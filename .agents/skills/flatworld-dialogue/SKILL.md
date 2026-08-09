@@ -59,6 +59,7 @@ ICharacterSpeechContextContributor
 
 - 聊天输入：`Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_PlayerChatInput.prefab`，固定节点 `Text Area`、`Placeholder`、`Text`。
 - 角色气泡：`Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_CharacterSpeechBubble.prefab`，固定节点 `Tail`、`Message`，根节点包含 `CanvasGroup`。
+- 角色气泡是非交互提示，`ScreenSpaceSpeechBubblePresenter` 必须将其固定为 `UIManager.PanelRoot` 的第一个子节点；禁止置顶，背包和所有模态交互面板必须覆盖气泡。
 - `PlayerChatInputController` 与 `ScreenSpaceSpeechBubblePresenter` 只通过 `GameRes` 实例化 Prefab、查找节点和更新数据，禁止运行时创建背景、文本、输入框或气泡尾部。
 - Prefab 查询键统一位于 `Assets/5_Scripts/5-5_UI/RuntimeUIPrefabKeys.cs`；重建入口为 `Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder.cs` 的菜单 `FlatWorld/UI/Rebuild Runtime Prefab UI`。
 - `FlatWorld.Dialogue.asmdef` 直接引用 `GamePlay`、`UI` 与 `m_Utilitiles`；访问 `GameRes.Instance` 时不要移除基类程序集引用。
@@ -74,6 +75,7 @@ ICharacterSpeechContextContributor
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：`ScreenSpaceSpeechBubblePresenter` 不再将角色气泡置顶，改为固定在 `PanelRoot` 最底层；背包及其他交互面板始终显示在气泡上方。
 - 2026-08-04：`WeatherExposureSpeechProvider` 扫描附近火源时，先确认物品存在燃料模块再读取点燃状态；普通物品不是错误条件，必须静默跳过，避免按扫描频率重复输出“找不到燃料模块”警告。
 - 2026-07-30：新增天气 Facts Contributor 与 `weather_rain.json`；现有 Controller 通过扩展发现自动接入，不建立第二套天气台词调度器。
 - 2026-07-29：新增 T 键玩家聊天，Enter 提交到既有角色气泡、Esc 取消；新增 `Player` 台词优先级和显式斜杠命令处理接口，远程 Player 禁止本地输入。
@@ -85,7 +87,7 @@ ICharacterSpeechContextContributor
 ## 修改后自动测试
 
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；测试脚本：`Assets/GameTest/Dialogue/DialogueSmokeTests.cs`；场景探针：`Assets/GameTest/Dialogue/DialogueSmokeTestProbe.cs`；测试场景：`Assets/GameTest/Scenes/Dialogue/DialogueSmokeTest.unity`；冒烟分类：`Dialogue.Smoke`。
-- 当前冒烟覆盖 `CriticalHungerFact_ShowsConfiguredSpeech` 完整调度链、聊天/气泡 Prefab 约束，以及 Player 天气 Contributor 与降雨 JSON 的已知 Fact 校验。
+- 当前冒烟覆盖 `CriticalHungerFact_ShowsConfiguredSpeech` 完整调度链、角色气泡低于交互面板的层级约束、聊天/气泡 Prefab 约束，以及 Player 天气 Contributor 与降雨 JSON 的已知 Fact 校验。
 - 新增 Fact、Provider、Trigger、Presenter 或 JSON 行为时必须增加系统测试；修复 Bug 时先增加可复现问题的回归测试。核心调度链变化时同步更新此场景和冒烟用例。
 - 测试失败时优先修复生产代码，禁止删除测试、弱化断言或修改 JSON 输入来制造通过；随机台词测试必须限制为唯一候选或固定随机状态。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Dialogue.Smoke`；无需视觉模型或测试工具卡片。涉及一次性完成标记、玩家状态、UI 气泡或联机边界时追加对应分类；只有气泡布局或最终观感变化才做定向截图。

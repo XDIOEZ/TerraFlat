@@ -67,7 +67,8 @@ public sealed class WorldTopologyBody : MonoBehaviour
             item.itemData.transform.position = transform.position;
 
         ItemMgr.Instance.NotifyRuntimeItemMoved(item);
-        ChunkMgr.Instance?.UpdateItem_ChunkOwner(item);
+        if (!ItemMgr.Instance.IsRuntimeAiEntity(item))
+            ChunkMgr.Instance?.UpdateItem_ChunkOwner(item);
         WorldTopologyRuntime.NotifyPositionWrapped(previous, normalized);
         return true;
     }

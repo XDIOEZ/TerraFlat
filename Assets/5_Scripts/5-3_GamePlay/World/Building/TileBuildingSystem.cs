@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.WorldModel;
 using UnityEngine;
+
+using RuntimeChunk = FlatWorld.WorldModel.ChunkRuntime;
 
 public readonly struct TileBuildingCell
 {
@@ -8,10 +11,30 @@ public readonly struct TileBuildingCell
     {
         Map = map;
         Position = position;
+        RuntimeChunk = null;
+        LocalPosition = position;
+        RuntimeTileId = 0;
+        TileBlockId = null;
+    }
+
+    public TileBuildingCell(RuntimeChunk runtimeChunk, Vector2Int position,
+        Vector2Int localPosition, int runtimeTileId, string tileBlockId)
+    {
+        Map = null;
+        Position = position;
+        RuntimeChunk = runtimeChunk;
+        LocalPosition = localPosition;
+        RuntimeTileId = runtimeTileId;
+        TileBlockId = tileBlockId;
     }
 
     public Map Map { get; }
+    public RuntimeChunk RuntimeChunk { get; }
     public Vector2Int Position { get; }
+    public Vector2Int LocalPosition { get; }
+    public int RuntimeTileId { get; }
+    public string TileBlockId { get; }
+    public bool UsesRuntimeTerrain => RuntimeChunk != null;
 }
 
 public readonly struct TileBuildingHitCandidate
@@ -70,8 +93,8 @@ public readonly struct TileBuildingDamageResult
 }
 
 /// <summary>
-/// 墙壁等非工作方块的权威运行时入口。实例状态保存在 Map.Data 的顶层 TileData，
-/// 不创建 Item、Module 或每格 GameObject。
+/// 墙壁等非工作方块的权威运行时入口。新区块把状态保存在 ChunkTerrainData 的
+/// BlockingTileId，旧 Map.Data 仅作为兼容回退，不创建每格 GameObject。
 /// </summary>
 public static class TileBuildingSystem
 {
@@ -82,20 +105,13 @@ public static class TileBuildingSystem
     public static event Action<TileBuildingDamageResult> CellDamaged;
     public static event Action<TileBuildingDamageResult> CellDestroyed;
 
-    public static bool TryPlace(
-        Vector3 worldPosition,
-        string tileBlockId,
-        out TileBuildingCell placedCell,
-        out string reason)
+    /// <summary>只做放置资格检查，不改动地图；建筑虚影和右键放置共用这条规则。</summary>
+    public static bool CanPlace(Vector3 worldPosition, string tileBlockId, out string reason)
     {
-        placedCell = default;
         reason = null;
         Vector2Int cell = new Vector2Int(
             Mathf.FloorToInt(worldPosition.x),
             Mathf.FloorToInt(worldPosition.y));
-
-        if (!TryGetLoadedMap(cell, out Map map, out reason))
-            return false;
 
         Tile_Block definition = GameRes.Instance?.GetTileBlock(tileBlockId);
         if (definition?.tileDataTemplate == null)
@@ -109,6 +125,133 @@ public static class TileBuildingSystem
             reason = $"{tileBlockId} 不是有效的阻挡 Tile";
             return false;
         }
+
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        if (chunkManager?.RuntimeChunks != null)
+        {
+            Vector2 center = new Vector2(cell.x + 0.5f, cell.y + 0.5f);
+            if (!chunkManager.TryGetRuntimeTerrainTile(center, out RuntimeTerrainTileSample runtimeTile))
+            {
+                reason = $"地块 {cell} 所在新区块尚未加载";
+                return false;
+            }
+
+            if (!TryResolveRuntimeTileId(chunkManager, tileBlockId, out int runtimeTileId))
+            {
+                reason = $"新区块配置未注册建筑地块：{tileBlockId}";
+                return false;
+            }
+
+            ChunkTerrainData terrain = runtimeTile.Terrain;
+            if (runtimeTile.TopTileId == 0 || !terrain.IsWalkable(
+                    runtimeTile.LocalCell.x, runtimeTile.LocalCell.y))
+            {
+                reason = $"地块 {cell} 不可建造或已有阻挡方块";
+                return false;
+            }
+
+            if (!terrain.CanSetBlockingTile(runtimeTile.LocalCell.x, runtimeTile.LocalCell.y,
+                    runtimeTileId))
+            {
+                reason = $"地块 {cell} 使用了不支持运行时建筑的扩展地块堆栈";
+                return false;
+            }
+
+            return true;
+        }
+
+        if (!TryGetLoadedMap(cell, out Map map, out reason))
+            return false;
+
+        int layerCount = map.Data.GetLayerCount(cell);
+        if (layerCount == 0)
+        {
+            reason = $"地块 {cell} 不可建造";
+            return false;
+        }
+
+        if (BlockingTilemapLayer.IsBlockingTile(map.Data.GetTopTile(cell)))
+        {
+            reason = $"地块 {cell} 已有阻挡方块";
+            return false;
+        }
+
+        return true;
+    }
+
+    public static bool TryPlace(
+        Vector3 worldPosition,
+        string tileBlockId,
+        out TileBuildingCell placedCell,
+        out string reason)
+    {
+        placedCell = default;
+        reason = null;
+        Vector2Int cell = new Vector2Int(
+            Mathf.FloorToInt(worldPosition.x),
+            Mathf.FloorToInt(worldPosition.y));
+
+        Tile_Block definition = GameRes.Instance?.GetTileBlock(tileBlockId);
+        if (definition?.tileDataTemplate == null)
+        {
+            reason = $"找不到格子建筑定义：{tileBlockId}";
+            return false;
+        }
+
+        if (!BlockingTilemapLayer.IsBlockingTile(definition.tileDataTemplate))
+        {
+            reason = $"{tileBlockId} 不是有效的阻挡 Tile";
+            return false;
+        }
+
+        // 新区块已经成为权威地形时，建筑直接写入 ChunkTerrainData，不能再要求旧 Map 表现对象存在。
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        if (chunkManager?.RuntimeChunks != null)
+        {
+            Vector2 center = new Vector2(cell.x + 0.5f, cell.y + 0.5f);
+            if (!chunkManager.TryGetRuntimeTerrainTile(center, out RuntimeTerrainTileSample runtimeTile))
+            {
+                reason = $"地块 {cell} 所在新区块尚未加载";
+                return false;
+            }
+
+            if (!TryResolveRuntimeTileId(chunkManager, tileBlockId, out int runtimeTileId))
+            {
+                reason = $"新区块配置未注册建筑地块：{tileBlockId}";
+                return false;
+            }
+
+            ChunkTerrainData terrain = runtimeTile.Terrain;
+            if (runtimeTile.TopTileId == 0 || !terrain.IsWalkable(
+                    runtimeTile.LocalCell.x, runtimeTile.LocalCell.y))
+            {
+                reason = $"地块 {cell} 不可建造或已有阻挡方块";
+                return false;
+            }
+
+            if (!terrain.TrySetBlockingTile(runtimeTile.LocalCell.x, runtimeTile.LocalCell.y,
+                    runtimeTileId))
+            {
+                reason = $"地块 {cell} 使用了不支持运行时建筑的扩展地块堆栈";
+                return false;
+            }
+
+            if (!chunkManager.TryGetChunkRuntime(runtimeTile.Address, out RuntimeChunk runtimeChunk))
+            {
+                terrain.TryRemoveBlockingTile(runtimeTile.LocalCell.x, runtimeTile.LocalCell.y,
+                    runtimeTileId);
+                reason = $"地块 {cell} 所在新区块已失效";
+                return false;
+            }
+
+            placedCell = new TileBuildingCell(runtimeChunk, runtimeTile.WorldCell,
+                runtimeTile.LocalCell, runtimeTileId, tileBlockId);
+            CellPlaced?.Invoke(placedCell);
+            return true;
+        }
+
+        if (!TryGetLoadedMap(cell, out Map map, out reason))
+            return false;
 
         int layerCount = map.Data.GetLayerCount(cell);
         if (layerCount == 0)
@@ -132,6 +275,50 @@ public static class TileBuildingSystem
         RefreshBlockingState(map, cell);
         placedCell = new TileBuildingCell(map, cell);
         CellPlaced?.Invoke(placedCell);
+        return true;
+    }
+
+    /// <summary>按放置时保存的权威区块位置移除建筑，兼容旧 Map 单元格调用。</summary>
+    public static bool TryRemove(
+        TileBuildingCell placedCell,
+        bool spawnDrop,
+        out string reason)
+    {
+        if (!placedCell.UsesRuntimeTerrain)
+            return TryRemove(placedCell.Map, placedCell.Position, spawnDrop, out reason);
+
+        reason = null;
+        RuntimeChunk runtimeChunk = placedCell.RuntimeChunk;
+        ChunkTerrainData terrain = runtimeChunk?.Terrain;
+        if (runtimeChunk == null || runtimeChunk.DataStatus != ChunkDataStatus.Ready ||
+            terrain == null || terrain.IsDisposed)
+        {
+            reason = $"地块 {placedCell.Position} 所在新区块已卸载";
+            return false;
+        }
+
+        int localX = placedCell.LocalPosition.x;
+        int localY = placedCell.LocalPosition.y;
+        TerrainCell current = terrain.GetCell(localX, localY);
+        if (current.BlockingTileId == 0 ||
+            (placedCell.RuntimeTileId != 0 && current.BlockingTileId != placedCell.RuntimeTileId))
+        {
+            reason = $"地块 {placedCell.Position} 没有可移除的运行时建筑";
+            return false;
+        }
+
+        if (!terrain.TryRemoveBlockingTile(localX, localY, placedCell.RuntimeTileId))
+        {
+            reason = $"地块 {placedCell.Position} 的运行时建筑状态已改变";
+            return false;
+        }
+
+        if (spawnDrop)
+        {
+            TileBuildingDamageProfile profile = ResolveRuntimeProfile(placedCell);
+            SpawnDrop(profile, placedCell.Position);
+        }
+
         return true;
     }
 
@@ -339,6 +526,37 @@ public static class TileBuildingSystem
         return false;
     }
 
+    private static bool TryResolveRuntimeTileId(
+        ChunkMgr chunkManager,
+        string tileBlockId,
+        out int runtimeTileId)
+    {
+        runtimeTileId = 0;
+        if (chunkManager == null || string.IsNullOrWhiteSpace(tileBlockId))
+            return false;
+
+        const string prefix = "tile.block.";
+        IReadOnlyDictionary<string, string> textParameters =
+            chunkManager.ActiveGenerationProfile?.TextParameters;
+        if (textParameters == null)
+            return false;
+
+        foreach (KeyValuePair<string, string> parameter in textParameters)
+        {
+            if (!parameter.Key.StartsWith(prefix, StringComparison.Ordinal) ||
+                !string.Equals(parameter.Value, tileBlockId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            string numericPart = parameter.Key.Substring(prefix.Length);
+            if (int.TryParse(numericPart, out runtimeTileId) && runtimeTileId > 0)
+                return true;
+        }
+
+        return false;
+    }
+
     private static bool TryGetTopBlockingTile(
         Map map,
         Vector2Int cell,
@@ -359,6 +577,15 @@ public static class TileBuildingSystem
         Tile_Block definition = GameRes.Instance.GetTileBlock(tile.ID);
         if (definition == null && !string.Equals(tile.ID, tile.Name, StringComparison.Ordinal))
             definition = GameRes.Instance.GetTileBlock(tile.Name);
+        return definition?.damageProfile;
+    }
+
+    private static TileBuildingDamageProfile ResolveRuntimeProfile(TileBuildingCell placedCell)
+    {
+        if (GameRes.Instance == null || string.IsNullOrWhiteSpace(placedCell.TileBlockId))
+            return null;
+
+        Tile_Block definition = GameRes.Instance.GetTileBlock(placedCell.TileBlockId);
         return definition?.damageProfile;
     }
 

@@ -7,7 +7,7 @@ namespace FlatWorld.Dialogue
 {
     /// <summary>
     /// 在 UIManager.PanelRoot 下动态创建屏幕空间气泡，并持续跟随角色头顶。
-    /// 不接收射线，不参与输入，也不依赖具体台词来源。
+    /// 气泡固定处于交互面板下方，不接收射线、不参与输入，也不依赖具体台词来源。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ScreenSpaceSpeechBubblePresenter :
@@ -70,7 +70,7 @@ namespace FlatWorld.Dialogue
             visiblePriority = request.Priority;
             isVisible = true;
             viewObject.SetActive(true);
-            viewRect.SetAsLastSibling();
+            PlaceBelowInteractivePanels();
             UpdateLayout();
             if (!UpdateScreenPosition())
             {
@@ -118,6 +118,7 @@ private bool EnsureView()
                     viewRect.SetParent(currentRootRect, false);
                 rootRect = currentRootRect;
                 rootCanvas = rootRect.GetComponentInParent<Canvas>();
+                PlaceBelowInteractivePanels();
                 return true;
             }
 
@@ -148,8 +149,20 @@ private bool EnsureView()
             canvasGroup.alpha = 0f;
             canvasGroup.interactable = false;
             canvasGroup.blocksRaycasts = false;
+            PlaceBelowInteractivePanels();
             viewObject.SetActive(false);
             return true;
+        }
+
+        /// <summary>
+        /// 气泡是非交互提示，固定在 PanelRoot 最底层，确保背包和模态面板始终覆盖它。
+        /// </summary>
+        private void PlaceBelowInteractivePanels()
+        {
+            if (viewRect == null || viewRect.parent == null || viewRect.GetSiblingIndex() == 0)
+                return;
+
+            viewRect.SetAsFirstSibling();
         }
 
 

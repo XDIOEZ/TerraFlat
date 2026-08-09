@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// 草地的纯视觉细节层。使用 Tilemap 批处理，不创建 Item、碰撞体或存档数据。
+/// 草地的纯视觉细节层。使用 Tilemap 批处理，不创建 Item 或碰撞体；状态由 Data_TileMap 的草层持有。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class GrassDetailLayer : MonoBehaviour
@@ -28,6 +28,7 @@ public sealed class GrassDetailLayer : MonoBehaviour
 
     [Header("渲染")]
     [SerializeField] private int sortingOrderOffset = 1;
+    [SerializeField] private Material grassMaterial;
 
     private readonly List<Sprite> runtimeSprites = new();
     private readonly List<Tile> runtimeTiles = new();
@@ -73,17 +74,24 @@ public sealed class GrassDetailLayer : MonoBehaviour
         ApplyCell(map, worldPosition, topTile, worldSeed);
     }
 
-    public bool RemoveGrassAt(Map map, Vector2Int worldPosition)
+    /// <summary>消费草层中的一格草，并同步清除对应的视觉格。</summary>
+    public bool TryConsumeGrassAt(Map map, Vector2Int worldPosition)
     {
         if (!HasGrassAt(map, worldPosition))
             return false;
 
-        if (!map.Data.TrySetGrassStateAtWorld(worldPosition, GrassCellState.Removed))
+        if (!map.Data.TryConsumeGrassAtWorld(worldPosition))
             return false;
 
         EnsureDetailTilemap(map);
         detailTilemap?.SetTile(new Vector3Int(worldPosition.x, worldPosition.y, 0), null);
         return true;
+    }
+
+    /// <summary>兼容旧调用方；新的草消费逻辑统一走草层接口。</summary>
+    public bool RemoveGrassAt(Map map, Vector2Int worldPosition)
+    {
+        return TryConsumeGrassAt(map, worldPosition);
     }
 
     public bool HasGrassAt(Map map, Vector2Int worldPosition)
@@ -219,7 +227,10 @@ public sealed class GrassDetailLayer : MonoBehaviour
     private void EnsureDetailTilemap(Map map)
     {
         if (detailTilemap != null)
+        {
+            ApplyDetailRendererSettings(map);
             return;
+        }
 
         Transform existing = transform.Find(DetailObjectName);
         GameObject detailObject;
@@ -242,14 +253,41 @@ public sealed class GrassDetailLayer : MonoBehaviour
         if (detailRenderer == null)
             detailRenderer = detailObject.AddComponent<TilemapRenderer>();
 
-        TilemapRenderer groundRenderer = map.tileMap != null ? map.tileMap.GetComponent<TilemapRenderer>() : null;
+        ApplyDetailRendererSettings(map);
+    }
+
+    #region 草地材质
+
+    /// <summary>同步排序层并应用共享摆动材质，不创建运行时材质副本。</summary>
+    private void ApplyDetailRendererSettings(Map map)
+    {
+        if (detailTilemap == null)
+            return;
+
+        TilemapRenderer detailRenderer = detailTilemap.GetComponent<TilemapRenderer>();
+        if (detailRenderer == null)
+            return;
+
+        TilemapRenderer groundRenderer = map != null && map.tileMap != null
+            ? map.tileMap.GetComponent<TilemapRenderer>()
+            : null;
         if (groundRenderer != null)
         {
             detailRenderer.sortingLayerID = groundRenderer.sortingLayerID;
             detailRenderer.sortingOrder = groundRenderer.sortingOrder + sortingOrderOffset;
-            detailRenderer.sharedMaterial = groundRenderer.sharedMaterial;
         }
+
+        if (grassMaterial != null)
+            detailRenderer.sharedMaterial = grassMaterial;
+        else if (groundRenderer != null)
+            detailRenderer.sharedMaterial = groundRenderer.sharedMaterial;
+
+        // 顶点摆动会越过原始 Tile 边界，扩大区块裁剪范围避免边缘草地被截断。
+        detailRenderer.chunkCullingBounds = new Vector3(0.08f, 0.08f, 0f);
+        detailRenderer.detectChunkCullingBounds = TilemapRenderer.DetectChunkCullingBounds.Auto;
     }
+
+    #endregion
 
     private void EnsureRuntimeTiles()
     {

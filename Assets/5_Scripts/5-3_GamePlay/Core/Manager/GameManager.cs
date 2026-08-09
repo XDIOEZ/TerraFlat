@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UltEvents;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -113,9 +114,13 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     /// </summary>
     /// <param name="onComplete">退出完成后的回调函数</param>
     /// <returns></returns>
-    public IEnumerator BackToHelloScene_Coroutine(Item Player, System.Action onComplete = null)
+    public IEnumerator BackToHelloScene_Coroutine(Item playerItem, System.Action onComplete = null)
     {
         Debug.Log("<color=yellow>[ExitGame]</color> 开始执行退出流程...");
+
+        // 记录退出前的动态世界场景；LoadSceneMode.Single 理论上会卸载它，
+        // 后续仍会显式核验，防止异常路径留下同名空场景阻塞下一次进入。
+        Scene exitingWorldScene = SceneManager.GetActiveScene();
 
         ////////////////////////////////////////////////////////////////////////////////////
         // 阶段 1：准备阶段
@@ -123,6 +128,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         // 标记已退出游戏世界，各管理器应停止运行
         IsInGameWorld = false;
+        ResetWorldEntryLifecycle();
 
         // 通知所有订阅者：游戏世界已退出
         Event_GameWorldExit?.Invoke();
@@ -160,15 +166,21 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         // 阶段 3：清理阶段
         ////////////////////////////////////////////////////////////////////////////////////
 
-        // 销毁玩家对象
-        if (Player != null)
+        // 通过 ItemMgr 正式注销玩家，确保运行时索引、感知空间哈希和 Player_DIC 同步清理。
+        if (playerItem is Player player)
         {
-            Destroy(Player.gameObject);
-            Debug.Log("[ExitGame] 已销毁玩家对象");
+            ItemMgr.Instance.ReleasePlayerForWorldTransition(player);
+            Debug.Log("[ExitGame] 已注销玩家对象");
+        }
+        else if (playerItem != null)
+        {
+            ItemMgr.Instance.DespawnItem(playerItem, saveData: false);
+            Debug.Log("[ExitGame] 已注销非 Player 玩家对象");
         }
 
         // 延迟一帧，等待所有标记为销毁的对象实际销毁
         yield return null;
+        ItemMgr.Instance.CleanupNullItems();
 
         // 销毁之前实例化的天体对象
         if (SunAndMoonObj != null)
@@ -181,6 +193,11 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         // 清理所有区块
         Debug.Log("[ExitGame] 开始清理区块...");
         ChunkMgr.Instance.ClearAllChunk();
+
+        // Chunk 对象池会在帧末销毁旧 Item，确认完成后再重建索引，
+        // 避免下次 Event_GameWorldEnter 读取到已销毁的 GameItem。
+        yield return null;
+        ItemMgr.Instance.CleanupNullItems();
 
         // 等待 Unity 在主线程完成资源卸载。不在场景切换中强制执行托管终结器，
         // 避免与 Unity 原生对象的延迟销毁发生重入。
@@ -199,6 +216,20 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         AsyncOperation loadOp = SceneManager.LoadSceneAsync("GameStartScene");
         while (!loadOp.isDone)
             yield return null;
+
+        // Single 加载应已卸载旧动态场景；若平台/异常时序未完成，补一次显式卸载并等待结束。
+        if (exitingWorldScene.IsValid() &&
+            exitingWorldScene.isLoaded &&
+            !string.Equals(exitingWorldScene.name, "GameStartScene", StringComparison.Ordinal))
+        {
+            Debug.LogWarning($"[ExitGame] 检测到残留世界场景，补充卸载：{exitingWorldScene.name}");
+            AsyncOperation unloadWorldScene = SceneManager.UnloadSceneAsync(exitingWorldScene);
+            while (unloadWorldScene != null && !unloadWorldScene.isDone)
+                yield return null;
+        }
+
+        // 场景卸载后再清理一次，覆盖不归属 Chunk 的运行时 Item。
+        ItemMgr.Instance?.CleanupNullItems();
 
         ////////////////////////////////////////////////////////////////////////////////////
         // 阶段 5：收尾阶段
@@ -777,6 +808,11 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         Vector3 spawnPosition = new Vector3(landPosition.x + 0.5f, landPosition.y + 0.5f, 0f);
         player.transform.position = spawnPosition;
         player.Data.transform.position = spawnPosition;
+        // 以最终确认的安全陆地坐标写入一次主世界出生点，确保复活不会回到死亡位置。
+        PlayerMainWorldSpawnStore.SetMainWorldSpawn(
+            player.Data,
+            SceneManager.GetActiveScene().name,
+            spawnPosition);
         Debug.Log($"[GameManager] 新玩家出生点已按种子定位到安全陆地：seed={worldSeed}, anchor={seedAnchor}, spawn={spawnPosition}");
         Event_PlayerEnterWorld?.Invoke(player);
     }
@@ -1014,14 +1050,58 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     /// </summary>
     public void SaveGame()
     {
+        CaptureSaveGameState();
+
+        // SaveDataMgr 在写盘前统一保存全部已加载区块。
+        SaveDataMgr.Instance.Save_And_WriteToDisk();
+    }
+
+    /// <summary>
+    /// 自动保存入口：保持实体和输入继续运行，只在主线程采集快照，磁盘原子写入由后台任务完成。
+    /// </summary>
+    public Task<bool> SaveGameInBackground()
+    {
+        CaptureSaveGameState();
+        return SaveDataMgr.Instance.Save_And_WriteToDiskInBackground();
+    }
+
+    /// <summary>自动保存的分帧入口；快照完成后只返回后台文件写入任务。</summary>
+    public IEnumerator SaveGameInBackgroundCoroutine(Action<Task<bool>> onWriteQueued)
+    {
+        Exception captureFailure = null;
+        try
+        {
+            CaptureSaveGameState();
+        }
+        catch (Exception exception)
+        {
+            captureFailure = exception;
+        }
+
+        if (captureFailure != null)
+        {
+            onWriteQueued?.Invoke(Task.FromException<bool>(captureFailure));
+            yield break;
+        }
+
+        yield return SaveDataMgr.Instance.Save_And_WriteToDiskInBackgroundCoroutine(onWriteQueued);
+    }
+
+    /// <summary>采集世界时钟和本地玩家的持久化状态。</summary>
+    private static void CaptureSaveGameState()
+    {
+        if (SaveDataMgr.Instance?.SaveData == null)
+            throw new InvalidOperationException("存档管理器或当前存档尚未就绪，无法保存世界。");
+        if (DayTimeSystem.Instance == null)
+            throw new InvalidOperationException("世界时间系统尚未就绪，无法保存世界。");
+        if (ItemMgr.Instance == null)
+            throw new InvalidOperationException("物品管理器尚未就绪，无法保存世界。");
+
         // 保存时间数据
         SaveDataMgr.Instance.SaveData.DayTimeData = DayTimeSystem.Instance.GetSaveData();
 
         // 先保存玩家数据
         ItemMgr.Instance.SavePlayer();
-
-        // SaveDataMgr 在写盘前统一保存全部已加载区块。
-        SaveDataMgr.Instance.Save_And_WriteToDisk();
     }
 
     #endregion

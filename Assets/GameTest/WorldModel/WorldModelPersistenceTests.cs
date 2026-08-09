@@ -31,6 +31,49 @@ namespace FlatWorld.GameTest.WorldModel
         }
 
         [Test]
+        [Category("WorldModel.Grass")]
+        [Category("Smoke")]
+        public void ConsumingGrassUpdatesLayerAndNotifiesOnce()
+        {
+            using var world = CreateCommittedWorld(12);
+            ChunkRuntime chunk = null;
+            foreach (ChunkRuntime value in world.Chunks.Values)
+                chunk = value;
+
+            Assert.That(chunk, Is.Not.Null);
+            ChunkTerrainData terrain = chunk.Terrain;
+            Vector2Int grassCell = default;
+            bool foundGrass = false;
+            for (int y = 0; y < terrain.Height && !foundGrass; y++)
+            for (int x = 0; x < terrain.Width; x++)
+            {
+                if (terrain.GetGrass(x, y) != ChunkTerrainData.GrassPresent)
+                    continue;
+
+                grassCell = new Vector2Int(x, y);
+                foundGrass = true;
+                break;
+            }
+
+            Assert.That(foundGrass, Is.True, "测试区块必须包含至少一格草层数据。");
+            int changeCount = 0;
+            TerrainChangeKind lastChangeKind = default;
+            terrain.Changed += change =>
+            {
+                changeCount++;
+                lastChangeKind = change.Kind;
+            };
+
+            Assert.That(terrain.TryConsumeGrass(grassCell.x, grassCell.y), Is.True);
+            Assert.That(terrain.GetGrass(grassCell.x, grassCell.y),
+                Is.EqualTo(ChunkTerrainData.GrassEmpty));
+            Assert.That(changeCount, Is.EqualTo(1));
+            Assert.That(lastChangeKind, Is.EqualTo(TerrainChangeKind.Grass));
+            Assert.That(terrain.TryConsumeGrass(grassCell.x, grassCell.y), Is.False);
+            Assert.That(changeCount, Is.EqualTo(1), "同一格草不能重复消费或重复刷新。");
+        }
+
+        [Test]
         public void ChunkViewCanBindUnbindAndRebindWithoutDuplicateLeases()
         {
             using var world = CreateCommittedWorld(10);
@@ -68,6 +111,7 @@ namespace FlatWorld.GameTest.WorldModel
             DimensionCatalogSO catalog = AssetDatabase.LoadAssetAtPath<DimensionCatalogSO>(
                 "Assets/Resources/Config/DimensionCatalog_Default.asset");
             Assert.That(catalog, Is.Not.Null);
+            ChunkGenerationProfileSO surfaceProfile = null;
             foreach (string dimensionId in new[] { "surface", "cave" })
             {
                 DimensionDefinition definition = catalog.Find(dimensionId);
@@ -79,6 +123,18 @@ namespace FlatWorld.GameTest.WorldModel
                 Assert.That(definition.ChunkViewPrefab, Is.Not.Null, dimensionId);
                 Assert.That(definition.ChunkViewPrefab.GetComponent<global::Map>(), Is.Null,
                     "ChunkView prefab must not carry the legacy Map authority.");
+                if (dimensionId == "surface")
+                {
+                    surfaceProfile = definition.GenerationProfile;
+                }
+                else
+                {
+                    Assert.That(definition.GenerationProfile.CreateSnapshot().Settings.Mode,
+                        Is.EqualTo(ChunkGenerationMode.Cave));
+                    Assert.That(definition.GenerationProfile,
+                        Is.Not.SameAs(surfaceProfile),
+                        "矿洞必须使用独立 Cave Profile，不能复用地表 Profile。");
+                }
             }
         }
 

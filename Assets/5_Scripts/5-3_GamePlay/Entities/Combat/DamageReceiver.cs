@@ -192,11 +192,9 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     [Min(0.01f)]
     public float flashDuration = 0.2f;
 
-    public Color flashColor = new Color(1f, 0f, 0f, 1f);
+    public Color flashColor = Color.white;
     public float shakeDuration = 0.15f;
     public float shakeMagnitude = 0.1f;
-
-    private bool isFlashing = false;
 
     public GameObject PanelPrefab;
     [ReadOnly]
@@ -219,6 +217,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     private float _lastDamageUiTime = -999f;
     private Item _handStateEventOwner;
     private bool _isVisualShaking;
+    private Coroutine _shakeCoroutine;
+    private Vector3 _visualShakeRestPosition;
 
     private bool _deathConsumedByExternalHandler;
 
@@ -621,11 +621,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
             // UI & 特效处理（只有在造成实际伤害时才触发）
             OnAction.Invoke(Hp);
 
-            if (item.Sprite != null && !isFlashing)
-            {
-                Hit_Flash(item.Sprite);
-                StartCoroutine(ShakeSprite(item.Sprite.transform));
-            }
+            PlayHitVisualFeedback();
 
 
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
@@ -740,11 +736,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         // UI & 特效处理
         OnAction.Invoke(Hp);
 
-        if (item.Sprite != null && !isFlashing)
-        {
-            Hit_Flash(item.Sprite);
-            StartCoroutine(ShakeSprite(item.Sprite.transform));
-        }
+        PlayHitVisualFeedback();
 
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
 
@@ -1105,10 +1097,14 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         hits = new List<BodyPartDamageInfo>(2);
         BodyPartHealth first = SelectRandomBodyPart(null);
         if (first == null)
+            first = SelectFallbackLivingBodyPart(null);
+        if (first == null)
             return 0f;
 
         bool useSecondPart = Random.value < Mathf.Clamp01(Data.TwoPartHitChance);
         BodyPartHealth second = useSecondPart ? SelectRandomBodyPart(first) : null;
+        if (second == null && useSecondPart)
+            second = SelectFallbackLivingBodyPart(first);
         int hitCount = second == null ? 1 : 2;
         float damageShare = 1f / hitCount;
         float damagePerPart = damage * damageShare;
@@ -1202,6 +1198,31 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         }
 
         return candidates[candidates.Count - 1];
+    }
+
+    /// <summary>当剩余生命全部落在零权重部位时，仍选取一个存活部位，防止实体永久卡在残血。</summary>
+    private BodyPartHealth SelectFallbackLivingBodyPart(BodyPartHealth excluded)
+    {
+        BodyPartHealth fallback = null;
+        float highestHp = 0f;
+
+        for (int i = 0; i < Data.BodyParts.Count; i++)
+        {
+            BodyPartHealth candidate = Data.BodyParts[i];
+            if (candidate == null || candidate == excluded ||
+                candidate.Hp <= 0f || candidate.MaxHp <= 0f)
+            {
+                continue;
+            }
+
+            if (fallback == null || candidate.Hp > highestHp)
+            {
+                fallback = candidate;
+                highestHp = candidate.Hp;
+            }
+        }
+
+        return fallback;
     }
 
     private static void ApplyDamageToBodyPart(
@@ -1608,55 +1629,65 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     #region 动画效果实现
 
+    /// <summary>使用角色渲染模块播放闪白，并启动轻微震动；不再访问 Renderer.material。</summary>
+    private void PlayHitVisualFeedback()
+    {
+        if (item == null || item.Sprite == null)
+            return;
+
+        Hit_Flash(item.Sprite);
+        Transform spriteTransform = item.Sprite.transform;
+
+        if (_shakeCoroutine != null)
+        {
+            StopCoroutine(_shakeCoroutine);
+            spriteTransform.localPosition = _visualShakeRestPosition;
+        }
+        else
+        {
+            _visualShakeRestPosition = spriteTransform.localPosition;
+        }
+
+        _shakeCoroutine = StartCoroutine(ShakeSprite(spriteTransform, _visualShakeRestPosition));
+    }
+
+    /// <summary>把受击参数转交给角色渲染模块，保留旧的公共方法名兼容外部调用。</summary>
     public void Hit_Flash(SpriteRenderer spriteRenderer)
     {
-        StartCoroutine(FlashCoroutine(spriteRenderer));
+        if (spriteRenderer == null)
+            return;
+
+        ActorRenderColorEffect renderEffect = spriteRenderer.GetComponentInParent<ActorRenderColorEffect>();
+        if (renderEffect == null && item != null)
+            renderEffect = item.GetComponentInChildren<ActorRenderColorEffect>(true);
+
+        if (renderEffect != null)
+            renderEffect.PlayHitFlash(flashColor, flashDuration, flashCount);
     }
 
-    private IEnumerator FlashCoroutine(SpriteRenderer spriteRenderer)
+    /// <summary>使用衰减正弦位移实现稳定的小幅震动，连续受击时会重新触发而不会叠加偏移。</summary>
+    private IEnumerator ShakeSprite(Transform spriteTransform, Vector3 restPosition)
     {
-        isFlashing = true;
-        Color originalColor = spriteRenderer.material.color;
-
-        for (int i = 0; i < flashCount; i++)
-        {
-            yield return StartCoroutine(LerpColor(spriteRenderer, originalColor, flashColor, flashDuration * 0.5f));
-            yield return StartCoroutine(LerpColor(spriteRenderer, flashColor, originalColor, flashDuration * 0.5f));
-        }
-
-        isFlashing = false;
-    }
-
-    private IEnumerator LerpColor(SpriteRenderer spriteRenderer, Color fromColor, Color toColor, float duration)
-    {
-        float time = 0f;
-        while (time < duration)
-        {
-            spriteRenderer.material.color = Color.Lerp(fromColor, toColor, time / duration);
-            time += Time.deltaTime;
-            yield return null;
-        }
-        spriteRenderer.material.color = toColor;
-    }
-
-    private IEnumerator ShakeSprite(Transform spriteTransform)
-    {
-        Vector3 originalPos = spriteTransform.localPosition;
         float elapsed = 0f;
         _isVisualShaking = true;
+        float duration = Mathf.Max(0f, shakeDuration);
+        float magnitude = Mathf.Max(0f, shakeMagnitude);
 
-        while (elapsed < shakeDuration)
+        while (elapsed < duration)
         {
-            float x = Random.Range(-1f, 1f) * shakeMagnitude;
-            float y = Random.Range(-1f, 1f) * shakeMagnitude;
+            float progress = duration <= 0f ? 1f : Mathf.Clamp01(elapsed / duration);
+            float envelope = 1f - progress;
+            float x = Mathf.Sin(elapsed * 52f) * magnitude * envelope;
+            float y = Mathf.Cos(elapsed * 67f) * magnitude * 0.55f * envelope;
 
-            spriteTransform.localPosition = originalPos + new Vector3(x, y, 0f);
+            spriteTransform.localPosition = restPosition + new Vector3(x, y, 0f);
             elapsed += Time.deltaTime;
             yield return null;
         }
 
-        spriteTransform.localPosition = originalPos;
+        spriteTransform.localPosition = restPosition;
         _isVisualShaking = false;
+        _shakeCoroutine = null;
         UpdateWorldHealthBarLayout();
     }
 

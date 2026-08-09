@@ -67,6 +67,10 @@ description: Continuously evolve FlatWorld's real single-player Runtime.GoldenPa
 
 GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通过真实 `Mover.Move` 执行一次右边界环绕；等待对侧 Chunk Ready，验证玩家数据、Chunk/MapSave 规范键，然后恢复原位置并继续完整流程。复杂状态机位于 `FlatWorldGoldenPathScenarios.WorldTopology.cs`。
 
+## 当前燃烧 Buff 表现场景（2026-08-09）
+
+`OnTraversalTick` 通过真实玩家 `BuffManager.AddBuff(燃烧)` 施加正式 Buff，除验证真实伤害 Tick 外，还要求 `ActorStatusVisualEffectController` 已配置完整八帧火焰并立即处于启用状态；统一 Cleanup 移除 Buff 后必须确认火焰同步隐藏并恢复生命。实现位于 `FlatWorldGoldenPathScenarios.Buff.cs`。
+
 ## 当前运行时水体场景（2026-08-08）
 
 `OnChunkReady` 在活动 `ChunkRuntime` 中寻找一格可走陆地和一格水体，通过真实玩家 `TileEffectReceiver.RefreshCurrentTileEffects()` 验证进入水体获得 `水体减速/潮湿`、移动倍率按正式 Buff 配置下降、离开后移除并恢复；通过和失败路径都把玩家位置、速度及脚下地块效果恢复到检查前状态。实现位于 `FlatWorldGoldenPathScenarios.TileEffects.cs`。
@@ -74,6 +78,22 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 ## 当前新玩家出生场景（2026-08-08）
 
 `OnWorldReady` 在初始 Chunk 窗口稳定后直接读取玩家脚下的 `ChunkRuntime/ChunkTerrainData`，断言出生格非水且可走，并核对运行时位置与 `Data_Player` 存档位置一致；场景不移动玩家、不改生成参数。实现位于 `FlatWorldGoldenPathScenarios.PlayerMovement.cs`。
+
+## 当前主世界出生点复活场景（2026-08-09）
+
+`OnWorldReady` 读取玩家 `flatworld.playerSpawn` 存档，使用真实 `DamageReceiver.ForceHurt()` 触发濒死，再调用公开 `Mod_PlayerDeathState.RespawnFromDying()`；断言玩家回到持久化主世界出生点且生命恢复，并在清理阶段恢复测试前的位置与生命。实现位于 `FlatWorldGoldenPathScenarios.PlayerMovement.cs`。
+
+## 当前玩家速度过渡场景（2026-08-09）
+
+`OnWorldReady` 通过真实 `Mover.Move` 和 Rigidbody2D 速度验证走路起步、进入/退出奔跑的平滑过渡，以及松开方向后默认 0.07 秒的极短惯性和停止；场景不依赖真实设备输入，Cleanup 恢复测试前速度与移动状态。实现位于 `FlatWorldGoldenPathScenarios.PlayerMovement.cs`。
+
+## 当前 GM 管理员无敌场景（2026-08-09）
+
+`OnWorldReady` 先断言管理员无敌默认关闭，随后通过真实 `PlayerAdminController` 关闭无敌并用 `DamageReceiver.ForceHurt()` 观察正常扣血，再重新开启无敌并施加致死环境伤害，断言满血恢复且未进入 `Mod_PlayerDeathState` 濒死。通过和失败路径都会恢复玩家名、生命和原无敌开关。实现位于 `FlatWorldGoldenPathScenarios.PlayerMovement.cs`。
+
+## 当前自动保存场景（2026-08-09）
+
+`OnWorldReady` 通过 `GameManager.SaveGameInBackgroundCoroutine()` 启动真实分帧快照与后台原子写盘；`OnTraversalTick` 等待最多 10 秒，断言写入成功、`GameController` 没有输入锁、Mover/Rigidbody2D 可用且 `Time.timeScale` 未改，退出前必须完成。实现位于 `FlatWorldGoldenPathScenarios.AutoSave.cs`。
 
 ## 当前建筑放置场景（2026-08-08）
 
@@ -91,10 +111,16 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
-- 2026-08-08：`OnWorldReady` 使用真实玩家 `Mover.HandleRunInputPressed/Released()` 验证长按松开保持常驻奔跑，并由下一次短按关闭后恢复原速度倍率。
-- 2026-08-08：建筑场景改为调用 `Mod_Building.TryGetBuildingPreviewVisual()` 获取召唤器真实预览来源，并断言旧建筑材质缺失时虚影仍保留有效默认材质、图片与 `Shadow` 排序层。
-- 2026-08-08：黄金路径启动器把当前 Unity 进程 ID 原子写入 `golden-running-*` 请求本体；EditorSettings 或 PlayMode 引发 Domain Reload、且 `SessionState` 尚未恢复时可安全续接，编辑器真正重启后仍按中断处理。
-- 2026-08-08：WorldModel 往返场景加入真实 Chicken 的区块显隐回归：离开起始 View 后必须 inactive，返回且 View 重绑后必须 active，并在统一 Cleanup 通过 `ItemMgr.DespawnItem()` 清理。
+- 2026-08-09：建筑召唤器迁移到 JSON 后继续复用现有建筑黄金路径的 `Wall_Wood_Summoner` 场景；该场景通过 `GameRes.CreateItemData → ItemMgr.InstantiateItem → Load` 真实验证 JSON ItemData、`Mod_Building` 放置、快照占地与清理，无需复制一套迁移专用场景。
+- 2026-08-09：WorldModel 进入世界阶段新增活动视野绑定断言，要求完整窗口的 `ChunkView` 均已就绪，避免维度切换或普通进入只完成中心区块就被判定为 Ready。
+- 2026-08-09：矿洞入口/出口的一一对应由 `WorldModel.Cave` 纯生成回归断言唯一数量和同格坐标；Golden Path 的生态销毁场景继续跳过永久 `CaveExit`，避免把配对基线误判为可删除自然物。
+- 2026-08-09：建筑黄金路径在世界就绪阶段验证石墙召唤器写入新区块 `BlockingTileId`、Tilemap 刷新与可逆清理，避免临时阻挡格干扰移动阶段。
+- 2026-08-09：生态场景选择可销毁自然物时跳过确定性跨维度传送门；该类入口是永久基线，不得被“销毁后不复活”断言误写成删除差量，矿物/树木等普通自然物仍保持原验证。
+- 2026-08-09：玩家奔跑场景扩展为实际 Rigidbody2D 速度回归：走路起步、走跑互切、松开后默认 0.07 秒的极短惯性及停止均通过 `Mover.Move` 验证，并在 Cleanup 恢复原速度。
+- 2026-08-09：GM 生物召唤修复复用 WorldModel 场景的正式 `ItemMgr.InstantiateItem(...) → Load()` 生命周期；这是运行时控制台局部入口修正，现有 Chicken 创建、`RuntimeEntities` 归属与重进恢复断言覆盖同一生产链路，未额外启动完整 Golden Path。
+- 2026-08-09：燃烧 Buff 黄金路径扩展为同时断言角色火焰表现：AddBuff 后八帧状态序列必须激活，Cleanup 移除后必须同步隐藏，仍保留真实 Tick 伤害与生命恢复断言。
+- 2026-08-09：WorldModel 场景断言 Chicken 不含旧 `Chunk` 父级、挂在 `RuntimeEntities` 且 `WorldAddress` 匹配；首次退出前记录 GUID，重进后必须从新版区块存档恢复同一 AI，再执行最终退出清理。
+- 2026-08-09：管理员无敌场景新增默认关闭断言，防止默认“管理员”玩家被意外置为无敌而无法正常死亡。
 
 ## 当前地表气候与水文场景（2026-08-08）
 

@@ -1352,7 +1352,7 @@ public static class GameUIPrefabRebuilder
             colors.normalColor = Color.white;
             colors.highlightedColor = primary ? new Color(1.13f, 1.08f, 0.98f, 1f) : new Color(1.18f, 1.16f, 1.10f, 1f);
             colors.pressedColor = new Color(0.74f, 0.78f, 0.80f, 1f);
-            colors.selectedColor = colors.highlightedColor;
+            colors.selectedColor = FlatWorldUITheme.Selection;
             colors.disabledColor = new Color(0.45f, 0.45f, 0.45f, 0.55f);
             colors.fadeDuration = 0.10f;
             button.colors = colors;

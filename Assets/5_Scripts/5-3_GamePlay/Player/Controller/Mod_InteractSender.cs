@@ -25,6 +25,8 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private Component currentReceiverComponent;
     public float maxInteractDistance = 2f;
     private bool shouldDisableColliderAfterInteract;
+    // 出口可能在玩家已经到位后才生成；按键时主动扫描，避免只依赖首次物理触发回调。
+    private readonly Collider2D[] interactionOverlapBuffer = new Collider2D[32];
 
     public override void Load()
     {
@@ -74,6 +76,10 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         action.canceled -= OnInteractReleased;
         action.performed += OnInteractPressed;
         action.canceled += OnInteractReleased;
+
+        // 世界物体支持左键直接交互；GameController 已过滤 UI 与锁定状态。
+        gameController.LeftClick -= OnPointerClick;
+        gameController.LeftClick += OnPointerClick;
     }
 
     private void UnbindInput()
@@ -84,6 +90,7 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         var action = gameController._inputActions.Win10.E;
         action.performed -= OnInteractPressed;
         action.canceled -= OnInteractReleased;
+        gameController.LeftClick -= OnPointerClick;
     }
 
     private void OnInteractPressed(InputAction.CallbackContext ctx)
@@ -99,6 +106,7 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         // 每次按下交互键时刷新范围缓存，避免使用过期触发器列表。
         receiversInRange.Clear();
         interactCollider.enabled = true;
+        RefreshReceiversAtCurrentPosition();
     }
 
     private void OnInteractReleased(InputAction.CallbackContext ctx)
@@ -112,6 +120,87 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             return;
 
         DisableInteractCollider();
+    }
+
+    /// <summary>把左键落点转换为世界交互，兼容石门等没有手持物品的 IInteractable。</summary>
+    private void OnPointerClick()
+    {
+        if (IsGameplayInputLocked() || gameController == null || item == null)
+            return;
+
+        Vector3 pointerWorld;
+        try
+        {
+            pointerWorld = gameController.GetMouseWorldPosition();
+        }
+        catch (MissingReferenceException)
+        {
+            return;
+        }
+
+        Physics2D.SyncTransforms();
+        Collider2D[] colliders = Physics2D.OverlapPointAll(pointerWorld);
+        IInteractable selectedReceiver = null;
+        float closestDistance = float.MaxValue;
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            IInteractable receiver = WorldTopologyColliderProxy.ResolveComponent<IInteractable>(colliders[i]);
+            Component receiverComponent = receiver as Component;
+            if (receiverComponent == null || receiver == null)
+                continue;
+
+            float distance = WorldTopologyRuntime.Distance(
+                item.transform.position, receiverComponent.transform.position);
+            if (distance > maxInteractDistance || distance >= closestDistance)
+                continue;
+
+            closestDistance = distance;
+            selectedReceiver = receiver;
+        }
+
+        selectedReceiver?.OnInteractStart(item);
+    }
+
+    /// <summary>
+    /// 扫描玩家当前交互半径内的目标，补偿动态区块/自然物在玩家之后完成绑定的时序。
+    /// </summary>
+    private void RefreshReceiversAtCurrentPosition()
+    {
+        if (item == null || !item.gameObject.activeInHierarchy)
+            return;
+
+        Physics2D.SyncTransforms();
+        int count = Physics2D.OverlapCircleNonAlloc(
+            item.transform.position,
+            Mathf.Max(0.01f, maxInteractDistance),
+            interactionOverlapBuffer);
+        IInteractable closestReceiver = null;
+        float closestDistance = float.MaxValue;
+
+        for (int i = 0; i < count; i++)
+        {
+            IInteractable receiver = WorldTopologyColliderProxy.ResolveComponent<IInteractable>(
+                interactionOverlapBuffer[i]);
+            Component receiverComponent = receiver as Component;
+            if (receiver == null || receiverComponent == null)
+                continue;
+
+            float distance = WorldTopologyRuntime.Distance(
+                item.transform.position, receiverComponent.transform.position);
+            if (distance > maxInteractDistance)
+                continue;
+
+            if (!receiversInRange.Contains(receiver))
+                receiversInRange.Add(receiver);
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestReceiver = receiver;
+            }
+        }
+
+        if (closestReceiver != null && currentReceiver != closestReceiver)
+            StartInteraction(closestReceiver);
     }
 
     private void OnDisable()

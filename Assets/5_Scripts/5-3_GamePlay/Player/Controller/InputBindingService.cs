@@ -156,6 +156,7 @@ public sealed class InputBindingService : IDisposable
         new BindingSpec("Tab", null, "营养面板", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
         new BindingSpec("HotbarPrevious", null, "快捷栏上一格", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
         new BindingSpec("HotbarNext", null, "快捷栏下一格", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
+        new BindingSpec("OpenChat", null, "打开聊天框", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button"),
         new BindingSpec("ESC", null, "关闭面板 / 打开设置", InputBindingDeviceGroup.Gamepad, "Gamepad", "Button")
     };
 

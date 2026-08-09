@@ -252,12 +252,15 @@ public static class GameSavePrefabBuilder
             background.color = InkSoft;
             Button button = root.AddComponent<Button>();
             button.targetGraphic = background;
-            button.navigation = new Navigation { mode = Navigation.Mode.None };
+            // 条目的业务选中态由 GameSaveItemView 统一控制，避免 ColorTint 覆盖确认后的高亮。
+            button.transition = Selectable.Transition.None;
+            // 动态条目生成后即可参与面板的自动导航，不依赖下一次运行时修复。
+            button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
             ColorBlock colors = button.colors;
             colors.normalColor = Color.white;
             colors.highlightedColor = new Color(1.16f, 1.12f, 1.04f, 1f);
             colors.pressedColor = new Color(0.72f, 0.76f, 0.78f, 1f);
-            colors.selectedColor = colors.highlightedColor;
+            colors.selectedColor = FlatWorldUITheme.Selection;
             colors.fadeDuration = 0.1f;
             button.colors = colors;
 
@@ -419,7 +422,7 @@ public static class GameSavePrefabBuilder
         colors.normalColor = Color.white;
         colors.highlightedColor = new Color(1.16f, 1.11f, 1.02f, 1f);
         colors.pressedColor = new Color(0.72f, 0.76f, 0.78f, 1f);
-        colors.selectedColor = colors.highlightedColor;
+        colors.selectedColor = FlatWorldUITheme.Selection;
         colors.disabledColor = new Color(0.42f, 0.43f, 0.44f, 0.56f);
         colors.fadeDuration = 0.12f;
         button.colors = colors;

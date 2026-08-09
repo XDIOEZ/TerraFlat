@@ -1,8 +1,11 @@
 // AI-Context: 正式运行时 UI 的 Prefab 固化入口；运行时代码只能实例化这些资产，不再创建视觉节点。
 
 using System.IO;
+using System.Collections.Generic;
 using TMPro;
 using UnityEditor;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -51,6 +54,8 @@ public static class RuntimeUIPrefabBuilder
 
         SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.AudioSettings + ".prefab", BuildAudioSettings);
         SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.UISettings + ".prefab", BuildInterfaceSettings);
+        SaveCoordinateDisplaySettingsPrefab();
+        SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.MainMenuSettings + ".prefab", BuildMainMenuSettings);
         SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.AutoSaveSettings + ".prefab", BuildAutoSaveSettings);
         SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab", BuildWorldStreamingSettings);
         SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.DifficultySettings + ".prefab", BuildDifficultySettings);
@@ -59,15 +64,16 @@ public static class RuntimeUIPrefabBuilder
         SaveNewPrefab(DialogueRoot + RuntimeUIPrefabKeys.PlayerChatInput + ".prefab", BuildPlayerChatInput);
         SaveNewPrefab(DialogueRoot + RuntimeUIPrefabKeys.CharacterSpeechBubble + ".prefab", BuildSpeechBubble);
         SaveNewPrefab(SystemRoot + RuntimeUIPrefabKeys.WorldLoading + ".prefab", BuildWorldLoading);
+        SavePlayerWorldCoordinatePrefab();
 
-        UpdateExistingPrefab(MenuRoot + "Info_Button_List.prefab", AddSettingsEntryButtons);
+        UpdateExistingPrefab(MenuRoot + "Info_Button_List.prefab", ConfigureSettingsActionListPages);
         UpdateExistingPrefab(InventoryRoot + "UI_Bag.prefab", AddInventorySortButton);
         UpdateExistingPrefab(InventoryRoot + "UI_Slot.prefab", AddCraftingPreviewLayers);
         UpdateExistingWorldPrefab(NetworkPlayerPrefab, AddNetworkPlayerNameLabel);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[Runtime UI] 已固化设置、世界加载、聊天、气泡、背包整理、制作预览与联机玩家名称 Prefab。运行时不再创建这些视觉节点。");
+        Debug.Log("[Runtime UI] 已固化设置、设置列表分页、显示设置、世界加载、聊天、气泡、玩家坐标、背包整理、制作预览与联机玩家名称 Prefab。运行时不再创建这些视觉节点。");
     }
 
     /// <summary>只重建区块流送设置和入口，避免小改动重写全部运行时 Prefab。</summary>
@@ -85,10 +91,67 @@ public static class RuntimeUIPrefabBuilder
         SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab",
             BuildWorldStreamingSettings);
         UpdateExistingPrefab(MenuRoot + "Info_Button_List.prefab",
-            AddWorldStreamingEntryButton);
+            ConfigureSettingsActionListPages);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[Runtime UI] 已固化区块流送性能设置 Prefab 与入口按钮。");
+    }
+
+    /// <summary>只重建主菜单设置窗口，便于单独调整显示、画质和语言的占位布局。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Main Menu Settings UI")]
+    public static void RebuildMainMenuSettingsUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(SettingsRoot);
+        SaveNewPrefab(
+            SettingsRoot + RuntimeUIPrefabKeys.MainMenuSettings + ".prefab",
+            BuildMainMenuSettings);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化主菜单设置窗口 Prefab（大小、画质、语言占位项）。");
+    }
+
+    /// <summary>只重建左上角常驻的玩家世界坐标 HUD，并确保其进入运行时 Prefab 索引。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Player World Coordinate HUD")]
+    public static void RebuildPlayerWorldCoordinateHUD()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(SystemRoot);
+        SavePlayerWorldCoordinatePrefab();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化玩家世界坐标 HUD Prefab。");
+    }
+
+    /// <summary>只重建坐标显示设置和设置列表分页，避免无关运行时 Prefab 被重写。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Coordinate Display Settings UI")]
+    public static void RebuildCoordinateDisplaySettingsUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(SettingsRoot);
+        SaveCoordinateDisplaySettingsPrefab();
+        UpdateExistingPrefab(MenuRoot + "Info_Button_List.prefab", ConfigureSettingsActionListPages);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化坐标显示设置 Prefab 与设置列表三分页。");
     }
 
     private static void SaveNewPrefab(string path, System.Func<GameObject> factory)
@@ -103,6 +166,40 @@ public static class RuntimeUIPrefabBuilder
         {
             Object.DestroyImmediate(root);
         }
+    }
+
+    /// <summary>保存坐标 HUD 并注册 Prefab 标签，确保 GameRes 能按键名加载。</summary>
+    private static void SavePlayerWorldCoordinatePrefab()
+    {
+        string prefabPath = SystemRoot + RuntimeUIPrefabKeys.PlayerWorldCoordinate + ".prefab";
+        SaveNewPrefab(prefabPath, BuildPlayerWorldCoordinateHUD);
+        EnsureRuntimePrefabAddressable(prefabPath);
+    }
+
+    /// <summary>保存坐标显示设置并登记为可由 GameRes 查询的正式运行时 Prefab。</summary>
+    private static void SaveCoordinateDisplaySettingsPrefab()
+    {
+        string prefabPath = SettingsRoot + RuntimeUIPrefabKeys.CoordinateDisplaySettings + ".prefab";
+        SaveNewPrefab(prefabPath, BuildCoordinateDisplaySettings);
+        EnsureRuntimePrefabAddressable(prefabPath);
+    }
+
+    /// <summary>为新增运行时 UI 建立可重复执行的 Addressables Prefab 条目。</summary>
+    private static void EnsureRuntimePrefabAddressable(string prefabPath)
+    {
+        string guid = AssetDatabase.AssetPathToGUID(prefabPath);
+        if (string.IsNullOrWhiteSpace(guid))
+            throw new InvalidDataException($"无法注册运行时 UI Prefab：{prefabPath}");
+
+        AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
+        if (settings == null)
+            throw new System.InvalidOperationException("AddressableAssetSettings 未初始化。");
+
+        AddressableAssetEntry entry = settings.FindAssetEntry(guid) ??
+                                      settings.CreateOrMoveEntry(guid, settings.DefaultGroup, false, false);
+        entry.address = prefabPath;
+        entry.SetLabel("Prefab", true, true);
+        settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, entry, true);
     }
 
     private static void UpdateExistingPrefab(string path, System.Action<GameObject> update)
@@ -139,6 +236,47 @@ public static class RuntimeUIPrefabBuilder
     #endregion
 
     #region 系统 UI
+
+    /// <summary>构建固定在屏幕左上角的非交互坐标卡片，尺寸为 296×72 设计像素。</summary>
+    private static GameObject BuildPlayerWorldCoordinateHUD()
+    {
+        GameObject root = CreateUIObject(RuntimeUIPrefabKeys.PlayerWorldCoordinate, null);
+        RectTransform rootRect = root.GetComponent<RectTransform>();
+        SetTopLeft(rootRect, 32f, 32f, 296f, 72f);
+
+        Image background = CreateImage("背景", root.transform, new Color(0.025f, 0.043f, 0.058f, 0.92f));
+        background.raycastTarget = false;
+        Stretch(background.rectTransform);
+        AddOutline(background, new Color(0.83f, 0.49f, 0.23f, 0.42f));
+
+        Shadow shadow = background.gameObject.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.48f);
+        shadow.effectDistance = new Vector2(3f, -3f);
+
+        Image accent = CreateImage("强调线", root.transform, Amber);
+        accent.raycastTarget = false;
+        RectTransform accentRect = accent.rectTransform;
+        accentRect.anchorMin = new Vector2(0f, 0f);
+        accentRect.anchorMax = new Vector2(0f, 1f);
+        accentRect.pivot = new Vector2(0f, 0.5f);
+        accentRect.anchoredPosition = Vector2.zero;
+        accentRect.sizeDelta = new Vector2(4f, -18f);
+
+        TextMeshProUGUI title = CreateText("坐标标题", root.transform, "世界坐标 / POSITION", 10f, Amber);
+        title.fontStyle = FontStyles.Bold;
+        title.characterSpacing = 1.15f;
+        title.enableWordWrapping = false;
+        title.overflowMode = TextOverflowModes.Ellipsis;
+        SetTopLeft(title.rectTransform, 18f, 11f, 258f, 16f);
+
+        TextMeshProUGUI coordinates = CreateText("坐标文本", root.transform, "X  +0.0    Y  +0.0", 16f, Cream);
+        coordinates.fontStyle = FontStyles.Bold;
+        coordinates.enableWordWrapping = false;
+        coordinates.overflowMode = TextOverflowModes.Ellipsis;
+        SetTopLeft(coordinates.rectTransform, 18f, 34f, 258f, 26f);
+
+        return root;
+    }
 
     private static GameObject BuildWorldLoading()
     {
@@ -268,6 +406,90 @@ public static class RuntimeUIPrefabBuilder
         Transform footer = CreateFooter(root.transform);
         CreateButton("恢复默认按钮", footer, "恢复默认", 104f, 34f, false);
         CreateButton("完成按钮", footer, "完成", 78f, 34f, true);
+        return root;
+    }
+
+    /// <summary>构建 HUD 坐标格式选择页；两种显示立即写入本地偏好，不会修改世界或存档坐标。</summary>
+    private static GameObject BuildCoordinateDisplaySettings()
+    {
+        GameObject root = CreatePanelRoot(
+            RuntimeUIPrefabKeys.CoordinateDisplaySettings,
+            new Vector2(620f, 360f));
+        CreateHeader(root.transform, "显示设置", "关闭按钮");
+        CreateHint(root.transform, "选择屏幕左上角坐标卡片的显示方式；切换会立即生效并自动保存。", 36f);
+
+        CreateSettingsSection(root.transform, "坐标显示", "POSITION HUD");
+        GameObject modeRow = CreateRow("坐标显示方式行", root.transform, 54f);
+        CreateRowLabel(modeRow.transform, "显示方式", 100f);
+        CreateButton("世界坐标模式按钮", modeRow.transform, "世界坐标  X / Y", 204f, 42f, true);
+        CreateButton("经纬度模式按钮", modeRow.transform, "经纬度  经 / 纬", 204f, 42f, false);
+
+        TextMeshProUGUI status = CreateText(
+            "状态文本",
+            root.transform,
+            "当前显示：世界坐标（X / Y）",
+            13f,
+            Muted);
+        status.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
+
+        Transform footer = CreateFooter(root.transform);
+        CreateButton("完成按钮", footer, "完成", 78f, 34f, true);
+        return root;
+    }
+
+    /// <summary>构建主菜单设置窗口；当前只提供视觉与占位选项，不接入实际设置逻辑。</summary>
+    private static GameObject BuildMainMenuSettings()
+    {
+        GameObject root = CreateModalPanelRoot(
+            RuntimeUIPrefabKeys.MainMenuSettings,
+            new Vector2(720f, 600f));
+        Transform dialog = root.transform.Find("设置对话框");
+
+        CreateHeader(dialog, "游戏设置", "关闭按钮");
+        CreateHint(dialog, "调整显示大小、画质与语言。选项为界面预览，功能将在后续接入。", 36f);
+
+        CreateSettingsSection(dialog, "显示", "DISPLAY");
+        CreateSettingsDropdownRow(
+            dialog,
+            "窗口大小",
+            "窗口大小下拉列表",
+            new[] { "1920 × 1080", "1600 × 900", "1280 × 720" });
+        CreateSettingsDropdownRow(
+            dialog,
+            "显示模式",
+            "显示模式下拉列表",
+            new[] { "全屏窗口", "全屏", "窗口" });
+
+        CreateSettingsSection(dialog, "画质", "GRAPHICS");
+        CreateSettingsDropdownRow(
+            dialog,
+            "画质预设",
+            "画质预设下拉列表",
+            new[] { "高（推荐）", "中", "低" });
+        CreateSettingsDropdownRow(
+            dialog,
+            "特效质量",
+            "特效质量下拉列表",
+            new[] { "高", "中", "低" });
+
+        CreateSettingsSection(dialog, "语言", "LANGUAGE");
+        CreateSettingsDropdownRow(
+            dialog,
+            "游戏语言",
+            "游戏语言下拉列表",
+            new[] { "简体中文", "English" });
+
+        TextMeshProUGUI status = CreateText(
+            "设置状态",
+            dialog,
+            "当前为界面预览；设置功能将在后续版本接入。",
+            13f,
+            Muted);
+        status.gameObject.AddComponent<LayoutElement>().preferredHeight = 26f;
+
+        Transform footer = CreateFooter(dialog);
+        CreateButton("恢复默认按钮", footer, "恢复默认", 104f, 34f, false);
+        CreateButton("返回按钮", footer, "返回", 78f, 34f, true);
         return root;
     }
 
@@ -542,37 +764,181 @@ public static class RuntimeUIPrefabBuilder
 
     #region 现有 Prefab 固化
 
-    private static void AddSettingsEntryButtons(GameObject root)
+    /// <summary>
+    /// 将原本堆在同一 ScrollRect 中的设置入口拆成三页。
+    /// 每页最多四项，分页控制固定在滚动区域下方，避免入口继续向下溢出。
+    /// </summary>
+    private static void ConfigureSettingsActionListPages(GameObject root)
     {
         Transform content = FindTransform(root.transform, "Content");
-        if (content == null)
-            throw new MissingReferenceException("Info_Button_List.prefab 缺少 Content。");
+        RectTransform scrollRect = FindTransform(root.transform, "Scroll View") as RectTransform;
+        if (content == null || scrollRect == null)
+            throw new MissingReferenceException("Info_Button_List.prefab 缺少 Content 或 Scroll View。");
 
-        EnsureEntryButton(content, "音量调节");
-        EnsureEntryButton(content, "UI设置");
-        EnsureEntryButton(content, "自动保存");
-        EnsureEntryButton(content, "流送性能");
-        EnsureEntryButton(content, "游戏难度");
-        EnsureEntryButton(content, "按键绑定");
+        SetTopLeft(scrollRect, 42f, 148f, 346f, 314f);
+        ConfigureActionListScroll(scrollRect, content);
+
+        Transform interfacePage = EnsureActionListPage(
+            content,
+            SettingsActionListPagination.InterfacePageName);
+        Transform worldPage = EnsureActionListPage(
+            content,
+            SettingsActionListPagination.WorldPageName);
+        Transform sessionPage = EnsureActionListPage(
+            content,
+            SettingsActionListPagination.SessionPageName);
+
+        MoveEntryToPage(root.transform, interfacePage, "音量调节");
+        MoveEntryToPage(root.transform, interfacePage, "UI设置");
+        MoveEntryToPage(root.transform, interfacePage, "显示设置");
+        MoveEntryToPage(root.transform, interfacePage, "按键绑定");
+
+        MoveEntryToPage(root.transform, worldPage, "自动保存");
+        MoveEntryToPage(root.transform, worldPage, "流送性能");
+        MoveEntryToPage(root.transform, worldPage, "游戏难度");
+
+        MoveEntryToPage(root.transform, sessionPage, "保存游戏");
+        MoveEntryToPage(root.transform, sessionPage, "保存并回到主界面按钮");
+        MoveEntryToPage(root.transform, sessionPage, "保存并退出游戏按钮");
+
+        interfacePage.SetSiblingIndex(0);
+        worldPage.SetSiblingIndex(1);
+        sessionPage.SetSiblingIndex(2);
+        interfacePage.gameObject.SetActive(true);
+        worldPage.gameObject.SetActive(false);
+        sessionPage.gameObject.SetActive(false);
+        EnsureActionListPagerControls(root.transform);
     }
 
-    /// <summary>只向现有设置列表追加流送性能入口。</summary>
-    private static void AddWorldStreamingEntryButton(GameObject root)
+    /// <summary>设置分页列表的视口与 Content，彻底移除旧的纵向滚动布局所有权。</summary>
+    private static void ConfigureActionListScroll(RectTransform scrollRect, Transform content)
     {
-        Transform content = FindTransform(root.transform, "Content");
-        if (content == null)
-            throw new MissingReferenceException("Info_Button_List.prefab 缺少 Content。");
-        EnsureEntryButton(content, "流送性能");
+        ScrollRect scroll = scrollRect.GetComponent<ScrollRect>();
+        if (scroll != null)
+        {
+            scroll.horizontal = false;
+            scroll.vertical = false;
+            scroll.inertia = false;
+            scroll.verticalScrollbar = null;
+        }
+
+        Transform scrollbar = FindTransform(scrollRect, "Scrollbar Vertical");
+        if (scrollbar != null)
+            scrollbar.gameObject.SetActive(false);
+
+        GridLayoutGroup grid = content.GetComponent<GridLayoutGroup>();
+        if (grid != null)
+            Object.DestroyImmediate(grid);
+        VerticalLayoutGroup verticalLayout = content.GetComponent<VerticalLayoutGroup>();
+        if (verticalLayout != null)
+            Object.DestroyImmediate(verticalLayout);
+        ContentSizeFitter fitter = content.GetComponent<ContentSizeFitter>();
+        if (fitter != null)
+            Object.DestroyImmediate(fitter);
+
+        RectTransform contentRect = content as RectTransform;
+        if (contentRect == null)
+            throw new MissingComponentException("Info_Button_List.prefab 的 Content 缺少 RectTransform。");
+        Stretch(contentRect);
     }
 
-    private static void EnsureEntryButton(Transform content, string name)
+    /// <summary>创建或更新可铺满视口的单个分页容器。</summary>
+    private static Transform EnsureActionListPage(Transform content, string pageName)
     {
-        Transform existing = FindTransform(content, name);
-        GameObject buttonObject = existing != null
-            ? existing.gameObject
-            : CreateButton(name, content, name, 264f, 52f, false).gameObject;
-        buttonObject.name = name;
-        ConfigureButtonVisual(buttonObject.GetComponent<Button>(), false, name);
+        Transform page = FindTransform(content, pageName);
+        if (page == null)
+            page = CreateUIObject(pageName, content).transform;
+
+        RectTransform pageRect = page as RectTransform;
+        Stretch(pageRect);
+
+        GridLayoutGroup grid = page.GetComponent<GridLayoutGroup>();
+        if (grid != null)
+            Object.DestroyImmediate(grid);
+        ContentSizeFitter fitter = page.GetComponent<ContentSizeFitter>();
+        if (fitter != null)
+            Object.DestroyImmediate(fitter);
+
+        VerticalLayoutGroup layout = page.GetComponent<VerticalLayoutGroup>();
+        if (layout == null)
+            layout = page.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(0, 0, 0, 0);
+        layout.spacing = 12f;
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+        return page;
+    }
+
+    /// <summary>复用既有业务按钮或创建新入口，并将其移动到指定页面。</summary>
+    private static void MoveEntryToPage(Transform root, Transform page, string entryName)
+    {
+        Transform entry = FindTransform(root, entryName);
+        Button button = entry != null ? entry.GetComponent<Button>() : null;
+        if (button == null)
+            button = CreateButton(entryName, page, entryName, 264f, 52f, false);
+
+        button.gameObject.name = entryName;
+        button.transform.SetParent(page, false);
+        button.gameObject.SetActive(true);
+
+        LayoutElement element = button.GetComponent<LayoutElement>() ??
+                                button.gameObject.AddComponent<LayoutElement>();
+        element.preferredWidth = 264f;
+        element.preferredHeight = 52f;
+        button.GetComponent<RectTransform>().sizeDelta = new Vector2(264f, 52f);
+        ConfigureButtonVisual(button, false, entryName);
+    }
+
+    /// <summary>创建固定在列表底部的翻页按钮与页码文本。</summary>
+    private static void EnsureActionListPagerControls(Transform root)
+    {
+        Button previous = EnsureActionListPagerButton(
+            root,
+            SettingsActionListPagination.PreviousButtonName,
+            "上一页");
+        SetTopLeft(previous.GetComponent<RectTransform>(), 42f, 482f, 112f, 38f);
+
+        TextMeshProUGUI pageText = FindTransform(
+            root,
+            SettingsActionListPagination.PageTextName)?.GetComponent<TextMeshProUGUI>();
+        if (pageText == null)
+        {
+            pageText = CreateText(
+                SettingsActionListPagination.PageTextName,
+                root,
+                "PAGE  1 / 3",
+                12f,
+                Muted);
+        }
+
+        pageText.fontStyle = FontStyles.Bold;
+        pageText.alignment = TextAlignmentOptions.Center;
+        pageText.raycastTarget = false;
+        SetTopLeft(pageText.rectTransform, 164f, 482f, 100f, 38f);
+
+        Button next = EnsureActionListPagerButton(
+            root,
+            SettingsActionListPagination.NextButtonName,
+            "下一页");
+        SetTopLeft(next.GetComponent<RectTransform>(), 276f, 482f, 112f, 38f);
+    }
+
+    private static Button EnsureActionListPagerButton(
+        Transform root,
+        string buttonName,
+        string caption)
+    {
+        Button button = FindTransform(root, buttonName)?.GetComponent<Button>();
+        if (button == null)
+            button = CreateButton(buttonName, root, caption, 112f, 38f, false);
+
+        button.gameObject.name = buttonName;
+        button.gameObject.SetActive(true);
+        ConfigureButtonVisual(button, false, caption);
+        return button;
     }
 
     private static void AddInventorySortButton(GameObject root)
@@ -689,6 +1055,40 @@ public static class RuntimeUIPrefabBuilder
         return root;
     }
 
+    /// <summary>创建带遮罩的居中模态面板，根节点负责拦截背景输入。</summary>
+    private static GameObject CreateModalPanelRoot(string name, Vector2 size)
+    {
+        GameObject root = new GameObject(
+            name,
+            typeof(RectTransform),
+            typeof(CanvasGroup),
+            typeof(CanvasRenderer),
+            typeof(Image),
+            typeof(BasePanel));
+        Stretch(root.GetComponent<RectTransform>());
+
+        Image overlay = root.GetComponent<Image>();
+        overlay.color = new Color(0.015f, 0.028f, 0.034f, 0.78f);
+        overlay.raycastTarget = true;
+        ConfigureBasePanel(root);
+
+        GameObject dialog = CreateUIObject("设置对话框", root.transform, typeof(Image));
+        SetCentered(dialog.GetComponent<RectTransform>(), Vector2.zero, size);
+        Image dialogImage = dialog.GetComponent<Image>();
+        dialogImage.color = Canvas;
+        dialogImage.raycastTarget = true;
+        AddOutline(dialogImage, Amber);
+
+        VerticalLayoutGroup layout = dialog.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(20, 20, 18, 18);
+        layout.spacing = 10f;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        return root;
+    }
+
     private static void ConfigureBasePanel(GameObject root)
     {
         BasePanel panel = root.GetComponent<BasePanel>();
@@ -738,6 +1138,57 @@ public static class RuntimeUIPrefabBuilder
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = false;
         return row;
+    }
+
+    /// <summary>创建设置页的小节标题，统一使用琥珀色强调和英文眉题。</summary>
+    private static void CreateSettingsSection(Transform parent, string title, string eyebrow)
+    {
+        GameObject section = CreateUIObject(title + "设置分组", parent, typeof(Image));
+        LayoutElement element = section.AddComponent<LayoutElement>();
+        element.preferredHeight = 26f;
+
+        Image background = section.GetComponent<Image>();
+        background.color = new Color(0.07f, 0.15f, 0.17f, 0.72f);
+        AddOutline(background, new Color(0.55f, 0.68f, 0.70f, 0.16f));
+
+        HorizontalLayoutGroup layout = section.AddComponent<HorizontalLayoutGroup>();
+        layout.padding = new RectOffset(12, 12, 3, 3);
+        layout.spacing = 10f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        TextMeshProUGUI titleText = CreateText(title + "分组标题", section.transform, title, 13f, Amber);
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.gameObject.AddComponent<LayoutElement>().preferredWidth = 96f;
+
+        TextMeshProUGUI eyebrowText = CreateText(title + "分组英文", section.transform, eyebrow, 10f, Muted);
+        eyebrowText.characterSpacing = 2f;
+        eyebrowText.alignment = TextAlignmentOptions.MidlineRight;
+        eyebrowText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+    }
+
+    /// <summary>创建设置页下拉项，并写入仅用于展示的默认选项。</summary>
+    private static TMP_Dropdown CreateSettingsDropdownRow(
+        Transform parent,
+        string label,
+        string dropdownName,
+        string[] options)
+    {
+        GameObject row = CreateRow(label + "行", parent, 44f);
+        CreateRowLabel(row.transform, label, 122f);
+
+        TMP_Dropdown dropdown = CreateDropdown(dropdownName, row.transform);
+        LayoutElement element = dropdown.gameObject.AddComponent<LayoutElement>();
+        element.preferredWidth = 480f;
+        element.preferredHeight = 40f;
+        dropdown.ClearOptions();
+        dropdown.AddOptions(new List<string>(options));
+        dropdown.value = 0;
+        dropdown.RefreshShownValue();
+        return dropdown;
     }
 
     private static void CreateRowLabel(Transform parent, string value, float width)
@@ -1070,7 +1521,7 @@ public static class RuntimeUIPrefabBuilder
         colors.normalColor = Color.white;
         colors.highlightedColor = new Color(1.12f, 1.08f, 1f, 1f);
         colors.pressedColor = new Color(0.74f, 0.78f, 0.80f, 1f);
-        colors.selectedColor = colors.highlightedColor;
+        colors.selectedColor = FlatWorldUITheme.Selection;
         colors.disabledColor = new Color(0.45f, 0.45f, 0.45f, 0.55f);
         colors.fadeDuration = 0.1f;
         button.colors = colors;
@@ -1169,6 +1620,15 @@ public static class RuntimeUIPrefabBuilder
         rect.pivot = new Vector2(0.5f, 0.5f);
         rect.anchoredPosition = position;
         rect.sizeDelta = size;
+    }
+
+    private static void SetTopLeft(RectTransform rect, float left, float top, float width, float height)
+    {
+        rect.anchorMin = new Vector2(0f, 1f);
+        rect.anchorMax = new Vector2(0f, 1f);
+        rect.pivot = new Vector2(0f, 1f);
+        rect.anchoredPosition = new Vector2(left, -top);
+        rect.sizeDelta = new Vector2(width, height);
     }
 
     private static void SetTopStretch(RectTransform rect, Vector2 offsetMin, Vector2 offsetMax)

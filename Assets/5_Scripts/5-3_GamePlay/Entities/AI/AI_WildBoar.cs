@@ -21,7 +21,7 @@ public enum WildBoarState
 
 /// <summary>
 /// 野猪 AI：支持觅食/进食/睡眠/愤怒值/攻击伤害窗口/逃跑等行为。
-/// 状态优先级：逃跑 > 攻击 > 追击 > 警觉 > 睡眠 > 进食 > 觅食 > 移动 > 待机
+/// 状态优先级：逃跑 > 攻击 > 警觉 > 追击 > 睡眠 > 进食 > 觅食 > 移动 > 待机
 /// </summary>
 public partial class AI_WildBoar : AI_Base<WildBoarState>
 {
@@ -139,8 +139,10 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/追击"), LabelText("追击玩家")]
 	public bool chasePlayer = true;
 
-	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/攻击"), HorizontalGroup("配置/战斗/攻击/Hr1"), LabelText("触发距离"), SuffixLabel("米", true), MinValue(0.1f)]
-	public float attackTriggerDistance = 2f;
+	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/攻击"), HorizontalGroup("配置/战斗/攻击/Hr1"), LabelText("横向距离"), SuffixLabel("米", true), MinValue(0.1f)]
+	public float attackTriggerDistance = 1.6f;
+	[HorizontalGroup("配置/战斗/攻击/Hr1"), LabelText("竖向距离"), SuffixLabel("米", true), MinValue(0.1f)]
+	public float attackVerticalTriggerDistance = 0.45f;
 	[HorizontalGroup("配置/战斗/攻击/Hr1"), LabelText("持续时间"), SuffixLabel("秒", true), MinValue(0.1f)]
 	public float attackDuration = 1.5f;
 
@@ -152,7 +154,9 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/攻击"), LabelText("攻击冷却"), SuffixLabel("秒", true), MinValue(0f)]
 	public float attackCooldown = 2f;
 	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/攻击"), LabelText("攻击窗口"), SuffixLabel("秒", true), MinValue(0.01f)]
-	public float attackDamageWindow = 0.2f;
+	public float attackDamageWindow = 0.12f;
+	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/攻击"), LabelText("攻击窗口延迟"), SuffixLabel("秒", true), MinValue(0f)]
+	public float attackDamageStartDelay = 0.06f;
 
 	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/逃跑"), HorizontalGroup("配置/战斗/逃跑/Hr1"), LabelText("触发血量"), Range(0f, 1f)]
 	public float fleeTriggerHpRate = 0.2f;
@@ -237,12 +241,18 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		_attack.Reset();
 		_attack.Cooldown = attackCooldown;
 		_attack.DamageWindow = attackDamageWindow;
+		_attack.DamageWindowStartDelay = attackDamageStartDelay;
 	}
 
 	protected override void OnBindExtraModules()
 	{
 		item.itemMods.GetMod_ByID(ModText.Food, out Mod_Food food);
 		_food = food;
+		if (_detector != null)
+		{
+			// 感知半径至少覆盖追击触发距离；丢失距离由当前目标记忆维持。
+			_detector.DetectionRadius = Mathf.Max(_detector.DetectionRadius, chaseTriggerDistance);
+		}
 		_attack.Bind(item);
 	}
 
@@ -335,8 +345,8 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	{
 		if (ShouldFlee())    return WildBoarState.Flee;
 		if (ShouldAttack())  return WildBoarState.Attack;
-		if (ShouldChase())   return WildBoarState.Chase;
 		if (ShouldAlert())   return WildBoarState.Alert;
+		if (ShouldChase())   return WildBoarState.Chase;
 		if (ShouldSleep())   return WildBoarState.Sleep;
 		if (ShouldEat())     return WildBoarState.Eat;
 		if (ShouldForage())  return WildBoarState.Forage;
@@ -360,7 +370,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	#region Tick - WildBoar 特有状态
 	private void TickForage()
 	{
-		TryRefreshDetector();
 		if (_currentFoodTarget == null)
 		{
 			_currentFoodTarget = FindClosestEdibleItem();
@@ -421,8 +430,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		Vector3 targetPosition = _currentThreat.transform.position;
 		FaceTarget(targetPosition, true);
 
-		float distance = DistanceTo(_currentThreat.transform);
-		if (distance <= attackTriggerDistance)
+		if (IsTargetInsideAttackRange(targetPosition))
 		{
 			StopMove();
 			if (!_attack.IsWindowTriggered && _attack.IsCooldownDone)
@@ -461,14 +469,12 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	private bool ShouldAttack()
 	{
 		if (_currentThreat == null) return false;
-		float distance = DistanceTo(_currentThreat.transform);
+		if (_currentState != WildBoarState.Attack && _alertCooldownTimer > 0f) return false;
 		float rageLevel = Data.RageLevel;
 
-		float allowedDistance = _currentState == WildBoarState.Attack
-			? attackTriggerDistance * 1.15f
-			: attackTriggerDistance;
+		// 攻击状态与伤害触发盒共用横向更远、竖向更窄的椭圆范围，避免上下方向空挥。
 		float requiredRage = _currentState == WildBoarState.Attack ? 0.1f : 0.3f;
-		return distance <= allowedDistance && rageLevel > requiredRage;
+		return IsTargetInsideAttackRange(_currentThreat.transform.position) && rageLevel > requiredRage;
 	}
 
 	private bool ShouldChase()
@@ -493,29 +499,20 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	private bool ShouldAlert()
 	{
-		TryRefreshDetector();
-		Item threat = FindThreatInAlertRange();
+		if (_currentThreat == null)
+			return _alertCooldownTimer > 0f;
 
-		if (_currentState == WildBoarState.Alert)
-		{
-			if (threat != null)
-			{
-				_currentThreat = threat;
-				_alertCooldownTimer = alertDuration;
-				return true;
-			}
-			if (_alertCooldownTimer > 0f) return true;
-			_currentThreat = null;
-			return false;
-		}
-
-		if (threat != null)
-		{
-			_currentThreat = threat;
-			_alertCooldownTimer = alertDuration;
+		// 外部激怒或已进入警觉状态时，使用现有计时器完成警觉延迟。
+		if (_currentState == WildBoarState.Alert || _alertCooldownTimer > 0f)
 			return true;
-		}
-		return false;
+		if (_currentState == WildBoarState.Chase || _currentState == WildBoarState.Attack)
+			return false;
+
+		if (DistanceTo(_currentThreat.transform) > alertDetectDistance)
+			return false;
+
+		_alertCooldownTimer = Mathf.Max(0.01f, alertToChaseDuration);
+		return true;
 	}
 
 	private bool ShouldSleep()
@@ -549,7 +546,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		if (hungerRate > eatEnterHungerRate) return false;
 		if (_currentFoodTarget == null)
 		{
-			TryRefreshDetector();
 			_currentFoodTarget = FindClosestEdibleItem();
 			if (_currentFoodTarget == null) return false;
 		}
@@ -563,7 +559,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 		if (_currentFoodTarget == null)
 		{
-			TryRefreshDetector();
 			_currentFoodTarget = FindClosestEdibleItem();
 			if (_currentFoodTarget == null) return false;
 		}
@@ -572,9 +567,32 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	#endregion
 
 	#region Helpers - WildBoar 特有
+	/// <summary>判断目标是否位于横向更远、竖向更窄的攻击椭圆内。</summary>
+	private bool IsTargetInsideAttackRange(Vector3 targetPosition)
+	{
+		Vector2 delta = WorldTopologyRuntime.ShortestDelta(transform.position, targetPosition);
+		return IsInsideEllipticalAttackRange(
+			delta,
+			attackTriggerDistance,
+			attackVerticalTriggerDistance);
+	}
+
+	/// <summary>用椭圆半轴判断相对坐标是否可进入攻击范围。</summary>
+	public static bool IsInsideEllipticalAttackRange(
+		Vector2 delta,
+		float horizontalRadius,
+		float verticalRadius)
+	{
+		float safeHorizontalRadius = Mathf.Max(0.01f, horizontalRadius);
+		float safeVerticalRadius = Mathf.Max(0.01f, verticalRadius);
+		float normalizedHorizontal = delta.x / safeHorizontalRadius;
+		float normalizedVertical = delta.y / safeVerticalRadius;
+		return normalizedHorizontal * normalizedHorizontal +
+		       normalizedVertical * normalizedVertical <= 1f;
+	}
+
 	private void RefreshThreatTarget()
 	{
-		TryRefreshDetector();
 		Item nearestThreat = FindClosestThreat();
 
 		if (nearestThreat != null)
@@ -583,8 +601,9 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 			return;
 		}
 
-		// 没有检测到新威胁，清除现有威胁
-		_currentThreat = null;
+		// 感知快照暂时没有新目标时保留当前目标，直到超过追击放弃距离。
+		if (_currentThreat != null && DistanceTo(_currentThreat.transform) > chaseLossDistance)
+			_currentThreat = null;
 	}
 
 	private void UpdateRageLevel(float deltaTime)
@@ -606,42 +625,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	private Item FindClosestThreat()
 	{
 		return _detector.FindClosestItemByTags(chaseThreatTags, transform.position, chasePlayer);
-	}
-
-	private Item FindThreatInAlertRange()
-	{
-		List<Item> allItems = _detector.CurrentItemsInArea;
-		if (allItems == null || allItems.Count == 0) return null;
-
-		Item closestThreat = null;
-		float closestDistance = float.MaxValue;
-
-		foreach (Item item in allItems)
-		{
-			if (item == null) continue;
-
-			bool isThreat = false;
-			if (chasePlayer && item.CompareTag("Player")) isThreat = true;
-			if (!isThreat && chaseThreatTags != null && item.itemData != null && item.itemData.Tags != null)
-			{
-				foreach (string tag in chaseThreatTags)
-				{
-					if (item.itemData.Tags.Contains(tag)) { isThreat = true; break; }
-				}
-			}
-			if (item.name != null && chaseThreatTags != null && chaseThreatTags.Contains(item.name)) isThreat = true;
-
-			if (isThreat)
-			{
-				float dist = DistanceTo(item.transform);
-				if (dist < closestDistance && dist <= alertDetectDistance)
-				{
-					closestThreat = item;
-					closestDistance = dist;
-				}
-			}
-		}
-		return closestThreat;
 	}
 
 	private Item FindClosestEdibleItem()

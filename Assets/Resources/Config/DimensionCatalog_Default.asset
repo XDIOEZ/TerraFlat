@@ -38,7 +38,7 @@ MonoBehaviour:
   - DimensionId: cave
     DisplayName: "\u5730\u4E0B\u77FF\u6D1E"
     GenerationMode: 1
-    GenerationProfile: {fileID: 11400000, guid: aa7b6291e6ab42aa8b7d9924dd7c5eef, type: 2}
+    GenerationProfile: {fileID: 11400000, guid: 4c731b47572548d3a41dc7e31a564f59, type: 2}
     ChunkViewPrefab: {fileID: 2002, guid: 5fd5ad0c427441e78f6085d92b935fd9, type: 3}
     MapCorePrefabId: MapCore
     SeedSalt: 7919

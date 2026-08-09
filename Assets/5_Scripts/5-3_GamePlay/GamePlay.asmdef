@@ -28,7 +28,8 @@
         "GUID:d8b63aba1907145bea998dd612889d6b",
         "FlatWorld.Audio",
         "FlatWorld.Networking.Core",
-        "FlatWorld.WorldModel"
+        "FlatWorld.WorldModel",
+        "FlatWorld.Localization"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

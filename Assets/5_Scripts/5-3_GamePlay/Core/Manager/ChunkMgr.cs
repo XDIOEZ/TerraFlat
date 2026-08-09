@@ -667,6 +667,12 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
         if (item == null)
             return;
 
+        if (RuntimeAiEntityUtility.IsAiEntity(item))
+        {
+            ItemWorldPlacement.AttachRuntimeAi(item, item.gameObject);
+            return;
+        }
+
         Vector2 worldPosition = item.transform.position;
         if (WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds) &&
             !bounds.Contains(worldPosition))

@@ -69,6 +69,67 @@ namespace FlatWorld.GameTest.InventoryCrafting
             }
         }
 
+        [Test]
+        [Category("InventoryCrafting.Smoke")]
+        [Category("Smoke")]
+        public void PlayerBagLeftClickTransfersToHotbarInsteadOfHiddenHandSlot()
+        {
+            GameObject playerObject = new("PlayerBagLeftClick_Test");
+            Inventory previousPlayerHand = Inventory_Hand.PlayerHand;
+
+            try
+            {
+                Player player = playerObject.AddComponent<Player>();
+                Inventory_HotBar hotbar = playerObject.AddComponent<Inventory_HotBar>();
+                hotbar.RuntimeInventory = new Inventory_HotBar.HotBarRuntimeInventory
+                {
+                    Data = new Inventory_Data(
+                        new List<ItemSlot> { new ItemSlot(0) },
+                        ModText.Hotbar)
+                };
+                hotbar.RuntimeInventory.Owner = null;
+
+                player.itemMods.BindOwner(player);
+                player.itemMods.Mods_List[ModText.Hotbar] = new List<Module> { hotbar };
+
+                Inventory hiddenHand = new Inventory
+                {
+                    Data = new Inventory_Data(
+                        new List<ItemSlot> { new ItemSlot(0) },
+                        ModText.Hand)
+                };
+
+                Inventory bag = new Inventory
+                {
+                    item = player,
+                    Data = new Inventory_Data(
+                        new List<ItemSlot> { new ItemSlot(0) },
+                        ModText.Bag),
+                    DefaultTarget_Inventory = hiddenHand
+                };
+                bag.Data.itemSlots[0].itemData = new Data_GeneralItem
+                {
+                    IDName = "Regression_Item",
+                    Stack = new ItemStack { Amount = 1f, Volume = 1f }
+                };
+
+                Inventory_Hand.PlayerHand = null;
+                bag.OnLeftClick(0);
+
+                Assert.That(bag.Data.itemSlots[0].itemData, Is.Null, "玩家背包槽位应转出物品。");
+                Assert.That(hiddenHand.Data.itemSlots[0].itemData, Is.Null, "物品不应落入不可见的手部缓冲槽。");
+                Assert.That(
+                    hotbar.RuntimeInventory.Data.itemSlots[0].itemData?.IDName,
+                    Is.EqualTo("Regression_Item"),
+                    "玩家背包左键应将物品放入当前快捷栏槽位。");
+            }
+            finally
+            {
+                Inventory_Hand.PlayerHand = previousPlayerHand;
+                UnityEngine.Object.DestroyImmediate(playerObject);
+            }
+        }
+
 
         private static void AssertCraftingPreviewLayers(ItemSlot_UI slot, string prefabPath)
         {

@@ -78,6 +78,20 @@ namespace FlatWorld.WorldModel
             values[GetIndex(x, y)] = value;
         }
 
+        /// <summary>读取生成阶段已经写入的环境值，供后续纯生成阶段复用。</summary>
+        public bool TryGetEnvironmentValue(string layerId, int x, int y, out float value)
+        {
+            ThrowIfUnavailable();
+            if (_environmentLayers.TryGetValue(layerId, out float[] values))
+            {
+                value = values[GetIndex(x, y)];
+                return true;
+            }
+
+            value = default;
+            return false;
+        }
+
         /// <summary>设置某个格子的草地状态。</summary>
         public void SetGrass(int x, int y, byte value)
         {
@@ -193,6 +207,10 @@ namespace FlatWorld.WorldModel
     /// </summary>
     public sealed class ChunkTerrainData : IDisposable
     {
+        // 草层状态：0 表示尚未初始化，1 表示无草，2 表示有草。
+        public const byte GrassEmpty = 1;
+        public const byte GrassPresent = 2;
+
         private TerrainCell[] _cells;
         private Dictionary<string, float[]> _environmentLayers;
         private Dictionary<int, int[]> _extendedTileStacks;
@@ -319,6 +337,64 @@ namespace FlatWorld.WorldModel
             return count == 0 ? 0 : GetTileIdAt(x, y, count - 1);
         }
 
+        /// <summary>预览阶段判断普通地形格能否写入运行时建筑阻挡层。</summary>
+        public bool CanSetBlockingTile(int x, int y, int tileId)
+        {
+            ThrowIfDisposed();
+            if (tileId == 0)
+                throw new ArgumentOutOfRangeException(nameof(tileId));
+
+            int index = GetIndex(x, y);
+            if (_extendedTileStacks.ContainsKey(index))
+                return false;
+
+            return _cells[index].BlockingTileId == 0;
+        }
+
+        /// <summary>在普通三层地形格上写入运行时建筑的阻挡地块。</summary>
+        public bool TrySetBlockingTile(int x, int y, int tileId)
+        {
+            ThrowIfDisposed();
+            if (tileId == 0)
+                throw new ArgumentOutOfRangeException(nameof(tileId));
+
+            int index = GetIndex(x, y);
+            // 扩展堆栈拥有自己的完整顺序，不能让单独的 BlockingTileId 与它分叉。
+            if (_extendedTileStacks.ContainsKey(index))
+                return false;
+
+            TerrainCell previous = _cells[index];
+            if (previous.BlockingTileId == tileId &&
+                (previous.Flags & TerrainCellFlags.Blocking) != 0)
+                return true;
+
+            TerrainCellFlags flags = previous.Flags | TerrainCellFlags.Blocking;
+            _cells[index] = new TerrainCell(previous.GroundTileId, previous.BackTileId,
+                tileId, previous.BiomeId, previous.NavigationCost, flags);
+            MarkChanged(x, y, TerrainChangeKind.TileStack);
+            return true;
+        }
+
+        /// <summary>移除运行时建筑写入的阻挡地块，并恢复原格子的可行走状态。</summary>
+        public bool TryRemoveBlockingTile(int x, int y, int expectedTileId = 0)
+        {
+            ThrowIfDisposed();
+            int index = GetIndex(x, y);
+            if (_extendedTileStacks.ContainsKey(index))
+                return false;
+
+            TerrainCell previous = _cells[index];
+            if (previous.BlockingTileId == 0 ||
+                (expectedTileId != 0 && previous.BlockingTileId != expectedTileId))
+                return false;
+
+            TerrainCellFlags flags = previous.Flags & ~TerrainCellFlags.Blocking;
+            _cells[index] = new TerrainCell(previous.GroundTileId, previous.BackTileId,
+                0, previous.BiomeId, previous.NavigationCost, flags);
+            MarkChanged(x, y, TerrainChangeKind.TileStack);
+            return true;
+        }
+
         /// <summary>
         /// 用一个新列表替换这个格子的所有地块层。
         /// 0 代表空层，会被删掉；前三层放进普通格子数据，超过三层时再额外保存完整顺序。
@@ -374,6 +450,19 @@ namespace FlatWorld.WorldModel
                 return;
             _grass[index] = value;
             MarkChanged(x, y, TerrainChangeKind.Grass);
+        }
+
+        /// <summary>消费一格存在的草，并通知草层渲染器清除对应格子。</summary>
+        public bool TryConsumeGrass(int x, int y)
+        {
+            ThrowIfDisposed();
+            int index = GetIndex(x, y);
+            if (_grass[index] != GrassPresent)
+                return false;
+
+            _grass[index] = GrassEmpty;
+            MarkChanged(x, y, TerrainChangeKind.Grass);
+            return true;
         }
 
         /// <summary>复制一份全部草地数据，调用方可以放心保存，不会影响原地图。</summary>

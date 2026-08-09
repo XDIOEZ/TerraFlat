@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 时间、天气与温度定位
 
-> 最后核对：2026-07-31。
+> 最后核对：2026-08-09。
 
 ## 修改前先读
 
@@ -34,6 +34,7 @@ disable-model-invocation: false
 - 星球天气数据：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/PlanetData.cs`。
 - 地表静态降水层：`EnvironmentLayers.Precipitation` 由 `ChunkGenerator_Land` 根据最终高度图生成；它影响群系、资源和自然作物环境，不等同于 `WeatherMgr` 的动态降雨事件强度。
 - 雨效控制：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/RainEffectController.cs`。
+- 雨滴落地水花：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/RainGroundSplashController.cs`；由 `WeatherMgr` 独立按需加载 `Resources/Weather/RainGroundSplash`，只同步启停与强度；原雨层定位仍由 `RainEffectController` 负责。
 - 权威天气事件接线：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/WeatherMgr.AuthoritativeEvent.cs`。
 - 角色温度模块：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Mod_Temperature.cs`。
 - 玩家雨中暴露与火源恢复：`Assets/5_Scripts/5-3_GamePlay/Presentation/Dialogue/WeatherExposureSpeechProvider.cs`。
@@ -68,6 +69,7 @@ GameManager.Event_GameWorldEnter
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：动态雨效由 `RainEffectController` 独占相机顶部定位，`WeatherMgr` 不再覆盖其 Transform；`RainEffect` 保留单边顶部发射，生命周期按正交相机高度、初始下落速度和 `1.12` 倍余量动态补足到下边缘。独立地面水花层按天气强度优先采样已加载非水非阻挡地形，区块未就绪时在画面内降级发射；小雨/暴雨发射频率分别为 `12/s` / `48/s`，确保屏幕内持续有足够落地反馈。
 - 2026-08-04：地表静态降水取消独立噪声，改由最终高度图平滑反向映射；动态天气事件、雨效及权威端调度契约保持不变。
 - 2026-07-31：环境链接入维度覆盖；地下矿洞使用固定 `0.08` 光照并抑制天气/雨效，地表行为保持不变。
 - 2026-07-31：`WeatherMgr` 不再于开始菜单阶段提前解析 `DayTimeSystem`；仅在游戏世界激活后订阅时间推进事件，避免将正常的未进入世界状态误报为场景缺少时间系统。

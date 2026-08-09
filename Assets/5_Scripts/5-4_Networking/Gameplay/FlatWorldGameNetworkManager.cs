@@ -94,6 +94,9 @@ namespace FlatWorld.Networking.Gameplay
 
             NormalizeGenerationSettings(planet);
 
+            // 快照和生成设置哈希必须使用同一份已冻结的生态配置。
+            ChunkMgr.Instance?.EnsureActiveEcologyConfiguration();
+
             SetGameplayStatus($"主机世界已准备：{currentPlanetName} / Seed {saveData.Seed}");
         }
 
@@ -283,12 +286,12 @@ namespace FlatWorld.Networking.Gameplay
             pendingPlayerNames[connection.connectionId] = playerName;
 
             CaptureLoadedChunks();
-            byte[] snapshot = SaveDataMgr.Instance.CreateCompressedNetworkSnapshot();
-            LastSnapshotBytes = snapshot.Length;
-
             string planetName = ResolveCurrentPlanetName();
             PlanetData synchronizedPlanet = SaveDataMgr.Instance.SaveData.PlanetData_Dict[planetName];
             NormalizeGenerationSettings(synchronizedPlanet);
+            ChunkMgr.Instance?.EnsureActiveEcologyConfiguration();
+            byte[] snapshot = SaveDataMgr.Instance.CreateCompressedNetworkSnapshot();
+            LastSnapshotBytes = snapshot.Length;
             uint generationSettingsHash = NetworkMapGenerationProtocol.CalculateSettingsHash(
                 SaveDataMgr.Instance.SaveData.Seed,
                 synchronizedPlanet.Radius,
@@ -296,7 +299,10 @@ namespace FlatWorld.Networking.Gameplay
                 synchronizedPlanet.AutoGenerateMap,
                 synchronizedPlanet.ChunkSize.x,
                 synchronizedPlanet.ChunkSize.y,
-                synchronizedPlanet.TopologyMode);
+                synchronizedPlanet.TopologyMode,
+                ChunkMgr.Instance?.GetActiveGenerationFingerprint() ??
+                synchronizedPlanet.Ecology?.Generation?.GenerationFingerprint ??
+                synchronizedPlanet.Ecology?.ConfigurationFingerprint ?? 0UL);
             int transferId = unchecked(++nextSnapshotTransferId);
             if (transferId == 0)
                 transferId = unchecked(++nextSnapshotTransferId);
@@ -574,7 +580,10 @@ namespace FlatWorld.Networking.Gameplay
                 planet.AutoGenerateMap,
                 planet.ChunkSize.x,
                 planet.ChunkSize.y,
-                planet.TopologyMode);
+                planet.TopologyMode,
+                ChunkMgr.Instance?.GetActiveGenerationFingerprint() ??
+                planet.Ecology?.Generation?.GenerationFingerprint ??
+                planet.Ecology?.ConfigurationFingerprint ?? 0UL);
             if (localSettingsHash != snapshot.GenerationSettingsHash)
             {
                 throw new InvalidOperationException(

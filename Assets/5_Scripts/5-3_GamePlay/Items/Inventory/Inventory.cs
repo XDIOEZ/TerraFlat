@@ -42,6 +42,8 @@ public class Inventory
     private GameController _boundController;
     private InputAction _boundToggleAction;
     private Action<InputAction.CallbackContext> _toggleCallback;
+    // 当前背包打开的物品上下文菜单；关闭背包时必须随背包一起回收。
+    private BasePanel _activeContextMenuPanel;
 
     #endregion
 
@@ -154,6 +156,7 @@ public class Inventory
                 return;
             }
 
+            // B 是库存自身的开关键，不能交给全局取消栈抢先消费。
             SwitchUI();
         };
 
@@ -204,6 +207,9 @@ public class Inventory
             GameManager.Instance.StartCoroutine(DelayedBringToFront(basePanel.GetComponent<RectTransform>()));
             return;
         }
+
+        if (basePanel.IsOpen())
+            CloseActiveContextMenu();
 
         basePanel.Toggle();
         if (basePanel.IsOpen())
@@ -273,6 +279,7 @@ public class Inventory
         basePanel.PrepareForGamepadNavigation(closeOnCancel: closeOnCancel);
         basePanel.Opened += AcquirePanelInputLock;
         basePanel.Closed += ReleasePanelInputLock;
+        basePanel.Closed += CloseActiveContextMenu;
 
         // 如果此 inventory 中保存了面板位置，则尝试在创建时恢复位置
         if (Data != null)
@@ -312,6 +319,18 @@ public class Inventory
     private void ReleasePanelInputLock()
     {
         _boundController?.ReleaseGameplayInputLock(this);
+    }
+
+    /// <summary>
+    /// 回收当前库存派生的右键菜单及其物品详情子面板，避免父背包关闭后留下悬空 UI。
+    /// </summary>
+    private void CloseActiveContextMenu()
+    {
+        if (_activeContextMenuPanel == null)
+            return;
+
+        _activeContextMenuPanel.Destroy();
+        _activeContextMenuPanel = null;
     }
 
     private void ResolvePanelInputController()
@@ -409,6 +428,13 @@ public class Inventory
         RefreshUI();
 
         InventorySortButton.EnsureFor(this);
+
+        // 槽位是运行时动态创建的，必须在创建完成后重新收集组件并补齐导航图。
+        Canvas.ForceUpdateCanvases();
+        basePanel.RefreshUIComponents();
+        basePanel.PrepareForGamepadNavigation(
+            preferredControlName: "UI_Slot",
+            closeOnCancel: !string.Equals(ToggleActionName, "B", StringComparison.OrdinalIgnoreCase));
     }
     //同步UI与Data
     public void SyncData()
@@ -680,9 +706,20 @@ public class Inventory
             return;
         }
 
-        RightClickMenu_UI currentMenuInstance;
-        currentMenuInstance = GameObject.Instantiate(menuPrefabUI);
+        CloseActiveContextMenu();
+
+        BasePanel menuPanel = UIManager.Instance.CreatePanelFromGameObject(menuPrefab);
+        RightClickMenu_UI currentMenuInstance = menuPanel != null
+            ? menuPanel.GetComponent<RightClickMenu_UI>()
+            : null;
+        if (currentMenuInstance == null)
+        {
+            Debug.LogError("[Inventory.OnRightClick] 右键菜单实例缺少 RightClickMenu_UI 组件");
+            return;
+        }
+
         currentMenuInstance.Init(itemSlot_UI[index], slot, item);
+        _activeContextMenuPanel = menuPanel;
 
         RectTransform menuRect = currentMenuInstance.GetComponent<RectTransform>();
         if (currentMenuInstance.basePanel != null && currentMenuInstance.basePanel.Dragger != null && currentMenuInstance.basePanel.Dragger.rectTransform != null)
@@ -726,23 +763,34 @@ public class Inventory
             return;
         }
 
-        //默认为手部
-        if (DefaultTarget_Inventory.Data.itemSlots.Count > index)
-        {
-            Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[index]);
-            DefaultTarget_Inventory.RefreshUI(index);
-        }
-        else
-        {
-            Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[0]);
-            DefaultTarget_Inventory.RefreshUI(0);
-        }
+        int targetIndex = GetLeftClickTargetSlotIndex(index);
+        Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[targetIndex]);
+        DefaultTarget_Inventory.RefreshUI(targetIndex);
+
+        // 玩家背包转入快捷栏后，立即刷新当前手持实例，避免等待下一次模块 Tick 才显示。
+        if (DefaultTarget_Inventory is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory)
+            hotBarInventory.SyncHeldItemImmediately();
 
         RefreshUI(index);
     }
 
     private bool TryEnsureDefaultTargetInventory()
     {
+        // 玩家背包的左键操作应进入快捷栏，否则物品只会落入不可见的手部缓冲槽。
+        if (IsPlayerBagInventory())
+        {
+            if (DefaultTarget_Inventory?.Data?.Name == ModText.Hotbar &&
+                IsValidQuickTransferTarget(DefaultTarget_Inventory))
+                return true;
+
+            Inventory hotBar = GetPlayerHotBarInventory();
+            if (IsValidQuickTransferTarget(hotBar))
+            {
+                DefaultTarget_Inventory = hotBar;
+                return true;
+            }
+        }
+
         if (DefaultTarget_Inventory != null && DefaultTarget_Inventory.Data != null && DefaultTarget_Inventory.Data.itemSlots != null && DefaultTarget_Inventory.Data.itemSlots.Count > 0)
             return true;
 
@@ -764,6 +812,32 @@ public class Inventory
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 玩家背包点击时使用快捷栏当前选中槽；普通容器仍沿用原有手部槽位映射。
+    /// </summary>
+    private int GetLeftClickTargetSlotIndex(int sourceIndex)
+    {
+        if (DefaultTarget_Inventory is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory &&
+            hotBarInventory.Data?.itemSlots != null &&
+            hotBarInventory.Data.itemSlots.Count > 0)
+        {
+            return Mathf.Clamp(
+                hotBarInventory.Data.Index,
+                0,
+                hotBarInventory.Data.itemSlots.Count - 1);
+        }
+
+        return DefaultTarget_Inventory.Data.itemSlots.Count > sourceIndex ? sourceIndex : 0;
+    }
+
+    /// <summary>
+    /// 仅识别本地玩家的主背包，避免改变箱子、工作台和其他独立库存的手部交换规则。
+    /// </summary>
+    private bool IsPlayerBagInventory()
+    {
+        return item is Player && Data?.Name == ModText.Bag;
     }
 
     public virtual void OnShiftQuickTransfer(int index)

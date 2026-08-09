@@ -2,8 +2,10 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -16,6 +18,16 @@ public partial class GameManager
     public const string MainMenuContinueButtonKey = "选择存档";
     public const string MainMenuNewGameButtonKey = "新游戏";
     public const string MainMenuMultiplayerButtonKey = "联机模式";
+    public const string MainMenuSettingsButtonKey = "设置";
+    public const string MainMenuSettingsPanelKey = RuntimeUIPrefabKeys.MainMenuSettings;
+    public const string MainMenuSettingsCloseButtonKey = "关闭按钮";
+    public const string MainMenuSettingsReturnButtonKey = "返回按钮";
+    public const string MainMenuSettingsPreferredControlKey = "窗口大小下拉列表";
+    public const string MainMenuSettingsLanguageDropdownKey = "游戏语言下拉列表";
+    public const string MainMenuSettingsLanguageStatusTextKey = "设置状态";
+
+    private static readonly string[] MainMenuSettingsLocaleCodes = { "zh-CN", "en" };
+    private static readonly string[] MainMenuSettingsLanguageOptions = { "简体中文", "English" };
 
     public const string NewGamePanelKey = "NewGame";
     public const string NewGameStartButtonKey = "开始新游戏";
@@ -187,10 +199,34 @@ public partial class GameManager
             return;
 
         float normalizedProgress = Mathf.Clamp01(progress);
-        worldLoadingTitle.text = title;
-        SetWorldLoadingStatus(status);
+        worldLoadingTitle.text = LocalizeWorldLoadingText(title);
+        SetWorldLoadingStatus(LocalizeWorldLoadingText(status));
         worldLoadingProgress.value = normalizedProgress;
         worldLoadingProgressText.text = $"{Mathf.RoundToInt(normalizedProgress * 100f)}%";
+    }
+
+    private static string LocalizeWorldLoadingText(string sourceText)
+    {
+        if (string.IsNullOrWhiteSpace(sourceText))
+            return string.Empty;
+
+        const string planetPrefix = "正在加载星球：";
+        if (sourceText.StartsWith(planetPrefix, StringComparison.Ordinal))
+        {
+            return FlatWorldLocalizationService.GetUiFormat(
+                "正在加载星球：{0}",
+                sourceText.Substring(planetPrefix.Length));
+        }
+
+        const string travelPrefix = "正在前往：";
+        if (sourceText.StartsWith(travelPrefix, StringComparison.Ordinal))
+        {
+            return FlatWorldLocalizationService.GetUiFormat(
+                "正在前往：{0}",
+                FlatWorldLocalizationService.GetUiText(sourceText.Substring(travelPrefix.Length)));
+        }
+
+        return FlatWorldLocalizationService.GetUiText(sourceText);
     }
 
     private void SetWorldLoadingStatus(string status)
@@ -336,9 +372,137 @@ public partial class GameManager
 
         panel.SetButtonOnClick(MainMenuContinueButtonKey, OpenGameSaveManager);
         panel.SetButtonOnClick(MainMenuNewGameButtonKey, OpenNewGame);
+        panel.SetButtonOnClick(MainMenuSettingsButtonKey, OpenMainMenuSettings);
         panel.PrepareForGamepadNavigation(MainMenuContinueButtonKey, false);
         panel.Open();
     }
+
+    /// <summary>
+    /// 打开主菜单设置面板，并同步语言下拉框的当前选择。
+    /// </summary>
+    public void OpenMainMenuSettings()
+    {
+        if (UIManager.Instance != null &&
+            UIManager.Instance.TryGetPanel(MainMenuSettingsPanelKey, out BasePanel existingPanel))
+        {
+            RefreshMainMenuSettingsLanguage(existingPanel);
+            existingPanel.Open();
+            return;
+        }
+
+        if (GameRes.Instance == null)
+        {
+            Debug.LogError("[GameManager] 无法打开主菜单设置：GameRes 未就绪。", this);
+            return;
+        }
+
+        GameObject prefab = GameRes.Instance.GetPrefab(MainMenuSettingsPanelKey, false);
+        if (prefab == null)
+        {
+            Debug.LogError(
+                $"[GameManager] 缺少主菜单设置 Prefab：{MainMenuSettingsPanelKey}。请检查 Addressables/Prefab 标签。",
+                this);
+            return;
+        }
+
+        UIManager uiManager = UIManager.Instance;
+        BasePanel panel = uiManager.CreatePanelFromGameObject(prefab, MainMenuSettingsPanelKey);
+        if (panel == null)
+        {
+            Debug.LogError("[GameManager] 主菜单设置 Prefab 实例化后未获得 BasePanel。", this);
+            return;
+        }
+
+        panel.SetButtonOnClick(MainMenuSettingsCloseButtonKey, panel.Close);
+        panel.SetButtonOnClick(MainMenuSettingsReturnButtonKey, panel.Close);
+        BindMainMenuSettingsLanguage(panel);
+        panel.PrepareForGamepadNavigation(MainMenuSettingsPreferredControlKey);
+        panel.Open();
+    }
+
+    #region 主菜单语言设置
+
+    /// <summary>绑定语言下拉框；当前提供简体中文和英语两个 Locale。</summary>
+    private void BindMainMenuSettingsLanguage(BasePanel panel)
+    {
+        TMP_Dropdown languageDropdown = GetMainMenuSettingsLanguageDropdown(panel);
+        if (languageDropdown == null)
+        {
+            Debug.LogError(
+                $"[GameManager] 主菜单设置 Prefab 缺少语言下拉列表：{MainMenuSettingsLanguageDropdownKey}",
+                panel);
+            return;
+        }
+
+        FlatWorldLocalizationService.Initialize();
+        languageDropdown.ClearOptions();
+        languageDropdown.AddOptions(new List<string>(MainMenuSettingsLanguageOptions));
+        languageDropdown.onValueChanged.AddListener(
+            selectedIndex => OnMainMenuSettingsLanguageChanged(panel, selectedIndex));
+        RefreshMainMenuSettingsLanguage(panel);
+    }
+
+    /// <summary>按下拉索引切换语言，失败时恢复当前有效选择。</summary>
+    private static void OnMainMenuSettingsLanguageChanged(BasePanel panel, int selectedIndex)
+    {
+        if (selectedIndex < 0 || selectedIndex >= MainMenuSettingsLocaleCodes.Length)
+        {
+            RefreshMainMenuSettingsLanguage(panel);
+            return;
+        }
+
+        string localeCode = MainMenuSettingsLocaleCodes[selectedIndex];
+        if (!FlatWorldLocalizationService.TrySetLocale(localeCode))
+        {
+            Debug.LogWarning($"[GameManager] 无法切换到未配置的语言：{localeCode}");
+            RefreshMainMenuSettingsLanguage(panel);
+            SetMainMenuSettingsLanguageStatus(
+                panel,
+                FlatWorldLocalizationService.GetUiFormat("语言切换失败：{0}", localeCode));
+            return;
+        }
+
+        RefreshMainMenuSettingsLanguage(panel);
+    }
+
+    /// <summary>根据当前 Locale 回填下拉框，并显示即时保存状态。</summary>
+    private static void RefreshMainMenuSettingsLanguage(BasePanel panel)
+    {
+        TMP_Dropdown languageDropdown = GetMainMenuSettingsLanguageDropdown(panel);
+        if (languageDropdown == null)
+            return;
+
+        int selectedIndex = Array.IndexOf(
+            MainMenuSettingsLocaleCodes,
+            FlatWorldLocalizationService.CurrentLocaleCode);
+        selectedIndex = selectedIndex < 0 ? 0 : selectedIndex;
+        languageDropdown.SetValueWithoutNotify(selectedIndex);
+        languageDropdown.RefreshShownValue();
+        SetMainMenuSettingsLanguageStatus(
+            panel,
+            selectedIndex == 0
+                ? FlatWorldLocalizationService.GetUiText("当前语言：简体中文")
+                : FlatWorldLocalizationService.GetUiText("当前语言：English"));
+    }
+
+    /// <summary>查找主菜单设置内的语言下拉框。</summary>
+    private static TMP_Dropdown GetMainMenuSettingsLanguageDropdown(BasePanel panel)
+    {
+        Transform dropdownTransform = panel == null
+            ? null
+            : FindChildRecursive(panel.transform, MainMenuSettingsLanguageDropdownKey);
+        return dropdownTransform?.GetComponent<TMP_Dropdown>();
+    }
+
+    /// <summary>更新设置面板底部的语言状态文字。</summary>
+    private static void SetMainMenuSettingsLanguageStatus(BasePanel panel, string status)
+    {
+        TextMeshProUGUI statusText = panel?.GetText(MainMenuSettingsLanguageStatusTextKey);
+        if (statusText != null)
+            statusText.text = status;
+    }
+
+    #endregion
 
     public void OpenContextMenu()
     {
@@ -394,7 +558,7 @@ public partial class GameManager
     {
         if (TryOpenExistingPanel(GameSavePanelKey))
         {
-            SaveDataManager_UI.Instance?.Refresh();
+            SaveDataManager_UI.Instance?.RefreshForGamepadOpen();
             return;
         }
 
@@ -407,9 +571,10 @@ public partial class GameManager
         panel.SetButtonOnClick(GameSaveDeleteButtonKey, OnClick_DeleteSave_Button);
         panel.SetButtonOnClick(GameSaveBackButtonKey, panel.Close);
         panel.GetInputField(GameSavePlayerInputKey)?.onValueChanged.AddListener(OnUpdatePlayerNameChanged);
-        panel.PrepareForGamepadNavigation(GameSaveStartButtonKey);
+        // 动态存档条目在 RefreshForGamepadOpen 后创建；这里仅提供无存档时的安全回退。
+        panel.PrepareForGamepadNavigation(GameSaveBackButtonKey);
         panel.Open();
-        SaveDataManager_UI.Instance?.Refresh();
+        SaveDataManager_UI.Instance?.RefreshForGamepadOpen();
     }
 
     private static bool TryOpenExistingPanel(string panelName)
@@ -695,18 +860,28 @@ public partial class GameManager
         TMP_Text title = panel.GetText(NewGameDifficultyTitleTextKey);
         TMP_Text description = panel.GetText(NewGameDifficultyDescriptionTextKey);
         TMP_Text rules = panel.GetText(NewGameDifficultyRuleTextKey);
+        string localizedName = FlatWorldLocalizationService.GetUiText(definition.DisplayName);
         if (title != null)
-            title.text = definition.DisplayName;
+            title.text = localizedName;
         if (description != null)
-            description.text = definition.Description;
+            description.text = FlatWorldLocalizationService.GetUiText(definition.Description);
         if (rules != null)
         {
             string deathRule = definition.PlayerDeath.DropAllCarriedItems ? "死亡掉落" : "死亡保留";
-            rules.text =
-                $"战斗：玩家 {FormatMultiplier(definition.CreatureCombat.PlayerAttackMultiplier)} / 生物伤害 {FormatMultiplier(definition.CreatureCombat.AttackMultiplier)} / 生物生命 {FormatMultiplier(definition.CreatureCombat.MaxHealthMultiplier)}\n" +
-                $"生存：饥饿 {FormatMultiplier(definition.PlayerSurvival.HungerDrainMultiplier)} / 耐力消耗 {FormatMultiplier(definition.PlayerSurvival.StaminaConsumptionMultiplier)} / {deathRule}\n" +
-                $"世界：时间 {FormatMultiplier(definition.World.TimeSpeedMultiplier)} / 生成 {FormatMultiplier(definition.World.SpawnFrequencyMultiplier)} / 战利品 {FormatMultiplier(definition.World.LootAmountMultiplier)}\n" +
-                $"生产：生长 {FormatMultiplier(definition.Production.CropGrowthMultiplier)} / 熔炼 {FormatMultiplier(definition.Production.SmeltingSpeedMultiplier)} / 制作 {FormatMultiplier(definition.Production.CraftingOutputMultiplier)}";
+            rules.text = FlatWorldLocalizationService.GetUiFormat(
+                "战斗：玩家 {0} / 生物伤害 {1} / 生物生命 {2}\n生存：饥饿 {3} / 耐力消耗 {4} / {5}\n世界：时间 {6} / 生成 {7} / 战利品 {8}\n生产：生长 {9} / 熔炼 {10} / 制作 {11}",
+                FormatMultiplier(definition.CreatureCombat.PlayerAttackMultiplier),
+                FormatMultiplier(definition.CreatureCombat.AttackMultiplier),
+                FormatMultiplier(definition.CreatureCombat.MaxHealthMultiplier),
+                FormatMultiplier(definition.PlayerSurvival.HungerDrainMultiplier),
+                FormatMultiplier(definition.PlayerSurvival.StaminaConsumptionMultiplier),
+                FlatWorldLocalizationService.GetUiText(deathRule),
+                FormatMultiplier(definition.World.TimeSpeedMultiplier),
+                FormatMultiplier(definition.World.SpawnFrequencyMultiplier),
+                FormatMultiplier(definition.World.LootAmountMultiplier),
+                FormatMultiplier(definition.Production.CropGrowthMultiplier),
+                FormatMultiplier(definition.Production.SmeltingSpeedMultiplier),
+                FormatMultiplier(definition.Production.CraftingOutputMultiplier));
         }
 
         for (int i = 0; i < GameDifficultyCatalog.All.Count; i++)
@@ -726,7 +901,9 @@ public partial class GameManager
 
         TMP_Text summary = panel.GetText(NewGameDifficultySummaryTextKey);
         if (summary != null)
-            summary.text = $"难度设置  ·  {definition.DisplayName}";
+            summary.text = FlatWorldLocalizationService.GetUiFormat(
+                "难度设置  ·  {0}",
+                FlatWorldLocalizationService.GetUiText(definition.DisplayName));
     }
 
     private static string FormatMultiplier(float multiplier)
@@ -785,13 +962,16 @@ public partial class GameManager
 
     public void OnClick_StartGame_Button()
     {
-        if (SaveDataMgr.Instance?.SaveData == null || SaveDataMgr.Instance.SaveData.Seed == 0)
+        BasePanel panel = GetSaveManagerPanel();
+        string selectedSaveName = panel?.GetText(GameSaveSelectedTextKey)?.text;
+        if (SaveDataMgr.Instance?.SaveData == null || SaveDataMgr.Instance.SaveData.Seed == 0 ||
+            string.IsNullOrWhiteSpace(selectedSaveName) ||
+            string.Equals(selectedSaveName, GameSaveNoSelectionText, StringComparison.Ordinal))
         {
             Debug.LogWarning("请先选择存档或创建新游戏");
             return;
         }
 
-        BasePanel panel = GetSaveManagerPanel();
         if (panel != null)
             ContinueGame(panel.GetInputField(GameSavePlayerInputKey)?.text);
     }
@@ -806,13 +986,22 @@ public partial class GameManager
 
         BasePanel panel = GetSaveManagerPanel();
         string selectedSaveName = panel?.GetText(GameSaveSelectedTextKey)?.text;
-        if (!string.IsNullOrEmpty(selectedSaveName))
+        if (string.IsNullOrWhiteSpace(selectedSaveName) ||
+            string.Equals(selectedSaveName, GameSaveNoSelectionText, StringComparison.Ordinal))
         {
-            string path = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData", selectedSaveName + ".bytes");
-            SaveDataMgr.Instance.LoadSaveByDisk(path);
+            Debug.LogWarning("请先选择要载入的存档");
+            return;
         }
 
-        SaveDataManager_UI.Instance?.GeneratePlayerButtons();
+        string path = Path.Combine(Application.persistentDataPath, "Saves", "LocalSaveData", selectedSaveName + ".bytes");
+        SaveDataMgr.Instance.LoadSaveByDisk(path);
+
+        SaveDataManager_UI saveList = SaveDataManager_UI.Instance;
+        if (saveList != null)
+        {
+            saveList.GeneratePlayerButtons();
+            saveList.FocusFirstPlayerOrNameInputForGamepad();
+        }
     }
 
     public void OnClick_DeleteSave_Button()

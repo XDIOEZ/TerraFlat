@@ -80,10 +80,12 @@ public class SettingCanvas : Module, IInstanceUI
         BindButton(UIText.CloseButtons, ClossApp);
         AudioSettingsPanelLauncher.Ensure(basePanel.transform);
         UISettingsPanelLauncher.Ensure(basePanel.transform);
+        CoordinateDisplaySettingsPanelLauncher.Ensure(basePanel.transform);
         AutoSaveSettingsPanelLauncher.Ensure(basePanel.transform);
         WorldStreamingSettingsPanelLauncher.Ensure(basePanel.transform);
         DifficultySettingsPanelLauncher.Ensure(basePanel.transform);
         InputBindingPanelLauncher.Ensure(basePanel.transform, gameController);
+        SettingsActionListPagination.Ensure(basePanel.transform);
         basePanel.SetPanelName(PanelName);
         basePanel.PrepareForGamepadNavigation();
         basePanel.Opened += AcquirePanelInputLock;

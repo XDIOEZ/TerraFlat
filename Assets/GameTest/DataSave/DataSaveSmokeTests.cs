@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Linq;
+using FlatWorld.Gameplay.Progress;
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
 using UnityEditor;
@@ -50,6 +51,64 @@ namespace FlatWorld.GameTest.DataSave
             {
                 Object.DestroyImmediate(playerObject);
             }
+        }
+
+        [Test]
+        [Category("DataSave.Player")]
+        public void MainWorldSpawnRoundTripsInsidePlayerSpecialDataWithoutOverwritingOtherNamespaces()
+        {
+            var playerData = new Data_Player
+            {
+                ItemSpecialData = "{\"flatworld.tutorial\":{\"stage\":2}}"
+            };
+            Vector3 expectedPosition = new Vector3(12.5f, -4.5f, 0f);
+
+            Assert.That(
+                PlayerMainWorldSpawnStore.SetMainWorldSpawn(
+                    playerData,
+                    "地球__dimension__cave",
+                    expectedPosition),
+                Is.True);
+            Assert.That(
+                PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(
+                    playerData,
+                    out Vector3 restoredPosition,
+                    out string restoredWorldKey),
+                Is.True);
+            Assert.That(restoredPosition, Is.EqualTo(expectedPosition));
+            Assert.That(restoredWorldKey, Is.EqualTo("地球"));
+            Assert.That(
+                ItemSpecialDataJsonStore.ReadRoot(playerData.ItemSpecialData)
+                    .Value<Newtonsoft.Json.Linq.JObject>("flatworld.tutorial")
+                    .Value<int>("stage"),
+                Is.EqualTo(2));
+
+            Assert.That(
+                PlayerMainWorldSpawnStore.EnsureMainWorldSpawn(
+                    playerData,
+                    "其他星球",
+                    new Vector3(99f, 88f, 0f)),
+                Is.True,
+                "已有出生点时 Ensure 只能保留原值，不能被后续加载覆盖。");
+            PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(
+                playerData,
+                out restoredPosition,
+                out restoredWorldKey);
+            Assert.That(restoredPosition, Is.EqualTo(expectedPosition));
+            Assert.That(restoredWorldKey, Is.EqualTo("地球"));
+
+            var saveContainer = new Ex_ModData_MemoryPackable();
+            saveContainer.WriteData<ItemData>(playerData);
+            Data_Player restoredPlayerData = saveContainer.GetData<ItemData>() as Data_Player;
+            Assert.That(restoredPlayerData, Is.Not.Null);
+            Assert.That(
+                PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(
+                    restoredPlayerData,
+                    out restoredPosition,
+                    out restoredWorldKey),
+                Is.True);
+            Assert.That(restoredPosition, Is.EqualTo(expectedPosition));
+            Assert.That(restoredWorldKey, Is.EqualTo("地球"));
         }
 
 

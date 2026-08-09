@@ -1,9 +1,7 @@
 ﻿using Sirenix.OdinInspector;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
 
+/// <summary>兼容旧 Prefab 模块 ID；运行时只刷新新版 WorldAddress 实体索引。</summary>
 public class Mod_ItemChunkAssigner : Module
 {
     public Ex_ModData_MemoryPackable ModData;
@@ -27,13 +25,15 @@ public class Mod_ItemChunkAssigner : Module
         if (_Data.isRunning == false)
             return;
 
-        Vector2Int currentChunkPos = ChunkMgr.NormalizeChunkPosition(
-            Chunk.GetChunkPosition(transform.position));
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        if (chunkManager == null)
+            return;
+
+        Vector2Int currentChunkPos = chunkManager.ResolveRuntimeChunkOrigin(transform.position);
         if (currentChunkPos != lastChunkPos)
         {
-            // ChunkMgr performs the old-owner removal and new-owner insertion atomically.
             lastChunkPos = currentChunkPos;
-            ChunkMgr.Instance.UpdateItem_ChunkOwner(item);
+            ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
         }
     }
 }

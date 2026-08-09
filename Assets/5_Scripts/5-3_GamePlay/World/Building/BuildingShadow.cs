@@ -6,6 +6,8 @@ using UnityEngine;
 public class BuildingShadow : MonoBehaviour
 {
     private const string PreviewSortingLayer = "Shadow";
+    // 预览必须压过 Default 世界精灵，但保持在 Player 等角色层之下。
+    private const int PreviewSortingOrder = 1000;
 
     public List<GameObject> AroundObjects = new();
     public SpriteRenderer ShadowRenderer;
@@ -98,7 +100,8 @@ public class BuildingShadow : MonoBehaviour
         ShadowRenderer.sortingLayerID = previewLayerId != 0
             ? previewLayerId
             : sourceRenderer.sortingLayerID;
-        ShadowRenderer.sortingOrder = sourceRenderer.sortingOrder;
+        // 不沿用建筑本体的排序序号，避免同层的地表装饰把虚影盖住。
+        ShadowRenderer.sortingOrder = PreviewSortingOrder;
         ShadowRenderer.flipX = sourceRenderer.flipX;
         ShadowRenderer.flipY = sourceRenderer.flipY;
         ShadowRenderer.drawMode = sourceRenderer.drawMode;
@@ -148,8 +151,12 @@ public class BuildingShadow : MonoBehaviour
     {
         // 渲染节点需要复刻建筑自身的局部偏移，因此预览碰撞体必须独立放在根节点，
         // 否则图片偏移会再次影响占地检测。
-        if (previewCollider != null && previewCollider.transform != transform)
-            previewCollider.enabled = false;
+        BoxCollider2D[] childColliders = GetComponentsInChildren<BoxCollider2D>(true);
+        for (int i = 0; i < childColliders.Length; i++)
+        {
+            if (childColliders[i].transform != transform)
+                childColliders[i].enabled = false;
+        }
 
         previewCollider = GetComponent<BoxCollider2D>();
         if (previewCollider == null)

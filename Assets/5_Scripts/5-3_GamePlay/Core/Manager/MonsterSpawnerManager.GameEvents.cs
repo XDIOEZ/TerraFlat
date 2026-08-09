@@ -96,9 +96,9 @@ public partial class MonsterSpawnerManager
 
             if (IsNearAnyPlayer(candidate, exclusionDistance) ||
                 (request.RequireOutsidePlayerView && IsVisibleByAnyActiveCamera(candidate)) ||
-                !TryGetLoadedTerrainContext(candidate, out Map map) ||
+                !IsRuntimeTerrainReady(candidate) ||
                 !IsWalkableSpawnPosition(candidate) ||
-                !IsEventBiomeAllowed(request.AllowedBiomes, map, candidate) ||
+                !IsEventBiomeAllowed(request.AllowedBiomes, candidate) ||
                 !IsEventLightAllowed(request, candidate))
             {
                 continue;
@@ -132,7 +132,7 @@ public partial class MonsterSpawnerManager
         return false;
     }
 
-    private static bool IsEventBiomeAllowed(List<string> allowedBiomes, Map map, Vector3 worldPosition)
+    private static bool IsEventBiomeAllowed(List<string> allowedBiomes, Vector3 worldPosition)
     {
         if (allowedBiomes == null || allowedBiomes.Count == 0)
             return true;
@@ -145,10 +145,7 @@ public partial class MonsterSpawnerManager
             return IsAllowedBiomeName(allowedBiomes, runtimeBiomeName, runtimeBiomeName);
         }
 
-        ChunkGenerator_Land landGenerator = map?.LandGenerator;
-        if (landGenerator == null || !landGenerator.TryGetBiomeAtWorld(worldCell, out BiomeData biome))
-            return false;
-        return IsAllowedBiomeName(allowedBiomes, biome.BiomeName, biome.name);
+        return false;
     }
 
     private static bool IsEventLightAllowed(

@@ -44,7 +44,12 @@ MonoBehaviour:
   m_BuildAddressablesWithPlayerBuild: 0
   m_overridePlayerVersion: '[UnityEditor.PlayerSettings.bundleVersion]'
   m_GroupAssets:
+  - {fileID: 11400000, guid: 3fdda4e58df31f3408442f9dbe394f2b, type: 2}
   - {fileID: 11400000, guid: d9f32c43b34535f429e061e66db019b1, type: 2}
+  - {fileID: 11400000, guid: 6f790d3c84324aa47a7cb9466cbdd4cf, type: 2}
+  - {fileID: 11400000, guid: cad88169264812948b605166862f3f2a, type: 2}
+  - {fileID: 11400000, guid: c1a0b5ec9098c0b4198a08bc75ae3a00, type: 2}
+  - {fileID: 11400000, guid: cab635028d15dc14e82392fac3d0da79, type: 2}
   m_BuildSettings:
     m_CompileScriptsInVirtualMode: 0
     m_CleanupStreamingAssetsAfterBuilds: 1
@@ -92,6 +97,10 @@ MonoBehaviour:
     - InventoryInit
     - Skill
     - ItemSprite
+    - Locale
+    - Locale-zh-CN
+    - Locale-en
+    - Preload
   m_SchemaTemplates: []
   m_GroupTemplateObjects:
   - {fileID: 11400000, guid: 81df820a3474c3645bf38f01f1aa6217, type: 2}

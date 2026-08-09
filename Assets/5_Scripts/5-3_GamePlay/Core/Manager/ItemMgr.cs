@@ -179,6 +179,13 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     private void Update()
     {
+        if (!IsWorldItemRuntimeActive())
+        {
+            // 退出世界后只结算并释放已提交的感知 Job，禁止旧场景实体继续 Tick。
+            CompletePerceptionBatch(applyResults: false);
+            return;
+        }
+
         CompletePerceptionBatch();
 
         if (RuntimeItems.Count == 0)
@@ -186,12 +193,22 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
             return;
         }
 
-        _tickScheduler.Update(RuntimeItems, Time.deltaTime, RefreshItemSpatialIndex);
+        _tickScheduler.Update(RuntimeItems, Time.deltaTime, RefreshRuntimeItemIndexes);
     }
 
     private void LateUpdate()
     {
+        if (!IsWorldItemRuntimeActive())
+            return;
+
         SchedulePerceptionBatch();
+    }
+
+    /// <summary>仅在真实游戏世界中调度 Item，菜单与退出回收阶段不允许旧实体继续运行。</summary>
+    private static bool IsWorldItemRuntimeActive()
+    {
+        GameManager gameManager = GameManager.Instance;
+        return gameManager != null && gameManager.IsInGameWorld;
     }
 
     #endregion
@@ -202,6 +219,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     public void CleanupNullItems()
     {
         _runtimeRegistry.CleanupNullItems();
+        CleanupRuntimeAiIndex();
         RebuildSpatialIndex();
         _tickScheduler.Rebuild(RuntimeItems);
 

@@ -21,24 +21,23 @@ namespace FlatWorld.GameTest.Buff
         }
     }
 
-    /// <summary>覆盖 GM Buff 点选的目标解析、施加与清除所依赖的运行时入口。</summary>
+    /// <summary>覆盖 GM Buff 目标列表、施加与清除所依赖的运行时入口。</summary>
     public sealed class GmBuffTargetingTests
     {
         [Test]
         [Category("Buff.GM")]
-        public void GmBuffTargetingResolvesBuffReceiverAndCanOverrideFiniteDuration()
+        public void GmBuffTargetListFindsActiveBuffReceiverAndCanOverrideFiniteDuration()
         {
             using BuffTargetingFixture fixture = new();
 
             MethodInfo resolver = typeof(GMReflectionConsole).GetMethod(
-                "FindBuffManagerAt",
+                "FindBuffManagersInLoadedScenes",
                 BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.That(resolver, Is.Not.Null, "GM Buff 点选必须提供世界目标解析入口。");
+            Assert.That(resolver, Is.Not.Null, "GM Buff 目标列表必须提供运行对象扫描入口。");
 
-            BuffManager resolved = resolver.Invoke(
-                null,
-                new object[] { fixture.TargetPosition }) as BuffManager;
-            Assert.That(resolved, Is.SameAs(fixture.Manager));
+            var resolved = resolver.Invoke(null, null) as System.Collections.Generic.List<BuffManager>;
+            Assert.That(resolved, Is.Not.Null);
+            CollectionAssert.Contains(resolved, fixture.Manager);
 
             Assert.That(fixture.Manager.AddBuff(fixture.FiniteBuff.Id), Is.True);
             Assert.That(fixture.Manager.TrySetBuffDuration(fixture.FiniteBuff.Id, 12.5f), Is.True);
@@ -68,7 +67,6 @@ namespace FlatWorld.GameTest.Buff
             private readonly BuffDefinition previousDefinition;
             private readonly bool hadPreviousDefinition;
 
-            public Vector2 TargetPosition { get; } = new(47321.75f, -29864.5f);
             public BuffManager Manager { get; }
             public BuffDefinition FiniteBuff { get; }
 
@@ -85,7 +83,6 @@ namespace FlatWorld.GameTest.Buff
                 gameRes.BuffDefinitions[FiniteBuff.Id] = FiniteBuff;
 
                 targetObject = new GameObject("GmBuffTargetingFixture");
-                targetObject.transform.position = TargetPosition;
                 targetObject.SetActive(false);
 
                 GmBuffTargetingTestItem item = targetObject.AddComponent<GmBuffTargetingTestItem>();
@@ -99,9 +96,7 @@ namespace FlatWorld.GameTest.Buff
                 };
                 item.itemMods.AddMod(Manager);
                 Manager.ModuleInit(item, Manager.ModData);
-                targetObject.AddComponent<BoxCollider2D>().size = Vector2.one * 2f;
                 targetObject.SetActive(true);
-                Physics2D.SyncTransforms();
             }
 
             public void Dispose()

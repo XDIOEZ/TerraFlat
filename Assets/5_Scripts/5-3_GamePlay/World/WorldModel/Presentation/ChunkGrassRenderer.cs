@@ -9,7 +9,6 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
 {
     private static readonly ProfilerMarker RenderAllMarker =
         new("FlatWorld.ChunkStreaming.RenderGrass");
-    private const byte Present = 2;
     private const int CommonVariantCount = 24;
 
     [SerializeField] private Tilemap tilemap;
@@ -22,12 +21,20 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
     [SerializeField] private Vector2 scaleRange = new(0.85f, 1.15f);
     [SerializeField, Range(0f, 1f)] private float accentVariantChance = 0.2f;
 
+    [Header("草地渲染")]
+    [SerializeField] private Material grassMaterial;
+
     private readonly List<Sprite> runtimeSprites = new();
     private readonly List<Tile> runtimeTiles = new();
     private ChunkRuntime boundChunk;
     private Texture2D boundTexture;
 
     public bool IsConfigured => tilemap != null && sourceTexture != null;
+
+    private void Awake()
+    {
+        ApplyGrassMaterial();
+    }
 
     public void Bind(ChunkRuntime chunk)
     {
@@ -41,6 +48,7 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
         Unbind();
         boundChunk = chunk;
         boundChunk.Terrain.Changed += HandleTerrainChanged;
+        ApplyGrassMaterial();
         EnsureRuntimeTiles();
         RenderAll(boundChunk.Terrain);
     }
@@ -61,6 +69,21 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
         RenderCell(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
     }
 
+    #region 草地材质
+
+    /// <summary>为区块草地 TilemapRenderer 设置共享摆动材质，避免运行时生成材质实例。</summary>
+    private void ApplyGrassMaterial()
+    {
+        if (tilemap == null || grassMaterial == null)
+            return;
+
+        TilemapRenderer renderer = tilemap.GetComponent<TilemapRenderer>();
+        if (renderer != null && renderer.sharedMaterial != grassMaterial)
+            renderer.sharedMaterial = grassMaterial;
+    }
+
+    #endregion
+
     private void RenderAll(ChunkTerrainData terrain)
     {
         if (tilemap == null || runtimeTiles.Count == 0 || terrain == null)
@@ -73,7 +96,7 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
             for (int y = 0; y < terrain.Height; y++)
             for (int x = 0; x < terrain.Width; x++)
             {
-                if (terrain.GetGrass(x, y) == Present)
+                if (terrain.GetGrass(x, y) == ChunkTerrainData.GrassPresent)
                 {
                     uint state = MixSeed(
                         boundChunk.Address.ChunkOrigin.X + x,
@@ -87,7 +110,7 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
             for (int y = 0; y < terrain.Height; y++)
             for (int x = 0; x < terrain.Width; x++)
             {
-                if (terrain.GetGrass(x, y) == Present)
+                if (terrain.GetGrass(x, y) == ChunkTerrainData.GrassPresent)
                     ApplyPresentCellVisual(x, y);
             }
         }
@@ -97,7 +120,7 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
     {
         if (tilemap == null || runtimeTiles.Count == 0)
             return;
-        if (terrain.GetGrass(x, y) == Present)
+        if (terrain.GetGrass(x, y) == ChunkTerrainData.GrassPresent)
             RenderPresentCell(x, y);
         else
             tilemap.SetTile(new Vector3Int(x, y, 0), null);

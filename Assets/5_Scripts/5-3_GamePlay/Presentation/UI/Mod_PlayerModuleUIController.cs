@@ -113,6 +113,17 @@ public class Mod_PlayerModuleUIController : Module
             UIButton_Instances.Add(go);
             BindButton(go, module, _uiModules[i]);
         }
+
+        // 模块按钮是在面板创建后动态生成的，生成完成后重新建立焦点和滚动跟随。
+        if (_buttonListPanel != null)
+        {
+            Canvas.ForceUpdateCanvases();
+            _buttonListPanel.RefreshUIComponents();
+            // 右上角模块下拉属于常驻 HUD，可参与手柄导航但不能成为 B/Esc 的全局关闭目标。
+            _buttonListPanel.PrepareForGamepadNavigation(
+                closeOnCancel: false,
+                closeOnEscape: false);
+        }
     }
 
     private Transform ResolveButtonParent()

@@ -23,7 +23,8 @@ disable-model-invocation: false
 GameSaveData
 ├─ PlayerData_Dict → Data_Player
 ├─ PlanetData_Dict → PlanetData
-│  └─ MapData_Dict → MapSave → ItemData → ModuleData
+│  ├─ MapData_Dict → MapSave → ItemData → ModuleData
+│  └─ EcologyWorldSaveData → 规则快照、删除 GUID、Changed ItemData
 ├─ DayTimeData
 ├─ Difficulty（partial：官方/自定义类型、规则版本与 17 项自定义规则）
 ├─ Mods（partial）
@@ -40,8 +41,10 @@ GameSaveData
 - 存档 partial：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/GameSaveData.*.cs`。
 - 地图存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/MapSave.cs`。
 - 星球存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/PlanetData.cs`。
-- 自动保存：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/AutoSaveController.cs`。
+- 生态存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/EcologyWorldSaveData.cs`；首次创建世界冻结 `ChunkGenerationProfileSO` 的生态配置，旧存档缺失该追加字段时使用空数据。
+- 自动保存：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/AutoSaveController.cs`；自动保存必须分帧采集旧 Chunk、后台原子写盘，且旧任务不得覆盖之后的手动/退出保存。
 - `ItemSpecialData` 命名空间合并：`Assets/5_Scripts/5-3_GamePlay/Core/Progress/ItemSpecialDataJsonStore.cs`。
+- 玩家主世界出生点：`Assets/5_Scripts/5-3_GamePlay/Core/Progress/PlayerMainWorldSpawnStore.cs`，写入 `flatworld.playerSpawn`，不改变 `Data_Player` 的 MemoryPack 布局。
 - 维度位置与入口锚点进度：`Assets/5_Scripts/5-3_GamePlay/World/Dimension/DimensionTravelProgressStore.cs`。
 - Addressables：`Assets/AddressableAssetsData/`。
 - 本体 JSON 配置：`Assets/StreamingAssets/GameConfig/`；物品、配方与 Buff 分别使用 `Items/`、`Recipes/`、`Buffs/`。
@@ -87,23 +90,24 @@ GameSaveData
 | `GameSaveData` 根、磁盘读写、备份、自动保存或首存档顺序 | `flatworld-core` | 新建/继续/退出期间只写目标存档，失败恢复不留下半状态 | `Core.Smoke` |
 | `ItemData`、`ModuleData`、MemoryPack Union 或模块序列化布局 | `flatworld-item-module`，并只加载实际数据所属玩法 Skill | 旧数据迁移、模块 ID/类型与 Prefab 挂载仍匹配 | `ItemModule.Smoke` 加对应玩法 Smoke |
 | `PlanetData`、`MapSave`、TileData、Chunk 差量或 `WorldKey` | `flatworld-map`、`flatworld-dimension` | 地表旧键兼容、维度隔离、基线与 ChangedItems 往返一致 | `Map.Smoke`、`Dimension.Smoke` |
+| `EcologyWorldSaveData`、自然物删除 GUID、`ItemData` 状态覆盖或配置指纹 | `flatworld-map`、`flatworld-item-module` | 旧 MemoryPack 存档可读，基线重放后应用删除/覆盖且只由权威端写入 | `WorldModel.Ecology`、`DataSave.Ecology` |
 | 压缩世界快照、MOD 记录或兼容版本 | `flatworld-networking`、`flatworld-modding` | 网络快照可往返，MOD 集合/协议不接受不兼容存档 | `Networking.Smoke`、`Modding.Smoke` |
 
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：建筑召唤器的 `ItemData`/`ModuleData` 已导出到按召唤器外壳分类的 JSON 分包；建筑本体 Prefab 仍由运行时保留，放置快照与占地数据继续走原有持久化链路。
+- 2026-08-09：矿洞入口配对不新增存档字段：`EcologyWorldSaveData.Generation` 已冻结的地表 Profile 继续作为真源，切入洞穴时重建配对快照；旧世界保持原冻结概率，新世界使用 1% 默认概率。
+- 2026-08-09：玩家主世界初始出生点通过 `PlayerMainWorldSpawnStore` 写入 `Data_Player.ItemSpecialData` 的独立命名空间；新世界使用最终安全陆地坐标，旧存档缺失时按默认种子出生算法补齐，避免新增 `Data_Player` MemoryPack 字段。
+- 2026-08-09：`EcologyWorldSaveData` 的追加 `Generation` 快照冻结当前 Profile 的全部数值/文本参数和有序 `CaveResourceRules`；按 `ProfileId` 恢复地表或矿洞，旧存档缺失字段时仅由权威端补写，保证洞穴房间、矿脉和传送门不随 SO 改动重排。
+- 2026-08-09：实体 AI 由 `ItemMgr` 按 `WorldAddress` 采集；旧全量区块写回 `MapSave.items`，新版/确定性区块复用 `ChunkSaveRecord.ChangedItems`，在区块数据 Ready 时按 GUID 恢复且跳过旧 Chunk 实例化，无需提升存档版本。
+- 2026-08-09：自动保存改为 `GameManager.SaveGameInBackgroundCoroutine()` 分帧捕获旧 Chunk、`SaveDataMgr` 后台原子写入；写入版本按文件登记，手动或退出保存会废弃尚未写入的旧自动保存，保存流程不得锁输入、时间缩放或实体启停。
 - 2026-08-08：新世界种子支持 UI 手动输入数字或文字；空白时由 `GameManager` 随机生成，`SaveSeed` 保存最终文本、`Seed` 保存稳定映射整数，手动 `0` 不再视为空输入。
+- 2026-08-08：`PlanetData` 末尾追加 `EcologyWorldSaveData`，冻结生态规则与指纹；区块只保存自然物删除 GUID 和变化后的 `ItemData`，`SaveDataMgr` 序列化前捕获运行中自然物，`DataSave.Ecology` 覆盖 MemoryPack 往返。
 - 2026-08-08：`SaveDataMgr.TryCreateNewSave` 的空名称兜底改为八位纯数字；正式新世界请求会提前为玩家名和存档名补同一个随机数字，存档层继续负责文件名清理与防覆盖编号。
 - 2026-08-07：物品 Manifest 的分包 `id/path`、`shellPrefab` 与模板 Prefab 根名称统一使用 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed`；重命名时保留 `.meta` GUID，并同步 Addressables Address 与 `sourcePrefab`，具体物品 ID 不变。
-- 2026-08-07：物品配置从单个 `items.json` 拆为 `item-manifest.json` + 按最终 `shellPrefab` 分类的 `shells/*.json`；加载器在全局合并后解析跨包继承，并拒绝路径越界、重复包、重复物品和错误外壳分类。
-- 2026-08-07：移除旧 `Assets/GameConfig/` Excel/Legacy 数据和 Excel→Prefab/JSON 同步工具链；物品与配方正式以 `StreamingAssets/GameConfig` JSON 为唯一真源，内容校验不再要求工作簿。
-- 2026-08-07：移除无外部引用的旧 `Assets/Saves/` 二进制地图/默认存档及会重建该目录的 `BundleSystem` 编辑工具；正式存档路径仍为 `Application.persistentDataPath/Saves/LocalSaveData/`。
-- 2026-08-05：`Data_TileMap` 由每格 `List<TileData>` 切换为 MemoryPack `TileStackCell[,]`，环境固定五张网格；紧凑存档与 MOD 封装升到版本 2，明确拒绝版本 1 和无头旧二进制数据。
 
-- 2026-07-31：`flatworld.dimensions` 新增按地表入口 GUID 保存的矿坑双向锚点；正式 `CaveExit` 在 Chunk Ready 后创建并进入差量 `ChangedItems`，未改变 MemoryPack 布局。
-- 2026-07-31：新增维度存档隔离；以兼容旧地表键的 `WorldKey` 复用 `PlanetData_Dict`，玩家各维度位置进入 `flatworld.dimensions`，未改变 MemoryPack 布局。
-- 2026-07-30：星球存档追加天气阶段、绝对时间边界、确定性随机游标和事件序号；旧存档由 `WeatherEventScheduler.InitializeIfNeeded()` 根据已有天气迁移。
 
 ## 修改后自动测试
 
@@ -112,6 +116,7 @@ GameSaveData
 - 新增数据字段、MemoryPack Union、自动保存、区块差量或配置加载行为时必须增加往返测试；修复 Bug 时先增加回归测试。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；不得写入玩家真实存档，必须使用临时路径并验证序列化前后关键字段一致。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category DataSave.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类。
+- 自动保存的完整回归位于 `Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.AutoSave.cs`：验证后台任务完成、`GameController` 未锁、`Mover`/Rigidbody2D 可用且 `Time.timeScale` 未变。
 - 教程存档、旧数据兼容及命名空间共存由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
 - 维度管理器的基础 PlayMode 生命周期由 `Assets/GameTest/Dimension/DimensionLifecycleTests.cs`（`Dimension.Smoke`）覆盖；维度世界键兼容不再属于精简 Smoke 集合。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
@@ -122,6 +127,6 @@ GameSaveData
 
 ## 有限环绕世界存档契约（2026-08-06）
 
-- `PlanetData.TopologyMode` 必须保持在 MemoryPack 布局末尾；枚举 `Infinite = 0` 保证旧布局缺失字段时仍为无限世界。
+- `PlanetData.TopologyMode` 必须保持在旧字段布局末尾；枚举 `Infinite = 0` 保证旧布局缺失字段时仍为无限世界，新增世界级字段只能追加在其后。
 - 有限世界保存的 `MapData_Dict` 键与 `MapSave.MapPosition/Name` 必须是规范 Chunk 坐标。
 - `DataSaveSmokeTests`（`DataSave.Smoke`）保留 TileStackMap 关键数据的 MemoryPack 往返行为。

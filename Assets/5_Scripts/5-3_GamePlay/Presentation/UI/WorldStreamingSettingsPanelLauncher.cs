@@ -1,5 +1,6 @@
 // AI-Context: 设置菜单的区块流送性能入口；模式写入 PlayerPrefs，并立即同步 ChunkMgr 调度器。
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -84,7 +85,12 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour
         if (modeDropdown != null)
         {
             modeDropdown.ClearOptions();
-            modeDropdown.AddOptions(ModeLabels);
+            modeDropdown.AddOptions(new List<string>
+            {
+                FlatWorldLocalizationService.GetUiText(ModeLabels[0]),
+                FlatWorldLocalizationService.GetUiText(ModeLabels[1]),
+                FlatWorldLocalizationService.GetUiText(ModeLabels[2])
+            });
         }
         else
         {
@@ -114,10 +120,16 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour
         statusText.text = WorldStreamingPreferences.Mode switch
         {
             WorldStreamingPerformanceMode.Smooth =>
-                $"当前：单后台线程生成 + 主线程逐帧绘制（{workers} 个生成任务并发）。",
+                FlatWorldLocalizationService.GetUiFormat(
+                    "当前：单后台线程生成 + 主线程逐帧绘制（{0} 个生成任务并发）。",
+                    workers),
             WorldStreamingPerformanceMode.Throughput =>
-                $"当前：安全多线程高吞吐（{workers} 个生成任务并发）。",
-            _ => $"当前：自动平衡（{workers} 个生成任务并发）。"
+                FlatWorldLocalizationService.GetUiFormat(
+                    "当前：安全多线程高吞吐（{0} 个生成任务并发）。",
+                    workers),
+            _ => FlatWorldLocalizationService.GetUiFormat(
+                "当前：自动平衡（{0} 个生成任务并发）。",
+                workers)
         };
     }
 

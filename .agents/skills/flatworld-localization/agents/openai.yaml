@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld 本地化"
+  short_description: "定位并修改 FlatWorld 多语言、UI 文本表与语言切换"
+  default_prompt: "使用 $flatworld-localization 定位或修改 FlatWorld 的本地化表、UI 文本、语言切换或翻译资源。"

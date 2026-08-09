@@ -15,6 +15,7 @@ public partial class Mover : Module
     {
         [Header("移动设置")]
         public GameValue_float Speed = new(10f);
+        [Tooltip("松开输入时的最低减速度，防止低速拖尾过长")]
         public float slowDownSpeed = 5f;
         public float endSpeed = 0.1f;
 
@@ -38,6 +39,13 @@ public partial class Mover : Module
     [Tooltip("速度源")]
     [SerializeField] public Mover_SaveData Data = new();
 
+    [Header("速度过渡")]
+    [Tooltip("走路、奔跑或转向时，速度达到新目标所需的时间（秒）")]
+    [Min(0.01f)] public float speedTransitionDuration = 0.24f;
+
+    [Tooltip("松开移动输入后停止所需的时间（秒），保留极短惯性")]
+    [Min(0.01f)] public float stopTransitionDuration = 0.07f;
+
     public List<Vector2> MemoryPath_Forbidden = new();  // 禁止路径点
     public bool IsLock = false;
     public bool hightReaction = false;
@@ -51,6 +59,11 @@ public partial class Mover : Module
     private InputAction moveAction;
     private InputAction runAction;
     public Rigidbody2D rb;
+
+    // 输入判定、到达判定与过渡时间的稳定下限。
+    private const float InputMoveThresholdSqr = 0.001f;
+    private const float ArriveThreshold = 0.1f;
+    private const float MinimumTransitionDuration = 0.01f;
 
     public Mod_Stamina stamina;                         // 体力模块
 
@@ -142,6 +155,8 @@ public partial class Mover : Module
     public virtual void OnValidate()
     {
         _Data.ID = ModText.Mover;
+        speedTransitionDuration = Mathf.Max(MinimumTransitionDuration, speedTransitionDuration);
+        stopTransitionDuration = Mathf.Max(MinimumTransitionDuration, stopTransitionDuration);
     }
 
     public override void Load()
@@ -179,34 +194,30 @@ public partial class Mover : Module
     public override void ModUpdate(float deltaTime)
     {
         if (moveAction == null) return;
+        if (rb == null)
+        {
+            Debug.LogError($"{name}: Rigidbody2D 为空，无法执行移动更新！");
+            return;
+        }
 
         if (item != null)
         {
             GameController controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
             if (controller != null && controller.IsGameplayInputLocked)
             {
-                Move(rb.position, deltaTime);
+                StopImmediately();
                 if (IsRunning)
                 {
                     SetRunState(false);
                 }
+
+                HandleHungerBuffs(false, false);
                 return;
             }
         }
 
         Vector2 input = moveAction.ReadValue<Vector2>();
-        bool isCurrentlyMoving = input.sqrMagnitude > 0.001f;
-
-        // 移动开始/结束事件触发
-        if (!_wasMoving && isCurrentlyMoving)
-        {
-            OnMoveStart?.Invoke();
-        }
-        else if (_wasMoving && !isCurrentlyMoving)
-        {
-            OnMoveEnd?.Invoke();
-        }
-        _wasMoving = isCurrentlyMoving;
+        bool isCurrentlyMoving = input.sqrMagnitude > InputMoveThresholdSqr;
 
         // 基于移动/奔跑状态，给拥有 Food+BuffManager 的对象挂/卸饥饿 Buff
         HandleHungerBuffs(isCurrentlyMoving, IsRunning);
@@ -294,16 +305,63 @@ public partial class Mover : Module
             return;
         }
 
-        float arriveThreshold = 0.1f;
         Vector2 delta = WorldTopologyRuntime.ShortestDelta(rb.position, targetPosition);
-        if (delta.magnitude < arriveThreshold)
-        {
-            rb.velocity = Vector2.zero;
-            return;
-        }
+        Vector2 targetVelocity = delta.sqrMagnitude < ArriveThreshold * ArriveThreshold
+            ? Vector2.zero
+            : delta.normalized * Speed.Value;
+        rb.velocity = CalculateSmoothedVelocity(targetVelocity, deltaTime);
+        UpdateMovementState();
+    }
 
-        Vector2 direction = delta.normalized;
-        rb.velocity = direction * Speed.Value;
+    /// <summary>将当前物理速度平滑靠近输入所要求的目标速度。</summary>
+    private Vector2 CalculateSmoothedVelocity(Vector2 targetVelocity, float deltaTime)
+    {
+        bool isStopping = targetVelocity.sqrMagnitude <= InputMoveThresholdSqr;
+        float transitionDuration = isStopping
+            ? stopTransitionDuration
+            : speedTransitionDuration;
+        float referenceSpeed = Mathf.Max(
+            Mathf.Max(rb.velocity.magnitude, targetVelocity.magnitude),
+            Mathf.Max(0f, Speed.Value));
+        float minimumChangeRate = isStopping ? Mathf.Max(0f, slowDownSpeed) : 0f;
+        float speedChangeRate = Mathf.Max(
+            minimumChangeRate,
+            referenceSpeed / Mathf.Max(MinimumTransitionDuration, transitionDuration));
+        Vector2 nextVelocity = Vector2.MoveTowards(
+            rb.velocity,
+            targetVelocity,
+            speedChangeRate * Mathf.Max(0f, deltaTime));
+
+        float stopThreshold = Mathf.Max(0.001f, endSpeed);
+        return isStopping && nextVelocity.sqrMagnitude <= stopThreshold * stopThreshold
+            ? Vector2.zero
+            : nextVelocity;
+    }
+
+    /// <summary>输入锁定时立即停止，避免模态界面打开后角色继续滑行。</summary>
+    private void StopImmediately()
+    {
+        if (rb == null)
+            return;
+
+        rb.velocity = Vector2.zero;
+        UpdateMovementState();
+    }
+
+    /// <summary>根据实际速度同步移动事件与动画状态。</summary>
+    private void UpdateMovementState()
+    {
+        float stopThreshold = Mathf.Max(0.001f, endSpeed);
+        bool isActuallyMoving = rb != null &&
+                                rb.velocity.sqrMagnitude > stopThreshold * stopThreshold;
+        IsMoving = isActuallyMoving;
+
+        if (!_wasMoving && isActuallyMoving)
+            OnMoveStart?.Invoke();
+        else if (_wasMoving && !isActuallyMoving)
+            OnMoveEnd?.Invoke();
+
+        _wasMoving = isActuallyMoving;
     }
 
     #endregion

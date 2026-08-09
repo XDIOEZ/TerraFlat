@@ -1,0 +1,516 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: FlatWorld Shared Data
+  m_EditorClassIdentifier: 
+  m_TableCollectionName: FlatWorld
+  m_TableCollectionNameGuidString: a6b2aa1bb32def84a8055087b25aa325
+  m_Entries:
+  - m_Id: 4702777344
+    m_Key: item.Axe_Stone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4774080512
+    m_Key: item.Axe_Stone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274816
+    m_Key: item.Axe_Flint.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274817
+    m_Key: item.Axe_Flint.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274818
+    m_Key: item.Axe_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274819
+    m_Key: item.Axe_Copper.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274820
+    m_Key: item.Axe_Bronze.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274821
+    m_Key: item.Axe_Bronze.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274822
+    m_Key: item.Axe_RawIron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274823
+    m_Key: item.Axe_RawIron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274824
+    m_Key: item.Axe_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4778274825
+    m_Key: item.Axe_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663424
+    m_Key: item.Dagger_Stone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663425
+    m_Key: item.Dagger_Stone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663426
+    m_Key: item.Dagger_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663427
+    m_Key: item.Dagger_Copper.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663428
+    m_Key: item.Dagger_Bone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663429
+    m_Key: item.Dagger_Bone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663430
+    m_Key: item.Knife_Flint.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4786663431
+    m_Key: item.Knife_Flint.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4799246336
+    m_Key: item.Pickaxe_Stone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4799246337
+    m_Key: item.Pickaxe_Stone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4799246338
+    m_Key: item.Pickaxe_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4799246339
+    m_Key: item.Pickaxe_Copper.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4799246340
+    m_Key: item.Pickaxe_Bronze.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4799246341
+    m_Key: item.Pickaxe_Bronze.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4807634944
+    m_Key: item.Pickaxe_RawIron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4807634945
+    m_Key: item.Pickaxe_RawIron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4807634946
+    m_Key: item.Pickaxe_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4807634947
+    m_Key: item.Pickaxe_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938112
+    m_Key: item.Bone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938113
+    m_Key: item.Bone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938114
+    m_Key: item.CharredMatter.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938115
+    m_Key: item.CharredMatter.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938116
+    m_Key: item.Earth.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938117
+    m_Key: item.Earth.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938118
+    m_Key: item.Leaf.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938119
+    m_Key: item.Leaf.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938120
+    m_Key: item.Leather.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938121
+    m_Key: item.Leather.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938122
+    m_Key: item.Plank.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938123
+    m_Key: item.Plank.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938124
+    m_Key: item.RawHide.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938125
+    m_Key: item.RawHide.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938126
+    m_Key: item.Rope.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938127
+    m_Key: item.Rope.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938128
+    m_Key: item.Twine.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938129
+    m_Key: item.Twine.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938130
+    m_Key: item.Ingot_Bronze.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938131
+    m_Key: item.Ingot_Bronze.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938132
+    m_Key: item.Ingot_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938133
+    m_Key: item.Ingot_Copper.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938134
+    m_Key: item.Ingot_RawIron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938135
+    m_Key: item.Ingot_RawIron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938136
+    m_Key: item.Ingot_Steel.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938137
+    m_Key: item.Ingot_Steel.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938138
+    m_Key: item.Ingot_Tin.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938139
+    m_Key: item.Ingot_Tin.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938140
+    m_Key: item.Ingot_WroughtIron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938141
+    m_Key: item.Ingot_WroughtIron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938142
+    m_Key: item.Ore_Coal.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938143
+    m_Key: item.Ore_Coal.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938144
+    m_Key: item.Ore_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938145
+    m_Key: item.Ore_Copper.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938146
+    m_Key: item.Ore_Flint.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938147
+    m_Key: item.Ore_Flint.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938148
+    m_Key: item.Ore_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938149
+    m_Key: item.Ore_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938150
+    m_Key: item.Ore_MagicalStone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938151
+    m_Key: item.Ore_MagicalStone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938152
+    m_Key: item.Ore_Tin.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938153
+    m_Key: item.Ore_Tin.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938154
+    m_Key: item.Apple.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938155
+    m_Key: item.Apple.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938156
+    m_Key: item.Berry.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938157
+    m_Key: item.Berry.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938158
+    m_Key: item.Coconut_Addle.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938159
+    m_Key: item.Coconut_Addle.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938160
+    m_Key: item.Coconut_Green.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938161
+    m_Key: item.Coconut_Green.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4878938162
+    m_Key: item.Coconut_Half.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326720
+    m_Key: item.Coconut_Half.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326721
+    m_Key: item.Coconut_Nude.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326722
+    m_Key: item.Coconut_Nude.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326723
+    m_Key: item.Coconut_Shell.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326724
+    m_Key: item.Coconut_Shell.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326725
+    m_Key: item.Coconut_Water.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326726
+    m_Key: item.Coconut_Water.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326727
+    m_Key: item.Coconut_WaterSalt.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326728
+    m_Key: item.Coconut_WaterSalt.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326729
+    m_Key: item.CoconutMeat.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326730
+    m_Key: item.CoconutMeat.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326731
+    m_Key: item.Egg.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326732
+    m_Key: item.Egg.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326733
+    m_Key: item.Egg_Cooked.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326734
+    m_Key: item.Egg_Cooked.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326735
+    m_Key: item.Fat.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326736
+    m_Key: item.Fat.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326737
+    m_Key: item.Meat.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326738
+    m_Key: item.Meat.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326739
+    m_Key: item.Meat_Cooked.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326740
+    m_Key: item.Meat_Cooked.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326741
+    m_Key: item.Meat_Dehydrate.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326742
+    m_Key: item.Meat_Dehydrate.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326743
+    m_Key: item.Meat_Rotten.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326744
+    m_Key: item.Meat_Rotten.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326745
+    m_Key: item.Tea.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4887326746
+    m_Key: item.Tea.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4891521024
+    m_Key: item.Seed_Apple.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4891521025
+    m_Key: item.Seed_Apple.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103936
+    m_Key: item.Spear_Stone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103937
+    m_Key: item.Spear_Stone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103938
+    m_Key: item.Spear_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103939
+    m_Key: item.Spear_Copper.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103940
+    m_Key: item.Spear_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103941
+    m_Key: item.Spear_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103942
+    m_Key: item.Spear_Stone_Animation.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4904103943
+    m_Key: item.Spear_Stone_Animation.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4908298240
+    m_Key: item.Stick_Wood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4908298241
+    m_Key: item.Stick_Wood.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4908298242
+    m_Key: item.Log.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 4908298243
+    m_Key: item.Log.description
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items: []
+  m_KeyGenerator:
+    rid: 1500752182028533811
+  references:
+    version: 2
+    RefIds:
+    - rid: 1500752182028533811
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1786200316845

@@ -75,6 +75,13 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         return ActiveDefinition?.GenerationProfile;
     }
 
+    /// <summary>读取指定维度的生成 Profile；矿洞复核地表入口时使用，不返回 Unity 资源给后台线程。</summary>
+    public ChunkGenerationProfileSO GetGenerationProfile(string dimensionId)
+    {
+        LoadCatalog();
+        return catalog?.Find(dimensionId)?.GenerationProfile;
+    }
+
     public ChunkView GetActiveChunkViewPrefab()
     {
         return ActiveDefinition?.ChunkViewPrefab;
@@ -83,6 +90,18 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
     public int GetActiveGenerationSeed(int baseSeed)
     {
         return GetGenerationSeed(baseSeed, ActiveAddress, ActiveDefinition);
+    }
+
+    /// <summary>按当前星球根计算另一维度的稳定生成种子，确保矿洞可复算地表实际地形。</summary>
+    public int GetGenerationSeedForDimension(int baseSeed, string dimensionId)
+    {
+        LoadCatalog();
+        WorldAddress source = ActiveAddress.IsValid
+            ? ActiveAddress
+            : WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name);
+        WorldAddress target = source.WithDimension(dimensionId);
+        DimensionDefinition definition = catalog?.Find(target.DimensionId);
+        return GetGenerationSeed(baseSeed, target, definition);
     }
 
     public int GetGenerationSeed(int baseSeed, WorldAddress address, DimensionDefinition definition = null)
@@ -122,6 +141,21 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
     public bool TryBeginTransition(Player player, string targetDimensionId, Item sourcePortalItem)
     {
+        return TryBeginTransitionInternal(player, targetDimensionId, sourcePortalItem,
+            generatedWorldPortal: false);
+    }
+
+    /// <summary>从新版 ChunkView 生成的天然入口切换；目标维度使用同一世界格的确定性出口。</summary>
+    public bool TryBeginGeneratedPortalTransition(Player player, string targetDimensionId,
+        Item sourcePortalItem)
+    {
+        return TryBeginTransitionInternal(player, targetDimensionId, sourcePortalItem,
+            generatedWorldPortal: true);
+    }
+
+    private bool TryBeginTransitionInternal(Player player, string targetDimensionId,
+        Item sourcePortalItem, bool generatedWorldPortal)
+    {
         if (isTransitioning || player == null || player != ItemMgr.Instance?.User_Player)
             return false;
 
@@ -149,15 +183,20 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         if (!GameManager.Instance.BeginDimensionTransitionLoading(targetDefinition.DisplayName))
             return false;
 
-        PortalTransitionContext portalContext = ResolvePortalTransition(
-            player.Data,
-            sourceAddress,
-            targetAddress,
-            targetDefinition,
-            sourcePortalItem);
-        if (portalContext == null && IsMinePortalTransition(sourceAddress, targetAddress))
+        PortalTransitionContext portalContext = generatedWorldPortal
+            ? ResolveGeneratedPortalTransition(sourcePortalItem)
+            : ResolvePortalTransition(
+                player.Data,
+                sourceAddress,
+                targetAddress,
+                targetDefinition,
+                sourcePortalItem);
+        if (portalContext == null &&
+            (generatedWorldPortal || IsMinePortalTransition(sourceAddress, targetAddress)))
         {
-            GameManager.Instance.FailDimensionTransitionLoading("矿坑入口锚点无效，无法切换维度。", null);
+            GameManager.Instance.FailDimensionTransitionLoading(
+                generatedWorldPortal ? "天然矿洞入口位置无效，无法切换维度。" :
+                "矿坑入口锚点无效，无法切换维度。", null);
             return false;
         }
 
@@ -303,6 +342,8 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         targetPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(true);
         GameManager.Instance.NotifyDimensionPlayerEntered(targetPlayer);
 
+        GameManager.Instance.SetDimensionTransitionLoading("正在生成目标区块…", 0.78f);
+        yield return WaitForRuntimeChunkPresentation(targetAddress, targetPosition, targetPlayer);
         while (ChunkMgr.Instance.HasPendingChunkLoads)
             yield return null;
 
@@ -661,6 +702,26 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         return null;
     }
 
+    /// <summary>新版自然入口不写旧版玩家锚点；入口/出口由同格确定性生成保证配对。</summary>
+    private static PortalTransitionContext ResolveGeneratedPortalTransition(Item sourcePortalItem)
+    {
+        if (sourcePortalItem == null)
+            return null;
+        Vector3 position = sourcePortalItem.transform.position;
+        if (float.IsNaN(position.x) || float.IsInfinity(position.x) ||
+            float.IsNaN(position.y) || float.IsInfinity(position.y) ||
+            float.IsNaN(position.z) || float.IsInfinity(position.z))
+        {
+            return null;
+        }
+
+        return new PortalTransitionContext
+        {
+            TargetPortalPosition = position,
+            EnsureCaveExit = false
+        };
+    }
+
     private static Vector3 ResolveTargetPosition(
         Data_Player playerData,
         WorldAddress targetAddress,
@@ -673,6 +734,50 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         return DimensionTravelProgressStore.TryGetLastPosition(playerData, targetAddress, out Vector3 savedPosition)
             ? savedPosition
             : targetDefinition.DefaultSpawnPosition;
+    }
+
+    /// <summary>
+    /// 维度场景切换后按玩家实际视距主动驱动新版 ChunkRuntime，并等待活动视野绑定完成。
+    /// 不能用 1x1 的保底窗口覆盖 Mod_ChunkLoader 已经计算好的视野窗口。
+    /// </summary>
+    private static IEnumerator WaitForRuntimeChunkPresentation(WorldAddress targetAddress,
+        Vector3 targetPosition, Player targetPlayer)
+    {
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        if (chunkManager == null)
+            throw new InvalidOperationException("维度切换后找不到 ChunkMgr。");
+
+        Mod_ChunkLoader chunkLoader = targetPlayer?.GetComponentInChildren<Mod_ChunkLoader>(true);
+        if (chunkLoader != null)
+        {
+            // 复用玩家自己的动态视距、预取距离和性能配置，避免切维度时只保留中心区块。
+            chunkLoader.RefreshChunksForCameraView();
+        }
+        else
+        {
+            // 没有标准玩家区块加载模块时保留一个兼容兜底窗口，至少不影响传送目标落地。
+            Debug.LogWarning("[DimensionManager] 目标玩家缺少 Mod_ChunkLoader，使用默认 3x3 维度窗口。", targetPlayer);
+            chunkManager.RefreshRuntimeWindow(targetPosition, 2, 3,
+                includeLocalPresentation: true, prefetchDistance: 3);
+        }
+
+        float deadline = Time.realtimeSinceStartup + 12f;
+        while (true)
+        {
+            if (chunkManager.AreRuntimeWindowPresentationsReady)
+            {
+                // 玩家已先放到目标坐标；让完整视野内的碰撞体在解锁输入前完成一次物理同步。
+                Physics2D.SyncTransforms();
+                yield return new WaitForFixedUpdate();
+                yield break;
+            }
+            if (Time.realtimeSinceStartup >= deadline)
+            {
+                throw new TimeoutException(
+                    $"目标维度区块未在限定时间内表现：{targetAddress.WorldKey}");
+            }
+            yield return null;
+        }
     }
 
     private static IEnumerator EnsureCaveExitCoroutine(

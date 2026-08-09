@@ -234,6 +234,15 @@ public partial class ChunkMgr
         if (profile == null)
             throw new ArgumentNullException(nameof(profile));
         PlanetData planet = SaveDataMgr.Instance?.GetCurrentPlanetData();
+        return ApplyWorldCoordinateScale(profile, planet);
+    }
+
+    /// <summary>按指定维度 PlanetData 写入坐标缩放；矿洞复核地表时不能误用当前矿洞数值。</summary>
+    private static ChunkGenerationProfileSnapshot ApplyWorldCoordinateScale(
+        ChunkGenerationProfileSnapshot profile, PlanetData planet)
+    {
+        if (profile == null)
+            throw new ArgumentNullException(nameof(profile));
         float coordinateScale = ChunkGenerator_Land.ResolveNoiseScale(planet);
         return profile.WithNumericParameter("world.coordinateScale", coordinateScale);
     }
@@ -251,7 +260,14 @@ public partial class ChunkMgr
     /// <summary>读取当前有限世界边界，并转换成纯生成器可用的拓扑快照。</summary>
     private static ChunkGenerationTopologySnapshot ResolveActiveGenerationTopology()
     {
-        return WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds)
+        PlanetData planet = SaveDataMgr.Instance?.GetCurrentPlanetData();
+        return ResolveGenerationTopology(planet);
+    }
+
+    /// <summary>将指定维度保存的有限世界范围转换为后台生成器可用的纯拓扑快照。</summary>
+    private static ChunkGenerationTopologySnapshot ResolveGenerationTopology(PlanetData planet)
+    {
+        return WorldTopologyBounds.TryCreate(planet, out WorldTopologyBounds bounds)
             ? new ChunkGenerationTopologySnapshot(
                 new Int2(bounds.Min.x, bounds.Min.y),
                 new Int2(bounds.Span.x, bounds.Span.y))

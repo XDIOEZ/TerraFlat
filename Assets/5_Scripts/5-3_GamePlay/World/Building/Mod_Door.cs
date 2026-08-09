@@ -86,9 +86,13 @@ public class Mod_Door : Module, IInteractable
     #region 交互接口
     public void OnInteractStart(Item playerItem)
     {
+        if (DoorRenderer == null || DoorCollider == null)
+            CacheReferences();
+
         Data.IsOpen = !Data.IsOpen;
         ApplyDoorState();
-        AudioService.Instance.PlayAt(
+        Save();
+        AudioService.Instance?.PlayAt(
             Data.IsOpen ? AudioEventIds.DoorOpen : AudioEventIds.DoorClose,
             transform.position);
     }

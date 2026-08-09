@@ -29,6 +29,8 @@ namespace FlatWorld.WorldModel
         public WorldAddress Address { get; }
         /// <summary>当前正式使用的地形数据；还没生成好时是 null。</summary>
         public ChunkTerrainData Terrain { get; private set; }
+        /// <summary>当前区块的自然物品确定性放置结果。</summary>
+        public ChunkEcologyData Ecology { get; private set; } = ChunkEcologyData.Empty;
         /// <summary>哪些格子被建筑或物品占用了。</summary>
         public ChunkOccupancyData Occupancy { get; }
         /// <summary>地形现在处于“未请求、生成中、可使用、失败或删除中”的哪个阶段。</summary>
@@ -131,7 +133,8 @@ namespace FlatWorld.WorldModel
             SetDataStatus(ChunkDataStatus.Failed);
         }
 
-        internal void ApplyGeneratedData(ChunkTerrainData terrain)
+        internal void ApplyGeneratedData(ChunkTerrainData terrain,
+            ChunkEcologyData ecology = null)
         {
             ThrowIfDisposed();
             if (terrain == null)
@@ -140,6 +143,7 @@ namespace FlatWorld.WorldModel
             // 先把新地形设为正式数据，再释放旧地形，避免同时占着两份大地图内存。
             ChunkTerrainData previous = Terrain;
             Terrain = terrain;
+            Ecology = ecology ?? ChunkEcologyData.Empty;
             Occupancy.Clear();
             FailureReason = null;
             SetDataStatus(ChunkDataStatus.Ready);
@@ -181,6 +185,7 @@ namespace FlatWorld.WorldModel
             _disposed = true;
             Terrain?.Dispose();
             Terrain = null;
+            Ecology = ChunkEcologyData.Empty;
             _simulationLeaseCount = 0;
             _presentationLeaseCount = 0;
             _navigationLeaseCount = 0;

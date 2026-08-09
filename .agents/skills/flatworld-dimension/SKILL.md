@@ -54,6 +54,7 @@ DimensionPortal.Interact
 
 - `ChunkMgr.TryCreateMapCore()` 从当前 `DimensionDefinition.MapCorePrefabId` 解析地图 Prefab。
 - `DimensionManager.ConfigureMap()` 在矿洞维度把原 `Map.mapGenerators` 替换为 `ChunkGenerator_Cave`；地表继续使用 MapCore 原管线。
+- 该 `ChunkGenerator_Cave` 只服务旧 `Map` 兼容流程；正式新世界经 `ChunkMgr.RefreshRuntimeWindow()` 进入 `DeterministicChunkGenerator + CaveLayoutKernel + CaveGenerationFeatureGenerator`，不得在新版 View 再调用旧 Chunk 生成器。
 - `MapGenerationContext` 携带当前 `WorldAddress` 与 `DimensionDefinition`。
 - 矿洞取代地表管线后，`ChunkGenerator_Cave` 是唯一 `BaseTerrain(100)` 生成器；不得与 `ChunkGenerator_Land` 同时存在。
 - 程序生成种子由基础种子、`WorldKey` 和 `SeedSalt` 混合；不同维度不得共享同一确定性 GUID 空间。
@@ -78,6 +79,7 @@ DimensionPortal.Interact
 - 正式矿坑锚点同样存于 `flatworld.dimensions.portalAnchors`：以地表 `WorldKey + MineEntrance Guid` 为稳定键，保存地表入口 GUID/位置、矿洞世界键和 CaveExit GUID/位置。
 - 使用矿坑入口时抵达对应 CaveExit 的 `PortalOffset` 安全偏移；使用 CaveExit 时返回绑定的地表矿坑旁，不再生成免费运行时 Portal。
 - `DimensionPortal` 通过现有 `IInteractable`/E 键链触发；地表入口必须是已安装 `MineEntrance`，生成的 `MineEntrance_Summoner` 因 `BuildingRole.Summoner` 会被拒绝。
+- `ChunkNaturalItemRenderer` 为确定性 `CaveExit` 调用 `DimensionPortal.ConfigureGenerated()`；此分支不写玩家锚点，按同一世界格切到另一维度，并在 `WaitForRuntimeChunkPresentation()` 确认目标 `ChunkView` 与自然出口已绑定。
 - 正式资源：`Assets/2_Prefabs/Building/MineEntrance.prefab`、`Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab`、`Assets/2_Prefabs/Dimension/CaveExit.prefab`。
 - `CaveExit` 是不可拾取 Chunk Item；必须等程序生成基线进入 Ready 后创建，使其自然进入 `ChunkSaveRecord.ChangedItems`，不得在基线前生成或只创建临时 GameObject。
 - 可重复安装器：`Assets/5_Scripts/5-2_Editor/Dimension/DimensionProjectInstaller.cs`，菜单 `FlatWorld/Dimension/Install Mine Entrances`。
@@ -121,16 +123,16 @@ DimensionPortal.Interact
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：维度切换在加载目标玩家后沿用 `Mod_ChunkLoader` 的相机视距、预取和销毁配置刷新完整 Runtime Window；等待活动视野内所有 `ChunkView` 绑定，禁止用 1x1 兜底覆盖周围区块。
+- 2026-08-09：进入矿洞时 `ChunkMgr` 从地表世界已冻结的 Profile、维度派生种子和拓扑构造 `CavePortalPairingSnapshot`；自然入口切换继续使用同一世界格，洞穴不再额外动态补造出口。
+- 2026-08-09：旧矿洞房间/隧道/矿脉设计迁入新版纯区块：`ChunkGenerationProfile_Cave` 冻结洞穴参数与矿脉规则，天然 `CaveExit` 由稳定位置成对生成。交互后先完整释放旧 Player/Scene，再主动刷新并等待目标 WorldModel ChunkView，避免旧队列空闲但新纯区块尚未表现时提前落地。
+- 2026-08-09：实体 AI 索引键使用 `WorldModel.WorldAddress` 的维度 ID 与 Chunk 原点，世界对象或 Epoch 改变即清空；存档继续以当前维度 `WorldKey` 作为 Planet 键，禁止跨地表/矿洞复用实体归属。
+- 2026-08-09：返回主菜单后必须确认旧 `WorldKey` 动态 Scene 已被 `LoadSceneMode.Single` 卸载；若仍加载，`GameManager` 补充显式卸载。此约束保护随后以相同世界键进入地表或维度时的 `SceneManager.CreateScene()`。
 - 2026-08-08：WorldModel 运行时窗口现在用 `DimensionManager.GetActiveGenerationSeed()` 派生区块种子，与出生点纯采样及旧 Map 生成保持一致，不同维度继续隔离确定性地形和 GUID 空间。
 - 2026-08-08：地块效果接收器改读 `ChunkRuntime/ChunkTerrainData`，运行时水体通过 Surface Profile 的 `tile.block.<TileId>` 映射恢复现有 `Tile_Water` 行为；切换世界仍使用进入缓存精确退出，旧 `Map` 仅作兼容回退。
 - 2026-08-05：矿洞生成改为带一格边界的 Burst 开放掩码与分类 Job；主线程通过新地形栈 API 写入地板/墙体两层，取消和销毁必须完成并释放 NativeArray。
 
 - 2026-07-31：移除玩家旁免费运行时 Portal；新增可建造/可拆除/可存档 `MineEntrance`、不可拾取差量存档 `CaveExit` 和按入口 GUID 绑定的双向锚点。
-- 2026-07-31：矿洞岩壁从地面 Tilemap 分离到通用“建筑阻挡层”；底层地面、阻挡视觉/碰撞和顶层导航 TileData 各自保持单一职责。
-- 2026-07-31：矿洞升级为跨 Chunk 连续的不规则房间、弯曲隧道和入口安全室；新增实体岩壁与沿墙噪声矿床，取代整块平坦石地随机散点矿物。
-- 2026-07-31：新增统一星球/维度世界地址、动态世界 Scene、独立地图与种子、玩家位置进度、地表与地下矿洞往返。
-- 2026-07-31：新增确定性矿洞生成器、固定低光照、禁天气/怪物和煤铜锡铁石矿脉；修正矿物掉落表。
-- 2026-07-31：首版明确禁止联机维度切换，为后续服务器权威星球旅行保留边界。
 
 ## 修改后维护本 Skill
 

@@ -45,10 +45,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  detectionRadius: 8
+  detectionRadius: 12
   itemLayer:
     serializedVersion: 2
-    m_Bits: 503
+    m_Bits: 1527
   currentItemsInArea: []
   ModData:
     Name: 
@@ -286,8 +286,8 @@ MonoBehaviour:
     RuntimeOwnerSlotIndex: -1
     BitData: 
   animationController: {fileID: 0}
-  moveHungerBuffId: ''
-  runHungerBuffId: ''
+  moveHungerBuffId: 
+  runHungerBuffId: 
   OnMoveStart:
     _PersistentCalls: []
   OnMoveEnd:
@@ -297,6 +297,7 @@ MonoBehaviour:
   destinationChangeThreshold: 0.05
   stalledRepathDelay: 0.8
   progressDistanceThreshold: 0.02
+  animationMoveSpeedThreshold: 0.03
   CanMove: 1
   HasReachedTarget: 0
 --- !u!1 &4766519559426352308
@@ -405,6 +406,7 @@ MonoBehaviour:
   stopDistance: 0.5
   waypointDistance: 0.12
   repathInterval: 0.25
+  maxRetryInterval: 2
   destinationChangeThreshold: 0.05
   stalledRepathDelay: 0.8
   progressDistanceThreshold: 0.02
@@ -433,7 +435,7 @@ MonoBehaviour:
   OnDurabilityModified:
     _PersistentCalls: []
   updateInterval: 0
-  Data:
+  data:
     IDName: WildBoar
     GameName: WildBoar
     Description: "\u7269\u54C1\u540D\u79F0\uFF1AWildBoar\n\u7269\u54C1\u63CF\u8FF0\uFF1A\n\u7269\u54C1\u4F53\u79EF\uFF1A1\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1AFalse\n\u7269\u54C1\u6807\u7B7E\uFF1ATagDictionary:\r\n 
@@ -530,10 +532,13 @@ MonoBehaviour:
   _currentState: 0
   _stateElapsed: 0
   _isReady: 0
+  _recentDamageThreat: {fileID: 0}
+  _damageThreatRemain: 0
   _mover: {fileID: 0}
   _hp: {fileID: 0}
   _detector: {fileID: 0}
   _animator: {fileID: 0}
+  _turnBody: {fileID: 0}
   OnStateChanged:
     _PersistentCalls: []
   Data:
@@ -578,12 +583,14 @@ MonoBehaviour:
   chaseThreatTags:
   - Player
   chasePlayer: 1
-  attackTriggerDistance: 1
+  attackTriggerDistance: 1.6
+  attackVerticalTriggerDistance: 0.45
   attackDuration: 1.5
   rageBuildupRate: 0.5
   rageDecayRate: 0.2
   attackCooldown: 2
-  attackDamageWindow: 0.2
+  attackDamageWindow: 0.12
+  attackDamageStartDelay: 0.06
   fleeTriggerHpRate: 0.2
   fleeSafeHpRate: 0.4
   fleeRunDistance: 10
@@ -924,8 +931,20 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5641593694245906890, guid: 88450745eac117c4295962551e0db2d7, type: 3}
+      propertyPath: m_Size.x
+      value: 2.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5641593694245906890, guid: 88450745eac117c4295962551e0db2d7, type: 3}
+      propertyPath: m_Size.y
+      value: 0.9
+      objectReference: {fileID: 0}
+    - target: {fileID: 5641593694245906890, guid: 88450745eac117c4295962551e0db2d7, type: 3}
       propertyPath: m_Enabled
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5641593694245906890, guid: 88450745eac117c4295962551e0db2d7, type: 3}
+      propertyPath: m_EdgeRadius
+      value: 0.45
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1008,18 +1027,6 @@ PrefabInstance:
     m_TransformParent: {fileID: 478715881179084011}
     m_Modifications:
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: FoodModData.FoodData.nutritionConsumeSpeed.BaseValue
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: FoodModData.FoodData.WaterConsumeSpeedRate
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-      propertyPath: FoodModData.FoodData.nutritionConsumeRate
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: Data.AbsorptionRate
       value: 0.01
       objectReference: {fileID: 0}
@@ -1030,6 +1037,18 @@ PrefabInstance:
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: Data.StaminaConsumeSpeedRate
       value: 0.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutritionConsumeRate
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.WaterConsumeSpeedRate
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: FoodModData.FoodData.nutritionConsumeSpeed.BaseValue
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5923271790331152526, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: m_Name

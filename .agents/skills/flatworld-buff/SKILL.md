@@ -5,7 +5,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 # FlatWorld Buff 定位
 
-> 最后核对：2026-08-03。
+> 最后核对：2026-08-09。
 
 ## 修改前先读
 
@@ -16,6 +16,8 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 5. `Assets/5_Scripts/5-3_GamePlay/Entities/Buff/BuffCatalogLoader.cs` 与 `Assets/StreamingAssets/GameConfig/Buffs/buff-manifest.json`：本体 Buff 分包加载入口与清单。
 
 主链路：`buff-manifest.json -> 启用的 Buff 分包 / MOD Def -> BuffDefinitionFactory -> GameRes.RegisterBuff -> BuffManager.AddBuff -> BuffInstance -> BuffEffectDispatcher`。
+
+角色状态表现链路：`BuffManager.BuffAdded/BuffRemoved/BuffDurationChanged -> ActorStatusVisualEffectController -> 独立 SpriteRenderer 序列 / 状态光晕 / VisualEffectManager 池化粒子`。控制器装配在玩家与 AI 共用的 Animator 模块 Prefab；它不参与伤害 Tick，也不改变 Buff 的权威生命周期。
 
 ## 按任务定位
 
@@ -59,6 +61,10 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：`光耀` 接入 `ActorStatusVisualEffectController` 的低强度状态光晕，复用圆形 Sprite 做轻微呼吸发光；仍由 `BuffAdded`、`BuffRemoved`、续期事件和 `0.2s` 兜底校验驱动，不改变幽灵真实伤害 Tick。
+- 2026-08-09：`ActorStatusVisualEffectController` 新增复合 Buff 粒子映射；`出血|流血|失血` 共用 `BloodDropStatusEffect`，由 `BuffAdded`、`BuffRemoved`、续期事件和 `0.2s` 兜底校验驱动，持续表现通过 `VisualEffectManager` 对象池启停。
+- 2026-08-09：新增可复用 `ActorStatusVisualEffectController`，由 `BuffManager` 生命周期事件驱动、每 `0.2s` 兜底同步存档恢复；`燃烧` 映射到 `CreatureBurning_Sheet` 八帧火焰，已装配到玩家/AI 动画模块。移除、过期和对象复用都会隐藏火焰，且附属精灵不受角色水体/受击 MPB 影响。
+- 2026-08-08：F4 GM Buff 分发改为动态扫描已加载场景中激活的 `BuffManager`，通过带索引的滚动列表选择目标；保留确认、取消、清除和限时覆盖，运行时不再绑定 `GameController.LeftClick`。
 - 2026-08-08：新版 `TileEffectReceiver` 通过 `ChunkTerrainData` 恢复河流/海洋的 `Tile_Water` 行为；进入水体添加 `水体减速`、`潮湿`，离开时成对移除并恢复移动倍率，旧 `Map` 仅作兼容回退。
 - 2026-08-05：本体 combat 分包新增稳定 ID `燃烧`：持续 5 秒、每秒 1 点真实伤害、重复施加刷新持续时间；真实单机黄金路径会在玩家移动阶段施加并跨 Tick 验证伤害，随后移除 Buff、恢复生命。
 - 2026-08-04：`BuffManager` 的规范模块 ID 固定为 `BuffManager`，并兼容旧存档/Prefab 中的 `Buff模块`；模板提取和模块自动修复不得再把旧 ID 写回运行时索引。

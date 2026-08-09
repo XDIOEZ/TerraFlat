@@ -311,7 +311,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -2000,7 +2000,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -2165,7 +2165,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -2330,7 +2330,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -2819,7 +2819,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -2984,7 +2984,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -3149,7 +3149,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -3314,7 +3314,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -3526,7 +3526,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -3691,7 +3691,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -3856,7 +3856,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -4021,7 +4021,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -4186,7 +4186,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -4351,7 +4351,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -4516,7 +4516,7 @@
       "modules": {
         "food": {
           "prefab": "Module_Food",
-          "id": "Mod_Food",
+          "id": "食物模块",
           "enabled": true,
           "data": {
             "FoodData": {
@@ -4598,6 +4598,87 @@
           }
         }
       },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Humus",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Materials/Humus.prefab",
+      "gameName": "Humus",
+      "description": "物品名称：RawMeat\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        ""
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/腐植.png[腐植]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {},
       "itemData": {
         "code": "",
         "transform": {

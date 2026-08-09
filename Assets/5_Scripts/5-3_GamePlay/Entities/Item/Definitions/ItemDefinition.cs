@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
+using FlatWorld.Localization;
 
 /// <summary>游戏本体 JSON 物品目录。</summary>
 [Serializable]
@@ -66,6 +67,12 @@ public sealed class ItemDefinitionDto
 
     [JsonProperty("gameName")]
     public string GameName;
+
+    [JsonProperty("labelKey")]
+    public string LabelKey;
+
+    [JsonProperty("descriptionKey")]
+    public string DescriptionKey;
 
     [JsonProperty("description")]
     public string Description;
@@ -205,8 +212,19 @@ public sealed class RuntimeItemDefinition
     public string RendererPath => Visual?.RendererPath;
     public Sprite Sprite { get; }
 
-    /// <summary>JSON 定义中的游戏显示名；空值时回退到稳定物品 ID。</summary>
-    public string DisplayName => string.IsNullOrWhiteSpace(templateData?.GameName)
+    /// <summary>名称在 String Table 中的稳定 key。</summary>
+    public string LabelKey { get; }
+
+    /// <summary>说明在 String Table 中的稳定 key。</summary>
+    public string DescriptionKey { get; }
+
+    /// <summary>按当前语言返回物品显示名；没有表时回退到 JSON gameName 或 ID。</summary>
+    public string DisplayName => FlatWorldLocalizationService.Get(LabelKey, LegacyDisplayName);
+
+    /// <summary>按当前语言返回物品说明；没有表时回退到 JSON description。</summary>
+    public string Description => FlatWorldLocalizationService.Get(DescriptionKey, templateData?.Description ?? string.Empty);
+
+    private string LegacyDisplayName => string.IsNullOrWhiteSpace(templateData?.GameName)
         ? Id
         : templateData.GameName;
 
@@ -218,7 +236,9 @@ public sealed class RuntimeItemDefinition
         ItemVisualDefinitionDto visual,
         Sprite sprite,
         Dictionary<string, string> parameters,
-        Dictionary<string, string> prefabIds)
+        Dictionary<string, string> prefabIds,
+        string labelKey,
+        string descriptionKey)
     {
         Id = id;
         ShellPrefabId = shellPrefabId;
@@ -226,6 +246,12 @@ public sealed class RuntimeItemDefinition
         templateData = itemData;
         Visual = visual;
         Sprite = sprite;
+        LabelKey = string.IsNullOrWhiteSpace(labelKey)
+            ? FlatWorldLocalizationService.GetItemLabelKey(id)
+            : labelKey.Trim();
+        DescriptionKey = string.IsNullOrWhiteSpace(descriptionKey)
+            ? FlatWorldLocalizationService.GetItemDescriptionKey(id)
+            : descriptionKey.Trim();
         moduleParameters = parameters ?? new Dictionary<string, string>(StringComparer.Ordinal);
         modulePrefabIds = prefabIds ?? new Dictionary<string, string>(StringComparer.Ordinal);
     }

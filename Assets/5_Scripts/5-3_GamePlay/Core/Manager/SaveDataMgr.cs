@@ -1,11 +1,16 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using MemoryPack;
 using Sirenix.OdinInspector;
+using FlatWorld.Networking;
+using FlatWorld.WorldModel;
+using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 /// <summary>
 /// 游戏存档与加载系统，负责管理游戏数据的保存和加载功能
@@ -20,9 +25,16 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'2' };
     private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'3' };
     private static readonly object SaveFileLock = new object();
+    private static readonly object SaveRevisionLock = new object();
+    private static readonly Dictionary<string, long> LatestSaveRevisions =
+        new(StringComparer.OrdinalIgnoreCase);
+    private static long nextSaveRevision;
 
     private readonly Dictionary<string, ChunkBaseline> chunkBaselines = new();
     private readonly Dictionary<string, ChunkSaveRecord> chunkDeltas = new();
+    private readonly HashSet<string> restoredRuntimeAiChunks = new(StringComparer.Ordinal);
+    private WorldRuntime restoredRuntimeAiWorld;
+    private long restoredRuntimeAiEpoch = long.MinValue;
 
     #region 存档配置
     [Tooltip("玩家的存档路径")]
@@ -153,6 +165,82 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     }
 
     /// <summary>
+    /// 自动保存专用入口：主线程先完成 Unity 对象快照，随后仅把已经独立的字节数组交给后台原子写盘。
+    /// 不触碰输入锁、时间缩放或实体启停，且较新的手动/退出保存会使旧自动保存失效。
+    /// </summary>
+    public Task<bool> Save_And_WriteToDiskInBackground()
+    {
+        if (SaveData == null)
+        {
+            Debug.LogError("❌ SaveData为null，无法自动保存");
+            return Task.FromResult(false);
+        }
+
+        try
+        {
+            // Unity 对象和 ModRuntime 只能在主线程读取；后台任务只接收不可变字节数组和文件路径。
+            PrepareLoadedChunksForSave();
+            return QueueCurrentSaveWriteInBackground();
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError($"❌ 自动保存快照创建失败: {exception.Message}");
+            Debug.LogException(exception);
+            return Task.FromException<bool>(exception);
+        }
+    }
+
+    /// <summary>
+    /// 自动保存专用协程：先通过既有入口采集生态自然物，再把旧区块快照分散到多帧。
+    /// 完成快照后通过回调交付后台写盘任务，调用方只能轮询任务，不能同步等待。
+    /// </summary>
+    public IEnumerator Save_And_WriteToDiskInBackgroundCoroutine(Action<Task<bool>> onWriteQueued)
+    {
+        if (SaveData == null)
+        {
+            Debug.LogError("❌ SaveData为null，无法自动保存");
+            onWriteQueued?.Invoke(Task.FromResult(false));
+            yield break;
+        }
+
+        Exception captureFailure = null;
+        IEnumerator captureRoutine = PrepareLoadedChunksForAutoSaveCoroutine(
+            exception => captureFailure = exception);
+        while (captureRoutine.MoveNext())
+            yield return captureRoutine.Current;
+
+        if (captureFailure != null)
+        {
+            onWriteQueued?.Invoke(Task.FromException<bool>(captureFailure));
+            yield break;
+        }
+
+        onWriteQueued?.Invoke(QueueCurrentSaveWriteInBackground());
+    }
+
+    /// <summary>在主线程构建完整字节快照，并返回不访问 Unity API 的后台文件写入任务。</summary>
+    private Task<bool> QueueCurrentSaveWriteInBackground()
+    {
+        try
+        {
+            EnsureDirectoryExists(UserSavePath);
+
+            string fullPath = GetSaveFilePath(UserSavePath, SaveData.saveName);
+            byte[] dataBytes = BuildCompactSavePayload(SaveData);
+            long saveRevision = ReserveSaveRevision(fullPath);
+
+            return Task.Run(() =>
+                WriteSaveAtomically(fullPath, dataBytes, saveRevision, discardIfSuperseded: true));
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError($"❌ 自动保存快照创建失败: {exception.Message}");
+            Debug.LogException(exception);
+            return Task.FromException<bool>(exception);
+        }
+    }
+
+    /// <summary>
     /// 保存当前游戏状态，并记录玩家退出该存档的现实时间。
     /// </summary>
     public void Save_And_WriteToDiskAndRecordExitTime()
@@ -247,7 +335,9 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
             string fullPath = GetSaveFilePath(savePath, saveName);
             byte[] dataBytes = BuildCompactSavePayload(saveData);
-            WriteSaveAtomically(fullPath, dataBytes);
+            long saveRevision = ReserveSaveRevision(fullPath);
+            if (!WriteSaveAtomically(fullPath, dataBytes, saveRevision, discardIfSuperseded: false))
+                return false;
 
             Debug.Log($"✅ 存档成功！路径: {fullPath}");
             return true;
@@ -630,13 +720,22 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// 先将完整存档写入同目录临时文件并强制落盘，再原子替换正式文件。
     /// 正式文件的上一版本会保留为.bak备份。
     /// </summary>
-    private static void WriteSaveAtomically(string fullPath, byte[] dataBytes)
+    private static bool WriteSaveAtomically(
+        string fullPath,
+        byte[] dataBytes,
+        long saveRevision,
+        bool discardIfSuperseded)
     {
         string temporaryPath = GetTemporarySavePath(fullPath);
         string backupPath = GetBackupSavePath(fullPath);
 
         lock (SaveFileLock)
         {
+            // 退出/手动保存已生成更新快照时，丢弃尚未开始写入的旧自动保存，
+            // 防止后台任务在世界退出后把过期状态覆盖到磁盘。
+            if (discardIfSuperseded && !IsSaveRevisionCurrent(fullPath, saveRevision))
+                return false;
+
             DeleteFileIfExists(temporaryPath);
 
             try
@@ -659,7 +758,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 if (!File.Exists(fullPath))
                 {
                     File.Move(temporaryPath, fullPath);
-                    return;
+                    return true;
                 }
 
                 DeleteFileIfExists(backupPath);
@@ -676,11 +775,38 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 {
                     ReplaceSaveWithBackupFallback(temporaryPath, fullPath, backupPath);
                 }
+
+                return true;
             }
             finally
             {
                 DeleteFileIfExists(temporaryPath);
             }
+        }
+    }
+
+    /// <summary>
+    /// 为同一存档文件登记最新快照版本；版本锁与文件锁分离，避免主线程等待后台磁盘写入。
+    /// </summary>
+    private static long ReserveSaveRevision(string fullPath)
+    {
+        string saveKey = Path.GetFullPath(fullPath);
+        lock (SaveRevisionLock)
+        {
+            long revision = ++nextSaveRevision;
+            LatestSaveRevisions[saveKey] = revision;
+            return revision;
+        }
+    }
+
+    /// <summary>判断后台自动保存的快照是否仍是该文件的最新版本。</summary>
+    private static bool IsSaveRevisionCurrent(string fullPath, long saveRevision)
+    {
+        string saveKey = Path.GetFullPath(fullPath);
+        lock (SaveRevisionLock)
+        {
+            return LatestSaveRevisions.TryGetValue(saveKey, out long latestRevision) &&
+                   latestRevision == saveRevision;
         }
     }
 
@@ -821,7 +947,8 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         HashSet<int> currentGuids = new HashSet<int>();
         foreach (Item item in chunk.RunTimeItems.Values)
         {
-            if (item == null || item is Map || item.itemData == null)
+            if (item == null || item is Map || item.itemData == null ||
+                RuntimeAiEntityUtility.IsAiEntity(item))
                 continue;
 
             try
@@ -875,21 +1002,291 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     {
         chunkBaselines.Clear();
         chunkDeltas.Clear();
+        restoredRuntimeAiChunks.Clear();
+        restoredRuntimeAiWorld = null;
+        restoredRuntimeAiEpoch = long.MinValue;
     }
 
     private void PrepareLoadedChunksForSave()
     {
-        if (ChunkMgr.Instance == null || ChunkMgr.Instance.Chunk_Dic_ByPos == null)
+        // 新 WorldModel 的自然物挂在 ChunkView，不属于旧 Chunk.RunTimeItems；先捕获其状态。
+        ChunkMgr.Instance?.CaptureRuntimeNaturalItemStates();
+        if (ChunkMgr.Instance != null && ChunkMgr.Instance.Chunk_Dic_ByPos != null)
+        {
+            List<Chunk> chunks = new List<Chunk>(ChunkMgr.Instance.Chunk_Dic_ByPos.Values);
+            for (int i = 0; i < chunks.Count; i++)
+            {
+                Chunk chunk = chunks[i];
+                if (chunk != null)
+                    chunk.SaveChunk();
+            }
+        }
+
+        // 旧 Chunk 写入结束后再合并 AI，避免旧差量记录覆盖新版实体快照。
+        CaptureRuntimeAiEntityStates();
+    }
+
+    /// <summary>自动保存将旧 Chunk 的快照分帧执行，防止一次性扫描打断玩家控制。</summary>
+    private IEnumerator PrepareLoadedChunksForAutoSaveCoroutine(Action<Exception> onFailure)
+    {
+        if (ChunkMgr.Instance != null)
+        {
+            // 生态自然物仍使用现有权威捕获入口；与后续旧 Chunk 扫描至少错开一帧。
+            ChunkMgr.Instance.CaptureRuntimeNaturalItemStates();
+            yield return null;
+        }
+
+        if (ChunkMgr.Instance != null && ChunkMgr.Instance.Chunk_Dic_ByPos != null)
+        {
+            List<Chunk> chunks = new List<Chunk>(ChunkMgr.Instance.Chunk_Dic_ByPos.Values);
+            for (int i = 0; i < chunks.Count; i++)
+            {
+                Chunk chunk = chunks[i];
+                if (chunk != null)
+                {
+                    Exception chunkSaveFailure = null;
+                    try
+                    {
+                        chunk.SaveChunk();
+                    }
+                    catch (Exception exception)
+                    {
+                        Debug.LogError($"[SaveDataMgr] 自动保存区块失败：{chunk.name}", chunk);
+                        Debug.LogException(exception);
+                        chunkSaveFailure = exception;
+                    }
+
+                    if (chunkSaveFailure != null)
+                    {
+                        onFailure?.Invoke(chunkSaveFailure);
+                        yield break;
+                    }
+                }
+
+                // 一个 Chunk 至少让出一帧，保持输入、物理和 AI 的常规 Update 频率。
+                if (i + 1 < chunks.Count)
+                    yield return null;
+            }
+        }
+
+        CaptureRuntimeAiEntityStates();
+    }
+
+    #region Runtime AI persistence
+
+    /// <summary>
+    /// 从 ItemMgr 的 WorldAddress 索引采集 AI；旧全量 MapSave 保持全量格式，
+    /// 程序化或纯新版区块则复用 ChangedItems 数据槽，避免新增存档版本字段。
+    /// </summary>
+    private void CaptureRuntimeAiEntityStates()
+    {
+        ItemMgr itemManager = ItemMgr.Instance;
+        if (itemManager == null || SaveData == null)
             return;
 
-        List<Chunk> chunks = new List<Chunk>(ChunkMgr.Instance.Chunk_Dic_ByPos.Values);
-        for (int i = 0; i < chunks.Count; i++)
+        string planetName = SceneManager.GetActiveScene().name;
+        var addresses = new HashSet<RuntimeWorldAddress>();
+        var capturedAddresses = new HashSet<RuntimeWorldAddress>();
+        var runtimeItems = new List<Item>();
+        var savedItems = new List<ItemData>();
+        itemManager.CopyRuntimeAiSaveAddresses(addresses);
+
+        foreach (RuntimeWorldAddress address in addresses)
         {
-            Chunk chunk = chunks[i];
-            if (chunk != null)
-                chunk.SaveChunk();
+            itemManager.CopyRuntimeAiItems(address, runtimeItems);
+            savedItems.Clear();
+            bool captureSucceeded = true;
+            for (int i = 0; i < runtimeItems.Count; i++)
+            {
+                Item item = runtimeItems[i];
+                try
+                {
+                    item.Save();
+                    savedItems.Add(CloneItemData(item.itemData));
+                }
+                catch (Exception exception)
+                {
+                    captureSucceeded = false;
+                    Debug.LogError($"[SaveDataMgr] 保存运行时 AI 失败：{item.name}", item);
+                    Debug.LogException(exception);
+                    break;
+                }
+            }
+
+            if (!captureSucceeded)
+                continue;
+
+            MergeRuntimeAiItems(planetName, address, savedItems);
+            capturedAddresses.Add(address);
+        }
+
+        itemManager.AcknowledgeRuntimeAiSave(capturedAddresses);
+    }
+
+    /// <summary>在新版区块数据就绪时恢复该地址的 AI，不再等待旧 Chunk 实例化。</summary>
+    public void RestoreRuntimeAiEntitiesForChunk(RuntimeWorldAddress address)
+    {
+        if (!GameNetwork.HasStateAuthority || SaveData == null || ItemMgr.Instance == null)
+            return;
+
+        EnsureRuntimeAiRestoreScope();
+        string planetName = SceneManager.GetActiveScene().name;
+        string chunkName = ToChunkName(address);
+        string restoreKey = $"{BuildChunkKey(planetName, chunkName)}\u001f{address.DimensionId}";
+        if (!restoredRuntimeAiChunks.Add(restoreKey))
+            return;
+
+        var candidates = new List<ItemData>();
+        string chunkKey = BuildChunkKey(planetName, chunkName);
+        if (chunkDeltas.TryGetValue(chunkKey, out ChunkSaveRecord delta))
+            CollectRuntimeAiData(delta?.ChangedItems, candidates);
+
+        if (TryGetFullMapSave(planetName, chunkName, out MapSave mapSave) && mapSave.items != null)
+        {
+            foreach (HashSet<ItemData> items in mapSave.items.Values)
+                CollectRuntimeAiData(items, candidates);
+        }
+
+        var restoredGuids = new HashSet<int>();
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            ItemData savedData = candidates[i];
+            if (savedData == null || !restoredGuids.Add(savedData.Guid))
+                continue;
+
+            Item existing = ItemMgr.Instance.GetItemByGuid(savedData.Guid);
+            if (existing != null)
+            {
+                if (RuntimeAiEntityUtility.IsAiEntity(existing))
+                    ItemWorldPlacement.AttachRuntimeAi(existing, existing.gameObject);
+                continue;
+            }
+
+            try
+            {
+                ItemData runtimeData = CloneItemData(savedData);
+                ItemTransform transformData = runtimeData.transform ?? new ItemTransform();
+                Item restored = ItemMgr.Instance.InstantiateItem(
+                    runtimeData,
+                    transformData.position,
+                    transformData.rotation,
+                    transformData.scale);
+                restored?.Load();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError(
+                    $"[SaveDataMgr] 恢复运行时 AI 失败：{savedData.IDName}, Guid={savedData.Guid}");
+                Debug.LogException(exception);
+            }
         }
     }
+
+    private void MergeRuntimeAiItems(
+        string planetName,
+        RuntimeWorldAddress address,
+        List<ItemData> savedItems)
+    {
+        string chunkName = ToChunkName(address);
+        string key = BuildChunkKey(planetName, chunkName);
+        if (!chunkBaselines.ContainsKey(key) &&
+            !chunkDeltas.ContainsKey(key) &&
+            TryGetFullMapSave(planetName, chunkName, out MapSave fullMapSave))
+        {
+            ReplaceMapSaveRuntimeAiItems(fullMapSave, savedItems);
+            return;
+        }
+
+        if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record == null)
+        {
+            record = new ChunkSaveRecord
+            {
+                PlanetName = planetName,
+                ChunkName = chunkName,
+                ChunkPosition = new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y),
+                IsDelta = true
+            };
+        }
+
+        record.ChangedItems ??= new List<ItemData>();
+        record.ChangedItems.RemoveAll(RuntimeAiEntityUtility.IsAiData);
+        for (int i = 0; i < savedItems.Count; i++)
+            record.ChangedItems.Add(savedItems[i]);
+        record.ChangedItems.Sort((left, right) => (left?.Guid ?? 0).CompareTo(right?.Guid ?? 0));
+
+        if (record.HasChanges)
+            chunkDeltas[key] = record;
+        else
+            chunkDeltas.Remove(key);
+    }
+
+    private static void ReplaceMapSaveRuntimeAiItems(MapSave mapSave, List<ItemData> savedItems)
+    {
+        mapSave.items ??= new Dictionary<string, HashSet<ItemData>>();
+        var emptyGroups = new List<string>();
+        foreach (KeyValuePair<string, HashSet<ItemData>> pair in mapSave.items)
+        {
+            pair.Value?.RemoveWhere(RuntimeAiEntityUtility.IsAiData);
+            if (pair.Value == null || pair.Value.Count == 0)
+                emptyGroups.Add(pair.Key);
+        }
+
+        for (int i = 0; i < emptyGroups.Count; i++)
+            mapSave.items.Remove(emptyGroups[i]);
+
+        for (int i = 0; i < savedItems.Count; i++)
+        {
+            ItemData data = savedItems[i];
+            if (data == null)
+                continue;
+            if (!mapSave.items.TryGetValue(data.IDName, out HashSet<ItemData> group))
+            {
+                group = new HashSet<ItemData>();
+                mapSave.items[data.IDName] = group;
+            }
+            group.Add(data);
+        }
+    }
+
+    private bool TryGetFullMapSave(string planetName, string chunkName, out MapSave mapSave)
+    {
+        mapSave = null;
+        return SaveData?.PlanetData_Dict != null &&
+               SaveData.PlanetData_Dict.TryGetValue(planetName, out PlanetData planet) &&
+               planet?.MapData_Dict != null &&
+               planet.MapData_Dict.TryGetValue(chunkName, out mapSave) &&
+               mapSave != null;
+    }
+
+    private static void CollectRuntimeAiData(IEnumerable<ItemData> source, List<ItemData> output)
+    {
+        if (source == null)
+            return;
+        foreach (ItemData data in source)
+        {
+            if (RuntimeAiEntityUtility.IsAiData(data))
+                output.Add(data);
+        }
+    }
+
+    private void EnsureRuntimeAiRestoreScope()
+    {
+        WorldRuntime world = ChunkMgr.ExistingInstance?.WorldRuntime;
+        long epoch = world?.Epoch ?? long.MinValue;
+        if (ReferenceEquals(restoredRuntimeAiWorld, world) && restoredRuntimeAiEpoch == epoch)
+            return;
+
+        restoredRuntimeAiChunks.Clear();
+        restoredRuntimeAiWorld = world;
+        restoredRuntimeAiEpoch = epoch;
+    }
+
+    private static string ToChunkName(RuntimeWorldAddress address)
+    {
+        return new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y).ToString();
+    }
+
+    #endregion
 
     private ChunkBaseline CaptureChunkBaseline(Chunk chunk)
     {
@@ -897,7 +1294,8 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         foreach (Item item in chunk.RunTimeItems.Values)
         {
-            if (item == null || item is Map || item.itemData == null)
+            if (item == null || item is Map || item.itemData == null ||
+                RuntimeAiEntityUtility.IsAiEntity(item))
                 continue;
 
             try
@@ -1038,6 +1436,8 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         {
             ItemData savedData = delta.ChangedItems[i];
             if (savedData == null || string.IsNullOrEmpty(savedData.IDName))
+                continue;
+            if (RuntimeAiEntityUtility.IsAiData(savedData))
                 continue;
 
             RemoveRuntimeItem(chunk, savedData.Guid);

@@ -72,19 +72,22 @@ namespace FlatWorld.WorldModel
                 return Reject(result, $"Chunk is not generating ({chunk.DataStatus}).", out rejectionReason);
 
             // 先把临时地形整理成正式数据。这个过程如果出错，原来的区块不会被改坏。
-            ChunkTerrainData terrain;
+            ChunkTerrainData terrain = null;
+            ChunkEcologyData ecology = null;
             try
             {
                 terrain = result.ConsumeTerrain();
+                ecology = result.ConsumeEcology();
             }
             catch (Exception exception)
             {
+                terrain?.Dispose();
                 return Reject(result, $"Terrain materialization failed: {exception.Message}",
                     out rejectionReason);
             }
 
             // 新地形交给区块后，临时结果就不再负责保管这份数据。
-            chunk.ApplyGeneratedData(terrain);
+            chunk.ApplyGeneratedData(terrain, ecology);
             result.Dispose();
             Events.Publish(new ChunkCommitted(request.Address, request.RequestVersion,
                 terrain.ComputeStableHash()));

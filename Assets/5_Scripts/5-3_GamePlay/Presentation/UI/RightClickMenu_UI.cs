@@ -15,6 +15,7 @@ public class RightClickMenu_UI : MonoBehaviour
     public ItemSlot_UI itemSlotUI; // 当前右键选中的UI槽位
     public BasePanel basePanel; // 右键菜单面板
     Item SlotOwner; // 槽位所属物品（通常为容器或玩家）
+    private GameController gameController;
 
     /// <summary>
     /// 初始化右键菜单并绑定按钮事件。
@@ -32,6 +33,7 @@ public class RightClickMenu_UI : MonoBehaviour
 
         basePanel.CollectUIComponents();
         SlotOwner = _SlotOwner;
+        ResolveInputController();
 
         Button destroyButton = basePanel.GetButton("销毁面板");
         if (destroyButton != null)
@@ -44,6 +46,12 @@ public class RightClickMenu_UI : MonoBehaviour
         Button showInfoButton = basePanel.GetButton("查看物品信息");
         if (showInfoButton != null)
             showInfoButton.onClick.AddListener(ShowItemInfo);
+
+        basePanel.PrepareForGamepadNavigation("使用物品", true, true);
+        basePanel.Opened += AcquireGameplayInputLock;
+        basePanel.Closed += ReleaseGameplayInputLock;
+        if (basePanel.IsOpen())
+            AcquireGameplayInputLock();
     }
 
     /// <summary>
@@ -70,7 +78,8 @@ public class RightClickMenu_UI : MonoBehaviour
     /// </summary>
     public void DestroyPanel()
     {
-        Destroy(basePanel.gameObject);
+        if (basePanel != null)
+            basePanel.Destroy();
     }
 
     /// <summary>
@@ -104,7 +113,7 @@ public class RightClickMenu_UI : MonoBehaviour
             return;
         }
 
-        itemInfoPanelBasePanel.CollectUIComponents();
+        itemInfoPanelBasePanel.Init();
         TextMeshProUGUI infoText = itemInfoPanelBasePanel.GetText("信息");
         if (infoText == null)
         {
@@ -115,6 +124,8 @@ public class RightClickMenu_UI : MonoBehaviour
         infoText.text = BuildItemInfoText(itemSlot.itemData);
         itemInfoPanel.transform.SetParent(basePanel.transform);
         itemInfoPanel.transform.localScale = Vector3.one;
+        itemInfoPanelBasePanel.PrepareForGamepadNavigation("销毁", true, true);
+        itemInfoPanelBasePanel.Open();
 
         RectTransform infoRect = itemInfoPanelBasePanel.rectTransform;
         if (infoRect == null)
@@ -134,6 +145,37 @@ public class RightClickMenu_UI : MonoBehaviour
         infoRect.anchorMax = new Vector2(0.5f, 0.5f);
         infoRect.anchoredPosition = Vector2.zero;
     }
+
+    #region 输入锁与引用
+
+    private void ResolveInputController()
+    {
+        gameController = SlotOwner?.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
+        gameController ??= SlotOwner?.GetComponent<GameController>();
+    }
+
+    private void AcquireGameplayInputLock()
+    {
+        gameController?.AcquireGameplayInputLock(this);
+    }
+
+    private void ReleaseGameplayInputLock()
+    {
+        gameController?.ReleaseGameplayInputLock(this);
+    }
+
+    private void OnDestroy()
+    {
+        if (basePanel != null)
+        {
+            basePanel.Opened -= AcquireGameplayInputLock;
+            basePanel.Closed -= ReleaseGameplayInputLock;
+        }
+
+        ReleaseGameplayInputLock();
+    }
+
+    #endregion
 
     /// <summary>
     /// 构建“详细介绍”文本：基础信息 + 模块信息 + 食物腐败信息。

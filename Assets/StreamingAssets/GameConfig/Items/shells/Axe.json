@@ -116,7 +116,7 @@
             },
             "$collider2D": {
               "type": "BoxCollider2D",
-              "enabled": true,
+              "enabled": false,
               "isTrigger": true,
               "offset": {
                 "x": 0.0,
@@ -131,7 +131,7 @@
         },
         "animation": {
           "prefab": "Mod_Weapon_AnimationAction",
-          "id": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -314,7 +314,7 @@
         },
         "animation": {
           "prefab": "Mod_Weapon_AnimationAction",
-          "id": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -497,7 +497,7 @@
         },
         "animation": {
           "prefab": "Mod_Weapon_AnimationAction",
-          "id": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -680,7 +680,7 @@
         },
         "animation": {
           "prefab": "Mod_Weapon_AnimationAction",
-          "id": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -864,7 +864,7 @@
         },
         "animation": {
           "prefab": "Mod_Weapon_AnimationAction",
-          "id": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
             "BitData": [],
@@ -1047,7 +1047,7 @@
         },
         "animation": {
           "prefab": "Mod_Weapon_AnimationAction",
-          "id": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
           "enabled": true,
           "data": {
             "BitData": [],

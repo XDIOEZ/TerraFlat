@@ -65,6 +65,20 @@ public partial class GrassLayerData
         return true;
     }
 
+    /// <summary>消费一格现有的草，并把它标记为已移除。</summary>
+    public bool TryConsume(int x, int y)
+    {
+        if (!Contains(x, y) || Cells == null)
+            return false;
+
+        int index = y * Width + x;
+        if ((GrassCellState)Cells[index] != GrassCellState.Present)
+            return false;
+
+        Cells[index] = (byte)GrassCellState.Removed;
+        return true;
+    }
+
     public void Clear()
     {
         if (Cells != null && Cells.Length > 0)

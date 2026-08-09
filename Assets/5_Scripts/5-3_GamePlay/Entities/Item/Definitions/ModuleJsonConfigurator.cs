@@ -20,7 +20,9 @@ public static class ModuleJsonConfigurator
     {
         ContractResolver = new UnitySerializedFieldContractResolver(),
         MissingMemberHandling = MissingMemberHandling.Error,
-        ObjectCreationHandling = ObjectCreationHandling.Replace
+        ObjectCreationHandling = ObjectCreationHandling.Replace,
+        // 仅允许迁移器登记的装备实例类型，避免开放 Json.NET 的任意类型反射。
+        Converters = { new EquipmentInstanceJsonConverter() }
     };
 
     public static void Apply(Module module, string itemId, string moduleName, string moduleId, string json)
@@ -105,6 +107,60 @@ public static class ModuleJsonConfigurator
                 polygon.pathCount = 1;
                 polygon.SetPath(0, points.ToObject<Vector2[]>());
                 break;
+        }
+    }
+
+    /// <summary>
+    /// 还原装备模块中的 SerializeReference 多态项。类型名来自迁移器白名单，
+    /// 不使用 TypeNameHandling，避免 JSON 配置获得任意类型实例化能力。
+    /// </summary>
+    private sealed class EquipmentInstanceJsonConverter : JsonConverter
+    {
+        private static readonly Dictionary<string, Type> AllowedTypes =
+            new(StringComparer.Ordinal)
+            {
+                [nameof(EquipmentInstance_Debug)] = typeof(EquipmentInstance_Debug),
+                [nameof(EquipmentInstance_Bag)] = typeof(EquipmentInstance_Bag),
+                [nameof(EquipmentInstance_Speed)] = typeof(EquipmentInstance_Speed),
+                [nameof(EquipmentInstance_Defense)] = typeof(EquipmentInstance_Defense)
+            };
+
+        public override bool CanWrite => false;
+
+        public override bool CanConvert(Type objectType)
+        {
+            return objectType == typeof(EquipmentInstance);
+        }
+
+        public override object ReadJson(
+            JsonReader reader,
+            Type objectType,
+            object existingValue,
+            JsonSerializer serializer)
+        {
+            if (reader.TokenType == JsonToken.Null)
+                return null;
+
+            JObject value = JObject.Load(reader);
+            string concreteTypeName = value.Value<string>("$concreteType");
+            if (!AllowedTypes.TryGetValue(concreteTypeName ?? string.Empty, out Type concreteType))
+            {
+                throw new JsonSerializationException(
+                    $"EquipmentInstance 类型无效或未登记：{concreteTypeName ?? "<empty>"}");
+            }
+
+            value.Remove("$concreteType");
+            EquipmentInstance instance = (EquipmentInstance)Activator.CreateInstance(concreteType);
+            using (JsonReader objectReader = value.CreateReader())
+            {
+                serializer.Populate(objectReader, instance);
+            }
+            return instance;
+        }
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            throw new NotSupportedException("EquipmentInstanceJsonConverter 只负责读取迁移配置。");
         }
     }
 

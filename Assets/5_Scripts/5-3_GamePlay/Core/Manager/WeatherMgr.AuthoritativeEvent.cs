@@ -369,6 +369,8 @@ public partial class WeatherMgr
         if (_rainEffectInstance != null)
             _rainEffectInstance.SetActive(false);
 
+        SetRainGroundSplashActive(false, 0f);
+
         if (_rainAudioHandle.IsPlaying)
             _rainAudioHandle.Stop(0.5f);
         _rainAudioHandle = AudioHandle.Invalid;

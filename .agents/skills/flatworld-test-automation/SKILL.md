@@ -115,9 +115,13 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --all
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：幽灵追击与光照伤害阈值改动按普通局部 AI 改动门槛完成静态诊断、Unity 编译与 Console 检查；新增 `AI.Smoke` 的 0.5 阈值断言，未主动运行 Test Runner 或完整 Golden Path。
+- 2026-08-09：`WorldModel.Cave` 新增地表入口与矿洞出口同格且唯一的纯生成断言；本次按项目默认只完成 WorldModel/GamePlay/Editor/GameTest 程序集编译、静态检查和 Unity Console 错误检查，未启动 Test Runner。
+- 2026-08-09：狼/幽灵感知修复按普通局部 AI 改动门槛完成静态诊断、Unity 编译与 Console 检查；未主动运行 Test Runner 或完整 Golden Path。
+- 2026-08-09：旧石墙预览迁移后执行 `Building.Smoke`（3/3）与 `Runtime.GoldenPath`；黄金路径已进入旧物品虚影断言，但在后续既有 `Mover.Move` 路径超时，需与建筑断言分开审计。
+- 2026-08-09：建筑系统接入新区块地形后按联动契约执行 `Building.Smoke`、`Map.Smoke`、`Navigation.Smoke` 与 `Runtime.GoldenPath`；黄金路径新增石墙阻挡层可逆验证，路径超时仍需区分既有无头移动问题。
+- 2026-08-09：新增 `WorldModel.Cave` 纯生成回归，覆盖洞穴地形/矿脉/传送门确定性、洞壁可走性、传送门概率边界、连续大预览保持正式概率格密度，以及矿脉规则指纹；系统改动仍先完成静态诊断、程序集编译和 Unity Console 检查，除非用户明确要求才启动 Test Runner。
+- 2026-08-09：GM AI 召唤局部生命周期修复按普通改动门槛完成静态脚本诊断、Unity 脚本编译和 Console 错误检查；未主动运行 Test Runner 或完整 Golden Path。
+- 2026-08-08：新增 `WorldModel.Ecology` 与 `DataSave.Ecology` 分类，覆盖确定性规则、环境过滤、洞穴空结果、配置/差量 MemoryPack 往返；`Runtime.GoldenPath` 增加自然物生成、销毁和 ChunkView 重绑不复活场景。
+- 2026-08-08：角色受击、伤害数字和特效池改动按普通特效修复门槛完成静态诊断、Unity 编译与 Console 检查，未主动运行 Test Runner。
 - 2026-08-08：`Building.Smoke` 新增旧建筑材质丢失时虚影保留默认 Sprite 材质的运行时实例回归；Golden Path 建筑场景复用生产预览解析 API。
-- 2026-08-08：`Map.Smoke` 新增运行时区块与出生点共用维度派生种子的源码接线回归，防止黄金路径中新玩家出生格加载后从陆地变成水面。
-- 2026-08-08：`Runtime.GoldenPath` 将当前 Unity 进程 ID 原子写入 running 请求本体以跨 Domain Reload 续接，避免 EditorSettings/PlayMode 重载时 0 秒误报中断，且不会掩盖真正的编辑器重启。
-- 2026-08-08：WorldModel Golden Path 往返阶段现在覆盖自然生物随 `ChunkView` 解绑休眠、重绑唤醒；普通 Bug 修复仍默认只做静态诊断、程序集编译和 Console 检查，除非用户明确要求或达到系统级测试门槛。
-- 2026-08-08：区块流送大改的静态验收新增 WorldModel CPU 并发安全上限、HeightDriven 相邻 Chunk 区域缓存复用，以及 UI 流送性能 Prefab/入口命名契约；未获用户明确要求时仍只做 Unity 编译与 Console 检查，不主动运行 Test Runner。
-- 2026-08-07：视觉检查统一读取 Golden Path 的 Game 画面或显式使用 `capture_source="game_view"`；禁止为截图聚焦、弹出、最大化或重新排布 Unity 窗口。

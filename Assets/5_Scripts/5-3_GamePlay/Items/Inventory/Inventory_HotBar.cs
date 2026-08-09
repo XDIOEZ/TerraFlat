@@ -70,6 +70,14 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
             base.ModUpdate(deltaTime);
             Owner?.OnInventoryModUpdate(deltaTime);
         }
+
+        /// <summary>
+        /// 外部库存完成物品转入后，立即同步快捷栏当前槽对应的手持实例。
+        /// </summary>
+        public void SyncHeldItemImmediately()
+        {
+            Owner?.SyncCurrentHeldItemWithSlot();
+        }
     }
 
     [Header("快捷栏运行时库存")]

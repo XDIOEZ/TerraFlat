@@ -258,15 +258,54 @@ public class Mod_Damage : Module, IDamageSender
     private void SpawnEffect(Vector2 hitPoint, float damage)
     {
         // 特效生成逻辑
+        VisualEffectManager effectManager = VisualEffectManager.Instance;
         foreach (GameEffect effectPrefab in AttackEffects)
         {
             if (effectPrefab != null)
             {
-                var effect = Instantiate(effectPrefab);
+                GameEffect effect = effectManager != null
+                    ? effectManager.GetGameEffectFromPool(effectPrefab)
+                    : Instantiate(effectPrefab);
                 effect.transform.position = new Vector3(hitPoint.x, hitPoint.y, 0f);
-                effect.Effect(transform, damage);
+                object effectData = effect is DamageTextEffect
+                    ? BuildDamageTextData(damage)
+                    : damage;
+                effect.Effect(transform, effectData);
             }
         }
+    }
+
+    /// <summary>把攻击模块已有的 DamageTag 转为伤害数字样式，不改变伤害结算语义。</summary>
+    private DamageTextEffectData BuildDamageTextData(float damage)
+    {
+        DamageTextStyle style = DamageTextStyle.Normal;
+        if (Weakness != null)
+        {
+            for (int i = 0; i < Weakness.Count; i++)
+            {
+                switch (Weakness[i].Tag)
+                {
+                    case DamageTag.火焰:
+                        style = DamageTextStyle.Fire;
+                        break;
+                    case DamageTag.切割:
+                    case DamageTag.劈砍:
+                        style = DamageTextStyle.Cutting;
+                        break;
+                    case DamageTag.钝击:
+                        style = DamageTextStyle.Blunt;
+                        break;
+                    case DamageTag.穿刺:
+                        style = DamageTextStyle.Piercing;
+                        break;
+                }
+
+                if (style != DamageTextStyle.Normal)
+                    break;
+            }
+        }
+
+        return new DamageTextEffectData(damage, style);
     }
     #endregion
 

@@ -1,5 +1,6 @@
 // AI-Context: 设置菜单的“UI设置”入口和运行时 uGUI 面板；提供全局界面缩放、安全区适配及即时持久化。
 
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -155,8 +156,8 @@ private void EnsureSettingsWindow()
         if (statusText != null)
         {
             statusText.text = UIUserSettings.RespectSafeArea
-                ? "安全区域适配：开启（推荐）"
-                : "安全区域适配：关闭";
+                ? FlatWorldLocalizationService.GetUiText("安全区域适配：开启（推荐）")
+                : FlatWorldLocalizationService.GetUiText("安全区域适配：关闭");
         }
     }
 

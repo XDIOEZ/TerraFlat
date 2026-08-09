@@ -86,6 +86,14 @@ public partial class Data_TileMap : ItemData
         return GrassLayer.Set(localPos.x, localPos.y, state);
     }
 
+    /// <summary>从草层消费一格草，只有存在的草才能成功消费。</summary>
+    public bool TryConsumeGrassAtWorld(Vector2Int worldPos)
+    {
+        Vector2Int localPos = worldPos - position;
+        EnsureGrassLayerStorage(Width, Height);
+        return GrassLayer.TryConsume(localPos.x, localPos.y);
+    }
+
     #endregion
 
     #region Environment Layers

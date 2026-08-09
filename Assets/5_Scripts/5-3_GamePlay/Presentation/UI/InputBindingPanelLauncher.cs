@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -227,7 +228,7 @@ private void EnsurePanel()
                 continue;
             }
 
-            label.text = entry.DisplayName;
+            label.text = FlatWorldLocalizationService.GetUiText(entry.DisplayName);
             bindingText.text = bindingService.GetBindingDisplayString(entry);
 
             BindingRow row = new BindingRow
@@ -303,9 +304,11 @@ private void EnsurePanel()
             return;
 
         SetRowsInteractable(false);
-        row.BindingText.text = "等待输入…";
+        row.BindingText.text = FlatWorldLocalizationService.GetUiText("等待输入…");
         SetStatus(
-            $"正在修改“{row.Entry.DisplayName}”；Esc / 手柄 B 取消，绑定该键时改用 Backspace / Start。");
+            FlatWorldLocalizationService.GetUiFormat(
+                "正在修改“{0}”；Esc / 手柄 B 取消，绑定该键时改用 Backspace / Start。",
+                FlatWorldLocalizationService.GetUiText(row.Entry.DisplayName)));
         bindingService.BeginInteractiveRebind(row.Entry, result =>
         {
             SetRowsInteractable(true);
@@ -314,20 +317,29 @@ private void EnsurePanel()
             switch (result.Status)
             {
                 case InputRebindStatus.Completed:
-                    SetStatus($"“{row.Entry.DisplayName}”已保存。");
+                    SetStatus(
+                        FlatWorldLocalizationService.GetUiFormat(
+                            "“{0}”已保存。",
+                            FlatWorldLocalizationService.GetUiText(row.Entry.DisplayName)));
                     break;
                 case InputRebindStatus.Canceled:
                     suppressEscapeCloseFrame = Time.frameCount;
-                    SetStatus("已取消本次修改。");
+                    SetStatus(FlatWorldLocalizationService.GetUiText("已取消本次修改。"));
                     break;
                 case InputRebindStatus.Conflict:
                     SetStatus(
-                        $"该按键已用于“{result.ConflictingEntry?.DisplayName ?? "其他操作"}”，未作修改。",
+                        FlatWorldLocalizationService.GetUiFormat(
+                            "该按键已用于“{0}”，未作修改。",
+                            FlatWorldLocalizationService.GetUiText(
+                                result.ConflictingEntry?.DisplayName ?? "其他操作")),
                         true);
                     break;
                 default:
                     SetStatus(
-                        $"修改失败：{result.Exception?.Message ?? "未知错误"}",
+                        FlatWorldLocalizationService.GetUiFormat(
+                            "修改失败：{0}",
+                            result.Exception?.Message ??
+                            FlatWorldLocalizationService.GetUiText("未知错误")),
                         true);
                     break;
             }
@@ -341,7 +353,10 @@ private void EnsurePanel()
 
         bindingService.ResetToDefaults(currentDeviceGroup);
         RebuildRows();
-        SetStatus($"{GetDevicePageName()}绑定已恢复默认值。");
+        SetStatus(
+            FlatWorldLocalizationService.GetUiFormat(
+                "{0}绑定已恢复默认值。",
+                FlatWorldLocalizationService.GetUiText(GetDevicePageName())));
     }
 
     private void RefreshRows()
@@ -387,7 +402,9 @@ private void EnsurePanel()
 
     private string GetDevicePageHint()
     {
-        return $"当前：{GetDevicePageName()}。选择一项后输入新控制；冲突会被拦截并自动保存。";
+        return FlatWorldLocalizationService.GetUiFormat(
+            "当前：{0}。选择一项后输入新控制；冲突会被拦截并自动保存。",
+            FlatWorldLocalizationService.GetUiText(GetDevicePageName()));
     }
 
     private string GetDevicePageName()

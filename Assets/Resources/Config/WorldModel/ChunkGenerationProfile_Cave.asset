@@ -1,0 +1,96 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 958c54338f944234e89ef98fd9a244eb, type: 3}
+  m_Name: ChunkGenerationProfile_Cave
+  m_EditorClassIdentifier:
+  profileId: cave.default
+  generationSignature: 20
+  chunkWidth: 16
+  chunkHeight: 16
+  numericParameters:
+  - Id: terrain.groundTileId
+    Value: 4
+  - Id: terrain.stoneTileId
+    Value: 4
+  - Id: cave.floorTileId
+    Value: 4
+  - Id: cave.wallTileId
+    Value: 7
+  - Id: cave.regionSize
+    Value: 20
+  - Id: cave.room.minRadius
+    Value: 3.8
+  - Id: cave.room.maxRadius
+    Value: 6.8
+  - Id: cave.tunnel.minRadius
+    Value: 1.35
+  - Id: cave.tunnel.maxRadius
+    Value: 2.15
+  - Id: cave.spawn.x
+    Value: 0.5
+  - Id: cave.spawn.y
+    Value: 0.5
+  - Id: cave.spawn.safeRadius
+    Value: 4
+  - Id: cave.portal.enabled
+    Value: 1
+  - Id: cave.portal.chunkChance
+    Value: 0.01
+  - Id: cave.portal.safeRadius
+    Value: 3
+  - Id: cave.portal.seedSalt
+    Value: 7919
+  - Id: cave.resource.density
+    Value: 0.14
+  - Id: cave.resource.looseDensity
+    Value: 0.004
+  - Id: navigation.defaultCost
+    Value: 1
+  textParameters:
+  - Id: terrain.mode
+    Value: cave
+  - Id: tile.block.4
+    Value: Tile_Stone
+  - Id: tile.block.7
+    Value: TileBase_StoneWall
+  - Id: cave.portal.itemId
+    Value: CaveExit
+  - Id: cave.portal.targetDimensionId
+    Value: surface
+  ecologyGlobalMultiplier: 1
+  ecologyRules: []
+  caveResourceRules:
+  - RuleId: cave.resource.tin
+    ItemId: Mine_Tin
+    VeinThreshold: 0.82
+    VeinScale: 0.032
+    NoiseOffset: 2207
+  - RuleId: cave.resource.iron
+    ItemId: Mine_Iron
+    VeinThreshold: 0.77
+    VeinScale: 0.036
+    NoiseOffset: 1103
+  - RuleId: cave.resource.copper
+    ItemId: Mine_Copper
+    VeinThreshold: 0.7
+    VeinScale: 0.044
+    NoiseOffset: 3301
+  - RuleId: cave.resource.coal
+    ItemId: Mine_Coal
+    VeinThreshold: 0.61
+    VeinScale: 0.052
+    NoiseOffset: 4409
+  - RuleId: cave.resource.stone
+    ItemId: Mine_Stone
+    VeinThreshold: 0
+    VeinScale: 0.06
+    NoiseOffset: 5501

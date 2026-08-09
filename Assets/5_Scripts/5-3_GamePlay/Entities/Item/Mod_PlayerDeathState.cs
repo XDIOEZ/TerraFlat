@@ -1,6 +1,7 @@
 using Sirenix.OdinInspector;
 using MemoryPack;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -58,8 +59,12 @@ public partial class Mod_PlayerDeathState : Module
     private Mover _mover; // 移动模块
     private Mod_ChunkLoader _chunkLoader; // 区块加载模块
     private Rigidbody2D _rb; // 刚体缓存
+    private PlayerAdminController _adminController; // 管理员无敌状态
 
     private bool _isInDyingState; // 是否已进入濒死
+
+    /// <summary>供管理员无敌恢复与自动化验证读取当前濒死状态。</summary>
+    public bool IsInDyingState => _isInDyingState;
 
     private BasePanel _dyingPanel; // 濒死UI面板
     private Button _respawnButton; // 重生按钮
@@ -105,6 +110,10 @@ public partial class Mod_PlayerDeathState : Module
         _mover = item.itemMods.GetMod_ByID<Mover>(ModText.Mover);
         _chunkLoader = item.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
         _rb = item.GetComponent<Rigidbody2D>();
+        _adminController = _player.GetComponentInChildren<PlayerAdminController>(true);
+
+        // 新玩家和旧存档都在首次加载时补齐主世界出生点，后续不再依赖当前坐标。
+        EnsureMainWorldSpawnPoint();
 
         _damageReceiver.OnDead -= OnPlayerDead;
         _damageReceiver.OnDead += OnPlayerDead;
@@ -165,18 +174,38 @@ public partial class Mod_PlayerDeathState : Module
             return;
         }
 
-        Vector3 respawnPos = item.transform.position;
-
-        if (Data.HasSleepRespawnPoint)
+        Vector3 respawnPos;
+        if (PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(
+                _player.Data,
+                out respawnPos,
+                out string mainWorldKey))
         {
-            respawnPos = Data.SleepRespawnPoint;
+            WorldAddress activeAddress = WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name);
+            if (!activeAddress.IsSurface ||
+                !string.Equals(activeAddress.PlanetId, mainWorldKey, System.StringComparison.Ordinal))
+            {
+                Debug.LogWarning(
+                    $"[Mod_PlayerDeathState] 当前不在主世界，已使用主世界出生坐标：" +
+                    $"active={activeAddress.WorldKey}, spawnWorld={mainWorldKey}");
+            }
         }
-        else if (GameManager.Instance != null && GameManager.Instance.TryGetDefaultPlayerSpawnPosition(out Vector3 defaultSpawnPos))
+        else if (GameManager.Instance != null &&
+                 GameManager.Instance.TryGetDefaultPlayerSpawnPosition(out Vector3 defaultSpawnPos))
         {
             respawnPos = defaultSpawnPos;
+            PlayerMainWorldSpawnStore.SetMainWorldSpawn(
+                _player.Data,
+                SceneManager.GetActiveScene().name,
+                respawnPos);
+        }
+        else if (Data.HasSleepRespawnPoint)
+        {
+            // 旧存档无法计算主世界出生点时，保留睡觉点作为兼容性兜底。
+            respawnPos = Data.SleepRespawnPoint;
         }
         else
         {
+            respawnPos = item.transform.position;
             Debug.LogWarning("[Mod_PlayerDeathState] 未找到默认出生点，回退到当前位置重生");
         }
 
@@ -211,9 +240,61 @@ public partial class Mod_PlayerDeathState : Module
         Debug.Log($"[Mod_PlayerDeathState] 玩家已重生，位置={item.transform.position}, 血量={_damageReceiver.Hp:F1}/{_damageReceiver.MaxHp:F1}");
     }
 
+    /// <summary>管理员重新开启无敌时，取消已进入的濒死状态并恢复玩家控制。</summary>
+    public bool TryResumeFromAdminInvincibility()
+    {
+        if (!_isInDyingState || _damageReceiver == null)
+        {
+            return false;
+        }
+
+        RestoreHealthForAdminInvincibility();
+        _isInDyingState = false;
+        _gameController?.SetGameplayInputLocked(false);
+
+        if (_rb != null)
+        {
+            _rb.velocity = Vector2.zero;
+        }
+
+        if (_mover != null)
+        {
+            _mover.SetRunState(false);
+            _mover.enabled = true;
+        }
+
+        CloseAndDestroyDyingPanel();
+        Debug.Log("[Mod_PlayerDeathState] 管理员无敌已恢复，已取消濒死状态。");
+        return true;
+    }
+
 #endregion
 
 #region 重生恢复
+
+    /// <summary>为新玩家或旧存档补写一次主世界初始出生点。</summary>
+    private void EnsureMainWorldSpawnPoint()
+    {
+        if (_player?.Data == null ||
+            PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(_player.Data, out _, out _) ||
+            GameManager.Instance == null)
+        {
+            return;
+        }
+
+        if (!GameManager.Instance.TryGetDefaultPlayerSpawnPosition(out Vector3 defaultSpawnPos))
+            return;
+
+        if (PlayerMainWorldSpawnStore.SetMainWorldSpawn(
+                _player.Data,
+                SceneManager.GetActiveScene().name,
+                defaultSpawnPos))
+        {
+            Debug.Log(
+                $"[Mod_PlayerDeathState] 已记录主世界初始出生点：" +
+                $"world={SceneManager.GetActiveScene().name}, position={defaultSpawnPos}");
+        }
+    }
 
     private void RestoreStatusModulesForRespawn()
     {
@@ -248,6 +329,22 @@ public partial class Mod_PlayerDeathState : Module
 
     private void OnPlayerDead()
     {
+        if (HasAdminInvincibility())
+        {
+            _damageReceiver.ConsumeCurrentDeath();
+            if (_isInDyingState)
+            {
+                TryResumeFromAdminInvincibility();
+            }
+            else
+            {
+                RestoreHealthForAdminInvincibility();
+            }
+
+            Debug.Log("[Mod_PlayerDeathState] 管理员无敌生效，已拦截濒死状态。");
+            return;
+        }
+
         if (_isInDyingState)
         {
             ShowDyingPanel();
@@ -280,6 +377,27 @@ public partial class Mod_PlayerDeathState : Module
 
         ShowDyingPanel();
         Debug.Log($"[Mod_PlayerDeathState] 玩家进入濒死状态，场景={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
+    }
+
+    /// <summary>判断当前玩家是否处于管理员无敌状态。</summary>
+    private bool HasAdminInvincibility()
+    {
+        if (_adminController == null && _player != null)
+            _adminController = _player.GetComponentInChildren<PlayerAdminController>(true);
+
+        return _adminController != null && _adminController.IsAdminInvincibilityEnabled;
+    }
+
+    /// <summary>把生命恢复到满值并清理本次死亡攻击者记录。</summary>
+    private void RestoreHealthForAdminInvincibility()
+    {
+        _damageReceiver.Hp = _damageReceiver.MaxHp;
+        _damageReceiver.Data.AttackersUIDs.Clear();
+
+        if (_damageReceiver.IsPanelVisible())
+        {
+            _damageReceiver.RefreshUI();
+        }
     }
 
 #endregion

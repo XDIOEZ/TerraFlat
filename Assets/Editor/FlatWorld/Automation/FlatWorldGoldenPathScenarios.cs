@@ -58,12 +58,16 @@ namespace FlatWorld.Automation
             ResetWorldWrapScenario();
             ResetWorldModelScenario();
             ResetInitialSpawnLandScenario();
+            ResetPlayerRespawnScenario();
             ResetPlayerRunInputScenario();
             ResetPlayerMoveSpeedScenario();
+            ResetPlayerAdminInvincibilityScenario();
             ResetChunkLoadSpeedScenario();
             ResetItemLifecycleScenario();
+            ResetEcologyScenario();
             ResetRuntimeTileEffectScenario();
             ResetBuildingPlacementScenario();
+            ResetAutoSaveScenario();
         }
 
         internal static void OnWorldReady(FlatWorldGoldenPathScenarioContext context)
@@ -75,9 +79,13 @@ namespace FlatWorld.Automation
                 BeginHydrologyScenario(context);
             BeginWorldModelScenario(context);
             RunPlayerMoveSpeedScenario(context);
+            RunPlayerAdminInvincibilityScenario(context);
+            RunPlayerRespawnScenario(context);
             RunChunkLoadSpeedScenario(context);
             BeginItemLifecycleScenario(context);
+            BeginEcologyScenario(context);
             RunBuildingPlacementScenario(context);
+            BeginAutoSaveScenario(context);
         }
 
         internal static void OnTraversalTick(FlatWorldGoldenPathScenarioContext context)
@@ -86,6 +94,7 @@ namespace FlatWorld.Automation
             // 该回调会重复执行，子场景必须幂等且不得阻塞。
             if (context.Configuration.scenarios.burningBuff)
                 TickBurningBuffScenario(context);
+            TickAutoSaveScenario(context);
         }
 
         internal static void OnChunkReady(FlatWorldGoldenPathScenarioContext context)
@@ -96,6 +105,7 @@ namespace FlatWorld.Automation
             if (context.Configuration.scenarios.hydrology)
                 VerifyHydrologyAtChunkReady(context);
             VerifyItemLifecycleAtChunkReady(context);
+            VerifyEcologyAtChunkReady(context);
             VerifyRuntimeTileEffectAtChunkReady(context);
         }
 
@@ -110,12 +120,16 @@ namespace FlatWorld.Automation
                 AssertWorldWrapScenarioCompleted();
             AssertWorldModelScenarioCompleted();
             AssertInitialSpawnLandScenarioCompleted();
+            AssertPlayerRespawnScenarioCompleted();
             AssertPlayerRunInputScenarioCompleted();
             AssertPlayerMoveSpeedScenarioCompleted();
+            AssertPlayerAdminInvincibilityScenarioCompleted();
             AssertChunkLoadSpeedScenarioCompleted();
             AssertItemLifecycleScenarioCompleted(context);
+            AssertEcologyScenarioCompleted();
             AssertRuntimeTileEffectScenarioCompleted();
             AssertBuildingPlacementScenarioCompleted();
+            AssertAutoSaveScenarioCompleted();
         }
 
         internal static void Cleanup(FlatWorldGoldenPathScenarioContext context)
@@ -126,12 +140,16 @@ namespace FlatWorld.Automation
             CleanupWorldWrapScenario();
             CleanupWorldModelScenario();
             CleanupInitialSpawnLandScenario();
+            CleanupPlayerRespawnScenario();
             CleanupPlayerRunInputScenario();
             CleanupPlayerMoveSpeedScenario();
+            CleanupPlayerAdminInvincibilityScenario();
             CleanupChunkLoadSpeedScenario();
             CleanupItemLifecycleScenario();
+            CleanupEcologyScenario();
             CleanupRuntimeTileEffectScenario();
             CleanupBuildingPlacementScenario();
+            CleanupAutoSaveScenario();
         }
     }
 }

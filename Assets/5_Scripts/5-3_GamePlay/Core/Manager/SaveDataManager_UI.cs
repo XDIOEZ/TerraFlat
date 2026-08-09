@@ -4,10 +4,14 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using TMPro;
 using Sirenix.OdinInspector;
+using UnityEngine.EventSystems;
 
 public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 {
     #region 字段定义
+
+    private const string SaveItemNamePrefix = "存档条目_";
+    private const string PlayerItemNamePrefix = "角色条目_";
 
     [Header("保存与加载")]
     public SaveDataMgr saveAndLoad;
@@ -49,8 +53,10 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     private void Start()
     {
         saveAndLoad = SaveDataMgr.Instance;
-        LoadSaveFileNames();
-        GenerateSaveButtons();
+        if (TryGetSavePanel(out BasePanel panel) && panel.IsOpen())
+            RefreshForGamepadOpen();
+        else
+            Refresh();
     }
 
     #endregion
@@ -109,29 +115,38 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// </summary>
     public void GenerateSaveButtons()
     {
-        // 清理现有按钮
-        foreach (Transform child in SaveSelectButton_Parent_Content)
-            Destroy(child.gameObject);
+        if (SaveSelectButton_Parent_Content == null)
+        {
+            Debug.LogWarning("存档按钮容器未绑定！");
+            return;
+        }
 
-        foreach (Transform child in Player_SelectButton_Parent_Content)
-            Destroy(child.gameObject);
+        // 刷新存档时不保留旧世界的角色列表，避免焦点和数据同时指向过期条目。
+        ClearDynamicButtons(SaveSelectButton_Parent_Content);
+        ClearDynamicButtons(Player_SelectButton_Parent_Content);
 
         // 生成存档按钮
-        foreach (string saveName in saves)
+        for (int index = 0; index < saves.Count; index++)
         {
+            string saveName = saves[index];
             GameObject buttonObj = Instantiate(Save_Player_SelectButton_Prefab, SaveSelectButton_Parent_Content);
+            buttonObj.name = SaveItemNamePrefix + (index + 1);
 
             ButtonInfoData SaveInfo = buttonObj.GetComponent<ButtonInfoData>();
-            SaveInfo.Name = saveName;
-            SaveInfo.Path = Path.Combine(PathToSaveFolder, saveName + ".bytes");
+            if (SaveInfo != null)
+            {
+                SaveInfo.Name = saveName;
+                SaveInfo.Path = Path.Combine(PathToSaveFolder, saveName + ".bytes");
+            }
+
+            SetItemLabel(buttonObj, saveName);
 
             var btn = buttonObj.GetComponent<Button>();
             if (btn != null)
                 btn.onClick.AddListener(() => OnClick_List_Save_Button(saveName, buttonObj));
         }
-        
-        // 生成玩家按钮
-        GeneratePlayerButtons();
+
+        RefreshGamepadNavigation();
     }
 
     /// <summary>
@@ -139,28 +154,35 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// </summary>
     public void GeneratePlayerButtons()
     {
-        foreach (Transform child in Player_SelectButton_Parent_Content)
-            Destroy(child.gameObject);
+        if (Player_SelectButton_Parent_Content == null)
+        {
+            Debug.LogWarning("角色按钮容器未绑定！");
+            return;
+        }
+
+        ClearDynamicButtons(Player_SelectButton_Parent_Content);
 
         if (saveAndLoad?.SaveData?.PlayerData_Dict != null)
         {
+            int index = 0;
             foreach (string playerName in saveAndLoad.SaveData.PlayerData_Dict.Keys)
             {
                 GameObject buttonObj = Instantiate(Save_Player_SelectButton_Prefab, Player_SelectButton_Parent_Content);
-                buttonObj.name = playerName;
+                buttonObj.name = PlayerItemNamePrefix + (++index);
 
                 ButtonInfoData SaveInfo = buttonObj.GetComponent<ButtonInfoData>();
-                SaveInfo.Name = playerName;
+                if (SaveInfo != null)
+                    SaveInfo.Name = playerName;
 
-                var tmpText = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
-                if (tmpText != null)
-                    tmpText.text = playerName;
+                SetItemLabel(buttonObj, playerName);
 
                 var btn = buttonObj.GetComponent<Button>();
                 if (btn != null)
-                btn.onClick.AddListener(() => OnClick_List_PlayerName_Button(playerName, buttonObj));
+                    btn.onClick.AddListener(() => OnClick_List_PlayerName_Button(playerName, buttonObj));
             }
         }
+
+        RefreshGamepadNavigation();
     }
     #endregion
 
@@ -173,6 +195,9 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// </summary>
     public void OnClick_List_Save_Button(string saveName, GameObject buttonObj)
     {
+        if (buttonObj == null)
+            return;
+
         // 清除旧选择态
         foreach (var saveInfo in SaveSelectButton_Parent_Content.GetComponentsInChildren<ButtonInfoData>())
         {
@@ -192,7 +217,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             currentInfo.SelectImage.enabled = true;
 
         // 使用BaseUIManager更新文本
-        BasePanel panel = uiManager.GetPanel(GameManager.GameSavePanelKey);
+        TryGetSavePanel(out BasePanel panel);
         panel?.SetText(GameManager.GameSaveSelectedTextKey, saveName);
         Button deleteButton = panel?.GetButton(GameManager.GameSaveDeleteButtonKey);
         if (deleteButton != null)
@@ -229,8 +254,12 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             Debug.LogWarning("SaveAndLoad组件未绑定！");
         }
 
-        // 使用BaseUIManager更新输入框
-        uiManager.GetPanel(GameManager.GameSavePanelKey)?.SetInputFieldText(GameManager.GameSavePlayerInputKey, playerName);
+        // 使用BaseUIManager更新输入框，并将手柄流程推进到进入世界。
+        if (TryGetSavePanel(out BasePanel panel))
+        {
+            panel.SetInputFieldText(GameManager.GameSavePlayerInputKey, playerName);
+            FocusStartGameForGamepad();
+        }
     }
 
     #endregion
@@ -244,11 +273,15 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     {
         LoadSaveFileNames();
         GenerateSaveButtons();
-        
-        // 刷新BaseUIManager中的组件
-        if (!uiManager.TryGetPanel(GameManager.GameSavePanelKey, out BasePanel panel))
-            uiManager.TryGetPanel(BasePanelName, out panel);
-        panel?.RefreshUIComponents();
+    }
+
+    /// <summary>
+    /// 打开存档面板时重置旧选择，并将手柄焦点交给第一条可用存档。
+    /// </summary>
+    public void RefreshForGamepadOpen()
+    {
+        Refresh();
+        ClearSaveSelection();
     }
 
     /// <summary>
@@ -256,16 +289,9 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// </summary>
     public void ClearSaveSelection()
     {
-        if (Player_SelectButton_Parent_Content != null)
-        {
-            foreach (Transform child in Player_SelectButton_Parent_Content)
-                Destroy(child.gameObject);
-        }
+        ClearDynamicButtons(Player_SelectButton_Parent_Content);
 
-        if (!uiManager.TryGetPanel(GameManager.GameSavePanelKey, out BasePanel panel))
-            uiManager.TryGetPanel(BasePanelName, out panel);
-
-        if (panel == null)
+        if (!TryGetSavePanel(out BasePanel panel))
             return;
 
         panel.SetText(GameManager.GameSaveSelectedTextKey, GameManager.GameSaveNoSelectionText);
@@ -274,6 +300,145 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         Button deleteButton = panel.GetButton(GameManager.GameSaveDeleteButtonKey);
         if (deleteButton != null)
             deleteButton.interactable = false;
+
+        RefreshGamepadNavigation(panel);
+        FocusFirstSaveOrBackForGamepad();
     }
+    #endregion
+
+    #region 手柄焦点
+
+    /// <summary>载入世界后优先聚焦首个角色；没有角色时转到名称输入框。</summary>
+    public void FocusFirstPlayerOrNameInputForGamepad()
+    {
+        if (!TryGetSavePanel(out BasePanel panel))
+            return;
+
+        RefreshGamepadNavigation(panel);
+        Button firstPlayer = FindFirstInteractableButton(Player_SelectButton_Parent_Content);
+        if (FocusGamepadControl(panel, firstPlayer))
+            return;
+
+        FocusGamepadControl(panel, panel.GetInputField(GameManager.GameSavePlayerInputKey));
+    }
+
+    /// <summary>确认角色后把焦点交给进入世界按钮，完成流程闭环。</summary>
+    public void FocusStartGameForGamepad()
+    {
+        if (!TryGetSavePanel(out BasePanel panel))
+            return;
+
+        FocusGamepadControl(panel, panel.GetButton(GameManager.GameSaveStartButtonKey));
+    }
+
+    /// <summary>没有存档时回退到返回按钮，避免 EventSystem 留下已销毁对象。</summary>
+    private void FocusFirstSaveOrBackForGamepad()
+    {
+        if (!TryGetSavePanel(out BasePanel panel))
+            return;
+
+        RefreshGamepadNavigation(panel);
+        Button firstSave = FindFirstInteractableButton(SaveSelectButton_Parent_Content);
+        if (FocusGamepadControl(panel, firstSave))
+            return;
+
+        if (!FocusGamepadControl(panel, panel.GetButton(GameManager.GameSaveBackButtonKey)))
+            panel.SelectDefaultForGamepad();
+    }
+
+    /// <summary>刷新动态布局、导航关系和滚动跟随器。</summary>
+    private void RefreshGamepadNavigation(BasePanel panel = null)
+    {
+        if (panel == null && !TryGetSavePanel(out panel))
+            return;
+        if (panel == null || !panel.IsGamepadNavigationPrepared)
+            return;
+
+        Canvas.ForceUpdateCanvases();
+        ForceRebuildLayout(SaveSelectButton_Parent_Content);
+        ForceRebuildLayout(Player_SelectButton_Parent_Content);
+        panel.RefreshUIComponents();
+    }
+
+    private static void ForceRebuildLayout(Transform content)
+    {
+        if (content is RectTransform rectTransform)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rectTransform);
+    }
+
+    private static Button FindFirstInteractableButton(Transform content)
+    {
+        if (content == null)
+            return null;
+
+        Button[] buttons = content.GetComponentsInChildren<Button>(false);
+        foreach (Button button in buttons)
+        {
+            if (button != null && button.IsInteractable())
+                return button;
+        }
+
+        return null;
+    }
+
+    private static bool FocusGamepadControl(BasePanel panel, Selectable selectable)
+    {
+        if (panel == null || selectable == null || !panel.IsOpen() ||
+            !panel.IsGamepadNavigationPrepared || !selectable.IsInteractable() ||
+            FlatWorldUITheme.IsGamepadNavigationExcluded(selectable))
+        {
+            return false;
+        }
+
+        EventSystem eventSystem = EventSystem.current;
+        if (eventSystem == null)
+            return false;
+
+        eventSystem.SetSelectedGameObject(null);
+        eventSystem.SetSelectedGameObject(selectable.gameObject);
+        return true;
+    }
+
+    private bool TryGetSavePanel(out BasePanel panel)
+    {
+        panel = null;
+        if (!uiManager.TryGetPanel(GameManager.GameSavePanelKey, out panel))
+            uiManager.TryGetPanel(BasePanelName, out panel);
+
+        return panel != null;
+    }
+
+    #endregion
+
+    #region 动态列表辅助
+
+    /// <summary>清除动态条目时先释放其焦点，防止 EventSystem 持有已销毁对象。</summary>
+    private static void ClearDynamicButtons(Transform content)
+    {
+        if (content == null)
+            return;
+
+        EventSystem eventSystem = EventSystem.current;
+        GameObject selectedObject = eventSystem != null ? eventSystem.currentSelectedGameObject : null;
+        if (selectedObject != null && selectedObject.transform.IsChildOf(content))
+            eventSystem.SetSelectedGameObject(null);
+
+        foreach (Transform child in content)
+        {
+            // Destroy 会延迟到帧末执行；先禁用可避免旧条目继续参与本帧导航计算。
+            child.gameObject.SetActive(false);
+            Destroy(child.gameObject);
+        }
+    }
+
+    private static void SetItemLabel(GameObject buttonObj, string value)
+    {
+        TextMeshProUGUI label = buttonObj != null
+            ? buttonObj.GetComponentInChildren<TextMeshProUGUI>(true)
+            : null;
+        if (label != null)
+            label.text = value;
+    }
+
     #endregion
 }

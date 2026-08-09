@@ -10,6 +10,7 @@ using UnityEngine.Serialization;
 public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
 {
     public const float CompletelyDarkValue = 0f;
+    private const string RuntimeLightLayerId = "light";
 
     [Header("光照层分级刷新")]
     [Tooltip("玩家可见/激活区块的刷新间隔")]
@@ -38,28 +39,11 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
             return;
 
         float now = Time.unscaledTime;
-        bool refreshActive = now >= _nextActiveRefreshTime;
-        bool refreshInactive = now >= _nextInactiveRefreshTime;
-        if (!refreshActive && !refreshInactive)
+        if (now < _nextActiveRefreshTime)
             return;
 
-        ChunkMgr chunkMgr = ChunkMgr.Instance;
-        if (chunkMgr == null)
-            return;
-
+        _nextActiveRefreshTime = now + Mathf.Max(0.05f, activeChunkRefreshInterval);
         RefreshLightSourceCache();
-
-        if (refreshActive)
-        {
-            _nextActiveRefreshTime = now + Mathf.Max(0.05f, activeChunkRefreshInterval);
-            RefreshChunks(chunkMgr.Chunk_Dic_Active_ByPos.Values);
-        }
-
-        if (refreshInactive)
-        {
-            _nextInactiveRefreshTime = now + Mathf.Max(activeChunkRefreshInterval, inactiveChunkRefreshInterval);
-            RefreshChunks(chunkMgr.Chunk_Dic_UnActive_ByPos.Values);
-        }
     }
 
     /// <summary>
@@ -88,12 +72,6 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
     {
         _nextActiveRefreshTime = Time.unscaledTime + Mathf.Max(0.05f, activeChunkRefreshInterval);
         RefreshLightSourceCache();
-
-        ChunkMgr chunkMgr = ChunkMgr.Instance;
-        if (chunkMgr == null)
-            return;
-
-        RefreshChunks(chunkMgr.Chunk_Dic_Active_ByPos.Values);
     }
 
     /// <summary>
@@ -103,12 +81,6 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
     {
         _nextInactiveRefreshTime = Time.unscaledTime + Mathf.Max(activeChunkRefreshInterval, inactiveChunkRefreshInterval);
         RefreshLightSourceCache();
-
-        ChunkMgr chunkMgr = ChunkMgr.Instance;
-        if (chunkMgr == null)
-            return;
-
-        RefreshChunks(chunkMgr.Chunk_Dic_UnActive_ByPos.Values);
     }
 
     /// <summary>
@@ -122,99 +94,21 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
         if (chunkMgr == null)
             return false;
 
-        Vector2Int chunkPos = Chunk.GetChunkPosition(worldPos);
-        if (!chunkMgr.TryGetActiveChunkByPos(chunkPos, out Chunk chunk) || !TryGetMapData(chunk, out Data_TileMap mapData))
-            return false;
-
-        Vector2Int worldCell = new Vector2Int(Mathf.FloorToInt(worldPos.x), Mathf.FloorToInt(worldPos.y));
-        if (!mapData.TryGetEnvironmentLocalPos(worldCell, out Vector2Int localPos))
+        if (!chunkMgr.TryGetRuntimeTerrainTile(worldPos, out RuntimeTerrainTileSample sample))
             return false;
 
         // 怪物生成查询必须使用即时值，避免恰好发生在周期刷新之前。
         RefreshLightSourceCache();
-        Vector2 cellCenter = new Vector2(worldCell.x + 0.5f, worldCell.y + 0.5f);
+        Vector2 cellCenter = new Vector2(sample.WorldCell.x + 0.5f, sample.WorldCell.y + 0.5f);
         lightLevel = EvaluateLightAt(cellCenter);
-        mapData.SetLightAtLocal(localPos.x, localPos.y, lightLevel);
+        sample.Terrain.SetEnvironmentValue(
+            RuntimeLightLayerId, sample.LocalCell.x, sample.LocalCell.y, lightLevel);
         return true;
     }
 
     public bool IsCompletelyDark(Vector2 worldPos)
     {
         return TryGetLightLevel(worldPos, out float lightLevel) && lightLevel <= darknessEpsilon;
-    }
-
-    private void RefreshChunk(Chunk chunk)
-    {
-        if (!TryGetMapData(chunk, out Data_TileMap mapData))
-            return;
-
-        EnvironmentLayers layers = mapData.EnvironmentLayers;
-        float globalLight = EvaluateGlobalLight();
-        for (int x = 0; x < layers.Width; x++)
-        {
-            for (int y = 0; y < layers.GridHeight; y++)
-            {
-                layers.SetLight(x, y, globalLight);
-            }
-        }
-
-        if (globalLight >= 1f)
-            return;
-
-        // 局部光只遍历自己半径覆盖的格子，避免每个格子遍历全部火把。
-        for (int i = 0; i < _pointLights.Count; i++)
-        {
-            AddPointLightToChunk(_pointLights[i], mapData, layers);
-        }
-    }
-
-    private static void AddPointLightToChunk(Light2D light, Data_TileMap mapData, EnvironmentLayers layers)
-    {
-        float outerRadius = Mathf.Max(0f, light.pointLightOuterRadius);
-        if (outerRadius <= 0f || light.intensity <= 0f)
-            return;
-
-        Vector2 lightPosition = light.transform.position;
-        int minX = Mathf.Max(0, Mathf.FloorToInt(lightPosition.x - outerRadius) - mapData.position.x);
-        int maxX = Mathf.Min(layers.Width - 1, Mathf.CeilToInt(lightPosition.x + outerRadius) - 1 - mapData.position.x);
-        int minY = Mathf.Max(0, Mathf.FloorToInt(lightPosition.y - outerRadius) - mapData.position.y);
-        int maxY = Mathf.Min(layers.GridHeight - 1, Mathf.CeilToInt(lightPosition.y + outerRadius) - 1 - mapData.position.y);
-        if (minX > maxX || minY > maxY)
-            return;
-
-        for (int x = minX; x <= maxX; x++)
-        {
-            for (int y = minY; y <= maxY; y++)
-            {
-                Vector2 cellCenter = new Vector2(mapData.position.x + x + 0.5f, mapData.position.y + y + 0.5f);
-                float contribution = EvaluatePointLight(light, cellCenter, outerRadius);
-                if (contribution > 0f)
-                {
-                    layers.SetLight(x, y, layers.GetLight(x, y) + contribution);
-                }
-            }
-        }
-    }
-
-    private void RefreshChunks(IEnumerable<Chunk> chunks)
-    {
-        foreach (Chunk chunk in chunks)
-        {
-            RefreshChunk(chunk);
-        }
-    }
-
-    private static bool TryGetMapData(Chunk chunk, out Data_TileMap mapData)
-    {
-        mapData = chunk?.Map?.Data;
-        if (mapData == null)
-            return false;
-
-        Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        int width = Mathf.Max(1, Mathf.RoundToInt(chunkSize.x));
-        int height = Mathf.Max(1, Mathf.RoundToInt(chunkSize.y));
-        mapData.EnsureEnvironmentStorage(width, height);
-        return mapData.EnvironmentLayers != null && mapData.EnvironmentLayers.IsValidSize(width, height);
     }
 
     private void RefreshLightSourceCache()

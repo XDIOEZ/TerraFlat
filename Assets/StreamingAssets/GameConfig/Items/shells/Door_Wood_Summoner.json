@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "BuildingSummoner_DoorWood_Base",
+      "abstract": true,
+      "shellPrefab": "Door_Wood_Summoner",
+      "visual": {
+        "rendererPath": "Item"
+      }
+    },
+    {
+      "id": "Door_Wood_Summoner",
+      "parent": "BuildingSummoner_DoorWood_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Door_Wood_Summoner.prefab",
+      "gameName": "Door_Wood",
+      "description": "物品名称：Chest_Wood\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Door_Wood_Close.png[Door_Wood_Close]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": -0.5,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "建筑模块": {
+          "prefab": "Mod_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Wood\",\"SummonerPrefabId\":\"Door_Wood_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "Door": {
+          "prefab": "Mod_Door",
+          "id": "Door",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    }
+  ]
+}

@@ -10,6 +10,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     public const float DefaultWeatherTemperatureOffset = 0f; // 默认天气温度修正
     private const string RainEffectResourcePath = "Weather/RainEffect"; // 雨效资源路径
+    private const string RainGroundSplashResourcePath = "Weather/RainGroundSplash"; // 地面水花资源路径
     private const int DebugWindowId = 981237; // 调试窗口ID
     private const float TitleBarHeight = 28f; // 标题栏高度
     private const float ResizeHandleSize = 18f; // 右下角缩放手柄尺寸
@@ -35,6 +36,9 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
     private GameObject _rainEffectInstance; // 雨效实例
     private RainEffectController _rainEffectController; // 雨效控制器
     private bool _rainEffectLoadFailed; // 雨效加载失败标记
+    private GameObject _rainGroundSplashInstance; // 独立地面水花实例
+    private RainGroundSplashController _rainGroundSplashController; // 地面水花控制器
+    private bool _rainGroundSplashLoadFailed; // 地面水花加载失败标记
 
 #endregion
 
@@ -146,6 +150,8 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
                 _rainEffectInstance.SetActive(false);
             }
 
+            SetRainGroundSplashActive(false, 0f);
+
             return;
         }
 
@@ -162,6 +168,8 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         {
             _rainEffectController.ApplySettings(GetCurrentWeatherIntensity());
         }
+
+        SetRainGroundSplashActive(true, GetCurrentWeatherIntensity());
     }
 
     public void ToggleDebugPanel()
@@ -215,9 +223,64 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         return _rainEffectInstance;
     }
 
+    /// <summary>启停独立地面水花层，不修改原雨层 Prefab 与粒子参数。</summary>
+    private void SetRainGroundSplashActive(bool active, float intensity)
+    {
+        if (!active)
+        {
+            if (_rainGroundSplashInstance != null)
+                _rainGroundSplashInstance.SetActive(false);
+            return;
+        }
+
+        GameObject splashInstance = EnsureRainGroundSplashInstance();
+        if (splashInstance == null)
+            return;
+
+        splashInstance.SetActive(true);
+        _rainGroundSplashController?.ApplySettings(intensity);
+    }
+
+    /// <summary>按需加载一次地面水花 Prefab；失败不会影响原雨层的显示。</summary>
+    private GameObject EnsureRainGroundSplashInstance()
+    {
+        if (_rainGroundSplashInstance != null)
+            return _rainGroundSplashInstance;
+
+        if (_rainGroundSplashLoadFailed)
+            return null;
+
+        GameObject splashPrefab = Resources.Load<GameObject>(RainGroundSplashResourcePath);
+        if (splashPrefab == null)
+        {
+            _rainGroundSplashLoadFailed = true;
+            Debug.LogWarning($"[WeatherMgr] 未找到地面水花 prefab，路径={RainGroundSplashResourcePath}");
+            return null;
+        }
+
+        _rainGroundSplashInstance = Instantiate(splashPrefab, transform);
+        _rainGroundSplashInstance.name = splashPrefab.name;
+        _rainGroundSplashController = _rainGroundSplashInstance.GetComponent<RainGroundSplashController>();
+        if (_rainGroundSplashController != null)
+            return _rainGroundSplashInstance;
+
+        _rainGroundSplashLoadFailed = true;
+        Debug.LogError($"[WeatherMgr] 地面水花 prefab 缺少 RainGroundSplashController，路径={RainGroundSplashResourcePath}");
+        Destroy(_rainGroundSplashInstance);
+        _rainGroundSplashInstance = null;
+        return null;
+    }
+
     private void SyncRainEffectTransform(Transform rainEffectTransform)
     {
         if (rainEffectTransform == null)
+        {
+            return;
+        }
+
+        // RainEffectController 会在 LateUpdate 中依据相机顶部完成精确定位；
+        // 这里再写一次中心点会与其相互覆盖，造成发射区域在场景中漂移。
+        if (_rainEffectController != null && rainEffectTransform == _rainEffectController.transform)
         {
             return;
         }
