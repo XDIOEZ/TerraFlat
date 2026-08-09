@@ -95,7 +95,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	public float detectorRefreshInterval = 0.6f;
 
 	[TabGroup("配置", "群体"), BoxGroup("配置/群体/协作"), LabelText("同伴响应范围"), SuffixLabel("米", true), MinValue(0.1f)]
-	public float allyCallDistance = 15f;
+	public float allyCallDistance = 40f;
 
 	[TabGroup("配置", "群体"), BoxGroup("配置/群体/协作"), LabelText("同伴支援时长"), SuffixLabel("秒", true), MinValue(0.1f)]
 	public float packAssistDuration = 5f;

@@ -72,4 +72,10 @@ public class Mod_Damage_AI : Mod_Damage,ITrunDirection
         currentLocalPos.x = xOffset * sign;
         transform.localPosition = currentLocalPos;
     }
+
+    /// <summary>在 AI 伤害窗口开始时补查已经重叠的目标。</summary>
+    public void ScanCurrentOverlapsAndApplyDamage()
+    {
+        ScanCurrentOverlapsAndApplyDamageForAiWindow();
+    }
 }

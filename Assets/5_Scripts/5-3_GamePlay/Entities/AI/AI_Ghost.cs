@@ -22,7 +22,8 @@ public partial class GhostAISaveData
 
 /// <summary>
 /// 幽灵 AI：在感知范围内直接追击本地玩家，追击时不受地形可走性和玩家所在光照限制。
-/// 幽灵自身所在位置的亮度严格大于 0.5 时持续添加“光耀” Buff，亮度小于等于 0.5 时移除。
+/// 幽灵自身所在位置的亮度严格大于 0.5 时持续添加“光耀” Buff，亮度小于等于 0.5 时移除；视觉子节点以低幅度正弦曲线上下浮动，
+/// 浮动只作用于 Sprite，不改变根物体、碰撞体、寻路位置和伤害判定。
 /// </summary>
 public class AI_Ghost : Module, IAIActor
 {
@@ -68,10 +69,10 @@ public class AI_Ghost : Module, IAIActor
     private Transform visualTransform;
     [SerializeField]
     private SpriteRenderer spriteRenderer;
+    [SerializeField, Min(0f), Tooltip("幽灵视觉上下浮动的高度，不影响根物体和碰撞体。")]
+    private float bobHeight = 0.12f;
     [SerializeField, Min(0f)]
-    private float bobHeight = 0.08f;
-    [SerializeField, Min(0f)]
-    private float bobFrequency = 1.6f;
+    private float bobFrequency = 1.4f;
 
     [ShowInInspector, ReadOnly]
     private GhostState _state;
@@ -81,6 +82,8 @@ public class AI_Ghost : Module, IAIActor
     private WorldNavigationAgent _pathAgent;
     private Rigidbody2D _rigidbody;
     private Vector3 _visualBaseLocalPosition;
+    private float _bobPhase;
+    private bool _hasVisualBasePosition;
     private Vector2 _moveTarget;
     private bool _hasMoveTarget;
     private float _decisionTimer;
@@ -115,7 +118,16 @@ public class AI_Ghost : Module, IAIActor
             item.Sprite = spriteRenderer;
 
         if (visualTransform != null)
-            _visualBaseLocalPosition = visualTransform.localPosition;
+        {
+            if (!_hasVisualBasePosition)
+            {
+                _visualBaseLocalPosition = visualTransform.localPosition;
+                _hasVisualBasePosition = true;
+            }
+
+            // 为不同幽灵分配稳定初始相位，避免同屏实体完全同步浮动。
+            _bobPhase = ((GetInstanceID() & int.MaxValue) % 97) / 97f * Mathf.PI * 2f;
+        }
 
         _rigidbody = item.GetComponent<Rigidbody2D>();
         EnsureNavigationAgent();
@@ -450,7 +462,8 @@ public class AI_Ghost : Module, IAIActor
         if (visualTransform == null)
             return;
 
-        float offset = Mathf.Sin(Time.time * bobFrequency * Mathf.PI * 2f) * bobHeight;
+        float angle = Time.time * Mathf.Max(0f, bobFrequency) * Mathf.PI * 2f + _bobPhase;
+        float offset = Mathf.Sin(angle) * Mathf.Max(0f, bobHeight);
         visualTransform.localPosition = _visualBaseLocalPosition + Vector3.up * offset;
     }
 
@@ -458,5 +471,7 @@ public class AI_Ghost : Module, IAIActor
     {
         ModData ??= new Ex_ModData_MemoryPackable();
         ModData.ID = ModuleId;
+        bobHeight = Mathf.Max(0f, bobHeight);
+        bobFrequency = Mathf.Max(0f, bobFrequency);
     }
 }

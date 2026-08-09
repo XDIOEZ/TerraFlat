@@ -14,6 +14,8 @@ GameObject:
   - component: {fileID: 1004}
   - component: {fileID: 1005}
   - component: {fileID: 1006}
+  - component: {fileID: 1007}
+  - component: {fileID: 1008}
   m_Layer: 0
   m_Name: Ghost
   m_TagString: Ghost
@@ -189,6 +191,39 @@ MonoBehaviour:
   destinationChangeThreshold: 0.1
   stalledRepathDelay: 0.75
   progressDistanceThreshold: 0.01
+--- !u!114 &1007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92b131e600ce4cd88ee96dd3f8edecdc, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  includeChildRenderers: 1
+  includeInactiveRenderers: 1
+  explicitRenderers: []
+--- !u!114 &1008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a5acb82949e4b3b87e1e21766f0565a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  statusTint: {r: 1, g: 1, b: 1, a: 1}
+  statusTintStrength: 0
+  statusTransitionSeconds: 0.12
+  hitFlashColor: {r: 1, g: 0.08, b: 0.08, a: 1}
+  defaultFlashDuration: 0.2
+  defaultFlashCount: 1
 --- !u!1 &2000
 GameObject:
   m_ObjectHideFlags: 0
@@ -199,6 +234,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2001}
   - component: {fileID: 2002}
+  - component: {fileID: 2003}
   m_Layer: 0
   m_Name: Visual
   m_TagString: Untagged
@@ -273,6 +309,27 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!95 &2003
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2000}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 0586e2315f9647388017b2d93fbd0756, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage:
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &3000
 GameObject:
   m_ObjectHideFlags: 0
@@ -338,8 +395,8 @@ MonoBehaviour:
   retreatSearchRadius: 6
   visualTransform: {fileID: 2001}
   spriteRenderer: {fileID: 2002}
-  bobHeight: 0.08
-  bobFrequency: 1.6
+  bobHeight: 0.12
+  bobFrequency: 1.4
   _state: 0
 --- !u!1001 &4000
 PrefabInstance:

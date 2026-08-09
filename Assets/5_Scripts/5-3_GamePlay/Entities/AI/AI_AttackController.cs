@@ -51,6 +51,12 @@ public class AI_AttackController
 
 	/// <summary>是否找到伤害组件</summary>
 	public bool HasDamageMods => _damageMods.Count > 0;
+
+	/// <summary>判断伤害模块是否属于需要在窗口起始帧补查重叠的 AI 触发器。</summary>
+	public static bool ShouldScanCurrentOverlapsOnWindowStart(Mod_Damage damageMod)
+	{
+		return damageMod is Mod_Damage_AI;
+	}
 #endregion
 
 #region Public API
@@ -220,6 +226,20 @@ public class AI_AttackController
 		// 视觉/事件状态与实际伤害窗口同时开始，首击和后续攻击使用同一时序。
 		SetAnimatorAttacking(true);
 		SetDamageEnabled(true);
+		ScanAIAttackOverlaps();
+	}
+
+	/// <summary>只扫描 AI 攻击触发器，避免影响武器伤害模块。</summary>
+	private void ScanAIAttackOverlaps()
+	{
+		for (int i = 0; i < _damageMods.Count; i++)
+		{
+			if (ShouldScanCurrentOverlapsOnWindowStart(_damageMods[i]) &&
+				_damageMods[i] is Mod_Damage_AI damageAI)
+			{
+				damageAI.ScanCurrentOverlapsAndApplyDamage();
+			}
+		}
 	}
 
 	/// <summary>

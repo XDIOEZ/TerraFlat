@@ -38,6 +38,9 @@ public class Mod_Damage : Module, IDamageSender
     [SerializeField]
     private float lastDamageTime = 0f;
     private List<DamageReceiver> insideReceivers = new List<DamageReceiver>();
+    private readonly List<Collider2D> overlapColliders = new List<Collider2D>();
+    private readonly HashSet<DamageReceiver> aiWindowHitReceivers = new HashSet<DamageReceiver>();
+    private bool aiWindowOverlapScanEnabled;
     private bool lastColliderEnabled = false;
     private bool tileDamageAppliedThisWindow;
 
@@ -78,6 +81,9 @@ public class Mod_Damage : Module, IDamageSender
         // 初始化定时伤害相关数据
         lastDamageTime = 0f;
         insideReceivers.Clear();
+        overlapColliders.Clear();
+        aiWindowHitReceivers.Clear();
+        aiWindowOverlapScanEnabled = false;
         lastColliderEnabled = damageCollider != null && damageCollider.enabled;
         tileDamageAppliedThisWindow = false;
     }
@@ -134,6 +140,10 @@ public class Mod_Damage : Module, IDamageSender
         DamageReceiver receiver = WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(other);
         if (receiver == null) return;
 
+        // AI 伤害窗已主动扫描过的目标，不再被同一窗口内后续触发事件重复结算。
+        if (aiWindowOverlapScanEnabled && aiWindowHitReceivers.Contains(receiver))
+            return;
+
         // 添加到内部接收器列表
         if (!insideReceivers.Contains(receiver))
         {
@@ -158,6 +168,9 @@ public class Mod_Damage : Module, IDamageSender
                     ApplyDamageToReceiver(receiver);
                 }
             }
+
+            if (aiWindowOverlapScanEnabled)
+                aiWindowHitReceivers.Add(receiver);
         }
     }
 
@@ -241,11 +254,14 @@ public class Mod_Damage : Module, IDamageSender
     private void BeginTileDamageWindow()
     {
         tileDamageAppliedThisWindow = false;
+        aiWindowHitReceivers.Clear();
     }
 
     private void EndDamageWindow()
     {
         insideReceivers.Clear();
+        aiWindowHitReceivers.Clear();
+        aiWindowOverlapScanEnabled = false;
         tileDamageAppliedThisWindow = false;
     }
 
@@ -310,6 +326,51 @@ public class Mod_Damage : Module, IDamageSender
     #endregion
 
     #region 新增方法：控制伤害启用/禁用
+
+    /// <summary>
+    /// AI 专用：伤害窗口开启后主动扫描当前重叠目标，弥补碰撞体后开时缺少 Enter 事件的问题。
+    /// </summary>
+    protected void ScanCurrentOverlapsAndApplyDamageForAiWindow()
+    {
+        if (damageCollider == null || !damageCollider.enabled)
+            return;
+
+        aiWindowOverlapScanEnabled = true;
+        aiWindowHitReceivers.Clear();
+        Physics2D.SyncTransforms();
+        overlapColliders.Clear();
+
+        ContactFilter2D filter = new ContactFilter2D
+        {
+            useTriggers = true,
+            useLayerMask = false,
+            useDepth = false,
+            useNormalAngle = false
+        };
+        damageCollider.OverlapCollider(filter, overlapColliders);
+
+        for (int i = 0; i < overlapColliders.Count; i++)
+        {
+            Collider2D overlap = overlapColliders[i];
+            DamageReceiver receiver = WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(overlap);
+            if (receiver == null || receiver.item == item || !aiWindowHitReceivers.Add(receiver))
+                continue;
+
+            if (!insideReceivers.Contains(receiver))
+                insideReceivers.Add(receiver);
+
+            if (!EnableOnTriggerEnterDamage || !CanDealDamageNow())
+                continue;
+
+            if (DamageInterval < 0f ||
+                DamageInterval == 0f ||
+                Time.time - lastDamageTime >= DamageInterval)
+            {
+                ApplyDamageToReceiver(receiver);
+            }
+        }
+    }
+
     /// <summary>
     /// 设置伤害逻辑启用状态（不负责开关Collider）
     /// </summary>

@@ -192,7 +192,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     [Min(0.01f)]
     public float flashDuration = 0.2f;
 
-    public Color flashColor = Color.white;
+    public Color flashColor = new Color(1f, 0.08f, 0.08f, 1f);
     public float shakeDuration = 0.15f;
     public float shakeMagnitude = 0.1f;
 
@@ -1629,7 +1629,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     #region 动画效果实现
 
-    /// <summary>使用角色渲染模块播放闪白，并启动轻微震动；不再访问 Renderer.material。</summary>
+    /// <summary>使用角色渲染模块播放闪红，并启动轻微震动；不再访问 Renderer.material。</summary>
     private void PlayHitVisualFeedback()
     {
         if (item == null || item.Sprite == null)
