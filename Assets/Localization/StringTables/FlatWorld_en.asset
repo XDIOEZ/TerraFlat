@@ -506,6 +506,142 @@ MonoBehaviour:
     m_Localized: Log.
     m_Metadata:
       m_Items: []
+  - m_Id: 357277925027840
+    m_Localized: BlastFurnace Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277958582272
+    m_Localized: BlastFurnace Summoner.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277958582273
+    m_Localized: Bonfire Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277958582274
+    m_Localized: Bonfire Summoner.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277962776576
+    m_Localized: Chestplate Iron
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277962776577
+    m_Localized: Chestplate Iron.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277962776578
+    m_Localized: Chestplate Twine
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277962776579
+    m_Localized: Chestplate Twine.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277962776580
+    m_Localized: Chestplate Wood
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277962776581
+    m_Localized: Chestplate Wood.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277971165184
+    m_Localized: Chest Wood Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277971165185
+    m_Localized: Chest Wood Summoner.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277979553792
+    m_Localized: Door Stone Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277979553793
+    m_Localized: Door Stone Summoner.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277983748096
+    m_Localized: Door Wood Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277983748097
+    m_Localized: Door Wood Summoner.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277992136704
+    m_Localized: Meatrack Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277992136705
+    m_Localized: Food that can be eaten.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277992136706
+    m_Localized: MineEntrance Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277992136707
+    m_Localized: MineEntrance Summoner.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278059245568
+    m_Localized: Humus
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278059245569
+    m_Localized: Humus.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278059245570
+    m_Localized: Scarecrow Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278059245571
+    m_Localized: Scarecrow Summoner.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278071828480
+    m_Localized: Smelter Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278071828481
+    m_Localized: Smelter Summoner.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278092800000
+    m_Localized: Tent Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278092800001
+    m_Localized: Tent Summoner.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278096994304
+    m_Localized: Wall Stone Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278096994305
+    m_Localized: Wall Stone Summoner.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278101188608
+    m_Localized: Wall Wood Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278101188609
+    m_Localized: Wall Wood Summoner.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278105382912
+    m_Localized: WorkBench Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278105382913
+    m_Localized: WorkBench Summoner.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
