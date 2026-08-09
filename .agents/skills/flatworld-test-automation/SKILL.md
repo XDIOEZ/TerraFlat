@@ -115,13 +115,13 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --all
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：新增 Buff 状态 HUD 的 `UI.Smoke` Prefab/Player 绑定、节点、左侧中部锚点和输入穿透契约；完成静态诊断、Prefab 导入、Unity 编译与 Console 检查，按项目默认未运行 Test Runner。
+- 2026-08-09：URP 2D 光照遮挡子层完成 GamePlay/Editor 静态诊断、Unity Console 检查和 Prefab 导入检查；新增建筑黄金路径断言但按项目默认未主动运行 Test Runner。
+- 2026-08-09：新增保存状态 HUD 与手动异步保存回归契约，完成相关脚本静态诊断、Prefab 导入、Unity 编译和 Console 检查；按项目默认未主动运行 UI Smoke/Golden Path Test Runner。
+- 2026-08-09：修复 `GameManager` 手动保存协程在含 `catch` 的 `try` 中使用 `yield` 导致的 `CS1626`；同时清理未使用 UI 相机变量并标注旧 MapCore 兼容读取，完成静态检查、Unity 编译和 Console 检查，未运行 Test Runner。
+- 2026-08-09：游戏内手柄准星改为玩家中心的固定半径径向定位，并补充 `UI.Smoke` 方向计算回归；本次仅完成 GamePlay/UI/GameTest 静态编译与差异检查，未主动运行 Unity Test Runner。
+- 2026-08-09：狼现代 Prefab 与旧行为树 Prefab 的玩家/同伴感知范围扩大到 40，并新增 `AI.Smoke` 视野覆盖回归断言；按普通局部 AI 配置改动仅做静态检查、编译和 Console 检查，未主动运行 Test Runner。
+- 2026-08-09：野猪首击补充 AI 伤害触发器重叠扫描后，完成相关脚本静态诊断、Unity 编译和 Console 定向检查；新增 `AI.Smoke` 首击扫描范围回归断言，未主动运行 Unity Test Runner。
+- 2026-08-09：修复 `FlatWorldGoldenPathScenarios.ItemLifecycle.cs` 缺少 `UnityEngine` 引用导致 `Vector2`、`Vector3`、`Quaternion`、`Time` 和 `Debug` 编译报错；完成静态检查、Unity AssetDatabase 刷新、脚本编译和 Console 检查，未运行 Test Runner。
+- 2026-08-09：玩家口渴伤害的局部 5 秒计时调整按小范围玩法改动完成脚本静态诊断与 Unity Console 检查；未主动运行 Test Runner 或完整 Golden Path，建议人工在水分归零后观察扣血间隔。
 - 2026-08-09：幽灵追击与光照伤害阈值改动按普通局部 AI 改动门槛完成静态诊断、Unity 编译与 Console 检查；新增 `AI.Smoke` 的 0.5 阈值断言，未主动运行 Test Runner 或完整 Golden Path。
-- 2026-08-09：`WorldModel.Cave` 新增地表入口与矿洞出口同格且唯一的纯生成断言；本次按项目默认只完成 WorldModel/GamePlay/Editor/GameTest 程序集编译、静态检查和 Unity Console 错误检查，未启动 Test Runner。
-- 2026-08-09：狼/幽灵感知修复按普通局部 AI 改动门槛完成静态诊断、Unity 编译与 Console 检查；未主动运行 Test Runner 或完整 Golden Path。
-- 2026-08-09：旧石墙预览迁移后执行 `Building.Smoke`（3/3）与 `Runtime.GoldenPath`；黄金路径已进入旧物品虚影断言，但在后续既有 `Mover.Move` 路径超时，需与建筑断言分开审计。
-- 2026-08-09：建筑系统接入新区块地形后按联动契约执行 `Building.Smoke`、`Map.Smoke`、`Navigation.Smoke` 与 `Runtime.GoldenPath`；黄金路径新增石墙阻挡层可逆验证，路径超时仍需区分既有无头移动问题。
-- 2026-08-09：新增 `WorldModel.Cave` 纯生成回归，覆盖洞穴地形/矿脉/传送门确定性、洞壁可走性、传送门概率边界、连续大预览保持正式概率格密度，以及矿脉规则指纹；系统改动仍先完成静态诊断、程序集编译和 Unity Console 检查，除非用户明确要求才启动 Test Runner。
-- 2026-08-09：GM AI 召唤局部生命周期修复按普通改动门槛完成静态脚本诊断、Unity 脚本编译和 Console 错误检查；未主动运行 Test Runner 或完整 Golden Path。
-- 2026-08-08：新增 `WorldModel.Ecology` 与 `DataSave.Ecology` 分类，覆盖确定性规则、环境过滤、洞穴空结果、配置/差量 MemoryPack 往返；`Runtime.GoldenPath` 增加自然物生成、销毁和 ChunkView 重绑不复活场景。
-- 2026-08-08：角色受击、伤害数字和特效池改动按普通特效修复门槛完成静态诊断、Unity 编译与 Console 检查，未主动运行 Test Runner。
-- 2026-08-08：`Building.Smoke` 新增旧建筑材质丢失时虚影保留默认 Sprite 材质的运行时实例回归；Golden Path 建筑场景复用生产预览解析 API。

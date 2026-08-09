@@ -44,16 +44,16 @@ Input System / PlayerInputActions
 - UI 上方点击由 `GameController.IsPointerOverUI()` 拦截。
 - F4 GM 的 Buff 点选模式订阅本地 `GameController.LeftClick.DynamicCalls`，因此沿用统一鼠标/虚拟光标坐标与 UI 点击拦截；模式由 GM 的确认、取消与清除按钮管理，场景切换时自动解除订阅。
 - `PlayerInputActions.inputactions` 同时声明 `Keyboard&Mouse`、`Gamepad` Scheme；禁止在 `GameController` 运行时注入手柄 Binding，修改后由 Unity 自动生成 `PlayerInputActions.cs`。
-- 当前手柄基础映射：左摇杆移动、右摇杆虚拟光标、RT/A 主要操作、LT/LB 次要操作、X 交互、Y 丢弃、B 背包、十字键上装备/下手工制作/左右切快捷栏、Start 设置、Select 营养面板。
+- 当前手柄基础映射：左摇杆移动、右摇杆控制以玩家为中心的游戏内准星（模态 UI 中切换为虚拟光标）、RT/A 主要操作、LT/LB 次要操作、X 交互、Y 丢弃、B 返回、十字键上装备/下手工制作/左右切快捷栏、Start 设置、Select 营养面板；键盘 B 仍打开背包。
 - `GameController` 在有本地 Player 时负责切换 `EventSystemGuard` 的输入设备模式；主菜单等无 Player 阶段由 `GamepadUIRuntimeController` 直接检测键鼠/手柄。`FlatWorldUI/Navigate` 只接收手柄，键盘 W/A/S/D 必须始终只驱动玩家移动。
-- `FlatWorldUI/Cancel` 的键鼠取消键固定为 Esc；键盘 B 只走 `Win10/B` 的背包开关，避免 EventSystem 与玩家库存模块同时消费同一次输入。
+- `FlatWorldUI/Cancel` 的键鼠取消键固定为 Esc，手柄 B/Start 负责返回；键盘 B 只走 `Win10/B` 的背包开关，避免 EventSystem 与玩家库存模块同时消费同一次输入。
 - 濒死、过场或联机准备期间使用输入锁定，不要通过禁用整个玩家对象规避输入。
 - 模态 UI 使用 `AcquireGameplayInputLock(owner)` / `ReleaseGameplayInputLock(owner)` 叠加锁定，避免子窗口恢复时误解锁其他系统。
 - 玩家运行时引用优先从 `ItemMgr.User_Player` / `UserPlayerTransform` 获取，兼容单机与联机本地玩家。
 - `Player.Act()` 是显式安全空行为：玩家操作由 `GameController` 与功能模块驱动，不得回退到 `Item.Act()` 触发普通物品 `OnAct` 使用链。
 - `GameController.Load()` / `Save()` 不持有世界存档数据；按键覆盖由 `InputBindingService` 通过 `PlayerPrefsInputBindingStore` 独立加载和保存。
 - 自动保存只能采集 Player/Item 状态；不得调用 `SetGameplayInputLocked`、禁用 `Mover`/Rigidbody2D 或改写 `Time.timeScale`，后台写盘由 `AutoSaveController` 轮询完成。
-- `InputBindingService` 按 `KeyboardMouse` / `Gamepad` 分组提供可编辑条目；重绑候选只能来自当前分页设备，Button 与 Vector2 分别限制控制类型，冲突只在同设备组内检测，恢复默认只清除当前分页覆盖。
+- `InputBindingService` 按 `KeyboardMouse` / `Gamepad` 分组提供可编辑条目；重绑候选只能来自当前分页设备，Button 与 Vector2 分别限制控制类型，冲突只在同设备组内检测；恢复默认只清除当前分页覆盖，单项“清除绑定”使用空覆盖路径并立即保存。
 - `Player.IsLocalProfile`、`IsNewProfile`、`WasProfileDataCreated` 与 `ProfileContextChanged` 仅为运行时档案上下文，不进入 `Data_Player` 序列化布局；新玩家判定来自数据是否创建，禁止用出生位置或本地控制权猜测。
 - GM 自定义移速统一调用 `PlayerAdminController.TrySetAdminMoveSpeedMultiplier`；输入范围为 `0.1–100x`，替换上一次管理员倍率并保留 Buff、装备等其他乘法修饰，禁止直接覆写 `Mover.Speed.MultiplicativeModifier`。
 - GM 玩家页的“管理员无敌”统一调用 `PlayerAdminController.TryToggleAdminInvincibility`；仅管理员可操作，开启时监听 `DamageReceiver.OnDamageReceived` 即时回满生命，并由 `Mod_PlayerDeathState` 拦截/恢复濒死。状态只保留当前运行时，启动或域重载后默认开启，不写入世界存档。
@@ -69,22 +69,23 @@ Input System / PlayerInputActions
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：库存槽位将键鼠 PointerDown 与手柄 A/Submit 分离；手柄虚拟光标不再伪装成键鼠点击，避免手上物品交换状态被手柄路径抢占。
+- 2026-08-09：游戏内手柄准星改为以玩家屏幕位置为中心的固定半径径向定位；右摇杆只更新方向，玩家移动及其他手柄按键不会清掉准星，常驻 HUD 不会把它切到 UI 焦点，模态面板仍可接管焦点。
+- 2026-08-09：手柄 B 从背包开关移交为全局 UI 返回，`Win10/B` 保留键盘 B 背包入口；打开的库存面板统一允许手柄取消关闭。
+- 2026-08-09：手柄焦点移动到 TMP 输入框时只停留在输入框；按 A/Submit 确认后才打开虚拟键盘，避免焦点移动自动弹窗，键盘 Enter 不触发虚拟键盘。
 - 2026-08-09：启用玩家交互范围时同步物理并主动扫描当前半径，补偿自然物/传送门在玩家到位后完成绑定的动态区块时序；避免首次按 E 依赖遗漏的 `OnTriggerEnter2D`。
+- 2026-08-09：按键绑定服务新增单项清除能力；键鼠与手柄都通过空 `overridePath` 禁用指定条目、保存覆盖并触发 `BindingsChanged`，重绑失败时区分空覆盖与无覆盖以保留清除状态。
+- 2026-08-09：常驻 HUD 快捷栏不再进入手柄焦点导航链；左摇杆只驱动玩家移动，快捷栏仍由十字键左右、滚轮和数字键切换。
 - 2026-08-09：`Mod_InteractSender` 复用 `GameController.LeftClick` 与指针世界坐标，按距离解析 `IInteractable`，石门可直接左键开关且不绕过 UI/输入锁。
 - 2026-08-09：玩家交互确定性天然 `CaveExit` 后，`DimensionPortal` 走专用生成入口分支；完整释放旧 Player/Scene、在新维度同格重建 Player，并等待 WorldModel 目标 ChunkView 表现完成后解锁输入，避免跨 Scene 保留旧 Chunk/Item 上下文。
 - 2026-08-09：玩家走路、奔跑、转向都改为目标速度平滑过渡；松开方向后仅保留 0.07 秒的极短惯性，体力/饥饿结算不延长，动画在实际停下后结束；玩法输入锁仍立即停止。
-- 2026-08-09：键鼠模式下 `FlatWorldUI/Navigate` 已删除 W/A/S/D 绑定；背包/菜单的橙色焦点框可保留，但 W/A/S/D 只移动玩家，手柄导航保持可用。
-- 2026-08-09：键盘 B 已从 `FlatWorldUI/Cancel` 移除，保留给 `Win10/B` 背包开关；手柄 B/Start 的 UI 返回映射保持不变。
-- 2026-08-09：自动保存改为分帧快照与后台写盘；保存期间 `GameController.IsGameplayInputLocked`、Mover/Rigidbody2D 与 `Time.timeScale` 必须保持原值，避免玩家无法移动。
-- 2026-08-09：主菜单退出也统一使用 `ItemMgr.ReleasePlayerForWorldTransition()` 注销本地 Player，确保 `Player_DIC`、运行时 Item 注册与感知索引同步移除；禁止直接销毁 Player GameObject 后再等待场景卸载。
-- 2026-08-09：F4 GM 玩家页新增“管理员无敌：开/关”按钮；关闭后生命、理智、饥饿与死亡恢复正常结算，重新开启会立即满状态并取消已进入的濒死。
-- 2026-08-09：主菜单存档流程的手柄焦点按“世界→角色/名称→进入世界”交接；动态列表重建前会释放旧焦点，避免 EventSystem 指向已销毁条目。
 ## 修改后自动测试
 
 - 精简 Smoke：`Assets/GameTest/PlayerInteraction/PlayerWorldWrapSmokeTests.cs`；当前只保留玩家跨四边与角落环绕时速度和数据不丢失这一关键行为。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；玩家交互测试约定目录：`Assets/GameTest/PlayerInteraction/`；场景目录：`Assets/GameTest/Scenes/PlayerInteraction/`；冒烟分类：`PlayerInteraction.Smoke`。
 - 新增输入、移动、摄像机、焦点、交互发送接收或玩家 Prefab 行为时必须增加系统测试；修复 Bug 时先增加回归测试。输入到移动或交互主流程变化时同步更新玩家冒烟场景。
 - 奔跑与速度过渡回归位于 `Assets/GameTest/PlayerInteraction/MoverRunInputTests.cs`，分类为 `PlayerInteraction.Input`；覆盖按下进入奔跑、短/长按松开恢复普通移动、重复按键不形成常驻状态，以及走路→奔跑→走路→松开的平滑速度变化。
+- `Assets/GameTest/PlayerInteraction/InputBindingServiceTests.cs` 覆盖单项清除绑定后的空路径、`未绑定` 显示、变更事件和持久化。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；输入测试必须使用可注入输入，不能依赖真实鼠标、键盘或手柄操作。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category PlayerInteraction.Smoke`；无需视觉模型或测试工具卡片。涉及 UI、Item/Module、建筑、地图或联机玩家时追加对应分类；只有光标、相机或交互反馈最终观感变化才做定向截图。
 - 管理员无敌的完整运行时回归位于 `Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.PlayerMovement.cs`，在 `OnWorldReady` 验证关闭后受伤、重新开启后拦截致死伤害，并在 Cleanup 恢复玩家状态。

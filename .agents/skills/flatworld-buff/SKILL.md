@@ -19,6 +19,8 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 角色状态表现链路：`BuffManager.BuffAdded/BuffRemoved/BuffDurationChanged -> ActorStatusVisualEffectController -> 独立 SpriteRenderer 序列 / 状态光晕 / VisualEffectManager 池化粒子`。控制器装配在玩家与 AI 共用的 Animator 模块 Prefab；它不参与伤害 Tick，也不改变 Buff 的权威生命周期。
 
+玩家状态 HUD 链路：`PlayerBuffStatusHUD -> Player/Module_BuffManager -> BuffManager.ActiveBuffs`。HUD 只读取本地玩家的活动 Buff，通过生命周期事件和低频时长兜底刷新状态名称/剩余时间；它是只读表现层，不创建、修改或持久化 Buff。
+
 ## 按任务定位
 
 - 修改本体 Buff 数值或组合：编辑 `Assets/StreamingAssets/GameConfig/Buffs/` 下由 `buff-manifest.json` 声明的业务分包；新增分包必须登记稳定 ID、相对路径和启用状态，不要恢复已淘汰的 Buff ScriptableObject 路径。
@@ -61,6 +63,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：新增 `PlayerBuffStatusHUD`/`BuffStatusRowView`，从本地玩家 `BuffManager.ActiveBuffs` 只读展示活动 Buff，使用 `BuffAdded`、`BuffRemoved`、`BuffDurationChanged` 与 `0.25s` 时长兜底刷新；图标暂用 UI 占位符，不改变 Buff 生命周期。
 - 2026-08-09：`光耀` 接入 `ActorStatusVisualEffectController` 的低强度状态光晕，复用圆形 Sprite 做轻微呼吸发光；仍由 `BuffAdded`、`BuffRemoved`、续期事件和 `0.2s` 兜底校验驱动，不改变幽灵真实伤害 Tick。
 - 2026-08-09：`ActorStatusVisualEffectController` 新增复合 Buff 粒子映射；`出血|流血|失血` 共用 `BloodDropStatusEffect`，由 `BuffAdded`、`BuffRemoved`、续期事件和 `0.2s` 兜底校验驱动，持续表现通过 `VisualEffectManager` 对象池启停。
 - 2026-08-09：新增可复用 `ActorStatusVisualEffectController`，由 `BuffManager` 生命周期事件驱动、每 `0.2s` 兜底同步存档恢复；`燃烧` 映射到 `CreatureBurning_Sheet` 八帧火焰，已装配到玩家/AI 动画模块。移除、过期和对象复用都会隐藏火焰，且附属精灵不受角色水体/受击 MPB 影响。

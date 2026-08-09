@@ -123,6 +123,7 @@ DimensionPortal.Interact
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：新版矿洞 `ChunkView` 的 `BlockingTileId` 现在会同步驱动 `LightOccluders`，洞穴岩壁用 URP 2D 阴影体阻挡玩家火把；纯洞穴布局和出口配对算法不变。
 - 2026-08-09：维度切换在加载目标玩家后沿用 `Mod_ChunkLoader` 的相机视距、预取和销毁配置刷新完整 Runtime Window；等待活动视野内所有 `ChunkView` 绑定，禁止用 1x1 兜底覆盖周围区块。
 - 2026-08-09：进入矿洞时 `ChunkMgr` 从地表世界已冻结的 Profile、维度派生种子和拓扑构造 `CavePortalPairingSnapshot`；自然入口切换继续使用同一世界格，洞穴不再额外动态补造出口。
 - 2026-08-09：旧矿洞房间/隧道/矿脉设计迁入新版纯区块：`ChunkGenerationProfile_Cave` 冻结洞穴参数与矿脉规则，天然 `CaveExit` 由稳定位置成对生成。交互后先完整释放旧 Player/Scene，再主动刷新并等待目标 WorldModel ChunkView，避免旧队列空闲但新纯区块尚未表现时提前落地。

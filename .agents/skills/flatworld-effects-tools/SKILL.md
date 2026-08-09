@@ -50,6 +50,9 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：`ChunkLightOccluderRenderer` 将新区块静态阻挡格合并为少量单位方形 URP 2D `ShadowCaster2D`，只在绑定/墙体变化时刷新，并通过 `CompositeShadowCaster2D` 组织 `LightOccluders` 子层；不新增每帧光照射线计算。
+- 2026-08-09：修复幽灵受击不闪红：幽灵 Prefab 根节点补挂 `ActorRenderEffectController` 与 `ActorRenderColorEffect`，让 `Visual` SpriteRenderer 进入统一 MPB 受击链路；不改幽灵伤害结算。
+- 2026-08-09：统一受击表现改为红色；`DamageReceiver`、`ActorRenderColorEffect`、Animator 模块 Prefab 及 `Sprite-Lit-Master` Shader 默认值保持一致，并补齐 Unlit Pass 的 MPB 参数声明。
 - 2026-08-09：状态表现控制器新增 `光耀` 低强度状态光晕；复用 `Circle.png` 作为金黄色圆形叠加，以轻微呼吸缩放和透明度变化表现发光，Buff 移除/对象禁用时隐藏，不改变 Buff 伤害逻辑。
 - 2026-08-09：状态表现控制器新增 VisualEffectManager 池化粒子配置；`出血`、`流血`、`失血` 共用 `BloodDropStatusEffect` 循环红色血滴，按当前角色 Sprite 高度跟随位置和排序，并在 Buff 移除/对象禁用时回收到对象池。
 - 2026-08-09：燃烧附着火焰的垂直锚点增加可配置偏移，玩家与 AI 默认向下移动角色高度的 `5%`，避免火焰底部露出玩家脚部；不改变缩放、帧率和 Buff 生命周期。
@@ -57,9 +60,6 @@ disable-model-invocation: false
 - 2026-08-09：雨效改为由 `RainEffectController` 单点跟随相机顶部，`WeatherMgr` 不再重复写入根 Transform；保留原单边顶部发射线，粒子寿命按正交相机高度、初始下落速度和 `1.12` 倍余量动态计算，确保下半屏持续有雨且不会无限落到地图外。`RainGroundSplash` 优先采样非水非阻挡地形，区块尚未 Ready 时在可视范围降级发射；频率提升至小雨 `12/s`、暴雨 `48/s`，生命周期 `0.32–0.5s`、上限 `80`，保证中雨约 12 个同时可见水花。
 - 2026-08-09：草地 Tilemap 接入独立 `Grass-Sway-Lit` Shader，使用 GPU 顶点风场、根部固定的弯曲权重和共享材质参数；`ChunkGrassRenderer`、`GrassDetailLayer` 及对应 Prefab 共用该材质并扩展裁剪边界。
 - 2026-08-09：新增独立 `RainGroundSplash` 表现层；由 `WeatherMgr` 单独加载，使用世界空间环形粒子表示雨滴落地，不改变天气数据与地形数据。
-- 2026-08-08：角色受击改用 MPB 颜色模块，伤害数字支持弹性/暴击/类型颜色，`GameEffect` 与 `VisualEffectManager` 统一池化回收和视觉状态重置。
-- 2026-08-08：水体连接处加入基于 Shader 时间的双层正弦波动画，水线与水下透明边界同步起伏，并开放波幅、频率和速度参数。
-- 2026-08-08：新增通用角色渲染效果控制器与水体浸没模块；统一 MPB 写入，支持 `deepValue` 驱动的水下染色、透明度、柔和水线及深水保留头部，并接入玩家/AI 动画 Prefab。
 
 ## 修改后自动测试
 

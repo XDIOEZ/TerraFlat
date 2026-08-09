@@ -57,16 +57,16 @@ ItemMaker / ItemMgr 实例化
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：刀类变体使用 JSON `visual.rendererLocalEulerAngles` 与 `flipX` 明确记录贴图朝向；共享 Dagger 外壳不再把骨刀/燧石刀的艺术方向错误地按石刀默认值构造。
+- 2026-08-09：`Mod_Food` 口渴伤害改为独立 5 秒计时器，每次按 `WaterSelfHurt` 扣血；补水、复活、加载和对象池生命周期会清零计时，FixedInterval 模块仍按累计 `deltaTime` 结算。
+- 2026-08-09：本体 ItemDefinition 的 SpriteAddress 对含方括号的资源路径执行迁移前阻断；样例图集目录已改为安全名称并保留 GUID，模块原型按持久化 ID 选择且深拷贝保持真实 ModuleData 派生类型，避免 Addressables 路径误解析和 Ex_ModData 类型退化。
 - 2026-08-09：建筑召唤器 Item 数据进入 JSON 分包；每个召唤器保留独立 Prefab 外壳，JSON 接管 ItemData/ModuleData，复杂 Module 参数留在壳体以保持建筑放置、库存、设备和专用组件引用。
 - 2026-08-09：本体物品迁移器新增 Humus 与胸甲定义；胸甲 `Module_Equipment_Store` 的 SerializeReference 装备实例使用受限类型标签恢复，JSON 参数不启用任意 TypeNameHandling，避免抽象类型实例化失败或扩大反射面。
 - 2026-08-09：`DimensionPortal` 实现 Item 池生命周期清理；复用对象时重置锚点、初始化和传送状态，生成出口显式绑定宿主 `Item`，避免旧运行时状态污染新出口。
 - 2026-08-09：确定性 `CaveExit` 仍是不可拾取的永久基线物品；矿洞侧现在仅接收与地表入口同坐标的一条放置记录，`ChunkNaturalItemRenderer` 不创建额外运行时出口。
-- 2026-08-09：新版自然物的临时掉落不再进入旧 `Chunk` 归属更新或 `RequestLoadChunk`，`ChunkNaturalItemRenderer` 统一登记并在解绑时无存档回收，避免 Item 掉落动画触发旧区块加载卡顿。
+- 2026-08-09：玩家丢弃、玩家死亡和战斗/灌木掉落统一通过 `ChunkView` 的 `ChunkNaturalItemRenderer` 登记为临时物品；新区块窗口下 `ItemWorldPlacement` 与 `Mod_Droping` 不再查询旧 `Chunk` 或请求旧区块，背包扣减改为生成成功后提交，避免掉落卡顿和物品误扣。
 - 2026-08-09：`ChunkNaturalItemRenderer` 识别带目标维度的确定性 `CaveExit`，在 `Load()` 后调用 `DimensionPortal.ConfigureGenerated()` 并禁拾取；天然传送门只由基线恢复，解绑/保存时不得写入自然物删除或状态差量，其他洞穴矿物仍走原有稳定 GUID、环境初始化和池化回收。
 - 2026-08-09：GM 生物召唤不再通过反射只执行 `InstantiateItem`；必须以 `ItemMgr` 直接生成、立即 `Load()` 并校验 `IAIActor` 反向绑定。初始化或类型校验失败时从运行时注册表 Despawn，避免对象池、Tick 和 AI 索引残留半初始化实体。
-- 2026-08-09：`ItemMgr.RuntimeEntities` 新增 AI 分类缓存、`WorldAddress` 正反向索引和场景级 `RuntimeEntities` 根节点；Item 注册、移动、池化及场景直接销毁必须同步注销，普通 Item Tick 禁止重复扫描组件树。
-- 2026-08-09：灌木成熟提示必须从 `GameRes.TryGetItemDefinition(itemId).Sprite` 取得 JSON 解析出的 `RuntimeItemDefinition` 图标；`Berry` 的真源为 `Items/shells/Prop.json` 中的 `visual.spriteAddress`，禁止从共享外壳或 `Berry.prefab` 的 SpriteRenderer 读取。
-- 2026-08-09：`ItemMgr.Update/LateUpdate` 仅在 `GameManager.IsInGameWorld` 为真时调度 Item 与感知；退出阶段只完成但不应用已提交的感知 Job。主菜单退出必须走 `ReleasePlayerForWorldTransition()`，并在 Chunk/场景卸载后调用 `CleanupNullItems()`，禁止让已销毁 Item 留在注册表供下一世界读取。
 
 ## 易误判点
 

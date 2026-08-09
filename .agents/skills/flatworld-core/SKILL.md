@@ -22,7 +22,7 @@ disable-model-invocation: false
 ## 关键入口与路径
 
 - 世界事件：`GameManager.Event_GameWorldEnter`、`Event_GameWorldExit`、`Event_PlayerEnterWorld`。
-- 自动保存：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/AutoSaveController.cs`。
+- 自动与手动保存：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/{AutoSaveController,GameManager,SaveDataMgr}.cs`。
 - 玩家控制入口：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/GameController.cs`。
 - 玩家档案上下文：`ItemMgr.LoadOrCreatePlayerData(..., out wasCreated)`；创建、加载、网络提升与远程副本配置都必须显式调用 `Player.SetProfileContext()`。
 - 输入重绑定：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/InputBindingService.cs`。
@@ -74,19 +74,20 @@ GameStartScene
 
 > 最多保留 8 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：游戏内设置的时间暂停由 `SettingCanvas` 按 `GameNetwork.IsOnline` 与 `GameManager.IsInGameWorld` 判定；单机保存并恢复原 `Time.timeScale`，联机不修改全局时间流速。
+- 2026-08-09：手动保存入口改为分帧快照与后台原子写盘，`GameManager` 通过保存状态 HUD 反馈进度；退出保存路径仍保持生命周期专用的记录退出时间流程。
+- 2026-08-09：`GameRes` 启动阶段的 JSON Item Sprite 加载已避开含方括号的 Addressables 内部路径；迁移工具阻断此类路径并保留 GUID 引用，启动日志确认 21 个分包、78 个本体物品可完整注册。
 - 2026-08-09：维度切换加载目标玩家后必须按其相机视距主动刷新完整 Chunk 窗口，并在解锁输入前等待活动视野绑定完成；不能只等待玩家脚下区块。
 - 2026-08-09：新玩家完成安全陆地定位后，将主世界初始出生点写入玩家 `ItemSpecialData`；`Mod_PlayerDeathState` 加载旧存档时按同一世界种子补齐，死亡复活优先回到该持久坐标，不再把当前死亡位置当作正常出生点。
 - 2026-08-09：维度切换进入目标 Scene 后由 `DimensionManager` 主动驱动 `ChunkMgr.RefreshRuntimeWindow()` 并等待目标 `ChunkView` 完整绑定；WorldModel 运行时窗口会注入基础世界种子到 `cave.portal.baseSeed`，使地表入口与矿洞出口使用同一稳定布局。
 - 2026-08-09：自动保存经 `GameManager.SaveGameInBackgroundCoroutine()` 先分帧捕获旧 Chunk，再由 `SaveDataMgr` 后台原子写盘；同一文件的写入版本保证手动/退出保存优先，自动保存不得锁玩家输入、Mover 或 `Time.timeScale`。
 - 2026-08-09：返回主菜单时必须先将 `IsInGameWorld` 置为 false 并 `ResetWorldEntryLifecycle()`，再通过 `ItemMgr.ReleasePlayerForWorldTransition()` 注销 Player；等待 Chunk 回收后清理运行时 Item 注册，并在 `LoadSceneMode.Single` 完成后核验旧动态世界 Scene 已卸载。禁止直接 `Destroy(Player.gameObject)`，否则 AI 感知与 MonsterSpawner 可能读取 Unity 伪空对象，进而中断下一次 `RunWorld()`。
-- 2026-08-08：新玩家出生点纯采样与 `ChunkMgr.RefreshRuntimeWindow()` 统一使用 `DimensionManager.GetActiveGenerationSeed()`；禁止一个使用维度派生种子、另一个使用基础存档种子，否则预测陆地会在真实区块加载后变成水面。
-- 2026-08-08：新玩家纯地形出生搜索改为“锚点附近密集方环 + 剩余预算覆盖完整配置半径”；避免 4096 次采样被近处连续海面耗尽而实际只检查约 32 格，最终候选仍以正式区块结果确认非水且可走后再触发 `Event_PlayerEnterWorld`。
 
 ## 修改后自动测试
 
 - 基础测试脚本：`Assets/GameTest/Core/CoreSmokeTests.cs`；当前覆盖 GameManager、GameRes、SceneMgr、启动/管理器场景入口、空玩家/存档名称自动生成八位数字，以及新建/进入存档必须使用 Prefab 加载界面、先等待渲染帧并持续到区块队列完成、出生点必须纯种子定位后再交给玩家流送模块加载 Chunk、禁止 GameManager 重复扫描保存区块的源码契约。
 - `Runtime.GoldenPath` 在完整退出后会从刚写入的隔离存档重新进入同一玩家/世界键，断言旧动态 Scene、`Player_DIC` 与 Item 注册表均已清理，再执行第二次退出。
-- `Runtime.GoldenPath` 的 `FlatWorldGoldenPathScenarios.AutoSave.cs` 在 `OnWorldReady` 启动正式自动保存链，移动阶段断言后台写入完成且输入锁、Mover/Rigidbody2D 与时间缩放保持可用。
+- `Runtime.GoldenPath` 的 `FlatWorldGoldenPathScenarios.AutoSave.cs` 在 `OnWorldReady` 启动正式自动保存链，并继续调用 `GameManager.SaveGame()` 验证手动异步入口；移动阶段断言后台写入完成且输入锁、Mover/Rigidbody2D 与时间缩放保持可用。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；核心流程测试约定目录：`Assets/GameTest/Core/`；场景目录：`Assets/GameTest/Scenes/Core/`；冒烟分类：`Core.Smoke`。
 - 新增启动、世界创建、继续游戏、场景切换或退出行为时必须增加系统测试；修复 Bug 时先增加回归测试。全局生命周期变化时同步更新最小启动冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试必须使用临时世界和临时存档，并在结束时清理全局对象与事件订阅。

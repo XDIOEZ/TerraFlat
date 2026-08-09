@@ -93,7 +93,7 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 
 ## 当前自动保存场景（2026-08-09）
 
-`OnWorldReady` 通过 `GameManager.SaveGameInBackgroundCoroutine()` 启动真实分帧快照与后台原子写盘；`OnTraversalTick` 等待最多 10 秒，断言写入成功、`GameController` 没有输入锁、Mover/Rigidbody2D 可用且 `Time.timeScale` 未改，退出前必须完成。实现位于 `FlatWorldGoldenPathScenarios.AutoSave.cs`。
+`OnWorldReady` 通过 `GameManager.SaveGameInBackgroundCoroutine()` 启动真实分帧快照与后台原子写盘，随后调用 `GameManager.SaveGame()` 验证手动保存入口和 `LastSaveSucceeded`；`OnTraversalTick` 等待最多 10 秒，断言写入成功、保存状态最终结束、`GameController` 没有输入锁、Mover/Rigidbody2D 可用且 `Time.timeScale` 未改，退出前必须完成。实现位于 `FlatWorldGoldenPathScenarios.AutoSave.cs`。
 
 ## 当前建筑放置场景（2026-08-08）
 
@@ -111,6 +111,9 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：建筑黄金路径在新区块石墙写入/移除前后新增 `ChunkLightOccluderRenderer.ActiveOccluderCount` 断言，验证阻挡层与 URP 光照遮挡子层同步且可逆。
+- 2026-08-09：自动保存场景继续验证手动 `GameManager.SaveGame()` 的分帧快照、后台写盘与 `LastSaveSucceeded`，保持输入、Mover/Rigidbody2D 与 `Time.timeScale` 不受保存影响。
+- 2026-08-09：`ItemLifecycle` 场景在真实 WorldModel 世界中生成短距离 Berry 掉落，跨帧断言物品绑定 `ChunkView` 临时节点且动画结束后可拾取，并在退出前通过 `ItemMgr` 清理，覆盖掉落归属回归链路。
 - 2026-08-09：建筑召唤器迁移到 JSON 后继续复用现有建筑黄金路径的 `Wall_Wood_Summoner` 场景；该场景通过 `GameRes.CreateItemData → ItemMgr.InstantiateItem → Load` 真实验证 JSON ItemData、`Mod_Building` 放置、快照占地与清理，无需复制一套迁移专用场景。
 - 2026-08-09：WorldModel 进入世界阶段新增活动视野绑定断言，要求完整窗口的 `ChunkView` 均已就绪，避免维度切换或普通进入只完成中心区块就被判定为 Ready。
 - 2026-08-09：矿洞入口/出口的一一对应由 `WorldModel.Cave` 纯生成回归断言唯一数量和同格坐标；Golden Path 的生态销毁场景继续跳过永久 `CaveExit`，避免把配对基线误判为可删除自然物。
@@ -118,9 +121,6 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 - 2026-08-09：生态场景选择可销毁自然物时跳过确定性跨维度传送门；该类入口是永久基线，不得被“销毁后不复活”断言误写成删除差量，矿物/树木等普通自然物仍保持原验证。
 - 2026-08-09：玩家奔跑场景扩展为实际 Rigidbody2D 速度回归：走路起步、走跑互切、松开后默认 0.07 秒的极短惯性及停止均通过 `Mover.Move` 验证，并在 Cleanup 恢复原速度。
 - 2026-08-09：GM 生物召唤修复复用 WorldModel 场景的正式 `ItemMgr.InstantiateItem(...) → Load()` 生命周期；这是运行时控制台局部入口修正，现有 Chicken 创建、`RuntimeEntities` 归属与重进恢复断言覆盖同一生产链路，未额外启动完整 Golden Path。
-- 2026-08-09：燃烧 Buff 黄金路径扩展为同时断言角色火焰表现：AddBuff 后八帧状态序列必须激活，Cleanup 移除后必须同步隐藏，仍保留真实 Tick 伤害与生命恢复断言。
-- 2026-08-09：WorldModel 场景断言 Chicken 不含旧 `Chunk` 父级、挂在 `RuntimeEntities` 且 `WorldAddress` 匹配；首次退出前记录 GUID，重进后必须从新版区块存档恢复同一 AI，再执行最终退出清理。
-- 2026-08-09：管理员无敌场景新增默认关闭断言，防止默认“管理员”玩家被意外置为无敌而无法正常死亡。
 
 ## 当前地表气候与水文场景（2026-08-08）
 

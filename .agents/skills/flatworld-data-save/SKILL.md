@@ -42,7 +42,7 @@ GameSaveData
 - 地图存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/MapSave.cs`。
 - 星球存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/PlanetData.cs`。
 - 生态存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/EcologyWorldSaveData.cs`；首次创建世界冻结 `ChunkGenerationProfileSO` 的生态配置，旧存档缺失该追加字段时使用空数据。
-- 自动保存：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/AutoSaveController.cs`；自动保存必须分帧采集旧 Chunk、后台原子写盘，且旧任务不得覆盖之后的手动/退出保存。
+- 自动与手动保存：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/{AutoSaveController,GameManager,SaveDataMgr}.cs`；自动保存和 `GameManager.SaveGame()` 共用分帧采集旧 Chunk、后台原子写盘链，且旧任务不得覆盖之后的手动/退出保存。
 - `ItemSpecialData` 命名空间合并：`Assets/5_Scripts/5-3_GamePlay/Core/Progress/ItemSpecialDataJsonStore.cs`。
 - 玩家主世界出生点：`Assets/5_Scripts/5-3_GamePlay/Core/Progress/PlayerMainWorldSpawnStore.cs`，写入 `flatworld.playerSpawn`，不改变 `Data_Player` 的 MemoryPack 布局。
 - 维度位置与入口锚点进度：`Assets/5_Scripts/5-3_GamePlay/World/Dimension/DimensionTravelProgressStore.cs`。
@@ -98,6 +98,7 @@ GameSaveData
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
 - 2026-08-09：建筑召唤器的 `ItemData`/`ModuleData` 已导出到按召唤器外壳分类的 JSON 分包；建筑本体 Prefab 仍由运行时保留，放置快照与占地数据继续走原有持久化链路。
+- 2026-08-09：手动 `GameManager.SaveGame()` 复用 `SaveGameInBackgroundCoroutine()`，区块快照分帧执行、字节快照后台原子写盘；自动保存仍按版本号避免旧任务覆盖新手动/退出保存。
 - 2026-08-09：矿洞入口配对不新增存档字段：`EcologyWorldSaveData.Generation` 已冻结的地表 Profile 继续作为真源，切入洞穴时重建配对快照；旧世界保持原冻结概率，新世界使用 1% 默认概率。
 - 2026-08-09：玩家主世界初始出生点通过 `PlayerMainWorldSpawnStore` 写入 `Data_Player.ItemSpecialData` 的独立命名空间；新世界使用最终安全陆地坐标，旧存档缺失时按默认种子出生算法补齐，避免新增 `Data_Player` MemoryPack 字段。
 - 2026-08-09：`EcologyWorldSaveData` 的追加 `Generation` 快照冻结当前 Profile 的全部数值/文本参数和有序 `CaveResourceRules`；按 `ProfileId` 恢复地表或矿洞，旧存档缺失字段时仅由权威端补写，保证洞穴房间、矿脉和传送门不随 SO 改动重排。
@@ -106,7 +107,6 @@ GameSaveData
 - 2026-08-08：新世界种子支持 UI 手动输入数字或文字；空白时由 `GameManager` 随机生成，`SaveSeed` 保存最终文本、`Seed` 保存稳定映射整数，手动 `0` 不再视为空输入。
 - 2026-08-08：`PlanetData` 末尾追加 `EcologyWorldSaveData`，冻结生态规则与指纹；区块只保存自然物删除 GUID 和变化后的 `ItemData`，`SaveDataMgr` 序列化前捕获运行中自然物，`DataSave.Ecology` 覆盖 MemoryPack 往返。
 - 2026-08-08：`SaveDataMgr.TryCreateNewSave` 的空名称兜底改为八位纯数字；正式新世界请求会提前为玩家名和存档名补同一个随机数字，存档层继续负责文件名清理与防覆盖编号。
-- 2026-08-07：物品 Manifest 的分包 `id/path`、`shellPrefab` 与模板 Prefab 根名称统一使用 `Axe/Prop/Dagger/Pickaxe/Spear/Stick/Seed`；重命名时保留 `.meta` GUID，并同步 Addressables Address 与 `sourcePrefab`，具体物品 ID 不变。
 
 
 ## 修改后自动测试
