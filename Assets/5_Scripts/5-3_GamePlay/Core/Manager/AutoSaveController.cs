@@ -172,6 +172,7 @@ public sealed class AutoSaveController : MonoBehaviour
         isSaving = true;
         isCapturing = true;
         ScheduleFromNow();
+        gameManager.BeginSaveStatus();
         StartCoroutine(SaveNowCoroutine());
     }
 
@@ -198,12 +199,14 @@ public sealed class AutoSaveController : MonoBehaviour
         if (pendingSaveWrite == null)
         {
             isSaving = false;
+            gameManager?.CompleteSaveStatus(false);
             return true;
         }
 
         if (!pendingSaveWrite.IsCompleted)
             return false;
 
+        bool statusSucceeded = true;
         try
         {
             bool wroteToDisk = pendingSaveWrite.GetAwaiter().GetResult();
@@ -219,6 +222,7 @@ public sealed class AutoSaveController : MonoBehaviour
         }
         catch (Exception exception)
         {
+            statusSucceeded = false;
             Debug.LogException(new InvalidOperationException(
                 "[AutoSave] 后台写盘失败，已保留下一个保存周期。",
                 exception));
@@ -227,6 +231,7 @@ public sealed class AutoSaveController : MonoBehaviour
         {
             pendingSaveWrite = null;
             isSaving = false;
+            gameManager?.CompleteSaveStatus(statusSucceeded);
         }
 
         return true;

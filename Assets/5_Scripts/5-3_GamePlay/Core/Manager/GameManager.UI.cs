@@ -111,6 +111,10 @@ public partial class GameManager
     private string worldLoadingStatusBase = string.Empty;
     private int worldLoadingStatusDotCount;
 
+    private GameSaveStatusHUD saveStatusHUD;
+    private int activeSaveOperationCount;
+    private bool saveOperationFailed;
+
     public static string GetNewGameDifficultyPresetButtonKey(GameDifficultyId difficulty)
     {
         return $"官方难度预设_{difficulty}";
@@ -124,12 +128,51 @@ public partial class GameManager
     {
         WorldEntryProgressChanged -= OnWorldEntryProgressChanged;
         WorldEntryProgressChanged += OnWorldEntryProgressChanged;
+        saveStatusHUD = GameSaveStatusHUD.Ensure(this);
     }
 
     partial void DisposeWorldEntryPresentation()
     {
         WorldEntryProgressChanged -= OnWorldEntryProgressChanged;
+        activeSaveOperationCount = 0;
+        saveOperationFailed = false;
+        saveStatusHUD = null;
     }
+
+    #region 保存状态提示
+
+    /// <summary>当前是否存在手动或自动保存任务。</summary>
+    public bool IsSaveInProgress => activeSaveOperationCount > 0;
+
+    /// <summary>登记一个保存任务并显示右上角提示。</summary>
+    public void BeginSaveStatus()
+    {
+        if (activeSaveOperationCount == 0)
+            saveOperationFailed = false;
+
+        activeSaveOperationCount++;
+        saveStatusHUD ??= GameSaveStatusHUD.Ensure(this);
+        saveStatusHUD?.BeginSave();
+    }
+
+    /// <summary>完成一个保存任务；所有并行保存结束后统一决定成功或失败提示。</summary>
+    public void CompleteSaveStatus(bool succeeded)
+    {
+        if (activeSaveOperationCount <= 0)
+            return;
+
+        if (!succeeded)
+            saveOperationFailed = true;
+
+        activeSaveOperationCount--;
+        if (activeSaveOperationCount > 0)
+            return;
+
+        saveStatusHUD?.EndSave(!saveOperationFailed);
+        saveOperationFailed = false;
+    }
+
+    #endregion
 
     private void OnWorldEntryProgressChanged(WorldEntryProgressInfo progress)
     {
