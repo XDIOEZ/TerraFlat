@@ -1584,6 +1584,90 @@ MonoBehaviour:
     m_Localized: No game save is currently loaded; difficulty cannot be changed.
     m_Metadata:
       m_Items: []
+  - m_Id: 7357812617231
+    m_Localized: Clear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617232
+    m_Localized: Unbound
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617233
+    m_Localized: Failed to clear the binding.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617234
+    m_Localized: "The binding for \u201C{0}\u201D was cleared."
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617235
+    m_Localized: "Saving\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617236
+    m_Localized: Save Failed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 311290649030656
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 311290686779392
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 311290686779393
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 311291202678784
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 311291206873088
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 311291206873089
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 311291206873090
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 311291211067392
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 311291211067393
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 311291412393984
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 318621097046016
+    m_Localized: Status Effects / BUFFS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 318621159960576
+    m_Localized: No Active Effects
+    m_Metadata:
+      m_Items: []
+  - m_Id: 318621180932096
+    m_Localized: Remaining 30s
+    m_Metadata:
+      m_Items: []
+  - m_Id: 318621382258688
+    m_Localized: Permanent
+    m_Metadata:
+      m_Items: []
+  - m_Id: 318621382258689
+    m_Localized: Remaining {0}s
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

@@ -260,6 +260,12 @@ namespace FlatWorld.Dialogue
                 return false;
 
             string text = inputField.text;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                CloseChat(clearText: true);
+                return true;
+            }
+
             bool submitted = TrySubmitText(text);
             if (submitted)
                 CloseChat(clearText: true);

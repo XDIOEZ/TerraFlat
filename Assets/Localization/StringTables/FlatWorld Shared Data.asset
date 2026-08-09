@@ -503,6 +503,142 @@ MonoBehaviour:
     m_Key: item.Log.description
     m_Metadata:
       m_Items: []
+  - m_Id: 357277925027840
+    m_Key: item.BlastFurnace_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277958582272
+    m_Key: item.BlastFurnace_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277958582273
+    m_Key: item.Bonfire_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277958582274
+    m_Key: item.Bonfire_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277962776576
+    m_Key: item.Chestplate_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277962776577
+    m_Key: item.Chestplate_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277962776578
+    m_Key: item.Chestplate_Twine.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277962776579
+    m_Key: item.Chestplate_Twine.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277962776580
+    m_Key: item.Chestplate_Wood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277962776581
+    m_Key: item.Chestplate_Wood.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277971165184
+    m_Key: item.Chest_Wood_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277971165185
+    m_Key: item.Chest_Wood_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277979553792
+    m_Key: item.Door_Stone_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277979553793
+    m_Key: item.Door_Stone_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277983748096
+    m_Key: item.Door_Wood_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277983748097
+    m_Key: item.Door_Wood_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277992136704
+    m_Key: item.Meatrack_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277992136705
+    m_Key: item.Meatrack_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277992136706
+    m_Key: item.MineEntrance_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357277992136707
+    m_Key: item.MineEntrance_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278059245568
+    m_Key: item.Humus.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278059245569
+    m_Key: item.Humus.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278059245570
+    m_Key: item.Scarecrow_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278059245571
+    m_Key: item.Scarecrow_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278071828480
+    m_Key: item.Smelter_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278071828481
+    m_Key: item.Smelter_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278092800000
+    m_Key: item.Tent_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278092800001
+    m_Key: item.Tent_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278096994304
+    m_Key: item.Wall_Stone_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278096994305
+    m_Key: item.Wall_Stone_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278101188608
+    m_Key: item.Wall_Wood_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278101188609
+    m_Key: item.Wall_Wood_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278105382912
+    m_Key: item.WorkBench_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 357278105382913
+    m_Key: item.WorkBench_Summoner.description
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
