@@ -254,30 +254,55 @@ public sealed partial class GMReflectionConsole
         tabBar.AddComponent<LayoutElement>().preferredHeight = 42f;
         tabBar.AddComponent<Image>().color = new Color(0.043f, 0.112f, 0.139f, 1f);
 
-        HorizontalLayoutGroup layout = tabBar.AddComponent<HorizontalLayoutGroup>();
-        layout.padding = new RectOffset(6, 6, 3, 3);
+        ScrollRect scroll = tabBar.AddComponent<ScrollRect>();
+        scroll.horizontal = true;
+        scroll.vertical = false;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 40f;
+
+        GameObject viewport = CreateUiObject("Tab Viewport", tabBar.transform);
+        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
+        viewportRect.anchorMin = Vector2.zero;
+        viewportRect.anchorMax = Vector2.one;
+        viewportRect.offsetMin = new Vector2(6f, 3f);
+        viewportRect.offsetMax = new Vector2(-6f, -3f);
+        viewport.AddComponent<RectMask2D>();
+        scroll.viewport = viewportRect;
+
+        GameObject content = CreateUiObject("Tab Content", viewport.transform);
+        RectTransform contentRect = content.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 0f);
+        contentRect.anchorMax = new Vector2(0f, 1f);
+        contentRect.pivot = new Vector2(0f, 0.5f);
+        contentRect.sizeDelta = Vector2.zero;
+
+        HorizontalLayoutGroup layout = content.AddComponent<HorizontalLayoutGroup>();
         layout.spacing = 5f;
-        layout.childAlignment = TextAnchor.LowerLeft;
+        layout.childAlignment = TextAnchor.MiddleLeft;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
-        layout.childForceExpandWidth = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
 
-        CreateTab(tabBar.transform, GmPageId.Player, "玩家", 150f);
-        CreateTab(tabBar.transform, GmPageId.Buff, "Buff", 150f);
-        CreateTab(tabBar.transform, GmPageId.Spawn, "生成与召唤", 170f);
-        CreateTab(tabBar.transform, GmPageId.World, "世界", 150f);
-        CreateTab(tabBar.transform, GmPageId.Structures, "遗迹", 150f);
-        CreateTab(tabBar.transform, GmPageId.GameEvents, "游戏事件", 170f);
-        CreateTab(tabBar.transform, GmPageId.Commands, "调试命令", 170f);
+        scroll.content = contentRect;
+
+        CreateTab(content.transform, GmPageId.Player, "玩家", 128f);
+        CreateTab(content.transform, GmPageId.Buff, "Buff", 100f);
+        CreateTab(content.transform, GmPageId.Spawn, "生成", 128f);
+        CreateTab(content.transform, GmPageId.World, "世界", 100f);
+        CreateTab(content.transform, GmPageId.Structures, "遗迹", 100f);
+        CreateTab(content.transform, GmPageId.GameEvents, "事件", 110f);
+        CreateTab(content.transform, GmPageId.Commands, "命令", 110f);
+        contentRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 806f);
     }
 
     private void CreateTab(Transform parent, GmPageId pageId, string label, float width)
     {
         Button button = CreateButton(parent, label, () => SetActivePage(pageId), width, 36f);
         LayoutElement layout = button.GetComponent<LayoutElement>();
-        layout.minWidth = 96f;
-        layout.preferredWidth = 0f;
-        layout.flexibleWidth = 1f;
+        layout.minWidth = width;
+        layout.preferredWidth = width;
+        layout.flexibleWidth = 0f;
         gmPages[pageId] = new GmPageView { TabButton = button };
     }
 
@@ -489,7 +514,12 @@ public sealed partial class GMReflectionConsole
         grid.cellSize = new Vector2(cellWidth, cellHeight);
         grid.spacing = new Vector2(8f, 8f);
         grid.childAlignment = TextAnchor.UpperLeft;
-        gmResponsiveGrids.Add(grid);
+        gmResponsiveGrids.Add(new GmResponsiveGrid
+        {
+            Grid = grid,
+            MaxColumns = Mathf.Max(1, columns),
+            CellHeight = cellHeight
+        });
         SetGridHeight(gridObject.transform, itemCount, columns, cellHeight, 8f);
         return gridObject.transform;
     }
