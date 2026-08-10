@@ -5,6 +5,10 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
+/// <summary>
+/// 管理设置页的按键绑定入口、模态面板和可复用绑定行。
+/// 绑定行只在容量不足时实例化；取消按键仅在面板打开期间轮询，关闭时立即释放玩法输入租约。
+/// </summary>
 [DisallowMultipleComponent]
 public sealed class InputBindingPanelLauncher : MonoBehaviour
 {
@@ -14,12 +18,14 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
     {
         public GameObject Root;
         public InputBindingEntry Entry;
+        public TextMeshProUGUI Label;
         public TextMeshProUGUI BindingText;
         public Button RebindButton;
         public Button ClearButton;
     }
 
     private readonly List<BindingRow> rows = new List<BindingRow>();
+    private readonly Stack<BindingRow> pooledRows = new Stack<BindingRow>();
 
     private GameController gameController;
     private InputBindingService bindingService;
@@ -35,6 +41,14 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
     private bool panelSuspendedInput;
     private int suppressEscapeCloseFrame = -1;
 
+    /// <summary>当前页面实际显示的绑定行数量。</summary>
+    public int ActiveRowCount => rows.Count;
+
+    /// <summary>当前保留的绑定行总数，供 Profiler 检查是否发生重复实例化。</summary>
+    public int RetainedRowCount => rows.Count + pooledRows.Count;
+
+    #region 初始化与面板生命周期
+
     public static InputBindingPanelLauncher Ensure(
         Transform settingsPanel,
         GameController gameController)
@@ -49,6 +63,8 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
 
         launcher.Initialize(gameController);
         launcher.EnsureEntryButton();
+        // 入口按钮仍可调用禁用组件的方法；只有子面板打开期间才需要轮询取消按键。
+        launcher.enabled = launcher.bindingPanel != null && launcher.bindingPanel.IsVisible();
         return launcher;
     }
 
@@ -70,9 +86,12 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
 
         if (bindingService != null)
             bindingService.BindingsChanged += RefreshRows;
+
+        if (bindingPanel != null && bindingPanel.IsVisible())
+            RebuildRows();
     }
 
-private void EnsureEntryButton()
+    private void EnsureEntryButton()
     {
         if (entryButton == null)
             entryButton = FindButton(transform, EntryButtonName);
@@ -89,7 +108,7 @@ private void EnsureEntryButton()
         entryButton.onClick.AddListener(Open);
     }
 
-private void Update()
+    private void Update()
     {
         if (bindingPanel == null || !bindingPanel.IsVisible() || bindingService == null)
             return;
@@ -105,7 +124,7 @@ private void Update()
             Close();
     }
 
-private void Open()
+    private void Open()
     {
         if (bindingService == null)
         {
@@ -131,20 +150,21 @@ private void Open()
         SetStatus(GetDevicePageHint());
         bindingPanel.Open();
         bindingPanel.transform.SetAsLastSibling();
-        Canvas.ForceUpdateCanvases();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(dialogRect);
+        RequestLocalLayoutRebuild();
+        enabled = true;
     }
 
-private void Close()
+    private void Close()
     {
         if (bindingService != null && bindingService.IsRebinding)
             bindingService.CancelActiveRebind();
 
         bindingPanel?.Close();
         ReleaseInputLock();
+        enabled = false;
     }
 
-private void EnsurePanel()
+    private void EnsurePanel()
     {
         if (bindingPanel != null)
             return;
@@ -173,6 +193,7 @@ private void EnsurePanel()
         bindingPanel.GetButton("完成按钮")?.onClick.AddListener(Close);
         keyboardMouseTabButton?.onClick.AddListener(ShowKeyboardMouseBindings);
         gamepadTabButton?.onClick.AddListener(ShowGamepadBindings);
+        bindingPanel.Closed += HandlePanelClosed;
 
         if (dialogRect == null || content == null || statusText == null ||
             keyboardMouseTabButton == null || gamepadTabButton == null)
@@ -188,72 +209,128 @@ private void EnsurePanel()
         bindingPanel.Close();
     }
 
+    #endregion
 
+    #region 绑定行复用
 
-
-
-
-
+    /// <summary>按当前设备页复用现有行；切页只改变数据和显隐，不再销毁 GameObject。</summary>
     private void RebuildRows()
     {
-        for (int i = 0; i < rows.Count; i++)
-        {
-            if (rows[i]?.Root == null)
-                continue;
-
-            rows[i].Root.SetActive(false);
-            Destroy(rows[i].Root);
-        }
-
-        rows.Clear();
+        ReleaseActiveRows();
         if (bindingService == null || content == null || rowPrefab == null)
             return;
 
         IReadOnlyList<InputBindingEntry> entries =
             bindingService.GetEntries(currentDeviceGroup);
+        bool createdRow = false;
         for (int i = 0; i < entries.Count; i++)
         {
             InputBindingEntry entry = entries[i];
-            GameObject rowObject = Instantiate(rowPrefab, content, false);
-            rowObject.name =
-                $"绑定项_{currentDeviceGroup}_{entry.Action?.name ?? i.ToString()}_{entry.BindingIndex}";
-            rowObject.SetActive(true);
-
-            TextMeshProUGUI label = FindText(rowObject.transform, "操作名称");
-            TextMeshProUGUI bindingText = FindText(rowObject.transform, "绑定值");
-            Button rebindButton = FindButton(rowObject.transform, "修改按钮");
-            Button clearButton = FindButton(rowObject.transform, "清除按钮");
-            if (label == null || bindingText == null || rebindButton == null || clearButton == null)
-            {
-                Debug.LogError("[InputBindingPanelLauncher] 按键绑定行 Prefab 控件命名契约不完整。", rowObject);
-                Destroy(rowObject);
+            BindingRow row = AcquireRow(ref createdRow);
+            if (row == null)
                 continue;
-            }
 
-            label.text = FlatWorldLocalizationService.GetUiText(entry.DisplayName);
-            bindingText.text = bindingService.GetBindingDisplayString(entry);
-
-            BindingRow row = new BindingRow
-            {
-                Root = rowObject,
-                Entry = entry,
-                BindingText = bindingText,
-                RebindButton = rebindButton,
-                ClearButton = clearButton
-            };
-            rebindButton.onClick.AddListener(() => BeginRebind(row));
-            clearButton.onClick.AddListener(() => ClearBinding(row));
+            row.Entry = entry;
+            row.Root.name =
+                $"绑定项_{currentDeviceGroup}_{entry.Action?.name ?? i.ToString()}_{entry.BindingIndex}";
+            row.Root.transform.SetSiblingIndex(i);
+            row.Label.text = FlatWorldLocalizationService.GetUiText(entry.DisplayName);
+            row.BindingText.text = bindingService.GetBindingDisplayString(entry);
+            row.Root.SetActive(true);
             rows.Add(row);
         }
 
         UpdateTabVisuals();
+        RequestLocalLayoutRebuild();
 
-        // 动态行位于 Content 深层，创建/销毁完成后显式提交一次层级快照。
-        bindingPanel?.RefreshUIComponents();
+        // 只有新增槽位才重建层级快照；纯复用只刷新导航状态。
+        if (createdRow)
+            bindingPanel?.RefreshUIComponents();
+        else
+            bindingPanel?.RefreshGamepadNavigationState();
 
         if (bindingPanel != null && bindingPanel.IsVisible())
             bindingPanel.PrepareForGamepadNavigation("修改按钮", false);
     }
+
+    private BindingRow AcquireRow(ref bool createdRow)
+    {
+        BindingRow row = null;
+        while (pooledRows.Count > 0 && row == null)
+        {
+            BindingRow candidate = pooledRows.Pop();
+            if (candidate?.Root != null)
+                row = candidate;
+        }
+
+        if (row == null)
+        {
+            row = CreateRow();
+            createdRow |= row != null;
+        }
+
+        if (row?.Root == null)
+            return null;
+
+        row.Root.transform.SetParent(content, false);
+        return row;
+    }
+
+    private BindingRow CreateRow()
+    {
+        GameObject rowObject = Instantiate(rowPrefab, content, false);
+        rowObject.SetActive(false);
+
+        BindingRow row = new BindingRow
+        {
+            Root = rowObject,
+            Label = FindText(rowObject.transform, "操作名称"),
+            BindingText = FindText(rowObject.transform, "绑定值"),
+            RebindButton = FindButton(rowObject.transform, "修改按钮"),
+            ClearButton = FindButton(rowObject.transform, "清除按钮")
+        };
+        if (row.Label == null || row.BindingText == null ||
+            row.RebindButton == null || row.ClearButton == null)
+        {
+            Debug.LogError(
+                "[InputBindingPanelLauncher] 按键绑定行 Prefab 控件命名契约不完整。",
+                rowObject);
+            Destroy(rowObject);
+            return null;
+        }
+
+        row.RebindButton.onClick.AddListener(() => BeginRebind(row));
+        row.ClearButton.onClick.AddListener(() => ClearBinding(row));
+        return row;
+    }
+
+    private void ReleaseActiveRows()
+    {
+        for (int i = 0; i < rows.Count; i++)
+        {
+            BindingRow row = rows[i];
+            if (row?.Root == null)
+                continue;
+
+            row.Root.SetActive(false);
+            row.Entry = null;
+            pooledRows.Push(row);
+        }
+
+        rows.Clear();
+    }
+
+    private void RequestLocalLayoutRebuild()
+    {
+        if (content is RectTransform contentRect)
+            LayoutRebuilder.MarkLayoutForRebuild(contentRect);
+        if (dialogRect != null)
+            LayoutRebuilder.MarkLayoutForRebuild(dialogRect);
+    }
+
+    #endregion
+
+    #region 分页与绑定操作
 
     private void ShowKeyboardMouseBindings()
     {
@@ -273,12 +350,6 @@ private void EnsurePanel()
         currentDeviceGroup = deviceGroup;
         RebuildRows();
         SetStatus(GetDevicePageHint());
-
-        if (dialogRect != null)
-        {
-            Canvas.ForceUpdateCanvases();
-            LayoutRebuilder.ForceRebuildLayoutImmediate(dialogRect);
-        }
     }
 
     private void UpdateTabVisuals()
@@ -300,10 +371,6 @@ private void EnsurePanel()
                 : FlatWorldUITheme.Surface;
         }
     }
-
-
-
-
 
     private void BeginRebind(BindingRow row)
     {
@@ -353,8 +420,6 @@ private void EnsurePanel()
         });
     }
 
-    #region 单项绑定清除
-
     /// <summary>清除当前设备页选中操作的绑定，并让空绑定立即显示为未绑定。</summary>
     private void ClearBinding(BindingRow row)
     {
@@ -376,15 +441,13 @@ private void EnsurePanel()
                 FlatWorldLocalizationService.GetUiText(row.Entry.DisplayName)));
     }
 
-    #endregion
-
     private void ResetToDefaults()
     {
         if (bindingService == null)
             return;
 
         bindingService.ResetToDefaults(currentDeviceGroup);
-        RebuildRows();
+        RefreshRows();
         SetStatus(
             FlatWorldLocalizationService.GetUiFormat(
                 "{0}绑定已恢复默认值。",
@@ -448,6 +511,10 @@ private void EnsurePanel()
             : "键鼠";
     }
 
+    #endregion
+
+    #region 布局、输入租约与清理
+
     private void UpdateDialogSize()
     {
         if (dialogRect == null)
@@ -482,21 +549,14 @@ private void EnsurePanel()
         panelSuspendedInput = false;
     }
 
+    /// <summary>面板被全局取消路由关闭时也必须释放玩法输入租约。</summary>
+    private void HandlePanelClosed()
+    {
+        ReleaseInputLock();
+        enabled = false;
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-private void OnDestroy()
+    private void OnDestroy()
     {
         if (bindingService != null)
         {
@@ -511,13 +571,18 @@ private void OnDestroy()
             keyboardMouseTabButton.onClick.RemoveListener(ShowKeyboardMouseBindings);
         if (gamepadTabButton != null)
             gamepadTabButton.onClick.RemoveListener(ShowGamepadBindings);
+        if (bindingPanel != null)
+            bindingPanel.Closed -= HandlePanelClosed;
         ReleaseInputLock();
         if (bindingPanel != null)
             Destroy(bindingPanel.gameObject);
     }
 
+    #endregion
 
-private static Transform FindTransform(Transform root, string objectName)
+    #region 组件查询
+
+    private static Transform FindTransform(Transform root, string objectName)
     {
         Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
         for (int i = 0; i < transforms.Length; i++)
@@ -552,4 +617,6 @@ private static Transform FindTransform(Transform root, string objectName)
 
         return null;
     }
+
+    #endregion
 }

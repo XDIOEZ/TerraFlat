@@ -54,6 +54,9 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// </summary>
     public static void BringToFront(RectTransform rectTransform, Canvas canvas = null)
     {
+        if (rectTransform == null)
+            return;
+
         // 增加全局层级计数器
         BasePanel.CurrentOrder++;
         // 设置当前元素的兄弟索引
@@ -63,11 +66,17 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         {
             canvas.sortingOrder = BasePanel.CurrentOrder;
         }
+
+        NotifyInteractionSurfaceChanged();
     }
     public static void BringToBack(RectTransform rectTransform)
     {
+        if (rectTransform == null)
+            return;
+
         // 设置当前元素的兄弟索引
         rectTransform.SetSiblingIndex(BasePanel.CurrentOrder - 1);
+        NotifyInteractionSurfaceChanged();
     }
 
     public CanvasGroup canvasGroup;
@@ -317,11 +326,21 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         bool closeOnCancel = true,
         bool closeOnEscape = true)
     {
+        bool contractChanged = !gamepadNavigationPrepared ||
+                               closeOnGamepadCancel != closeOnCancel ||
+                               closeOnEscapeShortcut != closeOnEscape ||
+                               !string.Equals(
+                                   preferredSelectableName,
+                                   preferredControlName,
+                                   StringComparison.Ordinal);
         gamepadNavigationPrepared = true;
         closeOnGamepadCancel = closeOnCancel;
         closeOnEscapeShortcut = closeOnEscape;
         preferredSelectableName = preferredControlName;
         EnsureGamepadNavigationSnapshot();
+
+        if (contractChanged)
+            NotifyInteractionSurfaceChanged();
 
         if (isOpen)
             SelectDefaultForGamepad();
@@ -332,7 +351,11 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// </summary>
     public void SetEscapeShortcutEnabled(bool enabled)
     {
+        if (closeOnEscapeShortcut == enabled)
+            return;
+
         closeOnEscapeShortcut = enabled;
+        NotifyInteractionSurfaceChanged();
     }
 
     [Button]
@@ -565,6 +588,17 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
         Opened = null;
         Closed = null;
+    }
+
+    /// <summary>对象启停会改变活动面板集合，必须让顶层查询缓存失效。</summary>
+    private void OnEnable()
+    {
+        NotifyInteractionSurfaceChanged();
+    }
+
+    private void OnDisable()
+    {
+        NotifyInteractionSurfaceChanged();
     }
 
     #region 按钮操作
@@ -999,6 +1033,19 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         MarkHierarchyDirty();
         EnsureHierarchySnapshot();
         ApplyCachedRuntimeBindings();
+        if (gamepadNavigationPrepared)
+            EnsureGamepadNavigationSnapshot();
+
+        NotifyInteractionSurfaceChanged();
+    }
+
+    /// <summary>
+    /// 页面显隐或交互状态变化时仅刷新导航契约，不重新扫描没有变化的层级。
+    /// </summary>
+    public void RefreshGamepadNavigationState()
+    {
+        EnsureHierarchySnapshot();
+        navigationSnapshotVersion = -1;
         if (gamepadNavigationPrepared)
             EnsureGamepadNavigationSnapshot();
 

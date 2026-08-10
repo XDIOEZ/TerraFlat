@@ -38,6 +38,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     #region 运行时状态
 
     private readonly Transform[] pages = new Transform[3];
+    private readonly Button[] firstButtons = new Button[3];
 
     private BasePanel basePanel;
     private RectTransform contentRect;
@@ -80,6 +81,10 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         {
             pages[index] = FindTransform(transform, PageNames[index]);
             configured &= pages[index] != null;
+            firstButtons[index] = pages[index] != null
+                ? FindButton(pages[index], FirstButtonNames[index])
+                : null;
+            configured &= firstButtons[index] != null;
         }
 
         if (!configured)
@@ -122,11 +127,11 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         nextButton.interactable = currentPage < pages.Length - 1;
         pageText.SetText("PAGE  {0} / {1}", currentPage + 1, pages.Length);
 
-        Canvas.ForceUpdateCanvases();
         if (contentRect != null)
-            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+            LayoutRebuilder.MarkLayoutForRebuild(contentRect);
 
-        basePanel?.RefreshUIComponents();
+        // 页面节点没有增删，只刷新现有快照的导航状态，避免翻页时重新扫描整个面板。
+        basePanel?.RefreshGamepadNavigationState();
         if (focusFirstButton)
             FocusCurrentPageFirstButton();
     }
@@ -137,7 +142,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         if (basePanel == null || !basePanel.IsOpen() || EventSystem.current == null)
             return;
 
-        Button firstButton = FindButton(pages[currentPage], FirstButtonNames[currentPage]);
+        Button firstButton = firstButtons[currentPage];
         if (firstButton == null || !firstButton.IsInteractable())
             return;
 
