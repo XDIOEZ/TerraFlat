@@ -51,7 +51,7 @@ public sealed class BuffStatusRowView : MonoBehaviour
         RefreshRemaining(runtime);
     }
 
-    /// <summary>刷新剩余时间文本；由 Buff HUD 的低频兜底刷新驱动，兼容 Tick 未发送时长事件的现状。</summary>
+    /// <summary>刷新剩余时间文本；由显式时长变化或整秒倒计时事件驱动。</summary>
     public void RefreshRemaining(BuffInstance runtime)
     {
         if (runtime == null || runtime.Definition == null ||

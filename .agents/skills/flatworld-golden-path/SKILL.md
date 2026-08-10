@@ -17,7 +17,7 @@ description: Continuously evolve FlatWorld's real single-player Runtime.GoldenPa
 
 1. 先完成生产代码与领域 Smoke 测试，再评估黄金路径。
 2. 只要新行为能在标准单机世界内通过公开生产 API 确定性执行，就必须添加或更新一个黄金路径场景；不要等用户另行要求。
-3. 将场景挂到现有阶段：进入世界后、移动 Tick、Chunk Ready、退出世界前或统一清理。只有新功能确实需要新的生命周期边界时，才修改主编排命令。
+3. 将场景挂到现有阶段：进入世界后、世界就绪跨帧等待、移动 Tick、Chunk Ready、退出世界前或统一清理。`TickWorldReadyScenarios` 专门等待初始地块的帧末批处理，完成后才允许截图和自动保存；只有新功能确实需要新的生命周期边界时，才修改主编排命令。
 4. 用命名清晰的状态化子场景实现“安排行为 → 跨 Tick 观测 → 断言 → 恢复状态”。回调不得阻塞 Editor 主线程；复杂场景拆到 `FlatWorldGoldenPathScenarios.<Subsystem>.cs` partial 文件。
 5. 使用隔离存档、固定种子和带超时的条件等待。禁止真实输入、用截图代替可观察状态断言、无界等待、随机重试和静默跳过。
 6. 保留原有断言；失败时修复生产代码或测试接线，不得放宽断言制造通过。
@@ -93,11 +93,11 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 
 ## 当前自动保存场景（2026-08-09）
 
-`OnWorldReady` 通过 `GameManager.SaveGameInBackgroundCoroutine()` 启动真实分帧快照与后台原子写盘，随后调用 `GameManager.SaveGame()` 验证手动保存入口和 `LastSaveSucceeded`；`OnTraversalTick` 等待最多 10 秒，断言写入成功、保存状态最终结束、`GameController` 没有输入锁、Mover/Rigidbody2D 可用且 `Time.timeScale` 未改，退出前必须完成。实现位于 `FlatWorldGoldenPathScenarios.AutoSave.cs`。
+`TickWorldReadyScenarios` 完成初始跨帧表现断言后，通过 `GameManager.SaveGameInBackgroundCoroutine()` 启动真实分帧快照与后台原子写盘，随后调用 `GameManager.SaveGame()` 验证手动保存入口和 `LastSaveSucceeded`；`OnTraversalTick` 等待最多 10 秒，断言写入成功、保存状态最终结束、`GameController` 没有输入锁、Mover/Rigidbody2D 可用且 `Time.timeScale` 未改，退出前必须完成。实现位于 `FlatWorldGoldenPathScenarios.AutoSave.cs`。
 
 ## 当前建筑放置场景（2026-08-08）
 
-`OnWorldReady` 使用正式 `Wall_Wood_Summoner` 在玩家附近扫描可放置的新版权威地块，通过 `ValidateAuthoritativePlacement()` 与 `TryCreateInstalledBuilding()` 验证新区块读取、建筑实例和 `BuildingOccupancyRegistry` 动态占地；同时初始化正式 `BuildingShadow`，断言图片、材质和 `Shadow` 排序层接线，随后立即清理虚影、建筑和召唤器。实现位于 `FlatWorldGoldenPathScenarios.Building.cs`。
+`OnWorldReady` 使用正式 `Wall_Wood_Summoner` 在玩家附近扫描可放置的新版权威地块，通过 `ValidateAuthoritativePlacement()` 与 `TryCreateInstalledBuilding()` 验证新区块读取、建筑实例和 `BuildingOccupancyRegistry` 动态占地；同时初始化正式 `BuildingShadow`，断言图片、材质和 `Shadow` 排序层接线。石墙阻挡写入后由 `TickWorldReadyScenarios` 等待 `ChunkLightOccluderRenderer.RebuildVersion` 跨帧递增，再断言阴影增加、移除石墙并等待下一帧恢复；临时墙清理完成后才启动自动保存。实现位于 `FlatWorldGoldenPathScenarios.Building.cs`。
 
 ## 当前 GM 区块加载调速场景（2026-08-08）
 
@@ -111,6 +111,7 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-10：新增 `WaitForWorldReadyScenarios` 编排阶段；建筑石墙通过 `RebuildVersion` 分两帧断言遮挡新增与恢复，临时墙清理后才启动自动保存，匹配帧末合并重建语义且不污染存档。
 - 2026-08-09：建筑黄金路径在新区块石墙写入/移除前后新增 `ChunkLightOccluderRenderer.ActiveOccluderCount` 断言，验证阻挡层与 URP 光照遮挡子层同步且可逆。
 - 2026-08-09：自动保存场景继续验证手动 `GameManager.SaveGame()` 的分帧快照、后台写盘与 `LastSaveSucceeded`，保持输入、Mover/Rigidbody2D 与 `Time.timeScale` 不受保存影响。
 - 2026-08-09：`ItemLifecycle` 场景在真实 WorldModel 世界中生成短距离 Berry 掉落，跨帧断言物品绑定 `ChunkView` 临时节点且动画结束后可拾取，并在退出前通过 `ItemMgr` 清理，覆盖掉落归属回归链路。
@@ -120,7 +121,6 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 - 2026-08-09：建筑黄金路径在世界就绪阶段验证石墙召唤器写入新区块 `BlockingTileId`、Tilemap 刷新与可逆清理，避免临时阻挡格干扰移动阶段。
 - 2026-08-09：生态场景选择可销毁自然物时跳过确定性跨维度传送门；该类入口是永久基线，不得被“销毁后不复活”断言误写成删除差量，矿物/树木等普通自然物仍保持原验证。
 - 2026-08-09：玩家奔跑场景扩展为实际 Rigidbody2D 速度回归：走路起步、走跑互切、松开后默认 0.07 秒的极短惯性及停止均通过 `Mover.Move` 验证，并在 Cleanup 恢复原速度。
-- 2026-08-09：GM 生物召唤修复复用 WorldModel 场景的正式 `ItemMgr.InstantiateItem(...) → Load()` 生命周期；这是运行时控制台局部入口修正，现有 Chicken 创建、`RuntimeEntities` 归属与重进恢复断言覆盖同一生产链路，未额外启动完整 Golden Path。
 
 ## 当前地表气候与水文场景（2026-08-08）
 

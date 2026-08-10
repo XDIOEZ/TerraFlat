@@ -248,6 +248,9 @@ private void EnsurePanel()
 
         UpdateTabVisuals();
 
+        // 动态行位于 Content 深层，创建/销毁完成后显式提交一次层级快照。
+        bindingPanel?.RefreshUIComponents();
+
         if (bindingPanel != null && bindingPanel.IsVisible())
             bindingPanel.PrepareForGamepadNavigation("修改按钮", false);
     }

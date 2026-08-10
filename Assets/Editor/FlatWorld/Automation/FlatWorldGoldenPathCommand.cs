@@ -272,6 +272,9 @@ namespace FlatWorld.Automation
                     case RuntimePhase.WaitForWorld:
                         TickWaitForWorld();
                         break;
+                    case RuntimePhase.WaitForWorldReadyScenarios:
+                        TickWaitForWorldReadyScenarios();
+                        break;
                     case RuntimePhase.VerifyWorldWrap:
                         TickVerifyWorldWrap();
                         break;
@@ -448,6 +451,20 @@ namespace FlatWorld.Automation
             _screenshotPaths = new List<string>(3);
             RecordObservedActiveChunks(ChunkMgr.Instance);
             FlatWorldGoldenPathScenarios.OnWorldReady(CreateScenarioContext());
+            _runtimePhase = RuntimePhase.WaitForWorldReadyScenarios;
+            _phaseDeadline = EditorApplication.timeSinceStartup +
+                             _executor.Configuration.execution.worldEntryTimeoutSeconds;
+        }
+
+        /// <summary>给帧末批处理的表现层留下真实帧，再继续截图、移动和自动保存。</summary>
+        private static void TickWaitForWorldReadyScenarios()
+        {
+            if (!FlatWorldGoldenPathScenarios.TickWorldReadyScenarios(CreateScenarioContext()))
+            {
+                ThrowIfTimedOut("世界就绪后的跨帧表现断言未在限定时间内完成。");
+                return;
+            }
+
             if (_executor.Configuration.scenarios.worldWrap)
             {
                 FlatWorldGoldenPathScenarios.BeginWorldWrapScenario(CreateScenarioContext());
@@ -1540,6 +1557,7 @@ namespace FlatWorld.Automation
             None,
             WaitForStartup,
             WaitForWorld,
+            WaitForWorldReadyScenarios,
             VerifyWorldWrap,
             RestoreWorldWrap,
             MoveWorldModelAway,

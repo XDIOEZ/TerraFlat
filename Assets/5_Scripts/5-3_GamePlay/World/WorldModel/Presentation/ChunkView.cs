@@ -18,10 +18,13 @@ public sealed class ChunkView : MonoBehaviour
     private bool navigationEnabled;
     private int bindVersion;
     private bool presentationComplete;
+    private ChunkLightOccluderRenderer lightOccluderRenderer;
 
     public ChunkRuntime Model => chunk;
     public bool IsBound => chunk != null && presentationComplete;
     public bool IsBinding => chunk != null && !presentationComplete;
+    /// <summary>当前 View 保留的阴影槽数量，供流送 Profiler 与回归检查使用。</summary>
+    public int RetainedOccluderCount => lightOccluderRenderer?.RetainedOccluderCount ?? 0;
 
     /// <summary>确保运行时区块表现拥有独立的自然物品父节点。</summary>
     private void Awake()
@@ -116,6 +119,26 @@ public sealed class ChunkView : MonoBehaviour
         renderer?.CaptureState();
     }
 
+    #region 池化资源
+
+    /// <summary>从对象池取出时清除禁用期间遗留的裁剪状态。</summary>
+    public void PrepareForPoolReuse()
+    {
+        if (chunk != null || world != null)
+            Unbind();
+        lightOccluderRenderer?.PrepareForPoolReuse();
+    }
+
+    /// <summary>由 ChunkMgr 在禁用状态下主动裁掉长期池化 View 的历史资源。</summary>
+    public void TrimPooledResources()
+    {
+        if (chunk != null || world != null)
+            return;
+        lightOccluderRenderer?.TrimPooledResources();
+    }
+
+    #endregion
+
     private void OnDisable() => Unbind();
     private void OnDestroy() => Unbind();
 
@@ -162,14 +185,13 @@ public sealed class ChunkView : MonoBehaviour
     /// <summary>旧 ChunkView Prefab 无需手工改层级，首次加载时自动补齐 LightOccluders 子节点。</summary>
     private void EnsureLightOccluderRenderer()
     {
-        ChunkLightOccluderRenderer renderer =
-            GetComponentInChildren<ChunkLightOccluderRenderer>(true);
-        if (renderer != null)
+        lightOccluderRenderer = GetComponentInChildren<ChunkLightOccluderRenderer>(true);
+        if (lightOccluderRenderer != null)
             return;
 
         var lightOccluders = new GameObject("LightOccluders");
         lightOccluders.transform.SetParent(transform, false);
-        lightOccluders.AddComponent<ChunkLightOccluderRenderer>();
+        lightOccluderRenderer = lightOccluders.AddComponent<ChunkLightOccluderRenderer>();
     }
 
     /// <summary>建立租约和事件，再由同步或分帧入口绑定各表现组件。</summary>

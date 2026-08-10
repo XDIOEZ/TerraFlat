@@ -475,8 +475,187 @@ namespace FlatWorld.GameTest.UI
             string source = File.ReadAllText(sourcePath);
             Assert.That(source, Does.Contain("BuffAdded"));
             Assert.That(source, Does.Contain("BuffRemoved"));
+            Assert.That(source, Does.Contain("BuffCountdownChanged"));
             Assert.That(source, Does.Contain("ActiveBuffs"));
-            Assert.That(source, Does.Contain("GetUiFormat"));
+            Assert.That(source, Does.Contain("LayoutRebuilder.MarkLayoutForRebuild"));
+            Assert.That(source, Does.Not.Contain("private void LateUpdate()"));
+            Assert.That(source, Does.Not.Contain("Canvas.ForceUpdateCanvases"));
+            Assert.That(source, Does.Not.Contain("LayoutRebuilder.ForceRebuildLayoutImmediate"));
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        public void SharedUiRefreshDriversStayIdleUntilEventsArrive()
+        {
+            const string feedbackPath =
+                "Assets/5_Scripts/5-5_UI/FlatWorldUIFeedback.cs";
+            const string settingsPath =
+                "Assets/5_Scripts/5-5_UI/UIUserSettings.cs";
+
+            string feedbackSource = File.ReadAllText(feedbackPath);
+            string settingsSource = File.ReadAllText(settingsPath);
+
+            Assert.That(feedbackSource, Does.Contain("using DG.Tweening;"));
+            Assert.That(feedbackSource, Does.Contain("IPointerEnterHandler"));
+            Assert.That(feedbackSource, Does.Contain("DOScale"));
+            Assert.That(feedbackSource, Does.Contain("SetUpdate(true)"));
+            Assert.That(feedbackSource, Does.Contain("KillScaleTween"));
+            Assert.That(feedbackSource, Does.Not.Contain("private void Update()"));
+            Assert.That(feedbackSource, Does.Not.Contain("FlatWorldUIFeedbackInputRelay"));
+
+            Assert.That(settingsSource, Does.Contain("public static event Action Changed;"));
+            Assert.That(settingsSource, Does.Contain("UIUserSettings.Changed += HandleSettingsChanged;"));
+            Assert.That(settingsSource, Does.Contain("OnRectTransformDimensionsChange"));
+            Assert.That(settingsSource, Does.Not.Contain("private void Update()"));
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        public void SharedUiHierarchyAndVirtualCursorUseDirtyCaches()
+        {
+            const string basePanelPath =
+                "Assets/5_Scripts/5-5_UI/BasePanel.cs";
+            const string uiManagerPath =
+                "Assets/5_Scripts/5-5_UI/UIManager.cs";
+            const string gamepadControllerPath =
+                "Assets/5_Scripts/5-5_UI/GamepadUIRuntimeController.cs";
+            const string inputBindingLauncherPath =
+                "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/InputBindingPanelLauncher.cs";
+
+            string basePanelSource = File.ReadAllText(basePanelPath);
+            string uiManagerSource = File.ReadAllText(uiManagerPath);
+            string gamepadControllerSource = File.ReadAllText(gamepadControllerPath);
+            string inputBindingLauncherSource = File.ReadAllText(inputBindingLauncherPath);
+
+            Assert.That(
+                basePanelSource,
+                Does.Contain("GetComponentsInChildren<Component>(true, hierarchyComponents);"));
+            Assert.That(basePanelSource, Does.Contain("HierarchySnapshotRebuildCount"));
+            Assert.That(basePanelSource, Does.Contain("ApplySelectionColors(cachedSelectables)"));
+            Assert.That(basePanelSource, Does.Not.Contain("GetComponentsInChildren<Button>(true)"));
+            Assert.That(basePanelSource, Does.Not.Contain("GetComponentsInChildren<Selectable>(true)"));
+
+            Assert.That(uiManagerSource, Does.Contain("public Canvas RootCanvas"));
+            Assert.That(uiManagerSource, Does.Contain("InteractionSurfaceRevision"));
+            Assert.That(uiManagerSource, Does.Contain("NotifyInteractionSurfaceChanged"));
+
+            Assert.That(gamepadControllerSource, Does.Contain("hoverTargetDirty"));
+            Assert.That(gamepadControllerSource, Does.Contain("StationaryHoverRefreshSeconds"));
+            Assert.That(gamepadControllerSource, Does.Contain("HoverRaycastCount"));
+            Assert.That(gamepadControllerSource, Does.Not.Contain("FindObjectsOfType<Canvas>"));
+            Assert.That(gamepadControllerSource, Does.Not.Contain("GameObject.Find(\"PanelRoot\")"));
+
+            Assert.That(
+                inputBindingLauncherSource,
+                Does.Contain("bindingPanel?.RefreshUIComponents();"),
+                "动态生成按键行后必须显式提交 BasePanel 层级快照。");
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        public void BasePanelReusesHierarchySnapshotUntilExplicitRefresh()
+        {
+            GameObject panelObject = new GameObject(
+                "层级快照测试面板",
+                typeof(RectTransform),
+                typeof(CanvasGroup));
+
+            try
+            {
+                BasePanel panel = panelObject.AddComponent<BasePanel>();
+                GameObject contentObject = new GameObject("Content", typeof(RectTransform));
+                contentObject.transform.SetParent(panelObject.transform, false);
+                GameObject buttonObject = new GameObject(
+                    "动态按钮",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image),
+                    typeof(Button));
+                buttonObject.transform.SetParent(contentObject.transform, false);
+
+                panel.RefreshUIComponents();
+                int rebuildCount = panel.HierarchySnapshotRebuildCount;
+
+                Assert.That(panel.GetButton("动态按钮"), Is.SameAs(buttonObject.GetComponent<Button>()));
+                panel.GetButton("动态按钮");
+                panel.PrepareForGamepadNavigation("动态按钮", false, false);
+                panel.PrepareForGamepadNavigation("动态按钮", false, false);
+
+                Assert.That(
+                    panel.HierarchySnapshotRebuildCount,
+                    Is.EqualTo(rebuildCount),
+                    "同一层级版本内的查询和导航准备不得再次扫描层级。");
+                Assert.That(panel.CachedSelectableCount, Is.EqualTo(1));
+            }
+            finally
+            {
+                Object.DestroyImmediate(panelObject);
+            }
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        public void GamepadSelectionFollowerCoalescesLatestTargetPerScrollRect()
+        {
+            const string sourcePath =
+                "Assets/5_Scripts/5-5_UI/GamepadUISelectionFollower.cs";
+            MethodInfo resetScheduler = typeof(GamepadUISelectionFollower).GetMethod(
+                "ResetScheduler",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            FieldInfo pendingRequestsField = typeof(GamepadUISelectionFollower).GetField(
+                "pendingRequests",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.That(resetScheduler, Is.Not.Null);
+            Assert.That(pendingRequestsField, Is.Not.Null);
+
+            GameObject scrollObject = new GameObject(
+                "焦点合并测试_ScrollRect",
+                typeof(RectTransform),
+                typeof(ScrollRect));
+
+            try
+            {
+                resetScheduler.Invoke(null, null);
+                ScrollRect scrollRect = scrollObject.GetComponent<ScrollRect>();
+                GameObject viewportObject = new GameObject("Viewport", typeof(RectTransform));
+                viewportObject.transform.SetParent(scrollObject.transform, false);
+                GameObject contentObject = new GameObject("Content", typeof(RectTransform));
+                contentObject.transform.SetParent(viewportObject.transform, false);
+                scrollRect.viewport = viewportObject.GetComponent<RectTransform>();
+                scrollRect.content = contentObject.GetComponent<RectTransform>();
+
+                GameObject firstTarget = new GameObject("目标一", typeof(RectTransform));
+                firstTarget.transform.SetParent(contentObject.transform, false);
+                GamepadUISelectionFollower firstFollower =
+                    firstTarget.AddComponent<GamepadUISelectionFollower>();
+                GameObject latestTarget = new GameObject("目标二", typeof(RectTransform));
+                latestTarget.transform.SetParent(contentObject.transform, false);
+                GamepadUISelectionFollower latestFollower =
+                    latestTarget.AddComponent<GamepadUISelectionFollower>();
+
+                firstFollower.OnSelect(null);
+                latestFollower.OnSelect(null);
+
+                System.Collections.IDictionary pendingRequests =
+                    pendingRequestsField.GetValue(null) as System.Collections.IDictionary;
+                Assert.That(pendingRequests, Is.Not.Null);
+                Assert.That(pendingRequests.Count, Is.EqualTo(1));
+                Assert.That(pendingRequests[scrollRect], Is.SameAs(latestFollower));
+
+                string source = File.ReadAllText(sourcePath);
+                Assert.That(source, Does.Contain("Canvas.willRenderCanvases += FlushPendingRequests;"));
+                Assert.That(
+                    source,
+                    Does.Contain("LayoutRebuilder.ForceRebuildLayoutImmediate(follower.content);"));
+                Assert.That(source, Does.Not.Contain("Canvas.ForceUpdateCanvases()"));
+                Assert.That(source, Does.Not.Contain("private void Update()"));
+                Assert.That(source, Does.Not.Contain("private void LateUpdate()"));
+            }
+            finally
+            {
+                resetScheduler?.Invoke(null, null);
+                Object.DestroyImmediate(scrollObject);
+            }
         }
 
         [Test]

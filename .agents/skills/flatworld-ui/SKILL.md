@@ -5,7 +5,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 # FlatWorld UI 系统定位
 
-> 最后核对：2026-08-09。修改 Prefab 位置或控件节点名后必须立即更新本 Skill。
+> 最后核对：2026-08-10。修改 Prefab 位置或控件节点名后必须立即更新本 Skill。
 
 ## 修改前先读
 
@@ -20,11 +20,12 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 存档条目：`Assets/5_Scripts/5-5_UI/GameSaveItemView.cs`。
 - 通用旧基类：`Assets/5_Scripts/5-5_UI/BaseUIManager.cs`。
 - 旧视觉主题工具：`Assets/5_Scripts/5-5_UI/FlatWorldUITheme.cs`；正式运行时面板不再调用，Prefab 是视觉真相。
-- UI 反馈：`Assets/5_Scripts/5-5_UI/FlatWorldUIFeedback.cs`。
+- UI 反馈：`Assets/5_Scripts/5-5_UI/FlatWorldUIFeedback.cs`；组件直接接收 EventSystem 事件，并用非缩放时间 DOTween 按需播放唯一缩放动画，静止时没有组件级 `Update`。
+- UI 用户偏好：`Assets/5_Scripts/5-5_UI/UIUserSettings.cs`；`UIUserSettings` 缓存 PlayerPrefs 并广播 `Changed`，`UIScaleController` 按设置、尺寸和应用恢复事件刷新。
 - 游戏内适配：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/`。
 - 玩家世界坐标 HUD：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/{PlayerWorldCoordinateHUD,PlayerWorldCoordinateDisplayPreferences}.cs`；只为本地 `Player` 创建非交互常驻卡片，并持久化世界坐标/经纬度显示偏好。
 - 保存状态 HUD：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/GameSaveStatusHUD.cs`；只实例化 `UI_SaveStatus` Prefab，显示异步保存状态，不拦截玩家输入。
-- Buff 状态 HUD：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/{PlayerBuffStatusHUD,BuffStatusRowView}.cs`；只为本地 `Player` 读取 `BuffManager.ActiveBuffs`，实例化左侧中部非交互状态列表并显示剩余时间。
+- Buff 状态 HUD：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/{PlayerBuffStatusHUD,BuffStatusRowView}.cs`；只为本地 `Player` 读取 `BuffManager.ActiveBuffs`，由增删、显式时长变化和整秒倒计时事件刷新，不保留兜底轮询。
 - 开发调试控制台：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/GMReflectionConsole.cs` 及其 `Navigation`/`Buffs` partial；F4 GM 工具是既有的运行时调试 Canvas，属于正式 Prefab UI 规则之外的开发者专用例外。
 - UI 音频绑定：`Assets/5_Scripts/5-5_UI/Audio/`。
 - UI Prefab 根目录：`Assets/2_Prefabs/2-1_UI/`。
@@ -52,6 +53,17 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - `Info_Button_List` 等右上角常驻模块菜单可调用 `PrepareForGamepadNavigation` 提供焦点，但必须传入 `closeOnCancel: false, closeOnEscape: false`，不得被 B/Esc 的临时面板关闭栈误关。
 - `BasePanel`/`BaseUIManager` 只允许运行时收集控件和补充非视觉音频反馈，不得调用主题系统新增装饰、改颜色或改布局。
 - Prefab 移动后同时检查场景 Inspector 引用、Addressables/Resources 引用和本 Skill 路径。
+
+## 性能与事件驱动约束
+
+- 常驻 HUD、设置应用器和通用 UI 反馈禁止为了等待绑定或比较静态状态保留 `Update`/`LateUpdate`；组件引用只在 `Awake`、绑定、资格变化或层级变化事件中解析，禁止逐帧 `GetComponent*`。
+- 动态列表必须分离“结构变化”和“内容变化”：增删、排序或显隐变化才调用 `LayoutRebuilder.MarkLayoutForRebuild()` 标记所属局部 `RectTransform`；倒计时、数值、颜色等内容刷新不得强制重建布局。
+- 高频或常驻路径禁止调用 `Canvas.ForceUpdateCanvases()` 与 `LayoutRebuilder.ForceRebuildLayoutImmediate()`。只有需要在同一调用栈立即读取最终尺寸的低频显式操作才可定向使用，并必须说明原因。
+- `FlatWorldUIFeedback` 直接负责 EventSystem 输入；状态变化时 Kill 旧缩放 Tween 并通过 `DOScale(...).SetUpdate(true)` 重定向唯一动画，失活/销毁时必须 Kill。不得恢复手写 `Update`，也不要为禁用事件接收组件额外增加输入中继。
+- `UIUserSettings` 的 PlayerPrefs 值只在首次访问和显式写入时处理，所有修改必须走 `Set*`/`ResetToDefaults()` 并广播 `Changed`；`UIScaleController` 订阅事件，并通过 `OnRectTransformDimensionsChange`、应用焦点/暂停恢复处理显示环境变化。
+- `BasePanel` 使用一次 `GetComponentsInChildren<Component>(true, reusableList)` 建立按钮、文本、Selectable 等共享层级快照；同一结构版本内的查询、打开和导航准备不得再次扫描。直属子节点变化会自动标脏，深层动态列表完成增删后必须调用一次 `RefreshUIComponents()` 显式提交；本地化、音频、主题和通用反馈必须消费该缓存列表，不能各自重新扫描。
+- `UIManager.RootCanvas` 是虚拟光标的权威 Canvas 缓存，面板开关、排序、显隐和结构变化通过 `InteractionSurfaceRevision` 广播；`GamepadUIRuntimeController` 只在光标位置、修订号或 Canvas 尺寸变化时重新 `RaycastAll`，静止时仅保留 0.2 秒安全校验。回归/Profiler 可读取 `BasePanel.HierarchySnapshotRebuildCount`、`CachedSelectableCount`、`CanvasResolveCount` 和 `HoverRaycastCount`。
+- `GamepadUISelectionFollower` 缓存所属 `ScrollRect`、Content、Viewport 和自身 RectTransform；焦点变化只覆盖该 ScrollRect 的待处理目标，通过一次 `Canvas.willRenderCanvases` 回调在帧末合并。同一容器每帧最多局部 `ForceRebuildLayoutImmediate(content)` 一次，禁止恢复 `Canvas.ForceUpdateCanvases()` 或组件级 `Update/LateUpdate`。
 
 ## UI 文案与多语言
 
@@ -99,6 +111,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-10：清理 UI 常驻轮询与重复扫描：Buff HUD 改为事件驱动局部布局；通用按钮反馈改用非缩放时间 DOTween；UI 用户偏好改为静态缓存广播；`BasePanel` 改为共享层级快照；虚拟光标改为缓存与按需射线；滚动焦点跟随改为缓存父级、帧末按 ScrollRect 合并并仅重建目标 Content。
 - 2026-08-09：新增 `UI_BuffStatus` 左侧中部非交互 Buff 状态 HUD；从本地玩家 `BuffManager` 读取活动 Buff，使用 `UI_BuffStatusItem` 占位图标显示名称和剩余时间，并保持对话气泡与模态面板层级契约。
 - 2026-08-09：区分常驻 HUD 与模态手柄面板；常驻模块菜单不再触发游戏内右摇杆准星退出，背包/设置等模态面板仍可接管 UI 焦点。
 - 2026-08-09：新增 `UI_SaveStatus` 右上角非交互保存状态 HUD；`GameManager.SaveGame()` 改用分帧快照与后台原子写盘，保存期间提示“正在保存…”，完成后自动隐藏。
@@ -108,15 +121,14 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 2026-08-09：手柄焦点到 TMP 输入框时不再自动弹出虚拟键盘，只有再次按 A/Submit 才打开；键盘 Enter 保持普通键盘输入路径。
 - 2026-08-09：游戏内 `Info_Button_List` 从 9 项单列拆为界面/世界/会话三分页；新增 `UI_CoordinateDisplaySettings` 和“显示设置”入口，可立即持久化左上角 HUD 的世界坐标或经纬度显示，有限循环世界按边界投影经纬度。
 - 2026-08-09：按键绑定行新增“清除按钮”；`InputBindingService` 使用空覆盖路径禁用单个键鼠/手柄绑定并立即保存，`UISmokeTests` 与输入回归测试覆盖节点和清除契约。
-- 2026-08-09：`UI_HotBar` 常驻快捷栏从手柄焦点导航和最上层焦点恢复链中排除，避免左摇杆移动时改变快捷栏槽位。
-- 2026-08-09：修复键盘 B 背包关闭被右上角常驻菜单抢先消费：`FlatWorldUI/Cancel` 不绑定键盘 B，`Info_Button_List` 保留手柄导航但退出全局取消栈；手柄 B 另由 UI Cancel 统一返回。
-## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/UI/UISmokeTests.cs` 与 `Assets/GameTest/UI/WorldTopologyUISmokeTests.cs`；当前覆盖 UIManager、BasePanel 手柄导航/取消契约、手柄 B 统一返回且不抢键盘 B、运行时 UI 导航不绑定键盘移动键、存档动态条目的焦点/选择态和自动导航、输入框手柄焦点与虚拟键盘确认触发、按键绑定双分页节点及行内修改/清除按钮、游戏内设置单机暂停契约、Resources UIRoot、八个设置 Prefab（含坐标显示和主菜单设置）、主菜单设置入口、设置列表三分页、流送性能入口、世界加载 Prefab、保存状态 HUD 与手动异步保存契约、玩家坐标 HUD 的节点/左上锚点/输入穿透/Player 绑定、Buff 状态 HUD 的节点/左侧中部锚点/滚动内容/输入穿透/Player 绑定、新世界难度命名契约，以及可选世界种子输入框的命名与卡片边界；`Assets/GameTest/PlayerInteraction/InputBindingServiceTests.cs` 覆盖单项清除绑定的空路径与持久化；联机 Prefab 与 GameRes 加载约束由 `NetworkingSmokeTests.cs` 覆盖。
+## 修改后验证
+
+- 基础测试脚本：`Assets/GameTest/UI/UISmokeTests.cs` 与 `Assets/GameTest/UI/WorldTopologyUISmokeTests.cs`；当前覆盖 UIManager、BasePanel 手柄导航/取消契约与共享层级快照、虚拟光标根 Canvas/交互面修订号/按需射线契约、滚动焦点按 ScrollRect 合并/最后目标/局部布局契约、手柄 B 统一返回且不抢键盘 B、运行时 UI 导航不绑定键盘移动键、存档动态条目的焦点/选择态和自动导航、输入框手柄焦点与虚拟键盘确认触发、按键绑定双分页节点及行内修改/清除按钮/动态快照提交、游戏内设置单机暂停契约、Resources UIRoot、八个设置 Prefab（含坐标显示和主菜单设置）、主菜单设置入口、设置列表三分页、流送性能入口、世界加载 Prefab、保存状态 HUD 与手动异步保存契约、玩家坐标 HUD 的节点/左上锚点/输入穿透/Player 绑定、Buff 状态 HUD 的节点/左侧中部锚点/滚动内容/输入穿透/Player 绑定及事件驱动布局契约、通用按钮反馈的 DOTween/无 Update/清理契约与 UI 设置缓存广播契约、新世界难度命名契约，以及可选世界种子输入框的命名与卡片边界；`Assets/GameTest/PlayerInteraction/InputBindingServiceTests.cs` 覆盖单项清除绑定的空路径与持久化；联机 Prefab 与 GameRes 加载约束由 `NetworkingSmokeTests.cs` 覆盖。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；UI 测试约定目录：`Assets/GameTest/UI/`；场景目录：`Assets/GameTest/Scenes/UI/`；冒烟分类：`UI.Smoke`。
 - 新增面板、按钮、输入框、动态 UI、存档列表或 UI 音效行为时必须增加系统测试；修复 Bug 时先增加回归测试。面板打开、交互和关闭主流程变化时同步更新 UI 冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；必须验证控件命名契约、组件类型、事件绑定和重复打开关闭，视觉观感仍交由人工确认。
-- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category UI.Smoke`；无需视觉模型或测试工具卡片。涉及核心流程、玩家输入、存档、联机或音频时追加对应分类；只有布局、配色或最终视觉观感变化才做定向截图。
+- 先按 `flatworld-test-automation` 的触发门槛判断：普通局部 UI 清理只做静态诊断、相关程序集编译和 Console 检查；达到系统级门槛或用户明确要求时，才执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category UI.Smoke`。涉及核心流程、玩家输入、存档、联机或音频时再追加对应分类。
 - UI 核心取消路由由 `Assets/GameTest/UI/UISmokeTests.cs`（`UI.Smoke`）覆盖；聊天与气泡的详细行为不再属于精简 Smoke 集合。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 

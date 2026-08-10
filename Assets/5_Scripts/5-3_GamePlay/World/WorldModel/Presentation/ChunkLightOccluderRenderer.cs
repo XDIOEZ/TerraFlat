@@ -19,6 +19,8 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
 
     private const string OccluderName = "Occluder";
     private const int OccluderWarningThreshold = 128;
+    private const int RetainedOccluderBuffer = 8;
+    private const float OccluderTrimDelaySeconds = 7.5f;
 
     private readonly List<LightOccluderSlot> slots = new();
     private readonly List<RectInt> mergedRectangles = new();
@@ -26,10 +28,24 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
     private bool[] visitedCells;
     private ChunkRuntime boundChunk;
     private int activeOccluderCount;
+    private int recentPeakOccluderCount;
+    private int rebuildVersion;
+    private int pendingTrimTarget = -1;
+    private float pendingTrimAt = float.PositiveInfinity;
+    private bool rebuildRequested;
     private bool warningLogged;
 
     /// <summary>当前区块实际启用的阴影体数量，供调试和 Golden Path 断言使用。</summary>
     public int ActiveOccluderCount => activeOccluderCount;
+
+    /// <summary>当前实际保留的阴影槽数量，包含少量待复用缓冲槽。</summary>
+    public int RetainedOccluderCount => slots.Count;
+
+    /// <summary>上次裁剪后观察到的实际使用峰值，供 Profiler 与回归检查使用。</summary>
+    public int RecentPeakOccluderCount => recentPeakOccluderCount;
+
+    /// <summary>每次实际重建后递增，便于确认同帧地块事件已被合并。</summary>
+    public int RebuildVersion => rebuildVersion;
 
     /// <summary>当前是否已经绑定到一个可见区块。</summary>
     public bool IsBound => boundChunk != null;
@@ -43,6 +59,20 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         EnsureCompositeShadowGroup();
     }
 
+    /// <summary>同一帧的多次地块变化统一在帧末合并为一次重建。</summary>
+    private void LateUpdate()
+    {
+        if (rebuildRequested)
+        {
+            rebuildRequested = false;
+            ChunkTerrainData terrain = boundChunk?.Terrain;
+            if (terrain != null)
+                Rebuild(terrain);
+        }
+
+        TryTrimRetainedSlots();
+    }
+
     /// <summary>绑定区块地形，并按阻挡地块生成光照遮挡矩形。</summary>
     public void Bind(ChunkRuntime chunk)
     {
@@ -54,7 +84,11 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         if (ReferenceEquals(boundChunk, chunk))
             return;
 
-        Unbind();
+        if (boundChunk != null)
+            Unbind();
+
+        rebuildRequested = false;
+        CancelPendingTrim();
         boundChunk = chunk;
         boundChunk.Terrain.Changed += HandleTerrainChanged;
         Rebuild(boundChunk.Terrain);
@@ -66,6 +100,8 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         if (boundChunk?.Terrain != null)
             boundChunk.Terrain.Changed -= HandleTerrainChanged;
 
+        rebuildRequested = false;
+
         for (int i = 0; i < slots.Count; i++)
         {
             if (slots[i]?.GameObject != null)
@@ -75,9 +111,10 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         activeOccluderCount = 0;
         warningLogged = false;
         boundChunk = null;
+        RefreshTrimSchedule(activeOccluderCount);
     }
 
-    /// <summary>墙体或其它阻挡地块变化时，仅重建当前区块的光照遮挡层。</summary>
+    /// <summary>墙体或其它阻挡地块变化时仅标脏，帧末统一重建。</summary>
     private void HandleTerrainChanged(ChunkTerrainChanged changed)
     {
         if (boundChunk?.Terrain == null ||
@@ -87,7 +124,27 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
             return;
         }
 
-        Rebuild(boundChunk.Terrain);
+        rebuildRequested = true;
+    }
+
+    /// <summary>View 从对象池取出时取消旧裁剪计划，避免绑定途中误删可复用槽。</summary>
+    public void PrepareForPoolReuse()
+    {
+        rebuildRequested = false;
+        CancelPendingTrim();
+    }
+
+    /// <summary>禁用的池化 View 由 ChunkMgr 主动调用，立即裁掉历史阴影槽。</summary>
+    public void TrimPooledResources()
+    {
+        if (boundChunk != null)
+            return;
+
+        rebuildRequested = false;
+        activeOccluderCount = 0;
+        TrimSlotsTo(RetainedOccluderBuffer);
+        recentPeakOccluderCount = 0;
+        CancelPendingTrim();
     }
 
     #endregion
@@ -113,6 +170,9 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         }
 
         activeOccluderCount = mergedRectangles.Count;
+        recentPeakOccluderCount = Mathf.Max(recentPeakOccluderCount, activeOccluderCount);
+        RefreshTrimSchedule(activeOccluderCount);
+        rebuildVersion++;
         if (activeOccluderCount > OccluderWarningThreshold && !warningLogged)
         {
             Debug.LogWarning(
@@ -205,6 +265,70 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
     #endregion
 
     #region URP ShadowCaster2D 对象池
+
+    /// <summary>需求下降后启动延迟裁剪；期间需求变化会重新计算目标和等待时间。</summary>
+    private void RefreshTrimSchedule(int actualUsage)
+    {
+        int target = Mathf.Min(slots.Count, Mathf.Max(0, actualUsage) + RetainedOccluderBuffer);
+        if (slots.Count <= target)
+        {
+            CancelPendingTrim();
+            return;
+        }
+
+        if (pendingTrimTarget == target)
+            return;
+
+        pendingTrimTarget = target;
+        pendingTrimAt = Time.realtimeSinceStartup + OccluderTrimDelaySeconds;
+    }
+
+    /// <summary>延迟期结束后销毁多余槽位，而不只是禁用其中的组件。</summary>
+    private void TryTrimRetainedSlots()
+    {
+        if (pendingTrimTarget < 0 || Time.realtimeSinceStartup < pendingTrimAt)
+            return;
+
+        int currentTarget = Mathf.Min(
+            slots.Count,
+            activeOccluderCount + RetainedOccluderBuffer);
+        if (currentTarget != pendingTrimTarget)
+        {
+            pendingTrimTarget = currentTarget;
+            pendingTrimAt = Time.realtimeSinceStartup + OccluderTrimDelaySeconds;
+            return;
+        }
+
+        TrimSlotsTo(currentTarget);
+        recentPeakOccluderCount = activeOccluderCount;
+        CancelPendingTrim();
+    }
+
+    /// <summary>从列表末尾销毁完整槽对象，连同 Collider2D 与 ShadowCaster2D 一起释放。</summary>
+    private void TrimSlotsTo(int retainedCount)
+    {
+        retainedCount = Mathf.Clamp(retainedCount, 0, slots.Count);
+        for (int i = slots.Count - 1; i >= retainedCount; i--)
+        {
+            LightOccluderSlot slot = slots[i];
+            slots.RemoveAt(i);
+            if (slot?.GameObject == null)
+                continue;
+
+            slot.GameObject.SetActive(false);
+            if (Application.isPlaying)
+                Destroy(slot.GameObject);
+            else
+                DestroyImmediate(slot.GameObject);
+        }
+    }
+
+    /// <summary>清除延迟裁剪状态。</summary>
+    private void CancelPendingTrim()
+    {
+        pendingTrimTarget = -1;
+        pendingTrimAt = float.PositiveInfinity;
+    }
 
     /// <summary>确保遮挡子层拥有一个 URP 阴影分组。</summary>
     private void EnsureCompositeShadowGroup()

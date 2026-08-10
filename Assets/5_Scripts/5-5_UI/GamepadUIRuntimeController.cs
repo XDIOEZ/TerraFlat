@@ -10,11 +10,15 @@ using UnityEngine.UI;
 /// <summary>
 /// 统一处理手柄 UI 的焦点模式与虚拟光标模式。
 /// 左摇杆/十字键进入焦点导航，右摇杆进入虚拟光标；两种模式互斥，避免玩家不知道 A 键会作用于哪里。
+/// 光标命中由位置和交互面修订号驱动，静止时每 0.2 秒做一次低频安全校验。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class GamepadUIRuntimeController : MonoBehaviour
 {
     private const float DeviceDetectionStickDeadZone = 0.2f;
+    private const float CursorPositionEpsilonSquared = 0.01f;
+    private const float StationaryHoverRefreshSeconds = 0.2f;
+    private const float CanvasResolveRetrySeconds = 0.25f;
 
     #region 运行时状态
 
@@ -23,22 +27,37 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     private InputActionAsset inputAsset;
     private InputAction cancelAction;
     private InputAction submitAction;
+    private UIManager observedUIManager;
     private RectTransform canvasRect;
     private Canvas canvas;
     private RectTransform cursorRect;
-    private GamepadCursorGraphic cursorGraphic;
     private PointerEventData pointerEventData;
     private EventSystem pointerEventSystem;
     private GameObject hoveredObject;
     private TMP_InputField suppressedInputField;
     private int suppressedInputFieldFrame = -1;
+    private int observedInteractionSurfaceRevision = -1;
+    private int lastScreenWidth = -1;
+    private int lastScreenHeight = -1;
     private Vector2 cursorScreenPosition;
+    private Vector2 lastCanvasSize = new Vector2(float.NaN, float.NaN);
+    private float lastCanvasScaleFactor = -1f;
+    private float nextCanvasResolveTime;
+    private float nextStationaryHoverRefreshTime;
     private bool cursorPositionInitialized;
+    private bool cursorPositionDirty = true;
+    private bool hoverTargetDirty = true;
     private bool gamepadMode;
     private bool cursorMode;
 
     public bool IsGamepadMode => gamepadMode;
     public bool IsVirtualCursorMode => cursorMode;
+
+    /// <summary>Profiler 可读取的根 Canvas 解析尝试次数。</summary>
+    public int CanvasResolveCount { get; private set; }
+
+    /// <summary>Profiler 可读取的虚拟光标射线次数。</summary>
+    public int HoverRaycastCount { get; private set; }
 
     #endregion
 
@@ -47,17 +66,30 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     private void OnEnable()
     {
         GamepadVirtualKeyboardController.Closed += OnVirtualKeyboardClosed;
+        observedUIManager = null;
+        observedInteractionSurfaceRevision = -1;
+        cursorPositionDirty = true;
+        hoverTargetDirty = true;
+        nextCanvasResolveTime = 0f;
+        nextStationaryHoverRefreshTime = 0f;
     }
 
     private void OnDisable()
     {
         GamepadVirtualKeyboardController.Closed -= OnVirtualKeyboardClosed;
         UnbindCancelAction();
+        inputAsset = null;
         submitAction = null;
         suppressedInputField = null;
         suppressedInputFieldFrame = -1;
         ClearHoverTarget();
         SetCursorVisible(false);
+    }
+
+    private void OnDestroy()
+    {
+        if (cursorRect != null)
+            Destroy(cursorRect.gameObject);
     }
 
     private void Update()
@@ -67,14 +99,26 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         if (!gamepadMode)
             return;
 
+        RefreshInteractionSurfaceState();
         EnsureCursorVisual();
         TryOpenKeyboardForSelectedInputFieldOnSubmit();
 
         if (!cursorMode)
             return;
 
-        PositionCursor();
-        UpdateHoverTarget();
+        RefreshCanvasMetrics();
+        if (cursorPositionDirty && PositionCursor())
+            cursorPositionDirty = false;
+
+        if (Time.unscaledTime >= nextStationaryHoverRefreshTime)
+            hoverTargetDirty = true;
+
+        if (hoverTargetDirty && UpdateHoverTarget())
+        {
+            hoverTargetDirty = false;
+            nextStationaryHoverRefreshTime =
+                Time.unscaledTime + StationaryHoverRefreshSeconds;
+        }
     }
 
     #endregion
@@ -156,9 +200,13 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     /// </summary>
     public void Configure(InputActionAsset asset)
     {
+        if (ReferenceEquals(inputAsset, asset))
+            return;
+
         inputAsset = asset;
         BindCancelAction(asset);
         BindSubmitAction(asset);
+        RefreshInteractionSurfaceState();
         EnsureCursorVisual();
     }
 
@@ -167,13 +215,21 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     /// </summary>
     public void SetGamepadMode(bool enabled)
     {
+        if (gamepadMode == enabled)
+            return;
+
         gamepadMode = enabled;
         if (!enabled)
         {
             suppressedInputField = null;
             suppressedInputFieldFrame = -1;
             ExitCursorMode(false);
+            return;
         }
+
+        cursorPositionDirty = true;
+        hoverTargetDirty = true;
+        nextStationaryHoverRefreshTime = 0f;
     }
 
     /// <summary>
@@ -204,8 +260,16 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         if (!gamepadMode)
             return;
 
+        bool positionChanged = !cursorPositionInitialized ||
+                               (cursorScreenPosition - screenPosition).sqrMagnitude >
+                               CursorPositionEpsilonSquared;
         cursorScreenPosition = screenPosition;
         cursorPositionInitialized = true;
+        if (positionChanged)
+        {
+            cursorPositionDirty = true;
+            hoverTargetDirty = true;
+        }
         EnterCursorMode();
     }
 
@@ -217,7 +281,17 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         if (!gamepadMode || !cursorMode)
             return false;
 
-        UpdateHoverTarget();
+        RefreshInteractionSurfaceState();
+        EnsureCursorVisual();
+        RefreshCanvasMetrics();
+        if (cursorPositionDirty && PositionCursor())
+            cursorPositionDirty = false;
+        if (UpdateHoverTarget())
+        {
+            hoverTargetDirty = false;
+            nextStationaryHoverRefreshTime =
+                Time.unscaledTime + StationaryHoverRefreshSeconds;
+        }
         if (hoveredObject == null)
             return false;
 
@@ -322,7 +396,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
             return;
         }
 
-        UIManager manager = FindObjectOfType<UIManager>();
+        UIManager manager = UIManager.ExistingInstance;
         if (manager == null || manager.WasCancelHandledThisFrame())
             return;
 
@@ -421,6 +495,9 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
             return;
 
         cursorMode = true;
+        cursorPositionDirty = true;
+        hoverTargetDirty = true;
+        nextStationaryHoverRefreshTime = 0f;
         ClearHoverTarget();
         EventSystem.current?.SetSelectedGameObject(null);
         SetCursorVisible(true);
@@ -440,18 +517,51 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
 
         if (restoreFocus && EventSystem.current?.currentSelectedGameObject == null)
         {
-            UIManager manager = FindObjectOfType<UIManager>();
+            UIManager manager = UIManager.ExistingInstance;
             manager?.SelectTopmostGamepadPanel();
         }
     }
 
+    /// <summary>面板修订号变化时只标脏命中结果，并在根 Canvas 替换后重建光标。</summary>
+    private void RefreshInteractionSurfaceState()
+    {
+        UIManager manager = UIManager.ExistingInstance;
+        int revision = manager != null ? manager.InteractionSurfaceRevision : -1;
+        bool managerChanged = !ReferenceEquals(observedUIManager, manager);
+        if (!managerChanged && revision == observedInteractionSurfaceRevision)
+            return;
+
+        observedUIManager = manager;
+        observedInteractionSurfaceRevision = revision;
+        hoverTargetDirty = true;
+
+        CanvasResolveCount++;
+        Canvas targetCanvas = manager != null ? manager.RootCanvas : null;
+        if (targetCanvas != canvas)
+            BindCursorVisual(targetCanvas);
+    }
+
     private void EnsureCursorVisual()
     {
-        Canvas targetCanvas = FindTargetCanvas();
+        if (canvas != null && canvasRect != null && cursorRect != null)
+            return;
+
+        if (Time.unscaledTime < nextCanvasResolveTime)
+            return;
+
+        nextCanvasResolveTime = Time.unscaledTime + CanvasResolveRetrySeconds;
+        CanvasResolveCount++;
+        UIManager manager = UIManager.ExistingInstance;
+        BindCursorVisual(manager != null ? manager.RootCanvas : null);
+    }
+
+    /// <summary>把唯一虚拟光标绑定到权威 PanelRoot Canvas。</summary>
+    private void BindCursorVisual(Canvas targetCanvas)
+    {
         if (targetCanvas == null)
             return;
 
-        if (canvas == targetCanvas && cursorRect != null)
+        if (canvas == targetCanvas && canvasRect != null && cursorRect != null)
             return;
 
         if (cursorRect != null)
@@ -459,6 +569,12 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
 
         canvas = targetCanvas;
         canvasRect = canvas.GetComponent<RectTransform>();
+        if (canvasRect == null)
+        {
+            canvas = null;
+            return;
+        }
+
         GameObject cursorObject = new GameObject(
             "GamepadVirtualCursor",
             typeof(RectTransform),
@@ -470,36 +586,47 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         cursorRect.anchorMax = new Vector2(0.5f, 0.5f);
         cursorRect.pivot = new Vector2(0.5f, 0.5f);
         cursorRect.sizeDelta = new Vector2(28f, 28f);
-        cursorGraphic = cursorObject.GetComponent<GamepadCursorGraphic>();
+        GamepadCursorGraphic cursorGraphic = cursorObject.GetComponent<GamepadCursorGraphic>();
         cursorGraphic.color = FlatWorldUITheme.SelectionOutline;
         cursorGraphic.raycastTarget = false;
         cursorObject.transform.SetAsLastSibling();
+        lastScreenWidth = -1;
+        lastScreenHeight = -1;
+        lastCanvasSize = new Vector2(float.NaN, float.NaN);
+        lastCanvasScaleFactor = -1f;
+        cursorPositionDirty = true;
+        hoverTargetDirty = true;
         SetCursorVisible(cursorMode);
     }
 
-    private Canvas FindTargetCanvas()
+    /// <summary>分辨率或 Canvas 参数变化时重新定位并命中一次。</summary>
+    private void RefreshCanvasMetrics()
     {
-        GameObject panelRoot = GameObject.Find("PanelRoot");
-        Canvas panelCanvas = panelRoot != null
-            ? panelRoot.GetComponentInChildren<Canvas>(true)
-            : null;
-        if (panelCanvas != null)
-            return panelCanvas;
+        if (canvas == null || canvasRect == null)
+            return;
 
-        Canvas[] canvases = FindObjectsOfType<Canvas>(true);
-        for (int i = 0; i < canvases.Length; i++)
+        Vector2 canvasSize = canvasRect.rect.size;
+        float scaleFactor = canvas.scaleFactor;
+        if (lastScreenWidth == Screen.width &&
+            lastScreenHeight == Screen.height &&
+            lastCanvasSize == canvasSize &&
+            Mathf.Approximately(lastCanvasScaleFactor, scaleFactor))
         {
-            if (canvases[i] != null && canvases[i].isRootCanvas)
-                return canvases[i];
+            return;
         }
 
-        return null;
+        lastScreenWidth = Screen.width;
+        lastScreenHeight = Screen.height;
+        lastCanvasSize = canvasSize;
+        lastCanvasScaleFactor = scaleFactor;
+        cursorPositionDirty = true;
+        hoverTargetDirty = true;
     }
 
-    private void PositionCursor()
+    private bool PositionCursor()
     {
         if (cursorRect == null || canvasRect == null || !cursorPositionInitialized)
-            return;
+            return false;
 
         Camera eventCamera = canvas.renderMode == RenderMode.ScreenSpaceOverlay
             ? null
@@ -511,7 +638,10 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
                 out Vector2 localPosition))
         {
             cursorRect.anchoredPosition = localPosition;
+            return true;
         }
+
+        return false;
     }
 
     private void SetCursorVisible(bool visible)
@@ -520,15 +650,16 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
             cursorRect.gameObject.SetActive(visible);
     }
 
-    private void UpdateHoverTarget()
+    private bool UpdateHoverTarget()
     {
         EventSystem eventSystem = EventSystem.current;
         if (eventSystem == null)
-            return;
+            return false;
 
         PointerEventData data = GetPointerEventData(eventSystem);
         raycastResults.Clear();
         eventSystem.RaycastAll(data, raycastResults);
+        HoverRaycastCount++;
 
         GameObject nextObject = null;
         for (int i = 0; i < raycastResults.Count; i++)
@@ -545,7 +676,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         }
 
         if (nextObject == hoveredObject)
-            return;
+            return true;
 
         if (hoveredObject != null)
             ExecuteEvents.Execute(hoveredObject, data, ExecuteEvents.pointerExitHandler);
@@ -553,6 +684,8 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         hoveredObject = nextObject;
         if (hoveredObject != null)
             ExecuteEvents.Execute(hoveredObject, data, ExecuteEvents.pointerEnterHandler);
+
+        return true;
     }
 
     private void ClearHoverTarget()

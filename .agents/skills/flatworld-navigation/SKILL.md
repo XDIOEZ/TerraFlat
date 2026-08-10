@@ -43,7 +43,7 @@ Data_TileMap.GetTopTile（地形顶层可走性/权重）
 - 失败 Chunk 不得注册导航格或留在加载等待中；`ChunkMgr` 必须以失败回调结束等待者并安全回收。
 - `WorldNavigationAgent` / `Mover_AI` 必须通过 `WorldNavigationManager` 提交路径请求，不得回退到物理全场扫描或直接穿越不可走格。
 - 联机时导航图跟随本地 owned 玩家，Chunk 流送仍按所有观察者并集。
-- WorldModel 数据预取圈只生成 `ChunkRuntime`，不得注册导航；区块进入可见圈后由 `ChunkMgr.RuntimeWindow` 表现协程完成 `ChunkView.Bind()` 才领取 Navigation 租约并注册。排队期间离开窗口或世界重置必须取消表现项，只有 `ChunkView.IsBound` 的区块可以持有导航租约。
+- WorldModel 数据预取圈只生成 `ChunkRuntime`，不得注册导航；区块进入可见圈后由 `ChunkMgr.RuntimeWindow` 表现协程完成 `ChunkView.Bind()` 才领取 Navigation 租约并注册。排队期间离开窗口或世界重置必须取消表现项，只有 `ChunkView.IsBound` 的区块可以持有导航租约。View 进入对象池或被延迟销毁前必须先完成 `ChunkView.Unbind()`，池内禁用对象不得残留 Navigation/Presentation 租约。
 - 地下矿洞开放格顶层为 `TileBase_Stone`（`IsWalkable=true`、`Penalty=1000`），岩壁顶层为 `TileBase_StoneWall`（`IsWalkable=false`、`Penalty=0`）；独立“建筑阻挡层”的 TilemapCollider 只负责实体物理碰撞，A* 仍以顶层 TileData 为权威。
 
 ## 高耦合联动
@@ -60,6 +60,7 @@ Data_TileMap.GetTopTile（地形顶层可走性/权重）
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-10：`ChunkView` 动态延迟池明确要求入池与销毁前先 `Unbind()`，即使分帧绑定被世界退出中止，也必须同步释放唯一 Navigation/Presentation 租约后再禁用或销毁。
 - 2026-08-09：幽灵追击状态改为直接沿世界最短方向位移，明确跳过地形可走性和导航路径校验；非追击状态仍保留原导航代理用于避光/闲逛移动。
 - 2026-08-09：新版矿洞在 `DeterministicChunkGenerator` 已将房间/隧道写为可走地面、岩壁写为顶层 Blocking Cell；`ChunkView` 绑定时继续一次性把同一 `ChunkTerrainData` 交给碰撞与导航，矿脉和传送门 Item 不反向修改导航权威。
 - 2026-08-09：Ghost 继续以 `WorldNavigationAgent` 和新版权威地形校验目的地；移动后只通知 `ItemMgr` 刷新 `WorldAddress` 实体索引，不再检查旧活动 Chunk 或通过父级切换归属。
@@ -70,7 +71,6 @@ Data_TileMap.GetTopTile（地形顶层可走性/权重）
 - 2026-07-31：矿洞生成新增不可走岩壁 TileData；房间和隧道在地图初次完成后统一进入现有全 Chunk 导航更新，不逐格触发烘焙。
 - 2026-07-27：导航权威数据切换为 `TileData + BuildingOccupancyRegistry`，移除物理碰撞全场扫描依赖。
 - 2026-07-27：运行时地块/建筑变化统一进入脏格/脏区批处理，在 A* WorkItem 中更新节点与连接。
-- 2026-07-27：Ghost 导航改为 `Seeker + AILerp`，并在目的地提交前验证节点权重。
 
 ## 修改后自动测试
 

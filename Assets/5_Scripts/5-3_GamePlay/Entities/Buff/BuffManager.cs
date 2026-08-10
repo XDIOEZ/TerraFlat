@@ -37,6 +37,9 @@ public class BuffManager : Module
     public event Action<BuffInstance> BuffRemoved;
     public event Action<BuffInstance> BuffDurationChanged;
 
+    /// <summary>限时 Buff 的显示秒数变化时触发，供只读表现层按需刷新倒计时。</summary>
+    public event Action<BuffInstance> BuffCountdownChanged;
+
     private readonly List<string> iterationIds = new(16);
     private readonly List<string> expiredIds = new(8);
 
@@ -328,15 +331,31 @@ public class BuffManager : Module
         iterationIds.Clear();
         expiredIds.Clear();
         iterationIds.AddRange(ActiveBuffs.Keys);
+        Action<BuffInstance> countdownChanged = BuffCountdownChanged;
 
         for (int i = 0; i < iterationIds.Count; i++)
         {
             string buffId = iterationIds[i];
-            if (!ActiveBuffs.TryGetValue(buffId, out BuffInstance runtime) ||
-                runtime == null ||
-                runtime.Tick(deltaTime))
+            if (!ActiveBuffs.TryGetValue(buffId, out BuffInstance runtime) || runtime == null)
             {
                 expiredIds.Add(buffId);
+                continue;
+            }
+
+            int previousDisplaySeconds = countdownChanged != null
+                ? GetCountdownDisplaySeconds(runtime)
+                : -1;
+            if (runtime.Tick(deltaTime))
+            {
+                expiredIds.Add(buffId);
+                continue;
+            }
+
+            if (countdownChanged != null)
+            {
+                int currentDisplaySeconds = GetCountdownDisplaySeconds(runtime);
+                if (currentDisplaySeconds != previousDisplaySeconds)
+                    countdownChanged.Invoke(runtime);
             }
         }
 
@@ -356,6 +375,15 @@ public class BuffManager : Module
         ActiveBuffs.Remove(buffId);
         if (runtime != null)
             BuffRemoved?.Invoke(runtime);
+    }
+
+    /// <summary>把连续时长压缩为 HUD 实际显示的整秒值，永久 Buff 不参与倒计时事件。</summary>
+    private static int GetCountdownDisplaySeconds(BuffInstance runtime)
+    {
+        if (runtime?.Definition == null || runtime.Definition.IsPermanent)
+            return -1;
+
+        return Mathf.CeilToInt(Mathf.Max(0f, runtime.RemainingDurationSeconds));
     }
 
     #endregion

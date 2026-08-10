@@ -5,7 +5,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 # FlatWorld Buff 定位
 
-> 最后核对：2026-08-09。
+> 最后核对：2026-08-10。
 
 ## 修改前先读
 
@@ -19,7 +19,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 角色状态表现链路：`BuffManager.BuffAdded/BuffRemoved/BuffDurationChanged -> ActorStatusVisualEffectController -> 独立 SpriteRenderer 序列 / 状态光晕 / VisualEffectManager 池化粒子`。控制器装配在玩家与 AI 共用的 Animator 模块 Prefab；它不参与伤害 Tick，也不改变 Buff 的权威生命周期。
 
-玩家状态 HUD 链路：`PlayerBuffStatusHUD -> Player/Module_BuffManager -> BuffManager.ActiveBuffs`。HUD 只读取本地玩家的活动 Buff，通过生命周期事件和低频时长兜底刷新状态名称/剩余时间；它是只读表现层，不创建、修改或持久化 Buff。
+玩家状态 HUD 链路：`BuffManager.BuffAdded/BuffRemoved/BuffDurationChanged/BuffCountdownChanged -> PlayerBuffStatusHUD -> BuffStatusRowView`。HUD 只读取本地玩家的 `ActiveBuffs`；增删事件刷新条目结构，显式时长与整秒倒计时事件只刷新文本，不创建、修改或持久化 Buff。
 
 ## 按任务定位
 
@@ -57,13 +57,15 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 - `RemoveBuff()`、`ClearAllBuffs()` 与自然过期必须让 Stop 效果和 `BuffRemoved` 各执行一次；遍历期间继续使用快照列表，禁止直接修改活动字典。
 - MemoryPack 只持久化 `DefinitionId`、剩余时间和 Tick 累计；Unity 对象与定义引用在加载时通过 `GameRes` 恢复。缺失定义应跳过并报告，不得留下半初始化实例。
 - 保留 `BuffManager` 的模块 Tick 调度与 `BuffInstance` 的单次更新 Tick 上限，避免长帧造成无限补算。
+- `BuffCountdownChanged` 只在存在订阅者且限时 Buff 的向上取整显示秒数变化时触发；永久 Buff、同一显示秒内的 0.1 秒 Tick 和没有 HUD 的 AI 不产生表现事件开销。
 - MOD Buff 与本体 Buff 共用 `GameRes.RegisterBuff()` 的冲突检测；不要绕过注册入口覆盖已有 ID。
 
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
-- 2026-08-09：新增 `PlayerBuffStatusHUD`/`BuffStatusRowView`，从本地玩家 `BuffManager.ActiveBuffs` 只读展示活动 Buff，使用 `BuffAdded`、`BuffRemoved`、`BuffDurationChanged` 与 `0.25s` 时长兜底刷新；图标暂用 UI 占位符，不改变 Buff 生命周期。
+- 2026-08-10：`PlayerBuffStatusHUD` 移除 `0.25s` 兜底轮询；`BuffManager` 新增仅在显示整秒跨界时触发的 `BuffCountdownChanged`，HUD 的时长文本与条目结构分别按事件刷新，不改变 Buff 权威生命周期。
+- 2026-08-09：新增 `PlayerBuffStatusHUD`/`BuffStatusRowView`，从本地玩家 `BuffManager.ActiveBuffs` 只读展示活动 Buff，使用 `BuffAdded`、`BuffRemoved` 与 `BuffDurationChanged` 刷新；图标暂用 UI 占位符，不改变 Buff 生命周期。
 - 2026-08-09：`光耀` 接入 `ActorStatusVisualEffectController` 的低强度状态光晕，复用圆形 Sprite 做轻微呼吸发光；仍由 `BuffAdded`、`BuffRemoved`、续期事件和 `0.2s` 兜底校验驱动，不改变幽灵真实伤害 Tick。
 - 2026-08-09：`ActorStatusVisualEffectController` 新增复合 Buff 粒子映射；`出血|流血|失血` 共用 `BloodDropStatusEffect`，由 `BuffAdded`、`BuffRemoved`、续期事件和 `0.2s` 兜底校验驱动，持续表现通过 `VisualEffectManager` 对象池启停。
 - 2026-08-09：新增可复用 `ActorStatusVisualEffectController`，由 `BuffManager` 生命周期事件驱动、每 `0.2s` 兜底同步存档恢复；`燃烧` 映射到 `CreatureBurning_Sheet` 八帧火焰，已装配到玩家/AI 动画模块。移除、过期和对象复用都会隐藏火焰，且附属精灵不受角色水体/受击 MPB 影响。
@@ -72,14 +74,13 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 - 2026-08-05：本体 combat 分包新增稳定 ID `燃烧`：持续 5 秒、每秒 1 点真实伤害、重复施加刷新持续时间；真实单机黄金路径会在玩家移动阶段施加并跨 Tick 验证伤害，随后移除 Buff、恢复生命。
 - 2026-08-04：`BuffManager` 的规范模块 ID 固定为 `BuffManager`，并兼容旧存档/Prefab 中的 `Buff模块`；模板提取和模块自动修复不得再把旧 ID 写回运行时索引。
 - 2026-08-04：F4 GM 控制台新增 Buff 分发分页；确认后通过本地 `GameController.LeftClick` 点选带 `BuffManager` 的目标施加已注册 Buff，支持限时 Buff 的时长覆盖与重复施加；清除模式调用 `ClearAllBuffs()`，不会绕过 Stop/Removed 生命周期。
-- 2026-08-03：本体 Buff 从单个 `buffs.json` 拆为 `buff-manifest.json + environment/combat/survival/movement` 四个分包；运行时先聚合并检查跨包重复 ID，再统一注册。StreamingAssets 文本读取接入 Android/WebGL 的 `UnityWebRequest` 协程路径。
 
 ## 修改后自动测试
 
 - Buff 冒烟测试：`Assets/GameTest/Buff/BuffSmokeTests.cs`；分类：`Buff.Smoke`。
 - GM Buff 目标解析与时长覆盖：`Assets/GameTest/Buff/GmBuffTargetingTests.cs`；分类：`Buff.GM`。
 - 水体地块驱动 Buff 回归：`Assets/GameTest/Dimension/DimensionTileEffectTests.cs`；分类：`Dimension.TileEffects`。
-- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Buff.Smoke`；无需视觉模型、截图或测试工具卡片。
+- 先按 `flatworld-test-automation` 的触发门槛判断；普通局部表现事件清理只做静态诊断、相关程序集编译和 Console 检查，达到系统级门槛或用户明确要求时才执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Buff.Smoke`。
 - 仅按“高耦合联动”表命中项追加分类。
 - 新行为先增加确定性回归测试；测试失败时优先修复生产代码，禁止删除测试或弱化断言。
 - 只有 Buff 图标、粒子、界面布局或最终画面观感发生变化时才做定向截图。
