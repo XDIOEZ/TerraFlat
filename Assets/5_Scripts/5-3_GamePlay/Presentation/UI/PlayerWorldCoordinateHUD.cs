@@ -1,9 +1,10 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 
 /// <summary>
 /// 为本地玩家维护一个屏幕左上角的世界坐标 HUD。
-/// 仅实例化已制作好的 UI_PlayerWorldCoordinate Prefab；每帧在角色移动完成后刷新世界坐标或经纬度。
+/// 仅实例化已制作好的 UI_PlayerWorldCoordinate Prefab；本地玩家以 10Hz 刷新动态坐标，远端玩家不启动轮询。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Player))]
@@ -19,6 +20,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private const string GeographicFormat = "经 {0:0.00}°  纬 {1:0.00}°";
     private const string CoordinateTitle = "世界坐标 / POSITION";
     private const string GeographicTitle = "地理坐标 / GEO POSITION";
+    private const float RefreshIntervalSeconds = 0.1f;
 
     private Player player;
     private GameObject viewObject;
@@ -30,6 +32,10 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private PlayerWorldCoordinateDisplayMode lastDisplayMode =
         (PlayerWorldCoordinateDisplayMode)(-1);
     private bool missingPrefabLogged;
+    private Coroutine refreshCoroutine;
+
+    /// <summary>Profiler 可读取的坐标刷新节拍次数。</summary>
+    public int RefreshTickCount { get; private set; }
 
     #endregion
 
@@ -45,21 +51,18 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         ResolvePlayer();
         if (player != null)
             player.ProfileContextChanged += HandleProfileContextChanged;
+        PlayerWorldCoordinateDisplayPreferences.Changed += HandleDisplayPreferenceChanged;
 
-        RefreshVisibility();
-    }
-
-    /// <summary>在移动与物理更新结束后刷新，保证展示的是玩家本帧最终坐标。</summary>
-    private void LateUpdate()
-    {
-        RefreshVisibility();
+        RefreshForProfileContext();
     }
 
     private void OnDisable()
     {
         if (player != null)
             player.ProfileContextChanged -= HandleProfileContextChanged;
+        PlayerWorldCoordinateDisplayPreferences.Changed -= HandleDisplayPreferenceChanged;
 
+        StopRefreshLoop();
         SetViewActive(false);
     }
 
@@ -140,6 +143,9 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         }
 
         viewRect.SetAsFirstSibling();
+        lastCoordinateX = int.MinValue;
+        lastCoordinateY = int.MinValue;
+        lastDisplayMode = (PlayerWorldCoordinateDisplayMode)(-1);
         return true;
     }
 
@@ -235,7 +241,54 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
 
     private void HandleProfileContextChanged()
     {
+        RefreshForProfileContext();
+    }
+
+    private void HandleDisplayPreferenceChanged()
+    {
+        lastDisplayMode = (PlayerWorldCoordinateDisplayMode)(-1);
+        if (CanDisplay())
+            RefreshVisibility();
+    }
+
+    /// <summary>资格变化时只为本地玩家启动低频刷新循环。</summary>
+    private void RefreshForProfileContext()
+    {
+        if (!CanDisplay())
+        {
+            StopRefreshLoop();
+            SetViewActive(false);
+            return;
+        }
+
         RefreshVisibility();
+        if (refreshCoroutine == null)
+            refreshCoroutine = StartCoroutine(RefreshCoordinatesCoroutine());
+    }
+
+    private IEnumerator RefreshCoordinatesCoroutine()
+    {
+        WaitForSecondsRealtime wait = new WaitForSecondsRealtime(RefreshIntervalSeconds);
+        while (CanDisplay())
+        {
+            yield return wait;
+            if (!CanDisplay())
+                break;
+
+            RefreshTickCount++;
+            RefreshVisibility();
+        }
+
+        refreshCoroutine = null;
+    }
+
+    private void StopRefreshLoop()
+    {
+        if (refreshCoroutine == null)
+            return;
+
+        StopCoroutine(refreshCoroutine);
+        refreshCoroutine = null;
     }
 
     #endregion

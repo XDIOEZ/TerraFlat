@@ -538,6 +538,12 @@ namespace FlatWorld.GameTest.UI
             Assert.That(uiManagerSource, Does.Contain("public Canvas RootCanvas"));
             Assert.That(uiManagerSource, Does.Contain("InteractionSurfaceRevision"));
             Assert.That(uiManagerSource, Does.Contain("NotifyInteractionSurfaceChanged"));
+            Assert.That(uiManagerSource, Does.Contain("PanelQueryCacheRebuildCount"));
+            Assert.That(uiManagerSource, Does.Contain("panelQueryCacheRevision"));
+            Assert.That(
+                uiManagerSource,
+                Does.Contain(
+                    "child.GetComponentsInChildren<BasePanel>(true, panelQueryBuffer);"));
 
             Assert.That(gamepadControllerSource, Does.Contain("hoverTargetDirty"));
             Assert.That(gamepadControllerSource, Does.Contain("StationaryHoverRefreshSeconds"));
@@ -549,6 +555,52 @@ namespace FlatWorld.GameTest.UI
                 inputBindingLauncherSource,
                 Does.Contain("bindingPanel?.RefreshUIComponents();"),
                 "动态生成按键行后必须显式提交 BasePanel 层级快照。");
+            Assert.That(inputBindingLauncherSource, Does.Contain("pooledRows"));
+            Assert.That(inputBindingLauncherSource, Does.Contain("RetainedRowCount"));
+            Assert.That(inputBindingLauncherSource, Does.Not.Contain("Canvas.ForceUpdateCanvases()"));
+            Assert.That(
+                inputBindingLauncherSource,
+                Does.Not.Contain("LayoutRebuilder.ForceRebuildLayoutImmediate"));
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        public void RemainingUiHotPathsUsePoolsEventsAndLocalLayoutMarks()
+        {
+            string saveListSource = File.ReadAllText(
+                "Assets/5_Scripts/5-3_GamePlay/Core/Manager/SaveDataManager_UI.cs");
+            string resizerSource = File.ReadAllText(
+                "Assets/5_Scripts/5-5_UI/UIDragResizer.cs");
+            string contentMarkerSource = File.ReadAllText(
+                "Assets/5_Scripts/5-5_UI/UI_Content.cs");
+            string paginationSource = File.ReadAllText(
+                "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/SettingsActionListPagination.cs");
+            string coordinateHudSource = File.ReadAllText(
+                "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/PlayerWorldCoordinateHUD.cs");
+            string coordinatePreferencesSource = File.ReadAllText(
+                "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/PlayerWorldCoordinateDisplayPreferences.cs");
+
+            Assert.That(saveListSource, Does.Contain("RetainedEntryCount"));
+            Assert.That(saveListSource, Does.Contain("pooledRows"));
+            Assert.That(saveListSource, Does.Contain("LayoutRebuilder.MarkLayoutForRebuild"));
+            Assert.That(saveListSource, Does.Not.Contain("Canvas.ForceUpdateCanvases()"));
+            Assert.That(saveListSource, Does.Not.Contain("ClearDynamicButtons"));
+
+            Assert.That(resizerSource, Does.Contain("IPointerMoveHandler"));
+            Assert.That(resizerSource, Does.Not.Contain("void Update()"));
+            Assert.That(contentMarkerSource, Does.Not.Contain("void Update()"));
+
+            Assert.That(paginationSource, Does.Contain("RefreshGamepadNavigationState"));
+            Assert.That(paginationSource, Does.Contain("LayoutRebuilder.MarkLayoutForRebuild"));
+            Assert.That(paginationSource, Does.Not.Contain("Canvas.ForceUpdateCanvases()"));
+            Assert.That(
+                paginationSource,
+                Does.Not.Contain("LayoutRebuilder.ForceRebuildLayoutImmediate"));
+
+            Assert.That(coordinatePreferencesSource, Does.Contain("public static event Action Changed;"));
+            Assert.That(coordinateHudSource, Does.Contain("WaitForSecondsRealtime"));
+            Assert.That(coordinateHudSource, Does.Contain("RefreshIntervalSeconds = 0.1f"));
+            Assert.That(coordinateHudSource, Does.Not.Contain("private void LateUpdate()"));
         }
 
         [Test]
@@ -580,6 +632,7 @@ namespace FlatWorld.GameTest.UI
                 panel.GetButton("动态按钮");
                 panel.PrepareForGamepadNavigation("动态按钮", false, false);
                 panel.PrepareForGamepadNavigation("动态按钮", false, false);
+                panel.RefreshGamepadNavigationState();
 
                 Assert.That(
                     panel.HierarchySnapshotRebuildCount,

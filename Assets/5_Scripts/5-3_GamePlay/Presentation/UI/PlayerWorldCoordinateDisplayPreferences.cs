@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -26,6 +27,9 @@ public static class PlayerWorldCoordinateDisplayPreferences
     private static bool initialized;
     private static PlayerWorldCoordinateDisplayMode currentMode;
 
+    /// <summary>显示格式实际变化后广播，常驻 HUD 无需逐帧读取偏好。</summary>
+    public static event Action Changed;
+
     #endregion
 
     #region 公共接口
@@ -43,10 +47,15 @@ public static class PlayerWorldCoordinateDisplayPreferences
     /// <summary>立即保存并应用新的坐标显示格式。</summary>
     public static void SetMode(PlayerWorldCoordinateDisplayMode mode)
     {
-        currentMode = Normalize(mode);
-        initialized = true;
+        EnsureInitialized();
+        PlayerWorldCoordinateDisplayMode nextMode = Normalize(mode);
+        if (currentMode == nextMode)
+            return;
+
+        currentMode = nextMode;
         PlayerPrefs.SetInt(DisplayModeKey, (int)currentMode);
         PlayerPrefs.Save();
+        Changed?.Invoke();
     }
 
     /// <summary>恢复默认的世界坐标显示。</summary>
@@ -64,6 +73,7 @@ public static class PlayerWorldCoordinateDisplayPreferences
     {
         initialized = false;
         currentMode = DefaultMode;
+        Changed = null;
     }
 
     private static void EnsureInitialized()

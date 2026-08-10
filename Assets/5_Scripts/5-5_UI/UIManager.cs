@@ -45,6 +45,16 @@ public class UIManager : MonoBehaviour
     private int interactionSurfaceRevision;
     private int lastHandledCancelFrame = -1;
 
+    // 顶层面板查询只在交互面修订号变化时重新扫描，避免手柄路径逐帧分配数组。
+    private readonly List<BasePanel> panelQueryBuffer = new List<BasePanel>(16);
+    private Transform panelQueryCacheRoot;
+    private int panelQueryCacheRevision = int.MinValue;
+    private BasePanel cachedTopmostGamepadPanel;
+    private BasePanel cachedTopmostCancelPanel;
+
+    /// <summary>Profiler 可读取的顶层面板缓存重建次数。</summary>
+    public int PanelQueryCacheRebuildCount { get; private set; }
+
     /// <summary>缓存的 PanelRoot Canvas；仅在根节点失效或替换时重新解析。</summary>
     public Canvas RootCanvas
     {
@@ -280,8 +290,10 @@ public class UIManager : MonoBehaviour
     /// </summary>
     public bool TryCloseTopmostCancelPanel(BasePanel excludedPanel = null)
     {
-        EnsurePanelRootExists();
-        BasePanel panel = FindTopmostCancelPanel(panelRoot, excludedPanel);
+        EnsurePanelQueryCache();
+        BasePanel panel = cachedTopmostCancelPanel;
+        if (panel == excludedPanel)
+            panel = FindTopmostCancelPanel(panelRoot, excludedPanel);
         if (panel == null)
             return false;
 
@@ -295,8 +307,8 @@ public class UIManager : MonoBehaviour
     /// </summary>
     public bool SelectTopmostGamepadPanel()
     {
-        EnsurePanelRootExists();
-        BasePanel panel = FindTopmostGamepadPanel(panelRoot);
+        EnsurePanelQueryCache();
+        BasePanel panel = cachedTopmostGamepadPanel;
         if (panel == null)
             return false;
 
@@ -307,48 +319,65 @@ public class UIManager : MonoBehaviour
     /// <summary>判断当前是否存在打开且已接入手柄焦点导航的面板。</summary>
     public bool HasOpenGamepadNavigationPanel()
     {
-        return panelRoot != null && FindTopmostGamepadPanel(panelRoot) != null;
+        EnsurePanelQueryCache();
+        return cachedTopmostGamepadPanel != null;
     }
 
     /// <summary>判断当前是否存在打开且需要接管玩法输入的模态手柄面板。</summary>
     public bool HasOpenModalGamepadNavigationPanel()
     {
-        if (panelRoot == null)
-            return false;
-
-        for (int childIndex = panelRoot.childCount - 1; childIndex >= 0; childIndex--)
-        {
-            Transform child = panelRoot.GetChild(childIndex);
-            BasePanel[] childPanels = child.GetComponentsInChildren<BasePanel>(true);
-            for (int panelIndex = childPanels.Length - 1; panelIndex >= 0; panelIndex--)
-            {
-                BasePanel panel = childPanels[panelIndex];
-                if (panel != null && panel.IsCancelShortcutTarget)
-                    return true;
-            }
-        }
-
-        return false;
+        EnsurePanelQueryCache();
+        return cachedTopmostCancelPanel != null;
     }
 
-    private static BasePanel FindTopmostGamepadPanel(Transform root)
+    /// <summary>按当前修订号缓存最上层导航面板和模态取消目标。</summary>
+    private void EnsurePanelQueryCache()
     {
-        if (root == null)
-            return null;
+        // 缓存命中时不再重复解析 Canvas、UIScaleController 或其它根组件。
+        if (panelRoot == null)
+            EnsurePanelRootExists();
 
-        for (int childIndex = root.childCount - 1; childIndex >= 0; childIndex--)
+        if (panelQueryCacheRoot == panelRoot &&
+            panelQueryCacheRevision == interactionSurfaceRevision)
         {
-            Transform child = root.GetChild(childIndex);
-            BasePanel[] childPanels = child.GetComponentsInChildren<BasePanel>(true);
-            for (int panelIndex = childPanels.Length - 1; panelIndex >= 0; panelIndex--)
+            return;
+        }
+
+        cachedTopmostGamepadPanel = null;
+        cachedTopmostCancelPanel = null;
+        panelQueryBuffer.Clear();
+
+        if (panelRoot != null)
+        {
+            for (int childIndex = panelRoot.childCount - 1; childIndex >= 0; childIndex--)
             {
-                BasePanel panel = childPanels[panelIndex];
-                if (panel != null && panel.IsOpen() && panel.IsGamepadNavigationPrepared)
-                    return panel;
+                Transform child = panelRoot.GetChild(childIndex);
+                child.GetComponentsInChildren<BasePanel>(true, panelQueryBuffer);
+                for (int panelIndex = panelQueryBuffer.Count - 1; panelIndex >= 0; panelIndex--)
+                {
+                    BasePanel panel = panelQueryBuffer[panelIndex];
+                    if (panel == null)
+                        continue;
+
+                    if (cachedTopmostGamepadPanel == null &&
+                        panel.IsOpen() && panel.IsGamepadNavigationPrepared)
+                    {
+                        cachedTopmostGamepadPanel = panel;
+                    }
+
+                    if (cachedTopmostCancelPanel == null && panel.IsCancelShortcutTarget)
+                        cachedTopmostCancelPanel = panel;
+                }
+
+                panelQueryBuffer.Clear();
+                if (cachedTopmostGamepadPanel != null && cachedTopmostCancelPanel != null)
+                    break;
             }
         }
 
-        return null;
+        panelQueryCacheRoot = panelRoot;
+        panelQueryCacheRevision = interactionSurfaceRevision;
+        PanelQueryCacheRebuildCount++;
     }
 
     public static BasePanel FindTopmostCancelPanel(

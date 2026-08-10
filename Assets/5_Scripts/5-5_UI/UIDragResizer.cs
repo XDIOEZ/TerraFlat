@@ -1,10 +1,22 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
-using System.Collections.Generic;
 
+/// <summary>
+/// 通过右键拖拽调整 RectTransform 四边与四角，并限制最小/最大尺寸。
+/// 边缘命中只在 EventSystem 指针事件发生时计算，静止状态不会保留组件级帧循环。
+/// </summary>
+[DisallowMultipleComponent]
 [RequireComponent(typeof(RectTransform))]
-public class UIDragResizer : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
+public class UIDragResizer : MonoBehaviour,
+    IPointerEnterHandler,
+    IPointerMoveHandler,
+    IPointerExitHandler,
+    IBeginDragHandler,
+    IDragHandler,
+    IEndDragHandler
 {
+    #region 配置与状态
+
     [Header("设置")]
     public float edgeWidth = 10f;
     public float minWidth = 100f;
@@ -34,54 +46,33 @@ public class UIDragResizer : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
     private enum ResizeDir { None, Left, Right, Top, Bottom, TopLeft, TopRight, BottomLeft, BottomRight }
 
-    void Awake()
+    #endregion
+
+    #region 生命周期与指针事件
+
+    private void Awake()
     {
         rt = GetComponent<RectTransform>();
     }
 
-    void Update()
+    private void OnDisable()
     {
-        // 非拖拽时更新 hover 方向（使用本地坐标判断）
-        if (isDragging) return;
-
-        Vector2 local;
-        // 尝试使用当前 EventCamera，如果没有就传 null（Screen Space Overlay）
-        if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null)
-        {
-            // no-op: we don't rely on event camera here
-        }
-
-        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rt, Input.mousePosition, null, out local))
-        {
-            currentHover = ResizeDir.None;
-            UpdateCursor();
-            return;
-        }
-
-        Rect r = rt.rect;
-        float aw = edgeWidth / Mathf.Max(rt.lossyScale.x, rt.lossyScale.y);
-
-        bool left = local.x <= r.xMin + aw;
-        bool right = local.x >= r.xMax - aw;
-        bool top = local.y >= r.yMax - aw;
-        bool bottom = local.y <= r.yMin + aw;
-
-        if (left && top) currentHover = ResizeDir.TopLeft;
-        else if (right && top) currentHover = ResizeDir.TopRight;
-        else if (left && bottom) currentHover = ResizeDir.BottomLeft;
-        else if (right && bottom) currentHover = ResizeDir.BottomRight;
-        else if (left) currentHover = ResizeDir.Left;
-        else if (right) currentHover = ResizeDir.Right;
-        else if (top) currentHover = ResizeDir.Top;
-        else if (bottom) currentHover = ResizeDir.Bottom;
-        else currentHover = ResizeDir.None;
-
+        isDragging = false;
+        lockedDir = ResizeDir.None;
+        currentHover = ResizeDir.None;
         UpdateCursor();
     }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        // 直接 rely on Update hover — no-op here
+        RefreshHoverDirection(eventData.position, eventData.enterEventCamera);
+    }
+
+    /// <summary>仅在指针实际移动时重新计算命中的缩放边缘。</summary>
+    public void OnPointerMove(PointerEventData eventData)
+    {
+        if (!isDragging)
+            RefreshHoverDirection(eventData.position, eventData.enterEventCamera);
     }
 
     public void OnPointerExit(PointerEventData eventData)
@@ -96,6 +87,7 @@ public class UIDragResizer : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     public void OnBeginDrag(PointerEventData eventData)
     {
         if (eventData.button != PointerEventData.InputButton.Right) return;
+        RefreshHoverDirection(eventData.position, eventData.pressEventCamera);
         if (currentHover == ResizeDir.None) return;
 
         // 锁定方向
@@ -179,7 +171,58 @@ public class UIDragResizer : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     {
         isDragging = false;
         lockedDir = ResizeDir.None;
-        // hover 会在 Update 里恢复
+        RefreshHoverDirection(eventData.position, eventData.enterEventCamera);
+    }
+
+    #endregion
+
+    #region 边缘计算与光标
+
+    /// <summary>把屏幕指针位置转换为面板本地坐标，并计算当前缩放方向。</summary>
+    private void RefreshHoverDirection(Vector2 screenPosition, Camera eventCamera)
+    {
+        if (rt == null || isDragging)
+            return;
+
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                rt,
+                screenPosition,
+                eventCamera,
+                out Vector2 local))
+        {
+            currentHover = ResizeDir.None;
+            UpdateCursor();
+            return;
+        }
+
+        Rect rect = rt.rect;
+        if (!rect.Contains(local))
+        {
+            currentHover = ResizeDir.None;
+            UpdateCursor();
+            return;
+        }
+
+        float scale = Mathf.Max(
+            0.0001f,
+            Mathf.Max(Mathf.Abs(rt.lossyScale.x), Mathf.Abs(rt.lossyScale.y)));
+        float activeEdgeWidth = edgeWidth / scale;
+        bool left = local.x <= rect.xMin + activeEdgeWidth;
+        bool right = local.x >= rect.xMax - activeEdgeWidth;
+        bool top = local.y >= rect.yMax - activeEdgeWidth;
+        bool bottom = local.y <= rect.yMin + activeEdgeWidth;
+
+        if (left && top) currentHover = ResizeDir.TopLeft;
+        else if (right && top) currentHover = ResizeDir.TopRight;
+        else if (left && bottom) currentHover = ResizeDir.BottomLeft;
+        else if (right && bottom) currentHover = ResizeDir.BottomRight;
+        else if (left) currentHover = ResizeDir.Left;
+        else if (right) currentHover = ResizeDir.Right;
+        else if (top) currentHover = ResizeDir.Top;
+        else if (bottom) currentHover = ResizeDir.Bottom;
+        else currentHover = ResizeDir.None;
+
+        UpdateCursor();
     }
 
     private void UpdateCursor()
@@ -215,4 +258,6 @@ public class UIDragResizer : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
             Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
         }
     }
+
+    #endregion
 }

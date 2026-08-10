@@ -6,12 +6,28 @@ using TMPro;
 using Sirenix.OdinInspector;
 using UnityEngine.EventSystems;
 
+/// <summary>
+/// 维护本地存档与角色选择面板的数据、选择态和手柄焦点。
+/// 两类动态条目共享复用池；列表刷新只更新业务值、差异选择态和所属 Content 的延迟布局标记。
+/// </summary>
 public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 {
     #region 字段定义
 
     private const string SaveItemNamePrefix = "存档条目_";
     private const string PlayerItemNamePrefix = "角色条目_";
+
+    /// <summary>缓存动态条目的组件引用；复用时只替换业务数据和父容器。</summary>
+    private sealed class SelectionRow
+    {
+        public GameObject Root;
+        public Button Button;
+        public ButtonInfoData Info;
+        public GameSaveItemView View;
+        public TextMeshProUGUI Label;
+        public string Value;
+        public bool IsSave;
+    }
 
     [Header("保存与加载")]
     public SaveDataMgr saveAndLoad;
@@ -27,6 +43,24 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     public Transform SaveSelectButton_Parent_Content; // 存档按钮父物体
     public Transform Player_SelectButton_Parent_Content; // 玩家按钮父物体
     public string BasePanelName = "存档选择面板";
+
+    private readonly List<SelectionRow> saveRows = new List<SelectionRow>();
+    private readonly List<SelectionRow> playerRows = new List<SelectionRow>();
+    private readonly Stack<SelectionRow> pooledRows = new Stack<SelectionRow>();
+    private readonly Dictionary<GameObject, SelectionRow> rowsByObject =
+        new Dictionary<GameObject, SelectionRow>();
+    private readonly List<string> playerNameBuffer = new List<string>();
+    private SelectionRow selectedSaveRow;
+    private SelectionRow selectedPlayerRow;
+
+    /// <summary>当前显示的存档条目数量。</summary>
+    public int ActiveSaveEntryCount => saveRows.Count;
+
+    /// <summary>当前显示的玩家条目数量。</summary>
+    public int ActivePlayerEntryCount => playerRows.Count;
+
+    /// <summary>动态列表当前保留的条目总数，供 Profiler 检查复用是否稳定。</summary>
+    public int RetainedEntryCount => saveRows.Count + playerRows.Count + pooledRows.Count;
 
     // 移除了原来的所有UI控件字段，通过BaseUIManager获取引用
 
@@ -121,32 +155,22 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             return;
         }
 
+        ClearSelectedRow(ref selectedSaveRow);
+        ClearSelectedRow(ref selectedPlayerRow);
+
         // 刷新存档时不保留旧世界的角色列表，避免焦点和数据同时指向过期条目。
-        ClearDynamicButtons(SaveSelectButton_Parent_Content);
-        ClearDynamicButtons(Player_SelectButton_Parent_Content);
+        bool playerStructureChanged = ReleaseRows(playerRows);
+        bool saveStructureChanged = SyncRows(
+            saveRows,
+            SaveSelectButton_Parent_Content,
+            saves,
+            true,
+            out bool createdRow);
 
-        // 生成存档按钮
-        for (int index = 0; index < saves.Count; index++)
-        {
-            string saveName = saves[index];
-            GameObject buttonObj = Instantiate(Save_Player_SelectButton_Prefab, SaveSelectButton_Parent_Content);
-            buttonObj.name = SaveItemNamePrefix + (index + 1);
-
-            ButtonInfoData SaveInfo = buttonObj.GetComponent<ButtonInfoData>();
-            if (SaveInfo != null)
-            {
-                SaveInfo.Name = saveName;
-                SaveInfo.Path = Path.Combine(PathToSaveFolder, saveName + ".bytes");
-            }
-
-            SetItemLabel(buttonObj, saveName);
-
-            var btn = buttonObj.GetComponent<Button>();
-            if (btn != null)
-                btn.onClick.AddListener(() => OnClick_List_Save_Button(saveName, buttonObj));
-        }
-
-        RefreshGamepadNavigation();
+        CommitDynamicListChanges(
+            saveStructureChanged,
+            playerStructureChanged,
+            createdRow);
     }
 
     /// <summary>
@@ -160,29 +184,21 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             return;
         }
 
-        ClearDynamicButtons(Player_SelectButton_Parent_Content);
-
+        ClearSelectedRow(ref selectedPlayerRow);
+        playerNameBuffer.Clear();
         if (saveAndLoad?.SaveData?.PlayerData_Dict != null)
         {
-            int index = 0;
             foreach (string playerName in saveAndLoad.SaveData.PlayerData_Dict.Keys)
-            {
-                GameObject buttonObj = Instantiate(Save_Player_SelectButton_Prefab, Player_SelectButton_Parent_Content);
-                buttonObj.name = PlayerItemNamePrefix + (++index);
-
-                ButtonInfoData SaveInfo = buttonObj.GetComponent<ButtonInfoData>();
-                if (SaveInfo != null)
-                    SaveInfo.Name = playerName;
-
-                SetItemLabel(buttonObj, playerName);
-
-                var btn = buttonObj.GetComponent<Button>();
-                if (btn != null)
-                    btn.onClick.AddListener(() => OnClick_List_PlayerName_Button(playerName, buttonObj));
-            }
+                playerNameBuffer.Add(playerName);
         }
 
-        RefreshGamepadNavigation();
+        bool playerStructureChanged = SyncRows(
+            playerRows,
+            Player_SelectButton_Parent_Content,
+            playerNameBuffer,
+            false,
+            out bool createdRow);
+        CommitDynamicListChanges(false, playerStructureChanged, createdRow);
     }
     #endregion
 
@@ -198,23 +214,8 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         if (buttonObj == null)
             return;
 
-        // 清除旧选择态
-        foreach (var saveInfo in SaveSelectButton_Parent_Content.GetComponentsInChildren<ButtonInfoData>())
-        {
-            GameSaveItemView itemView = saveInfo.GetComponent<GameSaveItemView>();
-            if (itemView != null)
-                itemView.SetSelected(false);
-            else if (saveInfo.SelectImage != null)
-                saveInfo.SelectImage.enabled = false;
-        }
-
-        // 启用当前条目的选择态
-        var currentInfo = buttonObj.GetComponent<ButtonInfoData>();
-        GameSaveItemView currentView = buttonObj.GetComponent<GameSaveItemView>();
-        if (currentView != null)
-            currentView.SetSelected(true);
-        else if (currentInfo != null && currentInfo.SelectImage != null)
-            currentInfo.SelectImage.enabled = true;
+        rowsByObject.TryGetValue(buttonObj, out SelectionRow currentRow);
+        SetSelectedRow(ref selectedSaveRow, currentRow, buttonObj);
 
         // 使用BaseUIManager更新文本
         TryGetSavePanel(out BasePanel panel);
@@ -239,11 +240,8 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 
     private void OnClick_List_PlayerName_Button(string playerName, GameObject buttonObj)
     {
-        foreach (GameSaveItemView itemView in Player_SelectButton_Parent_Content.GetComponentsInChildren<GameSaveItemView>())
-            itemView.SetSelected(false);
-
-        if (buttonObj != null)
-            buttonObj.GetComponent<GameSaveItemView>()?.SetSelected(true);
+        SelectionRow currentRow = FindRow(playerRows, playerName, buttonObj);
+        SetSelectedRow(ref selectedPlayerRow, currentRow, buttonObj);
 
         if (saveAndLoad != null)
         {
@@ -289,10 +287,15 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// </summary>
     public void ClearSaveSelection()
     {
-        ClearDynamicButtons(Player_SelectButton_Parent_Content);
+        ClearSelectedRow(ref selectedSaveRow);
+        ClearSelectedRow(ref selectedPlayerRow);
+        bool playerStructureChanged = ReleaseRows(playerRows);
 
         if (!TryGetSavePanel(out BasePanel panel))
+        {
+            CommitDynamicListChanges(false, playerStructureChanged, false);
             return;
+        }
 
         panel.SetText(GameManager.GameSaveSelectedTextKey, GameManager.GameSaveNoSelectionText);
         panel.SetInputFieldText(GameManager.GameSavePlayerInputKey, string.Empty);
@@ -301,7 +304,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         if (deleteButton != null)
             deleteButton.interactable = false;
 
-        RefreshGamepadNavigation(panel);
+        CommitDynamicListChanges(false, playerStructureChanged, false, panel);
         FocusFirstSaveOrBackForGamepad();
     }
     #endregion
@@ -314,8 +317,8 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         if (!TryGetSavePanel(out BasePanel panel))
             return;
 
-        RefreshGamepadNavigation(panel);
-        Button firstPlayer = FindFirstInteractableButton(Player_SelectButton_Parent_Content);
+        RefreshGamepadNavigation(panel, false);
+        Button firstPlayer = FindFirstInteractableButton(playerRows);
         if (FocusGamepadControl(panel, firstPlayer))
             return;
 
@@ -337,8 +340,8 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         if (!TryGetSavePanel(out BasePanel panel))
             return;
 
-        RefreshGamepadNavigation(panel);
-        Button firstSave = FindFirstInteractableButton(SaveSelectButton_Parent_Content);
+        RefreshGamepadNavigation(panel, false);
+        Button firstSave = FindFirstInteractableButton(saveRows);
         if (FocusGamepadControl(panel, firstSave))
             return;
 
@@ -346,34 +349,28 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             panel.SelectDefaultForGamepad();
     }
 
-    /// <summary>刷新动态布局、导航关系和滚动跟随器。</summary>
-    private void RefreshGamepadNavigation(BasePanel panel = null)
+    /// <summary>刷新导航状态；仅在新增条目时重建一次 BasePanel 层级快照。</summary>
+    private void RefreshGamepadNavigation(BasePanel panel = null, bool hierarchyChanged = false)
     {
         if (panel == null && !TryGetSavePanel(out panel))
             return;
-        if (panel == null || !panel.IsGamepadNavigationPrepared)
+        if (panel == null)
             return;
 
-        Canvas.ForceUpdateCanvases();
-        ForceRebuildLayout(SaveSelectButton_Parent_Content);
-        ForceRebuildLayout(Player_SelectButton_Parent_Content);
-        panel.RefreshUIComponents();
+        if (hierarchyChanged)
+            panel.RefreshUIComponents();
+        else
+            panel.RefreshGamepadNavigationState();
     }
 
-    private static void ForceRebuildLayout(Transform content)
+    private static Button FindFirstInteractableButton(IReadOnlyList<SelectionRow> rows)
     {
-        if (content is RectTransform rectTransform)
-            LayoutRebuilder.ForceRebuildLayoutImmediate(rectTransform);
-    }
-
-    private static Button FindFirstInteractableButton(Transform content)
-    {
-        if (content == null)
+        if (rows == null)
             return null;
 
-        Button[] buttons = content.GetComponentsInChildren<Button>(false);
-        foreach (Button button in buttons)
+        for (int i = 0; i < rows.Count; i++)
         {
+            Button button = rows[i]?.Button;
             if (button != null && button.IsInteractable())
                 return button;
         }
@@ -412,32 +409,259 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 
     #region 动态列表辅助
 
-    /// <summary>清除动态条目时先释放其焦点，防止 EventSystem 持有已销毁对象。</summary>
-    private static void ClearDynamicButtons(Transform content)
+    /// <summary>按索引复用条目；只有历史容量不足时才实例化新的 Prefab。</summary>
+    private bool SyncRows(
+        List<SelectionRow> activeRows,
+        Transform parent,
+        IReadOnlyList<string> values,
+        bool isSave,
+        out bool createdRow)
     {
-        if (content == null)
+        createdRow = false;
+        if (activeRows == null || parent == null || values == null)
+            return false;
+
+        for (int index = activeRows.Count - 1; index >= 0; index--)
+        {
+            if (activeRows[index]?.Root != null)
+                continue;
+
+            activeRows.RemoveAt(index);
+        }
+
+        for (int index = 0; index < values.Count; index++)
+        {
+            SelectionRow row;
+            if (index < activeRows.Count)
+            {
+                row = activeRows[index];
+            }
+            else
+            {
+                row = AcquireRow(parent, ref createdRow);
+                if (row == null)
+                    continue;
+                activeRows.Add(row);
+            }
+
+            ConfigureRow(row, values[index], isSave, index);
+            if (row.Root.transform.parent != parent)
+                row.Root.transform.SetParent(parent, false);
+            row.Root.transform.SetSiblingIndex(index);
+            if (!row.Root.activeSelf)
+                row.Root.SetActive(true);
+        }
+
+        for (int index = activeRows.Count - 1; index >= values.Count; index--)
+        {
+            ReleaseRow(activeRows[index]);
+            activeRows.RemoveAt(index);
+        }
+
+        return true;
+    }
+
+    private SelectionRow AcquireRow(Transform parent, ref bool createdRow)
+    {
+        SelectionRow row = null;
+        while (pooledRows.Count > 0 && row == null)
+        {
+            SelectionRow candidate = pooledRows.Pop();
+            if (candidate?.Root != null)
+                row = candidate;
+        }
+
+        if (row == null)
+        {
+            row = CreateRow(parent);
+            createdRow |= row != null;
+        }
+
+        return row;
+    }
+
+    private SelectionRow CreateRow(Transform parent)
+    {
+        if (Save_Player_SelectButton_Prefab == null)
+        {
+            Debug.LogError("[SaveDataManager_UI] 存档/角色条目 Prefab 未绑定。", this);
+            return null;
+        }
+
+        GameObject root = Instantiate(Save_Player_SelectButton_Prefab, parent, false);
+        root.SetActive(false);
+        SelectionRow row = new SelectionRow
+        {
+            Root = root,
+            Button = root.GetComponent<Button>(),
+            Info = root.GetComponent<ButtonInfoData>(),
+            View = root.GetComponent<GameSaveItemView>(),
+            Label = root.GetComponentInChildren<TextMeshProUGUI>(true)
+        };
+        if (row.Button == null || row.Label == null)
+        {
+            Debug.LogError("[SaveDataManager_UI] 动态条目 Prefab 缺少 Button 或文字组件。", root);
+            Destroy(root);
+            return null;
+        }
+
+        row.Button.onClick.AddListener(() => HandleRowClicked(row));
+        rowsByObject[root] = row;
+        return row;
+    }
+
+    private void ConfigureRow(SelectionRow row, string value, bool isSave, int index)
+    {
+        if (row?.Root == null)
+            return;
+
+        row.Value = value ?? string.Empty;
+        row.IsSave = isSave;
+        row.Root.name = (isSave ? SaveItemNamePrefix : PlayerItemNamePrefix) + (index + 1);
+        row.Label.text = row.Value;
+        row.Button.interactable = true;
+        if (row.Info != null)
+        {
+            row.Info.Name = row.Value;
+            row.Info.Path = isSave
+                ? Path.Combine(PathToSaveFolder, row.Value + ".bytes")
+                : string.Empty;
+        }
+
+        SetRowVisual(row, false);
+    }
+
+    private bool ReleaseRows(List<SelectionRow> activeRows)
+    {
+        if (activeRows == null || activeRows.Count == 0)
+            return false;
+
+        for (int index = activeRows.Count - 1; index >= 0; index--)
+            ReleaseRow(activeRows[index]);
+        activeRows.Clear();
+        return true;
+    }
+
+    /// <summary>条目入池前释放焦点并停用，避免旧对象继续参与本帧导航。</summary>
+    private void ReleaseRow(SelectionRow row)
+    {
+        if (row?.Root == null)
             return;
 
         EventSystem eventSystem = EventSystem.current;
         GameObject selectedObject = eventSystem != null ? eventSystem.currentSelectedGameObject : null;
-        if (selectedObject != null && selectedObject.transform.IsChildOf(content))
-            eventSystem.SetSelectedGameObject(null);
-
-        foreach (Transform child in content)
+        if (selectedObject != null &&
+            (selectedObject == row.Root || selectedObject.transform.IsChildOf(row.Root.transform)))
         {
-            // Destroy 会延迟到帧末执行；先禁用可避免旧条目继续参与本帧导航计算。
-            child.gameObject.SetActive(false);
-            Destroy(child.gameObject);
+            eventSystem.SetSelectedGameObject(null);
         }
+
+        SetRowVisual(row, false);
+        row.Value = string.Empty;
+        row.IsSave = false;
+        if (row.Info != null)
+        {
+            row.Info.Name = string.Empty;
+            row.Info.Path = string.Empty;
+        }
+
+        row.Root.SetActive(false);
+        pooledRows.Push(row);
     }
 
-    private static void SetItemLabel(GameObject buttonObj, string value)
+    private void HandleRowClicked(SelectionRow row)
     {
-        TextMeshProUGUI label = buttonObj != null
-            ? buttonObj.GetComponentInChildren<TextMeshProUGUI>(true)
-            : null;
-        if (label != null)
-            label.text = value;
+        if (row?.Root == null || !row.Root.activeInHierarchy)
+            return;
+
+        if (row.IsSave)
+            OnClick_List_Save_Button(row.Value, row.Root);
+        else
+            OnClick_List_PlayerName_Button(row.Value, row.Root);
+    }
+
+    private static SelectionRow FindRow(
+        IReadOnlyList<SelectionRow> rows,
+        string value,
+        GameObject root)
+    {
+        if (rows == null)
+            return null;
+
+        for (int index = 0; index < rows.Count; index++)
+        {
+            SelectionRow row = rows[index];
+            if (row == null)
+                continue;
+            if (root != null && row.Root == root)
+                return row;
+            if (root == null && string.Equals(row.Value, value, System.StringComparison.Ordinal))
+                return row;
+        }
+
+        return null;
+    }
+
+    private static void SetSelectedRow(
+        ref SelectionRow selectedRow,
+        SelectionRow nextRow,
+        GameObject fallbackRoot)
+    {
+        if (!ReferenceEquals(selectedRow, nextRow))
+            SetRowVisual(selectedRow, false);
+
+        selectedRow = nextRow;
+        if (nextRow != null)
+        {
+            SetRowVisual(nextRow, true);
+            return;
+        }
+
+        GameSaveItemView fallbackView = fallbackRoot?.GetComponent<GameSaveItemView>();
+        if (fallbackView != null)
+        {
+            fallbackView.SetSelected(true);
+            return;
+        }
+
+        ButtonInfoData fallbackInfo = fallbackRoot?.GetComponent<ButtonInfoData>();
+        if (fallbackInfo?.SelectImage != null)
+            fallbackInfo.SelectImage.enabled = true;
+    }
+
+    private static void ClearSelectedRow(ref SelectionRow selectedRow)
+    {
+        SetRowVisual(selectedRow, false);
+        selectedRow = null;
+    }
+
+    private static void SetRowVisual(SelectionRow row, bool selected)
+    {
+        if (row == null)
+            return;
+
+        if (row.View != null)
+            row.View.SetSelected(selected);
+        else if (row.Info?.SelectImage != null)
+            row.Info.SelectImage.enabled = selected;
+    }
+
+    /// <summary>提交局部布局和导航变化；新增组件时才扫描整个面板一次。</summary>
+    private void CommitDynamicListChanges(
+        bool saveLayoutChanged,
+        bool playerLayoutChanged,
+        bool hierarchyChanged,
+        BasePanel panel = null)
+    {
+        if (saveLayoutChanged && SaveSelectButton_Parent_Content is RectTransform saveContent)
+            LayoutRebuilder.MarkLayoutForRebuild(saveContent);
+        if (playerLayoutChanged && Player_SelectButton_Parent_Content is RectTransform playerContent)
+            LayoutRebuilder.MarkLayoutForRebuild(playerContent);
+
+        if (panel == null)
+            TryGetSavePanel(out panel);
+        if (panel != null)
+            RefreshGamepadNavigation(panel, hierarchyChanged);
     }
 
     #endregion

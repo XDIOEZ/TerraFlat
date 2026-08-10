@@ -23,7 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - UI 反馈：`Assets/5_Scripts/5-5_UI/FlatWorldUIFeedback.cs`；组件直接接收 EventSystem 事件，并用非缩放时间 DOTween 按需播放唯一缩放动画，静止时没有组件级 `Update`。
 - UI 用户偏好：`Assets/5_Scripts/5-5_UI/UIUserSettings.cs`；`UIUserSettings` 缓存 PlayerPrefs 并广播 `Changed`，`UIScaleController` 按设置、尺寸和应用恢复事件刷新。
 - 游戏内适配：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/`。
-- 玩家世界坐标 HUD：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/{PlayerWorldCoordinateHUD,PlayerWorldCoordinateDisplayPreferences}.cs`；只为本地 `Player` 创建非交互常驻卡片，并持久化世界坐标/经纬度显示偏好。
+- 玩家世界坐标 HUD：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/{PlayerWorldCoordinateHUD,PlayerWorldCoordinateDisplayPreferences}.cs`；只为本地 `Player` 创建非交互常驻卡片，以 10Hz 刷新坐标，并通过缓存偏好与 `Changed` 事件切换世界坐标/经纬度显示。
 - 保存状态 HUD：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/GameSaveStatusHUD.cs`；只实例化 `UI_SaveStatus` Prefab，显示异步保存状态，不拦截玩家输入。
 - Buff 状态 HUD：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/{PlayerBuffStatusHUD,BuffStatusRowView}.cs`；只为本地 `Player` 读取 `BuffManager.ActiveBuffs`，由增删、显式时长变化和整秒倒计时事件刷新，不保留兜底轮询。
 - 开发调试控制台：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/GMReflectionConsole.cs` 及其 `Navigation`/`Buffs` partial；F4 GM 工具是既有的运行时调试 Canvas，属于正式 Prefab UI 规则之外的开发者专用例外。
@@ -62,8 +62,10 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - `FlatWorldUIFeedback` 直接负责 EventSystem 输入；状态变化时 Kill 旧缩放 Tween 并通过 `DOScale(...).SetUpdate(true)` 重定向唯一动画，失活/销毁时必须 Kill。不得恢复手写 `Update`，也不要为禁用事件接收组件额外增加输入中继。
 - `UIUserSettings` 的 PlayerPrefs 值只在首次访问和显式写入时处理，所有修改必须走 `Set*`/`ResetToDefaults()` 并广播 `Changed`；`UIScaleController` 订阅事件，并通过 `OnRectTransformDimensionsChange`、应用焦点/暂停恢复处理显示环境变化。
 - `BasePanel` 使用一次 `GetComponentsInChildren<Component>(true, reusableList)` 建立按钮、文本、Selectable 等共享层级快照；同一结构版本内的查询、打开和导航准备不得再次扫描。直属子节点变化会自动标脏，深层动态列表完成增删后必须调用一次 `RefreshUIComponents()` 显式提交；本地化、音频、主题和通用反馈必须消费该缓存列表，不能各自重新扫描。
-- `UIManager.RootCanvas` 是虚拟光标的权威 Canvas 缓存，面板开关、排序、显隐和结构变化通过 `InteractionSurfaceRevision` 广播；`GamepadUIRuntimeController` 只在光标位置、修订号或 Canvas 尺寸变化时重新 `RaycastAll`，静止时仅保留 0.2 秒安全校验。回归/Profiler 可读取 `BasePanel.HierarchySnapshotRebuildCount`、`CachedSelectableCount`、`CanvasResolveCount` 和 `HoverRaycastCount`。
+- `UIManager.RootCanvas` 是虚拟光标的权威 Canvas 缓存，面板开关、排序、显隐和结构变化通过 `InteractionSurfaceRevision` 广播；顶层手柄/模态面板查询必须按该修订号复用结果，缓存命中时禁止重新解析根 Canvas 或扫描 `BasePanel`。`GamepadUIRuntimeController` 只在光标位置、修订号或 Canvas 尺寸变化时重新 `RaycastAll`，静止时仅保留 0.2 秒安全校验。回归/Profiler 可读取 `BasePanel.HierarchySnapshotRebuildCount`、`CachedSelectableCount`、`UIManager.PanelQueryCacheRebuildCount`、`CanvasResolveCount` 和 `HoverRaycastCount`。
 - `GamepadUISelectionFollower` 缓存所属 `ScrollRect`、Content、Viewport 和自身 RectTransform；焦点变化只覆盖该 ScrollRect 的待处理目标，通过一次 `Canvas.willRenderCanvases` 回调在帧末合并。同一容器每帧最多局部 `ForceRebuildLayoutImmediate(content)` 一次，禁止恢复 `Canvas.ForceUpdateCanvases()` 或组件级 `Update/LateUpdate`。
+- 按键绑定、存档和角色动态条目必须保留组件引用并复用历史实例；切页或刷新只更新数据、局部布局标记与前后两个选择态，只有历史容量不足时才实例化并提交一次 `BasePanel` 层级快照。可通过 `InputBindingPanelLauncher.RetainedRowCount` 与 `SaveDataManager_UI.RetainedEntryCount` 检查容量是否稳定。
+- `UIDragResizer` 只能在 `IPointerEnterHandler`、`IPointerMoveHandler` 与拖拽事件中计算边缘，不得恢复空闲 `Update`；纯定位标记组件（如 `UI_Content`）不得声明空的生命周期方法。
 
 ## UI 文案与多语言
 
@@ -77,7 +79,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 - 设置入口控制器：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/{AudioSettingsPanelLauncher,UISettingsPanelLauncher,CoordinateDisplaySettingsPanelLauncher,AutoSaveSettingsPanelLauncher,WorldStreamingSettingsPanelLauncher,DifficultySettingsPanelLauncher,InputBindingPanelLauncher,SettingsActionListPagination}.cs`。
 - 设置面板：`UI_AudioSettings`、`UI_InterfaceSettings`、`UI_CoordinateDisplaySettings`、`UI_AutoSaveSettings`、`UI_WorldStreamingSettings`、`UI_DifficultySettings`、`UI_InputBindingSettings`。
-- 按键绑定面板固定节点：`设备分页`、`键鼠分页按钮`、`手柄分页按钮`、`绑定列表/Content`、`恢复默认按钮`、`完成按钮`；动态 `UI_InputBindingRow` 固定包含 `操作名称`、`绑定值`、`修改按钮`、`清除按钮`，分页只重建行 Prefab 实例，不得运行时创建行内部视觉节点。
+- 按键绑定面板固定节点：`设备分页`、`键鼠分页按钮`、`手柄分页按钮`、`绑定列表/Content`、`恢复默认按钮`、`完成按钮`；动态 `UI_InputBindingRow` 固定包含 `操作名称`、`绑定值`、`修改按钮`、`清除按钮`，分页必须复用行池并只更新数据，不得销毁重建实例或运行时创建行内部视觉节点。
 - 设置入口按钮预制在 `Assets/2_Prefabs/2-1_UI/Menu_UI/Info_Button_List.prefab`：使用 `设置分页_界面`、`设置分页_世界`、`设置分页_会话` 三页及 `设置上一页按钮`、`设置下一页按钮`、`设置页码文本` 控制；“显示设置”位于界面页并打开独立坐标显示设置窗口。
 - 世界加载面板：`Assets/2_Prefabs/2-1_UI/Runtime/System/UI_WorldLoading.prefab`；根 Canvas 使用最高层 Overlay 并跨场景保留，固定节点为 `加载标题`、`加载状态`、`加载进度`、`加载进度文本`、`加载提示`。
 - 保存状态 HUD：`Assets/2_Prefabs/2-1_UI/Runtime/System/UI_SaveStatus.prefab`；右上角锚点（`-32,-118`，`260×52`），固定节点为 `背景`、`强调线`、`保存状态文本`，CanvasGroup 默认隐藏且不拦截输入。
@@ -92,6 +94,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 - 主菜单/新游戏/存档 Prefab 引用字段位于 `GameManager.UI.cs`。
 - 存档磁盘读写在 `SaveDataMgr.cs`，存档列表显示在 `SaveDataManager_UI.cs`。
+- `SaveDataManager_UI` 的存档/角色条目共享复用池；刷新列表只更新差异选择态并标记两个局部 Content，禁止遍历整个层级清选择或销毁重建全部按钮。
 - 主菜单控件名常量统一位于 `GameManager.UI.cs`，不要散落魔法字符串。
 - 主菜单设置入口位于 `UI_Hello.prefab` 右上角，控件名为“设置”，对应 `GameManager.MainMenuSettingsButtonKey`；`GameManager.OpenMainMenuSettings()` 通过 `RuntimeUIPrefabKeys.MainMenuSettings` 加载并注册 `UI_MainMenuSettings`，绑定“关闭按钮”“返回按钮”，设置功能本身仍为占位。
 - 新世界难度入口位于 `UI_NewGame.prefab` 底部；弹层包含官方预设/自定义主分页，自定义页再分为 `自定义分类页_战斗`、`自定义分类页_生存`、`自定义分类页_世界`、`自定义分类页_生产`。当前共 16 个 `难度_*倍率` Slider 与 `死亡掉落全部物品` Toggle，全部由 `GameManager.UI.cs` 的公开命名常量绑定；百分比文本统一命名为 `{SliderKey}_数值`。
@@ -111,6 +114,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-10：完成剩余 UI 热路径收敛：`UIManager` 按交互面修订号缓存顶层手柄/模态面板；按键绑定与存档/角色列表改为条目池和差异选择刷新；设置分页缓存首项并局部标记布局；拖拽缩放改为指针事件；坐标 HUD 仅本地玩家 10Hz 刷新并订阅偏好事件。
 - 2026-08-10：清理 UI 常驻轮询与重复扫描：Buff HUD 改为事件驱动局部布局；通用按钮反馈改用非缩放时间 DOTween；UI 用户偏好改为静态缓存广播；`BasePanel` 改为共享层级快照；虚拟光标改为缓存与按需射线；滚动焦点跟随改为缓存父级、帧末按 ScrollRect 合并并仅重建目标 Content。
 - 2026-08-09：新增 `UI_BuffStatus` 左侧中部非交互 Buff 状态 HUD；从本地玩家 `BuffManager` 读取活动 Buff，使用 `UI_BuffStatusItem` 占位图标显示名称和剩余时间，并保持对话气泡与模态面板层级契约。
 - 2026-08-09：区分常驻 HUD 与模态手柄面板；常驻模块菜单不再触发游戏内右摇杆准星退出，背包/设置等模态面板仍可接管 UI 焦点。
@@ -120,7 +124,6 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 2026-08-09：手柄 B 默认改为 UI 返回，不再触发背包开关；键盘 B 仍可开关背包，库存面板的手柄取消关闭保持可用。
 - 2026-08-09：手柄焦点到 TMP 输入框时不再自动弹出虚拟键盘，只有再次按 A/Submit 才打开；键盘 Enter 保持普通键盘输入路径。
 - 2026-08-09：游戏内 `Info_Button_List` 从 9 项单列拆为界面/世界/会话三分页；新增 `UI_CoordinateDisplaySettings` 和“显示设置”入口，可立即持久化左上角 HUD 的世界坐标或经纬度显示，有限循环世界按边界投影经纬度。
-- 2026-08-09：按键绑定行新增“清除按钮”；`InputBindingService` 使用空覆盖路径禁用单个键鼠/手柄绑定并立即保存，`UISmokeTests` 与输入回归测试覆盖节点和清除契约。
 
 ## 修改后验证
 
