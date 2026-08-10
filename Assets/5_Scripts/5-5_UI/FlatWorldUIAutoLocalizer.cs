@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using FlatWorld.Localization;
@@ -17,8 +18,18 @@ public static class FlatWorldUIAutoLocalizer
             return;
 
         TMP_Text[] texts = panelRoot.GetComponentsInChildren<TMP_Text>(true);
-        foreach (TMP_Text text in texts)
+        BindStaticTexts(texts);
+    }
+
+    /// <summary>复用面板层级快照完成本地化绑定，避免再次遍历整个 Transform 树。</summary>
+    public static void BindStaticTexts(IReadOnlyList<TMP_Text> texts)
+    {
+        if (texts == null)
+            return;
+
+        for (int i = 0; i < texts.Count; i++)
         {
+            TMP_Text text = texts[i];
             if (text == null || string.IsNullOrWhiteSpace(text.text) || !ContainsChinese(text.text))
                 continue;
 

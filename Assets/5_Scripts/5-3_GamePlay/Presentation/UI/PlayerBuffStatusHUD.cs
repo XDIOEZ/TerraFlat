@@ -7,8 +7,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 为本地玩家维护屏幕左侧中部的 Buff 提示栏。
-/// 只实例化 UI_BuffStatus 与 UI_BuffStatusItem Prefab；通过 BuffManager 生命周期事件和 0.25 秒兜底刷新，
-/// 展示玩家当前拥有的 Buff、占位图标及剩余时间。面板默认不拦截输入，没有 Buff 时整体隐藏。
+/// 只实例化 UI_BuffStatus 与 UI_BuffStatusItem Prefab；通过 BuffManager 生命周期与整秒倒计时事件刷新，
+/// 仅在条目结构变化时标记 Content 布局。面板默认不拦截输入，没有 Buff 时整体隐藏。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Player))]
@@ -22,7 +22,6 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     private const string CountNodeName = "数量文本";
     private const string EmptyNodeName = "空状态文本";
     private const string ContentNodeName = "Content";
-    private const float RefreshInterval = 0.25f;
 
     private Player player;
     private BuffManager buffManager;
@@ -34,12 +33,12 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     private TextMeshProUGUI titleText;
     private TextMeshProUGUI countText;
     private TextMeshProUGUI emptyText;
-    private bool refreshRequested = true;
-    private float nextRefreshTime;
     private bool missingPrefabLogged;
 
     private readonly List<BuffStatusRowView> rowViews = new(8);
     private readonly List<BuffInstance> buffSnapshot = new(8);
+    private readonly Dictionary<string, BuffStatusRowView> activeRows =
+        new(StringComparer.OrdinalIgnoreCase);
 
     #endregion
 
@@ -56,11 +55,41 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
         if (player != null)
             player.ProfileContextChanged += HandleProfileContextChanged;
 
-        refreshRequested = true;
+        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
+        FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
+        RefreshBinding();
     }
 
-    /// <summary>在玩家模块完成加载后补绑定 BuffManager，并按低频间隔刷新剩余时间。</summary>
-    private void LateUpdate()
+    private void OnDisable()
+    {
+        if (player != null)
+            player.ProfileContextChanged -= HandleProfileContextChanged;
+
+        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
+        UnbindBuffManager();
+        SetViewActive(false);
+    }
+
+    private void OnDestroy()
+    {
+        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
+        if (viewObject != null)
+            Destroy(viewObject);
+    }
+
+    /// <summary>模块修复或运行时补装改变玩家子层级时，按事件重新解析一次 BuffManager。</summary>
+    private void OnTransformChildrenChanged()
+    {
+        if (isActiveAndEnabled && player != null && player.IsLocalProfile)
+            RefreshBinding();
+    }
+
+    #endregion
+
+    #region 数据绑定与刷新
+
+    /// <summary>按本地玩家资格绑定一次 BuffManager；静止期间不再扫描组件。</summary>
+    private void RefreshBinding()
     {
         ResolvePlayer();
         if (player == null || !player.IsLocalProfile)
@@ -76,29 +105,8 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
             return;
         }
 
-        if (refreshRequested || Time.unscaledTime >= nextRefreshTime)
-            RefreshNow();
+        RefreshStructure();
     }
-
-    private void OnDisable()
-    {
-        if (player != null)
-            player.ProfileContextChanged -= HandleProfileContextChanged;
-
-        UnbindBuffManager();
-        SetViewActive(false);
-    }
-
-    private void OnDestroy()
-    {
-        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
-        if (viewObject != null)
-            Destroy(viewObject);
-    }
-
-    #endregion
-
-    #region 数据绑定与刷新
 
     private bool TryBindBuffManager()
     {
@@ -115,43 +123,49 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
 
         buffManager.BuffAdded += HandleBuffChanged;
         buffManager.BuffRemoved += HandleBuffChanged;
-        buffManager.BuffDurationChanged += HandleBuffChanged;
-        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
-        FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
-        refreshRequested = true;
+        buffManager.BuffDurationChanged += HandleBuffContentChanged;
+        buffManager.BuffCountdownChanged += HandleBuffContentChanged;
         return true;
     }
 
     private void UnbindBuffManager()
     {
-        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
-        if (buffManager == null)
-            return;
+        if (buffManager != null)
+        {
+            buffManager.BuffAdded -= HandleBuffChanged;
+            buffManager.BuffRemoved -= HandleBuffChanged;
+            buffManager.BuffDurationChanged -= HandleBuffContentChanged;
+            buffManager.BuffCountdownChanged -= HandleBuffContentChanged;
+        }
 
-        buffManager.BuffAdded -= HandleBuffChanged;
-        buffManager.BuffRemoved -= HandleBuffChanged;
-        buffManager.BuffDurationChanged -= HandleBuffChanged;
         buffManager = null;
+        activeRows.Clear();
     }
 
     private void HandleBuffChanged(BuffInstance _)
     {
-        refreshRequested = true;
-        nextRefreshTime = Time.unscaledTime;
+        RefreshStructure();
+    }
+
+    /// <summary>时长变化只改对应文本，不触发布局重建。</summary>
+    private void HandleBuffContentChanged(BuffInstance runtime)
+    {
+        if (runtime == null || string.IsNullOrWhiteSpace(runtime.DefinitionId))
+            return;
+
+        if (activeRows.TryGetValue(runtime.DefinitionId, out BuffStatusRowView rowView))
+            rowView.RefreshRemaining(runtime);
     }
 
     private void HandleLanguageChanged(string _)
     {
-        refreshRequested = true;
-        nextRefreshTime = Time.unscaledTime;
+        RefreshStaticTexts();
+        RefreshVisibleRows();
     }
 
-    /// <summary>读取 ActiveBuffs 快照，复用行 Prefab，完成后强制重建 Content 布局。</summary>
-    private void RefreshNow()
+    /// <summary>读取 ActiveBuffs 快照并复用行 Prefab；仅此结构入口标记 Content 布局。</summary>
+    private void RefreshStructure()
     {
-        refreshRequested = false;
-        nextRefreshTime = Time.unscaledTime + RefreshInterval;
-
         if (!EnsureView() || buffManager == null)
         {
             SetViewActive(false);
@@ -168,12 +182,20 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
 
         buffSnapshot.Sort(CompareBuffs);
         EnsureRowViews(buffSnapshot.Count);
+        activeRows.Clear();
         for (int i = 0; i < rowViews.Count; i++)
         {
             bool active = i < buffSnapshot.Count;
             rowViews[i].gameObject.SetActive(active);
             if (active)
+            {
                 rowViews[i].Bind(buffSnapshot[i]);
+                activeRows[buffSnapshot[i].DefinitionId] = rowViews[i];
+            }
+            else
+            {
+                rowViews[i].Clear();
+            }
         }
 
         if (countText != null)
@@ -182,9 +204,21 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
             emptyText.gameObject.SetActive(buffSnapshot.Count == 0);
 
         SetViewActive(buffSnapshot.Count > 0);
-        Canvas.ForceUpdateCanvases();
         if (contentRect != null)
-            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+            LayoutRebuilder.MarkLayoutForRebuild(contentRect);
+    }
+
+    /// <summary>语言切换时只刷新已显示行的内容，条目结构保持不变。</summary>
+    private void RefreshVisibleRows()
+    {
+        if (buffManager == null || activeRows.Count == 0)
+            return;
+
+        foreach (KeyValuePair<string, BuffStatusRowView> pair in activeRows)
+        {
+            if (buffManager.TryGetBuff(pair.Key, out BuffInstance runtime))
+                pair.Value.Bind(runtime);
+        }
     }
 
     private static int CompareBuffs(BuffInstance left, BuffInstance right)
@@ -324,9 +358,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
 
     private void HandleProfileContextChanged()
     {
-        refreshRequested = true;
-        if (player == null || !player.IsLocalProfile)
-            SetViewActive(false);
+        RefreshBinding();
     }
 
     private static Transform FindChild(Transform root, string childName)

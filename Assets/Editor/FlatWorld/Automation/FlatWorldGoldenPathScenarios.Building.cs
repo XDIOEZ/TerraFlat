@@ -7,6 +7,14 @@ namespace FlatWorld.Automation
     /// <summary>在真实单机新区块上验证建筑召唤器、虚影和动态占地。</summary>
     internal static partial class FlatWorldGoldenPathScenarios
     {
+        private enum StoneWallOccluderVerificationPhase
+        {
+            None,
+            WaitForPlacementRebuild,
+            WaitForRemovalRebuild,
+            Completed
+        }
+
         private const string GoldenBuildingSummonerId = "Wall_Wood_Summoner";
         private const string GoldenStoneWallTileBlockId = "TileBase_BuiltStoneWall";
         private const int GoldenStoneWallRuntimeTileId = 8;
@@ -19,6 +27,11 @@ namespace FlatWorld.Automation
         private static GameObject _buildingScenarioShadowObject;
         private static Vector3 _buildingScenarioPlacement;
         private static TileBuildingCell _buildingScenarioStoneCell;
+        private static ChunkLightOccluderRenderer _buildingScenarioLightOccluder;
+        private static StoneWallOccluderVerificationPhase _buildingScenarioOccluderPhase;
+        private static int _buildingScenarioOriginalOccluderCount;
+        private static int _buildingScenarioLastOccluderRebuildVersion;
+        private static int _buildingScenarioTerrainChangeFrame;
         private static bool _buildingScenarioStonePlaced;
         private static bool _buildingScenarioStoneScenarioCompleted;
         private static bool _buildingPlacementScenarioCompleted;
@@ -33,6 +46,11 @@ namespace FlatWorld.Automation
             _buildingScenarioShadowObject = null;
             _buildingScenarioPlacement = default;
             _buildingScenarioStoneCell = default;
+            _buildingScenarioLightOccluder = null;
+            _buildingScenarioOccluderPhase = StoneWallOccluderVerificationPhase.None;
+            _buildingScenarioOriginalOccluderCount = -1;
+            _buildingScenarioLastOccluderRebuildVersion = -1;
+            _buildingScenarioTerrainChangeFrame = -1;
             _buildingScenarioStonePlaced = false;
             _buildingScenarioStoneScenarioCompleted = false;
             _buildingPlacementScenarioCompleted = false;
@@ -84,13 +102,14 @@ namespace FlatWorld.Automation
             VerifyBuildingShadow(summonerModule);
             // 先清理木墙实体，复用已验证的安全格测试新区块石墙，避免动态占地影响候选搜索。
             CleanupBuildingPlacementObjects();
-            RunStoneWallChunkPlacementScenario(_buildingScenarioPlacement);
             RunLegacyStoneWallPreviewScenario(context);
+            CleanupBuildingPlacementObjects();
+            BeginStoneWallChunkPlacementScenario(_buildingScenarioPlacement);
             _buildingPlacementScenarioCompleted = true;
             Debug.Log(
-                $"[GoldenPath][Building] 新区块放置、动态占地与虚影验证通过：" +
-                $"cell={placementCell}, lastRejected={lastReason ?? "无"}。");
-            CleanupBuildingPlacementObjects();
+                $"[GoldenPath][Building] 新区块放置、动态占地与虚影验证通过，" +
+                $"等待跨帧检查石墙遮挡：cell={placementCell}, " +
+                $"lastRejected={lastReason ?? "无"}。");
         }
 
         private static void AssertBuildingPlacementScenarioCompleted()
@@ -111,7 +130,7 @@ namespace FlatWorld.Automation
 
         #region 新区块格子建筑
 
-        private static void RunStoneWallChunkPlacementScenario(Vector3 authorityPosition)
+        private static void BeginStoneWallChunkPlacementScenario(Vector3 authorityPosition)
         {
             ChunkMgr chunkManager = ChunkMgr.Instance;
             if (chunkManager?.RuntimeChunks == null)
@@ -144,6 +163,7 @@ namespace FlatWorld.Automation
 
                     ChunkLightOccluderRenderer lightOccluder = null;
                     int originalOccluderCount = -1;
+                    int originalRebuildVersion = -1;
                     if (chunkManager.TryGetRuntimeChunkView(
                             sample.Address,
                             out ChunkView existingView))
@@ -151,22 +171,20 @@ namespace FlatWorld.Automation
                         lightOccluder = existingView.GetComponentInChildren<
                             ChunkLightOccluderRenderer>(true);
                         originalOccluderCount = lightOccluder?.ActiveOccluderCount ?? -1;
+                        originalRebuildVersion = lightOccluder?.RebuildVersion ?? -1;
                     }
 
                     if (!TileBuildingSystem.TryPlace(placement, GoldenStoneWallTileBlockId,
                             out _buildingScenarioStoneCell, out lastReason))
                         continue;
 
-                    if (lightOccluder == null || !lightOccluder.IsBound ||
-                        lightOccluder.ActiveOccluderCount <= originalOccluderCount)
+                    _buildingScenarioStonePlaced = true;
+                    if (lightOccluder == null || !lightOccluder.IsBound)
                     {
                         throw new InvalidOperationException(
-                            $"石墙写入后光照遮挡层没有同步增加：cell={cell}, " +
-                            $"before={originalOccluderCount}, " +
-                            $"after={lightOccluder?.ActiveOccluderCount ?? -1}。");
+                            $"石墙写入后找不到已绑定的光照遮挡层：cell={cell}。");
                     }
 
-                    _buildingScenarioStonePlaced = true;
                     TerrainCell placedTerrain = _buildingScenarioStoneCell.RuntimeChunk.Terrain.GetCell(
                         _buildingScenarioStoneCell.LocalPosition.x,
                         _buildingScenarioStoneCell.LocalPosition.y);
@@ -180,26 +198,80 @@ namespace FlatWorld.Automation
                             $"石墙没有写入新区块阻挡层：cell={cell}, tile={placedTerrain.BlockingTileId}。");
                     }
 
-                    if (!TileBuildingSystem.TryRemove(_buildingScenarioStoneCell,
-                            spawnDrop: false, out string removeReason))
-                        throw new InvalidOperationException($"石墙新区块回滚失败：{removeReason}。");
-
-                    if (lightOccluder.ActiveOccluderCount != originalOccluderCount)
-                    {
-                        throw new InvalidOperationException(
-                            $"石墙移除后光照遮挡层没有恢复：cell={cell}, " +
-                            $"expected={originalOccluderCount}, " +
-                            $"actual={lightOccluder.ActiveOccluderCount}。");
-                    }
-
-                    _buildingScenarioStonePlaced = false;
-                    _buildingScenarioStoneScenarioCompleted = true;
-                    Debug.Log($"[GoldenPath][Building] 石墙已迁移到新区块阻挡层：cell={cell}, tileId={_buildingScenarioStoneCell.RuntimeTileId}。");
+                    _buildingScenarioLightOccluder = lightOccluder;
+                    _buildingScenarioOriginalOccluderCount = originalOccluderCount;
+                    _buildingScenarioLastOccluderRebuildVersion = originalRebuildVersion;
+                    _buildingScenarioTerrainChangeFrame = Time.frameCount;
+                    _buildingScenarioOccluderPhase =
+                        StoneWallOccluderVerificationPhase.WaitForPlacementRebuild;
                 }
             }
 
-            if (!_buildingScenarioStoneScenarioCompleted)
+            if (_buildingScenarioOccluderPhase == StoneWallOccluderVerificationPhase.None)
                 throw new InvalidOperationException($"玩家附近没有可验证的新区块石墙格子：{lastReason}。");
+        }
+
+        /// <summary>等待 LateUpdate 完成遮挡重建，再分两帧验证新增与移除结果。</summary>
+        private static bool TickBuildingPlacementScenario()
+        {
+            if (_buildingScenarioOccluderPhase == StoneWallOccluderVerificationPhase.Completed)
+                return true;
+            if (_buildingScenarioOccluderPhase == StoneWallOccluderVerificationPhase.None ||
+                Time.frameCount <= _buildingScenarioTerrainChangeFrame)
+            {
+                return false;
+            }
+            if (_buildingScenarioLightOccluder == null ||
+                !_buildingScenarioLightOccluder.IsBound)
+            {
+                throw new InvalidOperationException("跨帧检查石墙时光照遮挡层已经解绑或销毁。");
+            }
+            if (_buildingScenarioLightOccluder.RebuildVersion <=
+                _buildingScenarioLastOccluderRebuildVersion)
+            {
+                return false;
+            }
+
+            if (_buildingScenarioOccluderPhase ==
+                StoneWallOccluderVerificationPhase.WaitForPlacementRebuild)
+            {
+                if (_buildingScenarioLightOccluder.ActiveOccluderCount <=
+                    _buildingScenarioOriginalOccluderCount)
+                {
+                    throw new InvalidOperationException(
+                        $"石墙写入后一帧光照遮挡层没有增加：" +
+                        $"before={_buildingScenarioOriginalOccluderCount}, " +
+                        $"after={_buildingScenarioLightOccluder.ActiveOccluderCount}。");
+                }
+
+                if (!TileBuildingSystem.TryRemove(_buildingScenarioStoneCell,
+                        spawnDrop: false, out string removeReason))
+                    throw new InvalidOperationException($"石墙新区块回滚失败：{removeReason}。");
+
+                _buildingScenarioStonePlaced = false;
+                _buildingScenarioLastOccluderRebuildVersion =
+                    _buildingScenarioLightOccluder.RebuildVersion;
+                _buildingScenarioTerrainChangeFrame = Time.frameCount;
+                _buildingScenarioOccluderPhase =
+                    StoneWallOccluderVerificationPhase.WaitForRemovalRebuild;
+                return false;
+            }
+
+            if (_buildingScenarioLightOccluder.ActiveOccluderCount !=
+                _buildingScenarioOriginalOccluderCount)
+            {
+                throw new InvalidOperationException(
+                    $"石墙移除后一帧光照遮挡层没有恢复：" +
+                    $"expected={_buildingScenarioOriginalOccluderCount}, " +
+                    $"actual={_buildingScenarioLightOccluder.ActiveOccluderCount}。");
+            }
+
+            _buildingScenarioOccluderPhase = StoneWallOccluderVerificationPhase.Completed;
+            _buildingScenarioStoneScenarioCompleted = true;
+            Debug.Log(
+                $"[GoldenPath][Building] 石墙遮挡新增与移除跨帧验证通过：" +
+                $"tileId={_buildingScenarioStoneCell.RuntimeTileId}。");
+            return true;
         }
 
         #endregion

@@ -9,24 +9,38 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// 面板基类
-/// 该类用于自动查找并管理自身子控件，
-/// 帮助我们在代码中方便地操作UI控件，
-/// 提供显示与隐藏面板的接口
+/// 通用面板视图：按节点名缓存控件、管理开关状态并补齐本地化、音频和手柄导航能力。
+/// 层级结构只在初始化或显式标脏后扫描一次；动态列表完成增删后调用 RefreshUIComponents 即可重建快照。
 /// </summary>
 [RequireComponent(typeof(CanvasGroup))]
 public sealed class BasePanel : MonoBehaviour, ICancelHandler
 {
     // 每种UI类型都有一个字典 用来存储UI组件 名字就用挂接的gameObject.name 作为Key
-    private Dictionary<string, Button> buttons = new Dictionary<string, Button>();
-    private Dictionary<string, TMP_InputField> inputFields = new Dictionary<string, TMP_InputField>();
-    private Dictionary<string, TextMeshProUGUI> textElements = new Dictionary<string, TextMeshProUGUI>();
-    private Dictionary<string, Toggle> toggles = new Dictionary<string, Toggle>();
-    private Dictionary<string, Slider> sliders = new Dictionary<string, Slider>();
-    private Dictionary<string, ScrollRect> scrollRects = new Dictionary<string, ScrollRect>();
-    private Dictionary<string, Image> images = new Dictionary<string, Image>();
+    private readonly Dictionary<string, Button> buttons = new Dictionary<string, Button>();
+    private readonly Dictionary<string, TMP_InputField> inputFields = new Dictionary<string, TMP_InputField>();
+    private readonly Dictionary<string, TextMeshProUGUI> textElements = new Dictionary<string, TextMeshProUGUI>();
+    private readonly Dictionary<string, Toggle> toggles = new Dictionary<string, Toggle>();
+    private readonly Dictionary<string, Slider> sliders = new Dictionary<string, Slider>();
+    private readonly Dictionary<string, ScrollRect> scrollRects = new Dictionary<string, ScrollRect>();
+    private readonly Dictionary<string, Image> images = new Dictionary<string, Image>();
+    private readonly List<Component> hierarchyComponents = new List<Component>(128);
+    private readonly List<Button> cachedButtons = new List<Button>(32);
+    private readonly List<TMP_Text> cachedTexts = new List<TMP_Text>(32);
+    private readonly List<Selectable> cachedSelectables = new List<Selectable>(32);
     private readonly HashSet<Button> autoBoundButtons = new HashSet<Button>();
     private readonly HashSet<Toggle> autoBoundToggles = new HashSet<Toggle>();
+    private readonly HashSet<Button> autoBoundCloseButtons = new HashSet<Button>();
+    private readonly HashSet<Button> autoBoundDestroyButtons = new HashSet<Button>();
+
+    private bool hierarchySnapshotDirty = true;
+    private int hierarchySnapshotVersion;
+    private int navigationSnapshotVersion = -1;
+
+    /// <summary>Profiler 可读取的层级快照重建次数。</summary>
+    public int HierarchySnapshotRebuildCount { get; private set; }
+
+    /// <summary>当前快照内缓存的可选控件数量。</summary>
+    public int CachedSelectableCount => cachedSelectables.Count;
 
     /// <summary>
     /// 当前全局层级顺序，确保拖拽物体始终显示在最上层
@@ -89,24 +103,16 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     private void Awake()
     {
         EnsureRuntimeReferences();
-        FlatWorldUITheme.ApplyGamepadNavigationPolicy(transform);
+        EnsureHierarchySnapshot();
+        FlatWorldUITheme.ApplyGamepadNavigationPolicy(cachedSelectables);
     }
 
     #region  Unity生命周期
     public void Init()
     {
-        // 自动获取所有子对象上的UI组件
-        CollectUIComponents();
-
-        // 静态 UI 文本统一绑定到本地化表；不改动 Prefab 的视觉布局。
-        FlatWorldUIAutoLocalizer.BindStaticTexts(transform);
-
+        EnsureHierarchySnapshot();
         EnsureRuntimeReferences();
-
-        // 运行时补充音频与导航选中反馈；布局仍由 Prefab 和主题负责。
-        FlatWorldAudioUIFeedback.EnsureFor(transform);
-        FlatWorldUITheme.ApplySelectionColors(transform);
-        FlatWorldUIFeedback.EnsureFor(transform);
+        ApplyCachedRuntimeBindings();
 
         // 初始化面板状态
         if (canvasGroup != null)
@@ -158,29 +164,50 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
             canvasGroup = GetComponent<CanvasGroup>();
         }
 
-        if (Dragger == null)
-        {
-            Dragger = GetComponentInChildren<UI_Drag>(true);
-        }
-
-        if (Dragger != null)
-        {
-            CanDrag = true;
-        }
+        CanDrag = Dragger != null;
     }
     #endregion
+
+    #region 层级快照
 
     /// <summary>
     /// 自动收集所有子对象上的UI组件
     /// </summary>
     public void CollectUIComponents()
     {
+        MarkHierarchyDirty();
+        EnsureHierarchySnapshot();
+    }
+
+    /// <summary>标记面板结构已变化；下次查询前只重建一次快照。</summary>
+    public void MarkHierarchyDirty()
+    {
+        bool wasDirty = hierarchySnapshotDirty;
+        hierarchySnapshotDirty = true;
+        navigationSnapshotVersion = -1;
+        if (!wasDirty)
+            NotifyInteractionSurfaceChanged();
+    }
+
+    /// <summary>直属子节点变化时失效快照；深层动态列表仍由 RefreshUIComponents 显式提交。</summary>
+    private void OnTransformChildrenChanged()
+    {
+        MarkHierarchyDirty();
+    }
+
+    /// <summary>使用单次 Component 层级遍历重建全部名称字典和运行时列表。</summary>
+    private void EnsureHierarchySnapshot()
+    {
+        if (!hierarchySnapshotDirty)
+            return;
+
         EnsureRuntimeReferences();
 
         autoBoundButtons.RemoveWhere(button => button == null);
         autoBoundToggles.RemoveWhere(toggle => toggle == null);
+        autoBoundCloseButtons.RemoveWhere(button => button == null);
+        autoBoundDestroyButtons.RemoveWhere(button => button == null);
 
-        // 清空现有字典
         buttons.Clear();
         inputFields.Clear();
         textElements.Clear();
@@ -188,96 +215,100 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         sliders.Clear();
         scrollRects.Clear();
         images.Clear();
+        hierarchyComponents.Clear();
+        cachedButtons.Clear();
+        cachedTexts.Clear();
+        cachedSelectables.Clear();
+        Dragger = null;
+        CanDrag = false;
 
-        // 获取所有子对象上的Button组件
-        Button[] allButtons = GetComponentsInChildren<Button>(true);
-        foreach (Button btn in allButtons)
-        {
-            if (!buttons.ContainsKey(btn.name))
-            {
-                buttons[btn.name] = btn;
-                // 为按钮绑定点击事件
-                if (autoBoundButtons.Add(btn))
-                    btn.onClick.AddListener(() => OnClick(btn.name));
-            }
-        }
+        GetComponentsInChildren<Component>(true, hierarchyComponents);
+        for (int i = 0; i < hierarchyComponents.Count; i++)
+            CacheComponent(hierarchyComponents[i]);
 
-        // 获取所有子对象上的TMP_InputField组件
-        TMP_InputField[] allInputFields = GetComponentsInChildren<TMP_InputField>(true);
-        foreach (TMP_InputField inputField in allInputFields)
-        {
-            if (!inputFields.ContainsKey(inputField.name))
-            {
-                inputFields[inputField.name] = inputField;
-            }
-        }
-
-        // 获取所有子对象上的TextMeshProUGUI组件
-        TextMeshProUGUI[] allTexts = GetComponentsInChildren<TextMeshProUGUI>(true);
-        foreach (TextMeshProUGUI text in allTexts)
-        {
-            if (!textElements.ContainsKey(text.name))
-            {
-                textElements[text.name] = text;
-            }
-        }
-
-        // 获取所有子对象上的Toggle组件
-        Toggle[] allToggles = GetComponentsInChildren<Toggle>(true);
-        foreach (Toggle toggle in allToggles)
-        {
-            if (!toggles.ContainsKey(toggle.name))
-            {
-                toggles[toggle.name] = toggle;
-                // 为Toggle绑定值改变事件
-                if (autoBoundToggles.Add(toggle))
-                    toggle.onValueChanged.AddListener((value) => OnValueChanged(toggle.name, value));
-            }
-        }
-
-        // 获取所有子对象上的Slider组件
-        Slider[] allSliders = GetComponentsInChildren<Slider>(true);
-        foreach (Slider slider in allSliders)
-        {
-            if (!sliders.ContainsKey(slider.name))
-            {
-                sliders[slider.name] = slider;
-            }
-        }
-
-        // 获取所有子对象上的ScrollRect组件
-        ScrollRect[] allScrollRects = GetComponentsInChildren<ScrollRect>(true);
-        foreach (ScrollRect scrollRect in allScrollRects)
-        {
-            if (!scrollRects.ContainsKey(scrollRect.name))
-            {
-                scrollRects[scrollRect.name] = scrollRect;
-            }
-        }
-
-        // 获取所有子对象上的Image组件
-        Image[] allImages = GetComponentsInChildren<Image>(true);
-        foreach (Image image in allImages)
-        {
-            if (!images.ContainsKey(image.name))
-            {
-                images[image.name] = image;
-            }
-        }
-
-
-        // 为"关闭"按钮注册关闭事件（如果存在）
-        if (buttons.ContainsKey("关闭"))
-        {
-            buttons["关闭"].onClick.AddListener(() => Close());
-        }
-
-        // 为"销毁"按钮注册销毁事件（如果存在）
-        if (buttons.ContainsKey("销毁"))
-        {
-            buttons["销毁"].onClick.AddListener(() => Destroy(gameObject));
-        }
+        BindLifecycleButtons();
+        CanDrag = Dragger != null;
+        hierarchySnapshotDirty = false;
+        hierarchySnapshotVersion++;
+        navigationSnapshotVersion = -1;
+        HierarchySnapshotRebuildCount++;
     }
+
+    /// <summary>把单个组件归类到名称字典与复用列表。</summary>
+    private void CacheComponent(Component component)
+    {
+        if (component == null)
+            return;
+
+        if (component is Button button)
+        {
+            cachedButtons.Add(button);
+            if (!buttons.ContainsKey(button.name))
+            {
+                buttons[button.name] = button;
+                if (autoBoundButtons.Add(button))
+                    button.onClick.AddListener(() => OnClick(button.name));
+            }
+        }
+
+        if (component is TMP_InputField inputField && !inputFields.ContainsKey(inputField.name))
+            inputFields[inputField.name] = inputField;
+
+        if (component is TextMeshProUGUI text && !textElements.ContainsKey(text.name))
+            textElements[text.name] = text;
+
+        if (component is TMP_Text tmpText)
+            cachedTexts.Add(tmpText);
+
+        if (component is Toggle toggle && !toggles.ContainsKey(toggle.name))
+        {
+            toggles[toggle.name] = toggle;
+            if (autoBoundToggles.Add(toggle))
+                toggle.onValueChanged.AddListener(value => OnValueChanged(toggle.name, value));
+        }
+
+        if (component is Slider slider && !sliders.ContainsKey(slider.name))
+            sliders[slider.name] = slider;
+
+        if (component is ScrollRect scrollRect && !scrollRects.ContainsKey(scrollRect.name))
+            scrollRects[scrollRect.name] = scrollRect;
+
+        if (component is Image image && !images.ContainsKey(image.name))
+            images[image.name] = image;
+
+        if (component is Selectable selectable)
+            cachedSelectables.Add(selectable);
+
+        if (Dragger == null && component is UI_Drag dragger)
+            Dragger = dragger;
+    }
+
+    /// <summary>生命周期按钮只绑定一次，防止动态刷新累积监听。</summary>
+    private void BindLifecycleButtons()
+    {
+        if (buttons.TryGetValue("关闭", out Button closeButton) && autoBoundCloseButtons.Add(closeButton))
+            closeButton.onClick.AddListener(Close);
+
+        if (buttons.TryGetValue("销毁", out Button destroyButton) && autoBoundDestroyButtons.Add(destroyButton))
+            destroyButton.onClick.AddListener(DestroyPanelObject);
+    }
+
+    /// <summary>复用当前快照补齐本地化、音频、颜色和微交互组件。</summary>
+    private void ApplyCachedRuntimeBindings()
+    {
+        EnsureHierarchySnapshot();
+        FlatWorldUIAutoLocalizer.BindStaticTexts(cachedTexts);
+        FlatWorldAudioUIFeedback.EnsureFor(cachedButtons);
+        FlatWorldUITheme.ApplySelectionColors(cachedSelectables);
+        FlatWorldUIFeedback.EnsureFor(cachedButtons);
+    }
+
+    private void DestroyPanelObject()
+    {
+        Destroy(gameObject);
+    }
+
+    #endregion
 
     #region 面板显示控制
 
@@ -290,9 +321,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         closeOnGamepadCancel = closeOnCancel;
         closeOnEscapeShortcut = closeOnEscape;
         preferredSelectableName = preferredControlName;
-        FlatWorldUITheme.ApplyGamepadNavigationPolicy(transform);
-        EnsureAutomaticNavigation();
-        EnsureSelectionFollowers();
+        EnsureGamepadNavigationSnapshot();
 
         if (isOpen)
             SelectDefaultForGamepad();
@@ -322,12 +351,11 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
         if (gamepadNavigationPrepared)
         {
-            FlatWorldUITheme.ApplyGamepadNavigationPolicy(transform);
-            EnsureAutomaticNavigation();
-            EnsureSelectionFollowers();
+            EnsureGamepadNavigationSnapshot();
             SelectDefaultForGamepad();
         }
 
+        NotifyInteractionSurfaceChanged();
         if (!wasOpen && isOpen)
             Opened?.Invoke();
     }
@@ -346,6 +374,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
             BasePanel.BringToBack(rectTransform);
         }
 
+        NotifyInteractionSurfaceChanged();
         if (wasOpen && !isOpen)
         {
             RestorePreviousSelection();
@@ -396,10 +425,9 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
     private void EnsureAutomaticNavigation()
     {
-        Selectable[] selectables = GetComponentsInChildren<Selectable>(true);
-        for (int i = 0; i < selectables.Length; i++)
+        for (int i = 0; i < cachedSelectables.Count; i++)
         {
-            Selectable selectable = selectables[i];
+            Selectable selectable = cachedSelectables[i];
             if (selectable == null || FlatWorldUITheme.IsGamepadNavigationExcluded(selectable))
                 continue;
 
@@ -440,12 +468,12 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
     private Selectable FindPreferredSelectable()
     {
-        Selectable[] selectables = GetComponentsInChildren<Selectable>(true);
+        EnsureHierarchySnapshot();
         if (!string.IsNullOrEmpty(preferredSelectableName))
         {
-            for (int i = 0; i < selectables.Length; i++)
+            for (int i = 0; i < cachedSelectables.Count; i++)
             {
-                Selectable selectable = selectables[i];
+                Selectable selectable = cachedSelectables[i];
                 if (CanSelect(selectable) &&
                     (selectable.name == preferredSelectableName ||
                      selectable.name.StartsWith(preferredSelectableName, StringComparison.OrdinalIgnoreCase)))
@@ -454,9 +482,9 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         }
 
         Selectable fallback = null;
-        for (int i = 0; i < selectables.Length; i++)
+        for (int i = 0; i < cachedSelectables.Count; i++)
         {
-            Selectable selectable = selectables[i];
+            Selectable selectable = cachedSelectables[i];
             if (!CanSelect(selectable))
                 continue;
 
@@ -499,10 +527,9 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// </summary>
     private void EnsureSelectionFollowers()
     {
-        Selectable[] selectables = GetComponentsInChildren<Selectable>(true);
-        for (int i = 0; i < selectables.Length; i++)
+        for (int i = 0; i < cachedSelectables.Count; i++)
         {
-            Selectable selectable = selectables[i];
+            Selectable selectable = cachedSelectables[i];
             if (selectable == null || FlatWorldUITheme.IsGamepadNavigationExcluded(selectable))
                 continue;
 
@@ -514,8 +541,22 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         }
     }
 
+    /// <summary>每个层级版本只补齐一次导航与滚动跟随组件。</summary>
+    private void EnsureGamepadNavigationSnapshot()
+    {
+        EnsureHierarchySnapshot();
+        if (navigationSnapshotVersion == hierarchySnapshotVersion)
+            return;
+
+        FlatWorldUITheme.ApplyGamepadNavigationPolicy(cachedSelectables);
+        EnsureAutomaticNavigation();
+        EnsureSelectionFollowers();
+        navigationSnapshotVersion = hierarchySnapshotVersion;
+    }
+
     private void OnDestroy()
     {
+        NotifyInteractionSurfaceChanged();
         if (isOpen)
         {
             isOpen = false;
@@ -535,6 +576,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// <returns>按钮组件，如果不存在返回null</returns>
     public Button GetButton(string buttonName)
     {
+        EnsureHierarchySnapshot();
         if (buttons.TryGetValue(buttonName, out Button button))
         {
             return button;
@@ -612,9 +654,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     {
         Button button = GetButton(buttonName);
         if (button != null)
-        {
-            button.gameObject.SetActive(isVisible);
-        }
+            SetObjectActive(button.gameObject, isVisible);
     }
 
     #endregion
@@ -628,6 +668,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// <returns>输入框组件，如果不存在返回null</returns>
     public TMP_InputField GetInputField(string inputFieldName)
     {
+        EnsureHierarchySnapshot();
         if (inputFields.TryGetValue(inputFieldName, out TMP_InputField inputField))
         {
             return inputField;
@@ -688,9 +729,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     {
         TMP_InputField inputField = GetInputField(inputFieldName);
         if (inputField != null)
-        {
-            inputField.gameObject.SetActive(isVisible);
-        }
+            SetObjectActive(inputField.gameObject, isVisible);
     }
 
     #endregion
@@ -704,6 +743,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// <returns>文本组件，如果不存在返回null</returns>
     public TextMeshProUGUI GetText(string textName)
     {
+        EnsureHierarchySnapshot();
         if (textElements.TryGetValue(textName, out TextMeshProUGUI text))
         {
             return text;
@@ -773,9 +813,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     {
         TextMeshProUGUI textElement = GetText(textName);
         if (textElement != null)
-        {
-            textElement.gameObject.SetActive(isVisible);
-        }
+            SetObjectActive(textElement.gameObject, isVisible);
     }
 
     #endregion
@@ -789,6 +827,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// <returns>Toggle组件，如果不存在返回null</returns>
     public Toggle GetToggle(string toggleName)
     {
+        EnsureHierarchySnapshot();
         if (toggles.TryGetValue(toggleName, out Toggle toggle))
         {
             return toggle;
@@ -837,6 +876,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// <returns>Slider组件，如果不存在返回null</returns>
     public Slider GetSlider(string sliderName)
     {
+        EnsureHierarchySnapshot();
         if (sliders.TryGetValue(sliderName, out Slider slider))
         {
             return slider;
@@ -885,6 +925,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// <returns>Image组件，如果不存在返回null</returns>
     public Image GetImage(string imageName)
     {
+        EnsureHierarchySnapshot();
         if (images.TryGetValue(imageName, out Image image))
         {
             return image;
@@ -904,6 +945,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// <param name="isVisible">是否可见</param>
     public void SetUIVisible(string uiName, bool isVisible)
     {
+        EnsureHierarchySnapshot();
         // 检查是否为按钮
         if (buttons.ContainsKey(uiName))
         {
@@ -928,21 +970,21 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         // 检查是否为Toggle
         if (toggles.ContainsKey(uiName))
         {
-            toggles[uiName].gameObject.SetActive(isVisible);
+            SetObjectActive(toggles[uiName].gameObject, isVisible);
             return;
         }
 
         // 检查是否为Slider
         if (sliders.ContainsKey(uiName))
         {
-            sliders[uiName].gameObject.SetActive(isVisible);
+            SetObjectActive(sliders[uiName].gameObject, isVisible);
             return;
         }
 
         // 检查是否为Image
         if (images.ContainsKey(uiName))
         {
-            images[uiName].gameObject.SetActive(isVisible);
+            SetObjectActive(images[uiName].gameObject, isVisible);
             return;
         }
 
@@ -954,16 +996,29 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// </summary>
     public void RefreshUIComponents()
     {
-        CollectUIComponents();
-        FlatWorldUIAutoLocalizer.BindStaticTexts(transform);
-        FlatWorldUITheme.ApplySelectionColors(transform);
-        FlatWorldAudioUIFeedback.EnsureFor(transform);
-        FlatWorldUIFeedback.EnsureFor(transform);
+        MarkHierarchyDirty();
+        EnsureHierarchySnapshot();
+        ApplyCachedRuntimeBindings();
         if (gamepadNavigationPrepared)
-        {
-            EnsureAutomaticNavigation();
-            EnsureSelectionFollowers();
-        }
+            EnsureGamepadNavigationSnapshot();
+
+        NotifyInteractionSurfaceChanged();
+    }
+
+    /// <summary>仅在显隐实际变化时通知虚拟光标重新命中。</summary>
+    private void SetObjectActive(GameObject target, bool active)
+    {
+        if (target == null || target.activeSelf == active)
+            return;
+
+        target.SetActive(active);
+        NotifyInteractionSurfaceChanged();
+    }
+
+    /// <summary>通知全局 UI 交互面发生变化。</summary>
+    private static void NotifyInteractionSurfaceChanged()
+    {
+        UIManager.ExistingInstance?.NotifyInteractionSurfaceChanged();
     }
 
     #endregion

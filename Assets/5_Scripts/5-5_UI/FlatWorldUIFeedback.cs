@@ -1,12 +1,15 @@
 // AI-Context: FlatWorld 通用 UI 微交互；负责按钮悬停、按压和导航选中反馈，不查找业务节点、不绑定点击事件。
 
 using System;
+using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
 /// 为普通操作按钮提供悬停、按压和导航选中反馈。
+/// 交互事件只在状态变化时创建一个使用非缩放时间的 DOTween 缩放动画，静止时没有组件级 Update。
 /// 槽位按钮和可拖拽内容不应挂载本组件，避免干扰背包交互。
 /// </summary>
 [DisallowMultipleComponent]
@@ -24,13 +27,18 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
     [SerializeField, Range(1f, 1.08f)] private float hoverScale = 1.018f;
     [SerializeField, Range(0.92f, 1f)] private float pressedScale = 0.975f;
     [SerializeField, Range(1f, 1.12f)] private float selectedScale = 1.035f;
+    [Tooltip("数值越高，DOTween 缩放反馈越快。")]
     [SerializeField, Range(4f, 30f)] private float response = 18f;
 
     #endregion
 
     #region 运行时状态
 
+    private const float MinimumTweenDuration = 0.04f;
+    private const float ScaleComparisonEpsilonSquared = 0.000001f;
+
     private Selectable selectable;
+    private Tween scaleTween;
     private Graphic selectionGraphic;
     private Outline selectionOutline;
     private bool createdSelectionOutline;
@@ -57,15 +65,15 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
     private void OnEnable()
     {
         transform.localScale = Vector3.one;
-
-        bool isCurrentSelection = EventSystem.current != null
-            && EventSystem.current.currentSelectedGameObject == gameObject;
-        selected = isCurrentSelection;
+        selected = EventSystem.current != null &&
+                   EventSystem.current.currentSelectedGameObject == gameObject;
         SetSelectionVisual(selected);
+        AnimateToCurrentState();
     }
 
     private void OnDisable()
     {
+        KillScaleTween();
         hovered = false;
         pressed = false;
         selected = false;
@@ -75,39 +83,39 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
 
     private void OnDestroy()
     {
+        KillScaleTween();
         if (createdSelectionOutline && selectionOutline != null)
             Destroy(selectionOutline);
-    }
-
-    private void Update()
-    {
-        bool canInteract = selectable == null || selectable.IsInteractable();
-        if (!canInteract && selected)
-        {
-            selected = false;
-            RestoreSelectionOutline();
-        }
-
-        float target = !canInteract
-            ? 1f
-            : pressed ? pressedScale : selected ? selectedScale : hovered ? hoverScale : 1f;
-        float t = 1f - Mathf.Exp(-response * Time.unscaledDeltaTime);
-        transform.localScale = Vector3.Lerp(transform.localScale, Vector3.one * target, t);
     }
 
     #endregion
 
     #region 指针反馈
 
-    public void OnPointerEnter(PointerEventData eventData) => hovered = true;
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        hovered = true;
+        AnimateToCurrentState();
+    }
+
     public void OnPointerExit(PointerEventData eventData)
     {
         hovered = false;
         pressed = false;
+        AnimateToCurrentState();
     }
 
-    public void OnPointerDown(PointerEventData eventData) => pressed = true;
-    public void OnPointerUp(PointerEventData eventData) => pressed = false;
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        pressed = true;
+        AnimateToCurrentState();
+    }
+
+    public void OnPointerUp(PointerEventData eventData)
+    {
+        pressed = false;
+        AnimateToCurrentState();
+    }
 
     #endregion
 
@@ -118,12 +126,14 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
         selected = true;
         ConfigureSelectedColor();
         SetSelectionVisual(true);
+        AnimateToCurrentState();
     }
 
     public void OnDeselect(BaseEventData eventData)
     {
         selected = false;
         SetSelectionVisual(false);
+        AnimateToCurrentState();
     }
 
     /// <summary>
@@ -135,14 +145,68 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
             return;
 
         Button[] buttons = root.GetComponentsInChildren<Button>(true);
-        foreach (Button button in buttons)
+        EnsureFor(buttons);
+    }
+
+    /// <summary>复用面板按钮快照补齐视觉反馈，避免重复扫描层级。</summary>
+    public static void EnsureFor(IReadOnlyList<Button> buttons)
+    {
+        if (buttons == null || !Application.isPlaying)
+            return;
+
+        for (int i = 0; i < buttons.Count; i++)
         {
+            Button button = buttons[i];
             if (button == null || IsSlotButton(button.transform))
                 continue;
 
             if (button.GetComponent<FlatWorldUIFeedback>() == null)
                 button.gameObject.AddComponent<FlatWorldUIFeedback>();
         }
+    }
+
+    /// <summary>根据当前交互优先级重定向唯一缩放 Tween，暂停游戏时仍使用非缩放时间。</summary>
+    private void AnimateToCurrentState()
+    {
+        if (!isActiveAndEnabled || !gameObject.activeInHierarchy)
+            return;
+
+        bool canInteract = selectable == null || selectable.IsInteractable();
+        if (!canInteract && selected)
+        {
+            selected = false;
+            RestoreSelectionOutline();
+        }
+
+        float target = !canInteract
+            ? 1f
+            : pressed ? pressedScale : selected ? selectedScale : hovered ? hoverScale : 1f;
+        Vector3 targetScale = Vector3.one * target;
+        KillScaleTween();
+        if ((transform.localScale - targetScale).sqrMagnitude <= ScaleComparisonEpsilonSquared)
+        {
+            transform.localScale = targetScale;
+            return;
+        }
+
+        float duration = Mathf.Max(MinimumTweenDuration, 2f / Mathf.Max(1f, response));
+        scaleTween = transform
+            .DOScale(targetScale, duration)
+            .SetEase(Ease.OutQuad)
+            .SetUpdate(true)
+            .OnComplete(ClearScaleTweenReference);
+    }
+
+    /// <summary>动画自然完成后清除引用，避免后续状态切换重复操作已结束的 Tween。</summary>
+    private void ClearScaleTweenReference() => scaleTween = null;
+
+    /// <summary>终止当前缩放 Tween，不影响同一 Transform 上的其他动画。</summary>
+    private void KillScaleTween()
+    {
+        Tween tween = scaleTween;
+        scaleTween = null;
+        if (tween != null && tween.active)
+            tween.Kill(false);
     }
 
     /// <summary>

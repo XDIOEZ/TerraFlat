@@ -4,6 +4,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// 管理 FlatWorld 的统一 PanelRoot、面板实例与手柄交互面版本。
+/// 根 Canvas 只在创建或失效时解析；交互面修订号供虚拟光标按需刷新命中结果。
+/// </summary>
 public class UIManager : MonoBehaviour
 {
     #region 单例模式
@@ -37,7 +41,22 @@ public class UIManager : MonoBehaviour
     public Transform panelRoot;
     public GameObject panelRootPrefab;
     public GameObject[] panelPrefabs;
+    private Canvas rootCanvas;
+    private int interactionSurfaceRevision;
     private int lastHandledCancelFrame = -1;
+
+    /// <summary>缓存的 PanelRoot Canvas；仅在根节点失效或替换时重新解析。</summary>
+    public Canvas RootCanvas
+    {
+        get
+        {
+            EnsurePanelRootExists();
+            return rootCanvas;
+        }
+    }
+
+    /// <summary>面板开关、排序或结构改变时递增，供虚拟光标判断是否需要重新射线。</summary>
+    public int InteractionSurfaceRevision => interactionSurfaceRevision;
     #endregion
 
     #region 初始化
@@ -64,6 +83,7 @@ public class UIManager : MonoBehaviour
     {
         if (panelRoot != null)
         {
+            CacheRootCanvas();
             UIScaleController.Ensure(panelRoot);
             return;
         }
@@ -72,6 +92,7 @@ public class UIManager : MonoBehaviour
         if (existingPanelRoot != null)
         {
             panelRoot = existingPanelRoot.transform;
+            CacheRootCanvas();
             UIScaleController.Ensure(panelRoot);
             return;
         }
@@ -88,13 +109,45 @@ public class UIManager : MonoBehaviour
         GameObject canvasObj = Instantiate(rootPrefab);
         canvasObj.name = "PanelRoot";
         panelRoot = canvasObj.transform;
+        CacheRootCanvas();
         UIScaleController.Ensure(panelRoot);
+    }
+
+    /// <summary>只在根 Canvas 无效或不再属于 PanelRoot 时重新解析引用。</summary>
+    private void CacheRootCanvas()
+    {
+        if (panelRoot == null)
+        {
+            if (rootCanvas != null)
+            {
+                rootCanvas = null;
+                NotifyInteractionSurfaceChanged();
+            }
+            return;
+        }
+
+        if (rootCanvas != null &&
+            (rootCanvas.transform == panelRoot || rootCanvas.transform.IsChildOf(panelRoot)))
+        {
+            return;
+        }
+
+        Canvas nextCanvas = panelRoot.GetComponent<Canvas>() ??
+                            panelRoot.GetComponentInChildren<Canvas>(true);
+        if (rootCanvas == nextCanvas)
+            return;
+
+        rootCanvas = nextCanvas;
+        NotifyInteractionSurfaceChanged();
+        if (rootCanvas == null)
+            Debug.LogError("[UIManager] PanelRoot 缺少 Canvas，虚拟光标无法绑定。", panelRoot);
     }
 
     private void InitializePanels()
     {
         EnsurePanelRootExists();
         panels.Clear();
+        NotifyInteractionSurfaceChanged();
     }
     #endregion
 
@@ -211,6 +264,15 @@ public class UIManager : MonoBehaviour
     public void NotifyCancelHandled()
     {
         lastHandledCancelFrame = Time.frameCount;
+    }
+
+    /// <summary>通知虚拟光标当前可命中的 UI 表面已经变化。</summary>
+    public void NotifyInteractionSurfaceChanged()
+    {
+        unchecked
+        {
+            interactionSurfaceRevision++;
+        }
     }
 
     /// <summary>
@@ -361,6 +423,7 @@ public class UIManager : MonoBehaviour
                 {
                     Destroy(panelList[i].gameObject);
                     panelList.RemoveAt(i);
+                    NotifyInteractionSurfaceChanged();
                     break;
                 }
             }
@@ -384,6 +447,7 @@ public class UIManager : MonoBehaviour
             {
                 Destroy(panel.gameObject);
             }
+            NotifyInteractionSurfaceChanged();
         }
     }
 
@@ -399,6 +463,7 @@ public class UIManager : MonoBehaviour
                 }
             }
             panelList.Clear();
+            NotifyInteractionSurfaceChanged();
         }
     }
     #endregion
@@ -411,6 +476,7 @@ public class UIManager : MonoBehaviour
             panels[baseName] = new List<BasePanel>();
         }
         panels[baseName].Add(panel);
+        NotifyInteractionSurfaceChanged();
     }
 
     public void RefreshPanels()

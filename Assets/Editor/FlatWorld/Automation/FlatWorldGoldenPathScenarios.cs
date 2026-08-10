@@ -85,7 +85,16 @@ namespace FlatWorld.Automation
             BeginItemLifecycleScenario(context);
             BeginEcologyScenario(context);
             RunBuildingPlacementScenario(context);
+        }
+
+        /// <summary>等待必须跨真实帧完成的世界就绪场景，再启动可能写盘的自动保存。</summary>
+        internal static bool TickWorldReadyScenarios(FlatWorldGoldenPathScenarioContext context)
+        {
+            if (!TickBuildingPlacementScenario())
+                return false;
+
             BeginAutoSaveScenario(context);
+            return true;
         }
 
         internal static void OnTraversalTick(FlatWorldGoldenPathScenarioContext context)

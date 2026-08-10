@@ -1,5 +1,6 @@
 // AI-Context: 通用 UI 声音入口；通过稳定 AudioCue ID 播放，不让按钮依赖具体 AudioClip。
 
+using System.Collections.Generic;
 using FlatWorld.Audio;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -55,7 +56,16 @@ public sealed class FlatWorldAudioUIFeedback : MonoBehaviour,
             return;
 
         Button[] buttons = root.GetComponentsInChildren<Button>(true);
-        for (int i = 0; i < buttons.Length; i++)
+        EnsureFor(buttons);
+    }
+
+    /// <summary>复用面板按钮快照补齐音频反馈，避免重复扫描层级。</summary>
+    public static void EnsureFor(IReadOnlyList<Button> buttons)
+    {
+        if (buttons == null || !Application.isPlaying)
+            return;
+
+        for (int i = 0; i < buttons.Count; i++)
         {
             Button button = buttons[i];
             if (button != null && button.GetComponent<FlatWorldAudioUIFeedback>() == null)

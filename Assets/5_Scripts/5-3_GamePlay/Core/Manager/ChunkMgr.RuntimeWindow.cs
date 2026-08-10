@@ -16,6 +16,31 @@ public partial class ChunkMgr
         public int PresentationPriority;
     }
 
+    /// <summary>记录 ChunkView 的入池时刻与资源裁剪状态。</summary>
+    private struct PooledChunkViewEntry
+    {
+        public PooledChunkViewEntry(ChunkView view, float pooledAt)
+        {
+            View = view;
+            PooledAt = pooledAt;
+            ResourcesTrimmed = false;
+        }
+
+        public ChunkView View;
+        public float PooledAt;
+        public bool ResourcesTrimmed;
+
+        /// <summary>取出 View 并清除该池条目的时间与裁剪状态。</summary>
+        public ChunkView TakeView()
+        {
+            ChunkView view = View;
+            View = null;
+            PooledAt = 0f;
+            ResourcesTrimmed = false;
+            return view;
+        }
+    }
+
     /// <summary>空闲阶段才提交的一项区块数据预取。</summary>
     private readonly struct RuntimePrefetchRequest
     {
@@ -42,6 +67,9 @@ public partial class ChunkMgr
     [SerializeField, Min(1)] private int maxChunkPresentationsPerFrame = 1;
 
     private const int MaxIdlePrefetchConcurrency = 1;
+    private const int ChunkViewPoolSpareCapacity = 4;
+    private const float PooledViewResourceTrimDelaySeconds = 7.5f;
+    private const float ChunkViewPoolDestroyDelaySeconds = 10f;
 
     private readonly Dictionary<RuntimeWorldAddress, RuntimeChunkBinding> activeRuntimeBindings = new();
     private readonly HashSet<RuntimeWorldAddress> runtimeWindowTargets = new();
@@ -49,7 +77,7 @@ public partial class ChunkMgr
     private readonly List<RuntimeWorldAddress> runtimePresentationQueue = new();
     private readonly Queue<RuntimePrefetchRequest> runtimePrefetchQueue = new();
     private readonly HashSet<RuntimeWorldAddress> runtimePrefetchTargets = new();
-    private readonly Queue<ChunkView> chunkViewPool = new();
+    private readonly Queue<PooledChunkViewEntry> chunkViewPool = new();
     private bool runtimeWindowUsesLocalPresentation;
     private Coroutine runtimePresentationCoroutine;
     private int runtimePresentationInProgressCount;
@@ -65,6 +93,11 @@ public partial class ChunkMgr
         runtimePrefetchQueue.Count + runtimePrefetchInFlightCount;
     /// <summary>当前真正进入纯生成管线的低优先级预取数量，正常不超过 1。</summary>
     public int RuntimeChunkPrefetchInFlightCount => runtimePrefetchInFlightCount;
+    /// <summary>当前对象池实际保留的 ChunkView 数量。</summary>
+    public int RetainedRuntimeChunkViewPoolCount => chunkViewPool.Count;
+    /// <summary>按待展示区块数量动态计算的建议池容量。</summary>
+    public int RecommendedRuntimeChunkViewPoolCapacity =>
+        PendingRuntimeChunkPresentationCount + ChunkViewPoolSpareCapacity;
 
     /// <summary>
     /// 本地 WorldModel 区块窗口已经启用。掉落物等运行时实体在此状态下不得再触发旧 Chunk 加载。
@@ -533,9 +566,13 @@ public partial class ChunkMgr
     {
         while (chunkViewPool.Count > 0)
         {
-            ChunkView pooled = chunkViewPool.Dequeue();
-            if (pooled != null)
-                return pooled;
+            PooledChunkViewEntry entry = chunkViewPool.Dequeue();
+            ChunkView pooled = entry.TakeView();
+            if (pooled == null)
+                continue;
+
+            pooled.PrepareForPoolReuse();
+            return pooled;
         }
         return Instantiate(prefab, transform);
     }
@@ -543,6 +580,7 @@ public partial class ChunkMgr
     /// <summary>后台生成完成后修复画面绑定，处理旧任务晚到或区块被回收的情况。</summary>
     private void ReconcileRuntimeWindowBindings()
     {
+        MaintainRuntimeChunkViewPool();
         if (runtimeChunkManager == null || activeRuntimeBindings.Count == 0)
             return;
         foreach (KeyValuePair<RuntimeWorldAddress, RuntimeChunkBinding> pair in activeRuntimeBindings)
@@ -573,16 +611,89 @@ public partial class ChunkMgr
 
     #region 对象池与清理
 
+    /// <summary>裁剪长期禁用 View 的历史资源，并延迟销毁超出动态容量的最早闲置项。</summary>
+    private void MaintainRuntimeChunkViewPool()
+    {
+        if (chunkViewPool.Count == 0)
+            return;
+
+        float now = Time.realtimeSinceStartup;
+        int entryCount = chunkViewPool.Count;
+        for (int i = 0; i < entryCount; i++)
+        {
+            PooledChunkViewEntry entry = chunkViewPool.Dequeue();
+            if (entry.View != null)
+                chunkViewPool.Enqueue(entry);
+        }
+
+        int retainedCapacity = RecommendedRuntimeChunkViewPoolCapacity;
+        while (chunkViewPool.Count > retainedCapacity)
+        {
+            PooledChunkViewEntry oldest = chunkViewPool.Peek();
+            if (oldest.View == null)
+            {
+                chunkViewPool.Dequeue();
+                continue;
+            }
+            if (now - oldest.PooledAt < ChunkViewPoolDestroyDelaySeconds)
+                break;
+
+            oldest = chunkViewPool.Dequeue();
+            DestroyRuntimeChunkView(oldest.TakeView());
+        }
+
+        entryCount = chunkViewPool.Count;
+        for (int i = 0; i < entryCount; i++)
+        {
+            PooledChunkViewEntry entry = chunkViewPool.Dequeue();
+            if (!entry.ResourcesTrimmed &&
+                now - entry.PooledAt >= PooledViewResourceTrimDelaySeconds)
+            {
+                entry.View.TrimPooledResources();
+                entry.ResourcesTrimmed = true;
+            }
+
+            chunkViewPool.Enqueue(entry);
+        }
+    }
+
     /// <summary>解除当前 ChunkView 的全部租约并送回对象池。</summary>
     private void RecycleRuntimeChunkView(RuntimeChunkBinding binding)
     {
         if (binding?.View == null)
             return;
-        binding.View.Unbind();
-        binding.View.gameObject.SetActive(false);
-        binding.View.transform.SetParent(transform, false);
-        chunkViewPool.Enqueue(binding.View);
+
+        ChunkView view = binding.View;
         binding.View = null;
+        view.Unbind();
+        view.gameObject.SetActive(false);
+        view.transform.SetParent(transform, false);
+        chunkViewPool.Enqueue(new PooledChunkViewEntry(view, Time.realtimeSinceStartup));
+    }
+
+    /// <summary>销毁 View 前再次确保表现、导航等全部租约已经释放。</summary>
+    private static void DestroyRuntimeChunkView(ChunkView view)
+    {
+        if (view == null)
+            return;
+
+        view.Unbind();
+        if (view.gameObject.activeSelf)
+            view.gameObject.SetActive(false);
+        if (Application.isPlaying)
+            UnityEngine.Object.Destroy(view.gameObject);
+        else
+            UnityEngine.Object.DestroyImmediate(view.gameObject);
+    }
+
+    /// <summary>世界退出或管理器销毁时释放池内全部 View。</summary>
+    private void DestroyRuntimeChunkViewPool()
+    {
+        while (chunkViewPool.Count > 0)
+        {
+            PooledChunkViewEntry entry = chunkViewPool.Dequeue();
+            DestroyRuntimeChunkView(entry.TakeView());
+        }
     }
 
     /// <summary>解除指定区块的画面绑定，并把 ChunkView 放回对象池。</summary>
@@ -600,6 +711,17 @@ public partial class ChunkMgr
     /// <summary>清空全部区块画面绑定和窗口目标记录。</summary>
     private void ClearRuntimeWindowBindings()
     {
+        if (runtimePresentationCoroutine != null)
+        {
+            StopCoroutine(runtimePresentationCoroutine);
+            runtimePresentationCoroutine = null;
+        }
+        if (runtimePrefetchCoroutine != null)
+        {
+            StopCoroutine(runtimePrefetchCoroutine);
+            runtimePrefetchCoroutine = null;
+        }
+
         runtimeWindowRemovalBuffer.Clear();
         runtimeWindowRemovalBuffer.AddRange(activeRuntimeBindings.Keys);
         for (int i = 0; i < runtimeWindowRemovalBuffer.Count; i++)
@@ -615,16 +737,7 @@ public partial class ChunkMgr
             CancelChunkDataRequest(inFlight);
         runtimePrefetchInFlight = null;
         runtimePrefetchInFlightCount = 0;
-        if (runtimePresentationCoroutine != null)
-        {
-            StopCoroutine(runtimePresentationCoroutine);
-            runtimePresentationCoroutine = null;
-        }
-        if (runtimePrefetchCoroutine != null)
-        {
-            StopCoroutine(runtimePrefetchCoroutine);
-            runtimePrefetchCoroutine = null;
-        }
+        DestroyRuntimeChunkViewPool();
     }
 
     #endregion

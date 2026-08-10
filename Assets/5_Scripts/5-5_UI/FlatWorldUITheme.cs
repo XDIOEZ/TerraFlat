@@ -1,6 +1,7 @@
 // AI-Context: FlatWorld 全局 UI 视觉规范；集中处理面板、按钮、输入框、滑条、槽位和文字风格，不承载任何业务逻辑。
 
 using System;
+using System.Collections.Generic;
 using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
@@ -118,8 +119,18 @@ public static class FlatWorldUITheme
             return;
 
         Selectable[] selectables = root.GetComponentsInChildren<Selectable>(true);
-        foreach (Selectable selectable in selectables)
+        ApplySelectionColors(selectables);
+    }
+
+    /// <summary>复用面板可选控件快照设置选中颜色与导航策略。</summary>
+    public static void ApplySelectionColors(IReadOnlyList<Selectable> selectables)
+    {
+        if (selectables == null)
+            return;
+
+        for (int i = 0; i < selectables.Count; i++)
         {
+            Selectable selectable = selectables[i];
             if (selectable == null)
                 continue;
 
@@ -128,7 +139,7 @@ public static class FlatWorldUITheme
             selectable.colors = colors;
         }
 
-        ApplyGamepadNavigationPolicy(root);
+        ApplyGamepadNavigationPolicy(selectables);
     }
 
     /// <summary>
@@ -140,8 +151,18 @@ public static class FlatWorldUITheme
             return;
 
         Selectable[] selectables = root.GetComponentsInChildren<Selectable>(true);
-        foreach (Selectable selectable in selectables)
+        ApplyGamepadNavigationPolicy(selectables);
+    }
+
+    /// <summary>复用面板可选控件快照应用导航排除策略。</summary>
+    public static void ApplyGamepadNavigationPolicy(IReadOnlyList<Selectable> selectables)
+    {
+        if (selectables == null)
+            return;
+
+        for (int i = 0; i < selectables.Count; i++)
         {
+            Selectable selectable = selectables[i];
             if (!IsGamepadNavigationExcluded(selectable))
                 continue;
 
@@ -154,8 +175,9 @@ public static class FlatWorldUITheme
             selectable.navigation = navigation;
         }
 
-        foreach (Selectable selectable in selectables)
+        for (int i = 0; i < selectables.Count; i++)
         {
+            Selectable selectable = selectables[i];
             if (selectable == null || IsGamepadNavigationExcluded(selectable))
                 continue;
 

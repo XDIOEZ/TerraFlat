@@ -28,6 +28,7 @@
 | 扩展阶段 | 适用行为 | 典型断言 |
 | --- | --- | --- |
 | `OnWorldReady` | 玩家模块、初始 Buff、背包、装备、建筑、可确定生成的 AI | 模块存在，公开 API 改变运行时状态 |
+| `TickWorldReadyScenarios` | 初始地块/表现必须等待真实帧末批处理的场景 | 等待 `Time.frameCount` 与可观察版本推进；完成临时状态清理后才允许截图、移动和自动保存 |
 | `OnTraversalTick` | 需持续观测的 Buff Tick、体力、环境、AI 追踪 | 运行阶段按 Editor 帧驱动，效果在玩家移动时逐步发生 |
 | `OnChunkReady` | 跨 Chunk 玩法、一次性阶段断言 | 目标 Chunk Ready，玩法状态与 Chunk 字典同时健康 |
 | `BeforeWorldExit` | 存档捕获、长时状态、退出前结果 | 权威状态已进入存档根或结果已完成 |
@@ -50,9 +51,9 @@
 | --- | --- | --- | --- |
 | 新玩家安全陆地出生 | 初始 Chunk 窗口稳定后的 `OnWorldReady` | 玩家脚下权威 `ChunkTerrainData` 必须非水且可走，运行时位置与 `Data_Player` 存档位置一致 | 不修改状态，仅重置完成标记 |
 | 主世界出生点复活 | `OnWorldReady` 读取出生点后触发一次真实濒死/复活 | `DamageReceiver.ForceHurt()` 后，`Mod_PlayerDeathState.RespawnFromDying()` 必须把玩家送回 `flatworld.playerSpawn` 且恢复生命 | 恢复测试前位置、生命、速度与物理状态 |
-| 自动保存不锁操作 | `OnWorldReady` 启动，`OnTraversalTick` 观察 | 后台写入完成、无输入锁、Mover/Rigidbody2D/TimeScale 正常 | 仅清空任务引用 |
+| 自动保存不锁操作 | `TickWorldReadyScenarios` 完成初始临时状态清理后启动，`OnTraversalTick` 观察 | 后台写入完成、无输入锁、Mover/Rigidbody2D/TimeScale 正常 | 仅清空任务引用 |
 | 玩家长按奔跑与速度过渡 | `OnWorldReady` 调用真实 `Mover.HandleRunInputPressed/Released()` 和 `Mover.Move` | 走路起步、走跑互切均平滑靠近目标速度；松开方向保留默认 0.07 秒的极短惯性后停止，松开奔跑恢复普通速度倍率 | 立即恢复非奔跑状态、原速度与原移动状态；失败路径统一兜底 |
-| 新区块建筑放置 | `OnWorldReady` 使用正式 `Wall_Wood_Summoner` 扫描玩家附近候选格 | 权威地块校验成功、建筑进入已安装状态、动态占地注册；正式虚影继承图片/材质并进入 `Shadow` 排序层 | 立即销毁虚影，并通过 `ItemMgr` 回收建筑与召唤器；失败路径统一兜底 |
+| 新区块建筑放置 | `OnWorldReady` 使用正式 `Wall_Wood_Summoner` 扫描玩家附近候选格并写入临时石墙；`TickWorldReadyScenarios` 分两帧观察 | 权威地块校验、动态占地和正式虚影正确；`RebuildVersion` 推进后阴影增加，移除再推进一帧后恢复原数量 | 先清理虚影、建筑和召唤器，石墙跨帧断言结束后再清理；失败路径统一兜底 |
 | WorldModel 空闲预取、协程表现与生物显隐 | `OnWorldReady` 检查已完成外圈数据和预取并发；往返前按 `ItemMgr.InstantiateItem(...) → Load()` 创建真实 Chicken，原长距离阶段驱动起始区块离开并重新进入可见圈 | 预取实际并发不超过 1；已完成外圈数据 Dormant 且无三类租约；View 解绑后 Chicken inactive，重绑后恢复 active；往返复用同一模型且租约/订阅不重复 | 通过 `ItemMgr.DespawnItem()` 清理测试生物并清空场景引用，生产窗口自行回收 View 与排队项 |
 | 燃烧 Buff | 首次 `OnTraversalTick` 通过 `BuffManager.AddBuff(BurningBuffIds.Burning)` 施加 | 后续移动 Tick 观察玩家生命下降；`OnChunkReady` 确认定义仍注册且至少发生一次 Tick | 移除燃烧并恢复测试前生命值 |
 | 有限世界右边界环绕 | `OnWorldReady` 后、首次截图和长距离移动前，将真实玩家移动到右边界并通过 `Mover.Move` 越界 | 等待规范目标 Chunk Ready，验证环绕余量、玩家数据、Chunk 字典和地图存档键；恢复原位置并再次等待原 Chunk Ready | 通过和失败路径都恢复位置、速度与移动速度 |
