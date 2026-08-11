@@ -639,6 +639,70 @@ MonoBehaviour:
     m_Key: item.WorkBench_Summoner.description
     m_Metadata:
       m_Items: []
+  - m_Id: 1016654085054464
+    m_Key: quest.flatworld.first_chipped_tool.title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016654160551936
+    m_Key: quest.flatworld.first_chipped_tool.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016654160551937
+    m_Key: quest.flatworld.first_chipped_tool.objective.craft_chipped_tool
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000000
+    m_Key: quest.flatworld.debug_open_inventory.title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000001
+    m_Key: quest.flatworld.debug_open_inventory.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000002
+    m_Key: quest.flatworld.debug_open_inventory.objective.open_once
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000003
+    m_Key: quest.flatworld.debug_pickup_items.title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000004
+    m_Key: quest.flatworld.debug_pickup_items.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000005
+    m_Key: quest.flatworld.debug_pickup_items.objective.pickup_three
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000006
+    m_Key: quest.flatworld.debug_own_sticks.title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000007
+    m_Key: quest.flatworld.debug_own_sticks.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000008
+    m_Key: quest.flatworld.debug_own_sticks.objective.own_five_sticks
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000009
+    m_Key: quest.flatworld.debug_craft_and_build.title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000010
+    m_Key: quest.flatworld.debug_craft_and_build.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000011
+    m_Key: quest.flatworld.debug_craft_and_build.objective.craft_chipped_tool
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000012
+    m_Key: quest.flatworld.debug_craft_and_build.objective.place_any_building
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

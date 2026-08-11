@@ -30,7 +30,7 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 → 活跃区块持有 Simulation 租约；远区块休眠；超距逐出
 → RuntimeWindow 协程按玩家距离分帧绑定 ChunkView
 → ChunkView 完成后持有 Presentation / Navigation 租约
-→ Tilemap / 草地 / 环境 / Collider / A* 只作表现与适配
+→ Tilemap / 草地 / 环境 / Collider / Navigation 只作表现与适配
 ```
 
 ## 关键文件
@@ -92,7 +92,7 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - `MapGenerationContext` 现携带 `WorldAddress` 与 `DimensionDefinition`；基础种子按 `WorldKey + SeedSalt` 派生，保证同星球不同维度的地图、确定性 Item GUID 和 Chunk 差量隔离。
 - `ChunkMgr.TryCreateMapCore()` 和 `ChunkGenerator_Cave` 仅保留给旧 `Map` 兼容路径；新版 WorldModel 的矿洞不再调用旧 Chunk/Map 生成接口。
 - 新版矿洞由 `CaveLayoutKernel` 在后台以绝对世界坐标复现房间、弯曲隧道与入口安全网络，`DeterministicChunkGenerator` 直接输出地面/岩壁 `ChunkTerrainData`；`CaveLayoutSampler` 仅保留旧存档兼容。
-- `BlockingTilemapLayer` 负责 `TileTag=Blocking` 的静态 Tile 障碍：地面 Tilemap 渲染阻挡层下方的数据，独立“建筑阻挡层”渲染顶层障碍并持有 `TilemapCollider2D`；A* 与存档仍读取原顶层 TileData。
+- `BlockingTilemapLayer` 负责 `TileTag=Blocking` 的静态 Tile 障碍：地面 Tilemap 渲染阻挡层下方的数据，独立“建筑阻挡层”渲染顶层障碍并持有 `TilemapCollider2D`；导航与存档仍读取原顶层 TileData。
 - 动态可放置建筑不得写入阻挡 Tilemap，继续使用 GameObject Collider + `BuildingOccupancyRegistry`；阻挡层只服务矿洞岩壁、地牢墙体和结构模板中的静态 Tile 障碍。
 - `ChunkMgr.TrySetChunkLoadSpeedMultiplier()` 是运行时区块加载调速的统一公开入口；有限倍率同时缩放旧队列和新 WorldModel 生成并发。传入正无穷表示“自动最大”，后台生成按约三分之一逻辑处理器且最多 4 项，旧管线数量预算最多四倍、毫秒预算最多两倍；禁止重新返回 `int.MaxValue/Infinity`。运行中调整必须立即调用 `SetMaxGenerationConcurrency()`，降低上限不强杀已开始任务。Tilemap、碰撞和导航继续由主线程协程按表现组件逐帧绑定。调速不得改变加载距离、世界数据或确定性生成结果。
 
@@ -102,8 +102,8 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 
 | 本系统变更 | 联动检查 | 必查契约 | 追加测试 |
 |---|---|---|---|
-| `TileData` 可走性、Penalty、顶层 Tile 或导航脏格/脏区通知 | `flatworld-navigation` | A* 仍从权威 TileData 取值，节点和连接在数据变化后刷新 | `Navigation.Smoke` |
-| Chunk 激活窗口、加载/卸载、对象池、Ready 条件或 MapCore 创建 | `flatworld-navigation`；涉及观察者/维度时再加载 `flatworld-networking`、`flatworld-dimension` | GridGraph 窗口、观察者并集、维度 MapCore 与延迟失活顺序 | `Navigation.Smoke`；按命中项追加 `Networking.Smoke` 或 `Dimension.Smoke` |
+| `TileData` 可走性、Penalty、顶层 Tile 或导航脏格/脏区通知 | `flatworld-navigation` | `WorldNavigationGrid` 仍从权威 TileData 取值，格状态在数据变化后刷新 | `Navigation.Smoke` |
+| Chunk 激活窗口、加载/卸载、对象池、Ready 条件或 MapCore 创建 | `flatworld-navigation`；涉及观察者/维度时再加载 `flatworld-networking`、`flatworld-dimension` | 导航窗口、观察者并集、维度 MapCore 与延迟失活顺序 | `Navigation.Smoke`；按命中项追加 `Networking.Smoke` 或 `Dimension.Smoke` |
 | `MapSave`、Chunk 差量、确定性 Item GUID 或 Item 区块归属 | `flatworld-data-save`、`flatworld-item-module` | 基线与 ChangedItems、不重复注册、卸载重载结果一致 | `DataSave.Smoke`、`ItemModule.Smoke` |
 | `ChunkEcologyData`、`CaveGenerationFeatureGenerator`、自然物规则、生态放置或 `ChunkNaturalItemRenderer` | `flatworld-data-save`、`flatworld-item-module`、`flatworld-dimension` | 地表生态与矿洞矿脉/传送门均可重放；水域、结构、岩壁和差量过滤正确，Item 池化后不复活 | `WorldModel.Ecology`、`WorldModel.Cave`、`DataSave.Ecology`、`ItemModule.Smoke` |
 | 结构生成、静态阻挡层或动态建筑边界 | `flatworld-building`、`flatworld-navigation` | 静态 Tile 阻挡与 `BuildingOccupancyRegistry` 动态占地不混用 | `Building.Smoke`、`Navigation.Smoke` |
@@ -112,6 +112,7 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：移除已无引用的 A* Pathfinding Project 后，`ChunkView` 的 Navigation 租约继续把 `ChunkTerrainData` 注册到项目内置 `WorldNavigationGrid`，地图与 Chunk 行为不变。
 - 2026-08-11：`WorldGenerationRuntimeHooks` 新增纯 `ChunkGenerationProfileSnapshot` 转换入口，ChunkMgr 在坐标缩放后、配置冻结前应用，GameManager 出生搜索也复用同一入口；Golden Path 强化河流可进入后台模型，山地断言统一复用 `SurfaceBiomeClassifier`。
 - 2026-08-10：`ChunkLightOccluderRenderer` 合并同帧地块事件，并把历史阴影槽延迟裁到“实际 + 8”；`ChunkMgr` 的 View 池改为“待展示 + 4”动态容量、7.5 秒资源裁剪和 10 秒最早闲置销毁，世界退出完整清池。
 - 2026-08-09：新版 `ChunkView` 新增 `LightOccluders` 表现子层；它从 `ChunkTerrainData.BlockingTileId` 合并生成可复用 URP 2D `ShadowCaster2D`，区块解绑时回收/隐藏，墙体 `TileStack` 变化时局部重建。
@@ -121,7 +122,6 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - 2026-08-09：WorldModel 自然物的采摘掉落保持在 `NaturalItems` 表现节点，不再用旧 `ChunkMgr` 加载目标区块；解绑时回收临时掉落，避免旧区块与新版表现窗口交叉触发。
 - 2026-08-09：旧 `TileItem_StoneWall` 的右键放置不再写旧 `Map.Data`，通过 `TileBuildingSystem` 写入 `ChunkTerrainData.BlockingTileId`；新增 `CanSetBlockingTile` 供预览阶段检查扩展地块堆栈。
 - 2026-08-09：`ChunkTerrainData` 新增运行时阻挡地块写入/移除接口；新版区块渲染器通过 `TerrainChangeKind.TileStack` 即时刷新石墙，动态建筑不再依赖旧 `Map.Data`。
-- 2026-08-09：新版矿洞迁入纯 WorldModel：`CaveLayoutKernel` 输出连续房间/隧道/安全区地形，`CaveGenerationFeatureGenerator` 输出稳定洞壁矿脉、散矿和跨维度入口；洞穴继续复用 `ChunkEcologyData` 作为无 Unity 引用的世界物品记录。地形预览器构造快照时必须传递 `CaveResourceRules`，并以 `cave.portal.chunkWidth/Height` 保留正式概率格，不能让临时大预览区块稀释传送门密度。
 
 
 ## 修改后自动测试

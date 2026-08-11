@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "quests": [
+    {
+      "id": "flatworld:debug_open_inventory",
+      "definitionVersion": 1,
+      "titleKey": "quest.flatworld.debug_open_inventory.title",
+      "title": "测试：打开背包",
+      "descriptionKey": "quest.flatworld.debug_open_inventory.description",
+      "description": "开启任务后打开一次背包，并在 GM 任务分页中手动交付。",
+      "debugOnly": true,
+      "acceptMode": "manual",
+      "turnInMode": "manual",
+      "conditions": [],
+      "stages": [
+        {
+          "id": "open_inventory",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "open_once",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.debug_open_inventory.objective.open_once",
+              "label": "打开一次背包",
+              "required": 1,
+              "parameters": {
+                "eventType": "inventory.opened"
+              }
+            }
+          ]
+        }
+      ],
+      "rewards": []
+    },
+    {
+      "id": "flatworld:debug_pickup_items",
+      "definitionVersion": 1,
+      "titleKey": "quest.flatworld.debug_pickup_items.title",
+      "title": "测试：拾取物品",
+      "descriptionKey": "quest.flatworld.debug_pickup_items.description",
+      "description": "拾取任意三件物品，完成后自动交付。",
+      "debugOnly": true,
+      "acceptMode": "manual",
+      "turnInMode": "auto",
+      "conditions": [],
+      "stages": [
+        {
+          "id": "pickup_items",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "pickup_three",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.debug_pickup_items.objective.pickup_three",
+              "label": "拾取任意物品 3 件",
+              "required": 3,
+              "parameters": {
+                "eventType": "item.picked_up"
+              }
+            }
+          ]
+        }
+      ],
+      "rewards": []
+    },
+    {
+      "id": "flatworld:debug_own_sticks",
+      "definitionVersion": 1,
+      "titleKey": "quest.flatworld.debug_own_sticks.title",
+      "title": "测试：持有木棍",
+      "descriptionKey": "quest.flatworld.debug_own_sticks.description",
+      "description": "背包或快捷栏中持有五根木棍，用于验证状态型任务目标。",
+      "debugOnly": true,
+      "acceptMode": "manual",
+      "turnInMode": "manual",
+      "conditions": [],
+      "stages": [
+        {
+          "id": "own_sticks",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "own_five_sticks",
+              "type": "inventory.owns",
+              "labelKey": "quest.flatworld.debug_own_sticks.objective.own_five_sticks",
+              "label": "持有木棍 5 根",
+              "required": 5,
+              "parameters": {
+                "itemId": "Stick_Wood"
+              }
+            }
+          ]
+        }
+      ],
+      "rewards": []
+    },
+    {
+      "id": "flatworld:debug_craft_and_build",
+      "definitionVersion": 1,
+      "titleKey": "quest.flatworld.debug_craft_and_build.title",
+      "title": "测试：制作与建造",
+      "descriptionKey": "quest.flatworld.debug_craft_and_build.description",
+      "description": "先制作一件打制石器，再放置任意建筑，用于验证多阶段推进。",
+      "debugOnly": true,
+      "acceptMode": "manual",
+      "turnInMode": "manual",
+      "conditions": [],
+      "stages": [
+        {
+          "id": "craft_tool",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "craft_chipped_tool",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.debug_craft_and_build.objective.craft_chipped_tool",
+              "label": "制作一件打制石器",
+              "required": 1,
+              "parameters": {
+                "eventType": "craft.succeeded",
+                "targetId": "ChippedTool"
+              }
+            }
+          ]
+        },
+        {
+          "id": "place_building",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "place_any_building",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.debug_craft_and_build.objective.place_any_building",
+              "label": "放置任意建筑 1 次",
+              "required": 1,
+              "parameters": {
+                "eventType": "building.placed"
+              }
+            }
+          ]
+        }
+      ],
+      "rewards": []
+    }
+  ]
+}

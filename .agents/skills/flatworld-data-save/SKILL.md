@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 数据与存档定位
 
-> 最后核对：2026-08-08。序列化字段改动属于高影响变更。
+> 最后核对：2026-08-11。序列化字段改动属于高影响变更。
 
 ## 修改前先读
 
@@ -47,7 +47,8 @@ GameSaveData
 - 玩家主世界出生点：`Assets/5_Scripts/5-3_GamePlay/Core/Progress/PlayerMainWorldSpawnStore.cs`，写入 `flatworld.playerSpawn`，不改变 `Data_Player` 的 MemoryPack 布局。
 - 维度位置与入口锚点进度：`Assets/5_Scripts/5-3_GamePlay/World/Dimension/DimensionTravelProgressStore.cs`。
 - Addressables：`Assets/AddressableAssetsData/`。
-- 本体 JSON 配置：`Assets/StreamingAssets/GameConfig/`；物品、配方与 Buff 分别使用 `Items/`、`Recipes/`、`Buffs/`。
+- 本体 JSON 配置：`Assets/StreamingAssets/GameConfig/`；物品、配方、Buff 与任务分别使用 `Items/`、`Recipes/`、`Buffs/`、`Quests/`。
+- 玩家任务进度：`Assets/5_Scripts/5-3_GamePlay/Core/Quests/QuestProgressStore.cs`，写入 `flatworld.quests`，保留未知任务与未知 JSON 字段，不改变 `Data_Player` 的 MemoryPack 布局。
 
 ## 资源注册边界
 
@@ -72,6 +73,7 @@ GameSaveData
 - 联机世界快照由 `SaveDataMgr` 生成/应用，但网络传输流程位于 Networking Skill。
 - 对话与教程不得各自覆盖 `Data_Player.ItemSpecialData`：统一通过 `ItemSpecialDataJsonStore` 替换目标命名空间并保留未知根属性；旧非 JSON 字符串保存到 `flatworld.legacyItemSpecialData`。
 - 新手引导状态位于 `flatworld.tutorial`，保存 `eligible`、幂等 `milestones`、派生 `stage` 与 `completed`；新玩家资格需跨保存保留，旧存档无资格标记时默认禁用。禁止为教程修改 `Data_Player` 的 MemoryPack 布局。
+- 任务状态位于 `flatworld.quests`，当前版本 1；移除 MOD 后未知任务记录必须保留，读取到未来版本时禁用任务运行时并停止写回，禁止用空文档覆盖。
 - `SpawnerProgressSaveData.DataVersion` 当前为 1；新增字段保存生成总时间游标、可用生态预算、最后预算恢复日和待补位数量，旧版本加载时必须重置游标避免重放历史周期。
 - `SerializableTimeData.TotalDays` 是世界时间存档的一部分，不能仅保存日内 `CurrentTime`。
 - `PlanetData` 保存权威天气事件：`WeatherDataVersion`、`WeatherPhase`、阶段开始/结束绝对总时间、下一事件总时间、`WeatherRandomCursor` 与 `WeatherEventSequence`；剩余时间必须由绝对边界减当前总时间得到，禁止另存递减值。
@@ -97,6 +99,7 @@ GameSaveData
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：基础任务进度通过 `QuestProgressStore` 写入 `Data_Player.ItemSpecialData` 的 `flatworld.quests` 命名空间；版本 1 保留未知任务/字段，未来版本拒绝写回，无需修改 MemoryPack 布局。
 - 2026-08-11：WorldModel 临时生成 Hook 在 `ApplyPersistedEcologyConfiguration` 前转换 Profile；黄金路径强化水文参数会先冻结到隔离 PlanetData，退出重进继续得到相同生成指纹，同时不会写回项目 SO 或玩家真实存档。
 - 2026-08-11：Golden Path 接管请求时显式把 Addressables Play Mode 数据构建器切到 Fast Mode，进入 PlayMode 后直接读取最新 AssetDatabase；刀类共享外壳 `Dagger_Copper.prefab` 已登记路径地址和 `Prefab` 标签，避免旧 Bundle 或正式 Player 中缺少外壳。
 - 2026-08-10：自动保存采集阶段统一按约 2.5ms 单帧预算分段执行：自然物克隆、旧 Chunk 物品、程序化区块差异（物品/删除 GUID/Tile/草地）和运行时 AI 均跨帧处理；完成后仍只把不可变字节数组交给后台原子写盘。
@@ -106,7 +109,6 @@ GameSaveData
 - 2026-08-09：玩家主世界初始出生点通过 `PlayerMainWorldSpawnStore` 写入 `Data_Player.ItemSpecialData` 的独立命名空间；新世界使用最终安全陆地坐标，旧存档缺失时按默认种子出生算法补齐，避免新增 `Data_Player` MemoryPack 字段。
 - 2026-08-09：`EcologyWorldSaveData` 的追加 `Generation` 快照冻结当前 Profile 的全部数值/文本参数和有序 `CaveResourceRules`；按 `ProfileId` 恢复地表或矿洞，旧存档缺失字段时仅由权威端补写，保证洞穴房间、矿脉和传送门不随 SO 改动重排。
 - 2026-08-09：实体 AI 由 `ItemMgr` 按 `WorldAddress` 采集；旧全量区块写回 `MapSave.items`，新版/确定性区块复用 `ChunkSaveRecord.ChangedItems`，在区块数据 Ready 时按 GUID 恢复且跳过旧 Chunk 实例化，无需提升存档版本。
-- 2026-08-09：自动保存改为 `GameManager.SaveGameInBackgroundCoroutine()` 分帧捕获旧 Chunk、`SaveDataMgr` 后台原子写入；写入版本按文件登记，手动或退出保存会废弃尚未写入的旧自动保存，保存流程不得锁输入、时间缩放或实体启停。
 
 
 ## 修改后自动测试
@@ -118,6 +120,7 @@ GameSaveData
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category DataSave.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类。
 - 自动保存的完整回归位于 `Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.AutoSave.cs`：验证后台任务完成、`GameController` 未锁、`Mover`/Rigidbody2D 可用且 `Time.timeScale` 未变。
 - 教程存档、旧数据兼容及命名空间共存由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
+- 任务命名空间、未知 MOD 记录及扩展字段往返由 `Assets/GameTest/Quest/QuestSmokeTests.cs`（`Quest.Save`）覆盖。
 - 维度管理器的基础 PlayMode 生命周期由 `Assets/GameTest/Dimension/DimensionLifecycleTests.cs`（`Dimension.Smoke`）覆盖；维度世界键兼容不再属于精简 Smoke 集合。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 

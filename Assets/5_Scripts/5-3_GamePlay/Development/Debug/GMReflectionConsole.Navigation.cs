@@ -20,7 +20,8 @@ public sealed partial class GMReflectionConsole
         World,
         Structures,
         GameEvents,
-        Commands
+        Commands,
+        Quests
     }
 
     private sealed class GmPageView
@@ -123,6 +124,7 @@ public sealed partial class GMReflectionConsole
 
         BuildPlayerPage();
         BuildBuffPage();
+        BuildQuestPage();
         BuildSpawnPage();
         BuildWorldPage();
         BuildStructurePage();
@@ -289,12 +291,13 @@ public sealed partial class GMReflectionConsole
 
         CreateTab(content.transform, GmPageId.Player, "玩家", 128f);
         CreateTab(content.transform, GmPageId.Buff, "Buff", 100f);
+        CreateTab(content.transform, GmPageId.Quests, "任务", 100f);
         CreateTab(content.transform, GmPageId.Spawn, "生成", 128f);
         CreateTab(content.transform, GmPageId.World, "世界", 100f);
         CreateTab(content.transform, GmPageId.Structures, "遗迹", 100f);
         CreateTab(content.transform, GmPageId.GameEvents, "事件", 110f);
         CreateTab(content.transform, GmPageId.Commands, "命令", 110f);
-        contentRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 806f);
+        contentRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 911f);
     }
 
     private void CreateTab(Transform parent, GmPageId pageId, string label, float width)
@@ -1250,6 +1253,7 @@ public sealed partial class GMReflectionConsole
             GmPageId.Structures => "遗迹",
             GmPageId.GameEvents => "游戏事件",
             GmPageId.Commands => "调试命令",
+            GmPageId.Quests => "任务",
             _ => pageId.ToString()
         };
     }

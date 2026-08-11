@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld MOD 与 Lua 系统定位
 
-> 最后核对：2026-08-03。
+> 最后核对：2026-08-11。
 
 ## 修改前先读
 
@@ -25,7 +25,8 @@ GameRes 完成本体 Addressables
 → 扫描 Application.persistentDataPath/Mods/*/manifest.json
 → 校验路径、版本、依赖、内容哈希
 → 加载 AssetBundle 与 definitionFiles
-→ 克隆/注册资产和 Item 定义
+→ 克隆/注册资产和 Item、Recipe、Buff、Quest 定义
+→ 任务目录完成跨 MOD 引用与前置循环校验
 → 初始化 entryLua
 → 计算 ModSetHash
 ```
@@ -37,6 +38,7 @@ GameRes 完成本体 Addressables
 - 示例模板：`Assets/5_Scripts/5-2_Editor/Mods/ModTemplateCreator.cs`。
 - 本体资源衔接：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameRes.cs`。
 - MOD `definitionFiles` 可直接声明 `recipes` 数组，格式复用本体 `RecipeDto`；配方 ID 必须使用 MOD 命名空间。
+- MOD `definitionFiles` 可直接声明 `quests` 数组，格式复用 `QuestDefinition`；任务 ID 必须使用 `modId:` 前缀，并在所有 MOD 定义注册后统一 Finalize。
 - 旧 `assets[].type = recipe` AssetBundle 仍通过 `LegacyRecipeConverter` 转成 `RuntimeRecipe`，仅作为兼容桥。
 
 ## 安全与兼容边界
@@ -55,13 +57,14 @@ GameRes 完成本体 Addressables
 |---|---|---|---|
 | `GameRes` 接入点、本体/MOD 加载顺序、全局注册或覆盖规则 | `flatworld-core` | 本体资源先完成、冲突可诊断、失败不留下半注册内容 | `Core.Smoke` |
 | JSON Item/Module Def、Prefab/Bundle 物品注册或内容 ID | `flatworld-item-module`、`flatworld-data-save` | ID 命名空间、ModuleData、Prefab 类型和旧存档引用一致 | `ItemModule.Smoke`、`DataSave.Smoke` |
-| JSON `recipes` 或 `buffs` DTO、校验与注册 | 只加载实际定义类型对应的 `flatworld-inventory-crafting` 或 `flatworld-buff` | 与本体共用 DTO/校验器，加载顺序满足 Item 先于 Recipe/Buff | 对应领域 Smoke |
+| JSON `recipes`、`buffs` 或 `quests` DTO、校验与注册 | 只加载实际定义类型对应的 `flatworld-inventory-crafting`、`flatworld-buff` 或 `flatworld-quest` | 与本体共用 DTO/校验器，加载顺序满足 Item 先于 Recipe/Buff/Quest，任务最后统一 Finalize | 对应领域 Smoke |
 | ModSetHash、manifest 兼容范围、存档 MOD 记录或加入世界握手 | `flatworld-networking`、`flatworld-data-save` | 不兼容集合在进入世界前拒绝，存档记录可往返 | `Networking.Smoke`、`DataSave.Smoke` |
 
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：MOD `definitionFiles` 新增纯 JSON `quests`；加载顺序扩展为 Item → Recipe → Buff → Quest → 目录 Finalize，支持跨 MOD 前置引用，失败/卸载时清除外部任务且不留下半注册内容。
 - 2026-08-08：本体与 MOD 的 JSON 物品显示统一通过 `GameRes.TryGetItemPresentation()` 读取解析后的 `gameName` 与 `visual.spriteAddress`；共享外壳只负责实例结构，不再作为 UI 显示数据源。
 - 2026-08-08：本体物品 JSON 新增 `labelKey`/`descriptionKey`，由 Unity Localization 的 `FlatWorld` String Table 提供语言文本；MOD 现有同名字段与 `ModLocalizationRegistry` 继续保持兼容。
 - 2026-07-28：MOD 定义文件新增纯 JSON `recipes`，加载顺序为先物品 Def、再校验并注册配方；保留旧 Recipe AssetBundle 转换兼容。
@@ -78,4 +81,4 @@ GameRes 完成本体 Addressables
 
 ## 修改后维护本 Skill
 
-改变 manifest 字段、RecipeDto、JSON `recipes`、API 版本、目录结构、限制值、Lua 生命周期、Bundle/定义文件位置、存档记录或 `GameRes` 接入点后，必须更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。
+改变 manifest 字段、RecipeDto、QuestDefinition、JSON `recipes/quests`、API 版本、目录结构、限制值、Lua 生命周期、Bundle/定义文件位置、存档记录或 `GameRes` 接入点后，必须更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。

@@ -4,6 +4,7 @@
     "enableAllOperations": false,
     "enabledOperationIds": [
       "player.spawn-land",
+      "quest.progression",
       "inventory.crafting",
       "ui.inventory-panel",
       "audio.cue-playback",

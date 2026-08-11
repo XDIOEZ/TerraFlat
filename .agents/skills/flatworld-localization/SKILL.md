@@ -34,6 +34,13 @@ StreamingAssets/GameConfig/Items/*.json
 ```
 
 ```text
+StreamingAssets/GameConfig/Quests/*.json
+→ titleKey / descriptionKey / objective.labelKey
+→ FlatWorld String Table
+→ 任务追踪 HUD 按稳定 key 查询
+```
+
+```text
 正式 UI Prefab TMP 文本
 → FlatWorldLocalizationSetup 扫描并生成 key
 → FlatWorldUI String Table
@@ -45,7 +52,7 @@ StreamingAssets/GameConfig/Items/*.json
 
 - 当前 Unity 包为 `com.unity.localization` 1.4.5；不要绕过 Unity Localization 另建全局语言单例或按语言复制 Prefab。
 - 当前 Locale 代码为 `zh-CN` 与 `en`；默认语言为 `zh-CN`，用户选择保存到 `FlatWorld.Localization.Locale`。
-- `FlatWorld` 表用于物品名称/说明等本体内容；`FlatWorldUI` 表用于正式 UI。未来角色自言自语使用独立的 `FlatWorldDialogue` 表，不要混入 UI 表。
+- `FlatWorld` 表用于物品名称/说明、任务标题/说明/目标标签等本体内容；`FlatWorldUI` 表用于正式 UI 的标题、状态和模板。未来角色自言自语使用独立的 `FlatWorldDialogue` 表，不要混入 UI 表。
 - 物品与 UI 的 key 必须稳定：物品使用 `item.{itemId}.name/description` 或 JSON 明确提供的 `labelKey/descriptionKey`；UI 使用 `GetUiTextKey(sourceText)` 生成的 `ui.text.{hash}`。不要用翻译后的英文作为 key。
 - `FlatWorldLocalizationService.Get(key, fallback, table)` 查询失败必须显示调用方的 fallback；新增内容要保留原始中文作为安全回退，不能把 key 或空字符串直接显示给玩家。
 - `GetUiFormat(sourceTemplate, args)` 先查询模板再格式化；各语言模板必须保留相同数量和顺序的 `{0}`、`{1}` 占位符。
@@ -59,6 +66,7 @@ StreamingAssets/GameConfig/Items/*.json
 - **Prefab 里大量中文**：先运行 `FlatWorld/Localization/Setup Default Tables` 同步 `FlatWorldUI`，再检查 `BasePanel` 和 `FlatWorldUIAutoLocalizer`；不要手工给每个静态 TMP 节点复制一套语言节点。
 - **运行时动态 UI 中文**：在赋值点使用 `GetUiText` 或 `GetUiFormat`；同时把源模板加入 `FlatWorldLocalizationSetup.EnglishUiOverrides`，重新执行同步菜单。动态列表重建时必须使用当前语言，不要只在面板 Awake 时翻译一次。
 - **物品名称或说明**：修改 `Assets/StreamingAssets/GameConfig/Items/` 中的稳定 `id`、`labelKey`、`descriptionKey`；再由编辑器同步工具更新 `FlatWorld` 表。不要把 `name_zh/name_en/name_xx` 堆回物品业务配置。
+- **任务标题、说明或目标标签**：修改 `Assets/StreamingAssets/GameConfig/Quests/` 中的稳定 `titleKey`、`descriptionKey`、`labelKey` 与中文 fallback；英语进入 `EnglishQuestOverrides`，再由同步工具更新 `FlatWorld` 表，业务 JSON 不按语言复制字段。
 - **新增语言**：同时更新 Locale 资产、默认/可用语言配置、语言选择 UI、String Table 列、编辑器同步工具和 Addressables；不要只新增一个代码常量。
 - **角色自言自语**：同时读取 `flatworld-dialogue`。保留 JSON 的触发条件、优先级、冷却、一次性完成标记；建议为每条台词增加稳定 key，并在 `FlatWorldDialogue` 表按 key 翻译。不要新建第二个调度器。
 - **联机或存档中的显示文本**：显示文本仍应在本地端按 key 查询；网络/存档只传稳定 ID、Locale-independent 状态或原始用户输入，除非需求明确要求保存语言快照。
@@ -98,6 +106,8 @@ StreamingAssets/GameConfig/Items/*.json
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：四个 GM 测试任务的标题、说明和目标标签进入 `FlatWorld` 中英文表；`debugOnly` 只影响接取来源，不改变内容本地化与中文 fallback 契约，GM 开发者操作文字仍不进入正式 UI 表。
+- 2026-08-11：任务内容接入 `FlatWorld` 表：同步工具扫描本体 Quest JSON 的标题、说明和目标标签稳定 key；任务追踪 HUD 的标题/状态/空态进入 `FlatWorldUI`，语言切换会事件刷新全部可见任务卡。
 - 2026-08-09：GMReflectionConsole 属于开发者专用运行时调试 Canvas；本次仅调整 Buff 操作 fallback 文案，保留中文安全回退，未把调试字符串写入正式 `FlatWorldUI` 表。
 - 2026-08-09：新增 Buff 状态 HUD 的动态/静态文案（`状态效果 / BUFFS`、`暂无状态`、`永久`、`剩余 {0}s`）；已登记到 `EnglishUiOverrides` 并同步写入 `FlatWorldUI` 中英文 String Table，语言切换由 HUD 事件刷新。
 - 2026-08-09：按键绑定 UI 新增“清除”及清除状态文案；中文源模板与英文表达已登记到 `EnglishUiOverrides`，并同步写入 `FlatWorldUI` 的中英文 String Table。

@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld 任务系统导航"
+  short_description: "定位任务定义、进度、目标、奖励、存档与 MOD 接入"
+  default_prompt: "Use $flatworld-quest to locate and safely modify FlatWorld quest definitions, progression, rewards, persistence, gameplay signals, and mod integrations."

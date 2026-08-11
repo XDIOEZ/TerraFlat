@@ -19,6 +19,8 @@ public static class RuntimeUIPrefabKeys
     public const string SaveStatus = "UI_SaveStatus";
     public const string BuffStatus = "UI_BuffStatus";
     public const string BuffStatusItem = "UI_BuffStatusItem";
+    public const string QuestTracker = "UI_QuestTracker";
+    public const string QuestTrackerItem = "UI_QuestTrackerItem";
 
     #endregion
 

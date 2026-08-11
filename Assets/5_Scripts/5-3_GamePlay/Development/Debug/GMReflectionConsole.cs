@@ -127,6 +127,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (restorePreferencesCoroutine != null)
             StopCoroutine(restorePreferencesCoroutine);
         DisposeBuffTargeting();
+        DisposeQuestPage();
         UnbindGameEventManager();
     }
 
@@ -155,6 +156,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         RebindLegacyF4Conflict();
         HandleBuffTargetingSceneChanged();
+        HandleQuestPageSceneChanged();
         ApplyPersistedTogglePreferences();
         RestartRestorePreferences();
         if ((windowRoot != null && windowRoot.activeSelf) ||
@@ -1314,6 +1316,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshBuffDefinitions();
         RefreshBuffTargetList();
         RefreshBuffTargetingControls();
+        RefreshQuestPage();
         RefreshTeleportShortcutButton();
         RefreshAdminInvincibilityButton();
         RefreshPlayerMoveSpeedButton();

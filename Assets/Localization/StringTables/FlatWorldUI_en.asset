@@ -1668,6 +1668,34 @@ MonoBehaviour:
     m_Localized: Remaining {0}s
     m_Metadata:
       m_Items: []
+  - m_Id: 970667735998464
+    m_Localized: QUEST TRACKER / QUESTS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 970667765358592
+    m_Localized: No Active Quests
+    m_Metadata:
+      m_Items: []
+  - m_Id: 970667895382016
+    m_Localized: Active
+    m_Metadata:
+      m_Items: []
+  - m_Id: 970667895382017
+    m_Localized: Ready
+    m_Metadata:
+      m_Items: []
+  - m_Id: 970667895382018
+    m_Localized: Completed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 970667895382019
+    m_Localized: Objectives Complete
+    m_Metadata:
+      m_Items: []
+  - m_Id: 970667895382020
+    m_Localized: No Quest Objectives
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

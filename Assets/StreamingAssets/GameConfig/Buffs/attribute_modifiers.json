@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "buffs": [
+    {
+      "id": "跑步",
+      "displayName": "跑步",
+      "description": "生物拼尽全力地移动",
+      "durationSeconds": null,
+      "effects": [
+        {
+          "phase": "start",
+          "typeId": "core:move_speed_multiplier",
+          "value": 1.6
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:move_speed_multiplier",
+          "value": 0.625
+        }
+      ]
+    },
+    {
+      "id": "禁锢(99)",
+      "displayName": "禁锢(99)",
+      "description": "减速99%",
+      "durationSeconds": null,
+      "effects": [
+        {
+          "phase": "start",
+          "typeId": "core:move_speed_multiplier",
+          "value": 0.01
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:move_speed_multiplier",
+          "value": 100.0
+        }
+      ]
+    },
+    {
+      "id": "水体减速",
+      "displayName": "水体减速",
+      "description": "进入水后带来的减速",
+      "durationSeconds": null,
+      "effects": [
+        {
+          "phase": "start",
+          "typeId": "core:move_speed_multiplier",
+          "value": 0.5
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:move_speed_multiplier",
+          "value": 2.0
+        }
+      ]
+    },
+    {
+      "id": "潮湿",
+      "displayName": "潮湿",
+      "description": "潮湿时体温下降速度翻倍，离开水体后恢复正常。",
+      "durationSeconds": null,
+      "effects": [
+        {
+          "phase": "start",
+          "typeId": "core:temperature_cooling_multiplier",
+          "value": 2.0
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:temperature_cooling_multiplier",
+          "value": 0.5
+        }
+      ]
+    },
+    {
+      "id": "饥饿1.6",
+      "displayName": "饥饿1.6",
+      "description": "加快饥饿消耗速度",
+      "durationSeconds": null,
+      "effects": [
+        {
+          "phase": "start",
+          "typeId": "core:food_consume_speed_multiplier",
+          "value": 1.6
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:food_consume_speed_multiplier",
+          "value": 0.625
+        }
+      ]
+    },
+    {
+      "id": "饥饿2.0",
+      "displayName": "饥饿2.0",
+      "description": "加快饥饿消耗速度",
+      "durationSeconds": null,
+      "effects": [
+        {
+          "phase": "start",
+          "typeId": "core:food_consume_speed_multiplier",
+          "value": 2.0
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:food_consume_speed_multiplier",
+          "value": 0.5
+        }
+      ]
+    }
+  ]
+}

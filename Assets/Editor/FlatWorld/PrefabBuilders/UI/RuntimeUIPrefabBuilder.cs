@@ -68,16 +68,18 @@ public static class RuntimeUIPrefabBuilder
         SavePlayerWorldCoordinatePrefab();
         SaveSaveStatusPrefab();
         SaveBuffStatusPrefabs();
+        SaveQuestTrackerPrefabs();
 
         UpdateExistingPrefab(MenuRoot + "Info_Button_List.prefab", ConfigureSettingsActionListPages);
         UpdateExistingPrefab(InventoryRoot + "UI_Bag.prefab", AddInventorySortButton);
         UpdateExistingPrefab(InventoryRoot + "UI_Slot.prefab", AddCraftingPreviewLayers);
         UpdateExistingWorldPrefab(NetworkPlayerPrefab, AddNetworkPlayerNameLabel);
         UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerBuffStatusHUD);
+        UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerQuestTrackerHUD);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[Runtime UI] 已固化设置、设置列表分页、显示设置、世界加载、保存状态、Buff 状态、聊天、气泡、玩家坐标、背包整理、制作预览与联机玩家名称 Prefab。运行时不再创建这些视觉节点。");
+        Debug.Log("[Runtime UI] 已固化设置、设置列表分页、显示设置、世界加载、保存状态、Buff 状态、任务追踪、聊天、气泡、玩家坐标、背包整理、制作预览与联机玩家名称 Prefab。运行时不再创建这些视觉节点。");
     }
 
     /// <summary>只重建区块流送设置和入口，避免小改动重写全部运行时 Prefab。</summary>
@@ -176,6 +178,25 @@ public static class RuntimeUIPrefabBuilder
         Debug.Log("[Runtime UI] 已固化左侧中部 Buff 状态提示栏，并挂载到 Player.prefab。");
     }
 
+    /// <summary>只重建右侧任务追踪栏及玩家挂载组件，避免无关运行时 Prefab 被重写。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Quest Tracker HUD")]
+    public static void RebuildQuestTrackerHUD()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(SystemRoot);
+        SaveQuestTrackerPrefabs();
+        UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerQuestTrackerHUD);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化右侧任务追踪栏，并挂载到 Player.prefab。");
+    }
+
     /// <summary>只重建坐标显示设置和设置列表分页，避免无关运行时 Prefab 被重写。</summary>
     [MenuItem("FlatWorld/UI/Rebuild Coordinate Display Settings UI")]
     public static void RebuildCoordinateDisplaySettingsUI()
@@ -252,6 +273,17 @@ public static class RuntimeUIPrefabBuilder
         string itemPath = SystemRoot + RuntimeUIPrefabKeys.BuffStatusItem + ".prefab";
         SaveNewPrefab(panelPath, BuildBuffStatusHUD);
         SaveNewPrefab(itemPath, BuildBuffStatusItem);
+        EnsureRuntimePrefabAddressable(panelPath);
+        EnsureRuntimePrefabAddressable(itemPath);
+    }
+
+    /// <summary>保存任务追踪面板和可复用条目 Prefab，并登记为运行时 Addressable。</summary>
+    private static void SaveQuestTrackerPrefabs()
+    {
+        string panelPath = SystemRoot + RuntimeUIPrefabKeys.QuestTracker + ".prefab";
+        string itemPath = SystemRoot + RuntimeUIPrefabKeys.QuestTrackerItem + ".prefab";
+        SaveNewPrefab(panelPath, BuildQuestTrackerHUD);
+        SaveNewPrefab(itemPath, BuildQuestTrackerItem);
         EnsureRuntimePrefabAddressable(panelPath);
         EnsureRuntimePrefabAddressable(itemPath);
     }
@@ -544,6 +576,158 @@ public static class RuntimeUIPrefabBuilder
         remaining.enableWordWrapping = false;
         remaining.overflowMode = TextOverflowModes.Ellipsis;
         remaining.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+
+        return root;
+    }
+
+    /// <summary>构建屏幕右侧的非交互任务追踪卡，最多显示四条进行中或待领取任务。</summary>
+    private static GameObject BuildQuestTrackerHUD()
+    {
+        GameObject root = CreateUIObject(RuntimeUIPrefabKeys.QuestTracker, null, typeof(CanvasGroup));
+        RectTransform rootRect = root.GetComponent<RectTransform>();
+        rootRect.anchorMin = new Vector2(1f, 1f);
+        rootRect.anchorMax = new Vector2(1f, 1f);
+        rootRect.pivot = new Vector2(1f, 1f);
+        rootRect.anchoredPosition = new Vector2(-32f, -190f);
+        rootRect.sizeDelta = new Vector2(380f, 420f);
+
+        CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
+        canvasGroup.alpha = 1f;
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
+
+        Image background = CreateImage("背景", root.transform, new Color(0.025f, 0.043f, 0.058f, 0.92f));
+        background.raycastTarget = false;
+        Stretch(background.rectTransform);
+        AddOutline(background, new Color(0.83f, 0.49f, 0.23f, 0.46f));
+
+        Image accent = CreateImage("强调线", root.transform, Amber);
+        accent.raycastTarget = false;
+        RectTransform accentRect = accent.rectTransform;
+        accentRect.anchorMin = new Vector2(0f, 0f);
+        accentRect.anchorMax = new Vector2(0f, 1f);
+        accentRect.pivot = new Vector2(0f, 0.5f);
+        accentRect.anchoredPosition = Vector2.zero;
+        accentRect.sizeDelta = new Vector2(4f, -18f);
+
+        TextMeshProUGUI title = CreateText("标题", root.transform, "任务追踪 / QUESTS", 13f, Amber);
+        title.fontStyle = FontStyles.Bold;
+        title.characterSpacing = 1f;
+        title.enableWordWrapping = false;
+        title.overflowMode = TextOverflowModes.Ellipsis;
+        SetTopLeft(title.rectTransform, 18f, 12f, 260f, 22f);
+
+        TextMeshProUGUI count = CreateText("数量文本", root.transform, "0", 13f, Muted);
+        count.alignment = TextAlignmentOptions.MidlineRight;
+        count.enableWordWrapping = false;
+        count.rectTransform.anchorMin = new Vector2(1f, 1f);
+        count.rectTransform.anchorMax = new Vector2(1f, 1f);
+        count.rectTransform.pivot = new Vector2(1f, 1f);
+        count.rectTransform.anchoredPosition = new Vector2(-18f, -12f);
+        count.rectTransform.sizeDelta = new Vector2(56f, 22f);
+
+        GameObject listRoot = CreateUIObject("内容列表", root.transform);
+        SetTopLeft(listRoot.GetComponent<RectTransform>(), 16f, 48f, 348f, 354f);
+
+        GameObject viewport = CreateUIObject("Viewport", listRoot.transform, typeof(RectMask2D));
+        Stretch(viewport.GetComponent<RectTransform>());
+
+        GameObject content = CreateUIObject("Content", viewport.transform);
+        RectTransform contentRect = content.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.anchoredPosition = Vector2.zero;
+        contentRect.sizeDelta = Vector2.zero;
+
+        VerticalLayoutGroup contentLayout = content.AddComponent<VerticalLayoutGroup>();
+        contentLayout.spacing = 8f;
+        contentLayout.childControlWidth = true;
+        contentLayout.childControlHeight = true;
+        contentLayout.childForceExpandWidth = true;
+        contentLayout.childForceExpandHeight = false;
+        content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        TextMeshProUGUI empty = CreateText("空状态文本", root.transform, "暂无进行中的任务", 13f, Muted);
+        empty.alignment = TextAlignmentOptions.Center;
+        empty.enableWordWrapping = false;
+        empty.overflowMode = TextOverflowModes.Ellipsis;
+        SetTopLeft(empty.rectTransform, 24f, 205f, 332f, 24f);
+
+        return root;
+    }
+
+    /// <summary>构建固定高度任务条目，展示标题、说明、状态、目标摘要和进度条。</summary>
+    private static GameObject BuildQuestTrackerItem()
+    {
+        GameObject root = CreateUIObject(
+            RuntimeUIPrefabKeys.QuestTrackerItem,
+            null,
+            typeof(Image),
+            typeof(QuestTrackerRowView));
+        LayoutElement rowElement = root.AddComponent<LayoutElement>();
+        rowElement.preferredHeight = 80f;
+
+        Image background = root.GetComponent<Image>();
+        background.color = new Color(0.055f, 0.105f, 0.12f, 0.92f);
+        background.raycastTarget = false;
+        AddOutline(background, new Color(0.55f, 0.68f, 0.70f, 0.22f));
+
+        Image statusLine = CreateImage("状态线", root.transform, Amber);
+        statusLine.raycastTarget = false;
+        RectTransform statusLineRect = statusLine.rectTransform;
+        statusLineRect.anchorMin = new Vector2(0f, 0f);
+        statusLineRect.anchorMax = new Vector2(0f, 1f);
+        statusLineRect.pivot = new Vector2(0f, 0.5f);
+        statusLineRect.anchoredPosition = new Vector2(4f, 0f);
+        statusLineRect.sizeDelta = new Vector2(3f, -16f);
+
+        TextMeshProUGUI title = CreateText("任务标题", root.transform, "Quest", 15f, Cream);
+        title.fontStyle = FontStyles.Bold;
+        title.enableWordWrapping = false;
+        title.overflowMode = TextOverflowModes.Ellipsis;
+        SetTopLeft(title.rectTransform, 14f, 7f, 240f, 19f);
+
+        TextMeshProUGUI status = CreateText("任务状态", root.transform, "ACTIVE", 11f, Amber);
+        status.fontStyle = FontStyles.Bold;
+        status.alignment = TextAlignmentOptions.MidlineRight;
+        status.enableWordWrapping = false;
+        status.overflowMode = TextOverflowModes.Ellipsis;
+        status.rectTransform.anchorMin = new Vector2(1f, 1f);
+        status.rectTransform.anchorMax = new Vector2(1f, 1f);
+        status.rectTransform.pivot = new Vector2(1f, 1f);
+        status.rectTransform.anchoredPosition = new Vector2(-12f, -7f);
+        status.rectTransform.sizeDelta = new Vector2(78f, 19f);
+
+        TextMeshProUGUI description = CreateText("任务说明", root.transform, "Description", 11.5f, Muted);
+        description.enableWordWrapping = false;
+        description.overflowMode = TextOverflowModes.Ellipsis;
+        SetTopLeft(description.rectTransform, 14f, 28f, 320f, 18f);
+
+        TextMeshProUGUI objective = CreateText("目标文本", root.transform, "Objective  0/1", 11f, Cream);
+        objective.enableWordWrapping = false;
+        objective.overflowMode = TextOverflowModes.Ellipsis;
+        SetTopLeft(objective.rectTransform, 14f, 49f, 320f, 17f);
+
+        Image progressBackground = CreateImage(
+            "进度背景",
+            root.transform,
+            new Color(0.02f, 0.035f, 0.045f, 0.92f));
+        progressBackground.raycastTarget = false;
+        RectTransform progressBackgroundRect = progressBackground.rectTransform;
+        progressBackgroundRect.anchorMin = new Vector2(0f, 0f);
+        progressBackgroundRect.anchorMax = new Vector2(1f, 0f);
+        progressBackgroundRect.pivot = new Vector2(0.5f, 0f);
+        progressBackgroundRect.offsetMin = new Vector2(14f, 8f);
+        progressBackgroundRect.offsetMax = new Vector2(-12f, 12f);
+
+        Image progressFill = CreateImage("进度填充", progressBackground.transform, Amber);
+        progressFill.raycastTarget = false;
+        progressFill.type = Image.Type.Filled;
+        progressFill.fillMethod = Image.FillMethod.Horizontal;
+        progressFill.fillOrigin = 0;
+        progressFill.fillAmount = 0f;
+        Stretch(progressFill.rectTransform);
 
         return root;
     }
@@ -1302,6 +1486,19 @@ public static class RuntimeUIPrefabBuilder
         if (root.GetComponent<PlayerBuffStatusHUD>() == null)
         {
             root.AddComponent<PlayerBuffStatusHUD>();
+            EditorUtility.SetDirty(root);
+        }
+    }
+
+    /// <summary>确保本地玩家 Prefab 挂载任务追踪控制器；控制器只实例化正式任务 UI Prefab。</summary>
+    private static void EnsurePlayerQuestTrackerHUD(GameObject root)
+    {
+        if (root == null)
+            return;
+
+        if (root.GetComponent<PlayerQuestTrackerHUD>() == null)
+        {
+            root.AddComponent<PlayerQuestTrackerHUD>();
             EditorUtility.SetDirty(root);
         }
     }

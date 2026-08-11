@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld 美术生成"
+  short_description: "生成并校验符合 FlatWorld 像素画风的 Unity 游戏美术素材"
+  default_prompt: "使用 $flatworld-art-generation 生成一份符合项目画风、可直接导入 Unity 的像素美术素材。"

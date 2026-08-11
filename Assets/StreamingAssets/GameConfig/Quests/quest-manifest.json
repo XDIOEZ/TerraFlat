@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    {
+      "id": "starter",
+      "path": "starter.json",
+      "enabled": true
+    },
+    {
+      "id": "debug-tests",
+      "path": "debug-tests.json",
+      "enabled": true
+    }
+  ]
+}
