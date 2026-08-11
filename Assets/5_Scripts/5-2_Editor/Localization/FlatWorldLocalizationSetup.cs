@@ -121,6 +121,61 @@ namespace FlatWorld.Localization.Editor
                 { "Tea", "A warm drink made from tea leaves." }
             };
 
+        /// <summary>本体任务内容按稳定 key 进入 FlatWorld 表，避免把多语言字段堆回任务业务 JSON。</summary>
+        private static readonly Dictionary<string, string> EnglishQuestOverrides =
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                { "quest.flatworld.first_chipped_tool.title", "First Stone Tool" },
+                {
+                    "quest.flatworld.first_chipped_tool.description",
+                    "Craft a chipped stone tool and learn the basic crafting flow."
+                },
+                {
+                    "quest.flatworld.first_chipped_tool.objective.craft_chipped_tool",
+                    "Craft one chipped stone tool"
+                },
+                { "quest.flatworld.debug_open_inventory.title", "Test: Open Inventory" },
+                {
+                    "quest.flatworld.debug_open_inventory.description",
+                    "Open the inventory once, then claim the quest from the GM quest page."
+                },
+                {
+                    "quest.flatworld.debug_open_inventory.objective.open_once",
+                    "Open the inventory once"
+                },
+                { "quest.flatworld.debug_pickup_items.title", "Test: Pick Up Items" },
+                {
+                    "quest.flatworld.debug_pickup_items.description",
+                    "Pick up any three items. The quest turns in automatically."
+                },
+                {
+                    "quest.flatworld.debug_pickup_items.objective.pickup_three",
+                    "Pick up any 3 items"
+                },
+                { "quest.flatworld.debug_own_sticks.title", "Test: Own Sticks" },
+                {
+                    "quest.flatworld.debug_own_sticks.description",
+                    "Own five wooden sticks in the bag or hotbar to test a state-based objective."
+                },
+                {
+                    "quest.flatworld.debug_own_sticks.objective.own_five_sticks",
+                    "Own 5 wooden sticks"
+                },
+                { "quest.flatworld.debug_craft_and_build.title", "Test: Craft and Build" },
+                {
+                    "quest.flatworld.debug_craft_and_build.description",
+                    "Craft a chipped stone tool, then place any building to test stage progression."
+                },
+                {
+                    "quest.flatworld.debug_craft_and_build.objective.craft_chipped_tool",
+                    "Craft one chipped stone tool"
+                },
+                {
+                    "quest.flatworld.debug_craft_and_build.objective.place_any_building",
+                    "Place any building once"
+                }
+            };
+
         private static readonly Dictionary<string, string> EnglishUiOverrides =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
@@ -463,6 +518,13 @@ namespace FlatWorld.Localization.Editor
                 { "永久", "Permanent" },
                 { "剩余 {0}s", "Remaining {0}s" },
                 { "剩余 30s", "Remaining 30s" },
+                { "任务追踪 / QUESTS", "QUEST TRACKER / QUESTS" },
+                { "暂无进行中的任务", "No Active Quests" },
+                { "进行中", "Active" },
+                { "可领取", "Ready" },
+                { "已完成", "Completed" },
+                { "任务目标已完成", "Objectives Complete" },
+                { "暂无任务目标", "No Quest Objectives" },
                 { "正在加载星球：{0}", "Loading planet: {0}" },
                 { "正在创建玩家并准备出生区域…", "Creating the player and preparing the spawn area…" },
                 { "正在根据世界种子定位安全出生点…", "Locating a safe spawn point from the world seed…" },
@@ -608,6 +670,7 @@ namespace FlatWorld.Localization.Editor
             StringTable chineseTable = EnsureTable(collection, chinese);
             StringTable englishTable = EnsureTable(collection, english);
             int itemCount = SyncItemEntries(chineseTable, englishTable);
+            int questTextCount = SyncQuestEntries(chineseTable, englishTable);
 
             StringTableCollection uiCollection = LocalizationEditorSettings.GetStringTableCollection(
                 FlatWorldLocalizationService.UiTable);
@@ -639,7 +702,7 @@ namespace FlatWorld.Localization.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log($"[FlatWorld Localization] 已完成设置：Locale=zh-CN/en，物品条目={itemCount}，UI 文本={uiCount}，Tables={FlatWorldLocalizationService.DefaultTable}/{FlatWorldLocalizationService.UiTable}");
+            Debug.Log($"[FlatWorld Localization] 已完成设置：Locale=zh-CN/en，物品条目={itemCount}，任务文本={questTextCount}，UI 文本={uiCount}，Tables={FlatWorldLocalizationService.DefaultTable}/{FlatWorldLocalizationService.UiTable}");
         }
 
         #endregion
@@ -811,6 +874,96 @@ namespace FlatWorld.Localization.Editor
 
         #region JSON 同步
 
+        /// <summary>从本体任务分包同步标题、说明和目标标签到内容表。</summary>
+        private static int SyncQuestEntries(StringTable chineseTable, StringTable englishTable)
+        {
+            string questRoot = Path.Combine(Application.dataPath, "StreamingAssets/GameConfig/Quests");
+            if (!Directory.Exists(questRoot))
+                return 0;
+
+            var syncedKeys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string file in Directory.GetFiles(questRoot, "*.json", SearchOption.AllDirectories))
+            {
+                JObject root;
+                try
+                {
+                    root = JObject.Parse(File.ReadAllText(file));
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogWarning($"[FlatWorld Localization] 跳过无法解析的任务 JSON：{file}\n{exception.Message}");
+                    continue;
+                }
+
+                if (!(root["quests"] is JArray quests))
+                    continue;
+
+                foreach (JToken token in quests)
+                {
+                    if (!(token is JObject quest))
+                        continue;
+
+                    SyncQuestText(
+                        chineseTable,
+                        englishTable,
+                        quest.Value<string>("titleKey"),
+                        quest.Value<string>("title"),
+                        syncedKeys);
+                    SyncQuestText(
+                        chineseTable,
+                        englishTable,
+                        quest.Value<string>("descriptionKey"),
+                        quest.Value<string>("description"),
+                        syncedKeys);
+
+                    if (!(quest["stages"] is JArray stages))
+                        continue;
+
+                    foreach (JToken stageToken in stages)
+                    {
+                        if (!(stageToken is JObject stage) || !(stage["objectives"] is JArray objectives))
+                            continue;
+
+                        foreach (JToken objectiveToken in objectives)
+                        {
+                            if (!(objectiveToken is JObject objective))
+                                continue;
+
+                            SyncQuestText(
+                                chineseTable,
+                                englishTable,
+                                objective.Value<string>("labelKey"),
+                                objective.Value<string>("label"),
+                                syncedKeys);
+                        }
+                    }
+                }
+            }
+
+            return syncedKeys.Count;
+        }
+
+        private static void SyncQuestText(
+            StringTable chineseTable,
+            StringTable englishTable,
+            string key,
+            string sourceText,
+            ISet<string> syncedKeys)
+        {
+            string normalizedKey = key?.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedKey) || string.IsNullOrWhiteSpace(sourceText))
+                return;
+
+            SetChineseValue(chineseTable, normalizedKey, sourceText);
+            SetEnglishValue(
+                englishTable,
+                normalizedKey,
+                GetEnglishQuestText(normalizedKey, sourceText),
+                sourceText,
+                normalizedKey);
+            syncedKeys.Add(normalizedKey);
+        }
+
         private static int SyncItemEntries(StringTable chineseTable, StringTable englishTable)
         {
             string itemRoot = Path.Combine(Application.dataPath, "StreamingAssets/GameConfig/Items");
@@ -905,6 +1058,17 @@ namespace FlatWorld.Localization.Editor
         #endregion
 
         #region 英文翻译
+
+        private static string GetEnglishQuestText(string key, string sourceText)
+        {
+            if (EnglishQuestOverrides.TryGetValue(key, out string translatedText))
+                return translatedText;
+            if (!ContainsChinese(sourceText))
+                return sourceText;
+
+            Debug.LogWarning($"[FlatWorld Localization] 任务文本缺少英文翻译：{key} / {sourceText}");
+            return "Quest Text";
+        }
 
         private static string GetEnglishName(string itemId)
         {

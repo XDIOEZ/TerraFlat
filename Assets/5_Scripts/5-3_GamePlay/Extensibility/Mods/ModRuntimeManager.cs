@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using FlatWorld.Gameplay.Quests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -59,6 +60,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
     private readonly List<PendingItemDefinition> pendingItemDefinitions = new();
     private readonly List<PendingRecipeDefinition> pendingRecipeDefinitions = new();
     private readonly List<PendingBuffDefinition> pendingBuffDefinitions = new();
+    private readonly List<PendingQuestDefinition> pendingQuestDefinitions = new();
     private readonly List<PendingPatchDocument> pendingPatchDocuments = new();
     private readonly Dictionary<string, ModDefinitionInfo> definitionInfos = new(IdComparer);
     private ModProfile activeProfile;
@@ -194,6 +196,8 @@ public sealed class ModRuntimeManager : MonoBehaviour
         ProcessItemDefinitions(gameRes);
         ProcessRecipeDefinitions(gameRes);
         ProcessBuffDefinitions(gameRes);
+        ProcessQuestDefinitions();
+        QuestCatalog.FinalizeRegistration();
         yield return null;
 
         for (int i = 0; i < loadedPackages.Count; i++)
@@ -411,6 +415,32 @@ public sealed class ModRuntimeManager : MonoBehaviour
                 ValidateContentId(package.Manifest.Id, buff.Id);
                 pendingBuffDefinitions.Add(new PendingBuffDefinition(package, definitionFile, buffIndex++, buff));
             }
+
+            int questIndex = 0;
+            foreach (JToken token in document["quests"] as JArray ?? new JArray())
+            {
+                QuestDefinition quest;
+                try
+                {
+                    quest = token.ToObject<QuestDefinition>();
+                }
+                catch (Exception exception)
+                {
+                    throw new InvalidDataException(
+                        $"MOD {package.Manifest.Id} 任务 Def 无效：{definitionFile}#{questIndex}",
+                        exception);
+                }
+                if (quest == null)
+                    throw new InvalidDataException(
+                        $"MOD {package.Manifest.Id} 任务 Def 为空：{definitionFile}#{questIndex}");
+
+                ValidateContentId(package.Manifest.Id, quest.Id);
+                pendingQuestDefinitions.Add(new PendingQuestDefinition(
+                    package,
+                    definitionFile,
+                    questIndex++,
+                    quest));
+            }
         }
 
         foreach (string patchFile in package.Manifest.PatchFiles ?? Enumerable.Empty<string>())
@@ -526,6 +556,36 @@ public sealed class ModRuntimeManager : MonoBehaviour
                 Materialized = true
             };
             Debug.Log($"[MOD:{pending.Package.Manifest.Id}] 已注册 JSON Buff：{definition.Id}");
+        }
+    }
+
+    private void ProcessQuestDefinitions()
+    {
+        foreach (PendingQuestDefinition pending in pendingQuestDefinitions)
+        {
+            QuestDefinition definition = pending.Definition;
+            if (!string.IsNullOrWhiteSpace(definition.TitleKey))
+                definition.Title = ModLocalizationRegistry.Translate(definition.TitleKey, definition.Title);
+            if (!string.IsNullOrWhiteSpace(definition.DescriptionKey))
+            {
+                definition.Description = ModLocalizationRegistry.Translate(
+                    definition.DescriptionKey,
+                    definition.Description);
+            }
+
+            definition.SourceModId = pending.Package.Manifest.Id;
+            definition.SourceFile = pending.File;
+            definition.SourceIndex = pending.Index;
+            QuestCatalog.RegisterExternal(definition);
+            definitionInfos[definition.Id] = new ModDefinitionInfo
+            {
+                Id = definition.Id,
+                DeclaringModId = pending.Package.Manifest.Id,
+                SourceFile = pending.File,
+                SourceIndex = pending.Index,
+                Materialized = true
+            };
+            Debug.Log($"[MOD:{pending.Package.Manifest.Id}] 已注册 JSON 任务：{definition.Id}");
         }
     }
 
@@ -1537,10 +1597,12 @@ public sealed class ModRuntimeManager : MonoBehaviour
         pendingItemDefinitions.Clear();
         pendingRecipeDefinitions.Clear();
         pendingBuffDefinitions.Clear();
+        pendingQuestDefinitions.Clear();
         pendingPatchDocuments.Clear();
         definitionInfos.Clear();
         ModLocalizationRegistry.Clear();
         ModSettingsRegistry.Clear();
+        QuestCatalog.RemoveExternalDefinitions();
         activeProfile = null;
         safeModeActive = false;
         ModSetHash = string.Empty;
@@ -1627,6 +1689,26 @@ public sealed class ModRuntimeManager : MonoBehaviour
         public string File { get; }
         public int Index { get; }
         public BuffDefinitionDto Definition { get; }
+    }
+
+    private sealed class PendingQuestDefinition
+    {
+        public PendingQuestDefinition(
+            ModPackage package,
+            string file,
+            int index,
+            QuestDefinition definition)
+        {
+            Package = package;
+            File = file;
+            Index = index;
+            Definition = definition;
+        }
+
+        public ModPackage Package { get; }
+        public string File { get; }
+        public int Index { get; }
+        public QuestDefinition Definition { get; }
     }
 }
 

@@ -1,4 +1,5 @@
 // AI-Context: 玩家世界物品拾取入口；联机时只发起服务端事务，收到授权后才写入背包，禁止直接 Destroy 绕过 ItemMgr/网络生命周期。
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Audio;
@@ -208,17 +209,41 @@ public class ItemPicker : Module
             if (targetInventory?.Data == null)
                 continue;
 
+            float amountBeforePickup = CountItemAmount(targetInventory.Data, itemData.IDName);
             if (!targetInventory.Data.TryAddItem(itemData))
                 continue;
 
+            float addedAmount = Mathf.Max(
+                0f,
+                CountItemAmount(targetInventory.Data, itemData.IDName) - amountBeforePickup);
             itemData.Stack.CanBePickedUp = false;
             targetInventory.RefreshUI();
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
-            GameplayProgressEvents.PublishPickupSucceeded(item as Player, itemData.IDName);
+            GameplayProgressEvents.PublishPickupSucceeded(item as Player, itemData.IDName, addedAmount);
             return true;
         }
 
         return false;
+    }
+
+    /// <summary>统计库存内指定物品数量，用于发布实际成功入包的增量。</summary>
+    private static float CountItemAmount(Inventory_Data inventoryData, string itemId)
+    {
+        if (inventoryData?.itemSlots == null || string.IsNullOrWhiteSpace(itemId))
+            return 0f;
+
+        float total = 0f;
+        foreach (ItemSlot slot in inventoryData.itemSlots)
+        {
+            ItemData stored = slot?.itemData;
+            if (stored?.Stack != null &&
+                string.Equals(stored.IDName, itemId, StringComparison.Ordinal))
+            {
+                total += stored.Stack.Amount;
+            }
+        }
+
+        return total;
     }
 
     /// <summary>

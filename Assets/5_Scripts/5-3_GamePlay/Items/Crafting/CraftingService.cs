@@ -53,8 +53,8 @@ public static class CraftingService
                     prepared.Recipe);
             }
 
-                    PublishSuccess(actor, prepared.Outputs);
-                    return prepared;
+            PublishSuccess(actor, prepared.Outputs);
+            return prepared;
         }
         finally
         {
@@ -151,7 +151,11 @@ public static class CraftingService
         {
             try
             {
-                GameplayProgressEvents.PublishCraftSucceeded(actor, outputs[i]?.IDName);
+                ItemData output = outputs[i];
+                GameplayProgressEvents.PublishCraftSucceeded(
+                    actor,
+                    output?.IDName,
+                    output?.Stack?.Amount ?? 1f);
             }
             catch (Exception exception)
             {

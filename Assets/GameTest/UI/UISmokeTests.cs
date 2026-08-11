@@ -485,6 +485,83 @@ namespace FlatWorld.GameTest.UI
 
         [Test]
         [Category("UI.Smoke")]
+        [Category("UI.Layout")]
+        public void QuestTrackerHudPrefabAndPlayerBindingFollowContract()
+        {
+            const string hudPath =
+                "Assets/2_Prefabs/2-1_UI/Runtime/System/UI_QuestTracker.prefab";
+            const string itemPath =
+                "Assets/2_Prefabs/2-1_UI/Runtime/System/UI_QuestTrackerItem.prefab";
+            const string playerPath = "Assets/2_Prefabs/Player/Player.prefab";
+            const string sourcePath =
+                "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/PlayerQuestTrackerHUD.cs";
+
+            AssertPrefabContains(
+                hudPath,
+                "背景",
+                "强调线",
+                "标题",
+                "数量文本",
+                "空状态文本",
+                "内容列表",
+                "Viewport",
+                "Content");
+            AssertPrefabContains(
+                itemPath,
+                "状态线",
+                "任务标题",
+                "任务状态",
+                "任务说明",
+                "目标文本",
+                "进度背景",
+                "进度填充");
+
+            GameObject hudPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(hudPath)
+                ?? throw new AssertionException($"缺少任务追踪 HUD Prefab：{hudPath}");
+            RectTransform rootRect = hudPrefab.GetComponent<RectTransform>()
+                ?? throw new AssertionException("任务追踪 HUD 根节点缺少 RectTransform。");
+            Assert.That(rootRect.anchorMin, Is.EqualTo(new Vector2(1f, 1f)));
+            Assert.That(rootRect.anchorMax, Is.EqualTo(new Vector2(1f, 1f)));
+            Assert.That(rootRect.pivot, Is.EqualTo(new Vector2(1f, 1f)));
+            Assert.That(rootRect.anchoredPosition, Is.EqualTo(new Vector2(-32f, -190f)));
+            Assert.That(rootRect.sizeDelta, Is.EqualTo(new Vector2(380f, 420f)));
+
+            RectTransform content = hudPrefab.GetComponentsInChildren<RectTransform>(true)
+                .Single(item => item.name == "Content");
+            Assert.That(content.GetComponent<VerticalLayoutGroup>(), Is.Not.Null);
+            Assert.That(content.GetComponent<ContentSizeFitter>(), Is.Not.Null);
+
+            foreach (Graphic graphic in hudPrefab.GetComponentsInChildren<Graphic>(true))
+                Assert.That(graphic.raycastTarget, Is.False, $"任务追踪 HUD 不应拦截输入：{graphic.name}");
+
+            GameObject itemPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(itemPath)
+                ?? throw new AssertionException($"缺少任务追踪行 Prefab：{itemPath}");
+            Assert.That(itemPrefab.GetComponent<QuestTrackerRowView>(), Is.Not.Null);
+            Image progressFill = itemPrefab.GetComponentsInChildren<Image>(true)
+                .Single(item => item.name == "进度填充");
+            Assert.That(progressFill.type, Is.EqualTo(Image.Type.Filled));
+            foreach (Graphic graphic in itemPrefab.GetComponentsInChildren<Graphic>(true))
+                Assert.That(graphic.raycastTarget, Is.False, $"任务追踪行不应拦截输入：{graphic.name}");
+
+            GameObject playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(playerPath)
+                ?? throw new AssertionException($"缺少玩家 Prefab：{playerPath}");
+            Assert.That(playerPrefab.GetComponent<PlayerQuestTrackerHUD>(), Is.Not.Null,
+                "Player 必须挂载 PlayerQuestTrackerHUD，才能显示本地玩家任务。");
+
+            string source = File.ReadAllText(sourcePath);
+            Assert.That(source, Does.Contain("RuntimeReady"));
+            Assert.That(source, Does.Contain("RuntimeRemoving"));
+            Assert.That(source, Does.Contain("QuestChanged"));
+            Assert.That(source, Does.Contain("GetSnapshots"));
+            Assert.That(source, Does.Contain("LayoutRebuilder.MarkLayoutForRebuild"));
+            Assert.That(source, Does.Not.Contain("private void Update()"));
+            Assert.That(source, Does.Not.Contain("private void LateUpdate()"));
+            Assert.That(source, Does.Not.Contain("Canvas.ForceUpdateCanvases"));
+            Assert.That(source, Does.Not.Contain("LayoutRebuilder.ForceRebuildLayoutImmediate"));
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
         public void SharedUiRefreshDriversStayIdleUntilEventsArrive()
         {
             const string feedbackPath =

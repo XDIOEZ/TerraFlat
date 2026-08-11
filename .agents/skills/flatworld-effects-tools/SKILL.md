@@ -33,7 +33,7 @@ disable-model-invocation: false
 - 结构编辑器：`Assets/5_Scripts/5-2_Editor/Structures/`。
 - MOD 模板工具：`Assets/5_Scripts/5-2_Editor/Mods/ModTemplateCreator.cs`。
 - 音频生成工具：`Assets/5_Scripts/5-6_Audio/Editor/`。
-- 游戏调试目录：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/`。
+- 游戏调试目录：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/`；`GMReflectionConsole.Navigation.cs` 维护 F4 分页，领域操作拆入 `Buffs`/`Quests` partial，任务页只调用任务运行时公共 API。
 - 游戏调试程序集：`FlatWorld.Gameplay.Debug`；它是依赖 `GamePlay` 的叶子程序集，生产运行时代码不得反向引用 `GMReflectionConsole`。
 - 调试管理器：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameDebugManager.cs`。
 - 会话日志管理器：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameLogManager.cs`；启动时自动收集 Unity 日志到 `Application.persistentDataPath/GameLogs/`，业务关键流程使用 `Log`、`LogWarning`、`LogError`、`LogException` 记录带调用位置的 `[WORK]` 日志。
@@ -50,6 +50,7 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：F4 `GMReflectionConsole` 新增任务调试 partial 和独立分页；动态列出 `debugOnly` 任务，支持开启、批量开启、刷新与交付，场景切换/销毁时解除任务事件订阅。
 - 2026-08-09：`ChunkLightOccluderRenderer` 将新区块静态阻挡格合并为少量单位方形 URP 2D `ShadowCaster2D`，只在绑定/墙体变化时刷新，并通过 `CompositeShadowCaster2D` 组织 `LightOccluders` 子层；不新增每帧光照射线计算。
 - 2026-08-09：修复幽灵受击不闪红：幽灵 Prefab 根节点补挂 `ActorRenderEffectController` 与 `ActorRenderColorEffect`，让 `Visual` SpriteRenderer 进入统一 MPB 受击链路；不改幽灵伤害结算。
 - 2026-08-09：统一受击表现改为红色；`DamageReceiver`、`ActorRenderColorEffect`、Animator 模块 Prefab 及 `Sprite-Lit-Master` Shader 默认值保持一致，并补齐 Unlit Pass 的 MPB 参数声明。
@@ -59,11 +60,10 @@ disable-model-invocation: false
 - 2026-08-09：新增配置化角色状态附着特效控制器；燃烧 Buff 添加时立即显示并以 `10fps` 循环八帧火焰，续期不中断、移除/过期立即隐藏。火焰依据当前角色 Sprite 高度自适应缩放和排序，玩家与 AI 共用动画模块均已接线。
 - 2026-08-09：雨效改为由 `RainEffectController` 单点跟随相机顶部，`WeatherMgr` 不再重复写入根 Transform；保留原单边顶部发射线，粒子寿命按正交相机高度、初始下落速度和 `1.12` 倍余量动态计算，确保下半屏持续有雨且不会无限落到地图外。`RainGroundSplash` 优先采样非水非阻挡地形，区块尚未 Ready 时在可视范围降级发射；频率提升至小雨 `12/s`、暴雨 `48/s`，生命周期 `0.32–0.5s`、上限 `80`，保证中雨约 12 个同时可见水花。
 - 2026-08-09：草地 Tilemap 接入独立 `Grass-Sway-Lit` Shader，使用 GPU 顶点风场、根部固定的弯曲权重和共享材质参数；`ChunkGrassRenderer`、`GrassDetailLayer` 及对应 Prefab 共用该材质并扩展裁剪边界。
-- 2026-08-09：新增独立 `RainGroundSplash` 表现层；由 `WeatherMgr` 单独加载，使用世界空间环形粒子表示雨滴落地，不改变天气数据与地形数据。
 
 ## 修改后自动测试
 
-- 基础测试脚本：`Assets/GameTest/EffectsTools/EffectsToolsSmokeTests.cs`；当前基础覆盖视觉管理器、伤害文字、粒子 Prefab 和 Shader 入口。
+- 基础测试脚本：`Assets/GameTest/EffectsTools/EffectsToolsSmokeTests.cs`；当前基础覆盖视觉管理器、伤害文字、粒子 Prefab、Shader 入口，以及 GM 任务分页、公共任务 API 和无独立 `Update` 契约。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；特效与工具测试约定目录：`Assets/GameTest/EffectsTools/`；场景目录：`Assets/GameTest/Scenes/EffectsTools/`；冒烟分类：`EffectsTools.Smoke`。
 - 新增特效创建回收、Shader 参数、伤害文字或编辑器工具行为时必须增加系统测试；修复 Bug 时先增加回归测试。运行时特效主流程变化时同步更新隔离冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；视觉效果至少验证对象、材质、生命周期和关键参数，最终观感仍交由人工确认。

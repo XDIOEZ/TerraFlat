@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "buffs": [
+    {
+      "id": "生命恢复(1)",
+      "displayName": "生命恢复(1)",
+      "description": "每秒恢复1点生命值",
+      "durationSeconds": null,
+      "tickIntervalSeconds": 1.0,
+      "effects": [
+        {
+          "phase": "tick",
+          "typeId": "core:heal",
+          "value": 1.0
+        }
+      ]
+    }
+  ]
+}

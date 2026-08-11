@@ -70,6 +70,54 @@ public sealed class CraftingTransaction
         return true;
     }
 
+    #region 通用原子发放
+
+    /// <summary>
+    /// 创建只增加物品、不扣除材料的原子库存事务；任务奖励等系统可复用制作系统已验证的快照提交能力。
+    /// 任意一个物品无法完整放入时整笔事务失败，调用方不会看到部分奖励。
+    /// </summary>
+    public static bool TryCreateGrant(
+        Inventory outputInventory,
+        IReadOnlyList<ItemData> outputs,
+        out CraftingTransaction transaction,
+        out CraftingResult failure)
+    {
+        transaction = null;
+        failure = null;
+        if (outputInventory?.Data?.itemSlots == null || outputs == null || outputs.Count == 0)
+        {
+            failure = CraftingResult.Failed(
+                CraftingFailureReason.InvalidInventory,
+                "物品发放事务缺少有效库存或产物");
+            return false;
+        }
+        if (outputInventory.Data.itemSlots.Exists(slot => slot == null))
+        {
+            failure = CraftingResult.Failed(
+                CraftingFailureReason.InvalidInventory,
+                "物品发放库存包含空槽位引用");
+            return false;
+        }
+
+        var states = new List<InventoryState>();
+        InventoryState outputState = GetOrCreateState(states, outputInventory);
+        foreach (ItemData output in outputs)
+        {
+            if (outputState.TryAdd(output))
+                continue;
+
+            failure = CraftingResult.Failed(
+                CraftingFailureReason.OutputSpaceInsufficient,
+                $"没有足够空间容纳全部发放物品：{output?.IDName}");
+            return false;
+        }
+
+        transaction = new CraftingTransaction(states);
+        return true;
+    }
+
+    #endregion
+
     public bool Commit(out CraftingResult failure)
     {
         failure = null;

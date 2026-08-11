@@ -2,23 +2,23 @@
   "schemaVersion": 1,
   "packages": [
     {
-      "id": "environment",
-      "path": "environment.json",
+      "id": "periodic_damage",
+      "path": "periodic_damage.json",
       "enabled": true
     },
     {
-      "id": "combat",
-      "path": "combat.json",
+      "id": "periodic_recovery",
+      "path": "periodic_recovery.json",
       "enabled": true
     },
     {
-      "id": "survival",
-      "path": "survival.json",
+      "id": "periodic_resource_change",
+      "path": "periodic_resource_change.json",
       "enabled": true
     },
     {
-      "id": "movement",
-      "path": "movement.json",
+      "id": "attribute_modifiers",
+      "path": "attribute_modifiers.json",
       "enabled": true
     }
   ]

@@ -7,6 +7,7 @@ using UnityEngine.Tilemaps;
 using UnityEngine;
 using System.IO;
 using System.Linq;
+using FlatWorld.Gameplay.Quests;
 
 public class GameRes : SingletonAutoMono<GameRes>
 {
@@ -194,6 +195,23 @@ public class GameRes : SingletonAutoMono<GameRes>
             yield break;
         }
         loadedAssetsCount += loadedBuffCount;
+        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+
+        loadingText = "加载 JSON 任务";
+        int loadedQuestCount = 0;
+        System.Exception questLoadError = null;
+        yield return StartCoroutine(QuestCatalogLoader.LoadBuiltInAsync(
+            count => loadedQuestCount = count,
+            exception => questLoadError = exception));
+        if (questLoadError != null)
+        {
+            loadingText = $"任务加载失败：{questLoadError.Message}";
+            loadingProgress = 1f;
+            Debug.LogError(loadingText);
+            Debug.LogException(questLoadError);
+            yield break;
+        }
+        loadedAssetsCount += loadedQuestCount;
         loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
             
         yield return StartCoroutine(SyncLoadAssetsWithProgress<TileBase>(
@@ -412,6 +430,7 @@ private void ClearAllDictionaries()
     tileBaseDict.Clear();
     TileBlockDict.Clear();
     BuffDefinitions.Clear();
+    QuestCatalog.Reset();
     InventoryInitDict.Clear();
     SkillDict.Clear();
 }

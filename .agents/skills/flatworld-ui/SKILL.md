@@ -26,7 +26,8 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 玩家世界坐标 HUD：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/{PlayerWorldCoordinateHUD,PlayerWorldCoordinateDisplayPreferences}.cs`；只为本地 `Player` 创建非交互常驻卡片，以 10Hz 刷新坐标，并通过缓存偏好与 `Changed` 事件切换世界坐标/经纬度显示。
 - 保存状态 HUD：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/GameSaveStatusHUD.cs`；只实例化 `UI_SaveStatus` Prefab，显示异步保存状态，不拦截玩家输入。
 - Buff 状态 HUD：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/{PlayerBuffStatusHUD,BuffStatusRowView}.cs`；只为本地 `Player` 读取 `BuffManager.ActiveBuffs`，由增删、显式时长变化和整秒倒计时事件刷新，不保留兜底轮询。
-- 开发调试控制台：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/GMReflectionConsole.cs` 及其 `Navigation`/`Buffs` partial；F4 GM 工具是既有的运行时调试 Canvas，属于正式 Prefab UI 规则之外的开发者专用例外。
+- 任务追踪 HUD：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/{PlayerQuestTrackerHUD,QuestTrackerRowView}.cs`；只为本地 `Player` 读取任务快照，由 `QuestManager.RuntimeReady/RuntimeRemoving` 与 `PlayerQuestRuntime.QuestChanged` 刷新，不持有可写进度记录。
+- 开发调试控制台：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/GMReflectionConsole.cs` 及其 `Navigation`/`Buffs`/`Quests` partial；F4 GM 工具是既有的运行时调试 Canvas，属于正式 Prefab UI 规则之外的开发者专用例外。任务分页动态枚举 `debugOnly` 定义，不复制正式任务逻辑。
 - UI 音频绑定：`Assets/5_Scripts/5-5_UI/Audio/`。
 - UI Prefab 根目录：`Assets/2_Prefabs/2-1_UI/`。
 - PanelRoot Prefab：`Assets/Resources/UI/UIRoot.prefab`；`UIManager` 必须从该 Prefab 实例化，禁止运行时拼装 Canvas。
@@ -85,9 +86,10 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 保存状态 HUD：`Assets/2_Prefabs/2-1_UI/Runtime/System/UI_SaveStatus.prefab`；右上角锚点（`-32,-118`，`260×52`），固定节点为 `背景`、`强调线`、`保存状态文本`，CanvasGroup 默认隐藏且不拦截输入。
 - 玩家坐标 HUD：`Assets/2_Prefabs/2-1_UI/Runtime/System/UI_PlayerWorldCoordinate.prefab`；根节点固定左上锚点（`32,-32`，`296×72`），契约节点为 `背景`、`强调线`、`坐标标题`、`坐标文本`。它不使用 `BasePanel`，由 `PlayerWorldCoordinateHUD` 仅在本地 Player 下实例化到 `PanelRoot` 最低子层级，并且所有 Graphic 都必须关闭 `raycastTarget`；有限循环世界按边界映射经度/纬度，无限世界按当前星球半径提供本地地理参考。
 - Buff 状态 HUD：`Assets/2_Prefabs/2-1_UI/Runtime/System/UI_BuffStatus.prefab` 与 `UI_BuffStatusItem.prefab`；根节点锚定屏幕左侧中部（`32,0`，`320×360`），固定节点为 `标题`、`数量文本`、`内容列表/Viewport/Content`、`空状态文本`，条目固定包含 `占位图标`、`占位符文本`、`状态名称`、`剩余时间`。所有 Graphic 必须关闭 `raycastTarget`，由 `PlayerBuffStatusHUD` 挂到 `Player.prefab` 并保持在对话气泡之后、模态面板之前。
+- 任务追踪 HUD：`Assets/2_Prefabs/2-1_UI/Runtime/System/UI_QuestTracker.prefab` 与 `UI_QuestTrackerItem.prefab`；根节点锚定屏幕右上（`-32,-190`，`380×420`），固定节点为 `标题`、`数量文本`、`内容列表/Viewport/Content`、`空状态文本`，条目固定包含 `状态线`、`任务标题`、`任务状态`、`任务说明`、`目标文本`、`进度背景/进度填充`。所有 Graphic 必须关闭 `raycastTarget`，最多显示并复用四条，由 `PlayerQuestTrackerHUD` 挂到 `Player.prefab`。
 - 对话 UI：`Assets/2_Prefabs/2-1_UI/Runtime/Dialogue/UI_PlayerChatInput.prefab` 是底部半透明 Minecraft 风格单行输入条；`UI_CharacterSpeechBubble.prefab` 是角色头顶气泡。聊天控件固定节点为 `Text Area`、`Placeholder`、`Text`。
 - `GameManager.UI.cs` 只实例化和更新加载 Prefab；禁止用 `new GameObject` 或 `AddComponent` 在运行时构建加载视觉。新建和进入存档时由 `GameManager.cs` 驱动阶段文字与进度。
-- 统一重建器：`Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder.cs`；全量菜单为 `FlatWorld/UI/Rebuild Runtime Prefab UI`，仅重建流送设置使用 `FlatWorld/UI/Rebuild World Streaming Settings UI`，按键绑定行使用 `FlatWorld/UI/Rebuild Input Binding UI`，坐标 HUD 使用 `FlatWorld/UI/Rebuild Player World Coordinate HUD`，保存状态 HUD 使用 `FlatWorld/UI/Rebuild Save Status HUD`，Buff 状态 HUD 使用 `FlatWorld/UI/Rebuild Buff Status HUD`，显示设置与列表分页使用 `FlatWorld/UI/Rebuild Coordinate Display Settings UI`；定向入口避免无关 Prefab 重写。
+- 统一重建器：`Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder.cs`；全量菜单为 `FlatWorld/UI/Rebuild Runtime Prefab UI`，仅重建流送设置使用 `FlatWorld/UI/Rebuild World Streaming Settings UI`，按键绑定行使用 `FlatWorld/UI/Rebuild Input Binding UI`，坐标 HUD 使用 `FlatWorld/UI/Rebuild Player World Coordinate HUD`，保存状态 HUD 使用 `FlatWorld/UI/Rebuild Save Status HUD`，Buff 状态 HUD 使用 `FlatWorld/UI/Rebuild Buff Status HUD`，任务追踪使用 `FlatWorld/UI/Rebuild Quest Tracker HUD`，显示设置与列表分页使用 `FlatWorld/UI/Rebuild Coordinate Display Settings UI`；定向入口避免无关 Prefab 重写。
 - `Assets/2_Prefabs` 是 Addressables 文件夹条目并带 `Prefab` 标签，其下新增运行时面板会由 `GameRes` 按 Prefab 名预加载。
 
 ## 主菜单与存档
@@ -114,6 +116,8 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：F4 GM 控制台新增独立“任务”分页；动态任务卡提供开启、批量开启、状态目标刷新与手动交付，并订阅 `QuestChanged` 更新状态，分页搜索和历史页索引契约保持兼容。
+- 2026-08-11：新增右上角非交互任务追踪 HUD；从本地玩家任务快照显示标题、说明、状态、当前目标与进度条，最多复用四条，任务完成后自动移出，并通过任务运行时生命周期和 `QuestChanged` 完全事件驱动刷新。
 - 2026-08-11：库存面板创建时把真正的模态库存统一归一为关闭态，保证首次 `Open` 会获取输入锁；快捷栏与 `Inventory_Hand` 明确排除在模态焦点/输入锁外。Golden Path `ui.inventory-panel` 现在断言背包打开时锁定、关闭时释放，并在失败清理中兜底释放。
 - 2026-08-10：完成剩余 UI 热路径收敛：`UIManager` 按交互面修订号缓存顶层手柄/模态面板；按键绑定与存档/角色列表改为条目池和差异选择刷新；设置分页缓存首项并局部标记布局；拖拽缩放改为指针事件；坐标 HUD 仅本地玩家 10Hz 刷新并订阅偏好事件。
 - 2026-08-10：清理 UI 常驻轮询与重复扫描：Buff HUD 改为事件驱动局部布局；通用按钮反馈改用非缩放时间 DOTween；UI 用户偏好改为静态缓存广播；`BasePanel` 改为共享层级快照；虚拟光标改为缓存与按需射线；滚动焦点跟随改为缓存父级、帧末按 ScrollRect 合并并仅重建目标 Content。
@@ -122,12 +126,10 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 2026-08-09：新增 `UI_BuffStatus` 左侧中部非交互 Buff 状态 HUD；从本地玩家 `BuffManager` 读取活动 Buff，使用 `UI_BuffStatusItem` 占位图标显示名称和剩余时间，并保持对话气泡与模态面板层级契约。
 - 2026-08-09：区分常驻 HUD 与模态手柄面板；常驻模块菜单不再触发游戏内右摇杆准星退出，背包/设置等模态面板仍可接管 UI 焦点。
 - 2026-08-09：新增 `UI_SaveStatus` 右上角非交互保存状态 HUD；`GameManager.SaveGame()` 改用分帧快照与后台原子写盘，保存期间提示“正在保存…”，完成后自动隐藏。
-- 2026-08-09：槽位 UI 新增独立的手柄主要操作契约；虚拟光标确认直接进入手柄交换路径，鼠标 PointerDown 保持键鼠交换，不再共用一次点击状态。
-- 2026-08-09：游戏内 `SettingCanvas` 打开时，单机且处于游戏世界会暂停并保存原 `Time.timeScale`；关闭或销毁时恢复，联机设置不修改全局时间流速。
 
 ## 修改后验证
 
-- 基础测试脚本：`Assets/GameTest/UI/UISmokeTests.cs` 与 `Assets/GameTest/UI/WorldTopologyUISmokeTests.cs`；当前覆盖 UIManager、BasePanel 手柄导航/取消契约与共享层级快照、虚拟光标根 Canvas/交互面修订号/按需射线契约、滚动焦点按 ScrollRect 合并/最后目标/局部布局契约、手柄 B 统一返回且不抢键盘 B、运行时 UI 导航不绑定键盘移动键、存档动态条目的焦点/选择态和自动导航、输入框手柄焦点与虚拟键盘确认触发、按键绑定双分页节点及行内修改/清除按钮/动态快照提交、游戏内设置单机暂停契约、Resources UIRoot、八个设置 Prefab（含坐标显示和主菜单设置）、主菜单设置入口、设置列表三分页、流送性能入口、世界加载 Prefab、保存状态 HUD 与手动异步保存契约、玩家坐标 HUD 的节点/左上锚点/输入穿透/Player 绑定、Buff 状态 HUD 的节点/左侧中部锚点/滚动内容/输入穿透/Player 绑定及事件驱动布局契约、通用按钮反馈的 DOTween/无 Update/清理契约与 UI 设置缓存广播契约、新世界难度命名契约，以及可选世界种子输入框的命名与卡片边界；`Assets/GameTest/PlayerInteraction/InputBindingServiceTests.cs` 覆盖单项清除绑定的空路径与持久化；联机 Prefab 与 GameRes 加载约束由 `NetworkingSmokeTests.cs` 覆盖。
+- 基础测试脚本：`Assets/GameTest/UI/UISmokeTests.cs` 与 `Assets/GameTest/UI/WorldTopologyUISmokeTests.cs`；当前覆盖 UIManager、BasePanel 手柄导航/取消契约与共享层级快照、虚拟光标根 Canvas/交互面修订号/按需射线契约、滚动焦点按 ScrollRect 合并/最后目标/局部布局契约、手柄 B 统一返回且不抢键盘 B、运行时 UI 导航不绑定键盘移动键、存档动态条目的焦点/选择态和自动导航、输入框手柄焦点与虚拟键盘确认触发、按键绑定双分页节点及行内修改/清除按钮/动态快照提交、游戏内设置单机暂停契约、Resources UIRoot、八个设置 Prefab（含坐标显示和主菜单设置）、主菜单设置入口、设置列表三分页、流送性能入口、世界加载 Prefab、保存状态 HUD 与手动异步保存契约、玩家坐标 HUD 的节点/左上锚点/输入穿透/Player 绑定、Buff 状态 HUD 的节点/左侧中部锚点/滚动内容/输入穿透/Player 绑定及事件驱动布局契约、任务追踪 HUD 的节点/右上锚点/条目进度条/输入穿透/Player 绑定及事件驱动契约、通用按钮反馈的 DOTween/无 Update/清理契约与 UI 设置缓存广播契约、新世界难度命名契约，以及可选世界种子输入框的命名与卡片边界；`Assets/GameTest/PlayerInteraction/InputBindingServiceTests.cs` 覆盖单项清除绑定的空路径与持久化；联机 Prefab 与 GameRes 加载约束由 `NetworkingSmokeTests.cs` 覆盖。
 - Golden Path 自动化程序集显式引用 `UI`；真实单机面板生命周期由操作 `ui.inventory-panel` 覆盖：通过玩家背包公开入口创建、打开/关闭，并断言输入锁随面板获取与释放；失败清理会兜底关闭面板，不使用物理输入或查找按钮点击。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；UI 测试约定目录：`Assets/GameTest/UI/`；场景目录：`Assets/GameTest/Scenes/UI/`；冒烟分类：`UI.Smoke`。
 - 新增面板、按钮、输入框、动态 UI、存档列表或 UI 音效行为时必须增加系统测试；修复 Bug 时先增加回归测试。面板打开、交互和关闭主流程变化时同步更新 UI 冒烟场景。

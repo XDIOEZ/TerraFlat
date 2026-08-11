@@ -119,7 +119,9 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --all
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
-- 2026-08-11：Golden Path 默认配置启用全部 23 个接口化真实操作；JSON 支持全量减项或系统白名单，运行前验证稳定 ID，结果回显实际操作集合。单项操作异常隔离后继续同阶段其他系统；运行期警告按消息聚合写入 `warnings`，脚本直接显示主要 5 类及次数。
+- 2026-08-11：`Quest.Smoke` 增加四个 `debugOnly` 测试任务的清单、手动接取、代表性目标与多阶段契约；`EffectsTools.Smoke` 扩展 F4 GM 任务分页公共 API/无独立轮询检查，`quest.progression` 保护普通入世不自动接取调试任务。
+- 2026-08-11：`UI.Smoke` 增加任务追踪 Prefab、右上锚点、条目进度条、输入穿透、Player 挂载及无轮询契约；既有 `quest.progression` 同步断言追踪 HUD 入世显示与任务完成后移出，稳定 Golden 操作 ID 不变。
+- 2026-08-11：Golden Path 默认配置启用全部 24 个接口化真实操作，`GOLDEN_OPERATION_IDS` 新增 `quest.progression`；JSON 支持全量减项或系统白名单，运行前验证稳定 ID，结果回显实际操作集合。单项操作异常隔离后继续同阶段其他系统；运行期警告按消息聚合写入 `warnings`，脚本直接显示主要 5 类及次数。
 - 2026-08-11：Golden Path 新增 JSON 字段 `execution.errorCollectionSeconds`；首个运行时错误不再立即退出，而是在可行范围内继续覆盖并收集去重错误，计时结束后统一写入结构化失败；Agent 随后必须按根因文字反馈主要 3～5 项错误，不能只交付 JSON。
 - 2026-08-11：裸跑 `--golden-path` 默认启用已验证的 WorldModel 强化水文参数，并新增帧后移动驱动、整数 Chunk 休眠环带与静止 AI 探针；`wrapped-river-fast.json` 仍用于缩小世界的快速完整回归。
 - 2026-08-11：Golden Path Editor 桥接在接管请求时把 Addressables Play Mode 切到 Fast Mode，避免实机流程复用旧 Bundle；之后仍按原流程刷新 AssetDatabase、编译并进入标准 Domain Reload。
@@ -127,5 +129,3 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --all
 - 2026-08-10：区块阴影帧末合并、延迟缩槽和动态 View 池完成 UTF-8、差异与 Unity 定向编译检查；`GamePlay.dll` 已更新且本次文件无诊断，整项目仍被既有 `GMReflectionConsole` 三处错误阻断；按用户要求未运行 Test Runner/Golden Path。
 - 2026-08-10：幽灵接触伤害改为复用 `Mod_Damage`，移除专用 `GhostContactDamage`，并将根触发盒保持为 `0.6×0.9`；同步更新 `AI.Smoke` 组件/参数回归断言，按局部 Prefab/战斗配置改动只完成静态诊断、Unity 编译和 Console 检查，未主动运行 Test Runner。
 - 2026-08-10：矿洞死亡返回地表修复完成 GamePlay/Automation 静态编译，并扩展黄金路径的矿洞到主世界复活路由断言；按项目默认未主动运行 Test Runner 或完整 Golden Path。
-- 2026-08-10：矿洞出口首次 E 时序修复完成 GamePlay/Automation 静态编译并新增黄金路径同目标交互重试断言；按项目默认只检查编译与 Console，不主动运行 PlayerInteraction Smoke 或完整 Golden Path。
-- 2026-08-09：新增 Buff 状态 HUD 的 `UI.Smoke` Prefab/Player 绑定、节点、左侧中部锚点和输入穿透契约；完成静态诊断、Prefab 导入、Unity 编译与 Console 检查，按项目默认未运行 Test Runner。

@@ -8,13 +8,13 @@ disable-model-invocation: false
 
 # FlatWorld 核心生命周期定位
 
-> 最后核对：2026-08-09。路径相对仓库根目录。
+> 最后核对：2026-08-11。路径相对仓库根目录。
 
 ## 修改前先读
 
 1. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.cs`：世界生命周期、新建/继续/退出、出生点、核心事件。
 2. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.UI.cs`：主菜单、新游戏、存档面板绑定与控件命名契约。
-3. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameRes.cs`：Addressables 本体资源加载完成后接入 MOD。
+3. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameRes.cs`：加载本体 Item/Recipe/Buff/Quest 与 Addressables，完成后接入 MOD。
 4. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/SceneMgr.cs`：通用同步/异步场景服务。
 5. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/ItemMgr.Players.cs`：单机/联机 Player 加载、创建与本地档案上下文建立。
 6. 涉及星球表面、矿洞或跨世界旅行时同步读取 `flatworld-dimension`，权威入口为 `DimensionManager` 与 `GameManager.Dimension.cs`。
@@ -22,6 +22,7 @@ disable-model-invocation: false
 ## 关键入口与路径
 
 - 世界事件：`GameManager.Event_GameWorldEnter`、`Event_GameWorldExit`、`Event_PlayerEnterWorld`。
+- 任务生命周期：`GameManager.Start()` 显式创建并绑定 `QuestManager`；本地玩家在 `Event_PlayerEnterWorld` 后读取独立任务进度，世界退出时释放运行时。
 - 自动与手动保存：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/{AutoSaveController,GameManager,SaveDataMgr}.cs`。
 - 玩家控制入口：`Assets/5_Scripts/5-3_GamePlay/Player/Controller/GameController.cs`。
 - 玩家档案上下文：`ItemMgr.LoadOrCreatePlayerData(..., out wasCreated)`；创建、加载、网络提升与远程副本配置都必须显式调用 `Player.SetProfileContext()`。
@@ -35,7 +36,7 @@ disable-model-invocation: false
 
 ```text
 GameStartScene
-→ GameRes 加载 Addressables 与 MOD
+→ GameRes 加载本体 Item/Recipe/Buff/Quest、Addressables 与 MOD
 → GameManager.CreateNewWorld / ContinueGame
 → 显示持久化 UI_WorldLoading Prefab
 → SaveDataMgr 准备存档
@@ -65,7 +66,7 @@ GameStartScene
 | 本系统变更 | 联动检查 | 必查契约 | 追加测试 |
 |---|---|---|---|
 | `GameRes` 的 Addressables 加载阶段、Prefab/Item/Module 注册或资源键 | `flatworld-item-module`、`flatworld-modding` | 本体先于 MOD、运行时字典键与 Prefab/Module 数据仍一致 | `ItemModule.Smoke`、`Modding.Smoke` |
-| `GameRes` 的 Buff、Recipe 或 Skill 字典 | 只加载实际被改注册表对应的 `flatworld-buff`、`flatworld-inventory-crafting` 或 `flatworld-combat` | ID、加载顺序和冲突规则不变 | 对应领域 Smoke |
+| `GameRes` 的 Buff、Recipe、Quest 或 Skill 目录 | 只加载实际被改注册表对应的 `flatworld-buff`、`flatworld-inventory-crafting`、`flatworld-quest` 或 `flatworld-combat` | ID、加载顺序和冲突规则不变 | 对应领域 Smoke |
 | 世界创建/进入/退出、存档准备、动态世界 Scene 或全局事件顺序 | `flatworld-dimension`、`flatworld-data-save` | 加载遮罩、首存档、世界事件和失败恢复顺序 | `Dimension.Smoke`、`DataSave.Smoke` |
 | 玩家创建/释放、出生点或 `SetProfileContext()` | `flatworld-player-interaction`；涉及远程副本时再加载 `flatworld-networking` | 本地档案身份、远程副本隔离和玩家事件只触发一次 | `PlayerInteraction.Smoke`；联机时追加 `Networking.Smoke` |
 | `GameManager.UI.cs` 控件键、加载面板或主菜单绑定 | `flatworld-ui` | Prefab 节点名、焦点恢复和世界输入锁 | `UI.Smoke` |
@@ -74,6 +75,7 @@ GameStartScene
 
 > 最多保留 8 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：`GameRes` 在 Buff 后加载内建 Quest、MOD 内容完成后统一 Finalize；`GameManager.Start()` 显式绑定 `QuestManager`，本地玩家入世后创建独立任务运行时，退出世界时释放。
 - 2026-08-09：游戏内设置的时间暂停由 `SettingCanvas` 按 `GameNetwork.IsOnline` 与 `GameManager.IsInGameWorld` 判定；单机保存并恢复原 `Time.timeScale`，联机不修改全局时间流速。
 - 2026-08-09：手动保存入口改为分帧快照与后台原子写盘，`GameManager` 通过保存状态 HUD 反馈进度；退出保存路径仍保持生命周期专用的记录退出时间流程。
 - 2026-08-09：`GameRes` 启动阶段的 JSON Item Sprite 加载已避开含方括号的 Addressables 内部路径；迁移工具阻断此类路径并保留 GUID 引用，启动日志确认 21 个分包、78 个本体物品可完整注册。
@@ -81,7 +83,6 @@ GameStartScene
 - 2026-08-09：新玩家完成安全陆地定位后，将主世界初始出生点写入玩家 `ItemSpecialData`；`Mod_PlayerDeathState` 加载旧存档时按同一世界种子补齐，死亡复活优先回到该持久坐标，不再把当前死亡位置当作正常出生点。
 - 2026-08-09：维度切换进入目标 Scene 后由 `DimensionManager` 主动驱动 `ChunkMgr.RefreshRuntimeWindow()` 并等待目标 `ChunkView` 完整绑定；WorldModel 运行时窗口会注入基础世界种子到 `cave.portal.baseSeed`，使地表入口与矿洞出口使用同一稳定布局。
 - 2026-08-09：自动保存经 `GameManager.SaveGameInBackgroundCoroutine()` 先分帧捕获旧 Chunk，再由 `SaveDataMgr` 后台原子写盘；同一文件的写入版本保证手动/退出保存优先，自动保存不得锁玩家输入、Mover 或 `Time.timeScale`。
-- 2026-08-09：返回主菜单时必须先将 `IsInGameWorld` 置为 false 并 `ResetWorldEntryLifecycle()`，再通过 `ItemMgr.ReleasePlayerForWorldTransition()` 注销 Player；等待 Chunk 回收后清理运行时 Item 注册，并在 `LoadSceneMode.Single` 完成后核验旧动态世界 Scene 已卸载。禁止直接 `Destroy(Player.gameObject)`，否则 AI 感知与 MonsterSpawner 可能读取 Unity 伪空对象，进而中断下一次 `RunWorld()`。
 
 ## 修改后自动测试
 

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "buffs": [
+    {
+      "id": "补水",
+      "displayName": "补水",
+      "description": "入水后喝几口",
+      "durationSeconds": null,
+      "tickIntervalSeconds": 1.0,
+      "effects": [
+        {
+          "phase": "tick",
+          "typeId": "core:nutrition_change",
+          "targetId": "water",
+          "value": 100.0
+        }
+      ]
+    }
+  ]
+}

@@ -73,7 +73,7 @@ disable-model-invocation: false
 |---|---|---|---|
 | 会话状态、Host/Client 世界进入或本地/远程 Player 提升 | `flatworld-core`、`flatworld-player-interaction` | 世界生命周期只执行一次，本地档案与远程视觉副本严格隔离 | `Core.Smoke`、`PlayerInteraction.Smoke` |
 | 世界快照、Item 状态消息、协议版本或序列化桥 | `flatworld-data-save`、`flatworld-item-module` | 服务端权威状态可往返，客户端不进入本地保存/Tick | `DataSave.Smoke`、`ItemModule.Smoke` |
-| Chunk 观察者并集、本地导航窗口或世界坐标同步 | `flatworld-map`、`flatworld-navigation` | Chunk 按全部观察者流送，GridGraph 只跟随本地 owned 玩家 | `Map.Smoke`、`Navigation.Smoke` |
+| Chunk 观察者并集、本地导航窗口或世界坐标同步 | `flatworld-map`、`flatworld-navigation` | Chunk 按全部观察者流送，`WorldNavigationGrid` 的本地窗口只跟随 owned 玩家 | `Map.Smoke`、`Navigation.Smoke` |
 | 建筑放置/拆除请求、accepted/reject 或库存剩余数量 | `flatworld-building` | 服务端校验和提交为唯一权威，拒绝路径无副作用 | `Building.Smoke` |
 | MOD 集合哈希、兼容握手或存档 MOD 记录 | `flatworld-modding` | 不兼容集合在加入世界前被拒绝 | `Modding.Smoke` |
 

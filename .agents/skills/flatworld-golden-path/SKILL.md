@@ -113,20 +113,24 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 
 `OnWorldReady` 断言主线程表现协程队列已排空且空闲预取实际并发不超过 1；已完成的 `LoadChunkDistance..UnActiveDistance` 外圈数据必须保持 Dormant 且不持有 Simulation/Presentation/Navigation 租约，但不要求整圈阻塞式生成完。原有往返场景离开可见圈后验证 View 与三类租约释放，并验证固定创建的 Chicken 已随起始区块休眠；返回时等待分帧表现完成，再验证该生物恢复、同一 `ChunkRuntime`、地形哈希、唯一租约和 `ChunkCommitted` 订阅均未重复。清理阶段销毁测试生物。实现位于 `FlatWorldGoldenPathScenarios.WorldModel.cs`。
 
+## 当前任务进度场景（2026-08-11）
+
+`quest.progression` 在 `OnWorldReady` 先确认示例任务已随本地玩家入世自动接取、四个 `debugOnly` GM 测试任务均未污染普通进度，并断言正式任务追踪 Prefab 已绑定、输入穿透且显示该任务；随后由 `inventory.crafting` 的正式制作事务发布 `craft.succeeded / ChippedTool`。`BeforeWorldExit` 断言任务完成后已移出追踪器、原子奖励可交付且 `flatworld.quests` 已写入玩家存档模型。聚焦白名单必须同时启用这两个操作。实现位于 `FlatWorldGoldenPathScenarios.Quest.cs`。
+
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
-- 2026-08-11：Golden Path 引入 `IFlatWorldGoldenPathOperation` 注册表与 JSON 全开/白名单/黑名单选择，默认回归 23 项真实操作；新增背包制作、战斗目标、背包 UI、音频 Cue、角色气泡、时间天气和已加载网格寻路覆盖。单项操作失败会隔离并继续同阶段其他系统，结果回显实际启用 ID。
+- 2026-08-11：`quest.progression` 增加 GM 测试任务隔离断言：目录必须加载至少四个 `debugOnly` 定义，普通玩家入世时这些任务均不得自动进入进度；稳定操作 ID 和默认数量不变。
+- 2026-08-11：扩展 `quest.progression` 的任务 UI 断言：入世时确认任务追踪 Prefab 就绪、输入穿透并展示示例任务，正式制作完成后确认该任务立即移出追踪列表；稳定操作 ID 和默认操作数量不变。
+- 2026-08-11：新增 `quest.progression`，默认回归扩展为 24 项真实操作；任务场景先断言自动接取，再复用 `inventory.crafting` 的正式成功信号，退出前验证原子奖励和 `flatworld.quests` 命名空间。
+- 2026-08-11：Golden Path 引入 `IFlatWorldGoldenPathOperation` 注册表与 JSON 全开/白名单/黑名单选择，初版回归 23 项真实操作；新增背包制作、战斗目标、背包 UI、音频 Cue、角色气泡、时间天气和已加载网格寻路覆盖。单项操作失败会隔离并继续同阶段其他系统，结果回显实际启用 ID。
 - 2026-08-11：Golden Path 运行结果审计同时读取 Console 的 `error` 与 `warning`；运行期警告按消息聚合写入结果 `warnings` 并回显出现次数，脚本直接展示主要 5 类。首个错误才启动 JSON 宽限计时，可推进时继续覆盖、不可推进时仅等待异步错误；Agent 必须按根因直接反馈主要错误，JSON 仅作为完整证据。
 - 2026-08-11：默认 Golden Path 启用确定性强化水文；出生搜索与 ChunkMgr 共用 WorldModel Profile Hook，真实移动由帧后协程重放 `Mover.Move`，Berry 掉落完成后才允许休眠；模型往返使用整数 Chunk 环带，Chicken 探针固定在块中心并冻结移动，消除边界和漫步误报。
 - 2026-08-11：取消 Golden Path 固定三次执行上限；改为每次失败必须先修复再持续重跑，直到完整通过或确认存在项目外部阻塞。
 - 2026-08-11：Golden Path 接管请求前验证 Item 外壳及 JSON 关键模块（当前含 `GameItem`、`Mod_Furnace`）的 MonoScript 类型映射；失效时仅重导入对应脚本并等待 Domain Reload，再选择 Addressables Fast Mode，避免陈旧脚本缓存或 Existing Build Bundle。
 - 2026-08-10：新增 `WaitForWorldReadyScenarios` 编排阶段；建筑石墙通过 `RebuildVersion` 分两帧断言遮挡新增与恢复，临时墙清理后才启动自动保存，匹配帧末合并重建语义且不污染存档。
 - 2026-08-10：主世界复活场景新增生产路由断言：模拟矿洞 `WorldAddress` 必须要求跨维度返回地表，而地表到自身不得触发世界切换；原真实致死、复活坐标与生命恢复断言保持不变。
-- 2026-08-10：`OnWorldReady` 新增真实玩家同目标交互重试场景；连续两次调用 `Mod_InteractSender` 公开扫描入口，断言相同 `IInteractable` 不会因首次瞬态拒绝而被缓存锁死，并在清理阶段恢复探测状态。
-- 2026-08-10：自动保存黄金路径继续覆盖分帧采集；新增自然物、旧 Chunk 差异与运行时 AI 跨帧预算执行的真实入口，保持后台写盘、输入、Mover/Rigidbody2D 与 `Time.timeScale` 断言。
-- 2026-08-09：建筑黄金路径在新区块石墙写入/移除前后新增 `ChunkLightOccluderRenderer.ActiveOccluderCount` 断言，验证阻挡层与 URP 光照遮挡子层同步且可逆。
 
 ## 当前地表气候与水文场景（2026-08-08）
 

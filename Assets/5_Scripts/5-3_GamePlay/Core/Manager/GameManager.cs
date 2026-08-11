@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using FlatWorld.Gameplay.Quests;
 using UltEvents;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -93,6 +94,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         AutoSaveController.Ensure(this);
         _ = DimensionManager.Instance;
         _ = FlatWorld.Gameplay.Events.GameEventManager.Instance;
+        QuestManager.Instance.BindGameManager(this);
 
         // 寻路系统不在 StartScene 激活，等玩家进入游戏世界后再启用
         // WorldNavigationManager 在进入世界后注册当前已加载区块。

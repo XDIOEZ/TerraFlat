@@ -47,6 +47,7 @@
 | `player.admin-invincibility` | Player/Combat | 无敌开关与真实伤害 |
 | `combat.player-respawn` | Combat/Dimension | 濒死、主世界路由与复活 |
 | `combat.target-damage` | Combat/AI | 玩家附近生成 Chicken，真实受伤与治疗 |
+| `quest.progression` | Quest/UI/Inventory | 自动接取示例任务，确认 `debugOnly` GM 测试任务未污染普通进度，验证任务追踪 UI 绑定与输入穿透，由正式制作成功信号推进并验证完成后移出、原子奖励与命名空间存档 |
 | `inventory.crafting` | Inventory/Crafting | 正式配方制作并把产物放入真实背包 |
 | `ui.inventory-panel` | UI | 真实背包面板开关、输入锁获取与释放 |
 | `audio.cue-playback` | Audio | `ui.click` Cue 播放句柄与停止回收 |
@@ -105,6 +106,7 @@
 | 自动保存不锁操作 | `TickWorldReadyScenarios` 完成初始临时状态清理后启动，`OnTraversalTick` 观察 | 自然物、旧 Chunk/差异与 AI 采集可跨帧，后台写入完成、无输入锁、Mover/Rigidbody2D/TimeScale 正常 | 仅清空任务引用 |
 | 玩家长按奔跑与速度过渡 | `OnWorldReady` 调用真实 `Mover.HandleRunInputPressed/Released()` 和 `Mover.Move` | 走路起步、走跑互切均平滑靠近目标速度；松开方向保留默认 0.07 秒的极短惯性后停止，松开奔跑恢复普通速度倍率 | 立即恢复非奔跑状态、原速度与原移动状态；失败路径统一兜底 |
 | 新区块建筑放置 | `OnWorldReady` 使用正式 `Wall_Wood_Summoner` 扫描玩家附近候选格并写入临时石墙；`TickWorldReadyScenarios` 分两帧观察 | 权威地块校验、动态占地和正式虚影正确；`RebuildVersion` 推进后阴影增加，移除再推进一帧后恢复原数量 | 先清理虚影、建筑和召唤器，石墙跨帧断言结束后再清理；失败路径统一兜底 |
+| 任务进度与追踪 HUD | `OnWorldReady` 读取示例任务快照并检查本地玩家 `PlayerQuestTrackerHUD`，随后依赖正式背包制作信号推进 | 自动接取、正式追踪 Prefab 就绪、输入穿透且展示示例任务；退出前完成态已移出追踪器，原子奖励与 `flatworld.quests` 写入有效 | 任务进度留给真实退出重进验证；清空 HUD 场景引用 |
 | 正式背包制作 | `OnWorldReady` 从配方目录读取 `core:打制石器`，通过 `CraftingService.Craft` 完成事务并写入玩家背包 | 输入扣除、`ChippedTool` 产出、生产成功事件与真实背包接收链有效 | 深拷贝恢复玩家原背包，清空临时库存引用 |
 | 可恢复战斗目标 | `OnWorldReady` 在玩家附近通过 `ItemMgr` 生成并加载 Chicken | `DamageReceiver.ForceHurt/Heal` 必须真实扣血并恢复 | 通过 `ItemMgr.DespawnItem` 清理目标 |
 | 背包面板开关 | `OnWorldReady` 创建真实玩家背包面板并连续调用两次 `SwitchUI` | 第一次改变开关状态，第二次精确恢复测试前状态 | 操作内立即恢复，不保留 UI 状态 |

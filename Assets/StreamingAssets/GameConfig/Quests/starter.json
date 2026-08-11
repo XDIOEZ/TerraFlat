@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "quests": [
+    {
+      "id": "flatworld:first_chipped_tool",
+      "definitionVersion": 1,
+      "titleKey": "quest.flatworld.first_chipped_tool.title",
+      "title": "第一件石器",
+      "descriptionKey": "quest.flatworld.first_chipped_tool.description",
+      "description": "制作一件打制石器，熟悉最基础的制作流程。",
+      "acceptMode": "auto",
+      "turnInMode": "auto",
+      "conditions": [],
+      "stages": [
+        {
+          "id": "craft",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "craft_chipped_tool",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.first_chipped_tool.objective.craft_chipped_tool",
+              "label": "制作一件打制石器",
+              "required": 1,
+              "parameters": {
+                "eventType": "craft.succeeded",
+                "targetId": "ChippedTool"
+              }
+            }
+          ]
+        }
+      ],
+      "rewards": [
+        {
+          "id": "starter_stick",
+          "type": "item.grant",
+          "parameters": {
+            "itemId": "Stick_Wood",
+            "amount": 1
+          }
+        }
+      ]
+    }
+  ]
+}

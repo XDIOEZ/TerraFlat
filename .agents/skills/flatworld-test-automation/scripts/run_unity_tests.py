@@ -44,6 +44,7 @@ GOLDEN_OPERATION_IDS = {
     "player.interaction-retry",
     "player.run-transition",
     "player.spawn-land",
+    "quest.progression",
     "save.auto",
     "ui.inventory-panel",
     "world.model-streaming",

@@ -642,6 +642,73 @@ MonoBehaviour:
     m_Localized: WorkBench Summoner.
     m_Metadata:
       m_Items: []
+  - m_Id: 1016654085054464
+    m_Localized: First Stone Tool
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016654160551936
+    m_Localized: Craft a chipped stone tool and learn the basic crafting flow.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016654160551937
+    m_Localized: Craft one chipped stone tool
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000000
+    m_Localized: 'Test: Open Inventory'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000001
+    m_Localized: Open the inventory once, then claim the quest from the GM quest
+      page.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000002
+    m_Localized: Open the inventory once
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000003
+    m_Localized: 'Test: Pick Up Items'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000004
+    m_Localized: Pick up any three items. The quest turns in automatically.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000005
+    m_Localized: Pick up any 3 items
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000006
+    m_Localized: 'Test: Own Sticks'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000007
+    m_Localized: Own five wooden sticks in the bag or hotbar to test a state-based
+      objective.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000008
+    m_Localized: Own 5 wooden sticks
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000009
+    m_Localized: 'Test: Craft and Build'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000010
+    m_Localized: Craft a chipped stone tool, then place any building to test stage
+      progression.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000011
+    m_Localized: Craft one chipped stone tool
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1016655000000012
+    m_Localized: Place any building once
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

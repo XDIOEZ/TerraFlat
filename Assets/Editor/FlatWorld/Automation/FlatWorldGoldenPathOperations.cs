@@ -201,6 +201,7 @@ namespace FlatWorld.Automation
                     onChunkReady: VerifyRuntimeTileEffectAtChunkReady,
                     beforeWorldExit: _ => AssertRuntimeTileEffectScenarioCompleted(),
                     cleanup: _ => CleanupRuntimeTileEffectScenario()),
+                CreateQuestProgressionOperation(),
                 CreateInventoryCraftingOperation(),
                 CreateCombatTargetDamageOperation(),
                 CreateAudioPlaybackOperation(),

@@ -15,7 +15,7 @@
 
 | 路径 | 权威职责 | 注意事项 |
 | --- | --- | --- |
-| `Assets/5_Scripts/5-2_Editor/Localization/FlatWorldLocalizationSetup.cs` | 菜单 `FlatWorld/Localization/Setup Default Tables`；创建 Locale、同步物品/UI 表 | 修改同步规则后必须重新执行菜单并检查 Console |
+| `Assets/5_Scripts/5-2_Editor/Localization/FlatWorldLocalizationSetup.cs` | 菜单 `FlatWorld/Localization/Setup Default Tables`；创建 Locale、同步物品/任务/UI 表 | 修改同步规则后必须重新执行菜单并检查 Console |
 | `Assets/5_Scripts/5-2_Editor/Editor.asmdef` | 编辑器程序集引用 `FlatWorld.Localization`、`Unity.Localization.Editor`、`Unity.TextMeshPro` | 编辑器扫描 TMP 时缺少引用会产生编译错误 |
 | `Assets/Localization/LocalizationSettings.asset` | Unity Localization Settings | 不要手工删除后只保留代码配置 |
 | `Assets/Localization/Locales/zh-CN.asset` | 简体中文 Locale | 默认语言 |
@@ -29,8 +29,9 @@
 | 路径 | 内容 | 本地化处理 |
 | --- | --- | --- |
 | `Assets/StreamingAssets/GameConfig/Items/` | 物品 JSON 的稳定 `id`、旧中文 `gameName/description`、可选 `labelKey/descriptionKey` | 由 Setup 菜单同步至 `FlatWorld` 表；业务配置不按语言复制 |
+| `Assets/StreamingAssets/GameConfig/Quests/` | 任务 JSON 的稳定 `titleKey/descriptionKey/objective.labelKey` 与中文 fallback；含 `debug-tests.json` 的 `debugOnly` GM 测试任务 | 由 Setup 菜单同步至 `FlatWorld` 表；英语集中维护在 `EnglishQuestOverrides`，调试标记不改变本地化流程 |
 | `Assets/2_Prefabs/2-1_UI/` | 正式 UI Prefab 的 TMP 静态文本 | Setup 扫描 CJK 文本；运行时由 `BasePanel` 自动绑定 |
-| `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/` | 设置面板、输入绑定、难度、`GameSaveStatusHUD`、`PlayerBuffStatusHUD`/`BuffStatusRowView` 等动态 UI | 赋值点使用 `GetUiText/GetUiFormat`，新增模板同步到编辑器覆盖字典 |
+| `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/` | 设置面板、输入绑定、难度、`GameSaveStatusHUD`、Buff HUD、`PlayerQuestTrackerHUD`/`QuestTrackerRowView` 等动态 UI | UI 状态使用 `GetUiText/GetUiFormat`；任务内容按配置 key 查询 `FlatWorld`，新增模板同步到编辑器覆盖字典 |
 | `Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.UI.cs` | 主菜单、世界加载、难度和语言状态文本 | 不要把 UI 文本常量继续直接赋给 TMP |
 | `Assets/Resources/Dialogue/Soliloquy/` | 角色自言自语 JSON | 属于 `flatworld-dialogue`；未来使用独立 `FlatWorldDialogue` 表 |
 
