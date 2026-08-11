@@ -31,14 +31,14 @@ namespace FlatWorld.GameTest.PlayerInteraction
 
         [Test]
         [Category("PlayerInteraction.Input")]
-        public void ShortShiftPressDoesNotToggleRunState()
+        public void HoldRunRunsOnlyUntilRelease()
         {
-            mover.HandleRunInputPressed();
+            mover.HandleHoldRunInputPressed();
 
             Assert.That(mover.IsRunning, Is.True);
             Assert.That(mover.Speed.Value, Is.EqualTo(10f).Within(0.001f));
 
-            mover.HandleRunInputReleased(0.1d);
+            mover.HandleHoldRunInputReleased();
 
             Assert.That(mover.IsRunning, Is.False);
             Assert.That(mover.Speed.Value, Is.EqualTo(5f).Within(0.001f));
@@ -46,14 +46,14 @@ namespace FlatWorld.GameTest.PlayerInteraction
 
         [Test]
         [Category("PlayerInteraction.Input")]
-        public void LongShiftPressRunsOnlyUntilRelease()
+        public void ToggleRunChangesStateOnEveryPress()
         {
-            mover.HandleRunInputPressed();
+            mover.HandleToggleRunInputPressed();
 
             Assert.That(mover.IsRunning, Is.True);
             Assert.That(mover.Speed.Value, Is.EqualTo(10f).Within(0.001f));
 
-            mover.HandleRunInputReleased(1d);
+            mover.HandleToggleRunInputPressed();
 
             Assert.That(mover.IsRunning, Is.False);
             Assert.That(mover.Speed.Value, Is.EqualTo(5f).Within(0.001f));
@@ -61,15 +61,16 @@ namespace FlatWorld.GameTest.PlayerInteraction
 
         [Test]
         [Category("PlayerInteraction.Input")]
-        public void RepeatedShiftPressesDoNotCreatePersistentRunState()
+        public void HoldAndToggleRunShareOneStableRunState()
         {
-            mover.HandleRunInputPressed();
-            mover.HandleRunInputReleased(1d);
+            mover.HandleToggleRunInputPressed();
+            mover.HandleHoldRunInputPressed();
+            mover.HandleHoldRunInputReleased();
             Assert.That(mover.IsRunning, Is.False);
 
-            mover.HandleRunInputPressed();
+            mover.HandleHoldRunInputPressed();
             Assert.That(mover.IsRunning, Is.True);
-            mover.HandleRunInputReleased(1d);
+            mover.HandleHoldRunInputReleased();
 
             Assert.That(mover.IsRunning, Is.False);
             Assert.That(mover.Speed.Value, Is.EqualTo(5f).Within(0.001f));
@@ -90,7 +91,7 @@ namespace FlatWorld.GameTest.PlayerInteraction
             AdvanceMovement(target, simulationStep, 16);
             Assert.That(body.velocity.x, Is.EqualTo(5f).Within(0.01f));
 
-            mover.HandleRunInputPressed();
+            mover.HandleHoldRunInputPressed();
             mover.Move(target, simulationStep);
             Assert.That(body.velocity.x, Is.GreaterThan(5f));
             Assert.That(body.velocity.x, Is.LessThan(mover.Speed.Value));
@@ -98,7 +99,7 @@ namespace FlatWorld.GameTest.PlayerInteraction
             AdvanceMovement(target, simulationStep, 16);
             Assert.That(body.velocity.x, Is.EqualTo(10f).Within(0.01f));
 
-            mover.HandleRunInputReleased(1d);
+            mover.HandleHoldRunInputReleased();
             mover.Move(target, simulationStep);
             Assert.That(body.velocity.x, Is.GreaterThan(5f));
             Assert.That(body.velocity.x, Is.LessThan(10f));

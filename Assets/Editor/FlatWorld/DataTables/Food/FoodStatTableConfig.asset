@@ -519,25 +519,3 @@ MonoBehaviour:
     SpoilageTargetItemID: Meat_Rotten
     HasNutrition: 1
     HasSpoilage: 1
-  - Prefab: {fileID: 4766519559426352308, guid: 15d7395a1c9a46e4592996e6b0ccd15a, type: 3}
-    PrefabPath: Assets/2_Prefabs/Entity_AI/Wolf_Tree.prefab
-    PrefabName: Wolf_Tree
-    Carbohydrates: 500
-    Fat: 500
-    Protein: 500
-    Water: 500
-    Vitamins: 500
-    Max_Carbohydrates: 500
-    Max_Fat: 500
-    Max_Protein: 500
-    Max_Water: 500
-    Max_Vitamins: 500
-    Max_EatingProgress: 3
-    nutritionConsumeSpeed: 1
-    WaterConsumeSpeedRate: 1
-    nutritionConsumeRate: 1
-    EnableSpoilage: 1
-    SpoilageIntervalSeconds: 1800
-    SpoilageTargetItemID: Meat_Rotten
-    HasNutrition: 1
-    HasSpoilage: 1

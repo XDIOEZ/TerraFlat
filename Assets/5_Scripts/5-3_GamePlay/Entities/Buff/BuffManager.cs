@@ -471,3 +471,16 @@ public static class BurningBuffIds
 {
     public const string Burning = "燃烧";
 }
+
+/// <summary>感染类 Buff 的稳定 ID，供玩法、表现和测试统一引用。</summary>
+public static class InfectionBuffIds
+{
+    public const string Infection = "感染";
+}
+
+/// <summary>淡水环境能力 Buff 的稳定 ID；只表示玩家当前可以饮水，不直接修改营养值。</summary>
+public static class FreshWaterBuffIds
+{
+    public const string Clean = "位于干净的淡水中";
+    public const string Dirty = "位于脏的淡水中";
+}

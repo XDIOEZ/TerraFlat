@@ -182,7 +182,7 @@ public partial class Inventory_Data
         }
 
         // 情况5：特殊交换（特殊数据不一致）
-        if (inputData.ItemSpecialData != localData.ItemSpecialData)
+        if (!inputData.HasSameStackIdentity(localData) && inputData.IDName == localData.IDName)
         {
             Event_OnBeforeDataChanged.Invoke(localSlot);
             localSlot.Change(inputSlotHand);
@@ -194,7 +194,7 @@ public partial class Inventory_Data
         }
 
         // 情况6：物品相同，堆叠交换
-        if (inputData.IDName == localData.IDName)
+        if (inputData.CanStackWith(localData))
         {
             int changeAmount = Mathf.CeilToInt(localData.Stack.Amount * rate);
             ChangeItemAmount(localSlot, inputSlotHand, changeAmount);
@@ -226,7 +226,7 @@ public partial class Inventory_Data
 
         // 确保两个物品的特殊数据一致
         if (localSlot.itemData != null &&
-            localSlot.itemData.ItemSpecialData != inputSlotHand.itemData.ItemSpecialData)
+            !localSlot.itemData.HasSameStackIdentity(inputSlotHand.itemData))
             return false;
 
         int changed = 0;
@@ -311,9 +311,7 @@ public partial class Inventory_Data
         {
             var slot = itemSlots[i];
             bool hasItem = slot.itemData != null;
-            bool sameItem = hasItem &&
-                            slot.itemData.IDName == inputItemData.IDName &&
-                            slot.itemData.ItemSpecialData == inputItemData.ItemSpecialData;
+            bool sameItem = hasItem && slot.itemData.CanStackWith(inputItemData);
 
             // 仅处理已有、同类、且未满的堆叠
             if (!hasItem || !sameItem || slot.IsFull)
@@ -446,8 +444,7 @@ public partial class Inventory_Data
             return false;
 
         // 若目标槽位已有物品，需确保ID与特殊数据一致
-        if (dataTo != null &&
-            (dataTo.IDName != dataFrom.IDName || dataTo.ItemSpecialData != dataFrom.ItemSpecialData))
+        if (dataTo != null && !dataTo.HasSameStackIdentity(dataFrom))
             return false;
 
         // 若物品不可堆叠（Volume > 1），则不能进行堆叠式转移，只能直接移动单件到空槽
@@ -726,8 +723,7 @@ public partial class Inventory_Data
     {
         return CanUseDefaultStacking(source) &&
                CanUseDefaultStacking(target) &&
-               string.Equals(source.IDName, target.IDName, StringComparison.Ordinal) &&
-               string.Equals(source.ItemSpecialData, target.ItemSpecialData, StringComparison.Ordinal);
+               source.HasSameStackIdentity(target);
     }
 
     private static float GetAvailableStackAmount(ItemSlot slot, ItemData itemData)

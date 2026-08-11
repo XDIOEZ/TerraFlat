@@ -205,6 +205,11 @@ public class SpawnerConfig : ScriptableObject
     [MinValue(0f)]
     public float AsyncSpawnInterval;
 
+    [ShowIf(nameof(ScheduleMode), SpawnerScheduleMode.DayMilestoneGrowth)]
+    [LabelText("无上限逐日增长")]
+    [Tooltip("启用后，第 N 天排入 N 只生物，并忽略生态预算、物种、生成组、玩家周边与全局存活上限。")]
+    public bool UnboundedDailyGrowth;
+
     [LabelText("必须生成在完全黑暗地块")]
     public bool RequireCompletelyDarkTile = true;
 

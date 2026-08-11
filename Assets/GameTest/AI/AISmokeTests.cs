@@ -158,22 +158,16 @@ namespace FlatWorld.GameTest.AI
         [Category("Smoke")]
         public void WolfPerceptionAndPackCallRangesCoverPlayerView()
         {
-            const float expectedWolfPerceptionRadius = 40f;
+            const float expectedWolfPerceptionRadius = 120f;
             GameObject wildBoarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/2_Prefabs/Entity_AI/WildBoar.prefab");
             GameObject wolfPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/2_Prefabs/Entity_AI/Wolf.prefab");
-            GameObject legacyWolfPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Entity_AI/Wolf_Tree.prefab");
-
             Mod_ItemDetector wildBoarDetector = wildBoarPrefab != null
                 ? wildBoarPrefab.GetComponentInChildren<Mod_ItemDetector>(true)
                 : null;
             Mod_ItemDetector wolfDetector = wolfPrefab != null
                 ? wolfPrefab.GetComponentInChildren<Mod_ItemDetector>(true)
-                : null;
-            Mod_ItemDetector legacyWolfDetector = legacyWolfPrefab != null
-                ? legacyWolfPrefab.GetComponentInChildren<Mod_ItemDetector>(true)
                 : null;
             AI_Wolf wolf = wolfPrefab != null
                 ? wolfPrefab.GetComponentInChildren<AI_Wolf>(true)
@@ -181,11 +175,12 @@ namespace FlatWorld.GameTest.AI
 
             Assert.That(wildBoarDetector, Is.Not.Null);
             Assert.That(wolfDetector, Is.Not.Null);
-            Assert.That(legacyWolfDetector, Is.Not.Null);
             Assert.That(wolf, Is.Not.Null);
             Assert.That(wolfDetector.DetectionRadius, Is.GreaterThan(wildBoarDetector.DetectionRadius));
             Assert.That(wolfDetector.DetectionRadius, Is.GreaterThanOrEqualTo(expectedWolfPerceptionRadius));
-            Assert.That(legacyWolfDetector.DetectionRadius, Is.GreaterThanOrEqualTo(expectedWolfPerceptionRadius));
+            Assert.That(wolf.alertDetectDistance, Is.GreaterThanOrEqualTo(20f));
+            Assert.That(wolf.chaseTriggerDistance, Is.GreaterThanOrEqualTo(28f));
+            Assert.That(wolf.chaseLossDistance, Is.GreaterThanOrEqualTo(44f));
             Assert.That(wolf.allyCallDistance, Is.GreaterThanOrEqualTo(expectedWolfPerceptionRadius));
             Assert.That(
                 wolf.allyCallDistance,
@@ -200,7 +195,6 @@ namespace FlatWorld.GameTest.AI
         public void WolfDetectorMasksIncludePlayerAndActorLayers()
         {
             AssertWolfDetectorMask("Assets/2_Prefabs/Entity_AI/Wolf.prefab");
-            AssertWolfDetectorMask("Assets/2_Prefabs/Entity_AI/Wolf_Tree.prefab");
         }
 
         /// <summary>幽灵亮度伤害必须在严格超过一半亮度后才开启。</summary>

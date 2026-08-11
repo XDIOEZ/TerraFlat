@@ -149,6 +149,100 @@ namespace FlatWorld.WorldModel
             return DistanceSquared(request.Topology, point, spawn) <= radius * radius;
         }
 
+        /// <summary>
+        /// 在洞室内部采样确定性的地下湖水深；出生区、天然出口及其连接通道始终保持干燥。
+        /// 以世界区域而非区块坐标选湖，保证湖面跨 Chunk 连续且不受加载顺序影响。
+        /// </summary>
+        public static double SampleGroundwaterDepth(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
+        {
+            if (!settings.CaveGroundwaterEnabled || settings.CaveGroundwaterRoomChance <= 0d ||
+                IsInsideDefaultSpawnSafeArea(request, settings, worldX, worldY))
+                return 0d;
+
+            Int2 normalized = Normalize(request.Topology, new Int2(worldX, worldY));
+            Point point = new(normalized.X + 0.5d, normalized.Y + 0.5d);
+            if (IsInsidePortalNetwork(request, settings, point, GetPortalSeed(request, settings)))
+                return 0d;
+
+            Int2 region = GetRegionCoordinates(request.Topology, settings, point);
+            double deepest = 0d;
+            for (int regionX = region.X - 1; regionX <= region.X + 1; regionX++)
+            for (int regionY = region.Y - 1; regionY <= region.Y + 1; regionY++)
+            {
+                uint state = HashRoom(request.Topology, settings, request.WorldSeed,
+                    regionX, regionY, 0x2f6e2b1);
+                if (NextUnitDouble(ref state) >= settings.CaveGroundwaterRoomChance)
+                    continue;
+
+                Room room = CreateRoom(request.Topology, settings, regionX, regionY,
+                    request.WorldSeed);
+                double radiusRatio = Lerp(settings.CaveGroundwaterMinRadiusRatio,
+                    settings.CaveGroundwaterMaxRadiusRatio, NextUnitDouble(ref state));
+                double offsetX = Lerp(-0.16d, 0.16d, NextUnitDouble(ref state)) * room.RadiusX;
+                double offsetY = Lerp(-0.16d, 0.16d, NextUnitDouble(ref state)) * room.RadiusY;
+                Point lakeCenter = room.Center + new Point(offsetX, offsetY);
+                Point delta = ShortestDelta(request.Topology, lakeCenter, point);
+                double sin = Math.Sin(room.AngleRadians);
+                double cos = Math.Cos(room.AngleRadians);
+                double localX = delta.X * cos + delta.Y * sin;
+                double localY = -delta.X * sin + delta.Y * cos;
+                double radiusX = Math.Max(0.5d, room.RadiusX * radiusRatio);
+                double radiusY = Math.Max(0.5d, room.RadiusY * radiusRatio * 0.82d);
+                double normalizedDistance = Math.Sqrt(
+                    localX * localX / (radiusX * radiusX) +
+                    localY * localY / (radiusY * radiusY));
+                double shorelineNoise = SampleNoise01(request.Topology, point,
+                    request.WorldSeed, 0.19d, 0x51f15e);
+                double shoreline = 1d + (shorelineNoise - 0.5d) * 0.22d;
+                if (normalizedDistance >= shoreline)
+                    continue;
+
+                double centerStrength = Clamp01(1d - normalizedDistance / shoreline);
+                double depth = Lerp(settings.CaveGroundwaterMinDepth,
+                    settings.CaveGroundwaterMaxDepth, Math.Sqrt(centerStrength));
+                deepest = Math.Max(deepest, depth);
+            }
+
+            return deepest;
+        }
+
+        /// <summary>在干燥洞壁边缘确定性生成藤蔓；地下水两格内提高概率。</summary>
+        public static bool ShouldPlaceVine(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
+        {
+            if (!settings.CaveVineEnabled || settings.CaveVineWallChance <= 0d ||
+                !IsWallEdge(request, settings, worldX, worldY) ||
+                IsInsideDefaultSpawnSafeArea(request, settings, worldX, worldY) ||
+                SampleGroundwaterDepth(request, settings, worldX, worldY) > 0d)
+                return false;
+
+            Point point = new(worldX + 0.5d, worldY + 0.5d);
+            if (IsInsidePortalNetwork(request, settings, point, GetPortalSeed(request, settings)))
+                return false;
+
+            bool nearWater = false;
+            for (int offsetY = -2; offsetY <= 2 && !nearWater; offsetY++)
+            for (int offsetX = -2; offsetX <= 2; offsetX++)
+            {
+                if (offsetX * offsetX + offsetY * offsetY > 4)
+                    continue;
+                if (SampleGroundwaterDepth(request, settings, worldX + offsetX,
+                        worldY + offsetY) > 0d)
+                {
+                    nearWater = true;
+                    break;
+                }
+            }
+
+            // 水池周围保持原有湿润生成量；其他干燥区域只保留配置比例。
+            double chance = settings.CaveVineWallChance *
+                (nearWater ? settings.CaveVineWetMultiplier : settings.CaveVineDryMultiplier);
+            Int2 normalized = Normalize(request.Topology, new Int2(worldX, worldY));
+            uint state = Hash(request.WorldSeed, normalized.X, normalized.Y, 0x18d5a37);
+            return NextUnitDouble(ref state) < Math.Min(1d, chance);
+        }
+
         #endregion
 
         #region 天然传送门布局

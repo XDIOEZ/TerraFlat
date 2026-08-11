@@ -383,7 +383,7 @@ namespace FlatWorld.Automation
                 walkSpeed,
                 "走路速度未在过渡窗口内达到目标速度。");
 
-            _runInputMover.HandleRunInputPressed();
+            _runInputMover.HandleHoldRunInputPressed();
 
             float expectedRunModifier = _runInputOriginalModifier * _runInputMover.RunSpeedRate;
             if (!_runInputMover.IsRunning ||
@@ -411,7 +411,7 @@ namespace FlatWorld.Automation
                 runSpeed,
                 "奔跑速度未在过渡窗口内达到目标速度。");
 
-            _runInputMover.HandleRunInputReleased(1d);
+            _runInputMover.HandleHoldRunInputReleased();
             if (_runInputMover.IsRunning ||
                 Mathf.Abs(_runInputMover.Speed.MultiplicativeModifier - _runInputOriginalModifier) >
                 RunInputSpeedTolerance)

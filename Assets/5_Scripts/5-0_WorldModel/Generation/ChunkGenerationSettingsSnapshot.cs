@@ -314,6 +314,8 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "river.maxLakeLevelRise", 0.045d), 0.001d, 0.25d);
             RiverLakeMinFlow = Positive(
                 GetDouble(numbers, "river.lakeMinFlow", 0.35d), 0.35d);
+            RiverLakeChance = Clamp01(
+                GetDouble(numbers, "river.lakeChance", 0.75d));
             RiverMaxCachedRegions = Clamp(
                 GetInt(numbers, "river.maxCachedRegions", 9), 1, 32);
             GrassDensity = Clamp01(GetDouble(numbers, "grass.density", 0.24d));
@@ -342,6 +344,25 @@ namespace FlatWorld.WorldModel
             CaveSpawnY = Finite(GetDouble(numbers, "cave.spawn.y", 0.5d), 0.5d);
             CaveSpawnSafeRadius = NonNegativeFinite(
                 GetDouble(numbers, "cave.spawn.safeRadius", 4d), 4d);
+            CaveGroundwaterEnabled = GetBool(numbers, "cave.groundwater.enabled", false);
+            CaveGroundwaterRoomChance = Clamp01(
+                GetDouble(numbers, "cave.groundwater.roomChance", 0.28d));
+            CaveGroundwaterMinRadiusRatio = Clamp(
+                GetDouble(numbers, "cave.groundwater.minRadiusRatio", 0.42d), 0.15d, 0.9d);
+            CaveGroundwaterMaxRadiusRatio = Clamp(
+                GetDouble(numbers, "cave.groundwater.maxRadiusRatio", 0.68d),
+                CaveGroundwaterMinRadiusRatio, 0.95d);
+            CaveGroundwaterMinDepth = Clamp01(
+                GetDouble(numbers, "cave.groundwater.minDepth", 0.25d));
+            CaveGroundwaterMaxDepth = Math.Max(CaveGroundwaterMinDepth, Clamp01(
+                GetDouble(numbers, "cave.groundwater.maxDepth", 0.85d)));
+            CaveVineEnabled = GetBool(numbers, "cave.vine.enabled", false);
+            CaveVineWallChance = Clamp01(
+                GetDouble(numbers, "cave.vine.wallChance", 0.06d));
+            CaveVineWetMultiplier = Clamp(
+                GetDouble(numbers, "cave.vine.wetMultiplier", 2.5d), 1d, 10d);
+            CaveVineDryMultiplier = Clamp01(
+                GetDouble(numbers, "cave.vine.dryMultiplier", 0.2d));
             CavePortalEnabled = GetBool(numbers, "cave.portal.enabled", true);
             CavePortalChunkChance = Clamp01(
                 GetDouble(numbers, "cave.portal.chunkChance", 0d));
@@ -482,6 +503,8 @@ namespace FlatWorld.WorldModel
         public double RiverMaxLakeLevelRise { get; }
         /// <summary>累计径流达到该值后，合格盆地才会表现为湖泊。</summary>
         public double RiverLakeMinFlow { get; }
+        /// <summary>高度驱动河网在内陆汇流终点形成淡水湖的确定性概率。</summary>
+        public double RiverLakeChance { get; }
         /// <summary>每个纯生成器实例最多保留多少个已完成水文区域。</summary>
         public int RiverMaxCachedRegions { get; }
         /// <summary>合适的地面上长出草的基本概率。</summary>
@@ -508,6 +531,19 @@ namespace FlatWorld.WorldModel
         public double CaveSpawnX { get; }
         public double CaveSpawnY { get; }
         public double CaveSpawnSafeRadius { get; }
+        /// <summary>洞室地下湖的确定性分布、水面半径与水深范围。</summary>
+        public bool CaveGroundwaterEnabled { get; }
+        public double CaveGroundwaterRoomChance { get; }
+        public double CaveGroundwaterMinRadiusRatio { get; }
+        public double CaveGroundwaterMaxRadiusRatio { get; }
+        public double CaveGroundwaterMinDepth { get; }
+        public double CaveGroundwaterMaxDepth { get; }
+        /// <summary>洞壁藤蔓基础概率；临近地下水时使用湿润倍率。</summary>
+        public bool CaveVineEnabled { get; }
+        public double CaveVineWallChance { get; }
+        public double CaveVineWetMultiplier { get; }
+        /// <summary>远离地下水时的藤蔓概率倍率，默认保留原概率的 20%。</summary>
+        public double CaveVineDryMultiplier { get; }
         /// <summary>跨维度天然入口的成对布局参数。</summary>
         public bool CavePortalEnabled { get; }
         public double CavePortalChunkChance { get; }

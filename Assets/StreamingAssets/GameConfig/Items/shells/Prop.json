@@ -1397,8 +1397,8 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_229.png[Item_Tool_229]",
         "rendererLocalPosition": {
-          "x": -1.203,
-          "y": 1.012,
+          "x": 0.0,
+          "y": 0.0,
           "z": 0.0
         },
         "rendererLocalEulerAngles": {
@@ -1596,8 +1596,8 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_239.png[Item_Tool_239]",
         "rendererLocalPosition": {
-          "x": -1.22,
-          "y": 2.21,
+          "x": 0.0,
+          "y": 0.0,
           "z": 0.0
         },
         "rendererLocalEulerAngles": {
@@ -1756,8 +1756,8 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/item/resources_basic.png[resources_basic_36]",
         "rendererLocalPosition": {
-          "x": 0.9618472,
-          "y": -2.39137888,
+          "x": 0.0,
+          "y": 0.0,
           "z": 0.0
         },
         "rendererLocalEulerAngles": {

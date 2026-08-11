@@ -1,9 +1,6 @@
 ---
 name: flatworld-modding
 description: "Use when: 定位或修改 FlatWorld 的 MOD 扫描、manifest、依赖排序、内容哈希、AssetBundle、JSON 物品定义、Lua 生命周期、MOD API、MOD 存档或模板工具。关键词：ModRuntimeManager、ModManifest、ModApi、ModLuaRuntime。"
-argument-hint: "MOD、Lua 或扩展内容问题"
-user-invocable: true
-disable-model-invocation: false
 ---
 
 # FlatWorld MOD 与 Lua 系统定位
@@ -11,14 +8,12 @@ disable-model-invocation: false
 > 最后核对：2026-08-03。
 
 ## 修改前先读
-
 1. `Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/ModRuntimeManager.cs`：扫描、校验、排序、加载、卸载和全局状态。
 2. `Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/ModManifest.cs`：manifest、依赖、Bundle、内容定义与存档记录。
 3. `Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/ModApi.cs`：公开给 MOD/Lua 的游戏 API。
 4. `Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/ModLuaRuntime.cs`：Lua 运行时。
 
 ## 加载链
-
 ```text
 GameRes 完成本体 Addressables
 → ModRuntimeManager.LoadEnabledMods
@@ -31,7 +26,6 @@ GameRes 完成本体 Addressables
 ```
 
 ## 关键文件
-
 - Lua 行为组件：`Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/Mod_LuaBehaviour.cs`。
 - MOD 存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/GameSaveData.Mods.cs`。
 - 示例模板：`Assets/5_Scripts/5-2_Editor/Mods/ModTemplateCreator.cs`。
@@ -40,35 +34,25 @@ GameRes 完成本体 Addressables
 - 旧 `assets[].type = recipe` AssetBundle 仍通过 `LegacyRecipeConverter` 转成 `RuntimeRecipe`，仅作为兼容桥。
 
 ## 安全与兼容边界
-
 - MOD 根目录是 `Application.persistentDataPath/Mods`，不是 Assets 内固定目录。
 - 保持路径解析、防重解析点、文件数/体积/JSON 长度限制，不能为方便加载而绕过。
 - manifest ID、版本范围、依赖顺序和内容哈希参与兼容判断；改格式需提供版本迁移。
 - MOD 注册的 Prefab/Item ID 需避免覆盖本体或其他 MOD，除非 API 明确允许。
-- 联机加入前应比较 MOD 集合哈希与存档 MOD 记录。
 
 ## 高耦合联动
-
 只在本次改动命中下表契约时加载对应 Skill 并追加最小测试；Lua 脚本内部玩法逻辑只加载它实际调用的领域 Skill。
-
 | 本系统变更 | 联动检查 | 必查契约 | 追加测试 |
 |---|---|---|---|
 | `GameRes` 接入点、本体/MOD 加载顺序、全局注册或覆盖规则 | `flatworld-core` | 本体资源先完成、冲突可诊断、失败不留下半注册内容 | `Core.Smoke` |
-| JSON Item/Module Def、Prefab/Bundle 物品注册或内容 ID | `flatworld-item-module`、`flatworld-data-save` | ID 命名空间、ModuleData、Prefab 类型和旧存档引用一致 | `ItemModule.Smoke`、`DataSave.Smoke` |
-| JSON `recipes` 或 `buffs` DTO、校验与注册 | 只加载实际定义类型对应的 `flatworld-inventory-crafting` 或 `flatworld-buff` | 与本体共用 DTO/校验器，加载顺序满足 Item 先于 Recipe/Buff | 对应领域 Smoke |
-| ModSetHash、manifest 兼容范围、存档 MOD 记录或加入世界握手 | `flatworld-networking`、`flatworld-data-save` | 不兼容集合在进入世界前拒绝，存档记录可往返 | `Networking.Smoke`、`DataSave.Smoke` |
 
 ## 近期变更
-
-> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
-
+> 最多保留 5 条，按新到旧排列；超过时删除最旧条目。
 - 2026-08-08：本体与 MOD 的 JSON 物品显示统一通过 `GameRes.TryGetItemPresentation()` 读取解析后的 `gameName` 与 `visual.spriteAddress`；共享外壳只负责实例结构，不再作为 UI 显示数据源。
 - 2026-08-08：本体物品 JSON 新增 `labelKey`/`descriptionKey`，由 Unity Localization 的 `FlatWorld` String Table 提供语言文本；MOD 现有同名字段与 `ModLocalizationRegistry` 继续保持兼容。
 - 2026-07-28：MOD 定义文件新增纯 JSON `recipes`，加载顺序为先物品 Def、再校验并注册配方；保留旧 Recipe AssetBundle 转换兼容。
 - 2026-07-27：当前 MOD 流程在本体资源加载后执行，支持 manifest 依赖排序、AssetBundle、JSON Item 定义、Lua 生命周期与集合哈希。
 
 ## 修改后自动测试
-
 - 基础测试脚本：`Assets/GameTest/Modding/ModdingSmokeTests.cs`；当前基础覆盖运行时管理、manifest、Lua 与模板工具入口。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；MOD 测试约定目录：`Assets/GameTest/Modding/`；场景目录：`Assets/GameTest/Scenes/Modding/`；冒烟分类：`Modding.Smoke`。
 - 新增 manifest、依赖排序、内容哈希、AssetBundle、JSON、Lua 生命周期或 MOD 存档行为时必须增加系统测试；修复 Bug 时先增加回归测试。
@@ -77,5 +61,4 @@ GameRes 完成本体 Addressables
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill
-
 改变 manifest 字段、RecipeDto、JSON `recipes`、API 版本、目录结构、限制值、Lua 生命周期、Bundle/定义文件位置、存档记录或 `GameRes` 接入点后，必须更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。

@@ -203,6 +203,9 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     [NonSerialized]
     private float _buffNutritionConsumeMultiplier = 1f;
 
+    [NonSerialized]
+    private float _buffWaterConsumeMultiplier = 1f;
+
     public float RuntimeNutritionConsumeMultiplier
     {
         get => _runtimeNutritionConsumeMultiplier;
@@ -210,6 +213,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     }
 
     public float BuffNutritionConsumeMultiplier => _buffNutritionConsumeMultiplier;
+    public float BuffWaterConsumeMultiplier => _buffWaterConsumeMultiplier;
 
     [MemoryPackIgnore]
     private UnityEngine.InputSystem.InputAction _tabAction;
@@ -229,6 +233,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         FoodModData.ApplyToFoodData();
         RuntimeNutritionConsumeMultiplier = 1f;
         _buffNutritionConsumeMultiplier = 1f;
+        _buffWaterConsumeMultiplier = 1f;
         _waterDamageTickTimer = 0f;
 
         ResolveFoodRuntimeModules();
@@ -284,6 +289,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         EatingProgress = 0f;
         RuntimeNutritionConsumeMultiplier = 1f;
         _buffNutritionConsumeMultiplier = 1f;
+        _buffWaterConsumeMultiplier = 1f;
         _waterDamageTickTimer = 0f;
         ConsumeCompleted = null;
         ReleaseRuntimeBindings(destroyPanel: true);
@@ -294,6 +300,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         EatingProgress = 0f;
         RuntimeNutritionConsumeMultiplier = 1f;
         _buffNutritionConsumeMultiplier = 1f;
+        _buffWaterConsumeMultiplier = 1f;
         _waterDamageTickTimer = 0f;
         ConsumeCompleted = null;
         ReleaseRuntimeBindings(destroyPanel: true);
@@ -387,6 +394,21 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
             100f);
     }
 
+    /// <summary>单独叠乘水分消耗倍率，不影响其他营养消耗。</summary>
+    public void MultiplyRuntimeWaterConsumeSpeed(float multiplier)
+    {
+        if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier <= 0f)
+        {
+            Debug.LogWarning($"[Mod_Food] 忽略无效水分消耗倍率：{multiplier}", this);
+            return;
+        }
+
+        _buffWaterConsumeMultiplier = Mathf.Clamp(
+            _buffWaterConsumeMultiplier * multiplier,
+            0.01f,
+            100f);
+    }
+
     public float ConsumeNutrition(float timeDelta)
     {
         timeDelta *= RuntimeNutritionConsumeMultiplier * BuffNutritionConsumeMultiplier;
@@ -427,7 +449,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         }
 
         // 水分单独按时间与倍率消耗，不受食物消耗类型影响
-        float usedWater = timeDelta * Data.WaterConsumeSpeedRate;
+        float usedWater = timeDelta * Data.WaterConsumeSpeedRate * BuffWaterConsumeMultiplier;
         Data.nutrition.Water = Mathf.Max(0, Data.nutrition.Water - usedWater);
 
         // 维生素自然消耗，速度为0.01倍时间增量

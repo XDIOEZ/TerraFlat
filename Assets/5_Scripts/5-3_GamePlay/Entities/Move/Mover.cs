@@ -57,7 +57,8 @@ public partial class Mover : Module
     public bool IsMoving;
 
     private InputAction moveAction;
-    private InputAction runAction;
+    private InputAction holdRunAction;
+    private InputAction toggleRunAction;
     public Rigidbody2D rb;
 
     // 输入判定、到达判定与过渡时间的稳定下限。
@@ -168,16 +169,18 @@ public partial class Mover : Module
         // 加载 Buff 管理器（可能不存在，需容错）
         item.itemMods.GetMod_ByID(ModText.BuffManager, out buffManager);
 
-        // 加载控制器模块
-        LoadMod<GameController>(item, ModText.Controller, controller =>
+        // 动物不含玩家输入与体力模块，按可选依赖安静解析。
+        GameController controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        if (controller != null)
         {
-            // 回调里才赋值 moveAction
             moveAction = controller._inputActions.Win10.Move_Player;
-            BindRunAction(controller._inputActions.Win10.Shift);
-        });
+            BindRunActions(
+                controller._inputActions.Win10.Shift,
+                controller._inputActions.Win10.ToggleRun);
+        }
 
         // 加载体力模块
-        stamina = LoadMod<Mod_Stamina>(item, ModText.Stamina);
+        stamina = item.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
         animationController = item.itemMods.GetMod_ByID<Mod_AnimatorController>(ModText.AnimatorReceiver);
 
         if (animationController != null)
@@ -249,16 +252,22 @@ public partial class Mover : Module
     #endregion
 
     #region 公共方法
-    public void HandleRunInputPressed()
+    public void HandleHoldRunInputPressed()
     {
-        // Shift 按下后进入奔跑，保持输入期间持续奔跑。
+        // 长按奔跑键按下后进入奔跑，保持输入期间持续奔跑。
         SetRunState(true);
     }
 
-    public void HandleRunInputReleased(double heldDuration)
+    public void HandleHoldRunInputReleased()
     {
-        // 保留时长参数兼容输入回调；无论按住多久，松开都恢复普通移动。
+        // 长按奔跑键松开后恢复普通移动。
         SetRunState(false);
+    }
+
+    public void HandleToggleRunInputPressed()
+    {
+        // 每次按下切换键，都在奔跑与普通移动之间切换。
+        SetRunState(!IsRunning);
     }
 
     public void SetRunState(bool isRun)
@@ -393,7 +402,7 @@ public partial class Mover : Module
     }
     public void OnDestroy()
     {
-        UnbindRunAction();
+        UnbindRunActions();
         OnMoveStart?.Clear();
         OnMoveEnd?.Clear();
 
@@ -404,35 +413,51 @@ public partial class Mover : Module
 
     #region 奔跑输入
 
-    private void BindRunAction(InputAction action)
+    private void BindRunActions(InputAction holdAction, InputAction toggleAction)
     {
-        UnbindRunAction();
-        runAction = action;
-        if (runAction == null)
-            return;
+        UnbindRunActions();
+        holdRunAction = holdAction;
+        toggleRunAction = toggleAction;
 
-        runAction.started += OnRunActionStarted;
-        runAction.canceled += OnRunActionCanceled;
+        if (holdRunAction != null)
+        {
+            holdRunAction.started += OnHoldRunActionStarted;
+            holdRunAction.canceled += OnHoldRunActionCanceled;
+        }
+
+        if (toggleRunAction != null)
+            toggleRunAction.performed += OnToggleRunActionPerformed;
     }
 
-    private void UnbindRunAction()
+    private void UnbindRunActions()
     {
-        if (runAction == null)
-            return;
+        if (holdRunAction != null)
+        {
+            holdRunAction.started -= OnHoldRunActionStarted;
+            holdRunAction.canceled -= OnHoldRunActionCanceled;
+            holdRunAction = null;
+        }
 
-        runAction.started -= OnRunActionStarted;
-        runAction.canceled -= OnRunActionCanceled;
-        runAction = null;
+        if (toggleRunAction != null)
+        {
+            toggleRunAction.performed -= OnToggleRunActionPerformed;
+            toggleRunAction = null;
+        }
     }
 
-    private void OnRunActionStarted(InputAction.CallbackContext context)
+    private void OnHoldRunActionStarted(InputAction.CallbackContext context)
     {
-        HandleRunInputPressed();
+        HandleHoldRunInputPressed();
     }
 
-    private void OnRunActionCanceled(InputAction.CallbackContext context)
+    private void OnHoldRunActionCanceled(InputAction.CallbackContext context)
     {
-        HandleRunInputReleased(context.duration);
+        HandleHoldRunInputReleased();
+    }
+
+    private void OnToggleRunActionPerformed(InputAction.CallbackContext context)
+    {
+        HandleToggleRunInputPressed();
     }
 
     #endregion

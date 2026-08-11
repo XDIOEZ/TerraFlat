@@ -16,7 +16,7 @@ MonoBehaviour:
   - PrefabName: Ghost
     Probability: 1
     EcologyCost: 1
-    SpeciesAliveLimit: 6
+    SpeciesAliveLimit: 0
   PersistentId: ghost_milestone_growth
   ScheduleMode: 1
   EcologyGroup: 2
@@ -28,7 +28,7 @@ MonoBehaviour:
   MaxSpawnDistance: 50
   PlayerVisibilityExclusionDistance: 24
   PlayerPopulationRadius: 70
-  PerPlayerAliveLimit: 3
+  PerPlayerAliveLimit: 0
   SpawnSearchRetryCount: 16
   SpawnCount: 1
   SpawnChance: 1
@@ -38,9 +38,10 @@ MonoBehaviour:
   DailyBudgetRecovery: 1
   RecoveryTargetPopulation: 0
   RecoveryCheckInterval: 10
-  GrowthIntervalDays: 3
+  GrowthIntervalDays: 1
   MaxLifetimeSpawnCount: 64
   AsyncSpawnInterval: 0
+  UnboundedDailyGrowth: 1
   RequireCompletelyDarkTile: 1
   MaxAllowedTileLight: 0
   AllowedBiomeNames:

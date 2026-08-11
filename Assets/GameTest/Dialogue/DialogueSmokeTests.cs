@@ -84,6 +84,26 @@ namespace FlatWorld.GameTest.Dialogue
         [Test]
         [Category("Dialogue.Smoke")]
         [Category("Smoke")]
+        public void HydrationConfig_ProvidesThreeValidatedWarningTiers()
+        {
+            const string configPath = "Assets/Resources/Dialogue/Soliloquy/need_hydration.json";
+            TextAsset hydrationConfig = AssetDatabase.LoadAssetAtPath<TextAsset>(configPath);
+            Assert.That(hydrationConfig, Is.Not.Null, $"缺少水分台词配置：{configPath}");
+
+            CharacterSpeechConfigLoadResult result = CharacterSpeechConfigLoader.LoadSources(
+                new[] { new CharacterSpeechConfigSource("need_hydration.json", hydrationConfig.text) },
+                logIssues: false);
+
+            Assert.That(result.Issues, Is.Empty);
+            string[] ids = result.Entries.Select(entry => entry.Id).ToArray();
+            Assert.That(ids, Does.Contain("need.hydration.thirsty"));
+            Assert.That(ids, Does.Contain("need.hydration.very_thirsty"));
+            Assert.That(ids, Does.Contain("need.hydration.dehydrated"));
+        }
+
+        [Test]
+        [Category("Dialogue.Smoke")]
+        [Category("Smoke")]
         public void SpeechBubblePresenter_StaysBelowInteractivePanels()
         {
             GameObject root = new GameObject("DialogueLayerRoot", typeof(RectTransform));
