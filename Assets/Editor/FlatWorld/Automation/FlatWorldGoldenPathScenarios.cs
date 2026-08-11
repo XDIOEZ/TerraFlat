@@ -58,6 +58,7 @@ namespace FlatWorld.Automation
             ResetWorldWrapScenario();
             ResetWorldModelScenario();
             ResetInitialSpawnLandScenario();
+            ResetPlayerInteractionRetryScenario();
             ResetPlayerRespawnScenario();
             ResetPlayerRunInputScenario();
             ResetPlayerMoveSpeedScenario();
@@ -74,6 +75,7 @@ namespace FlatWorld.Automation
         {
             // 玩家和初始 Chunk 就绪后的一次性安排挂在这里。
             VerifyInitialPlayerSpawnLand(context);
+            RunPlayerInteractionRetryScenario(context);
             RunPlayerRunInputScenario(context);
             if (context.Configuration.scenarios.hydrology)
                 BeginHydrologyScenario(context);
@@ -91,6 +93,8 @@ namespace FlatWorld.Automation
         internal static bool TickWorldReadyScenarios(FlatWorldGoldenPathScenarioContext context)
         {
             if (!TickBuildingPlacementScenario())
+                return false;
+            if (!TickItemLifecycleDropScenario())
                 return false;
 
             BeginAutoSaveScenario(context);
@@ -130,6 +134,7 @@ namespace FlatWorld.Automation
                 AssertWorldWrapScenarioCompleted();
             AssertWorldModelScenarioCompleted();
             AssertInitialSpawnLandScenarioCompleted();
+            AssertPlayerInteractionRetryScenarioCompleted();
             AssertPlayerRespawnScenarioCompleted();
             AssertPlayerRunInputScenarioCompleted();
             AssertPlayerMoveSpeedScenarioCompleted();
@@ -150,6 +155,7 @@ namespace FlatWorld.Automation
             CleanupWorldWrapScenario();
             CleanupWorldModelScenario();
             CleanupInitialSpawnLandScenario();
+            CleanupPlayerInteractionRetryScenario();
             CleanupPlayerRespawnScenario();
             CleanupPlayerRunInputScenario();
             CleanupPlayerMoveSpeedScenario();

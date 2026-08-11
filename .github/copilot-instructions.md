@@ -25,13 +25,13 @@
 - Project name: FlatWorld
 - Unity version: Unity 2022.3.62f3c1
 - Active scene:
-  - Name: DontDestroyOnLoad
+  - Name: GameStartScene
   - Tags:
     - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
   - Layers:
-    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player
+    - Default, TransparentFX, Ignore Raycast, Water, UI
 - Active game object:
-  - Name: DayTimeSystem
+  - Name: GameStartIndex
   - Tag: Untagged
   - Layer: Default
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->

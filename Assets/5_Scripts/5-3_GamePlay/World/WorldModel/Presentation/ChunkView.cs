@@ -139,6 +139,18 @@ public sealed class ChunkView : MonoBehaviour
 
     #endregion
 
+    /// <summary>自动保存专用的自然物分帧快照入口。</summary>
+    public IEnumerator CaptureNaturalItemStateCoroutine()
+    {
+        ChunkNaturalItemRenderer renderer = GetComponentInChildren<ChunkNaturalItemRenderer>(true);
+        if (renderer == null)
+            yield break;
+
+        IEnumerator captureRoutine = renderer.CaptureStateCoroutine();
+        while (captureRoutine.MoveNext())
+            yield return captureRoutine.Current;
+    }
+
     private void OnDisable() => Unbind();
     private void OnDestroy() => Unbind();
 

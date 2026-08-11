@@ -39,12 +39,11 @@ description: Continuously evolve FlatWorld's real single-player Runtime.GoldenPa
 8. 按下方“运行结果审计”检查结构化结果、运行时报错和全部截图；不得只看到终端 `PASS` 就结束。
 9. 最终总结中说明新场景所在阶段、黄金路径结果、运行时报错检查结论和截图检查结论。
 
-## 最多三次规则
+## 持续重试规则
 
-- 每个已经完成并进入验收的独立系统或修改批次，单独拥有最多 3 次 Golden Path 执行机会；计数不按对话累计，也不跨系统、跨修改批次继承。
-- 同一批次因第 1 或第 2 次失败而进行的修复仍属于该批次，不重置计数。
-- 开始另一个系统，或用户在上一批次结束后要求一轮新的独立修改时，重新获得最多 3 次机会。
-- 第 3 次仍未满意或失败时立即停止重跑，提交三次结果 JSON、截图、Console 错误与不满意原因，等待用户指导；未经用户明确授权不得执行第 4 次。
+- Golden Path 不设固定执行次数上限；只要仍有可修复的生产代码、资源或测试基础设施问题，就在每次失败后先定位并修复，再重新执行完整流程。
+- 禁止无修改地重复碰运气；每次重跑前必须有明确的新证据、修复或外部状态恢复。
+- 只有遇到无法由当前项目解决的外部阻塞，或继续执行需要用户提供新的权限/资源时，才停止并提交完整结果证据。
 
 ## 运行结果审计（强制）
 
@@ -79,9 +78,13 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 
 `OnWorldReady` 在初始 Chunk 窗口稳定后直接读取玩家脚下的 `ChunkRuntime/ChunkTerrainData`，断言出生格非水且可走，并核对运行时位置与 `Data_Player` 存档位置一致；场景不移动玩家、不改生成参数。实现位于 `FlatWorldGoldenPathScenarios.PlayerMovement.cs`。
 
+## 当前同目标交互重试场景（2026-08-10）
+
+`OnWorldReady` 使用真实玩家 `Mod_InteractSender.TryInteractAtCurrentPosition()` 对同一临时 `IInteractable` 连续请求两次，要求两次都触发 `OnInteractStart`；覆盖矿洞出口首次请求被加载收尾瞬态拒绝后，下一次 E 仍能重试。`finally` 与统一 Cleanup 都会取消交互、恢复距离并销毁探针。实现位于 `FlatWorldGoldenPathScenarios.PlayerMovement.cs`。
+
 ## 当前主世界出生点复活场景（2026-08-09）
 
-`OnWorldReady` 读取玩家 `flatworld.playerSpawn` 存档，使用真实 `DamageReceiver.ForceHurt()` 触发濒死，再调用公开 `Mod_PlayerDeathState.RespawnFromDying()`；断言玩家回到持久化主世界出生点且生命恢复，并在清理阶段恢复测试前的位置与生命。实现位于 `FlatWorldGoldenPathScenarios.PlayerMovement.cs`。
+`OnWorldReady` 读取玩家 `flatworld.playerSpawn` 存档，先断言模拟矿洞地址到主世界地址必须被生产路由识别为跨维度切换，再使用真实 `DamageReceiver.ForceHurt()` 触发濒死并调用公开 `Mod_PlayerDeathState.RespawnFromDying()`；当前地表实例断言玩家回到持久化主世界出生点且生命恢复，并在清理阶段恢复测试前的位置与生命。实现位于 `FlatWorldGoldenPathScenarios.PlayerMovement.cs`。
 
 ## 当前玩家速度过渡场景（2026-08-09）
 
@@ -111,16 +114,16 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：默认 Golden Path 启用确定性强化水文；出生搜索与 ChunkMgr 共用 WorldModel Profile Hook，真实移动由帧后协程重放 `Mover.Move`，Berry 掉落完成后才允许休眠；模型往返使用整数 Chunk 环带，Chicken 探针固定在块中心并冻结移动，消除边界和漫步误报。
+- 2026-08-11：取消 Golden Path 固定三次执行上限；改为每次失败必须先修复再持续重跑，直到完整通过或确认存在项目外部阻塞。
+- 2026-08-11：Golden Path 接管请求前验证 Item 外壳及 JSON 关键模块（当前含 `GameItem`、`Mod_Furnace`）的 MonoScript 类型映射；失效时仅重导入对应脚本并等待 Domain Reload，再选择 Addressables Fast Mode，避免陈旧脚本缓存或 Existing Build Bundle。
 - 2026-08-10：新增 `WaitForWorldReadyScenarios` 编排阶段；建筑石墙通过 `RebuildVersion` 分两帧断言遮挡新增与恢复，临时墙清理后才启动自动保存，匹配帧末合并重建语义且不污染存档。
+- 2026-08-10：主世界复活场景新增生产路由断言：模拟矿洞 `WorldAddress` 必须要求跨维度返回地表，而地表到自身不得触发世界切换；原真实致死、复活坐标与生命恢复断言保持不变。
+- 2026-08-10：`OnWorldReady` 新增真实玩家同目标交互重试场景；连续两次调用 `Mod_InteractSender` 公开扫描入口，断言相同 `IInteractable` 不会因首次瞬态拒绝而被缓存锁死，并在清理阶段恢复探测状态。
+- 2026-08-10：自动保存黄金路径继续覆盖分帧采集；新增自然物、旧 Chunk 差异与运行时 AI 跨帧预算执行的真实入口，保持后台写盘、输入、Mover/Rigidbody2D 与 `Time.timeScale` 断言。
 - 2026-08-09：建筑黄金路径在新区块石墙写入/移除前后新增 `ChunkLightOccluderRenderer.ActiveOccluderCount` 断言，验证阻挡层与 URP 光照遮挡子层同步且可逆。
 - 2026-08-09：自动保存场景继续验证手动 `GameManager.SaveGame()` 的分帧快照、后台写盘与 `LastSaveSucceeded`，保持输入、Mover/Rigidbody2D 与 `Time.timeScale` 不受保存影响。
 - 2026-08-09：`ItemLifecycle` 场景在真实 WorldModel 世界中生成短距离 Berry 掉落，跨帧断言物品绑定 `ChunkView` 临时节点且动画结束后可拾取，并在退出前通过 `ItemMgr` 清理，覆盖掉落归属回归链路。
-- 2026-08-09：建筑召唤器迁移到 JSON 后继续复用现有建筑黄金路径的 `Wall_Wood_Summoner` 场景；该场景通过 `GameRes.CreateItemData → ItemMgr.InstantiateItem → Load` 真实验证 JSON ItemData、`Mod_Building` 放置、快照占地与清理，无需复制一套迁移专用场景。
-- 2026-08-09：WorldModel 进入世界阶段新增活动视野绑定断言，要求完整窗口的 `ChunkView` 均已就绪，避免维度切换或普通进入只完成中心区块就被判定为 Ready。
-- 2026-08-09：矿洞入口/出口的一一对应由 `WorldModel.Cave` 纯生成回归断言唯一数量和同格坐标；Golden Path 的生态销毁场景继续跳过永久 `CaveExit`，避免把配对基线误判为可删除自然物。
-- 2026-08-09：建筑黄金路径在世界就绪阶段验证石墙召唤器写入新区块 `BlockingTileId`、Tilemap 刷新与可逆清理，避免临时阻挡格干扰移动阶段。
-- 2026-08-09：生态场景选择可销毁自然物时跳过确定性跨维度传送门；该类入口是永久基线，不得被“销毁后不复活”断言误写成删除差量，矿物/树木等普通自然物仍保持原验证。
-- 2026-08-09：玩家奔跑场景扩展为实际 Rigidbody2D 速度回归：走路起步、走跑互切、松开后默认 0.07 秒的极短惯性及停止均通过 `Mover.Move` 验证，并在 Cleanup 恢复原速度。
 
 ## 当前地表气候与水文场景（2026-08-08）
 
@@ -129,10 +132,10 @@ Hydrology 场景要求每个模型区块提供 `temperature/temperature.celsius/
 ## 配置执行器契约（2026-08-06）
 
 - `FlatWorldGoldenPathConfiguration` 是版本化、强验证的输入和结果快照；运行结果必须回显最终有效配置，便于复现 AI 临时构造的场景。
-- `FlatWorldGoldenPathExecutor` 是生产系统入口适配层：通过 `NewWorldCreationRequest` 创建真实世界，通过玩家模块 API 调视野，通过 `WorldGenerationRuntimeHooks` 在 `Map.Act()` 前配置当前 Map 实例。
+- `FlatWorldGoldenPathExecutor` 是生产系统入口适配层：通过 `NewWorldCreationRequest` 创建真实世界，通过玩家模块 API 调视野，通过 `WorldGenerationRuntimeHooks` 同时配置旧 `Map.Act()` 实例和新版 `ChunkGenerationProfileSnapshot`。
 - `player.cameraOrthographicSize` 控制移动阶段视距；`player.screenshotOrthographicSize` 仅在三次截图前临时拉远相机，通过真实 `Mod_Cam` 刷新可见 Chunk 窗口并等待全部 Ready，截图后恢复移动视距。
 - WorldModel 往返场景验证表现协程已排空，且 `ChunkCommitted` 订阅数必须等于当前 `PresentationStatus=Bound` 的 View 数；不得再与截图缩放切换前的历史基线比较，因为相机恢复会合法改变表现窗口数量。
-- `WorldGenerationRuntimeHooks` 默认没有订阅者；执行器结束或 Domain Reload 时必须解除订阅，所以临时河流/地形参数不会污染 Prefab、后续游戏或存档默认配置。
+- `WorldGenerationRuntimeHooks` 默认没有订阅者；WorldModel Hook 必须在 Profile 冻结到隔离存档前执行，执行器结束或 Domain Reload 时解除订阅，所以临时河流/地形参数不会污染 Prefab、后续游戏或存档默认配置。
 - `world.noiseScale` 必须在进入世界后的 `ChunkMgr.ActiveGenerationProfile.Settings.WorldCoordinateScale` 中保持一致；河流距离倍率按 `clamp(0.01 / scale, 0.25, 4)` 回显，WorldModel 场景在 `OnWorldReady` 阶段断言该接线。
 - 状态化子场景继续负责跨帧的调用、观测、断言和清理；配置决定场景是否启用及运行参数，执行器不绕过生产系统直接伪造结果。
 - 快速有限世界/强化河流示例见 `references/wrapped-river-fast.json`。

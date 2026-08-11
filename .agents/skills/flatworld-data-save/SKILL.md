@@ -42,7 +42,7 @@ GameSaveData
 - 地图存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/MapSave.cs`。
 - 星球存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/PlanetData.cs`。
 - 生态存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/EcologyWorldSaveData.cs`；首次创建世界冻结 `ChunkGenerationProfileSO` 的生态配置，旧存档缺失该追加字段时使用空数据。
-- 自动与手动保存：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/{AutoSaveController,GameManager,SaveDataMgr}.cs`；自动保存和 `GameManager.SaveGame()` 共用分帧采集旧 Chunk、后台原子写盘链，且旧任务不得覆盖之后的手动/退出保存。
+- 自动与手动保存：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/{AutoSaveController,GameManager,SaveDataMgr}.cs`；自动保存和 `GameManager.SaveGame()` 共用自然物、旧 Chunk、差异 Tile/草地与 AI 的单帧预算采集，再交给后台原子写盘，且旧任务不得覆盖之后的手动/退出保存。
 - `ItemSpecialData` 命名空间合并：`Assets/5_Scripts/5-3_GamePlay/Core/Progress/ItemSpecialDataJsonStore.cs`。
 - 玩家主世界出生点：`Assets/5_Scripts/5-3_GamePlay/Core/Progress/PlayerMainWorldSpawnStore.cs`，写入 `flatworld.playerSpawn`，不改变 `Data_Player` 的 MemoryPack 布局。
 - 维度位置与入口锚点进度：`Assets/5_Scripts/5-3_GamePlay/World/Dimension/DimensionTravelProgressStore.cs`。
@@ -97,6 +97,9 @@ GameSaveData
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：WorldModel 临时生成 Hook 在 `ApplyPersistedEcologyConfiguration` 前转换 Profile；黄金路径强化水文参数会先冻结到隔离 PlanetData，退出重进继续得到相同生成指纹，同时不会写回项目 SO 或玩家真实存档。
+- 2026-08-11：Golden Path 接管请求时显式把 Addressables Play Mode 数据构建器切到 Fast Mode，进入 PlayMode 后直接读取最新 AssetDatabase；刀类共享外壳 `Dagger_Copper.prefab` 已登记路径地址和 `Prefab` 标签，避免旧 Bundle 或正式 Player 中缺少外壳。
+- 2026-08-10：自动保存采集阶段统一按约 2.5ms 单帧预算分段执行：自然物克隆、旧 Chunk 物品、程序化区块差异（物品/删除 GUID/Tile/草地）和运行时 AI 均跨帧处理；完成后仍只把不可变字节数组交给后台原子写盘。
 - 2026-08-09：建筑召唤器的 `ItemData`/`ModuleData` 已导出到按召唤器外壳分类的 JSON 分包；建筑本体 Prefab 仍由运行时保留，放置快照与占地数据继续走原有持久化链路。
 - 2026-08-09：手动 `GameManager.SaveGame()` 复用 `SaveGameInBackgroundCoroutine()`，区块快照分帧执行、字节快照后台原子写盘；自动保存仍按版本号避免旧任务覆盖新手动/退出保存。
 - 2026-08-09：矿洞入口配对不新增存档字段：`EcologyWorldSaveData.Generation` 已冻结的地表 Profile 继续作为真源，切入洞穴时重建配对快照；旧世界保持原冻结概率，新世界使用 1% 默认概率。
@@ -104,9 +107,6 @@ GameSaveData
 - 2026-08-09：`EcologyWorldSaveData` 的追加 `Generation` 快照冻结当前 Profile 的全部数值/文本参数和有序 `CaveResourceRules`；按 `ProfileId` 恢复地表或矿洞，旧存档缺失字段时仅由权威端补写，保证洞穴房间、矿脉和传送门不随 SO 改动重排。
 - 2026-08-09：实体 AI 由 `ItemMgr` 按 `WorldAddress` 采集；旧全量区块写回 `MapSave.items`，新版/确定性区块复用 `ChunkSaveRecord.ChangedItems`，在区块数据 Ready 时按 GUID 恢复且跳过旧 Chunk 实例化，无需提升存档版本。
 - 2026-08-09：自动保存改为 `GameManager.SaveGameInBackgroundCoroutine()` 分帧捕获旧 Chunk、`SaveDataMgr` 后台原子写入；写入版本按文件登记，手动或退出保存会废弃尚未写入的旧自动保存，保存流程不得锁输入、时间缩放或实体启停。
-- 2026-08-08：新世界种子支持 UI 手动输入数字或文字；空白时由 `GameManager` 随机生成，`SaveSeed` 保存最终文本、`Seed` 保存稳定映射整数，手动 `0` 不再视为空输入。
-- 2026-08-08：`PlanetData` 末尾追加 `EcologyWorldSaveData`，冻结生态规则与指纹；区块只保存自然物删除 GUID 和变化后的 `ItemData`，`SaveDataMgr` 序列化前捕获运行中自然物，`DataSave.Ecology` 覆盖 MemoryPack 往返。
-- 2026-08-08：`SaveDataMgr.TryCreateNewSave` 的空名称兜底改为八位纯数字；正式新世界请求会提前为玩家名和存档名补同一个随机数字，存档层继续负责文件名清理与防覆盖编号。
 
 
 ## 修改后自动测试

@@ -18,6 +18,8 @@ namespace FlatWorld.Gameplay.Events
         public bool RequireGlobalDarkness;
         public bool RequireCompletelyDarkTile;
         public float MaxAllowedTileLight = 1f;
+        /// <summary>GM 强制事件忽略日夜、地块光照和群系限制，但仍保留地形与可走性校验。</summary>
+        public bool IgnoreEnvironmentalRestrictions;
         public List<string> AllowedBiomes = new();
     }
 }

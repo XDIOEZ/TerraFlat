@@ -997,6 +997,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         noiseScale = PlanetData.NormalizeNoiseScale(noiseScale);
         profile = profileAsset.CreateSnapshot().WithNumericParameter(
             "world.coordinateScale", noiseScale);
+        // 出生搜索与 ChunkMgr 后台生成必须经过同一运行时覆盖，避免选中的陆地生成后变成水。
+        profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
         dimensionId = dimensionManager.ActiveDefinition?.DimensionId;
         if (string.IsNullOrWhiteSpace(dimensionId))
             dimensionId = WorldAddress.SurfaceDimensionId;
@@ -1101,7 +1103,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     }
 
     /// <summary>
-    /// 自动保存入口：保持实体和输入继续运行，只在主线程采集快照，磁盘原子写入由后台任务完成。
+    /// 自动保存入口：保持实体和输入继续运行，主线程负责采集/构建字节快照，磁盘原子写入由后台任务完成。
     /// </summary>
     public Task<bool> SaveGameInBackground()
     {

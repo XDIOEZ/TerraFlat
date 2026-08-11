@@ -212,6 +212,7 @@ public partial class ChunkMgr
             ? profileAsset.CreateSnapshot()
             : defaultGenerationSnapshot;
         profile = ApplyWorldCoordinateScale(profile);
+        profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
         profile = ApplyPersistedEcologyConfiguration(profile);
         int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
         if (baseSeed == 0)

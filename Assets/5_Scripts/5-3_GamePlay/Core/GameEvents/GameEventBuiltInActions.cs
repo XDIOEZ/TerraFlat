@@ -58,6 +58,8 @@ namespace FlatWorld.Gameplay.Events
         public int NextWaveIndex;
         public int PendingInCurrentWave;
         public float NextWaveTotalTime;
+        /// <summary>GM 强制事件是否跳过日夜、光照和群系限制。</summary>
+        public bool IgnoreEnvironmentalRestrictions;
     }
 
     public sealed class CreatureWavesGameEventAction : IGameEventActionHandler
@@ -105,6 +107,8 @@ namespace FlatWorld.Gameplay.Events
             CreatureWavesRuntimeState runtime = ReadRuntime(state);
             if (runtime.NextWaveTotalTime <= 0f)
                 runtime.NextWaveTotalTime = context.ActiveEvent.StartedTotalTime;
+            if (context.IsGmForced)
+                runtime.IgnoreEnvironmentalRestrictions = true;
             WriteRuntime(state, runtime);
             return Tick(context, parameters, state);
         }
@@ -126,6 +130,9 @@ namespace FlatWorld.Gameplay.Events
             CreatureWavesRuntimeState runtime = ReadRuntime(state);
             if (runtime.NextWaveIndex >= value.Waves && runtime.PendingInCurrentWave <= 0)
                 return GameEventActionStatus.Completed;
+
+            bool ignoreEnvironmentalRestrictions =
+                runtime.IgnoreEnvironmentalRestrictions || context.IsGmForced;
 
             MonsterSpawnerManager spawner = MonsterSpawnerManager.Instance;
             if (spawner == null)
@@ -157,6 +164,7 @@ namespace FlatWorld.Gameplay.Events
                 RequireGlobalDarkness = value.RequireGlobalDarkness,
                 RequireCompletelyDarkTile = value.RequireCompletelyDarkTile,
                 MaxAllowedTileLight = Mathf.Clamp01(value.MaxAllowedTileLight),
+                IgnoreEnvironmentalRestrictions = ignoreEnvironmentalRestrictions,
                 AllowedBiomes = value.AllowedBiomes ?? new List<string>()
             });
 

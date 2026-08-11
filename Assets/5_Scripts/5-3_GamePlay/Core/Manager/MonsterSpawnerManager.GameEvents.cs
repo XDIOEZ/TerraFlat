@@ -48,8 +48,11 @@ public partial class MonsterSpawnerManager
 
         _dayTimeSystem ??= DayTimeSystem.Instance;
         RefreshPlayerPositions(activeWorldKey);
+        bool ignoreEnvironmentalRestrictions = request.IgnoreEnvironmentalRestrictions;
         if (_playerPositions.Count == 0 ||
-            (request.RequireGlobalDarkness && !IsGlobalDark(activeWorldKey)))
+            (!ignoreEnvironmentalRestrictions &&
+             request.RequireGlobalDarkness &&
+             !IsGlobalDark(activeWorldKey)))
         {
             return 0;
         }
@@ -98,8 +101,10 @@ public partial class MonsterSpawnerManager
                 (request.RequireOutsidePlayerView && IsVisibleByAnyActiveCamera(candidate)) ||
                 !IsRuntimeTerrainReady(candidate) ||
                 !IsWalkableSpawnPosition(candidate) ||
-                !IsEventBiomeAllowed(request.AllowedBiomes, candidate) ||
-                !IsEventLightAllowed(request, candidate))
+                (!request.IgnoreEnvironmentalRestrictions &&
+                 !IsEventBiomeAllowed(request.AllowedBiomes, candidate)) ||
+                (!request.IgnoreEnvironmentalRestrictions &&
+                 !IsEventLightAllowed(request, candidate)))
             {
                 continue;
             }
@@ -168,6 +173,8 @@ public partial class MonsterSpawnerManager
         return lightLevel <= maximum + 0.0001f;
     }
 
+    #region 事件生物初始化校验
+
     private static bool TrySpawnEventCreature(
         string prefabId,
         Vector3 position,
@@ -185,14 +192,60 @@ public partial class MonsterSpawnerManager
                 return false;
 
             spawnedItem.Load();
+            if (!TryGetBoundAiActor(spawnedItem, out _))
+            {
+                Debug.LogError(
+                    $"[GameEvent] 生成 '{prefabId}' 后没有找到已绑定的 IAIActor，已回收未初始化实体。");
+                DespawnFailedEventCreature(spawnedItem);
+                spawnedItem = null;
+                return false;
+            }
+
             spawnedItem.GetComponentInChildren<Mod_ItemDetector>(true)?.Update_Detector();
             return true;
         }
         catch (Exception exception)
         {
+            DespawnFailedEventCreature(spawnedItem);
             spawnedItem = null;
             Debug.LogError($"[GameEvent] Failed to spawn '{prefabId}': {exception.Message}");
             return false;
         }
     }
+
+    private static bool TryGetBoundAiActor(Item spawnedItem, out IAIActor actor)
+    {
+        actor = null;
+        if (spawnedItem == null)
+            return false;
+
+        MonoBehaviour[] behaviours = spawnedItem.GetComponentsInChildren<MonoBehaviour>(true);
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            if (behaviours[i] is not IAIActor candidate || candidate.ActorItem != spawnedItem)
+                continue;
+
+            actor = candidate;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void DespawnFailedEventCreature(Item spawnedItem)
+    {
+        if (spawnedItem == null || spawnedItem.DestructionHandled || ItemMgr.Instance == null)
+            return;
+
+        try
+        {
+            ItemMgr.Instance.DespawnItem(spawnedItem, saveData: false);
+        }
+        catch (Exception cleanupException)
+        {
+            Debug.LogError($"[GameEvent] 回收未初始化实体失败: {cleanupException.Message}");
+        }
+    }
+
+    #endregion
 }

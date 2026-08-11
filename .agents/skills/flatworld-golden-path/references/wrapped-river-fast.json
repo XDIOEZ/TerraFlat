@@ -18,9 +18,12 @@
     "runoffCellSize": 16,
     "runoffSampleStride": 4,
     "maxTraceSteps": 128,
+    "minimumVisibleCourseLength": 8,
     "infiltrationFloor": 0.0,
     "riverStartFlow": 0.02,
+    "tributaryStartFlow": 0.01,
     "fullWidthFlow": 0.2,
+    "floodplainStartFlow": 0.02,
     "lakeMinFlow": 0.05
   },
   "execution": {

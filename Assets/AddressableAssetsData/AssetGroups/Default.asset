@@ -965,6 +965,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 97f6605c00e28b74c9e535a7d0cc7dce
+    m_Address: Assets/2_Prefabs/Weapon/Weapon/Dagger_Copper.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 97e7d2adcd4bf2b479296591882482ba
     m_Address: Assets/6_Art/item/Tool/Item_Tool_363.png
     m_ReadOnly: 0

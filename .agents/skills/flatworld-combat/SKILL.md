@@ -5,7 +5,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 
 # FlatWorld 战斗与技能定位
 
-> 最后核对：2026-08-09。
+> 最后核对：2026-08-10。
 
 ## 修改前先读
 
@@ -45,6 +45,7 @@ Buff 定义、生命周期、效果、叠加与存档统一见 `flatworld-buff`�
 - 伤害死亡回调可能生成 Item、播放音效和更新 UI，修改时检查这些订阅者。
 - `DamageReceiver.DeathStarted` 是带接收器参数的真实死亡信号；未被外部消费的死亡最终必须走 `ItemMgr.DespawnItem(item, saveData:false)`，同步清理运行时索引和 Chunk 存档，禁止直接 `Destroy` 遗留幽灵注册。
 - 玩家死亡掉落规则由 `Assets/5_Scripts/5-3_GamePlay/Core/Difficulty/GameDifficulty.cs` 的 `GameDifficultyService.Current.PlayerDeath` 统一提供；`Mod_PlayerDeathState` 不得直接判断预设枚举。官方预设与新世界自定义规则共享此入口。
+- 玩家在非地表维度死亡后必须通过 `DimensionManager.TryBeginRespawnTransition()` 返回存档中的主世界地表出生点；恢复生命、食物等权威状态必须发生在维度事务首次 `SavePlayer()` 之前，禁止只在当前 Scene 改成地表坐标。
 - `DamageReceiver.Hurt()` 是直接伤害难度结算点：玩家攻击、生物攻击和非玩家实体等效生命倍率统一由 `GameDifficultyService.ResolveDirectDamageMultiplier()` 计算；倍率为 0 时不得触发最低 1 点伤害或装备耐久损耗。
 - `DamageReceiver.Hurt()` 对实际受伤且存活、拥有 `Mover` 的实体施加受击减速；默认移动倍率 0.5、持续 0.35 秒，连续命中只刷新持续时间而不叠加倍率，环境伤害 `ForceHurt()` 不触发。
 - `DamageReceiver.ForceHurt()` 与 `Heal()` 分别承接玩家环境伤害倍率和治疗倍率；`DamageReceiver.DropLoot()`、`DamageReciver_Action_SpawnItem` 统一应用世界战利品数量倍率。
@@ -66,6 +67,8 @@ Buff 定义、生命周期、效果、叠加与存档统一见 `flatworld-buff`�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-10：修复矿洞死亡仍在地下同坐标复活：`Mod_PlayerDeathState` 现在解析主世界地表地址，并通过维度事务重建地表玩家；生命与状态通过保存前回调先恢复，避免 0 血状态被首次 `SavePlayer()` 写回。
+- 2026-08-10：幽灵接触伤害移除专用 `GhostContactDamage`，直接复用斧头使用的通用 `Mod_Damage`；根节点 `BoxCollider2D` 作为伤害碰撞体，伤害 `20`、间隔 `1s`，统一进入 `DamageReceiver.Hurt()` 结算，并新增 `AI.Smoke` Prefab 回归断言。
 - 2026-08-09：修复幽灵受伤不闪红：幽灵 Prefab 增加 `ActorRenderEffectController` 与 `ActorRenderColorEffect`，`DamageReceiver` 现在能找到统一 MPB 受击模块；伤害结算和死亡边界不变。
 - 2026-08-09：AI 攻击窗口启用时仅对 `Mod_Damage_AI` 主动执行 `OverlapCollider` 重叠扫描，并按窗口记录已命中接收器，修复野猪首击缺少 `OnTriggerEnter2D` 时的伤害遗漏；普通武器仍保持原触发逻辑。
 - 2026-08-09：受击闪烁统一改为明显红色；`DamageReceiver.flashColor`、`ActorRenderColorEffect.hitFlashColor`、角色 Animator Prefab 和 Sprite Shader 默认值一致，仍通过 MPB 播放，不创建材质实例。
@@ -74,8 +77,6 @@ Buff 定义、生命周期、效果、叠加与存档统一见 `flatworld-buff`�
 - 2026-08-09：野猪独立 `AttackTrigger_AI` 覆盖改为 `2.2×0.9`、圆角 `0.45` 的横向胶囊伤害触发盒；AI 进入攻击同步按横向 `1.6`、竖向 `0.45` 椭圆判断，避免上下方向空挥。
 - 2026-08-09：`AI_AttackController` 在伤害窗口启用时才同步攻击事件状态；野猪起手首帧继续保持 `IsAttacking=false`，避免首击发生额外攻击开始/停止脉冲，伤害窗口参数不变。
 - 2026-08-09：通用武器动画模块在载入与回到待机时强制关闭命中碰撞体；`Axe.prefab` 修正伤害模块错误的 `m_Enabled=1` 覆盖，斧头及同类手持物只会在攻击动画命中帧内结算伤害。
-- 2026-08-09：管理员无敌默认改为关闭，运行时重置同样保持关闭；默认名为“管理员”的 Player Prefab 现在可正常受伤和死亡，仍可由管理员开关主动开启无敌。
-- 2026-08-09：野猪 `Attack.anim` 禁用循环并延长至一次伤害起手到下一次起手的完整 `2.18s` 周期；`0.06s` 开始、`0.12s` 持续的伤害窗口和前冲峰值保持不变，避免冷却中重复播放攻击表演。
 
 ## 修改后自动测试
 
@@ -85,7 +86,7 @@ Buff 定义、生命周期、效果、叠加与存档统一见 `flatworld-buff`�
 - 新增伤害、死亡、掉落、武器或技能行为时必须增加系统测试；修复 Bug 时先增加回归测试。攻击到受伤、死亡与掉落主流程变化时同步更新战斗冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；伤害随机项必须固定输入，死亡和掉落事件必须验证不会重复触发。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Combat.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类；只有攻击特效或界面观感变化才做定向截图。
-- 管理员无敌的真实伤害/死亡回归由 `FlatWorldGoldenPathScenarios.PlayerMovement.cs` 在 `OnWorldReady` 通过 `DamageReceiver.ForceHurt()` 覆盖；Cleanup 必须恢复生命、玩家名与无敌开关。
+- 管理员无敌与主世界复活回归由 `FlatWorldGoldenPathScenarios.PlayerMovement.cs` 在 `OnWorldReady` 通过 `DamageReceiver.ForceHurt()` 覆盖；复活场景同时断言矿洞地址必须走跨维度地表路由，Cleanup 必须恢复生命、玩家名与无敌开关。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 - 战斗精简 Smoke 位于 `Assets/GameTest/Combat/CombatSmokeTests.cs`（`Combat.Smoke`），保留受击减速与恢复这一关键行为；矿物掉落细节不再属于 Smoke 集合。
 

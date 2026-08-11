@@ -16,6 +16,8 @@
 
 可用 `--golden-config <partial.json>` 或重复的 `--golden-set section.field=<json-value>` 构造本次场景。结果 JSON 的 `configuration` 保存合并、验证后的完整快照；复现失败时直接复用该对象。临时配置只能调整隔离运行时实例，禁止用 Editor API 写 Prefab、SO 或 ProjectSettings 来构造场景。
 
+水文覆盖通过 `WorldGenerationRuntimeHooks` 同时兼容旧 MapCore 与新版 WorldModel Profile。默认黄金路径已启用确定性强化水文；新版配置除区域、径流、起流量与宽度外，还显式包含 `minimumVisibleCourseLength`、`tributaryStartFlow`、`floodplainStartFlow`。Hook 必须在出生搜索和生成配置冻结前共同应用，退出重进后保持相同指纹。
+
 ## 运行产物与审计
 
 - 每次请求的结构化结果位于 `Library/FlatWorldSkillTests/golden-result-<request-id>.json`。不能只看终端 `PASS`；必须打开该文件，确认 `state=completed`、`outcome=Passed`、`failed=0` 且 `failures` 为空。
@@ -50,14 +52,15 @@
 | 场景 | 安排阶段 | 观测与断言 | 清理 |
 | --- | --- | --- | --- |
 | 新玩家安全陆地出生 | 初始 Chunk 窗口稳定后的 `OnWorldReady` | 玩家脚下权威 `ChunkTerrainData` 必须非水且可走，运行时位置与 `Data_Player` 存档位置一致 | 不修改状态，仅重置完成标记 |
-| 主世界出生点复活 | `OnWorldReady` 读取出生点后触发一次真实濒死/复活 | `DamageReceiver.ForceHurt()` 后，`Mod_PlayerDeathState.RespawnFromDying()` 必须把玩家送回 `flatworld.playerSpawn` 且恢复生命 | 恢复测试前位置、生命、速度与物理状态 |
-| 自动保存不锁操作 | `TickWorldReadyScenarios` 完成初始临时状态清理后启动，`OnTraversalTick` 观察 | 后台写入完成、无输入锁、Mover/Rigidbody2D/TimeScale 正常 | 仅清空任务引用 |
+| 同一目标连续交互重试 | `OnWorldReady` 使用真实玩家 `Mod_InteractSender.TryInteractAtCurrentPosition()` 连续发起两次请求 | 同一 `IInteractable` 在玩家未离开范围、当前目标未清空时必须收到两次 `OnInteractStart`，避免瞬态拒绝后永久失效 | 取消当前交互、恢复原交互距离并销毁临时探针 |
+| 主世界出生点复活 | `OnWorldReady` 先验证矿洞到地表的生产路由，再触发一次真实濒死/复活 | 矿洞地址必须要求跨维度返回主世界；当前地表实例中 `DamageReceiver.ForceHurt()` 后，`Mod_PlayerDeathState.RespawnFromDying()` 必须把玩家送回 `flatworld.playerSpawn` 且恢复生命 | 恢复测试前位置、生命、速度与物理状态 |
+| 自动保存不锁操作 | `TickWorldReadyScenarios` 完成初始临时状态清理后启动，`OnTraversalTick` 观察 | 自然物、旧 Chunk/差异与 AI 采集可跨帧，后台写入完成、无输入锁、Mover/Rigidbody2D/TimeScale 正常 | 仅清空任务引用 |
 | 玩家长按奔跑与速度过渡 | `OnWorldReady` 调用真实 `Mover.HandleRunInputPressed/Released()` 和 `Mover.Move` | 走路起步、走跑互切均平滑靠近目标速度；松开方向保留默认 0.07 秒的极短惯性后停止，松开奔跑恢复普通速度倍率 | 立即恢复非奔跑状态、原速度与原移动状态；失败路径统一兜底 |
 | 新区块建筑放置 | `OnWorldReady` 使用正式 `Wall_Wood_Summoner` 扫描玩家附近候选格并写入临时石墙；`TickWorldReadyScenarios` 分两帧观察 | 权威地块校验、动态占地和正式虚影正确；`RebuildVersion` 推进后阴影增加，移除再推进一帧后恢复原数量 | 先清理虚影、建筑和召唤器，石墙跨帧断言结束后再清理；失败路径统一兜底 |
 | WorldModel 空闲预取、协程表现与生物显隐 | `OnWorldReady` 检查已完成外圈数据和预取并发；往返前按 `ItemMgr.InstantiateItem(...) → Load()` 创建真实 Chicken，原长距离阶段驱动起始区块离开并重新进入可见圈 | 预取实际并发不超过 1；已完成外圈数据 Dormant 且无三类租约；View 解绑后 Chicken inactive，重绑后恢复 active；往返复用同一模型且租约/订阅不重复 | 通过 `ItemMgr.DespawnItem()` 清理测试生物并清空场景引用，生产窗口自行回收 View 与排队项 |
 | 燃烧 Buff | 首次 `OnTraversalTick` 通过 `BuffManager.AddBuff(BurningBuffIds.Burning)` 施加 | 后续移动 Tick 观察玩家生命下降；`OnChunkReady` 确认定义仍注册且至少发生一次 Tick | 移除燃烧并恢复测试前生命值 |
 | 有限世界右边界环绕 | `OnWorldReady` 后、首次截图和长距离移动前，将真实玩家移动到右边界并通过 `Mover.Move` 越界 | 等待规范目标 Chunk Ready，验证环绕余量、玩家数据、Chunk 字典和地图存档键；恢复原位置并再次等待原 Chunk Ready | 通过和失败路径都恢复位置、速度与移动速度 |
-| WorldModel 旧版气候、有序 Biome、二维石地山地、D∞ 河流、湖泊、冲积平原与草地表现 | `OnWorldReady` 先核对 `world.noiseScale` 已进入纯 Profile 及河流距离倍率，再扫描已绑定模型区块；后续在每次 `OnChunkReady` 累积观察 | 断言独立温度通道按 Profile 映射摄氏值、`basePrecipitation/precipitation` 出现地形降雨差异、`windX/windY` 为单位向量，并用 `SurfaceBiomeClassifier` 核对旧有序群系；`mountain` 与活动高度阈值/石地 Tile 一致，淡水 `riverDepth/riverFlow`、`riverKind`、湖泊 `riverSurfaceLevel`（遇到湖泊时）、低坡 `riverFloodplain` 与草状态存在，并确认对应 Ground/Grass Tilemap 已实际写入 Tile | 仅清空场景累计状态，不修改生产世界 |
+| WorldModel 旧版气候、有序 Biome、二维石地山地、D∞ 河流、湖泊、冲积平原与草地表现 | `OnWorldReady` 先核对 `world.noiseScale` 已进入纯 Profile 及河流距离倍率，再扫描已绑定模型区块；后续在每次 `OnChunkReady` 累积观察 | 断言独立温度通道按 Profile 映射摄氏值、`basePrecipitation/precipitation` 出现地形降雨差异、`windX/windY` 为单位向量，并用 `SurfaceBiomeClassifier` 核对旧有序群系；`mountain` 与该分类器的 Stone 结果/石地 Tile 一致，淡水 `riverDepth/riverFlow`、`riverKind`、湖泊 `riverSurfaceLevel`（遇到湖泊时）、低坡 `riverFloodplain` 与草状态存在，并确认对应 Ground/Grass Tilemap 已实际写入 Tile | 仅清空场景累计状态，不修改生产世界 |
 | 运行时水体地块效果 | `OnChunkReady` 从活动 `ChunkRuntime` 选择可走陆地与水体格，临时移动真实玩家并调用 `TileEffectReceiver.RefreshCurrentTileEffects()` | 断言水体 `TileData_Water`、`水体减速/潮湿`、正式速度倍率，以及离水后的 Buff/速度恢复 | `finally` 与统一 `Cleanup` 恢复原位置、速度并重新绑定原脚下地块 |
 | GM 自定义玩家移速倍率 | `OnWorldReady` 通过真实 `PlayerAdminController.TrySetAdminMoveSpeedMultiplier` 输入 `2.75x` | 断言管理员倍率与 `Mover.Speed.MultiplicativeModifier` 同步变化，且其他乘法修饰保持不变 | 立即恢复原管理员倍率；失败清理路径再次兜底恢复 |
 | GM 管理员无敌开关 | `OnWorldReady` 通过真实 `PlayerAdminController` 关闭/重新开启无敌，并调用 `DamageReceiver.ForceHurt()` | 关闭后必须正常扣血；重新开启后立即满血，致死伤害不得进入 `Mod_PlayerDeathState` 濒死 | 恢复原玩家名、生命与无敌状态；失败清理路径再次兜底恢复 |

@@ -72,6 +72,8 @@ Summoner（库存中的持久化载体）
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：`Building.Smoke` 补齐 `Tile_Block`、Chunk Palette/Profile、Structure Catalog/Definition/Template 与 `BiomeData` 类型链；共享断言在 AssetDatabase 缓存陈旧时强制同步重导入后再判定，避免合法 ScriptableObject 被误报丢失。
+- 2026-08-11：`Building.Smoke` 不再用 MonoBehaviour 的 `MonoScript.GetClass()` 入口检查纯静态 `BuildingOccupancyRegistry`，改为验证编译类型保持静态，避免把合法静态类误报为脚本失效。
 - 2026-08-09：新区块静态阻挡层新增 `LightOccluders` 子层；石墙写入/移除 `ChunkTerrainData.BlockingTileId` 时同步刷新 URP 2D 阴影体，动态建筑仍保持 GameObject 与 `BuildingOccupancyRegistry` 模型。
 - 2026-08-09：13 个建筑召唤器的 Item/Module 数据迁移到 `Items/shells/*_Summoner.json`；每个召唤器 Prefab 继续作为唯一运行时外壳，已放置建筑本体、快照、占地注册表和放置链路不改动。
 - 2026-08-09：旧 `TileItem_StoneWall` 通过 `Item_Tile_Grass` 兼容壳映射到 `TileBase_BuiltStoneWall`，右键直接复用新区块放置入口并创建始终可见的 `BuildingShadow`；冒烟与黄金路径覆盖旧物品预览。
@@ -80,8 +82,6 @@ Summoner（库存中的持久化载体）
 - 2026-08-09：修正建筑虚影的排序层级：`Shadow` 位于 `Default` 之后，预览 Sprite 使用高排序序号并在 Prefab 中预设，避免被普通建筑/草地精灵覆盖；Prefab 补齐根节点预览碰撞体并增加层级回归断言。
 - 2026-08-08：建筑召唤器的预览与最终放置改为优先读取 `ChunkMgr.TryGetRuntimeTerrainTile()` 的 `ChunkRuntime/ChunkTerrainData` 权威地块，旧 `Chunk.Map` 仅作兼容回退；`BuildingShadow` 继承建筑本体材质并使用 `Shadow` 排序层，修复新区块下“地块尚未加载”和虚影不显示。
 - 2026-08-05：静态结构与阻挡层迁移到连续 `TileStackCell` API；动态建筑继续只叠加 `BuildingOccupancyRegistry`，导航同时读取地形栈顶层与建筑占用。
-- 2026-07-31：新增正式 `MineEntrance`/`MineEntrance_Summoner` 建筑对；安装后的建筑可进入矿洞，召唤器不可触发，拆除与 Chunk 存档继续复用建筑快照事务。
-- 2026-07-31：新增通用静态“建筑阻挡层” Tilemap；明确只承载地图生成的静态墙体，动态建造系统继续使用建筑实体、快照和占地注册表。
 
 ## 修改后自动测试
 

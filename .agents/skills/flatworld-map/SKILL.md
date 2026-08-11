@@ -112,6 +112,7 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：`WorldGenerationRuntimeHooks` 新增纯 `ChunkGenerationProfileSnapshot` 转换入口，ChunkMgr 在坐标缩放后、配置冻结前应用，GameManager 出生搜索也复用同一入口；Golden Path 强化河流可进入后台模型，山地断言统一复用 `SurfaceBiomeClassifier`。
 - 2026-08-10：`ChunkLightOccluderRenderer` 合并同帧地块事件，并把历史阴影槽延迟裁到“实际 + 8”；`ChunkMgr` 的 View 池改为“待展示 + 4”动态容量、7.5 秒资源裁剪和 10 秒最早闲置销毁，世界退出完整清池。
 - 2026-08-09：新版 `ChunkView` 新增 `LightOccluders` 表现子层；它从 `ChunkTerrainData.BlockingTileId` 合并生成可复用 URP 2D `ShadowCaster2D`，区块解绑时回收/隐藏，墙体 `TileStack` 变化时局部重建。
 - 2026-08-09：掉落物归属新增 `ChunkMgr.TryGetRuntimeDropParent`，玩家、战斗和自然物掉落挂到已绑定 `ChunkView` 的临时节点；新区块窗口不再因掉落调用旧 `ChunkMgr` 加载链。
@@ -121,7 +122,6 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - 2026-08-09：旧 `TileItem_StoneWall` 的右键放置不再写旧 `Map.Data`，通过 `TileBuildingSystem` 写入 `ChunkTerrainData.BlockingTileId`；新增 `CanSetBlockingTile` 供预览阶段检查扩展地块堆栈。
 - 2026-08-09：`ChunkTerrainData` 新增运行时阻挡地块写入/移除接口；新版区块渲染器通过 `TerrainChangeKind.TileStack` 即时刷新石墙，动态建筑不再依赖旧 `Map.Data`。
 - 2026-08-09：新版矿洞迁入纯 WorldModel：`CaveLayoutKernel` 输出连续房间/隧道/安全区地形，`CaveGenerationFeatureGenerator` 输出稳定洞壁矿脉、散矿和跨维度入口；洞穴继续复用 `ChunkEcologyData` 作为无 Unity 引用的世界物品记录。地形预览器构造快照时必须传递 `CaveResourceRules`，并以 `cave.portal.chunkWidth/Height` 保留正式概率格，不能让临时大预览区块稀释传送门密度。
-- 2026-08-09：地形预览器读取自然物图标时不再单独探测 Prefab 根节点，改为遍历层级内的 `SpriteRenderer`，兼容根节点无渲染器的 Weed 等物品；画布裁剪改用 `try/finally`，单个图标资源异常不会破坏后续 IMGUI 布局。
 
 
 ## 修改后自动测试

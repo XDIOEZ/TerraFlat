@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
@@ -180,6 +182,7 @@ public partial class ChunkMgr
 
         ChunkGenerationProfileSnapshot profile = ApplyWorldCoordinateScale(
             profileAsset.CreateSnapshot());
+        profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
         profile = ApplyPersistedEcologyConfiguration(profile);
         int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
         if (baseSeed == 0)
@@ -200,6 +203,32 @@ public partial class ChunkMgr
 
         foreach (RuntimeChunkBinding binding in activeRuntimeBindings.Values)
             binding?.View?.CaptureNaturalItemState();
+    }
+
+    /// <summary>自动保存专用的自然物分帧快照，先复制 View 列表再跨帧遍历。</summary>
+    public IEnumerator CaptureRuntimeNaturalItemStatesCoroutine()
+    {
+        if (!GameNetwork.HasStateAuthority || activeRuntimeBindings == null)
+            yield break;
+
+        List<ChunkView> views = new List<ChunkView>();
+        foreach (RuntimeChunkBinding binding in activeRuntimeBindings.Values)
+        {
+            ChunkView view = binding?.View;
+            if (view != null)
+                views.Add(view);
+        }
+
+        for (int i = 0; i < views.Count; i++)
+        {
+            ChunkView view = views[i];
+            if (view == null)
+                continue;
+
+            IEnumerator captureRoutine = view.CaptureNaturalItemStateCoroutine();
+            while (captureRoutine.MoveNext())
+                yield return captureRoutine.Current;
+        }
     }
 
     /// <summary>读取某个自然物的状态覆盖；没有覆盖时返回 false。</summary>

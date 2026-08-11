@@ -65,14 +65,27 @@ namespace FlatWorld.Automation
                 Require(hydrology.hydrologyRegionSize >= 64, "hydrologyRegionSize must be >= 64.");
                 Require(hydrology.runoffCellSize >= 16, "runoffCellSize must be >= 16.");
                 Require(hydrology.runoffSampleStride >= 1, "runoffSampleStride must be >= 1.");
+                Require(hydrology.runoffCellSize % hydrology.runoffSampleStride == 0,
+                    "runoffSampleStride must divide runoffCellSize.");
                 Require(hydrology.maxTraceSteps >= 32, "maxTraceSteps must be >= 32.");
+                Require(hydrology.minimumVisibleCourseLength >= 0 &&
+                        hydrology.minimumVisibleCourseLength <= hydrology.maxTraceSteps,
+                    "minimumVisibleCourseLength must be in [0, maxTraceSteps].");
                 Require(hydrology.seaLevel is >= 0f and <= 1f, "seaLevel must be in [0, 1].");
                 Require(hydrology.infiltrationFloor is >= 0f and <= 1f,
                     "infiltrationFloor must be in [0, 1].");
-                Require(hydrology.riverStartFlow > 0f && hydrology.fullWidthFlow > 0f,
-                    "river flow thresholds must be positive.");
+                Require(hydrology.riverStartFlow > 0f &&
+                        hydrology.tributaryStartFlow > 0f &&
+                        hydrology.tributaryStartFlow <= hydrology.riverStartFlow &&
+                        hydrology.fullWidthFlow >= hydrology.riverStartFlow &&
+                        hydrology.floodplainStartFlow >= hydrology.riverStartFlow &&
+                        hydrology.lakeMinFlow > 0f,
+                    "river flow thresholds are invalid.");
                 Require(hydrology.maxRiverWidth is >= 1 and <= 5,
                     "maxRiverWidth must be in [1, 5].");
+                Require(hydrology.windwardRainGain is >= 0f and <= 2f &&
+                        hydrology.leewardRainLoss is >= 0f and <= 2f,
+                    "orographic rain strengths must be in [0, 2].");
             }
 
             Require(execution.startupTimeoutSeconds > 0d &&
@@ -140,17 +153,20 @@ namespace FlatWorld.Automation
     [Serializable]
     internal sealed class GoldenPathHydrologyConfiguration
     {
-        public bool overrideGeneration;
-        public int hydrologyRegionSize = 256;
-        public int runoffCellSize = 64;
-        public int runoffSampleStride = 8;
-        public int maxTraceSteps = 512;
+        public bool overrideGeneration = true;
+        public int hydrologyRegionSize = 64;
+        public int runoffCellSize = 16;
+        public int runoffSampleStride = 4;
+        public int maxTraceSteps = 128;
+        public int minimumVisibleCourseLength = 8;
         public float seaLevel = 0.5f;
-        public float infiltrationFloor = 0.25f;
-        public float riverStartFlow = 0.12f;
-        public float fullWidthFlow = 2.5f;
+        public float infiltrationFloor;
+        public float riverStartFlow = 0.02f;
+        public float tributaryStartFlow = 0.01f;
+        public float fullWidthFlow = 0.2f;
         public int maxRiverWidth = 5;
-        public float lakeMinFlow = 0.35f;
+        public float floodplainStartFlow = 0.02f;
+        public float lakeMinFlow = 0.05f;
         public float windwardRainGain = 0.8f;
         public float leewardRainLoss = 0.6f;
     }

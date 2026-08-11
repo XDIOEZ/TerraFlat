@@ -88,13 +88,25 @@ namespace FlatWorld.Automation
             }
 
             _modelTerrainHash = _modelStartChunk.Terrain.ComputeStableHash();
+            ChunkGenerationProfileSnapshot profile = manager.ActiveGenerationProfile;
+            Vector2 probePosition = new(
+                _modelStartAddress.ChunkOrigin.X + profile.Width / 2 + 0.5f,
+                _modelStartAddress.ChunkOrigin.Y + profile.Height / 2 + 0.5f);
             _modelVisibilityCreature = ItemMgr.Instance.InstantiateItem(
-                "Chicken", _modelStartPosition, Quaternion.identity, Vector3.one);
+                "Chicken", probePosition, Quaternion.identity, Vector3.one);
             if (_modelVisibilityCreature == null || _modelVisibilityCreature.DestructionHandled ||
                 ItemMgr.Instance.GetItemByGuid(_modelVisibilityCreature.itemData?.Guid ?? 0) !=
                 _modelVisibilityCreature)
                 throw new InvalidOperationException("无法创建用于区块实体显隐验证的 Chicken。");
             _modelVisibilityCreature.Load();
+            Mover_AI probeMover =
+                _modelVisibilityCreature.itemMods.GetMod_ByID<Mover_AI>(ModText.Mover) ??
+                _modelVisibilityCreature.itemMods.GetMod_ByID<Mover_AI>(ModText.Mover_AI);
+            if (probeMover?.Speed == null)
+                throw new InvalidOperationException("区块实体显隐探针缺少 Mover_AI。");
+            // 该实体只验证 WorldAddress 与休眠显隐；冻结临时速度，避免鸡自行漫步跨 Chunk。
+            probeMover.Speed.BaseValue = 0f;
+            probeMover.StopMovement();
             AssertRuntimeAiMigration(manager, _modelVisibilityCreature, _modelStartAddress);
             AssertWorldModelPrefetchRing(manager, FlatWorldGoldenPathCommandPlayerLoader());
 
@@ -116,8 +128,10 @@ namespace FlatWorld.Automation
             }
 
             direction = SelectSafeCardinalDirection(_modelStartPosition);
+            // 精确平移整数个 Chunk，保留玩家在块内的局部坐标；额外小数会在靠近边缘时
+            // 多跨一块，把起始块推出 destroyDistance 的唯一休眠环带。
             float distance = (direction.x != 0f ? chunkSize.x : chunkSize.y) *
-                             (dormantDistance + 0.05f);
+                             dormantDistance;
             _modelAwayPosition = WorldTopologyRuntime.NormalizePosition(
                 _modelStartPosition + direction * distance);
         }

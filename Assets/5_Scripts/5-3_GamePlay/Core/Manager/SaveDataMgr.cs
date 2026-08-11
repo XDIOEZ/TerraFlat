@@ -19,6 +19,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
     private const int CompactSaveVersion = 4;
     private const int ModdedSaveVersion = 3;
+    private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
     private const string LastExitTimeSuffix = ".lastplayed";
@@ -165,7 +166,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     }
 
     /// <summary>
-    /// 自动保存专用入口：主线程先完成 Unity 对象快照，随后仅把已经独立的字节数组交给后台原子写盘。
+    /// 自动保存专用入口：主线程按帧预算完成 Unity 对象快照，最后构建独立字节数组，随后仅把它交给后台原子写盘。
     /// 不触碰输入锁、时间缩放或实体启停，且较新的手动/退出保存会使旧自动保存失效。
     /// </summary>
     public Task<bool> Save_And_WriteToDiskInBackground()
@@ -993,6 +994,177 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         return true;
     }
 
+    /// <summary>
+    /// 自动保存专用的分帧差异扫描；物品、删除 GUID、Tile 和草地逐段处理，完成后一次性提交差量。
+    /// </summary>
+    public IEnumerator TrySaveChunkDifferencesCoroutine(
+        Chunk chunk,
+        Action<bool, Exception> onCompleted)
+    {
+        if (chunk?.MapSave == null || chunk.Map?.Data == null)
+        {
+            onCompleted?.Invoke(false, null);
+            yield break;
+        }
+
+        string planetName = SceneManager.GetActiveScene().name;
+        string key = BuildChunkKey(planetName, chunk.MapSave.Name);
+        if (!chunkBaselines.TryGetValue(key, out ChunkBaseline baseline))
+        {
+            onCompleted?.Invoke(false, null);
+            yield break;
+        }
+
+        ChunkSaveRecord delta = new ChunkSaveRecord
+        {
+            PlanetName = planetName,
+            ChunkName = chunk.MapSave.Name,
+            ChunkPosition = chunk.MapSave.MapPosition,
+            SunlightIntensity = chunk.MapSave.SunlightIntensity,
+            IsDelta = true
+        };
+
+        HashSet<int> currentGuids = new HashSet<int>();
+        List<Item> items = new List<Item>(chunk.RunTimeItems.Values);
+        float frameStart = Time.realtimeSinceStartup;
+        for (int i = 0; i < items.Count; i++)
+        {
+            Item item = items[i];
+            if (item == null || item is Map || item.itemData == null ||
+                RuntimeAiEntityUtility.IsAiEntity(item))
+            {
+                continue;
+            }
+
+            ItemData itemData = null;
+            Exception itemFailure = null;
+            ulong currentHash = 0UL;
+            ItemData changedItem = null;
+            try
+            {
+                item.Save();
+                itemData = item.itemData;
+                if (itemData == null)
+                    throw new InvalidDataException($"区块物品 {item.name} 的 ItemData 为空");
+                currentHash = ComputeItemHash(itemData);
+                if (!baseline.ItemHashes.TryGetValue(itemData.Guid, out ulong baselineHash) ||
+                    currentHash != baselineHash)
+                {
+                    changedItem = CloneItemData(itemData);
+                }
+            }
+            catch (Exception exception)
+            {
+                itemFailure = exception;
+                Debug.LogError($"[SaveDataMgr] 分帧保存区块物品失败: {item.name}", item);
+                Debug.LogException(exception);
+            }
+
+            if (itemFailure != null)
+            {
+                onCompleted?.Invoke(false, itemFailure);
+                yield break;
+            }
+
+            currentGuids.Add(itemData.Guid);
+            if (changedItem != null)
+                delta.ChangedItems.Add(changedItem);
+
+            if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
+            {
+                frameStart = Time.realtimeSinceStartup;
+                yield return null;
+            }
+        }
+
+        List<int> baselineGuids = new List<int>(baseline.ItemHashes.Keys);
+        for (int i = 0; i < baselineGuids.Count; i++)
+        {
+            int generatedGuid = baselineGuids[i];
+            if (!currentGuids.Contains(generatedGuid))
+                delta.RemovedItemGuids.Add(generatedGuid);
+
+            if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
+            {
+                frameStart = Time.realtimeSinceStartup;
+                yield return null;
+            }
+        }
+
+        Data_TileMap mapData = chunk.Map.Data;
+        var tileBuffer = new List<TileData>(4);
+        int width = mapData.Width;
+        int height = mapData.Height;
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                mapData.CopyStackLocalTo(x, y, tileBuffer);
+                ulong currentHash = ComputeTileHash(tileBuffer);
+                bool hasBaselineCell = x < baseline.TileWidth && y < baseline.TileHeight;
+                if (!hasBaselineCell || currentHash != baseline.TileHashes[x, y])
+                {
+                    delta.TileDeltas.Add(new TileCellSaveDelta
+                    {
+                        LocalPosition = new Vector2Int(x, y),
+                        Tiles = CloneTileList(tileBuffer)
+                    });
+                }
+
+                if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
+                {
+                    frameStart = Time.realtimeSinceStartup;
+                    yield return null;
+                }
+            }
+        }
+
+        mapData.EnsureGrassLayerStorage(mapData.Width, mapData.Height);
+        GrassLayerData grassLayer = mapData.GrassLayer;
+        for (int x = 0; x < grassLayer.Width; x++)
+        {
+            for (int y = 0; y < grassLayer.Height; y++)
+            {
+                GrassCellState currentState = grassLayer.Get(x, y);
+                bool hasBaselineCell = x < baseline.GrassWidth && y < baseline.GrassHeight;
+                int baselineIndex = y * baseline.GrassWidth + x;
+                GrassCellState baselineState = hasBaselineCell &&
+                    baseline.GrassStates != null &&
+                    (uint)baselineIndex < (uint)baseline.GrassStates.Length
+                        ? (GrassCellState)baseline.GrassStates[baselineIndex]
+                        : GrassCellState.Uninitialized;
+
+                if (currentState != baselineState)
+                {
+                    delta.GrassDeltas.Add(new GrassCellSaveDelta
+                    {
+                        LocalPosition = new Vector2Int(x, y),
+                        State = currentState
+                    });
+                }
+
+                if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
+                {
+                    frameStart = Time.realtimeSinceStartup;
+                    yield return null;
+                }
+            }
+        }
+
+        delta.ChangedItems.Sort((a, b) => (a?.Guid ?? 0).CompareTo(b?.Guid ?? 0));
+        delta.RemovedItemGuids.Sort();
+
+        // 只在完整差异扫描完成后提交，跨帧期间不会留下半成品差量。
+        chunk.MapSave.items ??= new Dictionary<string, HashSet<ItemData>>();
+        chunk.MapSave.items.Clear();
+        if (delta.HasChanges)
+            chunkDeltas[key] = delta;
+        else
+            chunkDeltas.Remove(key);
+
+        onCompleted?.Invoke(true, null);
+    }
+
     public bool TryGetChunkDelta(string planetName, string chunkName, out ChunkSaveRecord delta)
     {
         return chunkDeltas.TryGetValue(BuildChunkKey(planetName, chunkName), out delta);
@@ -1026,14 +1198,23 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         CaptureRuntimeAiEntityStates();
     }
 
-    /// <summary>自动保存将旧 Chunk 的快照分帧执行，防止一次性扫描打断玩家控制。</summary>
+    /// <summary>自动保存将自然物、旧 Chunk、差异扫描和 AI 快照按单帧预算分散执行。</summary>
     private IEnumerator PrepareLoadedChunksForAutoSaveCoroutine(Action<Exception> onFailure)
     {
         if (ChunkMgr.Instance != null)
         {
-            // 生态自然物仍使用现有权威捕获入口；与后续旧 Chunk 扫描至少错开一帧。
-            ChunkMgr.Instance.CaptureRuntimeNaturalItemStates();
-            yield return null;
+            // 自然物也要分帧克隆，避免表现窗口内大量 Item 在同一帧序列化。
+            Exception naturalFailure = null;
+            IEnumerator naturalRoutine = ForwardAutoSaveRoutine(
+                ChunkMgr.Instance.CaptureRuntimeNaturalItemStatesCoroutine(),
+                exception => naturalFailure = exception);
+            while (naturalRoutine.MoveNext())
+                yield return naturalRoutine.Current;
+            if (naturalFailure != null)
+            {
+                onFailure?.Invoke(naturalFailure);
+                yield break;
+            }
         }
 
         if (ChunkMgr.Instance != null && ChunkMgr.Instance.Chunk_Dic_ByPos != null)
@@ -1045,16 +1226,15 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 if (chunk != null)
                 {
                     Exception chunkSaveFailure = null;
-                    try
-                    {
-                        chunk.SaveChunk();
-                    }
-                    catch (Exception exception)
-                    {
-                        Debug.LogError($"[SaveDataMgr] 自动保存区块失败：{chunk.name}", chunk);
-                        Debug.LogException(exception);
-                        chunkSaveFailure = exception;
-                    }
+                    IEnumerator chunkRoutine = ForwardAutoSaveRoutine(
+                        chunk.SaveChunkCoroutine(exception => chunkSaveFailure = exception),
+                        exception =>
+                        {
+                            if (chunkSaveFailure == null)
+                                chunkSaveFailure = exception;
+                        });
+                    while (chunkRoutine.MoveNext())
+                        yield return chunkRoutine.Current;
 
                     if (chunkSaveFailure != null)
                     {
@@ -1063,13 +1243,54 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                     }
                 }
 
-                // 一个 Chunk 至少让出一帧，保持输入、物理和 AI 的常规 Update 频率。
-                if (i + 1 < chunks.Count)
-                    yield return null;
+                // 即使当前 Chunk 很小，也让区块之间错开一帧，给输入与物理留出更新机会。
+                yield return null;
             }
         }
 
-        CaptureRuntimeAiEntityStates();
+        // 旧 Chunk 写入结束后再合并 AI，避免旧差量记录覆盖新版实体快照。
+        Exception aiFailure = null;
+        IEnumerator aiRoutine = ForwardAutoSaveRoutine(
+            CaptureRuntimeAiEntityStatesCoroutine(),
+            exception => aiFailure = exception);
+        while (aiRoutine.MoveNext())
+            yield return aiRoutine.Current;
+        if (aiFailure != null)
+            onFailure?.Invoke(aiFailure);
+    }
+
+    /// <summary>安全转发自动保存子协程，避免异常中断后让保存状态永久停留。</summary>
+    private static IEnumerator ForwardAutoSaveRoutine(
+        IEnumerator routine,
+        Action<Exception> onFailure)
+    {
+        if (routine == null)
+            yield break;
+
+        while (true)
+        {
+            bool moved = false;
+            Exception failure = null;
+            try
+            {
+                moved = routine.MoveNext();
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+            }
+
+            if (failure != null)
+            {
+                onFailure?.Invoke(failure);
+                yield break;
+            }
+
+            if (!moved)
+                yield break;
+
+            yield return routine.Current;
+        }
     }
 
     #region Runtime AI persistence
@@ -1118,6 +1339,101 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
             MergeRuntimeAiItems(planetName, address, savedItems);
             capturedAddresses.Add(address);
+        }
+
+        itemManager.AcknowledgeRuntimeAiSave(capturedAddresses);
+    }
+
+    /// <summary>自动保存专用的 AI 分帧快照；每帧限制 Item.Save 与数据克隆的累计耗时。</summary>
+    private IEnumerator CaptureRuntimeAiEntityStatesCoroutine()
+    {
+        ItemMgr itemManager = ItemMgr.Instance;
+        if (itemManager == null || SaveData == null)
+            yield break;
+
+        string planetName = SceneManager.GetActiveScene().name;
+        var addresses = new HashSet<RuntimeWorldAddress>();
+        bool copiedAddresses = true;
+        try
+        {
+            itemManager.CopyRuntimeAiSaveAddresses(addresses);
+        }
+        catch (Exception exception)
+        {
+            copiedAddresses = false;
+            Debug.LogError("[SaveDataMgr] 复制运行时 AI 地址失败");
+            Debug.LogException(exception);
+        }
+
+        if (!copiedAddresses)
+            yield break;
+
+        List<RuntimeWorldAddress> addressSnapshot = new List<RuntimeWorldAddress>(addresses);
+        var capturedAddresses = new HashSet<RuntimeWorldAddress>();
+        var runtimeItems = new List<Item>();
+        var savedItems = new List<ItemData>();
+        float frameStart = Time.realtimeSinceStartup;
+
+        for (int addressIndex = 0; addressIndex < addressSnapshot.Count; addressIndex++)
+        {
+            RuntimeWorldAddress address = addressSnapshot[addressIndex];
+            bool copiedItems = true;
+            try
+            {
+                itemManager.CopyRuntimeAiItems(address, runtimeItems);
+            }
+            catch (Exception exception)
+            {
+                copiedItems = false;
+                Debug.LogError($"[SaveDataMgr] 复制运行时 AI 失败：{address}");
+                Debug.LogException(exception);
+            }
+
+            if (!copiedItems)
+                continue;
+
+            savedItems.Clear();
+            bool captureSucceeded = true;
+            for (int itemIndex = 0; itemIndex < runtimeItems.Count; itemIndex++)
+            {
+                Item item = runtimeItems[itemIndex];
+                Exception itemFailure = null;
+                try
+                {
+                    item.Save();
+                    savedItems.Add(CloneItemData(item.itemData));
+                }
+                catch (Exception exception)
+                {
+                    itemFailure = exception;
+                    Debug.LogError($"[SaveDataMgr] 分帧保存运行时 AI 失败：{item.name}", item);
+                    Debug.LogException(exception);
+                }
+
+                if (itemFailure != null)
+                {
+                    captureSucceeded = false;
+                    break;
+                }
+
+                if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
+                {
+                    frameStart = Time.realtimeSinceStartup;
+                    yield return null;
+                }
+            }
+
+            if (captureSucceeded)
+            {
+                MergeRuntimeAiItems(planetName, address, savedItems);
+                capturedAddresses.Add(address);
+            }
+
+            if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
+            {
+                frameStart = Time.realtimeSinceStartup;
+                yield return null;
+            }
         }
 
         itemManager.AcknowledgeRuntimeAiSave(capturedAddresses);

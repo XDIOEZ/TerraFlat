@@ -133,6 +133,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void Update()
     {
         UpdateBuffTargetListIfNeeded();
+        RefreshResponsiveLayoutIfCanvasChanged();
 
         bool f4Pressed = Keyboard.current != null
             ? Keyboard.current.f4Key.wasPressedThisFrame
