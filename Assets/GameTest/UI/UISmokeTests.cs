@@ -83,6 +83,18 @@ namespace FlatWorld.GameTest.UI
                     GamepadVirtualKeyboardController.IsOpen,
                     Is.False,
                     "手柄焦点移动到输入框时不能自动打开虚拟键盘，必须等待确认键。");
+
+                string controllerSource = File.ReadAllText(
+                    "Assets/5_Scripts/5-5_UI/GamepadUIRuntimeController.cs");
+                Assert.That(controllerSource, Does.Contain("GamepadInputFieldNavigationBridge"));
+                Assert.That(
+                    controllerSource,
+                    Does.Contain("EventSystem.current?.SetSelectedGameObject(target.gameObject, eventData);"));
+                Assert.That(controllerSource, Does.Not.Contain("DeactivateInputField(clearSelection: false);"),
+                    "输入框获得手柄焦点时必须保留选中表现，不能直接强制取消焦点。");
+
+                string panelSource = File.ReadAllText("Assets/5_Scripts/5-5_UI/BasePanel.cs");
+                Assert.That(panelSource, Does.Contain("EnsureInputFieldNavigationBridges();"));
             }
             finally
             {
@@ -383,6 +395,41 @@ namespace FlatWorld.GameTest.UI
                 ?? throw new AssertionException($"缺少玩家 Prefab：{playerPath}");
             Assert.That(playerPrefab.GetComponent<PlayerWorldCoordinateHUD>(), Is.Not.Null,
                 "Player 必须挂载 PlayerWorldCoordinateHUD，才能在进入世界后自动创建坐标面板。");
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        [Category("UI.Layout")]
+        public void SettingsSessionPageProvidesExitWithoutSavingAction()
+        {
+            const string prefabPath = "Assets/2_Prefabs/2-1_UI/Menu_UI/Info_Button_List.prefab";
+            const string settingSourcePath =
+                "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/Module_Setting.cs";
+
+            AssertPrefabContains(prefabPath, "设置分页_会话", "不保存直接退出");
+            string source = File.ReadAllText(settingSourcePath);
+            Assert.That(source, Does.Contain("BindButton(UIText.ExitWithoutSavingButtons, ExitAppWithoutSaving)"));
+            Assert.That(source, Does.Contain("saveCurrentGame: false"));
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        public void GamepadFocusIsConstrainedToTopmostOpenPanel()
+        {
+            const string managerPath = "Assets/5_Scripts/5-5_UI/UIManager.cs";
+            const string controllerPath =
+                "Assets/5_Scripts/5-5_UI/GamepadUIRuntimeController.cs";
+
+            string managerSource = File.ReadAllText(managerPath);
+            string controllerSource = File.ReadAllText(controllerPath);
+
+            Assert.That(managerSource, Does.Contain("ConstrainSelectionToTopmostGamepadPanel"));
+            Assert.That(managerSource, Does.Contain("selectedObject.transform.IsChildOf(panel.transform)"));
+            Assert.That(controllerSource, Does.Contain("private void LateUpdate()"));
+            Assert.That(
+                controllerSource,
+                Does.Contain("ConstrainSelectionToTopmostGamepadPanel();"),
+                "EventSystem 完成方向导航后必须阻止焦点停留在背景面板。");
         }
 
         [Test]

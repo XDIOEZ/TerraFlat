@@ -111,6 +111,29 @@ public abstract partial class ItemData
             Durability = MaxDurability;
         }
     }
+
+    #region 堆叠判定
+
+    /// <summary>判断两个物品是否属于同一堆叠；空字符串与 null 视为同一份无特殊数据。</summary>
+    public bool HasSameStackIdentity(ItemData other)
+    {
+        if (other == null || !string.Equals(IDName, other.IDName, StringComparison.Ordinal))
+            return false;
+
+        string ownSpecialData = string.IsNullOrEmpty(ItemSpecialData) ? string.Empty : ItemSpecialData;
+        string otherSpecialData = string.IsNullOrEmpty(other.ItemSpecialData) ? string.Empty : other.ItemSpecialData;
+        return string.Equals(ownSpecialData, otherSpecialData, StringComparison.Ordinal);
+    }
+
+    /// <summary>判断两个物品是否允许合并进同一库存槽位。</summary>
+    public bool CanStackWith(ItemData other)
+    {
+        return Stack != null && other?.Stack != null &&
+               Stack.Volume <= 1f && other.Stack.Volume <= 1f &&
+               HasSameStackIdentity(other);
+    }
+
+    #endregion
 }
 
 

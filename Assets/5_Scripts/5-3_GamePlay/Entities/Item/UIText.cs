@@ -16,5 +16,8 @@ public static class UIText
 
     // 退出/关闭游戏相关按钮名候选
     public static readonly string[] CloseButtons = new[] { "保存并退出游戏按钮"}; // 退出游戏按钮组
+
+    // 不保存直接退出游戏相关按钮名候选
+    public static readonly string[] ExitWithoutSavingButtons = new[] { "不保存直接退出" };
     #endregion
 }

@@ -126,7 +126,7 @@ public class Inventory
         // 未配置 ToggleActionName 时不绑定
         if (string.IsNullOrEmpty(ToggleActionName))
         {
-            Debug.LogWarning("[Inventory.BindController] ToggleActionName 为空，取消绑定");
+            // 快捷栏、装备栏等常驻库存不需要独立开关按键。
             return;
         }
         // 未配置 ToggleActionName 时不绑定
@@ -314,8 +314,8 @@ public class Inventory
         }
 
         // 设置窗口信息
-        if (basePanel.GetText("窗口信息") != null)
-            basePanel.GetText("窗口信息").text = Data.Name;
+        if (basePanel.TryGetText("窗口信息", out TMPro.TextMeshProUGUI titleText))
+            titleText.text = Data.Name;
 
         // 调用UI初始化方法（此时basePanel已存在）
         InitUI();
@@ -1019,8 +1019,7 @@ public class Inventory
             if (targetSlot == null || targetSlot.itemData == null)
                 continue;
 
-            if (targetSlot.itemData.IDName != sourceSlot.itemData.IDName ||
-                targetSlot.itemData.ItemSpecialData != sourceSlot.itemData.ItemSpecialData)
+            if (!targetSlot.itemData.CanStackWith(sourceSlot.itemData))
                 continue;
 
             int transferCount = Mathf.CeilToInt(sourceSlot.itemData.Stack.Amount);

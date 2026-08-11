@@ -24,16 +24,21 @@ public class Tile_Water : TileBlockBehaviour
         SetWaterVisualState(item, depthValue, true);
 
         // Buff 添加逻辑
-        if (!validItem || buffManager == null || BuffInfo == null || BuffInfo.Count == 0)
+        if (!validItem || buffManager == null)
             return;
 
-        foreach (string buffId in BuffInfo)
+        if (BuffInfo != null)
         {
-            if (string.IsNullOrWhiteSpace(buffId))
-                continue;
+            foreach (string buffId in BuffInfo)
+            {
+                if (string.IsNullOrWhiteSpace(buffId))
+                    continue;
 
-            buffManager.AddBuff(buffId);
+                buffManager.AddBuff(buffId);
+            }
         }
+
+        ApplyFreshWaterCapability(item, water, buffManager);
     }
 
     public override void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
@@ -44,17 +49,23 @@ public class Tile_Water : TileBlockBehaviour
 
         // 移除 Buff
         BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
-        if (buffManager == null || BuffInfo == null)
+        if (buffManager == null)
             return;
 
-        foreach (string buffId in BuffInfo)
+        if (BuffInfo != null)
         {
-            if (string.IsNullOrWhiteSpace(buffId))
-                continue;
+            foreach (string buffId in BuffInfo)
+            {
+                if (string.IsNullOrWhiteSpace(buffId))
+                    continue;
 
-            if (buffManager.HasBuff(buffId))
-                buffManager.RemoveBuff(buffId);
+                if (buffManager.HasBuff(buffId))
+                    buffManager.RemoveBuff(buffId);
+            }
         }
+
+
+        RemoveFreshWaterCapability(buffManager);
     }
 
     public override void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
@@ -74,6 +85,49 @@ public class Tile_Water : TileBlockBehaviour
         WaterImmersionRenderEffect effect = item.GetComponentInChildren<WaterImmersionRenderEffect>(true);
         if (effect != null)
             effect.SetWaterState(depth, inWater);
+    }
+
+    #endregion
+
+    #region Fresh Water Capability
+
+    /// <summary>只有无盐淡水提供饮水能力；河流视为干净水，湖泊、地下水与旧版未知来源视为脏水。</summary>
+    private static void ApplyFreshWaterCapability(Item item, TileData_Water water,
+        BuffManager buffManager)
+    {
+        RemoveFreshWaterCapability(buffManager);
+        if (item == null || water == null || water.salt > 0.01f)
+            return;
+
+        string qualityBuffId = IsCleanFlowingFreshWater(item.transform.position)
+            ? FreshWaterBuffIds.Clean
+            : FreshWaterBuffIds.Dirty;
+        buffManager.AddBuff(qualityBuffId);
+    }
+
+    private static bool IsCleanFlowingFreshWater(Vector2 worldPosition)
+    {
+        ChunkMgr manager = ChunkMgr.Instance;
+        if (manager == null ||
+            !manager.TryGetRuntimeTerrainTile(worldPosition, out RuntimeTerrainTileSample sample))
+        {
+            return false;
+        }
+
+        return sample.Terrain.TryGetEnvironmentValue(
+                   "riverKind", sample.LocalCell.x, sample.LocalCell.y, out float riverKind) &&
+               Mathf.RoundToInt(riverKind) == (int)HydrologyWaterKind.River;
+    }
+
+    private static void RemoveFreshWaterCapability(BuffManager buffManager)
+    {
+        if (buffManager == null)
+            return;
+
+        if (buffManager.HasBuff(FreshWaterBuffIds.Clean))
+            buffManager.RemoveBuff(FreshWaterBuffIds.Clean);
+        if (buffManager.HasBuff(FreshWaterBuffIds.Dirty))
+            buffManager.RemoveBuff(FreshWaterBuffIds.Dirty);
     }
 
     #endregion

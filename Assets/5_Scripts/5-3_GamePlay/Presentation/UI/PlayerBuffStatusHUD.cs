@@ -22,6 +22,10 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     private const string CountNodeName = "数量文本";
     private const string EmptyNodeName = "空状态文本";
     private const string ContentNodeName = "Content";
+    private const float PanelHeaderHeight = 36f;
+    private const float PanelVerticalPadding = 8f;
+    private const float RowHeight = 31f;
+    private const float RowSpacing = 7f;
 
     private Player player;
     private BuffManager buffManager;
@@ -204,8 +208,23 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
             emptyText.gameObject.SetActive(buffSnapshot.Count == 0);
 
         SetViewActive(buffSnapshot.Count > 0);
-        if (contentRect != null)
-            LayoutRebuilder.MarkLayoutForRebuild(contentRect);
+        RebuildDynamicLayout(buffSnapshot.Count);
+    }
+
+    /// <summary>按实际 Buff 数量收缩或增长背景板，不保留空白列表高度。</summary>
+    private void RebuildDynamicLayout(int visibleRowCount)
+    {
+        if (viewRect == null || contentRect == null || visibleRowCount <= 0)
+            return;
+
+        float rowsHeight = visibleRowCount * RowHeight + Mathf.Max(0, visibleRowCount - 1) * RowSpacing;
+        viewRect.SetSizeWithCurrentAnchors(
+            RectTransform.Axis.Vertical,
+            PanelHeaderHeight + rowsHeight + PanelVerticalPadding);
+
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+        LayoutRebuilder.ForceRebuildLayoutImmediate(viewRect);
     }
 
     /// <summary>语言切换时只刷新已显示行的内容，条目结构保持不变。</summary>

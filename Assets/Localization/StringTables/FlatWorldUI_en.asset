@@ -1668,6 +1668,10 @@ MonoBehaviour:
     m_Localized: Remaining {0}s
     m_Metadata:
       m_Items: []
+  - m_Id: 1058478408773632
+    m_Localized: Exit Without Saving
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

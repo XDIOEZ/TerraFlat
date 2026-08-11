@@ -6,6 +6,7 @@ public static class BuffEffectTypeIds
 {
     public const string MoveSpeedMultiplier = "core:move_speed_multiplier";
     public const string FoodConsumeSpeedMultiplier = "core:food_consume_speed_multiplier";
+    public const string WaterConsumeSpeedMultiplier = "core:water_consume_speed_multiplier";
     public const string TemperatureCoolingMultiplier = "core:temperature_cooling_multiplier";
     public const string Heal = "core:heal";
     public const string StaminaChange = "core:stamina_change";
@@ -26,6 +27,7 @@ public static class BuffEffectDispatcher
     {
         Register(BuffEffectTypeIds.MoveSpeedMultiplier, ApplyMoveSpeedMultiplier);
         Register(BuffEffectTypeIds.FoodConsumeSpeedMultiplier, ApplyFoodConsumeSpeedMultiplier);
+        Register(BuffEffectTypeIds.WaterConsumeSpeedMultiplier, ApplyWaterConsumeSpeedMultiplier);
         Register(BuffEffectTypeIds.TemperatureCoolingMultiplier, ApplyTemperatureCoolingMultiplier);
         Register(BuffEffectTypeIds.Heal, ApplyHeal);
         Register(BuffEffectTypeIds.StaminaChange, ApplyStaminaChange);
@@ -111,6 +113,13 @@ public static class BuffEffectDispatcher
         Item receiver = GetReceiver(runtime);
         Mod_Food food = receiver?.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
         food?.MultiplyRuntimeNutritionConsumeSpeed(effect.Value);
+    }
+
+    private static void ApplyWaterConsumeSpeedMultiplier(BuffEffectDefinition effect, BuffInstance runtime)
+    {
+        Item receiver = GetReceiver(runtime);
+        Mod_Food food = receiver?.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
+        food?.MultiplyRuntimeWaterConsumeSpeed(effect.Value);
     }
 
     private static void ApplyTemperatureCoolingMultiplier(BuffEffectDefinition effect, BuffInstance runtime)

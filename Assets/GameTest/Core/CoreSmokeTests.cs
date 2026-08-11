@@ -1,5 +1,6 @@
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
+using System.IO;
 
 namespace FlatWorld.GameTest.Core
 {
@@ -28,6 +29,19 @@ namespace FlatWorld.GameTest.Core
             Assert.That(request.SaveName, Does.Match("^[0-9]{8}$"));
             Assert.That(request.PlayerName, Is.EqualTo(request.SaveName));
             Assert.That(request.TryValidate(out string error), Is.True, error);
+        }
+
+        [Test]
+        [Category("Core.Smoke")]
+        public void ExitLifecycleCanExplicitlySkipDiskSave()
+        {
+            const string gameManagerPath =
+                "Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.cs";
+            string source = File.ReadAllText(gameManagerPath);
+
+            Assert.That(source, Does.Contain("bool saveCurrentGame = true"));
+            Assert.That(source, Does.Contain("if (saveCurrentGame)"));
+            Assert.That(source, Does.Contain("Save_And_WriteToDiskAndRecordExitTime();"));
         }
     }
 }

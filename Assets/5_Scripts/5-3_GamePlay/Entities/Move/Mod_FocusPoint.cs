@@ -151,6 +151,11 @@ public partial class Mod_FocusPoint : Module
             }
             
             float targetAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+            HandAimOrientation aimOrientation = targetTrans.GetComponent<HandAimOrientation>();
+            if (aimOrientation != null)
+            {
+                targetAngle += aimOrientation.AngleOffsetDegrees;
+            }
 
             // 平滑旋转到目标角度
             float currentAngle = targetTrans.localEulerAngles.z;

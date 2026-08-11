@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  detectionRadius: 40
+  detectionRadius: 120
   itemLayer:
     serializedVersion: 2
     m_Bits: 1527
@@ -702,7 +702,7 @@ MonoBehaviour:
   playerTags:
   - Player
   detectorRefreshInterval: 0.6
-  allyCallDistance: 40
+  allyCallDistance: 120
   packAssistDuration: 5
   packCallCooldown: 0.8
   enableChaseFormation: 1
@@ -715,10 +715,10 @@ MonoBehaviour:
   chaseSeparationDistance: 0.85
   chaseSeparationStrength: 0.7
   chaseSeparationMaxOffset: 0.2
-  alertDetectDistance: 10
-  chaseTriggerDistance: 14
+  alertDetectDistance: 20
+  chaseTriggerDistance: 28
   attackTriggerDistance: 1.4
-  chaseLossDistance: 22
+  chaseLossDistance: 44
   attackCooldown: 2
   attackDamageWindow: 0.33333334
   attackDamageStartDelay: 0.35
@@ -842,7 +842,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.size
-      value: 2
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.Weakness.Array.data[1]
@@ -882,7 +882,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[1].LootPrefab
-      value: 
+      value:
       objectReference: {fileID: 3341342614344715908, guid: 327c3ce740863d148bd9d335738dd5dc, type: 3}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[0].LootPrefabName
@@ -891,6 +891,26 @@ PrefabInstance:
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[1].LootPrefabName
       value: Meat
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[2].LootPrefab
+      value: 
+      objectReference: {fileID: 4346459173911706397, guid: 7fa1725ad46407f47a171f54026e684b, type: 3}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[2].LootPrefabName
+      value: Bone
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[2].DropChance
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[2].MinAmount
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
+      propertyPath: Data.LootTable.Array.data[2].MaxAmount
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: m_LocalPosition.x

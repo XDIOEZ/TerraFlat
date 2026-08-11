@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "need.hydration.thirsty",
+      "topic": "hydration.thirsty",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Need",
+      "conditions": [{ "fact": "hydration.tier", "operator": "Equal", "value": "Thirsty" }],
+      "lines": ["我有点口渴了，得找点水喝", "嘴巴有点干，我想喝水了", "我该补充一点水分了"],
+      "duration": 3.4,
+      "cooldown": 55,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    },
+    {
+      "id": "need.hydration.very_thirsty",
+      "topic": "hydration.very_thirsty",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Critical",
+      "conditions": [{ "fact": "hydration.tier", "operator": "Equal", "value": "VeryThirsty" }],
+      "lines": ["我好渴……得赶紧找水", "我口非常渴，再不喝水就糟了", "我的喉咙都快冒烟了"],
+      "duration": 3.7,
+      "cooldown": 35,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    },
+    {
+      "id": "need.hydration.dehydrated",
+      "topic": "hydration.dehydrated",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Emergency",
+      "conditions": [{ "fact": "hydration.tier", "operator": "Equal", "value": "Dehydrated" }],
+      "lines": ["我脱水了，必须马上喝水！", "我撑不住了……水，我需要水！", "我已经严重脱水，再不喝水会出事的！"],
+      "duration": 4.0,
+      "cooldown": 22,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    }
+  ]
+}

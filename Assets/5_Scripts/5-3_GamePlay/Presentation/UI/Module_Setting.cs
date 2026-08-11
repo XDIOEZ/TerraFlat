@@ -81,6 +81,7 @@ public class SettingCanvas : Module, IInstanceUI
         BindButton(UIText.ExitButtons, ExitGame);
         BindButton(UIText.SaveButtons, SaveGame);
         BindButton(UIText.CloseButtons, ClossApp);
+        BindButton(UIText.ExitWithoutSavingButtons, ExitAppWithoutSaving);
         AudioSettingsPanelLauncher.Ensure(basePanel.transform);
         UISettingsPanelLauncher.Ensure(basePanel.transform);
         CoordinateDisplaySettingsPanelLauncher.Ensure(basePanel.transform);
@@ -181,6 +182,22 @@ public class SettingCanvas : Module, IInstanceUI
         Application.Quit();
 #endif
         }));
+    }
+
+    /// <summary>跳过当前世界写盘，完成运行时清理后直接退出应用。</summary>
+    public void ExitAppWithoutSaving()
+    {
+        GameManager.Instance.StartCoroutine(GameManager.Instance.BackToHelloScene_Coroutine(
+            item,
+            () =>
+            {
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.isPlaying = false;
+#else
+                Application.Quit();
+#endif
+            },
+            saveCurrentGame: false));
     }
 
     // 对象销毁时取消事件绑定

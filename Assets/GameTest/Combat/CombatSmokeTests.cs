@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using FlatWorld.GameTest.Shared;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 
 namespace FlatWorld.GameTest.Combat
@@ -115,6 +116,35 @@ namespace FlatWorld.GameTest.Combat
             {
                 Object.DestroyImmediate(root);
             }
+        }
+
+        /// <summary>动物死亡必须按物种配置必掉骨头数量，且保留随机上下界。</summary>
+        [Test]
+        [Category("Combat.Smoke")]
+        [Category("Smoke")]
+        public void AnimalPrefabsDropConfiguredBoneAmounts()
+        {
+            AssertBoneLoot("Chicken", 1, 1);
+            AssertBoneLoot("Wolf", 1, 3);
+            AssertBoneLoot("WildBoar", 1, 5);
+        }
+
+        private static void AssertBoneLoot(string prefabName, int expectedMin, int expectedMax)
+        {
+            string path = $"Assets/2_Prefabs/Entity_AI/{prefabName}.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            DamageReceiver receiver = prefab != null
+                ? prefab.GetComponentInChildren<DamageReceiver>(true)
+                : null;
+
+            Assert.That(prefab, Is.Not.Null, $"动物 Prefab 不存在：{path}");
+            Assert.That(receiver, Is.Not.Null, $"动物缺少 DamageReceiver：{path}");
+
+            LootEntry boneLoot = receiver.Data.LootTable.Find(entry => entry.LootPrefabName == "Bone");
+            Assert.That(boneLoot, Is.Not.Null, $"动物死亡战利品缺少 Bone：{path}");
+            Assert.That(boneLoot.DropChance, Is.EqualTo(1f), $"骨头必须为必掉：{path}");
+            Assert.That(boneLoot.MinAmount, Is.EqualTo(expectedMin), $"骨头最小数量错误：{path}");
+            Assert.That(boneLoot.MaxAmount, Is.EqualTo(expectedMax), $"骨头最大数量错误：{path}");
         }
 
         private sealed class TestDamageSender : IDamageSender

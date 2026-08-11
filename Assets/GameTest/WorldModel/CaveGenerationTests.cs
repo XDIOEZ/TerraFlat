@@ -173,6 +173,54 @@ namespace FlatWorld.GameTest.WorldModel
                 Is.Not.EqualTo(stone.GenerationFingerprint));
         }
 
+        [Test]
+        public void GroundwaterCreatesFreshwaterLakesOutsideSpawnSafeArea()
+        {
+            ChunkGenerationProfileSnapshot profile = CreateCaveProfile(portalChance: 0d,
+                resourceDensity: 0d, groundwaterEnabled: true);
+            int waterCells = 0;
+            int deepWaterCells = 0;
+            for (int chunkY = -4; chunkY <= 4; chunkY++)
+            for (int chunkX = -4; chunkX <= 4; chunkX++)
+            {
+                CaveObservation cave = GenerateCave(profile, 91357,
+                    new Int2(chunkX * profile.Width, chunkY * profile.Height));
+                waterCells += cave.WaterCellCount;
+                deepWaterCells += cave.DeepWaterCellCount;
+                if (chunkX == 0 && chunkY == 0)
+                    Assert.That(cave.IsWater(0, 0), Is.False, "默认出生安全区不得积水。");
+            }
+
+            Assert.That(waterCells, Is.GreaterThan(0), "固定范围内应生成确定性的地下湖。 ");
+            Assert.That(deepWaterCells, Is.GreaterThan(0), "地下湖中心应具有高于岸边的水深。 ");
+        }
+
+        [Test]
+        public void CaveVinesGenerateDeterministicallyOnDryWalkableWallEdges()
+        {
+            ChunkGenerationProfileSnapshot profile = CreateCaveProfile(portalChance: 0d,
+                resourceDensity: 0d, groundwaterEnabled: true, vineEnabled: true);
+            int vineCells = 0;
+            for (int chunkY = -4; chunkY <= 4; chunkY++)
+            for (int chunkX = -4; chunkX <= 4; chunkX++)
+            {
+                CaveObservation cave = GenerateCave(profile, 91357,
+                    new Int2(chunkX * profile.Width, chunkY * profile.Height));
+                List<NaturalItemPlacement> vines = cave.Placements.FindAll(
+                    placement => placement.ItemId == "Twine" &&
+                                 placement.RuleId == "cave.vine.twine");
+                vineCells += vines.Count;
+                foreach (NaturalItemPlacement vine in vines)
+                {
+                    Assert.That(cave.IsWater(vine.LocalX, vine.LocalY), Is.False);
+                    Assert.That(cave.IsWalkable(vine.LocalX, vine.LocalY), Is.True,
+                        "可采集藤蔓只能出现在无水可走的洞壁边缘。 ");
+                }
+            }
+
+            Assert.That(vineCells, Is.GreaterThan(0), "固定范围内应生成确定性的洞壁藤蔓。 ");
+        }
+
         #region 构造与读取
 
         private static CaveObservation GenerateCave(ChunkGenerationProfileSnapshot profile,
@@ -187,10 +235,24 @@ namespace FlatWorld.GameTest.WorldModel
             ChunkRuntime chunk = world.Chunks[address];
             var placements = new List<NaturalItemPlacement>(chunk.Ecology.Placements);
             var walkable = new bool[chunk.Terrain.Width, chunk.Terrain.Height];
+            var water = new bool[chunk.Terrain.Width, chunk.Terrain.Height];
+            int waterCellCount = 0;
+            int deepWaterCellCount = 0;
             for (int y = 0; y < chunk.Terrain.Height; y++)
             for (int x = 0; x < chunk.Terrain.Width; x++)
+            {
                 walkable[x, y] = chunk.Terrain.IsWalkable(x, y);
-            return new CaveObservation(chunk.Terrain.ComputeStableHash(), placements, walkable);
+                TerrainCell cell = chunk.Terrain.GetCell(x, y);
+                water[x, y] = (cell.Flags & TerrainCellFlags.Water) != 0;
+                if (!water[x, y])
+                    continue;
+                waterCellCount++;
+                if (chunk.Terrain.TryGetEnvironmentValue("riverDepth", x, y, out float depth) &&
+                    depth >= 0.5f)
+                    deepWaterCellCount++;
+            }
+            return new CaveObservation(chunk.Terrain.ComputeStableHash(), placements, walkable,
+                water, waterCellCount, deepWaterCellCount);
         }
 
         private static List<NaturalItemPlacement> GenerateSurface(
@@ -207,13 +269,25 @@ namespace FlatWorld.GameTest.WorldModel
 
         private static ChunkGenerationProfileSnapshot CreateCaveProfile(double portalChance,
             double resourceDensity, ChunkGenerationProfileSnapshot pairedSurfaceProfile = null,
-            int surfaceSeed = 424242)
+            int surfaceSeed = 424242, bool groundwaterEnabled = false,
+            bool vineEnabled = false)
         {
             var numbers = new Dictionary<string, double>
             {
                 ["terrain.stoneTileId"] = 4d,
+                ["terrain.waterTileId"] = 2d,
                 ["cave.floorTileId"] = 4d,
                 ["cave.wallTileId"] = 7d,
+                ["cave.groundwater.enabled"] = groundwaterEnabled ? 1d : 0d,
+                ["cave.groundwater.roomChance"] = 1d,
+                ["cave.groundwater.minRadiusRatio"] = 0.42d,
+                ["cave.groundwater.maxRadiusRatio"] = 0.68d,
+                ["cave.groundwater.minDepth"] = 0.25d,
+                ["cave.groundwater.maxDepth"] = 0.85d,
+                ["cave.vine.enabled"] = vineEnabled ? 1d : 0d,
+                ["cave.vine.wallChance"] = 0.065d,
+                ["cave.vine.wetMultiplier"] = 2.5d,
+                ["cave.vine.dryMultiplier"] = 0.2d,
                 ["cave.portal.enabled"] = 1d,
                 ["cave.portal.chunkChance"] = portalChance,
                 ["cave.portal.safeRadius"] = 3d,
@@ -278,19 +352,28 @@ namespace FlatWorld.GameTest.WorldModel
         private readonly struct CaveObservation
         {
             public CaveObservation(ulong terrainHash, List<NaturalItemPlacement> placements,
-                bool[,] walkable)
+                bool[,] walkable, bool[,] water, int waterCellCount, int deepWaterCellCount)
             {
                 TerrainHash = terrainHash;
                 Placements = placements;
                 this.walkable = walkable;
+                this.water = water;
+                WaterCellCount = waterCellCount;
+                DeepWaterCellCount = deepWaterCellCount;
             }
 
             private readonly bool[,] walkable;
+            private readonly bool[,] water;
             public ulong TerrainHash { get; }
             public List<NaturalItemPlacement> Placements { get; }
+            public int WaterCellCount { get; }
+            public int DeepWaterCellCount { get; }
             public bool IsWalkable(int x, int y) =>
                 walkable != null && (uint)x < (uint)walkable.GetLength(0) &&
                 (uint)y < (uint)walkable.GetLength(1) && walkable[x, y];
+            public bool IsWater(int x, int y) =>
+                water != null && (uint)x < (uint)water.GetLength(0) &&
+                (uint)y < (uint)water.GetLength(1) && water[x, y];
         }
 
         #endregion

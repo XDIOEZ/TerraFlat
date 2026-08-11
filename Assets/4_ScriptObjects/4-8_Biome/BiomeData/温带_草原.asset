@@ -31,7 +31,7 @@ MonoBehaviour:
     - itemPrefab: {fileID: 472936261257613889, guid: ffe53350727c81c47b55bde5e24c3142, type: 3}
       itemName: Bush
       itemCount: 1
-      SpawnChance: 0.001
+      SpawnChance: 0.0015
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}

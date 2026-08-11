@@ -60,6 +60,14 @@ MonoBehaviour:
         TemperatureRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}
         HeightRange: {x: 0, y: 1}
+    - itemPrefab: {fileID: 3926578369279844245, guid: 789943bea24026d43aff45dba8a66fc9, type: 3}
+      itemName: Ore_Stone
+      itemCount: 1
+      SpawnChance: 0.0005
+      environmentConditionRange:
+        TemperatureRange: {x: 0, y: 1}
+        PrecipitationRange: {x: 0, y: 1}
+        HeightRange: {x: 0, y: 1}
     - itemPrefab: {fileID: 2383149550844687321, guid: 742285658deda7b44a8723ac170c91f4, type: 3}
       itemName: Mine_Tin
       itemCount: 1
