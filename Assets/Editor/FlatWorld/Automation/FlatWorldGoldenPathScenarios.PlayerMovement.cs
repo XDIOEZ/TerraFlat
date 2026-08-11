@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 
 namespace FlatWorld.Automation
 {
-    /// <summary>通过真实玩家 API 验证出生、奔跑输入与管理员移动速度倍率。</summary>
+    /// <summary>通过真实玩家 API 验证出生、交互重试、奔跑输入与管理员能力。</summary>
     internal static partial class FlatWorldGoldenPathScenarios
     {
         #region 新玩家安全出生点
@@ -69,6 +69,108 @@ namespace FlatWorld.Automation
 
         #endregion
 
+        #region 同目标交互重试
+
+        private static Mod_InteractSender _interactionRetrySender;
+        private static GameObject _interactionRetryProbeObject;
+        private static GoldenPathInteractionRetryProbe _interactionRetryProbe;
+        private static float _interactionRetryOriginalDistance;
+        private static bool _interactionRetryDistanceCaptured;
+        private static bool _interactionRetryScenarioCompleted;
+
+        private static void ResetPlayerInteractionRetryScenario()
+        {
+            _interactionRetrySender = null;
+            _interactionRetryProbeObject = null;
+            _interactionRetryProbe = null;
+            _interactionRetryOriginalDistance = 0f;
+            _interactionRetryDistanceCaptured = false;
+            _interactionRetryScenarioCompleted = false;
+        }
+
+        /// <summary>验证同一目标第一次临时拒绝后，下一次交互请求仍会再次触发。</summary>
+        private static void RunPlayerInteractionRetryScenario(
+            FlatWorldGoldenPathScenarioContext context)
+        {
+            if (context.Player == null)
+                throw new InvalidOperationException("交互重试场景找不到真实玩家。");
+
+            _interactionRetrySender =
+                context.Player.GetComponentInChildren<Mod_InteractSender>(true);
+            if (_interactionRetrySender?.interactCollider == null)
+                throw new InvalidOperationException("真实玩家缺少可用的交互发送器或探测碰撞体。");
+
+            _interactionRetryOriginalDistance = _interactionRetrySender.maxInteractDistance;
+            _interactionRetryDistanceCaptured = true;
+            _interactionRetrySender.CancelCurrentInteraction();
+            _interactionRetrySender.maxInteractDistance = 0.25f;
+
+            _interactionRetryProbeObject = new GameObject("GoldenPath Interaction Retry Probe");
+            _interactionRetryProbeObject.transform.position = context.Player.transform.position;
+            CircleCollider2D collider = _interactionRetryProbeObject.AddComponent<CircleCollider2D>();
+            collider.isTrigger = true;
+            collider.radius = 0.05f;
+            _interactionRetryProbe =
+                _interactionRetryProbeObject.AddComponent<GoldenPathInteractionRetryProbe>();
+            Physics2D.SyncTransforms();
+
+            try
+            {
+                if (!_interactionRetrySender.TryInteractAtCurrentPosition() ||
+                    _interactionRetryProbe.StartCount != 1)
+                {
+                    throw new InvalidOperationException("第一次主动交互没有触发当前目标。");
+                }
+
+                // 不离开范围、不清除目标，直接模拟玩家再次按 E。
+                if (!_interactionRetrySender.TryInteractAtCurrentPosition() ||
+                    _interactionRetryProbe.StartCount != 2)
+                {
+                    throw new InvalidOperationException(
+                        "同一交互目标被缓存后没有响应第二次请求。");
+                }
+
+                _interactionRetryScenarioCompleted = true;
+                Debug.Log("[GoldenPath][Player] 同一目标连续两次交互重试验证通过。");
+            }
+            finally
+            {
+                CleanupPlayerInteractionRetryScenario();
+            }
+        }
+
+        private static void AssertPlayerInteractionRetryScenarioCompleted()
+        {
+            if (!_interactionRetryScenarioCompleted)
+                throw new InvalidOperationException("完整黄金路径结束前未完成同目标交互重试验证。");
+        }
+
+        private static void CleanupPlayerInteractionRetryScenario()
+        {
+            if (_interactionRetrySender != null)
+            {
+                _interactionRetrySender.CancelCurrentInteraction();
+                if (_interactionRetryDistanceCaptured)
+                {
+                    _interactionRetrySender.maxInteractDistance =
+                        _interactionRetryOriginalDistance;
+                }
+            }
+
+            if (_interactionRetryProbeObject != null)
+            {
+                _interactionRetryProbeObject.SetActive(false);
+                UnityEngine.Object.Destroy(_interactionRetryProbeObject);
+            }
+
+            _interactionRetrySender = null;
+            _interactionRetryProbeObject = null;
+            _interactionRetryProbe = null;
+            _interactionRetryDistanceCaptured = false;
+        }
+
+        #endregion
+
         #region 主世界出生点复活
 
         private static Player _respawnScenarioPlayer;
@@ -122,6 +224,18 @@ namespace FlatWorld.Automation
                 throw new InvalidOperationException(
                     $"黄金路径复活场景必须在主世界执行：active={activeAddress.WorldKey}, " +
                     $"spawnWorld={mainWorldKey}。");
+            }
+
+            WorldAddress mainWorldAddress = new WorldAddress(
+                mainWorldKey,
+                WorldAddress.SurfaceDimensionId);
+            WorldAddress caveAddress = mainWorldAddress.WithDimension(
+                WorldAddress.CaveDimensionId);
+            if (!Mod_PlayerDeathState.RequiresWorldTransition(caveAddress, mainWorldAddress) ||
+                Mod_PlayerDeathState.RequiresWorldTransition(mainWorldAddress, mainWorldAddress))
+            {
+                throw new InvalidOperationException(
+                    "玩家死亡复活路由没有把矿洞识别为跨维度返回地表。");
             }
 
             _respawnScenarioOriginalPosition = _respawnScenarioPlayer.transform.position;
@@ -642,5 +756,23 @@ namespace FlatWorld.Automation
         }
 
         #endregion
+    }
+
+    /// <summary>黄金路径专用交互目标，只记录公开 IInteractable 调用次数。</summary>
+    internal sealed class GoldenPathInteractionRetryProbe : MonoBehaviour, IInteractable
+    {
+        internal int StartCount { get; private set; }
+
+        public void OnInteractStart(Item playerItem)
+        {
+            if (playerItem == null)
+                throw new InvalidOperationException("交互重试探针收到空玩家。");
+
+            StartCount++;
+        }
+
+        public void OnInteractCancel(Item playerItem)
+        {
+        }
     }
 }

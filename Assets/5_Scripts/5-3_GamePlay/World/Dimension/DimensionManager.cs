@@ -155,6 +155,76 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             generatedWorldPortal: true);
     }
 
+    /// <summary>
+    /// 玩家在非地表维度死亡时，复用完整世界切换事务返回指定地表出生点。
+    /// 该入口使用精确坐标，不读取维度最后位置，也不套用传送门偏移。
+    /// </summary>
+    public bool TryBeginRespawnTransition(
+        Player player,
+        WorldAddress targetAddress,
+        Vector3 targetPosition,
+        Action preparePlayerForSave)
+    {
+        if (isTransitioning || player == null || player != ItemMgr.Instance?.User_Player ||
+            preparePlayerForSave == null)
+        {
+            return false;
+        }
+
+        if (GameNetwork.IsOnline)
+        {
+            Debug.LogWarning("[DimensionManager] 当前联机版本暂不支持跨维度重生。");
+            return false;
+        }
+
+        WorldAddress sourceAddress = ActiveAddress.IsValid
+            ? ActiveAddress
+            : WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name);
+        if (!targetAddress.IsValid || !targetAddress.IsSurface || targetAddress == sourceAddress ||
+            !IsFinitePosition(targetPosition))
+        {
+            return false;
+        }
+
+        LoadCatalog();
+        DimensionDefinition targetDefinition = catalog.Find(targetAddress.DimensionId);
+        if (targetDefinition == null)
+        {
+            Debug.LogError($"[DimensionManager] 未注册重生目标维度：{targetAddress.DimensionId}");
+            return false;
+        }
+
+        if (!GameManager.Instance.BeginDimensionTransitionLoading(targetDefinition.DisplayName))
+            return false;
+
+        try
+        {
+            // StartCoroutine 会同步运行到首个 yield；必须先恢复生命等权威数据，
+            // 否则 ExecuteTransitionCoroutine 的首次 SavePlayer 会把死亡状态写回存档。
+            preparePlayerForSave();
+        }
+        catch (Exception exception)
+        {
+            GameManager.Instance.FailDimensionTransitionLoading(
+                "跨维度重生前恢复玩家状态失败。",
+                exception);
+            return false;
+        }
+
+        PortalTransitionContext respawnContext = new PortalTransitionContext
+        {
+            TargetPortalPosition = new Vector3(targetPosition.x, targetPosition.y, 0f),
+            UseExactTargetPosition = true
+        };
+        StartCoroutine(TransitionCoroutine(
+            player,
+            sourceAddress,
+            targetAddress,
+            targetDefinition,
+            respawnContext));
+        return true;
+    }
+
     private bool TryBeginTransitionInternal(Player player, string targetDimensionId,
         Item sourcePortalItem, bool generatedWorldPortal)
     {
@@ -357,6 +427,13 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
         yield return null;
         targetPlayer.GetComponentInChildren<TileEffectReceiver>(true)?.RefreshCurrentTileEffects();
+
+        // GameManager 在玩家进入后还会等待 Chunk 队列和两个收尾帧。
+        // 必须等这条权威生命周期真正完成再解锁输入，否则玩家落在出口上时，
+        // 第一次 E 会因“世界进入流程仍在执行”而被拒绝。
+        GameManager.Instance.SetDimensionTransitionLoading("正在完成目标维度加载…", 0.96f);
+        yield return WaitForWorldEntryLifecycleCompletion(targetAddress);
+
         targetPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(false);
         ItemMgr.Instance.SavePlayer();
         SaveDataMgr.Instance.Save_And_WriteToDisk();
@@ -373,6 +450,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         public DimensionPortalAnchor Anchor;
         public Vector3 TargetPortalPosition;
         public bool EnsureCaveExit;
+        public bool UseExactTargetPosition;
     }
 
     private void RecoverAfterTransitionFailure(
@@ -731,11 +809,23 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         PortalTransitionContext portalContext)
     {
         if (portalContext != null)
-            return portalContext.TargetPortalPosition + targetDefinition.PortalOffset;
+        {
+            return portalContext.UseExactTargetPosition
+                ? portalContext.TargetPortalPosition
+                : portalContext.TargetPortalPosition + targetDefinition.PortalOffset;
+        }
 
         return DimensionTravelProgressStore.TryGetLastPosition(playerData, targetAddress, out Vector3 savedPosition)
             ? savedPosition
             : targetDefinition.DefaultSpawnPosition;
+    }
+
+    /// <summary>检查跨世界目标坐标是否可安全写入存档。</summary>
+    private static bool IsFinitePosition(Vector3 position)
+    {
+        return !float.IsNaN(position.x) && !float.IsInfinity(position.x) &&
+               !float.IsNaN(position.y) && !float.IsInfinity(position.y) &&
+               !float.IsNaN(position.z) && !float.IsInfinity(position.z);
     }
 
     /// <summary>
@@ -778,6 +868,26 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
                 throw new TimeoutException(
                     $"目标维度区块未在限定时间内表现：{targetAddress.WorldKey}");
             }
+            yield return null;
+        }
+    }
+
+    /// <summary>等待 GameManager 的世界进入收尾完成，避免维度交互窗口提前开放。</summary>
+    private static IEnumerator WaitForWorldEntryLifecycleCompletion(WorldAddress targetAddress)
+    {
+        GameManager gameManager = GameManager.Instance;
+        if (gameManager == null)
+            throw new InvalidOperationException("维度切换收尾时找不到 GameManager。");
+
+        float deadline = Time.realtimeSinceStartup + 12f;
+        while (gameManager.IsWorldEntryInProgress)
+        {
+            if (Time.realtimeSinceStartup >= deadline)
+            {
+                throw new TimeoutException(
+                    $"目标维度世界进入生命周期未在限定时间内完成：{targetAddress.WorldKey}");
+            }
+
             yield return null;
         }
     }

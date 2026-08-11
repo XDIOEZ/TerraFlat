@@ -1,5 +1,8 @@
 using NUnit.Framework;
 using System.Collections.Generic;
+using System.Reflection;
+using FlatWorld.GameTest.Shared;
+using UnityEditor;
 using UnityEngine;
 
 namespace FlatWorld.GameTest.ItemModule
@@ -29,6 +32,93 @@ namespace FlatWorld.GameTest.ItemModule
                     $"物品 {definition.Id} 没有 JSON 显示名");
                 Assert.That(definition.Visual?.SpriteAddress, Is.Not.Null.And.Not.Empty,
                     $"物品 {definition.Id} 没有 JSON 显示贴图地址");
+            }
+        }
+
+        [Test]
+        [Category("ItemModule.Smoke")]
+        [Category("Smoke")]
+        public void MeatrackModuleShellResolvesRuntimeComponent()
+        {
+            const string scriptPath = "Assets/5_Scripts/5-3_GamePlay/Items/Food/Meatrack.cs";
+            const string prefabPath = "Assets/2_Prefabs/Building/Meatrack.prefab";
+
+            GameTestAssertions.AssertScriptType(scriptPath, nameof(Meatrack));
+            AssetDatabase.ImportAsset(
+                prefabPath,
+                ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, $"缺少晾肉架模块外壳：{prefabPath}");
+            Assert.That(prefab.GetComponentInChildren<Meatrack>(true), Is.Not.Null,
+                "晾肉架模块外壳没有解析出 Meatrack 运行时组件");
+        }
+
+        [Test]
+        [Category("ItemModule.Smoke")]
+        [Category("Smoke")]
+        public void ScarecrowShellResolvesEquipmentModule()
+        {
+            const string scriptPath = "Assets/5_Scripts/5-3_GamePlay/Items/Equipment/Mod_Equipment.cs";
+            const string prefabPath = "Assets/2_Prefabs/Building/Summoners/Scarecrow_Summoner.prefab";
+
+            GameTestAssertions.AssertScriptType(scriptPath, nameof(Mod_Equipment));
+            AssetDatabase.ImportAsset(
+                prefabPath,
+                ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, $"缺少稻草人物品外壳：{prefabPath}");
+            Assert.That(prefab.GetComponentInChildren<Mod_Equipment>(true), Is.Not.Null,
+                "稻草人物品外壳没有解析出 Mod_Equipment 运行时组件");
+        }
+
+        [Test]
+        [Category("ItemModule.Smoke")]
+        [Category("Smoke")]
+        public void WorkBenchShellResolvesMakeTableModule()
+        {
+            const string scriptPath = "Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Mod_MakeTable.cs";
+            const string prefabPath = "Assets/2_Prefabs/Building/Summoners/WorkBench_Summoner.prefab";
+
+            GameTestAssertions.AssertScriptType(scriptPath, nameof(Mod_MakeTable));
+            AssetDatabase.ImportAsset(
+                prefabPath,
+                ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, $"缺少工作台物品外壳：{prefabPath}");
+            Assert.That(prefab.GetComponentInChildren<Mod_MakeTable>(true), Is.Not.Null,
+                "工作台物品外壳没有解析出 Mod_MakeTable 运行时组件");
+        }
+
+        [Test]
+        [Category("ItemModule.Smoke")]
+        [Category("Smoke")]
+        public void PrefabAliasCannotReplaceItemShellWithNonItemPrefab()
+        {
+            var managerObject = new GameObject("GameResAliasProbe");
+            managerObject.SetActive(false);
+            var itemObject = new GameObject("Dagger");
+            var moduleObject = new GameObject("Dagger");
+
+            try
+            {
+                GameRes gameRes = managerObject.AddComponent<GameRes>();
+                itemObject.AddComponent<ItemTemplateLifecycleProbe>();
+                MethodInfo registerAlias = typeof(GameRes).GetMethod(
+                    "RegisterPrefabAlias",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(registerAlias, Is.Not.Null);
+
+                registerAlias.Invoke(gameRes, new object[] { "Dagger", itemObject });
+                registerAlias.Invoke(gameRes, new object[] { "Dagger", moduleObject });
+
+                Assert.That(gameRes.AllPrefabs["Dagger"], Is.SameAs(itemObject),
+                    "非 Item 的同名 Prefab 不得覆盖 JSON 使用的 Item 外壳");
+            }
+            finally
+            {
+                Object.DestroyImmediate(managerObject);
+                Object.DestroyImmediate(itemObject);
+                Object.DestroyImmediate(moduleObject);
             }
         }
 

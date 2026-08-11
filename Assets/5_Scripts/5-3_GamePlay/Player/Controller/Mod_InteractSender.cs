@@ -49,9 +49,7 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     {
         if (IsGameplayInputLocked())
         {
-            StopCurrentInteraction();
-            DisableInteractCollider();
-            shouldDisableColliderAfterInteract = false;
+            CancelCurrentInteraction();
             return;
         }
 
@@ -95,18 +93,22 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private void OnInteractPressed(InputAction.CallbackContext ctx)
     {
-        if (IsGameplayInputLocked())
-        {
-            return;
-        }
+        TryInteractAtCurrentPosition();
+    }
 
-        if (interactCollider == null)
-            return;
+    /// <summary>
+    /// 主动扫描并触发当前最近目标；同一目标允许每次按键重新执行，
+    /// 避免目标曾因维度加载等瞬态条件拒绝后被永久缓存。
+    /// </summary>
+    public bool TryInteractAtCurrentPosition()
+    {
+        if (IsGameplayInputLocked() || interactCollider == null)
+            return false;
 
         // 每次按下交互键时刷新范围缓存，避免使用过期触发器列表。
         receiversInRange.Clear();
         interactCollider.enabled = true;
-        RefreshReceiversAtCurrentPosition();
+        return RefreshReceiversAtCurrentPosition();
     }
 
     private void OnInteractReleased(InputAction.CallbackContext ctx)
@@ -158,16 +160,17 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             selectedReceiver = receiver;
         }
 
-        selectedReceiver?.OnInteractStart(item);
+        if (selectedReceiver != null)
+            StartInteraction(selectedReceiver);
     }
 
     /// <summary>
     /// 扫描玩家当前交互半径内的目标，补偿动态区块/自然物在玩家之后完成绑定的时序。
     /// </summary>
-    private void RefreshReceiversAtCurrentPosition()
+    private bool RefreshReceiversAtCurrentPosition()
     {
         if (item == null || !item.gameObject.activeInHierarchy)
-            return;
+            return false;
 
         Physics2D.SyncTransforms();
         int count = Physics2D.OverlapCircleNonAlloc(
@@ -199,20 +202,14 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             }
         }
 
-        if (closestReceiver != null && currentReceiver != closestReceiver)
-            StartInteraction(closestReceiver);
+        // 这是一次明确的新交互请求；即使目标没变也必须重试。
+        return closestReceiver != null && StartInteraction(closestReceiver);
     }
 
     private void OnDisable()
     {
         UnbindInput();
-        StopCurrentInteraction();
-        receiversInRange.Clear();
-
-        if (interactCollider != null)
-            interactCollider.enabled = false;
-
-        shouldDisableColliderAfterInteract = false;
+        CancelCurrentInteraction();
     }
 
     private void OnDestroy()
@@ -223,17 +220,21 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     #region 交互流程
 
-    private void StartInteraction(IInteractable receiver)
+    private bool StartInteraction(IInteractable receiver)
     {
         if (receiver == null)
-            return;
+            return false;
 
         var receiverComponent = receiver as Component;
         if (receiverComponent == null)
         {
             Debug.LogError("IInteractable 必须由 Component/MonoBehaviour 实现");
-            return;
+            return false;
         }
+
+        // 切换目标前先完整结束旧交互，避免 UI/占用状态残留。
+        if (currentReceiver != null && currentReceiver != receiver)
+            StopCurrentInteraction();
 
         currentReceiver = receiver;
         currentReceiverComponent = receiverComponent;
@@ -241,6 +242,16 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
         // 交互建立后失活触发器，后续交互维持仅依赖距离检测。
         shouldDisableColliderAfterInteract = true;
+        return true;
+    }
+
+    /// <summary>结束当前交互并清理一次性探测状态。</summary>
+    public void CancelCurrentInteraction()
+    {
+        StopCurrentInteraction();
+        receiversInRange.Clear();
+        DisableInteractCollider();
+        shouldDisableColliderAfterInteract = false;
     }
 
     private void StopCurrentInteraction()
@@ -305,7 +316,8 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (!receiversInRange.Contains(receiver))
             receiversInRange.Add(receiver);
 
-        StartInteraction(receiver);
+        if (currentReceiver != receiver)
+            StartInteraction(receiver);
     }
 
     private void OnTriggerStay2D(Collider2D other)

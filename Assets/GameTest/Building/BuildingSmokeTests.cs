@@ -15,7 +15,29 @@ namespace FlatWorld.GameTest.Building
         public void RequiredEntryPointsAndAssetsExist()
         {
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_Building.cs", "Mod_Building");
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/World/Building/BuildingOccupancyRegistry.cs", "BuildingOccupancyRegistry");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/World/Map/SO/Tile_Block.cs", "Tile_Block");
+            GameTestAssertions.AssertScriptType(
+                "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkTilePaletteSO.cs",
+                "ChunkTilePaletteSO");
+            GameTestAssertions.AssertScriptType(
+                "Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Configuration/ChunkGenerationProfileSO.cs",
+                "ChunkGenerationProfileSO");
+            GameTestAssertions.AssertScriptType(
+                "Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/StructureCatalogSO.cs",
+                "StructureCatalogSO");
+            GameTestAssertions.AssertScriptType(
+                "Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/StructureDefinitionSO.cs",
+                "StructureDefinitionSO");
+            GameTestAssertions.AssertScriptType(
+                "Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/StructureTemplateSO.cs",
+                "StructureTemplateSO");
+            GameTestAssertions.AssertScriptType(
+                "Assets/5_Scripts/5-3_GamePlay/World/Map/SO/BiomeData.cs",
+                "BiomeData");
+            Assert.That(typeof(BuildingOccupancyRegistry).IsAbstract, Is.True,
+                "BuildingOccupancyRegistry 必须保持静态权威注册表");
+            Assert.That(typeof(BuildingOccupancyRegistry).IsSealed, Is.True,
+                "BuildingOccupancyRegistry 必须保持静态权威注册表");
             GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/BuildingShadow.prefab");
             GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/MineEntrance.prefab");
             GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab");

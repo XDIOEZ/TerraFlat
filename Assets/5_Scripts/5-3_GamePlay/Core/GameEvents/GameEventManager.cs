@@ -84,18 +84,27 @@ namespace FlatWorld.Gameplay.Events
 
         public bool TryTriggerNow(string eventId, bool ignoreConditions = false)
         {
-            return TryTriggerNowInternal(eventId, ignoreConditions, ignoreRestrictions: false);
+            return TryTriggerNowInternal(
+                eventId,
+                ignoreConditions,
+                ignoreRestrictions: false,
+                gmForce: false);
         }
 
         public bool TryForceTriggerNow(string eventId)
         {
-            return TryTriggerNowInternal(eventId, ignoreConditions: true, ignoreRestrictions: true);
+            return TryTriggerNowInternal(
+                eventId,
+                ignoreConditions: true,
+                ignoreRestrictions: true,
+                gmForce: true);
         }
 
         private bool TryTriggerNowInternal(
             string eventId,
             bool ignoreConditions,
-            bool ignoreRestrictions)
+            bool ignoreRestrictions,
+            bool gmForce)
         {
             if (!worldActive || !GameNetwork.HasStateAuthority ||
                 string.IsNullOrWhiteSpace(eventId) ||
@@ -110,7 +119,16 @@ namespace FlatWorld.Gameplay.Events
 
             float totalTime = timeData.GetTotalGameTime();
             int dayNumber = Mathf.FloorToInt(totalTime / Mathf.Max(1f, timeData.DayLength)) + 1;
-            GameEventOccurrence occurrence = new(totalTime, dayNumber, "manual");
+            GameEventOccurrence occurrence = new(
+                totalTime,
+                dayNumber,
+                gmForce ? "gm.force" : "manual",
+                gmForce
+                    ? new JObject
+                    {
+                        [GameEventActionContext.GmForcePayloadKey] = true
+                    }.ToString()
+                    : null);
             return TryStartEvent(
                 definition,
                 occurrence,

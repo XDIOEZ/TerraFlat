@@ -214,6 +214,34 @@ namespace FlatWorld.GameTest.AI
             Assert.That(AI_Ghost.ShouldTakeLightDamage(0.5001f), Is.True);
         }
 
+        /// <summary>幽灵接触伤害复用通用伤害模块，并使用贴近身体轮廓的触发盒。</summary>
+        [Test]
+        [Category("AI.Smoke")]
+        [Category("Smoke")]
+        public void GhostUsesSharedDamageSenderOnBodyCollider()
+        {
+            GameObject ghostPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Entity_AI/Ghost.prefab");
+            BoxCollider2D bodyCollider = ghostPrefab != null
+                ? ghostPrefab.GetComponent<BoxCollider2D>()
+                : null;
+            Mod_Damage damageSender = ghostPrefab != null
+                ? ghostPrefab.GetComponent<Mod_Damage>()
+                : null;
+
+            Assert.That(bodyCollider, Is.Not.Null);
+            Assert.That(damageSender, Is.Not.Null);
+            Assert.That(bodyCollider.isTrigger, Is.True);
+            Assert.That(bodyCollider.size.x, Is.EqualTo(0.6f).Within(0.0001f));
+            Assert.That(bodyCollider.size.y, Is.EqualTo(0.9f).Within(0.0001f));
+            Assert.That(bodyCollider.offset.x, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(bodyCollider.offset.y, Is.EqualTo(0.15f).Within(0.0001f));
+            Assert.That(damageSender.Damage.BaseValue, Is.EqualTo(20f).Within(0.0001f));
+            Assert.That(damageSender.DamageInterval, Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(damageSender.EnableOnTriggerEnterDamage, Is.True);
+            Assert.That(damageSender.OnlyDealDamageWhenInHand, Is.False);
+        }
+
         /// <summary>首次攻击必须先经历起手延迟，再开启唯一的伤害窗口。</summary>
         [Test]
         [Category("AI.Smoke")]

@@ -1,4 +1,5 @@
 using System;
+using FlatWorld.WorldModel;
 using UnityEngine;
 
 namespace FlatWorld.Automation
@@ -12,11 +13,19 @@ namespace FlatWorld.Automation
         internal FlatWorldGoldenPathConfiguration Configuration { get; }
         private Mod_Cam _camera;
         private Mod_ChunkLoader _chunkLoader;
+        private bool _generationHooksRegistered;
 
         internal FlatWorldGoldenPathExecutor(FlatWorldGoldenPathConfiguration configuration)
         {
             Configuration = configuration ?? FlatWorldGoldenPathConfiguration.CreateDefault();
             Configuration.Validate();
+            if (Configuration.hydrology.overrideGeneration)
+            {
+                WorldGenerationRuntimeHooks.BeforeMapGeneration += ApplyLegacyGenerationOverrides;
+                WorldGenerationRuntimeHooks.BeforeWorldModelGeneration +=
+                    ApplyWorldModelGenerationOverrides;
+                _generationHooksRegistered = true;
+            }
         }
 
         internal NewWorldCreationRequest CreateWorldRequest(string suffix)
@@ -80,8 +89,70 @@ namespace FlatWorld.Automation
                     "GoldenPath screenshot view was requested before the player camera was configured.");
         }
 
+        #region 临时世界生成覆盖
+
+        /// <summary>兼容旧 MapCore 管线；只修改本次运行时实例。</summary>
+        private void ApplyLegacyGenerationOverrides(Map map)
+        {
+            GoldenPathHydrologyConfiguration hydrology = Configuration.hydrology;
+            ChunkGenerator_River river = map.GetGenerator<ChunkGenerator_River>();
+            ChunkGenerator_Land land = map.GetGenerator<ChunkGenerator_Land>();
+            if (river == null || land == null)
+                throw new InvalidOperationException("GoldenPath hydrology override requires Land and River generators.");
+
+            river.hydrologyRegionSize = hydrology.hydrologyRegionSize;
+            river.runoffCellSize = hydrology.runoffCellSize;
+            river.runoffSampleStride = hydrology.runoffSampleStride;
+            river.maxTraceSteps = hydrology.maxTraceSteps;
+            river.seaLevel = hydrology.seaLevel;
+            river.infiltrationFloor = hydrology.infiltrationFloor;
+            river.riverStartFlow = hydrology.riverStartFlow;
+            river.fullWidthFlow = hydrology.fullWidthFlow;
+            river.maxRiverWidth = hydrology.maxRiverWidth;
+            river.lakeMinFlow = hydrology.lakeMinFlow;
+            land.WindwardRainGain = hydrology.windwardRainGain;
+            land.LeewardRainLoss = hydrology.leewardRainLoss;
+            ChunkGenerator_River.ClearHydrologyCache();
+        }
+
+        /// <summary>把黄金路径水文配置映射到当前后台 WorldModel 的纯参数快照。</summary>
+        private ChunkGenerationProfileSnapshot ApplyWorldModelGenerationOverrides(
+            ChunkGenerationProfileSnapshot profile)
+        {
+            GoldenPathHydrologyConfiguration hydrology = Configuration.hydrology;
+            return profile
+                .WithNumericParameter("river.enabled", 1d)
+                .WithNumericParameter("terrain.seaLevel", hydrology.seaLevel)
+                .WithNumericParameter("river.hydrologyRegionSize", hydrology.hydrologyRegionSize)
+                .WithNumericParameter("river.runoffCellSize", hydrology.runoffCellSize)
+                .WithNumericParameter("river.runoffSampleStride", hydrology.runoffSampleStride)
+                .WithNumericParameter("river.maxTraceSteps", hydrology.maxTraceSteps)
+                .WithNumericParameter("river.minimumVisibleCourseLength",
+                    hydrology.minimumVisibleCourseLength)
+                .WithNumericParameter("river.infiltrationFloor", hydrology.infiltrationFloor)
+                .WithNumericParameter("river.startFlow", hydrology.riverStartFlow)
+                .WithNumericParameter("river.tributaryStartFlow", hydrology.tributaryStartFlow)
+                .WithNumericParameter("river.fullWidthFlow", hydrology.fullWidthFlow)
+                .WithNumericParameter("river.maxWidth", hydrology.maxRiverWidth)
+                .WithNumericParameter("river.floodplainStartFlow", hydrology.floodplainStartFlow)
+                .WithNumericParameter("river.lakeMinFlow", hydrology.lakeMinFlow)
+                .WithNumericParameter("climate.orographic.windwardGain",
+                    hydrology.windwardRainGain)
+                .WithNumericParameter("climate.orographic.leewardLoss",
+                    hydrology.leewardRainLoss);
+        }
+
+        #endregion
+
         public void Dispose()
         {
+            if (_generationHooksRegistered)
+            {
+                WorldGenerationRuntimeHooks.BeforeMapGeneration -= ApplyLegacyGenerationOverrides;
+                WorldGenerationRuntimeHooks.BeforeWorldModelGeneration -=
+                    ApplyWorldModelGenerationOverrides;
+                _generationHooksRegistered = false;
+            }
             RestoreTraversalView();
             _camera = null;
             _chunkLoader = null;

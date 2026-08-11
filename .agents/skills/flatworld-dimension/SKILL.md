@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 # FlatWorld 维度与星球世界定位
 
-> 最后核对：2026-08-05。首版只开放离线地表与地下矿洞往返。
+> 最后核对：2026-08-10。首版只开放离线地表与地下矿洞往返。
 
 ## 修改前先读
 
@@ -42,7 +42,8 @@ DimensionPortal.Interact
 → ItemMgr 创建玩家
 → 按入口锚点定位目标出口旁的安全位置
 → 等待目标 Chunk 基线完成并查找或创建正式 CaveExit Item
-→ 等待首批 Chunk 完成并关闭加载界面
+→ 等待完整 Runtime Window 与 GameManager 世界进入收尾完成
+→ 解锁玩家输入并关闭加载界面
 ```
 
 - 动态世界 Scene 名与 `WorldKey` 一致，固定玩法世界不需要加入 Build Settings。
@@ -80,6 +81,8 @@ DimensionPortal.Interact
 - 使用矿坑入口时抵达对应 CaveExit 的 `PortalOffset` 安全偏移；使用 CaveExit 时返回绑定的地表矿坑旁，不再生成免费运行时 Portal。
 - `DimensionPortal` 通过现有 `IInteractable`/E 键链触发；地表入口必须是已安装 `MineEntrance`，生成的 `MineEntrance_Summoner` 因 `BuildingRole.Summoner` 会被拒绝。
 - `ChunkNaturalItemRenderer` 为确定性 `CaveExit` 调用 `DimensionPortal.ConfigureGenerated()`；此分支不写玩家锚点，按同一世界格切到另一维度，并在 `WaitForRuntimeChunkPresentation()` 确认目标 `ChunkView` 与自然出口已绑定。
+- 维度切换不得只等待 Chunk 队列；`DimensionManager` 必须继续等待 `GameManager.IsWorldEntryInProgress == false` 后才能解锁新玩家输入，避免落在出口上的首次 E 被仍在收尾的世界进入流程拒绝。
+- 非地表死亡复活走 `DimensionManager.TryBeginRespawnTransition()`：目标只接受地表 `WorldAddress` 与精确主世界出生坐标，并复用玩家释放、动态 Scene、Chunk Runtime Window 和世界进入生命周期；准备回调必须在 `StartCoroutine()` 前恢复生命等权威数据，因为协程会同步运行至首个 `yield` 并立即调用 `SavePlayer()`。
 - 正式资源：`Assets/2_Prefabs/Building/MineEntrance.prefab`、`Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab`、`Assets/2_Prefabs/Dimension/CaveExit.prefab`。
 - `CaveExit` 是不可拾取 Chunk Item；必须等程序生成基线进入 Ready 后创建，使其自然进入 `ChunkSaveRecord.ChangedItems`，不得在基线前生成或只创建临时 GameObject。
 - 可重复安装器：`Assets/5_Scripts/5-2_Editor/Dimension/DimensionProjectInstaller.cs`，菜单 `FlatWorld/Dimension/Install Mine Entrances`。
@@ -123,6 +126,8 @@ DimensionPortal.Interact
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-10：新增跨维度重生入口；矿洞死亡不再在当前洞穴 Scene 直接套用地表坐标，而是恢复玩家数据后复用完整维度事务返回主世界地表出生点，精确坐标不读取维度最后位置或传送门偏移。
+- 2026-08-10：维度切换新增 `GameManager` 世界进入生命周期屏障；目标 Runtime Window 就绪后仍保持输入锁，直到 Chunk 队列与两个权威收尾帧全部完成，避免首次进入矿洞立刻按 E 返回时请求被拒绝。
 - 2026-08-09：新版矿洞 `ChunkView` 的 `BlockingTileId` 现在会同步驱动 `LightOccluders`，洞穴岩壁用 URP 2D 阴影体阻挡玩家火把；纯洞穴布局和出口配对算法不变。
 - 2026-08-09：维度切换在加载目标玩家后沿用 `Mod_ChunkLoader` 的相机视距、预取和销毁配置刷新完整 Runtime Window；等待活动视野内所有 `ChunkView` 绑定，禁止用 1x1 兜底覆盖周围区块。
 - 2026-08-09：进入矿洞时 `ChunkMgr` 从地表世界已冻结的 Profile、维度派生种子和拓扑构造 `CavePortalPairingSnapshot`；自然入口切换继续使用同一世界格，洞穴不再额外动态补造出口。
@@ -131,9 +136,6 @@ DimensionPortal.Interact
 - 2026-08-09：返回主菜单后必须确认旧 `WorldKey` 动态 Scene 已被 `LoadSceneMode.Single` 卸载；若仍加载，`GameManager` 补充显式卸载。此约束保护随后以相同世界键进入地表或维度时的 `SceneManager.CreateScene()`。
 - 2026-08-08：WorldModel 运行时窗口现在用 `DimensionManager.GetActiveGenerationSeed()` 派生区块种子，与出生点纯采样及旧 Map 生成保持一致，不同维度继续隔离确定性地形和 GUID 空间。
 - 2026-08-08：地块效果接收器改读 `ChunkRuntime/ChunkTerrainData`，运行时水体通过 Surface Profile 的 `tile.block.<TileId>` 映射恢复现有 `Tile_Water` 行为；切换世界仍使用进入缓存精确退出，旧 `Map` 仅作兼容回退。
-- 2026-08-05：矿洞生成改为带一格边界的 Burst 开放掩码与分类 Job；主线程通过新地形栈 API 写入地板/墙体两层，取消和销毁必须完成并释放 NativeArray。
-
-- 2026-07-31：移除玩家旁免费运行时 Portal；新增可建造/可拆除/可存档 `MineEntrance`、不可拾取差量存档 `CaveExit` 和按入口 GUID 绑定的双向锚点。
 
 ## 修改后维护本 Skill
 

@@ -115,13 +115,13 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --all
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：裸跑 `--golden-path` 默认启用已验证的 WorldModel 强化水文参数，并新增帧后移动驱动、整数 Chunk 休眠环带与静止 AI 探针；`wrapped-river-fast.json` 仍用于缩小世界的快速完整回归。
+- 2026-08-11：Golden Path Editor 桥接在接管请求时把 Addressables Play Mode 切到 Fast Mode，避免实机流程复用旧 Bundle；之后仍按原流程刷新 AssetDatabase、编译并进入标准 Domain Reload。
 - 2026-08-10：UI 常驻轮询、通用按钮 DOTween、`BasePanel` 共享层级快照、虚拟光标按需射线及滚动焦点帧末合并改造完成 UTF-8、差异与 Unity 编译检查；新增 `UI.Smoke` 静态契约、快照复用和同 ScrollRect 最后目标回归，`UI`、`GamePlay`、`FlatWorld.GameTest` 相关程序集定向编译通过，独立 batch 日志确认本次文件无诊断，整项目仍只被既有 `GMReflectionConsole` 三处错误阻断；按项目默认未运行 Test Runner。
 - 2026-08-10：区块阴影帧末合并、延迟缩槽和动态 View 池完成 UTF-8、差异与 Unity 定向编译检查；`GamePlay.dll` 已更新且本次文件无诊断，整项目仍被既有 `GMReflectionConsole` 三处错误阻断；按用户要求未运行 Test Runner/Golden Path。
+- 2026-08-10：幽灵接触伤害改为复用 `Mod_Damage`，移除专用 `GhostContactDamage`，并将根触发盒保持为 `0.6×0.9`；同步更新 `AI.Smoke` 组件/参数回归断言，按局部 Prefab/战斗配置改动只完成静态诊断、Unity 编译和 Console 检查，未主动运行 Test Runner。
+- 2026-08-10：矿洞死亡返回地表修复完成 GamePlay/Automation 静态编译，并扩展黄金路径的矿洞到主世界复活路由断言；按项目默认未主动运行 Test Runner 或完整 Golden Path。
+- 2026-08-10：矿洞出口首次 E 时序修复完成 GamePlay/Automation 静态编译并新增黄金路径同目标交互重试断言；按项目默认只检查编译与 Console，不主动运行 PlayerInteraction Smoke 或完整 Golden Path。
 - 2026-08-09：新增 Buff 状态 HUD 的 `UI.Smoke` Prefab/Player 绑定、节点、左侧中部锚点和输入穿透契约；完成静态诊断、Prefab 导入、Unity 编译与 Console 检查，按项目默认未运行 Test Runner。
 - 2026-08-09：URP 2D 光照遮挡子层完成 GamePlay/Editor 静态诊断、Unity Console 检查和 Prefab 导入检查；新增建筑黄金路径断言但按项目默认未主动运行 Test Runner。
 - 2026-08-09：新增保存状态 HUD 与手动异步保存回归契约，完成相关脚本静态诊断、Prefab 导入、Unity 编译和 Console 检查；按项目默认未主动运行 UI Smoke/Golden Path Test Runner。
-- 2026-08-09：修复 `GameManager` 手动保存协程在含 `catch` 的 `try` 中使用 `yield` 导致的 `CS1626`；同时清理未使用 UI 相机变量并标注旧 MapCore 兼容读取，完成静态检查、Unity 编译和 Console 检查，未运行 Test Runner。
-- 2026-08-09：游戏内手柄准星改为玩家中心的固定半径径向定位，并补充 `UI.Smoke` 方向计算回归；本次仅完成 GamePlay/UI/GameTest 静态编译与差异检查，未主动运行 Unity Test Runner。
-- 2026-08-09：狼现代 Prefab 与旧行为树 Prefab 的玩家/同伴感知范围扩大到 40，并新增 `AI.Smoke` 视野覆盖回归断言；按普通局部 AI 配置改动仅做静态检查、编译和 Console 检查，未主动运行 Test Runner。
-- 2026-08-09：野猪首击补充 AI 伤害触发器重叠扫描后，完成相关脚本静态诊断、Unity 编译和 Console 定向检查；新增 `AI.Smoke` 首击扫描范围回归断言，未主动运行 Unity Test Runner。
-- 2026-08-09：修复 `FlatWorldGoldenPathScenarios.ItemLifecycle.cs` 缺少 `UnityEngine` 引用导致 `Vector2`、`Vector3`、`Quaternion`、`Time` 和 `Debug` 编译报错；完成静态检查、Unity AssetDatabase 刷新、脚本编译和 Console 检查，未运行 Test Runner。

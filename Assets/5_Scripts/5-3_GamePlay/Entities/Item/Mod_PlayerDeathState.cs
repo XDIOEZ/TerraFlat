@@ -174,70 +174,48 @@ public partial class Mod_PlayerDeathState : Module
             return;
         }
 
-        Vector3 respawnPos;
-        if (PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(
-                _player.Data,
-                out respawnPos,
-                out string mainWorldKey))
+        ResolveRespawnDestination(
+            out Vector3 respawnPos,
+            out WorldAddress activeAddress,
+            out WorldAddress targetAddress);
+
+        if (RequiresWorldTransition(activeAddress, targetAddress))
         {
-            WorldAddress activeAddress = WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name);
-            if (!activeAddress.IsSurface ||
-                !string.Equals(activeAddress.PlanetId, mainWorldKey, System.StringComparison.Ordinal))
+            DimensionManager dimensionManager = DimensionManager.Instance;
+            if (dimensionManager == null ||
+                !dimensionManager.TryBeginRespawnTransition(
+                    _player,
+                    targetAddress,
+                    respawnPos,
+                    () => CompleteRespawnState(
+                        restartChunkStreaming: false,
+                        unlockInput: false)))
             {
-                Debug.LogWarning(
-                    $"[Mod_PlayerDeathState] 当前不在主世界，已使用主世界出生坐标：" +
-                    $"active={activeAddress.WorldKey}, spawnWorld={mainWorldKey}");
+                Debug.LogError(
+                    $"[Mod_PlayerDeathState] 无法开始跨维度重生：" +
+                    $"active={activeAddress.WorldKey}, target={targetAddress.WorldKey}");
+                return;
             }
-        }
-        else if (GameManager.Instance != null &&
-                 GameManager.Instance.TryGetDefaultPlayerSpawnPosition(out Vector3 defaultSpawnPos))
-        {
-            respawnPos = defaultSpawnPos;
-            PlayerMainWorldSpawnStore.SetMainWorldSpawn(
-                _player.Data,
-                SceneManager.GetActiveScene().name,
-                respawnPos);
-        }
-        else if (Data.HasSleepRespawnPoint)
-        {
-            // 旧存档无法计算主世界出生点时，保留睡觉点作为兼容性兜底。
-            respawnPos = Data.SleepRespawnPoint;
-        }
-        else
-        {
-            respawnPos = item.transform.position;
-            Debug.LogWarning("[Mod_PlayerDeathState] 未找到默认出生点，回退到当前位置重生");
+
+            Debug.Log(
+                $"[Mod_PlayerDeathState] 已开始跨维度重生：" +
+                $"{activeAddress.WorldKey} -> {targetAddress.WorldKey}, position={respawnPos}");
+            return;
         }
 
         item.transform.position = new Vector3(respawnPos.x, respawnPos.y, 0f);
         _player.Data.transform.position = item.transform.position;
-
-        float respawnHp = _damageReceiver.MaxHp * Mathf.Clamp01(respawnHpRate);
-        _damageReceiver.Hp = respawnHp > 0f ? respawnHp : _damageReceiver.MaxHp;
-        _damageReceiver.Data.AttackersUIDs.Clear();
-        RestoreStatusModulesForRespawn();
-        RestartChunkStreamingForRespawn();
-
-        if (_rb != null)
-        {
-            _rb.velocity = Vector2.zero;
-        }
-
-        if (_mover != null)
-        {
-            _mover.enabled = true;
-        }
-
-        _isInDyingState = false;
-        _gameController.SetGameplayInputLocked(false);
-        CloseAndDestroyDyingPanel();
-
-        if (_damageReceiver.IsPanelVisible())
-        {
-            _damageReceiver.RefreshUI();
-        }
+        CompleteRespawnState(restartChunkStreaming: true, unlockInput: true);
 
         Debug.Log($"[Mod_PlayerDeathState] 玩家已重生，位置={item.transform.position}, 血量={_damageReceiver.Hp:F1}/{_damageReceiver.MaxHp:F1}");
+    }
+
+    /// <summary>判断复活目标是否需要经过完整动态世界切换。</summary>
+    public static bool RequiresWorldTransition(
+        WorldAddress activeAddress,
+        WorldAddress targetAddress)
+    {
+        return activeAddress.IsValid && targetAddress.IsValid && activeAddress != targetAddress;
     }
 
     /// <summary>管理员重新开启无敌时，取消已进入的濒死状态并恢复玩家控制。</summary>
@@ -272,10 +250,109 @@ public partial class Mod_PlayerDeathState : Module
 
 #region 重生恢复
 
+    /// <summary>解析主世界复活地址与坐标；现代存档优先读取固定主世界出生点。</summary>
+    private void ResolveRespawnDestination(
+        out Vector3 respawnPosition,
+        out WorldAddress activeAddress,
+        out WorldAddress targetAddress)
+    {
+        activeAddress = ResolveActiveWorldAddress();
+        targetAddress = activeAddress.WithDimension(WorldAddress.SurfaceDimensionId);
+
+        if (PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(
+                _player.Data,
+                out respawnPosition,
+                out string mainWorldKey))
+        {
+            targetAddress = WorldAddress.FromWorldKey(mainWorldKey)
+                .WithDimension(WorldAddress.SurfaceDimensionId);
+            return;
+        }
+
+        // 旧存档若在矿洞缺少主出生点，优先回到进入矿洞前记录的地表位置。
+        if (!activeAddress.IsSurface &&
+            DimensionTravelProgressStore.TryGetLastPosition(
+                _player.Data,
+                targetAddress,
+                out respawnPosition))
+        {
+            PlayerMainWorldSpawnStore.SetMainWorldSpawn(
+                _player.Data,
+                targetAddress.WorldKey,
+                respawnPosition);
+            Debug.LogWarning(
+                $"[Mod_PlayerDeathState] 旧存档缺少主世界出生点，" +
+                $"已采用最近地表位置：{respawnPosition}");
+            return;
+        }
+
+        if (activeAddress.IsSurface && GameManager.Instance != null &&
+            GameManager.Instance.TryGetDefaultPlayerSpawnPosition(out respawnPosition))
+        {
+            PlayerMainWorldSpawnStore.SetMainWorldSpawn(
+                _player.Data,
+                targetAddress.WorldKey,
+                respawnPosition);
+            return;
+        }
+
+        if (Data.HasSleepRespawnPoint)
+        {
+            // 仅作为无法恢复主世界记录的旧存档兼容兜底。
+            respawnPosition = Data.SleepRespawnPoint;
+            return;
+        }
+
+        respawnPosition = item.transform.position;
+        Debug.LogWarning(
+            $"[Mod_PlayerDeathState] 未找到主世界出生点，" +
+            $"将切回地表对应坐标：{respawnPosition}");
+    }
+
+    /// <summary>恢复死亡状态数据；跨维度时输入继续由维度事务保持锁定。</summary>
+    private void CompleteRespawnState(bool restartChunkStreaming, bool unlockInput)
+    {
+        float respawnHp = _damageReceiver.MaxHp * Mathf.Clamp01(respawnHpRate);
+        _damageReceiver.Hp = respawnHp > 0f ? respawnHp : _damageReceiver.MaxHp;
+        _damageReceiver.Data.AttackersUIDs.Clear();
+        RestoreStatusModulesForRespawn();
+
+        if (_rb != null)
+            _rb.velocity = Vector2.zero;
+
+        if (_mover != null)
+        {
+            _mover.SetRunState(false);
+            _mover.enabled = true;
+        }
+
+        if (restartChunkStreaming)
+            RestartChunkStreamingForRespawn();
+
+        _isInDyingState = false;
+        if (unlockInput)
+            _gameController.SetGameplayInputLocked(false);
+
+        CloseAndDestroyDyingPanel();
+        if (_damageReceiver.IsPanelVisible())
+            _damageReceiver.RefreshUI();
+    }
+
+    /// <summary>优先读取维度管理器的权威地址，Scene 名作为启动兼容兜底。</summary>
+    private static WorldAddress ResolveActiveWorldAddress()
+    {
+        if (DimensionManager.Instance != null && DimensionManager.Instance.ActiveAddress.IsValid)
+            return DimensionManager.Instance.ActiveAddress;
+
+        return WorldAddress.FromWorldKey(SceneManager.GetActiveScene().name);
+    }
+
     /// <summary>为新玩家或旧存档补写一次主世界初始出生点。</summary>
     private void EnsureMainWorldSpawnPoint()
     {
+        WorldAddress activeAddress = ResolveActiveWorldAddress();
         if (_player?.Data == null ||
+            !activeAddress.IsSurface ||
             PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(_player.Data, out _, out _) ||
             GameManager.Instance == null)
         {
@@ -287,12 +364,12 @@ public partial class Mod_PlayerDeathState : Module
 
         if (PlayerMainWorldSpawnStore.SetMainWorldSpawn(
                 _player.Data,
-                SceneManager.GetActiveScene().name,
+                activeAddress.WorldKey,
                 defaultSpawnPos))
         {
             Debug.Log(
                 $"[Mod_PlayerDeathState] 已记录主世界初始出生点：" +
-                $"world={SceneManager.GetActiveScene().name}, position={defaultSpawnPos}");
+                $"world={activeAddress.WorldKey}, position={defaultSpawnPos}");
         }
     }
 

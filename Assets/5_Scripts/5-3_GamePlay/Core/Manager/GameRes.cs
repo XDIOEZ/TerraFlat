@@ -489,12 +489,24 @@ public void HotReloadAllResources()
         }
     }
 
-    private void RegisterPrefabAlias(string key, GameObject prefab)
+    internal void RegisterPrefabAlias(string key, GameObject prefab)
     {
         if (prefab == null || string.IsNullOrWhiteSpace(key))
             return;
 
-        AllPrefabs[key.Trim()] = prefab;
+        string normalizedKey = key.Trim();
+        if (AllPrefabs.TryGetValue(normalizedKey, out GameObject existingPrefab) &&
+            existingPrefab != null && existingPrefab != prefab)
+        {
+            Item existingItem = existingPrefab.GetComponent<Item>();
+            Item incomingItem = prefab.GetComponent<Item>();
+
+            // JSON shellPrefab 必须稳定指向真实 Item；普通 Prefab 或模块别名不得覆盖同名外壳。
+            if (existingItem != null && incomingItem == null)
+                return;
+        }
+
+        AllPrefabs[normalizedKey] = prefab;
     }
 
     #endregion

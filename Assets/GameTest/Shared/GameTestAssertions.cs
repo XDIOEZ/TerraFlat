@@ -18,6 +18,16 @@ namespace FlatWorld.GameTest.Shared
             Assert.That(script, Is.Not.Null, $"缺少关键脚本：{scriptPath}");
 
             Type type = script.GetClass();
+            if (type == null)
+            {
+                // Unity 偶尔会保留失效的 MonoScript 类型映射，强制导入后重新读取。
+                AssetDatabase.ImportAsset(
+                    scriptPath,
+                    ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+                script = AssetDatabase.LoadAssetAtPath<MonoScript>(scriptPath);
+                type = script != null ? script.GetClass() : null;
+            }
+
             Assert.That(type, Is.Not.Null, $"关键脚本未解析出类型，可能存在编译或类名问题：{scriptPath}");
             Assert.That(type.Name, Is.EqualTo(expectedTypeName), $"关键脚本类型与约定不一致：{scriptPath}");
         }
@@ -29,6 +39,15 @@ namespace FlatWorld.GameTest.Shared
         public static void AssertAssetExists(string assetPath)
         {
             UnityEngine.Object asset = AssetDatabase.LoadMainAssetAtPath(assetPath);
+            if (asset == null && System.IO.File.Exists(assetPath))
+            {
+                // 处理关闭自动刷新或文件属性变化后，磁盘资产尚未进入 AssetDatabase 的情况。
+                AssetDatabase.ImportAsset(
+                    assetPath,
+                    ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+                asset = AssetDatabase.LoadMainAssetAtPath(assetPath);
+            }
+
             Assert.That(asset, Is.Not.Null, $"缺少关键资产：{assetPath}");
         }
 

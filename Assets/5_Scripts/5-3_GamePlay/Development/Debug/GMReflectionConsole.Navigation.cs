@@ -53,6 +53,7 @@ public sealed partial class GMReflectionConsole
 
     private RectTransform gmCanvasRect;
     private RectTransform gmWindowRect;
+    private Vector2 lastGmCanvasSize;
     private Transform gmPageHost;
     private TMP_InputField gmSearchInput;
     private TextMeshProUGUI gmSearchSummaryText;
@@ -1123,6 +1124,8 @@ public sealed partial class GMReflectionConsole
         if (canvasSize.x <= 0f || canvasSize.y <= 0f)
             return;
 
+        lastGmCanvasSize = canvasSize;
+
         const float safeMargin = 32f;
         gmWindowRect.SetSizeWithCurrentAnchors(
             RectTransform.Axis.Horizontal,
@@ -1130,8 +1133,51 @@ public sealed partial class GMReflectionConsole
         gmWindowRect.SetSizeWithCurrentAnchors(
             RectTransform.Axis.Vertical,
             Mathf.Min(780f, Mathf.Max(560f, canvasSize.y - safeMargin * 2f)));
+        LayoutRebuilder.ForceRebuildLayoutImmediate(gmWindowRect);
+        SyncBrowserRootsToWindow();
         ResizeResponsiveGrids();
         LayoutRebuilder.ForceRebuildLayoutImmediate(gmWindowRect);
+
+        if (airdropBrowserRect != null && airdropBrowserRoot != null && airdropBrowserRoot.activeSelf)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(airdropBrowserRect);
+        if (aiCreatureBrowserRect != null && aiCreatureBrowserRoot != null && aiCreatureBrowserRoot.activeSelf)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(aiCreatureBrowserRect);
+    }
+
+    /// <summary>窗口打开期间检测分辨率变化，及时重新计算面板和目录列数。</summary>
+    private void RefreshResponsiveLayoutIfCanvasChanged()
+    {
+        if (windowRoot == null || !windowRoot.activeSelf || gmCanvasRect == null)
+            return;
+
+        Vector2 canvasSize = gmCanvasRect.rect.size;
+        if (canvasSize.x <= 0f || canvasSize.y <= 0f ||
+            (canvasSize - lastGmCanvasSize).sqrMagnitude < 1f)
+            return;
+
+        ClampTabbedWindowToCanvas();
+    }
+
+    /// <summary>让目录覆盖层与 GM 主窗口保持同一尺寸和中心点。</summary>
+    private void SyncBrowserRootsToWindow()
+    {
+        if (gmWindowRect == null)
+            return;
+
+        Vector2 windowSize = gmWindowRect.rect.size;
+        SyncBrowserRoot(airdropBrowserRect, windowSize);
+        SyncBrowserRoot(aiCreatureBrowserRect, windowSize);
+    }
+
+    private static void SyncBrowserRoot(RectTransform browserRect, Vector2 windowSize)
+    {
+        if (browserRect == null)
+            return;
+
+        browserRect.anchorMin = browserRect.anchorMax = new Vector2(0.5f, 0.5f);
+        browserRect.pivot = new Vector2(0.5f, 0.5f);
+        browserRect.anchoredPosition = Vector2.zero;
+        browserRect.sizeDelta = windowSize;
     }
 
     private void ResizeResponsiveGrids()
@@ -1139,17 +1185,45 @@ public sealed partial class GMReflectionConsole
         if (gmWindowRect == null)
             return;
 
-        gmResponsiveGrids.RemoveAll(grid => grid == null);
-        float availableWidth = Mathf.Max(360f, gmWindowRect.rect.width - 88f);
+        gmResponsiveGrids.RemoveAll(entry => entry == null || entry.Grid == null);
         for (int i = 0; i < gmResponsiveGrids.Count; i++)
         {
-            GridLayoutGroup grid = gmResponsiveGrids[i];
-            int columns = Mathf.Max(1, grid.constraintCount);
+            GmResponsiveGrid entry = gmResponsiveGrids[i];
+            GridLayoutGroup grid = entry.Grid;
+            RectTransform gridRect = grid.transform as RectTransform;
+            float availableWidth = gridRect != null && gridRect.rect.width > 1f
+                ? gridRect.rect.width
+                : Mathf.Max(320f, gmWindowRect.rect.width - 88f);
+            int columns = GetResponsiveColumnCount(entry.MaxColumns, availableWidth);
             float totalSpacing = grid.spacing.x * (columns - 1);
+            float cellWidth = Mathf.Max(
+                100f,
+                (availableWidth - totalSpacing) / columns);
+            grid.constraintCount = columns;
             grid.cellSize = new Vector2(
-                Mathf.Max(100f, (availableWidth - totalSpacing) / columns),
-                grid.cellSize.y);
+                cellWidth,
+                entry.CellHeight);
+            SetGridHeight(
+                grid.transform,
+                grid.transform.childCount,
+                columns,
+                entry.CellHeight,
+                grid.spacing.y);
         }
+    }
+
+    private static int GetResponsiveColumnCount(int maxColumns, float availableWidth)
+    {
+        if (maxColumns <= 1 || availableWidth < 420f)
+            return 1;
+
+        if (maxColumns >= 4)
+            return availableWidth >= 900f ? 4 : 2;
+
+        if (maxColumns == 3)
+            return availableWidth >= 780f ? 3 : 2;
+
+        return availableWidth >= 560f ? 2 : 1;
     }
 
     private static void ClearChildren(Transform parent)

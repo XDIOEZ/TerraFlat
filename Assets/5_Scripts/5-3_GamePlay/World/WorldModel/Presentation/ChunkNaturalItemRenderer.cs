@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Networking;
 using FlatWorld.WorldModel;
@@ -13,6 +14,8 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
 {
     #region 字段
+
+    private const float AutoSaveFrameBudgetSeconds = 0.0025f;
 
     private readonly Dictionary<int, Item> spawnedItems = new();
     private readonly HashSet<Item> transientItems = new();
@@ -147,6 +150,46 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
             {
                 Debug.LogError($"[ChunkNaturalItemRenderer] 保存自然物失败：{item.name}，{exception}",
                     item);
+            }
+        }
+    }
+
+    /// <summary>自动保存专用的自然物分帧快照，避免一次克隆全部表现物。</summary>
+    public IEnumerator CaptureStateCoroutine()
+    {
+        if (boundChunk == null || !GameNetwork.HasStateAuthority ||
+            ChunkMgr.Instance == null)
+        {
+            yield break;
+        }
+
+        RuntimeWorldAddress address = boundChunk.Address;
+        List<KeyValuePair<int, Item>> items = new List<KeyValuePair<int, Item>>(spawnedItems);
+        float frameStart = Time.realtimeSinceStartup;
+        for (int i = 0; i < items.Count; i++)
+        {
+            KeyValuePair<int, Item> pair = items[i];
+            Item item = pair.Value;
+            if (item != null && item.itemData != null && !item.DestructionHandled &&
+                !generatedPortalGuids.Contains(pair.Key))
+            {
+                try
+                {
+                    item.Save();
+                    ItemData snapshot = FastCloner.FastCloner.DeepClone(item.itemData);
+                    ChunkMgr.Instance.CaptureNaturalItemState(address, snapshot);
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogError($"[ChunkNaturalItemRenderer] 分帧保存自然物失败：{item.name}，{exception}",
+                        item);
+                }
+            }
+
+            if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
+            {
+                frameStart = Time.realtimeSinceStartup;
+                yield return null;
             }
         }
     }

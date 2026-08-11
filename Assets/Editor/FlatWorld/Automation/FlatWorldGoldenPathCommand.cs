@@ -1,9 +1,13 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Build.DataBuilders;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -53,6 +57,9 @@ namespace FlatWorld.Automation
         private static string _originalSavePath;
         private static Player _player;
         private static Mover _mover;
+        private static Coroutine _movementDriverCoroutine;
+        private static bool _movementDriveActive;
+        private static Vector2 _movementDriveTarget;
         private static float _originalMoveSpeed;
         private static Vector2 _startPosition;
         private static Vector2 _chunkSize;
@@ -172,6 +179,11 @@ namespace FlatWorld.Automation
             if (requestPath == null)
                 return;
 
+            if (!EnsureRequiredMonoScriptsReady())
+                return;
+            RefreshRequiredPrefabComponents();
+            EnsureAddressablesUseAssetDatabase();
+
             // Unity 可能在 Refresh/Domain Reload 时把当前内存偏好写回 ProjectSettings。
             // 必须先锁定磁盘上的用户原值，黄金路径结束后再恢复。
             CaptureSerializedEnterPlayModeSettings();
@@ -204,6 +216,143 @@ namespace FlatWorld.Automation
             {
                 WriteFailureBeforePlay(exception.Message);
             }
+        }
+
+        /// <summary>修复并验证实际路径依赖的 MonoScript 类型映射。</summary>
+        private static bool EnsureRequiredMonoScriptsReady()
+        {
+            (string Path, Type Type)[] requiredScripts =
+            {
+                ("Assets/5_Scripts/5-3_GamePlay/Entities/Item/GameItem.cs", typeof(GameItem)),
+                ("Assets/5_Scripts/5-3_GamePlay/Entities/Item/Mod_Furnace.cs", typeof(Mod_Furnace)),
+                ("Assets/5_Scripts/5-3_GamePlay/Items/Food/Meatrack.cs", typeof(Meatrack)),
+                ("Assets/5_Scripts/5-3_GamePlay/Items/Equipment/Mod_Equipment.cs", typeof(Mod_Equipment)),
+                ("Assets/5_Scripts/5-3_GamePlay/World/Map/SO/Tile_Block.cs", typeof(Tile_Block)),
+                ("Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkTilePaletteSO.cs", typeof(ChunkTilePaletteSO)),
+                ("Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Configuration/ChunkGenerationProfileSO.cs", typeof(ChunkGenerationProfileSO)),
+                ("Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/StructureCatalogSO.cs", typeof(StructureCatalogSO)),
+                ("Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/StructureDefinitionSO.cs", typeof(StructureDefinitionSO)),
+                ("Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/StructureTemplateSO.cs", typeof(StructureTemplateSO)),
+                ("Assets/5_Scripts/5-3_GamePlay/World/Map/SO/BiomeData.cs", typeof(BiomeData))
+            };
+
+            bool requestedImport = false;
+            foreach ((string path, Type expectedType) in requiredScripts)
+            {
+                MonoScript script = AssetDatabase.LoadAssetAtPath<MonoScript>(path);
+                if (script != null && script.GetClass() == expectedType)
+                    continue;
+
+                AssetDatabase.ImportAsset(
+                    path,
+                    ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+                requestedImport = true;
+            }
+
+            string[] prefabPaths = GetRuntimeAddressablePrefabPaths();
+            string[] dependencies = prefabPaths.Length > 0
+                ? AssetDatabase.GetDependencies(prefabPaths, true)
+                : Array.Empty<string>();
+            foreach (string scriptPath in dependencies
+                         .Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+                         .Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                MonoScript script = AssetDatabase.LoadAssetAtPath<MonoScript>(scriptPath);
+                if (script != null && script.GetClass() != null)
+                    continue;
+
+                AssetDatabase.ImportAsset(
+                    scriptPath,
+                    ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+                requestedImport = true;
+            }
+
+            // 脚本重导入可能触发编译/Domain Reload；下一轮 Poll 再做硬校验并接管请求。
+            if (requestedImport)
+                return false;
+
+            return true;
+        }
+
+        /// <summary>脚本映射恢复后，重导入仍缓存为 Missing Script 的关键 Prefab。</summary>
+        private static void RefreshRequiredPrefabComponents()
+        {
+            (string Path, Type Type)[] requiredPrefabs =
+            {
+                ("Assets/2_Prefabs/Building/Meatrack.prefab", typeof(Meatrack)),
+                ("Assets/2_Prefabs/Building/Summoners/Scarecrow_Summoner.prefab", typeof(Mod_Equipment))
+            };
+
+            foreach ((string path, Type expectedType) in requiredPrefabs)
+            {
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab != null && prefab.GetComponentInChildren(expectedType, true) != null)
+                    continue;
+
+                AssetDatabase.ImportAsset(
+                    path,
+                    ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            }
+
+            foreach (string path in GetRuntimeAddressablePrefabPaths())
+            {
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab != null && !HasMissingMonoScript(prefab))
+                    continue;
+
+                AssetDatabase.ImportAsset(
+                    path,
+                    ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            }
+        }
+
+        /// <summary>收集当前运行时 Prefab 标签实际会加载的 Addressables 资源。</summary>
+        private static string[] GetRuntimeAddressablePrefabPaths()
+        {
+            AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
+            if (settings == null)
+                return Array.Empty<string>();
+
+            return settings.groups
+                .Where(group => group != null)
+                .SelectMany(group => group.entries)
+                .Where(entry => entry != null &&
+                                entry.labels.Contains("Prefab") &&
+                                entry.AssetPath.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
+                .Select(entry => entry.AssetPath)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        /// <summary>检查 Prefab 根节点及全部子节点是否仍含 Missing Script。</summary>
+        private static bool HasMissingMonoScript(GameObject prefab)
+        {
+            foreach (Transform node in prefab.GetComponentsInChildren<Transform>(true))
+            {
+                if (GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(node.gameObject) > 0)
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>Golden Path 必须读取当前 AssetDatabase，不能复用可能陈旧的 Addressables Bundle。</summary>
+        private static void EnsureAddressablesUseAssetDatabase()
+        {
+            AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
+            if (settings == null)
+                throw new InvalidOperationException("Golden Path 找不到 Addressables 设置。");
+
+            for (int index = 0; index < settings.DataBuilders.Count; index++)
+            {
+                if (settings.DataBuilders[index] is not BuildScriptFastMode)
+                    continue;
+
+                settings.ActivePlayModeDataBuilderIndex = index;
+                return;
+            }
+
+            throw new InvalidOperationException("Golden Path 找不到 Addressables Fast Mode 数据构建器。");
         }
 
         private static void EnterDefaultStartScene()
@@ -552,13 +701,21 @@ namespace FlatWorld.Automation
             float distance = WorldTopologyRuntime.Distance(_mover.rb.position, target);
             if (distance > 0.2f)
             {
-                ThrowIfTimedOut($"无头模型往返未在限定时间内到达 {target}。");
+                ThrowIfTimedOut(
+                    $"无头模型往返未在限定时间内到达 {target}；" +
+                    $"当前位置={_mover.rb.position}，剩余={distance:0.###}，" +
+                    $"速度={_mover.rb.velocity}，MoverSpeed={_mover.Speed.Value:0.###}，" +
+                    $"Base={_mover.Speed.BaseValue:0.###}，" +
+                    $"Multiplier={_mover.Speed.MultiplicativeModifier:0.###}，" +
+                    $"BodyType={_mover.rb.bodyType}，Simulated={_mover.rb.simulated}，" +
+                    $"TimeScale={Time.timeScale:0.###}。");
                 _mover.Speed.BaseValue = Mathf.Clamp(distance * 8f, 2f,
                     _executor.Configuration.player.maximumMoveSpeed);
+                SetMovementDrive(target);
                 _mover.Move(target, Mathf.Max(Time.deltaTime, 0.02f));
                 return;
             }
-            _mover.Move(_mover.rb.position, Mathf.Max(Time.deltaTime, 0.02f));
+            StopMovementDrive();
             _expectedChunk = ChunkMgr.NormalizeChunkPosition(
                 ChunkMgr.Instance.ResolveRuntimeChunkOrigin(_mover.rb.position));
             _runtimePhase = completedPhase;
@@ -593,11 +750,12 @@ namespace FlatWorld.Automation
                     distance * 8f,
                     2f,
                     _executor.Configuration.player.maximumMoveSpeed);
+                SetMovementDrive(target);
                 _mover.Move(target, Mathf.Max(Time.deltaTime, 0.02f));
                 return;
             }
 
-            _mover.Move(_mover.rb.position, Mathf.Max(Time.deltaTime, 0.02f));
+            StopMovementDrive();
             _expectedChunk = ChunkMgr.NormalizeChunkPosition(
                 ChunkMgr.Instance.ResolveRuntimeChunkOrigin(_mover.rb.position));
             _runtimePhase = RuntimePhase.WaitForChunk;
@@ -647,8 +805,7 @@ namespace FlatWorld.Automation
             string name,
             ScreenshotContinuation continuation)
         {
-            if (_mover != null && _mover.rb != null)
-                _mover.Move(_mover.rb.position, Mathf.Max(Time.deltaTime, 0.02f));
+            StopMovementDrive();
 
             _executor.ConfigureScreenshotView();
             _screenshotViewApplied = true;
@@ -671,8 +828,7 @@ namespace FlatWorld.Automation
 
         private static void TickWaitForScreenshot()
         {
-            if (_mover != null && _mover.rb != null)
-                _mover.Move(_mover.rb.position, Mathf.Max(Time.deltaTime, 0.02f));
+            StopMovementDrive();
 
             if (!_screenshotRequested)
             {
@@ -1127,6 +1283,7 @@ namespace FlatWorld.Automation
             Application.logMessageReceived -= OnRuntimeLog;
             if (_gameManager != null && _worldEntryHandler != null)
                 _gameManager.WorldEntryProgressChanged -= _worldEntryHandler;
+            StopMovementDriver();
             if (_mover != null && _mover.Speed != null)
             {
                 _mover.Speed.BaseValue = _originalMoveSpeed;
@@ -1142,6 +1299,51 @@ namespace FlatWorld.Automation
             if (EditorApplication.isPlaying)
                 EditorApplication.ExitPlaymode();
         }
+
+        #region 真实帧移动驱动
+
+        /// <summary>在游戏 Update 完成后持续重放正式移动入口，避免玩家输入模块覆盖自动化速度。</summary>
+        private static IEnumerator DriveMovementAfterUpdate()
+        {
+            while (_activeRequest != null && EditorApplication.isPlaying)
+            {
+                yield return null;
+                if (!_movementDriveActive || _mover == null || _mover.rb == null)
+                    continue;
+
+                _mover.Move(_movementDriveTarget, Mathf.Max(Time.deltaTime, 0.02f));
+            }
+
+            _movementDriverCoroutine = null;
+        }
+
+        /// <summary>设置当前自动化移动目标，并确保真实帧驱动已运行。</summary>
+        private static void SetMovementDrive(Vector2 target)
+        {
+            _movementDriveTarget = target;
+            _movementDriveActive = true;
+            if (_movementDriverCoroutine == null && _gameManager != null)
+                _movementDriverCoroutine = _gameManager.StartCoroutine(DriveMovementAfterUpdate());
+        }
+
+        /// <summary>停止目标驱动并通过正式移动入口把刚体速度归零。</summary>
+        private static void StopMovementDrive()
+        {
+            _movementDriveActive = false;
+            if (_mover != null && _mover.rb != null)
+                _mover.Move(_mover.rb.position, Mathf.Max(Time.deltaTime, 0.02f));
+        }
+
+        /// <summary>结束测试时彻底注销移动协程。</summary>
+        private static void StopMovementDriver()
+        {
+            StopMovementDrive();
+            if (_movementDriverCoroutine != null && _gameManager != null)
+                _gameManager.StopCoroutine(_movementDriverCoroutine);
+            _movementDriverCoroutine = null;
+        }
+
+        #endregion
 
         private static FlatWorldGoldenPathScenarioContext CreateScenarioContext()
         {
@@ -1516,6 +1718,9 @@ namespace FlatWorld.Automation
             _originalSavePath = null;
             _player = null;
             _mover = null;
+            _movementDriverCoroutine = null;
+            _movementDriveActive = false;
+            _movementDriveTarget = default;
             _originalMoveSpeed = 0f;
             _startPosition = default;
             _chunkSize = default;

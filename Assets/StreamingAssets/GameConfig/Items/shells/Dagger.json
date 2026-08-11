@@ -4,7 +4,7 @@
     {
       "id": "Knife_Base",
       "abstract": true,
-      "shellPrefab": "Dagger",
+      "shellPrefab": "Dagger_Copper",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,

@@ -12,10 +12,10 @@ GameObject:
   - component: {fileID: 1002}
   - component: {fileID: 1003}
   - component: {fileID: 1004}
-  - component: {fileID: 1005}
   - component: {fileID: 1006}
   - component: {fileID: 1007}
   - component: {fileID: 1008}
+  - component: {fileID: 3136644202198907639}
   m_Layer: 0
   m_Name: Ghost
   m_TagString: Ghost
@@ -74,7 +74,7 @@ BoxCollider2D:
   m_IsTrigger: 1
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0.1}
+  m_Offset: {x: 0, y: 0.15}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
@@ -85,7 +85,7 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 0.9, y: 1.4}
+  m_Size: {x: 0.6, y: 0.9}
   m_EdgeRadius: 0
 --- !u!50 &1003
 Rigidbody2D:
@@ -159,20 +159,6 @@ MonoBehaviour:
     inHand: 0
     Guid: -1732050807
     code:
---- !u!114 &1005
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1000}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4a7d2c9e1b3f5a6c8d0e2f4b6a8c1d3e, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  trueDamage: 20
-  damageCooldown: 1
 --- !u!114 &1006
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -224,6 +210,42 @@ MonoBehaviour:
   hitFlashColor: {r: 1, g: 0.08, b: 0.08, a: 1}
   defaultFlashDuration: 0.2
   defaultFlashCount: 1
+--- !u!114 &3136644202198907639
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60f24a3c06829c84884da41d9cc84099, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  item: {fileID: 0}
+  AttackEffects: []
+  Weakness: []
+  Damage:
+    BaseValue: 20
+    BaseAdditive: 0
+    AdditiveModifier: 0
+    MultiplicativeModifier: 1
+    FinalAdditive: 0
+  DamageInterval: 1
+  EnableOnTriggerEnterDamage: 1
+  OnlyDealDamageWhenInHand: 0
+  tileDamageToolKind: 0
+  weaponAudioClass: 0
+  attackAudioCueId:
+  impactAudioOverrides: []
+  damageCollider: {fileID: 1002}
+  lastDamageTime: 0
+  MemoryPackableData:
+    Name:
+    ID:
+    isRunning: 1
+    Type: 0
+    BitData:
 --- !u!1 &2000
 GameObject:
   m_ObjectHideFlags: 0

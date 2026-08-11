@@ -4,7 +4,7 @@
     {
       "id": "Dagger",
       "path": "shells/Dagger.json",
-      "shellPrefab": "Dagger",
+      "shellPrefab": "Dagger_Copper",
       "enabled": true
     },
     {

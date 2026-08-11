@@ -1,6 +1,7 @@
 ﻿using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -474,6 +475,8 @@ public class Chunk : MonoBehaviour
     #endregion
 
     #region 区块保存
+    private const float AutoSaveFrameBudgetSeconds = 0.0025f;
+
     public Chunk SaveChunk()
     {
         if (MapSave == null)
@@ -508,9 +511,137 @@ public class Chunk : MonoBehaviour
     }
 
     /// <summary>
+    /// 自动保存专用的分帧区块快照；每帧只处理约 2.5ms，避免大量物品或差异扫描阻塞玩家输入。
+    /// </summary>
+    public IEnumerator SaveChunkCoroutine(Action<Exception> onFailure = null)
+    {
+        if (MapSave == null)
+        {
+            Exception failure = new InvalidOperationException($"区块 {name} 的 MapSave 为空，无法保存");
+            Debug.LogError($"❌ {failure.Message}", this);
+            onFailure?.Invoke(failure);
+            yield break;
+        }
+
+        if (SaveDataMgr.Instance != null)
+        {
+            bool differenceHandled = false;
+            Exception differenceFailure = null;
+            IEnumerator differenceRoutine = ForwardAutoSaveRoutine(
+                SaveDataMgr.Instance.TrySaveChunkDifferencesCoroutine(
+                    this,
+                    (handled, failure) =>
+                    {
+                        differenceHandled = handled;
+                        differenceFailure = failure;
+                    }),
+                failure =>
+                {
+                    if (differenceFailure == null)
+                        differenceFailure = failure;
+                });
+
+            while (differenceRoutine.MoveNext())
+                yield return differenceRoutine.Current;
+
+            if (differenceFailure != null)
+            {
+                onFailure?.Invoke(differenceFailure);
+                yield break;
+            }
+
+            if (differenceHandled)
+            {
+                RefreshPositionDictionary(new List<Item>(RunTimeItems.Values));
+                yield break;
+            }
+        }
+
+        MapSave.items ??= new Dictionary<string, HashSet<ItemData>>();
+        MapSave.items.Clear();
+
+        List<Item> items = new List<Item>(RunTimeItems.Values);
+        float frameStart = Time.realtimeSinceStartup;
+        for (int i = 0; i < items.Count; i++)
+        {
+            Item item = items[i];
+            if (item == null || RuntimeAiEntityUtility.IsAiEntity(item))
+                continue;
+
+            Exception itemFailure = null;
+            try
+            {
+                item.Save();
+                if (item.itemData != null)
+                    MapSave.AddItemData(item.itemData);
+            }
+            catch (Exception exception)
+            {
+                itemFailure = exception;
+                Debug.LogError($"[Chunk] 自动保存物品失败：{item.name}", item);
+                Debug.LogException(exception);
+            }
+
+            if (itemFailure != null)
+            {
+                onFailure?.Invoke(itemFailure);
+                yield break;
+            }
+
+            if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
+            {
+                frameStart = Time.realtimeSinceStartup;
+                yield return null;
+            }
+        }
+
+        // 让位置索引使用当前稳定快照，避免跨帧期间字典被实体生命周期修改。
+        RefreshPositionDictionary(new List<Item>(RunTimeItems.Values));
+    }
+
+    /// <summary>安全转发自动保存子协程，避免异常导致自动保存控制器无法收尾。</summary>
+    private static IEnumerator ForwardAutoSaveRoutine(
+        IEnumerator routine,
+        Action<Exception> onFailure)
+    {
+        if (routine == null)
+            yield break;
+
+        while (true)
+        {
+            bool moved = false;
+            Exception failure = null;
+            try
+            {
+                moved = routine.MoveNext();
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+            }
+
+            if (failure != null)
+            {
+                onFailure?.Invoke(failure);
+                yield break;
+            }
+
+            if (!moved)
+                yield break;
+
+            yield return routine.Current;
+        }
+    }
+
+    /// <summary>
     /// 刷新位置字典，重建基于当前物品位置的映射
     /// </summary>
     private void RefreshPositionDictionary()
+    {
+        RefreshPositionDictionary(RunTimeItems.Values);
+    }
+
+    private void RefreshPositionDictionary(IEnumerable<Item> items)
     {
         EnsurePositionArray();
 
@@ -527,7 +658,7 @@ public class Chunk : MonoBehaviour
             }
         }
 
-        foreach (var item in RunTimeItems.Values)
+        foreach (var item in items)
         {
             if (item == null)
                 continue;

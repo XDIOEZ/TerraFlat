@@ -8,6 +8,9 @@ using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>从 StreamingAssets 加载本体 ItemDefinition，并绑定少量外壳 Prefab。</summary>
 public static class ItemDefinitionCatalogLoader
@@ -155,6 +158,63 @@ public static class ItemDefinitionCatalogLoader
         {
             failed?.Invoke(exception);
             yield break;
+        }
+
+        // JSON 外壳由定义目录显式预加载，避免通用 Prefab 别名的加载顺序决定 shellPrefab 结果。
+        var shellAddresses = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (ItemDefinitionDto dto in dtos)
+        {
+            if (dto.Abstract || string.IsNullOrWhiteSpace(dto.ShellPrefab) ||
+                string.IsNullOrWhiteSpace(dto.SourcePrefab))
+            {
+                continue;
+            }
+
+            string shellId = dto.ShellPrefab.Trim();
+            string sourcePath = dto.SourcePrefab.Trim().Replace('\\', '/');
+            if (string.Equals(
+                    Path.GetFileNameWithoutExtension(sourcePath),
+                    shellId,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                shellAddresses.TryAdd(shellId, sourcePath);
+            }
+        }
+
+        var shellHandles = new Dictionary<string, AsyncOperationHandle<GameObject>>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (KeyValuePair<string, string> pair in shellAddresses)
+            shellHandles[pair.Key] = Addressables.LoadAssetAsync<GameObject>(pair.Value);
+
+        while (shellHandles.Values.Any(handle => !handle.IsDone))
+            yield return null;
+
+        foreach (KeyValuePair<string, AsyncOperationHandle<GameObject>> pair in shellHandles)
+        {
+            GameObject shell = pair.Value.Result;
+#if UNITY_EDITOR
+            // Editor 直接读取当前 AssetDatabase，避免已初始化的 Addressables locator 复用旧 Bundle。
+            AssetDatabase.ImportAsset(
+                shellAddresses[pair.Key],
+                ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            shell = AssetDatabase.LoadAssetAtPath<GameObject>(shellAddresses[pair.Key]) ?? shell;
+#endif
+            Item shellItem = shell != null ? shell.GetComponent<Item>() : null;
+            if (pair.Value.Status != AsyncOperationStatus.Succeeded || shellItem?.itemData == null)
+            {
+                string componentTypes = shell == null
+                    ? "<none>"
+                    : string.Join(",", shell.GetComponents<Component>()
+                        .Where(component => component != null)
+                        .Select(component => component.GetType().Name));
+                failed?.Invoke(new InvalidDataException(
+                    $"物品外壳 Addressable 无效：{pair.Key} → {shellAddresses[pair.Key]}；" +
+                    $"status={pair.Value.Status}，result={shell?.name ?? "<null>"}，" +
+                    $"components={componentTypes}，item={shellItem?.GetType().Name ?? "<null>"}，" +
+                    $"itemData={(shellItem?.itemData == null ? "null" : shellItem.itemData.IDName)}"));
+                yield break;
+            }
+            gameRes.RegisterPrefabAlias(pair.Key, shell);
         }
 
         string[] addresses = dtos

@@ -777,7 +777,7 @@ public sealed partial class GMReflectionConsole
 
         SetBuffButtonPresentation(
             buffApplyButton,
-            applying ? "正在分发 Buff" : "确认并点选施加",
+            applying ? "批量分发中" : "批量分发",
             applying ? new Color(0.18f, 0.48f, 0.33f, 1f) : new Color(0.66f, 0.32f, 0.15f, 1f));
         SetBuffButtonPresentation(
             buffCancelButton,
@@ -806,7 +806,7 @@ public sealed partial class GMReflectionConsole
         else
         {
             buffTargetingHintText.text =
-                "选择 Buff 后可直接点击下方目标索引；也可先点“确认并点选施加”进入连续分发。";
+                "选择 Buff 后可直接点击下方目标索引；需要连续施加时点击“批量分发”。";
             buffTargetingHintText.color = new Color(0.66f, 0.71f, 0.71f);
         }
     }

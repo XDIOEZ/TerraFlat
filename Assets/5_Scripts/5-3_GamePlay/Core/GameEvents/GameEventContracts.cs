@@ -96,6 +96,9 @@ namespace FlatWorld.Gameplay.Events
 
     public sealed class GameEventActionContext
     {
+        /// <summary>GM 强制触发写入的运行时标记键，不改变正式事件配置参数。</summary>
+        public const string GmForcePayloadKey = "__gmForce";
+
         public GameEventManager Manager { get; }
         public GameEventDefinition Definition { get; }
         public GameEventActionDefinition Action { get; }
@@ -104,6 +107,9 @@ namespace FlatWorld.Gameplay.Events
         public float CurrentTotalTime { get; }
         public float DayLength { get; }
         public JObject TriggerPayload { get; }
+
+        /// <summary>当前事件是否由 GM 面板强制触发；该标记会随事件触发载荷保存。</summary>
+        public bool IsGmForced => TriggerPayload.Value<bool?>(GmForcePayloadKey) == true;
 
         public GameEventActionContext(
             GameEventManager manager,

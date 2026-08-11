@@ -181,7 +181,8 @@ namespace FlatWorld.Automation
                         $"Chunk {chunk.Address} 群系顺序判定不一致：{x},{y}, " +
                         $"expected={expectedBiome}, actual={cell.BiomeId}。");
 
-                bool expectedMountain = !water && height + 0.0001f >= settings.MountainLevel;
+                // 山地必须复用集中群系分类结果，不能在测试里另加阈值容差形成第二套规则。
+                bool expectedMountain = expectedBiome == SurfaceBiomeKind.Stone;
                 if ((mountain > 0.5f) != expectedMountain)
                     throw new InvalidOperationException(
                         $"Chunk {chunk.Address} 山地高度分类不一致：{x},{y}, height={height}, mountain={mountain}。");

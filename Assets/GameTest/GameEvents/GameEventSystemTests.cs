@@ -216,6 +216,50 @@ namespace FlatWorld.GameTest.GameEvents
         }
 
         [Test]
+        [Category("GameEvents.Action")]
+        public void GmForcedCreatureWavesPersistEnvironmentalBypassState()
+        {
+            GameEventDefinition definition = new() { Id = "forced_event" };
+            GameEventActionDefinition actionDefinition = new()
+            {
+                Id = "waves",
+                Type = "creature.waves"
+            };
+            ActiveGameEventSaveData activeEvent = new()
+            {
+                StartedTotalTime = 10f,
+                TriggerPayloadJson = new JObject
+                {
+                    [GameEventActionContext.GmForcePayloadKey] = true
+                }.ToString()
+            };
+            GameEventActionContext context = new(
+                null,
+                definition,
+                actionDefinition,
+                activeEvent,
+                "world",
+                10f,
+                1440f);
+            GameEventActionRuntimeSaveData state = new();
+
+            CreatureWavesGameEventAction action = new();
+            action.Begin(
+                context,
+                JObject.FromObject(new
+                {
+                    prefabId = "Ghost",
+                    waves = 1,
+                    countPerWave = 1
+                }),
+                state);
+
+            JObject runtime = JObject.Parse(state.RuntimeDataJson);
+            Assert.That(context.IsGmForced, Is.True);
+            Assert.That(runtime.Value<bool>("IgnoreEnvironmentalRestrictions"), Is.True);
+        }
+
+        [Test]
         [Category("GameEvents.Save")]
         public void NewSaveDataStartsWithIndependentEventCollections()
         {

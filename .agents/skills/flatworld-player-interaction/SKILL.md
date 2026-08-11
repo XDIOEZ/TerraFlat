@@ -64,11 +64,14 @@ Input System / PlayerInputActions
 - `Mover` 以 `speedTransitionDuration` 平滑切换走路、奔跑和转向速度，松开方向则使用更短的 `stopTransitionDuration`（默认 0.07 秒）减速；体力与饥饿 Buff 仍仅按方向输入结算，移动动画以实际 Rigidbody2D 速度结束为准。`IsGameplayInputLocked` 仍立即清零速度，避免模态 UI 打开后角色滑动。
 - 完整维度切换通过 `ItemMgr.ReleasePlayerForWorldTransition()` 注销旧世界玩家，再由现有加载链重建；不得只移动 Transform 后保留旧 Chunk、Item 索引或场景归属。
 - `Mod_InteractSender` 使用碰撞体所在 GameObject 的 `GetComponent<IInteractable>()`；矿坑入口/出口的 Trigger 与 `DimensionPortal` 必须同节点。`MineEntrance_Summoner` 虽复制入口组件，也必须由建筑角色检查拒绝交互；新版自然 `CaveExit` 通过 `ConfigureGenerated()` 走同格确定性目标，不读取旧玩家锚点。
+- `Mod_InteractSender.TryInteractAtCurrentPosition()` 表示一次明确的新请求：每次按 E 都主动扫描最近目标，即使仍是同一 `IInteractable` 也要再次调用；目标改变时先取消旧交互，瞬态拒绝不得把当前目标永久锁死。外部自动化或控制器清理使用 `CancelCurrentInteraction()`。
 
 ## 近期变更
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-10：E 键主动扫描改为“每次请求都执行”；同一出口若曾在维度加载收尾期间临时拒绝，后续按键仍会重试，切换到其他目标前先取消旧交互，并提供公开取消入口统一清理探测状态。
+- 2026-08-10：保存采集改为约 2.5ms 单帧预算的协程分段处理；保存链不获取玩家输入锁、不禁用 Mover，也不修改 `Time.timeScale`，玩家可在快照跨帧期间继续移动。
 - 2026-08-09：库存槽位将键鼠 PointerDown 与手柄 A/Submit 分离；手柄虚拟光标不再伪装成键鼠点击，避免手上物品交换状态被手柄路径抢占。
 - 2026-08-09：游戏内手柄准星改为以玩家屏幕位置为中心的固定半径径向定位；右摇杆只更新方向，玩家移动及其他手柄按键不会清掉准星，常驻 HUD 不会把它切到 UI 焦点，模态面板仍可接管焦点。
 - 2026-08-09：手柄 B 从背包开关移交为全局 UI 返回，`Win10/B` 保留键盘 B 背包入口；打开的库存面板统一允许手柄取消关闭。
@@ -77,8 +80,6 @@ Input System / PlayerInputActions
 - 2026-08-09：按键绑定服务新增单项清除能力；键鼠与手柄都通过空 `overridePath` 禁用指定条目、保存覆盖并触发 `BindingsChanged`，重绑失败时区分空覆盖与无覆盖以保留清除状态。
 - 2026-08-09：常驻 HUD 快捷栏不再进入手柄焦点导航链；左摇杆只驱动玩家移动，快捷栏仍由十字键左右、滚轮和数字键切换。
 - 2026-08-09：`Mod_InteractSender` 复用 `GameController.LeftClick` 与指针世界坐标，按距离解析 `IInteractable`，石门可直接左键开关且不绕过 UI/输入锁。
-- 2026-08-09：玩家交互确定性天然 `CaveExit` 后，`DimensionPortal` 走专用生成入口分支；完整释放旧 Player/Scene、在新维度同格重建 Player，并等待 WorldModel 目标 ChunkView 表现完成后解锁输入，避免跨 Scene 保留旧 Chunk/Item 上下文。
-- 2026-08-09：玩家走路、奔跑、转向都改为目标速度平滑过渡；松开方向后仅保留 0.07 秒的极短惯性，体力/饥饿结算不延长，动画在实际停下后结束；玩法输入锁仍立即停止。
 ## 修改后自动测试
 
 - 精简 Smoke：`Assets/GameTest/PlayerInteraction/PlayerWorldWrapSmokeTests.cs`；当前只保留玩家跨四边与角落环绕时速度和数据不丢失这一关键行为。
@@ -90,6 +91,7 @@ Input System / PlayerInputActions
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category PlayerInteraction.Smoke`；无需视觉模型或测试工具卡片。涉及 UI、Item/Module、建筑、地图或联机玩家时追加对应分类；只有光标、相机或交互反馈最终观感变化才做定向截图。
 - 管理员无敌的完整运行时回归位于 `Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.PlayerMovement.cs`，在 `OnWorldReady` 验证关闭后受伤、重新开启后拦截致死伤害，并在 Cleanup 恢复玩家状态。
 - 自动保存的玩家可操作性回归位于 `Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.AutoSave.cs`，确认后台写盘结束后输入锁、Mover/Rigidbody2D 与时间缩放均未被保存链改变。
+- 同目标交互重试回归位于 `Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.PlayerMovement.cs`；在真实玩家 `OnWorldReady` 阶段连续调用两次公开扫描入口，断言同一个 `IInteractable` 收到两次请求，并统一恢复距离和探测状态。
 - Player 教程资格、Prefab 接线与远程隔离由 `Assets/GameTest/Guide/NewPlayerGuideSmokeTests.cs`（`Guide.Smoke`）覆盖。
 - 玩家聊天的输入锁、Prefab 接线与按键冲突不再属于精简 Smoke 集合，修改聊天系统时按需运行或补充专项测试。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。

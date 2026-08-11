@@ -68,10 +68,10 @@ namespace FlatWorld.Automation
         }
 
         /// <summary>跨帧等待掉落动画结束，并确认物品仍由新版区块节点持有。</summary>
-        private static void TickItemLifecycleDropScenario()
+        private static bool TickItemLifecycleDropScenario()
         {
             if (itemLifecycleDropOwnershipVerified)
-                return;
+                return true;
             if (itemLifecycleDrop == null)
                 throw new InvalidOperationException("Item lifecycle: 掉落物在验证完成前被销毁。");
 
@@ -82,7 +82,7 @@ namespace FlatWorld.Automation
                 if (Time.time >= itemLifecycleDropDeadline)
                     throw new InvalidOperationException(
                         "Item lifecycle: 掉落物没有挂到新版 ChunkView 临时物品节点。");
-                return;
+                return false;
             }
 
             if (itemLifecycleDrop.itemData?.Stack != null &&
@@ -90,11 +90,14 @@ namespace FlatWorld.Automation
             {
                 itemLifecycleDropOwnershipVerified = true;
                 Debug.Log("[GoldenPath][ItemLifecycle] 掉落物已绑定新版 ChunkView 并完成动画。");
+                return true;
             }
-            else if (Time.time >= itemLifecycleDropDeadline)
+            if (Time.time >= itemLifecycleDropDeadline)
             {
                 throw new InvalidOperationException("Item lifecycle: 掉落动画未在限定时间内完成。");
             }
+
+            return false;
         }
 
         private static void VerifyItemLifecycleAtChunkReady(FlatWorldGoldenPathScenarioContext context)

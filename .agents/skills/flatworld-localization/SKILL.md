@@ -98,6 +98,7 @@ StreamingAssets/GameConfig/Items/*.json
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-09：GMReflectionConsole 属于开发者专用运行时调试 Canvas；本次仅调整 Buff 操作 fallback 文案，保留中文安全回退，未把调试字符串写入正式 `FlatWorldUI` 表。
 - 2026-08-09：新增 Buff 状态 HUD 的动态/静态文案（`状态效果 / BUFFS`、`暂无状态`、`永久`、`剩余 {0}s`）；已登记到 `EnglishUiOverrides` 并同步写入 `FlatWorldUI` 中英文 String Table，语言切换由 HUD 事件刷新。
 - 2026-08-09：按键绑定 UI 新增“清除”及清除状态文案；中文源模板与英文表达已登记到 `EnglishUiOverrides`，并同步写入 `FlatWorldUI` 的中英文 String Table。
 - 2026-08-09：新增保存状态动态文案“正在保存…”/“保存失败”；通过 `EnglishUiOverrides`、`FlatWorldUI` 中英文表和 `GameSaveStatusHUD` 的语言事件刷新。
