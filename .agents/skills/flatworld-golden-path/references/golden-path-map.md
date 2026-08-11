@@ -4,6 +4,8 @@
 
 - 主流程：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathCommand.cs`
 - 场景编排：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.cs`
+- 操作接口与注册表：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathOperations.cs`
+- 跨系统真实操作：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.CrossSystem.cs`
 - 复杂领域场景：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.<Subsystem>.cs`
 - 测试入口：`.agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path`
 - 配置模型：`Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathConfiguration.cs`
@@ -16,12 +18,58 @@
 
 可用 `--golden-config <partial.json>` 或重复的 `--golden-set section.field=<json-value>` 构造本次场景。结果 JSON 的 `configuration` 保存合并、验证后的完整快照；复现失败时直接复用该对象。临时配置只能调整隔离运行时实例，禁止用 Editor API 写 Prefab、SO 或 ProjectSettings 来构造场景。
 
+## JSON 操作选择
+
+每个玩法操作实现 `IFlatWorldGoldenPathOperation` 并使用稳定 ID。默认配置必须保持全部启用；AI 只有在后续操作数量明显增加，或本次开发只需聚焦少数系统时，才按命中领域修改临时 JSON：
+
+```json
+{
+  "scenarios": {
+    "enableAllOperations": true,
+    "enabledOperationIds": [],
+    "disabledOperationIds": []
+  }
+}
+```
+
+- 默认全量：`enableAllOperations=true` 且两个列表为空；未来新增操作会自动进入完整回归。
+- 全量减项：保持 `enableAllOperations=true`，把暂不适用的稳定 ID 放入 `disabledOperationIds`。
+- 系统白名单：设为 `enableAllOperations=false`，只把本次命中系统的 ID 放入 `enabledOperationIds`。
+- `disabledOperationIds` 始终优先；未知、重复、同时启用/禁用的 ID 会在 Python 与 C# 两端启动前失败。`worldWrap`、`hydrology`、`burningBuff` 是旧配置兼容门，相关操作还必须同时通过对应布尔值。
+- 结果 JSON 的 `enabledOperationIds` 回显本次实际选择。新增、改名或删除操作时，必须同步更新 C# 注册表、Python `GOLDEN_OPERATION_IDS`、本表与示例 JSON。
+
+| 稳定操作 ID | 系统 | 主要真实操作 |
+| --- | --- | --- |
+| `player.spawn-land` | Player/Map | 断言玩家出生在权威可走陆地 |
+| `player.interaction-retry` | Player Interaction | 连续两次调用真实交互入口 |
+| `player.run-transition` | Player | 走路、奔跑、惯性与停止 |
+| `player.admin-move-speed` | Player | 管理员移速倍率写入与恢复 |
+| `player.admin-invincibility` | Player/Combat | 无敌开关与真实伤害 |
+| `combat.player-respawn` | Combat/Dimension | 濒死、主世界路由与复活 |
+| `combat.target-damage` | Combat/AI | 玩家附近生成 Chicken，真实受伤与治疗 |
+| `inventory.crafting` | Inventory/Crafting | 正式配方制作并把产物放入真实背包 |
+| `ui.inventory-panel` | UI | 真实背包面板开关、输入锁获取与释放 |
+| `audio.cue-playback` | Audio | `ui.click` Cue 播放句柄与停止回收 |
+| `dialogue.player-speech` | Dialogue | 角色气泡请求、Presenter 与显示事件 |
+| `environment.time-weather` | Environment | 时间推进、降雨切换与恢复 |
+| `environment.ecology` | Environment/Map | 地表气候、生态与水文累计断言 |
+| `environment.tile-effects` | Environment/Buff | 水体 Buff、移速与离水恢复 |
+| `navigation.loaded-grid` | Navigation | 已加载稀疏网格的真实异步寻路 |
+| `building.placement` | Building/Navigation | 玩家附近建筑、占地、阴影与可逆清理 |
+| `item.drop-lifecycle` | Item Module | 掉落、休眠、重绑与生命周期 |
+| `buff.burning` | Buff/Combat | 正式燃烧 Buff、Tick 与表现 |
+| `map.hydrology` | Map | Profile、水文、Biome 与地形表现 |
+| `map.chunk-load-speed` | Map/WorldModel | 区块加载倍率与调度预算 |
+| `world.model-streaming` | WorldModel/AI | Chunk 往返、租约及生物显隐 |
+| `world.wrap` | World/Map | 有限世界跨边界环绕与恢复 |
+| `save.auto` | Data Save | 分帧快照、后台写盘与输入健康 |
+
 水文覆盖通过 `WorldGenerationRuntimeHooks` 同时兼容旧 MapCore 与新版 WorldModel Profile。默认黄金路径已启用确定性强化水文；新版配置除区域、径流、起流量与宽度外，还显式包含 `minimumVisibleCourseLength`、`tributaryStartFlow`、`floodplainStartFlow`。Hook 必须在出生搜索和生成配置冻结前共同应用，退出重进后保持相同指纹。
 
 ## 运行产物与审计
 
 - 每次请求的结构化结果位于 `Library/FlatWorldSkillTests/golden-result-<request-id>.json`。不能只看终端 `PASS`；必须打开该文件，确认 `state=completed`、`outcome=Passed`、`failed=0` 且 `failures` 为空。
-- 主流程监听本次 Play Mode 的 `Error`、`Exception` 和 `Assert`，出现时会把错误消息与堆栈写入结构化失败。运行前用 Unity MCP 清空 Console，运行后用 MCP `read_console` 读取错误详情；不要扫描完整 `Editor.log`。MCP 断线时先重连正确的 Unity 实例。
+- 主流程监听本次 Play Mode 的 `Error`、`Exception`、`Assert` 和 `Warning`。单个接口化操作失败时记录错误、标记该操作故障并继续同阶段其他系统；核心世界/Chunk 状态已无法可靠推进时才进入只收集异步错误的状态。首个错误启动 `execution.errorCollectionSeconds` 宽限计时，计时结束后统一失败退出并写入全部去重错误；警告独立按消息聚合进结果 `warnings`，保留首个堆栈与出现次数，不触发计时或改变通过状态。运行前用 Unity MCP 清空 Console，运行后用 MCP `read_console` 同时读取错误与警告，以补查编译期/Editor 留存消息；不要扫描完整 `Editor.log`。
 - 三张截图位于 `Library/FlatWorldSkillTests/GoldenPathCaptures/<request-id>/initial.png`、`middle.png` 和 `final.png`，并通过结果 JSON 的 `screenshotPaths` 返回。Agent 必须逐张实际打开，检查黑屏、空白、纯色、紫色材质、错误遮罩，以及玩家、地形、主要 HUD 和阶段变化是否正常。
 - 截图审计只补充视觉覆盖，不替代运行时状态断言。结构化结果、运行时报错检查或任一截图审计失败时，都应诊断、修复并重新执行完整黄金路径。
 
@@ -57,6 +105,13 @@
 | 自动保存不锁操作 | `TickWorldReadyScenarios` 完成初始临时状态清理后启动，`OnTraversalTick` 观察 | 自然物、旧 Chunk/差异与 AI 采集可跨帧，后台写入完成、无输入锁、Mover/Rigidbody2D/TimeScale 正常 | 仅清空任务引用 |
 | 玩家长按奔跑与速度过渡 | `OnWorldReady` 调用真实 `Mover.HandleRunInputPressed/Released()` 和 `Mover.Move` | 走路起步、走跑互切均平滑靠近目标速度；松开方向保留默认 0.07 秒的极短惯性后停止，松开奔跑恢复普通速度倍率 | 立即恢复非奔跑状态、原速度与原移动状态；失败路径统一兜底 |
 | 新区块建筑放置 | `OnWorldReady` 使用正式 `Wall_Wood_Summoner` 扫描玩家附近候选格并写入临时石墙；`TickWorldReadyScenarios` 分两帧观察 | 权威地块校验、动态占地和正式虚影正确；`RebuildVersion` 推进后阴影增加，移除再推进一帧后恢复原数量 | 先清理虚影、建筑和召唤器，石墙跨帧断言结束后再清理；失败路径统一兜底 |
+| 正式背包制作 | `OnWorldReady` 从配方目录读取 `core:打制石器`，通过 `CraftingService.Craft` 完成事务并写入玩家背包 | 输入扣除、`ChippedTool` 产出、生产成功事件与真实背包接收链有效 | 深拷贝恢复玩家原背包，清空临时库存引用 |
+| 可恢复战斗目标 | `OnWorldReady` 在玩家附近通过 `ItemMgr` 生成并加载 Chicken | `DamageReceiver.ForceHurt/Heal` 必须真实扣血并恢复 | 通过 `ItemMgr.DespawnItem` 清理目标 |
+| 背包面板开关 | `OnWorldReady` 创建真实玩家背包面板并连续调用两次 `SwitchUI` | 第一次改变开关状态，第二次精确恢复测试前状态 | 操作内立即恢复，不保留 UI 状态 |
+| 音频 Cue 播放 | `OnWorldReady` 从 `AudioService` 解析并播放 `ui.click` | 播放句柄有效且处于活动，停止后立即回收 | Cleanup 再次兜底停止句柄 |
+| 角色气泡发言 | `OnWorldReady` 调用玩家 `CharacterSoliloquyController.Say` | Presenter 接受请求并同步触发 `SpeechShown` | 取消临时事件订阅，短时气泡自行结束 |
+| 时间与天气切换 | `OnWorldReady` 推进当前场景时间并切换为确定强度降雨 | 时间确实推进，`WeatherMgr` 进入有效降雨 | `finally` 恢复原时间、天气类型和强度 |
+| 已加载网格寻路 | `OnWorldReady` 在玩家周围选取确定可走格并提交 `WorldNavigationManager.RequestPath`；`TickWorldReadyScenarios` 等异步回调 | 路径成功、到达目标且至少包含一个 Waypoint | 未完成请求在 Cleanup 取消 |
 | WorldModel 空闲预取、协程表现与生物显隐 | `OnWorldReady` 检查已完成外圈数据和预取并发；往返前按 `ItemMgr.InstantiateItem(...) → Load()` 创建真实 Chicken，原长距离阶段驱动起始区块离开并重新进入可见圈 | 预取实际并发不超过 1；已完成外圈数据 Dormant 且无三类租约；View 解绑后 Chicken inactive，重绑后恢复 active；往返复用同一模型且租约/订阅不重复 | 通过 `ItemMgr.DespawnItem()` 清理测试生物并清空场景引用，生产窗口自行回收 View 与排队项 |
 | 燃烧 Buff | 首次 `OnTraversalTick` 通过 `BuffManager.AddBuff(BurningBuffIds.Burning)` 施加 | 后续移动 Tick 观察玩家生命下降；`OnChunkReady` 确认定义仍注册且至少发生一次 Tick | 移除燃烧并恢复测试前生命值 |
 | 有限世界右边界环绕 | `OnWorldReady` 后、首次截图和长距离移动前，将真实玩家移动到右边界并通过 `Mover.Move` 越界 | 等待规范目标 Chunk Ready，验证环绕余量、玩家数据、Chunk 字典和地图存档键；恢复原位置并再次等待原 Chunk Ready | 通过和失败路径都恢复位置、速度与移动速度 |

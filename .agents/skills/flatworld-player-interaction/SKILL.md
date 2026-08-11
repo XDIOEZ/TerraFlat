@@ -49,6 +49,7 @@ Input System / PlayerInputActions
 - `FlatWorldUI/Cancel` 的键鼠取消键固定为 Esc，手柄 B/Start 负责返回；键盘 B 只走 `Win10/B` 的背包开关，避免 EventSystem 与玩家库存模块同时消费同一次输入。
 - 濒死、过场或联机准备期间使用输入锁定，不要通过禁用整个玩家对象规避输入。
 - 模态 UI 使用 `AcquireGameplayInputLock(owner)` / `ReleaseGameplayInputLock(owner)` 叠加锁定，避免子窗口恢复时误解锁其他系统。
+- 输入锁异常由 `GameController.DescribeGameplayInputLockState()` 输出直接锁状态、所有者数量和所有者类型/名称，供 Golden Path 把阻塞根因直接写入错误摘要；不得用它绕过或清空其他系统持有的锁。
 - 玩家运行时引用优先从 `ItemMgr.User_Player` / `UserPlayerTransform` 获取，兼容单机与联机本地玩家。
 - `Player.Act()` 是显式安全空行为：玩家操作由 `GameController` 与功能模块驱动，不得回退到 `Item.Act()` 触发普通物品 `OnAct` 使用链。
 - `GameController.Load()` / `Save()` 不持有世界存档数据；按键覆盖由 `InputBindingService` 通过 `PlayerPrefsInputBindingStore` 独立加载和保存。
@@ -70,6 +71,7 @@ Input System / PlayerInputActions
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：新增 `GameController.DescribeGameplayInputLockState()` 自动化诊断；修正库存 UI 契约，手部库存/快捷栏不再误获模态锁，真实背包打开与关闭必须分别获取和释放所有者锁。
 - 2026-08-10：E 键主动扫描改为“每次请求都执行”；同一出口若曾在维度加载收尾期间临时拒绝，后续按键仍会重试，切换到其他目标前先取消旧交互，并提供公开取消入口统一清理探测状态。
 - 2026-08-10：保存采集改为约 2.5ms 单帧预算的协程分段处理；保存链不获取玩家输入锁、不禁用 Mover，也不修改 `Time.timeScale`，玩家可在快照跨帧期间继续移动。
 - 2026-08-09：库存槽位将键鼠 PointerDown 与手柄 A/Submit 分离；手柄虚拟光标不再伪装成键鼠点击，避免手上物品交换状态被手柄路径抢占。
@@ -79,7 +81,6 @@ Input System / PlayerInputActions
 - 2026-08-09：启用玩家交互范围时同步物理并主动扫描当前半径，补偿自然物/传送门在玩家到位后完成绑定的动态区块时序；避免首次按 E 依赖遗漏的 `OnTriggerEnter2D`。
 - 2026-08-09：按键绑定服务新增单项清除能力；键鼠与手柄都通过空 `overridePath` 禁用指定条目、保存覆盖并触发 `BindingsChanged`，重绑失败时区分空覆盖与无覆盖以保留清除状态。
 - 2026-08-09：常驻 HUD 快捷栏不再进入手柄焦点导航链；左摇杆只驱动玩家移动，快捷栏仍由十字键左右、滚轮和数字键切换。
-- 2026-08-09：`Mod_InteractSender` 复用 `GameController.LeftClick` 与指针世界坐标，按距离解析 `IInteractable`，石门可直接左键开关且不绕过 UI/输入锁。
 ## 修改后自动测试
 
 - 精简 Smoke：`Assets/GameTest/PlayerInteraction/PlayerWorldWrapSmokeTests.cs`；当前只保留玩家跨四边与角落环绕时速度和数据不丢失这一关键行为。

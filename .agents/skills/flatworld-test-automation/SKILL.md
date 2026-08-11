@@ -43,7 +43,7 @@ description: "Use when validating FlatWorld Unity changes, deciding whether test
 
 4. 若 `python` 不在 PATH，先获取 Codex 工作区依赖，再用返回的 Python 绝对路径执行同一脚本。
 5. 根据进程退出码和结构化失败信息处理结果；不要仅根据 Unity 进程退出码判断测试通过。
-6. 需要检查 Unity 日志时只使用 MCP Console：运行前 `read_console(action="clear")`，运行后 `read_console(action="get", types=["error"], format="detailed")`。不要读取或全文扫描 `Editor.log`；MCP 不可用时先恢复 Unity 连接。
+6. 需要检查 Unity 日志时只使用 MCP Console：运行前 `read_console(action="clear")`，运行后 `read_console(action="get", types=["error", "warning"], format="detailed")`。不要读取或全文扫描 `Editor.log`；MCP 不可用时先恢复 Unity 连接。
 
 常用调用：
 
@@ -86,6 +86,9 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --all
 - 每次测试前先扫描全部 `Assets/**/*.cs`；发现非 UTF-8 或 `U+FFFD (�)` 时一次性列出并终止，不再让 Unity 逐文件编译报错。
 - 打开的 Editor 会在接管请求前同步刷新 AssetDatabase，确保失焦或关闭 Auto Refresh 时也会先编译 AI 的最新修改。
 - `--golden-path` 使用隔离临时存档并只调用公开生产 API；不点击 UI、不发送物理输入。`--golden-config` 接收局部 JSON，重复的 `--golden-set section.field=<json-value>` 可做最后覆盖；未知字段和类型错误必须在运行前拒绝。
+- Golden Path 操作选择使用 `scenarios.enableAllOperations/enabledOperationIds/disabledOperationIds`；默认全部启用，选择模式下 Python 与 Unity 双重拒绝未知、重复和冲突 ID，结果通过 `enabledOperationIds` 回显实际执行集合。
+- `execution.errorCollectionSeconds` 控制 Golden Path 首个运行时错误后的收集宽限期；宽限期内尽量继续可可靠执行的流程并累计去重错误，无法推进时保持运行到计时结束，再统一失败退出。
+- Golden Path 会把本次 Play Mode 捕获的警告按消息聚合到结果 JSON 的 `warnings`（含首个堆栈与 `occurrenceCount`），终端直接显示主要 5 类；警告不启动首错计时，也不单独把通过改为失败。MCP Console 仍用于补查编译期及运行前已存在的 Editor 警告。
 - 黄金路径运行结束后必须按 `$flatworld-golden-path` 读取结构化 JSON、检查本次 `Error/Exception/Assert`，并逐张目视 `initial/middle/final`；截图只做视觉审计，不替代状态断言。
 - Editor 桥接通道在 PlayMode 前后保存并按字节恢复已知易变字体资源，避免动态字形写回污染 Git；不主动切换或保存用户场景。
 - Editor 桥接通道会跨 PlayMode Domain Reload 从 `running/pending` 状态恢复请求、重新挂接 TestRunner 回调，并持久化易变资源快照；测试不依赖用户的 Enter Play Mode 设置。
@@ -95,6 +98,7 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --all
 ## 处理失败
 
 - 先阅读脚本打印的失败测试、消息和堆栈，再定位生产代码。
+- 测试结束后必须直接向用户反馈主要错误：按根因合并重复/连锁项，优先用文字列出最影响流程的 3～5 项及其阶段、影响和建议修复方向；错误较少时全部列出，错误较多时同时报告总数。不得只给结果 JSON 或要求用户自行打开文件查错。
 - 禁止删除测试、弱化断言或改写输入来制造通过。
 - 编译失败时先修复编译；不要让旧程序集的测试结果冒充新代码验证。
 - 若测试分类不存在，运行 `--list-categories` 并更新领域 Skill 的分类记录。
@@ -115,6 +119,8 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --all
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：Golden Path 默认配置启用全部 23 个接口化真实操作；JSON 支持全量减项或系统白名单，运行前验证稳定 ID，结果回显实际操作集合。单项操作异常隔离后继续同阶段其他系统；运行期警告按消息聚合写入 `warnings`，脚本直接显示主要 5 类及次数。
+- 2026-08-11：Golden Path 新增 JSON 字段 `execution.errorCollectionSeconds`；首个运行时错误不再立即退出，而是在可行范围内继续覆盖并收集去重错误，计时结束后统一写入结构化失败；Agent 随后必须按根因文字反馈主要 3～5 项错误，不能只交付 JSON。
 - 2026-08-11：裸跑 `--golden-path` 默认启用已验证的 WorldModel 强化水文参数，并新增帧后移动驱动、整数 Chunk 休眠环带与静止 AI 探针；`wrapped-river-fast.json` 仍用于缩小世界的快速完整回归。
 - 2026-08-11：Golden Path Editor 桥接在接管请求时把 Addressables Play Mode 切到 Fast Mode，避免实机流程复用旧 Bundle；之后仍按原流程刷新 AssetDatabase、编译并进入标准 Domain Reload。
 - 2026-08-10：UI 常驻轮询、通用按钮 DOTween、`BasePanel` 共享层级快照、虚拟光标按需射线及滚动焦点帧末合并改造完成 UTF-8、差异与 Unity 编译检查；新增 `UI.Smoke` 静态契约、快照复用和同 ScrollRect 最后目标回归，`UI`、`GamePlay`、`FlatWorld.GameTest` 相关程序集定向编译通过，独立 batch 日志确认本次文件无诊断，整项目仍只被既有 `GMReflectionConsole` 三处错误阻断；按项目默认未运行 Test Runner。
@@ -123,5 +129,3 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --all
 - 2026-08-10：矿洞死亡返回地表修复完成 GamePlay/Automation 静态编译，并扩展黄金路径的矿洞到主世界复活路由断言；按项目默认未主动运行 Test Runner 或完整 Golden Path。
 - 2026-08-10：矿洞出口首次 E 时序修复完成 GamePlay/Automation 静态编译并新增黄金路径同目标交互重试断言；按项目默认只检查编译与 Console，不主动运行 PlayerInteraction Smoke 或完整 Golden Path。
 - 2026-08-09：新增 Buff 状态 HUD 的 `UI.Smoke` Prefab/Player 绑定、节点、左侧中部锚点和输入穿透契约；完成静态诊断、Prefab 导入、Unity 编译与 Console 检查，按项目默认未运行 Test Runner。
-- 2026-08-09：URP 2D 光照遮挡子层完成 GamePlay/Editor 静态诊断、Unity Console 检查和 Prefab 导入检查；新增建筑黄金路径断言但按项目默认未主动运行 Test Runner。
-- 2026-08-09：新增保存状态 HUD 与手动异步保存回归契约，完成相关脚本静态诊断、Prefab 导入、Unity 编译和 Console 检查；按项目默认未主动运行 UI Smoke/Golden Path Test Runner。

@@ -43,6 +43,7 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：Golden Path 自动化程序集显式引用 `FlatWorld.Audio`，新增 `audio.cue-playback`，在真实世界解析 `ui.click` Cue、验证播放句柄并停止回收；该操作位于背包 UI 开关之前，避免同 Cue 冷却造成误报。
 - 2026-08-08：`GameStartScene/Main Camera` 固定挂载 `AudioListener`，保证主菜单及资源加载阶段始终存在监听器；进入世界后随主菜单场景卸载，由玩家相机监听器接管。
 - 2026-07-30：新增原创 `weather.rain.loop` Ambient Cue；降雨开始时淡入、结束时淡出，状态未变化不重复播放。
 - 2026-07-28：从原音频与对话混合 Skill 中拆分，音频 Skill 仅维护音频服务、Cue、路由与资源边界。
@@ -51,6 +52,7 @@ disable-model-invocation: false
 ## 修改后自动测试
 
 - 基础测试脚本：`Assets/GameTest/Audio/AudioSmokeTests.cs`；当前覆盖 AudioService、AudioCue、RuntimeConfig、Catalog 以及循环雨声 Cue 的资源、总线和循环配置。
+- 真实单机播放与声源池链由 Golden Path 操作 `audio.cue-playback` 覆盖；操作停止后必须确认句柄不再活动，并在 Cleanup 兜底回收。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；音频测试约定目录：`Assets/GameTest/Audio/`；场景目录：`Assets/GameTest/Scenes/Audio/`；冒烟分类：`Audio.Smoke`。
 - 新增 AudioCue、声源池、路由或淡入淡出行为时必须增加系统测试；修复 Bug 时先增加回归测试。核心播放与回收流程变化时同步更新音频冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试必须使用短测试音频或可观察状态，避免依赖人工听感作为唯一判定。

@@ -39,8 +39,11 @@ namespace FlatWorld.Automation
                 "world.noiseScale is outside the production range.");
             Require(TryResolveTopology(out WorldTopologyMode topology),
                 "world.topologyMode must be Wrapped or Infinite.");
-            Require(!scenarios.worldWrap || topology == WorldTopologyMode.Wrapped,
-                "scenarios.worldWrap requires a Wrapped world.");
+            FlatWorldGoldenPathScenarios.ValidateOperationSelection(scenarios);
+            Require(!FlatWorldGoldenPathScenarios.IsOperationEnabled(this,
+                        FlatWorldGoldenPathScenarios.WorldWrapOperationId) ||
+                    topology == WorldTopologyMode.Wrapped,
+                "enabled world.wrap operation requires a Wrapped world.");
             Require(TryResolveDifficulty(out _),
                 "world.difficulty must be Simple, Hard, or Custom.");
 
@@ -91,7 +94,8 @@ namespace FlatWorld.Automation
             Require(execution.startupTimeoutSeconds > 0d &&
                     execution.worldEntryTimeoutSeconds > 0d &&
                     execution.moveTimeoutSeconds > 0d &&
-                    execution.screenshotTimeoutSeconds > 0d,
+                    execution.screenshotTimeoutSeconds > 0d &&
+                    execution.errorCollectionSeconds > 0d,
                 "execution timeouts must be positive.");
             Require(execution.minimumVisitedChunks >= 1 && execution.minimumObservedChunks >= 1,
                 "execution Chunk minimums must be positive.");
@@ -136,7 +140,7 @@ namespace FlatWorld.Automation
         public float cameraOrthographicSize = 10f;
         public float screenshotOrthographicSize = 20f;
         public float wrapMoveSpeed = 12f;
-        public float maximumMoveSpeed = 24f;
+        public float maximumMoveSpeed = 24f; // 自动路径最终有效速度上限，而非未结算修饰的 BaseValue。
         public int waypointCount = 12;
         public float waypointStepChunks = 1.5f;
         public int middleScreenshotWaypointIndex = 5;
@@ -145,6 +149,9 @@ namespace FlatWorld.Automation
     [Serializable]
     internal sealed class GoldenPathScenarioConfiguration
     {
+        public bool enableAllOperations = true;
+        public string[] enabledOperationIds = Array.Empty<string>();
+        public string[] disabledOperationIds = Array.Empty<string>();
         public bool worldWrap = true;
         public bool hydrology = true;
         public bool burningBuff = true;
@@ -178,6 +185,7 @@ namespace FlatWorld.Automation
         public double worldEntryTimeoutSeconds = 180d;
         public double moveTimeoutSeconds = 20d;
         public double screenshotTimeoutSeconds = 15d;
+        public double errorCollectionSeconds = 10d;
         public int minimumVisitedChunks = 10;
         public int minimumObservedChunks = 50;
         public int screenshotSettleFrames = 2;

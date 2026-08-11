@@ -15,7 +15,7 @@ disable-model-invocation: false
 1. `Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_Building.cs`：放置、拆除、状态、角色、快照和联机事务。
 2. `Assets/5_Scripts/5-3_GamePlay/World/Building/BuildingShadow.cs`：放置预览与候选位置。
 3. `Assets/5_Scripts/5-3_GamePlay/World/Building/BuildingOccupancyRegistry.cs`：运行时动态占地。
-4. `Assets/5_Scripts/5-3_GamePlay/World/PathFinding/AstarGameManager.cs`：占地变化后的导航更新。
+4. `Assets/5_Scripts/5-3_GamePlay/World/PathFinding/WorldNavigationManager.cs`：占地变化后的导航更新。
 
 ## 核心模型
 
@@ -72,6 +72,7 @@ Summoner（库存中的持久化载体）
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：项目移除已无引用的 A* Pathfinding Project；动态建筑占地继续通过 `BuildingOccupancyRegistry` 向 `WorldNavigationManager` 提交导航脏格，运行行为不变。
 - 2026-08-11：`Building.Smoke` 补齐 `Tile_Block`、Chunk Palette/Profile、Structure Catalog/Definition/Template 与 `BiomeData` 类型链；共享断言在 AssetDatabase 缓存陈旧时强制同步重导入后再判定，避免合法 ScriptableObject 被误报丢失。
 - 2026-08-11：`Building.Smoke` 不再用 MonoBehaviour 的 `MonoScript.GetClass()` 入口检查纯静态 `BuildingOccupancyRegistry`，改为验证编译类型保持静态，避免把合法静态类误报为脚本失效。
 - 2026-08-09：新区块静态阻挡层新增 `LightOccluders` 子层；石墙写入/移除 `ChunkTerrainData.BlockingTileId` 时同步刷新 URP 2D 阴影体，动态建筑仍保持 GameObject 与 `BuildingOccupancyRegistry` 模型。
@@ -81,11 +82,11 @@ Summoner（库存中的持久化载体）
 - 2026-08-08：`Mod_Building.TryGetBuildingPreviewVisual()` 统一暴露真实预览图片/根节点/占地；`BuildingShadow` 仅在本体材质有效时继承，否则保留 Prefab 默认 Sprite 材质，避免旧建筑材质 GUID 丢失后虚影再次变空。
 - 2026-08-09：修正建筑虚影的排序层级：`Shadow` 位于 `Default` 之后，预览 Sprite 使用高排序序号并在 Prefab 中预设，避免被普通建筑/草地精灵覆盖；Prefab 补齐根节点预览碰撞体并增加层级回归断言。
 - 2026-08-08：建筑召唤器的预览与最终放置改为优先读取 `ChunkMgr.TryGetRuntimeTerrainTile()` 的 `ChunkRuntime/ChunkTerrainData` 权威地块，旧 `Chunk.Map` 仅作兼容回退；`BuildingShadow` 继承建筑本体材质并使用 `Shadow` 排序层，修复新区块下“地块尚未加载”和虚影不显示。
-- 2026-08-05：静态结构与阻挡层迁移到连续 `TileStackCell` API；动态建筑继续只叠加 `BuildingOccupancyRegistry`，导航同时读取地形栈顶层与建筑占用。
 
 ## 修改后自动测试
 
 - 基础测试脚本：`Assets/GameTest/Building/BuildingSmokeTests.cs`；当前基础覆盖建筑模块、动态占地、放置预览 Prefab、虚影材质/排序层与结构目录入口。
+- 真实单机玩家周边放置由 Golden Path 操作 `building.placement` 覆盖；默认全量配置启用，系统聚焦 JSON 可按稳定 ID 单独选择或排除，仍必须保留建筑、石墙、占地与阴影的可逆清理。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；建筑测试约定目录：`Assets/GameTest/Building/`；场景目录：`Assets/GameTest/Scenes/Building/`；冒烟分类：`Building.Smoke`。
 - 新增放置、占地、安装拆除或建筑快照行为时必须增加系统测试；修复 Bug 时先增加回归测试。建筑主流程变化时同步更新建筑冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试创建的占地、Prefab 和临时快照必须清理。

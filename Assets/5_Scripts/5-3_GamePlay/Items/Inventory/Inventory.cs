@@ -166,7 +166,7 @@ public class Inventory
         _boundController = gameController;
         _boundToggleAction = action;
 
-        if (basePanel != null && basePanel.IsOpen())
+        if (basePanel != null && basePanel.IsOpen() && UsesModalGameplayInputLock())
             AcquirePanelInputLock();
     }
 
@@ -276,14 +276,22 @@ public class Inventory
 
         basePanel = UIManager.Instance.CreatePanelFromGameObject(panelPrefab).GetComponentInChildren<BasePanel>();
         ResolvePanelInputController();
-        // 常驻快捷栏不进入 EventSystem 焦点链，避免左摇杆移动时把 HUD 槽位当成导航目标。
-        if (!IsHotBarInventory())
+        bool usesModalGameplayInputLock = UsesModalGameplayInputLock();
+        // 快捷栏与手部库存属于常驻/内部 HUD，不进入模态焦点链，也不锁定玩家输入。
+        if (usesModalGameplayInputLock)
         {
             basePanel.PrepareForGamepadNavigation(closeOnCancel: true);
+            basePanel.Opened += AcquirePanelInputLock;
+            basePanel.Closed += ReleasePanelInputLock;
         }
-        basePanel.Opened += AcquirePanelInputLock;
-        basePanel.Closed += ReleasePanelInputLock;
         basePanel.Closed += CloseActiveContextMenu;
+
+        // 普通背包 Prefab 可能以可见状态保存；先统一为关闭态，确保随后 Open 能触发输入锁事件。
+        // 快捷栏与手部库存保留 Prefab 的显示状态，不参与这次归一化。
+        if (usesModalGameplayInputLock)
+        {
+            basePanel.Close();
+        }
 
         // 如果此 inventory 中保存了面板位置，则尝试在创建时恢复位置
         if (Data != null)
@@ -317,7 +325,8 @@ public class Inventory
 
     private void AcquirePanelInputLock()
     {
-        _boundController?.AcquireGameplayInputLock(this);
+        if (UsesModalGameplayInputLock())
+            _boundController?.AcquireGameplayInputLock(this);
     }
 
     private void ReleasePanelInputLock()
@@ -436,7 +445,7 @@ public class Inventory
         // 槽位是运行时动态创建的，必须在创建完成后重新收集组件并补齐导航图。
         Canvas.ForceUpdateCanvases();
         basePanel.RefreshUIComponents();
-        if (!IsHotBarInventory())
+        if (UsesModalGameplayInputLock())
         {
             basePanel.PrepareForGamepadNavigation(
                 preferredControlName: "UI_Slot",
@@ -1171,6 +1180,12 @@ public class Inventory
     private bool IsHandInventory()
     {
         return this is Inventory_Hand || Data?.Name == ModText.Hand;
+    }
+
+    /// <summary>只有玩家主动打开的库存面板才参与模态输入锁与手柄焦点链。</summary>
+    private bool UsesModalGameplayInputLock()
+    {
+        return !IsHotBarInventory() && !IsHandInventory();
     }
 
     #endregion

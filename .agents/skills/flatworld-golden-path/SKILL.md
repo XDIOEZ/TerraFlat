@@ -18,7 +18,7 @@ description: Continuously evolve FlatWorld's real single-player Runtime.GoldenPa
 1. 先完成生产代码与领域 Smoke 测试，再评估黄金路径。
 2. 只要新行为能在标准单机世界内通过公开生产 API 确定性执行，就必须添加或更新一个黄金路径场景；不要等用户另行要求。
 3. 将场景挂到现有阶段：进入世界后、世界就绪跨帧等待、移动 Tick、Chunk Ready、退出世界前或统一清理。`TickWorldReadyScenarios` 专门等待初始地块的帧末批处理，完成后才允许截图和自动保存；只有新功能确实需要新的生命周期边界时，才修改主编排命令。
-4. 用命名清晰的状态化子场景实现“安排行为 → 跨 Tick 观测 → 断言 → 恢复状态”。回调不得阻塞 Editor 主线程；复杂场景拆到 `FlatWorldGoldenPathScenarios.<Subsystem>.cs` partial 文件。
+4. 每项可选行为实现或适配 `IFlatWorldGoldenPathOperation`，使用稳定 `Id/SystemId` 和“安排行为 → 跨 Tick 观测 → 断言 → 恢复状态”生命周期；复杂场景拆到 `FlatWorldGoldenPathScenarios.<Subsystem>.cs` partial 文件。回调不得阻塞 Editor 主线程。
 5. 使用隔离存档、固定种子和带超时的条件等待。禁止真实输入、用截图代替可观察状态断言、无界等待、随机重试和静默跳过。
 6. 保留原有断言；失败时修复生产代码或测试接线，不得放宽断言制造通过。
 7. 执行受影响领域的 Smoke 分类，然后执行：
@@ -31,17 +31,19 @@ description: Continuously evolve FlatWorld's real single-player Runtime.GoldenPa
 
    ```powershell
    python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path --golden-config .agents/skills/flatworld-golden-path/references/wrapped-river-fast.json
+   python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path --golden-config .agents/skills/flatworld-golden-path/references/inventory-combat-focused.json
    python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path --golden-set world.radius=64 --golden-set player.maximumMoveSpeed=40.0 --golden-set player.screenshotOrthographicSize=24.0
    ```
 
-   AI 可以按本次目标临时配置世界种子/尺寸/Chunk、拓扑、玩家视野与移动、启用的子场景、河流生成参数、超时和覆盖量门槛。新增可调系统参数时，必须同时更新 C# 配置默认值、Python 默认字典、验证、执行器应用逻辑、结果回显和示例；未知字段或类型不匹配必须在启动 Unity 场景前失败。
+   AI 可以按本次目标临时配置世界种子/尺寸/Chunk、拓扑、玩家视野与移动、启用的子场景、河流生成参数、超时和覆盖量门槛。当前默认必须以 `scenarios.enableAllOperations=true` 执行全部操作；后续聚焦系统时可用 `enabledOperationIds` 白名单或 `disabledOperationIds` 黑名单，稳定 ID 与系统映射以 `golden-path-map.md` 为准。新增可调系统参数或操作时，必须同时更新 C# 配置/注册表、Python 默认字典与 ID 集、验证、结果回显和示例；未知字段、类型或操作 ID 必须在启动 Unity 场景前失败。
 
-8. 按下方“运行结果审计”检查结构化结果、运行时报错和全部截图；不得只看到终端 `PASS` 就结束。
-9. 最终总结中说明新场景所在阶段、黄金路径结果、运行时报错检查结论和截图检查结论。
+8. 按下方“运行结果审计”检查结构化结果、运行时错误与警告和全部截图；不得只看到终端 `PASS` 就结束。
+9. 最终总结中说明新场景所在阶段、黄金路径结果、运行时错误与警告检查结论和截图检查结论。失败时必须直接用文字反馈主要错误，不得只提供结果 JSON 让用户自行查找。
 
 ## 持续重试规则
 
 - Golden Path 不设固定执行次数上限；只要仍有可修复的生产代码、资源或测试基础设施问题，就在每次失败后先定位并修复，再重新执行完整流程。
+- 首个运行时错误出现后，由执行器按 JSON 中的 `execution.errorCollectionSeconds` 启动宽限计时。当前状态仍可可靠推进时继续原流程并尽量覆盖、收集更多去重错误；状态机异常导致后续断言已无意义时停止阶段推进，但保持运行直到宽限计时结束，以收集异步错误。计时结束后统一失败退出，Agent 再集中修复已收集错误并从完整 Golden Path 入口开始下一轮。
 - 禁止无修改地重复碰运气；每次重跑前必须有明确的新证据、修复或外部状态恢复。
 - 只有遇到无法由当前项目解决的外部阻塞，或继续执行需要用户提供新的权限/资源时，才停止并提交完整结果证据。
 
@@ -50,11 +52,12 @@ description: Continuously evolve FlatWorld's real single-player Runtime.GoldenPa
 每次执行 `--golden-path` 后都必须完成以下检查：
 
 1. 打开终端输出指向的 `Library/FlatWorldSkillTests/golden-result-<request-id>.json`，要求 `state` 为 `completed`、`outcome` 为 `Passed`、`failed` 为 `0`，并且 `failures` 为空。退出码为 `0` 或终端显示 `PASS` 不能替代这一步。
-2. 明确检查运行时报错。运行前通过 Unity MCP `read_console(action="clear")` 清空 Console；运行后只通过 `read_console(action="get", types=["error"], format="detailed")` 读取 Console 窗口中的本次 `Error`、`Exception` 和 `Assert`，不要读取或扫描完整 `Editor.log`。黄金路径命令也会监听本次 Play Mode 错误并将首个错误转成结构化失败；只要结果或 MCP Console 出现错误，就必须阅读消息与堆栈、修复并重跑。MCP 暂时断线时先恢复/重连 Unity 实例，不用文件日志代替。
+2. 明确检查运行时错误与警告。运行前通过 Unity MCP `read_console(action="clear")` 清空 Console；运行后只通过 `read_console(action="get", types=["error", "warning"], format="detailed")` 读取 Console 窗口中的本次 `Error`、`Exception`、`Assert` 和 `Warning`，不要读取或扫描完整 `Editor.log`。黄金路径命令会在首个 Play Mode 错误后按 `execution.errorCollectionSeconds` 继续收集并把全部去重错误写入结构化失败；本次运行警告按消息聚合到结果 JSON 的 `warnings`，保留首个堆栈与 `occurrenceCount`，终端直接列出主要 5 类。警告不启动首错计时，也不单独把通过改为失败。Agent 必须一次阅读并集中处理本轮消息；不得在发现首个错误时手动提前终止。只有能够证明是预期、无害且与本次改动无关的既有警告才可保留，并在最终总结中说明依据。MCP 暂时断线时先恢复/重连 Unity 实例，不用文件日志代替。
 3. 从结果 JSON 的 `screenshotPaths` 读取截图路径，要求正好包含可访问的 `initial.png`、`middle.png`、`final.png`。逐张使用 `view_image` 或当前环境等效的图像查看能力实际打开，不能只检查文件存在或大小。
 4. 目视确认三张图均不是黑屏、空白、纯色或紫色材质错误；真实玩家、世界地形与主要 HUD 可见；没有报错弹窗或异常遮罩；三个阶段的地形/相机画面与移动流程相符。三张图完全相同或任一图明显异常时，先诊断再重跑。
-5. 截图是额外的视觉回归检查，不能替代生产状态、Chunk、存档或玩法断言。任一结构化结果、运行时报错或截图检查未通过，黄金路径都不得报告完成。
-6. 最终总结至少给出结果 JSON 路径、是否确认无运行时 `Error/Exception/Assert`、三张截图是否全部目视通过，以及截图目录或三条路径。
+5. 截图是额外的视觉回归检查，不能替代生产状态、Chunk、存档或玩法断言。任一结构化结果、运行时错误与警告审计或截图检查未通过，黄金路径都不得报告完成。
+6. 最终总结至少给出结果 JSON 路径、是否确认无运行时 `Error/Exception/Assert/Warning`；若保留预期警告，逐项列出消息、来源和判定依据；同时说明三张截图是否全部目视通过，以及截图目录或三条路径。
+7. 测试失败时，Agent 必须在对话中直接给出“主要错误”文字摘要：按根因合并重复或连锁错误，优先列出最影响流程的 3～5 项，并说明错误消息核心、发生阶段或相关系统、是否阻塞后续覆盖以及建议修复方向。若错误少于 3 项则全部列出；若超过 5 项则补充总错误数，并说明完整清单保存在结果 JSON。JSON 是详细证据和跳转入口，不能代替面向用户的错误反馈。
 
 ## 允许不扩展的情况
 
@@ -114,6 +117,8 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：Golden Path 引入 `IFlatWorldGoldenPathOperation` 注册表与 JSON 全开/白名单/黑名单选择，默认回归 23 项真实操作；新增背包制作、战斗目标、背包 UI、音频 Cue、角色气泡、时间天气和已加载网格寻路覆盖。单项操作失败会隔离并继续同阶段其他系统，结果回显实际启用 ID。
+- 2026-08-11：Golden Path 运行结果审计同时读取 Console 的 `error` 与 `warning`；运行期警告按消息聚合写入结果 `warnings` 并回显出现次数，脚本直接展示主要 5 类。首个错误才启动 JSON 宽限计时，可推进时继续覆盖、不可推进时仅等待异步错误；Agent 必须按根因直接反馈主要错误，JSON 仅作为完整证据。
 - 2026-08-11：默认 Golden Path 启用确定性强化水文；出生搜索与 ChunkMgr 共用 WorldModel Profile Hook，真实移动由帧后协程重放 `Mover.Move`，Berry 掉落完成后才允许休眠；模型往返使用整数 Chunk 环带，Chicken 探针固定在块中心并冻结移动，消除边界和漫步误报。
 - 2026-08-11：取消 Golden Path 固定三次执行上限；改为每次失败必须先修复再持续重跑，直到完整通过或确认存在项目外部阻塞。
 - 2026-08-11：Golden Path 接管请求前验证 Item 外壳及 JSON 关键模块（当前含 `GameItem`、`Mod_Furnace`）的 MonoScript 类型映射；失效时仅重导入对应脚本并等待 Domain Reload，再选择 Addressables Fast Mode，避免陈旧脚本缓存或 Existing Build Bundle。
@@ -122,8 +127,6 @@ GoldenPath 在 `OnWorldReady` 后、首次截图与原长距离流程前，通�
 - 2026-08-10：`OnWorldReady` 新增真实玩家同目标交互重试场景；连续两次调用 `Mod_InteractSender` 公开扫描入口，断言相同 `IInteractable` 不会因首次瞬态拒绝而被缓存锁死，并在清理阶段恢复探测状态。
 - 2026-08-10：自动保存黄金路径继续覆盖分帧采集；新增自然物、旧 Chunk 差异与运行时 AI 跨帧预算执行的真实入口，保持后台写盘、输入、Mover/Rigidbody2D 与 `Time.timeScale` 断言。
 - 2026-08-09：建筑黄金路径在新区块石墙写入/移除前后新增 `ChunkLightOccluderRenderer.ActiveOccluderCount` 断言，验证阻挡层与 URP 光照遮挡子层同步且可逆。
-- 2026-08-09：自动保存场景继续验证手动 `GameManager.SaveGame()` 的分帧快照、后台写盘与 `LastSaveSucceeded`，保持输入、Mover/Rigidbody2D 与 `Time.timeScale` 不受保存影响。
-- 2026-08-09：`ItemLifecycle` 场景在真实 WorldModel 世界中生成短距离 Berry 掉落，跨帧断言物品绑定 `ChunkView` 临时节点且动画结束后可拾取，并在退出前通过 `ItemMgr` 清理，覆盖掉落归属回归链路。
 
 ## 当前地表气候与水文场景（2026-08-08）
 

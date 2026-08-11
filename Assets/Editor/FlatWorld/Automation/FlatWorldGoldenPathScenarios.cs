@@ -52,120 +52,49 @@ namespace FlatWorld.Automation
     {
         internal static void Reset()
         {
-            // 在新的黄金路径开始前重置各玩法场景的静态状态。
-            ResetBurningBuffScenario();
-            ResetHydrologyScenario();
+            // 在新的黄金路径开始前重置全部已注册玩法操作与命令级场景状态。
+            ResetRegisteredOperations();
             ResetWorldWrapScenario();
-            ResetWorldModelScenario();
-            ResetInitialSpawnLandScenario();
-            ResetPlayerInteractionRetryScenario();
-            ResetPlayerRespawnScenario();
-            ResetPlayerRunInputScenario();
-            ResetPlayerMoveSpeedScenario();
-            ResetPlayerAdminInvincibilityScenario();
-            ResetChunkLoadSpeedScenario();
-            ResetItemLifecycleScenario();
-            ResetEcologyScenario();
-            ResetRuntimeTileEffectScenario();
-            ResetBuildingPlacementScenario();
-            ResetAutoSaveScenario();
         }
 
         internal static void OnWorldReady(FlatWorldGoldenPathScenarioContext context)
         {
-            // 玩家和初始 Chunk 就绪后的一次性安排挂在这里。
-            VerifyInitialPlayerSpawnLand(context);
-            RunPlayerInteractionRetryScenario(context);
-            RunPlayerRunInputScenario(context);
-            if (context.Configuration.scenarios.hydrology)
-                BeginHydrologyScenario(context);
-            BeginWorldModelScenario(context);
-            RunPlayerMoveSpeedScenario(context);
-            RunPlayerAdminInvincibilityScenario(context);
-            RunPlayerRespawnScenario(context);
-            RunChunkLoadSpeedScenario(context);
-            BeginItemLifecycleScenario(context);
-            BeginEcologyScenario(context);
-            RunBuildingPlacementScenario(context);
+            // 玩家和初始 Chunk 就绪后，由注册器依照 JSON 操作选择统一安排。
+            RunRegisteredWorldReadyOperations(context);
         }
 
         /// <summary>等待必须跨真实帧完成的世界就绪场景，再启动可能写盘的自动保存。</summary>
         internal static bool TickWorldReadyScenarios(FlatWorldGoldenPathScenarioContext context)
         {
-            if (!TickBuildingPlacementScenario())
-                return false;
-            if (!TickItemLifecycleDropScenario())
-                return false;
-
-            BeginAutoSaveScenario(context);
-            return true;
+            return TickRegisteredWorldReadyOperations(context);
         }
 
         internal static void OnTraversalTick(FlatWorldGoldenPathScenarioContext context)
         {
             // 与移动并行、需要跨 Tick 观测的场景挂在这里。
             // 该回调会重复执行，子场景必须幂等且不得阻塞。
-            if (context.Configuration.scenarios.burningBuff)
-                TickBurningBuffScenario(context);
-            TickItemLifecycleDropScenario();
-            TickAutoSaveScenario(context);
+            RunRegisteredTraversalOperations(context);
         }
 
         internal static void OnChunkReady(FlatWorldGoldenPathScenarioContext context)
         {
             // 每个目标 Chunk 就绪后的阶段断言挂在这里。
-            if (context.Configuration.scenarios.burningBuff)
-                VerifyBurningBuffAtChunkReady(context);
-            if (context.Configuration.scenarios.hydrology)
-                VerifyHydrologyAtChunkReady(context);
-            VerifyItemLifecycleAtChunkReady(context);
-            VerifyEcologyAtChunkReady(context);
-            VerifyRuntimeTileEffectAtChunkReady(context);
+            RunRegisteredChunkReadyOperations(context);
         }
 
         internal static void BeforeWorldExit(FlatWorldGoldenPathScenarioContext context)
         {
             // 完成移动后、退出世界前的长时状态断言挂在这里。
-            if (context.Configuration.scenarios.burningBuff)
-                AssertBurningBuffScenarioCompleted();
-            if (context.Configuration.scenarios.hydrology)
-                AssertHydrologyScenarioCompleted();
-            if (context.Configuration.scenarios.worldWrap)
+            if (IsOperationEnabled(context.Configuration, WorldWrapOperationId))
                 AssertWorldWrapScenarioCompleted();
-            AssertWorldModelScenarioCompleted();
-            AssertInitialSpawnLandScenarioCompleted();
-            AssertPlayerInteractionRetryScenarioCompleted();
-            AssertPlayerRespawnScenarioCompleted();
-            AssertPlayerRunInputScenarioCompleted();
-            AssertPlayerMoveSpeedScenarioCompleted();
-            AssertPlayerAdminInvincibilityScenarioCompleted();
-            AssertChunkLoadSpeedScenarioCompleted();
-            AssertItemLifecycleScenarioCompleted(context);
-            AssertEcologyScenarioCompleted();
-            AssertRuntimeTileEffectScenarioCompleted();
-            AssertBuildingPlacementScenarioCompleted();
-            AssertAutoSaveScenarioCompleted();
+            AssertRegisteredOperationsCompleted(context);
         }
 
         internal static void Cleanup(FlatWorldGoldenPathScenarioContext context)
         {
-            // 通过和失败都会调用；在这里恢复 Buff、生命、物品和临时对象。
-            CleanupBurningBuffScenario();
-            CleanupHydrologyScenario();
+            // 通过和失败都会调用；按注册逆序恢复状态，再处理命令级环绕状态。
+            CleanupRegisteredOperations(context);
             CleanupWorldWrapScenario();
-            CleanupWorldModelScenario();
-            CleanupInitialSpawnLandScenario();
-            CleanupPlayerInteractionRetryScenario();
-            CleanupPlayerRespawnScenario();
-            CleanupPlayerRunInputScenario();
-            CleanupPlayerMoveSpeedScenario();
-            CleanupPlayerAdminInvincibilityScenario();
-            CleanupChunkLoadSpeedScenario();
-            CleanupItemLifecycleScenario();
-            CleanupEcologyScenario();
-            CleanupRuntimeTileEffectScenario();
-            CleanupBuildingPlacementScenario();
-            CleanupAutoSaveScenario();
         }
     }
 }

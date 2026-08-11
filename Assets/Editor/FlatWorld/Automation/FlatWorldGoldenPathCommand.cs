@@ -51,7 +51,9 @@ namespace FlatWorld.Automation
         private static RuntimePhase _runtimePhase;
         private static double _runtimeStartedAt;
         private static double _phaseDeadline;
-        private static string _runtimeError;
+        private static readonly List<RuntimeFailureRecord> RuntimeFailures = new();
+        private static readonly List<RuntimeFailureRecord> RuntimeWarnings = new();
+        private static double _errorCollectionDeadline;
         private static GameManager _gameManager;
         private static SaveDataMgr _saveDataManager;
         private static string _originalSavePath;
@@ -405,9 +407,10 @@ namespace FlatWorld.Automation
             EditorApplication.QueuePlayerLoopUpdate();
             RecordObservedActiveChunks(ChunkMgr.Instance);
 
-            if (!string.IsNullOrEmpty(_runtimeError))
+            if (RuntimeFailures.Count > 0 &&
+                EditorApplication.timeSinceStartup >= _errorCollectionDeadline)
             {
-                FinishRuntime(false, _runtimeError);
+                FinishRuntime(false, "运行时错误收集宽限期已结束。");
                 return;
             }
 
@@ -460,11 +463,14 @@ namespace FlatWorld.Automation
                     case RuntimePhase.WaitForFinalWorldExit:
                         TickWaitForFinalWorldExit();
                         break;
+                    case RuntimePhase.ErrorCollection:
+                        break;
                 }
             }
             catch (Exception exception)
             {
-                FinishRuntime(false, exception.Message, exception.ToString());
+                RecordRuntimeFailure(exception.Message, exception.ToString());
+                _runtimePhase = RuntimePhase.ErrorCollection;
             }
         }
 
@@ -614,7 +620,9 @@ namespace FlatWorld.Automation
                 return;
             }
 
-            if (_executor.Configuration.scenarios.worldWrap)
+            if (FlatWorldGoldenPathScenarios.IsOperationEnabled(
+                    _executor.Configuration,
+                    FlatWorldGoldenPathScenarios.WorldWrapOperationId))
             {
                 FlatWorldGoldenPathScenarios.BeginWorldWrapScenario(CreateScenarioContext());
                 _runtimePhase = RuntimePhase.VerifyWorldWrap;
@@ -659,7 +667,21 @@ namespace FlatWorld.Automation
                 return;
             }
 
-            BeginWorldModelExcursion();
+            BeginWorldModelExcursionOrTraversal();
+        }
+
+        /// <summary>只有配置启用世界模型流送时才执行额外往返，否则直接进入正式路径移动。</summary>
+        private static void BeginWorldModelExcursionOrTraversal()
+        {
+            if (FlatWorldGoldenPathScenarios.IsOperationEnabled(
+                    _executor.Configuration,
+                    FlatWorldGoldenPathScenarios.WorldModelOperationId))
+            {
+                BeginWorldModelExcursion();
+                return;
+            }
+
+            BeginNextWaypoint();
         }
 
         private static void BeginWorldModelExcursion()
@@ -699,7 +721,7 @@ namespace FlatWorld.Automation
             if (_mover == null || _mover.rb == null)
                 throw new InvalidOperationException("无头模型往返时玩家 Mover 已销毁。");
             float distance = WorldTopologyRuntime.Distance(_mover.rb.position, target);
-            if (distance > 0.2f)
+            if (distance > _executor.Configuration.execution.positionTolerance)
             {
                 ThrowIfTimedOut(
                     $"无头模型往返未在限定时间内到达 {target}；" +
@@ -709,8 +731,7 @@ namespace FlatWorld.Automation
                     $"Multiplier={_mover.Speed.MultiplicativeModifier:0.###}，" +
                     $"BodyType={_mover.rb.bodyType}，Simulated={_mover.rb.simulated}，" +
                     $"TimeScale={Time.timeScale:0.###}。");
-                _mover.Speed.BaseValue = Mathf.Clamp(distance * 8f, 2f,
-                    _executor.Configuration.player.maximumMoveSpeed);
+                SetConfiguredEffectiveMoveSpeed(distance);
                 SetMovementDrive(target);
                 _mover.Move(target, Mathf.Max(Time.deltaTime, 0.02f));
                 return;
@@ -743,13 +764,10 @@ namespace FlatWorld.Automation
             Vector2 target = _waypoints[_waypointIndex];
             FlatWorldGoldenPathScenarios.OnTraversalTick(CreateScenarioContext());
             float distance = WorldTopologyRuntime.Distance(_mover.rb.position, target);
-            if (distance > 0.2f)
+            if (distance > _executor.Configuration.execution.positionTolerance)
             {
                 ThrowIfTimedOut($"Mover.Move 未在限定时间内到达 {target}。");
-                _mover.Speed.BaseValue = Mathf.Clamp(
-                    distance * 8f,
-                    2f,
-                    _executor.Configuration.player.maximumMoveSpeed);
+                SetConfiguredEffectiveMoveSpeed(distance);
                 SetMovementDrive(target);
                 _mover.Move(target, Mathf.Max(Time.deltaTime, 0.02f));
                 return;
@@ -761,6 +779,36 @@ namespace FlatWorld.Automation
             _runtimePhase = RuntimePhase.WaitForChunk;
             _phaseDeadline = EditorApplication.timeSinceStartup +
                              _executor.Configuration.execution.worldEntryTimeoutSeconds;
+        }
+
+        /// <summary>
+        /// 将配置速度解释为最终有效速度；反解 BaseValue，保留 Buff、难度和管理员倍率等生产修饰。
+        /// </summary>
+        private static void SetConfiguredEffectiveMoveSpeed(float remainingDistance)
+        {
+            GameValue_float speed = _mover?.Speed;
+            if (speed == null)
+                throw new InvalidOperationException("黄金路径移动缺少有效速度数据。");
+
+            float modifierScale = (1f + speed.AdditiveModifier) * speed.MultiplicativeModifier;
+            if (float.IsNaN(modifierScale) || float.IsInfinity(modifierScale) ||
+                Mathf.Abs(modifierScale) < 0.0001f)
+            {
+                throw new InvalidOperationException(
+                    $"黄金路径无法在速度修饰为 {modifierScale} 时驱动玩家移动。");
+            }
+
+            float desiredEffectiveSpeed = Mathf.Clamp(
+                remainingDistance * 8f,
+                2f,
+                _executor.Configuration.player.maximumMoveSpeed);
+            speed.BaseValue =
+                (desiredEffectiveSpeed - speed.FinalAdditive) / modifierScale - speed.BaseAdditive;
+            if (float.IsNaN(speed.Value) || float.IsInfinity(speed.Value) || speed.Value <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"黄金路径反解后的玩家速度无效：base={speed.BaseValue}, value={speed.Value}。");
+            }
         }
 
         private static void TickWaitForChunk()
@@ -869,7 +917,9 @@ namespace FlatWorld.Automation
             switch (continuation)
             {
                 case ScreenshotContinuation.BeginTraversal:
-                    if (_executor.Configuration.scenarios.worldWrap)
+                    if (FlatWorldGoldenPathScenarios.IsOperationEnabled(
+                            _executor.Configuration,
+                            FlatWorldGoldenPathScenarios.WorldWrapOperationId))
                     {
                         FlatWorldGoldenPathScenarios.BeginWorldWrapRestoration();
                         _runtimePhase = RuntimePhase.RestoreWorldWrap;
@@ -878,7 +928,7 @@ namespace FlatWorld.Automation
                     }
                     else
                     {
-                        BeginWorldModelExcursion();
+                        BeginWorldModelExcursionOrTraversal();
                     }
                     break;
                 case ScreenshotContinuation.ContinueTraversal:
@@ -1047,8 +1097,11 @@ namespace FlatWorld.Automation
                          itemManager != null &&
                          itemManager.User_Player != null &&
                          ChunkMgr.Instance != null;
+            bool verifyWorldModelReentry = FlatWorldGoldenPathScenarios.IsOperationEnabled(
+                _executor.Configuration,
+                FlatWorldGoldenPathScenarios.WorldModelOperationId);
             if (!ready || !IsChunkWindowReady(ChunkMgr.Instance) ||
-                !FlatWorldGoldenPathScenarios.TickWorldModelAiReentry())
+                verifyWorldModelReentry && !FlatWorldGoldenPathScenarios.TickWorldModelAiReentry())
             {
                 ThrowIfTimedOut("退出后重进世界、AI 实体或初始 Chunk 窗口未在限定时间内完成。");
                 return;
@@ -1262,7 +1315,20 @@ namespace FlatWorld.Automation
         {
             if (_runtimePhase == RuntimePhase.Finishing)
                 return;
+            if (RuntimeFailures.Count > 0 &&
+                EditorApplication.timeSinceStartup < _errorCollectionDeadline)
+            {
+                _runtimePhase = RuntimePhase.ErrorCollection;
+                return;
+            }
             _runtimePhase = RuntimePhase.Finishing;
+
+            if (RuntimeFailures.Count > 0)
+            {
+                passed = false;
+                if (string.IsNullOrWhiteSpace(message))
+                    message = "黄金路径检测到运行时错误。";
+            }
 
             try
             {
@@ -1389,23 +1455,13 @@ namespace FlatWorld.Automation
                 failed = passed ? 0 : 1,
                 skipped = 0,
                 inconclusive = 0,
-                failures = passed
-                    ? new List<GoldenPathFailure>()
-                    : new List<GoldenPathFailure>
-                    {
-                        new()
-                        {
-                            fullName = "FlatWorld.DefaultStartScene.CreateWorldMoveStraight",
-                            resultState = "Failed",
-                            message = message ?? "黄金路径失败。",
-                            stackTrace = stackTrace ?? string.Empty,
-                            durationSeconds = Math.Max(
-                                0d,
-                                EditorApplication.timeSinceStartup - _runtimeStartedAt)
-                        }
-                    },
+                failures = CreateFailures(passed, message, stackTrace),
+                warnings = CreateWarnings(),
                 message = passed ? message ?? string.Empty : string.Empty,
                 screenshotPaths = _screenshotPaths?.ToArray() ?? Array.Empty<string>(),
+                enabledOperationIds = FlatWorldGoldenPathScenarios.GetEnabledOperationIds(
+                    _activeRequest.configuration ??
+                    FlatWorldGoldenPathConfiguration.CreateDefault()).ToArray(),
                 configuration = _activeRequest.configuration ??
                                 FlatWorldGoldenPathConfiguration.CreateDefault()
             };
@@ -1413,14 +1469,125 @@ namespace FlatWorld.Automation
 
         private static void OnRuntimeLog(string condition, string stackTrace, LogType type)
         {
+            if (type == LogType.Warning)
+            {
+                RecordRuntimeWarning(condition, stackTrace);
+                return;
+            }
+
             if (type != LogType.Error && type != LogType.Exception && type != LogType.Assert)
                 return;
-            if (!string.IsNullOrEmpty(_runtimeError))
+            RecordRuntimeFailure(condition, stackTrace);
+        }
+
+        /// <summary>记录去重后的运行时警告；警告参与结果审计，但不会触发错误宽限计时。</summary>
+        private static void RecordRuntimeWarning(string message, string stackTrace)
+        {
+            string normalizedMessage = message ?? "未知运行时警告。";
+            if (normalizedMessage.StartsWith("[FlatWorldGoldenPath]", StringComparison.Ordinal))
                 return;
 
-            _runtimeError = string.IsNullOrWhiteSpace(stackTrace)
-                ? condition
-                : condition + Environment.NewLine + stackTrace;
+            string normalizedStackTrace = stackTrace ?? string.Empty;
+            RuntimeFailureRecord existing = RuntimeWarnings.FirstOrDefault(record =>
+                string.Equals(record.message, normalizedMessage, StringComparison.Ordinal));
+            if (existing != null)
+            {
+                existing.occurrenceCount++;
+                return;
+            }
+
+            RuntimeWarnings.Add(new RuntimeFailureRecord
+            {
+                message = normalizedMessage,
+                stackTrace = normalizedStackTrace,
+                occurrenceCount = 1
+            });
+        }
+
+        /// <summary>记录去重后的运行时错误，并在首个错误出现时启动配置化宽限计时。</summary>
+        private static void RecordRuntimeFailure(string message, string stackTrace)
+        {
+            string normalizedMessage = message ?? "未知运行时错误。";
+            string normalizedStackTrace = stackTrace ?? string.Empty;
+            if (RuntimeFailures.Any(record =>
+                    string.Equals(record.message, normalizedMessage, StringComparison.Ordinal) &&
+                    string.Equals(record.stackTrace, normalizedStackTrace, StringComparison.Ordinal)))
+                return;
+
+            if (RuntimeFailures.Count == 0)
+            {
+                double graceSeconds = _executor?.Configuration.execution.errorCollectionSeconds ??
+                                      _activeRequest?.configuration?.execution?.errorCollectionSeconds ??
+                                      FlatWorldGoldenPathConfiguration.CreateDefault()
+                                          .execution.errorCollectionSeconds;
+                _errorCollectionDeadline = EditorApplication.timeSinceStartup + graceSeconds;
+                Debug.LogWarning($"[FlatWorldGoldenPath] 检测到首个运行时错误，将继续收集 {graceSeconds:0.###} 秒。");
+            }
+
+            RuntimeFailures.Add(new RuntimeFailureRecord
+            {
+                message = normalizedMessage,
+                stackTrace = normalizedStackTrace
+            });
+        }
+
+        /// <summary>记录可隔离的玩法操作错误；计时继续，但不会中断同阶段的其他操作。</summary>
+        internal static void RecordRecoverableOperationFailure(
+            string operationId,
+            string systemId,
+            string phase,
+            Exception exception)
+        {
+            string message =
+                $"GoldenPath operation {operationId} ({systemId}) failed during {phase}: " +
+                exception.Message;
+            RecordRuntimeFailure(message, exception.ToString());
+            Debug.LogWarning($"[FlatWorldGoldenPath] {message} 已隔离该操作并继续覆盖其他系统。");
+        }
+
+        /// <summary>把宽限期内收集的全部错误写入结构化结果。</summary>
+        private static List<GoldenPathFailure> CreateFailures(
+            bool passed,
+            string message,
+            string stackTrace)
+        {
+            double duration = Math.Max(0d, EditorApplication.timeSinceStartup - _runtimeStartedAt);
+            if (RuntimeFailures.Count > 0)
+            {
+                return RuntimeFailures.Select((record, index) => new GoldenPathFailure
+                {
+                    fullName = $"FlatWorld.DefaultStartScene.RuntimeError[{index + 1}]",
+                    resultState = "Failed",
+                    message = record.message,
+                    stackTrace = record.stackTrace,
+                    durationSeconds = duration
+                }).ToList();
+            }
+
+            if (passed)
+                return new List<GoldenPathFailure>();
+            return new List<GoldenPathFailure>
+            {
+                new()
+                {
+                    fullName = "FlatWorld.DefaultStartScene.CreateWorldMoveStraight",
+                    resultState = "Failed",
+                    message = message ?? "黄金路径失败。",
+                    stackTrace = stackTrace ?? string.Empty,
+                    durationSeconds = duration
+                }
+            };
+        }
+
+        /// <summary>把本次运行捕获的全部去重警告写入结果 JSON，供脚本和 Agent 直接汇总。</summary>
+        private static List<GoldenPathWarning> CreateWarnings()
+        {
+            return RuntimeWarnings.Select(record => new GoldenPathWarning
+            {
+                message = record.message,
+                stackTrace = record.stackTrace,
+                occurrenceCount = Math.Max(1, record.occurrenceCount)
+            }).ToList();
         }
 
         private static void RecoverState()
@@ -1712,7 +1879,9 @@ namespace FlatWorld.Automation
             _executor?.Dispose();
             _executor = null;
             _runtimePhase = RuntimePhase.None;
-            _runtimeError = null;
+            RuntimeFailures.Clear();
+            RuntimeWarnings.Clear();
+            _errorCollectionDeadline = 0d;
             _gameManager = null;
             _saveDataManager = null;
             _originalSavePath = null;
@@ -1775,6 +1944,7 @@ namespace FlatWorld.Automation
             WaitForWorldExit,
             WaitForWorldReentry,
             WaitForFinalWorldExit,
+            ErrorCollection,
             Finishing
         }
 
@@ -1784,6 +1954,14 @@ namespace FlatWorld.Automation
             BeginTraversal,
             ContinueTraversal,
             CompleteTraversal
+        }
+
+        [Serializable]
+        private sealed class RuntimeFailureRecord
+        {
+            public string message;
+            public string stackTrace;
+            public int occurrenceCount;
         }
 
         [Serializable]
@@ -1813,8 +1991,10 @@ namespace FlatWorld.Automation
             public int skipped;
             public int inconclusive;
             public List<GoldenPathFailure> failures;
+            public List<GoldenPathWarning> warnings;
             public string message;
             public string[] screenshotPaths;
+            public string[] enabledOperationIds;
             public FlatWorldGoldenPathConfiguration configuration;
         }
 
@@ -1826,6 +2006,14 @@ namespace FlatWorld.Automation
             public string message;
             public string stackTrace;
             public double durationSeconds;
+        }
+
+        [Serializable]
+        private sealed class GoldenPathWarning
+        {
+            public string message;
+            public string stackTrace;
+            public int occurrenceCount;
         }
     }
 }

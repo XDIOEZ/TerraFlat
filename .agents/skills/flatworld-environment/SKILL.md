@@ -83,6 +83,7 @@ GameManager.Event_GameWorldEnter
 ## 修改后验证
 
 - 基础测试脚本：`Assets/GameTest/Environment/EnvironmentSmokeTests.cs`；当前覆盖时间、天气、温度、雨效 Resources、`TotalDays` 往返、固定种子确定性天气和跨阶段跳时不重复结算。
+- 真实单机环境入口由 Golden Path 操作 `environment.time-weather` 覆盖：推进当前动态场景时间、切换确定强度降雨并在 `finally` 恢复原时间、天气与强度；水体效果和地表生态仍由 `environment.tile-effects/environment.ecology` 覆盖。
 - 地表静态降水的高度映射与 MapCore 无独立降水噪声契约由 `Assets/GameTest/Map/MapSmokeTests.cs`（`Map.Smoke`）覆盖。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；环境测试约定目录：`Assets/GameTest/Environment/`；场景目录：`Assets/GameTest/Scenes/Environment/`；冒烟分类：`Environment.Smoke`。
 - 新增时间、昼夜、季节、天气、光照或温度行为时必须增加系统测试；修复 Bug 时先增加回归测试。时间推进到环境反馈主流程变化时同步更新环境冒烟场景。

@@ -24,6 +24,31 @@ GOLDEN_PATH_CATEGORY = "Runtime.GoldenPath"
 GOLDEN_REQUEST_PREFIX = "golden-request-"
 GOLDEN_RUNNING_PREFIX = "golden-running-"
 GOLDEN_RESULT_PREFIX = "golden-result-"
+GOLDEN_OPERATION_IDS = {
+    "audio.cue-playback",
+    "buff.burning",
+    "building.placement",
+    "combat.player-respawn",
+    "combat.target-damage",
+    "dialogue.player-speech",
+    "environment.ecology",
+    "environment.tile-effects",
+    "environment.time-weather",
+    "inventory.crafting",
+    "item.drop-lifecycle",
+    "map.chunk-load-speed",
+    "map.hydrology",
+    "navigation.loaded-grid",
+    "player.admin-invincibility",
+    "player.admin-move-speed",
+    "player.interaction-retry",
+    "player.run-transition",
+    "player.spawn-land",
+    "save.auto",
+    "ui.inventory-panel",
+    "world.model-streaming",
+    "world.wrap",
+}
 
 DEFAULT_GOLDEN_CONFIGURATION: dict[str, Any] = {
     "schemaVersion": 1,
@@ -47,7 +72,14 @@ DEFAULT_GOLDEN_CONFIGURATION: dict[str, Any] = {
         "waypointStepChunks": 1.5,
         "middleScreenshotWaypointIndex": 5,
     },
-    "scenarios": {"worldWrap": True, "hydrology": True, "burningBuff": True},
+    "scenarios": {
+        "enableAllOperations": True,
+        "enabledOperationIds": [],
+        "disabledOperationIds": [],
+        "worldWrap": True,
+        "hydrology": True,
+        "burningBuff": True,
+    },
     "hydrology": {
         "overrideGeneration": True,
         "hydrologyRegionSize": 64,
@@ -71,6 +103,7 @@ DEFAULT_GOLDEN_CONFIGURATION: dict[str, Any] = {
         "worldEntryTimeoutSeconds": 180.0,
         "moveTimeoutSeconds": 20.0,
         "screenshotTimeoutSeconds": 15.0,
+        "errorCollectionSeconds": 10.0,
         "minimumVisitedChunks": 10,
         "minimumObservedChunks": 50,
         "screenshotSettleFrames": 2,
@@ -179,7 +212,64 @@ def build_golden_configuration(args: argparse.Namespace) -> dict[str, Any]:
         except json.JSONDecodeError:
             value = raw_value
         set_known_configuration_value(configuration, dotted_path.strip(), value)
+    validate_golden_operation_selection(configuration)
     return configuration
+
+
+def validate_golden_operation_selection(configuration: dict[str, Any]) -> None:
+    """在提交给 Unity 前拒绝拼写错误、重复或互相冲突的操作选择。"""
+    scenarios = configuration["scenarios"]
+    enabled = scenarios["enabledOperationIds"]
+    disabled = scenarios["disabledOperationIds"]
+    for field_name, operation_ids in (
+        ("enabledOperationIds", enabled),
+        ("disabledOperationIds", disabled),
+    ):
+        if not all(isinstance(operation_id, str) for operation_id in operation_ids):
+            raise RunnerError(
+                f"GoldenPath scenarios.{field_name} must contain only strings."
+            )
+        normalized = [operation_id.casefold() for operation_id in operation_ids]
+        if len(normalized) != len(set(normalized)):
+            raise RunnerError(
+                f"GoldenPath scenarios.{field_name} contains duplicate operation IDs."
+            )
+        known_by_normalized_id = {
+            operation_id.casefold(): operation_id for operation_id in GOLDEN_OPERATION_IDS
+        }
+        unknown = sorted(
+            (
+                operation_id
+                for operation_id in operation_ids
+                if operation_id.casefold() not in known_by_normalized_id
+            ),
+            key=str.casefold,
+        )
+        if unknown:
+            raise RunnerError(
+                f"GoldenPath scenarios.{field_name} contains unknown operations: "
+                + ", ".join(unknown)
+            )
+
+    disabled_normalized = {operation_id.casefold() for operation_id in disabled}
+    conflicts = sorted(
+        (
+            operation_id
+            for operation_id in enabled
+            if operation_id.casefold() in disabled_normalized
+        ),
+        key=str.casefold,
+    )
+    if conflicts:
+        raise RunnerError(
+            "GoldenPath operations cannot be both enabled and disabled: "
+            + ", ".join(conflicts)
+        )
+    if not scenarios["enableAllOperations"] and not enabled:
+        raise RunnerError(
+            "GoldenPath scenarios.enabledOperationIds cannot be empty when "
+            "enableAllOperations is false."
+        )
 
 
 def merge_known_configuration(
@@ -596,6 +686,13 @@ def report_result(result: dict[str, Any]) -> int:
         f"{status}: {total} tests; {passed} passed, {failed} failed, "
         f"{skipped} skipped, {inconclusive} inconclusive ({duration:.2f}s)"
     )
+    enabled_operations = result.get("enabledOperationIds", []) or []
+    if enabled_operations:
+        print(
+            f"GoldenPath operations: {len(enabled_operations)} enabled ("
+            + ", ".join(enabled_operations)
+            + ")"
+        )
     for failure in result.get("failures", []) or []:
         print(f"\n- {failure.get('fullName', '<unknown>')}")
         message = str(failure.get("message", "")).strip()
@@ -604,6 +701,16 @@ def report_result(result: dict[str, Any]) -> int:
             print(f"  {message}")
         if stack:
             print("  " + stack.replace("\n", "\n  "))
+    warnings = result.get("warnings", []) or []
+    if warnings:
+        print(f"\nWARN: {len(warnings)} unique runtime warning(s)")
+        for index, warning in enumerate(warnings[:5], start=1):
+            message = str(warning.get("message", "")).strip() or "<empty warning>"
+            occurrence_count = int(warning.get("occurrenceCount", 1) or 1)
+            count_suffix = f" (x{occurrence_count})" if occurrence_count > 1 else ""
+            print(f"  {index}. {message}{count_suffix}")
+        if len(warnings) > 5:
+            print(f"  ... {len(warnings) - 5} more warning(s) are stored in the result JSON.")
     if result.get("resultFile"):
         print(f"\nResult: {result['resultFile']}")
     if result.get("logFile"):
