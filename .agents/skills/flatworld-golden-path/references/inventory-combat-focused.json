@@ -1,0 +1,14 @@
+{
+  "presetName": "inventory-combat-focused",
+  "scenarios": {
+    "enableAllOperations": false,
+    "enabledOperationIds": [
+      "player.spawn-land",
+      "inventory.crafting",
+      "ui.inventory-panel",
+      "audio.cue-playback",
+      "combat.target-damage"
+    ],
+    "disabledOperationIds": []
+  }
+}

@@ -59,6 +59,26 @@ public class GameController : Module
 
     public bool IsGameplayInputLocked => _isGameplayInputLocked || _gameplayInputLockOwners.Count > 0; // 当前是否锁定玩家输入
 
+    /// <summary>生成输入锁诊断文本，供自动化错误报告定位直接锁与叠加锁所有者。</summary>
+    public string DescribeGameplayInputLockState()
+    {
+        var ownerNames = new List<string>(_gameplayInputLockOwners.Count);
+        foreach (object owner in _gameplayInputLockOwners)
+        {
+            if (owner is UnityEngine.Object unityObject)
+            {
+                ownerNames.Add($"{owner.GetType().Name}({unityObject.name})");
+            }
+            else
+            {
+                ownerNames.Add(owner?.GetType().FullName ?? "null");
+            }
+        }
+
+        return $"direct={_isGameplayInputLocked}, ownerCount={ownerNames.Count}, " +
+               $"owners=[{string.Join(", ", ownerNames)}]";
+    }
+
 #endregion
 
 #region Unity生命周期

@@ -87,6 +87,7 @@ Buff 定义、生命周期、效果、叠加与存档统一见 `flatworld-buff`�
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；伤害随机项必须固定输入，死亡和掉落事件必须验证不会重复触发。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Combat.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类；只有攻击特效或界面观感变化才做定向截图。
 - 管理员无敌与主世界复活回归由 `FlatWorldGoldenPathScenarios.PlayerMovement.cs` 在 `OnWorldReady` 通过 `DamageReceiver.ForceHurt()` 覆盖；复活场景同时断言矿洞地址必须走跨维度地表路由，Cleanup 必须恢复生命、玩家名与无敌开关。
+- Golden Path 操作 `combat.target-damage` 在真实玩家附近经 `ItemMgr` 生成 Chicken，调用生产 `DamageReceiver.ForceHurt/Heal` 并清理实体；与既有 `combat.player-respawn` 分别覆盖目标受伤链和玩家死亡链。
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 - 战斗精简 Smoke 位于 `Assets/GameTest/Combat/CombatSmokeTests.cs`（`Combat.Smoke`），保留受击减速与恢复这一关键行为；矿物掉落细节不再属于 Smoke 集合。
 

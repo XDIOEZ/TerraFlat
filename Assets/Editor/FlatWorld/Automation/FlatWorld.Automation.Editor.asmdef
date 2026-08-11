@@ -6,7 +6,10 @@
         "Unity.Addressables.Editor",
         "GamePlay",
         "FlatWorld.WorldModel",
+        "FlatWorld.Audio",
+        "FlatWorld.Dialogue",
         "Data",
+        "UI",
         "GUID:6b2403a08572f7c49b7802a26e472b30"
     ],
     "includePlatforms": [

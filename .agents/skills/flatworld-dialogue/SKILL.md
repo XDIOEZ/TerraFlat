@@ -75,6 +75,7 @@ ICharacterSpeechContextContributor
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：Golden Path 自动化程序集显式引用 `FlatWorld.Dialogue`，新增 `dialogue.player-speech`，在真实玩家上调用 `CharacterSoliloquyController.Say` 并断言 Presenter 的 `SpeechShown` 事件。
 - 2026-08-09：玩家聊天输入框为空或仅包含空白字符时按 Enter 直接关闭输入框，不重新聚焦，也不发布空聊天消息；有内容时继续沿原提交链处理。
 - 2026-08-09：`ScreenSpaceSpeechBubblePresenter` 不再将角色气泡置顶，改为固定在 `PanelRoot` 最底层；背包及其他交互面板始终显示在气泡上方。
 - 2026-08-04：`WeatherExposureSpeechProvider` 扫描附近火源时，先确认物品存在燃料模块再读取点燃状态；普通物品不是错误条件，必须静默跳过，避免按扫描频率重复输出“找不到燃料模块”警告。
@@ -89,6 +90,7 @@ ICharacterSpeechContextContributor
 
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；测试脚本：`Assets/GameTest/Dialogue/DialogueSmokeTests.cs`；场景探针：`Assets/GameTest/Dialogue/DialogueSmokeTestProbe.cs`；测试场景：`Assets/GameTest/Scenes/Dialogue/DialogueSmokeTest.unity`；冒烟分类：`Dialogue.Smoke`。
 - 当前冒烟覆盖 `CriticalHungerFact_ShowsConfiguredSpeech` 完整调度链、角色气泡低于交互面板的层级约束、聊天/气泡 Prefab 约束，以及 Player 天气 Contributor 与降雨 JSON 的已知 Fact 校验。
+- 真实单机 Presenter 链由 Golden Path 操作 `dialogue.player-speech` 覆盖；使用短时确定文本、临时订阅显示事件并立即解除，不写一次性台词存档。
 - 新增 Fact、Provider、Trigger、Presenter 或 JSON 行为时必须增加系统测试；修复 Bug 时先增加可复现问题的回归测试。核心调度链变化时同步更新此场景和冒烟用例。
 - 测试失败时优先修复生产代码，禁止删除测试、弱化断言或修改 JSON 输入来制造通过；随机台词测试必须限制为唯一候选或固定随机状态。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Dialogue.Smoke`；无需视觉模型或测试工具卡片。涉及一次性完成标记、玩家状态、UI 气泡或联机边界时追加对应分类；只有气泡布局或最终观感变化才做定向截图。

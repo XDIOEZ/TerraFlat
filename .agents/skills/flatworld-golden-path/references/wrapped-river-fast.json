@@ -12,6 +12,11 @@
     "waypointStepChunks": 1.0,
     "middleScreenshotWaypointIndex": 3
   },
+  "scenarios": {
+    "enableAllOperations": true,
+    "enabledOperationIds": [],
+    "disabledOperationIds": []
+  },
   "hydrology": {
     "overrideGeneration": true,
     "hydrologyRegionSize": 64,
@@ -27,6 +32,7 @@
     "lakeMinFlow": 0.05
   },
   "execution": {
+    "errorCollectionSeconds": 10.0,
     "minimumVisitedChunks": 4,
     "minimumObservedChunks": 16
   }

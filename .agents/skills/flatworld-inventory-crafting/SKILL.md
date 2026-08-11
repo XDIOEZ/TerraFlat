@@ -86,6 +86,7 @@ disable-model-invocation: false
 - `Assets/5_Scripts/5-3_GamePlay/Items/Equipment/Module_Equipment.cs` 已废弃，优先使用 `Mod_Equipment.cs`。
 - 遗迹容器内容不使用空壳 `Mod_Box`，由 `StructureContainerContents` 配置并在结构物件 `Load()` 后写入 `Mod_Inventory`；固定槽位配置会完整覆盖目标库存，空配置可表示空箱子。
 - Inventory 持有数据和 UI 生命周期，但实际运行更新仍受 Item/Module Tick 调度影响。
+- `Inventory.EnsurePanelCreated()` 只允许真正的模态库存订阅 `Opened/Closed` 输入锁并在创建后归一为关闭态；常驻快捷栏与内部 `Inventory_Hand` 必须保持无模态输入锁，避免玩家出生后移动、奔跑和交互被常驻 HUD 阻塞。
 - `ToggleActionName = B` 的库存仍由键盘 B 自身直接开关；手柄 B 走全局取消关闭库存，不能让两条路径重复消费，库存派生的右键菜单及其物品详情必须在库存关闭时一并销毁。
 - 配方不再依赖 `CraftingRecipe` Addressables 标签；修改 JSON 后检查清单、对应分包、物品 ID 与 `GameRes` 配方字典。
 
@@ -93,6 +94,7 @@ disable-model-invocation: false
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：修正库存面板首次创建的输入锁契约：模态背包先关闭再由公开入口打开并触发锁事件，快捷栏/手部库存排除在锁与手柄模态焦点外；Golden Path 联合验证背包制作与 `ui.inventory-panel` 的锁定/释放。
 - 2026-08-09：拆分库存槽位的键鼠点击与手柄确认入口；键鼠在手上已有物品时保留手部交换，手柄使用当前快捷栏槽位，避免两种交换状态互相占用。
 - 2026-08-09：BerryBush 的新版生态掉落物挂到 `NaturalItems`，采摘不再通过旧 `ChunkMgr` 触发区块加载；临时浆果由自然物表现层在区块解绑时回收。
 - 2026-08-09：手柄 B 默认改为返回，不再打开背包；键盘 B 保留背包开关，库存面板统一接入 `BasePanel` 的手柄取消关闭。
@@ -102,12 +104,12 @@ disable-model-invocation: false
 - 2026-08-09：玩家背包左键改为写入快捷栏当前选中槽并立即同步手持实例，避免物品只进入不可见的 `Inventory_Hand` 缓冲槽；箱子、工作台等独立库存仍保留手部交换。
 - 2026-08-09：库存槽位、动态模块按钮和物品上下文菜单接入手柄焦点、主要/次要操作、滚动跟随与嵌套返回，避免手柄在纯统计条和滚动条上浪费导航步数。
 - 2026-08-08：背包槽位与制作产物预览统一通过 `GameRes.TryGetItemPresentation()` 获取显示贴图；JSON 物品不再从 `AllPrefabs` 的共享模板外壳读取错误图标。
-- 2026-08-08：删除已完整迁移到 JSON 的本体旧配方 SO 与对应 Addressables 目录条目：`4-4_Composite`、`4-5_Cook`；保留旧配方类型仅用于 MOD AssetBundle 兼容。
 ## 修改后自动测试
 
 - 基础测试脚本：`Assets/GameTest/InventoryCrafting/InventoryCraftingSmokeTests.cs`；当前覆盖库存模块、装备、配方、制作公共核心、初始库存资源入口、快捷栏初始选框对齐与切换父节点稳定性，以及 `UI_Bag` 整理按钮和 `UI_Slot` 制作预览图层命名契约。
 - 农业闭环测试：`Assets/GameTest/InventoryCrafting/AgricultureLoopTests.cs`，分类 `InventoryCrafting.Agriculture`；覆盖唯一播种入口、AppleTree 单一 `Mod_Grow`、无无限生产/旧成长模块、肥料补给、倍率单次结算、水肥边界和成长状态 MemoryPack 往返。
 - 公共核心回归：`Assets/GameTest/InventoryCrafting/CraftingCoreTests.cs`，分类 `InventoryCrafting.Core`；覆盖失败不扣料、多输出空间不足不部分产出、输入槽回落、镜像 + Tag + 紧凑网格消费映射和无序配方多余输入拒绝。
+- 真实单机链由 Golden Path 操作 `inventory.crafting` 覆盖：从正式目录执行 `core:打制石器`，把 `ChippedTool` 写入玩家背包并在退出前完整恢复背包；可与 `ui.inventory-panel` 联合选择。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；背包制作测试约定目录：`Assets/GameTest/InventoryCrafting/`；场景目录：`Assets/GameTest/Scenes/InventoryCrafting/`；冒烟分类：`InventoryCrafting.Smoke`。
 - 新增背包、槽位、快捷栏、容器、装备、配方、食物或植物行为时必须增加系统测试；修复 Bug 时先增加回归测试。物品进入背包到使用或制作主流程变化时同步更新冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试物品必须使用隔离数据并验证数量守恒、引用清理和失败路径。

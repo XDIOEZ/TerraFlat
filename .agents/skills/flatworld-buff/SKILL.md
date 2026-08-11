@@ -5,7 +5,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 # FlatWorld Buff 定位
 
-> 最后核对：2026-08-10。
+> 最后核对：2026-08-11。
 
 ## 修改前先读
 
@@ -23,7 +23,9 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 ## 按任务定位
 
-- 修改本体 Buff 数值或组合：编辑 `Assets/StreamingAssets/GameConfig/Buffs/` 下由 `buff-manifest.json` 声明的业务分包；新增分包必须登记稳定 ID、相对路径和启用状态，不要恢复已淘汰的 Buff ScriptableObject 路径。
+- 修改本体 Buff 数值或组合：编辑 `Assets/StreamingAssets/GameConfig/Buffs/` 下由 `buff-manifest.json` 声明的功能模型分包；`periodic_damage.json` 保存周期伤害主模型，`periodic_recovery.json` 保存周期生命恢复，`periodic_resource_change.json` 保存周期资源变化，`attribute_modifiers.json` 保存成对 Start/Stop 属性倍率。复合 Buff 按主要执行模型只归档一次，附加效果仍保留在同一定义的 `effects` 中。
+- 分包 ID/文件名只负责内容编辑与未来 Excel 工作表分组，不参与运行时行为；`category` 仍是饮水延时等规则使用的运行时语义，禁止用文件分类替代 `blood_loss` 等类别。
+- 新增功能模型分包必须登记稳定 ID、相对路径和启用状态，不要恢复已淘汰的 Buff ScriptableObject 路径。
 - 修改字段、类别或叠加规则：同步检查 `BuffDefinitionDto`、`BuffDefinition`、`BuffDefinitionFactory` 和现有 JSON。
 - 新增效果类型：在 `BuffEffectTypeIds` 定义稳定 ID，在 `BuffEffectDispatcher` 注册处理器，并在 `BuffDefinitionFactory.ValidateEffectParameters()` 增加参数校验。
 - 修改添加、移除、叠加、饮水延时或事件：编辑 `BuffManager`。
@@ -34,6 +36,13 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 - 修改模块装配：检查 `Assets/2_Prefabs/Module/Manager/Module_BuffManager.prefab`，并同时使用 `flatworld-item-module`。
 
 `ModuleObserverBase.cs` 与 `ColdWeaponStaminaObserver.cs` 虽位于 Buff 目录，但属于旧模块观察者/武器精力逻辑，不是 JSON Buff 生命周期；修改它们时同时使用 `flatworld-combat` 或 `flatworld-item-module`。
+
+## Excel 往返契约
+
+- 使用 `Buffs` 表保存一行一个 Buff 的公共字段：`packageId`、`id`、显示文本、`category`、持续时间、Tick 间隔、叠加方式与饮水延时。
+- 使用 `Effects` 表保存一行一个效果：`buffId`、`effectIndex`、`phase`、`typeId`、`targetId`、`requiredTag`、`value`；通过 `buffId` 回连 `Buffs`，按 `effectIndex` 恢复 JSON 数组顺序。
+- `packageId` 必须对应 `buff-manifest.json` 中的功能模型分包 ID；导入时按它写回目标 JSON，禁止根据 `category` 猜测文件归属。
+- 禁止把任意数量的效果展开为 `effect1/effect2/...` 固定列，也不要引入模板继承或覆盖语义；每个 Buff JSON 定义保持自包含，确保 JSON 与表格能够无损往返。
 
 ## 高耦合联动
 
@@ -64,6 +73,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 > 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
 
+- 2026-08-11：本体 Buff JSON 从 `combat/environment/survival/movement` 业务来源分包改为 `periodic_damage/periodic_recovery/periodic_resource_change/attribute_modifiers` 功能模型分包；13 个 Buff 的稳定 ID、schemaVersion 1、数值、效果与运行时 `category` 均保持不变，分包层仅服务内容编辑和未来 Excel 分组。
 - 2026-08-10：`PlayerBuffStatusHUD` 移除 `0.25s` 兜底轮询；`BuffManager` 新增仅在显示整秒跨界时触发的 `BuffCountdownChanged`，HUD 的时长文本与条目结构分别按事件刷新，不改变 Buff 权威生命周期。
 - 2026-08-09：新增 `PlayerBuffStatusHUD`/`BuffStatusRowView`，从本地玩家 `BuffManager.ActiveBuffs` 只读展示活动 Buff，使用 `BuffAdded`、`BuffRemoved` 与 `BuffDurationChanged` 刷新；图标暂用 UI 占位符，不改变 Buff 生命周期。
 - 2026-08-09：`光耀` 接入 `ActorStatusVisualEffectController` 的低强度状态光晕，复用圆形 Sprite 做轻微呼吸发光；仍由 `BuffAdded`、`BuffRemoved`、续期事件和 `0.2s` 兜底校验驱动，不改变幽灵真实伤害 Tick。
@@ -73,7 +83,6 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 - 2026-08-08：新版 `TileEffectReceiver` 通过 `ChunkTerrainData` 恢复河流/海洋的 `Tile_Water` 行为；进入水体添加 `水体减速`、`潮湿`，离开时成对移除并恢复移动倍率，旧 `Map` 仅作兼容回退。
 - 2026-08-05：本体 combat 分包新增稳定 ID `燃烧`：持续 5 秒、每秒 1 点真实伤害、重复施加刷新持续时间；真实单机黄金路径会在玩家移动阶段施加并跨 Tick 验证伤害，随后移除 Buff、恢复生命。
 - 2026-08-04：`BuffManager` 的规范模块 ID 固定为 `BuffManager`，并兼容旧存档/Prefab 中的 `Buff模块`；模板提取和模块自动修复不得再把旧 ID 写回运行时索引。
-- 2026-08-04：F4 GM 控制台新增 Buff 分发分页；确认后通过本地 `GameController.LeftClick` 点选带 `BuffManager` 的目标施加已注册 Buff，支持限时 Buff 的时长覆盖与重复施加；清除模式调用 `ClearAllBuffs()`，不会绕过 Stop/Removed 生命周期。
 
 ## 修改后自动测试
 
