@@ -34,4 +34,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界地图、Chunk 流送
 - 默认静态诊断、编译和 Console；系统级变化运行 `Map.Smoke`，按契约追加相关分类。测试目录：`Assets/GameTest/Map/`、`Assets/GameTest/WorldModel/`。
 - 生成测试固定种子并清理 Chunk/Tilemap；视觉只在地形最终观感变化时检查。
 
-生成器、Prefab/资源、Chunk 状态/租约、MapSave 或 Ready 契约变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
+
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

@@ -31,8 +31,7 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 - 检查成功、取消、失败、无保存退出均能释放事件、输入锁、玩家、Chunk 和 Scene。
 - 默认只做静态诊断、编译和 Console；系统级生命周期变化按 `flatworld-test-automation` 选择相关 Smoke，并扩展 Golden Path。
 
-事件顺序、资源阶段、场景/出生点/玩家身份或加载 UI 契约变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
 
-## 近期变更
-
-- 2026-08-12：GameRes 在 Item JSON 后、Recipe 前原子加载 Actor JSON，并维护独立 ActorDefinitions 注册表。
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

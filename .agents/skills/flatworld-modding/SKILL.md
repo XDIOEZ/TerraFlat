@@ -29,8 +29,7 @@ description: "Use when: 定位或修改 FlatWorld 的 MOD 扫描、manifest、�
 - 在隔离 MOD 目录覆盖合法、缺依赖、循环依赖、损坏配置、卸载清理与 Lua 生命周期。
 - 默认不主动跑测试；需要时运行 `Modding.Smoke`。入口：`Assets/GameTest/Modding/ModdingSmokeTests.cs`。
 
-manifest、API/目录限制、加载顺序、Lua/Bundle、存档或 GameRes 接入变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
 
-## 近期变更
-
-- 2026-08-12：definitionFiles 新增 Actor 继承、Bundle 外观覆盖、受限 Lua 行为和卸载回滚；模板包含 forest_wolf 示例。
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

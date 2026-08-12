@@ -18,6 +18,7 @@ namespace FlatWorld.Automation
         void OnTraversalTick(FlatWorldGoldenPathScenarioContext context);
         void OnChunkReady(FlatWorldGoldenPathScenarioContext context);
         void BeforeWorldExit(FlatWorldGoldenPathScenarioContext context);
+        void OnWorldReentered(FlatWorldGoldenPathScenarioContext context);
         void Cleanup(FlatWorldGoldenPathScenarioContext context);
     }
 
@@ -30,6 +31,7 @@ namespace FlatWorld.Automation
         private readonly Action<FlatWorldGoldenPathScenarioContext> onTraversalTick;
         private readonly Action<FlatWorldGoldenPathScenarioContext> onChunkReady;
         private readonly Action<FlatWorldGoldenPathScenarioContext> beforeWorldExit;
+        private readonly Action<FlatWorldGoldenPathScenarioContext> onWorldReentered;
         private readonly Action<FlatWorldGoldenPathScenarioContext> cleanup;
 
         internal string Id { get; }
@@ -46,6 +48,7 @@ namespace FlatWorld.Automation
             Action<FlatWorldGoldenPathScenarioContext> onTraversalTick = null,
             Action<FlatWorldGoldenPathScenarioContext> onChunkReady = null,
             Action<FlatWorldGoldenPathScenarioContext> beforeWorldExit = null,
+            Action<FlatWorldGoldenPathScenarioContext> onWorldReentered = null,
             Action<FlatWorldGoldenPathScenarioContext> cleanup = null)
         {
             Id = id;
@@ -56,6 +59,7 @@ namespace FlatWorld.Automation
             this.onTraversalTick = onTraversalTick;
             this.onChunkReady = onChunkReady;
             this.beforeWorldExit = beforeWorldExit;
+            this.onWorldReentered = onWorldReentered;
             this.cleanup = cleanup;
         }
 
@@ -75,6 +79,9 @@ namespace FlatWorld.Automation
 
         public void BeforeWorldExit(FlatWorldGoldenPathScenarioContext context) =>
             beforeWorldExit?.Invoke(context);
+
+        public void OnWorldReentered(FlatWorldGoldenPathScenarioContext context) =>
+            onWorldReentered?.Invoke(context);
 
         public void Cleanup(FlatWorldGoldenPathScenarioContext context) => cleanup?.Invoke(context);
     }
@@ -201,6 +208,7 @@ namespace FlatWorld.Automation
                     onChunkReady: VerifyRuntimeTileEffectAtChunkReady,
                     beforeWorldExit: _ => AssertRuntimeTileEffectScenarioCompleted(),
                     cleanup: _ => CleanupRuntimeTileEffectScenario()),
+                CreateMetallurgyProgressionOperation(),
                 CreateQuestProgressionOperation(),
                 CreateInventoryCraftingOperation(),
                 CreateCombatTargetDamageOperation(),
@@ -419,6 +427,13 @@ namespace FlatWorld.Automation
                     RecordOperationFailure(operation, "Cleanup", exception);
                 }
             }
+        }
+
+        private static void VerifyRegisteredWorldReentryOperations(
+            FlatWorldGoldenPathScenarioContext context)
+        {
+            foreach (IFlatWorldGoldenPathOperation operation in GetEnabledOperations(context))
+                RunOperationSafely(operation, "OnWorldReentered", () => operation.OnWorldReentered(context));
         }
 
         /// <summary>隔离单项玩法失败，让同一轮仍能覆盖其他互不依赖的系统。</summary>

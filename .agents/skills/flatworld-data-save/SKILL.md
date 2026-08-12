@@ -32,8 +32,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 3. 联动：生命周期→Core，Item/Module→Item，Chunk 差量→Map，协议快照→Networking，内容 Def→对应领域 Skill。
 4. 默认做静态诊断、编译和 Console；需要时运行 `DataSave.Smoke`。测试入口：`Assets/GameTest/DataSave/DataSaveSmokeTests.cs`。
 
-数据类、版本、配置/Addressables、迁移或存档入口变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
 
-## 近期变更
-
-- 2026-08-12：新增 Actor JSON Manifest 与稳定 Addressables 地址，静态参数进入 JSON，AI 当前状态仍由 ModuleData/MemoryPack 保存。
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

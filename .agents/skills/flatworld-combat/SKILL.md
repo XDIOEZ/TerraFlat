@@ -27,8 +27,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 默认不主动跑测试；需要时运行 `Combat.Smoke`，AI 攻击专项同时看 `AI.Smoke`。
 - 测试入口：`Assets/GameTest/Combat/CombatSmokeTests.cs`。
 
-伤害接口、身体部位、技能资源、掉落、Prefab 或网络权威边界变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
 
-## 近期变更
-
-- 2026-08-12：Chicken/WildBoar/Wolf/Ghost 的 DamageReceiver/Mod_Damage 静态配置迁入 Actor JSON，受击/死亡多态动作继续留在 Prefab。
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

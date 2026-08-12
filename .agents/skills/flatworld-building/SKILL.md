@@ -28,8 +28,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 默认做静态诊断、编译和 Console；需要时运行 `Building.Smoke`，真实放置链可用 Golden Path `building.placement`。
 - 测试入口：`Assets/GameTest/Building/BuildingSmokeTests.cs`。
 
-## 近期变更
+## Skill 维护原则
 
-- 2026-08-12：13 个建筑召唤器定义由具体对象文件合并到类别文件 `building_summoners.json`；每条定义仍保留原 `shellPrefab`，建筑放置、快照、占地及专用组件不变。
-
-角色、快照版本、占地、校验、Prefab/结构路径变化时更新本 Skill；近期变更最多 5 条。
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

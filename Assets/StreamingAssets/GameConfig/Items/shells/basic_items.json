@@ -14,15 +14,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Item/Prop.prefab",
       "gameName": "Bone",
-      "description": "物品名称：Bone\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n    - Material\r\n  Material:\r\n    - Wood\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "动物遗留的骨头，可用于制作简易工具与武器。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_327.png[Item_Tool_327]",
         "rendererLocalPosition": {
@@ -95,15 +93,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Item/CharredMatter.prefab",
       "gameName": "CharredMatter",
-      "description": "物品名称：CharredMatter\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n    - Material\r\n  Material:\r\n    - Wood\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "高温处理失败后留下的烧焦物，价值有限。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/resources_basic.png[resources_basic_4]",
         "rendererLocalPosition": {
@@ -176,15 +172,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Item/Earth.prefab",
       "gameName": "Earth",
-      "description": "物品名称：Earth\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "常见的泥土，可用于基础种植与建造。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_231.png[Item_Tool_231]",
         "rendererLocalPosition": {
@@ -257,7 +251,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Item/Leaf.prefab",
       "gameName": "Leaf",
-      "description": "物品名称：Leaf\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "柔韧的树叶，可作为火绒或基础制作材料。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -422,15 +416,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Item/Leather.prefab",
       "gameName": "Leather",
-      "description": "物品名称：Leather\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "处理后的皮革，可用于制作耐用装备。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/icons_sheet.png[icons_sheet_69]",
         "rendererLocalPosition": {
@@ -542,15 +534,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Item/Plank.prefab",
       "gameName": "Plank",
-      "description": "物品名称：Plank\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "加工后的木板，是建筑和制作的常用材料。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Plant/Tree/item299.png[item299]",
         "rendererLocalPosition": {
@@ -623,15 +613,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Item/RawHide.prefab",
       "gameName": "RawHide",
-      "description": "物品名称：RawHide\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "尚未鞣制的生皮，可进一步加工为皮革。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/RawHide.png[RawHide]",
         "rendererLocalPosition": {
@@ -743,15 +731,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Item/Rope.prefab",
       "gameName": "Rope",
-      "description": "物品名称：Rope\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "结实的绳索，可用于制作工具、建筑和装备。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/icons_sheet.png[icons_sheet_80]",
         "rendererLocalPosition": {
@@ -824,15 +810,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Item/Twine.prefab",
       "gameName": "Twine",
-      "description": "物品名称：Twine\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "由纤维搓成的细绳，适合基础制作。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Plant/Tree/item302.png[item302]",
         "rendererLocalPosition": {
@@ -905,7 +889,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Mineral/Ingot/Ingot_Bronze.prefab",
       "gameName": "Ingot_Bronze",
-      "description": "物品名称：Ingot_Bronze\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：Ingot(),物品材质：Copper\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "铜与锡冶炼得到的青铜锭，可用于制作青铜器具。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1063,14 +1047,16 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Mineral/Ingot/Ingot_RawIron.prefab",
       "gameName": "Ingot_RawIron",
-      "description": "物品名称：Ingot_RawIron\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：Ingot(),物品材质：Iron\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "铁矿初步冶炼得到的粗铁锭，可用于制作第一批金属工具。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
       "tags": [
-        ""
+        "Ingot",
+        "Iron",
+        "RawIron"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Ore/ores.png[ores_10]",
@@ -1144,14 +1130,15 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Mineral/Ingot/Ingot_Steel.prefab",
       "gameName": "Ingot_Steel",
-      "description": "物品名称：Ingot_Steel\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "铁与碳高温冶炼得到的钢锭，可用于制作高强度防具。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
       "tags": [
-        ""
+        "Ingot",
+        "Steel"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Tool/Item_ingot_001.png[Item_ingot_001]",
@@ -1225,7 +1212,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Mineral/Ingot/Ingot_Tin.prefab",
       "gameName": "Ingot_Tin",
-      "description": "物品名称：Ingot_Tin\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：Ingot(),物品材质：Copper\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "锡矿冶炼得到的锡锭，是制作青铜的合金材料。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1304,14 +1291,16 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Mineral/Ingot/Ingot_WroughtIron.prefab",
       "gameName": "Ingot_WroughtIron",
-      "description": "物品名称：Ingot_WroughtIron\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：Ingot(),物品材质：Iron\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "进一步提炼粗铁得到的熟铁锭，可用于制作更坚固的铁制工具。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
       "tags": [
-        ""
+        "Ingot",
+        "Iron",
+        "WroughtIron"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Tool/Item_ingot_004.png[Item_ingot_004]",
@@ -1385,15 +1374,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Mineral/Ore/Ore_Coal.prefab",
       "gameName": "Ore_Coal",
-      "description": "物品名称：Ore_Coal\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "可燃的煤炭，既能提供高温，也能参与炼钢。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_229.png[Item_Tool_229]",
         "rendererLocalPosition": {
@@ -1505,7 +1492,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Mineral/Ore/Ore_Copper.prefab",
       "gameName": "Ore_Copper",
-      "description": "物品名称：Ore_Copper\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "含铜的矿石，可在熔炉中冶炼为铜锭。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1584,15 +1571,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Mineral/Ore/Ore_Flint.prefab",
       "gameName": "Ore_Flint",
-      "description": "物品名称：Ore_Flint\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "坚硬而锋利的燧石，可用于打火和制作石器。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_239.png[Item_Tool_239]",
         "rendererLocalPosition": {
@@ -1665,13 +1650,16 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Mineral/Ore/Ore_Iron.prefab",
       "gameName": "Ore_Iron",
-      "description": "物品名称：Ore_Iron\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：Ore(),物品材质：Tin\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "含铁的矿石，可在熔炉中冶炼为粗铁锭。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Ore",
+        "Iron"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_391.png[Item_Tool_391]",
         "rendererLocalPosition": {
@@ -1744,15 +1732,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Mineral/Ore/Ore_MagicalStone.prefab",
       "gameName": "Ore_MagicalStone",
-      "description": "物品名称：Ore_MagicalStone\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:11.78\n物品特殊数据：\n全局唯一标识：0",
+      "description": "蕴含异常能量的矿石，可用于特殊制作。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/resources_basic.png[resources_basic_36]",
         "rendererLocalPosition": {
@@ -1865,15 +1851,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Mineral/Ore/Ore_Tin.prefab",
       "gameName": "Ore_Tin",
-      "description": "物品名称：Ore_Tin\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：Ore(),物品材质：Copper\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "含锡的矿石，可在熔炉中冶炼为锡锭。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_393.png[Item_Tool_393]",
         "rendererLocalPosition": {
@@ -2276,7 +2260,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Food/Coconut_Addle.prefab",
       "gameName": "Coconut_Addle",
-      "description": "物品名称：Coconut_Green\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：-701546922",
+      "description": "已经变质的椰子，不适合直接食用。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -2441,15 +2425,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Food/Coconut_Green.prefab",
       "gameName": "Coconut_Green",
-      "description": "物品名称：Coconut_Green\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：-701546922",
+      "description": "尚未处理的青椰子，内部保存着椰肉和椰汁。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_165.png[Item_Tool_165]",
         "rendererLocalPosition": {
@@ -2522,15 +2504,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Food/Coconut_Half.prefab",
       "gameName": "Coconut_Half",
-      "description": "物品名称：Coconut_Green\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：-701546922",
+      "description": "劈开的半边椰子，可继续取出椰肉和椰壳。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/Item_Food_009.png[Item_Food_009]",
         "rendererLocalPosition": {
@@ -2603,15 +2583,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Food/Coconut_Nude.prefab",
       "gameName": "Coconut_Nude",
-      "description": "物品名称：Coconut_Green\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：-701546922",
+      "description": "去除外层纤维的椰子，可以进一步劈开。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/Item_Food_Fruit.png[Item_Food_Fruit_98]",
         "rendererLocalPosition": {
@@ -2684,15 +2662,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Food/Coconut_Shell.prefab",
       "gameName": "Coconut_Shell",
-      "description": "物品名称：Coconut_Green\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：-701546922",
+      "description": "坚硬的椰壳，可当作简易容器或制作材料。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/椰子壳-空.png[椰子壳-空]",
         "rendererLocalPosition": {
@@ -2765,7 +2741,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Food/Coconut_Water.prefab",
       "gameName": "Coconut_Water",
-      "description": "物品名称：Coconut_Green\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：-701546922",
+      "description": "清甜的椰子水，可以补充水分。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -2930,7 +2906,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Food/Coconut_WaterSalt.prefab",
       "gameName": "Coconut_WaterSalt",
-      "description": "物品名称：Coconut_Green\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：-701546922",
+      "description": "混入盐分的椰子水，饮用前应谨慎处理。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -3472,7 +3448,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Food/Egg_Cooked.prefab",
       "gameName": "Egg_Cooked",
-      "description": "物品名称：CookedEgg\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "经过烹饪的鸡蛋，可以安全食用。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -3637,7 +3613,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Food/Fat.prefab",
       "gameName": "Fat",
-      "description": "物品名称：Fat\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "从动物组织取得的脂肪，可作为燃料或烹饪材料。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -3802,7 +3778,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Food/Meat.prefab",
       "gameName": "Meat",
-      "description": "物品名称：RawMeat\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "未经烹饪的生肉，应加热后再食用。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -3967,7 +3943,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Food/Meat_Cooked.prefab",
       "gameName": "Meat_Cooked",
-      "description": "物品名称：CookedMeat\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "经过烹饪的熟肉，可以恢复饱食度。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -4132,7 +4108,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Food/Meat_Dehydrate.prefab",
       "gameName": "Meat_Dehydrate",
-      "description": "物品名称：RawMeat\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "脱水保存的肉干，便于长时间携带。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -4297,7 +4273,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Food/Meat_Rotten.prefab",
       "gameName": "Meat_Rotten",
-      "description": "物品名称：RawMeat\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "已经腐败的肉，食用会带来风险。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -4627,15 +4603,13 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Materials/Humus.prefab",
       "gameName": "Humus",
-      "description": "物品名称：RawMeat\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "description": "富含有机质的腐殖土，适合改善种植环境。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/腐植.png[腐植]",
         "rendererLocalPosition": {

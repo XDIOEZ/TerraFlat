@@ -1032,8 +1032,20 @@ namespace FlatWorld.Localization.Editor
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(entry.Value))
+            if (string.IsNullOrWhiteSpace(entry.Value) || IsDebugItemDescription(entry.Value))
                 entry.Value = value ?? string.Empty;
+        }
+
+        /// <summary>只识别旧 ItemData.ToString 污染，不覆盖人工维护的正常中文翻译。</summary>
+        private static bool IsDebugItemDescription(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            return value.Contains("物品名称：", StringComparison.Ordinal) ||
+                   value.Contains("物品堆叠信息：", StringComparison.Ordinal) ||
+                   value.Contains("全局唯一标识：", StringComparison.Ordinal) ||
+                   value.Contains("TagDictionary:", StringComparison.Ordinal);
         }
 
         private static void SetEnglishValue(

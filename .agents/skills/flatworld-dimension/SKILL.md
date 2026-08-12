@@ -28,4 +28,7 @@ description: "Use when: 定位或修改 FlatWorld 的维度、星球表面/地�
 - 地址/生命周期联动 Core+Data；生成联动 Map；环境联动 Environment；联机限制联动 Networking。
 - 默认不主动跑测试；需要时运行 `Dimension.Smoke`，地块效果追加 `Dimension.TileEffects`。测试目录：`Assets/GameTest/Dimension/`。
 
-地址格式、切换链、生成种子、入口/进度、环境或联机边界变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
+
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

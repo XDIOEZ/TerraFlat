@@ -135,7 +135,9 @@ namespace FlatWorld.Localization
                     key,
                     fallbackBehavior: FallbackBehavior.UseProjectSettings);
 
-                if (!string.IsNullOrWhiteSpace(localized) && !string.Equals(localized, key, StringComparison.Ordinal))
+                if (!string.IsNullOrWhiteSpace(localized) &&
+                    !string.Equals(localized, key, StringComparison.Ordinal) &&
+                    !IsLegacyItemDebugText(localized))
                     return localized;
             }
             catch (Exception)
@@ -144,6 +146,17 @@ namespace FlatWorld.Localization
             }
 
             return string.IsNullOrWhiteSpace(fallback) ? key : fallback;
+        }
+
+        /// <summary>阻断旧迁移误写进 String Table 的 ItemData.ToString 调试文本。</summary>
+        private static bool IsLegacyItemDebugText(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            return value.Contains("物品名称：", StringComparison.Ordinal) &&
+                   (value.Contains("全局唯一标识：", StringComparison.Ordinal) ||
+                    value.Contains("物品堆叠信息：", StringComparison.Ordinal));
         }
 
         /// <summary>生成本体物品名称的稳定 String Table key。</summary>

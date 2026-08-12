@@ -423,7 +423,7 @@
       ],
       "outputs": [
         {
-          "itemId": "Pickaxe_Stone",
+          "itemId": "Pickaxe_RawIron",
           "amount": 1
         }
       ],
@@ -509,6 +509,58 @@
           "itemId": "Pickaxe_Copper",
           "amount": 1
         }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:熟铁镐",
+      "displayName": "熟铁镐",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 3,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Ingot_WroughtIron", "tag": "", "amount": 1 },
+        { "slot": 1, "match": "exact_item", "itemId": "Ingot_WroughtIron", "tag": "", "amount": 1 },
+        { "slot": 2, "match": "exact_item", "itemId": "Ingot_WroughtIron", "tag": "", "amount": 1 },
+        { "slot": 3, "match": "exact_item", "itemId": "Rope", "tag": "", "amount": 1 },
+        { "slot": 4, "match": "exact_item", "itemId": "Stick_Wood", "tag": "", "amount": 1 },
+        { "slot": 5, "match": "exact_item", "itemId": "Rope", "tag": "", "amount": 1 },
+        { "slot": 6, "match": "exact_item", "itemId": "", "tag": "", "amount": 0 },
+        { "slot": 7, "match": "exact_item", "itemId": "Stick_Wood", "tag": "", "amount": 1 },
+        { "slot": 8, "match": "exact_item", "itemId": "", "tag": "", "amount": 0 }
+      ],
+      "outputs": [
+        { "itemId": "Pickaxe_Iron", "amount": 1 }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:钢制铁甲",
+      "displayName": "钢制铁甲",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 3,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Ingot_Steel", "tag": "", "amount": 1 },
+        { "slot": 1, "match": "exact_item", "itemId": "", "tag": "", "amount": 0 },
+        { "slot": 2, "match": "exact_item", "itemId": "Ingot_Steel", "tag": "", "amount": 1 },
+        { "slot": 3, "match": "exact_item", "itemId": "Ingot_Steel", "tag": "", "amount": 1 },
+        { "slot": 4, "match": "exact_item", "itemId": "Ingot_Steel", "tag": "", "amount": 1 },
+        { "slot": 5, "match": "exact_item", "itemId": "Ingot_Steel", "tag": "", "amount": 1 },
+        { "slot": 6, "match": "exact_item", "itemId": "Ingot_Steel", "tag": "", "amount": 1 },
+        { "slot": 7, "match": "exact_item", "itemId": "Ingot_Steel", "tag": "", "amount": 1 },
+        { "slot": 8, "match": "exact_item", "itemId": "Ingot_Steel", "tag": "", "amount": 1 }
+      ],
+      "outputs": [
+        { "itemId": "Chestplate_Iron", "amount": 1 }
       ],
       "actions": []
     }

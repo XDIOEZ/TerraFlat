@@ -32,6 +32,7 @@ namespace FlatWorld.Gameplay.Progress
         public const string InventoryOpened = "inventory.opened";
         public const string ItemPickedUp = "item.picked_up";
         public const string CraftSucceeded = "craft.succeeded";
+        public const string SmeltSucceeded = "smelt.succeeded";
         public const string BuildingPlaced = "building.placed";
         public const string FireSeedCreated = "fire_seed.created";
         public const string FurnaceIgnited = "furnace.ignited";
@@ -48,6 +49,7 @@ namespace FlatWorld.Gameplay.Progress
         public static event Action<Player> InventoryOpened;
         public static event Action<Player, string> PickupSucceeded;
         public static event Action<Player, string> CraftSucceeded;
+        public static event Action<Player, string> SmeltSucceeded;
         public static event Action<Player, string> BuildingPlaced;
         public static event Action<Player, string> FireSeedCreated;
         public static event Action<Player, string> FurnaceIgnited;
@@ -63,6 +65,7 @@ namespace FlatWorld.Gameplay.Progress
             InventoryOpened = null;
             PickupSucceeded = null;
             CraftSucceeded = null;
+            SmeltSucceeded = null;
             BuildingPlaced = null;
             FireSeedCreated = null;
             FurnaceIgnited = null;
@@ -98,6 +101,16 @@ namespace FlatWorld.Gameplay.Progress
 
             InvokeSafely(CraftSucceeded, actor, outputItemId);
             PublishSignal(new GameplayProgressSignal(actor, GameplayProgressTypes.CraftSucceeded, outputItemId, amount));
+        }
+
+        /// <summary>仅在熔炼产物已写入输出库存后发布，失败、烧焦和预览都不得调用。</summary>
+        public static void PublishSmeltSucceeded(Player actor, string outputItemId, float amount = 1f)
+        {
+            if (actor == null || string.IsNullOrWhiteSpace(outputItemId))
+                return;
+
+            InvokeSafely(SmeltSucceeded, actor, outputItemId);
+            PublishSignal(new GameplayProgressSignal(actor, GameplayProgressTypes.SmeltSucceeded, outputItemId, amount));
         }
 
         public static void PublishBuildingPlaced(Player actor, string buildingId, float amount = 1f)

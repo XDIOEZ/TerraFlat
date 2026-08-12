@@ -4,7 +4,7 @@
 
 | 路径 | 权威职责 | 首选搜索词 |
 | --- | --- | --- |
-| `Assets/5_Scripts/5-7_Localization/FlatWorldLocalizationService.cs` | Locale 初始化、语言切换、PlayerPrefs 持久化、String Table 查询、物品/UI key | `TrySetLocale`, `Get(`, `GetUiText`, `GetUiFormat`, `LanguageChanged` |
+| `Assets/5_Scripts/5-7_Localization/FlatWorldLocalizationService.cs` | Locale 初始化、语言切换、PlayerPrefs 持久化、String Table 查询、旧物品调试文本过滤、物品/UI key | `TrySetLocale`, `Get(`, `IsLegacyItemDebugText`, `GetUiText`, `GetUiFormat`, `LanguageChanged` |
 | `Assets/5_Scripts/5-7_Localization/LocalizedTextBinder.cs` | TMP 文本绑定、语言事件订阅、fallback 刷新 | `Configure`, `Refresh`, `LanguageChanged` |
 | `Assets/5_Scripts/5-7_Localization/FlatWorld.Localization.asmdef` | 运行时本地化程序集；引用 `Unity.Localization` 与 `Unity.TextMeshPro` | `FlatWorld.Localization` |
 | `Assets/5_Scripts/5-5_UI/FlatWorldUIAutoLocalizer.cs` | 为面板内仍含中文的 TMP 文本动态补充 UI 表绑定；不改布局 | `BindStaticTexts`, `ContainsChinese` |
@@ -15,7 +15,7 @@
 
 | 路径 | 权威职责 | 注意事项 |
 | --- | --- | --- |
-| `Assets/5_Scripts/5-2_Editor/Localization/FlatWorldLocalizationSetup.cs` | 菜单 `FlatWorld/Localization/Setup Default Tables`；创建 Locale、同步物品/任务/UI 表 | 修改同步规则后必须重新执行菜单并检查 Console |
+| `Assets/5_Scripts/5-2_Editor/Localization/FlatWorldLocalizationSetup.cs` | 菜单 `FlatWorld/Localization/Setup Default Tables`；创建 Locale、同步物品/任务/UI 表并替换旧 ItemData 调试描述 | 修改同步规则后必须重新执行菜单并检查 Console |
 | `Assets/5_Scripts/5-2_Editor/Editor.asmdef` | 编辑器程序集引用 `FlatWorld.Localization`、`Unity.Localization.Editor`、`Unity.TextMeshPro` | 编辑器扫描 TMP 时缺少引用会产生编译错误 |
 | `Assets/Localization/LocalizationSettings.asset` | Unity Localization Settings | 不要手工删除后只保留代码配置 |
 | `Assets/Localization/Locales/zh-CN.asset` | 简体中文 Locale | 默认语言 |

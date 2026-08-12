@@ -270,6 +270,7 @@ public static class ItemDefinitionMigrationTool
         JObject existingRoot = File.Exists(ManifestPath)
             ? ItemDefinitionCatalogLoader.LoadBuiltInSourceCatalog()
             : new JObject();
+        Dictionary<string, JObject> existingDefinitions = BuildExistingDefinitions(existingRoot);
         JArray output = new();
         PreserveManualDefinitions(existingRoot, output);
 
@@ -281,7 +282,7 @@ public static class ItemDefinitionMigrationTool
         }
 
         foreach (MigrationGroup group in Groups)
-            ExportGroup(group, output, concreteIds);
+            ExportGroup(group, output, concreteIds, existingDefinitions);
 
         JObject root = new()
         {
@@ -472,7 +473,26 @@ public static class ItemDefinitionMigrationTool
         }
     }
 
-    private static void ExportGroup(MigrationGroup group, JArray output, HashSet<string> concreteIds)
+    private static Dictionary<string, JObject> BuildExistingDefinitions(JObject existingRoot)
+    {
+        var result = new Dictionary<string, JObject>(StringComparer.OrdinalIgnoreCase);
+        if (existingRoot?["items"] is not JArray items)
+            return result;
+
+        foreach (JObject item in items.OfType<JObject>())
+        {
+            string id = item.Value<string>("id")?.Trim();
+            if (!string.IsNullOrWhiteSpace(id))
+                result[id] = item;
+        }
+        return result;
+    }
+
+    private static void ExportGroup(
+        MigrationGroup group,
+        JArray output,
+        HashSet<string> concreteIds,
+        IReadOnlyDictionary<string, JObject> existingDefinitions)
     {
         GameObject shell = LoadPrefab(group.ShellPath);
         Item shellItem = RequireItem(shell, group.ShellPath);
@@ -504,7 +524,15 @@ public static class ItemDefinitionMigrationTool
             if (string.IsNullOrWhiteSpace(id) || !concreteIds.Add(id))
                 throw new InvalidDataException($"迁移物品 ID 为空或重复：{id}（{sourcePath}）");
 
-            JObject definition = BuildDefinition(group, sourcePath, sourceItem, shell, shellRenderer, shellCollider);
+            existingDefinitions.TryGetValue(id, out JObject existingDefinition);
+            JObject definition = BuildDefinition(
+                group,
+                sourcePath,
+                sourceItem,
+                shell,
+                shellRenderer,
+                shellCollider,
+                existingDefinition);
             output.Add(definition);
         }
     }
@@ -515,7 +543,8 @@ public static class ItemDefinitionMigrationTool
         Item sourceItem,
         GameObject shell,
         SpriteRenderer shellRenderer,
-        Collider2D shellCollider)
+        Collider2D shellCollider,
+        JObject existingDefinition)
     {
         ItemData data = sourceItem.itemData;
         SpriteRenderer sourceRenderer = RequireRenderer(sourceItem.gameObject, sourcePath);
@@ -566,19 +595,49 @@ public static class ItemDefinitionMigrationTool
             ["parent"] = group.BaseId,
             ["sourcePrefab"] = sourcePath,
             ["gameName"] = data.GameName,
-            ["description"] = data.Description,
+            ["description"] = ResolveSafeDescription(data, existingDefinition),
             ["durability"] = data.Durability,
             ["maxDurability"] = data.MaxDurability,
             ["amount"] = data.Stack?.Amount ?? 1f,
             ["volume"] = data.Stack?.Volume ?? 0f,
             ["canBePickedUp"] = data.Stack?.CanBePickedUp ?? true,
-            ["tags"] = data.Tags != null ? JArray.FromObject(data.Tags) : new JArray(),
+            ["tags"] = new JArray((data.Tags ?? new List<string>())
+                .Where(tag => !string.IsNullOrWhiteSpace(tag))
+                .Select(tag => tag.Trim())),
             ["visual"] = visual,
             ["modules"] = modules
         };
         if (itemData.HasValues)
             definition["itemData"] = itemData;
         return definition;
+    }
+
+    /// <summary>迁移源仍含旧调试串时保留已人工清洗的 JSON 文案，避免重复迁移把污染写回来。</summary>
+    private static string ResolveSafeDescription(ItemData data, JObject existingDefinition)
+    {
+        string sourceDescription = data?.Description;
+        if (!IsDebugDescription(sourceDescription))
+            return sourceDescription?.Trim() ?? string.Empty;
+
+        string existingDescription = existingDefinition?.Value<string>("description");
+        if (!IsDebugDescription(existingDescription) && !string.IsNullOrWhiteSpace(existingDescription))
+            return existingDescription.Trim();
+
+        string displayName = string.IsNullOrWhiteSpace(data?.GameName) ? data?.IDName : data.GameName;
+        return string.IsNullOrWhiteSpace(displayName)
+            ? "可用于探索、生存或制作的物品。"
+            : $"{displayName.Trim()}，可用于探索、生存或制作。";
+    }
+
+    private static bool IsDebugDescription(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        return value.Contains("物品名称：", StringComparison.Ordinal) ||
+               value.Contains("物品堆叠信息：", StringComparison.Ordinal) ||
+               value.Contains("全局唯一标识：", StringComparison.Ordinal) ||
+               value.Contains("TagDictionary:", StringComparison.Ordinal);
     }
 
     private static JObject BuildVisual(

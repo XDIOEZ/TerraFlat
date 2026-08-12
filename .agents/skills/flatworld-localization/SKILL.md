@@ -30,4 +30,7 @@ description: "Use when: 定位或修改 FlatWorld 的多语言系统、Unity Loc
 4. UI 文字联动 `flatworld-ui`；Item/Quest/Dialogue 只加载命中的领域 Skill。
 5. 默认只做静态诊断、编译、Console 与人工切换语言，不主动运行 Test Runner。
 
-Locale、表、key、扫描/绑定或资源路径变化时同步更新本 Skill 和 `references/file-map.md`；近期变更最多 5 条。
+## Skill 维护原则
+
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

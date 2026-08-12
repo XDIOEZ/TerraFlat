@@ -35,6 +35,7 @@ GOLDEN_OPERATION_IDS = {
     "environment.tile-effects",
     "environment.time-weather",
     "inventory.crafting",
+    "inventory.metallurgy-progression",
     "item.drop-lifecycle",
     "map.chunk-load-speed",
     "map.hydrology",

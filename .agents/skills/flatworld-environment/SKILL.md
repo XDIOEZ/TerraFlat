@@ -27,4 +27,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 默认不主动跑测试；需要时运行 `Environment.Smoke`。测试入口：`Assets/GameTest/Environment/EnvironmentSmokeTests.cs`。
 - 真实世界链可用 Golden Path `environment.time-weather`，清理时恢复原环境。
 
-时间入口、光照、天气字段、温度阈值或资源路径变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
+
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

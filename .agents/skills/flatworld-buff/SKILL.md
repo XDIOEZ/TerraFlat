@@ -28,4 +28,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 3. 默认不主动跑测试；需要时运行 `Buff.Smoke`，GM/水体按需追加 `Buff.GM`、`Dimension.TileEffects`。
 4. 测试入口：`Assets/GameTest/Buff/`。
 
-字段、效果类型、类别、JSON/Prefab/注册/存档路径变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
+
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。
