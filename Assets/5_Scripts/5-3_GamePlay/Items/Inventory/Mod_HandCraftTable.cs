@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -42,6 +43,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     private int _currentClickProgress;
     private CraftingOutputPreview _outputPreview;
+    private TextMeshProUGUI _craftingHintText;
     private GameController _inputController;
     private InputAction _toggleAction;
     private Action<InputAction.CallbackContext> _toggleCallback;
@@ -59,6 +61,9 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     private const int InputSlotCount = 4;
     private const int OutputSlotCount = 1;
+    private const string CraftingHintName = "FWUI_FooterHint";
+    private const string WaitingHint = "放入材料 · 核对配方 · 开始制作";
+    private const string ReadyHint = "配方已匹配 · 点击开始制作";
     [Header("调试")]
     [Tooltip("是否输出手工合成详细调试日志")]
     public bool EnableCraftDebug = true;
@@ -260,6 +265,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
         workButton.onClick.RemoveListener(OnCraftButtonClick);
         workButton.onClick.AddListener(OnCraftButtonClick);
+        _craftingHintText = basePanel.GetText(CraftingHintName);
 
         inputInventory.RefreshUI();
         outputInventory.RefreshUI();
@@ -319,13 +325,26 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     private void RefreshCraftPreview()
     {
+        bool canCraft = TryGetCraftPreview(out ItemData previewItem);
+        RefreshCraftingPrompt(canCraft);
+
         if (_outputPreview == null)
             return;
 
-        if (TryGetCraftPreview(out ItemData previewItem))
+        if (canCraft)
             _outputPreview.Show(previewItem, _currentClickProgress / (float)RequiredClickCount);
         else
             _outputPreview.Clear();
+    }
+
+    /// <summary>同步配方匹配提示与制作按钮可用状态。</summary>
+    private void RefreshCraftingPrompt(bool canCraft)
+    {
+        if (workButton != null)
+            workButton.interactable = canCraft;
+
+        if (_craftingHintText != null)
+            _craftingHintText.text = canCraft ? ReadyHint : WaitingHint;
     }
 
     private void BindInputSlots()

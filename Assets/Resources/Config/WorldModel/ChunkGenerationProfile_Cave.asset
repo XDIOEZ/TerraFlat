@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Cave
   m_EditorClassIdentifier:
   profileId: cave.default
-  generationSignature: 20
+  generationSignature: 23
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -41,6 +41,26 @@ MonoBehaviour:
     Value: 0.5
   - Id: cave.spawn.safeRadius
     Value: 4
+  - Id: cave.groundwater.enabled
+    Value: 1
+  - Id: cave.groundwater.roomChance
+    Value: 0.28
+  - Id: cave.groundwater.minRadiusRatio
+    Value: 0.42
+  - Id: cave.groundwater.maxRadiusRatio
+    Value: 0.68
+  - Id: cave.groundwater.minDepth
+    Value: 0.25
+  - Id: cave.groundwater.maxDepth
+    Value: 0.85
+  - Id: cave.vine.enabled
+    Value: 1
+  - Id: cave.vine.wallChance
+    Value: 0.065
+  - Id: cave.vine.wetMultiplier
+    Value: 2.5
+  - Id: cave.vine.dryMultiplier
+    Value: 0.2
   - Id: cave.portal.enabled
     Value: 1
   - Id: cave.portal.chunkChance
@@ -60,6 +80,8 @@ MonoBehaviour:
     Value: cave
   - Id: tile.block.4
     Value: Tile_Stone
+  - Id: tile.block.2
+    Value: Tile_Water_Fresh
   - Id: tile.block.7
     Value: TileBase_StoneWall
   - Id: cave.portal.itemId

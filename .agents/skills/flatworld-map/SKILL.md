@@ -1,9 +1,6 @@
 ---
 name: flatworld-map
 description: "Use when: 定位或修改 FlatWorld 的世界地图、Chunk 流送、Tilemap、程序化生成、Biome、River、Structure、TileData、地图保存或区块 Prefab。关键词：ChunkMgr、Chunk、Map、ChunkGenerator、MapSave。"
-argument-hint: "地图、区块或生成问题"
-user-invocable: true
-disable-model-invocation: false
 ---
 
 # FlatWorld 地图与 Chunk 系统定位
@@ -11,17 +8,12 @@ disable-model-invocation: false
 > 最后核对：2026-08-09。
 
 ## 修改前先读
-
 1. `Assets/5_Scripts/5-0_WorldModel/ChunkRuntime.cs`：区块纯数据、三类租约与数据/模拟/表现状态。
 2. `Assets/5_Scripts/5-0_WorldModel/ChunkTerrainData.cs`：地形、环境、草地、阻挡与导航权威查询。
 3. `Assets/5_Scripts/5-0_WorldModel/ChunkMgr.cs`：纯 C# 缓存、生成调度、三级窗口与逐出。
 4. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/ChunkMgr.WorldRuntime.cs`、`ChunkMgr.RuntimeWindow.cs`：Unity 侧主线程提交与视图租约适配。
-5. `Assets/5_Scripts/5-3_GamePlay/World/WorldModel/Presentation/ChunkView.cs`：Tilemap、草地、环境、碰撞和导航表现绑定。
-6. 旧 `Chunk`、`Map`、`Data_TileMap` 仍是待移除的迁移源，不得再扩展为新区块权威；普通物品、玩家、AI、建筑等实体继续使用现有 `Item/Module`。
-7. 涉及地下矿洞或跨星球地图时读取 `flatworld-dimension`；维度配置入口为 `DimensionManager.ConfigureMap()`。
 
 ## 地图主链
-
 ```text
 Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 → ChunkMgr.RefreshRuntimeWindow
@@ -34,38 +26,22 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 ```
 
 ## 关键文件
-
 - 联机扩展：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/ChunkMgr.Networking.cs`。
 - 玩家区块加载器：`Assets/5_Scripts/5-3_GamePlay/World/Chunk/Mod_ChunkLoader.cs`。
 - Item 区块归属：`Assets/5_Scripts/5-3_GamePlay/World/Chunk/Mod_ItemChunkAssigner.cs`。
 - 生成上下文：`Assets/5_Scripts/5-3_GamePlay/World/Map/Base/MapGenerationContext.cs`。
 - 地形生成：`Assets/5_Scripts/5-3_GamePlay/World/Map/Controller/ChunkGenerator_Land.cs`。
 - 统一噪声核与生成签名：`Assets/5_Scripts/5-3_GamePlay/World/Map/Base/TerrainNoise.cs`。
-- 无头旧版地形/气候核：`Assets/5_Scripts/5-0_WorldModel/Generation/LegacyTerrainClimateKernel.cs`。
-- Biome 集中解析：`Assets/5_Scripts/5-3_GamePlay/World/Map/Base/BiomeResolver.cs`。
-- 河流生成：`Assets/5_Scripts/5-3_GamePlay/World/Map/Controller/ChunkGenerator_River.cs`。
-- 无头河流调参记录：`.agents/river-heightmap-tuning.json`。
-- 物品生成：`Assets/5_Scripts/5-3_GamePlay/World/Map/Controller/ChunkGenerator_SpawnItems.cs`。
-- 结构生成：`Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/ChunkGenerator_Structures.cs`。
-- 矿洞生成：`Assets/5_Scripts/5-3_GamePlay/World/Dimension/ChunkGenerator_Cave.cs`。
-- 地图存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/MapSave.cs`。
-- Tilemap 数据：`Assets/5_Scripts/5-1_Data/ItemData/Data_TileMap.cs`、`Assets/5_Scripts/5-1_Data/TileData/TileStackCell.cs`。
-- 静态阻挡层：`Assets/5_Scripts/5-3_GamePlay/World/Map/BlockingTilemapLayer.cs`。
-- 地块权威数据：`Assets/5_Scripts/5-1_Data/TileData/`。
 
 ## 资源目录
-
 - Map Prefab：`Assets/2_Prefabs/Map/`。
 - TileBlock Prefab：`Assets/2_Prefabs/TileBlock/`。
 - Tile 资源：`Assets/7_Tiles/`。
 - TileBlock SO：`Assets/4_ScriptObjects/4-1_TileBlock/`。
 - Biome SO：`Assets/4_ScriptObjects/4-8_Biome/`。
 - Structure SO：`Assets/4_ScriptObjects/4-9_Structures/`。
-- 结构目录：`Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/`。
-- 结构目录资产：`Assets/Resources/Config/StructureCatalog_Default.asset`。
 
 ## 系统边界
-
 - 区块权威是无 Unity 引用的 `ChunkRuntime + ChunkTerrainData`；`ChunkView` 可重复绑定、解绑和池化，不能反向成为数据来源。
 - 运行时窗口分为三圈：`LoadChunkDistance` 内领取 Simulation 并显示，`UnActiveDistance` 内只提前生成数据，`DestroyChunkDistance` 内只保留缓存；预取任务必须排在可见任务之后，同圈优先玩家最近跨区移动方向。预取区块不得领取模拟、表现或导航租约。
 - 已就绪区块不能在后台完成回调里直接集中 `ChunkView.Bind()`；统一进入 `ChunkMgr.RuntimeWindow` 的全局协程队列，按距玩家由近到远、每帧最多 `maxChunkPresentationsPerFrame` 个完成 Tilemap、草地、碰撞和导航绑定。离开窗口、重置世界或对象池回收必须同步取消待表现项。
@@ -97,9 +73,7 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - `ChunkMgr.TrySetChunkLoadSpeedMultiplier()` 是运行时区块加载调速的统一公开入口；有限倍率同时缩放旧队列和新 WorldModel 生成并发。传入正无穷表示“自动最大”，后台生成按约三分之一逻辑处理器且最多 4 项，旧管线数量预算最多四倍、毫秒预算最多两倍；禁止重新返回 `int.MaxValue/Infinity`。运行中调整必须立即调用 `SetMaxGenerationConcurrency()`，降低上限不强杀已开始任务。Tilemap、碰撞和导航继续由主线程协程按表现组件逐帧绑定。调速不得改变加载距离、世界数据或确定性生成结果。
 
 ## 高耦合联动
-
 只在本次改动命中下表契约时加载对应 Skill 并追加最小测试；单纯地形美术或不改变数据的生成参数调整不要扩散检查。
-
 | 本系统变更 | 联动检查 | 必查契约 | 追加测试 |
 |---|---|---|---|
 | `TileData` 可走性、Penalty、顶层 Tile 或导航脏格/脏区通知 | `flatworld-navigation` | `WorldNavigationGrid` 仍从权威 TileData 取值，格状态在数据变化后刷新 | `Navigation.Smoke` |
@@ -123,25 +97,26 @@ Mod_ChunkLoader / NetworkChunkStreamingCoordinator
 - 2026-08-09：旧 `TileItem_StoneWall` 的右键放置不再写旧 `Map.Data`，通过 `TileBuildingSystem` 写入 `ChunkTerrainData.BlockingTileId`；新增 `CanSetBlockingTile` 供预览阶段检查扩展地块堆栈。
 - 2026-08-09：`ChunkTerrainData` 新增运行时阻挡地块写入/移除接口；新版区块渲染器通过 `TerrainChangeKind.TileStack` 即时刷新石墙，动态建筑不再依赖旧 `Map.Data`。
 
+| `TileData` 可走性、Penalty、顶层 Tile 或导航脏格/脏区通知 | `flatworld-navigation` | A* 仍从权威 TileData 取值，节点和连接在数据变化后刷新 | `Navigation.Smoke` |
+
+## 近期变更
+> 最多保留 5 条，按新到旧排列；超过时删除最旧条目。
+- 2026-08-11：高度驱动河网新增内陆汇流终点淡水湖；终点汇流量达标后按 `river.lakeChance=0.75` 确定性生成湖盆，复用现有湖面抬升和 `18–220` 格面积边界，生成签名升级到 25。
+- 2026-08-11：地表 `legacyLand` 群系的草原最大降水阈值从 `0.75` 降为 `0.50`，使高降水森林区间从 `0.25` 扩大到 `0.50`，生成签名升级到 24。
+- 2026-08-11：矿洞 `Twine` 分布向地下湖集中；水池两格内保持原概率，其他干燥洞壁概率乘 `0.2`，生成签名升级到 23。
+- 2026-08-11：纯 WorldModel 矿洞新增确定性可采集藤蔓；`CaveLayoutKernel` 限定干燥洞壁边缘并让地下水附近更茂盛，`CaveGenerationFeatureGenerator` 输出 `Twine` 自然物，复用现有拾取与区块差量链，生成签名升级到 22。
+- 2026-08-11：纯 WorldModel 矿洞新增洞室地下湖；`CaveLayoutKernel` 按世界区域与种子输出跨 Chunk 连续水深，`DeterministicChunkGenerator` 写入淡水 Tile、Water 标记和 `riverDepth/riverKind/groundwater` 环境层，直接复用现有水体表现与 Buff。出生点、天然入口和连接通道禁止积水，生成签名升级到 21。
 
 ## 修改后自动测试
-
 - 基础测试脚本：`Assets/GameTest/Map/MapSmokeTests.cs`、`Assets/GameTest/WorldModel/WorldModelSmokeTests.cs`、`Assets/GameTest/WorldModel/WorldModelPersistenceTests.cs`、`Assets/GameTest/WorldModel/LegacyHydrologyKernelTests.cs` 与 `LegacyTerrainClimateKernelTests.cs`；当前基础覆盖 Chunk 生命周期、固定失败种子的完整半径出生搜索、南北/四角周期地形哈希、正式 D∞ 河流 Profile、二维山地石地、旧版气候等价/风场/地形降雨、旧版水文盆地/出口/区域接缝/取消、跨接缝休眠保留窗口、区块加载倍率 API、Tilemap、地形噪声与结构入口。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；地图测试约定目录：`Assets/GameTest/Map/`；场景目录：`Assets/GameTest/Scenes/Map/`；冒烟分类：`Map.Smoke`。
 - 新增 Chunk 流送、Tilemap、程序生成、Biome、River、Structure 或地图差量行为时必须增加系统测试；修复 Bug 时先增加回归测试。中心 Chunk 加载与卸载主流程变化时同步更新地图冒烟场景。
 - 测试失败时优先修复生产代码，禁止删除测试或弱化断言；程序生成必须固定种子，测试结束必须清理 Chunk、Tilemap 与临时地图数据。
 - 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Map.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类；只有地形、河流或 Tilemap 最终观感变化才做定向截图。
 - 维度管理器的基础 PlayMode 生命周期由 `Assets/GameTest/Dimension/DimensionLifecycleTests.cs`（`Dimension.Smoke`）覆盖；地图 Smoke 不再承载完整洞穴生成契约。
-- 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill
-
 移动生成器、地图 Prefab、Biome/Structure/Tile 资源，改变 Chunk 生命周期、生成顺序、MapSave 结构或就绪条件后，必须同步更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。
 
 ## 有限环绕世界契约（2026-08-06）
-
 - `WorldTopologyBounds` 是世界坐标、格子和 Chunk 原点归一化及最短环面位移的唯一公共入口。
-- `ChunkMgr` 的查询、队列、窗口、字典和 MapSave 键必须使用规范 Chunk 原点；窗口必须去重，有限世界不得产生边界外键。
-- 纯生成请求必须携带 `ChunkGenerationTopologySnapshot`；地形、气候、河流、洞穴和离散草地采样在两个轴及四角重复，边界相邻格不得出现非周期断层。
-- 活跃与 `destroyDistance` 保留窗口都以归一化后的 Chunk 地址集合判断，不得用规范坐标的直接绝对差计算跨接缝距离。
-- 相关精简回归位于 `MapSmokeTests`（`Map.Smoke`）及 `WorldModelSmokeTests`（`WorldModel.Smoke`）。

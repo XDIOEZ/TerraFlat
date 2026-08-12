@@ -12,7 +12,7 @@ namespace FlatWorld.WorldModel
     public sealed class DeterministicChunkGenerator : IChunkPureGenerator
     {
         /// <summary>纯区块生成规则版本；气候、群系、河谷选路或河网筛选规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 20;
+        public const int CurrentGenerationSignature = 25;
 
         private readonly LegacyHydrologyKernel legacyHydrologyKernel = new();
         private readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<GeneratedHydrologyMap>>
@@ -577,6 +577,7 @@ namespace FlatWorld.WorldModel
         {
             var sampling = new HydrologySamplingContext(request, settings);
             var flowByCell = new Dictionary<Int2, double>();
+            var terminalFlowByCell = new Dictionary<Int2, double>();
             var processedSourceOrigins = new HashSet<Int2>();
             int maximumRadius = Math.Max(0, (settings.RiverMaxWidth - 1) / 2);
             int padding = settings.RiverMaxTraceSteps + maximumRadius + 1;
@@ -607,6 +608,7 @@ namespace FlatWorld.WorldModel
                         sampling,
                         sourceOrigin,
                         flowByCell,
+                        terminalFlowByCell,
                         cancellationToken);
                 }
             }
@@ -673,7 +675,88 @@ namespace FlatWorld.WorldModel
                     floodplainCells);
             }
 
+            AddHeightDrivenTerminalLakes(
+                request,
+                settings,
+                sampling,
+                terminalFlowByCell,
+                riverCells,
+                cancellationToken);
+
             return new GeneratedHydrologyMap(riverCells, floodplainCells);
+        }
+
+        /// <summary>把足够汇流的内陆低洼扩展为淡水湖，河流入海时不生成湖。</summary>
+        private static void AddHeightDrivenTerminalLakes(
+            ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings,
+            HydrologySamplingContext sampling,
+            IReadOnlyDictionary<Int2, double> terminalFlowByCell,
+            Dictionary<Int2, GeneratedHydrologyCell> riverCells,
+            CancellationToken cancellationToken)
+        {
+            foreach (KeyValuePair<Int2, double> terminal in terminalFlowByCell)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (terminal.Value < settings.RiverLakeMinFlow ||
+                    Hash01(request.WorldSeed, terminal.Key.X, terminal.Key.Y, 0x6c8e9cf5u) >=
+                    settings.RiverLakeChance)
+                    continue;
+
+                double sinkHeight = sampling.Height(terminal.Key);
+                if (sinkHeight <= settings.SeaLevel)
+                    continue;
+
+                var basin = new HashSet<Int2> { terminal.Key };
+                var frontier = new List<Int2>();
+                for (int i = 0; i < RiverNeighbors.Length; i++)
+                    frontier.Add(sampling.Normalize(terminal.Key + RiverNeighbors[i]));
+
+                while (frontier.Count > 0 && basin.Count < settings.RiverMaxLakeCells)
+                {
+                    int lowestIndex = 0;
+                    double lowestHeight = sampling.Height(frontier[0]);
+                    for (int i = 1; i < frontier.Count; i++)
+                    {
+                        double candidateHeight = sampling.Height(frontier[i]);
+                        if (candidateHeight >= lowestHeight)
+                            continue;
+                        lowestIndex = i;
+                        lowestHeight = candidateHeight;
+                    }
+
+                    Int2 current = frontier[lowestIndex];
+                    frontier.RemoveAt(lowestIndex);
+                    if (basin.Contains(current) ||
+                        lowestHeight - sinkHeight > settings.RiverMaxLakeLevelRise)
+                        continue;
+                    basin.Add(current);
+                    for (int i = 0; i < RiverNeighbors.Length; i++)
+                    {
+                        Int2 neighbor = sampling.Normalize(current + RiverNeighbors[i]);
+                        if (!basin.Contains(neighbor) && !frontier.Contains(neighbor))
+                            frontier.Add(neighbor);
+                    }
+                }
+
+                if (basin.Count < settings.RiverMinLakeCells)
+                    continue;
+                foreach (Int2 lakePosition in basin)
+                {
+                    if (!ContainsChunk(request, lakePosition) ||
+                        sampling.Height(lakePosition) <= settings.SeaLevel)
+                        continue;
+                    double depthT = Clamp01((sinkHeight + settings.RiverMaxLakeLevelRise -
+                                             sampling.Height(lakePosition)) /
+                                            settings.RiverMaxLakeLevelRise);
+                    SetRiverCell(riverCells, lakePosition, new GeneratedHydrologyCell(
+                        GeneratedHydrologyKind.Lake,
+                        terminal.Value,
+                        Lerp(settings.RiverDepthMin, settings.RiverDepthMax,
+                            Math.Max(0.15d, depthT)),
+                        sinkHeight + settings.RiverMaxLakeLevelRise));
+                }
+            }
         }
 
         /// <summary>把缓存限制在配置上限内，优先移除最早加入的区域。</summary>
@@ -832,6 +915,7 @@ namespace FlatWorld.WorldModel
             HydrologySamplingContext sampling,
             Int2 sourceOrigin,
             Dictionary<Int2, double> flowByCell,
+            Dictionary<Int2, double> terminalFlowByCell,
             CancellationToken cancellationToken)
         {
             ChunkGenerationSettingsSnapshot settings = sampling.Settings;
@@ -874,7 +958,8 @@ namespace FlatWorld.WorldModel
             if (contribution <= 0.0001d)
                 return;
 
-            TraceRunoff(sampling, source, contribution, flowByCell, cancellationToken);
+            TraceRunoff(sampling, source, contribution, flowByCell, terminalFlowByCell,
+                cancellationToken);
         }
 
         /// <summary>沿八邻域最低点追踪径流；到海洋或真实局部洼地后结束。</summary>
@@ -883,6 +968,7 @@ namespace FlatWorld.WorldModel
             Int2 source,
             double contribution,
             Dictionary<Int2, double> flowByCell,
+            Dictionary<Int2, double> terminalFlowByCell,
             CancellationToken cancellationToken)
         {
             var visited = new HashSet<Int2>();
@@ -901,7 +987,10 @@ namespace FlatWorld.WorldModel
                 AddFlow(flowByCell, current, contribution);
 
                 if (!TryChooseDownhill(sampling, current, currentHeight, out Int2 next))
+                {
+                    AddFlow(terminalFlowByCell, current, contribution);
                     break;
+                }
                 AddDiagonalBridge(sampling, current, next, contribution, flowByCell);
                 current = next;
             }
@@ -1168,22 +1257,28 @@ namespace FlatWorld.WorldModel
             flowByCell[position] = current + contribution;
         }
 
-        /// <summary>保存更深或更大流量的河道结果，避免较弱结果覆盖较强结果。</summary>
+        /// <summary>合并淡水格；湖泊优先于河道，同类则保留更深和更大流量。</summary>
         private static void SetRiverCell(
             Dictionary<Int2, GeneratedHydrologyCell> cells,
             Int2 position,
             GeneratedHydrologyCell candidate)
         {
             if (cells.TryGetValue(position, out GeneratedHydrologyCell current) &&
+                current.Kind >= candidate.Kind &&
                 current.Depth >= candidate.Depth && current.Flow >= candidate.Flow)
             {
                 return;
             }
 
+            GeneratedHydrologyKind kind = current.Kind == GeneratedHydrologyKind.Lake ||
+                                           candidate.Kind == GeneratedHydrologyKind.Lake
+                ? GeneratedHydrologyKind.Lake
+                : GeneratedHydrologyKind.River;
             cells[position] = new GeneratedHydrologyCell(
-                GeneratedHydrologyKind.River,
+                kind,
                 Math.Max(current.Flow, candidate.Flow),
-                Math.Max(current.Depth, candidate.Depth));
+                Math.Max(current.Depth, candidate.Depth),
+                Math.Max(current.SurfaceLevel, candidate.SurfaceLevel));
         }
 
         /// <summary>记录格子的最大冲积带强度，重复计算时只保留更明显的一次。</summary>
@@ -1432,17 +1527,29 @@ namespace FlatWorld.WorldModel
         {
             worldX = request.Topology.NormalizeX(worldX);
             worldY = request.Topology.NormalizeY(worldY);
-            // 洞穴格子只有两种：能走的空地，或不能穿过的岩壁。岩壁下面仍保留一层洞穴地面。
+            // 洞穴岩壁下保留石地；开放洞室可按世界区域形成跨 Chunk 连续的地下湖。
             bool open = CaveLayoutKernel.IsOpenAtWorld(request, settings, worldX, worldY);
-            TerrainCellFlags flags = open ? TerrainCellFlags.Walkable : TerrainCellFlags.Blocking;
-            terrain.SetCell(x, y, new TerrainCell(settings.CaveFloorTileId, 0,
-                open ? 0 : settings.CaveWallTileId, 100, open ? settings.DefaultNavigationCost :
-                short.MaxValue, flags));
-            terrain.SetEnvironmentValue("height", x, y, open ? 1f : 0f);
+            double groundwaterDepth = open
+                ? CaveLayoutKernel.SampleGroundwaterDepth(request, settings, worldX, worldY)
+                : 0d;
+            bool groundwater = groundwaterDepth > 0d;
+            TerrainCellFlags flags = !open
+                ? TerrainCellFlags.Blocking
+                : groundwater ? TerrainCellFlags.Water : TerrainCellFlags.Walkable;
+            int groundTileId = groundwater ? settings.FreshWaterTileId : settings.CaveFloorTileId;
+            terrain.SetCell(x, y, new TerrainCell(groundTileId, 0,
+                open ? 0 : settings.CaveWallTileId, 100,
+                open && !groundwater ? settings.DefaultNavigationCost : short.MaxValue, flags));
+            terrain.SetEnvironmentValue("height", x, y,
+                groundwater ? (float)(1d - groundwaterDepth) : open ? 1f : 0f);
             terrain.SetEnvironmentValue("temperature", x, y, 0.38f);
             terrain.SetEnvironmentValue("temperature.celsius", x, y, 8f);
             terrain.SetEnvironmentValue("precipitation", x, y, 0f);
-            terrain.SetEnvironmentValue("moisture", x, y, 0.3f);
+            terrain.SetEnvironmentValue("moisture", x, y, groundwater ? 1f : 0.3f);
+            terrain.SetEnvironmentValue("riverDepth", x, y, (float)groundwaterDepth);
+            terrain.SetEnvironmentValue("riverFlow", x, y, 0f);
+            terrain.SetEnvironmentValue("riverKind", x, y, groundwater ? 2f : 0f);
+            terrain.SetEnvironmentValue("groundwater", x, y, groundwater ? 1f : 0f);
             terrain.SetEnvironmentValue("grass", x, y, 0f);
             terrain.SetGrass(x, y, GrassEmpty);
         }

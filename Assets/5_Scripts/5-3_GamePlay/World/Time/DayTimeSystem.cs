@@ -175,12 +175,12 @@ private void TimeRun(string sceneName, float deltaTime)
 
     private Color GetLightColor(string sceneName)
     {
-        if (!WorldTimeDict.TryGetValue(sceneName, out var td))
+        if (!TryGetResolvedTimeData(sceneName, out _, out TimeData timeData))
             return DefaultLightColor;
 
         // 0-1 的昼夜进度
-        float t = Mathf.Clamp01(td.CurrentTime / td.DayLength);
-        return td.dayNightGradient.Evaluate(t);
+        float t = Mathf.Clamp01(timeData.CurrentTime / timeData.DayLength);
+        return timeData.dayNightGradient.Evaluate(t);
     }
     #region 公共接口
 
@@ -230,12 +230,6 @@ private void TimeRun(string sceneName, float deltaTime)
     /// </summary>
     public float GetLighting(string sceneName)
     {
-        if (DimensionManager.Instance.TryGetDefinitionForWorldKey(sceneName, out DimensionDefinition dimension) &&
-            dimension.UseFixedLighting)
-        {
-            return Mathf.Clamp01(dimension.FixedLighting);
-        }
-
         // 获取采光率
         float lightingRate = 1.0f;
         SceneLightingRateDict.TryGetValue(sceneName, out lightingRate);
@@ -258,8 +252,15 @@ private void TimeRun(string sceneName, float deltaTime)
             baseLightIntensity = timeData.LightParams.Evaluate(timeRatio);
         }
 
-        // 最终光照 = 基础光照 × 采光率
-        return baseLightIntensity * lightingRate;
+        // 维度光照值是上限而不是固定值：白天不会超过矿洞亮度，夜晚仍跟随地表继续变暗。
+        float lighting = baseLightIntensity * lightingRate;
+        if (DimensionManager.Instance.TryGetDefinitionForWorldKey(sceneName, out DimensionDefinition dimension) &&
+            dimension.UseFixedLighting)
+        {
+            lighting = Mathf.Min(lighting, Mathf.Clamp01(dimension.FixedLighting));
+        }
+
+        return lighting;
     }
     
     /// <summary>

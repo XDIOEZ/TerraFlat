@@ -316,6 +316,27 @@ public class UIManager : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// 将手柄焦点限制在当前最上层导航面板，阻止 Automatic Navigation 跳到背景 UI。
+    /// </summary>
+    public bool ConstrainSelectionToTopmostGamepadPanel()
+    {
+        EnsurePanelQueryCache();
+        BasePanel panel = cachedTopmostGamepadPanel;
+        if (panel == null)
+            return false;
+
+        GameObject selectedObject = UnityEngine.EventSystems.EventSystem.current?.currentSelectedGameObject;
+        if (selectedObject != null &&
+            (selectedObject.transform == panel.transform || selectedObject.transform.IsChildOf(panel.transform)))
+        {
+            return false;
+        }
+
+        panel.SelectDefaultForGamepad();
+        return true;
+    }
+
     /// <summary>判断当前是否存在打开且已接入手柄焦点导航的面板。</summary>
     public bool HasOpenGamepadNavigationPanel()
     {

@@ -329,10 +329,7 @@ public sealed class CraftingTransaction
 
         private static bool CanStack(ItemData target, ItemData source)
         {
-            return target?.Stack != null && source?.Stack != null &&
-                   target.Stack.Volume <= 1f &&
-                   string.Equals(target.IDName, source.IDName, StringComparison.Ordinal) &&
-                   string.Equals(target.ItemSpecialData, source.ItemSpecialData, StringComparison.Ordinal);
+            return target != null && target.CanStackWith(source);
         }
 
         private static ItemData Clone(ItemData itemData)

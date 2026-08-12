@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 912345678901234570}
   - component: {fileID: 912345678901234572}
   - component: {fileID: 912345678901234574}
+  - component: {fileID: 834762951406283742}
   m_Layer: 0
   m_Name: Module_Animator_AI
   m_TagString: Untagged
@@ -23,6 +24,23 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &834762951406283742
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2231892886818212503}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e25c048af858c8841a942eeb909d29f7, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  buffId: 光耀
+  lightColor: {r: 1, g: 0.82, b: 0.32, a: 1}
+  intensity: 0.85
+  innerRadius: 0.8
+  outerRadius: 5
 --- !u!4 &45469955551787273
 Transform:
   m_ObjectHideFlags: 0

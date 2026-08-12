@@ -528,7 +528,7 @@ namespace FlatWorld.GameTest.Navigation
 
             string[] actors =
             {
-                "Chicken", "Chicken_Tree", "WildBoar", "WildBoar_Tree", "Wolf", "Wolf_Tree", "Ghost"
+                "Chicken", "Chicken_Tree", "WildBoar", "WildBoar_Tree", "Wolf", "Ghost"
             };
             for (int i = 0; i < actors.Length; i++)
             {

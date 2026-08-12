@@ -64,10 +64,7 @@ public class Mod_AnimatorController : Module, ITrunDirection
 
         if (!TryResolveState(animationName, preferredLayer, out int layer, out int stateHash))
         {
-            WarnOnce(
-                $"state:{_cachedControllerId}:{preferredLayer}:{animationName}",
-                $"[{nameof(Mod_AnimatorController)}] Animator 中不存在状态 '{animationName}'，已跳过播放。",
-                this);
+            // Animator 刚激活的首帧可能尚未建立状态表；Try 语义下安静返回，AI 后续状态刷新会自然重试。
             return false;
         }
 

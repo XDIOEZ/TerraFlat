@@ -305,6 +305,12 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     {
         int dayNumber = Mathf.Max(1, currentDay + 1);
         int growthInterval = Mathf.Max(1, config.GrowthIntervalDays);
+        if (config.UnboundedDailyGrowth)
+        {
+            QueueUnboundedDailyGrowth(config, state, dayNumber);
+            return;
+        }
+
         int lifetimeLimit = GameDifficultyService.ScaleCount(
             config.MaxLifetimeSpawnCount,
             GameDifficultyService.Current.World.SpawnPopulationMultiplier,
@@ -332,6 +338,25 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             Mathf.Max(0, targetScheduledCount - CountGroupAlive(config)));
     }
 
+    /// <summary>为无上限逐日模式排入当晚对应数量。</summary>
+    private void QueueUnboundedDailyGrowth(
+        SpawnerConfig config,
+        SpawnerProgressSaveData state,
+        int dayNumber)
+    {
+        int lastProcessedDay = Mathf.Max(0, state.ProcessedGrowthMilestones);
+        if (dayNumber <= lastProcessedDay)
+            return;
+
+        long firstMissingDay = lastProcessedDay + 1L;
+        long missingDayCount = dayNumber - lastProcessedDay;
+        long scheduledCount = (firstMissingDay + dayNumber) * missingDayCount / 2L;
+        state.PendingSpawnCount = (int)Math.Min(
+            int.MaxValue,
+            (long)Mathf.Max(0, state.PendingSpawnCount) + scheduledCount);
+        state.ProcessedGrowthMilestones = dayNumber;
+    }
+
     private bool IsScheduledTimeDark(string sceneName, TimeData timeData, float timeInDay)
     {
         if (timeData?.LightParams == null)
@@ -350,6 +375,13 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private static void RecoverEcologyBudget(SpawnerConfig config, SpawnerProgressSaveData state, int currentDay)
     {
+        if (config.UnboundedDailyGrowth)
+        {
+            state.AvailableBudget = int.MaxValue;
+            state.LastBudgetRecoveryDay = currentDay;
+            return;
+        }
+
         float populationMultiplier = GameDifficultyService.Current.World.SpawnPopulationMultiplier;
         int maxBudget = GameDifficultyService.ScaleCount(
             config.MaxEcologyBudget,
@@ -473,8 +505,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             _globalAliveLimit,
             GameDifficultyService.Current.World.SpawnPopulationMultiplier,
             1);
-        if (_trackedItems.Count >= globalLimit ||
-            CountGroupAlive(config) >= GetEffectiveGroupLimit(config))
+        if (!config.UnboundedDailyGrowth &&
+            (_trackedItems.Count >= globalLimit ||
+             CountGroupAlive(config) >= GetEffectiveGroupLimit(config)))
         {
             return false;
         }
@@ -489,7 +522,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         if (!SpawnMonster(entry.PrefabName, spawnPosition))
             return false;
 
-        state.AvailableBudget = Mathf.Max(0, state.AvailableBudget - Mathf.Max(1, entry.EcologyCost));
+        if (!config.UnboundedDailyGrowth)
+            state.AvailableBudget = Mathf.Max(0, state.AvailableBudget - Mathf.Max(1, entry.EcologyCost));
         return true;
     }
 
@@ -504,7 +538,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         for (int i = 0; i < config.SpawnEntries.Count; i++)
         {
             SpawnerConfig.SpawnEntry entry = config.SpawnEntries[i];
-            if (CanSpawnEntry(entry, state))
+            if (CanSpawnEntry(config, entry, state))
                 totalWeight += entry.Probability;
         }
 
@@ -517,7 +551,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         for (int i = 0; i < config.SpawnEntries.Count; i++)
         {
             SpawnerConfig.SpawnEntry entry = config.SpawnEntries[i];
-            if (!CanSpawnEntry(entry, state))
+            if (!CanSpawnEntry(config, entry, state))
                 continue;
 
             lastAvailable = entry;
@@ -529,12 +563,16 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         return lastAvailable;
     }
 
-    private bool CanSpawnEntry(SpawnerConfig.SpawnEntry entry, SpawnerProgressSaveData state)
+    /// <summary>检查生成条目是否满足当前生成器配置、生态预算与物种上限。</summary>
+    private bool CanSpawnEntry(
+        SpawnerConfig config,
+        SpawnerConfig.SpawnEntry entry,
+        SpawnerProgressSaveData state)
     {
         if (entry == null ||
             string.IsNullOrWhiteSpace(entry.PrefabName) ||
             entry.Probability <= 0f ||
-            state.AvailableBudget < Mathf.Max(1, entry.EcologyCost))
+            (!config.UnboundedDailyGrowth && state.AvailableBudget < Mathf.Max(1, entry.EcologyCost)))
         {
             return false;
         }
@@ -769,6 +807,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private int GetEffectiveGroupLimit(SpawnerConfig config)
     {
+        if (config.UnboundedDailyGrowth)
+            return int.MaxValue;
+
         return GameDifficultyService.ScaleCount(
             config.GroupAliveLimit,
             GameDifficultyService.Current.World.SpawnPopulationMultiplier,
@@ -1063,7 +1104,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
                 }
             }
 
-            if (totalCount > Mathf.Max(1, _globalAliveLimit) ||
+            if ((!config.UnboundedDailyGrowth && totalCount > Mathf.Max(1, _globalAliveLimit)) ||
                 groupCount > GetEffectiveGroupLimit(config) ||
                 (speciesLimit > 0 && speciesCount > speciesLimit) ||
                 ExceedsNearbyPlayerLimit(item, config, overflow))

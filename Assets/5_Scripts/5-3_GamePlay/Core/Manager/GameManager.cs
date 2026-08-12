@@ -119,7 +119,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     /// </summary>
     /// <param name="onComplete">退出完成后的回调函数</param>
     /// <returns></returns>
-    public IEnumerator BackToHelloScene_Coroutine(Item playerItem, System.Action onComplete = null)
+    public IEnumerator BackToHelloScene_Coroutine(
+        Item playerItem,
+        System.Action onComplete = null,
+        bool saveCurrentGame = true)
     {
         Debug.Log("<color=yellow>[ExitGame]</color> 开始执行退出流程...");
 
@@ -159,13 +162,20 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         ItemMgr.Instance.CleanupNullItems();
         ChunkMgr.Instance.CleanEmptyDicValues();
 
-        // 提前保存玩家数据（在销毁逻辑执行前）
-        Debug.Log("[ExitGame] 开始保存玩家数据...");
-        ItemMgr.Instance.SavePlayer();
+        if (saveCurrentGame)
+        {
+            // 提前保存玩家数据（在销毁逻辑执行前）
+            Debug.Log("[ExitGame] 开始保存玩家数据...");
+            ItemMgr.Instance.SavePlayer();
 
-        // SaveDataMgr 在写盘前统一保存全部已加载区块，避免同一批区块被扫描两次。
-        Debug.Log("[ExitGame] 写入存档文件...");
-        SaveDataMgr.Instance.Save_And_WriteToDiskAndRecordExitTime();
+            // SaveDataMgr 在写盘前统一保存全部已加载区块，避免同一批区块被扫描两次。
+            Debug.Log("[ExitGame] 写入存档文件...");
+            SaveDataMgr.Instance.Save_And_WriteToDiskAndRecordExitTime();
+        }
+        else
+        {
+            Debug.Log("[ExitGame] 已选择不保存，跳过玩家、区块与退出时间写盘。");
+        }
 
         ////////////////////////////////////////////////////////////////////////////////////
         // 阶段 3：清理阶段

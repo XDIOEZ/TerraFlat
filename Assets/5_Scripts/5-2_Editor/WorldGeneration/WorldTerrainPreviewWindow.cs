@@ -250,6 +250,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["biome.grassland.maximumTemperature"] = "温度高于该值不判定温带草原",
             ["biome.grassland.minimumPrecipitation"] = "降水低于该值不判定温带草原",
             ["biome.grassland.maximumPrecipitation"] = "降水高于该值不判定温带草原，通常转森林",
+            ["river.lakeChance"] = "内陆汇流终点形成淡水湖的确定性概率",
             ["navigation.defaultCost"] = "普通地面的寻路代价；越大角色越不愿经过"
         };
 

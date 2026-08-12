@@ -71,15 +71,10 @@ public class ItemMods
     }
     public T GetMod_ByID<T>(string modID) where T : Module
     {
-        T mod;
-        if (Mods_List.ContainsKey(modID) == false)
-        {
-            mod = null;
-            Debug.LogWarning("没有找到ID为" + modID + "的模块");
-            return mod;
-        }
-        mod = Mods_List[modID][0] as T;
-        return mod;
+        if (!Mods_List.TryGetValue(modID, out List<Module> modules) || modules.Count == 0)
+            return null;
+
+        return modules[0] as T;
     }
 
     /// <summary>

@@ -271,6 +271,8 @@ namespace FlatWorld.GameTest.WorldModel
                 Is.EqualTo(0.045d).Within(0.000001d));
             Assert.That(profile.Settings.RiverLakeMinFlow,
                 Is.EqualTo(0.35d).Within(0.000001d));
+            Assert.That(profile.Settings.RiverLakeChance,
+                Is.EqualTo(0.75d).Within(0.000001d));
             Assert.That(profile.NumericParameters.ContainsKey("river.noiseScale"), Is.False);
 
             using var world = new WorldRuntime("surface-coverage", 1);

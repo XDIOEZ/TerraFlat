@@ -103,7 +103,7 @@ public void AddItem(ItemData itemData)
         // 插槽为空，直接放置物品
         this.itemData = itemData;
     }
-    else if (this.itemData.IDName == itemData.IDName)
+    else if (this.itemData.CanStackWith(itemData))
     {
         // 插槽中已有相同ID的物品，增加堆叠数量
         this.itemData.Stack.Amount += itemData.Stack.Amount;

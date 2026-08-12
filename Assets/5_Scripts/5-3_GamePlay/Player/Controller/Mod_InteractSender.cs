@@ -4,7 +4,7 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
+public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 {
     #region 基础参数
 
@@ -49,6 +49,7 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     {
         if (IsGameplayInputLocked())
         {
+            EndFreshWaterDrinkHold();
             CancelCurrentInteraction();
             return;
         }
@@ -60,6 +61,7 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         }
 
         ValidateCurrentInteractionDistance();
+        TickFreshWaterDrinking(deltaTime);
     }
     #endregion
 
@@ -93,6 +95,7 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private void OnInteractPressed(InputAction.CallbackContext ctx)
     {
+        BeginFreshWaterDrinkHold();
         TryInteractAtCurrentPosition();
     }
 
@@ -113,6 +116,7 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private void OnInteractReleased(InputAction.CallbackContext ctx)
     {
+        EndFreshWaterDrinkHold();
         if (IsGameplayInputLocked())
         {
             return;
@@ -209,6 +213,7 @@ public class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private void OnDisable()
     {
         UnbindInput();
+        EndFreshWaterDrinkHold();
         CancelCurrentInteraction();
     }
 

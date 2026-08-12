@@ -564,6 +564,16 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         }
     }
 
+    /// <summary>为输入框补充确认前的方向导航桥接，不改变其 Selectable 焦点表现。</summary>
+    private void EnsureInputFieldNavigationBridges()
+    {
+        foreach (TMP_InputField inputField in inputFields.Values)
+        {
+            if (inputField != null && inputField.GetComponent<GamepadInputFieldNavigationBridge>() == null)
+                inputField.gameObject.AddComponent<GamepadInputFieldNavigationBridge>();
+        }
+    }
+
     /// <summary>每个层级版本只补齐一次导航与滚动跟随组件。</summary>
     private void EnsureGamepadNavigationSnapshot()
     {
@@ -574,6 +584,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         FlatWorldUITheme.ApplyGamepadNavigationPolicy(cachedSelectables);
         EnsureAutomaticNavigation();
         EnsureSelectionFollowers();
+        EnsureInputFieldNavigationBridges();
         navigationSnapshotVersion = hierarchySnapshotVersion;
     }
 
@@ -777,11 +788,9 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// <returns>文本组件，如果不存在返回null</returns>
     public TextMeshProUGUI GetText(string textName)
     {
-        EnsureHierarchySnapshot();
-        if (textElements.TryGetValue(textName, out TextMeshProUGUI text))
-        {
+        if (TryGetText(textName, out TextMeshProUGUI text))
             return text;
-        }
+
         Debug.LogWarning($"未找到名为 {textName} 的文本组件");
 
         Transform parent = transform;
@@ -793,6 +802,13 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         }
 
         return null;
+    }
+
+    /// <summary>安静查询可选文本组件。</summary>
+    public bool TryGetText(string textName, out TextMeshProUGUI text)
+    {
+        EnsureHierarchySnapshot();
+        return textElements.TryGetValue(textName, out text);
     }
 
     /// <summary>

@@ -792,6 +792,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lowThreshold: 0.4
   criticalThreshold: 0.15
+  thirstyThreshold: 0.4
+  veryThirstyThreshold: 0.15
 --- !u!114 &8512309475123094753
 MonoBehaviour:
   m_ObjectHideFlags: 0

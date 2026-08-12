@@ -313,6 +313,7 @@ public class GameController : Module
         _inputActions.Win10.P.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.H.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.Shift.performed += UpdateCurrentInputDevice;
+        _inputActions.Win10.ToggleRun.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.Ctrl.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.ESC.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.Tab.performed += UpdateCurrentInputDevice;
@@ -341,6 +342,7 @@ public class GameController : Module
         _inputActions.Win10.P.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.H.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.Shift.performed -= UpdateCurrentInputDevice;
+        _inputActions.Win10.ToggleRun.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.Ctrl.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.ESC.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.Tab.performed -= UpdateCurrentInputDevice;

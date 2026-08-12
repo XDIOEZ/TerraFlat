@@ -12,6 +12,19 @@ public class SlicingEffect : GameEffect
     private bool hasStarted = false;
     private bool returnScheduled;
     private float returnAtTime;
+    private Animator effectAnimator;
+    private Quaternion initialLocalRotation;
+
+    #region Lifecycle
+
+    /// <summary>缓存 Prefab 的初始朝向和动画组件，供对象池重复播放时恢复。</summary>
+    private void Awake()
+    {
+        effectAnimator = GetComponent<Animator>();
+        initialLocalRotation = transform.localRotation;
+    }
+
+    #endregion
 
     #region Pool Lifecycle
 
@@ -22,6 +35,14 @@ public class SlicingEffect : GameEffect
         hasStarted = false;
         returnScheduled = false;
         returnAtTime = 0f;
+        transform.localRotation = initialLocalRotation;
+
+        // 回收对象重新激活后 Animator 仍可能停留在结束帧，强制回到动画首帧。
+        if (effectAnimator != null)
+        {
+            effectAnimator.Rebind();
+            effectAnimator.Update(0f);
+        }
     }
 
     public override void OnReturnedToPool()

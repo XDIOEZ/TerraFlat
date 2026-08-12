@@ -166,6 +166,15 @@ namespace InputSystem
                     ""initialStateCheck"": false
                 },
                 {
+                    ""name"": ""ToggleRun"",
+                    ""type"": ""Button"",
+                    ""id"": ""ed189489-dfcf-46ce-a95a-9dbbb33953d4"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""Ctrl"",
                     ""type"": ""Button"",
                     ""id"": ""f97acfb8-7977-4572-ab52-cb9cb249db0b"",
@@ -529,7 +538,7 @@ namespace InputSystem
                 {
                     ""name"": """",
                     ""id"": ""b15368c5-1a16-4f77-8d1b-0bbf8f9fc789"",
-                    ""path"": ""<Gamepad>/leftStickPress"",
+                    ""path"": """",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Gamepad"",
@@ -644,6 +653,28 @@ namespace InputSystem
                     ""processors"": """",
                     ""groups"": ""Gamepad"",
                     ""action"": ""HotbarNext"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""db85ce75-e36c-4919-9fdd-e995a8a4bce7"",
+                    ""path"": """",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""ToggleRun"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""56ad1bcd-3273-45cf-aa67-631e3f2ed00f"",
+                    ""path"": ""<Gamepad>/leftStickPress"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""ToggleRun"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -866,6 +897,7 @@ namespace InputSystem
             m_Win10_CtrlMouse = m_Win10.FindAction("CtrlMouse", throwIfNotFound: true);
             m_Win10_ESC = m_Win10.FindAction("ESC", throwIfNotFound: true);
             m_Win10_Shift = m_Win10.FindAction("Shift", throwIfNotFound: true);
+            m_Win10_ToggleRun = m_Win10.FindAction("ToggleRun", throwIfNotFound: true);
             m_Win10_Ctrl = m_Win10.FindAction("Ctrl", throwIfNotFound: true);
             m_Win10_MouseScroll = m_Win10.FindAction("MouseScroll", throwIfNotFound: true);
             m_Win10_Mouse = m_Win10.FindAction("Mouse", throwIfNotFound: true);
@@ -967,6 +999,7 @@ namespace InputSystem
         private readonly InputAction m_Win10_CtrlMouse;
         private readonly InputAction m_Win10_ESC;
         private readonly InputAction m_Win10_Shift;
+        private readonly InputAction m_Win10_ToggleRun;
         private readonly InputAction m_Win10_Ctrl;
         private readonly InputAction m_Win10_MouseScroll;
         private readonly InputAction m_Win10_Mouse;
@@ -1023,6 +1056,10 @@ namespace InputSystem
             /// Provides access to the underlying input action "Win10/Shift".
             /// </summary>
             public InputAction @Shift => m_Wrapper.m_Win10_Shift;
+            /// <summary>
+            /// Provides access to the underlying input action "Win10/ToggleRun".
+            /// </summary>
+            public InputAction @ToggleRun => m_Wrapper.m_Win10_ToggleRun;
             /// <summary>
             /// Provides access to the underlying input action "Win10/Ctrl".
             /// </summary>
@@ -1125,6 +1162,9 @@ namespace InputSystem
                 @Shift.started += instance.OnShift;
                 @Shift.performed += instance.OnShift;
                 @Shift.canceled += instance.OnShift;
+                @ToggleRun.started += instance.OnToggleRun;
+                @ToggleRun.performed += instance.OnToggleRun;
+                @ToggleRun.canceled += instance.OnToggleRun;
                 @Ctrl.started += instance.OnCtrl;
                 @Ctrl.performed += instance.OnCtrl;
                 @Ctrl.canceled += instance.OnCtrl;
@@ -1199,6 +1239,9 @@ namespace InputSystem
                 @Shift.started -= instance.OnShift;
                 @Shift.performed -= instance.OnShift;
                 @Shift.canceled -= instance.OnShift;
+                @ToggleRun.started -= instance.OnToggleRun;
+                @ToggleRun.performed -= instance.OnToggleRun;
+                @ToggleRun.canceled -= instance.OnToggleRun;
                 @Ctrl.started -= instance.OnCtrl;
                 @Ctrl.performed -= instance.OnCtrl;
                 @Ctrl.canceled -= instance.OnCtrl;
@@ -1360,6 +1403,13 @@ namespace InputSystem
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnShift(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "ToggleRun" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnToggleRun(InputAction.CallbackContext context);
             /// <summary>
             /// Method invoked when associated input action "Ctrl" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>

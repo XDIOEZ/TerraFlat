@@ -78,6 +78,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "ToggleRun",
+                    "type": "Button",
+                    "id": "ed189489-dfcf-46ce-a95a-9dbbb33953d4",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Ctrl",
                     "type": "Button",
                     "id": "f97acfb8-7977-4572-ab52-cb9cb249db0b",
@@ -441,7 +450,7 @@
                 {
                     "name": "",
                     "id": "b15368c5-1a16-4f77-8d1b-0bbf8f9fc789",
-                    "path": "<Gamepad>/leftStickPress",
+                    "path": "",
                     "interactions": "",
                     "processors": "",
                     "groups": "Gamepad",
@@ -556,6 +565,28 @@
                     "processors": "",
                     "groups": "Gamepad",
                     "action": "HotbarNext",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "db85ce75-e36c-4919-9fdd-e995a8a4bce7",
+                    "path": "",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "ToggleRun",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "56ad1bcd-3273-45cf-aa67-631e3f2ed00f",
+                    "path": "<Gamepad>/leftStickPress",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Gamepad",
+                    "action": "ToggleRun",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

@@ -121,6 +121,15 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         }
     }
 
+    /// <summary>EventSystem 完成方向导航后，把越界到背景 UI 的焦点拉回最上层面板。</summary>
+    private void LateUpdate()
+    {
+        if (!gamepadMode || cursorMode || GamepadVirtualKeyboardController.IsOpen)
+            return;
+
+        UIManager.ExistingInstance?.ConstrainSelectionToTopmostGamepadPanel();
+    }
+
     #endregion
 
     #region 菜单输入源检测
@@ -718,6 +727,38 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     }
 
     #endregion
+}
+
+/// <summary>让输入框保留手柄焦点框，并在虚拟键盘打开前允许方向导航离开。</summary>
+[DisallowMultipleComponent]
+public sealed class GamepadInputFieldNavigationBridge : MonoBehaviour, IMoveHandler
+{
+    private TMP_InputField inputField;
+
+    private void Awake()
+    {
+        inputField = GetComponent<TMP_InputField>();
+    }
+
+    public void OnMove(AxisEventData eventData)
+    {
+        if (inputField == null || GamepadVirtualKeyboardController.IsOpen)
+            return;
+
+        Selectable target = eventData.moveDir switch
+        {
+            MoveDirection.Left => inputField.FindSelectableOnLeft(),
+            MoveDirection.Right => inputField.FindSelectableOnRight(),
+            MoveDirection.Up => inputField.FindSelectableOnUp(),
+            MoveDirection.Down => inputField.FindSelectableOnDown(),
+            _ => null
+        };
+        if (target == null || !target.IsActive() || !target.IsInteractable())
+            return;
+
+        EventSystem.current?.SetSelectedGameObject(target.gameObject, eventData);
+        eventData.Use();
+    }
 }
 
 /// <summary>

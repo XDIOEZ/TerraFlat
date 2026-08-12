@@ -853,23 +853,40 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
                 includeLocalPresentation: true, prefetchDistance: 3);
         }
 
-        float deadline = Time.realtimeSinceStartup + 12f;
-        while (true)
+        // 玩家脚下区块决定碰撞与实体能否安全落地，必须等待；外围视野只影响逐步显现，
+        // 不应因为低性能设备或大视距超过固定时长，就把已经成功的世界切换判定为失败。
+        float centerDeadline = Time.realtimeSinceStartup + 30f;
+        while (!chunkManager.IsRuntimeEntityPresentationReady(targetPosition))
         {
-            if (chunkManager.AreRuntimeWindowPresentationsReady)
-            {
-                // 玩家已先放到目标坐标；让完整视野内的碰撞体在解锁输入前完成一次物理同步。
-                Physics2D.SyncTransforms();
-                yield return new WaitForFixedUpdate();
-                yield break;
-            }
-            if (Time.realtimeSinceStartup >= deadline)
+            if (Time.realtimeSinceStartup >= centerDeadline)
             {
                 throw new TimeoutException(
-                    $"目标维度区块未在限定时间内表现：{targetAddress.WorldKey}");
+                    $"目标维度玩家落地区块未在限定时间内表现：{targetAddress.WorldKey}");
             }
+
             yield return null;
         }
+
+        // 中心区块已可安全使用后，再给外围区块一段加载宽限期。
+        // 超过宽限期只记录诊断并继续切换，剩余 ChunkView 由正常流送队列后台补齐。
+        float windowDeadline = Time.realtimeSinceStartup + 12f;
+        while (!chunkManager.AreRuntimeWindowPresentationsReady &&
+               Time.realtimeSinceStartup < windowDeadline)
+        {
+            yield return null;
+        }
+
+        if (!chunkManager.AreRuntimeWindowPresentationsReady)
+        {
+            Debug.LogWarning(
+                $"[DimensionManager] 目标维度外围区块仍在后台表现，先完成玩家落地：" +
+                $"{targetAddress.WorldKey}，待表现 {chunkManager.PendingRuntimeChunkPresentationCount}，" +
+                $"仍有后台生成 {chunkManager.HasPendingChunkDataLoads}。",
+                chunkManager);
+        }
+
+        Physics2D.SyncTransforms();
+        yield return new WaitForFixedUpdate();
     }
 
     /// <summary>等待 GameManager 的世界进入收尾完成，避免维度交互窗口提前开放。</summary>
@@ -1013,6 +1030,15 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             {
                 saveData.DayTimeData.WorldTimeDict[worldKey] = new SerializableTimeData(GameManager.Instance.ReadyTimeData ?? new TimeData());
             }
+        }
+
+        // 兼容已经创建过的旧矿洞存档：旧数据可能因固定光照从未写入地表时间引用。
+        if (!address.IsSurface &&
+            saveData.DayTimeData.WorldTimeDict.TryGetValue(worldKey, out SerializableTimeData existingDimensionTime) &&
+            existingDimensionTime != null &&
+            string.IsNullOrEmpty(existingDimensionTime.ReferenceScene))
+        {
+            existingDimensionTime.ReferenceScene = address.PlanetId;
         }
 
         if (!saveData.DayTimeData.SceneLightingRateDict.ContainsKey(worldKey))
