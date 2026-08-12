@@ -191,12 +191,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 15d7395a1c9a46e4592996e6b0ccd15a
-    m_Address: Assets/2_Prefabs/Entity_AI/Wolf_Tree.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 165cdd179ecf95240a837f111f66d1d5
     m_Address: "Assets/2_Prefabs/Space/\u571F\u661F.prefab"
     m_ReadOnly: 0

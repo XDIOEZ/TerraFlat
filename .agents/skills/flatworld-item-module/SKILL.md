@@ -1,9 +1,6 @@
 ---
 name: flatworld-item-module
 description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构、实体创建销毁、对象池、模块加载保存、Tick 调度、运行时注册、空间索引或网络模块序列化。关键词：ItemMgr、Item、Module、ItemMods、ItemMaker。"
-argument-hint: "Item、Module、Tick 或对象池问题"
-user-invocable: true
-disable-model-invocation: false
 ---
 
 # FlatWorld Item / Module 系统定位
@@ -11,14 +8,12 @@ disable-model-invocation: false
 > 最后核对：2026-08-07。绝大多数玩法最终挂接到 Item 的 Module。
 
 ## 修改前先读
-
 1. `Assets/5_Scripts/5-3_GamePlay/Entities/Item/Item.cs`：Item 生命周期、模块加载保存与局部调度缓存。
 2. `Assets/5_Scripts/5-3_GamePlay/Entities/Item/Module.cs`：模块基类、`TickMode`、`FixedTickInterval`。
 3. `Assets/5_Scripts/5-3_GamePlay/Entities/Item/ItemMods.cs`：按名称/ID 的模块索引与调度失效。
 4. `Assets/5_Scripts/5-3_GamePlay/Core/Manager/ItemMgr*.cs`：`ItemMgr.cs` 保留公共 API 与 Unity 生命周期；Spawning、Perception、Players、RandomDrop partial 分别承载实例生成销毁、感知空间索引、玩家加载和随机掉落。
 
 ## 核心链路
-
 ```text
 ItemMaker / ItemMgr 实例化
 → Item.itemData
@@ -30,66 +25,40 @@ ItemMaker / ItemMgr 实例化
 ```
 
 ## 关键文件与资源
-
 - 抽象实体：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Item.cs`。
 - 通用实体：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/GameItem.cs`。
 - 玩家实体：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Player.cs`。
 - 创建入口：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/ItemMaker.cs`。
 - 数据基类：`Assets/5_Scripts/5-1_Data/ItemData/ItemData.cs`。
 - 地图 ItemData：`Assets/5_Scripts/5-1_Data/ItemData/Data_TileMap.cs`；格子地形栈：`Assets/5_Scripts/5-1_Data/TileData/TileStackCell.cs`。
-- 联网序列化：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/ItemNetworkStateSerialization.cs`。
-- 远端模块边界：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/IRemoteNetworkModule.cs`。
-- Item Prefab：`Assets/2_Prefabs/Item/`。
-- Module Prefab：`Assets/2_Prefabs/Module/`。
-- 本体物品入口：`Assets/StreamingAssets/GameConfig/Items/item-manifest.json`；定义按最终解析出的 `shellPrefab` 放在 `Items/shells/*.json`，Manifest 的 `shellPrefab` 必须与包内最终外壳及模板 Prefab 根名称一致（现有模板包括 `Axe/Prop/Dagger_Copper/Pickaxe/Spear/Stick/Seed`，包 `id/path` 可继续表达物品家族，例如 Dagger 家族；新增专用外壳时按实际 Prefab 名登记）。`ItemDefinitionCatalogLoader` 只加载 Manifest 显式启用的包，先全局合并再解析跨文件 `parent`，是物品静态配置的唯一真源。
 
 ## 调度约束
-
 - `Module.TickMode` 可为 `EveryFrame`、`FixedInterval`、`Disabled`。
 - 未声明策略的旧模块默认 `EveryFrame`；未覆盖 `ModUpdate` 的模块可自动休眠。
 - `ItemMgr` 使用 EveryFrame、Fast(0.05s)、Normal(0.1s)、Slow(0.25s) 的 8 桶错帧调度。
 - `ItemMods` 增删模块、对象池复用和模块配置变化必须使调度缓存失效。
-- FixedInterval 模块接收真实累计 `deltaTime`，不要假设每次调用等于固定间隔。
-- `Data_TileMap` 仍是 `ItemData` 联合序列化成员；地形栈必须通过 `TileStackCell`/`TileStackView` API 访问，禁止恢复逐格 `List<TileData>` 或暴露可变列表。
-- 物品环境初始化只保留温度、摄氏温度、降水、高度、光照五张网格；生产速度的环境系数读取降水，不再读取湿度。
 
 ## 近期变更
-
-> 最多保留 10 条，按新到旧排列；新增后超过上限时删除最旧条目。
-
+> 最多保留 5 条，按新到旧排列；超过时删除最旧条目。
+- 2026-08-12：`ItemData` 新增统一堆叠身份接口，将 `ItemSpecialData` 的 `null` 与空字符串规范为相同无特殊数据，避免旧资源与 JSON 定义生成的同 ID 材料被拆成多个堆叠。
+- 2026-08-11：普通资源掉落物的 JSON 视觉位置必须以实体原点为中心；煤炭、燧石、魔法石及关联旧 Prefab 已清除误迁移的场景坐标，避免生成后固定偏离实体位置。
 - 2026-08-11：`ItemModule.Smoke` 增加 Meatrack、Scarecrow、WorkBench 外壳真实模块类型回归；Golden Path 会扫描全部 `Prefab` Addressables 的脚本依赖与 Missing Script，并在初始 Berry 掉落完成归属/动画后才进入区块休眠阶段。
 - 2026-08-11：刀类 JSON 家族改用接线健康且结构兼容的 `Dagger_Copper` 共享外壳，石刀/骨刀/燧石刀继续由 JSON 覆盖数据、贴图和朝向；异步加载按 `sourcePrefab` 显式预加载，Editor 强制重导入后读 AssetDatabase，Player 继续使用 Addressables。
 - 2026-08-10：事件波次生物与 GM 召唤共用 `ItemMgr` 直接生成→`Load()`→`IAIActor` 绑定校验→失败回收链，避免幽灵围攻生成半初始化实体。
-- 2026-08-09：刀类变体使用 JSON `visual.rendererLocalEulerAngles` 与 `flipX` 明确记录贴图朝向；共享 Dagger 外壳不再把骨刀/燧石刀的艺术方向错误地按石刀默认值构造。
-- 2026-08-09：`Mod_Food` 口渴伤害改为独立 5 秒计时器，每次按 `WaterSelfHurt` 扣血；补水、复活、加载和对象池生命周期会清零计时，FixedInterval 模块仍按累计 `deltaTime` 结算。
-- 2026-08-09：本体 ItemDefinition 的 SpriteAddress 对含方括号的资源路径执行迁移前阻断；样例图集目录已改为安全名称并保留 GUID，模块原型按持久化 ID 选择且深拷贝保持真实 ModuleData 派生类型，避免 Addressables 路径误解析和 Ex_ModData 类型退化。
-- 2026-08-09：建筑召唤器 Item 数据进入 JSON 分包；每个召唤器保留独立 Prefab 外壳，JSON 接管 ItemData/ModuleData，复杂 Module 参数留在壳体以保持建筑放置、库存、设备和专用组件引用。
-- 2026-08-09：本体物品迁移器新增 Humus 与胸甲定义；胸甲 `Module_Equipment_Store` 的 SerializeReference 装备实例使用受限类型标签恢复，JSON 参数不启用任意 TypeNameHandling，避免抽象类型实例化失败或扩大反射面。
-- 2026-08-09：`DimensionPortal` 实现 Item 池生命周期清理；复用对象时重置锚点、初始化和传送状态，生成出口显式绑定宿主 `Item`，避免旧运行时状态污染新出口。
-- 2026-08-09：确定性 `CaveExit` 仍是不可拾取的永久基线物品；矿洞侧现在仅接收与地表入口同坐标的一条放置记录，`ChunkNaturalItemRenderer` 不创建额外运行时出口。
 
 ## 易误判点
-
 - 远程网络视觉副本不得注册进本地 Tick、AI 感知或本地存档索引。
 - `Item.OnDestroy` 与主动 `PrepareForDespawn` 有防重复逻辑，不能在外部再次保存/销毁同一 Item。
 - 新模块不仅要创建脚本，还要检查 Module Prefab、ModuleData、Addressables 标签和目标 Item Prefab 挂载。
 - `Items/shells/` 不会被自动扫描；新增分包必须登记进 `item-manifest.json`。修改物品最终 `shellPrefab` 后，也必须把原始定义移到对应模板包，否则加载器会按 Manifest 的 `shellPrefab` 分类约束直接报错。
-- 所有本体分包的 `id`、文件名、`shellPrefab` 与模板 Prefab 根名称必须保持一致；具体物品 ID 与模板身份是两套概念，禁止为了统一模板名而修改 Prefab 内的 `ItemData.IDName`。
-- 旧 `Item/Mod_HealthPoints.cs` 已确认无代码或资源引用并删除；实体生命值不是通用 Item Module 扩展点，统一由战斗系统 `DamageReceiver` 管理。
 
 ## 高耦合联动
-
 只在本次改动命中下表契约时加载对应 Skill 并追加最小测试；单个玩法模块的内部数值调整只加载该玩法 Skill。
-
 | 本系统变更 | 联动检查 | 必查契约 | 追加测试 |
 |---|---|---|---|
 | Item 创建/加载/保存/Despawn、对象池复用或 ModuleData | `flatworld-data-save`；涉及远端状态时再加载 `flatworld-networking` | 注册与注销各一次、池化无旧订阅、序列化往返不丢模块 | `DataSave.Smoke`；联机时追加 `Networking.Smoke` |
-| Module Tick 档位、累计 deltaTime 或调度缓存失效 | 只加载实际受影响模块所属 Skill，例如 `flatworld-buff`、`flatworld-inventory-crafting`、`flatworld-combat` | FixedInterval 语义不变，增删模块和复用后重新建缓存 | 对应玩法 Smoke |
-| 玩家注册、创建/释放或 `SetProfileContext()` | `flatworld-core`、`flatworld-player-interaction`；涉及远程副本时再加载 `flatworld-networking` | 本地档案、玩家索引与远程副本隔离 | `Core.Smoke`、`PlayerInteraction.Smoke`；联机时追加 `Networking.Smoke` |
-| 感知空间索引、移动同步或实体位置注册 | `flatworld-ai`、`flatworld-navigation` | AI 查询不读到池中/远程残留，导航位置与实体位置一致 | `AI.Smoke`、`Navigation.Smoke` |
 
 ## 修改后自动测试
-
 - 基础测试脚本：`Assets/GameTest/ItemModule/ItemModuleSmokeTests.cs`；当前只保留 Manifest 分包聚合/外壳分类与模块规范 ID/数据重绑定两个关键契约。
 - 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；Item/Module 测试约定目录：`Assets/GameTest/ItemModule/`；场景目录：`Assets/GameTest/Scenes/ItemModule/`；冒烟分类：`ItemModule.Smoke`。
 - 新增实体创建销毁、模块加载保存、Tick 调度、对象池或运行时注册行为时必须增加系统测试；修复 Bug 时先增加回归测试。Item 完整生命周期变化时同步更新冒烟场景。
@@ -98,5 +67,4 @@ ItemMaker / ItemMgr 实例化
 - 新增或移动测试脚本、场景、分类及覆盖范围后，必须更新本节；单次测试结果只在任务总结中报告，不写入 Skill。
 
 ## 修改后维护本 Skill
-
 改变 Item/Module 生命周期、Tick 档位、池化规则、注册索引、Prefab 目录、物品 JSON 定义或网络边界后，必须更新本 Skill；若调整具体玩法模块，也同步更新该玩法 Skill 的近期变更。

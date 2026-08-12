@@ -7,7 +7,7 @@ namespace FlatWorld.WorldModel
 {
     /// <summary>
     /// 新版区块的洞穴物品阶段。
-    /// 地形完成后在纯数据中输出洞壁矿脉、散落矿石和跨维度传送门，主线程只负责由 ChunkView 实例化。
+    /// 地形完成后在纯数据中输出可采集藤蔓、洞壁矿脉、散落矿石和跨维度传送门，主线程只负责由 ChunkView 实例化。
     /// </summary>
     public static class CaveGenerationFeatureGenerator
     {
@@ -91,9 +91,6 @@ namespace FlatWorld.WorldModel
 
             IReadOnlyList<CaveResourceRuleSnapshot> resourceRules =
                 request.Profile.CaveResourceRules;
-            if (resourceRules == null || resourceRules.Count == 0)
-                return placements.Count == 0 ? ChunkEcologyData.Empty : new ChunkEcologyData(placements);
-
             int startX = request.Address.ChunkOrigin.X;
             int startY = request.Address.ChunkOrigin.Y;
             for (int localY = 0; localY < terrain.Height; localY++)
@@ -116,6 +113,15 @@ namespace FlatWorld.WorldModel
                     {
                         continue;
                     }
+
+                    if (TryAddVine(request, settings, worldX, worldY, localX, localY,
+                            placements, claimedGuids))
+                    {
+                        continue;
+                    }
+
+                    if (resourceRules == null || resourceRules.Count == 0)
+                        continue;
 
                     bool spawnedMine = CaveLayoutKernel.IsWallEdge(
                                            request, settings, worldX, worldY) &&
@@ -464,6 +470,32 @@ namespace FlatWorld.WorldModel
         {
             int quotient = value / divisor;
             return value % divisor < 0 ? quotient - 1 : quotient;
+        }
+
+        #endregion
+
+        #region 可采集藤蔓
+
+        /// <summary>复用现有 Twine 自然物，使矿洞藤蔓可拾取、可存档并能参与制作。</summary>
+        private static bool TryAddVine(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
+            int localX, int localY, List<NaturalItemPlacement> placements,
+            HashSet<int> claimedGuids)
+        {
+            if (!CaveLayoutKernel.ShouldPlaceVine(request, settings, worldX, worldY))
+                return false;
+
+            const string ruleId = "cave.vine.twine";
+            uint state = CaveLayoutKernel.Hash(request.WorldSeed, worldX, worldY,
+                unchecked((int)0x56b7c12d));
+            float offsetX = (float)Lerp(-0.16d, 0.16d,
+                CaveLayoutKernel.NextUnitDouble(ref state));
+            float offsetY = (float)Lerp(-0.12d, 0.12d,
+                CaveLayoutKernel.NextUnitDouble(ref state));
+            int guid = CaveLayoutKernel.CreatePlacementGuid(request, worldX, worldY, ruleId);
+            AddPlacement(placements, claimedGuids, new NaturalItemPlacement(guid, "Twine",
+                localX, localY, offsetX, offsetY, ruleId));
+            return true;
         }
 
         #endregion

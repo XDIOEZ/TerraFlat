@@ -95,7 +95,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	public float detectorRefreshInterval = 0.6f;
 
 	[TabGroup("配置", "群体"), BoxGroup("配置/群体/协作"), LabelText("同伴响应范围"), SuffixLabel("米", true), MinValue(0.1f)]
-	public float allyCallDistance = 40f;
+	public float allyCallDistance = 120f;
 
 	[TabGroup("配置", "群体"), BoxGroup("配置/群体/协作"), LabelText("同伴支援时长"), SuffixLabel("秒", true), MinValue(0.1f)]
 	public float packAssistDuration = 5f;
@@ -130,14 +130,14 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	public float chaseSeparationMaxOffset = 0.2f;
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), HorizontalGroup("配置/行为/战斗/Hr1"), LabelText("警觉距离"), SuffixLabel("米", true), MinValue(0.1f)]
-	public float alertDetectDistance = 10f;
+	public float alertDetectDistance = 20f;
 	[HorizontalGroup("配置/行为/战斗/Hr1"), LabelText("追击触发"), SuffixLabel("米", true), MinValue(0.1f)]
-	public float chaseTriggerDistance = 14f;
+	public float chaseTriggerDistance = 28f;
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), HorizontalGroup("配置/行为/战斗/Hr2"), LabelText("攻击距离"), SuffixLabel("米", true), MinValue(0.1f)]
 	public float attackTriggerDistance = 1.4f;
 	[HorizontalGroup("配置/行为/战斗/Hr2"), LabelText("追击放弃"), SuffixLabel("米", true), MinValue(0.1f)]
-	public float chaseLossDistance = 22f;
+	public float chaseLossDistance = 44f;
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), HorizontalGroup("配置/行为/战斗/Hr3"), LabelText("攻击冷却"), SuffixLabel("秒", true), MinValue(0f)]
 	public float attackCooldown = 2f;
@@ -508,6 +508,8 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	{
 		if (_currentThreat == null) { StopMove(); return; }
 
+		// 追击期间持续面向玩家，避免寻路移动时保留旧朝向而倒着奔跑。
+		FaceTarget(_currentThreat.transform.position);
 		MoveTo(_hasChaseFormationTarget
 			? _chaseFormationTarget
 			: _currentThreat.transform.position);

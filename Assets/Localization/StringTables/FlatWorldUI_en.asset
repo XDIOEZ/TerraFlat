@@ -1694,6 +1694,8 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 970667895382020
     m_Localized: No Quest Objectives
+  - m_Id: 1058478408773632
+    m_Localized: Exit Without Saving
     m_Metadata:
       m_Items: []
   references:

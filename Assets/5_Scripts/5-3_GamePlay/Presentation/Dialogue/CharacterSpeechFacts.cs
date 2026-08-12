@@ -13,6 +13,14 @@ namespace FlatWorld.Dialogue
 
         #endregion
 
+        #region 水分
+
+        public const string HydrationRate = "hydration.rate";
+        public const string HydrationTier = "hydration.tier";
+        public const string HydrationIsTakingDamage = "hydration.isTakingDamage";
+
+        #endregion
+
         #region 新手引导
 
         public const string TutorialEnabled = "tutorial.enabled";

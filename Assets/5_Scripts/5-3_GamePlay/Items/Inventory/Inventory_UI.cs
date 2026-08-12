@@ -288,8 +288,7 @@ public class Inventory : MonoBehaviour
             {
                 var slot = Data.itemSlots[i];
                 if (!slot.IsFull && slot._ItemData != null &&
-                    slot._ItemData.ItemSpecialData == inputItemData.ItemSpecialData &&
-                    slot._ItemData.IDName == inputItemData.IDName &&
+                    slot._ItemData.CanStackWith(inputItemData) &&
                     slot._ItemData.Stack.CurrentVolume + inputItemData.Stack.CurrentVolume <= slot.SlotMaxVolume)
                 {
                     stackIndex = i;
@@ -361,8 +360,7 @@ public class Inventory : MonoBehaviour
         foreach (var slot in Data.itemSlots)
         {
             if (!slot.IsFull && slot._ItemData != null &&
-                slot._ItemData.ItemSpecialData == inputItemData.ItemSpecialData &&
-                slot._ItemData.IDName == inputItemData.IDName &&
+                slot._ItemData.CanStackWith(inputItemData) &&
                 slot._ItemData.Stack.CurrentVolume + inputItemData.Stack.CurrentVolume <= slot.SlotMaxVolume)
             {
                 //  Debug.Log("找到可堆叠的槽位");
@@ -452,7 +450,7 @@ public class Inventory : MonoBehaviour
         }
 
         // 特殊交换
-        if (localSlot._ItemData.Stack.Volume > MinStackVolume || localSlot._ItemData.ItemSpecialData != inputSlotHand._ItemData.ItemSpecialData)
+        if (localSlot._ItemData.Stack.Volume > MinStackVolume || !localSlot._ItemData.HasSameStackIdentity(inputSlotHand._ItemData))
         {
             Debug.Log("特殊交换");
             localSlot.Change(inputSlotHand);
@@ -491,7 +489,7 @@ public class Inventory : MonoBehaviour
             inputSlotHand._ItemData.Stack.Amount = 0;
         }
 
-        if (localSlot._ItemData.ItemSpecialData != inputSlotHand._ItemData.ItemSpecialData)
+        if (!localSlot._ItemData.HasSameStackIdentity(inputSlotHand._ItemData))
         {
             return false;
         }

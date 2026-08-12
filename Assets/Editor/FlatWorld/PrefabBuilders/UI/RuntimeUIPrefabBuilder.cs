@@ -438,7 +438,7 @@ public static class RuntimeUIPrefabBuilder
         rootRect.anchorMax = new Vector2(0f, 0.5f);
         rootRect.pivot = new Vector2(0f, 0.5f);
         rootRect.anchoredPosition = new Vector2(32f, 0f);
-        rootRect.sizeDelta = new Vector2(320f, 360f);
+        rootRect.sizeDelta = new Vector2(160f, 106f);
 
         CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
         canvasGroup.alpha = 1f;
@@ -464,7 +464,7 @@ public static class RuntimeUIPrefabBuilder
         title.characterSpacing = 1f;
         title.enableWordWrapping = false;
         title.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(title.rectTransform, 18f, 12f, 220f, 22f);
+        SetTopLeft(title.rectTransform, 12f, 9f, 112f, 18f);
 
         TextMeshProUGUI count = CreateText("数量文本", root.transform, "0", 13f, Muted);
         count.alignment = TextAlignmentOptions.MidlineRight;
@@ -473,11 +473,15 @@ public static class RuntimeUIPrefabBuilder
         count.rectTransform.anchorMin = new Vector2(1f, 1f);
         count.rectTransform.anchorMax = new Vector2(1f, 1f);
         count.rectTransform.pivot = new Vector2(1f, 1f);
-        count.rectTransform.anchoredPosition = new Vector2(-18f, -12f);
-        count.rectTransform.sizeDelta = new Vector2(52f, 22f);
+        count.rectTransform.anchoredPosition = new Vector2(-10f, -9f);
+        count.rectTransform.sizeDelta = new Vector2(28f, 18f);
 
         GameObject scrollRoot = CreateUIObject("内容列表", root.transform, typeof(ScrollRect));
-        SetTopLeft(scrollRoot.GetComponent<RectTransform>(), 16f, 48f, 288f, 292f);
+        RectTransform scrollRect = scrollRoot.GetComponent<RectTransform>();
+        scrollRect.anchorMin = new Vector2(0f, 0f);
+        scrollRect.anchorMax = new Vector2(1f, 1f);
+        scrollRect.offsetMin = new Vector2(8f, 8f);
+        scrollRect.offsetMax = new Vector2(-8f, -36f);
 
         GameObject viewport = CreateUIObject("Viewport", scrollRoot.transform, typeof(RectMask2D));
         Stretch(viewport.GetComponent<RectTransform>());
@@ -506,11 +510,11 @@ public static class RuntimeUIPrefabBuilder
         scroll.viewport = viewport.GetComponent<RectTransform>();
         scroll.content = contentRect;
 
-        TextMeshProUGUI empty = CreateText("空状态文本", root.transform, "暂无状态", 13f, Muted);
+        TextMeshProUGUI empty = CreateText("空状态文本", root.transform, "暂无状态", 11f, Muted);
         empty.alignment = TextAlignmentOptions.Center;
         empty.enableWordWrapping = false;
         empty.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(empty.rectTransform, 20f, 182f, 280f, 24f);
+        SetTopLeft(empty.rectTransform, 8f, 42f, 144f, 24f);
 
         return root;
     }
@@ -524,7 +528,7 @@ public static class RuntimeUIPrefabBuilder
             typeof(Image),
             typeof(BuffStatusRowView));
         LayoutElement rowElement = root.AddComponent<LayoutElement>();
-        rowElement.preferredHeight = 58f;
+        rowElement.preferredHeight = 31f;
 
         Image background = root.GetComponent<Image>();
         background.color = new Color(0.055f, 0.105f, 0.12f, 0.92f);
@@ -532,8 +536,8 @@ public static class RuntimeUIPrefabBuilder
         AddOutline(background, new Color(0.55f, 0.68f, 0.70f, 0.22f));
 
         HorizontalLayoutGroup rowLayout = root.AddComponent<HorizontalLayoutGroup>();
-        rowLayout.padding = new RectOffset(10, 10, 8, 8);
-        rowLayout.spacing = 10f;
+        rowLayout.padding = new RectOffset(5, 5, 4, 4);
+        rowLayout.spacing = 5f;
         rowLayout.childAlignment = TextAnchor.MiddleLeft;
         rowLayout.childControlWidth = true;
         rowLayout.childControlHeight = true;
@@ -542,14 +546,14 @@ public static class RuntimeUIPrefabBuilder
 
         GameObject iconObject = CreateUIObject("占位图标", root.transform, typeof(Image));
         LayoutElement iconElement = iconObject.AddComponent<LayoutElement>();
-        iconElement.preferredWidth = 38f;
-        iconElement.preferredHeight = 38f;
+        iconElement.preferredWidth = 23f;
+        iconElement.preferredHeight = 23f;
         Image icon = iconObject.GetComponent<Image>();
         icon.color = new Color(0.26f, 0.61f, 0.57f, 0.85f);
         icon.raycastTarget = false;
         AddOutline(icon, new Color(0.95f, 0.91f, 0.81f, 0.42f));
 
-        TextMeshProUGUI placeholder = CreateText("占位符文本", iconObject.transform, "?", 20f, Cream);
+        TextMeshProUGUI placeholder = CreateText("占位符文本", iconObject.transform, "?", 13f, Cream);
         placeholder.fontStyle = FontStyles.Bold;
         placeholder.alignment = TextAlignmentOptions.Center;
         placeholder.enableWordWrapping = false;
@@ -566,16 +570,16 @@ public static class RuntimeUIPrefabBuilder
         infoLayout.childForceExpandWidth = true;
         infoLayout.childForceExpandHeight = false;
 
-        TextMeshProUGUI name = CreateText("状态名称", info.transform, "Buff", 15f, Cream);
+        TextMeshProUGUI name = CreateText("状态名称", info.transform, "Buff", 10f, Cream);
         name.fontStyle = FontStyles.Bold;
         name.enableWordWrapping = false;
         name.overflowMode = TextOverflowModes.Ellipsis;
-        name.gameObject.AddComponent<LayoutElement>().preferredHeight = 23f;
+        name.gameObject.AddComponent<LayoutElement>().preferredHeight = 13f;
 
-        TextMeshProUGUI remaining = CreateText("剩余时间", info.transform, "剩余 30s", 11f, Muted);
+        TextMeshProUGUI remaining = CreateText("剩余时间", info.transform, "剩余 30s", 8f, Muted);
         remaining.enableWordWrapping = false;
         remaining.overflowMode = TextOverflowModes.Ellipsis;
-        remaining.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        remaining.gameObject.AddComponent<LayoutElement>().preferredHeight = 10f;
 
         return root;
     }

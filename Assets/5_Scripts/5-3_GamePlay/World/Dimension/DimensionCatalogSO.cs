@@ -46,7 +46,9 @@ public sealed class DimensionDefinition
     [Tooltip("Legacy catalog compatibility only; 1:1 dimension travel no longer applies this offset.")]
     public Vector3 PortalOffset = Vector3.zero;
     public string PortalTargetDimensionId;
+    [Tooltip("启用维度光照上限；实际亮度仍跟随引用世界的昼夜变化。")]
     public bool UseFixedLighting;
+    [Tooltip("维度允许的最高全局光照强度，不作为最低亮度或恒定亮度。")]
     [Range(0f, 1f)] public float FixedLighting = 1f;
     public bool SuppressWeather;
     public bool EnableMonsterSpawning = true;
