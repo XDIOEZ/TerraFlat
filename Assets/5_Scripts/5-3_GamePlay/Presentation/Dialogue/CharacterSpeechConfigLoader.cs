@@ -27,6 +27,8 @@ namespace FlatWorld.Dialogue
             CharacterSpeechFacts.TutorialEnabled,
             CharacterSpeechFacts.TutorialStage,
             CharacterSpeechFacts.TutorialCompleted,
+            CharacterSpeechFacts.MetallurgyFirstRawIronSmelted,
+            CharacterSpeechFacts.MetallurgyFirstMetalToolCrafted,
             CharacterSpeechFacts.WeatherType,
             CharacterSpeechFacts.WeatherPhase,
             CharacterSpeechFacts.WeatherIntensity,

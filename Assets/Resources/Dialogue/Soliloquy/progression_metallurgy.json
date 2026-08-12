@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "progression.metallurgy.first-raw-iron",
+      "topic": "progression.metallurgy.first-raw-iron",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Ambient",
+      "conditions": [
+        { "fact": "metallurgy.firstRawIronSmelted", "operator": "Equal", "value": "True" },
+        { "fact": "metallurgy.firstMetalToolCrafted", "operator": "Equal", "value": "False" }
+      ],
+      "lines": [
+        "第一块粗铁锭成了。再备些木料和绳子，就能做一把耐用的粗铁工具。"
+      ],
+      "duration": 5.2,
+      "cooldown": 60,
+      "once": true,
+      "completionFlag": "progression.metallurgy.first-raw-iron.shown",
+      "enabled": true
+    },
+    {
+      "id": "progression.metallurgy.first-metal-tool",
+      "topic": "progression.metallurgy.first-metal-tool",
+      "triggers": ["StateChanged", "Idle"],
+      "priority": "Ambient",
+      "conditions": [
+        { "fact": "metallurgy.firstMetalToolCrafted", "operator": "Equal", "value": "True" }
+      ],
+      "lines": [
+        "粗铁工具到手了。接下来可以继续提炼熟铁，再挑战更结实的装备。"
+      ],
+      "duration": 5.0,
+      "cooldown": 60,
+      "once": true,
+      "completionFlag": "progression.metallurgy.first-metal-tool.shown",
+      "enabled": true
+    }
+  ]
+}

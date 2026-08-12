@@ -27,4 +27,7 @@ description: "Use when: 定位或修改 FlatWorld 的角色自言自语、屏幕
 - 覆盖 Fact→Provider→调度→Presenter、优先级/冷却、一次性恢复、远程副本隔离及解除订阅。
 - 默认不主动跑测试；需要时运行 `Dialogue.Smoke`。测试入口：`Assets/GameTest/Dialogue/DialogueSmokeTests.cs`；真实链可用 Golden Path `dialogue.player-speech`。
 
-接口、Fact/Provider、Prefab、JSON 或完成标记变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
+
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

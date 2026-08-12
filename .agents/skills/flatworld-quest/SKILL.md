@@ -32,4 +32,7 @@ description: "Use when: 定位或修改 FlatWorld 的任务定义、任务目录
 - 存档→Data；物品奖励→Inventory；入世/加载顺序→Core；MOD 内容→Modding；UI 文本→UI+Localization；真实玩法→对应 Skill+Golden Path。
 - 默认静态诊断、编译和 Console；需要时运行 `Quest.Smoke`/`Quest.Save`。真实流程聚焦时同时启用 `quest.progression` 与 `inventory.crafting`。
 
-定义、Handler、JSON、信号、存档版本、UI 接口或 Golden ID 变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
+
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

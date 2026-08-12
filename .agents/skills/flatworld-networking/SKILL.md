@@ -30,4 +30,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Mirror/KCP 联机启动、
 - 按改动联动 Core/Player、Data/Item、Map/Navigation、Building 或 Modding。
 - 默认不主动跑测试；需要时运行 `Networking.Smoke`。测试入口：`Assets/GameTest/Networking/NetworkingSmokeTests.cs`；不得恢复独立测试 Harness/Prefab/Build 场景。
 
-协议、消息、玩家身份、Prefab、流送或权威边界变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
+
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

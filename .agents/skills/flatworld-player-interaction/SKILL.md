@@ -27,4 +27,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 默认做静态诊断与编译；需要时运行 `PlayerInteraction.Smoke` 或专项 `PlayerInteraction.Input`。
 - 测试目录：`Assets/GameTest/PlayerInteraction/`。
 
-Input Action、Prefab、交互协议、相机/焦点或本地玩家解析变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
+
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

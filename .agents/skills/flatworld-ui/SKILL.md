@@ -34,4 +34,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 检查 Prefab/节点/组件/事件、重复开关、输入锁、焦点边界、输入穿透、条目复用和本地化切换；最终布局再人工看。
 - 默认静态诊断、编译和 Console；系统级变化运行 `UI.Smoke`。测试入口：`Assets/GameTest/UI/UISmokeTests.cs`；真实库存面板可用 Golden Path `ui.inventory-panel`。
 
-Prefab/节点名、PanelKey、PanelRoot、焦点/输入锁或绑定变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
+
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

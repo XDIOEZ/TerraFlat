@@ -1121,6 +1121,7 @@ namespace FlatWorld.Automation
 
             _player = reenteredPlayer;
             _mover = reenteredPlayer.itemMods.GetMod_ByID<Mover>(ModText.Mover);
+            FlatWorldGoldenPathScenarios.OnWorldReentered(CreateScenarioContext());
             _worldExitCompleted = false;
             _runtimePhase = RuntimePhase.WaitForFinalWorldExit;
             _phaseDeadline = EditorApplication.timeSinceStartup +

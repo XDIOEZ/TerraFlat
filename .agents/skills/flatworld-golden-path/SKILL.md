@@ -37,8 +37,7 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --gol
 3. 从 JSON 打开且实际查看 `initial/middle/final.png`；确认非黑屏/空白/紫材质，玩家、地形、主要 HUD 与阶段变化合理。
 4. 结构化结果、Console 或视觉任一失败都不得报告通过；截图不能替代玩法断言。
 
-生命周期阶段、Operation ID、配置/结果格式或场景入口变化时更新本 Skill 与 map reference；近期变更最多 5 条。
+## Skill 维护原则
 
-## 近期变更
-
-- 2026-08-12：Runtime.GoldenPath 启动阶段新增本体 Actor JSON 注册与视觉资源断言；遵循项目规则，本次未主动运行 Test Runner。
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

@@ -20,9 +20,7 @@
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [
-        ""
-      ],
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/item/Plant/GrassAndFlower.png[GrassAndFlower_16]",
         "rendererLocalPosition": {

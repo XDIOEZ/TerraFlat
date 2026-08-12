@@ -6,6 +6,7 @@
       "player.spawn-land",
       "quest.progression",
       "inventory.crafting",
+      "inventory.metallurgy-progression",
       "ui.inventory-panel",
       "audio.cue-playback",
       "combat.target-damage"

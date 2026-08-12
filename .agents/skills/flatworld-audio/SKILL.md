@@ -25,4 +25,7 @@ description: "Use when: 定位或修改 FlatWorld 的音频服务、AudioCue、�
 - 默认不主动跑测试；需要时按 `flatworld-test-automation` 运行 `Audio.Smoke`。
 - 测试入口：`Assets/GameTest/Audio/AudioSmokeTests.cs`；真实播放链由 Golden Path `audio.cue-playback` 覆盖。
 
-Cue ID、资源路径、池化或路由契约变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
+
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

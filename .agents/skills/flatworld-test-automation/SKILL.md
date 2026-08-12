@@ -34,8 +34,7 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --che
 - 随机/时间/地图测试注入确定输入；结束后清理临时存档、对象、端口和进程。
 - 只有布局、颜色、动画、粒子、Shader 或相机最终观感变化才做定向视觉检查；优先打开 Golden Path 已生成的 Game 截图，不改变用户 Editor 布局或 Play Mode。
 
-脚本、门槛、分类或结果格式变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
 
-## 近期变更
-
-- 2026-08-12：新增 Actor JSON/Addressables、MOD Actor/Lua 与真实启动注册三层断言；默认仍只编译和检查 Console。
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

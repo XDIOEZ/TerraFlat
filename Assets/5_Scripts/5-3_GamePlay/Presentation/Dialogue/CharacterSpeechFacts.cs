@@ -29,6 +29,13 @@ namespace FlatWorld.Dialogue
 
         #endregion
 
+        #region 冶金进度
+
+        public const string MetallurgyFirstRawIronSmelted = "metallurgy.firstRawIronSmelted";
+        public const string MetallurgyFirstMetalToolCrafted = "metallurgy.firstMetalToolCrafted";
+
+        #endregion
+
         #region 天气与暴露
 
         public const string WeatherType = "weather.type";

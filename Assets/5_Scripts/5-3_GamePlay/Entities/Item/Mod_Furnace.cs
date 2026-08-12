@@ -35,6 +35,7 @@ public class Mod_Furnace : Module, IInteractable
     private const float PanelDestroyDelay = 30f;
     private Coroutine panelDestroyCoroutine;
     private Player currentInteractingPlayer;
+    private Player smeltingActor;
     #endregion
 
     #region 生命周期
@@ -97,6 +98,7 @@ public class Mod_Furnace : Module, IInteractable
     {
         ClosePanelAndClearTransferContext();
         CancelPanelDestroyCountdown();
+        smeltingActor = null;
     }
 
     private void ClosePanelAndClearTransferContext()
@@ -548,6 +550,17 @@ public class Mod_Furnace : Module, IInteractable
 
         // 执行熔炼
         ExecuteSmelting(InputInventory, OutputInventory, recipe, outputItems);
+    }
+
+    /// <summary>
+    /// 由服务器事务或自动化场景代表玩家提交一次完整熔炼；不打开 UI，也不绕过配方、温度、材料与空间校验。
+    /// </summary>
+    public void CompleteSmelting(Player actor)
+    {
+        if (actor != null)
+            smeltingActor = actor;
+
+        CompleteSmelting();
     }
     #endregion
 
@@ -1115,7 +1128,25 @@ public class Mod_Furnace : Module, IInteractable
 
         outputInv.RefreshUI();
         inputInv.RefreshUI();
+        PublishSmeltingSuccess(outputItems);
         Debug.Log($"熔炼完成：{recipe.name}");
+    }
+
+    /// <summary>全部产物提交成功后，按产物逐项发布权威熔炼进度。</summary>
+    private void PublishSmeltingSuccess(IReadOnlyList<ItemData> outputItems)
+    {
+        Player actor = smeltingActor ?? currentInteractingPlayer;
+        if (actor == null || outputItems == null)
+            return;
+
+        for (int index = 0; index < outputItems.Count; index++)
+        {
+            ItemData output = outputItems[index];
+            GameplayProgressEvents.PublishSmeltSucceeded(
+                actor,
+                output?.IDName,
+                output?.Stack?.Amount ?? 1f);
+        }
     }
 
     // 提取传统的位置扣除逻辑为单独方法，方便复用
@@ -1271,6 +1302,7 @@ public class Mod_Furnace : Module, IInteractable
 
         // 开始熔炼
         Data.IsSmelting = true;
+        smeltingActor = currentInteractingPlayer;
 
         // 点燃燃料模块
         mod_Fuel?.SetIgnited(true);

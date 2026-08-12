@@ -32,8 +32,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 3. 默认做静态诊断、编译和 Console 检查；达到测试门槛或用户要求时按 `flatworld-test-automation` 运行 `AI.Smoke`。
 4. 测试入口：`Assets/GameTest/AI/AISmokeTests.cs`；真实世界行为可放入 Golden Path。
 
-路径、Prefab 挂载、感知/目标算法、Spawner 配置或测试入口变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
 
-## 近期变更
-
-- 2026-08-12：Chicken、WildBoar、Wolf、Ghost 接入独立 Actor JSON 目录、稳定 Addressables 地址和 MOD Actor 继承入口。
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

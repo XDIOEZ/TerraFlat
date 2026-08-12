@@ -46,7 +46,7 @@ namespace FlatWorld.Automation
     /// <summary>
     /// 真实黄金路径的稳定扩展点。阶段方法只做编排，
     /// 具体玩法可拆到 FlatWorldGoldenPathScenarios.&lt;Subsystem&gt;.cs。
-    /// 调用顺序：Reset → OnWorldReady → OnTraversalTick/OnChunkReady → BeforeWorldExit → Cleanup。
+    /// 调用顺序：Reset → OnWorldReady → OnTraversalTick/OnChunkReady → BeforeWorldExit → OnWorldReentered → Cleanup。
     /// </summary>
     internal static partial class FlatWorldGoldenPathScenarios
     {
@@ -88,6 +88,12 @@ namespace FlatWorld.Automation
             if (IsOperationEnabled(context.Configuration, WorldWrapOperationId))
                 AssertWorldWrapScenarioCompleted();
             AssertRegisteredOperationsCompleted(context);
+        }
+
+        internal static void OnWorldReentered(FlatWorldGoldenPathScenarioContext context)
+        {
+            // ContinueGame 完成后验证必须穿过真实磁盘保存边界的领域状态。
+            VerifyRegisteredWorldReentryOperations(context);
         }
 
         internal static void Cleanup(FlatWorldGoldenPathScenarioContext context)

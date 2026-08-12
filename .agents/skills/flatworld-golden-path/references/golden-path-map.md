@@ -49,6 +49,7 @@
 | `combat.target-damage` | Combat/AI | 玩家附近生成 Chicken，真实受伤与治疗 |
 | `quest.progression` | Quest/UI/Inventory | 自动接取示例任务，确认 `debugOnly` GM 测试任务未污染普通进度，验证任务追踪 UI 绑定与输入穿透，由正式制作成功信号推进并验证完成后移出、原子奖励与命名空间存档 |
 | `inventory.crafting` | Inventory/Crafting | 正式配方制作并把产物放入真实背包 |
+| `inventory.metallurgy-progression` | Inventory/Crafting/Data Save/Dialogue | 真实高炉将铁矿冶炼为粗铁、用该批产物制作粗铁镐，验证成功信号、里程碑及保存退出后 ContinueGame 恢复，再还原临时玩家状态 |
 | `ui.inventory-panel` | UI | 真实背包面板开关、输入锁获取与释放 |
 | `audio.cue-playback` | Audio | `ui.click` Cue 播放句柄与停止回收 |
 | `dialogue.player-speech` | Dialogue | 角色气泡请求、Presenter 与显示事件 |

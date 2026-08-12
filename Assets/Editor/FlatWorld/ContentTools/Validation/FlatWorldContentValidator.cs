@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
@@ -88,6 +89,8 @@ public static class FlatWorldContentValidator
     private const string ModulePrefabRoot = PrefabRoot + "/Module";
     private const string ScriptObjectRoot = "Assets/4_ScriptObjects";
     private const string ResourcesRoot = "Assets/Resources";
+    private const string ItemRootAssetPath = "Assets/StreamingAssets/GameConfig/Items";
+    private const string ItemManifestAssetPath = ItemRootAssetPath + "/item-manifest.json";
     private const string RecipeRootAssetPath = "Assets/StreamingAssets/GameConfig/Recipes";
     private const string RecipeManifestAssetPath = RecipeRootAssetPath + "/recipe-manifest.json";
     private const string WorldManagerPrefabPath = "Assets/2_Prefabs/GameManager/WorldManager.prefab";
@@ -115,6 +118,7 @@ public static class FlatWorldContentValidator
         public readonly List<PrefabRecord> ItemPrefabs = new();
         public readonly Dictionary<string, PrefabRecord> PrefabAliases = new(StringComparer.Ordinal);
         public readonly Dictionary<string, PrefabRecord> ItemIds = new(StringComparer.Ordinal);
+        public readonly HashSet<string> ItemDefinitionIds = new(StringComparer.Ordinal);
         public readonly HashSet<string> BiomeNames = new(StringComparer.Ordinal);
     }
 
@@ -150,6 +154,7 @@ public static class FlatWorldContentValidator
         ValidationContext context = new();
 
         RunRule(report, "FWC-SYS-001", PrefabRoot, "PrefabCatalog", () => BuildPrefabCatalog(context, report));
+        RunRule(report, "FWC-SYS-011", ItemManifestAssetPath, "ItemDefinitionCatalog", () => ValidateItemDefinitions(context, report));
         RunRule(report, "FWC-SYS-002", PrefabRoot, "ItemAndModule", () => ValidateItemsAndModules(context, report));
         RunRule(report, "FWC-SYS-003", RecipeManifestAssetPath, "RecipeCatalog", () => ValidateRecipes(context, report));
         RunRule(report, "FWC-SYS-004", PrefabRoot + "/Building", "BuildingPair", () => ValidateBuildings(context, report));
@@ -321,7 +326,9 @@ public static class FlatWorldContentValidator
             if (item?.itemData == null)
                 continue;
 
-            ValidateItemText(record, report);
+            // 已迁移物品的运行时文字来自 JSON；旧 Prefab 只承担外壳或迁移定位职责。
+            if (!context.ItemDefinitionIds.Contains(record.ItemId))
+                ValidateItemText(record, report);
             if (item.itemData.Stack == null)
             {
                 AddError(report, "FWC-ITEM-007", record.Path, "ItemData.Stack", "物品缺少堆叠数据。", item);
@@ -540,6 +547,266 @@ public static class FlatWorldContentValidator
 
     #endregion
 
+    #region JSON 物品定义
+
+    /// <summary>按运行时相同的 Manifest、分包和跨文件继承路径校验权威物品目录。</summary>
+    private static void ValidateItemDefinitions(
+        ValidationContext context,
+        FlatWorldContentValidationReport report)
+    {
+        string manifestAbsolutePath = ToAbsolutePath(ItemManifestAssetPath);
+        if (!File.Exists(manifestAbsolutePath))
+        {
+            AddError(report, "FWC-ITEMJSON-001", ItemManifestAssetPath, "Manifest", "物品清单不存在。", null);
+            return;
+        }
+
+        ItemDefinitionManifestDto manifest;
+        try
+        {
+            manifest = ItemDefinitionCatalogLoader.DeserializeManifest(File.ReadAllText(manifestAbsolutePath));
+            ItemDefinitionCatalogLoader.ValidateManifest(manifest);
+        }
+        catch (Exception exception)
+        {
+            AddError(report, "FWC-ITEMJSON-002", ItemManifestAssetPath, "Manifest", exception.Message, null);
+            return;
+        }
+
+        var packageJsons = new List<string>();
+        var sourcePaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        string itemRootAbsolutePath = ToAbsolutePath(ItemRootAssetPath);
+        foreach (ItemDefinitionPackageDto package in manifest.Packages ?? new List<ItemDefinitionPackageDto>())
+        {
+            if (package == null || !package.Enabled)
+                continue;
+
+            string packageAbsolutePath;
+            try
+            {
+                packageAbsolutePath = ItemDefinitionCatalogLoader.ResolvePackagePath(
+                    itemRootAbsolutePath,
+                    package.Path);
+            }
+            catch (Exception exception)
+            {
+                AddError(
+                    report,
+                    "FWC-ITEMJSON-003",
+                    ItemManifestAssetPath,
+                    $"packages[{package?.Id}].path",
+                    exception.Message,
+                    null);
+                continue;
+            }
+
+            string packageAssetPath = ToAssetPath(packageAbsolutePath);
+            if (!File.Exists(packageAbsolutePath))
+            {
+                AddError(
+                    report,
+                    "FWC-ITEMJSON-004",
+                    packageAssetPath,
+                    "Package",
+                    $"启用的物品分包 '{package.Id}' 不存在。",
+                    null);
+                continue;
+            }
+
+            string packageJson = File.ReadAllText(packageAbsolutePath);
+            packageJsons.Add(packageJson);
+            try
+            {
+                JObject root = JObject.Parse(packageJson);
+                if (root["items"] is not JArray items)
+                    throw new InvalidDataException("分包缺少 items 数组。");
+
+                for (int index = 0; index < items.Count; index++)
+                {
+                    if (items[index] is not JObject item)
+                        continue;
+                    string id = item.Value<string>("id")?.Trim();
+                    if (!string.IsNullOrWhiteSpace(id))
+                        sourcePaths.TryAdd(id, packageAssetPath);
+                }
+            }
+            catch (Exception exception)
+            {
+                AddError(report, "FWC-ITEMJSON-005", packageAssetPath, "items", exception.Message, null);
+            }
+        }
+
+        List<ItemDefinitionDto> definitions;
+        try
+        {
+            definitions = ItemDefinitionCatalogLoader.ResolveDefinitions(packageJsons);
+        }
+        catch (Exception exception)
+        {
+            AddError(report, "FWC-ITEMJSON-006", ItemManifestAssetPath, "items", exception.Message, null);
+            return;
+        }
+
+        var knownIdsIgnoreCase = new HashSet<string>(
+            definitions.Select(definition => definition.Id),
+            StringComparer.OrdinalIgnoreCase);
+        var knownDefinitionIds = new HashSet<string>(
+            definitions.Select(definition => definition.Id),
+            StringComparer.Ordinal);
+        foreach (ItemDefinitionDto definition in definitions)
+        {
+            if (definition == null || string.IsNullOrWhiteSpace(definition.Id))
+                continue;
+
+            string assetPath = sourcePaths.TryGetValue(definition.Id, out string sourcePath)
+                ? sourcePath
+                : ItemManifestAssetPath;
+            if (!definition.Abstract)
+                context.ItemDefinitionIds.Add(definition.Id);
+            ValidateResolvedItemDefinition(
+                context,
+                report,
+                definition,
+                knownIdsIgnoreCase,
+                knownDefinitionIds,
+                assetPath);
+        }
+    }
+
+    private static void ValidateResolvedItemDefinition(
+        ValidationContext context,
+        FlatWorldContentValidationReport report,
+        ItemDefinitionDto definition,
+        ISet<string> knownIds,
+        ISet<string> knownDefinitionIds,
+        string assetPath)
+    {
+        string field = $"items[{definition.Id}]";
+        if (definition.Abstract)
+            return;
+
+        if (string.IsNullOrWhiteSpace(definition.ShellPrefab) ||
+            !context.PrefabAliases.ContainsKey(definition.ShellPrefab.Trim()))
+        {
+            AddError(
+                report,
+                "FWC-ITEMJSON-007",
+                assetPath,
+                field + ".shellPrefab",
+                $"运行时外壳 '{definition.ShellPrefab}' 无法解析到 Prefab。",
+                null);
+        }
+
+        if (string.IsNullOrWhiteSpace(definition.SourcePrefab))
+        {
+            AddWarning(report, "FWC-ITEMJSON-101", assetPath, field + ".sourcePrefab", "缺少编辑器迁移源定位。", null);
+        }
+        else
+        {
+            string sourcePrefabPath = definition.SourcePrefab.Trim().Replace('\\', '/');
+            GameObject sourcePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(sourcePrefabPath);
+            Item sourceItem = sourcePrefab != null ? sourcePrefab.GetComponent<Item>() : null;
+            if (sourceItem?.itemData == null)
+            {
+                AddError(
+                    report,
+                    "FWC-ITEMJSON-008",
+                    assetPath,
+                    field + ".sourcePrefab",
+                    $"迁移源 '{sourcePrefabPath}' 不存在或缺少 ItemData。",
+                    null);
+            }
+            else if (!string.Equals(
+                         sourceItem.itemData.IDName,
+                         definition.Id,
+                         StringComparison.OrdinalIgnoreCase))
+            {
+                AddError(
+                    report,
+                    "FWC-ITEMJSON-009",
+                    assetPath,
+                    field + ".sourcePrefab",
+                    $"迁移源 ItemData.IDName '{sourceItem.itemData.IDName}' 与定义 ID '{definition.Id}' 不一致。",
+                    sourcePrefab);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(definition.GameName))
+        {
+            AddError(report, "FWC-ITEMJSON-010", assetPath, field + ".gameName", "物品显示名回退值为空。", null);
+        }
+        else if (!string.Equals(definition.GameName, definition.Id, StringComparison.OrdinalIgnoreCase) &&
+                 knownIds.Contains(definition.GameName.Trim()))
+        {
+            AddError(
+                report,
+                "FWC-ITEMJSON-011",
+                assetPath,
+                field + ".gameName",
+                $"显示名错误引用了另一物品 ID '{definition.GameName}'。",
+                null);
+        }
+
+        if (IsDebugDescription(definition.Description))
+        {
+            AddError(
+                report,
+                "FWC-ITEMJSON-012",
+                assetPath,
+                field + ".description",
+                "描述被 ItemData.ToString() 调试文本污染。",
+                null);
+        }
+        else if (string.IsNullOrWhiteSpace(definition.Description))
+        {
+            AddWarning(report, "FWC-ITEMJSON-102", assetPath, field + ".description", "物品描述为空。", null);
+        }
+
+        if (definition.Tags != null)
+        {
+            for (int index = 0; index < definition.Tags.Count; index++)
+            {
+                if (string.IsNullOrWhiteSpace(definition.Tags[index]))
+                {
+                    AddError(
+                        report,
+                        "FWC-ITEMJSON-013",
+                        assetPath,
+                        $"{field}.tags[{index}]",
+                        "标签不得包含空字符串。",
+                        null);
+                }
+            }
+        }
+
+        foreach (KeyValuePair<string, ItemModuleDefinitionDto> pair in
+                 definition.Modules ?? new Dictionary<string, ItemModuleDefinitionDto>())
+        {
+            string moduleField = $"{field}.modules[{pair.Key}]";
+            if (string.IsNullOrWhiteSpace(pair.Key) || pair.Value == null)
+            {
+                AddError(report, "FWC-ITEMJSON-014", assetPath, moduleField, "模块稳定名为空或定义为空。", null);
+                continue;
+            }
+
+            string modulePrefabId = pair.Value.Prefab?.Trim();
+            if (string.IsNullOrWhiteSpace(modulePrefabId) ||
+                !context.PrefabAliases.ContainsKey(modulePrefabId) &&
+                !knownDefinitionIds.Contains(modulePrefabId))
+            {
+                AddError(
+                    report,
+                    "FWC-ITEMJSON-015",
+                    assetPath,
+                    moduleField + ".prefab",
+                    $"模块 Prefab ID '{pair.Value.Prefab}' 无法解析。",
+                    null);
+            }
+        }
+    }
+
+    #endregion
+
     #region 配方
 
     private static void ValidateRecipes(ValidationContext context, FlatWorldContentValidationReport report)
@@ -564,6 +831,8 @@ public static class FlatWorldContentValidator
         }
 
         HashSet<string> recipeIds = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, RecipeDto> recipesById = new(StringComparer.Ordinal);
+        Dictionary<string, int> materialConsumers = new(StringComparer.Ordinal);
         string recipeRootAbsolutePath = ToAbsolutePath(RecipeRootAssetPath);
         foreach (RecipePackageDto package in manifest.Packages ?? new List<RecipePackageDto>())
         {
@@ -610,6 +879,10 @@ public static class FlatWorldContentValidator
                 {
                     AddError(report, "FWC-RECIPE-006", packageAssetPath, $"recipes[{recipeId}].id", $"跨分包重复配方 ID：{recipeId}", null);
                 }
+                else
+                {
+                    recipesById[recipeId] = recipe;
+                }
 
                 for (int inputIndex = 0; inputIndex < (recipe.Inputs?.Count ?? 0); inputIndex++)
                 {
@@ -618,7 +891,11 @@ public static class FlatWorldContentValidator
                         continue;
                     if (string.IsNullOrWhiteSpace(input.ItemId))
                         continue;
-                    if (!context.PrefabAliases.ContainsKey(input.ItemId.Trim()))
+                    string inputItemId = input.ItemId.Trim();
+                    materialConsumers[inputItemId] = materialConsumers.TryGetValue(inputItemId, out int count)
+                        ? count + 1
+                        : 1;
+                    if (!ItemExists(context, inputItemId))
                     {
                         AddError(
                             report,
@@ -635,7 +912,7 @@ public static class FlatWorldContentValidator
                     RecipeOutputDto output = recipe.Outputs[outputIndex];
                     if (output == null || string.IsNullOrWhiteSpace(output.ItemId))
                         continue;
-                    if (!context.PrefabAliases.ContainsKey(output.ItemId.Trim()))
+                    if (!ItemExists(context, output.ItemId.Trim()))
                     {
                         AddError(
                             report,
@@ -649,6 +926,91 @@ public static class FlatWorldContentValidator
             }
         }
 
+        ValidateMetallurgyProgression(context, recipesById, materialConsumers, report);
+    }
+
+    /// <summary>锁定当前首条铁器纵向链，避免产物回退成石器或冶炼出没有用途的死材料。</summary>
+    private static void ValidateMetallurgyProgression(
+        ValidationContext context,
+        IReadOnlyDictionary<string, RecipeDto> recipesById,
+        IReadOnlyDictionary<string, int> materialConsumers,
+        FlatWorldContentValidationReport report)
+    {
+        const string rawIronPickaxeRecipeId = "core:粗铁镐";
+        if (!recipesById.TryGetValue(rawIronPickaxeRecipeId, out RecipeDto rawIronPickaxe) ||
+            rawIronPickaxe.Outputs == null ||
+            rawIronPickaxe.Outputs.Count != 1 ||
+            !string.Equals(rawIronPickaxe.Outputs[0]?.ItemId, "Pickaxe_RawIron", StringComparison.Ordinal))
+        {
+            AddError(
+                report,
+                "FWC-PROGRESSION-001",
+                RecipeManifestAssetPath,
+                $"recipes[{rawIronPickaxeRecipeId}].outputs",
+                "粗铁镐配方必须唯一产出 Pickaxe_RawIron。",
+                null);
+        }
+
+        ValidateRecipeOutput(
+            context,
+            recipesById,
+            "core:熟铁镐",
+            "Pickaxe_Iron",
+            report);
+        ValidateRecipeOutput(
+            context,
+            recipesById,
+            "core:钢制铁甲",
+            "Chestplate_Iron",
+            report);
+
+        string[] requiredConsumerIds = { "Ingot_RawIron", "Ingot_WroughtIron", "Ingot_Steel" };
+        for (int index = 0; index < requiredConsumerIds.Length; index++)
+        {
+            string itemId = requiredConsumerIds[index];
+            if (!materialConsumers.ContainsKey(itemId))
+            {
+                AddError(
+                    report,
+                    "FWC-PROGRESSION-002",
+                    RecipeManifestAssetPath,
+                    $"material[{itemId}]",
+                    $"铁器链材料 '{itemId}' 没有任何已启用配方消费，会成为死产物。",
+                    null);
+            }
+        }
+    }
+
+    /// <summary>铁器消费端必须保留稳定配方 ID、唯一产物和可解析的 JSON 物品定义。</summary>
+    private static void ValidateRecipeOutput(
+        ValidationContext context,
+        IReadOnlyDictionary<string, RecipeDto> recipesById,
+        string recipeId,
+        string outputItemId,
+        FlatWorldContentValidationReport report)
+    {
+        if (recipesById.TryGetValue(recipeId, out RecipeDto recipe) &&
+            recipe.Outputs != null &&
+            recipe.Outputs.Count == 1 &&
+            string.Equals(recipe.Outputs[0]?.ItemId, outputItemId, StringComparison.Ordinal) &&
+            ItemExists(context, outputItemId))
+        {
+            return;
+        }
+
+        AddError(
+            report,
+            "FWC-PROGRESSION-003",
+            RecipeManifestAssetPath,
+            $"recipes[{recipeId}].outputs",
+            $"配方 '{recipeId}' 必须唯一产出可解析物品 '{outputItemId}'。",
+            null);
+    }
+
+    private static bool ItemExists(ValidationContext context, string itemId)
+    {
+        return !string.IsNullOrWhiteSpace(itemId) &&
+               (context.ItemDefinitionIds.Contains(itemId) || context.PrefabAliases.ContainsKey(itemId));
     }
 
     #endregion

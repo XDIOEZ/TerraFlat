@@ -25,4 +25,7 @@ description: "Use when: 定位或修改 FlatWorld 的太空场景、星球运行
 - 轨道与时间测试使用确定数据/步长；检查 Load/Save、中心绑定、Prefab 解析和场景清理。
 - 默认不主动跑测试；需要时运行 `Space.Smoke`。入口：`Assets/GameTest/Space/SpaceSmokeTests.cs`。
 
-星体字段、轨道、Prefab/Scene、飞行或保存策略变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
+
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

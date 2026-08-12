@@ -28,4 +28,7 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、动态
 - 坐标/窗口变化联动 `flatworld-map`，owned 玩家联动 Networking，占地联动 Building，AI 决策联动 AI Skill。
 - 默认不主动跑测试；需要时运行 `Navigation.Smoke`。测试入口：`Assets/GameTest/Navigation/NavigationSmokeTests.cs`。
 
-坐标、权重、脏区、占地、AI 代理或窗口策略变化时更新本 Skill；近期变更最多 5 条。
+## Skill 维护原则
+
+- 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
+- 不记录修改日期、近期变更或仅描述本次改动内容的流水账。
