@@ -1,6 +1,7 @@
 using FlatWorld.GameTest.Shared;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -13,6 +14,41 @@ namespace FlatWorld.GameTest.AI
         private enum AdvanceTestState
         {
             Advance
+        }
+
+        [Test]
+        [Category("AI.Smoke")]
+        [Category("Smoke")]
+        public void BuiltInActorsComeFromJsonAndUseStableAddressables()
+        {
+            List<ItemDefinitionDto> definitions = ActorDefinitionCatalogLoader.LoadBuiltInDefinitions();
+            string[] expectedIds = { "Chicken", "WildBoar", "Wolf", "Ghost" };
+            Assert.That(definitions.FindAll(definition => !definition.Abstract).Count, Is.EqualTo(expectedIds.Length));
+
+            foreach (string id in expectedIds)
+            {
+                ItemDefinitionDto definition = definitions.Find(candidate => candidate.Id == id);
+                Assert.That(definition, Is.Not.Null, $"Actor JSON 缺少 {id}");
+                Assert.That(definition.ShellAddress, Does.StartWith("flatworld.actor.shell."));
+                Assert.That(definition.Visual?.SpriteAddress, Does.StartWith("flatworld.actor.sprite."));
+                Assert.That(definition.Visual?.AnimatorControllerAddress,
+                    Does.StartWith("flatworld.actor.animator."));
+                Assert.That(definition.Modules.ContainsKey("ai"), Is.True, $"{id} 缺少 AI 参数块");
+                Assert.That(
+                    System.Linq.Enumerable.Any(
+                        definition.Modules.Values,
+                        module => module.Parameters?.HasValues == true),
+                    Is.True,
+                    $"{id} 没有导出模块参数");
+
+                string sourceGuid = AssetDatabase.AssetPathToGUID(definition.SourcePrefab);
+                string settingsText = File.ReadAllText(
+                    "Assets/AddressableAssetsData/AssetGroups/Default.asset");
+                Assert.That(settingsText, Does.Contain($"m_GUID: {sourceGuid}"),
+                    $"{id} 外壳未注册 Addressables");
+                Assert.That(settingsText, Does.Contain($"m_Address: {definition.ShellAddress}"),
+                    $"{id} 外壳地址不得依赖文件路径");
+            }
         }
 
 

@@ -1,0 +1,1574 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "BuildingSummoner_BlastFurnace_Base",
+      "abstract": true,
+      "shellPrefab": "BlastFurnace_Summoner",
+      "visual": {
+        "rendererPath": "Render"
+      }
+    },
+    {
+      "id": "BlastFurnace_Summoner",
+      "parent": "BuildingSummoner_BlastFurnace_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/BlastFurnace_Summoner.prefab",
+      "gameName": "BlastFurnace",
+      "description": "高炉：一种炉子，其中燃烧是通过压力下的空气流动来强制进行的，尤其是用于还原铁矿石的炉子。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Tileset.png[Smelter]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"BlastFurnace\",\"SummonerPrefabId\":\"BlastFurnace_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          }
+        },
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "熔炉模块": {
+          "prefab": "Mod_Furnace",
+          "id": "熔炉模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "BuildingSummoner_Bonfire_Base",
+      "abstract": true,
+      "shellPrefab": "Bonfire_Summoner",
+      "visual": {
+        "rendererPath": "Render"
+      }
+    },
+    {
+      "id": "Bonfire_Summoner",
+      "parent": "BuildingSummoner_Bonfire_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Bonfire_Summoner.prefab",
+      "gameName": "Bonfire",
+      "description": "物品名称：Bonfire\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：Station(None),物品材质：Stone\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：2133285210",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/icons_sheet.png[icons_sheet_56]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "熔炉模块": {
+          "prefab": "Mod_Furnace",
+          "id": "熔炉模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          }
+        },
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Bonfire\",\"SummonerPrefabId\":\"Bonfire_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [
+              2,
+              0,
+              0,
+              72,
+              67,
+              0,
+              0,
+              72,
+              67,
+              0,
+              0,
+              72,
+              68
+            ],
+            "Type": 0
+          }
+        },
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Hp\":0.0,\"MaxHp\":100.0,\"AttackersUIDs\":[],\"ShowCanvas\":true,\"DamageInterval\":0.1,\"DestroyDelay\":-1.0,\"LootTable\":[{\"LootPrefabName\":\"Chicken\",\"DropChance\":0.001,\"MinAmount\":1,\"MaxAmount\":1}],\"Defense\":0.0}",
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "BuildingSummoner_ChestWood_Base",
+      "abstract": true,
+      "shellPrefab": "Chest_Wood_Summoner",
+      "visual": {
+        "rendererPath": "Item"
+      }
+    },
+    {
+      "id": "Chest_Wood_Summoner",
+      "parent": "BuildingSummoner_ChestWood_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Chest_Wood_Summoner.prefab",
+      "gameName": "Chest_Wood",
+      "description": "物品名称：Chest_Wood\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Tileset.png[Tileset_77]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": -0.5,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Chest_Wood\",\"SummonerPrefabId\":\"Chest_Wood_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "Module_Interaction": {
+          "prefab": "Module_Interaction",
+          "id": "Module_Interaction",
+          "enabled": false,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "UI_背包": {
+          "prefab": "Mod_Inventory",
+          "id": "UI_背包",
+          "enabled": true,
+          "data": {
+            "Data": {},
+            "PanleRectPosition": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "InventoryInitName": "",
+            "BasePanelIsOpen": true,
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "BuildingSummoner_DoorStone_Base",
+      "abstract": true,
+      "shellPrefab": "Door_Stone_Summoner",
+      "visual": {
+        "rendererPath": "Item"
+      }
+    },
+    {
+      "id": "Door_Stone_Summoner",
+      "parent": "BuildingSummoner_DoorStone_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Door_Stone_Summoner.prefab",
+      "gameName": "石门",
+      "description": "可以开关的厚重石门。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Door_Stone_Close.png[Door_Stone_Close]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": -0.5,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "建筑模块": {
+          "prefab": "Mod_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Stone\",\"SummonerPrefabId\":\"Door_Stone_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "Door": {
+          "prefab": "Mod_Door",
+          "id": "Door",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "BuildingSummoner_DoorWood_Base",
+      "abstract": true,
+      "shellPrefab": "Door_Wood_Summoner",
+      "visual": {
+        "rendererPath": "Item"
+      }
+    },
+    {
+      "id": "Door_Wood_Summoner",
+      "parent": "BuildingSummoner_DoorWood_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Door_Wood_Summoner.prefab",
+      "gameName": "Door_Wood",
+      "description": "物品名称：Chest_Wood\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Door_Wood_Close.png[Door_Wood_Close]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": -0.5,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "建筑模块": {
+          "prefab": "Mod_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Wood\",\"SummonerPrefabId\":\"Door_Wood_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "Door": {
+          "prefab": "Mod_Door",
+          "id": "Door",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "BuildingSummoner_Meatrack_Base",
+      "abstract": true,
+      "shellPrefab": "Meatrack_Summoner",
+      "visual": {
+        "rendererPath": "Render"
+      }
+    },
+    {
+      "id": "Meatrack_Summoner",
+      "parent": "BuildingSummoner_Meatrack_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Meatrack_Summoner.prefab",
+      "gameName": "Meatrack",
+      "description": "高炉：一种炉子，其中燃烧是通过压力下的空气流动来强制进行的，尤其是用于还原铁矿石的炉子。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Meatrack.png[Meatrack]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Meatrack\",\"SummonerPrefabId\":\"Meatrack_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "晾肉架模块": {
+          "prefab": "Meatrack",
+          "id": "晾肉架模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "BuildingSummoner_MineEntrance_Base",
+      "abstract": true,
+      "shellPrefab": "MineEntrance_Summoner",
+      "visual": {
+        "rendererPath": "Item"
+      }
+    },
+    {
+      "id": "MineEntrance_Summoner",
+      "parent": "BuildingSummoner_MineEntrance_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab",
+      "gameName": "矿坑入口",
+      "description": "安装后可通往地下矿洞，并在矿洞中生成对应出口。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png[Wall_Stone_Medium]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": -0.5,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 0.28,
+          "g": 0.22,
+          "b": 0.18,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 2.0,
+            "y": 2.0
+          }
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MineEntrance\",\"SummonerPrefabId\":\"MineEntrance_Summoner\"}",
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "BuildingSummoner_Scarecrow_Base",
+      "abstract": true,
+      "shellPrefab": "Scarecrow_Summoner",
+      "visual": {
+        "rendererPath": "渲染绘制"
+      }
+    },
+    {
+      "id": "Scarecrow_Summoner",
+      "parent": "BuildingSummoner_Scarecrow_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Scarecrow_Summoner.prefab",
+      "gameName": "Scarecrow",
+      "description": "物品名称：Scarecrow\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 10.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Characters/Hana Caraka - Base Character sample/walk.png[walk_11]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.01342845,
+            "y": 0.241712272
+          },
+          "path": "",
+          "size": {
+            "x": 0.4427185,
+            "y": 0.516575456
+          }
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Scarecrow\",\"SummonerPrefabId\":\"Scarecrow_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "Module_Equipment": {
+          "prefab": "Mod_Equipment",
+          "id": "Module_Equipment",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "BuildingSummoner_Smelter_Base",
+      "abstract": true,
+      "shellPrefab": "Smelter_Summoner",
+      "visual": {
+        "rendererPath": "Render"
+      }
+    },
+    {
+      "id": "Smelter_Summoner",
+      "parent": "BuildingSummoner_Smelter_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Smelter_Summoner.prefab",
+      "gameName": "Smelter",
+      "description": "什么都没有描述",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 200.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/icons_sheet.png[icons_sheet_43]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "熔炉模块": {
+          "prefab": "Mod_Furnace",
+          "id": "熔炉模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          }
+        },
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Smelter\",\"SummonerPrefabId\":\"Smelter_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "Module_Interaction": {
+          "prefab": "Module_Interaction",
+          "id": "Module_Interaction",
+          "enabled": false,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          }
+        },
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "BuildingSummoner_Tent_Base",
+      "abstract": true,
+      "shellPrefab": "Tent_Summoner",
+      "visual": {
+        "rendererPath": "Sprite"
+      }
+    },
+    {
+      "id": "Tent_Summoner",
+      "parent": "BuildingSummoner_Tent_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Tent_Summoner.prefab",
+      "gameName": "Tent",
+      "description": "什么都没有描述",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 2.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/帐篷.png[帐篷]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Tent\",\"SummonerPrefabId\":\"Tent_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "Module_Interaction": {
+          "prefab": "Module_Interaction",
+          "id": "Module_Interaction",
+          "enabled": false,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "BuildingSummoner_WallStone_Base",
+      "abstract": true,
+      "shellPrefab": "Wall_Stone_Summoner",
+      "visual": {
+        "rendererPath": "Item"
+      }
+    },
+    {
+      "id": "Wall_Stone_Summoner",
+      "parent": "BuildingSummoner_WallStone_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Wall_Stone_Summoner.prefab",
+      "gameName": "石墙",
+      "description": "由坚固石块砌成的防御墙体。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png[Wall_Stone_Medium]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": -0.5,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Stone\",\"SummonerPrefabId\":\"Wall_Stone_Summoner\",\"TileBlockId\":\"TileBase_BuiltStoneWall\"}",
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "BuildingSummoner_WallWood_Base",
+      "abstract": true,
+      "shellPrefab": "Wall_Wood_Summoner",
+      "visual": {
+        "rendererPath": "Item"
+      }
+    },
+    {
+      "id": "Wall_Wood_Summoner",
+      "parent": "BuildingSummoner_WallWood_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Wall_Wood_Summoner.prefab",
+      "gameName": "Chest_Wood",
+      "description": "物品名称：Chest_Wood\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Wall_Wood_Medium.png[Wall_Wood_Medium]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": -0.5,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Wood\",\"SummonerPrefabId\":\"Wall_Wood_Summoner\"}",
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "BuildingSummoner_WorkBench_Base",
+      "abstract": true,
+      "shellPrefab": "WorkBench_Summoner",
+      "visual": {
+        "rendererPath": "Module_Renderer"
+      }
+    },
+    {
+      "id": "WorkBench_Summoner",
+      "parent": "BuildingSummoner_WorkBench_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/WorkBench_Summoner.prefab",
+      "gameName": "WorkBench",
+      "description": "物品名称：WorkBench\n物品描述：\n物品体积：100\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n    - Construct\r\n  Material:\r\n    - Wood\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 100.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Building/Tileset.png[workbenches]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.99,
+            "y": 0.99
+          }
+        }
+      },
+      "modules": {
+        "Module_WorkBench": {
+          "prefab": "Mod_MakeTable",
+          "id": "Module_WorkBench",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          }
+        },
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        },
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"WorkBench\",\"SummonerPrefabId\":\"WorkBench_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "Module_Interaction": {
+          "prefab": "Module_Interaction",
+          "id": "Module_Interaction",
+          "enabled": false,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    }
+  ]
+}

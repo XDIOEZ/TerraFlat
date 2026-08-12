@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld 高清角色立绘"
+  short_description: "生成、重绘和验收 FlatWorld 高清角色立绘及 UI 人物图"
+  default_prompt: "使用 $flatworld-portrait-art 为 FlatWorld 制作一张身份一致、适合 UI 使用的高清角色立绘。"

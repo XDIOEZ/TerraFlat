@@ -58,6 +58,8 @@ public sealed class ModRuntimeManager : MonoBehaviour
     private readonly List<UnityEngine.Object> clonedAssets = new();
     private readonly HashSet<GameObject> runtimeTemplates = new();
     private readonly List<PendingItemDefinition> pendingItemDefinitions = new();
+    private readonly List<PendingActorDefinition> pendingActorDefinitions = new();
+    private readonly List<string> registeredActorIds = new();
     private readonly List<PendingRecipeDefinition> pendingRecipeDefinitions = new();
     private readonly List<PendingBuffDefinition> pendingBuffDefinitions = new();
     private readonly List<PendingQuestDefinition> pendingQuestDefinitions = new();
@@ -194,6 +196,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
 
         reportProgress?.Invoke("解析 Def 继承与 Patch", 0.55f);
         ProcessItemDefinitions(gameRes);
+        ProcessActorDefinitions(gameRes);
         ProcessRecipeDefinitions(gameRes);
         ProcessBuffDefinitions(gameRes);
         ProcessQuestDefinitions();
@@ -389,6 +392,22 @@ public sealed class ModRuntimeManager : MonoBehaviour
                 pendingItemDefinitions.Add(new PendingItemDefinition(package, definitionFile, itemIndex++, (JObject)itemObject.DeepClone()));
             }
 
+            int actorIndex = 0;
+            foreach (JToken token in document["actors"] as JArray ?? new JArray())
+            {
+                if (token is not JObject actorObject)
+                    throw new InvalidDataException(
+                        $"MOD {package.Manifest.Id} Actor Def 无效：{definitionFile}#{actorIndex}");
+
+                string id = actorObject.Value<string>("id");
+                ValidateContentId(package.Manifest.Id, id);
+                pendingActorDefinitions.Add(new PendingActorDefinition(
+                    package,
+                    definitionFile,
+                    actorIndex++,
+                    (JObject)actorObject.DeepClone()));
+            }
+
             int recipeIndex = 0;
             foreach (JToken token in document["recipes"] as JArray ?? new JArray())
             {
@@ -520,6 +539,345 @@ public sealed class ModRuntimeManager : MonoBehaviour
             info.Materialized = true;
             info.ReplacedBuiltInContent = replacesExisting;
         }
+    }
+
+    /// <summary>
+    /// 解析 MOD Actor 继承并原子注册。Actor 复用 ItemDefinition 的实例化/存档管线，
+    /// 但必须继承或提供带 IAIActor 的合法外壳；行为参数与外观均由 JSON 覆盖。
+    /// </summary>
+    private void ProcessActorDefinitions(GameRes gameRes)
+    {
+        var sources = new Dictionary<string, PendingActorDefinition>(IdComparer);
+        foreach (PendingActorDefinition pending in pendingActorDefinitions)
+        {
+            string id = pending.Document.Value<string>("id")?.Trim();
+            if (!sources.TryAdd(id ?? string.Empty, pending))
+                throw new InvalidDataException($"重复 Actor Def：{id}");
+        }
+
+        var resolved = new Dictionary<string, JObject>(IdComparer);
+        var resolving = new HashSet<string>(IdComparer);
+        foreach (string id in sources.Keys)
+            ResolveActorDefinition(id, sources, resolved, resolving);
+
+        var registrations = new List<(RuntimeItemDefinition Definition, PendingActorDefinition Source)>();
+        var seenActorIds = new HashSet<string>(IdComparer);
+        foreach (KeyValuePair<string, JObject> pair in resolved)
+        {
+            ItemDefinitionDto definition = pair.Value.ToObject<ItemDefinitionDto>()
+                ?? throw new InvalidDataException($"Actor Def 无法解析：{pair.Key}");
+            if (definition.Abstract)
+                continue;
+            PendingActorDefinition source = sources[pair.Key];
+            if (string.IsNullOrWhiteSpace(definition.Id) || !seenActorIds.Add(definition.Id))
+                throw new InvalidDataException($"Actor Def ID 为空或重复：{definition.Id ?? "<empty>"}");
+            if (string.IsNullOrWhiteSpace(definition.ShellPrefab))
+                throw new InvalidDataException(
+                    $"Actor {definition.Id} 缺少 shellPrefab；请继承本体 Actor 或声明自定义外壳");
+            if (gameRes.AllPrefabs.ContainsKey(definition.Id) || gameRes.ItemDefinitions.ContainsKey(definition.Id))
+                throw new InvalidDataException($"Actor ID 与已有内容冲突：{definition.Id}");
+
+            if (!string.IsNullOrWhiteSpace(definition.LabelKey))
+                definition.GameName = ModLocalizationRegistry.Translate(definition.LabelKey, definition.GameName);
+            if (!string.IsNullOrWhiteSpace(definition.DescriptionKey))
+                definition.Description = ModLocalizationRegistry.Translate(
+                    definition.DescriptionKey,
+                    definition.Description);
+
+            var sprites = new Dictionary<string, Sprite>(IdComparer);
+            var controllers = new Dictionary<string, RuntimeAnimatorController>(IdComparer);
+            ResolveActorVisualResources(pair.Value, definition, source.Package, sprites, controllers);
+            RuntimeItemDefinition runtime = ActorDefinitionCatalogLoader.BuildExternalDefinition(
+                gameRes,
+                definition,
+                sprites,
+                controllers);
+            registrations.Add((runtime, source));
+        }
+
+        var committedIds = new List<string>(registrations.Count);
+        try
+        {
+            foreach ((RuntimeItemDefinition definition, PendingActorDefinition source) in registrations)
+            {
+                gameRes.RegisterActorDefinition(definition);
+                committedIds.Add(definition.Id);
+                registeredActorIds.Add(definition.Id);
+                definitionInfos[definition.Id] = new ModDefinitionInfo
+                {
+                    Id = definition.Id,
+                    DeclaringModId = source.Package.Manifest.Id,
+                    SourceFile = source.File,
+                    SourceIndex = source.Index,
+                    Materialized = true
+                };
+                Debug.Log($"[MOD:{source.Package.Manifest.Id}] 已注册 JSON Actor：{definition.Id}");
+            }
+        }
+        catch
+        {
+            for (int index = committedIds.Count - 1; index >= 0; index--)
+            {
+                string actorId = committedIds[index];
+                gameRes.UnregisterExternalActorDefinition(actorId);
+                registeredActorIds.Remove(actorId);
+                definitionInfos.Remove(actorId);
+            }
+            throw;
+        }
+    }
+
+    private JObject ResolveActorDefinition(
+        string id,
+        Dictionary<string, PendingActorDefinition> sources,
+        Dictionary<string, JObject> resolved,
+        HashSet<string> resolving)
+    {
+        if (resolved.TryGetValue(id, out JObject cached))
+            return cached;
+        if (!sources.TryGetValue(id, out PendingActorDefinition source))
+            return null;
+        if (!resolving.Add(id))
+            throw new InvalidDataException($"Actor Def 继承存在循环：{id}");
+
+        JObject result = new();
+        string parentId = source.Document.Value<string>("parent")?.Trim();
+        if (!string.IsNullOrWhiteSpace(parentId))
+        {
+            JObject parent = ResolveActorDefinition(parentId, sources, resolved, resolving);
+            if (parent != null)
+                result = (JObject)parent.DeepClone();
+            else if (ActorDefinitionCatalogLoader.TryGetResolvedSource(parentId, out JObject builtIn))
+                result = builtIn;
+            else
+                throw new InvalidDataException($"Actor {id} 找不到 parent：{parentId}");
+        }
+
+        JObject declared = (JObject)source.Document.DeepClone();
+        SanitizeActorLuaModules(source.Package, declared, result);
+        result.Merge(declared, new JsonMergeSettings
+        {
+            MergeArrayHandling = MergeArrayHandling.Replace,
+            MergeNullValueHandling = MergeNullValueHandling.Merge
+        });
+        result["id"] = id;
+        result["abstract"] = declared.Value<bool?>("abstract") ?? false;
+        result.Remove("parent");
+
+        RecordVisualResourceOwner(result, declared, source.Package.Manifest.Id);
+        ValidateResolvedActorLuaModules(result);
+        resolving.Remove(id);
+        resolved.Add(id, result);
+        return result;
+    }
+
+    /// <summary>
+    /// Lua 模块只能切换到当前定义所属 MOD 包内的脚本；仅覆盖普通参数时保留父级脚本归属。
+    /// </summary>
+    private static void SanitizeActorLuaModules(
+        ModPackage package,
+        JObject definition,
+        JObject inheritedDefinition)
+    {
+        if (definition?["modules"] is not JObject modules)
+            return;
+
+        foreach (JProperty moduleProperty in modules.Properties())
+        {
+            if (moduleProperty.Value is not JObject module)
+                continue;
+
+            JObject inheritedModule = inheritedDefinition?["modules"]?[moduleProperty.Name] as JObject;
+            if (!IsActorLuaModule(module) && !IsActorLuaModule(inheritedModule))
+                continue;
+
+            JObject parameters = module["parameters"] as JObject ?? new JObject();
+            JProperty scriptProperty = parameters.Property(
+                "scriptPath",
+                StringComparison.OrdinalIgnoreCase);
+            JProperty modIdProperty = parameters.Property("modId", StringComparison.OrdinalIgnoreCase);
+            string scriptPath = scriptProperty?.Value?.Value<string>()?.Trim();
+
+            if (scriptProperty != null)
+            {
+                if (string.IsNullOrWhiteSpace(scriptPath))
+                    throw new InvalidDataException(
+                        $"MOD {package.Manifest.Id} 的 Actor Lua 模块 {moduleProperty.Name} 的 scriptPath 不能为空");
+                ModPathUtility.ResolvePackagePath(package.RootPath, scriptPath, true);
+                parameters["modId"] = package.Manifest.Id;
+            }
+            else if (modIdProperty != null)
+            {
+                throw new InvalidDataException(
+                    $"MOD {package.Manifest.Id} 的 Actor Lua 模块 {moduleProperty.Name} " +
+                    "不能脱离 scriptPath 单独覆盖 modId");
+            }
+            else if (!IsActorLuaModule(inheritedModule))
+            {
+                throw new InvalidDataException(
+                    $"MOD {package.Manifest.Id} 的 Actor Lua 模块 {moduleProperty.Name} 缺少 scriptPath");
+            }
+
+            module["parameters"] = parameters;
+        }
+    }
+
+    /// <summary>校验继承完成后的 Lua 脚本仍属于已加载 MOD，阻止跨包路径与伪造归属。</summary>
+    private void ValidateResolvedActorLuaModules(JObject definition)
+    {
+        if (definition?["modules"] is not JObject modules)
+            return;
+
+        foreach (JProperty moduleProperty in modules.Properties())
+        {
+            if (moduleProperty.Value is not JObject module || !IsActorLuaModule(module))
+                continue;
+
+            JObject parameters = module["parameters"] as JObject;
+            string ownerId = parameters?.GetValue("modId", StringComparison.OrdinalIgnoreCase)
+                ?.Value<string>()?.Trim();
+            string scriptPath = parameters?.GetValue("scriptPath", StringComparison.OrdinalIgnoreCase)
+                ?.Value<string>()?.Trim();
+            if (string.IsNullOrWhiteSpace(ownerId) || string.IsNullOrWhiteSpace(scriptPath))
+                throw new InvalidDataException(
+                    $"Actor {definition.Value<string>("id")} 的 Lua 模块 {moduleProperty.Name} 缺少归属或脚本路径");
+            if (!packagesById.TryGetValue(ownerId, out ModPackage owner))
+                throw new InvalidDataException(
+                    $"Actor {definition.Value<string>("id")} 的 Lua 模块来源 MOD 未加载：{ownerId}");
+
+            ModPathUtility.ResolvePackagePath(owner.RootPath, scriptPath, true);
+        }
+    }
+
+    private static bool IsActorLuaModule(JObject module)
+    {
+        if (module == null)
+            return false;
+
+        string prefab = module.Value<string>("prefab")?.Trim();
+        string moduleId = module.Value<string>("id")?.Trim();
+        return string.Equals(prefab, Mod_LuaBehaviour.ModuleId, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(moduleId, Mod_LuaBehaviour.ModuleId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void RecordVisualResourceOwner(JObject result, JObject declared, string modId)
+    {
+        if (declared?["visual"] is not JObject visual)
+            return;
+
+        if (visual.Property("spriteBundle", StringComparison.OrdinalIgnoreCase) != null ||
+            visual.Property("spriteAsset", StringComparison.OrdinalIgnoreCase) != null)
+        {
+            result["$spriteOwnerModId"] = modId;
+        }
+        else if (visual.Property("spriteAddress", StringComparison.OrdinalIgnoreCase) != null)
+        {
+            result.Remove("$spriteOwnerModId");
+        }
+
+        if (visual.Property("animatorControllerBundle", StringComparison.OrdinalIgnoreCase) != null ||
+            visual.Property("animatorControllerAsset", StringComparison.OrdinalIgnoreCase) != null)
+        {
+            result["$controllerOwnerModId"] = modId;
+        }
+        else if (visual.Property("animatorControllerAddress", StringComparison.OrdinalIgnoreCase) != null)
+        {
+            result.Remove("$controllerOwnerModId");
+        }
+    }
+
+    private void ResolveActorVisualResources(
+        JObject source,
+        ItemDefinitionDto definition,
+        ModPackage declaringPackage,
+        IDictionary<string, Sprite> sprites,
+        IDictionary<string, RuntimeAnimatorController> controllers)
+    {
+        ItemVisualDefinitionDto visual = definition.Visual;
+        if (visual == null)
+            return;
+
+        if (!string.IsNullOrWhiteSpace(visual.SpriteBundle) ||
+            !string.IsNullOrWhiteSpace(visual.SpriteAsset))
+        {
+            if (string.IsNullOrWhiteSpace(visual.SpriteBundle) || string.IsNullOrWhiteSpace(visual.SpriteAsset))
+                throw new InvalidDataException(
+                    $"Actor {definition.Id} 的 spriteBundle 与 spriteAsset 必须成对声明");
+            ModPackage owner = ResolveActorResourceOwner(source, "$spriteOwnerModId", declaringPackage);
+            Sprite sprite = LoadBundleAsset<Sprite>(owner, visual.SpriteBundle, visual.SpriteAsset, definition.Id);
+            string key = $"mod-actor://{definition.Id}/sprite";
+            visual.SpriteAddress = key;
+            sprites[key] = sprite;
+        }
+        else if (!string.IsNullOrWhiteSpace(visual.SpriteAddress))
+        {
+            if (!ActorDefinitionCatalogLoader.TryGetLoadedSprite(visual.SpriteAddress, out Sprite sprite))
+                throw new InvalidDataException(
+                    $"Actor {definition.Id} 只能引用已加载的本体 Sprite 地址或自己的 AssetBundle 资源：{visual.SpriteAddress}");
+            sprites[visual.SpriteAddress] = sprite;
+        }
+
+        if (!string.IsNullOrWhiteSpace(visual.AnimatorControllerBundle) ||
+            !string.IsNullOrWhiteSpace(visual.AnimatorControllerAsset))
+        {
+            if (string.IsNullOrWhiteSpace(visual.AnimatorControllerBundle) ||
+                string.IsNullOrWhiteSpace(visual.AnimatorControllerAsset))
+            {
+                throw new InvalidDataException(
+                    $"Actor {definition.Id} 的 animatorControllerBundle 与 animatorControllerAsset 必须成对声明");
+            }
+            ModPackage owner = ResolveActorResourceOwner(source, "$controllerOwnerModId", declaringPackage);
+            RuntimeAnimatorController controller = LoadBundleAsset<RuntimeAnimatorController>(
+                owner,
+                visual.AnimatorControllerBundle,
+                visual.AnimatorControllerAsset,
+                definition.Id);
+            string key = $"mod-actor://{definition.Id}/animator";
+            visual.AnimatorControllerAddress = key;
+            controllers[key] = controller;
+        }
+        else if (!string.IsNullOrWhiteSpace(visual.AnimatorControllerAddress))
+        {
+            if (!ActorDefinitionCatalogLoader.TryGetLoadedController(
+                    visual.AnimatorControllerAddress,
+                    out RuntimeAnimatorController controller))
+            {
+                throw new InvalidDataException(
+                    $"Actor {definition.Id} 只能引用已加载的本体动画地址或自己的 AssetBundle 资源：" +
+                    visual.AnimatorControllerAddress);
+            }
+            controllers[visual.AnimatorControllerAddress] = controller;
+        }
+    }
+
+    private ModPackage ResolveActorResourceOwner(
+        JObject source,
+        string metadataName,
+        ModPackage fallback)
+    {
+        string ownerId = source.Value<string>(metadataName)?.Trim();
+        if (string.IsNullOrWhiteSpace(ownerId))
+            return fallback;
+        if (!packagesById.TryGetValue(ownerId, out ModPackage owner))
+            throw new InvalidDataException($"Actor 外观资源来源 MOD 未加载：{ownerId}");
+        return owner;
+    }
+
+    private static T LoadBundleAsset<T>(
+        ModPackage package,
+        string bundleId,
+        string assetName,
+        string actorId)
+        where T : UnityEngine.Object
+    {
+        if (!package.Bundles.TryGetValue(bundleId, out AssetBundle bundle))
+            throw new InvalidDataException(
+                $"MOD {package.Manifest.Id} 的 Actor {actorId} 找不到 Bundle：{bundleId}");
+        T asset = bundle.LoadAsset<T>(assetName);
+        if (asset == null)
+            throw new InvalidDataException(
+                $"MOD {package.Manifest.Id} 的 Actor {actorId} 找不到资源：{assetName}");
+        return asset;
     }
 
     private void ProcessRecipeDefinitions(GameRes gameRes)
@@ -1573,6 +1931,12 @@ public sealed class ModRuntimeManager : MonoBehaviour
     private void UnloadAll(bool keepFailureState = false)
     {
         UnbindGameEvents();
+
+        GameRes gameRes = GameRes.Instance;
+        for (int index = registeredActorIds.Count - 1; index >= 0; index--)
+            gameRes?.UnregisterExternalActorDefinition(registeredActorIds[index]);
+        registeredActorIds.Clear();
+
         foreach (ModLuaRuntime runtime in luaRuntimes.Values)
             runtime.Dispose();
         luaRuntimes.Clear();
@@ -1595,6 +1959,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
         packagesById.Clear();
         globalStates.Clear();
         pendingItemDefinitions.Clear();
+        pendingActorDefinitions.Clear();
         pendingRecipeDefinitions.Clear();
         pendingBuffDefinitions.Clear();
         pendingQuestDefinitions.Clear();
@@ -1632,6 +1997,22 @@ public sealed class ModRuntimeManager : MonoBehaviour
     private sealed class PendingItemDefinition
     {
         public PendingItemDefinition(ModPackage package, string file, int index, JObject document)
+        {
+            Package = package;
+            File = file;
+            Index = index;
+            Document = document;
+        }
+
+        public ModPackage Package { get; }
+        public string File { get; }
+        public int Index { get; }
+        public JObject Document { get; }
+    }
+
+    private sealed class PendingActorDefinition
+    {
+        public PendingActorDefinition(ModPackage package, string file, int index, JObject document)
         {
             Package = package;
             File = file;

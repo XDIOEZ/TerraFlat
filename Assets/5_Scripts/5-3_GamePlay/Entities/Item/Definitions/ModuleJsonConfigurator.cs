@@ -94,6 +94,8 @@ public static class ModuleJsonConfigurator
         {
             case BoxCollider2D box when data["size"] != null:
                 box.size = data["size"].ToObject<Vector2>();
+                if (data["edgeRadius"] != null)
+                    box.edgeRadius = data.Value<float>("edgeRadius");
                 break;
             case CircleCollider2D circle when data["radius"] != null:
                 circle.radius = data.Value<float>("radius");

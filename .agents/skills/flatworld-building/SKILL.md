@@ -3,64 +3,33 @@ name: flatworld-building
 description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装拆除、召唤器/世界建筑角色、建筑快照、占地、门、堆肥、结构生成、建筑 Prefab 或结构编辑器。关键词：Mod_Building、BuildingShadow、BuildingOccupancyRegistry。"
 ---
 
-# FlatWorld 建造系统定位
+# FlatWorld 建造
 
-> 最后核对：2026-08-08。建筑占地会直接影响导航。
+## 入口
 
-## 修改前先读
-1. `Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_Building.cs`：放置、拆除、状态、角色、快照和联机事务。
-2. `Assets/5_Scripts/5-3_GamePlay/World/Building/BuildingShadow.cs`：放置预览与候选位置。
-3. `Assets/5_Scripts/5-3_GamePlay/World/Building/BuildingOccupancyRegistry.cs`：运行时动态占地。
-4. `Assets/5_Scripts/5-3_GamePlay/World/PathFinding/WorldNavigationManager.cs`：占地变化后的导航更新。
+- 主链：`Assets/5_Scripts/5-3_GamePlay/World/Building/{Mod_Building,BuildingShadow,BuildingOccupancyRegistry}.cs`
+- 建筑召唤器物品定义：`Assets/StreamingAssets/GameConfig/Items/shells/building_summoners.json`；同一类别文件包含 13 个召唤器各自的抽象基类和具体定义。
+- 门/堆肥：同目录 `Mod_Door.cs`、`Mod_CompostBin.cs`
+- 结构：`World/Map/Structures/{ChunkGenerator_Structures,StructureData,StructureItemAuthoring}.cs`
+- 结构资源：`Assets/4_ScriptObjects/4-9_Structures/`
 
-## 核心模型
-```text
-Summoner（库存中的持久化载体）
-→ BuildingShadow 预览与校验
-→ 创建 PlacedBuilding（世界实例）
-→ 注册 BuildingOccupancyRegistry
-→ 提交导航脏格
+## 核心链与不变量
 
-拆除：PlacedBuilding
-→ 生成带 Snapshot 的 Summoner
-→ 成功后删除原建筑
-```
+`Summoner → BuildingShadow 校验 → PlacedBuilding → 注册占地 → 导航脏格`；拆除反向生成带 Snapshot 的 Summoner，成功后才删除建筑。
 
-## 关键文件与资源
-- 门：`Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_Door.cs`。
-- 堆肥箱：`Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_CompostBin.cs`。
-- 结构生成：`Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/ChunkGenerator_Structures.cs`。
-- 结构数据：`Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/StructureData.cs`。
-- 结构作者组件：`Assets/5_Scripts/5-3_GamePlay/World/Map/Structures/StructureItemAuthoring.cs`。
-- 结构 SO：`Assets/4_ScriptObjects/4-9_Structures/`。
+- 以 `BuildingRole` 区分 Summoner/PlacedBuilding，禁止用血量或位置推断。
+- 动态建筑保持 GameObject + Collider + `BuildingOccupancyRegistry`，不得写入地形 `TileData`。
+- 静态岩壁/结构墙才使用 Blocking Tile；Tile 栈只通过 `Data_TileMap` API 读写。
+- 占地算法或安装/拆除顺序变化时联动 `flatworld-navigation` 与 `flatworld-map`。
 
-## 约束
-- `BuildingRole` 明确区分 `Summoner` 与 `PlacedBuilding`，禁止再用血量或位置推断角色。
-- 动态占地不修改地形 `TileData`，由 `BuildingOccupancyRegistry` 叠加阻挡。
-- “建筑阻挡层”只处理矿洞岩壁、地牢墙体、结构模板墙体等静态 Tile 障碍；数据顶层需使用 `TileTag=Blocking` 且 `IsWalkable=false`。玩家放置/拆除的动态建筑仍是 GameObject，并继续注册 `BuildingOccupancyRegistry`，不得迁移到 Tilemap。
-- 静态地形只能通过 `Data_TileMap` 的地形栈 API 读取顶层或修改层级；建筑占地保持独立，不得直接取得或改写格子的可变 Tile 列表。
+## 验证
 
-## 高耦合联动
-只在本次改动命中下表契约时加载对应 Skill 并追加最小测试；Prefab 外观或放置预览配色变化不要扩散检查。
-| 本系统变更 | 联动检查 | 必查契约 | 追加测试 |
-|---|---|---|---|
-| `BuildingOccupancyRegistry`、占地格计算、安装/拆除时的注册顺序 | `flatworld-navigation`、`flatworld-map` | 动态占地不写 TileData，提交对应导航脏格且无残留 | `Navigation.Smoke`、`Map.Smoke` |
+- 检查预览与最终占地一致、注册/注销成对、失败路径无残留、快照可还原。
+- 默认做静态诊断、编译和 Console；需要时运行 `Building.Smoke`，真实放置链可用 Golden Path `building.placement`。
+- 测试入口：`Assets/GameTest/Building/BuildingSmokeTests.cs`。
 
 ## 近期变更
-> 最多保留 5 条，按新到旧排列；超过时删除最旧条目。
-- 2026-08-11：项目移除已无引用的 A* Pathfinding Project；动态建筑占地继续通过 `BuildingOccupancyRegistry` 向 `WorldNavigationManager` 提交导航脏格，运行行为不变。
-- 2026-08-11：`Building.Smoke` 补齐 `Tile_Block`、Chunk Palette/Profile、Structure Catalog/Definition/Template 与 `BiomeData` 类型链；共享断言在 AssetDatabase 缓存陈旧时强制同步重导入后再判定，避免合法 ScriptableObject 被误报丢失。
-- 2026-08-11：`Building.Smoke` 不再用 MonoBehaviour 的 `MonoScript.GetClass()` 入口检查纯静态 `BuildingOccupancyRegistry`，改为验证编译类型保持静态，避免把合法静态类误报为脚本失效。
-- 2026-08-09：新区块静态阻挡层新增 `LightOccluders` 子层；石墙写入/移除 `ChunkTerrainData.BlockingTileId` 时同步刷新 URP 2D 阴影体，动态建筑仍保持 GameObject 与 `BuildingOccupancyRegistry` 模型。
-- 2026-08-09：13 个建筑召唤器的 Item/Module 数据迁移到 `Items/shells/*_Summoner.json`；每个召唤器 Prefab 继续作为唯一运行时外壳，已放置建筑本体、快照、占地注册表和放置链路不改动。
 
-## 修改后自动测试
-- 基础测试脚本：`Assets/GameTest/Building/BuildingSmokeTests.cs`；当前基础覆盖建筑模块、动态占地、放置预览 Prefab、虚影材质/排序层与结构目录入口。
-- 真实单机玩家周边放置由 Golden Path 操作 `building.placement` 覆盖；默认全量配置启用，系统聚焦 JSON 可按稳定 ID 单独选择或排除，仍必须保留建筑、石墙、占地与阴影的可逆清理。
-- 统一测试程序集：`Assets/GameTest/FlatWorld.GameTest.asmdef`；建筑测试约定目录：`Assets/GameTest/Building/`；场景目录：`Assets/GameTest/Scenes/Building/`；冒烟分类：`Building.Smoke`。
-- 新增放置、占地、安装拆除或建筑快照行为时必须增加系统测试；修复 Bug 时先增加回归测试。建筑主流程变化时同步更新建筑冒烟场景。
-- 测试失败时优先修复生产代码，禁止删除测试或弱化断言；测试创建的占地、Prefab 和临时快照必须清理。
-- 完成修改后执行 `python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --category Building.Smoke`；无需视觉模型或测试工具卡片。仅按“高耦合联动”表命中项追加分类；只有放置预览或最终外观变化才做定向截图。
+- 2026-08-12：13 个建筑召唤器定义由具体对象文件合并到类别文件 `building_summoners.json`；每条定义仍保留原 `shellPrefab`，建筑放置、快照、占地及专用组件不变。
 
-## 修改后维护本 Skill
-改变建筑角色、快照版本、Prefab 命名、占地算法、放置校验、结构资源路径或编辑器烘焙流程后，必须更新本 Skill；仅在“高耦合联动”表契约变化时更新对应 Skill。
+角色、快照版本、占地、校验、Prefab/结构路径变化时更新本 Skill；近期变更最多 5 条。

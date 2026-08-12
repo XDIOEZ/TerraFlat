@@ -51,6 +51,18 @@ namespace FlatWorld.GameTest.Core
             saveDataManager = SaveDataMgr.Instance;
             Assert.That(gameManager, Is.Not.Null);
             Assert.That(saveDataManager, Is.Not.Null);
+            foreach (string actorId in new[] { "Chicken", "WildBoar", "Wolf", "Ghost" })
+            {
+                Assert.That(
+                    GameRes.Instance.TryGetActorDefinition(actorId, out RuntimeItemDefinition actorDefinition),
+                    Is.True,
+                    $"JSON Actor {actorId} 未在真实启动生命周期中注册。 ");
+                Assert.That(actorDefinition.IsActor, Is.True);
+                Assert.That(actorDefinition.Sprite, Is.Not.Null, $"{actorId} 的 Addressable Sprite 未加载。 ");
+                Assert.That(actorDefinition.AnimatorController,
+                    Is.Not.Null,
+                    $"{actorId} 的 Addressable AnimatorController 未加载。 ");
+            }
 
             originalSavePath = saveDataManager.UserSavePath;
             temporarySaveDirectory = Path.GetFullPath(Path.Combine(

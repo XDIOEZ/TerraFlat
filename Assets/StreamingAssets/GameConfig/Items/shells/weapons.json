@@ -1,0 +1,945 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Knife_Base",
+      "abstract": true,
+      "shellPrefab": "Dagger_Copper",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "canBePickedUp": true,
+      "tags": [
+        "Knife",
+        "Modern"
+      ],
+      "visual": {
+        "rendererPath": "Render/Render_1"
+      },
+      "modules": {
+        "animation": {
+          "prefab": "Module_Weapon_AnimationAction",
+          "enabled": true,
+          "parameters": {
+            "useLocalInput": true,
+            "idleAnimationName": "Idle_0",
+            "attackAnimationNames": [
+              "Attack_1",
+              "Attack_2"
+            ],
+            "comboWindowOverride": -1.0,
+            "comboWindowGrace": 0.05,
+            "loopComboOnHold": true,
+            "attackSpeedMultiplier": 1.0
+          }
+        },
+        "damage": {
+          "prefab": "Mod_Damage",
+          "enabled": true,
+          "parameters": {
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 135.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "Weakness": [
+              {
+                "Tag": "切割",
+                "Level": 1
+              }
+            ],
+            "Damage": {
+              "BaseValue": 5.0,
+              "BaseAdditive": 0.0,
+              "AdditiveModifier": 0.0,
+              "MultiplicativeModifier": 1.0,
+              "FinalAdditive": 0.0
+            },
+            "DamageInterval": 0.2,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false
+          }
+        }
+      }
+    },
+    {
+      "id": "Dagger_Stone",
+      "parent": "Knife_Base",
+      "gameName": "石制小刀",
+      "labelKey": "item.Dagger_Stone.name",
+      "descriptionKey": "item.Dagger_Stone.description",
+      "description": "用石料制作的小刀。",
+      "volume": 3,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[石制小刀]",
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 225.0
+        },
+        "flipX": true
+      },
+      "modules": {
+        "damage": {
+          "parameters": {
+            "$transform": {
+              "localPosition": {
+                "x": -0.45396262,
+                "y": 0.4539626,
+                "z": 0.0
+              }
+            },
+            "Damage": {
+              "BaseValue": 6.0
+            }
+          }
+        }
+      },
+      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Dagger.prefab"
+    },
+    {
+      "id": "Dagger_Copper",
+      "parent": "Knife_Base",
+      "gameName": "铜制小刀",
+      "labelKey": "item.Dagger_Copper.name",
+      "descriptionKey": "item.Dagger_Copper.description",
+      "description": "用铜制作的小刀。",
+      "volume": 3,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[Tool_Weapon_19]",
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 225.0
+        },
+        "flipX": true
+      },
+      "modules": {
+        "damage": {
+          "parameters": {
+            "$transform": {
+              "localPosition": {
+                "x": -0.45396262,
+                "y": 0.4539626,
+                "z": 0.0
+              }
+            },
+            "Damage": {
+              "BaseValue": 10.0
+            },
+            "Weakness": [
+              {
+                "Tag": "切割",
+                "Level": 2
+              }
+            ]
+          }
+        }
+      },
+      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Dagger_Copper.prefab"
+    },
+    {
+      "id": "Dagger_Bone",
+      "parent": "Knife_Base",
+      "gameName": "骨制小刀",
+      "labelKey": "item.Dagger_Bone.name",
+      "descriptionKey": "item.Dagger_Bone.description",
+      "description": "用骨料制作的小刀。",
+      "volume": 2,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Weapon_006.png",
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 315.0
+        },
+        "flipX": false
+      },
+      "modules": {
+        "damage": {
+          "parameters": {
+            "Damage": {
+              "BaseValue": 7.0
+            }
+          }
+        }
+      },
+      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Dagger_Bone.prefab"
+    },
+    {
+      "id": "Knife_Flint",
+      "parent": "Knife_Base",
+      "gameName": "燧石小刀",
+      "labelKey": "item.Knife_Flint.name",
+      "descriptionKey": "item.Knife_Flint.description",
+      "description": "用燧石制作的小刀。",
+      "volume": 2,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Gun/iron-weapons.png[iron-weapons_248]",
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 315.0
+        },
+        "flipX": true
+      },
+      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Knife_Flint.prefab"
+    },
+    {
+      "id": "Spear_Base",
+      "abstract": true,
+      "shellPrefab": "Spear",
+      "visual": {
+        "rendererPath": "Render/Render_1"
+      }
+    },
+    {
+      "id": "Spear_Stone",
+      "parent": "Spear_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Spear.prefab",
+      "gameName": "Spear_Stone",
+      "description": "物品名称：Spear_Stone\n物品描述：\n物品体积：2\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 2.0,
+      "canBePickedUp": true,
+      "tags": [
+        "",
+        "Modern"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[Tool_Weapon_66]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 225.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": true,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.163523972,
+            "y": -0.005667731
+          },
+          "path": "",
+          "size": {
+            "x": 0.782788157,
+            "y": 0.199719965
+          }
+        }
+      },
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "AttackEffects": [],
+            "Weakness": [
+              {
+                "Tag": 2,
+                "Level": 1
+              }
+            ],
+            "Damage": {
+              "BaseValue": 10.0,
+              "BaseAdditive": 0.0,
+              "AdditiveModifier": 0.0,
+              "MultiplicativeModifier": 1.0,
+              "FinalAdditive": 0.0
+            },
+            "DamageInterval": 1.0,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "tileDamageToolKind": 0,
+            "weaponAudioClass": 0,
+            "attackAudioCueId": "",
+            "impactAudioOverrides": [],
+            "lastDamageTime": 0.0,
+            "$transform": {
+              "localPosition": {
+                "x": -0.453962624,
+                "y": 0.4539626,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 135.0
+              },
+              "localScale": {
+                "x": 0.999999762,
+                "y": 0.999999762,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 1.0,
+                "y": 1.0
+              }
+            }
+          }
+        },
+        "animation": {
+          "prefab": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "useLocalInput": false,
+            "idleAnimationName": "Idle_0",
+            "attackAnimationNames": [
+              "Attack_1"
+            ],
+            "comboWindowOverride": -1.0,
+            "comboWindowGrace": 0.05,
+            "loopComboOnHold": true,
+            "attackSpeedMultiplier": 1.0,
+            "RawData": [],
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Spear_Copper",
+      "parent": "Spear_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Spear_Copper.prefab",
+      "gameName": "Spear_Copper",
+      "description": "物品名称：Spear_Copper\n物品描述：\n物品体积：2\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 2.0,
+      "canBePickedUp": true,
+      "tags": [
+        "",
+        "Modern"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[Tool_Weapon_69]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 225.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": true,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.163523972,
+            "y": -0.005667731
+          },
+          "path": "",
+          "size": {
+            "x": 0.782788157,
+            "y": 0.199719965
+          }
+        }
+      },
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "AttackEffects": [],
+            "Weakness": [
+              {
+                "Tag": 2,
+                "Level": 2
+              }
+            ],
+            "Damage": {
+              "BaseValue": 20.0,
+              "BaseAdditive": 0.0,
+              "AdditiveModifier": 0.0,
+              "MultiplicativeModifier": 1.0,
+              "FinalAdditive": 0.0
+            },
+            "DamageInterval": 0.2,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "tileDamageToolKind": 0,
+            "weaponAudioClass": 0,
+            "attackAudioCueId": "",
+            "impactAudioOverrides": [],
+            "lastDamageTime": 0.0,
+            "$transform": {
+              "localPosition": {
+                "x": -0.453962624,
+                "y": 0.4539626,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 135.0
+              },
+              "localScale": {
+                "x": 0.999999762,
+                "y": 0.999999762,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 1.0,
+                "y": 1.0
+              }
+            }
+          }
+        },
+        "animation": {
+          "prefab": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "useLocalInput": false,
+            "idleAnimationName": "Idle_0",
+            "attackAnimationNames": [
+              "Attack_1"
+            ],
+            "comboWindowOverride": -1.0,
+            "comboWindowGrace": 0.05,
+            "loopComboOnHold": true,
+            "attackSpeedMultiplier": 1.0,
+            "RawData": [],
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Spear_Iron",
+      "parent": "Spear_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Spear_Iron.prefab",
+      "gameName": "Spear_Iron",
+      "description": "物品名称：Spear_Iron\n物品描述：\n物品体积：2\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 2.0,
+      "canBePickedUp": true,
+      "tags": [
+        "",
+        "Modern"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[Tool_Weapon_67]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 315.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.163523972,
+            "y": -0.005667731
+          },
+          "path": "",
+          "size": {
+            "x": 0.782788157,
+            "y": 0.199719965
+          }
+        }
+      },
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "AttackEffects": [],
+            "Weakness": [
+              {
+                "Tag": 2,
+                "Level": 3
+              }
+            ],
+            "Damage": {
+              "BaseValue": 18.0,
+              "BaseAdditive": 0.0,
+              "AdditiveModifier": 0.0,
+              "MultiplicativeModifier": 1.0,
+              "FinalAdditive": 0.0
+            },
+            "DamageInterval": 0.2,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "tileDamageToolKind": 0,
+            "weaponAudioClass": 0,
+            "attackAudioCueId": "",
+            "impactAudioOverrides": [],
+            "lastDamageTime": 0.0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.453962535,
+                "y": 0.4539626,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 45.0000038
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 1.0,
+                "y": 1.0
+              }
+            }
+          }
+        },
+        "animation": {
+          "prefab": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "useLocalInput": false,
+            "idleAnimationName": "Idle_0",
+            "attackAnimationNames": [
+              "Attack_1"
+            ],
+            "comboWindowOverride": -1.0,
+            "comboWindowGrace": 0.05,
+            "loopComboOnHold": true,
+            "attackSpeedMultiplier": 1.0,
+            "RawData": [],
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Spear_Stone_Animation",
+      "parent": "Spear_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Spear_Stone_Animation.prefab",
+      "gameName": "Spear_Stone_Animation",
+      "description": "物品名称：Spear_Stone\n物品描述：\n物品体积：2\n物品耐久度：1\n是否可拾取：True\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 2.0,
+      "canBePickedUp": true,
+      "tags": [
+        "",
+        "Modern"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[Tool_Weapon_66]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 225.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": true,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.163523972,
+            "y": -0.005667731
+          },
+          "path": "",
+          "size": {
+            "x": 0.782788157,
+            "y": 0.199719965
+          }
+        }
+      },
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "AttackEffects": [],
+            "Weakness": [
+              {
+                "Tag": 2,
+                "Level": 1
+              }
+            ],
+            "Damage": {
+              "BaseValue": 10.0,
+              "BaseAdditive": 0.0,
+              "AdditiveModifier": 0.0,
+              "MultiplicativeModifier": 1.0,
+              "FinalAdditive": 0.0
+            },
+            "DamageInterval": 0.2,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "tileDamageToolKind": 0,
+            "weaponAudioClass": 0,
+            "attackAudioCueId": "",
+            "impactAudioOverrides": [],
+            "lastDamageTime": 0.0,
+            "$transform": {
+              "localPosition": {
+                "x": -0.453962624,
+                "y": 0.4539626,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 135.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 1.0,
+                "y": 1.0
+              }
+            }
+          }
+        },
+        "animation": {
+          "prefab": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "useLocalInput": false,
+            "idleAnimationName": "Idle_0",
+            "attackAnimationNames": [
+              "Attack_1"
+            ],
+            "comboWindowOverride": -1.0,
+            "comboWindowGrace": 0.05,
+            "loopComboOnHold": true,
+            "attackSpeedMultiplier": 1.0,
+            "RawData": [],
+            "$transform": {
+              "localPosition": {
+                "x": -0.5672792,
+                "y": -0.0191983227,
+                "z": -9.931686
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    }
+  ]
+}

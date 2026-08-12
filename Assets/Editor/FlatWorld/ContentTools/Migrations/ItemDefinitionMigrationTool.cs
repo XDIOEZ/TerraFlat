@@ -19,11 +19,31 @@ using UnityEngine.Events;
 /// </summary>
 public static class ItemDefinitionMigrationTool
 {
+    #region 路径与分类配置
+
     private const string CatalogRootPath = "Assets/StreamingAssets/GameConfig/Items";
     private const string ManifestPath = CatalogRootPath + "/item-manifest.json";
     private const string PackageRootPath = CatalogRootPath + "/shells";
     private const string RequestPath = "Temp/FlatWorldItemDefinitionMigration.request";
     private const string ItemSpriteLabel = "ItemSprite";
+
+    /// <summary>物品定义文件按玩法类别命名，避免文件名绑定某个具体物品或运行时外壳。</summary>
+    private static readonly ItemPackageCategory[] PackageCategories =
+    {
+        new("basic_items", shellPrefab => string.Equals(shellPrefab, "Prop", StringComparison.OrdinalIgnoreCase)),
+        new("tools", shellPrefab =>
+            string.Equals(shellPrefab, "Stick", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(shellPrefab, "Axe", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(shellPrefab, "Pickaxe", StringComparison.OrdinalIgnoreCase)),
+        new("weapons", shellPrefab =>
+            string.Equals(shellPrefab, "Dagger_Copper", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(shellPrefab, "Spear", StringComparison.OrdinalIgnoreCase)),
+        new("equipment", shellPrefab =>
+            string.Equals(shellPrefab, "Chestplate_Iron", StringComparison.OrdinalIgnoreCase)),
+        new("seeds", shellPrefab => string.Equals(shellPrefab, "Seed", StringComparison.OrdinalIgnoreCase)),
+        new("building_summoners", shellPrefab =>
+            shellPrefab.EndsWith("_Summoner", StringComparison.OrdinalIgnoreCase))
+    };
 
     private static readonly HashSet<string> PreservedIds = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -217,6 +237,10 @@ public static class ItemDefinitionMigrationTool
             preserveShellModuleFields: true)
     };
 
+    #endregion
+
+    #region 编辑器入口
+
     private static bool requestHookInstalled;
 
     [InitializeOnLoadMethod]
@@ -282,7 +306,11 @@ public static class ItemDefinitionMigrationTool
         ValidateCatalogInternal(ItemDefinitionCatalogLoader.LoadBuiltInDefinitions(), true);
     }
 
-    /// <summary>按每条定义最终解析出的 shellPrefab 重建分包与唯一 Manifest 入口。</summary>
+    #endregion
+
+    #region 类别分包
+
+    /// <summary>按物品玩法类别重建分包与唯一 Manifest 入口。</summary>
     private static void WriteCatalogPackages(JObject root)
     {
         if (root?["items"] is not JArray sourceItems)
@@ -304,12 +332,12 @@ public static class ItemDefinitionMigrationTool
                 throw new InvalidDataException($"物品 {id} 无法按 shellPrefab 分类");
             }
 
-            string shellPrefab = definition.ShellPrefab.Trim();
-            if (!packageItems.TryGetValue(shellPrefab, out JArray items))
+            string packageName = ResolvePackageCategory(definition.ShellPrefab.Trim());
+            if (!packageItems.TryGetValue(packageName, out JArray items))
             {
                 items = new JArray();
-                packageItems.Add(shellPrefab, items);
-                packageOrder.Add(shellPrefab);
+                packageItems.Add(packageName, items);
+                packageOrder.Add(packageName);
             }
             items.Add(source.DeepClone());
         }
@@ -318,18 +346,17 @@ public static class ItemDefinitionMigrationTool
         var currentGeneratedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var manifest = new ItemDefinitionManifestDto();
         Directory.CreateDirectory(PackageRootPath);
-        foreach (string shellPrefab in packageOrder)
+        foreach (string packageName in packageOrder)
         {
-            string packageName = shellPrefab;
             string relativePath = "shells/" + GetSafePackageFileName(packageName) + ".json";
             string assetPath = CatalogRootPath + "/" + relativePath;
             if (!currentGeneratedPaths.Add(assetPath))
-                throw new InvalidDataException($"shellPrefab 文件名冲突：{shellPrefab}");
+                throw new InvalidDataException($"物品类别文件名冲突：{packageName}");
 
             JObject packageRoot = new()
             {
                 ["schemaVersion"] = ItemDefinitionCatalogLoader.SupportedSchemaVersion,
-                ["items"] = packageItems[shellPrefab]
+                ["items"] = packageItems[packageName]
             };
             File.WriteAllText(
                 assetPath,
@@ -340,7 +367,8 @@ public static class ItemDefinitionMigrationTool
             {
                 Id = packageName,
                 Path = relativePath,
-                ShellPrefab = shellPrefab,
+                // 类别包可能包含多个外壳；每条定义自己的 shellPrefab 仍是运行时权威值。
+                ShellPrefab = null,
                 Enabled = true
             });
         }
@@ -381,17 +409,31 @@ public static class ItemDefinitionMigrationTool
         return result;
     }
 
-    private static string GetSafePackageFileName(string shellPrefab)
+    private static string GetSafePackageFileName(string packageName)
     {
         var invalid = new HashSet<char>(Path.GetInvalidFileNameChars()) { '/', '\\' };
-        var builder = new StringBuilder(shellPrefab.Length);
-        foreach (char character in shellPrefab)
+        var builder = new StringBuilder(packageName.Length);
+        foreach (char character in packageName)
             builder.Append(invalid.Contains(character) ? '_' : character);
         string result = builder.ToString().Trim();
         return string.IsNullOrWhiteSpace(result)
-            ? throw new InvalidDataException($"shellPrefab 无法生成文件名：{shellPrefab}")
+            ? throw new InvalidDataException($"物品类别无法生成文件名：{packageName}")
             : result;
     }
+
+    /// <summary>依据最终运行时外壳返回稳定的物品类别名。</summary>
+    private static string ResolvePackageCategory(string shellPrefab)
+    {
+        foreach (ItemPackageCategory category in PackageCategories)
+        {
+            if (category.Matches(shellPrefab))
+                return category.Name;
+        }
+
+        throw new InvalidDataException($"shellPrefab 没有登记物品类别：{shellPrefab}");
+    }
+
+    #endregion
 
     private static void PollMigrationRequest()
     {
@@ -576,7 +618,7 @@ public static class ItemDefinitionMigrationTool
         return visual;
     }
 
-    private static JObject SerializeModuleParameters(Module module)
+    internal static JObject SerializeModuleParameters(Module module)
     {
         JObject parameters = new();
         for (Type type = module.GetType(); type != null && type != typeof(Module); type = type.BaseType)
@@ -585,6 +627,7 @@ public static class ItemDefinitionMigrationTool
                          BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
             {
                 if (!IsUnitySerializedField(field) || IsIgnoredField(field) ||
+                    field.GetCustomAttribute<SerializeReference>() != null ||
                     typeof(ModuleData).IsAssignableFrom(field.FieldType) ||
                     typeof(UnityEngine.Object).IsAssignableFrom(field.FieldType) ||
                     typeof(Delegate).IsAssignableFrom(field.FieldType) ||
@@ -614,7 +657,7 @@ public static class ItemDefinitionMigrationTool
         return parameters;
     }
 
-    private static JObject SerializeFields(object value)
+    internal static JObject SerializeFields(object value)
     {
         if (value == null)
             return new JObject();
@@ -789,7 +832,7 @@ public static class ItemDefinitionMigrationTool
             attribute.GetType().Name is "MemoryPackIgnoreAttribute" or "FastClonerIgnoreAttribute");
     }
 
-    private static JObject SerializeCollider(Collider2D collider, string path)
+    internal static JObject SerializeCollider(Collider2D collider, string path)
     {
         JObject data = new()
         {
@@ -805,6 +848,7 @@ public static class ItemDefinitionMigrationTool
         {
             case BoxCollider2D box:
                 data["size"] = Vector2Token(box.size);
+                data["edgeRadius"] = box.edgeRadius;
                 break;
             case CircleCollider2D circle:
                 data["radius"] = circle.radius;
@@ -820,7 +864,7 @@ public static class ItemDefinitionMigrationTool
         return data;
     }
 
-    private static string ResolveModuleId(Module module)
+    internal static string ResolveModuleId(Module module)
     {
         string canonicalId = module?.CanonicalModuleId;
         if (!string.IsNullOrWhiteSpace(canonicalId))
@@ -829,7 +873,7 @@ public static class ItemDefinitionMigrationTool
         return module.GetType().Name;
     }
 
-    private static string ResolveModulePrefab(Module module, string fallbackId)
+    internal static string ResolveModulePrefab(Module module, string fallbackId)
     {
         UnityEngine.Object original = PrefabUtility.GetCorrespondingObjectFromOriginalSource(module.gameObject);
         string assetPath = original != null ? AssetDatabase.GetAssetPath(original) : null;
@@ -1008,7 +1052,7 @@ public static class ItemDefinitionMigrationTool
             .FirstOrDefault(collider => collider.GetComponentInParent<Module>(true) == null);
     }
 
-    private static string GetRelativePath(Transform root, Transform child)
+    internal static string GetRelativePath(Transform root, Transform child)
     {
         if (root == child)
             return string.Empty;
@@ -1024,15 +1068,15 @@ public static class ItemDefinitionMigrationTool
         return string.Join("/", parts);
     }
 
-    private static void RemoveProperties(JObject target, params string[] names)
+    internal static void RemoveProperties(JObject target, params string[] names)
     {
         foreach (string name in names)
             target.Property(name, StringComparison.OrdinalIgnoreCase)?.Remove();
     }
 
-    private static JObject Vector2Token(Vector2 value) => new() { ["x"] = value.x, ["y"] = value.y };
-    private static JObject Vector3Token(Vector3 value) => new() { ["x"] = value.x, ["y"] = value.y, ["z"] = value.z };
-    private static JObject ColorToken(Color value) =>
+    internal static JObject Vector2Token(Vector2 value) => new() { ["x"] = value.x, ["y"] = value.y };
+    internal static JObject Vector3Token(Vector3 value) => new() { ["x"] = value.x, ["y"] = value.y, ["z"] = value.z };
+    internal static JObject ColorToken(Color value) =>
         new() { ["r"] = value.r, ["g"] = value.g, ["b"] = value.b, ["a"] = value.a };
 
     private sealed class MigrationGroup
@@ -1053,6 +1097,19 @@ public static class ItemDefinitionMigrationTool
         public string ShellPath { get; }
         public string[] SourcePaths { get; }
         public bool PreserveShellModuleFields { get; }
+    }
+
+    /// <summary>声明一个稳定文件类别及其运行时外壳匹配规则。</summary>
+    private sealed class ItemPackageCategory
+    {
+        public ItemPackageCategory(string name, Func<string, bool> matches)
+        {
+            Name = name;
+            Matches = matches;
+        }
+
+        public string Name { get; }
+        public Func<string, bool> Matches { get; }
     }
 
     private sealed class MigrationPreview

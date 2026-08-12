@@ -1,0 +1,2381 @@
+{
+  "schemaVersion": 1,
+  "actors": [
+    {
+      "id": "Chicken",
+      "shellPrefab": "CoreActor.Chicken.Shell",
+      "shellAddress": "flatworld.actor.shell.chicken",
+      "sourcePrefab": "Assets/2_Prefabs/Entity_AI/Chicken.prefab",
+      "gameName": "Chicken_State",
+      "description": "生鸡肉：从野生鸡类身上剥取的未处理肉类",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": false,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "rendererPath": "Module_Animator_AI",
+        "spriteAddress": "flatworld.actor.sprite.chicken[Chicken_Sleep_1]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": true,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "animatorPath": "Module_Animator_AI",
+        "animatorControllerAddress": "flatworld.actor.animator.chicken",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.007042438,
+            "y": 0.04902029
+          },
+          "path": "",
+          "size": {
+            "x": 0.2,
+            "y": 0.1
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "animator": {
+          "prefab": "Module_Animator_AI",
+          "id": "Module_Animator_AI",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "visualMode": 0,
+            "moveDetectSpeed": 0.05,
+            "walkSwingAngle": 8.0,
+            "walkSwingSpeed": 12.0,
+            "walkBobAmount": 0.04,
+            "walkReturnSpeed": 12.0,
+            "attackDashDistance": 0.22,
+            "attackDashForwardTime": 0.06,
+            "attackDashBackTime": 0.12,
+            "autoAttackDirection": true,
+            "attackDirection": {
+              "x": 1.0,
+              "y": 0.0
+            },
+            "SkillId": 0,
+            "CanUseSkill": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "ChunkAssigner": {
+          "prefab": "Module_AutoChunkOwner",
+          "id": "ChunkAssigner",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "ai": {
+          "prefab": "AI_Chicken",
+          "id": "Module_AI_Chicken",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "debugLog": false,
+            "eatEnterHungerRate": 0.35,
+            "eatExitHungerRate": 0.85,
+            "sleepEnterHpRate": 0.5,
+            "sleepExitHpRate": 0.55,
+            "sleepRecoverHpPerSecond": 6.0,
+            "sleepDuration": 6.0,
+            "sleepCooldown": 3.0,
+            "dayStartRatio": 0.25,
+            "dayEndRatio": 0.75,
+            "detectorRefreshInterval": 0.8,
+            "eatDistance": 1.2,
+            "enableGrassForaging": true,
+            "grassSearchRadius": 8.0,
+            "grassEatDuration": 1.0,
+            "grassSustenanceDays": 2.0,
+            "enableIdleWander": true,
+            "idleMinDuration": 0.6,
+            "idleMaxDuration": 1.8,
+            "wanderRadius": 4.0,
+            "wanderStopDistance": 0.35,
+            "wanderPauseMin": 0.8,
+            "wanderPauseMax": 2.2,
+            "edibleTags": [
+              "Meat",
+              "Worm",
+              "Corn",
+              "Wheat",
+              "Seed",
+              "Food",
+              "Weed",
+              "Plant"
+            ],
+            "wanderAvoidHighPenalty": true,
+            "wanderDangerPenalty": 1200,
+            "wanderSampleCount": 8,
+            "wanderPenaltyWeight": 1.0,
+            "eggItemId": "Egg",
+            "layEggInterval": 2880.0,
+            "layEggDuration": 2.0,
+            "fleeTriggerDistance": 6.0,
+            "fleeSafeDistance": 10.0,
+            "fleeRunDistance": 8.0,
+            "damageFleeDuration": 5.0,
+            "threatTags": [
+              "Predator"
+            ],
+            "fleeFromPlayer": true,
+            "defaultMateDuration": 8.0,
+            "animIdle": "Stand",
+            "animMove": "Move",
+            "animForage": "Move",
+            "animEat": "Stand",
+            "animSleep": "Stand",
+            "animMate": "Stand",
+            "animLayEgg": "Stand",
+            "animFlee": "Move",
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "BuffManager": {
+          "prefab": "Module_BuffManager",
+          "id": "BuffManager",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "detector": {
+          "prefab": "Module_Detector",
+          "id": "物品检测模块",
+          "enabled": false,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "detectionRadius": 5.0,
+            "itemLayer": 1025,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "health": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 150.0,
+              "MaxHp": 150.0,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.25,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "Defense": 5.0,
+              "Weakness": [
+                {
+                  "Tag": 0,
+                  "Level": 1
+                },
+                {
+                  "Tag": 2,
+                  "Level": 1
+                }
+              ],
+              "ShowCanvas": true,
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0,
+              "LootTable": [
+                {
+                  "LootPrefabName": "Chicken",
+                  "DropChance": 0.001,
+                  "MinAmount": 1,
+                  "MaxAmount": 1
+                },
+                {
+                  "LootPrefabName": "Meat",
+                  "DropChance": 0.8,
+                  "MinAmount": 1,
+                  "MaxAmount": 2
+                },
+                {
+                  "LootPrefabName": "Prop",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 1
+                }
+              ]
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": true,
+            "hitSlowMultiplier": 0.5,
+            "hitSlowDuration": 0.35,
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "flashColor": {
+              "r": 1.0,
+              "g": 0.08,
+              "b": 0.08,
+              "a": 1.0
+            },
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.16,
+            "healthBarWorldScale": 0.55,
+            "enableDebugTools": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0531100631,
+                "y": 0.294484079
+              },
+              "size": {
+                "x": 0.659446239,
+                "y": 0.7663305
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
+        "FaceMouse模块": {
+          "prefab": "Module_FocusPoint_AI",
+          "id": "FaceMouse模块",
+          "enabled": false,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "RotationSpeed": 180.0,
+              "FocusPoints": {
+                "See": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "Move": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "Skill_0": {
+                  "x": 0.0,
+                  "y": 0.0
+                }
+              },
+              "ActivateRotation": true,
+              "StopRotationDistance": 0.1
+            },
+            "targetRotationTransforms": [],
+            "$transform": {
+              "localPosition": {
+                "x": 4.5,
+                "y": -10.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "food": {
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 500.0,
+                "Max_Carbohydrates": 500.0,
+                "Fat": 500.0,
+                "Max_Fat": 500.0,
+                "Protein": 500.0,
+                "Max_Protein": 500.0,
+                "Water": 500.0,
+                "Max_Water": 500.0,
+                "Vitamins": 500.0,
+                "Max_Vitamins": 500.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 1.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 1.0,
+              "nutritionConsumeRate": 1.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Meat_Rotten",
+            "Type": 0
+          },
+          "parameters": {
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "mover": {
+          "prefab": "Module_Mover_AI",
+          "id": "移动模块",
+          "enabled": false,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "stopDistance": 0.1,
+            "destinationChangeThreshold": 0.5,
+            "stalledRepathDelay": 0.8,
+            "progressDistanceThreshold": 0.02,
+            "animationMoveSpeedThreshold": 0.03,
+            "Data": {
+              "Speed": {
+                "BaseValue": 5.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "slowDownSpeed": 5.0,
+              "endSpeed": 0.1,
+              "moveStaminaConsume": 1.0,
+              "runStaminaConsume": 2.0,
+              "runSpeedRate": 2.0,
+              "RunStaminaThreshold": 2.0
+            },
+            "speedTransitionDuration": 0.24,
+            "stopTransitionDuration": 0.07,
+            "IsLock": false,
+            "hightReaction": false,
+            "moveHungerBuffId": "饥饿1.6",
+            "runHungerBuffId": "饥饿2.0",
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "生产模块": {
+          "prefab": "Module_Production",
+          "id": "生产模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "ProductionList": [
+              {
+                "itemName": "Egg",
+                "itemCountMin": 1,
+                "itemCountMax": 3,
+                "MaxProductionTime": 2880.0,
+                "ProductionTime": 0.0,
+                "MaxProductionCount": -1,
+                "CurrentProductionCount": 0,
+                "ThrowItem": true,
+                "DestroySelf": false,
+                "SpawnProbability": 1.0,
+                "Random_ProductionTime": {
+                  "x": 0.0,
+                  "y": 2880.0
+                }
+              }
+            ],
+            "ProductionSpeed": 1.0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "Module_TurnBody": {
+          "prefab": "Module_TurnBody",
+          "id": "Module_TurnBody",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Duration": 0.3,
+            "controlledTransforms_Direction": [],
+            "controlledTransforms_Position": [],
+            "DefaultPosition": {
+              "x": 0.5,
+              "y": 0.0
+            },
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "TileReciver": {
+          "prefab": "TileReciver",
+          "id": "TileReciver",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "lastGridPos": {
+              "x": 0,
+              "y": 0
+            },
+            "currentTileData": null,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "WildBoar",
+      "shellPrefab": "CoreActor.WildBoar.Shell",
+      "shellAddress": "flatworld.actor.shell.wildboar",
+      "sourcePrefab": "Assets/2_Prefabs/Entity_AI/WildBoar.prefab",
+      "gameName": "WildBoar",
+      "description": "物品名称：WildBoar\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：False\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": false,
+      "tags": [
+        "WildBoar"
+      ],
+      "visual": {
+        "rendererPath": "Module_Animator_AI",
+        "spriteAddress": "flatworld.actor.sprite.wildboar[MiniBoar_10]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "animatorPath": "Module_Animator_AI",
+        "animatorControllerAddress": "flatworld.actor.animator.wildboar",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.007042438,
+            "y": 0.04902029
+          },
+          "path": "",
+          "size": {
+            "x": 0.2,
+            "y": 0.1
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 500.0,
+                "Max_Carbohydrates": 500.0,
+                "Fat": 500.0,
+                "Max_Fat": 500.0,
+                "Protein": 500.0,
+                "Max_Protein": 500.0,
+                "Water": 500.0,
+                "Max_Water": 500.0,
+                "Vitamins": 500.0,
+                "Max_Vitamins": 500.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 1.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 1.0,
+              "nutritionConsumeRate": 1.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Meat_Rotten",
+            "Type": 0
+          },
+          "parameters": {
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "detector": {
+          "prefab": "Mod_ItemDetector",
+          "id": "物品检测模块",
+          "enabled": false,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "detectionRadius": 12.0,
+            "itemLayer": 1527,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "FaceMouse模块": {
+          "prefab": "Mod_FocusPoint_AI",
+          "id": "FaceMouse模块",
+          "enabled": false,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "RotationSpeed": 180.0,
+              "FocusPoints": {
+                "See": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "Move": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "Skill_0": {
+                  "x": 0.0,
+                  "y": 0.0
+                }
+              },
+              "ActivateRotation": true,
+              "StopRotationDistance": 0.1
+            },
+            "targetRotationTransforms": [],
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "mover": {
+          "prefab": "Mover_AI",
+          "id": "移动模块",
+          "enabled": false,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "stopDistance": 0.1,
+            "destinationChangeThreshold": 0.05,
+            "stalledRepathDelay": 0.8,
+            "progressDistanceThreshold": 0.02,
+            "animationMoveSpeedThreshold": 0.03,
+            "Data": {
+              "Speed": {
+                "BaseValue": 3.75,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "slowDownSpeed": 5.0,
+              "endSpeed": 0.1,
+              "moveStaminaConsume": 1.0,
+              "runStaminaConsume": 2.0,
+              "runSpeedRate": 2.0,
+              "RunStaminaThreshold": 2.0
+            },
+            "speedTransitionDuration": 0.24,
+            "stopTransitionDuration": 0.07,
+            "IsLock": false,
+            "hightReaction": false,
+            "moveHungerBuffId": "",
+            "runHungerBuffId": "",
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "health": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 300.0,
+              "MaxHp": 300.0,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.25,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "Defense": 5.0,
+              "Weakness": [
+                {
+                  "Tag": 0,
+                  "Level": 2
+                },
+                {
+                  "Tag": 2,
+                  "Level": 1
+                },
+                {
+                  "Tag": 1,
+                  "Level": 3
+                }
+              ],
+              "ShowCanvas": true,
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0,
+              "LootTable": [
+                {
+                  "LootPrefabName": "Chicken",
+                  "DropChance": 0.001,
+                  "MinAmount": 1,
+                  "MaxAmount": 1
+                },
+                {
+                  "LootPrefabName": "Meat",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 3
+                },
+                {
+                  "LootPrefabName": "Prop",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 5
+                }
+              ]
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": true,
+            "hitSlowMultiplier": 0.5,
+            "hitSlowDuration": 0.35,
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "flashColor": {
+              "r": 1.0,
+              "g": 0.08,
+              "b": 0.08,
+              "a": 1.0
+            },
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.16,
+            "healthBarWorldScale": 0.55,
+            "enableDebugTools": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0166221261,
+                "y": 0.278846383
+              },
+              "size": {
+                "x": 1.0,
+                "y": 0.589103341
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
+        "damage": {
+          "prefab": "Module_AttackTrigger_AI",
+          "id": "AttackTrigger_AI",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "xOffset": 0.5,
+            "AttackEffects": [],
+            "Weakness": [],
+            "Damage": {
+              "BaseValue": 10.0,
+              "BaseAdditive": 0.0,
+              "AdditiveModifier": 0.0,
+              "MultiplicativeModifier": 1.0,
+              "FinalAdditive": 0.0
+            },
+            "DamageInterval": -1.0,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "tileDamageToolKind": 0,
+            "weaponAudioClass": 0,
+            "attackAudioCueId": "",
+            "impactAudioOverrides": [],
+            "$transform": {
+              "localPosition": {
+                "x": -0.824,
+                "y": 0.291,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 2.2,
+                "y": 0.9
+              },
+              "edgeRadius": 0.45
+            }
+          }
+        },
+        "ai": {
+          "prefab": "AI_WildBoar",
+          "id": "Module_AI_WildBoar",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "debugLog": true,
+            "eatEnterHungerRate": 0.4,
+            "eatExitHungerRate": 0.8,
+            "sleepEnterHpRate": 0.45,
+            "sleepExitHpRate": 0.5,
+            "sleepRecoverHpPerSecond": 5.0,
+            "sleepDuration": 8.0,
+            "sleepCooldown": 4.0,
+            "dayStartRatio": 0.25,
+            "dayEndRatio": 0.75,
+            "duskStartRatio": 0.65,
+            "aggressiveDuringDusk": true,
+            "detectorRefreshInterval": 1.0,
+            "eatDistance": 1.5,
+            "enableWander": true,
+            "idleMinDuration": 1.0,
+            "idleMaxDuration": 3.0,
+            "wanderRadius": 6.0,
+            "wanderStopDistance": 0.5,
+            "wanderPauseMin": 1.0,
+            "wanderPauseMax": 3.0,
+            "edibleTags": [
+              "Food",
+              "Corpse"
+            ],
+            "wanderAvoidHighPenalty": true,
+            "wanderDangerPenalty": 1200,
+            "wanderSampleCount": 8,
+            "wanderPenaltyWeight": 1.0,
+            "alertDetectDistance": 8.0,
+            "alertDuration": 3.0,
+            "alertToChaseDuration": 1.0,
+            "chaseTriggerDistance": 12.0,
+            "chaseLossDistance": 20.0,
+            "chaseThreatTags": [
+              "Player"
+            ],
+            "chasePlayer": true,
+            "attackTriggerDistance": 1.6,
+            "attackVerticalTriggerDistance": 0.45,
+            "attackDuration": 1.5,
+            "rageBuildupRate": 0.5,
+            "rageDecayRate": 0.2,
+            "attackCooldown": 2.0,
+            "attackDamageWindow": 0.12,
+            "attackDamageStartDelay": 0.06,
+            "fleeTriggerHpRate": 0.2,
+            "fleeSafeHpRate": 0.4,
+            "fleeRunDistance": 10.0,
+            "animIdle": "Stand",
+            "animMove": "Move",
+            "animSleep": "Stand",
+            "animForage": "Move",
+            "animEat": "Stand",
+            "animAlert": "Stand",
+            "animChase": "Move",
+            "animAttack": "Attack",
+            "animFlee": "Move",
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "ChunkAssigner": {
+          "prefab": "Module_AutoChunkOwner",
+          "id": "ChunkAssigner",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "TileReciver": {
+          "prefab": "TileReciver",
+          "id": "TileReciver",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "lastGridPos": {
+              "x": 0,
+              "y": 0
+            },
+            "currentTileData": null,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "BuffManager": {
+          "prefab": "Module_BuffManager",
+          "id": "BuffManager",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "animator": {
+          "prefab": "Module_Animator_AI",
+          "id": "Module_Animator_AI",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "visualMode": 0,
+            "moveDetectSpeed": 0.05,
+            "walkSwingAngle": 8.0,
+            "walkSwingSpeed": 12.0,
+            "walkBobAmount": 0.04,
+            "walkReturnSpeed": 12.0,
+            "attackDashDistance": 0.22,
+            "attackDashForwardTime": 0.06,
+            "attackDashBackTime": 0.12,
+            "autoAttackDirection": true,
+            "attackDirection": {
+              "x": 1.0,
+              "y": 0.0
+            },
+            "SkillId": 0,
+            "CanUseSkill": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "Module_TurnBody": {
+          "prefab": "Module_TurnBody",
+          "id": "Module_TurnBody",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Duration": 0.3,
+            "controlledTransforms_Direction": [],
+            "controlledTransforms_Position": [],
+            "DefaultPosition": {
+              "x": 0.5,
+              "y": 0.0
+            },
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Wolf",
+      "shellPrefab": "CoreActor.Wolf.Shell",
+      "shellAddress": "flatworld.actor.shell.wolf",
+      "sourcePrefab": "Assets/2_Prefabs/Entity_AI/Wolf.prefab",
+      "gameName": "Wolf",
+      "description": "物品名称：Wolf\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": false,
+      "tags": [
+        "Wolf"
+      ],
+      "visual": {
+        "rendererPath": "AI动画模块",
+        "spriteAddress": "flatworld.actor.sprite.wolf[Wolf_0]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": true,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "animatorPath": "AI动画模块",
+        "animatorControllerAddress": "flatworld.actor.animator.wolf",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.007042438,
+            "y": 0.04902029
+          },
+          "path": "",
+          "size": {
+            "x": 0.2,
+            "y": 0.1
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 500.0,
+                "Max_Carbohydrates": 500.0,
+                "Fat": 500.0,
+                "Max_Fat": 500.0,
+                "Protein": 500.0,
+                "Max_Protein": 500.0,
+                "Water": 500.0,
+                "Max_Water": 500.0,
+                "Vitamins": 500.0,
+                "Max_Vitamins": 500.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 1.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 1.0,
+              "nutritionConsumeRate": 1.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 1800.0,
+            "SpoilageTargetItemID": "Meat_Rotten",
+            "Type": 0
+          },
+          "parameters": {
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "detector": {
+          "prefab": "Mod_ItemDetector",
+          "id": "物品检测模块",
+          "enabled": false,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "detectionRadius": 120.0,
+            "itemLayer": 1527,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "FaceMouse模块": {
+          "prefab": "Mod_FocusPoint_AI",
+          "id": "FaceMouse模块",
+          "enabled": false,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "RotationSpeed": 180.0,
+              "FocusPoints": {
+                "See": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "Move": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "Skill_0": {
+                  "x": 0.0,
+                  "y": 0.0
+                }
+              },
+              "ActivateRotation": true,
+              "StopRotationDistance": 0.1
+            },
+            "targetRotationTransforms": [],
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "mover": {
+          "prefab": "Mover_AI",
+          "id": "移动模块",
+          "enabled": false,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "stopDistance": 0.1,
+            "destinationChangeThreshold": 0.05,
+            "stalledRepathDelay": 0.8,
+            "progressDistanceThreshold": 0.02,
+            "animationMoveSpeedThreshold": 0.03,
+            "Data": {
+              "Speed": {
+                "BaseValue": 3.75,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "slowDownSpeed": 5.0,
+              "endSpeed": 0.1,
+              "moveStaminaConsume": 1.0,
+              "runStaminaConsume": 2.0,
+              "runSpeedRate": 2.0,
+              "RunStaminaThreshold": 2.0
+            },
+            "speedTransitionDuration": 0.24,
+            "stopTransitionDuration": 0.07,
+            "IsLock": false,
+            "hightReaction": false,
+            "moveHungerBuffId": "",
+            "runHungerBuffId": "",
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "health": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 200.0,
+              "MaxHp": 200.0,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.25,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "Defense": 3.0,
+              "Weakness": [
+                {
+                  "Tag": 0,
+                  "Level": 2
+                },
+                {
+                  "Tag": 2,
+                  "Level": 1
+                },
+                {
+                  "Tag": 1,
+                  "Level": 3
+                }
+              ],
+              "ShowCanvas": true,
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0,
+              "LootTable": [
+                {
+                  "LootPrefabName": "Chicken",
+                  "DropChance": 0.001,
+                  "MinAmount": 1,
+                  "MaxAmount": 1
+                },
+                {
+                  "LootPrefabName": "Meat",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 3
+                },
+                {
+                  "LootPrefabName": "Prop",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 3
+                }
+              ]
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": true,
+            "hitSlowMultiplier": 0.5,
+            "hitSlowDuration": 0.35,
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "flashColor": {
+              "r": 1.0,
+              "g": 0.08,
+              "b": 0.08,
+              "a": 1.0
+            },
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.16,
+            "healthBarWorldScale": 0.55,
+            "enableDebugTools": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0166221261,
+                "y": 0.278846383
+              },
+              "size": {
+                "x": 1.0,
+                "y": 0.589103341
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
+        "damage": {
+          "prefab": "Mod_Damage_AI",
+          "id": "AttackTrigger_AI",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "xOffset": 0.65,
+            "AttackEffects": [],
+            "Weakness": [],
+            "Damage": {
+              "BaseValue": 10.0,
+              "BaseAdditive": 0.0,
+              "AdditiveModifier": 0.0,
+              "MultiplicativeModifier": 1.0,
+              "FinalAdditive": 0.0
+            },
+            "DamageInterval": -1.0,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "tileDamageToolKind": 0,
+            "weaponAudioClass": 0,
+            "attackAudioCueId": "",
+            "impactAudioOverrides": [],
+            "$transform": {
+              "localPosition": {
+                "x": 0.65,
+                "y": 0.291,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 1.2,
+                "y": 1.2
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
+        "ChunkAssigner": {
+          "prefab": "Module_AutoChunkOwner",
+          "id": "ChunkAssigner",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "TileReciver": {
+          "prefab": "TileReciver",
+          "id": "TileReciver",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "lastGridPos": {
+              "x": 0,
+              "y": 0
+            },
+            "currentTileData": null,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "BuffManager": {
+          "prefab": "Module_BuffManager",
+          "id": "BuffManager",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "转身模块": {
+          "prefab": "Module_TurnBody",
+          "id": "转身模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Duration": 0.3,
+            "controlledTransforms_Direction": [],
+            "controlledTransforms_Position": [],
+            "DefaultPosition": {
+              "x": 0.5,
+              "y": 0.0
+            },
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "animator": {
+          "prefab": "Module_Animator_AI",
+          "id": "AI动画模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "visualMode": 0,
+            "moveDetectSpeed": 0.05,
+            "walkSwingAngle": 8.0,
+            "walkSwingSpeed": 12.0,
+            "walkBobAmount": 0.04,
+            "walkReturnSpeed": 12.0,
+            "attackDashDistance": 0.22,
+            "attackDashForwardTime": 0.06,
+            "attackDashBackTime": 0.12,
+            "autoAttackDirection": true,
+            "attackDirection": {
+              "x": 1.0,
+              "y": 0.0
+            },
+            "SkillId": 0,
+            "CanUseSkill": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "ai": {
+          "prefab": "AI_Wolf",
+          "id": "Module_AI_Wolf",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "debugLog": true,
+            "wolfTags": [
+              "Wolf"
+            ],
+            "playerTags": [
+              "Player"
+            ],
+            "detectorRefreshInterval": 0.6,
+            "allyCallDistance": 120.0,
+            "packAssistDuration": 5.0,
+            "packCallCooldown": 0.8,
+            "enableChaseFormation": true,
+            "chaseFormationMinMembers": 2,
+            "chaseFormationRadius": 1.05,
+            "chaseFormationVerticalSpacing": 0.42,
+            "chaseFormationMaxVerticalRatio": 0.55,
+            "chaseFormationAttackMargin": 0.18,
+            "chaseFormationAttackSlotTolerance": 0.14,
+            "chaseSeparationDistance": 0.85,
+            "chaseSeparationStrength": 0.7,
+            "chaseSeparationMaxOffset": 0.2,
+            "alertDetectDistance": 20.0,
+            "chaseTriggerDistance": 28.0,
+            "attackTriggerDistance": 1.4,
+            "chaseLossDistance": 44.0,
+            "attackCooldown": 2.0,
+            "attackDamageWindow": 0.333333343,
+            "attackDamageStartDelay": 0.35,
+            "alertKeepDuration": 2.0,
+            "fleeTriggerHpRate": 0.22,
+            "fleeSafeHpRate": 0.45,
+            "avoidRunDistance": 9.0,
+            "fleeRunDistance": 12.0,
+            "enableWander": true,
+            "idleMinDuration": 0.8,
+            "idleMaxDuration": 2.2,
+            "wanderRadius": 5.0,
+            "wanderStopDistance": 0.4,
+            "wanderCohesionWeight": 1.0,
+            "wanderPauseMin": 0.8,
+            "wanderPauseMax": 2.5,
+            "wanderAvoidHighPenalty": true,
+            "wanderDangerPenalty": 1200,
+            "wanderSampleCount": 8,
+            "wanderPenaltyWeight": 1.0,
+            "animIdle": "Idle",
+            "animMove": "Move",
+            "animAlert": "Idle",
+            "animChase": "Move",
+            "animAttack": "Attack",
+            "animAvoid": "Move",
+            "animFlee": "Move",
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Ghost",
+      "shellPrefab": "CoreActor.Ghost.Shell",
+      "shellAddress": "flatworld.actor.shell.ghost",
+      "sourcePrefab": "Assets/2_Prefabs/Entity_AI/Ghost.prefab",
+      "gameName": "幽灵",
+      "description": "只在完全黑暗中活动的敌对生物。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": false,
+      "tags": [
+        "Ghost"
+      ],
+      "visual": {
+        "rendererPath": "Visual",
+        "spriteAddress": "flatworld.actor.sprite.ghost[Ghost]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.15,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 0.86
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 2,
+        "animatorPath": "Visual",
+        "animatorControllerAddress": "flatworld.actor.animator.ghost"
+      },
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Ghost",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "AttackEffects": [],
+            "Weakness": [],
+            "Damage": {
+              "BaseValue": 20.0,
+              "BaseAdditive": 0.0,
+              "AdditiveModifier": 0.0,
+              "MultiplicativeModifier": 1.0,
+              "FinalAdditive": 0.0
+            },
+            "DamageInterval": 1.0,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "tileDamageToolKind": 0,
+            "weaponAudioClass": 0,
+            "attackAudioCueId": "",
+            "impactAudioOverrides": [],
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.15
+              },
+              "size": {
+                "x": 0.6,
+                "y": 0.9
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
+        "ai": {
+          "prefab": "AI_Ghost",
+          "id": "AI_Ghost",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "perceptionRadius": 60.0,
+            "wanderRadius": 6.0,
+            "wanderSpeed": 1.25,
+            "chaseSpeed": 2.5,
+            "retreatSpeed": 2.0,
+            "decisionInterval": 0.2,
+            "stuckRepathDelay": 0.75,
+            "darkPositionSamples": 16,
+            "retreatSearchRadius": 6.0,
+            "bobHeight": 0.12,
+            "bobFrequency": 1.4,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "health": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 100.0,
+              "MaxHp": 100.0,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.25,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "Defense": 0.0,
+              "Weakness": [],
+              "ShowCanvas": true,
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0,
+              "LootTable": []
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": true,
+            "hitSlowMultiplier": 0.5,
+            "hitSlowDuration": 0.35,
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "flashColor": {
+              "r": 1.0,
+              "g": 0.08,
+              "b": 0.08,
+              "a": 1.0
+            },
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.16,
+            "healthBarWorldScale": 0.55,
+            "enableDebugTools": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 0.9,
+                "y": 1.4
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
+        "BuffManager": {
+          "prefab": "Module_BuffManager",
+          "id": "BuffManager",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    }
+  ]
+}

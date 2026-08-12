@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 using UnityEngine;
 using FlatWorld.Localization;
 
-/// <summary>游戏本体 JSON 物品目录。</summary>
+/// <summary>游戏本体 JSON 物品目录；文件可按玩法类别拆分。</summary>
 [Serializable]
 public sealed class ItemDefinitionCatalogDto
 {
@@ -27,7 +27,7 @@ public sealed class ItemDefinitionManifestDto
     public List<ItemDefinitionPackageDto> Packages = new();
 }
 
-/// <summary>按运行时外壳 Prefab 分类的物品定义分包。</summary>
+/// <summary>物品定义分包；文件通常按玩法类别命名，也可声明单一外壳约束。</summary>
 [Serializable]
 public sealed class ItemDefinitionPackageDto
 {
@@ -38,7 +38,7 @@ public sealed class ItemDefinitionPackageDto
     public string Path;
 
     /// <summary>可选分类约束；填写后，包内所有定义解析出的 shellPrefab 必须一致。</summary>
-    [JsonProperty("shellPrefab")]
+    [JsonProperty("shellPrefab", NullValueHandling = NullValueHandling.Ignore)]
     public string ShellPrefab;
 
     [JsonProperty("enabled")]
@@ -60,6 +60,10 @@ public sealed class ItemDefinitionDto
 
     [JsonProperty("shellPrefab")]
     public string ShellPrefab;
+
+    /// <summary>运行时外壳的稳定 Addressables 地址；地址与资源目录解耦。</summary>
+    [JsonProperty("shellAddress", NullValueHandling = NullValueHandling.Ignore)]
+    public string ShellAddress;
 
     /// <summary>仅供编辑器迁移/校验定位旧资源；运行时不会加载此 Prefab。</summary>
     [JsonProperty("sourcePrefab")]
@@ -116,6 +120,28 @@ public sealed class ItemVisualDefinitionDto
     [JsonProperty("spriteAddress")]
     public string SpriteAddress;
 
+    /// <summary>MOD AssetBundle 名；与 spriteAsset 配合覆盖本体 Sprite。</summary>
+    [JsonProperty("spriteBundle", NullValueHandling = NullValueHandling.Ignore)]
+    public string SpriteBundle;
+
+    /// <summary>MOD AssetBundle 内的 Sprite 资源名。</summary>
+    [JsonProperty("spriteAsset", NullValueHandling = NullValueHandling.Ignore)]
+    public string SpriteAsset;
+
+    [JsonProperty("animatorPath", NullValueHandling = NullValueHandling.Ignore)]
+    public string AnimatorPath;
+
+    [JsonProperty("animatorControllerAddress", NullValueHandling = NullValueHandling.Ignore)]
+    public string AnimatorControllerAddress;
+
+    /// <summary>MOD AssetBundle 名；与 animatorControllerAsset 配合覆盖动画控制器。</summary>
+    [JsonProperty("animatorControllerBundle", NullValueHandling = NullValueHandling.Ignore)]
+    public string AnimatorControllerBundle;
+
+    /// <summary>MOD AssetBundle 内的 RuntimeAnimatorController 资源名。</summary>
+    [JsonProperty("animatorControllerAsset", NullValueHandling = NullValueHandling.Ignore)]
+    public string AnimatorControllerAsset;
+
     [JsonProperty("rendererLocalPosition")]
     public Vector3? RendererLocalPosition;
 
@@ -168,6 +194,9 @@ public sealed class ItemColliderDefinitionDto
     [JsonProperty("radius")]
     public float? Radius;
 
+    [JsonProperty("edgeRadius")]
+    public float? EdgeRadius;
+
     [JsonProperty("direction")]
     public int? Direction;
 
@@ -211,6 +240,8 @@ public sealed class RuntimeItemDefinition
     public ItemVisualDefinitionDto Visual { get; }
     public string RendererPath => Visual?.RendererPath;
     public Sprite Sprite { get; }
+    public RuntimeAnimatorController AnimatorController { get; }
+    public bool IsActor { get; }
 
     /// <summary>名称在 String Table 中的稳定 key。</summary>
     public string LabelKey { get; }
@@ -238,7 +269,9 @@ public sealed class RuntimeItemDefinition
         Dictionary<string, string> parameters,
         Dictionary<string, string> prefabIds,
         string labelKey,
-        string descriptionKey)
+        string descriptionKey,
+        RuntimeAnimatorController animatorController = null,
+        bool isActor = false)
     {
         Id = id;
         ShellPrefabId = shellPrefabId;
@@ -246,6 +279,8 @@ public sealed class RuntimeItemDefinition
         templateData = itemData;
         Visual = visual;
         Sprite = sprite;
+        AnimatorController = animatorController;
+        IsActor = isActor;
         LabelKey = string.IsNullOrWhiteSpace(labelKey)
             ? FlatWorldLocalizationService.GetItemLabelKey(id)
             : labelKey.Trim();

@@ -110,6 +110,10 @@ public sealed class ModDefinitionDocument
     [JsonProperty("items")]
     public List<ModItemDefinition> Items = new();
 
+    /// <summary>可继承本体或其他已解析 Actor 的数据驱动 AI 定义。</summary>
+    [JsonProperty("actors")]
+    public List<ItemDefinitionDto> Actors = new();
+
     [JsonProperty("recipes")]
     public List<RecipeDto> Recipes = new();
 

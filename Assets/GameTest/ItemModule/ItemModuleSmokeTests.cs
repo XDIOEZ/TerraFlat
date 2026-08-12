@@ -1,6 +1,8 @@
 using NUnit.Framework;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
+using System.Linq;
 using FlatWorld.GameTest.Shared;
 using UnityEditor;
 using UnityEngine;
@@ -32,6 +34,35 @@ namespace FlatWorld.GameTest.ItemModule
                     $"物品 {definition.Id} 没有 JSON 显示名");
                 Assert.That(definition.Visual?.SpriteAddress, Is.Not.Null.And.Not.Empty,
                     $"物品 {definition.Id} 没有 JSON 显示贴图地址");
+            }
+        }
+
+        [Test]
+        [Category("ItemModule.Smoke")]
+        [Category("Smoke")]
+        public void BuiltInManifestUsesStableItemCategoryFileNames()
+        {
+            ItemDefinitionManifestDto manifest = ItemDefinitionCatalogLoader.DeserializeManifest(
+                File.ReadAllText(ItemDefinitionCatalogLoader.BuiltInManifestPath));
+            ItemDefinitionCatalogLoader.ValidateManifest(manifest);
+
+            string[] expectedCategories =
+            {
+                "basic_items", "tools", "weapons", "equipment", "seeds", "building_summoners"
+            };
+            string[] actualCategories = manifest.Packages
+                .Where(package => package.Enabled)
+                .Select(package => package.Id)
+                .OrderBy(id => id, System.StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            Assert.That(actualCategories, Is.EquivalentTo(expectedCategories),
+                "物品 JSON 应按稳定玩法类别分包，不应退回具体物品或 Prefab 名称");
+            foreach (ItemDefinitionPackageDto package in manifest.Packages)
+            {
+                Assert.That(package.Path, Is.EqualTo($"shells/{package.Id}.json"));
+                Assert.That(package.ShellPrefab, Is.Null.Or.Empty,
+                    $"类别包 {package.Id} 可包含多个运行时外壳，不应声明单一 shellPrefab 约束");
             }
         }
 
