@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEngine;
 
 #region MOD 公共 API
@@ -124,6 +125,12 @@ public sealed class ModItemApi
     public int Guid => item?.itemData?.Guid ?? 0;
     public float Durability => item?.itemData?.Durability ?? 0f;
     public float MaxDurability => item?.itemData?.MaxDurability ?? 0f;
+    public float X => item != null ? item.transform.position.x : 0f;
+    public float Y => item != null ? item.transform.position.y : 0f;
+    public bool IsActor => item != null && item.GetComponentsInChildren<MonoBehaviour>(true)
+        .Any(component => component is IAIActor);
+    public float Health => item?.GetComponentInChildren<DamageReceiver>(true)?.Hp ?? 0f;
+    public float MaxHealth => item?.GetComponentInChildren<DamageReceiver>(true)?.MaxHp ?? 0f;
 
     public void AddDurability(float amount)
     {
@@ -135,6 +142,27 @@ public sealed class ModItemApi
     {
         ModRuntimeManager.Instance?.EnsureWorldMutationAllowed("Act");
         item?.OnAct?.Invoke();
+    }
+
+    /// <summary>让带 Mover_AI 的 Actor 前往世界坐标；基础状态机仍可在后续 Tick 覆盖目标。</summary>
+    public bool MoveTo(float x, float y, bool forceRepath = false)
+    {
+        ModRuntimeManager.Instance?.EnsureWorldMutationAllowed("ActorMoveTo");
+        Mover_AI mover = item?.GetComponentInChildren<Mover_AI>(true);
+        if (mover == null)
+            return false;
+        mover.SetDestination(new Vector2(x, y), forceRepath);
+        return true;
+    }
+
+    public bool StopMoving()
+    {
+        ModRuntimeManager.Instance?.EnsureWorldMutationAllowed("ActorStopMoving");
+        Mover_AI mover = item?.GetComponentInChildren<Mover_AI>(true);
+        if (mover == null)
+            return false;
+        mover.StopMovement();
+        return true;
     }
 }
 

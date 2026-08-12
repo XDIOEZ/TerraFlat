@@ -19,42 +19,76 @@ public static class ItemDefinitionRuntime
 
     private static void ApplyVisual(RuntimeItemDefinition definition, Item item)
     {
-        if (definition.Sprite == null)
+        ItemVisualDefinitionDto visual = definition.Visual;
+        if (visual == null)
             return;
 
+        bool needsRenderer = definition.Sprite != null ||
+                             visual.RendererLocalPosition.HasValue ||
+                             visual.RendererLocalEulerAngles.HasValue ||
+                             visual.RendererLocalScale.HasValue ||
+                             visual.Color.HasValue ||
+                             visual.FlipX.HasValue ||
+                             visual.FlipY.HasValue ||
+                             !string.IsNullOrWhiteSpace(visual.SortingLayerName) ||
+                             visual.SortingOrder.HasValue;
         SpriteRenderer renderer = null;
-        if (!string.IsNullOrWhiteSpace(definition.RendererPath))
+        if (needsRenderer && !string.IsNullOrWhiteSpace(definition.RendererPath))
         {
             Transform target = item.transform.Find(definition.RendererPath);
             renderer = target != null ? target.GetComponent<SpriteRenderer>() : null;
         }
-        renderer ??= item.GetComponentsInChildren<SpriteRenderer>(true)
-            .FirstOrDefault(candidate => candidate.sprite != null);
-        renderer ??= item.GetComponentInChildren<SpriteRenderer>(true);
-        if (renderer == null)
-            throw new MissingComponentException($"物品 {definition.Id} 的外壳缺少 SpriteRenderer");
+        if (needsRenderer)
+        {
+            renderer ??= item.GetComponentsInChildren<SpriteRenderer>(true)
+                .FirstOrDefault(candidate => candidate.sprite != null);
+            renderer ??= item.GetComponentInChildren<SpriteRenderer>(true);
+            if (renderer == null)
+                throw new MissingComponentException($"物品 {definition.Id} 的外壳缺少 SpriteRenderer");
 
-        renderer.sprite = definition.Sprite;
-        ItemVisualDefinitionDto visual = definition.Visual;
-        if (visual?.RendererLocalPosition != null)
-            renderer.transform.localPosition = visual.RendererLocalPosition.Value;
-        if (visual?.RendererLocalEulerAngles != null)
-            renderer.transform.localEulerAngles = visual.RendererLocalEulerAngles.Value;
-        if (visual?.RendererLocalScale != null)
-            renderer.transform.localScale = visual.RendererLocalScale.Value;
-        if (visual?.Color != null)
-            renderer.color = visual.Color.Value;
-        if (visual?.FlipX != null)
-            renderer.flipX = visual.FlipX.Value;
-        if (visual?.FlipY != null)
-            renderer.flipY = visual.FlipY.Value;
-        if (!string.IsNullOrWhiteSpace(visual?.SortingLayerName))
-            renderer.sortingLayerName = visual.SortingLayerName;
-        if (visual?.SortingOrder != null)
-            renderer.sortingOrder = visual.SortingOrder.Value;
+            if (definition.Sprite != null)
+                renderer.sprite = definition.Sprite;
+            if (visual.RendererLocalPosition.HasValue)
+                renderer.transform.localPosition = visual.RendererLocalPosition.Value;
+            if (visual.RendererLocalEulerAngles.HasValue)
+                renderer.transform.localEulerAngles = visual.RendererLocalEulerAngles.Value;
+            if (visual.RendererLocalScale.HasValue)
+                renderer.transform.localScale = visual.RendererLocalScale.Value;
+            if (visual.Color.HasValue)
+                renderer.color = visual.Color.Value;
+            if (visual.FlipX.HasValue)
+                renderer.flipX = visual.FlipX.Value;
+            if (visual.FlipY.HasValue)
+                renderer.flipY = visual.FlipY.Value;
+            if (!string.IsNullOrWhiteSpace(visual.SortingLayerName))
+                renderer.sortingLayerName = visual.SortingLayerName;
+            if (visual.SortingOrder.HasValue)
+                renderer.sortingOrder = visual.SortingOrder.Value;
 
-        ApplyCollider(item, visual?.Collider);
-        item.Sprite = renderer;
+            item.Sprite = renderer;
+        }
+
+        ApplyAnimator(item, visual.AnimatorPath, definition.AnimatorController);
+        ApplyCollider(item, visual.Collider);
+    }
+
+    /// <summary>用 JSON 指定的稳定资源覆盖外壳上的动画控制器。</summary>
+    private static void ApplyAnimator(Item item, string animatorPath, RuntimeAnimatorController controller)
+    {
+        if (controller == null)
+            return;
+
+        Animator animator = null;
+        if (!string.IsNullOrWhiteSpace(animatorPath))
+        {
+            Transform target = item.transform.Find(animatorPath);
+            animator = target != null ? target.GetComponent<Animator>() : null;
+        }
+        animator ??= item.GetComponentInChildren<Animator>(true);
+        if (animator == null)
+            throw new MissingComponentException($"物品 {item.itemData?.IDName} 的外壳缺少 Animator");
+
+        animator.runtimeAnimatorController = controller;
     }
 
     private static void ApplyCollider(Item item, ItemColliderDefinitionDto definition)
@@ -88,6 +122,8 @@ public static class ItemDefinitionRuntime
         {
             case BoxCollider2D box when definition.Size.HasValue:
                 box.size = definition.Size.Value;
+                if (definition.EdgeRadius.HasValue)
+                    box.edgeRadius = definition.EdgeRadius.Value;
                 break;
             case CircleCollider2D circle when definition.Radius.HasValue:
                 circle.radius = definition.Radius.Value;

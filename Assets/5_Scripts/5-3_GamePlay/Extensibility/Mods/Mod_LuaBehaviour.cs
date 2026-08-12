@@ -6,6 +6,8 @@ using UnityEngine;
 /// </summary>
 public sealed class Mod_LuaBehaviour : Module
 {
+    public const string ModuleId = "Mod_LuaBehaviour";
+
     #region 配置
 
     [SerializeField]
@@ -35,12 +37,23 @@ public sealed class Mod_LuaBehaviour : Module
 
     public override ModuleTickMode TickMode => tickMode;
     public override float FixedTickInterval => Mathf.Max(0.01f, fixedTickInterval);
+    public override string CanonicalModuleId => ModuleId;
 
     public override void Awake()
     {
         data ??= new Ex_ModData();
+        data.ID = ModuleId;
         base.Awake();
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        data ??= new Ex_ModData();
+        data.ID = ModuleId;
+        fixedTickInterval = Mathf.Max(0.01f, fixedTickInterval);
+    }
+#endif
 
     public override void Load()
     {

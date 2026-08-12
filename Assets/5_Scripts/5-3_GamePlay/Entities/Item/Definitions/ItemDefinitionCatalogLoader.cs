@@ -491,6 +491,31 @@ public static class ItemDefinitionCatalogLoader
 
     private static List<ItemDefinitionDto> ResolveDefinitions(JObject root)
     {
+        return ResolveDefinitionObjects(root)
+            .Select(source => source.ToObject<ItemDefinitionDto>() ??
+                              throw new InvalidDataException(
+                                  $"无法解析物品定义：{source.Value<string>("id")}"))
+            .ToList();
+    }
+
+    /// <summary>返回继承合并后的原始 JSON，Actor/MOD 可继续继承且不会反射 Unity 结构体属性。</summary>
+    internal static List<JObject> ResolveDefinitionObjects(IEnumerable<string> catalogJsons)
+    {
+        if (catalogJsons == null)
+            throw new ArgumentNullException(nameof(catalogJsons));
+
+        var roots = new List<JObject>();
+        int index = 0;
+        foreach (string json in catalogJsons)
+        {
+            roots.Add(ParseCatalogRoot(json, $"内存分包[{index}]"));
+            index++;
+        }
+        return ResolveDefinitionObjects(CreateCombinedCatalog(roots));
+    }
+
+    private static List<JObject> ResolveDefinitionObjects(JObject root)
+    {
         JArray items = (JArray)root["items"];
 
         var sources = new Dictionary<string, JObject>(StringComparer.OrdinalIgnoreCase);
@@ -511,8 +536,7 @@ public static class ItemDefinitionCatalogLoader
             ResolveOne(id, sources, resolved, resolving);
 
         return sources.Keys
-            .Select(id => resolved[id].ToObject<ItemDefinitionDto>() ??
-                          throw new InvalidDataException($"无法解析物品定义：{id}"))
+            .Select(id => (JObject)resolved[id].DeepClone())
             .ToList();
     }
 
@@ -553,10 +577,13 @@ public static class ItemDefinitionCatalogLoader
 
     #endregion
 
-    private static RuntimeItemDefinition BuildRuntimeDefinition(
+    internal static RuntimeItemDefinition BuildRuntimeDefinition(
         GameRes gameRes,
         ItemDefinitionDto dto,
-        IReadOnlyDictionary<string, Sprite> preloadedSprites = null)
+        IReadOnlyDictionary<string, Sprite> preloadedSprites = null,
+        IReadOnlyDictionary<string, RuntimeAnimatorController> preloadedControllers = null,
+        bool isActor = false,
+        IReadOnlyDictionary<string, GameObject> preloadedShells = null)
     {
         string id = dto.Id?.Trim();
         string shellId = dto.ShellPrefab?.Trim();
@@ -565,7 +592,16 @@ public static class ItemDefinitionCatalogLoader
         if (string.IsNullOrWhiteSpace(shellId))
             throw new InvalidDataException($"物品 {id} 缺少 shellPrefab");
 
-        GameObject shell = gameRes.GetPrefab(shellId, false);
+        GameObject shell;
+        if (preloadedShells != null)
+        {
+            if (!preloadedShells.TryGetValue(shellId, out shell) || shell == null)
+                throw new InvalidDataException($"物品 {id} 找不到预加载外壳：{shellId}");
+        }
+        else
+        {
+            shell = gameRes.GetPrefab(shellId, false);
+        }
         Item shellItem = shell != null ? shell.GetComponent<Item>() : null;
         if (shellItem?.itemData == null)
             throw new InvalidDataException($"物品 {id} 的外壳不是有效 Item：{shellId}");
@@ -619,6 +655,10 @@ public static class ItemDefinitionCatalogLoader
         }
 
         Sprite sprite = ResolveSprite(dto.Visual?.SpriteAddress, id, preloadedSprites);
+        RuntimeAnimatorController animatorController = ResolveAnimatorController(
+            dto.Visual?.AnimatorControllerAddress,
+            id,
+            preloadedControllers);
         return new RuntimeItemDefinition(
             id,
             shellId,
@@ -629,7 +669,9 @@ public static class ItemDefinitionCatalogLoader
             moduleParameters,
             modulePrefabIds,
             dto.LabelKey,
-            dto.DescriptionKey);
+            dto.DescriptionKey,
+            animatorController,
+            isActor);
     }
 
     private static void PopulateTemplateData(JObject data, ItemData template, string itemId)
@@ -729,5 +771,34 @@ public static class ItemDefinitionCatalogLoader
         if (handle.Status != AsyncOperationStatus.Succeeded || sprite == null)
             throw new InvalidDataException($"物品 {itemId} 找不到 Sprite Addressable：{address}");
         return sprite;
+    }
+
+    /// <summary>解析动画控制器；Actor 与普通物品共用同一套视觉应用管线。</summary>
+    private static RuntimeAnimatorController ResolveAnimatorController(
+        string address,
+        string itemId,
+        IReadOnlyDictionary<string, RuntimeAnimatorController> preloadedControllers)
+    {
+        if (string.IsNullOrWhiteSpace(address))
+            return null;
+
+        string key = address.Trim();
+        if (preloadedControllers != null)
+        {
+            if (preloadedControllers.TryGetValue(key, out RuntimeAnimatorController preloaded) &&
+                preloaded != null)
+            {
+                return preloaded;
+            }
+
+            throw new InvalidDataException($"物品 {itemId} 找不到预加载动画控制器：{key}");
+        }
+
+        AsyncOperationHandle<RuntimeAnimatorController> handle =
+            Addressables.LoadAssetAsync<RuntimeAnimatorController>(key);
+        RuntimeAnimatorController controller = handle.WaitForCompletion();
+        if (handle.Status != AsyncOperationStatus.Succeeded || controller == null)
+            throw new InvalidDataException($"物品 {itemId} 找不到动画控制器 Addressable：{address}");
+        return controller;
     }
 }

@@ -26,6 +26,11 @@ public class GameRes : SingletonAutoMono<GameRes>
     public Dictionary<string, RuntimeItemDefinition> ItemDefinitions =
         new Dictionary<string, RuntimeItemDefinition>(System.StringComparer.OrdinalIgnoreCase);
 
+    [Header("JSON Actor 定义字典")]
+    [ShowInInspector]
+    public Dictionary<string, RuntimeItemDefinition> ActorDefinitions =
+        new Dictionary<string, RuntimeItemDefinition>(System.StringComparer.OrdinalIgnoreCase);
+
     private readonly Dictionary<string, ItemData> legacyItemDataTemplates =
         new Dictionary<string, ItemData>(System.StringComparer.OrdinalIgnoreCase);
 
@@ -159,6 +164,25 @@ public class GameRes : SingletonAutoMono<GameRes>
             yield break;
         }
         loadedAssetsCount += loadedItemDefinitionCount;
+        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+
+        loadingText = "加载 JSON Actor 定义";
+        int loadedActorDefinitionCount = 0;
+        System.Exception actorDefinitionError = null;
+        yield return StartCoroutine(ActorDefinitionCatalogLoader.LoadBuiltInAsync(
+            this,
+            count => loadedActorDefinitionCount = count,
+            exception => actorDefinitionError = exception,
+            progress => loadingProgress = Mathf.Clamp01(progress)));
+        if (actorDefinitionError != null)
+        {
+            loadingText = $"Actor 定义加载失败：{actorDefinitionError.Message}";
+            loadingProgress = 1f;
+            Debug.LogError(loadingText);
+            Debug.LogException(actorDefinitionError);
+            yield break;
+        }
+        loadedAssetsCount += loadedActorDefinitionCount;
         loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
             
         loadingText = "加载JSON配方";
@@ -424,6 +448,8 @@ private void ClearAllDictionaries()
 {
     AllPrefabs.Clear();
     ItemDefinitions.Clear();
+    ActorDefinitions.Clear();
+    ActorDefinitionCatalogLoader.ResetRuntimeCatalog();
     legacyItemDataTemplates.Clear();
     recipeDict.Clear();
     recipeById.Clear();
@@ -528,6 +554,17 @@ public void HotReloadAllResources()
         AllPrefabs[normalizedKey] = prefab;
     }
 
+    /// <summary>批量注册失败时，仅移除仍指向本次外壳的内部别名。</summary>
+    internal void UnregisterPrefabAlias(string key, GameObject prefab)
+    {
+        if (prefab == null || string.IsNullOrWhiteSpace(key))
+            return;
+
+        string normalizedKey = key.Trim();
+        if (AllPrefabs.TryGetValue(normalizedKey, out GameObject registered) && registered == prefab)
+            AllPrefabs.Remove(normalizedKey);
+    }
+
     #endregion
 
     #region 外部接口
@@ -619,6 +656,74 @@ public void HotReloadAllResources()
         // 兼容仍以 AllPrefabs.ContainsKey 判断物品是否存在的配方与玩法代码。
         AllPrefabs[definition.Id] = definition.ShellPrefab;
         LoadedCount++;
+    }
+
+    /// <summary>注册 JSON Actor；同时进入通用 ItemDefinition 管线以复用对象池与存档。</summary>
+    public void RegisterActorDefinition(RuntimeItemDefinition definition)
+    {
+        if (definition == null || !definition.IsActor)
+            throw new InvalidDataException("注册的 ActorDefinition 为空或未标记为 Actor");
+        if (ActorDefinitions.ContainsKey(definition.Id))
+            throw new InvalidDataException($"ActorDefinition ID 冲突：{definition.Id}");
+        if (AllPrefabs.TryGetValue(definition.Id, out GameObject existingPrefab) &&
+            existingPrefab != null && existingPrefab != definition.ShellPrefab)
+        {
+            throw new InvalidDataException($"ActorDefinition ID 与已有 Prefab 别名冲突：{definition.Id}");
+        }
+
+        // 两张表必须保持原子一致，避免其中一步失败后留下半注册 Actor。
+        bool itemRegistered = false;
+        try
+        {
+            RegisterItemDefinition(definition);
+            itemRegistered = true;
+            ActorDefinitions.Add(definition.Id, definition);
+        }
+        catch
+        {
+            ActorDefinitions.Remove(definition.Id);
+            if (itemRegistered)
+            {
+                ItemDefinitions.Remove(definition.Id);
+                if (AllPrefabs.TryGetValue(definition.Id, out GameObject prefab) &&
+                    prefab == definition.ShellPrefab)
+                {
+                    AllPrefabs.Remove(definition.Id);
+                }
+                LoadedCount = Mathf.Max(0, LoadedCount - 1);
+            }
+            throw;
+        }
+    }
+
+    public bool TryGetActorDefinition(string actorId, out RuntimeItemDefinition definition)
+    {
+        if (string.IsNullOrWhiteSpace(actorId))
+        {
+            definition = null;
+            return false;
+        }
+
+        return ActorDefinitions.TryGetValue(actorId.Trim(), out definition);
+    }
+
+    /// <summary>仅供 MOD 卸载回滚其运行时 Actor 定义。</summary>
+    public bool UnregisterExternalActorDefinition(string actorId)
+    {
+        if (string.IsNullOrWhiteSpace(actorId) ||
+            !ActorDefinitions.Remove(actorId.Trim(), out RuntimeItemDefinition definition))
+        {
+            return false;
+        }
+
+        ItemDefinitions.Remove(actorId.Trim());
+        if (AllPrefabs.TryGetValue(actorId.Trim(), out GameObject prefab) &&
+            prefab == definition.ShellPrefab)
+        {
+            AllPrefabs.Remove(actorId.Trim());
+        }
+        LoadedCount = Mathf.Max(0, LoadedCount - 1);
+        return true;
     }
 
     public bool TryGetItemDefinition(string itemId, out RuntimeItemDefinition definition)

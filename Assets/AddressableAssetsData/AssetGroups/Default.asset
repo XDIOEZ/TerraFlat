@@ -89,6 +89,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0586e2315f9647388017b2d93fbd0756
+    m_Address: flatworld.actor.animator.ghost
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 08d3d4e1050f6084f867e5cf9aa1e058
     m_Address: Assets/6_Art/Food/Item_Food_Fruit.png
     m_ReadOnly: 0
@@ -199,12 +205,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 16f38f33714285247b623a2423e14c90
     m_Address: Assets/2_Prefabs/GameManager/WorldManager.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 1708703c07cce624892b595ae445e268
-    m_Address: Assets/2_Prefabs/Weapon/Weapon/Dagger.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -486,9 +486,10 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 4449fdf41529cdf488d41484f92e53e9
-    m_Address: Assets/2_Prefabs/Entity_AI/Chicken.prefab
+    m_Address: flatworld.actor.shell.chicken
     m_ReadOnly: 0
     m_SerializedLabels:
+    - ActorShell
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 459532248325a9d41aa69c33047a58ee
@@ -678,9 +679,10 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 63385f96683848648b48555cb0876c19
-    m_Address: Assets/2_Prefabs/Entity_AI/WildBoar.prefab
+    m_Address: flatworld.actor.shell.wildboar
     m_ReadOnly: 0
     m_SerializedLabels:
+    - ActorShell
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 642410d366c9d5e4bb7e8fe2a2a24a5f
@@ -725,6 +727,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6afd653fc5050c441a633e547e62c6f0
+    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Furnace.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6b482d47c04124340abeb0703ea48c4c
     m_Address: "Assets/2_Prefabs/Module/\u6389\u843D\u6A21\u5757.prefab"
     m_ReadOnly: 0
@@ -743,6 +751,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6c0d68a959e78d545b0b889726a21dcc
+    m_Address: flatworld.actor.animator.wolf
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6c3a1f4436d999445b39c197107ce458
     m_Address: Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_InterfaceSettings.prefab
     m_ReadOnly: 0
@@ -751,6 +765,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6dad61aac020ddd4a802165922117e55
     m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Bag.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6e88f70a7af617045af34ab8be235fbf
+    m_Address: Mod_LuaBehaviour
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -796,6 +816,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7c4d3c190401db54db1675f7e9f60bae
+    m_Address: flatworld.actor.animator.chicken
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7ef3d949fb4a7374fb43fc85b09d4cc2
     m_Address: Assets/2_Prefabs/Module/Module_Fuel.prefab
@@ -910,6 +936,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8e1b6a3c5f7d9e0a2b4c6d8f1a3e5b7c
+    m_Address: flatworld.actor.sprite.ghost
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 902952c12669acc448ab8712e0c96250
     m_Address: Assets/6_Art/item/Equipment/Jade Equipment/Jade Chestplate.png
@@ -1032,9 +1064,10 @@ MonoBehaviour:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9f2c7b4d6a8e0f1b3c5d7e9a2b4f6c8d
-    m_Address: Assets/2_Prefabs/Entity_AI/Ghost.prefab
+    m_Address: flatworld.actor.shell.ghost
     m_ReadOnly: 0
     m_SerializedLabels:
+    - ActorShell
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9fbe5f349e29e714697e4680674c1bb1
@@ -1122,6 +1155,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a738bbcdb3393c345a301d55c1387eb0
+    m_Address: flatworld.actor.sprite.wildboar
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a84f90f79ba86a34aa88b8e752960665
     m_Address: Assets/2_Prefabs/Module/Animator/Module_Animator_AI.prefab
     m_ReadOnly: 0
@@ -1181,6 +1220,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b2e2fe7100b6c064698a52e24c3bbf7f
+    m_Address: flatworld.actor.sprite.chicken
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b33b36a78f5818647976e4e5b86efe8c
     m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_MakerTable.prefab
@@ -1410,6 +1455,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cf1ad0f47355fcb488d9bff25b95f68b
+    m_Address: flatworld.actor.sprite.wolf
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: cfcaae5d4c4ccea4fb3554ba602b7890
     m_Address: Assets/2_Prefabs/TileBlock/TileItem_Water.prefab
     m_ReadOnly: 0
@@ -1476,6 +1527,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d5796b80b58f98a4a9bf270003d954c8
+    m_Address: flatworld.actor.animator.wildboar
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d583767306a467b47a8ffff035dc9395
     m_Address: Assets/2_Prefabs/Mine/Mine_Iron.prefab
     m_ReadOnly: 0
@@ -1501,9 +1558,10 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: dd531bf9262d2dd4bad34506f71b2385
-    m_Address: Assets/2_Prefabs/Entity_AI/Wolf.prefab
+    m_Address: flatworld.actor.shell.wolf
     m_ReadOnly: 0
     m_SerializedLabels:
+    - ActorShell
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: de2c021d01f7a8149ae5f7b18a453254

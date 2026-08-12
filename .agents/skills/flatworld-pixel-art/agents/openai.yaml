@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld 运行时像素美术"
+  short_description: "生成和校验 FlatWorld 像素角色、动画及世界素材"
+  default_prompt: "使用 $flatworld-pixel-art 为 FlatWorld 制作一份符合运行时规格的像素美术素材。"

@@ -1649,6 +1649,8 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 970667895382020
     m_Key: ui.text.B081D3F4
+    m_Metadata:
+      m_Items: []
   - m_Id: 1058478408773632
     m_Key: ui.text.951FBEA4
     m_Metadata:

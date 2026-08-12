@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    {
+      "id": "core-actors",
+      "path": "definitions/core-actors.json",
+      "enabled": true
+    }
+  ]
+}

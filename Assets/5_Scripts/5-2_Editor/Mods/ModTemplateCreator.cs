@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System.IO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -29,6 +30,7 @@ public static class ModTemplateCreator
         File.WriteAllText(Path.Combine(root, "Localization", "en.json"), CreateLocalizationJson("en", "Training Shortsword", "A training weapon created by the complete MOD Def pipeline."));
         File.WriteAllText(Path.Combine(root, "Settings", "settings.json"), CreateSettingsJson());
         File.WriteAllText(Path.Combine(root, "Lua", "main.lua"), CreateMainLua());
+        File.WriteAllText(Path.Combine(root, "Lua", "actor.lua"), CreateActorLua());
         File.WriteAllText(Path.Combine(root, "README.md"), CreateReadme());
 
         AssetDatabase.Refresh();
@@ -88,7 +90,43 @@ public static class ModTemplateCreator
             Volume = 1f,
             CanBePickedUp = true
         });
-        return JsonConvert.SerializeObject(document, Formatting.Indented);
+        JObject root = JObject.FromObject(document);
+        root["actors"] = new JArray
+        {
+            new JObject
+            {
+                ["id"] = "example.flatworld.mod:forest_wolf",
+                ["parent"] = "Wolf",
+                ["gameName"] = "Forest Wolf",
+                ["description"] = "继承本体 Wolf 逻辑、由 JSON 覆盖参数并附加 Lua 行为。",
+                ["tags"] = new JArray("Wolf", "Predator", "example.flatworld.mod:forest"),
+                ["modules"] = new JObject
+                {
+                    ["ai"] = new JObject
+                    {
+                        ["parameters"] = new JObject
+                        {
+                            ["alertDetectDistance"] = 24f,
+                            ["chaseTriggerDistance"] = 34f
+                        }
+                    },
+                    ["lua"] = new JObject
+                    {
+                        ["prefab"] = Mod_LuaBehaviour.ModuleId,
+                        ["id"] = Mod_LuaBehaviour.ModuleId,
+                        ["enabled"] = true,
+                        ["parameters"] = new JObject
+                        {
+                            // modId 由运行时强制写入，作者不能借此读取其他 MOD 的脚本。
+                            ["scriptPath"] = "Lua/actor.lua",
+                            ["tickMode"] = (int)ModuleTickMode.FixedInterval,
+                            ["fixedTickInterval"] = 0.5f
+                        }
+                    }
+                }
+            }
+        };
+        return root.ToString(Formatting.Indented);
     }
 
     private static string CreatePatchJson()
@@ -169,15 +207,46 @@ return M
 ";
     }
 
+    private static string CreateActorLua()
+    {
+        return @"local M = {}
+
+function M.OnLoad(actor, state, deltaTime, api)
+    api:Log('Actor loaded: ' .. actor.Id)
+    return state
+end
+
+function M.OnUpdate(actor, state, deltaTime, api)
+    -- actor 提供 X/Y、Health/MaxHealth、MoveTo 与 StopMoving。
+    -- 保留本体 Wolf 状态机时，该状态机仍可能在后续 Tick 覆盖移动目标。
+    return state
+end
+
+function M.OnSave(actor, state, deltaTime, api)
+    return state
+end
+
+return M
+";
+    }
+
     private static string CreateReadme()
     {
         return @"# FlatWorld 示例 MOD
+
+## Actor JSON
+
+- `actors` 可用 `parent: Wolf/Chicken/WildBoar/Ghost` 继承本体状态机与全部模块。
+- `modules` 只填写差异参数；`Mod_LuaBehaviour` 可增加 OnLoad/OnUpdate/OnAct/OnSave 钩子。
+- 自定义外形使用 `visual.spriteBundle + spriteAsset`；动画使用 `animatorControllerBundle + animatorControllerAsset`。
+- 单纯换皮不需要制作新 AI Prefab；自定义 Prefab 仍必须只使用游戏提供的组件。
 
 - `Defs/items.json`：物品 Def 和继承。
 - `Patches/balance.json`：set/add/remove/replace/merge/test Patch。
 - `Localization/`：按语言注册命名空间文本。
 - `Settings/settings.json`：client/world/server 设置 schema。
 - `Lua/main.lua`：OnLoad、OnUpdate、OnEvent、OnSave、OnLoadSave、OnUnload 生命周期。
+- `Lua/actor.lua`：Actor 实例级安全 Lua 扩展。
 
 游戏主菜单按 F10 打开 MOD 管理器。修改启停或顺序后，在未进入世界时重载内容。
 ";
