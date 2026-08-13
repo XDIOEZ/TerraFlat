@@ -172,6 +172,13 @@ public static class ActorDefinitionCatalogLoader
                 yield break;
             }
 
+            if (string.IsNullOrWhiteSpace(definition.Visual?.AnimatorControllerAddress))
+            {
+                failed?.Invoke(new InvalidDataException(
+                    $"Actor {id} 必须声明 visual.animatorControllerAddress；Actor 不再绑定 Sprite 子资源"));
+                yield break;
+            }
+
             if (shellAddresses.TryGetValue(shellId, out string existing) &&
                 !string.Equals(existing, address, StringComparison.OrdinalIgnoreCase))
             {
@@ -186,32 +193,21 @@ public static class ActorDefinitionCatalogLoader
             pair => pair.Key,
             pair => Addressables.LoadAssetAsync<GameObject>(pair.Value),
             StringComparer.OrdinalIgnoreCase);
-        string[] spriteAddresses = concrete
-            .Select(definition => definition.Visual?.SpriteAddress?.Trim())
-            .Where(address => !string.IsNullOrWhiteSpace(address))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
         string[] controllerAddresses = concrete
             .Select(definition => definition.Visual?.AnimatorControllerAddress?.Trim())
             .Where(address => !string.IsNullOrWhiteSpace(address))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        var spriteHandles = spriteAddresses.ToDictionary(
-            address => address,
-            Addressables.LoadAssetAsync<Sprite>,
-            StringComparer.OrdinalIgnoreCase);
         var controllerHandles = controllerAddresses.ToDictionary(
             address => address,
             Addressables.LoadAssetAsync<RuntimeAnimatorController>,
             StringComparer.OrdinalIgnoreCase);
 
         while (shellHandles.Values.Any(handle => !handle.IsDone) ||
-               spriteHandles.Values.Any(handle => !handle.IsDone) ||
                controllerHandles.Values.Any(handle => !handle.IsDone))
         {
-            int total = shellHandles.Count + spriteHandles.Count + controllerHandles.Count;
+            int total = shellHandles.Count + controllerHandles.Count;
             int done = shellHandles.Values.Count(handle => handle.IsDone) +
-                       spriteHandles.Values.Count(handle => handle.IsDone) +
                        controllerHandles.Values.Count(handle => handle.IsDone);
             progress?.Invoke(total == 0 ? 0.85f : 0.15f + 0.7f * done / total);
             yield return null;
@@ -230,13 +226,6 @@ public static class ActorDefinitionCatalogLoader
             }
 
             LoadedSprites.Clear();
-            foreach (KeyValuePair<string, AsyncOperationHandle<Sprite>> pair in spriteHandles)
-            {
-                if (pair.Value.Status != AsyncOperationStatus.Succeeded || pair.Value.Result == null)
-                    throw new InvalidDataException($"Actor Sprite Addressable 无效：{pair.Key}");
-                LoadedSprites[pair.Key] = pair.Value.Result;
-            }
-
             LoadedControllers.Clear();
             foreach (KeyValuePair<string, AsyncOperationHandle<RuntimeAnimatorController>> pair in controllerHandles)
             {

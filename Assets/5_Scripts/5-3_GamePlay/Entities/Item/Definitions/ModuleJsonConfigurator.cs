@@ -22,7 +22,11 @@ public static class ModuleJsonConfigurator
         MissingMemberHandling = MissingMemberHandling.Error,
         ObjectCreationHandling = ObjectCreationHandling.Replace,
         // 仅允许迁移器登记的装备实例类型，避免开放 Json.NET 的任意类型反射。
-        Converters = { new EquipmentInstanceJsonConverter() }
+        Converters =
+        {
+            new EquipmentInstanceJsonConverter(),
+            new LayerMaskJsonConverter()
+        }
     };
 
     public static void Apply(Module module, string itemId, string moduleName, string moduleId, string json)
@@ -77,6 +81,44 @@ public static class ModuleJsonConfigurator
         {
             ApplyCollider(module, colliderObject);
             parameters.Remove("$collider2D");
+        }
+    }
+
+    /// <summary>把 JSON 整数或字符串安全转换为 Unity LayerMask。</summary>
+    private sealed class LayerMaskJsonConverter : JsonConverter
+    {
+        public override bool CanWrite => false;
+
+        public override bool CanConvert(Type objectType)
+        {
+            return objectType == typeof(LayerMask);
+        }
+
+        public override object ReadJson(
+            JsonReader reader,
+            Type objectType,
+            object existingValue,
+            JsonSerializer serializer)
+        {
+            if (reader.TokenType == JsonToken.Null)
+                return existingValue ?? default(LayerMask);
+
+            if (reader.TokenType == JsonToken.Integer)
+                return new LayerMask { value = Convert.ToInt32(reader.Value) };
+
+            if (reader.TokenType == JsonToken.String &&
+                int.TryParse(reader.Value?.ToString(), out int value))
+            {
+                return new LayerMask { value = value };
+            }
+
+            throw new JsonSerializationException(
+                $"LayerMask 只支持整数或数字字符串，实际类型：{reader.TokenType}");
+        }
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            writer.WriteValue(((LayerMask)value).value);
         }
     }
 

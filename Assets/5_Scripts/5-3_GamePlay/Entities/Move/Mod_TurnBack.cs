@@ -98,14 +98,13 @@ public class Mod_TurnBack : Module
 
     public void TurnBodyToDirection(Vector2 targetDirection)
     {
-        if (isTurning) return;
-
         OnTrun.Invoke(targetDirection);
 
         if (Mathf.Abs(targetDirection.x) < 0.01f) return;
 
         float targetSign = Mathf.Sign(targetDirection.x);
         float facingSign = Mathf.Sign(currentDirection.x);
+        // 转身过程中也要接收最新方向，否则目标从左侧切到右侧时会继续倒着追。
         if (facingSign == targetSign) return;
 
         currentDirection = (targetDirection.x > 0) ? Vector2.right : Vector2.left;

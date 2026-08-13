@@ -944,6 +944,35 @@
         "ItemSpecialData": "",
         "inHand": false
       }
+    },
+    {
+      "id": "ChippedTool",
+      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/ChippedTool.prefab",
+      "shellPrefab": "ChippedTool",
+      "gameName": "打制石器",
+      "description": "由石料打制而成的简易工具。"
+    },
+    {
+      "id": "Torch",
+      "sourcePrefab": "Assets/2_Prefabs/Weapon/Torch.prefab",
+      "shellPrefab": "Torch",
+      "gameName": "火把",
+      "description": "可照亮周围环境的简易火把，由木棍和燃料制成。",
+      "modules": {
+        "light": {
+          "prefab": "Module_LightSource",
+          "id": "Module_LightSource",
+          "enabled": true,
+          "parameters": {
+            "Data": {
+              "IsEnabled": true,
+              "Intensity": 1.0,
+              "Range": 8.0,
+              "InnerRadius": 0.1
+            }
+          }
+        }
+      }
     }
   ]
 }

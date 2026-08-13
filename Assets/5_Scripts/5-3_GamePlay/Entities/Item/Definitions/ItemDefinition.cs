@@ -134,6 +134,10 @@ public sealed class ItemVisualDefinitionDto
     [JsonProperty("animatorControllerAddress", NullValueHandling = NullValueHandling.Ignore)]
     public string AnimatorControllerAddress;
 
+    /// <summary>绑定 AnimatorController 后默认播放的状态名；Actor 用它代替 Sprite 子资源地址。</summary>
+    [JsonProperty("animationState", NullValueHandling = NullValueHandling.Ignore)]
+    public string AnimationState;
+
     /// <summary>MOD AssetBundle 名；与 animatorControllerAsset 配合覆盖动画控制器。</summary>
     [JsonProperty("animatorControllerBundle", NullValueHandling = NullValueHandling.Ignore)]
     public string AnimatorControllerBundle;

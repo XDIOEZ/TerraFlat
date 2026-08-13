@@ -367,6 +367,15 @@ namespace FlatWorld.Editor.ContentWorkshop
                 throw new InvalidOperationException("请为物品选择一个 Sprite 图标。");
             if (draft.Durability < 0f || draft.Amount <= 0f || draft.Volume < 0f)
                 throw new InvalidOperationException("耐久不得为负数，初始数量必须大于 0，体积不得为负数。");
+            if (draft.AddFoodAbility)
+            {
+                if (draft.FoodMaxEatingProgress < 1f)
+                    throw new InvalidOperationException("完整进食次数必须至少为 1。");
+                if (draft.FoodEnableSpoilage && string.IsNullOrWhiteSpace(draft.FoodSpoilageTargetItemId))
+                    throw new InvalidOperationException("启用腐败时必须填写腐败目标物品 ID。");
+                if (HasNegativeFoodValue(draft))
+                    throw new InvalidOperationException("食物参数不能为负数。");
+            }
             if (!itemSourcesById.ContainsKey(template.ParentId))
                 throw new InvalidOperationException($"物品模板父定义不存在：{template.ParentId}");
             if (!itemSourcesById.ContainsKey(template.ReferenceItemId))
@@ -394,6 +403,7 @@ namespace FlatWorld.Editor.ContentWorkshop
                 {
                     ["spriteAddress"] = spriteAddress,
                     ["color"] = ColorToken(draft.Tint),
+                    ["rendererLocalEulerAngles"] = RotationToken(draft.RotationDegrees),
                     ["flipX"] = draft.FlipX,
                     ["flipY"] = draft.FlipY
                 }
@@ -436,8 +446,77 @@ namespace FlatWorld.Editor.ContentWorkshop
             {
                 damage["BaseValue"] = Mathf.Max(0f, draft.Damage);
             }
+
+            if (draft.AddFoodAbility &&
+                modules.GetValue("food", StringComparison.OrdinalIgnoreCase) is JObject foodModule)
+            {
+                ApplyFoodParameters(foodModule, draft);
+            }
             return modules;
         }
+
+        #region 食物模块写入
+
+        /// <summary>将工坊食物参数写入食物模块的 data 与 parameters 节点。</summary>
+        private static void ApplyFoodParameters(JObject foodModule, WorkshopItemDraft draft)
+        {
+            JObject data = EnsureObject(foodModule, "data");
+            JObject foodData = EnsureObject(data, "FoodData");
+            JObject nutrition = EnsureObject(foodData, "nutrition");
+            nutrition["Carbohydrates"] = Mathf.Max(0f, draft.FoodCarbohydrates);
+            nutrition["Max_Carbohydrates"] = Mathf.Max(0f, draft.FoodMaxCarbohydrates);
+            nutrition["Fat"] = Mathf.Max(0f, draft.FoodFat);
+            nutrition["Max_Fat"] = Mathf.Max(0f, draft.FoodMaxFat);
+            nutrition["Protein"] = Mathf.Max(0f, draft.FoodProtein);
+            nutrition["Max_Protein"] = Mathf.Max(0f, draft.FoodMaxProtein);
+            nutrition["Water"] = Mathf.Max(0f, draft.FoodWater);
+            nutrition["Max_Water"] = Mathf.Max(0f, draft.FoodMaxWater);
+            nutrition["Vitamins"] = Mathf.Max(0f, draft.FoodVitamins);
+            nutrition["Max_Vitamins"] = Mathf.Max(0f, draft.FoodMaxVitamins);
+            foodData["Max_EatingProgress"] = Mathf.Max(1f, draft.FoodMaxEatingProgress);
+            EnsureObject(foodData, "nutritionConsumeSpeed")["BaseValue"] =
+                Mathf.Max(0f, draft.FoodNutritionConsumeSpeed);
+            foodData["WaterConsumeSpeedRate"] = Mathf.Max(0f, draft.FoodWaterConsumeSpeedRate);
+            foodData["nutritionConsumeRate"] = Mathf.Max(0f, draft.FoodNutritionConsumeRate);
+            data["EnableSpoilage"] = draft.FoodEnableSpoilage;
+            data["SpoilageIntervalSeconds"] = Mathf.Max(0f, draft.FoodSpoilageIntervalSeconds);
+            data["SpoilageTargetItemID"] = draft.FoodSpoilageTargetItemId?.Trim() ?? string.Empty;
+
+            JObject parameters = EnsureObject(foodModule, "parameters");
+            parameters["ConsumeKind"] = Mathf.Clamp(draft.FoodConsumeKind, 0, 1);
+        }
+
+        /// <summary>确保模块 JSON 中存在可写的对象节点。</summary>
+        private static JObject EnsureObject(JObject source, string propertyName)
+        {
+            if (source[propertyName] is JObject existing)
+                return existing;
+
+            var created = new JObject();
+            source[propertyName] = created;
+            return created;
+        }
+
+        /// <summary>检查食物草稿中所有必须为非负数的字段。</summary>
+        private static bool HasNegativeFoodValue(WorkshopItemDraft draft)
+        {
+            return draft.FoodCarbohydrates < 0f ||
+                   draft.FoodMaxCarbohydrates < 0f ||
+                   draft.FoodFat < 0f ||
+                   draft.FoodMaxFat < 0f ||
+                   draft.FoodProtein < 0f ||
+                   draft.FoodMaxProtein < 0f ||
+                   draft.FoodWater < 0f ||
+                   draft.FoodMaxWater < 0f ||
+                   draft.FoodVitamins < 0f ||
+                   draft.FoodMaxVitamins < 0f ||
+                   draft.FoodNutritionConsumeSpeed < 0f ||
+                   draft.FoodWaterConsumeSpeedRate < 0f ||
+                   draft.FoodNutritionConsumeRate < 0f ||
+                   draft.FoodSpoilageIntervalSeconds < 0f;
+        }
+
+        #endregion
 
         private JObject FindReferenceModule(WorkshopItemTemplate template, string moduleName)
         {
@@ -816,6 +895,20 @@ namespace FlatWorld.Editor.ContentWorkshop
                 ["g"] = color.g,
                 ["b"] = color.b,
                 ["a"] = color.a
+            };
+        }
+
+        /// <summary>序列化物品 SpriteRenderer 的 Z 轴旋转，X/Y 保持为零。</summary>
+        private static JObject RotationToken(float degrees)
+        {
+            if (float.IsNaN(degrees) || float.IsInfinity(degrees))
+                degrees = 0f;
+            degrees = Mathf.Repeat(degrees + 180f, 360f) - 180f;
+            return new JObject
+            {
+                ["x"] = 0f,
+                ["y"] = 0f,
+                ["z"] = degrees
             };
         }
 

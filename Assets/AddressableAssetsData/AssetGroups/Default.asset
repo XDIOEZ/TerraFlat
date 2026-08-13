@@ -727,12 +727,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 6afd653fc5050c441a633e547e62c6f0
-    m_Address: Assets/2_Prefabs/2-1_UI/InventoryUI/UI_Furnace.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6b482d47c04124340abeb0703ea48c4c
     m_Address: "Assets/2_Prefabs/Module/\u6389\u843D\u6A21\u5757.prefab"
     m_ReadOnly: 0

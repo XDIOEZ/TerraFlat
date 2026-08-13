@@ -421,6 +421,8 @@ namespace FlatWorld.WorldModel
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.MaxPrecipitation));
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.MinHeight));
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.MaxHeight));
+                AddLong(ref hash, BitConverter.DoubleToInt64Bits(
+                    rule.MinRiverFloodplainStrength));
                 AddLong(ref hash, rule.CompanionOnly ? 1 : 0);
                 AddString(ref hash, rule.CompanionHostTag);
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.CompanionSpawnChance));

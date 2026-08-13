@@ -22,7 +22,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_327.png[Item_Tool_327]",
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_327.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -180,7 +180,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_231.png[Item_Tool_231]",
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_231.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -542,7 +542,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Plant/Tree/item299.png[item299]",
+        "spriteAddress": "Assets/6_Art/item/Plant/Tree/item299.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -621,7 +621,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/RawHide.png[RawHide]",
+        "spriteAddress": "Assets/6_Art/item/RawHide.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -818,7 +818,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Plant/Tree/item302.png[item302]",
+        "spriteAddress": "Assets/6_Art/item/Plant/Tree/item302.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -897,7 +897,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_ingot_003.png[Item_ingot_003]",
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_ingot_003.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -976,7 +976,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_402.png[Item_Tool_402]",
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_402.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1141,7 +1141,7 @@
         "Steel"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_ingot_001.png[Item_ingot_001]",
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_ingot_001.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1220,7 +1220,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_394.png[Item_Tool_394]",
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_394.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1303,7 +1303,7 @@
         "WroughtIron"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_ingot_004.png[Item_ingot_004]",
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_ingot_004.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1382,7 +1382,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_229.png[Item_Tool_229]",
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_229.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1500,7 +1500,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_399.png[Item_Tool_399]",
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_399.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1579,7 +1579,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_239.png[Item_Tool_239]",
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_239.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1661,7 +1661,7 @@
         "Iron"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_391.png[Item_Tool_391]",
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_391.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1859,7 +1859,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_393.png[Item_Tool_393]",
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_393.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1940,7 +1940,7 @@
         "47"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Food/Item_Food_013.png[Item_Food_013]",
+        "spriteAddress": "Assets/6_Art/Food/Item_Food_013.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2270,7 +2270,7 @@
         "47"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Food/椰子壳-脏水.png[椰子壳-脏水]",
+        "spriteAddress": "Assets/6_Art/Food/椰子壳-脏水.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2433,7 +2433,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_165.png[Item_Tool_165]",
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_165.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2512,7 +2512,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Food/Item_Food_009.png[Item_Food_009]",
+        "spriteAddress": "Assets/6_Art/Food/Item_Food_009.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2670,7 +2670,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Food/椰子壳-空.png[椰子壳-空]",
+        "spriteAddress": "Assets/6_Art/Food/椰子壳-空.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2751,7 +2751,7 @@
         "47"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Food/椰子壳-有水.png[椰子壳-有水]",
+        "spriteAddress": "Assets/6_Art/Food/椰子壳-有水.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2916,7 +2916,7 @@
         "47"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Food/椰子壳-有水.png[椰子壳-有水]",
+        "spriteAddress": "Assets/6_Art/Food/椰子壳-有水.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -3081,7 +3081,7 @@
         "47"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Food/椰肉.png[椰肉]",
+        "spriteAddress": "Assets/6_Art/Food/椰肉.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -3246,7 +3246,7 @@
         "47"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_115.png[Item_Tool_115]",
+        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_115.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.025,
@@ -3458,7 +3458,7 @@
         "47"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Food/Fried_Egg.png[Fried_Egg]",
+        "spriteAddress": "Assets/6_Art/Food/Fried_Egg.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -4283,7 +4283,7 @@
         "47"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Food/pixelate (1).png[pixelate (1)]",
+        "spriteAddress": "Assets/6_Art/Food/pixelate (1).png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -4448,7 +4448,7 @@
         "47"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Food/Tea.png[Tea]",
+        "spriteAddress": "Assets/6_Art/Food/Tea.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -4611,7 +4611,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Food/腐植.png[腐植]",
+        "spriteAddress": "Assets/6_Art/Food/腐植.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -4676,6 +4676,13 @@
         "ItemSpecialData": "",
         "inHand": false
       }
+    },
+    {
+      "id": "Ore_Stone",
+      "sourcePrefab": "Assets/2_Prefabs/Mineral/Ore/Ore_Stone.prefab",
+      "shellPrefab": "Ore_Stone",
+      "gameName": "石头矿石",
+      "description": "可用于制作和建造的石质材料。"
     }
   ]
 }

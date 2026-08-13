@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -837,11 +838,14 @@ namespace FlatWorld.Editor.ContentWorkshop
             {
                 Texture preview = AssetPreview.GetAssetPreview(itemDraft.Icon) ?? itemDraft.Icon.texture;
                 Color oldColor = GUI.color;
+                Matrix4x4 oldMatrix = GUI.matrix;
                 GUI.color = itemDraft.Tint;
+                GUIUtility.RotateAroundPivot(itemDraft.RotationDegrees, previewRect.center);
                 GUI.DrawTexture(new Rect(previewRect.x + 25f, previewRect.y + 25f, 190f, 190f),
                     preview,
                     ScaleMode.ScaleToFit,
                     true);
+                GUI.matrix = oldMatrix;
                 GUI.color = oldColor;
             }
             else
@@ -895,12 +899,18 @@ namespace FlatWorld.Editor.ContentWorkshop
             GUILayout.Space(8f);
             GUILayout.Label("外观", EditorStyles.boldLabel);
             itemDraft.Tint = EditorGUILayout.ColorField("颜色", itemDraft.Tint);
+            itemDraft.RotationDegrees = NormalizeRotation(
+                EditorGUILayout.FloatField(
+                    new GUIContent("旋转角度 (°)", "绕 Sprite 中心旋转的 Z 轴角度"),
+                    itemDraft.RotationDegrees));
             itemDraft.FlipX = EditorGUILayout.Toggle("水平翻转", itemDraft.FlipX);
             itemDraft.FlipY = EditorGUILayout.Toggle("垂直翻转", itemDraft.FlipY);
 
             GUILayout.Space(8f);
             GUILayout.Label("能力卡片", EditorStyles.boldLabel);
             itemDraft.AddFoodAbility = EditorGUILayout.ToggleLeft("可以食用", itemDraft.AddFoodAbility);
+            if (itemDraft.AddFoodAbility)
+                DrawFoodInspector();
             itemDraft.AddFuelAbility = EditorGUILayout.ToggleLeft("可以作为燃料", itemDraft.AddFuelAbility);
             itemDraft.AddCombatAbility = EditorGUILayout.ToggleLeft("可以造成近战伤害", itemDraft.AddCombatAbility);
             itemDraft.AddEquipmentAbility = EditorGUILayout.ToggleLeft("可以装备", itemDraft.AddEquipmentAbility);
@@ -932,6 +942,69 @@ namespace FlatWorld.Editor.ContentWorkshop
             EditorGUILayout.EndVertical();
         }
 
+        #region 食物参数编辑
+
+        /// <summary>绘制食物模块的营养、进食、腐败和饮用方式参数。</summary>
+        private void DrawFoodInspector()
+        {
+            GUILayout.Space(6f);
+            GUILayout.Label("食物参数", EditorStyles.boldLabel);
+            itemDraft.FoodConsumeKind = Mathf.Clamp(
+                EditorGUILayout.Popup("食用方式", itemDraft.FoodConsumeKind, new[] { "固体食物", "饮品" }),
+                0,
+                1);
+
+            GUILayout.Label("营养值", EditorStyles.miniBoldLabel);
+            itemDraft.FoodCarbohydrates = NonNegativeFloatField("碳水化合物", itemDraft.FoodCarbohydrates);
+            itemDraft.FoodFat = NonNegativeFloatField("脂肪", itemDraft.FoodFat);
+            itemDraft.FoodProtein = NonNegativeFloatField("蛋白质", itemDraft.FoodProtein);
+            itemDraft.FoodWater = NonNegativeFloatField("水分", itemDraft.FoodWater);
+            itemDraft.FoodVitamins = NonNegativeFloatField("维生素", itemDraft.FoodVitamins);
+
+            GUILayout.Label("营养容量上限", EditorStyles.miniBoldLabel);
+            itemDraft.FoodMaxCarbohydrates = NonNegativeFloatField(
+                "碳水上限",
+                itemDraft.FoodMaxCarbohydrates);
+            itemDraft.FoodMaxFat = NonNegativeFloatField("脂肪上限", itemDraft.FoodMaxFat);
+            itemDraft.FoodMaxProtein = NonNegativeFloatField("蛋白质上限", itemDraft.FoodMaxProtein);
+            itemDraft.FoodMaxWater = NonNegativeFloatField("水分上限", itemDraft.FoodMaxWater);
+            itemDraft.FoodMaxVitamins = NonNegativeFloatField("维生素上限", itemDraft.FoodMaxVitamins);
+
+            GUILayout.Label("食用特性", EditorStyles.miniBoldLabel);
+            itemDraft.FoodMaxEatingProgress = Mathf.Max(
+                1f,
+                EditorGUILayout.FloatField("完整进食次数", itemDraft.FoodMaxEatingProgress));
+            itemDraft.FoodNutritionConsumeSpeed = NonNegativeFloatField(
+                "营养自然消耗速度",
+                itemDraft.FoodNutritionConsumeSpeed);
+            itemDraft.FoodWaterConsumeSpeedRate = NonNegativeFloatField(
+                "水分消耗倍率",
+                itemDraft.FoodWaterConsumeSpeedRate);
+            itemDraft.FoodNutritionConsumeRate = NonNegativeFloatField(
+                "营养消耗倍率",
+                itemDraft.FoodNutritionConsumeRate);
+
+            GUILayout.Label("腐败设置", EditorStyles.miniBoldLabel);
+            itemDraft.FoodEnableSpoilage = EditorGUILayout.Toggle("启用腐败", itemDraft.FoodEnableSpoilage);
+            if (itemDraft.FoodEnableSpoilage)
+            {
+                itemDraft.FoodSpoilageIntervalSeconds = NonNegativeFloatField(
+                    "腐败间隔 (秒)",
+                    itemDraft.FoodSpoilageIntervalSeconds);
+                itemDraft.FoodSpoilageTargetItemId = EditorGUILayout.TextField(
+                    new GUIContent("腐败目标 ID", "腐败后替换成的物品稳定 ID"),
+                    itemDraft.FoodSpoilageTargetItemId);
+            }
+        }
+
+        /// <summary>绘制不会接受负数的浮点数输入。</summary>
+        private static float NonNegativeFloatField(string label, float value)
+        {
+            return Mathf.Max(0f, EditorGUILayout.FloatField(label, value));
+        }
+
+        #endregion
+
         private void DuplicateItem(WorkshopItemEntry source)
         {
             WorkshopItemTemplate template = TemplateForCategory(source.Category);
@@ -949,12 +1022,111 @@ namespace FlatWorld.Editor.ContentWorkshop
             if (definition.Visual != null)
             {
                 itemDraft.Tint = definition.Visual.Color ?? Color.white;
+                itemDraft.RotationDegrees = NormalizeRotation(
+                    definition.Visual.RendererLocalEulerAngles?.z ?? 0f);
                 itemDraft.FlipX = definition.Visual.FlipX ?? false;
                 itemDraft.FlipY = definition.Visual.FlipY ?? false;
             }
+            CopyFoodParameters(definition);
             statusMessage = $"已复制“{source.DisplayName}”的外观与基础数值；稳定 ID 已重新生成。";
             statusType = MessageType.Info;
         }
+
+        #region 食物参数读取
+
+        /// <summary>从已解析的食物模块读取参数，供复制物品时继续编辑。</summary>
+        private void CopyFoodParameters(ItemDefinitionDto definition)
+        {
+            ItemModuleDefinitionDto foodModule = definition?.Modules?
+                .FirstOrDefault(pair => string.Equals(pair.Key, "food", StringComparison.OrdinalIgnoreCase))
+                .Value;
+            if (foodModule == null)
+                return;
+
+            JObject foodData = GetObject(foodModule.Data, "FoodData");
+            JObject nutrition = GetObject(foodData, "nutrition");
+            itemDraft.AddFoodAbility = true;
+            itemDraft.FoodCarbohydrates = ReadFloat(nutrition, "Carbohydrates", itemDraft.FoodCarbohydrates);
+            itemDraft.FoodMaxCarbohydrates = ReadFloat(
+                nutrition,
+                "Max_Carbohydrates",
+                itemDraft.FoodMaxCarbohydrates);
+            itemDraft.FoodFat = ReadFloat(nutrition, "Fat", itemDraft.FoodFat);
+            itemDraft.FoodMaxFat = ReadFloat(nutrition, "Max_Fat", itemDraft.FoodMaxFat);
+            itemDraft.FoodProtein = ReadFloat(nutrition, "Protein", itemDraft.FoodProtein);
+            itemDraft.FoodMaxProtein = ReadFloat(nutrition, "Max_Protein", itemDraft.FoodMaxProtein);
+            itemDraft.FoodWater = ReadFloat(nutrition, "Water", itemDraft.FoodWater);
+            itemDraft.FoodMaxWater = ReadFloat(nutrition, "Max_Water", itemDraft.FoodMaxWater);
+            itemDraft.FoodVitamins = ReadFloat(nutrition, "Vitamins", itemDraft.FoodVitamins);
+            itemDraft.FoodMaxVitamins = ReadFloat(nutrition, "Max_Vitamins", itemDraft.FoodMaxVitamins);
+            itemDraft.FoodMaxEatingProgress = Mathf.Max(
+                1f,
+                ReadFloat(foodData, "Max_EatingProgress", itemDraft.FoodMaxEatingProgress));
+            itemDraft.FoodNutritionConsumeSpeed = ReadFloat(
+                GetObject(foodData, "nutritionConsumeSpeed"),
+                "BaseValue",
+                itemDraft.FoodNutritionConsumeSpeed);
+            itemDraft.FoodWaterConsumeSpeedRate = ReadFloat(
+                foodData,
+                "WaterConsumeSpeedRate",
+                itemDraft.FoodWaterConsumeSpeedRate);
+            itemDraft.FoodNutritionConsumeRate = ReadFloat(
+                foodData,
+                "nutritionConsumeRate",
+                itemDraft.FoodNutritionConsumeRate);
+            itemDraft.FoodEnableSpoilage = ReadBool(
+                foodModule.Data,
+                "EnableSpoilage",
+                itemDraft.FoodEnableSpoilage);
+            itemDraft.FoodSpoilageIntervalSeconds = ReadFloat(
+                foodModule.Data,
+                "SpoilageIntervalSeconds",
+                itemDraft.FoodSpoilageIntervalSeconds);
+            itemDraft.FoodSpoilageTargetItemId = ReadString(
+                foodModule.Data,
+                "SpoilageTargetItemID",
+                itemDraft.FoodSpoilageTargetItemId);
+            itemDraft.FoodConsumeKind = Mathf.Clamp(
+                ReadInt(foodModule.Parameters, "ConsumeKind", itemDraft.FoodConsumeKind),
+                0,
+                1);
+        }
+
+        /// <summary>按不区分大小写的属性名读取 JSON 对象。</summary>
+        private static JObject GetObject(JObject source, string propertyName)
+        {
+            return source?.GetValue(propertyName, StringComparison.OrdinalIgnoreCase) as JObject;
+        }
+
+        /// <summary>读取食物浮点字段，字段缺失时保留默认值。</summary>
+        private static float ReadFloat(JObject source, string propertyName, float fallback)
+        {
+            JToken token = source?.GetValue(propertyName, StringComparison.OrdinalIgnoreCase);
+            return token == null ? fallback : token.Value<float>();
+        }
+
+        /// <summary>读取食物整数参数，字段缺失时保留默认值。</summary>
+        private static int ReadInt(JObject source, string propertyName, int fallback)
+        {
+            JToken token = source?.GetValue(propertyName, StringComparison.OrdinalIgnoreCase);
+            return token == null ? fallback : token.Value<int>();
+        }
+
+        /// <summary>读取食物布尔字段，字段缺失时保留默认值。</summary>
+        private static bool ReadBool(JObject source, string propertyName, bool fallback)
+        {
+            JToken token = source?.GetValue(propertyName, StringComparison.OrdinalIgnoreCase);
+            return token == null ? fallback : token.Value<bool>();
+        }
+
+        /// <summary>读取食物字符串字段，字段缺失时保留默认值。</summary>
+        private static string ReadString(JObject source, string propertyName, string fallback)
+        {
+            string value = source?.GetValue(propertyName, StringComparison.OrdinalIgnoreCase)?.Value<string>();
+            return string.IsNullOrWhiteSpace(value) ? fallback : value;
+        }
+
+        #endregion
 
         private void CreateItem()
         {
@@ -1045,6 +1217,14 @@ namespace FlatWorld.Editor.ContentWorkshop
             if (sprite == null)
                 return null;
             return AssetPreview.GetAssetPreview(sprite) ?? AssetPreview.GetMiniThumbnail(sprite) ?? sprite.texture;
+        }
+
+        /// <summary>把角度限制到 [-180, 180)，避免手工输入不断累积。</summary>
+        private static float NormalizeRotation(float degrees)
+        {
+            if (float.IsNaN(degrees) || float.IsInfinity(degrees))
+                return 0f;
+            return Mathf.Repeat(degrees + 180f, 360f) - 180f;
         }
 
         #endregion

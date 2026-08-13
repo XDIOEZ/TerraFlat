@@ -18,7 +18,7 @@
       ],
       "visual": {
         "rendererPath": "Module_Animator_AI",
-        "spriteAddress": "flatworld.actor.sprite.chicken[Chicken_Sleep_1]",
+        "animationState": "Stand",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -710,7 +710,7 @@
       ],
       "visual": {
         "rendererPath": "Module_Animator_AI",
-        "spriteAddress": "flatworld.actor.sprite.wildboar[MiniBoar_10]",
+        "animationState": "Stand",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1419,7 +1419,7 @@
       ],
       "visual": {
         "rendererPath": "AI动画模块",
-        "spriteAddress": "flatworld.actor.sprite.wolf[Wolf_0]",
+        "animationState": "Idle",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2122,7 +2122,7 @@
       ],
       "visual": {
         "rendererPath": "Visual",
-        "spriteAddress": "flatworld.actor.sprite.ghost[Ghost]",
+        "animationState": "Idle",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.15,

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEngine;
 
@@ -68,12 +69,16 @@ public static class ItemDefinitionRuntime
             item.Sprite = renderer;
         }
 
-        ApplyAnimator(item, visual.AnimatorPath, definition.AnimatorController);
+        ApplyAnimator(item, visual.AnimatorPath, definition.AnimatorController, visual.AnimationState);
         ApplyCollider(item, visual.Collider);
     }
 
-    /// <summary>用 JSON 指定的稳定资源覆盖外壳上的动画控制器。</summary>
-    private static void ApplyAnimator(Item item, string animatorPath, RuntimeAnimatorController controller)
+    /// <summary>绑定 AnimatorController，并按 JSON 指定状态初始化动画机。</summary>
+    private static void ApplyAnimator(
+        Item item,
+        string animatorPath,
+        RuntimeAnimatorController controller,
+        string animationState)
     {
         if (controller == null)
             return;
@@ -89,6 +94,32 @@ public static class ItemDefinitionRuntime
             throw new MissingComponentException($"物品 {item.itemData?.IDName} 的外壳缺少 Animator");
 
         animator.runtimeAnimatorController = controller;
+        if (!string.IsNullOrWhiteSpace(animationState))
+            PlayInitialAnimatorState(item, animator, animationState);
+    }
+
+    /// <summary>直接按状态机状态名播放初始动画，不依赖 Sprite 子资源切片。</summary>
+    private static void PlayInitialAnimatorState(Item item, Animator animator, string animationState)
+    {
+        string stateName = animationState.Trim();
+        if (animator.layerCount <= 0)
+            throw new InvalidOperationException($"物品 {item.itemData?.IDName} 的 Animator 没有可用状态层");
+
+        int layer = 0;
+        int stateHash = Animator.StringToHash(stateName);
+        if (!animator.HasState(layer, stateHash))
+        {
+            string fullPath = $"{animator.GetLayerName(layer)}.{stateName}";
+            stateHash = Animator.StringToHash(fullPath);
+            if (!animator.HasState(layer, stateHash))
+            {
+                throw new InvalidDataException(
+                    $"物品 {item.itemData?.IDName} 的 Animator 找不到状态：{stateName}");
+            }
+        }
+
+        animator.Play(stateHash, layer, 0f);
+        animator.Update(0f);
     }
 
     private static void ApplyCollider(Item item, ItemColliderDefinitionDto definition)

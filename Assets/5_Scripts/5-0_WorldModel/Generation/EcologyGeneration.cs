@@ -33,7 +33,8 @@ namespace FlatWorld.WorldModel
             double companionOffsetX = 0d,
             double companionOffsetY = 0d,
             double companionMinRadius = 0d,
-            double companionMaxRadius = 0d)
+            double companionMaxRadius = 0d,
+            double minRiverFloodplainStrength = 0d)
         {
             if (string.IsNullOrWhiteSpace(ruleId))
                 throw new ArgumentException("Ecology rule id is required.", nameof(ruleId));
@@ -60,6 +61,7 @@ namespace FlatWorld.WorldModel
             CompanionOffsetY = Finite(companionOffsetY, 0d);
             CompanionMinRadius = Math.Max(0d, Finite(companionMinRadius, 0d));
             CompanionMaxRadius = Math.Max(CompanionMinRadius, Finite(companionMaxRadius, 0d));
+            MinRiverFloodplainStrength = Clamp01(minRiverFloodplainStrength);
         }
 
         public string RuleId { get; }
@@ -83,13 +85,16 @@ namespace FlatWorld.WorldModel
         public double CompanionOffsetY { get; }
         public double CompanionMinRadius { get; }
         public double CompanionMaxRadius { get; }
+        /// <summary>最低河流冲积影响强度；大于 0 时只在河岸附近生成。</summary>
+        public double MinRiverFloodplainStrength { get; }
 
         #endregion
 
         #region 规则校验
 
-        /// <summary>检查地形群系和三个生成期环境通道是否符合规则。</summary>
-        public bool Matches(int biomeId, double temperature, double precipitation, double height)
+        /// <summary>检查地形群系和生成期环境通道是否符合规则。</summary>
+        public bool Matches(int biomeId, double temperature, double precipitation, double height,
+            double riverFloodplainStrength = 0d)
         {
             if (BiomeMask != 0 && (biomeId < 0 || biomeId >= 31 ||
                 (BiomeMask & (1 << biomeId)) == 0))
@@ -99,7 +104,8 @@ namespace FlatWorld.WorldModel
 
             return temperature >= MinTemperature && temperature <= MaxTemperature &&
                    precipitation >= MinPrecipitation && precipitation <= MaxPrecipitation &&
-                   height >= MinHeight && height <= MaxHeight;
+                   height >= MinHeight && height <= MaxHeight &&
+                   riverFloodplainStrength >= MinRiverFloodplainStrength;
         }
 
         private static List<string> NormalizeTags(IEnumerable<string> tags)
@@ -267,12 +273,14 @@ namespace FlatWorld.WorldModel
                     double temperature = ReadEnvironment(terrain, "temperature", x, y);
                     double precipitation = ReadEnvironment(terrain, "precipitation", x, y);
                     double height = ReadEnvironment(terrain, "height", x, y);
+                    double riverFloodplain = ReadEnvironment(terrain, "riverFloodplain", x, y);
 
                     // 先处理宿主规则，保证伴生物的宿主关系与规则顺序无关。
                     for (int ruleIndex = 0; ruleIndex < hostRules.Count; ruleIndex++)
                     {
                         EcologySpawnRuleSnapshot rule = hostRules[ruleIndex];
-                        if (!rule.Matches(cell.BiomeId, temperature, precipitation, height))
+                        if (!rule.Matches(cell.BiomeId, temperature, precipitation, height,
+                                riverFloodplain))
                         {
                             continue;
                         }
@@ -306,7 +314,8 @@ namespace FlatWorld.WorldModel
                     {
                         EcologySpawnRuleSnapshot rule = companionRules[ruleIndex];
                         if (string.IsNullOrWhiteSpace(rule.CompanionHostTag) ||
-                            !rule.Matches(cell.BiomeId, temperature, precipitation, height) ||
+                            !rule.Matches(cell.BiomeId, temperature, precipitation, height,
+                                riverFloodplain) ||
                             !hosts.TryGetValue(rule.CompanionHostTag, out int hostGuid))
                         {
                             continue;
