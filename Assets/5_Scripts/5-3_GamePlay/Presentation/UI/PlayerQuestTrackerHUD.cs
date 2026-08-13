@@ -9,7 +9,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 为本地玩家维护屏幕右侧的简洁任务追踪卡。组件通过 QuestManager 的运行时生命周期事件绑定玩家，
 /// 只订阅 QuestChanged 并复用最多四个条目 Prefab；完成任务自动移出追踪列表，没有逐帧轮询，
-/// 也不会拦截鼠标、手柄或玩家移动输入。
+/// 任务内容和装饰元素不会拦截输入，只保留展开/收起按钮的有意交互。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Player))]
@@ -22,8 +22,11 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
     private const string TitleNodeName = "标题";
     private const string CountNodeName = "数量文本";
     private const string EmptyNodeName = "空状态文本";
+    private const string ToggleButtonNodeName = "任务面板开关按钮";
     private const string ContentNodeName = "Content";
     private const int MaximumVisibleQuestCount = 4;
+    private static readonly Vector2 ExpandedViewSize = new Vector2(300f, 300f);
+    private static readonly Vector2 CollapsedViewSize = new Vector2(300f, 54f);
 
     private Player player;
     private QuestManager questManager;
@@ -36,6 +39,8 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
     private TextMeshProUGUI titleText;
     private TextMeshProUGUI countText;
     private TextMeshProUGUI emptyText;
+    private Button toggleButton;
+    private bool isExpanded = true;
     private bool missingPrefabLogged;
 
     private readonly List<QuestTrackerRowView> rowViews = new(MaximumVisibleQuestCount);
@@ -49,10 +54,11 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
     /// <summary>正式任务追踪 Prefab 是否已完成实例化和节点解析。</summary>
     public bool IsViewReady => viewObject != null && contentRect != null && viewCanvasGroup != null;
 
-    /// <summary>用于自动化确认常驻任务 HUD 不会抢占玩法输入。</summary>
+    /// <summary>用于确认任务内容不抢占玩法输入；只有展开/收起按钮接收点击。</summary>
     public bool IsInputTransparent => viewCanvasGroup != null &&
-                                      !viewCanvasGroup.interactable &&
-                                      !viewCanvasGroup.blocksRaycasts;
+                                      viewCanvasGroup.interactable &&
+                                      viewCanvasGroup.blocksRaycasts &&
+                                      toggleButton != null;
 
     #endregion
 
@@ -71,6 +77,8 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
 
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
         FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
+        if (toggleButton != null)
+            toggleButton.onClick.RemoveListener(ToggleExpanded);
         RefreshBinding();
     }
 
@@ -80,6 +88,8 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
             player.ProfileContextChanged -= HandleProfileContextChanged;
 
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
+        if (toggleButton != null)
+            toggleButton.onClick.RemoveListener(ToggleExpanded);
         UnbindQuestManager();
         UnbindRuntime();
         SetViewActive(false);
@@ -253,12 +263,9 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
 
         if (countText != null)
             countText.SetText("{0}", snapshotBuffer.Count);
-        if (emptyText != null)
-            emptyText.gameObject.SetActive(snapshotBuffer.Count == 0);
-        if (contentRect != null)
-            contentRect.gameObject.SetActive(snapshotBuffer.Count > 0);
 
         SetViewActive(true);
+        ApplyExpandedState();
         if (structureChanged && contentRect != null)
             LayoutRebuilder.MarkLayoutForRebuild(contentRect);
     }
@@ -347,6 +354,11 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
             if (viewRect != null && viewRect.parent != rootRect)
                 viewRect.SetParent(rootRect, false);
 
+            if (toggleButton != null)
+            {
+                toggleButton.onClick.RemoveListener(ToggleExpanded);
+                toggleButton.onClick.AddListener(ToggleExpanded);
+            }
             PlaceBelowInteractivePanels();
             return viewRect != null && contentRect != null && itemPrefab != null;
         }
@@ -371,11 +383,12 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
         titleText = FindChildText(viewObject.transform, TitleNodeName);
         countText = FindChildText(viewObject.transform, CountNodeName);
         emptyText = FindChildText(viewObject.transform, EmptyNodeName);
+        toggleButton = FindChildButton(viewObject.transform, ToggleButtonNodeName);
         Transform content = FindChild(viewObject.transform, ContentNodeName);
         contentRect = content as RectTransform ?? content?.GetComponent<RectTransform>();
 
         if (viewRect == null || viewCanvasGroup == null || contentRect == null ||
-            titleText == null || countText == null || emptyText == null)
+            titleText == null || countText == null || emptyText == null || toggleButton == null)
         {
             Debug.LogError("[PlayerQuestTrackerHUD] UI_QuestTracker Prefab 控件命名契约不完整。", viewObject);
             Destroy(viewObject);
@@ -386,12 +399,16 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
             titleText = null;
             countText = null;
             emptyText = null;
+            toggleButton = null;
             return false;
         }
 
-        viewCanvasGroup.interactable = false;
-        viewCanvasGroup.blocksRaycasts = false;
+        viewCanvasGroup.interactable = true;
+        viewCanvasGroup.blocksRaycasts = true;
+        toggleButton.onClick.RemoveListener(ToggleExpanded);
+        toggleButton.onClick.AddListener(ToggleExpanded);
         RefreshStaticTexts();
+        ApplyExpandedState();
         PlaceBelowInteractivePanels();
         SetViewActive(false);
         return true;
@@ -403,6 +420,12 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
             titleText.text = FlatWorldLocalizationService.GetUiText("任务追踪 / QUESTS");
         if (emptyText != null)
             emptyText.text = FlatWorldLocalizationService.GetUiText("暂无进行中的任务");
+        if (toggleButton != null)
+        {
+            TextMeshProUGUI toggleLabel = toggleButton.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (toggleLabel != null)
+                toggleLabel.text = FlatWorldLocalizationService.GetUiText(isExpanded ? "收起" : "展开");
+        }
     }
 
     private void SetViewActive(bool active)
@@ -412,12 +435,40 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
 
         if (viewCanvasGroup != null)
         {
-            viewCanvasGroup.interactable = false;
-            viewCanvasGroup.blocksRaycasts = false;
+            viewCanvasGroup.interactable = active;
+            viewCanvasGroup.blocksRaycasts = active;
         }
 
         if (viewObject.activeSelf != active)
             viewObject.SetActive(active);
+    }
+
+    private void ToggleExpanded()
+    {
+        isExpanded = !isExpanded;
+        ApplyExpandedState();
+    }
+
+    private void ApplyExpandedState()
+    {
+        if (viewRect == null)
+            return;
+
+        viewRect.sizeDelta = isExpanded ? ExpandedViewSize : CollapsedViewSize;
+        bool hasVisibleQuests = snapshotBuffer.Count > 0;
+        GameObject contentRoot = contentRect != null && contentRect.parent != null
+            ? contentRect.parent.gameObject
+            : null;
+        if (contentRoot != null)
+            contentRoot.SetActive(isExpanded && hasVisibleQuests);
+        if (emptyText != null)
+            emptyText.gameObject.SetActive(isExpanded && !hasVisibleQuests);
+        if (toggleButton != null)
+        {
+            TextMeshProUGUI label = toggleButton.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (label != null)
+                label.text = FlatWorldLocalizationService.GetUiText(isExpanded ? "收起" : "展开");
+        }
     }
 
     /// <summary>坐标与 Buff HUD 之后排列，仍保持在所有交互面板下方。</summary>
@@ -464,6 +515,12 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
     {
         Transform child = FindChild(root, childName);
         return child != null ? child.GetComponent<TextMeshProUGUI>() : null;
+    }
+
+    private static Button FindChildButton(Transform root, string childName)
+    {
+        Transform child = FindChild(root, childName);
+        return child != null ? child.GetComponent<Button>() : null;
     }
 
     #endregion

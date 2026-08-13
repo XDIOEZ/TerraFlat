@@ -65,7 +65,7 @@ namespace FlatWorld.Networking.Gameplay
             disconnectButton = panel.GetButton(DisconnectButtonKey);
             closeButton = panel.GetButton(CloseButtonKey);
 
-            playerNameInput?.SetTextWithoutNotify($"玩家_{Random.Range(1000, 9999)}");
+            playerNameInput?.SetTextWithoutNotify(NewWorldCreationRequest.CreateRandomPlayerName());
 
             hostButton?.onClick.AddListener(StartHost);
             joinButton?.onClick.AddListener(StartClient);

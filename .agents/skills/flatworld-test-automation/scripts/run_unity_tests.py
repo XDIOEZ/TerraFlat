@@ -43,6 +43,7 @@ GOLDEN_OPERATION_IDS = {
     "player.admin-invincibility",
     "player.admin-move-speed",
     "player.interaction-retry",
+    "player.mobile-controls",
     "player.run-transition",
     "player.spawn-land",
     "quest.progression",
@@ -57,7 +58,7 @@ DEFAULT_GOLDEN_CONFIGURATION: dict[str, Any] = {
     "presetName": "default",
     "world": {
         "seed": 424242,
-        "radius": 512,
+        "radius": 1000,
         "chunkSizeX": 16,
         "chunkSizeY": 16,
         "noiseScale": 0.01,
@@ -83,7 +84,7 @@ DEFAULT_GOLDEN_CONFIGURATION: dict[str, Any] = {
         "burningBuff": True,
     },
     "hydrology": {
-        "overrideGeneration": True,
+        "overrideGeneration": False,
         "hydrologyRegionSize": 64,
         "runoffCellSize": 16,
         "runoffSampleStride": 4,

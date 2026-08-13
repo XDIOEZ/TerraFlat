@@ -55,7 +55,7 @@ public static class GameUIPrefabRebuilder
         { InventoryRoot + "UI_Death.prefab", new[] { "重生", "回到主菜单" } },
         { InventoryRoot + "UI_GameModuleUI.prefab", new[] { "Dropdown", "Template", "Content" } },
         { MenuRoot + "Info_Button_List.prefab", new[] { "Scroll View", "保存游戏", "保存并回到主界面按钮", "保存并退出游戏按钮", "关闭" } },
-        { CommonRoot + "右键菜单.prefab", new[] { "控制面板", "销毁面板", "使用物品", "查看物品信息" } },
+        { CommonRoot + "右键菜单.prefab", new[] { "控制面板", "销毁面板", "使用物品", "查看物品信息", "丢弃一个", "丢弃整组" } },
         { CommonRoot + "物品信息面板.prefab", new[] { "面板", "信息", "销毁" } },
         { ModsRoot + "UI_Canvas.prefab", new[] { "Panel", "Slider", "关闭页面" } },
         { ModsRoot + "UI_HP.prefab", new[] { "血量模块_世界面板", "背景", "血量" } },
@@ -138,6 +138,8 @@ public static class GameUIPrefabRebuilder
                     NormalizeTypography(root.transform);
                     NormalizeControls(root.transform);
                     FlatWorldUITheme.Apply(root.transform);
+                    if (string.Equals(target.Path, ModsRoot + "UI_Food.prefab", StringComparison.Ordinal))
+                        FinalizeNutritionHud(root);
                     EditorUtility.SetDirty(root);
                     PrefabUtility.SaveAsPrefabAsset(root, target.Path);
                     rebuilt++;
@@ -390,6 +392,8 @@ public static class GameUIPrefabRebuilder
             NormalizeTypography(root.transform);
             NormalizeControls(root.transform);
             FlatWorldUITheme.Apply(root.transform);
+            if (string.Equals(target.Path, ModsRoot + "UI_Food.prefab", StringComparison.Ordinal))
+                FinalizeNutritionHud(root);
             EditorUtility.SetDirty(root);
             PrefabUtility.SaveAsPrefabAsset(root, target.Path);
             return true;
@@ -618,7 +622,7 @@ public static class GameUIPrefabRebuilder
         horizon.rectTransform.sizeDelta = new Vector2(0f, 1f);
 
         Image card = CreateImage("FWUI_DeathCard", chrome, new Color(0.025f, 0.043f, 0.058f, 0.92f));
-        SetCenter(card.rectTransform, new Vector2(0f, 8f), new Vector2(860f, 430f));
+        SetCentered(card.rectTransform, new Vector2(0f, 8f), new Vector2(860f, 430f));
         AddOutline(card, new Color(0.83f, 0.49f, 0.23f, 0.26f));
 
         TextMeshProUGUI eyebrow = CreateText("FWUI_DeathEyebrow", card.transform, "JOURNEY INTERRUPTED / 生存记录", 17f, Amber, FontStyles.Bold, TextAlignmentOptions.Center);
@@ -861,13 +865,43 @@ public static class GameUIPrefabRebuilder
         if (panel == null)
             return;
 
-        ConfigureFloatingCard(panel, 310f, 408f, "物品操作", "ITEM / ACTIONS");
+        EnsureContextMenuButton(panel, "丢弃一个", "丢弃一个");
+        EnsureContextMenuButton(panel, "丢弃整组", "丢弃整组");
+        ConfigureFloatingCard(panel, 310f, 528f, "物品操作", "ITEM / ACTIONS");
         RectTransform scroll = FindRect(panel, "Scroll View");
         if (scroll != null)
-            SetTopLeft(scroll, 20f, 94f, 270f, 230f);
+            SetTopLeft(scroll, 20f, 94f, 270f, 350f);
         RectTransform destroy = FindRect(panel, "销毁面板");
         if (destroy != null)
-            SetTopLeft(destroy, 20f, 338f, 270f, 50f);
+            SetTopLeft(destroy, 20f, 458f, 270f, 50f);
+    }
+
+    /// <summary>在编辑器构建期补齐手机物品菜单动作，运行时只负责绑定现有正式节点。</summary>
+    private static void EnsureContextMenuButton(Transform panel, string name, string caption)
+    {
+        if (FindTransform(panel, name) != null)
+            return;
+
+        Transform content = FindTransform(panel, "Content") ?? FindTransform(panel, "Scroll View") ?? panel;
+        GameObject buttonObject = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+        buttonObject.transform.SetParent(content, false);
+        Image image = buttonObject.GetComponent<Image>();
+        image.color = SurfaceRaised;
+        buttonObject.GetComponent<Button>().targetGraphic = image;
+        LayoutElement element = buttonObject.AddComponent<LayoutElement>();
+        element.preferredWidth = 250f;
+        element.preferredHeight = 50f;
+
+        GameObject labelObject = new GameObject("Text (TMP)", typeof(RectTransform), typeof(TextMeshProUGUI));
+        labelObject.transform.SetParent(buttonObject.transform, false);
+        TextMeshProUGUI label = labelObject.GetComponent<TextMeshProUGUI>();
+        label.font = font;
+        label.text = caption;
+        label.fontSize = 16f;
+        label.color = Cream;
+        label.alignment = TextAlignmentOptions.Center;
+        label.raycastTarget = false;
+        Stretch(label.rectTransform);
     }
 
     private static void BuildItemInfo(GameObject root)
@@ -916,13 +950,19 @@ public static class GameUIPrefabRebuilder
             Stretch(rootRect);
 
         EnsureNutritionTemperatureRow(panel);
-        SetCenter(panelRect, new Vector2(-480f, 120f), new Vector2(382f, 324f));
-        Image panelImage = EnsureImage(panel.gameObject);
-        panelImage.color = new Color(0.025f, 0.043f, 0.058f, 0.90f);
-        panelImage.sprite = null;
-        panelImage.type = Image.Type.Simple;
-        AddOutline(panelImage, Border);
-        BuildCardHeader(panel, "角色参数", "SURVIVAL / VITALS", 382f);
+        SetBottomLeft(panelRect, new Vector2(28f, 28f), new Vector2(326f, 196f));
+
+        // 参数 HUD 不使用卡片底板或装饰描边，避免透明区域遮挡世界和制造视觉焦点。
+        Image panelImage = panel.GetComponent<Image>();
+        if (panelImage != null)
+        {
+            panelImage.enabled = false;
+            panelImage.raycastTarget = false;
+        }
+
+        Outline panelOutline = panel.GetComponent<Outline>();
+        if (panelOutline != null)
+            UnityEngine.Object.DestroyImmediate(panelOutline);
 
         string[] sliders = { "碳水", "脂肪", "蛋白质", "水", "维生素", "体温" };
         for (int i = 0; i < sliders.Length; i++)
@@ -930,7 +970,7 @@ public static class GameUIPrefabRebuilder
             RectTransform slider = FindRect(panel, sliders[i]);
             if (slider != null)
             {
-                SetTopLeft(slider, 28f, 86f + i * 38f, 326f, 26f);
+                SetTopLeft(slider, 0f, i * 34f, 326f, 26f);
                 Slider sliderComponent = slider.GetComponent<Slider>();
                 if (sliderComponent != null)
                     sliderComponent.interactable = false;
@@ -938,6 +978,37 @@ public static class GameUIPrefabRebuilder
         }
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+    }
+
+    /// <summary>
+    /// 收尾角色参数 HUD 的输入与装饰状态，避免主题通用规则重新添加整块描边或射线拦截。
+    /// </summary>
+    private static void FinalizeNutritionHud(GameObject root)
+    {
+        Transform panel = FindTransform(root.transform, "Panel");
+        if (panel == null)
+            return;
+
+        Image panelImage = panel.GetComponent<Image>();
+        if (panelImage != null)
+        {
+            panelImage.enabled = false;
+            panelImage.raycastTarget = false;
+        }
+
+        Outline panelOutline = panel.GetComponent<Outline>();
+        if (panelOutline != null)
+            UnityEngine.Object.DestroyImmediate(panelOutline);
+
+        CanvasGroup rootCanvasGroup = root.GetComponent<CanvasGroup>();
+        if (rootCanvasGroup != null)
+        {
+            rootCanvasGroup.interactable = false;
+            rootCanvasGroup.blocksRaycasts = false;
+        }
+
+        foreach (Graphic graphic in panel.GetComponentsInChildren<Graphic>(true))
+            graphic.raycastTarget = false;
     }
 
     private static void EnsureNutritionTemperatureRow(Transform panel)
@@ -1618,7 +1689,18 @@ public static class GameUIPrefabRebuilder
         rect.sizeDelta = new Vector2(width, height);
     }
 
-    private static void SetCenter(RectTransform rect, Vector2 position, Vector2 size)
+    /// <summary>将 HUD 子面板固定到 Canvas 左下角，并保留安全边距。</summary>
+    private static void SetBottomLeft(RectTransform rect, Vector2 position, Vector2 size)
+    {
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.zero;
+        rect.pivot = Vector2.zero;
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+    }
+
+    /// <summary>将装饰卡片固定到父节点中心，不影响左下角 HUD 的独立锚点规则。</summary>
+    private static void SetCentered(RectTransform rect, Vector2 position, Vector2 size)
     {
         rect.anchorMin = new Vector2(0.5f, 0.5f);
         rect.anchorMax = new Vector2(0.5f, 0.5f);

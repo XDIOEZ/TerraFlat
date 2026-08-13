@@ -125,6 +125,12 @@ namespace FlatWorld.Automation
                     beforeWorldExit: _ => AssertPlayerRunInputScenarioCompleted(),
                     cleanup: _ => CleanupPlayerRunInputScenario()),
                 new FlatWorldGoldenPathOperation(
+                    "player.mobile-controls", "player",
+                    reset: ResetMobileControlsScenario,
+                    onWorldReady: RunMobileControlsScenario,
+                    beforeWorldExit: _ => AssertMobileControlsScenarioCompleted(),
+                    cleanup: _ => CleanupMobileControlsScenario()),
+                new FlatWorldGoldenPathOperation(
                     "map.hydrology", "map",
                     reset: ResetHydrologyScenario,
                     onWorldReady: BeginHydrologyScenario,

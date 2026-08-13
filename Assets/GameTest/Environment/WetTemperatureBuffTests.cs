@@ -54,7 +54,7 @@ namespace FlatWorld.GameTest.Environment
         {
             var definitions = BuffCatalogLoader.LoadBuiltInDefinitions();
 
-            Assert.That(definitions, Has.Count.EqualTo(13));
+            Assert.That(definitions, Has.Count.EqualTo(17));
             Assert.That(
                 definitions.SelectMany(definition => definition.Effects)
                     .All(effect => effect.IsHandlerCached),

@@ -10,6 +10,8 @@ public sealed class NewWorldCreationRequest
 {
     private const uint GeneratedNameMinimum = 10000000;
     private const uint GeneratedNameRange = 90000000;
+    private const string GeneratedPlayerNamePrefix = "Player_";
+    private const string GeneratedWorldNamePrefix = "World_";
 
     #region 请求数据
 
@@ -36,9 +38,9 @@ public sealed class NewWorldCreationRequest
     {
         bool requiresGeneratedName = string.IsNullOrWhiteSpace(saveName) ||
                                      string.IsNullOrWhiteSpace(playerName);
-        string generatedName = requiresGeneratedName ? CreateRandomNumericName() : string.Empty;
-        SaveName = ResolveNameOrDefault(saveName, generatedName);
-        PlayerName = ResolveNameOrDefault(playerName, generatedName);
+        string generatedSuffix = requiresGeneratedName ? CreateRandomNumericSuffix() : string.Empty;
+        SaveName = ResolveNameOrDefault(saveName, CreateRandomWorldName(generatedSuffix));
+        PlayerName = ResolveNameOrDefault(playerName, CreateRandomPlayerName(generatedSuffix));
         Seed = seed?.Trim() ?? string.Empty;
         PlanetData = planetData == null
             ? null
@@ -51,8 +53,8 @@ public sealed class NewWorldCreationRequest
         CustomDifficultyRules.Normalize();
     }
 
-    /// <summary>生成八位纯数字名称，供未命名的新世界和玩家使用。</summary>
-    public static string CreateRandomNumericName()
+    /// <summary>生成八位随机数字后缀，供默认玩家名和世界名共用。</summary>
+    private static string CreateRandomNumericSuffix()
     {
         unchecked
         {
@@ -62,7 +64,31 @@ public sealed class NewWorldCreationRequest
         }
     }
 
-    /// <summary>保留玩家输入；空白名称统一使用本次请求的随机数字。</summary>
+    /// <summary>生成带 Player_ 前缀的默认玩家名。</summary>
+    public static string CreateRandomPlayerName()
+    {
+        return CreateRandomPlayerName(CreateRandomNumericSuffix());
+    }
+
+    /// <summary>生成带 World_ 前缀的默认世界名。</summary>
+    public static string CreateRandomWorldName()
+    {
+        return CreateRandomWorldName(CreateRandomNumericSuffix());
+    }
+
+    /// <summary>把同一个随机后缀转换为默认玩家名。</summary>
+    private static string CreateRandomPlayerName(string suffix)
+    {
+        return $"{GeneratedPlayerNamePrefix}{suffix}";
+    }
+
+    /// <summary>把同一个随机后缀转换为默认世界名。</summary>
+    private static string CreateRandomWorldName(string suffix)
+    {
+        return $"{GeneratedWorldNamePrefix}{suffix}";
+    }
+
+    /// <summary>保留玩家输入；空白名称使用带对应前缀的默认名称。</summary>
     private static string ResolveNameOrDefault(string requestedName, string generatedName)
     {
         string value = requestedName?.Trim() ?? string.Empty;

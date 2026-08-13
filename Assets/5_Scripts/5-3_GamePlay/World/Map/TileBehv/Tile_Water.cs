@@ -9,6 +9,9 @@ using UnityEngine;
 [System.Serializable]
 public class Tile_Water : TileBlockBehaviour
 {
+    /// <summary>水体盐度高于此值时视为盐水；海水运行时数据使用 80 作为盐度。</summary>
+    private const float SaltWaterThreshold = 0.01f;
+
     [Header("进入水体时附加的 Buff 列表")]
     public List<string> BuffInfo = new List<string>();
 
@@ -38,7 +41,7 @@ public class Tile_Water : TileBlockBehaviour
             }
         }
 
-        ApplyFreshWaterCapability(item, water, buffManager);
+        ApplyWaterCapability(item, water, buffManager);
     }
 
     public override void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
@@ -65,7 +68,7 @@ public class Tile_Water : TileBlockBehaviour
         }
 
 
-        RemoveFreshWaterCapability(buffManager);
+        RemoveWaterCapability(buffManager);
     }
 
     public override void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
@@ -89,15 +92,21 @@ public class Tile_Water : TileBlockBehaviour
 
     #endregion
 
-    #region Fresh Water Capability
+    #region Water Capability
 
-    /// <summary>只有无盐淡水提供饮水能力；河流视为干净水，湖泊、地下水与旧版未知来源视为脏水。</summary>
-    private static void ApplyFreshWaterCapability(Item item, TileData_Water water,
+    /// <summary>按水体盐度授予盐水或淡水能力，并保证同一生物只保留一种饮水来源。</summary>
+    private static void ApplyWaterCapability(Item item, TileData_Water water,
         BuffManager buffManager)
     {
-        RemoveFreshWaterCapability(buffManager);
-        if (item == null || water == null || water.salt > 0.01f)
+        RemoveWaterCapability(buffManager);
+        if (item == null || water == null)
             return;
+
+        if (water.salt > SaltWaterThreshold)
+        {
+            buffManager.AddBuff(SaltWaterBuffIds.InSaltWater);
+            return;
+        }
 
         string qualityBuffId = IsCleanFlowingFreshWater(item.transform.position)
             ? FreshWaterBuffIds.Clean
@@ -119,7 +128,8 @@ public class Tile_Water : TileBlockBehaviour
                Mathf.RoundToInt(riverKind) == (int)HydrologyWaterKind.River;
     }
 
-    private static void RemoveFreshWaterCapability(BuffManager buffManager)
+    /// <summary>离开水体或切换水质时清理所有饮水能力 Buff。</summary>
+    private static void RemoveWaterCapability(BuffManager buffManager)
     {
         if (buffManager == null)
             return;
@@ -128,6 +138,8 @@ public class Tile_Water : TileBlockBehaviour
             buffManager.RemoveBuff(FreshWaterBuffIds.Clean);
         if (buffManager.HasBuff(FreshWaterBuffIds.Dirty))
             buffManager.RemoveBuff(FreshWaterBuffIds.Dirty);
+        if (buffManager.HasBuff(SaltWaterBuffIds.InSaltWater))
+            buffManager.RemoveBuff(SaltWaterBuffIds.InSaltWater);
     }
 
     #endregion

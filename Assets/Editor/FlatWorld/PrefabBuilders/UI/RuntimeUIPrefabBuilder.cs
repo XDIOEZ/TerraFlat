@@ -19,6 +19,8 @@ public static class RuntimeUIPrefabBuilder
     private const string DialogueRoot = RuntimeRoot + "Dialogue/";
     private const string SettingsRoot = RuntimeRoot + "Settings/";
     private const string SystemRoot = RuntimeRoot + "System/";
+    private const string MobileRoot = RuntimeRoot + "Mobile/";
+    private const string UIRootPrefab = "Assets/Resources/UI/UIRoot.prefab";
     private const string InventoryRoot = "Assets/2_Prefabs/2-1_UI/InventoryUI/";
     private const string NetworkPlayerPrefab = "Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab";
     private const string PlayerPrefab = "Assets/2_Prefabs/Player/Player.prefab";
@@ -52,6 +54,7 @@ public static class RuntimeUIPrefabBuilder
         Directory.CreateDirectory(SettingsRoot);
         Directory.CreateDirectory(DialogueRoot);
         Directory.CreateDirectory(SystemRoot);
+        Directory.CreateDirectory(MobileRoot);
 
         SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.AudioSettings + ".prefab", BuildAudioSettings);
         SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.UISettings + ".prefab", BuildInterfaceSettings);
@@ -65,10 +68,13 @@ public static class RuntimeUIPrefabBuilder
         SaveNewPrefab(DialogueRoot + RuntimeUIPrefabKeys.PlayerChatInput + ".prefab", BuildPlayerChatInput);
         SaveNewPrefab(DialogueRoot + RuntimeUIPrefabKeys.CharacterSpeechBubble + ".prefab", BuildSpeechBubble);
         SaveNewPrefab(SystemRoot + RuntimeUIPrefabKeys.WorldLoading + ".prefab", BuildWorldLoading);
+        SaveDimensionLoadingPrefab();
         SavePlayerWorldCoordinatePrefab();
         SaveSaveStatusPrefab();
         SaveBuffStatusPrefabs();
         SaveQuestTrackerPrefabs();
+        SaveMobileControlsPrefab();
+        UpdateExistingPrefab(UIRootPrefab, EnsureSafeAreaRoot);
 
         UpdateExistingPrefab(MenuRoot + "Info_Button_List.prefab", ConfigureSettingsActionListPages);
         UpdateExistingPrefab(InventoryRoot + "UI_Bag.prefab", AddInventorySortButton);
@@ -76,10 +82,49 @@ public static class RuntimeUIPrefabBuilder
         UpdateExistingWorldPrefab(NetworkPlayerPrefab, AddNetworkPlayerNameLabel);
         UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerBuffStatusHUD);
         UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerQuestTrackerHUD);
+        UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerMobileControlsHUD);
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[Runtime UI] 已固化设置、设置列表分页、显示设置、世界加载、保存状态、Buff 状态、任务追踪、聊天、气泡、玩家坐标、背包整理、制作预览与联机玩家名称 Prefab。运行时不再创建这些视觉节点。");
+    }
+
+    /// <summary>只构建手机 HUD、安全区根节点和 Player 挂载，避免重写其它已有 UI Prefab。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Mobile Controls UI")]
+    public static void RebuildMobileControlsUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(MobileRoot);
+        SaveMobileControlsPrefab();
+        UpdateExistingPrefab(UIRootPrefab, EnsureSafeAreaRoot);
+        UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerMobileControlsHUD);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化手机多点触控 HUD、安全区根节点，并挂载到 Player.prefab。");
+    }
+
+    /// <summary>只重建维度切换加载页，避免覆盖用户正在调整的其它运行时 UI。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Dimension Loading UI")]
+    public static void RebuildDimensionLoadingUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(SystemRoot);
+        SaveDimensionLoadingPrefab();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化维度切换专属加载页并注册 Addressable。");
     }
 
     /// <summary>只重建区块流送设置和入口，避免小改动重写全部运行时 Prefab。</summary>
@@ -288,6 +333,22 @@ public static class RuntimeUIPrefabBuilder
         EnsureRuntimePrefabAddressable(itemPath);
     }
 
+    /// <summary>保存正式手机 HUD，并登记为 GameRes 可寻址 Prefab。</summary>
+    private static void SaveMobileControlsPrefab()
+    {
+        string prefabPath = MobileRoot + RuntimeUIPrefabKeys.MobileControls + ".prefab";
+        SaveNewPrefab(prefabPath, BuildMobileControlsHUD);
+        EnsureRuntimePrefabAddressable(prefabPath);
+    }
+
+    /// <summary>保存维度加载页并登记为 GameRes 可寻址 Prefab。</summary>
+    private static void SaveDimensionLoadingPrefab()
+    {
+        string prefabPath = SystemRoot + RuntimeUIPrefabKeys.DimensionLoading + ".prefab";
+        SaveNewPrefab(prefabPath, BuildDimensionLoading);
+        EnsureRuntimePrefabAddressable(prefabPath);
+    }
+
     /// <summary>保存坐标显示设置并登记为可由 GameRes 查询的正式运行时 Prefab。</summary>
     private static void SaveCoordinateDisplaySettingsPrefab()
     {
@@ -349,43 +410,18 @@ public static class RuntimeUIPrefabBuilder
 
     #region 系统 UI
 
-    /// <summary>构建固定在屏幕左上角的非交互坐标卡片，尺寸为 296×72 设计像素。</summary>
+    /// <summary>构建固定在屏幕左上角的非交互坐标文本，只保留玩家需要读取的坐标值。</summary>
     private static GameObject BuildPlayerWorldCoordinateHUD()
     {
         GameObject root = CreateUIObject(RuntimeUIPrefabKeys.PlayerWorldCoordinate, null);
         RectTransform rootRect = root.GetComponent<RectTransform>();
-        SetTopLeft(rootRect, 32f, 32f, 296f, 72f);
-
-        Image background = CreateImage("背景", root.transform, new Color(0.025f, 0.043f, 0.058f, 0.92f));
-        background.raycastTarget = false;
-        Stretch(background.rectTransform);
-        AddOutline(background, new Color(0.83f, 0.49f, 0.23f, 0.42f));
-
-        Shadow shadow = background.gameObject.AddComponent<Shadow>();
-        shadow.effectColor = new Color(0f, 0f, 0f, 0.48f);
-        shadow.effectDistance = new Vector2(3f, -3f);
-
-        Image accent = CreateImage("强调线", root.transform, Amber);
-        accent.raycastTarget = false;
-        RectTransform accentRect = accent.rectTransform;
-        accentRect.anchorMin = new Vector2(0f, 0f);
-        accentRect.anchorMax = new Vector2(0f, 1f);
-        accentRect.pivot = new Vector2(0f, 0.5f);
-        accentRect.anchoredPosition = Vector2.zero;
-        accentRect.sizeDelta = new Vector2(4f, -18f);
-
-        TextMeshProUGUI title = CreateText("坐标标题", root.transform, "世界坐标 / POSITION", 10f, Amber);
-        title.fontStyle = FontStyles.Bold;
-        title.characterSpacing = 1.15f;
-        title.enableWordWrapping = false;
-        title.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(title.rectTransform, 18f, 11f, 258f, 16f);
+        SetTopLeft(rootRect, 28f, 28f, 240f, 30f);
 
         TextMeshProUGUI coordinates = CreateText("坐标文本", root.transform, "X  +0.0    Y  +0.0", 16f, Cream);
         coordinates.fontStyle = FontStyles.Bold;
         coordinates.enableWordWrapping = false;
         coordinates.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(coordinates.rectTransform, 18f, 34f, 258f, 26f);
+        SetTopLeft(coordinates.rectTransform, 0f, 0f, 240f, 30f);
 
         return root;
     }
@@ -584,7 +620,7 @@ public static class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>构建屏幕右侧的非交互任务追踪卡，最多显示四条进行中或待领取任务。</summary>
+    /// <summary>构建屏幕右侧的可折叠任务追踪卡，最多显示四条进行中或待领取任务。</summary>
     private static GameObject BuildQuestTrackerHUD()
     {
         GameObject root = CreateUIObject(RuntimeUIPrefabKeys.QuestTracker, null, typeof(CanvasGroup));
@@ -592,13 +628,13 @@ public static class RuntimeUIPrefabBuilder
         rootRect.anchorMin = new Vector2(1f, 1f);
         rootRect.anchorMax = new Vector2(1f, 1f);
         rootRect.pivot = new Vector2(1f, 1f);
-        rootRect.anchoredPosition = new Vector2(-32f, -190f);
-        rootRect.sizeDelta = new Vector2(380f, 420f);
+        rootRect.anchoredPosition = new Vector2(-24f, -168f);
+        rootRect.sizeDelta = new Vector2(300f, 300f);
 
         CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
         canvasGroup.alpha = 1f;
-        canvasGroup.interactable = false;
-        canvasGroup.blocksRaycasts = false;
+        canvasGroup.interactable = true;
+        canvasGroup.blocksRaycasts = true;
 
         Image background = CreateImage("背景", root.transform, new Color(0.025f, 0.043f, 0.058f, 0.92f));
         background.raycastTarget = false;
@@ -619,7 +655,7 @@ public static class RuntimeUIPrefabBuilder
         title.characterSpacing = 1f;
         title.enableWordWrapping = false;
         title.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(title.rectTransform, 18f, 12f, 260f, 22f);
+        SetTopLeft(title.rectTransform, 16f, 10f, 190f, 22f);
 
         TextMeshProUGUI count = CreateText("数量文本", root.transform, "0", 13f, Muted);
         count.alignment = TextAlignmentOptions.MidlineRight;
@@ -627,11 +663,14 @@ public static class RuntimeUIPrefabBuilder
         count.rectTransform.anchorMin = new Vector2(1f, 1f);
         count.rectTransform.anchorMax = new Vector2(1f, 1f);
         count.rectTransform.pivot = new Vector2(1f, 1f);
-        count.rectTransform.anchoredPosition = new Vector2(-18f, -12f);
-        count.rectTransform.sizeDelta = new Vector2(56f, 22f);
+        count.rectTransform.anchoredPosition = new Vector2(-74f, -10f);
+        count.rectTransform.sizeDelta = new Vector2(34f, 22f);
+
+        Button toggleButton = CreateButton("任务面板开关按钮", root.transform, "收起", 52f, 26f, false);
+        SetTopRight(toggleButton.GetComponent<RectTransform>(), 14f, 8f, 52f, 26f);
 
         GameObject listRoot = CreateUIObject("内容列表", root.transform);
-        SetTopLeft(listRoot.GetComponent<RectTransform>(), 16f, 48f, 348f, 354f);
+        SetTopLeft(listRoot.GetComponent<RectTransform>(), 16f, 48f, 268f, 234f);
 
         GameObject viewport = CreateUIObject("Viewport", listRoot.transform, typeof(RectMask2D));
         Stretch(viewport.GetComponent<RectTransform>());
@@ -656,7 +695,7 @@ public static class RuntimeUIPrefabBuilder
         empty.alignment = TextAlignmentOptions.Center;
         empty.enableWordWrapping = false;
         empty.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(empty.rectTransform, 24f, 205f, 332f, 24f);
+        SetTopLeft(empty.rectTransform, 16f, 150f, 268f, 24f);
 
         return root;
     }
@@ -670,7 +709,7 @@ public static class RuntimeUIPrefabBuilder
             typeof(Image),
             typeof(QuestTrackerRowView));
         LayoutElement rowElement = root.AddComponent<LayoutElement>();
-        rowElement.preferredHeight = 80f;
+        rowElement.preferredHeight = 72f;
 
         Image background = root.GetComponent<Image>();
         background.color = new Color(0.055f, 0.105f, 0.12f, 0.92f);
@@ -690,7 +729,7 @@ public static class RuntimeUIPrefabBuilder
         title.fontStyle = FontStyles.Bold;
         title.enableWordWrapping = false;
         title.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(title.rectTransform, 14f, 7f, 240f, 19f);
+        SetTopLeft(title.rectTransform, 14f, 7f, 184f, 19f);
 
         TextMeshProUGUI status = CreateText("任务状态", root.transform, "ACTIVE", 11f, Amber);
         status.fontStyle = FontStyles.Bold;
@@ -700,18 +739,18 @@ public static class RuntimeUIPrefabBuilder
         status.rectTransform.anchorMin = new Vector2(1f, 1f);
         status.rectTransform.anchorMax = new Vector2(1f, 1f);
         status.rectTransform.pivot = new Vector2(1f, 1f);
-        status.rectTransform.anchoredPosition = new Vector2(-12f, -7f);
-        status.rectTransform.sizeDelta = new Vector2(78f, 19f);
+        status.rectTransform.anchoredPosition = new Vector2(-10f, -7f);
+        status.rectTransform.sizeDelta = new Vector2(64f, 19f);
 
         TextMeshProUGUI description = CreateText("任务说明", root.transform, "Description", 11.5f, Muted);
         description.enableWordWrapping = false;
         description.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(description.rectTransform, 14f, 28f, 320f, 18f);
+        SetTopLeft(description.rectTransform, 14f, 27f, 240f, 18f);
 
         TextMeshProUGUI objective = CreateText("目标文本", root.transform, "Objective  0/1", 11f, Cream);
         objective.enableWordWrapping = false;
         objective.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(objective.rectTransform, 14f, 49f, 320f, 17f);
+        SetTopLeft(objective.rectTransform, 14f, 47f, 240f, 17f);
 
         Image progressBackground = CreateImage(
             "进度背景",
@@ -814,6 +853,111 @@ public static class RuntimeUIPrefabBuilder
         return root;
     }
 
+    private static GameObject BuildDimensionLoading()
+    {
+        GameObject root = new GameObject(
+            RuntimeUIPrefabKeys.DimensionLoading,
+            typeof(RectTransform),
+            typeof(Canvas),
+            typeof(CanvasScaler),
+            typeof(GraphicRaycaster),
+            typeof(CanvasGroup),
+            typeof(CanvasRenderer),
+            typeof(Image));
+        Stretch(root.GetComponent<RectTransform>());
+
+        Canvas canvas = root.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = 32000;
+
+        CanvasScaler scaler = root.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
+        canvasGroup.alpha = 1f;
+        canvasGroup.interactable = true;
+        canvasGroup.blocksRaycasts = true;
+
+        Image blocker = root.GetComponent<Image>();
+        blocker.color = Color.clear;
+        blocker.raycastTarget = true;
+
+        Image background = CreateImage(GameManager.DimensionLoadingBackgroundKey, root.transform,
+            new Color(0.055f, 0.055f, 0.065f, 1f));
+        background.raycastTarget = false;
+        Stretch(background.rectTransform);
+
+        Image texture = CreateImage(GameManager.DimensionLoadingTextureKey, root.transform,
+            new Color(1f, 1f, 1f, 0.16f));
+        texture.raycastTarget = false;
+        texture.type = Image.Type.Tiled;
+        Stretch(texture.rectTransform);
+
+        Image shade = CreateImage("像素暗角", root.transform, new Color(0.01f, 0.012f, 0.015f, 0.46f));
+        shade.raycastTarget = false;
+        Stretch(shade.rectTransform);
+
+        GameObject card = CreateUIObject("维度加载内容", root.transform, typeof(Image), typeof(Shadow));
+        SetCentered(card.GetComponent<RectTransform>(), Vector2.zero, new Vector2(720f, 560f));
+        Image cardImage = card.GetComponent<Image>();
+        cardImage.color = new Color(0.025f, 0.03f, 0.035f, 0.94f);
+        cardImage.raycastTarget = false;
+        AddOutline(cardImage, new Color(0.95f, 0.62f, 0.22f, 0.75f));
+        Shadow shadow = card.GetComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.75f);
+        shadow.effectDistance = new Vector2(8f, -8f);
+
+        TextMeshProUGUI eyebrow = CreateText("维度加载标题", card.transform, "维度跃迁", 17f, Muted);
+        eyebrow.alignment = TextAlignmentOptions.Center;
+        SetCentered(eyebrow.rectTransform, new Vector2(0f, 218f), new Vector2(620f, 34f));
+
+        Image iconFrame = CreateImage("维度图标边框", card.transform, new Color(0.08f, 0.085f, 0.09f, 1f));
+        iconFrame.raycastTarget = false;
+        SetCentered(iconFrame.rectTransform, new Vector2(0f, 112f), new Vector2(132f, 132f));
+        AddOutline(iconFrame, Border);
+
+        Image icon = CreateImage(GameManager.DimensionLoadingIconKey, iconFrame.transform, Color.white);
+        icon.raycastTarget = false;
+        icon.preserveAspect = true;
+        Stretch(icon.rectTransform);
+        icon.rectTransform.offsetMin = new Vector2(14f, 14f);
+        icon.rectTransform.offsetMax = new Vector2(-14f, -14f);
+
+        TextMeshProUGUI dimensionName = CreateText(GameManager.DimensionLoadingNameKey, card.transform, "地下矿洞", 34f, Amber);
+        dimensionName.fontStyle = FontStyles.Bold;
+        dimensionName.alignment = TextAlignmentOptions.Center;
+        SetCentered(dimensionName.rectTransform, new Vector2(0f, 18f), new Vector2(620f, 56f));
+
+        TextMeshProUGUI status = CreateText(GameManager.DimensionLoadingStatusKey, card.transform, "正在创建目标维度…", 18f, Cream);
+        status.alignment = TextAlignmentOptions.Center;
+        SetCentered(status.rectTransform, new Vector2(0f, -38f), new Vector2(620f, 34f));
+
+        Slider progress = CreateSlider(GameManager.DimensionLoadingProgressKey, card.transform);
+        progress.interactable = false;
+        progress.value = 0.48f;
+        SetCentered(progress.GetComponent<RectTransform>(), new Vector2(0f, -91f), new Vector2(580f, 30f));
+        Transform progressFill = progress.transform.Find("Fill Area/Fill");
+        if (progressFill != null)
+            progressFill.name = GameManager.DimensionLoadingProgressFillKey;
+
+        TextMeshProUGUI percent = CreateText(GameManager.DimensionLoadingProgressTextKey, card.transform, "48%", 17f, Amber);
+        percent.alignment = TextAlignmentOptions.Center;
+        SetCentered(percent.rectTransform, new Vector2(0f, -133f), new Vector2(180f, 28f));
+
+        TextMeshProUGUI hint = CreateText(GameManager.DimensionLoadingHintKey, card.transform,
+            "维度稳定后将自动抵达。", 14f, Muted);
+        hint.alignment = TextAlignmentOptions.Center;
+        SetCentered(hint.rectTransform, new Vector2(0f, -192f), new Vector2(620f, 30f));
+
+        Image lowerLine = CreateImage("底部像素强调线", card.transform, Amber);
+        lowerLine.raycastTarget = false;
+        SetCentered(lowerLine.rectTransform, new Vector2(0f, -238f), new Vector2(580f, 4f));
+        return root;
+    }
+
     #endregion
 
     #region 设置面板
@@ -900,13 +1044,12 @@ public static class RuntimeUIPrefabBuilder
     {
         GameObject root = CreateModalPanelRoot(
             RuntimeUIPrefabKeys.MainMenuSettings,
-            new Vector2(720f, 600f));
+            FlatWorldUIPanelMetrics.SharedModalCardSize);
         Transform dialog = root.transform.Find("设置对话框");
 
         CreateHeader(dialog, "游戏设置", "关闭按钮");
-        CreateHint(dialog, "调整显示大小、画质与语言。选项为界面预览，功能将在后续接入。", 36f);
 
-        CreateSettingsSection(dialog, "显示", "DISPLAY");
+        CreateSettingsSection(dialog, "显示", string.Empty);
         CreateSettingsDropdownRow(
             dialog,
             "窗口大小",
@@ -918,7 +1061,7 @@ public static class RuntimeUIPrefabBuilder
             "显示模式下拉列表",
             new[] { "全屏窗口", "全屏", "窗口" });
 
-        CreateSettingsSection(dialog, "画质", "GRAPHICS");
+        CreateSettingsSection(dialog, "画质", string.Empty);
         CreateSettingsDropdownRow(
             dialog,
             "画质预设",
@@ -930,7 +1073,7 @@ public static class RuntimeUIPrefabBuilder
             "特效质量下拉列表",
             new[] { "高", "中", "低" });
 
-        CreateSettingsSection(dialog, "语言", "LANGUAGE");
+        CreateSettingsSection(dialog, "语言", string.Empty);
         CreateSettingsDropdownRow(
             dialog,
             "游戏语言",
@@ -940,10 +1083,10 @@ public static class RuntimeUIPrefabBuilder
         TextMeshProUGUI status = CreateText(
             "设置状态",
             dialog,
-            "当前为界面预览；设置功能将在后续版本接入。",
+            string.Empty,
             13f,
             Muted);
-        status.gameObject.AddComponent<LayoutElement>().preferredHeight = 26f;
+        status.gameObject.AddComponent<LayoutElement>().preferredHeight = 38f;
 
         Transform footer = CreateFooter(dialog);
         CreateButton("恢复默认按钮", footer, "恢复默认", 104f, 34f, false);
@@ -1507,6 +1650,181 @@ public static class RuntimeUIPrefabBuilder
         }
     }
 
+    /// <summary>确保本地玩家 Prefab 挂载手机 HUD 控制器；编辑器模拟必须由 Inspector 显式开启。</summary>
+    private static void EnsurePlayerMobileControlsHUD(GameObject root)
+    {
+        if (root == null)
+            return;
+
+        if (root.GetComponent<PlayerMobileControlsHUD>() == null)
+        {
+            root.AddComponent<PlayerMobileControlsHUD>();
+            EditorUtility.SetDirty(root);
+        }
+    }
+
+    /// <summary>在全屏根 Canvas 下固化安全区节点，所有正式面板与手机 HUD 都由 UIManager 挂到这里。</summary>
+    private static void EnsureSafeAreaRoot(GameObject root)
+    {
+        if (root == null)
+            return;
+
+        Transform existing = root.transform.Find("SafeAreaRoot");
+        GameObject safeAreaObject = existing != null
+            ? existing.gameObject
+            : new GameObject("SafeAreaRoot", typeof(RectTransform), typeof(SafeAreaRectController));
+        if (existing == null)
+            safeAreaObject.transform.SetParent(root.transform, false);
+
+        RectTransform rect = safeAreaObject.GetComponent<RectTransform>();
+        Stretch(rect);
+        if (safeAreaObject.GetComponent<SafeAreaRectController>() == null)
+            safeAreaObject.AddComponent<SafeAreaRectController>();
+        safeAreaObject.transform.SetAsLastSibling();
+        EditorUtility.SetDirty(root);
+    }
+
+    /// <summary>
+    /// 构建 Android 横屏的正式手机控制层。普通指向区先创建并置于按钮之后，按钮和攻击摇杆作为后续兄弟拥有更高射线优先级。
+    /// </summary>
+    private static GameObject BuildMobileControlsHUD()
+    {
+        GameObject root = CreateUIObject(RuntimeUIPrefabKeys.MobileControls, null, typeof(CanvasGroup));
+        Stretch(root.GetComponent<RectTransform>());
+        CanvasGroup rootGroup = root.GetComponent<CanvasGroup>();
+        rootGroup.alpha = 1f;
+        rootGroup.interactable = true;
+        rootGroup.blocksRaycasts = true;
+
+        GameObject gameplay = CreateUIObject("玩法控制层", root.transform);
+        Stretch(gameplay.GetComponent<RectTransform>());
+
+        // 透明捕获层仅覆盖右半屏空白区，按钮和攻击摇杆随后创建以获得更高射线优先级。
+        GameObject aimZone = CreateUIObject("普通指向区", gameplay.transform, typeof(Image));
+        RectTransform aimRect = aimZone.GetComponent<RectTransform>();
+        aimRect.anchorMin = new Vector2(0.5f, 0f);
+        aimRect.anchorMax = Vector2.one;
+        aimRect.offsetMin = Vector2.zero;
+        aimRect.offsetMax = Vector2.zero;
+        Image aimCapture = aimZone.GetComponent<Image>();
+        aimCapture.color = new Color(1f, 1f, 1f, 0.001f);
+        aimCapture.raycastTarget = true;
+        CreateJoystickVisual(aimZone.transform, Vector2.zero, 188f, floating: true);
+
+        GameObject moveZone = CreateUIObject("移动摇杆", gameplay.transform, typeof(Image));
+        SetBottomLeft(moveZone.GetComponent<RectTransform>(), 34f, 34f, 230f, 230f);
+        Image moveHit = moveZone.GetComponent<Image>();
+        moveHit.color = new Color(1f, 1f, 1f, 0.001f);
+        moveHit.raycastTarget = true;
+        CreateJoystickVisual(moveZone.transform, Vector2.zero, 188f, floating: false);
+
+        GameObject attackZone = CreateUIObject("攻击摇杆", gameplay.transform, typeof(Image));
+        SetBottomRight(attackZone.GetComponent<RectTransform>(), 34f, 34f, 230f, 230f);
+        Image attackHit = attackZone.GetComponent<Image>();
+        attackHit.color = new Color(1f, 1f, 1f, 0.001f);
+        attackHit.raycastTarget = true;
+        CreateJoystickVisual(attackZone.transform, Vector2.zero, 188f, floating: false);
+
+        CreateMobileButton("交互", gameplay.transform, "交互", new Vector2(1f, 0f), new Vector2(-292f, 206f), 112f);
+        CreateMobileButton("使用", gameplay.transform, "使用", new Vector2(1f, 0f), new Vector2(-174f, 286f), 112f);
+        CreateMobileButton("奔跑", gameplay.transform, "奔跑", new Vector2(0f, 0f), new Vector2(280f, 96f), 104f);
+        CreateMobileButton("菜单", gameplay.transform, "菜单", new Vector2(1f, 1f), new Vector2(-58f, -58f), 100f);
+
+        GameObject hotbarAnchor = CreateUIObject("快捷栏锚点", gameplay.transform);
+        RectTransform hotbarRect = hotbarAnchor.GetComponent<RectTransform>();
+        hotbarRect.anchorMin = hotbarRect.anchorMax = new Vector2(0.5f, 0f);
+        hotbarRect.pivot = new Vector2(0.5f, 0f);
+        hotbarRect.anchoredPosition = new Vector2(0f, 16f);
+        hotbarRect.sizeDelta = new Vector2(760f, 126f);
+
+        BuildMobileDrawer(root.transform);
+        return root;
+    }
+
+    private static void CreateJoystickVisual(Transform parent, Vector2 position, float diameter, bool floating)
+    {
+        GameObject baseObject = CreateUIObject("底座", parent, typeof(Image), typeof(CanvasGroup));
+        RectTransform baseRect = baseObject.GetComponent<RectTransform>();
+        SetCentered(baseRect, position, new Vector2(diameter, diameter));
+        Image baseImage = baseObject.GetComponent<Image>();
+        baseImage.color = new Color(SurfaceRaised.r, SurfaceRaised.g, SurfaceRaised.b, 0.64f);
+        baseImage.raycastTarget = false;
+        AddOutline(baseImage, floating ? new Color(0f, 0f, 0f, 0f) : Border);
+        CanvasGroup baseGroup = baseObject.GetComponent<CanvasGroup>();
+        baseGroup.alpha = floating ? 0f : 1f;
+        baseGroup.interactable = false;
+        baseGroup.blocksRaycasts = false;
+
+        GameObject knobObject = CreateUIObject("摇杆", baseObject.transform, typeof(Image));
+        RectTransform knobRect = knobObject.GetComponent<RectTransform>();
+        SetCentered(knobRect, Vector2.zero, new Vector2(82f, 82f));
+        Image knobImage = knobObject.GetComponent<Image>();
+        knobImage.color = new Color(Teal.r, Teal.g, Teal.b, 0.92f);
+        knobImage.raycastTarget = false;
+    }
+
+    private static void BuildMobileDrawer(Transform parent)
+    {
+        GameObject drawer = CreateUIObject("菜单抽屉", parent, typeof(Image));
+        RectTransform drawerRect = drawer.GetComponent<RectTransform>();
+        drawerRect.anchorMin = new Vector2(1f, 0.5f);
+        drawerRect.anchorMax = new Vector2(1f, 0.5f);
+        drawerRect.pivot = new Vector2(1f, 0.5f);
+        drawerRect.anchoredPosition = new Vector2(-20f, 0f);
+        drawerRect.sizeDelta = new Vector2(430f, 690f);
+        Image background = drawer.GetComponent<Image>();
+        background.color = Canvas;
+        background.raycastTarget = true;
+        AddOutline(background, Amber);
+
+        TextMeshProUGUI title = CreateText("抽屉标题", drawer.transform, "手机菜单", 22f, Cream);
+        title.fontStyle = FontStyles.Bold;
+        RectTransform titleRect = title.rectTransform;
+        titleRect.anchorMin = new Vector2(0f, 1f);
+        titleRect.anchorMax = new Vector2(1f, 1f);
+        titleRect.pivot = new Vector2(0.5f, 1f);
+        titleRect.anchoredPosition = new Vector2(0f, -16f);
+        titleRect.sizeDelta = new Vector2(-112f, 48f);
+
+        GameObject buttonGrid = CreateUIObject("抽屉按钮区", drawer.transform);
+        RectTransform gridRect = buttonGrid.GetComponent<RectTransform>();
+        gridRect.anchorMin = Vector2.zero;
+        gridRect.anchorMax = Vector2.one;
+        gridRect.offsetMin = new Vector2(22f, 22f);
+        gridRect.offsetMax = new Vector2(-22f, -82f);
+        GridLayoutGroup grid = buttonGrid.AddComponent<GridLayoutGroup>();
+        grid.cellSize = new Vector2(184f, 66f);
+        grid.spacing = new Vector2(14f, 14f);
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        grid.constraintCount = 2;
+
+        CreateButton("关闭抽屉", buttonGrid.transform, "关闭", 184f, 66f, false);
+        CreateButton("背包", buttonGrid.transform, "背包", 184f, 66f, true);
+        CreateButton("装备", buttonGrid.transform, "装备", 184f, 66f, false);
+        CreateButton("制作", buttonGrid.transform, "制作", 184f, 66f, false);
+        CreateButton("状态", buttonGrid.transform, "生存状态", 184f, 66f, false);
+        CreateButton("丢弃一个", buttonGrid.transform, "丢弃一个", 184f, 66f, false);
+        CreateButton("镜头+", buttonGrid.transform, "镜头 +", 184f, 66f, false);
+        CreateButton("镜头-", buttonGrid.transform, "镜头 -", 184f, 66f, false);
+        CreateButton("设置", buttonGrid.transform, "设置", 184f, 66f, true);
+    }
+
+    private static void CreateMobileButton(
+        string name,
+        Transform parent,
+        string caption,
+        Vector2 anchor,
+        Vector2 position,
+        float size)
+    {
+        Button button = CreateButton(name, parent, caption, size, size, name == "交互" || name == "使用");
+        RectTransform rect = button.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = anchor;
+        rect.pivot = anchor;
+        rect.anchoredPosition = position;
+        rect.sizeDelta = new Vector2(size, size);
+    }
+
     #endregion
 
     #region 通用控件构建
@@ -1586,7 +1904,7 @@ public static class RuntimeUIPrefabBuilder
     {
         GameObject header = CreateUIObject("标题", parent, typeof(Image));
         header.GetComponent<Image>().color = SurfaceRaised;
-        header.AddComponent<LayoutElement>().preferredHeight = 50f;
+        header.AddComponent<LayoutElement>().preferredHeight = 64f;
 
         HorizontalLayoutGroup layout = header.AddComponent<HorizontalLayoutGroup>();
         layout.padding = new RectOffset(14, 10, 6, 6);
@@ -1630,7 +1948,7 @@ public static class RuntimeUIPrefabBuilder
     {
         GameObject section = CreateUIObject(title + "设置分组", parent, typeof(Image));
         LayoutElement element = section.AddComponent<LayoutElement>();
-        element.preferredHeight = 26f;
+        element.preferredHeight = 38f;
 
         Image background = section.GetComponent<Image>();
         background.color = new Color(0.07f, 0.15f, 0.17f, 0.72f);
@@ -1649,10 +1967,13 @@ public static class RuntimeUIPrefabBuilder
         titleText.fontStyle = FontStyles.Bold;
         titleText.gameObject.AddComponent<LayoutElement>().preferredWidth = 96f;
 
-        TextMeshProUGUI eyebrowText = CreateText(title + "分组英文", section.transform, eyebrow, 10f, Muted);
-        eyebrowText.characterSpacing = 2f;
-        eyebrowText.alignment = TextAlignmentOptions.MidlineRight;
-        eyebrowText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        if (!string.IsNullOrWhiteSpace(eyebrow))
+        {
+            TextMeshProUGUI eyebrowText = CreateText(title + "分组英文", section.transform, eyebrow, 10f, Muted);
+            eyebrowText.characterSpacing = 2f;
+            eyebrowText.alignment = TextAlignmentOptions.MidlineRight;
+            eyebrowText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        }
     }
 
     /// <summary>创建设置页下拉项，并写入仅用于展示的默认选项。</summary>
@@ -1662,13 +1983,13 @@ public static class RuntimeUIPrefabBuilder
         string dropdownName,
         string[] options)
     {
-        GameObject row = CreateRow(label + "行", parent, 44f);
+        GameObject row = CreateRow(label + "行", parent, 58f);
         CreateRowLabel(row.transform, label, 122f);
 
         TMP_Dropdown dropdown = CreateDropdown(dropdownName, row.transform);
         LayoutElement element = dropdown.gameObject.AddComponent<LayoutElement>();
-        element.preferredWidth = 480f;
-        element.preferredHeight = 40f;
+        element.preferredWidth = 1040f;
+        element.preferredHeight = 52f;
         dropdown.ClearOptions();
         dropdown.AddOptions(new List<string>(options));
         dropdown.value = 0;
@@ -1954,7 +2275,7 @@ public static class RuntimeUIPrefabBuilder
     private static Transform CreateFooter(Transform parent)
     {
         GameObject footer = CreateUIObject("底部操作", parent);
-        footer.AddComponent<LayoutElement>().preferredHeight = 42f;
+        footer.AddComponent<LayoutElement>().preferredHeight = 56f;
         HorizontalLayoutGroup layout = footer.AddComponent<HorizontalLayoutGroup>();
         layout.spacing = 10f;
         layout.childAlignment = TextAnchor.MiddleRight;
@@ -2113,6 +2434,31 @@ public static class RuntimeUIPrefabBuilder
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 1f);
         rect.anchoredPosition = new Vector2(left, -top);
+        rect.sizeDelta = new Vector2(width, height);
+    }
+
+    private static void SetTopRight(RectTransform rect, float right, float top, float width, float height)
+    {
+        rect.anchorMin = new Vector2(1f, 1f);
+        rect.anchorMax = new Vector2(1f, 1f);
+        rect.pivot = new Vector2(1f, 1f);
+        rect.anchoredPosition = new Vector2(-right, -top);
+        rect.sizeDelta = new Vector2(width, height);
+    }
+
+    private static void SetBottomLeft(RectTransform rect, float left, float bottom, float width, float height)
+    {
+        rect.anchorMin = rect.anchorMax = Vector2.zero;
+        rect.pivot = Vector2.zero;
+        rect.anchoredPosition = new Vector2(left, bottom);
+        rect.sizeDelta = new Vector2(width, height);
+    }
+
+    private static void SetBottomRight(RectTransform rect, float right, float bottom, float width, float height)
+    {
+        rect.anchorMin = rect.anchorMax = new Vector2(1f, 0f);
+        rect.pivot = new Vector2(1f, 0f);
+        rect.anchoredPosition = new Vector2(-right, bottom);
         rect.sizeDelta = new Vector2(width, height);
     }
 

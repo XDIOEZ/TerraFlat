@@ -387,7 +387,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         value = value.Trim().TrimEnd('.', ' ');
         if (string.IsNullOrWhiteSpace(value) || value == "." || value == "..")
         {
-            value = NewWorldCreationRequest.CreateRandomNumericName();
+            value = NewWorldCreationRequest.CreateRandomWorldName();
         }
 
         const int maxLength = 48;

@@ -19,7 +19,7 @@ namespace FlatWorld.Networking.Gameplay
         private readonly Dictionary<int, string> pendingPlayerNames = new Dictionary<int, string>();
         private readonly Dictionary<int, NetworkProtocolHello> clientProtocolHellos = new Dictionary<int, NetworkProtocolHello>();
         private readonly HashSet<int> pendingPlayerSpawns = new HashSet<int>();
-        private string localPlayerName = "玩家";
+        private string localPlayerName = NewWorldCreationRequest.CreateRandomPlayerName();
         private string currentPlanetName;
         private Coroutine worldEnterCoroutine;
         private NetworkItemStateCoordinator itemStateCoordinator;
@@ -161,7 +161,7 @@ namespace FlatWorld.Networking.Gameplay
                 {
                     string playerName = pendingPlayerNames.TryGetValue(connectionId, out string pendingName)
                         ? pendingName
-                        : $"玩家_{connectionId}";
+                        : $"Player_{connectionId}";
                     int playerIndex = NetworkServer.connections.Values.Count(activeConnection =>
                         activeConnection != null && activeConnection.identity != null);
 
@@ -714,7 +714,9 @@ namespace FlatWorld.Networking.Gameplay
 
         private static string SanitizePlayerName(string playerName)
         {
-            string value = string.IsNullOrWhiteSpace(playerName) ? "玩家" : playerName.Trim();
+            string value = string.IsNullOrWhiteSpace(playerName)
+                ? NewWorldCreationRequest.CreateRandomPlayerName()
+                : playerName.Trim();
             return value.Length <= 16 ? value : value.Substring(0, 16);
         }
 

@@ -16,6 +16,11 @@ public class RightClickMenu_UI : MonoBehaviour
     public BasePanel basePanel; // 右键菜单面板
     Item SlotOwner; // 槽位所属物品（通常为容器或玩家）
     private GameController gameController;
+    private Module_DiscardItem discardModule;
+    private Button dropStackButton;
+    private TMP_Text dropStackLabel;
+    private Coroutine dropStackConfirmationCoroutine;
+    private bool dropStackConfirmationArmed;
 
     /// <summary>
     /// 初始化右键菜单并绑定按钮事件。
@@ -34,6 +39,7 @@ public class RightClickMenu_UI : MonoBehaviour
         basePanel.CollectUIComponents();
         SlotOwner = _SlotOwner;
         ResolveInputController();
+        discardModule = ResolveDiscardModule();
 
         Button destroyButton = basePanel.GetButton("销毁面板");
         if (destroyButton != null)
@@ -46,6 +52,17 @@ public class RightClickMenu_UI : MonoBehaviour
         Button showInfoButton = basePanel.GetButton("查看物品信息");
         if (showInfoButton != null)
             showInfoButton.onClick.AddListener(ShowItemInfo);
+
+        Button dropOneButton = basePanel.GetButton("丢弃一个");
+        if (dropOneButton != null)
+            dropOneButton.onClick.AddListener(DropOne);
+
+        dropStackButton = basePanel.GetButton("丢弃整组");
+        if (dropStackButton != null)
+        {
+            dropStackButton.onClick.AddListener(RequestDropStack);
+            dropStackLabel = dropStackButton.GetComponentInChildren<TMP_Text>(true);
+        }
 
         basePanel.PrepareForGamepadNavigation("使用物品", true, true);
         basePanel.Opened += AcquireGameplayInputLock;
@@ -146,12 +163,86 @@ public class RightClickMenu_UI : MonoBehaviour
         infoRect.anchoredPosition = Vector2.zero;
     }
 
+    #region 手机明确丢弃动作
+
+    public void DropOne()
+    {
+        if (itemSlot?.itemData == null || itemSlot.Amount <= 0 || discardModule == null)
+            return;
+
+        discardModule.DropItemByCount(itemSlot, 1);
+        itemSlotUI?.RefreshUI();
+        if (itemSlot.Amount <= 0)
+            DestroyPanel();
+    }
+
+    /// <summary>整组丢弃需要在两秒内再次点击确认，避免触屏误删整组物品。</summary>
+    public void RequestDropStack()
+    {
+        if (itemSlot?.itemData == null || itemSlot.Amount <= 0 || discardModule == null)
+            return;
+
+        if (!dropStackConfirmationArmed)
+        {
+            dropStackConfirmationArmed = true;
+            if (dropStackLabel != null)
+                dropStackLabel.text = FlatWorld.Localization.FlatWorldLocalizationService.GetUiText("再次确认");
+            if (dropStackConfirmationCoroutine != null)
+                StopCoroutine(dropStackConfirmationCoroutine);
+            dropStackConfirmationCoroutine = StartCoroutine(ClearDropStackConfirmation());
+            return;
+        }
+
+        int amount = itemSlot.Amount;
+        ClearDropStackConfirmationImmediate();
+        discardModule.DropItemByCount(itemSlot, amount);
+        itemSlotUI?.RefreshUI();
+        DestroyPanel();
+    }
+
+    private IEnumerator ClearDropStackConfirmation()
+    {
+        yield return new WaitForSecondsRealtime(2f);
+        dropStackConfirmationCoroutine = null;
+        ClearDropStackConfirmationImmediate();
+    }
+
+    private void ClearDropStackConfirmationImmediate()
+    {
+        dropStackConfirmationArmed = false;
+        if (dropStackConfirmationCoroutine != null)
+        {
+            StopCoroutine(dropStackConfirmationCoroutine);
+            dropStackConfirmationCoroutine = null;
+        }
+        if (dropStackLabel != null)
+            dropStackLabel.text = FlatWorld.Localization.FlatWorldLocalizationService.GetUiText("丢弃整组");
+    }
+
+    #endregion
+
     #region 输入锁与引用
 
     private void ResolveInputController()
     {
         gameController = SlotOwner?.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
         gameController ??= SlotOwner?.GetComponent<GameController>();
+    }
+
+    /// <summary>容器槽位也沿 Owner 链回溯到玩家，保证背包、装备和快捷栏都能明确丢弃。</summary>
+    private Module_DiscardItem ResolveDiscardModule()
+    {
+        Item current = SlotOwner;
+        int depth = 0;
+        while (current != null && depth++ < 8)
+        {
+            Module_DiscardItem module = current.GetComponentInChildren<Module_DiscardItem>(true);
+            if (module != null)
+                return module;
+            current = current.Owner;
+        }
+
+        return null;
     }
 
     private void AcquireGameplayInputLock()
@@ -173,6 +264,7 @@ public class RightClickMenu_UI : MonoBehaviour
         }
 
         ReleaseGameplayInputLock();
+        ClearDropStackConfirmationImmediate();
     }
 
     #endregion

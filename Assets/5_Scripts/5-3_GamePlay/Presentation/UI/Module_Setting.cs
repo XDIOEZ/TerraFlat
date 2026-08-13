@@ -59,6 +59,13 @@ public class SettingCanvas : Module, IInstanceUI
             return;
         }
 
+        // Android 返回键顺序：临时面板之后先关闭不锁玩法的手机抽屉，再切换设置面板。
+        if (PlayerMobileControlsHUD.TryCloseActiveDrawer())
+        {
+            uiManager.NotifyCancelHandled();
+            return;
+        }
+
         bool panelOpen = basePanel != null && basePanel.IsOpen();
         if (gameController != null && gameController.IsGameplayInputLocked && !panelOpen)
         {

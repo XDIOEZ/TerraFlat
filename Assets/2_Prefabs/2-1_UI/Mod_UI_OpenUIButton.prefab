@@ -103,7 +103,7 @@ MonoBehaviour:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.8352941, g: 0.8901961, b: 0.8745098, a: 1}
     m_PressedColor: {r: 0.7254902, g: 0.7647059, b: 0.7529412, a: 0.82}
-    m_SelectedColor: {r: 0.8352941, g: 0.8901961, b: 0.8745098, a: 1}
+    m_SelectedColor: {r: 0.9411765, g: 0.6392157, b: 0.3529412, a: 1}
     m_DisabledColor: {r: 0.46666667, g: 0.49019608, b: 0.4862745, a: 0.48}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.11
@@ -152,6 +152,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   hoverScale: 1.018
   pressedScale: 0.975
+  selectedScale: 1.035
   response: 18
 --- !u!1 &3433587211712931107
 GameObject:

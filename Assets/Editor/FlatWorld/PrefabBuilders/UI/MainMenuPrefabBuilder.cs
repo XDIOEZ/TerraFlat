@@ -40,7 +40,6 @@ public static class MainMenuPrefabBuilder
             BuildBrand(root.transform, font);
             BuildMenuCard(root.transform, font);
             BuildSettingsButton(root.transform, font);
-            BuildFooter(root.transform, font);
 
             EditorUtility.SetDirty(root);
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
@@ -133,10 +132,6 @@ public static class MainMenuPrefabBuilder
         brand.anchoredPosition = new Vector2(108f, -74f);
         brand.sizeDelta = new Vector2(720f, 270f);
 
-        TMP_Text eyebrow = CreateText("品牌眉题", brand, "FLAT WORLD  /  生存沙盒", font, 20f, Amber, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(eyebrow.rectTransform, new Vector2(0f, -2f), new Vector2(620f, 34f), new Vector2(0f, 1f));
-        eyebrow.characterSpacing = 5f;
-
         TMP_Text shadow = CreateText("标题阴影", brand, "平坦世界", font, 100f, new Color(0.015f, 0.025f, 0.03f, 0.72f), FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(shadow.rectTransform, new Vector2(7f, -48f), new Vector2(700f, 122f), new Vector2(0f, 1f));
 
@@ -148,8 +143,6 @@ public static class MainMenuPrefabBuilder
         SetRect(divider.rectTransform, new Vector2(0f, -176f), new Vector2(86f, 4f), new Vector2(0f, 1f));
         divider.raycastTarget = false;
 
-        TMP_Text tagline = CreateText("品牌副标题", brand, "从一簇篝火开始，活过这个辽阔世界。", font, 23f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(tagline.rectTransform, new Vector2(0f, -199f), new Vector2(700f, 44f), new Vector2(0f, 1f));
     }
 
     private static void BuildMenuCard(Transform root, TMP_FontAsset font)
@@ -176,13 +169,7 @@ public static class MainMenuPrefabBuilder
         accent.rectTransform.sizeDelta = new Vector2(5f, 0f);
         accent.raycastTarget = false;
 
-        TMP_Text section = CreateText("菜单标题", card.transform, "开始旅程", font, 28f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(section.rectTransform, new Vector2(30f, -24f), new Vector2(280f, 42f), new Vector2(0f, 1f));
-
-        TMP_Text hint = CreateText("菜单提示", card.transform, "选择一种方式进入世界", font, 17f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(hint.rectTransform, new Vector2(30f, -66f), new Vector2(360f, 28f), new Vector2(0f, 1f));
-
-        CreateMenuButton(card.transform, font, GameManager.MainMenuContinueButtonKey, "01", "继续旅程", "载入已有世界", 112f, true, false);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuContinueButtonKey, "01", "继续旅程", "载入已有世界", 112f, false, false);
         CreateMenuButton(card.transform, font, GameManager.MainMenuNewGameButtonKey, "02", "新建世界", "自定义你的开局", 202f, false, false);
         CreateMenuButton(card.transform, font, GameManager.MainMenuMultiplayerButtonKey, "03", "联机模式", "与好友共同生存", 292f, false, true);
     }
@@ -328,25 +315,6 @@ public static class MainMenuPrefabBuilder
             TMP_Text arrow = CreateText(objectName + "_箭头", buttonObject.transform, ">", font, 22f, primary ? Cream : Muted, FontStyles.Bold, TextAlignmentOptions.Center);
             SetRect(arrow.rectTransform, new Vector2(-32f, 0f), new Vector2(32f, 40f), new Vector2(1f, 0.5f));
         }
-    }
-
-    private static void BuildFooter(Transform root, TMP_FontAsset font)
-    {
-        TMP_Text build = CreateText("版本信息", root, "DEVELOPMENT BUILD  /  世界仍在生长", font, 15f, new Color(0.70f, 0.75f, 0.74f, 0.78f), FontStyles.Normal, TextAlignmentOptions.Left);
-        build.rectTransform.anchorMin = Vector2.zero;
-        build.rectTransform.anchorMax = Vector2.zero;
-        build.rectTransform.pivot = Vector2.zero;
-        build.rectTransform.anchoredPosition = new Vector2(108f, 54f);
-        build.rectTransform.sizeDelta = new Vector2(520f, 30f);
-        build.characterSpacing = 2f;
-
-        TMP_Text pillars = CreateText("玩法支柱", root, "探索  ·  建造  ·  生存", font, 18f, Cream, FontStyles.Bold, TextAlignmentOptions.Right);
-        pillars.rectTransform.anchorMin = Vector2.one;
-        pillars.rectTransform.anchorMax = Vector2.one;
-        pillars.rectTransform.pivot = Vector2.one;
-        pillars.rectTransform.anchoredPosition = new Vector2(-82f, -58f);
-        pillars.rectTransform.sizeDelta = new Vector2(420f, 34f);
-        pillars.characterSpacing = 4f;
     }
 
     private static RectTransform CreateRect(string name, Transform parent)

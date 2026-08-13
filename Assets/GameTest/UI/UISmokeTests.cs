@@ -376,7 +376,7 @@ namespace FlatWorld.GameTest.UI
             const string hudPath = "Assets/2_Prefabs/2-1_UI/Runtime/System/UI_PlayerWorldCoordinate.prefab";
             const string playerPath = "Assets/2_Prefabs/Player/Player.prefab";
 
-            AssertPrefabContains(hudPath, "背景", "强调线", "坐标标题", "坐标文本");
+            AssertPrefabContains(hudPath, "坐标文本");
 
             GameObject hudPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(hudPath)
                 ?? throw new AssertionException($"缺少坐标 HUD Prefab：{hudPath}");
@@ -385,8 +385,8 @@ namespace FlatWorld.GameTest.UI
             Assert.That(rootRect.anchorMin, Is.EqualTo(new Vector2(0f, 1f)));
             Assert.That(rootRect.anchorMax, Is.EqualTo(new Vector2(0f, 1f)));
             Assert.That(rootRect.pivot, Is.EqualTo(new Vector2(0f, 1f)));
-            Assert.That(rootRect.anchoredPosition, Is.EqualTo(new Vector2(32f, -32f)));
-            Assert.That(rootRect.sizeDelta, Is.EqualTo(new Vector2(296f, 72f)));
+            Assert.That(rootRect.anchoredPosition, Is.EqualTo(new Vector2(28f, -28f)));
+            Assert.That(rootRect.sizeDelta, Is.EqualTo(new Vector2(240f, 30f)));
 
             foreach (Graphic graphic in hudPrefab.GetComponentsInChildren<Graphic>(true))
                 Assert.That(graphic.raycastTarget, Is.False, $"坐标 HUD 不应拦截输入：{graphic.name}");
@@ -550,6 +550,7 @@ namespace FlatWorld.GameTest.UI
                 "标题",
                 "数量文本",
                 "空状态文本",
+                "任务面板开关按钮",
                 "内容列表",
                 "Viewport",
                 "Content");
@@ -570,16 +571,23 @@ namespace FlatWorld.GameTest.UI
             Assert.That(rootRect.anchorMin, Is.EqualTo(new Vector2(1f, 1f)));
             Assert.That(rootRect.anchorMax, Is.EqualTo(new Vector2(1f, 1f)));
             Assert.That(rootRect.pivot, Is.EqualTo(new Vector2(1f, 1f)));
-            Assert.That(rootRect.anchoredPosition, Is.EqualTo(new Vector2(-32f, -190f)));
-            Assert.That(rootRect.sizeDelta, Is.EqualTo(new Vector2(380f, 420f)));
+            Assert.That(rootRect.anchoredPosition, Is.EqualTo(new Vector2(-24f, -168f)));
+            Assert.That(rootRect.sizeDelta, Is.EqualTo(new Vector2(300f, 300f)));
 
             RectTransform content = hudPrefab.GetComponentsInChildren<RectTransform>(true)
                 .Single(item => item.name == "Content");
             Assert.That(content.GetComponent<VerticalLayoutGroup>(), Is.Not.Null);
             Assert.That(content.GetComponent<ContentSizeFitter>(), Is.Not.Null);
 
+            Button toggleButton = hudPrefab.GetComponentsInChildren<Button>(true)
+                .Single(item => item.name == "任务面板开关按钮");
+            Image toggleImage = toggleButton.GetComponent<Image>();
+            Assert.That(toggleImage, Is.Not.Null);
+            Assert.That(toggleImage.raycastTarget, Is.True);
+
             foreach (Graphic graphic in hudPrefab.GetComponentsInChildren<Graphic>(true))
-                Assert.That(graphic.raycastTarget, Is.False, $"任务追踪 HUD 不应拦截输入：{graphic.name}");
+                if (graphic.gameObject.name != "任务面板开关按钮")
+                    Assert.That(graphic.raycastTarget, Is.False, $"任务追踪 HUD 不应拦截输入：{graphic.name}");
 
             GameObject itemPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(itemPath)
                 ?? throw new AssertionException($"缺少任务追踪行 Prefab：{itemPath}");
@@ -950,7 +958,23 @@ namespace FlatWorld.GameTest.UI
             Assert.That(rootRect.anchorMin, Is.EqualTo(Vector2.zero));
             Assert.That(rootRect.anchorMax, Is.EqualTo(Vector2.one),
                 "参数面板根节点应铺满 Canvas，拖拽坐标才能与 Canvas 坐标一致。");
-            Assert.That(panelRect.sizeDelta, Is.EqualTo(new Vector2(382f, 324f)));
+            Assert.That(panelRect.anchorMin, Is.EqualTo(Vector2.zero));
+            Assert.That(panelRect.anchorMax, Is.EqualTo(Vector2.zero));
+            Assert.That(panelRect.pivot, Is.EqualTo(Vector2.zero));
+            Assert.That(panelRect.anchoredPosition, Is.EqualTo(new Vector2(28f, 28f)));
+            Assert.That(panelRect.sizeDelta, Is.EqualTo(new Vector2(326f, 196f)));
+
+            Image panelImage = panelRect.GetComponent<Image>();
+            Assert.That(panelImage, Is.Not.Null);
+            Assert.That(panelImage.enabled, Is.False, "参数 HUD 不应保留整块背景。");
+            Assert.That(panelImage.raycastTarget, Is.False);
+            Assert.That(panelRect.GetComponent<Outline>(), Is.Null,
+                "参数 HUD 不应保留整块描边。");
+            Assert.That(prefab.GetComponent<CanvasGroup>().blocksRaycasts, Is.False,
+                "参数 HUD 不应拦截世界输入。");
+            Assert.That(panelRect.GetComponentsInChildren<Graphic>(true)
+                .All(graphic => !graphic.raycastTarget), Is.True,
+                "参数 HUD 的状态条和文字不应拦截世界输入。");
 
             string[] rowNames = { "碳水", "脂肪", "蛋白质", "水", "维生素", "体温" };
             Slider[] sliders = prefab.GetComponentsInChildren<Slider>(true);
@@ -961,7 +985,7 @@ namespace FlatWorld.GameTest.UI
                 Assert.That(row.anchorMin, Is.EqualTo(new Vector2(0f, 1f)), rowNames[i]);
                 Assert.That(row.anchorMax, Is.EqualTo(new Vector2(0f, 1f)), rowNames[i]);
                 Assert.That(row.anchoredPosition,
-                    Is.EqualTo(new Vector2(28f, -(86f + i * 38f))), rowNames[i]);
+                    Is.EqualTo(new Vector2(0f, -(i * 34f))), rowNames[i]);
                 Assert.That(row.sizeDelta, Is.EqualTo(new Vector2(326f, 26f)), rowNames[i]);
                 Assert.That(slider.interactable, Is.False, $"{rowNames[i]} 只是状态显示，不应可拖动。");
             }
@@ -971,7 +995,8 @@ namespace FlatWorld.GameTest.UI
             Assert.That(temperatureText, Is.Not.Null);
             Assert.That(temperatureText.raycastTarget, Is.False);
             Assert.That(prefab.GetComponentsInChildren<TextMeshProUGUI>(true)
-                .Single(text => text.name == "FWUI_Card标题").text, Is.EqualTo("角色参数"));
+                .Any(text => text.name == "FWUI_Card标题"), Is.False,
+                "参数 HUD 不应保留单独的标题文字。");
 
             Vector2[] resolutions =
             {
@@ -987,7 +1012,9 @@ namespace FlatWorld.GameTest.UI
                 float logicalHeight = resolution.y / widthScale;
                 Rect canvasBounds = new Rect(-960f, -logicalHeight * 0.5f, 1920f, logicalHeight);
                 Rect panelBounds = new Rect(
-                    panelRect.anchoredPosition - panelRect.sizeDelta * 0.5f,
+                    new Vector2(
+                        canvasBounds.xMin + panelRect.anchoredPosition.x,
+                        canvasBounds.yMin + panelRect.anchoredPosition.y),
                     panelRect.sizeDelta);
                 Assert.That(panelBounds.xMin, Is.GreaterThanOrEqualTo(canvasBounds.xMin + 20f), resolution.ToString());
                 Assert.That(panelBounds.xMax, Is.LessThanOrEqualTo(canvasBounds.xMax - 20f), resolution.ToString());
@@ -1006,6 +1033,46 @@ namespace FlatWorld.GameTest.UI
                 .ToArray();
             foreach (string expectedName in expectedNames)
                 Assert.That(objectNames, Does.Contain(expectedName), $"{prefabPath} 缺少节点：{expectedName}");
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        [Category("Smoke")]
+        public void DimensionLoadingPrefabIsFullScreenBlockingAndThemeReady()
+        {
+            const string prefabPath =
+                "Assets/2_Prefabs/2-1_UI/Runtime/System/UI_DimensionLoading.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, "缺少维度切换专属加载页 Prefab。");
+
+            RectTransform root = prefab.GetComponent<RectTransform>();
+            Canvas canvas = prefab.GetComponent<Canvas>();
+            CanvasGroup canvasGroup = prefab.GetComponent<CanvasGroup>();
+            Image blocker = prefab.GetComponent<Image>();
+            Assert.That(root.offsetMin, Is.EqualTo(Vector2.zero));
+            Assert.That(root.offsetMax, Is.EqualTo(Vector2.zero));
+            Assert.That(canvas.renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));
+            Assert.That(canvas.sortingOrder, Is.EqualTo(32000));
+            Assert.That(canvasGroup.interactable, Is.True);
+            Assert.That(canvasGroup.blocksRaycasts, Is.True);
+            Assert.That(blocker.raycastTarget, Is.True);
+
+            AssertPrefabContains(
+                prefabPath,
+                GameManager.DimensionLoadingBackgroundKey,
+                GameManager.DimensionLoadingTextureKey,
+                GameManager.DimensionLoadingIconKey,
+                GameManager.DimensionLoadingNameKey,
+                GameManager.DimensionLoadingStatusKey,
+                GameManager.DimensionLoadingProgressKey,
+                GameManager.DimensionLoadingProgressTextKey,
+                GameManager.DimensionLoadingHintKey,
+                GameManager.DimensionLoadingProgressFillKey);
+
+            string addressables = File.ReadAllText(
+                "Assets/AddressableAssetsData/AssetGroups/Default.asset");
+            Assert.That(addressables, Does.Contain(prefabPath));
+            Assert.That(RuntimeUIPrefabKeys.DimensionLoading, Is.EqualTo("UI_DimensionLoading"));
         }
 
         private static BasePanel CreateTestPanel(

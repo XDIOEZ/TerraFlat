@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld Android 输入导航"
+  short_description: "定位并维护安卓触摸输入、虚拟摇杆、安全区和移动端 HUD 系统"
+  default_prompt: "Use $flatworld-android-input to locate and safely modify FlatWorld Android touch input."

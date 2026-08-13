@@ -12,6 +12,10 @@ using FlatWorld.Gameplay.Quests;
 public class GameRes : SingletonAutoMono<GameRes>
 {
     #region 字段
+
+    /// <summary>只返回当前已存在的资源管理器，不会因查询而自动创建实例。</summary>
+    public static GameRes ExistingInstance => instance;
+
     public int LoadedCount = 0;
     
     [Header("资源标签列表")]
@@ -76,9 +80,15 @@ public class GameRes : SingletonAutoMono<GameRes>
 
     #region Unity 生命周期
 
-    new void Awake()
+    protected override void Awake()
     {
         base.Awake();
+
+        // 返回主菜单时场景会再次带入 WorldManager Prefab；重复实例已由基类安排销毁，
+        // 不能再启动一条会清空正式资源目录、随后又因对象销毁而中断的加载协程。
+        if (instance != this)
+            return;
+
         // 初始化时显示加载界面
         showLoadingGUI = true;
         loadingText = "正在加载资源...";

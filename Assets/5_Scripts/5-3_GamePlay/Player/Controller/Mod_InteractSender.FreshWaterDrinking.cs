@@ -2,17 +2,17 @@ using FlatWorld.Audio;
 using UnityEngine;
 
 /// <summary>
-/// 玩家淡水饮用扩展：只有持有“位于干净/脏的淡水中”Buff 时，长按交互键 1 秒才开始饮水。
+/// 玩家水体饮用扩展：只有持有淡水或“位于盐水中”Buff 时，长按交互键 1 秒才开始饮水。
 /// 饮水开始后每秒恢复 25 水分并播放饮水音效与蓝色水粒子；脏水每个饮水 Tick 独立进行 20% 感染判定。
 /// 输入按下、松开仍由 Mod_InteractSender 的 E/手柄西键绑定统一驱动，不新增第二套输入动作。
 /// </summary>
 public partial class Mod_InteractSender
 {
-    #region 淡水饮用配置
+    #region 水体饮用配置
 
     private const string FreshWaterDrinkEffectName = "Particle_BeEat";
 
-    [Header("淡水饮用")]
+    [Header("水体饮用")]
     [SerializeField, Min(0f)] private float freshWaterDrinkHoldSeconds = 1f;
     [SerializeField, Min(0.05f)] private float freshWaterDrinkTickSeconds = 1f;
     [SerializeField, Min(0f)] private float freshWaterGainPerTick = 25f;
@@ -20,7 +20,7 @@ public partial class Mod_InteractSender
 
     #endregion
 
-    #region 淡水饮用状态
+    #region 水体饮用状态
 
     private BuffManager freshWaterBuffManager;
     private Mod_Food freshWaterFood;
@@ -41,11 +41,11 @@ public partial class Mod_InteractSender
 
     #region 输入与 Tick
 
-    /// <summary>交互键按下时尝试建立淡水饮用等待；没有淡水能力 Buff 时不会进入状态。</summary>
+    /// <summary>交互键按下时尝试建立水体饮用等待；没有水体能力 Buff 时不会进入状态。</summary>
     public bool BeginFreshWaterDrinkHold()
     {
         ResolveFreshWaterDrinkModules();
-        if (!TryGetFreshWaterQuality(out _))
+        if (!TryGetDrinkableWater(out _))
         {
             ResetFreshWaterDrinkState();
             return false;
@@ -58,7 +58,7 @@ public partial class Mod_InteractSender
         return true;
     }
 
-    /// <summary>松开交互键、输入锁定或离开淡水时立即停止饮水。</summary>
+    /// <summary>松开交互键、输入锁定或离开水体时立即停止饮水。</summary>
     public void EndFreshWaterDrinkHold()
     {
         ResetFreshWaterDrinkState();
@@ -71,7 +71,7 @@ public partial class Mod_InteractSender
             return;
 
         ResolveFreshWaterDrinkModules();
-        if (!TryGetFreshWaterQuality(out _))
+        if (!TryGetDrinkableWater(out _))
         {
             ResetFreshWaterDrinkState();
             return;
@@ -103,11 +103,11 @@ public partial class Mod_InteractSender
 
     #region 饮水结算
 
-    /// <summary>执行一次公开且可确定验证的饮水脉冲；返回是否实际获得了淡水饮用资格。</summary>
+    /// <summary>执行一次公开且可确定验证的饮水脉冲；返回是否实际获得了水体饮用资格。</summary>
     public bool ProcessFreshWaterDrinkPulse(float infectionRoll, bool playFeedback = true)
     {
         ResolveFreshWaterDrinkModules();
-        if (!TryGetFreshWaterQuality(out bool dirty) ||
+        if (!TryGetDrinkableWater(out bool dirty) ||
             freshWaterFood?.Data?.nutrition == null)
         {
             ResetFreshWaterDrinkState();
@@ -129,15 +129,22 @@ public partial class Mod_InteractSender
         return true;
     }
 
-    private bool TryGetFreshWaterQuality(out bool dirty)
+    /// <summary>检查当前是否只有一种有效水源；盐水允许饮用但不触发淡水感染判定。</summary>
+    private bool TryGetDrinkableWater(out bool dirty)
     {
         dirty = false;
         if (freshWaterBuffManager == null)
             return false;
 
         bool clean = freshWaterBuffManager.HasBuff(FreshWaterBuffIds.Clean);
-        dirty = freshWaterBuffManager.HasBuff(FreshWaterBuffIds.Dirty);
-        return clean ^ dirty;
+        bool dirtyWater = freshWaterBuffManager.HasBuff(FreshWaterBuffIds.Dirty);
+        bool saltWater = freshWaterBuffManager.HasBuff(SaltWaterBuffIds.InSaltWater);
+        int sourceCount = (clean ? 1 : 0) + (dirtyWater ? 1 : 0) + (saltWater ? 1 : 0);
+        if (sourceCount != 1)
+            return false;
+
+        dirty = dirtyWater;
+        return true;
     }
 
     private void ResolveFreshWaterDrinkModules()

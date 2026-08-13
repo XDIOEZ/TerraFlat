@@ -63,6 +63,7 @@ public static class NetworkModePrefabBuilder
         Stretch(rect);
 
         Canvas canvas = root.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.overrideSorting = true;
         canvas.sortingOrder = 500;
 
@@ -89,11 +90,11 @@ public static class NetworkModePrefabBuilder
     private static void BuildVisualTree(Transform root, TMP_FontAsset font)
     {
         Image shadow = CreateImage("面板投影", root, new Color(0f, 0f, 0f, 0.38f));
-        SetRect(shadow.rectTransform, new Vector2(12f, -14f), new Vector2(920f, 680f), new Vector2(0.5f, 0.5f));
+        SetRect(shadow.rectTransform, new Vector2(12f, -14f), FlatWorldUIPanelMetrics.SharedModalCardSize, new Vector2(0.5f, 0.5f));
         shadow.raycastTarget = false;
 
         Image card = CreateImage("联机主卡片", root, Ink);
-        SetRect(card.rectTransform, Vector2.zero, new Vector2(920f, 680f), new Vector2(0.5f, 0.5f));
+        SetRect(card.rectTransform, Vector2.zero, FlatWorldUIPanelMetrics.SharedModalCardSize, new Vector2(0.5f, 0.5f));
 
         Outline cardOutline = card.gameObject.AddComponent<Outline>();
         cardOutline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.32f);
@@ -116,15 +117,8 @@ public static class NetworkModePrefabBuilder
 
     private static void BuildHeader(Transform card, TMP_FontAsset font)
     {
-        TMP_Text eyebrow = CreateText("联机眉题", card, "MULTIPLAYER  /  网络会话", font, 16f, Amber, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(eyebrow.rectTransform, new Vector2(42f, -34f), new Vector2(560f, 26f), new Vector2(0f, 1f));
-        eyebrow.characterSpacing = 3f;
-
         TMP_Text title = CreateText("标题", card, "联机模式", font, 42f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(title.rectTransform, new Vector2(42f, -70f), new Vector2(500f, 58f), new Vector2(0f, 1f));
-
-        TMP_Text description = CreateText("说明", card, "创建你的世界，或粘贴好友提供的 UDP 穿透地址加入旅程。", font, 19f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(description.rectTransform, new Vector2(42f, -130f), new Vector2(720f, 34f), new Vector2(0f, 1f));
+        SetRect(title.rectTransform, new Vector2(42f, -38f), new Vector2(700f, 58f), new Vector2(0f, 1f));
 
         CreateButton(card, font, "关闭按钮", "×", new Vector2(-34f, -34f), new Vector2(48f, 48f), new Color(0.08f, 0.11f, 0.13f, 0.96f), new Color(0.64f, 0.70f, 0.71f, 0.28f), 28f, new Vector2(1f, 1f));
 
@@ -132,7 +126,7 @@ public static class NetworkModePrefabBuilder
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
         divider.rectTransform.anchorMax = new Vector2(1f, 1f);
         divider.rectTransform.pivot = new Vector2(0.5f, 1f);
-        divider.rectTransform.anchoredPosition = new Vector2(0f, -178f);
+        divider.rectTransform.anchoredPosition = new Vector2(0f, -112f);
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
     }
@@ -140,14 +134,14 @@ public static class NetworkModePrefabBuilder
     private static void BuildConnectionForm(Transform card, TMP_FontAsset font)
     {
         TMP_Text heading = CreateText("连接设置标题", card, "连接设置", font, 22f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(heading.rectTransform, new Vector2(42f, -208f), new Vector2(470f, 34f), new Vector2(0f, 1f));
+        SetRect(heading.rectTransform, new Vector2(42f, -150f), new Vector2(760f, 34f), new Vector2(0f, 1f));
 
-        CreateInput(card, font, "玩家名称输入框", "玩家名称", "你在联机世界中的显示名称", "玩家_0000", new Vector2(42f, -258f), new Vector2(500f, 66f));
-        CreateInput(card, font, "地址输入框", "主机 / UDP 穿透地址", "例如 tunnel.example.com:24567", "127.0.0.1", new Vector2(42f, -358f), new Vector2(342f, 66f));
-        CreateInput(card, font, "端口输入框", "主机 / 默认端口", "7777", "7777", new Vector2(400f, -358f), new Vector2(142f, 66f), TMP_InputField.ContentType.IntegerNumber);
+        CreateInput(card, font, "玩家名称输入框", "玩家名称", "你在联机世界中的显示名称", "Player_0000", new Vector2(42f, -200f), new Vector2(760f, 66f));
+        CreateInput(card, font, "地址输入框", "主机 / UDP 穿透地址", "例如 tunnel.example.com:24567", "127.0.0.1", new Vector2(42f, -300f), new Vector2(520f, 66f));
+        CreateInput(card, font, "端口输入框", "主机 / 默认端口", "7777", "7777", new Vector2(580f, -300f), new Vector2(220f, 66f), TMP_InputField.ContentType.IntegerNumber);
 
         Image notice = CreateImage("同步说明底板", card, new Color(0.07f, 0.105f, 0.125f, 0.92f));
-        SetRect(notice.rectTransform, new Vector2(42f, -458f), new Vector2(500f, 78f), new Vector2(0f, 1f));
+        SetRect(notice.rectTransform, new Vector2(42f, -400f), new Vector2(760f, 84f), new Vector2(0f, 1f));
 
         Image noticeAccent = CreateImage("同步说明强调线", notice.transform, Teal);
         noticeAccent.rectTransform.anchorMin = new Vector2(0f, 0f);
@@ -158,16 +152,16 @@ public static class NetworkModePrefabBuilder
         noticeAccent.raycastTarget = false;
 
         TMP_Text noticeTitle = CreateText("同步说明标题", notice.transform, "世界同步", font, 17f, Teal, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(noticeTitle.rectTransform, new Vector2(18f, -10f), new Vector2(180f, 26f), new Vector2(0f, 1f));
+        SetRect(noticeTitle.rectTransform, new Vector2(18f, -10f), new Vector2(260f, 26f), new Vector2(0f, 1f));
 
         TMP_Text noticeText = CreateText("同步说明文字", notice.transform, "可直接粘贴 域名:端口；穿透协议必须为 UDP，地址自带端口时会覆盖默认端口。", font, 15f, Muted, FontStyles.Normal, TextAlignmentOptions.Left, true);
-        SetRect(noticeText.rectTransform, new Vector2(18f, -38f), new Vector2(458f, 30f), new Vector2(0f, 1f));
+        SetRect(noticeText.rectTransform, new Vector2(18f, -38f), new Vector2(718f, 34f), new Vector2(0f, 1f));
     }
 
     private static void BuildSessionSummary(Transform card, TMP_FontAsset font)
     {
         Image summary = CreateImage("会话状态卡", card, new Color(0.035f, 0.06f, 0.075f, 0.98f));
-        SetRect(summary.rectTransform, new Vector2(-42f, -208f), new Vector2(292f, 328f), new Vector2(1f, 1f));
+        SetRect(summary.rectTransform, new Vector2(-42f, -150f), new Vector2(420f, 420f), new Vector2(1f, 1f));
 
         Outline outline = summary.gameObject.AddComponent<Outline>();
         outline.effectColor = new Color(0.55f, 0.64f, 0.65f, 0.18f);
@@ -177,7 +171,7 @@ public static class NetworkModePrefabBuilder
         SetRect(heading.rectTransform, new Vector2(24f, -24f), new Vector2(220f, 32f), new Vector2(0f, 1f));
 
         Image statusPill = CreateImage("状态底板", summary.transform, new Color(0.07f, 0.16f, 0.15f, 1f));
-        SetRect(statusPill.rectTransform, new Vector2(24f, -70f), new Vector2(244f, 56f), new Vector2(0f, 1f));
+        SetRect(statusPill.rectTransform, new Vector2(24f, -70f), new Vector2(372f, 56f), new Vector2(0f, 1f));
 
         Image statusDot = CreateImage("状态指示点", statusPill.transform, Teal);
         SetRect(statusDot.rectTransform, new Vector2(18f, 0f), new Vector2(10f, 10f), new Vector2(0f, 0.5f));
@@ -190,18 +184,14 @@ public static class NetworkModePrefabBuilder
         status.rectTransform.offsetMax = new Vector2(-12f, -8f);
 
         TMP_Text playersLabel = CreateText("玩家数量标签", summary.transform, "当前连接", font, 14f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(playersLabel.rectTransform, new Vector2(24f, -146f), new Vector2(210f, 24f), new Vector2(0f, 1f));
+        SetRect(playersLabel.rectTransform, new Vector2(24f, -146f), new Vector2(300f, 24f), new Vector2(0f, 1f));
 
         TMP_Text players = CreateText("玩家数量文本", summary.transform, "玩家：0 / 2", font, 28f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(players.rectTransform, new Vector2(24f, -174f), new Vector2(220f, 42f), new Vector2(0f, 1f));
+        SetRect(players.rectTransform, new Vector2(24f, -174f), new Vector2(300f, 42f), new Vector2(0f, 1f));
 
         Image divider = CreateImage("状态分隔线", summary.transform, new Color(0.55f, 0.64f, 0.65f, 0.16f));
-        SetRect(divider.rectTransform, new Vector2(24f, -232f), new Vector2(244f, 1f), new Vector2(0f, 1f));
+        SetRect(divider.rectTransform, new Vector2(24f, -232f), new Vector2(372f, 1f), new Vector2(0f, 1f));
         divider.raycastTarget = false;
-
-        TMP_Text controls = CreateText("操作提示", summary.transform, "移动  WASD / 方向键\n关闭  使用右上角按钮", font, 14f, Muted, FontStyles.Normal, TextAlignmentOptions.TopLeft, true);
-        SetRect(controls.rectTransform, new Vector2(24f, -252f), new Vector2(244f, 58f), new Vector2(0f, 1f));
-        controls.lineSpacing = 6f;
     }
 
     private static void BuildActions(Transform card, TMP_FontAsset font)
@@ -210,13 +200,13 @@ public static class NetworkModePrefabBuilder
         divider.rectTransform.anchorMin = new Vector2(0f, 0f);
         divider.rectTransform.anchorMax = new Vector2(1f, 0f);
         divider.rectTransform.pivot = new Vector2(0.5f, 0f);
-        divider.rectTransform.anchoredPosition = new Vector2(0f, 112f);
+        divider.rectTransform.anchoredPosition = new Vector2(0f, 128f);
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
 
-        CreateButton(card, font, "创建主机按钮", "创建主机", new Vector2(42f, 34f), new Vector2(214f, 62f), new Color(0.70f, 0.36f, 0.16f, 1f), new Color(1f, 0.71f, 0.38f, 0.38f), 20f, Vector2.zero);
-        CreateButton(card, font, "加入游戏按钮", "加入好友", new Vector2(272f, 34f), new Vector2(214f, 62f), new Color(0.08f, 0.29f, 0.29f, 1f), new Color(0.36f, 0.78f, 0.72f, 0.34f), 20f, Vector2.zero);
-        CreateButton(card, font, "断开按钮", "断开连接", new Vector2(-42f, 34f), new Vector2(194f, 62f), new Color(0.25f, 0.075f, 0.075f, 0.96f), new Color(0.78f, 0.34f, 0.29f, 0.30f), 18f, new Vector2(1f, 0f));
+        CreateButton(card, font, "创建主机按钮", "创建主机", new Vector2(42f, 42f), new Vector2(280f, 68f), new Color(0.70f, 0.36f, 0.16f, 1f), new Color(1f, 0.71f, 0.38f, 0.38f), 20f, Vector2.zero);
+        CreateButton(card, font, "加入游戏按钮", "加入好友", new Vector2(342f, 42f), new Vector2(280f, 68f), new Color(0.08f, 0.29f, 0.29f, 1f), new Color(0.36f, 0.78f, 0.72f, 0.34f), 20f, Vector2.zero);
+        CreateButton(card, font, "断开按钮", "断开连接", new Vector2(-42f, 42f), new Vector2(240f, 68f), new Color(0.25f, 0.075f, 0.075f, 0.96f), new Color(0.78f, 0.34f, 0.29f, 0.30f), 18f, new Vector2(1f, 0f));
     }
 
     #endregion

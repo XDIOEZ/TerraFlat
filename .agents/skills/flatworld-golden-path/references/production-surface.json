@@ -1,0 +1,11 @@
+{
+  "presetName": "production-surface",
+  "scenarios": {
+    "enableAllOperations": true,
+    "enabledOperationIds": [],
+    "disabledOperationIds": []
+  },
+  "hydrology": {
+    "overrideGeneration": false
+  }
+}

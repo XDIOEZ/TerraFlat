@@ -71,9 +71,9 @@ public class Mod_Weapon_AnimationAction : Module
             cachedController = item.Owner.GetComponentInChildren<GameController>();
             if (cachedController != null)
             {
-                //绑定Controller 也就是新输入系统
-                cachedController.LeftClick += OnControllerLeftClick;
-                cachedController.LeftClickUp += OnControllerLeftClickUp;
+                // 只监听中央攻击语义；手机交互与使用不会再误触发武器。
+                cachedController.AttackStarted += OnAttackStarted;
+                cachedController.AttackEnded += OnAttackEnded;
             }
         }
         animator = item.GetComponentInChildren<Animator>();
@@ -83,13 +83,24 @@ public class Mod_Weapon_AnimationAction : Module
 
     public override void Save()
     {
-        if (cachedController != null)
-        {
-            cachedController.LeftClick -= OnControllerLeftClick;
-            cachedController.LeftClickUp -= OnControllerLeftClickUp;
-            cachedController = null;
-        }
+        UnbindAttackInput();
         ModSaveData.WriteData(RawData);
+    }
+
+    private void OnDestroy()
+    {
+        UnbindAttackInput();
+    }
+
+    /// <summary>统一解除中央攻击语义，避免武器被直接销毁时残留订阅。</summary>
+    private void UnbindAttackInput()
+    {
+        if (cachedController == null)
+            return;
+
+        cachedController.AttackStarted -= OnAttackStarted;
+        cachedController.AttackEnded -= OnAttackEnded;
+        cachedController = null;
     }
     #endregion
     [InfoBox("驱动本地输入与连击状态机")]
@@ -328,7 +339,7 @@ public class Mod_Weapon_AnimationAction : Module
         return results.Count > 0;
     }
 
-    private void OnControllerLeftClick()
+    private void OnAttackStarted()
     {
         if (cachedController != null && cachedController.IsGameplayInputLocked)
         {
@@ -339,7 +350,7 @@ public class Mod_Weapon_AnimationAction : Module
         RequestAttack();
     }
 
-    private void OnControllerLeftClickUp()
+    private void OnAttackEnded()
     {
         isHoldingInput = false;
     }

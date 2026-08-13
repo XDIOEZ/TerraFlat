@@ -105,11 +105,11 @@ public static class GameSavePrefabBuilder
     private static Image BuildCard(Transform root)
     {
         Image shadow = CreateImage("存档主卡投影", root, new Color(0f, 0f, 0f, 0.42f));
-        SetRect(shadow.rectTransform, new Vector2(14f, -16f), new Vector2(1400f, 800f), new Vector2(0.5f, 0.5f));
+        SetRect(shadow.rectTransform, new Vector2(14f, -16f), FlatWorldUIPanelMetrics.SharedModalCardSize, new Vector2(0.5f, 0.5f));
         shadow.raycastTarget = false;
 
         Image card = CreateImage("存档主卡", root, Ink);
-        SetRect(card.rectTransform, Vector2.zero, new Vector2(1400f, 800f), new Vector2(0.5f, 0.5f));
+        SetRect(card.rectTransform, Vector2.zero, FlatWorldUIPanelMetrics.SharedModalCardSize, new Vector2(0.5f, 0.5f));
 
         Outline outline = card.gameObject.AddComponent<Outline>();
         outline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.34f);
@@ -127,15 +127,8 @@ public static class GameSavePrefabBuilder
 
     private static void BuildHeader(Transform card, TMP_FontAsset font)
     {
-        TMP_Text eyebrow = CreateText("存档眉题", card, "ARCHIVE  /  世界存档", font, 16f, Amber, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(eyebrow.rectTransform, new Vector2(42f, -28f), new Vector2(560f, 26f), new Vector2(0f, 1f));
-        eyebrow.characterSpacing = 3f;
-
         TMP_Text title = CreateText("存档标题", card, "选择存档", font, 42f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(title.rectTransform, new Vector2(42f, -60f), new Vector2(520f, 58f), new Vector2(0f, 1f));
-
-        TMP_Text description = CreateText("存档说明", card, "从上一次篝火继续旅程，并选择本次操控的角色。", font, 18f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(description.rectTransform, new Vector2(42f, -116f), new Vector2(780f, 30f), new Vector2(0f, 1f));
+        SetRect(title.rectTransform, new Vector2(42f, -38f), new Vector2(700f, 58f), new Vector2(0f, 1f));
 
         CreateButton(card, font, GameManager.GameSaveBackButtonKey, "返回主界面", new Vector2(-42f, -42f), new Vector2(170f, 52f), InkSoft, Cream, 17f, new Vector2(1f, 1f));
 
@@ -143,7 +136,7 @@ public static class GameSavePrefabBuilder
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
         divider.rectTransform.anchorMax = new Vector2(1f, 1f);
         divider.rectTransform.pivot = new Vector2(0.5f, 1f);
-        divider.rectTransform.anchoredPosition = new Vector2(0f, -162f);
+        divider.rectTransform.anchoredPosition = new Vector2(0f, -112f);
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
     }
@@ -151,22 +144,19 @@ public static class GameSavePrefabBuilder
     private static Transform BuildSaveList(Transform card, TMP_FontAsset font)
     {
         Image panel = CreatePanelCard("世界存档区", card);
-        SetRect(panel.rectTransform, new Vector2(42f, -190f), new Vector2(410f, 480f), new Vector2(0f, 1f));
+        SetRect(panel.rectTransform, new Vector2(42f, -138f), new Vector2(520f, 520f), new Vector2(0f, 1f));
 
         CreateStepBadge(panel.transform, font, "STEP 01", new Vector2(22f, -22f));
         TMP_Text heading = CreateText("世界存档标题", panel.transform, "世界存档", font, 23f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(heading.rectTransform, new Vector2(22f, -58f), new Vector2(250f, 34f), new Vector2(0f, 1f));
 
-        TMP_Text hint = CreateText("世界存档提示", panel.transform, "选择一个世界；右键条目可管理存档", font, 14f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(hint.rectTransform, new Vector2(22f, -92f), new Vector2(360f, 26f), new Vector2(0f, 1f));
-
-        return CreateScrollList("存档列表", panel.transform, new Vector2(20f, -132f), new Vector2(370f, 326f));
+        return CreateScrollList("存档列表", panel.transform, new Vector2(20f, -96f), new Vector2(480f, 394f));
     }
 
     private static Transform BuildWorkspace(Transform card, TMP_FontAsset font)
     {
         Image panel = CreatePanelCard("存档操作区", card);
-        SetRect(panel.rectTransform, new Vector2(474f, -190f), new Vector2(884f, 480f), new Vector2(0f, 1f));
+        SetRect(panel.rectTransform, new Vector2(582f, -138f), new Vector2(816f, 520f), new Vector2(0f, 1f));
 
         CreateStepBadge(panel.transform, font, "STEP 02", new Vector2(24f, -22f));
         TMP_Text currentLabel = CreateText("当前存档标签", panel.transform, "当前选择", font, 14f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
@@ -194,18 +184,14 @@ public static class GameSavePrefabBuilder
         Transform playerContent = CreateScrollList("存档中的玩家列表", panel.transform, new Vector2(24f, -226f), new Vector2(368f, 224f));
 
         Image identity = CreateImage("角色身份区", panel.transform, new Color(0.035f, 0.06f, 0.075f, 0.98f));
-        SetRect(identity.rectTransform, new Vector2(-24f, -166f), new Vector2(444f, 284f), new Vector2(1f, 1f));
+        SetRect(identity.rectTransform, new Vector2(-24f, -166f), new Vector2(400f, 284f), new Vector2(1f, 1f));
 
         CreateStepBadge(identity.transform, font, "STEP 03", new Vector2(20f, -18f));
         TMP_Text identityHeading = CreateText("角色身份标题", identity.transform, "本次角色", font, 20f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(identityHeading.rectTransform, new Vector2(20f, -54f), new Vector2(300f, 30f), new Vector2(0f, 1f));
         TMP_Text nameLabel = CreateText("玩家名称标签", identity.transform, "玩家名称", font, 14f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(nameLabel.rectTransform, new Vector2(20f, -96f), new Vector2(360f, 24f), new Vector2(0f, 1f));
-        CreateInput(identity.transform, font, GameManager.GameSavePlayerInputKey, "选择角色或输入新名称", new Vector2(20f, -124f), new Vector2(404f, 62f));
-
-        TMP_Text identityHint = CreateText("角色身份提示", identity.transform, "角色名称决定进入世界后操控的身份。\n首次进入也可以直接创建新角色。", font, 14f, Muted, FontStyles.Normal, TextAlignmentOptions.TopLeft, true);
-        SetRect(identityHint.rectTransform, new Vector2(20f, -202f), new Vector2(404f, 58f), new Vector2(0f, 1f));
-        identityHint.lineSpacing = 5f;
+        CreateInput(identity.transform, font, GameManager.GameSavePlayerInputKey, "选择角色或输入新名称", new Vector2(20f, -124f), new Vector2(360f, 62f));
         return playerContent;
     }
 
@@ -218,10 +204,6 @@ public static class GameSavePrefabBuilder
         divider.rectTransform.anchoredPosition = new Vector2(0f, 104f);
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
-
-        TMP_Text flow = CreateText("存档流程提示", card, "选择世界  >  载入存档  >  选择角色  >  进入世界", font, 15f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(flow.rectTransform, new Vector2(42f, 38f), new Vector2(760f, 34f), new Vector2(0f, 0f));
-        flow.characterSpacing = 1f;
 
         CreateButton(card, font, GameManager.GameSaveStartButtonKey, "进入世界", new Vector2(-42f, 26f), new Vector2(250f, 66f), new Color(0.70f, 0.36f, 0.16f, 1f), Cream, 21f, new Vector2(1f, 0f));
     }

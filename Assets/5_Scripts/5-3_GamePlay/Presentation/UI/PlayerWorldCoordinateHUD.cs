@@ -14,18 +14,14 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
 
     public const string ViewName = "PlayerWorldCoordinateHUD";
 
-    private const string CoordinateTitleNodeName = "坐标标题";
     private const string CoordinateTextNodeName = "坐标文本";
     private const string CoordinateFormat = "X  {0:0.0}    Y  {1:0.0}";
     private const string GeographicFormat = "经 {0:0.00}°  纬 {1:0.00}°";
-    private const string CoordinateTitle = "世界坐标 / POSITION";
-    private const string GeographicTitle = "地理坐标 / GEO POSITION";
     private const float RefreshIntervalSeconds = 0.1f;
 
     private Player player;
     private GameObject viewObject;
     private RectTransform viewRect;
-    private TextMeshProUGUI coordinateTitle;
     private TextMeshProUGUI coordinateText;
     private int lastCoordinateX = int.MinValue;
     private int lastCoordinateY = int.MinValue;
@@ -127,17 +123,14 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         viewObject = Instantiate(prefab, rootRect, false);
         viewObject.name = ViewName;
         viewRect = viewObject.GetComponent<RectTransform>();
-        Transform titleNode = viewObject.transform.Find(CoordinateTitleNodeName);
         Transform textNode = viewObject.transform.Find(CoordinateTextNodeName);
-        coordinateTitle = titleNode != null ? titleNode.GetComponent<TextMeshProUGUI>() : null;
         coordinateText = textNode != null ? textNode.GetComponent<TextMeshProUGUI>() : null;
-        if (viewRect == null || coordinateTitle == null || coordinateText == null)
+        if (viewRect == null || coordinateText == null)
         {
             Debug.LogError("[PlayerWorldCoordinateHUD] 坐标 HUD Prefab 控件命名契约不完整。", viewObject);
             Destroy(viewObject);
             viewObject = null;
             viewRect = null;
-            coordinateTitle = null;
             coordinateText = null;
             return false;
         }
@@ -168,12 +161,10 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         if (displayMode == PlayerWorldCoordinateDisplayMode.LatitudeLongitude)
         {
             GetLatitudeLongitude(position, out float longitude, out float latitude);
-            coordinateTitle.text = GeographicTitle;
             coordinateText.SetText(GeographicFormat, longitude, latitude);
             return;
         }
 
-        coordinateTitle.text = CoordinateTitle;
         coordinateText.SetText(CoordinateFormat, coordinateX * 0.1f, coordinateY * 0.1f);
     }
 

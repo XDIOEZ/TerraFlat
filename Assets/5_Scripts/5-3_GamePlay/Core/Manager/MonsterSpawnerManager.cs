@@ -46,12 +46,80 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     private readonly Dictionary<Item, DamageReceiver> _receiverByItem = new();
     private readonly Dictionary<Item, float> _farAwaySince = new();
     private readonly HashSet<Item> _chunkDormantItems = new();
+    private readonly Dictionary<Item, int> _ecologyRecycleProtectionCounts = new();
     private readonly Dictionary<string, float> _nextSpawnRetryTime = new(StringComparer.Ordinal);
     private readonly Dictionary<string, float> _nextRecoveryCheckTime = new(StringComparer.Ordinal);
     private readonly List<Vector3> _playerPositions = new(4);
     private readonly List<Item> _itemSnapshot = new(64);
     private float _nextPopulationMaintenanceTime;
     private float _nextRecycleCheckTime;
+
+    #endregion
+
+    #region 生态回收保活租约
+
+    /// <summary>
+    /// 为已经纳入生态管理的生物获取临时回收保护。
+    /// 保护只绕过种群上限与远距离回收，不影响区块休眠、显隐、AI Tick 或正式销毁。
+    /// </summary>
+    public IDisposable AcquireEcologyRecycleProtection(Item item)
+    {
+        if (item == null)
+            throw new ArgumentNullException(nameof(item));
+        if (item.DestructionHandled)
+            throw new InvalidOperationException("已进入销毁流程的生物不能获取生态回收保护。");
+        if (!_trackedItems.ContainsKey(item))
+            throw new InvalidOperationException("只有已被 MonsterSpawnerManager 管理的生物才能获取回收保护。");
+
+        _ecologyRecycleProtectionCounts.TryGetValue(item, out int count);
+        _ecologyRecycleProtectionCounts[item] = count + 1;
+        _farAwaySince.Remove(item);
+        return new EcologyRecycleProtectionLease(this, item);
+    }
+
+    /// <summary>判断目标是否仍持有至少一个生态回收保护租约。</summary>
+    private bool IsEcologyRecycleProtected(Item item) =>
+        item != null &&
+        _ecologyRecycleProtectionCounts.TryGetValue(item, out int count) &&
+        count > 0;
+
+    /// <summary>释放单个引用计数；最后一个租约释放后恢复正式生态回收。</summary>
+    private void ReleaseEcologyRecycleProtection(Item item)
+    {
+        if (ReferenceEquals(item, null) ||
+            !_ecologyRecycleProtectionCounts.TryGetValue(item, out int count))
+        {
+            return;
+        }
+
+        if (count <= 1)
+            _ecologyRecycleProtectionCounts.Remove(item);
+        else
+            _ecologyRecycleProtectionCounts[item] = count - 1;
+    }
+
+    /// <summary>确保保活作用域在异常清理和重复 Dispose 时也只释放一次。</summary>
+    private sealed class EcologyRecycleProtectionLease : IDisposable
+    {
+        private MonsterSpawnerManager _owner;
+        private Item _item;
+
+        internal EcologyRecycleProtectionLease(MonsterSpawnerManager owner, Item item)
+        {
+            _owner = owner;
+            _item = item;
+        }
+
+        public void Dispose()
+        {
+            MonsterSpawnerManager owner = _owner;
+            Item item = _item;
+            _owner = null;
+            _item = null;
+            if (owner != null)
+                owner.ReleaseEcologyRecycleProtection(item);
+        }
+    }
 
     #endregion
 
@@ -921,6 +989,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         _trackedItems.Clear();
         _farAwaySince.Clear();
         _chunkDormantItems.Clear();
+        _ecologyRecycleProtectionCounts.Clear();
         _trackedPopulation = 0;
     }
 
@@ -981,6 +1050,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         _trackedItems.Remove(item);
         _farAwaySince.Remove(item);
         _chunkDormantItems.Remove(item);
+        _ecologyRecycleProtectionCounts.Remove(item);
         if (_receiverByItem.TryGetValue(item, out DamageReceiver receiver))
         {
             _receiverByItem.Remove(item);
@@ -1104,10 +1174,12 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
                 }
             }
 
-            if ((!config.UnboundedDailyGrowth && totalCount > Mathf.Max(1, _globalAliveLimit)) ||
+            bool exceedsLimit =
+                (!config.UnboundedDailyGrowth && totalCount > Mathf.Max(1, _globalAliveLimit)) ||
                 groupCount > GetEffectiveGroupLimit(config) ||
                 (speciesLimit > 0 && speciesCount > speciesLimit) ||
-                ExceedsNearbyPlayerLimit(item, config, overflow))
+                ExceedsNearbyPlayerLimit(item, config, overflow);
+            if (exceedsLimit && !IsEcologyRecycleProtected(item))
             {
                 overflow.Add(item);
             }
@@ -1161,6 +1233,11 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             SpawnerConfig config = pair.Value;
             if (item == null || config == null || config.RecycleDistance <= 0f)
                 continue;
+            if (IsEcologyRecycleProtected(item))
+            {
+                _farAwaySince.Remove(item);
+                continue;
+            }
 
             if (!IsNearAnyPlayer(item.transform.position, config.RecycleDistance))
             {

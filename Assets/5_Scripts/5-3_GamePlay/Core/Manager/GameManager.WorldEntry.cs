@@ -9,6 +9,12 @@ public enum WorldEntryProgressState
     Failed
 }
 
+public enum WorldEntryPresentationMode
+{
+    Standard,
+    Dimension
+}
+
 /// <summary>
 /// 与具体 UI 无关的世界进入进度快照。呈现层可订阅它，测试也可直接观察它。
 /// </summary>
@@ -18,23 +24,41 @@ public readonly struct WorldEntryProgressInfo
     public string Status { get; }
     public float Progress { get; }
     public WorldEntryProgressState State { get; }
+    public WorldEntryPresentationMode PresentationMode { get; }
+    public string TargetId { get; }
 
     public WorldEntryProgressInfo(
         string title,
         string status,
         float progress,
         WorldEntryProgressState state)
+        : this(title, status, progress, state, WorldEntryPresentationMode.Standard, string.Empty)
+    {
+    }
+
+    public WorldEntryProgressInfo(
+        string title,
+        string status,
+        float progress,
+        WorldEntryProgressState state,
+        WorldEntryPresentationMode presentationMode,
+        string targetId)
     {
         Title = title ?? string.Empty;
         Status = status ?? string.Empty;
         Progress = Mathf.Clamp01(progress);
         State = state;
+        PresentationMode = presentationMode;
+        TargetId = targetId ?? string.Empty;
     }
 }
 
 public partial class GameManager
 {
     private bool isWorldEntryInProgress;
+    private bool worldEntryCompletesOnPlayerReady;
+    private WorldEntryPresentationMode worldEntryPresentationMode = WorldEntryPresentationMode.Standard;
+    private string worldEntryTargetId = string.Empty;
     private Coroutine worldEntryCompletionCoroutine;
 
     public bool IsWorldEntryInProgress => isWorldEntryInProgress;
@@ -49,6 +73,23 @@ public partial class GameManager
 
     private bool BeginWorldEntry(string title, string status, float progress)
     {
+        return BeginWorldEntry(
+            title,
+            status,
+            progress,
+            WorldEntryPresentationMode.Standard,
+            string.Empty,
+            true);
+    }
+
+    private bool BeginWorldEntry(
+        string title,
+        string status,
+        float progress,
+        WorldEntryPresentationMode presentationMode,
+        string targetId,
+        bool completeOnPlayerReady)
+    {
         if (isWorldEntryInProgress)
         {
             Debug.LogWarning("[GameManager] 世界进入流程已在执行，忽略重复请求。");
@@ -56,10 +97,12 @@ public partial class GameManager
         }
 
         isWorldEntryInProgress = true;
+        worldEntryCompletesOnPlayerReady = completeOnPlayerReady;
+        worldEntryPresentationMode = presentationMode;
+        worldEntryTargetId = targetId ?? string.Empty;
         Event_PlayerEnterWorld -= OnWorldEntryPlayerReady;
         Event_PlayerEnterWorld += OnWorldEntryPlayerReady;
-        PublishWorldEntryProgress(
-            new WorldEntryProgressInfo(title, status, progress, WorldEntryProgressState.Running));
+        PublishCurrentWorldEntryProgress(title, status, progress, WorldEntryProgressState.Running);
         return true;
     }
 
@@ -68,8 +111,7 @@ public partial class GameManager
         if (!isWorldEntryInProgress)
             return;
 
-        PublishWorldEntryProgress(
-            new WorldEntryProgressInfo(title, status, progress, WorldEntryProgressState.Running));
+        PublishCurrentWorldEntryProgress(title, status, progress, WorldEntryProgressState.Running);
     }
 
     private void OnWorldEntryPlayerReady(Player player)
@@ -78,6 +120,9 @@ public partial class GameManager
             return;
 
         Event_PlayerEnterWorld -= OnWorldEntryPlayerReady;
+        if (!worldEntryCompletesOnPlayerReady)
+            return;
+
         if (worldEntryCompletionCoroutine != null)
             StopCoroutine(worldEntryCompletionCoroutine);
         worldEntryCompletionCoroutine = StartCoroutine(CompleteWorldEntryCoroutine());
@@ -104,13 +149,24 @@ public partial class GameManager
         yield return null;
 
         worldEntryCompletionCoroutine = null;
+        CompleteWorldEntry("加载完成", "世界已经准备完毕。");
+    }
+
+    private void CompleteWorldEntry(string title, string status)
+    {
+        if (!isWorldEntryInProgress)
+            return;
+
+        Event_PlayerEnterWorld -= OnWorldEntryPlayerReady;
+        if (worldEntryCompletionCoroutine != null)
+        {
+            StopCoroutine(worldEntryCompletionCoroutine);
+            worldEntryCompletionCoroutine = null;
+        }
+
         isWorldEntryInProgress = false;
-        PublishWorldEntryProgress(
-            new WorldEntryProgressInfo(
-                "加载完成",
-                "世界已经准备完毕。",
-                1f,
-                WorldEntryProgressState.Completed));
+        PublishCurrentWorldEntryProgress(title, status, 1f, WorldEntryProgressState.Completed);
+        ResetCurrentWorldEntryContext();
     }
 
     private void FailWorldEntry(string message, Exception exception = null)
@@ -127,12 +183,31 @@ public partial class GameManager
         Debug.LogError($"[GameManager] {message}", this);
 
         isWorldEntryInProgress = false;
+        PublishCurrentWorldEntryProgress("加载失败", message, 0f, WorldEntryProgressState.Failed);
+        ResetCurrentWorldEntryContext();
+    }
+
+    private void PublishCurrentWorldEntryProgress(
+        string title,
+        string status,
+        float progress,
+        WorldEntryProgressState state)
+    {
         PublishWorldEntryProgress(
             new WorldEntryProgressInfo(
-                "加载失败",
-                message,
-                0f,
-                WorldEntryProgressState.Failed));
+                title,
+                status,
+                progress,
+                state,
+                worldEntryPresentationMode,
+                worldEntryTargetId));
+    }
+
+    private void ResetCurrentWorldEntryContext()
+    {
+        worldEntryCompletesOnPlayerReady = false;
+        worldEntryPresentationMode = WorldEntryPresentationMode.Standard;
+        worldEntryTargetId = string.Empty;
     }
 
     private void PublishWorldEntryProgress(WorldEntryProgressInfo progress)
@@ -165,5 +240,6 @@ public partial class GameManager
         }
 
         isWorldEntryInProgress = false;
+        ResetCurrentWorldEntryContext();
     }
 }

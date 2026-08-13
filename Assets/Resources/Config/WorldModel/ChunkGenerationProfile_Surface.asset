@@ -414,7 +414,7 @@ MonoBehaviour:
   - RuleId: surface.river.oreStone
     ItemId: Ore_Stone
     ItemCount: 1
-    SpawnChance: 0.035
+    SpawnChance: 0.00875
     SpawnChanceMultiplier: 1
     BiomeMask: 0
     MinTemperature: 0

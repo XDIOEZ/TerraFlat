@@ -15,12 +15,14 @@ public static class RuntimeUIPrefabKeys
     public const string InputBindingSettings = "UI_InputBindingSettings";
     public const string InputBindingRow = "UI_InputBindingRow";
     public const string WorldLoading = "UI_WorldLoading";
+    public const string DimensionLoading = "UI_DimensionLoading";
     public const string PlayerWorldCoordinate = "UI_PlayerWorldCoordinate";
     public const string SaveStatus = "UI_SaveStatus";
     public const string BuffStatus = "UI_BuffStatus";
     public const string BuffStatusItem = "UI_BuffStatusItem";
     public const string QuestTracker = "UI_QuestTracker";
     public const string QuestTrackerItem = "UI_QuestTrackerItem";
+    public const string MobileControls = "UI_MobileControls";
 
     #endregion
 

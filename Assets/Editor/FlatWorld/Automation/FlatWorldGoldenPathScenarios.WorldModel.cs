@@ -14,6 +14,7 @@ namespace FlatWorld.Automation
         private static Vector2 _modelStartPosition;
         private static Vector2 _modelAwayPosition;
         private static Item _modelVisibilityCreature;
+        private static IDisposable _modelVisibilityCreatureRecycleProtection;
         private static int _modelSavedCreatureGuid;
         private static RuntimeWorldAddress _modelSavedCreatureAddress;
         private static bool _modelDormancyObserved;
@@ -24,6 +25,7 @@ namespace FlatWorld.Automation
 
         private static void ResetWorldModelScenario()
         {
+            ReleaseModelVisibilityCreatureRecycleProtection();
             _modelStartAddress = default;
             _modelStartChunk = null;
             _modelTerrainHash = 0;
@@ -98,6 +100,11 @@ namespace FlatWorld.Automation
                 ItemMgr.Instance.GetItemByGuid(_modelVisibilityCreature.itemData?.Guid ?? 0) !=
                 _modelVisibilityCreature)
                 throw new InvalidOperationException("无法创建用于区块实体显隐验证的 Chicken。");
+            MonsterSpawnerManager spawner = MonsterSpawnerManager.Instance;
+            if (spawner == null)
+                throw new InvalidOperationException("区块实体显隐验证缺少正式生态管理器。");
+            _modelVisibilityCreatureRecycleProtection =
+                spawner.AcquireEcologyRecycleProtection(_modelVisibilityCreature);
             _modelVisibilityCreature.Load();
             Mover_AI probeMover =
                 _modelVisibilityCreature.itemMods.GetMod_ByID<Mover_AI>(ModText.Mover) ??
@@ -166,10 +173,10 @@ namespace FlatWorld.Automation
             if (retained.SimulationLeaseCount != 0 || retained.PresentationLeaseCount != 0 ||
                 retained.NavigationLeaseCount != 0)
                 throw new InvalidOperationException("休眠区块仍持有模拟、表现或导航租约。");
-            if (_modelVisibilityCreature == null)
-                throw new InvalidOperationException("区块休眠验证期间测试生物被意外回收。");
+            AssertModelVisibilityCreatureRetained("区块休眠验证");
             if (_modelVisibilityCreature.gameObject.activeInHierarchy)
                 return false;
+            AssertRuntimeAiMigration(manager, _modelVisibilityCreature, _modelStartAddress);
             AssertWorldModelIdentity(retained);
             _modelDormancyObserved = true;
             Debug.Log("[GoldenPath][WorldModel] 起始区块已失去 View 并保留无头模型，Tick 已休眠。");
@@ -189,8 +196,7 @@ namespace FlatWorld.Automation
             {
                 return false;
             }
-            if (_modelVisibilityCreature == null)
-                throw new InvalidOperationException("区块返回验证期间测试生物被意外回收。");
+            AssertModelVisibilityCreatureRetained("区块返回验证");
             if (!_modelVisibilityCreature.gameObject.activeInHierarchy)
                 return false;
             AssertRuntimeAiMigration(manager, _modelVisibilityCreature, _modelStartAddress);
@@ -336,8 +342,26 @@ namespace FlatWorld.Automation
             }
         }
 
+        /// <summary>确认 ChunkView 解绑没有连带销毁或注销场景级生物实体。</summary>
+        private static void AssertModelVisibilityCreatureRetained(string phase)
+        {
+            if (_modelVisibilityCreature == null || _modelVisibilityCreature.DestructionHandled)
+                throw new InvalidOperationException($"{phase}期间测试生物被意外回收。");
+            int guid = _modelVisibilityCreature.itemData?.Guid ?? 0;
+            if (guid == 0 || ItemMgr.Instance?.GetItemByGuid(guid) != _modelVisibilityCreature)
+                throw new InvalidOperationException($"{phase}期间测试生物已从运行时注册表移除。");
+        }
+
+        /// <summary>释放测试专用保活；正式 Despawn 仍由场景清理统一执行。</summary>
+        private static void ReleaseModelVisibilityCreatureRecycleProtection()
+        {
+            _modelVisibilityCreatureRecycleProtection?.Dispose();
+            _modelVisibilityCreatureRecycleProtection = null;
+        }
+
         private static void CleanupWorldModelScenario()
         {
+            ReleaseModelVisibilityCreatureRecycleProtection();
             if (_modelVisibilityCreature != null && ItemMgr.Instance != null)
                 ItemMgr.Instance.DespawnItem(_modelVisibilityCreature, saveData: false);
             _modelVisibilityCreature = null;

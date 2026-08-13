@@ -125,7 +125,7 @@ namespace FlatWorld.Automation
     internal sealed class GoldenPathWorldConfiguration
     {
         public int seed = 424242;
-        public int radius = 512;
+        public int radius = PlanetData.DefaultRadius;
         public int chunkSizeX = 16;
         public int chunkSizeY = 16;
         public float noiseScale = PlanetData.DefaultNoiseScale;
@@ -160,7 +160,7 @@ namespace FlatWorld.Automation
     [Serializable]
     internal sealed class GoldenPathHydrologyConfiguration
     {
-        public bool overrideGeneration = true;
+        public bool overrideGeneration = false;
         public int hydrologyRegionSize = 64;
         public int runoffCellSize = 16;
         public int runoffSampleStride = 4;
