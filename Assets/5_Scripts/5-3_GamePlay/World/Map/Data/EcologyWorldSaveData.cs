@@ -347,6 +347,8 @@ public partial class EcologyRuleSaveData
     public double CompanionOffsetY;
     public double CompanionMinRadius;
     public double CompanionMaxRadius;
+    // 新增字段放在旧字段末尾，避免改变旧 MemoryPack 数据的字段顺序。
+    public double MinRiverFloodplainStrength;
 
     #endregion
 
@@ -369,6 +371,7 @@ public partial class EcologyRuleSaveData
             MaxPrecipitation = snapshot.MaxPrecipitation,
             MinHeight = snapshot.MinHeight,
             MaxHeight = snapshot.MaxHeight,
+            MinRiverFloodplainStrength = snapshot.MinRiverFloodplainStrength,
             CompanionOnly = snapshot.CompanionOnly,
             CompanionHostTag = snapshot.CompanionHostTag,
             CompanionSpawnChance = snapshot.CompanionSpawnChance,
@@ -406,7 +409,8 @@ public partial class EcologyRuleSaveData
             CompanionOffsetX,
             CompanionOffsetY,
             CompanionMinRadius,
-            CompanionMaxRadius);
+            CompanionMaxRadius,
+            MinRiverFloodplainStrength);
     }
 
     #endregion

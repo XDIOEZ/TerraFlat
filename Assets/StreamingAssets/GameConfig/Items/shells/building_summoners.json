@@ -423,7 +423,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Door_Stone_Close.png[Door_Stone_Close]",
+        "spriteAddress": "Assets/6_Art/Building/Door_Stone_Close.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": -0.5,
@@ -540,7 +540,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Door_Wood_Close.png[Door_Wood_Close]",
+        "spriteAddress": "Assets/6_Art/Building/Door_Wood_Close.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": -0.5,
@@ -657,7 +657,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Meatrack.png[Meatrack]",
+        "spriteAddress": "Assets/6_Art/Building/Meatrack.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -774,7 +774,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png[Wall_Stone_Medium]",
+        "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": -0.5,
@@ -1134,7 +1134,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/帐篷.png[帐篷]",
+        "spriteAddress": "Assets/6_Art/item/帐篷.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1251,7 +1251,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png[Wall_Stone_Medium]",
+        "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": -0.5,
@@ -1359,7 +1359,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Wall_Wood_Medium.png[Wall_Wood_Medium]",
+        "spriteAddress": "Assets/6_Art/Building/Wall_Wood_Medium.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": -0.5,
@@ -1569,6 +1569,13 @@
         "ItemSpecialData": "",
         "inHand": false
       }
+    },
+    {
+      "id": "SparkMaker_Summoner",
+      "sourcePrefab": "Assets/2_Prefabs/Tools/Summoners/SparkMaker_Summoner.prefab",
+      "shellPrefab": "SparkMaker_Summoner",
+      "gameName": "钻木取火工具",
+      "description": "用于放置钻木取火设施的工具。"
     }
   ]
 }

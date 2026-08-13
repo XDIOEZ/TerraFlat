@@ -477,6 +477,8 @@ namespace FlatWorld.Editor.ContentWorkshop
         public float Volume = 1f;
         public bool CanBePickedUp = true;
         public Color Tint = Color.white;
+        /// <summary>SpriteRenderer 绕 Z 轴的本地旋转角度，单位为度。</summary>
+        public float RotationDegrees;
         public bool FlipX;
         public bool FlipY;
         public string Tags = string.Empty;
@@ -485,6 +487,47 @@ namespace FlatWorld.Editor.ContentWorkshop
         public bool AddCombatAbility;
         public bool AddEquipmentAbility;
         public float Damage = 5f;
+
+        #region 食物参数
+
+        /// <summary>食物提供的碳水化合物数值。</summary>
+        public float FoodCarbohydrates = 40f;
+        /// <summary>食物提供的碳水化合物容量上限。</summary>
+        public float FoodMaxCarbohydrates = 40f;
+        /// <summary>食物提供的脂肪数值。</summary>
+        public float FoodFat = 1f;
+        /// <summary>食物提供的脂肪容量上限。</summary>
+        public float FoodMaxFat = 1f;
+        /// <summary>食物提供的蛋白质数值。</summary>
+        public float FoodProtein = 1f;
+        /// <summary>食物提供的蛋白质容量上限。</summary>
+        public float FoodMaxProtein = 1f;
+        /// <summary>食物提供的水分数值。</summary>
+        public float FoodWater = 55f;
+        /// <summary>食物提供的水分容量上限。</summary>
+        public float FoodMaxWater = 55f;
+        /// <summary>食物提供的维生素数值。</summary>
+        public float FoodVitamins = 20f;
+        /// <summary>食物提供的维生素容量上限。</summary>
+        public float FoodMaxVitamins = 20f;
+        /// <summary>完整吃掉一份食物所需的进食次数。</summary>
+        public float FoodMaxEatingProgress = 3f;
+        /// <summary>营养自然消耗速度。</summary>
+        public float FoodNutritionConsumeSpeed;
+        /// <summary>水分自然消耗倍率。</summary>
+        public float FoodWaterConsumeSpeedRate;
+        /// <summary>总体营养消耗倍率。</summary>
+        public float FoodNutritionConsumeRate;
+        /// <summary>是否启用食物腐败。</summary>
+        public bool FoodEnableSpoilage = true;
+        /// <summary>食物腐败触发间隔，单位为秒。</summary>
+        public float FoodSpoilageIntervalSeconds = 1800f;
+        /// <summary>食物腐败后替换成的物品 ID。</summary>
+        public string FoodSpoilageTargetItemId = "Meat_Rotten";
+        /// <summary>食用方式：0 为固体，1 为饮品。</summary>
+        public int FoodConsumeKind;
+
+        #endregion
 
         public void ResetForTemplate(WorkshopItemTemplate template)
         {
@@ -506,6 +549,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             };
             CanBePickedUp = true;
             Tint = Color.white;
+            RotationDegrees = 0f;
             FlipX = false;
             FlipY = false;
             Tags = string.Empty;
@@ -514,6 +558,25 @@ namespace FlatWorld.Editor.ContentWorkshop
             AddCombatAbility = template.Kind is WorkshopItemTemplateKind.Tool or WorkshopItemTemplateKind.Weapon;
             AddEquipmentAbility = template.Kind == WorkshopItemTemplateKind.Equipment;
             Damage = template.Kind == WorkshopItemTemplateKind.Weapon ? 10f : 5f;
+
+            FoodCarbohydrates = 40f;
+            FoodMaxCarbohydrates = 40f;
+            FoodFat = 1f;
+            FoodMaxFat = 1f;
+            FoodProtein = 1f;
+            FoodMaxProtein = 1f;
+            FoodWater = 55f;
+            FoodMaxWater = 55f;
+            FoodVitamins = 20f;
+            FoodMaxVitamins = 20f;
+            FoodMaxEatingProgress = 3f;
+            FoodNutritionConsumeSpeed = 0f;
+            FoodWaterConsumeSpeedRate = 0f;
+            FoodNutritionConsumeRate = 0f;
+            FoodEnableSpoilage = true;
+            FoodSpoilageIntervalSeconds = 1800f;
+            FoodSpoilageTargetItemId = "Meat_Rotten";
+            FoodConsumeKind = 0;
             Id = WorkshopIdUtility.CreateTimestampId("item");
         }
 

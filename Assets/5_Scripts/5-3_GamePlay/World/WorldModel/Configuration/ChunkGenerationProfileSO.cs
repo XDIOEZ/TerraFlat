@@ -19,6 +19,8 @@ public sealed class EcologySpawnRuleConfig
     [LabelText("最高降水"), Range(0f, 1f)] public float MaxPrecipitation = 1f;
     [LabelText("最低高度"), Range(0f, 1f)] public float MinHeight;
     [LabelText("最高高度"), Range(0f, 1f)] public float MaxHeight = 1f;
+    [LabelText("最低河岸影响"), Range(0f, 1f), Tooltip("大于 0 时只在河流冲积影响带内生成。")]
+    public float MinRiverFloodplainStrength;
     [LabelText("提供宿主标签")] public List<string> ProvidedTags = new();
     [LabelText("仅伴生物")] public bool CompanionOnly;
     [LabelText("宿主标签")] public string CompanionHostTag;
@@ -51,7 +53,8 @@ public sealed class EcologySpawnRuleConfig
             CompanionOffsetX,
             CompanionOffsetY,
             CompanionMinRadius,
-            CompanionMaxRadius);
+            CompanionMaxRadius,
+            MinRiverFloodplainStrength);
     }
 }
 

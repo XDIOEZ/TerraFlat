@@ -750,10 +750,13 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	protected void MoveAwayFrom(Vector3 sourcePosition, float distance)
 	{
 		Vector2 awayDir = WorldTopologyRuntime.ShortestDelta(sourcePosition, transform.position).normalized;
-		MoveTo(WorldTopologyRuntime.NormalizePosition(transform.position + (Vector3)(awayDir * distance)));
+		Vector3 targetPosition = WorldTopologyRuntime.NormalizePosition(
+			transform.position + (Vector3)(awayDir * distance));
+		MoveTo(targetPosition);
+		FaceTarget(targetPosition);
 	}
 
-	/// <summary>面向目标方向（不移动，仅设置朝向）。攻击前可立即完成翻转。</summary>
+	/// <summary>面向目标方向（不移动、不修改移动目标）。攻击前可立即完成翻转。</summary>
 	protected void FaceTarget(Vector3 targetPosition, bool immediate = false)
 	{
 		Vector2 direction = WorldTopologyRuntime.ShortestDelta(transform.position, targetPosition);
@@ -763,7 +766,6 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		}
 
 		direction.Normalize();
-		_mover.TargetPosition = (Vector2)transform.position + direction;
 
 		if (_turnBody == null)
 		{

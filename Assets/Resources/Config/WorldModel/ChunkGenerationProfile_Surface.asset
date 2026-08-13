@@ -272,7 +272,7 @@ MonoBehaviour:
   - RuleId: surface.forest.bush
     ItemId: Bush
     ItemCount: 1
-    SpawnChance: 0.000225
+    SpawnChance: 0.00045
     SpawnChanceMultiplier: 1
     BiomeMask: 32
     MinTemperature: 0
@@ -352,7 +352,49 @@ MonoBehaviour:
   - RuleId: surface.grassland.bush
     ItemId: Bush
     ItemCount: 1
-    SpawnChance: 0.0001
+    SpawnChance: 0.0002
+    SpawnChanceMultiplier: 1
+    BiomeMask: 16
+    MinTemperature: 0
+    MaxTemperature: 1
+    MinPrecipitation: 0
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    ProvidedTags:
+    - Bush
+    CompanionOnly: 0
+    CompanionHostTag:
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
+  - RuleId: surface.grassland.stick
+    ItemId: Stick_Wood
+    ItemCount: 1
+    SpawnChance: 0
+    SpawnChanceMultiplier: 1
+    BiomeMask: 16
+    MinTemperature: 0
+    MaxTemperature: 1
+    MinPrecipitation: 0
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    MinRiverFloodplainStrength: 0
+    ProvidedTags: []
+    CompanionOnly: 1
+    CompanionHostTag: Bush
+    CompanionSpawnChance: 0.75
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0.45
+    CompanionMaxRadius: 1.25
+  - RuleId: surface.grassland.stone
+    ItemId: Mine_Stone
+    ItemCount: 1
+    SpawnChance: 0.00005
     SpawnChanceMultiplier: 1
     BiomeMask: 16
     MinTemperature: 0
@@ -369,18 +411,19 @@ MonoBehaviour:
     CompanionOffsetY: 0
     CompanionMinRadius: 0
     CompanionMaxRadius: 0
-  - RuleId: surface.grassland.stone
-    ItemId: Mine_Stone
+  - RuleId: surface.river.oreStone
+    ItemId: Ore_Stone
     ItemCount: 1
-    SpawnChance: 0.00005
+    SpawnChance: 0.035
     SpawnChanceMultiplier: 1
-    BiomeMask: 16
+    BiomeMask: 0
     MinTemperature: 0
     MaxTemperature: 1
     MinPrecipitation: 0
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0.05
     ProvidedTags: []
     CompanionOnly: 0
     CompanionHostTag:
@@ -472,7 +515,27 @@ MonoBehaviour:
   - RuleId: surface.stone.stone
     ItemId: Mine_Stone
     ItemCount: 1
-    SpawnChance: 0.00005
+    SpawnChance: 0.0005
+    SpawnChanceMultiplier: 1
+    BiomeMask: 128
+    MinTemperature: 0
+    MaxTemperature: 1
+    MinPrecipitation: 0
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    ProvidedTags: []
+    CompanionOnly: 0
+    CompanionHostTag:
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
+  - RuleId: surface.stone.oreStone
+    ItemId: Ore_Stone
+    ItemCount: 1
+    SpawnChance: 0.0005
     SpawnChanceMultiplier: 1
     BiomeMask: 128
     MinTemperature: 0

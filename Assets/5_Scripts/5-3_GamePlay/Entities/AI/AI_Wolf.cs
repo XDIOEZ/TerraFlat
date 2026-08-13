@@ -508,11 +508,12 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	{
 		if (_currentThreat == null) { StopMove(); return; }
 
-		// 追击期间持续面向玩家，避免寻路移动时保留旧朝向而倒着奔跑。
-		FaceTarget(_currentThreat.transform.position);
-		MoveTo(_hasChaseFormationTarget
+		// 编队追击时以实际编队目标为准，保证狼的头朝向真实行进方向。
+		Vector3 chaseTarget = _hasChaseFormationTarget
 			? _chaseFormationTarget
-			: _currentThreat.transform.position);
+			: _currentThreat.transform.position;
+		MoveTo(chaseTarget);
+		FaceTarget(chaseTarget);
 		TryCallNearbyWolves();
 	}
 

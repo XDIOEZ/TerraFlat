@@ -736,7 +736,9 @@ public void HotReloadAllResources()
         return ItemDefinitions.TryGetValue(itemId, out definition);
     }
 
-    /// <summary>获取物品界面显示信息；JSON 定义优先，旧物品回退到独立 Prefab。</summary>
+    /// <summary>
+    /// 获取物品界面显示信息；显式 JSON 图标优先，缺失时回退到物品外壳 Prefab 的 SpriteRenderer。
+    /// </summary>
     public bool TryGetItemPresentation(string itemId, out string displayName, out Sprite sprite)
     {
         displayName = string.Empty;
@@ -749,20 +751,46 @@ public void HotReloadAllResources()
         {
             displayName = definition.DisplayName;
             sprite = definition.Sprite;
-            return true;
+            if (sprite != null)
+                return true;
+
+            // JSON 物品可能只描述玩法和外壳，图标继续复用外壳上的现有 SpriteRenderer。
+            return TryGetPrefabPresentation(
+                requestedId,
+                definition.ShellPrefab,
+                ref displayName,
+                out sprite);
         }
 
-        if (!AllPrefabs.TryGetValue(requestedId, out GameObject prefab) || prefab == null)
+        return TryGetPrefabPresentation(requestedId, null, ref displayName, out sprite);
+    }
+
+    /// <summary>从物品外壳读取旧 Prefab 图标，兼容未填写 visual.spriteAddress 的物品。</summary>
+    private bool TryGetPrefabPresentation(
+        string itemId,
+        GameObject preferredPrefab,
+        ref string displayName,
+        out Sprite sprite)
+    {
+        sprite = null;
+        GameObject prefab = preferredPrefab;
+        if (prefab == null && !AllPrefabs.TryGetValue(itemId, out prefab))
+            return false;
+        if (prefab == null)
             return false;
 
         Item item = prefab.GetComponent<Item>() ?? prefab.GetComponentInChildren<Item>(true);
-        displayName = !string.IsNullOrWhiteSpace(item?.itemData?.GameName)
-            ? item.itemData.GameName
-            : requestedId;
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            displayName = !string.IsNullOrWhiteSpace(item?.itemData?.GameName)
+                ? item.itemData.GameName
+                : itemId;
+        }
+
         sprite = item?.Sprite != null
             ? item.Sprite.sprite
             : prefab.GetComponentInChildren<SpriteRenderer>(true)?.sprite;
-        return item != null;
+        return sprite != null;
     }
 
     /// <summary>按物品 ID 创建数据；JSON 定义优先，未迁移物品回退到旧 Prefab。</summary>

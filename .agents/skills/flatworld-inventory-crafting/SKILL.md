@@ -30,6 +30,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 
 - 覆盖满包、回滚、镜像/Tag/紧凑网格、快捷栏/手持同步、输入锁和作物存档往返。
 - UI 契约联动 UI Skill；Item 生命周期联动 Item Skill；配方/农业存档联动 Data Skill。
+- JSON 物品迁移时可以暂不填写 `visual` 图标；库存槽位的统一显示入口必须回退到 shell Prefab 的 `SpriteRenderer`，否则已有物品会在快捷栏中变成空槽。
 - 默认不主动跑测试；需要时运行 `InventoryCrafting.Smoke`，专项用 `.Core`/`.Agriculture`。测试目录：`Assets/GameTest/InventoryCrafting/`。
 
 ## Skill 维护原则

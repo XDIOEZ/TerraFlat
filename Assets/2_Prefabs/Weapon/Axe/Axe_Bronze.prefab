@@ -139,7 +139,7 @@ MonoBehaviour:
   OnDurabilityModified:
     _PersistentCalls: []
   updateInterval: 0
-  Data:
+  data:
     IDName: Axe_Bronze
     GameName: Axe_Bronze
     Description: "\u7269\u54C1\u540D\u79F0\uFF1AAxe_Bronze\n\u7269\u54C1\u63CF\u8FF0\uFF1A\n\u7269\u54C1\u4F53\u79EF\uFF1A2\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1000\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue\n\u7269\u54C1\u6807\u7B7E\uFF1ATagDictionary:\r\n 
@@ -231,7 +231,6 @@ MonoBehaviour:
   idleAnimationName: Idle_0
   attackAnimationNames:
   - Attack_2
-  - Attack_1
   comboWindowOverride: -1
   comboWindowGrace: 0.05
   loopComboOnHold: 1

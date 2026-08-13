@@ -181,6 +181,32 @@ public static class ItemDefinitionCatalogLoader
             }
         }
 
+#if UNITY_EDITOR
+        // Fast Mode 下内置 Prefab 直接读取当前 AssetDatabase，避免旧 Locator 进入 AssetDatabaseProvider。
+        foreach (KeyValuePair<string, string> pair in shellAddresses)
+        {
+            AssetDatabase.ImportAsset(
+                pair.Value,
+                ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            GameObject shell = AssetDatabase.LoadAssetAtPath<GameObject>(pair.Value);
+            Item shellItem = shell != null ? shell.GetComponent<Item>() : null;
+            if (shellItem?.itemData == null)
+            {
+                string componentTypes = shell == null
+                    ? "<none>"
+                    : string.Join(",", shell.GetComponents<Component>()
+                        .Where(component => component != null)
+                        .Select(component => component.GetType().Name));
+                failed?.Invoke(new InvalidDataException(
+                    $"内置物品外壳 Prefab 无效：{pair.Key} → {pair.Value}；" +
+                    $"result={shell?.name ?? "<null>"}，" +
+                    $"components={componentTypes}，item={shellItem?.GetType().Name ?? "<null>"}，" +
+                    $"itemData={(shellItem?.itemData == null ? "null" : shellItem.itemData.IDName)}"));
+                yield break;
+            }
+            gameRes.RegisterPrefabAlias(pair.Key, shell);
+        }
+#else
         var shellHandles = new Dictionary<string, AsyncOperationHandle<GameObject>>(
             StringComparer.OrdinalIgnoreCase);
         foreach (KeyValuePair<string, string> pair in shellAddresses)
@@ -192,13 +218,6 @@ public static class ItemDefinitionCatalogLoader
         foreach (KeyValuePair<string, AsyncOperationHandle<GameObject>> pair in shellHandles)
         {
             GameObject shell = pair.Value.Result;
-#if UNITY_EDITOR
-            // Editor 直接读取当前 AssetDatabase，避免已初始化的 Addressables locator 复用旧 Bundle。
-            AssetDatabase.ImportAsset(
-                shellAddresses[pair.Key],
-                ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
-            shell = AssetDatabase.LoadAssetAtPath<GameObject>(shellAddresses[pair.Key]) ?? shell;
-#endif
             Item shellItem = shell != null ? shell.GetComponent<Item>() : null;
             if (pair.Value.Status != AsyncOperationStatus.Succeeded || shellItem?.itemData == null)
             {
@@ -216,12 +235,27 @@ public static class ItemDefinitionCatalogLoader
             }
             gameRes.RegisterPrefabAlias(pair.Key, shell);
         }
+#endif
 
         string[] addresses = dtos
             .Where(dto => !dto.Abstract && !string.IsNullOrWhiteSpace(dto.Visual?.SpriteAddress))
             .Select(dto => dto.Visual.SpriteAddress.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+        var sprites = new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
+#if UNITY_EDITOR
+        // Fast Mode 下直接读取 AssetDatabase，绕过 Addressables 1.22.3 的子资源空引用缺陷。
+        foreach (string address in addresses)
+        {
+            if (!TryLoadEditorSprite(address, out Sprite sprite, out string error))
+            {
+                failed?.Invoke(new InvalidDataException(error));
+                yield break;
+            }
+
+            sprites[address] = sprite;
+        }
+#else
         var handles = new Dictionary<string, AsyncOperationHandle<Sprite>>(StringComparer.OrdinalIgnoreCase);
         foreach (string address in addresses)
             handles[address] = Addressables.LoadAssetAsync<Sprite>(address);
@@ -233,7 +267,6 @@ public static class ItemDefinitionCatalogLoader
             yield return null;
         }
 
-        var sprites = new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
         foreach (KeyValuePair<string, AsyncOperationHandle<Sprite>> pair in handles)
         {
             if (pair.Value.Status != AsyncOperationStatus.Succeeded || pair.Value.Result == null)
@@ -243,6 +276,7 @@ public static class ItemDefinitionCatalogLoader
             }
             sprites[pair.Key] = pair.Value.Result;
         }
+#endif
 
         var definitions = new List<RuntimeItemDefinition>(dtos.Count);
         try
@@ -466,6 +500,95 @@ public static class ItemDefinitionCatalogLoader
 
     #endregion
 
+#if UNITY_EDITOR
+    #region 编辑器 Sprite 解析
+
+    /// <summary>
+    /// 编辑器 Fast Mode 直接解析 Sprite，避免 Addressables 1.22.3 的 AssetDatabaseProvider 子资源空引用。
+    /// </summary>
+    public static bool TryLoadEditorSprite(string address, out Sprite sprite, out string error)
+    {
+        sprite = null;
+        error = null;
+
+        string key = address?.Trim();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            error = "Sprite Addressable 不能为空。";
+            return false;
+        }
+
+        string assetKey = key;
+        string subObjectName = null;
+        int closeBracket = key.LastIndexOf(']');
+        int openBracket = closeBracket > 0 ? key.LastIndexOf('[', closeBracket) : -1;
+        if (openBracket > 0 && closeBracket == key.Length - 1)
+        {
+            assetKey = key.Substring(0, openBracket);
+            subObjectName = key.Substring(openBracket + 1, closeBracket - openBracket - 1);
+        }
+
+        string assetPath = assetKey.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase)
+            ? assetKey.Replace('\\', '/')
+            : null;
+        if (string.IsNullOrWhiteSpace(assetPath))
+        {
+            error = $"Sprite Addressable '{key}' 不是可直接读取的 Assets 路径。";
+            return false;
+        }
+
+        UnityEngine.Object mainAsset = AssetDatabase.LoadMainAssetAtPath(assetPath);
+        if (mainAsset == null)
+        {
+            AssetDatabase.ImportAsset(
+                assetPath,
+                ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            mainAsset = AssetDatabase.LoadMainAssetAtPath(assetPath);
+        }
+
+        if (mainAsset == null)
+        {
+            error = $"Sprite Addressable '{key}' 的主资源无法加载：{assetPath}。";
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(subObjectName))
+        {
+            sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        }
+        else
+        {
+            Sprite mainSprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+            if (mainSprite != null && string.Equals(mainSprite.name, subObjectName, StringComparison.Ordinal))
+                sprite = mainSprite;
+
+            if (sprite == null)
+            {
+                foreach (UnityEngine.Object representation in
+                         AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath))
+                {
+                    if (representation is Sprite candidate &&
+                        string.Equals(candidate.name, subObjectName, StringComparison.Ordinal))
+                    {
+                        sprite = candidate;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (sprite == null)
+        {
+            error = $"Sprite Addressable '{key}' 找不到子资源：{assetPath}[{subObjectName}]。";
+            return false;
+        }
+
+        return true;
+    }
+
+    #endregion
+#endif
+
     #region 定义继承
 
     public static List<ItemDefinitionDto> ResolveDefinitions(string json)
@@ -654,7 +777,10 @@ public static class ItemDefinitionCatalogLoader
             modulePrefabIds.Add(moduleName, moduleId);
         }
 
-        Sprite sprite = ResolveSprite(dto.Visual?.SpriteAddress, id, preloadedSprites);
+        // Actor 由 AnimatorController 驱动 SpriteRenderer，永远不再解析 Sprite 子资源地址。
+        Sprite sprite = isActor
+            ? null
+            : ResolveSprite(dto.Visual?.SpriteAddress, id, preloadedSprites);
         RuntimeAnimatorController animatorController = ResolveAnimatorController(
             dto.Visual?.AnimatorControllerAddress,
             id,
@@ -766,6 +892,15 @@ public static class ItemDefinitionCatalogLoader
             throw new InvalidDataException($"物品 {itemId} 找不到预加载 Sprite：{key}");
         }
 
+#if UNITY_EDITOR
+        if (key.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+        {
+            if (TryLoadEditorSprite(key, out Sprite editorSprite, out string editorError))
+                return editorSprite;
+
+            throw new InvalidDataException($"物品 {itemId} 的 Sprite 无法解析：{editorError}");
+        }
+#endif
         AsyncOperationHandle<Sprite> handle = Addressables.LoadAssetAsync<Sprite>(key);
         Sprite sprite = handle.WaitForCompletion();
         if (handle.Status != AsyncOperationStatus.Succeeded || sprite == null)
