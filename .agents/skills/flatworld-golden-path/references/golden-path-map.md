@@ -43,6 +43,7 @@
 | `player.spawn-land` | Player/Map | 断言玩家出生在权威可走陆地 |
 | `player.interaction-retry` | Player Interaction | 连续两次调用真实交互入口 |
 | `player.run-transition` | Player | 走路、奔跑、惯性与停止 |
+| `player.mobile-controls` | Player/UI/Combat | 自定义手机设备、移动/朝向并行、攻击语义分流与输入锁清理 |
 | `player.admin-move-speed` | Player | 管理员移速倍率写入与恢复 |
 | `player.admin-invincibility` | Player/Combat | 无敌开关与真实伤害 |
 | `combat.player-respawn` | Combat/Dimension | 濒死、主世界路由与复活 |
@@ -66,7 +67,7 @@
 | `world.wrap` | World/Map | 有限世界跨边界环绕与恢复 |
 | `save.auto` | Data Save | 分帧快照、后台写盘与输入健康 |
 
-水文覆盖通过 `WorldGenerationRuntimeHooks` 同时兼容旧 MapCore 与新版 WorldModel Profile。默认黄金路径已启用确定性强化水文；新版配置除区域、径流、起流量与宽度外，还显式包含 `minimumVisibleCourseLength`、`tributaryStartFlow`、`floodplainStartFlow`。Hook 必须在出生搜索和生成配置冻结前共同应用，退出重进后保持相同指纹。
+水文覆盖通过 `WorldGenerationRuntimeHooks` 同时兼容旧 MapCore 与新版 WorldModel Profile。默认黄金路径不安装水文覆盖，直接使用正式 `ChunkGenerationProfile_Surface`；只有明确的水文调参实验才临时启用 `hydrology.overrideGeneration`。覆盖配置除区域、径流、起流量与宽度外，还显式包含 `minimumVisibleCourseLength`、`tributaryStartFlow`、`floodplainStartFlow`。Hook 必须在出生搜索和生成配置冻结前共同应用，退出重进后保持相同指纹。
 
 ## 运行产物与审计
 
@@ -115,7 +116,7 @@
 | 角色气泡发言 | `OnWorldReady` 调用玩家 `CharacterSoliloquyController.Say` | Presenter 接受请求并同步触发 `SpeechShown` | 取消临时事件订阅，短时气泡自行结束 |
 | 时间与天气切换 | `OnWorldReady` 推进当前场景时间并切换为确定强度降雨 | 时间确实推进，`WeatherMgr` 进入有效降雨 | `finally` 恢复原时间、天气类型和强度 |
 | 已加载网格寻路 | `OnWorldReady` 在玩家周围选取确定可走格并提交 `WorldNavigationManager.RequestPath`；`TickWorldReadyScenarios` 等异步回调 | 路径成功、到达目标且至少包含一个 Waypoint | 未完成请求在 Cleanup 取消 |
-| WorldModel 空闲预取、协程表现与生物显隐 | `OnWorldReady` 检查已完成外圈数据和预取并发；往返前按 `ItemMgr.InstantiateItem(...) → Load()` 创建真实 Chicken，原长距离阶段驱动起始区块离开并重新进入可见圈 | 预取实际并发不超过 1；已完成外圈数据 Dormant 且无三类租约；View 解绑后 Chicken inactive，重绑后恢复 active；往返复用同一模型且租约/订阅不重复 | 通过 `ItemMgr.DespawnItem()` 清理测试生物并清空场景引用，生产窗口自行回收 View 与排队项 |
+| WorldModel 空闲预取、协程表现与生物显隐 | `OnWorldReady` 检查已完成外圈数据和预取并发；往返前按 `ItemMgr.InstantiateItem(...) → Load()` 创建真实 Chicken，并获取只绕过生态数量/距离回收的临时租约；原长距离阶段驱动起始区块离开并重新进入可见圈 | 预取实际并发不超过 1；已完成外圈数据 Dormant 且无三类租约；View 解绑后同 GUID Chicken 仍在运行时注册表且 inactive，重绑后同一实例恢复 active；往返复用同一模型且租约/订阅不重复 | 先释放生态回收租约，再通过 `ItemMgr.DespawnItem()` 清理测试生物；失败路径同样执行，生产窗口自行回收 View 与排队项 |
 | 燃烧 Buff | 首次 `OnTraversalTick` 通过 `BuffManager.AddBuff(BurningBuffIds.Burning)` 施加 | 后续移动 Tick 观察玩家生命下降；`OnChunkReady` 确认定义仍注册且至少发生一次 Tick | 移除燃烧并恢复测试前生命值 |
 | 有限世界右边界环绕 | `OnWorldReady` 后、首次截图和长距离移动前，将真实玩家移动到右边界并通过 `Mover.Move` 越界 | 等待规范目标 Chunk Ready，验证环绕余量、玩家数据、Chunk 字典和地图存档键；恢复原位置并再次等待原 Chunk Ready | 通过和失败路径都恢复位置、速度与移动速度 |
 | WorldModel 旧版气候、有序 Biome、二维石地山地、D∞ 河流、湖泊、冲积平原与草地表现 | `OnWorldReady` 先核对 `world.noiseScale` 已进入纯 Profile 及河流距离倍率，再扫描已绑定模型区块；后续在每次 `OnChunkReady` 累积观察 | 断言独立温度通道按 Profile 映射摄氏值、`basePrecipitation/precipitation` 出现地形降雨差异、`windX/windY` 为单位向量，并用 `SurfaceBiomeClassifier` 核对旧有序群系；`mountain` 与该分类器的 Stone 结果/石地 Tile 一致，淡水 `riverDepth/riverFlow`、`riverKind`、湖泊 `riverSurfaceLevel`（遇到湖泊时）、低坡 `riverFloodplain` 与草状态存在，并确认对应 Ground/Grass Tilemap 已实际写入 Tile | 仅清空场景累计状态，不修改生产世界 |

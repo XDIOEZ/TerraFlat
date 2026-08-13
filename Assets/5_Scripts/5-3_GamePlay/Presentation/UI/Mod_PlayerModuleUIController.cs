@@ -6,6 +6,10 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
+/// <summary>
+/// 管理玩家模块的可选 UI 入口。当前版本不在游戏内自动创建右上角统一管理按钮，
+/// 但保留手动重建和清理逻辑，避免后续恢复功能时改变模块数据结构。
+/// </summary>
 public class Mod_PlayerModuleUIController : Module
 {
 #region 基础参数
@@ -34,7 +38,8 @@ public class Mod_PlayerModuleUIController : Module
 
     public override void Load()
     {
-        RebuildUIButtons();
+        // 暂时移除右上角角色模块统一管理入口，保留控制器以便后续恢复时不改变数据结构。
+        ClearButtons();
     }
 
     public override void Save()

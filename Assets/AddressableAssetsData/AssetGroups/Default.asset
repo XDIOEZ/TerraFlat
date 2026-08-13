@@ -95,6 +95,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 08640f772c27ee944929981f9566590b
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/System/UI_DimensionLoading.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 08d3d4e1050f6084f867e5cf9aa1e058
     m_Address: Assets/6_Art/Food/Item_Food_Fruit.png
     m_ReadOnly: 0
@@ -783,6 +789,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 70d725d8194078249a195891ee61da07
     m_Address: Assets/2_Prefabs/2-1_UI/Menu_UI/UI_GameSaveManager.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7213ccb23a9d80848845ec3342cb9e9a
+    m_Address: Assets/2_Prefabs/2-1_UI/Runtime/Mobile/UI_MobileControls.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab

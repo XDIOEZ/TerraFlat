@@ -88,6 +88,23 @@ namespace FlatWorld.GameTest.Dimension
             Assert.That(fixture.Receiver.HasActiveTileEffects, Is.True);
         }
 
+        [Test]
+        [Category("Dimension.TileEffects")]
+        public void RuntimeSaltWaterAppliesCapabilityOnEntryAndRemovesOnExit()
+        {
+            using TileEffectFixture fixture = new TileEffectFixture(80f);
+
+            Assert.That(fixture.BuffManager.HasBuff(fixture.SaltBuff.Id), Is.True,
+                "进入盐水地块后必须自动获得位于盐水中 Buff。");
+            Assert.That(fixture.BuffManager.HasBuff(FreshWaterBuffIds.Clean), Is.False);
+            Assert.That(fixture.BuffManager.HasBuff(FreshWaterBuffIds.Dirty), Is.False);
+
+            fixture.Receiver.PrepareForWorldTransition();
+
+            Assert.That(fixture.BuffManager.HasBuff(fixture.SaltBuff.Id), Is.False,
+                "离开盐水地块后必须移除位于盐水中 Buff。");
+        }
+
         private sealed class TileEffectFixture : IDisposable
         {
             private const string TestTileId = "Test_DimensionTransitionWater";
@@ -100,16 +117,22 @@ namespace FlatWorld.GameTest.Dimension
             private readonly bool hadPreviousBlock;
             private readonly BuffDefinition previousSlowBuff;
             private readonly bool hadPreviousSlowBuff;
+            private readonly BuffDefinition previousSaltBuff;
+            private readonly bool hadPreviousSaltBuff;
 
             public BuffManager BuffManager { get; }
             public TileEffectReceiver Receiver { get; }
             public BuffDefinition SlowBuff { get; }
+            public BuffDefinition SaltBuff { get; }
 
-            public TileEffectFixture()
+            public TileEffectFixture(float salt = 0f)
             {
                 SlowBuff = BuffCatalogLoader.LoadBuiltInDefinitions()
                     .Single(definition => definition.Id == "水体减速");
+                SaltBuff = BuffCatalogLoader.LoadBuiltInDefinitions()
+                    .Single(definition => definition.Id == SaltWaterBuffIds.InSaltWater);
                 Assert.That(SlowBuff, Is.Not.Null);
+                Assert.That(SaltBuff, Is.Not.Null);
 
                 gameRes = GameRes.Instance;
                 Assert.That(gameRes, Is.Not.Null);
@@ -118,6 +141,11 @@ namespace FlatWorld.GameTest.Dimension
                     out BuffDefinition existingSlowBuff);
                 previousSlowBuff = existingSlowBuff;
                 gameRes.BuffDefinitions[SlowBuff.Id] = SlowBuff;
+                hadPreviousSaltBuff = gameRes.BuffDefinitions.TryGetValue(
+                    SaltBuff.Id,
+                    out BuffDefinition existingSaltBuff);
+                previousSaltBuff = existingSaltBuff;
+                gameRes.BuffDefinitions[SaltBuff.Id] = SaltBuff;
 
                 waterBlock = ScriptableObject.CreateInstance<Tile_Block>();
                 waterBlock.tileItemName = TestTileId;
@@ -139,7 +167,8 @@ namespace FlatWorld.GameTest.Dimension
                 {
                     ID = TestTileId,
                     Name = TestTileId,
-                    deepValue = 0.5f
+                    deepValue = 0.5f,
+                    salt = salt
                 });
 
                 itemObject = new GameObject("DimensionTileEffectTestItem");
@@ -181,6 +210,11 @@ namespace FlatWorld.GameTest.Dimension
                         gameRes.BuffDefinitions[SlowBuff.Id] = previousSlowBuff;
                     else
                         gameRes.BuffDefinitions.Remove(SlowBuff.Id);
+
+                    if (hadPreviousSaltBuff)
+                        gameRes.BuffDefinitions[SaltBuff.Id] = previousSaltBuff;
+                    else
+                        gameRes.BuffDefinitions.Remove(SaltBuff.Id);
                 }
 
                 if (itemObject != null)

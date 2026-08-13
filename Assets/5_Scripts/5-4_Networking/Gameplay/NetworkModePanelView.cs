@@ -19,6 +19,21 @@ namespace FlatWorld.Networking.Gameplay
             if (panelObject == null)
                 return null;
 
+            RectTransform panelRect = panelObject.GetComponent<RectTransform>();
+            if (panelRect != null && parent != null)
+            {
+                // 通用实例化会写入世界坐标，UI 面板挂到 PanelRoot 后必须恢复本地布局。
+                panelRect.SetParent(parent, false);
+                panelRect.anchorMin = Vector2.zero;
+                panelRect.anchorMax = Vector2.one;
+                panelRect.pivot = new Vector2(0.5f, 0.5f);
+                panelRect.sizeDelta = Vector2.zero;
+                panelRect.localPosition = Vector3.zero;
+                panelRect.anchoredPosition = Vector2.zero;
+                panelRect.localRotation = Quaternion.identity;
+                panelRect.localScale = Vector3.one;
+            }
+
             panelObject.name = NetworkPanelKey;
             BasePanel basePanel = panelObject.GetComponent<BasePanel>();
             if (basePanel == null)

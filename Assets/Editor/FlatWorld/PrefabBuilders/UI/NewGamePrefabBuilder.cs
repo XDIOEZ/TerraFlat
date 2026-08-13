@@ -89,11 +89,11 @@ public static class NewGamePrefabBuilder
     private static Image BuildCard(Transform root)
     {
         Image shadow = CreateImage("新世界主卡投影", root, new Color(0f, 0f, 0f, 0.42f));
-        SetRect(shadow.rectTransform, new Vector2(14f, -16f), new Vector2(1200f, 760f), new Vector2(0.5f, 0.5f));
+        SetRect(shadow.rectTransform, new Vector2(14f, -16f), FlatWorldUIPanelMetrics.SharedModalCardSize, new Vector2(0.5f, 0.5f));
         shadow.raycastTarget = false;
 
         Image card = CreateImage("新世界主卡", root, Ink);
-        SetRect(card.rectTransform, Vector2.zero, new Vector2(1200f, 760f), new Vector2(0.5f, 0.5f));
+        SetRect(card.rectTransform, Vector2.zero, FlatWorldUIPanelMetrics.SharedModalCardSize, new Vector2(0.5f, 0.5f));
 
         Outline outline = card.gameObject.AddComponent<Outline>();
         outline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.34f);
@@ -111,15 +111,8 @@ public static class NewGamePrefabBuilder
 
     private static void BuildHeader(Transform card, TMP_FontAsset font)
     {
-        TMP_Text eyebrow = CreateText("新世界眉题", card, "NEW WORLD  /  世界生成", font, 16f, Amber, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(eyebrow.rectTransform, new Vector2(42f, -28f), new Vector2(520f, 26f), new Vector2(0f, 1f));
-        eyebrow.characterSpacing = 3f;
-
         TMP_Text title = CreateText("新世界标题", card, "创建新世界", font, 42f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(title.rectTransform, new Vector2(42f, -60f), new Vector2(600f, 58f), new Vector2(0f, 1f));
-
-        TMP_Text description = CreateText("新世界说明", card, "名称可选；决定这个世界最初的轮廓。", font, 18f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(description.rectTransform, new Vector2(42f, -116f), new Vector2(720f, 30f), new Vector2(0f, 1f));
+        SetRect(title.rectTransform, new Vector2(42f, -38f), new Vector2(700f, 58f), new Vector2(0f, 1f));
 
         CreateButton(card, font, GameManager.NewGameBackButtonKey, "返回主界面", new Vector2(-42f, -42f), new Vector2(170f, 52f), InkSoft, 17f, new Vector2(1f, 1f));
 
@@ -127,7 +120,7 @@ public static class NewGamePrefabBuilder
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
         divider.rectTransform.anchorMax = new Vector2(1f, 1f);
         divider.rectTransform.pivot = new Vector2(0.5f, 1f);
-        divider.rectTransform.anchoredPosition = new Vector2(0f, -162f);
+        divider.rectTransform.anchoredPosition = new Vector2(0f, -112f);
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
     }
@@ -135,20 +128,20 @@ public static class NewGamePrefabBuilder
     private static void BuildIdentity(Transform card, TMP_FontAsset font)
     {
         Image panel = CreatePanelCard("身份与存档区", card);
-        SetRect(panel.rectTransform, new Vector2(42f, -188f), new Vector2(500f, 452f), new Vector2(0f, 1f));
+        SetRect(panel.rectTransform, new Vector2(42f, -138f), new Vector2(620f, 520f), new Vector2(0f, 1f));
 
         CreateStepBadge(panel.transform, font, "STEP 01", new Vector2(24f, -22f));
         TMP_Text heading = CreateText("身份与存档标题", panel.transform, "身份与存档", font, 23f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(heading.rectTransform, new Vector2(24f, -58f), new Vector2(320f, 34f), new Vector2(0f, 1f));
 
-        CreateLabel(panel.transform, font, "玩家名称标签", "玩家名称", "可留空，自动生成数字", new Vector2(24f, -108f), 452f);
-        CreateInput(panel.transform, font, GameManager.NewGamePlayerInputKey, "可选，例如：旅人", string.Empty, new Vector2(24f, -152f), new Vector2(452f, 64f), TMP_InputField.ContentType.Standard);
+        CreateLabel(panel.transform, font, "玩家名称标签", "玩家名称", "可留空，自动生成带前缀的名称", new Vector2(24f, -108f), 572f);
+        CreateInput(panel.transform, font, GameManager.NewGamePlayerInputKey, "可选，例如：旅人", string.Empty, new Vector2(24f, -152f), new Vector2(572f, 64f), TMP_InputField.ContentType.Standard);
 
-        CreateLabel(panel.transform, font, "存档名称标签", "存档名称", "可留空，自动生成数字", new Vector2(24f, -244f), 452f);
-        CreateInput(panel.transform, font, GameManager.NewGameSaveInputKey, "可选，例如：篝火以北", string.Empty, new Vector2(24f, -288f), new Vector2(452f, 64f), TMP_InputField.ContentType.Standard);
+        CreateLabel(panel.transform, font, "存档名称标签", "存档名称", "可留空，自动生成带前缀的名称", new Vector2(24f, -244f), 572f);
+        CreateInput(panel.transform, font, GameManager.NewGameSaveInputKey, "可选，例如：篝火以北", string.Empty, new Vector2(24f, -288f), new Vector2(572f, 64f), TMP_InputField.ContentType.Standard);
 
         Image note = CreateImage("存档命名提示底板", panel.transform, new Color(0.035f, 0.06f, 0.075f, 0.98f));
-        SetRect(note.rectTransform, new Vector2(24f, -380f), new Vector2(452f, 50f), new Vector2(0f, 1f));
+        SetRect(note.rectTransform, new Vector2(24f, -380f), new Vector2(572f, 62f), new Vector2(0f, 1f));
         Image noteAccent = CreateImage("存档命名提示强调线", note.transform, Teal);
         noteAccent.rectTransform.anchorMin = new Vector2(0f, 0f);
         noteAccent.rectTransform.anchorMax = new Vector2(0f, 1f);
@@ -157,26 +150,26 @@ public static class NewGamePrefabBuilder
         noteAccent.rectTransform.sizeDelta = new Vector2(4f, 0f);
         noteAccent.raycastTarget = false;
 
-        TMP_Text noteText = CreateText("存档命名提示", note.transform, "两个名称都可留空；系统会自动填写同一个随机数字。", font, 14f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        TMP_Text noteText = CreateText("存档命名提示", note.transform, "两个名称都可留空；系统会自动填写 Player_ 和 World_ 前缀的随机名称。", font, 14f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
         Stretch(noteText.rectTransform, 18f, 12f, 8f, 8f);
     }
 
     private static void BuildWorldSettings(Transform card, TMP_FontAsset font)
     {
         Image panel = CreatePanelCard("世界参数区", card);
-        SetRect(panel.rectTransform, new Vector2(562f, -188f), new Vector2(596f, 452f), new Vector2(0f, 1f));
+        SetRect(panel.rectTransform, new Vector2(702f, -138f), new Vector2(656f, 520f), new Vector2(0f, 1f));
 
         CreateStepBadge(panel.transform, font, "STEP 02", new Vector2(24f, -22f));
         TMP_Text heading = CreateText("世界参数标题", panel.transform, "世界参数", font, 23f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(heading.rectTransform, new Vector2(24f, -58f), new Vector2(320f, 34f), new Vector2(0f, 1f));
 
-        CreateCompactLabel(panel.transform, font, "星球半径标签", "星球半径", "越大，探索范围越广", new Vector2(24f, -108f), 258f);
-        CreateCompactLabel(panel.transform, font, "噪声缩放标签", "世界坐标缩放", "越小舒展，越大密集", new Vector2(306f, -108f), 266f);
+        CreateCompactLabel(panel.transform, font, "星球半径标签", "星球半径", "越大，探索范围越广", new Vector2(24f, -108f), 286f);
+        CreateCompactLabel(panel.transform, font, "噪声缩放标签", "世界坐标缩放", "越小舒展，越大密集", new Vector2(322f, -108f), 286f);
 
         string defaultRadius = PlanetData.DefaultRadius.ToString(CultureInfo.InvariantCulture);
-        CreateInput(panel.transform, font, GameManager.NewGameRadiusInputKey, defaultRadius, defaultRadius, new Vector2(24f, -164f), new Vector2(258f, 64f), TMP_InputField.ContentType.IntegerNumber);
+        CreateInput(panel.transform, font, GameManager.NewGameRadiusInputKey, defaultRadius, defaultRadius, new Vector2(24f, -164f), new Vector2(286f, 64f), TMP_InputField.ContentType.IntegerNumber);
         string defaultNoiseScale = PlanetData.DefaultNoiseScale.ToString("0.########", CultureInfo.InvariantCulture);
-        CreateInput(panel.transform, font, GameManager.NewGameNoiseInputKey, defaultNoiseScale, defaultNoiseScale, new Vector2(306f, -164f), new Vector2(266f, 64f), TMP_InputField.ContentType.DecimalNumber);
+        CreateInput(panel.transform, font, GameManager.NewGameNoiseInputKey, defaultNoiseScale, defaultNoiseScale, new Vector2(322f, -164f), new Vector2(286f, 64f), TMP_InputField.ContentType.DecimalNumber);
 
         Toggle topologyToggle = CreateToggle(
             panel.transform,
@@ -185,15 +178,11 @@ public static class NewGamePrefabBuilder
             "有限循环世界",
             "越过上下左右边界后从对侧返回；关闭则使用原有无限世界。",
             new Vector2(24f, -242f),
-            new Vector2(548f, 62f));
+            new Vector2(608f, 62f));
         topologyToggle.isOn = true;
 
         Image profile = CreateImage("世界生成概览", panel.transform, new Color(0.035f, 0.06f, 0.075f, 0.98f));
-        SetRect(profile.rectTransform, new Vector2(24f, -316f), new Vector2(548f, 112f), new Vector2(0f, 1f));
-
-        TMP_Text profileEyebrow = CreateText("世界生成概览眉题", profile.transform, "GENERATION PROFILE", font, 12f, Teal, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(profileEyebrow.rectTransform, new Vector2(18f, -14f), new Vector2(320f, 22f), new Vector2(0f, 1f));
-        profileEyebrow.characterSpacing = 2f;
+        SetRect(profile.rectTransform, new Vector2(24f, -316f), new Vector2(608f, 130f), new Vector2(0f, 1f));
 
         TMP_Text seedHint = CreateText("世界种子提示", profile.transform, "留空则随机 · 支持数字或文字", font, 12f, Muted, FontStyles.Normal, TextAlignmentOptions.Right);
         SetRect(seedHint.rectTransform, new Vector2(-18f, -14f), new Vector2(300f, 22f), new Vector2(1f, 1f));
@@ -204,8 +193,8 @@ public static class NewGamePrefabBuilder
             GameManager.NewGameSeedInputKey,
             "留空自动生成随机种子",
             string.Empty,
-            new Vector2(18f, -42f),
-            new Vector2(512f, 52f),
+            new Vector2(18f, -48f),
+            new Vector2(572f, 60f),
             TMP_InputField.ContentType.Standard);
     }
 
@@ -220,10 +209,6 @@ public static class NewGamePrefabBuilder
         divider.raycastTarget = false;
 
         CreateButton(card, font, GameManager.NewGameDifficultyButtonKey, "难度设置  ·  简单", new Vector2(42f, 22f), new Vector2(238f, 66f), InkSoft, 17f, new Vector2(0f, 0f));
-
-        TMP_Text flow = CreateText("新世界流程提示", card, "确认身份  >  调整规则  >  生成世界", font, 14f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(flow.rectTransform, new Vector2(304f, 34f), new Vector2(490f, 34f), new Vector2(0f, 0f));
-        flow.characterSpacing = 1f;
 
         CreateButton(card, font, GameManager.NewGameStartButtonKey, "生成新世界", new Vector2(-42f, 22f), new Vector2(250f, 66f), new Color(0.70f, 0.36f, 0.16f, 1f), 21f, new Vector2(1f, 0f));
     }

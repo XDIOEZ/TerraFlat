@@ -179,6 +179,8 @@ namespace FlatWorld.Localization.Editor
         private static readonly Dictionary<string, string> EnglishUiOverrides =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                { "收起", "Collapse" },
+                { "展开", "Expand" },
                 { "设置", "Settings" },
                 { "继续旅程", "Continue Journey" },
                 { "开始旅程", "Begin Journey" },
@@ -265,6 +267,15 @@ namespace FlatWorld.Localization.Editor
                 { "物品操作", "Item Actions" },
                 { "查看物品信息", "View Item Info" },
                 { "使用物品", "Use Item" },
+                { "手机菜单", "Mobile Menu" },
+                { "使用", "Use" },
+                { "菜单", "Menu" },
+                { "状态", "Status" },
+                { "丢弃一个", "Drop One" },
+                { "丢弃整组", "Drop Stack" },
+                { "再次确认", "Confirm Again" },
+                { "镜头 +", "Camera +" },
+                { "镜头 -", "Camera -" },
                 { "删除", "Delete" },
                 { "重命名", "Rename" },
                 { "篝火", "Campfire" },
@@ -316,7 +327,6 @@ namespace FlatWorld.Localization.Editor
                 { "确定", "OK" },
                 { "是", "Yes" },
                 { "否", "No" },
-                { "玩家_0000", "Player_0000" },
                 { "设置状态", "Settings Status" },
                 { "当前语言：简体中文", "Current language: Simplified Chinese" },
                 { "当前语言：English", "Current language: English" },
@@ -381,8 +391,8 @@ namespace FlatWorld.Localization.Editor
                 { "可直接粘贴 域名:端口；穿透协议必须为", "You can paste domain:port directly; the traversal protocol must be" },
                 { "移动  WASD / 方向键\n关闭  使用右上角按钮", "Move  WASD / Arrow Keys\nClose  Use the top-right button" },
                 { "名称可选；决定这个世界最初的轮廓。", "Name is optional; it determines the initial shape of this world." },
-                { "可留空，自动生成数字", "Leave blank to generate a number automatically" },
-                { "两个名称都可留空；系统会自动填写同一个随机数字。", "Both names may be left blank; the system will fill in the same random number." },
+                { "可留空，自动生成带前缀的名称", "Leave blank to generate a prefixed name automatically" },
+                { "两个名称都可留空；系统会自动填写 Player_ 和 World_ 前缀的随机名称。", "Both names may be left blank; the system will fill in matching Player_ and World_ names." },
                 { "越大，探索范围越广", "Larger values provide a wider exploration range" },
                 { "越小舒展，越大密集", "Smaller values are more spacious; larger values are denser" },
                 { "有限循环世界", "Finite Loop World" },
@@ -504,7 +514,10 @@ namespace FlatWorld.Localization.Editor
                 { "当前：安全多线程高吞吐（{0} 个生成任务并发）。", "Current: safe multithreaded high throughput ({0} generation tasks concurrent)." },
                 { "当前：自动平衡（{0} 个生成任务并发）。", "Current: automatic balance ({0} generation tasks concurrent)." },
                 { "正在切换维度", "Switching Dimension" },
+                { "维度跃迁", "Dimension Travel" },
                 { "正在前往：{0}", "Traveling to: {0}" },
+                { "维度稳定后将自动抵达。", "You will arrive automatically once the dimension stabilizes." },
+                { "未知维度", "Unknown Dimension" },
                 { "正在创建新世界", "Creating New World" },
                 { "正在准备新存档数据…", "Preparing new save data…" },
                 { "正在生成世界种子…", "Generating world seed…" },
@@ -534,7 +547,14 @@ namespace FlatWorld.Localization.Editor
                 { "正在保存当前维度…", "Saving the current dimension…" },
                 { "正在创建目标维度…", "Creating the target dimension…" },
                 { "正在加载目标维度…", "Loading the target dimension…" },
+                { "正在生成目标区块…", "Generating target chunks…" },
                 { "正在固定矿洞出口…", "Securing the cave exit…" },
+                { "正在完成目标维度加载…", "Finalizing the target dimension…" },
+                { "维度切换完成", "Dimension Travel Complete" },
+                { "目标维度已经准备完毕。", "The target dimension is ready." },
+                { "维度切换失败，正在恢复原世界…", "Dimension travel failed; restoring the source world…" },
+                { "维度切换失败，已恢复到原世界。", "Dimension travel failed; the source world was restored." },
+                { "维度切换失败，原世界恢复也发生异常。", "Dimension travel failed, and restoring the source world also encountered an error." },
                 { "{0}绑定已恢复默认值。", "{0} bindings restored to defaults." },
                 { "向下移动", "Move Down" },
                 { "向左移动", "Move Left" },
@@ -716,6 +736,10 @@ namespace FlatWorld.Localization.Editor
         private static int SyncUiEntries(StringTable chineseTable, StringTable englishTable)
         {
             const string uiPrefabRoot = "Assets/2_Prefabs/2-1_UI";
+            string chineseTablePath = AssetDatabase.GetAssetPath(chineseTable);
+            string englishTablePath = AssetDatabase.GetAssetPath(englishTable);
+            if (string.IsNullOrEmpty(chineseTablePath) || string.IsNullOrEmpty(englishTablePath))
+                throw new InvalidOperationException("UI StringTable 缺少稳定资源路径，无法安全扫描 Prefab。");
             string[] prefabGuids = AssetDatabase.FindAssets("t:Prefab", new[] { uiPrefabRoot });
             var syncedKeys = new HashSet<string>(StringComparer.Ordinal);
 
@@ -749,6 +773,11 @@ namespace FlatWorld.Localization.Editor
                     if (prefabRoot != null)
                         PrefabUtility.UnloadPrefabContents(prefabRoot);
                 }
+
+                // Load/UnloadPrefabContents 可能触发资源刷新，使此前缓存的 StringTable 句柄失效。
+                // 每个 Prefab 扫描后按稳定 Asset 路径重新获取，避免后续写表访问已销毁对象。
+                chineseTable = ReloadStringTable(chineseTablePath);
+                englishTable = ReloadStringTable(englishTablePath);
             }
 
             // 同步脚本运行时会使用的模板，避免动态状态文本绕过 UI 表。
@@ -763,7 +792,32 @@ namespace FlatWorld.Localization.Editor
                 syncedKeys.Add(key);
             }
 
+            SyncStableUiEntry(chineseTable, englishTable, "dimension.surface.name", "地表", "Surface");
+            SyncStableUiEntry(chineseTable, englishTable, "dimension.cave.name", "地下矿洞", "Underground Cave");
+            syncedKeys.Add("dimension.surface.name");
+            syncedKeys.Add("dimension.cave.name");
+
             return syncedKeys.Count;
+        }
+
+        private static void SyncStableUiEntry(
+            StringTable chineseTable,
+            StringTable englishTable,
+            string key,
+            string chinese,
+            string english)
+        {
+            SetChineseValue(chineseTable, key, chinese);
+            SetEnglishValue(englishTable, key, english, chinese, key);
+        }
+
+        /// <summary>资源刷新后重新加载 StringTable；句柄仍有效时直接返回。</summary>
+        private static StringTable ReloadStringTable(string assetPath)
+        {
+            StringTable reloaded = AssetDatabase.LoadAssetAtPath<StringTable>(assetPath);
+            return reloaded != null
+                ? reloaded
+                : throw new InvalidOperationException($"无法重新加载 StringTable：{assetPath}");
         }
 
         /// <summary>获取 UI 文本的英文翻译；未覆盖的文本不会把中文带入英语表。</summary>

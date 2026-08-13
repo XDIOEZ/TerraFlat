@@ -9,6 +9,30 @@ public enum DimensionGenerationMode
 }
 
 [Serializable]
+public sealed class DimensionLoadingTheme
+{
+    [Tooltip("加载页低透明度平铺纹理。")]
+    public Sprite BackgroundTexture;
+    [Tooltip("加载页中央维度图标；未配置时使用背景纹理。")]
+    public Sprite Icon;
+    public Color BackgroundColor = new Color(0.055f, 0.06f, 0.07f, 1f);
+    public Color AccentColor = new Color(0.78f, 0.66f, 0.38f, 1f);
+
+    public static DimensionLoadingTheme CreateNeutral()
+    {
+        return new DimensionLoadingTheme();
+    }
+
+    public DimensionLoadingTheme ResolveOrNeutral()
+    {
+        if (BackgroundColor.a > 0f && AccentColor.a > 0f)
+            return this;
+
+        return CreateNeutral();
+    }
+}
+
+[Serializable]
 public sealed class DimensionResourceRule
 {
     public string ItemId;
@@ -34,6 +58,8 @@ public sealed class DimensionDefinition
 {
     public string DimensionId = WorldAddress.SurfaceDimensionId;
     public string DisplayName = "地表";
+    [Tooltip("维度名称在 FlatWorldUI 表中的稳定键；业务维度 ID 不参与显示翻译。")]
+    public string DisplayNameLocalizationKey = "dimension.surface.name";
     public DimensionGenerationMode GenerationMode = DimensionGenerationMode.Surface;
     [Tooltip("主线程创建的纯数据生成配置快照来源。")]
     public ChunkGenerationProfileSO GenerationProfile;
@@ -53,6 +79,9 @@ public sealed class DimensionDefinition
     public bool SuppressWeather;
     public bool EnableMonsterSpawning = true;
 
+    [Header("加载页主题")]
+    public DimensionLoadingTheme LoadingTheme = new();
+
     [Header("矿洞生成")]
     [Range(0f, 1f)] public float CaveEntranceChunkChance = 0.04f;
     [Min(1f)] public float CaveEntranceSafeRadius = 3f;
@@ -69,12 +98,18 @@ public sealed class DimensionDefinition
         {
             DimensionId = WorldAddress.SurfaceDimensionId,
             DisplayName = "地表",
+            DisplayNameLocalizationKey = "dimension.surface.name",
             GenerationMode = DimensionGenerationMode.Surface,
             GenerationProfile = Resources.Load<ChunkGenerationProfileSO>(
                 "Config/WorldModel/ChunkGenerationProfile_Surface"),
             PortalOffset = Vector3.zero,
             PortalTargetDimensionId = WorldAddress.CaveDimensionId,
-            EnableMonsterSpawning = true
+            EnableMonsterSpawning = true,
+            LoadingTheme = new DimensionLoadingTheme
+            {
+                BackgroundColor = new Color(0.075f, 0.145f, 0.075f, 1f),
+                AccentColor = new Color(0.56f, 0.76f, 0.36f, 1f)
+            }
         };
     }
 
@@ -84,6 +119,7 @@ public sealed class DimensionDefinition
         {
             DimensionId = WorldAddress.CaveDimensionId,
             DisplayName = "地下矿洞",
+            DisplayNameLocalizationKey = "dimension.cave.name",
             GenerationMode = DimensionGenerationMode.Cave,
             GenerationProfile = Resources.Load<ChunkGenerationProfileSO>(
                 "Config/WorldModel/ChunkGenerationProfile_Cave"),
@@ -94,6 +130,11 @@ public sealed class DimensionDefinition
             FixedLighting = 0.08f,
             SuppressWeather = true,
             EnableMonsterSpawning = false,
+            LoadingTheme = new DimensionLoadingTheme
+            {
+                BackgroundColor = new Color(0.055f, 0.055f, 0.065f, 1f),
+                AccentColor = new Color(0.95f, 0.62f, 0.22f, 1f)
+            },
             CaveEntranceChunkChance = 0.04f,
             CaveEntranceSafeRadius = 3f,
             CaveFloorTileId = "TileBase_Stone",

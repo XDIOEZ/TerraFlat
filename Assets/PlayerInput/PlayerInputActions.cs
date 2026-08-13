@@ -112,6 +112,24 @@ namespace InputSystem
                     ""initialStateCheck"": false
                 },
                 {
+                    ""name"": ""MobileAim_Player"",
+                    ""type"": ""Value"",
+                    ""id"": ""2b1ae001-38d8-4bb2-9291-7fba61453001"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""MobileAttackAim_Player"",
+                    ""type"": ""Value"",
+                    ""id"": ""2b1ae002-38d8-4bb2-9291-7fba61453002"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true
+                },
+                {
                     ""name"": ""SwitchHotBar_Player"",
                     ""type"": ""Value"",
                     ""id"": ""69d1b644-cfab-421b-ad2b-430736048577"",
@@ -361,12 +379,45 @@ namespace InputSystem
                 },
                 {
                     ""name"": """",
-                    ""id"": ""991e0d5c-ed20-4fa6-8fa4-bce57fe23fdb"",
-                    ""path"": """",
+                    ""id"": ""2b1ae101-38d8-4bb2-9291-7fba61453101"",
+                    ""path"": ""<FlatWorldMobileDevice>/move"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
+                    ""groups"": ""Mobile"",
+                    ""action"": ""Move_Player"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""991e0d5c-ed20-4fa6-8fa4-bce57fe23fdb"",
+                    ""path"": ""<FlatWorldMobileDevice>/attack"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mobile"",
                     ""action"": ""Attack_Player"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""2b1ae102-38d8-4bb2-9291-7fba61453102"",
+                    ""path"": ""<FlatWorldMobileDevice>/aim"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mobile"",
+                    ""action"": ""MobileAim_Player"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""2b1ae103-38d8-4bb2-9291-7fba61453103"",
+                    ""path"": ""<FlatWorldMobileDevice>/attackAim"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mobile"",
+                    ""action"": ""MobileAttackAim_Player"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -853,6 +904,94 @@ namespace InputSystem
                     ""action"": ""Tab"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""2b1ae201-38d8-4bb2-9291-7fba61453201"",
+                    ""path"": ""<FlatWorldMobileDevice>/interact"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mobile"",
+                    ""action"": ""E"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""2b1ae202-38d8-4bb2-9291-7fba61453202"",
+                    ""path"": ""<FlatWorldMobileDevice>/use"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mobile"",
+                    ""action"": ""RightClick"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""2b1ae203-38d8-4bb2-9291-7fba61453203"",
+                    ""path"": ""<FlatWorldMobileDevice>/run"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mobile"",
+                    ""action"": ""ToggleRun"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""2b1ae204-38d8-4bb2-9291-7fba61453204"",
+                    ""path"": ""<FlatWorldMobileDevice>/inventory"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mobile"",
+                    ""action"": ""B"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""2b1ae205-38d8-4bb2-9291-7fba61453205"",
+                    ""path"": ""<FlatWorldMobileDevice>/equipment"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mobile"",
+                    ""action"": ""P"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""2b1ae206-38d8-4bb2-9291-7fba61453206"",
+                    ""path"": ""<FlatWorldMobileDevice>/crafting"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mobile"",
+                    ""action"": ""H"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""2b1ae207-38d8-4bb2-9291-7fba61453207"",
+                    ""path"": ""<FlatWorldMobileDevice>/survival"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mobile"",
+                    ""action"": ""Tab"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""2b1ae208-38d8-4bb2-9291-7fba61453208"",
+                    ""path"": ""<FlatWorldMobileDevice>/settings"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Mobile"",
+                    ""action"": ""ESC"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -884,6 +1023,17 @@ namespace InputSystem
                     ""isOR"": false
                 }
             ]
+        },
+        {
+            ""name"": ""Mobile"",
+            ""bindingGroup"": ""Mobile"",
+            ""devices"": [
+                {
+                    ""devicePath"": ""<FlatWorldMobileDevice>"",
+                    ""isOptional"": false,
+                    ""isOR"": false
+                }
+            ]
         }
     ]
 }");
@@ -891,6 +1041,8 @@ namespace InputSystem
             m_Win10 = asset.FindActionMap("Win10", throwIfNotFound: true);
             m_Win10_Move_Player = m_Win10.FindAction("Move_Player", throwIfNotFound: true);
             m_Win10_Attack_Player = m_Win10.FindAction("Attack_Player", throwIfNotFound: true);
+            m_Win10_MobileAim_Player = m_Win10.FindAction("MobileAim_Player", throwIfNotFound: true);
+            m_Win10_MobileAttackAim_Player = m_Win10.FindAction("MobileAttackAim_Player", throwIfNotFound: true);
             m_Win10_SwitchHotBar_Player = m_Win10.FindAction("SwitchHotBar_Player", throwIfNotFound: true);
             m_Win10_F = m_Win10.FindAction("F", throwIfNotFound: true);
             m_Win10_B = m_Win10.FindAction("B", throwIfNotFound: true);
@@ -993,6 +1145,8 @@ namespace InputSystem
         private List<IWin10Actions> m_Win10ActionsCallbackInterfaces = new List<IWin10Actions>();
         private readonly InputAction m_Win10_Move_Player;
         private readonly InputAction m_Win10_Attack_Player;
+        private readonly InputAction m_Win10_MobileAim_Player;
+        private readonly InputAction m_Win10_MobileAttackAim_Player;
         private readonly InputAction m_Win10_SwitchHotBar_Player;
         private readonly InputAction m_Win10_F;
         private readonly InputAction m_Win10_B;
@@ -1032,6 +1186,14 @@ namespace InputSystem
             /// Provides access to the underlying input action "Win10/Attack_Player".
             /// </summary>
             public InputAction @Attack_Player => m_Wrapper.m_Win10_Attack_Player;
+            /// <summary>
+            /// Provides access to the underlying input action "Win10/MobileAim_Player".
+            /// </summary>
+            public InputAction @MobileAim_Player => m_Wrapper.m_Win10_MobileAim_Player;
+            /// <summary>
+            /// Provides access to the underlying input action "Win10/MobileAttackAim_Player".
+            /// </summary>
+            public InputAction @MobileAttackAim_Player => m_Wrapper.m_Win10_MobileAttackAim_Player;
             /// <summary>
             /// Provides access to the underlying input action "Win10/SwitchHotBar_Player".
             /// </summary>
@@ -1144,6 +1306,12 @@ namespace InputSystem
                 @Attack_Player.started += instance.OnAttack_Player;
                 @Attack_Player.performed += instance.OnAttack_Player;
                 @Attack_Player.canceled += instance.OnAttack_Player;
+                @MobileAim_Player.started += instance.OnMobileAim_Player;
+                @MobileAim_Player.performed += instance.OnMobileAim_Player;
+                @MobileAim_Player.canceled += instance.OnMobileAim_Player;
+                @MobileAttackAim_Player.started += instance.OnMobileAttackAim_Player;
+                @MobileAttackAim_Player.performed += instance.OnMobileAttackAim_Player;
+                @MobileAttackAim_Player.canceled += instance.OnMobileAttackAim_Player;
                 @SwitchHotBar_Player.started += instance.OnSwitchHotBar_Player;
                 @SwitchHotBar_Player.performed += instance.OnSwitchHotBar_Player;
                 @SwitchHotBar_Player.canceled += instance.OnSwitchHotBar_Player;
@@ -1221,6 +1389,12 @@ namespace InputSystem
                 @Attack_Player.started -= instance.OnAttack_Player;
                 @Attack_Player.performed -= instance.OnAttack_Player;
                 @Attack_Player.canceled -= instance.OnAttack_Player;
+                @MobileAim_Player.started -= instance.OnMobileAim_Player;
+                @MobileAim_Player.performed -= instance.OnMobileAim_Player;
+                @MobileAim_Player.canceled -= instance.OnMobileAim_Player;
+                @MobileAttackAim_Player.started -= instance.OnMobileAttackAim_Player;
+                @MobileAttackAim_Player.performed -= instance.OnMobileAttackAim_Player;
+                @MobileAttackAim_Player.canceled -= instance.OnMobileAttackAim_Player;
                 @SwitchHotBar_Player.started -= instance.OnSwitchHotBar_Player;
                 @SwitchHotBar_Player.performed -= instance.OnSwitchHotBar_Player;
                 @SwitchHotBar_Player.canceled -= instance.OnSwitchHotBar_Player;
@@ -1340,6 +1514,19 @@ namespace InputSystem
                 return asset.controlSchemes[m_GamepadSchemeIndex];
             }
         }
+        private int m_MobileSchemeIndex = -1;
+        /// <summary>
+        /// Provides access to the input control scheme.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputControlScheme" />
+        public InputControlScheme MobileScheme
+        {
+            get
+            {
+                if (m_MobileSchemeIndex == -1) m_MobileSchemeIndex = asset.FindControlSchemeIndex("Mobile");
+                return asset.controlSchemes[m_MobileSchemeIndex];
+            }
+        }
         /// <summary>
         /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "Win10" which allows adding and removing callbacks.
         /// </summary>
@@ -1361,6 +1548,20 @@ namespace InputSystem
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnAttack_Player(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "MobileAim_Player" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnMobileAim_Player(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "MobileAttackAim_Player" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnMobileAttackAim_Player(InputAction.CallbackContext context);
             /// <summary>
             /// Method invoked when associated input action "SwitchHotBar_Player" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>

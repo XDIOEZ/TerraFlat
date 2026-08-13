@@ -13,7 +13,7 @@ namespace FlatWorld.GameTest.PlayerInteraction
         protected override void SetItemData(ItemData value) => data = RequireData<Data_GeneralItem>(value);
     }
 
-    /// <summary>验证淡水 Buff 对长按饮水、补水和脏水感染的授权边界。</summary>
+    /// <summary>验证水体 Buff 对长按饮水、补水和脏水感染的授权边界。</summary>
     public sealed class FreshWaterDrinkingTests
     {
         [Test]
@@ -46,6 +46,19 @@ namespace FlatWorld.GameTest.PlayerInteraction
             Assert.That(fixture.Sender.ProcessFreshWaterDrinkPulse(0.1999f, false), Is.True);
             Assert.That(fixture.BuffManager.HasBuff(InfectionBuffIds.Infection), Is.True,
                 "脏水判定值低于20%时必须获得感染。");
+
+            fixture.Sender.EndFreshWaterDrinkHold();
+            fixture.BuffManager.RemoveBuff(FreshWaterBuffIds.Dirty);
+            fixture.BuffManager.RemoveBuff(InfectionBuffIds.Infection);
+            fixture.BuffManager.AddBuff(SaltWaterBuffIds.InSaltWater);
+            fixture.Food.Data.nutrition.Water = 100f;
+            Assert.That(fixture.Sender.BeginFreshWaterDrinkHold(), Is.True,
+                "位于盐水中时必须允许长按 E 键开始饮水。");
+            fixture.Sender.TickFreshWaterDrinking(1.01f);
+            Assert.That(fixture.Food.Data.nutrition.Water, Is.EqualTo(125f),
+                "盐水应复用现有饮水 Tick 的补水逻辑。");
+            Assert.That(fixture.BuffManager.HasBuff(InfectionBuffIds.Infection), Is.False,
+                "盐水饮水不应误用脏淡水的感染判定。");
         }
 
         private sealed class FreshWaterDrinkingFixture : IDisposable
@@ -67,6 +80,7 @@ namespace FlatWorld.GameTest.PlayerInteraction
                 List<BuffDefinition> definitions = BuffCatalogLoader.LoadBuiltInDefinitions();
                 Register(definitions.Single(definition => definition.Id == FreshWaterBuffIds.Clean));
                 Register(definitions.Single(definition => definition.Id == FreshWaterBuffIds.Dirty));
+                Register(definitions.Single(definition => definition.Id == SaltWaterBuffIds.InSaltWater));
                 Register(definitions.Single(definition => definition.Id == InfectionBuffIds.Infection));
 
                 itemObject = new GameObject("FreshWaterDrinkingTestPlayer");
@@ -105,6 +119,7 @@ namespace FlatWorld.GameTest.PlayerInteraction
                          {
                              FreshWaterBuffIds.Clean,
                              FreshWaterBuffIds.Dirty,
+                             SaltWaterBuffIds.InSaltWater,
                              InfectionBuffIds.Infection
                          })
                 {

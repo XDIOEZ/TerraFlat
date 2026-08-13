@@ -69,7 +69,10 @@ public class Mod_FarmlandSupply : Module
             return;
         }
 
-        Vector3 mouseWorldPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        GameController controller = ResolveOwnerController();
+        Vector3 mouseWorldPosition = controller != null
+            ? controller.GetMouseWorldPosition()
+            : Camera.main.ScreenToWorldPoint(Input.mousePosition);
         mouseWorldPosition = WorldTopologyRuntime.NormalizePosition(mouseWorldPosition);
         if (!TryResolveFarmland(mouseWorldPosition, out Vector2Int tilePos, out TileData_Farmland farmlandData))
         {
@@ -125,6 +128,14 @@ public class Mod_FarmlandSupply : Module
 #endregion
 
 #region 事件绑定
+
+    /// <summary>统一从持有者读取鼠标、手柄或手机径向指向。</summary>
+    private GameController ResolveOwnerController()
+    {
+        Item owner = item?.Owner;
+        GameController controller = owner?.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
+        return controller != null ? controller : owner?.GetComponent<GameController>();
+    }
 
     private void BindActEvent()
     {

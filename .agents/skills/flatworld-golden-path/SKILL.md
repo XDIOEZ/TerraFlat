@@ -20,13 +20,14 @@ description: Continuously evolve FlatWorld's real single-player Runtime.GoldenPa
 - 实现/适配 `IFlatWorldGoldenPathOperation`，使用稳定 `Id/SystemId`；挂到现有生命周期阶段，复杂逻辑放对应 subsystem partial。
 - 生命周期为“安排 → 跨 Tick 观察 → 断言 → 恢复”。使用隔离存档、固定种子、公开 API、可观察状态和有界超时。
 - 禁止真实输入、阻塞 Editor、随机重试、无界等待、截图代替状态断言或静默跳过。
+- 若真实流程会销毁并重建玩家（例如维度往返），必须在其它玩家场景初始化前执行，并从 `ItemMgr.User_Player` 重新绑定玩家、Mover、ChunkLoader 与执行器配置；旧 Unity 对象引用不得继续传给后续操作。
 - 保留既有断言；失败时修生产代码或接线。每次重跑前必须有新证据/修复，直到完整通过或遇到项目外阻塞。
 - 真实启动资源阶段断言四个本体 Actor 已注册且 Addressable Sprite/AnimatorController 非空。
 - 配置由版本化 `FlatWorldGoldenPathConfiguration` 强校验并回显；操作间依赖用白名单/配置显式表达。
 
 ```powershell
 python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path
-python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path --golden-config .agents/skills/flatworld-golden-path/references/wrapped-river-fast.json
+python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path --golden-config .agents/skills/flatworld-golden-path/references/production-surface.json
 python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --golden-path --golden-set world.radius=64
 ```
 

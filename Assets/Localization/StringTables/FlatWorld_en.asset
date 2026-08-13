@@ -709,6 +709,46 @@ MonoBehaviour:
     m_Localized: Place any building once
     m_Metadata:
       m_Items: []
+  - m_Id: 1679033391210496
+    m_Localized: Ore Stone
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033445736448
+    m_Localized: Raw material that can be processed into useful resources.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033454125056
+    m_Localized: SparkMaker Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033454125057
+    m_Localized: SparkMaker Summoner.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033475096576
+    m_Localized: FlintStrike
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033475096577
+    m_Localized: FlintStrike.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033483485184
+    m_Localized: ChippedTool
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033483485185
+    m_Localized: ChippedTool.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033483485186
+    m_Localized: Torch
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033483485187
+    m_Localized: Torch.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

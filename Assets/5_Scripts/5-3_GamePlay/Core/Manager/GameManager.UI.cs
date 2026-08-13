@@ -93,6 +93,16 @@ public partial class GameManager
     public const string WorldLoadingProgressKey = "加载进度";
     public const string WorldLoadingProgressTextKey = "加载进度文本";
 
+    public const string DimensionLoadingBackgroundKey = "维度背景";
+    public const string DimensionLoadingTextureKey = "维度纹理";
+    public const string DimensionLoadingIconKey = "维度图标";
+    public const string DimensionLoadingNameKey = "目标维度名称";
+    public const string DimensionLoadingStatusKey = "维度加载状态";
+    public const string DimensionLoadingProgressKey = "维度加载进度";
+    public const string DimensionLoadingProgressTextKey = "维度加载进度文本";
+    public const string DimensionLoadingHintKey = "维度加载提示";
+    public const string DimensionLoadingProgressFillKey = "维度进度填充";
+
     private const float WorldLoadingEllipsisFrameSeconds = 0.35f;
 
     private GameDifficultyId pendingNewWorldDifficulty = GameDifficultyId.Simple;
@@ -110,6 +120,29 @@ public partial class GameManager
     private string worldLoadingAnimatedStatusSource = string.Empty;
     private string worldLoadingStatusBase = string.Empty;
     private int worldLoadingStatusDotCount;
+
+    private GameObject dimensionLoadingView;
+    private Canvas dimensionLoadingCanvas;
+    private CanvasGroup dimensionLoadingCanvasGroup;
+    private Image dimensionLoadingBackground;
+    private Image dimensionLoadingTexture;
+    private Image dimensionLoadingIcon;
+    private Image dimensionLoadingProgressFill;
+    private TextMeshProUGUI dimensionLoadingName;
+    private TextMeshProUGUI dimensionLoadingStatus;
+    private TextMeshProUGUI dimensionLoadingProgressText;
+    private TextMeshProUGUI dimensionLoadingHint;
+    private Slider dimensionLoadingProgress;
+    private Coroutine dimensionLoadingHideCoroutine;
+    private string activeDimensionLoadingTargetId = string.Empty;
+
+    public bool IsDimensionLoadingPresentationVisible =>
+        dimensionLoadingView != null &&
+        dimensionLoadingView.activeInHierarchy &&
+        dimensionLoadingCanvasGroup != null &&
+        dimensionLoadingCanvasGroup.alpha >= 0.99f;
+
+    public string ActiveDimensionLoadingTargetId => activeDimensionLoadingTargetId;
 
     private GameSaveStatusHUD saveStatusHUD;
     private int activeSaveOperationCount;
@@ -176,6 +209,14 @@ public partial class GameManager
 
     private void OnWorldEntryProgressChanged(WorldEntryProgressInfo progress)
     {
+        if (progress.PresentationMode == WorldEntryPresentationMode.Dimension)
+        {
+            HideWorldLoadingView();
+            PresentDimensionLoading(progress);
+            return;
+        }
+
+        HideDimensionLoadingViewImmediate();
         if (!EnsureWorldLoadingView())
             return;
 
@@ -193,6 +234,149 @@ public partial class GameManager
             worldLoadingHideCoroutine = StartCoroutine(HideWorldLoadingViewAfterDelay(0.15f));
         else if (progress.State == WorldEntryProgressState.Failed)
             worldLoadingHideCoroutine = StartCoroutine(HideWorldLoadingViewAfterDelay(1.5f));
+    }
+
+    private void PresentDimensionLoading(WorldEntryProgressInfo progress)
+    {
+        if (!EnsureDimensionLoadingView())
+            return;
+
+        if (dimensionLoadingHideCoroutine != null)
+        {
+            StopCoroutine(dimensionLoadingHideCoroutine);
+            dimensionLoadingHideCoroutine = null;
+        }
+
+        activeDimensionLoadingTargetId = progress.TargetId;
+        ApplyDimensionLoadingTheme(progress.TargetId);
+        dimensionLoadingName.text = ResolveDimensionDisplayName(progress.TargetId);
+        dimensionLoadingStatus.text = LocalizeWorldLoadingText(progress.Status);
+        dimensionLoadingHint.text = FlatWorldLocalizationService.GetUiText("维度稳定后将自动抵达。");
+        dimensionLoadingProgress.value = Mathf.Clamp01(progress.Progress);
+        dimensionLoadingProgressText.text = $"{Mathf.RoundToInt(progress.Progress * 100f)}%";
+        dimensionLoadingCanvasGroup.alpha = 1f;
+        dimensionLoadingCanvasGroup.interactable = true;
+        dimensionLoadingCanvasGroup.blocksRaycasts = true;
+        dimensionLoadingView.SetActive(true);
+        dimensionLoadingCanvas.sortingOrder = 32000;
+
+        if (progress.State == WorldEntryProgressState.Completed)
+            dimensionLoadingHideCoroutine = StartCoroutine(FadeDimensionLoadingView(0f));
+        else if (progress.State == WorldEntryProgressState.Failed)
+            dimensionLoadingHideCoroutine = StartCoroutine(FadeDimensionLoadingView(1.5f));
+    }
+
+    private bool EnsureDimensionLoadingView()
+    {
+        if (dimensionLoadingView != null)
+            return true;
+
+        if (GameRes.Instance == null)
+        {
+            Debug.LogError("[GameManager] 无法显示维度加载面板：GameRes 未就绪。");
+            return false;
+        }
+
+        dimensionLoadingView = GameRes.Instance.InstantiatePrefab(RuntimeUIPrefabKeys.DimensionLoading);
+        if (dimensionLoadingView == null)
+        {
+            Debug.LogError($"[GameManager] 缺少维度加载面板 Prefab：{RuntimeUIPrefabKeys.DimensionLoading}");
+            return false;
+        }
+
+        dimensionLoadingCanvas = dimensionLoadingView.GetComponent<Canvas>();
+        dimensionLoadingCanvasGroup = dimensionLoadingView.GetComponent<CanvasGroup>();
+        dimensionLoadingBackground = FindChildRecursive(dimensionLoadingView.transform, DimensionLoadingBackgroundKey)?.GetComponent<Image>();
+        dimensionLoadingTexture = FindChildRecursive(dimensionLoadingView.transform, DimensionLoadingTextureKey)?.GetComponent<Image>();
+        dimensionLoadingIcon = FindChildRecursive(dimensionLoadingView.transform, DimensionLoadingIconKey)?.GetComponent<Image>();
+        dimensionLoadingName = FindChildRecursive(dimensionLoadingView.transform, DimensionLoadingNameKey)?.GetComponent<TextMeshProUGUI>();
+        dimensionLoadingStatus = FindChildRecursive(dimensionLoadingView.transform, DimensionLoadingStatusKey)?.GetComponent<TextMeshProUGUI>();
+        dimensionLoadingProgress = FindChildRecursive(dimensionLoadingView.transform, DimensionLoadingProgressKey)?.GetComponent<Slider>();
+        dimensionLoadingProgressText = FindChildRecursive(dimensionLoadingView.transform, DimensionLoadingProgressTextKey)?.GetComponent<TextMeshProUGUI>();
+        dimensionLoadingHint = FindChildRecursive(dimensionLoadingView.transform, DimensionLoadingHintKey)?.GetComponent<TextMeshProUGUI>();
+        dimensionLoadingProgressFill = FindChildRecursive(dimensionLoadingView.transform, DimensionLoadingProgressFillKey)?.GetComponent<Image>();
+
+        if (dimensionLoadingCanvas == null || dimensionLoadingCanvasGroup == null ||
+            dimensionLoadingBackground == null || dimensionLoadingTexture == null || dimensionLoadingIcon == null ||
+            dimensionLoadingName == null || dimensionLoadingStatus == null || dimensionLoadingProgress == null ||
+            dimensionLoadingProgressText == null || dimensionLoadingHint == null || dimensionLoadingProgressFill == null)
+        {
+            Debug.LogError("[GameManager] UI_DimensionLoading.prefab 的控件命名契约不完整。");
+            Destroy(dimensionLoadingView);
+            dimensionLoadingView = null;
+            return false;
+        }
+
+        DontDestroyOnLoad(dimensionLoadingView);
+        return true;
+    }
+
+    private void ApplyDimensionLoadingTheme(string targetId)
+    {
+        DimensionLoadingTheme theme = DimensionLoadingTheme.CreateNeutral();
+        if (DimensionManager.Instance != null &&
+            DimensionManager.Instance.TryGetDefinition(targetId, out DimensionDefinition definition))
+        {
+            theme = definition.LoadingTheme?.ResolveOrNeutral() ?? theme;
+        }
+
+        dimensionLoadingBackground.color = theme.BackgroundColor;
+        dimensionLoadingTexture.sprite = theme.BackgroundTexture;
+        dimensionLoadingTexture.enabled = theme.BackgroundTexture != null;
+        dimensionLoadingTexture.color = new Color(1f, 1f, 1f, 0.16f);
+        dimensionLoadingIcon.sprite = theme.Icon != null ? theme.Icon : theme.BackgroundTexture;
+        dimensionLoadingIcon.enabled = dimensionLoadingIcon.sprite != null;
+        dimensionLoadingProgressFill.color = theme.AccentColor;
+        dimensionLoadingName.color = theme.AccentColor;
+    }
+
+    private static string ResolveDimensionDisplayName(string targetId)
+    {
+        if (DimensionManager.Instance != null &&
+            DimensionManager.Instance.TryGetDefinition(targetId, out DimensionDefinition definition))
+        {
+            return FlatWorldLocalizationService.Get(
+                definition.DisplayNameLocalizationKey,
+                definition.DisplayName,
+                FlatWorldLocalizationService.UiTable);
+        }
+
+        return FlatWorldLocalizationService.GetUiText("未知维度");
+    }
+
+    private IEnumerator FadeDimensionLoadingView(float delaySeconds)
+    {
+        if (delaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(delaySeconds);
+
+        const float duration = 0.15f;
+        float elapsed = 0f;
+        while (dimensionLoadingCanvasGroup != null && elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            dimensionLoadingCanvasGroup.alpha = 1f - Mathf.Clamp01(elapsed / duration);
+            yield return null;
+        }
+
+        HideDimensionLoadingViewImmediate();
+    }
+
+    private void HideDimensionLoadingViewImmediate()
+    {
+        if (dimensionLoadingHideCoroutine != null)
+            StopCoroutine(dimensionLoadingHideCoroutine);
+        dimensionLoadingHideCoroutine = null;
+        activeDimensionLoadingTargetId = string.Empty;
+
+        if (dimensionLoadingCanvasGroup != null)
+        {
+            dimensionLoadingCanvasGroup.alpha = 1f;
+            dimensionLoadingCanvasGroup.interactable = false;
+            dimensionLoadingCanvasGroup.blocksRaycasts = false;
+        }
+
+        if (dimensionLoadingView != null)
+            dimensionLoadingView.SetActive(false);
     }
 
     private bool EnsureWorldLoadingView()

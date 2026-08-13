@@ -103,9 +103,19 @@
           "value": 2.0
         },
         {
+          "phase": "start",
+          "typeId": "core:water_consume_speed_multiplier",
+          "value": 0.5
+        },
+        {
           "phase": "stop",
           "typeId": "core:food_consume_speed_multiplier",
           "value": 0.5
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:water_consume_speed_multiplier",
+          "value": 2.0
         }
       ]
     }

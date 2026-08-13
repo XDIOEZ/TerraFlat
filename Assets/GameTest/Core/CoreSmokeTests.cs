@@ -26,8 +26,11 @@ namespace FlatWorld.GameTest.Core
                 new PlanetData { Name = "测试世界" },
                 new TimeData());
 
-            Assert.That(request.SaveName, Does.Match("^[0-9]{8}$"));
-            Assert.That(request.PlayerName, Is.EqualTo(request.SaveName));
+            Assert.That(request.SaveName, Does.Match("^World_[0-9]{8}$"));
+            Assert.That(request.PlayerName, Does.Match("^Player_[0-9]{8}$"));
+            Assert.That(
+                request.SaveName.Substring("World_".Length),
+                Is.EqualTo(request.PlayerName.Substring("Player_".Length)));
             Assert.That(request.TryValidate(out string error), Is.True, error);
         }
 

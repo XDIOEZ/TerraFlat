@@ -87,6 +87,7 @@ public static class EventSystemGuard
 
         primary.sendNavigationEvents = true;
         primaryInputModule.deselectOnBackgroundClick = false;
+        primaryInputModule.pointerBehavior = UIPointerBehavior.AllPointersAsIs;
         primaryInputModule.enabled = true;
 
         #endregion
@@ -198,6 +199,8 @@ public static class EventSystemGuard
         inputModule.scrollWheel = CreateReference(uiMap.FindAction("MouseScroll", false));
         inputModule.trackedDevicePosition = null;
         inputModule.trackedDeviceOrientation = null;
+        // 保留每个 TouchControl 的独立 pointerId，按钮、移动、指向和攻击才能真正并行。
+        inputModule.pointerBehavior = UIPointerBehavior.AllPointersAsIs;
     }
 
     private static InputActionMap EnsureRuntimeUIActionMap(
@@ -228,17 +231,35 @@ public static class EventSystemGuard
             cancel.AddBinding("<Gamepad>/buttonEast");
             cancel.AddBinding("<Gamepad>/start");
 
-            InputAction point = uiMap.AddAction("MousePoint", InputActionType.PassThrough, expectedControlLayout: "Vector2");
-            point.AddBinding("<Mouse>/position");
-            InputAction leftClick = uiMap.AddAction("MouseLeftClick", InputActionType.PassThrough, expectedControlLayout: "Button");
-            leftClick.AddBinding("<Mouse>/leftButton");
-            InputAction rightClick = uiMap.AddAction("MouseRightClick", InputActionType.PassThrough, expectedControlLayout: "Button");
-            rightClick.AddBinding("<Mouse>/rightButton");
-            InputAction scroll = uiMap.AddAction("MouseScroll", InputActionType.PassThrough, expectedControlLayout: "Vector2");
-            scroll.AddBinding("<Mouse>/scroll");
+            uiMap.AddAction("MousePoint", InputActionType.PassThrough, expectedControlLayout: "Vector2");
+            uiMap.AddAction("MouseLeftClick", InputActionType.PassThrough, expectedControlLayout: "Button");
+            uiMap.AddAction("MouseRightClick", InputActionType.PassThrough, expectedControlLayout: "Button");
+            uiMap.AddAction("MouseScroll", InputActionType.PassThrough, expectedControlLayout: "Vector2");
         }
 
+        EnsureBinding(uiMap.FindAction("MousePoint", false), "<Mouse>/position");
+        EnsureBinding(uiMap.FindAction("MousePoint", false), "<Touchscreen>/touch*/position");
+        EnsureBinding(uiMap.FindAction("MouseLeftClick", false), "<Mouse>/leftButton");
+        EnsureBinding(uiMap.FindAction("MouseLeftClick", false), "<Touchscreen>/touch*/press");
+        EnsureBinding(uiMap.FindAction("MouseRightClick", false), "<Mouse>/rightButton");
+        EnsureBinding(uiMap.FindAction("MouseScroll", false), "<Mouse>/scroll");
+
         return uiMap;
+    }
+
+    /// <summary>在重复配置或域重载时幂等补齐 UI 指针绑定。</summary>
+    private static void EnsureBinding(InputAction action, string path)
+    {
+        if (action == null || string.IsNullOrEmpty(path))
+            return;
+
+        for (int i = 0; i < action.bindings.Count; i++)
+        {
+            if (string.Equals(action.bindings[i].path, path, System.StringComparison.OrdinalIgnoreCase))
+                return;
+        }
+
+        action.AddBinding(path);
     }
 
     private static InputActionReference CreateReference(InputAction action)

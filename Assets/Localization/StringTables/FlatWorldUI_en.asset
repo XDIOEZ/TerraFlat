@@ -470,7 +470,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7210971140
-    m_Localized: Leave blank to generate a number automatically
+    m_Localized: Leave blank to generate a prefixed name automatically
     m_Metadata:
       m_Items: []
   - m_Id: 7210971141
@@ -486,8 +486,8 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7210971144
-    m_Localized: Both names may be left blank; the system will fill in the same random
-      number.
+    m_Localized: Both names may be left blank; the system will fill in matching Player_
+      and World_ names.
     m_Metadata:
       m_Items: []
   - m_Id: 7210971145
@@ -1694,8 +1694,128 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 970667895382020
     m_Localized: No Quest Objectives
+    m_Metadata:
+      m_Items: []
   - m_Id: 1058478408773632
     m_Localized: Exit Without Saving
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1633047058931712
+    m_Localized: Collapse
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1633047180566528
+    m_Localized: Expand
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1644391187439616
+    m_Localized: Both names may be left blank; the system will fill in matching Player_
+      and World_ names.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1644391640424448
+    m_Localized: Use
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1644391640424449
+    m_Localized: Menu
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1644391640424450
+    m_Localized: Mobile Menu
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1644391640424451
+    m_Localized: Crafting
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1644391640424452
+    m_Localized: Drop One
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1644391640424453
+    m_Localized: Camera +
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1644391640424454
+    m_Localized: Camera -
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1644392407982080
+    m_Localized: Drop Stack
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1644392525422592
+    m_Localized: Status
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1644392525422593
+    m_Localized: Confirm Again
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1644392525422594
+    m_Localized: Toggle Run
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1644392525422595
+    m_Localized: Hold to Run
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1682863977750528
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1682864132939776
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1682864132939777
+    m_Localized: You will arrive automatically once the dimension stabilizes.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1682864560758784
+    m_Localized: Dimension Travel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1682864560758785
+    m_Localized: Unknown Dimension
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1682864560758786
+    m_Localized: "Generating target chunks\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1682864560758787
+    m_Localized: "Finalizing the target dimension\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1682864564953088
+    m_Localized: Dimension Travel Complete
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1682864564953089
+    m_Localized: The target dimension is ready.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1682864564953090
+    m_Localized: "Dimension travel failed; restoring the source world\u2026"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1682864564953091
+    m_Localized: Dimension travel failed; the source world was restored.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1682864564953092
+    m_Localized: Dimension travel failed, and restoring the source world also encountered
+      an error.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1686151750049792
+    m_Localized: Surface
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1686151829741568
+    m_Localized: Underground Cave
     m_Metadata:
       m_Items: []
   references:

@@ -26,6 +26,7 @@ description: "Use when: 定位或修改 FlatWorld 的任务定义、任务目录
 - 奖励先准备 `QuestRewardPlan`，物品在同一库存快照中全部可放才提交；满包保持 ReadyToClaim，不部分发放。
 - 进度使用 `ItemSpecialData` 的 `flatworld.quests`，保留未知任务/字段；未来版本禁用运行时并停止写回。
 - 远程玩家不创建本地任务 Runtime；UI 只读 Snapshot 并订阅 QuestChanged，不持有可写记录。
+- 玩家入世事件可能与资源热重载交错；目录、`GameRes` 和 MOD 尚未共同 Ready 时，本地玩家 Runtime 必须排队，并在最终内容快照就绪后补启动，不能把竞态当永久失败。
 
 ## 联动与验证
 

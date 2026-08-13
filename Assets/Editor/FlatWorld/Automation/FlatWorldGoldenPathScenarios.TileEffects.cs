@@ -40,7 +40,8 @@ namespace FlatWorld.Automation
 
             ChunkMgr manager = ChunkMgr.Instance;
             if (manager == null || !TryFindWaterAndDryCells(manager,
-                    out Vector2 waterPosition, out Vector2 dryPosition))
+                    out Vector2 waterPosition, out Vector2 dryPosition,
+                    out Vector2 saltWaterPosition, out bool hasSaltWater))
                 return;
 
             Player player = context.Player;
@@ -122,19 +123,47 @@ namespace FlatWorld.Automation
                 }
                 interactSender.EndFreshWaterDrinkHold();
 
+                if (hasSaltWater)
+                {
+                    MovePlayerForTileEffectCheck(saltWaterPosition);
+                    if (!receiver.RefreshCurrentTileEffects() ||
+                        receiver.currentTileData is not TileData_Water)
+                        throw new InvalidOperationException("TileEffectReceiver 未识别运行时盐水地块。");
+                    if (!buffManager.HasBuff(SaltWaterBuffIds.InSaltWater))
+                        throw new InvalidOperationException("玩家进入运行时盐水后未获得位于盐水中 Buff。");
+                    if (buffManager.HasBuff(FreshWaterBuffIds.Clean) ||
+                        buffManager.HasBuff(FreshWaterBuffIds.Dirty))
+                        throw new InvalidOperationException("进入盐水后仍残留淡水饮用能力 Buff。");
+
+                    float saltDrinkStartWater = Mathf.Min(
+                        food.Data.nutrition.Water,
+                        food.Data.nutrition.Max_Water - interactSender.FreshWaterGainPerTick);
+                    food.Data.nutrition.Water = saltDrinkStartWater;
+                    food.DataUpdate?.Invoke();
+                    if (!interactSender.BeginFreshWaterDrinkHold())
+                        throw new InvalidOperationException("持有位于盐水中 Buff 时无法开始长按饮水。");
+                    interactSender.TickFreshWaterDrinking(1.01f);
+                    if (Mathf.Abs(food.Data.nutrition.Water -
+                                  (saltDrinkStartWater + interactSender.FreshWaterGainPerTick)) >
+                        TileEffectTolerance)
+                        throw new InvalidOperationException("盐水未复用现有长按饮水补水逻辑。");
+                    interactSender.EndFreshWaterDrinkHold();
+                }
+
                 MovePlayerForTileEffectCheck(dryPosition);
                 receiver.RefreshCurrentTileEffects();
                 interactSender.TickFreshWaterDrinking(0f);
                 if (buffManager.HasBuff(WaterSlowBuffId) || buffManager.HasBuff(WetBuffId) ||
                     buffManager.HasBuff(FreshWaterBuffIds.Clean) ||
-                    buffManager.HasBuff(FreshWaterBuffIds.Dirty))
+                    buffManager.HasBuff(FreshWaterBuffIds.Dirty) ||
+                    buffManager.HasBuff(SaltWaterBuffIds.InSaltWater))
                     throw new InvalidOperationException("玩家离开运行时水体后水体 Buff 未移除。");
                 if (Mathf.Abs(mover.Speed.MultiplicativeModifier - drySpeedMultiplier) >
                     TileEffectTolerance)
                     throw new InvalidOperationException("玩家离开水体后移动速度倍率未恢复。");
 
                 _tileEffectScenarioCompleted = true;
-                Debug.Log("[GoldenPath][TileEffects] 运行时水体进入、减速、潮湿及离开恢复验证通过。");
+                Debug.Log("[GoldenPath][TileEffects] 运行时淡水/盐水进入、饮水及离开恢复验证通过。");
             }
             finally
             {
@@ -167,12 +196,15 @@ namespace FlatWorld.Automation
         #region 运行时采样
 
         private static bool TryFindWaterAndDryCells(ChunkMgr manager,
-            out Vector2 waterPosition, out Vector2 dryPosition)
+            out Vector2 waterPosition, out Vector2 dryPosition,
+            out Vector2 saltWaterPosition, out bool foundSaltWater)
         {
             waterPosition = default;
             dryPosition = default;
+            saltWaterPosition = default;
             bool foundWater = false;
             bool foundDry = false;
+            foundSaltWater = false;
 
             foreach (ChunkRuntime chunk in manager.Chunks.Values)
             {
@@ -181,13 +213,14 @@ namespace FlatWorld.Automation
                     chunk.SimulationStatus != ChunkSimulationStatus.Active || terrain == null)
                     continue;
 
-                for (int y = 0; y < terrain.Height && (!foundWater || !foundDry); y++)
-                for (int x = 0; x < terrain.Width && (!foundWater || !foundDry); x++)
+                for (int y = 0; y < terrain.Height && (!foundWater || !foundDry || !foundSaltWater); y++)
+                for (int x = 0; x < terrain.Width && (!foundWater || !foundDry || !foundSaltWater); x++)
                 {
                     TerrainCell cell = terrain.GetCell(x, y);
                     bool isWater = (cell.Flags & TerrainCellFlags.Water) != 0;
                     bool isDryCandidate = !isWater && terrain.IsWalkable(x, y);
-                    if (isWater ? foundWater : foundDry || !isDryCandidate)
+                    if ((!isWater && (foundDry || !isDryCandidate)) ||
+                        (isWater && foundWater && foundSaltWater))
                         continue;
 
                     var localCell = new Vector2Int(x, y);
@@ -199,7 +232,14 @@ namespace FlatWorld.Automation
                         continue;
 
                     Vector2 center = worldCell + new Vector2(0.5f, 0.5f);
-                    if (isWater && tileData is TileData_Water water && water.salt <= 0.01f)
+                    if (isWater && tileData is TileData_Water water && water.salt > 0.01f &&
+                        !foundSaltWater)
+                    {
+                        saltWaterPosition = center;
+                        foundSaltWater = true;
+                    }
+                    else if (isWater && tileData is TileData_Water freshWater &&
+                             freshWater.salt <= 0.01f && !foundWater)
                     {
                         waterPosition = center;
                         foundWater = true;
@@ -211,11 +251,11 @@ namespace FlatWorld.Automation
                     }
                 }
 
-                if (foundWater && foundDry)
+                if (foundWater && foundDry && foundSaltWater)
                     return true;
             }
 
-            return false;
+            return foundWater && foundDry;
         }
 
         private static float ResolveWaterSlowdownFactor()

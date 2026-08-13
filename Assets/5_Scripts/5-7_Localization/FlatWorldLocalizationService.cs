@@ -137,6 +137,7 @@ namespace FlatWorld.Localization
 
                 if (!string.IsNullOrWhiteSpace(localized) &&
                     !string.Equals(localized, key, StringComparison.Ordinal) &&
+                    !localized.StartsWith("No translation found for", StringComparison.OrdinalIgnoreCase) &&
                     !IsLegacyItemDebugText(localized))
                     return localized;
             }

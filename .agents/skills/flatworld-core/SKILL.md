@@ -22,6 +22,7 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 - `GameManager` 是新建、继续、运行、退出世界的权威；`GameWorldSceneManager` 不是。
 - 动态维度 Scene 不进 Build Settings，以 `WorldKey` 命名并复用 `RunWorld()`。
 - 资源加载保持本体先于 MOD；注册失败不得留下半初始化字典。
+- `GameRes` 会随 `WorldManager` Prefab 再次出现在 `GameStartScene`；跨场景存活实例已存在时，重复实例不得启动资源加载协程，否则会先清空目录、再随重复对象销毁而中断加载。
 - 创建/网络提升/远程副本都显式设置 Player ProfileContext，玩家事件只触发一次。
 - UI 逻辑留在 `GameManager.UI.cs`；加载视觉来自 Prefab，不在运行时拼装。
 - 世界/资源/玩家/UI 契约变化时只加载实际命中的 Data、Dimension、Item、Networking 或 UI Skill。

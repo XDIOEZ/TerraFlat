@@ -90,7 +90,10 @@ public partial class Mod_Hoe : Module
             return;
         }
 
-        Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        GameController controller = ResolveOwnerController();
+        Vector3 mouseWorldPos = controller != null
+            ? controller.GetMouseWorldPosition()
+            : Camera.main.ScreenToWorldPoint(Input.mousePosition);
         mouseWorldPos.z = 0f;
         mouseWorldPos = WorldTopologyRuntime.NormalizePosition(mouseWorldPos);
 
@@ -143,6 +146,14 @@ public partial class Mod_Hoe : Module
 #endregion
 
 #region 辅助方法
+
+    /// <summary>统一从持有者读取鼠标、手柄或手机径向指向。</summary>
+    private GameController ResolveOwnerController()
+    {
+        Item owner = item?.Owner;
+        GameController controller = owner?.itemMods?.GetMod_ByID<GameController>(ModText.Controller);
+        return controller != null ? controller : owner?.GetComponent<GameController>();
+    }
 
     private bool TryResolveMapByWorldPos(Vector3 worldPos, out Map map)
     {

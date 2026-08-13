@@ -43,6 +43,8 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
 {
     // 口渴状态每 5 秒结算一次单次伤害，避免按模块 Tick 连续掉血。
     private const float WaterDamageTickInterval = 5f;
+    // 旧版参数面板默认位置；读取到该值时迁移到新的左下角 Prefab 初始位置。
+    private static readonly Vector2 LegacyCenteredPanelPosition = new Vector2(-480f, 120f);
 
     public override string CanonicalModuleId => ModText.Food;
 
@@ -530,11 +532,19 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         if (movableRect == null)
             return;
 
-        if (Data.PanelPosition != Vector2.zero)
+        if (Data.PanelPosition != Vector2.zero &&
+            !IsLegacyCenteredPanelPosition(Data.PanelPosition))
             movableRect.anchoredPosition = Data.PanelPosition;
 
         Canvas.ForceUpdateCanvases();
         ClampInsideCanvas(movableRect, 20f);
+    }
+
+    /// <summary>判断存档中的位置是否来自旧版屏幕中部默认布局。</summary>
+    private static bool IsLegacyCenteredPanelPosition(Vector2 position)
+    {
+        return Mathf.Abs(position.x - LegacyCenteredPanelPosition.x) < 0.5f &&
+               Mathf.Abs(position.y - LegacyCenteredPanelPosition.y) < 0.5f;
     }
 
     private static void ClampInsideCanvas(RectTransform panelRect, float margin)
@@ -665,8 +675,25 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     private void OpenPanel()
     {
         panelUI.Open();
+        SetStatusHudInputTransparent();
         Data.ShowCanvas = true;
         RefreshUI();
+    }
+
+    /// <summary>角色参数只展示状态，不应覆盖世界输入或参与 UI 射线检测。</summary>
+    private void SetStatusHudInputTransparent()
+    {
+        if (panelUI == null)
+            return;
+
+        if (panelUI.canvasGroup != null)
+        {
+            panelUI.canvasGroup.interactable = false;
+            panelUI.canvasGroup.blocksRaycasts = false;
+        }
+
+        foreach (Graphic graphic in panelUI.GetComponentsInChildren<Graphic>(true))
+            graphic.raycastTarget = false;
     }
 
     private void OnPanelOpened()

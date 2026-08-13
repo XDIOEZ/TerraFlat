@@ -301,15 +301,45 @@ public class Module_DiscardItem : Mod_BaseDroper
         if (GameController != null && GameController._inputActions != null)
         {
             var inputActions = GameController._inputActions.Win10;
-            inputActions.F.performed -= OnDropButtonPressed;
+            inputActions.F.started -= OnDropButtonPressed;
             inputActions.F.canceled -= OnDropButtonReleased;
-            inputActions.Ctrl.performed -= OnCtrlPressed;
+            inputActions.Ctrl.started -= OnCtrlPressed;
             inputActions.Ctrl.canceled -= OnCtrlReleased;
         }
     }
     #endregion
 
     #region 物品丢弃接口
+
+    /// <summary>
+    /// 丢弃当前明确选择的物品：优先手持槽，其次快捷栏选中槽。手机抽屉固定传入 1，物品菜单可传入整组数量；
+    /// 不依赖 Ctrl 或鼠标悬停，因此触屏调用不会命中其它 UI 槽位。
+    /// </summary>
+    public bool TryDropCurrentSelection(int count)
+    {
+        if (count <= 0)
+            return false;
+
+        ItemSlot handSlot = hand?.HandInventory?.Data?.itemSlots != null &&
+                            hand.HandInventory.Data.Index >= 0 &&
+                            hand.HandInventory.Data.Index < hand.HandInventory.Data.itemSlots.Count
+            ? hand.HandInventory.Data.itemSlots[hand.HandInventory.Data.Index]
+            : null;
+        if (handSlot?.itemData != null && handSlot.Amount > 0)
+        {
+            DropItemByCount(handSlot, Mathf.Min(count, handSlot.Amount));
+            return true;
+        }
+
+        ItemSlot hotbarSlot = Hotbar?.CurrentSelectItemSlot;
+        if (hotbarSlot?.itemData == null || hotbarSlot.Amount <= 0)
+            return false;
+
+        DropItemByCount(hotbarSlot, Mathf.Min(count, hotbarSlot.Amount));
+        if (hotbarSlot.Amount <= 0)
+            Hotbar.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
+        return true;
+    }
 
     [Button("DropItemBySlot")]
     public void DropItemBySlot(ItemSlot slot)
@@ -399,7 +429,9 @@ public class Module_DiscardItem : Mod_BaseDroper
     [Button("快速丢弃")]
     public void FastDropItem(int count = 1)
     {
-        Vector2 mousePosition = Mouse.current.position.ReadValue();
+        Vector2 mousePosition = GameController != null
+            ? GameController.GetPointerScreenPosition()
+            : Mouse.current != null ? Mouse.current.position.ReadValue() : (Vector2)Input.mousePosition;
 
         List<RaycastResult> results = new List<RaycastResult>();
         PointerEventData pointerEventData = new PointerEventData(EventSystem.current)
@@ -427,7 +459,9 @@ public class Module_DiscardItem : Mod_BaseDroper
     [Button("快速丢弃整组")]
     public void FastDropStack()
     {
-        Vector2 mousePosition = Mouse.current.position.ReadValue();
+        Vector2 mousePosition = GameController != null
+            ? GameController.GetPointerScreenPosition()
+            : Mouse.current != null ? Mouse.current.position.ReadValue() : (Vector2)Input.mousePosition;
 
         List<RaycastResult> results = new List<RaycastResult>();
         PointerEventData pointerEventData = new PointerEventData(EventSystem.current)

@@ -1,3 +1,4 @@
+using System.Collections;
 using Sirenix.OdinInspector;
 using TMPro;
 using UltEvents;
@@ -11,6 +12,7 @@ public class ItemSlot_UI : MonoBehaviour,
     IPointerEnterHandler,
     IPointerExitHandler,
     IPointerUpHandler,
+    IPointerMoveHandler,
     IScrollHandler,
     ISubmitHandler,
     ISelectHandler,
@@ -60,6 +62,15 @@ public class ItemSlot_UI : MonoBehaviour,
     private static int _shiftQuickTransferSessionId;
     private int _lastHandledShiftQuickTransferSessionId = -1;
 
+    [Header("手机长按")]
+    [SerializeField, Min(0.1f)] private float touchLongPressSeconds = 0.45f;
+    [SerializeField, Min(1f)] private float touchMoveTolerance = 16f;
+    private int touchPointerId = int.MinValue;
+    private Vector2 touchPressPosition;
+    private bool touchMovedTooFar;
+    private bool touchLongPressTriggered;
+    private Coroutine touchLongPressCoroutine;
+
     /// <summary>
     /// 用于获取槽位数据的委托（解除对Data的直接依赖）
     /// </summary>
@@ -88,6 +99,7 @@ public class ItemSlot_UI : MonoBehaviour,
         _OnScroll.Clear();
         if (selectionOutlineCreated && selectionOutline != null)
             Destroy(selectionOutline);
+        CancelTouchPress();
     }
     #endregion
 
@@ -193,6 +205,18 @@ public class ItemSlot_UI : MonoBehaviour,
             return;
         }
 
+        // 触屏轻触延后到抬起确认，以便 0.45 秒长按能独立打开物品菜单而不先交换槽位。
+        if (eventData.button == PointerEventData.InputButton.Left && eventData.pointerId >= 0)
+        {
+            CancelTouchPress();
+            touchPointerId = eventData.pointerId;
+            touchPressPosition = eventData.position;
+            touchMovedTooFar = false;
+            touchLongPressTriggered = false;
+            touchLongPressCoroutine = StartCoroutine(WaitForTouchLongPress());
+            return;
+        }
+
         Click(eventData);
     }
 
@@ -215,14 +239,67 @@ public class ItemSlot_UI : MonoBehaviour,
     public void OnPointerExit(PointerEventData eventData)
     {
         isPointerOver = false;
+        if (eventData == null || eventData.pointerId != touchPointerId)
+            return;
+
+        // 指针离开槽位等同超过移动阈值，禁止滑动背包时误弹长按菜单。
+        touchMovedTooFar = true;
+        if (touchLongPressCoroutine != null)
+        {
+            StopCoroutine(touchLongPressCoroutine);
+            touchLongPressCoroutine = null;
+        }
     }
 
     public void OnPointerUp(PointerEventData eventData)
     {
+        if (eventData.button == PointerEventData.InputButton.Left && eventData.pointerId == touchPointerId)
+        {
+            bool shouldTap = !touchMovedTooFar && !touchLongPressTriggered;
+            CancelTouchPress();
+            if (shouldTap)
+                HandleLeftClick();
+        }
+
         if (eventData.button == PointerEventData.InputButton.Left)
         {
             _isShiftQuickTransferDragging = false;
         }
+    }
+
+    public void OnPointerMove(PointerEventData eventData)
+    {
+        if (eventData == null || eventData.pointerId != touchPointerId || touchMovedTooFar)
+            return;
+
+        Canvas canvas = GetComponentInParent<Canvas>();
+        float scaleFactor = canvas != null ? Mathf.Max(0.01f, canvas.scaleFactor) : 1f;
+        touchMovedTooFar = (eventData.position - touchPressPosition).magnitude / scaleFactor > touchMoveTolerance;
+        if (touchMovedTooFar && touchLongPressCoroutine != null)
+        {
+            StopCoroutine(touchLongPressCoroutine);
+            touchLongPressCoroutine = null;
+        }
+    }
+
+    private IEnumerator WaitForTouchLongPress()
+    {
+        yield return new WaitForSecondsRealtime(touchLongPressSeconds);
+        touchLongPressCoroutine = null;
+        if (touchPointerId == int.MinValue || touchMovedTooFar)
+            yield break;
+
+        touchLongPressTriggered = true;
+        CreateRightClickUI();
+    }
+
+    private void CancelTouchPress()
+    {
+        if (touchLongPressCoroutine != null)
+            StopCoroutine(touchLongPressCoroutine);
+        touchLongPressCoroutine = null;
+        touchPointerId = int.MinValue;
+        touchMovedTooFar = false;
     }
 
     /// <summary>

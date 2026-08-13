@@ -3,7 +3,6 @@ using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public partial class Mod_ColdWeapon : Module
 {
@@ -100,7 +99,6 @@ public partial class Mod_ColdWeapon : Module
     public Vector2 StartPosition = Vector2.zero;
     public Transform MoveTargetTransform;
 
-    private InputAction InputAction;
     private GameController cachedController;
     private Vector2 returnTarget;
 
@@ -135,9 +133,9 @@ public partial class Mod_ColdWeapon : Module
             cachedController = item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>();
             if (cachedController != null)
             {
-                InputAction = cachedController._inputActions.Win10.LeftClick;
-                InputAction.started += OnInputActionStarted;
-                InputAction.canceled += OnInputActionCanceled;
+                // 武器只订阅攻击语义，避免手机交互/使用与攻击耦合。
+                cachedController.AttackStarted += OnAttackStarted;
+                cachedController.AttackEnded += OnAttackEnded;
             }
         }
         else
@@ -168,13 +166,24 @@ public partial class Mod_ColdWeapon : Module
         weaponData.ObserverState = BuildObserverState();
         Data.WriteData(weaponData);
 
-        if (item.Owner != null && InputAction != null)
+        if (item.Owner != null && cachedController != null)
         {
-            InputAction.started -= OnInputActionStarted;
-            InputAction.canceled -= OnInputActionCanceled;
+            cachedController.AttackStarted -= OnAttackStarted;
+            cachedController.AttackEnded -= OnAttackEnded;
         }
 
         // 取消订阅伤害事件，防止潜在引用泄漏
+        UnsubscribeDamageEvents();
+    }
+
+    private void OnDestroy()
+    {
+        if (cachedController != null)
+        {
+            cachedController.AttackStarted -= OnAttackStarted;
+            cachedController.AttackEnded -= OnAttackEnded;
+            cachedController = null;
+        }
         UnsubscribeDamageEvents();
     }
     #endregion
@@ -214,21 +223,17 @@ public partial class Mod_ColdWeapon : Module
     #endregion
 
     #region 输入与攻击控制
-    public void OnInputActionStarted(InputAction.CallbackContext context)
+    public void OnAttackStarted()
     {
         if (cachedController != null && cachedController.IsGameplayInputLocked)
         {
             return;
         }
 
-        if (context.started &&
-            (cachedController == null || !cachedController.IsPointerOverUI()))
-        {
-            StartAttack();
-        }
+        StartAttack();
     }
 
-    private void OnInputActionCanceled(InputAction.CallbackContext context) => StopAttack();
+    private void OnAttackEnded() => StopAttack();
 
     [Button("开始攻击")]
     public virtual void StartAttack()

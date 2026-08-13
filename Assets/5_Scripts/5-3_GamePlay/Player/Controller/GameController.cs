@@ -5,6 +5,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UltEvents;
 using InputSystem;
+using FlatWorld.Mobile;
 
 [RequireComponent(typeof(Item))]
 public class GameController : Module
@@ -12,7 +13,8 @@ public class GameController : Module
     public enum InputDeviceType
     {
         KeyboardMouse,
-        Gamepad
+        Gamepad,
+        Mobile
     }
 
 #region 输入系统
@@ -24,7 +26,10 @@ public class GameController : Module
     public bool CtrlIsDown; // Ctrl状态（保留原字段）
     public InputDeviceType CurrentInputDevice => _currentInputDevice; // 当前活跃输入设备
     public bool IsUsingGamepad => _currentInputDevice == InputDeviceType.Gamepad;
+    public bool IsUsingMobile => _currentInputDevice == InputDeviceType.Mobile;
     public event Action<InputDeviceType> ActiveInputDeviceChanged;
+    public event Action AttackStarted;
+    public event Action AttackEnded;
 
     [Header("手柄适配")]
     public bool EnableGamepadAdapter = true; // 是否启用手柄适配
@@ -42,6 +47,14 @@ public class GameController : Module
     private bool _isGameplayInputLocked; // 濒死/过场时是否锁定玩家输入
     private bool _suppressLeftClickUntilRelease;
     private bool _suppressRightClickUntilRelease;
+    private bool _suppressMobileAttackUntilRelease;
+    private bool _attackInputHeld;
+    private Vector2 _mobileAimDirection = Vector2.right;
+    private Vector2 _mobileAttackAimDirection = Vector2.right;
+    private bool _mobileAimDirectionInitialized;
+    private bool _mobileAttackAimDirectionInitialized;
+    private bool _mobileAttackActive;
+    private bool _mobileAttackDraggedOutsideDeadZone;
     private readonly List<RaycastResult> _uiRaycastResults = new List<RaycastResult>(8);
     private readonly HashSet<object> _gameplayInputLockOwners = new HashSet<object>();
 
@@ -112,11 +125,15 @@ public class GameController : Module
         }
 
         UnregisterInputCallbacks();
+        CancelActiveAttackAndMobileInput();
         _inputActions.Disable();
     }
 
     public override void ModUpdate(float deltaTime)
     {
+        if (_currentInputDevice == InputDeviceType.Mobile)
+            UpdateMobileRadialCursor();
+
         if (!EnableGamepadAdapter || !UseGamepadVirtualCursor)
         {
             return;
@@ -127,6 +144,7 @@ public class GameController : Module
 
     public void OnDestroy()
     {
+        CancelActiveAttackAndMobileInput();
         InputBindings?.Dispose();
         if (InputBindings != null)
             InputBindings.BindingsChanged -= HandleBindingsChanged;
@@ -136,6 +154,8 @@ public class GameController : Module
         _inputActions = null;
         _gameplayInputLockOwners.Clear();
         ActiveInputDeviceChanged = null;
+        AttackStarted = null;
+        AttackEnded = null;
         LeftClick.Clear();
         LeftClickUp.Clear();
         RightClick.Clear();
@@ -163,6 +183,7 @@ public class GameController : Module
 
         _suppressLeftClickUntilRelease = false;
         LeftClick.Invoke();
+        BeginAttack();
     }
 
     public void LeftClickUpAction(InputAction.CallbackContext obj) /// 左键抬起
@@ -180,6 +201,7 @@ public class GameController : Module
         }
 
         LeftClickUp.Invoke();
+        EndAttack();
     }
 
     public void RightClickAction(InputAction.CallbackContext obj) /// 右键按下
@@ -191,7 +213,8 @@ public class GameController : Module
             return;
         }
 
-        if (IsGameplayInputLocked || IsPointerOverUI() || EventSystemGuard.IsGamepadUISelectionActive)
+        bool isMobileUse = obj.control?.device is FlatWorldMobileDevice;
+        if (IsGameplayInputLocked || (!isMobileUse && IsPointerOverUI()) || EventSystemGuard.IsGamepadUISelectionActive)
         {
             _suppressRightClickUntilRelease = true;
             return;
@@ -221,18 +244,31 @@ public class GameController : Module
     public void SetGameplayInputLocked(bool isLocked) /// 锁定或解锁玩家快捷键输入
     {
         _isGameplayInputLocked = isLocked;
+        if (isLocked)
+            CancelActiveAttackAndMobileInput();
+        UIManager.Instance?.NotifyInteractionSurfaceChanged();
     }
 
     public void AcquireGameplayInputLock(object owner)
     {
         if (owner != null)
-            _gameplayInputLockOwners.Add(owner);
+        {
+            bool added = _gameplayInputLockOwners.Add(owner);
+            if (added)
+            {
+                CancelActiveAttackAndMobileInput();
+                UIManager.Instance?.NotifyInteractionSurfaceChanged();
+            }
+        }
     }
 
     public void ReleaseGameplayInputLock(object owner)
     {
         if (owner != null)
-            _gameplayInputLockOwners.Remove(owner);
+        {
+            if (_gameplayInputLockOwners.Remove(owner))
+                UIManager.Instance?.NotifyInteractionSurfaceChanged();
+        }
     }
 
 #endregion
@@ -241,7 +277,9 @@ public class GameController : Module
 
     public Vector2 GetPointerScreenPosition() /// 获取当前屏幕指针坐标
     {
-        if (_currentInputDevice == InputDeviceType.Gamepad && UseGamepadVirtualCursor && _virtualCursorInitialized)
+        if ((_currentInputDevice == InputDeviceType.Gamepad || _currentInputDevice == InputDeviceType.Mobile) &&
+            UseGamepadVirtualCursor &&
+            _virtualCursorInitialized)
         {
             return _virtualCursorScreenPosition;
         }
@@ -294,6 +332,8 @@ public class GameController : Module
     {
         _inputActions.Win10.LeftClick.performed += LeftClickAction;
         _inputActions.Win10.LeftClick.canceled += LeftClickUpAction;
+        _inputActions.Win10.Attack_Player.started += MobileAttackStartedAction;
+        _inputActions.Win10.Attack_Player.canceled += MobileAttackEndedAction;
         _inputActions.Win10.RightClick.performed += RightClickAction;
         _inputActions.Win10.RightClick.canceled += RightClickUpAction;
 
@@ -302,6 +342,10 @@ public class GameController : Module
         _inputActions.Win10.Mouse.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.GamepadCursor.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.GamepadCursor.canceled += UpdateCurrentInputDevice;
+        _inputActions.Win10.MobileAim_Player.performed += HandleMobileAim;
+        _inputActions.Win10.MobileAim_Player.canceled += HandleMobileAim;
+        _inputActions.Win10.MobileAttackAim_Player.performed += HandleMobileAttackAim;
+        _inputActions.Win10.MobileAttackAim_Player.canceled += HandleMobileAttackAim;
         _inputActions.Win10.OpenChat.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.SwitchHotBar_Player.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.HotbarPrevious.performed += UpdateCurrentInputDevice;
@@ -323,6 +367,8 @@ public class GameController : Module
     {
         _inputActions.Win10.LeftClick.performed -= LeftClickAction;
         _inputActions.Win10.LeftClick.canceled -= LeftClickUpAction;
+        _inputActions.Win10.Attack_Player.started -= MobileAttackStartedAction;
+        _inputActions.Win10.Attack_Player.canceled -= MobileAttackEndedAction;
         _inputActions.Win10.RightClick.performed -= RightClickAction;
         _inputActions.Win10.RightClick.canceled -= RightClickUpAction;
 
@@ -331,6 +377,10 @@ public class GameController : Module
         _inputActions.Win10.Mouse.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.GamepadCursor.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.GamepadCursor.canceled -= UpdateCurrentInputDevice;
+        _inputActions.Win10.MobileAim_Player.performed -= HandleMobileAim;
+        _inputActions.Win10.MobileAim_Player.canceled -= HandleMobileAim;
+        _inputActions.Win10.MobileAttackAim_Player.performed -= HandleMobileAttackAim;
+        _inputActions.Win10.MobileAttackAim_Player.canceled -= HandleMobileAttackAim;
         _inputActions.Win10.OpenChat.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.SwitchHotBar_Player.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.HotbarPrevious.performed -= UpdateCurrentInputDevice;
@@ -362,6 +412,12 @@ public class GameController : Module
         }
 
         InputDevice device = context.control.device;
+        if (device is FlatWorldMobileDevice)
+        {
+            SetCurrentInputDevice(InputDeviceType.Mobile);
+            return;
+        }
+
         if (device is Gamepad)
         {
             if (!EnableGamepadAdapter)
@@ -390,6 +446,155 @@ public class GameController : Module
         EventSystemGuard.SetGamepadMode(deviceType == InputDeviceType.Gamepad);
         ActiveInputDeviceChanged?.Invoke(deviceType);
     }
+
+    #region 手机输入语义与径向指向
+
+    /// <summary>手机攻击只产生攻击语义，不再复用 LeftClick，避免同时触发世界交互或拆除。</summary>
+    private void MobileAttackStartedAction(InputAction.CallbackContext context)
+    {
+        UpdateCurrentInputDevice(context);
+        _mobileAttackActive = true;
+        _mobileAttackDraggedOutsideDeadZone = false;
+        UpdateMobileRadialCursor();
+
+        if (IsGameplayInputLocked)
+        {
+            _suppressMobileAttackUntilRelease = true;
+            return;
+        }
+
+        _suppressMobileAttackUntilRelease = false;
+        BeginAttack();
+    }
+
+    /// <summary>无论方向是否拖出死区，手机攻击抬起都会可靠释放攻击状态。</summary>
+    private void MobileAttackEndedAction(InputAction.CallbackContext context)
+    {
+        UpdateCurrentInputDevice(context);
+        _mobileAttackActive = false;
+
+        if (_suppressMobileAttackUntilRelease)
+        {
+            _suppressMobileAttackUntilRelease = false;
+        }
+        else
+        {
+            EndAttack();
+        }
+
+        if (!_mobileAimDirectionInitialized && _mobileAttackDraggedOutsideDeadZone)
+        {
+            _mobileAimDirection = _mobileAttackAimDirection;
+            _mobileAimDirectionInitialized = true;
+        }
+
+        _mobileAttackDraggedOutsideDeadZone = false;
+        UpdateMobileRadialCursor();
+    }
+
+    /// <summary>普通指向松手时保留最后有效方向，零向量只结束当前触控所有权。</summary>
+    private void HandleMobileAim(InputAction.CallbackContext context)
+    {
+        UpdateCurrentInputDevice(context);
+        Vector2 aim = context.ReadValue<Vector2>();
+        if (aim.sqrMagnitude >= GamepadCursorDeadZone * GamepadCursorDeadZone)
+        {
+            _mobileAimDirection = aim.normalized;
+            _mobileAimDirectionInitialized = true;
+        }
+
+        if (!_mobileAttackActive)
+            UpdateMobileRadialCursor();
+    }
+
+    /// <summary>攻击摇杆拖出死区后覆盖普通方向；未拖出时仍沿普通最后方向立即攻击。</summary>
+    private void HandleMobileAttackAim(InputAction.CallbackContext context)
+    {
+        UpdateCurrentInputDevice(context);
+        Vector2 aim = context.ReadValue<Vector2>();
+        if (aim.sqrMagnitude >= GamepadCursorDeadZone * GamepadCursorDeadZone)
+        {
+            _mobileAttackAimDirection = aim.normalized;
+            _mobileAttackAimDirectionInitialized = true;
+            _mobileAttackDraggedOutsideDeadZone = true;
+        }
+
+        if (_mobileAttackActive)
+            UpdateMobileRadialCursor();
+    }
+
+    /// <summary>把手机的最终朝向映射到与手柄一致的径向虚拟光标。</summary>
+    private void UpdateMobileRadialCursor()
+    {
+        if (_currentInputDevice != InputDeviceType.Mobile)
+            return;
+
+        Vector2 direction;
+        bool hasDirection;
+        if (_mobileAttackActive && _mobileAttackDraggedOutsideDeadZone)
+        {
+            direction = _mobileAttackAimDirection;
+            hasDirection = true;
+        }
+        else
+        {
+            direction = _mobileAimDirection;
+            hasDirection = _mobileAimDirectionInitialized;
+        }
+
+        if (!hasDirection)
+            return;
+
+        _virtualCursorScreenPosition = CalculateGameplayRadialCursorScreenPosition(
+            GetPlayerScreenPosition(),
+            direction,
+            GamepadCursorRadius,
+            new Vector2(Screen.width, Screen.height),
+            CursorClampPadding);
+        _virtualCursorInitialized = true;
+    }
+
+    private void BeginAttack()
+    {
+        if (_attackInputHeld)
+            return;
+
+        _attackInputHeld = true;
+        AttackStarted?.Invoke();
+    }
+
+    private void EndAttack()
+    {
+        if (!_attackInputHeld)
+            return;
+
+        _attackInputHeld = false;
+        AttackEnded?.Invoke();
+    }
+
+    /// <summary>由输入锁、暂停、失焦、禁用和销毁共同调用，杜绝移动或攻击卡住。</summary>
+    public void CancelActiveAttackAndMobileInput()
+    {
+        MobileInputRuntime.ResetAll();
+        _mobileAttackActive = false;
+        _mobileAttackDraggedOutsideDeadZone = false;
+        _suppressMobileAttackUntilRelease = false;
+        EndAttack();
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus)
+            CancelActiveAttackAndMobileInput();
+    }
+
+    private void OnApplicationPause(bool paused)
+    {
+        if (paused)
+            CancelActiveAttackAndMobileInput();
+    }
+
+    #endregion
 
     private void InitializeVirtualCursor() /// 初始化虚拟光标
     {

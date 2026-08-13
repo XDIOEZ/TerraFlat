@@ -1,4 +1,5 @@
 using Sirenix.OdinInspector;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -42,6 +43,7 @@ public class UIManager : MonoBehaviour
     public GameObject panelRootPrefab;
     public GameObject[] panelPrefabs;
     private Canvas rootCanvas;
+    private RectTransform safeAreaRoot;
     private int interactionSurfaceRevision;
     private int lastHandledCancelFrame = -1;
 
@@ -55,6 +57,9 @@ public class UIManager : MonoBehaviour
     /// <summary>Profiler 可读取的顶层面板缓存重建次数。</summary>
     public int PanelQueryCacheRebuildCount { get; private set; }
 
+    /// <summary>面板、输入锁、抽屉或返回栈变化时通知常驻 HUD 立即刷新可交互状态。</summary>
+    public event Action InteractionSurfaceChanged;
+
     /// <summary>缓存的 PanelRoot Canvas；仅在根节点失效或替换时重新解析。</summary>
     public Canvas RootCanvas
     {
@@ -62,6 +67,16 @@ public class UIManager : MonoBehaviour
         {
             EnsurePanelRootExists();
             return rootCanvas;
+        }
+    }
+
+    /// <summary>正式面板和手机控制的只读安全区根节点；全屏背景仍由外层根 Canvas 承载。</summary>
+    public RectTransform SafeAreaRoot
+    {
+        get
+        {
+            EnsurePanelRootExists();
+            return safeAreaRoot;
         }
     }
 
@@ -94,7 +109,8 @@ public class UIManager : MonoBehaviour
         if (panelRoot != null)
         {
             CacheRootCanvas();
-            UIScaleController.Ensure(panelRoot);
+            ResolveSafeAreaRoot();
+            UIScaleController.Ensure(rootCanvas != null ? rootCanvas.transform : panelRoot);
             return;
         }
 
@@ -103,7 +119,8 @@ public class UIManager : MonoBehaviour
         {
             panelRoot = existingPanelRoot.transform;
             CacheRootCanvas();
-            UIScaleController.Ensure(panelRoot);
+            ResolveSafeAreaRoot();
+            UIScaleController.Ensure(rootCanvas != null ? rootCanvas.transform : panelRoot);
             return;
         }
 
@@ -120,7 +137,8 @@ public class UIManager : MonoBehaviour
         canvasObj.name = "PanelRoot";
         panelRoot = canvasObj.transform;
         CacheRootCanvas();
-        UIScaleController.Ensure(panelRoot);
+        ResolveSafeAreaRoot();
+        UIScaleController.Ensure(rootCanvas != null ? rootCanvas.transform : panelRoot);
     }
 
     /// <summary>只在根 Canvas 无效或不再属于 PanelRoot 时重新解析引用。</summary>
@@ -137,12 +155,15 @@ public class UIManager : MonoBehaviour
         }
 
         if (rootCanvas != null &&
-            (rootCanvas.transform == panelRoot || rootCanvas.transform.IsChildOf(panelRoot)))
+            (rootCanvas.transform == panelRoot ||
+             rootCanvas.transform.IsChildOf(panelRoot) ||
+             panelRoot.IsChildOf(rootCanvas.transform)))
         {
             return;
         }
 
         Canvas nextCanvas = panelRoot.GetComponent<Canvas>() ??
+                            panelRoot.GetComponentInParent<Canvas>() ??
                             panelRoot.GetComponentInChildren<Canvas>(true);
         if (rootCanvas == nextCanvas)
             return;
@@ -151,6 +172,26 @@ public class UIManager : MonoBehaviour
         NotifyInteractionSurfaceChanged();
         if (rootCanvas == null)
             Debug.LogError("[UIManager] PanelRoot 缺少 Canvas，虚拟光标无法绑定。", panelRoot);
+    }
+
+    /// <summary>把运行时面板根切到正式 Prefab 中的 SafeAreaRoot，并保证安全区组件生效。</summary>
+    private void ResolveSafeAreaRoot()
+    {
+        if (rootCanvas == null)
+            return;
+
+        RectTransform nextSafeArea = rootCanvas.transform.Find("SafeAreaRoot") as RectTransform;
+        if (nextSafeArea == null)
+        {
+            safeAreaRoot = null;
+            panelRoot = rootCanvas.transform;
+            Debug.LogError("[UIManager] UIRoot.prefab 缺少 SafeAreaRoot，面板已暂时回退到全屏根节点。", rootCanvas);
+            return;
+        }
+
+        safeAreaRoot = nextSafeArea;
+        panelRoot = safeAreaRoot;
+        SafeAreaRectController.Ensure(safeAreaRoot);
     }
 
     private void InitializePanels()
@@ -283,6 +324,7 @@ public class UIManager : MonoBehaviour
         {
             interactionSurfaceRevision++;
         }
+        InteractionSurfaceChanged?.Invoke();
     }
 
     /// <summary>

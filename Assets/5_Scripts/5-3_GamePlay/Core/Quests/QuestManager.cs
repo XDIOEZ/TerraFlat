@@ -14,6 +14,7 @@ namespace FlatWorld.Gameplay.Quests
         #region 状态
 
         private readonly Dictionary<Player, PlayerQuestRuntime> runtimes = new();
+        private readonly HashSet<Player> pendingPlayers = new();
         private GameManager boundGameManager;
         private bool eventsBound;
 
@@ -59,6 +60,11 @@ namespace FlatWorld.Gameplay.Quests
             boundGameManager = gameManager;
             if (boundGameManager != null)
                 boundGameManager.Event_GameWorldExit += HandleWorldExit;
+        }
+
+        private void Update()
+        {
+            TryStartPendingRuntimes();
         }
 
         protected override void OnDestroy()
@@ -120,6 +126,51 @@ namespace FlatWorld.Gameplay.Quests
                 return;
             }
 
+            if (!IsQuestContentReady())
+            {
+                if (pendingPlayers.Add(player))
+                    Debug.Log("[Quest] 任务内容仍在加载，本地玩家任务运行时已进入等待队列。");
+                return;
+            }
+
+            StartRuntime(player);
+        }
+
+        /// <summary>只在本体资源、任务目录和 MOD 定义形成同一份最终快照后启动等待中的运行时。</summary>
+        private void TryStartPendingRuntimes()
+        {
+            if (pendingPlayers.Count == 0 || !IsQuestContentReady())
+                return;
+
+            var readyPlayers = new List<Player>(pendingPlayers);
+            pendingPlayers.Clear();
+            foreach (Player player in readyPlayers)
+            {
+                if (player != null && player.IsLocalProfile && player.Data != null)
+                    StartRuntime(player);
+            }
+        }
+
+        /// <summary>资源热重载期间目录会短暂 Ready，仍须等待 GameRes 与 MOD 完整收尾。</summary>
+        private static bool IsQuestContentReady()
+        {
+            if (!QuestCatalog.IsReady)
+                return false;
+
+            GameRes gameRes = GameRes.ExistingInstance;
+            if (gameRes != null && !gameRes.isLoadFinish)
+                return false;
+
+            ModRuntimeManager modRuntime = ModRuntimeManager.Instance;
+            return modRuntime == null || modRuntime.IsReady;
+        }
+
+        /// <summary>为已确认内容就绪的本地玩家创建任务运行时。</summary>
+        private void StartRuntime(Player player)
+        {
+            if (runtimes.ContainsKey(player))
+                return;
+
             var runtime = new PlayerQuestRuntime(player);
             if (!runtime.Initialize(out string error))
             {
@@ -145,6 +196,8 @@ namespace FlatWorld.Gameplay.Quests
 
         private void ClearRuntimes()
         {
+            pendingPlayers.Clear();
+
             foreach (KeyValuePair<Player, PlayerQuestRuntime> pair in runtimes)
             {
                 NotifyRuntimeRemoving(pair.Key);

@@ -63,6 +63,13 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         return definition != null;
     }
 
+    public bool TryGetDefinition(string dimensionId, out DimensionDefinition definition)
+    {
+        LoadCatalog();
+        definition = catalog?.Find(dimensionId);
+        return definition != null;
+    }
+
     public string GetActiveMapCorePrefabId()
     {
 #pragma warning disable 0618 // 旧 ChunkMgr 兼容路径仍需读取旧 MapCore 配置；新版 WorldModel 不使用该入口。
@@ -194,7 +201,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             return false;
         }
 
-        if (!GameManager.Instance.BeginDimensionTransitionLoading(targetDefinition.DisplayName))
+        if (!GameManager.Instance.BeginDimensionTransitionLoading(targetDefinition))
             return false;
 
         try
@@ -252,7 +259,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             return false;
         }
 
-        if (!GameManager.Instance.BeginDimensionTransitionLoading(targetDefinition.DisplayName))
+        if (!GameManager.Instance.BeginDimensionTransitionLoading(targetDefinition))
             return false;
 
         PortalTransitionContext portalContext = generatedWorldPortal
@@ -313,6 +320,22 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         GameController sourceController = sourcePlayer.GetComponentInChildren<GameController>(true);
         sourceController?.SetGameplayInputLocked(true);
         TransitionState state = new TransitionState();
+
+        // 必须等专属 Canvas 实际提交一帧后再保存、卸载场景，避免首帧穿帮。
+        bool presentationWarningLogged = false;
+        float presentationWarningAt = Time.realtimeSinceStartup + 12f;
+        while (!GameManager.Instance.IsDimensionLoadingPresentationVisible)
+        {
+            if (!presentationWarningLogged && Time.realtimeSinceStartup >= presentationWarningAt)
+            {
+                presentationWarningLogged = true;
+                Debug.LogWarning("[DimensionManager] 维度加载页尚未完成实例化，继续保持输入锁并等待。", this);
+            }
+
+            yield return null;
+        }
+        yield return new WaitForEndOfFrame();
+
         IEnumerator routine = ExecuteTransitionCoroutine(
             sourcePlayer,
             sourceAddress,
@@ -346,11 +369,41 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
         if (failure != null)
         {
-            RecoverAfterTransitionFailure(playerData, sourceAddress, sourcePosition, state.ExitNotified, state.EnterNotified);
-            ItemMgr.Instance?.User_Player
-                ?.GetComponentInChildren<TileEffectReceiver>(true)
-                ?.RefreshCurrentTileEffects();
-            GameManager.Instance.FailDimensionTransitionLoading("维度切换失败，已尝试恢复玩家。", failure);
+            GameManager.Instance.SetDimensionTransitionLoading("维度切换失败，正在恢复原世界…", 0.1f);
+            IEnumerator recoveryRoutine = RecoverAfterTransitionFailureCoroutine(
+                playerData,
+                sourceAddress,
+                sourcePosition,
+                state.ExitNotified,
+                state.EnterNotified);
+            Exception recoveryFailure = null;
+            while (true)
+            {
+                bool hasNext;
+                object current = null;
+                try
+                {
+                    hasNext = recoveryRoutine.MoveNext();
+                    if (hasNext)
+                        current = recoveryRoutine.Current;
+                }
+                catch (Exception exception)
+                {
+                    recoveryFailure = exception;
+                    break;
+                }
+
+                if (!hasNext)
+                    break;
+
+                yield return current;
+            }
+
+            GameManager.Instance.FailDimensionTransitionLoading(
+                recoveryFailure == null
+                    ? "维度切换失败，已恢复到原世界。"
+                    : "维度切换失败，原世界恢复也发生异常。",
+                recoveryFailure ?? failure);
         }
 
         isTransitioning = false;
@@ -416,8 +469,6 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
         GameManager.Instance.SetDimensionTransitionLoading("正在生成目标区块…", 0.78f);
         yield return WaitForRuntimeChunkPresentation(targetAddress, targetPosition, targetPlayer);
-        while (ChunkMgr.Instance.HasPendingChunkLoads)
-            yield return null;
 
         if (portalContext?.EnsureCaveExit == true)
         {
@@ -428,11 +479,10 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         yield return null;
         targetPlayer.GetComponentInChildren<TileEffectReceiver>(true)?.RefreshCurrentTileEffects();
 
-        // GameManager 在玩家进入后还会等待 Chunk 队列和两个收尾帧。
-        // 必须等这条权威生命周期真正完成再解锁输入，否则玩家落在出口上时，
-        // 第一次 E 会因“世界进入流程仍在执行”而被拒绝。
         GameManager.Instance.SetDimensionTransitionLoading("正在完成目标维度加载…", 0.96f);
-        yield return WaitForWorldEntryLifecycleCompletion(targetAddress);
+        Physics2D.SyncTransforms();
+        yield return new WaitForFixedUpdate();
+        GameManager.Instance.CompleteDimensionTransitionLoading();
 
         targetPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(false);
         ItemMgr.Instance.SavePlayer();
@@ -453,7 +503,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         public bool UseExactTargetPosition;
     }
 
-    private void RecoverAfterTransitionFailure(
+    private IEnumerator RecoverAfterTransitionFailureCoroutine(
         Data_Player playerData,
         WorldAddress sourceAddress,
         Vector3 sourcePosition,
@@ -461,34 +511,52 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         bool enterNotified)
     {
         if (playerData == null)
-            return;
+            yield break;
 
-        if (ItemMgr.Instance?.User_Player == null)
+        Player currentPlayer = ItemMgr.Instance?.User_Player;
+        if (!exitNotified)
         {
-            Scene scene = SceneManager.GetSceneByName(sourceAddress.WorldKey);
-            if (!scene.IsValid() || !scene.isLoaded)
-                scene = SceneManager.CreateScene(sourceAddress.WorldKey);
-            SceneManager.SetActiveScene(scene);
-            ActivateWorld(sourceAddress);
-
-            playerData.CurrentSceneName = sourceAddress.WorldKey;
-            playerData.transform.position = sourcePosition;
-            SaveDataMgr.Instance.SaveData.PlayerData_Dict[playerData.Name_User] = playerData;
-
-            if (exitNotified && !enterNotified)
-                GameManager.Instance.NotifyDimensionWorldEntered();
-
-            Player recoveredPlayer = ItemMgr.Instance.LoadPlayer(playerData.Name_User);
-            recoveredPlayer.transform.position = sourcePosition;
-            recoveredPlayer.Data.transform.position = sourcePosition;
-            GameManager.Instance.NotifyDimensionPlayerEntered(recoveredPlayer);
+            currentPlayer?.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(false);
+            yield break;
         }
-        else
+
+        if (enterNotified)
+            GameManager.Instance.NotifyDimensionWorldExiting();
+
+        if (currentPlayer != null)
+            ItemMgr.Instance.ReleasePlayerForWorldTransition(currentPlayer);
+        ChunkMgr.Instance?.OnSceneChange();
+
+        Scene previousScene = SceneManager.GetActiveScene();
+        Scene sourceScene = SceneManager.GetSceneByName(sourceAddress.WorldKey);
+        if (!sourceScene.IsValid() || !sourceScene.isLoaded)
+            sourceScene = SceneManager.CreateScene(sourceAddress.WorldKey);
+        SceneManager.SetActiveScene(sourceScene);
+        ActivateWorld(sourceAddress);
+
+        if (previousScene.IsValid() && previousScene.isLoaded && previousScene != sourceScene)
         {
-            ItemMgr.Instance.User_Player.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(false);
-            if (exitNotified && !enterNotified)
-                GameManager.Instance.NotifyDimensionWorldEntered();
+            AsyncOperation unloadOperation = SceneManager.UnloadSceneAsync(previousScene);
+            while (unloadOperation != null && !unloadOperation.isDone)
+                yield return null;
         }
+
+        playerData.CurrentSceneName = sourceAddress.WorldKey;
+        playerData.transform.position = sourcePosition;
+        SaveDataMgr.Instance.SaveData.PlayerData_Dict[playerData.Name_User] = playerData;
+        GameManager.Instance.NotifyDimensionWorldEntered();
+
+        Player recoveredPlayer = ItemMgr.Instance.LoadPlayer(playerData.Name_User);
+        recoveredPlayer.transform.position = sourcePosition;
+        recoveredPlayer.Data.transform.position = sourcePosition;
+        recoveredPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(true);
+        GameManager.Instance.NotifyDimensionPlayerEntered(recoveredPlayer);
+        yield return WaitForRuntimeChunkPresentation(sourceAddress, sourcePosition, recoveredPlayer);
+
+        recoveredPlayer.GetComponentInChildren<TileEffectReceiver>(true)?.RefreshCurrentTileEffects();
+        recoveredPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(false);
+        ItemMgr.Instance.SavePlayer();
+        SaveDataMgr.Instance.Save_And_WriteToDisk();
     }
 
     private void OnPlayerEnteredWorld(Player player)
@@ -853,60 +921,42 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
                 includeLocalPresentation: true, prefetchDistance: 3);
         }
 
-        // 玩家脚下区块决定碰撞与实体能否安全落地，必须等待；外围视野只影响逐步显现，
-        // 不应因为低性能设备或大视距超过固定时长，就把已经成功的世界切换判定为失败。
-        float centerDeadline = Time.realtimeSinceStartup + 30f;
+        // 玩家脚下区块决定碰撞与实体能否安全落地；超时只诊断，绝不带病放行。
+        bool centerWarningLogged = false;
+        float centerWarningAt = Time.realtimeSinceStartup + 12f;
         while (!chunkManager.IsRuntimeEntityPresentationReady(targetPosition))
         {
-            if (Time.realtimeSinceStartup >= centerDeadline)
+            if (!centerWarningLogged && Time.realtimeSinceStartup >= centerWarningAt)
             {
-                throw new TimeoutException(
-                    $"目标维度玩家落地区块未在限定时间内表现：{targetAddress.WorldKey}");
+                centerWarningLogged = true;
+                Debug.LogWarning(
+                    $"[DimensionManager] 目标维度玩家落地区块表现超过 12 秒，继续等待：{targetAddress.WorldKey}",
+                    chunkManager);
             }
 
             yield return null;
         }
 
-        // 中心区块已可安全使用后，再给外围区块一段加载宽限期。
-        // 超过宽限期只记录诊断并继续切换，剩余 ChunkView 由正常流送队列后台补齐。
-        float windowDeadline = Time.realtimeSinceStartup + 12f;
-        while (!chunkManager.AreRuntimeWindowPresentationsReady &&
-               Time.realtimeSinceStartup < windowDeadline)
+        // 只等待相机活动窗口；更远的低优先级预取不属于该判定。
+        bool windowWarningLogged = false;
+        float windowWarningAt = Time.realtimeSinceStartup + 12f;
+        while (!chunkManager.AreRuntimeWindowPresentationsReady)
         {
-            yield return null;
-        }
+            if (!windowWarningLogged && Time.realtimeSinceStartup >= windowWarningAt)
+            {
+                windowWarningLogged = true;
+                Debug.LogWarning(
+                    $"[DimensionManager] 目标维度可见窗口表现超过 12 秒，继续保持加载页：" +
+                    $"{targetAddress.WorldKey}，待表现 {chunkManager.PendingRuntimeChunkPresentationCount}，" +
+                    $"仍有后台生成 {chunkManager.HasPendingChunkDataLoads}。",
+                    chunkManager);
+            }
 
-        if (!chunkManager.AreRuntimeWindowPresentationsReady)
-        {
-            Debug.LogWarning(
-                $"[DimensionManager] 目标维度外围区块仍在后台表现，先完成玩家落地：" +
-                $"{targetAddress.WorldKey}，待表现 {chunkManager.PendingRuntimeChunkPresentationCount}，" +
-                $"仍有后台生成 {chunkManager.HasPendingChunkDataLoads}。",
-                chunkManager);
+            yield return null;
         }
 
         Physics2D.SyncTransforms();
         yield return new WaitForFixedUpdate();
-    }
-
-    /// <summary>等待 GameManager 的世界进入收尾完成，避免维度交互窗口提前开放。</summary>
-    private static IEnumerator WaitForWorldEntryLifecycleCompletion(WorldAddress targetAddress)
-    {
-        GameManager gameManager = GameManager.Instance;
-        if (gameManager == null)
-            throw new InvalidOperationException("维度切换收尾时找不到 GameManager。");
-
-        float deadline = Time.realtimeSinceStartup + 12f;
-        while (gameManager.IsWorldEntryInProgress)
-        {
-            if (Time.realtimeSinceStartup >= deadline)
-            {
-                throw new TimeoutException(
-                    $"目标维度世界进入生命周期未在限定时间内完成：{targetAddress.WorldKey}");
-            }
-
-            yield return null;
-        }
     }
 
     private static IEnumerator EnsureCaveExitCoroutine(

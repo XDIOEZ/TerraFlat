@@ -73,6 +73,10 @@ namespace FlatWorld.Automation
         private static HashSet<Vector2Int> _visitedChunks;
         private static HashSet<Vector2Int> _observedChunks;
         private static List<string> _screenshotPaths;
+        private static List<string> _dimensionLoadingScreenshotPaths;
+        private static int _dimensionRoundTripPhase;
+        private static bool _dimensionLoadingObserved;
+        private static bool _dimensionInputLockObserved;
         private static string _pendingScreenshotPath;
         private static int _screenshotCaptureAfterFrame;
         private static double _screenshotCaptureNotBefore;
@@ -424,6 +428,9 @@ namespace FlatWorld.Automation
                     case RuntimePhase.WaitForWorld:
                         TickWaitForWorld();
                         break;
+                    case RuntimePhase.WaitForDimensionRoundTrip:
+                        TickWaitForDimensionRoundTrip();
+                        break;
                     case RuntimePhase.WaitForWorldReadyScenarios:
                         TickWaitForWorldReadyScenarios();
                         break;
@@ -570,6 +577,113 @@ namespace FlatWorld.Automation
             if (_player.Data.CurrentSceneName != SceneManager.GetActiveScene().name)
                 throw new InvalidOperationException("玩家保存的当前场景与实际场景不一致。");
 
+            _screenshotPaths = new List<string>(3);
+            _dimensionLoadingScreenshotPaths = new List<string>(2);
+            BeginDimensionRoundTrip(WorldAddress.CaveDimensionId);
+        }
+
+        private static void BeginDimensionRoundTrip(string targetDimensionId)
+        {
+            _terminalWorldEntryState = null;
+            _terminalWorldEntryStatus = null;
+            _dimensionLoadingObserved = false;
+            _dimensionInputLockObserved = false;
+            Item portalProbe = ItemMgr.Instance.InstantiateItem("Berry", _player.transform.position);
+            if (!DimensionManager.Instance.TryBeginGeneratedPortalTransition(
+                    _player,
+                    targetDimensionId,
+                    portalProbe))
+            {
+                ItemMgr.Instance.DespawnItem(portalProbe, saveData: false);
+                throw new InvalidOperationException($"Golden Path 无法启动维度往返：{targetDimensionId}");
+            }
+
+            _dimensionRoundTripPhase = targetDimensionId == WorldAddress.CaveDimensionId ? 1 : 2;
+            _runtimePhase = RuntimePhase.WaitForDimensionRoundTrip;
+            _phaseDeadline = EditorApplication.timeSinceStartup +
+                             _executor.Configuration.execution.worldEntryTimeoutSeconds;
+        }
+
+        private static void TickWaitForDimensionRoundTrip()
+        {
+            if (_terminalWorldEntryState == WorldEntryProgressState.Failed)
+                throw new InvalidOperationException($"维度往返失败：{_terminalWorldEntryStatus ?? "未知错误"}");
+
+            string expectedTarget = _dimensionRoundTripPhase == 1
+                ? WorldAddress.CaveDimensionId
+                : WorldAddress.SurfaceDimensionId;
+            if (_gameManager.IsDimensionLoadingPresentationVisible)
+            {
+                if (!string.Equals(
+                        _gameManager.ActiveDimensionLoadingTargetId,
+                        expectedTarget,
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"维度加载页主题目标错误：期望 {expectedTarget}，实际 {_gameManager.ActiveDimensionLoadingTargetId}。");
+                }
+
+                _dimensionLoadingObserved = true;
+                Player activePlayer = ItemMgr.Instance?.User_Player;
+                GameController controller = activePlayer?.GetComponentInChildren<GameController>(true);
+                _dimensionInputLockObserved |= controller != null && controller.IsGameplayInputLocked;
+
+                if (_dimensionLoadingScreenshotPaths.Count < _dimensionRoundTripPhase)
+                {
+                    string directory = GetScreenshotDirectory(_activeRequest.id);
+                    Directory.CreateDirectory(directory);
+                    string screenshotPath = Path.Combine(
+                        directory,
+                        $"dimension-loading-{expectedTarget}.png");
+                    ScreenCapture.CaptureScreenshot(screenshotPath);
+                    _dimensionLoadingScreenshotPaths.Add(screenshotPath);
+                }
+            }
+
+            if (DimensionManager.Instance.IsTransitioning || _gameManager.IsWorldEntryInProgress)
+            {
+                ThrowIfTimedOut($"维度加载未在限定时间内完成：{expectedTarget}");
+                return;
+            }
+
+            WorldAddress activeAddress = DimensionManager.Instance.ActiveAddress;
+            if (!string.Equals(activeAddress.DimensionId, expectedTarget, StringComparison.Ordinal))
+            {
+                ThrowIfTimedOut($"维度管理器没有抵达目标：{expectedTarget}");
+                return;
+            }
+
+            if (!_dimensionLoadingObserved)
+                throw new InvalidOperationException($"切换 {expectedTarget} 时未观察到专属加载页。");
+            if (!_dimensionInputLockObserved)
+                throw new InvalidOperationException($"切换 {expectedTarget} 时未观察到底层输入锁。");
+            if (ChunkMgr.Instance == null || !ChunkMgr.Instance.AreRuntimeWindowPresentationsReady)
+                throw new InvalidOperationException($"切换 {expectedTarget} 完成时可见 ChunkView 窗口尚未就绪。");
+
+            _player = ItemMgr.Instance.User_Player;
+            if (_player == null)
+                throw new InvalidOperationException($"切换 {expectedTarget} 后没有重新生成玩家。");
+
+            if (_dimensionRoundTripPhase == 1)
+            {
+                BeginDimensionRoundTrip(WorldAddress.SurfaceDimensionId);
+                return;
+            }
+
+            GameController finalController = _player.GetComponentInChildren<GameController>(true);
+            if (finalController != null && finalController.IsGameplayInputLocked)
+                throw new InvalidOperationException("维度往返完成后玩家输入仍被锁定。");
+            if (_dimensionLoadingScreenshotPaths.Count != 2 ||
+                _dimensionLoadingScreenshotPaths.Any(path => !File.Exists(path)))
+            {
+                throw new InvalidOperationException("维度加载页诊断截图没有完整写入磁盘。");
+            }
+
+            InitializeTraversalAfterDimensionRoundTrip();
+        }
+
+        private static void InitializeTraversalAfterDimensionRoundTrip()
+        {
             _mover = _player.itemMods.GetMod_ByID<Mover>(ModText.Mover);
             Mod_ChunkLoader chunkLoader =
                 _player.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
@@ -582,6 +696,7 @@ namespace FlatWorld.Automation
                 collider.enabled = false;
 
             _originalMoveSpeed = _mover.Speed.BaseValue;
+            _executor.ConfigurePlayer(_player, chunkLoader);
             _startPosition = _mover.rb.position;
             _chunkSize = ChunkMgr.GetChunkSize();
             GoldenPathPlayerConfiguration playerConfig = _executor.Configuration.player;
@@ -603,7 +718,6 @@ namespace FlatWorld.Automation
                 ChunkMgr.Instance.ResolveRuntimeChunkOrigin(_startPosition)
             };
             _observedChunks = new HashSet<Vector2Int>();
-            _screenshotPaths = new List<string>(3);
             RecordObservedActiveChunks(ChunkMgr.Instance);
             FlatWorldGoldenPathScenarios.OnWorldReady(CreateScenarioContext());
             _runtimePhase = RuntimePhase.WaitForWorldReadyScenarios;
@@ -1460,6 +1574,8 @@ namespace FlatWorld.Automation
                 warnings = CreateWarnings(),
                 message = passed ? message ?? string.Empty : string.Empty,
                 screenshotPaths = _screenshotPaths?.ToArray() ?? Array.Empty<string>(),
+                dimensionLoadingScreenshotPaths =
+                    _dimensionLoadingScreenshotPaths?.ToArray() ?? Array.Empty<string>(),
                 enabledOperationIds = FlatWorldGoldenPathScenarios.GetEnabledOperationIds(
                     _activeRequest.configuration ??
                     FlatWorldGoldenPathConfiguration.CreateDefault()).ToArray(),
@@ -1902,6 +2018,10 @@ namespace FlatWorld.Automation
             _visitedChunks = null;
             _observedChunks = null;
             _screenshotPaths = null;
+            _dimensionLoadingScreenshotPaths = null;
+            _dimensionRoundTripPhase = 0;
+            _dimensionLoadingObserved = false;
+            _dimensionInputLockObserved = false;
             _pendingScreenshotPath = null;
             _screenshotCaptureAfterFrame = 0;
             _screenshotCaptureNotBefore = 0d;
@@ -1932,6 +2052,7 @@ namespace FlatWorld.Automation
             None,
             WaitForStartup,
             WaitForWorld,
+            WaitForDimensionRoundTrip,
             WaitForWorldReadyScenarios,
             VerifyWorldWrap,
             RestoreWorldWrap,
@@ -1995,6 +2116,7 @@ namespace FlatWorld.Automation
             public List<GoldenPathWarning> warnings;
             public string message;
             public string[] screenshotPaths;
+            public string[] dimensionLoadingScreenshotPaths;
             public string[] enabledOperationIds;
             public FlatWorldGoldenPathConfiguration configuration;
         }

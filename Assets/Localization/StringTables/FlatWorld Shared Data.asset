@@ -703,6 +703,46 @@ MonoBehaviour:
     m_Key: quest.flatworld.debug_craft_and_build.objective.place_any_building
     m_Metadata:
       m_Items: []
+  - m_Id: 1679033391210496
+    m_Key: item.Ore_Stone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033445736448
+    m_Key: item.Ore_Stone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033454125056
+    m_Key: item.SparkMaker_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033454125057
+    m_Key: item.SparkMaker_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033475096576
+    m_Key: item.FlintStrike.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033475096577
+    m_Key: item.FlintStrike.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033483485184
+    m_Key: item.ChippedTool.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033483485185
+    m_Key: item.ChippedTool.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033483485186
+    m_Key: item.Torch.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1679033483485187
+    m_Key: item.Torch.description
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
