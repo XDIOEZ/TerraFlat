@@ -8,8 +8,20 @@ public class Mod_Damage : Module, IDamageSender
     [Header("攻击特效")]
     public List<GameEffect> AttackEffects = new List<GameEffect>();
 
-    public List<DamageType> Weakness = new List<DamageType>();
+    [Header("四类攻击伤害")]
+    [Tooltip("切割、穿刺、劈砍、钝击分别独立参与防御结算；总战斗力为四项之和。")]
+    public CombatDamage DamageValues = new CombatDamage();
+
+    [HideInInspector]
+    [Tooltip("仅用于把旧资源迁移到四类伤害，新的战斗结算不会直接读取该值。")]
     public GameValue_float Damage = new GameValue_float(10f);
+
+    [HideInInspector]
+    [Tooltip("仅用于识别旧资源的主要伤害类型，等级不再参与结算。")]
+    public List<DamageType> Weakness = new List<DamageType>();
+
+    [SerializeField, HideInInspector]
+    private int damageSystemVersion;
 
     [Header("定时伤害设置")]
     [Tooltip("伤害间隔时间（秒）\n-1: 永远不启用\n0: 每帧造成伤害\n>0: 每间隔秒数造成伤害")]
@@ -64,13 +76,14 @@ public class Mod_Damage : Module, IDamageSender
 
     #region IDamageSender 实现
     Item IDamageSender.attacker { get => item; set => item = value; }
-    List<DamageType> IDamageSender.Weakness { get => Weakness; set => Weakness = value; }
-    GameValue_float IDamageSender.Damage { get => Damage; set => Damage = value; }
+    CombatDamage IDamageSender.DamageValues => ResolveDamageValues();
     #endregion
 
     #region Unity 生命周期
     public override void Load()
     {
+        NormalizeDamageValues();
+
         // 初始化时尝试获取碰撞体组件
         if (damageCollider == null)
         {
@@ -156,7 +169,7 @@ public class Mod_Damage : Module, IDamageSender
             // DamageInterval < 0：仅做一次进入伤害，不参与冷却（保持旧行为）
             if (DamageInterval < 0f)
             {
-                ApplyDamageToReceiver(receiver);
+                ApplyDamageToReceiver(receiver, other);
             }
             else
             {
@@ -165,7 +178,7 @@ public class Mod_Damage : Module, IDamageSender
                 if (DamageInterval == 0f || Time.time - lastDamageTime >= DamageInterval)
                 {
                     // 实际更新时间由 ApplyDamageToReceiver 在真正造成伤害时负责
-                    ApplyDamageToReceiver(receiver);
+                    ApplyDamageToReceiver(receiver, other);
                 }
             }
 
@@ -201,17 +214,18 @@ public class Mod_Damage : Module, IDamageSender
         }
     }
 
-    private void ApplyDamageToReceiver(DamageReceiver receiver)
+    /// <summary>结算一次实体伤害，并优先使用本次实际命中的碰撞体定位特效。</summary>
+    private void ApplyDamageToReceiver(DamageReceiver receiver, Collider2D hitCollider = null)
     {
         if (!CanDealDamageNow()) return;
 
         // 造成伤害
         float acDamage = receiver.Hurt(this);
 
-        // 生成攻击特效
-        if (AttackEffects != null && AttackEffects.Count > 0)
+        // DamageReceiver 与受击 Collider 可能位于不同层级，不能假定接收器节点自身带 Collider。
+        if (acDamage > 0f && AttackEffects != null && AttackEffects.Count > 0)
         {
-            Vector2 hitPoint = receiver.GetComponent<Collider2D>().ClosestPoint(transform.position);
+            Vector2 hitPoint = ResolveHitPoint(receiver, hitCollider);
             SpawnEffect(hitPoint, acDamage);
         }
 
@@ -221,6 +235,23 @@ public class Mod_Damage : Module, IDamageSender
 
         lastDamageTime = Time.time;
 
+    }
+
+    /// <summary>解析稳定的命中特效位置；缺少碰撞体时回退到受击对象中心。</summary>
+    private Vector2 ResolveHitPoint(DamageReceiver receiver, Collider2D hitCollider)
+    {
+        if (hitCollider != null)
+            return hitCollider.ClosestPoint(transform.position);
+
+        Collider2D receiverCollider = receiver.GetComponent<Collider2D>();
+        if (receiverCollider == null)
+            receiverCollider = receiver.GetComponentInChildren<Collider2D>(true);
+        if (receiverCollider == null)
+            receiverCollider = receiver.GetComponentInParent<Collider2D>();
+
+        return receiverCollider != null
+            ? receiverCollider.ClosestPoint(transform.position)
+            : (Vector2)receiver.transform.position;
     }
 
     private void TryApplyDamageToTilemap()
@@ -238,7 +269,7 @@ public class Mod_Damage : Module, IDamageSender
             return;
 
         tileDamageAppliedThisWindow = true;
-        if (AttackEffects != null && AttackEffects.Count > 0)
+        if (result.AppliedDamage > 0f && AttackEffects != null && AttackEffects.Count > 0)
             SpawnEffect(result.HitPoint, result.AppliedDamage);
         OnDamageApplied?.Invoke(result.AppliedDamage);
         lastDamageTime = Time.time;
@@ -291,38 +322,89 @@ public class Mod_Damage : Module, IDamageSender
         }
     }
 
-    /// <summary>把攻击模块已有的 DamageTag 转为伤害数字样式，不改变伤害结算语义。</summary>
+    /// <summary>按占比最大的有效伤害类型选择伤害数字样式。</summary>
     private DamageTextEffectData BuildDamageTextData(float damage)
     {
         DamageTextStyle style = DamageTextStyle.Normal;
-        if (Weakness != null)
+        CombatDamage values = ResolveDamageValues();
+        float highest = values.Cutting;
+        if (highest > 0f)
+            style = DamageTextStyle.Cutting;
+        if (values.Piercing > highest)
         {
-            for (int i = 0; i < Weakness.Count; i++)
-            {
-                switch (Weakness[i].Tag)
-                {
-                    case DamageTag.火焰:
-                        style = DamageTextStyle.Fire;
-                        break;
-                    case DamageTag.切割:
-                    case DamageTag.劈砍:
-                        style = DamageTextStyle.Cutting;
-                        break;
-                    case DamageTag.钝击:
-                        style = DamageTextStyle.Blunt;
-                        break;
-                    case DamageTag.穿刺:
-                        style = DamageTextStyle.Piercing;
-                        break;
-                }
-
-                if (style != DamageTextStyle.Normal)
-                    break;
-            }
+            highest = values.Piercing;
+            style = DamageTextStyle.Piercing;
         }
+        if (values.Chopping > highest)
+        {
+            highest = values.Chopping;
+            style = DamageTextStyle.Cutting;
+        }
+        if (values.Blunt > highest)
+            style = DamageTextStyle.Blunt;
 
         return new DamageTextEffectData(damage, style);
     }
+
+    /// <summary>获取已校正的四类伤害，并兼容尚未迁移的旧攻击资源。</summary>
+    public CombatDamage ResolveDamageValues()
+    {
+        NormalizeDamageValues();
+        return DamageValues;
+    }
+
+    /// <summary>由数值工具显式写入四类伤害，并阻止零伤害配置回退到旧单值。</summary>
+    public void SetDamageValues(CombatDamage values)
+    {
+        DamageValues = values ?? new CombatDamage();
+        DamageValues.ClampNonNegative();
+        damageSystemVersion = 1;
+    }
+
+    /// <summary>旧单值伤害按原标签迁入一个主要类型；旧等级被明确丢弃。</summary>
+    private void NormalizeDamageValues()
+    {
+        DamageValues ??= new CombatDamage();
+        DamageValues.ClampNonNegative();
+        if (damageSystemVersion >= 1)
+            return;
+
+        if (DamageValues.TotalCombatPower > 0f)
+        {
+            damageSystemVersion = 1;
+            return;
+        }
+
+        if (Damage == null || Damage.Value <= 0f)
+        {
+            damageSystemVersion = 1;
+            return;
+        }
+
+        float legacyValue = Mathf.Max(0f, Damage.Value);
+        DamageTag legacyTag = Weakness != null && Weakness.Count > 0
+            ? Weakness[0].Tag
+            : DamageTag.钝击;
+
+        switch (legacyTag)
+        {
+            case DamageTag.切割:
+                DamageValues.Cutting = legacyValue;
+                break;
+            case DamageTag.穿刺:
+                DamageValues.Piercing = legacyValue;
+                break;
+            case DamageTag.劈砍:
+                DamageValues.Chopping = legacyValue;
+                break;
+            default:
+                DamageValues.Blunt = legacyValue;
+                break;
+        }
+
+        damageSystemVersion = 1;
+    }
+
     #endregion
 
     #region 新增方法：控制伤害启用/禁用
@@ -366,7 +448,7 @@ public class Mod_Damage : Module, IDamageSender
                 DamageInterval == 0f ||
                 Time.time - lastDamageTime >= DamageInterval)
             {
-                ApplyDamageToReceiver(receiver);
+                ApplyDamageToReceiver(receiver, overlap);
             }
         }
     }

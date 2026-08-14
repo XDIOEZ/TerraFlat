@@ -12,6 +12,8 @@ public sealed class ActorRenderColorEffect : ActorRenderEffectModule
 
     private static readonly int ActorTintId = Shader.PropertyToID("_ActorTint");
     private static readonly int ActorTintStrengthId = Shader.PropertyToID("_ActorTintStrength");
+    private static readonly int ActorTintPulseSpeedId = Shader.PropertyToID("_ActorTintPulseSpeed");
+    private static readonly int ActorTintPulseAmplitudeId = Shader.PropertyToID("_ActorTintPulseAmplitude");
     private static readonly int HitFlashId = Shader.PropertyToID("_HitFlash");
     private static readonly int HitFlashColorId = Shader.PropertyToID("_HitFlashColor");
 
@@ -23,6 +25,10 @@ public sealed class ActorRenderColorEffect : ActorRenderEffectModule
     [SerializeField] private Color statusTint = Color.white;
     [SerializeField, Range(0f, 1f)] private float statusTintStrength;
     [SerializeField, Min(0f)] private float statusTransitionSeconds = 0.12f;
+    [Tooltip("状态染色呼吸速度；感染等持续状态使用低频轻微波动。")]
+    [SerializeField, Min(0f)] private float statusPulseSpeed = 1.2f;
+    [Tooltip("状态染色呼吸幅度；建议保持较低，避免颜色闪烁过强。")]
+    [SerializeField, Range(0f, 0.3f)] private float statusPulseAmplitude = 0.08f;
 
     [Header("受击闪红")]
     [SerializeField] private Color hitFlashColor = new Color(1f, 0.08f, 0.08f, 1f);
@@ -68,6 +74,8 @@ public sealed class ActorRenderColorEffect : ActorRenderEffectModule
         EnsureFlashCurve();
         statusTintStrength = Mathf.Clamp01(statusTintStrength);
         statusTransitionSeconds = Mathf.Max(0f, statusTransitionSeconds);
+        statusPulseSpeed = Mathf.Max(0f, statusPulseSpeed);
+        statusPulseAmplitude = Mathf.Clamp(statusPulseAmplitude, 0f, 0.3f);
         defaultFlashDuration = Mathf.Max(0.01f, defaultFlashDuration);
         defaultFlashCount = Mathf.Max(1, defaultFlashCount);
     }
@@ -131,6 +139,8 @@ public sealed class ActorRenderColorEffect : ActorRenderEffectModule
 
         block.SetColor(ActorTintId, currentStatusTint);
         block.SetFloat(ActorTintStrengthId, Mathf.Clamp01(currentStatusStrength));
+        block.SetFloat(ActorTintPulseSpeedId, Mathf.Max(0f, statusPulseSpeed));
+        block.SetFloat(ActorTintPulseAmplitudeId, Mathf.Clamp(statusPulseAmplitude, 0f, 0.3f));
         block.SetColor(HitFlashColorId, currentFlashColor);
         block.SetFloat(HitFlashId, currentFlashAmount);
     }

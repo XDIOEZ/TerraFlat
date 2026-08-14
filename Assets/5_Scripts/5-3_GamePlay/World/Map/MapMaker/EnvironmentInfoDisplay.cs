@@ -441,7 +441,8 @@ private void UpdateMouseInfo()
     /// </summary>
     private void DrawInfoPanel()
     {
-        int totalPages = (hoveredTileData != null) ? 2 : 1;
+        bool hasEnvironmentData = TryGetHoveredEnvironment(out EnvironmentLayers environmentLayers);
+        int totalPages = (hasEnvironmentData && hoveredTileData != null) ? 2 : 1;
         currentPage = Mathf.Clamp(currentPage, 0, totalPages - 1);
 
         // 预估需要的行数（用于动态计算高度），不同页内容不同
@@ -449,7 +450,7 @@ private void UpdateMouseInfo()
         if (currentPage == 0)
         {
             // 标题、坐标、群系、温度、基础/最终降雨、风场、高度与水文
-            lineCount += 9;
+            lineCount += hasEnvironmentData ? 9 : 2;
         }
         else
         {
@@ -472,14 +473,23 @@ private void UpdateMouseInfo()
         // 绘制信息面板
         GUILayout.BeginArea(new Rect(guiX, guiY, panelSize.x, panelHeight), boxStyle);
 
+        if (!hasEnvironmentData)
+        {
+            GUILayout.Label("<b>环境信息</b>", labelStyle);
+            GUILayout.Label("鼠标位置暂无有效环境数据", labelStyle);
+            GUILayout.Label($"按 {toggleKey} 键切换显示", labelStyle);
+            GUILayout.EndArea();
+            return;
+        }
+
         if (currentPage == 0)
         {
             // 第 1 页：环境因素
-            float displayTempCelsius = GetDisplayTemperatureCelsius(hoveredLocalPos.x, hoveredLocalPos.y);
-            float temperature = map.Data.EnvironmentLayers.Temperature[hoveredLocalPos.x, hoveredLocalPos.y];
-            float precipitation = map.Data.EnvironmentLayers.Precipitation[hoveredLocalPos.x, hoveredLocalPos.y];
-            float height = map.Data.EnvironmentLayers.Height[hoveredLocalPos.x, hoveredLocalPos.y];
-            Vector2 wind = map.Data.EnvironmentLayers.GetWind(hoveredLocalPos.x, hoveredLocalPos.y);
+            float displayTempCelsius = environmentLayers.TemperatureCelsius[hoveredLocalPos.x, hoveredLocalPos.y];
+            float temperature = environmentLayers.Temperature[hoveredLocalPos.x, hoveredLocalPos.y];
+            float precipitation = environmentLayers.Precipitation[hoveredLocalPos.x, hoveredLocalPos.y];
+            float height = environmentLayers.Height[hoveredLocalPos.x, hoveredLocalPos.y];
+            Vector2 wind = environmentLayers.GetWind(hoveredLocalPos.x, hoveredLocalPos.y);
             float basePrecipitation = precipitation;
             int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
             DimensionManager dimensionManager = DimensionManager.Instance;
@@ -537,15 +547,26 @@ private void UpdateMouseInfo()
         GUILayout.EndArea();
     }
 
-    private float GetDisplayTemperatureCelsius(int x, int y)
+    /// <summary>
+    /// 获取当前悬停格子的完整环境层，避免地图切换或区块卸载期间读取失效引用。
+    /// </summary>
+    private bool TryGetHoveredEnvironment(out EnvironmentLayers environmentLayers)
     {
-        if (map == null || map.Data == null || map.Data.EnvironmentLayers == null)
-            return 0f;
+        environmentLayers = null;
+        if (!isValidPosition || map == null || map.Data == null)
+            return false;
 
-        if (!map.Data.EnvironmentLayers.Contains(x, y))
-            return 0f;
+        EnvironmentLayers layers = map.Data.EnvironmentLayers;
+        if (layers == null || !layers.Contains(hoveredLocalPos.x, hoveredLocalPos.y))
+            return false;
 
-        return map.Data.EnvironmentLayers.TemperatureCelsius[x, y];
+        int width = layers.Width;
+        int height = layers.GridHeight;
+        if (!layers.IsValidSize(width, height))
+            return false;
+
+        environmentLayers = layers;
+        return true;
     }
 
     /// <summary>

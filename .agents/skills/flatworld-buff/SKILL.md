@@ -20,6 +20,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 - Handler 在定义构建时缓存，运行 Tick 不做反射或字符串查找。
 - 新效果需同时增加稳定 typeId、Dispatcher 注册和参数校验。
 - 内容分包只决定归档；运行时语义仍由 `category`/effects 决定。
+- “当前位于某环境、可执行某操作”以及只在环境内生效的减速等被动影响，不使用可清除 Buff；只有潮湿、感染、中毒等角色状态进入 BuffManager。
 
 ## 工作流与验证
 

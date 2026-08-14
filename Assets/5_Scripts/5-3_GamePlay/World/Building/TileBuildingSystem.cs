@@ -404,8 +404,9 @@ public static class TileBuildingSystem
         IDamageSender sender,
         out bool weaknessMatched)
     {
-        weaknessMatched = false;
-        if (profile?.Damageable != true || sender?.Damage == null)
+        // 旧 weaknessMatched 输出仅为 API 兼容；等级弱点系统已经移除。
+        weaknessMatched = true;
+        if (profile?.Damageable != true || sender?.DamageValues == null)
             return 0f;
 
         if (profile.RequiredTool != TileDamageToolKind.None &&
@@ -415,37 +416,9 @@ public static class TileBuildingSystem
             return 0f;
         }
 
-        float defenseReductionRatio = 0f;
-        if (profile.Weakness != null && sender.Weakness != null)
-        {
-            for (int i = 0; i < profile.Weakness.Count; i++)
-            {
-                for (int j = 0; j < sender.Weakness.Count; j++)
-                {
-                    DamageType receiverType = profile.Weakness[i];
-                    DamageType attackerType = sender.Weakness[j];
-                    if (receiverType.Tag != attackerType.Tag)
-                        continue;
-
-                    weaknessMatched = true;
-                    int receiverLevel = Mathf.Max(1, receiverType.Level);
-                    int attackerLevel = Mathf.Max(1, attackerType.Level);
-                    float reduction = 1f - Mathf.Clamp01((receiverLevel - attackerLevel) * 0.5f);
-                    defenseReductionRatio = Mathf.Max(defenseReductionRatio, reduction);
-                }
-            }
-        }
-
-        if (profile.RequireWeaknessMatch && !weaknessMatched)
-            return 0f;
-
         float multiplier = GameDifficultyService.ResolveDirectDamageMultiplier(sender.attacker, null);
-        float rawDamage = sender.Damage.Value * multiplier;
-        if (rawDamage <= 0f)
-            return 0f;
-
-        float effectiveDefense = profile.Defense * (1f - defenseReductionRatio);
-        return Mathf.Max(1f, rawDamage - effectiveDefense);
+        CombatDamage scaledDamage = sender.DamageValues.Scaled(multiplier);
+        return scaledDamage.CalculateAgainst(profile.ResolveDefense());
     }
 
     private static bool TryDamage(

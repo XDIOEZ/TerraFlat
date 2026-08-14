@@ -1026,15 +1026,15 @@ MonoBehaviour:
     FoodData:
       nutrition:
         Carbohydrates: 500
-        Max_Carbohydrates: 500
+        Max_Carbohydrates: 1000
         Fat: 500
-        Max_Fat: 500
+        Max_Fat: 1000
         Protein: 500
-        Max_Protein: 500
+        Max_Protein: 1000
         Water: 1500
         Max_Water: 1500
         Vitamins: 500
-        Max_Vitamins: 500
+        Max_Vitamins: 1000
       Max_EatingProgress: 3
       ShowCanvas: 0
       nutritionConsumeSpeed:

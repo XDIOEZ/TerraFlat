@@ -24,6 +24,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 生成保持固定种子、稳定 BiomeId/顺序和统一噪声、气候、水文规则。
 - 修改算法时考虑生成签名、旧存档、联机指纹和 Wrapped 坐标。
 - 洞穴入口联动 `flatworld-dimension`，可走性联动 `flatworld-navigation`，差量联动 `flatworld-data-save`。
+- 地块可提供环境动作与被动效果定义，但共享 `TileBlockBehaviour` 只保存规则；玩家长按、Tick、环境倍率等实例状态必须留在角色侧运行器。
 
 ## 验证
 

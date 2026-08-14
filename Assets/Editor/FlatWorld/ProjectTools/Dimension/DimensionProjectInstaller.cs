@@ -9,11 +9,27 @@ using UnityEngine;
 
 public static class DimensionProjectInstaller
 {
+    /// <summary>贴合 2×2 山洞外轮廓，整块阻挡洞口并避免方形碰撞占用过多空地。</summary>
+    private static readonly Vector2[] NaturalCaveBodyPoints =
+    {
+        new Vector2(-0.97f, -0.58f),
+        new Vector2(-0.88f, -0.18f),
+        new Vector2(-0.62f, 0.22f),
+        new Vector2(-0.3f, 0.54f),
+        new Vector2(0f, 0.64f),
+        new Vector2(0.3f, 0.54f),
+        new Vector2(0.62f, 0.22f),
+        new Vector2(0.88f, -0.18f),
+        new Vector2(0.97f, -0.58f)
+    };
+
     private const string CatalogDirectory = "Assets/Resources/Config";
     private const string CatalogPath = CatalogDirectory + "/DimensionCatalog_Default.asset";
     private const string WallStonePath = "Assets/2_Prefabs/World/Buildings/Wall_Stone.prefab";
     private const string MineEntrancePath = "Assets/2_Prefabs/World/Buildings/MineEntrance.prefab";
     private const string CaveExitPath = "Assets/2_Prefabs/World/Dimensions/CaveExit.prefab";
+    private const string NaturalCaveEntranceSpritePath =
+        "Assets/6_Art/Env/Dimension/CaveEntrance_Natural.png";
     private const long PortalComponentId = 900000000000000001;
     private const long InteractionColliderId = 900000000000000002;
 
@@ -141,23 +157,30 @@ public static class DimensionProjectInstaller
                 Guid = 194873622
             });
 
+            // 实体碰撞覆盖完整山洞，防止玩家、生物和 AI 穿入黑色洞口。
+            PolygonCollider2D body = root.AddComponent<PolygonCollider2D>();
+            body.points = NaturalCaveBodyPoints;
+            root.AddComponent<WorldNavigationObstacle>();
+
+            // 外层触发器只承担交互范围，不参与物理阻挡。
             BoxCollider2D interaction = root.AddComponent<BoxCollider2D>();
             interaction.isTrigger = true;
-            interaction.size = new Vector2(1.8f, 1.8f);
+            interaction.size = new Vector2(2.6f, 2f);
 
             DimensionPortal portal = root.AddComponent<DimensionPortal>();
             portal.Configure(WorldAddress.SurfaceDimensionId, false);
 
             GameObject visual = new GameObject("Visual");
             visual.transform.SetParent(root.transform, false);
-            visual.transform.localScale = new Vector3(1.45f, 1.45f, 1f);
             SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
-            GameObject mineStone = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Stone.prefab");
-            renderer.sprite = mineStone != null
-                ? mineStone.GetComponentInChildren<SpriteRenderer>(true)?.sprite
-                : null;
-            renderer.color = new Color(0.35f, 0.78f, 1f, 1f);
-            renderer.sortingOrder = 50;
+            renderer.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(NaturalCaveEntranceSpritePath);
+            if (renderer.sprite == null)
+                throw new FileNotFoundException("找不到天然山洞入口 Sprite。", NaturalCaveEntranceSpritePath);
+
+            renderer.color = Color.white;
+            // 使用项目统一的 Y 轴世界排序，避免山洞固定盖住站在前方的玩家。
+            renderer.sortingOrder = 0;
+            renderer.spriteSortPoint = SpriteSortPoint.Pivot;
             item.Sprite = renderer;
 
             PrefabUtility.SaveAsPrefabAsset(root, CaveExitPath);

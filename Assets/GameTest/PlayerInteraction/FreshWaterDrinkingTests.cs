@@ -1,151 +1,115 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 
 namespace FlatWorld.GameTest.PlayerInteraction
 {
-    public sealed class FreshWaterDrinkingTestItem : Item
+    public sealed class EnvironmentDrinkingTestItem : Item
     {
-        private Data_GeneralItem data = new() { IDName = "FreshWaterDrinkingTestPlayer" };
+        private Data_GeneralItem data = new() { IDName = "EnvironmentDrinkingTestPlayer" };
         public override ItemData itemData => data;
-        protected override void SetItemData(ItemData value) => data = RequireData<Data_GeneralItem>(value);
+        protected override void SetItemData(ItemData value) =>
+            data = RequireData<Data_GeneralItem>(value);
     }
 
-    /// <summary>验证水体 Buff 对长按饮水、补水和脏水感染的授权边界。</summary>
-    public sealed class FreshWaterDrinkingTests
+    /// <summary>验证水体动作定义为每个角色创建独立实例，并正确处理长按、补水与脏水感染。</summary>
+    public sealed class EnvironmentDrinkingTests
     {
         [Test]
         [Category("PlayerInteraction.Input")]
-        public void FreshWaterBuffGatesHoldDrinkingAndDirtyWaterInfection()
+        public void WaterDefinitionCreatesIndependentDrinkInstanceAndDirtyWaterCanInfect()
         {
-            using var fixture = new FreshWaterDrinkingFixture();
+            using var fixture = new EnvironmentDrinkingFixture();
 
-            Assert.That(fixture.Sender.BeginFreshWaterDrinkHold(), Is.False,
-                "没有淡水环境 Buff 时不能开始饮水。");
-            Assert.That(fixture.Sender.ProcessFreshWaterDrinkPulse(0f, false), Is.False);
+            Assert.That(fixture.Runner.BeginPreferredAction(), Is.False,
+                "没有环境动作定义时不能开始动作。");
+
+            fixture.Provide(WaterEnvironmentKind.CleanFresh);
+            Assert.That(fixture.Runner.BeginPreferredAction(), Is.True);
+            DrinkWaterActionInstance clean = fixture.ActiveDrink;
+            fixture.Runner.TickActiveAction(0.99f);
             Assert.That(fixture.Food.Data.nutrition.Water, Is.EqualTo(100f));
+            fixture.Runner.TickActiveAction(0.02f);
+            Assert.That(fixture.Food.Data.nutrition.Water, Is.EqualTo(225f));
+            Assert.That(fixture.BuffManager.HasBuff(InfectionBuffIds.Infection), Is.False);
 
-            fixture.BuffManager.AddBuff(FreshWaterBuffIds.Clean);
-            Assert.That(fixture.Sender.BeginFreshWaterDrinkHold(), Is.True);
-            fixture.Sender.TickFreshWaterDrinking(0.99f);
-            Assert.That(fixture.Food.Data.nutrition.Water, Is.EqualTo(100f),
-                "长按未满1秒前不能补水。");
-            fixture.Sender.TickFreshWaterDrinking(0.02f);
-            Assert.That(fixture.Food.Data.nutrition.Water, Is.EqualTo(125f));
-            Assert.That(fixture.BuffManager.HasBuff(InfectionBuffIds.Infection), Is.False,
-                "干净淡水不能触发感染。");
+            fixture.Runner.CancelActiveAction();
+            fixture.Provide(WaterEnvironmentKind.DirtyFresh);
+            Assert.That(fixture.Runner.BeginPreferredAction(), Is.True);
+            DrinkWaterActionInstance dirty = fixture.ActiveDrink;
+            Assert.That(dirty, Is.Not.SameAs(clean),
+                "每次开始环境动作都必须创建角色独享实例。");
+            Assert.That(dirty.ProcessPulse(0.2f, false), Is.True);
+            Assert.That(fixture.BuffManager.HasBuff(InfectionBuffIds.Infection), Is.False);
+            Assert.That(dirty.ProcessPulse(0.1999f, false), Is.True);
+            Assert.That(fixture.BuffManager.HasBuff(InfectionBuffIds.Infection), Is.True);
 
-            fixture.Sender.EndFreshWaterDrinkHold();
-            fixture.BuffManager.RemoveBuff(FreshWaterBuffIds.Clean);
-            fixture.BuffManager.AddBuff(FreshWaterBuffIds.Dirty);
-            Assert.That(fixture.Sender.ProcessFreshWaterDrinkPulse(0.2f, false), Is.True);
-            Assert.That(fixture.BuffManager.HasBuff(InfectionBuffIds.Infection), Is.False,
-                "20%边界值不应落入感染区间。");
-            Assert.That(fixture.Sender.ProcessFreshWaterDrinkPulse(0.1999f, false), Is.True);
-            Assert.That(fixture.BuffManager.HasBuff(InfectionBuffIds.Infection), Is.True,
-                "脏水判定值低于20%时必须获得感染。");
-
-            fixture.Sender.EndFreshWaterDrinkHold();
-            fixture.BuffManager.RemoveBuff(FreshWaterBuffIds.Dirty);
-            fixture.BuffManager.RemoveBuff(InfectionBuffIds.Infection);
-            fixture.BuffManager.AddBuff(SaltWaterBuffIds.InSaltWater);
-            fixture.Food.Data.nutrition.Water = 100f;
-            Assert.That(fixture.Sender.BeginFreshWaterDrinkHold(), Is.True,
-                "位于盐水中时必须允许长按 E 键开始饮水。");
-            fixture.Sender.TickFreshWaterDrinking(1.01f);
-            Assert.That(fixture.Food.Data.nutrition.Water, Is.EqualTo(125f),
-                "盐水应复用现有饮水 Tick 的补水逻辑。");
-            Assert.That(fixture.BuffManager.HasBuff(InfectionBuffIds.Infection), Is.False,
-                "盐水饮水不应误用脏淡水的感染判定。");
+            fixture.Runner.ClearAvailableActions();
+            Assert.That(fixture.Runner.ActiveAction, Is.Null);
+            Assert.That(fixture.Runner.AvailableActionCount, Is.Zero);
         }
 
-        private sealed class FreshWaterDrinkingFixture : IDisposable
+        private sealed class EnvironmentDrinkingFixture : IDisposable
         {
             private readonly GameObject itemObject;
             private readonly GameRes gameRes;
-            private readonly Dictionary<string, BuffDefinition> previousDefinitions = new();
-            private readonly HashSet<string> existingDefinitionIds = new();
+            private readonly BuffDefinition previousInfection;
+            private readonly bool hadPreviousInfection;
 
             public BuffManager BuffManager { get; }
             public Mod_Food Food { get; }
-            public Mod_InteractSender Sender { get; }
+            public EnvironmentInteractionRunner Runner { get; }
+            public DrinkWaterActionInstance ActiveDrink =>
+                Runner.ActiveAction as DrinkWaterActionInstance;
 
-            public FreshWaterDrinkingFixture()
+            public EnvironmentDrinkingFixture()
             {
                 gameRes = GameRes.Instance;
                 Assert.That(gameRes, Is.Not.Null);
+                BuffDefinition infection = BuffCatalogLoader.LoadBuiltInDefinitions()
+                    .Single(definition => definition.Id == InfectionBuffIds.Infection);
+                hadPreviousInfection = gameRes.BuffDefinitions.TryGetValue(
+                    infection.Id, out previousInfection);
+                gameRes.BuffDefinitions[infection.Id] = infection;
 
-                List<BuffDefinition> definitions = BuffCatalogLoader.LoadBuiltInDefinitions();
-                Register(definitions.Single(definition => definition.Id == FreshWaterBuffIds.Clean));
-                Register(definitions.Single(definition => definition.Id == FreshWaterBuffIds.Dirty));
-                Register(definitions.Single(definition => definition.Id == SaltWaterBuffIds.InSaltWater));
-                Register(definitions.Single(definition => definition.Id == InfectionBuffIds.Infection));
-
-                itemObject = new GameObject("FreshWaterDrinkingTestPlayer");
+                itemObject = new GameObject("EnvironmentDrinkingTestPlayer");
                 itemObject.SetActive(false);
-                var item = itemObject.AddComponent<FreshWaterDrinkingTestItem>();
+                EnvironmentDrinkingTestItem item = itemObject.AddComponent<EnvironmentDrinkingTestItem>();
                 item.itemMods = new ItemMods(item);
 
                 BuffManager = itemObject.AddComponent<BuffManager>();
                 BuffManager.ModData = CreateModuleData(ModText.BuffManager, "TestBuffManager");
                 Food = itemObject.AddComponent<Mod_Food>();
-                Food.FoodModData = new ModData_FoodData
-                {
-                    ID = ModText.Food,
-                    Name = "TestFood"
-                };
-                Sender = itemObject.AddComponent<Mod_InteractSender>();
-                Sender.ModSaveData = CreateModuleData(ModText.Interact, "TestInteractSender");
+                Food.FoodModData = new ModData_FoodData { ID = ModText.Food, Name = "TestFood" };
+                Runner = itemObject.AddComponent<EnvironmentInteractionRunner>();
 
                 item.itemMods.AddMod(BuffManager);
                 item.itemMods.AddMod(Food);
-                item.itemMods.AddMod(Sender);
                 BuffManager.ModuleInit(item, BuffManager.ModData);
                 Food.ModuleInit(item, Food.FoodModData);
-                Sender.ModuleInit(item, Sender.ModSaveData);
+                Runner.Bind(item);
                 Food.Data.nutrition.Water = 100f;
                 Food.Data.nutrition.Max_Water = 500f;
                 itemObject.SetActive(true);
             }
 
+            public void Provide(WaterEnvironmentKind kind) =>
+                Runner.SetAvailableActions(
+                    new DrinkWaterActionDefinition(kind, 1f, 1f, 125f, 0.2f));
+
             public void Dispose()
             {
                 if (itemObject != null)
                     UnityEngine.Object.DestroyImmediate(itemObject);
-
-                foreach (string id in new[]
-                         {
-                             FreshWaterBuffIds.Clean,
-                             FreshWaterBuffIds.Dirty,
-                             SaltWaterBuffIds.InSaltWater,
-                             InfectionBuffIds.Infection
-                         })
-                {
-                    if (existingDefinitionIds.Contains(id))
-                        gameRes.BuffDefinitions[id] = previousDefinitions[id];
-                    else
-                        gameRes.BuffDefinitions.Remove(id);
-                }
+                if (hadPreviousInfection)
+                    gameRes.BuffDefinitions[InfectionBuffIds.Infection] = previousInfection;
+                else
+                    gameRes.BuffDefinitions.Remove(InfectionBuffIds.Infection);
             }
 
-            private void Register(BuffDefinition definition)
-            {
-                if (gameRes.BuffDefinitions.TryGetValue(definition.Id, out BuffDefinition previous))
-                {
-                    existingDefinitionIds.Add(definition.Id);
-                    previousDefinitions[definition.Id] = previous;
-                }
-
-                gameRes.BuffDefinitions[definition.Id] = definition;
-            }
-
-            private static Ex_ModData_MemoryPackable CreateModuleData(string id, string name)
-            {
-                return new Ex_ModData_MemoryPackable { ID = id, Name = name };
-            }
+            private static Ex_ModData_MemoryPackable CreateModuleData(string id, string name) =>
+                new() { ID = id, Name = name };
         }
-
     }
 }

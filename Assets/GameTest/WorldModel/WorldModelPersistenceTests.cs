@@ -273,6 +273,8 @@ namespace FlatWorld.GameTest.WorldModel
                 Is.EqualTo(0.35d).Within(0.000001d));
             Assert.That(profile.Settings.RiverLakeChance,
                 Is.EqualTo(0.75d).Within(0.000001d));
+            Assert.That(profile.Settings.RiverNavigationCost,
+                Is.GreaterThan(profile.Settings.DefaultNavigationCost));
             Assert.That(profile.NumericParameters.ContainsKey("river.noiseScale"), Is.False);
 
             using var world = new WorldRuntime("surface-coverage", 1);
@@ -303,6 +305,14 @@ namespace FlatWorld.GameTest.WorldModel
                     if (terrain.TryGetEnvironmentValue("riverDepth", x, y, out float depth) &&
                         depth > 0f)
                     {
+                        TerrainCell riverCell = terrain.GetCell(x, y);
+                        Assert.That(
+                            (riverCell.Flags & TerrainCellFlags.Walkable) != 0,
+                            Is.True,
+                            "淡水河必须是高代价可通行地形，不能注册成导航障碍。");
+                        Assert.That(
+                            riverCell.NavigationCost,
+                            Is.EqualTo(profile.Settings.RiverNavigationCost));
                         riverCells++;
                         Assert.That(
                             terrain.TryGetEnvironmentValue("riverKind", x, y, out float kind),

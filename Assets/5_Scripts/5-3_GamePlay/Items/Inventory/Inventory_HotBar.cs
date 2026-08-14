@@ -100,6 +100,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private Mod_FocusPoint faceMouse;
     private Mod_TurnBack turnBody;
+    private ActorRenderEffectController actorRenderEffects;
 
     private GameController _inputController;
     private InputAction _mouseScrollAction;
@@ -648,6 +649,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     {
         if (CurentSelectItem == null) return;
 
+        actorRenderEffects?.UnregisterExternalRenderers(CurentSelectItem.transform);
         CurentSelectItem.SetInHand(false);
 
         if (faceMouse != null)
@@ -696,6 +698,9 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         itemInstance.OnItemDestroy += OnDestroyCurrentObject;
 
         itemInstance.Load();
+
+        // 手持物位于快捷栏节点而非角色动画节点，需要显式加入角色水体/受击等渲染效果。
+        actorRenderEffects?.RegisterExternalRenderers(itemInstance.transform);
 
         CurentSelectItem = itemInstance;
         CurrentSelectItemSlot = slot;
@@ -795,6 +800,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
         item.itemMods.GetMod_ByID(ModText.FocusPoint, out faceMouse);
         item.itemMods.GetMod_ByID(ModText.TrunBody, out turnBody);
+        actorRenderEffects = item.GetComponentInChildren<ActorRenderEffectController>(true);
 
         Transform positionTransform = spawnLocation != null ? spawnLocation : item.transform;
 

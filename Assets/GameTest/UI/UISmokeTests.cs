@@ -300,6 +300,78 @@ namespace FlatWorld.GameTest.UI
 
         [Test]
         [Category("UI.Smoke")]
+        public void SaveItemPointerPressDoesNotImitateConfirmedSelection()
+        {
+            GameObject itemObject = new GameObject(
+                "鼠标拖拽存档条目测试",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(GameSaveItemView));
+            GameObject accentObject = new GameObject(
+                "选择强调线",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+            accentObject.transform.SetParent(itemObject.transform, false);
+
+            try
+            {
+                GameSaveItemView itemView = itemObject.GetComponent<GameSaveItemView>()
+                    ?? throw new AssertionException("测试条目缺少 GameSaveItemView。");
+                itemView.Background = itemObject.GetComponent<Image>();
+                itemView.SelectionAccent = accentObject.GetComponent<Image>();
+
+                itemView.SetSelected(false);
+                itemView.OnSelect(new PointerEventData(null));
+
+                Assert.That(itemView.SelectionAccent.enabled, Is.False,
+                    "鼠标按住并拖动列表时，起始存档不能显示为已经选中。");
+            }
+            finally
+            {
+                Object.DestroyImmediate(accentObject);
+                Object.DestroyImmediate(itemObject);
+            }
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
+        [Category("UI.Layout")]
+        public void SaveManagerProvidesBoundedBatchDeleteConfirmation()
+        {
+            const string prefabPath = "Assets/2_Prefabs/2-1_UI/Menu_UI/UI_GameSaveManager.prefab";
+            AssertPrefabContains(
+                prefabPath,
+                GameManager.GameSaveBatchDeleteButtonKey,
+                "批量删除操作区",
+                GameManager.GameSaveBatchConfirmButtonKey,
+                GameManager.GameSaveBatchCancelButtonKey,
+                "批量删除二次确认界面",
+                GameManager.GameSaveBatchWarningTextKey,
+                GameManager.GameSaveBatchDialogConfirmButtonKey,
+                GameManager.GameSaveBatchDialogCancelButtonKey);
+
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath)
+                ?? throw new AssertionException($"缺少存档管理 Prefab：{prefabPath}");
+            SaveDataManager_UI controller = prefab.GetComponent<SaveDataManager_UI>()
+                ?? throw new AssertionException("存档管理 Prefab 缺少 SaveDataManager_UI。");
+            Assert.That(controller.BatchDeleteModeActions, Is.Not.Null);
+            Assert.That(controller.BatchDeleteConfirmationDialog, Is.Not.Null);
+            Assert.That(controller.BatchDeleteModeActions.activeSelf, Is.False);
+            Assert.That(controller.BatchDeleteConfirmationDialog.activeSelf, Is.False);
+
+            RectTransform card = prefab.transform.Find("存档主卡") as RectTransform;
+            RectTransform dialog = controller.BatchDeleteConfirmationDialog.transform
+                .Find("批量删除确认卡") as RectTransform;
+            Assert.That(card, Is.Not.Null);
+            Assert.That(dialog, Is.Not.Null);
+            Assert.That(dialog.rect.width, Is.LessThan(card.rect.width));
+            Assert.That(dialog.rect.height, Is.LessThan(card.rect.height));
+        }
+
+        [Test]
+        [Category("UI.Smoke")]
         [Category("Smoke")]
         public void WorldStreamingSettingsPrefabAndEntryFollowNamingContract()
         {

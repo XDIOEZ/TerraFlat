@@ -81,6 +81,12 @@ public partial class GameManager
     public const string GameSaveStartButtonKey = "开始游戏按钮";
     public const string GameSaveLoadButtonKey = "加载存档按钮";
     public const string GameSaveDeleteButtonKey = "删除存档按钮";
+    public const string GameSaveBatchDeleteButtonKey = "批量删除存档按钮";
+    public const string GameSaveBatchConfirmButtonKey = "确认批量删除按钮";
+    public const string GameSaveBatchCancelButtonKey = "取消批量删除按钮";
+    public const string GameSaveBatchDialogConfirmButtonKey = "二次确认删除按钮";
+    public const string GameSaveBatchDialogCancelButtonKey = "二次确认取消按钮";
+    public const string GameSaveBatchWarningTextKey = "批量删除确认提示";
     public const string GameSaveBackButtonKey = "返回按钮";
     public const string GameSavePlayerInputKey = "选择或新增玩家名称输入框";
     public const string GameSaveSelectedTextKey = "选中的存档名称";
@@ -793,10 +799,21 @@ public partial class GameManager
             return;
 
         BasePanel panel = UIManager.Instance.CreatePanelFromGameObject(UIPrefab_SaveManager, GameSavePanelKey);
+        SaveDataManager_UI saveList = SaveDataManager_UI.Instance;
+        panel.CancelOverride = eventData => saveList != null && saveList.TryHandleCancel(eventData);
         panel.SetButtonOnClick(GameSaveStartButtonKey, OnClick_StartGame_Button);
         panel.SetButtonOnClick(GameSaveLoadButtonKey, OnClick_LoadSaveData_Button);
         panel.SetButtonOnClick(GameSaveDeleteButtonKey, OnClick_DeleteSave_Button);
-        panel.SetButtonOnClick(GameSaveBackButtonKey, panel.Close);
+        panel.SetButtonOnClick(GameSaveBatchDeleteButtonKey, () => saveList?.BeginBatchDeleteMode());
+        panel.SetButtonOnClick(GameSaveBatchConfirmButtonKey, () => saveList?.OpenBatchDeleteConfirmation());
+        panel.SetButtonOnClick(GameSaveBatchCancelButtonKey, () => saveList?.CancelBatchDeleteMode());
+        panel.SetButtonOnClick(GameSaveBatchDialogConfirmButtonKey, () => saveList?.ConfirmBatchDelete());
+        panel.SetButtonOnClick(GameSaveBatchDialogCancelButtonKey, () => saveList?.CancelBatchDeleteConfirmation());
+        panel.SetButtonOnClick(GameSaveBackButtonKey, () =>
+        {
+            saveList?.ResetBatchDeleteState();
+            panel.Close();
+        });
         panel.GetInputField(GameSavePlayerInputKey)?.onValueChanged.AddListener(OnUpdatePlayerNameChanged);
         // 动态存档条目在 RefreshForGamepadOpen 后创建；这里仅提供无存档时的安全回退。
         panel.PrepareForGamepadNavigation(GameSaveBackButtonKey);

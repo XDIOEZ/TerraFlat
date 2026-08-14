@@ -1,102 +1,49 @@
-
-using MemoryPack;
 using System.Collections.Generic;
-using System;
-using UnityEngine;
-using System.Linq;
-using NaughtyAttributes;
+using MemoryPack;
 
+/// <summary>
+/// 通用数据层的四类伤害容器。旧字段只为 MemoryPack 存档兼容保留，新结算仅使用四类数值。
+/// </summary>
 [System.Serializable]
 [MemoryPackable]
 public partial class Damage
 {
-    [Header("伤害数值设置")]
+    // 旧字段顺序不可改变。
     public float PhysicalDamage;
     public float ArmorBreaking;
     public float MagicDamage;
-
-    [Header("伤害类型设置")]
     public List<string> DamageType;
 
+    // 四类字段必须追加在旧字段后。
+    public float Cutting;
+    public float Piercing;
+    public float Chopping;
+    public float Blunt;
+
     [MemoryPackIgnore]
-    public float TotalDamage => PhysicalDamage + MagicDamage;
+    public float TotalDamage => Cutting + Piercing + Chopping + Blunt;
 
-
-    /// <summary>
-    /// 构造函数
-    /// </summary>
+    [MemoryPackConstructor]
     public Damage()
     {
-        // 初始化 DamageType 列表，防止空引用异常
         DamageType = new List<string>();
     }
 
-    /// <summary>
-    /// 检测 Damage 中对应的伤害类型列表，并返回击中弱点的数量
-    /// </summary>
-    /// <param name="damageTypes">需要检测的伤害类型列表</param>
-    /// <returns>返回击中弱点的数量，0 表示没有击中任何弱点</returns>
-    public int Check_DamageType(List<string> damageTypes)
+    public Damage(float cutting, float piercing, float chopping, float blunt) : this()
     {
-        // 输入验证：如果 damageTypes 为空或无效，直接返回 0
-        if (damageTypes == null || damageTypes.Count == 0)
-        {
-            return 0;
-        }
-
-        int hitCount = 0; // 记录击中弱点的数量
-
-        // 遍历输入的伤害类型列表，检查每个类型是否存在于 DamageType 中
-        foreach (string damageType in damageTypes)
-        {
-            // 如果伤害类型为空或无效，跳过
-            if (string.IsNullOrWhiteSpace(damageType))
-            {
-                continue;
-            }
-
-            // 如果伤害类型存在于 DamageType 中，增加击中计数
-            if (DamageType.Contains(damageType, StringComparer.OrdinalIgnoreCase))
-            {
-                hitCount++;
-            }
-        }
-
-        // 返回击中弱点的数量
-        return hitCount;
+        Cutting = cutting;
+        Piercing = piercing;
+        Chopping = chopping;
+        Blunt = blunt;
     }
 
-    /// <summary>
-    /// 计算最终伤害
-    /// </summary>
-    /// <param name="defense">防御属性</param>
-    /// <returns>最终伤害值</returns>
+    /// <summary>四类攻击分别减去对应防御，再合计最终伤害。</summary>
     public float Return_EndDamage(Defense defense = null)
     {
-        float damage = 0;
-
-        // 如果没有传入防御属性，则默认为 0
-        float defenseStrength = defense?.defenseStrength ?? 0;
-        float defenseToughness = defense?.defenseToughness ?? 0;
-        float defenseMagic = defense?.defenseMagic ?? 0; // 默认为 0
-
-
-
-        // 计算魔法伤害，应用减免比例
-        damage += MagicDamage - (MagicDamage * defenseMagic);
-
-       // float EndBreaking = ArmorBreaking - defenseToughness;
-        // 计算物理伤害，应用减免比例
-        damage += PhysicalDamage - (PhysicalDamage * (defenseStrength * 0.01f));
-
-
-        if (damage < 0)
-        {
-            damage = 1;
-        }
-
-        return damage;
+        defense ??= new Defense();
+        return System.Math.Max(0f, Cutting - defense.Cutting) +
+               System.Math.Max(0f, Piercing - defense.Piercing) +
+               System.Math.Max(0f, Chopping - defense.Chopping) +
+               System.Math.Max(0f, Blunt - defense.Blunt);
     }
-
-
 }

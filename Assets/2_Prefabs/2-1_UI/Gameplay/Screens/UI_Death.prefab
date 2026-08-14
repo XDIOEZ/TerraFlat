@@ -774,9 +774,7 @@ GameObject:
   - component: {fileID: 450775526475556609}
   - component: {fileID: 6509266299059581012}
   - component: {fileID: 1359344631300528648}
-  - component: {fileID: 169596928074992398}
   - component: {fileID: 1488680035631547101}
-  - component: {fileID: 1997811094099751515}
   - component: {fileID: 7509096894359410181}
   m_Layer: 5
   m_Name: UI_Death
@@ -857,25 +855,6 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &169596928074992398
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5019330763773049737}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e35963cbd2d44304c83e206e1ebb4fc3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  rectTransform: {fileID: 1019407897883900610}
-  canvas: {fileID: 0}
-  draggableImage: {fileID: 6509266299059581012}
-  originalPosition: {x: 0, y: 0}
-  offset: {x: 0, y: 0}
-  DefaultOrder: 0
-  IsDragging: 0
 --- !u!114 &1488680035631547101
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -889,33 +868,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 1359344631300528648}
-  CanDrag: 1
-  Dragger: {fileID: 169596928074992398}
+  CanDrag: 0
+  Dragger: {fileID: 0}
   rectTransform: {fileID: 1019407897883900610}
   PanelName: 
   isOpen: 0
---- !u!114 &1997811094099751515
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5019330763773049737}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 95166ba301826764992aa306a3914885, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  edgeWidth: 50
-  minWidth: 100
-  minHeight: 100
-  maxWidth: 2000
-  maxHeight: 2000
-  horizontalResizeCursor: {fileID: 0}
-  verticalResizeCursor: {fileID: 0}
-  diagonalNE: {fileID: 0}
-  diagonalNW: {fileID: 0}
-  useCustomCursor: 0
 --- !u!114 &7509096894359410181
 MonoBehaviour:
   m_ObjectHideFlags: 0

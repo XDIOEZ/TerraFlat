@@ -84,8 +84,6 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	public float sleepEnterHpRate = 0.5f;
 	[FoldoutGroup("睡眠参数"), PropertyOrder(21), LabelText("睡眠维持血量阈值"), Range(0f, 1f)]
 	public float sleepExitHpRate = 0.55f;
-	[FoldoutGroup("睡眠参数"), PropertyOrder(22), LabelText("睡眠回血速度"), SuffixLabel("/秒", true)]
-	public float sleepRecoverHpPerSecond = 6f;
 	[FoldoutGroup("睡眠参数"), PropertyOrder(23), LabelText("单次睡眠时长"), SuffixLabel("秒", true), MinValue(0.1f)]
 	public float sleepDuration = 6f;
 	[FoldoutGroup("睡眠参数"), PropertyOrder(24), LabelText("睡醒冷却时间"), SuffixLabel("秒", true), MinValue(0f)]
@@ -404,7 +402,6 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	private void TickSleep(float deltaTime)
 	{
-		_hp.Heal(deltaTime * sleepRecoverHpPerSecond, item);
 	}
 
 	private void TickMate()

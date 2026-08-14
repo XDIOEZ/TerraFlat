@@ -510,12 +510,14 @@ public class Inventory
             itemSlotUI._OnScroll.Clear();
             itemSlotUI.OnRightClick.Clear();
             itemSlotUI.OnShiftQuickTransfer.Clear();
+            itemSlotUI.OnMouseDragBegin = null;
 
             itemSlotUI.OnLeftClick += OnLeftClick;
             itemSlotUI.OnGamepadSubmit += OnGamepadSubmit;
             itemSlotUI._OnScroll += OnScroll;
             itemSlotUI.OnRightClick += OnRightClick;
             itemSlotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
+            itemSlotUI.OnMouseDragBegin = OnMouseDragBegin;
 
             // 修复 Belong_Inventory 的逻辑，将其设置为当前 Inventory 实例
             if (Data.itemSlots[i].onSlotDataChanged != null)
@@ -572,12 +574,14 @@ public class Inventory
         slotUI._OnScroll.Clear();
         slotUI.OnRightClick.Clear();
         slotUI.OnShiftQuickTransfer.Clear();
+        slotUI.OnMouseDragBegin = null;
 
         slotUI.OnLeftClick += OnLeftClick;
         slotUI.OnGamepadSubmit += OnGamepadSubmit;
         slotUI._OnScroll += OnScroll;
         slotUI.OnRightClick += OnRightClick;
         slotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
+        slotUI.OnMouseDragBegin = OnMouseDragBegin;
 
         slotUI.RefreshUI();
     }
@@ -782,6 +786,26 @@ public class Inventory
     }
 
     /// <summary>
+    /// 鼠标拖拽必须固定使用玩家手上槽位，避免玩家行囊的普通点击规则把物品送入快捷栏。
+    /// </summary>
+    public virtual bool OnMouseDragBegin(int index)
+    {
+        if (Data == null || Data.itemSlots == null || index < 0 || index >= Data.itemSlots.Count)
+            return false;
+
+        Inventory handInventory = GetPlayerHandInventory();
+        if (!IsValidQuickTransferTarget(handInventory))
+        {
+            Debug.LogWarning($"[Inventory.OnMouseDragBegin] 玩家手上库存不可用，当前库存={Data.Name}, 索引={index}");
+            return false;
+        }
+
+        DefaultTarget_Inventory = handInventory;
+        ProcessSlotInteraction(index, SlotInteractionSource.MouseDrag);
+        return HasHeldItem(handInventory);
+    }
+
+    /// <summary>
     /// 手柄 A/Submit 的槽位操作入口，使用独立的快捷栏目标，不改写键鼠手上槽位状态。
     /// </summary>
     public virtual void OnGamepadSubmit(int index)
@@ -802,7 +826,8 @@ public class Inventory
     private enum SlotInteractionSource
     {
         KeyboardMouse,
-        Gamepad
+        Gamepad,
+        MouseDrag
     }
 
     /// <summary>
@@ -831,10 +856,20 @@ public class Inventory
     }
 
     /// <summary>
-    /// 键鼠优先保留已有的手上物品交换；手柄则固定使用当前快捷栏槽位。
+    /// 键鼠始终使用鼠标携带槽；手柄确认玩家行囊时才固定使用当前快捷栏槽位。
     /// </summary>
     private bool TryResolveSlotInteractionTarget(SlotInteractionSource source)
     {
+        if (source == SlotInteractionSource.MouseDrag)
+        {
+            Inventory handInventory = GetPlayerHandInventory();
+            if (IsValidQuickTransferTarget(handInventory))
+            {
+                DefaultTarget_Inventory = handInventory;
+                return true;
+            }
+        }
+
         if (IsPlayerBagInventory() && source == SlotInteractionSource.Gamepad)
         {
             Inventory hotBar = GetPlayerHotBarInventory();
@@ -848,7 +883,7 @@ public class Inventory
         if (IsPlayerBagInventory() && source == SlotInteractionSource.KeyboardMouse)
         {
             Inventory handInventory = GetPlayerHandInventory();
-            if (HasHeldItem(handInventory))
+            if (IsValidQuickTransferTarget(handInventory))
             {
                 DefaultTarget_Inventory = handInventory;
                 return true;

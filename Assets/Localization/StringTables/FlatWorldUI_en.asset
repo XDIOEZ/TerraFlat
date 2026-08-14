@@ -1818,6 +1818,50 @@ MonoBehaviour:
     m_Localized: Underground Cave
     m_Metadata:
       m_Items: []
+  - m_Id: 1751778585391104
+    m_Localized: Delete Multiple Saves
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751778686054400
+    m_Localized: Delete Selected
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751778686054401
+    m_Localized: Cancel Selection
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751778686054402
+    m_Localized: Delete Selected Saves?
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751778686054403
+    m_Localized: 'The selected saves will be permanently deleted.
+
+      This action
+      cannot be undone.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751778686054404
+    m_Localized: Cancel and Return
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751778686054405
+    m_Localized: Permanently Delete Selected
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751780279889920
+    m_Localized: 'Batch selection: {0} save(s) selected'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751780279889921
+    m_Localized: 'The selected {0} save(s) will be permanently deleted.
+
+      {1}
+
+      This
+      action cannot be undone.'
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

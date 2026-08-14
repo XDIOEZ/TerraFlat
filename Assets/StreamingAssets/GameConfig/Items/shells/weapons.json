@@ -60,6 +60,13 @@
                 "Level": 1
               }
             ],
+            "DamageValues": {
+              "Cutting": 4.0,
+              "Piercing": 1.0,
+              "Chopping": 0.0,
+              "Blunt": 0.0
+            },
+            "damageSystemVersion": 1,
             "Damage": {
               "BaseValue": 5.0,
               "BaseAdditive": 0.0,
@@ -101,6 +108,13 @@
                 "z": 0.0
               }
             },
+            "DamageValues": {
+              "Cutting": 5.0,
+              "Piercing": 1.0,
+              "Chopping": 0.0,
+              "Blunt": 0.0
+            },
+            "damageSystemVersion": 1,
             "Damage": {
               "BaseValue": 6.0
             }
@@ -136,6 +150,13 @@
                 "z": 0.0
               }
             },
+            "DamageValues": {
+              "Cutting": 8.0,
+              "Piercing": 2.0,
+              "Chopping": 0.0,
+              "Blunt": 0.0
+            },
+            "damageSystemVersion": 1,
             "Damage": {
               "BaseValue": 10.0
             },
@@ -170,6 +191,13 @@
       "modules": {
         "damage": {
           "parameters": {
+            "DamageValues": {
+              "Cutting": 5.0,
+              "Piercing": 2.0,
+              "Chopping": 0.0,
+              "Blunt": 0.0
+            },
+            "damageSystemVersion": 1,
             "Damage": {
               "BaseValue": 7.0
             }
@@ -280,6 +308,13 @@
                 "Level": 1
               }
             ],
+            "DamageValues": {
+              "Cutting": 2.0,
+              "Piercing": 8.0,
+              "Chopping": 0.0,
+              "Blunt": 0.0
+            },
+            "damageSystemVersion": 1,
             "Damage": {
               "BaseValue": 10.0,
               "BaseAdditive": 0.0,
@@ -465,6 +500,13 @@
                 "Level": 2
               }
             ],
+            "DamageValues": {
+              "Cutting": 3.0,
+              "Piercing": 17.0,
+              "Chopping": 0.0,
+              "Blunt": 0.0
+            },
+            "damageSystemVersion": 1,
             "Damage": {
               "BaseValue": 20.0,
               "BaseAdditive": 0.0,
@@ -650,6 +692,13 @@
                 "Level": 3
               }
             ],
+            "DamageValues": {
+              "Cutting": 3.0,
+              "Piercing": 21.0,
+              "Chopping": 0.0,
+              "Blunt": 0.0
+            },
+            "damageSystemVersion": 1,
             "Damage": {
               "BaseValue": 18.0,
               "BaseAdditive": 0.0,
@@ -835,6 +884,13 @@
                 "Level": 1
               }
             ],
+            "DamageValues": {
+              "Cutting": 2.0,
+              "Piercing": 8.0,
+              "Chopping": 0.0,
+              "Blunt": 0.0
+            },
+            "damageSystemVersion": 1,
             "Damage": {
               "BaseValue": 10.0,
               "BaseAdditive": 0.0,
@@ -959,6 +1015,114 @@
       "gameName": "火把",
       "description": "可照亮周围环境的简易火把，由木棍和燃料制成。",
       "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "AttackEffects": [],
+            "Weakness": [
+              {
+                "Tag": 1,
+                "Level": 1
+              }
+            ],
+            "DamageValues": {
+              "Cutting": 0.0,
+              "Piercing": 0.0,
+              "Chopping": 0.0,
+              "Blunt": 2.0
+            },
+            "damageSystemVersion": 1,
+            "Damage": {
+              "BaseValue": 1.0,
+              "BaseAdditive": 0.0,
+              "AdditiveModifier": 0.0,
+              "MultiplicativeModifier": 1.0,
+              "FinalAdditive": 0.0
+            },
+            "DamageInterval": 0.2,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "tileDamageToolKind": 0,
+            "weaponAudioClass": 0,
+            "attackAudioCueId": "",
+            "impactAudioOverrides": [],
+            "lastDamageTime": 0.0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 1.0,
+                "y": 1.0
+              }
+            }
+          }
+        },
+        "animation": {
+          "prefab": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "useLocalInput": false,
+            "idleAnimationName": "Idle_0",
+            "attackAnimationNames": [
+              "Attack_2"
+            ],
+            "comboWindowOverride": -1.0,
+            "comboWindowGrace": 0.05,
+            "loopComboOnHold": true,
+            "attackSpeedMultiplier": 1.0,
+            "RawData": [],
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
         "light": {
           "prefab": "Module_LightSource",
           "id": "Module_LightSource",

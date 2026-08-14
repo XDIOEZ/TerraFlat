@@ -179,6 +179,8 @@ namespace FlatWorld.Automation
         private static Rigidbody2D _respawnScenarioBody;
         private static Vector3 _respawnScenarioOriginalPosition;
         private static float _respawnScenarioOriginalHp;
+        private static string _respawnScenarioOriginalProfileName;
+        private static string _respawnScenarioOriginalPlayerName;
         private static bool _respawnScenarioApplied;
         private static bool _respawnScenarioCompleted;
 
@@ -190,6 +192,8 @@ namespace FlatWorld.Automation
             _respawnScenarioBody = null;
             _respawnScenarioOriginalPosition = default;
             _respawnScenarioOriginalHp = 0f;
+            _respawnScenarioOriginalProfileName = null;
+            _respawnScenarioOriginalPlayerName = null;
             _respawnScenarioApplied = false;
             _respawnScenarioCompleted = false;
         }
@@ -240,6 +244,8 @@ namespace FlatWorld.Automation
 
             _respawnScenarioOriginalPosition = _respawnScenarioPlayer.transform.position;
             _respawnScenarioOriginalHp = _respawnScenarioDamageReceiver.Hp;
+            _respawnScenarioOriginalProfileName = _respawnScenarioPlayer.ProfileName;
+            _respawnScenarioOriginalPlayerName = _respawnScenarioPlayer.Data.Name_User;
             _respawnScenarioApplied = true;
 
             Vector3 deathPosition = mainWorldSpawn + new Vector3(3f, 1f, 0f);
@@ -263,11 +269,21 @@ namespace FlatWorld.Automation
                 WorldTopologyRuntime.Distance(_respawnScenarioPlayer.transform.position, mainWorldSpawn) >
                 0.001f ||
                 Mathf.Abs(_respawnScenarioDamageReceiver.Hp -
-                          _respawnScenarioDamageReceiver.MaxHp) > 0.001f)
+                          _respawnScenarioDamageReceiver.MaxHp) > 0.001f ||
+                !string.Equals(
+                    _respawnScenarioPlayer.ProfileName,
+                    _respawnScenarioOriginalProfileName,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    _respawnScenarioPlayer.Data.Name_User,
+                    _respawnScenarioOriginalPlayerName,
+                    StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
                     $"玩家没有回到主世界出生点：actual={_respawnScenarioPlayer.transform.position}, " +
-                    $"expected={mainWorldSpawn}, hp={_respawnScenarioDamageReceiver.Hp}。");
+                    $"expected={mainWorldSpawn}, hp={_respawnScenarioDamageReceiver.Hp}, " +
+                    $"profile={_respawnScenarioPlayer.ProfileName}, " +
+                    $"name={_respawnScenarioPlayer.Data.Name_User}。");
             }
 
             RestorePlayerRespawnScenario();

@@ -915,7 +915,15 @@ namespace FlatWorld.Editor.ContentWorkshop
             itemDraft.AddCombatAbility = EditorGUILayout.ToggleLeft("可以造成近战伤害", itemDraft.AddCombatAbility);
             itemDraft.AddEquipmentAbility = EditorGUILayout.ToggleLeft("可以装备", itemDraft.AddEquipmentAbility);
             if (itemDraft.AddCombatAbility)
-                itemDraft.Damage = Mathf.Max(0f, EditorGUILayout.FloatField("基础伤害", itemDraft.Damage));
+            {
+                itemDraft.CuttingDamage = Mathf.Max(0f, EditorGUILayout.FloatField("切割伤害", itemDraft.CuttingDamage));
+                itemDraft.PiercingDamage = Mathf.Max(0f, EditorGUILayout.FloatField("穿刺伤害", itemDraft.PiercingDamage));
+                itemDraft.ChoppingDamage = Mathf.Max(0f, EditorGUILayout.FloatField("劈砍伤害", itemDraft.ChoppingDamage));
+                itemDraft.BluntDamage = Mathf.Max(0f, EditorGUILayout.FloatField("钝击伤害", itemDraft.BluntDamage));
+                float totalCombatPower = itemDraft.CuttingDamage + itemDraft.PiercingDamage +
+                                         itemDraft.ChoppingDamage + itemDraft.BluntDamage;
+                EditorGUILayout.LabelField("总战斗力", totalCombatPower.ToString("0.##"));
+            }
 
             GUILayout.Space(8f);
             showAdvancedItem = EditorGUILayout.Foldout(showAdvancedItem, "开发者高级设置", true);

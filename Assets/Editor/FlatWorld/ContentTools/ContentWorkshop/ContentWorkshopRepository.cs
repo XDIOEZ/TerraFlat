@@ -441,10 +441,19 @@ namespace FlatWorld.Editor.ContentWorkshop
                 modules[moduleName] = module.DeepClone();
             }
 
-            if (modules["damage"] is JObject damageModule &&
-                damageModule["parameters"]?["Damage"] is JObject damage)
+            if (modules["damage"] is JObject damageModule)
             {
-                damage["BaseValue"] = Mathf.Max(0f, draft.Damage);
+                JObject parameters = EnsureObject(damageModule, "parameters");
+                parameters["DamageValues"] = new JObject
+                {
+                    ["Cutting"] = Mathf.Max(0f, draft.CuttingDamage),
+                    ["Piercing"] = Mathf.Max(0f, draft.PiercingDamage),
+                    ["Chopping"] = Mathf.Max(0f, draft.ChoppingDamage),
+                    ["Blunt"] = Mathf.Max(0f, draft.BluntDamage)
+                };
+                parameters["damageSystemVersion"] = 1;
+                parameters.Remove("Weakness");
+                parameters.Remove("Damage");
             }
 
             if (draft.AddFoodAbility &&

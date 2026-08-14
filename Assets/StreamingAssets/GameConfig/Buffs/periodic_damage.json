@@ -90,9 +90,9 @@
       "id": "感染",
       "displayName": "感染",
       "category": "general",
-      "description": "感染期间身体微微发绿，每秒受到1点真实伤害。",
+      "description": "感染期间身体微微发绿，每10秒受到1点真实伤害。",
       "durationSeconds": 30.0,
-      "tickIntervalSeconds": 1.0,
+      "tickIntervalSeconds": 10.0,
       "stackMode": "refresh_duration",
       "effects": [
         {

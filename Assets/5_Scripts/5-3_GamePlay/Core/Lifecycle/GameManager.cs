@@ -769,7 +769,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         if (player?.Data != null)
         {
             player.Data.CurrentSceneName = SceneManager.GetActiveScene().name;
-            SaveDataMgr.Instance.SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;
+            SaveDataMgr.Instance.SaveData.PlayerData_Dict[player.ProfileName] = player.Data;
         }
 
         if (RequiresInitialPlayerPlacement(player))

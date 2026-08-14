@@ -16,6 +16,7 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、动态
 ## 不变量
 
 - 权威链：Tile 栈顶可走性/权重 + 动态建筑占地 → 脏格/脏区 → 稀疏 `WorldNavigationGrid`。
+- 新运行时世界注册导航时读取 `ChunkRuntime.Terrain` 的 `TerrainCell`，不读取旧 `TileData` SO；河流必须同时带 `Water | Walkable`，并使用有限的高 `NavigationCost`，海洋才保持不可通行。
 - 运行时只用项目内置导航，不恢复 Aron Granberg A*，也不把 Physics2D 扫描当权威。
 - 移除覆盖层后恢复基础层权重；建筑不改 TileData。
 - 失败/未表现完成的 Chunk 不注册导航；View 入池或销毁前先 Unbind。

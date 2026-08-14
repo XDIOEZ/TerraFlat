@@ -29,7 +29,12 @@ public sealed class ActorRenderEffectController : MonoBehaviour
     private static readonly int BodyMaxVId = Shader.PropertyToID("_BodyMaxV");
 
     private readonly List<Renderer> renderers = new List<Renderer>();
+    private readonly List<Renderer> externalRenderers = new List<Renderer>();
     private readonly List<ActorRenderEffectModule> modules = new List<ActorRenderEffectModule>();
+    private readonly Dictionary<Renderer, Material[]> externalOriginalMaterials =
+        new Dictionary<Renderer, Material[]>();
+    private readonly Dictionary<Renderer, MaterialPropertyBlock> externalOriginalPropertyBlocks =
+        new Dictionary<Renderer, MaterialPropertyBlock>();
     private MaterialPropertyBlock propertyBlock;
     private bool bindingsDirty = true;
 
@@ -97,6 +102,11 @@ public sealed class ActorRenderEffectController : MonoBehaviour
         bindingsDirty = true;
     }
 
+    private void OnDestroy()
+    {
+        RestoreAllExternalMaterials();
+    }
+
     #endregion
 
     #region Binding
@@ -136,8 +146,65 @@ public sealed class ActorRenderEffectController : MonoBehaviour
                 modules.Add(module);
         }
 
+        for (int i = externalRenderers.Count - 1; i >= 0; i--)
+        {
+            Renderer externalRenderer = externalRenderers[i];
+            if (externalRenderer == null)
+            {
+                externalRenderers.RemoveAt(i);
+                continue;
+            }
+
+            AddRenderer(externalRenderer);
+        }
+
         modules.Sort(CompareModules);
         bindingsDirty = false;
+    }
+
+    /// <summary>注册手持物等不在角色表现节点下的附属 Renderer，并临时继承角色效果材质。</summary>
+    public void RegisterExternalRenderers(Transform root)
+    {
+        if (root == null)
+            return;
+
+        if (bindingsDirty)
+            RefreshBindings();
+
+        Material effectMaterial = FindEffectSpriteMaterial();
+        Renderer[] foundRenderers = root.GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < foundRenderers.Length; i++)
+        {
+            Renderer renderer = foundRenderers[i];
+            if (renderer == null || renderer.GetComponent<ActorRenderEffectExclude>() != null)
+                continue;
+
+            if (!externalRenderers.Contains(renderer))
+                externalRenderers.Add(renderer);
+
+            CaptureExternalPropertyBlock(renderer);
+            AddRenderer(renderer);
+            ApplyEffectMaterial(renderer, effectMaterial);
+        }
+    }
+
+    /// <summary>移除附属 Renderer，并恢复其进入手持状态前使用的材质。</summary>
+    public void UnregisterExternalRenderers(Transform root)
+    {
+        if (root == null)
+            return;
+
+        Renderer[] foundRenderers = root.GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < foundRenderers.Length; i++)
+        {
+            Renderer renderer = foundRenderers[i];
+            if (renderer == null)
+                continue;
+
+            externalRenderers.Remove(renderer);
+            renderers.Remove(renderer);
+            RestoreExternalRenderer(renderer);
+        }
     }
 
     private void AddRenderer(Renderer renderer)
@@ -159,6 +226,82 @@ public sealed class ActorRenderEffectController : MonoBehaviour
         if (right == null)
             return -1;
         return left.Priority.CompareTo(right.Priority);
+    }
+
+    /// <summary>查找支持角色效果参数的主体 Sprite 材质。</summary>
+    private Material FindEffectSpriteMaterial()
+    {
+        for (int i = 0; i < renderers.Count; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (!(renderer is SpriteRenderer) || externalRenderers.Contains(renderer))
+                continue;
+
+            Material material = renderer.sharedMaterial;
+            if (material != null && material.HasProperty(BodyMinVId))
+                return material;
+        }
+
+        return null;
+    }
+
+    /// <summary>仅替换 SpriteRenderer 材质；粒子和独立特效保持原表现。</summary>
+    private void ApplyEffectMaterial(Renderer renderer, Material effectMaterial)
+    {
+        if (!(renderer is SpriteRenderer) || effectMaterial == null ||
+            renderer.sharedMaterial == effectMaterial)
+        {
+            return;
+        }
+
+        if (!externalOriginalMaterials.ContainsKey(renderer))
+            externalOriginalMaterials.Add(renderer, renderer.sharedMaterials);
+
+        renderer.sharedMaterial = effectMaterial;
+    }
+
+    /// <summary>保存附属 Renderer 原有属性，避免退出手持或返回对象池后残留水下参数。</summary>
+    private void CaptureExternalPropertyBlock(Renderer renderer)
+    {
+        if (externalOriginalPropertyBlocks.ContainsKey(renderer))
+            return;
+
+        MaterialPropertyBlock originalBlock = new MaterialPropertyBlock();
+        renderer.GetPropertyBlock(originalBlock);
+        externalOriginalPropertyBlocks.Add(renderer, originalBlock);
+    }
+
+    private void RestoreExternalMaterial(Renderer renderer)
+    {
+        if (renderer == null || !externalOriginalMaterials.TryGetValue(renderer, out Material[] materials))
+            return;
+
+        renderer.sharedMaterials = materials;
+        externalOriginalMaterials.Remove(renderer);
+    }
+
+    private void RestoreExternalRenderer(Renderer renderer)
+    {
+        if (renderer == null)
+            return;
+
+        RestoreExternalMaterial(renderer);
+        if (externalOriginalPropertyBlocks.TryGetValue(renderer, out MaterialPropertyBlock block))
+        {
+            renderer.SetPropertyBlock(block);
+            externalOriginalPropertyBlocks.Remove(renderer);
+        }
+    }
+
+    private void RestoreAllExternalMaterials()
+    {
+        Renderer[] registeredRenderers = externalRenderers.ToArray();
+        for (int i = 0; i < registeredRenderers.Length; i++)
+            RestoreExternalRenderer(registeredRenderers[i]);
+
+        externalRenderers.Clear();
+        externalOriginalMaterials.Clear();
+        externalOriginalPropertyBlocks.Clear();
     }
 
     #endregion

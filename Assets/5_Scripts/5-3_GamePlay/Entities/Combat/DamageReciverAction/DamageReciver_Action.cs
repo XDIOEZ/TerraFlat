@@ -10,6 +10,7 @@ public class DamageReceiverDamageInfo
     public Item Attacker;
     public float DamageValue;
     public float SenderDamageValue;
+    public CombatDamage SenderDamageValues;
     public float HpBefore;
     public float HpAfter;
     public bool IsFatal;

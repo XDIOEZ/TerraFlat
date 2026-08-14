@@ -14,7 +14,7 @@ public partial class EcologyWorldSaveData
 {
     #region 世界配置
 
-    public const int CurrentDataVersion = 2;
+    public const int CurrentDataVersion = 3;
 
     [MemoryPackInclude] public int DataVersion;
     [MemoryPackInclude] public string ProfileId;
@@ -88,6 +88,38 @@ public partial class EcologyWorldSaveData
             }
         }
         return snapshots;
+    }
+
+    /// <summary>把旧存档中错误绑定到树的木头与藤蔓改回群系独立散布。</summary>
+    public bool MigrateDeprecatedTreeCompanionRules()
+    {
+        if (DataVersion >= CurrentDataVersion || Rules == null)
+            return false;
+
+        bool changed = false;
+        for (int i = 0; i < Rules.Count; i++)
+        {
+            EcologyRuleSaveData rule = Rules[i];
+            if (rule == null || !rule.CompanionOnly ||
+                !string.Equals(rule.CompanionHostTag, "Tree", StringComparison.OrdinalIgnoreCase) ||
+                (!string.Equals(rule.ItemId, "Twine", StringComparison.OrdinalIgnoreCase) &&
+                 !string.Equals(rule.ItemId, "Log", StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            rule.CompanionOnly = false;
+            rule.CompanionHostTag = string.Empty;
+            rule.CompanionSpawnChance = 0d;
+            rule.CompanionOffsetX = 0d;
+            rule.CompanionOffsetY = 0d;
+            rule.CompanionMinRadius = 0d;
+            rule.CompanionMaxRadius = 0d;
+            changed = true;
+        }
+
+        DataVersion = CurrentDataVersion;
+        return changed;
     }
 
     /// <summary>获取或创建一个区块的生态差量记录。</summary>
@@ -171,7 +203,7 @@ public partial class EcologyWorldSaveData
 [Serializable]
 public partial class WorldGenerationProfileSaveData
 {
-    public const int CurrentDataVersion = 1;
+    public const int CurrentDataVersion = 2;
 
     public int DataVersion;
     public string ProfileId;
@@ -234,6 +266,44 @@ public partial class WorldGenerationProfileSaveData
     {
         return profile != null && HasConfiguration &&
                string.Equals(ProfileId, profile.ProfileId, StringComparison.Ordinal);
+    }
+
+    /// <summary>旧矿洞存档仅迁移一次，把墙边矿物与地面散矿密度统一缩减到原来的 30%。</summary>
+    public bool MigrateCaveResourceDensityToThirtyPercent(
+        ChunkGenerationProfileSnapshot profile)
+    {
+        if (DataVersion >= CurrentDataVersion || !Matches(profile) ||
+            profile.Settings.Mode != ChunkGenerationMode.Cave)
+        {
+            return false;
+        }
+
+        bool changed = ScaleNumericParameter("cave.resource.density", 0.3d);
+        changed |= ScaleNumericParameter("cave.resource.looseDensity", 0.3d);
+        DataVersion = CurrentDataVersion;
+        return changed;
+    }
+
+    /// <summary>按键缩放一个已冻结的数值参数。</summary>
+    private bool ScaleNumericParameter(string id, double multiplier)
+    {
+        if (NumericParameters == null)
+            return false;
+
+        for (int i = 0; i < NumericParameters.Count; i++)
+        {
+            WorldGenerationNumericParameterSaveData parameter = NumericParameters[i];
+            if (parameter == null ||
+                !string.Equals(parameter.Id, id, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            parameter.Value *= multiplier;
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>构造后台生成器可直接使用的冻结 Profile。</summary>

@@ -48,9 +48,13 @@ public partial class ChunkMgr
             return profile;
         }
 
-        return profile.WithEcology(
+        planet.Ecology.MigrateDeprecatedTreeCompanionRules();
+        ChunkGenerationProfileSnapshot persistedProfile = profile.WithEcology(
             planet.Ecology.GlobalMultiplier,
             planet.Ecology.CreateRuleSnapshots());
+        // 迁移后同步真实规则指纹，避免联机仍拿旧伴生配置的指纹进行校验。
+        planet.Ecology.ConfigurationFingerprint = persistedProfile.EcologyFingerprint;
+        return persistedProfile;
     }
 
     /// <summary>只恢复完整生成参数；地表配对复核不需要重建生态 Item，却必须读取相同地形和结构配置。</summary>
@@ -69,10 +73,15 @@ public partial class ChunkMgr
             return profile;
         }
 
-        return planet.Ecology.TryApplyGenerationConfiguration(profile,
-            out ChunkGenerationProfileSnapshot restoredProfile)
-            ? restoredProfile
-            : profile;
+        planet.Ecology.Generation.MigrateCaveResourceDensityToThirtyPercent(profile);
+        if (!planet.Ecology.TryApplyGenerationConfiguration(profile,
+                out ChunkGenerationProfileSnapshot restoredProfile))
+        {
+            return profile;
+        }
+
+        planet.Ecology.Generation.GenerationFingerprint = restoredProfile.GenerationFingerprint;
+        return restoredProfile;
     }
 
     /// <summary>

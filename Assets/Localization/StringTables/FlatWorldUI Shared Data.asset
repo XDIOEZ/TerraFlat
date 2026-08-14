@@ -1771,6 +1771,42 @@ MonoBehaviour:
     m_Key: dimension.cave.name
     m_Metadata:
       m_Items: []
+  - m_Id: 1751778585391104
+    m_Key: ui.text.20530E3C
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751778686054400
+    m_Key: ui.text.05335518
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751778686054401
+    m_Key: ui.text.762AEDD5
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751778686054402
+    m_Key: ui.text.141C741B
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751778686054403
+    m_Key: ui.text.14842EA7
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751778686054404
+    m_Key: ui.text.5837085D
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751778686054405
+    m_Key: ui.text.BD461774
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751780279889920
+    m_Key: ui.text.ADF04957
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1751780279889921
+    m_Key: ui.text.F02041E4
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

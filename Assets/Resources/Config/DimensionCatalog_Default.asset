@@ -65,8 +65,8 @@ MonoBehaviour:
     CaveEntranceSafeRadius: 3
     CaveFloorTileId: TileBase_Stone
     CaveWallTileId: TileBase_StoneWall
-    CaveResourceDensity: 0.14
-    CaveLooseOreDensity: 0.004
+    CaveResourceDensity: 0.042
+    CaveLooseOreDensity: 0.0012
     CaveSafeRadius: 4
     CaveResources:
     - ItemId: Mine_Tin

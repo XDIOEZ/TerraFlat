@@ -225,7 +225,11 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     public void SetGamepadMode(bool enabled)
     {
         if (gamepadMode == enabled)
+        {
+            if (!enabled)
+                ClearNavigationSelection();
             return;
+        }
 
         gamepadMode = enabled;
         if (!enabled)
@@ -233,12 +237,24 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
             suppressedInputField = null;
             suppressedInputFieldFrame = -1;
             ExitCursorMode(false);
+            ClearNavigationSelection();
             return;
         }
 
         cursorPositionDirty = true;
         hoverTargetDirty = true;
         nextStationaryHoverRefreshTime = 0f;
+    }
+
+    /// <summary>退出手柄模式时清除按钮/槽位焦点框，但保留正在键盘输入的文本框。</summary>
+    private static void ClearNavigationSelection()
+    {
+        EventSystem eventSystem = EventSystem.current;
+        GameObject selectedObject = eventSystem?.currentSelectedGameObject;
+        if (selectedObject == null || selectedObject.GetComponentInParent<TMP_InputField>() != null)
+            return;
+
+        eventSystem.SetSelectedGameObject(null);
     }
 
     /// <summary>

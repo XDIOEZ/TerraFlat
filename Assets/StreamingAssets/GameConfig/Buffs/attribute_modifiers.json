@@ -38,24 +38,6 @@
       ]
     },
     {
-      "id": "水体减速",
-      "displayName": "水体减速",
-      "description": "进入水后带来的减速",
-      "durationSeconds": null,
-      "effects": [
-        {
-          "phase": "start",
-          "typeId": "core:move_speed_multiplier",
-          "value": 0.5
-        },
-        {
-          "phase": "stop",
-          "typeId": "core:move_speed_multiplier",
-          "value": 2.0
-        }
-      ]
-    },
-    {
       "id": "潮湿",
       "displayName": "潮湿",
       "description": "潮湿时体温下降速度翻倍，离开水体后恢复正常。",

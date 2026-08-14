@@ -20,6 +20,9 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 技能由 `GameRes.SkillDict` 注册；移动资源同时检查 Addressables `Skill` 标签。
 - Buff 生命周期属于 `flatworld-buff`；伤害 API 语义变化才联动 Buff/Environment，局部数值与表现无需扩散。
 - 正式 AI 的生命、防御、攻击伤害、伤害碰撞窗静态值来自 Actor JSON modules；当前生命和攻击者等运行态仍由存档/模块维护。
+- 历史武器/Actor 大量通过 Prefab 或 JSON 继承覆盖旧单值 `Damage`；迁移到四类伤害时只能在最终运行实例 `Load` 后读取合并结果，禁止在 `OnValidate` 提前固化父模板数值。
+- 树木、矿物等世界资源的 `DamageReceiver.Data` 会进入世界存档；调整 Prefab 防御时若旧存档也必须生效，要同步提升数据版本并在 `Load` 按稳定物品 ID 迁移，不能只改 Prefab。
+- `DamageReceiver` 与实际受击 `Collider2D` 不保证位于同一节点；命中特效应优先使用碰撞回调传入的 Collider 定位，并在缺失时回退子级、父级或接收器中心，禁止直接假定 `receiver.GetComponent<Collider2D>()` 非空。
 
 ## 验证
 

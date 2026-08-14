@@ -13,6 +13,8 @@ using UnityEngine.UI;
 public sealed class InputBindingPanelLauncher : MonoBehaviour
 {
     private const string EntryButtonName = "按键绑定";
+    private static readonly Vector2 PreferredDialogSize = new Vector2(920f, 820f);
+    private const float DialogSafeMargin = 64f;
 
     private sealed class BindingRow
     {
@@ -528,15 +530,15 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
             ? canvasRect.rect.size
             : new Vector2(Screen.width, Screen.height);
         Vector2 available = new Vector2(
-            Mathf.Max(1f, canvasSize.x - 64f),
-            Mathf.Max(1f, canvasSize.y - 64f));
+            Mathf.Max(1f, canvasSize.x - DialogSafeMargin),
+            Mathf.Max(1f, canvasSize.y - DialogSafeMargin));
 
         dialogRect.SetSizeWithCurrentAnchors(
             RectTransform.Axis.Horizontal,
-            Mathf.Min(760f, available.x));
+            Mathf.Min(PreferredDialogSize.x, available.x));
         dialogRect.SetSizeWithCurrentAnchors(
             RectTransform.Axis.Vertical,
-            Mathf.Min(720f, available.y));
+            Mathf.Min(PreferredDialogSize.y, available.y));
     }
 
     private void ReleaseInputLock()

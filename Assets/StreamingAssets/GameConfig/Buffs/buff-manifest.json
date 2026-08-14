@@ -20,11 +20,6 @@
       "id": "attribute_modifiers",
       "path": "attribute_modifiers.json",
       "enabled": true
-    },
-    {
-      "id": "environment",
-      "path": "environment.json",
-      "enabled": true
     }
   ]
 }

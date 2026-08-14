@@ -49,7 +49,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     {
         if (IsGameplayInputLocked())
         {
-            EndFreshWaterDrinkHold();
+            EndEnvironmentActionHold();
             CancelCurrentInteraction();
             return;
         }
@@ -61,7 +61,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         }
 
         ValidateCurrentInteractionDistance();
-        TickFreshWaterDrinking(deltaTime);
+        TickEnvironmentInteraction(deltaTime);
     }
     #endregion
 
@@ -95,8 +95,9 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private void OnInteractPressed(InputAction.CallbackContext ctx)
     {
-        BeginFreshWaterDrinkHold();
-        TryInteractAtCurrentPosition();
+        bool interacted = TryInteractAtCurrentPosition();
+        if (!interacted)
+            BeginEnvironmentActionHold();
     }
 
     /// <summary>
@@ -116,7 +117,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private void OnInteractReleased(InputAction.CallbackContext ctx)
     {
-        EndFreshWaterDrinkHold();
+        EndEnvironmentActionHold();
         if (IsGameplayInputLocked())
         {
             return;
@@ -213,7 +214,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private void OnDisable()
     {
         UnbindInput();
-        EndFreshWaterDrinkHold();
+        EndEnvironmentActionHold();
         CancelCurrentInteraction();
     }
 

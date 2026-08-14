@@ -279,7 +279,8 @@ MonoBehaviour:
   eatExitHungerRate: 0.85
   sleepEnterHpRate: 0.5
   sleepExitHpRate: 0.55
-  sleepRecoverHpPerSecond: 6
+  healthRecoveryInterval: 60
+  healthRecoveryAmount: 10
   sleepDuration: 6
   sleepCooldown: 3
   dayStartRatio: 0.25

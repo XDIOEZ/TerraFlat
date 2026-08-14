@@ -7,6 +7,7 @@
         "FlatWorld.Gameplay.Debug",
         "FlatWorld.Guide",
         "FlatWorld.Networking.Core",
+        "Effect",
         "GamePlay",
         "Data",
         "UI",

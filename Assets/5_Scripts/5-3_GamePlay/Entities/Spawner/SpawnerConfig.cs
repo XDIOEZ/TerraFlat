@@ -210,6 +210,10 @@ public class SpawnerConfig : ScriptableObject
     [Tooltip("启用后，第 N 天排入 N 只生物，并忽略生态预算、物种、生成组、玩家周边与全局存活上限。")]
     public bool UnboundedDailyGrowth;
 
+    [LabelText("忽略种群数量上限")]
+    [Tooltip("启用后不再用物种、生成组、玩家周边或全局数量限制生成和回收；仍保留生成计划、概率、生态预算与远距离回收。")]
+    public bool IgnorePopulationLimits;
+
     [LabelText("必须生成在完全黑暗地块")]
     public bool RequireCompletelyDarkTile = true;
 

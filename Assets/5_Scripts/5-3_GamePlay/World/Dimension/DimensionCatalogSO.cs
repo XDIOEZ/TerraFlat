@@ -87,8 +87,8 @@ public sealed class DimensionDefinition
     [Min(1f)] public float CaveEntranceSafeRadius = 3f;
     public string CaveFloorTileId = "TileBase_Stone";
     public string CaveWallTileId = "TileBase_StoneWall";
-    [Range(0f, 0.5f)] public float CaveResourceDensity = 0.14f;
-    [Range(0f, 0.1f)] public float CaveLooseOreDensity;
+    [Range(0f, 0.5f)] public float CaveResourceDensity = 0.042f;
+    [Range(0f, 0.1f)] public float CaveLooseOreDensity = 0.0012f;
     [Min(0f)] public float CaveSafeRadius = 4f;
     public List<DimensionResourceRule> CaveResources = new();
 
@@ -139,8 +139,8 @@ public sealed class DimensionDefinition
             CaveEntranceSafeRadius = 3f,
             CaveFloorTileId = "TileBase_Stone",
             CaveWallTileId = "TileBase_StoneWall",
-            CaveResourceDensity = 0.14f,
-            CaveLooseOreDensity = 0.004f,
+            CaveResourceDensity = 0.042f,
+            CaveLooseOreDensity = 0.0012f,
             CaveSafeRadius = 4f,
             CaveResources = new List<DimensionResourceRule>
             {

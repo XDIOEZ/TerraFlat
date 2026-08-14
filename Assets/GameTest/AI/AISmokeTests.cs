@@ -266,7 +266,7 @@ namespace FlatWorld.GameTest.AI
             Assert.That(bodyCollider.size.y, Is.EqualTo(0.9f).Within(0.0001f));
             Assert.That(bodyCollider.offset.x, Is.EqualTo(0f).Within(0.0001f));
             Assert.That(bodyCollider.offset.y, Is.EqualTo(0.15f).Within(0.0001f));
-            Assert.That(damageSender.Damage.BaseValue, Is.EqualTo(20f).Within(0.0001f));
+            Assert.That(damageSender.ResolveDamageValues().TotalCombatPower, Is.EqualTo(20f).Within(0.0001f));
             Assert.That(damageSender.DamageInterval, Is.EqualTo(1f).Within(0.0001f));
             Assert.That(damageSender.EnableOnTriggerEnterDamage, Is.True);
             Assert.That(damageSender.OnlyDealDamageWhenInHand, Is.False);

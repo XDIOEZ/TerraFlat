@@ -22,8 +22,15 @@ public class Player : Item
     [NonSerialized]
     private bool wasProfileDataCreated;
 
+    [NonSerialized]
+    private string profileName;
+
     public bool IsLocalProfile => isLocalProfile;
     public bool IsNewProfile => isLocalProfile && wasProfileDataCreated;
+    /// <summary>存档字典使用的稳定档案名，不受显示名或管理员身份临时变化影响。</summary>
+    public string ProfileName => string.IsNullOrWhiteSpace(profileName)
+        ? data?.Name_User
+        : profileName;
     internal bool WasProfileDataCreated => wasProfileDataCreated;
 
     public event Action ProfileContextChanged;
@@ -44,13 +51,24 @@ public class Player : Item
     /// <summary>
     /// 设置本运行时 Player 是否由本机控制，以及对应玩家数据是否刚刚创建。
     /// </summary>
-    public void SetProfileContext(bool localProfile, bool profileDataWasCreated)
+    public void SetProfileContext(
+        bool localProfile,
+        bool profileDataWasCreated,
+        string runtimeProfileName = null)
     {
-        if (isLocalProfile == localProfile && wasProfileDataCreated == profileDataWasCreated)
+        string resolvedProfileName = string.IsNullOrWhiteSpace(runtimeProfileName)
+            ? profileName
+            : runtimeProfileName.Trim();
+        if (isLocalProfile == localProfile &&
+            wasProfileDataCreated == profileDataWasCreated &&
+            string.Equals(profileName, resolvedProfileName, StringComparison.Ordinal))
+        {
             return;
+        }
 
         isLocalProfile = localProfile;
         wasProfileDataCreated = profileDataWasCreated;
+        profileName = resolvedProfileName;
         ProfileContextChanged?.Invoke();
     }
 

@@ -44,7 +44,7 @@ namespace FlatWorld.GameTest.Map
 
         [Test]
         [Category("Map.TileBuilding")]
-        public void DamageCalculationAppliesWeaknessAndRemainingDefense()
+        public void DamageCalculationSubtractsMatchingTypedDefense()
         {
             SaveDataMgr preexistingSaveManager = Object.FindObjectOfType<SaveDataMgr>();
             try
@@ -52,35 +52,23 @@ namespace FlatWorld.GameTest.Map
                 var profile = new TileBuildingDamageProfile
                 {
                     Damageable = true,
-                    Defense = 8f,
+                    DefenseValues = new CombatDefense(8f, 0f, 2f, 0f),
+                    DamageSystemVersion = 1,
                     RequiredTool = TileDamageToolKind.None,
-                    RequireWeaknessMatch = true,
-                    Weakness = new List<DamageType>
-                    {
-                        new DamageType((DamageTag)1, 3)
-                    }
                 };
                 var sender = new FakeDamageSender
                 {
-                    Damage = new GameValue_float(50f),
-                    Weakness = new List<DamageType>
-                    {
-                        new DamageType((DamageTag)1, 2)
-                    }
+                    DamageValues = new CombatDamage(10f, 5f, 6f, 0f)
                 };
 
                 float actual = TileBuildingSystem.CalculateDamage(profile, sender, out bool matched);
                 float multiplier = GameDifficultyService.ResolveDirectDamageMultiplier(null, null);
 
                 Assert.That(matched, Is.True);
-                Assert.That(actual, Is.EqualTo(Mathf.Max(1f, 50f * multiplier - 4f)).Within(0.001f));
-
-                sender.Weakness = new List<DamageType>
-                {
-                    new DamageType((DamageTag)2, 10)
-                };
-                Assert.That(TileBuildingSystem.CalculateDamage(profile, sender, out matched), Is.Zero);
-                Assert.That(matched, Is.False);
+                float expected = Mathf.Max(0f, 10f * multiplier - 8f) +
+                                 5f * multiplier +
+                                 Mathf.Max(0f, 6f * multiplier - 2f);
+                Assert.That(actual, Is.EqualTo(expected).Within(0.001f));
             }
             finally
             {
@@ -373,9 +361,8 @@ namespace FlatWorld.GameTest.Map
 
         private sealed class FakeDamageSender : IDamageSender
         {
-            public GameValue_float Damage { get; set; }
+            public CombatDamage DamageValues { get; set; }
             public Item attacker { get; set; }
-            public List<DamageType> Weakness { get; set; }
         }
 
         private static void AddWall(

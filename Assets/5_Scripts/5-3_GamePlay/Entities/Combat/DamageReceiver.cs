@@ -15,6 +15,9 @@ using Random = UnityEngine.Random;
 public class DamageReceiver : Module, IRemoteNetworkModule
 {
     private const int CurrentBodyPartDataVersion = 1;
+    private const int CurrentDamageSystemVersion = 2;
+    // 玩家每恢复 1 点生命值消耗 1 点蛋白质。
+    private const float PlayerHealingProteinCostPerHp = 1f;
 
     #region 数据引用
 
@@ -36,10 +39,13 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         set => SetOverallHp(value, false);
     }
 
-    public float Defense
+    public CombatDefense Defense
     {
-        get => Data.Defense;
-        set => Data.Defense = Mathf.Max(0f, value);
+        get
+        {
+            UpgradeDamageSystemData();
+            return Data.DefenseValues;
+        }
     }
 
     public UltEvent OnDead = new();
@@ -96,7 +102,17 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         public List<BodyPartHealth> BodyParts = new List<BodyPartHealth>();
 
         [Header("防御设置")]
+        [Tooltip("切割、穿刺、劈砍、钝击防御分别只抵消同类型伤害。")]
+        public CombatDefense DefenseValues = new CombatDefense();
+
+        [HideInInspector]
+        [Tooltip("旧单值防御，仅供一次性迁移为四类同值防御。")]
         public float Defense = 0;
+
+        [HideInInspector]
+        public int DamageSystemVersion;
+
+        [HideInInspector]
         public List<DamageType> Weakness = new List<DamageType>();
         [Header("伤害者的UID列表")]
         public List<int> AttackersUIDs = new List<int>();
@@ -256,6 +272,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     {
         ClearHitSlowdown();
         modData.ReadData(ref Data);
+        UpgradeDamageSystemData();
         UpgradeBodyPartData();
         NormalizeStatRanges();
         BindHandStateEvent();
@@ -278,6 +295,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         Dictionary<BodyPartType, BodyPartSnapshot> previousBodyParts = CaptureBodyPartSnapshots();
         modData = networkData;
         modData.ReadData(ref Data);
+        UpgradeDamageSystemData();
         UpgradeBodyPartData();
         NormalizeStatRanges();
         Data.ShowCanvas = false;
@@ -511,7 +529,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     public virtual float Hurt(IDamageSender damageSender)
     {
-        if (Hp <= 0 || item == null) return -1;
+        if (Hp <= 0 || item == null || damageSender == null) return -1;
 
         float hpBefore = Hp;
 
@@ -522,62 +540,14 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         }
         lastDamageTime = Time.time;
 
-        // 攻击者标签命中受击者弱点标签则计算破甲比例
-        bool isDefenseBreak = false;
-        float defenseReductionRatio = 0f; // 0表示不削减防御(防御100%生效)，1表示完全削减防御(无视防御)
-
-        if (Data.Weakness != null && damageSender.Weakness != null)
-        {
-            for (int i = 0; i < Data.Weakness.Count; i++)
-            {
-                for (int j = 0; j < damageSender.Weakness.Count; j++)
-                {
-                    if (damageSender.Weakness[j].Tag == Data.Weakness[i].Tag)
-                    {
-                        isDefenseBreak = true;
-                        
-                        int receiverLevel = Mathf.Max(1, Data.Weakness[i].Level);
-                        int attackerLevel = Mathf.Max(1, damageSender.Weakness[j].Level);
-                        
-                        // 当斧头(attacker)=1，树木(receiver)=2时，差值为1 => 削减50%防御（留50%发挥作用）
-                        // 当斧头(attacker)=1，树木(receiver)=3时，差值为2 => 削减0%防御（全部防御生效）
-                        // 当斧头(attacker)>=2，树木(receiver)=2时，差值<=0 => 削减100%防御（无视防御）
-                        float reduction = 1f - Mathf.Clamp01((receiverLevel - attackerLevel) * 0.5f);
-                        
-                        if (reduction > defenseReductionRatio)
-                        {
-                            defenseReductionRatio = reduction;
-                        }
-                    }
-                }
-            }
-        }
-
         float difficultyDamageMultiplier = GameDifficultyService.ResolveDirectDamageMultiplier(
             damageSender.attacker,
             item);
-        float senderDamageValue = damageSender.Damage.Value * difficultyDamageMultiplier;
+        CombatDamage senderDamage = damageSender.DamageValues ?? new CombatDamage();
+        CombatDamage scaledDamage = senderDamage.Scaled(difficultyDamageMultiplier);
 
-        // 计算实际伤害
-        float actualDamage;
-        if (senderDamageValue <= 0f)
-        {
-            actualDamage = 0f;
-        }
-        else if (isDefenseBreak)
-        {
-            // 考虑破防比例，计算剩余的有效防御力
-            float effectiveDefense = Defense * (1f - defenseReductionRatio);
-            float normalDamage = senderDamageValue - effectiveDefense;
-            actualDamage = normalDamage < 1f ? 1f : normalDamage;
-        }
-        else
-        {
-            // 计算实际伤害（减法公式：攻击力 - 当前防御）
-            float normalDamage = senderDamageValue - Defense;
-            // 未破防时保底造成 1 点伤害
-            actualDamage = normalDamage < 1f ? 1f : normalDamage;
-        }
+        // 四种伤害分别减去对应防御，低于零的分量归零，最后再相加。
+        float actualDamage = scaledDamage.CalculateAgainst(Defense);
 
         // 记录攻击者（根据是否造成实际伤害决定概率）
         if (damageSender.attacker != null)
@@ -761,18 +731,49 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         if (healAmount <= 0f)
             return Hp;
 
+        float missingHp = Mathf.Max(0f, MaxHp - oldHp);
+        if (missingHp <= 0f)
+            return Hp;
+
+        healAmount = Mathf.Min(healAmount, missingHp);
+
+        // 玩家回血由蛋白质支付，其他实体仍沿用原有免费回血逻辑。
+        Mod_Food playerFood = null;
+        if (GameDifficultyService.IsPlayer(item))
+        {
+            playerFood = item?.itemMods?.GetMod_ByID<Mod_Food>(ModText.Food);
+            if (playerFood?.Data?.nutrition == null)
+                return Hp;
+
+            float availableProtein = Mathf.Max(0f, playerFood.Data.nutrition.Protein);
+            float proteinLimitedHeal = availableProtein / PlayerHealingProteinCostPerHp;
+            healAmount = Mathf.Min(healAmount, proteinLimitedHeal);
+            if (healAmount <= 0f)
+                return Hp;
+        }
+
         if (UsesBodyPartHealth)
             HealAllBodyParts(healAmount);
         else
             Hp = Mathf.Min(Hp + healAmount, MaxHp);
 
+        float actualHeal = Mathf.Max(0f, Hp - oldHp);
+        if (playerFood != null && actualHeal > 0f)
+        {
+            Nutrition nutrition = playerFood.Data.nutrition;
+            nutrition.Protein = Mathf.Max(
+                0f,
+                nutrition.Protein - actualHeal * PlayerHealingProteinCostPerHp);
+            playerFood.DataUpdate?.Invoke();
+        }
+
         // 只有在血量发生变化时才刷新UI
-        if (Mathf.Abs(Hp - oldHp) > 0.001f && IsPanelVisible())
+        if (actualHeal > 0.001f && IsPanelVisible())
         {
             RefreshUI();
         }
 
-        if (Mathf.Abs(Hp - oldHp) > 0.001f)
+        if (actualHeal > 0.001f)
         {
             DataUpdate?.Invoke();
             OnAction?.Invoke(Hp);
@@ -788,19 +789,20 @@ public class DamageReceiver : Module, IRemoteNetworkModule
             HandleDeath(CreateDamageInfo(null, 0f, Hp, Hp));
     }
 
-    public void AddDefense(float value)
+    public void AddDefense(CombatDefense value)
     {
-        Defense += value;
+        Defense.Add(value);
     }
 
-    public void RemoveDefense(float value)
+    public void RemoveDefense(CombatDefense value)
     {
-        Defense -= value;
+        Defense.Remove(value);
     }
 
-    public void SetDefense(float value)
+    public void SetDefense(CombatDefense value)
     {
-        Defense = value;
+        Data.DefenseValues = value ?? new CombatDefense();
+        Data.DefenseValues.ClampNonNegative();
     }
 
     [Button("Enable and reset body-part health")]
@@ -1362,7 +1364,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         Data.MaxHp = Mathf.Max(0f, Data.MaxHp);
         Data.Hp = Mathf.Clamp(Data.Hp, 0f, Data.MaxHp);
         Data.TwoPartHitChance = Mathf.Clamp01(Data.TwoPartHitChance);
-        Data.Defense = Mathf.Max(0f, Data.Defense);
+        Data.DefenseValues ??= new CombatDefense();
+        Data.DefenseValues.ClampNonNegative();
 
         if (!Data.UseBodyPartHealth)
             return;
@@ -1381,6 +1384,51 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         }
 
         SynchronizeOverallHealthFromBodyParts();
+    }
+
+    /// <summary>迁移旧单值防御，并修正旧存档中会完全阻断采集进度的资源防御。</summary>
+    private void UpgradeDamageSystemData()
+    {
+        Data.DefenseValues ??= new CombatDefense();
+        Data.DefenseValues.ClampNonNegative();
+        if (Data.DamageSystemVersion >= CurrentDamageSystemVersion)
+            return;
+
+        if (Data.DamageSystemVersion < 1 &&
+            Data.DefenseValues.TotalDefense <= 0f &&
+            Data.Defense > 0f)
+        {
+            float legacyDefense = Mathf.Max(0f, Data.Defense);
+            Data.DefenseValues = new CombatDefense(
+                legacyDefense,
+                legacyDefense,
+                legacyDefense,
+                legacyDefense);
+        }
+
+        // 版本 1 曾把旧单值防御复制到四项，树木的 50 防御会让所有斧头都无法造成伤害。
+        if (Data.DamageSystemVersion < 2)
+            TryApplyTemporaryResourceDefensePreset();
+
+        Data.Weakness?.Clear();
+        Data.DamageSystemVersion = CurrentDamageSystemVersion;
+    }
+
+    /// <summary>按资源 ID 为旧存档补入临时四类防御，保证砍树与采矿流程可继续。</summary>
+    private void TryApplyTemporaryResourceDefensePreset()
+    {
+        string itemId = item?.itemData?.IDName;
+        Data.DefenseValues = itemId switch
+        {
+            "AppleTree" or "Tree_Coconut" => new CombatDefense(2f, 4f, 0f, 3f),
+            "Bush" => new CombatDefense(0f, 1f, 0f, 1f),
+            "Mine_Stone" => new CombatDefense(12f, 2f, 14f, 2f),
+            "Mine_Coal" => new CombatDefense(10f, 3f, 12f, 3f),
+            "Mine_Tin" => new CombatDefense(16f, 7f, 18f, 5f),
+            "Mine_Copper" => new CombatDefense(14f, 8f, 16f, 6f),
+            "Mine_Iron" => new CombatDefense(18f, 13f, 20f, 8f),
+            _ => Data.DefenseValues
+        };
     }
 
     private void OnDamaged_ShowUiAndScheduleHide()
@@ -1502,7 +1550,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule
             DamageSender = damageSender,
             Attacker = damageSender?.attacker,
             DamageValue = damageValue,
-            SenderDamageValue = damageSender != null ? damageSender.Damage.Value : damageValue,
+            SenderDamageValue = damageSender?.DamageValues?.TotalCombatPower ?? damageValue,
+            SenderDamageValues = damageSender?.DamageValues,
             HpBefore = hpBefore,
             HpAfter = hpAfter,
             IsFatal = hpAfter <= 0f,
@@ -1606,23 +1655,17 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     #region 调试方法
 
-    [Button("添加全部1级弱点")]
-    public void Debug_AddAllWeaknesses()
+    [Button("重置四类防御")]
+    public void Debug_ResetTypedDefense()
     {
         if (!enableDebugTools)
         {
-            Debug.LogWarning($"[{item?.itemData?.GameName}] 调试开关未开启，跳过添加全部1级弱点");
+            Debug.LogWarning($"[{item?.itemData?.GameName}] 调试开关未开启，跳过重置四类防御");
             return;
         }
 
-        Data.Weakness.Clear();
-
-        foreach (DamageTag tag in System.Enum.GetValues(typeof(DamageTag)))
-        {
-            Data.Weakness.Add(new DamageType(tag, 1));
-        }
-
-        Debug.Log($"[{item.itemData.GameName}] 已添加全部弱点，共 {Data.Weakness.Count} 个");
+        Data.DefenseValues = new CombatDefense();
+        Data.DamageSystemVersion = 1;
     }
 
     #endregion

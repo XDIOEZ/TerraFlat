@@ -41,6 +41,8 @@ MonoBehaviour:
   intensity: 0.85
   innerRadius: 0.8
   outerRadius: 5
+  infectionTint: {r: 0.3, g: 0.78, b: 0.28, a: 1}
+  infectionTintStrength: 0.18
 --- !u!4 &6222619928666247172
 Transform:
   m_ObjectHideFlags: 0
@@ -200,6 +202,8 @@ MonoBehaviour:
   statusTint: {r: 1, g: 1, b: 1, a: 1}
   statusTintStrength: 0
   statusTransitionSeconds: 0.12
+  statusPulseSpeed: 1.2
+  statusPulseAmplitude: 0.08
   hitFlashColor: {r: 1, g: 0.08, b: 0.08, a: 1}
   defaultFlashDuration: 0.2
   defaultFlashCount: 1

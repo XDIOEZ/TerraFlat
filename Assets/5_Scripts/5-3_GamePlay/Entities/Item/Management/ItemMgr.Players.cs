@@ -33,7 +33,7 @@ public partial class ItemMgr
             if (_networkRemoteReplicas.Contains(player)) continue;
             player.Save();
 
-            SaveDataMgr.Instance.SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;
+            SaveDataMgr.Instance.SaveData.PlayerData_Dict[RequireProfileName(player)] = player.Data;
 
             playerCount++;
         }
@@ -51,9 +51,12 @@ public partial class ItemMgr
         Data_Player playerData = LoadOrCreatePlayerData(playerName, out bool wasCreated);
         //传入数据创建玩家
         Player player = CreatePlayer(playerData);
-        player.SetProfileContext(localProfile: true, profileDataWasCreated: wasCreated);
+        player.SetProfileContext(
+            localProfile: true,
+            profileDataWasCreated: wasCreated,
+            runtimeProfileName: playerName);
         //设置玩家数据到玩家引用字典
-        ItemMgr.Instance.Player_DIC[player.Data.Name_User] = player;
+        ItemMgr.Instance.Player_DIC[player.ProfileName] = player;
 
         player.Load();
 
@@ -65,11 +68,12 @@ public partial class ItemMgr
         if (player == null)
             return;
 
-        if (player.Data != null &&
-            Player_DIC.TryGetValue(player.Data.Name_User, out Player registeredPlayer) &&
+        string profileName = player.ProfileName;
+        if (!string.IsNullOrWhiteSpace(profileName) &&
+            Player_DIC.TryGetValue(profileName, out Player registeredPlayer) &&
             registeredPlayer == player)
         {
-            Player_DIC.Remove(player.Data.Name_User);
+            Player_DIC.Remove(profileName);
         }
 
         _networkPlayers.Remove(player);
@@ -85,9 +89,12 @@ public partial class ItemMgr
         Data_Player playerData = LoadOrCreatePlayerData(playerName, out bool wasCreated);
         //传入数据创建玩家
         Player player = CreatePlayer(playerData);
-        player.SetProfileContext(localProfile: true, profileDataWasCreated: wasCreated);
+        player.SetProfileContext(
+            localProfile: true,
+            profileDataWasCreated: wasCreated,
+            runtimeProfileName: playerName);
         //设置玩家数据到玩家引用字典
-        ItemMgr.Instance.Player_DIC[player.Data.Name_User] = player;
+        ItemMgr.Instance.Player_DIC[player.ProfileName] = player;
 
         return player;
     }
@@ -127,7 +134,8 @@ public partial class ItemMgr
         Player player = CreatePlayer(playerData);
         player.SetProfileContext(
             localProfile: initializeLocalModules,
-            profileDataWasCreated: !hasSavedData);
+            profileDataWasCreated: !hasSavedData,
+            runtimeProfileName: playerName);
         Player_DIC[playerName] = player;
         _networkPlayers.Add(player);
         SaveDataMgr.Instance.SaveData.PlayerData_Dict[playerName] = playerData;
@@ -153,7 +161,8 @@ public partial class ItemMgr
         _networkRemoteReplicas.Remove(player);
         player.SetProfileContext(
             localProfile: true,
-            profileDataWasCreated: player.WasProfileDataCreated);
+            profileDataWasCreated: player.WasProfileDataCreated,
+            runtimeProfileName: player.ProfileName);
         InitializeNetworkLocalPlayer(player, spawnPosition);
     }
 
@@ -167,13 +176,14 @@ public partial class ItemMgr
 
         if (player.Data != null)
         {
-            if (Player_DIC.TryGetValue(player.Data.Name_User, out Player registeredPlayer) && registeredPlayer == player)
-                Player_DIC.Remove(player.Data.Name_User);
+            string profileName = RequireProfileName(player);
+            if (Player_DIC.TryGetValue(profileName, out Player registeredPlayer) && registeredPlayer == player)
+                Player_DIC.Remove(profileName);
 
             if (persistData)
             {
                 player.Save();
-                SaveDataMgr.Instance.SaveData.PlayerData_Dict[player.Data.Name_User] = player.Data;
+                SaveDataMgr.Instance.SaveData.PlayerData_Dict[profileName] = player.Data;
             }
         }
 
@@ -204,7 +214,8 @@ public partial class ItemMgr
     {
         player.SetProfileContext(
             localProfile: false,
-            profileDataWasCreated: player.WasProfileDataCreated);
+            profileDataWasCreated: player.WasProfileDataCreated,
+            runtimeProfileName: player.ProfileName);
         player.transform.position = spawnPosition;
         player.Data.transform.position = spawnPosition;
 
@@ -223,12 +234,25 @@ public partial class ItemMgr
 
     private Data_Player LoadOrCreatePlayerData(string playerName, out bool wasCreated)
     {
+        if (string.IsNullOrWhiteSpace(playerName))
+            throw new ArgumentException("玩家档案名不能为空", nameof(playerName));
+
+        playerName = playerName.Trim();
         Data_Player playerData;
         //检测存档中是否存在玩家数据
         if (SaveDataMgr.Instance.SaveData.PlayerData_Dict.TryGetValue(playerName, out var loadedPlayerData))
         {
             playerData = loadedPlayerData;
             wasCreated = false;
+
+            // 档案字典键是玩家身份真源；修复旧存档中空名、默认名或临时身份写回造成的错位。
+            if (!string.Equals(playerData.Name_User, playerName, StringComparison.Ordinal))
+            {
+                Debug.LogWarning(
+                    $"[ItemMgr] 玩家档案名与数据名不一致，已按档案键修复：" +
+                    $"data={playerData.Name_User ?? "<null>"}, profile={playerName}");
+                playerData.Name_User = playerName;
+            }
         }
         else //如果不存在，则创建默认玩家数据
         {
@@ -256,6 +280,16 @@ public partial class ItemMgr
         newPlayer.transform.SetParent(null, true);
 
         return newPlayer;
+    }
+
+    /// <summary>获取 Player 在存档和运行时字典中的稳定身份键。</summary>
+    private static string RequireProfileName(Player player)
+    {
+        string profileName = player?.ProfileName;
+        if (string.IsNullOrWhiteSpace(profileName))
+            throw new InvalidOperationException("玩家缺少稳定档案名，禁止保存到错误角色槽位");
+
+        return profileName;
     }
 
     #endregion

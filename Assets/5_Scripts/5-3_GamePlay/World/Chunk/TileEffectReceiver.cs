@@ -35,8 +35,10 @@ public class TileEffectReceiver : Module
     private Vector2Int activeGridPos;
     private bool hasActiveTileEffects;
     private bool isPreparedForWorldTransition;
+    private EnvironmentInteractionRunner environmentInteractions;
 
     public bool HasActiveTileEffects => hasActiveTileEffects;
+    public EnvironmentInteractionRunner EnvironmentInteractions => EnsureEnvironmentInteractions();
     public override string CanonicalModuleId => ModText.TileEffectReceiver;
 
     #endregion
@@ -58,6 +60,7 @@ public class TileEffectReceiver : Module
     private void Start()
     {
         enabled = true;
+        EnsureEnvironmentInteractions();
         RefreshCurrentTileEffects();
     }
 
@@ -263,6 +266,18 @@ public class TileEffectReceiver : Module
         activeRuntimeTileId = 0;
         hasActiveTileEffects = false;
         currentTileData = null;
+    }
+
+    /// <summary>运行时补装通用环境动作运行器；它只保存角色自己的动作实例，不写入存档。</summary>
+    private EnvironmentInteractionRunner EnsureEnvironmentInteractions()
+    {
+        if (environmentInteractions == null)
+            environmentInteractions = GetComponent<EnvironmentInteractionRunner>();
+        if (environmentInteractions == null)
+            environmentInteractions = gameObject.AddComponent<EnvironmentInteractionRunner>();
+
+        environmentInteractions.Bind(item ?? GetComponentInParent<Item>());
+        return environmentInteractions;
     }
 
     private void UpdateLegacyMapReference()

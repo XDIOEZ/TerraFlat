@@ -23,6 +23,8 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 多产物必须全部放下才提交；失败不扣料、不部分产出。`amount=0` 参与签名但不消耗。
 - 配方动作在库存事务成功后执行；异常恢复快照。玩法进度信号只在最终成功后发布。
 - 模态库存才获取输入锁；快捷栏和 `Inventory_Hand` 不锁玩家输入。
+- 槽位鼠标拖放必须复用 `ItemSlot_UI.OnLeftClick` 的既有事务：短按在抬起时提交一次，越过系统拖拽阈值后拿起并在目标槽位抬起放下；触屏拖动需转交父级 `ScrollRect`，保留滚动与长按菜单。
+- 玩家行囊的键鼠点击无条件使用 `Inventory_Hand`，不能因携带槽为空而回退当前快捷栏；快捷栏选中槽只参与手柄确认与角色当前装备，不参与 PC 背包交换。
 - 当前作物闭环为 `Seed_Apple → AppleTree → Apple + Seed_Apple`；`Mod_Grow` 是唯一成长状态机，倍率各乘一次。
 - 废弃 `Module_Equipment.cs` 不再使用。
 

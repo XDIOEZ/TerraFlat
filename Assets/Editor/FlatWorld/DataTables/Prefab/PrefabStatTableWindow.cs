@@ -114,8 +114,15 @@ public class PrefabStatTableWindow : EditorWindow
                 EditorGUILayout.LabelField("路径", GUILayout.Width(220));
                 EditorGUILayout.LabelField("MaxHp", GUILayout.Width(70));
                 EditorGUILayout.LabelField("Hp", GUILayout.Width(70));
-                EditorGUILayout.LabelField("Defense", GUILayout.Width(70));
-                EditorGUILayout.LabelField("Damage", GUILayout.Width(70));
+                EditorGUILayout.LabelField("切防", GUILayout.Width(50));
+                EditorGUILayout.LabelField("刺防", GUILayout.Width(50));
+                EditorGUILayout.LabelField("劈防", GUILayout.Width(50));
+                EditorGUILayout.LabelField("钝防", GUILayout.Width(50));
+                EditorGUILayout.LabelField("切伤", GUILayout.Width(50));
+                EditorGUILayout.LabelField("刺伤", GUILayout.Width(50));
+                EditorGUILayout.LabelField("劈伤", GUILayout.Width(50));
+                EditorGUILayout.LabelField("钝伤", GUILayout.Width(50));
+                EditorGUILayout.LabelField("战力", GUILayout.Width(50));
                 EditorGUILayout.LabelField("状态", GUILayout.Width(120));
                 GUILayout.FlexibleSpace();
             }
@@ -170,14 +177,28 @@ public class PrefabStatTableWindow : EditorWindow
             EditorGUI.BeginChangeCheck();
             float newHp = EditorGUILayout.FloatField(row.MaxHp, GUILayout.Width(60));
             float newCurrentHp = EditorGUILayout.FloatField(row.Hp, GUILayout.Width(60));
-            float newDefense = EditorGUILayout.FloatField(row.Defense, GUILayout.Width(60));
-            float newDamage = EditorGUILayout.FloatField(row.Damage, GUILayout.Width(60));
+            float newCuttingDefense = EditorGUILayout.FloatField(row.CuttingDefense, GUILayout.Width(45));
+            float newPiercingDefense = EditorGUILayout.FloatField(row.PiercingDefense, GUILayout.Width(45));
+            float newChoppingDefense = EditorGUILayout.FloatField(row.ChoppingDefense, GUILayout.Width(45));
+            float newBluntDefense = EditorGUILayout.FloatField(row.BluntDefense, GUILayout.Width(45));
+            float newCuttingDamage = EditorGUILayout.FloatField(row.CuttingDamage, GUILayout.Width(45));
+            float newPiercingDamage = EditorGUILayout.FloatField(row.PiercingDamage, GUILayout.Width(45));
+            float newChoppingDamage = EditorGUILayout.FloatField(row.ChoppingDamage, GUILayout.Width(45));
+            float newBluntDamage = EditorGUILayout.FloatField(row.BluntDamage, GUILayout.Width(45));
+            float totalCombatPower = row.CuttingDamage + row.PiercingDamage + row.ChoppingDamage + row.BluntDamage;
+            EditorGUILayout.LabelField(totalCombatPower.ToString("0.##"), GUILayout.Width(50));
             if (EditorGUI.EndChangeCheck())
             {
                 row.MaxHp = Mathf.Max(0f, newHp);
                 row.Hp = Mathf.Clamp(newCurrentHp, 0f, row.MaxHp);
-                row.Defense = Mathf.Max(0f, newDefense);
-                row.Damage = Mathf.Max(0f, newDamage);
+                row.CuttingDefense = Mathf.Max(0f, newCuttingDefense);
+                row.PiercingDefense = Mathf.Max(0f, newPiercingDefense);
+                row.ChoppingDefense = Mathf.Max(0f, newChoppingDefense);
+                row.BluntDefense = Mathf.Max(0f, newBluntDefense);
+                row.CuttingDamage = Mathf.Max(0f, newCuttingDamage);
+                row.PiercingDamage = Mathf.Max(0f, newPiercingDamage);
+                row.ChoppingDamage = Mathf.Max(0f, newChoppingDamage);
+                row.BluntDamage = Mathf.Max(0f, newBluntDamage);
                 _config.SaveNow();
             }
 
@@ -375,8 +396,14 @@ public class PrefabStatTableWindow : EditorWindow
             PrefabName = prefab.name,
             MaxHp = 0f,
             Hp = 0f,
-            Defense = 0f,
-            Damage = 0f,
+            CuttingDefense = 0f,
+            PiercingDefense = 0f,
+            ChoppingDefense = 0f,
+            BluntDefense = 0f,
+            CuttingDamage = 0f,
+            PiercingDamage = 0f,
+            ChoppingDamage = 0f,
+            BluntDamage = 0f,
             HasHp = false,
             HasDefense = false,
             HasDamage = false
@@ -389,14 +416,22 @@ public class PrefabStatTableWindow : EditorWindow
             row.HasDefense = true;
             row.MaxHp = receivers[0].Data != null ? receivers[0].Data.MaxHp : 0f;
             row.Hp = receivers[0].Data != null ? receivers[0].Data.Hp : 0f;
-            row.Defense = receivers[0].Data != null ? receivers[0].Data.Defense : 0f;
+            CombatDefense defense = receivers[0].Defense;
+            row.CuttingDefense = defense.Cutting;
+            row.PiercingDefense = defense.Piercing;
+            row.ChoppingDefense = defense.Chopping;
+            row.BluntDefense = defense.Blunt;
         }
 
         Mod_Damage[] damages = prefab.GetComponentsInChildren<Mod_Damage>(true);
         if (damages != null && damages.Length > 0)
         {
             row.HasDamage = true;
-            row.Damage = damages[0].Damage != null ? damages[0].Damage.BaseValue : 0f;
+            CombatDamage damage = damages[0].ResolveDamageValues();
+            row.CuttingDamage = damage.Cutting;
+            row.PiercingDamage = damage.Piercing;
+            row.ChoppingDamage = damage.Chopping;
+            row.BluntDamage = damage.Blunt;
         }
 
         return row;
@@ -445,7 +480,12 @@ public class PrefabStatTableWindow : EditorWindow
 
                 receiver.Data.MaxHp = Mathf.Max(0f, row.MaxHp);
                 receiver.Data.Hp = Mathf.Clamp(row.Hp, 0f, receiver.Data.MaxHp);
-                receiver.Data.Defense = Mathf.Max(0f, row.Defense);
+                receiver.SetDefense(new CombatDefense(
+                    row.CuttingDefense,
+                    row.PiercingDefense,
+                    row.ChoppingDefense,
+                    row.BluntDefense));
+                receiver.Data.DamageSystemVersion = 1;
                 EditorUtility.SetDirty(receiver);
                 changed = true;
             }
@@ -453,12 +493,16 @@ public class PrefabStatTableWindow : EditorWindow
             Mod_Damage[] damages = root.GetComponentsInChildren<Mod_Damage>(true);
             foreach (Mod_Damage damage in damages)
             {
-                if (damage == null || damage.Damage == null)
+                if (damage == null)
                 {
                     continue;
                 }
 
-                damage.Damage.BaseValue = Mathf.Max(0f, row.Damage);
+                damage.SetDamageValues(new CombatDamage(
+                    row.CuttingDamage,
+                    row.PiercingDamage,
+                    row.ChoppingDamage,
+                    row.BluntDamage));
                 EditorUtility.SetDirty(damage);
                 changed = true;
             }

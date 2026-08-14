@@ -39,5 +39,9 @@ MonoBehaviour:
       type: {class: Tile_Water, ns: , asm: GamePlay}
       data:
         BuffInfo:
-        - "\u6C34\u4F53\u51CF\u901F"
         - "\u6F6E\u6E7F"
+        drinkHoldSeconds: 1
+        drinkTickSeconds: 1
+        waterGainPerTick: 125
+        dirtyWaterInfectionChance: 0.2
+        moveSpeedMultiplier: 0.5

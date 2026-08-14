@@ -813,12 +813,12 @@ public static class GameUIPrefabRebuilder
 
     private static void BuildActionList(GameObject root)
     {
-        RectTransform frame = PrepareWindow(root, 430f, 584f, "功能列表", "ACTIONS / QUICK ENTRY", "选择一项操作继续");
-        AddSection(frame, "AVAILABLE", "可用操作", 24f, 104f, 382f, 390f);
+        RectTransform frame = PrepareWindow(root, 580f, 720f, "功能列表", "ACTIONS / QUICK ENTRY", "选择一项操作继续");
+        AddSection(frame, "AVAILABLE", "可用操作", 24f, 104f, 532f, 522f);
         RectTransform scroll = FindRect(root.transform, "Scroll View");
         if (scroll != null)
         {
-            SetTopLeft(scroll, 42f, 148f, 346f, 322f);
+            SetTopLeft(scroll, 54f, 156f, 472f, 390f);
 
             RectTransform content = FindRect(scroll, "Content");
             if (content != null)
@@ -840,8 +840,8 @@ public static class GameUIPrefabRebuilder
                     grid.childAlignment = TextAnchor.MiddleCenter;
                     grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
                     grid.startAxis = GridLayoutGroup.Axis.Vertical;
-                    grid.cellSize = new Vector2(264f, 52f);
-                    grid.spacing = new Vector2(0f, 14f);
+                    grid.cellSize = new Vector2(360f, 64f);
+                    grid.spacing = new Vector2(0f, 16f);
                     grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
                     grid.constraintCount = 1;
                 }

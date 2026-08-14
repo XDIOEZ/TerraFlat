@@ -8,6 +8,8 @@ Shader "Game/2D/Sprite-Lit-Master"
 
         // 额外效果属性
         _WaterY ("Water Surface Y (World)", Float) = 0
+        _WaterWorldSpace ("Use World Space Water", Range(0,1)) = 0
+        _WaterReferenceHeight ("Water Reference Height", Float) = 1
         _BodyClip ("Body Bottom Clip (0-1)", Range(0,1)) = 0
         _BodyMinV ("Body UV Bottom", Range(0,1)) = 0
         _BodyMaxV ("Body UV Top", Range(0,1)) = 1
@@ -28,6 +30,8 @@ Shader "Game/2D/Sprite-Lit-Master"
 
         _ActorTint ("Actor Status Tint", Color) = (1,1,1,1)
         _ActorTintStrength ("Actor Status Tint Strength", Range(0,1)) = 0
+        _ActorTintPulseSpeed ("Actor Status Tint Pulse Speed", Range(0,5)) = 1.2
+        _ActorTintPulseAmplitude ("Actor Status Tint Pulse Amount", Range(0,0.3)) = 0.08
         _HitFlash ("Hit Flash", Range(0,1)) = 0
         _HitFlashColor ("Hit Flash Color", Color) = (1,0.08,0.08,1)
 
@@ -87,9 +91,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 half4   color       : COLOR;
                 float4  uv          : TEXCOORD0; // xy is uv, z is localY, w is localX
                 half2   lightingUV  : TEXCOORD1;
-                #if defined(DEBUG_DISPLAY)
                 float3  positionWS  : TEXCOORD2;
-                #endif
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -108,6 +110,8 @@ Shader "Game/2D/Sprite-Lit-Master"
 
             // 自定义效果参数
             float _WaterY;
+            float _WaterWorldSpace;
+            float _WaterReferenceHeight;
             float _BodyClip;
             float _BodyMinV;
             float _BodyMaxV;
@@ -125,6 +129,8 @@ Shader "Game/2D/Sprite-Lit-Master"
             float _WaterWaveSpeed;
             float4 _ActorTint;
             float _ActorTintStrength;
+            float _ActorTintPulseSpeed;
+            float _ActorTintPulseAmplitude;
             float _HitFlash;
             float4 _HitFlashColor;
             float _Dissolve;
@@ -155,9 +161,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 v.positionOS = UnityFlipSprite(v.positionOS, unity_SpriteFlip);
 #endif
                 o.positionCS = TransformObjectToHClip(v.positionOS);
-                #if defined(DEBUG_DISPLAY)
                 o.positionWS = TransformObjectToWorld(v.positionOS);
-                #endif
                 o.uv.xy = TRANSFORM_TEX(v.uv, _MainTex);
                 o.uv.z = v.positionOS.y;
                 o.uv.w = v.positionOS.x;
@@ -190,14 +194,22 @@ Shader "Game/2D/Sprite-Lit-Master"
                 {
                     float surfaceV = saturate(_WaterSurfaceV);
                     float feather = max(1e-5, _WaterFeather);
-                    float wavePhase = i.uv.w * _WaterWaveFrequency + _Time.y * _WaterWaveSpeed;
+                    float worldMode = saturate(_WaterWorldSpace);
+                    float referenceHeight = max(1e-5, _WaterReferenceHeight);
+                    float horizontalPosition = lerp(i.uv.w, i.positionWS.x, worldMode);
+                    float wavePhase = horizontalPosition * _WaterWaveFrequency + _Time.y * _WaterWaveSpeed;
                     float waveOffset = sin(wavePhase) * _WaterWaveAmplitude;
                     waveOffset += sin(wavePhase * 1.7 - _Time.y * _WaterWaveSpeed * 0.75) * _WaterWaveAmplitude * 0.35;
-                    float waveSurfaceV = saturate(surfaceV + waveOffset);
+                    float waterPosition = lerp(bodyV, i.positionWS.y, worldMode);
+                    float waveSurface = lerp(
+                        saturate(surfaceV + waveOffset),
+                        _WaterY + waveOffset * referenceHeight,
+                        worldMode);
+                    float effectiveFeather = lerp(feather, feather * referenceHeight, worldMode);
                     float submergedMask = 1.0 - smoothstep(
-                        waveSurfaceV - feather,
-                        waveSurfaceV + feather,
-                        bodyV);
+                        waveSurface - effectiveFeather,
+                        waveSurface + effectiveFeather,
+                        waterPosition);
                     submergedMask *= waterBlend;
 
                     main.rgb = lerp(
@@ -207,11 +219,11 @@ Shader "Game/2D/Sprite-Lit-Master"
                     main.a *= lerp(1.0, saturate(_WaterAlpha), submergedMask);
 
                     // 水线使用柔和带状渐变，避免硬裁剪造成的平直断面。
-                    float lineRadius = max(1e-5, _WaterLineWidth);
+                    float lineRadius = max(1e-5, _WaterLineWidth) * lerp(1.0, referenceHeight, worldMode);
                     float lineMask = 1.0 - smoothstep(
                         lineRadius,
-                        lineRadius + feather,
-                        abs(bodyV - waveSurfaceV));
+                        lineRadius + effectiveFeather,
+                        abs(waterPosition - waveSurface));
                     lineMask *= waterBlend * saturate(_WaterLineStrength);
                     main.rgb = lerp(
                         main.rgb,
@@ -220,7 +232,10 @@ Shader "Game/2D/Sprite-Lit-Master"
                 }
 
                 // === 角色状态染色与受击闪红 ===
-                main.rgb = lerp(main.rgb, _ActorTint.rgb, saturate(_ActorTintStrength));
+                float statusPulse = 1.0 + sin(_Time.y * max(0.0, _ActorTintPulseSpeed)) *
+                    saturate(_ActorTintPulseAmplitude);
+                float statusBlend = saturate(saturate(_ActorTintStrength) * statusPulse);
+                main.rgb = lerp(main.rgb, _ActorTint.rgb, statusBlend);
                 main.rgb = lerp(main.rgb, _HitFlashColor.rgb, saturate(_HitFlash));
 
                 // === 溶解效果（可选） ===
@@ -275,6 +290,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 half3   bitangentWS     : TEXCOORD3;
                 float   localY          : TEXCOORD4;
                 float   localX          : TEXCOORD5;
+                float2  positionWS      : TEXCOORD6;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -285,6 +301,9 @@ Shader "Game/2D/Sprite-Lit-Master"
             half4 _NormalMap_ST;
             float _BodyMinV;
             float _BodyMaxV;
+            float _WaterY;
+            float _WaterWorldSpace;
+            float _WaterReferenceHeight;
             float _WaterEnabled;
             float _WaterSurfaceV;
             float _WaterFeather;
@@ -294,6 +313,8 @@ Shader "Game/2D/Sprite-Lit-Master"
             float _WaterWaveSpeed;
             float4 _ActorTint;
             float _ActorTintStrength;
+            float _ActorTintPulseSpeed;
+            float _ActorTintPulseAmplitude;
             float _HitFlash;
             float4 _HitFlashColor;
 
@@ -314,6 +335,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 o.bitangentWS = cross(o.normalWS, o.tangentWS) * attributes.tangent.w;
                 o.localY = attributes.positionOS.y;
                 o.localX = attributes.positionOS.x;
+                o.positionWS = TransformObjectToWorld(attributes.positionOS).xy;
 #ifdef UNITY_INSTANCING_ENABLED
                 o.color *= unity_SpriteColor;
 #endif
@@ -330,14 +352,22 @@ Shader "Game/2D/Sprite-Lit-Master"
                 float bodyRange = max(1e-5, _BodyMaxV - _BodyMinV);
                 float bodyV = saturate((i.localY - _BodyMinV) / bodyRange);
                 float feather = max(1e-5, _WaterFeather);
-                float wavePhase = i.localX * _WaterWaveFrequency + _Time.y * _WaterWaveSpeed;
+                float worldMode = saturate(_WaterWorldSpace);
+                float referenceHeight = max(1e-5, _WaterReferenceHeight);
+                float horizontalPosition = lerp(i.localX, i.positionWS.x, worldMode);
+                float wavePhase = horizontalPosition * _WaterWaveFrequency + _Time.y * _WaterWaveSpeed;
                 float waveOffset = sin(wavePhase) * _WaterWaveAmplitude;
                 waveOffset += sin(wavePhase * 1.7 - _Time.y * _WaterWaveSpeed * 0.75) * _WaterWaveAmplitude * 0.35;
-                float waveSurfaceV = saturate(_WaterSurfaceV + waveOffset);
+                float waterPosition = lerp(bodyV, i.positionWS.y, worldMode);
+                float waveSurface = lerp(
+                    saturate(_WaterSurfaceV + waveOffset),
+                    _WaterY + waveOffset * referenceHeight,
+                    worldMode);
+                float effectiveFeather = lerp(feather, feather * referenceHeight, worldMode);
                 float submergedMask = 1.0 - smoothstep(
-                    waveSurfaceV - feather,
-                    waveSurfaceV + feather,
-                    bodyV);
+                    waveSurface - effectiveFeather,
+                    waveSurface + effectiveFeather,
+                    waterPosition);
                 submergedMask *= saturate(_WaterEnabled);
                 mainTex.a *= lerp(1.0, saturate(_WaterAlpha), submergedMask);
 
@@ -376,9 +406,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 float2  uv              : TEXCOORD0;
                 float   localY          : TEXCOORD1;
                 float   localX          : TEXCOORD3;
-                #if defined(DEBUG_DISPLAY)
                 float3  positionWS  : TEXCOORD2;
-                #endif
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -389,6 +417,9 @@ Shader "Game/2D/Sprite-Lit-Master"
             half4 _RendererColor;
             float _BodyMinV;
             float _BodyMaxV;
+            float _WaterY;
+            float _WaterWorldSpace;
+            float _WaterReferenceHeight;
             float _WaterEnabled;
             float _WaterSurfaceV;
             float _WaterFeather;
@@ -416,9 +447,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 attributes.positionOS = UnityFlipSprite(attributes.positionOS, unity_SpriteFlip);
 #endif
                 o.positionCS = TransformObjectToHClip(attributes.positionOS);
-                #if defined(DEBUG_DISPLAY)
                 o.positionWS = TransformObjectToWorld(attributes.positionOS);
-                #endif
                 o.uv = TRANSFORM_TEX(attributes.uv, _MainTex);
                 o.localY = attributes.positionOS.y;
                 o.localX = attributes.positionOS.x;
@@ -440,14 +469,22 @@ Shader "Game/2D/Sprite-Lit-Master"
                 {
                     float surfaceV = saturate(_WaterSurfaceV);
                     float feather = max(1e-5, _WaterFeather);
-                    float wavePhase = i.localX * _WaterWaveFrequency + _Time.y * _WaterWaveSpeed;
+                    float worldMode = saturate(_WaterWorldSpace);
+                    float referenceHeight = max(1e-5, _WaterReferenceHeight);
+                    float horizontalPosition = lerp(i.localX, i.positionWS.x, worldMode);
+                    float wavePhase = horizontalPosition * _WaterWaveFrequency + _Time.y * _WaterWaveSpeed;
                     float waveOffset = sin(wavePhase) * _WaterWaveAmplitude;
                     waveOffset += sin(wavePhase * 1.7 - _Time.y * _WaterWaveSpeed * 0.75) * _WaterWaveAmplitude * 0.35;
-                    float waveSurfaceV = saturate(surfaceV + waveOffset);
+                    float waterPosition = lerp(bodyV, i.positionWS.y, worldMode);
+                    float waveSurface = lerp(
+                        saturate(surfaceV + waveOffset),
+                        _WaterY + waveOffset * referenceHeight,
+                        worldMode);
+                    float effectiveFeather = lerp(feather, feather * referenceHeight, worldMode);
                     float submergedMask = 1.0 - smoothstep(
-                        waveSurfaceV - feather,
-                        waveSurfaceV + feather,
-                        bodyV);
+                        waveSurface - effectiveFeather,
+                        waveSurface + effectiveFeather,
+                        waterPosition);
                     submergedMask *= waterBlend;
                     mainTex.rgb = lerp(
                         mainTex.rgb,
@@ -455,11 +492,11 @@ Shader "Game/2D/Sprite-Lit-Master"
                         saturate(_WaterTintStrength) * submergedMask);
                     mainTex.a *= lerp(1.0, saturate(_WaterAlpha), submergedMask);
 
-                    float lineRadius = max(1e-5, _WaterLineWidth);
+                    float lineRadius = max(1e-5, _WaterLineWidth) * lerp(1.0, referenceHeight, worldMode);
                     float lineMask = 1.0 - smoothstep(
                         lineRadius,
-                        lineRadius + feather,
-                        abs(bodyV - waveSurfaceV));
+                        lineRadius + effectiveFeather,
+                        abs(waterPosition - waveSurface));
                     lineMask *= waterBlend * saturate(_WaterLineStrength);
                     mainTex.rgb = lerp(
                         mainTex.rgb,
@@ -468,7 +505,10 @@ Shader "Game/2D/Sprite-Lit-Master"
                 }
 
                 // === 角色状态染色与受击闪红 ===
-                mainTex.rgb = lerp(mainTex.rgb, _ActorTint.rgb, saturate(_ActorTintStrength));
+                float statusPulse = 1.0 + sin(_Time.y * max(0.0, _ActorTintPulseSpeed)) *
+                    saturate(_ActorTintPulseAmplitude);
+                float statusBlend = saturate(saturate(_ActorTintStrength) * statusPulse);
+                mainTex.rgb = lerp(mainTex.rgb, _ActorTint.rgb, statusBlend);
                 mainTex.rgb = lerp(mainTex.rgb, _HitFlashColor.rgb, saturate(_HitFlash));
 
                 #if defined(DEBUG_DISPLAY)

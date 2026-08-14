@@ -76,6 +76,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	private float _stateDecisionTimer;
 	protected float _wanderWaitTimer;
 	protected float _idleRemainTimer;
+	private float _healthRecoveryTimer;
 
 	// --- 闲逛状态 ---
 	protected Vector3 _wanderTarget;
@@ -105,6 +106,14 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 #region Events
 	/// <summary>状态切换事件，参数为 (旧状态, 新状态)</summary>
 	public UltEvent<TState, TState> OnStateChanged = new UltEvent<TState, TState>();
+#endregion
+
+#region Config - 通用生命恢复
+	[BoxGroup("通用生命恢复"), LabelText("回血间隔"), SuffixLabel("秒", true), MinValue(0.1f)]
+	public float healthRecoveryInterval = 60f;
+
+	[BoxGroup("通用生命恢复"), LabelText("单次回血"), MinValue(0f)]
+	public float healthRecoveryAmount = 10f;
 #endregion
 
 #region Abstract - 子类必须实现
@@ -200,6 +209,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		_detectorRefreshTimer = GetDetectorPhaseOffset();
 		_stateDecisionTimer = 0f;
 		_wanderWaitTimer = 0f;
+		_healthRecoveryTimer = 0f;
 		_hasWanderTarget = false;
 		_lastPlayedAnimation = null;
 		ClearRecentDamageThreat();
@@ -230,6 +240,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 
 		// 子类特有计时器递减
 		UpdateExtraTimers(deltaTime);
+		TickHealthRecovery(deltaTime);
 
 		// 通用计时器递减（不限状态的计时器）
 		_wanderWaitTimer = DecrementTimer(_wanderWaitTimer, deltaTime);
@@ -258,6 +269,26 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		SynchronizeLocomotionAnimation();
 	}
 
+#endregion
+
+#region HealthRecovery
+	/// <summary>所有正式动物统一按固定间隔恢复生命，满血时不累计下一次回血进度。</summary>
+	private void TickHealthRecovery(float deltaTime)
+	{
+		if (_hp == null || _hp.Hp <= 0f || _hp.Hp >= _hp.MaxHp ||
+			healthRecoveryInterval <= 0f || healthRecoveryAmount <= 0f)
+		{
+			_healthRecoveryTimer = 0f;
+			return;
+		}
+
+		_healthRecoveryTimer += deltaTime;
+		if (_healthRecoveryTimer < healthRecoveryInterval)
+			return;
+
+		_healthRecoveryTimer %= healthRecoveryInterval;
+		_hp.Heal(healthRecoveryAmount, item);
+	}
 #endregion
 
 #region StateMachine
