@@ -7,10 +7,10 @@ namespace FlatWorld.GameTest.InventoryCrafting
     /// <summary>单一苹果作物闭环测试：保护播种、成长、成熟、收获与存档边界。</summary>
     public sealed class AgricultureLoopTests
     {
-        private const string SeedPath = "Assets/2_Prefabs/Seed/Seed.prefab";
-        private const string FoodPath = "Assets/2_Prefabs/Food/Apple.prefab";
-        private const string CropPath = "Assets/2_Prefabs/Plant/AppleTree.prefab";
-        private const string FertilizerPath = "Assets/2_Prefabs/Food/Fertilizer.prefab";
+        private const string SeedPath = "Assets/2_Prefabs/Gameplay/Items/Seeds/Seed.prefab";
+        private const string FoodPath = "Assets/2_Prefabs/Gameplay/Items/Food/Apple.prefab";
+        private const string CropPath = "Assets/2_Prefabs/World/ResourceNodes/Plants/AppleTree.prefab";
+        private const string FertilizerPath = "Assets/2_Prefabs/Gameplay/Items/Food/Fertilizer.prefab";
 
         [Test]
         [Category("InventoryCrafting.Agriculture")]

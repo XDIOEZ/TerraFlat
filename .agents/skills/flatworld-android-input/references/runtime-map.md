@@ -24,7 +24,7 @@
 | HUD 控制器 | `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/PlayerMobileControlsHUD.cs` | 本地玩家可见性、Prefab 绑定、抽屉、快捷栏、面板联动和总清理 |
 | 正式视觉 | `Assets/2_Prefabs/2-1_UI/Runtime/Mobile/UI_MobileControls.prefab` | 控件布局、射线顺序与节点命名契约 |
 | Prefab 构建 | `Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder.cs` | `FlatWorld/UI/Rebuild Mobile Controls UI`，生成正式手机 UI |
-| Prefab 键 | `Assets/5_Scripts/5-5_UI/RuntimeUIPrefabKeys.cs` | 手机控制 Prefab 的稳定寻址键 |
+| Prefab 键 | `Assets/5_Scripts/5-5_UI/Core/RuntimeUIPrefabKeys.cs` | 手机控制 Prefab 的稳定寻址键 |
 
 ## Mobile 动作映射
 
@@ -44,8 +44,8 @@
 
 | 问题 | 先检查 |
 |---|---|
-| 多指被合并、第二根手指无效 | `Assets/5_Scripts/5-5_UI/EventSystemGuard.cs` 的逐触点绑定和 `AllPointersAsIs` |
-| 刘海遮挡、横屏翻转或尺寸变化 | `Assets/5_Scripts/5-5_UI/SafeAreaRectController.cs`、`Assets/5_Scripts/5-5_UI/UIManager.cs`、`Assets/Resources/UI/UIRoot.prefab` |
+| 多指被合并、第二根手指无效 | `Assets/5_Scripts/5-5_UI/Input/EventSystemGuard.cs` 的逐触点绑定和 `AllPointersAsIs` |
+| 刘海遮挡、横屏翻转或尺寸变化 | `Assets/5_Scripts/5-5_UI/Common/Controls/SafeAreaRectController.cs`、`Assets/5_Scripts/5-5_UI/Core/UIManager.cs`、`Assets/Resources/UI/UIRoot.prefab` |
 | 面板打开后仍能移动/攻击 | `UIManager.InteractionSurfaceChanged`、`PlayerMobileControlsHUD.RefreshInteractionSurface()`、`GameController.CancelActiveAttackAndMobileInput()` |
 | 按钮会改变普通朝向 | `UI_MobileControls.prefab` 的层级/射线顺序和指向捕获层范围 |
 | 快捷栏与摇杆重叠 | `PlayerMobileControlsHUD.TryConfigureHotbarWidth()`；上限为安全区宽度 44% 与 760 参考像素的较小值 |
@@ -57,8 +57,8 @@
 
 - 武器只监听 `AttackStarted`/`AttackEnded`：`Assets/5_Scripts/5-3_GamePlay/Entities/Combat/Mod_Weapon_AnimationAction.cs`、`Assets/5_Scripts/5-3_GamePlay/Entities/Combat/Mod_ColdWeapon.cs`。
 - 建造和世界指向：`Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_Building.cs`。
-- 锄地、农田补给和种植：`Assets/5_Scripts/5-3_GamePlay/Items/Food/Mod_Hoe.cs`、`Assets/5_Scripts/5-3_GamePlay/Items/Food/Mod_FarmlandSupply.cs`、`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Mod_Seed.AuthoritativePlanting.cs`。
-- 丢弃、槽位长按和物品菜单：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Module_DiscardItem.cs`、`Assets/5_Scripts/5-3_GamePlay/Items/Inventory/ItemSlot_UI.cs`、`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/RightClickMenu_UI.cs`。
+- 锄地、农田补给和种植：`Assets/5_Scripts/5-3_GamePlay/Items/Food/Mod_Hoe.cs`、`Assets/5_Scripts/5-3_GamePlay/Items/Food/Mod_FarmlandSupply.cs`、`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Growth/Mod_Seed.AuthoritativePlanting.cs`。
+- 丢弃、槽位长按和物品菜单：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Inventory/Module_DiscardItem.cs`、`Assets/5_Scripts/5-3_GamePlay/Items/Inventory/ItemSlot_UI.cs`、`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/RightClickMenu_UI.cs`。
 - Android 帧率与质量启动配置：`Assets/5_Scripts/5-3_GamePlay/Core/MobilePlatformBootstrap.cs`；平台序列化配置位于 `ProjectSettings/ProjectSettings.asset` 和 `ProjectSettings/QualitySettings.asset`。
 
 ## 定位命令

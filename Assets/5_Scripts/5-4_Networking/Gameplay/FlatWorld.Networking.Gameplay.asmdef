@@ -7,7 +7,7 @@
         "Data",
         "GamePlay",
         "UI",
-        "m_Utilitiles",
+        "FlatWorld.Utilities",
         "Mirror",
         "Mirror.Components",
         "Mirror.Transports",

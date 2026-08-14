@@ -11,7 +11,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 建筑召唤器物品定义：`Assets/StreamingAssets/GameConfig/Items/shells/building_summoners.json`；同一类别文件包含 13 个召唤器各自的抽象基类和具体定义。
 - 门/堆肥：同目录 `Mod_Door.cs`、`Mod_CompostBin.cs`
 - 结构：`World/Map/Structures/{ChunkGenerator_Structures,StructureData,StructureItemAuthoring}.cs`
-- 结构资源：`Assets/4_ScriptObjects/4-9_Structures/`
+- 结构资源：`Assets/4_ScriptObjects/World/Structures/`
 
 ## 核心链与不变量
 

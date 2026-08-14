@@ -52,7 +52,7 @@ namespace FlatWorld.GameTest.Networking
             string playerSource = File.ReadAllText(
                 "Assets/5_Scripts/5-4_Networking/Gameplay/NetworkWorldPlayer.cs");
             string streamingSource = File.ReadAllText(
-                "Assets/5_Scripts/5-3_GamePlay/Core/Manager/ChunkMgr.Networking.cs");
+                "Assets/5_Scripts/5-3_GamePlay/World/Chunk/Management/ChunkMgr.Networking.cs");
             Assert.That(playerSource, Does.Contain("WorldTopologyRuntime.ShortestDelta"));
             Assert.That(playerSource, Does.Contain("WorldTopologyRuntime.NormalizePosition"));
             Assert.That(streamingSource, Does.Contain("NormalizeChunkPosition"));

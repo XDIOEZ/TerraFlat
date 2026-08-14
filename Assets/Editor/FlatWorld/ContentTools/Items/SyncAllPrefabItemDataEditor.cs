@@ -5,14 +5,14 @@ using UnityEditor.Animations;
 
 public static class SyncAllPrefabItemDataEditor
 {
-    private const string WeaponRootFolder = "Assets/2_Prefabs/Weapon";
-    private const string WeaponFolder = "Assets/2_Prefabs/Weapon/Weapon";
+    private const string WeaponRootFolder = "Assets/2_Prefabs/Gameplay/Items/Weapons";
+    private const string WeaponFolder = "Assets/2_Prefabs/Gameplay/Items/Weapons/Weapon";
     private const string LegacySuffix = "(Legacy)";
     private const string ObsoleteTag = "Obsolete";
     private const string ModernTag = "Modern";
-    private const string AnimationTemplatePath = "Assets/2_Prefabs/Weapon/Weapon/ChippedTool.prefab";
+    private const string AnimationTemplatePath = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/ChippedTool.prefab";
     private const string AnimationActionNodeName = "Module_Weapon_AnimationAction";
-    private const string ModDamagePrefabPath = "Assets/2_Prefabs/Module/Combat/Mod_Damage.prefab";
+    private const string ModDamagePrefabPath = "Assets/2_Prefabs/Gameplay/Modules/Combat/Mod_Damage.prefab";
 
     [MenuItem("FlatWorld/同步所有Prefab ItemData（名字+Guid）")]
     public static void SyncAllPrefabItemsInAssets()
@@ -362,10 +362,10 @@ public static class SyncAllPrefabItemDataEditor
     {
         string[] targetPaths =
         {
-            "Assets/2_Prefabs/Weapon/Axe/Axe_Bronze.prefab",
-            "Assets/2_Prefabs/Weapon/Axe/Axe_Copper.prefab",
-            "Assets/2_Prefabs/Weapon/Axe/Axe_Iron.prefab",
-            "Assets/2_Prefabs/Weapon/Axe/Axe_RawIron.prefab"
+            "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Bronze.prefab",
+            "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Copper.prefab",
+            "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Iron.prefab",
+            "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_RawIron.prefab"
         };
 
         RuntimeAnimatorController templateController = ResolveTemplateController();

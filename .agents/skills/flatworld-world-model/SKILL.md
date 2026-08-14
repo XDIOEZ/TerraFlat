@@ -1,0 +1,35 @@
+---
+name: flatworld-world-model
+description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运行时、异步生成调度、世界快照、Chunk 租约、WorldRuntimeHost 或 ChunkView 表现绑定。关键词：WorldRuntime、ChunkRuntime、ChunkTerrainData、ChunkGenerationScheduler、WorldRuntimeHost、ChunkView。"
+---
+
+# FlatWorld WorldModel
+
+## 入口
+
+- 纯模型：`Assets/5_Scripts/5-0_WorldModel/`
+- Unity 宿主：`Assets/5_Scripts/5-3_GamePlay/World/WorldModel/WorldRuntimeHost.cs`
+- 表现适配：同目录 `Presentation/{ChunkView,IChunkViewRenderer,Chunk*Renderer}.cs`
+- 运行时桥接：`Assets/5_Scripts/5-3_GamePlay/World/Chunk/Management/ChunkMgr.{WorldRuntime,RuntimeWindow}.cs`
+- 配置与资源：`Assets/Resources/Config/WorldModel/`、`Assets/2_Prefabs/World/WorldModel/`
+
+## 主链
+
+`观察者窗口 → ChunkMgr 请求 → 后台纯生成 → 主线程提交 → ChunkRuntime 租约 → ChunkView 分帧绑定 → 解绑并逐出`
+
+## 边界
+
+- `5-0_WorldModel` 保持纯 C#，后台生成不得访问 Unity 对象。
+- `ChunkRuntime + ChunkTerrainData` 是权威状态；Tilemap、Collider 和 Renderer 只是表现。
+- 提交生成结果前校验世界纪元与请求版本；取消、失败和逐出路径必须释放结果及租约。
+- 生成保持固定种子和稳定签名；修改地形内容规则时同时使用 `flatworld-map`。
+- 可走性联动 `flatworld-navigation`，维度地址联动 `flatworld-dimension`，快照持久化联动 `flatworld-data-save`。
+
+## 验证
+
+- 默认检查静态诊断、Unity 编译和 Console。
+- 仅用户明确要求时运行 `WorldModel.Smoke` 或对应生成/持久化分类；测试位于 `Assets/GameTest/WorldModel/`。
+
+## Skill 维护原则
+
+- 只补充可复用的易错点、隐含约束和必要注意事项，不记录近期改动流水账。

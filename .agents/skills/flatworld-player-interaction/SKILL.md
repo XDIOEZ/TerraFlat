@@ -7,7 +7,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 
 ## 入口
 
-- 玩家：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Player.cs`；数据：`Assets/5_Scripts/5-1_Data/ItemData/Data_Player.cs`
+- 玩家：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Player/Player.cs`；数据：`Assets/5_Scripts/5-1_Data/ItemData/Data_Player.cs`
 - 输入：`Player/Controller/{GameController,InputBindingService}.cs`
 - 交互：同目录 `{Mod_InteractSender,Mod_InteractReciver}.cs`
 - 管理员：`PlayerAdminController.cs`；移动/相机/焦点：`Entities/Move/`

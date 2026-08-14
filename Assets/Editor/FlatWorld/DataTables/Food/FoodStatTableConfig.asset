@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Rows:
   - Prefab: {fileID: 3926578369279844245, guid: 4ed054f92372bc644ae2a3773e84e923, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/Apple.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Apple.prefab
     PrefabName: Apple
     Carbohydrates: 500
     Fat: 500
@@ -36,7 +36,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 3926578369279844245, guid: dd90396d24a6d6449bdb9b264052785e, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/Berry.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Berry.prefab
     PrefabName: Berry
     Carbohydrates: 500
     Fat: 500
@@ -58,7 +58,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 5065571277225119290, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
-    PrefabPath: Assets/2_Prefabs/Entity_AI/Chicken.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/AI/Chicken.prefab
     PrefabName: Chicken
     Carbohydrates: 500
     Fat: 500
@@ -80,7 +80,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 5065571277225119290, guid: 85010448eb6bc8d4695b75a6845d1c00, type: 3}
-    PrefabPath: Assets/2_Prefabs/Entity_AI/Chicken_Tree.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/AI/Chicken_Tree.prefab
     PrefabName: Chicken_Tree
     Carbohydrates: 500
     Fat: 500
@@ -102,7 +102,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 4346459173911706397, guid: faf2cef52b42954478b6619621409a94, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/Coconut_Addle.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Addle.prefab
     PrefabName: Coconut_Addle
     Carbohydrates: 0
     Fat: 0
@@ -124,7 +124,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 4346459173911706397, guid: 4f4ec86cf6b1190469b2b10a578cb68b, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/Coconut_Water.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Water.prefab
     PrefabName: Coconut_Water
     Carbohydrates: 0
     Fat: 0
@@ -146,7 +146,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 4346459173911706397, guid: 9cc8fef1bc61d97469ca6ef9d08dc633, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/Coconut_WaterSalt.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Coconut_WaterSalt.prefab
     PrefabName: Coconut_WaterSalt
     Carbohydrates: 0
     Fat: 0
@@ -168,7 +168,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 3926578369279844245, guid: aae6f07605357cb49b47fba252201311, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/CoconutMeat.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/CoconutMeat.prefab
     PrefabName: CoconutMeat
     Carbohydrates: 500
     Fat: 500
@@ -190,7 +190,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 2641514758235206763, guid: 4bcfc510d090cd94994daf92083d6f6b, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/Egg.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Egg.prefab
     PrefabName: Egg
     Carbohydrates: 500
     Fat: 500
@@ -212,7 +212,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 3926578369279844245, guid: ecd66c5c9e4e368479430b1a6544fa40, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/Egg_Cooked.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Egg_Cooked.prefab
     PrefabName: Egg_Cooked
     Carbohydrates: 500
     Fat: 500
@@ -234,7 +234,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 3341342614344715908, guid: 4c16f5b620aca1741a1e0f0a149c9cf5, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/Fat.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Fat.prefab
     PrefabName: Fat
     Carbohydrates: 500
     Fat: 500
@@ -256,7 +256,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 7089920087521160863, guid: 9b7fa0dd7f7673f4cbc1e737865ae62d, type: 3}
-    PrefabPath: Assets/2_Prefabs/Item/Leaf.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Common/Leaf.prefab
     PrefabName: Leaf
     Carbohydrates: 500
     Fat: 500
@@ -278,7 +278,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 3341342614344715908, guid: 327c3ce740863d148bd9d335738dd5dc, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/Meat.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Meat.prefab
     PrefabName: Meat
     Carbohydrates: 500
     Fat: 500
@@ -300,7 +300,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 3341342614344715908, guid: 92fc3da9917bffe4a95a5e4648efdcb6, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/Meat_Cooked.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Meat_Cooked.prefab
     PrefabName: Meat_Cooked
     Carbohydrates: 500
     Fat: 500
@@ -322,7 +322,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 3571398385804367392, guid: 6eaeac1b6e74e694085d0f6d120a1c01, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/Meat_Dehydrate.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Meat_Dehydrate.prefab
     PrefabName: Meat_Dehydrate
     Carbohydrates: 500
     Fat: 500
@@ -344,7 +344,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 2556837308338000749, guid: 59206157aa76762488737a1c7fd1b928, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/Meat_Rotten.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Meat_Rotten.prefab
     PrefabName: Meat_Rotten
     Carbohydrates: 500
     Fat: 500
@@ -366,7 +366,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 0
   - Prefab: {fileID: 5923271790331152526, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
-    PrefabPath: Assets/2_Prefabs/Module/Module_Food.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Modules/Items/Module_Food.prefab
     PrefabName: Module_Food
     Carbohydrates: 500
     Fat: 500
@@ -388,7 +388,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 4678875130974218576, guid: 46220fac86a489c48ab7f0d514bc3e40, type: 3}
-    PrefabPath: Assets/2_Prefabs/Player/Player.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Player/Player.prefab
     PrefabName: Player
     Carbohydrates: 500
     Fat: 500
@@ -410,7 +410,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 3926578369279844245, guid: 486f4f4656d5d6846a5f68ef9e928005, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/Tea.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Tea.prefab
     PrefabName: Tea
     Carbohydrates: 1
     Fat: 1
@@ -432,7 +432,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 463977462678543879, guid: a2d494b844ece424088d4bfb48532082, type: 3}
-    PrefabPath: Assets/2_Prefabs/Food/Weed.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Weed.prefab
     PrefabName: Weed
     Carbohydrates: 500
     Fat: 500
@@ -454,7 +454,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 4766519559426352308, guid: 63385f96683848648b48555cb0876c19, type: 3}
-    PrefabPath: Assets/2_Prefabs/Entity_AI/WildBoar.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab
     PrefabName: WildBoar
     Carbohydrates: 500
     Fat: 500
@@ -476,7 +476,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 4766519559426352308, guid: e1958d25f8baa7a48b6f0c754ee6317e, type: 3}
-    PrefabPath: Assets/2_Prefabs/Entity_AI/WildBoar_Tree.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/AI/WildBoar_Tree.prefab
     PrefabName: WildBoar_Tree
     Carbohydrates: 500
     Fat: 500
@@ -498,7 +498,7 @@ MonoBehaviour:
     HasNutrition: 1
     HasSpoilage: 1
   - Prefab: {fileID: 4766519559426352308, guid: dd531bf9262d2dd4bad34506f71b2385, type: 3}
-    PrefabPath: Assets/2_Prefabs/Entity_AI/Wolf.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/AI/Wolf.prefab
     PrefabName: Wolf
     Carbohydrates: 500
     Fat: 500

@@ -12,10 +12,10 @@ namespace FlatWorld.GameTest.Core
         [Category("Smoke")]
         public void RequiredEntryPointsScenesAndOptionalNamesRemainValid()
         {
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.cs", "GameManager");
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Core/Manager/NewWorldCreationRequest.cs", "NewWorldCreationRequest");
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameRes.cs", "GameRes");
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Core/Manager/SceneMgr.cs", "SceneMgr");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/GameManager.cs", "GameManager");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/NewWorldCreationRequest.cs", "NewWorldCreationRequest");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/GameRes.cs", "GameRes");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/SceneMgr.cs", "SceneMgr");
             GameTestAssertions.AssertAssetExists("Assets/3_Scenes/GameStartScene.unity");
             GameTestAssertions.AssertAssetExists("Assets/3_Scenes/Manager.unity");
 
@@ -39,7 +39,7 @@ namespace FlatWorld.GameTest.Core
         public void ExitLifecycleCanExplicitlySkipDiskSave()
         {
             const string gameManagerPath =
-                "Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.cs";
+                "Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/GameManager.cs";
             string source = File.ReadAllText(gameManagerPath);
 
             Assert.That(source, Does.Contain("bool saveCurrentGame = true"));

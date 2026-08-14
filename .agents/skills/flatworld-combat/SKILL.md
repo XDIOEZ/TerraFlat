@@ -9,7 +9,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 
 - 结算：`Assets/5_Scripts/5-3_GamePlay/Entities/Combat/{DamageReceiver,IDamageSender,Mod_Damage,Mod_Damage_AI,Mod_ColdWeapon,Mod_Defense}.cs`
 - 技能：`Entities/Skill/{Mod_SkillManager,BaseSkill,BaseSkillAction,RuntimeSkill,Skill_*}.cs`
-- 资源：`Assets/4_ScriptObjects/4-3_Skill/`、`Assets/2_Prefabs/Skills/`
+- 资源：`Assets/4_ScriptObjects/Gameplay/Skills/`、`Assets/2_Prefabs/Gameplay/Skills/`
 - 受击表现：`Assets/5_Scripts/5-3_GamePlay/Presentation/ActorRenderColorEffect.cs`
 
 ## 不变量

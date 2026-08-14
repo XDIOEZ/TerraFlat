@@ -12,7 +12,7 @@
     {
       "id": "Chestplate_Iron",
       "parent": "Equipment_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Equipment/Chestplate_Iron.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Equipment/Chestplate_Iron.prefab",
       "gameName": "Chestplate_Iron",
       "description": "以钢锭锻造成的重型胸甲，牺牲少量移动速度换取可靠防护。",
       "durability": 200.0,
@@ -24,7 +24,7 @@
         "36"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_077.png",
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_077.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -134,7 +134,7 @@
     {
       "id": "Chestplate_Twine",
       "parent": "Equipment_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Equipment/Chestplate_Twine.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Equipment/Chestplate_Twine.prefab",
       "gameName": "Chestplate_Twine",
       "description": "以藤条和细绳编成的轻型护甲。",
       "durability": 200.0,
@@ -146,7 +146,7 @@
         "36"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Equipment/Jade Equipment/Jade Chestplate.png",
+        "spriteAddress": "Assets/6_Art/Items/Equipment/Jade Equipment/Jade Chestplate.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -251,7 +251,7 @@
     {
       "id": "Chestplate_Wood",
       "parent": "Equipment_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Equipment/Chestplate_Wood.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Equipment/Chestplate_Wood.prefab",
       "gameName": "Chestplate_Wood",
       "description": "由木板拼接而成的基础护甲。",
       "durability": 200.0,
@@ -263,7 +263,7 @@
         "36"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Equipment/Wood Equipment/Wood Chestplate.png",
+        "spriteAddress": "Assets/6_Art/Items/Equipment/Wood Equipment/Wood Chestplate.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

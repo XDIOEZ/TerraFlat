@@ -12,7 +12,7 @@
     {
       "id": "BlastFurnace_Summoner",
       "parent": "BuildingSummoner_BlastFurnace_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/BlastFurnace_Summoner.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/BlastFurnace_Summoner.prefab",
       "gameName": "BlastFurnace",
       "description": "高炉：一种炉子，其中燃烧是通过压力下的空气流动来强制进行的，尤其是用于还原铁矿石的炉子。",
       "durability": 1.0,
@@ -138,7 +138,7 @@
     {
       "id": "Bonfire_Summoner",
       "parent": "BuildingSummoner_Bonfire_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Bonfire_Summoner.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Bonfire_Summoner.prefab",
       "gameName": "Bonfire",
       "description": "用于在合适地点放置一座火堆。",
       "durability": 1.0,
@@ -150,7 +150,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/icons_sheet.png[icons_sheet_56]",
+        "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_56]",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -278,7 +278,7 @@
     {
       "id": "Chest_Wood_Summoner",
       "parent": "BuildingSummoner_ChestWood_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Chest_Wood_Summoner.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Chest_Wood_Summoner.prefab",
       "gameName": "Chest_Wood",
       "description": "用于在合适地点放置一个木制储物箱。",
       "durability": 1.0,
@@ -411,7 +411,7 @@
     {
       "id": "Door_Stone_Summoner",
       "parent": "BuildingSummoner_DoorStone_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Door_Stone_Summoner.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Door_Stone_Summoner.prefab",
       "gameName": "石门",
       "description": "可以开关的厚重石门。",
       "durability": 1.0,
@@ -528,7 +528,7 @@
     {
       "id": "Door_Wood_Summoner",
       "parent": "BuildingSummoner_DoorWood_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Door_Wood_Summoner.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Door_Wood_Summoner.prefab",
       "gameName": "Door_Wood",
       "description": "用于在建筑结构中放置一扇木门。",
       "durability": 1.0,
@@ -645,7 +645,7 @@
     {
       "id": "Meatrack_Summoner",
       "parent": "BuildingSummoner_Meatrack_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Meatrack_Summoner.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Meatrack_Summoner.prefab",
       "gameName": "Meatrack",
       "description": "高炉：一种炉子，其中燃烧是通过压力下的空气流动来强制进行的，尤其是用于还原铁矿石的炉子。",
       "durability": 1.0,
@@ -762,7 +762,7 @@
     {
       "id": "MineEntrance_Summoner",
       "parent": "BuildingSummoner_MineEntrance_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/MineEntrance_Summoner.prefab",
       "gameName": "矿坑入口",
       "description": "安装后可通往地下矿洞，并在矿洞中生成对应出口。",
       "durability": 1.0,
@@ -870,7 +870,7 @@
     {
       "id": "Scarecrow_Summoner",
       "parent": "BuildingSummoner_Scarecrow_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Scarecrow_Summoner.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Scarecrow_Summoner.prefab",
       "gameName": "Scarecrow",
       "description": "用于在农田附近放置一个稻草人。",
       "durability": 1.0,
@@ -987,7 +987,7 @@
     {
       "id": "Smelter_Summoner",
       "parent": "BuildingSummoner_Smelter_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Smelter_Summoner.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Smelter_Summoner.prefab",
       "gameName": "Smelter",
       "description": "什么都没有描述",
       "durability": 1.0,
@@ -999,7 +999,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/icons_sheet.png[icons_sheet_43]",
+        "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_43]",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1122,7 +1122,7 @@
     {
       "id": "Tent_Summoner",
       "parent": "BuildingSummoner_Tent_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Tent_Summoner.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Tent_Summoner.prefab",
       "gameName": "Tent",
       "description": "什么都没有描述",
       "durability": 1.0,
@@ -1134,7 +1134,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/帐篷.png",
+        "spriteAddress": "Assets/6_Art/Items/Tent.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1239,7 +1239,7 @@
     {
       "id": "Wall_Stone_Summoner",
       "parent": "BuildingSummoner_WallStone_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Wall_Stone_Summoner.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Stone_Summoner.prefab",
       "gameName": "石墙",
       "description": "由坚固石块砌成的防御墙体。",
       "durability": 1.0,
@@ -1347,7 +1347,7 @@
     {
       "id": "Wall_Wood_Summoner",
       "parent": "BuildingSummoner_WallWood_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/Wall_Wood_Summoner.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab",
       "gameName": "Chest_Wood",
       "description": "用于在合适地点放置一段木墙。",
       "durability": 1.0,
@@ -1455,7 +1455,7 @@
     {
       "id": "WorkBench_Summoner",
       "parent": "BuildingSummoner_WorkBench_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Building/Summoners/WorkBench_Summoner.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/WorkBench_Summoner.prefab",
       "gameName": "WorkBench",
       "description": "用于在合适地点放置一座工作台。",
       "durability": 1.0,
@@ -1572,7 +1572,7 @@
     },
     {
       "id": "SparkMaker_Summoner",
-      "sourcePrefab": "Assets/2_Prefabs/Tools/Summoners/SparkMaker_Summoner.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/SparkMaker_Summoner.prefab",
       "shellPrefab": "SparkMaker_Summoner",
       "gameName": "钻木取火工具",
       "description": "用于放置钻木取火设施的工具。"

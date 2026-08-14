@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld 新手引导"
+  short_description: "定位 FlatWorld 新手引导阶段、进度存档、触发信号及对话联动"
+  default_prompt: "Use $flatworld-guide to locate and safely modify FlatWorld new-player guide code."

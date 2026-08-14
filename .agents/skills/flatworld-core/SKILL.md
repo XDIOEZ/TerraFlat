@@ -7,7 +7,7 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 
 ## 入口
 
-- 世界生命周期：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.cs`
+- 世界生命周期：`Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/GameManager.cs`
 - UI 绑定：同目录 `GameManager.UI.cs`
 - 资源启动：同目录 `GameRes.cs`
 - 场景服务：同目录 `SceneMgr.cs`

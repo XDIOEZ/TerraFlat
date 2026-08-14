@@ -7,10 +7,10 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 ## 入口
 
-- 运行时视觉：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/VisualEffectManager.cs`、`Assets/5_Scripts/SpecialEffects/`
+- 运行时视觉：`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Management/VisualEffectManager.cs`、`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Runtime/`
 - 角色渲染：`Assets/5_Scripts/5-3_GamePlay/Presentation/{ActorRenderEffectController,ActorRenderColorEffect,WaterImmersionRenderEffect}.cs`
-- 编辑器工具：`Assets/Editor/FlatWorld/`、`Assets/5_Scripts/5-2_Editor/`；内容工坊入口为菜单 `FlatWorld/内容配置/内容工坊`
-- 调试：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/`、`Core/Manager/{GameDebugManager,GameLogManager}.cs`
+- 编辑器工具：`Assets/Editor/FlatWorld/`、`Assets/Editor/FlatWorld/ProjectTools/`；内容工坊入口为菜单 `FlatWorld/内容配置/内容工坊`
+- 调试：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/`、`Development/Diagnostics/{GameDebugManager,GameLogManager}.cs`
 
 ## 不变量
 

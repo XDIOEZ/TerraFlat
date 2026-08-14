@@ -14,7 +14,7 @@ namespace FlatWorld.GameTest.Space
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/World/Space/SpaceMgr.cs", "SpaceMgr");
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/World/Space/Module_Fly.cs", "Module_Fly");
             GameTestAssertions.AssertAssetExists("Assets/3_Scenes/SpaceScene.unity");
-            GameTestAssertions.AssertFolderContainsAsset("Assets/2_Prefabs/Space", "t:Prefab");
+            GameTestAssertions.AssertFolderContainsAsset("Assets/2_Prefabs/World/Space", "t:Prefab");
         }
     }
 }

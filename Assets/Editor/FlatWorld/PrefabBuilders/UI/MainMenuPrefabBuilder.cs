@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 public static class MainMenuPrefabBuilder
 {
-    private const string PrefabPath = "Assets/2_Prefabs/2-1_UI/Menu_UI/UI_Hello.prefab";
+    private const string PrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab";
     private const string BackgroundPath = "Assets/6_Art/UI/MainMenu/FlatWorld_MainMenu_Background.png";
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
 

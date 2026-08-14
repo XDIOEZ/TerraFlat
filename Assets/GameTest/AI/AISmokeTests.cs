@@ -96,7 +96,7 @@ namespace FlatWorld.GameTest.AI
         public void WolfPrefabAcceptsReusableAdvanceCommands()
         {
             GameObject wolfPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Entity_AI/Wolf.prefab");
+                "Assets/2_Prefabs/Gameplay/AI/Wolf.prefab");
             AI_Wolf wolf = wolfPrefab != null
                 ? wolfPrefab.GetComponentInChildren<AI_Wolf>(true)
                 : null;
@@ -114,7 +114,7 @@ namespace FlatWorld.GameTest.AI
         public void WolfChaseFormationSlotsStaySeparatedInsideAttackRange()
         {
             GameObject wolfPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Entity_AI/Wolf.prefab");
+                "Assets/2_Prefabs/Gameplay/AI/Wolf.prefab");
             AI_Wolf wolf = wolfPrefab != null
                 ? wolfPrefab.GetComponentInChildren<AI_Wolf>(true)
                 : null;
@@ -171,9 +171,9 @@ namespace FlatWorld.GameTest.AI
         public void CombatAnimalPrefabsCoverChaseTriggerDistance()
         {
             GameObject wildBoarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Entity_AI/WildBoar.prefab");
+                "Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab");
             GameObject wolfPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Entity_AI/Wolf.prefab");
+                "Assets/2_Prefabs/Gameplay/AI/Wolf.prefab");
 
             AI_WildBoar wildBoar = wildBoarPrefab != null
                 ? wildBoarPrefab.GetComponentInChildren<AI_WildBoar>(true)
@@ -196,9 +196,9 @@ namespace FlatWorld.GameTest.AI
         {
             const float expectedWolfPerceptionRadius = 120f;
             GameObject wildBoarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Entity_AI/WildBoar.prefab");
+                "Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab");
             GameObject wolfPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Entity_AI/Wolf.prefab");
+                "Assets/2_Prefabs/Gameplay/AI/Wolf.prefab");
             Mod_ItemDetector wildBoarDetector = wildBoarPrefab != null
                 ? wildBoarPrefab.GetComponentInChildren<Mod_ItemDetector>(true)
                 : null;
@@ -230,7 +230,7 @@ namespace FlatWorld.GameTest.AI
         [Category("Smoke")]
         public void WolfDetectorMasksIncludePlayerAndActorLayers()
         {
-            AssertWolfDetectorMask("Assets/2_Prefabs/Entity_AI/Wolf.prefab");
+            AssertWolfDetectorMask("Assets/2_Prefabs/Gameplay/AI/Wolf.prefab");
         }
 
         /// <summary>幽灵亮度伤害必须在严格超过一半亮度后才开启。</summary>
@@ -251,7 +251,7 @@ namespace FlatWorld.GameTest.AI
         public void GhostUsesSharedDamageSenderOnBodyCollider()
         {
             GameObject ghostPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Entity_AI/Ghost.prefab");
+                "Assets/2_Prefabs/Gameplay/AI/Ghost.prefab");
             BoxCollider2D bodyCollider = ghostPrefab != null
                 ? ghostPrefab.GetComponent<BoxCollider2D>()
                 : null;
@@ -305,7 +305,7 @@ namespace FlatWorld.GameTest.AI
         public void AttackControllerFirstWindowScansOnlyAIDamageModules()
         {
             GameObject wildBoarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Entity_AI/WildBoar.prefab");
+                "Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab");
             Mod_Damage_AI aiDamage = wildBoarPrefab != null
                 ? wildBoarPrefab.GetComponentInChildren<Mod_Damage_AI>(true)
                 : null;
@@ -338,7 +338,7 @@ namespace FlatWorld.GameTest.AI
         public void WildBoarAttackRangeUsesHorizontalEllipse()
         {
             GameObject wildBoarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Entity_AI/WildBoar.prefab");
+                "Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab");
             AI_WildBoar wildBoar = wildBoarPrefab != null
                 ? wildBoarPrefab.GetComponentInChildren<AI_WildBoar>(true)
                 : null;
@@ -383,7 +383,7 @@ namespace FlatWorld.GameTest.AI
         public void WildBoarAttackWindowMatchesAttackAnimation()
         {
             GameObject wildBoarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Entity_AI/WildBoar.prefab");
+                "Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab");
             AI_WildBoar wildBoar = wildBoarPrefab != null
                 ? wildBoarPrefab.GetComponentInChildren<AI_WildBoar>(true)
                 : null;

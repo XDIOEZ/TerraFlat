@@ -85,7 +85,7 @@ namespace FlatWorld.GameTest.UI
                     "手柄焦点移动到输入框时不能自动打开虚拟键盘，必须等待确认键。");
 
                 string controllerSource = File.ReadAllText(
-                    "Assets/5_Scripts/5-5_UI/GamepadUIRuntimeController.cs");
+                    "Assets/5_Scripts/5-5_UI/Input/Gamepad/GamepadUIRuntimeController.cs");
                 Assert.That(controllerSource, Does.Contain("GamepadInputFieldNavigationBridge"));
                 Assert.That(
                     controllerSource,
@@ -93,7 +93,7 @@ namespace FlatWorld.GameTest.UI
                 Assert.That(controllerSource, Does.Not.Contain("DeactivateInputField(clearSelection: false);"),
                     "输入框获得手柄焦点时必须保留选中表现，不能直接强制取消焦点。");
 
-                string panelSource = File.ReadAllText("Assets/5_Scripts/5-5_UI/BasePanel.cs");
+                string panelSource = File.ReadAllText("Assets/5_Scripts/5-5_UI/Core/BasePanel.cs");
                 Assert.That(panelSource, Does.Contain("EnsureInputFieldNavigationBridges();"));
             }
             finally
@@ -218,7 +218,7 @@ namespace FlatWorld.GameTest.UI
         public void InputBindingRowProvidesModifyAndClearButtons()
         {
             const string rowPath =
-                "Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_InputBindingRow.prefab";
+                "Assets/2_Prefabs/2-1_UI/Settings/Components/UI_InputBindingRow.prefab";
 
             AssertPrefabContains(
                 rowPath,
@@ -288,7 +288,7 @@ namespace FlatWorld.GameTest.UI
         [Category("UI.Smoke")]
         public void SaveItemPrefabUsesAutomaticGamepadNavigation()
         {
-            const string prefabPath = "Assets/2_Prefabs/2-1_UI/存档选择按钮.prefab";
+            const string prefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionButton.prefab";
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             Assert.That(prefab, Is.Not.Null, $"缺少存档条目 Prefab：{prefabPath}");
 
@@ -304,17 +304,17 @@ namespace FlatWorld.GameTest.UI
         public void WorldStreamingSettingsPrefabAndEntryFollowNamingContract()
         {
             AssertPrefabContains(
-                "Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_WorldStreamingSettings.prefab",
+                "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_WorldStreamingSettings.prefab",
                 "性能模式下拉列表",
                 "状态文本",
                 "取消按钮",
                 "应用按钮");
             AssertPrefabContains(
-                "Assets/2_Prefabs/2-1_UI/Menu_UI/Info_Button_List.prefab",
+                "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_ActionList.prefab",
                 "流送性能");
 
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_WorldStreamingSettings.prefab");
+                "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_WorldStreamingSettings.prefab");
             RectTransform rect = prefab.GetComponent<RectTransform>();
             Assert.That(rect.sizeDelta.x, Is.LessThanOrEqualTo(680f));
             Assert.That(rect.sizeDelta.y, Is.LessThanOrEqualTo(420f));
@@ -326,8 +326,8 @@ namespace FlatWorld.GameTest.UI
         [Category("UI.Layout")]
         public void MainMenuSettingsVisualPrefabFollowsNamingAndLayoutContract()
         {
-            const string mainMenuPath = "Assets/2_Prefabs/2-1_UI/Menu_UI/UI_Hello.prefab";
-            const string settingsPath = "Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_MainMenuSettings.prefab";
+            const string mainMenuPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab";
+            const string settingsPath = "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_MainMenuSettings.prefab";
 
             AssertPrefabContains(mainMenuPath, GameManager.MainMenuSettingsButtonKey);
             AssertPrefabContains(
@@ -373,8 +373,8 @@ namespace FlatWorld.GameTest.UI
         [Category("Smoke")]
         public void PlayerWorldCoordinateHudPrefabAndPlayerBindingFollowContract()
         {
-            const string hudPath = "Assets/2_Prefabs/2-1_UI/Runtime/System/UI_PlayerWorldCoordinate.prefab";
-            const string playerPath = "Assets/2_Prefabs/Player/Player.prefab";
+            const string hudPath = "Assets/2_Prefabs/2-1_UI/Gameplay/HUD/UI_PlayerWorldCoordinate.prefab";
+            const string playerPath = "Assets/2_Prefabs/Gameplay/Player/Player.prefab";
 
             AssertPrefabContains(hudPath, "坐标文本");
 
@@ -402,7 +402,7 @@ namespace FlatWorld.GameTest.UI
         [Category("UI.Layout")]
         public void SettingsSessionPageProvidesExitWithoutSavingAction()
         {
-            const string prefabPath = "Assets/2_Prefabs/2-1_UI/Menu_UI/Info_Button_List.prefab";
+            const string prefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_ActionList.prefab";
             const string settingSourcePath =
                 "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/Module_Setting.cs";
 
@@ -416,9 +416,9 @@ namespace FlatWorld.GameTest.UI
         [Category("UI.Smoke")]
         public void GamepadFocusIsConstrainedToTopmostOpenPanel()
         {
-            const string managerPath = "Assets/5_Scripts/5-5_UI/UIManager.cs";
+            const string managerPath = "Assets/5_Scripts/5-5_UI/Core/UIManager.cs";
             const string controllerPath =
-                "Assets/5_Scripts/5-5_UI/GamepadUIRuntimeController.cs";
+                "Assets/5_Scripts/5-5_UI/Input/Gamepad/GamepadUIRuntimeController.cs";
 
             string managerSource = File.ReadAllText(managerPath);
             string controllerSource = File.ReadAllText(controllerPath);
@@ -438,9 +438,9 @@ namespace FlatWorld.GameTest.UI
         public void SaveStatusHudAndManualSaveFollowAsyncContract()
         {
             const string hudPath =
-                "Assets/2_Prefabs/2-1_UI/Runtime/System/UI_SaveStatus.prefab";
+                "Assets/2_Prefabs/2-1_UI/Gameplay/HUD/UI_SaveStatus.prefab";
             const string gameManagerPath =
-                "Assets/5_Scripts/5-3_GamePlay/Core/Manager/GameManager.cs";
+                "Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/GameManager.cs";
 
             AssertPrefabContains(hudPath, "背景", "强调线", "保存状态文本");
             GameObject hudPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(hudPath)
@@ -467,10 +467,10 @@ namespace FlatWorld.GameTest.UI
         public void BuffStatusHudPrefabAndPlayerBindingFollowContract()
         {
             const string hudPath =
-                "Assets/2_Prefabs/2-1_UI/Runtime/System/UI_BuffStatus.prefab";
+                "Assets/2_Prefabs/2-1_UI/Gameplay/Status/Buff/UI_BuffStatus.prefab";
             const string itemPath =
-                "Assets/2_Prefabs/2-1_UI/Runtime/System/UI_BuffStatusItem.prefab";
-            const string playerPath = "Assets/2_Prefabs/Player/Player.prefab";
+                "Assets/2_Prefabs/2-1_UI/Gameplay/Status/Buff/UI_BuffStatusItem.prefab";
+            const string playerPath = "Assets/2_Prefabs/Gameplay/Player/Player.prefab";
             const string sourcePath =
                 "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/PlayerBuffStatusHUD.cs";
 
@@ -536,10 +536,10 @@ namespace FlatWorld.GameTest.UI
         public void QuestTrackerHudPrefabAndPlayerBindingFollowContract()
         {
             const string hudPath =
-                "Assets/2_Prefabs/2-1_UI/Runtime/System/UI_QuestTracker.prefab";
+                "Assets/2_Prefabs/2-1_UI/Gameplay/Status/Quest/UI_QuestTracker.prefab";
             const string itemPath =
-                "Assets/2_Prefabs/2-1_UI/Runtime/System/UI_QuestTrackerItem.prefab";
-            const string playerPath = "Assets/2_Prefabs/Player/Player.prefab";
+                "Assets/2_Prefabs/2-1_UI/Gameplay/Status/Quest/UI_QuestTrackerItem.prefab";
+            const string playerPath = "Assets/2_Prefabs/Gameplay/Player/Player.prefab";
             const string sourcePath =
                 "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/PlayerQuestTrackerHUD.cs";
 
@@ -620,9 +620,9 @@ namespace FlatWorld.GameTest.UI
         public void SharedUiRefreshDriversStayIdleUntilEventsArrive()
         {
             const string feedbackPath =
-                "Assets/5_Scripts/5-5_UI/FlatWorldUIFeedback.cs";
+                "Assets/5_Scripts/5-5_UI/Common/Presentation/FlatWorldUIFeedback.cs";
             const string settingsPath =
-                "Assets/5_Scripts/5-5_UI/UIUserSettings.cs";
+                "Assets/5_Scripts/5-5_UI/Settings/UIUserSettings.cs";
 
             string feedbackSource = File.ReadAllText(feedbackPath);
             string settingsSource = File.ReadAllText(settingsPath);
@@ -646,11 +646,11 @@ namespace FlatWorld.GameTest.UI
         public void SharedUiHierarchyAndVirtualCursorUseDirtyCaches()
         {
             const string basePanelPath =
-                "Assets/5_Scripts/5-5_UI/BasePanel.cs";
+                "Assets/5_Scripts/5-5_UI/Core/BasePanel.cs";
             const string uiManagerPath =
-                "Assets/5_Scripts/5-5_UI/UIManager.cs";
+                "Assets/5_Scripts/5-5_UI/Core/UIManager.cs";
             const string gamepadControllerPath =
-                "Assets/5_Scripts/5-5_UI/GamepadUIRuntimeController.cs";
+                "Assets/5_Scripts/5-5_UI/Input/Gamepad/GamepadUIRuntimeController.cs";
             const string inputBindingLauncherPath =
                 "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/InputBindingPanelLauncher.cs";
 
@@ -700,11 +700,11 @@ namespace FlatWorld.GameTest.UI
         public void RemainingUiHotPathsUsePoolsEventsAndLocalLayoutMarks()
         {
             string saveListSource = File.ReadAllText(
-                "Assets/5_Scripts/5-3_GamePlay/Core/Manager/SaveDataManager_UI.cs");
+                "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/SaveDataManager_UI.cs");
             string resizerSource = File.ReadAllText(
-                "Assets/5_Scripts/5-5_UI/UIDragResizer.cs");
+                "Assets/5_Scripts/5-5_UI/Common/Controls/UIDragResizer.cs");
             string contentMarkerSource = File.ReadAllText(
-                "Assets/5_Scripts/5-5_UI/UI_Content.cs");
+                "Assets/5_Scripts/5-5_UI/Gameplay/Inventory/UI_Content.cs");
             string paginationSource = File.ReadAllText(
                 "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/SettingsActionListPagination.cs");
             string coordinateHudSource = File.ReadAllText(
@@ -783,7 +783,7 @@ namespace FlatWorld.GameTest.UI
         public void GamepadSelectionFollowerCoalescesLatestTargetPerScrollRect()
         {
             const string sourcePath =
-                "Assets/5_Scripts/5-5_UI/GamepadUISelectionFollower.cs";
+                "Assets/5_Scripts/5-5_UI/Input/Gamepad/GamepadUISelectionFollower.cs";
             MethodInfo resetScheduler = typeof(GamepadUISelectionFollower).GetMethod(
                 "ResetScheduler",
                 BindingFlags.Static | BindingFlags.NonPublic);
@@ -849,9 +849,9 @@ namespace FlatWorld.GameTest.UI
         public void CoordinateDisplaySettingsAndActionListPagerFollowContract()
         {
             const string displaySettingsPath =
-                "Assets/2_Prefabs/2-1_UI/Runtime/Settings/UI_CoordinateDisplaySettings.prefab";
+                "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_CoordinateDisplaySettings.prefab";
             const string actionListPath =
-                "Assets/2_Prefabs/2-1_UI/Menu_UI/Info_Button_List.prefab";
+                "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_ActionList.prefab";
 
             AssertPrefabContains(
                 displaySettingsPath,
@@ -948,7 +948,7 @@ namespace FlatWorld.GameTest.UI
         [Category("UI.Layout")]
         public void CharacterStatusPanelContainsTemperatureAndFitsSupportedScreens()
         {
-            const string prefabPath = "Assets/2_Prefabs/2-1_UI/ModsUI/UI_Food.prefab";
+            const string prefabPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Status/Player/UI_Food.prefab";
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             Assert.That(prefab, Is.Not.Null, $"缺少角色参数面板：{prefabPath}");
 
@@ -1041,7 +1041,7 @@ namespace FlatWorld.GameTest.UI
         public void DimensionLoadingPrefabIsFullScreenBlockingAndThemeReady()
         {
             const string prefabPath =
-                "Assets/2_Prefabs/2-1_UI/Runtime/System/UI_DimensionLoading.prefab";
+                "Assets/2_Prefabs/2-1_UI/Gameplay/Loading/UI_DimensionLoading.prefab";
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             Assert.That(prefab, Is.Not.Null, "缺少维度切换专属加载页 Prefab。");
 

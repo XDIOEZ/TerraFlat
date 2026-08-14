@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Rows:
   - Prefab: {fileID: 480202971505006560, guid: ce24645065817804fbd6156e223ca429, type: 3}
-    PrefabPath: Assets/2_Prefabs/Plant/AppleTree.prefab
+    PrefabPath: Assets/2_Prefabs/World/ResourceNodes/Plants/AppleTree.prefab
     PrefabName: AppleTree
     MaxHp: 180
     Hp: 200
@@ -24,7 +24,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 2799532577642217657, guid: 961591bf5cfada64fb2f54e29e11b405, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Axe/Axe_Bronze.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Bronze.prefab
     PrefabName: Axe_Bronze
     MaxHp: 0
     Hp: 0
@@ -34,7 +34,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 2799532577642217657, guid: 57a70a21a794f914fafdb22b4de526c8, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Axe/Axe_Copper.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Copper.prefab
     PrefabName: Axe_Copper
     MaxHp: 0
     Hp: 0
@@ -44,7 +44,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 571565931952562247, guid: a0f6e61c3674b2948b811426c39ee719, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Axe/Axe_Flint.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Flint.prefab
     PrefabName: Axe_Flint
     MaxHp: 0
     Hp: 0
@@ -54,7 +54,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 2799532577642217657, guid: e4164b4cb51e7254a8da659947ffee4b, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Axe/Axe_Iron.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Iron.prefab
     PrefabName: Axe_Iron
     MaxHp: 0
     Hp: 0
@@ -64,7 +64,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 2799532577642217657, guid: 09c77b39820303f4894d205db4b7953c, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Axe/Axe_RawIron.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_RawIron.prefab
     PrefabName: Axe_RawIron
     MaxHp: 0
     Hp: 0
@@ -74,7 +74,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 571565931952562247, guid: d2a3c08c6a3925746b84b9c128f8c793, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Axe/Axe.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe.prefab
     PrefabName: Axe_Stone
     MaxHp: 0
     Hp: 0
@@ -84,7 +84,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 7534172511798132841, guid: 7939cd1121d1caf48a4f4bcb810d16d2, type: 3}
-    PrefabPath: Assets/2_Prefabs/Building/BlastFurnace.prefab
+    PrefabPath: Assets/2_Prefabs/World/Buildings/BlastFurnace.prefab
     PrefabName: BlastFurnace
     MaxHp: 200
     Hp: 200
@@ -94,7 +94,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 7534172511798132841, guid: dbe0fdf0241e35442b1a020284fc6eb3, type: 3}
-    PrefabPath: Assets/2_Prefabs/Building/Bonfire.prefab
+    PrefabPath: Assets/2_Prefabs/World/Buildings/Bonfire.prefab
     PrefabName: Bonfire
     MaxHp: 50
     Hp: 50
@@ -104,7 +104,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 472936261257613889, guid: ffe53350727c81c47b55bde5e24c3142, type: 3}
-    PrefabPath: Assets/2_Prefabs/Plant/Bush.prefab
+    PrefabPath: Assets/2_Prefabs/World/ResourceNodes/Plants/Bush.prefab
     PrefabName: Bush
     MaxHp: 50
     Hp: 50
@@ -114,7 +114,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 6626571208127967517, guid: 4c2d602b69d751141870951cc6fcf398, type: 3}
-    PrefabPath: Assets/2_Prefabs/Building/Chest_Wood.prefab
+    PrefabPath: Assets/2_Prefabs/World/Buildings/Chest_Wood.prefab
     PrefabName: Chest_Wood
     MaxHp: 100
     Hp: 100
@@ -124,7 +124,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 5065571277225119290, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
-    PrefabPath: Assets/2_Prefabs/Entity_AI/Chicken.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/AI/Chicken.prefab
     PrefabName: Chicken
     MaxHp: 150
     Hp: 150
@@ -134,7 +134,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 571565931952562247, guid: 314fc0b19c2478b459f9cf3665a4d841, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/ChippedTool.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/ChippedTool.prefab
     PrefabName: ChippedTool
     MaxHp: 0
     Hp: 0
@@ -144,7 +144,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 571565931952562247, guid: ab85711649fc956429d8f8a553dc145a, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/Dagger_Bone.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger_Bone.prefab
     PrefabName: Dagger_Bone
     MaxHp: 0
     Hp: 0
@@ -154,7 +154,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 4375072302657932727, guid: 97f6605c00e28b74c9e535a7d0cc7dce, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/Dagger_Copper.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger_Copper.prefab
     PrefabName: Dagger_Copper
     MaxHp: 0
     Hp: 0
@@ -164,7 +164,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 4375072302657932727, guid: 1708703c07cce624892b595ae445e268, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/Dagger.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger.prefab
     PrefabName: Dagger_Stone
     MaxHp: 0
     Hp: 0
@@ -174,7 +174,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 6626571208127967517, guid: 38596f03f2136a34b91d1e6cfb2e8777, type: 3}
-    PrefabPath: Assets/2_Prefabs/Building/Door_Wood.prefab
+    PrefabPath: Assets/2_Prefabs/World/Buildings/Door_Wood.prefab
     PrefabName: Door_Wood
     MaxHp: 200
     Hp: 200
@@ -184,7 +184,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 9092067032435507713, guid: 8d957a5691b916f48b40231a4b297ea4, type: 3}
-    PrefabPath: Assets/2_Prefabs/Skills/FireBall.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Skills/FireBall.prefab
     PrefabName: FireBall
     MaxHp: 0
     Hp: 0
@@ -194,7 +194,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 571565931952562247, guid: 6f04f63db18870946977a64dc9373560, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Axe/Hoe_Stone.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Tools/Hoes/Hoe_Stone.prefab
     PrefabName: Hoe_Stone
     MaxHp: 0
     Hp: 0
@@ -204,7 +204,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 571565931952562247, guid: 14dd6960d9e7f1f47b1c5e82bc3ded4e, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/Knife_Flint.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Knife_Flint.prefab
     PrefabName: Knife_Flint
     MaxHp: 0
     Hp: 0
@@ -214,7 +214,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 2120960324422205105, guid: 38ee20713ed57f548af3746e835a0984, type: 3}
-    PrefabPath: Assets/2_Prefabs/Skills/LaserFoucus.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Skills/LaserFoucus.prefab
     PrefabName: LaserFoucus
     MaxHp: 0
     Hp: 0
@@ -224,7 +224,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 7187358966865186485, guid: f4cc48e2af981584b99bbfbe41c565cd, type: 3}
-    PrefabPath: Assets/2_Prefabs/Skills/LaserLine.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Skills/LaserLine.prefab
     PrefabName: LaserLine
     MaxHp: 0
     Hp: 0
@@ -234,7 +234,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 6080359168784707265, guid: e20f69bbb0a50124ca7520292175eeff, type: 3}
-    PrefabPath: Assets/2_Prefabs/Item/Log.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Common/Log.prefab
     PrefabName: Log
     MaxHp: 0
     Hp: 0
@@ -244,7 +244,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 2383149550844687321, guid: 58df281e8bb89684ca779ca6009f0c54, type: 3}
-    PrefabPath: Assets/2_Prefabs/Mine/Mine_Coal.prefab
+    PrefabPath: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Coal.prefab
     PrefabName: Mine_Coal
     MaxHp: 300
     Hp: 300
@@ -254,7 +254,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 1127970862557664809, guid: 471c4ce24372590429646f3580bb9fd3, type: 3}
-    PrefabPath: Assets/2_Prefabs/Mine/Mine_Copper.prefab
+    PrefabPath: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Copper.prefab
     PrefabName: Mine_Copper
     MaxHp: 200
     Hp: 200
@@ -264,7 +264,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 2383149550844687321, guid: d583767306a467b47a8ffff035dc9395, type: 3}
-    PrefabPath: Assets/2_Prefabs/Mine/Mine_Iron.prefab
+    PrefabPath: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Iron.prefab
     PrefabName: Mine_Iron
     MaxHp: 300
     Hp: 300
@@ -274,7 +274,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 4005766048098034071, guid: 3dfc40753affecf47b6d630f4d9a4668, type: 3}
-    PrefabPath: Assets/2_Prefabs/Mine/Mine_Stone.prefab
+    PrefabPath: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Stone.prefab
     PrefabName: Mine_Stone
     MaxHp: 180
     Hp: 180
@@ -284,7 +284,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 2383149550844687321, guid: 742285658deda7b44a8723ac170c91f4, type: 3}
-    PrefabPath: Assets/2_Prefabs/Mine/Mine_Tin.prefab
+    PrefabPath: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Tin.prefab
     PrefabName: Mine_Tin
     MaxHp: 400
     Hp: 400
@@ -294,7 +294,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 2747812879517624506, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-    PrefabPath: Assets/2_Prefabs/Module/Combat/Mod_Damage.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Modules/Combat/Mod_Damage.prefab
     PrefabName: Mod_Damage
     MaxHp: 0
     Hp: 0
@@ -304,7 +304,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 4851786055190149567, guid: 88450745eac117c4295962551e0db2d7, type: 3}
-    PrefabPath: Assets/2_Prefabs/Module/AI/Module_AttackTrigger_AI.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Modules/AI/Module_AttackTrigger_AI.prefab
     PrefabName: Module_AttackTrigger_AI
     MaxHp: 0
     Hp: 0
@@ -314,7 +314,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 1470591457584899670, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-    PrefabPath: Assets/2_Prefabs/Module/Combat/Module_DamageReciver.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Modules/Combat/Module_DamageReciver.prefab
     PrefabName: Module_DamageReciver
     MaxHp: 180
     Hp: 180
@@ -324,7 +324,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 571565931952562247, guid: ef2a888dba596134b8df58b62bae5ee6, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/Needle_Bone.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Needle_Bone.prefab
     PrefabName: Needle_Bone
     MaxHp: 0
     Hp: 0
@@ -334,7 +334,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 4926578369279844245, guid: 6bc82347947d5234196874132eda820e, type: 3}
-    PrefabPath: Assets/2_Prefabs/Mineral/Ore/Ore_Flint_Bullet.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Flint_Bullet.prefab
     PrefabName: Ore_Flint_Bullet
     MaxHp: 0
     Hp: 0
@@ -344,7 +344,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 4926578369279844245, guid: 02227e6017399414abaa0ef5e37adbe1, type: 3}
-    PrefabPath: Assets/2_Prefabs/Mineral/Ore/Ore_Stone_Bullet.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Stone_Bullet.prefab
     PrefabName: Ore_Stone_Bullet
     MaxHp: 0
     Hp: 0
@@ -354,7 +354,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 6784024402793062405, guid: cd47b2ff8c819b941be4c52d530fa45a, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Bronze.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Bronze.prefab
     PrefabName: Pickaxe_Bronze
     MaxHp: 0
     Hp: 0
@@ -364,7 +364,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 6784024402793062405, guid: a2044fa2f9b41d143bb9b6fb2a49fb33, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Copper.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Copper.prefab
     PrefabName: Pickaxe_Copper
     MaxHp: 0
     Hp: 0
@@ -374,7 +374,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 6784024402793062405, guid: c905281ec96bd944e86d903e300bb97b, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Iron.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Iron.prefab
     PrefabName: Pickaxe_Iron
     MaxHp: 0
     Hp: 0
@@ -384,7 +384,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 6784024402793062405, guid: ae151ca1947f44f43a9b18cd8d812825, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_RawIron.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_RawIron.prefab
     PrefabName: Pickaxe_RawIron
     MaxHp: 0
     Hp: 0
@@ -394,7 +394,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 571565931952562247, guid: 648dac1c2de9b3544ad86849c39a90fd, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe.prefab
     PrefabName: Pickaxe_Stone
     MaxHp: 0
     Hp: 0
@@ -404,7 +404,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 4678875130974218576, guid: 46220fac86a489c48ab7f0d514bc3e40, type: 3}
-    PrefabPath: Assets/2_Prefabs/Player/Player.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Player/Player.prefab
     PrefabName: Player
     MaxHp: 100
     Hp: 100
@@ -414,7 +414,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 4240221386964068424, guid: 41d17800f3397ad4085f635c2fd9b1f6, type: 3}
-    PrefabPath: Assets/2_Prefabs/Space/Rocket.prefab
+    PrefabPath: Assets/2_Prefabs/World/Space/Rocket.prefab
     PrefabName: Rocket
     MaxHp: 200
     Hp: 200
@@ -424,7 +424,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 8823128489376387190, guid: 296e945b0a9dda44b9a5d58075d795da, type: 3}
-    PrefabPath: Assets/2_Prefabs/Entity_AI/Scarecrow.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/AI/Scarecrow.prefab
     PrefabName: Scarecrow
     MaxHp: 100
     Hp: 100
@@ -434,7 +434,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 7534172511798132841, guid: d11f29cf83ce4dd46932f8463f0e81f7, type: 3}
-    PrefabPath: Assets/2_Prefabs/Building/Smelter.prefab
+    PrefabPath: Assets/2_Prefabs/World/Buildings/Smelter.prefab
     PrefabName: Smelter
     MaxHp: 200
     Hp: 200
@@ -444,7 +444,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 1913413943585218338, guid: e6fdacac5e6c3584ba6ead923ec12de3, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/Spear_Copper.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear_Copper.prefab
     PrefabName: Spear_Copper
     MaxHp: 0
     Hp: 0
@@ -454,7 +454,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 1913413943585218338, guid: d2e7961fe8584484d81a169fcba2627a, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/Spear_Iron.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear_Iron.prefab
     PrefabName: Spear_Iron
     MaxHp: 0
     Hp: 0
@@ -464,7 +464,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 1913413943585218338, guid: 2867b73ca70b9c04cac4f3aa8fe446b9, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/Spear.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear.prefab
     PrefabName: Spear_Stone
     MaxHp: 0
     Hp: 0
@@ -474,7 +474,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 571565931952562247, guid: 1aae1f0267e31f846a780278580a10b5, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/Spear_Stone_Animation.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear_Stone_Animation.prefab
     PrefabName: Spear_Stone_Animation
     MaxHp: 0
     Hp: 0
@@ -484,7 +484,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 571565931952562247, guid: b3ce3e3a1adb1de418fdcfdc4c5a9e94, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon-Remote/Staff_Wood.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Ranged/Staff_Wood.prefab
     PrefabName: Staff_Wood
     MaxHp: 0
     Hp: 0
@@ -494,7 +494,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
-    PrefabPath: Assets/2_Prefabs/Item/Stick.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Common/Stick.prefab
     PrefabName: Stick_Wood
     MaxHp: 0
     Hp: 0
@@ -504,7 +504,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 9092067032435507713, guid: 6f27a587bf720974ca9a865de93b5e99, type: 3}
-    PrefabPath: Assets/2_Prefabs/Skills/Stone_KnifeThrowing.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Skills/Stone_KnifeThrowing.prefab
     PrefabName: Stone_KnifeThrowing
     MaxHp: 0
     Hp: 0
@@ -514,7 +514,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 571565931952562247, guid: 8042e942207940647b24ee91463aa184, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon-Remote/StoneThrowingRope.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Ranged/StoneThrowingRope.prefab
     PrefabName: StoneThrowingRope
     MaxHp: 0
     Hp: 0
@@ -524,7 +524,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 1913413943585218338, guid: 337af568711ba9442ad340dc4cf5cadc, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Weapon/Sword_Bronze.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Sword_Bronze.prefab
     PrefabName: Sword_Bronze
     MaxHp: 0
     Hp: 0
@@ -534,7 +534,7 @@ MonoBehaviour:
     HasDefense: 0
     HasDamage: 1
   - Prefab: {fileID: 5803474980971561914, guid: 2cf443899d309994e8491f7fa4e3026b, type: 3}
-    PrefabPath: Assets/2_Prefabs/Building/Tent.prefab
+    PrefabPath: Assets/2_Prefabs/World/Buildings/Tent.prefab
     PrefabName: Tent
     MaxHp: 200
     Hp: 200
@@ -544,7 +544,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 6598347724538692461, guid: ab36d19445e99a54ca06f4650472e418, type: 3}
-    PrefabPath: Assets/2_Prefabs/Weapon/Torch.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab
     PrefabName: Torch
     MaxHp: 50
     Hp: 50
@@ -554,7 +554,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 6626571208127967517, guid: b7bb17f855b07ef47a96ea42eefb4d19, type: 3}
-    PrefabPath: Assets/2_Prefabs/Building/Wall_Wood.prefab
+    PrefabPath: Assets/2_Prefabs/World/Buildings/Wall_Wood.prefab
     PrefabName: Wall_Wood
     MaxHp: 200
     Hp: 200
@@ -564,7 +564,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 4766519559426352308, guid: 63385f96683848648b48555cb0876c19, type: 3}
-    PrefabPath: Assets/2_Prefabs/Entity_AI/WildBoar.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab
     PrefabName: WildBoar
     MaxHp: 300
     Hp: 300
@@ -574,7 +574,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 1
   - Prefab: {fileID: 4766519559426352308, guid: dd531bf9262d2dd4bad34506f71b2385, type: 3}
-    PrefabPath: Assets/2_Prefabs/Entity_AI/Wolf.prefab
+    PrefabPath: Assets/2_Prefabs/Gameplay/AI/Wolf.prefab
     PrefabName: Wolf
     MaxHp: 200
     Hp: 200
@@ -584,7 +584,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 1
   - Prefab: {fileID: 6616435716361065375, guid: cca6f0741d956684bbb9a6c9ea0fe5c7, type: 3}
-    PrefabPath: Assets/2_Prefabs/Building/WorkBench.prefab
+    PrefabPath: Assets/2_Prefabs/World/Buildings/WorkBench.prefab
     PrefabName: WorkBench
     MaxHp: 100
     Hp: 100
@@ -594,7 +594,7 @@ MonoBehaviour:
     HasDefense: 1
     HasDamage: 0
   - Prefab: {fileID: 2462440452985786027, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-    PrefabPath: "Assets/2_Prefabs/Module/Var/\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757
+    PrefabPath: "Assets/2_Prefabs/Gameplay/Modules/Variants/\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757
       \u77FF\u7269.prefab"
     PrefabName: "\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757 \u77FF\u7269"
     MaxHp: 180

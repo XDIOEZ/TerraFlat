@@ -229,8 +229,8 @@ namespace FlatWorld.Automation
         {
             (string Path, Type Type)[] requiredScripts =
             {
-                ("Assets/5_Scripts/5-3_GamePlay/Entities/Item/GameItem.cs", typeof(GameItem)),
-                ("Assets/5_Scripts/5-3_GamePlay/Entities/Item/Mod_Furnace.cs", typeof(Mod_Furnace)),
+                ("Assets/5_Scripts/5-3_GamePlay/Entities/Item/Core/GameItem.cs", typeof(GameItem)),
+                ("Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Crafting/Mod_Furnace.cs", typeof(Mod_Furnace)),
                 ("Assets/5_Scripts/5-3_GamePlay/Items/Food/Meatrack.cs", typeof(Meatrack)),
                 ("Assets/5_Scripts/5-3_GamePlay/Items/Equipment/Mod_Equipment.cs", typeof(Mod_Equipment)),
                 ("Assets/5_Scripts/5-3_GamePlay/World/Map/SO/Tile_Block.cs", typeof(Tile_Block)),
@@ -285,8 +285,8 @@ namespace FlatWorld.Automation
         {
             (string Path, Type Type)[] requiredPrefabs =
             {
-                ("Assets/2_Prefabs/Building/Meatrack.prefab", typeof(Meatrack)),
-                ("Assets/2_Prefabs/Building/Summoners/Scarecrow_Summoner.prefab", typeof(Mod_Equipment))
+                ("Assets/2_Prefabs/World/Buildings/Meatrack.prefab", typeof(Meatrack)),
+                ("Assets/2_Prefabs/World/Buildings/Summoners/Scarecrow_Summoner.prefab", typeof(Mod_Equipment))
             };
 
             foreach ((string path, Type expectedType) in requiredPrefabs)

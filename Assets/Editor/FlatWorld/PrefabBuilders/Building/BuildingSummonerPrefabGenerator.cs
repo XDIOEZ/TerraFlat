@@ -13,9 +13,9 @@ using UnityEngine;
 /// </summary>
 public static class BuildingSummonerPrefabGenerator
 {
-    public const string BuildingRoot = "Assets/2_Prefabs/Building";
+    public const string BuildingRoot = "Assets/2_Prefabs/World/Buildings";
     public const string SummonerRoot = BuildingRoot + "/Summoners";
-    public const string ToolRoot = "Assets/2_Prefabs/Tools";
+    public const string ToolRoot = "Assets/2_Prefabs/Gameplay/Items/Tools";
     public const string ToolSummonerRoot = ToolRoot + "/Summoners";
 
     private static readonly string[] SourceRoots = { BuildingRoot, ToolRoot };

@@ -72,7 +72,7 @@ namespace FlatWorld.GameTest.ItemModule
         public void MeatrackModuleShellResolvesRuntimeComponent()
         {
             const string scriptPath = "Assets/5_Scripts/5-3_GamePlay/Items/Food/Meatrack.cs";
-            const string prefabPath = "Assets/2_Prefabs/Building/Meatrack.prefab";
+            const string prefabPath = "Assets/2_Prefabs/World/Buildings/Meatrack.prefab";
 
             GameTestAssertions.AssertScriptType(scriptPath, nameof(Meatrack));
             AssetDatabase.ImportAsset(
@@ -90,7 +90,7 @@ namespace FlatWorld.GameTest.ItemModule
         public void ScarecrowShellResolvesEquipmentModule()
         {
             const string scriptPath = "Assets/5_Scripts/5-3_GamePlay/Items/Equipment/Mod_Equipment.cs";
-            const string prefabPath = "Assets/2_Prefabs/Building/Summoners/Scarecrow_Summoner.prefab";
+            const string prefabPath = "Assets/2_Prefabs/World/Buildings/Summoners/Scarecrow_Summoner.prefab";
 
             GameTestAssertions.AssertScriptType(scriptPath, nameof(Mod_Equipment));
             AssetDatabase.ImportAsset(
@@ -108,7 +108,7 @@ namespace FlatWorld.GameTest.ItemModule
         public void WorkBenchShellResolvesMakeTableModule()
         {
             const string scriptPath = "Assets/5_Scripts/5-3_GamePlay/Items/Inventory/Mod_MakeTable.cs";
-            const string prefabPath = "Assets/2_Prefabs/Building/Summoners/WorkBench_Summoner.prefab";
+            const string prefabPath = "Assets/2_Prefabs/World/Buildings/Summoners/WorkBench_Summoner.prefab";
 
             GameTestAssertions.AssertScriptType(scriptPath, nameof(Mod_MakeTable));
             AssetDatabase.ImportAsset(

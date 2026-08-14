@@ -14,16 +14,21 @@ public static class RuntimeUIPrefabBuilder
     #region 路径与视觉常量
 
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
-    private const string MenuRoot = "Assets/2_Prefabs/2-1_UI/Menu_UI/";
-    private const string RuntimeRoot = "Assets/2_Prefabs/2-1_UI/Runtime/";
-    private const string DialogueRoot = RuntimeRoot + "Dialogue/";
-    private const string SettingsRoot = RuntimeRoot + "Settings/";
-    private const string SystemRoot = RuntimeRoot + "System/";
-    private const string MobileRoot = RuntimeRoot + "Mobile/";
+    private const string PrefabRoot = "Assets/2_Prefabs/2-1_UI/";
+    private const string MainMenuCoreRoot = PrefabRoot + "MainMenu/Core/";
+    private const string DialogueRoot = PrefabRoot + "Gameplay/Dialogue/";
+    private const string HudRoot = PrefabRoot + "Gameplay/HUD/";
+    private const string LoadingRoot = PrefabRoot + "Gameplay/Loading/";
+    private const string MobileRoot = PrefabRoot + "Gameplay/Mobile/";
+    private const string BuffRoot = PrefabRoot + "Gameplay/Status/Buff/";
+    private const string QuestRoot = PrefabRoot + "Gameplay/Status/Quest/";
+    private const string SettingsPanelsRoot = PrefabRoot + "Settings/Panels/";
+    private const string SettingsComponentsRoot = PrefabRoot + "Settings/Components/";
     private const string UIRootPrefab = "Assets/Resources/UI/UIRoot.prefab";
-    private const string InventoryRoot = "Assets/2_Prefabs/2-1_UI/InventoryUI/";
+    private const string InventoryPanelsRoot = PrefabRoot + "Gameplay/Inventory/Panels/";
+    private const string InventoryComponentsRoot = PrefabRoot + "Gameplay/Inventory/Components/";
     private const string NetworkPlayerPrefab = "Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab";
-    private const string PlayerPrefab = "Assets/2_Prefabs/Player/Player.prefab";
+    private const string PlayerPrefab = "Assets/2_Prefabs/Gameplay/Player/Player.prefab";
 
     private static readonly Color Canvas = new Color(0.025f, 0.043f, 0.058f, 0.99f);
     private static readonly Color Surface = new Color(0.045f, 0.075f, 0.095f, 0.99f);
@@ -51,23 +56,27 @@ public static class RuntimeUIPrefabBuilder
             return;
         }
 
-        Directory.CreateDirectory(SettingsRoot);
+        Directory.CreateDirectory(SettingsPanelsRoot);
+        Directory.CreateDirectory(SettingsComponentsRoot);
         Directory.CreateDirectory(DialogueRoot);
-        Directory.CreateDirectory(SystemRoot);
+        Directory.CreateDirectory(HudRoot);
+        Directory.CreateDirectory(LoadingRoot);
         Directory.CreateDirectory(MobileRoot);
+        Directory.CreateDirectory(BuffRoot);
+        Directory.CreateDirectory(QuestRoot);
 
-        SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.AudioSettings + ".prefab", BuildAudioSettings);
-        SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.UISettings + ".prefab", BuildInterfaceSettings);
+        SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.AudioSettings + ".prefab", BuildAudioSettings);
+        SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.UISettings + ".prefab", BuildInterfaceSettings);
         SaveCoordinateDisplaySettingsPrefab();
-        SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.MainMenuSettings + ".prefab", BuildMainMenuSettings);
-        SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.AutoSaveSettings + ".prefab", BuildAutoSaveSettings);
-        SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab", BuildWorldStreamingSettings);
-        SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.DifficultySettings + ".prefab", BuildDifficultySettings);
-        SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.InputBindingSettings + ".prefab", BuildInputBindingSettings);
-        SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.InputBindingRow + ".prefab", BuildInputBindingRow);
+        SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.MainMenuSettings + ".prefab", BuildMainMenuSettings);
+        SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.AutoSaveSettings + ".prefab", BuildAutoSaveSettings);
+        SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab", BuildWorldStreamingSettings);
+        SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.DifficultySettings + ".prefab", BuildDifficultySettings);
+        SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.InputBindingSettings + ".prefab", BuildInputBindingSettings);
+        SaveNewPrefab(SettingsComponentsRoot + RuntimeUIPrefabKeys.InputBindingRow + ".prefab", BuildInputBindingRow);
         SaveNewPrefab(DialogueRoot + RuntimeUIPrefabKeys.PlayerChatInput + ".prefab", BuildPlayerChatInput);
         SaveNewPrefab(DialogueRoot + RuntimeUIPrefabKeys.CharacterSpeechBubble + ".prefab", BuildSpeechBubble);
-        SaveNewPrefab(SystemRoot + RuntimeUIPrefabKeys.WorldLoading + ".prefab", BuildWorldLoading);
+        SaveNewPrefab(LoadingRoot + RuntimeUIPrefabKeys.WorldLoading + ".prefab", BuildWorldLoading);
         SaveDimensionLoadingPrefab();
         SavePlayerWorldCoordinatePrefab();
         SaveSaveStatusPrefab();
@@ -76,9 +85,9 @@ public static class RuntimeUIPrefabBuilder
         SaveMobileControlsPrefab();
         UpdateExistingPrefab(UIRootPrefab, EnsureSafeAreaRoot);
 
-        UpdateExistingPrefab(MenuRoot + "Info_Button_List.prefab", ConfigureSettingsActionListPages);
-        UpdateExistingPrefab(InventoryRoot + "UI_Bag.prefab", AddInventorySortButton);
-        UpdateExistingPrefab(InventoryRoot + "UI_Slot.prefab", AddCraftingPreviewLayers);
+        UpdateExistingPrefab(MainMenuCoreRoot + "UI_ActionList.prefab", ConfigureSettingsActionListPages);
+        UpdateExistingPrefab(InventoryPanelsRoot + "UI_Bag.prefab", AddInventorySortButton);
+        UpdateExistingPrefab(InventoryComponentsRoot + "UI_Slot.prefab", AddCraftingPreviewLayers);
         UpdateExistingWorldPrefab(NetworkPlayerPrefab, AddNetworkPlayerNameLabel);
         UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerBuffStatusHUD);
         UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerQuestTrackerHUD);
@@ -120,7 +129,7 @@ public static class RuntimeUIPrefabBuilder
             return;
         }
 
-        Directory.CreateDirectory(SystemRoot);
+        Directory.CreateDirectory(LoadingRoot);
         SaveDimensionLoadingPrefab();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -138,10 +147,10 @@ public static class RuntimeUIPrefabBuilder
             return;
         }
 
-        Directory.CreateDirectory(SettingsRoot);
-        SaveNewPrefab(SettingsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab",
+        Directory.CreateDirectory(SettingsPanelsRoot);
+        SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab",
             BuildWorldStreamingSettings);
-        UpdateExistingPrefab(MenuRoot + "Info_Button_List.prefab",
+        UpdateExistingPrefab(MainMenuCoreRoot + "UI_ActionList.prefab",
             ConfigureSettingsActionListPages);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -159,9 +168,9 @@ public static class RuntimeUIPrefabBuilder
             return;
         }
 
-        Directory.CreateDirectory(SettingsRoot);
+        Directory.CreateDirectory(SettingsPanelsRoot);
         SaveNewPrefab(
-            SettingsRoot + RuntimeUIPrefabKeys.MainMenuSettings + ".prefab",
+            SettingsPanelsRoot + RuntimeUIPrefabKeys.MainMenuSettings + ".prefab",
             BuildMainMenuSettings);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -179,7 +188,7 @@ public static class RuntimeUIPrefabBuilder
             return;
         }
 
-        Directory.CreateDirectory(SystemRoot);
+        Directory.CreateDirectory(HudRoot);
         SavePlayerWorldCoordinatePrefab();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -197,7 +206,7 @@ public static class RuntimeUIPrefabBuilder
             return;
         }
 
-        Directory.CreateDirectory(SystemRoot);
+        Directory.CreateDirectory(HudRoot);
         SaveSaveStatusPrefab();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -215,7 +224,7 @@ public static class RuntimeUIPrefabBuilder
             return;
         }
 
-        Directory.CreateDirectory(SystemRoot);
+        Directory.CreateDirectory(BuffRoot);
         SaveBuffStatusPrefabs();
         UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerBuffStatusHUD);
         AssetDatabase.SaveAssets();
@@ -234,7 +243,7 @@ public static class RuntimeUIPrefabBuilder
             return;
         }
 
-        Directory.CreateDirectory(SystemRoot);
+        Directory.CreateDirectory(QuestRoot);
         SaveQuestTrackerPrefabs();
         UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerQuestTrackerHUD);
         AssetDatabase.SaveAssets();
@@ -253,9 +262,9 @@ public static class RuntimeUIPrefabBuilder
             return;
         }
 
-        Directory.CreateDirectory(SettingsRoot);
+        Directory.CreateDirectory(SettingsPanelsRoot);
         SaveCoordinateDisplaySettingsPrefab();
-        UpdateExistingPrefab(MenuRoot + "Info_Button_List.prefab", ConfigureSettingsActionListPages);
+        UpdateExistingPrefab(MainMenuCoreRoot + "UI_ActionList.prefab", ConfigureSettingsActionListPages);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[Runtime UI] 已固化坐标显示设置 Prefab 与设置列表三分页。");
@@ -272,9 +281,9 @@ public static class RuntimeUIPrefabBuilder
             return;
         }
 
-        Directory.CreateDirectory(SettingsRoot);
+        Directory.CreateDirectory(SettingsComponentsRoot);
         SaveNewPrefab(
-            SettingsRoot + RuntimeUIPrefabKeys.InputBindingRow + ".prefab",
+            SettingsComponentsRoot + RuntimeUIPrefabKeys.InputBindingRow + ".prefab",
             BuildInputBindingRow);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -298,7 +307,7 @@ public static class RuntimeUIPrefabBuilder
     /// <summary>保存坐标 HUD 并注册 Prefab 标签，确保 GameRes 能按键名加载。</summary>
     private static void SavePlayerWorldCoordinatePrefab()
     {
-        string prefabPath = SystemRoot + RuntimeUIPrefabKeys.PlayerWorldCoordinate + ".prefab";
+        string prefabPath = HudRoot + RuntimeUIPrefabKeys.PlayerWorldCoordinate + ".prefab";
         SaveNewPrefab(prefabPath, BuildPlayerWorldCoordinateHUD);
         EnsureRuntimePrefabAddressable(prefabPath);
     }
@@ -306,7 +315,7 @@ public static class RuntimeUIPrefabBuilder
     /// <summary>保存右上角保存状态提示并登记为运行时 Prefab。</summary>
     private static void SaveSaveStatusPrefab()
     {
-        string prefabPath = SystemRoot + RuntimeUIPrefabKeys.SaveStatus + ".prefab";
+        string prefabPath = HudRoot + RuntimeUIPrefabKeys.SaveStatus + ".prefab";
         SaveNewPrefab(prefabPath, BuildSaveStatusHUD);
         EnsureRuntimePrefabAddressable(prefabPath);
     }
@@ -314,8 +323,8 @@ public static class RuntimeUIPrefabBuilder
     /// <summary>保存 Buff 状态面板和可复用行 Prefab，并登记为运行时 Addressable。</summary>
     private static void SaveBuffStatusPrefabs()
     {
-        string panelPath = SystemRoot + RuntimeUIPrefabKeys.BuffStatus + ".prefab";
-        string itemPath = SystemRoot + RuntimeUIPrefabKeys.BuffStatusItem + ".prefab";
+        string panelPath = BuffRoot + RuntimeUIPrefabKeys.BuffStatus + ".prefab";
+        string itemPath = BuffRoot + RuntimeUIPrefabKeys.BuffStatusItem + ".prefab";
         SaveNewPrefab(panelPath, BuildBuffStatusHUD);
         SaveNewPrefab(itemPath, BuildBuffStatusItem);
         EnsureRuntimePrefabAddressable(panelPath);
@@ -325,8 +334,8 @@ public static class RuntimeUIPrefabBuilder
     /// <summary>保存任务追踪面板和可复用条目 Prefab，并登记为运行时 Addressable。</summary>
     private static void SaveQuestTrackerPrefabs()
     {
-        string panelPath = SystemRoot + RuntimeUIPrefabKeys.QuestTracker + ".prefab";
-        string itemPath = SystemRoot + RuntimeUIPrefabKeys.QuestTrackerItem + ".prefab";
+        string panelPath = QuestRoot + RuntimeUIPrefabKeys.QuestTracker + ".prefab";
+        string itemPath = QuestRoot + RuntimeUIPrefabKeys.QuestTrackerItem + ".prefab";
         SaveNewPrefab(panelPath, BuildQuestTrackerHUD);
         SaveNewPrefab(itemPath, BuildQuestTrackerItem);
         EnsureRuntimePrefabAddressable(panelPath);
@@ -344,7 +353,7 @@ public static class RuntimeUIPrefabBuilder
     /// <summary>保存维度加载页并登记为 GameRes 可寻址 Prefab。</summary>
     private static void SaveDimensionLoadingPrefab()
     {
-        string prefabPath = SystemRoot + RuntimeUIPrefabKeys.DimensionLoading + ".prefab";
+        string prefabPath = LoadingRoot + RuntimeUIPrefabKeys.DimensionLoading + ".prefab";
         SaveNewPrefab(prefabPath, BuildDimensionLoading);
         EnsureRuntimePrefabAddressable(prefabPath);
     }
@@ -352,7 +361,7 @@ public static class RuntimeUIPrefabBuilder
     /// <summary>保存坐标显示设置并登记为可由 GameRes 查询的正式运行时 Prefab。</summary>
     private static void SaveCoordinateDisplaySettingsPrefab()
     {
-        string prefabPath = SettingsRoot + RuntimeUIPrefabKeys.CoordinateDisplaySettings + ".prefab";
+        string prefabPath = SettingsPanelsRoot + RuntimeUIPrefabKeys.CoordinateDisplaySettings + ".prefab";
         SaveNewPrefab(prefabPath, BuildCoordinateDisplaySettings);
         EnsureRuntimePrefabAddressable(prefabPath);
     }
@@ -1375,7 +1384,7 @@ public static class RuntimeUIPrefabBuilder
         Transform content = FindTransform(root.transform, "Content");
         RectTransform scrollRect = FindTransform(root.transform, "Scroll View") as RectTransform;
         if (content == null || scrollRect == null)
-            throw new MissingReferenceException("Info_Button_List.prefab 缺少 Content 或 Scroll View。");
+            throw new MissingReferenceException("UI_ActionList.prefab 缺少 Content 或 Scroll View。");
 
         SetTopLeft(scrollRect, 42f, 148f, 346f, 314f);
         ConfigureActionListScroll(scrollRect, content);
@@ -1440,7 +1449,7 @@ public static class RuntimeUIPrefabBuilder
 
         RectTransform contentRect = content as RectTransform;
         if (contentRect == null)
-            throw new MissingComponentException("Info_Button_List.prefab 的 Content 缺少 RectTransform。");
+            throw new MissingComponentException("UI_ActionList.prefab 的 Content 缺少 RectTransform。");
         Stretch(contentRect);
     }
 

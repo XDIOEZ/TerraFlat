@@ -131,7 +131,7 @@ namespace FlatWorld.GameTest.Combat
 
         private static void AssertBoneLoot(string prefabName, int expectedMin, int expectedMax)
         {
-            string path = $"Assets/2_Prefabs/Entity_AI/{prefabName}.prefab";
+            string path = $"Assets/2_Prefabs/Gameplay/AI/{prefabName}.prefab";
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             DamageReceiver receiver = prefab != null
                 ? prefab.GetComponentInChildren<DamageReceiver>(true)

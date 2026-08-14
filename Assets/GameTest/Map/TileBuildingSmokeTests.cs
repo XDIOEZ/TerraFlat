@@ -10,11 +10,11 @@ namespace FlatWorld.GameTest.Map
     {
         private static readonly string[] PickaxePrefabPaths =
         {
-            "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe.prefab",
-            "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Copper.prefab",
-            "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Bronze.prefab",
-            "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_RawIron.prefab",
-            "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Iron.prefab"
+            "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe.prefab",
+            "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Copper.prefab",
+            "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Bronze.prefab",
+            "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_RawIron.prefab",
+            "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Iron.prefab"
         };
 
         [Test]
@@ -232,7 +232,7 @@ namespace FlatWorld.GameTest.Map
         [Category("Map.TileBuilding")]
         public void CaveStoneWallHasDamageProfile()
         {
-            const string path = "Assets/4_ScriptObjects/4-1_TileBlock/TileBase_StoneWall.asset";
+            const string path = "Assets/4_ScriptObjects/World/Tiles/TileBase_StoneWall.asset";
             Tile_Block wall = AssetDatabase.LoadAssetAtPath<Tile_Block>(path);
 
             Assert.That(wall, Is.Not.Null, $"Missing cave wall definition: {path}");
@@ -255,7 +255,7 @@ namespace FlatWorld.GameTest.Map
         [Category("Map.TileBuilding")]
         public void BuiltStoneWallUsesOneCellTileAndCellBuildingState()
         {
-            const string path = "Assets/4_ScriptObjects/4-1_TileBlock/TileBase_BuiltStoneWall.asset";
+            const string path = "Assets/4_ScriptObjects/World/Tiles/TileBase_BuiltStoneWall.asset";
             Tile_Block wall = AssetDatabase.LoadAssetAtPath<Tile_Block>(path);
 
             Assert.That(wall, Is.Not.Null, $"Missing built stone wall definition: {path}");

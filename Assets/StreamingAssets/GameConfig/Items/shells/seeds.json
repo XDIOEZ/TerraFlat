@@ -12,7 +12,7 @@
     {
       "id": "Seed_Apple",
       "parent": "Seed_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Seed/Seed.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Seeds/Seed.prefab",
       "gameName": "Seed_Apple",
       "description": "一天一苹果,医生远离我",
       "durability": 1.0,
@@ -22,7 +22,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Plant/GrassAndFlower.png[GrassAndFlower_16]",
+        "spriteAddress": "Assets/6_Art/Items/Plants/GrassAndFlower.png[GrassAndFlower_16]",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

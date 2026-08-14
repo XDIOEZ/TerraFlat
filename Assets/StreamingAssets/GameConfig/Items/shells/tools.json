@@ -12,7 +12,7 @@
     {
       "id": "Stick_Wood",
       "parent": "WoodTool_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Item/Stick.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Stick.prefab",
       "gameName": "Stick_Wood",
       "description": "常见的木棍，是工具、武器和生火装置的基础材料。",
       "durability": 1.0,
@@ -22,7 +22,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_408.png",
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_408.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -193,7 +193,7 @@
     {
       "id": "Log",
       "parent": "WoodTool_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Item/Log.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Log.prefab",
       "gameName": "Log",
       "description": "砍伐树木获得的原木，可加工为木板或作为燃料。",
       "durability": 1.0,
@@ -203,7 +203,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Plant/Tree/item296.png",
+        "spriteAddress": "Assets/6_Art/Items/Plants/Tree/item296.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -420,7 +420,7 @@
     {
       "id": "Axe_Stone",
       "parent": "Axe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Axe/Axe.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe.prefab",
       "gameName": "Axe_Stone",
       "description": "以石材制成的斧头，适合早期砍伐。",
       "durability": 1.0,
@@ -432,7 +432,7 @@
         "Axe"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Weapon_031.png",
+        "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_031.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -603,7 +603,7 @@
     {
       "id": "Axe_Flint",
       "parent": "Axe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Axe/Axe_Flint.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Flint.prefab",
       "gameName": "Axe_Flint",
       "description": "以燧石制成的锋利斧头，比普通石斧更耐用。",
       "durability": 1.0,
@@ -615,7 +615,7 @@
         "Axe"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_366.png",
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_366.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -786,7 +786,7 @@
     {
       "id": "Axe_Copper",
       "parent": "Axe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Axe/Axe_Copper.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Copper.prefab",
       "gameName": "Axe_Copper",
       "description": "以铜制成的斧头，拥有稳定的砍伐效率。",
       "durability": 100.0,
@@ -798,7 +798,7 @@
         "Axe"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_376.png",
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_376.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -969,7 +969,7 @@
     {
       "id": "Axe_Bronze",
       "parent": "Axe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Axe/Axe_Bronze.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Bronze.prefab",
       "gameName": "Axe_Bronze",
       "description": "以青铜制成的斧头，强度高于铜制工具。",
       "durability": 1000.0,
@@ -981,7 +981,7 @@
         "Axe"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Weapon_032.png",
+        "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_032.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1153,7 +1153,7 @@
     {
       "id": "Axe_RawIron",
       "parent": "Axe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Axe/Axe_RawIron.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_RawIron.prefab",
       "gameName": "Axe_RawIron",
       "description": "以粗铁锻成的斧头，是早期金属砍伐工具。",
       "durability": 100.0,
@@ -1165,7 +1165,7 @@
         "Axe"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_371.png",
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_371.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1336,7 +1336,7 @@
     {
       "id": "Axe_Iron",
       "parent": "Axe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Axe/Axe_Iron.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Iron.prefab",
       "gameName": "Axe_Iron",
       "description": "以熟铁锻成的坚固斧头，适合持续砍伐。",
       "durability": 1000.0,
@@ -1348,7 +1348,7 @@
         "Axe"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Weapon_033.png",
+        "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_033.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1527,7 +1527,7 @@
     {
       "id": "Pickaxe_Stone",
       "parent": "Pickaxe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe.prefab",
       "gameName": "Pickaxe_Stone",
       "description": "以石材制成的矿镐，适合开采浅层矿物。",
       "durability": 1.0,
@@ -1539,7 +1539,7 @@
         "Modern"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_363.png",
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_363.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1710,7 +1710,7 @@
     {
       "id": "Pickaxe_Copper",
       "parent": "Pickaxe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Copper.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Copper.prefab",
       "gameName": "Pickaxe_Copper",
       "description": "以铜制成的矿镐，比石镐更耐用。",
       "durability": 200.0,
@@ -1724,7 +1724,7 @@
         "Modern"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_373.png",
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_373.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -1895,7 +1895,7 @@
     {
       "id": "Pickaxe_Bronze",
       "parent": "Pickaxe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Bronze.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Bronze.prefab",
       "gameName": "Pickaxe_Bronze",
       "description": "以青铜制成的矿镐，适合开采较硬矿层。",
       "durability": 200.0,
@@ -1907,7 +1907,7 @@
         "36"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Weapon_020.png",
+        "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_020.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2078,7 +2078,7 @@
     {
       "id": "Pickaxe_RawIron",
       "parent": "Pickaxe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_RawIron.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_RawIron.prefab",
       "gameName": "Pickaxe_RawIron",
       "description": "用粗铁锭制作的金属镐，是从石器迈入铁器阶段的第一件采矿工具。",
       "durability": 200.0,
@@ -2092,7 +2092,7 @@
         "Modern"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Tool_368.png",
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_368.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2263,7 +2263,7 @@
     {
       "id": "Pickaxe_Iron",
       "parent": "Pickaxe_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Iron.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Iron.prefab",
       "gameName": "Pickaxe_Iron",
       "description": "用熟铁锭制作的坚固铁镐，适合持续开采更坚硬的矿层。",
       "durability": 200.0,
@@ -2277,7 +2277,7 @@
         "Modern"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Weapon_021.png",
+        "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_021.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -2455,7 +2455,7 @@
     },
     {
       "id": "FlintStrike",
-      "sourcePrefab": "Assets/2_Prefabs/Tools/FlintStrike.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/FlintStrike.prefab",
       "shellPrefab": "FlintStrike",
       "gameName": "打火石",
       "description": "用于生火的打火石。"

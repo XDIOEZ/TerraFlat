@@ -9,8 +9,8 @@ description: "Use when: 定位或修改 FlatWorld 的 MOD 扫描、manifest、�
 
 - 管理/模型/API/Lua：`Assets/5_Scripts/5-3_GamePlay/Extensibility/Mods/{ModRuntimeManager,ModManifest,ModApi,ModLuaRuntime,Mod_LuaBehaviour}.cs`
 - 存档：`World/Map/Data/GameSaveData.Mods.cs`
-- 模板：`Assets/5_Scripts/5-2_Editor/Mods/ModTemplateCreator.cs`
-- 本体接入：`Core/Manager/GameRes.cs`
+- 模板：`Assets/Editor/FlatWorld/ProjectTools/Mods/ModTemplateCreator.cs`
+- 本体接入：`Core/Lifecycle/GameRes.cs`
 
 ## 加载与不变量
 

@@ -712,10 +712,10 @@ public class Inventory
             return;
         }
 
-        GameObject menuPrefab = GameRes.Instance.GetPrefab("右键菜单");
+        GameObject menuPrefab = GameRes.Instance.GetPrefab("UI_ItemContextMenu");
         if (menuPrefab == null)
         {
-            Debug.LogError("[Inventory.OnRightClick] 未找到预制体: 右键菜单");
+            Debug.LogError("[Inventory.OnRightClick] 未找到预制体: UI_ItemContextMenu");
             return;
         }
 
