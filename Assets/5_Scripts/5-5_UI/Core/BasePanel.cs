@@ -96,6 +96,8 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
     public event Action Opened;
     public event Action Closed;
+    /// <summary>领域面板可优先消费取消操作，例如关闭危险确认层而不是直接关闭整个面板。</summary>
+    public Func<BaseEventData, bool> CancelOverride { get; set; }
 
     /// <summary>
     /// 是否属于可由全局取消快捷键关闭的临时面板。
@@ -441,6 +443,12 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         if (!gamepadNavigationPrepared || !closeOnGamepadCancel || !isOpen)
             return;
 
+        if (CancelOverride != null && CancelOverride(eventData))
+        {
+            UIManager.Instance.NotifyCancelHandled();
+            return;
+        }
+
         eventData.Use();
         UIManager.Instance.NotifyCancelHandled();
         Close();
@@ -473,6 +481,9 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// </summary>
     public void SelectDefaultForGamepad()
     {
+        if (!EventSystemGuard.IsGamepadMode)
+            return;
+
         EventSystem eventSystem = EventSystem.current;
         if (eventSystem == null)
             return;
@@ -599,6 +610,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
         Opened = null;
         Closed = null;
+        CancelOverride = null;
     }
 
     /// <summary>对象启停会改变活动面板集合，必须让顶层查询缓存失效。</summary>

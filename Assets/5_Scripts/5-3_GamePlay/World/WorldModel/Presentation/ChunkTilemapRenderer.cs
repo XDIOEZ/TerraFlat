@@ -1,15 +1,47 @@
+using System;
 using FlatWorld.WorldModel;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+/// <summary>
+/// 新版区块的基础 Tilemap 表现层。
+///
+/// 地表水岸与矿洞墙脚使用 Ground Tilemap，矿洞地下水使用 CaveWater Tilemap。
+/// 左、右、下、上四个接触方向编码到 Tile Color RGBA，由 Tilemap Shader 绘制渐变，
+/// 不再为接触阴影创建 SpriteRenderer 游戏对象。Tile Color 只作为表现数据。
+/// </summary>
 public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
 {
+    #region 配置与状态
+
     [SerializeField] private ChunkTilePaletteSO palette;
     [SerializeField] private Tilemap groundTilemap;
+    [SerializeField] private Tilemap caveWaterTilemap;
     [SerializeField] private Tilemap backTilemap;
     [SerializeField] private Tilemap blockingTilemap;
 
+    private WorldRuntime boundWorld;
     private ChunkRuntime boundChunk;
+    private IDisposable chunkCommittedSubscription;
+    private bool renderCaveWater;
+
+    #endregion
+
+    #region 绑定与生命周期
+
+    /// <summary>注入当前世界，用于计算跨 Chunk 的地下水岸线方向。</summary>
+    public void SetWorld(WorldRuntime worldRuntime)
+    {
+        if (ReferenceEquals(boundWorld, worldRuntime))
+            return;
+
+        chunkCommittedSubscription?.Dispose();
+        chunkCommittedSubscription = null;
+        boundWorld = worldRuntime;
+        if (boundWorld != null)
+            chunkCommittedSubscription =
+                boundWorld.Events.Subscribe<ChunkCommitted>(HandleChunkCommitted);
+    }
 
     public void Bind(ChunkRuntime chunk)
     {
@@ -22,6 +54,9 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
 
         Unbind();
         boundChunk = chunk;
+        renderCaveWater = IsCaveDimension(chunk.Address.DimensionId);
+        if (caveWaterTilemap != null)
+            caveWaterTilemap.gameObject.SetActive(renderCaveWater);
         boundChunk.Terrain.Changed += HandleTerrainChanged;
         Render(chunk.Terrain);
     }
@@ -32,10 +67,16 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
             boundChunk.Terrain.Changed -= HandleTerrainChanged;
         if (groundTilemap != null)
             groundTilemap.ClearAllTiles();
+        if (caveWaterTilemap != null)
+        {
+            caveWaterTilemap.ClearAllTiles();
+            caveWaterTilemap.gameObject.SetActive(false);
+        }
         if (backTilemap != null)
             backTilemap.ClearAllTiles();
         if (blockingTilemap != null)
             blockingTilemap.ClearAllTiles();
+        renderCaveWater = false;
         boundChunk = null;
     }
 
@@ -43,8 +84,40 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
     {
         if (boundChunk?.Terrain == null)
             return;
-        RenderCell(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
+        if (changed.Kind != TerrainChangeKind.Cell &&
+            changed.Kind != TerrainChangeKind.TileStack)
+            return;
+
+        // 接触方向会连带影响四个邻格，地形变化时刷新本 Chunk 的轻量 Tilemap 数据。
+        Render(boundChunk.Terrain);
     }
+
+    /// <summary>相邻区块生成后刷新边界格的岸向数据。</summary>
+    private void HandleChunkCommitted(ChunkCommitted committed)
+    {
+        if (boundChunk?.Terrain == null ||
+            !string.Equals(committed.Address.DimensionId, boundChunk.Address.DimensionId,
+                StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        int width = boundChunk.Terrain.Width;
+        int height = boundChunk.Terrain.Height;
+        Int2 origin = boundChunk.Address.ChunkOrigin;
+        Int2 changed = committed.Address.ChunkOrigin;
+        bool isNeighbour =
+            (changed.X == origin.X - width && changed.Y == origin.Y) ||
+            (changed.X == origin.X + width && changed.Y == origin.Y) ||
+            (changed.X == origin.X && changed.Y == origin.Y - height) ||
+            (changed.X == origin.X && changed.Y == origin.Y + height);
+        if (isNeighbour)
+            Render(boundChunk.Terrain);
+    }
+
+    #endregion
+
+    #region Tilemap 绘制
 
     private void Render(ChunkTerrainData terrain)
     {
@@ -55,6 +128,9 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
 
         int count = terrain.CellCount;
         var ground = groundTilemap != null ? new TileBase[count] : null;
+        var caveWater = renderCaveWater && caveWaterTilemap != null
+            ? new TileBase[count]
+            : null;
         var back = backTilemap != null ? new TileBase[count] : null;
         var blocking = blockingTilemap != null ? new TileBase[count] : null;
         for (int y = 0; y < terrain.Height; y++)
@@ -63,7 +139,10 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
             {
                 int index = y * terrain.Width + x;
                 TerrainCell cell = terrain.GetCell(x, y);
-                if (ground != null && cell.GroundTileId != 0)
+                bool water = IsWater(cell);
+                if (caveWater != null && water && cell.GroundTileId != 0)
+                    palette.TryGetTile(cell.GroundTileId, out caveWater[index]);
+                else if (ground != null && cell.GroundTileId != 0)
                     palette.TryGetTile(cell.GroundTileId, out ground[index]);
                 if (back != null && cell.BackTileId != 0)
                     palette.TryGetTile(cell.BackTileId, out back[index]);
@@ -74,27 +153,156 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
 
         var bounds = new BoundsInt(0, 0, 0, terrain.Width, terrain.Height, 1);
         if (ground != null)
+        {
             groundTilemap.SetTilesBlock(bounds, ground);
+            ApplyGroundContactMasks(terrain);
+        }
+        if (caveWater != null)
+        {
+            caveWaterTilemap.SetTilesBlock(bounds, caveWater);
+            ApplyCaveWaterEdgeMasks(terrain);
+        }
         if (back != null)
             backTilemap.SetTilesBlock(bounds, back);
         if (blocking != null)
             blockingTilemap.SetTilesBlock(bounds, blocking);
     }
 
-    private void RenderCell(ChunkTerrainData terrain, int x, int y)
+    #endregion
+
+    #region Tilemap Shader 数据
+
+    /// <summary>矿洞地面编码墙脚方向；地表水格编码水岸方向。</summary>
+    private void ApplyGroundContactMasks(ChunkTerrainData terrain)
     {
-        TerrainCell cell = terrain.GetCell(x, y);
-        Vector3Int position = new(x, y, 0);
-        if (groundTilemap != null)
-            groundTilemap.SetTile(position, Resolve(cell.GroundTileId));
-        if (backTilemap != null)
-            backTilemap.SetTile(position, Resolve(cell.BackTileId));
-        if (blockingTilemap != null)
-            blockingTilemap.SetTile(position, Resolve(cell.BlockingTileId));
+        bool cave = IsCaveDimension(boundChunk?.Address.DimensionId);
+        for (int y = 0; y < terrain.Height; y++)
+        {
+            for (int x = 0; x < terrain.Width; x++)
+            {
+                TerrainCell cell = terrain.GetCell(x, y);
+                if (cell.GroundTileId == 0)
+                    continue;
+
+                bool receivesShadow = cave ? !IsBlocking(cell) && !IsWater(cell) : IsWater(cell);
+                Vector3Int position = new(x, y, 0);
+                groundTilemap.SetTileFlags(position, TileFlags.None);
+                groundTilemap.SetColor(position, receivesShadow
+                    ? BuildContactMask(terrain, x, y, cave ? ContactKind.Wall : ContactKind.Land)
+                    : Color.clear);
+            }
+        }
     }
 
-    private TileBase Resolve(int tileId)
+    /// <summary>RGBA 分别编码左、右、下、上岸线，Shader 在对应水格内侧绘制暗边。</summary>
+    private void ApplyCaveWaterEdgeMasks(ChunkTerrainData terrain)
     {
-        return tileId != 0 && palette.TryGetTile(tileId, out TileBase tile) ? tile : null;
+        for (int y = 0; y < terrain.Height; y++)
+        {
+            for (int x = 0; x < terrain.Width; x++)
+            {
+                TerrainCell cell = terrain.GetCell(x, y);
+                if (!IsWater(cell))
+                    continue;
+
+                Vector3Int position = new(x, y, 0);
+                caveWaterTilemap.SetTileFlags(position, TileFlags.None);
+                caveWaterTilemap.SetColor(position,
+                    BuildContactMask(terrain, x, y, ContactKind.Land));
+            }
+        }
     }
+
+    /// <summary>RGBA 分别表示左、右、下、上是否需要绘制接触阴影。</summary>
+    private Color BuildContactMask(ChunkTerrainData terrain, int x, int y, ContactKind kind)
+    {
+        return new Color(
+            IsContactNeighbour(terrain, x - 1, y, kind) ? 1f : 0f,
+            IsContactNeighbour(terrain, x + 1, y, kind) ? 1f : 0f,
+            IsContactNeighbour(terrain, x, y - 1, kind) ? 1f : 0f,
+            IsContactNeighbour(terrain, x, y + 1, kind) ? 1f : 0f);
+    }
+
+    private bool IsContactNeighbour(ChunkTerrainData terrain, int x, int y, ContactKind kind)
+    {
+        if (!TryGetCell(terrain, x, y, out TerrainCell neighbour))
+            return false;
+        return kind == ContactKind.Wall ? IsBlocking(neighbour) : !IsWater(neighbour);
+    }
+
+    /// <summary>读取本区块或已就绪的正交相邻区块格子。</summary>
+    private bool TryGetCell(ChunkTerrainData terrain, int x, int y, out TerrainCell cell)
+    {
+        if (x >= 0 && x < terrain.Width && y >= 0 && y < terrain.Height)
+        {
+            cell = terrain.GetCell(x, y);
+            return true;
+        }
+
+        cell = default;
+        if (boundWorld == null || boundChunk == null)
+            return false;
+
+        Int2 origin = boundChunk.Address.ChunkOrigin;
+        int targetOriginX = origin.X;
+        int targetOriginY = origin.Y;
+        int localX = x;
+        int localY = y;
+        if (x < 0)
+            targetOriginX -= terrain.Width;
+        else if (x >= terrain.Width)
+            targetOriginX += terrain.Width;
+        if (y < 0)
+            targetOriginY -= terrain.Height;
+        else if (y >= terrain.Height)
+            targetOriginY += terrain.Height;
+
+        var address = new FlatWorld.WorldModel.WorldAddress(boundChunk.Address.DimensionId,
+            new Int2(targetOriginX, targetOriginY));
+        if (!boundWorld.TryGetChunkTerrain(address, out ChunkTerrainData neighbourTerrain))
+            return false;
+
+        if (localX < 0)
+            localX += neighbourTerrain.Width;
+        else if (localX >= terrain.Width)
+            localX -= terrain.Width;
+        if (localY < 0)
+            localY += neighbourTerrain.Height;
+        else if (localY >= terrain.Height)
+            localY -= terrain.Height;
+        if (localX < 0 || localX >= neighbourTerrain.Width ||
+            localY < 0 || localY >= neighbourTerrain.Height)
+        {
+            return false;
+        }
+
+        cell = neighbourTerrain.GetCell(localX, localY);
+        return true;
+    }
+
+    private static bool IsCaveDimension(string dimensionId)
+    {
+        if (DimensionManager.Instance != null &&
+            DimensionManager.Instance.TryGetDefinition(dimensionId,
+                out DimensionDefinition definition))
+        {
+            return definition.GenerationMode == DimensionGenerationMode.Cave;
+        }
+
+        return string.Equals(dimensionId, "cave", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsWater(TerrainCell cell) =>
+        (cell.Flags & TerrainCellFlags.Water) != 0;
+
+    private static bool IsBlocking(TerrainCell cell) =>
+        cell.BlockingTileId != 0 && (cell.Flags & TerrainCellFlags.Blocking) != 0;
+
+    private enum ContactKind
+    {
+        Wall,
+        Land
+    }
+
+    #endregion
 }

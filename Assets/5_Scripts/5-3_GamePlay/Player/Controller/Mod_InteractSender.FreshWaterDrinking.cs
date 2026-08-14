@@ -1,199 +1,406 @@
+using System.Collections.Generic;
 using FlatWorld.Audio;
 using UnityEngine;
 
-/// <summary>
-/// 玩家水体饮用扩展：只有持有淡水或“位于盐水中”Buff 时，长按交互键 1 秒才开始饮水。
-/// 饮水开始后每秒恢复 25 水分并播放饮水音效与蓝色水粒子；脏水每个饮水 Tick 独立进行 20% 感染判定。
-/// 输入按下、松开仍由 Mod_InteractSender 的 E/手柄西键绑定统一驱动，不新增第二套输入动作。
-/// </summary>
-public partial class Mod_InteractSender
+/// <summary>环境动作定义，由环境来源提供规则，每次开始时为角色创建独立运行实例。</summary>
+public interface IEnvironmentActionDefinition
 {
-    #region 水体饮用配置
+    string ActionId { get; }
+    int Priority { get; }
+    IEnvironmentActionInstance CreateInstance(Item actor);
+}
 
-    private const string FreshWaterDrinkEffectName = "Particle_BeEat";
+/// <summary>单个角色的一次环境动作实例，负责开始、持续更新与取消。</summary>
+public interface IEnvironmentActionInstance
+{
+    string ActionId { get; }
+    bool IsHeld { get; }
+    bool IsExecuting { get; }
+    bool Begin();
+    void Tick(float deltaTime);
+    void Cancel();
+}
 
-    [Header("水体饮用")]
-    [SerializeField, Min(0f)] private float freshWaterDrinkHoldSeconds = 1f;
-    [SerializeField, Min(0.05f)] private float freshWaterDrinkTickSeconds = 1f;
-    [SerializeField, Min(0f)] private float freshWaterGainPerTick = 25f;
-    [SerializeField, Range(0f, 1f)] private float dirtyWaterInfectionChance = 0.2f;
+/// <summary>环境被动效果定义；进入环境时为角色创建实例，离开时由同一实例精确撤销。</summary>
+public interface IEnvironmentEffectDefinition
+{
+    string EffectId { get; }
+    IEnvironmentEffectInstance CreateInstance(Item actor);
+}
+
+/// <summary>单个角色持有的环境被动效果实例，不进入 Buff 列表，也不参与 Buff 清理。</summary>
+public interface IEnvironmentEffectInstance
+{
+    string EffectId { get; }
+    bool IsApplied { get; }
+    bool Apply();
+    void Remove();
+}
+
+/// <summary>
+/// 角色侧环境动作运行器。只负责接收定义、选择动作并运行独立实例，
+/// 不包含喝水、采集等具体规则，后续新增动作时无需扩充本类。
+/// </summary>
+public sealed class EnvironmentInteractionRunner : MonoBehaviour
+{
+    #region 运行时状态
+
+    private readonly List<IEnvironmentActionDefinition> definitions = new(4);
+    private readonly List<IEnvironmentEffectDefinition> effectDefinitions = new(4);
+    private readonly List<IEnvironmentEffectInstance> activeEffects = new(4);
+    private Item actor;
+    private IEnvironmentActionInstance activeAction;
+    private IEnvironmentActionInstance lastAction;
+
+    public int AvailableActionCount => definitions.Count;
+    public IEnvironmentActionInstance ActiveAction => activeAction;
+    public IEnvironmentActionInstance LastAction => lastAction;
+    public int ActiveEffectCount => activeEffects.Count;
 
     #endregion
 
-    #region 水体饮用状态
+    #region 环境被动效果
 
-    private BuffManager freshWaterBuffManager;
-    private Mod_Food freshWaterFood;
-    private bool freshWaterDrinkHeld;
-    private bool freshWaterDrinking;
-    private float freshWaterHoldElapsed;
-    private float freshWaterTickElapsed;
-
-    public AudioHandle LastFreshWaterDrinkAudioHandle { get; private set; }
-    public GameObject LastFreshWaterDrinkEffect { get; private set; }
-
-    public bool IsFreshWaterDrinkHeld => freshWaterDrinkHeld;
-    public bool IsDrinkingFreshWater => freshWaterDrinking;
-    public float FreshWaterGainPerTick => freshWaterGainPerTick;
-    public float DirtyWaterInfectionChance => dirtyWaterInfectionChance;
-
-    #endregion
-
-    #region 输入与 Tick
-
-    /// <summary>交互键按下时尝试建立水体饮用等待；没有水体能力 Buff 时不会进入状态。</summary>
-    public bool BeginFreshWaterDrinkHold()
+    /// <summary>替换当前环境效果；每个定义为当前角色创建独立实例并立即应用。</summary>
+    public void SetAvailableEffects(params IEnvironmentEffectDefinition[] availableEffects)
     {
-        ResolveFreshWaterDrinkModules();
-        if (!TryGetDrinkableWater(out _))
+        ClearAvailableEffects();
+        if (availableEffects == null || actor == null)
+            return;
+
+        for (int i = 0; i < availableEffects.Length; i++)
         {
-            ResetFreshWaterDrinkState();
+            IEnvironmentEffectDefinition definition = availableEffects[i];
+            if (definition == null)
+                continue;
+
+            IEnvironmentEffectInstance instance = definition.CreateInstance(actor);
+            if (instance == null || !instance.Apply())
+            {
+                instance?.Remove();
+                continue;
+            }
+
+            effectDefinitions.Add(definition);
+            activeEffects.Add(instance);
+        }
+    }
+
+    /// <summary>离开环境时使用原实例撤销效果，避免按当前数值重新猜测来源。</summary>
+    public void ClearAvailableEffects()
+    {
+        for (int i = activeEffects.Count - 1; i >= 0; i--)
+            activeEffects[i]?.Remove();
+
+        activeEffects.Clear();
+        effectDefinitions.Clear();
+    }
+
+    public bool TryGetEffectDefinition<TDefinition>(out TDefinition definition)
+        where TDefinition : class, IEnvironmentEffectDefinition
+    {
+        for (int i = 0; i < effectDefinitions.Count; i++)
+        {
+            if (effectDefinitions[i] is TDefinition typed)
+            {
+                definition = typed;
+                return true;
+            }
+        }
+
+        definition = null;
+        return false;
+    }
+
+    #endregion
+
+    #region 环境定义
+
+    public void Bind(Item actionActor) => actor = actionActor;
+
+    public void SetAvailableActions(params IEnvironmentActionDefinition[] availableDefinitions)
+    {
+        CancelActiveAction();
+        definitions.Clear();
+        if (availableDefinitions == null)
+            return;
+
+        for (int i = 0; i < availableDefinitions.Length; i++)
+        {
+            if (availableDefinitions[i] != null)
+                definitions.Add(availableDefinitions[i]);
+        }
+    }
+
+    public void ClearAvailableActions()
+    {
+        CancelActiveAction();
+        definitions.Clear();
+    }
+
+    public bool TryGetDefinition<TDefinition>(out TDefinition definition)
+        where TDefinition : class, IEnvironmentActionDefinition
+    {
+        for (int i = 0; i < definitions.Count; i++)
+        {
+            if (definitions[i] is TDefinition typed)
+            {
+                definition = typed;
+                return true;
+            }
+        }
+
+        definition = null;
+        return false;
+    }
+
+    #endregion
+
+    #region 动作运行
+
+    public bool BeginPreferredAction()
+    {
+        CancelActiveAction();
+        IEnvironmentActionDefinition selected = null;
+        for (int i = 0; i < definitions.Count; i++)
+        {
+            IEnvironmentActionDefinition candidate = definitions[i];
+            if (selected == null || candidate.Priority > selected.Priority)
+                selected = candidate;
+        }
+
+        if (actor == null || selected == null)
+            return false;
+
+        IEnvironmentActionInstance instance = selected.CreateInstance(actor);
+        if (instance == null || !instance.Begin())
+        {
+            instance?.Cancel();
             return false;
         }
 
-        freshWaterDrinkHeld = true;
-        freshWaterDrinking = false;
-        freshWaterHoldElapsed = 0f;
-        freshWaterTickElapsed = 0f;
+        activeAction = instance;
+        lastAction = instance;
         return true;
     }
 
-    /// <summary>松开交互键、输入锁定或离开水体时立即停止饮水。</summary>
-    public void EndFreshWaterDrinkHold()
+    public void TickActiveAction(float deltaTime) =>
+        activeAction?.Tick(Mathf.Max(0f, deltaTime));
+
+    public void CancelActiveAction()
     {
-        ResetFreshWaterDrinkState();
+        if (activeAction == null)
+            return;
+
+        activeAction.Cancel();
+        lastAction = activeAction;
+        activeAction = null;
     }
 
-    /// <summary>按模块 Tick 推进长按与持续饮水，不依赖帧率。</summary>
-    public void TickFreshWaterDrinking(float deltaTime)
+    private void OnDisable()
     {
-        if (!freshWaterDrinkHeld)
+        CancelActiveAction();
+        ClearAvailableEffects();
+    }
+
+    #endregion
+}
+
+/// <summary>环境移动速度倍率定义；用于水体、泥地等只在环境内生效的被动影响。</summary>
+public sealed class MoveSpeedEnvironmentEffectDefinition : IEnvironmentEffectDefinition
+{
+    public const string StableEffectId = "environment.move_speed_multiplier";
+
+    public MoveSpeedEnvironmentEffectDefinition(float multiplier)
+    {
+        Multiplier = Mathf.Max(0.01f, multiplier);
+    }
+
+    public string EffectId => StableEffectId;
+    public float Multiplier { get; }
+    public IEnvironmentEffectInstance CreateInstance(Item actor) =>
+        new MoveSpeedEnvironmentEffectInstance(actor, this);
+}
+
+/// <summary>角色独享的环境移速实例；应用时乘入，离开时仅撤销自己贡献的倍率。</summary>
+public sealed class MoveSpeedEnvironmentEffectInstance : IEnvironmentEffectInstance
+{
+    private readonly Mover mover;
+    private readonly float multiplier;
+
+    public MoveSpeedEnvironmentEffectInstance(Item actor,
+        MoveSpeedEnvironmentEffectDefinition definition)
+    {
+        mover = actor?.itemMods?.GetMod_ByID<Mover>(ModText.Mover);
+        multiplier = definition?.Multiplier ?? 1f;
+    }
+
+    public string EffectId => MoveSpeedEnvironmentEffectDefinition.StableEffectId;
+    public bool IsApplied { get; private set; }
+
+    public bool Apply()
+    {
+        if (IsApplied || mover?.Speed == null || multiplier <= 0f)
+            return false;
+
+        mover.Speed.MultiplicativeModifier *= multiplier;
+        IsApplied = true;
+        return true;
+    }
+
+    public void Remove()
+    {
+        if (!IsApplied)
             return;
 
-        ResolveFreshWaterDrinkModules();
-        if (!TryGetDrinkableWater(out _))
-        {
-            ResetFreshWaterDrinkState();
+        if (mover?.Speed != null && multiplier > 0f)
+            mover.Speed.MultiplicativeModifier /= multiplier;
+        IsApplied = false;
+    }
+}
+
+/// <summary>水体来源类型，是当前环境事实，不属于可驱散或持久化的 Buff。</summary>
+public enum WaterEnvironmentKind
+{
+    CleanFresh,
+    DirtyFresh,
+    Salt
+}
+
+/// <summary>水体提供的喝水动作定义；保存规则，不保存任何玩家运行状态。</summary>
+public sealed class DrinkWaterActionDefinition : IEnvironmentActionDefinition
+{
+    public const string StableActionId = "environment.drink_water";
+
+    public DrinkWaterActionDefinition(WaterEnvironmentKind waterKind, float holdSeconds,
+        float tickSeconds, float waterGainPerTick, float dirtyInfectionChance)
+    {
+        WaterKind = waterKind;
+        HoldSeconds = Mathf.Max(0f, holdSeconds);
+        TickSeconds = Mathf.Max(0.05f, tickSeconds);
+        WaterGainPerTick = Mathf.Max(0f, waterGainPerTick);
+        DirtyInfectionChance = Mathf.Clamp01(dirtyInfectionChance);
+    }
+
+    public string ActionId => StableActionId;
+    public int Priority => 100;
+    public WaterEnvironmentKind WaterKind { get; }
+    public float HoldSeconds { get; }
+    public float TickSeconds { get; }
+    public float WaterGainPerTick { get; }
+    public float DirtyInfectionChance { get; }
+    public IEnvironmentActionInstance CreateInstance(Item actor) =>
+        new DrinkWaterActionInstance(actor, this);
+}
+
+/// <summary>单个角色的一次喝水实例，维护长按、Tick、补水、感染与反馈。</summary>
+public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
+{
+    private const string DrinkEffectName = "Particle_BeEat";
+    private readonly Item actor;
+    private readonly DrinkWaterActionDefinition definition;
+    private readonly BuffManager buffManager;
+    private readonly Mod_Food food;
+    private float holdElapsed;
+    private float tickElapsed;
+
+    public DrinkWaterActionInstance(Item actor, DrinkWaterActionDefinition definition)
+    {
+        this.actor = actor;
+        this.definition = definition;
+        buffManager = actor?.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        food = actor?.itemMods?.GetMod_ByID(ModText.Food) as Mod_Food;
+    }
+
+    public string ActionId => DrinkWaterActionDefinition.StableActionId;
+    public bool IsHeld { get; private set; }
+    public bool IsExecuting { get; private set; }
+    public DrinkWaterActionDefinition Definition => definition;
+    public AudioHandle LastAudioHandle { get; private set; }
+    public GameObject LastEffect { get; private set; }
+
+    public bool Begin()
+    {
+        if (actor == null || definition == null || food?.Data?.nutrition == null)
+            return false;
+
+        IsHeld = true;
+        IsExecuting = false;
+        holdElapsed = 0f;
+        tickElapsed = 0f;
+        return true;
+    }
+
+    public void Tick(float deltaTime)
+    {
+        if (!IsHeld)
             return;
-        }
 
         float safeDelta = Mathf.Max(0f, deltaTime);
-        if (!freshWaterDrinking)
+        if (!IsExecuting)
         {
-            freshWaterHoldElapsed += safeDelta;
-            if (freshWaterHoldElapsed < freshWaterDrinkHoldSeconds)
+            holdElapsed += safeDelta;
+            if (holdElapsed < definition.HoldSeconds)
                 return;
 
-            freshWaterDrinking = true;
-            freshWaterTickElapsed = 0f;
-            ProcessFreshWaterDrinkPulse(UnityEngine.Random.value);
+            IsExecuting = true;
+            tickElapsed = 0f;
+            ProcessPulse(Random.value);
             return;
         }
 
-        freshWaterTickElapsed += safeDelta;
-        float interval = Mathf.Max(0.05f, freshWaterDrinkTickSeconds);
-        while (freshWaterTickElapsed >= interval && freshWaterDrinkHeld)
+        tickElapsed += safeDelta;
+        while (tickElapsed >= definition.TickSeconds && IsHeld)
         {
-            freshWaterTickElapsed -= interval;
-            ProcessFreshWaterDrinkPulse(UnityEngine.Random.value);
+            tickElapsed -= definition.TickSeconds;
+            ProcessPulse(Random.value);
         }
     }
 
-    #endregion
-
-    #region 饮水结算
-
-    /// <summary>执行一次公开且可确定验证的饮水脉冲；返回是否实际获得了水体饮用资格。</summary>
-    public bool ProcessFreshWaterDrinkPulse(float infectionRoll, bool playFeedback = true)
+    public void Cancel()
     {
-        ResolveFreshWaterDrinkModules();
-        if (!TryGetDrinkableWater(out bool dirty) ||
-            freshWaterFood?.Data?.nutrition == null)
-        {
-            ResetFreshWaterDrinkState();
+        IsHeld = false;
+        IsExecuting = false;
+        holdElapsed = 0f;
+        tickElapsed = 0f;
+    }
+
+    public bool ProcessPulse(float infectionRoll, bool playFeedback = true)
+    {
+        if (food?.Data?.nutrition == null || definition == null)
             return false;
-        }
 
-        Nutrition nutrition = freshWaterFood.Data.nutrition;
+        Nutrition nutrition = food.Data.nutrition;
         nutrition.Water = Mathf.Clamp(
-            nutrition.Water + Mathf.Max(0f, freshWaterGainPerTick),
-            0f,
-            nutrition.Max_Water);
-        freshWaterFood.DataUpdate?.Invoke();
+            nutrition.Water + definition.WaterGainPerTick, 0f, nutrition.Max_Water);
+        food.DataUpdate?.Invoke();
 
-        if (dirty && Mathf.Clamp01(infectionRoll) < dirtyWaterInfectionChance)
-            freshWaterBuffManager.AddBuff(InfectionBuffIds.Infection);
+        if (definition.WaterKind == WaterEnvironmentKind.DirtyFresh &&
+            Mathf.Clamp01(infectionRoll) < definition.DirtyInfectionChance)
+            buffManager?.AddBuff(InfectionBuffIds.Infection);
 
         if (playFeedback)
-            PlayFreshWaterDrinkFeedback();
+            PlayFeedback();
         return true;
     }
 
-    /// <summary>检查当前是否只有一种有效水源；盐水允许饮用但不触发淡水感染判定。</summary>
-    private bool TryGetDrinkableWater(out bool dirty)
+    #region 表现反馈
+
+    private void PlayFeedback()
     {
-        dirty = false;
-        if (freshWaterBuffManager == null)
-            return false;
-
-        bool clean = freshWaterBuffManager.HasBuff(FreshWaterBuffIds.Clean);
-        bool dirtyWater = freshWaterBuffManager.HasBuff(FreshWaterBuffIds.Dirty);
-        bool saltWater = freshWaterBuffManager.HasBuff(SaltWaterBuffIds.InSaltWater);
-        int sourceCount = (clean ? 1 : 0) + (dirtyWater ? 1 : 0) + (saltWater ? 1 : 0);
-        if (sourceCount != 1)
-            return false;
-
-        dirty = dirtyWater;
-        return true;
-    }
-
-    private void ResolveFreshWaterDrinkModules()
-    {
-        if (item?.itemMods == null)
-            return;
-
-        freshWaterBuffManager ??=
-            item.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
-        freshWaterFood ??= item.itemMods.GetMod_ByID(ModText.Food) as Mod_Food;
-    }
-
-    private void ResetFreshWaterDrinkState()
-    {
-        freshWaterDrinkHeld = false;
-        freshWaterDrinking = false;
-        freshWaterHoldElapsed = 0f;
-        freshWaterTickElapsed = 0f;
-    }
-
-    #endregion
-
-    #region 音频与粒子
-
-    private void PlayFreshWaterDrinkFeedback()
-    {
-        if (item == null)
-            return;
-
-        LastFreshWaterDrinkAudioHandle = AudioService.Instance.Play(
+        LastAudioHandle = AudioService.Instance.Play(
             AudioEventIds.FoodDrink,
-            AudioPlayOptions.Attached(item.transform, 0.75f, 1f));
+            AudioPlayOptions.Attached(actor.transform, 0.75f, 1f));
 
         VisualEffectManager manager = VisualEffectManager.Instance;
         if (manager == null)
             return;
 
-        GameObject effect = manager.PlayEffect(
-            item.transform,
-            FreshWaterDrinkEffectName,
-            item.transform,
-            new Vector3(0f, 0.15f, 0f),
-            0.8f,
-            EffectStackMode.Stackable);
-        LastFreshWaterDrinkEffect = effect;
-        ConfigureBlueWaterParticles(effect);
+        LastEffect = manager.PlayEffect(actor.transform, DrinkEffectName, actor.transform,
+            new Vector3(0f, 0.15f, 0f), 0.8f, EffectStackMode.Stackable);
+        ConfigureBlueWaterParticles(LastEffect);
     }
 
-    /// <summary>复用正式进食粒子池，将本次实例改造成浅蓝/深蓝水滴效果。</summary>
     private static void ConfigureBlueWaterParticles(GameObject effect)
     {
         if (effect == null)
@@ -210,6 +417,43 @@ public partial class Mod_InteractSender
                 new Color(0.05f, 0.3f, 0.95f, 0.95f));
             system.Play(true);
         }
+    }
+
+    #endregion
+}
+
+/// <summary>玩家交互输入桥，只转发环境动作的按下、持续与松开。</summary>
+public partial class Mod_InteractSender
+{
+    #region 环境动作转发
+
+    private EnvironmentInteractionRunner environmentInteractionRunner;
+
+    public bool BeginEnvironmentActionHold()
+    {
+        ResolveEnvironmentInteractionRunner();
+        return environmentInteractionRunner != null &&
+               environmentInteractionRunner.BeginPreferredAction();
+    }
+
+    public void EndEnvironmentActionHold() =>
+        environmentInteractionRunner?.CancelActiveAction();
+
+    public void TickEnvironmentInteraction(float deltaTime)
+    {
+        ResolveEnvironmentInteractionRunner();
+        environmentInteractionRunner?.TickActiveAction(deltaTime);
+    }
+
+    private void ResolveEnvironmentInteractionRunner()
+    {
+        if (environmentInteractionRunner != null || item == null)
+            return;
+
+        TileEffectReceiver receiver =
+            item.itemMods?.GetMod_ByID<TileEffectReceiver>(ModText.TileEffectReceiver) ??
+            item.GetComponentInChildren<TileEffectReceiver>(true);
+        environmentInteractionRunner = receiver?.EnvironmentInteractions;
     }
 
     #endregion

@@ -506,6 +506,13 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void ClampPendingSpawns(SpawnerConfig config, SpawnerProgressSaveData state)
     {
+        if (config.IgnorePopulationLimits)
+        {
+            state.PendingSpawnCount = Mathf.Max(0, state.PendingSpawnCount);
+            state.PendingReplacementCount = Mathf.Max(0, state.PendingReplacementCount);
+            return;
+        }
+
         int availableRoom = Mathf.Max(0, GetEffectiveGroupLimit(config) - CountGroupAlive(config));
         state.PendingSpawnCount = Mathf.Clamp(state.PendingSpawnCount, 0, availableRoom);
         availableRoom -= state.PendingSpawnCount;
@@ -574,7 +581,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             GameDifficultyService.Current.World.SpawnPopulationMultiplier,
             1);
         if (!config.UnboundedDailyGrowth &&
-            (_trackedItems.Count >= globalLimit ||
+            !config.IgnorePopulationLimits &&
+            (CountPopulationLimitedAlive() >= globalLimit ||
              CountGroupAlive(config) >= GetEffectiveGroupLimit(config)))
         {
             return false;
@@ -648,7 +656,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
          int speciesLimit = GameDifficultyService.ScaleCount(
              entry.SpeciesAliveLimit,
              GameDifficultyService.Current.World.SpawnPopulationMultiplier);
-         return entry.SpeciesAliveLimit <= 0 ||
+         return config.IgnorePopulationLimits ||
+             entry.SpeciesAliveLimit <= 0 ||
              CountSpeciesAlive(entry.PrefabName) < speciesLimit;
     }
 
@@ -841,6 +850,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private bool IsWithinPlayerPopulationLimit(SpawnerConfig config, Vector3 candidate)
     {
+        if (config.IgnorePopulationLimits)
+            return true;
+
         int limit = GameDifficultyService.ScaleCount(
             config.PerPlayerAliveLimit,
             GameDifficultyService.Current.World.SpawnPopulationMultiplier);
@@ -875,7 +887,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private int GetEffectiveGroupLimit(SpawnerConfig config)
     {
-        if (config.UnboundedDailyGrowth)
+        if (config.UnboundedDailyGrowth || config.IgnorePopulationLimits)
             return int.MaxValue;
 
         return GameDifficultyService.ScaleCount(
@@ -903,6 +915,23 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         {
             if (item?.itemData != null && item.itemData.IDName == speciesId)
                 count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>只统计仍受全局数量预算约束的生态实体。</summary>
+    private int CountPopulationLimitedAlive()
+    {
+        int count = 0;
+        foreach (KeyValuePair<Item, SpawnerConfig> pair in _trackedItems)
+        {
+            SpawnerConfig config = pair.Value;
+            if (pair.Key != null && config != null &&
+                !config.UnboundedDailyGrowth && !config.IgnorePopulationLimits)
+            {
+                count++;
+            }
         }
 
         return count;
@@ -1156,7 +1185,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             groupCounts.TryGetValue(config, out int groupCount);
             speciesCount++;
             groupCount++;
-            totalCount++;
+            if (!config.UnboundedDailyGrowth && !config.IgnorePopulationLimits)
+                totalCount++;
             speciesCounts[speciesId] = speciesCount;
             groupCounts[config] = groupCount;
 
@@ -1175,10 +1205,11 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             }
 
             bool exceedsLimit =
-                (!config.UnboundedDailyGrowth && totalCount > Mathf.Max(1, _globalAliveLimit)) ||
-                groupCount > GetEffectiveGroupLimit(config) ||
-                (speciesLimit > 0 && speciesCount > speciesLimit) ||
-                ExceedsNearbyPlayerLimit(item, config, overflow);
+                !config.IgnorePopulationLimits &&
+                ((!config.UnboundedDailyGrowth && totalCount > Mathf.Max(1, _globalAliveLimit)) ||
+                 groupCount > GetEffectiveGroupLimit(config) ||
+                 (speciesLimit > 0 && speciesCount > speciesLimit) ||
+                 ExceedsNearbyPlayerLimit(item, config, overflow));
             if (exceedsLimit && !IsEcologyRecycleProtected(item))
             {
                 overflow.Add(item);

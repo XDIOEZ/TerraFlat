@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using TMPro;
 using Sirenix.OdinInspector;
 using UnityEngine.EventSystems;
+using FlatWorld.Localization;
 
 /// <summary>
 /// 维护本地存档与角色选择面板的数据、选择态和手柄焦点。
@@ -42,6 +43,8 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     public GameObject Save_Player_SelectButton_Prefab; // 存档/玩家按钮预制体
     public Transform SaveSelectButton_Parent_Content; // 存档按钮父物体
     public Transform Player_SelectButton_Parent_Content; // 玩家按钮父物体
+    public GameObject BatchDeleteModeActions; // 批量选择模式下的确认/取消操作区
+    public GameObject BatchDeleteConfirmationDialog; // 真正删除前的二次确认遮罩
     public string BasePanelName = "存档选择面板";
 
     private readonly List<SelectionRow> saveRows = new List<SelectionRow>();
@@ -52,6 +55,10 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     private readonly List<string> playerNameBuffer = new List<string>();
     private SelectionRow selectedSaveRow;
     private SelectionRow selectedPlayerRow;
+    private readonly HashSet<string> batchSelectedSaveNames =
+        new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+    private bool isBatchDeleteMode;
+    private bool isBatchDeleteConfirmationOpen;
 
     /// <summary>当前显示的存档条目数量。</summary>
     public int ActiveSaveEntryCount => saveRows.Count;
@@ -61,6 +68,12 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
 
     /// <summary>动态列表当前保留的条目总数，供 Profiler 检查复用是否稳定。</summary>
     public int RetainedEntryCount => saveRows.Count + playerRows.Count + pooledRows.Count;
+
+    /// <summary>是否正在多选要删除的世界存档。</summary>
+    public bool IsBatchDeleteMode => isBatchDeleteMode;
+
+    /// <summary>当前批量选中的存档数量。</summary>
+    public int BatchSelectedSaveCount => batchSelectedSaveNames.Count;
 
     // UI 控件由当前存档面板的 BasePanel 统一获取。
 
@@ -215,6 +228,12 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             return;
 
         rowsByObject.TryGetValue(buttonObj, out SelectionRow currentRow);
+        if (isBatchDeleteMode)
+        {
+            ToggleBatchSaveSelection(currentRow);
+            return;
+        }
+
         SetSelectedRow(ref selectedSaveRow, currentRow, buttonObj);
 
         // 使用当前存档面板更新选中项文本。
@@ -278,9 +297,216 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     /// </summary>
     public void RefreshForGamepadOpen()
     {
+        ResetBatchDeleteState();
         Refresh();
         ClearSaveSelection();
     }
+
+    /// <summary>危险确认层优先消费返回键；其余情况仍交给 BasePanel 原有关闭逻辑。</summary>
+    public bool TryHandleCancel(BaseEventData eventData)
+    {
+        if (!isBatchDeleteConfirmationOpen)
+            return false;
+
+        eventData?.Use();
+        CancelBatchDeleteConfirmation();
+        return true;
+    }
+
+    #region 批量删除
+
+    /// <summary>进入多选模式；仅改变列表交互，不读取或删除磁盘文件。</summary>
+    public void BeginBatchDeleteMode()
+    {
+        if (isBatchDeleteMode)
+            return;
+
+        isBatchDeleteMode = true;
+        isBatchDeleteConfirmationOpen = false;
+        batchSelectedSaveNames.Clear();
+        ClearSelectedRow(ref selectedSaveRow);
+        ClearSelectedRow(ref selectedPlayerRow);
+        bool playerStructureChanged = ReleaseRows(playerRows);
+        UpdateBatchDeleteUi();
+        CommitDynamicListChanges(false, playerStructureChanged, false);
+        FocusFirstSaveOrBackForGamepad();
+    }
+
+    /// <summary>退出批量选择并清空勾选；不会删除任何存档。</summary>
+    public void CancelBatchDeleteMode()
+    {
+        ResetBatchDeleteState();
+        ClearSaveSelection();
+    }
+
+    /// <summary>打开真正删除前的二次确认界面。</summary>
+    public void OpenBatchDeleteConfirmation()
+    {
+        if (!isBatchDeleteMode || batchSelectedSaveNames.Count == 0)
+        {
+            Debug.LogWarning("请至少选择一个要删除的存档");
+            return;
+        }
+
+        isBatchDeleteConfirmationOpen = true;
+        UpdateBatchDeleteUi();
+        FocusBatchDeleteControl(GameManager.GameSaveBatchDialogCancelButtonKey);
+    }
+
+    /// <summary>取消二次确认并安全返回已有多选状态。</summary>
+    public void CancelBatchDeleteConfirmation()
+    {
+        if (!isBatchDeleteConfirmationOpen)
+            return;
+
+        isBatchDeleteConfirmationOpen = false;
+        UpdateBatchDeleteUi();
+        FocusBatchDeleteControl(GameManager.GameSaveBatchConfirmButtonKey);
+    }
+
+    /// <summary>仅由二次确认按钮调用，逐个复用正式存档删除 API。</summary>
+    public void ConfirmBatchDelete()
+    {
+        if (!isBatchDeleteMode || !isBatchDeleteConfirmationOpen ||
+            batchSelectedSaveNames.Count == 0)
+        {
+            Debug.LogWarning("批量删除确认状态无效，未删除任何存档");
+            return;
+        }
+
+        SaveDataMgr manager = saveAndLoad != null ? saveAndLoad : SaveDataMgr.Instance;
+        if (manager == null)
+        {
+            Debug.LogWarning("SaveAndLoad组件未绑定！");
+            return;
+        }
+
+        List<string> selectedNames = new List<string>(batchSelectedSaveNames);
+        for (int index = 0; index < selectedNames.Count; index++)
+        {
+            string saveName = selectedNames[index];
+            if (!saves.Contains(saveName))
+                continue;
+
+            manager.DeleteSave(manager.UserSavePath, saveName);
+            if (manager.SaveData != null &&
+                string.Equals(manager.SaveData.saveName, saveName, System.StringComparison.Ordinal))
+            {
+                manager.SaveData = null;
+                manager.CurrentContrrolPlayerName = string.Empty;
+            }
+        }
+
+        ResetBatchDeleteState();
+        Refresh();
+        ClearSaveSelection();
+    }
+
+    /// <summary>面板关闭或重新打开时复位危险操作状态。</summary>
+    public void ResetBatchDeleteState()
+    {
+        isBatchDeleteMode = false;
+        isBatchDeleteConfirmationOpen = false;
+        batchSelectedSaveNames.Clear();
+        for (int index = 0; index < saveRows.Count; index++)
+            SetRowVisual(saveRows[index], false);
+        UpdateBatchDeleteUi();
+    }
+
+    private void ToggleBatchSaveSelection(SelectionRow row)
+    {
+        if (row == null || !row.IsSave || string.IsNullOrWhiteSpace(row.Value))
+            return;
+
+        bool selected = batchSelectedSaveNames.Add(row.Value);
+        if (!selected)
+            batchSelectedSaveNames.Remove(row.Value);
+        SetRowVisual(row, selected);
+        UpdateBatchDeleteUi();
+    }
+
+    /// <summary>集中更新模式按钮、普通操作和危险确认遮罩。</summary>
+    private void UpdateBatchDeleteUi()
+    {
+        if (!TryGetSavePanel(out BasePanel panel))
+            return;
+
+        Button entryButton = panel.GetButton(GameManager.GameSaveBatchDeleteButtonKey);
+        if (entryButton != null)
+            entryButton.gameObject.SetActive(!isBatchDeleteMode);
+        if (BatchDeleteModeActions != null)
+            BatchDeleteModeActions.SetActive(isBatchDeleteMode && !isBatchDeleteConfirmationOpen);
+        if (BatchDeleteConfirmationDialog != null)
+            BatchDeleteConfirmationDialog.SetActive(isBatchDeleteConfirmationOpen);
+
+        Button confirmSelectionButton = panel.GetButton(GameManager.GameSaveBatchConfirmButtonKey);
+        if (confirmSelectionButton != null)
+            confirmSelectionButton.interactable = batchSelectedSaveNames.Count > 0;
+
+        Button loadButton = panel.GetButton(GameManager.GameSaveLoadButtonKey);
+        Button singleDeleteButton = panel.GetButton(GameManager.GameSaveDeleteButtonKey);
+        Button startButton = panel.GetButton(GameManager.GameSaveStartButtonKey);
+        Button backButton = panel.GetButton(GameManager.GameSaveBackButtonKey);
+        if (loadButton != null)
+            loadButton.interactable = !isBatchDeleteMode;
+        if (singleDeleteButton != null)
+            singleDeleteButton.interactable = !isBatchDeleteMode && selectedSaveRow != null;
+        if (startButton != null)
+            startButton.interactable = !isBatchDeleteMode;
+        if (backButton != null)
+            backButton.interactable = !isBatchDeleteConfirmationOpen;
+        for (int index = 0; index < saveRows.Count; index++)
+        {
+            Button rowButton = saveRows[index]?.Button;
+            if (rowButton != null)
+                rowButton.interactable = !isBatchDeleteConfirmationOpen;
+        }
+
+        if (isBatchDeleteMode)
+        {
+            panel.SetText(
+                GameManager.GameSaveSelectedTextKey,
+                FlatWorldLocalizationService.GetUiFormat(
+                    "批量选择：已选 {0} 个存档",
+                    batchSelectedSaveNames.Count));
+        }
+
+        if (isBatchDeleteConfirmationOpen)
+        {
+            panel.SetText(
+                GameManager.GameSaveBatchWarningTextKey,
+                FlatWorldLocalizationService.GetUiFormat(
+                    "将永久删除已选中的 {0} 个存档。\n{1}\n此操作无法撤销。",
+                    batchSelectedSaveNames.Count,
+                    BuildBatchDeleteNamePreview()));
+        }
+
+        panel.RefreshGamepadNavigationState();
+    }
+
+    private string BuildBatchDeleteNamePreview()
+    {
+        const int previewLimit = 4;
+        List<string> names = new List<string>(batchSelectedSaveNames);
+        names.Sort(System.StringComparer.OrdinalIgnoreCase);
+        if (names.Count > previewLimit)
+        {
+            names.RemoveRange(previewLimit, names.Count - previewLimit);
+            names.Add("……");
+        }
+
+        return string.Join("、", names);
+    }
+
+    private void FocusBatchDeleteControl(string buttonName)
+    {
+        if (!TryGetSavePanel(out BasePanel panel))
+            return;
+
+        FocusGamepadControl(panel, panel.GetButton(buttonName));
+    }
+
+    #endregion
 
     /// <summary>
     /// 清空已删除存档对应的 UI 选择与角色列表，避免继续进入已不存在的世界。

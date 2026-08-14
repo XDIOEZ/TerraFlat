@@ -1,10 +1,12 @@
 using System.Collections;
+using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using TMPro;
 using UltEvents;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 public class ItemSlot_UI : MonoBehaviour,
@@ -13,6 +15,10 @@ public class ItemSlot_UI : MonoBehaviour,
     IPointerExitHandler,
     IPointerUpHandler,
     IPointerMoveHandler,
+    IInitializePotentialDragHandler,
+    IBeginDragHandler,
+    IDragHandler,
+    IEndDragHandler,
     IScrollHandler,
     ISubmitHandler,
     ISelectHandler,
@@ -45,6 +51,9 @@ public class ItemSlot_UI : MonoBehaviour,
     [Tooltip("Shift+左键快速转移事件")]
     public UltEvent<int> OnShiftQuickTransfer = new UltEvent<int>();
 
+    /// <summary>鼠标拖拽开始时，把源物品明确转入鼠标携带槽。</summary>
+    public System.Func<int, bool> OnMouseDragBegin { get; set; }
+
     private GameObject currentMenuInstance;
 
     private Outline selectionOutline;
@@ -57,6 +66,16 @@ public class ItemSlot_UI : MonoBehaviour,
 
 
     private bool isPointerOver = false;
+
+    [Header("鼠标拖拽")]
+    private bool mousePressStartedWithItem;
+    private bool mouseDragActive;
+    private RectTransform mouseDragGhost;
+    private ItemSlot_UI mouseDragHoverSlot;
+    private bool dragHoverOutlineEnabled;
+    private Color dragHoverOutlineColor;
+    private Vector2 dragHoverOutlineDistance;
+    private bool dragHoverOutlineUsesGraphicAlpha;
 
     private static bool _isShiftQuickTransferDragging;
     private static int _shiftQuickTransferSessionId;
@@ -96,9 +115,11 @@ public class ItemSlot_UI : MonoBehaviour,
         OnGamepadSubmit.Clear();
         OnRightClick.Clear();
         OnShiftQuickTransfer.Clear();
+        OnMouseDragBegin = null;
         _OnScroll.Clear();
         if (selectionOutlineCreated && selectionOutline != null)
             Destroy(selectionOutline);
+        EndMouseDragVisual();
         CancelTouchPress();
     }
     #endregion
@@ -196,6 +217,14 @@ public class ItemSlot_UI : MonoBehaviour,
     #region 接口实现
     public void OnPointerDown(PointerEventData eventData)
     {
+        bool isTouch = IsTouchPointer(eventData);
+        if (eventData.button == PointerEventData.InputButton.Left && !isTouch)
+        {
+            EventSystemGuard.SetGamepadMode(false);
+            mousePressStartedWithItem = !IsItemSlotEmpty(GetSlotData());
+            mouseDragActive = false;
+        }
+
         if (eventData.button == PointerEventData.InputButton.Left && IsShiftPressed())
         {
             _isShiftQuickTransferDragging = true;
@@ -206,7 +235,7 @@ public class ItemSlot_UI : MonoBehaviour,
         }
 
         // 触屏轻触延后到抬起确认，以便 0.45 秒长按能独立打开物品菜单而不先交换槽位。
-        if (eventData.button == PointerEventData.InputButton.Left && eventData.pointerId >= 0)
+        if (eventData.button == PointerEventData.InputButton.Left && isTouch)
         {
             CancelTouchPress();
             touchPointerId = eventData.pointerId;
@@ -217,7 +246,8 @@ public class ItemSlot_UI : MonoBehaviour,
             return;
         }
 
-        Click(eventData);
+        if (eventData.button == PointerEventData.InputButton.Right)
+            HandleRightClick();
     }
 
     public void OnPointerEnter(PointerEventData eventData)
@@ -261,6 +291,15 @@ public class ItemSlot_UI : MonoBehaviour,
                 HandleLeftClick();
         }
 
+        if (eventData.button == PointerEventData.InputButton.Left && !IsTouchPointer(eventData) &&
+            !mouseDragActive && !_isShiftQuickTransferDragging)
+        {
+            // 短按只在抬起时提交一次，避免按下即交换导致拖拽和点击互相打架。
+            HandleLeftClick();
+            mousePressStartedWithItem = false;
+            EventSystemGuard.SetGamepadMode(false);
+        }
+
         if (eventData.button == PointerEventData.InputButton.Left)
         {
             _isShiftQuickTransferDragging = false;
@@ -282,6 +321,72 @@ public class ItemSlot_UI : MonoBehaviour,
         }
     }
 
+    public void OnInitializePotentialDrag(PointerEventData eventData)
+    {
+        if (IsTouchPointer(eventData))
+            FindParentScrollRect()?.OnInitializePotentialDrag(eventData);
+        else
+            eventData.useDragThreshold = true;
+    }
+
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        if (IsTouchPointer(eventData))
+        {
+            FindParentScrollRect()?.OnBeginDrag(eventData);
+            return;
+        }
+
+        if (eventData.button != PointerEventData.InputButton.Left || !mousePressStartedWithItem ||
+            IsShiftPressed())
+            return;
+
+        Sprite draggedSprite = image != null ? image.sprite : null;
+        mouseDragActive = OnMouseDragBegin?.Invoke(slotIndex) == true;
+        if (!mouseDragActive)
+        {
+            mousePressStartedWithItem = false;
+            return;
+        }
+
+        CreateMouseDragGhost(draggedSprite, eventData.position);
+        UpdateMouseDragHover(eventData);
+    }
+
+    public void OnDrag(PointerEventData eventData)
+    {
+        if (IsTouchPointer(eventData))
+        {
+            FindParentScrollRect()?.OnDrag(eventData);
+            return;
+        }
+
+        if (!mouseDragActive)
+            return;
+
+        PositionMouseDragGhost(eventData.position);
+        UpdateMouseDragHover(eventData);
+    }
+
+    public void OnEndDrag(PointerEventData eventData)
+    {
+        if (IsTouchPointer(eventData))
+        {
+            FindParentScrollRect()?.OnEndDrag(eventData);
+            return;
+        }
+
+        if (!mouseDragActive)
+            return;
+
+        ItemSlot_UI targetSlot = FindSlotUnderPointer(eventData);
+        (targetSlot != null && targetSlot.isActiveAndEnabled ? targetSlot : this).HandleLeftClick();
+        mousePressStartedWithItem = false;
+        mouseDragActive = false;
+        EndMouseDragVisual();
+        EventSystemGuard.SetGamepadMode(false);
+    }
+
     private IEnumerator WaitForTouchLongPress()
     {
         yield return new WaitForSecondsRealtime(touchLongPressSeconds);
@@ -300,6 +405,19 @@ public class ItemSlot_UI : MonoBehaviour,
         touchLongPressCoroutine = null;
         touchPointerId = int.MinValue;
         touchMovedTooFar = false;
+    }
+
+    private static bool IsTouchPointer(PointerEventData eventData)
+    {
+        if (eventData is ExtendedPointerEventData extendedData)
+            return extendedData.pointerType == UIPointerType.Touch;
+
+        return eventData != null && eventData.pointerId >= 0 && Touchscreen.current != null;
+    }
+
+    private ScrollRect FindParentScrollRect()
+    {
+        return transform.parent != null ? transform.parent.GetComponentInParent<ScrollRect>() : null;
     }
 
     /// <summary>
@@ -359,6 +477,12 @@ public class ItemSlot_UI : MonoBehaviour,
     /// </summary>
     public void OnSelect(BaseEventData eventData)
     {
+        if (!EventSystemGuard.IsGamepadMode)
+        {
+            RestoreSelectionOutline();
+            return;
+        }
+
         EnsureSelectionOutline();
         if (selectionOutline == null)
             return;
@@ -414,6 +538,125 @@ public class ItemSlot_UI : MonoBehaviour,
         selectionOutline.effectColor = selectionOutlineBaselineColor;
         selectionOutline.effectDistance = selectionOutlineBaselineDistance;
         selectionOutline.useGraphicAlpha = selectionOutlineBaselineUsesGraphicAlpha;
+    }
+
+    #endregion
+
+    #region 鼠标拖放
+    /// <summary>
+    /// 创建跟随鼠标的半透明图标，让拖拽状态和携带物品清晰可见。
+    /// </summary>
+    private void CreateMouseDragGhost(Sprite draggedSprite, Vector2 screenPosition)
+    {
+        Canvas rootCanvas = GetComponentInParent<Canvas>()?.rootCanvas;
+        if (rootCanvas == null || draggedSprite == null)
+            return;
+
+        GameObject ghostObject = new GameObject(
+            "InventoryDragGhost",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image));
+        ghostObject.transform.SetParent(rootCanvas.transform, false);
+        ghostObject.transform.SetAsLastSibling();
+        mouseDragGhost = ghostObject.GetComponent<RectTransform>();
+        mouseDragGhost.sizeDelta = image != null
+            ? image.rectTransform.rect.size
+            : new Vector2(64f, 64f);
+
+        Image ghostImage = ghostObject.GetComponent<Image>();
+        ghostImage.sprite = draggedSprite;
+        ghostImage.preserveAspect = true;
+        ghostImage.raycastTarget = false;
+        ghostImage.color = new Color(1f, 1f, 1f, 0.82f);
+        PositionMouseDragGhost(screenPosition);
+    }
+
+    private void PositionMouseDragGhost(Vector2 screenPosition)
+    {
+        if (mouseDragGhost == null)
+            return;
+
+        Canvas rootCanvas = mouseDragGhost.GetComponentInParent<Canvas>();
+        RectTransform canvasRect = rootCanvas != null ? rootCanvas.transform as RectTransform : null;
+        Camera eventCamera = rootCanvas != null && rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? rootCanvas.worldCamera
+            : null;
+        if (canvasRect != null && RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                canvasRect, screenPosition, eventCamera, out Vector2 localPosition))
+        {
+            mouseDragGhost.anchoredPosition = localPosition;
+        }
+    }
+
+    private void UpdateMouseDragHover(PointerEventData eventData)
+    {
+        ItemSlot_UI nextSlot = FindSlotUnderPointer(eventData);
+        if (nextSlot == mouseDragHoverSlot)
+            return;
+
+        SetMouseDragHover(mouseDragHoverSlot, false);
+        mouseDragHoverSlot = nextSlot;
+        SetMouseDragHover(mouseDragHoverSlot, true);
+    }
+
+    private void SetMouseDragHover(ItemSlot_UI slot, bool active)
+    {
+        if (slot == null)
+            return;
+
+        slot.EnsureSelectionOutline();
+        if (slot.selectionOutline == null)
+            return;
+
+        if (active)
+        {
+            slot.dragHoverOutlineEnabled = slot.selectionOutline.enabled;
+            slot.dragHoverOutlineColor = slot.selectionOutline.effectColor;
+            slot.dragHoverOutlineDistance = slot.selectionOutline.effectDistance;
+            slot.dragHoverOutlineUsesGraphicAlpha = slot.selectionOutline.useGraphicAlpha;
+            slot.selectionOutline.enabled = true;
+            slot.selectionOutline.effectColor = FlatWorldUITheme.AccentHover;
+            slot.selectionOutline.effectDistance = FlatWorldUITheme.SelectionOutlineDistance;
+            slot.selectionOutline.useGraphicAlpha = false;
+            return;
+        }
+
+        slot.selectionOutline.enabled = slot.dragHoverOutlineEnabled;
+        slot.selectionOutline.effectColor = slot.dragHoverOutlineColor;
+        slot.selectionOutline.effectDistance = slot.dragHoverOutlineDistance;
+        slot.selectionOutline.useGraphicAlpha = slot.dragHoverOutlineUsesGraphicAlpha;
+    }
+
+    private void EndMouseDragVisual()
+    {
+        SetMouseDragHover(mouseDragHoverSlot, false);
+        mouseDragHoverSlot = null;
+        if (mouseDragGhost != null)
+            Destroy(mouseDragGhost.gameObject);
+        mouseDragGhost = null;
+    }
+
+    /// <summary>
+    /// 从完整射线结果中查找槽位，允许图标、文字或装饰层位于槽位背景上方。
+    /// </summary>
+    private static ItemSlot_UI FindSlotUnderPointer(PointerEventData eventData)
+    {
+        EventSystem eventSystem = EventSystem.current;
+        if (eventSystem == null)
+            return null;
+
+        var raycastResults = new List<RaycastResult>();
+        eventSystem.RaycastAll(eventData, raycastResults);
+        for (int i = 0; i < raycastResults.Count; i++)
+        {
+            GameObject hitObject = raycastResults[i].gameObject;
+            ItemSlot_UI slot = hitObject != null ? hitObject.GetComponentInParent<ItemSlot_UI>() : null;
+            if (slot != null)
+                return slot;
+        }
+
+        return null;
     }
     #endregion
 

@@ -70,9 +70,9 @@ MonoBehaviour:
   - Id: cave.portal.seedSalt
     Value: 7919
   - Id: cave.resource.density
-    Value: 0.14
+    Value: 0.042
   - Id: cave.resource.looseDensity
-    Value: 0.004
+    Value: 0.0012
   - Id: navigation.defaultCost
     Value: 1
   textParameters:

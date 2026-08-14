@@ -439,12 +439,12 @@ public class GameController : Module
 
     private void SetCurrentInputDevice(InputDeviceType deviceType)
     {
-        if (_currentInputDevice == deviceType)
-            return;
-
+        bool deviceChanged = _currentInputDevice != deviceType;
         _currentInputDevice = deviceType;
+        // 即使缓存设备类型未变化，也要校正可能由场景切换遗留的全局 UI 手柄状态。
         EventSystemGuard.SetGamepadMode(deviceType == InputDeviceType.Gamepad);
-        ActiveInputDeviceChanged?.Invoke(deviceType);
+        if (deviceChanged)
+            ActiveInputDeviceChanged?.Invoke(deviceType);
     }
 
     #region 手机输入语义与径向指向

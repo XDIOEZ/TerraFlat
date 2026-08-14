@@ -147,31 +147,21 @@ public static class DamageReceiverBitDataMigrationTool
         if (root.TryGetValue("Defense", out JToken newDefenseToken))
         {
             float defenseValue = newDefenseToken.Value<float>();
-            root["Defense"] = Mathf.Max(0f, defenseValue);
+            float safeDefense = Mathf.Max(0f, defenseValue);
+            root["DefenseValues"] = new JObject
+            {
+                ["Cutting"] = safeDefense,
+                ["Piercing"] = safeDefense,
+                ["Chopping"] = safeDefense,
+                ["Blunt"] = safeDefense
+            };
+            root["DamageSystemVersion"] = 1;
             changed = true;
         }
 
-        if (root.TryGetValue("Weakness", out JToken weaknessToken) && weaknessToken.Type == JTokenType.Object)
+        if (root.ContainsKey("Weakness"))
         {
-            JObject weaknessObj = (JObject)weaknessToken;
-            JArray weaknessList = new JArray();
-
-            foreach (JProperty property in weaknessObj.Properties())
-            {
-                if (Enum.TryParse(property.Name, true, out DamageTag tag))
-                {
-                    if (!weaknessList.Contains((int)tag))
-                    {
-                        weaknessList.Add((int)tag);
-                    }
-                }
-                else
-                {
-                    weaknessList.Add(property.Name);
-                }
-            }
-
-            root["Weakness"] = weaknessList;
+            root.Remove("Weakness");
             changed = true;
         }
 

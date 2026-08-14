@@ -34,11 +34,19 @@ namespace FlatWorld.GameTest.DataSave
             try
             {
                 player.Data.transform.position = Vector3.zero;
-                player.SetProfileContext(localProfile: true, profileDataWasCreated: false);
+                player.SetProfileContext(
+                    localProfile: true,
+                    profileDataWasCreated: false,
+                    runtimeProfileName: "原角色");
                 Assert.That(
                     requiresInitialPlacement.Invoke(null, new object[] { player }),
                     Is.False,
                     "旧玩家保存在世界原点时也必须原样恢复。");
+                player.Data.Name_User = "管理员";
+                Assert.That(
+                    player.ProfileName,
+                    Is.EqualTo("原角色"),
+                    "显示名或临时管理员身份变化不能改变存档角色键。");
 
                 player.Data.transform.position = new Vector3(17f, -9f, 0f);
                 player.SetProfileContext(localProfile: true, profileDataWasCreated: true);

@@ -316,6 +316,10 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
     {
         isTransitioning = true;
         Data_Player playerData = sourcePlayer.Data;
+        string playerProfileName = sourcePlayer.ProfileName;
+        if (string.IsNullOrWhiteSpace(playerProfileName))
+            throw new InvalidOperationException("维度切换缺少稳定玩家档案名。");
+
         Vector3 sourcePosition = sourcePlayer.transform.position;
         GameController sourceController = sourcePlayer.GetComponentInChildren<GameController>(true);
         sourceController?.SetGameplayInputLocked(true);
@@ -372,6 +376,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             GameManager.Instance.SetDimensionTransitionLoading("维度切换失败，正在恢复原世界…", 0.1f);
             IEnumerator recoveryRoutine = RecoverAfterTransitionFailureCoroutine(
                 playerData,
+                playerProfileName,
                 sourceAddress,
                 sourcePosition,
                 state.ExitNotified,
@@ -418,7 +423,9 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         TransitionState state)
     {
         Data_Player playerData = sourcePlayer.Data;
-        string playerName = playerData.Name_User;
+        string playerName = sourcePlayer.ProfileName;
+        if (string.IsNullOrWhiteSpace(playerName))
+            throw new InvalidOperationException("跨维度切换缺少稳定玩家档案名。");
         DimensionTravelProgressStore.SetLastPosition(playerData, sourceAddress, sourcePlayer.transform.position);
         sourcePlayer.GetComponentInChildren<TileEffectReceiver>(true)?.PrepareForWorldTransition();
         ItemMgr.Instance.SavePlayer();
@@ -505,6 +512,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
     private IEnumerator RecoverAfterTransitionFailureCoroutine(
         Data_Player playerData,
+        string playerProfileName,
         WorldAddress sourceAddress,
         Vector3 sourcePosition,
         bool exitNotified,
@@ -543,10 +551,10 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
         playerData.CurrentSceneName = sourceAddress.WorldKey;
         playerData.transform.position = sourcePosition;
-        SaveDataMgr.Instance.SaveData.PlayerData_Dict[playerData.Name_User] = playerData;
+        SaveDataMgr.Instance.SaveData.PlayerData_Dict[playerProfileName] = playerData;
         GameManager.Instance.NotifyDimensionWorldEntered();
 
-        Player recoveredPlayer = ItemMgr.Instance.LoadPlayer(playerData.Name_User);
+        Player recoveredPlayer = ItemMgr.Instance.LoadPlayer(playerProfileName);
         recoveredPlayer.transform.position = sourcePosition;
         recoveredPlayer.Data.transform.position = sourcePosition;
         recoveredPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(true);
@@ -1011,7 +1019,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         targetPlayer.transform.position = safePosition;
         targetPlayer.Data.transform.position = safePosition;
         playerData.transform.position = safePosition;
-        SaveDataMgr.Instance.SaveData.PlayerData_Dict[playerData.Name_User] = playerData;
+        SaveDataMgr.Instance.SaveData.PlayerData_Dict[targetPlayer.ProfileName] = playerData;
     }
 
     private static Item FindCaveExit(Chunk chunk, DimensionPortalAnchor anchor, Vector3 desiredPosition)

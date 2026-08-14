@@ -46,7 +46,7 @@
 | `player.mobile-controls` | Player/UI/Combat | 自定义手机设备、移动/朝向并行、攻击语义分流与输入锁清理 |
 | `player.admin-move-speed` | Player | 管理员移速倍率写入与恢复 |
 | `player.admin-invincibility` | Player/Combat | 无敌开关与真实伤害 |
-| `combat.player-respawn` | Combat/Dimension | 濒死、主世界路由与复活 |
+| `combat.player-respawn` | Combat/Dimension | 濒死、主世界路由、档案身份不变与复活 |
 | `combat.target-damage` | Combat/AI | 玩家附近生成 Chicken，真实受伤与治疗 |
 | `quest.progression` | Quest/UI/Inventory | 自动接取示例任务，确认 `debugOnly` GM 测试任务未污染普通进度，验证任务追踪 UI 绑定与输入穿透，由正式制作成功信号推进并验证完成后移出、原子奖励与命名空间存档 |
 | `inventory.crafting` | Inventory/Crafting | 正式配方制作并把产物放入真实背包 |
@@ -56,7 +56,7 @@
 | `dialogue.player-speech` | Dialogue | 角色气泡请求、Presenter 与显示事件 |
 | `environment.time-weather` | Environment | 时间推进、降雨切换与恢复 |
 | `environment.ecology` | Environment/Map | 地表气候、生态与水文累计断言 |
-| `environment.tile-effects` | Environment/Buff/Player/Audio/VFX | 淡水水质 Buff、长按饮水、脏水感染、反馈与离水恢复 |
+| `environment.tile-effects` | Environment/Buff/Player/Audio/VFX | 水体动作/减速实例、潮湿状态、长按饮水、脏水感染、反馈与离水恢复 |
 | `navigation.loaded-grid` | Navigation | 已加载稀疏网格的真实异步寻路 |
 | `building.placement` | Building/Navigation | 玩家附近建筑、占地、阴影与可逆清理 |
 | `item.drop-lifecycle` | Item Module | 掉落、休眠、重绑与生命周期 |
@@ -104,7 +104,7 @@
 | --- | --- | --- | --- |
 | 新玩家安全陆地出生 | 初始 Chunk 窗口稳定后的 `OnWorldReady` | 玩家脚下权威 `ChunkTerrainData` 必须非水且可走，运行时位置与 `Data_Player` 存档位置一致 | 不修改状态，仅重置完成标记 |
 | 同一目标连续交互重试 | `OnWorldReady` 使用真实玩家 `Mod_InteractSender.TryInteractAtCurrentPosition()` 连续发起两次请求 | 同一 `IInteractable` 在玩家未离开范围、当前目标未清空时必须收到两次 `OnInteractStart`，避免瞬态拒绝后永久失效 | 取消当前交互、恢复原交互距离并销毁临时探针 |
-| 主世界出生点复活 | `OnWorldReady` 先验证矿洞到地表的生产路由，再触发一次真实濒死/复活 | 矿洞地址必须要求跨维度返回主世界；当前地表实例中 `DamageReceiver.ForceHurt()` 后，`Mod_PlayerDeathState.RespawnFromDying()` 必须把玩家送回 `flatworld.playerSpawn` 且恢复生命 | 恢复测试前位置、生命、速度与物理状态 |
+| 主世界出生点复活 | `OnWorldReady` 先验证矿洞到地表的生产路由，再触发一次真实濒死/复活 | 矿洞地址必须要求跨维度返回主世界；当前地表实例中 `DamageReceiver.ForceHurt()` 后，`Mod_PlayerDeathState.RespawnFromDying()` 必须把玩家送回 `flatworld.playerSpawn`、恢复生命并保持档案名与玩家名不变 | 恢复测试前位置、生命、速度与物理状态 |
 | 自动保存不锁操作 | `TickWorldReadyScenarios` 完成初始临时状态清理后启动，`OnTraversalTick` 观察 | 自然物、旧 Chunk/差异与 AI 采集可跨帧，后台写入完成、无输入锁、Mover/Rigidbody2D/TimeScale 正常 | 仅清空任务引用 |
 | 玩家长按奔跑与速度过渡 | `OnWorldReady` 调用真实 `Mover.HandleRunInputPressed/Released()` 和 `Mover.Move` | 走路起步、走跑互切均平滑靠近目标速度；松开方向保留默认 0.07 秒的极短惯性后停止，松开奔跑恢复普通速度倍率 | 立即恢复非奔跑状态、原速度与原移动状态；失败路径统一兜底 |
 | 新区块建筑放置 | `OnWorldReady` 使用正式 `Wall_Wood_Summoner` 扫描玩家附近候选格并写入临时石墙；`TickWorldReadyScenarios` 分两帧观察 | 权威地块校验、动态占地和正式虚影正确；`RebuildVersion` 推进后阴影增加，移除再推进一帧后恢复原数量 | 先清理虚影、建筑和召唤器，石墙跨帧断言结束后再清理；失败路径统一兜底 |
@@ -120,7 +120,7 @@
 | 燃烧 Buff | 首次 `OnTraversalTick` 通过 `BuffManager.AddBuff(BurningBuffIds.Burning)` 施加 | 后续移动 Tick 观察玩家生命下降；`OnChunkReady` 确认定义仍注册且至少发生一次 Tick | 移除燃烧并恢复测试前生命值 |
 | 有限世界右边界环绕 | `OnWorldReady` 后、首次截图和长距离移动前，将真实玩家移动到右边界并通过 `Mover.Move` 越界 | 等待规范目标 Chunk Ready，验证环绕余量、玩家数据、Chunk 字典和地图存档键；恢复原位置并再次等待原 Chunk Ready | 通过和失败路径都恢复位置、速度与移动速度 |
 | WorldModel 旧版气候、有序 Biome、二维石地山地、D∞ 河流、湖泊、冲积平原与草地表现 | `OnWorldReady` 先核对 `world.noiseScale` 已进入纯 Profile 及河流距离倍率，再扫描已绑定模型区块；后续在每次 `OnChunkReady` 累积观察 | 断言独立温度通道按 Profile 映射摄氏值、`basePrecipitation/precipitation` 出现地形降雨差异、`windX/windY` 为单位向量，并用 `SurfaceBiomeClassifier` 核对旧有序群系；`mountain` 与该分类器的 Stone 结果/石地 Tile 一致，淡水 `riverDepth/riverFlow`、`riverKind`、湖泊 `riverSurfaceLevel`（遇到湖泊时）、低坡 `riverFloodplain` 与草状态存在，并确认对应 Ground/Grass Tilemap 已实际写入 Tile | 仅清空场景累计状态，不修改生产世界 |
-| 运行时淡水地块与饮用 | `OnChunkReady` 从活动 `ChunkRuntime` 选择可走陆地与淡水格，临时移动真实玩家并调用 `TileEffectReceiver.RefreshCurrentTileEffects()`，随后驱动公开长按饮水 API | 断言 `水体减速/潮湿`、唯一干净/脏淡水 Buff、1 秒长按门槛、补水、饮水音效、蓝色水粒子、脏水感染，以及离水后的 Buff/速度恢复 | `finally` 与统一 `Cleanup` 恢复位置、速度、水分、感染前置状态并停止音频 |
+| 运行时淡水地块与饮用 | `OnChunkReady` 从活动 `ChunkRuntime` 选择可走陆地与淡水格，临时移动真实玩家并调用 `TileEffectReceiver.RefreshCurrentTileEffects()`，随后驱动公开环境动作 API | 断言水体减速环境实例、潮湿 Buff、清 Buff 不解除减速、干净/脏/盐水动作定义、角色独立动作实例、1 秒长按门槛、补水、饮水反馈、脏水感染，以及离水后的动作/效果/Buff/速度恢复 | `finally` 与统一 `Cleanup` 恢复位置、速度、水分、感染前置状态并停止音频 |
 | GM 自定义玩家移速倍率 | `OnWorldReady` 通过真实 `PlayerAdminController.TrySetAdminMoveSpeedMultiplier` 输入 `2.75x` | 断言管理员倍率与 `Mover.Speed.MultiplicativeModifier` 同步变化，且其他乘法修饰保持不变 | 立即恢复原管理员倍率；失败清理路径再次兜底恢复 |
 | GM 管理员无敌开关 | `OnWorldReady` 通过真实 `PlayerAdminController` 关闭/重新开启无敌，并调用 `DamageReceiver.ForceHurt()` | 关闭后必须正常扣血；重新开启后立即满血，致死伤害不得进入 `Mod_PlayerDeathState` 濒死 | 恢复原玩家名、生命与无敌状态；失败清理路径再次兜底恢复 |
 | GM 自定义区块加载倍率 | `OnWorldReady` 通过真实 `ChunkMgr.TrySetChunkLoadSpeedMultiplier` 依次输入 `2.5x` 与正无穷 | 断言有限倍率提升旧队列预算并立即同步新 WorldModel 调度器；“自动最大”达到 CPU 安全并发、四倍数量预算和两倍毫秒预算，不得返回 `int.MaxValue/Infinity` 堵塞主线程 | 按场景开始前的有限/无限状态立即恢复；失败清理路径再次兜底恢复 |

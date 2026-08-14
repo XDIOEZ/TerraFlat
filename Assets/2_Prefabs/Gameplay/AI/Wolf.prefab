@@ -681,6 +681,8 @@ MonoBehaviour:
   _turnBody: {fileID: 0}
   OnStateChanged:
     _PersistentCalls: []
+  healthRecoveryInterval: 60
+  healthRecoveryAmount: 10
   Data:
     State: 0
     Fatigue01: 0

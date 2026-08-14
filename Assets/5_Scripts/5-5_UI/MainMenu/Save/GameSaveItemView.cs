@@ -71,10 +71,13 @@ public sealed class GameSaveItemView : MonoBehaviour, ISelectHandler, IDeselectH
         RefreshVisual();
     }
 
-    /// <summary>记录导航焦点并显示高对比效果。</summary>
+    /// <summary>
+    /// 仅键盘/手柄导航焦点显示高对比效果。
+    /// 鼠标按下也会让 Button 成为 EventSystem 当前对象，但拖动 ScrollRect 时不能伪装成业务选中。
+    /// </summary>
     public void OnSelect(BaseEventData eventData)
     {
-        navigationFocused = true;
+        navigationFocused = !(eventData is PointerEventData);
         RefreshVisual();
     }
 

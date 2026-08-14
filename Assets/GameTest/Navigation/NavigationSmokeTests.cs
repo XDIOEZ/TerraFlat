@@ -193,6 +193,21 @@ namespace FlatWorld.GameTest.Navigation
         }
 
         [Test]
+        [Category("Navigation.Grid")]
+        public void PathCrossesExpensiveTerrainWhenItIsTheOnlyRoute()
+        {
+            WorldNavigationGrid grid = new();
+            for (int x = 0; x < 7; x++)
+                grid.SetCell(new Vector2Int(x, 0), GroundPenalty, true);
+            grid.SetCell(new Vector2Int(3, 0), 5000u, true);
+
+            List<Vector2Int> path = new();
+            Assert.That(grid.TryFindPath(Vector2Int.zero, new Vector2Int(6, 0), path), Is.True);
+            Assert.That(path, Does.Contain(new Vector2Int(3, 0)));
+            AssertPathSegmentsWalkable(grid, path);
+        }
+
+        [Test]
         [Category("Navigation.Obstacle")]
         public void DynamicObstacleBlocksAndRestoresCellsWithoutChangingTerrainData()
         {

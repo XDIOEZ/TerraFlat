@@ -4,10 +4,9 @@ using UnityEngine;
 
 namespace FlatWorld.Automation
 {
-    /// <summary>在真实世界区块上验证玩家进出水体时的地块接收与 Buff 生命周期。</summary>
+    /// <summary>在真实世界区块上验证玩家进出水体时的环境动作与配置型 Buff 生命周期。</summary>
     internal static partial class FlatWorldGoldenPathScenarios
     {
-        private const string WaterSlowBuffId = "水体减速";
         private const string WetBuffId = "潮湿";
         private const float TileEffectTolerance = 0.0001f;
 
@@ -58,16 +57,17 @@ namespace FlatWorld.Automation
             if (receiver == null || buffManager == null || interactSender == null || food?.Data?.nutrition == null)
                 throw new InvalidOperationException("真实玩家缺少 TileEffectReceiver、BuffManager、交互或营养模块。");
 
-            float slowdownFactor = ResolveWaterSlowdownFactor();
             float originalWater = food.Data.nutrition.Water;
             bool hadInfection = buffManager.HasBuff(InfectionBuffIds.Infection);
+            DrinkWaterActionInstance lastDrinkAction = null;
             CaptureTileEffectPosition(player, mover, receiver);
             try
             {
                 MovePlayerForTileEffectCheck(dryPosition);
                 if (!receiver.RefreshCurrentTileEffects())
                     throw new InvalidOperationException("TileEffectReceiver 无法绑定运行时陆地地块。");
-                if (buffManager.HasBuff(WaterSlowBuffId) || buffManager.HasBuff(WetBuffId))
+                if (buffManager.HasBuff(WetBuffId) ||
+                    receiver.EnvironmentInteractions.ActiveEffectCount != 0)
                     throw new InvalidOperationException("进入水体前玩家已残留水体 Buff。");
 
                 float drySpeedMultiplier = mover.Speed.MultiplicativeModifier;
@@ -75,45 +75,67 @@ namespace FlatWorld.Automation
                 if (!receiver.RefreshCurrentTileEffects() ||
                     receiver.currentTileData is not TileData_Water)
                     throw new InvalidOperationException("TileEffectReceiver 未识别运行时水体地块。");
-                if (!buffManager.HasBuff(WaterSlowBuffId) || !buffManager.HasBuff(WetBuffId))
-                    throw new InvalidOperationException("玩家进入运行时水体后未获得减速与潮湿 Buff。");
-                bool cleanFreshWater = buffManager.HasBuff(FreshWaterBuffIds.Clean);
-                bool dirtyFreshWater = buffManager.HasBuff(FreshWaterBuffIds.Dirty);
-                if (cleanFreshWater == dirtyFreshWater)
-                    throw new InvalidOperationException("淡水必须且只能授予一种水质能力 Buff。");
+                if (!buffManager.HasBuff(WetBuffId))
+                    throw new InvalidOperationException("玩家进入运行时水体后未获得潮湿 Buff。");
+                if (!receiver.EnvironmentInteractions.TryGetEffectDefinition(
+                        out MoveSpeedEnvironmentEffectDefinition slowdownDefinition) ||
+                    receiver.EnvironmentInteractions.ActiveEffectCount != 1)
+                {
+                    throw new InvalidOperationException("玩家进入水体后未获得独立的环境减速实例。");
+                }
+                if (!receiver.EnvironmentInteractions.TryGetDefinition(
+                        out DrinkWaterActionDefinition freshWaterDefinition) ||
+                    freshWaterDefinition.WaterKind == WaterEnvironmentKind.Salt)
+                {
+                    throw new InvalidOperationException("淡水未提供有效的淡水饮用动作定义。");
+                }
                 if (Mathf.Abs(mover.Speed.MultiplicativeModifier -
-                              drySpeedMultiplier * slowdownFactor) > TileEffectTolerance)
+                              drySpeedMultiplier * slowdownDefinition.Multiplier) >
+                    TileEffectTolerance)
                 {
                     throw new InvalidOperationException(
                         $"水体减速倍率异常：陆地={drySpeedMultiplier:0.###}，" +
                         $"水中={mover.Speed.MultiplicativeModifier:0.###}，" +
-                        $"配置倍率={slowdownFactor:0.###}。");
+                        $"配置倍率={slowdownDefinition.Multiplier:0.###}。");
+                }
+
+                buffManager.RemoveBuff(WetBuffId);
+                if (buffManager.HasBuff(WetBuffId))
+                    throw new InvalidOperationException("潮湿 Buff 无法通过标准清理入口移除。");
+                if (Mathf.Abs(mover.Speed.MultiplicativeModifier -
+                              drySpeedMultiplier * slowdownDefinition.Multiplier) >
+                    TileEffectTolerance)
+                {
+                    throw new InvalidOperationException("清除潮湿 Buff 错误解除了水体环境减速。");
                 }
 
                 float drinkStartWater = Mathf.Min(originalWater, food.Data.nutrition.Max_Water - 50f);
                 food.Data.nutrition.Water = drinkStartWater;
                 food.DataUpdate?.Invoke();
-                if (!interactSender.BeginFreshWaterDrinkHold())
-                    throw new InvalidOperationException("持有淡水能力 Buff 时无法开始长按饮水。");
-                interactSender.TickFreshWaterDrinking(0.99f);
+                if (!interactSender.BeginEnvironmentActionHold())
+                    throw new InvalidOperationException("淡水环境无法开始长按饮水动作。");
+                lastDrinkAction = receiver.EnvironmentInteractions.ActiveAction as DrinkWaterActionInstance;
+                if (lastDrinkAction == null)
+                    throw new InvalidOperationException("淡水环境没有创建角色独享的喝水动作实例。");
+                interactSender.TickEnvironmentInteraction(0.99f);
                 if (Mathf.Abs(food.Data.nutrition.Water - drinkStartWater) > TileEffectTolerance)
                     throw new InvalidOperationException("长按交互键未满1秒时提前补水。");
-                interactSender.TickFreshWaterDrinking(0.02f);
+                interactSender.TickEnvironmentInteraction(0.02f);
                 if (Mathf.Abs(food.Data.nutrition.Water -
-                              (drinkStartWater + interactSender.FreshWaterGainPerTick)) >
+                              (drinkStartWater + freshWaterDefinition.WaterGainPerTick)) >
                     TileEffectTolerance)
                 {
                     throw new InvalidOperationException("长按交互键满1秒后没有按配置恢复水分。");
                 }
-                if (!interactSender.LastFreshWaterDrinkAudioHandle.IsValid ||
-                    !interactSender.LastFreshWaterDrinkAudioHandle.IsPlaying)
+                if (!lastDrinkAction.LastAudioHandle.IsValid ||
+                    !lastDrinkAction.LastAudioHandle.IsPlaying)
                     throw new InvalidOperationException("淡水饮用 Tick 没有播放 food.drink 音效。");
-                if (interactSender.LastFreshWaterDrinkEffect == null ||
-                    !interactSender.LastFreshWaterDrinkEffect.activeInHierarchy)
+                if (lastDrinkAction.LastEffect == null ||
+                    !lastDrinkAction.LastEffect.activeInHierarchy)
                     throw new InvalidOperationException("淡水饮用 Tick 没有播放蓝色水粒子。");
-                if (dirtyFreshWater)
+                if (freshWaterDefinition.WaterKind == WaterEnvironmentKind.DirtyFresh)
                 {
-                    interactSender.ProcessFreshWaterDrinkPulse(0f, false);
+                    lastDrinkAction.ProcessPulse(0f, false);
                     if (!buffManager.HasBuff(InfectionBuffIds.Infection))
                         throw new InvalidOperationException("脏淡水的20%饮水判定没有授予感染 Buff。");
                 }
@@ -121,7 +143,7 @@ namespace FlatWorld.Automation
                 {
                     throw new InvalidOperationException("干净淡水饮用错误触发了感染。");
                 }
-                interactSender.EndFreshWaterDrinkHold();
+                interactSender.EndEnvironmentActionHold();
 
                 if (hasSaltWater)
                 {
@@ -129,35 +151,39 @@ namespace FlatWorld.Automation
                     if (!receiver.RefreshCurrentTileEffects() ||
                         receiver.currentTileData is not TileData_Water)
                         throw new InvalidOperationException("TileEffectReceiver 未识别运行时盐水地块。");
-                    if (!buffManager.HasBuff(SaltWaterBuffIds.InSaltWater))
-                        throw new InvalidOperationException("玩家进入运行时盐水后未获得位于盐水中 Buff。");
-                    if (buffManager.HasBuff(FreshWaterBuffIds.Clean) ||
-                        buffManager.HasBuff(FreshWaterBuffIds.Dirty))
-                        throw new InvalidOperationException("进入盐水后仍残留淡水饮用能力 Buff。");
+                    if (!receiver.EnvironmentInteractions.TryGetDefinition(
+                            out DrinkWaterActionDefinition saltWaterDefinition) ||
+                        saltWaterDefinition.WaterKind != WaterEnvironmentKind.Salt)
+                    {
+                        throw new InvalidOperationException("盐水未提供盐水饮用动作定义。");
+                    }
 
                     float saltDrinkStartWater = Mathf.Min(
                         food.Data.nutrition.Water,
-                        food.Data.nutrition.Max_Water - interactSender.FreshWaterGainPerTick);
+                        food.Data.nutrition.Max_Water - saltWaterDefinition.WaterGainPerTick);
                     food.Data.nutrition.Water = saltDrinkStartWater;
                     food.DataUpdate?.Invoke();
-                    if (!interactSender.BeginFreshWaterDrinkHold())
-                        throw new InvalidOperationException("持有位于盐水中 Buff 时无法开始长按饮水。");
-                    interactSender.TickFreshWaterDrinking(1.01f);
+                    if (!interactSender.BeginEnvironmentActionHold())
+                        throw new InvalidOperationException("盐水环境无法开始长按饮水动作。");
+                    lastDrinkAction = receiver.EnvironmentInteractions.ActiveAction as DrinkWaterActionInstance;
+                    if (lastDrinkAction == null)
+                        throw new InvalidOperationException("盐水环境没有创建角色独享的喝水动作实例。");
+                    interactSender.TickEnvironmentInteraction(1.01f);
                     if (Mathf.Abs(food.Data.nutrition.Water -
-                                  (saltDrinkStartWater + interactSender.FreshWaterGainPerTick)) >
+                                  (saltDrinkStartWater + saltWaterDefinition.WaterGainPerTick)) >
                         TileEffectTolerance)
                         throw new InvalidOperationException("盐水未复用现有长按饮水补水逻辑。");
-                    interactSender.EndFreshWaterDrinkHold();
+                    interactSender.EndEnvironmentActionHold();
                 }
 
                 MovePlayerForTileEffectCheck(dryPosition);
                 receiver.RefreshCurrentTileEffects();
-                interactSender.TickFreshWaterDrinking(0f);
-                if (buffManager.HasBuff(WaterSlowBuffId) || buffManager.HasBuff(WetBuffId) ||
-                    buffManager.HasBuff(FreshWaterBuffIds.Clean) ||
-                    buffManager.HasBuff(FreshWaterBuffIds.Dirty) ||
-                    buffManager.HasBuff(SaltWaterBuffIds.InSaltWater))
-                    throw new InvalidOperationException("玩家离开运行时水体后水体 Buff 未移除。");
+                interactSender.TickEnvironmentInteraction(0f);
+                if (buffManager.HasBuff(WetBuffId) ||
+                    receiver.EnvironmentInteractions.AvailableActionCount != 0 ||
+                    receiver.EnvironmentInteractions.ActiveAction != null ||
+                    receiver.EnvironmentInteractions.ActiveEffectCount != 0)
+                    throw new InvalidOperationException("玩家离开运行时水体后环境动作或水体 Buff 未清理。");
                 if (Mathf.Abs(mover.Speed.MultiplicativeModifier - drySpeedMultiplier) >
                     TileEffectTolerance)
                     throw new InvalidOperationException("玩家离开水体后移动速度倍率未恢复。");
@@ -167,8 +193,8 @@ namespace FlatWorld.Automation
             }
             finally
             {
-                interactSender.EndFreshWaterDrinkHold();
-                interactSender.LastFreshWaterDrinkAudioHandle.Stop();
+                interactSender.EndEnvironmentActionHold();
+                lastDrinkAction?.LastAudioHandle.Stop();
                 food.Data.nutrition.Water = originalWater;
                 food.DataUpdate?.Invoke();
                 if (!hadInfection)
@@ -256,22 +282,6 @@ namespace FlatWorld.Automation
             }
 
             return foundWater && foundDry;
-        }
-
-        private static float ResolveWaterSlowdownFactor()
-        {
-            BuffDefinition definition = GameRes.Instance?.GetBuffDefinition(WaterSlowBuffId);
-            if (definition == null)
-                throw new InvalidOperationException($"水体减速 Buff 未注册：{WaterSlowBuffId}");
-
-            for (int i = 0; i < definition.StartEffects.Count; i++)
-            {
-                BuffEffectDefinition effect = definition.StartEffects[i];
-                if (effect.TypeId == BuffEffectTypeIds.MoveSpeedMultiplier && effect.Value > 0f)
-                    return effect.Value;
-            }
-
-            throw new InvalidOperationException("水体减速 Buff 缺少有效的移动速度倍率效果。");
         }
 
         #endregion

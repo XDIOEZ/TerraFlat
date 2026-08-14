@@ -17,7 +17,7 @@ public partial class Data_Player : ItemData
     public Hp hp = new Hp(30);
 
     [Tooltip("防御力")]
-    public Defense defense = new(5, 5);
+    public Defense defense = new(5, 5, 5, 5);
     #endregion
 
     #region 速度

@@ -10,8 +10,14 @@ public class PrefabStatTableRow
     public string PrefabName; // 预制体名称
     public float MaxHp; // 物品血量上限
     public float Hp; // 物品当前血量
-    public float Defense; // 物品防御
-    public float Damage; // 武器基础伤害
+    public float CuttingDefense; // 切割防御
+    public float PiercingDefense; // 穿刺防御
+    public float ChoppingDefense; // 劈砍防御
+    public float BluntDefense; // 钝击防御
+    public float CuttingDamage; // 切割伤害
+    public float PiercingDamage; // 穿刺伤害
+    public float ChoppingDamage; // 劈砍伤害
+    public float BluntDamage; // 钝击伤害
     public bool HasHp; // 是否存在血量组件
     public bool HasDefense; // 是否存在防御字段
     public bool HasDamage; // 是否存在伤害组件

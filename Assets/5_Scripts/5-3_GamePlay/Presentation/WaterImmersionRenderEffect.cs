@@ -10,6 +10,9 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
     #region Shader IDs
 
     private static readonly int WaterEnabledId = Shader.PropertyToID("_WaterEnabled");
+    private static readonly int WaterWorldSpaceId = Shader.PropertyToID("_WaterWorldSpace");
+    private static readonly int WaterYId = Shader.PropertyToID("_WaterY");
+    private static readonly int WaterReferenceHeightId = Shader.PropertyToID("_WaterReferenceHeight");
     private static readonly int WaterSurfaceVId = Shader.PropertyToID("_WaterSurfaceV");
     private static readonly int WaterFeatherId = Shader.PropertyToID("_WaterFeather");
     private static readonly int WaterTintId = Shader.PropertyToID("_WaterTint");
@@ -91,6 +94,13 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
     private float currentBlend;
     private float depthVelocity;
     private float blendVelocity;
+    private SpriteRenderer referenceSpriteRenderer;
+    private float currentSurfaceV;
+    private float currentTintStrength;
+    private float currentLineStrength;
+    private float currentWaterY;
+    private float currentReferenceHeight = 1f;
+    private bool hasWorldWaterReference;
 
     #endregion
 
@@ -99,6 +109,7 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
     private void Awake()
     {
         EnsureCurves();
+        CacheReferenceRenderer();
     }
 
     private void OnValidate()
@@ -150,26 +161,28 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
             smoothTime,
             Mathf.Infinity,
             deltaTime);
+
+        currentSurfaceV = Mathf.Clamp01(depthToSurface.Evaluate(Mathf.Clamp01(currentDepth)));
+        currentTintStrength = Mathf.Clamp01(depthToTintStrength.Evaluate(Mathf.Clamp01(currentDepth)));
+        currentLineStrength = Mathf.Clamp01(depthToLineStrength.Evaluate(Mathf.Clamp01(currentDepth)));
+        UpdateWorldWaterSurface();
     }
 
     protected override void ApplyEffect(Renderer renderer, MaterialPropertyBlock block, float deltaTime)
     {
-        EnsureCurves();
-
-        float depth = Mathf.Clamp01(currentDepth);
         float blend = Mathf.Clamp01(currentBlend);
-        float surfaceV = Mathf.Clamp01(depthToSurface.Evaluate(depth));
-        float tintStrength = Mathf.Clamp01(depthToTintStrength.Evaluate(depth));
-        float lineStrength = Mathf.Clamp01(depthToLineStrength.Evaluate(depth));
 
         block.SetFloat(WaterEnabledId, blend);
-        block.SetFloat(WaterSurfaceVId, surfaceV);
+        block.SetFloat(WaterWorldSpaceId, hasWorldWaterReference ? 1f : 0f);
+        block.SetFloat(WaterYId, currentWaterY);
+        block.SetFloat(WaterReferenceHeightId, currentReferenceHeight);
+        block.SetFloat(WaterSurfaceVId, currentSurfaceV);
         block.SetFloat(WaterFeatherId, Mathf.Max(0.001f, waterFeather));
         block.SetColor(WaterTintId, underwaterTint);
-        block.SetFloat(WaterTintStrengthId, tintStrength);
+        block.SetFloat(WaterTintStrengthId, currentTintStrength);
         block.SetFloat(WaterAlphaId, Mathf.Clamp01(underwaterAlpha));
         block.SetColor(WaterLineColorId, waterLineColor);
-        block.SetFloat(WaterLineStrengthId, lineStrength);
+        block.SetFloat(WaterLineStrengthId, currentLineStrength);
         block.SetFloat(WaterLineWidthId, Mathf.Max(0.001f, waterLineWidth));
         block.SetFloat(WaterWaveAmplitudeId, Mathf.Clamp01(waterWaveAmplitude));
         block.SetFloat(WaterWaveFrequencyId, Mathf.Max(0f, waterWaveFrequency));
@@ -186,6 +199,29 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
         depthToSurface ??= new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, 0.9f));
         depthToTintStrength ??= new AnimationCurve(new Keyframe(0f, 0.12f), new Keyframe(1f, 0.8f));
         depthToLineStrength ??= new AnimationCurve(new Keyframe(0f, 0.55f), new Keyframe(1f, 1f));
+    }
+
+    /// <summary>缓存角色主体 Sprite，避免每帧查找组件。</summary>
+    private void CacheReferenceRenderer()
+    {
+        if (referenceSpriteRenderer == null)
+            referenceSpriteRenderer = GetComponent<SpriteRenderer>();
+    }
+
+    /// <summary>由角色主体计算统一的世界水平水面，旋转的手持物不会带着水线一起旋转。</summary>
+    private void UpdateWorldWaterSurface()
+    {
+        CacheReferenceRenderer();
+        if (referenceSpriteRenderer == null || referenceSpriteRenderer.sprite == null)
+        {
+            hasWorldWaterReference = false;
+            return;
+        }
+
+        Bounds bounds = referenceSpriteRenderer.bounds;
+        hasWorldWaterReference = true;
+        currentReferenceHeight = Mathf.Max(0.0001f, bounds.size.y);
+        currentWaterY = bounds.min.y + currentReferenceHeight * currentSurfaceV;
     }
 
     #endregion

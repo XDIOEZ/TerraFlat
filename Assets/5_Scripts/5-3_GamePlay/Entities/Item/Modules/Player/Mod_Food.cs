@@ -43,6 +43,11 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
 {
     // 口渴状态每 5 秒结算一次单次伤害，避免按模块 Tick 连续掉血。
     private const float WaterDamageTickInterval = 5f;
+    // 玩家初始脂肪上限为 1000；满脂肪进食后最多成长到初始上限的 200%。
+    private const float PlayerInitialFatMaximum = 1000f;
+    private const float PlayerFatMaximumCap = PlayerInitialFatMaximum * 2f;
+    // 满脂肪时，食物脂肪值的 50% 转化为脂肪上限增长。
+    private const float PlayerFatMaximumGrowthRatio = 0.5f;
     // 旧版参数面板默认位置；读取到该值时迁移到新的左下角 Prefab 初始位置。
     private static readonly Vector2 LegacyCenteredPanelPosition = new Vector2(-480f, 120f);
 
@@ -875,10 +880,25 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         if (consumedFood?.Data?.nutrition == null || Data?.nutrition == null)
             return;
 
+        float fatBefore = Data.nutrition.Fat;
+        float fatMaximumBefore = Data.nutrition.Max_Fat;
+        float consumedFat = Mathf.Max(0f, consumedFood.Data.nutrition.Fat);
+        bool playerFatWasFull = GameDifficultyService.IsPlayer(item) &&
+            consumedFat > 0f &&
+            fatBefore >= fatMaximumBefore - 0.001f;
         float consumedWater = Mathf.Max(0f, consumedFood.Data.nutrition.Water);
         float waterBefore = Data.nutrition.Water;
 
         Data.nutrition = Data.nutrition + consumedFood.Data.nutrition;
+
+        if (playerFatWasFull)
+        {
+            float availableFatMaximumGrowth = Mathf.Max(0f, PlayerFatMaximumCap - fatMaximumBefore);
+            float fatMaximumGrowth = Mathf.Min(
+                consumedFat * PlayerFatMaximumGrowthRatio,
+                availableFatMaximumGrowth);
+            Data.nutrition.Max_Fat = fatMaximumBefore + fatMaximumGrowth;
+        }
 
         float actualWaterGain = Mathf.Max(0f, Data.nutrition.Water - waterBefore);
         DataUpdate?.Invoke();

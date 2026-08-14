@@ -66,34 +66,12 @@ namespace FlatWorld.GameTest.Buff
         [Test]
         [Category("Buff.Smoke")]
         [Category("Smoke")]
-        public void WaterCapabilityBuffsArePermanentAndEffectFree()
-        {
-            List<BuffDefinition> definitions = BuffCatalogLoader.LoadBuiltInDefinitions();
-            foreach (string id in new[]
-                     {
-                         FreshWaterBuffIds.Clean,
-                         FreshWaterBuffIds.Dirty,
-                         SaltWaterBuffIds.InSaltWater
-                     })
-            {
-                BuffDefinition definition = definitions.Find(candidate => candidate.Id == id);
-                Assert.That(definition, Is.Not.Null, $"本体目录必须注册水体能力 Buff：{id}");
-                Assert.That(definition.DurationSeconds, Is.Null, $"{id} 必须由地块进入/离开控制生命周期。");
-                Assert.That(definition.StartEffects, Is.Empty);
-                Assert.That(definition.TickEffects, Is.Empty);
-                Assert.That(definition.StopEffects, Is.Empty);
-            }
-        }
-
-        [Test]
-        [Category("Buff.Smoke")]
-        [Category("Smoke")]
         public void BuiltInBuffManifestContainsUniqueDefinitions()
         {
             List<BuffDefinition> definitions = BuffCatalogLoader.LoadBuiltInDefinitions();
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            Assert.That(definitions, Has.Count.EqualTo(17));
+            Assert.That(definitions, Has.Count.EqualTo(13));
             foreach (BuffDefinition definition in definitions)
                 Assert.That(ids.Add(definition.Id), Is.True, $"本体 Buff 清单包含重复 ID：{definition.Id}");
         }

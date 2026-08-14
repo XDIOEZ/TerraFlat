@@ -19,15 +19,23 @@ public sealed class TileBuildingDamageProfile
     [Min(1f)]
     public float MaxHealth = 100f;
 
+    [Tooltip("格子建筑的切割、穿刺、劈砍、钝击防御。")]
+    public CombatDefense DefenseValues = new CombatDefense();
+
+    [HideInInspector]
     [Min(0f)]
     public float Defense;
+
+    [HideInInspector]
+    public int DamageSystemVersion;
 
     [Tooltip("None 表示不限制工具类型。石墙/岩壁应配置为 Pickaxe。")]
     public TileDamageToolKind RequiredTool = TileDamageToolKind.None;
 
-    [Tooltip("开启后，攻击至少要命中一项弱点标签才会造成伤害。")]
+    [HideInInspector]
     public bool RequireWeaknessMatch;
 
+    [HideInInspector]
     public List<DamageType> Weakness = new List<DamageType>();
 
     public CombatImpactMaterial ImpactMaterial = CombatImpactMaterial.Default;
@@ -37,6 +45,26 @@ public sealed class TileBuildingDamageProfile
 
     [Min(0)]
     public int DropAmount;
+
+    /// <summary>读取四类防御，并兼容旧格子建筑的单值防御。</summary>
+    public CombatDefense ResolveDefense()
+    {
+        DefenseValues ??= new CombatDefense();
+        DefenseValues.ClampNonNegative();
+        if (DamageSystemVersion >= 1)
+            return DefenseValues;
+
+        if (DefenseValues.TotalDefense <= 0f && Defense > 0f)
+        {
+            float value = Mathf.Max(0f, Defense);
+            DefenseValues = new CombatDefense(value, value, value, value);
+        }
+
+        Weakness?.Clear();
+        RequireWeaknessMatch = false;
+        DamageSystemVersion = 1;
+        return DefenseValues;
+    }
 }
 
 /// <summary>

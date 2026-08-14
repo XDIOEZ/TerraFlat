@@ -67,9 +67,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	[HorizontalGroup("配置/生存/睡眠/Hr1"), LabelText("血量维持"), Range(0f, 1f)]
 	public float sleepExitHpRate = 0.5f;
 
-	[TabGroup("配置", "生存"), BoxGroup("配置/生存/睡眠"), HorizontalGroup("配置/生存/睡眠/Hr2"), LabelText("回血速度"), SuffixLabel("/秒", true)]
-	public float sleepRecoverHpPerSecond = 5f;
-	[HorizontalGroup("配置/生存/睡眠/Hr2"), LabelText("睡眠时长"), SuffixLabel("秒", true), MinValue(0.1f)]
+	[TabGroup("配置", "生存"), BoxGroup("配置/生存/睡眠"), LabelText("睡眠时长"), SuffixLabel("秒", true), MinValue(0.1f)]
 	public float sleepDuration = 8f;
 
 	[TabGroup("配置", "生存"), BoxGroup("配置/生存/睡眠"), LabelText("睡醒冷却"), SuffixLabel("秒", true), MinValue(0f)]
@@ -400,7 +398,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	private void TickSleep(float deltaTime)
 	{
-		_hp.Heal(deltaTime * sleepRecoverHpPerSecond, item);
 	}
 
 	private void TickAlert(float deltaTime)
@@ -502,8 +499,10 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		if (_currentThreat == null)
 			return _alertCooldownTimer > 0f;
 
-		// 外部激怒或已进入警觉状态时，使用现有计时器完成警觉延迟。
-		if (_currentState == WildBoarState.Alert || _alertCooldownTimer > 0f)
+		// 警觉状态只维持到倒计时结束；结束后必须放行后续追击判断，避免永久卡在警觉。
+		if (_currentState == WildBoarState.Alert)
+			return _alertCooldownTimer > 0f;
+		if (_alertCooldownTimer > 0f)
 			return true;
 		if (_currentState == WildBoarState.Chase || _currentState == WildBoarState.Attack)
 			return false;

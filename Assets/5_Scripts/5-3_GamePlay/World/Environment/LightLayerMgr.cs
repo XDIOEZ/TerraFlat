@@ -122,6 +122,8 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
             Light2D light = lights[i];
             if (light == null || !light.enabled || !light.gameObject.activeInHierarchy || light.intensity <= 0f)
                 continue;
+            if (light.GetComponent<WorldTopologyLightProxy>() != null)
+                continue;
 
             if (light.lightType == Light2D.LightType.Global)
             {

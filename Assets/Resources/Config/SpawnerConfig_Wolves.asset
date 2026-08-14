@@ -41,6 +41,7 @@ MonoBehaviour:
   GrowthIntervalDays: 3
   MaxLifetimeSpawnCount: 64
   AsyncSpawnInterval: 0
+  IgnorePopulationLimits: 1
   RequireCompletelyDarkTile: 0
   MaxAllowedTileLight: 0.35
   AllowedBiomeNames:

@@ -477,16 +477,3 @@ public static class InfectionBuffIds
 {
     public const string Infection = "感染";
 }
-
-/// <summary>淡水环境能力 Buff 的稳定 ID；只表示玩家当前可以饮水，不直接修改营养值。</summary>
-public static class FreshWaterBuffIds
-{
-    public const string Clean = "位于干净的淡水中";
-    public const string Dirty = "位于脏的淡水中";
-}
-
-/// <summary>盐水环境能力 Buff 的稳定 ID，表示生物当前位于海水中并获得饮水交互资格。</summary>
-public static class SaltWaterBuffIds
-{
-    public const string InSaltWater = "位于盐水中";
-}

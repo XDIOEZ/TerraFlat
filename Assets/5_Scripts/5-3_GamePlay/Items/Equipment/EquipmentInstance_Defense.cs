@@ -5,10 +5,14 @@ using UnityEngine;
 [MemoryPackable]
 public partial class EquipmentInstance_Defense : EquipmentInstance
 {
+    [HideInInspector]
     public float DefenseBonusIncrease = 0f;
 
     [MemoryPackIgnore]
     private bool _isApplied = false;
+
+    // MemoryPack 兼容：新字段只追加在旧 DefenseBonusIncrease 后面。
+    public CombatDefense DefenseBonus = new CombatDefense();
 
     public override void Equip(Item item)
     {
@@ -19,7 +23,7 @@ public partial class EquipmentInstance_Defense : EquipmentInstance
         if (damageReceiver == null)
             throw new MissingComponentException($"[{nameof(EquipmentInstance_Defense)}] Cannot find {nameof(DamageReceiver)} on item {item?.name}");
 
-        damageReceiver.AddDefense(DefenseBonusIncrease);
+        damageReceiver.AddDefense(ResolveDefenseBonus());
         _isApplied = true;
     }
 
@@ -32,11 +36,24 @@ public partial class EquipmentInstance_Defense : EquipmentInstance
         if (damageReceiver == null)
             throw new MissingComponentException($"[{nameof(EquipmentInstance_Defense)}] Cannot find {nameof(DamageReceiver)} on item {item?.name}");
 
-        damageReceiver.RemoveDefense(DefenseBonusIncrease);
+        damageReceiver.RemoveDefense(ResolveDefenseBonus());
         _isApplied = false;
     }
 
     public override void Update()
     {
+    }
+
+    /// <summary>兼容旧装备单值防御；新装备直接填写四类防御。</summary>
+    private CombatDefense ResolveDefenseBonus()
+    {
+        DefenseBonus ??= new CombatDefense();
+        DefenseBonus.ClampNonNegative();
+        if (DefenseBonus.TotalDefense > 0f || DefenseBonusIncrease <= 0f)
+            return DefenseBonus;
+
+        float value = Mathf.Max(0f, DefenseBonusIncrease);
+        DefenseBonus = new CombatDefense(value, value, value, value);
+        return DefenseBonus;
     }
 }

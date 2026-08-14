@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier:
   profileId: surface.default
-  generationSignature: 25
+  generationSignature: 26
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -193,6 +193,8 @@ MonoBehaviour:
     Value: 0.5
   - Id: navigation.defaultCost
     Value: 1
+  - Id: navigation.riverCost
+    Value: 5000
   - Id: cave.portal.enabled
     Value: 1
   - Id: cave.portal.chunkChance
@@ -262,13 +264,13 @@ MonoBehaviour:
     MinHeight: 0
     MaxHeight: 1
     ProvidedTags: []
-    CompanionOnly: 1
-    CompanionHostTag: Tree
-    CompanionSpawnChance: 0.945
+    CompanionOnly: 0
+    CompanionHostTag:
+    CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
-    CompanionMinRadius: 0.45
-    CompanionMaxRadius: 1.25
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
   - RuleId: surface.forest.bush
     ItemId: Bush
     ItemCount: 1
@@ -322,11 +324,11 @@ MonoBehaviour:
     MinHeight: 0
     MaxHeight: 1
     ProvidedTags: []
-    CompanionOnly: 1
-    CompanionHostTag: Tree
-    CompanionSpawnChance: 1
-    CompanionOffsetX: 0.9
-    CompanionOffsetY: -0.3
+    CompanionOnly: 0
+    CompanionHostTag:
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
     CompanionMinRadius: 0
     CompanionMaxRadius: 0
   - RuleId: surface.forest.stick

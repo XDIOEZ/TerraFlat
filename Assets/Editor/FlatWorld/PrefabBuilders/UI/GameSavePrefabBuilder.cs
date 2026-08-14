@@ -52,10 +52,14 @@ public static class GameSavePrefabBuilder
             Transform saveContent = BuildSaveList(card.transform, font);
             Transform playerContent = BuildWorkspace(card.transform, font);
             BuildFooter(card.transform, font);
+            GameObject batchActions = BuildBatchDeleteActions(card.transform, font);
+            GameObject confirmationDialog = BuildBatchDeleteConfirmation(card.transform, font);
 
             controller.Save_Player_SelectButton_Prefab = itemPrefab;
             controller.SaveSelectButton_Parent_Content = saveContent;
             controller.Player_SelectButton_Parent_Content = playerContent;
+            controller.BatchDeleteModeActions = batchActions;
+            controller.BatchDeleteConfirmationDialog = confirmationDialog;
 
             EditorUtility.SetDirty(controller);
             EditorUtility.SetDirty(root);
@@ -150,7 +154,19 @@ public static class GameSavePrefabBuilder
         TMP_Text heading = CreateText("世界存档标题", panel.transform, "世界存档", font, 23f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(heading.rectTransform, new Vector2(22f, -58f), new Vector2(250f, 34f), new Vector2(0f, 1f));
 
-        return CreateScrollList("存档列表", panel.transform, new Vector2(20f, -96f), new Vector2(480f, 394f));
+        CreateButton(
+            panel.transform,
+            font,
+            GameManager.GameSaveBatchDeleteButtonKey,
+            "批量删除存档",
+            new Vector2(-20f, -54f),
+            new Vector2(180f, 36f),
+            new Color(0.30f, 0.10f, 0.09f, 1f),
+            Cream,
+            14f,
+            new Vector2(1f, 1f));
+
+        return CreateScrollList("存档列表", panel.transform, new Vector2(20f, -102f), new Vector2(480f, 330f));
     }
 
     private static Transform BuildWorkspace(Transform card, TMP_FontAsset font)
@@ -206,6 +222,101 @@ public static class GameSavePrefabBuilder
         divider.raycastTarget = false;
 
         CreateButton(card, font, GameManager.GameSaveStartButtonKey, "进入世界", new Vector2(-42f, 26f), new Vector2(250f, 66f), new Color(0.70f, 0.36f, 0.16f, 1f), Cream, 21f, new Vector2(1f, 0f));
+    }
+
+    /// <summary>构建左侧列表底部的批量选择操作区，固定占用 50 像素高度。</summary>
+    private static GameObject BuildBatchDeleteActions(Transform card, TMP_FontAsset font)
+    {
+        Transform savePanel = card.Find("世界存档区");
+        GameObject actions = new GameObject("批量删除操作区", typeof(RectTransform));
+        actions.layer = LayerMask.NameToLayer("UI");
+        actions.transform.SetParent(savePanel, false);
+        SetRect(actions.GetComponent<RectTransform>(), new Vector2(20f, 20f), new Vector2(480f, 50f), Vector2.zero);
+
+        Button confirm = CreateButton(
+            actions.transform,
+            font,
+            GameManager.GameSaveBatchConfirmButtonKey,
+            "确认删除所选",
+            Vector2.zero,
+            new Vector2(292f, 46f),
+            new Color(0.48f, 0.12f, 0.10f, 1f),
+            Cream,
+            15f,
+            new Vector2(0f, 0f));
+        confirm.interactable = false;
+        CreateButton(
+            actions.transform,
+            font,
+            GameManager.GameSaveBatchCancelButtonKey,
+            "取消批量选择",
+            Vector2.zero,
+            new Vector2(176f, 46f),
+            InkSoft,
+            Cream,
+            14f,
+            new Vector2(1f, 0f));
+
+        actions.SetActive(false);
+        return actions;
+    }
+
+    /// <summary>构建覆盖主卡的二次确认层；遮罩阻断点击，默认焦点落在安全的取消按钮。</summary>
+    private static GameObject BuildBatchDeleteConfirmation(Transform card, TMP_FontAsset font)
+    {
+        Image overlay = CreateImage("批量删除二次确认界面", card, new Color(0.003f, 0.008f, 0.012f, 0.88f));
+        Stretch(overlay.rectTransform);
+        overlay.raycastTarget = true;
+
+        Image dialog = CreatePanelCard("批量删除确认卡", overlay.transform);
+        SetRect(dialog.rectTransform, Vector2.zero, new Vector2(760f, 390f), new Vector2(0.5f, 0.5f));
+        Image accent = CreateImage("危险操作强调线", dialog.transform, new Color(0.78f, 0.20f, 0.16f, 1f));
+        accent.rectTransform.anchorMin = new Vector2(0f, 1f);
+        accent.rectTransform.anchorMax = new Vector2(1f, 1f);
+        accent.rectTransform.pivot = new Vector2(0.5f, 1f);
+        accent.rectTransform.anchoredPosition = Vector2.zero;
+        accent.rectTransform.sizeDelta = new Vector2(0f, 6f);
+        accent.raycastTarget = false;
+
+        TMP_Text title = CreateText("批量删除确认标题", dialog.transform, "确认批量删除存档？", font, 30f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(title.rectTransform, new Vector2(38f, -38f), new Vector2(684f, 48f), new Vector2(0f, 1f));
+        TMP_Text warning = CreateText(
+            GameManager.GameSaveBatchWarningTextKey,
+            dialog.transform,
+            "将永久删除已选中的存档。\n此操作无法撤销。",
+            font,
+            18f,
+            new Color(0.93f, 0.76f, 0.69f, 1f),
+            FontStyles.Normal,
+            TextAlignmentOptions.TopLeft,
+            true);
+        SetRect(warning.rectTransform, new Vector2(38f, -108f), new Vector2(684f, 164f), new Vector2(0f, 1f));
+
+        CreateButton(
+            dialog.transform,
+            font,
+            GameManager.GameSaveBatchDialogCancelButtonKey,
+            "取消并返回",
+            new Vector2(38f, 34f),
+            new Vector2(250f, 58f),
+            InkSoft,
+            Cream,
+            17f,
+            new Vector2(0f, 0f));
+        CreateButton(
+            dialog.transform,
+            font,
+            GameManager.GameSaveBatchDialogConfirmButtonKey,
+            "永久删除所选存档",
+            new Vector2(-38f, 34f),
+            new Vector2(300f, 58f),
+            new Color(0.60f, 0.11f, 0.09f, 1f),
+            Cream,
+            17f,
+            new Vector2(1f, 0f));
+
+        overlay.gameObject.SetActive(false);
+        return overlay.gameObject;
     }
 
     private static void RebuildItemPrefab(TMP_FontAsset font)

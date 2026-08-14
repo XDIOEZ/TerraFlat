@@ -486,7 +486,10 @@ namespace FlatWorld.Editor.ContentWorkshop
         public bool AddFuelAbility;
         public bool AddCombatAbility;
         public bool AddEquipmentAbility;
-        public float Damage = 5f;
+        public float CuttingDamage;
+        public float PiercingDamage;
+        public float ChoppingDamage;
+        public float BluntDamage = 5f;
 
         #region 食物参数
 
@@ -557,7 +560,10 @@ namespace FlatWorld.Editor.ContentWorkshop
             AddFuelAbility = false;
             AddCombatAbility = template.Kind is WorkshopItemTemplateKind.Tool or WorkshopItemTemplateKind.Weapon;
             AddEquipmentAbility = template.Kind == WorkshopItemTemplateKind.Equipment;
-            Damage = template.Kind == WorkshopItemTemplateKind.Weapon ? 10f : 5f;
+            CuttingDamage = 0f;
+            PiercingDamage = 0f;
+            ChoppingDamage = template.Kind == WorkshopItemTemplateKind.Weapon ? 10f : 5f;
+            BluntDamage = 0f;
 
             FoodCarbohydrates = 40f;
             FoodMaxCarbohydrates = 40f;

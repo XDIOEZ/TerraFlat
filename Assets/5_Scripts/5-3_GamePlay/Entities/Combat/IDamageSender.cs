@@ -1,11 +1,8 @@
 
-using System.Collections.Generic;
-using UltEvents;
-using UnityEngine;
-
 public interface IDamageSender
 {
-    public GameValue_float Damage { get; set; }
+    /// <summary>本次攻击的四类基础伤害。</summary>
+    public CombatDamage DamageValues { get; }
+
     public Item attacker { get; set; }
-    public List<DamageType> Weakness { get; set; }
 }

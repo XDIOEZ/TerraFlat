@@ -123,6 +123,14 @@ public sealed class FlatWorldUIFeedback : MonoBehaviour,
 
     public void OnSelect(BaseEventData eventData)
     {
+        if (!EventSystemGuard.IsGamepadMode)
+        {
+            selected = false;
+            SetSelectionVisual(false);
+            AnimateToCurrentState();
+            return;
+        }
+
         selected = true;
         ConfigureSelectedColor();
         SetSelectionVisual(true);

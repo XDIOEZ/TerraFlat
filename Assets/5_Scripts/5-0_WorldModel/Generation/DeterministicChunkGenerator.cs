@@ -12,7 +12,7 @@ namespace FlatWorld.WorldModel
     public sealed class DeterministicChunkGenerator : IChunkPureGenerator
     {
         /// <summary>纯区块生成规则版本；气候、群系、河谷选路或河网筛选规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 25;
+        public const int CurrentGenerationSignature = 26;
 
         private readonly LegacyHydrologyKernel legacyHydrologyKernel = new();
         private readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<GeneratedHydrologyMap>>
@@ -378,8 +378,9 @@ namespace FlatWorld.WorldModel
             {
                 biomeId = (int)biome;
                 groundTileId = settings.FreshWaterTileId;
-                flags = TerrainCellFlags.Water;
-                navigationCost = short.MaxValue;
+                // 河流只是高代价地形：有陆路时 A* 优先绕行，唯一通路是河时仍可渡河。
+                flags = TerrainCellFlags.Water | TerrainCellFlags.Walkable;
+                navigationCost = settings.RiverNavigationCost;
             }
             else if (biome == SurfaceBiomeKind.Stone)
             {

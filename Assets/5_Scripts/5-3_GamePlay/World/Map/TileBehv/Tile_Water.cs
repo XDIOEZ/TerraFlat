@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// 水体地块逻辑行为
-/// 负责处理进入 / 离开水地块时的特效与 Buff 效果。
+/// 负责水体表现、配置型环境 Buff，以及向角色提供无状态的喝水动作定义。
 /// 作为 TileBlockBehaviour 的具体实现，通过组合到 Tile_Block 中使用。
 /// </summary>
 [System.Serializable]
@@ -14,6 +14,20 @@ public class Tile_Water : TileBlockBehaviour
 
     [Header("进入水体时附加的 Buff 列表")]
     public List<string> BuffInfo = new List<string>();
+
+    [Header("水体环境动作")]
+    [Tooltip("长按交互键达到该时长后开始饮水。")]
+    [Min(0f)] public float drinkHoldSeconds = 1f;
+    [Tooltip("持续饮水的结算间隔。")]
+    [Min(0.05f)] public float drinkTickSeconds = 1f;
+    [Tooltip("每次饮水恢复的水分。")]
+    [Min(0f)] public float waterGainPerTick = 125f;
+    [Tooltip("脏淡水每次饮水触发感染的概率。")]
+    [Range(0f, 1f)] public float dirtyWaterInfectionChance = 0.2f;
+
+    [Header("水体环境效果")]
+    [Tooltip("进入水体后的移动速度倍率；由环境实例维护，不进入 Buff 系统。")]
+    [Min(0.01f)] public float moveSpeedMultiplier = 0.5f;
 
     public override void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
     {
@@ -26,11 +40,8 @@ public class Tile_Water : TileBlockBehaviour
         float depthValue = water != null ? Mathf.Clamp01(water.deepValue) : 0f;
         SetWaterVisualState(item, depthValue, true);
 
-        // Buff 添加逻辑
-        if (!validItem || buffManager == null)
-            return;
-
-        if (BuffInfo != null)
+        // 配置型 Buff 与环境动作相互独立；没有 BuffManager 的角色仍可获得动作定义。
+        if (validItem && buffManager != null && BuffInfo != null)
         {
             foreach (string buffId in BuffInfo)
             {
@@ -41,7 +52,8 @@ public class Tile_Water : TileBlockBehaviour
             }
         }
 
-        ApplyWaterCapability(item, water, buffManager);
+        ProvideWaterActions(item, water, receiver);
+        ProvideWaterEffects(receiver);
     }
 
     public override void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
@@ -52,10 +64,7 @@ public class Tile_Water : TileBlockBehaviour
 
         // 移除 Buff
         BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
-        if (buffManager == null)
-            return;
-
-        if (BuffInfo != null)
+        if (buffManager != null && BuffInfo != null)
         {
             foreach (string buffId in BuffInfo)
             {
@@ -68,7 +77,8 @@ public class Tile_Water : TileBlockBehaviour
         }
 
 
-        RemoveWaterCapability(buffManager);
+        receiver?.EnvironmentInteractions.ClearAvailableActions();
+        receiver?.EnvironmentInteractions.ClearAvailableEffects();
     }
 
     public override void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
@@ -92,26 +102,31 @@ public class Tile_Water : TileBlockBehaviour
 
     #endregion
 
-    #region Water Capability
+    #region 环境动作提供
 
-    /// <summary>按水体盐度授予盐水或淡水能力，并保证同一生物只保留一种饮水来源。</summary>
-    private static void ApplyWaterCapability(Item item, TileData_Water water,
-        BuffManager buffManager)
+    /// <summary>水体只提供无角色状态的动作定义；角色侧运行器在按键时创建独立实例。</summary>
+    private void ProvideWaterActions(Item item, TileData_Water water,
+        TileEffectReceiver receiver)
     {
-        RemoveWaterCapability(buffManager);
+        EnvironmentInteractionRunner runner = receiver?.EnvironmentInteractions;
+        if (runner == null)
+            return;
+
+        runner.ClearAvailableActions();
         if (item == null || water == null)
             return;
 
-        if (water.salt > SaltWaterThreshold)
-        {
-            buffManager.AddBuff(SaltWaterBuffIds.InSaltWater);
-            return;
-        }
-
-        string qualityBuffId = IsCleanFlowingFreshWater(item.transform.position)
-            ? FreshWaterBuffIds.Clean
-            : FreshWaterBuffIds.Dirty;
-        buffManager.AddBuff(qualityBuffId);
+        WaterEnvironmentKind waterKind = water.salt > SaltWaterThreshold
+            ? WaterEnvironmentKind.Salt
+            : IsCleanFlowingFreshWater(item.transform.position)
+                ? WaterEnvironmentKind.CleanFresh
+                : WaterEnvironmentKind.DirtyFresh;
+        runner.SetAvailableActions(new DrinkWaterActionDefinition(
+            waterKind,
+            drinkHoldSeconds,
+            drinkTickSeconds,
+            waterGainPerTick,
+            dirtyWaterInfectionChance));
     }
 
     private static bool IsCleanFlowingFreshWater(Vector2 worldPosition)
@@ -128,18 +143,11 @@ public class Tile_Water : TileBlockBehaviour
                Mathf.RoundToInt(riverKind) == (int)HydrologyWaterKind.River;
     }
 
-    /// <summary>离开水体或切换水质时清理所有饮水能力 Buff。</summary>
-    private static void RemoveWaterCapability(BuffManager buffManager)
+    /// <summary>进入水体时创建角色独享的减速实例；清 Buff 不会影响该环境效果。</summary>
+    private void ProvideWaterEffects(TileEffectReceiver receiver)
     {
-        if (buffManager == null)
-            return;
-
-        if (buffManager.HasBuff(FreshWaterBuffIds.Clean))
-            buffManager.RemoveBuff(FreshWaterBuffIds.Clean);
-        if (buffManager.HasBuff(FreshWaterBuffIds.Dirty))
-            buffManager.RemoveBuff(FreshWaterBuffIds.Dirty);
-        if (buffManager.HasBuff(SaltWaterBuffIds.InSaltWater))
-            buffManager.RemoveBuff(SaltWaterBuffIds.InSaltWater);
+        receiver?.EnvironmentInteractions.SetAvailableEffects(
+            new MoveSpeedEnvironmentEffectDefinition(moveSpeedMultiplier));
     }
 
     #endregion

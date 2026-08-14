@@ -9,6 +9,33 @@ namespace FlatWorld.GameTest.Combat
     /// <summary>战斗基础冒烟测试：保护伤害与技能系统入口。</summary>
     public sealed class CombatSmokeTests
     {
+        [Test]
+        [Category("Combat.Smoke")]
+        [Category("Smoke")]
+        public void TypedDamageUsesIndependentSubtractionAndZeroFloor()
+        {
+            var axe = new CombatDamage(1f, 0f, 5f, 3f);
+            Assert.That(axe.TotalCombatPower, Is.EqualTo(9f));
+
+            var knife = new CombatDamage(3f, 0f, 0f, 0f);
+            var plate = new CombatDefense(10f, 0f, 0f, 0f);
+            Assert.That(knife.CalculateAgainst(plate), Is.Zero);
+
+            var machete = new CombatDamage(20f, 0f, 0f, 0f);
+            Assert.That(machete.CalculateAgainst(plate), Is.EqualTo(10f));
+
+            var hoe = new CombatDamage(0f, 5f, 6f, 0f);
+            Assert.That(hoe.CalculateAgainst(new CombatDefense()), Is.EqualTo(11f));
+        }
+
+        [Test]
+        [Category("Combat.Smoke")]
+        [Category("Smoke")]
+        public void BasicMeleePrefabsUseExplicitTypedDamageAndKeepHitEffects()
+        {
+            AssertBasicMeleePrefab("Assets/2_Prefabs/Item/Log.prefab", 5f);
+            AssertBasicMeleePrefab("Assets/2_Prefabs/Item/Stick.prefab", 6f);
+        }
 
         [Test]
         [Category("Combat.Smoke")]
@@ -147,17 +174,32 @@ namespace FlatWorld.GameTest.Combat
             Assert.That(boneLoot.MaxAmount, Is.EqualTo(expectedMax), $"骨头最大数量错误：{path}");
         }
 
+        /// <summary>基础近战物品必须显式使用钝击伤害，并继承通用命中特效。</summary>
+        private static void AssertBasicMeleePrefab(string path, float expectedBluntDamage)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            Mod_Damage damage = prefab != null
+                ? prefab.GetComponentInChildren<Mod_Damage>(true)
+                : null;
+
+            Assert.That(prefab, Is.Not.Null, $"基础近战 Prefab 不存在：{path}");
+            Assert.That(damage, Is.Not.Null, $"基础近战物品缺少 Mod_Damage：{path}");
+
+            CombatDamage values = damage.ResolveDamageValues();
+            Assert.That(values.Blunt, Is.EqualTo(expectedBluntDamage), $"钝击伤害配置错误：{path}");
+            Assert.That(values.TotalCombatPower, Is.EqualTo(expectedBluntDamage), $"伤害类型配置不纯：{path}");
+            Assert.That(damage.AttackEffects, Is.Not.Null.And.Not.Empty, $"命中特效配置为空：{path}");
+        }
+
         private sealed class TestDamageSender : IDamageSender
         {
             public TestDamageSender(float damage)
             {
-                Damage = new GameValue_float(damage);
-                Weakness = new List<DamageType>();
+                DamageValues = new CombatDamage(0f, 0f, 0f, damage);
             }
 
-            public GameValue_float Damage { get; set; }
+            public CombatDamage DamageValues { get; }
             public Item attacker { get; set; }
-            public List<DamageType> Weakness { get; set; }
         }
     }
 }

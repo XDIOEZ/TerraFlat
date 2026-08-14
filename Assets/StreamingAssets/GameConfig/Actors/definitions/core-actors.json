@@ -149,7 +149,8 @@
             "eatExitHungerRate": 0.85,
             "sleepEnterHpRate": 0.5,
             "sleepExitHpRate": 0.55,
-            "sleepRecoverHpPerSecond": 6.0,
+            "healthRecoveryInterval": 60.0,
+            "healthRecoveryAmount": 10.0,
             "sleepDuration": 6.0,
             "sleepCooldown": 3.0,
             "dayStartRatio": 0.25,
@@ -1076,6 +1077,13 @@
             "xOffset": 0.5,
             "AttackEffects": [],
             "Weakness": [],
+            "DamageValues": {
+              "Cutting": 0.0,
+              "Piercing": 2.0,
+              "Chopping": 0.0,
+              "Blunt": 8.0
+            },
+            "damageSystemVersion": 1,
             "Damage": {
               "BaseValue": 10.0,
               "BaseAdditive": 0.0,
@@ -1137,7 +1145,8 @@
             "eatExitHungerRate": 0.8,
             "sleepEnterHpRate": 0.45,
             "sleepExitHpRate": 0.5,
-            "sleepRecoverHpPerSecond": 5.0,
+            "healthRecoveryInterval": 60.0,
+            "healthRecoveryAmount": 10.0,
             "sleepDuration": 8.0,
             "sleepCooldown": 4.0,
             "dayStartRatio": 0.25,
@@ -1441,7 +1450,7 @@
           "b": 1.0,
           "a": 1.0
         },
-        "flipX": true,
+        "flipX": false,
         "flipY": false,
         "sortingLayerName": "Default",
         "sortingOrder": 0,
@@ -1785,6 +1794,13 @@
             "xOffset": 0.65,
             "AttackEffects": [],
             "Weakness": [],
+            "DamageValues": {
+              "Cutting": 3.0,
+              "Piercing": 2.0,
+              "Chopping": 0.0,
+              "Blunt": 7.0
+            },
+            "damageSystemVersion": 1,
             "Damage": {
               "BaseValue": 10.0,
               "BaseAdditive": 0.0,
@@ -2010,6 +2026,8 @@
           },
           "parameters": {
             "debugLog": true,
+            "healthRecoveryInterval": 60.0,
+            "healthRecoveryAmount": 10.0,
             "wolfTags": [
               "Wolf"
             ],
@@ -2163,6 +2181,13 @@
           "parameters": {
             "AttackEffects": [],
             "Weakness": [],
+            "DamageValues": {
+              "Cutting": 0.0,
+              "Piercing": 0.0,
+              "Chopping": 0.0,
+              "Blunt": 20.0
+            },
+            "damageSystemVersion": 1,
             "Damage": {
               "BaseValue": 20.0,
               "BaseAdditive": 0.0,

@@ -18,6 +18,7 @@ public sealed class ChunkView : MonoBehaviour
     private bool navigationEnabled;
     private int bindVersion;
     private bool presentationComplete;
+    private ChunkTilemapRenderer tilemapRenderer;
     private ChunkLightOccluderRenderer lightOccluderRenderer;
 
     public ChunkRuntime Model => chunk;
@@ -31,6 +32,7 @@ public sealed class ChunkView : MonoBehaviour
     {
         EnsureNaturalItemRenderer();
         EnsureLightOccluderRenderer();
+        tilemapRenderer = GetComponentInChildren<ChunkTilemapRenderer>(true);
     }
 
     public void Bind(WorldRuntime worldRuntime, ChunkRuntime chunkRuntime, bool includeNavigation = true)
@@ -106,6 +108,7 @@ public sealed class ChunkView : MonoBehaviour
         navigationLease = null;
         presentationLease?.Dispose();
         presentationLease = null;
+        tilemapRenderer?.SetWorld(null);
         chunk = null;
         world = null;
         navigationEnabled = false;
@@ -213,6 +216,7 @@ public sealed class ChunkView : MonoBehaviour
         Unbind();
         world = worldRuntime;
         chunk = chunkRuntime;
+        tilemapRenderer?.SetWorld(worldRuntime);
         navigationEnabled = includeNavigation;
         presentationComplete = false;
         transform.position = new Vector3(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y, 0f);

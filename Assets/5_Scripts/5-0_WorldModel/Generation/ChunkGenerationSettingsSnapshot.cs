@@ -376,9 +376,9 @@ namespace FlatWorld.WorldModel
             CavePortalBaseSeed = GetInt(numbers, "cave.portal.baseSeed", 0);
             CavePortalSeedSalt = GetInt(numbers, "cave.portal.seedSalt", 7919);
             CaveResourceDensity = Clamp01(
-                GetDouble(numbers, "cave.resource.density", 0.14d));
+                GetDouble(numbers, "cave.resource.density", 0.042d));
             CaveLooseOreDensity = Clamp01(
-                GetDouble(numbers, "cave.resource.looseDensity", 0d));
+                GetDouble(numbers, "cave.resource.looseDensity", 0.0012d));
             CavePortalItemId = GetText(texts, "cave.portal.itemId", "CaveExit");
             CavePortalTargetDimensionId = GetText(
                 texts,
@@ -386,6 +386,8 @@ namespace FlatWorld.WorldModel
                 Mode == ChunkGenerationMode.Cave ? "surface" : "cave");
             DefaultNavigationCost = (short)Clamp(GetInt(numbers,
                 "navigation.defaultCost", 1), 1, short.MaxValue);
+            RiverNavigationCost = (short)Clamp(GetInt(numbers,
+                "navigation.riverCost", 5000), DefaultNavigationCost, short.MaxValue);
         }
 
         /// <summary>生成地表还是洞穴。</summary>
@@ -560,6 +562,8 @@ namespace FlatWorld.WorldModel
         public double CaveLooseOreDensity { get; }
         /// <summary>普通地面默认有多难走；数字越大，寻路越不喜欢走。</summary>
         public short DefaultNavigationCost { get; }
+        /// <summary>河流的有限寻路代价；高于陆地，但不能把河流变成不可通行障碍。</summary>
+        public short RiverNavigationCost { get; }
 
         // 这些小方法只从当前这份设置里取值，不会偷偷读取全局设置。
         /// <summary>读取一个整数参数；找不到时返回默认值。</summary>

@@ -13,7 +13,10 @@ public class BerryBush : MonoBehaviour, IInteractable
 	public string BerryItemId = "Berry"; // 产出物品ID
 
 	[Min(0.1f)]
-	public float ProductionIntervalSeconds = 45f; // 每次成熟间隔
+	public float ProductionIntervalSeconds = 135f; // 每批成熟间隔
+
+	[Min(1)]
+	public int ProductionBatchSize = 3; // 每轮成熟时一次生成的浆果数量
 
 	[Min(1)]
 	public int MaxBerryCount = 12; // 浆果库存上限
@@ -88,7 +91,8 @@ public class BerryBush : MonoBehaviour, IInteractable
 		if (_productionTimer >= Mathf.Max(0.1f, ProductionIntervalSeconds))
 		{
 			_productionTimer = 0f;
-			_currentBerryCount++;
+			int batchSize = Mathf.Max(1, ProductionBatchSize);
+			_currentBerryCount = Mathf.Min(Mathf.Max(1, MaxBerryCount), _currentBerryCount + batchSize);
 			RefreshReadySpriteVisual();
 		}
 	}
