@@ -8,8 +8,8 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 ## 入口
 
 - 时间：`Assets/5_Scripts/5-3_GamePlay/World/Time/{DayTimeSystem,TimeData,DayNightTimeManager}.cs`
-- 天气：`Core/Manager/{WeatherMgr,WeatherEventScheduler,RainEffectController,RainGroundSplashController}.cs`
-- 光照/温度：`Core/Manager/{LightLayerMgr,TemperatureMgr}.cs`
+- 天气：`World/Environment/{WeatherMgr,WeatherEventScheduler,RainEffectController,RainGroundSplashController}.cs`
+- 光照/温度：`World/Environment/{LightLayerMgr,TemperatureMgr}.cs`
 - 存档：`World/Map/Data/{PlanetData,PlanetTimeData}.cs`
 
 ## 不变量

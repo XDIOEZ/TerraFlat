@@ -142,7 +142,7 @@ namespace FlatWorld.GameTest.WorldModel
         public void ChunkViewPrefabRepeatedBindingRendersAndClearsEveryModelLayer()
         {
             ChunkView prefab = AssetDatabase.LoadAssetAtPath<ChunkView>(
-                "Assets/2_Prefabs/WorldModel/ChunkView.prefab");
+                "Assets/2_Prefabs/World/WorldModel/ChunkView.prefab");
             Assert.That(prefab, Is.Not.Null);
             Assert.That(prefab.GetComponent<ChunkTilemapRenderer>(), Is.Not.Null);
             Assert.That(prefab.GetComponent<ChunkEnvironmentTilemapRenderer>(), Is.Not.Null);

@@ -70,9 +70,9 @@ public static class FlatWorldUIThemeMigrator
 
     private static bool UsesBespokeMenuArt(string path)
     {
-        return path.EndsWith("UI_Hello.prefab", StringComparison.OrdinalIgnoreCase) ||
-               path.EndsWith("UI_GameSaveManager.prefab", StringComparison.OrdinalIgnoreCase) ||
+        return path.EndsWith("UI_MainMenu.prefab", StringComparison.OrdinalIgnoreCase) ||
+               path.EndsWith("UI_SaveSelectionPanel.prefab", StringComparison.OrdinalIgnoreCase) ||
                path.EndsWith("UI_NewGame.prefab", StringComparison.OrdinalIgnoreCase) ||
-               path.EndsWith("存档选择按钮.prefab", StringComparison.OrdinalIgnoreCase);
+               path.EndsWith("UI_SaveSelectionButton.prefab", StringComparison.OrdinalIgnoreCase);
     }
 }

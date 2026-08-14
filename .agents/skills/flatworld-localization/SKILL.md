@@ -9,8 +9,8 @@ description: "Use when: 定位或修改 FlatWorld 的多语言系统、Unity Loc
 
 - 服务：`Assets/5_Scripts/5-7_Localization/FlatWorldLocalizationService.cs`
 - 绑定：同目录 `LocalizedTextBinder.cs`
-- 编辑器同步：`Assets/5_Scripts/5-2_Editor/Localization/FlatWorldLocalizationSetup.cs`
-- UI 自动绑定：`Assets/5_Scripts/5-5_UI/{BasePanel,FlatWorldUIAutoLocalizer}.cs`
+- 编辑器同步：`Assets/Editor/FlatWorld/ProjectTools/Localization/FlatWorldLocalizationSetup.cs`
+- UI 自动绑定：`Assets/5_Scripts/5-5_UI/Core/BasePanel.cs`、`Assets/5_Scripts/5-5_UI/Common/Presentation/FlatWorldUIAutoLocalizer.cs`
 - 详细文件导航：`references/file-map.md`（只在路径不明确时读）
 
 ## 固定契约

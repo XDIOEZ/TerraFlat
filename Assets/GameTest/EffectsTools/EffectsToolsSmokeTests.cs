@@ -12,9 +12,9 @@ namespace FlatWorld.GameTest.EffectsTools
         [Category("Smoke")]
         public void RequiredEntryPointsAndAssetsExist()
         {
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Core/Manager/VisualEffectManager.cs", "VisualEffectManager");
-            GameTestAssertions.AssertScriptType("Assets/5_Scripts/SpecialEffects/DamageTextEffect.cs", "DamageTextEffect");
-            GameTestAssertions.AssertFolderContainsAsset("Assets/2_Prefabs/ParticleEffect", "t:Prefab");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Management/VisualEffectManager.cs", "VisualEffectManager");
+            GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Runtime/Text/DamageTextEffect.cs", "DamageTextEffect");
+            GameTestAssertions.AssertFolderContainsAsset("Assets/2_Prefabs/Effects", "t:Prefab");
             GameTestAssertions.AssertFolderContainsAsset("Assets/Shaders", "t:Shader");
 
             string navigationSource = File.ReadAllText(

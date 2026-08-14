@@ -11,7 +11,7 @@
         "Data",
         "UI",
         "PlayerInput",
-        "m_Utilitiles",
+        "FlatWorld.Utilities",
         "Unity.TextMeshPro",
         "Unity.InputSystem",
         "FlatWorld.WorldModel",

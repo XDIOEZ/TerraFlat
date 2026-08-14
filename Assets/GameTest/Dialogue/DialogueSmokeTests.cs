@@ -26,7 +26,7 @@ namespace FlatWorld.GameTest.Dialogue
         [Category("Dialogue.Weather")]
         public void PlayerPrefabProvidesWeatherFactsAndRainLines()
         {
-            const string playerPath = "Assets/2_Prefabs/Player/Player.prefab";
+            const string playerPath = "Assets/2_Prefabs/Gameplay/Player/Player.prefab";
             GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(playerPath);
             Assert.That(player, Is.Not.Null, $"缺少玩家 Prefab：{playerPath}");
             Assert.That(player.GetComponent<WeatherExposureSpeechProvider>(), Is.Not.Null);

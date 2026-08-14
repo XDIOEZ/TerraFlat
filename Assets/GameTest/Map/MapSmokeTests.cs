@@ -60,7 +60,7 @@ namespace FlatWorld.GameTest.Map
         public void RuntimeWindowUsesTheSameDerivedSeedAsSpawnSearch()
         {
             const string runtimeWindowPath =
-                "Assets/5_Scripts/5-3_GamePlay/Core/Manager/ChunkMgr.RuntimeWindow.cs";
+                "Assets/5_Scripts/5-3_GamePlay/World/Chunk/Management/ChunkMgr.RuntimeWindow.cs";
             string source = File.ReadAllText(runtimeWindowPath);
             int methodStart = source.IndexOf(
                 "public void RefreshRuntimeWindow",
@@ -100,7 +100,7 @@ namespace FlatWorld.GameTest.Map
         [Category("Smoke")]
         public void DirectChunkLoadReusesAnAlreadyActiveChunk()
         {
-            const string chunkManagerPath = "Assets/5_Scripts/5-3_GamePlay/Core/Manager/ChunkMgr.cs";
+            const string chunkManagerPath = "Assets/5_Scripts/5-3_GamePlay/World/Chunk/Management/ChunkMgr.cs";
             string source = File.ReadAllText(chunkManagerPath);
             int methodStart = source.IndexOf("public Chunk LoadChunk_By_Position", System.StringComparison.Ordinal);
             int createStart = source.IndexOf("// === 第二优先级", methodStart, System.StringComparison.Ordinal);

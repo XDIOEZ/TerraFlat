@@ -12,7 +12,7 @@ namespace FlatWorld.GameTest.Environment
         [Category("Environment.Weather")]
         public void WeatherManagerDefersTimeSystemUntilWorldEntry()
         {
-            string source = File.ReadAllText("Assets/5_Scripts/5-3_GamePlay/Core/Manager/WeatherMgr.cs");
+            string source = File.ReadAllText("Assets/5_Scripts/5-3_GamePlay/World/Environment/WeatherMgr.cs");
             int startIndex = source.IndexOf("private void Start()");
             int destroyIndex = source.IndexOf("protected override void OnDestroy()", startIndex);
 
@@ -30,7 +30,7 @@ namespace FlatWorld.GameTest.Environment
             Assert.That(WeatherMgr.IsWeatherSuppressedInDimension(surface), Is.False);
             Assert.That(WeatherMgr.IsWeatherSuppressedInDimension(cave), Is.True);
 
-            string source = File.ReadAllText("Assets/5_Scripts/5-3_GamePlay/Core/Manager/WeatherMgr.cs");
+            string source = File.ReadAllText("Assets/5_Scripts/5-3_GamePlay/World/Environment/WeatherMgr.cs");
             int lifecycleIndex = source.IndexOf("private void ApplyGameWorldLifecycleState(bool isActive)");
             int updateIndex = source.IndexOf("private void Update()", lifecycleIndex);
             Assert.That(lifecycleIndex, Is.GreaterThanOrEqualTo(0));

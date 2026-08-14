@@ -35,10 +35,10 @@ namespace FlatWorld.GameTest.Buff
             Assert.That(tickEffect.Value, Is.EqualTo(1f));
             Assert.That(tickEffect.IsHandlerCached, Is.True);
 
-            AssertBurningVisualConfiguration("Assets/2_Prefabs/Module/Module_Animator.prefab");
-            AssertBurningVisualConfiguration("Assets/2_Prefabs/Module/Animator/Module_Animator_AI.prefab");
-            AssertRadianceLightConfiguration("Assets/2_Prefabs/Module/Module_Animator.prefab");
-            AssertRadianceLightConfiguration("Assets/2_Prefabs/Module/Animator/Module_Animator_AI.prefab");
+            AssertBurningVisualConfiguration("Assets/2_Prefabs/Gameplay/Modules/Animation/Module_Animator.prefab");
+            AssertBurningVisualConfiguration("Assets/2_Prefabs/Gameplay/Modules/Animation/Module_Animator_AI.prefab");
+            AssertRadianceLightConfiguration("Assets/2_Prefabs/Gameplay/Modules/Animation/Module_Animator.prefab");
+            AssertRadianceLightConfiguration("Assets/2_Prefabs/Gameplay/Modules/Animation/Module_Animator_AI.prefab");
         }
 
         [Test]
@@ -59,8 +59,8 @@ namespace FlatWorld.GameTest.Buff
             Assert.That(infection.TickEffects[0].Value, Is.EqualTo(1f));
             Assert.That(infection.TickEffects[0].IsHandlerCached, Is.True);
 
-            AssertInfectionTintConfiguration("Assets/2_Prefabs/Module/Module_Animator.prefab");
-            AssertInfectionTintConfiguration("Assets/2_Prefabs/Module/Animator/Module_Animator_AI.prefab");
+            AssertInfectionTintConfiguration("Assets/2_Prefabs/Gameplay/Modules/Animation/Module_Animator.prefab");
+            AssertInfectionTintConfiguration("Assets/2_Prefabs/Gameplay/Modules/Animation/Module_Animator_AI.prefab");
         }
 
         [Test]

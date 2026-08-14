@@ -7,8 +7,8 @@ using UnityEngine.UI;
 
 public static class GameSavePrefabBuilder
 {
-    private const string PanelPrefabPath = "Assets/2_Prefabs/2-1_UI/Menu_UI/UI_GameSaveManager.prefab";
-    private const string ItemPrefabPath = "Assets/2_Prefabs/2-1_UI/存档选择按钮.prefab";
+    private const string PanelPrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionPanel.prefab";
+    private const string ItemPrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionButton.prefab";
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
 
     private static readonly Color Ink = new Color(0.025f, 0.043f, 0.058f, 0.985f);
@@ -221,7 +221,7 @@ public static class GameSavePrefabBuilder
                     Object.DestroyImmediate(component, true);
             }
 
-            root.name = "存档选择按钮";
+            root.name = "UI_SaveSelectionButton";
             root.layer = LayerMask.NameToLayer("UI");
             RectTransform rect = root.GetComponent<RectTransform>();
             rect.anchorMin = new Vector2(0f, 1f);

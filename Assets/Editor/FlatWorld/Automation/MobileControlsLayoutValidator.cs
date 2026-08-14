@@ -12,9 +12,9 @@ namespace FlatWorld.Automation
     public static class MobileControlsLayoutValidator
     {
         private const string MobilePrefabPath =
-            "Assets/2_Prefabs/2-1_UI/Runtime/Mobile/UI_MobileControls.prefab";
+            "Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControls.prefab";
         private const string UIRootPath = "Assets/Resources/UI/UIRoot.prefab";
-        private const string PlayerPrefabPath = "Assets/2_Prefabs/Player/Player.prefab";
+        private const string PlayerPrefabPath = "Assets/2_Prefabs/Gameplay/Player/Player.prefab";
 
         #region 菜单入口
 

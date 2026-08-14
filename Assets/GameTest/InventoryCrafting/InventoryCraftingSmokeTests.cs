@@ -19,7 +19,7 @@ namespace FlatWorld.GameTest.InventoryCrafting
         [Category("Smoke")]
         public void HotbarSlotsDoNotEnterGamepadNavigation()
         {
-            const string prefabPath = "Assets/2_Prefabs/2-1_UI/InventoryUI/UI_HotBar.prefab";
+            const string prefabPath = "Assets/2_Prefabs/2-1_UI/Gameplay/HUD/UI_HotBar.prefab";
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             Assert.That(prefab, Is.Not.Null, $"缺少快捷栏 Prefab：{prefabPath}");
 

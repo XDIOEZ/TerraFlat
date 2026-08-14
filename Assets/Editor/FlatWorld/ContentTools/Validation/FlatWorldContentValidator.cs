@@ -93,7 +93,7 @@ public static class FlatWorldContentValidator
     private const string ItemManifestAssetPath = ItemRootAssetPath + "/item-manifest.json";
     private const string RecipeRootAssetPath = "Assets/StreamingAssets/GameConfig/Recipes";
     private const string RecipeManifestAssetPath = RecipeRootAssetPath + "/recipe-manifest.json";
-    private const string WorldManagerPrefabPath = "Assets/2_Prefabs/GameManager/WorldManager.prefab";
+    private const string WorldManagerPrefabPath = "Assets/2_Prefabs/Core/Managers/WorldManager.prefab";
     private const string BuildingShadowPrefabId = "BuildingShadow";
 
     private static readonly string[] SerializedValidationRoots =

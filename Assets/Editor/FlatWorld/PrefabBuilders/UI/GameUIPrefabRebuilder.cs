@@ -15,19 +15,25 @@ public static class GameUIPrefabRebuilder
 {
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
     private const string SelectBoxSpritePath = "Assets/6_Art/UI/Inventory_UI/Inventory_select.png";
-    private const string InventoryRoot = "Assets/2_Prefabs/2-1_UI/InventoryUI/";
-    private const string MenuRoot = "Assets/2_Prefabs/2-1_UI/Menu_UI/";
-    private const string ModsRoot = "Assets/2_Prefabs/2-1_UI/ModsUI/";
-    private const string CommonRoot = "Assets/2_Prefabs/2-1_UI/";
-    private const string SlotPrefabPath = InventoryRoot + "UI_Slot.prefab";
+    private const string PrefabRoot = "Assets/2_Prefabs/2-1_UI/";
+    private const string CommonControlsRoot = PrefabRoot + "Common/Controls/";
+    private const string MainMenuCoreRoot = PrefabRoot + "MainMenu/Core/";
+    private const string MainMenuSaveRoot = PrefabRoot + "MainMenu/Save/";
+    private const string CraftingRoot = PrefabRoot + "Gameplay/Crafting/";
+    private const string HudRoot = PrefabRoot + "Gameplay/HUD/";
+    private const string InventoryComponentsRoot = PrefabRoot + "Gameplay/Inventory/Components/";
+    private const string InventoryPanelsRoot = PrefabRoot + "Gameplay/Inventory/Panels/";
+    private const string ScreensRoot = PrefabRoot + "Gameplay/Screens/";
+    private const string PlayerStatusRoot = PrefabRoot + "Gameplay/Status/Player/";
+    private const string SlotPrefabPath = InventoryComponentsRoot + "UI_Slot.prefab";
 
     private static readonly string[] CraftingPreviewPrefabPaths =
     {
         SlotPrefabPath,
-        InventoryRoot + "UI_HandCraftTable.prefab",
-        InventoryRoot + "UI_MakerTable.prefab",
-        InventoryRoot + "UI_FireDrill.prefab",
-        InventoryRoot + "UI_FlintStrike.prefab"
+        CraftingRoot + "UI_HandCraftTable.prefab",
+        CraftingRoot + "UI_MakerTable.prefab",
+        CraftingRoot + "UI_FireDrill.prefab",
+        CraftingRoot + "UI_FlintStrike.prefab"
     };
 
     private static readonly Color Ink = new Color(0.025f, 0.043f, 0.058f, 0.985f);
@@ -44,23 +50,23 @@ public static class GameUIPrefabRebuilder
 
     private static readonly Dictionary<string, string[]> BindingContracts = new Dictionary<string, string[]>
     {
-        { InventoryRoot + "UI_Bag.prefab", new[] { "Scroll View", "Content", "关闭" } },
-        { InventoryRoot + "UI_Equipment.prefab", new[] { "Scroll View", "Content", "关闭" } },
-        { InventoryRoot + "UI_HandCraftTable.prefab", new[] { "输入_1", "输入_2", "输入_3", "输入_4", "输出_1", "合成按钮", "关闭", "Progress" } },
-        { InventoryRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_9", "输出_1", "输出_2", "合成按钮", "关闭", "Progress" } },
-        { InventoryRoot + "UI_Furnace.prefab", new[] { "输入_1", "输入_2", "输入_3", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "合成按钮", "关闭" } },
-        { InventoryRoot + "UI_BoneFire.prefab", new[] { "输入_1", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "合成按钮", "关闭" } },
-        { InventoryRoot + "UI_FireDrill.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
-        { InventoryRoot + "UI_FlintStrike.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
-        { InventoryRoot + "UI_Death.prefab", new[] { "重生", "回到主菜单" } },
-        { InventoryRoot + "UI_GameModuleUI.prefab", new[] { "Dropdown", "Template", "Content" } },
-        { MenuRoot + "Info_Button_List.prefab", new[] { "Scroll View", "保存游戏", "保存并回到主界面按钮", "保存并退出游戏按钮", "关闭" } },
-        { CommonRoot + "右键菜单.prefab", new[] { "控制面板", "销毁面板", "使用物品", "查看物品信息", "丢弃一个", "丢弃整组" } },
-        { CommonRoot + "物品信息面板.prefab", new[] { "面板", "信息", "销毁" } },
-        { ModsRoot + "UI_Canvas.prefab", new[] { "Panel", "Slider", "关闭页面" } },
-        { ModsRoot + "UI_HP.prefab", new[] { "血量模块_世界面板", "背景", "血量" } },
-        { ModsRoot + "UI_Food.prefab", new[] { "碳水", "脂肪", "蛋白质", "水", "维生素", "体温", "DataText_体温" } },
-        { ModsRoot + "UI_Sleep.prefab", new[] { "ZZZs" } }
+        { InventoryPanelsRoot + "UI_Bag.prefab", new[] { "Scroll View", "Content", "关闭" } },
+        { InventoryPanelsRoot + "UI_Equipment.prefab", new[] { "Scroll View", "Content", "关闭" } },
+        { CraftingRoot + "UI_HandCraftTable.prefab", new[] { "输入_1", "输入_2", "输入_3", "输入_4", "输出_1", "合成按钮", "关闭", "Progress" } },
+        { CraftingRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_9", "输出_1", "输出_2", "合成按钮", "关闭", "Progress" } },
+        { CraftingRoot + "UI_Furnace.prefab", new[] { "输入_1", "输入_2", "输入_3", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "合成按钮", "关闭" } },
+        { CraftingRoot + "UI_Bonfire.prefab", new[] { "输入_1", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "合成按钮", "关闭" } },
+        { CraftingRoot + "UI_FireDrill.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
+        { CraftingRoot + "UI_FlintStrike.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
+        { ScreensRoot + "UI_Death.prefab", new[] { "重生", "回到主菜单" } },
+        { PlayerStatusRoot + "UI_ModuleList.prefab", new[] { "Dropdown", "Template", "Content" } },
+        { MainMenuCoreRoot + "UI_ActionList.prefab", new[] { "Scroll View", "保存游戏", "保存并回到主界面按钮", "保存并退出游戏按钮", "关闭" } },
+        { InventoryPanelsRoot + "UI_ItemContextMenu.prefab", new[] { "控制面板", "销毁面板", "使用物品", "查看物品信息", "丢弃一个", "丢弃整组" } },
+        { InventoryPanelsRoot + "UI_ItemInfo.prefab", new[] { "面板", "信息", "销毁" } },
+        { PlayerStatusRoot + "UI_ModuleSettings.prefab", new[] { "Panel", "Slider", "关闭页面" } },
+        { PlayerStatusRoot + "UI_Health.prefab", new[] { "血量模块_世界面板", "背景", "血量" } },
+        { PlayerStatusRoot + "UI_Food.prefab", new[] { "碳水", "脂肪", "蛋白质", "水", "维生素", "体温", "DataText_体温" } },
+        { PlayerStatusRoot + "UI_Sleep.prefab", new[] { "ZZZs" } }
     };
 
     private sealed class BuildTarget
@@ -87,34 +93,34 @@ public static class GameUIPrefabRebuilder
 
         List<BuildTarget> targets = new List<BuildTarget>
         {
-            new BuildTarget(InventoryRoot + "UI_Bag.prefab", root => BuildScrollWindow(root, 706f, 640f, "行囊", "INVENTORY / FIELD KIT", "整理携带物资 · 拖拽交换位置", 5, new Vector2(96f, 96f))),
-            new BuildTarget(InventoryRoot + "UI_Equipment.prefab", root => BuildScrollWindow(root, 526f, 566f, "装备", "EQUIPMENT / LOADOUT", "将装备拖入槽位以更新生存配置", 2, new Vector2(112f, 112f))),
-            new BuildTarget(InventoryRoot + "UI_CompostBin.prefab", root => BuildScrollWindow(root, 646f, 468f, "堆肥箱", "COMPOST / RESOURCE CYCLE", "投入可腐物 · 等待自然转化", 5, new Vector2(88f, 88f))),
-            new BuildTarget(InventoryRoot + "UI_MeatRack.prefab", root => BuildScrollWindow(root, 646f, 468f, "晾肉架", "MEAT RACK / PRESERVATION", "保持通风 · 留意加工进度", 5, new Vector2(88f, 88f))),
-            new BuildTarget(InventoryRoot + "UI_HandCraftTable.prefab", root => BuildCraftWindow(root, "手工制作", "CRAFTING / BASIC WORK", 4, false)),
-            new BuildTarget(InventoryRoot + "UI_FireDrill.prefab", root => BuildCraftWindow(root, "钻木取火", "FIRECRAFT / FRICTION", 1, true)),
-            new BuildTarget(InventoryRoot + "UI_FlintStrike.prefab", root => BuildCraftWindow(root, "燧石取火", "FIRECRAFT / SPARK", 1, true)),
-            new BuildTarget(InventoryRoot + "UI_MakerTable.prefab", BuildMakerTable),
-            new BuildTarget(InventoryRoot + "UI_Furnace.prefab", root => BuildFurnace(root, false)),
-            new BuildTarget(InventoryRoot + "UI_BoneFire.prefab", root => BuildFurnace(root, true)),
-            new BuildTarget(InventoryRoot + "UI_Death.prefab", BuildDeathScreen),
-            new BuildTarget(InventoryRoot + "UI_HotBar.prefab", BuildHotbar),
-            new BuildTarget(InventoryRoot + "UI_Hand.prefab", BuildHandSlot),
-            new BuildTarget(InventoryRoot + "UI_GameModuleUI.prefab", BuildGameModuleSelector),
-            new BuildTarget(MenuRoot + "Info_Button_List.prefab", BuildActionList),
-            new BuildTarget(MenuRoot + "UI_ContextMenu .prefab", BuildSaveContextMenu),
-            new BuildTarget(CommonRoot + "右键菜单.prefab", BuildItemContextMenu),
-            new BuildTarget(CommonRoot + "物品信息面板.prefab", BuildItemInfo),
-            new BuildTarget(CommonRoot + "Hand_Slot_UI.prefab", BuildSlot),
-            new BuildTarget(CommonRoot + "Mod_UI_OpenUIButton.prefab", BuildBaseButton),
-            new BuildTarget(InventoryRoot + "Button.prefab", BuildBaseButton),
-            new BuildTarget(ModsRoot + "UI_Canvas.prefab", BuildSettingsPanel),
-            new BuildTarget(ModsRoot + "UI_HP.prefab", BuildHealthWorldPanel),
-            new BuildTarget(ModsRoot + "UI_Food.prefab", BuildNutritionHud),
-            new BuildTarget(ModsRoot + "UI_Sleep.prefab", BuildSleepHud),
-            new BuildTarget(CommonRoot + "InventoryUI/UI_Slot.prefab", BuildSlot),
-            new BuildTarget(CommonRoot + "Base_UI/UI_Slider.prefab", BuildBaseSlider),
-            new BuildTarget(CommonRoot + "Base_UI/UI_SelectBox.prefab", BuildBaseSelectBox)
+            new BuildTarget(InventoryPanelsRoot + "UI_Bag.prefab", root => BuildScrollWindow(root, 706f, 640f, "行囊", "INVENTORY / FIELD KIT", "整理携带物资 · 拖拽交换位置", 5, new Vector2(96f, 96f))),
+            new BuildTarget(InventoryPanelsRoot + "UI_Equipment.prefab", root => BuildScrollWindow(root, 526f, 566f, "装备", "EQUIPMENT / LOADOUT", "将装备拖入槽位以更新生存配置", 2, new Vector2(112f, 112f))),
+            new BuildTarget(CraftingRoot + "UI_CompostBin.prefab", root => BuildScrollWindow(root, 646f, 468f, "堆肥箱", "COMPOST / RESOURCE CYCLE", "投入可腐物 · 等待自然转化", 5, new Vector2(88f, 88f))),
+            new BuildTarget(CraftingRoot + "UI_MeatRack.prefab", root => BuildScrollWindow(root, 646f, 468f, "晾肉架", "MEAT RACK / PRESERVATION", "保持通风 · 留意加工进度", 5, new Vector2(88f, 88f))),
+            new BuildTarget(CraftingRoot + "UI_HandCraftTable.prefab", root => BuildCraftWindow(root, "手工制作", "CRAFTING / BASIC WORK", 4, false)),
+            new BuildTarget(CraftingRoot + "UI_FireDrill.prefab", root => BuildCraftWindow(root, "钻木取火", "FIRECRAFT / FRICTION", 1, true)),
+            new BuildTarget(CraftingRoot + "UI_FlintStrike.prefab", root => BuildCraftWindow(root, "燧石取火", "FIRECRAFT / SPARK", 1, true)),
+            new BuildTarget(CraftingRoot + "UI_MakerTable.prefab", BuildMakerTable),
+            new BuildTarget(CraftingRoot + "UI_Furnace.prefab", root => BuildFurnace(root, false)),
+            new BuildTarget(CraftingRoot + "UI_Bonfire.prefab", root => BuildFurnace(root, true)),
+            new BuildTarget(ScreensRoot + "UI_Death.prefab", BuildDeathScreen),
+            new BuildTarget(HudRoot + "UI_HotBar.prefab", BuildHotbar),
+            new BuildTarget(InventoryPanelsRoot + "UI_Hand.prefab", BuildHandSlot),
+            new BuildTarget(PlayerStatusRoot + "UI_ModuleList.prefab", BuildGameModuleSelector),
+            new BuildTarget(MainMenuCoreRoot + "UI_ActionList.prefab", BuildActionList),
+            new BuildTarget(MainMenuSaveRoot + "UI_SaveContextMenu.prefab", BuildSaveContextMenu),
+            new BuildTarget(InventoryPanelsRoot + "UI_ItemContextMenu.prefab", BuildItemContextMenu),
+            new BuildTarget(InventoryPanelsRoot + "UI_ItemInfo.prefab", BuildItemInfo),
+            new BuildTarget(InventoryComponentsRoot + "UI_HandSlot.prefab", BuildSlot),
+            new BuildTarget(PlayerStatusRoot + "UI_ModuleOpenButton.prefab", BuildBaseButton),
+            new BuildTarget(PlayerStatusRoot + "UI_ModuleButton.prefab", BuildBaseButton),
+            new BuildTarget(PlayerStatusRoot + "UI_ModuleSettings.prefab", BuildSettingsPanel),
+            new BuildTarget(PlayerStatusRoot + "UI_Health.prefab", BuildHealthWorldPanel),
+            new BuildTarget(PlayerStatusRoot + "UI_Food.prefab", BuildNutritionHud),
+            new BuildTarget(PlayerStatusRoot + "UI_Sleep.prefab", BuildSleepHud),
+            new BuildTarget(InventoryComponentsRoot + "UI_Slot.prefab", BuildSlot),
+            new BuildTarget(CommonControlsRoot + "UI_Slider.prefab", BuildBaseSlider),
+            new BuildTarget(CommonControlsRoot + "UI_SelectBox.prefab", BuildBaseSelectBox)
         };
 
         int rebuilt = 0;
@@ -138,7 +144,7 @@ public static class GameUIPrefabRebuilder
                     NormalizeTypography(root.transform);
                     NormalizeControls(root.transform);
                     FlatWorldUITheme.Apply(root.transform);
-                    if (string.Equals(target.Path, ModsRoot + "UI_Food.prefab", StringComparison.Ordinal))
+                    if (string.Equals(target.Path, PlayerStatusRoot + "UI_Food.prefab", StringComparison.Ordinal))
                         FinalizeNutritionHud(root);
                     EditorUtility.SetDirty(root);
                     PrefabUtility.SaveAsPrefabAsset(root, target.Path);
@@ -177,8 +183,8 @@ public static class GameUIPrefabRebuilder
 
         BuildTarget[] targets =
         {
-            new BuildTarget(InventoryRoot + "UI_HotBar.prefab", BuildHotbar),
-            new BuildTarget(CommonRoot + "Base_UI/UI_SelectBox.prefab", BuildBaseSelectBox)
+            new BuildTarget(HudRoot + "UI_HotBar.prefab", BuildHotbar),
+            new BuildTarget(CommonControlsRoot + "UI_SelectBox.prefab", BuildBaseSelectBox)
         };
 
         int rebuilt = 0;
@@ -308,7 +314,7 @@ public static class GameUIPrefabRebuilder
             return;
         }
 
-        BuildTarget target = new BuildTarget(MenuRoot + "Info_Button_List.prefab", BuildActionList);
+        BuildTarget target = new BuildTarget(MainMenuCoreRoot + "UI_ActionList.prefab", BuildActionList);
         bool rebuilt = RebuildSinglePrefab(target);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -329,11 +335,11 @@ public static class GameUIPrefabRebuilder
 
         BuildTarget[] targets =
         {
-            new BuildTarget(CommonRoot + "Base_UI/UI_Slider.prefab", BuildBaseSlider),
-            new BuildTarget(ModsRoot + "UI_Food.prefab", BuildNutritionHud),
-            new BuildTarget(InventoryRoot + "UI_Furnace.prefab", root => BuildFurnace(root, false)),
-            new BuildTarget(InventoryRoot + "UI_BoneFire.prefab", root => BuildFurnace(root, true)),
-            new BuildTarget(ModsRoot + "UI_Canvas.prefab", BuildSettingsPanel)
+            new BuildTarget(CommonControlsRoot + "UI_Slider.prefab", BuildBaseSlider),
+            new BuildTarget(PlayerStatusRoot + "UI_Food.prefab", BuildNutritionHud),
+            new BuildTarget(CraftingRoot + "UI_Furnace.prefab", root => BuildFurnace(root, false)),
+            new BuildTarget(CraftingRoot + "UI_Bonfire.prefab", root => BuildFurnace(root, true)),
+            new BuildTarget(PlayerStatusRoot + "UI_ModuleSettings.prefab", BuildSettingsPanel)
         };
 
         int rebuilt = 0;
@@ -366,7 +372,7 @@ public static class GameUIPrefabRebuilder
             return;
         }
 
-        BuildTarget target = new BuildTarget(ModsRoot + "UI_Food.prefab", BuildNutritionHud);
+        BuildTarget target = new BuildTarget(PlayerStatusRoot + "UI_Food.prefab", BuildNutritionHud);
         bool rebuilt = RebuildSinglePrefab(target);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -392,7 +398,7 @@ public static class GameUIPrefabRebuilder
             NormalizeTypography(root.transform);
             NormalizeControls(root.transform);
             FlatWorldUITheme.Apply(root.transform);
-            if (string.Equals(target.Path, ModsRoot + "UI_Food.prefab", StringComparison.Ordinal))
+            if (string.Equals(target.Path, PlayerStatusRoot + "UI_Food.prefab", StringComparison.Ordinal))
                 FinalizeNutritionHud(root);
             EditorUtility.SetDirty(root);
             PrefabUtility.SaveAsPrefabAsset(root, target.Path);

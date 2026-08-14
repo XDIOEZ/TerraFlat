@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 public static class NetworkModePrefabBuilder
 {
-    private const string PrefabPath = "Assets/2_Prefabs/2-1_UI/Menu_UI/UI_NetworkMode.prefab";
+    private const string PrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab";
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
 
     private static readonly Color Ink = new Color(0.025f, 0.043f, 0.058f, 0.98f);

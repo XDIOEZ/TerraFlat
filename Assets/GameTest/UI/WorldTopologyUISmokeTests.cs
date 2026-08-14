@@ -17,7 +17,7 @@ namespace FlatWorld.GameTest.UI
         public void WrappedToggleFitsBetweenGenerationInputsAndProfileCard()
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/2-1_UI/Menu_UI/UI_NewGame.prefab");
+                "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NewGame.prefab");
             RectTransform topology = prefab.GetComponentsInChildren<Toggle>(true)
                 .Single(toggle => toggle.name == GameManager.NewGameTopologyToggleKey)
                 .GetComponent<RectTransform>();
@@ -47,7 +47,7 @@ namespace FlatWorld.GameTest.UI
         public void WorldSeedInputIsOptionalAndFitsInsideGenerationProfile()
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/2-1_UI/Menu_UI/UI_NewGame.prefab");
+                "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NewGame.prefab");
             TMP_InputField seedInput = prefab.GetComponentsInChildren<TMP_InputField>(true)
                 .Single(input => input.name == GameManager.NewGameSeedInputKey);
             RectTransform seedRect = seedInput.GetComponent<RectTransform>();

@@ -60,180 +60,180 @@ public static class ItemDefinitionMigrationTool
 
     private static readonly Dictionary<string, string> PreservedSourcePaths = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Dagger_Stone"] = "Assets/2_Prefabs/Weapon/Weapon/Dagger.prefab",
-        ["Dagger_Copper"] = "Assets/2_Prefabs/Weapon/Weapon/Dagger_Copper.prefab",
-        ["Dagger_Bone"] = "Assets/2_Prefabs/Weapon/Weapon/Dagger_Bone.prefab",
-        ["Knife_Flint"] = "Assets/2_Prefabs/Weapon/Weapon/Knife_Flint.prefab"
+        ["Dagger_Stone"] = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger.prefab",
+        ["Dagger_Copper"] = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger_Copper.prefab",
+        ["Dagger_Bone"] = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger_Bone.prefab",
+        ["Knife_Flint"] = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Knife_Flint.prefab"
     };
 
     private static readonly MigrationGroup[] Groups =
     {
         new(
             "BasicItem_Base",
-            "Assets/2_Prefabs/Item/Prop.prefab",
+            "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
             new[]
             {
-                "Assets/2_Prefabs/Item/Prop.prefab",
-                "Assets/2_Prefabs/Item/CharredMatter.prefab",
-                "Assets/2_Prefabs/Item/Earth.prefab",
-                "Assets/2_Prefabs/Item/Leaf.prefab",
-                "Assets/2_Prefabs/Item/Leather.prefab",
-                "Assets/2_Prefabs/Item/Plank.prefab",
-                "Assets/2_Prefabs/Item/RawHide.prefab",
-                "Assets/2_Prefabs/Item/Rope.prefab",
-                "Assets/2_Prefabs/Item/Twine.prefab",
-                "Assets/2_Prefabs/Mineral/Ingot/Ingot_Bronze.prefab",
-                "Assets/2_Prefabs/Mineral/Ingot/Ingot_Copper.prefab",
-                "Assets/2_Prefabs/Mineral/Ingot/Ingot_RawIron.prefab",
-                "Assets/2_Prefabs/Mineral/Ingot/Ingot_Steel.prefab",
-                "Assets/2_Prefabs/Mineral/Ingot/Ingot_Tin.prefab",
-                "Assets/2_Prefabs/Mineral/Ingot/Ingot_WroughtIron.prefab",
-                "Assets/2_Prefabs/Mineral/Ore/Ore_Coal.prefab",
-                "Assets/2_Prefabs/Mineral/Ore/Ore_Copper.prefab",
-                "Assets/2_Prefabs/Mineral/Ore/Ore_Flint.prefab",
-                "Assets/2_Prefabs/Mineral/Ore/Ore_Iron.prefab",
-                "Assets/2_Prefabs/Mineral/Ore/Ore_MagicalStone.prefab",
-                "Assets/2_Prefabs/Mineral/Ore/Ore_Tin.prefab",
-                "Assets/2_Prefabs/Food/Apple.prefab",
-                "Assets/2_Prefabs/Food/Berry.prefab",
-                "Assets/2_Prefabs/Food/Coconut_Addle.prefab",
-                "Assets/2_Prefabs/Food/Coconut_Green.prefab",
-                "Assets/2_Prefabs/Food/Coconut_Half.prefab",
-                "Assets/2_Prefabs/Food/Coconut_Nude.prefab",
-                "Assets/2_Prefabs/Food/Coconut_Shell.prefab",
-                "Assets/2_Prefabs/Food/Coconut_Water.prefab",
-                "Assets/2_Prefabs/Food/Coconut_WaterSalt.prefab",
-                "Assets/2_Prefabs/Food/CoconutMeat.prefab",
-                "Assets/2_Prefabs/Food/Egg.prefab",
-                "Assets/2_Prefabs/Food/Egg_Cooked.prefab",
-                "Assets/2_Prefabs/Food/Fat.prefab",
-                "Assets/2_Prefabs/Food/Meat.prefab",
-                "Assets/2_Prefabs/Food/Meat_Cooked.prefab",
-                "Assets/2_Prefabs/Food/Meat_Dehydrate.prefab",
-                "Assets/2_Prefabs/Food/Meat_Rotten.prefab",
-                "Assets/2_Prefabs/Food/Tea.prefab",
-                "Assets/2_Prefabs/Materials/Humus.prefab"
+                "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Common/CharredMatter.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Common/Earth.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Common/Leaf.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Common/Leather.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Common/Plank.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Common/RawHide.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Common/Rope.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Common/Twine.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Minerals/Ingot/Ingot_Bronze.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Minerals/Ingot/Ingot_Copper.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Minerals/Ingot/Ingot_RawIron.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Minerals/Ingot/Ingot_Steel.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Minerals/Ingot/Ingot_Tin.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Minerals/Ingot/Ingot_WroughtIron.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Coal.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Copper.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Flint.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Iron.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_MagicalStone.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Tin.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Apple.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Berry.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Addle.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Green.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Half.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Nude.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Shell.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Water.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_WaterSalt.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/CoconutMeat.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Egg.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Egg_Cooked.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Fat.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Meat.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Meat_Cooked.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Meat_Dehydrate.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Meat_Rotten.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Tea.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Materials/Humus.prefab"
             }),
         new(
             "Equipment_Base",
-            "Assets/2_Prefabs/Equipment/Chestplate_Iron.prefab",
+            "Assets/2_Prefabs/Gameplay/Items/Equipment/Chestplate_Iron.prefab",
             new[]
             {
-                "Assets/2_Prefabs/Equipment/Chestplate_Iron.prefab",
-                "Assets/2_Prefabs/Equipment/Chestplate_Twine.prefab",
-                "Assets/2_Prefabs/Equipment/Chestplate_Wood.prefab"
+                "Assets/2_Prefabs/Gameplay/Items/Equipment/Chestplate_Iron.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Equipment/Chestplate_Twine.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Equipment/Chestplate_Wood.prefab"
             }),
         new(
             "WoodTool_Base",
-            "Assets/2_Prefabs/Item/Stick.prefab",
+            "Assets/2_Prefabs/Gameplay/Items/Common/Stick.prefab",
             new[]
             {
-                "Assets/2_Prefabs/Item/Stick.prefab",
-                "Assets/2_Prefabs/Item/Log.prefab"
+                "Assets/2_Prefabs/Gameplay/Items/Common/Stick.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Common/Log.prefab"
             }),
         new(
             "Axe_Base",
-            "Assets/2_Prefabs/Weapon/Axe/Axe.prefab",
+            "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe.prefab",
             new[]
             {
-                "Assets/2_Prefabs/Weapon/Axe/Axe.prefab",
-                "Assets/2_Prefabs/Weapon/Axe/Axe_Flint.prefab",
-                "Assets/2_Prefabs/Weapon/Axe/Axe_Copper.prefab",
-                "Assets/2_Prefabs/Weapon/Axe/Axe_Bronze.prefab",
-                "Assets/2_Prefabs/Weapon/Axe/Axe_RawIron.prefab",
-                "Assets/2_Prefabs/Weapon/Axe/Axe_Iron.prefab"
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Flint.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Copper.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Bronze.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_RawIron.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Iron.prefab"
             }),
         new(
             "Pickaxe_Base",
-            "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe.prefab",
+            "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe.prefab",
             new[]
             {
-                "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe.prefab",
-                "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Copper.prefab",
-                "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Bronze.prefab",
-                "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_RawIron.prefab",
-                "Assets/2_Prefabs/Weapon/Pixkaxe/Pickaxe_Iron.prefab"
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Copper.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Bronze.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_RawIron.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Iron.prefab"
             }),
         new(
             "Spear_Base",
-            "Assets/2_Prefabs/Weapon/Weapon/Spear.prefab",
+            "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear.prefab",
             new[]
             {
-                "Assets/2_Prefabs/Weapon/Weapon/Spear.prefab",
-                "Assets/2_Prefabs/Weapon/Weapon/Spear_Copper.prefab",
-                "Assets/2_Prefabs/Weapon/Weapon/Spear_Iron.prefab",
-                "Assets/2_Prefabs/Weapon/Weapon/Spear_Stone_Animation.prefab"
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear_Copper.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear_Iron.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear_Stone_Animation.prefab"
             }),
         new(
             "Seed_Base",
-            "Assets/2_Prefabs/Seed/Seed.prefab",
-            new[] { "Assets/2_Prefabs/Seed/Seed.prefab" }),
+            "Assets/2_Prefabs/Gameplay/Items/Seeds/Seed.prefab",
+            new[] { "Assets/2_Prefabs/Gameplay/Items/Seeds/Seed.prefab" }),
         // 建筑召唤器保留各自的 Item Prefab 作为运行时外壳；JSON 只接管 ItemData/ModuleData，
         // 这样建筑放置、快照、占地和专用 UI/组件引用仍由原召唤器壳体提供。
         new(
             "BuildingSummoner_BlastFurnace_Base",
-            "Assets/2_Prefabs/Building/Summoners/BlastFurnace_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/Building/Summoners/BlastFurnace_Summoner.prefab" },
+            "Assets/2_Prefabs/World/Buildings/Summoners/BlastFurnace_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/BlastFurnace_Summoner.prefab" },
             preserveShellModuleFields: true),
         new(
             "BuildingSummoner_Bonfire_Base",
-            "Assets/2_Prefabs/Building/Summoners/Bonfire_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/Building/Summoners/Bonfire_Summoner.prefab" },
+            "Assets/2_Prefabs/World/Buildings/Summoners/Bonfire_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Bonfire_Summoner.prefab" },
             preserveShellModuleFields: true),
         new(
             "BuildingSummoner_ChestWood_Base",
-            "Assets/2_Prefabs/Building/Summoners/Chest_Wood_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/Building/Summoners/Chest_Wood_Summoner.prefab" },
+            "Assets/2_Prefabs/World/Buildings/Summoners/Chest_Wood_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Chest_Wood_Summoner.prefab" },
             preserveShellModuleFields: true),
         new(
             "BuildingSummoner_DoorStone_Base",
-            "Assets/2_Prefabs/Building/Summoners/Door_Stone_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/Building/Summoners/Door_Stone_Summoner.prefab" },
+            "Assets/2_Prefabs/World/Buildings/Summoners/Door_Stone_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Door_Stone_Summoner.prefab" },
             preserveShellModuleFields: true),
         new(
             "BuildingSummoner_DoorWood_Base",
-            "Assets/2_Prefabs/Building/Summoners/Door_Wood_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/Building/Summoners/Door_Wood_Summoner.prefab" },
+            "Assets/2_Prefabs/World/Buildings/Summoners/Door_Wood_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Door_Wood_Summoner.prefab" },
             preserveShellModuleFields: true),
         new(
             "BuildingSummoner_Meatrack_Base",
-            "Assets/2_Prefabs/Building/Summoners/Meatrack_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/Building/Summoners/Meatrack_Summoner.prefab" },
+            "Assets/2_Prefabs/World/Buildings/Summoners/Meatrack_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Meatrack_Summoner.prefab" },
             preserveShellModuleFields: true),
         new(
             "BuildingSummoner_MineEntrance_Base",
-            "Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab" },
+            "Assets/2_Prefabs/World/Buildings/Summoners/MineEntrance_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/MineEntrance_Summoner.prefab" },
             preserveShellModuleFields: true),
         new(
             "BuildingSummoner_Scarecrow_Base",
-            "Assets/2_Prefabs/Building/Summoners/Scarecrow_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/Building/Summoners/Scarecrow_Summoner.prefab" },
+            "Assets/2_Prefabs/World/Buildings/Summoners/Scarecrow_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Scarecrow_Summoner.prefab" },
             preserveShellModuleFields: true),
         new(
             "BuildingSummoner_Smelter_Base",
-            "Assets/2_Prefabs/Building/Summoners/Smelter_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/Building/Summoners/Smelter_Summoner.prefab" },
+            "Assets/2_Prefabs/World/Buildings/Summoners/Smelter_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Smelter_Summoner.prefab" },
             preserveShellModuleFields: true),
         new(
             "BuildingSummoner_Tent_Base",
-            "Assets/2_Prefabs/Building/Summoners/Tent_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/Building/Summoners/Tent_Summoner.prefab" },
+            "Assets/2_Prefabs/World/Buildings/Summoners/Tent_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Tent_Summoner.prefab" },
             preserveShellModuleFields: true),
         new(
             "BuildingSummoner_WallStone_Base",
-            "Assets/2_Prefabs/Building/Summoners/Wall_Stone_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/Building/Summoners/Wall_Stone_Summoner.prefab" },
+            "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Stone_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Stone_Summoner.prefab" },
             preserveShellModuleFields: true),
         new(
             "BuildingSummoner_WallWood_Base",
-            "Assets/2_Prefabs/Building/Summoners/Wall_Wood_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/Building/Summoners/Wall_Wood_Summoner.prefab" },
+            "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab" },
             preserveShellModuleFields: true),
         new(
             "BuildingSummoner_WorkBench_Base",
-            "Assets/2_Prefabs/Building/Summoners/WorkBench_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/Building/Summoners/WorkBench_Summoner.prefab" },
+            "Assets/2_Prefabs/World/Buildings/Summoners/WorkBench_Summoner.prefab",
+            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/WorkBench_Summoner.prefab" },
             preserveShellModuleFields: true)
     };
 
@@ -937,7 +937,7 @@ public static class ItemDefinitionMigrationTool
         UnityEngine.Object original = PrefabUtility.GetCorrespondingObjectFromOriginalSource(module.gameObject);
         string assetPath = original != null ? AssetDatabase.GetAssetPath(original) : null;
         if (!string.IsNullOrWhiteSpace(assetPath) &&
-            assetPath.StartsWith("Assets/2_Prefabs/Module/", StringComparison.OrdinalIgnoreCase))
+            assetPath.StartsWith("Assets/2_Prefabs/Gameplay/Modules/", StringComparison.OrdinalIgnoreCase))
             return Path.GetFileNameWithoutExtension(assetPath);
 
         return module.GetType().Name;
@@ -973,7 +973,7 @@ public static class ItemDefinitionMigrationTool
         if (inShell)
             return;
 
-        bool prefabExists = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/2_Prefabs/Module" })
+        bool prefabExists = AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/2_Prefabs/Gameplay/Modules" })
             .Select(AssetDatabase.GUIDToAssetPath)
             .Any(path => string.Equals(
                 Path.GetFileNameWithoutExtension(path), modulePrefab, StringComparison.OrdinalIgnoreCase));

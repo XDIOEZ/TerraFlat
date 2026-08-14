@@ -8,7 +8,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 ## 入口
 
 - 生命周期：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/{Item,Module,ItemMods,ItemMaker}.cs`
-- 管理器：`Core/Manager/ItemMgr*.cs`（Spawning/Perception/Players/RandomDrop partial）
+- 管理器：`Entities/Item/Management/ItemMgr*.cs`（Spawning/Perception/Players/RandomDrop partial）
 - 数据：`Assets/5_Scripts/5-1_Data/{ItemData/ItemData,ModData/ModuleData}.cs`
 - 本体定义：`Assets/StreamingAssets/GameConfig/Items/item-manifest.json`
 - 模板化物品编辑：`Assets/Editor/FlatWorld/ContentTools/ContentWorkshop/`

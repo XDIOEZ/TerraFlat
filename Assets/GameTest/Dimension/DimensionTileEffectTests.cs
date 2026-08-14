@@ -180,7 +180,7 @@ namespace FlatWorld.GameTest.Dimension
                 BuffManager.ModData = CreateModuleData(ModText.BuffManager, "TestBuffManager");
 
                 GameObject receiverPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                    "Assets/2_Prefabs/Module/Manager/TileReciver.prefab");
+                    "Assets/2_Prefabs/Gameplay/Modules/Managers/TileReciver.prefab");
                 Assert.That(receiverPrefab, Is.Not.Null);
                 GameObject receiverObject = UnityEngine.Object.Instantiate(receiverPrefab, itemObject.transform);
                 Receiver = receiverObject.GetComponent<TileEffectReceiver>();

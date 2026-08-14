@@ -22,7 +22,7 @@ namespace FlatWorld.GameTest.DataSave
             Assert.That(requiresInitialPlacement, Is.Not.Null);
 
             GameObject playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Player/Player.prefab");
+                "Assets/2_Prefabs/Gameplay/Player/Player.prefab");
             Assert.That(playerPrefab, Is.Not.Null);
 
             GameObject playerObject = Object.Instantiate(playerPrefab);

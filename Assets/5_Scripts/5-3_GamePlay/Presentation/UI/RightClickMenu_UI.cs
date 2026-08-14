@@ -116,7 +116,7 @@ public class RightClickMenu_UI : MonoBehaviour
             return;
         }
 
-        GameObject itemInfoPanel = GameRes.Instance.InstantiatePrefab("物品信息面板");
+        GameObject itemInfoPanel = GameRes.Instance.InstantiatePrefab("UI_ItemInfo");
         if (itemInfoPanel == null)
         {
             Debug.LogError("[RightClickMenu_UI.ShowItemInfo] 物品信息面板预制体实例化失败");

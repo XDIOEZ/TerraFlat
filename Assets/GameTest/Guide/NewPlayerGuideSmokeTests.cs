@@ -119,7 +119,7 @@ namespace FlatWorld.GameTest.Guide
         private static Player CreatePlayerInstance(string instanceName)
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Player/Player.prefab");
+                "Assets/2_Prefabs/Gameplay/Player/Player.prefab");
             Assert.That(prefab, Is.Not.Null);
 
             GameObject instance = UnityEngine.Object.Instantiate(prefab);

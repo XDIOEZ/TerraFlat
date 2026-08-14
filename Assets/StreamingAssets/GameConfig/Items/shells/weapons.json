@@ -83,7 +83,7 @@
       "description": "用石料制作的小刀。",
       "volume": 3,
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[石制小刀]",
+        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[石制小刀]",
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
@@ -107,7 +107,7 @@
           }
         }
       },
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Dagger.prefab"
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger.prefab"
     },
     {
       "id": "Dagger_Copper",
@@ -118,7 +118,7 @@
       "description": "用铜制作的小刀。",
       "volume": 3,
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[Tool_Weapon_19]",
+        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_19]",
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
@@ -148,7 +148,7 @@
           }
         }
       },
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Dagger_Copper.prefab"
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger_Copper.prefab"
     },
     {
       "id": "Dagger_Bone",
@@ -159,7 +159,7 @@
       "description": "用骨料制作的小刀。",
       "volume": 2,
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool/Item_Weapon_006.png",
+        "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_006.png",
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
@@ -176,7 +176,7 @@
           }
         }
       },
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Dagger_Bone.prefab"
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger_Bone.prefab"
     },
     {
       "id": "Knife_Flint",
@@ -187,7 +187,7 @@
       "description": "用燧石制作的小刀。",
       "volume": 2,
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Gun/iron-weapons.png[iron-weapons_248]",
+        "spriteAddress": "Assets/6_Art/Items/Weapons/Guns/iron-weapons.png[iron-weapons_248]",
         "rendererLocalEulerAngles": {
           "x": 0.0,
           "y": 0.0,
@@ -195,7 +195,7 @@
         },
         "flipX": true
       },
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Knife_Flint.prefab"
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Knife_Flint.prefab"
     },
     {
       "id": "Spear_Base",
@@ -208,7 +208,7 @@
     {
       "id": "Spear_Stone",
       "parent": "Spear_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Spear.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear.prefab",
       "gameName": "Spear_Stone",
       "description": "装有石制矛头的长矛，可用于近距离防身。",
       "durability": 1.0,
@@ -222,7 +222,7 @@
         "Modern"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[Tool_Weapon_66]",
+        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_66]",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -393,7 +393,7 @@
     {
       "id": "Spear_Copper",
       "parent": "Spear_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Spear_Copper.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear_Copper.prefab",
       "gameName": "Spear_Copper",
       "description": "装有铜制矛头的长矛，兼顾攻击距离与耐用度。",
       "durability": 1.0,
@@ -407,7 +407,7 @@
         "Modern"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[Tool_Weapon_69]",
+        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_69]",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -578,7 +578,7 @@
     {
       "id": "Spear_Iron",
       "parent": "Spear_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Spear_Iron.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear_Iron.prefab",
       "gameName": "Spear_Iron",
       "description": "装有铁制矛头的长矛，拥有可靠的穿刺能力。",
       "durability": 1.0,
@@ -592,7 +592,7 @@
         "Modern"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[Tool_Weapon_67]",
+        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_67]",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -763,7 +763,7 @@
     {
       "id": "Spear_Stone_Animation",
       "parent": "Spear_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/Spear_Stone_Animation.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Spear_Stone_Animation.prefab",
       "gameName": "Spear_Stone_Animation",
       "description": "带有完整攻击动作的石矛变体。",
       "durability": 1.0,
@@ -777,7 +777,7 @@
         "Modern"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/item/Tool_Weapon.png[Tool_Weapon_66]",
+        "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_66]",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -947,14 +947,14 @@
     },
     {
       "id": "ChippedTool",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Weapon/ChippedTool.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/ChippedTool.prefab",
       "shellPrefab": "ChippedTool",
       "gameName": "打制石器",
       "description": "由石料打制而成的简易工具。"
     },
     {
       "id": "Torch",
-      "sourcePrefab": "Assets/2_Prefabs/Weapon/Torch.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab",
       "shellPrefab": "Torch",
       "gameName": "火把",
       "description": "可照亮周围环境的简易火把，由木棍和燃料制成。",

@@ -22,7 +22,7 @@ public static class ActorDefinitionMigrationTool
     private const string DefinitionPath = DefinitionRoot + "/core-actors.json";
     private const string ActorShellLabel = "ActorShell";
     private const string ActorVisualLabel = "ActorVisual";
-    private const string LuaModulePrefabPath = "Assets/2_Prefabs/Module/Mod_LuaBehaviour.prefab";
+    private const string LuaModulePrefabPath = "Assets/2_Prefabs/Gameplay/Modules/Extensibility/Mod_LuaBehaviour.prefab";
 
     private static readonly ActorSource[] Sources =
     {
@@ -326,7 +326,7 @@ public static class ActorDefinitionMigrationTool
     /// <summary>生成内建 Lua 行为模块外壳，使 MOD Actor 可只通过 JSON 安装安全脚本钩子。</summary>
     private static void EnsureLuaModulePrefab(AddressableAssetSettings settings)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(LuaModulePrefabPath) ?? "Assets/2_Prefabs/Module");
+        Directory.CreateDirectory(Path.GetDirectoryName(LuaModulePrefabPath) ?? "Assets/2_Prefabs/Gameplay/Modules");
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(LuaModulePrefabPath);
         if (prefab == null)
         {

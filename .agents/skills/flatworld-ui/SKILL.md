@@ -7,22 +7,29 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 ## 入口
 
-- 生命周期：`Assets/5_Scripts/5-5_UI/{UIManager,BasePanel}.cs`
-- 主菜单/存档：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/{GameManager.UI,SaveDataManager_UI}.cs`
+- 生命周期：`Assets/5_Scripts/5-5_UI/Core/{UIManager,BasePanel}.cs`
+- 通用控件/表现：`Assets/5_Scripts/5-5_UI/Common/{Controls,Presentation}/`；输入：`Assets/5_Scripts/5-5_UI/Input/`
+- 主菜单：`Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/GameManager.UI.cs`；存档 UI：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/SaveDataManager_UI.cs`
 - 游戏内 UI：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/`
 - Prefab：`Assets/2_Prefabs/2-1_UI/`；根：`Assets/Resources/UI/UIRoot.prefab`
-- 运行时键/构建器：`RuntimeUIPrefabKeys.cs`、`Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder.cs`
+- 运行时键/构建器：`Assets/5_Scripts/5-5_UI/Core/RuntimeUIPrefabKeys.cs`、`Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder.cs`
 
-## 架构与不变量
+## 架构与运行时约束
 
 - 领域控制器创建/持有正式 Prefab，`UIManager` 管生命周期；控件节点名是绑定契约。正式 UI 不用 `new GameObject/AddComponent` 拼视觉。
-- Prefab 是视觉真相；`BasePanel` 不在初始化时重写结构。新增 Prefab 位于 Addressables `Prefab` 标签范围并用稳定键加载。
+- Prefab 是视觉真相；`BasePanel` 不在初始化时重写结构。运行时只用稳定键加载正式 Prefab。
 - 常驻 HUD 不拦截输入，Graphic 关闭 raycastTarget；若 HUD 提供展开/收起功能，只允许开关按钮接收 raycast，内容和装饰元素仍必须输入透明；模态面板才获取输入锁和顶层手柄焦点，关闭/失败路径释放。
 - 坐标、角色状态等信息型 HUD 使用屏幕角落锚点和透明容器，只显示会随运行时变化的字段/状态条；禁止为这类 HUD 添加整块背景、卡片标题或装饰性介绍文字。
 - 常驻组件事件驱动；禁止等待绑定或比较静态状态的 Update/LateUpdate 和逐帧 `GetComponent*`。
 - 动态列表复用条目；结构变化才局部 MarkLayoutForRebuild，数值/颜色更新不强制布局。热路径禁止 ForceUpdateCanvases/ForceRebuild。
 - EventSystem 反馈保持唯一非缩放 Tween，重入先 Kill，失活/销毁清理。
 - 主菜单控件名集中在 `GameManager.UI.cs`；定向构建 Prefab，避免无关重写。
+
+## Prefab 与目录约束
+
+- 创建 UI Prefab 时必须按用途放入 `Assets/2_Prefabs/2-1_UI/` 下合适的分类目录；优先复用 `Common`、`Gameplay`、`MainMenu`、`Settings`，不要把 Prefab 直接堆在 UI 根目录。现有分类都不匹配时，才新增职责明确的子目录。
+- 新增正式 Prefab 必须位于 Addressables `Prefab` 标签范围，并登记稳定加载键；移动或重命名资源时保留 `.meta`，同步检查加载键与引用。
+- `5-5_UI` 的子目录统一继承根 `UI.asmdef`；整理脚本时使用 `AssetDatabase.MoveAsset` 连同 `.meta` 移动，不新建子程序集或重生成 GUID，避免 Prefab 上的 MonoScript 引用失效。
 
 ## 文案、焦点与联动
 

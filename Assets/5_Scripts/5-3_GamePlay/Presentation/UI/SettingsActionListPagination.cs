@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 管理游戏内设置入口列表的固定三分页。
-/// 视觉节点由 Info_Button_List.prefab 固化，脚本仅切换页面和维护手柄焦点，避免入口继续在 ScrollRect 中纵向溢出。
+/// 视觉节点由 UI_ActionList.prefab 固化，脚本仅切换页面和维护手柄焦点，避免入口继续在 ScrollRect 中纵向溢出。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class SettingsActionListPagination : MonoBehaviour
@@ -89,7 +89,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
 
         if (!configured)
         {
-            Debug.LogError("[SettingsActionListPagination] Info_Button_List Prefab 分页节点不完整。", this);
+            Debug.LogError("[SettingsActionListPagination] UI_ActionList Prefab 分页节点不完整。", this);
             return;
         }
 

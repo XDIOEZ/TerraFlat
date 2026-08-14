@@ -10,7 +10,7 @@ namespace FlatWorld.GameTest.Map
 {
     public sealed class RiverAestheticGenerationTests
     {
-        private const string MapPrefabPath = "Assets/2_Prefabs/Map/MapCore.prefab";
+        private const string MapPrefabPath = "Assets/2_Prefabs/World/Map/MapCore.prefab";
 
         [TearDown]
         public void TearDown()

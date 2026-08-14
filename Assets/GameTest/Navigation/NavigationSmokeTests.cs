@@ -522,7 +522,7 @@ namespace FlatWorld.GameTest.Navigation
         public void RuntimePrefabsUseOnlyTheNewNavigationComponents()
         {
             GameObject worldManager = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/GameManager/WorldManager.prefab");
+                "Assets/2_Prefabs/Core/Managers/WorldManager.prefab");
             Assert.That(worldManager, Is.Not.Null);
             Assert.That(worldManager.GetComponentsInChildren<WorldNavigationManager>(true), Has.Length.EqualTo(1));
 
@@ -533,7 +533,7 @@ namespace FlatWorld.GameTest.Navigation
             for (int i = 0; i < actors.Length; i++)
             {
                 GameObject actor = AssetDatabase.LoadAssetAtPath<GameObject>(
-                    $"Assets/2_Prefabs/Entity_AI/{actors[i]}.prefab");
+                    $"Assets/2_Prefabs/Gameplay/AI/{actors[i]}.prefab");
                 Assert.That(actor, Is.Not.Null, actors[i]);
                 Assert.That(actor.GetComponent<WorldNavigationAgent>(), Is.Not.Null, actors[i]);
             }
@@ -542,7 +542,7 @@ namespace FlatWorld.GameTest.Navigation
             for (int i = 0; i < mines.Length; i++)
             {
                 GameObject mine = AssetDatabase.LoadAssetAtPath<GameObject>(
-                    $"Assets/2_Prefabs/Mine/{mines[i]}.prefab");
+                    $"Assets/2_Prefabs/World/ResourceNodes/Mines/{mines[i]}.prefab");
                 Assert.That(mine.GetComponent<WorldNavigationObstacle>(), Is.Not.Null, mines[i]);
             }
         }
@@ -572,7 +572,7 @@ namespace FlatWorld.GameTest.Navigation
             }
 
             string worldManagerYaml = File.ReadAllText(
-                "Assets/2_Prefabs/GameManager/WorldManager.prefab");
+                "Assets/2_Prefabs/Core/Managers/WorldManager.prefab");
             Assert.That(worldManagerYaml, Does.Not.Contain("78396926cbbfc4ac3b48fc5fc34a87d1"));
         }
 

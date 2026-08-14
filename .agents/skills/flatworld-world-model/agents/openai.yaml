@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld WorldModel"
+  short_description: "Navigate WorldModel runtime, generation, and presentation code"
+  default_prompt: "Use $flatworld-world-model to locate and safely modify FlatWorld WorldModel code."

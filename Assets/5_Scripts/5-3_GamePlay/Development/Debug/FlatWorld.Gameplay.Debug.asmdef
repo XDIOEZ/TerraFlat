@@ -4,7 +4,7 @@
     "references": [
         "GamePlay",
         "Data",
-        "m_Utilitiles",
+        "FlatWorld.Utilities",
         "UI",
         "Kybernetik.UltEvents",
         "Unity.InputSystem",

@@ -38,14 +38,14 @@ namespace FlatWorld.GameTest.Building
                 "BuildingOccupancyRegistry 必须保持静态权威注册表");
             Assert.That(typeof(BuildingOccupancyRegistry).IsSealed, Is.True,
                 "BuildingOccupancyRegistry 必须保持静态权威注册表");
-            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/BuildingShadow.prefab");
-            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/MineEntrance.prefab");
-            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/Summoners/MineEntrance_Summoner.prefab");
-            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/Door_Stone.prefab");
-            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/Wall_Stone.prefab");
-            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/Building/Summoners/Wall_Stone_Summoner.prefab");
-            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/TileBlock/TileItem_StoneWall.prefab");
-            GameTestAssertions.AssertAssetExists("Assets/4_ScriptObjects/4-1_TileBlock/TileBase_BuiltStoneWall.asset");
+            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/World/Buildings/BuildingShadow.prefab");
+            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/World/Buildings/MineEntrance.prefab");
+            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/World/Buildings/Summoners/MineEntrance_Summoner.prefab");
+            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/World/Buildings/Door_Stone.prefab");
+            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/World/Buildings/Wall_Stone.prefab");
+            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/World/Buildings/Summoners/Wall_Stone_Summoner.prefab");
+            GameTestAssertions.AssertAssetExists("Assets/2_Prefabs/World/Tiles/TileItem_StoneWall.prefab");
+            GameTestAssertions.AssertAssetExists("Assets/4_ScriptObjects/World/Tiles/TileBase_BuiltStoneWall.asset");
             GameTestAssertions.AssertAssetExists("Assets/Resources/Config/WorldModel/ChunkTilePalette_Default.asset");
             GameTestAssertions.AssertAssetExists("Assets/Resources/Config/WorldModel/ChunkGenerationProfile_Surface.asset");
             GameTestAssertions.AssertAssetExists("Assets/Resources/Config/StructureCatalog_Default.asset");
@@ -55,14 +55,14 @@ namespace FlatWorld.GameTest.Building
                 "Mod_InteractSender");
 
             GameObject stoneDoorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Building/Door_Stone.prefab");
+                "Assets/2_Prefabs/World/Buildings/Door_Stone.prefab");
             Mod_Door stoneDoor = stoneDoorPrefab.GetComponentInChildren<Mod_Door>(true);
             Assert.That(stoneDoor, Is.Not.Null, "石门预制体缺少 Mod_Door");
             Assert.That(stoneDoor.DoorCollider, Is.Not.Null, "石门缺少阻挡碰撞体");
             Assert.That(stoneDoor.DoorRenderer, Is.Not.Null, "石门缺少门贴图引用");
 
             GameObject shadowPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Building/BuildingShadow.prefab");
+                "Assets/2_Prefabs/World/Buildings/BuildingShadow.prefab");
             BuildingShadow shadow = shadowPrefab.GetComponentInChildren<BuildingShadow>(true);
             Assert.That(shadow, Is.Not.Null, "建筑虚影预制体缺少 BuildingShadow");
             Assert.That(shadow.ShadowRenderer, Is.Not.Null, "建筑虚影缺少 SpriteRenderer 引用");
@@ -74,7 +74,7 @@ namespace FlatWorld.GameTest.Building
                 "建筑虚影必须使用正排序序号，避免被同层地表精灵覆盖");
 
             GameObject legacyStoneWallPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/TileBlock/TileItem_StoneWall.prefab");
+                "Assets/2_Prefabs/World/Tiles/TileItem_StoneWall.prefab");
             Assert.That(legacyStoneWallPrefab.GetComponent<Item_Tile_Grass>(), Is.Not.Null,
                 "旧石墙物品必须保留兼容脚本");
             Assert.That(Item_Tile_Grass.TryResolveRuntimeTileBlockId(
@@ -97,9 +97,9 @@ namespace FlatWorld.GameTest.Building
         public void ShadowKeepsFallbackMaterialWhenLegacyBuildingMaterialIsMissing()
         {
             GameObject shadowPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Building/BuildingShadow.prefab");
+                "Assets/2_Prefabs/World/Buildings/BuildingShadow.prefab");
             GameObject buildingPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/2_Prefabs/Building/Wall_Wood.prefab");
+                "Assets/2_Prefabs/World/Buildings/Wall_Wood.prefab");
             GameObject shadowObject = Object.Instantiate(shadowPrefab);
             GameObject buildingObject = Object.Instantiate(buildingPrefab);
             try

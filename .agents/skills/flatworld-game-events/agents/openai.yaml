@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld 游戏事件"
+  short_description: "定位 FlatWorld 游戏事件配置、触发条件、行动处理及运行时状态"
+  default_prompt: "Use $flatworld-game-events to locate and safely modify FlatWorld game-event code."

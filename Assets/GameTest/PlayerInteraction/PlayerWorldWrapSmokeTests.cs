@@ -36,7 +36,7 @@ namespace FlatWorld.GameTest.PlayerInteraction
                 PlanetData_Dict = new Dictionary<string, PlanetData> { [sceneName] = planet }
             };
 
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/2_Prefabs/Player/Player.prefab");
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/2_Prefabs/Gameplay/Player/Player.prefab");
             GameObject instance = Object.Instantiate(prefab);
             try
             {

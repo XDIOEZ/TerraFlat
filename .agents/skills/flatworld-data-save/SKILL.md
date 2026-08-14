@@ -7,7 +7,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 
 ## 入口
 
-- 磁盘与快照：`Assets/5_Scripts/5-3_GamePlay/Core/Manager/SaveDataMgr.cs`
+- 磁盘与快照：`Assets/5_Scripts/5-3_GamePlay/Core/Save/SaveDataMgr.cs`
 - 根数据：`World/Map/Data/GameSaveData.cs` 及 `GameSaveData.*.cs`
 - Item/Module：`Assets/5_Scripts/5-1_Data/{ItemData/ItemData,ModData/ModuleData}.cs`
 - 地图/星球：`World/Map/Data/{MapSave,PlanetData,EcologyWorldSaveData}.cs`
