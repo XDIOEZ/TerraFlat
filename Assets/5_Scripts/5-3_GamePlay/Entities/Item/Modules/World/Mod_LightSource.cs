@@ -5,6 +5,7 @@ using UnityEngine.Rendering.Universal;
 /// <summary>
 /// 通用物品光照模块：统一维护逻辑光照参数与 Unity Light2D 的显示参数。
 /// 地块光照层由 LightLayerMgr 按此 Light2D 的实时强度、范围和距离进行计算。
+/// 运行时既可作为独立模块 Prefab，也可直接挂在物品外壳上供 JSON 定义复用。
 /// </summary>
 public class Mod_LightSource : Module
 {
