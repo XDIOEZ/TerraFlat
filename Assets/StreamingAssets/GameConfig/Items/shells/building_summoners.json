@@ -1576,6 +1576,13 @@
       "shellPrefab": "SparkMaker_Summoner",
       "gameName": "钻木取火工具",
       "description": "用于放置钻木取火设施的工具。"
+    },
+    {
+      "id": "Torch_Summoner",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab",
+      "shellPrefab": "Torch_Summoner",
+      "gameName": "火把",
+      "description": "用于放置火把照明设施的工具。"
     }
   ]
 }
