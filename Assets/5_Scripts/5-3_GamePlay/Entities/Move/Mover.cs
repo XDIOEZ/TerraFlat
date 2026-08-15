@@ -27,7 +27,8 @@ public partial class Mover : Module
         public float runStaminaConsume = 2f;
 
         [Header("跑步设置")]
-        public float runSpeedRate = 2f;
+        public float runSpeedRate = 1.5f;
+        [Tooltip("是否保持奔跑模式；随玩家存档序列化保存")]
         public bool isRunning = false;
         public float RunStaminaThreshold = 2f; // 体力低于该值时，不能奔跑
 
@@ -71,21 +72,18 @@ public partial class Mover : Module
     public Ex_ModData_MemoryPackable ModDataMemoryPack = new();
     public Mod_AnimatorController animationController;
 
-    // 饥饿相关：移动/奔跑时通过 Buff 加快 Food 模块的消耗
-    [Header("饥饿消耗设置")]
-    [Tooltip("移动时附加的 JSON Buff ID")]
-    public string moveHungerBuffId = "饥饿1.6";
+    [Header("移动饥饿动作")]
+    [Tooltip("移动模块自己的饥饿消耗配置；它不是 Buff，不会被清 Buff 道具移除。")]
+    public MovementHungerActionDefinition hungerAction = new();
 
-    [Tooltip("奔跑时附加的 JSON Buff ID")]
-    public string runHungerBuffId = "饥饿2.0";
-
-    private BuffManager buffManager;
-    private bool moveHungerBuffActive = false;
-    private bool runHungerBuffActive = false;
+    private MovementHungerActionInstance hungerActionInstance;
 
     [Header("移动事件")]
     public UltEvent OnMoveStart;
     public UltEvent OnMoveEnd;
+
+    /// <summary>奔跑状态真实变化时通知 HUD；体力不足等自动停止路径也会同步表现。</summary>
+    public event System.Action<bool> RunStateChanged;
 
     #endregion
 
@@ -158,16 +156,19 @@ public partial class Mover : Module
         _Data.ID = ModText.Mover;
         speedTransitionDuration = Mathf.Max(MinimumTransitionDuration, speedTransitionDuration);
         stopTransitionDuration = Mathf.Max(MinimumTransitionDuration, stopTransitionDuration);
+        hungerAction?.ClampValues();
     }
 
     public override void Load()
     {
         ModDataMemoryPack.ReadData(ref Data);
+        bool persistedRunState = Data.isRunning;
+        Data.isRunning = false;
 
         rb = GetComponentInParent<Rigidbody2D>();
 
-        // 加载 Buff 管理器（可能不存在，需容错）
-        item.itemMods.GetMod_ByID(ModText.BuffManager, out buffManager);
+        hungerAction ??= new MovementHungerActionDefinition();
+        hungerActionInstance = hungerAction.CreateInstance(item);
 
         // 动物不含玩家输入与体力模块，按可选依赖安静解析。
         GameController controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
@@ -187,7 +188,12 @@ public partial class Mover : Module
         {
             OnMoveStart += () => animationController.SetBool(AnimationText.Move, true);
             OnMoveEnd += () => animationController.SetBool(AnimationText.Move, false);
+            animationController.SetBool(AnimationText.Run, false);
         }
+
+        // 先恢复基础数据，再通过统一入口重建奔跑倍率与动画状态。
+        if (persistedRunState)
+            SetRunState(true);
     }
 
 
@@ -196,7 +202,11 @@ public partial class Mover : Module
 
     public override void ModUpdate(float deltaTime)
     {
-        if (moveAction == null) return;
+        if (moveAction == null)
+        {
+            hungerActionInstance?.SetMovementState(false, false);
+            return;
+        }
         if (rb == null)
         {
             Debug.LogError($"{name}: Rigidbody2D 为空，无法执行移动更新！");
@@ -209,12 +219,8 @@ public partial class Mover : Module
             if (controller != null && controller.IsGameplayInputLocked)
             {
                 StopImmediately();
-                if (IsRunning)
-                {
-                    SetRunState(false);
-                }
-
-                HandleHungerBuffs(false, false);
+                // 输入锁定只停止位移，奔跑开关作为存档状态保留，解锁后继续沿用。
+                hungerActionInstance?.SetMovementState(false, false);
                 return;
             }
         }
@@ -222,13 +228,9 @@ public partial class Mover : Module
         Vector2 input = moveAction.ReadValue<Vector2>();
         bool isCurrentlyMoving = input.sqrMagnitude > InputMoveThresholdSqr;
 
-        // 基于移动/奔跑状态，给拥有 Food+BuffManager 的对象挂/卸饥饿 Buff
-        HandleHungerBuffs(isCurrentlyMoving, IsRunning);
-
         if (isCurrentlyMoving)
         {
-            Vector2 target = rb.position + input.normalized;
-            Move(target, deltaTime);
+            MoveByInput(input, deltaTime);
 
             if (stamina != null)
             {
@@ -245,8 +247,11 @@ public partial class Mover : Module
         }
         else
         {
-            Move(rb.position, deltaTime); // 停止移动
+            MoveByInput(Vector2.zero, deltaTime); // 停止移动
         }
+
+        // 每帧只更新动作实例状态；实际营养扣除仍由 Mod_Food 的统一 Tick 完成。
+        hungerActionInstance?.SetMovementState(isCurrentlyMoving, IsRunning);
     }
 
     #endregion
@@ -281,16 +286,16 @@ public partial class Mover : Module
             }
         }
 
-        if (IsRunning == isRun) return;
-        IsRunning = isRun;
         // 体力不足时禁止跑步
         if (isRun && stamina != null && stamina.CurrentValue < RunStaminaThreshold)
         {
             Debug.Log("体力太低，无法奔跑");
             if (animationController != null) animationController.SetBool(AnimationText.Run, false);
-            IsRunning = false;
             return;
         }
+
+        if (IsRunning == isRun) return;
+        IsRunning = isRun;
 
         if (isRun)
         {
@@ -303,7 +308,7 @@ public partial class Mover : Module
             if (animationController != null) animationController.SetBool(AnimationText.Run, false);
         }
 
-
+        RunStateChanged?.Invoke(IsRunning);
     }
 
     public virtual void Move(Vector2 targetPosition, float deltaTime)
@@ -318,6 +323,23 @@ public partial class Mover : Module
         Vector2 targetVelocity = delta.sqrMagnitude < ArriveThreshold * ArriveThreshold
             ? Vector2.zero
             : delta.normalized * Speed.Value;
+        rb.velocity = CalculateSmoothedVelocity(targetVelocity, deltaTime);
+        UpdateMovementState();
+    }
+
+    /// <summary>按二维输入幅度驱动玩家移动；满幅达到当前最大速度，轻推时按比例降速。</summary>
+    public void MoveByInput(Vector2 input, float deltaTime)
+    {
+        if (rb == null)
+        {
+            Debug.LogError($"{name}: Rigidbody2D 为空，无法执行输入移动！");
+            return;
+        }
+
+        Vector2 clampedInput = Vector2.ClampMagnitude(input, 1f);
+        Vector2 targetVelocity = clampedInput.sqrMagnitude > InputMoveThresholdSqr
+            ? clampedInput * Speed.Value
+            : Vector2.zero;
         rb.velocity = CalculateSmoothedVelocity(targetVelocity, deltaTime);
         UpdateMovementState();
     }
@@ -393,7 +415,7 @@ public partial class Mover : Module
             moveStaminaConsume = Data.moveStaminaConsume,
             runStaminaConsume = Data.runStaminaConsume,
             runSpeedRate = Data.runSpeedRate,
-            isRunning = false,
+            isRunning = Data.isRunning,
             RunStaminaThreshold = Data.RunStaminaThreshold
         };
 
@@ -405,9 +427,10 @@ public partial class Mover : Module
         UnbindRunActions();
         OnMoveStart?.Clear();
         OnMoveEnd?.Clear();
+        RunStateChanged = null;
 
-        // 模块被销毁时，确保清除与移动/奔跑相关的饥饿状态 Buff
-        ClearHungerBuffs();
+        hungerActionInstance?.Dispose();
+        hungerActionInstance = null;
     }
     #endregion
 
@@ -462,71 +485,100 @@ public partial class Mover : Module
 
     #endregion
 
-    #region 饥饿 Buff 逻辑
+}
 
-    /// <summary>
-    /// 根据当前移动/奔跑状态，动态添加或移除饥饿相关 Buff。
-    /// </summary>
-    private void HandleHungerBuffs(bool isMoving, bool isRunning)
+/// <summary>
+/// 移动模块持有的饥饿动作配置模板。
+/// 普通移动默认使用 1.6 倍营养消耗，奔跑在此基础上再乘 2 倍，保持原有玩法数值，
+/// 但配置不再依赖 Buff JSON，因此清理 Buff 不会破坏移动饥饿规则。
+/// </summary>
+[System.Serializable]
+public sealed class MovementHungerActionDefinition
+{
+    [Tooltip("是否启用移动/奔跑饥饿动作；AI 移动模块默认关闭。")]
+    public bool enabled = false;
+
+    [Min(0f)]
+    [Tooltip("普通移动时的营养消耗倍率。")]
+    public float moveNutritionConsumeMultiplier = 1.6f;
+
+    [Min(0f)]
+    [Tooltip("奔跑相对普通移动额外使用的营养消耗倍率。")]
+    public float runNutritionConsumeMultiplier = 2f;
+
+    /// <summary>校正运行时和 Inspector 可能写入的非法配置。</summary>
+    public void ClampValues()
     {
-        if (buffManager == null)
-        {
-            // 该物体没有 BuffManager，直接退出（例如纯移动物体）
+        moveNutritionConsumeMultiplier = Mathf.Max(0f, moveNutritionConsumeMultiplier);
+        runNutritionConsumeMultiplier = Mathf.Max(0f, runNutritionConsumeMultiplier);
+    }
+
+    /// <summary>按当前移动状态计算最终营养消耗倍率。</summary>
+    public float ResolveMultiplier(bool isMoving, bool isRunning)
+    {
+        if (!enabled || !isMoving)
+            return 1f;
+
+        float multiplier = Mathf.Max(0f, moveNutritionConsumeMultiplier);
+        if (isRunning)
+            multiplier *= Mathf.Max(0f, runNutritionConsumeMultiplier);
+        return multiplier;
+    }
+
+    /// <summary>从配置模板创建角色独享的运行实例。</summary>
+    public MovementHungerActionInstance CreateInstance(Item actor)
+    {
+        Mod_Food food = actor?.itemMods?.GetMod_ByID<Mod_Food>(ModText.Food);
+        return new MovementHungerActionInstance(this, food);
+    }
+}
+
+/// <summary>
+/// 单个角色持有的移动饥饿动作实例。
+/// 只维护移动状态并把倍率交给 Mod_Food，实际扣除营养仍由 Food 模块统一执行，
+/// 因此不会与基础饥饿、难度倍率、动物维持状态或其他非移动规则重复扣除。
+/// </summary>
+public sealed class MovementHungerActionInstance
+{
+    private readonly MovementHungerActionDefinition definition;
+    private readonly Mod_Food food;
+    private bool isMoving;
+    private bool isRunning;
+
+    public MovementHungerActionInstance(
+        MovementHungerActionDefinition definition,
+        Mod_Food food)
+    {
+        this.definition = definition;
+        this.food = food;
+    }
+
+    /// <summary>当前动作是否正在为移动状态提供额外规则。</summary>
+    public bool IsActive => definition != null && definition.enabled && isMoving && food != null;
+
+    /// <summary>刷新移动/奔跑状态，并立即应用当前配置倍率。</summary>
+    public void SetMovementState(bool moving, bool running)
+    {
+        isMoving = moving;
+        isRunning = moving && running;
+        ApplyMultiplier();
+    }
+
+    /// <summary>模块销毁或角色回收时还原 Food，避免对象池复用残留倍率。</summary>
+    public void Dispose()
+    {
+        isMoving = false;
+        isRunning = false;
+        ApplyMultiplier();
+    }
+
+    private void ApplyMultiplier()
+    {
+        if (food == null)
             return;
-        }
 
-        // 1. 处理移动饥饿 Buff
-        if (isMoving)
-        {
-            TryAddHungerBuff(moveHungerBuffId, ref moveHungerBuffActive);
-        }
-        else
-        {
-            TryRemoveHungerBuff(moveHungerBuffId, ref moveHungerBuffActive);
-        }
-
-        // 2. 处理奔跑附加饥饿 Buff（只在移动且奔跑时生效）
-        if (isMoving && isRunning)
-        {
-            TryAddHungerBuff(runHungerBuffId, ref runHungerBuffActive);
-        }
-        else
-        {
-            TryRemoveHungerBuff(runHungerBuffId, ref runHungerBuffActive);
-        }
-    }
-
-    private void TryAddHungerBuff(string buffId, ref bool stateFlag)
-    {
-        if (stateFlag) return;
-        if (buffManager == null) return;
-        if (string.IsNullOrWhiteSpace(buffId)) return;
-
-        stateFlag = buffManager.AddBuff(buffId);
-    }
-
-    private void TryRemoveHungerBuff(string buffId, ref bool stateFlag)
-    {
-        if (buffManager == null) return;
-        if (string.IsNullOrWhiteSpace(buffId)) return;
-        if (!stateFlag && !buffManager.HasBuff(buffId)) return;
-
-        buffManager.RemoveBuff(buffId);
-        stateFlag = false;
-    }
-
-    #endregion
-
-    /// <summary>
-    /// 强制清理当前可能仍然挂在身上的移动/奔跑饥饿 Buff。
-    /// 在模块销毁或需要重置状态时调用。
-    /// </summary>
-    private void ClearHungerBuffs()
-    {
-        if (buffManager == null) return;
-
-        // 不直接操作字典，而是复用已有的移除逻辑和状态位
-        TryRemoveHungerBuff(moveHungerBuffId, ref moveHungerBuffActive);
-        TryRemoveHungerBuff(runHungerBuffId, ref runHungerBuffActive);
+        definition?.ClampValues();
+        float multiplier = definition?.ResolveMultiplier(isMoving, isRunning) ?? 1f;
+        food.SetMovementNutritionConsumeMultiplier(multiplier);
     }
 }

@@ -1,5 +1,4 @@
 ﻿using MemoryPack;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -16,6 +15,8 @@ public partial class Mod_FocusPoint : Module
     public List<Transform> targetRotationTransforms = new List<Transform>();
     
     private List<Transform> _cachedValidTargets;
+    private readonly Dictionary<Transform, float> _currentAimAngles = new Dictionary<Transform, float>();
+    private readonly Dictionary<Transform, float> _baseLocalXAngles = new Dictionary<Transform, float>();
     private int _lastTargetCount = -1;
     private bool _needsRefresh = true;
     #endregion
@@ -41,9 +42,6 @@ public partial class Mod_FocusPoint : Module
         GameController = item.Owner != null
             ? item.Owner.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>()
             : item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>();
-
-        GameController = item.GetComponentInChildren<GameController>();
-
 
         // 获取TurnBody组件
         turnBody = item.Owner != null
@@ -118,6 +116,28 @@ public partial class Mod_FocusPoint : Module
             Debug.Log($"[FaceMouse] 已清理 {removedCount} 个空对象，当前列表大小：{targetRotationTransforms.Count}", this);
         }
     }
+
+    /// <summary>注册需要随统一朝向旋转的对象。</summary>
+    public void AddRotationTarget(Transform target)
+    {
+        if (target == null || targetRotationTransforms.Contains(target))
+            return;
+
+        targetRotationTransforms.Add(target);
+        _needsRefresh = true;
+    }
+
+    /// <summary>注销旋转对象并清理其平滑角度状态。</summary>
+    public void RemoveRotationTarget(Transform target)
+    {
+        if (target == null)
+            return;
+
+        targetRotationTransforms.Remove(target);
+        _currentAimAngles.Remove(target);
+        _baseLocalXAngles.Remove(target);
+        _needsRefresh = true;
+    }
     #endregion
 
     #region Private Methods
@@ -131,7 +151,7 @@ public partial class Mod_FocusPoint : Module
         }
 
         // 遍历所有有效目标执行旋转
-        foreach (var targetTrans in targetRotationTransforms)
+        foreach (var targetTrans in GetValidRotationTargets())
         {
             // 计算目标对象到鼠标位置的距离
             float distanceToMouse = WorldTopologyRuntime.Distance(targetTrans.position, targetPosition);
@@ -157,13 +177,23 @@ public partial class Mod_FocusPoint : Module
                 targetAngle += aimOrientation.AngleOffsetDegrees;
             }
 
-            // 平滑旋转到目标角度
-            float currentAngle = targetTrans.localEulerAngles.z;
-            float smoothedAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, Data.RotationSpeed * deltaTime);
+            // 独立保存瞄准角，避免从 Y=180° 的欧拉角反解时丢失左右翻转。
+            if (!_currentAimAngles.TryGetValue(targetTrans, out float currentAngle))
+            {
+                currentAngle = targetTrans.localEulerAngles.z;
+                _currentAimAngles[targetTrans] = currentAngle;
+                _baseLocalXAngles[targetTrans] = targetTrans.localEulerAngles.x;
+            }
 
-            // 应用旋转（仅Z轴，保持X和Y轴不变）
-            Vector3 currentLocalEulerAngles = targetTrans.localEulerAngles;
-            targetTrans.localRotation = Quaternion.Euler(currentLocalEulerAngles.x, currentLocalEulerAngles.y, smoothedAngle);
+            float smoothedAngle = Mathf.MoveTowardsAngle(currentAngle, targetAngle, Data.RotationSpeed * deltaTime);
+            _currentAimAngles[targetTrans] = smoothedAngle;
+
+            // 由同一次写入合成人物转身 Y 轴和手持瞄准 Z 轴，防止两个模块互相覆盖。
+            float facingAngleY = turnBody != null
+                ? turnBody.CurrentTurnAngleY
+                : (playerFacingDirection < 0f ? 180f : 0f);
+            float baseLocalX = _baseLocalXAngles[targetTrans];
+            targetTrans.localRotation = Quaternion.Euler(baseLocalX, facingAngleY, smoothedAngle);
         }
     }
 
@@ -189,6 +219,17 @@ public partial class Mod_FocusPoint : Module
             
             _lastTargetCount = targetRotationTransforms.Count;
             _needsRefresh = false;
+
+            var trackedTargets = new List<Transform>(_currentAimAngles.Keys);
+            for (int i = 0; i < trackedTargets.Count; i++)
+            {
+                Transform trackedTarget = trackedTargets[i];
+                if (trackedTarget != null && _cachedValidTargets.Contains(trackedTarget))
+                    continue;
+
+                _currentAimAngles.Remove(trackedTarget);
+                _baseLocalXAngles.Remove(trackedTarget);
+            }
             
             // 仅在调试模式下输出警告
             #if UNITY_EDITOR || DEVELOPMENT_BUILD

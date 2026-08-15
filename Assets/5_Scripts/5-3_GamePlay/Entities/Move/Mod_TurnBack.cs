@@ -25,6 +25,9 @@ public class Mod_TurnBack : Module
     [SerializeField, ReadOnly, Tooltip("是否正在转身（由脚本自动控制）")]
     public bool isTurning = false;
 
+    /// <summary>角色当前实际使用的左右转身角，供瞄准对象合成最终旋转。</summary>
+    public float CurrentTurnAngleY { get; private set; }
+
     public UltEvent<Vector2> OnTrun = new UltEvent<Vector2>();
 
     private float turnTimeElapsed;
@@ -65,6 +68,9 @@ public class Mod_TurnBack : Module
 
         controlledTransforms_Direction.Clear();
         CollectTurnDirectionTransforms();
+        targetY = currentDirection == Vector2.right ? 0f : 180f;
+        CurrentTurnAngleY = targetY;
+        UpdateAllTransformDirections();
 
         if (faceMouse == null)
             Debug.LogError("[TurnBody] 初始化失败：FaceMouse 模块未找到！" + item.name);
@@ -112,10 +118,11 @@ public class Mod_TurnBack : Module
         isTurning = true;
         turnTimeElapsed = 0f;
 
-        if (controlledTransforms_Direction.Count == 0) return;
-
-        startY = NormalizeAngle(controlledTransforms_Direction[0].eulerAngles.y);
         targetY = (currentDirection == Vector2.right) ? 0f : 180f;
+        startY = controlledTransforms_Direction.Count > 0
+            ? NormalizeAngle(controlledTransforms_Direction[0].eulerAngles.y)
+            : CurrentTurnAngleY;
+        CurrentTurnAngleY = startY;
 
         // 记录位置的起始值和目标值
         RecordPositionTransformValues();
@@ -129,6 +136,7 @@ public class Mod_TurnBack : Module
         turnTimeElapsed += deltaTime;
         float t = Mathf.Clamp01(turnTimeElapsed / Duration);
         float newY = Mathf.LerpAngle(startY, targetY, t);
+        CurrentTurnAngleY = newY;
 
         foreach (var tform in controlledTransforms_Direction)
         {
@@ -152,6 +160,7 @@ public class Mod_TurnBack : Module
                 }
             }
 
+            CurrentTurnAngleY = targetY;
             isTurning = false;
         }
     }
@@ -170,7 +179,8 @@ public class Mod_TurnBack : Module
 
         foreach (var mod in item.itemMods.Mods.Values)
         {
-            if (!(mod is ITrunDirection))
+            // 同时负责瞄准的对象由 FocusPoint 一次性合成 Y/Z 旋转，避免双重写入。
+            if (!(mod is ITrunDirection) || mod is IFocusPoint)
                 continue;
 
             AddControlledTransform(mod.transform);
@@ -208,10 +218,9 @@ public class Mod_TurnBack : Module
     {
         if (transform == null) return;
 
-        // 根据当前方向设置Y轴旋转
-        float targetYRotation = (currentDirection == Vector2.right) ? 0f : 180f;
+        // 根据当前转身插值设置Y轴旋转
         Vector3 currentEulerAngles = transform.eulerAngles;
-        transform.rotation = Quaternion.Euler(currentEulerAngles.x, targetYRotation, currentEulerAngles.z);
+        transform.rotation = Quaternion.Euler(currentEulerAngles.x, CurrentTurnAngleY, currentEulerAngles.z);
     }
     /// <summary>
     /// 批量更新所有受控制对象的朝向
@@ -306,6 +315,9 @@ public class Mod_TurnBack : Module
     {
         isTurning = false;
         turnTimeElapsed = 0f;
+        targetY = currentDirection == Vector2.right ? 0f : 180f;
+        CurrentTurnAngleY = targetY;
+        UpdateAllTransformDirections();
     }
 
     #endregion

@@ -15,6 +15,8 @@ namespace FlatWorld.Automation
         private static int mobileAttackStartedCount;
         private static int mobileAttackEndedCount;
         private static int mobileLeftClickCount;
+        private static GameController.InputDeviceType mobileOriginalPreferredInputDevice;
+        private static bool mobileOriginalPreferredInputDeviceCaptured;
         private static bool mobileControlsCompleted;
 
         #endregion
@@ -28,6 +30,8 @@ namespace FlatWorld.Automation
             mobileAttackStartedCount = 0;
             mobileAttackEndedCount = 0;
             mobileLeftClickCount = 0;
+            mobileOriginalPreferredInputDevice = GameController.InputDeviceType.KeyboardMouse;
+            mobileOriginalPreferredInputDeviceCaptured = false;
             mobileControlsCompleted = false;
         }
 
@@ -39,6 +43,9 @@ namespace FlatWorld.Automation
             if (mobileControlsController == null)
                 throw new InvalidOperationException("MobileControls: 真实玩家缺少 GameController。");
 
+            mobileOriginalPreferredInputDevice = mobileControlsController.PreferredInputDevice;
+            mobileOriginalPreferredInputDeviceCaptured = true;
+            mobileControlsController.SetPreferredInputDevice(GameController.InputDeviceType.Mobile);
             mobileControlsController.AttackStarted += RecordMobileAttackStarted;
             mobileControlsController.AttackEnded += RecordMobileAttackEnded;
             mobileControlsController.LeftClick += RecordMobileLeftClick;
@@ -90,6 +97,8 @@ namespace FlatWorld.Automation
                 mobileControlsController.LeftClick -= RecordMobileLeftClick;
                 mobileControlsController.SetGameplayInputLocked(false);
                 mobileControlsController.CancelActiveAttackAndMobileInput();
+                if (mobileOriginalPreferredInputDeviceCaptured)
+                    mobileControlsController.SetPreferredInputDevice(mobileOriginalPreferredInputDevice);
             }
 
             ResetMobileControlsScenario();
