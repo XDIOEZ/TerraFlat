@@ -814,7 +814,7 @@ public class Inventory
             return;
         }
 
-        currentMenuInstance.Init(itemSlot_UI[index], slot, item);
+        currentMenuInstance.Init(itemSlot_UI[index], slot, item, Data, index);
         _activeContextMenuPanel = menuPanel;
 
         RectTransform menuRect = currentMenuInstance.GetComponent<RectTransform>();

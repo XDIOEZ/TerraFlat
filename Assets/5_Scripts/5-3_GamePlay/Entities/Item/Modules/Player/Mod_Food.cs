@@ -192,6 +192,16 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     [Tooltip("静态物品定义。Drink 只在完整喝下一份饮品后触发饮水玩法事件。")]
     public FoodConsumeKind ConsumeKind = FoodConsumeKind.Solid;
 
+    [FoldoutGroup("食用类型")]
+    [LabelText("允许食用")]
+    [Tooltip("关闭后物品保留食物数据和计时模块，但不会响应使用操作或提供营养。")]
+    public bool ConsumptionEnabled = true;
+
+    [FoldoutGroup("食用类型")]
+    [LabelText("完成食用后替换物品ID")]
+    [Tooltip("达到食用次数后在原库存槽位替换为该物品；留空时沿用普通食物的消耗逻辑。")]
+    public string ConsumeCompleteReplacementItemID = string.Empty;
+
     public event Action<FoodConsumeResult> ConsumeCompleted;
 
     [MemoryPackIgnore]
@@ -260,6 +270,10 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     {
         FoodModData ??= new ModData_FoodData();
         FoodModData.ApplyToFoodData();
+        float maxEatingProgress = Mathf.Max(0f, Data.Max_EatingProgress);
+        EatingProgress = maxEatingProgress > 0f
+            ? Mathf.Clamp(FoodModData.EatingProgress, 0f, maxEatingProgress)
+            : 0f;
         RuntimeNutritionConsumeMultiplier = 1f;
         _movementNutritionConsumeMultiplier = 1f;
         _movementWaterConsumeMultiplier = 1f;
@@ -298,6 +312,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         }
 
         FoodModData ??= new ModData_FoodData();
+        SyncEatingProgressToData();
         FoodModData.SyncFromFood(Data);
         FoodModData.ApplyToFoodData();
     }
@@ -306,6 +321,11 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     /// </summary>
     public override void Act()
     {
+        if (!ConsumptionEnabled)
+        {
+            return;
+        }
+
         Item owner = item?.Owner;
         Mod_Food playerFood = owner?.itemMods?.GetMod_ByID(ModText.Food) as Mod_Food;
         if (playerFood == null)
@@ -315,6 +335,27 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         }
 
         playerFood.Eat(BeEater: this);
+    }
+
+    /// <summary>
+    /// 为右键临时使用实例绑定真实库存槽位，确保多次点击写回同一份物品数据。
+    /// </summary>
+    public void BindRuntimeInventoryContext(Inventory_Data inventoryData, ItemSlot slot, int slotIndex)
+    {
+        FoodModData ??= new ModData_FoodData();
+        FoodModData.RuntimeOwnerInventoryData = inventoryData;
+        FoodModData.RuntimeOwnerSlot = slot;
+        FoodModData.RuntimeOwnerItemData = slot?.itemData;
+        FoodModData.RuntimeOwnerSlotIndex = slotIndex;
+    }
+
+    /// <summary>
+    /// 将临时实例的使用进度立即同步到可持久化食物数据。
+    /// </summary>
+    private void SyncEatingProgressToData()
+    {
+        FoodModData ??= new ModData_FoodData();
+        FoodModData.EatingProgress = Mathf.Max(0f, EatingProgress);
     }
 
     public void OnItemTakenFromPool()
@@ -872,22 +913,37 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     #region 进食行为
     public void BeEat(Mod_Food Eater)
     {
-        if (Eater == null || item?.itemData?.Stack == null || Data == null)
+        if (!ConsumptionEnabled || Eater == null || item?.itemData?.Stack == null || Data == null || Data.Max_EatingProgress <= 0f)
             return;
 
         ShakeItem(item.transform);
         PlayConsumeAudio();
 
         EatingProgress++;
+        SyncEatingProgressToData();
 
         if (EatingProgress >= Data.Max_EatingProgress)
         {
+            if (HasConsumeReplacementTarget())
+            {
+                if (TryCompleteReplacement(Eater))
+                {
+                    return;
+                }
+
+                EatingProgress = 0f;
+                SyncEatingProgressToData();
+                Debug.LogWarning($"[Mod_Food] 食用完成替换失败，物品={item?.itemData?.IDName}, 目标={ConsumeCompleteReplacementItemID}", this);
+                return;
+            }
+
             // 减少堆叠数量
             item.itemData.Stack.Amount--;
             // UI 更新通知
             item.OnUIRefresh?.Invoke();
             // 进度归零
-            EatingProgress = 0;
+            EatingProgress = 0f;
+            SyncEatingProgressToData();
 
             Eater.ApplyConsumedNutrition(this);
 
@@ -901,9 +957,11 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     public void Eat(Mod_Food BeEater)
     {
         if (BeEater == null ||
+            !BeEater.ConsumptionEnabled ||
             BeEater.item?.itemData?.Stack == null ||
             BeEater.Data == null ||
-            Data == null)
+            Data == null ||
+            BeEater.Data.Max_EatingProgress <= 0f)
         {
             return;
         }
@@ -915,12 +973,26 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
 
         if (BeEater.EatingProgress >= BeEater.Data.Max_EatingProgress)
         {
+            if (BeEater.HasConsumeReplacementTarget())
+            {
+                if (BeEater.TryCompleteReplacement(this))
+                {
+                    return;
+                }
+
+                BeEater.EatingProgress = 0f;
+                BeEater.SyncEatingProgressToData();
+                Debug.LogWarning($"[Mod_Food] 食用完成替换失败，物品={BeEater.item?.itemData?.IDName}, 目标={BeEater.ConsumeCompleteReplacementItemID}", BeEater);
+                return;
+            }
+
             // 减少被吃食物的堆叠数量
             BeEater.item.itemData.Stack.Amount--;
             // UI 更新通知
             BeEater.item.OnUIRefresh?.Invoke();
 
-            BeEater.EatingProgress = 0; // 吃进度归零
+            BeEater.EatingProgress = 0f; // 吃进度归零
+            BeEater.SyncEatingProgressToData();
 
             // 吃掉目标食物的营养值
             ApplyConsumedNutrition(BeEater);
@@ -1207,6 +1279,38 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         {
             _damageReceiver.ForceHurt(HealthState.VitaminSelfHurt * safeDelta);
         }
+    }
+
+    /// <summary>判断当前食物是否配置了完成后替换目标。</summary>
+    private bool HasConsumeReplacementTarget()
+    {
+        return !string.IsNullOrWhiteSpace(ConsumeCompleteReplacementItemID);
+    }
+
+    /// <summary>
+    /// 完成多次食用后的原槽位替换，并在替换成功后发放一次营养。
+    /// </summary>
+    private bool TryCompleteReplacement(Mod_Food consumer)
+    {
+        if (!FoodModData.TryReplaceCurrentItem(ConsumeCompleteReplacementItemID, out string failedReason))
+        {
+            Debug.LogWarning($"[Mod_Food] 无法替换完成食用物品，原因={failedReason}", this);
+            return false;
+        }
+
+        EatingProgress = 0f;
+        SyncEatingProgressToData();
+        item?.OnUIRefresh?.Invoke();
+        RefreshOwnerHotbar(item);
+        consumer?.ApplyConsumedNutrition(this);
+        return true;
+    }
+
+    /// <summary>立即同步物品所属玩家快捷栏的当前手持实例。</summary>
+    private static void RefreshOwnerHotbar(Item consumedItem)
+    {
+        Inventory_HotBar hotbar = consumedItem?.Owner?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        hotbar?.RuntimeInventory?.SyncHeldItemImmediately();
     }
 
     /// <summary>按蛋白质状态执行连续回血或大间隔一次性回血。</summary>

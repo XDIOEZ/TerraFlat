@@ -4678,6 +4678,340 @@
       }
     },
     {
+      "id": "WildDogMilk",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "野生狗奶",
+      "description": "永远喝不完的野生狗奶；连续使用三次后会进入灰色休眠状态。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 2.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Item_WildDogMilk.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 50.0,
+                "Max_Fat": 50.0,
+                "Protein": 100.0,
+                "Max_Protein": 100.0,
+                "Water": 200.0,
+                "Max_Water": 200.0,
+                "Vitamins": 0.0,
+                "Max_Vitamins": 0.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": false,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 720.0,
+            "SpoilageTargetItemID": "WildDogMilk_Gray",
+            "EatingProgress": 0.0,
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "ConsumptionEnabled": true,
+            "ConsumeCompleteReplacementItemID": "WildDogMilk_Gray",
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": false,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.drink",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 1,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "WildDogMilk_Gray",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "野生狗奶",
+      "description": "进入休眠状态的灰色野生狗奶，十二分钟后恢复。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 2.0,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Item_WildDogMilk_Gray.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 0.0,
+                "Max_Fat": 0.0,
+                "Protein": 0.0,
+                "Max_Protein": 0.0,
+                "Water": 0.0,
+                "Max_Water": 0.0,
+                "Vitamins": 0.0,
+                "Max_Vitamins": 0.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0,
+              "ObserverState": []
+            },
+            "EnableSpoilage": true,
+            "SpoilageElapsedSeconds": 0.0,
+            "SpoilageIntervalSeconds": 720.0,
+            "SpoilageTargetItemID": "WildDogMilk",
+            "EatingProgress": 0.0,
+            "Type": 0
+          },
+          "parameters": {
+            "EatingProgress": 0.0,
+            "ConsumptionEnabled": false,
+            "ConsumeCompleteReplacementItemID": "",
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": false,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": false,
+              "CueId": "food.drink",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 1,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
       "id": "Ore_Stone",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Stone.prefab",
       "shellPrefab": "Ore_Stone",
