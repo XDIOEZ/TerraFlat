@@ -141,13 +141,15 @@ public class DayNightTimeManager : SingletonMono<DayNightTimeManager>
         enabled = false;
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
         if (GameManager.Instance != null)
         {
             GameManager.Instance.Event_GameWorldEnter -= OnGameWorldEnter;
             GameManager.Instance.Event_GameWorldExit -= OnGameWorldExit;
         }
+
+        base.OnDestroy();
     }
     #endregion
 

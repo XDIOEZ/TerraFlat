@@ -16,6 +16,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 ## 不变量
 
 - 感知链为 Detector 请求 → ItemMgr 空间格粗筛 → Collider2D 精确确认 → 应用进入/离开结果。
+- 目标感知范围由 Detector 的 `DetectionRadius` 与 Item 的 `PerceptionRadiusMultiplier` 共同决定；修改感知逻辑时必须同步空间粗筛、目标快照精筛和 AI 状态阈值，避免大体型目标被漏筛或状态机仍使用旧距离。
 - 现代 AI 位于 `Entities/AI/`；修改 Prefab 前确认其使用状态机还是旧 Kiwi 行为树。
 - `Chicken_Tree`、`WildBoar_Tree` 是历史 Kiwi 兼容 Prefab，不实现 `IAIActor`，不加入正式 Actor JSON/MOD 继承目录。
 - 狼只使用 `Assets/2_Prefabs/Gameplay/AI/Wolf.prefab`；不要恢复已删除的 `Wolf_Tree.prefab`。
@@ -25,6 +26,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - Actor 模块参数中的 `LayerMask` 使用 JSON 位掩码整数；`ModuleJsonConfigurator` 负责将数值转换到 `LayerMask.value`，不要直接依赖 Json.NET 的默认转换。
 - `UnboundedDailyGrowth` 会跳过生态预算与存活上限；修改生成条件时保留其独立语义。
 - `IgnorePopulationLimits` 只取消物种、生成组、玩家周边与全局数量上限；生成计划、概率、生态预算和远距离回收仍然生效，不能与 `UnboundedDailyGrowth` 混为一谈。
+- 动物头顶调试 HUD 由全局 `AI_DebugOverlay.Visible` 控制，GM 面板通过 `GMConsolePreferences` 持久化开关；动物自身的 `debugLog` 只负责日志，不要重新用它控制 HUD 显示。
 - 需要短时保留正式生态生物用于跨区块、存档或可见性验证时，使用 `MonsterSpawnerManager.AcquireEcologyRecycleProtection` 的作用域租约；它只绕过数量与距离回收，不能阻止区块休眠显隐或调用方的正式 `DespawnItem`，并且必须在清理路径释放。
 - 移动/可走性改动联动 `flatworld-navigation`；伤害联动 `flatworld-combat`；注册/存档联动 Item/Data Skill。
 

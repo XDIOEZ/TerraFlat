@@ -51,6 +51,40 @@ public class Mod_ItemDetector : Module
         set => detectionRadius = value;
     }
 
+    /// <summary>
+    /// 获取该检测器对指定目标使用的最终感知半径。
+    /// 观察者的基础检测半径与目标自身的被感知倍率共同生效。
+    /// </summary>
+    public float GetEffectiveDetectionRadius(Item target)
+    {
+        return CalculateEffectiveDetectionRadius(
+            DetectionRadius,
+            target != null ? target.GetPerceptionRadiusMultiplier() : 1f);
+    }
+
+    /// <summary>按指定目标计算任意基础感知距离的最终范围，供 AI 状态阈值复用。</summary>
+    public static float CalculateEffectiveDetectionRadius(float baseDetectionRadius, Item target)
+    {
+        return CalculateEffectiveDetectionRadius(
+            baseDetectionRadius,
+            target != null ? target.GetPerceptionRadiusMultiplier() : 1f);
+    }
+
+    /// <summary>按目标倍率修正观察者的基础感知半径。</summary>
+    public static float CalculateEffectiveDetectionRadius(
+        float baseDetectionRadius,
+        float targetPerceptionRadiusMultiplier)
+    {
+        float safeRadius = float.IsNaN(baseDetectionRadius) || float.IsInfinity(baseDetectionRadius)
+            ? 0f
+            : Mathf.Max(0f, baseDetectionRadius);
+        float safeMultiplier = float.IsNaN(targetPerceptionRadiusMultiplier) ||
+                               float.IsInfinity(targetPerceptionRadiusMultiplier)
+            ? 1f
+            : Mathf.Max(0f, targetPerceptionRadiusMultiplier);
+        return safeRadius * safeMultiplier;
+    }
+
     public Ex_ModData_MemoryPackable ModData; // 模块数据
 
     public override ModuleData _Data // 重写的模块数据属性

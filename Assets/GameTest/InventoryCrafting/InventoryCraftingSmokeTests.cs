@@ -52,7 +52,7 @@ namespace FlatWorld.GameTest.InventoryCrafting
         [Test]
         [Category("InventoryCrafting.Smoke")]
         [Category("Smoke")]
-        public void HotbarSelectionBoxMovesWithoutChangingItsParent()
+        public void HotbarSelectionBoxMovesToCurrentSlot()
         {
             GameObject hotbarObject = new("HotbarSelection_Test");
             GameObject firstSlotObject = new("HotbarSlot_0_Test");
@@ -68,8 +68,6 @@ namespace FlatWorld.GameTest.InventoryCrafting
                 secondSlotObject.transform.position = new Vector3(125f, 20f, 0f);
 
                 selectionObject.transform.SetParent(firstSlotObject.transform, false);
-                Transform originalParent = selectionObject.transform.parent;
-
                 hotbar.SelectBox = selectionObject;
                 hotbar.SelectBoxChangeDuration = 0.1f;
                 hotbar.RuntimeInventory.itemSlot_UI.Add(firstSlot);
@@ -92,7 +90,8 @@ namespace FlatWorld.GameTest.InventoryCrafting
 
                 moveSelection.Invoke(hotbar, new object[] { 1 });
 
-                Assert.That(selectionObject.transform.parent, Is.EqualTo(originalParent), "切换快捷栏位不应改变选中框层级。");
+                Assert.That(selectionObject.transform.parent, Is.EqualTo(secondSlotObject.transform), "切换快捷栏位必须同步选中框父节点。");
+                Assert.That(selectionObject.transform.GetSiblingIndex(), Is.EqualTo(0), "选中框必须位于目标槽位首个兄弟节点。");
             }
             finally
             {

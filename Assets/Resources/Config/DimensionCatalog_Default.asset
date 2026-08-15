@@ -53,7 +53,7 @@ MonoBehaviour:
     PortalOffset: {x: 0, y: 0, z: 0}
     PortalTargetDimensionId: surface
     UseFixedLighting: 1
-    FixedLighting: 0.08
+    FixedLighting: 0.2
     SuppressWeather: 1
     EnableMonsterSpawning: 0
     LoadingTheme:

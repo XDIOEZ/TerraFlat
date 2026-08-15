@@ -134,15 +134,30 @@ public class SettingCanvas : Module, IInstanceUI
             }
             else
             {
-                basePanel.Open();
+                OpenSettingsPanel();
             }
         }
     }
 
+    #region 设置面板层级
+
+    /// <summary>打开设置前重新确认高优先级 Canvas，确保对话气泡和玩法 HUD 无法盖住设置。</summary>
+    private void OpenSettingsPanel()
+    {
+        if (basePanel == null)
+            return;
+
+        UIManager.Instance.ConfigureSettingsPanelLayer(basePanel);
+        basePanel.Open();
+        basePanel.transform.SetAsLastSibling();
+    }
+
+    #endregion
+
     public void I_ShowPanel()
     {
         EnsurePanelCreated();
-        basePanel.Open();
+        OpenSettingsPanel();
     }
 
     public void I_ClosePanel()
@@ -157,7 +172,7 @@ public class SettingCanvas : Module, IInstanceUI
     {
         if (EnsurePanelCreated())
         {
-            basePanel.Open();
+            OpenSettingsPanel();
             return;
         }
 

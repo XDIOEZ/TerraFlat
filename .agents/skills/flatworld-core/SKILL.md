@@ -23,6 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 - 动态维度 Scene 不进 Build Settings，以 `WorldKey` 命名并复用 `RunWorld()`。
 - 资源加载保持本体先于 MOD；注册失败不得留下半初始化字典。
 - `GameRes` 会随 `WorldManager` Prefab 再次出现在 `GameStartScene`；跨场景存活实例已存在时，重复实例不得启动资源加载协程，否则会先清空目录、再随重复对象销毁而中断加载。
+- 基于 `SingletonMono<T>` 的跨场景管理器必须按 Unity null 语义恢复已销毁的静态引用，且场景副本不得覆盖有效实例，否则返回主菜单再进入时会把运行时回调发送给已销毁对象。
 - 创建/网络提升/远程副本都显式设置 Player ProfileContext，玩家事件只触发一次。
 - UI 逻辑留在 `GameManager.UI.cs`；加载视觉来自 Prefab，不在运行时拼装。
 - 标准新建/继续游戏的加载页只能在玩家脚下区块与完整可见 `ChunkView` 窗口完成表现绑定、物理同步收尾后发布 `Completed` 并淡出；后台生成队列清空不等于可展示，诊断超时只能告警，不能提前放行。

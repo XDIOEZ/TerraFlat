@@ -98,6 +98,9 @@ public class Tile_Water : TileBlockBehaviour
         WaterImmersionRenderEffect effect = item.GetComponentInChildren<WaterImmersionRenderEffect>(true);
         if (effect != null)
             effect.SetWaterState(depth, inWater);
+
+        // 水下看不到脚底阴影，阴影状态与水体视觉状态保持同一入口更新。
+        ActorShadowManager.GetInstance()?.SetActorInWater(item, inWater);
     }
 
     #endregion

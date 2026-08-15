@@ -618,6 +618,7 @@ MonoBehaviour:
     staminaRecoverySpeed: 10
     Name_User: "\u7BA1\u7406\u5458"
     PlayerPov: 10
+    PerceptionRadiusMultiplier: 1
 --- !u!114 &4377666045775335801
 MonoBehaviour:
   m_ObjectHideFlags: 0

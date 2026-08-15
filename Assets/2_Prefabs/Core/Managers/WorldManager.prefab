@@ -505,6 +505,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7250920568931868721}
   - component: {fileID: 3411970761366036574}
+  - component: {fileID: 6675140932819043210}
   m_Layer: 0
   m_Name: ItemMgr
   m_TagString: Untagged
@@ -539,6 +540,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212defbe379f6e04e832893eda7ea808, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  defaultPlayerCreationTemplate: {fileID: 11400000, guid: 10b0a59f45db3924f92356ee758f354d, type: 2}
+--- !u!114 &6675140932819043210
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5482967027949208378}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b1e6c3d7a904ef0a9a2b86f1d4c5e70, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  actorShadowPrefab: {fileID: 4309152267431885310, guid: 6d2a7f4c9e3148b3a5c0d7e1f2a6b8c9, type: 3}
+  maxShadowAlpha: 0.55
+  minSunlightToShow: 0.02
+  sunlightResponsePower: 1
+  shadowWidthRatio: 0.9
+  shadowHeightToWidthRatio: 0.9
+  minShadowWidth: 0.18
+  maxShadowWidth: 2.5
+  shadowGroundOffset: 0.01
 --- !u!1 &8923630362666243623
 GameObject:
   m_ObjectHideFlags: 0

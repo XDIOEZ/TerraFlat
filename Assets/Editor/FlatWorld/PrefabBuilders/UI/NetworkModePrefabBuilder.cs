@@ -58,6 +58,7 @@ public static class NetworkModePrefabBuilder
             typeof(GraphicRaycaster),
             typeof(BasePanel));
         root.layer = LayerMask.NameToLayer("UI");
+        root.AddComponent<FullScreenRectController>();
 
         RectTransform rect = root.GetComponent<RectTransform>();
         Stretch(rect);

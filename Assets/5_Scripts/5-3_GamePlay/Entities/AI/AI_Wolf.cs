@@ -627,18 +627,14 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	private bool ShouldChase()
 	{
 		if (_currentThreat == null) return false;
-		float distance = DistanceTo(_currentThreat.transform);
 		bool alreadyEngaged = _currentState == WolfState.Chase || _currentState == WolfState.Attack;
+		float chaseDistance = alreadyEngaged ? chaseLossDistance : chaseTriggerDistance;
 
 		if (IsAggressiveAdvanceActive())
-			return distance <= (alreadyEngaged ? chaseLossDistance : chaseTriggerDistance);
+			return IsWithinEffectivePerceptionRange(_currentThreat, chaseDistance);
 
 		if (_packCount >= 2)
-		{
-			return alreadyEngaged
-				? distance <= chaseLossDistance
-				: distance <= chaseTriggerDistance;
-		}
+			return IsWithinEffectivePerceptionRange(_currentThreat, chaseDistance);
 		return false;
 	}
 
@@ -648,7 +644,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		if (_currentThreat == null) return false;
 		if (IsAggressiveAdvanceActive()) return false;
 		if (_packCount > 1) return false;
-		return DistanceTo(_currentThreat.transform) <= chaseTriggerDistance;
+		return IsWithinEffectivePerceptionRange(_currentThreat, chaseTriggerDistance);
 	}
 
 	/// <summary>警觉条件：威胁在警觉距离内，或警觉计时器未过期</summary>
@@ -656,7 +652,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	{
 		if (_currentThreat == null) return _alertTimer > 0f;
 
-		if (DistanceTo(_currentThreat.transform) <= alertDetectDistance)
+		if (IsWithinEffectivePerceptionRange(_currentThreat, alertDetectDistance))
 		{
 			_alertTimer = alertKeepDuration;
 			return true;
@@ -742,7 +738,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 			}
 
 			if (IsLivingActorTarget(_currentThreat) &&
-			    DistanceTo(_currentThreat.transform) <= chaseLossDistance)
+			    IsWithinEffectivePerceptionRange(_currentThreat, chaseLossDistance))
 			{
 				return;
 			}
@@ -760,7 +756,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		}
 
 		if (_currentThreat == null) return;
-		if (DistanceTo(_currentThreat.transform) > chaseLossDistance)
+		if (!IsWithinEffectivePerceptionRange(_currentThreat, chaseLossDistance))
 			_currentThreat = null;
 	}
 
@@ -1077,7 +1073,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		foreach (Item it in allItems)
 		{
 			if (!TryGetWolfAlly(it, out AI_Wolf ally)) continue;
-			if (DistanceTo(ally.transform) > allyCallDistance) continue;
+			if (!IsWithinEffectivePerceptionRange(it, allyCallDistance)) continue;
 			ally.ReceivePackCall(threatSource, this);
 		}
 	}

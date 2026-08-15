@@ -141,6 +141,7 @@ public static class GameUIPrefabRebuilder
                     RemoveGeneratedArt(root.transform);
                     target.Build(root);
                     SetUILayerRecursively(root);
+                    NormalizeCanvasLayers(root.transform);
                     NormalizeTypography(root.transform);
                     NormalizeControls(root.transform);
                     FlatWorldUITheme.Apply(root.transform);
@@ -232,6 +233,7 @@ public static class GameUIPrefabRebuilder
                         throw new MissingReferenceException($"{path} 未找到制作输出槽。");
 
                     SetUILayerRecursively(root);
+                    NormalizeCanvasLayers(root.transform);
                     EditorUtility.SetDirty(root);
                     PrefabUtility.SaveAsPrefabAsset(root, path);
                     rebuilt++;
@@ -395,6 +397,7 @@ public static class GameUIPrefabRebuilder
             RemoveGeneratedArt(root.transform);
             target.Build(root);
             SetUILayerRecursively(root);
+            NormalizeCanvasLayers(root.transform);
             NormalizeTypography(root.transform);
             NormalizeControls(root.transform);
             FlatWorldUITheme.Apply(root.transform);
@@ -1260,6 +1263,12 @@ public static class GameUIPrefabRebuilder
         image.preserveAspect = true;
         image.raycastTarget = false;
         AddOutline(image, new Color(0.83f, 0.49f, 0.23f, 0.34f));
+        Canvas canvas = root.GetComponent<Canvas>();
+        if (canvas != null)
+        {
+            canvas.overrideSorting = false;
+            canvas.sortingOrder = 0;
+        }
         TMP_Text label = root.GetComponentInChildren<TMP_Text>(true);
         if (label != null)
         {
@@ -1748,5 +1757,17 @@ public static class GameUIPrefabRebuilder
             uiLayer = 5;
         foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
             child.gameObject.layer = uiLayer;
+    }
+
+    private static void NormalizeCanvasLayers(Transform root)
+    {
+        if (root == null)
+            return;
+
+        foreach (Canvas canvas in root.GetComponentsInChildren<Canvas>(true))
+        {
+            if (canvas != null && !canvas.overrideSorting)
+                canvas.sortingOrder = 0;
+        }
     }
 }

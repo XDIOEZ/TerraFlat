@@ -50,4 +50,8 @@ public partial class Data_Player : ItemData
     public string Name_User = "Ikun";
 
     public float PlayerPov = 10;
+
+    [Tooltip("被其他生物感知时的范围倍率。1 为标准体型，2 表示按两倍基础感知范围被发现。")]
+    [Min(0f)]
+    public float PerceptionRadiusMultiplier = 1f;
 }

@@ -109,7 +109,8 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         _toggleCallback = _ =>
         {
             if (_inputController.IsGameplayInputLocked &&
-                (basePanel == null || !basePanel.IsOpen()))
+                (basePanel == null || !basePanel.IsOpen()) &&
+                !CanToggleFromMobileMenu())
             {
                 return;
             }
@@ -117,6 +118,14 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             TogglePanelByKey();
         };
         _toggleAction.performed += _toggleCallback;
+    }
+
+    /// <summary>手机菜单抽屉内的制作按钮允许在背包面板打开时切换制作面板。</summary>
+    private bool CanToggleFromMobileMenu()
+    {
+        return _inputController != null &&
+               _inputController.IsUsingMobile &&
+               PlayerMobileControlsHUD.IsActiveDrawerOpen;
     }
 
 #endregion
@@ -196,6 +205,9 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     private void OnDestroy()
     {
+        inputInventory?.UnbindSlotDataEvents();
+        outputInventory?.UnbindSlotDataEvents();
+
         if (_toggleAction != null && _toggleCallback != null)
             _toggleAction.performed -= _toggleCallback;
 
@@ -394,6 +406,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         if (inventory == null || inventory.Data == null)
             throw new System.NullReferenceException($"[Mod_HandCraftTable] {inventoryName} 或 Data 为空");
 
+        inventory.UnbindSlotDataEvents();
         for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
         {
             inventory.Data.itemSlots[i].Index = i;

@@ -103,6 +103,7 @@ public static class GameSavePrefabBuilder
     {
         Image scrim = CreateImage("存档界面遮罩", root, new Color(0.006f, 0.016f, 0.024f, 0.76f));
         Stretch(scrim.rectTransform);
+        scrim.gameObject.AddComponent<FullScreenRectController>();
         scrim.raycastTarget = true;
     }
 

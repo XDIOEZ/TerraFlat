@@ -19,7 +19,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private const string DrawerName = "菜单抽屉";
     private const string GameplayLayerName = "玩法控制层";
     private const string PersistentLayerName = "常驻控制层";
-    private const int ModalHotbarSortingOrder = 1000;
     private const float MoveZoneMarginX = 76f;
     private const float MoveZoneMarginY = 54f;
     private const float FixedMoveZoneSize = 230f;
@@ -44,6 +43,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private Image runButtonImage;
     private Outline runButtonOutline;
     private Image runStateIndicator;
+    private Slider cameraZoomSlider;
     private Coroutine hotbarSetupCoroutine;
     private bool hotbarConfigured;
     private bool geometryInitialized;
@@ -68,6 +68,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private Vector3 hotbarOriginalLocalScale;
 
     public bool IsDrawerOpen => drawer != null && drawer.activeSelf;
+    /// <summary>本地手机菜单抽屉是否打开，用于允许背包和制作面板并行切换。</summary>
+    public static bool IsActiveDrawerOpen => activeLocalHud != null && activeLocalHud.IsDrawerOpen;
     public bool IsViewReady => viewObject != null && gameplayLayer != null &&
                                 persistentLayer != null && drawer != null;
 
@@ -195,6 +197,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         ConfigureJoysticks();
         ConfigureVirtualButtons();
         CacheRunButtonVisual();
+        ConfigureCameraZoomSlider();
         ConfigureCommands();
         hotbarSetupCoroutine = StartCoroutine(ConfigureHotbarWhenReady());
     }
@@ -391,9 +394,48 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         BindClick("菜单", ToggleDrawer);
         BindClick("关闭抽屉", CloseDrawer);
         BindClick("丢弃一个", DropOne);
-        BindClick("镜头+", () => ChangeCameraView(-1f));
-        BindClick("镜头-", () => ChangeCameraView(1f));
-        BindClick("设置", OpenSettingsFromDrawer);
+        BindClick("设置", OpenSettingsFromButton);
+    }
+
+    /// <summary>绑定手机菜单中的镜头缩放滑动条，并使用当前相机视野初始化滑块位置。</summary>
+    private void ConfigureCameraZoomSlider()
+    {
+        Transform node = FindRequired("镜头缩放");
+        cameraZoomSlider = node != null ? node.GetComponent<Slider>() : null;
+        if (cameraZoomSlider == null)
+            return;
+
+        cameraZoomSlider.onValueChanged.RemoveListener(HandleCameraZoomChanged);
+        cameraZoomSlider.onValueChanged.AddListener(HandleCameraZoomChanged);
+        RefreshCameraZoomSlider();
+    }
+
+    /// <summary>把滑动条范围和当前镜头正交尺寸同步，避免打开菜单时显示旧值。</summary>
+    private void RefreshCameraZoomSlider()
+    {
+        if (cameraZoomSlider == null)
+            return;
+
+        Mod_Cam cameraModule = GetComponentInChildren<Mod_Cam>(true);
+        if (cameraModule == null || cameraModule.Vcam == null)
+            return;
+
+        cameraZoomSlider.minValue = cameraModule.MinPovValue;
+        cameraZoomSlider.maxValue = cameraModule.MaxPovValue;
+        cameraZoomSlider.wholeNumbers = false;
+        cameraZoomSlider.SetValueWithoutNotify(
+            Mathf.Clamp(cameraModule.CurrentOrthographicSize, cameraModule.MinPovValue, cameraModule.MaxPovValue));
+    }
+
+    /// <summary>将手机滑动条的绝对值交给相机模块，保持区块流送范围同步刷新。</summary>
+    private void HandleCameraZoomChanged(float value)
+    {
+        Mod_Cam cameraModule = GetComponentInChildren<Mod_Cam>(true);
+        if (cameraModule == null || cameraModule.Vcam == null)
+            return;
+
+        cameraModule.SetOrthographicSize(value);
+        RefreshCameraZoomSlider();
     }
 
     private void BindClick(string nodeName, UnityEngine.Events.UnityAction action)
@@ -526,7 +568,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (modalOpen)
         {
             hotbarCanvas.overrideSorting = true;
-            hotbarCanvas.sortingOrder = ModalHotbarSortingOrder;
+            hotbarCanvas.sortingOrder = UIManager.HotbarModalSortingOrder;
             return;
         }
 
@@ -543,15 +585,11 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (drawer == null)
             return;
 
-        // 模态面板打开时菜单仍可见，第一次点击直接关闭最上层面板，避免用户失去返回/退出路径。
         UIManager manager = UIManager.ExistingInstance;
-        if (manager != null && manager.HasOpenModalGamepadNavigationPanel() &&
-            manager.TryCloseTopmostCancelPanel())
-        {
-            return;
-        }
-
+        // 菜单抽屉是背包、制作等玩法面板的并行入口，面板打开时仍允许展开。
         drawer.SetActive(!drawer.activeSelf);
+        if (drawer.activeSelf)
+            RefreshCameraZoomSlider();
         manager?.NotifyInteractionSurfaceChanged();
     }
 
@@ -577,14 +615,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         dropper?.TryDropCurrentSelection(1);
     }
 
-    private void ChangeCameraView(float delta)
-    {
-        Mod_Cam cameraModule = GetComponentInChildren<Mod_Cam>(true);
-        cameraModule?.ChangeCameraView(delta);
-    }
-
-    /// <summary>抽屉设置按钮先显式收起抽屉，再脉冲设置 Action，确保返回栈真正打开设置面板。</summary>
-    private void OpenSettingsFromDrawer()
+    /// <summary>独立设置按钮先收起抽屉，再脉冲设置 Action，确保返回栈正确打开设置面板。</summary>
+    private void OpenSettingsFromButton()
     {
         if (drawer != null)
             drawer.SetActive(false);
@@ -635,8 +667,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         lastScreenWidth = Screen.width;
         lastScreenHeight = Screen.height;
 
-        if ((modalOpen || blocked) && drawer != null && drawer.activeSelf)
-            drawer.SetActive(false);
+        // 菜单抽屉用于在背包与制作面板之间切换，不能因玩法面板获得输入锁而自动收起。
         if (gameplayLayer != null)
             gameplayLayer.SetActive(gameplayVisible);
         if (persistentLayer != null)

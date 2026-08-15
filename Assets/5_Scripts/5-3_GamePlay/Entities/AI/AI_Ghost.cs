@@ -197,9 +197,13 @@ public class AI_Ghost : Module, IAIActor
 
         // 先锁定玩家，再处理避光状态，避免玩家站在有光区域时幽灵永远只会撤退。
         Transform player = ResolvePlayerTransform();
+        Item playerItem = player != null ? player.GetComponentInParent<Player>() : null;
+        float effectivePerceptionRadius = Mod_ItemDetector.CalculateEffectiveDetectionRadius(
+            perceptionRadius,
+            playerItem);
         if (player != null &&
             WorldTopologyRuntime.SqrDistance(item.transform.position, player.position) <=
-            perceptionRadius * perceptionRadius)
+            effectivePerceptionRadius * effectivePerceptionRadius)
         {
             _state = GhostState.Chase;
             _moveTarget = player.position;

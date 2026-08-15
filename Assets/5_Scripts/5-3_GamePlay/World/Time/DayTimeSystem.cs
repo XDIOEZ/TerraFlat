@@ -25,6 +25,25 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
     [Tooltip("默认光源颜色")]
     public Color DefaultLightColor = Color.white;
 
+    #region 月相光照设置
+    [Header("月相夜间光照")]
+    [Tooltip("月相完整周期对应的游戏天数；29.53 接近现实月相周期")]
+    [Min(1f)]
+    public float LunarCycleDays = 29.53f;
+
+    [Tooltip("新月时的夜间全局光照强度")]
+    [Range(0f, 1f)]
+    public float NewMoonNightIntensity = 0.035f;
+
+    [Tooltip("满月时的夜间全局光照强度")]
+    [Range(0f, 1f)]
+    public float FullMoonNightIntensity = 0.18f;
+
+    [Tooltip("新世界第 0 天的月相位置；0 为新月，0.5 为满月")]
+    [Range(0f, 1f)]
+    public float InitialMoonPhase = 0.5f;
+    #endregion
+
     [Header("时间 -> 地块光照层")]
     [Tooltip("是否将昼夜光照同步到已加载地块的光照层")]
     public bool SyncTileLightLayer = true;
@@ -250,6 +269,7 @@ private void TimeRun(string sceneName, float deltaTime)
             // 使用自身光照参数计算基础光照强度
             float timeRatio = timeData.CurrentTime / timeData.DayLength;
             baseLightIntensity = timeData.LightParams.Evaluate(timeRatio);
+            baseLightIntensity = Mathf.Max(baseLightIntensity, GetMoonlightIntensity(timeData));
         }
 
         // 维度光照值是上限而不是固定值：白天不会超过矿洞亮度，夜晚仍跟随地表继续变暗。
@@ -261,6 +281,24 @@ private void TimeRun(string sceneName, float deltaTime)
         }
 
         return lighting;
+    }
+
+    private float GetMoonlightIntensity(TimeData timeData)
+    {
+        if (timeData == null)
+            return 0f;
+
+        float dayLength = Mathf.Max(1f, timeData.DayLength);
+        float currentDayProgress = Mathf.Repeat(timeData.CurrentTime, dayLength) / dayLength;
+        float elapsedDays = Mathf.Max(0, timeData.TotalDays) + currentDayProgress;
+        float cycleDays = Mathf.Max(1f, LunarCycleDays);
+        float moonPhase = Mathf.Repeat(InitialMoonPhase + elapsedDays / cycleDays, 1f);
+        float illumination = 0.5f - 0.5f * Mathf.Cos(moonPhase * Mathf.PI * 2f);
+
+        return Mathf.Lerp(
+            Mathf.Clamp01(NewMoonNightIntensity),
+            Mathf.Clamp01(FullMoonNightIntensity),
+            illumination);
     }
     
     /// <summary>

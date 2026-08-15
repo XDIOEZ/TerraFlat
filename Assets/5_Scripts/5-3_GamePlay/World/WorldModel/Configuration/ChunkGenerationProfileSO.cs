@@ -86,6 +86,7 @@ public sealed class CaveResourceRuleConfig
 [CreateAssetMenu(fileName = "ChunkGenerationProfile", menuName = "FlatWorld/World/Chunk Generation Profile")]
 public sealed class ChunkGenerationProfileSO : ScriptableObject
 {
+#pragma warning disable CS0649 // 这些字段由 Unity 序列化面板赋值。
     [Serializable]
     private struct NumericParameter
     {
@@ -105,6 +106,7 @@ public sealed class ChunkGenerationProfileSO : ScriptableObject
         [LabelText("文本内容")]
         public string Value;
     }
+#pragma warning restore CS0649
 
     [SerializeField, LabelText("配置标识")] private string profileId = "surface.default";
     [SerializeField, LabelText("生成签名")] private int generationSignature =

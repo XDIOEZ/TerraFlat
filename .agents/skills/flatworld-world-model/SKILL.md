@@ -23,6 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - `ChunkRuntime + ChunkTerrainData` 是权威状态；Tilemap、Collider 和 Renderer 只是表现。
 - 提交生成结果前校验世界纪元与请求版本；取消、失败和逐出路径必须释放结果及租约。
 - 生成保持固定种子和稳定签名；修改地形内容规则时同时使用 `flatworld-map`。
+- Unity 序列化的私有配置结构体字段不会被 C# 编译器识别为 Inspector 赋值；出现 CS0649 时只在对应字段范围使用局部禁用，不要为消警告改写运行时默认值。
 - 可走性联动 `flatworld-navigation`，维度地址联动 `flatworld-dimension`，快照持久化联动 `flatworld-data-save`。
 
 ## 验证

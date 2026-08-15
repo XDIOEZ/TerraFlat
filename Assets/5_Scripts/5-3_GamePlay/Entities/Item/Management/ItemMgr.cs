@@ -17,6 +17,11 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     private const string GROUP_MAP_CORE = "MapCore";
 
+    [Header("玩家创建配置")]
+    [SerializeField] private PlayerCreationTemplateSO defaultPlayerCreationTemplate;
+
+    public PlayerCreationTemplateSO DefaultPlayerCreationTemplate => defaultPlayerCreationTemplate;
+
     #region Runtime Data
 
     [ShowInInspector]
@@ -161,7 +166,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         GameManager.Instance.BackToHelloScene_Event_Start += CleanupNullItems;
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
         CompletePerceptionBatch(false);
         DisposePerceptionJobData();
@@ -170,6 +175,8 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         {
             GameManager.Instance.BackToHelloScene_Event_Start -= CleanupNullItems;
         }
+
+        base.OnDestroy();
     }
 
     private void OnDisable()

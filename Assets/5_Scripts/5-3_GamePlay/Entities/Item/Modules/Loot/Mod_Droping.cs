@@ -31,6 +31,7 @@ public class Mod_Droping : Module
     public override void Load()
     {
         modData.ReadData(ref drop);
+        BindDropItemReference();
 
         // 掉落物先尝试绑定新版 ChunkView。新区块窗口已启用时，即使当前画面尚未
         // 完成绑定也不能回退到旧 Chunk 查询，否则灌木死亡掉落会触发同步加载卡顿。
@@ -42,7 +43,8 @@ public class Mod_Droping : Module
         LastChunk = usesLegacyChunkOwnership && item != null
             ? item.GetComponentInParent<Chunk>()
             : null;
-        item.itemData.Stack.CanBePickedUp = false;
+        if (item?.itemData?.Stack != null)
+            item.itemData.Stack.CanBePickedUp = false;
     }
 
     public override void ModUpdate(float deltaTime)
@@ -54,16 +56,12 @@ public class Mod_Droping : Module
             return;
         }
 
-        // 检查物品是否为空，如果为空则尝试重新获取
+        // 掉落模块挂在掉落物自身，优先绑定宿主，避免注册顺序导致 GUID 反查失败。
         if (drop.item == null)
         {
-            drop.item = ItemMgr.Instance.GetItemByGuid(drop.itemGuid);
+            BindDropItemReference();
             if (drop.item == null)
-            {
-                Debug.LogError("丢弃物品丢失");
-                drop.item = item;
                 return;
-            }
         }
 
         // 更新进度时间并计算插值参数
@@ -115,6 +113,17 @@ public class Mod_Droping : Module
             drop.item.itemData.Stack.CanBePickedUp = true;
             drop = null; // 销毁droping
         }
+    }
+
+    /// <summary>绑定掉落模块所属的物品，并同步修正旧存档中的物品 GUID。</summary>
+    private void BindDropItemReference()
+    {
+        if (drop == null || item == null)
+            return;
+
+        drop.item = item;
+        if (item.itemData != null)
+            drop.itemGuid = item.itemData.Guid;
     }
 
     /// <summary>

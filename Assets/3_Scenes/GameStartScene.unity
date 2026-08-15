@@ -122,55 +122,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &54272814
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 54272815}
-  - component: {fileID: 54272816}
-  m_Layer: 0
-  m_Name: DayTimeSystem
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &54272815
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 54272814}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1510772670}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &54272816
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 54272814}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f914b0958fba1ba4daac26b71a5e7bc1, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  GlobalLight: {fileID: 0}
-  DefaultLightColor: {r: 1, g: 1, b: 1, a: 1}
-  SyncTileLightLayer: 1
-  ActiveChunkLightRefreshInterval: 0.25
-  InactiveChunkLightRefreshInterval: 5
 --- !u!1 &964472421
 GameObject:
   m_ObjectHideFlags: 0
@@ -308,11 +259,6 @@ AudioListener:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 964472421}
   m_Enabled: 1
---- !u!4 &1510772670 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 891121404665747283, guid: 16f38f33714285247b623a2423e14c90, type: 3}
-  m_PrefabInstance: {fileID: 4828757420143755386}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1915399574
 GameObject:
   m_ObjectHideFlags: 0
@@ -411,10 +357,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects:
-    - targetCorrespondingSourceObject: {fileID: 891121404665747283, guid: 16f38f33714285247b623a2423e14c90, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 54272815}
+    m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 16f38f33714285247b623a2423e14c90, type: 3}
 --- !u!1660057539 &9223372036854775807
