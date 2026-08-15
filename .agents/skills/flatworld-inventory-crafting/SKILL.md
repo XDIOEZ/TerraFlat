@@ -23,8 +23,12 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 多产物必须全部放下才提交；失败不扣料、不部分产出。`amount=0` 参与签名但不消耗。
 - 配方动作在库存事务成功后执行；异常恢复快照。玩法进度信号只在最终成功后发布。
 - 模态库存才获取输入锁；快捷栏和 `Inventory_Hand` 不锁玩家输入。
-- 槽位鼠标拖放必须复用 `ItemSlot_UI.OnLeftClick` 的既有事务：短按在抬起时提交一次，越过系统拖拽阈值后拿起并在目标槽位抬起放下；触屏拖动需转交父级 `ScrollRect`，保留滚动与长按菜单。
+- 槽位鼠标与触屏拖放必须复用 `ItemSlot_UI.OnMouseDragBegin` / `OnMouseDragDrop` 的定向事务：短按在抬起时提交一次，物品槽越过系统拖拽阈值后先拿起到玩家手部槽，再在目标槽位抬起放下；未命中任何 `ItemSlot_UI` 时保留整组在 `Inventory_Hand`，后续点击按轻触方向处理：连续拿取方向下同类已有物品从槽位取一件，放置方向下空槽/同类槽向目标放一件，异类槽交换，长按空槽或同类槽则一次性放下手上整组；同类物品合并到目标槽，空槽放入，异类交换，容量不足保留手部余量，空槽起手才转交父级 `ScrollRect`，同时保留长按菜单。
+- 手机快捷栏轻触必须走独立 `OnTouchTap` 语义，只切换当前选中格或按单件规则取放；触屏拖放必须走 `OnMouseDragDrop` 定向事务，桌面键鼠行为不得改变。
+- 跟随指针的 `UI_Hand` 是纯视觉层：Canvas 排序固定高于快捷栏模态层（1001 > 1000），且 CanvasGroup/子图形不得拦截目标槽位射线；世界手持物挂在快捷栏节点及其子节点末端。
 - 玩家行囊的键鼠点击无条件使用 `Inventory_Hand`，不能因携带槽为空而回退当前快捷栏；快捷栏选中槽只参与手柄确认与角色当前装备，不参与 PC 背包交换。
+- 快捷栏收到 Mobile `RightClick` 时必须允许当前手持物执行 `Act`，不能因触点位于手机“使用”按钮上而被 `IsPointerOverUI()` 拦截；键鼠右键仍保留 UI 遮挡检查。
+- 快捷栏生成的手持物只注册到玩家 `Mod_FocusPoint`；左右翻身角由该模块读取 `Mod_TurnBack.CurrentTurnAngleY` 后与 Z 轴瞄准一次性合成，不能再把手持物根节点注册进 `controlledTransforms_Direction`。
 - 当前作物闭环为 `Seed_Apple → AppleTree → Apple + Seed_Apple`；`Mod_Grow` 是唯一成长状态机，倍率各乘一次。
 - 废弃 `Module_Equipment.cs` 不再使用。
 
