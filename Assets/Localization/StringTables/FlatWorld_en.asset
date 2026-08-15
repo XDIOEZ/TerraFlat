@@ -749,6 +749,14 @@ MonoBehaviour:
     m_Localized: Torch.
     m_Metadata:
       m_Items: []
+  - m_Id: 2189623678644224
+    m_Localized: Torch Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2189623766724608
+    m_Localized: Torch Summoner.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

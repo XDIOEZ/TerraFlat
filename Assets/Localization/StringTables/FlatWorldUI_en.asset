@@ -1862,6 +1862,47 @@ MonoBehaviour:
       action cannot be undone.'
     m_Metadata:
       m_Items: []
+  - m_Id: 2143638067785728
+    m_Localized: 'Floating Move Joystick (Off: Fixed)'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2164721491816448
+    m_Localized: Choose a gameplay control method first; keyboard, mouse, and gamepad
+      bindings can be changed below.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2164721584091136
+    m_Localized: Control Method
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2164721584091137
+    m_Localized: Keyboard & Mouse
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2164721781223424
+    m_Localized: Gamepad
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2164721781223425
+    m_Localized: Mobile Touch
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2164721781223426
+    m_Localized: 'Control method changed to: {0}.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2188953449836544
+    m_Localized: 'Changes apply immediately and are saved automatically. Positive lookahead moves the camera ahead; negative values add inertia, and more negative means stronger inertia. Higher smoothing is steadier but slower to respond.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2188953508556800
+    m_Localized: Camera Lookahead
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2188953508556801
+    m_Localized: Lookahead Smoothing
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

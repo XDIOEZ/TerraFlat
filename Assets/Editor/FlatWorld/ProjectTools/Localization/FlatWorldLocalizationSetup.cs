@@ -179,6 +179,7 @@ namespace FlatWorld.Localization.Editor
         private static readonly Dictionary<string, string> EnglishUiOverrides =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                // 设置页的镜头预判术语保持稳定，供正式 Prefab 扫描并同步英文表。
                 { "收起", "Collapse" },
                 { "展开", "Expand" },
                 { "设置", "Settings" },
@@ -189,6 +190,8 @@ namespace FlatWorld.Localization.Editor
                 { "生成新世界", "Generate World" },
                 { "选择存档", "Select Save" },
                 { "载入存档", "Load Save" },
+                { "保存时间：--", "Save time: --" },
+                { "保存时间：{0}", "Save time: {0}" },
                 { "批量删除存档", "Delete Multiple Saves" },
                 { "确认删除所选", "Delete Selected" },
                 { "取消批量选择", "Cancel Selection" },
@@ -255,6 +258,9 @@ namespace FlatWorld.Localization.Editor
                 { "UI 设置", "UI Settings" },
                 { "界面设置", "Interface Settings" },
                 { "界面缩放", "UI Scale" },
+                { "镜头前探", "Camera Lookahead" },
+                { "预判平滑", "Lookahead Smoothing" },
+                { "浮动移动摇杆（关闭则固定）", "Floating Move Joystick (Off: Fixed)" },
                 { "安全区域适配：开启（推荐）", "Safe Area: On (Recommended)" },
                 { "主音量", "Master Volume" },
                 { "音乐音量", "Music Volume" },
@@ -373,6 +379,12 @@ namespace FlatWorld.Localization.Editor
                 { "自动保存", "Auto Save" },
                 { "游戏难度", "Game Difficulty" },
                 { "按键绑定", "Key Bindings" },
+                { "控制方式", "Control Method" },
+                { "电脑键鼠控制", "Keyboard & Mouse" },
+                { "手柄控制", "Gamepad" },
+                { "手机触屏控制", "Mobile Touch" },
+                { "先选择玩法控制方式；键鼠与手柄按键可在下方分别修改。", "Choose a gameplay control method first; keyboard, mouse, and gamepad bindings can be changed below." },
+                { "控制方式已切换为：{0}。", "Control method changed to: {0}." },
                 { "流送性能", "Streaming Performance" },
                 { "测试", "Test" },
                 { "从上一次篝火继续旅程，并选择本次操控的角色。", "Continue from the previous campfire and choose the character you will control." },
@@ -445,6 +457,7 @@ namespace FlatWorld.Localization.Editor
                 { "体温", "Body Temperature" },
                 { "RESTING / 世界在篝火外继续流动", "RESTING / THE WORLD CONTINUES OUTSIDE THE CAMPFIRE" },
                 { "主音量控制全部声音；其他通道可以单独调整。设置会自动保存。", "Master volume controls all sounds; other channels can be adjusted separately. Settings are saved automatically." },
+                { "调整会立即应用并自动保存。镜头前探正值为提前跟随，负值为惯性；负值绝对值越大，惯性越强。预判平滑越大越稳，但响应越慢。", "Changes apply immediately and are saved automatically. Positive lookahead moves the camera ahead; negative values add inertia, and more negative means stronger inertia. Higher smoothing is steadier but slower to respond." },
                 { "自动保存只在游戏世界中按现实时间运行，设置会立即保存。", "Auto-save runs in the game world using real time; settings are saved immediately." },
                 { "当前设置：每 10 分钟自动保存。", "Current setting: auto-save every 10 minutes." },
                 { "难度属于当前存档并立即生效。选择预设后点击应用。", "Difficulty belongs to the current save and takes effect immediately. Choose a preset and click Apply." },
@@ -837,6 +850,13 @@ namespace FlatWorld.Localization.Editor
                 return "Debug message";
             if (normalized.IndexOf("创建你的世界", StringComparison.Ordinal) >= 0)
                 return "Create your world, or use UDP traversal to join the journey.";
+            if (normalized.IndexOf("镜头前探", StringComparison.Ordinal) >= 0 &&
+                normalized.IndexOf("预判平滑", StringComparison.Ordinal) >= 0)
+                return "Changes apply immediately and are saved automatically. Positive lookahead moves the camera ahead; negative values add inertia, and more negative means stronger inertia. Higher smoothing is steadier but slower to respond.";
+            if (normalized.IndexOf("镜头前探", StringComparison.Ordinal) >= 0)
+                return "Camera Lookahead";
+            if (normalized.IndexOf("预判平滑", StringComparison.Ordinal) >= 0)
+                return "Lookahead Smoothing";
 
             string translatedText;
             if (EnglishUiOverrides.TryGetValue(normalized, out translatedText))
