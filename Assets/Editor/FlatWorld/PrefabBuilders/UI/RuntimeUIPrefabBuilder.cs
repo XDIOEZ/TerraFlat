@@ -39,10 +39,16 @@ public static class RuntimeUIPrefabBuilder
     private static readonly Color Teal = new Color(0.26f, 0.61f, 0.57f, 1f);
     private static readonly Color Danger = new Color(0.66f, 0.31f, 0.27f, 1f);
     private static readonly Color Border = new Color(0.55f, 0.68f, 0.70f, 0.28f);
+    // 右侧操作组整体向左上移动，保持交互、使用和攻击摇杆的相对位置不变。
+    private static readonly Vector2 MobileActionGroupOffset = new Vector2(-200f, 100f);
+    // 主菜单设置使用更暖、更低亮度的独立背景，避免通用设置页的蓝绿色底板抢占视觉焦点。
+    private static readonly Color MainMenuSettingsCanvas = new Color(0.052f, 0.031f, 0.026f, 1f);
+    private static readonly Color MainMenuSettingsSurface = new Color(0.036f, 0.061f, 0.068f, 1f);
+    private static readonly Color MainMenuSettingsSection = new Color(0.14f, 0.067f, 0.038f, 0.96f);
 
     // 设置子分页统一使用更大的阅读尺寸，避免各页面视觉比例不一致。
     private static readonly Vector2 AudioSettingsSize = new Vector2(800f, 650f);
-    private static readonly Vector2 InterfaceSettingsSize = new Vector2(800f, 520f);
+    private static readonly Vector2 InterfaceSettingsSize = new Vector2(800f, 680f);
     private static readonly Vector2 CoordinateSettingsSize = new Vector2(800f, 500f);
     private static readonly Vector2 AutoSaveSettingsSize = new Vector2(820f, 540f);
     private static readonly Vector2 WorldStreamingSettingsSize = new Vector2(840f, 560f);
@@ -152,6 +158,26 @@ public static class RuntimeUIPrefabBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[Runtime UI] 已固化手机多点触控 HUD、安全区根节点，并挂载到 Player.prefab。");
+    }
+
+    /// <summary>只重建 UI 设置页，供界面、移动摇杆和镜头预判偏好调整使用。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Interface Settings UI")]
+    public static void RebuildInterfaceSettingsUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(SettingsPanelsRoot);
+        string prefabPath = SettingsPanelsRoot + RuntimeUIPrefabKeys.UISettings + ".prefab";
+        SaveNewPrefab(prefabPath, BuildInterfaceSettings);
+        EnsureRuntimePrefabAddressable(prefabPath);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化 UI 设置页、移动摇杆模式和镜头预判设置。");
     }
 
     /// <summary>只重建维度切换加载页，避免覆盖用户正在调整的其它运行时 UI。</summary>
@@ -514,15 +540,15 @@ public static class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>构建屏幕左侧中部的非交互 Buff 状态栏，超出高度时由 ScrollRect 裁剪。</summary>
+    /// <summary>构建屏幕左侧中部上方的非交互 Buff 状态栏，避开手机奔跑按钮，超出高度时由 ScrollRect 裁剪。</summary>
     private static GameObject BuildBuffStatusHUD()
     {
         GameObject root = CreateUIObject(RuntimeUIPrefabKeys.BuffStatus, null, typeof(CanvasGroup));
         RectTransform rootRect = root.GetComponent<RectTransform>();
         rootRect.anchorMin = new Vector2(0f, 0.5f);
         rootRect.anchorMax = new Vector2(0f, 0.5f);
-        rootRect.pivot = new Vector2(0f, 0.5f);
-        rootRect.anchoredPosition = new Vector2(32f, 0f);
+        rootRect.pivot = new Vector2(0f, 0f);
+        rootRect.anchoredPosition = new Vector2(32f, 60f);
         rootRect.sizeDelta = new Vector2(160f, 106f);
 
         CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
@@ -853,7 +879,8 @@ public static class RuntimeUIPrefabBuilder
         canvasGroup.blocksRaycasts = true;
 
         Image overlay = root.GetComponent<Image>();
-        overlay.color = new Color(0.012f, 0.022f, 0.028f, 0.96f);
+        // 世界加载期间完全遮挡玩法 UI，避免快捷栏、摇杆和按钮透出。
+        overlay.color = new Color(0.012f, 0.022f, 0.028f, 1f);
         overlay.raycastTarget = true;
 
         GameObject card = CreateUIObject("加载内容", root.transform, typeof(Image), typeof(Shadow));
@@ -1034,7 +1061,10 @@ public static class RuntimeUIPrefabBuilder
     {
         GameObject root = CreatePanelRoot(RuntimeUIPrefabKeys.UISettings, InterfaceSettingsSize);
         CreateSettingsHeader(root.transform, "UI 设置", "关闭按钮");
-        CreateSettingsHint(root.transform, "调整会立即应用并自动保存；Prefab 中的布局就是运行时看到的基础布局。", 52f);
+        CreateSettingsHint(
+            root.transform,
+            "调整会立即应用并自动保存。镜头前探正值为提前跟随，负值为惯性；负值绝对值越大，惯性越强。预判平滑越大越稳，但响应越慢。",
+            64f);
 
         GameObject scaleRow = CreateRow("界面缩放行", root.transform, 52f);
         CreateRowLabel(scaleRow.transform, "界面缩放", 112f);
@@ -1050,6 +1080,37 @@ public static class RuntimeUIPrefabBuilder
         TextMeshProUGUI safeLabel = CreateText("安全区域说明", safeAreaRow.transform, "适配屏幕安全区域", 17f, Cream);
         safeLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         CreateToggle("安全区域适配", safeAreaRow.transform);
+
+        GameObject joystickRow = CreateRow("移动摇杆模式行", root.transform, 48f);
+        TextMeshProUGUI joystickLabel = CreateText(
+            "移动摇杆模式说明",
+            joystickRow.transform,
+            "浮动移动摇杆（关闭则固定）",
+            17f,
+            Cream);
+        joystickLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        Toggle joystickToggle = CreateToggle("浮动移动摇杆", joystickRow.transform);
+        joystickToggle.isOn = true;
+
+        GameObject lookaheadRow = CreateRow("镜头前探行", root.transform, 52f);
+        CreateRowLabel(lookaheadRow.transform, "镜头前探", 112f);
+        Slider lookaheadSlider = CreateSlider("镜头前探", lookaheadRow.transform);
+        lookaheadSlider.minValue = CameraUserSettings.MinimumLookahead;
+        lookaheadSlider.maxValue = CameraUserSettings.MaximumLookahead;
+        lookaheadSlider.value = CameraUserSettings.DefaultLookahead;
+        TextMeshProUGUI lookaheadValue = CreateText("镜头前探数值", lookaheadRow.transform, "+0.22s", 16f, Amber);
+        lookaheadValue.alignment = TextAlignmentOptions.MidlineRight;
+        lookaheadValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 72f;
+
+        GameObject smoothingRow = CreateRow("预判平滑行", root.transform, 52f);
+        CreateRowLabel(smoothingRow.transform, "预判平滑", 112f);
+        Slider smoothingSlider = CreateSlider("预判平滑", smoothingRow.transform);
+        smoothingSlider.minValue = CameraUserSettings.MinimumLookaheadSmoothing;
+        smoothingSlider.maxValue = CameraUserSettings.MaximumLookaheadSmoothing;
+        smoothingSlider.value = CameraUserSettings.DefaultLookaheadSmoothing;
+        TextMeshProUGUI smoothingValue = CreateText("预判平滑数值", smoothingRow.transform, "0.5", 16f, Amber);
+        smoothingValue.alignment = TextAlignmentOptions.MidlineRight;
+        smoothingValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 52f;
 
         TextMeshProUGUI status = CreateText("状态文本", root.transform, "安全区域适配：开启（推荐）", 16f, Muted);
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
@@ -1088,42 +1149,43 @@ public static class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>构建主菜单设置窗口；当前只提供视觉与占位选项，不接入实际设置逻辑。</summary>
+    /// <summary>构建主菜单设置窗口；运行时由 GameManager 绑定显示、画质、特效质量和语言设置。</summary>
     private static GameObject BuildMainMenuSettings()
     {
         GameObject root = CreateModalPanelRoot(
             RuntimeUIPrefabKeys.MainMenuSettings,
             FlatWorldUIPanelMetrics.SharedModalCardSize);
         Transform dialog = root.transform.Find("设置对话框");
+        ConfigureMainMenuSettingsBackground(root, dialog);
 
-        CreateHeader(dialog, "游戏设置", "关闭按钮");
+        CreateMainMenuSettingsHeader(dialog, "游戏设置", "关闭按钮");
 
-        CreateSettingsSection(dialog, "显示", string.Empty);
-        CreateSettingsDropdownRow(
+        CreateMainMenuSettingsSection(dialog, "显示");
+        CreateMainMenuSettingsDropdownRow(
             dialog,
             "窗口大小",
             "窗口大小下拉列表",
             new[] { "1920 × 1080", "1600 × 900", "1280 × 720" });
-        CreateSettingsDropdownRow(
+        CreateMainMenuSettingsDropdownRow(
             dialog,
             "显示模式",
             "显示模式下拉列表",
             new[] { "全屏窗口", "全屏", "窗口" });
 
-        CreateSettingsSection(dialog, "画质", string.Empty);
-        CreateSettingsDropdownRow(
+        CreateMainMenuSettingsSection(dialog, "画质");
+        CreateMainMenuSettingsDropdownRow(
             dialog,
             "画质预设",
             "画质预设下拉列表",
             new[] { "高（推荐）", "中", "低" });
-        CreateSettingsDropdownRow(
+        CreateMainMenuSettingsDropdownRow(
             dialog,
             "特效质量",
             "特效质量下拉列表",
             new[] { "高", "中", "低" });
 
-        CreateSettingsSection(dialog, "语言", string.Empty);
-        CreateSettingsDropdownRow(
+        CreateMainMenuSettingsSection(dialog, "语言");
+        CreateMainMenuSettingsDropdownRow(
             dialog,
             "游戏语言",
             "游戏语言下拉列表",
@@ -1133,14 +1195,45 @@ public static class RuntimeUIPrefabBuilder
             "设置状态",
             dialog,
             string.Empty,
-            13f,
+            18f,
             Muted);
-        status.gameObject.AddComponent<LayoutElement>().preferredHeight = 38f;
+        status.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
 
         Transform footer = CreateFooter(dialog);
-        CreateButton("恢复默认按钮", footer, "恢复默认", 104f, 34f, false);
-        CreateButton("返回按钮", footer, "返回", 78f, 34f, true);
+        footer.GetComponent<LayoutElement>().preferredHeight = 76f;
+        Button resetButton = CreateButton("恢复默认按钮", footer, "恢复默认", 160f, 60f, false);
+        resetButton.GetComponent<Image>().color = MainMenuSettingsSurface;
+        SetButtonLabelSize(resetButton, 20f);
+        SetButtonLabelSize(CreateButton("返回按钮", footer, "返回", 130f, 60f, true), 20f);
         return root;
+    }
+
+    /// <summary>为主菜单设置页建立覆盖刘海区的暗幕、卡片投影和暖黑背景。</summary>
+    private static void ConfigureMainMenuSettingsBackground(GameObject root, Transform dialog)
+    {
+        Image rootBlocker = root.GetComponent<Image>();
+        rootBlocker.color = new Color(0.004f, 0.008f, 0.012f, 0.01f);
+
+        Image backdrop = CreateImage(
+            "设置全屏背景遮罩",
+            root.transform,
+            new Color(0.004f, 0.009f, 0.013f, 0.88f));
+        Stretch(backdrop.rectTransform);
+        backdrop.raycastTarget = false;
+        backdrop.gameObject.AddComponent<FullScreenRectController>();
+        backdrop.transform.SetAsFirstSibling();
+
+        Image shadow = CreateImage("设置主卡投影", root.transform, new Color(0f, 0f, 0f, 0.48f));
+        SetCentered(
+            shadow.rectTransform,
+            new Vector2(14f, -16f),
+            FlatWorldUIPanelMetrics.SharedModalCardSize);
+        shadow.raycastTarget = false;
+        shadow.transform.SetSiblingIndex(1);
+
+        Image dialogImage = dialog.GetComponent<Image>();
+        dialogImage.color = MainMenuSettingsCanvas;
+        dialog.SetAsLastSibling();
     }
 
     private static GameObject BuildAutoSaveSettings()
@@ -1257,7 +1350,23 @@ public static class RuntimeUIPrefabBuilder
         layout.childForceExpandHeight = false;
 
         CreateHeader(dialog.transform, "按键绑定", "关闭按钮");
-        CreateHint(dialog.transform, "分别设置键鼠与手柄；重复绑定会被拦截，修改后自动保存。", 42f);
+        CreateHint(dialog.transform, "先选择玩法控制方式；键鼠与手柄按键可在下方分别修改。", 42f);
+
+        GameObject controlModeRow = CreateRow("控制方式行", dialog.transform, 58f);
+        CreateRowLabel(controlModeRow.transform, "控制方式", 122f);
+        TMP_Dropdown controlModeDropdown = CreateDropdown("控制模式下拉列表", controlModeRow.transform);
+        LayoutElement controlModeElement = controlModeDropdown.gameObject.AddComponent<LayoutElement>();
+        controlModeElement.flexibleWidth = 1f;
+        controlModeElement.preferredHeight = 46f;
+        controlModeDropdown.ClearOptions();
+        controlModeDropdown.AddOptions(new List<string>
+        {
+            "电脑键鼠控制",
+            "手柄控制",
+            "手机触屏控制"
+        });
+        controlModeDropdown.value = 0;
+        controlModeDropdown.RefreshShownValue();
 
         GameObject deviceTabs = CreateUIObject("设备分页", dialog.transform);
         deviceTabs.AddComponent<LayoutElement>().preferredHeight = 36f;
@@ -1764,25 +1873,51 @@ public static class RuntimeUIPrefabBuilder
         CreateJoystickVisual(aimZone.transform, Vector2.zero, 188f, floating: true);
 
         GameObject moveZone = CreateUIObject("移动摇杆", gameplay.transform, typeof(Image));
-        SetBottomLeft(moveZone.GetComponent<RectTransform>(), 34f, 34f, 230f, 230f);
+        RectTransform moveRect = moveZone.GetComponent<RectTransform>();
+        moveRect.anchorMin = Vector2.zero;
+        moveRect.anchorMax = new Vector2(0.5f, 1f);
+        moveRect.offsetMin = Vector2.zero;
+        moveRect.offsetMax = Vector2.zero;
         Image moveHit = moveZone.GetComponent<Image>();
         moveHit.color = new Color(1f, 1f, 1f, 0.001f);
         moveHit.raycastTarget = true;
-        CreateJoystickVisual(moveZone.transform, Vector2.zero, 188f, floating: false);
+        CreateJoystickVisual(moveZone.transform, Vector2.zero, 188f, floating: true);
 
         GameObject attackZone = CreateUIObject("攻击摇杆", gameplay.transform, typeof(Image));
-        SetBottomRight(attackZone.GetComponent<RectTransform>(), 34f, 34f, 230f, 230f);
+        SetBottomRight(
+            attackZone.GetComponent<RectTransform>(),
+            76f - MobileActionGroupOffset.x,
+            54f + MobileActionGroupOffset.y,
+            230f,
+            230f);
         Image attackHit = attackZone.GetComponent<Image>();
         attackHit.color = new Color(1f, 1f, 1f, 0.001f);
         attackHit.raycastTarget = true;
         CreateJoystickVisual(attackZone.transform, Vector2.zero, 188f, floating: false);
 
-        CreateMobileButton("交互", gameplay.transform, "交互", new Vector2(1f, 0f), new Vector2(-292f, 206f), 112f);
-        CreateMobileButton("使用", gameplay.transform, "使用", new Vector2(1f, 0f), new Vector2(-174f, 286f), 112f);
-        CreateMobileButton("奔跑", gameplay.transform, "奔跑", new Vector2(0f, 0f), new Vector2(280f, 96f), 104f);
-        CreateMobileButton("菜单", gameplay.transform, "菜单", new Vector2(1f, 1f), new Vector2(-58f, -58f), 100f);
+        CreateMobileButton(
+            "交互",
+            gameplay.transform,
+            "交互",
+            new Vector2(1f, 0f),
+            new Vector2(-292f, 206f) + MobileActionGroupOffset,
+            112f);
+        CreateMobileButton(
+            "使用",
+            gameplay.transform,
+            "使用",
+            new Vector2(1f, 0f),
+            new Vector2(-174f, 286f) + MobileActionGroupOffset,
+            112f);
+        CreateMobileButton("奔跑", gameplay.transform, "奔跑", new Vector2(0f, 0.5f), new Vector2(76f, 0f), 104f);
 
-        GameObject hotbarAnchor = CreateUIObject("快捷栏锚点", gameplay.transform);
+        // 菜单是手机端的返回/退出入口，不能随模态面板一起隐藏；点击时由运行时优先关闭最上层面板。
+        GameObject persistent = CreateUIObject("常驻控制层", root.transform);
+        Stretch(persistent.GetComponent<RectTransform>());
+        CreateMobileButton("菜单", persistent.transform, "菜单", new Vector2(1f, 1f), new Vector2(-58f, -58f), 100f);
+
+        // 快捷栏独立于玩法控制层，打开背包等模态面板时仍可见、可拖放。
+        GameObject hotbarAnchor = CreateUIObject("快捷栏锚点", root.transform);
         RectTransform hotbarRect = hotbarAnchor.GetComponent<RectTransform>();
         hotbarRect.anchorMin = hotbarRect.anchorMax = new Vector2(0.5f, 0f);
         hotbarRect.pivot = new Vector2(0.5f, 0f);
@@ -1850,7 +1985,10 @@ public static class RuntimeUIPrefabBuilder
         grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         grid.constraintCount = 2;
 
-        CreateButton("关闭抽屉", buttonGrid.transform, "关闭", 184f, 66f, false);
+        // 关闭按钮收进标题区，底部留出 14px 间隙，避免压住网格第一行按钮。
+        Button closeButton = CreateButton("关闭抽屉", drawer.transform, "关闭", 88f, 52f, false);
+        SetTopRight(closeButton.GetComponent<RectTransform>(), 16f, 16f, 88f, 52f);
+
         CreateButton("背包", buttonGrid.transform, "背包", 184f, 66f, true);
         CreateButton("装备", buttonGrid.transform, "装备", 184f, 66f, false);
         CreateButton("制作", buttonGrid.transform, "制作", 184f, 66f, false);
@@ -1875,6 +2013,19 @@ public static class RuntimeUIPrefabBuilder
         rect.pivot = anchor;
         rect.anchoredPosition = position;
         rect.sizeDelta = new Vector2(size, size);
+
+        if (name == "奔跑")
+        {
+            GameObject indicator = CreateUIObject("状态标记", button.transform, typeof(Image));
+            RectTransform indicatorRect = indicator.GetComponent<RectTransform>();
+            indicatorRect.anchorMin = indicatorRect.anchorMax = Vector2.one;
+            indicatorRect.pivot = Vector2.one;
+            indicatorRect.anchoredPosition = new Vector2(-10f, -10f);
+            indicatorRect.sizeDelta = new Vector2(20f, 20f);
+            Image indicatorImage = indicator.GetComponent<Image>();
+            indicatorImage.color = Border;
+            indicatorImage.raycastTarget = false;
+        }
     }
 
     #endregion
@@ -1973,6 +2124,30 @@ public static class RuntimeUIPrefabBuilder
         CreateButton(closeButtonName, header.transform, "关闭", 72f, 34f, false);
     }
 
+    /// <summary>主菜单设置页使用移动端可读标题栏，不影响游戏内紧凑设置窗口。</summary>
+    private static void CreateMainMenuSettingsHeader(Transform parent, string title, string closeButtonName)
+    {
+        GameObject header = CreateUIObject("标题", parent, typeof(Image));
+        header.GetComponent<Image>().color = MainMenuSettingsSurface;
+        header.AddComponent<LayoutElement>().preferredHeight = 82f;
+
+        HorizontalLayoutGroup layout = header.AddComponent<HorizontalLayoutGroup>();
+        layout.padding = new RectOffset(18, 12, 9, 9);
+        layout.spacing = 12f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        TextMeshProUGUI titleText = CreateText("标题文本", header.transform, title, 32f, Cream);
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        Button closeButton = CreateButton(closeButtonName, header.transform, "关闭", 120f, 64f, false);
+        closeButton.GetComponent<Image>().color = new Color(0.058f, 0.047f, 0.043f, 1f);
+        SetButtonLabelSize(closeButton, 20f);
+    }
+
     /// <summary>设置子分页专用的大字号标题栏。</summary>
     private static void CreateSettingsHeader(Transform parent, string title, string closeButtonName)
     {
@@ -2057,6 +2232,59 @@ public static class RuntimeUIPrefabBuilder
             eyebrowText.alignment = TextAlignmentOptions.MidlineRight;
             eyebrowText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         }
+    }
+
+    /// <summary>创建主菜单设置页的移动端分组标题。</summary>
+    private static void CreateMainMenuSettingsSection(Transform parent, string title)
+    {
+        GameObject section = CreateUIObject(title + "设置分组", parent, typeof(Image));
+        section.AddComponent<LayoutElement>().preferredHeight = 50f;
+
+        Image background = section.GetComponent<Image>();
+        background.color = MainMenuSettingsSection;
+        AddOutline(background, new Color(0.83f, 0.49f, 0.23f, 0.22f));
+
+        HorizontalLayoutGroup layout = section.AddComponent<HorizontalLayoutGroup>();
+        layout.padding = new RectOffset(14, 14, 4, 4);
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        TextMeshProUGUI titleText = CreateText(title + "分组标题", section.transform, title, 22f, Amber);
+        titleText.fontStyle = FontStyles.Bold;
+        titleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+    }
+
+    /// <summary>创建主菜单设置页的移动端下拉行，扩大文字、选项和触控高度。</summary>
+    private static TMP_Dropdown CreateMainMenuSettingsDropdownRow(
+        Transform parent,
+        string label,
+        string dropdownName,
+        string[] options)
+    {
+        GameObject row = CreateRow(label + "行", parent, 72f);
+        TextMeshProUGUI labelText = CreateText(label + "标签", row.transform, label, 22f, Cream);
+        labelText.gameObject.AddComponent<LayoutElement>().preferredWidth = 160f;
+
+        TMP_Dropdown dropdown = CreateDropdown(dropdownName, row.transform);
+        LayoutElement element = dropdown.gameObject.AddComponent<LayoutElement>();
+        element.preferredWidth = 1100f;
+        element.preferredHeight = 64f;
+        dropdown.captionText.fontSize = 20f;
+        dropdown.itemText.fontSize = 19f;
+        Transform item = dropdown.itemText.transform.parent;
+        item.GetComponent<LayoutElement>().preferredHeight = 56f;
+        ((Image)dropdown.targetGraphic).color = MainMenuSettingsSurface;
+        dropdown.template.GetComponent<Image>().color = MainMenuSettingsCanvas;
+        item.GetComponent<Image>().color = new Color(0.055f, 0.075f, 0.078f, 1f);
+        dropdown.template.sizeDelta = new Vector2(0f, 280f);
+        dropdown.ClearOptions();
+        dropdown.AddOptions(new List<string>(options));
+        dropdown.value = 0;
+        dropdown.RefreshShownValue();
+        return dropdown;
     }
 
     /// <summary>创建设置页下拉项，并写入仅用于展示的默认选项。</summary>

@@ -112,13 +112,21 @@ public static class MainMenuPrefabBuilder
 
     private static void BuildBackground(Transform root, Sprite sprite)
     {
-        Image background = CreateImage("世界远景", root, Color.white);
-        Stretch(background.rectTransform);
+        RectTransform fullScreenBackground = CreateRect("全屏背景", root);
+        Stretch(fullScreenBackground);
+        fullScreenBackground.gameObject.AddComponent<FullScreenRectController>();
+
+        Image background = CreateImage("世界远景", fullScreenBackground, Color.white);
+        Center(background.rectTransform);
         background.sprite = sprite;
         background.type = Image.Type.Simple;
         background.raycastTarget = false;
 
-        Image atmosphere = CreateImage("氛围压暗", root, new Color(0.015f, 0.035f, 0.055f, 0.08f));
+        AspectRatioFitter backgroundFitter = background.gameObject.AddComponent<AspectRatioFitter>();
+        backgroundFitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+        backgroundFitter.aspectRatio = sprite.rect.width / sprite.rect.height;
+
+        Image atmosphere = CreateImage("氛围压暗", fullScreenBackground, new Color(0.015f, 0.035f, 0.055f, 0.08f));
         Stretch(atmosphere.rectTransform);
         atmosphere.raycastTarget = false;
     }
@@ -129,7 +137,7 @@ public static class MainMenuPrefabBuilder
         brand.anchorMin = new Vector2(0f, 1f);
         brand.anchorMax = new Vector2(0f, 1f);
         brand.pivot = new Vector2(0f, 1f);
-        brand.anchoredPosition = new Vector2(108f, -74f);
+        brand.anchoredPosition = new Vector2(76f, -60f);
         brand.sizeDelta = new Vector2(720f, 270f);
 
         TMP_Text shadow = CreateText("标题阴影", brand, "平坦世界", font, 100f, new Color(0.015f, 0.025f, 0.03f, 0.72f), FontStyles.Bold, TextAlignmentOptions.Left);
@@ -152,8 +160,8 @@ public static class MainMenuPrefabBuilder
         cardRect.anchorMin = Vector2.zero;
         cardRect.anchorMax = Vector2.zero;
         cardRect.pivot = Vector2.zero;
-        cardRect.anchoredPosition = new Vector2(108f, 118f);
-        cardRect.sizeDelta = new Vector2(470f, 410f);
+        cardRect.anchoredPosition = new Vector2(76f, 76f);
+        cardRect.sizeDelta = new Vector2(560f, 410f);
         card.raycastTarget = true;
 
         Outline cardOutline = card.gameObject.AddComponent<Outline>();
@@ -169,9 +177,9 @@ public static class MainMenuPrefabBuilder
         accent.rectTransform.sizeDelta = new Vector2(5f, 0f);
         accent.raycastTarget = false;
 
-        CreateMenuButton(card.transform, font, GameManager.MainMenuContinueButtonKey, "01", "继续旅程", "载入已有世界", 112f, false, false);
-        CreateMenuButton(card.transform, font, GameManager.MainMenuNewGameButtonKey, "02", "新建世界", "自定义你的开局", 202f, false, false);
-        CreateMenuButton(card.transform, font, GameManager.MainMenuMultiplayerButtonKey, "03", "联机模式", "与好友共同生存", 292f, false, true);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuContinueButtonKey, "01", "继续旅程", "载入已有世界", 40f, false, false);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuNewGameButtonKey, "02", "新建世界", "自定义你的开局", 154f, false, false);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuMultiplayerButtonKey, "03", "联机模式", "与好友共同生存", 268f, false, true);
     }
 
     /// <summary>创建主菜单右上角的设置入口；当前只负责展示，不绑定设置逻辑。</summary>
@@ -190,8 +198,8 @@ public static class MainMenuPrefabBuilder
         rect.anchorMin = Vector2.one;
         rect.anchorMax = Vector2.one;
         rect.pivot = Vector2.one;
-        rect.anchoredPosition = new Vector2(-108f, -74f);
-        rect.sizeDelta = new Vector2(188f, 58f);
+        rect.anchoredPosition = new Vector2(-76f, -60f);
+        rect.sizeDelta = new Vector2(220f, 96f);
 
         Image image = buttonObject.GetComponent<Image>();
         image.color = InkSoft;
@@ -224,18 +232,18 @@ public static class MainMenuPrefabBuilder
             FontStyles.Bold,
             TextAlignmentOptions.Left);
         eyebrow.characterSpacing = 2f;
-        SetRect(eyebrow.rectTransform, new Vector2(18f, -8f), new Vector2(126f, 18f), new Vector2(0f, 1f));
+        SetRect(eyebrow.rectTransform, new Vector2(20f, -17f), new Vector2(150f, 20f), new Vector2(0f, 1f));
 
         TMP_Text title = CreateText(
             "设置标题",
             buttonObject.transform,
             "设置",
             font,
-            21f,
+            24f,
             Cream,
             FontStyles.Bold,
             TextAlignmentOptions.Left);
-        SetRect(title.rectTransform, new Vector2(18f, -29f), new Vector2(126f, 28f), new Vector2(0f, 1f));
+        SetRect(title.rectTransform, new Vector2(20f, -43f), new Vector2(150f, 34f), new Vector2(0f, 1f));
 
         TMP_Text arrow = CreateText(
             "设置箭头",
@@ -270,7 +278,7 @@ public static class MainMenuPrefabBuilder
         rect.anchorMax = new Vector2(1f, 1f);
         rect.pivot = new Vector2(0.5f, 1f);
         rect.anchoredPosition = new Vector2(0f, -top);
-        rect.sizeDelta = new Vector2(-60f, 70f);
+        rect.sizeDelta = new Vector2(-48f, 104f);
 
         Image image = buttonObject.GetComponent<Image>();
         image.color = baseColor;
@@ -295,13 +303,13 @@ public static class MainMenuPrefabBuilder
         button.colors = colors;
 
         TMP_Text number = CreateText(objectName + "_序号", buttonObject.transform, index, font, 18f, primary ? Cream : Amber, FontStyles.Bold, TextAlignmentOptions.Center);
-        SetRect(number.rectTransform, new Vector2(16f, 0f), new Vector2(46f, 70f), new Vector2(0f, 0.5f));
+        SetRect(number.rectTransform, new Vector2(16f, 0f), new Vector2(54f, 104f), new Vector2(0f, 0.5f));
 
-        TMP_Text titleText = CreateText(objectName + "_标题", buttonObject.transform, title, font, 24f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(titleText.rectTransform, new Vector2(78f, 8f), new Vector2(240f, 34f), new Vector2(0f, 0.5f));
+        TMP_Text titleText = CreateText(objectName + "_标题", buttonObject.transform, title, font, 27f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(titleText.rectTransform, new Vector2(88f, 13f), new Vector2(280f, 38f), new Vector2(0f, 0.5f));
 
-        TMP_Text subtitleText = CreateText(objectName + "_说明", buttonObject.transform, subtitle, font, 15f, primary ? new Color(0.96f, 0.86f, 0.73f, 0.9f) : Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(subtitleText.rectTransform, new Vector2(78f, -20f), new Vector2(250f, 24f), new Vector2(0f, 0.5f));
+        TMP_Text subtitleText = CreateText(objectName + "_说明", buttonObject.transform, subtitle, font, 17f, primary ? new Color(0.96f, 0.86f, 0.73f, 0.9f) : Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(subtitleText.rectTransform, new Vector2(88f, -23f), new Vector2(300f, 28f), new Vector2(0f, 0.5f));
 
         if (online)
         {
@@ -361,6 +369,16 @@ public static class MainMenuPrefabBuilder
         rect.anchoredPosition = Vector2.zero;
         rect.offsetMin = new Vector2(left, bottom);
         rect.offsetMax = new Vector2(-right, -top);
+    }
+
+    /// <summary>居中交给 AspectRatioFitter 管理尺寸。</summary>
+    private static void Center(RectTransform rect)
+    {
+        rect.anchorMin = Vector2.one * 0.5f;
+        rect.anchorMax = Vector2.one * 0.5f;
+        rect.pivot = Vector2.one * 0.5f;
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = Vector2.zero;
     }
 
     private static void SetAnchored(RectTransform rect, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)

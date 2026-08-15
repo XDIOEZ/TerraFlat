@@ -420,7 +420,7 @@ namespace FlatWorld.GameTest.UI
 
             RectTransform dialog = prefab.GetComponentsInChildren<RectTransform>(true)
                 .Single(rect => rect.name == "设置对话框");
-            Assert.That(dialog.sizeDelta, Is.EqualTo(new Vector2(720f, 600f)));
+            Assert.That(dialog.sizeDelta, Is.EqualTo(new Vector2(1480f, 840f)));
             Assert.That(dialog.GetComponent<VerticalLayoutGroup>(), Is.Not.Null);
         }
 

@@ -239,6 +239,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         // 使用当前存档面板更新选中项文本。
         TryGetSavePanel(out BasePanel panel);
         panel?.SetText(GameManager.GameSaveSelectedTextKey, saveName);
+        SetSelectedSaveTime(panel, saveName);
         Button deleteButton = panel?.GetButton(GameManager.GameSaveDeleteButtonKey);
         if (deleteButton != null)
             deleteButton.interactable = true;
@@ -469,6 +470,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
                 FlatWorldLocalizationService.GetUiFormat(
                     "批量选择：已选 {0} 个存档",
                     batchSelectedSaveNames.Count));
+            ClearSelectedSaveTime(panel);
         }
 
         if (isBatchDeleteConfirmationOpen)
@@ -524,6 +526,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         }
 
         panel.SetText(GameManager.GameSaveSelectedTextKey, GameManager.GameSaveNoSelectionText);
+        ClearSelectedSaveTime(panel);
         panel.SetInputFieldText(GameManager.GameSavePlayerInputKey, string.Empty);
 
         Button deleteButton = panel.GetButton(GameManager.GameSaveDeleteButtonKey);
@@ -533,6 +536,38 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         CommitDynamicListChanges(false, playerStructureChanged, false, panel);
         FocusFirstSaveOrBackForGamepad();
     }
+    #endregion
+
+    #region 存档时间
+
+    /// <summary>根据存档元数据刷新当前选中存档的现实保存时间；旧存档自动回退文件修改时间。</summary>
+    private void SetSelectedSaveTime(BasePanel panel, string saveName)
+    {
+        if (panel == null)
+            return;
+
+        string fullPath = Path.Combine(PathToSaveFolder, (saveName ?? string.Empty) + ".bytes");
+        System.DateTime saveTimeUtc = SaveDataMgr.GetLastExitTimeUtc(fullPath);
+        if (saveTimeUtc == System.DateTime.MinValue)
+        {
+            ClearSelectedSaveTime(panel);
+            return;
+        }
+
+        string localTime = saveTimeUtc.ToLocalTime().ToString(
+            "yyyy-MM-dd HH:mm:ss",
+            System.Globalization.CultureInfo.InvariantCulture);
+        panel.SetText(
+            GameManager.GameSaveTimeTextKey,
+            FlatWorldLocalizationService.GetUiFormat("保存时间：{0}", localTime));
+    }
+
+    /// <summary>没有有效存档选择时清空保存时间，避免残留上一个存档的信息。</summary>
+    private static void ClearSelectedSaveTime(BasePanel panel)
+    {
+        panel?.SetText(GameManager.GameSaveTimeTextKey, GameManager.GameSaveNoTimeText);
+    }
+
     #endregion
 
     #region 手柄焦点

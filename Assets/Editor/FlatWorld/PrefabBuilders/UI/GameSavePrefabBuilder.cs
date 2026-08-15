@@ -131,16 +131,16 @@ public static class GameSavePrefabBuilder
 
     private static void BuildHeader(Transform card, TMP_FontAsset font)
     {
-        TMP_Text title = CreateText("存档标题", card, "选择存档", font, 42f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(title.rectTransform, new Vector2(42f, -38f), new Vector2(700f, 58f), new Vector2(0f, 1f));
+        TMP_Text title = CreateText("存档标题", card, "选择存档", font, 48f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(title.rectTransform, new Vector2(42f, -34f), new Vector2(700f, 68f), new Vector2(0f, 1f));
 
-        CreateButton(card, font, GameManager.GameSaveBackButtonKey, "返回主界面", new Vector2(-42f, -42f), new Vector2(170f, 52f), InkSoft, Cream, 17f, new Vector2(1f, 1f));
+        CreateButton(card, font, GameManager.GameSaveBackButtonKey, "返回主界面", new Vector2(-42f, -28f), new Vector2(210f, 72f), InkSoft, Cream, 22f, new Vector2(1f, 1f));
 
         Image divider = CreateImage("存档标题分隔线", card, new Color(0.55f, 0.64f, 0.65f, 0.18f));
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
         divider.rectTransform.anchorMax = new Vector2(1f, 1f);
         divider.rectTransform.pivot = new Vector2(0.5f, 1f);
-        divider.rectTransform.anchoredPosition = new Vector2(0f, -112f);
+        divider.rectTransform.anchoredPosition = new Vector2(0f, -126f);
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
     }
@@ -148,66 +148,69 @@ public static class GameSavePrefabBuilder
     private static Transform BuildSaveList(Transform card, TMP_FontAsset font)
     {
         Image panel = CreatePanelCard("世界存档区", card);
-        SetRect(panel.rectTransform, new Vector2(42f, -138f), new Vector2(520f, 520f), new Vector2(0f, 1f));
+        SetRect(panel.rectTransform, new Vector2(42f, -150f), new Vector2(520f, 520f), new Vector2(0f, 1f));
 
         CreateStepBadge(panel.transform, font, "STEP 01", new Vector2(22f, -22f));
-        TMP_Text heading = CreateText("世界存档标题", panel.transform, "世界存档", font, 23f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(heading.rectTransform, new Vector2(22f, -58f), new Vector2(250f, 34f), new Vector2(0f, 1f));
+        TMP_Text heading = CreateText("世界存档标题", panel.transform, "世界存档", font, 28f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(heading.rectTransform, new Vector2(22f, -62f), new Vector2(250f, 40f), new Vector2(0f, 1f));
 
         CreateButton(
             panel.transform,
             font,
             GameManager.GameSaveBatchDeleteButtonKey,
             "批量删除存档",
-            new Vector2(-20f, -54f),
-            new Vector2(180f, 36f),
+            new Vector2(-20f, -50f),
+            new Vector2(210f, 56f),
             new Color(0.30f, 0.10f, 0.09f, 1f),
             Cream,
-            14f,
+            18f,
             new Vector2(1f, 1f));
 
-        return CreateScrollList("存档列表", panel.transform, new Vector2(20f, -102f), new Vector2(480f, 330f));
+        return CreateScrollList("存档列表", panel.transform, new Vector2(20f, -122f), new Vector2(480f, 300f));
     }
 
     private static Transform BuildWorkspace(Transform card, TMP_FontAsset font)
     {
         Image panel = CreatePanelCard("存档操作区", card);
-        SetRect(panel.rectTransform, new Vector2(582f, -138f), new Vector2(816f, 520f), new Vector2(0f, 1f));
+        SetRect(panel.rectTransform, new Vector2(582f, -150f), new Vector2(816f, 520f), new Vector2(0f, 1f));
 
         CreateStepBadge(panel.transform, font, "STEP 02", new Vector2(24f, -22f));
-        TMP_Text currentLabel = CreateText("当前存档标签", panel.transform, "当前选择", font, 14f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(currentLabel.rectTransform, new Vector2(24f, -58f), new Vector2(230f, 24f), new Vector2(0f, 1f));
+        TMP_Text currentLabel = CreateText("当前存档标签", panel.transform, "当前选择", font, 18f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(currentLabel.rectTransform, new Vector2(24f, -58f), new Vector2(230f, 28f), new Vector2(0f, 1f));
 
-        TMP_Text currentSave = CreateText(GameManager.GameSaveSelectedTextKey, panel.transform, GameManager.GameSaveNoSelectionText, font, 30f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(currentSave.rectTransform, new Vector2(24f, -82f), new Vector2(560f, 46f), new Vector2(0f, 1f));
+        TMP_Text currentSave = CreateText(GameManager.GameSaveSelectedTextKey, panel.transform, GameManager.GameSaveNoSelectionText, font, 36f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(currentSave.rectTransform, new Vector2(24f, -88f), new Vector2(550f, 52f), new Vector2(0f, 1f));
 
-        CreateButton(panel.transform, font, GameManager.GameSaveLoadButtonKey, "载入存档", new Vector2(-24f, -36f), new Vector2(190f, 62f), new Color(0.08f, 0.29f, 0.29f, 1f), Cream, 19f, new Vector2(1f, 1f));
-        Button deleteButton = CreateButton(panel.transform, font, GameManager.GameSaveDeleteButtonKey, "删除存档", new Vector2(-24f, -104f), new Vector2(190f, 30f), new Color(0.38f, 0.11f, 0.10f, 1f), Cream, 15f, new Vector2(1f, 1f));
+        TMP_Text saveTime = CreateText(GameManager.GameSaveTimeTextKey, panel.transform, GameManager.GameSaveNoTimeText, font, 18f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(saveTime.rectTransform, new Vector2(24f, -140f), new Vector2(540f, 36f), new Vector2(0f, 1f));
+
+        CreateButton(panel.transform, font, GameManager.GameSaveLoadButtonKey, "载入存档", new Vector2(-24f, -28f), new Vector2(210f, 78f), new Color(0.08f, 0.29f, 0.29f, 1f), Cream, 23f, new Vector2(1f, 1f));
+        Button deleteButton = CreateButton(panel.transform, font, GameManager.GameSaveDeleteButtonKey, "删除存档", new Vector2(-24f, -116f), new Vector2(210f, 52f), new Color(0.38f, 0.11f, 0.10f, 1f), Cream, 18f, new Vector2(1f, 1f));
         deleteButton.interactable = false;
 
         Image divider = CreateImage("当前存档分隔线", panel.transform, new Color(0.55f, 0.64f, 0.65f, 0.17f));
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
         divider.rectTransform.anchorMax = new Vector2(1f, 1f);
         divider.rectTransform.pivot = new Vector2(0.5f, 1f);
-        divider.rectTransform.anchoredPosition = new Vector2(0f, -142f);
+        divider.rectTransform.anchoredPosition = new Vector2(0f, -184f);
         divider.rectTransform.sizeDelta = new Vector2(-48f, 1f);
         divider.raycastTarget = false;
 
-        TMP_Text playerHeading = CreateText("角色列表标题", panel.transform, "可用角色", font, 20f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(playerHeading.rectTransform, new Vector2(24f, -166f), new Vector2(330f, 32f), new Vector2(0f, 1f));
-        TMP_Text playerHint = CreateText("角色列表提示", panel.transform, "载入存档后选择角色", font, 13f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(playerHint.rectTransform, new Vector2(24f, -197f), new Vector2(330f, 22f), new Vector2(0f, 1f));
-        Transform playerContent = CreateScrollList("存档中的玩家列表", panel.transform, new Vector2(24f, -226f), new Vector2(368f, 224f));
+        TMP_Text playerHeading = CreateText("角色列表标题", panel.transform, "可用角色", font, 26f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(playerHeading.rectTransform, new Vector2(24f, -204f), new Vector2(330f, 36f), new Vector2(0f, 1f));
+        TMP_Text playerHint = CreateText("角色列表提示", panel.transform, "载入存档后选择角色", font, 18f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(playerHint.rectTransform, new Vector2(24f, -242f), new Vector2(330f, 28f), new Vector2(0f, 1f));
+        Transform playerContent = CreateScrollList("存档中的玩家列表", panel.transform, new Vector2(24f, -278f), new Vector2(368f, 214f));
 
         Image identity = CreateImage("角色身份区", panel.transform, new Color(0.035f, 0.06f, 0.075f, 0.98f));
-        SetRect(identity.rectTransform, new Vector2(-24f, -166f), new Vector2(400f, 284f), new Vector2(1f, 1f));
+        SetRect(identity.rectTransform, new Vector2(-24f, -204f), new Vector2(400f, 288f), new Vector2(1f, 1f));
 
         CreateStepBadge(identity.transform, font, "STEP 03", new Vector2(20f, -18f));
-        TMP_Text identityHeading = CreateText("角色身份标题", identity.transform, "本次角色", font, 20f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(identityHeading.rectTransform, new Vector2(20f, -54f), new Vector2(300f, 30f), new Vector2(0f, 1f));
-        TMP_Text nameLabel = CreateText("玩家名称标签", identity.transform, "玩家名称", font, 14f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(nameLabel.rectTransform, new Vector2(20f, -96f), new Vector2(360f, 24f), new Vector2(0f, 1f));
-        CreateInput(identity.transform, font, GameManager.GameSavePlayerInputKey, "选择角色或输入新名称", new Vector2(20f, -124f), new Vector2(360f, 62f));
+        TMP_Text identityHeading = CreateText("角色身份标题", identity.transform, "本次角色", font, 26f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(identityHeading.rectTransform, new Vector2(20f, -58f), new Vector2(300f, 36f), new Vector2(0f, 1f));
+        TMP_Text nameLabel = CreateText("玩家名称标签", identity.transform, "玩家名称", font, 18f, Muted, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(nameLabel.rectTransform, new Vector2(20f, -106f), new Vector2(360f, 28f), new Vector2(0f, 1f));
+        CreateInput(identity.transform, font, GameManager.GameSavePlayerInputKey, "选择角色或输入新名称", new Vector2(20f, -140f), new Vector2(360f, 84f));
         return playerContent;
     }
 
@@ -221,17 +224,17 @@ public static class GameSavePrefabBuilder
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
 
-        CreateButton(card, font, GameManager.GameSaveStartButtonKey, "进入世界", new Vector2(-42f, 26f), new Vector2(250f, 66f), new Color(0.70f, 0.36f, 0.16f, 1f), Cream, 21f, new Vector2(1f, 0f));
+        CreateButton(card, font, GameManager.GameSaveStartButtonKey, "进入世界", new Vector2(-42f, 20f), new Vector2(280f, 80f), new Color(0.70f, 0.36f, 0.16f, 1f), Cream, 25f, new Vector2(1f, 0f));
     }
 
-    /// <summary>构建左侧列表底部的批量选择操作区，固定占用 50 像素高度。</summary>
+    /// <summary>构建左侧列表底部的批量选择操作区，使用移动端可触控的 60 像素按钮。</summary>
     private static GameObject BuildBatchDeleteActions(Transform card, TMP_FontAsset font)
     {
         Transform savePanel = card.Find("世界存档区");
         GameObject actions = new GameObject("批量删除操作区", typeof(RectTransform));
         actions.layer = LayerMask.NameToLayer("UI");
         actions.transform.SetParent(savePanel, false);
-        SetRect(actions.GetComponent<RectTransform>(), new Vector2(20f, 20f), new Vector2(480f, 50f), Vector2.zero);
+        SetRect(actions.GetComponent<RectTransform>(), new Vector2(20f, 20f), new Vector2(480f, 64f), Vector2.zero);
 
         Button confirm = CreateButton(
             actions.transform,
@@ -239,10 +242,10 @@ public static class GameSavePrefabBuilder
             GameManager.GameSaveBatchConfirmButtonKey,
             "确认删除所选",
             Vector2.zero,
-            new Vector2(292f, 46f),
+            new Vector2(292f, 60f),
             new Color(0.48f, 0.12f, 0.10f, 1f),
             Cream,
-            15f,
+            18f,
             new Vector2(0f, 0f));
         confirm.interactable = false;
         CreateButton(
@@ -251,10 +254,10 @@ public static class GameSavePrefabBuilder
             GameManager.GameSaveBatchCancelButtonKey,
             "取消批量选择",
             Vector2.zero,
-            new Vector2(176f, 46f),
+            new Vector2(176f, 60f),
             InkSoft,
             Cream,
-            14f,
+            17f,
             new Vector2(1f, 0f));
 
         actions.SetActive(false);
@@ -269,7 +272,7 @@ public static class GameSavePrefabBuilder
         overlay.raycastTarget = true;
 
         Image dialog = CreatePanelCard("批量删除确认卡", overlay.transform);
-        SetRect(dialog.rectTransform, Vector2.zero, new Vector2(760f, 390f), new Vector2(0.5f, 0.5f));
+        SetRect(dialog.rectTransform, Vector2.zero, new Vector2(820f, 430f), new Vector2(0.5f, 0.5f));
         Image accent = CreateImage("危险操作强调线", dialog.transform, new Color(0.78f, 0.20f, 0.16f, 1f));
         accent.rectTransform.anchorMin = new Vector2(0f, 1f);
         accent.rectTransform.anchorMax = new Vector2(1f, 1f);
@@ -278,41 +281,41 @@ public static class GameSavePrefabBuilder
         accent.rectTransform.sizeDelta = new Vector2(0f, 6f);
         accent.raycastTarget = false;
 
-        TMP_Text title = CreateText("批量删除确认标题", dialog.transform, "确认批量删除存档？", font, 30f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(title.rectTransform, new Vector2(38f, -38f), new Vector2(684f, 48f), new Vector2(0f, 1f));
+        TMP_Text title = CreateText("批量删除确认标题", dialog.transform, "确认批量删除存档？", font, 36f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(title.rectTransform, new Vector2(42f, -42f), new Vector2(736f, 56f), new Vector2(0f, 1f));
         TMP_Text warning = CreateText(
             GameManager.GameSaveBatchWarningTextKey,
             dialog.transform,
             "将永久删除已选中的存档。\n此操作无法撤销。",
             font,
-            18f,
+            22f,
             new Color(0.93f, 0.76f, 0.69f, 1f),
             FontStyles.Normal,
             TextAlignmentOptions.TopLeft,
             true);
-        SetRect(warning.rectTransform, new Vector2(38f, -108f), new Vector2(684f, 164f), new Vector2(0f, 1f));
+        SetRect(warning.rectTransform, new Vector2(42f, -120f), new Vector2(736f, 174f), new Vector2(0f, 1f));
 
         CreateButton(
             dialog.transform,
             font,
             GameManager.GameSaveBatchDialogCancelButtonKey,
             "取消并返回",
-            new Vector2(38f, 34f),
-            new Vector2(250f, 58f),
+            new Vector2(42f, 34f),
+            new Vector2(270f, 72f),
             InkSoft,
             Cream,
-            17f,
+            21f,
             new Vector2(0f, 0f));
         CreateButton(
             dialog.transform,
             font,
             GameManager.GameSaveBatchDialogConfirmButtonKey,
             "永久删除所选存档",
-            new Vector2(-38f, 34f),
-            new Vector2(300f, 58f),
+            new Vector2(-42f, 34f),
+            new Vector2(330f, 72f),
             new Color(0.60f, 0.11f, 0.09f, 1f),
             Cream,
-            17f,
+            21f,
             new Vector2(1f, 0f));
 
         overlay.gameObject.SetActive(false);
@@ -339,7 +342,7 @@ public static class GameSavePrefabBuilder
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
             rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = new Vector2(0f, 72f);
+            rect.sizeDelta = new Vector2(0f, 96f);
 
             Image background = root.AddComponent<Image>();
             background.color = InkSoft;
@@ -358,7 +361,7 @@ public static class GameSavePrefabBuilder
             button.colors = colors;
 
             LayoutElement layout = root.AddComponent<LayoutElement>();
-            layout.preferredHeight = 72f;
+            layout.preferredHeight = 96f;
             layout.flexibleWidth = 1f;
 
             Image accent = CreateImage("选择强调线", root.transform, Teal);
@@ -370,12 +373,12 @@ public static class GameSavePrefabBuilder
             accent.enabled = false;
             accent.raycastTarget = false;
 
-            TMP_Text label = CreateText("条目名称", root.transform, "存档条目", font, 18f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-            SetRect(label.rectTransform, new Vector2(20f, 7f), new Vector2(270f, 30f), new Vector2(0f, 0.5f));
-            TMP_Text subtitle = CreateText("条目提示", root.transform, "选择  /  右键管理", font, 12f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-            SetRect(subtitle.rectTransform, new Vector2(20f, -20f), new Vector2(250f, 22f), new Vector2(0f, 0.5f));
-            TMP_Text arrow = CreateText("条目箭头", root.transform, ">", font, 18f, Amber, FontStyles.Bold, TextAlignmentOptions.Center);
-            SetRect(arrow.rectTransform, new Vector2(-18f, 0f), new Vector2(28f, 40f), new Vector2(1f, 0.5f));
+            TMP_Text label = CreateText("条目名称", root.transform, "存档条目", font, 24f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+            SetRect(label.rectTransform, new Vector2(22f, 12f), new Vector2(360f, 34f), new Vector2(0f, 0.5f));
+            TMP_Text subtitle = CreateText("条目提示", root.transform, "选择  /  右键管理", font, 17f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+            SetRect(subtitle.rectTransform, new Vector2(22f, -24f), new Vector2(350f, 26f), new Vector2(0f, 0.5f));
+            TMP_Text arrow = CreateText("条目箭头", root.transform, ">", font, 24f, Amber, FontStyles.Bold, TextAlignmentOptions.Center);
+            SetRect(arrow.rectTransform, new Vector2(-20f, 0f), new Vector2(34f, 48f), new Vector2(1f, 0.5f));
 
             ButtonInfoData info = root.AddComponent<ButtonInfoData>();
             info.SelectImage = accent;
@@ -461,9 +464,9 @@ public static class GameSavePrefabBuilder
         RectTransform area = areaObject.GetComponent<RectTransform>();
         Stretch(area, 16f, 16f, 8f, 8f);
 
-        TextMeshProUGUI placeholder = (TextMeshProUGUI)CreateText("Placeholder", area, placeholderValue, font, 17f, new Color(0.53f, 0.59f, 0.60f, 0.82f), FontStyles.Normal, TextAlignmentOptions.MidlineLeft);
+        TextMeshProUGUI placeholder = (TextMeshProUGUI)CreateText("Placeholder", area, placeholderValue, font, 22f, new Color(0.53f, 0.59f, 0.60f, 0.82f), FontStyles.Normal, TextAlignmentOptions.MidlineLeft);
         Stretch(placeholder.rectTransform);
-        TextMeshProUGUI valueText = (TextMeshProUGUI)CreateText("Text", area, string.Empty, font, 18f, Cream, FontStyles.Normal, TextAlignmentOptions.MidlineLeft);
+        TextMeshProUGUI valueText = (TextMeshProUGUI)CreateText("Text", area, string.Empty, font, 23f, Cream, FontStyles.Normal, TextAlignmentOptions.MidlineLeft);
         Stretch(valueText.rectTransform);
 
         TMP_InputField input = inputObject.GetComponent<TMP_InputField>();
@@ -489,8 +492,8 @@ public static class GameSavePrefabBuilder
     private static void CreateStepBadge(Transform parent, TMP_FontAsset font, string value, Vector2 position)
     {
         Image badge = CreateImage(value + "_底板", parent, new Color(0.12f, 0.23f, 0.22f, 1f));
-        SetRect(badge.rectTransform, position, new Vector2(88f, 26f), new Vector2(0f, 1f));
-        TMP_Text text = CreateText(value + "_文字", badge.transform, value, font, 12f, Teal, FontStyles.Bold, TextAlignmentOptions.Center);
+        SetRect(badge.rectTransform, position, new Vector2(104f, 32f), new Vector2(0f, 1f));
+        TMP_Text text = CreateText(value + "_文字", badge.transform, value, font, 15f, Teal, FontStyles.Bold, TextAlignmentOptions.Center);
         Stretch(text.rectTransform);
         text.characterSpacing = 1f;
     }

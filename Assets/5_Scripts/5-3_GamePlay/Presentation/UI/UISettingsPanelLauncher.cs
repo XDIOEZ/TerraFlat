@@ -1,4 +1,4 @@
-// AI-Context: 设置菜单的“UI设置”入口和运行时 uGUI 面板；提供全局界面缩放、安全区适配及即时持久化。
+// AI-Context: 设置菜单的“UI设置”入口和运行时 uGUI 面板；提供界面、移动摇杆和镜头预判偏好及即时持久化。
 
 using FlatWorld.Localization;
 using TMPro;
@@ -10,14 +10,19 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
 {
     private const string EntryButtonName = "UI设置";
     private const float PreferredWidth = 620f;
-    private const float PreferredHeight = 390f;
+    private const float PreferredHeight = 680f;
     private const float CanvasSafeMargin = 32f;
 
     private Button entryButton;
     private BasePanel settingsPanel;
     private Slider scaleSlider;
     private Toggle safeAreaToggle;
+    private Toggle floatingMoveJoystickToggle;
+    private Slider cameraLookaheadSlider;
+    private Slider cameraSmoothingSlider;
     private TextMeshProUGUI scaleValueText;
+    private TextMeshProUGUI cameraLookaheadValueText;
+    private TextMeshProUGUI cameraSmoothingValueText;
     private TextMeshProUGUI statusText;
     private bool isClamping;
 
@@ -82,7 +87,12 @@ private void EnsureSettingsWindow()
             RuntimeUIPrefabKeys.UISettings);
         scaleSlider = settingsPanel.GetSlider("界面缩放");
         safeAreaToggle = settingsPanel.GetToggle("安全区域适配");
+        floatingMoveJoystickToggle = settingsPanel.GetToggle("浮动移动摇杆");
+        cameraLookaheadSlider = settingsPanel.GetSlider("镜头前探");
+        cameraSmoothingSlider = settingsPanel.GetSlider("预判平滑");
         scaleValueText = settingsPanel.GetText("界面缩放数值");
+        cameraLookaheadValueText = settingsPanel.GetText("镜头前探数值");
+        cameraSmoothingValueText = settingsPanel.GetText("预判平滑数值");
         statusText = settingsPanel.GetText("状态文本");
 
         settingsPanel.GetButton("关闭按钮")?.onClick.AddListener(Close);
@@ -90,8 +100,14 @@ private void EnsureSettingsWindow()
         settingsPanel.GetButton("完成按钮")?.onClick.AddListener(Close);
         scaleSlider?.onValueChanged.AddListener(OnScaleChanged);
         safeAreaToggle?.onValueChanged.AddListener(OnSafeAreaChanged);
+        floatingMoveJoystickToggle?.onValueChanged.AddListener(OnFloatingMoveJoystickChanged);
+        cameraLookaheadSlider?.onValueChanged.AddListener(OnCameraLookaheadChanged);
+        cameraSmoothingSlider?.onValueChanged.AddListener(OnCameraSmoothingChanged);
 
-        if (scaleSlider == null || safeAreaToggle == null || scaleValueText == null || statusText == null)
+        if (scaleSlider == null || safeAreaToggle == null || floatingMoveJoystickToggle == null ||
+            cameraLookaheadSlider == null || cameraSmoothingSlider == null ||
+            scaleValueText == null || cameraLookaheadValueText == null ||
+            cameraSmoothingValueText == null || statusText == null)
             Debug.LogError("[UISettingsPanelLauncher] UI 设置 Prefab 控件命名契约不完整。", settingsPanel);
 
         if (scaleSlider != null)
@@ -99,6 +115,20 @@ private void EnsureSettingsWindow()
             scaleSlider.minValue = UIUserSettings.MinimumScale;
             scaleSlider.maxValue = UIUserSettings.MaximumScale;
             scaleSlider.wholeNumbers = false;
+        }
+
+        if (cameraLookaheadSlider != null)
+        {
+            cameraLookaheadSlider.minValue = CameraUserSettings.MinimumLookahead;
+            cameraLookaheadSlider.maxValue = CameraUserSettings.MaximumLookahead;
+            cameraLookaheadSlider.wholeNumbers = false;
+        }
+
+        if (cameraSmoothingSlider != null)
+        {
+            cameraSmoothingSlider.minValue = CameraUserSettings.MinimumLookaheadSmoothing;
+            cameraSmoothingSlider.maxValue = CameraUserSettings.MaximumLookaheadSmoothing;
+            cameraSmoothingSlider.wholeNumbers = false;
         }
 
         ClampWindowToCanvas();
@@ -133,9 +163,29 @@ private void EnsureSettingsWindow()
         ClampWindowToCanvas();
     }
 
+    private void OnFloatingMoveJoystickChanged(bool value)
+    {
+        UIUserSettings.SetFloatingMoveJoystick(value);
+    }
+
+    private void OnCameraLookaheadChanged(float value)
+    {
+        float applied = CameraUserSettings.SetLookahead(value);
+        cameraLookaheadSlider?.SetValueWithoutNotify(applied);
+        RefreshCameraValues();
+    }
+
+    private void OnCameraSmoothingChanged(float value)
+    {
+        float applied = CameraUserSettings.SetLookaheadSmoothing(value);
+        cameraSmoothingSlider?.SetValueWithoutNotify(applied);
+        RefreshCameraValues();
+    }
+
     private void ResetToDefault()
     {
         UIUserSettings.ResetToDefaults();
+        CameraUserSettings.ResetToDefaults();
         RefreshValues();
         ClampWindowToCanvas();
     }
@@ -146,6 +196,12 @@ private void EnsureSettingsWindow()
             scaleSlider.SetValueWithoutNotify(UIUserSettings.Scale);
         if (safeAreaToggle != null)
             safeAreaToggle.SetIsOnWithoutNotify(UIUserSettings.RespectSafeArea);
+        if (floatingMoveJoystickToggle != null)
+            floatingMoveJoystickToggle.SetIsOnWithoutNotify(UIUserSettings.FloatingMoveJoystick);
+        if (cameraLookaheadSlider != null)
+            cameraLookaheadSlider.SetValueWithoutNotify(CameraUserSettings.Lookahead);
+        if (cameraSmoothingSlider != null)
+            cameraSmoothingSlider.SetValueWithoutNotify(CameraUserSettings.LookaheadSmoothing);
         RefreshStatus();
     }
 
@@ -153,12 +209,21 @@ private void EnsureSettingsWindow()
     {
         if (scaleValueText != null)
             scaleValueText.text = ToPercent(UIUserSettings.Scale);
+        RefreshCameraValues();
         if (statusText != null)
         {
             statusText.text = UIUserSettings.RespectSafeArea
                 ? FlatWorldLocalizationService.GetUiText("安全区域适配：开启（推荐）")
                 : FlatWorldLocalizationService.GetUiText("安全区域适配：关闭");
         }
+    }
+
+    private void RefreshCameraValues()
+    {
+        if (cameraLookaheadValueText != null)
+            cameraLookaheadValueText.text = FormatSignedSeconds(CameraUserSettings.Lookahead);
+        if (cameraSmoothingValueText != null)
+            cameraSmoothingValueText.text = CameraUserSettings.LookaheadSmoothing.ToString("0.0");
     }
 
 private void Close()
@@ -227,6 +292,11 @@ private void ClampWindowToCanvas()
     private static string ToPercent(float value)
     {
         return Mathf.RoundToInt(value * 100f) + "%";
+    }
+
+    private static string FormatSignedSeconds(float value)
+    {
+        return (value >= 0f ? "+" : string.Empty) + value.ToString("0.00") + "s";
     }
 
 

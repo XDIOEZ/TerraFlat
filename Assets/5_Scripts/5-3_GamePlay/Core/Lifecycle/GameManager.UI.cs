@@ -23,11 +23,17 @@ public partial class GameManager
     public const string MainMenuSettingsCloseButtonKey = "关闭按钮";
     public const string MainMenuSettingsReturnButtonKey = "返回按钮";
     public const string MainMenuSettingsPreferredControlKey = "窗口大小下拉列表";
+    public const string MainMenuSettingsQualityPresetKey = "画质预设下拉列表";
+    public const string MainMenuSettingsEffectsQualityKey = "特效质量下拉列表";
     public const string MainMenuSettingsLanguageDropdownKey = "游戏语言下拉列表";
     public const string MainMenuSettingsLanguageStatusTextKey = "设置状态";
 
     private static readonly string[] MainMenuSettingsLocaleCodes = { "zh-CN", "en" };
     private static readonly string[] MainMenuSettingsLanguageOptions = { "简体中文", "English" };
+    private static readonly string[] MainMenuSettingsQualityOptions =
+        { "高（推荐）", "中", "低" };
+    private static readonly string[] MainMenuSettingsEffectsQualityOptions =
+        { "高", "中", "低" };
 
     public const string NewGamePanelKey = "NewGame";
     public const string NewGameStartButtonKey = "开始新游戏";
@@ -90,7 +96,9 @@ public partial class GameManager
     public const string GameSaveBackButtonKey = "返回按钮";
     public const string GameSavePlayerInputKey = "选择或新增玩家名称输入框";
     public const string GameSaveSelectedTextKey = "选中的存档名称";
+    public const string GameSaveTimeTextKey = "存档保存时间";
     public const string GameSaveNoSelectionText = "尚未选择存档";
+    public const string GameSaveNoTimeText = "保存时间：--";
 
     private const string ContextMenuPanelKey = "ContextMenu";
 
@@ -117,6 +125,7 @@ public partial class GameManager
 
     private GameObject worldLoadingView;
     private Canvas worldLoadingCanvas;
+    private CanvasGroup worldLoadingCanvasGroup;
     private TextMeshProUGUI worldLoadingTitle;
     private TextMeshProUGUI worldLoadingStatus;
     private TextMeshProUGUI worldLoadingProgressText;
@@ -233,13 +242,16 @@ public partial class GameManager
         }
 
         UpdateWorldLoadingView(progress.Title, progress.Status, progress.Progress);
+        worldLoadingCanvasGroup.alpha = 1f;
+        worldLoadingCanvasGroup.interactable = true;
+        worldLoadingCanvasGroup.blocksRaycasts = true;
         worldLoadingView.SetActive(true);
         worldLoadingCanvas.sortingOrder = 32000;
 
         if (progress.State == WorldEntryProgressState.Completed)
-            worldLoadingHideCoroutine = StartCoroutine(HideWorldLoadingViewAfterDelay(0.15f));
+            worldLoadingHideCoroutine = StartCoroutine(FadeWorldLoadingView(0f));
         else if (progress.State == WorldEntryProgressState.Failed)
-            worldLoadingHideCoroutine = StartCoroutine(HideWorldLoadingViewAfterDelay(1.5f));
+            worldLoadingHideCoroutine = StartCoroutine(FadeWorldLoadingView(1.5f));
     }
 
     private void PresentDimensionLoading(WorldEntryProgressInfo progress)
@@ -404,6 +416,7 @@ public partial class GameManager
         }
 
         worldLoadingCanvas = worldLoadingView.GetComponent<Canvas>();
+        worldLoadingCanvasGroup = worldLoadingView.GetComponent<CanvasGroup>();
         worldLoadingTitle = FindChildRecursive(worldLoadingView.transform, WorldLoadingTitleKey)
             ?.GetComponent<TextMeshProUGUI>();
         worldLoadingStatus = FindChildRecursive(worldLoadingView.transform, WorldLoadingStatusKey)
@@ -413,7 +426,8 @@ public partial class GameManager
         worldLoadingProgress = FindChildRecursive(worldLoadingView.transform, WorldLoadingProgressKey)
             ?.GetComponent<Slider>();
 
-        if (worldLoadingCanvas == null || worldLoadingTitle == null || worldLoadingStatus == null ||
+        if (worldLoadingCanvas == null || worldLoadingCanvasGroup == null ||
+            worldLoadingTitle == null || worldLoadingStatus == null ||
             worldLoadingProgressText == null || worldLoadingProgress == null)
         {
             Debug.LogError("[GameManager] UI_WorldLoading.prefab 的加载控件命名契约不完整。");
@@ -544,18 +558,40 @@ public partial class GameManager
         worldLoadingStatusDotCount = 0;
     }
 
-    private IEnumerator HideWorldLoadingViewAfterDelay(float delaySeconds)
+    /// <summary>区块窗口完成后复用维度加载页的淡出节奏，再展示游戏画面。</summary>
+    private IEnumerator FadeWorldLoadingView(float delaySeconds)
     {
-        yield return new WaitForSecondsRealtime(Mathf.Max(0f, delaySeconds));
+        if (delaySeconds > 0f)
+            yield return new WaitForSecondsRealtime(delaySeconds);
+
+        const float duration = 0.15f;
+        float elapsed = 0f;
+        while (worldLoadingCanvasGroup != null && elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            worldLoadingCanvasGroup.alpha = 1f - Mathf.Clamp01(elapsed / duration);
+            yield return null;
+        }
+
         HideWorldLoadingView();
     }
 
     private void HideWorldLoadingView()
     {
+        if (worldLoadingHideCoroutine != null)
+            StopCoroutine(worldLoadingHideCoroutine);
+        worldLoadingHideCoroutine = null;
         StopWorldLoadingStatusAnimation();
+
+        if (worldLoadingCanvasGroup != null)
+        {
+            worldLoadingCanvasGroup.alpha = 1f;
+            worldLoadingCanvasGroup.interactable = false;
+            worldLoadingCanvasGroup.blocksRaycasts = false;
+        }
+
         if (worldLoadingView != null)
             worldLoadingView.SetActive(false);
-        worldLoadingHideCoroutine = null;
     }
 
     #endregion
@@ -619,6 +655,7 @@ public partial class GameManager
             UIManager.Instance.TryGetPanel(MainMenuSettingsPanelKey, out BasePanel existingPanel))
         {
             RefreshMainMenuSettingsLanguage(existingPanel);
+            RefreshMainMenuSettingsQuality(existingPanel);
             existingPanel.Open();
             return;
         }
@@ -648,10 +685,114 @@ public partial class GameManager
 
         panel.SetButtonOnClick(MainMenuSettingsCloseButtonKey, panel.Close);
         panel.SetButtonOnClick(MainMenuSettingsReturnButtonKey, panel.Close);
+        panel.SetButtonOnClick(
+            "恢复默认按钮",
+            () => ResetMainMenuSettings(panel));
+        BindMainMenuSettingsQuality(panel);
         BindMainMenuSettingsLanguage(panel);
         panel.PrepareForGamepadNavigation(MainMenuSettingsPreferredControlKey);
         panel.Open();
     }
+
+    #region 主菜单画质设置
+
+    /// <summary>绑定主菜单画质预设和后处理质量下拉框，并立即应用到运行时。</summary>
+    private static void BindMainMenuSettingsQuality(BasePanel panel)
+    {
+        TMP_Dropdown qualityDropdown = GetMainMenuSettingsDropdown(
+            panel,
+            MainMenuSettingsQualityPresetKey);
+        TMP_Dropdown effectsQualityDropdown = GetMainMenuSettingsDropdown(
+            panel,
+            MainMenuSettingsEffectsQualityKey);
+
+        if (qualityDropdown == null || effectsQualityDropdown == null)
+        {
+            Debug.LogError(
+                "[GameManager] 主菜单设置 Prefab 缺少画质预设或特效质量下拉列表。",
+                panel);
+            return;
+        }
+
+        qualityDropdown.ClearOptions();
+        qualityDropdown.AddOptions(new List<string>(MainMenuSettingsQualityOptions));
+        qualityDropdown.onValueChanged.AddListener(
+            selectedIndex => OnMainMenuSettingsQualityChanged(panel, selectedIndex));
+
+        effectsQualityDropdown.ClearOptions();
+        effectsQualityDropdown.AddOptions(
+            new List<string>(MainMenuSettingsEffectsQualityOptions));
+        effectsQualityDropdown.onValueChanged.AddListener(
+            selectedIndex => OnMainMenuSettingsEffectsQualityChanged(panel, selectedIndex));
+
+        RefreshMainMenuSettingsQuality(panel);
+    }
+
+    /// <summary>应用主菜单的画质预设。</summary>
+    private static void OnMainMenuSettingsQualityChanged(BasePanel panel, int selectedIndex)
+    {
+        GraphicsUserSettings.SetPresetIndex(selectedIndex);
+        RefreshMainMenuSettingsQuality(panel);
+        SetMainMenuSettingsStatus(panel, "画质设置已保存");
+    }
+
+    /// <summary>应用主菜单的后处理特效质量。</summary>
+    private static void OnMainMenuSettingsEffectsQualityChanged(
+        BasePanel panel,
+        int selectedIndex)
+    {
+        ScreenPostProcessSettings.SetQualityIndex(selectedIndex);
+        RefreshMainMenuSettingsQuality(panel);
+        SetMainMenuSettingsStatus(panel, "特效质量设置已保存");
+    }
+
+    /// <summary>恢复画质预设和后处理质量默认值。</summary>
+    private static void ResetMainMenuSettings(BasePanel panel)
+    {
+        GraphicsUserSettings.ResetToDefaults();
+        ScreenPostProcessSettings.ResetToDefaults();
+        RefreshMainMenuSettingsQuality(panel);
+        SetMainMenuSettingsStatus(panel, "画质与特效质量已恢复默认");
+    }
+
+    /// <summary>按持久化设置回填两个画质下拉框。</summary>
+    private static void RefreshMainMenuSettingsQuality(BasePanel panel)
+    {
+        TMP_Dropdown qualityDropdown = GetMainMenuSettingsDropdown(
+            panel,
+            MainMenuSettingsQualityPresetKey);
+        TMP_Dropdown effectsQualityDropdown = GetMainMenuSettingsDropdown(
+            panel,
+            MainMenuSettingsEffectsQualityKey);
+
+        if (qualityDropdown != null)
+        {
+            qualityDropdown.SetValueWithoutNotify(GraphicsUserSettings.PresetIndex);
+            qualityDropdown.RefreshShownValue();
+        }
+
+        if (effectsQualityDropdown != null)
+        {
+            effectsQualityDropdown.SetValueWithoutNotify(
+                ScreenPostProcessSettings.QualityIndex);
+            effectsQualityDropdown.RefreshShownValue();
+        }
+    }
+
+    /// <summary>按节点名获取主菜单设置中的 TMP 下拉框。</summary>
+    private static TMP_Dropdown GetMainMenuSettingsDropdown(
+        BasePanel panel,
+        string dropdownName)
+    {
+        Transform dropdownTransform = panel == null
+            ? null
+            : FindChildRecursive(panel.transform, dropdownName);
+        return dropdownTransform == null
+            ? null
+            : dropdownTransform.GetComponent<TMP_Dropdown>();
+    }
+
+    #endregion
 
     #region 主菜单语言设置
 
@@ -727,12 +868,18 @@ public partial class GameManager
         return dropdownTransform?.GetComponent<TMP_Dropdown>();
     }
 
-    /// <summary>更新设置面板底部的语言状态文字。</summary>
-    private static void SetMainMenuSettingsLanguageStatus(BasePanel panel, string status)
+    /// <summary>更新设置面板底部的状态文字。</summary>
+    private static void SetMainMenuSettingsStatus(BasePanel panel, string status)
     {
         TextMeshProUGUI statusText = panel?.GetText(MainMenuSettingsLanguageStatusTextKey);
         if (statusText != null)
             statusText.text = status;
+    }
+
+    /// <summary>兼容语言设置调用的状态文字入口。</summary>
+    private static void SetMainMenuSettingsLanguageStatus(BasePanel panel, string status)
+    {
+        SetMainMenuSettingsStatus(panel, status);
     }
 
     #endregion
@@ -890,7 +1037,8 @@ public partial class GameManager
             ReadyPlanetData,
             ReadyTimeData,
             pendingNewWorldDifficulty,
-            pendingCustomDifficultyRules);
+            pendingCustomDifficultyRules,
+            GameRes.ExistingInstance?.TextLibraries);
         if (!request.TryValidate(out string validationError))
         {
             Debug.LogWarning($"[GameManager] 新世界参数无效：{validationError}");

@@ -111,16 +111,16 @@ public static class NewGamePrefabBuilder
 
     private static void BuildHeader(Transform card, TMP_FontAsset font)
     {
-        TMP_Text title = CreateText("新世界标题", card, "创建新世界", font, 42f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(title.rectTransform, new Vector2(42f, -38f), new Vector2(700f, 58f), new Vector2(0f, 1f));
+        TMP_Text title = CreateText("新世界标题", card, "创建新世界", font, 48f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(title.rectTransform, new Vector2(42f, -34f), new Vector2(700f, 68f), new Vector2(0f, 1f));
 
-        CreateButton(card, font, GameManager.NewGameBackButtonKey, "返回主界面", new Vector2(-42f, -42f), new Vector2(170f, 52f), InkSoft, 17f, new Vector2(1f, 1f));
+        CreateButton(card, font, GameManager.NewGameBackButtonKey, "返回主界面", new Vector2(-42f, -28f), new Vector2(210f, 72f), InkSoft, 22f, new Vector2(1f, 1f));
 
         Image divider = CreateImage("新世界标题分隔线", card, new Color(0.55f, 0.64f, 0.65f, 0.18f));
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
         divider.rectTransform.anchorMax = new Vector2(1f, 1f);
         divider.rectTransform.pivot = new Vector2(0.5f, 1f);
-        divider.rectTransform.anchoredPosition = new Vector2(0f, -112f);
+        divider.rectTransform.anchoredPosition = new Vector2(0f, -126f);
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
     }
@@ -128,20 +128,20 @@ public static class NewGamePrefabBuilder
     private static void BuildIdentity(Transform card, TMP_FontAsset font)
     {
         Image panel = CreatePanelCard("身份与存档区", card);
-        SetRect(panel.rectTransform, new Vector2(42f, -138f), new Vector2(620f, 520f), new Vector2(0f, 1f));
+        SetRect(panel.rectTransform, new Vector2(42f, -150f), new Vector2(620f, 520f), new Vector2(0f, 1f));
 
         CreateStepBadge(panel.transform, font, "STEP 01", new Vector2(24f, -22f));
-        TMP_Text heading = CreateText("身份与存档标题", panel.transform, "身份与存档", font, 23f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(heading.rectTransform, new Vector2(24f, -58f), new Vector2(320f, 34f), new Vector2(0f, 1f));
+        TMP_Text heading = CreateText("身份与存档标题", panel.transform, "身份与存档", font, 28f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(heading.rectTransform, new Vector2(24f, -62f), new Vector2(320f, 40f), new Vector2(0f, 1f));
 
-        CreateLabel(panel.transform, font, "玩家名称标签", "玩家名称", "可留空，自动生成带前缀的名称", new Vector2(24f, -108f), 572f);
-        CreateInput(panel.transform, font, GameManager.NewGamePlayerInputKey, "可选，例如：旅人", string.Empty, new Vector2(24f, -152f), new Vector2(572f, 64f), TMP_InputField.ContentType.Standard);
+        CreateLabel(panel.transform, font, "玩家名称标签", "玩家名称", "可留空，自动生成带前缀的名称", new Vector2(24f, -112f), 572f);
+        CreateInput(panel.transform, font, GameManager.NewGamePlayerInputKey, "可选，例如：旅人", string.Empty, new Vector2(24f, -150f), new Vector2(572f, 84f), TMP_InputField.ContentType.Standard);
 
-        CreateLabel(panel.transform, font, "存档名称标签", "存档名称", "可留空，自动生成带前缀的名称", new Vector2(24f, -244f), 572f);
-        CreateInput(panel.transform, font, GameManager.NewGameSaveInputKey, "可选，例如：篝火以北", string.Empty, new Vector2(24f, -288f), new Vector2(572f, 64f), TMP_InputField.ContentType.Standard);
+        CreateLabel(panel.transform, font, "存档名称标签", "存档名称", "可留空，自动生成带前缀的名称", new Vector2(24f, -258f), 572f);
+        CreateInput(panel.transform, font, GameManager.NewGameSaveInputKey, "可选，例如：篝火以北", string.Empty, new Vector2(24f, -296f), new Vector2(572f, 84f), TMP_InputField.ContentType.Standard);
 
         Image note = CreateImage("存档命名提示底板", panel.transform, new Color(0.035f, 0.06f, 0.075f, 0.98f));
-        SetRect(note.rectTransform, new Vector2(24f, -380f), new Vector2(572f, 62f), new Vector2(0f, 1f));
+        SetRect(note.rectTransform, new Vector2(24f, -406f), new Vector2(572f, 82f), new Vector2(0f, 1f));
         Image noteAccent = CreateImage("存档命名提示强调线", note.transform, Teal);
         noteAccent.rectTransform.anchorMin = new Vector2(0f, 0f);
         noteAccent.rectTransform.anchorMax = new Vector2(0f, 1f);
@@ -150,26 +150,26 @@ public static class NewGamePrefabBuilder
         noteAccent.rectTransform.sizeDelta = new Vector2(4f, 0f);
         noteAccent.raycastTarget = false;
 
-        TMP_Text noteText = CreateText("存档命名提示", note.transform, "两个名称都可留空；系统会自动填写 Player_ 和 World_ 前缀的随机名称。", font, 14f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        TMP_Text noteText = CreateText("存档命名提示", note.transform, "两个名称都可留空；系统会自动填写 Player_ 和 World_ 前缀的随机名称。", font, 18f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
         Stretch(noteText.rectTransform, 18f, 12f, 8f, 8f);
     }
 
     private static void BuildWorldSettings(Transform card, TMP_FontAsset font)
     {
         Image panel = CreatePanelCard("世界参数区", card);
-        SetRect(panel.rectTransform, new Vector2(702f, -138f), new Vector2(656f, 520f), new Vector2(0f, 1f));
+        SetRect(panel.rectTransform, new Vector2(702f, -150f), new Vector2(656f, 520f), new Vector2(0f, 1f));
 
         CreateStepBadge(panel.transform, font, "STEP 02", new Vector2(24f, -22f));
-        TMP_Text heading = CreateText("世界参数标题", panel.transform, "世界参数", font, 23f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(heading.rectTransform, new Vector2(24f, -58f), new Vector2(320f, 34f), new Vector2(0f, 1f));
+        TMP_Text heading = CreateText("世界参数标题", panel.transform, "世界参数", font, 28f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(heading.rectTransform, new Vector2(24f, -62f), new Vector2(320f, 40f), new Vector2(0f, 1f));
 
         CreateCompactLabel(panel.transform, font, "星球半径标签", "星球半径", "越大，探索范围越广", new Vector2(24f, -108f), 286f);
         CreateCompactLabel(panel.transform, font, "噪声缩放标签", "世界坐标缩放", "越小舒展，越大密集", new Vector2(322f, -108f), 286f);
 
         string defaultRadius = PlanetData.DefaultRadius.ToString(CultureInfo.InvariantCulture);
-        CreateInput(panel.transform, font, GameManager.NewGameRadiusInputKey, defaultRadius, defaultRadius, new Vector2(24f, -164f), new Vector2(286f, 64f), TMP_InputField.ContentType.IntegerNumber);
+        CreateInput(panel.transform, font, GameManager.NewGameRadiusInputKey, defaultRadius, defaultRadius, new Vector2(24f, -166f), new Vector2(286f, 84f), TMP_InputField.ContentType.IntegerNumber);
         string defaultNoiseScale = PlanetData.DefaultNoiseScale.ToString("0.########", CultureInfo.InvariantCulture);
-        CreateInput(panel.transform, font, GameManager.NewGameNoiseInputKey, defaultNoiseScale, defaultNoiseScale, new Vector2(322f, -164f), new Vector2(286f, 64f), TMP_InputField.ContentType.DecimalNumber);
+        CreateInput(panel.transform, font, GameManager.NewGameNoiseInputKey, defaultNoiseScale, defaultNoiseScale, new Vector2(322f, -166f), new Vector2(286f, 84f), TMP_InputField.ContentType.DecimalNumber);
 
         Toggle topologyToggle = CreateToggle(
             panel.transform,
@@ -177,15 +177,15 @@ public static class NewGamePrefabBuilder
             GameManager.NewGameTopologyToggleKey,
             "有限循环世界",
             "越过上下左右边界后从对侧返回；关闭则使用原有无限世界。",
-            new Vector2(24f, -242f),
-            new Vector2(608f, 62f));
+            new Vector2(24f, -264f),
+            new Vector2(608f, 84f));
         topologyToggle.isOn = true;
 
         Image profile = CreateImage("世界生成概览", panel.transform, new Color(0.035f, 0.06f, 0.075f, 0.98f));
-        SetRect(profile.rectTransform, new Vector2(24f, -316f), new Vector2(608f, 130f), new Vector2(0f, 1f));
+        SetRect(profile.rectTransform, new Vector2(24f, -362f), new Vector2(608f, 126f), new Vector2(0f, 1f));
 
-        TMP_Text seedHint = CreateText("世界种子提示", profile.transform, "留空则随机 · 支持数字或文字", font, 12f, Muted, FontStyles.Normal, TextAlignmentOptions.Right);
-        SetRect(seedHint.rectTransform, new Vector2(-18f, -14f), new Vector2(300f, 22f), new Vector2(1f, 1f));
+        TMP_Text seedHint = CreateText("世界种子提示", profile.transform, "留空则随机 · 支持数字或文字", font, 16f, Muted, FontStyles.Normal, TextAlignmentOptions.Right);
+        SetRect(seedHint.rectTransform, new Vector2(-18f, -12f), new Vector2(340f, 26f), new Vector2(1f, 1f));
 
         CreateInput(
             profile.transform,
@@ -193,8 +193,8 @@ public static class NewGamePrefabBuilder
             GameManager.NewGameSeedInputKey,
             "留空自动生成随机种子",
             string.Empty,
-            new Vector2(18f, -48f),
-            new Vector2(572f, 60f),
+            new Vector2(18f, -46f),
+            new Vector2(572f, 70f),
             TMP_InputField.ContentType.Standard);
     }
 
@@ -208,9 +208,9 @@ public static class NewGamePrefabBuilder
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
 
-        CreateButton(card, font, GameManager.NewGameDifficultyButtonKey, "难度设置  ·  简单", new Vector2(42f, 22f), new Vector2(238f, 66f), InkSoft, 17f, new Vector2(0f, 0f));
+        CreateButton(card, font, GameManager.NewGameDifficultyButtonKey, "难度设置  ·  简单", new Vector2(42f, 20f), new Vector2(300f, 80f), InkSoft, 22f, new Vector2(0f, 0f));
 
-        CreateButton(card, font, GameManager.NewGameStartButtonKey, "生成新世界", new Vector2(-42f, 22f), new Vector2(250f, 66f), new Color(0.70f, 0.36f, 0.16f, 1f), 21f, new Vector2(1f, 0f));
+        CreateButton(card, font, GameManager.NewGameStartButtonKey, "生成新世界", new Vector2(-42f, 20f), new Vector2(280f, 80f), new Color(0.70f, 0.36f, 0.16f, 1f), 25f, new Vector2(1f, 0f));
     }
 
     private static void BuildDifficultyPanel(Transform root, TMP_FontAsset font)
@@ -219,54 +219,54 @@ public static class NewGamePrefabBuilder
         Stretch(overlay.rectTransform);
 
         Image dialog = CreatePanelCard("难度设置窗口", overlay.transform);
-        SetRect(dialog.rectTransform, Vector2.zero, new Vector2(1120f, 650f), new Vector2(0.5f, 0.5f));
+        SetRect(dialog.rectTransform, Vector2.zero, new Vector2(1320f, 720f), new Vector2(0.5f, 0.5f));
 
-        TMP_Text eyebrow = CreateText("难度设置眉题", dialog.transform, "DIFFICULTY  /  沙盒规则", font, 14f, Amber, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(eyebrow.rectTransform, new Vector2(30f, -24f), new Vector2(500f, 24f), new Vector2(0f, 1f));
+        TMP_Text eyebrow = CreateText("难度设置眉题", dialog.transform, "DIFFICULTY  /  沙盒规则", font, 17f, Amber, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(eyebrow.rectTransform, new Vector2(40f, -22f), new Vector2(540f, 28f), new Vector2(0f, 1f));
         eyebrow.characterSpacing = 2f;
 
-        TMP_Text title = CreateText("难度设置标题", dialog.transform, "选择官方预设，或创建自己的规则", font, 30f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(title.rectTransform, new Vector2(30f, -50f), new Vector2(760f, 42f), new Vector2(0f, 1f));
+        TMP_Text title = CreateText("难度设置标题", dialog.transform, "选择官方预设，或创建自己的规则", font, 36f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(title.rectTransform, new Vector2(40f, -52f), new Vector2(860f, 50f), new Vector2(0f, 1f));
 
-        CreateButton(dialog.transform, font, GameManager.NewGameDifficultyCloseButtonKey, "关闭", new Vector2(-30f, -28f), new Vector2(112f, 46f), InkSoft, 16f, new Vector2(1f, 1f));
+        CreateButton(dialog.transform, font, GameManager.NewGameDifficultyCloseButtonKey, "关闭", new Vector2(-40f, -24f), new Vector2(140f, 64f), InkSoft, 21f, new Vector2(1f, 1f));
 
         Image divider = CreateImage("难度标题分隔线", dialog.transform, new Color(0.55f, 0.64f, 0.65f, 0.18f));
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
         divider.rectTransform.anchorMax = new Vector2(1f, 1f);
         divider.rectTransform.pivot = new Vector2(0.5f, 1f);
-        divider.rectTransform.anchoredPosition = new Vector2(0f, -104f);
+        divider.rectTransform.anchoredPosition = new Vector2(0f, -120f);
         divider.rectTransform.sizeDelta = new Vector2(-60f, 1f);
         divider.raycastTarget = false;
 
-        CreateButton(dialog.transform, font, GameManager.NewGameDifficultyOfficialTabKey, "官方预设", new Vector2(30f, -126f), new Vector2(190f, 46f), Amber, 16f, new Vector2(0f, 1f));
-        CreateButton(dialog.transform, font, GameManager.NewGameDifficultyCustomTabKey, "自定义", new Vector2(232f, -126f), new Vector2(190f, 46f), InkSoft, 16f, new Vector2(0f, 1f));
+        CreateButton(dialog.transform, font, GameManager.NewGameDifficultyOfficialTabKey, "官方预设", new Vector2(40f, -140f), new Vector2(220f, 60f), Amber, 20f, new Vector2(0f, 1f));
+        CreateButton(dialog.transform, font, GameManager.NewGameDifficultyCustomTabKey, "自定义", new Vector2(276f, -140f), new Vector2(220f, 60f), InkSoft, 20f, new Vector2(0f, 1f));
 
         BuildOfficialDifficultyPage(dialog.transform, font);
         BuildCustomDifficultyPage(dialog.transform, font);
         BuildDifficultyDetails(dialog.transform, font);
 
-        TMP_Text note = CreateText("难度存档提示", dialog.transform, "难度属于当前世界存档；进入游戏后可在设置面板中切换官方预设。", font, 13f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(note.rectTransform, new Vector2(30f, 24f), new Vector2(720f, 28f), new Vector2(0f, 0f));
+        TMP_Text note = CreateText("难度存档提示", dialog.transform, "难度属于当前世界存档；进入游戏后可在设置面板中切换官方预设。", font, 17f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(note.rectTransform, new Vector2(40f, 28f), new Vector2(840f, 34f), new Vector2(0f, 0f));
 
-        CreateButton(dialog.transform, font, GameManager.NewGameDifficultyConfirmButtonKey, "确认选择", new Vector2(-30f, 18f), new Vector2(190f, 52f), new Color(0.70f, 0.36f, 0.16f, 1f), 18f, new Vector2(1f, 0f));
+        CreateButton(dialog.transform, font, GameManager.NewGameDifficultyConfirmButtonKey, "确认选择", new Vector2(-40f, 22f), new Vector2(230f, 72f), new Color(0.70f, 0.36f, 0.16f, 1f), 23f, new Vector2(1f, 0f));
         overlay.gameObject.SetActive(false);
     }
 
     private static void BuildOfficialDifficultyPage(Transform dialog, TMP_FontAsset font)
     {
         Image page = CreateImage(GameManager.NewGameDifficultyOfficialPageKey, dialog, Surface);
-        SetRect(page.rectTransform, new Vector2(30f, -188f), new Vector2(392f, 372f), new Vector2(0f, 1f));
+        SetRect(page.rectTransform, new Vector2(40f, -216f), new Vector2(456f, 414f), new Vector2(0f, 1f));
 
-        TMP_Text heading = CreateText("官方预设标题", page.transform, "官方预设", font, 19f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(heading.rectTransform, new Vector2(18f, -16f), new Vector2(340f, 28f), new Vector2(0f, 1f));
+        TMP_Text heading = CreateText("官方预设标题", page.transform, "官方预设", font, 24f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(heading.rectTransform, new Vector2(20f, -16f), new Vector2(400f, 34f), new Vector2(0f, 1f));
 
-        TMP_Text caption = CreateText("官方预设说明", page.transform, "预设会持续扩充，并保持规则组合清晰。", font, 12.5f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(caption.rectTransform, new Vector2(18f, -46f), new Vector2(348f, 24f), new Vector2(0f, 1f));
+        TMP_Text caption = CreateText("官方预设说明", page.transform, "预设会持续扩充，并保持规则组合清晰。", font, 16f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(caption.rectTransform, new Vector2(20f, -54f), new Vector2(410f, 28f), new Vector2(0f, 1f));
 
         GameObject scrollObject = new GameObject("官方预设列表", typeof(RectTransform), typeof(ScrollRect));
         scrollObject.layer = LayerMask.NameToLayer("UI");
         scrollObject.transform.SetParent(page.transform, false);
-        SetRect(scrollObject.GetComponent<RectTransform>(), new Vector2(18f, -84f), new Vector2(356f, 270f), new Vector2(0f, 1f));
+        SetRect(scrollObject.GetComponent<RectTransform>(), new Vector2(20f, -92f), new Vector2(416f, 300f), new Vector2(0f, 1f));
 
         GameObject viewportObject = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
         viewportObject.layer = LayerMask.NameToLayer("UI");
@@ -322,20 +322,20 @@ public static class NewGamePrefabBuilder
     private static void BuildCustomDifficultyPage(Transform dialog, TMP_FontAsset font)
     {
         Image page = CreateImage(GameManager.NewGameDifficultyCustomPageKey, dialog, Surface);
-        SetRect(page.rectTransform, new Vector2(30f, -188f), new Vector2(392f, 372f), new Vector2(0f, 1f));
+        SetRect(page.rectTransform, new Vector2(40f, -216f), new Vector2(456f, 414f), new Vector2(0f, 1f));
 
-        TMP_Text heading = CreateText("自定义规则标题", page.transform, "自定义规则", font, 19f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(heading.rectTransform, new Vector2(18f, -16f), new Vector2(340f, 28f), new Vector2(0f, 1f));
+        TMP_Text heading = CreateText("自定义规则标题", page.transform, "自定义规则", font, 24f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(heading.rectTransform, new Vector2(20f, -16f), new Vector2(400f, 34f), new Vector2(0f, 1f));
 
-        TMP_Text caption = CreateText("自定义规则说明", page.transform, "17 项规则均已接入实际游戏系统。", font, 12.5f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(caption.rectTransform, new Vector2(18f, -46f), new Vector2(348f, 24f), new Vector2(0f, 1f));
+        TMP_Text caption = CreateText("自定义规则说明", page.transform, "17 项规则均已接入实际游戏系统。", font, 16f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(caption.rectTransform, new Vector2(20f, -54f), new Vector2(410f, 28f), new Vector2(0f, 1f));
         caption.enableWordWrapping = true;
         caption.overflowMode = TextOverflowModes.Ellipsis;
 
-        CreateButton(page.transform, font, GameManager.NewGameDifficultyCombatCategoryKey, "战斗", new Vector2(18f, -78f), new Vector2(80f, 34f), Amber, 13f, new Vector2(0f, 1f));
-        CreateButton(page.transform, font, GameManager.NewGameDifficultySurvivalCategoryKey, "生存", new Vector2(106f, -78f), new Vector2(80f, 34f), InkSoft, 13f, new Vector2(0f, 1f));
-        CreateButton(page.transform, font, GameManager.NewGameDifficultyWorldCategoryKey, "世界", new Vector2(194f, -78f), new Vector2(80f, 34f), InkSoft, 13f, new Vector2(0f, 1f));
-        CreateButton(page.transform, font, GameManager.NewGameDifficultyProductionCategoryKey, "生产", new Vector2(282f, -78f), new Vector2(80f, 34f), InkSoft, 13f, new Vector2(0f, 1f));
+        CreateButton(page.transform, font, GameManager.NewGameDifficultyCombatCategoryKey, "战斗", new Vector2(20f, -88f), new Vector2(98f, 46f), Amber, 16f, new Vector2(0f, 1f));
+        CreateButton(page.transform, font, GameManager.NewGameDifficultySurvivalCategoryKey, "生存", new Vector2(126f, -88f), new Vector2(98f, 46f), InkSoft, 16f, new Vector2(0f, 1f));
+        CreateButton(page.transform, font, GameManager.NewGameDifficultyWorldCategoryKey, "世界", new Vector2(232f, -88f), new Vector2(98f, 46f), InkSoft, 16f, new Vector2(0f, 1f));
+        CreateButton(page.transform, font, GameManager.NewGameDifficultyProductionCategoryKey, "生产", new Vector2(338f, -88f), new Vector2(98f, 46f), InkSoft, 16f, new Vector2(0f, 1f));
 
         BuildCustomCombatPage(page.transform, font);
         BuildCustomSurvivalPage(page.transform, font);
@@ -383,7 +383,7 @@ public static class NewGamePrefabBuilder
     private static Image CreateCustomCategoryPage(string name, Transform parent)
     {
         Image page = CreateImage(name, parent, new Color(0.035f, 0.06f, 0.075f, 0.98f));
-        SetRect(page.rectTransform, new Vector2(18f, -122f), new Vector2(356f, 230f), new Vector2(0f, 1f));
+        SetRect(page.rectTransform, new Vector2(20f, -146f), new Vector2(416f, 248f), new Vector2(0f, 1f));
         return page;
     }
 
@@ -398,20 +398,20 @@ public static class NewGamePrefabBuilder
         GameObject row = new GameObject(name + "_行", typeof(RectTransform));
         row.layer = LayerMask.NameToLayer("UI");
         row.transform.SetParent(parent, false);
-        SetRect(row.GetComponent<RectTransform>(), new Vector2(10f, -top), new Vector2(336f, 50f), new Vector2(0f, 1f));
+        SetRect(row.GetComponent<RectTransform>(), new Vector2(12f, -top), new Vector2(392f, 50f), new Vector2(0f, 1f));
 
-        TMP_Text titleText = CreateText(name + "_标题", row.transform, title, font, 13.5f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(titleText.rectTransform, new Vector2(0f, 0f), new Vector2(120f, 20f), new Vector2(0f, 1f));
-        TMP_Text descriptionText = CreateText(name + "_说明", row.transform, description, font, 10.5f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(descriptionText.rectTransform, new Vector2(0f, -19f), new Vector2(174f, 20f), new Vector2(0f, 1f));
+        TMP_Text titleText = CreateText(name + "_标题", row.transform, title, font, 16f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(titleText.rectTransform, new Vector2(0f, 0f), new Vector2(150f, 22f), new Vector2(0f, 1f));
+        TMP_Text descriptionText = CreateText(name + "_说明", row.transform, description, font, 13f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(descriptionText.rectTransform, new Vector2(0f, -22f), new Vector2(205f, 22f), new Vector2(0f, 1f));
 
-        TMP_Text valueText = CreateText(name + "_数值", row.transform, "100%", font, 13f, Amber, FontStyles.Bold, TextAlignmentOptions.Right);
+        TMP_Text valueText = CreateText(name + "_数值", row.transform, "100%", font, 16f, Amber, FontStyles.Bold, TextAlignmentOptions.Right);
         SetRect(valueText.rectTransform, new Vector2(-2f, 0f), new Vector2(62f, 20f), new Vector2(1f, 1f));
 
         GameObject sliderObject = new GameObject(name, typeof(RectTransform), typeof(Slider));
         sliderObject.layer = LayerMask.NameToLayer("UI");
         sliderObject.transform.SetParent(row.transform, false);
-        SetRect(sliderObject.GetComponent<RectTransform>(), new Vector2(-2f, -27f), new Vector2(154f, 18f), new Vector2(1f, 1f));
+        SetRect(sliderObject.GetComponent<RectTransform>(), new Vector2(-2f, -27f), new Vector2(180f, 22f), new Vector2(1f, 1f));
 
         Image background = CreateImage("Background", sliderObject.transform, InkSoft);
         Stretch(background.rectTransform, 0f, 0f, 6f, 6f);
@@ -453,7 +453,7 @@ public static class NewGamePrefabBuilder
         GameObject toggleObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Toggle));
         toggleObject.layer = LayerMask.NameToLayer("UI");
         toggleObject.transform.SetParent(parent, false);
-        SetRect(toggleObject.GetComponent<RectTransform>(), new Vector2(10f, -top), new Vector2(336f, 42f), new Vector2(0f, 1f));
+        SetRect(toggleObject.GetComponent<RectTransform>(), new Vector2(12f, -top), new Vector2(392f, 48f), new Vector2(0f, 1f));
 
         Image background = toggleObject.GetComponent<Image>();
         background.color = InkSoft;
@@ -462,8 +462,8 @@ public static class NewGamePrefabBuilder
         Image mark = CreateImage("勾选标记", box.transform, Amber);
         Stretch(mark.rectTransform, 5f, 5f, 5f, 5f);
 
-        TMP_Text label = CreateText(name + "_标题", toggleObject.transform, title, font, 13f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(label.rectTransform, new Vector2(44f, -8f), new Vector2(278f, 26f), new Vector2(0f, 1f));
+        TMP_Text label = CreateText(name + "_标题", toggleObject.transform, title, font, 16f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(label.rectTransform, new Vector2(48f, -8f), new Vector2(330f, 30f), new Vector2(0f, 1f));
 
         Toggle toggle = toggleObject.GetComponent<Toggle>();
         toggle.targetGraphic = box;
@@ -475,47 +475,47 @@ public static class NewGamePrefabBuilder
     private static void BuildDifficultyDetails(Transform dialog, TMP_FontAsset font)
     {
         Image details = CreateImage("难度详情区", dialog, new Color(0.035f, 0.06f, 0.075f, 0.98f));
-        SetRect(details.rectTransform, new Vector2(442f, -126f), new Vector2(648f, 434f), new Vector2(0f, 1f));
+        SetRect(details.rectTransform, new Vector2(516f, -140f), new Vector2(764f, 490f), new Vector2(0f, 1f));
 
-        TMP_Text eyebrow = CreateText("难度详情眉题", details.transform, "SELECTED PROFILE", font, 12f, Teal, FontStyles.Bold, TextAlignmentOptions.Left);
+        TMP_Text eyebrow = CreateText("难度详情眉题", details.transform, "SELECTED PROFILE", font, 16f, Teal, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(eyebrow.rectTransform, new Vector2(24f, -22f), new Vector2(420f, 22f), new Vector2(0f, 1f));
         eyebrow.characterSpacing = 2f;
 
-        TMP_Text title = CreateText(GameManager.NewGameDifficultyTitleTextKey, details.transform, "简单", font, 34f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(title.rectTransform, new Vector2(24f, -54f), new Vector2(580f, 48f), new Vector2(0f, 1f));
+        TMP_Text title = CreateText(GameManager.NewGameDifficultyTitleTextKey, details.transform, "简单", font, 40f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(title.rectTransform, new Vector2(24f, -58f), new Vector2(700f, 56f), new Vector2(0f, 1f));
 
-        TMP_Text description = CreateText(GameManager.NewGameDifficultyDescriptionTextKey, details.transform, "保持当前游戏配置。玩家死亡后不会掉落随身物品。", font, 16f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(description.rectTransform, new Vector2(24f, -118f), new Vector2(600f, 74f), new Vector2(0f, 1f));
+        TMP_Text description = CreateText(GameManager.NewGameDifficultyDescriptionTextKey, details.transform, "保持当前游戏配置。玩家死亡后不会掉落随身物品。", font, 20f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(description.rectTransform, new Vector2(24f, -126f), new Vector2(716f, 82f), new Vector2(0f, 1f));
         description.enableWordWrapping = true;
         description.overflowMode = TextOverflowModes.Ellipsis;
 
         Image ruleCard = CreateImage("难度规则卡片", details.transform, Surface);
-        SetRect(ruleCard.rectTransform, new Vector2(24f, -204f), new Vector2(600f, 166f), new Vector2(0f, 1f));
-        TMP_Text ruleLabel = CreateText("难度规则标签", ruleCard.transform, "当前已接入规则", font, 13f, Teal, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(ruleCard.rectTransform, new Vector2(24f, -220f), new Vector2(716f, 178f), new Vector2(0f, 1f));
+        TMP_Text ruleLabel = CreateText("难度规则标签", ruleCard.transform, "当前已接入规则", font, 17f, Teal, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(ruleLabel.rectTransform, new Vector2(16f, -14f), new Vector2(360f, 24f), new Vector2(0f, 1f));
-        TMP_Text rule = CreateText(GameManager.NewGameDifficultyRuleTextKey, ruleCard.transform, "战斗：玩家 100% / 生物伤害 100% / 生物生命 100%", font, 13.5f, Cream, FontStyles.Bold, TextAlignmentOptions.TopLeft);
-        SetRect(rule.rectTransform, new Vector2(16f, -46f), new Vector2(568f, 108f), new Vector2(0f, 1f));
+        TMP_Text rule = CreateText(GameManager.NewGameDifficultyRuleTextKey, ruleCard.transform, "战斗：玩家 100% / 生物伤害 100% / 生物生命 100%", font, 17f, Cream, FontStyles.Bold, TextAlignmentOptions.TopLeft);
+        SetRect(rule.rectTransform, new Vector2(16f, -50f), new Vector2(684f, 114f), new Vector2(0f, 1f));
         rule.enableWordWrapping = true;
         rule.overflowMode = TextOverflowModes.Ellipsis;
 
-        TMP_Text future = CreateText("难度未来规则提示", details.transform, "官方预设与自定义面板共享同一套存档规则，后续扩充时不需要玩家重新创建世界。", font, 13.5f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(future.rectTransform, new Vector2(24f, -388f), new Vector2(600f, 34f), new Vector2(0f, 1f));
+        TMP_Text future = CreateText("难度未来规则提示", details.transform, "官方预设与自定义面板共享同一套存档规则，后续扩充时不需要玩家重新创建世界。", font, 17f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(future.rectTransform, new Vector2(24f, -418f), new Vector2(716f, 48f), new Vector2(0f, 1f));
         future.enableWordWrapping = true;
         future.overflowMode = TextOverflowModes.Ellipsis;
     }
 
     private static void CreateDifficultyPresetButton(Transform parent, TMP_FontAsset font, string name, string title, string description)
     {
-        Button button = CreateButton(parent, font, name, string.Empty, Vector2.zero, new Vector2(356f, 100f), InkSoft, 16f, new Vector2(0f, 1f));
-        button.gameObject.AddComponent<LayoutElement>().preferredHeight = 100f;
+        Button button = CreateButton(parent, font, name, string.Empty, Vector2.zero, new Vector2(416f, 116f), InkSoft, 19f, new Vector2(0f, 1f));
+        button.gameObject.AddComponent<LayoutElement>().preferredHeight = 116f;
         TMP_Text generatedLabel = button.GetComponentInChildren<TMP_Text>();
         if (generatedLabel != null)
             generatedLabel.gameObject.SetActive(false);
 
-        TMP_Text titleText = CreateText(name + "_标题", button.transform, title, font, 21f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(titleText.rectTransform, new Vector2(16f, -14f), new Vector2(320f, 30f), new Vector2(0f, 1f));
-        TMP_Text descriptionText = CreateText(name + "_说明", button.transform, description, font, 13f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(descriptionText.rectTransform, new Vector2(16f, -50f), new Vector2(320f, 42f), new Vector2(0f, 1f));
+        TMP_Text titleText = CreateText(name + "_标题", button.transform, title, font, 24f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(titleText.rectTransform, new Vector2(18f, -14f), new Vector2(380f, 34f), new Vector2(0f, 1f));
+        TMP_Text descriptionText = CreateText(name + "_说明", button.transform, description, font, 16f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(descriptionText.rectTransform, new Vector2(18f, -54f), new Vector2(380f, 50f), new Vector2(0f, 1f));
         descriptionText.enableWordWrapping = true;
         descriptionText.overflowMode = TextOverflowModes.Ellipsis;
     }
@@ -542,10 +542,10 @@ public static class NewGamePrefabBuilder
         Image mark = CreateImage("勾选标记", box.transform, Amber);
         Stretch(mark.rectTransform, 6f, 6f, 6f, 6f);
 
-        TMP_Text titleText = CreateText(name + "_标题", toggleObject.transform, title, font, 16f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(titleText.rectTransform, new Vector2(58f, -8f), new Vector2(Mathf.Max(120f, size.x - 74f), 24f), new Vector2(0f, 1f));
-        TMP_Text descriptionText = CreateText(name + "_说明", toggleObject.transform, description, font, 12.5f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(descriptionText.rectTransform, new Vector2(58f, -34f), new Vector2(Mathf.Max(120f, size.x - 74f), Mathf.Max(22f, size.y - 36f)), new Vector2(0f, 1f));
+        TMP_Text titleText = CreateText(name + "_标题", toggleObject.transform, title, font, 20f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(titleText.rectTransform, new Vector2(62f, -10f), new Vector2(Mathf.Max(120f, size.x - 78f), 30f), new Vector2(0f, 1f));
+        TMP_Text descriptionText = CreateText(name + "_说明", toggleObject.transform, description, font, 16f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(descriptionText.rectTransform, new Vector2(62f, -42f), new Vector2(Mathf.Max(120f, size.x - 78f), Mathf.Max(28f, size.y - 44f)), new Vector2(0f, 1f));
         descriptionText.enableWordWrapping = true;
         descriptionText.overflowMode = TextOverflowModes.Ellipsis;
 
@@ -559,18 +559,18 @@ public static class NewGamePrefabBuilder
 
     private static void CreateLabel(Transform parent, TMP_FontAsset font, string name, string title, string subtitle, Vector2 position, float width)
     {
-        TMP_Text titleText = CreateText(name, parent, title, font, 17f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(titleText.rectTransform, position, new Vector2(width, 26f), new Vector2(0f, 1f));
-        TMP_Text subtitleText = CreateText(name + "_说明", parent, subtitle, font, 13f, Muted, FontStyles.Normal, TextAlignmentOptions.Right);
-        SetRect(subtitleText.rectTransform, position, new Vector2(width, 26f), new Vector2(0f, 1f));
+        TMP_Text titleText = CreateText(name, parent, title, font, 21f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(titleText.rectTransform, position, new Vector2(width, 30f), new Vector2(0f, 1f));
+        TMP_Text subtitleText = CreateText(name + "_说明", parent, subtitle, font, 16f, Muted, FontStyles.Normal, TextAlignmentOptions.Right);
+        SetRect(subtitleText.rectTransform, position, new Vector2(width, 30f), new Vector2(0f, 1f));
     }
 
     private static void CreateCompactLabel(Transform parent, TMP_FontAsset font, string name, string title, string subtitle, Vector2 position, float width)
     {
-        TMP_Text titleText = CreateText(name, parent, title, font, 16f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
-        SetRect(titleText.rectTransform, position, new Vector2(width, 24f), new Vector2(0f, 1f));
-        TMP_Text subtitleText = CreateText(name + "_说明", parent, subtitle, font, 12f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
-        SetRect(subtitleText.rectTransform, position + new Vector2(0f, -24f), new Vector2(width, 22f), new Vector2(0f, 1f));
+        TMP_Text titleText = CreateText(name, parent, title, font, 20f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        SetRect(titleText.rectTransform, position, new Vector2(width, 28f), new Vector2(0f, 1f));
+        TMP_Text subtitleText = CreateText(name + "_说明", parent, subtitle, font, 16f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetRect(subtitleText.rectTransform, position + new Vector2(0f, -28f), new Vector2(width, 26f), new Vector2(0f, 1f));
     }
 
     private static TMP_InputField CreateInput(Transform parent, TMP_FontAsset font, string name, string placeholderValue, string initialValue, Vector2 position, Vector2 size, TMP_InputField.ContentType contentType)
@@ -592,9 +592,9 @@ public static class NewGamePrefabBuilder
         RectTransform area = areaObject.GetComponent<RectTransform>();
         Stretch(area, 16f, 16f, 8f, 8f);
 
-        TextMeshProUGUI placeholder = (TextMeshProUGUI)CreateText("Placeholder", area, placeholderValue, font, 17f, new Color(0.53f, 0.59f, 0.60f, 0.82f), FontStyles.Normal, TextAlignmentOptions.MidlineLeft);
+        TextMeshProUGUI placeholder = (TextMeshProUGUI)CreateText("Placeholder", area, placeholderValue, font, 22f, new Color(0.53f, 0.59f, 0.60f, 0.82f), FontStyles.Normal, TextAlignmentOptions.MidlineLeft);
         Stretch(placeholder.rectTransform);
-        TextMeshProUGUI valueText = (TextMeshProUGUI)CreateText("Text", area, initialValue, font, 18f, Cream, FontStyles.Normal, TextAlignmentOptions.MidlineLeft);
+        TextMeshProUGUI valueText = (TextMeshProUGUI)CreateText("Text", area, initialValue, font, 23f, Cream, FontStyles.Normal, TextAlignmentOptions.MidlineLeft);
         Stretch(valueText.rectTransform);
 
         TMP_InputField input = inputObject.GetComponent<TMP_InputField>();
@@ -622,8 +622,8 @@ public static class NewGamePrefabBuilder
     private static void CreateStepBadge(Transform parent, TMP_FontAsset font, string value, Vector2 position)
     {
         Image badge = CreateImage(value + "_底板", parent, new Color(0.12f, 0.23f, 0.22f, 1f));
-        SetRect(badge.rectTransform, position, new Vector2(88f, 26f), new Vector2(0f, 1f));
-        TMP_Text text = CreateText(value + "_文字", badge.transform, value, font, 12f, Teal, FontStyles.Bold, TextAlignmentOptions.Center);
+        SetRect(badge.rectTransform, position, new Vector2(104f, 32f), new Vector2(0f, 1f));
+        TMP_Text text = CreateText(value + "_文字", badge.transform, value, font, 15f, Teal, FontStyles.Bold, TextAlignmentOptions.Center);
         Stretch(text.rectTransform);
         text.characterSpacing = 1f;
     }

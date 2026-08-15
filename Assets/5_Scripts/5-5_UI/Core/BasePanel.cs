@@ -91,6 +91,8 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     private bool gamepadNavigationPrepared;
     private bool closeOnGamepadCancel;
     private bool closeOnEscapeShortcut;
+    [SerializeField]
+    private bool blocksGameplayInput = true;
     private string preferredSelectableName;
     private GameObject previousSelectedObject;
 
@@ -110,6 +112,9 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// 当前面板是否已经接入手柄导航契约。
     /// </summary>
     public bool IsGamepadNavigationPrepared => gamepadNavigationPrepared;
+
+    /// <summary>当前打开面板是否应接管玩法触摸；导航准备与玩法输入隔离是两条独立契约。</summary>
+    public bool IsGameplayInputBlocking => blocksGameplayInput && isOpen && gameObject.activeInHierarchy;
 
     private void Awake()
     {
@@ -357,6 +362,16 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
             return;
 
         closeOnEscapeShortcut = enabled;
+        NotifyInteractionSurfaceChanged();
+    }
+
+    /// <summary>显式声明常驻 HUD 是否允许面板打开时继续操作世界；普通面板默认阻断玩法输入。</summary>
+    public void SetGameplayInputBlocking(bool shouldBlock)
+    {
+        if (blocksGameplayInput == shouldBlock)
+            return;
+
+        blocksGameplayInput = shouldBlock;
         NotifyInteractionSurfaceChanged();
     }
 
