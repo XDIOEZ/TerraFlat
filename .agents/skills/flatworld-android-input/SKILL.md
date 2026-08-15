@@ -16,16 +16,24 @@ description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系�
 ## 必须保持的不变量
 
 - 保持 `FlatWorldMobileDevice` 为独立 `InputDevice`，不得继承或伪装成 `Gamepad`，否则会误启用手柄焦点导航和手柄光标模式。
+- 仅选择手机控制方案时不要提前创建 `FlatWorldMobileDevice`；由首次触控写入按需创建，避免 Unity 域重载尝试恢复虚拟设备时产生布局重建警告。
 - 只编辑 `PlayerInputActions.inputactions` 作为 Action/Binding 真相；`PlayerInputActions.cs` 是生成文件，不要手工维护。
 - 保持攻击、交互、使用三条语义分流：手机攻击只产生 `AttackStarted`/`AttackEnded`；交互复用 `E`；使用复用 `RightClick`。不得让手机攻击回落到 `LeftClick`。
+- 手机 `RightClick` 使用事件来自 HUD 按钮，`GameController` 与快捷栏消费端都不能再用 `IsPointerOverUI()` 拦截；仅 Mobile 绕过，桌面右键仍保持 UI 遮挡保护。
 - 保持普通指向只更新朝向，松手后保留最后有效方向；攻击按下立即开始，未出死区时沿普通朝向，拖出死区后使用攻击方向，松开后恢复普通朝向。
 - 所有需要世界坐标的交互、放置、种植、锄地、工具和丢弃路径统一调用 `GameController.GetPointerScreenPosition()` 或 `GetMouseWorldPosition()`，不得直接新增 `Mouse.current`、`Input.mousePosition` 或 `Camera.ScreenToWorldPoint` 读取。
 - 每个摇杆和按住型按钮独立持有自己的 `pointerId`。不得使用单个全局触摸、`Input.GetTouch(0)` 或共享“当前手指”。
 - 在输入锁、模态面板、暂停、失焦、后台、控件禁用、方向/尺寸变化、玩家销毁时，同时释放触摸所有权、移动、攻击按钮和攻击语义；清理必须幂等。
 - 保持 `EventSystemGuard` 的 `UIPointerBehavior.AllPointersAsIs` 与逐触点 UI 绑定；不要将多点触控合并为单指。
 - 保持右侧普通指向层位于功能按钮和攻击摇杆之后，只有空白区域能取得普通指向所有权；不要用全屏透明层遮住按钮射线。
+- 手机控制根正常游戏时必须排在同级常驻 HUD 后方，让任务追踪等真实按钮优先接收射线；菜单抽屉展开时也属于临时交互层，必须把包含抽屉的控制根临时提到最上层，关闭抽屉或模态面板后必须恢复到底层。
+- 手机 HUD 的菜单/返回入口必须放在独立的常驻控制层，不能和移动、指向、攻击、交互、使用、奔跑一起放入玩法控制层；模态面板打开时菜单第一次点击应优先关闭最上层可取消面板，保持退出路径。
+- 左手移动摇杆的固定/浮动偏好统一由 `UIUserSettings.FloatingMoveJoystick` 持久化；切换模式必须先释放当前触点，浮动模式覆盖左半屏并在按下点出现，固定模式复用同一摇杆实例与底座坐标算法。
 - 正式手机视觉以 `UI_MobileControls.prefab` 为真相并挂到 `UIManager.SafeAreaRoot`；运行时只绑定行为和现有 HUD，不拼装另一套视觉。
-- 只为本地玩家在移动平台显示 HUD；编辑器必须经过显式模拟开关。不要让远程玩家或桌面默认实例化手机控制层。
+- 手机快捷栏锚点必须与玩法控制层同级，不能成为玩法层子节点；模态背包只隐藏摇杆和玩法按钮，快捷栏需保持可见并提升到面板之上参与拖放。
+- `UI_HotBar.prefab` 自带独立 Canvas；模态容器打开时仅调整手机 HUD 根节点兄弟顺序不足以保证快捷栏获得射线，必须临时启用快捷栏 Canvas 的 `overrideSorting` 并提升排序，关闭容器后恢复原始值。
+- 面板接管玩法输入必须独立于手柄导航资格：`BasePanel` 默认阻断玩法输入，快捷栏、手部库存和状态条等常驻 HUD 必须显式调用 `SetGameplayInputBlocking(false)`；不能因为某个面板未调用 `PrepareForGamepadNavigation` 就让手机摇杆继续生效。
+- 只为本地玩家在设置页手动选择 Mobile 控制方式时显示 HUD；真实触屏、键鼠或手柄输入不得自动切换控制方式。不要让远程玩家或未选择 Mobile 的实例创建手机控制层。
 - 保持键鼠、手柄与存档格式兼容；新增移动端行为不得修改桌面端原有合成语义。
 
 ## 跨系统边界

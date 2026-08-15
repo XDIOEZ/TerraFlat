@@ -20,6 +20,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 以 `BuildingRole` 区分 Summoner/PlacedBuilding，禁止用血量或位置推断。
 - 动态建筑保持 GameObject + Collider + `BuildingOccupancyRegistry`，不得写入地形 `TileData`。
 - 静态岩壁/结构墙才使用 Blocking Tile；Tile 栈只通过 `Data_TileMap` API 读写。
+- `BuildingShadow` 的 `sourceRenderer` 与 `sourceRoot` 必须来自同一对象层级；本体 prefab 可能没有 SpriteRenderer，此时只能用手持实例的 Sprite 和手持实例根节点配对，禁止跨对象计算局部偏移。
 - 占地算法或安装/拆除顺序变化时联动 `flatworld-navigation` 与 `flatworld-map`。
 
 ## 验证

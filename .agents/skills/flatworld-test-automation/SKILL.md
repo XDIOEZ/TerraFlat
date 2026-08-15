@@ -26,6 +26,9 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --che
 - 分类从领域 Skill 选择；`Smoke` 保持每领域关键检查，真实启动/入世/Chunk/退出只由 `Runtime.GoldenPath` 负责。
 - Actor JSON 静态覆盖在 `AI.Smoke`，MOD Actor DTO/Lua 外壳覆盖在 `Modding.Smoke`；真实加载覆盖在 `Runtime.GoldenPath`。
 - 历史 GBK 可先预览 `scripts/normalize_source_encoding.ps1`，确认后才 `-Apply`。
+- 通过 MCP 菜单触发的长耗时编译必须使用“菜单立即返回、编辑器稍后执行、单任务锁”的队列入口；不要在 `execute_menu_item` 调用栈内同步阻塞，否则 MCP 超时重发会造成重复编译和进度窗残留。完成状态从 Unity Console 读取。
+- 长耗时编译的防重复记录必须跨程序集域重载保留，并设置短期重复请求保护；不要在 `InitializeOnLoad` 恢复时同时清掉最近请求记录，否则 MCP 重连后重放菜单命令会再次启动编译。
+- `PlayerBuildInterface.CompilePlayerScripts` 增量重复运行时可能返回空 `assemblies`，即使输出目录仍有有效 DLL；Android 校验需同时检查返回集合与目标目录 DLL，二者都为空才判定没有产出。
 
 ## 失败与视觉
 
