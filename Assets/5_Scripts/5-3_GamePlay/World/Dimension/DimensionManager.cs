@@ -322,8 +322,12 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
         Vector3 sourcePosition = sourcePlayer.transform.position;
         GameController sourceController = sourcePlayer.GetComponentInChildren<GameController>(true);
+        Mover sourceMover = sourcePlayer.itemMods?.GetMod_ByID<Mover>(ModText.Mover);
+        TransitionState state = new TransitionState
+        {
+            PreserveRunState = sourceMover != null && sourceMover.IsRunning
+        };
         sourceController?.SetGameplayInputLocked(true);
-        TransitionState state = new TransitionState();
 
         // 必须等专属 Canvas 实际提交一帧后再保存、卸载场景，避免首帧穿帮。
         bool presentationWarningLogged = false;
@@ -380,7 +384,8 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
                 sourceAddress,
                 sourcePosition,
                 state.ExitNotified,
-                state.EnterNotified);
+                state.EnterNotified,
+                state.PreserveRunState);
             Exception recoveryFailure = null;
             while (true)
             {
@@ -492,6 +497,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         GameManager.Instance.CompleteDimensionTransitionLoading();
 
         targetPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(false);
+        RestorePlayerRunState(targetPlayer, state.PreserveRunState);
         ItemMgr.Instance.SavePlayer();
         SaveDataMgr.Instance.Save_And_WriteToDisk();
     }
@@ -500,6 +506,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
     {
         public bool ExitNotified;
         public bool EnterNotified;
+        public bool PreserveRunState;
     }
 
     private sealed class PortalTransitionContext
@@ -516,7 +523,8 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         WorldAddress sourceAddress,
         Vector3 sourcePosition,
         bool exitNotified,
-        bool enterNotified)
+        bool enterNotified,
+        bool preserveRunState)
     {
         if (playerData == null)
             yield break;
@@ -525,6 +533,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         if (!exitNotified)
         {
             currentPlayer?.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(false);
+            RestorePlayerRunState(currentPlayer, preserveRunState);
             yield break;
         }
 
@@ -563,8 +572,16 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
         recoveredPlayer.GetComponentInChildren<TileEffectReceiver>(true)?.RefreshCurrentTileEffects();
         recoveredPlayer.GetComponentInChildren<GameController>(true)?.SetGameplayInputLocked(false);
+        RestorePlayerRunState(recoveredPlayer, preserveRunState);
         ItemMgr.Instance.SavePlayer();
         SaveDataMgr.Instance.Save_And_WriteToDisk();
+    }
+
+    /// <summary>维度切换完成后恢复玩家的奔跑开关；恢复必须在输入解锁后执行。</summary>
+    private static void RestorePlayerRunState(Player player, bool shouldRun)
+    {
+        Mover mover = player?.itemMods?.GetMod_ByID<Mover>(ModText.Mover);
+        mover?.SetRunState(shouldRun);
     }
 
     private void OnPlayerEnteredWorld(Player player)

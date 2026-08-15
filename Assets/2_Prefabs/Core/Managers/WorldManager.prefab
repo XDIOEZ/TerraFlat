@@ -335,7 +335,7 @@ MonoBehaviour:
     OrbitClockwise: 0
     SelfRotateSpeed: 20
   ReadyTimeData:
-    CurrentTime: 600
+    CurrentTime: 360
     DayLength: 1440
     LightParams:
       serializedVersion: 2
@@ -350,7 +350,7 @@ MonoBehaviour:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.15
+        time: 0.1
         value: 0
         inSlope: 0
         outSlope: 0
@@ -359,7 +359,7 @@ MonoBehaviour:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.25
+        time: 0.2
         value: 1
         inSlope: 0
         outSlope: 0
@@ -377,7 +377,7 @@ MonoBehaviour:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.75
+        time: 0.8
         value: 1
         inSlope: 0
         outSlope: 0
@@ -386,7 +386,7 @@ MonoBehaviour:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.85
+        time: 0.9
         value: 0
         inSlope: 0
         outSlope: 0
