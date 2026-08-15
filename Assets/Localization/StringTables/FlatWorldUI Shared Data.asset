@@ -1807,6 +1807,46 @@ MonoBehaviour:
     m_Key: ui.text.F02041E4
     m_Metadata:
       m_Items: []
+  - m_Id: 2143638067785728
+    m_Key: ui.text.BFA4B5CD
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2164721491816448
+    m_Key: ui.text.1778BD0E
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2164721584091136
+    m_Key: ui.text.C0B7D88C
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2164721584091137
+    m_Key: ui.text.9E8464B0
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2164721781223424
+    m_Key: ui.text.0A7C8073
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2164721781223425
+    m_Key: ui.text.2078CC32
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2164721781223426
+    m_Key: ui.text.5442884B
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2188953449836544
+    m_Key: ui.text.ED187A23
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2188953508556800
+    m_Key: ui.text.DFE404F6
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2188953508556801
+    m_Key: ui.text.A6C415B9
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
