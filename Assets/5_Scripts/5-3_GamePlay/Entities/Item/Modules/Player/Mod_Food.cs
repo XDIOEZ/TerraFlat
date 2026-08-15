@@ -208,6 +208,9 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     private float _runtimeNutritionConsumeMultiplier = 1f;
 
     [NonSerialized]
+    private float _movementNutritionConsumeMultiplier = 1f;
+
+    [NonSerialized]
     private float _buffNutritionConsumeMultiplier = 1f;
 
     [NonSerialized]
@@ -218,6 +221,9 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         get => _runtimeNutritionConsumeMultiplier;
         set => _runtimeNutritionConsumeMultiplier = Mathf.Max(0f, value);
     }
+
+    /// <summary>移动动作提供的独立营养消耗倍率，不受 Buff 清理影响。</summary>
+    public float MovementNutritionConsumeMultiplier => _movementNutritionConsumeMultiplier;
 
     public float BuffNutritionConsumeMultiplier => _buffNutritionConsumeMultiplier;
     public float BuffWaterConsumeMultiplier => _buffWaterConsumeMultiplier;
@@ -239,6 +245,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         FoodModData ??= new ModData_FoodData();
         FoodModData.ApplyToFoodData();
         RuntimeNutritionConsumeMultiplier = 1f;
+        _movementNutritionConsumeMultiplier = 1f;
         _buffNutritionConsumeMultiplier = 1f;
         _buffWaterConsumeMultiplier = 1f;
         _waterDamageTickTimer = 0f;
@@ -295,6 +302,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     {
         EatingProgress = 0f;
         RuntimeNutritionConsumeMultiplier = 1f;
+        _movementNutritionConsumeMultiplier = 1f;
         _buffNutritionConsumeMultiplier = 1f;
         _buffWaterConsumeMultiplier = 1f;
         _waterDamageTickTimer = 0f;
@@ -306,6 +314,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     {
         EatingProgress = 0f;
         RuntimeNutritionConsumeMultiplier = 1f;
+        _movementNutritionConsumeMultiplier = 1f;
         _buffNutritionConsumeMultiplier = 1f;
         _buffWaterConsumeMultiplier = 1f;
         _waterDamageTickTimer = 0f;
@@ -387,6 +396,18 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     #endregion
 
     #region 营养管理
+    /// <summary>由移动饥饿动作设置当前倍率；不写入 Buff 列表，也不参与 Buff 清理。</summary>
+    public void SetMovementNutritionConsumeMultiplier(float multiplier)
+    {
+        if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier < 0f)
+        {
+            Debug.LogWarning($"[Mod_Food] 忽略无效移动营养消耗倍率：{multiplier}", this);
+            return;
+        }
+
+        _movementNutritionConsumeMultiplier = multiplier;
+    }
+
     public void MultiplyRuntimeNutritionConsumeSpeed(float multiplier)
     {
         if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier <= 0f)
@@ -418,7 +439,9 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
 
     public float ConsumeNutrition(float timeDelta)
     {
-        timeDelta *= RuntimeNutritionConsumeMultiplier * BuffNutritionConsumeMultiplier;
+        timeDelta *= RuntimeNutritionConsumeMultiplier *
+                     MovementNutritionConsumeMultiplier *
+                     BuffNutritionConsumeMultiplier;
 
         if (GameDifficultyService.IsPlayer(item))
             timeDelta *= GameDifficultyService.Current.PlayerSurvival.HungerDrainMultiplier;
@@ -662,6 +685,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         }
 
         panelUI.SetEscapeShortcutEnabled(false);
+        panelUI.SetGameplayInputBlocking(false);
 
         PanleInstance = panelUI.gameObject;
         DataUpdate -= RefreshUI;

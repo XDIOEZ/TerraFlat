@@ -73,7 +73,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 1,
@@ -261,7 +260,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 1,
@@ -497,7 +495,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 3,
@@ -687,7 +684,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 3,
@@ -877,7 +873,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 3,
@@ -1067,7 +1062,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 3,
@@ -1258,7 +1252,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 3,
@@ -1448,7 +1441,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 3,
@@ -1646,7 +1638,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 1,
@@ -1876,7 +1867,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 1,
@@ -2028,7 +2018,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 1,
@@ -2220,7 +2209,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 1,
@@ -2412,7 +2400,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 1,
@@ -2549,7 +2536,10 @@
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/FlintStrike.prefab",
       "shellPrefab": "FlintStrike",
       "gameName": "打火石",
-      "description": "用于生火的打火石。"
+      "description": "用于生火的打火石。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tools/Flint.png"
+      }
     }
   ]
 }

@@ -301,7 +301,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 2,
@@ -493,7 +492,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 2,
@@ -685,7 +683,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 2,
@@ -877,7 +874,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 2,
@@ -1006,7 +1002,11 @@
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/ChippedTool.prefab",
       "shellPrefab": "ChippedTool",
       "gameName": "打制石器",
-      "description": "由石料打制而成的简易工具。"
+      "description": "由石料打制而成的简易工具。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_98]",
+        "flipX": true
+      }
     },
     {
       "id": "Torch",
@@ -1014,6 +1014,9 @@
       "shellPrefab": "Torch",
       "gameName": "火把",
       "description": "可照亮周围环境的简易火把，由木棍和燃料制成。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tools/item_tool_torches.png[item_tool_torches_0]"
+      },
       "modules": {
         "damage": {
           "prefab": "Mod_Damage",
@@ -1024,7 +1027,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "Weakness": [
               {
                 "Tag": 1,
