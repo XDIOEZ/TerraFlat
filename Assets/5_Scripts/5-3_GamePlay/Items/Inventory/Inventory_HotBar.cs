@@ -59,6 +59,46 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
             Owner?.OnInventoryLeftClick(index);
         }
 
+        /// <summary>手机无手持物时轻触快捷栏选中，有手持物时按单件取放规则处理。</summary>
+        public override void OnTouchTap(int index)
+        {
+            if (Owner != null && Owner.IsMobileTouchSelectionActive() &&
+                Owner.RuntimeInventory != null && !Owner.RuntimeInventory.HasTouchHeldItem())
+            {
+                Owner.OnInventoryLeftClick(index);
+                return;
+            }
+
+            base.OnTouchTap(index);
+            Owner?.SyncCurrentHeldItemWithSlot();
+            Owner?.NotifyOwnerNetworkStateChanged();
+        }
+
+        /// <summary>手机长按空槽或同类槽时一次性放下手持整组，并同步当前快捷栏状态。</summary>
+        public override bool OnTouchLongPress(int index)
+        {
+            bool handled = base.OnTouchLongPress(index);
+            if (handled)
+            {
+                Owner?.SyncCurrentHeldItemWithSlot();
+                Owner?.NotifyOwnerNetworkStateChanged();
+            }
+
+            return handled;
+        }
+
+        /// <summary>桌面空手轻触快捷栏选中槽位；手持整组时沿用单件取放事务。</summary>
+        public override void OnDesktopTap(int index)
+        {
+            if (Owner?.RuntimeInventory != null && Owner.RuntimeInventory.HasTouchHeldItem())
+            {
+                base.OnDesktopTap(index);
+                return;
+            }
+
+            Owner?.OnInventoryLeftClick(index);
+        }
+
         public override void OnShiftQuickTransfer(int index)
         {
             if (TryShiftQuickTransfer(index))
@@ -401,6 +441,17 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
 #region 输入
 
+    /// <summary>仅在真实手机控制方案且没有模态容器时启用快捷栏轻触选中语义。</summary>
+    private bool IsMobileTouchSelectionActive()
+    {
+        if (_inputController == null || !_inputController.IsUsingMobile)
+            return false;
+
+        // 容器打开后快捷栏轻触必须进入库存交换路径，不能误切换当前手持实例。
+        UIManager manager = UIManager.ExistingInstance;
+        return manager == null || !manager.HasOpenGameplayInputBlockingPanel();
+    }
+
     private void BindInventoryController()
     {
         if (item == null)
@@ -499,7 +550,8 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
             return;
         }
 
-        if (IsPointerOverUI())
+        // 手机“使用”本身就是 UI 按钮，不能再被快捷栏的桌面指针遮挡检查拦截。
+        if ((_inputController == null || !_inputController.IsUsingMobile) && IsPointerOverUI())
             return;
 
         SyncCurrentHeldItemWithSlot();
@@ -654,7 +706,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
         if (faceMouse != null)
         {
-            faceMouse.targetRotationTransforms.Remove(CurentSelectItem.transform);
+            faceMouse.RemoveRotationTarget(CurentSelectItem.transform);
         }
 
         if (turnBody != null)
@@ -681,8 +733,13 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void ConfigureItemInstance(Item itemInstance, ItemData data, ItemSlot slot)
     {
+        // 快捷栏挂点是角色的最后一个表现节点，确保世界手持物绘制在角色其它模块之后。
+        if (spawnLocation != null)
+            spawnLocation.SetAsLastSibling();
+
         Transform tf = itemInstance.transform;
         tf.SetParent(spawnLocation, false);
+        tf.SetAsLastSibling();
         tf.localPosition = Vector3.zero;
 
         Vector3 rot = tf.localEulerAngles;
@@ -706,17 +763,9 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         CurrentSelectItemSlot = slot;
         currentObject = itemInstance.gameObject;
 
-        if (faceMouse != null && !faceMouse.targetRotationTransforms.Contains(tf))
-        {
-            faceMouse.targetRotationTransforms.Add(tf);
-        }
+        faceMouse?.AddRotationTarget(tf);
 
-        if (turnBody != null && !turnBody.controlledTransforms_Direction.Contains(tf))
-        {
-            turnBody.controlledTransforms_Direction.Add(tf);
-        }
-
-        turnBody?.UpdateAllTransformDirections();
+        // 手持物的 Y 转身与 Z 瞄准统一由 FocusPoint 合成，不能再交给 TurnBody 重复写旋转。
     }
 
 #endregion
@@ -863,7 +912,8 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         }
     }
 
-    private void NotifyOwnerNetworkStateChanged()
+    /// <summary>槽位交换后通知拥有者同步快捷栏运行时状态。</summary>
+    public void NotifyOwnerNetworkStateChanged()
     {
         if (item != null)
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);

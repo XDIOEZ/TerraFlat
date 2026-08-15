@@ -689,6 +689,7 @@ public static class ItemDefinitionMigrationTool
                     field.GetCustomAttribute<SerializeReference>() != null ||
                     typeof(ModuleData).IsAssignableFrom(field.FieldType) ||
                     typeof(UnityEngine.Object).IsAssignableFrom(field.FieldType) ||
+                    IsUnityObjectReferenceCollection(field.FieldType) ||
                     typeof(Delegate).IsAssignableFrom(field.FieldType) ||
                     typeof(UnityEventBase).IsAssignableFrom(field.FieldType) ||
                     field.FieldType.FullName?.Contains("UltEvent", StringComparison.Ordinal) == true)
@@ -872,6 +873,13 @@ public static class ItemDefinitionMigrationTool
                 return arguments[0];
         }
         return null;
+    }
+
+    /// <summary>Unity 资源引用集合由 Prefab 保留，JSON 迁移不应把它们导出为空数组。</summary>
+    private static bool IsUnityObjectReferenceCollection(Type declaredType)
+    {
+        Type elementType = GetEnumerableElementType(declaredType);
+        return elementType != null && typeof(UnityEngine.Object).IsAssignableFrom(elementType);
     }
 
     private static bool IsUnitySerializedField(FieldInfo field)

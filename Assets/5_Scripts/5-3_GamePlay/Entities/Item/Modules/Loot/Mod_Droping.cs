@@ -12,6 +12,8 @@ public class Mod_Droping : Module
 
     public Mod_BaseDroper.Drop drop;
     public Ex_ModData modData;
+    /// <summary>资源目录注册 Prefab 时使用的稳定掉落模块 ID，不依赖实例化后的 Awake。</summary>
+    public override string CanonicalModuleId => ModText.Drop;
     public Chunk LastChunk; // 上一帧 item 所处的 chunk
     private bool usesLegacyChunkOwnership;
 
@@ -23,7 +25,7 @@ public class Mod_Droping : Module
 
     public override void Awake()
     {
-         _Data.ID = ModText.Drop;
+         base.Awake();
     }
 
     public override void Load()

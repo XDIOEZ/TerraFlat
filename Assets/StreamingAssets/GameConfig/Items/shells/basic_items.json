@@ -4682,7 +4682,10 @@
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Stone.prefab",
       "shellPrefab": "Ore_Stone",
       "gameName": "石头矿石",
-      "description": "可用于制作和建造的石质材料。"
+      "description": "可用于制作和建造的石质材料。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_404.png"
+      }
     }
   ]
 }

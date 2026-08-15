@@ -215,6 +215,105 @@ public partial class Inventory_Data
         Debug.Log($"(物品不同)交换物品槽位:{index} 物品:{inputSlotHand.itemData.IDName}");
     }
 
+    #region 触屏单件交互
+
+    /// <summary>执行一次手机轻触的单件取放；同类物品可按当前交互方向取出或放入一件。</summary>
+    public bool TouchTapItem(
+        ItemSlot localSlot,
+        Inventory_Data handInventory,
+        ItemSlot handSlot,
+        bool preferPickupSameType = false)
+    {
+        if (localSlot == null || handInventory == null || handSlot == null ||
+            itemSlots == null || handInventory.itemSlots == null ||
+            !itemSlots.Contains(localSlot) || !handInventory.itemSlots.Contains(handSlot) ||
+            ReferenceEquals(localSlot, handSlot))
+            return false;
+
+        ItemData localData = localSlot.itemData;
+        ItemData handData = handSlot.itemData;
+
+        // 空手时从当前槽位取一件，不能把空槽当成可取来源。
+        if (handData == null)
+            return TransferItemQuantityTo(localSlot, handInventory, handSlot, 1);
+
+        // 空槽只能接收手上物品的一件。
+        if (localData == null)
+            return handInventory.TransferItemQuantityTo(handSlot, this, localSlot, 1);
+
+        // 同类槽按当前方向继续取出或放入一件。
+        if (localData.CanStackWith(handData))
+        {
+            if (preferPickupSameType)
+                return TransferItemQuantityTo(localSlot, handInventory, handSlot, 1);
+
+            return handInventory.TransferItemQuantityTo(handSlot, this, localSlot, 1);
+        }
+
+        // 两种不同物品按整槽交换，避免异类物品被错误合并。
+        return SwapItemSlotsTo(localSlot, handInventory, handSlot);
+    }
+
+    /// <summary>交换当前数据与另一个库存中的两个槽位，并通知双方库存监听器。</summary>
+    private bool SwapItemSlotsTo(ItemSlot localSlot, Inventory_Data targetInventory, ItemSlot targetSlot)
+    {
+        if (targetInventory == null || targetInventory.itemSlots == null ||
+            !targetInventory.itemSlots.Contains(targetSlot))
+            return false;
+
+        EnsureRuntimeEvents();
+        targetInventory.EnsureRuntimeEvents();
+
+        ItemData localData = localSlot.itemData;
+        ItemData targetData = targetSlot.itemData;
+
+        Event_OnBeforeDataChanged.Invoke(localSlot);
+        targetInventory.Event_OnBeforeDataChanged.Invoke(targetSlot);
+
+        localSlot.itemData = targetData;
+        targetSlot.itemData = localData;
+
+        localSlot.RefreshUI();
+        targetSlot.RefreshUI();
+        Event_RefreshUI.Invoke(localSlot.Index);
+        targetInventory.Event_RefreshUI.Invoke(targetSlot.Index);
+        Event_OnDataChanged.Invoke(localSlot);
+        targetInventory.Event_OnDataChanged.Invoke(targetSlot);
+        Event_OnDataChanged_TwoSlots.Invoke(localSlot, targetSlot);
+        targetInventory.Event_OnDataChanged_TwoSlots.Invoke(targetSlot, localSlot);
+        return true;
+    }
+
+    #endregion
+
+    #region 拖拽放置
+
+    /// <summary>将手持整组物品放入当前槽位：空槽放入、同类合并、异类交换；拖拽和长按整组放置共用。</summary>
+    public bool DropDraggedItem(ItemSlot localSlot, Inventory_Data handInventory, ItemSlot handSlot)
+    {
+        if (localSlot == null || handInventory == null || handSlot == null ||
+            itemSlots == null || handInventory.itemSlots == null ||
+            !itemSlots.Contains(localSlot) || !handInventory.itemSlots.Contains(handSlot) ||
+            ReferenceEquals(localSlot, handSlot))
+            return false;
+
+        ItemData handData = handSlot.itemData;
+        if (handData?.Stack == null)
+            return false;
+
+        ItemData localData = localSlot.itemData;
+        if (localData == null || localData.CanStackWith(handData))
+        {
+            int handAmount = Mathf.CeilToInt(handData.Stack.Amount);
+            return handInventory.TransferItemQuantityTo(handSlot, this, localSlot, handAmount);
+        }
+
+        // 拖到不同物品上时保持原有拖拽交换语义。
+        return SwapItemSlotsTo(localSlot, handInventory, handSlot);
+    }
+
+    #endregion
+
     public bool ChangeItemAmount(ItemSlot localSlot, ItemSlot inputSlotHand, int count)
     {
         if (inputSlotHand.itemData == null)

@@ -46,6 +46,16 @@ public class Inventory
     // 当前背包打开的物品上下文菜单；关闭背包时必须随背包一起回收。
     private BasePanel _activeContextMenuPanel;
 
+    // 轻触同类物品时记录当前是连续拿取还是连续放置，不引入独立状态机。
+    private enum TouchTapFlow
+    {
+        None,
+        Pickup,
+        PutDown
+    }
+
+    private TouchTapFlow _touchTapFlow;
+
     #endregion
 
     #region 生命周期
@@ -277,6 +287,7 @@ public class Inventory
         basePanel = UIManager.Instance.CreatePanelFromGameObject(panelPrefab).GetComponentInChildren<BasePanel>();
         ResolvePanelInputController();
         bool usesModalGameplayInputLock = UsesModalGameplayInputLock();
+        basePanel.SetGameplayInputBlocking(usesModalGameplayInputLock);
         // 快捷栏与手部库存属于常驻/内部 HUD，不进入模态焦点链，也不锁定玩家输入。
         if (usesModalGameplayInputLock)
         {
@@ -511,6 +522,10 @@ public class Inventory
             itemSlotUI.OnRightClick.Clear();
             itemSlotUI.OnShiftQuickTransfer.Clear();
             itemSlotUI.OnMouseDragBegin = null;
+            itemSlotUI.OnMouseDragDrop = null;
+            itemSlotUI.OnTouchTap = null;
+            itemSlotUI.OnTouchLongPress = null;
+            itemSlotUI.OnDesktopTap = null;
 
             itemSlotUI.OnLeftClick += OnLeftClick;
             itemSlotUI.OnGamepadSubmit += OnGamepadSubmit;
@@ -518,6 +533,10 @@ public class Inventory
             itemSlotUI.OnRightClick += OnRightClick;
             itemSlotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
             itemSlotUI.OnMouseDragBegin = OnMouseDragBegin;
+            itemSlotUI.OnMouseDragDrop = OnMouseDragDrop;
+            itemSlotUI.OnTouchTap = OnTouchTap;
+            itemSlotUI.OnTouchLongPress = OnTouchLongPress;
+            itemSlotUI.OnDesktopTap = OnDesktopTap;
 
             // 修复 Belong_Inventory 的逻辑，将其设置为当前 Inventory 实例
             if (Data.itemSlots[i].onSlotDataChanged != null)
@@ -575,6 +594,10 @@ public class Inventory
         slotUI.OnRightClick.Clear();
         slotUI.OnShiftQuickTransfer.Clear();
         slotUI.OnMouseDragBegin = null;
+        slotUI.OnMouseDragDrop = null;
+        slotUI.OnTouchTap = null;
+        slotUI.OnTouchLongPress = null;
+        slotUI.OnDesktopTap = null;
 
         slotUI.OnLeftClick += OnLeftClick;
         slotUI.OnGamepadSubmit += OnGamepadSubmit;
@@ -582,6 +605,10 @@ public class Inventory
         slotUI.OnRightClick += OnRightClick;
         slotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
         slotUI.OnMouseDragBegin = OnMouseDragBegin;
+        slotUI.OnMouseDragDrop = OnMouseDragDrop;
+        slotUI.OnTouchTap = OnTouchTap;
+        slotUI.OnTouchLongPress = OnTouchLongPress;
+        slotUI.OnDesktopTap = OnDesktopTap;
 
         slotUI.RefreshUI();
     }
@@ -785,6 +812,105 @@ public class Inventory
                 : SlotInteractionSource.KeyboardMouse);
     }
 
+    /// <summary>触屏轻触执行单件取放、同类追加或异类交换。</summary>
+    public virtual void OnTouchTap(int index)
+    {
+        if (!TryGetPlayerHandSlots(index, out Inventory handInventory, out ItemSlot localSlot, out ItemSlot handSlot))
+            return;
+
+        bool handWasEmpty = handSlot.itemData == null;
+        bool localHadItem = localSlot.itemData != null;
+        bool sameType = localHadItem && !handWasEmpty &&
+                        localSlot.itemData.CanStackWith(handSlot.itemData);
+        bool preferPickupSameType = _touchTapFlow == TouchTapFlow.Pickup && sameType;
+
+        // 手上物品放入带限制的目标槽位前，复用库存接收规则。
+        if (handSlot.itemData != null && !CanAcceptQuickTransfer(handSlot, localSlot))
+            return;
+
+        if (!Data.TouchTapItem(localSlot, handInventory.Data, handSlot, preferPickupSameType))
+            return;
+
+        RefreshUI(index);
+        handInventory.RefreshUI(handSlot.Index);
+
+        if (!HasHeldItem(handInventory))
+        {
+            _touchTapFlow = TouchTapFlow.None;
+        }
+        else if ((handWasEmpty && localHadItem) || preferPickupSameType)
+        {
+            // 空手拿起或在拿取方向点击同类槽后，继续点击可继续拿取。
+            _touchTapFlow = TouchTapFlow.Pickup;
+        }
+        else if (!localHadItem || sameType)
+        {
+            // 点击空槽或放置方向的同类槽后，继续点击可连续分发。
+            _touchTapFlow = TouchTapFlow.PutDown;
+        }
+        else
+        {
+            // 异类交换完成后重新等待下一次明确的取放方向。
+            _touchTapFlow = TouchTapFlow.None;
+        }
+    }
+
+    /// <summary>触屏长按空槽或同类槽时，把玩家手上整组物品一次性放入目标槽。</summary>
+    public virtual bool OnTouchLongPress(int index)
+    {
+        if (!TryGetPlayerHandSlots(index, out Inventory handInventory, out ItemSlot localSlot, out ItemSlot handSlot) ||
+            handSlot.itemData == null || !CanAcceptQuickTransfer(handSlot, localSlot))
+            return false;
+
+        // 长按只允许整组放入空槽或同类槽，异类槽继续交给物品菜单处理。
+        if (localSlot.itemData != null && !localSlot.itemData.CanStackWith(handSlot.itemData))
+            return false;
+
+        if (!Data.DropDraggedItem(localSlot, handInventory.Data, handSlot))
+            return false;
+
+        RefreshUI(index);
+        handInventory.RefreshUI(handSlot.Index);
+
+        if (this is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory)
+            hotBarInventory.SyncHeldItemImmediately();
+
+        _touchTapFlow = HasHeldItem(handInventory)
+            ? TouchTapFlow.PutDown
+            : TouchTapFlow.None;
+
+        return true;
+    }
+
+    /// <summary>桌面空手轻触不改变库存；拖拽后手上有整组物品时，轻触执行单件取放。</summary>
+    public virtual void OnDesktopTap(int index)
+    {
+        if (HasTouchHeldItem())
+            OnTouchTap(index);
+    }
+
+    /// <summary>判断当前库存是否存在可继续执行单件取放的手持物品。</summary>
+    public bool HasTouchHeldItem()
+    {
+        return HasHeldItem(GetPlayerHandInventory());
+    }
+
+    /// <summary>解析当前槽位、玩家手部库存和手部槽位。</summary>
+    private bool TryGetPlayerHandSlots(int index, out Inventory handInventory, out ItemSlot localSlot, out ItemSlot handSlot)
+    {
+        handInventory = GetPlayerHandInventory();
+        localSlot = null;
+        handSlot = null;
+
+        if (!IsValidQuickTransferTarget(handInventory) || Data == null || Data.itemSlots == null ||
+            index < 0 || index >= Data.itemSlots.Count || handInventory == this)
+            return false;
+
+        localSlot = Data.itemSlots[index];
+        handSlot = handInventory.Data.itemSlots[0];
+        return localSlot != null && handSlot != null;
+    }
+
     /// <summary>
     /// 鼠标拖拽必须固定使用玩家手上槽位，避免玩家行囊的普通点击规则把物品送入快捷栏。
     /// </summary>
@@ -802,7 +928,32 @@ public class Inventory
 
         DefaultTarget_Inventory = handInventory;
         ProcessSlotInteraction(index, SlotInteractionSource.MouseDrag);
-        return HasHeldItem(handInventory);
+        bool hasHeldItem = HasHeldItem(handInventory);
+        _touchTapFlow = hasHeldItem
+            ? TouchTapFlow.PutDown
+            : TouchTapFlow.None;
+        return hasHeldItem;
+    }
+
+    /// <summary>拖拽结束时把玩家手上整堆物品定向放入目标槽位。</summary>
+    public virtual void OnMouseDragDrop(int index)
+    {
+        if (!TryGetPlayerHandSlots(index, out Inventory handInventory, out ItemSlot localSlot, out ItemSlot handSlot) ||
+            handSlot.itemData == null || !CanAcceptQuickTransfer(handSlot, localSlot))
+            return;
+
+        if (!Data.DropDraggedItem(localSlot, handInventory.Data, handSlot))
+            return;
+
+        RefreshUI(index);
+        handInventory.RefreshUI(handSlot.Index);
+
+        if (this is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory)
+            hotBarInventory.SyncHeldItemImmediately();
+
+        _touchTapFlow = HasHeldItem(handInventory)
+            ? TouchTapFlow.PutDown
+            : TouchTapFlow.None;
     }
 
     /// <summary>

@@ -173,8 +173,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   BerryItemId: Berry
-  ProductionIntervalSeconds: 135
-  ProductionBatchSize: 3
+  ProductionIntervalSeconds: 405
+  ProductionBatchSize: 6
   MaxBerryCount: 12
   NaturalInitialBerryCountMin: 1
   NaturalInitialBerryCountMax: 2

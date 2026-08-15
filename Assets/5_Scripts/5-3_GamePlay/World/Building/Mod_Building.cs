@@ -1172,18 +1172,61 @@ public class Mod_Building : Module
         return worldPosition;
     }
 
-    private SpriteRenderer GetBuildingPreviewRenderer()
+    /// <summary>按同一层级返回预览图片和局部坐标根节点，避免跨对象计算出世界坐标偏移。</summary>
+    private bool TryGetBuildingPreviewRenderer(
+        out SpriteRenderer sourceRenderer,
+        out Transform sourceRoot)
     {
+        sourceRenderer = null;
+        sourceRoot = null;
+
         if (TryGetBuildingBodyPrefab(out GameObject buildingPrefab))
         {
             Item buildingItem = buildingPrefab.GetComponent<Item>();
             SpriteRenderer bodyRenderer = buildingItem != null ? buildingItem.Sprite : null;
-            bodyRenderer ??= buildingPrefab.GetComponentInChildren<SpriteRenderer>(true);
-            if (bodyRenderer != null)
-                return bodyRenderer;
+            if (bodyRenderer != null && bodyRenderer.sprite != null)
+            {
+                sourceRenderer = bodyRenderer;
+                sourceRoot = buildingPrefab.transform;
+                return true;
+            }
+
+            SpriteRenderer[] bodyRenderers = buildingPrefab.GetComponentsInChildren<SpriteRenderer>(true);
+            for (int i = 0; i < bodyRenderers.Length; i++)
+            {
+                SpriteRenderer candidate = bodyRenderers[i];
+                if (candidate == null || candidate.sprite == null)
+                    continue;
+
+                sourceRenderer = candidate;
+                sourceRoot = buildingPrefab.transform;
+                return true;
+            }
         }
 
-        return item.Sprite != null ? item.Sprite : item.GetComponentInChildren<SpriteRenderer>(true);
+        if (item == null)
+            return false;
+
+        if (item.Sprite != null && item.Sprite.sprite != null)
+        {
+            sourceRenderer = item.Sprite;
+            sourceRoot = item.transform;
+            return true;
+        }
+
+        SpriteRenderer[] itemRenderers = item.GetComponentsInChildren<SpriteRenderer>(true);
+        for (int i = 0; i < itemRenderers.Length; i++)
+        {
+            SpriteRenderer candidate = itemRenderers[i];
+            if (candidate == null || candidate.sprite == null)
+                continue;
+
+            sourceRenderer = candidate;
+            sourceRoot = item.transform;
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>返回真实放置预览使用的图片、局部坐标根节点与占地范围。</summary>
@@ -1192,10 +1235,7 @@ public class Mod_Building : Module
         out Transform sourceRoot,
         out Bounds footprint)
     {
-        sourceRenderer = GetBuildingPreviewRenderer();
-        sourceRoot = TryGetBuildingBodyPrefab(out GameObject buildingPrefab)
-            ? buildingPrefab.transform
-            : item != null ? item.transform : null;
+        TryGetBuildingPreviewRenderer(out sourceRenderer, out sourceRoot);
         footprint = GetBuildingPreviewBounds();
         return sourceRenderer != null && sourceRoot != null;
     }

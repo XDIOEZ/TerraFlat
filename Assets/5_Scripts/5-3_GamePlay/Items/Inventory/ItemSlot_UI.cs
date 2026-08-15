@@ -51,8 +51,20 @@ public class ItemSlot_UI : MonoBehaviour,
     [Tooltip("Shift+左键快速转移事件")]
     public UltEvent<int> OnShiftQuickTransfer = new UltEvent<int>();
 
-    /// <summary>鼠标拖拽开始时，把源物品明确转入鼠标携带槽。</summary>
+    /// <summary>鼠标或触屏拖拽开始时，把源物品明确转入玩家手上槽位。</summary>
     public System.Func<int, bool> OnMouseDragBegin { get; set; }
+
+    /// <summary>鼠标或触屏拖拽结束时，在目标槽执行定向放置事务。</summary>
+    public System.Action<int> OnMouseDragDrop { get; set; }
+
+    /// <summary>触屏轻触入口，允许快捷栏将轻触与物品交换分开处理。</summary>
+    public System.Action<int> OnTouchTap { get; set; }
+
+    /// <summary>触屏长按入口；返回 true 表示已完成整组放置并阻止物品菜单。</summary>
+    public System.Func<int, bool> OnTouchLongPress { get; set; }
+
+    /// <summary>桌面轻触入口；空手时保持选中语义，拖拽后手持整组时用于单件分发。</summary>
+    public System.Action<int> OnDesktopTap { get; set; }
 
     private GameObject currentMenuInstance;
 
@@ -70,6 +82,7 @@ public class ItemSlot_UI : MonoBehaviour,
     [Header("鼠标拖拽")]
     private bool mousePressStartedWithItem;
     private bool mouseDragActive;
+    private bool suppressDesktopTapAfterDrag;
     private RectTransform mouseDragGhost;
     private ItemSlot_UI mouseDragHoverSlot;
     private bool dragHoverOutlineEnabled;
@@ -88,6 +101,9 @@ public class ItemSlot_UI : MonoBehaviour,
     private Vector2 touchPressPosition;
     private bool touchMovedTooFar;
     private bool touchLongPressTriggered;
+    private bool touchPressStartedWithItem;
+    private bool touchItemDragActive;
+    private bool touchScrollDragActive;
     private Coroutine touchLongPressCoroutine;
 
     /// <summary>
@@ -116,6 +132,10 @@ public class ItemSlot_UI : MonoBehaviour,
         OnRightClick.Clear();
         OnShiftQuickTransfer.Clear();
         OnMouseDragBegin = null;
+        OnMouseDragDrop = null;
+        OnTouchTap = null;
+        OnTouchLongPress = null;
+        OnDesktopTap = null;
         _OnScroll.Clear();
         if (selectionOutlineCreated && selectionOutline != null)
             Destroy(selectionOutline);
@@ -159,7 +179,10 @@ public class ItemSlot_UI : MonoBehaviour,
     {
         if (eventData.button == PointerEventData.InputButton.Left)
         {
-            HandleLeftClick();
+            if (IsTouchPointer(eventData))
+                HandleTouchTap();
+            else
+                HandleDesktopTap();
         }
         else if (eventData.button == PointerEventData.InputButton.Right)
         {
@@ -172,6 +195,33 @@ public class ItemSlot_UI : MonoBehaviour,
     private void HandleLeftClick()
     {
         OnLeftClick.Invoke(slotIndex);
+    }
+
+    private void HandleTouchTap()
+    {
+        // 手机轻触必须使用独立的单件事务入口，未绑定时也不能回退到整堆交换。
+        OnTouchTap?.Invoke(slotIndex);
+    }
+
+    private void HandleTouchLongPress()
+    {
+        if (OnTouchLongPress?.Invoke(slotIndex) == true)
+            return;
+
+        CreateRightClickUI();
+    }
+
+    private void HandleDesktopTap()
+    {
+        OnDesktopTap?.Invoke(slotIndex);
+    }
+
+    private void HandleMouseDragDrop()
+    {
+        if (OnMouseDragDrop != null)
+            OnMouseDragDrop.Invoke(slotIndex);
+        else
+            HandleLeftClick();
     }
 
     private void HandleRightClick()
@@ -223,6 +273,7 @@ public class ItemSlot_UI : MonoBehaviour,
             EventSystemGuard.SetGamepadMode(false);
             mousePressStartedWithItem = !IsItemSlotEmpty(GetSlotData());
             mouseDragActive = false;
+            suppressDesktopTapAfterDrag = false;
         }
 
         if (eventData.button == PointerEventData.InputButton.Left && IsShiftPressed())
@@ -242,6 +293,9 @@ public class ItemSlot_UI : MonoBehaviour,
             touchPressPosition = eventData.position;
             touchMovedTooFar = false;
             touchLongPressTriggered = false;
+            touchPressStartedWithItem = !IsItemSlotEmpty(GetSlotData());
+            touchItemDragActive = false;
+            touchScrollDragActive = false;
             touchLongPressCoroutine = StartCoroutine(WaitForTouchLongPress());
             return;
         }
@@ -288,15 +342,18 @@ public class ItemSlot_UI : MonoBehaviour,
             bool shouldTap = !touchMovedTooFar && !touchLongPressTriggered;
             CancelTouchPress();
             if (shouldTap)
-                HandleLeftClick();
+                HandleTouchTap();
         }
 
         if (eventData.button == PointerEventData.InputButton.Left && !IsTouchPointer(eventData) &&
             !mouseDragActive && !_isShiftQuickTransferDragging)
         {
-            // 短按只在抬起时提交一次，避免按下即交换导致拖拽和点击互相打架。
-            HandleLeftClick();
+            // 拖拽结束后的同一次抬起不能再次变成点击，否则会立刻分发一件回源槽位。
+            bool shouldHandleDesktopTap = !suppressDesktopTapAfterDrag;
             mousePressStartedWithItem = false;
+            suppressDesktopTapAfterDrag = false;
+            if (shouldHandleDesktopTap)
+                HandleDesktopTap();
             EventSystemGuard.SetGamepadMode(false);
         }
 
@@ -324,7 +381,11 @@ public class ItemSlot_UI : MonoBehaviour,
     public void OnInitializePotentialDrag(PointerEventData eventData)
     {
         if (IsTouchPointer(eventData))
-            FindParentScrollRect()?.OnInitializePotentialDrag(eventData);
+        {
+            eventData.useDragThreshold = true;
+            if (!touchPressStartedWithItem)
+                FindParentScrollRect()?.OnInitializePotentialDrag(eventData);
+        }
         else
             eventData.useDragThreshold = true;
     }
@@ -333,6 +394,26 @@ public class ItemSlot_UI : MonoBehaviour,
     {
         if (IsTouchPointer(eventData))
         {
+            touchMovedTooFar = true;
+            CancelTouchLongPress();
+            if (eventData.button == PointerEventData.InputButton.Left && touchPressStartedWithItem)
+            {
+                Sprite touchDraggedSprite = image != null ? image.sprite : null;
+                touchItemDragActive = OnMouseDragBegin?.Invoke(slotIndex) == true;
+                if (touchItemDragActive)
+                {
+                    CreateMouseDragGhost(touchDraggedSprite, eventData.position);
+                    UpdateMouseDragHover(eventData);
+                }
+                else
+                {
+                    touchPressStartedWithItem = false;
+                }
+
+                return;
+            }
+
+            touchScrollDragActive = true;
             FindParentScrollRect()?.OnBeginDrag(eventData);
             return;
         }
@@ -357,7 +438,15 @@ public class ItemSlot_UI : MonoBehaviour,
     {
         if (IsTouchPointer(eventData))
         {
-            FindParentScrollRect()?.OnDrag(eventData);
+            if (touchItemDragActive)
+            {
+                PositionMouseDragGhost(eventData.position);
+                UpdateMouseDragHover(eventData);
+            }
+            else if (touchScrollDragActive)
+            {
+                FindParentScrollRect()?.OnDrag(eventData);
+            }
             return;
         }
 
@@ -372,7 +461,24 @@ public class ItemSlot_UI : MonoBehaviour,
     {
         if (IsTouchPointer(eventData))
         {
-            FindParentScrollRect()?.OnEndDrag(eventData);
+            if (touchItemDragActive)
+            {
+                ItemSlot_UI touchTargetSlot = FindSlotUnderPointer(eventData);
+                if (touchTargetSlot != null && touchTargetSlot.isActiveAndEnabled)
+                    touchTargetSlot.HandleMouseDragDrop();
+                // 松手未命中槽位时不提交放下事务，整组物品继续留在玩家手上供后续单件分发。
+                touchItemDragActive = false;
+                touchPressStartedWithItem = false;
+                EndMouseDragVisual();
+                EventSystemGuard.SetGamepadMode(false);
+            }
+            else if (touchScrollDragActive)
+            {
+                FindParentScrollRect()?.OnEndDrag(eventData);
+            }
+
+            touchScrollDragActive = false;
+            CancelTouchPress();
             return;
         }
 
@@ -380,9 +486,12 @@ public class ItemSlot_UI : MonoBehaviour,
             return;
 
         ItemSlot_UI targetSlot = FindSlotUnderPointer(eventData);
-        (targetSlot != null && targetSlot.isActiveAndEnabled ? targetSlot : this).HandleLeftClick();
+        if (targetSlot != null && targetSlot.isActiveAndEnabled)
+            targetSlot.HandleMouseDragDrop();
+        // 松手未命中槽位时保留手上整组物品，不调用源槽位的放下逻辑。
         mousePressStartedWithItem = false;
         mouseDragActive = false;
+        suppressDesktopTapAfterDrag = true;
         EndMouseDragVisual();
         EventSystemGuard.SetGamepadMode(false);
     }
@@ -395,16 +504,22 @@ public class ItemSlot_UI : MonoBehaviour,
             yield break;
 
         touchLongPressTriggered = true;
-        CreateRightClickUI();
+        HandleTouchLongPress();
     }
 
     private void CancelTouchPress()
     {
+        CancelTouchLongPress();
+        touchPointerId = int.MinValue;
+        touchMovedTooFar = false;
+        touchPressStartedWithItem = false;
+    }
+
+    private void CancelTouchLongPress()
+    {
         if (touchLongPressCoroutine != null)
             StopCoroutine(touchLongPressCoroutine);
         touchLongPressCoroutine = null;
-        touchPointerId = int.MinValue;
-        touchMovedTooFar = false;
     }
 
     private static bool IsTouchPointer(PointerEventData eventData)

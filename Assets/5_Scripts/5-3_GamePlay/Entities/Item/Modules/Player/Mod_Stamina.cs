@@ -51,6 +51,9 @@ public partial class Mod_Stamina : Module
             BasePanel staminaPanel = UIManager.Instance.CreatePanelFromGameObject(Prefab_UI);
             if (staminaPanel != null)
             {
+                // 耐力条是常驻信息 HUD：不阻断玩法输入，并固定在其它面板下方。
+                staminaPanel.SetGameplayInputBlocking(false);
+                staminaPanel.transform.SetAsFirstSibling();
                 slider = staminaPanel.GetComponentInChildren<Slider>();
             }
         }

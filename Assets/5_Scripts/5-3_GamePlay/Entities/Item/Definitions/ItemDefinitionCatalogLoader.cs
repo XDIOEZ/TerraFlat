@@ -182,12 +182,10 @@ public static class ItemDefinitionCatalogLoader
         }
 
 #if UNITY_EDITOR
-        // Fast Mode 下内置 Prefab 直接读取当前 AssetDatabase，避免旧 Locator 进入 AssetDatabaseProvider。
+        // Fast Mode 下只读取已经导入的 Prefab。Play Mode 内强制重新导入会触发
+        // PrefabImporter 不一致警告，也会让资源目录初始化产生额外抖动。
         foreach (KeyValuePair<string, string> pair in shellAddresses)
         {
-            AssetDatabase.ImportAsset(
-                pair.Value,
-                ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
             GameObject shell = AssetDatabase.LoadAssetAtPath<GameObject>(pair.Value);
             Item shellItem = shell != null ? shell.GetComponent<Item>() : null;
             if (shellItem?.itemData == null)

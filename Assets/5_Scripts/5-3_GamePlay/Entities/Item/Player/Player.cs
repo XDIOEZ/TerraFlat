@@ -93,6 +93,26 @@ public class Player : Item
         transform.rotation = itemData.transform.rotation;
         transform.localScale = itemData.transform.scale;
         base.Load();
+        EnsureLowHealthPostProcessEffect();
+    }
+
+    #endregion
+
+    #region 玩家屏幕后处理
+
+    /// <summary>在玩家模块完成加载后绑定低血量表现，避免远程玩家重复接管本地相机。</summary>
+    private void EnsureLowHealthPostProcessEffect()
+    {
+        DamageReceiver damageReceiver = itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        if (damageReceiver == null)
+            return;
+
+        PlayerLowHealthPostProcessEffect effect =
+            GetComponent<PlayerLowHealthPostProcessEffect>();
+        if (effect == null)
+            effect = gameObject.AddComponent<PlayerLowHealthPostProcessEffect>();
+
+        effect.Bind(this, damageReceiver);
     }
 
     #endregion
