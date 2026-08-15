@@ -105,6 +105,9 @@ public sealed class PlayerCreationTemplateSO : ScriptableObject
         ApplyMovement(player.GetComponentInChildren<Mover>(true));
         ApplyFood(player.GetComponentInChildren<Mod_Food>(true));
         ApplyStamina(player.GetComponentInChildren<Mod_Stamina>(true));
+
+        ItemData templateData = player.Get_NewItemData();
+        player.Data.ModuleDataDic = templateData.ModuleDataDic;
     }
 
     #endregion

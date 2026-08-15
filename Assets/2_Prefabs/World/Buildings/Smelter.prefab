@@ -324,7 +324,7 @@ GameObject:
   - component: {fileID: 5720747661594404640}
   - component: {fileID: 4274464180475841882}
   m_Layer: 6
-  m_Name: Smelter
+  m_Name: "Smelter"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -377,7 +377,7 @@ MonoBehaviour:
     _PersistentCalls: []
   updateInterval: 0
   Data:
-    IDName: Smelter
+    IDName: "Smelter"
     GameName: Smelter
     Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
     Durability: 1
@@ -573,11 +573,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: Data.BuildingPrefabId
-      value: Smelter
+      value: "Smelter"
       objectReference: {fileID: 0}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: Data.SummonerPrefabId
-      value: Smelter_Summoner
+      value: "Smelter_Summoner"
       objectReference: {fileID: 0}
     - target: {fileID: 2296275565012368985, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: m_LocalPosition.x

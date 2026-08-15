@@ -109,6 +109,7 @@ public sealed class ModAuthoringWindow : EditorWindow
             throw new InvalidDataException("manifest 必须填写 id 和 version");
 
         HashSet<string> contentIds = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> playerTemplateIds = new(StringComparer.OrdinalIgnoreCase);
         foreach (string file in manifest.DefinitionFiles ?? Enumerable.Empty<string>())
         {
             JObject document = JObject.Parse(File.ReadAllText(ResolveInside(sourceRoot, file, true)));
@@ -122,7 +123,24 @@ public sealed class ModAuthoringWindow : EditorWindow
                     throw new InvalidDataException($"重复内容 ID：{id}");
                 itemCount++;
             }
-            messages.Add($"Def：{file}，物品 {itemCount} 个");
+
+            int playerTemplateCount = 0;
+            foreach (JToken template in document["playerCreationTemplates"] as JArray ?? new JArray())
+            {
+                string id = template.Value<string>("id")?.Trim();
+                if (string.IsNullOrWhiteSpace(id))
+                    throw new InvalidDataException($"{file} 中的玩家创建模板缺少 id");
+                if (id.Contains(":", StringComparison.Ordinal) &&
+                    !id.StartsWith(manifest.Id + ":", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException($"{file} 中的玩家创建模板 ID 必须使用 {manifest.Id}: 命名空间");
+
+                string normalizedId = id.Contains(":", StringComparison.Ordinal) ? id : $"{manifest.Id}:{id}";
+                if (!playerTemplateIds.Add(normalizedId))
+                    throw new InvalidDataException($"重复玩家创建模板 ID：{normalizedId}");
+                playerTemplateCount++;
+            }
+
+            messages.Add($"Def：{file}，物品 {itemCount} 个，玩家模板 {playerTemplateCount} 个");
         }
 
         foreach (string file in manifest.PatchFiles ?? Enumerable.Empty<string>())

@@ -48,6 +48,31 @@ public class SpawnerConfig : ScriptableObject
         [Tooltip("当前世界中该物种允许存活的最大数量；0 表示仅受生成组上限控制")]
         [MinValue(0)]
         public int SpeciesAliveLimit;
+
+        [LabelText("出生初始化")]
+        public SpawnerSpawnInitialization Initialization = new();
+    }
+
+    [Serializable]
+    public class SpawnerSpawnInitialization
+    {
+        [LabelText("营养初始化")]
+        public SpawnerNutritionInitialization Nutrition = new();
+    }
+
+    [Serializable]
+    public class SpawnerNutritionInitialization
+    {
+        [LabelText("启用")]
+        public bool Enabled;
+
+        [LabelText("初始饱食度最小值")]
+        [Range(0f, 1f)]
+        public float MinFoodRate = 1f;
+
+        [LabelText("初始饱食度最大值")]
+        [Range(0f, 1f)]
+        public float MaxFoodRate = 1f;
     }
 
 #endregion

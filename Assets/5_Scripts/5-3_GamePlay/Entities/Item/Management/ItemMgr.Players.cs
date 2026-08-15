@@ -52,7 +52,7 @@ public partial class ItemMgr
         //传入数据创建玩家
         Player player = CreatePlayer(playerData);
         if (wasCreated)
-            ApplyDefaultPlayerCreationTemplate(player);
+            ApplyPlayerCreationTemplate(player, ResolveDefaultPlayerCreationTemplate());
         player.SetProfileContext(
             localProfile: true,
             profileDataWasCreated: wasCreated,
@@ -87,12 +87,17 @@ public partial class ItemMgr
     [Tooltip("实例化玩家 但是不初始化")]
     public Player CreatePlayer(string playerName)
     {
+        return CreatePlayer(playerName, ResolveDefaultPlayerCreationTemplate());
+    }
+
+    public Player CreatePlayer(string playerName, PlayerCreationTemplateConfig creationTemplate)
+    {
         // 加载或者创建玩家数据
         Data_Player playerData = LoadOrCreatePlayerData(playerName, out bool wasCreated);
         //传入数据创建玩家
         Player player = CreatePlayer(playerData);
         if (wasCreated)
-            ApplyDefaultPlayerCreationTemplate(player);
+            ApplyPlayerCreationTemplate(player, creationTemplate);
         player.SetProfileContext(
             localProfile: true,
             profileDataWasCreated: wasCreated,
@@ -102,8 +107,6 @@ public partial class ItemMgr
 
         return player;
     }
-        if (!hasSavedData)
-            ApplyDefaultPlayerCreationTemplate(player);
 
     /// <summary>
     /// 为 Mirror 网络身份创建对应的核心 Player Item。
@@ -138,6 +141,8 @@ public partial class ItemMgr
             playerData.transform.scale = Vector3.one;
 
         Player player = CreatePlayer(playerData);
+        if (!hasSavedData)
+            ApplyPlayerCreationTemplate(player, ResolveDefaultPlayerCreationTemplate());
         player.SetProfileContext(
             localProfile: initializeLocalModules,
             profileDataWasCreated: !hasSavedData,
@@ -288,9 +293,17 @@ public partial class ItemMgr
         return newPlayer;
     }
 
-    private void ApplyDefaultPlayerCreationTemplate(Player player)
+    private PlayerCreationTemplateConfig ResolveDefaultPlayerCreationTemplate()
     {
-        defaultPlayerCreationTemplate?.ApplyTo(player);
+        string templateId = string.IsNullOrWhiteSpace(defaultPlayerCreationTemplateId)
+            ? PlayerCreationTemplateCatalogService.DefaultProfileId
+            : defaultPlayerCreationTemplateId.Trim();
+        return PlayerCreationTemplateCatalogService.GetRequired(templateId);
+    }
+
+    private static void ApplyPlayerCreationTemplate(Player player, PlayerCreationTemplateConfig creationTemplate)
+    {
+        creationTemplate?.ApplyTo(player);
     }
 
     /// <summary>获取 Player 在存档和运行时字典中的稳定身份键。</summary>

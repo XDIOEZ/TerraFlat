@@ -96,7 +96,7 @@ GameObject:
   - component: {fileID: -5184887567455039970}
   - component: {fileID: 7595501820574997015}
   m_Layer: 6
-  m_Name: Tent
+  m_Name: "Tent"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -148,7 +148,7 @@ MonoBehaviour:
     _PersistentCalls: []
   updateInterval: 0
   Data:
-    IDName: Tent
+    IDName: "Tent"
     GameName: Tent
     Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
     Durability: 1
@@ -560,11 +560,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: Data.BuildingPrefabId
-      value: Tent
+      value: "Tent"
       objectReference: {fileID: 0}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: Data.SummonerPrefabId
-      value: Tent_Summoner
+      value: "Tent_Summoner"
       objectReference: {fileID: 0}
     - target: {fileID: 2296275565012368985, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: m_LocalPosition.x

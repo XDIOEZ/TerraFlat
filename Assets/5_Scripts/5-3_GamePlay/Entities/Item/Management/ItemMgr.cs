@@ -18,9 +18,9 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     private const string GROUP_MAP_CORE = "MapCore";
 
     [Header("玩家创建配置")]
-    [SerializeField] private PlayerCreationTemplateSO defaultPlayerCreationTemplate;
+    [SerializeField] private string defaultPlayerCreationTemplateId;
 
-    public PlayerCreationTemplateSO DefaultPlayerCreationTemplate => defaultPlayerCreationTemplate;
+    public string DefaultPlayerCreationTemplateId => defaultPlayerCreationTemplateId;
 
     #region Runtime Data
 

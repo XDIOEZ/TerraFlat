@@ -20,10 +20,12 @@ description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系�
 - 只编辑 `PlayerInputActions.inputactions` 作为 Action/Binding 真相；`PlayerInputActions.cs` 是生成文件，不要手工维护。
 - 保持攻击、交互、使用三条语义分流：手机攻击只产生 `AttackStarted`/`AttackEnded`；交互复用 `E`；使用复用 `RightClick`。不得让手机攻击回落到 `LeftClick`。
 - 手机 `RightClick` 使用事件来自 HUD 按钮，`GameController` 与快捷栏消费端都不能再用 `IsPointerOverUI()` 拦截；仅 Mobile 绕过，桌面右键仍保持 UI 遮挡保护。
-- 保持普通指向只更新朝向，松手后保留最后有效方向；攻击按下立即开始，未出死区时沿普通朝向，拖出死区后使用攻击方向，松开后恢复普通朝向。
+- 保持普通指向只更新朝向和最后有效力度，松手后准线保留最后世界位置；攻击按下立即开始，未出死区时沿普通朝向，拖出死区后使用攻击方向，松开后恢复普通朝向。
 - 普通指向的最终方向同时作为交互目标选择依据；交互优先命中该方向前方目标，找不到时才回退到距离排序。
 - 所有需要世界坐标的交互、放置、种植、锄地、工具和丢弃路径统一调用 `GameController.GetPointerScreenPosition()` 或 `GetMouseWorldPosition()`，不得直接新增 `Mouse.current`、`Input.mousePosition` 或 `Camera.ScreenToWorldPoint` 读取。
 - 每个摇杆和按住型按钮独立持有自己的 `pointerId`。不得使用单个全局触摸、`Input.GetTouch(0)` 或共享“当前手指”。
+- `Inventory_Hand` 有有效物品时，`MobileVirtualJoystick` 不得取得触摸所有权；已有摇杆必须立即 `ResetOwnership`，避免拖拽丢弃期间生成浮动摇杆。
+- 快捷栏拖拽进入世界空白区后的长按检测必须复用 `ItemSlot_UI` 的独立 `pointerId` 与 EventSystem 射线；不得把其它 UI 区域当作世界落点。
 - 在输入锁、模态面板、暂停、失焦、后台、控件禁用、方向/尺寸变化、玩家销毁时，同时释放触摸所有权、移动、攻击按钮和攻击语义；清理必须幂等。
 - 保持 `EventSystemGuard` 的 `UIPointerBehavior.AllPointersAsIs` 与逐触点 UI 绑定；不要将多点触控合并为单指。
 - 保持右侧普通指向层位于功能按钮和攻击摇杆之后，只有空白区域能取得普通指向所有权；不要用全屏透明层遮住按钮射线。
@@ -40,7 +42,10 @@ description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系�
 - `PlayerInputActions` 资产、`Win10` 玩法 ActionMap 与运行时 UI ActionMap 都不得设置设备组 `bindingMask`；控制偏好只决定 HUD/指针呈现，键盘、手柄和手机虚拟设备必须能并行输入。
 - 当前输入设备变化只更新指针/UI状态，不得调用 `MobileInputRuntime.ResetAll()` 或清空触摸所有权；触摸清理只能由输入锁、模态面板、生命周期和真实控件失效触发。
 - 手机方案下 Shift 等键盘修饰键只由对应玩法模块消费，不参与设备切换；真实鼠标或 Device Simulator 转发的 Touchscreen 点击才退出手柄 UI/虚拟光标模式。不得切走手机 HUD、清空触摸或继续使用旧的虚拟光标位置判断 UI 命中。
-- 手机最终径向朝向的准线复用 `GamepadCursorGraphic`，通过 `EventSystemGuard` 的独立 Mobile Aim 光标状态显示；不得把该状态当作手柄 UI 虚拟光标参与射线、焦点或点击。
+- 手机最终径向朝向的准线复用 `GamepadCursorGraphic`，正式节点必须位于 `UI_MobileControls.prefab` 并由 `PlayerMobileControlsHUD` 定位；不得只修改手柄 UI 虚拟光标。
+- 手机准线的世界距离必须按当前手持物动态取值：空手或非建筑复用 `Mod_InteractSender.maxInteractDistance`，建筑召唤器复用 `Mod_Building.Data.maxVisibleDistance`。
+- `PlayerMobileControlsHUD` 允许仅在旧 Addressables/缓存 Prefab 缺少正式准线节点时补建兼容节点，正常视觉仍以 `UI_MobileControls.prefab` 为准。
+- 手机进入玩法时准线要按 `Mod_TurnBack.currentDirection` 初始化并立即显示，不能要求玩家先触摸普通指向区才出现。
 
 ## 跨系统边界
 

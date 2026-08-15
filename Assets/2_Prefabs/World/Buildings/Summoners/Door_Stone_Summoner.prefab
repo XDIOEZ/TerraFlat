@@ -180,8 +180,8 @@ MonoBehaviour:
     State: 0
     Role: 0
     SnapshotBase64: 
-    BuildingPrefabId: Door_Stone
-    SummonerPrefabId: Door_Stone_Summoner
+    BuildingPrefabId: "Door_Stone"
+    SummonerPrefabId: "Door_Stone_Summoner"
   BuildingData:
     Name: 
     ID: "\u5EFA\u7B51\u6A21\u5757"

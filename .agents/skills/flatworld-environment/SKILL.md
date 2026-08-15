@@ -21,6 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 维度 `FixedLighting` 是光照上限；SuppressWeather 会关闭天气与雨效。
 - 运行时全局光由 `TimeSystem.prefab` 中的 `DayTimeSystem + Light2D` 持有；`GameStartScene` 不得再注入独立 `DayTimeSystem`，否则会抢占单例并使带光源的运行时 Prefab 被销毁。
 - 月相应基于 `TimeData.TotalDays + CurrentTime / DayLength` 计算，不能只使用日内时间；月光先作为昼夜曲线的夜间下限，再经过采光率与维度固定光照上限。
+- 新世界时间参数来自 `GameConfig/Time/time-system.json` 的 Profile；Profile ID 与限时边界随 `TimeData` 存档，旧存档缺失时回退默认时间系统。
 - 伤害语义联动 `flatworld-combat`，维度覆盖联动 `flatworld-dimension`，雨视觉联动 Effects Skill。
 
 ## 验证

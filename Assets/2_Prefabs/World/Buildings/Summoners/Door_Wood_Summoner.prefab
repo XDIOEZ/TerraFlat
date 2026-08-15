@@ -264,8 +264,8 @@ MonoBehaviour:
     State: 0
     Role: 0
     SnapshotBase64: 
-    BuildingPrefabId: Door_Wood
-    SummonerPrefabId: Door_Wood_Summoner
+    BuildingPrefabId: "Door_Wood"
+    SummonerPrefabId: "Door_Wood_Summoner"
   BuildingData:
     Name: 
     ID: "\u5EFA\u7B51\u6A21\u5757"

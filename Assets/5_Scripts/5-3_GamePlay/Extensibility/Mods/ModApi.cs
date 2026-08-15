@@ -83,6 +83,29 @@ public sealed class ModApi
         return ModSettingsRegistry.GetString(ModId, settingId, fallback);
     }
 
+    /// <summary>为 MOD 注册对称的三态阵营关系，关系内容随 MOD 集合确定。</summary>
+    public void RegisterFactionRelation(
+        string leftFactionId,
+        string rightFactionId,
+        string relation)
+    {
+        if (!FactionRelationService.TryParseRelation(relation, out FactionRelation parsedRelation))
+            throw new ArgumentException($"无效的阵营关系：{relation}", nameof(relation));
+
+        FactionRelationService.RegisterExternalRelation(
+            ModId,
+            leftFactionId,
+            rightFactionId,
+            parsedRelation);
+    }
+
+    /// <summary>读取两个阵营的当前关系，返回 hostile、neutral 或 friendly。</summary>
+    public string GetFactionRelation(string leftFactionId, string rightFactionId)
+    {
+        return FactionRelationService.GetRelationName(
+            FactionRelationService.GetRelation(leftFactionId, rightFactionId));
+    }
+
     public void SetClientSettingJson(string settingId, string jsonValue)
     {
         ModSettingsRegistry.SetClientValue(ModId, settingId, jsonValue);
@@ -131,6 +154,14 @@ public sealed class ModItemApi
         .Any(component => component is IAIActor);
     public float Health => item?.GetComponentInChildren<DamageReceiver>(true)?.Hp ?? 0f;
     public float MaxHealth => item?.GetComponentInChildren<DamageReceiver>(true)?.MaxHp ?? 0f;
+    public string FactionId => FactionRelationService.GetFactionId(item);
+
+    /// <summary>在服务端权限允许时修改当前物品的阵营并触发联机状态同步。</summary>
+    public bool SetFactionId(string factionId)
+    {
+        ModRuntimeManager.Instance?.EnsureWorldMutationAllowed("SetFactionId");
+        return FactionRelationService.TrySetFactionId(item, factionId);
+    }
 
     public void AddDurability(float amount)
     {

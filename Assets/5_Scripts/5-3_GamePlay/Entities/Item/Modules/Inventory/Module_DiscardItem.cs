@@ -341,6 +341,29 @@ public class Module_DiscardItem : Mod_BaseDroper
         return true;
     }
 
+    public bool TryDropCurrentSelectionAtScreenPosition(Vector2 screenPosition)
+    {
+        ItemSlot handSlot = hand?.HandInventory?.Data?.itemSlots != null &&
+                            hand.HandInventory.Data.Index >= 0 &&
+                            hand.HandInventory.Data.Index < hand.HandInventory.Data.itemSlots.Count
+            ? hand.HandInventory.Data.itemSlots[hand.HandInventory.Data.Index]
+            : null;
+        if (handSlot?.itemData != null && handSlot.Amount > 0)
+        {
+            DropItemByCount(handSlot, handSlot.Amount, screenPosition);
+            return true;
+        }
+
+        ItemSlot hotbarSlot = Hotbar?.CurrentSelectItemSlot;
+        if (hotbarSlot?.itemData == null || hotbarSlot.Amount <= 0)
+            return false;
+
+        DropItemByCount(hotbarSlot, hotbarSlot.Amount, screenPosition);
+        if (hotbarSlot.Amount <= 0)
+            Hotbar.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
+        return true;
+    }
+
     [Button("DropItemBySlot")]
     public void DropItemBySlot(ItemSlot slot)
     {
@@ -367,6 +390,11 @@ public class Module_DiscardItem : Mod_BaseDroper
 
     public void DropItemByCount(ItemSlot slot, int count)
     {
+        DropItemByCount(slot, count, null);
+    }
+
+    public void DropItemByCount(ItemSlot slot, int count, Vector2? screenPosition)
+    {
         if (count <= 0 || slot == null || slot.Amount <= 0)
         {
             Debug.LogWarning("丢弃数量非法或物品槽为空！");
@@ -386,7 +414,9 @@ public class Module_DiscardItem : Mod_BaseDroper
             {
                 // 不再先查旧 Chunk；ItemWorldPlacement 和 Mod_Droping 会接入新版 ChunkView。
                 Vector2 startPos = transform.position;
-                Vector2 endPos = DropPos;
+                Vector2 endPos = screenPosition.HasValue
+                    ? GameController.GetMouseWorldPosition(screenPosition.Value)
+                    : DropPos;
                 newObject = ItemMgr.Instance.InstantiateItem(
                     newItemData,
                     startPos,
@@ -424,8 +454,21 @@ public class Module_DiscardItem : Mod_BaseDroper
             }
         }
 
-        slot.RefreshUI();
+        RefreshDiscardedSlotUI(slot);
     }
+
+    private void RefreshDiscardedSlotUI(ItemSlot slot)
+    {
+        slot.RefreshUI();
+
+        if (Hotbar?.Data?.itemSlots == null)
+            return;
+
+        int hotbarIndex = Hotbar.Data.itemSlots.IndexOf(slot);
+        if (hotbarIndex >= 0)
+            Hotbar.RefreshUI(hotbarIndex);
+    }
+
     [Button("快速丢弃")]
     public void FastDropItem(int count = 1)
     {

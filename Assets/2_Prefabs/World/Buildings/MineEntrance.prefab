@@ -98,7 +98,7 @@ GameObject:
   - component: {fileID: 900000000000000001}
   - component: {fileID: 900000000000000002}
   m_Layer: 6
-  m_Name: MineEntrance
+  m_Name: "MineEntrance"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -148,7 +148,7 @@ MonoBehaviour:
     _PersistentCalls: []
   updateInterval: 0
   Data:
-    IDName: MineEntrance
+    IDName: "MineEntrance"
     GameName: "矿坑入口"
     Description: "安装后可通往地下矿洞，并在矿洞中生成对应出口。"
     Durability: 1
@@ -246,11 +246,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: Data.BuildingPrefabId
-      value: MineEntrance
+      value: "MineEntrance"
       objectReference: {fileID: 0}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: Data.SummonerPrefabId
-      value: MineEntrance_Summoner
+      value: "MineEntrance_Summoner"
       objectReference: {fileID: 0}
     - target: {fileID: 2296275565012368985, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: m_LocalPosition.x

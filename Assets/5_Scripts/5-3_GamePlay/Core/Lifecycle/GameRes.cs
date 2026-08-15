@@ -127,6 +127,41 @@ public class GameRes : SingletonAutoMono<GameRes>
         ClearAllDictionaries();
         LoadedCount = 0;
         loadedAssetsCount = 0;
+        PlayerCreationTemplateCatalogService.ClearExternal();
+        loadingText = "加载 JSON 玩家创建配置";
+        PlayerCreationTemplateCatalogConfig playerCreationCatalog = null;
+        System.Exception playerCreationConfigError = null;
+        yield return StartCoroutine(PlayerCreationTemplateJsonLoader.LoadBuiltInAsync(
+            catalog => playerCreationCatalog = catalog,
+            exception => playerCreationConfigError = exception));
+        if (playerCreationConfigError != null)
+        {
+            loadingText = $"玩家创建配置加载失败：{playerCreationConfigError.Message}";
+            loadingProgress = 1f;
+            Debug.LogError(loadingText);
+            Debug.LogException(playerCreationConfigError);
+            yield break;
+        }
+
+        PlayerCreationTemplateCatalogService.ReplaceBuiltIn(playerCreationCatalog);
+
+        loadingText = "加载 JSON 时间系统配置";
+        TimeSystemConfigCatalog loadedTimeSystemConfig = null;
+        System.Exception timeSystemConfigError = null;
+        yield return StartCoroutine(TimeSystemConfigLoader.LoadBuiltInAsync(
+            catalog => loadedTimeSystemConfig = catalog,
+            exception => timeSystemConfigError = exception));
+        if (timeSystemConfigError != null)
+        {
+            loadingText = $"时间系统配置加载失败：{timeSystemConfigError.Message}";
+            loadingProgress = 1f;
+            Debug.LogError(loadingText);
+            Debug.LogException(timeSystemConfigError);
+            yield break;
+        }
+
+        TimeSystemConfigService.ReplaceCatalog(loadedTimeSystemConfig);
+        GameManager.Instance?.ApplyDefaultTimeSystemProfile();
 
         // 默认标签
         if (ADBLabels.Count == 0)
@@ -200,6 +235,23 @@ public class GameRes : SingletonAutoMono<GameRes>
         }
         loadedAssetsCount += loadedActorDefinitionCount;
         loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+
+        loadingText = "加载 JSON 生物生成配置";
+        SpawnerConfigCatalog loadedSpawnerConfig = null;
+        System.Exception spawnerConfigError = null;
+        yield return StartCoroutine(SpawnerConfigCatalogLoader.LoadBuiltInAsync(
+            catalog => loadedSpawnerConfig = catalog,
+            exception => spawnerConfigError = exception));
+        if (spawnerConfigError != null)
+        {
+            loadingText = $"生物生成配置加载失败：{spawnerConfigError.Message}";
+            loadingProgress = 1f;
+            Debug.LogError(loadingText);
+            Debug.LogException(spawnerConfigError);
+            yield break;
+        }
+
+        SpawnerConfigCatalogService.ReplaceCatalog(loadedSpawnerConfig);
             
         loadingText = "加载JSON配方";
         int loadedRecipeCount = 0;
@@ -487,6 +539,7 @@ private void ClearAllDictionaries()
     ItemDefinitions.Clear();
     ActorDefinitions.Clear();
     ActorDefinitionCatalogLoader.ResetRuntimeCatalog();
+    SpawnerConfigCatalogService.Reset();
     legacyItemDataTemplates.Clear();
     recipeDict.Clear();
     recipeById.Clear();

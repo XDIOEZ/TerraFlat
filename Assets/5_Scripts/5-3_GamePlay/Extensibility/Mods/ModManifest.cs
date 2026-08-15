@@ -119,6 +119,9 @@ public sealed class ModDefinitionDocument
 
     [JsonProperty("buffs")]
     public List<BuffDefinitionDto> Buffs = new();
+
+    [JsonProperty("playerCreationTemplates")]
+    public List<PlayerCreationTemplateConfig> PlayerCreationTemplates = new();
 }
 
 [Serializable]

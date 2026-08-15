@@ -20,41 +20,18 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
     // 全局光源引用
     [Tooltip("全局光源引用")]
     public Light2D GlobalLight;
-    
-    // 默认光源设置
-    [Tooltip("默认光源颜色")]
-    public Color DefaultLightColor = Color.white;
 
-    #region 月相光照设置
-    [Header("月相夜间光照")]
-    [Tooltip("月相完整周期对应的游戏天数；29.53 接近现实月相周期")]
-    [Min(1f)]
-    public float LunarCycleDays = 29.53f;
+    #region 运行时配置
 
-    [Tooltip("新月时的夜间全局光照强度")]
-    [Range(0f, 1f)]
-    public float NewMoonNightIntensity = 0.035f;
+    private Color defaultLightColor = Color.white;
+    private bool syncTileLightLayer = true;
+    private float activeChunkLightRefreshInterval = 0.25f;
+    private float inactiveChunkLightRefreshInterval = 5f;
+    private string appliedPresentationProfileId = string.Empty;
+    private string appliedPresentationSceneName = string.Empty;
+    private int appliedPresentationConfigVersion = -1;
 
-    [Tooltip("满月时的夜间全局光照强度")]
-    [Range(0f, 1f)]
-    public float FullMoonNightIntensity = 0.18f;
-
-    [Tooltip("新世界第 0 天的月相位置；0 为新月，0.5 为满月")]
-    [Range(0f, 1f)]
-    public float InitialMoonPhase = 0.5f;
     #endregion
-
-    [Header("时间 -> 地块光照层")]
-    [Tooltip("是否将昼夜光照同步到已加载地块的光照层")]
-    public bool SyncTileLightLayer = true;
-
-    [Tooltip("玩家可见/激活区块的光照层刷新间隔")]
-    [Min(0.05f)]
-    public float ActiveChunkLightRefreshInterval = 0.25f;
-
-    [Tooltip("已实例化但失活区块的低频刷新间隔；未加载存档不更新")]
-    [Min(0.1f)]
-    public float InactiveChunkLightRefreshInterval = 5f;
 
     private void OnEnable()
     {
@@ -97,7 +74,9 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
             return;
 
         LoadFromSaveData(SaveDataMgr.Instance.SaveData.DayTimeData);
-        EnsureSceneTimeData(SceneManager.GetActiveScene().name, GameManager.Instance.ReadyTimeData);
+        string sceneName = SceneManager.GetActiveScene().name;
+        EnsureSceneTimeData(sceneName, GameManager.Instance.ReadyTimeData);
+        ApplyPresentationSettings(sceneName);
     }
 
     private void OnGameWorldExit()
@@ -109,6 +88,9 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
 
         WorldTimeDict?.Clear();
         SceneLightingRateDict?.Clear();
+        appliedPresentationProfileId = string.Empty;
+        appliedPresentationSceneName = string.Empty;
+        appliedPresentationConfigVersion = -1;
     }
 
     private void Update()
@@ -156,6 +138,7 @@ private void TimeRun(string sceneName, float deltaTime)
         string currentSceneName = GetCurrentActiveSceneName();
         if (!string.IsNullOrEmpty(currentSceneName))
         {
+            ApplyPresentationSettings(currentSceneName);
             float lighting = GetLighting(currentSceneName);
             Color lightColor = GetLightColor(currentSceneName);
             SetGlobalLight(lighting, lightColor);
@@ -181,25 +164,56 @@ private void TimeRun(string sceneName, float deltaTime)
             GlobalLight.color = color;
         }
 
-        if (SyncTileLightLayer)
+        if (syncTileLightLayer)
         {
             LightLayerMgr.Instance.SetTimeLighting(
                 GlobalLight,
                 intensity,
                 color,
-                ActiveChunkLightRefreshInterval,
-                InactiveChunkLightRefreshInterval);
+            activeChunkLightRefreshInterval,
+            inactiveChunkLightRefreshInterval);
         }
     }
 
     private Color GetLightColor(string sceneName)
     {
         if (!TryGetResolvedTimeData(sceneName, out _, out TimeData timeData))
-            return DefaultLightColor;
+            return defaultLightColor;
 
         // 0-1 的昼夜进度
         float t = Mathf.Clamp01(timeData.CurrentTime / timeData.DayLength);
         return timeData.dayNightGradient.Evaluate(t);
+    }
+
+    private void ApplyPresentationSettings(string sceneName)
+    {
+        if (!TryGetResolvedTimeData(sceneName, out _, out TimeData timeData))
+            return;
+
+        string profileId = string.IsNullOrWhiteSpace(timeData.TimeSystemProfileId)
+            ? TimeSystemConfigService.DefaultProfileId
+            : timeData.TimeSystemProfileId;
+        if (string.Equals(appliedPresentationProfileId, profileId, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(appliedPresentationSceneName, sceneName, StringComparison.Ordinal) &&
+            appliedPresentationConfigVersion == TimeSystemConfigService.Version)
+        {
+            return;
+        }
+
+        if (!TimeSystemConfigService.TryGetPresentationSettings(
+                profileId,
+                out TimeSystemPresentationSettings settings))
+        {
+            settings = TimeSystemPresentationSettings.CreateDefault();
+        }
+
+        defaultLightColor = settings.DefaultLightColor;
+        syncTileLightLayer = settings.SyncTileLightLayer;
+        activeChunkLightRefreshInterval = settings.ActiveChunkLightRefreshInterval;
+        inactiveChunkLightRefreshInterval = settings.InactiveChunkLightRefreshInterval;
+        appliedPresentationProfileId = profileId ?? string.Empty;
+        appliedPresentationSceneName = sceneName;
+        appliedPresentationConfigVersion = TimeSystemConfigService.Version;
     }
     #region 公共接口
 
@@ -291,13 +305,13 @@ private void TimeRun(string sceneName, float deltaTime)
         float dayLength = Mathf.Max(1f, timeData.DayLength);
         float currentDayProgress = Mathf.Repeat(timeData.CurrentTime, dayLength) / dayLength;
         float elapsedDays = Mathf.Max(0, timeData.TotalDays) + currentDayProgress;
-        float cycleDays = Mathf.Max(1f, LunarCycleDays);
-        float moonPhase = Mathf.Repeat(InitialMoonPhase + elapsedDays / cycleDays, 1f);
+        float cycleDays = Mathf.Max(1f, timeData.LunarCycleDays);
+        float moonPhase = Mathf.Repeat(timeData.InitialMoonPhase + elapsedDays / cycleDays, 1f);
         float illumination = 0.5f - 0.5f * Mathf.Cos(moonPhase * Mathf.PI * 2f);
 
         return Mathf.Lerp(
-            Mathf.Clamp01(NewMoonNightIntensity),
-            Mathf.Clamp01(FullMoonNightIntensity),
+            Mathf.Clamp01(timeData.NewMoonNightIntensity),
+            Mathf.Clamp01(timeData.FullMoonNightIntensity),
             illumination);
     }
     
@@ -318,7 +332,7 @@ private void TimeRun(string sceneName, float deltaTime)
     {
         if (!WorldTimeDict.TryGetValue(sceneName, out TimeData timeData))
         {
-            timeData = new TimeData();
+            timeData = CreateConfiguredTimeData();
             WorldTimeDict[sceneName] = timeData;
         }
 
@@ -332,7 +346,7 @@ private void TimeRun(string sceneName, float deltaTime)
     {
         if (!WorldTimeDict.TryGetValue(sceneName, out TimeData timeData))
         {
-            timeData = new TimeData();
+            timeData = CreateConfiguredTimeData();
             WorldTimeDict[sceneName] = timeData;
         }
 
@@ -346,7 +360,7 @@ private void TimeRun(string sceneName, float deltaTime)
     {
         if (!WorldTimeDict.TryGetValue(sceneName, out TimeData timeData))
         {
-            timeData = new TimeData();
+            timeData = CreateConfiguredTimeData();
             WorldTimeDict[sceneName] = timeData;
         }
 
@@ -376,6 +390,11 @@ private void TimeRun(string sceneName, float deltaTime)
             return;
         }
 
+        timeData.EnsureTimeSystemDefaults();
+        gameSeconds = ClampAdvanceToTimeLimit(timeData, gameSeconds);
+        if (gameSeconds <= 0f)
+            return;
+
         float dayLength = Mathf.Max(1f, timeData.DayLength);
         int oldDay = timeData.GetCurrentDay();
         float oldTotalTime = timeData.GetTotalGameTime();
@@ -398,7 +417,7 @@ private void TimeRun(string sceneName, float deltaTime)
     {
         if (!WorldTimeDict.TryGetValue(sceneName, out TimeData timeData))
         {
-            timeData = new TimeData();
+            timeData = CreateConfiguredTimeData();
             WorldTimeDict[sceneName] = timeData;
         }
 
@@ -420,12 +439,11 @@ private void TimeRun(string sceneName, float deltaTime)
     {
         if (!WorldTimeDict.ContainsKey(sceneName))
         {
-            WorldTimeDict[sceneName] = new TimeData
-            {
-                DayLength = dayLength,
-                TimeScaleModifier = timeScale,
-                LightParams = TimeData.CreateDefaultLightCurve()
-            };
+            TimeData timeData = CreateConfiguredTimeData();
+            timeData.DayLength = Mathf.Max(1f, dayLength);
+            timeData.CurrentTime = Mathf.Repeat(timeData.CurrentTime, timeData.DayLength);
+            timeData.TimeScaleModifier = Mathf.Max(0f, timeScale);
+            WorldTimeDict[sceneName] = timeData;
         }
 
         // 默认采光率为1.0（完全采光）
@@ -451,18 +469,45 @@ private void TimeRun(string sceneName, float deltaTime)
 
         if (!WorldTimeDict.ContainsKey(sceneName) || WorldTimeDict[sceneName] == null)
         {
-            TimeData sourceTimeData = readyTimeData ?? new TimeData();
+            TimeData sourceTimeData = readyTimeData ?? CreateConfiguredTimeData();
             WorldTimeDict[sceneName] = sourceTimeData.CreateRuntimeCopy();
 
             Debug.Log($"[DayTimeSystem] 未找到场景时间数据，已拷贝 ReadyTimeData：{sceneName}");
         }
 
+        WorldTimeDict[sceneName].EnsureTimeSystemDefaults();
         WorldTimeDict[sceneName].EnsureDarkNightWindow();
 
         if (!SceneLightingRateDict.ContainsKey(sceneName))
         {
             SceneLightingRateDict[sceneName] = 1.0f;
         }
+    }
+
+    private TimeData CreateConfiguredTimeData()
+    {
+        if (TimeSystemConfigService.TryCreateDefaultTimeData(
+                out TimeData configuredTimeData,
+                out _))
+        {
+            return configuredTimeData;
+        }
+
+        TimeData fallback = new TimeData();
+        fallback.EnsureTimeSystemDefaults();
+        return fallback;
+    }
+
+    private static float ClampAdvanceToTimeLimit(TimeData timeData, float gameSeconds)
+    {
+        if (!string.Equals(timeData.TimeSystemMode, TimeSystemModes.TimeLimited, StringComparison.OrdinalIgnoreCase) ||
+            timeData.TimeLimitTotalGameTime <= 0f)
+        {
+            return gameSeconds;
+        }
+
+        float remaining = timeData.TimeLimitTotalGameTime - timeData.GetTotalGameTime();
+        return Mathf.Min(gameSeconds, Mathf.Max(0f, remaining));
     }
 
     #endregion
@@ -513,6 +558,7 @@ public void LoadFromSaveData(DayTimeSaveData saveData)
         foreach (var kvp in saveData.WorldTimeDict)
         {
             TimeData timeData = kvp.Value.ToTimeData();
+            timeData?.EnsureTimeSystemDefaults();
             timeData?.EnsureDarkNightWindow();
             WorldTimeDict[kvp.Key] = timeData;
         }
@@ -538,8 +584,14 @@ public partial class SerializableTimeData
     public float TimeScaleModifier;
     public string ReferenceScene;
     public int TotalDays;
-    // ↓↓↓ 新增：把梯度颜色一起存进来
     public SerializableGradient DayNightGradient;
+    public string TimeSystemProfileId;
+    public string TimeSystemMode;
+    public float TimeLimitTotalGameTime;
+    public float LunarCycleDays;
+    public float NewMoonNightIntensity;
+    public float FullMoonNightIntensity;
+    public float InitialMoonPhase;
 
     [MemoryPackConstructor]
     public SerializableTimeData(float currentTime,
@@ -548,7 +600,14 @@ public partial class SerializableTimeData
                                 float timeScaleModifier,
                                 string referenceScene,
                                 SerializableGradient dayNightGradient,
-                                int totalDays)
+                                int totalDays,
+                                string timeSystemProfileId,
+                                string timeSystemMode,
+                                float timeLimitTotalGameTime,
+                                float lunarCycleDays,
+                                float newMoonNightIntensity,
+                                float fullMoonNightIntensity,
+                                float initialMoonPhase)
     {
         CurrentTime = currentTime;
         DayLength = dayLength;
@@ -557,6 +616,13 @@ public partial class SerializableTimeData
         ReferenceScene = referenceScene ?? "";
         DayNightGradient = dayNightGradient;
         TotalDays = Mathf.Max(0, totalDays);
+        TimeSystemProfileId = timeSystemProfileId ?? "";
+        TimeSystemMode = timeSystemMode ?? TimeSystemModes.Unlimited;
+        TimeLimitTotalGameTime = timeLimitTotalGameTime;
+        LunarCycleDays = lunarCycleDays;
+        NewMoonNightIntensity = newMoonNightIntensity;
+        FullMoonNightIntensity = fullMoonNightIntensity;
+        InitialMoonPhase = initialMoonPhase;
     }
 
     // 从运行时 TimeData 抽数据
@@ -567,6 +633,13 @@ public partial class SerializableTimeData
         TimeScaleModifier = timeData.TimeScaleModifier;
         ReferenceScene = timeData.ReferenceScene ?? "";
         TotalDays = Mathf.Max(0, timeData.TotalDays);
+        TimeSystemProfileId = timeData.TimeSystemProfileId ?? "";
+        TimeSystemMode = timeData.TimeSystemMode ?? TimeSystemModes.Unlimited;
+        TimeLimitTotalGameTime = timeData.TimeLimitTotalGameTime;
+        LunarCycleDays = timeData.LunarCycleDays;
+        NewMoonNightIntensity = timeData.NewMoonNightIntensity;
+        FullMoonNightIntensity = timeData.FullMoonNightIntensity;
+        InitialMoonPhase = timeData.InitialMoonPhase;
 
         // AnimationCurve → 数组
         if (timeData.LightParams != null && timeData.LightParams.keys != null)
@@ -594,7 +667,7 @@ public partial class SerializableTimeData
             curve = new AnimationCurve(keys);
         }
 
-        return new TimeData
+        TimeData timeData = new TimeData
         {
             CurrentTime = CurrentTime,
             DayLength = DayLength,
@@ -602,8 +675,18 @@ public partial class SerializableTimeData
             TimeScaleModifier = TimeScaleModifier,
             ReferenceScene = ReferenceScene,
             TotalDays = Mathf.Max(0, TotalDays),
-            dayNightGradient = DayNightGradient.ToGradient()// 字段赋值（内部用）
+            dayNightGradient = DayNightGradient?.ToGradient() ?? new TimeData().dayNightGradient,
+            TimeSystemProfileId = TimeSystemProfileId,
+            TimeSystemMode = TimeSystemMode,
+            TimeLimitTotalGameTime = TimeLimitTotalGameTime,
+            LunarCycleDays = LunarCycleDays,
+            NewMoonNightIntensity = NewMoonNightIntensity,
+            FullMoonNightIntensity = FullMoonNightIntensity,
+            InitialMoonPhase = InitialMoonPhase
         };
+
+        timeData.EnsureTimeSystemDefaults();
+        return timeData;
     }
 }
 

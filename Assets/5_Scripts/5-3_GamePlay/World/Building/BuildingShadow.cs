@@ -84,7 +84,11 @@ public class BuildingShadow : MonoBehaviour
         ApplyVisualState();
     }
 
-    public void InitShadow(SpriteRenderer sourceRenderer, Transform sourceRoot, Bounds footprint)
+    public void InitShadow(
+        SpriteRenderer sourceRenderer,
+        Transform sourceRoot,
+        Bounds footprint,
+        bool copySourceOffset = true)
     {
         if (sourceRenderer == null || sourceRoot == null || ShadowRenderer == null)
             throw new MissingComponentException("BuildingShadow 缺少 SpriteRenderer 引用");
@@ -110,8 +114,12 @@ public class BuildingShadow : MonoBehaviour
         ShadowRenderer.enabled = true;
 
         Transform shadowTransform = ShadowRenderer.transform;
-        shadowTransform.localPosition = sourceRoot.InverseTransformPoint(sourceRenderer.transform.position);
-        shadowTransform.localRotation = Quaternion.Inverse(sourceRoot.rotation) * sourceRenderer.transform.rotation;
+        shadowTransform.localPosition = copySourceOffset
+            ? sourceRoot.InverseTransformPoint(sourceRenderer.transform.position)
+            : Vector3.zero;
+        shadowTransform.localRotation = copySourceOffset
+            ? Quaternion.Inverse(sourceRoot.rotation) * sourceRenderer.transform.rotation
+            : Quaternion.identity;
         shadowTransform.localScale = DivideScale(sourceRenderer.transform.lossyScale, sourceRoot.lossyScale);
 
         BoxColliderScale = new Vector2(

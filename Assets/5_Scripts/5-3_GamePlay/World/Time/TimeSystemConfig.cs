@@ -248,7 +248,9 @@ public static class TimeSystemConfigService
     public static bool IsLoaded => Catalog != null;
     public static string DefaultProfileId => Catalog?.DefaultProfileId ?? string.Empty;
     public static IReadOnlyList<TimeSystemProfileConfig> Profiles =>
-        Catalog?.Profiles ?? Array.Empty<TimeSystemProfileConfig>();
+        Catalog != null
+            ? Catalog.Profiles
+            : Array.Empty<TimeSystemProfileConfig>();
 
     #endregion
 

@@ -4,6 +4,8 @@ using UnityEngine;
 /// <summary>
 /// AI 攻击控制器，封装攻击伤害窗口的开启/关闭、冷却计时等逻辑。
 /// 可组合到任何需要攻击行为的 AI 中，消除攻击逻辑的重复代码。
+/// WindupDuration 控制伤害生效前的前摇，DamageWindow 控制实际伤害窗口，
+/// RecoveryDuration 控制伤害窗口结束后的后摇锁定；三者均以秒为单位，便于不同生物独立调参。
 ///
 /// 使用方式：
 /// 1. 在 AI 子类中声明字段: AI_AttackController _attack = new AI_AttackController();
@@ -20,8 +22,9 @@ public class AI_AttackController
 #region Fields
 	private readonly List<Mod_Damage> _damageMods = new List<Mod_Damage>();
 	private float _cooldownTimer;
-	private float _windowStartDelayTimer;
+	private float _windupTimer;
 	private float _windowRemainTimer;
+	private float _recoveryTimer;
 	private bool _windowTriggered;
 	private bool _damageWindowActive;
 	/// <summary>缓存的动画接收器引用，用于同步 IsAttacking 状态</summary>
@@ -37,8 +40,18 @@ public class AI_AttackController
 	/// <summary>伤害窗口持续时间（秒）</summary>
 	public float DamageWindow { get; set; }
 
-	/// <summary>攻击动画开始后，延迟多少秒开启伤害碰撞。</summary>
-	public float DamageWindowStartDelay { get; set; }
+	/// <summary>攻击开始后到伤害生效前的前摇时长（秒）。</summary>
+	public float WindupDuration { get; set; }
+
+	/// <summary>兼容旧调用方的前摇属性；新生物应使用 WindupDuration。</summary>
+	public float DamageWindowStartDelay
+	{
+		get => WindupDuration;
+		set => WindupDuration = value;
+	}
+
+	/// <summary>伤害窗口结束后的后摇锁定时长（秒）。</summary>
+	public float RecoveryDuration { get; set; }
 
 	/// <summary>冷却是否已结束</summary>
 	public bool IsCooldownDone => _cooldownTimer <= 0f;
@@ -48,6 +61,12 @@ public class AI_AttackController
 
 	/// <summary>伤害碰撞当前是否处于有效窗口。</summary>
 	public bool IsDamageWindowActive => _damageWindowActive;
+
+	/// <summary>攻击是否仍处于前摇、伤害窗口或后摇锁定阶段。</summary>
+	public bool IsAttackLocked => _windowTriggered || _damageWindowActive || _windupTimer > 0f || _recoveryTimer > 0f;
+
+	/// <summary>攻击后摇是否仍在进行。</summary>
+	public bool IsRecoveryActive => _recoveryTimer > 0f;
 
 	/// <summary>是否找到伤害组件</summary>
 	public bool HasDamageMods => _damageMods.Count > 0;
@@ -89,8 +108,9 @@ public class AI_AttackController
 	public void Reset()
 	{
 		_cooldownTimer = 0f;
-		_windowStartDelayTimer = 0f;
+		_windupTimer = 0f;
 		_windowRemainTimer = 0f;
+		_recoveryTimer = 0f;
 		_windowTriggered = false;
 		_damageWindowActive = false;
 		SetDamageEnabled(false);
@@ -114,18 +134,22 @@ public class AI_AttackController
 		{
 			_cooldownTimer = Mathf.Max(0f, _cooldownTimer - deltaTime);
 		}
+		if (_recoveryTimer > 0f)
+		{
+			_recoveryTimer = Mathf.Max(0f, _recoveryTimer - deltaTime);
+		}
 
 		float remainingDeltaTime = Mathf.Max(0f, deltaTime);
-		if (_windowStartDelayTimer > 0f)
+		if (_windupTimer > 0f)
 		{
-			if (remainingDeltaTime < _windowStartDelayTimer)
+			if (remainingDeltaTime < _windupTimer)
 			{
-				_windowStartDelayTimer -= remainingDeltaTime;
+				_windupTimer -= remainingDeltaTime;
 				return;
 			}
 
-			remainingDeltaTime -= _windowStartDelayTimer;
-			_windowStartDelayTimer = 0f;
+			remainingDeltaTime -= _windupTimer;
+			_windupTimer = 0f;
 			ActivateDamageWindow();
 		}
 
@@ -141,6 +165,7 @@ public class AI_AttackController
 		SetDamageEnabled(false);
 		_damageWindowActive = false;
 		SetAnimatorAttacking(false);
+		_recoveryTimer = Mathf.Max(_recoveryTimer, Mathf.Max(0f, RecoveryDuration));
 		_windowTriggered = false;
 		if (Cooldown > 0f)
 		{
@@ -160,9 +185,14 @@ public class AI_AttackController
 		string attackAnimName,
 		Vector2 attackDirection)
 	{
+		if (IsAttackLocked)
+		{
+			return;
+		}
+
 		AlignDamageDirection(attackDirection);
 		_windowTriggered = true;
-		_windowStartDelayTimer = Mathf.Max(0f, DamageWindowStartDelay);
+		_windupTimer = Mathf.Max(0f, WindupDuration);
 		_windowRemainTimer = 0f;
 		_damageWindowActive = false;
 
@@ -179,14 +209,14 @@ public class AI_AttackController
 			animator.ForcePlayAnimation(attackAnimName);
 		}
 
-		if (_windowStartDelayTimer <= 0f)
+		if (_windupTimer <= 0f)
 			ActivateDamageWindow();
 	}
 
 	/// <summary>停止攻击伤害窗口（关闭伤害碰撞）</summary>
 	public void StopWindow()
 	{
-		_windowStartDelayTimer = 0f;
+		_windupTimer = 0f;
 		_windowRemainTimer = 0f;
 		_damageWindowActive = false;
 		SetDamageEnabled(false);

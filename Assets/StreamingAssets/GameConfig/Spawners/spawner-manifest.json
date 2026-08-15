@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "configs": [
+    {
+      "id": "wildlife_resources",
+      "scheduleMode": "timedWindows",
+      "ecologyGroup": "animals",
+      "requireGlobalDarkness": false,
+      "spawnTriggerTime": 720.0,
+      "spawnTimeTolerance": 1.0,
+      "spawnsPerDay": 2,
+      "minSpawnDistance": 15.0,
+      "maxSpawnDistance": 50.0,
+      "playerVisibilityExclusionDistance": 20.0,
+      "playerPopulationRadius": 60.0,
+      "perPlayerAliveLimit": 8,
+      "spawnSearchRetryCount": 5,
+      "spawnCount": 2,
+      "spawnChance": 1.0,
+      "daysBetweenSpawns": 1,
+      "groupAliveLimit": 12,
+      "maxEcologyBudget": 12,
+      "dailyBudgetRecovery": 6,
+      "recoveryTargetPopulation": 8,
+      "recoveryCheckInterval": 8.0,
+      "growthIntervalDays": 3,
+      "maxLifetimeSpawnCount": 64,
+      "asyncSpawnInterval": 0.0,
+      "unboundedDailyGrowth": false,
+      "ignorePopulationLimits": true,
+      "requireCompletelyDarkTile": false,
+      "maxAllowedTileLight": 1.0,
+      "allowedBiomeNames": [
+        "森林",
+        "石地"
+      ],
+      "recycleDistance": 110.0,
+      "recycleGraceSeconds": 20.0,
+      "spawnEntries": [
+        {
+          "prefabName": "Chicken",
+          "probability": 5.0,
+          "ecologyCost": 1,
+          "speciesAliveLimit": 8,
+          "initialization": {
+            "nutrition": {
+              "enabled": true,
+              "minFoodRate": 0.7,
+              "maxFoodRate": 1.0
+            }
+          }
+        },
+        {
+          "prefabName": "WildBoar",
+          "probability": 2.0,
+          "ecologyCost": 2,
+          "speciesAliveLimit": 5
+        }
+      ]
+    },
+    {
+      "id": "wolf_common_enemy",
+      "scheduleMode": "timedWindows",
+      "ecologyGroup": "commonEnemies",
+      "requireGlobalDarkness": false,
+      "spawnTriggerTime": 1200.0,
+      "spawnTimeTolerance": 1.0,
+      "spawnsPerDay": 1,
+      "minSpawnDistance": 24.0,
+      "maxSpawnDistance": 50.0,
+      "playerVisibilityExclusionDistance": 22.0,
+      "playerPopulationRadius": 65.0,
+      "perPlayerAliveLimit": 4,
+      "spawnSearchRetryCount": 10,
+      "spawnCount": 2,
+      "spawnChance": 0.8,
+      "daysBetweenSpawns": 2,
+      "groupAliveLimit": 6,
+      "maxEcologyBudget": 8,
+      "dailyBudgetRecovery": 2,
+      "recoveryTargetPopulation": 3,
+      "recoveryCheckInterval": 10.0,
+      "growthIntervalDays": 3,
+      "maxLifetimeSpawnCount": 64,
+      "asyncSpawnInterval": 0.0,
+      "unboundedDailyGrowth": false,
+      "ignorePopulationLimits": true,
+      "requireCompletelyDarkTile": false,
+      "maxAllowedTileLight": 0.35,
+      "allowedBiomeNames": [
+        "森林",
+        "石地"
+      ],
+      "recycleDistance": 120.0,
+      "recycleGraceSeconds": 25.0,
+      "spawnEntries": [
+        {
+          "prefabName": "Wolf",
+          "probability": 1.0,
+          "ecologyCost": 2,
+          "speciesAliveLimit": 6
+        }
+      ]
+    },
+    {
+      "id": "ghost_milestone_growth",
+      "scheduleMode": "dayMilestoneGrowth",
+      "ecologyGroup": "nightEnemies",
+      "requireGlobalDarkness": true,
+      "spawnTriggerTime": 0.0,
+      "spawnTimeTolerance": 1.0,
+      "spawnsPerDay": 1,
+      "minSpawnDistance": 15.0,
+      "maxSpawnDistance": 50.0,
+      "playerVisibilityExclusionDistance": 24.0,
+      "playerPopulationRadius": 70.0,
+      "perPlayerAliveLimit": 0,
+      "spawnSearchRetryCount": 16,
+      "spawnCount": 1,
+      "spawnChance": 1.0,
+      "daysBetweenSpawns": 1,
+      "groupAliveLimit": 6,
+      "maxEcologyBudget": 6,
+      "dailyBudgetRecovery": 1,
+      "recoveryTargetPopulation": 0,
+      "recoveryCheckInterval": 10.0,
+      "growthIntervalDays": 1,
+      "maxLifetimeSpawnCount": 64,
+      "asyncSpawnInterval": 0.0,
+      "unboundedDailyGrowth": true,
+      "ignorePopulationLimits": false,
+      "requireCompletelyDarkTile": true,
+      "maxAllowedTileLight": 0.0,
+      "allowedBiomeNames": [
+        "森林",
+        "石地",
+        "沙漠"
+      ],
+      "recycleDistance": 130.0,
+      "recycleGraceSeconds": 30.0,
+      "spawnEntries": [
+        {
+          "prefabName": "Ghost",
+          "probability": 1.0,
+          "ecologyCost": 1,
+          "speciesAliveLimit": 0
+        }
+      ]
+    }
+  ]
+}

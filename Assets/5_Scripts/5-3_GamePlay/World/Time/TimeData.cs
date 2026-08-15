@@ -38,6 +38,27 @@ public partial class TimeData
     
     [Tooltip("总游戏天数（记录游玩了多少天）")]
     public int TotalDays = 0;
+
+    [Tooltip("创建该世界时使用的 JSON 时间系统 Profile ID")]
+    public string TimeSystemProfileId = "standard";
+
+    [Tooltip("时间系统模式")]
+    public string TimeSystemMode = TimeSystemModes.Unlimited;
+
+    [Tooltip("限时模式的绝对结束游戏时间；0 表示不限时")]
+    public float TimeLimitTotalGameTime = 0f;
+
+    [Tooltip("月相完整周期对应的游戏天数")]
+    public float LunarCycleDays = 29.53f;
+
+    [Tooltip("新月时的夜间全局光照强度")]
+    public float NewMoonNightIntensity = 0.035f;
+
+    [Tooltip("满月时的夜间全局光照强度")]
+    public float FullMoonNightIntensity = 0.18f;
+
+    [Tooltip("新世界第 0 天的月相位置")]
+    public float InitialMoonPhase = 0.5f;
     
     public TimeData() { }
 
@@ -55,8 +76,46 @@ public partial class TimeData
             dayNightGradient = CopyGradient(dayNightGradient),
             TimeScaleModifier = TimeScaleModifier,
             ReferenceScene = ReferenceScene,
-            TotalDays = TotalDays
+            TotalDays = TotalDays,
+            TimeSystemProfileId = TimeSystemProfileId,
+            TimeSystemMode = TimeSystemMode,
+            TimeLimitTotalGameTime = TimeLimitTotalGameTime,
+            LunarCycleDays = LunarCycleDays,
+            NewMoonNightIntensity = NewMoonNightIntensity,
+            FullMoonNightIntensity = FullMoonNightIntensity,
+            InitialMoonPhase = InitialMoonPhase
         };
+    }
+
+    public void EnsureTimeSystemDefaults()
+    {
+        if (string.IsNullOrWhiteSpace(TimeSystemProfileId))
+            TimeSystemProfileId = "standard";
+
+        if (!TimeSystemModes.IsSupported(TimeSystemMode))
+            TimeSystemMode = TimeSystemModes.Unlimited;
+        else
+            TimeSystemMode = TimeSystemModes.Normalize(TimeSystemMode);
+
+        if (float.IsNaN(TimeLimitTotalGameTime) ||
+            float.IsInfinity(TimeLimitTotalGameTime) ||
+            TimeLimitTotalGameTime < 0f)
+        {
+            TimeLimitTotalGameTime = 0f;
+        }
+
+        if (float.IsNaN(LunarCycleDays) || float.IsInfinity(LunarCycleDays) || LunarCycleDays <= 0f)
+            LunarCycleDays = 29.53f;
+        if (float.IsNaN(NewMoonNightIntensity) || float.IsInfinity(NewMoonNightIntensity))
+            NewMoonNightIntensity = 0.035f;
+        if (float.IsNaN(FullMoonNightIntensity) || float.IsInfinity(FullMoonNightIntensity))
+            FullMoonNightIntensity = 0.18f;
+        if (float.IsNaN(InitialMoonPhase) || float.IsInfinity(InitialMoonPhase))
+            InitialMoonPhase = 0.5f;
+
+        NewMoonNightIntensity = Mathf.Clamp01(NewMoonNightIntensity);
+        FullMoonNightIntensity = Mathf.Clamp01(FullMoonNightIntensity);
+        InitialMoonPhase = Mathf.Repeat(InitialMoonPhase, 1f);
     }
 
     private static AnimationCurve CopyAnimationCurve(AnimationCurve source)

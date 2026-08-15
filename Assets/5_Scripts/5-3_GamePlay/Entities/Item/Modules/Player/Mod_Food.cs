@@ -112,10 +112,15 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     {
         public bool Enabled = true;
         public float HealSpeed = 1f;
+        [Tooltip("大于 0 时按间隔一次性回血；为 0 时使用 HealSpeed 连续回血")]
+        public float HealInterval = 0f;
+        [Tooltip("离散回血每次恢复的生命值")]
+        public float HealAmount = 0f;
         [Tooltip("口渴状态每次扣除的生命值（每 5 秒触发一次）")]
         public float WaterSelfHurt = 1f;
         public float ProteinSelfHurt = 1f;
         public float VitaminSelfHurt = 1f;
+        [Tooltip("蛋白质最低比例；设为 0 时只要有蛋白质即可回血")]
         public float HealNeedRatio = 0.6f;
     }
 
@@ -196,6 +201,9 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     private DamageReceiver _damageReceiver;
 
     [MemoryPackIgnore]
+    private Mod_PlayerDeathState _deathState;
+
+    [MemoryPackIgnore]
     private Mod_Temperature _temperature;
 
     [MemoryPackIgnore]
@@ -203,6 +211,9 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
 
     [MemoryPackIgnore]
     private float _waterDamageTickTimer; // 口渴伤害累计计时
+
+    [MemoryPackIgnore]
+    private float _healthRecoveryTimer; // 离散回血累计计时
 
     [NonSerialized]
     private float _runtimeNutritionConsumeMultiplier = 1f;
@@ -254,7 +265,9 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         _movementWaterConsumeMultiplier = 1f;
         _buffNutritionConsumeMultiplier = 1f;
         _buffWaterConsumeMultiplier = 1f;
+        _hungerDamageTickTimer = 0f;
         _waterDamageTickTimer = 0f;
+        _healthRecoveryTimer = 0f;
 
         ResolveFoodRuntimeModules();
         LoadRuntimeStateFromLegacyData();
@@ -312,7 +325,9 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         _movementWaterConsumeMultiplier = 1f;
         _buffNutritionConsumeMultiplier = 1f;
         _buffWaterConsumeMultiplier = 1f;
+        _hungerDamageTickTimer = 0f;
         _waterDamageTickTimer = 0f;
+        _healthRecoveryTimer = 0f;
         ConsumeCompleted = null;
         ReleaseRuntimeBindings(destroyPanel: true);
     }
@@ -325,7 +340,9 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         _movementWaterConsumeMultiplier = 1f;
         _buffNutritionConsumeMultiplier = 1f;
         _buffWaterConsumeMultiplier = 1f;
+        _hungerDamageTickTimer = 0f;
         _waterDamageTickTimer = 0f;
+        _healthRecoveryTimer = 0f;
         ConsumeCompleted = null;
         ReleaseRuntimeBindings(destroyPanel: true);
     }
@@ -1037,6 +1054,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         item.itemMods.GetMod_ByID(ModText.Stamina, out _stamina);
         item.itemMods.GetMod_ByID(ModText.Hp, out _damageReceiver);
         item.itemMods.GetMod_ByID(ModText.Temperature, out _temperature);
+        item.itemMods.GetMod_ByID(Mod_PlayerDeathState.ModuleId, out _deathState);
     }
 
     private void LoadRuntimeStateFromLegacyData()
@@ -1075,6 +1093,15 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
                 var restored = MemoryPack.MemoryPackSerializer.Deserialize<FoodHealthState>(snapshot.Payload);
                 if (restored != null)
                 {
+                    // 旧存档没有离散回血字段时，保留当前模块配置，避免动物回退到连续回血。
+                    if (HealthState != null)
+                    {
+                        if (restored.HealInterval <= 0f && HealthState.HealInterval > 0f)
+                            restored.HealInterval = HealthState.HealInterval;
+                        if (restored.HealAmount <= 0f && HealthState.HealAmount > 0f)
+                            restored.HealAmount = HealthState.HealAmount;
+                    }
+
                     HealthState = restored;
                 }
             }
@@ -1122,38 +1149,49 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
 
     private void UpdateFoodHealth(float timeDelta)
     {
-        if (!HealthState.Enabled || _damageReceiver == null)
+        if (HealthState == null ||
+            !HealthState.Enabled ||
+            _damageReceiver == null ||
+            _damageReceiver.Hp <= 0f ||
+            _deathState?.IsInDyingState == true)
         {
+            _hungerDamageTickTimer = 0f;
             _waterDamageTickTimer = 0f;
+            _healthRecoveryTimer = 0f;
             return;
         }
 
         var nutrition = Data.nutrition;
-        float proteinHealNeed = nutrition.Max_Protein * HealthState.HealNeedRatio;
-        float waterHealNeed = nutrition.Max_Water * HealthState.HealNeedRatio;
+        float safeDelta = Mathf.Max(0f, timeDelta);
+        float proteinHealNeed = Mathf.Max(0f, nutrition.Max_Protein * HealthState.HealNeedRatio);
+        bool hasProtein = nutrition.Protein > 0f;
+        bool proteinReady = hasProtein &&
+            (HealthState.HealNeedRatio <= 0f || nutrition.Protein >= proteinHealNeed);
 
-        if (nutrition.Protein <= 0)
+        if (!hasProtein)
         {
-            _hungerDamageTickTimer += timeDelta;
+            _healthRecoveryTimer = 0f;
+            _hungerDamageTickTimer += safeDelta;
             while (_hungerDamageTickTimer >= 1f)
             {
                 _damageReceiver.ForceHurt(1f);
                 _hungerDamageTickTimer -= 1f;
             }
         }
-        else if (nutrition.Protein >= proteinHealNeed && nutrition.Water >= waterHealNeed)
+        else if (proteinReady)
         {
             _hungerDamageTickTimer = 0f;
-            _damageReceiver.Heal(HealthState.HealSpeed * timeDelta, item);
+            ApplyProteinHealthRecovery(safeDelta);
         }
         else
         {
             _hungerDamageTickTimer = 0f;
+            _healthRecoveryTimer = 0f;
         }
 
         if (nutrition.Water <= 0)
         {
-            _waterDamageTickTimer += Mathf.Max(0f, timeDelta);
+            _waterDamageTickTimer += safeDelta;
             while (_waterDamageTickTimer >= WaterDamageTickInterval)
             {
                 _damageReceiver.ForceHurt(HealthState.WaterSelfHurt);
@@ -1167,8 +1205,39 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
 
         if (nutrition.Vitamins <= 0)
         {
-            _damageReceiver.ForceHurt(HealthState.VitaminSelfHurt * timeDelta);
+            _damageReceiver.ForceHurt(HealthState.VitaminSelfHurt * safeDelta);
         }
+    }
+
+    /// <summary>按蛋白质状态执行连续回血或大间隔一次性回血。</summary>
+    private void ApplyProteinHealthRecovery(float timeDelta)
+    {
+        if (_damageReceiver == null || _damageReceiver.Hp >= _damageReceiver.MaxHp)
+        {
+            _healthRecoveryTimer = 0f;
+            return;
+        }
+
+        if (HealthState.HealInterval > 0f)
+        {
+            if (HealthState.HealAmount <= 0f)
+            {
+                _healthRecoveryTimer = 0f;
+                return;
+            }
+
+            _healthRecoveryTimer += timeDelta;
+            if (_healthRecoveryTimer < HealthState.HealInterval)
+                return;
+
+            _healthRecoveryTimer %= HealthState.HealInterval;
+            _damageReceiver.Heal(HealthState.HealAmount, item);
+            return;
+        }
+
+        _healthRecoveryTimer = 0f;
+        if (HealthState.HealSpeed > 0f)
+            _damageReceiver.Heal(HealthState.HealSpeed * timeDelta, item);
     }
 
     public void RestoreOnRespawn()
@@ -1176,6 +1245,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         Data.nutrition.Max();
         _hungerDamageTickTimer = 0f;
         _waterDamageTickTimer = 0f;
+        _healthRecoveryTimer = 0f;
         DataUpdate?.Invoke();
 
         if (Data.ShowCanvas)

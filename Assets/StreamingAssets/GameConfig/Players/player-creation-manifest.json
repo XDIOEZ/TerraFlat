@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "defaultProfileId": "default",
+  "profiles": [
+    {
+      "id": "default",
+      "core": {
+        "dataSpeed": 8.0,
+        "playerPov": 10.0,
+        "perceptionRadiusMultiplier": 1.0,
+        "initialStamina": 100.0,
+        "maxStamina": 100.0,
+        "staminaRecoverySpeed": 10.0
+      },
+      "movement": {
+        "speed": 5.0,
+        "slowDownSpeed": 5.0,
+        "endSpeed": 0.1,
+        "moveStaminaConsume": 0.0,
+        "runStaminaConsume": 2.0,
+        "runSpeedRate": 1.5,
+        "runStaminaThreshold": 2.0,
+        "speedTransitionDuration": 0.24,
+        "stopTransitionDuration": 0.07,
+        "hungerActionEnabled": true,
+        "moveNutritionConsumeMultiplier": 1.6,
+        "runNutritionConsumeMultiplier": 2.0,
+        "runWaterConsumeMultiplier": 0.5
+      },
+      "food": {
+        "nutrition": {
+          "carbohydrates": 500.0,
+          "maxCarbohydrates": 1000.0,
+          "fat": 500.0,
+          "maxFat": 1000.0,
+          "protein": 500.0,
+          "maxProtein": 1000.0,
+          "water": 1500.0,
+          "maxWater": 1500.0,
+          "vitamins": 500.0,
+          "maxVitamins": 1000.0
+        },
+        "nutritionConsumeSpeed": 0.5,
+        "waterConsumeSpeedRate": 1.0,
+        "nutritionConsumeRate": 1.0,
+        "staminaRecoverSpeed": 1.0,
+        "staminaConsumeSpeed": 0.5,
+        "healthEnabled": true,
+        "healSpeed": 0.01,
+        "waterSelfHurt": 1.0,
+        "proteinSelfHurt": 1.0,
+        "vitaminSelfHurt": 1.0,
+        "healNeedRatio": 0.6
+      },
+      "stamina": {
+        "currentStamina": 100.0,
+        "maxStamina": 100.0
+      }
+    }
+  ]
+}

@@ -554,6 +554,7 @@ public class Inventory
             itemSlotUI.OnMouseDragDrop = null;
             itemSlotUI.OnTouchTap = null;
             itemSlotUI.OnTouchLongPress = null;
+            itemSlotUI.OnTouchWorldLongPress = null;
             itemSlotUI.OnDesktopTap = null;
 
             itemSlotUI.OnLeftClick += OnLeftClick;
@@ -565,6 +566,7 @@ public class Inventory
             itemSlotUI.OnMouseDragDrop = OnMouseDragDrop;
             itemSlotUI.OnTouchTap = OnTouchTap;
             itemSlotUI.OnTouchLongPress = OnTouchLongPress;
+            itemSlotUI.OnTouchWorldLongPress = OnTouchWorldLongPress;
             itemSlotUI.OnDesktopTap = OnDesktopTap;
 
             // 修复 Belong_Inventory 的逻辑，将其设置为当前 Inventory 实例
@@ -626,6 +628,7 @@ public class Inventory
         slotUI.OnMouseDragDrop = null;
         slotUI.OnTouchTap = null;
         slotUI.OnTouchLongPress = null;
+        slotUI.OnTouchWorldLongPress = null;
         slotUI.OnDesktopTap = null;
 
         slotUI.OnLeftClick += OnLeftClick;
@@ -637,6 +640,7 @@ public class Inventory
         slotUI.OnMouseDragDrop = OnMouseDragDrop;
         slotUI.OnTouchTap = OnTouchTap;
         slotUI.OnTouchLongPress = OnTouchLongPress;
+        slotUI.OnTouchWorldLongPress = OnTouchWorldLongPress;
         slotUI.OnDesktopTap = OnDesktopTap;
 
         slotUI.RefreshUI();
@@ -921,6 +925,11 @@ public class Inventory
             : TouchTapFlow.None;
 
         return true;
+    }
+
+    public virtual bool OnTouchWorldLongPress(Vector2 screenPosition)
+    {
+        return false;
     }
 
     /// <summary>桌面空手轻触不改变库存；拖拽后手上有整组物品时，轻触执行单件取放。</summary>

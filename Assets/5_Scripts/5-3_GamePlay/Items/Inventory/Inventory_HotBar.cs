@@ -87,6 +87,11 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
             return handled;
         }
 
+        public override bool OnTouchWorldLongPress(Vector2 screenPosition)
+        {
+            return Owner?.TryDropHeldItemAtScreenPosition(screenPosition) == true;
+        }
+
         /// <summary>桌面空手轻触快捷栏选中槽位；手持整组时沿用单件取放事务。</summary>
         public override void OnDesktopTap(int index)
         {
@@ -647,6 +652,12 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     public Inventory GetDefaultTargetInventory()
     {
         return RuntimeInventory;
+    }
+
+    public bool TryDropHeldItemAtScreenPosition(Vector2 screenPosition)
+    {
+        Module_DiscardItem discardModule = item?.GetComponentInChildren<Module_DiscardItem>(true);
+        return discardModule?.TryDropCurrentSelectionAtScreenPosition(screenPosition) == true;
     }
 
     private bool IsGameplayInputLocked()

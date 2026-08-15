@@ -42,6 +42,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     public PlanetData ReadyPlanetData = new();
     
     [Header("准备好的时间数据")]
+    [System.NonSerialized]
     public TimeData ReadyTimeData = new TimeData();
     [Header("存档数据")]
     public GameSaveData ReadyGameSaveData = new GameSaveData();
@@ -95,6 +96,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         _ = DimensionManager.Instance;
         _ = FlatWorld.Gameplay.Events.GameEventManager.Instance;
         QuestManager.Instance.BindGameManager(this);
+        ApplyDefaultTimeSystemProfile();
 
         // 寻路系统不在 StartScene 激活，等玩家进入游戏世界后再启用
         // WorldNavigationManager 在进入世界后注册当前已加载区块。
@@ -454,6 +456,29 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         SaveDataMgr.Instance.SaveData.PlanetData_Dict[ReadyPlanetData_.Name] = FastCloner.FastCloner.DeepClone(ReadyPlanetData_);
         SaveDataMgr.Instance.SaveData.DayTimeData.WorldTimeDict[ReadyPlanetData_.Name] = new SerializableTimeData(timeData);
         SaveDataMgr.Instance.SaveData.DayTimeData.SceneLightingRateDict[ReadyPlanetData_.Name] = 1.0f;
+    }
+
+    public bool TrySetReadyTimeSystemProfile(string profileId)
+    {
+        if (!TimeSystemConfigService.TryCreateTimeData(
+                profileId,
+                out TimeData timeData,
+                out string error))
+        {
+            Debug.LogWarning($"[GameManager] 无法切换时间系统 Profile：{profileId}；{error}");
+            return false;
+        }
+
+        ReadyTimeData = timeData;
+        return true;
+    }
+
+    public bool ApplyDefaultTimeSystemProfile()
+    {
+        if (!TimeSystemConfigService.IsLoaded)
+            return false;
+
+        return TrySetReadyTimeSystemProfile(TimeSystemConfigService.DefaultProfileId);
     }
 
     [Tooltip("继续游戏,加载传入的玩家名称,通过名称获取玩家数据, ")]

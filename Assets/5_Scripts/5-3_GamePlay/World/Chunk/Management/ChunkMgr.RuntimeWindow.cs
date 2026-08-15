@@ -407,6 +407,8 @@ public partial class ChunkMgr
             if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding current) ||
                 !ReferenceEquals(current, binding))
                 return;
+            SaveDataMgr.Instance?.RestoreRuntimeTerrainForChunk(address, chunk);
+            SaveDataMgr.Instance?.RestoreRuntimeBuildingsForChunk(address);
             SaveDataMgr.Instance?.RestoreRuntimeAiEntitiesForChunk(address);
             if (!binding.WantsPresentation)
                 return;
@@ -591,6 +593,7 @@ public partial class ChunkMgr
                 current.DataStatus != ChunkDataStatus.Ready || current.Terrain == null)
                 continue;
 
+            SaveDataMgr.Instance?.RestoreRuntimeBuildingsForChunk(pair.Key);
             SaveDataMgr.Instance?.RestoreRuntimeAiEntitiesForChunk(pair.Key);
             if (!binding.WantsPresentation)
                 continue;

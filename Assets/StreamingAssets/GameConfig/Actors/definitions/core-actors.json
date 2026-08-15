@@ -149,8 +149,6 @@
             "eatExitHungerRate": 0.85,
             "sleepEnterHpRate": 0.5,
             "sleepExitHpRate": 0.55,
-            "healthRecoveryInterval": 60.0,
-            "healthRecoveryAmount": 10.0,
             "sleepDuration": 6.0,
             "sleepCooldown": 3.0,
             "dayStartRatio": 0.25,
@@ -481,6 +479,16 @@
               "PitchMax": 1.04
             },
             "ConsumeKind": 0,
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 0.0,
+              "HealInterval": 60.0,
+              "HealAmount": 10.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.0
+            },
             "$transform": {
               "localPosition": {
                 "x": 0.0,
@@ -805,6 +813,16 @@
               "PitchMax": 1.04
             },
             "ConsumeKind": 0,
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 0.0,
+              "HealInterval": 60.0,
+              "HealAmount": 10.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.0
+            },
             "$transform": {
               "localPosition": {
                 "x": 0.0,
@@ -1141,8 +1159,6 @@
             "eatExitHungerRate": 0.8,
             "sleepEnterHpRate": 0.45,
             "sleepExitHpRate": 0.5,
-            "healthRecoveryInterval": 60.0,
-            "healthRecoveryAmount": 10.0,
             "sleepDuration": 8.0,
             "sleepCooldown": 4.0,
             "dayStartRatio": 0.25,
@@ -1182,7 +1198,7 @@
             "rageDecayRate": 0.2,
             "attackCooldown": 2.0,
             "attackDamageWindow": 0.12,
-            "attackDamageStartDelay": 0.06,
+            "attackDamageStartDelay": 0.45,
             "fleeTriggerHpRate": 0.2,
             "fleeSafeHpRate": 0.4,
             "fleeRunDistance": 10.0,
@@ -1520,6 +1536,16 @@
               "PitchMax": 1.04
             },
             "ConsumeKind": 0,
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 0.0,
+              "HealInterval": 60.0,
+              "HealAmount": 10.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.0
+            },
             "$transform": {
               "localPosition": {
                 "x": 0.0,
@@ -2020,8 +2046,6 @@
           },
           "parameters": {
             "debugLog": true,
-            "healthRecoveryInterval": 60.0,
-            "healthRecoveryAmount": 10.0,
             "wolfTags": [
               "Wolf"
             ],
@@ -2048,7 +2072,8 @@
             "chaseLossDistance": 44.0,
             "attackCooldown": 2.0,
             "attackDamageWindow": 0.333333343,
-            "attackDamageStartDelay": 0.35,
+            "attackDamageStartDelay": 0.5,
+            "attackRecoveryDuration": 0.35,
             "alertKeepDuration": 2.0,
             "fleeTriggerHpRate": 0.22,
             "fleeSafeHpRate": 0.45,
@@ -2095,6 +2120,7 @@
       },
       "itemData": {
         "code": "",
+        "factionId": "wolves",
         "transform": {
           "position": {
             "x": 0.0,

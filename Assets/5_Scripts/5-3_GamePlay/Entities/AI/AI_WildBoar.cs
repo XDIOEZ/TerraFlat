@@ -49,8 +49,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	private float _sleepCooldownTimer;
 	private float _alertCooldownTimer;
-	// 攻击启动后的硬直/后摇剩余时间；期间即使目标离开攻击范围也必须原地完成本次攻击。
-	private float _attackRecoveryTimer;
 	private Vector3 _chaseTarget;
 	private AI_AttackController _attack = new AI_AttackController();
 	#endregion
@@ -155,8 +153,8 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	public float attackCooldown = 2f;
 	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/攻击"), LabelText("攻击窗口"), SuffixLabel("秒", true), MinValue(0.01f)]
 	public float attackDamageWindow = 0.12f;
-	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/攻击"), LabelText("攻击窗口延迟"), SuffixLabel("秒", true), MinValue(0f)]
-	public float attackDamageStartDelay = 0.06f;
+	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/攻击"), LabelText("攻击前摇"), SuffixLabel("秒", true), MinValue(0f)]
+	public float attackDamageStartDelay = 0.45f;
 
 	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/逃跑"), HorizontalGroup("配置/战斗/逃跑/Hr1"), LabelText("触发血量"), Range(0f, 1f)]
 	public float fleeTriggerHpRate = 0.2f;
@@ -236,13 +234,13 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	{
 		_sleepCooldownTimer = 0f;
 		_alertCooldownTimer = 0f;
-		_attackRecoveryTimer = 0f;
 		_currentFoodTarget = null;
 		_currentThreat = null;
 		_attack.Reset();
 		_attack.Cooldown = attackCooldown;
 		_attack.DamageWindow = attackDamageWindow;
-		_attack.DamageWindowStartDelay = attackDamageStartDelay;
+		_attack.WindupDuration = attackDamageStartDelay;
+		_attack.RecoveryDuration = attackDuration;
 	}
 
 	protected override void OnBindExtraModules()
@@ -275,7 +273,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	{
 		_sleepCooldownTimer = DecrementTimer(_sleepCooldownTimer, deltaTime);
 		_alertCooldownTimer = DecrementTimer(_alertCooldownTimer, deltaTime);
-		_attackRecoveryTimer = DecrementTimer(_attackRecoveryTimer, deltaTime);
 		_attack.Update(deltaTime);
 		UpdateRageLevel(deltaTime);
 	}
@@ -435,8 +432,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 		// 攻击窗口由 AI_AttackController 自己完成；目标在攻击过程中移出范围时，
 		// 不再提前打断窗口，避免攻击动画、伤害窗口和状态机不同步。
-		if (!_attack.IsWindowTriggered &&
-			_attackRecoveryTimer <= 0f &&
+		if (!_attack.IsAttackLocked &&
 			_attack.IsCooldownDone &&
 			IsTargetInsideAttackRange(targetPosition))
 		{
@@ -444,7 +440,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 				_animator,
 				animAttack,
 				WorldTopologyRuntime.ShortestDelta(transform.position, targetPosition));
-			_attackRecoveryTimer = Mathf.Max(0f, attackDuration);
 		}
 	}
 
@@ -465,15 +460,15 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 			: hpRate < fleeTriggerHpRate;
 	}
 
-	/// <summary>攻击条件：先完成本次后摇，且只有冷却结束后才能从追击进入攻击。</summary>
+	/// <summary>攻击条件：攻击锁定阶段必须完成，且只有冷却结束后才能从追击进入攻击。</summary>
 	private bool ShouldAttack()
 	{
 		if (_currentThreat == null) return false;
 
-		// 攻击已经启动后，必须锁定到后摇结束，不能因玩家短距离后撤而提前追击。
+		// 攻击已经启动后，必须锁定到前摇、伤害窗口和后摇结束，不能因玩家短距离后撤而提前追击。
 		if (_currentState == WildBoarState.Attack)
 		{
-			return _attackRecoveryTimer > 0f ||
+			return _attack.IsAttackLocked ||
 				IsTargetInsideAttackRange(_currentThreat.transform.position);
 		}
 

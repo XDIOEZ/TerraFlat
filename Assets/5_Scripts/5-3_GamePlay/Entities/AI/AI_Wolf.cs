@@ -143,8 +143,10 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	public float attackCooldown = 2f;
 	[HorizontalGroup("配置/行为/战斗/Hr3"), LabelText("伤害窗口"), SuffixLabel("秒", true), MinValue(0.01f)]
 	public float attackDamageWindow = 0.33333334f;
-	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), LabelText("攻击窗口延迟"), SuffixLabel("秒", true), MinValue(0f)]
-	public float attackDamageStartDelay = 0.35f;
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), LabelText("攻击前摇"), SuffixLabel("秒", true), MinValue(0f)]
+	public float attackDamageStartDelay = 0.5f;
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), LabelText("攻击后摇"), SuffixLabel("秒", true), MinValue(0f)]
+	public float attackRecoveryDuration = 0.35f;
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), LabelText("警觉维持时长"), SuffixLabel("秒", true), MinValue(0f)]
 	public float alertKeepDuration = 2f;
@@ -269,7 +271,8 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		_attack.Reset();
 		_attack.Cooldown = attackCooldown;
 		_attack.DamageWindow = attackDamageWindow;
-		_attack.DamageWindowStartDelay = attackDamageStartDelay;
+		_attack.WindupDuration = attackDamageStartDelay;
+		_attack.RecoveryDuration = attackRecoveryDuration;
 	}
 
 	protected override void OnBindExtraModules()
@@ -408,6 +411,9 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 			throw new ArgumentNullException(nameof(threatSource));
 		}
 
+		if (!FactionRelationService.CanAttack(item, threatSource))
+			return;
+
 		_currentThreat = threatSource;
 		ClearChaseFormation();
 		_alertTimer = alertKeepDuration;
@@ -428,6 +434,13 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		}
 
 		if (caller == this)
+		{
+			return;
+		}
+
+		if ((caller != null &&
+			FactionRelationService.GetRelation(caller.item, item) != FactionRelation.Friendly) ||
+			!FactionRelationService.CanAttack(item, threatSource))
 		{
 			return;
 		}
@@ -526,15 +539,23 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 			return;
 		}
 
+		if (!FactionRelationService.CanAttack(item, _currentThreat))
+		{
+			_currentThreat = null;
+			_attack.StopWindow();
+			StopMove();
+			return;
+		}
+
 		Vector3 targetPosition = _currentThreat.transform.position;
 		FaceTarget(targetPosition, true);
 
 		float distance = DistanceTo(_currentThreat.transform);
-		if (distance <= attackTriggerDistance)
+		if (distance <= attackTriggerDistance || _attack.IsAttackLocked)
 		{
 			StopMove();
-			// 冷却结束且未触发窗口 → 发起攻击
-			if (!_attack.IsWindowTriggered && _attack.IsCooldownDone)
+			// 前摇、伤害窗口和后摇期间保持本次攻击，不因目标短暂离开范围而重置。
+			if (!_attack.IsAttackLocked && _attack.IsCooldownDone)
 			{
 				_attack.StartWindow(
 					_animator,
@@ -615,6 +636,8 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	{
 		if (_currentThreat == null) return false;
 		float distance = DistanceTo(_currentThreat.transform);
+		if (_currentState == WolfState.Attack && _attack.IsAttackLocked)
+			return true;
 
 		if (!IsAggressiveAdvanceActive() && _packCount < 2) return false;
 		if (distance > attackTriggerDistance) return false;
@@ -728,6 +751,12 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 
 	private void RefreshThreatTarget()
 	{
+		if (_currentThreat != null && !FactionRelationService.CanAttack(item, _currentThreat))
+		{
+			_currentThreat = null;
+			ClearChaseFormation();
+		}
+
 		if (IsAggressiveAdvanceActive())
 		{
 			Item nearestActor = FindClosestAdvanceAggressionTarget();
@@ -787,6 +816,9 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		if (target == null || target == item)
 			return false;
 
+		if (!FactionRelationService.CanAttack(item, target))
+			return false;
+
 		if (TryGetWolfAlly(target, out _))
 			return false;
 
@@ -812,10 +844,32 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 
 	private Item FindClosestPlayerThreat()
 	{
-		return _detector.FindClosestItemByTags(
-			playerTags,
-			transform.position,
-			includeUnityPlayerTag: true);
+		List<Item> detectedItems = _detector?.CurrentItemsInArea;
+		if (detectedItems == null || detectedItems.Count == 0)
+			return null;
+
+		Item closest = null;
+		float closestDistanceSqr = float.MaxValue;
+		for (int i = 0; i < detectedItems.Count; i++)
+		{
+			Item candidate = detectedItems[i];
+			if (candidate == null || !IsPlayerChaseTarget(candidate) ||
+				!FactionRelationService.CanAttack(item, candidate))
+			{
+				continue;
+			}
+
+			float distanceSqr = WorldTopologyRuntime.SqrDistance(
+				transform.position,
+				candidate.transform.position);
+			if (distanceSqr >= closestDistanceSqr)
+				continue;
+
+			closest = candidate;
+			closestDistanceSqr = distanceSqr;
+		}
+
+		return closest;
 	}
 
 	private bool IsPlayerThreat(Item target)
@@ -1085,6 +1139,13 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 
 		ally = target.GetComponentInChildren<AI_Wolf>();
 		if (ally == null || ally == this) return false;
+
+		if (FactionRelationService.GetRelation(item, target) != FactionRelation.Friendly)
+			return false;
+
+		// 新定义以 FactionId 为准；只有旧存档/旧 Prefab 才继续使用 Wolf 标签回退。
+		if (!string.IsNullOrWhiteSpace(target.itemData?.FactionId))
+			return true;
 
 		if (wolfTags == null || wolfTags.Count == 0) return true;
 
