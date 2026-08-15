@@ -631,7 +631,9 @@ namespace MCPForUnity.Editor.Services.Transport.Transports
                             bool isBenign =
                                 msg.IndexOf("Connection closed before reading expected bytes", StringComparison.OrdinalIgnoreCase) >= 0
                                 || msg.IndexOf("Read timed out", StringComparison.OrdinalIgnoreCase) >= 0
-                                || ex is IOException;
+                                || ex is IOException
+                                // 网络流在旧客户端被新连接清理时会抛出此异常，属于正常断开。
+                                || ex is ObjectDisposedException;
                             if (isBenign)
                             {
                                 if (IsDebugEnabled()) McpLog.Info($"Client handler: {msg}", always: false);
@@ -649,7 +651,8 @@ namespace MCPForUnity.Editor.Services.Transport.Transports
                     lock (clientsLock) { activeClients.Remove(client); }
                     int remaining;
                     lock (clientsLock) { remaining = activeClients.Count; }
-                    McpLog.Info($"Client handler exited (remaining clients: {remaining})");
+                    // 客户端断开属于正常清理流程，仅在调试日志中记录，避免异步堆栈被 Unity 标记为异常。
+                    McpLog.Info($"Client handler exited (remaining clients: {remaining})", always: false);
                 }
             }
         }
