@@ -32,6 +32,10 @@ public class Mod_Cam : Module
     public GameController GameController;
     private Mod_ChunkLoader _chunkLoader;
     private WrappedWorldCameraRenderer _wrappedWorldRenderer;
+    private CinemachineFramingTransposer _framingTransposer;
+    private float _baseXDamping;
+    private float _baseYDamping;
+    private bool _cameraFollowDefaultsCaptured;
 
     public GameObject CamPrefab;
     private GameObject instantiatedCamera;
@@ -64,6 +68,17 @@ public class Mod_Cam : Module
     public new void Awake()
     {
          _Data.ID = ModText.Camera;
+    }
+
+    private void OnEnable()
+    {
+        CameraUserSettings.Changed -= HandleCameraSettingsChanged;
+        CameraUserSettings.Changed += HandleCameraSettingsChanged;
+    }
+
+    private void OnDisable()
+    {
+        CameraUserSettings.Changed -= HandleCameraSettingsChanged;
     }
 
     // 在Load方法中实例化相机逻辑
@@ -117,6 +132,8 @@ public class Mod_Cam : Module
         // 初始化相机视野（正交大小）
         if (Vcam != null)
         {
+            CacheCameraFollowDefaults();
+            ApplyCameraFollowSettings();
             LoadPovValue();
             Vcam.m_Lens.OrthographicSize = povValue;
         }
@@ -134,6 +151,8 @@ public class Mod_Cam : Module
     // 销毁时调用，注销事件
     private void OnDestroy()
     {
+        CameraUserSettings.Changed -= HandleCameraSettingsChanged;
+
         // 注销事件
         if (GameController != null && GameController._inputActions != null)
         {
@@ -146,6 +165,48 @@ public class Mod_Cam : Module
             Destroy(instantiatedCamera);
         }
     }
+    #endregion
+
+    #region 镜头预判设置
+
+    /// <summary>缓存相机 Prefab 的基础阻尼，避免切换正负前探值时丢失原始跟随手感。</summary>
+    private void CacheCameraFollowDefaults()
+    {
+        if (Vcam == null)
+            return;
+
+        _framingTransposer ??= Vcam.GetCinemachineComponent<CinemachineFramingTransposer>();
+        if (_framingTransposer == null || _cameraFollowDefaultsCaptured)
+            return;
+
+        _baseXDamping = _framingTransposer.m_XDamping;
+        _baseYDamping = _framingTransposer.m_YDamping;
+        _cameraFollowDefaultsCaptured = true;
+    }
+
+    /// <summary>即时应用玩家选择的正值前探、负值惯性和预判平滑。</summary>
+    public void ApplyCameraFollowSettings()
+    {
+        if (Vcam == null)
+            return;
+
+        CacheCameraFollowDefaults();
+        if (_framingTransposer == null || !_cameraFollowDefaultsCaptured)
+            return;
+
+        float lookahead = CameraUserSettings.Lookahead;
+        float inertia = Mathf.Max(0f, -lookahead);
+        _framingTransposer.m_LookaheadTime = Mathf.Max(0f, lookahead);
+        _framingTransposer.m_LookaheadSmoothing = CameraUserSettings.LookaheadSmoothing;
+        _framingTransposer.m_XDamping = Mathf.Clamp(_baseXDamping + inertia, 0f, 20f);
+        _framingTransposer.m_YDamping = Mathf.Clamp(_baseYDamping + inertia, 0f, 20f);
+    }
+
+    private void HandleCameraSettingsChanged()
+    {
+        ApplyCameraFollowSettings();
+    }
+
     #endregion
 
     #region 相机控制

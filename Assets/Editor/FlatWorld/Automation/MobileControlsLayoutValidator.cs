@@ -26,8 +26,16 @@ namespace FlatWorld.Automation
             Transform aim = RequireNode(gameplay, "普通指向区");
             Transform move = RequireNode(gameplay, "移动摇杆");
             Transform attack = RequireNode(gameplay, "攻击摇杆");
-            Transform hotbar = RequireNode(gameplay, "快捷栏锚点");
+            Transform run = RequireNode(gameplay, "奔跑");
+            Transform persistent = RequireNode(mobilePrefab.transform, "常驻控制层");
+            Transform menu = RequireNode(persistent, "菜单");
+            Transform hotbar = RequireNode(mobilePrefab.transform, "快捷栏锚点");
             Transform drawer = RequireNode(mobilePrefab.transform, "菜单抽屉");
+
+            if (menu.parent != persistent)
+                throw new InvalidOperationException("菜单按钮必须独立于玩法控制层，模态面板打开时仍需保留返回入口。");
+            if (hotbar.parent != mobilePrefab.transform)
+                throw new InvalidOperationException("快捷栏锚点必须独立于玩法控制层，才能在打开背包时保持显示。");
 
             if (aim.GetSiblingIndex() >= move.GetSiblingIndex() ||
                 aim.GetSiblingIndex() >= attack.GetSiblingIndex())
@@ -38,14 +46,18 @@ namespace FlatWorld.Automation
             RequireRaycast(aim, true);
             RequireRaycast(move, true);
             RequireRaycast(attack, true);
+            RequireNode(run, "状态标记").GetComponent<Image>();
             RequireNode(drawer, "抽屉按钮区").GetComponent<GridLayoutGroup>();
             RequireMobileButtons(mobilePrefab.transform);
             RequireInfrastructurePrefabs();
 
-            ValidateReferenceGeometry(1920f, 1080f, 0f, 0f, move, attack, hotbar, drawer);
-            ValidateReferenceGeometry(2400f, 1080f, 0f, 0f, move, attack, hotbar, drawer);
-            ValidateReferenceGeometry(2400f, 1080f, 132f, 48f, move, attack, hotbar, drawer);
-            ValidateReferenceGeometry(2400f, 1080f, 48f, 132f, move, attack, hotbar, drawer);
+            ValidateReferenceGeometry(2560f, 1440f, 0f, 0f, move, attack, run, hotbar, drawer);
+            ValidateReferenceGeometry(1920f, 1080f, 0f, 0f, move, attack, run, hotbar, drawer);
+            ValidateReferenceGeometry(1600f, 900f, 0f, 0f, move, attack, run, hotbar, drawer);
+            ValidateReferenceGeometry(1280f, 720f, 0f, 0f, move, attack, run, hotbar, drawer);
+            ValidateReferenceGeometry(2400f, 1080f, 0f, 0f, move, attack, run, hotbar, drawer);
+            ValidateReferenceGeometry(2400f, 1080f, 132f, 48f, move, attack, run, hotbar, drawer);
+            ValidateReferenceGeometry(2400f, 1080f, 48f, 132f, move, attack, run, hotbar, drawer);
 
             Debug.Log("[Mobile Layout] 通过：16:9、20:9、左右刘海安全区与两种横屏方向结构均满足约束。");
         }
@@ -118,6 +130,7 @@ namespace FlatWorld.Automation
             float rightInset,
             Transform move,
             Transform attack,
+            Transform run,
             Transform hotbar,
             Transform drawer)
         {
@@ -127,8 +140,25 @@ namespace FlatWorld.Automation
 
             RectTransform moveRect = (RectTransform)move;
             RectTransform attackRect = (RectTransform)attack;
+            RectTransform runRect = (RectTransform)run;
             RectTransform hotbarRect = (RectTransform)hotbar;
             RectTransform drawerRect = (RectTransform)drawer;
+            if (moveRect.anchorMin != Vector2.zero || moveRect.anchorMax != new Vector2(0.5f, 1f))
+                throw new InvalidOperationException("移动摇杆必须覆盖左半屏作为浮动按下区域。");
+            if (-attackRect.anchoredPosition.x < 64f || attackRect.anchoredPosition.y < 48f)
+            {
+                throw new InvalidOperationException("右侧攻击摇杆距离安全区边角过近。");
+            }
+            Vector2 leftMiddle = new Vector2(0f, 0.5f);
+            if (runRect.anchorMin != leftMiddle || runRect.anchorMax != leftMiddle ||
+                runRect.pivot != leftMiddle || runRect.anchoredPosition.x < 48f)
+            {
+                throw new InvalidOperationException("奔跑按钮必须锚定在安全区左侧中部，避开左下角玩家信息。");
+            }
+            float runBottom = screenHeight * 0.5f + runRect.anchoredPosition.y -
+                              runRect.sizeDelta.y * runRect.pivot.y;
+            if (runBottom < screenHeight * 0.3f)
+                throw new InvalidOperationException($"{screenWidth}x{screenHeight} 中奔跑按钮过于靠近左下角。");
             float targetHotbarWidth = Mathf.Min(760f, safeWidth * 0.44f);
             float sideReserve = Mathf.Max(moveRect.sizeDelta.x, attackRect.sizeDelta.x) + 68f;
             if (targetHotbarWidth + sideReserve * 2f > safeWidth + 0.01f)

@@ -60,5 +60,42 @@ namespace FlatWorld.GameTest.PlayerInteraction
             Assert.That(state.attackAim, Is.EqualTo(Vector2.zero));
             Assert.That(state.buttons, Is.Zero);
         }
+
+        [Test]
+        public void ZeroInput_DoesNotCreateMobileDeviceBeforeFirstTouch()
+        {
+            RemoveMobileDevices();
+            MobileInputRuntime.ResetAll();
+            Assert.That(CountMobileDevices(), Is.Zero);
+
+            MobileInputRuntime.SetAim(Vector2.zero);
+            MobileInputRuntime.SetAttackAim(Vector2.zero);
+            MobileInputRuntime.SetButton(MobileVirtualButton.Attack, false);
+            Assert.That(CountMobileDevices(), Is.Zero);
+
+            MobileInputRuntime.SetAim(Vector2.right);
+            Assert.That(CountMobileDevices(), Is.EqualTo(1));
+        }
+
+        private static void RemoveMobileDevices()
+        {
+            for (int i = UnityInputSystem.devices.Count - 1; i >= 0; i--)
+            {
+                if (UnityInputSystem.devices[i] is FlatWorldMobileDevice mobileDevice)
+                    UnityInputSystem.RemoveDevice(mobileDevice);
+            }
+        }
+
+        private static int CountMobileDevices()
+        {
+            int count = 0;
+            for (int i = 0; i < UnityInputSystem.devices.Count; i++)
+            {
+                if (UnityInputSystem.devices[i] is FlatWorldMobileDevice)
+                    count++;
+            }
+
+            return count;
+        }
     }
 }

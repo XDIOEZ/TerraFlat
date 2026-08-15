@@ -396,6 +396,12 @@ public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
         if (manager == null)
             return;
 
+        // 饮水特效属于可选反馈；资源目录尚未加载或测试环境未注册时静默跳过，
+        // 不能让缺少表现资源把已经成功的饮水动作升级为玩法错误。
+        GameRes gameRes = GameRes.ExistingInstance;
+        if (gameRes == null || gameRes.GetPrefab(DrinkEffectName, false) == null)
+            return;
+
         LastEffect = manager.PlayEffect(actor.transform, DrinkEffectName, actor.transform,
             new Vector3(0f, 0.15f, 0f), 0.8f, EffectStackMode.Stackable);
         ConfigureBlueWaterParticles(LastEffect);

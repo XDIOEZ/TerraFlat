@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 为本地玩家实例化正式手机控制 Prefab，并把节点契约连接到独立虚拟设备、快捷栏、丢弃和相机接口。
-/// HUD 在 Android 或显式编辑器模拟模式下启用；正式模态面板、输入锁、暂停和失焦会立即隐藏玩法控件并清空全部触摸状态。
+/// HUD 仅在本地玩家手动选择 Mobile 控制方式时启用；正式模态面板、输入锁、暂停和失焦会立即隐藏玩法控件并清空全部触摸状态。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Player))]
@@ -18,9 +18,16 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private const string AttackZoneName = "攻击摇杆";
     private const string DrawerName = "菜单抽屉";
     private const string GameplayLayerName = "玩法控制层";
+    private const string PersistentLayerName = "常驻控制层";
+    private const int ModalHotbarSortingOrder = 1000;
+    private const float MoveZoneMarginX = 76f;
+    private const float MoveZoneMarginY = 54f;
+    private const float FixedMoveZoneSize = 230f;
 
-    [SerializeField, Tooltip("仅在 Unity 编辑器中显式显示手机 HUD，便于横屏和安全区验收。")]
-    private bool enableEditorSimulation;
+    private static readonly Color RunOffColor = new(0.094f, 0.212f, 0.247f, 0.99f);
+    private static readonly Color RunOnColor = new(0.26f, 0.61f, 0.57f, 1f);
+    private static readonly Color RunOffBorderColor = new(0.55f, 0.68f, 0.70f, 0.28f);
+    private static readonly Color RunOnBorderColor = new(0.83f, 0.49f, 0.23f, 1f);
 
     private static PlayerMobileControlsHUD activeLocalHud;
 
@@ -28,9 +35,15 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private GameController controller;
     private GameObject viewObject;
     private GameObject gameplayLayer;
+    private GameObject persistentLayer;
     private GameObject drawer;
     private MobileVirtualJoystick[] joysticks;
     private MobileInputButton[] inputButtons;
+    private Canvas hotbarCanvas;
+    private Mover mover;
+    private Image runButtonImage;
+    private Outline runButtonOutline;
+    private Image runStateIndicator;
     private Coroutine hotbarSetupCoroutine;
     private bool hotbarConfigured;
     private bool geometryInitialized;
@@ -38,9 +51,25 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private int lastScreenWidth;
     private int lastScreenHeight;
     private bool missingPrefabLogged;
+    private bool runStateBound;
+    private bool hotbarCanvasSortingCached;
+    private bool hotbarCanvasOriginalOverrideSorting;
+    private int hotbarCanvasOriginalSortingOrder;
+    private bool changingViewState;
+    private bool hotbarOriginalLayoutCached;
+    private RectTransform hotbarOriginalRect;
+    private Transform hotbarOriginalParent;
+    private int hotbarOriginalSiblingIndex;
+    private Vector2 hotbarOriginalAnchorMin;
+    private Vector2 hotbarOriginalAnchorMax;
+    private Vector2 hotbarOriginalPivot;
+    private Vector2 hotbarOriginalAnchoredPosition;
+    private Vector2 hotbarOriginalSizeDelta;
+    private Vector3 hotbarOriginalLocalScale;
 
     public bool IsDrawerOpen => drawer != null && drawer.activeSelf;
-    public bool IsViewReady => viewObject != null && gameplayLayer != null && drawer != null;
+    public bool IsViewReady => viewObject != null && gameplayLayer != null &&
+                                persistentLayer != null && drawer != null;
 
     #endregion
 
@@ -50,12 +79,17 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     {
         player = GetComponent<Player>();
         controller = GetComponentInChildren<GameController>(true);
+        mover = GetComponentInChildren<Mover>(true);
     }
 
     private void OnEnable()
     {
         if (player != null)
             player.ProfileContextChanged += RefreshAvailability;
+        if (controller != null)
+            controller.ActiveInputDeviceChanged += HandleInputDeviceChanged;
+        UIUserSettings.MobileControlsChanged -= HandleMobileControlsSettingsChanged;
+        UIUserSettings.MobileControlsChanged += HandleMobileControlsSettingsChanged;
         RefreshAvailability();
     }
 
@@ -63,6 +97,10 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     {
         if (player != null)
             player.ProfileContextChanged -= RefreshAvailability;
+        if (controller != null)
+            controller.ActiveInputDeviceChanged -= HandleInputDeviceChanged;
+        UIUserSettings.MobileControlsChanged -= HandleMobileControlsSettingsChanged;
+        UnbindRunStateVisual();
         UnsubscribeInteractionSurface();
         if (activeLocalHud == this)
             activeLocalHud = null;
@@ -99,11 +137,14 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (player == null || !player.IsLocalProfile)
             return false;
 
-#if UNITY_EDITOR
-        return Application.isMobilePlatform || enableEditorSimulation;
-#else
-        return Application.isMobilePlatform;
-#endif
+        return controller != null &&
+               controller.PreferredInputDevice == GameController.InputDeviceType.Mobile;
+    }
+
+    /// <summary>设置切换控制方式后立即刷新触屏 HUD，并可靠释放旧触控状态。</summary>
+    private void HandleInputDeviceChanged(GameController.InputDeviceType deviceType)
+    {
+        RefreshAvailability();
     }
 
     private void RefreshAvailability()
@@ -112,6 +153,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         {
             if (activeLocalHud == this)
                 activeLocalHud = null;
+            UnsubscribeInteractionSurface();
             ResetAllTouchState();
             SetViewActive(false);
             return;
@@ -119,6 +161,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
         activeLocalHud = this;
         EnsureView();
+        BindRunStateVisual();
         SubscribeInteractionSurface();
         RefreshInteractionSurface();
     }
@@ -144,12 +187,14 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         viewObject.name = RuntimeUIPrefabKeys.MobileControls;
         FlatWorldUIAutoLocalizer.BindStaticTexts(viewObject.transform);
         gameplayLayer = FindRequired(GameplayLayerName)?.gameObject;
+        persistentLayer = FindRequired(PersistentLayerName)?.gameObject;
         drawer = FindRequired(DrawerName)?.gameObject;
         if (drawer != null)
             drawer.SetActive(false);
 
         ConfigureJoysticks();
         ConfigureVirtualButtons();
+        CacheRunButtonVisual();
         ConfigureCommands();
         hotbarSetupCoroutine = StartCoroutine(ConfigureHotbarWhenReady());
     }
@@ -172,8 +217,27 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     private void SetViewActive(bool active)
     {
-        if (viewObject != null)
+        if (viewObject == null)
+            return;
+
+        // 快捷栏是桌面和手机共用的 UI，不能随着手机 HUD 一起被停用。
+        if (!active)
+            RestoreHotbarToOriginalParent();
+
+        if (viewObject.activeSelf == active)
+            return;
+
+        // SetActive 会同步触发子 BasePanel.OnDisable；这些回调不能在父节点停用过程中
+        // 再次调整快捷栏层级，否则 Unity 会拒绝 SetAsLastSibling。
+        changingViewState = true;
+        try
+        {
             viewObject.SetActive(active);
+        }
+        finally
+        {
+            changingViewState = false;
+        }
     }
 
     #endregion
@@ -182,7 +246,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     private void ConfigureJoysticks()
     {
-        ConfigureJoystick(MoveZoneName, MobileVirtualJoystick.JoystickRole.Move, floating: false);
+        ApplyMoveJoystickMode();
         ConfigureJoystick(AimZoneName, MobileVirtualJoystick.JoystickRole.Aim, floating: true);
         ConfigureJoystick(AttackZoneName, MobileVirtualJoystick.JoystickRole.Attack, floating: false);
         joysticks = viewObject.GetComponentsInChildren<MobileVirtualJoystick>(true);
@@ -200,6 +264,58 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (joystick == null)
             joystick = zone.gameObject.AddComponent<MobileVirtualJoystick>();
         joystick.Configure(role, baseRect, knobRect, 92f, floating);
+    }
+
+    /// <summary>按玩家偏好在左半屏浮动区与左下角固定区之间切换，复用同一摇杆实例。</summary>
+    private void ApplyMoveJoystickMode()
+    {
+        Transform zone = FindRequired(MoveZoneName);
+        RectTransform zoneRect = zone as RectTransform;
+        if (zoneRect == null)
+            return;
+
+        RectTransform baseRect = zone.Find("底座") as RectTransform;
+        RectTransform knobRect = baseRect != null ? baseRect.Find("摇杆") as RectTransform : null;
+        MobileVirtualJoystick joystick = zone.GetComponent<MobileVirtualJoystick>();
+        if (joystick == null)
+            joystick = zone.gameObject.AddComponent<MobileVirtualJoystick>();
+        joystick.ResetOwnership();
+        if (baseRect != null)
+            baseRect.anchoredPosition = Vector2.zero;
+
+        bool floating = UIUserSettings.FloatingMoveJoystick;
+        if (floating)
+        {
+            zoneRect.anchorMin = Vector2.zero;
+            zoneRect.anchorMax = new Vector2(0.5f, 1f);
+            zoneRect.pivot = new Vector2(0.5f, 0.5f);
+            zoneRect.offsetMin = Vector2.zero;
+            zoneRect.offsetMax = Vector2.zero;
+        }
+        else
+        {
+            zoneRect.anchorMin = zoneRect.anchorMax = Vector2.zero;
+            zoneRect.pivot = Vector2.zero;
+            zoneRect.anchoredPosition = new Vector2(MoveZoneMarginX, MoveZoneMarginY);
+            zoneRect.sizeDelta = new Vector2(FixedMoveZoneSize, FixedMoveZoneSize);
+        }
+
+        joystick.Configure(
+            MobileVirtualJoystick.JoystickRole.Move,
+            baseRect,
+            knobRect,
+            92f,
+            floating);
+    }
+
+    private void HandleMobileControlsSettingsChanged()
+    {
+        if (viewObject == null)
+            return;
+
+        ResetAllTouchState();
+        ApplyMoveJoystickMode();
+        joysticks = viewObject.GetComponentsInChildren<MobileVirtualJoystick>(true);
     }
 
     private void ConfigureVirtualButtons()
@@ -226,6 +342,50 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         inputButton.Configure(virtualButton);
     }
 
+    /// <summary>缓存奔跑开关的两态视觉节点，状态由真实 Mover 统一驱动。</summary>
+    private void CacheRunButtonVisual()
+    {
+        Transform runButton = FindRequired("奔跑");
+        runButtonImage = runButton != null ? runButton.GetComponent<Image>() : null;
+        runButtonOutline = runButton != null ? runButton.GetComponent<Outline>() : null;
+        Transform indicator = runButton != null ? runButton.Find("状态标记") : null;
+        runStateIndicator = indicator != null ? indicator.GetComponent<Image>() : null;
+    }
+
+    private void BindRunStateVisual()
+    {
+        if (mover == null)
+            mover = GetComponentInChildren<Mover>(true);
+        if (mover == null || viewObject == null)
+            return;
+
+        if (!runStateBound)
+        {
+            mover.RunStateChanged += RefreshRunButtonVisual;
+            runStateBound = true;
+        }
+
+        RefreshRunButtonVisual(mover.IsRunning);
+    }
+
+    private void UnbindRunStateVisual()
+    {
+        if (mover != null && runStateBound)
+            mover.RunStateChanged -= RefreshRunButtonVisual;
+        runStateBound = false;
+    }
+
+    /// <summary>开启时使用青绿底与琥珀指示点，关闭时恢复深色弱提示。</summary>
+    private void RefreshRunButtonVisual(bool isRunning)
+    {
+        if (runButtonImage != null)
+            runButtonImage.color = isRunning ? RunOnColor : RunOffColor;
+        if (runButtonOutline != null)
+            runButtonOutline.effectColor = isRunning ? RunOnBorderColor : RunOffBorderColor;
+        if (runStateIndicator != null)
+            runStateIndicator.color = isRunning ? RunOnBorderColor : RunOffBorderColor;
+    }
+
     private void ConfigureCommands()
     {
         BindClick("菜单", ToggleDrawer);
@@ -250,7 +410,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private IEnumerator ConfigureHotbarWhenReady()
     {
         // 快捷栏面板由库存模块稍后创建；等待真实面板出现，避免 Awake 顺序导致手机布局永久漏接。
-        while (isActiveAndEnabled && viewObject != null && !hotbarConfigured)
+        while (isActiveAndEnabled && viewObject != null && viewObject.activeInHierarchy &&
+               ShouldShow() && !hotbarConfigured)
         {
             hotbarConfigured = TryConfigureHotbarWidth();
             if (!hotbarConfigured)
@@ -268,7 +429,20 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (hotbarAnchor == null || hotbarRect == null)
             return false;
 
-        hotbarRect.SetParent(hotbarAnchor, false);
+        // UIManager 的面板通知可能在父节点 SetActive 的中途进入这里；此时任何
+        // SetParent/SetAsLastSibling 都属于对正在停用层级的修改，必须跳过本次刷新。
+        if (changingViewState || viewObject == null || !viewObject.activeInHierarchy ||
+            !hotbarAnchor.gameObject.activeInHierarchy)
+        {
+            return false;
+        }
+
+        CacheHotbarOriginalLayout(hotbarRect, hotbarAnchor);
+
+        if (hotbarRect.parent != hotbarAnchor)
+            hotbarRect.SetParent(hotbarAnchor, false);
+        hotbarRect.SetAsLastSibling();
+        CacheHotbarCanvas(hotbarRect);
         float safeWidth = UIManager.Instance.SafeAreaRoot != null
             ? UIManager.Instance.SafeAreaRoot.rect.width
             : 1920f;
@@ -279,7 +453,85 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         hotbarRect.anchorMin = hotbarRect.anchorMax = new Vector2(0.5f, 0f);
         hotbarRect.pivot = new Vector2(0.5f, 0f);
         hotbarRect.anchoredPosition = Vector2.zero;
+        ApplyHotbarInteractionPriority(UIManager.Instance.HasOpenGameplayInputBlockingPanel());
         return true;
+    }
+
+    /// <summary>记录快捷栏在首次切入手机 HUD 前的桌面父节点和布局。</summary>
+    private void CacheHotbarOriginalLayout(RectTransform hotbarRect, Transform hotbarAnchor)
+    {
+        if (hotbarOriginalLayoutCached && hotbarOriginalRect == hotbarRect)
+            return;
+
+        hotbarOriginalRect = hotbarRect;
+        hotbarOriginalParent = hotbarRect.parent;
+        if (hotbarOriginalParent == hotbarAnchor)
+            hotbarOriginalParent = UIManager.ExistingInstance?.SafeAreaRoot;
+
+        hotbarOriginalSiblingIndex = hotbarRect.GetSiblingIndex();
+        hotbarOriginalAnchorMin = hotbarRect.anchorMin;
+        hotbarOriginalAnchorMax = hotbarRect.anchorMax;
+        hotbarOriginalPivot = hotbarRect.pivot;
+        hotbarOriginalAnchoredPosition = hotbarRect.anchoredPosition;
+        hotbarOriginalSizeDelta = hotbarRect.sizeDelta;
+        hotbarOriginalLocalScale = hotbarRect.localScale;
+        hotbarOriginalLayoutCached = hotbarOriginalParent != null;
+    }
+
+    /// <summary>切换到 PC 或销毁手机 HUD 前，将共用快捷栏还原到 SafeAreaRoot。</summary>
+    private void RestoreHotbarToOriginalParent()
+    {
+        if (!hotbarOriginalLayoutCached || hotbarOriginalRect == null ||
+            hotbarOriginalParent == null || !hotbarOriginalParent.gameObject.activeInHierarchy)
+        {
+            return;
+        }
+
+        if (hotbarOriginalRect.parent != hotbarOriginalParent)
+            hotbarOriginalRect.SetParent(hotbarOriginalParent, false);
+
+        int lastSiblingIndex = Mathf.Max(0, hotbarOriginalParent.childCount - 1);
+        hotbarOriginalRect.SetSiblingIndex(Mathf.Clamp(hotbarOriginalSiblingIndex, 0, lastSiblingIndex));
+        hotbarOriginalRect.anchorMin = hotbarOriginalAnchorMin;
+        hotbarOriginalRect.anchorMax = hotbarOriginalAnchorMax;
+        hotbarOriginalRect.pivot = hotbarOriginalPivot;
+        hotbarOriginalRect.sizeDelta = hotbarOriginalSizeDelta;
+        hotbarOriginalRect.anchoredPosition = hotbarOriginalAnchoredPosition;
+        hotbarOriginalRect.localScale = hotbarOriginalLocalScale;
+        ApplyHotbarInteractionPriority(false);
+    }
+
+    /// <summary>缓存快捷栏独立 Canvas 的原始排序，关闭容器后恢复桌面 HUD 层级。</summary>
+    private void CacheHotbarCanvas(RectTransform hotbarRect)
+    {
+        Canvas nextCanvas = hotbarRect != null ? hotbarRect.GetComponent<Canvas>() : null;
+        if (hotbarCanvas == nextCanvas && hotbarCanvasSortingCached)
+            return;
+
+        hotbarCanvas = nextCanvas;
+        hotbarCanvasSortingCached = hotbarCanvas != null;
+        if (!hotbarCanvasSortingCached)
+            return;
+
+        hotbarCanvasOriginalOverrideSorting = hotbarCanvas.overrideSorting;
+        hotbarCanvasOriginalSortingOrder = hotbarCanvas.sortingOrder;
+    }
+
+    /// <summary>模态容器打开时让快捷栏 Canvas 参与最上层射线命中，关闭后还原原始排序。</summary>
+    private void ApplyHotbarInteractionPriority(bool modalOpen)
+    {
+        if (!hotbarCanvasSortingCached || hotbarCanvas == null)
+            return;
+
+        if (modalOpen)
+        {
+            hotbarCanvas.overrideSorting = true;
+            hotbarCanvas.sortingOrder = ModalHotbarSortingOrder;
+            return;
+        }
+
+        hotbarCanvas.overrideSorting = hotbarCanvasOriginalOverrideSorting;
+        hotbarCanvas.sortingOrder = hotbarCanvasOriginalSortingOrder;
     }
 
     #endregion
@@ -290,8 +542,17 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     {
         if (drawer == null)
             return;
+
+        // 模态面板打开时菜单仍可见，第一次点击直接关闭最上层面板，避免用户失去返回/退出路径。
+        UIManager manager = UIManager.ExistingInstance;
+        if (manager != null && manager.HasOpenModalGamepadNavigationPanel() &&
+            manager.TryCloseTopmostCancelPanel())
+        {
+            return;
+        }
+
         drawer.SetActive(!drawer.activeSelf);
-        UIManager.Instance.NotifyInteractionSurfaceChanged();
+        manager?.NotifyInteractionSurfaceChanged();
     }
 
     public void CloseDrawer()
@@ -357,11 +618,11 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     private void RefreshInteractionSurface()
     {
-        if (viewObject == null)
+        if (viewObject == null || changingViewState || !isActiveAndEnabled)
             return;
 
         bool blocked = controller != null && controller.IsGameplayInputLocked;
-        bool modalOpen = UIManager.Instance.HasOpenModalGamepadNavigationPanel();
+        bool modalOpen = UIManager.Instance.HasOpenGameplayInputBlockingPanel();
         bool gameplayVisible = !blocked && !modalOpen;
         RectTransform safeRoot = UIManager.Instance.SafeAreaRoot;
         Vector2 safeSize = safeRoot != null ? safeRoot.rect.size : new Vector2(Screen.width, Screen.height);
@@ -378,7 +639,28 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             drawer.SetActive(false);
         if (gameplayLayer != null)
             gameplayLayer.SetActive(gameplayVisible);
-        viewObject.SetActive(ShouldShow());
+        if (persistentLayer != null)
+            persistentLayer.SetActive(ShouldShow());
+        SetViewActive(ShouldShow());
+
+        if (!ShouldShow() || viewObject == null || !viewObject.activeInHierarchy)
+        {
+            if (!gameplayVisible || geometryChanged)
+                ResetAllTouchState();
+            return;
+        }
+
+        if (viewObject.activeSelf)
+        {
+            // 正常游戏时让常驻 HUD 的真实按钮优先接收射线，右侧指向区只响应空白位置。
+            // 抽屉展开后它本身成为交互层，必须覆盖任务追踪 HUD；其它模态面板打开后再把快捷栏提到最上层参与拖放。
+            if (modalOpen || IsDrawerOpen)
+                viewObject.transform.SetAsLastSibling();
+            else
+                viewObject.transform.SetAsFirstSibling();
+        }
+
+        ApplyHotbarInteractionPriority(modalOpen);
 
         if (hotbarConfigured)
             TryConfigureHotbarWidth();

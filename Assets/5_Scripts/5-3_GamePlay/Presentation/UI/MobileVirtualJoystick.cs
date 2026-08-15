@@ -29,10 +29,10 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
     [SerializeField] private bool floatingOrigin;
 
     private RectTransform interactionRect;
-    private Canvas rootCanvas;
     private Camera eventCamera;
     private CanvasGroup baseCanvasGroup;
     private int pointerId = int.MinValue;
+    private Camera pointerEventCamera;
     private Vector2 originLocal;
     private Vector2 fixedBasePosition;
 
@@ -65,6 +65,8 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         float joystickRadius,
         bool useFloatingOrigin)
     {
+        // 切换固定/浮动模式前先按旧配置释放，避免底座位置与输入值残留。
+        ResetOwnership();
         role = joystickRole;
         baseRect = joystickBase;
         knobRect = knob;
@@ -72,12 +74,14 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         floatingOrigin = useFloatingOrigin;
         CacheReferences();
         ResetOwnership();
+        if (baseCanvasGroup != null)
+            baseCanvasGroup.alpha = floatingOrigin ? 0f : 1f;
     }
 
     private void CacheReferences()
     {
         interactionRect = transform as RectTransform;
-        rootCanvas = GetComponentInParent<Canvas>();
+        Canvas rootCanvas = GetComponentInParent<Canvas>();
         eventCamera = rootCanvas != null && rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay
             ? rootCanvas.worldCamera
             : null;
@@ -97,23 +101,25 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         if (HasPointerOwnership || eventData == null)
             return;
 
-        pointerId = eventData.pointerId;
-        if (!TryGetLocalPosition(eventData.position, out Vector2 pointerLocal))
-        {
-            ResetOwnership();
+        Camera inputCamera = eventData.pressEventCamera != null ? eventData.pressEventCamera : eventCamera;
+        if (!TryGetLocalPosition(eventData.position, inputCamera, out Vector2 pointerLocal))
             return;
-        }
+        if (baseRect == null)
+            return;
+
+        pointerId = eventData.pointerId;
+        pointerEventCamera = inputCamera;
 
         if (floatingOrigin)
         {
+            // 浮动摇杆只移动视觉底座；输入原点仍锁定在命中区坐标系，避免移动底座后重复换算。
             originLocal = pointerLocal;
-            if (baseRect != null)
-                baseRect.anchoredPosition = originLocal;
+            baseRect.anchoredPosition = originLocal;
             SetFloatingVisualVisible(true);
         }
         else
         {
-            // 固定摇杆始终以正式 Prefab 的底座中心为原点，不能因手指按在命中区边缘而漂移。
+            // 固定摇杆以底座初始锚点为原点，按下区域边缘不会改变方向基准。
             originLocal = fixedBasePosition;
         }
 
@@ -142,9 +148,10 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         eventData.Use();
     }
 
+    /// <summary>在稳定的命中区坐标中计算方向，避免浮动底座移动后原点漂移。</summary>
     private void UpdateDirection(Vector2 screenPosition)
     {
-        if (!TryGetLocalPosition(screenPosition, out Vector2 localPosition))
+        if (!TryGetLocalPosition(screenPosition, pointerEventCamera, out Vector2 localPosition))
             return;
 
         Vector2 delta = localPosition - originLocal;
@@ -167,9 +174,12 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         }
     }
 
-    private bool TryGetLocalPosition(Vector2 screenPosition, out Vector2 localPosition)
+    /// <summary>把屏幕触点转换到当前摇杆的稳定输入坐标系。</summary>
+    private bool TryGetLocalPosition(Vector2 screenPosition, Camera inputCamera, out Vector2 localPosition)
     {
-        RectTransform coordinateSpace = floatingOrigin ? interactionRect : baseRect?.parent as RectTransform;
+        RectTransform coordinateSpace = floatingOrigin
+            ? interactionRect
+            : (baseRect != null ? baseRect.parent as RectTransform : null);
         if (coordinateSpace == null)
         {
             localPosition = default;
@@ -179,7 +189,7 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         return RectTransformUtility.ScreenPointToLocalPointInRectangle(
             coordinateSpace,
             screenPosition,
-            eventCamera,
+            inputCamera,
             out localPosition);
     }
 
@@ -191,6 +201,8 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
     {
         bool owned = HasPointerOwnership;
         pointerId = int.MinValue;
+        pointerEventCamera = null;
+        originLocal = fixedBasePosition;
         if (knobRect != null)
             knobRect.anchoredPosition = Vector2.zero;
         if (floatingOrigin && baseRect != null)

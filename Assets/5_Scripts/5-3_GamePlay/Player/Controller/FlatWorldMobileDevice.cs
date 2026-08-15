@@ -49,6 +49,9 @@ namespace FlatWorld.Mobile
     /// <summary>
     /// Input System 可绑定的手机虚拟设备。设备生命周期由 MobileInputRuntime 统一管理，HUD 不直接伪造键盘、鼠标或手柄事件。
     /// </summary>
+#if UNITY_EDITOR
+    [UnityEditor.InitializeOnLoad]
+#endif
     [InputControlLayout(stateType = typeof(FlatWorldMobileState), displayName = "FlatWorld Mobile Device")]
     public sealed class FlatWorldMobileDevice : InputDevice
     {
@@ -164,26 +167,26 @@ namespace FlatWorld.Mobile
         public static void SetMove(Vector2 value)
         {
             state.move = ClampDirection(value);
-            QueueState();
+            QueueState(createDevice: state.move.sqrMagnitude > 0.0001f);
         }
 
         public static void SetAim(Vector2 value)
         {
             state.aim = ClampDirection(value);
-            QueueState();
+            QueueState(createDevice: state.aim.sqrMagnitude > 0.0001f);
         }
 
         public static void SetAttackAim(Vector2 value)
         {
             state.attackAim = ClampDirection(value);
-            QueueState();
+            QueueState(createDevice: state.attackAim.sqrMagnitude > 0.0001f);
         }
 
         public static void SetButton(MobileVirtualButton button, bool pressed)
         {
             uint mask = 1u << (int)button;
             state.buttons = pressed ? state.buttons | mask : state.buttons & ~mask;
-            QueueState();
+            QueueState(createDevice: pressed);
         }
 
         public static void ResetAll()
@@ -194,11 +197,21 @@ namespace FlatWorld.Mobile
 
         private static void QueueState(bool createDevice = true)
         {
-            FlatWorldMobileDevice target = createDevice ? EnsureDevice() : device;
+            FlatWorldMobileDevice target = createDevice ? EnsureDevice() : GetExistingDevice();
             if (target == null || !target.added)
                 return;
 
             UnityInputSystem.QueueStateEvent(target, state);
+        }
+
+        /// <summary>只查找已有设备，保证清零和释放输入不会提前创建手机设备。</summary>
+        private static FlatWorldMobileDevice GetExistingDevice()
+        {
+            if (device != null && device.added)
+                return device;
+
+            device = FlatWorldMobileDevice.current;
+            return device != null && device.added ? device : null;
         }
 
         private static Vector2 ClampDirection(Vector2 value)

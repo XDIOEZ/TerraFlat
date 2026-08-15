@@ -56,7 +56,7 @@ MonoBehaviour:
     endSpeed: 0.1
     moveStaminaConsume: 0
     runStaminaConsume: 2
-    runSpeedRate: 2
+    runSpeedRate: 1.5
     isRunning: 0
     RunStaminaThreshold: 2
   MemoryPath_Forbidden: []
@@ -73,8 +73,10 @@ MonoBehaviour:
     Type: 0
     BitData: 
   animationController: {fileID: 0}
-  moveHungerBuffId: "\u9965\u997F1.6"
-  runHungerBuffId: "\u9965\u997F2.0"
+  hungerAction:
+    enabled: 1
+    moveNutritionConsumeMultiplier: 1.6
+    runNutritionConsumeMultiplier: 2
   OnMoveStart:
     _PersistentCalls: []
   OnMoveEnd:
