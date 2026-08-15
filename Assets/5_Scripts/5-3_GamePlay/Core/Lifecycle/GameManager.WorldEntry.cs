@@ -125,31 +125,111 @@ public partial class GameManager
 
         if (worldEntryCompletionCoroutine != null)
             StopCoroutine(worldEntryCompletionCoroutine);
-        worldEntryCompletionCoroutine = StartCoroutine(CompleteWorldEntryCoroutine());
+        worldEntryCompletionCoroutine = StartCoroutine(CompleteWorldEntryCoroutine(player));
     }
 
-    private IEnumerator CompleteWorldEntryCoroutine()
+    /// <summary>
+    /// 等待玩家脚下区块与完整可见窗口完成表现绑定后，再结束标准世界加载页。
+    /// 后台数据生成结束不代表 Tilemap、碰撞和实体表现已经可以安全展示。
+    /// </summary>
+    private IEnumerator CompleteWorldEntryCoroutine(Player player)
     {
         ReportWorldEntryProgress("正在进入世界", "正在加载玩家周围区域…", 0.78f);
+
+        // 让本次 Event_PlayerEnterWorld 的其余订阅者先建立玩家区块窗口。
         yield return null;
 
-        float displayedProgress = 0.78f;
-        while (ChunkMgr.Instance != null && ChunkMgr.Instance.HasPendingChunkLoads)
+        if (player == null)
         {
-            displayedProgress = Mathf.MoveTowards(
-                displayedProgress,
-                0.95f,
-                Mathf.Max(0.002f, Time.unscaledDeltaTime * 0.08f));
-            ReportWorldEntryProgress("正在进入世界", "正在生成并加载周围区块…", displayedProgress);
+            worldEntryCompletionCoroutine = null;
+            FailWorldEntry("玩家实例无效，无法准备可见地图区域。");
+            yield break;
+        }
+
+        bool managerWarningLogged = false;
+        float managerWarningAt = Time.realtimeSinceStartup + 12f;
+        while (ChunkMgr.Instance == null)
+        {
+            if (!managerWarningLogged && Time.realtimeSinceStartup >= managerWarningAt)
+            {
+                managerWarningLogged = true;
+                Debug.LogWarning("[GameManager] 进入存档后超过 12 秒仍找不到 ChunkMgr，继续保持加载页。", this);
+            }
+
             yield return null;
         }
 
-        // 给 Chunk Ready 事件、导航刷新和延迟销毁各一个收尾帧。
-        yield return null;
-        yield return null;
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        Vector3 playerPosition = player.transform.position;
+        Mod_ChunkLoader chunkLoader = player.GetComponentInChildren<Mod_ChunkLoader>(true);
+        if (chunkLoader != null)
+        {
+            // 与维度切换一致，使用玩家当前相机视距建立完整可见窗口。
+            chunkLoader.RefreshChunksForCameraView();
+        }
+        else
+        {
+            Debug.LogWarning("[GameManager] 进入世界的玩家缺少 Mod_ChunkLoader，使用默认 3x3 区块窗口。", player);
+            chunkManager.RefreshRuntimeWindow(
+                playerPosition,
+                2,
+                3,
+                includeLocalPresentation: true,
+                prefetchDistance: 3);
+        }
+
+        bool centerWarningLogged = false;
+        float centerWarningAt = Time.realtimeSinceStartup + 12f;
+        float displayedProgress = 0.82f;
+        while (!chunkManager.IsRuntimeEntityPresentationReady(playerPosition))
+        {
+            displayedProgress = MoveWorldEntryLoadingProgress(displayedProgress, 0.9f);
+            ReportWorldEntryProgress("正在进入世界", "正在生成玩家所在区块…", displayedProgress);
+
+            if (!centerWarningLogged && Time.realtimeSinceStartup >= centerWarningAt)
+            {
+                centerWarningLogged = true;
+                Debug.LogWarning("[GameManager] 玩家脚下区块表现超过 12 秒，继续保持加载页。", chunkManager);
+            }
+
+            yield return null;
+        }
+
+        bool windowWarningLogged = false;
+        float windowWarningAt = Time.realtimeSinceStartup + 12f;
+        while (!chunkManager.AreRuntimeWindowPresentationsReady)
+        {
+            displayedProgress = MoveWorldEntryLoadingProgress(displayedProgress, 0.98f);
+            ReportWorldEntryProgress("正在进入世界", "正在绘制可见地图区块…", displayedProgress);
+
+            if (!windowWarningLogged && Time.realtimeSinceStartup >= windowWarningAt)
+            {
+                windowWarningLogged = true;
+                Debug.LogWarning(
+                    $"[GameManager] 可见区块窗口表现超过 12 秒，继续保持加载页：" +
+                    $"待表现 {chunkManager.PendingRuntimeChunkPresentationCount}，" +
+                    $"仍有后台生成 {chunkManager.HasPendingChunkDataLoads}。",
+                    chunkManager);
+            }
+
+            yield return null;
+        }
+
+        // 碰撞体变更需要在加载页淡出前同步，并等待一次固定帧完成物理收尾。
+        Physics2D.SyncTransforms();
+        yield return new WaitForFixedUpdate();
 
         worldEntryCompletionCoroutine = null;
         CompleteWorldEntry("加载完成", "世界已经准备完毕。");
+    }
+
+    /// <summary>平滑推进加载进度，但只由真实就绪条件触发最终完成。</summary>
+    private static float MoveWorldEntryLoadingProgress(float current, float target)
+    {
+        return Mathf.MoveTowards(
+            current,
+            target,
+            Mathf.Max(0.002f, Time.unscaledDeltaTime * 0.08f));
     }
 
     private void CompleteWorldEntry(string title, string status)

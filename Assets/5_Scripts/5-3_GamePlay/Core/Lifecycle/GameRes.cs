@@ -59,6 +59,12 @@ public class GameRes : SingletonAutoMono<GameRes>
     public Dictionary<string, BuffDefinition> BuffDefinitions =
         new Dictionary<string, BuffDefinition>(System.StringComparer.OrdinalIgnoreCase);
 
+    [System.NonSerialized]
+    private TextLibraryService textLibraryService = TextLibraryService.Empty;
+
+    /// <summary>文字库访问接口；调用方不需要依赖具体 JSON 加载实现。</summary>
+    public ITextLibraryService TextLibraries => textLibraryService;
+
     [Header("初始库存字典")]
     [ShowInInspector]
     public Dictionary<string, Inventoryinit> InventoryInitDict = new Dictionary<string, Inventoryinit>();
@@ -246,6 +252,27 @@ public class GameRes : SingletonAutoMono<GameRes>
             yield break;
         }
         loadedAssetsCount += loadedQuestCount;
+        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+
+        loadingText = "加载 JSON 文字库";
+        TextLibraryService loadedTextLibrary = null;
+        System.Exception textLibraryError = null;
+        yield return StartCoroutine(TextLibraryCatalogLoader.LoadBuiltInAsync(
+            service => loadedTextLibrary = service,
+            exception => textLibraryError = exception));
+        if (textLibraryError != null)
+        {
+            // 文字库属于可选扩展配置；加载失败不应阻断已有游戏内容，调用方会使用旧的数字名兜底。
+            textLibraryService = TextLibraryService.Empty;
+            Debug.LogError($"文字库加载失败，将使用默认名称兜底：{textLibraryError.Message}");
+            Debug.LogException(textLibraryError);
+        }
+        else
+        {
+            textLibraryService = loadedTextLibrary ?? TextLibraryService.Empty;
+            Debug.Log($"[TextLibrary] 已加载 {textLibraryService.EntryCount} 条文字，" +
+                $"{textLibraryService.LibraryIds.Count} 个分类");
+        }
         loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
             
         yield return StartCoroutine(SyncLoadAssetsWithProgress<TileBase>(
@@ -467,6 +494,7 @@ private void ClearAllDictionaries()
     TileBlockDict.Clear();
     BuffDefinitions.Clear();
     QuestCatalog.Reset();
+    textLibraryService = TextLibraryService.Empty;
     InventoryInitDict.Clear();
     SkillDict.Clear();
 }

@@ -85,6 +85,7 @@ namespace FlatWorld.Automation
         private static ScreenshotContinuation _screenshotContinuation;
         private static WorldEntryProgressState? _terminalWorldEntryState;
         private static string _terminalWorldEntryStatus;
+        private static bool _standardWorldEntryCompletedWithPresentationReady;
         private static Action<WorldEntryProgressInfo> _worldEntryHandler;
         private static bool _worldSetupApplied;
         private static bool _worldExitCompleted;
@@ -512,6 +513,12 @@ namespace FlatWorld.Automation
                     return;
                 _terminalWorldEntryState = progress.State;
                 _terminalWorldEntryStatus = progress.Status;
+                if (progress.PresentationMode == WorldEntryPresentationMode.Standard &&
+                    progress.State == WorldEntryProgressState.Completed)
+                {
+                    _standardWorldEntryCompletedWithPresentationReady =
+                        IsStandardWorldEntryPresentationReady();
+                }
             };
             _gameManager.WorldEntryProgressChanged += _worldEntryHandler;
 
@@ -572,6 +579,11 @@ namespace FlatWorld.Automation
 
             if (_terminalWorldEntryState != WorldEntryProgressState.Completed)
                 throw new InvalidOperationException("世界进入生命周期没有报告 Completed。");
+            if (!_standardWorldEntryCompletedWithPresentationReady)
+            {
+                throw new InvalidOperationException(
+                    "世界进入生命周期在玩家脚下或可见 ChunkView 窗口完成前提前报告 Completed。");
+            }
 
             _player = ItemMgr.Instance.User_Player;
             if (_player.Data.CurrentSceneName != SceneManager.GetActiveScene().name)
@@ -1189,6 +1201,7 @@ namespace FlatWorld.Automation
 
             _terminalWorldEntryState = null;
             _terminalWorldEntryStatus = null;
+            _standardWorldEntryCompletedWithPresentationReady = false;
             _gameManager.ContinueGame(_reentryPlayerName);
             _runtimePhase = RuntimePhase.WaitForWorldReentry;
             _phaseDeadline = EditorApplication.timeSinceStartup +
@@ -1232,6 +1245,12 @@ namespace FlatWorld.Automation
             Scene reenteredWorldScene = SceneManager.GetSceneByName(_reentryWorldKey);
             if (!reenteredWorldScene.IsValid() || !reenteredWorldScene.isLoaded)
                 throw new InvalidOperationException("退出后重进未创建有效的动态世界场景。");
+            if (_terminalWorldEntryState != WorldEntryProgressState.Completed ||
+                !_standardWorldEntryCompletedWithPresentationReady)
+            {
+                throw new InvalidOperationException(
+                    "退出后重进在完整可见 ChunkView 窗口准备完成前结束了加载生命周期。");
+            }
 
             _player = reenteredPlayer;
             _mover = reenteredPlayer.itemMods.GetMod_ByID<Mover>(ModText.Mover);
@@ -1383,6 +1402,17 @@ namespace FlatWorld.Automation
                     return false;
             }
             return activeCount > 0;
+        }
+
+        /// <summary>确认标准入世完成事件发布时，玩家落地点与完整可见窗口都已经绑定表现。</summary>
+        private static bool IsStandardWorldEntryPresentationReady()
+        {
+            Player activePlayer = ItemMgr.Instance?.User_Player;
+            ChunkMgr chunkManager = ChunkMgr.Instance;
+            return activePlayer != null &&
+                   chunkManager != null &&
+                   chunkManager.IsRuntimeEntityPresentationReady(activePlayer.transform.position) &&
+                   chunkManager.AreRuntimeWindowPresentationsReady;
         }
 
         private static bool IsChunkReadyAt(ChunkMgr chunkManager, Vector2Int chunkPosition)
@@ -2030,6 +2060,7 @@ namespace FlatWorld.Automation
             _screenshotContinuation = ScreenshotContinuation.None;
             _terminalWorldEntryState = null;
             _terminalWorldEntryStatus = null;
+            _standardWorldEntryCompletedWithPresentationReady = false;
             _worldEntryHandler = null;
             _worldSetupApplied = false;
             _worldExitCompleted = false;

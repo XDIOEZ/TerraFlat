@@ -34,13 +34,15 @@ public sealed class NewWorldCreationRequest
         PlanetData planetData,
         TimeData timeData,
         GameDifficultyId difficulty = GameDifficultyId.Simple,
-        GameDifficultyRuleValues customDifficultyRules = null)
+        GameDifficultyRuleValues customDifficultyRules = null,
+        ITextLibraryService textLibrary = null)
     {
+        textLibrary ??= GameRes.ExistingInstance?.TextLibraries;
         bool requiresGeneratedName = string.IsNullOrWhiteSpace(saveName) ||
                                      string.IsNullOrWhiteSpace(playerName);
         string generatedSuffix = requiresGeneratedName ? CreateRandomNumericSuffix() : string.Empty;
-        SaveName = ResolveNameOrDefault(saveName, CreateRandomWorldName(generatedSuffix));
-        PlayerName = ResolveNameOrDefault(playerName, CreateRandomPlayerName(generatedSuffix));
+        SaveName = ResolveNameOrDefault(saveName, CreateRandomWorldName(generatedSuffix, textLibrary));
+        PlayerName = ResolveNameOrDefault(playerName, CreateRandomPlayerName(generatedSuffix, textLibrary));
         Seed = seed?.Trim() ?? string.Empty;
         PlanetData = planetData == null
             ? null
@@ -64,27 +66,43 @@ public sealed class NewWorldCreationRequest
         }
     }
 
-    /// <summary>生成带 Player_ 前缀的默认玩家名。</summary>
-    public static string CreateRandomPlayerName()
+    /// <summary>生成默认玩家名；文字库可用时优先使用配置组合。</summary>
+    public static string CreateRandomPlayerName(ITextLibraryService textLibrary = null)
     {
-        return CreateRandomPlayerName(CreateRandomNumericSuffix());
+        return CreateRandomPlayerName(
+            CreateRandomNumericSuffix(),
+            textLibrary ?? GameRes.ExistingInstance?.TextLibraries);
     }
 
-    /// <summary>生成带 World_ 前缀的默认世界名。</summary>
-    public static string CreateRandomWorldName()
+    /// <summary>生成默认存档名；文字库可用时优先使用地点名组合。</summary>
+    public static string CreateRandomWorldName(ITextLibraryService textLibrary = null)
     {
-        return CreateRandomWorldName(CreateRandomNumericSuffix());
+        return CreateRandomWorldName(
+            CreateRandomNumericSuffix(),
+            textLibrary ?? GameRes.ExistingInstance?.TextLibraries);
     }
 
-    /// <summary>把同一个随机后缀转换为默认玩家名。</summary>
-    private static string CreateRandomPlayerName(string suffix)
+    /// <summary>优先从文字库生成玩家名，失败时保留兼容性的数字名。</summary>
+    private static string CreateRandomPlayerName(string suffix, ITextLibraryService textLibrary)
     {
+        if (textLibrary != null &&
+            textLibrary.TryGenerate(TextLibraryKeys.PlayerName, out string generatedName))
+        {
+            return generatedName;
+        }
+
         return $"{GeneratedPlayerNamePrefix}{suffix}";
     }
 
-    /// <summary>把同一个随机后缀转换为默认世界名。</summary>
-    private static string CreateRandomWorldName(string suffix)
+    /// <summary>优先从文字库生成存档名，失败时保留兼容性的数字名。</summary>
+    private static string CreateRandomWorldName(string suffix, ITextLibraryService textLibrary)
     {
+        if (textLibrary != null &&
+            textLibrary.TryGenerate(TextLibraryKeys.SaveName, out string generatedName))
+        {
+            return generatedName;
+        }
+
         return $"{GeneratedWorldNamePrefix}{suffix}";
     }
 

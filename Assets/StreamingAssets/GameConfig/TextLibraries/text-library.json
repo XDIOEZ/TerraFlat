@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "libraries": {
+    "person.familyNames": [
+      "林",
+      "苏",
+      "沈",
+      "顾",
+      "洛",
+      "白",
+      "叶",
+      "温",
+      "许",
+      "陆",
+      "秦",
+      "江",
+      "宁",
+      "祁",
+      "谢",
+      "云"
+    ],
+    "person.givenNames": [
+      "安",
+      "青",
+      "远",
+      "岚",
+      "归",
+      "眠",
+      "星",
+      "澜",
+      "月",
+      "砚",
+      "初",
+      "凛",
+      "知微",
+      "听雨",
+      "望舒",
+      "长歌"
+    ],
+    "person.nicknames": [
+      "小石",
+      "阿月",
+      "远客",
+      "青禾",
+      "晚风",
+      "北辰"
+    ],
+    "place.prefixes": [
+      "青石",
+      "落霞",
+      "星河",
+      "雾隐",
+      "霜叶",
+      "月桂",
+      "云岚",
+      "白沙",
+      "玄岩",
+      "长风",
+      "晨曦",
+      "暮光"
+    ],
+    "place.suffixes": [
+      "谷",
+      "镇",
+      "岛",
+      "原",
+      "城",
+      "湖",
+      "村",
+      "港",
+      "关",
+      "林",
+      "湾",
+      "丘"
+    ],
+    "book.titles": [
+      "星海拾遗",
+      "风中的旧地图",
+      "月下航行记",
+      "无人知晓的岛",
+      "旅人的篝火",
+      "雾中来信",
+      "矿石与远方",
+      "世界边缘札记"
+    ],
+    "item.names": [
+      "旅者短刃",
+      "青铜提灯",
+      "雾银护符",
+      "星砂药瓶",
+      "坚韧木盾",
+      "远行背包",
+      "月光种子",
+      "古旧罗盘"
+    ]
+  },
+  "generators": {
+    "generator.playerName": {
+      "parts": ["person.familyNames", "person.givenNames"],
+      "separator": ""
+    },
+    "generator.characterName": {
+      "parts": ["person.familyNames", "person.givenNames"],
+      "separator": ""
+    },
+    "generator.saveName": {
+      "parts": ["place.prefixes", "place.suffixes"],
+      "separator": ""
+    },
+    "generator.placeName": {
+      "parts": ["place.prefixes", "place.suffixes"],
+      "separator": ""
+    },
+    "generator.bookTitle": {
+      "parts": ["book.titles"],
+      "separator": ""
+    },
+    "generator.itemName": {
+      "parts": ["item.names"],
+      "separator": ""
+    }
+  }
+}
