@@ -43,7 +43,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     public int CachedSelectableCount => cachedSelectables.Count;
 
     /// <summary>
-    /// 当前全局层级顺序，确保拖拽物体始终显示在最上层
+    /// 当前全局层级序号，供独立 Canvas 的排序值使用；同一父节点的层级由 SetAsLastSibling 负责。
     /// </summary>
     [ShowInInspector]
     [ReadOnly]
@@ -59,8 +59,8 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
         // 增加全局层级计数器
         BasePanel.CurrentOrder++;
-        // 设置当前元素的兄弟索引
-        rectTransform.SetSiblingIndex(BasePanel.CurrentOrder);
+        // 兄弟索引必须取当前父节点末尾，不能把全局序号当作固定索引，否则首次打开会被已有 HUD 遮挡。
+        rectTransform.SetAsLastSibling();
 
         if (canvas != null)
         {
@@ -74,8 +74,8 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         if (rectTransform == null)
             return;
 
-        // 设置当前元素的兄弟索引
-        rectTransform.SetSiblingIndex(BasePanel.CurrentOrder - 1);
+        // 关闭面板回到底层，避免下次新建的 HUD 被旧面板挡住。
+        rectTransform.SetAsFirstSibling();
         NotifyInteractionSurfaceChanged();
     }
 

@@ -83,6 +83,7 @@ public static class NewGamePrefabBuilder
     {
         Image scrim = CreateImage("新世界界面遮罩", root, new Color(0.006f, 0.016f, 0.024f, 0.76f));
         Stretch(scrim.rectTransform);
+        scrim.gameObject.AddComponent<FullScreenRectController>();
         scrim.raycastTarget = true;
     }
 
@@ -217,6 +218,7 @@ public static class NewGamePrefabBuilder
     {
         Image overlay = CreateImage(GameManager.NewGameDifficultyPanelKey, root, new Color(0.004f, 0.012f, 0.018f, 0.92f));
         Stretch(overlay.rectTransform);
+        overlay.gameObject.AddComponent<FullScreenRectController>();
 
         Image dialog = CreatePanelCard("难度设置窗口", overlay.transform);
         SetRect(dialog.rectTransform, Vector2.zero, new Vector2(1320f, 720f), new Vector2(0.5f, 0.5f));

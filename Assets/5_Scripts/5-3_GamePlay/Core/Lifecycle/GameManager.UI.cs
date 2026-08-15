@@ -246,7 +246,7 @@ public partial class GameManager
         worldLoadingCanvasGroup.interactable = true;
         worldLoadingCanvasGroup.blocksRaycasts = true;
         worldLoadingView.SetActive(true);
-        worldLoadingCanvas.sortingOrder = 32000;
+        worldLoadingCanvas.sortingOrder = UIManager.GlobalOverlaySortingOrder;
 
         if (progress.State == WorldEntryProgressState.Completed)
             worldLoadingHideCoroutine = StartCoroutine(FadeWorldLoadingView(0f));
@@ -276,7 +276,7 @@ public partial class GameManager
         dimensionLoadingCanvasGroup.interactable = true;
         dimensionLoadingCanvasGroup.blocksRaycasts = true;
         dimensionLoadingView.SetActive(true);
-        dimensionLoadingCanvas.sortingOrder = 32000;
+        dimensionLoadingCanvas.sortingOrder = UIManager.GlobalOverlaySortingOrder;
 
         if (progress.State == WorldEntryProgressState.Completed)
             dimensionLoadingHideCoroutine = StartCoroutine(FadeDimensionLoadingView(0f));

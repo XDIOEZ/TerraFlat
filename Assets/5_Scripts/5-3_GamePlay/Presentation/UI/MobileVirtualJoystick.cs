@@ -4,7 +4,7 @@ using UnityEngine.EventSystems;
 
 /// <summary>
 /// 正式手机 HUD 的多指摇杆。每个实例只认领自己的 pointerId：左摇杆写移动、右半屏浮动区写普通指向、
-/// 固定攻击摇杆在按下瞬间写攻击按钮并持续更新攻击方向，避免不同手指互相抢占。
+/// 固定攻击摇杆以底座自身为触点坐标系，让摇杆头直接跟随手指；按下瞬间写攻击按钮并持续更新攻击方向，避免不同手指互相抢占。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class MobileVirtualJoystick : MonoBehaviour,
@@ -119,8 +119,8 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         }
         else
         {
-            // 固定摇杆以底座初始锚点为原点，按下区域边缘不会改变方向基准。
-            originLocal = fixedBasePosition;
+            // 固定摇杆的触点直接换算到底座自身坐标，原点永远是摇杆底座中心，消除父节点锚点带来的固定偏移。
+            originLocal = Vector2.zero;
         }
 
         if (role == JoystickRole.Attack)
@@ -148,7 +148,7 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         eventData.Use();
     }
 
-    /// <summary>在稳定的命中区坐标中计算方向，避免浮动底座移动后原点漂移。</summary>
+    /// <summary>在当前摇杆坐标中计算方向，固定摇杆不混用父节点偏移。</summary>
     private void UpdateDirection(Vector2 screenPosition)
     {
         if (!TryGetLocalPosition(screenPosition, pointerEventCamera, out Vector2 localPosition))
@@ -177,9 +177,8 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
     /// <summary>把屏幕触点转换到当前摇杆的稳定输入坐标系。</summary>
     private bool TryGetLocalPosition(Vector2 screenPosition, Camera inputCamera, out Vector2 localPosition)
     {
-        RectTransform coordinateSpace = floatingOrigin
-            ? interactionRect
-            : (baseRect != null ? baseRect.parent as RectTransform : null);
+        // 浮动摇杆在命中区内移动底座；固定摇杆直接使用底座坐标，确保摇杆头与手指处于同一坐标系。
+        RectTransform coordinateSpace = floatingOrigin ? interactionRect : baseRect;
         if (coordinateSpace == null)
         {
             localPosition = default;
@@ -202,7 +201,7 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         bool owned = HasPointerOwnership;
         pointerId = int.MinValue;
         pointerEventCamera = null;
-        originLocal = fixedBasePosition;
+        originLocal = floatingOrigin ? fixedBasePosition : Vector2.zero;
         if (knobRect != null)
             knobRect.anchoredPosition = Vector2.zero;
         if (floatingOrigin && baseRect != null)

@@ -6,12 +6,14 @@ using UnityEngine.Tilemaps;
 [CreateAssetMenu(fileName = "ChunkTilePalette", menuName = "FlatWorld/World/Chunk Tile Palette")]
 public sealed class ChunkTilePaletteSO : ScriptableObject
 {
+#pragma warning disable CS0649 // 这些字段由 Unity 序列化面板赋值。
     [Serializable]
     private struct Entry
     {
         public int TileId;
         public TileBase Tile;
     }
+#pragma warning restore CS0649
 
     [SerializeField] private List<Entry> entries = new();
     private Dictionary<int, TileBase> lookup;

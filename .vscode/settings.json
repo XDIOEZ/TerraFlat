@@ -59,7 +59,7 @@
     "dotnet.preferCSharpExtension": true,
     "outline-map.follow": "manual",
     "outline-map.expand": "expanded",
-    "chat.permissions.default": "autopilot",
+    "chat.permissions.default": "autoApprove",
     "chat.autopilot.advanced.enabled": true,
     "gcmp.commit.customInstructions": "生成详细的提交消息,简短但是全面的描述此次提交对系统的修改",
     "gcmp.commit.format": "custom"

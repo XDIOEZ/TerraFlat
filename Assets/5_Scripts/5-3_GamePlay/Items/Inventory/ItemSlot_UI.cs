@@ -120,8 +120,7 @@ public class ItemSlot_UI : MonoBehaviour,
     #region Unity生命周期方法
     private void Start()
     {
-        image = image ?? GetComponentInChildren<Image>();
-        text = text ?? GetComponentInChildren<TMP_Text>();
+        CacheVisualReferences();
         EnsureSelectionOutline();
     }
 
@@ -171,6 +170,10 @@ public class ItemSlot_UI : MonoBehaviour,
     [Button]
     public void RefreshUI()
     {
+        // 维度/场景切换期间可能收到旧库存事件，旧槽位的子级控件可能已被 Unity 销毁。
+        if (!CacheVisualReferences())
+            return;
+
         UpdateItemAmount();
         UpdateItemIcon();
     }
@@ -804,8 +807,25 @@ public class ItemSlot_UI : MonoBehaviour,
     #endregion
 
     #region UI更新方法
+    /// <summary>缓存并校验槽位的图标与数量文本引用，兼容面板销毁后的延迟刷新。</summary>
+    private bool CacheVisualReferences()
+    {
+        if (this == null || gameObject == null)
+            return false;
+
+        if (image == null)
+            image = GetComponentInChildren<Image>(true);
+        if (text == null)
+            text = GetComponentInChildren<TMP_Text>(true);
+
+        return image != null && text != null;
+    }
+
     private void UpdateItemAmount()
     {
+        if (text == null)
+            return;
+
         ItemSlot slotData = GetSlotData();
 
         if (slotData == null || IsItemSlotEmpty(slotData))
@@ -836,6 +856,9 @@ public class ItemSlot_UI : MonoBehaviour,
 
     private void UpdateItemIcon()
     {
+        if (image == null)
+            return;
+
         ItemSlot slotData = GetSlotData();
 
         if (slotData == null ||

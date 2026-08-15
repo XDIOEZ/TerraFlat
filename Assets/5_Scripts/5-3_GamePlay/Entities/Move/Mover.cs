@@ -506,11 +506,16 @@ public sealed class MovementHungerActionDefinition
     [Tooltip("奔跑相对普通移动额外使用的营养消耗倍率。")]
     public float runNutritionConsumeMultiplier = 2f;
 
+    [Min(0f)]
+    [Tooltip("奔跑时水分消耗倍率。")]
+    public float runWaterConsumeMultiplier = 0.5f;
+
     /// <summary>校正运行时和 Inspector 可能写入的非法配置。</summary>
     public void ClampValues()
     {
         moveNutritionConsumeMultiplier = Mathf.Max(0f, moveNutritionConsumeMultiplier);
         runNutritionConsumeMultiplier = Mathf.Max(0f, runNutritionConsumeMultiplier);
+        runWaterConsumeMultiplier = Mathf.Max(0f, runWaterConsumeMultiplier);
     }
 
     /// <summary>按当前移动状态计算最终营养消耗倍率。</summary>
@@ -523,6 +528,14 @@ public sealed class MovementHungerActionDefinition
         if (isRunning)
             multiplier *= Mathf.Max(0f, runNutritionConsumeMultiplier);
         return multiplier;
+    }
+
+    public float ResolveWaterMultiplier(bool isMoving, bool isRunning)
+    {
+        if (!enabled || !isMoving || !isRunning)
+            return 1f;
+
+        return Mathf.Max(0f, runWaterConsumeMultiplier);
     }
 
     /// <summary>从配置模板创建角色独享的运行实例。</summary>
@@ -579,6 +592,8 @@ public sealed class MovementHungerActionInstance
 
         definition?.ClampValues();
         float multiplier = definition?.ResolveMultiplier(isMoving, isRunning) ?? 1f;
+        float waterMultiplier = definition?.ResolveWaterMultiplier(isMoving, isRunning) ?? 1f;
         food.SetMovementNutritionConsumeMultiplier(multiplier);
+        food.SetMovementWaterConsumeMultiplier(waterMultiplier);
     }
 }

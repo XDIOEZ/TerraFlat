@@ -229,7 +229,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         previewOutline?.SetHighlighted(true);
     }
 
-    /// <summary>扫描交互半径并复用按键交互的最近目标规则。</summary>
+    /// <summary>扫描交互半径，按当前指向优先、距离规则兜底。</summary>
     private IInteractable FindClosestReceiverAtCurrentPosition(bool collectReceivers)
     {
         if (item == null || interactCollider == null || !item.gameObject.activeInHierarchy)
@@ -242,6 +242,10 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             interactionOverlapBuffer);
         IInteractable closestReceiver = null;
         float closestDistance = float.MaxValue;
+        IInteractable directionalReceiver = null;
+        float directionalAlignment = 0f;
+        float directionalDistance = float.MaxValue;
+        bool hasInteractionDirection = TryGetInteractionDirection(out Vector2 interactionDirection);
 
         for (int i = 0; i < count; i++)
         {
@@ -263,9 +267,54 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
                 closestDistance = distance;
                 closestReceiver = receiver;
             }
+
+            if (!hasInteractionDirection)
+                continue;
+
+            Vector2 receiverOffset = WorldTopologyRuntime.ShortestDelta(
+                item.transform.position, receiverComponent.transform.position);
+            if (receiverOffset.sqrMagnitude < 0.0001f)
+                continue;
+
+            float alignment = Vector2.Dot(interactionDirection, receiverOffset.normalized);
+            if (alignment < 0f ||
+                alignment < directionalAlignment ||
+                (Mathf.Approximately(alignment, directionalAlignment) && distance >= directionalDistance))
+            {
+                continue;
+            }
+
+            directionalAlignment = alignment;
+            directionalDistance = distance;
+            directionalReceiver = receiver;
         }
 
-        return closestReceiver;
+        return directionalReceiver ?? closestReceiver;
+    }
+
+    private bool TryGetInteractionDirection(out Vector2 direction)
+    {
+        direction = default;
+        if (gameController == null || item == null ||
+            (!gameController.IsUsingMobile && !gameController.IsUsingGamepad))
+        {
+            return false;
+        }
+
+        try
+        {
+            Vector2 pointerOffset = WorldTopologyRuntime.ShortestDelta(
+                item.transform.position, gameController.GetMouseWorldPosition());
+            if (pointerOffset.sqrMagnitude < 0.0001f)
+                return false;
+
+            direction = pointerOffset.normalized;
+            return true;
+        }
+        catch (MissingReferenceException)
+        {
+            return false;
+        }
     }
 
     /// <summary>过滤自身及失效组件，保证描边目标与交互目标来源一致。</summary>
@@ -278,7 +327,11 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         }
 
         Item receiverItem = receiverComponent.GetComponentInParent<Item>();
-        return receiverItem != item;
+        if (receiverItem == item)
+            return false;
+
+        // 只有按下交互键确实会触发打开、采集或其他玩法结果的目标才显示描边。
+        return receiver.CanInteract(item);
     }
 
     /// <summary>仅本机拥有的玩家手部模块可以驱动交互描边。</summary>

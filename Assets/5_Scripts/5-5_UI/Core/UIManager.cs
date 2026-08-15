@@ -42,8 +42,16 @@ public class UIManager : MonoBehaviour
     public Transform panelRoot;
     public GameObject panelRootPrefab;
     public GameObject[] panelPrefabs;
+    public const int GameplayHudSortingOrder = 0;
+    public const int HotbarModalSortingOrder = 1000;
+    public const int HeldItemSortingOrder = 1001;
+    /// <summary>设置面板的基础 Canvas 层级；高于玩法 HUD，低于加载和调试全屏覆盖层。</summary>
+    public const int SettingsPanelSortingOrder = 2000;
+    public const int GlobalOverlaySortingOrder = 32000;
+
     private Canvas rootCanvas;
     private RectTransform safeAreaRoot;
+    private int nextSettingsPanelSortingOrder = SettingsPanelSortingOrder;
     private int interactionSurfaceRevision;
     private int lastHandledCancelFrame = -1;
 
@@ -83,6 +91,63 @@ public class UIManager : MonoBehaviour
 
     /// <summary>面板开关、排序或结构改变时递增，供虚拟光标判断是否需要重新射线。</summary>
     public int InteractionSurfaceRevision => interactionSurfaceRevision;
+    #endregion
+
+    #region 面板层级
+
+    /// <summary>
+    /// 为设置类面板建立独立高优先级 Canvas，避免仅依赖 PanelRoot 的兄弟顺序被其它 UI 覆盖。
+    /// </summary>
+    public void ConfigureSettingsPanelLayer(BasePanel panel)
+    {
+        if (panel == null)
+            return;
+
+        Canvas canvas = panel.GetComponent<Canvas>();
+        if (canvas == null)
+            canvas = panel.gameObject.AddComponent<Canvas>();
+
+        canvas.overrideSorting = true;
+        if (RootCanvas != null)
+            canvas.sortingLayerID = RootCanvas.sortingLayerID;
+
+        // 同一批设置页按创建顺序递增，打开子设置页时始终位于主设置页之上。
+        if (canvas.sortingOrder < SettingsPanelSortingOrder)
+        {
+            canvas.sortingOrder = nextSettingsPanelSortingOrder++;
+        }
+
+        // 独立 Canvas 需要自己的射线入口，否则动态添加 Canvas 后控件可能无法点击。
+        if (panel.GetComponent<GraphicRaycaster>() == null)
+            panel.gameObject.AddComponent<GraphicRaycaster>();
+
+        panel.transform.SetAsLastSibling();
+        NotifyInteractionSurfaceChanged();
+    }
+
+    public static void NormalizeCanvasLayers(Transform root)
+    {
+        if (root == null)
+            return;
+
+        Canvas[] canvases = root.GetComponentsInChildren<Canvas>(true);
+        for (int i = 0; i < canvases.Length; i++)
+        {
+            Canvas canvas = canvases[i];
+            if (canvas != null && !canvas.overrideSorting)
+                canvas.sortingOrder = GameplayHudSortingOrder;
+        }
+    }
+
+    private static bool IsSettingsPanelName(string panelName)
+    {
+        if (string.IsNullOrEmpty(panelName))
+            return false;
+
+        return panelName.IndexOf("Settings", StringComparison.OrdinalIgnoreCase) >= 0 ||
+               panelName.IndexOf("设置", StringComparison.Ordinal) >= 0;
+    }
+
     #endregion
 
     #region 初始化
@@ -489,6 +554,7 @@ public class UIManager : MonoBehaviour
         EnsurePanelRootExists();
 
         GameObject panelInstance = Instantiate(panelPrefab, panelRoot);
+        NormalizeCanvasLayers(panelInstance.transform);
 
         BasePanel _basePanel = panelInstance.GetComponent<BasePanel>();
         if (_basePanel == null)
@@ -512,6 +578,10 @@ public class UIManager : MonoBehaviour
 
         //初始化面板
         _basePanel.Init();
+
+        // 设置子页使用独立高层 Canvas；主世界设置面板由 SettingCanvas 在打开时显式配置。
+        if (IsSettingsPanelName(baseName))
+            ConfigureSettingsPanelLayer(_basePanel);
 
         //注册面板
         RegisterPanel(_basePanel, baseName);

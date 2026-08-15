@@ -88,6 +88,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private Button chunkLoadSpeedApplyButton;
     private Button chunkLoadSpeedUnlimitedButton;
     private Button navigationPathButton;
+    private Button animalDebugOverlayButton;
     private Transform commandGrid;
     private Transform airdropItemGrid;
     private Transform aiCreatureGrid;
@@ -178,6 +179,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         WorldNavigationPathDebugOverlay.SetRoutesVisible(
             GMConsolePreferences.NavigationPathVisible);
+
+        AI_DebugOverlay.SetVisible(GMConsolePreferences.AnimalDebugOverlayVisible);
     }
 
     /// <summary>场景切换后等待玩家与区块管理器出现，再恢复运行时倍率。</summary>
@@ -252,7 +255,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         Canvas canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 32000;
+        canvas.sortingOrder = UIManager.GlobalOverlaySortingOrder;
 
         CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -406,7 +409,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         Canvas canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 32000;
+        canvas.sortingOrder = UIManager.GlobalOverlaySortingOrder;
 
         CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -1322,6 +1325,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshPlayerMoveSpeedButton();
         RefreshChunkLoadSpeedControl();
         RefreshNavigationPathButton();
+        RefreshAnimalDebugOverlayButton();
         RefreshItemIds();
         RefreshAiCreatureIds();
         RefreshStructureOptions();
@@ -1643,6 +1647,35 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         SetStatus(
             visible ? "AI 导航路线提示已开启。" : "AI 导航路线提示已关闭。",
             visible ? new Color(0.35f, 0.95f, 0.85f) : new Color(0.66f, 0.71f, 0.71f));
+    }
+
+    private void ToggleAnimalDebugOverlay()
+    {
+        bool visible = AI_DebugOverlay.Toggle();
+        GMConsolePreferences.SetAnimalDebugOverlayVisible(visible);
+        RefreshAnimalDebugOverlayButton();
+        SetStatus(
+            visible ? "动物头顶参数已开启。" : "动物头顶参数已关闭。",
+            visible ? new Color(0.35f, 0.95f, 0.85f) : new Color(0.66f, 0.71f, 0.71f));
+    }
+
+    private void RefreshAnimalDebugOverlayButton()
+    {
+        if (animalDebugOverlayButton == null)
+            return;
+
+        bool visible = AI_DebugOverlay.Visible;
+        TextMeshProUGUI label = animalDebugOverlayButton.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (label != null)
+            label.text = visible ? "动物参数：开" : "动物参数：关";
+
+        Image image = animalDebugOverlayButton.GetComponent<Image>();
+        if (image != null)
+        {
+            image.color = visible
+                ? new Color(0.10f, 0.45f, 0.31f, 1f)
+                : new Color(0.094f, 0.212f, 0.251f, 1f);
+        }
     }
 
     private void RefreshNavigationPathButton()

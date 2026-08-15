@@ -101,6 +101,12 @@ public class BerryBush : MonoBehaviour, IInteractable
 
 #region 交互
 
+	/// <summary>只有当前仍有浆果时，玩家按下交互键才会产生采集结果。</summary>
+	public bool CanInteract(Item playerItem)
+	{
+		return playerItem != null && _currentBerryCount > 0;
+	}
+
 	/// <summary>
 	/// 玩家按下E进入交互时触发：若已成熟则立即采摘并在周围生成浆果。
 	/// </summary>

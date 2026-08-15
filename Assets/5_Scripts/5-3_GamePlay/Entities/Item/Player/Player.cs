@@ -16,6 +16,9 @@ public class Player : Item
 
     public Data_Player Data => data;
 
+    /// <summary>玩家被其他实体感知时的范围倍率，直接由可存档玩家数据驱动。</summary>
+    public override float PerceptionRadiusMultiplier => data?.PerceptionRadiusMultiplier ?? 1f;
+
     [NonSerialized]
     private bool isLocalProfile;
 

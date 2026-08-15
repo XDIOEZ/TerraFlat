@@ -65,6 +65,7 @@ public partial class ItemMgr
         public int Guid;
         public int InstanceId;
         public int LayerBit;
+        public float PerceptionRadiusMultiplier;
         public float2 BoundsCenter;
         public float2 BoundsExtents;
     }
@@ -72,7 +73,8 @@ public partial class ItemMgr
     private struct DetectorQuerySnapshot
     {
         public float2 Center;
-        public float Radius;
+        public float DetectionRadius;
+        public float BroadphaseRadius;
         public int LayerMask;
         public int ExcludedInstanceId;
         public WorldTopologyDomain Topology;
@@ -101,10 +103,10 @@ public partial class ItemMgr
                     float2 imageCenter = query.Center + new float2(
                         imageX * query.Topology.Span.x,
                         imageY * query.Topology.Span.y);
-                    int minCellX = WorldToCell(imageCenter.x - query.Radius) - 1;
-                    int maxCellX = WorldToCell(imageCenter.x + query.Radius) + 1;
-                    int minCellY = WorldToCell(imageCenter.y - query.Radius) - 1;
-                    int maxCellY = WorldToCell(imageCenter.y + query.Radius) + 1;
+                    int minCellX = WorldToCell(imageCenter.x - query.BroadphaseRadius) - 1;
+                    int maxCellX = WorldToCell(imageCenter.x + query.BroadphaseRadius) + 1;
+                    int minCellY = WorldToCell(imageCenter.y - query.BroadphaseRadius) - 1;
+                    int maxCellY = WorldToCell(imageCenter.y + query.BroadphaseRadius) + 1;
                     for (int cellX = minCellX; cellX <= maxCellX; cellX++)
                     {
                         for (int cellY = minCellY; cellY <= maxCellY; cellY++)
@@ -125,7 +127,8 @@ public partial class ItemMgr
                                 float2 distanceToBounds = math.max(
                                     math.abs(candidate.BoundsCenter - imageCenter) - candidate.BoundsExtents,
                                     0f);
-                                if (math.lengthsq(distanceToBounds) > query.Radius * query.Radius)
+                                float effectiveRadius = query.DetectionRadius * candidate.PerceptionRadiusMultiplier;
+                                if (math.lengthsq(distanceToBounds) > effectiveRadius * effectiveRadius)
                                     continue;
 
                                 writer.Write(itemIndex);
@@ -274,15 +277,20 @@ public partial class ItemMgr
     {
         _perceptionQueryData.Clear();
         WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
+        float maximumTargetPerceptionMultiplier = GetMaximumTargetPerceptionMultiplier();
         for (int i = 0; i < _inFlightDetectors.Count; i++)
         {
             Mod_ItemDetector detector = _inFlightDetectors[i];
             Item excludedItem = detector.item;
             Vector3 detectorPosition = detector.transform.position;
+            float detectionRadius = Mod_ItemDetector.CalculateEffectiveDetectionRadius(
+                detector.DetectionRadius,
+                1f);
             _perceptionQueryData.Add(new DetectorQuerySnapshot
             {
                 Center = new float2(detectorPosition.x, detectorPosition.y),
-                Radius = Mathf.Max(0f, detector.DetectionRadius),
+                DetectionRadius = detectionRadius,
+                BroadphaseRadius = detectionRadius * maximumTargetPerceptionMultiplier,
                 LayerMask = detector.itemLayer.value,
                 ExcludedInstanceId = excludedItem != null ? excludedItem.GetInstanceID() : 0,
                 Topology = topology
@@ -308,10 +316,10 @@ public partial class ItemMgr
                 {
                     float centerX = query.Center.x + imageX * query.Topology.Span.x;
                     float centerY = query.Center.y + imageY * query.Topology.Span.y;
-                    int minCellX = WorldToPerceptionCell(centerX - query.Radius) - 1;
-                    int maxCellX = WorldToPerceptionCell(centerX + query.Radius) + 1;
-                    int minCellY = WorldToPerceptionCell(centerY - query.Radius) - 1;
-                    int maxCellY = WorldToPerceptionCell(centerY + query.Radius) + 1;
+                    int minCellX = WorldToPerceptionCell(centerX - query.BroadphaseRadius) - 1;
+                    int maxCellX = WorldToPerceptionCell(centerX + query.BroadphaseRadius) + 1;
+                    int minCellY = WorldToPerceptionCell(centerY - query.BroadphaseRadius) - 1;
+                    int maxCellY = WorldToPerceptionCell(centerY + query.BroadphaseRadius) + 1;
                     for (int cellX = minCellX; cellX <= maxCellX; cellX++)
                     {
                         for (int cellY = minCellY; cellY <= maxCellY; cellY++)
@@ -352,6 +360,7 @@ public partial class ItemMgr
             Guid = candidate.itemData.Guid,
             InstanceId = candidate.GetInstanceID(),
             LayerBit = 1 << candidate.gameObject.layer,
+            PerceptionRadiusMultiplier = candidate.GetPerceptionRadiusMultiplier(),
             BoundsCenter = new float2(boundsCenter.x, boundsCenter.y),
             BoundsExtents = new float2(boundsExtents.x, boundsExtents.y)
         });
@@ -440,7 +449,8 @@ public partial class ItemMgr
                 if (!IsSnapshotItemStillValid(candidate, snapshot))
                     continue;
 
-                if (!_perceptionResultItemSet.Add(candidate) || !PassesColliderPerceptionFilter(candidate, query))
+                if (!_perceptionResultItemSet.Add(candidate) ||
+                    !PassesColliderPerceptionFilter(candidate, query, snapshot))
                     continue;
 
                 _detectorApplyBuffer.Add(candidate);
@@ -464,14 +474,20 @@ public partial class ItemMgr
         return WorldRunTimeItems.TryGetValue(snapshot.Guid, out Item registeredItem) && registeredItem == candidate;
     }
 
-    private bool PassesColliderPerceptionFilter(Item candidate, DetectorQuerySnapshot query)
+    private bool PassesColliderPerceptionFilter(
+        Item candidate,
+        DetectorQuerySnapshot query,
+        PerceptionItemSnapshot candidateSnapshot)
     {
         int layerBit = 1 << candidate.gameObject.layer;
         if ((query.LayerMask & layerBit) == 0 || candidate.GetInstanceID() == query.ExcludedInstanceId)
             return false;
 
         Vector2 center = new Vector2(query.Center.x, query.Center.y);
-        float radiusSqr = query.Radius * query.Radius;
+        float effectiveRadius = Mod_ItemDetector.CalculateEffectiveDetectionRadius(
+            query.DetectionRadius,
+            candidateSnapshot.PerceptionRadiusMultiplier);
+        float radiusSqr = effectiveRadius * effectiveRadius;
         if (!_perceptionColliderCache.TryGetValue(candidate, out Collider2D[] colliders))
             return false;
 
@@ -535,6 +551,9 @@ public partial class ItemMgr
         if (radius < 0f)
             return;
 
+        float broadphaseRadius = Mod_ItemDetector.CalculateEffectiveDetectionRadius(
+            radius,
+            GetMaximumTargetPerceptionMultiplier());
         WorldTopologyDomain topology = WorldTopologyRuntime.GetActiveDomain();
         int minImage = topology.IsWrapped ? -1 : 0;
         int maxImage = topology.IsWrapped ? 1 : 0;
@@ -543,10 +562,10 @@ public partial class ItemMgr
             for (int imageY = minImage; imageY <= maxImage; imageY++)
             {
                 Vector2 imageCenter = center + new Vector2(imageX * topology.Span.x, imageY * topology.Span.y);
-                int minCellX = WorldToPerceptionCell(imageCenter.x - radius) - 1;
-                int maxCellX = WorldToPerceptionCell(imageCenter.x + radius) + 1;
-                int minCellY = WorldToPerceptionCell(imageCenter.y - radius) - 1;
-                int maxCellY = WorldToPerceptionCell(imageCenter.y + radius) + 1;
+                int minCellX = WorldToPerceptionCell(imageCenter.x - broadphaseRadius) - 1;
+                int maxCellX = WorldToPerceptionCell(imageCenter.x + broadphaseRadius) + 1;
+                int minCellY = WorldToPerceptionCell(imageCenter.y - broadphaseRadius) - 1;
+                int maxCellY = WorldToPerceptionCell(imageCenter.y + broadphaseRadius) + 1;
                 for (int cellX = minCellX; cellX <= maxCellX; cellX++)
                 {
                     for (int cellY = minCellY; cellY <= maxCellY; cellY++)
@@ -648,6 +667,27 @@ public partial class ItemMgr
         return ((long)x << 32) ^ (uint)y;
     }
 
+    /// <summary>获取当前运行时物品中最大的被感知倍率，用于保证空间粗筛不漏掉大体型目标。</summary>
+    private float GetMaximumTargetPerceptionMultiplier()
+    {
+        float maximumMultiplier = 1f;
+        for (int i = 0; i < RuntimeItems.Count; i++)
+        {
+            Item candidate = RuntimeItems[i];
+            if (candidate == null || candidate.itemData == null ||
+                !candidate.gameObject.activeInHierarchy || candidate.DestructionHandled)
+            {
+                continue;
+            }
+
+            maximumMultiplier = Mathf.Max(
+                maximumMultiplier,
+                candidate.GetPerceptionRadiusMultiplier());
+        }
+
+        return maximumMultiplier;
+    }
+
     private void TryAddSpatialCandidate(
         Item candidate,
         Vector2 center,
@@ -667,7 +707,10 @@ public partial class ItemMgr
         if ((layerMask.value & layerBit) == 0)
             return;
 
-        float radiusSqr = radius * radius;
+        float effectiveRadius = Mod_ItemDetector.CalculateEffectiveDetectionRadius(
+            radius,
+            candidate.GetPerceptionRadiusMultiplier());
+        float radiusSqr = effectiveRadius * effectiveRadius;
         _spatialColliderBuffer.Clear();
         candidate.GetComponents(_spatialColliderBuffer);
         for (int i = 0; i < _spatialColliderBuffer.Count; i++)

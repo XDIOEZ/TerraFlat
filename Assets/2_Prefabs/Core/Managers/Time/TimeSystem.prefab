@@ -47,6 +47,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   GlobalLight: {fileID: 8436068588726109976}
   DefaultLightColor: {r: 1, g: 1, b: 1, a: 1}
+  LunarCycleDays: 29.53
+  NewMoonNightIntensity: 0.035
+  FullMoonNightIntensity: 0.18
+  InitialMoonPhase: 0.5
   SyncTileLightLayer: 1
   ActiveChunkLightRefreshInterval: 0.25
   InactiveChunkLightRefreshInterval: 5

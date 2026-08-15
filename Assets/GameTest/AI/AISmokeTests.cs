@@ -51,6 +51,23 @@ namespace FlatWorld.GameTest.AI
             }
         }
 
+        /// <summary>观察者基础范围与目标被感知倍率必须共同决定最终感知距离。</summary>
+        [Test]
+        [Category("AI.Smoke")]
+        [Category("Smoke")]
+        public void PerceptionRangeCombinesObserverAndTargetValues()
+        {
+            Assert.That(
+                Mod_ItemDetector.CalculateEffectiveDetectionRadius(10f, 1f),
+                Is.EqualTo(10f).Within(0.0001f));
+            Assert.That(
+                Mod_ItemDetector.CalculateEffectiveDetectionRadius(10f, 2f),
+                Is.EqualTo(20f).Within(0.0001f));
+            Assert.That(
+                Mod_ItemDetector.CalculateEffectiveDetectionRadius(10f, 0f),
+                Is.EqualTo(0f).Within(0.0001f));
+        }
+
 
 
 

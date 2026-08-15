@@ -32,6 +32,22 @@ public struct AI_IdleConfig
 	public float maxDuration;
 }
 
+public static class AI_DebugOverlay
+{
+	public static bool Visible { get; private set; }
+
+	public static void SetVisible(bool visible)
+	{
+		Visible = visible;
+	}
+
+	public static bool Toggle()
+	{
+		Visible = !Visible;
+		return Visible;
+	}
+}
+
 /// <summary>
 /// AI 状态机抽象基类，封装所有 AI 共享的核心逻辑：
 /// - 状态机运行循环（评估 → 切换 → 帧逻辑）
@@ -821,6 +837,18 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	{
 		return WorldTopologyRuntime.Distance(transform.position, target.position);
 	}
+
+	/// <summary>按观察者基础距离与目标被感知倍率判断是否处于有效感知范围。</summary>
+	protected bool IsWithinEffectivePerceptionRange(Item target, float baseDistance)
+	{
+		if (target == null)
+			return false;
+
+		float effectiveDistance = Mod_ItemDetector.CalculateEffectiveDetectionRadius(
+			baseDistance,
+			target);
+		return DistanceTo(target.transform) <= effectiveDistance;
+	}
 #endregion
 
 #region ModuleBinding
@@ -916,7 +944,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 #region Debug
 	private void OnGUI()
 	{
-		if (!DebugLogEnabled || !Application.isPlaying || Camera.main == null)
+		if (!AI_DebugOverlay.Visible || !Application.isPlaying || Camera.main == null)
 		{
 			return;
 		}

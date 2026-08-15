@@ -18,13 +18,18 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 - 领域控制器创建/持有正式 Prefab，`UIManager` 管生命周期；控件节点名是绑定契约。正式 UI 不用 `new GameObject/AddComponent` 拼视觉。
 - Prefab 是视觉真相；`BasePanel` 不在初始化时重写结构。运行时只用稳定键加载正式 Prefab。
+- 同一 `PanelRoot` 下的面板置顶/置底必须使用 `SetAsLastSibling`/`SetAsFirstSibling`；全局层级序号只能用于独立 Canvas 的 `sortingOrder`，不能直接当作兄弟索引。
+- 槽位内的选中框、背景和装饰必须按槽内兄弟顺序分层；选中框切换时必须跟随当前槽位，不得留在旧槽位后再用世界坐标跨槽移动。
+- 设置类模态页（主设置及其子页）需要独立高层 Canvas 与 `GraphicRaycaster`；非交互对话气泡在玩法模态打开时隐藏，避免首帧或跨 Canvas 绘制顺序造成遮挡。
 - 常驻 HUD 不拦截输入，Graphic 关闭 raycastTarget；若 HUD 提供展开/收起功能，只允许开关按钮接收 raycast，内容和装饰元素仍必须输入透明；模态面板才获取输入锁和顶层手柄焦点，关闭/失败路径释放。
-- 手机 HUD 的菜单/返回入口必须独立于可隐藏的玩法控制层；模态面板打开时保留该入口并优先关闭最上层可取消面板，避免移动端失去返回/退出路径。
+- 手机 HUD 的菜单/返回入口必须独立于可隐藏的玩法控制层；模态玩法面板打开时保留该入口并允许背包/制作等面板并行打开，Android 返回键或 Escape 优先关闭最上层可取消面板，避免移动端失去退出路径。
 - 坐标、角色状态等信息型 HUD 使用屏幕角落锚点和透明容器，只显示会随运行时变化的字段/状态条；禁止为这类 HUD 添加整块背景、卡片标题或装饰性介绍文字。
 - 常驻组件事件驱动；禁止等待绑定或比较静态状态的 Update/LateUpdate 和逐帧 `GetComponent*`。
 - 动态列表复用条目；结构变化才局部 MarkLayoutForRebuild，数值/颜色更新不强制布局。热路径禁止 ForceUpdateCanvases/ForceRebuild。
 - 动态列表的通用节点名（如 `Content`）不得在整个面板全局查找；必须从所属 `ScrollRect` 或业务容器取引用，避免与 Dropdown 模板等同名节点串容器。
 - EventSystem 反馈保持唯一非缩放 Tween，重入先 Kill，失活/销毁清理。
+- `GamepadUIRuntimeController` 的手机准线状态与 `gamepadMode/cursorMode` 分离；手机准线只负责显示位置，不得清空 UI 焦点或触发 UI 命中。
+- GM 调试面板由 `GMReflectionConsole` 运行时动态构建，不通过正式 UI Prefab；可持久化的调试开关统一放入 `GMConsolePreferences`，按钮状态需在场景切换和面板刷新时同步。
 - 主菜单控件名集中在 `GameManager.UI.cs`；定向构建 Prefab，避免无关重写。
 - `SafeAreaRoot` 只约束交互内容；挂在其下的全屏背景使用 `FullScreenRectController` 反向扩展到根 Canvas，背景图用 `AspectRatioFitter.EnvelopeParent` 等比裁切。`CanvasScaler` 不再乘安全区比例，避免与 `SafeAreaRectController` 双重缩小 UI。
 

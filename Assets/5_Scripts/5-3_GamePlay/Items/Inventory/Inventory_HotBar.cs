@@ -369,6 +369,13 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
         int initialIndex = Mathf.Clamp(NormalizeIndex(CurrentIndex), 0, itemSlot_UI.Count - 1);
         SelectBox = Instantiate(SelectBoxPrefab, itemSlot_UI[initialIndex].transform, false);
+        SelectBox.transform.SetAsFirstSibling();
+        Canvas selectBoxCanvas = SelectBox.GetComponent<Canvas>();
+        if (selectBoxCanvas != null)
+        {
+            selectBoxCanvas.overrideSorting = false;
+            selectBoxCanvas.sortingOrder = UIManager.GameplayHudSortingOrder;
+        }
         SwitchItem(initialIndex, animateSelection: false);
     }
 
@@ -779,9 +786,14 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         ItemSlot_UI targetSlot = itemSlot_UI[index];
         if (targetSlot == null) return;
 
-        SelectBox.transform.DOKill();
-        // 保持初始父节点不变，只将选中框移动到目标快捷栏位的位置。
-        SelectBox.transform.DOMove(GetSelectBoxTargetPosition(targetSlot.transform), SelectBoxChangeDuration).SetEase(Ease.OutQuad);
+        Transform selectionTransform = SelectBox.transform;
+        selectionTransform.DOKill();
+        selectionTransform.SetParent(targetSlot.transform, true);
+        selectionTransform.SetAsFirstSibling();
+        selectionTransform
+            .DOMove(GetSelectBoxTargetPosition(targetSlot.transform), SelectBoxChangeDuration)
+            .SetEase(Ease.OutQuad)
+            .OnComplete(() => SnapSelectBoxToSlot(index));
     }
 
     private void SnapSelectBoxToSlot(int index)
@@ -795,16 +807,24 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
         Transform selectionTransform = SelectBox.transform;
         selectionTransform.DOKill();
-        if (selectionTransform.parent == targetSlot.transform)
+        selectionTransform.SetParent(targetSlot.transform, false);
+        selectionTransform.SetAsFirstSibling();
+        SetSelectBoxLocalPosition(selectionTransform);
+    }
+
+    private static void SetSelectBoxLocalPosition(Transform selectionTransform)
+    {
+        if (selectionTransform is RectTransform selectionRect)
         {
-            if (selectionTransform is RectTransform selectionRect)
-                selectionRect.anchoredPosition = Vector2.zero;
-            else
-                selectionTransform.localPosition = Vector3.zero;
+            selectionRect.anchoredPosition = Vector2.zero;
+            selectionRect.localRotation = Quaternion.identity;
+            selectionRect.localScale = Vector3.one;
             return;
         }
 
-        selectionTransform.position = GetSelectBoxTargetPosition(targetSlot.transform);
+        selectionTransform.localPosition = Vector3.zero;
+        selectionTransform.localRotation = Quaternion.identity;
+        selectionTransform.localScale = Vector3.one;
     }
 
     private static Vector3 GetSelectBoxTargetPosition(Transform targetSlot)

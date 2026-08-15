@@ -12,6 +12,7 @@ internal static class GMConsolePreferences
     private const string ChunkLoadUnlimitedKey = KeyPrefix + "ChunkLoadUnlimited";
     private const string TeleportShortcutKey = KeyPrefix + "TeleportShortcut";
     private const string NavigationPathKey = KeyPrefix + "NavigationPath";
+    private const string AnimalDebugOverlayKey = KeyPrefix + "AnimalDebugOverlay";
     private const string ActivePageKey = KeyPrefix + "ActivePage";
 
     #region 读取
@@ -30,6 +31,9 @@ internal static class GMConsolePreferences
 
     public static bool NavigationPathVisible =>
         PlayerPrefs.GetInt(NavigationPathKey, 0) != 0;
+
+    public static bool AnimalDebugOverlayVisible =>
+        PlayerPrefs.GetInt(AnimalDebugOverlayKey, 0) != 0;
 
     public static int ActivePageIndex => PlayerPrefs.GetInt(ActivePageKey, 0);
 
@@ -64,6 +68,12 @@ internal static class GMConsolePreferences
     public static void SetNavigationPathVisible(bool visible)
     {
         PlayerPrefs.SetInt(NavigationPathKey, visible ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    public static void SetAnimalDebugOverlayVisible(bool visible)
+    {
+        PlayerPrefs.SetInt(AnimalDebugOverlayKey, visible ? 1 : 0);
         PlayerPrefs.Save();
     }
 

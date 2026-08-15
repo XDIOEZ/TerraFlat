@@ -414,6 +414,18 @@ public partial class Mod_Grow
 
 #region 一次性收获
 
+    /// <summary>自然树木不响应玩家交互；仅成熟且未收获的玩家种植作物可被采集。</summary>
+    public bool CanInteract(Item playerItem)
+    {
+        return playerItem != null &&
+            allowCultivatedHarvest &&
+            Data != null &&
+            Data.isCultivatedCrop &&
+            Data.isMature &&
+            !Data.isHarvested &&
+            !_harvestInProgress;
+    }
+
     public void OnInteractStart(Item playerItem)
     {
         if (!allowCultivatedHarvest || !Data.isCultivatedCrop)

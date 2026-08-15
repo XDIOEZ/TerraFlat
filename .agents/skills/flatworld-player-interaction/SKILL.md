@@ -21,9 +21,12 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 本地档案由 `Player.IsLocalProfile`/ProfileContext 判定；远程副本不得持久化、跑本地教程或玩家语音。
 - 玩家存档与 `Player_DIC` 必须使用 `Player.ProfileName` 稳定档案键；`Data_Player.Name_User` 可能被显示名、旧存档或管理员身份临时改写，禁止用它决定保存、卸载或跨维度重建的角色槽位。
 - 手柄焦点只能停留在顶层导航面板；虚拟光标/虚拟键盘按现有模式接管。
-- 当前玩法控制方式由设置页手动选择并持久化为键鼠、手柄或手机；禁止按最近输入自动热切换。切换时只给玩法 ActionMap 设置 binding mask，禁止遮罩整个 InputActionAsset，否则会一并禁用设置页所需的鼠标、触摸和返回输入。
+- 当前玩法控制偏好由设置页手动选择并持久化为键鼠、手柄或手机；禁止按最近输入自动切换 HUD。输入资产、玩法 ActionMap 和 UI ActionMap 不得用 binding mask 互斥键鼠、手柄和手机输入；设置页/手柄焦点的设备状态也不能清空手机触摸。
+- 手机方案下 Shift 等键盘修饰键不参与设备切换；真实鼠标/Touchscreen 点击可退出手柄 UI/虚拟光标模式，硬件鼠标位置优先用于 UI 命中，但不能因此切走手机 HUD 或改变手机触控语义。
 - 切回键鼠模式时必须清空非输入框的 `EventSystem.currentSelectedGameObject`，且选中描边只在真实手柄模式显示，避免鼠标点击后残留手柄焦点框。
+- 交互描边脚本只能保留在 `GamePlay` 程序集源目录，禁止在 `Assets/5-3_GamePlay` 与 `Assets/5_Scripts/5-3_GamePlay` 同时放置同名类型，否则会触发 CS0436。
 - 同时需要左右翻身与上下瞄准的 Transform 只能由 `Mod_FocusPoint` 写最终旋转；`Mod_TurnBack` 只提供 `CurrentTurnAngleY`，禁止把同一 Transform 再加入其方向控制列表，否则 Y 翻转会被 Z 瞄准覆盖。
+- 手机/手柄交互优先选择普通指向前方的可交互目标，前方没有目标时才按距离兜底；鼠标点击仍按落点精确选择。
 - 玩家跑步模式与视觉状态分离：`Run` 只表示逻辑奔跑模式，`Move=false` 时 `Player.controller` 必须切换到 `Idle`；进入 `Run` 必须直接播放，不添加播放倍率渐起或 Animator 混合延迟，禁止修改全局 `Animator.speed`，否则会连带暂停攻击等其他动画。
 - `Mover_SaveData.isRunning` 是玩家奔跑开关的持久字段；输入锁定只停止位移，不清空该字段，跨维度重建后须在解锁输入后恢复。
 - `Player.prefab` 根的环绕控制只处理本地玩家且仅在 Wrapped 拓扑启用。

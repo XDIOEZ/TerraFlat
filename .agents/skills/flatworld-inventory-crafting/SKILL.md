@@ -13,6 +13,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 配方可视化编辑：`Assets/Editor/FlatWorld/ContentTools/ContentWorkshop/`，Unity 菜单为 `FlatWorld/内容配置/内容工坊`
 - 装备：`Items/Equipment/{Mod_Equipment,Equipment_SO,EquipmentInstance*,Module_Equipment_Store}.cs`
 - 食物/农业：`Entities/Item/Mod_Food.cs`、种子/成长模块与 `Mod_Grow.AuthoritativeCrop.cs`
+- 移动营养消耗：`Entities/Move/Mover.cs` 与 `Mod_Food` 分别维护营养、水分的移动倍率。
 - Prefab：`Assets/2_Prefabs/{Inventory,Equipment,Food,Plant,Seed,Tools}/`
 
 ## 不变量
@@ -26,6 +27,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 槽位鼠标与触屏拖放必须复用 `ItemSlot_UI.OnMouseDragBegin` / `OnMouseDragDrop` 的定向事务：短按在抬起时提交一次，物品槽越过系统拖拽阈值后先拿起到玩家手部槽，再在目标槽位抬起放下；未命中任何 `ItemSlot_UI` 时保留整组在 `Inventory_Hand`，后续点击按轻触方向处理：连续拿取方向下同类已有物品从槽位取一件，放置方向下空槽/同类槽向目标放一件，异类槽交换，长按空槽或同类槽则一次性放下手上整组；同类物品合并到目标槽，空槽放入，异类交换，容量不足保留手部余量，空槽起手才转交父级 `ScrollRect`，同时保留长按菜单。
 - 手机快捷栏轻触必须走独立 `OnTouchTap` 语义，只切换当前选中格或按单件规则取放；触屏拖放必须走 `OnMouseDragDrop` 定向事务，桌面键鼠行为不得改变。
 - 跟随指针的 `UI_Hand` 是纯视觉层：Canvas 排序固定高于快捷栏模态层（1001 > 1000），且 CanvasGroup/子图形不得拦截目标槽位射线；世界手持物挂在快捷栏节点及其子节点末端。
+- 快捷栏选中框属于当前槽位背景层，切换时必须重新挂到目标槽位并置为首个兄弟；数量文本和物品图标保持在其上方，不能依赖独立 Canvas 的任意 `sortingOrder`。
 - 玩家行囊的键鼠点击无条件使用 `Inventory_Hand`，不能因携带槽为空而回退当前快捷栏；快捷栏选中槽只参与手柄确认与角色当前装备，不参与 PC 背包交换。
 - 快捷栏收到 Mobile `RightClick` 时必须允许当前手持物执行 `Act`，不能因触点位于手机“使用”按钮上而被 `IsPointerOverUI()` 拦截；键鼠右键仍保留 UI 遮挡检查。
 - 快捷栏生成的手持物只注册到玩家 `Mod_FocusPoint`；左右翻身角由该模块读取 `Mod_TurnBack.CurrentTurnAngleY` 后与 Z 轴瞄准一次性合成，不能再把手持物根节点注册进 `controlledTransforms_Direction`。

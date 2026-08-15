@@ -43,8 +43,17 @@ namespace FlatWorld.Dialogue
 
         private void LateUpdate()
         {
-            if (viewObject != null && isVisible)
-                UpdateScreenPosition();
+            if (viewObject == null || !isVisible)
+                return;
+
+            // 设置、背包等模态面板打开时，非交互气泡直接隐藏，避免任何 Canvas 顺序异常造成遮挡。
+            if (IsBlockedByGameplayModalPanel())
+            {
+                HideImmediate();
+                return;
+            }
+
+            UpdateScreenPosition();
         }
 
         private void OnDisable()
@@ -60,8 +69,8 @@ namespace FlatWorld.Dialogue
 
         public bool Show(CharacterSpeechRequest request)
         {
-            if (request == null || !request.IsValid || !EnsureView())
-            return false;
+            if (request == null || !request.IsValid || IsBlockedByGameplayModalPanel() || !EnsureView())
+                return false;
 
             if (hideRoutine != null)
                 StopCoroutine(hideRoutine);
@@ -163,6 +172,13 @@ private bool EnsureView()
                 return;
 
             viewRect.SetAsFirstSibling();
+        }
+
+        /// <summary>判断当前是否存在必须阻断玩法输入的模态面板。</summary>
+        private static bool IsBlockedByGameplayModalPanel()
+        {
+            UIManager manager = UIManager.ExistingInstance;
+            return manager != null && manager.HasOpenGameplayInputBlockingPanel();
         }
 
 

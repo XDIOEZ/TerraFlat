@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 /// <summary>
@@ -49,6 +50,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     private bool hoverTargetDirty = true;
     private bool gamepadMode;
     private bool cursorMode;
+    private bool mobileAimCursorVisible;
 
     public bool IsGamepadMode => gamepadMode;
     public bool IsVirtualCursorMode => cursorMode;
@@ -66,6 +68,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     private void OnEnable()
     {
         GamepadVirtualKeyboardController.Closed += OnVirtualKeyboardClosed;
+        BindCancelAction(null);
         observedUIManager = null;
         observedInteractionSurfaceRevision = -1;
         cursorPositionDirty = true;
@@ -83,6 +86,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         suppressedInputField = null;
         suppressedInputFieldFrame = -1;
         ClearHoverTarget();
+        mobileAimCursorVisible = false;
         SetCursorVisible(false);
     }
 
@@ -96,11 +100,20 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     {
         DetectInputModeWithoutPlayerController();
 
-        if (!gamepadMode)
+        if (!gamepadMode && !mobileAimCursorVisible)
             return;
 
         RefreshInteractionSurfaceState();
         EnsureCursorVisual();
+
+        if (mobileAimCursorVisible && !gamepadMode)
+        {
+            RefreshCanvasMetrics();
+            if (cursorPositionDirty && PositionCursor())
+                cursorPositionDirty = false;
+            return;
+        }
+
         TryOpenKeyboardForSelectedInputFieldOnSubmit();
 
         if (!cursorMode)
@@ -246,6 +259,34 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         nextStationaryHoverRefreshTime = 0f;
     }
 
+    /// <summary>显示或隐藏手机玩法准线；手机准线不参与 UI 射线与焦点状态。</summary>
+    public void SetMobileAimCursorVisible(bool visible)
+    {
+        mobileAimCursorVisible = visible;
+        if (visible)
+        {
+            cursorPositionDirty = true;
+            EnsureCursorVisual();
+        }
+        else if (!cursorMode)
+        {
+            SetCursorVisible(false);
+        }
+    }
+
+    /// <summary>接收手机最终朝向对应的屏幕位置。</summary>
+    public void NotifyMobileAimCursorPosition(Vector2 screenPosition)
+    {
+        bool positionChanged = !cursorPositionInitialized ||
+                               (cursorScreenPosition - screenPosition).sqrMagnitude >
+                               CursorPositionEpsilonSquared;
+        cursorScreenPosition = screenPosition;
+        cursorPositionInitialized = true;
+        if (positionChanged)
+            cursorPositionDirty = true;
+        SetMobileAimCursorVisible(true);
+    }
+
     /// <summary>退出手柄模式时清除按钮/槽位焦点框，但保留正在键盘输入的文本框。</summary>
     private static void ClearNavigationSelection()
     {
@@ -384,6 +425,12 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     private void BindCancelAction(InputActionAsset asset)
     {
         InputAction nextAction = asset?.FindActionMap("FlatWorldUI", false)?.FindAction("Cancel", false);
+        if (nextAction == null)
+        {
+            InputSystemUIInputModule inputModule = GetComponent<InputSystemUIInputModule>();
+            nextAction = inputModule?.cancel?.action;
+        }
+
         if (ReferenceEquals(cancelAction, nextAction))
             return;
 
@@ -409,15 +456,14 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     private void OnCancelPerformed(InputAction.CallbackContext context)
     {
         // 手柄 B 现在只存在于 FlatWorldUI/Cancel 的默认回退绑定，首次按下时也要切换到手柄模式。
-        if (context.control?.device is Gamepad && !gamepadMode)
+        bool isGamepadInput = context.control?.device is Gamepad;
+        if (isGamepadInput && !gamepadMode)
             EventSystemGuard.SetGamepadMode(true);
-
-        if (!gamepadMode)
-            return;
 
         if (GamepadVirtualKeyboardController.IsOpen)
         {
             GamepadVirtualKeyboardController.Cancel();
+            UIManager.ExistingInstance?.NotifyCancelHandled();
             return;
         }
 
@@ -532,13 +578,13 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
     {
         if (!cursorMode)
         {
-            SetCursorVisible(false);
+            SetCursorVisible(mobileAimCursorVisible);
             return;
         }
 
         cursorMode = false;
         ClearHoverTarget();
-        SetCursorVisible(false);
+        SetCursorVisible(mobileAimCursorVisible);
 
         if (restoreFocus && EventSystem.current?.currentSelectedGameObject == null)
         {
@@ -621,7 +667,7 @@ public sealed class GamepadUIRuntimeController : MonoBehaviour
         lastCanvasScaleFactor = -1f;
         cursorPositionDirty = true;
         hoverTargetDirty = true;
-        SetCursorVisible(cursorMode);
+        SetCursorVisible(cursorMode || mobileAimCursorVisible);
     }
 
     /// <summary>分辨率或 Canvas 参数变化时重新定位并命中一次。</summary>

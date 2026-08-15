@@ -64,6 +64,16 @@ public class Mod_InteractReciver : Module, IInteractable
 
     #region 交互方法
 
+    /// <summary>仅当接收器有实际开始事件且物品不可拾取时才允许玩家交互。</summary>
+    public bool CanInteract(Item playerItem)
+    {
+        return playerItem != null &&
+            item?.itemData?.Stack != null &&
+            !item.itemData.Stack.CanBePickedUp &&
+            OnAction_Start != null &&
+            OnAction_Start.HasCalls;
+    }
+
     /// <summary>
     /// 开始交互
     /// </summary>

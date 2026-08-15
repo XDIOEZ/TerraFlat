@@ -162,7 +162,8 @@ public class Inventory
         _toggleCallback = ctx =>
         {
             if (gameController.IsGameplayInputLocked &&
-                (basePanel == null || !basePanel.IsOpen()))
+                (basePanel == null || !basePanel.IsOpen()) &&
+                !CanToggleFromMobileMenu())
             {
                 return;
             }
@@ -180,12 +181,21 @@ public class Inventory
             AcquirePanelInputLock();
     }
 
+    /// <summary>手机菜单抽屉内的背包按钮允许在制作面板打开时切换背包。</summary>
+    private bool CanToggleFromMobileMenu()
+    {
+        return _boundController != null &&
+               _boundController.IsUsingMobile &&
+               PlayerMobileControlsHUD.IsActiveDrawerOpen;
+    }
+
     /// <summary>
     /// 解除通过 BindController 建立的输入绑定
     /// </summary>
     public void UnbindController()
     {
         Data.Event_RefreshUI -= RefreshUI;
+        UnbindSlotDataEvents();
         _boundController?.ReleaseGameplayInputLock(this);
 
         if (_boundToggleAction != null && _toggleCallback != null)
@@ -196,6 +206,19 @@ public class Inventory
         _boundController = null;
         _boundToggleAction = null;
         _toggleCallback = null;
+    }
+
+    /// <summary>解除当前库存所有槽位的 UI 监听，避免场景/玩家销毁后继续回调旧界面。</summary>
+    public void UnbindSlotDataEvents()
+    {
+        if (Data?.itemSlots == null)
+            return;
+
+        for (int i = 0; i < Data.itemSlots.Count; i++)
+        {
+            ItemSlot slot = Data.itemSlots[i];
+            slot?.onSlotDataChanged.Clear();
+        }
     }
 
     #endregion
@@ -387,8 +410,14 @@ public class Inventory
         // 初始化物品槽位数据
         for (int i = 0; i < Data.itemSlots.Count; i++)
         {
-            Data.itemSlots[i].Index = i;
-            Data.itemSlots[i].SlotMaxVolume = 100;
+            ItemSlot slot = Data.itemSlots[i];
+            if (slot == null)
+                continue;
+
+            // Inventory 可能复用存档中的 ItemSlot，先清理上一轮玩家/UI 的旧监听。
+            slot.onSlotDataChanged.Clear();
+            slot.Index = i;
+            slot.SlotMaxVolume = 100;
         }
 
         // 初始化事件系统
@@ -690,15 +719,27 @@ public class Inventory
 
     public void RefreshUI(int index)
     {
-        if (index < 0 || index >= itemSlot_UI.Count) return;
-        itemSlot_UI[index].RefreshUI();
+        if (itemSlot_UI == null || index < 0 || index >= itemSlot_UI.Count)
+            return;
+
+        // 数据事件可能晚于面板销毁到达，Unity 已销毁的组件必须跳过。
+        ItemSlot_UI slotUI = itemSlot_UI[index];
+        if (slotUI == null)
+            return;
+
+        slotUI.RefreshUI();
     }
 
     public void RefreshUI()
     {
+        if (itemSlot_UI == null)
+            return;
+
         for (int i = 0; i < itemSlot_UI.Count; i++)
         {
-            itemSlot_UI[i].RefreshUI();
+            ItemSlot_UI slotUI = itemSlot_UI[i];
+            if (slotUI != null)
+                slotUI.RefreshUI();
         }
     }
 

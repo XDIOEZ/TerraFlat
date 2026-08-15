@@ -34,6 +34,9 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
 
     private void OnDestroy()
     {
+        inputInventory?.UnbindSlotDataEvents();
+        outputInventory?.UnbindSlotDataEvents();
+
         if (inputInventory?.Data != null)
             inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
 
@@ -163,6 +166,7 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
 
     private static void InitializeInventoryData(Inventory inventory, string inventoryName)
     {
+        inventory.UnbindSlotDataEvents();
 
         for (int i = 0; i < inventory.Data.itemSlots.Count; i++)
         {

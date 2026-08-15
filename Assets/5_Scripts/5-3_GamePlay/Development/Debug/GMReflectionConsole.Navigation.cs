@@ -84,7 +84,7 @@ public sealed partial class GMReflectionConsole
 
         Canvas canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 32000;
+        canvas.sortingOrder = UIManager.GlobalOverlaySortingOrder;
 
         CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -450,10 +450,16 @@ public sealed partial class GMReflectionConsole
         GmPageView page = CreatePage(GmPageId.World);
         AddPageIntro(page.Content, "世界与环境", "天气、时间、区块加载、视野和导航调试功能。 ");
 
-        Transform grid = CreateActionGrid(page.Content, 4, 256f, 36f, 11);
+        Transform grid = CreateActionGrid(page.Content, 4, 256f, 36f, 12);
         CreateSearchableButton(grid, GmPageId.World, "晴天", "天气 晴 clear weather", () => InvokeByTypeName("GameDebugManager", "SetClearWeather"));
         CreateSearchableButton(grid, GmPageId.World, "下雨", "天气 雨 rain weather", () => InvokeByTypeName("GameDebugManager", "SetRainWeather"));
         CreateSearchableButton(grid, GmPageId.World, "环境信息", "环境 温度 信息 debug", () => InvokeByTypeName("GameDebugManager", "ToggleEnvironmentInfo"));
+        animalDebugOverlayButton = CreateSearchableButton(
+            grid,
+            GmPageId.World,
+            "动物参数：关",
+            "动物 AI 头顶 状态 饱食度 狼 野猪 小鸡 debug",
+            ToggleAnimalDebugOverlay);
         CreateSearchableButton(grid, GmPageId.World, "视野无限", "相机 视野 unlimited view", () => InvokeByTypeName("Mod_Cam", "EnableUnlimitedView"));
         CreateSearchableButton(grid, GmPageId.World, "时间 +0.5", "时间 加速 time scale", () => InvokeByTypeName("PlayerAdminController", "TryUpdateTimeScale", 0.5f));
         CreateSearchableButton(grid, GmPageId.World, "时间 -0.5", "时间 减速 time scale", () => InvokeByTypeName("PlayerAdminController", "TryUpdateTimeScale", -0.5f));
@@ -469,6 +475,7 @@ public sealed partial class GMReflectionConsole
             ToggleNavigationPathHints);
 
         RefreshNavigationPathButton();
+        RefreshAnimalDebugOverlayButton();
         RefreshChunkLoadSpeedControl();
     }
 

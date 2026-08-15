@@ -21,6 +21,21 @@ public abstract class Item : MonoBehaviour
     public abstract ItemData itemData { get; }
 
     /// <summary>
+    /// 被其他实体感知时的范围倍率。1 为标准感知体型，数值越大越容易在更远处被发现。
+    /// 观察者的检测半径与该目标倍率共同决定最终感知范围。
+    /// </summary>
+    public virtual float PerceptionRadiusMultiplier => 1f;
+
+    /// <summary>读取经过安全归一化的目标感知倍率，避免异常存档破坏空间查询。</summary>
+    public float GetPerceptionRadiusMultiplier()
+    {
+        float multiplier = PerceptionRadiusMultiplier;
+        return float.IsNaN(multiplier) || float.IsInfinity(multiplier)
+            ? 1f
+            : Mathf.Max(0f, multiplier);
+    }
+
+    /// <summary>
     /// 将序列化数据绑定到运行时控制器。
     /// 这是 ItemData 整体替换的唯一公开入口。
     /// </summary>
@@ -372,6 +387,7 @@ public abstract class Item : MonoBehaviour
         itemMods.BindOwner(this);
         MarkModuleScheduleDirty();
         MigrateDeprecatedAgricultureModuleData();
+        MigrateDeprecatedStickWeaponModuleData();
         bool firstStart = itemData.ModuleDataDic.Count == 0;
 
         var modules = GetComponentsInChildren<Module>().ToList();
@@ -543,6 +559,33 @@ public abstract class Item : MonoBehaviour
         if (keysToRemove.Count > 0)
         {
             Debug.Log($"[Item] 已迁移 {itemData.IDName} 的旧农业模块数据：{deprecatedModuleId} ×{keysToRemove.Count}", this);
+        }
+    }
+
+    /// <summary>
+    /// 将木棍从旧的可攻击物品迁移为纯材料，避免旧存档自动恢复攻击模块。
+    /// </summary>
+    private void MigrateDeprecatedStickWeaponModuleData()
+    {
+        if (itemData?.ModuleDataDic == null || itemData.ModuleDataDic.Count == 0 ||
+            !string.Equals(itemData.IDName, "Stick_Wood", StringComparison.Ordinal))
+            return;
+
+        string[] deprecatedModuleIds =
+        {
+            "Mod_Damage",
+            "Module_Weapon_AnimationAction"
+        };
+        List<string> keysToRemove = itemData.ModuleDataDic
+            .Where(pair => pair.Value != null && deprecatedModuleIds.Contains(pair.Value.ID))
+            .Select(pair => pair.Key)
+            .ToList();
+        foreach (string key in keysToRemove)
+            itemData.ModuleDataDic.Remove(key);
+
+        if (keysToRemove.Count > 0)
+        {
+            Debug.Log($"[Item] 已迁移木棍的旧攻击模块：×{keysToRemove.Count}", this);
         }
     }
 

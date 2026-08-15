@@ -4,12 +4,9 @@ public class UI_FollowMouse : MonoBehaviour
 {
     #region 层级与交互契约
 
-    // 手持物必须高于快捷栏的模态层（1000），但仍低于加载/调试等全局覆盖层。
-    private const int HeldItemSortingOrder = 1001;
-
     [SerializeField, Min(0)]
     [Tooltip("跟随指针的手持物显示层，必须高于快捷栏模态层。")]
-    private int sortingOrder = HeldItemSortingOrder;
+    private int sortingOrder = UIManager.HeldItemSortingOrder;
 
     private Canvas canvas;
     private CanvasGroup canvasGroup;
@@ -80,7 +77,7 @@ public class UI_FollowMouse : MonoBehaviour
         if (canvas != null)
         {
             canvas.overrideSorting = true;
-            canvas.sortingOrder = Mathf.Max(HeldItemSortingOrder, sortingOrder);
+            canvas.sortingOrder = Mathf.Max(UIManager.HeldItemSortingOrder, sortingOrder);
         }
 
         if (canvasGroup != null)

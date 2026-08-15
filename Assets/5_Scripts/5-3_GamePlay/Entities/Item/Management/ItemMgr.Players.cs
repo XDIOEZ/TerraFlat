@@ -51,6 +51,8 @@ public partial class ItemMgr
         Data_Player playerData = LoadOrCreatePlayerData(playerName, out bool wasCreated);
         //传入数据创建玩家
         Player player = CreatePlayer(playerData);
+        if (wasCreated)
+            ApplyDefaultPlayerCreationTemplate(player);
         player.SetProfileContext(
             localProfile: true,
             profileDataWasCreated: wasCreated,
@@ -89,6 +91,8 @@ public partial class ItemMgr
         Data_Player playerData = LoadOrCreatePlayerData(playerName, out bool wasCreated);
         //传入数据创建玩家
         Player player = CreatePlayer(playerData);
+        if (wasCreated)
+            ApplyDefaultPlayerCreationTemplate(player);
         player.SetProfileContext(
             localProfile: true,
             profileDataWasCreated: wasCreated,
@@ -98,6 +102,8 @@ public partial class ItemMgr
 
         return player;
     }
+        if (!hasSavedData)
+            ApplyDefaultPlayerCreationTemplate(player);
 
     /// <summary>
     /// 为 Mirror 网络身份创建对应的核心 Player Item。
@@ -280,6 +286,11 @@ public partial class ItemMgr
         newPlayer.transform.SetParent(null, true);
 
         return newPlayer;
+    }
+
+    private void ApplyDefaultPlayerCreationTemplate(Player player)
+    {
+        defaultPlayerCreationTemplate?.ApplyTo(player);
     }
 
     /// <summary>获取 Player 在存档和运行时字典中的稳定身份键。</summary>

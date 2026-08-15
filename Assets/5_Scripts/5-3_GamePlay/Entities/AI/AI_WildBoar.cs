@@ -406,7 +406,8 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	private void TickAlert(float deltaTime)
 	{
-		if (_currentThreat != null && DistanceTo(_currentThreat.transform) <= alertDetectDistance)
+		if (_currentThreat != null &&
+			IsWithinEffectivePerceptionRange(_currentThreat, alertDetectDistance))
 		{
 			FaceTarget(_currentThreat.transform.position);
 		}
@@ -489,14 +490,12 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		if (_currentState == WildBoarState.Chase)
 		{
 			if (threat == null) return false;
-			float distance = DistanceTo(threat.transform);
 			_currentThreat = threat;
-			return distance < chaseLossDistance;
+			return IsWithinEffectivePerceptionRange(threat, chaseLossDistance);
 		}
 
 		if (threat == null) return false;
-		float threatDistance = DistanceTo(threat.transform);
-		if (threatDistance > chaseTriggerDistance) return false;
+		if (!IsWithinEffectivePerceptionRange(threat, chaseTriggerDistance)) return false;
 
 		_currentThreat = threat;
 		return true;
@@ -515,7 +514,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		if (_currentState == WildBoarState.Chase || _currentState == WildBoarState.Attack)
 			return false;
 
-		if (DistanceTo(_currentThreat.transform) > alertDetectDistance)
+		if (!IsWithinEffectivePerceptionRange(_currentThreat, alertDetectDistance))
 			return false;
 
 		_alertCooldownTimer = Mathf.Max(0.01f, alertToChaseDuration);
@@ -609,7 +608,8 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		}
 
 		// 感知快照暂时没有新目标时保留当前目标，直到超过追击放弃距离。
-		if (_currentThreat != null && DistanceTo(_currentThreat.transform) > chaseLossDistance)
+		if (_currentThreat != null &&
+			!IsWithinEffectivePerceptionRange(_currentThreat, chaseLossDistance))
 			_currentThreat = null;
 	}
 

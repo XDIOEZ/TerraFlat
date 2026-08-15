@@ -70,8 +70,13 @@ public class UI_Drag : MonoBehaviour, IPointerDownHandler, IBeginDragHandler, ID
     /// </summary>
     private void Start()
     {        
-        // 设置初始层级
-        rectTransform.SetSiblingIndex(DefaultOrder);
+        // 已打开的 BasePanel 可能在实例化同一帧完成置顶，不能再被 Start 回写到默认层。
+        BasePanel basePanel = GetComponent<BasePanel>();
+        if (basePanel != null && basePanel.IsOpen())
+            rectTransform.SetAsLastSibling();
+        else
+            rectTransform.SetSiblingIndex(DefaultOrder);
+
         BasePanel.CurrentOrder = Mathf.Max(BasePanel.CurrentOrder, DefaultOrder);
 
         // 验证引用是否正确

@@ -6,7 +6,7 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// 新版区块的基础 Tilemap 表现层。
 ///
-/// 地表水岸与矿洞墙脚使用 Ground Tilemap，矿洞地下水使用 CaveWater Tilemap。
+/// 地表水岸、地表石地边缘与矿洞墙脚使用 Ground Tilemap，矿洞地下水使用 CaveWater Tilemap。
 /// 左、右、下、上四个接触方向编码到 Tile Color RGBA，由 Tilemap Shader 绘制渐变，
 /// 不再为接触阴影创建 SpriteRenderer 游戏对象。Tile Color 只作为表现数据。
 /// </summary>
@@ -172,7 +172,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
 
     #region Tilemap Shader 数据
 
-    /// <summary>矿洞地面编码墙脚方向；地表水格编码水岸方向。</summary>
+    /// <summary>矿洞地面编码墙脚方向；地表水格和陆地格分别编码水岸、石地边缘方向。</summary>
     private void ApplyGroundContactMasks(ChunkTerrainData terrain)
     {
         bool cave = IsCaveDimension(boundChunk?.Address.DimensionId);
@@ -184,11 +184,30 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
                 if (cell.GroundTileId == 0)
                     continue;
 
-                bool receivesShadow = cave ? !IsBlocking(cell) && !IsWater(cell) : IsWater(cell);
+                bool receivesShadow;
+                ContactKind contactKind;
+                if (cave)
+                {
+                    receivesShadow = !IsBlocking(cell) && !IsWater(cell);
+                    contactKind = ContactKind.Wall;
+                }
+                else if (IsWater(cell))
+                {
+                    // 水岸阴影继续画在水格内侧，保持现有水面边缘效果。
+                    receivesShadow = true;
+                    contactKind = ContactKind.Land;
+                }
+                else
+                {
+                    // 石地与草地共用 Ground Tilemap；把阴影写到石地外侧的陆地格上。
+                    receivesShadow = !IsStone(cell);
+                    contactKind = ContactKind.Stone;
+                }
+
                 Vector3Int position = new(x, y, 0);
                 groundTilemap.SetTileFlags(position, TileFlags.None);
                 groundTilemap.SetColor(position, receivesShadow
-                    ? BuildContactMask(terrain, x, y, cave ? ContactKind.Wall : ContactKind.Land)
+                    ? BuildContactMask(terrain, x, y, contactKind)
                     : Color.clear);
             }
         }
@@ -227,7 +246,13 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
     {
         if (!TryGetCell(terrain, x, y, out TerrainCell neighbour))
             return false;
-        return kind == ContactKind.Wall ? IsBlocking(neighbour) : !IsWater(neighbour);
+        return kind switch
+        {
+            ContactKind.Wall => IsBlocking(neighbour),
+            ContactKind.Land => !IsWater(neighbour),
+            ContactKind.Stone => IsStone(neighbour),
+            _ => false
+        };
     }
 
     /// <summary>读取本区块或已就绪的正交相邻区块格子。</summary>
@@ -298,10 +323,15 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
     private static bool IsBlocking(TerrainCell cell) =>
         cell.BlockingTileId != 0 && (cell.Flags & TerrainCellFlags.Blocking) != 0;
 
+    /// <summary>通过稳定群系编号识别地表石地，避免依赖可变的 TileId 配置。</summary>
+    private static bool IsStone(TerrainCell cell) =>
+        cell.BiomeId == (int)SurfaceBiomeKind.Stone;
+
     private enum ContactKind
     {
         Wall,
-        Land
+        Land,
+        Stone
     }
 
     #endregion

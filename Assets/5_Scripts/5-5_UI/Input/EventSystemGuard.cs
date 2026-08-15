@@ -16,6 +16,7 @@ public static class EventSystemGuard
     private const string RuntimeUIActionMapName = "FlatWorldUI";
 
     private static InputActionAsset preferredInputAsset;
+    private static InputAction pointerClickAction;
     private static GamepadUIRuntimeController runtimeController;
     private static bool gamepadMode;
 
@@ -114,7 +115,10 @@ public static class EventSystemGuard
     /// </summary>
     public static void ConfigureInputActions(InputActionAsset inputAsset)
     {
+        EnsureNonBlockingInputSettings();
         preferredInputAsset = inputAsset;
+        if (inputAsset != null)
+            inputAsset.bindingMask = null;
         EventSystem eventSystem = EnsureExactlyOne();
         InputSystemUIInputModule inputModule = eventSystem?.GetComponent<InputSystemUIInputModule>();
         if (inputModule != null && inputAsset != null)
@@ -131,6 +135,7 @@ public static class EventSystemGuard
         if (inputAsset == null || !ReferenceEquals(preferredInputAsset, inputAsset))
             return;
 
+        UnbindPointerClickAction();
         preferredInputAsset = null;
         EventSystem eventSystem = EventSystem.current;
         InputSystemUIInputModule inputModule = eventSystem?.GetComponent<InputSystemUIInputModule>();
@@ -151,6 +156,8 @@ public static class EventSystemGuard
             return;
 
         InputActionMap uiMap = EnsureRuntimeUIActionMap(inputAsset, gameplayMap);
+        // 资产级遮罩同样必须为空，否则会覆盖子 ActionMap 的并行输入设置。
+        inputAsset.bindingMask = null;
         InputAction moveAction = gameplayMap.FindAction("Move_Player", false);
         InputAction submitAction = gameplayMap.FindAction("LeftClick", false);
         InputAction cancelAction = gameplayMap.FindAction("B", false);
@@ -173,7 +180,16 @@ public static class EventSystemGuard
         ApplyBindingOverride(cancel, 1, FindFirstGroupBindingPath(cancelAction, "Gamepad", "<Gamepad>/buttonEast"));
         ApplyBindingOverride(cancel, 2, FindFirstGroupBindingPath(escapeAction, "Gamepad", "<Gamepad>/start"));
 
+        // UI 指针动作不能被玩家方案或历史配置的设备遮罩限制。
+        uiMap.bindingMask = null;
         uiMap.Enable();
+    }
+
+    /// <summary>关闭快捷键消费，保证 Shift/Ctrl 等修饰键不会吞掉其它并行输入。</summary>
+    private static void EnsureNonBlockingInputSettings()
+    {
+        if (InputSystem.settings.shortcutKeysConsumeInput)
+            InputSystem.settings.shortcutKeysConsumeInput = false;
     }
 
     private static void ConfigureInputModule(InputSystemUIInputModule inputModule, InputActionAsset inputAsset)
@@ -187,6 +203,7 @@ public static class EventSystemGuard
 
         InputActionMap uiMap = EnsureRuntimeUIActionMap(inputAsset, gameplayMap);
         SynchronizeUIInputBindings(inputAsset);
+        BindPointerClickAction(uiMap.FindAction("MouseLeftClick", false));
 
         inputModule.actionsAsset = inputAsset;
         inputModule.move = CreateReference(uiMap.FindAction("Navigate", false));
@@ -310,6 +327,34 @@ public static class EventSystemGuard
         action.ApplyBindingOverride(bindingIndex, path);
     }
 
+    /// <summary>绑定统一指针点击，兼容真实鼠标和 Device Simulator 转发的触摸点击。</summary>
+    private static void BindPointerClickAction(InputAction nextAction)
+    {
+        if (ReferenceEquals(pointerClickAction, nextAction))
+            return;
+
+        UnbindPointerClickAction();
+        pointerClickAction = nextAction;
+        if (pointerClickAction != null)
+            pointerClickAction.performed += OnPointerClickPerformed;
+    }
+
+    /// <summary>解除旧输入资产的指针监听，避免场景切换后回调悬挂。</summary>
+    private static void UnbindPointerClickAction()
+    {
+        if (pointerClickAction != null)
+            pointerClickAction.performed -= OnPointerClickPerformed;
+        pointerClickAction = null;
+    }
+
+    /// <summary>任何真实指针点击都退出手柄 UI 接管，但不修改手机玩法输入状态。</summary>
+    private static void OnPointerClickPerformed(InputAction.CallbackContext context)
+    {
+        InputDevice device = context.control?.device;
+        if (device is Mouse || device is Touchscreen)
+            SetGamepadMode(false);
+    }
+
     #endregion
 
     #region 手柄焦点与上下文操作
@@ -332,6 +377,18 @@ public static class EventSystemGuard
     public static void NotifyGamepadCursorPosition(Vector2 screenPosition)
     {
         EnsureRuntimeController(EventSystem.current)?.NotifyCursorPosition(screenPosition);
+    }
+
+    /// <summary>更新手机玩法准线位置，不进入手柄 UI 虚拟光标模式。</summary>
+    public static void NotifyMobileAimCursorPosition(Vector2 screenPosition)
+    {
+        EnsureRuntimeController(EventSystem.current)?.NotifyMobileAimCursorPosition(screenPosition);
+    }
+
+    /// <summary>切换手机玩法准线显示状态。</summary>
+    public static void SetMobileAimCursorVisible(bool visible)
+    {
+        EnsureRuntimeController(EventSystem.current)?.SetMobileAimCursorVisible(visible);
     }
 
     public static bool TryHandleGamepadVirtualCursorClick()

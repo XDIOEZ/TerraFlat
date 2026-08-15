@@ -11,8 +11,8 @@
     },
     {
       "id": "Stick_Wood",
-      "parent": "WoodTool_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Stick.prefab",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
       "gameName": "Stick_Wood",
       "description": "常见的木棍，是工具、武器和生火装置的基础材料。",
       "durability": 1.0,
@@ -63,115 +63,7 @@
           }
         }
       },
-      "modules": {
-        "damage": {
-          "prefab": "Mod_Damage",
-          "id": "Mod_Damage",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "Weakness": [
-              {
-                "Tag": 1,
-                "Level": 1
-              }
-            ],
-            "DamageValues": {
-              "Cutting": 0.0,
-              "Piercing": 0.0,
-              "Chopping": 0.0,
-              "Blunt": 2.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 1.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
-            },
-            "DamageInterval": 0.2,
-            "EnableOnTriggerEnterDamage": true,
-            "OnlyDealDamageWhenInHand": false,
-            "tileDamageToolKind": 0,
-            "weaponAudioClass": 0,
-            "attackAudioCueId": "",
-            "impactAudioOverrides": [],
-            "lastDamageTime": 0.0,
-            "$transform": {
-              "localPosition": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
-              }
-            },
-            "$collider2D": {
-              "type": "BoxCollider2D",
-              "enabled": false,
-              "isTrigger": true,
-              "offset": {
-                "x": 0.0,
-                "y": 0.0
-              },
-              "size": {
-                "x": 1.0,
-                "y": 1.0
-              }
-            }
-          }
-        },
-        "animation": {
-          "prefab": "Mod_Weapon_AnimationAction",
-          "id": "Module_Weapon_AnimationAction",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "useLocalInput": false,
-            "idleAnimationName": "Idle_0",
-            "attackAnimationNames": [
-              "Attack_2"
-            ],
-            "comboWindowOverride": -1.0,
-            "comboWindowGrace": 0.05,
-            "loopComboOnHold": true,
-            "attackSpeedMultiplier": 1.0,
-            "RawData": [],
-            "$transform": {
-              "localPosition": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
-              }
-            }
-          }
-        }
-      },
+      "modules": {},
       "itemData": {
         "code": "",
         "transform": {

@@ -310,6 +310,22 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 			_sleepCooldownTimer = sleepCooldown;
 		}
 	}
+
+	protected override string GetDebugExtraInfo()
+	{
+		float hungerRate = _food != null
+			? Mathf.Clamp01(_food.Data.nutrition.GetFoodRate())
+			: 0f;
+		float grassRemaining = Data != null && Data.GrassSustenanceInitialized
+			? Mathf.Max(0f, Data.GrassSustenanceRemaining)
+			: 0f;
+		string grassText = !enableGrassForaging
+			? "关闭"
+			: Data != null && Data.GrassSustenanceInitialized
+				? $"{grassRemaining:F0}s"
+				: "未初始化";
+		return $" | 饱食度: {hungerRate:P0} | 草食剩余: {grassText}";
+	}
 	#endregion
 
 	#region PublicAPI
@@ -449,12 +465,11 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		{
 			if (threat == null) return false;
 			_currentThreat = threat;
-			return DistanceTo(threat.transform) < fleeSafeDistance;
+			return IsWithinEffectivePerceptionRange(threat, fleeSafeDistance);
 		}
 
 		if (threat == null) return false;
-		float distance = DistanceTo(threat.transform);
-		if (distance > fleeTriggerDistance) return false;
+		if (!IsWithinEffectivePerceptionRange(threat, fleeTriggerDistance)) return false;
 
 		_currentThreat = threat;
 		return true;

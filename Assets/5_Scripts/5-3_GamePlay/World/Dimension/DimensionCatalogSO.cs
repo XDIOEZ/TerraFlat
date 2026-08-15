@@ -127,7 +127,7 @@ public sealed class DimensionDefinition
             PortalOffset = Vector3.zero,
             PortalTargetDimensionId = WorldAddress.SurfaceDimensionId,
             UseFixedLighting = true,
-            FixedLighting = 0.08f,
+            FixedLighting = 0.2f,
             SuppressWeather = true,
             EnableMonsterSpawning = false,
             LoadingTheme = new DimensionLoadingTheme

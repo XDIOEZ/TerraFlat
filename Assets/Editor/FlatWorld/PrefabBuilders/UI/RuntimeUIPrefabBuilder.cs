@@ -39,8 +39,14 @@ public static class RuntimeUIPrefabBuilder
     private static readonly Color Teal = new Color(0.26f, 0.61f, 0.57f, 1f);
     private static readonly Color Danger = new Color(0.66f, 0.31f, 0.27f, 1f);
     private static readonly Color Border = new Color(0.55f, 0.68f, 0.70f, 0.28f);
-    // 右侧操作组整体向左上移动，保持交互、使用和攻击摇杆的相对位置不变。
-    private static readonly Vector2 MobileActionGroupOffset = new Vector2(-200f, 100f);
+    // 手机右侧操作组统一使用同一套安全边距与间距，避免摇杆和按钮各自漂移。
+    private const float MobileActionRightMargin = 76f;
+    private const float MobileActionBottomMargin = 54f;
+    private const float MobileAttackZoneSize = 230f;
+    private const float MobileActionButtonSize = 112f;
+    private const float MobileActionGap = 16f;
+    private const float MobileActionGroupWidth = MobileActionButtonSize * 2f + MobileActionGap;
+    private const float MobileActionGroupHeight = MobileAttackZoneSize + MobileActionGap + MobileActionButtonSize;
     // 主菜单设置使用更暖、更低亮度的独立背景，避免通用设置页的蓝绿色底板抢占视觉焦点。
     private static readonly Color MainMenuSettingsCanvas = new Color(0.052f, 0.031f, 0.026f, 1f);
     private static readonly Color MainMenuSettingsSurface = new Color(0.036f, 0.061f, 0.068f, 1f);
@@ -866,7 +872,7 @@ public static class RuntimeUIPrefabBuilder
         Canvas canvas = root.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.overrideSorting = true;
-        canvas.sortingOrder = 32000;
+        canvas.sortingOrder = UIManager.GlobalOverlaySortingOrder;
 
         CanvasScaler scaler = root.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -877,6 +883,7 @@ public static class RuntimeUIPrefabBuilder
         canvasGroup.alpha = 1f;
         canvasGroup.interactable = true;
         canvasGroup.blocksRaycasts = true;
+        root.AddComponent<FullScreenRectController>();
 
         Image overlay = root.GetComponent<Image>();
         // 世界加载期间完全遮挡玩法 UI，避免快捷栏、摇杆和按钮透出。
@@ -945,7 +952,7 @@ public static class RuntimeUIPrefabBuilder
         Canvas canvas = root.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.overrideSorting = true;
-        canvas.sortingOrder = 32000;
+        canvas.sortingOrder = UIManager.GlobalOverlaySortingOrder;
 
         CanvasScaler scaler = root.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -956,6 +963,7 @@ public static class RuntimeUIPrefabBuilder
         canvasGroup.alpha = 1f;
         canvasGroup.interactable = true;
         canvasGroup.blocksRaycasts = true;
+        root.AddComponent<FullScreenRectController>();
 
         Image blocker = root.GetComponent<Image>();
         blocker.color = Color.clear;
@@ -1331,6 +1339,7 @@ public static class RuntimeUIPrefabBuilder
         Image overlay = root.GetComponent<Image>();
         overlay.color = new Color(0.015f, 0.028f, 0.034f, 0.78f);
         overlay.raycastTarget = true;
+        root.AddComponent<FullScreenRectController>();
         ConfigureBasePanel(root);
 
         GameObject dialog = CreateUIObject("按键绑定面板", root.transform, typeof(Image));
@@ -1883,13 +1892,23 @@ public static class RuntimeUIPrefabBuilder
         moveHit.raycastTarget = true;
         CreateJoystickVisual(moveZone.transform, Vector2.zero, 188f, floating: true);
 
-        GameObject attackZone = CreateUIObject("攻击摇杆", gameplay.transform, typeof(Image));
+        // 右侧操作组以安全区右下角为唯一定位基准，组内所有控件使用局部坐标对齐。
+        GameObject actionGroup = CreateUIObject("右侧操作组", gameplay.transform);
+        RectTransform actionGroupRect = actionGroup.GetComponent<RectTransform>();
+        SetBottomRight(
+            actionGroupRect,
+            MobileActionRightMargin,
+            MobileActionBottomMargin,
+            MobileActionGroupWidth,
+            MobileActionGroupHeight);
+
+        GameObject attackZone = CreateUIObject("攻击摇杆", actionGroup.transform, typeof(Image));
         SetBottomRight(
             attackZone.GetComponent<RectTransform>(),
-            76f - MobileActionGroupOffset.x,
-            54f + MobileActionGroupOffset.y,
-            230f,
-            230f);
+            (MobileActionGroupWidth - MobileAttackZoneSize) * 0.5f,
+            0f,
+            MobileAttackZoneSize,
+            MobileAttackZoneSize);
         Image attackHit = attackZone.GetComponent<Image>();
         attackHit.color = new Color(1f, 1f, 1f, 0.001f);
         attackHit.raycastTarget = true;
@@ -1897,18 +1916,18 @@ public static class RuntimeUIPrefabBuilder
 
         CreateMobileButton(
             "交互",
-            gameplay.transform,
+            actionGroup.transform,
             "交互",
-            new Vector2(1f, 0f),
-            new Vector2(-292f, 206f) + MobileActionGroupOffset,
-            112f);
+            Vector2.zero,
+            new Vector2(0f, MobileAttackZoneSize + MobileActionGap),
+            MobileActionButtonSize);
         CreateMobileButton(
             "使用",
-            gameplay.transform,
+            actionGroup.transform,
             "使用",
             new Vector2(1f, 0f),
-            new Vector2(-174f, 286f) + MobileActionGroupOffset,
-            112f);
+            new Vector2(0f, MobileAttackZoneSize + MobileActionGap),
+            MobileActionButtonSize);
         CreateMobileButton("奔跑", gameplay.transform, "奔跑", new Vector2(0f, 0.5f), new Vector2(76f, 0f), 104f);
 
         // 菜单是手机端的返回/退出入口，不能随模态面板一起隐藏；点击时由运行时优先关闭最上层面板。
@@ -1994,9 +2013,29 @@ public static class RuntimeUIPrefabBuilder
         CreateButton("制作", buttonGrid.transform, "制作", 184f, 66f, false);
         CreateButton("状态", buttonGrid.transform, "生存状态", 184f, 66f, false);
         CreateButton("丢弃一个", buttonGrid.transform, "丢弃一个", 184f, 66f, false);
-        CreateButton("镜头+", buttonGrid.transform, "镜头 +", 184f, 66f, false);
-        CreateButton("镜头-", buttonGrid.transform, "镜头 -", 184f, 66f, false);
         CreateButton("设置", buttonGrid.transform, "设置", 184f, 66f, true);
+
+        // 镜头缩放单独占用抽屉底部横向区域，避免继续用两个按钮离散调整视野。
+        TextMeshProUGUI zoomLabel = CreateText("镜头缩放标签", drawer.transform, "镜头缩放", 16f, Cream);
+        zoomLabel.alignment = TextAlignmentOptions.MidlineLeft;
+        RectTransform zoomLabelRect = zoomLabel.rectTransform;
+        zoomLabelRect.anchorMin = new Vector2(0f, 0f);
+        zoomLabelRect.anchorMax = new Vector2(1f, 0f);
+        zoomLabelRect.pivot = new Vector2(0.5f, 0f);
+        zoomLabelRect.offsetMin = new Vector2(24f, 82f);
+        zoomLabelRect.offsetMax = new Vector2(-24f, 112f);
+
+        Slider zoomSlider = CreateSlider("镜头缩放", drawer.transform);
+        zoomSlider.minValue = 5f;
+        zoomSlider.maxValue = 20f;
+        zoomSlider.value = 10f;
+        zoomSlider.wholeNumbers = false;
+        RectTransform zoomRect = zoomSlider.GetComponent<RectTransform>();
+        zoomRect.anchorMin = new Vector2(0f, 0f);
+        zoomRect.anchorMax = new Vector2(1f, 0f);
+        zoomRect.pivot = new Vector2(0.5f, 0f);
+        zoomRect.offsetMin = new Vector2(24f, 24f);
+        zoomRect.offsetMax = new Vector2(-24f, 76f);
     }
 
     private static void CreateMobileButton(

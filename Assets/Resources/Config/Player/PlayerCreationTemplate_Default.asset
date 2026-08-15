@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1c3d9a74e6b4f0d8a2c5e7b9d1f3a6c, type: 3}
+  m_Name: PlayerCreationTemplate_Default
+  m_EditorClassIdentifier: 
+  core:
+    dataSpeed: 8
+    playerPov: 10
+    perceptionRadiusMultiplier: 1
+    initialStamina: 100
+    maxStamina: 100
+    staminaRecoverySpeed: 10
+  movement:
+    speed: 5
+    slowDownSpeed: 5
+    endSpeed: 0.1
+    moveStaminaConsume: 0
+    runStaminaConsume: 2
+    runSpeedRate: 1.5
+    runStaminaThreshold: 2
+    speedTransitionDuration: 0.24
+    stopTransitionDuration: 0.07
+    hungerActionEnabled: 1
+    moveNutritionConsumeMultiplier: 1.6
+    runNutritionConsumeMultiplier: 2
+    runWaterConsumeMultiplier: 0.5
+  food:
+    nutrition:
+      Carbohydrates: 500
+      Max_Carbohydrates: 1000
+      Fat: 500
+      Max_Fat: 1000
+      Protein: 500
+      Max_Protein: 1000
+      Water: 1500
+      Max_Water: 1500
+      Vitamins: 500
+      Max_Vitamins: 1000
+    nutritionConsumeSpeed: 0.5
+    waterConsumeSpeedRate: 1
+    nutritionConsumeRate: 1
+    staminaRecoverSpeed: 1
+    staminaConsumeSpeed: 0.5
+    healthEnabled: 1
+    healSpeed: 0.01
+    waterSelfHurt: 1
+    proteinSelfHurt: 1
+    vitaminSelfHurt: 1
+    healNeedRatio: 0.6
+  stamina:
+    currentStamina: 100
+    maxStamina: 100
