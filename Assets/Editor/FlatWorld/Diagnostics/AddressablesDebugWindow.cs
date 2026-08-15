@@ -434,7 +434,7 @@ namespace FlatWorld.Editor.Diagnostics
             try
             {
                 handle = Addressables.LoadResourceLocationsAsync(
-                    keys,
+                    (IEnumerable)keys,
                     Addressables.MergeMode.Union,
                     requestedType);
                 return true;

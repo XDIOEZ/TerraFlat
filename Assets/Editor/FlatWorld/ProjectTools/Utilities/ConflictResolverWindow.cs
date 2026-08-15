@@ -185,18 +185,12 @@ public class ConflictResolverFinal : EditorWindow
 
         int blockIndex = 0;
         bool insideConflict = false;
-        bool upperPart = true;
 
         foreach (var line in lines)
         {
             if (line.StartsWith("<<<<<<<"))
             {
                 insideConflict = true;
-                upperPart = true;
-            }
-            else if (line.StartsWith("=======") && insideConflict)
-            {
-                upperPart = false;
             }
             else if (line.StartsWith(">>>>>>>") && insideConflict)
             {
