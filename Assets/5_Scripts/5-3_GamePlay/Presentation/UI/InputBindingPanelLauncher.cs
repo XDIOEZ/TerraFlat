@@ -37,6 +37,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
     private Transform content;
     private GameObject rowPrefab;
     private TextMeshProUGUI statusText;
+    private TMP_Dropdown controlModeDropdown;
     private Button keyboardMouseTabButton;
     private Button gamepadTabButton;
     private InputBindingDeviceGroup currentDeviceGroup = InputBindingDeviceGroup.KeyboardMouse;
@@ -65,6 +66,8 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
 
         launcher.Initialize(gameController);
         launcher.EnsureEntryButton();
+        FlatWorldLocalizationService.LanguageChanged -= launcher.HandleLanguageChanged;
+        FlatWorldLocalizationService.LanguageChanged += launcher.HandleLanguageChanged;
         // 入口按钮仍可调用禁用组件的方法；只有子面板打开期间才需要轮询取消按键。
         launcher.enabled = launcher.bindingPanel != null && launcher.bindingPanel.IsVisible();
         return launcher;
@@ -149,6 +152,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
 
         UpdateDialogSize();
         RebuildRows();
+        RefreshControlModeDropdown();
         SetStatus(GetDevicePageHint());
         bindingPanel.Open();
         bindingPanel.transform.SetAsLastSibling();
@@ -185,19 +189,27 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
             prefab,
             RuntimeUIPrefabKeys.InputBindingSettings);
         dialogRect = FindTransform(bindingPanel.transform, "按键绑定面板") as RectTransform;
-        content = FindTransform(bindingPanel.transform, "Content");
+        Transform bindingList = FindTransform(bindingPanel.transform, "绑定列表");
+        ScrollRect bindingScrollRect = bindingList != null
+            ? bindingList.GetComponent<ScrollRect>()
+            : null;
+        // 下拉框模板也有名为 Content 的节点，必须从绑定列表的 ScrollRect 取真实内容容器。
+        content = bindingScrollRect != null ? bindingScrollRect.content : null;
         statusText = bindingPanel.GetText("状态文本");
+        controlModeDropdown = FindDropdown(bindingPanel.transform, "控制模式下拉列表");
         keyboardMouseTabButton = bindingPanel.GetButton("键鼠分页按钮");
         gamepadTabButton = bindingPanel.GetButton("手柄分页按钮");
 
         bindingPanel.GetButton("关闭按钮")?.onClick.AddListener(Close);
         bindingPanel.GetButton("恢复默认按钮")?.onClick.AddListener(ResetToDefaults);
         bindingPanel.GetButton("完成按钮")?.onClick.AddListener(Close);
+        controlModeDropdown?.onValueChanged.AddListener(HandleControlModeChanged);
         keyboardMouseTabButton?.onClick.AddListener(ShowKeyboardMouseBindings);
         gamepadTabButton?.onClick.AddListener(ShowGamepadBindings);
         bindingPanel.Closed += HandlePanelClosed;
 
-        if (dialogRect == null || content == null || statusText == null ||
+        if (dialogRect == null || bindingList == null || bindingScrollRect == null || content == null ||
+            statusText == null || controlModeDropdown == null ||
             keyboardMouseTabButton == null || gamepadTabButton == null)
         {
             Debug.LogError("[InputBindingPanelLauncher] 按键绑定 Prefab 控件命名契约不完整。", bindingPanel);
@@ -206,7 +218,8 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
         }
 
         SetDeviceGroup(InputBindingDeviceGroup.KeyboardMouse);
-        bindingPanel.PrepareForGamepadNavigation("键鼠分页按钮", false);
+        RefreshControlModeDropdown();
+        bindingPanel.PrepareForGamepadNavigation("控制模式下拉列表", false);
         UpdateDialogSize();
         bindingPanel.Close();
     }
@@ -333,6 +346,47 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
     #endregion
 
     #region 分页与绑定操作
+
+    /// <summary>按当前语言重建三个控制方式选项，并保持已保存的手动选择。</summary>
+    private void RefreshControlModeDropdown()
+    {
+        if (controlModeDropdown == null)
+            return;
+
+        controlModeDropdown.ClearOptions();
+        controlModeDropdown.AddOptions(new List<string>
+        {
+            FlatWorldLocalizationService.GetUiText("电脑键鼠控制"),
+            FlatWorldLocalizationService.GetUiText("手柄控制"),
+            FlatWorldLocalizationService.GetUiText("手机触屏控制")
+        });
+
+        int selectedIndex = gameController != null
+            ? (int)gameController.PreferredInputDevice
+            : 0;
+        controlModeDropdown.SetValueWithoutNotify(Mathf.Clamp(selectedIndex, 0, 2));
+        controlModeDropdown.RefreshShownValue();
+    }
+
+    /// <summary>下拉选择立即切换玩法绑定并写入 PlayerPrefs。</summary>
+    private void HandleControlModeChanged(int selectedIndex)
+    {
+        if (gameController == null || selectedIndex < 0 || selectedIndex > 2)
+            return;
+
+        gameController.SetPreferredInputDevice((GameController.InputDeviceType)selectedIndex);
+        RefreshControlModeDropdown();
+        SetStatus(
+            FlatWorldLocalizationService.GetUiFormat(
+                "控制方式已切换为：{0}。",
+                controlModeDropdown.options[controlModeDropdown.value].text));
+        bindingPanel?.RefreshGamepadNavigationState();
+    }
+
+    private void HandleLanguageChanged(string localeCode)
+    {
+        RefreshControlModeDropdown();
+    }
 
     private void ShowKeyboardMouseBindings()
     {
@@ -486,6 +540,8 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
             keyboardMouseTabButton.interactable = interactable;
         if (gamepadTabButton != null)
             gamepadTabButton.interactable = interactable;
+        if (controlModeDropdown != null)
+            controlModeDropdown.interactable = interactable;
     }
 
     private void SetStatus(string message, bool isError = false)
@@ -573,6 +629,9 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
             keyboardMouseTabButton.onClick.RemoveListener(ShowKeyboardMouseBindings);
         if (gamepadTabButton != null)
             gamepadTabButton.onClick.RemoveListener(ShowGamepadBindings);
+        if (controlModeDropdown != null)
+            controlModeDropdown.onValueChanged.RemoveListener(HandleControlModeChanged);
+        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
         if (bindingPanel != null)
             bindingPanel.Closed -= HandlePanelClosed;
         ReleaseInputLock();
@@ -615,6 +674,18 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
         {
             if (texts[i] != null && texts[i].name == textName)
                 return texts[i];
+        }
+
+        return null;
+    }
+
+    private static TMP_Dropdown FindDropdown(Transform root, string dropdownName)
+    {
+        TMP_Dropdown[] dropdowns = root.GetComponentsInChildren<TMP_Dropdown>(true);
+        for (int i = 0; i < dropdowns.Length; i++)
+        {
+            if (dropdowns[i] != null && dropdowns[i].name == dropdownName)
+                return dropdowns[i];
         }
 
         return null;

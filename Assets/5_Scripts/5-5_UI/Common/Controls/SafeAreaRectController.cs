@@ -27,8 +27,15 @@ public sealed class SafeAreaRectController : MonoBehaviour
 
         SafeAreaRectController controller = rectTransform.GetComponent<SafeAreaRectController>();
         if (controller == null)
+        {
             controller = rectTransform.gameObject.AddComponent<SafeAreaRectController>();
-        controller.ApplySafeArea(force: true);
+            // AddComponent 会同步触发 Awake/OnEnable，并完成首次强制应用。
+            // 此处不能再次广播，否则订阅者在回调中读取 SafeAreaRoot 会形成递归。
+            return controller;
+        }
+
+        // 已存在时仅在屏幕或安全区实际变化后更新，保持 Ensure 可重入且幂等。
+        controller.ApplySafeArea(force: false);
         return controller;
     }
 
@@ -39,7 +46,14 @@ public sealed class SafeAreaRectController : MonoBehaviour
 
     private void OnEnable()
     {
+        UIUserSettings.Changed -= HandleUISettingsChanged;
+        UIUserSettings.Changed += HandleUISettingsChanged;
         ApplySafeArea(force: true);
+    }
+
+    private void OnDisable()
+    {
+        UIUserSettings.Changed -= HandleUISettingsChanged;
     }
 
     private void OnRectTransformDimensionsChange()
@@ -60,6 +74,12 @@ public sealed class SafeAreaRectController : MonoBehaviour
             ApplySafeArea(force: false);
     }
 
+    /// <summary>安全区偏好变更后立即在全屏与安全区之间切换。</summary>
+    private void HandleUISettingsChanged()
+    {
+        ApplySafeArea(force: true);
+    }
+
     #endregion
 
     #region 安全区换算
@@ -69,9 +89,11 @@ public sealed class SafeAreaRectController : MonoBehaviour
         if (target == null)
             target = (RectTransform)transform;
 
-        Rect safeArea = Screen.safeArea;
         int width = Mathf.Max(1, Screen.width);
         int height = Mathf.Max(1, Screen.height);
+        Rect safeArea = UIUserSettings.RespectSafeArea
+            ? Screen.safeArea
+            : new Rect(0f, 0f, width, height);
         if (!force && safeArea == lastSafeArea && width == lastScreenWidth && height == lastScreenHeight)
             return;
 

@@ -15,6 +15,7 @@ public static class UIUserSettings
 
     private const string ScaleKey = "FlatWorld.UI.Scale";
     private const string RespectSafeAreaKey = "FlatWorld.UI.RespectSafeArea";
+    private const string FloatingMoveJoystickKey = "FlatWorld.Mobile.FloatingMoveJoystick";
 
     public const float DefaultScale = 1f;
     public const float MinimumScale = 0.75f;
@@ -28,9 +29,13 @@ public static class UIUserSettings
     private static bool initialized;
     private static float cachedScale = DefaultScale;
     private static bool cachedRespectSafeArea = true;
+    private static bool cachedFloatingMoveJoystick = true;
 
     /// <summary>任一 UI 偏好实际改变后广播一次。</summary>
     public static event Action Changed;
+
+    /// <summary>移动摇杆固定/浮动偏好改变时广播，避免无关 UI 设置触发摇杆重配。</summary>
+    public static event Action MobileControlsChanged;
 
     public static float Scale
     {
@@ -47,6 +52,15 @@ public static class UIUserSettings
         {
             EnsureInitialized();
             return cachedRespectSafeArea;
+        }
+    }
+
+    public static bool FloatingMoveJoystick
+    {
+        get
+        {
+            EnsureInitialized();
+            return cachedFloatingMoveJoystick;
         }
     }
 
@@ -80,20 +94,39 @@ public static class UIUserSettings
         Changed?.Invoke();
     }
 
+    /// <summary>保存左手移动摇杆模式；开启为左半屏浮动，关闭为左下角固定。</summary>
+    public static void SetFloatingMoveJoystick(bool value)
+    {
+        EnsureInitialized();
+        if (cachedFloatingMoveJoystick == value)
+            return;
+
+        cachedFloatingMoveJoystick = value;
+        PlayerPrefs.SetInt(FloatingMoveJoystickKey, value ? 1 : 0);
+        PlayerPrefs.Save();
+        MobileControlsChanged?.Invoke();
+    }
+
     public static void ResetToDefaults()
     {
         EnsureInitialized();
         bool changed = !Mathf.Approximately(cachedScale, DefaultScale) ||
-                       !cachedRespectSafeArea;
+                       !cachedRespectSafeArea ||
+                       !cachedFloatingMoveJoystick;
         if (!changed)
             return;
 
         cachedScale = DefaultScale;
         cachedRespectSafeArea = true;
+        bool mobileControlsChanged = !cachedFloatingMoveJoystick;
+        cachedFloatingMoveJoystick = true;
         PlayerPrefs.SetFloat(ScaleKey, DefaultScale);
         PlayerPrefs.SetInt(RespectSafeAreaKey, 1);
+        PlayerPrefs.SetInt(FloatingMoveJoystickKey, 1);
         PlayerPrefs.Save();
         Changed?.Invoke();
+        if (mobileControlsChanged)
+            MobileControlsChanged?.Invoke();
     }
 
     #endregion
@@ -106,7 +139,9 @@ public static class UIUserSettings
         initialized = false;
         cachedScale = DefaultScale;
         cachedRespectSafeArea = true;
+        cachedFloatingMoveJoystick = true;
         Changed = null;
+        MobileControlsChanged = null;
     }
 
     private static void EnsureInitialized()
@@ -116,6 +151,7 @@ public static class UIUserSettings
 
         cachedScale = SanitizeScale(PlayerPrefs.GetFloat(ScaleKey, DefaultScale));
         cachedRespectSafeArea = PlayerPrefs.GetInt(RespectSafeAreaKey, 1) != 0;
+        cachedFloatingMoveJoystick = PlayerPrefs.GetInt(FloatingMoveJoystickKey, 1) != 0;
         initialized = true;
     }
 
@@ -282,11 +318,8 @@ public sealed class UIScaleController : MonoBehaviour
         isApplying = true;
         try
         {
-            float requestedScale = UIUserSettings.Scale;
-            float safeAreaFactor = UIUserSettings.RespectSafeArea
-                ? CalculateSafeAreaFactor()
-                : 1f;
-            float effectiveScale = Mathf.Max(0.5f, requestedScale * safeAreaFactor);
+            // SafeAreaRoot 已经负责裁出可交互区域，CanvasScaler 不应再次缩小整套 UI。
+            float effectiveScale = Mathf.Max(0.5f, UIUserSettings.Scale);
 
             canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             canvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
@@ -319,13 +352,4 @@ public sealed class UIScaleController : MonoBehaviour
         }
     }
 
-    private static float CalculateSafeAreaFactor()
-    {
-        if (Screen.width <= 0 || Screen.height <= 0)
-            return 1f;
-
-        float widthRatio = Screen.safeArea.width / Screen.width;
-        float heightRatio = Screen.safeArea.height / Screen.height;
-        return Mathf.Clamp01(Mathf.Min(widthRatio, heightRatio));
-    }
 }

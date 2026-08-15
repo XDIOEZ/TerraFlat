@@ -52,6 +52,7 @@ public class UIManager : MonoBehaviour
     private Transform panelQueryCacheRoot;
     private int panelQueryCacheRevision = int.MinValue;
     private BasePanel cachedTopmostGamepadPanel;
+    private BasePanel cachedTopmostGameplayInputPanel;
     private BasePanel cachedTopmostCancelPanel;
 
     /// <summary>Profiler 可读取的顶层面板缓存重建次数。</summary>
@@ -386,14 +387,21 @@ public class UIManager : MonoBehaviour
         return cachedTopmostGamepadPanel != null;
     }
 
-    /// <summary>判断当前是否存在打开且需要接管玩法输入的模态手柄面板。</summary>
+    /// <summary>判断当前是否存在打开且已接入手柄导航取消契约的模态面板。</summary>
     public bool HasOpenModalGamepadNavigationPanel()
     {
         EnsurePanelQueryCache();
         return cachedTopmostCancelPanel != null;
     }
 
-    /// <summary>按当前修订号缓存最上层导航面板和模态取消目标。</summary>
+    /// <summary>判断当前是否存在打开且必须阻断手机/玩法输入的面板，与手柄导航资格解耦。</summary>
+    public bool HasOpenGameplayInputBlockingPanel()
+    {
+        EnsurePanelQueryCache();
+        return cachedTopmostGameplayInputPanel != null;
+    }
+
+    /// <summary>按当前修订号缓存最上层导航面板、玩法模态面板和取消目标。</summary>
     private void EnsurePanelQueryCache()
     {
         // 缓存命中时不再重复解析 Canvas、UIScaleController 或其它根组件。
@@ -407,6 +415,7 @@ public class UIManager : MonoBehaviour
         }
 
         cachedTopmostGamepadPanel = null;
+        cachedTopmostGameplayInputPanel = null;
         cachedTopmostCancelPanel = null;
         panelQueryBuffer.Clear();
 
@@ -428,12 +437,17 @@ public class UIManager : MonoBehaviour
                         cachedTopmostGamepadPanel = panel;
                     }
 
+                    if (cachedTopmostGameplayInputPanel == null && panel.IsGameplayInputBlocking)
+                        cachedTopmostGameplayInputPanel = panel;
+
                     if (cachedTopmostCancelPanel == null && panel.IsCancelShortcutTarget)
                         cachedTopmostCancelPanel = panel;
                 }
 
                 panelQueryBuffer.Clear();
-                if (cachedTopmostGamepadPanel != null && cachedTopmostCancelPanel != null)
+                if (cachedTopmostGamepadPanel != null &&
+                    cachedTopmostGameplayInputPanel != null &&
+                    cachedTopmostCancelPanel != null)
                     break;
             }
         }
