@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "defaultProfileId": "standard",
+  "profiles": [
+    {
+      "id": "standard",
+      "displayName": "标准时间",
+      "description": "标准昼夜循环，无时间上限。",
+      "mode": "unlimited",
+      "timeScale": 1.0,
+      "dayLength": 1440.0,
+      "initialTime": 360.0,
+      "initialTotalDays": 0,
+      "timeLimitDays": 0.0,
+      "referenceScene": "",
+      "lightCurve": [
+        { "time": 0.0, "value": 0.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.1, "value": 0.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.2, "value": 1.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.5, "value": 1.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.8, "value": 1.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.9, "value": 0.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 1.0, "value": 0.0, "inTangent": 0.0, "outTangent": 0.0 }
+      ],
+      "dayNightGradient": {
+        "colorKeys": [
+          { "color": { "r": 0.11764706, "g": 0.15686275, "b": 0.3529412, "a": 1.0 }, "time": 0.0 },
+          { "color": { "r": 0.27450982, "g": 0.19607843, "b": 0.39215687, "a": 1.0 }, "time": 0.25 },
+          { "color": { "r": 1.0, "g": 0.9607843, "b": 0.9019608, "a": 1.0 }, "time": 0.5 },
+          { "color": { "r": 1.0, "g": 0.5882353, "b": 0.3137255, "a": 1.0 }, "time": 0.75 },
+          { "color": { "r": 0.11764706, "g": 0.15686275, "b": 0.3529412, "a": 1.0 }, "time": 1.0 }
+        ],
+        "alphaKeys": [
+          { "alpha": 1.0, "time": 0.0 },
+          { "alpha": 1.0, "time": 1.0 }
+        ]
+      },
+      "moon": {
+        "cycleDays": 29.53,
+        "newMoonNightIntensity": 0.035,
+        "fullMoonNightIntensity": 0.18,
+        "initialPhase": 0.5
+      },
+      "presentation": {
+        "defaultLightColor": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+        "syncTileLightLayer": true,
+        "activeChunkLightRefreshInterval": 0.25,
+        "inactiveChunkLightRefreshInterval": 5.0
+      }
+    },
+    {
+      "id": "accelerated",
+      "displayName": "加速时间",
+      "description": "时间以标准速度的四倍推进，无时间上限。",
+      "mode": "unlimited",
+      "timeScale": 4.0,
+      "dayLength": 1440.0,
+      "initialTime": 360.0,
+      "initialTotalDays": 0,
+      "timeLimitDays": 0.0,
+      "referenceScene": "",
+      "lightCurve": [
+        { "time": 0.0, "value": 0.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.1, "value": 0.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.2, "value": 1.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.5, "value": 1.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.8, "value": 1.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.9, "value": 0.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 1.0, "value": 0.0, "inTangent": 0.0, "outTangent": 0.0 }
+      ],
+      "dayNightGradient": {
+        "colorKeys": [
+          { "color": { "r": 0.11764706, "g": 0.15686275, "b": 0.3529412, "a": 1.0 }, "time": 0.0 },
+          { "color": { "r": 0.27450982, "g": 0.19607843, "b": 0.39215687, "a": 1.0 }, "time": 0.25 },
+          { "color": { "r": 1.0, "g": 0.9607843, "b": 0.9019608, "a": 1.0 }, "time": 0.5 },
+          { "color": { "r": 1.0, "g": 0.5882353, "b": 0.3137255, "a": 1.0 }, "time": 0.75 },
+          { "color": { "r": 0.11764706, "g": 0.15686275, "b": 0.3529412, "a": 1.0 }, "time": 1.0 }
+        ],
+        "alphaKeys": [
+          { "alpha": 1.0, "time": 0.0 },
+          { "alpha": 1.0, "time": 1.0 }
+        ]
+      },
+      "moon": {
+        "cycleDays": 29.53,
+        "newMoonNightIntensity": 0.035,
+        "fullMoonNightIntensity": 0.18,
+        "initialPhase": 0.5
+      },
+      "presentation": {
+        "defaultLightColor": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+        "syncTileLightLayer": true,
+        "activeChunkLightRefreshInterval": 0.25,
+        "inactiveChunkLightRefreshInterval": 5.0
+      }
+    },
+    {
+      "id": "time-limited",
+      "displayName": "限时世界",
+      "description": "世界从创建时开始计时，七个游戏日后停止自然时间推进。",
+      "mode": "timeLimited",
+      "timeScale": 1.0,
+      "dayLength": 1440.0,
+      "initialTime": 360.0,
+      "initialTotalDays": 0,
+      "timeLimitDays": 7.0,
+      "referenceScene": "",
+      "lightCurve": [
+        { "time": 0.0, "value": 0.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.1, "value": 0.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.2, "value": 1.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.5, "value": 1.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.8, "value": 1.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 0.9, "value": 0.0, "inTangent": 0.0, "outTangent": 0.0 },
+        { "time": 1.0, "value": 0.0, "inTangent": 0.0, "outTangent": 0.0 }
+      ],
+      "dayNightGradient": {
+        "colorKeys": [
+          { "color": { "r": 0.11764706, "g": 0.15686275, "b": 0.3529412, "a": 1.0 }, "time": 0.0 },
+          { "color": { "r": 0.27450982, "g": 0.19607843, "b": 0.39215687, "a": 1.0 }, "time": 0.25 },
+          { "color": { "r": 1.0, "g": 0.9607843, "b": 0.9019608, "a": 1.0 }, "time": 0.5 },
+          { "color": { "r": 1.0, "g": 0.5882353, "b": 0.3137255, "a": 1.0 }, "time": 0.75 },
+          { "color": { "r": 0.11764706, "g": 0.15686275, "b": 0.3529412, "a": 1.0 }, "time": 1.0 }
+        ],
+        "alphaKeys": [
+          { "alpha": 1.0, "time": 0.0 },
+          { "alpha": 1.0, "time": 1.0 }
+        ]
+      },
+      "moon": {
+        "cycleDays": 29.53,
+        "newMoonNightIntensity": 0.035,
+        "fullMoonNightIntensity": 0.18,
+        "initialPhase": 0.5
+      },
+      "presentation": {
+        "defaultLightColor": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+        "syncTileLightLayer": true,
+        "activeChunkLightRefreshInterval": 0.25,
+        "inactiveChunkLightRefreshInterval": 5.0
+      }
+    }
+  ]
+}

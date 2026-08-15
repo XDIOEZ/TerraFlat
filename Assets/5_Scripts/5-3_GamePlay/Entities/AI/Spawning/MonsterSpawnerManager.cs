@@ -49,8 +49,10 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     private readonly Dictionary<Item, int> _ecologyRecycleProtectionCounts = new();
     private readonly Dictionary<string, float> _nextSpawnRetryTime = new(StringComparer.Ordinal);
     private readonly Dictionary<string, float> _nextRecoveryCheckTime = new(StringComparer.Ordinal);
+    private readonly List<SpawnerConfig> _jsonRuntimeConfigs = new();
     private readonly List<Vector3> _playerPositions = new(4);
     private readonly List<Item> _itemSnapshot = new(64);
+    private List<SpawnerConfig> _serializedSpawnerConfigs;
     private float _nextPopulationMaintenanceTime;
     private float _nextRecycleCheckTime;
 
@@ -130,21 +132,14 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         base.Awake();
         if (Instance != this)
             return;
-        if (_spawnerConfigs != null && _spawnerConfigs.Count > 0)
-            BuildSpeciesLookup();
+
+        _serializedSpawnerConfigs = _spawnerConfigs;
     }
 
     private void Start()
     {
         enabled = false;
 
-        if (_spawnerConfigs == null || _spawnerConfigs.Count == 0)
-        {
-            Debug.LogError("[MonsterSpawnerManager] 至少需要一个 SpawnerConfig。", this);
-            return;
-        }
-
-        BuildSpeciesLookup();
         ItemMgr.RuntimeItemInstantiated += OnRuntimeItemInstantiated;
         ItemMgr.RuntimeItemDespawning += OnRuntimeItemDespawning;
 
@@ -160,6 +155,12 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         if (DimensionManager.Instance.ActiveDefinition?.EnableMonsterSpawning == false)
         {
             ClearTrackedPopulation();
+            enabled = false;
+            return;
+        }
+
+        if (!PrepareSpawnerConfigs())
+        {
             enabled = false;
             return;
         }
@@ -182,6 +183,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     {
         CaptureSaveData(SaveDataMgr.Instance?.SaveData);
         ClearTrackedPopulation();
+        ReleaseJsonRuntimeConfigs();
         _nextSpawnRetryTime.Clear();
         _nextRecoveryCheckTime.Clear();
         enabled = false;
@@ -199,8 +201,50 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         ItemMgr.RuntimeItemInstantiated -= OnRuntimeItemInstantiated;
         ItemMgr.RuntimeItemDespawning -= OnRuntimeItemDespawning;
         ClearTrackedPopulation();
+        ReleaseJsonRuntimeConfigs();
 
         base.OnDestroy();
+    }
+
+    private bool PrepareSpawnerConfigs()
+    {
+        ReleaseJsonRuntimeConfigs();
+
+        if (SpawnerConfigCatalogService.IsLoaded)
+        {
+            _jsonRuntimeConfigs.AddRange(SpawnerConfigCatalogService.CreateRuntimeConfigs());
+            _spawnerConfigs = _jsonRuntimeConfigs;
+        }
+        else
+        {
+            _spawnerConfigs = _serializedSpawnerConfigs ?? new List<SpawnerConfig>();
+        }
+
+        if (_spawnerConfigs == null || _spawnerConfigs.Count == 0)
+        {
+            Debug.LogError("[MonsterSpawnerManager] JSON 与兼容回退均未提供有效 SpawnerConfig。", this);
+            return false;
+        }
+
+        BuildSpeciesLookup();
+        return true;
+    }
+
+    private void ReleaseJsonRuntimeConfigs()
+    {
+        for (int index = 0; index < _jsonRuntimeConfigs.Count; index++)
+        {
+            SpawnerConfig config = _jsonRuntimeConfigs[index];
+            if (config != null)
+                Destroy(config);
+        }
+
+        _jsonRuntimeConfigs.Clear();
+        if (Instance == this)
+        {
+            RegisteredSpeciesIds.Clear();
+            _configBySpecies.Clear();
+        }
     }
 
     private void Update()
@@ -595,7 +639,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         if (!TryGetValidSpawnPosition(config, out Vector3 spawnPosition))
             return false;
 
-        if (!SpawnMonster(entry.PrefabName, spawnPosition))
+        if (!TrySpawnMonster(entry, spawnPosition))
             return false;
 
         if (!config.UnboundedDailyGrowth)
@@ -768,12 +812,15 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         return lightLevel <= maxAllowedLight + 0.0001f;
     }
 
-    private static bool SpawnMonster(string spawnType, Vector3 spawnPosition)
+    private static bool TrySpawnMonster(
+        SpawnerConfig.SpawnEntry entry,
+        Vector3 spawnPosition)
     {
+        Item spawnedItem = null;
         try
         {
-            Item spawnedItem = ItemMgr.Instance.InstantiateItem(
-                spawnType,
+            spawnedItem = ItemMgr.Instance.InstantiateItem(
+                entry.PrefabName,
                 spawnPosition,
                 Quaternion.identity,
                 Vector3.one);
@@ -782,13 +829,58 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
                 return false;
 
             spawnedItem.Load();
+            ApplySpawnInitialization(spawnedItem, entry);
             return true;
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            Debug.LogError($"[MonsterSpawnerManager] 生成 {spawnType} 失败: {ex}");
+            if (spawnedItem != null && !spawnedItem.DestructionHandled && ItemMgr.Instance != null)
+                ItemMgr.Instance.DespawnItem(spawnedItem, saveData: false);
+
+            Debug.LogError($"[MonsterSpawnerManager] 生成 {entry?.PrefabName} 失败: {ex}");
             return false;
         }
+    }
+
+    private static void ApplySpawnInitialization(
+        Item spawnedItem,
+        SpawnerConfig.SpawnEntry entry)
+    {
+        SpawnerConfig.SpawnerNutritionInitialization nutritionConfig = entry?.Initialization?.Nutrition;
+        if (spawnedItem == null || nutritionConfig == null || !nutritionConfig.Enabled)
+            return;
+
+        Mod_Food food = spawnedItem.itemMods?.GetMod_ByID<Mod_Food>(ModText.Food);
+        if (food?.Data?.nutrition == null)
+        {
+            throw new InvalidOperationException(
+                $"物种 {entry.PrefabName} 配置了营养出生初始化，但实例缺少 Food 模块。");
+        }
+
+        Nutrition nutrition = food.Data.nutrition;
+        float minRate = Mathf.Clamp01(Mathf.Min(
+            nutritionConfig.MinFoodRate,
+            nutritionConfig.MaxFoodRate));
+        float maxRate = Mathf.Clamp01(Mathf.Max(
+            nutritionConfig.MinFoodRate,
+            nutritionConfig.MaxFoodRate));
+        float rate = GetDeterministicFoodRate(spawnedItem, minRate, maxRate);
+        nutrition.Carbohydrates = nutrition.Max_Carbohydrates * rate;
+        nutrition.Fat = nutrition.Max_Fat * rate;
+        food.DataUpdate?.Invoke();
+    }
+
+    private static float GetDeterministicFoodRate(Item item, float minRate, float maxRate)
+    {
+        if (Mathf.Approximately(minRate, maxRate))
+            return minRate;
+
+        int seed = item?.itemData != null && item.itemData.Guid != 0
+            ? item.itemData.Guid
+            : item != null ? item.GetInstanceID() : 1;
+        uint hash = unchecked((uint)seed * 2654435761u);
+        float normalized = (hash & 0xFFFFu) / 65535f;
+        return Mathf.Lerp(minRate, maxRate, normalized);
     }
 
     private bool IsGlobalDark(string sceneName)

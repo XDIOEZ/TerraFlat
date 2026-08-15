@@ -96,7 +96,7 @@ GameObject:
   - component: {fileID: 8755154006871449619}
   - component: {fileID: 7623197601834410540}
   m_Layer: 6
-  m_Name: Wall_Stone
+  m_Name: "Wall_Stone"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -146,7 +146,7 @@ MonoBehaviour:
     _PersistentCalls: []
   updateInterval: 0
   Data:
-    IDName: Wall_Stone
+    IDName: "Wall_Stone"
     GameName: "\u77F3\u5899"
     Description: "\u7531\u575A\u56FA\u77F3\u5757\u780C\u6210\u7684\u9632\u5FA1\u5899\u4F53\u3002"
     Durability: 1
@@ -248,11 +248,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: Data.BuildingPrefabId
-      value: Wall_Stone
+      value: "Wall_Stone"
       objectReference: {fileID: 0}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: Data.SummonerPrefabId
-      value: Wall_Stone_Summoner
+      value: "Wall_Stone_Summoner"
       objectReference: {fileID: 0}
     - target: {fileID: 2296275565012368985, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: m_LocalPosition.x

@@ -20,7 +20,10 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 以 `BuildingRole` 区分 Summoner/PlacedBuilding，禁止用血量或位置推断。
 - 动态建筑保持 GameObject + Collider + `BuildingOccupancyRegistry`，不得写入地形 `TileData`。
 - 静态岩壁/结构墙才使用 Blocking Tile；Tile 栈只通过 `Data_TileMap` API 读写。
+- 新版 WorldModel 的玩家格子建筑虽使用 `ChunkTerrainData.BlockingTileId`，仍必须接入存档的运行时区块差量；不能只依赖 `MapSave.items`。
+- 新版 WorldModel 的动态建筑 Item 不挂旧 `Chunk.RunTimeItems`；必须按 `Mod_Building` 的角色筛选，在 `ChangedItems` 中保存完整 `ItemData`，并在区块就绪后恢复模块状态/耐久。
 - `BuildingShadow` 的 `sourceRenderer` 与 `sourceRoot` 必须来自同一对象层级；本体 prefab 可能没有 SpriteRenderer，此时只能用手持实例的 Sprite 和手持实例根节点配对，禁止跨对象计算局部偏移。
+- 带 `Building_Data.TileBlockId` 的建筑最终由 `TileBuildingSystem` 写入 Tilemap，预览图片与占地范围必须以格心为锚点，不能继承本体 Sprite 子节点的局部偏移。
 - 占地算法或安装/拆除顺序变化时联动 `flatworld-navigation` 与 `flatworld-map`。
 
 ## 验证

@@ -531,6 +531,10 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     {
         if (Hp <= 0 || item == null || damageSender == null) return -1;
 
+        // 阵营关系是实体伤害的最终防线，避免碰撞、武器或其他攻击模块绕过 AI 选敌误伤队友。
+        if (!FactionRelationService.CanAttack(damageSender.attacker, item))
+            return -1;
+
         float hpBefore = Hp;
 
         // ⏱️ 受伤间隔判断
@@ -727,6 +731,10 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     public virtual float Heal(float healAmount, Item healer = null)
     {
         float oldHp = Hp;
+        // 已经归零的实体不能通过普通回血重新复活；玩家复活由 Mod_PlayerDeathState 显式赋值处理。
+        if (oldHp <= 0f)
+            return Hp;
+
         healAmount *= GameDifficultyService.ResolveHealingMultiplier(item);
         if (healAmount <= 0f)
             return Hp;
@@ -884,6 +892,10 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     public float HealBodyPart(BodyPartType part, float healAmount)
     {
         if (healAmount <= 0f || !TryGetBodyPart(part, out BodyPartHealth bodyPart))
+            return 0f;
+
+        // 普通部位回血不复活已经耗尽的部位，避免死亡/残肢状态被被动系统反复抬回。
+        if (bodyPart.Hp <= 0f)
             return 0f;
 
         float hpBefore = bodyPart.Hp;
@@ -1051,7 +1063,10 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         SynchronizeOverallHealthFromBodyParts();
     }
 
-    private void SetOverallHp(float value, bool dispatchEvents)
+    private void SetOverallHp(
+        float value,
+        bool dispatchEvents,
+        bool preserveDepletedBodyParts = false)
     {
         if (!UsesBodyPartHealth)
         {
@@ -1079,13 +1094,27 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         }
         else
         {
-            float missingHp = GetBodyPartMaxHpTotal() - currentHp;
-            float fillRatio = missingHp <= 0f ? 0f : (targetHp - currentHp) / missingHp;
+            float missingHp = 0f;
             for (int i = 0; i < Data.BodyParts.Count; i++)
             {
                 BodyPartHealth part = Data.BodyParts[i];
-                if (part != null)
-                    part.Hp += (part.MaxHp - part.Hp) * fillRatio;
+                if (part == null || (preserveDepletedBodyParts && part.Hp <= 0f))
+                    continue;
+
+                missingHp += Mathf.Max(0f, part.MaxHp - part.Hp);
+            }
+
+            float fillRatio = missingHp <= 0f
+                ? 0f
+                : Mathf.Clamp01((targetHp - currentHp) / missingHp);
+            for (int i = 0; i < Data.BodyParts.Count; i++)
+            {
+                BodyPartHealth part = Data.BodyParts[i];
+                if (part == null ||
+                    (preserveDepletedBodyParts && part.Hp <= 0f))
+                    continue;
+
+                part.Hp += (part.MaxHp - part.Hp) * fillRatio;
             }
         }
 
@@ -1165,7 +1194,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     private void HealAllBodyParts(float healAmount)
     {
         Dictionary<BodyPartType, BodyPartSnapshot> previous = CaptureBodyPartSnapshots();
-        SetOverallHp(Hp + healAmount, false);
+        SetOverallHp(Hp + healAmount, false, preserveDepletedBodyParts: true);
         DispatchNetworkBodyPartChanges(previous);
     }
 

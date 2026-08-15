@@ -1162,6 +1162,7 @@ public static class FlatWorldContentValidator
 
     private static void ValidateSpawners(ValidationContext context, FlatWorldContentValidationReport report)
     {
+        bool spawnerJsonLoaded = ValidateSpawnerJson(context, report);
         string[] guids = AssetDatabase.FindAssets("t:SpawnerConfig", new[] { ResourcesRoot + "/Config" });
         Array.Sort(guids, StringComparer.Ordinal);
 
@@ -1251,13 +1252,63 @@ public static class FlatWorldContentValidator
             }
         }
 
-        ValidateWorldManagerSpawnerReferences(configPaths, report);
+        ValidateWorldManagerSpawnerReferences(configPaths, report, spawnerJsonLoaded);
+    }
+
+    private static bool ValidateSpawnerJson(
+        ValidationContext context,
+        FlatWorldContentValidationReport report)
+    {
+        const string path = "Assets/StreamingAssets/GameConfig/Spawners/spawner-manifest.json";
+        SpawnerConfigCatalog catalog;
+        try
+        {
+            catalog = SpawnerConfigCatalogLoader.LoadBuiltIn();
+        }
+        catch (Exception exception)
+        {
+            AddError(report, "FWC-SPAWNER-019", path, "spawner-manifest.json", exception.Message, null);
+            return false;
+        }
+
+        if (catalog?.Configs == null)
+            return false;
+
+        for (int configIndex = 0; configIndex < catalog.Configs.Count; configIndex++)
+        {
+            SpawnerConfigDefinition config = catalog.Configs[configIndex];
+            if (config?.SpawnEntries == null)
+                continue;
+
+            for (int entryIndex = 0; entryIndex < config.SpawnEntries.Count; entryIndex++)
+            {
+                SpawnerSpawnEntryDefinition entry = config.SpawnEntries[entryIndex];
+                string speciesId = entry?.PrefabName?.Trim();
+                if (!string.IsNullOrWhiteSpace(speciesId) &&
+                    !context.PrefabAliases.ContainsKey(speciesId))
+                {
+                    AddError(
+                        report,
+                        "FWC-SPAWNER-020",
+                        path,
+                        $"configs[{configIndex}].spawnEntries[{entryIndex}].prefabName",
+                        $"生物 ID '{speciesId}' 无法解析到 Prefab。",
+                        null);
+                }
+            }
+        }
+
+        return true;
     }
 
     private static void ValidateWorldManagerSpawnerReferences(
         Dictionary<SpawnerConfig, string> configPaths,
-        FlatWorldContentValidationReport report)
+        FlatWorldContentValidationReport report,
+        bool spawnerJsonLoaded)
     {
+        if (spawnerJsonLoaded)
+            return;
+
         GameObject worldManagerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(WorldManagerPrefabPath);
         if (worldManagerPrefab == null)
         {

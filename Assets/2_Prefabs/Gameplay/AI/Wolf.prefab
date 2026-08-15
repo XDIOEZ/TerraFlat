@@ -679,8 +679,6 @@ MonoBehaviour:
   _turnBody: {fileID: 0}
   OnStateChanged:
     _PersistentCalls: []
-  healthRecoveryInterval: 60
-  healthRecoveryAmount: 10
   Data:
     State: 0
     Fatigue01: 0
@@ -721,7 +719,8 @@ MonoBehaviour:
   chaseLossDistance: 44
   attackCooldown: 2
   attackDamageWindow: 0.33333334
-  attackDamageStartDelay: 0.35
+  attackDamageStartDelay: 0.5
+  attackRecoveryDuration: 0.35
   alertKeepDuration: 2
   fleeTriggerHpRate: 0.22
   fleeSafeHpRate: 0.45
@@ -1199,6 +1198,22 @@ PrefabInstance:
     - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: FoodModData.FoodData.nutritionConsumeSpeed.BaseValue
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: HealthState.HealSpeed
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: HealthState.HealInterval
+      value: 60
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: HealthState.HealAmount
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3386547747097903612, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
+      propertyPath: HealthState.HealNeedRatio
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5923271790331152526, guid: c9071f519ad95e14b8f643d82db1e458, type: 3}
       propertyPath: m_Name

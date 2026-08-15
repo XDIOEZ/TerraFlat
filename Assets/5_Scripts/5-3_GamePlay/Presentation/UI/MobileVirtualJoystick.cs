@@ -38,6 +38,9 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
 
     public bool HasPointerOwnership => pointerId != int.MinValue;
 
+    /// <summary>普通指向区虽然是透明 UI 射线层，但其空白区域仍代表世界落点。</summary>
+    public bool IsWorldDropSurface => role == JoystickRole.Aim;
+
     #endregion
 
     #region 初始化
@@ -56,6 +59,12 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
     private void OnDisable()
     {
         ResetOwnership();
+    }
+
+    private void Update()
+    {
+        if (HasPointerOwnership && HasPlayerHeldItem())
+            ResetOwnership();
     }
 
     public void Configure(
@@ -98,7 +107,7 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        if (HasPointerOwnership || eventData == null)
+        if (HasPointerOwnership || eventData == null || HasPlayerHeldItem())
             return;
 
         Camera inputCamera = eventData.pressEventCamera != null ? eventData.pressEventCamera : eventCamera;
@@ -190,6 +199,24 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
             screenPosition,
             inputCamera,
             out localPosition);
+    }
+
+    #endregion
+
+    #region 手持物屏蔽
+
+    private static bool HasPlayerHeldItem()
+    {
+        Inventory handInventory = Inventory_Hand.PlayerHand;
+        if (handInventory?.Data?.itemSlots == null)
+            return false;
+
+        int index = handInventory.Data.Index;
+        if (index < 0 || index >= handInventory.Data.itemSlots.Count)
+            return false;
+
+        ItemSlot handSlot = handInventory.Data.itemSlots[index];
+        return handSlot?.itemData != null && handSlot.Amount > 0;
     }
 
     #endregion

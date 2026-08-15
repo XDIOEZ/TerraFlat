@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3204621750472627431}
   - component: {fileID: 4397884838053213005}
   m_Layer: 6
-  m_Name: Door_Stone
+  m_Name: "Door_Stone"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -62,7 +62,7 @@ MonoBehaviour:
     _PersistentCalls: []
   updateInterval: 0
   Data:
-    IDName: Door_Stone
+    IDName: "Door_Stone"
     GameName: "\u77F3\u95E8"
     Description: "\u53EF\u4EE5\u5F00\u5173\u7684\u539A\u91CD\u77F3\u95E8\u3002"
     Durability: 1
@@ -180,8 +180,8 @@ MonoBehaviour:
     State: 0
     Role: 1
     SnapshotBase64: 
-    BuildingPrefabId: Door_Stone
-    SummonerPrefabId: Door_Stone_Summoner
+    BuildingPrefabId: "Door_Stone"
+    SummonerPrefabId: "Door_Stone_Summoner"
   BuildingData:
     Name: 
     ID: "\u5EFA\u7B51\u6A21\u5757"

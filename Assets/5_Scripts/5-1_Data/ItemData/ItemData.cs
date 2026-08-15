@@ -64,6 +64,10 @@ public abstract partial class ItemData
     [ShowInInspector]
     public Dictionary<string, ModuleData> ModuleDataDic = new();
 
+    // 新增字段追加到末尾，保持旧 MemoryPack 存档的字段顺序。
+    [Tooltip("实体所属的阵营/队伍 ID；为空时由运行时兼容规则推导")]
+    public string FactionId = string.Empty;
+
     //重写ToString方法，用于在控制台输出物品信息
     public override string ToString()
     {

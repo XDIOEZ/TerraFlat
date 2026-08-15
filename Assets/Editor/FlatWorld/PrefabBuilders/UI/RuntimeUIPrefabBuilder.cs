@@ -1866,6 +1866,17 @@ public static class RuntimeUIPrefabBuilder
         rootGroup.interactable = true;
         rootGroup.blocksRaycasts = true;
 
+        GameObject aimCursor = CreateUIObject(
+            "手机准线",
+            root.transform,
+            typeof(CanvasRenderer),
+            typeof(GamepadCursorGraphic));
+        SetCentered(aimCursor.GetComponent<RectTransform>(), Vector2.zero, new Vector2(28f, 28f));
+        GamepadCursorGraphic aimCursorGraphic = aimCursor.GetComponent<GamepadCursorGraphic>();
+        aimCursorGraphic.color = FlatWorldUITheme.SelectionOutline;
+        aimCursorGraphic.raycastTarget = false;
+        aimCursor.SetActive(false);
+
         GameObject gameplay = CreateUIObject("玩法控制层", root.transform);
         Stretch(gameplay.GetComponent<RectTransform>());
 

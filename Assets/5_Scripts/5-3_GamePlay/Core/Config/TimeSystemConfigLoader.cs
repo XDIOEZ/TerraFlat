@@ -146,9 +146,10 @@ public static class TimeSystemConfigLoader
         if (!profileIds.Add(profile.Id))
             throw new InvalidDataException($"时间系统包含重复 Profile ID：{profile.Id}");
 
-        profile.Mode = TimeSystemModes.Normalize(profile.Mode);
-        if (!TimeSystemModes.IsSupported(profile.Mode))
+        string rawMode = profile.Mode?.Trim();
+        if (!TimeSystemModes.IsSupported(rawMode))
             throw new InvalidDataException($"时间系统 Profile {profile.Id} 的 mode 不受支持：{profile.Mode}");
+        profile.Mode = TimeSystemModes.Normalize(rawMode);
         if (!IsFinite(profile.TimeScale) || profile.TimeScale < 0f)
             throw new InvalidDataException($"时间系统 Profile {profile.Id} 的 timeScale 无效：{profile.TimeScale}");
         if (!IsFinite(profile.DayLength) || profile.DayLength <= 0f)

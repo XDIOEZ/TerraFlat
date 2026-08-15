@@ -63,6 +63,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
     private readonly List<PendingRecipeDefinition> pendingRecipeDefinitions = new();
     private readonly List<PendingBuffDefinition> pendingBuffDefinitions = new();
     private readonly List<PendingQuestDefinition> pendingQuestDefinitions = new();
+    private readonly List<PendingPlayerCreationTemplate> pendingPlayerCreationTemplates = new();
     private readonly List<PendingPatchDocument> pendingPatchDocuments = new();
     private readonly Dictionary<string, ModDefinitionInfo> definitionInfos = new(IdComparer);
     private ModProfile activeProfile;
@@ -200,6 +201,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
         ProcessRecipeDefinitions(gameRes);
         ProcessBuffDefinitions(gameRes);
         ProcessQuestDefinitions();
+        ProcessPlayerCreationTemplates();
         QuestCatalog.FinalizeRegistration();
         yield return null;
 
@@ -459,6 +461,20 @@ public sealed class ModRuntimeManager : MonoBehaviour
                     definitionFile,
                     questIndex++,
                     quest));
+            }
+
+            int playerTemplateIndex = 0;
+            foreach (JToken token in document["playerCreationTemplates"] as JArray ?? new JArray())
+            {
+                if (token is not JObject playerTemplateObject)
+                    throw new InvalidDataException(
+                        $"MOD {package.Manifest.Id} 玩家创建模板无效：{definitionFile}#{playerTemplateIndex}");
+
+                pendingPlayerCreationTemplates.Add(new PendingPlayerCreationTemplate(
+                    package,
+                    definitionFile,
+                    playerTemplateIndex++,
+                    (JObject)playerTemplateObject.DeepClone()));
             }
         }
 
@@ -947,6 +963,31 @@ public sealed class ModRuntimeManager : MonoBehaviour
         }
     }
 
+    private void ProcessPlayerCreationTemplates()
+    {
+        foreach (PendingPlayerCreationTemplate pending in pendingPlayerCreationTemplates)
+        {
+            PlayerCreationTemplateCatalogService.RegisterModTemplate(
+                pending.Package.Manifest.Id,
+                pending.Document,
+                pending.File,
+                pending.Index);
+        }
+
+        foreach (PendingPatchDocument pending in pendingPatchDocuments)
+        {
+            int operationIndex = 0;
+            foreach (ModPatchOperation operation in pending.Document.Patches ?? Enumerable.Empty<ModPatchOperation>())
+            {
+                if (PlayerCreationTemplateCatalogService.IsPatchTarget(operation?.Target))
+                    PlayerCreationTemplateCatalogService.ApplyModPatch(operation, pending.File, operationIndex);
+                operationIndex++;
+            }
+        }
+
+        PlayerCreationTemplateCatalogService.FinalizeExternal();
+    }
+
     private JObject ResolveItemDefinition(
         string id,
         Dictionary<string, PendingItemDefinition> sources,
@@ -997,6 +1038,9 @@ public sealed class ModRuntimeManager : MonoBehaviour
     {
         if (operation == null || string.IsNullOrWhiteSpace(operation.Target))
             throw new InvalidDataException($"MOD {pending.Package.Manifest.Id} Patch 目标为空：{pending.File}#{operationIndex}");
+
+        if (PlayerCreationTemplateCatalogService.IsPatchTarget(operation.Target))
+            return;
 
         if (!resolved.TryGetValue(operation.Target, out JObject target))
         {
@@ -1057,7 +1101,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
         }
     }
 
-    private static void ApplyPatchOperation(JObject target, ModPatchOperation operation, string file, int index)
+    internal static void ApplyPatchOperation(JObject target, ModPatchOperation operation, string file, int index)
     {
         string[] segments = NormalizePatchPath(operation.Path);
         if (segments.Length == 0)
@@ -1963,10 +2007,13 @@ public sealed class ModRuntimeManager : MonoBehaviour
         pendingRecipeDefinitions.Clear();
         pendingBuffDefinitions.Clear();
         pendingQuestDefinitions.Clear();
+        pendingPlayerCreationTemplates.Clear();
         pendingPatchDocuments.Clear();
+        PlayerCreationTemplateCatalogService.ClearExternal();
         definitionInfos.Clear();
         ModLocalizationRegistry.Clear();
         ModSettingsRegistry.Clear();
+        FactionRelationService.ClearExternalRelations();
         QuestCatalog.RemoveExternalDefinitions();
         activeProfile = null;
         safeModeActive = false;
@@ -2090,6 +2137,22 @@ public sealed class ModRuntimeManager : MonoBehaviour
         public string File { get; }
         public int Index { get; }
         public QuestDefinition Definition { get; }
+    }
+
+    private sealed class PendingPlayerCreationTemplate
+    {
+        public PendingPlayerCreationTemplate(ModPackage package, string file, int index, JObject document)
+        {
+            Package = package;
+            File = file;
+            Index = index;
+            Document = document;
+        }
+
+        public ModPackage Package { get; }
+        public string File { get; }
+        public int Index { get; }
+        public JObject Document { get; }
     }
 }
 

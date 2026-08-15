@@ -246,6 +246,7 @@ public static class TileBuildingSystem
 
             placedCell = new TileBuildingCell(runtimeChunk, runtimeTile.WorldCell,
                 runtimeTile.LocalCell, runtimeTileId, tileBlockId);
+            SaveDataMgr.Instance?.RecordRuntimeTerrainChange(placedCell);
             CellPlaced?.Invoke(placedCell);
             return true;
         }
@@ -312,6 +313,8 @@ public static class TileBuildingSystem
             reason = $"地块 {placedCell.Position} 的运行时建筑状态已改变";
             return false;
         }
+
+        SaveDataMgr.Instance?.RecordRuntimeTerrainChange(placedCell);
 
         if (spawnDrop)
         {
@@ -432,19 +435,35 @@ public static class TileBuildingSystem
             return false;
 
         TileBuildingDamageProfile profile = ResolveProfile(topTile);
-        float calculatedDamage = CalculateDamage(profile, sender, out _);
-        if (calculatedDamage <= 0f)
+        if (profile?.Damageable != true)
             return false;
 
+        float maxHealth = Mathf.Max(1f, profile.MaxHealth);
         TileData_CellBuilding state = topTile as TileData_CellBuilding;
+        float remainingHealth = state != null
+            ? Mathf.Clamp(state.CurrentHp, 0f, maxHealth)
+            : maxHealth;
+        float calculatedDamage = CalculateDamage(profile, sender, out _);
+        if (calculatedDamage <= 0f)
+        {
+            result = new TileBuildingDamageResult(
+                map,
+                hit.Cell,
+                hit.HitPoint,
+                0f,
+                remainingHealth,
+                false,
+                profile.ImpactMaterial);
+            return true;
+        }
+
         if (state == null)
         {
-            state = TileData_CellBuilding.FromTile(topTile, Mathf.Max(1f, profile.MaxHealth));
+            state = TileData_CellBuilding.FromTile(topTile, maxHealth);
             if (state == null || !map.Data.UpdateTileAt(hit.Cell, topIndex, state))
                 return false;
         }
 
-        float maxHealth = Mathf.Max(1f, profile.MaxHealth);
         if (state.Version <= 0)
         {
             state.Version = TileData_CellBuilding.CurrentVersion;

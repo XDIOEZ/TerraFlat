@@ -597,7 +597,6 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		{
 			Data.GrassSustenanceInitialized = true;
 			Data.GrassSustenanceRemaining = GetGrassSustenanceDuration();
-			_food.RestoreNutritionToMaximum();
 		}
 
 		ApplyGrassSustenanceState();

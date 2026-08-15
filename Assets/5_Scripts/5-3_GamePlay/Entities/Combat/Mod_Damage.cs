@@ -217,13 +217,17 @@ public class Mod_Damage : Module, IDamageSender
     /// <summary>结算一次实体伤害，并优先使用本次实际命中的碰撞体定位特效。</summary>
     private void ApplyDamageToReceiver(DamageReceiver receiver, Collider2D hitCollider = null)
     {
-        if (!CanDealDamageNow()) return;
+        if (!CanDealDamageNow() ||
+            !FactionRelationService.CanAttack(item, receiver?.item))
+        {
+            return;
+        }
 
         // 造成伤害
         float acDamage = receiver.Hurt(this);
 
         // DamageReceiver 与受击 Collider 可能位于不同层级，不能假定接收器节点自身带 Collider。
-        if (acDamage > 0f && AttackEffects != null && AttackEffects.Count > 0)
+        if (acDamage >= 0f && AttackEffects != null && AttackEffects.Count > 0)
         {
             Vector2 hitPoint = ResolveHitPoint(receiver, hitCollider);
             SpawnEffect(hitPoint, acDamage);
@@ -269,7 +273,7 @@ public class Mod_Damage : Module, IDamageSender
             return;
 
         tileDamageAppliedThisWindow = true;
-        if (result.AppliedDamage > 0f && AttackEffects != null && AttackEffects.Count > 0)
+        if (result.AppliedDamage >= 0f && AttackEffects != null && AttackEffects.Count > 0)
             SpawnEffect(result.HitPoint, result.AppliedDamage);
         OnDamageApplied?.Invoke(result.AppliedDamage);
         lastDamageTime = Time.time;

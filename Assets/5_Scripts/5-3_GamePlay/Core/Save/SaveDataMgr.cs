@@ -33,9 +33,16 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
     private readonly Dictionary<string, ChunkBaseline> chunkBaselines = new();
     private readonly Dictionary<string, ChunkSaveRecord> chunkDeltas = new();
+    private readonly Dictionary<string, RuntimeChunkBaseline> runtimeChunkBaselines = new();
+    private readonly HashSet<string> runtimeTerrainDirtyChunks = new(StringComparer.Ordinal);
+    private readonly HashSet<string> runtimeBuildingDirtyChunks = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RuntimeWorldAddress> runtimeBuildingDirtyAddresses = new(StringComparer.Ordinal);
     private readonly HashSet<string> restoredRuntimeAiChunks = new(StringComparer.Ordinal);
+    private readonly HashSet<string> restoredRuntimeBuildingChunks = new(StringComparer.Ordinal);
     private WorldRuntime restoredRuntimeAiWorld;
     private long restoredRuntimeAiEpoch = long.MinValue;
+    private WorldRuntime restoredRuntimeBuildingWorld;
+    private long restoredRuntimeBuildingEpoch = long.MinValue;
 
     #region 存档配置
     [Tooltip("玩家的存档路径")]
@@ -1170,17 +1177,270 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         return chunkDeltas.TryGetValue(BuildChunkKey(planetName, chunkName), out delta);
     }
 
+    #region Runtime terrain persistence
+
+    /// <summary>
+    /// 新版 WorldModel 区块生成完成后恢复玩家修改的阻挡地块。
+    /// 先记录程序化生成的原始阻挡层，再把存档差量覆盖到当前区块，避免把地形基线直接写进存档。
+    /// </summary>
+    public void RestoreRuntimeTerrainForChunk(RuntimeWorldAddress address, ChunkRuntime chunk)
+    {
+        if (!GameNetwork.HasStateAuthority || SaveData == null || chunk == null ||
+            chunk.DataStatus != ChunkDataStatus.Ready || chunk.Terrain == null ||
+            chunk.Terrain.IsDisposed)
+        {
+            return;
+        }
+
+        string planetName = ResolveRuntimePlanetName();
+        string chunkName = ToChunkName(address);
+        string key = BuildChunkKey(planetName, chunkName);
+        if (!TryEnsureRuntimeChunkBaseline(key, chunk, out _))
+            return;
+
+        if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta) ||
+            delta?.RuntimeTileDeltas == null)
+        {
+            return;
+        }
+
+        ChunkTerrainData terrain = chunk.Terrain;
+        for (int i = 0; i < delta.RuntimeTileDeltas.Count; i++)
+        {
+            RuntimeTileCellSaveDelta cell = delta.RuntimeTileDeltas[i];
+            int x = cell.LocalPosition.x;
+            int y = cell.LocalPosition.y;
+            if ((uint)x >= (uint)terrain.Width || (uint)y >= (uint)terrain.Height)
+                continue;
+
+            if (cell.BlockingTileId == 0)
+            {
+                TerrainCell current = terrain.GetCell(x, y);
+                if (current.BlockingTileId != 0)
+                    terrain.TryRemoveBlockingTile(x, y, current.BlockingTileId);
+            }
+            else
+            {
+                terrain.TrySetBlockingTile(x, y, cell.BlockingTileId);
+            }
+        }
+    }
+
+    /// <summary>放置或拆除运行时格子建筑后立即更新内存差量，保证区块被流送回收前也不会丢失修改。</summary>
+    public void RecordRuntimeTerrainChange(TileBuildingCell placedCell)
+    {
+        if (!GameNetwork.HasStateAuthority || SaveData == null ||
+            !placedCell.UsesRuntimeTerrain)
+        {
+            return;
+        }
+
+        ChunkRuntime chunk = placedCell.RuntimeChunk;
+        ChunkTerrainData terrain = chunk?.Terrain;
+        if (chunk == null || chunk.DataStatus != ChunkDataStatus.Ready ||
+            terrain == null || terrain.IsDisposed)
+        {
+            return;
+        }
+
+        string planetName = ResolveRuntimePlanetName();
+        string chunkName = ToChunkName(chunk.Address);
+        string key = BuildChunkKey(planetName, chunkName);
+        if (!TryEnsureRuntimeChunkBaseline(key, chunk, out RuntimeChunkBaseline baseline))
+            return;
+
+        int x = placedCell.LocalPosition.x;
+        int y = placedCell.LocalPosition.y;
+        if ((uint)x >= (uint)terrain.Width || (uint)y >= (uint)terrain.Height)
+            return;
+
+        int blockingTileId = terrain.GetCell(x, y).BlockingTileId;
+        SetRuntimeTileDelta(key, planetName, chunk.Address, placedCell.LocalPosition,
+            blockingTileId, baseline.GetBlockingTileId(x, y));
+        runtimeTerrainDirtyChunks.Add(key);
+    }
+
+    /// <summary>保存前复核本次变脏的运行时区块，避免只依赖单格通知留下半成品差量。</summary>
+    private void CaptureRuntimeTerrainStates()
+    {
+        if (!GameNetwork.HasStateAuthority || SaveData == null ||
+            runtimeTerrainDirtyChunks.Count == 0 || ChunkMgr.Instance?.Chunks == null)
+        {
+            return;
+        }
+
+        IReadOnlyDictionary<RuntimeWorldAddress, ChunkRuntime> chunks = ChunkMgr.Instance.Chunks;
+        foreach (KeyValuePair<RuntimeWorldAddress, ChunkRuntime> pair in chunks)
+        {
+            ChunkRuntime chunk = pair.Value;
+            if (chunk == null || chunk.DataStatus != ChunkDataStatus.Ready ||
+                chunk.Terrain == null || chunk.Terrain.IsDisposed)
+            {
+                continue;
+            }
+
+            string planetName = ResolveRuntimePlanetName();
+            string chunkName = ToChunkName(pair.Key);
+            string key = BuildChunkKey(planetName, chunkName);
+            if (!runtimeTerrainDirtyChunks.Contains(key) ||
+                !TryEnsureRuntimeChunkBaseline(key, chunk, out RuntimeChunkBaseline baseline))
+            {
+                continue;
+            }
+
+            RefreshRuntimeChunkDelta(key, planetName, pair.Key, chunk, baseline);
+        }
+
+        runtimeTerrainDirtyChunks.Clear();
+    }
+
+    private bool TryEnsureRuntimeChunkBaseline(
+        string key,
+        ChunkRuntime chunk,
+        out RuntimeChunkBaseline baseline)
+    {
+        baseline = null;
+        if (chunk?.Terrain == null || chunk.Terrain.IsDisposed)
+            return false;
+
+        if (runtimeChunkBaselines.TryGetValue(key, out RuntimeChunkBaseline existing) &&
+            existing.ChunkReference.IsAlive &&
+            ReferenceEquals(existing.ChunkReference.Target, chunk))
+        {
+            baseline = existing;
+            return true;
+        }
+
+        ChunkTerrainData terrain = chunk.Terrain;
+        int[] blockingTileIds = new int[terrain.CellCount];
+        for (int x = 0; x < terrain.Width; x++)
+        {
+            for (int y = 0; y < terrain.Height; y++)
+                blockingTileIds[y * terrain.Width + x] = terrain.GetCell(x, y).BlockingTileId;
+        }
+
+        baseline = new RuntimeChunkBaseline(chunk, terrain.Width, terrain.Height, blockingTileIds);
+        runtimeChunkBaselines[key] = baseline;
+        return true;
+    }
+
+    private void SetRuntimeTileDelta(
+        string key,
+        string planetName,
+        RuntimeWorldAddress address,
+        Vector2Int localPosition,
+        int blockingTileId,
+        int baselineBlockingTileId)
+    {
+        if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta) || delta == null)
+            delta = CreateRuntimeChunkDelta(planetName, address);
+
+        delta.RuntimeTileDeltas ??= new List<RuntimeTileCellSaveDelta>();
+        delta.RuntimeTileDeltas.RemoveAll(cell => cell.LocalPosition == localPosition);
+        if (blockingTileId != baselineBlockingTileId)
+        {
+            delta.RuntimeTileDeltas.Add(new RuntimeTileCellSaveDelta
+            {
+                LocalPosition = localPosition,
+                BlockingTileId = blockingTileId
+            });
+            delta.RuntimeTileDeltas.Sort(CompareRuntimeTileDelta);
+            chunkDeltas[key] = delta;
+            return;
+        }
+
+        if (!delta.HasChanges)
+            chunkDeltas.Remove(key);
+    }
+
+    private void RefreshRuntimeChunkDelta(
+        string key,
+        string planetName,
+        RuntimeWorldAddress address,
+        ChunkRuntime chunk,
+        RuntimeChunkBaseline baseline)
+    {
+        ChunkTerrainData terrain = chunk.Terrain;
+        chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta);
+        delta?.RuntimeTileDeltas?.Clear();
+
+        List<RuntimeTileCellSaveDelta> changes = new List<RuntimeTileCellSaveDelta>();
+        for (int x = 0; x < terrain.Width; x++)
+        {
+            for (int y = 0; y < terrain.Height; y++)
+            {
+                int currentBlockingTileId = terrain.GetCell(x, y).BlockingTileId;
+                if (currentBlockingTileId == baseline.GetBlockingTileId(x, y))
+                    continue;
+
+                changes.Add(new RuntimeTileCellSaveDelta
+                {
+                    LocalPosition = new Vector2Int(x, y),
+                    BlockingTileId = currentBlockingTileId
+                });
+            }
+        }
+
+        if (changes.Count == 0)
+        {
+            if (delta != null && !delta.HasChanges)
+                chunkDeltas.Remove(key);
+            return;
+        }
+
+        delta ??= CreateRuntimeChunkDelta(planetName, address);
+        delta.RuntimeTileDeltas = changes;
+        chunkDeltas[key] = delta;
+    }
+
+    private static ChunkSaveRecord CreateRuntimeChunkDelta(
+        string planetName,
+        RuntimeWorldAddress address)
+    {
+        return new ChunkSaveRecord
+        {
+            PlanetName = planetName,
+            ChunkName = ToChunkName(address),
+            ChunkPosition = new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y),
+            IsDelta = true
+        };
+    }
+
+    private static int CompareRuntimeTileDelta(
+        RuntimeTileCellSaveDelta left,
+        RuntimeTileCellSaveDelta right)
+    {
+        int x = left.LocalPosition.x.CompareTo(right.LocalPosition.x);
+        return x != 0 ? x : left.LocalPosition.y.CompareTo(right.LocalPosition.y);
+    }
+
+    private static string ResolveRuntimePlanetName()
+    {
+        string sceneName = SceneManager.GetActiveScene().name;
+        return string.IsNullOrWhiteSpace(sceneName) ? "world" : sceneName;
+    }
+
+    #endregion
+
     public void ResetChunkDifferenceState()
     {
         chunkBaselines.Clear();
         chunkDeltas.Clear();
+        runtimeChunkBaselines.Clear();
+        runtimeTerrainDirtyChunks.Clear();
+        runtimeBuildingDirtyChunks.Clear();
+        runtimeBuildingDirtyAddresses.Clear();
         restoredRuntimeAiChunks.Clear();
         restoredRuntimeAiWorld = null;
         restoredRuntimeAiEpoch = long.MinValue;
+        restoredRuntimeBuildingChunks.Clear();
+        restoredRuntimeBuildingWorld = null;
+        restoredRuntimeBuildingEpoch = long.MinValue;
     }
 
     private void PrepareLoadedChunksForSave()
     {
+        CaptureRuntimeTerrainStates();
         // 新 WorldModel 的自然物挂在 ChunkView，不属于旧 Chunk.RunTimeItems；先捕获其状态。
         ChunkMgr.Instance?.CaptureRuntimeNaturalItemStates();
         if (ChunkMgr.Instance != null && ChunkMgr.Instance.Chunk_Dic_ByPos != null)
@@ -1194,13 +1454,15 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             }
         }
 
-        // 旧 Chunk 写入结束后再合并 AI，避免旧差量记录覆盖新版实体快照。
+        // 旧 Chunk 写入结束后再合并新版建筑和 AI，避免旧差量记录覆盖新版实体快照。
+        CaptureRuntimeBuildingStates();
         CaptureRuntimeAiEntityStates();
     }
 
     /// <summary>自动保存将自然物、旧 Chunk、差异扫描和 AI 快照按单帧预算分散执行。</summary>
     private IEnumerator PrepareLoadedChunksForAutoSaveCoroutine(Action<Exception> onFailure)
     {
+        CaptureRuntimeTerrainStates();
         if (ChunkMgr.Instance != null)
         {
             // 自然物也要分帧克隆，避免表现窗口内大量 Item 在同一帧序列化。
@@ -1248,7 +1510,8 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             }
         }
 
-        // 旧 Chunk 写入结束后再合并 AI，避免旧差量记录覆盖新版实体快照。
+        // 旧 Chunk 写入结束后再合并新版建筑和 AI，避免旧差量记录覆盖新版实体快照。
+        CaptureRuntimeBuildingStates();
         Exception aiFailure = null;
         IEnumerator aiRoutine = ForwardAutoSaveRoutine(
             CaptureRuntimeAiEntityStatesCoroutine(),
@@ -1292,6 +1555,356 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             yield return routine.Current;
         }
     }
+
+    #region Runtime building persistence
+
+    /// <summary>
+    /// 标记新版 WorldModel 中动态建筑所在区块需要重写。
+    /// 通过 Mod_Building.Save 调用，覆盖安装、拆除、受损和拆除后召唤器掉落等路径。
+    /// </summary>
+    public void RecordRuntimeBuildingChange(Item buildingItem)
+    {
+        if (!GameNetwork.HasStateAuthority || SaveData == null ||
+            !IsRuntimeBuildingChangeSource(buildingItem))
+        {
+            return;
+        }
+
+        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+        if (chunkManager == null || !chunkManager.IsWorldModelRuntimeActive)
+            return;
+
+        string planetName = ResolveRuntimePlanetName();
+        RuntimeWorldAddress address = chunkManager.ResolveWorldAddress(buildingItem.transform.position);
+        string key = BuildChunkKey(planetName, ToChunkName(address));
+        runtimeBuildingDirtyChunks.Add(key);
+        runtimeBuildingDirtyAddresses[key] = address;
+    }
+
+    /// <summary>保存新版 WorldModel 中所有动态建筑，而不是只保存某一种建筑预制体。</summary>
+    private void CaptureRuntimeBuildingStates()
+    {
+        if (!GameNetwork.HasStateAuthority || SaveData == null ||
+            ItemMgr.Instance == null || ChunkMgr.ExistingInstance == null ||
+            !ChunkMgr.ExistingInstance.IsWorldModelRuntimeActive)
+        {
+            return;
+        }
+
+        string planetName = ResolveRuntimePlanetName();
+        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+        var savedItemsByKey = new Dictionary<string, List<ItemData>>(StringComparer.Ordinal);
+        var addressesByKey = new Dictionary<string, RuntimeWorldAddress>(StringComparer.Ordinal);
+        var failedKeys = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (Item item in ItemMgr.Instance.WorldRunTimeItems.Values)
+        {
+            if (!IsRuntimeBuildingItem(item, out _))
+                continue;
+
+            RuntimeWorldAddress address = chunkManager.ResolveWorldAddress(item.transform.position);
+            string key = BuildChunkKey(planetName, ToChunkName(address));
+            addressesByKey[key] = address;
+
+            try
+            {
+                item.Save();
+                if (item.itemData == null)
+                    throw new InvalidDataException($"建筑 {item.name} 的 ItemData 为空");
+
+                if (!savedItemsByKey.TryGetValue(key, out List<ItemData> savedItems))
+                {
+                    savedItems = new List<ItemData>();
+                    savedItemsByKey[key] = savedItems;
+                }
+
+                savedItems.Add(CloneItemData(item.itemData));
+            }
+            catch (Exception exception)
+            {
+                failedKeys.Add(key);
+                Debug.LogError($"[SaveDataMgr] 保存运行时建筑失败：{item.name}", item);
+                Debug.LogException(exception);
+            }
+        }
+
+        var keysToCapture = new HashSet<string>(runtimeBuildingDirtyChunks, StringComparer.Ordinal);
+        keysToCapture.UnionWith(savedItemsByKey.Keys);
+        foreach (string key in keysToCapture)
+        {
+            if (failedKeys.Contains(key))
+                continue;
+
+            if (!addressesByKey.TryGetValue(key, out RuntimeWorldAddress address) &&
+                !runtimeBuildingDirtyAddresses.TryGetValue(key, out address))
+            {
+                continue;
+            }
+
+            savedItemsByKey.TryGetValue(key, out List<ItemData> savedItems);
+            MergeRuntimeBuildingItems(planetName, address, savedItems);
+            runtimeBuildingDirtyChunks.Remove(key);
+            runtimeBuildingDirtyAddresses.Remove(key);
+        }
+    }
+
+    /// <summary>判断当前运行时对象是否是应该写入世界存档的建筑。</summary>
+    private static bool IsRuntimeBuildingItem(Item item, out Mod_Building building)
+    {
+        building = null;
+        if (item == null || item is Player || item is Map || item.itemData == null)
+            return false;
+
+        building = item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+        if (building?.Data == null)
+            return false;
+
+        if (building.Data.Role == BuildingRole.PlacedBuilding)
+        {
+            return building.CurrentState is BuildingState.Installed or
+                BuildingState.Damaged or BuildingState.Uninstalling;
+        }
+
+        // 背包中的召唤器由玩家数据保存；只有已经掉到世界里的召唤器才归入区块存档。
+        return building.Data.Role == BuildingRole.Summoner &&
+               !item.InHand && item.Owner == null && !item.DestructionHandled;
+    }
+
+    /// <summary>判断建筑 SaveData 是否属于动态世界建筑，供差量替换和清理使用。</summary>
+    private static bool IsRuntimeBuildingData(ItemData data)
+    {
+        try
+        {
+            return data != null && Mod_Building.TryReadBuildingData(
+                data, out _, out Mod_Building.Building_Data buildingData) &&
+                buildingData != null &&
+                (buildingData.Role == BuildingRole.PlacedBuilding ||
+                 (buildingData.Role == BuildingRole.Summoner && !data.inHand));
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>判断建筑 SaveData 是否可以在世界加载时重新实例化。</summary>
+    private static bool IsRestorableRuntimeBuildingData(ItemData data)
+    {
+        try
+        {
+            if (data == null || !Mod_Building.TryReadBuildingData(
+                    data, out _, out Mod_Building.Building_Data buildingData) ||
+                buildingData == null)
+            {
+                return false;
+            }
+
+            return (buildingData.Role == BuildingRole.PlacedBuilding &&
+                    buildingData.State is BuildingState.Installed or BuildingState.Damaged) ||
+                   (buildingData.Role == BuildingRole.Summoner && !data.inHand);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>建筑被安装、拆除或状态保存时都要记录所在区块，确保空区块也能清掉旧建筑差量。</summary>
+    private static bool IsRuntimeBuildingChangeSource(Item item)
+    {
+        if (item == null || item.itemData == null || item is Player || item is Map)
+            return false;
+
+        Mod_Building building = item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+        if (building?.Data == null)
+            return false;
+
+        if (building.Data.Role == BuildingRole.PlacedBuilding)
+        {
+            return building.CurrentState is BuildingState.Installed or
+                BuildingState.Damaged or BuildingState.Uninstalling;
+        }
+
+        return building.Data.Role == BuildingRole.Summoner &&
+               !item.InHand && item.Owner == null && !item.DestructionHandled;
+    }
+
+    private void MergeRuntimeBuildingItems(
+        string planetName,
+        RuntimeWorldAddress address,
+        List<ItemData> savedItems)
+    {
+        string chunkName = ToChunkName(address);
+        string key = BuildChunkKey(planetName, chunkName);
+        savedItems ??= new List<ItemData>();
+
+        if (!chunkBaselines.ContainsKey(key) &&
+            !chunkDeltas.ContainsKey(key) &&
+            TryGetFullMapSave(planetName, chunkName, out MapSave fullMapSave))
+        {
+            ReplaceMapSaveRuntimeBuildingItems(fullMapSave, savedItems);
+            return;
+        }
+
+        if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record == null)
+        {
+            record = CreateRuntimeChunkDelta(planetName, address);
+        }
+        else if (TryGetFullMapSave(planetName, chunkName, out MapSave existingFullMapSave))
+        {
+            // 一旦该区块已有差量，旧全量快照中的动态建筑必须移除，避免拆除后从全量快照复活。
+            ReplaceMapSaveRuntimeBuildingItems(existingFullMapSave, null);
+        }
+
+        record.ChangedItems ??= new List<ItemData>();
+        record.ChangedItems.RemoveAll(IsRuntimeBuildingData);
+        record.RemovedItemGuids ??= new List<int>();
+        for (int i = 0; i < savedItems.Count; i++)
+        {
+            ItemData savedItem = savedItems[i];
+            if (savedItem == null)
+                continue;
+
+            record.RemovedItemGuids.Remove(savedItem.Guid);
+            record.ChangedItems.Add(savedItem);
+        }
+
+        record.ChangedItems.Sort((left, right) => (left?.Guid ?? 0).CompareTo(right?.Guid ?? 0));
+        record.RemovedItemGuids.Sort();
+        if (record.HasChanges)
+            chunkDeltas[key] = record;
+        else
+            chunkDeltas.Remove(key);
+    }
+
+    private static void ReplaceMapSaveRuntimeBuildingItems(
+        MapSave mapSave,
+        List<ItemData> savedItems)
+    {
+        if (mapSave == null)
+            return;
+
+        savedItems ??= new List<ItemData>();
+        mapSave.items ??= new Dictionary<string, HashSet<ItemData>>();
+        var emptyGroups = new List<string>();
+        foreach (KeyValuePair<string, HashSet<ItemData>> pair in mapSave.items)
+        {
+            pair.Value?.RemoveWhere(IsRuntimeBuildingData);
+            if (pair.Value == null || pair.Value.Count == 0)
+                emptyGroups.Add(pair.Key);
+        }
+
+        for (int i = 0; i < emptyGroups.Count; i++)
+            mapSave.items.Remove(emptyGroups[i]);
+
+        for (int i = 0; i < savedItems.Count; i++)
+        {
+            ItemData data = savedItems[i];
+            if (data == null)
+                continue;
+
+            if (!mapSave.items.TryGetValue(data.IDName, out HashSet<ItemData> group))
+            {
+                group = new HashSet<ItemData>();
+                mapSave.items[data.IDName] = group;
+            }
+
+            group.Add(data);
+        }
+    }
+
+    /// <summary>新版区块就绪时恢复该区块的全部动态建筑，包括建筑模块状态和耐久。</summary>
+    public void RestoreRuntimeBuildingsForChunk(RuntimeWorldAddress address)
+    {
+        if (!GameNetwork.HasStateAuthority || SaveData == null || ItemMgr.Instance == null)
+            return;
+
+        EnsureRuntimeBuildingRestoreScope();
+        string planetName = ResolveRuntimePlanetName();
+        string chunkName = ToChunkName(address);
+        string restoreKey = $"{BuildChunkKey(planetName, chunkName)}\u001f{address.DimensionId}";
+        if (!restoredRuntimeBuildingChunks.Add(restoreKey))
+            return;
+
+        string chunkKey = BuildChunkKey(planetName, chunkName);
+        var candidates = new List<ItemData>();
+        var removedGuids = new HashSet<int>();
+        if (chunkDeltas.TryGetValue(chunkKey, out ChunkSaveRecord delta))
+        {
+            if (delta?.RemovedItemGuids != null)
+                removedGuids.UnionWith(delta.RemovedItemGuids);
+            CollectRuntimeBuildingData(delta?.ChangedItems, candidates);
+        }
+
+        if (TryGetFullMapSave(planetName, chunkName, out MapSave mapSave) && mapSave.items != null)
+        {
+            foreach (HashSet<ItemData> items in mapSave.items.Values)
+                CollectRuntimeBuildingData(items, candidates);
+        }
+
+        var restoredGuids = new HashSet<int>();
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            ItemData savedData = candidates[i];
+            if (savedData == null || removedGuids.Contains(savedData.Guid) ||
+                !restoredGuids.Add(savedData.Guid))
+            {
+                continue;
+            }
+
+            if (ItemMgr.Instance.GetItemByGuid(savedData.Guid) != null)
+                continue;
+
+            try
+            {
+                ItemData runtimeData = CloneItemData(savedData);
+                ItemTransform transformData = runtimeData.transform ?? new ItemTransform();
+                Item restored = ItemMgr.Instance.InstantiateItem(
+                    runtimeData,
+                    transformData.position,
+                    transformData.rotation,
+                    transformData.scale);
+                restored?.Load();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError(
+                    $"[SaveDataMgr] 恢复运行时建筑失败：{savedData.IDName}, Guid={savedData.Guid}");
+                Debug.LogException(exception);
+            }
+        }
+    }
+
+    private static void CollectRuntimeBuildingData(
+        IEnumerable<ItemData> source,
+        List<ItemData> output)
+    {
+        if (source == null)
+            return;
+
+        foreach (ItemData data in source)
+        {
+            if (IsRestorableRuntimeBuildingData(data))
+                output.Add(data);
+        }
+    }
+
+    private void EnsureRuntimeBuildingRestoreScope()
+    {
+        WorldRuntime world = ChunkMgr.ExistingInstance?.WorldRuntime;
+        long epoch = world?.Epoch ?? long.MinValue;
+        if (ReferenceEquals(restoredRuntimeBuildingWorld, world) &&
+            restoredRuntimeBuildingEpoch == epoch)
+        {
+            return;
+        }
+
+        restoredRuntimeBuildingChunks.Clear();
+        restoredRuntimeBuildingWorld = world;
+        restoredRuntimeBuildingEpoch = epoch;
+    }
+
+    #endregion
 
     #region Runtime AI persistence
 
@@ -2064,6 +2677,30 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         public byte[] GrassStates = Array.Empty<byte>();
     }
 
+    /// <summary>新版区块的程序化阻挡层基线；用弱引用避免玩家探索过多区块后长期持有运行时对象。</summary>
+    private sealed class RuntimeChunkBaseline
+    {
+        public RuntimeChunkBaseline(ChunkRuntime chunk, int width, int height, int[] blockingTileIds)
+        {
+            ChunkReference = new WeakReference(chunk);
+            Width = width;
+            Height = height;
+            BlockingTileIds = blockingTileIds ?? Array.Empty<int>();
+        }
+
+        public WeakReference ChunkReference { get; }
+        public int Width { get; }
+        public int Height { get; }
+        public int[] BlockingTileIds { get; }
+
+        public int GetBlockingTileId(int x, int y)
+        {
+            if ((uint)x >= (uint)Width || (uint)y >= (uint)Height)
+                return 0;
+            return BlockingTileIds[y * Width + x];
+        }
+    }
+
     #endregion
     
     #endregion
@@ -2108,6 +2745,8 @@ public partial class ChunkSaveRecord
     public List<int> RemovedItemGuids = new();
     public List<TileCellSaveDelta> TileDeltas = new();
     public List<GrassCellSaveDelta> GrassDeltas = new();
+    // 新版 WorldModel 的运行时阻挡地块差量；字段追加在末尾以保持旧存档兼容。
+    public List<RuntimeTileCellSaveDelta> RuntimeTileDeltas = new();
 
     [MemoryPackIgnore]
     public bool HasChanges =>
@@ -2115,7 +2754,8 @@ public partial class ChunkSaveRecord
         ((ChangedItems?.Count ?? 0) > 0 ||
          (RemovedItemGuids?.Count ?? 0) > 0 ||
          (TileDeltas?.Count ?? 0) > 0 ||
-         (GrassDeltas?.Count ?? 0) > 0);
+         (GrassDeltas?.Count ?? 0) > 0 ||
+         (RuntimeTileDeltas?.Count ?? 0) > 0);
 }
 
 [MemoryPackable]
@@ -2132,4 +2772,12 @@ public partial class GrassCellSaveDelta
 {
     public Vector2Int LocalPosition;
     public GrassCellState State;
+}
+
+[MemoryPackable]
+[Serializable]
+public partial class RuntimeTileCellSaveDelta
+{
+    public Vector2Int LocalPosition;
+    public int BlockingTileId;
 }

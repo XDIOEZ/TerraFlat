@@ -15,6 +15,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     private const string MoveZoneName = "移动摇杆";
     private const string AimZoneName = "普通指向区";
+    private const string AimCursorName = "手机准线";
     private const string AttackZoneName = "攻击摇杆";
     private const string DrawerName = "菜单抽屉";
     private const string GameplayLayerName = "玩法控制层";
@@ -36,6 +37,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private GameObject gameplayLayer;
     private GameObject persistentLayer;
     private GameObject drawer;
+    private RectTransform mobileAimCursor;
     private MobileVirtualJoystick[] joysticks;
     private MobileInputButton[] inputButtons;
     private Canvas hotbarCanvas;
@@ -191,6 +193,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         gameplayLayer = FindRequired(GameplayLayerName)?.gameObject;
         persistentLayer = FindRequired(PersistentLayerName)?.gameObject;
         drawer = FindRequired(DrawerName)?.gameObject;
+        EnsureAimCursorVisual();
         if (drawer != null)
             drawer.SetActive(false);
 
@@ -218,6 +221,34 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         return null;
     }
 
+    private void EnsureAimCursorVisual()
+    {
+        Transform existing = viewObject.transform.Find(AimCursorName);
+        mobileAimCursor = existing as RectTransform;
+        if (mobileAimCursor == null)
+        {
+            GameObject cursorObject = new GameObject(
+                AimCursorName,
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(GamepadCursorGraphic));
+            cursorObject.transform.SetParent(viewObject.transform, false);
+            mobileAimCursor = cursorObject.GetComponent<RectTransform>();
+            mobileAimCursor.anchorMin = new Vector2(0.5f, 0.5f);
+            mobileAimCursor.anchorMax = new Vector2(0.5f, 0.5f);
+            mobileAimCursor.pivot = new Vector2(0.5f, 0.5f);
+            mobileAimCursor.sizeDelta = new Vector2(28f, 28f);
+            cursorObject.transform.SetAsFirstSibling();
+        }
+
+        GamepadCursorGraphic cursorGraphic = mobileAimCursor.GetComponent<GamepadCursorGraphic>();
+        if (cursorGraphic == null)
+            cursorGraphic = mobileAimCursor.gameObject.AddComponent<GamepadCursorGraphic>();
+        cursorGraphic.color = FlatWorldUITheme.SelectionOutline;
+        cursorGraphic.raycastTarget = false;
+        mobileAimCursor.gameObject.SetActive(false);
+    }
+
     private void SetViewActive(bool active)
     {
         if (viewObject == null)
@@ -240,6 +271,37 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         finally
         {
             changingViewState = false;
+        }
+    }
+
+    #endregion
+
+    #region 手机准线
+
+    private void LateUpdate()
+    {
+        if (mobileAimCursor == null || controller == null || viewObject == null ||
+            !ShouldShow() || !viewObject.activeInHierarchy ||
+            gameplayLayer == null || !gameplayLayer.activeSelf)
+        {
+            return;
+        }
+
+        RectTransform rootRect = viewObject.transform as RectTransform;
+        if (rootRect == null)
+            return;
+
+        Canvas canvas = rootRect.GetComponentInParent<Canvas>();
+        Camera eventCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? canvas.worldCamera
+            : null;
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                rootRect,
+                controller.GetPointerScreenPosition(),
+                eventCamera,
+                out Vector2 localPosition))
+        {
+            mobileAimCursor.anchoredPosition = localPosition;
         }
     }
 
@@ -672,6 +734,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             gameplayLayer.SetActive(gameplayVisible);
         if (persistentLayer != null)
             persistentLayer.SetActive(ShouldShow());
+        if (mobileAimCursor != null)
+            mobileAimCursor.gameObject.SetActive(gameplayVisible);
         SetViewActive(ShouldShow());
 
         if (!ShouldShow() || viewObject == null || !viewObject.activeInHierarchy)

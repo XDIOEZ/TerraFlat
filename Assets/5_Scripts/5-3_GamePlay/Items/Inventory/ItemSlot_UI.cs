@@ -63,6 +63,9 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>触屏长按入口；返回 true 表示已完成整组放置并阻止物品菜单。</summary>
     public System.Func<int, bool> OnTouchLongPress { get; set; }
 
+    /// <summary>触屏拖拽物品后在世界非 UI 区域长按的入口。</summary>
+    public System.Func<Vector2, bool> OnTouchWorldLongPress { get; set; }
+
     /// <summary>桌面轻触入口；空手时保持选中语义，拖拽后手持整组时用于单件分发。</summary>
     public System.Action<int> OnDesktopTap { get; set; }
 
@@ -105,6 +108,10 @@ public class ItemSlot_UI : MonoBehaviour,
     private bool touchItemDragActive;
     private bool touchScrollDragActive;
     private Coroutine touchLongPressCoroutine;
+    private Coroutine touchWorldLongPressCoroutine;
+    private Vector2 touchWorldPressPosition;
+    private Vector2 touchWorldPointerPosition;
+    private readonly List<RaycastResult> touchRaycastResults = new List<RaycastResult>(8);
 
     /// <summary>
     /// 用于获取槽位数据的委托（解除对Data的直接依赖）
@@ -134,6 +141,7 @@ public class ItemSlot_UI : MonoBehaviour,
         OnMouseDragDrop = null;
         OnTouchTap = null;
         OnTouchLongPress = null;
+        OnTouchWorldLongPress = null;
         OnDesktopTap = null;
         _OnScroll.Clear();
         if (selectionOutlineCreated && selectionOutline != null)
@@ -510,9 +518,47 @@ public class ItemSlot_UI : MonoBehaviour,
         HandleTouchLongPress();
     }
 
+    private IEnumerator WaitForTouchWorldLongPress(int pointerId)
+    {
+        yield return new WaitForSecondsRealtime(touchLongPressSeconds);
+        touchWorldLongPressCoroutine = null;
+        if (touchPointerId != pointerId || !touchItemDragActive)
+            yield break;
+
+        if (OnTouchWorldLongPress?.Invoke(touchWorldPointerPosition) != true)
+            yield break;
+
+        touchLongPressTriggered = true;
+        touchItemDragActive = false;
+        touchPressStartedWithItem = false;
+        EndMouseDragVisual();
+    }
+
+    private void UpdateTouchWorldLongPress(PointerEventData eventData)
+    {
+        touchWorldPointerPosition = eventData.position;
+
+        Canvas canvas = GetComponentInParent<Canvas>();
+        float scaleFactor = canvas != null ? Mathf.Max(0.01f, canvas.scaleFactor) : 1f;
+        if (touchWorldLongPressCoroutine == null)
+        {
+            touchWorldPressPosition = eventData.position;
+            touchWorldLongPressCoroutine = StartCoroutine(WaitForTouchWorldLongPress(eventData.pointerId));
+            return;
+        }
+
+        if ((eventData.position - touchWorldPressPosition).magnitude / scaleFactor <= touchMoveTolerance)
+            return;
+
+        CancelTouchWorldLongPress();
+        touchWorldPressPosition = eventData.position;
+        touchWorldLongPressCoroutine = StartCoroutine(WaitForTouchWorldLongPress(eventData.pointerId));
+    }
+
     private void CancelTouchPress()
     {
         CancelTouchLongPress();
+        CancelTouchWorldLongPress();
         touchPointerId = int.MinValue;
         touchMovedTooFar = false;
         touchPressStartedWithItem = false;
@@ -523,6 +569,13 @@ public class ItemSlot_UI : MonoBehaviour,
         if (touchLongPressCoroutine != null)
             StopCoroutine(touchLongPressCoroutine);
         touchLongPressCoroutine = null;
+    }
+
+    private void CancelTouchWorldLongPress()
+    {
+        if (touchWorldLongPressCoroutine != null)
+            StopCoroutine(touchWorldLongPressCoroutine);
+        touchWorldLongPressCoroutine = null;
     }
 
     private static bool IsTouchPointer(PointerEventData eventData)
@@ -710,12 +763,48 @@ public class ItemSlot_UI : MonoBehaviour,
     private void UpdateMouseDragHover(PointerEventData eventData)
     {
         ItemSlot_UI nextSlot = FindSlotUnderPointer(eventData);
-        if (nextSlot == mouseDragHoverSlot)
+        if (nextSlot != mouseDragHoverSlot)
+        {
+            SetMouseDragHover(mouseDragHoverSlot, false);
+            mouseDragHoverSlot = nextSlot;
+            SetMouseDragHover(mouseDragHoverSlot, true);
+        }
+
+        if (!IsTouchPointer(eventData) || !touchItemDragActive)
             return;
 
-        SetMouseDragHover(mouseDragHoverSlot, false);
-        mouseDragHoverSlot = nextSlot;
-        SetMouseDragHover(mouseDragHoverSlot, true);
+        if (IsPointerOverUI(eventData))
+            CancelTouchWorldLongPress();
+        else
+            UpdateTouchWorldLongPress(eventData);
+    }
+
+    private bool IsPointerOverUI(PointerEventData eventData)
+    {
+        if (EventSystem.current == null)
+            return false;
+
+        touchRaycastResults.Clear();
+        EventSystem.current.RaycastAll(eventData, touchRaycastResults);
+        for (int i = 0; i < touchRaycastResults.Count; i++)
+        {
+            GameObject hitObject = touchRaycastResults[i].gameObject;
+            if (hitObject == null)
+                continue;
+
+            // 物品槽优先视为 UI，避免把槽位重叠区域当成世界落点。
+            if (hitObject.GetComponentInParent<ItemSlot_UI>() != null)
+                return true;
+
+            // 手机普通指向区是透明的世界指向层，允许在其空白区域长按丢弃。
+            MobileVirtualJoystick joystick = hitObject.GetComponentInParent<MobileVirtualJoystick>();
+            if (joystick != null && joystick.IsWorldDropSurface)
+                continue;
+
+            return true;
+        }
+
+        return false;
     }
 
     private void SetMouseDragHover(ItemSlot_UI slot, bool active)

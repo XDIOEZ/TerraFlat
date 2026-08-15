@@ -139,6 +139,7 @@ public class Mod_Building : Module
         Data.State = _currentState;
         BuildingData.WriteData(Data);
         item.itemData.ModuleDataDic[_Data.Name] = BuildingData;
+        SaveDataMgr.Instance?.RecordRuntimeBuildingChange(item);
     }
 
     public override void ApplyNetworkData(ModuleData data)
@@ -846,8 +847,16 @@ public class Mod_Building : Module
         }
 
         Bounds bounds = GetPlacementBounds(position);
-        if (!CheckWorldObstacles(bounds, out reason))
+        if (!string.IsNullOrWhiteSpace(Data?.TileBlockId))
+        {
+            // 格子建筑的合法性以建筑阻挡层数据为准，不能再用 TilemapCollider2D 的边界判断相邻格。
+            if (!TileBuildingSystem.CanPlace(position, Data.TileBlockId, out reason))
+                return false;
+        }
+        else if (!CheckWorldObstacles(bounds, out reason))
+        {
             return false;
+        }
 
         return CheckTilePenalties(bounds, out reason);
     }
@@ -952,6 +961,9 @@ public class Mod_Building : Module
 
     private Bounds GetPlacementBounds(Vector3 position)
     {
+        if (!string.IsNullOrWhiteSpace(Data?.TileBlockId))
+            return new Bounds(position, Vector3.one);
+
         if (boxCollider2D == null)
             return new Bounds(position, Vector3.one * 0.9f);
 
@@ -1130,7 +1142,11 @@ public class Mod_Building : Module
                     out Transform sourceRoot, out Bounds footprint))
                 throw new MissingComponentException("BuildingShadow 预制体或建筑 SpriteRenderer 配置不完整");
 
-            GhostShadow.InitShadow(source, sourceRoot, footprint);
+            GhostShadow.InitShadow(
+                source,
+                sourceRoot,
+                footprint,
+                copySourceOffset: string.IsNullOrWhiteSpace(Data.TileBlockId));
         }
         catch (Exception exception)
         {
@@ -1242,6 +1258,9 @@ public class Mod_Building : Module
 
     private Bounds GetBuildingPreviewBounds()
     {
+        if (!string.IsNullOrWhiteSpace(Data?.TileBlockId))
+            return new Bounds(Vector3.zero, Vector3.one);
+
         if (TryGetBuildingBodyPrefab(out GameObject buildingPrefab))
         {
             BoxCollider2D bodyCollider = buildingPrefab.GetComponent<BoxCollider2D>();
@@ -1374,7 +1393,7 @@ public class Mod_Building : Module
             : null;
     }
 
-    private static bool TryReadBuildingData(
+    public static bool TryReadBuildingData(
         ItemData itemData,
         out Ex_ModData moduleData,
         out Building_Data buildingState)
