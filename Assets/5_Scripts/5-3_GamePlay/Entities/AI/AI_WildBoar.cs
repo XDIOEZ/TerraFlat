@@ -49,6 +49,8 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	private float _sleepCooldownTimer;
 	private float _alertCooldownTimer;
+	// 攻击启动后的硬直/后摇剩余时间；期间即使目标离开攻击范围也必须原地完成本次攻击。
+	private float _attackRecoveryTimer;
 	private Vector3 _chaseTarget;
 	private AI_AttackController _attack = new AI_AttackController();
 	#endregion
@@ -141,7 +143,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	public float attackTriggerDistance = 1.6f;
 	[HorizontalGroup("配置/战斗/攻击/Hr1"), LabelText("竖向距离"), SuffixLabel("米", true), MinValue(0.1f)]
 	public float attackVerticalTriggerDistance = 0.45f;
-	[HorizontalGroup("配置/战斗/攻击/Hr1"), LabelText("持续时间"), SuffixLabel("秒", true), MinValue(0.1f)]
+	[HorizontalGroup("配置/战斗/攻击/Hr1"), LabelText("攻击后摇"), SuffixLabel("秒", true), MinValue(0.1f)]
 	public float attackDuration = 1.5f;
 
 	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/攻击"), HorizontalGroup("配置/战斗/攻击/Hr2"), LabelText("愤怒增长"), MinValue(0f)]
@@ -234,6 +236,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	{
 		_sleepCooldownTimer = 0f;
 		_alertCooldownTimer = 0f;
+		_attackRecoveryTimer = 0f;
 		_currentFoodTarget = null;
 		_currentThreat = null;
 		_attack.Reset();
@@ -272,6 +275,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	{
 		_sleepCooldownTimer = DecrementTimer(_sleepCooldownTimer, deltaTime);
 		_alertCooldownTimer = DecrementTimer(_alertCooldownTimer, deltaTime);
+		_attackRecoveryTimer = DecrementTimer(_attackRecoveryTimer, deltaTime);
 		_attack.Update(deltaTime);
 		UpdateRageLevel(deltaTime);
 	}
@@ -426,22 +430,20 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 		Vector3 targetPosition = _currentThreat.transform.position;
 		FaceTarget(targetPosition, true);
+		StopMove();
 
-		if (IsTargetInsideAttackRange(targetPosition))
+		// 攻击窗口由 AI_AttackController 自己完成；目标在攻击过程中移出范围时，
+		// 不再提前打断窗口，避免攻击动画、伤害窗口和状态机不同步。
+		if (!_attack.IsWindowTriggered &&
+			_attackRecoveryTimer <= 0f &&
+			_attack.IsCooldownDone &&
+			IsTargetInsideAttackRange(targetPosition))
 		{
-			StopMove();
-			if (!_attack.IsWindowTriggered && _attack.IsCooldownDone)
-			{
-				_attack.StartWindow(
-					_animator,
-					animAttack,
-					WorldTopologyRuntime.ShortestDelta(transform.position, targetPosition));
-			}
-		}
-		else
-		{
-			_attack.StopWindow();
-			StopMove();
+			_attack.StartWindow(
+				_animator,
+				animAttack,
+				WorldTopologyRuntime.ShortestDelta(transform.position, targetPosition));
+			_attackRecoveryTimer = Mathf.Max(0f, attackDuration);
 		}
 	}
 
@@ -462,16 +464,22 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 			: hpRate < fleeTriggerHpRate;
 	}
 
-	/// <summary>攻击条件：有威胁且距离/愤怒值满足要求</summary>
+	/// <summary>攻击条件：先完成本次后摇，且只有冷却结束后才能从追击进入攻击。</summary>
 	private bool ShouldAttack()
 	{
 		if (_currentThreat == null) return false;
-		if (_currentState != WildBoarState.Attack && _alertCooldownTimer > 0f) return false;
-		float rageLevel = Data.RageLevel;
+
+		// 攻击已经启动后，必须锁定到后摇结束，不能因玩家短距离后撤而提前追击。
+		if (_currentState == WildBoarState.Attack)
+		{
+			return _attackRecoveryTimer > 0f ||
+				IsTargetInsideAttackRange(_currentThreat.transform.position);
+		}
+
+		if (_alertCooldownTimer > 0f || !_attack.IsCooldownDone) return false;
 
 		// 攻击状态与伤害触发盒共用横向更远、竖向更窄的椭圆范围，避免上下方向空挥。
-		float requiredRage = _currentState == WildBoarState.Attack ? 0.1f : 0.3f;
-		return IsTargetInsideAttackRange(_currentThreat.transform.position) && rageLevel > requiredRage;
+		return IsTargetInsideAttackRange(_currentThreat.transform.position) && Data.RageLevel > 0.3f;
 	}
 
 	private bool ShouldChase()

@@ -533,8 +533,6 @@
             "stopTransitionDuration": 0.07,
             "IsLock": false,
             "hightReaction": false,
-            "moveHungerBuffId": "饥饿1.6",
-            "runHungerBuffId": "饥饿2.0",
             "$transform": {
               "localPosition": {
                 "x": 0.0,
@@ -937,8 +935,6 @@
             "stopTransitionDuration": 0.07,
             "IsLock": false,
             "hightReaction": false,
-            "moveHungerBuffId": "",
-            "runHungerBuffId": "",
             "$transform": {
               "localPosition": {
                 "x": 0.0,
@@ -1654,8 +1650,6 @@
             "stopTransitionDuration": 0.07,
             "IsLock": false,
             "hightReaction": false,
-            "moveHungerBuffId": "",
-            "runHungerBuffId": "",
             "$transform": {
               "localPosition": {
                 "x": 0.0,
