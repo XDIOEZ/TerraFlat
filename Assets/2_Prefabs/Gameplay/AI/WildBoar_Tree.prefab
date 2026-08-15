@@ -361,8 +361,6 @@ MonoBehaviour:
     RuntimeOwnerSlotIndex: -1
     BitData: 
   animationController: {fileID: 0}
-  moveHungerBuffId: ''
-  runHungerBuffId: ''
   OnMoveStart:
     _PersistentCalls: []
   OnMoveEnd:
