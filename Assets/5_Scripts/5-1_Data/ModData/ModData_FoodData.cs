@@ -34,6 +34,12 @@ public partial class ModData_FoodData : ModuleData
     [LabelText("腐败目标ID")]
     public string SpoilageTargetItemID = "Meat_Rotten";
 
+    [FoldoutGroup("持久化字段")]
+    [Tooltip("多次使用食物时已累计的使用次数")]
+    [ReadOnly]
+    [LabelText("使用进度")]
+    public float EatingProgress = 0f;
+
     #endregion
 
     #region 运行时上下文
@@ -319,6 +325,75 @@ public partial class ModData_FoodData : ModuleData
         RefreshContainerUI(inventoryData);
 
         Debug.Log($"[FoodSpoilage] 单个腐败成功，槽位={sourceSlotIndex}, 原物品={sourceItemData.IDName}, 新增腐败物={spoiledUnitData.IDName}");
+        return true;
+    }
+
+    /// <summary>
+    /// 将当前物品在原库存槽位替换为目标物品，保留数量、GUID、位置和拾取状态。
+    /// </summary>
+    public bool TryReplaceCurrentItem(string targetItemID, out string failedReason)
+    {
+        failedReason = string.Empty;
+
+        Inventory_Data inventoryData = RuntimeOwnerInventoryData;
+        ItemSlot sourceSlot = RuntimeOwnerSlot;
+        ItemData sourceItemData = RuntimeOwnerItemData;
+        int sourceSlotIndex = RuntimeOwnerSlotIndex;
+
+        if (inventoryData == null || inventoryData.itemSlots == null)
+        {
+            failedReason = "容器数据为空";
+            return false;
+        }
+
+        if (sourceSlot == null || sourceItemData == null || sourceItemData.Stack == null)
+        {
+            failedReason = "当前物品槽位或Stack为空";
+            return false;
+        }
+
+        if (!ReferenceEquals(sourceSlot.itemData, sourceItemData))
+        {
+            failedReason = "当前槽位物品已发生变化";
+            return false;
+        }
+
+        if (!inventoryData.itemSlots.Contains(sourceSlot))
+        {
+            failedReason = "当前槽位不属于目标容器";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(targetItemID))
+        {
+            failedReason = "替换目标ID为空";
+            return false;
+        }
+
+        float sourceAmount = Mathf.Max(0f, sourceItemData.Stack.Amount);
+        if (sourceAmount <= 0f)
+        {
+            failedReason = "当前物品数量不足";
+            return false;
+        }
+
+        ItemData replacementData = CreateTargetItemData(targetItemID);
+        if (!PrepareSpoiledItemData(replacementData, sourceItemData, sourceAmount, true))
+        {
+            failedReason = $"目标物品构建失败，目标ID={targetItemID}";
+            return false;
+        }
+
+        sourceSlot.itemData = replacementData;
+        NotifySlotChanged(inventoryData, sourceSlot, Mathf.Max(0, sourceSlotIndex));
+
+        // 替换完成后清理旧物品的运行时上下文，避免旧模块继续驱动槽位。
+        RuntimeOwnerInventoryData = null;
+        RuntimeOwnerSlot = null;
+        RuntimeOwnerItemData = null;
+        RuntimeOwnerSlotIndex = -1;
+
+        Debug.Log($"[FoodReplacement] 原槽位替换，槽位={sourceSlotIndex}, 原物品={sourceItemData.IDName}, 新物品={replacementData.IDName}, 数量={sourceAmount:F0}");
         return true;
     }
 

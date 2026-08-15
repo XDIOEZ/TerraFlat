@@ -15,6 +15,8 @@ public class RightClickMenu_UI : MonoBehaviour
     public ItemSlot_UI itemSlotUI; // 当前右键选中的UI槽位
     public BasePanel basePanel; // 右键菜单面板
     Item SlotOwner; // 槽位所属物品（通常为容器或玩家）
+    private Inventory_Data ownerInventoryData; // 槽位所属库存数据
+    private int ownerSlotIndex = -1; // 槽位在库存中的索引
     private GameController gameController;
     private Module_DiscardItem discardModule;
     private Button dropStackButton;
@@ -25,10 +27,12 @@ public class RightClickMenu_UI : MonoBehaviour
     /// <summary>
     /// 初始化右键菜单并绑定按钮事件。
     /// </summary>
-    public void Init(ItemSlot_UI _itemSlotUI, ItemSlot _itemSlot, Item _SlotOwner)
+    public void Init(ItemSlot_UI _itemSlotUI, ItemSlot _itemSlot, Item _SlotOwner, Inventory_Data _ownerInventoryData = null, int _ownerSlotIndex = -1)
     {
         itemSlotUI = _itemSlotUI;
         itemSlot = _itemSlot;
+        ownerInventoryData = _ownerInventoryData;
+        ownerSlotIndex = _ownerSlotIndex;
         basePanel = GetComponent<BasePanel>();
         if (basePanel == null)
         {
@@ -86,6 +90,8 @@ public class RightClickMenu_UI : MonoBehaviour
         Item item = ItemMgr.Instance.InstantiateItem(itemSlot.itemData);
         item.Load();
         item.Owner = SlotOwner;
+        Mod_Food food = item.itemMods?.GetMod_ByID<Mod_Food>(ModText.Food);
+        food?.BindRuntimeInventoryContext(ownerInventoryData, itemSlot, ownerSlotIndex);
         item.Act();
         ItemMgr.Instance.DespawnItem(item);
     }
