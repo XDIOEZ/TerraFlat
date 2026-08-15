@@ -594,6 +594,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 56759c2d2818ac14a876d08fdf6d06c8
+    m_Address: Assets/6_Art/Items/Tools/item_tool_torches.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 56f687a312c1c9f44a02b7622dbd5ef4
     m_Address: Assets/2_Prefabs/World/Buildings/Summoners/Chest_Wood_Summoner.prefab
     m_ReadOnly: 0
@@ -1221,6 +1227,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ae7e68181423a044da3cba334ab564bb
+    m_Address: Assets/6_Art/Items/ADDSparkMaker.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: afedc3279fc9e4642ba49ebc62089d51
     m_Address: Assets/6_Art/Items/Weapons/Item_Weapon_021.png
     m_ReadOnly: 0
@@ -1454,6 +1466,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ccad8bf9dc67f074b879b09d279d497a
+    m_Address: Assets/6_Art/Items/Tools/Flint.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ce24645065817804fbd6156e223ca429
     m_Address: Assets/2_Prefabs/World/ResourceNodes/Plants/AppleTree.prefab
@@ -1719,6 +1737,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f69b47e3c1c7a5b439c32e928803befd
+    m_Address: Assets/6_Art/Items/Tools/Item_Tool_404.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f6c78a2c3efe0264c8c88828280695cf
     m_Address: "Assets/2_Prefabs/World/Space/\u706B\u661F.prefab"
