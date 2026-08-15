@@ -54,52 +54,6 @@
           "value": 0.5
         }
       ]
-    },
-    {
-      "id": "饥饿1.6",
-      "displayName": "饥饿1.6",
-      "description": "加快饥饿消耗速度",
-      "durationSeconds": null,
-      "effects": [
-        {
-          "phase": "start",
-          "typeId": "core:food_consume_speed_multiplier",
-          "value": 1.6
-        },
-        {
-          "phase": "stop",
-          "typeId": "core:food_consume_speed_multiplier",
-          "value": 0.625
-        }
-      ]
-    },
-    {
-      "id": "饥饿2.0",
-      "displayName": "饥饿2.0",
-      "description": "加快饥饿消耗速度",
-      "durationSeconds": null,
-      "effects": [
-        {
-          "phase": "start",
-          "typeId": "core:food_consume_speed_multiplier",
-          "value": 2.0
-        },
-        {
-          "phase": "start",
-          "typeId": "core:water_consume_speed_multiplier",
-          "value": 0.5
-        },
-        {
-          "phase": "stop",
-          "typeId": "core:food_consume_speed_multiplier",
-          "value": 0.5
-        },
-        {
-          "phase": "stop",
-          "typeId": "core:water_consume_speed_multiplier",
-          "value": 2.0
-        }
-      ]
     }
   ]
 }

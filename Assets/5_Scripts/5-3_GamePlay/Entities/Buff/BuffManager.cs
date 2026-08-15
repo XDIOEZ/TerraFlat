@@ -131,6 +131,14 @@ public class BuffManager : Module
                 continue;
             }
 
+            // 旧版移动饥饿 Buff 已迁移为 Mover 的独立动作；读旧存档时直接丢弃，
+            // 不执行旧 Stop 效果，避免把新的 Food 运行时倍率错误地反向修改。
+            if (IsLegacyMovementHungerBuff(dictionaryId))
+            {
+                ActiveBuffs.Remove(dictionaryId);
+                continue;
+            }
+
             if (!runtime.Restore(buffReceiver))
             {
                 Debug.LogWarning($"[BuffManager] 已跳过无效 Buff：{runtime.DefinitionId}", this);
@@ -142,6 +150,17 @@ public class BuffManager : Module
                 RemoveBuffInternal(dictionaryId, runtime, invokeStop: true);
         }
     }
+
+    #region 旧版迁移
+
+    /// <summary>识别移动饥饿 Buff 的历史 ID，保证旧存档不会恢复可驱散的旧实现。</summary>
+    private static bool IsLegacyMovementHungerBuff(string buffId)
+    {
+        return string.Equals(buffId, "饥饿1.6", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(buffId, "饥饿2.0", StringComparison.OrdinalIgnoreCase);
+    }
+
+    #endregion
 
     #region 添加与叠加
 

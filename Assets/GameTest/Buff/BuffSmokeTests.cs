@@ -71,7 +71,7 @@ namespace FlatWorld.GameTest.Buff
             List<BuffDefinition> definitions = BuffCatalogLoader.LoadBuiltInDefinitions();
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            Assert.That(definitions, Has.Count.EqualTo(13));
+            Assert.That(definitions, Has.Count.EqualTo(11));
             foreach (BuffDefinition definition in definitions)
                 Assert.That(ids.Add(definition.Id), Is.True, $"本体 Buff 清单包含重复 ID：{definition.Id}");
         }
@@ -79,40 +79,17 @@ namespace FlatWorld.GameTest.Buff
         [Test]
         [Category("Buff.Smoke")]
         [Category("Smoke")]
-        public void RunningBuffHalvesOnlyItsHydrationDrainImpact()
+        public void MovementHungerIsNotRegisteredAsBuff()
         {
             List<BuffDefinition> definitions = BuffCatalogLoader.LoadBuiltInDefinitions();
-            BuffDefinition running = definitions.Find(definition => definition.Id == "饥饿2.0");
-
-            Assert.That(running, Is.Not.Null, "本体目录必须注册奔跑消耗 Buff。");
-            Assert.That(running.StartEffects.Count, Is.EqualTo(2));
-            Assert.That(running.StopEffects.Count, Is.EqualTo(2));
             Assert.That(
-                FindEffect(running.StartEffects, BuffEffectTypeIds.FoodConsumeSpeedMultiplier).Value,
-                Is.EqualTo(2f),
-                "奔跑对其他营养的原有效果必须保持不变。");
+                definitions.Exists(definition => definition.Id == "饥饿1.6"),
+                Is.False,
+                "移动饥饿必须由 Mover 的独立动作提供，不能重新注册为 Buff。");
             Assert.That(
-                FindEffect(running.StartEffects, BuffEffectTypeIds.WaterConsumeSpeedMultiplier).Value,
-                Is.EqualTo(0.5f),
-                "奔跑时的水分消耗必须在原结果上减半。");
-            Assert.That(
-                FindEffect(running.StopEffects, BuffEffectTypeIds.WaterConsumeSpeedMultiplier).Value,
-                Is.EqualTo(2f),
-                "停止奔跑时必须准确还原水分倍率。");
-        }
-
-        private static BuffEffectDefinition FindEffect(
-            IReadOnlyList<BuffEffectDefinition> effects,
-            string typeId)
-        {
-            for (int i = 0; i < effects.Count; i++)
-            {
-                if (effects[i].TypeId == typeId)
-                    return effects[i];
-            }
-
-            Assert.Fail($"找不到 Buff 效果：{typeId}");
-            return null;
+                definitions.Exists(definition => definition.Id == "饥饿2.0"),
+                Is.False,
+                "奔跑饥饿必须由 Mover 的独立动作提供，不能重新注册为 Buff。");
         }
 
         /// <summary>玩家和 AI 的动画模块都必须装配 Buff 光照观察者。</summary>
