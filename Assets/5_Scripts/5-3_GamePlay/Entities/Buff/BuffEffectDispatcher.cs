@@ -186,7 +186,7 @@ public static class BuffEffectDispatcher
         }
 
         if (!Mathf.Approximately(before, after))
-            food.DataUpdate?.Invoke();
+            food.NotifyStateChanged();
     }
 
     private static void ApplyTrueDamage(BuffEffectDefinition effect, BuffInstance runtime)

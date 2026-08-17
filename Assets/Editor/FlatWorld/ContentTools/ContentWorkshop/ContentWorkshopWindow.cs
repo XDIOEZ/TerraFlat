@@ -1082,16 +1082,19 @@ namespace FlatWorld.Editor.ContentWorkshop
                 foodData,
                 "nutritionConsumeRate",
                 itemDraft.FoodNutritionConsumeRate);
-            itemDraft.FoodEnableSpoilage = ReadBool(
+            JObject spoilageData = GetMechanicStateData(
                 foodModule.Data,
+                FoodObserverStateStore.SpoilageStateKey);
+            itemDraft.FoodEnableSpoilage = ReadBool(
+                spoilageData,
                 "EnableSpoilage",
                 itemDraft.FoodEnableSpoilage);
             itemDraft.FoodSpoilageIntervalSeconds = ReadFloat(
-                foodModule.Data,
+                spoilageData,
                 "SpoilageIntervalSeconds",
                 itemDraft.FoodSpoilageIntervalSeconds);
             itemDraft.FoodSpoilageTargetItemId = ReadString(
-                foodModule.Data,
+                spoilageData,
                 "SpoilageTargetItemID",
                 itemDraft.FoodSpoilageTargetItemId);
             itemDraft.FoodConsumeKind = Mathf.Clamp(
@@ -1104,6 +1107,26 @@ namespace FlatWorld.Editor.ContentWorkshop
         private static JObject GetObject(JObject source, string propertyName)
         {
             return source?.GetValue(propertyName, StringComparison.OrdinalIgnoreCase) as JObject;
+        }
+
+        /// <summary>读取指定食物观察者的通用数据节点。</summary>
+        private static JObject GetMechanicStateData(JObject source, string stateKey)
+        {
+            if (!(source?.GetValue("MechanicStates", StringComparison.OrdinalIgnoreCase) is JArray states))
+                return null;
+
+            foreach (JToken token in states)
+            {
+                if (!(token is JObject state) ||
+                    !string.Equals(state.Value<string>("StateKey"), stateKey, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                return GetObject(state, "Data");
+            }
+
+            return null;
         }
 
         /// <summary>读取食物浮点字段，字段缺失时保留默认值。</summary>

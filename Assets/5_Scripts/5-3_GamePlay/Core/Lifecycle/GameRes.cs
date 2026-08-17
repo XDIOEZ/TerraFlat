@@ -236,6 +236,23 @@ public class GameRes : SingletonAutoMono<GameRes>
         loadedAssetsCount += loadedActorDefinitionCount;
         loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
 
+        loadingText = "加载 JSON 动物技能";
+        AnimalSkillCatalog loadedAnimalSkillCatalog = null;
+        System.Exception animalSkillError = null;
+        yield return StartCoroutine(AnimalSkillCatalogLoader.LoadBuiltInAsync(
+            catalog => loadedAnimalSkillCatalog = catalog,
+            exception => animalSkillError = exception));
+        if (animalSkillError != null)
+        {
+            loadingText = $"动物技能配置加载失败：{animalSkillError.Message}";
+            loadingProgress = 1f;
+            Debug.LogError(loadingText);
+            Debug.LogException(animalSkillError);
+            yield break;
+        }
+
+        AnimalSkillCatalogService.Replace(loadedAnimalSkillCatalog);
+
         loadingText = "加载 JSON 生物生成配置";
         SpawnerConfigCatalog loadedSpawnerConfig = null;
         System.Exception spawnerConfigError = null;
@@ -546,6 +563,7 @@ private void ClearAllDictionaries()
     tileBaseDict.Clear();
     TileBlockDict.Clear();
     BuffDefinitions.Clear();
+    AnimalSkillCatalogService.Reset();
     QuestCatalog.Reset();
     textLibraryService = TextLibraryService.Empty;
     InventoryInitDict.Clear();

@@ -373,7 +373,7 @@ public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
         Nutrition nutrition = food.Data.nutrition;
         nutrition.Water = Mathf.Clamp(
             nutrition.Water + definition.WaterGainPerTick, 0f, nutrition.Max_Water);
-        food.DataUpdate?.Invoke();
+        food.NotifyStateChanged();
 
         if (definition.WaterKind == WaterEnvironmentKind.DirtyFresh &&
             Mathf.Clamp01(infectionRoll) < definition.DirtyInfectionChance)

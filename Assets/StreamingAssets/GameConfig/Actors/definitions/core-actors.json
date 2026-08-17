@@ -293,7 +293,14 @@
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
-              "Defense": 5.0,
+              "DefenseValues": {
+                "Cutting": 1.0,
+                "Piercing": 1.0,
+                "Chopping": 1.0,
+                "Blunt": 1.0
+              },
+              "Defense": 1.0,
+              "DamageSystemVersion": 2,
               "Weakness": [
                 {
                   "Tag": 0,
@@ -461,13 +468,25 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 1.0,
-              "nutritionConsumeRate": 1.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 1.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Meat_Rotten",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
@@ -795,13 +814,25 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 1.0,
-              "nutritionConsumeRate": 1.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 1.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Meat_Rotten",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
@@ -1145,6 +1176,35 @@
             }
           }
         },
+        "chargeAttackSkill": {
+          "prefab": "Module_ChargeAttack",
+          "id": "AnimalSkill_ChargeAttack",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "SkillId": "animal.charge_attack",
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
         "ai": {
           "prefab": "AI_WildBoar",
           "id": "Module_AI_WildBoar",
@@ -1167,6 +1227,10 @@
             "aggressiveDuringDusk": true,
             "detectorRefreshInterval": 1.0,
             "eatDistance": 1.5,
+            "enableGrassForaging": true,
+            "grassSearchRadius": 8.0,
+            "grassEatDuration": 1.0,
+            "grassSustenanceDays": 2.0,
             "enableWander": true,
             "idleMinDuration": 1.0,
             "idleMaxDuration": 3.0,
@@ -1176,7 +1240,8 @@
             "wanderPauseMax": 3.0,
             "edibleTags": [
               "Food",
-              "Corpse"
+              "Corpse",
+              "Meat"
             ],
             "wanderAvoidHighPenalty": true,
             "wanderDangerPenalty": 1200,
@@ -1194,6 +1259,8 @@
             "attackTriggerDistance": 1.6,
             "attackVerticalTriggerDistance": 0.45,
             "attackDuration": 1.5,
+            "attackPositionDistance": 1.2,
+            "attackPositionTolerance": 0.18,
             "rageBuildupRate": 0.5,
             "rageDecayRate": 0.2,
             "attackCooldown": 2.0,
@@ -1518,13 +1585,25 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 1.0,
-              "nutritionConsumeRate": 1.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 1.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Meat_Rotten",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {

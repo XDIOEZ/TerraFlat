@@ -28,7 +28,9 @@ public sealed class WorldTopologyColliderProxy : MonoBehaviour
         if (source == null)
             return null;
         T component = source.GetComponent<T>();
-        return component ?? source.GetComponentInParent<T>();
+        component ??= source.GetComponentInParent<T>();
+        // 玩家碰撞体常在根节点，而 DamageReceiver 等模块在子节点，需要继续向下解析。
+        return component ?? source.GetComponentInChildren<T>(true);
     }
 }
 

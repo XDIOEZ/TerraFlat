@@ -130,6 +130,51 @@ namespace MCPForUnity.Editor.Helpers
             return false;
         }
 
+        #region TextMeshPro 兼容性
+
+        private const string TmpTextBaseTypeFullName = "TMPro.TMP_Text";
+
+        /// <summary>
+        /// 跳过 TMP 材质不支持的外观属性，避免 Unity Material.Get* 产生控制台错误。
+        /// </summary>
+        private static bool ShouldSkipUnsupportedTextMaterialProperty(Component component, string propertyName)
+        {
+            if (!IsOrDerivedFrom(component.GetType(), TmpTextBaseTypeFullName))
+                return false;
+
+            string shaderPropertyName;
+            switch (propertyName)
+            {
+                case "outlineColor":
+                    shaderPropertyName = "_OutlineColor";
+                    break;
+                case "outlineWidth":
+                    shaderPropertyName = "_OutlineWidth";
+                    break;
+                default:
+                    return false;
+            }
+
+            try
+            {
+                // TMP_Text.fontSharedMaterial 只返回当前共享材质，不会触发材质属性读取。
+                PropertyInfo sharedMaterialProperty = component.GetType().GetProperty(
+                    "fontSharedMaterial",
+                    BindingFlags.Public | BindingFlags.Instance);
+                Material sharedMaterial = sharedMaterialProperty?.GetValue(component) as Material;
+
+                // 材质为空时 TMP getter 会直接返回缓存值，不需要跳过。
+                return sharedMaterial != null && !sharedMaterial.HasProperty(shaderPropertyName);
+            }
+            catch (Exception)
+            {
+                // 无法确认材质能力时保守跳过，避免反射再次触发 Unity 原生错误日志。
+                return true;
+            }
+        }
+
+        #endregion
+
         /// <summary>
         /// Serializes a UnityEngine.Object reference to a dictionary with name, instanceID, and assetPath.
         /// Used for consistent serialization of asset references in special-case component handlers.
@@ -461,6 +506,12 @@ namespace MCPForUnity.Editor.Helpers
                     skipProperty = true;
                 }
                 // --- End Skip Collider Properties ---
+
+                // TMP 的 Bitmap 等非 SDF shader 不一定声明 outline 属性，读取 TMP getter 会产生 Unity 原生错误。
+                if (ShouldSkipUnsupportedTextMaterialProperty(c, propName))
+                {
+                    skipProperty = true;
+                }
 
                 // Skip if flagged
                 if (skipProperty)

@@ -105,12 +105,17 @@ public class Inventory
                     continue;
                 }
 
-                moduleData.RuntimeOwnerItemData = itemData;
-                moduleData.RuntimeOwnerInventoryData = Data;
-                moduleData.RuntimeOwnerSlot = slot;
-                moduleData.RuntimeOwnerSlotIndex = i;
+                ModuleDataTickContext context = new ModuleDataTickContext(
+                    moduleData,
+                    itemData,
+                    Data,
+                    slot,
+                    i,
+                    deltaTime);
 
-                moduleData.DataUpdate(deltaTime);
+                // 具体模块通过观察者注册表接收 Tick；未注册模块保留旧 DataUpdate 兼容入口。
+                if (!ModuleDataTickObserverRegistry.Publish(context))
+                    moduleData.DataUpdate(deltaTime);
             }
         }
     }

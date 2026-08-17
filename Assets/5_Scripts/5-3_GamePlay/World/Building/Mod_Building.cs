@@ -43,7 +43,7 @@ public class Mod_Building : Module
     {
         // 不设置字段初值，旧 JSON 缺少 Version 时保持 0，才能正确迁移。
         public int Version;
-        public float maxVisibleDistance = 10f;
+        public float maxVisibleDistance = Mod_InteractSender.DefaultMaxInteractDistance;
         public float minVisibleDistance = 1f;
         public BuildingState State = BuildingState.NotInstalled;
         public BuildingRole Role = BuildingRole.Summoner;
@@ -834,7 +834,7 @@ public class Mod_Building : Module
             return false;
         }
 
-        if (WorldTopologyRuntime.Distance(authorityPosition, position) > Mathf.Max(1f, Data.maxVisibleDistance))
+        if (WorldTopologyRuntime.Distance(authorityPosition, position) > GetMaxPlacementDistance())
         {
             reason = "目标超出建造距离";
             return false;
@@ -1101,11 +1101,7 @@ public class Mod_Building : Module
 
     private void HandleGhostShadow()
     {
-        Camera mainCamera = Camera.main;
-        if (mainCamera == null)
-            return;
-
-        Vector3 mouse = NormalizePlacement(GetPointerWorldPosition(mainCamera));
+        Vector3 mouse = NormalizePlacement(GetPointerWorldPosition());
         if (GhostShadow == null)
         {
             CreateGhostShadow();
@@ -1115,7 +1111,7 @@ public class Mod_Building : Module
 
         GhostShadow.transform.position = mouse;
         float distance = WorldTopologyRuntime.Distance(GetAuthorityPosition(), mouse);
-        float maximumPlacementDistance = Mathf.Max(1f, Data.maxVisibleDistance);
+        float maximumPlacementDistance = GetMaxPlacementDistance();
         float alpha = Mathf.Clamp01(Mathf.InverseLerp(
             maximumPlacementDistance + 1.5f,
             maximumPlacementDistance,
@@ -1168,7 +1164,7 @@ public class Mod_Building : Module
         return true;
     }
 
-    private Vector3 GetPointerWorldPosition(Camera mainCamera)
+    private Vector3 GetPointerWorldPosition()
     {
         if (_ownerController == null && item?.Owner != null)
         {
@@ -1177,15 +1173,9 @@ public class Mod_Building : Module
                 _ownerController = item.Owner.GetComponent<GameController>();
         }
 
-        Vector2 screenPosition = _ownerController != null
-            ? _ownerController.GetPointerScreenPosition()
-            : (Vector2)Input.mousePosition;
-        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(
-            screenPosition.x,
-            screenPosition.y,
-            Mathf.Abs(mainCamera.transform.position.z)));
-        worldPosition.z = 0f;
-        return worldPosition;
+        return _ownerController != null
+            ? _ownerController.GetAimWorldPosition(GetMaxPlacementDistance())
+            : GetAuthorityPosition();
     }
 
     /// <summary>按同一层级返回预览图片和局部坐标根节点，避免跨对象计算出世界坐标偏移。</summary>
@@ -1311,6 +1301,15 @@ public class Mod_Building : Module
 
     private Vector3 GetAuthorityPosition()
         => item?.Owner != null ? item.Owner.transform.position : item != null ? item.transform.position : transform.position;
+
+    /// <summary>建筑预览、放置校验和玩家准星统一使用同一最大建造距离。</summary>
+    public float GetMaxPlacementDistance()
+    {
+        Mod_InteractSender interactionSender = item?.Owner?.GetComponentInChildren<Mod_InteractSender>(true);
+        return interactionSender != null
+            ? Mathf.Max(0.01f, interactionSender.maxInteractDistance)
+            : Mathf.Max(0.01f, Data?.maxVisibleDistance ?? Mod_InteractSender.DefaultMaxInteractDistance);
+    }
 
     private void SyncNavigationOccupancy()
     {

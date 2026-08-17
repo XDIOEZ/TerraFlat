@@ -312,12 +312,22 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private void ConfigureJoysticks()
     {
         ApplyMoveJoystickMode();
-        ConfigureJoystick(AimZoneName, MobileVirtualJoystick.JoystickRole.Aim, floating: true);
-        ConfigureJoystick(AttackZoneName, MobileVirtualJoystick.JoystickRole.Attack, floating: false);
+        float deadZone = GetAimJoystickDeadZone();
+        ConfigureJoystick(AimZoneName, MobileVirtualJoystick.JoystickRole.Aim, floating: true, deadZone: deadZone);
+        ConfigureJoystick(AttackZoneName, MobileVirtualJoystick.JoystickRole.Attack, floating: false, deadZone: deadZone);
         joysticks = viewObject.GetComponentsInChildren<MobileVirtualJoystick>(true);
     }
 
-    private void ConfigureJoystick(string nodeName, MobileVirtualJoystick.JoystickRole role, bool floating)
+    private float GetAimJoystickDeadZone()
+    {
+        return controller != null ? controller.AimDeadZone : PlayerAimCursorSystem.DefaultDeadZone;
+    }
+
+    private void ConfigureJoystick(
+        string nodeName,
+        MobileVirtualJoystick.JoystickRole role,
+        bool floating,
+        float deadZone)
     {
         Transform zone = FindRequired(nodeName);
         if (zone == null)
@@ -328,7 +338,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         MobileVirtualJoystick joystick = zone.GetComponent<MobileVirtualJoystick>();
         if (joystick == null)
             joystick = zone.gameObject.AddComponent<MobileVirtualJoystick>();
-        joystick.Configure(role, baseRect, knobRect, 92f, floating);
+        joystick.Configure(role, baseRect, knobRect, 92f, floating, deadZone);
     }
 
     /// <summary>按玩家偏好在左半屏浮动区与左下角固定区之间切换，复用同一摇杆实例。</summary>
@@ -370,7 +380,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             baseRect,
             knobRect,
             92f,
-            floating);
+            floating,
+            GetAimJoystickDeadZone());
     }
 
     private void HandleMobileControlsSettingsChanged()

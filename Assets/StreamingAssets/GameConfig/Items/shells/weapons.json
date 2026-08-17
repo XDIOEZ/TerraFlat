@@ -1006,6 +1006,27 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_98]",
         "flipX": true
+      },
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "enabled": true,
+          "parameters": {
+            "Weakness": [
+              {
+                "Tag": "切割",
+                "Level": 1
+              }
+            ],
+            "DamageValues": {
+              "Cutting": 6.0,
+              "Piercing": 0.0,
+              "Chopping": 0.0,
+              "Blunt": 0.0
+            },
+            "damageSystemVersion": 1
+          }
+        }
       }
     },
     {

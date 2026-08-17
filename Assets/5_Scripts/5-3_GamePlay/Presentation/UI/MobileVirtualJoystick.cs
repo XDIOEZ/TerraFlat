@@ -25,7 +25,7 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
     [SerializeField] private RectTransform baseRect;
     [SerializeField] private RectTransform knobRect;
     [SerializeField, Min(1f)] private float radius = 92f;
-    [SerializeField, Range(0f, 0.95f)] private float deadZone = 0.18f;
+    [SerializeField, Range(0f, 0.95f)] private float deadZone = PlayerAimCursorSystem.DefaultDeadZone;
     [SerializeField] private bool floatingOrigin;
 
     private RectTransform interactionRect;
@@ -72,7 +72,8 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         RectTransform joystickBase,
         RectTransform knob,
         float joystickRadius,
-        bool useFloatingOrigin)
+        bool useFloatingOrigin,
+        float joystickDeadZone)
     {
         // 切换固定/浮动模式前先按旧配置释放，避免底座位置与输入值残留。
         ResetOwnership();
@@ -81,6 +82,7 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         knobRect = knob;
         radius = Mathf.Max(1f, joystickRadius);
         floatingOrigin = useFloatingOrigin;
+        deadZone = Mathf.Clamp(joystickDeadZone, 0f, 0.95f);
         CacheReferences();
         ResetOwnership();
         if (baseCanvasGroup != null)
@@ -153,7 +155,7 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         if (eventData == null || eventData.pointerId != pointerId)
             return;
 
-        ResetOwnership();
+        ResetOwnership(returnKnobToCenter: role != JoystickRole.Attack);
         eventData.Use();
     }
 
@@ -223,13 +225,14 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
 
     #region 清理
 
-    public void ResetOwnership()
+    /// <summary>释放触点和输入；自然抬起时可保留战斗摇杆的最后视觉位置。</summary>
+    public void ResetOwnership(bool returnKnobToCenter = true)
     {
         bool owned = HasPointerOwnership;
         pointerId = int.MinValue;
         pointerEventCamera = null;
         originLocal = floatingOrigin ? fixedBasePosition : Vector2.zero;
-        if (knobRect != null)
+        if (returnKnobToCenter && knobRect != null)
             knobRect.anchoredPosition = Vector2.zero;
         if (floatingOrigin && baseRect != null)
             baseRect.anchoredPosition = fixedBasePosition;

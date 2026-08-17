@@ -116,6 +116,28 @@ public sealed class InputBindingService : IDisposable
         }
     }
 
+    #region 绑定覆盖持久化
+
+    /// <summary>与 Unity Input System 的按键覆盖 JSON 保持兼容，用于加载前过滤已经从输入资产移除的绑定。</summary>
+    [Serializable]
+    private sealed class SavedBindingOverrideList
+    {
+        public SavedBindingOverride[] bindings;
+    }
+
+    /// <summary>保存单项绑定覆盖所需的字段；path 为空字符串时表示用户主动清除了绑定。</summary>
+    [Serializable]
+    private sealed class SavedBindingOverride
+    {
+        public string action;
+        public string id;
+        public string path;
+        public string interactions;
+        public string processors;
+    }
+
+    #endregion
+
     private static readonly BindingSpec[] EditableBindingSpecs =
     {
         new BindingSpec("Move_Player", "up", "向上移动", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
@@ -432,7 +454,38 @@ public sealed class InputBindingService : IDisposable
 
         try
         {
-            inputAsset.LoadBindingOverridesFromJson(json);
+            SavedBindingOverrideList savedOverrides =
+                JsonUtility.FromJson<SavedBindingOverrideList>(json);
+            if (savedOverrides == null || savedOverrides.bindings == null)
+                throw new FormatException("按键覆盖配置缺少 bindings 字段。");
+
+            inputAsset.RemoveAllBindingOverrides();
+            int removedCount = 0;
+            for (int i = 0; i < savedOverrides.bindings.Length; i++)
+            {
+                SavedBindingOverride savedOverride = savedOverrides.bindings[i];
+                InputAction action;
+                int bindingIndex = FindBindingIndexById(
+                    savedOverride != null ? savedOverride.id : null,
+                    out action);
+                if (bindingIndex < 0)
+                {
+                    removedCount++;
+                    continue;
+                }
+
+                action.ApplyBindingOverride(
+                    bindingIndex,
+                    new InputBinding
+                    {
+                        overridePath = FromSavedOverrideValue(savedOverride.path),
+                        overrideInteractions = FromSavedOverrideValue(savedOverride.interactions),
+                        overrideProcessors = FromSavedOverrideValue(savedOverride.processors)
+                    });
+            }
+
+            if (removedCount > 0)
+                SaveOverrides();
         }
         catch (Exception exception)
         {
@@ -440,6 +493,46 @@ public sealed class InputBindingService : IDisposable
             store.Clear();
             Debug.LogWarning($"[InputBindingService] 已忽略损坏的按键配置：{exception.Message}");
         }
+    }
+
+    /// <summary>按稳定绑定 ID 查找当前输入资产中的动作与索引。</summary>
+    private int FindBindingIndexById(string bindingId, out InputAction action)
+    {
+        action = null;
+        if (string.IsNullOrEmpty(bindingId))
+            return -1;
+
+        for (int mapIndex = 0; mapIndex < inputAsset.actionMaps.Count; mapIndex++)
+        {
+            InputActionMap map = inputAsset.actionMaps[mapIndex];
+            for (int actionIndex = 0; actionIndex < map.actions.Count; actionIndex++)
+            {
+                InputAction candidate = map.actions[actionIndex];
+                for (int bindingIndex = 0; bindingIndex < candidate.bindings.Count; bindingIndex++)
+                {
+                    if (!string.Equals(
+                            candidate.bindings[bindingIndex].id.ToString(),
+                            bindingId,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    action = candidate;
+                    return bindingIndex;
+                }
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>还原 Unity 按键覆盖 JSON 中用字符串 null 表示的空覆盖值。</summary>
+    private static string FromSavedOverrideValue(string value)
+    {
+        return string.Equals(value, "null", StringComparison.Ordinal)
+            ? null
+            : value;
     }
 
     private void BuildEditableEntries()

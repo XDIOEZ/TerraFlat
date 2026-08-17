@@ -21,6 +21,4 @@ public partial class Food
      [Tooltip("营养消耗倍率")]
     public float nutritionConsumeRate = 1f;
 
-    [Tooltip("模块观察者的持久化状态bit流")]
-    public byte[] ObserverState;
 }
