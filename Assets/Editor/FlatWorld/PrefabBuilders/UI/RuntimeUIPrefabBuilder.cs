@@ -1941,10 +1941,11 @@ public static class RuntimeUIPrefabBuilder
             MobileActionButtonSize);
         CreateMobileButton("奔跑", gameplay.transform, "奔跑", new Vector2(0f, 0.5f), new Vector2(76f, 0f), 104f);
 
-        // 菜单是手机端的返回/退出入口，不能随模态面板一起隐藏；点击时由运行时优先关闭最上层面板。
+        // 设置与菜单并列固定在右上角，不能随模态面板一起隐藏；设置更靠右，菜单作为返回/退出入口。
         GameObject persistent = CreateUIObject("常驻控制层", root.transform);
         Stretch(persistent.GetComponent<RectTransform>());
-        CreateMobileButton("菜单", persistent.transform, "菜单", new Vector2(1f, 1f), new Vector2(-58f, -58f), 100f);
+        CreateMobileButton("设置", persistent.transform, "设置", new Vector2(1f, 1f), new Vector2(-58f, -58f), 100f);
+        CreateMobileButton("菜单", persistent.transform, "菜单", new Vector2(1f, 1f), new Vector2(-166f, -58f), 100f);
 
         // 快捷栏独立于玩法控制层，打开背包等模态面板时仍可见、可拖放。
         GameObject hotbarAnchor = CreateUIObject("快捷栏锚点", root.transform);
@@ -2024,8 +2025,6 @@ public static class RuntimeUIPrefabBuilder
         CreateButton("制作", buttonGrid.transform, "制作", 184f, 66f, false);
         CreateButton("状态", buttonGrid.transform, "生存状态", 184f, 66f, false);
         CreateButton("丢弃一个", buttonGrid.transform, "丢弃一个", 184f, 66f, false);
-        CreateButton("设置", buttonGrid.transform, "设置", 184f, 66f, true);
-
         // 镜头缩放单独占用抽屉底部横向区域，避免继续用两个按钮离散调整视野。
         TextMeshProUGUI zoomLabel = CreateText("镜头缩放标签", drawer.transform, "镜头缩放", 16f, Cream);
         zoomLabel.alignment = TextAlignmentOptions.MidlineLeft;

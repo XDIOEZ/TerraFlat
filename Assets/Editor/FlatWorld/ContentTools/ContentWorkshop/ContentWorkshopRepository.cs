@@ -466,7 +466,7 @@ namespace FlatWorld.Editor.ContentWorkshop
 
         #region 食物模块写入
 
-        /// <summary>将工坊食物参数写入食物模块的 data 与 parameters 节点。</summary>
+        /// <summary>将工坊食物参数写入食物基础数据和观察者状态负载。</summary>
         private static void ApplyFoodParameters(JObject foodModule, WorkshopItemDraft draft)
         {
             JObject data = EnsureObject(foodModule, "data");
@@ -487,11 +487,24 @@ namespace FlatWorld.Editor.ContentWorkshop
                 Mathf.Max(0f, draft.FoodNutritionConsumeSpeed);
             foodData["WaterConsumeSpeedRate"] = Mathf.Max(0f, draft.FoodWaterConsumeSpeedRate);
             foodData["nutritionConsumeRate"] = Mathf.Max(0f, draft.FoodNutritionConsumeRate);
-            data["EnableSpoilage"] = draft.FoodEnableSpoilage;
-            data["SpoilageIntervalSeconds"] = Mathf.Max(0f, draft.FoodSpoilageIntervalSeconds);
-            data["SpoilageTargetItemID"] = draft.FoodSpoilageTargetItemId?.Trim() ?? string.Empty;
+            data.Remove("EnableSpoilage");
+            data.Remove("SpoilageElapsedSeconds");
+            data.Remove("SpoilageIntervalSeconds");
+            data.Remove("SpoilageTargetItemID");
+            JArray mechanicStates = EnsureArray(data, "MechanicStates");
+            JObject spoilageState = EnsureMechanicState(mechanicStates, FoodObserverStateStore.SpoilageStateKey);
+            JObject spoilageData = EnsureObject(spoilageState, "Data");
+            spoilageData["EnableSpoilage"] = draft.FoodEnableSpoilage;
+            spoilageData["SpoilageElapsedSeconds"] = 0f;
+            spoilageData["SpoilageIntervalSeconds"] = Mathf.Max(0f, draft.FoodSpoilageIntervalSeconds);
+            spoilageData["SpoilageTargetItemID"] = draft.FoodSpoilageTargetItemId?.Trim() ?? string.Empty;
+
+            JObject consumptionState = EnsureMechanicState(mechanicStates, FoodObserverStateStore.ConsumptionStateKey);
+            JObject consumptionData = EnsureObject(consumptionState, "Data");
+            consumptionData["EatingProgress"] = 0f;
 
             JObject parameters = EnsureObject(foodModule, "parameters");
+            parameters.Remove("EatingProgress");
             parameters["ConsumeKind"] = Mathf.Clamp(draft.FoodConsumeKind, 0, 1);
         }
 
@@ -503,6 +516,38 @@ namespace FlatWorld.Editor.ContentWorkshop
 
             var created = new JObject();
             source[propertyName] = created;
+            return created;
+        }
+
+        /// <summary>确保模块 JSON 中存在可写的数组节点。</summary>
+        private static JArray EnsureArray(JObject source, string propertyName)
+        {
+            if (source[propertyName] is JArray existing)
+                return existing;
+
+            var created = new JArray();
+            source[propertyName] = created;
+            return created;
+        }
+
+        /// <summary>按 StateKey 查找或创建观察者状态节点。</summary>
+        private static JObject EnsureMechanicState(JArray states, string stateKey)
+        {
+            foreach (JToken token in states)
+            {
+                if (token is JObject state &&
+                    string.Equals(state.Value<string>("StateKey"), stateKey, StringComparison.Ordinal))
+                {
+                    return state;
+                }
+            }
+
+            var created = new JObject
+            {
+                ["StateKey"] = stateKey,
+                ["Data"] = new JObject()
+            };
+            states.Add(created);
             return created;
         }
 

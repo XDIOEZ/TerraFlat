@@ -772,7 +772,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
             nutrition.Protein = Mathf.Max(
                 0f,
                 nutrition.Protein - actualHeal * PlayerHealingProteinCostPerHp);
-            playerFood.DataUpdate?.Invoke();
+            playerFood.NotifyStateChanged();
         }
 
         // 只有在血量发生变化时才刷新UI

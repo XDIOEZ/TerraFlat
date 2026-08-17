@@ -19,6 +19,7 @@
 | Action 真相 | `Assets/PlayerInput/PlayerInputActions.inputactions` | 定义 `Mobile` 控制方案与动作绑定 |
 | 生成包装 | `Assets/PlayerInput/PlayerInputActions.cs` | Input System 自动生成；只检查，不手改 |
 | 输入语义 | `Assets/5_Scripts/5-3_GamePlay/Player/Controller/GameController.cs` | 设备切换、径向虚拟指针、攻击事件、输入锁和生命周期清理 |
+| 准星系统 | `Assets/5_Scripts/5-3_GamePlay/Player/Controller/PlayerAimCursorSystem.cs` | 统一摇杆死区、世界距离、屏幕径向位置和目标距离裁剪；`GameController` 持有并调用 |
 | 摇杆 | `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/MobileVirtualJoystick.cs` | 每实例持有 `pointerId`；移动、浮动指向与攻击摇杆写入 |
 | 按钮 | `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/MobileInputButton.cs` | 按住/抬起转换为虚拟设备按钮并可靠释放 |
 | HUD 控制器 | `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/PlayerMobileControlsHUD.cs` | 本地玩家可见性、Prefab 绑定、抽屉、快捷栏、面板联动和总清理 |

@@ -26,7 +26,9 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private IInteractable previewReceiver;
     private Component previewReceiverComponent;
     private InteractionTargetOutline previewOutline;
-    public float maxInteractDistance = 2f;
+    public const float DefaultMaxInteractDistance = 2f;
+    // 交互距离默认值；建筑放置距离运行时复用该值。
+    public float maxInteractDistance = DefaultMaxInteractDistance;
     private bool shouldDisableColliderAfterInteract;
     // 出口可能在玩家已经到位后才生成；按键时主动扫描，避免只依赖首次物理触发回调。
     private readonly Collider2D[] interactionOverlapBuffer = new Collider2D[32];

@@ -1364,8 +1364,14 @@ public partial class GameManager
             return;
         }
 
-        if (panel != null)
-            ContinueGame(panel.GetInputField(GameSavePlayerInputKey)?.text);
+        string playerName = panel?.GetInputField(GameSavePlayerInputKey)?.text;
+        if (string.IsNullOrWhiteSpace(playerName))
+        {
+            Debug.LogWarning("请先选择或输入玩家名称");
+            return;
+        }
+
+        ContinueGame(playerName);
     }
 
     public void OnClick_LoadSaveData_Button()
@@ -1392,7 +1398,8 @@ public partial class GameManager
         if (saveList != null)
         {
             saveList.GeneratePlayerButtons();
-            saveList.FocusFirstPlayerOrNameInputForGamepad();
+            if (!saveList.TrySelectFirstPlayer())
+                saveList.FocusFirstPlayerOrNameInputForGamepad();
         }
     }
 

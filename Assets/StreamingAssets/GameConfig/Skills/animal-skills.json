@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "skills": [
+    {
+      "id": "animal.charge_attack",
+      "type": "chargeAttack",
+      "chargeDurationSeconds": 3.0,
+      "rushSpeedMultiplier": 3.0,
+      "damageMultiplier": 2.0,
+      "cooldownSeconds": 8.0,
+      "rushDurationSeconds": 1.25,
+      "rushDistance": 6.0,
+      "triggerDistance": 10.0,
+      "arrivalDistance": 0.75,
+      "hitboxForwardOffset": 0.75,
+      "hitboxSize": {
+        "x": 1.4,
+        "y": 0.9
+      },
+      "hitboxOffset": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "chargeAnimation": "Stand",
+      "rushAnimation": "Move"
+    }
+  ]
+}

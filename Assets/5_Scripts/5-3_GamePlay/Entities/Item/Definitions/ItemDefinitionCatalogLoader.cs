@@ -829,11 +829,7 @@ public static class ItemDefinitionCatalogLoader
             $"modules.{moduleName}.data",
             "Name",
             "ID",
-            "isRunning",
-            "RuntimeOwnerItemData",
-            "RuntimeOwnerInventoryData",
-            "RuntimeOwnerSlot",
-            "RuntimeOwnerSlotIndex");
+            "isRunning");
         try
         {
             JsonConvert.PopulateObject(data.ToString(Formatting.None), moduleData, TemplateSettings);

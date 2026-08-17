@@ -401,7 +401,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9f4d4a1a8b7d4cc5a3f01e88e105ef52, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stopDistance: 0.5
+  stopDistance: 0.4
   waypointDistance: 0.12
   repathInterval: 0.25
   maxRetryInterval: 2
@@ -543,6 +543,8 @@ MonoBehaviour:
     State: 0
     Fatigue01: 0
     RageLevel: 0
+    GrassSustenanceInitialized: 0
+    GrassSustenanceRemaining: 0
   _currentFoodTarget: {fileID: 0}
   _currentThreat: {fileID: 0}
   debugLog: 1
@@ -558,6 +560,10 @@ MonoBehaviour:
   aggressiveDuringDusk: 1
   detectorRefreshInterval: 1
   eatDistance: 1.5
+  enableGrassForaging: 1
+  grassSearchRadius: 8
+  grassEatDuration: 1
+  grassSustenanceDays: 2
   enableWander: 1
   idleMinDuration: 1
   idleMaxDuration: 3
@@ -568,6 +574,7 @@ MonoBehaviour:
   edibleTags:
   - Food
   - Corpse
+  - Meat
   wanderAvoidHighPenalty: 1
   wanderDangerPenalty: 1200
   wanderSampleCount: 8
@@ -583,6 +590,8 @@ MonoBehaviour:
   attackTriggerDistance: 1.6
   attackVerticalTriggerDistance: 0.45
   attackDuration: 1.5
+  attackPositionDistance: 1.2
+  attackPositionTolerance: 0.18
   rageBuildupRate: 0.5
   rageDecayRate: 0.2
   attackCooldown: 2

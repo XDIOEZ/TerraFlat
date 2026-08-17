@@ -919,6 +919,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 59468430928f459086d2706d1f909c07
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Skills/Module_ChargeAttack.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8b4619eba9808f64f92359a091d87a46
     m_Address: "Assets/2_Prefabs/World/Space/\u592A\u9633.prefab"
     m_ReadOnly: 0

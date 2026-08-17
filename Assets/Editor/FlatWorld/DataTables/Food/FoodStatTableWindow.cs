@@ -406,10 +406,11 @@ public class FoodStatTableWindow : EditorWindow
                 row.WaterConsumeSpeedRate = foodData?.WaterConsumeSpeedRate ?? 0f;
                 row.nutritionConsumeRate = foodData?.nutritionConsumeRate ?? 0f;
 
-                row.EnableSpoilage = food.FoodModData.EnableSpoilage;
-                row.SpoilageIntervalSeconds = food.FoodModData.SpoilageIntervalSeconds;
-                row.SpoilageTargetItemID = food.FoodModData.SpoilageTargetItemID ?? "Meat_Rotten";
-                row.HasSpoilage = food.FoodModData.EnableSpoilage;
+                FoodSpoilageObserverData spoilageData = FoodSpoilageObserverData.Load(food.FoodModData);
+                row.EnableSpoilage = spoilageData.EnableSpoilage;
+                row.SpoilageIntervalSeconds = spoilageData.SpoilageIntervalSeconds;
+                row.SpoilageTargetItemID = spoilageData.SpoilageTargetItemID ?? "Meat_Rotten";
+                row.HasSpoilage = spoilageData.EnableSpoilage;
             }
         }
 
@@ -487,12 +488,12 @@ public class FoodStatTableWindow : EditorWindow
                 foodData.WaterConsumeSpeedRate = Mathf.Max(0f, row.WaterConsumeSpeedRate);
                 foodData.nutritionConsumeRate = Mathf.Max(0f, row.nutritionConsumeRate);
 
-                food.FoodModData.EnableSpoilage = row.EnableSpoilage;
-                food.FoodModData.SpoilageIntervalSeconds = Mathf.Max(0f, row.SpoilageIntervalSeconds);
+                FoodSpoilageObserverData spoilageData = FoodSpoilageObserverData.Load(food.FoodModData);
+                spoilageData.EnableSpoilage = row.EnableSpoilage;
+                spoilageData.SpoilageIntervalSeconds = Mathf.Max(0f, row.SpoilageIntervalSeconds);
                 if (!string.IsNullOrEmpty(row.SpoilageTargetItemID))
-                {
-                    food.FoodModData.SpoilageTargetItemID = row.SpoilageTargetItemID;
-                }
+                    spoilageData.SpoilageTargetItemID = row.SpoilageTargetItemID;
+                spoilageData.Save(food.FoodModData);
 
                 EditorUtility.SetDirty(food);
                 changed = true;

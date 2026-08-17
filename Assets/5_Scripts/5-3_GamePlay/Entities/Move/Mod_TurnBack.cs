@@ -25,6 +25,9 @@ public class Mod_TurnBack : Module
     [SerializeField, ReadOnly, Tooltip("是否正在转身（由脚本自动控制）")]
     public bool isTurning = false;
 
+    /// <summary>技能冲刺期间锁定朝向，阻止自动转身和其他模块改向。</summary>
+    public bool IsDirectionLocked { get; private set; }
+
     /// <summary>角色当前实际使用的左右转身角，供瞄准对象合成最终旋转。</summary>
     public float CurrentTurnAngleY { get; private set; }
 
@@ -91,6 +94,7 @@ public class Mod_TurnBack : Module
 
     private void UpdateWork()
     {
+        if (IsDirectionLocked) return;
         if (faceMouse == null) return;
 
         Vector2 characterPos = transform.position;
@@ -104,6 +108,7 @@ public class Mod_TurnBack : Module
 
     public void TurnBodyToDirection(Vector2 targetDirection)
     {
+        if (IsDirectionLocked) return;
         OnTrun.Invoke(targetDirection);
 
         if (Mathf.Abs(targetDirection.x) < 0.01f) return;
@@ -318,6 +323,20 @@ public class Mod_TurnBack : Module
         targetY = currentDirection == Vector2.right ? 0f : 180f;
         CurrentTurnAngleY = targetY;
         UpdateAllTransformDirections();
+    }
+
+    /// <summary>设置技能使用的朝向锁，释放后恢复正常自动转身。</summary>
+    public void SetDirectionLock(bool locked)
+    {
+        IsDirectionLocked = locked;
+        if (locked)
+        {
+            isTurning = false;
+            turnTimeElapsed = 0f;
+            targetY = currentDirection == Vector2.right ? 0f : 180f;
+            CurrentTurnAngleY = targetY;
+            UpdateAllTransformDirections();
+        }
     }
 
     #endregion

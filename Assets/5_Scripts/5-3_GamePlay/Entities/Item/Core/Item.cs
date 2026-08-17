@@ -387,7 +387,6 @@ public abstract class Item : MonoBehaviour
         itemMods.BindOwner(this);
         MarkModuleScheduleDirty();
         MigrateDeprecatedAgricultureModuleData();
-        MigrateDeprecatedStickWeaponModuleData();
         bool firstStart = itemData.ModuleDataDic.Count == 0;
 
         var modules = GetComponentsInChildren<Module>().ToList();
@@ -559,33 +558,6 @@ public abstract class Item : MonoBehaviour
         if (keysToRemove.Count > 0)
         {
             Debug.Log($"[Item] 已迁移 {itemData.IDName} 的旧农业模块数据：{deprecatedModuleId} ×{keysToRemove.Count}", this);
-        }
-    }
-
-    /// <summary>
-    /// 将木棍从旧的可攻击物品迁移为纯材料，避免旧存档自动恢复攻击模块。
-    /// </summary>
-    private void MigrateDeprecatedStickWeaponModuleData()
-    {
-        if (itemData?.ModuleDataDic == null || itemData.ModuleDataDic.Count == 0 ||
-            !string.Equals(itemData.IDName, "Stick_Wood", StringComparison.Ordinal))
-            return;
-
-        string[] deprecatedModuleIds =
-        {
-            "Mod_Damage",
-            "Module_Weapon_AnimationAction"
-        };
-        List<string> keysToRemove = itemData.ModuleDataDic
-            .Where(pair => pair.Value != null && deprecatedModuleIds.Contains(pair.Value.ID))
-            .Select(pair => pair.Key)
-            .ToList();
-        foreach (string key in keysToRemove)
-            itemData.ModuleDataDic.Remove(key);
-
-        if (keysToRemove.Count > 0)
-        {
-            Debug.Log($"[Item] 已迁移木棍的旧攻击模块：×{keysToRemove.Count}", this);
         }
     }
 

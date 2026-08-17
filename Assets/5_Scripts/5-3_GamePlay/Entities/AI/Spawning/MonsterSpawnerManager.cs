@@ -867,7 +867,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         float rate = GetDeterministicFoodRate(spawnedItem, minRate, maxRate);
         nutrition.Carbohydrates = nutrition.Max_Carbohydrates * rate;
         nutrition.Fat = nutrition.Max_Fat * rate;
-        food.DataUpdate?.Invoke();
+        food.NotifyStateChanged();
     }
 
     private static float GetDeterministicFoodRate(Item item, float minRate, float maxRate)

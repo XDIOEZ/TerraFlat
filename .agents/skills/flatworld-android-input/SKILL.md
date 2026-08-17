@@ -20,7 +20,8 @@ description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系�
 - 只编辑 `PlayerInputActions.inputactions` 作为 Action/Binding 真相；`PlayerInputActions.cs` 是生成文件，不要手工维护。
 - 保持攻击、交互、使用三条语义分流：手机攻击只产生 `AttackStarted`/`AttackEnded`；交互复用 `E`；使用复用 `RightClick`。不得让手机攻击回落到 `LeftClick`。
 - 手机 `RightClick` 使用事件来自 HUD 按钮，`GameController` 与快捷栏消费端都不能再用 `IsPointerOverUI()` 拦截；仅 Mobile 绕过，桌面右键仍保持 UI 遮挡保护。
-- 保持普通指向只更新朝向和最后有效力度，松手后准线保留最后世界位置；攻击按下立即开始，未出死区时沿普通朝向，拖出死区后使用攻击方向，松开后恢复普通朝向。
+- 保持普通指向只更新朝向和最后有效力度；准线每帧按玩家当前位置、最后方向和力度重算，松手后仍跟随玩家；攻击按下立即开始，未出死区时沿普通朝向，拖出死区后同步为普通朝向并持续保持，松手后仍跟随玩家移动。
+- 战斗摇杆抬起时只释放攻击输入并保留摇杆头的视觉位置；输入锁、面板、失焦和控件重置仍使用完整清理恢复摇杆中心。
 - 普通指向的最终方向同时作为交互目标选择依据；交互优先命中该方向前方目标，找不到时才回退到距离排序。
 - 所有需要世界坐标的交互、放置、种植、锄地、工具和丢弃路径统一调用 `GameController.GetPointerScreenPosition()` 或 `GetMouseWorldPosition()`，不得直接新增 `Mouse.current`、`Input.mousePosition` 或 `Camera.ScreenToWorldPoint` 读取。
 - 每个摇杆和按住型按钮独立持有自己的 `pointerId`。不得使用单个全局触摸、`Input.GetTouch(0)` 或共享“当前手指”。

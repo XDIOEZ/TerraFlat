@@ -503,7 +503,7 @@ MonoBehaviour:
   UseGamepadVirtualCursor: 1
   GamepadCursorSpeed: 1300
   GamepadCursorRadius: 120
-  GamepadCursorDeadZone: 0.18
+  GamepadCursorDeadZone: 0.08
   CursorClampPadding: 6
   LeftClick:
     _PersistentCalls: []

@@ -336,17 +336,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Humus",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -2015,17 +2026,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Meat_Rotten",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -2180,17 +2202,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Humus",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -2345,17 +2378,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Humus",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -2826,17 +2870,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Humus",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -2991,17 +3046,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Humus",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -3156,17 +3222,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Humus",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -3321,17 +3398,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Meat_Rotten",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -3533,17 +3621,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Meat_Rotten",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -3698,17 +3797,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Meat_Rotten",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -3863,17 +3973,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Meat_Rotten",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -4028,17 +4149,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Meat_Rotten",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -4193,17 +4325,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Meat_Rotten",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -4358,17 +4501,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": false,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Meat_Rotten",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": false,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -4523,17 +4677,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 1800.0,
-            "SpoilageTargetItemID": "Meat_Rotten",
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Meat_Rotten"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "StaminaState": {
               "StaminaRecoverSpeed": 1.0,
               "StaminaConsumeSpeed": 0.5
@@ -4767,18 +4932,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": false,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 720.0,
-            "SpoilageTargetItemID": "WildDogMilk_Gray",
-            "EatingProgress": 0.0,
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": false,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 720.0,
+                  "SpoilageTargetItemID": "WildDogMilk_Gray"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "ConsumptionEnabled": true,
             "ConsumeCompleteReplacementItemID": "WildDogMilk_Gray",
             "StaminaState": {
@@ -4933,18 +5108,28 @@
                 "y": 0.0
               },
               "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0,
-              "ObserverState": []
+              "nutritionConsumeRate": 0.0
             },
-            "EnableSpoilage": true,
-            "SpoilageElapsedSeconds": 0.0,
-            "SpoilageIntervalSeconds": 720.0,
-            "SpoilageTargetItemID": "WildDogMilk",
-            "EatingProgress": 0.0,
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 720.0,
+                  "SpoilageTargetItemID": "WildDogMilk"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
             "Type": 0
           },
           "parameters": {
-            "EatingProgress": 0.0,
             "ConsumptionEnabled": false,
             "ConsumeCompleteReplacementItemID": "",
             "StaminaState": {

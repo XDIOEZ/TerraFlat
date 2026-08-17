@@ -16,6 +16,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 ## 不变量
 
 - 输入链为 Input System → `GameController` → 玩家模块；不要让 UI、物理输入和玩法模块各自维护冲突状态。
+- `InputBindingService` 的覆盖存档按 binding GUID 关联输入资产；输入资产删改绑定后，加载前必须过滤当前资产不存在的 GUID 并重存清理后的配置，因为 Unity 内置加载器会直接输出警告而不会抛出异常。
 - 需要按触点落地的世界玩法统一调用 `GameController.GetMouseWorldPosition(screenPosition)`，不得在手机玩法模块内直接读取相机或共享虚拟光标坐标。
 - `Move_Player` 的二维幅度同时表达模拟移动速度比例：手机虚拟摇杆与手柄左摇杆必须保留 0～1 幅度，玩家移动路径不得提前归一化；键盘满幅输入与目标寻路接口保持原有语义。
 - 环境交互输入只转发按下/持续/松开；具体环境提供 `IEnvironmentActionDefinition` 或 `IEnvironmentEffectDefinition`，角色侧 `EnvironmentInteractionRunner` 每次创建独立实例，禁止把玩家长按或被动效果状态存进共享地块配置。

@@ -116,6 +116,8 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	[SerializeField, ReadOnly] protected Mod_ItemDetector _detector;
 	[SerializeField, ReadOnly] protected Mod_AnimatorController _animator;
 	[SerializeField, ReadOnly] protected Mod_TurnBack _turnBody;
+	// 动物技能由独立 Module 组合，AI 基类只提供统一收集与生命周期入口。
+	protected readonly AI_AnimalSkillController _animalSkills = new AI_AnimalSkillController();
 #endregion
 
 #region Events
@@ -221,6 +223,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		ClearRecentDamageThreat();
 
 		BindCommonModules();
+		_animalSkills.ResetRuntime();
 		OnResetRuntimeState();
 		BuildStateMachine();
 		if (IsIdleState(_currentState))
@@ -868,6 +871,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 
 		// 子类绑定额外模块
 		OnBindExtraModules();
+		_animalSkills.Bind(item);
 
 		// 验证通用模块
 		if (_mover == null)

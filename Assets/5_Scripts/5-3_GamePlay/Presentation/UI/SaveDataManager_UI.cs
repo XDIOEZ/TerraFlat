@@ -280,6 +280,27 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         }
     }
 
+    /// <summary>
+    /// 存档载入后自动确认第一条有效角色，避免玩家直接进入世界时遗漏角色选择。
+    /// </summary>
+    public bool TrySelectFirstPlayer()
+    {
+        for (int index = 0; index < playerRows.Count; index++)
+        {
+            SelectionRow firstPlayer = playerRows[index];
+            if (firstPlayer?.Button == null || !firstPlayer.Button.IsInteractable() ||
+                string.IsNullOrWhiteSpace(firstPlayer.Value))
+            {
+                continue;
+            }
+
+            OnClick_List_PlayerName_Button(firstPlayer.Value, firstPlayer.Root);
+            return true;
+        }
+
+        return false;
+    }
+
     #endregion
 
     #region 公共方法
@@ -326,11 +347,12 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         isBatchDeleteConfirmationOpen = false;
         batchSelectedSaveNames.Clear();
         ClearSelectedRow(ref selectedSaveRow);
+        ClearSaveSelectionVisuals();
         ClearSelectedRow(ref selectedPlayerRow);
         bool playerStructureChanged = ReleaseRows(playerRows);
         UpdateBatchDeleteUi();
         CommitDynamicListChanges(false, playerStructureChanged, false);
-        FocusFirstSaveOrBackForGamepad();
+        FocusBatchDeleteCancelForGamepad();
     }
 
     /// <summary>退出批量选择并清空勾选；不会删除任何存档。</summary>
@@ -410,7 +432,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         isBatchDeleteConfirmationOpen = false;
         batchSelectedSaveNames.Clear();
         for (int index = 0; index < saveRows.Count; index++)
-            SetRowVisual(saveRows[index], false);
+            ClearRowVisual(saveRows[index]);
         UpdateBatchDeleteUi();
     }
 
@@ -506,6 +528,15 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             return;
 
         FocusGamepadControl(panel, panel.GetButton(buttonName));
+    }
+
+    /// <summary>进入批量模式后把手柄焦点留在操作区，不让任一存档显示导航选中态。</summary>
+    private void FocusBatchDeleteCancelForGamepad()
+    {
+        if (!EventSystemGuard.IsGamepadMode)
+            return;
+
+        FocusBatchDeleteControl(GameManager.GameSaveBatchCancelButtonKey);
     }
 
     #endregion
@@ -894,6 +925,37 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
     {
         SetRowVisual(selectedRow, false);
         selectedRow = null;
+    }
+
+    /// <summary>清除所有存档条目的业务选中和导航焦点视觉，避免模式切换残留高亮。</summary>
+    private void ClearSaveSelectionVisuals()
+    {
+        for (int index = 0; index < saveRows.Count; index++)
+            ClearRowVisual(saveRows[index]);
+
+        EventSystem eventSystem = EventSystem.current;
+        GameObject selectedObject = eventSystem?.currentSelectedGameObject;
+        if (selectedObject != null &&
+            SaveSelectButton_Parent_Content != null &&
+            selectedObject.transform.IsChildOf(SaveSelectButton_Parent_Content))
+        {
+            eventSystem.SetSelectedGameObject(null);
+        }
+    }
+
+    private static void ClearRowVisual(SelectionRow row)
+    {
+        if (row == null)
+            return;
+
+        if (row.View != null)
+        {
+            row.View.ClearSelectionVisual();
+            return;
+        }
+
+        if (row.Info?.SelectImage != null)
+            row.Info.SelectImage.enabled = false;
     }
 
     private static void SetRowVisual(SelectionRow row, bool selected)

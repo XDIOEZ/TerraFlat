@@ -91,6 +91,7 @@ MonoBehaviour:
     ItemSpecialData: 
     inHand: 0
     Guid: -1070873522
+    FactionId: 
     position: {x: 50, y: 50}
     TileLoaded: 0
     GrassLayer:

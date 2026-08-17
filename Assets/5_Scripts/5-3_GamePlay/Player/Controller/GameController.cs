@@ -34,18 +34,19 @@ public class GameController : Module
     public event Action<InputDeviceType> ActiveInputDeviceChanged;
     public event Action AttackStarted;
     public event Action AttackEnded;
+    public float AimDeadZone => Mathf.Clamp01(GamepadCursorDeadZone); // 手机和手柄共用的准星死区
 
     [Header("手柄适配")]
     public bool EnableGamepadAdapter = true; // 是否启用手柄适配
     public bool UseGamepadVirtualCursor = true; // 手柄模式下是否启用虚拟光标
     public float GamepadCursorSpeed = 1300f; // 虚拟光标速度（像素/秒）
     [Min(1f)] public float GamepadCursorRadius = 120f; // 游戏内准星相对玩家的屏幕半径
-    public float GamepadCursorDeadZone = 0.18f; // 摇杆死区
+    [Range(0f, 0.95f)] public float GamepadCursorDeadZone = PlayerAimCursorSystem.DefaultDeadZone; // 摇杆死区
     public float CursorClampPadding = 6f; // 光标屏幕边缘留白
 
     [Header("手机指向")]
-    [Min(0f)] public float MobileCursorMinWorldDistance = 1f; // 手机摇杆回中时的最小世界距离
-    [Min(0f)] public float MobileCursorMaxWorldDistance = 10f; // 手机摇杆推满时的最大世界距离
+    [Min(0f)] public float MobileCursorMinWorldDistance = PlayerAimCursorSystem.DefaultMinWorldDistance; // 手机摇杆回中时的最小世界距离
+    [Min(0f)] public float MobileCursorMaxWorldDistance = PlayerAimCursorSystem.DefaultMaxWorldDistance; // 手机摇杆推满时的最大世界距离
 
     private InputDeviceType _currentInputDevice = InputDeviceType.KeyboardMouse; // 当前输入源缓存
     private InputDeviceType _preferredInputDevice = InputDeviceType.KeyboardMouse; // 设置中锁定的玩法控制方案
@@ -62,15 +63,12 @@ public class GameController : Module
     private bool _attackInputHeld;
     private float _mobileAimStrength;
     private float _mobileAttackAimStrength;
-    private bool _mobileAimActive;
-    private bool _mobileAttackAimActive;
     private Vector2 _mobileAimDirection = Vector2.right;
     private Vector2 _mobileAttackAimDirection = Vector2.right;
     private bool _mobileAimDirectionInitialized;
     private bool _mobileAttackActive;
     private bool _mobileAttackDraggedOutsideDeadZone;
-    private Vector3 _mobileCursorWorldPosition;
-    private bool _mobileCursorWorldPositionInitialized;
+    private readonly PlayerAimCursorSystem _aimCursor = new();
     private Inventory_HotBar _playerHotBar;
     private Mod_InteractSender _interactionSender;
     private readonly List<RaycastResult> _uiRaycastResults = new List<RaycastResult>(8);
@@ -122,6 +120,7 @@ public class GameController : Module
         }
 
         _inputActions = new PlayerInputActions();
+        _aimCursor.DeadZone = AimDeadZone;
         LoadPreferredInputDevice();
         ApplyPreferredInputDevice();
         InputBindings = new InputBindingService(_inputActions.asset);
@@ -353,6 +352,15 @@ public class GameController : Module
         return WorldTopologyRuntime.NormalizePosition(worldPos);
     }
 
+    /// <summary>获取当前准星世界位置，并按调用方提供的玩法距离统一裁剪。</summary>
+    public Vector3 GetAimWorldPosition(float maxWorldDistance)
+    {
+        return _aimCursor.ClampWorldPosition(
+            transform.position,
+            GetMouseWorldPosition(),
+            maxWorldDistance);
+    }
+
 #endregion
 
 #region 手柄适配
@@ -582,6 +590,7 @@ public class GameController : Module
         UpdateCurrentInputDevice(context);
         _mobileAttackActive = true;
         _mobileAttackDraggedOutsideDeadZone = false;
+        _mobileAttackAimStrength = 0f;
         UpdateMobileRadialCursor();
 
         if (IsGameplayInputLocked)
@@ -609,63 +618,54 @@ public class GameController : Module
             EndAttack();
         }
 
-        if (!_mobileAimDirectionInitialized && _mobileAttackDraggedOutsideDeadZone)
+        if (_mobileAttackDraggedOutsideDeadZone)
         {
             _mobileAimDirection = _mobileAttackAimDirection;
+            _mobileAimStrength = _mobileAttackAimStrength;
             _mobileAimDirectionInitialized = true;
         }
 
         _mobileAttackDraggedOutsideDeadZone = false;
+        _mobileAttackAimStrength = 0f;
         UpdateMobileRadialCursor();
     }
 
-    /// <summary>普通指向松手时保留最后有效方向，零向量只结束当前触控所有权。</summary>
+    /// <summary>普通指向松手时保留最后有效方向和力度，零向量只结束当前触控所有权。</summary>
     private void HandleMobileAim(InputAction.CallbackContext context)
     {
         UpdateCurrentInputDevice(context);
-        bool canceled = context.canceled;
-        if (!canceled)
-            _mobileAimActive = true;
-
         Vector2 aim = context.ReadValue<Vector2>();
-        if (aim.sqrMagnitude >= GamepadCursorDeadZone * GamepadCursorDeadZone)
+        _aimCursor.DeadZone = AimDeadZone;
+        if (_aimCursor.ApplyStickInput(aim, ref _mobileAimDirection, out float strength))
         {
-            _mobileAimDirection = aim.normalized;
             _mobileAimDirectionInitialized = true;
-            _mobileAimStrength = Mathf.Clamp01(aim.magnitude);
+            _mobileAimStrength = strength;
         }
-
-        if (canceled)
-            _mobileAimActive = false;
 
         if (!_mobileAttackActive)
             UpdateMobileRadialCursor();
     }
 
-    /// <summary>攻击摇杆拖出死区后覆盖普通方向；未拖出时仍沿普通最后方向立即攻击。</summary>
+    /// <summary>攻击摇杆拖出死区后同步普通视角方向和力度，使松手后仍保持该朝向并跟随玩家。</summary>
     private void HandleMobileAttackAim(InputAction.CallbackContext context)
     {
         UpdateCurrentInputDevice(context);
-        bool canceled = context.canceled;
-        if (!canceled)
-            _mobileAttackAimActive = true;
-
         Vector2 aim = context.ReadValue<Vector2>();
-        if (aim.sqrMagnitude >= GamepadCursorDeadZone * GamepadCursorDeadZone)
+        _aimCursor.DeadZone = AimDeadZone;
+        if (_aimCursor.ApplyStickInput(aim, ref _mobileAttackAimDirection, out float strength))
         {
-            _mobileAttackAimDirection = aim.normalized;
             _mobileAttackDraggedOutsideDeadZone = true;
-            _mobileAttackAimStrength = Mathf.Clamp01(aim.magnitude);
+            _mobileAimDirection = _mobileAttackAimDirection;
+            _mobileAimStrength = strength;
+            _mobileAimDirectionInitialized = true;
+            _mobileAttackAimStrength = strength;
         }
-
-        if (canceled)
-            _mobileAttackAimActive = false;
 
         if (_mobileAttackActive)
             UpdateMobileRadialCursor();
     }
 
-    /// <summary>更新手机准线；松手后保持最后一次世界坐标，只重新映射到当前屏幕。</summary>
+    /// <summary>按玩家当前位置和最后有效的手机方向/力度更新准线，使准线跟随玩家移动。</summary>
     private void UpdateMobileRadialCursor()
     {
         if (_preferredInputDevice != InputDeviceType.Mobile || _gamepadPointerActive ||
@@ -676,61 +676,43 @@ public class GameController : Module
         }
 
         EnsureMobileAimDirectionInitialized();
-        bool hasLiveInput = _mobileAimActive || _mobileAttackAimActive || _mobileAttackActive;
-        if (!_mobileCursorWorldPositionInitialized || hasLiveInput)
+        Vector2 direction;
+        float mobileAimStrength;
+        if (_mobileAttackActive && _mobileAttackDraggedOutsideDeadZone)
         {
-            Vector2 direction;
-            float mobileAimStrength;
-            if (_mobileAttackActive && _mobileAttackDraggedOutsideDeadZone)
-            {
-                direction = _mobileAttackAimDirection;
-                mobileAimStrength = _mobileAttackAimStrength;
-            }
-            else
-            {
-                direction = _mobileAimDirection;
-                mobileAimStrength = _mobileAimStrength;
-            }
-
-            if (_mainCamera != null)
-            {
-                _mobileCursorWorldPosition = CalculateMobileWorldCursorPosition(
-                    direction,
-                    mobileAimStrength);
-                _mobileCursorWorldPositionInitialized = true;
-            }
-            else
-            {
-                _virtualCursorScreenPosition = CalculateGameplayRadialCursorScreenPosition(
-                    GetPlayerScreenPosition(),
-                    direction,
-                    GamepadCursorRadius,
-                    new Vector2(Screen.width, Screen.height),
-                    CursorClampPadding);
-                _virtualCursorInitialized = true;
-                EventSystemGuard.NotifyMobileAimCursorPosition(_virtualCursorScreenPosition);
-                return;
-            }
+            direction = _mobileAttackAimDirection;
+            mobileAimStrength = _mobileAttackAimStrength;
+        }
+        else
+        {
+            direction = _mobileAimDirection;
+            mobileAimStrength = _mobileAimStrength;
         }
 
-        Vector3 screenPosition = _mainCamera.WorldToScreenPoint(_mobileCursorWorldPosition);
+        if (_mainCamera == null)
+        {
+            _virtualCursorScreenPosition = _aimCursor.CalculateRadialScreenPosition(
+                GetPlayerScreenPosition(),
+                direction,
+                GamepadCursorRadius,
+                new Vector2(Screen.width, Screen.height),
+                CursorClampPadding);
+            _virtualCursorInitialized = true;
+            EventSystemGuard.NotifyMobileAimCursorPosition(_virtualCursorScreenPosition);
+            return;
+        }
+
+        // 每帧以玩家当前坐标重新投影，避免准线停留在玩家移动前的旧世界位置。
+        Vector3 mobileCursorWorldPosition = _aimCursor.CalculateRadialWorldPosition(
+            transform.position,
+            direction,
+            mobileAimStrength,
+            MobileCursorMinWorldDistance,
+            GetMobileCursorMaxWorldDistance());
+        Vector3 screenPosition = _mainCamera.WorldToScreenPoint(mobileCursorWorldPosition);
         _virtualCursorScreenPosition = new Vector2(screenPosition.x, screenPosition.y);
         _virtualCursorInitialized = true;
         EventSystemGuard.NotifyMobileAimCursorPosition(_virtualCursorScreenPosition);
-    }
-
-    /// <summary>按手机摇杆力度把准线投影到固定世界距离，避免相机缩放改变建造范围。</summary>
-    private Vector3 CalculateMobileWorldCursorPosition(Vector2 direction, float strength)
-    {
-        float minDistance = Mathf.Max(0f, MobileCursorMinWorldDistance);
-        float maxDistance = Mathf.Max(minDistance, GetMobileCursorMaxWorldDistance());
-        float worldDistance = Mathf.Lerp(minDistance, maxDistance, Mathf.Clamp01(strength));
-        Vector2 normalizedDirection = direction.sqrMagnitude > 0.0001f
-            ? direction.normalized
-            : Vector2.right;
-        Vector3 worldPosition = transform.position + (Vector3)(normalizedDirection * worldDistance);
-        worldPosition.z = 0f;
-        return WorldTopologyRuntime.NormalizePosition(worldPosition);
     }
 
     private float GetMobileCursorMaxWorldDistance()
@@ -748,7 +730,7 @@ public class GameController : Module
         Item heldItem = _playerHotBar?.CurentSelectItem;
         Mod_Building building = heldItem?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
         if (building != null && building.IsItemInInventory && building.Data != null)
-            return Mathf.Max(0.01f, building.Data.maxVisibleDistance);
+            return building.GetMaxPlacementDistance();
 
         return interactionDistance;
     }
@@ -793,11 +775,8 @@ public class GameController : Module
         EventSystemGuard.SetMobileAimCursorVisible(false);
         _mobileAimStrength = 0f;
         _mobileAttackAimStrength = 0f;
-        _mobileAimActive = false;
-        _mobileAttackAimActive = false;
         _mobileAttackActive = false;
         _mobileAttackDraggedOutsideDeadZone = false;
-        _mobileCursorWorldPositionInitialized = false;
         _suppressMobileAttackUntilRelease = false;
         EndAttack();
     }
@@ -889,7 +868,7 @@ public class GameController : Module
         }
 
         Vector2 playerScreenPosition = GetPlayerScreenPosition();
-        _virtualCursorScreenPosition = CalculateGameplayRadialCursorScreenPosition(
+        _virtualCursorScreenPosition = _aimCursor.CalculateRadialScreenPosition(
             playerScreenPosition,
             _gamepadAimDirection,
             GamepadCursorRadius,
@@ -910,28 +889,6 @@ public class GameController : Module
         }
 
         return new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
-    }
-
-    /// <summary>计算固定半径准星位置，并限制在屏幕安全范围内。</summary>
-    private static Vector2 CalculateGameplayRadialCursorScreenPosition(
-        Vector2 playerScreenPosition,
-        Vector2 aimDirection,
-        float radius,
-        Vector2 screenSize,
-        float padding)
-    {
-        Vector2 direction = aimDirection.sqrMagnitude > 0.0001f
-            ? aimDirection.normalized
-            : Vector2.right;
-        Vector2 cursorPosition = playerScreenPosition + direction * Mathf.Max(1f, radius);
-
-        float minX = Mathf.Min(Mathf.Max(0f, padding), screenSize.x * 0.5f);
-        float maxX = Mathf.Max(minX, screenSize.x - padding);
-        float minY = Mathf.Min(Mathf.Max(0f, padding), screenSize.y * 0.5f);
-        float maxY = Mathf.Max(minY, screenSize.y - padding);
-        cursorPosition.x = Mathf.Clamp(cursorPosition.x, minX, maxX);
-        cursorPosition.y = Mathf.Clamp(cursorPosition.y, minY, maxY);
-        return cursorPosition;
     }
 
     /// <summary>
