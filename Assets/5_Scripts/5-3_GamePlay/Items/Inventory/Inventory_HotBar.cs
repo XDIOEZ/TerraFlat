@@ -570,7 +570,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
         if (CurentSelectItem == null)
         {
-            Debug.LogWarning("[Inventory_HotBar] 右键使用失败：当前未持有物品");
+            // 空快捷栏槽位的右键操作是无效操作，不应把正常输入记录成警告。
             return;
         }
 
