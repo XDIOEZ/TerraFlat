@@ -210,8 +210,8 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             return false;
         }
 
-        if (basePanel.GetText("窗口信息") != null)
-            basePanel.GetText("窗口信息").text = _Data.Name;
+        if (basePanel.TryGetText("窗口信息", out TextMeshProUGUI titleText))
+            titleText.text = _Data.Name;
 
         InitUI();
         basePanel.PrepareForGamepadNavigation();

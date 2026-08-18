@@ -185,8 +185,8 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
         }
 
         // 设置窗口信息
-        if (basePanel.GetText("窗口信息") != null)
-            basePanel.GetText("窗口信息").text = _Data.Name;
+        if (basePanel.TryGetText("窗口信息", out var titleText))
+            titleText.text = _Data.Name;
 
         // 调用UI初始化方法（此时basePanel已存在）
         InitUI();
