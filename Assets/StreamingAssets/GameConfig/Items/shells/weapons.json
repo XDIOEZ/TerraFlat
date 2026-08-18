@@ -76,7 +76,10 @@
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
-            "OnlyDealDamageWhenInHand": false
+            "OnlyDealDamageWhenInHand": false,
+            "EnableHitSlowdown": true,
+            "HitSlowMultiplier": 0.8,
+            "HitSlowDuration": 0.18
           }
         }
       }
@@ -324,6 +327,9 @@
             "DamageInterval": 1.0,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "EnableHitSlowdown": true,
+            "HitSlowMultiplier": 0.65,
+            "HitSlowDuration": 0.25,
             "tileDamageToolKind": 0,
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
@@ -515,6 +521,9 @@
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "EnableHitSlowdown": true,
+            "HitSlowMultiplier": 0.65,
+            "HitSlowDuration": 0.25,
             "tileDamageToolKind": 0,
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
@@ -706,6 +715,9 @@
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "EnableHitSlowdown": true,
+            "HitSlowMultiplier": 0.65,
+            "HitSlowDuration": 0.25,
             "tileDamageToolKind": 0,
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
@@ -897,6 +909,9 @@
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
+            "EnableHitSlowdown": true,
+            "HitSlowMultiplier": 0.65,
+            "HitSlowDuration": 0.25,
             "tileDamageToolKind": 0,
             "weaponAudioClass": 0,
             "attackAudioCueId": "",

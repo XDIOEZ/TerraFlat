@@ -584,7 +584,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
             damageInfo = CreateDamageInfo(damageSender, appliedDamage, hpBefore, Hp, bodyPartHits);
             if (Hp > 0f)
-                ApplyHitSlowdown();
+                ApplyHitSlowdown(damageSender);
 
             DispatchDamageReceived(damageInfo);
             OnDamaged_ShowUiAndScheduleHide();
@@ -621,7 +621,27 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     public void ApplyHitSlowdown()
     {
-        if (!enableHitSlowdown || hitSlowDuration <= 0f || hitSlowMultiplier >= 1f)
+        ApplyHitSlowdown(enableHitSlowdown, hitSlowMultiplier, hitSlowDuration);
+    }
+
+    /// <summary>优先使用攻击者提供的减速参数；旧的接收器参数作为非武器攻击的兼容回退。</summary>
+    public void ApplyHitSlowdown(IDamageSender damageSender)
+    {
+        if (damageSender is IHitSlowdownSource source)
+        {
+            ApplyHitSlowdown(
+                source.HitSlowdownEnabled,
+                source.HitSlowMultiplier,
+                source.HitSlowDuration);
+            return;
+        }
+
+        ApplyHitSlowdown();
+    }
+
+    private void ApplyHitSlowdown(bool enabled, float multiplier, float duration)
+    {
+        if (!enabled || duration <= 0f || multiplier >= 1f)
             return;
 
         Mover mover = ResolveMover();
@@ -631,16 +651,16 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
         if (_slowedMoveSpeed == moveSpeed)
         {
-            _hitSlowRemainingDuration = hitSlowDuration;
+            _hitSlowRemainingDuration = duration;
             return;
         }
 
         ClearHitSlowdown();
 
-        _appliedHitSlowMultiplier = Mathf.Clamp(hitSlowMultiplier, 0.05f, 1f);
+        _appliedHitSlowMultiplier = Mathf.Clamp(multiplier, 0.05f, 1f);
         _slowedMoveSpeed = moveSpeed;
         _slowedMoveSpeed.MultiplicativeModifier *= _appliedHitSlowMultiplier;
-        _hitSlowRemainingDuration = hitSlowDuration;
+        _hitSlowRemainingDuration = duration;
     }
 
     private void UpdateHitSlowdown(float deltaTime)
