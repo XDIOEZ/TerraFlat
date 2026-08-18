@@ -1,0 +1,4 @@
+.vscode/**
+media/**
+*.vsix
+node_modules/**

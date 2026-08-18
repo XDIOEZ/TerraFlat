@@ -209,7 +209,7 @@ MonoBehaviour:
       SlotMaxVolume: 0
       Index: 0
     RuntimeOwnerSlotIndex: -1
-    BitData: '{"Version":3,"maxVisibleDistance":10.0,"minVisibleDistance":1.0,"State":0,"Role":0,"SnapshotBase64":null,"BuildingPrefabId":"Door_Stone","SummonerPrefabId":"Door_Stone_Summoner"}'
+    BitData: '{"Version":3,"maxVisibleDistance":2.0,"minVisibleDistance":1.0,"State":0,"Role":0,"SnapshotBase64":null,"BuildingPrefabId":"Door_Stone","SummonerPrefabId":"Door_Stone_Summoner"}'
   GhostShadow: {fileID: 0}
   boxCollider2D: {fileID: 0}
   damageReceiver: {fileID: 0}

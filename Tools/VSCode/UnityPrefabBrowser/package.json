@@ -1,0 +1,56 @@
+{
+  "name": "unity-prefab-browser",
+  "displayName": "Unity Prefab Browser",
+  "description": "在 VS Code 中以 Unity Hierarchy 风格浏览已保存的 Prefab。",
+  "version": "0.1.0",
+  "publisher": "terraf-local",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCustomEditor:unityPrefabBrowser.prefabEditor"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "unityPrefabBrowser.prefabEditor",
+        "displayName": "Unity Prefab Hierarchy",
+        "selector": [
+          {
+            "filenamePattern": "*.prefab"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "unityPrefabBrowser.openAsHierarchy",
+        "title": "Unity Prefab Browser: Open with Unity Prefab Hierarchy"
+      },
+      {
+        "command": "unityPrefabBrowser.openAsText",
+        "title": "Unity Prefab Browser: Open YAML Source"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "unityPrefabBrowser.openAsHierarchy",
+          "when": "resourceExtname == .prefab",
+          "group": "navigation@1"
+        },
+        {
+          "command": "unityPrefabBrowser.openAsText",
+          "when": "resourceExtname == .prefab",
+          "group": "navigation@2"
+        }
+      ]
+    }
+  }
+}

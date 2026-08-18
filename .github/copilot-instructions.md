@@ -18,6 +18,8 @@
 - 你只需要编写和制作游戏 测试可以交给屏幕前的我,如果需要测试 可以在任务完成后告诉我要帮你测试什么
 - 除非用户明确要求运行测试，否则禁止主动调用 Unity Test Runner 或任何 `run_tests` 工具；默认只检查静态诊断、Unity 编译和 Console，并在总结中列出建议由用户执行的测试
 - 如果验证工具被用户取消，不要重试或中断剩余工作；改用不弹出交互卡片的静态诊断与 Console 检查完成收尾
+- 实现更稳，强化工程结构
+- 你是专业的Unity开发者 有架构思维 目光长远
 
 ## 不确定问题处理
 
@@ -26,21 +28,6 @@
 - 仅在低风险且可逆的默认选择下继续，并先说明假设；涉及删除或覆盖资源、公共接口、存档、网络协议或跨平台行为时必须先确认。
 - 不因用户当前打开某个文件就默认修改它，先定位真实实现入口与依赖关系。
 
-### 相关文档
-
-<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
-- Project name: FlatWorld
-- Unity version: Unity 2022.3.62f3c1
-- Active scene:
-  - Name: UI_Equipment
-  - Tags:
-    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
-  - Layers:
-    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player
-- Active game object:
-  - Name: FWUI_SlotLabel_Feet
-  - Tag: Untagged
-  - Layer: UI
 <!-- UNITY CODE ASSIST INSTRUCTIONS END -->
 
 #### 其他

@@ -55,8 +55,11 @@
         "Temp/": true,
         "UserSettings/": true
     },
-    "dotnet.defaultSolution": "FlatWorld.sln",
+    "dotnet.defaultSolution": "TerraFlat-master.sln",
     "dotnet.preferCSharpExtension": true,
+    "workbench.editorAssociations": {
+        "*.prefab": "unityPrefabBrowser.prefabEditor"
+    },
     "outline-map.follow": "manual",
     "outline-map.expand": "expanded",
     "chat.permissions.default": "autoApprove",
