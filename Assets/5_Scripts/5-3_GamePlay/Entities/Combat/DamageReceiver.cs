@@ -15,7 +15,7 @@ using Random = UnityEngine.Random;
 public class DamageReceiver : Module, IRemoteNetworkModule
 {
     private const int CurrentBodyPartDataVersion = 1;
-    private const int CurrentDamageSystemVersion = 2;
+    private const int CurrentDamageSystemVersion = 3;
     // 玩家每恢复 1 点生命值消耗 1 点蛋白质。
     private const float PlayerHealingProteinCostPerHp = 1f;
 
@@ -1459,6 +1459,10 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         if (Data.DamageSystemVersion < 2)
             TryApplyTemporaryResourceDefensePreset();
 
+        // 版本 3 下调树木钝击防御，让木棍只能造成很小的伤害，砍树仍应使用斧头。
+        if (Data.DamageSystemVersion < 3)
+            TryApplyTreeDefenseUpdate();
+
         Data.Weakness?.Clear();
         Data.DamageSystemVersion = CurrentDamageSystemVersion;
     }
@@ -1469,7 +1473,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         string itemId = item?.itemData?.IDName;
         Data.DefenseValues = itemId switch
         {
-            "AppleTree" or "Tree_Coconut" => new CombatDefense(2f, 4f, 0f, 3f),
+            "AppleTree" or "Tree_Coconut" => new CombatDefense(2f, 4f, 0f, 1.5f),
             "Bush" => new CombatDefense(0f, 1f, 0f, 1f),
             "Mine_Stone" => new CombatDefense(12f, 2f, 14f, 2f),
             "Mine_Coal" => new CombatDefense(10f, 3f, 12f, 3f),
@@ -1478,6 +1482,14 @@ public class DamageReceiver : Module, IRemoteNetworkModule
             "Mine_Iron" => new CombatDefense(18f, 13f, 20f, 8f),
             _ => Data.DefenseValues
         };
+    }
+
+    /// <summary>把版本 2 及更早树木存档的钝击防御迁移到新的低伤害数值。</summary>
+    private void TryApplyTreeDefenseUpdate()
+    {
+        string itemId = item?.itemData?.IDName;
+        if (itemId == "AppleTree" || itemId == "Tree_Coconut")
+            Data.DefenseValues.Blunt = 1.5f;
     }
 
     private void OnDamaged_ShowUiAndScheduleHide()
