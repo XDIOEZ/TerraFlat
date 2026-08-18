@@ -560,6 +560,7 @@ public class Inventory
             itemSlotUI.OnTouchTap = null;
             itemSlotUI.OnTouchLongPress = null;
             itemSlotUI.OnTouchWorldLongPress = null;
+            itemSlotUI.OnTouchHalfDragBegin = null;
             itemSlotUI.OnDesktopTap = null;
 
             itemSlotUI.OnLeftClick += OnLeftClick;
@@ -572,6 +573,7 @@ public class Inventory
             itemSlotUI.OnTouchTap = OnTouchTap;
             itemSlotUI.OnTouchLongPress = OnTouchLongPress;
             itemSlotUI.OnTouchWorldLongPress = OnTouchWorldLongPress;
+            itemSlotUI.OnTouchHalfDragBegin = OnTouchHalfDragBegin;
             itemSlotUI.OnDesktopTap = OnDesktopTap;
 
             // 修复 Belong_Inventory 的逻辑，将其设置为当前 Inventory 实例
@@ -634,6 +636,7 @@ public class Inventory
         slotUI.OnTouchTap = null;
         slotUI.OnTouchLongPress = null;
         slotUI.OnTouchWorldLongPress = null;
+        slotUI.OnTouchHalfDragBegin = null;
         slotUI.OnDesktopTap = null;
 
         slotUI.OnLeftClick += OnLeftClick;
@@ -646,6 +649,7 @@ public class Inventory
         slotUI.OnTouchTap = OnTouchTap;
         slotUI.OnTouchLongPress = OnTouchLongPress;
         slotUI.OnTouchWorldLongPress = OnTouchWorldLongPress;
+        slotUI.OnTouchHalfDragBegin = OnTouchHalfDragBegin;
         slotUI.OnDesktopTap = OnDesktopTap;
 
         slotUI.RefreshUI();
@@ -929,6 +933,31 @@ public class Inventory
             ? TouchTapFlow.PutDown
             : TouchTapFlow.None;
 
+        return true;
+    }
+
+    /// <summary>触屏长按更久后拖拽时，只把源堆的一半转入玩家手部槽位。</summary>
+    public virtual bool OnTouchHalfDragBegin(int index)
+    {
+        if (!TryGetPlayerHandSlots(index, out Inventory handInventory, out ItemSlot localSlot, out ItemSlot handSlot) ||
+            localSlot.itemData?.Stack == null)
+            return false;
+
+        // 手上已有物品时沿用原有整组拖拽/交换语义，避免半组拆分覆盖手上物品。
+        if (handSlot.itemData != null)
+            return OnMouseDragBegin(index);
+
+        DefaultTarget_Inventory = handInventory;
+        int sourceAmount = Mathf.FloorToInt(localSlot.itemData.Stack.Amount);
+        int halfAmount = Mathf.Max(1, Mathf.CeilToInt(sourceAmount * 0.5f));
+        if (!Data.TransferItemQuantityTo(localSlot, handInventory.Data, handSlot, halfAmount))
+            return false;
+
+        RefreshUI(index);
+        handInventory.RefreshUI(handSlot.Index);
+        _touchTapFlow = HasHeldItem(handInventory)
+            ? TouchTapFlow.PutDown
+            : TouchTapFlow.None;
         return true;
     }
 

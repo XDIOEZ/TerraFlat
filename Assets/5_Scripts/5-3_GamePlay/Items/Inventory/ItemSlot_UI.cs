@@ -66,6 +66,9 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>触屏拖拽物品后在世界非 UI 区域长按的入口。</summary>
     public System.Func<Vector2, bool> OnTouchWorldLongPress { get; set; }
 
+    /// <summary>触屏长按更久后开始拖拽时，把源堆拆出一半的入口。</summary>
+    public System.Func<int, bool> OnTouchHalfDragBegin { get; set; }
+
     /// <summary>桌面轻触入口；空手时保持选中语义，拖拽后手持整组时用于单件分发。</summary>
     public System.Action<int> OnDesktopTap { get; set; }
 
@@ -99,15 +102,19 @@ public class ItemSlot_UI : MonoBehaviour,
 
     [Header("手机长按")]
     [SerializeField, Min(0.1f)] private float touchLongPressSeconds = 0.45f;
+    [SerializeField, Min(0.1f)] private float touchHalfDragReadySeconds = 0.85f;
     [SerializeField, Min(1f)] private float touchMoveTolerance = 16f;
     private int touchPointerId = int.MinValue;
     private Vector2 touchPressPosition;
     private bool touchMovedTooFar;
     private bool touchLongPressTriggered;
+    private bool touchLongPressMenuPending;
+    private bool touchHalfDragReady;
     private bool touchPressStartedWithItem;
     private bool touchItemDragActive;
     private bool touchScrollDragActive;
     private Coroutine touchLongPressCoroutine;
+    private Coroutine touchHalfDragReadyCoroutine;
     private Coroutine touchWorldLongPressCoroutine;
     private Vector2 touchWorldPressPosition;
     private Vector2 touchWorldPointerPosition;
@@ -142,6 +149,7 @@ public class ItemSlot_UI : MonoBehaviour,
         OnTouchTap = null;
         OnTouchLongPress = null;
         OnTouchWorldLongPress = null;
+        OnTouchHalfDragBegin = null;
         OnDesktopTap = null;
         _OnScroll.Clear();
         if (selectionOutlineCreated && selectionOutline != null)
@@ -308,6 +316,8 @@ public class ItemSlot_UI : MonoBehaviour,
             touchItemDragActive = false;
             touchScrollDragActive = false;
             touchLongPressCoroutine = StartCoroutine(WaitForTouchLongPress());
+            if (touchPressStartedWithItem)
+                touchHalfDragReadyCoroutine = StartCoroutine(WaitForTouchHalfDragReady());
             return;
         }
 
@@ -344,6 +354,7 @@ public class ItemSlot_UI : MonoBehaviour,
             StopCoroutine(touchLongPressCoroutine);
             touchLongPressCoroutine = null;
         }
+        CancelTouchHalfDragReady();
     }
 
     public void OnPointerUp(PointerEventData eventData)
@@ -351,8 +362,11 @@ public class ItemSlot_UI : MonoBehaviour,
         if (eventData.button == PointerEventData.InputButton.Left && eventData.pointerId == touchPointerId)
         {
             bool shouldTap = !touchMovedTooFar && !touchLongPressTriggered;
+            bool shouldShowLongPressMenu = !touchMovedTooFar && touchLongPressMenuPending;
             CancelTouchPress();
-            if (shouldTap)
+            if (shouldShowLongPressMenu)
+                HandleTouchLongPress();
+            else if (shouldTap)
                 HandleTouchTap();
         }
 
@@ -387,6 +401,8 @@ public class ItemSlot_UI : MonoBehaviour,
             StopCoroutine(touchLongPressCoroutine);
             touchLongPressCoroutine = null;
         }
+        if (touchMovedTooFar)
+            CancelTouchHalfDragReady();
     }
 
     public void OnInitializePotentialDrag(PointerEventData eventData)
@@ -410,7 +426,10 @@ public class ItemSlot_UI : MonoBehaviour,
             if (eventData.button == PointerEventData.InputButton.Left && touchPressStartedWithItem)
             {
                 Sprite touchDraggedSprite = image != null ? image.sprite : null;
-                touchItemDragActive = OnMouseDragBegin?.Invoke(slotIndex) == true;
+                System.Func<int, bool> beginDrag = touchHalfDragReady
+                    ? OnTouchHalfDragBegin ?? OnMouseDragBegin
+                    : OnMouseDragBegin;
+                touchItemDragActive = beginDrag?.Invoke(slotIndex) == true;
                 if (touchItemDragActive)
                 {
                     CreateMouseDragGhost(touchDraggedSprite, eventData.position);
@@ -515,7 +534,20 @@ public class ItemSlot_UI : MonoBehaviour,
             yield break;
 
         touchLongPressTriggered = true;
-        HandleTouchLongPress();
+        if (touchPressStartedWithItem)
+            touchLongPressMenuPending = true;
+        else
+            HandleTouchLongPress();
+    }
+
+    private IEnumerator WaitForTouchHalfDragReady()
+    {
+        yield return new WaitForSecondsRealtime(Mathf.Max(touchLongPressSeconds, touchHalfDragReadySeconds));
+        touchHalfDragReadyCoroutine = null;
+        if (touchPointerId == int.MinValue || touchMovedTooFar || !touchPressStartedWithItem)
+            yield break;
+
+        touchHalfDragReady = true;
     }
 
     private IEnumerator WaitForTouchWorldLongPress(int pointerId)
@@ -562,6 +594,8 @@ public class ItemSlot_UI : MonoBehaviour,
         touchPointerId = int.MinValue;
         touchMovedTooFar = false;
         touchPressStartedWithItem = false;
+        touchLongPressMenuPending = false;
+        CancelTouchHalfDragReady();
     }
 
     private void CancelTouchLongPress()
@@ -569,6 +603,14 @@ public class ItemSlot_UI : MonoBehaviour,
         if (touchLongPressCoroutine != null)
             StopCoroutine(touchLongPressCoroutine);
         touchLongPressCoroutine = null;
+    }
+
+    private void CancelTouchHalfDragReady()
+    {
+        if (touchHalfDragReadyCoroutine != null)
+            StopCoroutine(touchHalfDragReadyCoroutine);
+        touchHalfDragReadyCoroutine = null;
+        touchHalfDragReady = false;
     }
 
     private void CancelTouchWorldLongPress()
