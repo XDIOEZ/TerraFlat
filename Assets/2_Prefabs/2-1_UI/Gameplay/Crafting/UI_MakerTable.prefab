@@ -1571,6 +1571,7 @@ GameObject:
   - component: {fileID: 3899455578550254128}
   - component: {fileID: 2115922731168733653}
   - component: {fileID: 8510605165787814091}
+  - component: {fileID: 723450918273645002}
   m_Layer: 5
   m_Name: UI_MakerTable
   m_TagString: Untagged
@@ -1677,7 +1678,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   canvasGroup: {fileID: 3899455578550254128}
   CanDrag: 1
-  Dragger: {fileID: 0}
+  Dragger: {fileID: 723450918273645002}
   rectTransform: {fileID: 8543295809523781137}
   PanelName: 
   isOpen: 0
@@ -1696,6 +1697,25 @@ MonoBehaviour:
   m_EffectColor: {r: 0.84313726, g: 0.6313726, b: 0.3882353, a: 0.26}
   m_EffectDistance: {x: 1, y: -1}
   m_UseGraphicAlpha: 1
+--- !u!114 &723450918273645002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2639614329428065687}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e35963cbd2d44304c83e206e1ebb4fc3, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  rectTransform: {fileID: 8543295809523781137}
+  canvas: {fileID: 0}
+  draggableImage: {fileID: 750660494994979300}
+  originalPosition: {x: 0, y: 0}
+  offset: {x: 0, y: 0}
+  DefaultOrder: 0
+  IsDragging: 0
 --- !u!1 &2645646613136906322
 GameObject:
   m_ObjectHideFlags: 0
