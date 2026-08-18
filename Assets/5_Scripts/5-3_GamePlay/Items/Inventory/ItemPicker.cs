@@ -11,6 +11,8 @@ using UnityEngine;
 public class ItemPicker : Module
 {
 
+    private const float InventoryFullPromptCooldownSeconds = 600f;
+
     #region 基础参数
 
     public Ex_ModData_MemoryPackable ModSaveData;
@@ -95,6 +97,7 @@ public class ItemPicker : Module
     /// 基础拾取权限控制变量
     /// </summary>
     private bool canPickUp = true;
+    private float nextInventoryFullPromptTime = -Mathf.Infinity;
 
     /// <summary>
     /// 综合判断是否可以拾取物品
@@ -192,8 +195,27 @@ public class ItemPicker : Module
                 return;
             }
 
+            ShowInventoryFullPrompt();
             Debug.Log($"[{nameof(ItemPicker)}] All target inventories are full, cannot pick up item: {pickAble.itemData.IDName}");
         }
+    }
+
+    /// <summary>拾取失败时按触发事件限频提示，不在空闲期间轮询或重复弹窗。</summary>
+    private void ShowInventoryFullPrompt()
+    {
+        float now = Time.unscaledTime;
+        if (now < nextInventoryFullPromptTime)
+            return;
+
+        GameManager gameManager = FindObjectOfType<GameManager>();
+        GameSaveStatusHUD statusHUD = gameManager != null
+            ? GameSaveStatusHUD.Ensure(gameManager)
+            : null;
+        if (statusHUD == null)
+            return;
+
+        nextInventoryFullPromptTime = now + InventoryFullPromptCooldownSeconds;
+        statusHUD.ShowTransientMessage("我的背包满了");
     }
 
     /// <summary>
