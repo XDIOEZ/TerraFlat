@@ -4,7 +4,7 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// 负责显示游戏保存状态的右上角非交互 HUD。
+/// 负责显示游戏保存状态和短暂玩法提示的右上角非交互 HUD。
 /// 视觉节点只来自 UI_SaveStatus Prefab；保存期间使用未缩放时间保持提示和淡出不受暂停影响。
 /// </summary>
 [DisallowMultipleComponent]
@@ -26,6 +26,8 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
     private float shownAt;
     private bool saveInProgress;
     private bool saveFailed;
+    private bool transientMessageActive;
+    private string transientMessage;
     private bool missingPrefabLogged;
 
     #endregion
@@ -83,6 +85,8 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
     {
         saveInProgress = true;
         saveFailed = false;
+        transientMessageActive = false;
+        transientMessage = null;
         CancelHideCoroutine();
         BeginViewIfReady();
         if (statusText == null)
@@ -98,6 +102,8 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
     {
         saveInProgress = false;
         saveFailed = !succeeded;
+        transientMessageActive = false;
+        transientMessage = null;
         BeginViewIfReady();
         if (statusText == null)
             return;
@@ -121,8 +127,29 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
 
         if (saveInProgress)
             statusText.text = FlatWorldLocalizationService.GetUiText("正在保存…");
+        else if (transientMessageActive)
+            statusText.text = FlatWorldLocalizationService.GetUiText(transientMessage);
         else if (saveFailed)
             statusText.text = FlatWorldLocalizationService.GetUiText("保存失败");
+    }
+
+    /// <summary>显示一条复用现有状态卡片的短暂玩法提示，避免新增单句提示预制体。</summary>
+    public void ShowTransientMessage(string message, float visibleSeconds = 2f)
+    {
+        if (string.IsNullOrWhiteSpace(message) || saveInProgress)
+            return;
+
+        CancelHideCoroutine();
+        BeginViewIfReady();
+        if (statusText == null)
+            return;
+
+        transientMessage = message;
+        transientMessageActive = true;
+        statusText.text = FlatWorldLocalizationService.GetUiText(message);
+        shownAt = Time.unscaledTime;
+        SetViewVisible(true);
+        ScheduleHide(visibleSeconds);
     }
 
     #endregion
@@ -221,6 +248,8 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
         if (saveInProgress)
             yield break;
 
+        transientMessageActive = false;
+        transientMessage = null;
         SetViewVisible(false);
     }
 
