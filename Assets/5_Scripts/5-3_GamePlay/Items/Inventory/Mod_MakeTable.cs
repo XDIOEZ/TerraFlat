@@ -23,10 +23,13 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
     public GameObject InventoryPanel_Prefab;
     public Mod_InteractReciver mod_InteractReciver;
 
+    private const string InputInventorySaveKey = "maketable.input";
+    private const string OutputInventorySaveKey = "maketable.output";
+
     public override void Load()
     {
         mod_InteractReciver = item.GetComponentInChildren<Mod_InteractReciver>();
-        ModSaveData.ReadData(ref RawData);
+        RestoreInventoryState();
         mod_InteractReciver.OnAction_Start += Interact_Start;
         mod_InteractReciver.OnAction_Stop += Interact_Stop;
         InitData();
@@ -49,9 +52,36 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
 
     public override void Save()
     {
-        ModSaveData.WriteData(RawData);
+        SaveInventoryState();
     }
     #endregion
+
+    #region 库存存档
+
+    /// <summary>读取工作台输入/输出槽位；旧 RawData 格式不存在库存时保持兼容。</summary>
+    private void RestoreInventoryState()
+    {
+        Inventory_ModuleData savedData = InventoryModuleDataPersistence.TryRead(ModSaveData);
+        InventoryModuleDataPersistence.TryRestore(inputInventory, savedData, InputInventorySaveKey);
+        InventoryModuleDataPersistence.TryRestore(outputInventory, savedData, OutputInventorySaveKey);
+    }
+
+    /// <summary>保存工作台输入/输出槽位。</summary>
+    private void SaveInventoryState()
+    {
+        ModSaveData ??= new Ex_ModData_MemoryPackable();
+        Inventory_ModuleData savedData = new Inventory_ModuleData
+        {
+            Name = ModSaveData.Name,
+            ID = ModSaveData.ID
+        };
+        InventoryModuleDataPersistence.Capture(savedData, InputInventorySaveKey, inputInventory);
+        InventoryModuleDataPersistence.Capture(savedData, OutputInventorySaveKey, outputInventory);
+        InventoryModuleDataPersistence.Write(ModSaveData, savedData);
+    }
+
+    #endregion
+
     [Header("交互组件")]
     [Tooltip("合成按钮")]
     public Button workButton;
