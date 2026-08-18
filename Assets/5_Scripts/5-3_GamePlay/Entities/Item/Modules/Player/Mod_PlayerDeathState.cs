@@ -497,6 +497,7 @@ public partial class Mod_PlayerDeathState : Module
         if (_dyingPanel == null)
         {
             _dyingPanel = UIManager.Instance.CreatePanelFromGameObject(dyingPanelPrefab, dyingPanelPrefabName);
+            UIManager.Instance.ConfigureGlobalOverlayPanel(_dyingPanel);
             _dyingPanel.CollectUIComponents();
             BindDyingPanelButtons();
         }

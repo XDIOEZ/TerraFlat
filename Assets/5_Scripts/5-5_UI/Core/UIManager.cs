@@ -125,6 +125,41 @@ public class UIManager : MonoBehaviour
         NotifyInteractionSurfaceChanged();
     }
 
+    /// <summary>把需要遮挡整个游戏界面的面板移动到外层根 Canvas，并提升到全局覆盖层。</summary>
+    public void ConfigureGlobalOverlayPanel(BasePanel panel)
+    {
+        if (panel == null)
+            return;
+
+        EnsurePanelRootExists();
+        if (rootCanvas == null)
+            return;
+
+        RectTransform panelRect = panel.GetComponent<RectTransform>();
+        if (panelRect == null)
+            return;
+
+        panelRect.SetParent(rootCanvas.transform, false);
+        panelRect.anchorMin = Vector2.zero;
+        panelRect.anchorMax = Vector2.one;
+        panelRect.anchoredPosition = Vector2.zero;
+        panelRect.sizeDelta = Vector2.zero;
+
+        Canvas canvas = panel.GetComponent<Canvas>();
+        if (canvas == null)
+            canvas = panel.gameObject.AddComponent<Canvas>();
+
+        canvas.overrideSorting = true;
+        canvas.sortingLayerID = rootCanvas.sortingLayerID;
+        canvas.sortingOrder = GlobalOverlaySortingOrder;
+
+        if (panel.GetComponent<GraphicRaycaster>() == null)
+            panel.gameObject.AddComponent<GraphicRaycaster>();
+
+        panelRect.SetAsLastSibling();
+        NotifyInteractionSurfaceChanged();
+    }
+
     public static void NormalizeCanvasLayers(Transform root)
     {
         if (root == null)
