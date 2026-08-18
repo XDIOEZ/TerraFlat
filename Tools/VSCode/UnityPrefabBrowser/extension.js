@@ -1,7 +1,9 @@
 const vscode = require('vscode');
+const path = require('path');
 
 const VIEW_TYPE = 'unityPrefabBrowser.prefabEditor';
 const EXCLUDE_GLOB = '**/{Library,Temp,Logs,Obj,obj,Build,build,node_modules}/**';
+let assetGuidIndexPromise;
 
 /**
  * VS Code 扩展入口：把 .prefab 注册为只读自定义编辑器。
@@ -73,7 +75,10 @@ class PrefabEditorProvider {
 
     /** @param {PrefabDocument} document @param {vscode.WebviewPanel} webviewPanel */
     resolveCustomEditor(document, webviewPanel) {
-        webviewPanel.webview.options = { enableScripts: true };
+        webviewPanel.webview.options = {
+            enableScripts: true,
+            localResourceRoots: getWebviewResourceRoots(document.uri)
+        };
         webviewPanel.webview.html = getWebviewHtml(webviewPanel.webview);
 
         const key = document.uri.toString();
@@ -88,7 +93,7 @@ class PrefabEditorProvider {
         const messageSubscription = webviewPanel.webview.onDidReceiveMessage(async message => {
             switch (message?.type) {
                 case 'ready':
-                    await postDocument(webviewPanel, document.data);
+                    await this.sendDocument(document, webviewPanel);
                     break;
                 case 'copyPath':
                     await vscode.env.clipboard.writeText(document.uri.fsPath);
@@ -114,7 +119,13 @@ class PrefabEditorProvider {
         });
 
         // 某些 VS Code 版本在页面 ready 消息前不会立即显示首帧，保留一次兜底发送。
-        void postDocument(webviewPanel, document.data);
+        void this.sendDocument(document, webviewPanel);
+    }
+
+    /** @param {PrefabDocument} document @param {vscode.WebviewPanel} panel */
+    async sendDocument(document, panel) {
+        const data = await attachPreviewAssets(document.data, panel.webview);
+        await postDocument(panel, data);
     }
 
     /** @param {vscode.Uri} uri */
@@ -127,7 +138,7 @@ class PrefabEditorProvider {
         const data = await readPrefabData(uri);
         await Promise.all([...editorsForDocument].map(async editor => {
             editor.document.data = data;
-            await postDocument(editor.panel, data);
+            await this.sendDocument(editor.document, editor.panel);
         }));
     }
 }
@@ -156,6 +167,79 @@ async function readPrefabData(uri) {
             error: error instanceof Error ? error.message : String(error)
         };
     }
+}
+
+/** @param {vscode.Uri} documentUri */
+function getWebviewResourceRoots(documentUri) {
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(documentUri);
+    return workspaceFolder ? [workspaceFolder.uri] : [];
+}
+
+/** @param {object} data @param {vscode.Webview} webview */
+async function attachPreviewAssets(data, webview) {
+    if (data.error || !data.roots?.length || !hasPreviewAssetReference(data.roots)) {
+        return data;
+    }
+
+    const assetGuidIndex = await getAssetGuidIndex();
+    const preparedData = JSON.parse(JSON.stringify(data));
+    walkNodes(preparedData.roots, node => {
+        for (const visual of node.visuals || []) {
+            const assetPath = assetGuidIndex.get(visual.assetGuid);
+            if (!assetPath) {
+                continue;
+            }
+
+            visual.imageUri = webview.asWebviewUri(vscode.Uri.file(assetPath)).toString();
+            visual.assetPath = getAssetPath(vscode.Uri.file(assetPath));
+        }
+    });
+    return preparedData;
+}
+
+/** @param {Array<object>} roots */
+function hasPreviewAssetReference(roots) {
+    let found = false;
+    walkNodes(roots, node => {
+        if ((node.visuals || []).some(visual => visual.assetGuid)) {
+            found = true;
+        }
+    });
+    return found;
+}
+
+/** @returns {Promise<Map<string, string>>} */
+async function getAssetGuidIndex() {
+    if (!assetGuidIndexPromise) {
+        assetGuidIndexPromise = buildAssetGuidIndex().catch(() => new Map());
+    }
+    return assetGuidIndexPromise;
+}
+
+/** @returns {Promise<Map<string, string>>} */
+async function buildAssetGuidIndex() {
+    const index = new Map();
+    const metaUris = await vscode.workspace.findFiles(
+        '**/*.{png,jpg,jpeg,gif,webp,svg}.meta',
+        EXCLUDE_GLOB,
+        20000
+    );
+
+    for (let offset = 0; offset < metaUris.length; offset += 64) {
+        const batch = metaUris.slice(offset, offset + 64);
+        await Promise.all(batch.map(async metaUri => {
+            try {
+                const metaText = Buffer.from(await vscode.workspace.fs.readFile(metaUri)).toString('utf8');
+                const guid = metaText.match(/^\s*guid:\s*([0-9a-fA-F]{32})\s*$/m)?.[1];
+                if (guid) {
+                    index.set(guid, metaUri.fsPath.slice(0, -'.meta'.length));
+                }
+            } catch {
+                // 单个资源的 meta 读取失败不应影响其他贴图预览。
+            }
+        }));
+    }
+    return index;
 }
 
 /**
@@ -196,7 +280,19 @@ function parsePrefabYaml(yaml, uri) {
                 gameObjectId,
                 parentTransformId: readFileId(section.body, 'm_Father'),
                 siblingOrder: readInteger(section.body, 'm_RootOrder', section.index),
-                type: section.type
+                type: section.type,
+                x: readVector2(section.body, 'm_AnchoredPosition')?.x ?? readVector3(section.body, 'm_LocalPosition').x,
+                y: readVector2(section.body, 'm_AnchoredPosition')?.y ?? readVector3(section.body, 'm_LocalPosition').y,
+                scaleX: readVector3(section.body, 'm_LocalScale').x,
+                scaleY: readVector3(section.body, 'm_LocalScale').y,
+                rotation: readRotationZ(section.body),
+                width: section.type === 'RectTransform'
+                    ? readVector2(section.body, 'm_SizeDelta')?.x || 0
+                    : readVector2(section.body, 'm_Size')?.x || 0,
+                height: section.type === 'RectTransform'
+                    ? readVector2(section.body, 'm_SizeDelta')?.y || 0
+                    : readVector2(section.body, 'm_Size')?.y || 0,
+                isRectTransform: section.type === 'RectTransform'
             };
             transformsByGameObject.set(gameObjectId, transform);
             gameObjectByTransform.set(section.id, gameObjectId);
@@ -223,10 +319,16 @@ function parsePrefabYaml(yaml, uri) {
             ? gameObjectByTransform.get(transform.parentTransformId) || null
             : null;
         const nestedPrefab = prefabInstances.get(gameObject.prefabInstanceId);
-        const components = gameObject.componentIds
+        const componentSections = gameObject.componentIds
             .map(componentId => sectionsById.get(componentId))
-            .filter(Boolean)
-            .map(section => getComponentLabel(section));
+            .filter(Boolean);
+        const components = componentSections.map(section => getComponentLabel(section));
+        const visuals = componentSections
+            .map((section, index) => {
+                const visual = getVisualComponent(section);
+                return visual ? { ...visual, id: `${gameObject.id}:visual:${index}` } : null;
+            })
+            .filter(Boolean);
 
         componentCount += components.length;
         if (nestedPrefab) {
@@ -240,6 +342,8 @@ function parsePrefabYaml(yaml, uri) {
             parentId: parentGameObjectId,
             siblingOrder: transform?.siblingOrder ?? gameObject.sourceIndex,
             components,
+            visuals,
+            transform: transform || createDefaultTransform(),
             nestedPrefab: nestedPrefab || null,
             children: []
         });
@@ -265,6 +369,8 @@ function parsePrefabYaml(yaml, uri) {
             parentId,
             siblingOrder: prefabInstance.sourceIndex,
             components: ['Nested Prefab'],
+            visuals: [],
+            transform: createDefaultTransform(),
             nestedPrefab: prefabInstance,
             children: []
         });
@@ -345,6 +451,134 @@ function readInteger(body, key, fallback) {
 }
 
 /** @param {string} body @param {string} key */
+function readVector2(body, key) {
+    const value = readInlineObject(body, key);
+    if (!value) {
+        return null;
+    }
+    return {
+        x: Number.isFinite(value.x) ? value.x : 0,
+        y: Number.isFinite(value.y) ? value.y : 0
+    };
+}
+
+/** @param {string} body @param {string} key */
+function readVector3(body, key) {
+    const value = readInlineObject(body, key);
+    return {
+        x: Number.isFinite(value?.x) ? value.x : 0,
+        y: Number.isFinite(value?.y) ? value.y : 0,
+        z: Number.isFinite(value?.z) ? value.z : 0
+    };
+}
+
+/** @param {string} body */
+function readRotationZ(body) {
+    const rotation = readInlineObject(body, 'm_LocalRotation');
+    if (!rotation) {
+        return 0;
+    }
+
+    const numerator = 2 * ((rotation.w ?? 1) * (rotation.z ?? 0) + (rotation.x ?? 0) * (rotation.y ?? 0));
+    const denominator = 1 - 2 * ((rotation.y ?? 0) ** 2 + (rotation.z ?? 0) ** 2);
+    return Math.atan2(numerator, denominator) * 180 / Math.PI;
+}
+
+/** @param {string} body @param {string} key */
+function readColor(body, key) {
+    const value = readInlineObject(body, key);
+    return {
+        r: clamp(value?.r ?? 1),
+        g: clamp(value?.g ?? 1),
+        b: clamp(value?.b ?? 1),
+        a: clamp(value?.a ?? 1)
+    };
+}
+
+/** @param {string} body @param {string} key */
+function readReference(body, key) {
+    const expression = new RegExp(`^\\s*${escapeRegExp(key)}:\\s*\\{([^}]*)\\}`, 'm');
+    const content = body.match(expression)?.[1];
+    if (!content) {
+        return { fileID: '0', guid: '' };
+    }
+    return {
+        fileID: content.match(/fileID:\s*(-?\d+)/)?.[1] || '0',
+        guid: content.match(/guid:\s*([0-9a-fA-F]{32})/)?.[1] || ''
+    };
+}
+
+/** @param {string} body @param {string} key */
+function readInlineObject(body, key) {
+    const expression = new RegExp(`^\\s*${escapeRegExp(key)}:\\s*\\{([^}]*)\\}`, 'm');
+    const content = body.match(expression)?.[1];
+    if (!content) {
+        return null;
+    }
+
+    const value = {};
+    for (const match of content.matchAll(/([A-Za-z]+):\s*(-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)/g)) {
+        value[match[1]] = Number.parseFloat(match[2]);
+    }
+    return value;
+}
+
+/** @param {number} value */
+function clamp(value) {
+    return Math.max(0, Math.min(1, value));
+}
+
+/** @returns {object} */
+function createDefaultTransform() {
+    return {
+        x: 0,
+        y: 0,
+        scaleX: 1,
+        scaleY: 1,
+        rotation: 0,
+        width: 0,
+        height: 0,
+        isRectTransform: false
+    };
+}
+
+/** @param {{ type: string, body: string }} section */
+function getVisualComponent(section) {
+    if (section.type === 'SpriteRenderer') {
+        return {
+            label: 'SpriteRenderer',
+            kind: 'sprite',
+            assetGuid: readReference(section.body, 'm_Sprite').guid,
+            color: readColor(section.body, 'm_Color'),
+            enabled: readScalar(section.body, 'm_Enabled') !== '0'
+        };
+    }
+
+    if (section.type !== 'MonoBehaviour') {
+        return null;
+    }
+
+    const sprite = readReference(section.body, 'm_Sprite');
+    const texture = readReference(section.body, 'm_Texture');
+    if (!hasKey(section.body, 'm_Sprite') && !hasKey(section.body, 'm_Texture')) {
+        return null;
+    }
+
+    return {
+        label: texture.guid && !sprite.guid ? 'RawImage' : 'Image',
+        kind: texture.guid && !sprite.guid ? 'rawImage' : 'image',
+        assetGuid: sprite.guid || texture.guid,
+        color: readColor(section.body, 'm_Color'),
+        enabled: readScalar(section.body, 'm_Enabled') !== '0'
+    };
+}
+
+/** @param {string} body @param {string} key */
+function hasKey(body, key) {
+    return new RegExp(`^\\s*${escapeRegExp(key)}:`, 'm').test(body);
+}
+
+/** @param {string} body @param {string} key */
 function readScalar(body, key) {
     const expression = new RegExp(`^\\s*${escapeRegExp(key)}:\\s*(.*?)\\s*$`, 'm');
     return cleanYamlScalar(body.match(expression)?.[1] || '');
@@ -378,6 +612,11 @@ function readGuid(body, key) {
 function getComponentLabel(section) {
     if (section.type !== 'MonoBehaviour') {
         return section.type;
+    }
+
+    const visual = getVisualComponent(section);
+    if (visual) {
+        return visual.label;
     }
 
     const classIdentifier = readScalar(section.body, 'm_EditorClassIdentifier');
@@ -418,7 +657,7 @@ function getWebviewHtml(webview) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
     <title>Unity Prefab Hierarchy</title>
     <style>
         :root {
@@ -482,8 +721,19 @@ function getWebviewHtml(webview) {
             font-size: 0.9em;
         }
 
-        .layout { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(250px, 32%); min-height: calc(100vh - 80px); }
+        .layout { display: grid; grid-template-columns: minmax(260px, 28%) minmax(360px, 1fr) minmax(250px, 25%); min-height: calc(100vh - 80px); }
         .tree-panel { min-width: 0; padding: 10px 8px 24px 8px; overflow: auto; }
+        .preview-panel { display: flex; min-width: 0; min-height: 360px; flex-direction: column; border-left: 1px solid var(--border); }
+        .preview-toolbar { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 6px 10px; border-bottom: 1px solid var(--border); background: var(--panel); }
+        .preview-title { font-weight: 600; }
+        .preview-status { flex: 1; color: var(--muted); font-size: 0.9em; }
+        .preview-stage { position: relative; flex: 1; min-height: 320px; overflow: hidden; background-color: var(--vscode-editor-background); background-image: linear-gradient(45deg, rgba(127,127,127,.08) 25%, transparent 25%), linear-gradient(-45deg, rgba(127,127,127,.08) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(127,127,127,.08) 75%), linear-gradient(-45deg, transparent 75%, rgba(127,127,127,.08) 75%); background-size: 24px 24px; background-position: 0 0, 0 12px, 12px -12px, -12px 0; }
+        .preview-item { position: absolute; display: flex; align-items: center; justify-content: center; border: 1px solid transparent; cursor: pointer; transform-origin: center; }
+        .preview-item:hover, .preview-item.selected { border-color: var(--vscode-focusBorder); z-index: 9999; }
+        .preview-item.selected { box-shadow: 0 0 0 1px var(--vscode-focusBorder); }
+        .preview-image { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+        .preview-placeholder { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; padding: 4px; color: var(--muted); background: rgba(127,127,127,.16); font-size: 0.8em; text-align: center; overflow-wrap: anywhere; pointer-events: none; }
+        .preview-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; color: var(--muted); text-align: center; }
         .details-panel { min-width: 0; padding: 14px; border-left: 1px solid var(--border); background: var(--panel); overflow: auto; }
 
         .tree-node { min-width: max-content; }
@@ -530,7 +780,7 @@ function getWebviewHtml(webview) {
 
         @media (max-width: 720px) {
             .layout { grid-template-columns: 1fr; }
-            .details-panel { border-top: 1px solid var(--border); border-left: 0; }
+            .preview-panel, .details-panel { border-top: 1px solid var(--border); border-left: 0; }
             .search { width: 150px; }
         }
     </style>
@@ -549,6 +799,13 @@ function getWebviewHtml(webview) {
     <div id="stats" class="stats"></div>
     <main class="layout">
         <section id="tree" class="tree-panel" role="tree"></section>
+        <section class="preview-panel" aria-label="2D预览">
+            <div class="preview-toolbar">
+                <span class="preview-title">2D 预览</span>
+                <span id="previewStatus" class="preview-status">等待读取图像</span>
+            </div>
+            <div id="preview" class="preview-stage"></div>
+        </section>
         <aside id="details" class="details-panel"></aside>
     </main>
 
@@ -585,6 +842,7 @@ function getWebviewHtml(webview) {
             renderTree();
         });
         document.getElementById('refresh').addEventListener('click', () => api.postMessage({ type: 'refresh' }));
+        window.addEventListener('resize', () => renderPreview());
 
         document.getElementById('tree').addEventListener('click', event => {
             const target = event.target.closest('[data-action]');
@@ -607,6 +865,15 @@ function getWebviewHtml(webview) {
             if (target.dataset.action === 'revealInExplorer') api.postMessage({ type: 'revealInExplorer' });
         });
 
+        document.getElementById('preview').addEventListener('click', event => {
+            const item = event.target.closest('[data-preview-id]');
+            if (!item) return;
+            selectedId = item.dataset.previewId;
+            renderTree();
+            renderDetails();
+            renderPreview();
+        });
+
         function indexNodes() {
             nodesById.clear();
             for (const root of documentData?.roots || []) walk(root, node => nodesById.set(node.id, node));
@@ -623,6 +890,7 @@ function getWebviewHtml(webview) {
             renderStats();
             renderTree();
             renderDetails();
+            renderPreview();
         }
 
         function renderStats() {
@@ -697,6 +965,95 @@ function getWebviewHtml(webview) {
                 '<div class="hint">这是保存到磁盘的 Prefab 预览。Unity 中尚未保存的改动不会出现在这里。</div>';
         }
 
+        function renderPreview() {
+            const stage = document.getElementById('preview');
+            const status = document.getElementById('previewStatus');
+            if (documentData?.error) {
+                stage.innerHTML = '<div class="preview-empty">无法读取 Prefab。</div>';
+                status.textContent = '读取失败';
+                return;
+            }
+
+            const items = [];
+            collectPreviewItems(documentData?.roots || [], 0, 0, 1, 1, true, items);
+            if (!items.length) {
+                stage.innerHTML = '<div class="preview-empty">没有可绘制的 2D 图像。<br>需要 SpriteRenderer、Image 或 RawImage，并且引用可读取的图片资源。</div>';
+                status.textContent = '没有图像';
+                return;
+            }
+
+            const width = Math.max(stage.clientWidth, 640);
+            const height = Math.max(stage.clientHeight, 360);
+            const bounds = getPreviewBounds(items);
+            const contentWidth = Math.max(bounds.maxX - bounds.minX, 1);
+            const contentHeight = Math.max(bounds.maxY - bounds.minY, 1);
+            const drawScale = Math.max(0.08, Math.min(1, (width - 40) / contentWidth, (height - 40) / contentHeight));
+            const centerX = (bounds.minX + bounds.maxX) / 2;
+            const centerY = (bounds.minY + bounds.maxY) / 2;
+
+            stage.innerHTML = items.map(item => {
+                const itemWidth = Math.max(item.width * drawScale, 2);
+                const itemHeight = Math.max(item.height * drawScale, 2);
+                const left = width / 2 + (item.x - centerX) * drawScale;
+                const top = height / 2 - (item.y - centerY) * drawScale;
+                const selected = item.nodeId === selectedId ? ' selected' : '';
+                const color = item.color || { r: 1, g: 1, b: 1, a: 1 };
+                const image = item.imageUri
+                    ? '<img class="preview-image" src="' + escapeAttribute(item.imageUri) + '" alt="' + escapeAttribute(item.label) + '">'
+                    : '<span class="preview-placeholder">' + escapeHtml(item.label) + '</span>';
+                return '<div class="preview-item' + selected + '" data-preview-id="' + escapeAttribute(item.nodeId) + '" title="' + escapeAttribute(item.label) + '" style="left:' + left + 'px;top:' + top + 'px;width:' + itemWidth + 'px;height:' + itemHeight + 'px;transform:translate(-50%,-50%) rotate(' + (-item.rotation) + 'deg) scale(' + item.scaleX + ',' + item.scaleY + ');opacity:' + color.a + ';background:rgba(' + Math.round(color.r * 255) + ',' + Math.round(color.g * 255) + ',' + Math.round(color.b * 255) + ',' + color.a + ')">' + image + '</div>';
+            }).join('');
+            status.textContent = items.length + ' 个图像 · 预览比例 ' + Math.round(drawScale * 100) + '%';
+        }
+
+        function collectPreviewItems(nodes, parentX, parentY, parentScaleX, parentScaleY, parentActive, result) {
+            for (const node of nodes) {
+                const transform = node.transform || { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0, width: 0, height: 0, isRectTransform: false };
+                const coordinateScale = transform.isRectTransform ? 1 : 64;
+                const x = parentX + transform.x * coordinateScale * parentScaleX;
+                const y = parentY + transform.y * coordinateScale * parentScaleY;
+                const scaleX = parentScaleX * (transform.scaleX || 1);
+                const scaleY = parentScaleY * (transform.scaleY || 1);
+                const active = parentActive && node.active;
+                if (active) {
+                    for (const visual of node.visuals || []) {
+                        if (!visual.enabled) continue;
+                        const defaultWidth = visual.kind === 'sprite' ? 1 : 120;
+                        const defaultHeight = visual.kind === 'sprite' ? 1 : 80;
+                        const baseWidth = transform.width || defaultWidth;
+                        const baseHeight = transform.height || defaultHeight;
+                        result.push({
+                            nodeId: node.id,
+                            label: node.name + ' · ' + visual.label,
+                            imageUri: visual.imageUri,
+                            x,
+                            y,
+                            width: Math.abs(baseWidth * coordinateScale),
+                            height: Math.abs(baseHeight * coordinateScale),
+                            scaleX,
+                            scaleY,
+                            rotation: transform.rotation || 0,
+                            color: visual.color
+                        });
+                    }
+                }
+                collectPreviewItems(node.children || [], x, y, scaleX, scaleY, active, result);
+            }
+        }
+
+        function getPreviewBounds(items) {
+            const bounds = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+            for (const item of items) {
+                const halfWidth = item.width * Math.abs(item.scaleX) / 2;
+                const halfHeight = item.height * Math.abs(item.scaleY) / 2;
+                bounds.minX = Math.min(bounds.minX, item.x - halfWidth);
+                bounds.maxX = Math.max(bounds.maxX, item.x + halfWidth);
+                bounds.minY = Math.min(bounds.minY, item.y - halfHeight);
+                bounds.maxY = Math.max(bounds.maxY, item.y + halfHeight);
+            }
+            return bounds;
+        }
+
         function escapeHtml(value) {
             return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
         }
@@ -719,4 +1076,4 @@ function createNonce() {
 
 function deactivate() {}
 
-module.exports = { activate, deactivate, parsePrefabYaml };
+module.exports = { activate, deactivate, parsePrefabYaml, getWebviewHtml };

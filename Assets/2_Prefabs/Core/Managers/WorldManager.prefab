@@ -362,7 +362,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   toggleEnvironmentInfoKey: 284
   setClearWeatherKey: 285
-  setRainWeatherKey: 286
+  setRainWeatherKey: 288
   createOnFirstToggle: 1
   cleanupDuplicateDisplaysOnToggle: 1
 --- !u!114 &2693940703275175513

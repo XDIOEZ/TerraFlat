@@ -15,7 +15,6 @@ using Random = UnityEngine.Random;
 public class DamageReceiver : Module, IRemoteNetworkModule
 {
     private const int CurrentBodyPartDataVersion = 1;
-    private const int CurrentDamageSystemVersion = 3;
     // 玩家每恢复 1 点生命值消耗 1 点蛋白质。
     private const float PlayerHealingProteinCostPerHp = 1f;
 
@@ -41,11 +40,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     public CombatDefense Defense
     {
-        get
-        {
-            UpgradeDamageSystemData();
-            return Data.DefenseValues;
-        }
+        get => Data.DefenseValues;
     }
 
     public UltEvent OnDead = new();
@@ -272,7 +267,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     {
         ClearHitSlowdown();
         modData.ReadData(ref Data);
-        UpgradeDamageSystemData();
         UpgradeBodyPartData();
         NormalizeStatRanges();
         BindHandStateEvent();
@@ -295,7 +289,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         Dictionary<BodyPartType, BodyPartSnapshot> previousBodyParts = CaptureBodyPartSnapshots();
         modData = networkData;
         modData.ReadData(ref Data);
-        UpgradeDamageSystemData();
         UpgradeBodyPartData();
         NormalizeStatRanges();
         Data.ShowCanvas = false;
@@ -1435,63 +1428,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         SynchronizeOverallHealthFromBodyParts();
     }
 
-    /// <summary>迁移旧单值防御，并修正旧存档中会完全阻断采集进度的资源防御。</summary>
-    private void UpgradeDamageSystemData()
-    {
-        Data.DefenseValues ??= new CombatDefense();
-        Data.DefenseValues.ClampNonNegative();
-        if (Data.DamageSystemVersion >= CurrentDamageSystemVersion)
-            return;
-
-        if (Data.DamageSystemVersion < 1 &&
-            Data.DefenseValues.TotalDefense <= 0f &&
-            Data.Defense > 0f)
-        {
-            float legacyDefense = Mathf.Max(0f, Data.Defense);
-            Data.DefenseValues = new CombatDefense(
-                legacyDefense,
-                legacyDefense,
-                legacyDefense,
-                legacyDefense);
-        }
-
-        // 版本 1 曾把旧单值防御复制到四项，树木的 50 防御会让所有斧头都无法造成伤害。
-        if (Data.DamageSystemVersion < 2)
-            TryApplyTemporaryResourceDefensePreset();
-
-        // 版本 3 下调树木钝击防御，让木棍只能造成很小的伤害，砍树仍应使用斧头。
-        if (Data.DamageSystemVersion < 3)
-            TryApplyTreeDefenseUpdate();
-
-        Data.Weakness?.Clear();
-        Data.DamageSystemVersion = CurrentDamageSystemVersion;
-    }
-
-    /// <summary>按资源 ID 为旧存档补入临时四类防御，保证砍树与采矿流程可继续。</summary>
-    private void TryApplyTemporaryResourceDefensePreset()
-    {
-        string itemId = item?.itemData?.IDName;
-        Data.DefenseValues = itemId switch
-        {
-            "AppleTree" or "Tree_Coconut" => new CombatDefense(2f, 4f, 0f, 1.5f),
-            "Bush" => new CombatDefense(0f, 1f, 0f, 1f),
-            "Mine_Stone" => new CombatDefense(12f, 2f, 14f, 2f),
-            "Mine_Coal" => new CombatDefense(10f, 3f, 12f, 3f),
-            "Mine_Tin" => new CombatDefense(16f, 7f, 18f, 5f),
-            "Mine_Copper" => new CombatDefense(14f, 8f, 16f, 6f),
-            "Mine_Iron" => new CombatDefense(18f, 13f, 20f, 8f),
-            _ => Data.DefenseValues
-        };
-    }
-
-    /// <summary>把版本 2 及更早树木存档的钝击防御迁移到新的低伤害数值。</summary>
-    private void TryApplyTreeDefenseUpdate()
-    {
-        string itemId = item?.itemData?.IDName;
-        if (itemId == "AppleTree" || itemId == "Tree_Coconut")
-            Data.DefenseValues.Blunt = 1.5f;
-    }
-
     private void OnDamaged_ShowUiAndScheduleHide()
     {
         _lastDamageUiTime = Time.time;
@@ -1726,7 +1662,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         }
 
         Data.DefenseValues = new CombatDefense();
-        Data.DamageSystemVersion = 1;
     }
 
     #endregion
