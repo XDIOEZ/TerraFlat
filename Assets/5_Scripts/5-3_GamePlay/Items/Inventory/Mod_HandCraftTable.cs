@@ -62,6 +62,8 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     private const int InputSlotCount = 4;
     private const int OutputSlotCount = 1;
     private const string CraftingHintName = "FWUI_FooterHint";
+    private const string InputInventorySaveKey = "handcraft.input";
+    private const string OutputInventorySaveKey = "handcraft.output";
     private const string WaitingHint = "放入材料 · 核对配方 · 开始制作";
     private const string ReadyHint = "配方已匹配 · 点击开始制作";
     [Header("调试")]
@@ -79,7 +81,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     public override void Load()
     {
-        ModSaveData.ReadData(ref RawData);
+        RestoreInventoryState();
         InitData();
         BindToggleInput();
     }
@@ -89,7 +91,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         if (inputInventory?.Data != null)
             inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
 
-        ModSaveData.WriteData(RawData);
+        SaveInventoryState();
     }
 
     private void BindToggleInput()
@@ -126,6 +128,32 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         return _inputController != null &&
                _inputController.IsUsingMobile &&
                PlayerMobileControlsHUD.IsActiveDrawerOpen;
+    }
+
+#endregion
+
+#region 库存存档
+
+    /// <summary>读取制作面板输入/输出槽位；没有新格式数据时保留预制体初始库存。</summary>
+    private void RestoreInventoryState()
+    {
+        Inventory_ModuleData savedData = InventoryModuleDataPersistence.TryRead(ModSaveData);
+        InventoryModuleDataPersistence.TryRestore(inputInventory, savedData, InputInventorySaveKey);
+        InventoryModuleDataPersistence.TryRestore(outputInventory, savedData, OutputInventorySaveKey);
+    }
+
+    /// <summary>保存制作面板输入/输出槽位，避免关闭世界后只保存了模块空壳。</summary>
+    private void SaveInventoryState()
+    {
+        ModSaveData ??= new Ex_ModData_MemoryPackable();
+        Inventory_ModuleData savedData = new Inventory_ModuleData
+        {
+            Name = ModSaveData.Name,
+            ID = ModSaveData.ID
+        };
+        InventoryModuleDataPersistence.Capture(savedData, InputInventorySaveKey, inputInventory);
+        InventoryModuleDataPersistence.Capture(savedData, OutputInventorySaveKey, outputInventory);
+        InventoryModuleDataPersistence.Write(ModSaveData, savedData);
     }
 
 #endregion

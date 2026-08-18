@@ -33,6 +33,9 @@ public class Mod_Furnace : Module, IInteractable
     public BasePanel basePanel; // 熔炉面板
     public GameObject UI_Prefab; // 熔炉UI预制体
     private const float PanelDestroyDelay = 30f;
+    private const string InputInventorySaveKey = "furnace.input";
+    private const string OutputInventorySaveKey = "furnace.output";
+    private const string FuelInventorySaveKey = "furnace.fuel";
     private Coroutine panelDestroyCoroutine;
     private Player currentInteractingPlayer;
     private Player smeltingActor;
@@ -43,7 +46,7 @@ public class Mod_Furnace : Module, IInteractable
     public override void Load()
     {
         mod_Fuel = item.GetComponentInChildren<Mod_Fuel>();
-        ModSaveData.ReadData(ref RawData);
+        RestoreSavedState();
         InputInventory.InitData();
         OutputInventory.InitData();
         FuelInventory.InitData();
@@ -91,7 +94,46 @@ public class Mod_Furnace : Module, IInteractable
 
     public override void Save()
     {
-        ModSaveData.WriteData(RawData);
+        Data ??= new ModSmeltingData();
+        Data.InvData ??= new Dictionary<string, Inventory_Data>();
+        Data.InvData[InputInventorySaveKey] = InputInventory?.Data;
+        Data.InvData[OutputInventorySaveKey] = OutputInventory?.Data;
+        Data.InvData[FuelInventorySaveKey] = FuelInventory?.Data;
+        ModSaveData ??= new Ex_ModData_MemoryPackable();
+        ModSaveData.WriteData(Data);
+    }
+
+    /// <summary>读取熔炉进度和三类库存；旧字符串存档读取失败时使用默认运行时数据。</summary>
+    private void RestoreSavedState()
+    {
+        if (ModSaveData?.BitData == null || ModSaveData.BitData.Length == 0)
+            return;
+
+        try
+        {
+            ModSaveData.ReadData(ref Data);
+        }
+        catch
+        {
+            // 兼容旧版 RawData 存档，不让旧数据阻断熔炉初始化。
+            Data = new ModSmeltingData();
+        }
+
+        Data ??= new ModSmeltingData();
+        Data.InvData ??= new Dictionary<string, Inventory_Data>();
+        RestoreInventory(InputInventory, InputInventorySaveKey);
+        RestoreInventory(OutputInventory, OutputInventorySaveKey);
+        RestoreInventory(FuelInventory, FuelInventorySaveKey);
+    }
+
+    /// <summary>恢复一个熔炉库存的数据引用。</summary>
+    private void RestoreInventory(Inventory targetInventory, string key)
+    {
+        if (targetInventory == null || !Data.InvData.TryGetValue(key, out Inventory_Data savedData) ||
+            savedData == null)
+            return;
+
+        targetInventory.Data = savedData;
     }
 
     private void OnDestroy()

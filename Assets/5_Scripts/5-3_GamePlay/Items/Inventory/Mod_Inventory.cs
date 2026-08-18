@@ -59,6 +59,9 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
 
     public override void Load()
     {
+        Data ??= new Inventory_ModuleData();
+        Data.Data ??= new Dictionary<string, Inventory_Data>();
+
         // 先根据序列化列表构建运行时字典
         inventoryRefDic.Clear();
         if (InventoryInstances != null)
@@ -69,13 +72,8 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
                 if (inv == null)
                     continue;
 
-                // 优先使用 Inventory_Data.Name 作为key，若为空则使用物体名
-                string key = inv.Data != null && !string.IsNullOrEmpty(inv.Data.Name)
-                    ? inv.Data.Name
-                    : inv.Data.Name;
-
-                if (string.IsNullOrEmpty(key))
-                    continue;
+                // 没有名称的输入/输出/燃料槽也必须有稳定键，不能因此被存档系统跳过。
+                string key = GetInventoryKey(inv, i);
 
                 if (!inventoryRefDic.ContainsKey(key))
                     inventoryRefDic.Add(key, inv);
@@ -93,13 +91,14 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
             Inventory currentInventory = kvp.Value;
 
             // 加载库存数据
-            if (Data.Data.Count == 0)
+            if (Data.Data.TryGetValue(inventoryId, out Inventory_Data savedInventoryData) &&
+                savedInventoryData != null)
+            {
+                currentInventory.Data = savedInventoryData;
+            }
+            else
             {
                 Data.Data[inventoryId] = currentInventory.Data;
-            }
-            else if (Data.Data.ContainsKey(inventoryId))
-            {
-                currentInventory.Data = Data.Data[inventoryId];
             }
 
             // 查找模块数据
@@ -327,6 +326,9 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
     [Button]
     public override void Save()
     {
+        Data ??= new Inventory_ModuleData();
+        Data.Data ??= new Dictionary<string, Inventory_Data>();
+
         Mod_Equipment equipment = item?.GetComponentsInChildren<Mod_Equipment>(true)
             .FirstOrDefault();
         equipment?.PrepareBagStorageForOwnerSave();
@@ -371,11 +373,18 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
             }
         }
 
-        // 保存所有Inventory的数据
-        foreach (var kvp in InventoryRefDic)
+        // 保存所有 InventoryInstances；不能只遍历字典，否则没有名称的槽位会漏存。
+        if (InventoryInstances != null)
         {
-            kvp.Value.Save();
-            Data.Data[kvp.Key] = kvp.Value.Data;
+            for (int i = 0; i < InventoryInstances.Count; i++)
+            {
+                Inventory currentInventory = InventoryInstances[i];
+                if (currentInventory == null)
+                    continue;
+
+                currentInventory.Save();
+                Data.Data[GetInventoryKey(currentInventory, i)] = currentInventory.Data;
+            }
         }
 
         Item_Data.ModuleDataDic[_Data.Name] = Data;
@@ -388,6 +397,15 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
     #endregion
 
     #region 辅助方法
+    /// <summary>生成库存存档键；优先使用配置名称，否则使用列表索引保证稳定唯一。</summary>
+    private static string GetInventoryKey(Inventory targetInventory, int index)
+    {
+        string configuredName = targetInventory?.Data?.Name;
+        return string.IsNullOrWhiteSpace(configuredName)
+            ? $"Inventory_{index}"
+            : configuredName;
+    }
+
     // 辅助方法：检查Vector2是否有效
     private bool IsValidVector2(Vector2 vector)
     {
