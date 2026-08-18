@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Mod_Damage : Module, IDamageSender
+public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
 {
     #region 伤害相关数据
     [Header("攻击特效")]
@@ -35,6 +35,16 @@ public class Mod_Damage : Module, IDamageSender
     [Min(1)]
     [Tooltip("每次攻击伤害窗口最多命中的实体数量；默认 1，群攻武器可按需调高。")]
     public int MaxAttackTargets = 1;
+
+    [Header("受击减速效果")]
+    [Tooltip("是否让被本次攻击命中的目标减速")]
+    public bool EnableHitSlowdown = true;
+    [Range(0.05f, 1f)]
+    [Tooltip("受击后的移动速度倍率，数值越小减速越强")]
+    public float HitSlowMultiplier = 0.5f;
+    [Min(0f)]
+    [Tooltip("受击减速持续时间（秒）")]
+    public float HitSlowDuration = 0.35f;
 
     [Header("格子建筑伤害")]
     [SerializeField, Tooltip("明确标记该攻击模块可使用的拆墙工具类型。None 不会绕过目标自身的工具限制。")]
@@ -83,6 +93,9 @@ public class Mod_Damage : Module, IDamageSender
     #region IDamageSender 实现
     Item IDamageSender.attacker { get => item; set => item = value; }
     CombatDamage IDamageSender.DamageValues => ResolveDamageValues();
+    bool IHitSlowdownSource.HitSlowdownEnabled => EnableHitSlowdown;
+    float IHitSlowdownSource.HitSlowMultiplier => HitSlowMultiplier;
+    float IHitSlowdownSource.HitSlowDuration => HitSlowDuration;
     #endregion
 
     #region Unity 生命周期
