@@ -1102,6 +1102,15 @@ public class Mod_Building : Module
     private void HandleGhostShadow()
     {
         Vector3 mouse = NormalizePlacement(GetPointerWorldPosition());
+        float maximumPlacementDistance = GetMaxPlacementDistance();
+        float distance = WorldTopologyRuntime.Distance(GetAuthorityPosition(), mouse);
+        if (distance > maximumPlacementDistance + BoundsEpsilon)
+        {
+            // 超出建造范围时不保留边界处的假预览，避免玩家误以为仍可放置。
+            CleanupGhost();
+            return;
+        }
+
         if (GhostShadow == null)
         {
             CreateGhostShadow();
@@ -1110,8 +1119,6 @@ public class Mod_Building : Module
         }
 
         GhostShadow.transform.position = mouse;
-        float distance = WorldTopologyRuntime.Distance(GetAuthorityPosition(), mouse);
-        float maximumPlacementDistance = GetMaxPlacementDistance();
         float alpha = Mathf.Clamp01(Mathf.InverseLerp(
             maximumPlacementDistance + 1.5f,
             maximumPlacementDistance,
@@ -1174,7 +1181,7 @@ public class Mod_Building : Module
         }
 
         return _ownerController != null
-            ? _ownerController.GetAimWorldPosition(GetMaxPlacementDistance())
+            ? _ownerController.GetMouseWorldPosition()
             : GetAuthorityPosition();
     }
 
