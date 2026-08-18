@@ -1,5 +1,4 @@
 // AI-Context: 玩家世界物品拾取入口；联机时只发起服务端事务，收到授权后才写入背包，禁止直接 Destroy 绕过 ItemMgr/网络生命周期。
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Audio;
@@ -187,7 +186,9 @@ public class ItemPicker : Module
             if (TryAcceptNetworkPickup(pickAble.itemData))
             {
                 PlayPickupSuction(pickAble);
-                ItemMgr.Instance.DespawnItem(pickAble);
+                // 只在整组物品都已入包时回收世界物品；部分拾取要保留剩余数量。
+                if (!pickAble.itemData.Stack.CanBePickedUp)
+                    ItemMgr.Instance.DespawnItem(pickAble);
                 return;
             }
 
@@ -198,25 +199,40 @@ public class ItemPicker : Module
     /// <summary>
     /// 网络拾取授权和单机拾取共用的唯一入包入口。
     /// </summary>
-    public bool TryAcceptNetworkPickup(ItemData itemData)
+    public bool TryAcceptNetworkPickup(ItemData itemData, bool allowPartial = true)
     {
         if (itemData == null || itemData.Stack == null)
             return false;
 
+        float requestedAmount = Mathf.Max(0f, itemData.Stack.Amount);
         foreach (IInventory inventory in AddTargetInventories)
         {
             Inventory targetInventory = inventory?.GetDefaultTargetInventory();
             if (targetInventory?.Data == null)
                 continue;
 
-            float amountBeforePickup = CountItemAmount(targetInventory.Data, itemData.IDName);
-            if (!targetInventory.Data.TryAddItem(itemData))
+            if (!allowPartial &&
+                (!targetInventory.Data.TryAddItem(itemData, false, out float availableAmount) ||
+                 availableAmount + 0.0001f < requestedAmount))
+            {
+                continue;
+            }
+
+            if (!targetInventory.Data.TryAddItem(itemData, true, out float addedAmount) ||
+                addedAmount <= 0f)
                 continue;
 
-            float addedAmount = Mathf.Max(
-                0f,
-                CountItemAmount(targetInventory.Data, itemData.IDName) - amountBeforePickup);
-            itemData.Stack.CanBePickedUp = false;
+            bool fullyAdded = addedAmount + 0.0001f >= requestedAmount;
+            if (fullyAdded)
+            {
+                itemData.Stack.CanBePickedUp = false;
+            }
+            else
+            {
+                itemData.Stack.Amount = Mathf.Max(0f, requestedAmount - addedAmount);
+                itemData.Stack.CanBePickedUp = true;
+            }
+
             targetInventory.RefreshUI();
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
             GameplayProgressEvents.PublishPickupSucceeded(item as Player, itemData.IDName, addedAmount);
@@ -224,26 +240,6 @@ public class ItemPicker : Module
         }
 
         return false;
-    }
-
-    /// <summary>统计库存内指定物品数量，用于发布实际成功入包的增量。</summary>
-    private static float CountItemAmount(Inventory_Data inventoryData, string itemId)
-    {
-        if (inventoryData?.itemSlots == null || string.IsNullOrWhiteSpace(itemId))
-            return 0f;
-
-        float total = 0f;
-        foreach (ItemSlot slot in inventoryData.itemSlots)
-        {
-            ItemData stored = slot?.itemData;
-            if (stored?.Stack != null &&
-                string.Equals(stored.IDName, itemId, StringComparison.Ordinal))
-            {
-                total += stored.Stack.Amount;
-            }
-        }
-
-        return total;
     }
 
     /// <summary>

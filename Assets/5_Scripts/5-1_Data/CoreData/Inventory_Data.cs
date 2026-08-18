@@ -377,10 +377,18 @@ public partial class Inventory_Data
 
     public bool TryAddItem(ItemData inputItemData, bool doAdd = true)
     {
+        return TryAddItem(inputItemData, doAdd, out _);
+    }
+
+    /// <summary>尝试加入物品，并返回本次实际加入的数量；允许调用方正确处理容量不足时的剩余物品。</summary>
+    public bool TryAddItem(ItemData inputItemData, bool doAdd, out float addedAmount)
+    {
+        addedAmount = 0f;
         if (inputItemData == null) return false;
 
         float unitVolume = inputItemData.Stack.Volume;
         float remainingAmount = inputItemData.Stack.Amount;
+        float originalAmount = Mathf.Max(0f, remainingAmount);
         bool addedAny = false;
 
         // 非堆叠物品（体积大于1）
@@ -396,6 +404,7 @@ public partial class Inventory_Data
                         Event_RefreshUI.Invoke(i);
                         inputItemData.Stack.CanBePickedUp = false;
                     }
+                    addedAmount = originalAmount;
                     return true;
                 }
             }
@@ -458,12 +467,9 @@ public partial class Inventory_Data
             addedAny = true;
         }
 
-        if (doAdd)
-        {
+        addedAmount = Mathf.Max(0f, originalAmount - remainingAmount);
+        if (doAdd && remainingAmount <= 0.0001f)
             inputItemData.Stack.CanBePickedUp = false;
-            if (remainingAmount > 0)
-                Debug.LogWarning($"物品添加未完全完成，剩余 {remainingAmount} 个未添加。");
-        }
 
         return addedAny;
     }

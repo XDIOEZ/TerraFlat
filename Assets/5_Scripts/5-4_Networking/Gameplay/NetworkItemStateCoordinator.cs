@@ -543,7 +543,7 @@ namespace FlatWorld.Networking.Gameplay
 
             bool accepted = request?.Picker != null &&
                             ItemNetworkStateSerialization.TryDeserializeItemData(response.Payload, out ItemData itemData) &&
-                            request.Picker.TryAcceptNetworkPickup(itemData);
+                            request.Picker.TryAcceptNetworkPickup(itemData, allowPartial: false);
 
             if (accepted)
             {
