@@ -44,6 +44,8 @@ namespace FlatWorld.Gameplay.Progress
     /// </summary>
     public static class GameplayProgressEvents
     {
+        public const string DimensionIdPayloadKey = "dimensionId";
+
         #region 事件
 
         public static event Action<Player> InventoryOpened;
@@ -85,13 +87,25 @@ namespace FlatWorld.Gameplay.Progress
             PublishSignal(new GameplayProgressSignal(actor, GameplayProgressTypes.InventoryOpened, null, 1f));
         }
 
-        public static void PublishPickupSucceeded(Player actor, string itemId, float amount = 1f)
+        public static void PublishPickupSucceeded(
+            Player actor,
+            string itemId,
+            float amount = 1f,
+            string dimensionId = null)
         {
             if (actor == null || string.IsNullOrWhiteSpace(itemId))
                 return;
 
             InvokeSafely(PickupSucceeded, actor, itemId);
-            PublishSignal(new GameplayProgressSignal(actor, GameplayProgressTypes.ItemPickedUp, itemId, amount));
+            JObject payload = string.IsNullOrWhiteSpace(dimensionId)
+                ? null
+                : new JObject { [DimensionIdPayloadKey] = dimensionId.Trim() };
+            PublishSignal(new GameplayProgressSignal(
+                actor,
+                GameplayProgressTypes.ItemPickedUp,
+                itemId,
+                amount,
+                payload));
         }
 
         public static void PublishCraftSucceeded(Player actor, string outputItemId, float amount = 1f)

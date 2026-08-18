@@ -234,10 +234,19 @@ namespace FlatWorld.Gameplay.Quests
         {
             string eventType = definition.Parameters?.Value<string>("eventType")?.Trim();
             string targetId = definition.Parameters?.Value<string>("targetId")?.Trim();
+            string dimensionId = definition.Parameters?.Value<string>("dimensionId")?.Trim();
             if (!string.Equals(eventType, signal.Type, StringComparison.OrdinalIgnoreCase))
                 return current;
             if (!string.IsNullOrWhiteSpace(targetId) &&
                 !string.Equals(targetId, signal.TargetId, StringComparison.OrdinalIgnoreCase))
+            {
+                return current;
+            }
+            if (!string.IsNullOrWhiteSpace(dimensionId) &&
+                !string.Equals(
+                    dimensionId,
+                    signal.Payload?.Value<string>(GameplayProgressEvents.DimensionIdPayloadKey),
+                    StringComparison.OrdinalIgnoreCase))
             {
                 return current;
             }

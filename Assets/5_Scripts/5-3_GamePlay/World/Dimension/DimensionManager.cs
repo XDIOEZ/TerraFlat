@@ -23,6 +23,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
     public WorldAddress ActiveAddress { get; private set; }
     public DimensionDefinition ActiveDefinition { get; private set; }
     public bool IsTransitioning => isTransitioning;
+    public static DimensionManager ExistingInstance => instance;
 
     protected override void Awake()
     {
