@@ -72,6 +72,7 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
         EnsureEquipmentListSize();
         RebuildEquipmentRuntimeStateAfterLoad();
+        RefreshBagStorageSlots();
 
         BindOpenPanelTrigger();
 
@@ -208,6 +209,72 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
     #endregion
 
     #region 装备逻辑
+
+    /// <summary>重新挂载所有已装备收纳袋，兼容背包模块晚于装备模块恢复存档的顺序。</summary>
+    public void RefreshBagStorageSlots()
+    {
+        Inventory ownerInventory = ResolveOwnerBagInventory();
+        if (ownerInventory == null)
+            return;
+
+        DetachBagStorageSlots(ownerInventory);
+        foreach (EquipmentInstance_Bag bag in GetEquippedBagInstances())
+            bag.AttachToPlayerInventory(ownerInventory);
+    }
+
+    /// <summary>保存玩家行囊前临时移除装备扩展槽，避免把草笼内容重复写入玩家行囊存档。</summary>
+    public void PrepareBagStorageForOwnerSave()
+    {
+        Inventory ownerInventory = ResolveOwnerBagInventory();
+        if (ownerInventory != null)
+            DetachBagStorageSlots(ownerInventory);
+    }
+
+    /// <summary>玩家行囊存档完成后恢复运行时扩展槽。</summary>
+    public void RestoreBagStorageAfterOwnerSave()
+    {
+        RefreshBagStorageSlots();
+    }
+
+    private void DetachBagStorageSlots(Inventory ownerInventory)
+    {
+        foreach (EquipmentInstance_Bag bag in GetEquippedBagInstances())
+            bag.DetachFromPlayerInventory(ownerInventory);
+    }
+
+    private IEnumerable<EquipmentInstance_Bag> GetEquippedBagInstances()
+    {
+        foreach (List<EquipmentInstance> list in equipment_Instances)
+        {
+            if (list == null)
+                continue;
+
+            foreach (EquipmentInstance instance in list)
+            {
+                if (instance is EquipmentInstance_Bag bag)
+                    yield return bag;
+            }
+        }
+    }
+
+    private Inventory ResolveOwnerBagInventory()
+    {
+        if (item == null)
+            return null;
+
+        Mod_Inventory bagModule = item.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag);
+        if (bagModule?.inventory != null)
+            return bagModule.inventory;
+
+        Mod_Inventory[] modules = item.GetComponentsInChildren<Mod_Inventory>(true);
+        for (int i = 0; i < modules.Length; i++)
+        {
+            if (modules[i]?.inventory != null)
+                return modules[i].inventory;
+        }
+
+        return null;
+    }
 
     void LoadSaveDataFromModule()
     {

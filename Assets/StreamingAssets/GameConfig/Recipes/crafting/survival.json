@@ -562,6 +562,54 @@
         }
       ],
       "actions": []
+    },
+    {
+      "id": "core:编制草笼",
+      "displayName": "编制草笼",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 2,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Leaf",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Leaf",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Basket_Grass",
+          "amount": 1
+        }
+      ],
+      "actions": []
     }
   ]
 }

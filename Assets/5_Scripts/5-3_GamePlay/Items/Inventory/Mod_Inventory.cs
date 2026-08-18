@@ -147,6 +147,11 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
         {
             Debug.LogWarning("Item或Item的itemMods为空，无法绑定交互事件");
         }
+
+        // 装备模块可能先于本背包模块恢复，统一在背包数据就绪后重新挂载装备扩展槽。
+        Mod_Equipment equipment = item?.GetComponentsInChildren<Mod_Equipment>(true)
+            .FirstOrDefault();
+        equipment?.RefreshBagStorageSlots();
     }
 
     private void NewMethod(Inventory currentInventory)
@@ -322,6 +327,12 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
     [Button]
     public override void Save()
     {
+        Mod_Equipment equipment = item?.GetComponentsInChildren<Mod_Equipment>(true)
+            .FirstOrDefault();
+        equipment?.PrepareBagStorageForOwnerSave();
+
+        try
+        {
         // 保存面板开关状态 - 仅保存第一个面板的状态作为参考
         if (inventoryBasePanelCache.Count > 0)
         {
@@ -368,6 +379,11 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
         }
 
         Item_Data.ModuleDataDic[_Data.Name] = Data;
+        }
+        finally
+        {
+            equipment?.RestoreBagStorageAfterOwnerSave();
+        }
     }
     #endregion
 
