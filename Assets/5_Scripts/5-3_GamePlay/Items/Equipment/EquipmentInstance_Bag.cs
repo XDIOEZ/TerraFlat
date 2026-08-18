@@ -20,6 +20,9 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
     [MemoryPackIgnore]
     Inventory BagInventory = new Inventory();
 
+    [MemoryPackIgnore]
+    private Inventory attachedOwnerInventory;
+
     private string GetInventorySummary(Inventory_Data data)
     {
         if (data == null)
@@ -95,6 +98,8 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
         BagInventory.InitData();
         BagInventory.BindController(controller);
 
+        AttachToPlayerInventory(ResolvePlayerBagInventory(item));
+
         LogDebug("Equip-After", item);
     }
 
@@ -108,11 +113,11 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
     {
         LogDebug("UnEquip-Before", item);
 
-        if (BagInventory != null && BagInventory.Data != null)
-        {
-            // 卸下时回写最新快照，确保下次装备可以还原内容。
-            BagData = CloneInventoryData(BagInventory.Data);
-        }
+        DetachFromPlayerInventory(ResolvePlayerBagInventory(item));
+
+        // BagData 直接持有扩展槽位对象；卸下后只需让运行时副本重新指向最新快照。
+        if (BagInventory != null)
+            BagInventory.Data = CloneInventoryData(BagData);
 
         BagInventory.UnbindController();
         if (BagInventory.basePanel != null)
@@ -123,6 +128,57 @@ public partial class EquipmentInstance_Bag : EquipmentInstance
 
         LogDebug("UnEquip-After", item);
 
+    }
+
+    /// <summary>把草笼槽位接到玩家行囊末尾，使其直接参与现有背包 UI 和取放逻辑。</summary>
+    public void AttachToPlayerInventory(Inventory ownerInventory)
+    {
+        if (ownerInventory == null || BagData == null)
+            return;
+
+        if (attachedOwnerInventory == ownerInventory)
+            return;
+
+        if (attachedOwnerInventory != null)
+            DetachFromPlayerInventory(attachedOwnerInventory);
+
+        BagData.itemSlots ??= new List<ItemSlot>();
+        if (BagData.itemSlots.Count == 0)
+            return;
+
+        ownerInventory.AppendExternalSlots(BagData.itemSlots);
+        attachedOwnerInventory = ownerInventory;
+    }
+
+    /// <summary>卸下草笼时按槽位引用回收扩展格，保留格内物品供下次重新装备。</summary>
+    public void DetachFromPlayerInventory(Inventory ownerInventory)
+    {
+        Inventory target = attachedOwnerInventory ?? ownerInventory;
+        if (target == null || BagData?.itemSlots == null || BagData.itemSlots.Count == 0)
+            return;
+
+        target.RemoveExternalSlots(BagData.itemSlots);
+        if (ReferenceEquals(attachedOwnerInventory, target))
+            attachedOwnerInventory = null;
+    }
+
+    private static Inventory ResolvePlayerBagInventory(Item playerItem)
+    {
+        if (playerItem == null)
+            return null;
+
+        Mod_Inventory bagModule = playerItem.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag);
+        if (bagModule?.inventory != null)
+            return bagModule.inventory;
+
+        Mod_Inventory[] modules = playerItem.GetComponentsInChildren<Mod_Inventory>(true);
+        for (int i = 0; i < modules.Length; i++)
+        {
+            if (modules[i]?.inventory != null)
+                return modules[i].inventory;
+        }
+
+        return null;
     }
 
 }

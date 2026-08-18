@@ -1433,6 +1433,55 @@ public class Inventory
     #region 运行时容量调整
 
     /// <summary>
+    /// 将外部装备提供的槽位临时挂入当前库存。槽位对象本身由装备持有，
+    /// 因此保存时可以把内容写回装备，而不会复制出第二份物品数据。
+    /// </summary>
+    public void AppendExternalSlots(IList<ItemSlot> externalSlots)
+    {
+        if (Data?.itemSlots == null || externalSlots == null || externalSlots.Count == 0)
+            return;
+
+        for (int i = 0; i < externalSlots.Count; i++)
+            Data.itemSlots.Add(externalSlots[i] ?? new ItemSlot());
+
+        InitData();
+        if (basePanel != null)
+            InitUI();
+    }
+
+    /// <summary>按槽位对象引用移除外部槽位，避免多个装备扩展槽位时误删普通背包格。</summary>
+    public bool RemoveExternalSlots(IList<ItemSlot> externalSlots)
+    {
+        if (Data?.itemSlots == null || externalSlots == null || externalSlots.Count == 0)
+            return false;
+
+        int startIndex = -1;
+        for (int i = 0; i < Data.itemSlots.Count; i++)
+        {
+            if (ReferenceEquals(Data.itemSlots[i], externalSlots[0]))
+            {
+                startIndex = i;
+                break;
+            }
+        }
+
+        if (startIndex < 0 || startIndex + externalSlots.Count > Data.itemSlots.Count)
+            return false;
+
+        for (int i = 0; i < externalSlots.Count; i++)
+        {
+            if (!ReferenceEquals(Data.itemSlots[startIndex + i], externalSlots[i]))
+                return false;
+        }
+
+        Data.itemSlots.RemoveRange(startIndex, externalSlots.Count);
+        InitData();
+        if (basePanel != null)
+            InitUI();
+        return true;
+    }
+
+    /// <summary>
     /// 在游戏运行时为背包动态添加额外槽位
     /// 例如传入 3 则在当前基础上再增加 3 个空槽位
     /// </summary>
