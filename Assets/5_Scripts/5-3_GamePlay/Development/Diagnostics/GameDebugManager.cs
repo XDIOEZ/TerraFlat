@@ -7,7 +7,8 @@ public class GameDebugManager : MonoBehaviour
     [Header("调试快捷键")]
     [SerializeField] private KeyCode toggleEnvironmentInfoKey = KeyCode.F3;
     [SerializeField] private KeyCode setClearWeatherKey = KeyCode.F4;
-    [SerializeField] private KeyCode setRainWeatherKey = KeyCode.F5;
+    // 强制下雨调试键避开 F5 资源热重载快捷键。
+    [SerializeField] private KeyCode setRainWeatherKey = KeyCode.F7;
 
     [Header("实例化策略")]
     [SerializeField] private bool createOnFirstToggle = true;
