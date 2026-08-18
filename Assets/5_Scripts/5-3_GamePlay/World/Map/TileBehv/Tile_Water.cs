@@ -119,31 +119,16 @@ public class Tile_Water : TileBlockBehaviour
         if (item == null || water == null)
             return;
 
+        // 当前所有非盐水地表水都视为污水，包含河流；饮用后沿用现有感染概率。
         WaterEnvironmentKind waterKind = water.salt > SaltWaterThreshold
             ? WaterEnvironmentKind.Salt
-            : IsCleanFlowingFreshWater(item.transform.position)
-                ? WaterEnvironmentKind.CleanFresh
-                : WaterEnvironmentKind.DirtyFresh;
+            : WaterEnvironmentKind.DirtyFresh;
         runner.SetAvailableActions(new DrinkWaterActionDefinition(
             waterKind,
             drinkHoldSeconds,
             drinkTickSeconds,
             waterGainPerTick,
             dirtyWaterInfectionChance));
-    }
-
-    private static bool IsCleanFlowingFreshWater(Vector2 worldPosition)
-    {
-        ChunkMgr manager = ChunkMgr.Instance;
-        if (manager == null ||
-            !manager.TryGetRuntimeTerrainTile(worldPosition, out RuntimeTerrainTileSample sample))
-        {
-            return false;
-        }
-
-        return sample.Terrain.TryGetEnvironmentValue(
-                   "riverKind", sample.LocalCell.x, sample.LocalCell.y, out float riverKind) &&
-               Mathf.RoundToInt(riverKind) == (int)HydrologyWaterKind.River;
     }
 
     /// <summary>进入水体时创建角色独享的减速实例；清 Buff 不会影响该环境效果。</summary>
