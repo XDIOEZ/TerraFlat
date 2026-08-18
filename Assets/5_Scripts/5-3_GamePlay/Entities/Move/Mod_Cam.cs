@@ -264,6 +264,19 @@ public class Mod_Cam : Module
         _chunkLoader?.RefreshChunksForCameraView();
     }
 
+    /// <summary>按双指间距变化调整正交视野；两指分开时镜头拉近，合拢时镜头拉远。</summary>
+    public void ApplyPinchZoom(float screenDistanceDelta, float sensitivity)
+    {
+        if (Vcam == null || GameController?.IsGameplayInputLocked == true)
+            return;
+
+        float safeSensitivity = Mathf.Max(0f, sensitivity);
+        if (safeSensitivity <= 0f || Mathf.Abs(screenDistanceDelta) <= 0.001f)
+            return;
+
+        SetOrthographicSize(CurrentOrthographicSize - screenDistanceDelta * safeSensitivity);
+    }
+
     public void EnableUnlimitedView()
     {
         MaxPovValue = float.MaxValue;

@@ -1,6 +1,8 @@
 using System.Collections;
 using FlatWorld.Mobile;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.UI;
 
 /// <summary>
@@ -23,6 +25,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private const float MoveZoneMarginX = 76f;
     private const float MoveZoneMarginY = 54f;
     private const float FixedMoveZoneSize = 230f;
+    private const float PinchZoomSensitivity = 0.02f;
 
     private static readonly Color RunOffColor = new(0.094f, 0.212f, 0.247f, 0.99f);
     private static readonly Color RunOnColor = new(0.26f, 0.61f, 0.57f, 1f);
@@ -54,6 +57,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private int lastScreenHeight;
     private bool missingPrefabLogged;
     private bool runStateBound;
+    private bool pinchActive;
+    private float lastPinchDistance;
     private bool hotbarCanvasSortingCached;
     private bool hotbarCanvasOriginalOverrideSorting;
     private int hotbarCanvasOriginalSortingOrder;
@@ -280,6 +285,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     private void LateUpdate()
     {
+        UpdatePinchZoom();
+
         if (mobileAimCursor == null || controller == null || viewObject == null ||
             !ShouldShow() || !viewObject.activeInHierarchy ||
             gameplayLayer == null || !gameplayLayer.activeSelf)
@@ -303,6 +310,60 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         {
             mobileAimCursor.anchoredPosition = localPosition;
         }
+    }
+
+    /// <summary>在没有模态面板时读取两个独立触点，直接把间距变化交给相机模块。</summary>
+    private void UpdatePinchZoom()
+    {
+        if (!ShouldShow() || viewObject == null || !viewObject.activeInHierarchy ||
+            gameplayLayer == null || !gameplayLayer.activeSelf ||
+            controller == null || controller.IsGameplayInputLocked)
+        {
+            pinchActive = false;
+            return;
+        }
+
+        Touchscreen touchscreen = Touchscreen.current;
+        if (touchscreen == null)
+        {
+            pinchActive = false;
+            return;
+        }
+
+        TouchControl first = null;
+        TouchControl second = null;
+        int activeTouchCount = 0;
+        for (int i = 0; i < touchscreen.touches.Count; i++)
+        {
+            TouchControl touch = touchscreen.touches[i];
+            if (!touch.press.isPressed)
+                continue;
+
+            activeTouchCount++;
+            if (first == null)
+                first = touch;
+            else if (second == null)
+                second = touch;
+        }
+
+        if (activeTouchCount != 2 || first == null || second == null)
+        {
+            pinchActive = false;
+            return;
+        }
+
+        float distance = Vector2.Distance(first.position.ReadValue(), second.position.ReadValue());
+        if (!pinchActive)
+        {
+            lastPinchDistance = distance;
+            pinchActive = true;
+            return;
+        }
+
+        float distanceDelta = distance - lastPinchDistance;
+        lastPinchDistance = distance;
+        Mod_Cam cameraModule = GetComponentInChildren<Mod_Cam>(true);
+        cameraModule?.ApplyPinchZoom(distanceDelta, PinchZoomSensitivity);
     }
 
     #endregion
@@ -779,6 +840,9 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     public void ResetAllTouchState()
     {
+        pinchActive = false;
+        lastPinchDistance = 0f;
+
         if (joysticks != null)
         {
             for (int i = 0; i < joysticks.Length; i++)
