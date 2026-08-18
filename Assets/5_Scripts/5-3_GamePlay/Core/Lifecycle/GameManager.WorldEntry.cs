@@ -60,6 +60,7 @@ public partial class GameManager
     private WorldEntryPresentationMode worldEntryPresentationMode = WorldEntryPresentationMode.Standard;
     private string worldEntryTargetId = string.Empty;
     private Coroutine worldEntryCompletionCoroutine;
+    private bool isRespawnLoadingPresentationActive;
 
     public bool IsWorldEntryInProgress => isWorldEntryInProgress;
 
@@ -112,6 +113,48 @@ public partial class GameManager
             return;
 
         PublishCurrentWorldEntryProgress(title, status, progress, WorldEntryProgressState.Running);
+    }
+
+    /// <summary>复用世界加载页显示同场景重生的区块等待，不启动完整的世界进入生命周期。</summary>
+    internal bool BeginRespawnLoadingPresentation()
+    {
+        if (isWorldEntryInProgress || isRespawnLoadingPresentationActive)
+            return false;
+
+        isRespawnLoadingPresentationActive = true;
+        PublishWorldEntryProgress(new WorldEntryProgressInfo(
+            "正在重生",
+            "正在加载玩家周围区块…",
+            0.05f,
+            WorldEntryProgressState.Running));
+        return true;
+    }
+
+    /// <summary>更新同场景重生的加载页进度。</summary>
+    internal void ReportRespawnLoadingProgress(string status, float progress)
+    {
+        if (!isRespawnLoadingPresentationActive)
+            return;
+
+        PublishWorldEntryProgress(new WorldEntryProgressInfo(
+            "正在重生",
+            status,
+            progress,
+            WorldEntryProgressState.Running));
+    }
+
+    /// <summary>区块与碰撞准备完成后关闭同场景重生加载页。</summary>
+    internal void CompleteRespawnLoadingPresentation()
+    {
+        if (!isRespawnLoadingPresentationActive)
+            return;
+
+        isRespawnLoadingPresentationActive = false;
+        PublishWorldEntryProgress(new WorldEntryProgressInfo(
+            "重生完成",
+            "周围区域已经准备完毕。",
+            1f,
+            WorldEntryProgressState.Completed));
     }
 
     private void OnWorldEntryPlayerReady(Player player)
@@ -320,6 +363,7 @@ public partial class GameManager
         }
 
         isWorldEntryInProgress = false;
+        isRespawnLoadingPresentationActive = false;
         ResetCurrentWorldEntryContext();
     }
 }
