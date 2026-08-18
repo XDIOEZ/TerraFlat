@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -13,9 +14,19 @@ public class Mod_Equipment_Player : Mod_Equipment
     [Tooltip("用于开关装备面板的 InputAction 名称（来自 PlayerInputActions/Win10）")]
     public string OpenPanelActionName = "H";
 
+    [Tooltip("同时打开合成、装备和背包面板的 InputAction 名称")]
+    public string OpenPrimaryPanelsActionName = "Tab";
+
+    [Range(0.5f, 1f)]
+    [Tooltip("Tab 组合面板的显示缩放比例")]
+    public float PrimaryPanelScale = 0.75f;
+
     private InputAction openPanelAction;
     private Action<InputAction.CallbackContext> openPanelCallback;
+    private InputAction openPrimaryPanelsAction;
+    private Action<InputAction.CallbackContext> openPrimaryPanelsCallback;
     private GameController inputController;
+    private readonly HashSet<BasePanel> compactedPanels = new();
 
     #endregion
 
@@ -45,6 +56,16 @@ public class Mod_Equipment_Player : Mod_Equipment
 
         openPanelCallback = _ => ToggleEquipmentPanelFromInput();
         openPanelAction.performed += openPanelCallback;
+
+        openPrimaryPanelsAction = inputController._inputActions.FindAction(OpenPrimaryPanelsActionName);
+        if (openPrimaryPanelsAction == null)
+        {
+            Debug.LogError($"[Mod_Equipment_Player] 找不到输入动作 '{OpenPrimaryPanelsActionName}'。物体: {name}");
+            return;
+        }
+
+        openPrimaryPanelsCallback = _ => TogglePrimaryPanelsFromInput();
+        openPrimaryPanelsAction.performed += openPrimaryPanelsCallback;
     }
 
     protected override void UnbindOpenPanelTrigger()
@@ -52,9 +73,15 @@ public class Mod_Equipment_Player : Mod_Equipment
         if (openPanelAction != null && openPanelCallback != null)
             openPanelAction.performed -= openPanelCallback;
 
+        if (openPrimaryPanelsAction != null && openPrimaryPanelsCallback != null)
+            openPrimaryPanelsAction.performed -= openPrimaryPanelsCallback;
+
         openPanelAction = null;
         openPanelCallback = null;
+        openPrimaryPanelsAction = null;
+        openPrimaryPanelsCallback = null;
         inputController = null;
+        compactedPanels.Clear();
     }
 
     #endregion
@@ -94,6 +121,101 @@ public class Mod_Equipment_Player : Mod_Equipment
         }
 
         EquipmentInventory.basePanel.Toggle();
+    }
+
+    /// <summary>Tab 统一切换玩家的合成、装备、背包三块主要面板。</summary>
+    private void TogglePrimaryPanelsFromInput()
+    {
+        if (inputController != null && inputController.IsGameplayInputLocked && !HasAnyPrimaryPanelOpen())
+            return;
+
+        Mod_HandCraftTable craftTable = ResolveCraftTable();
+        Mod_Inventory bagModule = ResolveBagModule();
+        if (craftTable == null || bagModule == null || EquipmentInventory == null)
+        {
+            Debug.LogWarning("[Mod_Equipment_Player] Tab 面板组缺少合成、装备或背包模块，无法统一打开");
+            return;
+        }
+
+        if (ArePrimaryPanelsOpen())
+        {
+            craftTable.I_ClosePanel();
+            I_ClosePanel();
+            bagModule.I_ClosePanel();
+            return;
+        }
+
+        craftTable.I_ShowPanel();
+        ShowEquipmentPanel();
+        bagModule.I_ShowPanel();
+
+        CompactPanel(craftTable.basePanel);
+        CompactPanel(EquipmentInventory.basePanel);
+        CompactPanel(bagModule.inventory?.basePanel);
+    }
+
+    private bool ArePrimaryPanelsOpen()
+    {
+        Mod_HandCraftTable craftTable = ResolveCraftTable();
+        Mod_Inventory bagModule = ResolveBagModule();
+        return craftTable?.basePanel?.IsOpen() == true &&
+               EquipmentInventory?.basePanel?.IsOpen() == true &&
+               bagModule?.inventory?.basePanel?.IsOpen() == true;
+    }
+
+    private bool HasAnyPrimaryPanelOpen()
+    {
+        Mod_HandCraftTable craftTable = ResolveCraftTable();
+        Mod_Inventory bagModule = ResolveBagModule();
+        return craftTable?.basePanel?.IsOpen() == true ||
+               EquipmentInventory?.basePanel?.IsOpen() == true ||
+               bagModule?.inventory?.basePanel?.IsOpen() == true;
+    }
+
+    private void ShowEquipmentPanel()
+    {
+        EquipmentInventory.EnsurePanelCreated();
+        if (EquipmentInventory.basePanel == null)
+            return;
+
+        Inventory handInventory = item?.GetComponentInChildren<Mod_Hand>()?.HandInventory;
+        if (handInventory != null)
+            EquipmentInventory.DefaultTarget_Inventory = handInventory;
+
+        EquipmentInventory.basePanel.Open();
+    }
+
+    private void CompactPanel(BasePanel panel)
+    {
+        if (panel == null || !compactedPanels.Add(panel))
+            return;
+
+        panel.transform.localScale *= Mathf.Clamp(PrimaryPanelScale, 0.5f, 1f);
+    }
+
+    private Mod_HandCraftTable ResolveCraftTable()
+    {
+        Mod_HandCraftTable[] modules = item?.GetComponentsInChildren<Mod_HandCraftTable>(true);
+        return modules != null && modules.Length > 0 ? modules[0] : null;
+    }
+
+    private Mod_Inventory ResolveBagModule()
+    {
+        Mod_Inventory bagModule = item?.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag);
+        if (bagModule != null)
+            return bagModule;
+
+        Mod_Inventory[] modules = item?.GetComponentsInChildren<Mod_Inventory>(true);
+        if (modules == null)
+            return null;
+
+        for (int i = 0; i < modules.Length; i++)
+        {
+            if (modules[i]?.inventory?.Data?.ToggleActionName == "B")
+                return modules[i];
+        }
+
+        return null;
     }
 
     #endregion
