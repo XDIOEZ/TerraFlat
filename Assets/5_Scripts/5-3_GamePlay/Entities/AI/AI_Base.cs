@@ -769,8 +769,12 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	protected void MoveAwayFrom(Vector3 sourcePosition, float distance)
 	{
 		Vector2 awayDir = WorldTopologyRuntime.ShortestDelta(sourcePosition, transform.position).normalized;
+		Vector2 escapeOffset = AI_WanderUtility.PickWaterAwareEscapeOffset(
+			transform.position,
+			awayDir,
+			distance);
 		Vector3 targetPosition = WorldTopologyRuntime.NormalizePosition(
-			transform.position + (Vector3)(awayDir * distance));
+			transform.position + (Vector3)escapeOffset);
 		MoveTo(targetPosition);
 		FaceTarget(targetPosition);
 	}
