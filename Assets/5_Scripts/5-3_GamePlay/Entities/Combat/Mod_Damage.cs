@@ -31,6 +31,11 @@ public class Mod_Damage : Module, IDamageSender
     [Tooltip("是否仅允许物品在手上时造成伤害")]
     public bool OnlyDealDamageWhenInHand = false;
 
+    [Header("攻击目标限制")]
+    [Min(1)]
+    [Tooltip("每次攻击伤害窗口最多命中的实体数量；默认 1，群攻武器可按需调高。")]
+    public int MaxAttackTargets = 1;
+
     [Header("格子建筑伤害")]
     [SerializeField, Tooltip("明确标记该攻击模块可使用的拆墙工具类型。None 不会绕过目标自身的工具限制。")]
     private TileDamageToolKind tileDamageToolKind = TileDamageToolKind.None;
@@ -52,6 +57,7 @@ public class Mod_Damage : Module, IDamageSender
     private List<DamageReceiver> insideReceivers = new List<DamageReceiver>();
     private readonly List<Collider2D> overlapColliders = new List<Collider2D>();
     private readonly HashSet<DamageReceiver> aiWindowHitReceivers = new HashSet<DamageReceiver>();
+    private readonly HashSet<DamageReceiver> attackWindowHitReceivers = new HashSet<DamageReceiver>();
     private bool aiWindowOverlapScanEnabled;
     private bool lastColliderEnabled = false;
     private bool tileDamageAppliedThisWindow;
@@ -96,6 +102,7 @@ public class Mod_Damage : Module, IDamageSender
         insideReceivers.Clear();
         overlapColliders.Clear();
         aiWindowHitReceivers.Clear();
+        attackWindowHitReceivers.Clear();
         aiWindowOverlapScanEnabled = false;
         lastColliderEnabled = damageCollider != null && damageCollider.enabled;
         tileDamageAppliedThisWindow = false;
@@ -223,6 +230,15 @@ public class Mod_Damage : Module, IDamageSender
             return;
         }
 
+        if (receiver == null ||
+            attackWindowHitReceivers.Contains(receiver) ||
+            attackWindowHitReceivers.Count >= Mathf.Max(1, MaxAttackTargets))
+        {
+            return;
+        }
+
+        attackWindowHitReceivers.Add(receiver);
+
         // 造成伤害
         float acDamage = receiver.Hurt(this);
 
@@ -290,12 +306,14 @@ public class Mod_Damage : Module, IDamageSender
     {
         tileDamageAppliedThisWindow = false;
         aiWindowHitReceivers.Clear();
+        attackWindowHitReceivers.Clear();
     }
 
     private void EndDamageWindow()
     {
         insideReceivers.Clear();
         aiWindowHitReceivers.Clear();
+        attackWindowHitReceivers.Clear();
         aiWindowOverlapScanEnabled = false;
         tileDamageAppliedThisWindow = false;
     }
@@ -499,6 +517,8 @@ public class Mod_Damage : Module, IDamageSender
     public void StartAttack()
     {
         SetDamageEnabled(true);
+        // 碰撞体可能持续启用，开始新的动作时仍需重新计算本次可命中的目标数。
+        attackWindowHitReceivers.Clear();
         // 某些持续伤害模块的碰撞体可能已经启用，路由器会按攻击者去重。
         CombatAudioRouter.PlayWeaponAttack(this);
         lastDamageTime = Time.time; // 重置伤害计时
