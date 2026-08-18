@@ -1103,7 +1103,7 @@ PrefabInstance:
       objectReference: {fileID: 7734132848255119104}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: BuildingData.BitData
-      value: '{"Version":3,"maxVisibleDistance":10.0,"minVisibleDistance":1.0,"State":0,"Role":0,"SnapshotBase64":null,"BuildingPrefabId":"Meatrack","SummonerPrefabId":"Meatrack_Summoner"}'
+      value: '{"Version":3,"maxVisibleDistance":2.0,"minVisibleDistance":1.0,"State":0,"Role":0,"SnapshotBase64":null,"BuildingPrefabId":"Meatrack","SummonerPrefabId":"Meatrack_Summoner"}'
       objectReference: {fileID: 0}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: Data.BuildingPrefabId

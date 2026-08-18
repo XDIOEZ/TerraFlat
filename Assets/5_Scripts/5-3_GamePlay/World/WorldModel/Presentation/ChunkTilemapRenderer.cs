@@ -6,7 +6,7 @@ using UnityEngine.Tilemaps;
 /// <summary>
 /// 新版区块的基础 Tilemap 表现层。
 ///
-/// 地表水岸、地表石地边缘与矿洞墙脚使用 Ground Tilemap，矿洞地下水使用 CaveWater Tilemap。
+/// 地表陆地、地表水岸、矿洞墙脚和水体分别使用对应的 Tilemap 表现层。
 /// 左、右、下、上四个接触方向编码到 Tile Color RGBA，由 Tilemap Shader 绘制渐变，
 /// 不再为接触阴影创建 SpriteRenderer 游戏对象。Tile Color 只作为表现数据。
 /// </summary>
@@ -16,6 +16,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
 
     [SerializeField] private ChunkTilePaletteSO palette;
     [SerializeField] private Tilemap groundTilemap;
+    [SerializeField] private Tilemap waterTilemap;
     [SerializeField] private Tilemap caveWaterTilemap;
     [SerializeField] private Tilemap backTilemap;
     [SerializeField] private Tilemap blockingTilemap;
@@ -55,6 +56,8 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
         Unbind();
         boundChunk = chunk;
         renderCaveWater = IsCaveDimension(chunk.Address.DimensionId);
+        if (waterTilemap != null)
+            waterTilemap.gameObject.SetActive(!renderCaveWater);
         if (caveWaterTilemap != null)
             caveWaterTilemap.gameObject.SetActive(renderCaveWater);
         boundChunk.Terrain.Changed += HandleTerrainChanged;
@@ -67,6 +70,11 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
             boundChunk.Terrain.Changed -= HandleTerrainChanged;
         if (groundTilemap != null)
             groundTilemap.ClearAllTiles();
+        if (waterTilemap != null)
+        {
+            waterTilemap.ClearAllTiles();
+            waterTilemap.gameObject.SetActive(false);
+        }
         if (caveWaterTilemap != null)
         {
             caveWaterTilemap.ClearAllTiles();
@@ -128,6 +136,9 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
 
         int count = terrain.CellCount;
         var ground = groundTilemap != null ? new TileBase[count] : null;
+        var surfaceWater = !renderCaveWater && waterTilemap != null
+            ? new TileBase[count]
+            : null;
         var caveWater = renderCaveWater && caveWaterTilemap != null
             ? new TileBase[count]
             : null;
@@ -139,9 +150,16 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
             {
                 int index = y * terrain.Width + x;
                 TerrainCell cell = terrain.GetCell(x, y);
-                bool water = IsWater(cell);
-                if (caveWater != null && water && cell.GroundTileId != 0)
-                    palette.TryGetTile(cell.GroundTileId, out caveWater[index]);
+                bool isWaterCell = IsWater(cell);
+                if (isWaterCell && cell.GroundTileId != 0)
+                {
+                    if (caveWater != null)
+                        palette.TryGetTile(cell.GroundTileId, out caveWater[index]);
+                    else if (surfaceWater != null)
+                        palette.TryGetTile(cell.GroundTileId, out surfaceWater[index]);
+                    else if (ground != null)
+                        palette.TryGetTile(cell.GroundTileId, out ground[index]);
+                }
                 else if (ground != null && cell.GroundTileId != 0)
                     palette.TryGetTile(cell.GroundTileId, out ground[index]);
                 if (back != null && cell.BackTileId != 0)
@@ -157,10 +175,15 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
             groundTilemap.SetTilesBlock(bounds, ground);
             ApplyGroundContactMasks(terrain);
         }
+        if (surfaceWater != null)
+        {
+            waterTilemap.SetTilesBlock(bounds, surfaceWater);
+            ApplyWaterEdgeMasks(waterTilemap, terrain);
+        }
         if (caveWater != null)
         {
             caveWaterTilemap.SetTilesBlock(bounds, caveWater);
-            ApplyCaveWaterEdgeMasks(terrain);
+            ApplyWaterEdgeMasks(caveWaterTilemap, terrain);
         }
         if (back != null)
             backTilemap.SetTilesBlock(bounds, back);
@@ -183,6 +206,15 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
                 TerrainCell cell = terrain.GetCell(x, y);
                 if (cell.GroundTileId == 0)
                     continue;
+
+                // 有独立水面层时，水格由对应 Water Tilemap 负责，Ground 不再写入其颜色遮罩。
+                bool dedicatedWater = IsWater(cell) &&
+                    ((cave && caveWaterTilemap != null) ||
+                     (!cave && waterTilemap != null));
+                if (dedicatedWater)
+                {
+                    continue;
+                }
 
                 bool receivesShadow;
                 ContactKind contactKind;
@@ -214,8 +246,11 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
     }
 
     /// <summary>RGBA 分别编码左、右、下、上岸线，Shader 在对应水格内侧绘制暗边。</summary>
-    private void ApplyCaveWaterEdgeMasks(ChunkTerrainData terrain)
+    private void ApplyWaterEdgeMasks(Tilemap targetTilemap, ChunkTerrainData terrain)
     {
+        if (targetTilemap == null)
+            return;
+
         for (int y = 0; y < terrain.Height; y++)
         {
             for (int x = 0; x < terrain.Width; x++)
@@ -225,8 +260,8 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
                     continue;
 
                 Vector3Int position = new(x, y, 0);
-                caveWaterTilemap.SetTileFlags(position, TileFlags.None);
-                caveWaterTilemap.SetColor(position,
+                targetTilemap.SetTileFlags(position, TileFlags.None);
+                targetTilemap.SetColor(position,
                     BuildContactMask(terrain, x, y, ContactKind.Land));
             }
         }
