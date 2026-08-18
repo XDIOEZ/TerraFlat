@@ -171,7 +171,9 @@ public static class CraftingRecipeMatcher
         match = null;
         int requiredSlotCount = recipe.inputs.RowItems_List.Count(required => !IsEmptyIngredient(required));
         int occupiedSlotCount = inputSlots.Count(slot => slot?.itemData != null);
-        if (requiredSlotCount != occupiedSlotCount)
+        // 无规则配方只要求材料总量满足；同一种材料可以集中在一个堆叠槽中，不能强制玩家先把它拆成多个槽位。
+        // 但额外放入未声明的材料仍然要拒绝，避免误匹配后被事务消耗。
+        if (requiredSlotCount == 0 || occupiedSlotCount > requiredSlotCount)
             return false;
 
         var remaining = new float[inputSlots.Count];
@@ -179,11 +181,12 @@ public static class CraftingRecipeMatcher
             remaining[i] = inputSlots[i]?.itemData?.Stack?.Amount ?? 0f;
 
         var consumptions = new Dictionary<int, float>();
-        foreach (RuntimeRecipeIngredient required in recipe.inputs.RowItems_List)
+        IEnumerable<RuntimeRecipeIngredient> requiredIngredients = recipe.inputs.RowItems_List
+            .Where(required => !IsEmptyIngredient(required))
+            .OrderBy(required => inputSlots.Count(slot => MatchesIdentity(required, slot?.itemData)))
+            .ThenByDescending(required => required.amount);
+        foreach (RuntimeRecipeIngredient required in requiredIngredients)
         {
-            if (IsEmptyIngredient(required))
-                continue;
-
             float need = required.amount;
             bool foundMatch = false;
             for (int i = 0; i < inputSlots.Count; i++)
@@ -240,8 +243,14 @@ public static class CraftingRecipeMatcher
         if (required == null || actual == null)
             return false;
         if (required.matchMode == MatchMode.ByTag)
-            return actual.Tags != null && actual.Tags.Contains(required.Tag);
-        return string.Equals(actual.IDName, required.ItemName, StringComparison.Ordinal);
+        {
+            string requiredTag = required.Tag?.Trim();
+            return !string.IsNullOrEmpty(requiredTag) &&
+                   actual.Tags != null &&
+                   actual.Tags.Any(tag => string.Equals(tag?.Trim(), requiredTag, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return string.Equals(actual.IDName?.Trim(), required.ItemName?.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsEmptyIngredient(RuntimeRecipeIngredient ingredient)
