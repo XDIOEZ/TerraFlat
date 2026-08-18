@@ -139,11 +139,18 @@ public class Inventory_WorkBench : Inventory
         _outputPreview = CraftingOutputPreview.Attach(basePanel, outputSlot);
         Data.Event_OnDataChanged -= OnInputSlotChanged;
         Data.Event_OnDataChanged += OnInputSlotChanged;
+        outputInventory.Data.Event_OnDataChanged -= OnOutputSlotChanged;
+        outputInventory.Data.Event_OnDataChanged += OnOutputSlotChanged;
     }
 
     private void OnInputSlotChanged(ItemSlot _)
     {
         ResetCraftProgress();
+        RefreshCraftPreview();
+    }
+
+    private void OnOutputSlotChanged(ItemSlot _)
+    {
         RefreshCraftPreview();
     }
 

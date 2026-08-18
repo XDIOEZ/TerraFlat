@@ -59,6 +59,13 @@ public sealed class CraftingOutputPreview : MonoBehaviour
     public void Show(Sprite sprite, float progress01 = 0f)
     {
         EnsureImages();
+        if (IsOutputOccupied())
+        {
+            // 输出槽已有上一次制作结果时，真实物品优先显示，不能再叠加下一次制作虚影。
+            Clear();
+            return;
+        }
+
         if (sprite == null || _ghostImage == null || _revealImage == null)
         {
             Clear();
@@ -72,6 +79,13 @@ public sealed class CraftingOutputPreview : MonoBehaviour
         _ghostImage.gameObject.SetActive(true);
         _revealImage.gameObject.SetActive(true);
         SetProgress(progress01);
+    }
+
+    /// <summary>检查输出槽是否仍保留上一件制作结果。</summary>
+    public bool IsOutputOccupied()
+    {
+        ItemSlot slot = _slotUI?.GetSlotDataFunc?.Invoke(_slotUI.slotIndex);
+        return slot?.itemData != null;
     }
 
     public void SetProgress(float progress01)
