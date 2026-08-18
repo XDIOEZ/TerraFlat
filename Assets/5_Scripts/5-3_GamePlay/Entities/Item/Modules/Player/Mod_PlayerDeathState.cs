@@ -1,3 +1,4 @@
+using System.Collections;
 using Sirenix.OdinInspector;
 using MemoryPack;
 using UnityEngine;
@@ -69,6 +70,8 @@ public partial class Mod_PlayerDeathState : Module
     private BasePanel _dyingPanel; // 濒死UI面板
     private Button _respawnButton; // 重生按钮
     private Button _exitButton; // 回主菜单按钮
+    private Coroutine _respawnCoroutine; // 等待周围区块准备完成的协程
+    private bool _respawnInProgress; // 防止重复点击重生
 
 #endregion
 
@@ -169,10 +172,12 @@ public partial class Mod_PlayerDeathState : Module
 
     public void RespawnFromDying()
     {
-        if (!_isInDyingState)
+        if (!_isInDyingState || _respawnInProgress)
         {
             return;
         }
+
+        _respawnInProgress = true;
 
         ResolveRespawnDestination(
             out Vector3 respawnPos,
@@ -194,6 +199,7 @@ public partial class Mod_PlayerDeathState : Module
                 Debug.LogError(
                     $"[Mod_PlayerDeathState] 无法开始跨维度重生：" +
                     $"active={activeAddress.WorldKey}, target={targetAddress.WorldKey}");
+                _respawnInProgress = false;
                 return;
             }
 
@@ -203,11 +209,7 @@ public partial class Mod_PlayerDeathState : Module
             return;
         }
 
-        item.transform.position = new Vector3(respawnPos.x, respawnPos.y, 0f);
-        _player.Data.transform.position = item.transform.position;
-        CompleteRespawnState(restartChunkStreaming: true, unlockInput: true);
-
-        Debug.Log($"[Mod_PlayerDeathState] 玩家已重生，位置={item.transform.position}, 血量={_damageReceiver.Hp:F1}/{_damageReceiver.MaxHp:F1}");
+        _respawnCoroutine = StartCoroutine(RespawnAfterChunksReadyCoroutine(respawnPos));
     }
 
     /// <summary>判断复活目标是否需要经过完整动态世界切换。</summary>
@@ -330,12 +332,91 @@ public partial class Mod_PlayerDeathState : Module
             RestartChunkStreamingForRespawn();
 
         _isInDyingState = false;
+        _respawnInProgress = false;
         if (unlockInput)
             _gameController.SetGameplayInputLocked(false);
 
         CloseAndDestroyDyingPanel();
         if (_damageReceiver.IsPanelVisible())
             _damageReceiver.RefreshUI();
+    }
+
+    /// <summary>把玩家移到重生点后等待脚下区块和当前可见窗口完成，再恢复移动。</summary>
+    private IEnumerator RespawnAfterChunksReadyCoroutine(Vector3 respawnPosition)
+    {
+        GameManager gameManager = GameManager.Instance;
+        bool loadingPresentationStarted = gameManager != null &&
+            gameManager.BeginRespawnLoadingPresentation();
+
+        _dyingPanel?.Close();
+        item.transform.position = new Vector3(respawnPosition.x, respawnPosition.y, 0f);
+        _player.Data.transform.position = item.transform.position;
+        RestartChunkStreamingForRespawn();
+
+        yield return null;
+
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        float displayedProgress = 0.18f;
+        while (chunkManager == null)
+        {
+            gameManager?.ReportRespawnLoadingProgress("正在连接区块管理器…", displayedProgress);
+            yield return null;
+            chunkManager = ChunkMgr.Instance;
+        }
+
+        bool centerWarningLogged = false;
+        float warningAt = Time.realtimeSinceStartup + 12f;
+        while (!chunkManager.IsRuntimeEntityPresentationReady(item.transform.position) ||
+               chunkManager.HasPendingChunkLoads)
+        {
+            displayedProgress = Mathf.MoveTowards(
+                displayedProgress,
+                0.76f,
+                Mathf.Max(0.002f, Time.unscaledDeltaTime * 0.08f));
+            gameManager?.ReportRespawnLoadingProgress("正在生成玩家所在区块…", displayedProgress);
+
+            if (!centerWarningLogged && Time.realtimeSinceStartup >= warningAt)
+            {
+                centerWarningLogged = true;
+                Debug.LogWarning("[Mod_PlayerDeathState] 玩家所在区块加载超过 12 秒，继续等待。", chunkManager);
+            }
+
+            yield return null;
+        }
+
+        bool windowWarningLogged = false;
+        warningAt = Time.realtimeSinceStartup + 12f;
+        while (!chunkManager.AreRuntimeWindowPresentationsReady)
+        {
+            displayedProgress = Mathf.MoveTowards(
+                displayedProgress,
+                0.98f,
+                Mathf.Max(0.002f, Time.unscaledDeltaTime * 0.08f));
+            gameManager?.ReportRespawnLoadingProgress("正在绘制周围区块…", displayedProgress);
+
+            if (!windowWarningLogged && Time.realtimeSinceStartup >= warningAt)
+            {
+                windowWarningLogged = true;
+                Debug.LogWarning(
+                    $"[Mod_PlayerDeathState] 重生周围区块表现超过 12 秒，继续等待：" +
+                    $"待表现 {chunkManager.PendingRuntimeChunkPresentationCount}",
+                    chunkManager);
+            }
+
+            yield return null;
+        }
+
+        Physics2D.SyncTransforms();
+        yield return new WaitForFixedUpdate();
+
+        CompleteRespawnState(restartChunkStreaming: false, unlockInput: true);
+        gameManager?.CompleteRespawnLoadingPresentation();
+        _respawnCoroutine = null;
+
+        Debug.Log(
+            $"[Mod_PlayerDeathState] 玩家已重生，位置={item.transform.position}, " +
+            $"血量={_damageReceiver.Hp:F1}/{_damageReceiver.MaxHp:F1}, " +
+            $"加载页={loadingPresentationStarted}");
     }
 
     /// <summary>优先读取维度管理器的权威地址，Scene 名作为启动兼容兜底。</summary>
