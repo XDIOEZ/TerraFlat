@@ -257,7 +257,15 @@ public class ItemPicker : Module
 
             targetInventory.RefreshUI();
             ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
-            GameplayProgressEvents.PublishPickupSucceeded(item as Player, itemData.IDName, addedAmount);
+            DimensionManager dimensionManager = DimensionManager.ExistingInstance;
+            string dimensionId = dimensionManager != null && dimensionManager.ActiveAddress.IsValid
+                ? dimensionManager.ActiveAddress.DimensionId
+                : null;
+            GameplayProgressEvents.PublishPickupSucceeded(
+                item as Player,
+                itemData.IDName,
+                addedAmount,
+                dimensionId);
             return true;
         }
 

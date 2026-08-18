@@ -3,28 +3,244 @@
   "quests": [
     {
       "id": "flatworld:first_chipped_tool",
-      "definitionVersion": 1,
-      "titleKey": "quest.flatworld.first_chipped_tool.title",
-      "title": "第一件石器",
-      "descriptionKey": "quest.flatworld.first_chipped_tool.description",
-      "description": "制作一件打制石器，熟悉最基础的制作流程。",
+      "definitionVersion": 2,
+      "titleKey": "quest.flatworld.survival_mining_path.title",
+      "title": "从石器到铜锭",
+      "descriptionKey": "quest.flatworld.survival_mining_path.description",
+      "description": "从收集石头开始，逐步制作工具、进入矿洞、点燃熔炉并完成铜锭与粗铁锭。",
       "acceptMode": "auto",
       "turnInMode": "auto",
       "conditions": [],
       "stages": [
         {
-          "id": "craft",
+          "id": "gather_stone",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "pick_stone",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.pick_stone",
+              "label": "捡起 2 个石头",
+              "required": 2,
+              "parameters": {
+                "eventType": "item.picked_up",
+                "targetId": "Ore_Stone"
+              }
+            }
+          ]
+        },
+        {
+          "id": "craft_chipped_tool",
           "completionMode": "all",
           "objectives": [
             {
               "id": "craft_chipped_tool",
               "type": "signal.count",
-              "labelKey": "quest.flatworld.first_chipped_tool.objective.craft_chipped_tool",
-              "label": "制作一件打制石器",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.craft_chipped_tool",
+              "label": "制作打制石器",
               "required": 1,
               "parameters": {
                 "eventType": "craft.succeeded",
                 "targetId": "ChippedTool"
+              }
+            }
+          ]
+        },
+        {
+          "id": "gather_workbench_materials",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "pick_logs",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.pick_logs",
+              "label": "收集 2 根原木",
+              "required": 2,
+              "parameters": {
+                "eventType": "item.picked_up",
+                "targetId": "Log"
+              }
+            },
+            {
+              "id": "pick_sticks",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.pick_sticks",
+              "label": "收集 2 根木棍",
+              "required": 2,
+              "parameters": {
+                "eventType": "item.picked_up",
+                "targetId": "Stick_Wood"
+              }
+            }
+          ]
+        },
+        {
+          "id": "craft_workbench",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "craft_workbench",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.craft_workbench",
+              "label": "制作工作台",
+              "required": 1,
+              "parameters": {
+                "eventType": "craft.succeeded",
+                "targetId": "WorkBench_Summoner"
+              }
+            }
+          ]
+        },
+        {
+          "id": "craft_stone_tools",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "craft_stone_pickaxe",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.craft_stone_pickaxe",
+              "label": "制作石镐",
+              "required": 1,
+              "parameters": {
+                "eventType": "craft.succeeded",
+                "targetId": "Pickaxe_Stone"
+              }
+            },
+            {
+              "id": "craft_stone_axe",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.craft_stone_axe",
+              "label": "制作石斧",
+              "required": 1,
+              "parameters": {
+                "eventType": "craft.succeeded",
+                "targetId": "Axe_Stone"
+              }
+            }
+          ]
+        },
+        {
+          "id": "mine_in_cave",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "mine_iron_ore",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.mine_iron_ore",
+              "label": "在矿洞采集铁矿",
+              "required": 1,
+              "parameters": {
+                "eventType": "item.picked_up",
+                "targetId": "Ore_Iron",
+                "dimensionId": "cave"
+              }
+            },
+            {
+              "id": "mine_copper_ore",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.mine_copper_ore",
+              "label": "在矿洞采集 2 个铜矿",
+              "required": 2,
+              "parameters": {
+                "eventType": "item.picked_up",
+                "targetId": "Ore_Copper",
+                "dimensionId": "cave"
+              }
+            },
+            {
+              "id": "mine_coal_ore",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.mine_coal_ore",
+              "label": "在矿洞采集煤炭",
+              "required": 1,
+              "parameters": {
+                "eventType": "item.picked_up",
+                "targetId": "Ore_Coal",
+                "dimensionId": "cave"
+              }
+            }
+          ]
+        },
+        {
+          "id": "craft_smelter",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "craft_smelter",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.craft_smelter",
+              "label": "制作熔炉",
+              "required": 1,
+              "parameters": {
+                "eventType": "craft.succeeded",
+                "targetId": "Smelter_Summoner"
+              }
+            }
+          ]
+        },
+        {
+          "id": "ignite_smelter",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "ignite_smelter",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.ignite_smelter",
+              "label": "给熔炉点火并开始烧制",
+              "required": 1,
+              "parameters": {
+                "eventType": "furnace.ignited"
+              }
+            }
+          ]
+        },
+        {
+          "id": "make_charcoal",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "smelt_charcoal",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.smelt_charcoal",
+              "label": "烧制 1 个木炭",
+              "required": 1,
+              "parameters": {
+                "eventType": "smelt.succeeded",
+                "targetId": "Ore_Coal"
+              }
+            }
+          ]
+        },
+        {
+          "id": "smelt_raw_iron",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "smelt_raw_iron",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.smelt_raw_iron",
+              "label": "烧制 1 个粗铁锭",
+              "required": 1,
+              "parameters": {
+                "eventType": "smelt.succeeded",
+                "targetId": "Ingot_RawIron"
+              }
+            }
+          ]
+        },
+        {
+          "id": "smelt_copper",
+          "completionMode": "all",
+          "objectives": [
+            {
+              "id": "smelt_copper",
+              "type": "signal.count",
+              "labelKey": "quest.flatworld.survival_mining_path.objective.smelt_copper",
+              "label": "烧制 1 个铜锭",
+              "required": 1,
+              "parameters": {
+                "eventType": "smelt.succeeded",
+                "targetId": "Ingot_Copper"
               }
             }
           ]
