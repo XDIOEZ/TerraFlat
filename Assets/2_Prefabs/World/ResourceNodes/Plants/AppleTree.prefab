@@ -560,10 +560,7 @@ PrefabInstance:
       propertyPath: Data.MaxHp
       value: 200
       objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Defense
-      value: 50
-      objectReference: {fileID: 0}
+
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.ShowCanvas
       value: 0
@@ -572,10 +569,7 @@ PrefabInstance:
       propertyPath: Data.MaxHp.BaseValue
       value: 200
       objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Defense.BaseValue
-      value: 1.5
-      objectReference: {fileID: 0}
+
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.DefenseValues.Cutting
       value: 2
@@ -593,37 +587,21 @@ PrefabInstance:
       value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.DamageSystemVersion
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: HurtActions.Array.size
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Weakness.Array.size
-      value: 1
-      objectReference: {fileID: 0}
+
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: HurtActions.Array.data[0]
       value: 9072450061413700021
       objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Weakness.Array.data[0].Tag
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Weakness.Array.data[0].Level
-      value: 1
-      objectReference: {fileID: 0}
+
+
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: managedReferences[9072450061413700021]
       value: GamePlay DamageReciver_Action_SpawnItem
       objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Weakness._serializedList.Array.size
-      value: 1
-      objectReference: {fileID: 0}
+
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[0].LootPrefabName
       value: Chicken
@@ -632,14 +610,8 @@ PrefabInstance:
       propertyPath: managedReferences[9072450061413700021].Enabled
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Weakness._serializedList.Array.data[0].Key
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Weakness._serializedList.Array.data[0].Value
-      value: 1
-      objectReference: {fileID: 0}
+
+
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: managedReferences[9072450061413700021].SpawnRadius
       value: 1.15

@@ -92,13 +92,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   AttackEffects: []
-  Weakness: []
-  Damage:
-    BaseValue: 10
-    BaseAdditive: 0
-    AdditiveModifier: 0
-    MultiplicativeModifier: 1
-    FinalAdditive: 0
+  DamageValues:
+    Cutting: 0
+    Piercing: 0
+    Chopping: 0
+    Blunt: 10
   DamageInterval: -1
   EnableOnTriggerEnterDamage: 1
   OnlyDealDamageWhenInHand: 0

@@ -401,25 +401,25 @@ PrefabInstance:
       value: 0.2
       objectReference: {fileID: 0}
     - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: Damage.BaseValue
-      value: 7
-      objectReference: {fileID: 0}
-    - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: Weakness.Array.size
+      propertyPath: DamageValues.Cutting
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: Weakness.Array.data[0]
-      value: 3
+      propertyPath: DamageValues.Piercing
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: Weakness.Array.data[0].Tag
-      value: 3
+      propertyPath: DamageValues.Chopping
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: Weakness.Array.data[0].Level
+      propertyPath: DamageValues.Blunt
       value: 1
       objectReference: {fileID: 0}
+
+
+
+
     - target: {fileID: 2747812879517624506, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
       propertyPath: m_Name
       value: Mod_Damage

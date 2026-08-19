@@ -299,18 +299,6 @@
                 "Chopping": 1.0,
                 "Blunt": 1.0
               },
-              "Defense": 1.0,
-              "DamageSystemVersion": 2,
-              "Weakness": [
-                {
-                  "Tag": 0,
-                  "Level": 1
-                },
-                {
-                  "Tag": 2,
-                  "Level": 1
-                }
-              ],
               "ShowCanvas": true,
               "DamageInterval": 0.12,
               "DestroyDelay": 0.0,
@@ -1019,21 +1007,6 @@
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
-              "Defense": 5.0,
-              "Weakness": [
-                {
-                  "Tag": 0,
-                  "Level": 2
-                },
-                {
-                  "Tag": 2,
-                  "Level": 1
-                },
-                {
-                  "Tag": 1,
-                  "Level": 3
-                }
-              ],
               "ShowCanvas": true,
               "DamageInterval": 0.12,
               "DestroyDelay": 0.0,
@@ -1056,7 +1029,13 @@
                   "MinAmount": 1,
                   "MaxAmount": 5
                 }
-              ]
+              ],
+              "DefenseValues": {
+                "Cutting": 5.0,
+                "Piercing": 5.0,
+                "Chopping": 5.0,
+                "Blunt": 5.0
+              }
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1121,20 +1100,11 @@
           "parameters": {
             "xOffset": 0.5,
             "AttackEffects": [],
-            "Weakness": [],
             "DamageValues": {
               "Cutting": 0.0,
               "Piercing": 2.0,
               "Chopping": 0.0,
               "Blunt": 8.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 10.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": -1.0,
             "EnableOnTriggerEnterDamage": true,
@@ -1790,21 +1760,6 @@
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
-              "Defense": 3.0,
-              "Weakness": [
-                {
-                  "Tag": 0,
-                  "Level": 2
-                },
-                {
-                  "Tag": 2,
-                  "Level": 1
-                },
-                {
-                  "Tag": 1,
-                  "Level": 3
-                }
-              ],
               "ShowCanvas": true,
               "DamageInterval": 0.12,
               "DestroyDelay": 0.0,
@@ -1827,7 +1782,13 @@
                   "MinAmount": 1,
                   "MaxAmount": 3
                 }
-              ]
+              ],
+              "DefenseValues": {
+                "Cutting": 3.0,
+                "Piercing": 3.0,
+                "Chopping": 3.0,
+                "Blunt": 3.0
+              }
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1892,20 +1853,11 @@
           "parameters": {
             "xOffset": 0.65,
             "AttackEffects": [],
-            "Weakness": [],
             "DamageValues": {
               "Cutting": 3.0,
               "Piercing": 2.0,
               "Chopping": 0.0,
               "Blunt": 7.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 10.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": -1.0,
             "EnableOnTriggerEnterDamage": true,
@@ -2279,20 +2231,11 @@
           },
           "parameters": {
             "AttackEffects": [],
-            "Weakness": [],
             "DamageValues": {
               "Cutting": 0.0,
               "Piercing": 0.0,
               "Chopping": 0.0,
               "Blunt": 20.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 20.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": 1.0,
             "EnableOnTriggerEnterDamage": true,
@@ -2389,12 +2332,16 @@
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
-              "Defense": 0.0,
-              "Weakness": [],
               "ShowCanvas": true,
               "DamageInterval": 0.12,
               "DestroyDelay": 0.0,
-              "LootTable": []
+              "LootTable": [],
+              "DefenseValues": {
+                "Cutting": 0.0,
+                "Piercing": 0.0,
+                "Chopping": 0.0,
+                "Blunt": 0.0
+              }
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",

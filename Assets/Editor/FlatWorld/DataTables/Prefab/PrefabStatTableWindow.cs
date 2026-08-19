@@ -485,7 +485,6 @@ public class PrefabStatTableWindow : EditorWindow
                     row.PiercingDefense,
                     row.ChoppingDefense,
                     row.BluntDefense));
-                receiver.Data.DamageSystemVersion = 1;
                 EditorUtility.SetDirty(receiver);
                 changed = true;
             }

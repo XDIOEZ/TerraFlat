@@ -194,9 +194,9 @@ public static class BuildingSummonerPrefabGenerator
             ? ToolSummonerRoot
             : SummonerRoot;
         string summonerPath = $"{destinationRoot}/{MakeSafeFileName(summonerId)}.prefab";
-        // Prefab variants cannot represent every custom ItemData value (for example
-        // DamageType dictionary keys). Mirror the source YAML instead and preserve an
-        // existing destination .meta file so references to the summoner remain stable.
+        // Prefab variants cannot represent every custom ItemData value. Mirror the
+        // source YAML instead and preserve an existing destination .meta file so
+        // references to the summoner remain stable.
         File.Copy(Path.GetFullPath(buildingPath), Path.GetFullPath(summonerPath), true);
 
         changed |= PatchPrefabYaml(

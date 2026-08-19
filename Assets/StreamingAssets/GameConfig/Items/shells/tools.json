@@ -73,25 +73,11 @@
             "Type": 0
           },
           "parameters": {
-            "Weakness": [
-              {
-                "Tag": 1,
-                "Level": 1
-              }
-            ],
             "DamageValues": {
               "Cutting": 0.0,
               "Piercing": 0.0,
               "Chopping": 0.0,
               "Blunt": 2.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 1.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -260,25 +246,11 @@
             "Type": 0
           },
           "parameters": {
-            "Weakness": [
-              {
-                "Tag": 1,
-                "Level": 1
-              }
-            ],
             "DamageValues": {
               "Cutting": 0.0,
               "Piercing": 0.0,
               "Chopping": 2.0,
               "Blunt": 6.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 5.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -495,25 +467,11 @@
             "Type": 0
           },
           "parameters": {
-            "Weakness": [
-              {
-                "Tag": 3,
-                "Level": 1
-              }
-            ],
             "DamageValues": {
               "Cutting": 1.0,
               "Piercing": 0.0,
               "Chopping": 10.0,
               "Blunt": 1.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 7.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -688,25 +646,11 @@
             "Type": 0
           },
           "parameters": {
-            "Weakness": [
-              {
-                "Tag": 3,
-                "Level": 1
-              }
-            ],
             "DamageValues": {
               "Cutting": 2.0,
               "Piercing": 0.0,
               "Chopping": 11.0,
               "Blunt": 1.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 8.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -881,25 +825,11 @@
             "Type": 0
           },
           "parameters": {
-            "Weakness": [
-              {
-                "Tag": 3,
-                "Level": 2
-              }
-            ],
             "DamageValues": {
               "Cutting": 2.0,
               "Piercing": 0.0,
               "Chopping": 15.0,
               "Blunt": 1.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 12.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -1074,25 +1004,11 @@
             "Type": 0
           },
           "parameters": {
-            "Weakness": [
-              {
-                "Tag": 3,
-                "Level": 2
-              }
-            ],
             "DamageValues": {
               "Cutting": 3.0,
               "Piercing": 0.0,
               "Chopping": 18.0,
               "Blunt": 1.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 15.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -1268,25 +1184,11 @@
             "Type": 0
           },
           "parameters": {
-            "Weakness": [
-              {
-                "Tag": 3,
-                "Level": 2
-              }
-            ],
             "DamageValues": {
               "Cutting": 3.0,
               "Piercing": 0.0,
               "Chopping": 20.0,
               "Blunt": 1.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 15.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -1461,25 +1363,11 @@
             "Type": 0
           },
           "parameters": {
-            "Weakness": [
-              {
-                "Tag": 3,
-                "Level": 3
-              }
-            ],
             "DamageValues": {
               "Cutting": 4.0,
               "Piercing": 0.0,
               "Chopping": 23.0,
               "Blunt": 1.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 20.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -1662,25 +1550,11 @@
             "Type": 0
           },
           "parameters": {
-            "Weakness": [
-              {
-                "Tag": 1,
-                "Level": 1
-              }
-            ],
             "DamageValues": {
               "Cutting": 0.0,
               "Piercing": 10.0,
               "Chopping": 0.0,
               "Blunt": 4.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 10.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -1891,25 +1765,11 @@
             "Type": 0
           },
           "parameters": {
-            "Weakness": [
-              {
-                "Tag": 1,
-                "Level": 2
-              }
-            ],
             "DamageValues": {
               "Cutting": 0.0,
               "Piercing": 15.0,
               "Chopping": 0.0,
               "Blunt": 6.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 18.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -2042,25 +1902,11 @@
             "Type": 0
           },
           "parameters": {
-            "Weakness": [
-              {
-                "Tag": 1,
-                "Level": 2
-              }
-            ],
             "DamageValues": {
               "Cutting": 0.0,
               "Piercing": 18.0,
               "Chopping": 0.0,
               "Blunt": 7.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 20.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -2233,25 +2079,11 @@
             "Type": 0
           },
           "parameters": {
-            "Weakness": [
-              {
-                "Tag": 1,
-                "Level": 2
-              }
-            ],
             "DamageValues": {
               "Cutting": 0.0,
               "Piercing": 21.0,
               "Chopping": 0.0,
               "Blunt": 7.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 15.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -2424,33 +2256,11 @@
             "Type": 0
           },
           "parameters": {
-            "Weakness": [
-              {
-                "Tag": 1,
-                "Level": 3
-              },
-              {
-                "Tag": 2,
-                "Level": 1
-              },
-              {
-                "Tag": 3,
-                "Level": 1
-              }
-            ],
             "DamageValues": {
               "Cutting": 0.0,
               "Piercing": 25.0,
               "Chopping": 0.0,
               "Blunt": 9.0
-            },
-            "damageSystemVersion": 1,
-            "Damage": {
-              "BaseValue": 25.0,
-              "BaseAdditive": 0.0,
-              "AdditiveModifier": 0.0,
-              "MultiplicativeModifier": 1.0,
-              "FinalAdditive": 0.0
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,

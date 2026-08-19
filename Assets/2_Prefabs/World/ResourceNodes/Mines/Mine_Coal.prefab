@@ -245,10 +245,7 @@ PrefabInstance:
       propertyPath: Data.MaxHp
       value: 300
       objectReference: {fileID: 0}
-    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-      propertyPath: Data.Defense
-      value: 20
-      objectReference: {fileID: 0}
+
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.ShowCanvas
       value: 1
@@ -257,10 +254,7 @@ PrefabInstance:
       propertyPath: Data.MaxHp.BaseValue
       value: 150
       objectReference: {fileID: 0}
-    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-      propertyPath: Data.Defense.BaseValue
-      value: 50
-      objectReference: {fileID: 0}
+
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.DefenseValues.Cutting
       value: 10
@@ -277,30 +271,14 @@ PrefabInstance:
       propertyPath: Data.DefenseValues.Blunt
       value: 3
       objectReference: {fileID: 0}
-    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-      propertyPath: Data.DamageSystemVersion
-      value: 2
-      objectReference: {fileID: 0}
-    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-      propertyPath: Data.Weakness.Array.size
-      value: 1
-      objectReference: {fileID: 0}
+
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.size
       value: 2
       objectReference: {fileID: 0}
-    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-      propertyPath: Data.Weakness.Array.data[0]
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-      propertyPath: Data.Weakness.Array.data[0].Tag
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-      propertyPath: Data.Weakness.Array.data[0].Level
-      value: 1
-      objectReference: {fileID: 0}
+
+
+
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.data[0].MaxAmount
       value: 3
@@ -329,10 +307,7 @@ PrefabInstance:
       propertyPath: Data.LootTable.Array.data[1].LootPrefabName
       value: Ore_Stone
       objectReference: {fileID: 0}
-    - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-      propertyPath: Data.Weakness._serializedList.Array.data[0].Value
-      value: 1
-      objectReference: {fileID: 0}
+
     - target: {fileID: 3418258393810232365, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

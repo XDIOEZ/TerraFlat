@@ -60,7 +60,6 @@ public partial class CombatDamage
                Mathf.Max(0f, Blunt - defense.Blunt);
     }
 }
-
 /// <summary>
 /// 四类防御数值，分别只抵消同类型攻击，不提供最低伤害保底。
 /// </summary>
@@ -125,19 +124,5 @@ public partial class CombatDefense
         Piercing = Mathf.Max(0f, Piercing);
         Chopping = Mathf.Max(0f, Chopping);
         Blunt = Mathf.Max(0f, Blunt);
-    }
-}
-
-/// <summary>旧伤害标签等级数据，只用于读取历史 Prefab/JSON 并迁移，不再参与战斗结算。</summary>
-[Serializable]
-public struct DamageType
-{
-    public DamageTag Tag;
-    public int Level;
-
-    public DamageType(DamageTag tag, int level = 1)
-    {
-        Tag = tag;
-        Level = level;
     }
 }

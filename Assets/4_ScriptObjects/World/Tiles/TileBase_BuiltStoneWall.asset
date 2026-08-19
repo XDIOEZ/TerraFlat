@@ -20,12 +20,12 @@ MonoBehaviour:
   damageProfile:
     Damageable: 1
     MaxHealth: 200
-    Defense: 5
+    DefenseValues:
+      Cutting: 5
+      Piercing: 5
+      Chopping: 5
+      Blunt: 5
     RequiredTool: 1
-    RequireWeaknessMatch: 1
-    Weakness:
-    - Tag: 1
-      Level: 1
     ImpactMaterial: 4
     DropItemId: Wall_Stone_Summoner
     DropAmount: 1

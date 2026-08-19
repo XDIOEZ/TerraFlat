@@ -1,20 +1,12 @@
-using System.Collections.Generic;
 using MemoryPack;
 
 /// <summary>
-/// 通用数据层的四类伤害容器。旧字段只为 MemoryPack 存档兼容保留，新结算仅使用四类数值。
+/// 通用数据层的四类伤害容器，所有伤害直接按切割、穿刺、劈砍、钝击保存和结算。
 /// </summary>
 [System.Serializable]
 [MemoryPackable]
 public partial class Damage
 {
-    // 旧字段顺序不可改变。
-    public float PhysicalDamage;
-    public float ArmorBreaking;
-    public float MagicDamage;
-    public List<string> DamageType;
-
-    // 四类字段必须追加在旧字段后。
     public float Cutting;
     public float Piercing;
     public float Chopping;
@@ -23,13 +15,14 @@ public partial class Damage
     [MemoryPackIgnore]
     public float TotalDamage => Cutting + Piercing + Chopping + Blunt;
 
+    /// <summary>创建全为零的四类伤害数据。</summary>
     [MemoryPackConstructor]
     public Damage()
     {
-        DamageType = new List<string>();
     }
 
-    public Damage(float cutting, float piercing, float chopping, float blunt) : this()
+    /// <summary>按切割、穿刺、劈砍、钝击顺序创建伤害数据。</summary>
+    public Damage(float cutting, float piercing, float chopping, float blunt)
     {
         Cutting = cutting;
         Piercing = piercing;
