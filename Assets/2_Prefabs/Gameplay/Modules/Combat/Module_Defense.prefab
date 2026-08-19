@@ -51,9 +51,8 @@ MonoBehaviour:
     isRunning: 1
     Type: 1
     BitData: 
-  Defense:
-    BaseValue: 12
-    BaseAdditive: 0
-    AdditiveModifier: 0
-    MultiplicativeModifier: 1
-    FinalAdditive: 0
+  DefenseValues:
+    Cutting: 12
+    Piercing: 12
+    Chopping: 12
+    Blunt: 12

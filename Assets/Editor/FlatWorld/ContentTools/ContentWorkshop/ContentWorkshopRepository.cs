@@ -451,7 +451,6 @@ namespace FlatWorld.Editor.ContentWorkshop
                     ["Chopping"] = Mathf.Max(0f, draft.ChoppingDamage),
                     ["Blunt"] = Mathf.Max(0f, draft.BluntDamage)
                 };
-                parameters["damageSystemVersion"] = 1;
                 parameters.Remove("Weakness");
                 parameters.Remove("Damage");
             }

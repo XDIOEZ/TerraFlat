@@ -126,8 +126,11 @@ MonoBehaviour:
     TwoPartHitChance: 0.25
     BodyPartDataVersion: 0
     BodyParts: []
-    Defense: 8
-    Weakness: []
+    DefenseValues:
+      Cutting: 8
+      Piercing: 8
+      Chopping: 8
+      Blunt: 8
     AttackersUIDs: 
     ShowCanvas: 1
     DamageInterval: 0.12

@@ -499,37 +499,28 @@ PrefabInstance:
       value: 200
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Defense
+      propertyPath: Data.DefenseValues.Cutting
       value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Weakness.Array.size
-      value: 2
+      propertyPath: Data.DefenseValues.Piercing
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Weakness.Array.data[0]
-      value: 1
+      propertyPath: Data.DefenseValues.Chopping
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Weakness.Array.data[1]
-      value: 2
+      propertyPath: Data.DefenseValues.Blunt
+      value: 10
       objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Weakness.Array.data[0].Tag
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Weakness.Array.data[1].Tag
-      value: 2
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Weakness.Array.data[0].Level
-      value: 8
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Weakness.Array.data[1].Level
-      value: 8
-      objectReference: {fileID: 0}
+
+
+
+
+
+
+
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[0].LootPrefabName
       value: Chicken

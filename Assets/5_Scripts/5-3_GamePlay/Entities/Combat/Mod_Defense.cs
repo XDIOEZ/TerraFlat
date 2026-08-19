@@ -1,6 +1,3 @@
-using MemoryPack;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public partial class Mod_Defense : Module
@@ -11,11 +8,7 @@ public partial class Mod_Defense : Module
     [Header("四类防御加成")]
     public CombatDefense DefenseValues = new CombatDefense();
 
-    [HideInInspector]
-    public GameValue_float Defense = new GameValue_float(0);
-
-    [SerializeField, HideInInspector]
-    private int damageSystemVersion;
+    /// <summary>初始化防御模块的默认数据标识。</summary>
     public override void Awake()
     {
         if (_Data.ID == "")
@@ -26,10 +19,11 @@ public partial class Mod_Defense : Module
     }
 
 
+    /// <summary>校正四类防御并挂接到生命模块。</summary>
     public override void Load()
     {
-        SaveData.ReadData(ref Defense);
-        UpgradeLegacyDefense();
+        DefenseValues ??= new CombatDefense();
+        DefenseValues.ClampNonNegative();
         if (item.itemMods.ContainsKey_ID(ModText.Hp))
         {
             var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
@@ -37,6 +31,7 @@ public partial class Mod_Defense : Module
         }
     }
 
+    /// <summary>卸载本模块对生命模块施加的四类防御。</summary>
     public override void Save()
     {
         // 取消Load中的加成
@@ -45,25 +40,6 @@ public partial class Mod_Defense : Module
             var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
             Hp.RemoveDefense(DefenseValues);
         }
-        // 保持旧存档载荷可读；四类基础防御由模块配置负责。
-        SaveData.WriteData(Defense);
-    }
-
-    /// <summary>旧防御模块的单值加成迁为四类相同加成。</summary>
-    private void UpgradeLegacyDefense()
-    {
-        DefenseValues ??= new CombatDefense();
-        DefenseValues.ClampNonNegative();
-        if (damageSystemVersion >= 1)
-            return;
-
-        if (DefenseValues.TotalDefense <= 0f && Defense != null && Defense.Value > 0f)
-        {
-            float value = Mathf.Max(0f, Defense.Value);
-            DefenseValues = new CombatDefense(value, value, value, value);
-        }
-
-        damageSystemVersion = 1;
     }
 
 }

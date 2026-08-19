@@ -4915,10 +4915,7 @@ PrefabInstance:
       propertyPath: damageInterval
       value: 0.5
       objectReference: {fileID: 0}
-    - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: Weakness.Array.data[0]
-      value: 4
-      objectReference: {fileID: 0}
+
     - target: {fileID: 2747812879517624506, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
       propertyPath: m_Name
       value: Mod_Damage_1

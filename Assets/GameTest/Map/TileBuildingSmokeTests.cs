@@ -53,7 +53,6 @@ namespace FlatWorld.GameTest.Map
                 {
                     Damageable = true,
                     DefenseValues = new CombatDefense(8f, 0f, 2f, 0f),
-                    DamageSystemVersion = 1,
                     RequiredTool = TileDamageToolKind.None,
                 };
                 var sender = new FakeDamageSender

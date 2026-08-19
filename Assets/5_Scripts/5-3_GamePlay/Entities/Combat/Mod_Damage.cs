@@ -12,17 +12,6 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     [Tooltip("切割、穿刺、劈砍、钝击分别独立参与防御结算；总战斗力为四项之和。")]
     public CombatDamage DamageValues = new CombatDamage();
 
-    [HideInInspector]
-    [Tooltip("仅用于把旧资源迁移到四类伤害，新的战斗结算不会直接读取该值。")]
-    public GameValue_float Damage = new GameValue_float(10f);
-
-    [HideInInspector]
-    [Tooltip("仅用于识别旧资源的主要伤害类型，等级不再参与结算。")]
-    public List<DamageType> Weakness = new List<DamageType>();
-
-    [SerializeField, HideInInspector]
-    private int damageSystemVersion;
-
     [Header("定时伤害设置")]
     [Tooltip("伤害间隔时间（秒）\n-1: 永远不启用\n0: 每帧造成伤害\n>0: 每间隔秒数造成伤害")]
     public float DamageInterval = -1f;
@@ -381,7 +370,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
         return new DamageTextEffectData(damage, style);
     }
 
-    /// <summary>获取已校正的四类伤害，并兼容尚未迁移的旧攻击资源。</summary>
+    /// <summary>获取已校正的四类伤害。</summary>
     public CombatDamage ResolveDamageValues()
     {
         NormalizeDamageValues();
@@ -393,51 +382,13 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     {
         DamageValues = values ?? new CombatDamage();
         DamageValues.ClampNonNegative();
-        damageSystemVersion = 1;
     }
 
-    /// <summary>旧单值伤害按原标签迁入一个主要类型；旧等级被明确丢弃。</summary>
+    /// <summary>确保四类伤害对象存在，并限制运行时数据不会出现负数。</summary>
     private void NormalizeDamageValues()
     {
         DamageValues ??= new CombatDamage();
         DamageValues.ClampNonNegative();
-        if (damageSystemVersion >= 1)
-            return;
-
-        if (DamageValues.TotalCombatPower > 0f)
-        {
-            damageSystemVersion = 1;
-            return;
-        }
-
-        if (Damage == null || Damage.Value <= 0f)
-        {
-            damageSystemVersion = 1;
-            return;
-        }
-
-        float legacyValue = Mathf.Max(0f, Damage.Value);
-        DamageTag legacyTag = Weakness != null && Weakness.Count > 0
-            ? Weakness[0].Tag
-            : DamageTag.钝击;
-
-        switch (legacyTag)
-        {
-            case DamageTag.切割:
-                DamageValues.Cutting = legacyValue;
-                break;
-            case DamageTag.穿刺:
-                DamageValues.Piercing = legacyValue;
-                break;
-            case DamageTag.劈砍:
-                DamageValues.Chopping = legacyValue;
-                break;
-            default:
-                DamageValues.Blunt = legacyValue;
-                break;
-        }
-
-        damageSystemVersion = 1;
     }
 
     #endregion

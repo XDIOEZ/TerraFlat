@@ -18,8 +18,14 @@ MonoBehaviour:
     PrefabName: AppleTree
     MaxHp: 180
     Hp: 200
-    Defense: 8
-    Damage: 0
+    CuttingDefense: 8
+    PiercingDefense: 8
+    ChoppingDefense: 8
+    BluntDefense: 8
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -28,8 +34,14 @@ MonoBehaviour:
     PrefabName: Axe_Bronze
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 15
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 15
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -38,8 +50,14 @@ MonoBehaviour:
     PrefabName: Axe_Copper
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 12
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 12
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -48,8 +66,14 @@ MonoBehaviour:
     PrefabName: Axe_Flint
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 8
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 8
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -58,8 +82,14 @@ MonoBehaviour:
     PrefabName: Axe_Iron
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 20
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 20
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -68,8 +98,14 @@ MonoBehaviour:
     PrefabName: Axe_RawIron
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 15
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 15
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -78,8 +114,14 @@ MonoBehaviour:
     PrefabName: Axe_Stone
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 7
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 7
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -88,8 +130,14 @@ MonoBehaviour:
     PrefabName: BlastFurnace
     MaxHp: 200
     Hp: 200
-    Defense: 10
-    Damage: 0
+    CuttingDefense: 10
+    PiercingDefense: 10
+    ChoppingDefense: 10
+    BluntDefense: 10
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -98,8 +146,14 @@ MonoBehaviour:
     PrefabName: Bonfire
     MaxHp: 50
     Hp: 50
-    Defense: 2
-    Damage: 0
+    CuttingDefense: 2
+    PiercingDefense: 2
+    ChoppingDefense: 2
+    BluntDefense: 2
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -108,8 +162,14 @@ MonoBehaviour:
     PrefabName: Bush
     MaxHp: 50
     Hp: 50
-    Defense: 1
-    Damage: 0
+    CuttingDefense: 1
+    PiercingDefense: 1
+    ChoppingDefense: 1
+    BluntDefense: 1
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -118,8 +178,14 @@ MonoBehaviour:
     PrefabName: Chest_Wood
     MaxHp: 100
     Hp: 100
-    Defense: 5
-    Damage: 0
+    CuttingDefense: 5
+    PiercingDefense: 5
+    ChoppingDefense: 5
+    BluntDefense: 5
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -128,8 +194,14 @@ MonoBehaviour:
     PrefabName: Chicken
     MaxHp: 150
     Hp: 150
-    Defense: 5
-    Damage: 0
+    CuttingDefense: 5
+    PiercingDefense: 5
+    ChoppingDefense: 5
+    BluntDefense: 5
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -138,8 +210,14 @@ MonoBehaviour:
     PrefabName: ChippedTool
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 5
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 5
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -148,8 +226,14 @@ MonoBehaviour:
     PrefabName: Dagger_Bone
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 7
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 7
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -158,8 +242,14 @@ MonoBehaviour:
     PrefabName: Dagger_Copper
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 10
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 10
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -168,8 +258,14 @@ MonoBehaviour:
     PrefabName: Dagger_Stone
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 6
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 6
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -178,8 +274,14 @@ MonoBehaviour:
     PrefabName: Door_Wood
     MaxHp: 200
     Hp: 200
-    Defense: 10
-    Damage: 0
+    CuttingDefense: 10
+    PiercingDefense: 10
+    ChoppingDefense: 10
+    BluntDefense: 10
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -188,8 +290,14 @@ MonoBehaviour:
     PrefabName: FireBall
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 5
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 5
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -198,8 +306,14 @@ MonoBehaviour:
     PrefabName: Hoe_Stone
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 5
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 5
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -208,8 +322,14 @@ MonoBehaviour:
     PrefabName: Knife_Flint
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 5
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 5
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -218,8 +338,14 @@ MonoBehaviour:
     PrefabName: LaserFoucus
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 5
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 5
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -228,8 +354,14 @@ MonoBehaviour:
     PrefabName: LaserLine
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 5
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 5
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -238,8 +370,14 @@ MonoBehaviour:
     PrefabName: Log
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 5
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 5
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -248,8 +386,14 @@ MonoBehaviour:
     PrefabName: Mine_Coal
     MaxHp: 300
     Hp: 300
-    Defense: 20
-    Damage: 0
+    CuttingDefense: 20
+    PiercingDefense: 20
+    ChoppingDefense: 20
+    BluntDefense: 20
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -258,8 +402,14 @@ MonoBehaviour:
     PrefabName: Mine_Copper
     MaxHp: 200
     Hp: 200
-    Defense: 25
-    Damage: 0
+    CuttingDefense: 25
+    PiercingDefense: 25
+    ChoppingDefense: 25
+    BluntDefense: 25
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -268,8 +418,14 @@ MonoBehaviour:
     PrefabName: Mine_Iron
     MaxHp: 300
     Hp: 300
-    Defense: 30
-    Damage: 0
+    CuttingDefense: 30
+    PiercingDefense: 30
+    ChoppingDefense: 30
+    BluntDefense: 30
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -278,8 +434,14 @@ MonoBehaviour:
     PrefabName: Mine_Stone
     MaxHp: 180
     Hp: 180
-    Defense: 20
-    Damage: 0
+    CuttingDefense: 20
+    PiercingDefense: 20
+    ChoppingDefense: 20
+    BluntDefense: 20
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -288,8 +450,14 @@ MonoBehaviour:
     PrefabName: Mine_Tin
     MaxHp: 400
     Hp: 400
-    Defense: 20
-    Damage: 0
+    CuttingDefense: 20
+    PiercingDefense: 20
+    ChoppingDefense: 20
+    BluntDefense: 20
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -298,8 +466,14 @@ MonoBehaviour:
     PrefabName: Mod_Damage
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 5
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 5
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -308,8 +482,14 @@ MonoBehaviour:
     PrefabName: Module_AttackTrigger_AI
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 10
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 10
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -318,8 +498,14 @@ MonoBehaviour:
     PrefabName: Module_DamageReciver
     MaxHp: 180
     Hp: 180
-    Defense: 8
-    Damage: 0
+    CuttingDefense: 8
+    PiercingDefense: 8
+    ChoppingDefense: 8
+    BluntDefense: 8
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -328,8 +514,14 @@ MonoBehaviour:
     PrefabName: Needle_Bone
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 2
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 2
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -338,8 +530,14 @@ MonoBehaviour:
     PrefabName: Ore_Flint_Bullet
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 5
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 5
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -348,8 +546,14 @@ MonoBehaviour:
     PrefabName: Ore_Stone_Bullet
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 5
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 5
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -358,8 +562,14 @@ MonoBehaviour:
     PrefabName: Pickaxe_Bronze
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 20
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 20
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -368,8 +578,14 @@ MonoBehaviour:
     PrefabName: Pickaxe_Copper
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 18
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 18
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -378,8 +594,14 @@ MonoBehaviour:
     PrefabName: Pickaxe_Iron
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 25
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 25
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -388,8 +610,14 @@ MonoBehaviour:
     PrefabName: Pickaxe_RawIron
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 15
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 15
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -398,8 +626,14 @@ MonoBehaviour:
     PrefabName: Pickaxe_Stone
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 10
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 10
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -408,8 +642,14 @@ MonoBehaviour:
     PrefabName: Player
     MaxHp: 100
     Hp: 100
-    Defense: 0
-    Damage: 0
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -418,8 +658,14 @@ MonoBehaviour:
     PrefabName: Rocket
     MaxHp: 200
     Hp: 200
-    Defense: 10
-    Damage: 0
+    CuttingDefense: 10
+    PiercingDefense: 10
+    ChoppingDefense: 10
+    BluntDefense: 10
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -428,8 +674,14 @@ MonoBehaviour:
     PrefabName: Scarecrow
     MaxHp: 100
     Hp: 100
-    Defense: 0
-    Damage: 0
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -438,8 +690,14 @@ MonoBehaviour:
     PrefabName: Smelter
     MaxHp: 200
     Hp: 200
-    Defense: 10
-    Damage: 0
+    CuttingDefense: 10
+    PiercingDefense: 10
+    ChoppingDefense: 10
+    BluntDefense: 10
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -448,8 +706,14 @@ MonoBehaviour:
     PrefabName: Spear_Copper
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 20
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 20
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -458,8 +722,14 @@ MonoBehaviour:
     PrefabName: Spear_Iron
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 18
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 18
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -468,8 +738,14 @@ MonoBehaviour:
     PrefabName: Spear_Stone
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 10
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 10
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -478,8 +754,14 @@ MonoBehaviour:
     PrefabName: Spear_Stone_Animation
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 10
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 10
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -488,8 +770,14 @@ MonoBehaviour:
     PrefabName: Staff_Wood
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 5
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 5
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -498,8 +786,14 @@ MonoBehaviour:
     PrefabName: Stick_Wood
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 1
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 1
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -508,8 +802,14 @@ MonoBehaviour:
     PrefabName: Stone_KnifeThrowing
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 5
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 5
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -518,8 +818,14 @@ MonoBehaviour:
     PrefabName: StoneThrowingRope
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 5
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 5
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -528,8 +834,14 @@ MonoBehaviour:
     PrefabName: Sword_Bronze
     MaxHp: 0
     Hp: 0
-    Defense: 0
-    Damage: 20
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 20
+    BluntDamage: 0
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
@@ -538,8 +850,14 @@ MonoBehaviour:
     PrefabName: Tent
     MaxHp: 200
     Hp: 200
-    Defense: 10
-    Damage: 0
+    CuttingDefense: 10
+    PiercingDefense: 10
+    ChoppingDefense: 10
+    BluntDefense: 10
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -548,8 +866,14 @@ MonoBehaviour:
     PrefabName: Torch
     MaxHp: 50
     Hp: 50
-    Defense: 0
-    Damage: 0
+    CuttingDefense: 0
+    PiercingDefense: 0
+    ChoppingDefense: 0
+    BluntDefense: 0
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -558,8 +882,14 @@ MonoBehaviour:
     PrefabName: Wall_Wood
     MaxHp: 200
     Hp: 200
-    Defense: 10
-    Damage: 0
+    CuttingDefense: 10
+    PiercingDefense: 10
+    ChoppingDefense: 10
+    BluntDefense: 10
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -568,8 +898,14 @@ MonoBehaviour:
     PrefabName: WildBoar
     MaxHp: 300
     Hp: 300
-    Defense: 5
-    Damage: 10
+    CuttingDefense: 5
+    PiercingDefense: 5
+    ChoppingDefense: 5
+    BluntDefense: 5
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 10
     HasHp: 1
     HasDefense: 1
     HasDamage: 1
@@ -578,8 +914,14 @@ MonoBehaviour:
     PrefabName: Wolf
     MaxHp: 200
     Hp: 200
-    Defense: 3
-    Damage: 10
+    CuttingDefense: 3
+    PiercingDefense: 3
+    ChoppingDefense: 3
+    BluntDefense: 3
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 10
     HasHp: 1
     HasDefense: 1
     HasDamage: 1
@@ -588,8 +930,14 @@ MonoBehaviour:
     PrefabName: WorkBench
     MaxHp: 100
     Hp: 100
-    Defense: 5
-    Damage: 0
+    CuttingDefense: 5
+    PiercingDefense: 5
+    ChoppingDefense: 5
+    BluntDefense: 5
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
@@ -599,8 +947,14 @@ MonoBehaviour:
     PrefabName: "\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757 \u77FF\u7269"
     MaxHp: 180
     Hp: 100
-    Defense: 8
-    Damage: 0
+    CuttingDefense: 8
+    PiercingDefense: 8
+    ChoppingDefense: 8
+    BluntDefense: 8
+    CuttingDamage: 0
+    PiercingDamage: 0
+    ChoppingDamage: 0
+    BluntDamage: 0
     HasHp: 1
     HasDefense: 1
     HasDamage: 0

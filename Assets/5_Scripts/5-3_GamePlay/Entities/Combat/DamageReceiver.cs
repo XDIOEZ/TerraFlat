@@ -99,16 +99,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         [Header("防御设置")]
         [Tooltip("切割、穿刺、劈砍、钝击防御分别只抵消同类型伤害。")]
         public CombatDefense DefenseValues = new CombatDefense();
-
-        [HideInInspector]
-        [Tooltip("旧单值防御，仅供一次性迁移为四类同值防御。")]
-        public float Defense = 0;
-
-        [HideInInspector]
-        public int DamageSystemVersion;
-
-        [HideInInspector]
-        public List<DamageType> Weakness = new List<DamageType>();
         [Header("伤害者的UID列表")]
         public List<int> AttackersUIDs = new List<int>();
 

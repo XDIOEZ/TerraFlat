@@ -105,12 +105,3 @@ public static class AnimationText
     public static string Run = "Run";
     public static string Attack = "Attack";
 }
-
-public enum DamageTag
-{
-    切割,
-    钝击,
-    穿刺,
-    劈砍,
-    火焰,
-}

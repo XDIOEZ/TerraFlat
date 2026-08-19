@@ -238,7 +238,7 @@
           "id": "生命值系统模块",
           "enabled": true,
           "data": {
-            "BitData": "{\"Hp\":0.0,\"MaxHp\":100.0,\"AttackersUIDs\":[],\"ShowCanvas\":true,\"DamageInterval\":0.1,\"DestroyDelay\":-1.0,\"LootTable\":[{\"LootPrefabName\":\"Chicken\",\"DropChance\":0.001,\"MinAmount\":1,\"MaxAmount\":1}],\"Defense\":0.0}",
+            "BitData": "{\"Hp\":0.0,\"MaxHp\":100.0,\"AttackersUIDs\":[],\"ShowCanvas\":true,\"DamageInterval\":0.1,\"DestroyDelay\":-1.0,\"LootTable\":[{\"LootPrefabName\":\"Chicken\",\"DropChance\":0.001,\"MinAmount\":1,\"MaxAmount\":1}],\"DefenseValues\":{\"Cutting\":0.0,\"Piercing\":0.0,\"Chopping\":0.0,\"Blunt\":0.0}}",
             "Type": 0
           }
         }
