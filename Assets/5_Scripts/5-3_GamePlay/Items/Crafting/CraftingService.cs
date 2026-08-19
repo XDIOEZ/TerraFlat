@@ -164,3 +164,48 @@ public static class CraftingService
         }
     }
 }
+
+/// <summary>合成预览失败诊断；只在有输入且失败原因变化时记录，避免空面板初始化刷屏。</summary>
+public static class CraftingPreviewDiagnostics
+{
+    /// <summary>记录当前输入对应的预检失败原因，帮助定位配方、产物或库存阻塞。</summary>
+    public static void ReportFailure(
+        string source,
+        Inventory inputInventory,
+        CraftingResult result,
+        ref string lastMessage)
+    {
+        if (result == null || result.Success)
+        {
+            lastMessage = string.Empty;
+            return;
+        }
+
+        if (!HasInput(inputInventory))
+            return;
+
+        string message = string.IsNullOrWhiteSpace(result.Message)
+            ? result.FailureReason.ToString()
+            : result.Message;
+        if (string.Equals(lastMessage, message, StringComparison.Ordinal))
+            return;
+
+        lastMessage = message;
+        Debug.LogWarning($"[{source}] 配方检测失败：{message}");
+    }
+
+    /// <summary>判断输入库存是否真的放入了材料，过滤打开面板时的空预览。</summary>
+    private static bool HasInput(Inventory inputInventory)
+    {
+        if (inputInventory?.Data?.itemSlots == null)
+            return false;
+
+        for (int i = 0; i < inputInventory.Data.itemSlots.Count; i++)
+        {
+            if (inputInventory.Data.itemSlots[i]?.itemData != null)
+                return true;
+        }
+
+        return false;
+    }
+}

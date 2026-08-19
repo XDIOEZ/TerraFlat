@@ -1,5 +1,6 @@
 using NaughtyAttributes;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -15,6 +16,9 @@ public class Module_DiscardItem : Mod_BaseDroper
     public float parabolaHeight = 2f; // 抛物线最大高度
     public float baseDropDuration = 0.5f; // 动画基础持续时间
     public float distanceSensitivity = 0.1f; // 动画时间距离敏感度
+
+    [Header("手持丢弃反馈")]
+    [SerializeField, Min(0.01f)] private float heldDropScaleDuration = 0.16f;
 
     [Header("丢弃操作配置")]
     public float dropRepeatDelay = 0.3f; // 长按重复丢弃的延迟
@@ -42,6 +46,9 @@ public class Module_DiscardItem : Mod_BaseDroper
     private ItemSlot_UI hoveredSlot = null;
     [SerializeField]
     private bool isCtrlPressed = false;
+    private Coroutine heldDropAnimation;
+    private Transform heldDropTransform;
+    private Vector3 heldDropBaseScale = Vector3.one;
 
     #region 生命周期
 
@@ -180,7 +187,7 @@ public class Module_DiscardItem : Mod_BaseDroper
                 // 只有当物品完全丢弃完后才销毁对象
                 if (hotbarSlot.Amount <= 0)
                 {
-                    Hotbar.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
+                    DestroyHeldObjectIfEmpty(hotbarSlot);
                 }
                 return;
             }
@@ -204,7 +211,7 @@ public class Module_DiscardItem : Mod_BaseDroper
                 // 如果物品已经耗尽，且是当前快捷栏选中的物品，则销毁手上物体
                 if (hoveredSlotData.Amount <= 0 && hoveredSlotData == Hotbar?.CurrentSelectItemSlot)
                 {
-                    Hotbar?.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
+                    DestroyHeldObjectIfEmpty(hoveredSlotData);
                 }
 
                 hoveredSlot.RefreshUI();
@@ -267,7 +274,7 @@ public class Module_DiscardItem : Mod_BaseDroper
             // 只有当物品完全丢弃完后才销毁对象
             if (hotbarSlot.Amount <= 0)
             {
-                Hotbar.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
+                DestroyHeldObjectIfEmpty(hotbarSlot);
             }
         }
         else
@@ -298,6 +305,7 @@ public class Module_DiscardItem : Mod_BaseDroper
 
     public void OnDestroy()
     {
+        StopHeldDropAnimation(true);
         if (GameController != null && GameController._inputActions != null)
         {
             var inputActions = GameController._inputActions.Win10;
@@ -336,8 +344,7 @@ public class Module_DiscardItem : Mod_BaseDroper
             return false;
 
         DropItemByCount(hotbarSlot, Mathf.Min(count, hotbarSlot.Amount));
-        if (hotbarSlot.Amount <= 0)
-            Hotbar.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
+        DestroyHeldObjectIfEmpty(hotbarSlot);
         return true;
     }
 
@@ -359,8 +366,7 @@ public class Module_DiscardItem : Mod_BaseDroper
             return false;
 
         DropItemByCount(hotbarSlot, hotbarSlot.Amount, screenPosition);
-        if (hotbarSlot.Amount <= 0)
-            Hotbar.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
+        DestroyHeldObjectIfEmpty(hotbarSlot);
         return true;
     }
 
@@ -401,6 +407,8 @@ public class Module_DiscardItem : Mod_BaseDroper
             return;
         }
 
+        string droppedItemId = slot.itemData?.IDName;
+        bool dropCommitted = false;
         if (count <= slot.Amount)
         {
             // 克隆数据
@@ -440,6 +448,7 @@ public class Module_DiscardItem : Mod_BaseDroper
                 slot.Amount -= count;
                 if (slot.Amount <= 0)
                     slot.ClearData();
+                dropCommitted = true;
             }
             catch (Exception exception)
             {
@@ -454,7 +463,89 @@ public class Module_DiscardItem : Mod_BaseDroper
             }
         }
 
+        if (dropCommitted)
+            BeginHeldDropAnimation(slot, droppedItemId);
+
         RefreshDiscardedSlotUI(slot);
+    }
+
+    /// <summary>判断本次丢弃是否影响当前快捷栏正在显示的手持物。</summary>
+    private bool IsCurrentHeldSlot(ItemSlot slot, string droppedItemId = null)
+    {
+        if (slot == null || Hotbar?.CurentSelectItem == null)
+            return false;
+
+        if (ReferenceEquals(slot, Hotbar.CurrentSelectItemSlot))
+            return true;
+
+        ItemData heldData = Hotbar.CurentSelectItem.itemData;
+        string slotItemId = slot.itemData?.IDName ?? droppedItemId;
+        return !string.IsNullOrWhiteSpace(slotItemId) && heldData != null &&
+               string.Equals(slotItemId, heldData.IDName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>启动手持物缩小反馈；整组耗尽时由动画结束回收手持实例。</summary>
+    private void BeginHeldDropAnimation(ItemSlot slot, string droppedItemId)
+    {
+        if (!IsCurrentHeldSlot(slot, droppedItemId))
+            return;
+
+        Transform visual = Hotbar.CurentSelectItem.transform;
+        if (visual == null)
+            return;
+
+        StopHeldDropAnimation(true);
+        heldDropTransform = visual;
+        heldDropBaseScale = visual.localScale;
+        heldDropAnimation = StartCoroutine(AnimateHeldDrop(visual, heldDropBaseScale, slot.Amount <= 0));
+    }
+
+    /// <summary>按短时缓动缩小手持物，并在整组耗尽后销毁它。</summary>
+    private IEnumerator AnimateHeldDrop(Transform visual, Vector3 baseScale, bool destroyWhenComplete)
+    {
+        float duration = Mathf.Max(0.01f, heldDropScaleDuration);
+        float elapsed = 0f;
+        while (elapsed < duration && visual != null)
+        {
+            elapsed += Time.deltaTime;
+            float progress = Mathf.Clamp01(elapsed / duration);
+            float easedProgress = 1f - Mathf.Pow(1f - progress, 3f);
+            visual.localScale = Vector3.Lerp(baseScale, Vector3.zero, easedProgress);
+            yield return null;
+        }
+
+        heldDropAnimation = null;
+        if (destroyWhenComplete)
+            Hotbar?.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
+        else if (visual != null)
+            visual.localScale = baseScale;
+
+        heldDropTransform = null;
+        heldDropBaseScale = Vector3.one;
+    }
+
+    /// <summary>停止上一轮手持反馈并恢复原始缩放，避免连续丢弃时从零缩放开始。</summary>
+    private void StopHeldDropAnimation(bool restoreScale)
+    {
+        if (heldDropAnimation != null)
+            StopCoroutine(heldDropAnimation);
+        heldDropAnimation = null;
+
+        if (restoreScale && heldDropTransform != null)
+            heldDropTransform.localScale = heldDropBaseScale;
+
+        heldDropTransform = null;
+        heldDropBaseScale = Vector3.one;
+    }
+
+    /// <summary>整组耗尽时等待缩小动画完成；没有动画时立即回收手持实例。</summary>
+    private void DestroyHeldObjectIfEmpty(ItemSlot slot)
+    {
+        if (slot == null || slot.Amount > 0 || !IsCurrentHeldSlot(slot))
+            return;
+
+        if (heldDropAnimation == null)
+            Hotbar?.OnDestroyCurrentObject(Hotbar.CurentSelectItem);
     }
 
     private void RefreshDiscardedSlotUI(ItemSlot slot)

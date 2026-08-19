@@ -1,3 +1,4 @@
+using Action = System.Action;
 using System.Collections.Generic;
 using FlatWorld.Audio;
 using UnityEngine;
@@ -6,6 +7,7 @@ using UnityEngine;
 public interface IEnvironmentActionDefinition
 {
     string ActionId { get; }
+    string DisplayNameKey { get; }
     int Priority { get; }
     IEnvironmentActionInstance CreateInstance(Item actor);
 }
@@ -56,6 +58,7 @@ public sealed class EnvironmentInteractionRunner : MonoBehaviour
     public IEnvironmentActionInstance ActiveAction => activeAction;
     public IEnvironmentActionInstance LastAction => lastAction;
     public int ActiveEffectCount => activeEffects.Count;
+    public event Action AvailableActionsChanged;
 
     #endregion
 
@@ -123,19 +126,25 @@ public sealed class EnvironmentInteractionRunner : MonoBehaviour
         CancelActiveAction();
         definitions.Clear();
         if (availableDefinitions == null)
+        {
+            AvailableActionsChanged?.Invoke();
             return;
+        }
 
         for (int i = 0; i < availableDefinitions.Length; i++)
         {
             if (availableDefinitions[i] != null)
                 definitions.Add(availableDefinitions[i]);
         }
+
+        AvailableActionsChanged?.Invoke();
     }
 
     public void ClearAvailableActions()
     {
         CancelActiveAction();
         definitions.Clear();
+        AvailableActionsChanged?.Invoke();
     }
 
     public bool TryGetDefinition<TDefinition>(out TDefinition definition)
@@ -152,6 +161,20 @@ public sealed class EnvironmentInteractionRunner : MonoBehaviour
 
         definition = null;
         return false;
+    }
+
+    /// <summary>返回当前优先级最高环境动作的本地化名称键，供手机交互按钮显示。</summary>
+    public string GetPreferredActionDisplayNameKey()
+    {
+        IEnvironmentActionDefinition selected = null;
+        for (int i = 0; i < definitions.Count; i++)
+        {
+            IEnvironmentActionDefinition candidate = definitions[i];
+            if (candidate != null && (selected == null || candidate.Priority > selected.Priority))
+                selected = candidate;
+        }
+
+        return selected?.DisplayNameKey;
     }
 
     #endregion
@@ -283,6 +306,7 @@ public sealed class DrinkWaterActionDefinition : IEnvironmentActionDefinition
     }
 
     public string ActionId => StableActionId;
+    public string DisplayNameKey => "喝水";
     public int Priority => 100;
     public WaterEnvironmentKind WaterKind { get; }
     public float HoldSeconds { get; }

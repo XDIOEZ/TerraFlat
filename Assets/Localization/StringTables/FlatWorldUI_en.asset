@@ -1892,7 +1892,9 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 2188953449836544
-    m_Localized: 'Changes apply immediately and are saved automatically. Positive lookahead moves the camera ahead; negative values add inertia, and more negative means stronger inertia. Higher smoothing is steadier but slower to respond.'
+    m_Localized: Changes apply immediately and are saved automatically. Positive
+      lookahead moves the camera ahead; negative values add inertia, and more negative
+      means stronger inertia. Higher smoothing is steadier but slower to respond.
     m_Metadata:
       m_Items: []
   - m_Id: 2188953508556800
@@ -1901,6 +1903,42 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 2188953508556801
     m_Localized: Lookahead Smoothing
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3772419866714112
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3772420055457792
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3772420055457793
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3772420059652096
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3772420558774272
+    m_Localized: Camera Zoom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3772421850619904
+    m_Localized: 'Save time: --'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3772423276683264
+    m_Localized: 'Pinch Zoom (Off: Disabled)'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3772423608033280
+    m_Localized: 'Save time: {0}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3772423620616192
+    m_Localized: Drink
     m_Metadata:
       m_Items: []
   references:

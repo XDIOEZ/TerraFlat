@@ -43,6 +43,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     private int _currentClickProgress;
     private CraftingOutputPreview _outputPreview;
+    private string _lastCraftPreviewMessage;
     private TextMeshProUGUI _craftingHintText;
     private GameController _inputController;
     private InputAction _toggleAction;
@@ -212,6 +213,11 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
         if (basePanel.TryGetText("窗口信息", out TextMeshProUGUI titleText))
             titleText.text = _Data.Name;
+
+        RectTransform panelRect = basePanel.Dragger != null
+            ? basePanel.Dragger.rectTransform
+            : basePanel.rectTransform;
+        InventoryPanelLayout.ApplyDefaultCraftingPosition(panelRect);
 
         InitUI();
         basePanel.PrepareForGamepadNavigation();
@@ -519,6 +525,11 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     private bool TryGetCraftPreview(out ItemData previewItem)
     {
         CraftingResult result = CraftingService.Preview(inputInventory, outputInventory, Capabilities);
+        CraftingPreviewDiagnostics.ReportFailure(
+            nameof(Mod_HandCraftTable),
+            inputInventory,
+            result,
+            ref _lastCraftPreviewMessage);
         previewItem = result.PrimaryOutput;
         return result.Success;
     }

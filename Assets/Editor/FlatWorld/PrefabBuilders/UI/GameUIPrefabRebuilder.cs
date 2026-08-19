@@ -51,7 +51,7 @@ public static class GameUIPrefabRebuilder
     private static readonly Dictionary<string, string[]> BindingContracts = new Dictionary<string, string[]>
     {
         { InventoryPanelsRoot + "UI_Bag.prefab", new[] { "Scroll View", "Content", "关闭" } },
-        { InventoryPanelsRoot + "UI_Equipment.prefab", new[] { "Scroll View", "Content", "关闭" } },
+        { InventoryPanelsRoot + "UI_Equipment.prefab", new[] { "UI_Content", "关闭" } },
         { CraftingRoot + "UI_HandCraftTable.prefab", new[] { "输入_1", "输入_2", "输入_3", "输入_4", "输出_1", "合成按钮", "关闭", "Progress" } },
         { CraftingRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_9", "输出_1", "输出_2", "合成按钮", "关闭", "Progress" } },
         { CraftingRoot + "UI_Furnace.prefab", new[] { "输入_1", "输入_2", "输入_3", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "合成按钮", "关闭" } },

@@ -192,6 +192,9 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	/// <summary>Called immediately after a valid damage source is remembered.</summary>
 	protected virtual void OnDamageThreatUpdated(DamageReceiverDamageInfo damageInfo) { }
 
+	/// <summary>收到有效伤害后调用，供动物扩展受伤触发而不依赖攻击者类型。</summary>
+	protected virtual void OnDamageReceived(DamageReceiverDamageInfo damageInfo) { }
+
 	/// <summary>重置运行时状态（Load 时调用，子类初始化自己的运行时字段）</summary>
 	protected virtual void OnResetRuntimeState() { }
 
@@ -927,11 +930,14 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	{
 		if (damageInfo == null ||
 			damageInfo.DamageValue <= 0f ||
-			damageInfo.Attacker == null ||
 			damageInfo.Attacker == item)
 		{
 			return;
 		}
+
+		OnDamageReceived(damageInfo);
+		if (damageInfo.Attacker == null)
+			return;
 
 		_recentDamageThreat = damageInfo.Attacker;
 		_lastDamageThreatPosition = damageInfo.Attacker.transform.position;

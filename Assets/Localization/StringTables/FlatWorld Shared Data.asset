@@ -751,6 +751,98 @@ MonoBehaviour:
     m_Key: item.Torch_Summoner.description
     m_Metadata:
       m_Items: []
+  - m_Id: 3818404710014976
+    m_Key: item.WildDogMilk.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405100085248
+    m_Key: item.WildDogMilk.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405100085249
+    m_Key: item.WildDogMilk_Gray.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405100085250
+    m_Key: item.WildDogMilk_Gray.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405150416896
+    m_Key: item.Basket_Grass.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405150416897
+    m_Key: item.Basket_Grass.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405305606144
+    m_Key: quest.flatworld.survival_mining_path.title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405322383360
+    m_Key: quest.flatworld.survival_mining_path.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405330771968
+    m_Key: quest.flatworld.survival_mining_path.objective.pick_stone
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405334966272
+    m_Key: quest.flatworld.survival_mining_path.objective.craft_chipped_tool
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405339160576
+    m_Key: quest.flatworld.survival_mining_path.objective.pick_logs
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405343354880
+    m_Key: quest.flatworld.survival_mining_path.objective.pick_sticks
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405355937792
+    m_Key: quest.flatworld.survival_mining_path.objective.craft_workbench
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405360132096
+    m_Key: quest.flatworld.survival_mining_path.objective.craft_stone_pickaxe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405368520704
+    m_Key: quest.flatworld.survival_mining_path.objective.craft_stone_axe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405376909312
+    m_Key: quest.flatworld.survival_mining_path.objective.mine_iron_ore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405381103616
+    m_Key: quest.flatworld.survival_mining_path.objective.mine_copper_ore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405385297920
+    m_Key: quest.flatworld.survival_mining_path.objective.mine_coal_ore
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405393686528
+    m_Key: quest.flatworld.survival_mining_path.objective.craft_smelter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405397880832
+    m_Key: quest.flatworld.survival_mining_path.objective.ignite_smelter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405402075136
+    m_Key: quest.flatworld.survival_mining_path.objective.smelt_charcoal
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405406269440
+    m_Key: quest.flatworld.survival_mining_path.objective.smelt_raw_iron
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405410463744
+    m_Key: quest.flatworld.survival_mining_path.objective.smelt_copper
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

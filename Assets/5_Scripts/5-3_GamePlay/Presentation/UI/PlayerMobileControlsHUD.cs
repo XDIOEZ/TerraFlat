@@ -1,6 +1,10 @@
 using System.Collections;
+using System.Collections.Generic;
+using FlatWorld.Localization;
 using FlatWorld.Mobile;
+using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using UnityEngine.UI;
@@ -26,6 +30,10 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private const float MoveZoneMarginY = 54f;
     private const float FixedMoveZoneSize = 230f;
     private const float PinchZoomSensitivity = 0.02f;
+    private const float PinchCenterMinX = 0.25f;
+    private const float PinchCenterMaxX = 0.75f;
+    private const float PinchCenterMinY = 0.18f;
+    private const float PinchCenterMaxY = 0.82f;
 
     private static readonly Color RunOffColor = new(0.094f, 0.212f, 0.247f, 0.99f);
     private static readonly Color RunOnColor = new(0.26f, 0.61f, 0.57f, 1f);
@@ -49,6 +57,9 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private Outline runButtonOutline;
     private Image runStateIndicator;
     private Slider cameraZoomSlider;
+    private TMP_Text interactionButtonText;
+    private EnvironmentInteractionRunner environmentInteractionRunner;
+    private readonly List<RaycastResult> pinchRaycastResults = new List<RaycastResult>(8);
     private Coroutine hotbarSetupCoroutine;
     private bool hotbarConfigured;
     private bool geometryInitialized;
@@ -111,6 +122,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         UIUserSettings.MobileControlsChanged -= HandleMobileControlsSettingsChanged;
         UnbindRunStateVisual();
         UnsubscribeInteractionSurface();
+        UnbindEnvironmentInteractionLabel();
         if (activeLocalHud == this)
             activeLocalHud = null;
         hotbarSetupCoroutine = null;
@@ -121,6 +133,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private void OnDestroy()
     {
         UnsubscribeInteractionSurface();
+        UnbindEnvironmentInteractionLabel();
         if (viewObject != null)
             Destroy(viewObject);
     }
@@ -172,6 +185,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         EnsureView();
         BindRunStateVisual();
         SubscribeInteractionSurface();
+        BindEnvironmentInteractionLabel();
         RefreshInteractionSurface();
     }
 
@@ -317,7 +331,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     {
         if (!ShouldShow() || viewObject == null || !viewObject.activeInHierarchy ||
             gameplayLayer == null || !gameplayLayer.activeSelf ||
-            controller == null || controller.IsGameplayInputLocked)
+            controller == null || controller.IsGameplayInputLocked ||
+            !UIUserSettings.EnablePinchZoom)
         {
             pinchActive = false;
             return;
@@ -332,21 +347,21 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
         TouchControl first = null;
         TouchControl second = null;
-        int activeTouchCount = 0;
+        int allowedTouchCount = 0;
         for (int i = 0; i < touchscreen.touches.Count; i++)
         {
             TouchControl touch = touchscreen.touches[i];
-            if (!touch.press.isPressed)
+            if (!touch.press.isPressed || !IsPinchTouchAllowed(touch))
                 continue;
 
-            activeTouchCount++;
+            allowedTouchCount++;
             if (first == null)
                 first = touch;
             else if (second == null)
                 second = touch;
         }
 
-        if (activeTouchCount != 2 || first == null || second == null)
+        if (allowedTouchCount != 2 || first == null || second == null)
         {
             pinchActive = false;
             return;
@@ -364,6 +379,41 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         lastPinchDistance = distance;
         Mod_Cam cameraModule = GetComponentInChildren<Mod_Cam>(true);
         cameraModule?.ApplyPinchZoom(distanceDelta, PinchZoomSensitivity);
+    }
+
+    /// <summary>只允许屏幕中部且未命中真实 UI 的触点参与双指缩放。</summary>
+    private bool IsPinchTouchAllowed(TouchControl touch)
+    {
+        Vector2 position = touch.position.ReadValue();
+        if (Screen.width <= 0 || Screen.height <= 0 ||
+            position.x < Screen.width * PinchCenterMinX ||
+            position.x > Screen.width * PinchCenterMaxX ||
+            position.y < Screen.height * PinchCenterMinY ||
+            position.y > Screen.height * PinchCenterMaxY)
+        {
+            return false;
+        }
+
+        if (EventSystem.current == null)
+            return true;
+
+        PointerEventData eventData = new PointerEventData(EventSystem.current)
+        {
+            position = position
+        };
+        pinchRaycastResults.Clear();
+        EventSystem.current.RaycastAll(eventData, pinchRaycastResults);
+        for (int i = 0; i < pinchRaycastResults.Count; i++)
+        {
+            GameObject hitObject = pinchRaycastResults[i].gameObject;
+            MobileVirtualJoystick joystick = hitObject?.GetComponentInParent<MobileVirtualJoystick>();
+            if (joystick != null && joystick.IsWorldDropSurface)
+                continue;
+
+            return false;
+        }
+
+        return true;
     }
 
     #endregion
@@ -447,10 +497,10 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     private void HandleMobileControlsSettingsChanged()
     {
+        ResetAllTouchState();
         if (viewObject == null)
             return;
 
-        ResetAllTouchState();
         ApplyMoveJoystickMode();
         joysticks = viewObject.GetComponentsInChildren<MobileVirtualJoystick>(true);
     }
@@ -458,6 +508,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private void ConfigureVirtualButtons()
     {
         ConfigureVirtualButton("交互", MobileVirtualButton.Interact);
+        CacheInteractionButtonText();
         ConfigureVirtualButton("使用", MobileVirtualButton.Use);
         ConfigureVirtualButton("奔跑", MobileVirtualButton.Run);
         ConfigureVirtualButton("背包", MobileVirtualButton.Inventory);
@@ -465,6 +516,13 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         ConfigureVirtualButton("制作", MobileVirtualButton.Crafting);
         ConfigureVirtualButton("状态", MobileVirtualButton.Survival);
         inputButtons = viewObject.GetComponentsInChildren<MobileInputButton>(true);
+    }
+
+    /// <summary>缓存交互按钮文字节点，环境动作变化时只更新文本，不重建按钮。</summary>
+    private void CacheInteractionButtonText()
+    {
+        Transform node = FindRequired("交互");
+        interactionButtonText = node?.GetComponentInChildren<TMP_Text>(true);
     }
 
     private void ConfigureVirtualButton(string nodeName, MobileVirtualButton virtualButton)
@@ -780,6 +838,44 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         UIManager manager = UIManager.ExistingInstance;
         if (manager != null)
             manager.InteractionSurfaceChanged -= RefreshInteractionSurface;
+    }
+
+    /// <summary>把水体等环境动作运行器绑定到手机交互按钮的动态文字。</summary>
+    private void BindEnvironmentInteractionLabel()
+    {
+        TileEffectReceiver receiver = player?.itemMods?.GetMod_ByID<TileEffectReceiver>(ModText.TileEffectReceiver) ??
+                                       player?.GetComponentInChildren<TileEffectReceiver>(true);
+        EnvironmentInteractionRunner nextRunner = receiver?.EnvironmentInteractions;
+        if (environmentInteractionRunner == nextRunner)
+        {
+            RefreshInteractionButtonLabel();
+            return;
+        }
+
+        UnbindEnvironmentInteractionLabel();
+        environmentInteractionRunner = nextRunner;
+        if (environmentInteractionRunner != null)
+            environmentInteractionRunner.AvailableActionsChanged += RefreshInteractionButtonLabel;
+        RefreshInteractionButtonLabel();
+    }
+
+    /// <summary>解除环境动作运行器事件，避免玩家对象销毁后继续回调 HUD。</summary>
+    private void UnbindEnvironmentInteractionLabel()
+    {
+        if (environmentInteractionRunner != null)
+            environmentInteractionRunner.AvailableActionsChanged -= RefreshInteractionButtonLabel;
+        environmentInteractionRunner = null;
+    }
+
+    /// <summary>根据当前首选环境动作显示“交互”或“喝水”等本地化名称。</summary>
+    private void RefreshInteractionButtonLabel()
+    {
+        if (interactionButtonText == null)
+            return;
+
+        string displayNameKey = environmentInteractionRunner?.GetPreferredActionDisplayNameKey();
+        interactionButtonText.text = FlatWorldLocalizationService.GetUiText(
+            string.IsNullOrWhiteSpace(displayNameKey) ? "交互" : displayNameKey);
     }
 
     private void RefreshInteractionSurface()

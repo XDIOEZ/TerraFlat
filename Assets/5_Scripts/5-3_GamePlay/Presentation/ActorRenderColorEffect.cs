@@ -121,6 +121,12 @@ public sealed class ActorRenderColorEffect : ActorRenderEffectModule
         return renderer is SpriteRenderer;
     }
 
+    /// <summary>状态染色和受击闪红只作用于角色本体，避免感染时把手持武器染绿。</summary>
+    protected override bool AppliesToExternalRenderer()
+    {
+        return false;
+    }
+
     protected override void PrepareFrame(float deltaTime)
     {
         float tintBlend = GetTransitionBlend(deltaTime, statusTransitionSeconds);

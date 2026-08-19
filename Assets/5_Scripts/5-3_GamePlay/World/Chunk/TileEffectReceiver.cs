@@ -8,6 +8,15 @@ using UnityEngine;
 /// </summary>
 public class TileEffectReceiver : Module
 {
+    private const float WaterEdgeTolerance = 0.2f;
+    private static readonly Vector2Int[] WaterEdgeDirections =
+    {
+        Vector2Int.left,
+        Vector2Int.right,
+        Vector2Int.down,
+        Vector2Int.up
+    };
+
     #region Inspector
 
     [Header("位置信息")]
@@ -200,8 +209,31 @@ public class TileEffectReceiver : Module
 
     private bool TryResolveTileEffect(Vector2Int gridPos, out TileEffectResolution resolution)
     {
+        if (TryResolveTileEffectAtPosition(transform.position, gridPos, out TileEffectResolution exactResolution))
+        {
+            if (exactResolution.TileData is TileData_Water ||
+                !IsNearCellEdge(transform.position, gridPos) ||
+                !TryResolveNearbyWater(gridPos, out resolution))
+            {
+                resolution = exactResolution;
+            }
+
+            return true;
+        }
+
+        if (TryResolveNearbyWater(gridPos, out resolution))
+            return true;
+
+        resolution = default;
+        return false;
+    }
+
+    /// <summary>按指定世界采样点查询新版运行时地形或旧 Map 地块行为。</summary>
+    private bool TryResolveTileEffectAtPosition(Vector2 samplePosition, Vector2Int gridPos,
+        out TileEffectResolution resolution)
+    {
         ChunkMgr manager = ChunkMgr.Instance;
-        if (manager != null && manager.TryGetRuntimeTileEffect(transform.position,
+        if (manager != null && manager.TryGetRuntimeTileEffect(samplePosition,
                 out RuntimeTerrainTileSample sample, out TileData runtimeData,
                 out Tile_Block runtimeBlock))
         {
@@ -225,23 +257,60 @@ public class TileEffectReceiver : Module
         return false;
     }
 
+    /// <summary>在角色贴近边界时查找相邻水格，给水池交互保留小范围容错。</summary>
+    private bool TryResolveNearbyWater(Vector2Int gridPos, out TileEffectResolution resolution)
+    {
+        resolution = default;
+        if (!IsNearCellEdge(transform.position, gridPos))
+            return false;
+
+        for (int i = 0; i < WaterEdgeDirections.Length; i++)
+        {
+            Vector2Int neighborGridPos = gridPos + WaterEdgeDirections[i];
+            Vector2 samplePosition = new Vector2(neighborGridPos.x + 0.5f, neighborGridPos.y + 0.5f);
+            if (!TryResolveTileEffectAtPosition(samplePosition, neighborGridPos,
+                    out TileEffectResolution candidate) ||
+                !(candidate.TileData is TileData_Water))
+            {
+                continue;
+            }
+
+            resolution = candidate;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>判断角色与当前格子边界的最近距离是否进入水边容错范围。</summary>
+    private static bool IsNearCellEdge(Vector2 position, Vector2Int gridPos)
+    {
+        float distanceToLeft = position.x - gridPos.x;
+        float distanceToRight = gridPos.x + 1f - position.x;
+        float distanceToBottom = position.y - gridPos.y;
+        float distanceToTop = gridPos.y + 1f - position.y;
+        float nearestDistance = Mathf.Min(
+            distanceToLeft,
+            distanceToRight,
+            distanceToBottom,
+            distanceToTop);
+        return nearestDistance >= 0f && nearestDistance <= WaterEdgeTolerance;
+    }
+
     private bool IsActiveSourceCurrent(Vector2Int gridPos)
     {
         if (!hasActiveTileEffects || activeGridPos != gridPos)
             return false;
 
-        if (activeRuntimeTerrain != null)
-        {
-            ChunkMgr manager = ChunkMgr.Instance;
-            return manager != null &&
-                   manager.TryGetRuntimeTerrainTile(transform.position,
-                       out RuntimeTerrainTileSample sample) &&
-                   ReferenceEquals(sample.Terrain, activeRuntimeTerrain) &&
-                   sample.TopTileId == activeRuntimeTileId;
-        }
+        if (!TryResolveTileEffect(gridPos, out TileEffectResolution currentResolution))
+            return false;
 
-        return activeTileMap != null && activeTileMap == Cache_map &&
-               ReferenceEquals(activeTileData, Cache_map.GetTile(gridPos));
+        if (activeRuntimeTerrain != null)
+            return ReferenceEquals(currentResolution.RuntimeTerrain, activeRuntimeTerrain) &&
+                   currentResolution.RuntimeTileId == activeRuntimeTileId;
+
+        return activeTileMap != null && activeTileMap == currentResolution.Map &&
+               ReferenceEquals(activeTileData, currentResolution.TileData);
     }
 
     private void CacheActiveTile(Vector2Int gridPos, TileEffectResolution resolution)
