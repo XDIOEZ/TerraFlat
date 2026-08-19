@@ -41,6 +41,7 @@ public class Mod_HandMade : Module,IInventory
 
     private int _currentClickProgress;
     private CraftingOutputPreview _outputPreview;
+    private string _lastCraftPreviewMessage;
     private static readonly CraftingCapabilities Capabilities = new CraftingCapabilities
     {
         RecipeType = RecipeType.Crafting,
@@ -128,6 +129,11 @@ public class Mod_HandMade : Module,IInventory
     private bool TryGetCraftPreview(out ItemData previewItem)
     {
         CraftingResult result = CraftingService.Preview(inputInventory, outputInventory, Capabilities);
+        CraftingPreviewDiagnostics.ReportFailure(
+            nameof(Mod_HandMade),
+            inputInventory,
+            result,
+            ref _lastCraftPreviewMessage);
         previewItem = result.PrimaryOutput;
         return result.Success;
     }

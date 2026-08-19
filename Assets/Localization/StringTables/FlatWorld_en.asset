@@ -757,6 +757,98 @@ MonoBehaviour:
     m_Localized: Torch Summoner.
     m_Metadata:
       m_Items: []
+  - m_Id: 3818404710014976
+    m_Localized: WildDogMilk
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405100085248
+    m_Localized: WildDogMilk.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405100085249
+    m_Localized: WildDogMilk Gray
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405100085250
+    m_Localized: WildDogMilk Gray.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405150416896
+    m_Localized: Basket Grass
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405150416897
+    m_Localized: Basket Grass.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405305606144
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405322383360
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405330771968
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405334966272
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405339160576
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405343354880
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405355937792
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405360132096
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405368520704
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405376909312
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405381103616
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405385297920
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405393686528
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405397880832
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405402075136
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405406269440
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3818405410463744
+    m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

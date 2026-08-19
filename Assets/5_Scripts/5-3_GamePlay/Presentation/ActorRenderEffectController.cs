@@ -85,7 +85,11 @@ public sealed class ActorRenderEffectController : MonoBehaviour
                 if (module == null)
                     continue;
 
-                module.ApplyFrame(renderer, propertyBlock, deltaTime);
+                module.ApplyFrame(
+                    renderer,
+                    propertyBlock,
+                    deltaTime,
+                    externalRenderers.Contains(renderer));
             }
 
             renderer.SetPropertyBlock(propertyBlock);
@@ -349,10 +353,22 @@ public abstract class ActorRenderEffectModule : MonoBehaviour
     }
 
     /// <summary>向指定 Renderer 合并本模块的材质参数。</summary>
-    internal void ApplyFrame(Renderer renderer, MaterialPropertyBlock block, float deltaTime)
+    internal void ApplyFrame(
+        Renderer renderer,
+        MaterialPropertyBlock block,
+        float deltaTime,
+        bool isExternalRenderer)
     {
-        if (isActiveAndEnabled && AppliesTo(renderer))
+        if (isActiveAndEnabled &&
+            (!isExternalRenderer || AppliesToExternalRenderer()) &&
+            AppliesTo(renderer))
             ApplyEffect(renderer, block, deltaTime);
+    }
+
+    /// <summary>声明本模块是否应把效果扩展到角色外部注册的手持物 Renderer。</summary>
+    protected virtual bool AppliesToExternalRenderer()
+    {
+        return true;
     }
 
     /// <summary>判断本模块是否作用于指定 Renderer。</summary>

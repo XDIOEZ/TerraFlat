@@ -335,6 +335,7 @@ public class Inventory
         // 如果此 inventory 中保存了面板位置，则尝试在创建时恢复位置
         if (Data != null)
         {
+            bool hasSavedPanelPosition = false;
             RectTransform rt = null;
             if (basePanel.Dragger != null)
                 rt = basePanel.Dragger.GetComponent<RectTransform>();
@@ -348,6 +349,13 @@ public class Inventory
                 if (IsValidVector2(savedPos2) && (savedPos2.x != 0 || savedPos2.y != 0))
                 {
                     rt.anchoredPosition = savedPos2;
+                    hasSavedPanelPosition = true;
+                }
+
+                if (!hasSavedPanelPosition &&
+                    string.Equals(panelPrefab.name, "UI_Bag", StringComparison.Ordinal))
+                {
+                    InventoryPanelLayout.ApplyDefaultBagPosition(rt);
                 }
             }
         }
@@ -1764,4 +1772,58 @@ public class Inventory
     }
 
     #endregion
+}
+
+/// <summary>统一管理背包与制作面板首次打开时的左右布局，避免两个大面板默认重叠。</summary>
+public static class InventoryPanelLayout
+{
+    public const float PanelMargin = 18f;
+    private const float DefaultBagWidth = 706f;
+    private const float DefaultCraftingWidth = 726f;
+
+    /// <summary>把背包放到画布左侧，并保留统一的小边距。</summary>
+    public static void ApplyDefaultBagPosition(RectTransform panel)
+    {
+        SetSidePosition(panel, left: true);
+    }
+
+    /// <summary>把制作面板放到画布右侧，与背包保持统一间距。</summary>
+    public static void ApplyDefaultCraftingPosition(RectTransform panel)
+    {
+        SetSidePosition(panel, left: false);
+    }
+
+    /// <summary>按背包与制作面板的组合宽度计算相邻位置，窄屏时回退到各自屏幕侧边。</summary>
+    private static void SetSidePosition(RectTransform panel, bool left)
+    {
+        if (panel == null)
+            return;
+
+        RectTransform parent = panel.parent as RectTransform;
+        if (parent == null)
+            return;
+
+        Canvas.ForceUpdateCanvases();
+        float canvasWidth = parent.rect.width > 0f ? parent.rect.width : Screen.width;
+        float panelWidth = panel.rect.width > 0f ? panel.rect.width : panel.sizeDelta.x;
+        float bagWidth = left ? panelWidth : DefaultBagWidth;
+        float craftingWidth = left ? DefaultCraftingWidth : panelWidth;
+        float pairWidth = bagWidth + PanelMargin + craftingWidth;
+        float availableWidth = Mathf.Max(0f, canvasWidth - PanelMargin * 2f);
+        float x;
+        if (pairWidth <= availableWidth)
+        {
+            float pairLeft = -pairWidth * 0.5f;
+            x = left
+                ? pairLeft + bagWidth * 0.5f
+                : pairLeft + bagWidth + PanelMargin + craftingWidth * 0.5f;
+        }
+        else
+        {
+            float halfWidth = Mathf.Max(0f, canvasWidth * 0.5f - PanelMargin - panelWidth * 0.5f);
+            x = left ? -halfWidth : halfWidth;
+        }
+
+        panel.anchoredPosition = new Vector2(x, panel.anchoredPosition.y);
+    }
 }

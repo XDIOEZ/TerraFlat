@@ -18,6 +18,7 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
     private Slider scaleSlider;
     private Toggle safeAreaToggle;
     private Toggle floatingMoveJoystickToggle;
+    private Toggle enablePinchZoomToggle;
     private Slider cameraLookaheadSlider;
     private Slider cameraSmoothingSlider;
     private TextMeshProUGUI scaleValueText;
@@ -88,6 +89,7 @@ private void EnsureSettingsWindow()
         scaleSlider = settingsPanel.GetSlider("界面缩放");
         safeAreaToggle = settingsPanel.GetToggle("安全区域适配");
         floatingMoveJoystickToggle = settingsPanel.GetToggle("浮动移动摇杆");
+        enablePinchZoomToggle = settingsPanel.GetToggle("双指缩放");
         cameraLookaheadSlider = settingsPanel.GetSlider("镜头前探");
         cameraSmoothingSlider = settingsPanel.GetSlider("预判平滑");
         scaleValueText = settingsPanel.GetText("界面缩放数值");
@@ -101,10 +103,12 @@ private void EnsureSettingsWindow()
         scaleSlider?.onValueChanged.AddListener(OnScaleChanged);
         safeAreaToggle?.onValueChanged.AddListener(OnSafeAreaChanged);
         floatingMoveJoystickToggle?.onValueChanged.AddListener(OnFloatingMoveJoystickChanged);
+        enablePinchZoomToggle?.onValueChanged.AddListener(OnEnablePinchZoomChanged);
         cameraLookaheadSlider?.onValueChanged.AddListener(OnCameraLookaheadChanged);
         cameraSmoothingSlider?.onValueChanged.AddListener(OnCameraSmoothingChanged);
 
         if (scaleSlider == null || safeAreaToggle == null || floatingMoveJoystickToggle == null ||
+            enablePinchZoomToggle == null ||
             cameraLookaheadSlider == null || cameraSmoothingSlider == null ||
             scaleValueText == null || cameraLookaheadValueText == null ||
             cameraSmoothingValueText == null || statusText == null)
@@ -168,6 +172,12 @@ private void EnsureSettingsWindow()
         UIUserSettings.SetFloatingMoveJoystick(value);
     }
 
+    /// <summary>保存双指缩放偏好并让手机 HUD 立即清理旧触点状态。</summary>
+    private void OnEnablePinchZoomChanged(bool value)
+    {
+        UIUserSettings.SetEnablePinchZoom(value);
+    }
+
     private void OnCameraLookaheadChanged(float value)
     {
         float applied = CameraUserSettings.SetLookahead(value);
@@ -198,6 +208,8 @@ private void EnsureSettingsWindow()
             safeAreaToggle.SetIsOnWithoutNotify(UIUserSettings.RespectSafeArea);
         if (floatingMoveJoystickToggle != null)
             floatingMoveJoystickToggle.SetIsOnWithoutNotify(UIUserSettings.FloatingMoveJoystick);
+        if (enablePinchZoomToggle != null)
+            enablePinchZoomToggle.SetIsOnWithoutNotify(UIUserSettings.EnablePinchZoom);
         if (cameraLookaheadSlider != null)
             cameraLookaheadSlider.SetValueWithoutNotify(CameraUserSettings.Lookahead);
         if (cameraSmoothingSlider != null)

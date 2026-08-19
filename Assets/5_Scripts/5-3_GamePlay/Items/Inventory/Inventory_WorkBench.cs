@@ -29,6 +29,7 @@ public class Inventory_WorkBench : Inventory
 
     private int _currentClickProgress;
     private CraftingOutputPreview _outputPreview;
+    private string _lastCraftPreviewMessage;
     private static readonly CraftingCapabilities Capabilities = new CraftingCapabilities
     {
         RecipeType = RecipeType.Crafting,
@@ -190,6 +191,11 @@ public class Inventory_WorkBench : Inventory
     private bool TryGetCraftPreview(out ItemData previewItem)
     {
         CraftingResult result = CraftingService.Preview(inputInventory, outputInventory, Capabilities);
+        CraftingPreviewDiagnostics.ReportFailure(
+            nameof(Inventory_WorkBench),
+            inputInventory,
+            result,
+            ref _lastCraftPreviewMessage);
         previewItem = result.PrimaryOutput;
         return result.Success;
     }

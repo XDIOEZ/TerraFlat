@@ -838,12 +838,35 @@ public class ItemSlot_UI : MonoBehaviour,
             if (hitObject.GetComponentInParent<ItemSlot_UI>() != null)
                 return true;
 
+            BasePanel panel = hitObject.GetComponentInParent<BasePanel>();
+            if (panel != null)
+            {
+                if (!panel.IsOpen())
+                    continue;
+
+                RectTransform panelRect = panel.Dragger != null
+                    ? panel.Dragger.rectTransform
+                    : panel.rectTransform;
+                if (panelRect == null ||
+                    RectTransformUtility.RectangleContainsScreenPoint(
+                        panelRect,
+                        eventData.position,
+                        eventData.pressEventCamera))
+                {
+                    return true;
+                }
+
+                continue;
+            }
+
             // 手机普通指向区是透明的世界指向层，允许在其空白区域长按丢弃。
             MobileVirtualJoystick joystick = hitObject.GetComponentInParent<MobileVirtualJoystick>();
             if (joystick != null && joystick.IsWorldDropSurface)
                 continue;
 
-            return true;
+            // 只拦截真实可操作控件，面板外的装饰 Image/Text 不应吞掉世界长按。
+            if (hitObject.GetComponentInParent<Selectable>() != null)
+                return true;
         }
 
         return false;

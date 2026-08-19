@@ -96,6 +96,7 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
 
     private int _currentClickProgress;
     private CraftingOutputPreview _outputPreview;
+    private string _lastCraftPreviewMessage;
     private static readonly CraftingCapabilities Capabilities = new CraftingCapabilities
     {
         RecipeType = RecipeType.Crafting,
@@ -181,6 +182,10 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
             if (IsValidVector2(savedPos2) && (savedPos2.x != 0 || savedPos2.y != 0))
             {
                 rt.anchoredPosition = savedPos2;
+            }
+            else
+            {
+                InventoryPanelLayout.ApplyDefaultCraftingPosition(rt);
             }
         }
 
@@ -327,6 +332,11 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
     private bool TryGetCraftPreview(out ItemData previewItem)
     {
         CraftingResult result = CraftingService.Preview(inputInventory, outputInventory, Capabilities);
+        CraftingPreviewDiagnostics.ReportFailure(
+            nameof(Mod_MakeTable),
+            inputInventory,
+            result,
+            ref _lastCraftPreviewMessage);
         previewItem = result.PrimaryOutput;
         return result.Success;
     }

@@ -16,6 +16,7 @@ public static class UIUserSettings
     private const string ScaleKey = "FlatWorld.UI.Scale";
     private const string RespectSafeAreaKey = "FlatWorld.UI.RespectSafeArea";
     private const string FloatingMoveJoystickKey = "FlatWorld.Mobile.FloatingMoveJoystick";
+    private const string EnablePinchZoomKey = "FlatWorld.Mobile.EnablePinchZoom";
 
     public const float DefaultScale = 1f;
     public const float MinimumScale = 0.75f;
@@ -30,6 +31,7 @@ public static class UIUserSettings
     private static float cachedScale = DefaultScale;
     private static bool cachedRespectSafeArea = true;
     private static bool cachedFloatingMoveJoystick = true;
+    private static bool cachedEnablePinchZoom;
 
     /// <summary>任一 UI 偏好实际改变后广播一次。</summary>
     public static event Action Changed;
@@ -61,6 +63,15 @@ public static class UIUserSettings
         {
             EnsureInitialized();
             return cachedFloatingMoveJoystick;
+        }
+    }
+
+    public static bool EnablePinchZoom
+    {
+        get
+        {
+            EnsureInitialized();
+            return cachedEnablePinchZoom;
         }
     }
 
@@ -107,22 +118,38 @@ public static class UIUserSettings
         MobileControlsChanged?.Invoke();
     }
 
+    /// <summary>保存双指缩放开关；默认关闭，避免普通双指触控误改变镜头。</summary>
+    public static void SetEnablePinchZoom(bool value)
+    {
+        EnsureInitialized();
+        if (cachedEnablePinchZoom == value)
+            return;
+
+        cachedEnablePinchZoom = value;
+        PlayerPrefs.SetInt(EnablePinchZoomKey, value ? 1 : 0);
+        PlayerPrefs.Save();
+        MobileControlsChanged?.Invoke();
+    }
+
     public static void ResetToDefaults()
     {
         EnsureInitialized();
         bool changed = !Mathf.Approximately(cachedScale, DefaultScale) ||
                        !cachedRespectSafeArea ||
-                       !cachedFloatingMoveJoystick;
+                       !cachedFloatingMoveJoystick ||
+                       cachedEnablePinchZoom;
         if (!changed)
             return;
 
         cachedScale = DefaultScale;
         cachedRespectSafeArea = true;
-        bool mobileControlsChanged = !cachedFloatingMoveJoystick;
+        bool mobileControlsChanged = !cachedFloatingMoveJoystick || cachedEnablePinchZoom;
         cachedFloatingMoveJoystick = true;
+        cachedEnablePinchZoom = false;
         PlayerPrefs.SetFloat(ScaleKey, DefaultScale);
         PlayerPrefs.SetInt(RespectSafeAreaKey, 1);
         PlayerPrefs.SetInt(FloatingMoveJoystickKey, 1);
+        PlayerPrefs.SetInt(EnablePinchZoomKey, 0);
         PlayerPrefs.Save();
         Changed?.Invoke();
         if (mobileControlsChanged)
@@ -140,6 +167,7 @@ public static class UIUserSettings
         cachedScale = DefaultScale;
         cachedRespectSafeArea = true;
         cachedFloatingMoveJoystick = true;
+        cachedEnablePinchZoom = false;
         Changed = null;
         MobileControlsChanged = null;
     }
@@ -152,6 +180,7 @@ public static class UIUserSettings
         cachedScale = SanitizeScale(PlayerPrefs.GetFloat(ScaleKey, DefaultScale));
         cachedRespectSafeArea = PlayerPrefs.GetInt(RespectSafeAreaKey, 1) != 0;
         cachedFloatingMoveJoystick = PlayerPrefs.GetInt(FloatingMoveJoystickKey, 1) != 0;
+        cachedEnablePinchZoom = PlayerPrefs.GetInt(EnablePinchZoomKey, 0) != 0;
         initialized = true;
     }
 

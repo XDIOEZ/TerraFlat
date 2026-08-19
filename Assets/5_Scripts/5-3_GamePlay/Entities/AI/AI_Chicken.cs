@@ -25,6 +25,8 @@ public enum ChickenState
 /// </summary>
 public partial class AI_Chicken : AI_Base<ChickenState>
 {
+	private const string SpeedOneBuffId = "速度1";
+
 	#region SaveData
 	[Serializable]
 	[MemoryPackable]
@@ -246,6 +248,16 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		}
 
 		MoveTo(_fleeTarget);
+	}
+
+	/// <summary>小鸡受到有效伤害后获得短时速度1，不要求伤害必须来自可识别攻击者。</summary>
+	protected override void OnDamageReceived(DamageReceiverDamageInfo damageInfo)
+	{
+		if (item == null || damageInfo == null || damageInfo.DamageValue <= 0f)
+			return;
+
+		BuffManager buffManager = item.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+		buffManager?.AddBuff(SpeedOneBuffId);
 	}
 
 	protected override void OnBindExtraModules()

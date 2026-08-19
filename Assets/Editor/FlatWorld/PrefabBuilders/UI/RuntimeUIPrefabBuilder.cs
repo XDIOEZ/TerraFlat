@@ -1100,6 +1100,17 @@ public static class RuntimeUIPrefabBuilder
         Toggle joystickToggle = CreateToggle("浮动移动摇杆", joystickRow.transform);
         joystickToggle.isOn = true;
 
+        GameObject pinchZoomRow = CreateRow("双指缩放行", root.transform, 48f);
+        TextMeshProUGUI pinchZoomLabel = CreateText(
+            "双指缩放说明",
+            pinchZoomRow.transform,
+            "双指缩放（关闭则禁用）",
+            17f,
+            Cream);
+        pinchZoomLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        Toggle pinchZoomToggle = CreateToggle("双指缩放", pinchZoomRow.transform);
+        pinchZoomToggle.isOn = false;
+
         GameObject lookaheadRow = CreateRow("镜头前探行", root.transform, 52f);
         CreateRowLabel(lookaheadRow.transform, "镜头前探", 112f);
         Slider lookaheadSlider = CreateSlider("镜头前探", lookaheadRow.transform);
