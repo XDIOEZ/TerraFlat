@@ -4,6 +4,7 @@
     "com.cysharp.memorypack": "https://github.com/Cysharp/MemoryPack.git?path=src/MemoryPack.Unity/Assets/MemoryPack.Unity",
     "com.github-glitchenzo.nugetforunity": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
     "com.h8man.2d.navmeshplus": "file:com.h8man.2d.navmeshplus",
+    "com.kybernetik.ultevents": "file:com.kybernetik.ultevents",
     "com.veriorpies.parrelsync": "file:com.veriorpies.parrelsync",
     "com.unity.2d.pixel-perfect": "5.1.0",
     "com.unity.addressables": "1.22.3",
