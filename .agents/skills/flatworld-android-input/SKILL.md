@@ -43,6 +43,7 @@ description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系�
 - `PlayerInputActions` 资产、`Win10` 玩法 ActionMap 与运行时 UI ActionMap 都不得设置设备组 `bindingMask`；控制偏好只决定 HUD/指针呈现，键盘、手柄和手机虚拟设备必须能并行输入。
 - 当前输入设备变化只更新指针/UI状态，不得调用 `MobileInputRuntime.ResetAll()` 或清空触摸所有权；触摸清理只能由输入锁、模态面板、生命周期和真实控件失效触发。
 - 手机方案下 Shift 等键盘修饰键只由对应玩法模块消费，不参与设备切换；真实鼠标或 Device Simulator 转发的 Touchscreen 点击才退出手柄 UI/虚拟光标模式。不得切走手机 HUD、清空触摸或继续使用旧的虚拟光标位置判断 UI 命中。
+- 双指缩放必须按两个独立 `TouchControl.touchId` 持续跟踪，仅在玩法控制层可见且未锁定时生效；视野变化统一调用 `Mod_Cam.ChangeCameraView`，禁止使用 `Input.GetTouch(0)` 或直接改相机尺寸。
 - 手机最终径向朝向的准线复用 `GamepadCursorGraphic`，正式节点必须位于 `UI_MobileControls.prefab` 并由 `PlayerMobileControlsHUD` 定位；不得只修改手柄 UI 虚拟光标。
 - 手机准线的世界距离必须按当前手持物动态取值：空手或非建筑复用 `Mod_InteractSender.maxInteractDistance`，建筑召唤器复用 `Mod_Building.Data.maxVisibleDistance`。
 - `PlayerMobileControlsHUD` 允许仅在旧 Addressables/缓存 Prefab 缺少正式准线节点时补建兼容节点，正常视觉仍以 `UI_MobileControls.prefab` 为准。

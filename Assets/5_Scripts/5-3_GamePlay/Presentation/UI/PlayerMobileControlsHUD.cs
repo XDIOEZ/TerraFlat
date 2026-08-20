@@ -1,10 +1,6 @@
 using System.Collections;
-using System.Collections.Generic;
-using FlatWorld.Localization;
 using FlatWorld.Mobile;
-using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using UnityEngine.UI;
@@ -29,11 +25,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private const float MoveZoneMarginX = 76f;
     private const float MoveZoneMarginY = 54f;
     private const float FixedMoveZoneSize = 230f;
-    private const float PinchZoomSensitivity = 0.02f;
-    private const float PinchCenterMinX = 0.25f;
-    private const float PinchCenterMaxX = 0.75f;
-    private const float PinchCenterMinY = 0.18f;
-    private const float PinchCenterMaxY = 0.82f;
+    private const float PinchZoomSensitivity = 0.015f;
+    private const float PinchZoomNoiseThreshold = 1f;
 
     private static readonly Color RunOffColor = new(0.094f, 0.212f, 0.247f, 0.99f);
     private static readonly Color RunOnColor = new(0.26f, 0.61f, 0.57f, 1f);
@@ -57,9 +50,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private Outline runButtonOutline;
     private Image runStateIndicator;
     private Slider cameraZoomSlider;
-    private TMP_Text interactionButtonText;
-    private EnvironmentInteractionRunner environmentInteractionRunner;
-    private readonly List<RaycastResult> pinchRaycastResults = new List<RaycastResult>(8);
     private Coroutine hotbarSetupCoroutine;
     private bool hotbarConfigured;
     private bool geometryInitialized;
@@ -68,8 +58,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private int lastScreenHeight;
     private bool missingPrefabLogged;
     private bool runStateBound;
-    private bool pinchActive;
-    private float lastPinchDistance;
     private bool hotbarCanvasSortingCached;
     private bool hotbarCanvasOriginalOverrideSorting;
     private int hotbarCanvasOriginalSortingOrder;
@@ -84,6 +72,9 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private Vector2 hotbarOriginalAnchoredPosition;
     private Vector2 hotbarOriginalSizeDelta;
     private Vector3 hotbarOriginalLocalScale;
+    private int pinchPointerIdA = int.MinValue;
+    private int pinchPointerIdB = int.MinValue;
+    private float previousPinchDistance;
 
     public bool IsDrawerOpen => drawer != null && drawer.activeSelf;
     /// <summary>本地手机菜单抽屉是否打开，用于允许背包和制作面板并行切换。</summary>
@@ -122,7 +113,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         UIUserSettings.MobileControlsChanged -= HandleMobileControlsSettingsChanged;
         UnbindRunStateVisual();
         UnsubscribeInteractionSurface();
-        UnbindEnvironmentInteractionLabel();
         if (activeLocalHud == this)
             activeLocalHud = null;
         hotbarSetupCoroutine = null;
@@ -133,7 +123,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private void OnDestroy()
     {
         UnsubscribeInteractionSurface();
-        UnbindEnvironmentInteractionLabel();
         if (viewObject != null)
             Destroy(viewObject);
     }
@@ -185,7 +174,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         EnsureView();
         BindRunStateVisual();
         SubscribeInteractionSurface();
-        BindEnvironmentInteractionLabel();
         RefreshInteractionSurface();
     }
 
@@ -297,10 +285,19 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     #region 手机准线
 
+    private void Update()
+    {
+        if (!IsGameplayTouchAvailable())
+        {
+            ResetPinchZoom();
+            return;
+        }
+
+        UpdatePinchZoom();
+    }
+
     private void LateUpdate()
     {
-        UpdatePinchZoom();
-
         if (mobileAimCursor == null || controller == null || viewObject == null ||
             !ShouldShow() || !viewObject.activeInHierarchy ||
             gameplayLayer == null || !gameplayLayer.activeSelf)
@@ -326,94 +323,128 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         }
     }
 
-    /// <summary>在没有模态面板时读取两个独立触点，直接把间距变化交给相机模块。</summary>
+    #endregion
+
+    #region 双指缩放
+
+    private bool IsGameplayTouchAvailable()
+    {
+        return ShouldShow() &&
+               viewObject != null &&
+               viewObject.activeInHierarchy &&
+               gameplayLayer != null &&
+               gameplayLayer.activeSelf &&
+               controller != null &&
+               !controller.IsGameplayInputLocked;
+    }
+
     private void UpdatePinchZoom()
     {
-        if (!ShouldShow() || viewObject == null || !viewObject.activeInHierarchy ||
-            gameplayLayer == null || !gameplayLayer.activeSelf ||
-            controller == null || controller.IsGameplayInputLocked ||
-            !UIUserSettings.EnablePinchZoom)
+        if (pinchPointerIdA == int.MinValue || pinchPointerIdB == int.MinValue)
         {
-            pinchActive = false;
+            if (!TryGetFirstTwoActiveTouches(
+                    out int firstId,
+                    out int secondId,
+                    out Vector2 firstPosition,
+                    out Vector2 secondPosition))
+            {
+                return;
+            }
+
+            pinchPointerIdA = firstId;
+            pinchPointerIdB = secondId;
+            previousPinchDistance = Vector2.Distance(firstPosition, secondPosition);
             return;
         }
+
+        if (!TryGetTouchPosition(pinchPointerIdA, out Vector2 firstTouchPosition) ||
+            !TryGetTouchPosition(pinchPointerIdB, out Vector2 secondTouchPosition))
+        {
+            ResetPinchZoom();
+            return;
+        }
+
+        float currentPinchDistance = Vector2.Distance(firstTouchPosition, secondTouchPosition);
+        float distanceDelta = currentPinchDistance - previousPinchDistance;
+        previousPinchDistance = currentPinchDistance;
+        if (Mathf.Abs(distanceDelta) < PinchZoomNoiseThreshold)
+            return;
+
+        Mod_Cam cameraModule = GetComponentInChildren<Mod_Cam>(true);
+        if (cameraModule == null || cameraModule.Vcam == null)
+            return;
+
+        cameraModule.ChangeCameraView(-distanceDelta * PinchZoomSensitivity);
+    }
+
+    private static bool TryGetFirstTwoActiveTouches(
+        out int firstId,
+        out int secondId,
+        out Vector2 firstPosition,
+        out Vector2 secondPosition)
+    {
+        firstId = int.MinValue;
+        secondId = int.MinValue;
+        firstPosition = default;
+        secondPosition = default;
 
         Touchscreen touchscreen = Touchscreen.current;
         if (touchscreen == null)
-        {
-            pinchActive = false;
-            return;
-        }
+            return false;
 
-        TouchControl first = null;
-        TouchControl second = null;
-        int allowedTouchCount = 0;
         for (int i = 0; i < touchscreen.touches.Count; i++)
         {
             TouchControl touch = touchscreen.touches[i];
-            if (!touch.press.isPressed || !IsPinchTouchAllowed(touch))
+            if (touch == null || !touch.press.isPressed)
                 continue;
 
-            allowedTouchCount++;
-            if (first == null)
-                first = touch;
-            else if (second == null)
-                second = touch;
+            int touchId = touch.touchId.ReadValue();
+            if (touchId < 0)
+                continue;
+
+            if (firstId == int.MinValue)
+            {
+                firstId = touchId;
+                firstPosition = touch.position.ReadValue();
+                continue;
+            }
+
+            if (touchId == firstId)
+                continue;
+
+            secondId = touchId;
+            secondPosition = touch.position.ReadValue();
+            return true;
         }
 
-        if (allowedTouchCount != 2 || first == null || second == null)
-        {
-            pinchActive = false;
-            return;
-        }
-
-        float distance = Vector2.Distance(first.position.ReadValue(), second.position.ReadValue());
-        if (!pinchActive)
-        {
-            lastPinchDistance = distance;
-            pinchActive = true;
-            return;
-        }
-
-        float distanceDelta = distance - lastPinchDistance;
-        lastPinchDistance = distance;
-        Mod_Cam cameraModule = GetComponentInChildren<Mod_Cam>(true);
-        cameraModule?.ApplyPinchZoom(distanceDelta, PinchZoomSensitivity);
+        return false;
     }
 
-    /// <summary>只允许屏幕中部且未命中真实 UI 的触点参与双指缩放。</summary>
-    private bool IsPinchTouchAllowed(TouchControl touch)
+    private static bool TryGetTouchPosition(int touchId, out Vector2 position)
     {
-        Vector2 position = touch.position.ReadValue();
-        if (Screen.width <= 0 || Screen.height <= 0 ||
-            position.x < Screen.width * PinchCenterMinX ||
-            position.x > Screen.width * PinchCenterMaxX ||
-            position.y < Screen.height * PinchCenterMinY ||
-            position.y > Screen.height * PinchCenterMaxY)
-        {
+        position = default;
+        Touchscreen touchscreen = Touchscreen.current;
+        if (touchscreen == null)
             return false;
-        }
 
-        if (EventSystem.current == null)
-            return true;
-
-        PointerEventData eventData = new PointerEventData(EventSystem.current)
+        for (int i = 0; i < touchscreen.touches.Count; i++)
         {
-            position = position
-        };
-        pinchRaycastResults.Clear();
-        EventSystem.current.RaycastAll(eventData, pinchRaycastResults);
-        for (int i = 0; i < pinchRaycastResults.Count; i++)
-        {
-            GameObject hitObject = pinchRaycastResults[i].gameObject;
-            MobileVirtualJoystick joystick = hitObject?.GetComponentInParent<MobileVirtualJoystick>();
-            if (joystick != null && joystick.IsWorldDropSurface)
+            TouchControl touch = touchscreen.touches[i];
+            if (touch == null || !touch.press.isPressed || touch.touchId.ReadValue() != touchId)
                 continue;
 
-            return false;
+            position = touch.position.ReadValue();
+            return true;
         }
 
-        return true;
+        return false;
+    }
+
+    private void ResetPinchZoom()
+    {
+        pinchPointerIdA = int.MinValue;
+        pinchPointerIdB = int.MinValue;
+        previousPinchDistance = 0f;
     }
 
     #endregion
@@ -497,10 +528,10 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     private void HandleMobileControlsSettingsChanged()
     {
-        ResetAllTouchState();
         if (viewObject == null)
             return;
 
+        ResetAllTouchState();
         ApplyMoveJoystickMode();
         joysticks = viewObject.GetComponentsInChildren<MobileVirtualJoystick>(true);
     }
@@ -508,7 +539,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private void ConfigureVirtualButtons()
     {
         ConfigureVirtualButton("交互", MobileVirtualButton.Interact);
-        CacheInteractionButtonText();
         ConfigureVirtualButton("使用", MobileVirtualButton.Use);
         ConfigureVirtualButton("奔跑", MobileVirtualButton.Run);
         ConfigureVirtualButton("背包", MobileVirtualButton.Inventory);
@@ -516,13 +546,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         ConfigureVirtualButton("制作", MobileVirtualButton.Crafting);
         ConfigureVirtualButton("状态", MobileVirtualButton.Survival);
         inputButtons = viewObject.GetComponentsInChildren<MobileInputButton>(true);
-    }
-
-    /// <summary>缓存交互按钮文字节点，环境动作变化时只更新文本，不重建按钮。</summary>
-    private void CacheInteractionButtonText()
-    {
-        Transform node = FindRequired("交互");
-        interactionButtonText = node?.GetComponentInChildren<TMP_Text>(true);
     }
 
     private void ConfigureVirtualButton(string nodeName, MobileVirtualButton virtualButton)
@@ -840,44 +863,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             manager.InteractionSurfaceChanged -= RefreshInteractionSurface;
     }
 
-    /// <summary>把水体等环境动作运行器绑定到手机交互按钮的动态文字。</summary>
-    private void BindEnvironmentInteractionLabel()
-    {
-        TileEffectReceiver receiver = player?.itemMods?.GetMod_ByID<TileEffectReceiver>(ModText.TileEffectReceiver) ??
-                                       player?.GetComponentInChildren<TileEffectReceiver>(true);
-        EnvironmentInteractionRunner nextRunner = receiver?.EnvironmentInteractions;
-        if (environmentInteractionRunner == nextRunner)
-        {
-            RefreshInteractionButtonLabel();
-            return;
-        }
-
-        UnbindEnvironmentInteractionLabel();
-        environmentInteractionRunner = nextRunner;
-        if (environmentInteractionRunner != null)
-            environmentInteractionRunner.AvailableActionsChanged += RefreshInteractionButtonLabel;
-        RefreshInteractionButtonLabel();
-    }
-
-    /// <summary>解除环境动作运行器事件，避免玩家对象销毁后继续回调 HUD。</summary>
-    private void UnbindEnvironmentInteractionLabel()
-    {
-        if (environmentInteractionRunner != null)
-            environmentInteractionRunner.AvailableActionsChanged -= RefreshInteractionButtonLabel;
-        environmentInteractionRunner = null;
-    }
-
-    /// <summary>根据当前首选环境动作显示“交互”或“喝水”等本地化名称。</summary>
-    private void RefreshInteractionButtonLabel()
-    {
-        if (interactionButtonText == null)
-            return;
-
-        string displayNameKey = environmentInteractionRunner?.GetPreferredActionDisplayNameKey();
-        interactionButtonText.text = FlatWorldLocalizationService.GetUiText(
-            string.IsNullOrWhiteSpace(displayNameKey) ? "交互" : displayNameKey);
-    }
-
     private void RefreshInteractionSurface()
     {
         if (viewObject == null || changingViewState || !isActiveAndEnabled)
@@ -936,9 +921,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     public void ResetAllTouchState()
     {
-        pinchActive = false;
-        lastPinchDistance = 0f;
-
+        ResetPinchZoom();
         if (joysticks != null)
         {
             for (int i = 0; i < joysticks.Length; i++)
