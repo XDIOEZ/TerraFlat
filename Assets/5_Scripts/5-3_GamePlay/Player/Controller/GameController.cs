@@ -57,6 +57,7 @@ public class GameController : Module
     private bool _hardwareMousePointerActive; // 最近一次鼠标输入是否应作为 UI/世界指针
     private bool _virtualCursorInitialized; // 虚拟光标是否初始化
     private bool _isGameplayInputLocked; // 濒死/过场时是否锁定玩家输入
+    private bool _reportedMissingMainCamera; // 是否已经提示过相机尚未就绪
     private bool _suppressLeftClickUntilRelease;
     private bool _suppressRightClickUntilRelease;
     private bool _suppressMobileAttackUntilRelease;
@@ -344,8 +345,21 @@ public class GameController : Module
     {
         if (_mainCamera == null)
         {
-            throw new MissingReferenceException("[GameController] _mainCamera 为空，无法计算指针世界坐标");
+            _mainCamera = Camera.main;
         }
+
+        if (_mainCamera == null)
+        {
+            if (!_reportedMissingMainCamera)
+            {
+                _reportedMissingMainCamera = true;
+                Debug.LogWarning("[GameController] 主相机尚未就绪，暂时使用玩家位置作为指针坐标", this);
+            }
+
+            return WorldTopologyRuntime.NormalizePosition(new Vector3(transform.position.x, transform.position.y, 0f));
+        }
+
+        _reportedMissingMainCamera = false;
 
         Vector3 worldPos = _mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, Mathf.Abs(_mainCamera.transform.position.z)));
         worldPos.z = 0f;

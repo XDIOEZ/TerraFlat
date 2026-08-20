@@ -301,6 +301,24 @@ public partial class GameManager
             worldEntryCompletionCoroutine = null;
         }
 
+        // 进入世界失败后立即停止 ItemMgr Tick，并注销可能已半初始化的玩家。
+        IsInGameWorld = false;
+        if (ItemMgr.Instance != null && SaveDataMgr.Instance != null)
+        {
+            Player failedPlayer = ItemMgr.Instance.User_Player;
+            if (failedPlayer != null)
+            {
+                try
+                {
+                    ItemMgr.Instance.ReleasePlayerForWorldTransition(failedPlayer);
+                }
+                catch (Exception cleanupException)
+                {
+                    Debug.LogException(cleanupException, this);
+                }
+            }
+        }
+
         if (exception != null)
             Debug.LogException(exception, this);
         Debug.LogError($"[GameManager] {message}", this);

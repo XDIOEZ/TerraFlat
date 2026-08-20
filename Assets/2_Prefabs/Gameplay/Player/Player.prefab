@@ -1,5 +1,146 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &980285892626113258
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4469299423806421341}
+  - component: {fileID: 3638360995494413321}
+  - component: {fileID: 8165384964757949843}
+  m_Layer: 7
+  m_Name: Module_DamageReciver
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4469299423806421341
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 980285892626113258}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7343432311901774332}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!61 &3638360995494413321
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 980285892626113258}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_UsedByComposite: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  serializedVersion: 2
+  m_Size: {x: 1, y: 1}
+  m_EdgeRadius: 0
+--- !u!114 &8165384964757949843
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 980285892626113258}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66936691572dbd04a801f40fe0923069, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  item: {fileID: 0}
+  modData:
+    Name:
+    ID: "\u751F\u547D\u503C\u7CFB\u7EDF\u6A21\u5757"
+    isRunning: 1
+    Type: 0
+    BitData:
+  Data:
+    Hp: 100
+    MaxHp: 100
+    UseBodyPartHealth: 0
+    TwoPartHitChance: 0.25
+    BodyPartDataVersion: 0
+    BodyParts: []
+    DefenseValues:
+      Cutting: 0
+      Piercing: 0
+      Chopping: 0
+      Blunt: 0
+    AttackersUIDs:
+    ShowCanvas: 0
+    DamageInterval: 0.1
+    DestroyDelay: 0
+    LootTable: []
+  OnDead:
+    _PersistentCalls: []
+  HurtActions: []
+  DeathActions: []
+  impactAudioMaterial: 0
+  hurtAudioCueId:
+  enableHitSlowdown: 1
+  hitSlowMultiplier: 0.5
+  hitSlowDuration: 0.35
+  flashCount: 1
+  flashDuration: 0.2
+  flashColor: {r: 1, g: 0.08, b: 0.08, a: 1}
+  shakeDuration: 0.15
+  shakeMagnitude: 0.1
+  PanelPrefab: {fileID: 0}
+  PanleInstance: {fileID: 0}
+  DataUpdate:
+    _PersistentCalls: []
+  UIValues: {fileID: 0}
+  HideUiDelayAfterLastDamage: 4
+  healthBarTopPadding: 0.16
+  healthBarWorldScale: 0.55
+  Equipment_Inventory: {fileID: 0}
+  enableDebugTools: 0
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &1408008954124956922
 GameObject:
   m_ObjectHideFlags: 0
@@ -50,28 +191,6 @@ MonoBehaviour:
     ID: 
     isRunning: 1
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
     BitData: 
   EquipmentInventory:
     item: {fileID: 0}
@@ -109,6 +228,8 @@ MonoBehaviour:
     itemSlot_UI: []
   equipment_ModuleData: []
   OpenPanelActionName: P
+  OpenPrimaryPanelsActionName: Tab
+  PrimaryPanelScale: 0.75
   references:
     version: 2
     RefIds: []
@@ -162,28 +283,6 @@ MonoBehaviour:
     ID: 
     isRunning: 1
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
     BitData: 
   Data:
     CurrentTemperature: 36.5
@@ -249,28 +348,6 @@ MonoBehaviour:
     ID: "UI_\u5FEB\u6377\u680F"
     isRunning: 1
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
     BitData: 
   RawData: []
   RuntimeInventory:
@@ -396,7 +473,6 @@ Transform:
   - {fileID: 477348667287463692}
   - {fileID: 5528085685617393577}
   - {fileID: 3140632785313566189}
-  - {fileID: 7060073367249890225}
   - {fileID: 2346054118044131776}
   - {fileID: 3655081339386380888}
   - {fileID: 7086098086926392403}
@@ -410,6 +486,7 @@ Transform:
   - {fileID: 4008861612708923450}
   - {fileID: 2583823434517663508}
   - {fileID: 4464676328456984453}
+  - {fileID: 4469299423806421341}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &8862278864143937418
@@ -505,6 +582,8 @@ MonoBehaviour:
   GamepadCursorRadius: 120
   GamepadCursorDeadZone: 0.08
   CursorClampPadding: 6
+  MobileCursorMinWorldDistance: 0
+  MobileCursorMaxWorldDistance: 10
   LeftClick:
     _PersistentCalls: []
   LeftClickUp:
@@ -518,28 +597,6 @@ MonoBehaviour:
     ID: 
     isRunning: 0
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
     BitData: 
 --- !u!114 &6883143605326503467
 MonoBehaviour:
@@ -589,6 +646,7 @@ MonoBehaviour:
     ItemSpecialData: 
     inHand: 0
     Guid: -112887599
+    FactionId:
     CurrentSceneName: "\u5730\u7403"
     hp:
       value: 30
@@ -650,28 +708,6 @@ MonoBehaviour:
     ID: 
     isRunning: 1
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
     BitData: 
 --- !u!114 &9206547286300101542
 MonoBehaviour:
@@ -691,28 +727,6 @@ MonoBehaviour:
     ID: PlayerDeathState
     isRunning: 1
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
     BitData: 
   respawnHpRate: 1
   dyingPanelPrefab: {fileID: 0}
@@ -740,28 +754,6 @@ MonoBehaviour:
     ID: 
     isRunning: 1
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
     BitData: 
   ButtonPrefab: {fileID: 3948103345439709801, guid: d52e8e0393ca8974095cb621f030f5c1, type: 3}
   UIContainer: {fileID: 0}
@@ -1000,33 +992,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  ConsumeAudio:
+    Enabled: 1
+    CueId: food.eat
+    VolumeScale: 0.78
+    PitchMin: 0.96
+    PitchMax: 1.04
+  HealthState:
+    Enabled: 1
+    HealSpeed: 0.01
+    HealInterval: 0
+    HealAmount: 0
+    WaterSelfHurt: 1
+    ProteinSelfHurt: 1
+    VitaminSelfHurt: 1
+    HealNeedRatio: 0.6
   FoodModData:
     Name: 
     ID: 
     isRunning: 1
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
     FoodData:
       nutrition:
         Carbohydrates: 500
@@ -1051,19 +1036,7 @@ MonoBehaviour:
       PanelPosition: {x: 0, y: 0}
       WaterConsumeSpeedRate: 1
       nutritionConsumeRate: 1
-      ObserverState: 
-    EnableSpoilage: 1
-    SpoilageElapsedSeconds: 0
-    SpoilageIntervalSeconds: 1800
-    SpoilageTargetItemID: Meat_Rotten
-    RuntimeSpoilageDeltaSeconds: 0
-    RuntimeResolvedIntervalSeconds: 0
-    RuntimeResolvedTargetItemID: 
-    RuntimeCurrentItemID: 
-    RuntimeTriggered: 0
-    RuntimeInvalid: 0
-    RuntimeInvalidReason: 
-  EatingProgress: 0
+    MechanicStates: []
   DataUpdate:
     _PersistentCalls: []
   PanelPrefab: {fileID: 8312455399916695399, guid: 215a9df040199634fb89efb65997fb42, type: 3}
@@ -1072,20 +1045,9 @@ MonoBehaviour:
   StaminaState:
     StaminaRecoverSpeed: 1
     StaminaConsumeSpeed: 0.5
-  HealthState:
-    Enabled: 1
-    HealSpeed: 0.01
-    WaterSelfHurt: 1
-    ProteinSelfHurt: 1
-    VitaminSelfHurt: 1
-    HealNeedRatio: 0.6
-  ConsumeAudio:
-    Enabled: 1
-    CueId: food.eat
-    VolumeScale: 0.78
-    PitchMin: 0.96
-    PitchMax: 1.04
   ConsumeKind: 0
+  ConsumptionEnabled: 1
+  ConsumeCompleteReplacementItemID:
 --- !u!1 &7574631112993380532
 GameObject:
   m_ObjectHideFlags: 0
@@ -1136,28 +1098,6 @@ MonoBehaviour:
     ID: 
     isRunning: 1
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
     BitData: 
   RawData: []
   inputInventory:
@@ -2958,95 +2898,4 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 6072322925231242487, guid: 30335a1d847f20547aba60b7da974cf8, type: 3}
   m_PrefabInstance: {fileID: 8506781615031263973}
-  m_PrefabAsset: {fileID: 0}
---- !u!1001 &8705092064363751265
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 7343432311901774332}
-    m_Modifications:
-    - target: {fileID: 1470591457584899670, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_Name
-      value: Module_DamageReciver
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Hp
-      value: 100
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.MaxHp
-      value: 100
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.DefenseValues.Cutting
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.DefenseValues.Piercing
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.DefenseValues.Chopping
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.DefenseValues.Blunt
-      value: 0
-      objectReference: {fileID: 0}
-
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.LootTable.Array.data[0].LootPrefabName
-      value: Chicken
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
---- !u!4 &7060073367249890225 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-  m_PrefabInstance: {fileID: 8705092064363751265}
   m_PrefabAsset: {fileID: 0}

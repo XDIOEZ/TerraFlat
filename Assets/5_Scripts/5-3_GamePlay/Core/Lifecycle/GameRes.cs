@@ -81,6 +81,7 @@ public class GameRes : SingletonAutoMono<GameRes>
     private float loadingProgress = 0f;
     private int totalAssetsToLoad = 0;
     private int loadedAssetsCount = 0;
+    private bool resourceLoadFailed = false;
 
     #endregion
 
@@ -119,6 +120,8 @@ public class GameRes : SingletonAutoMono<GameRes>
     private System.Collections.IEnumerator LoadResourcesWithProgress()
     {
         isLoadFinish = false;
+        resourceLoadFailed = false;
+        loadingProgress = 0f;
 
         // 记录上次加载的资源数量
         int previousLoadedCount = LoadedCount;
@@ -136,10 +139,7 @@ public class GameRes : SingletonAutoMono<GameRes>
             exception => playerCreationConfigError = exception));
         if (playerCreationConfigError != null)
         {
-            loadingText = $"玩家创建配置加载失败：{playerCreationConfigError.Message}";
-            loadingProgress = 1f;
-            Debug.LogError(loadingText);
-            Debug.LogException(playerCreationConfigError);
+            MarkResourceLoadingFailed($"玩家创建配置加载失败：{playerCreationConfigError.Message}", playerCreationConfigError);
             yield break;
         }
 
@@ -153,10 +153,7 @@ public class GameRes : SingletonAutoMono<GameRes>
             exception => timeSystemConfigError = exception));
         if (timeSystemConfigError != null)
         {
-            loadingText = $"时间系统配置加载失败：{timeSystemConfigError.Message}";
-            loadingProgress = 1f;
-            Debug.LogError(loadingText);
-            Debug.LogException(timeSystemConfigError);
+            MarkResourceLoadingFailed($"时间系统配置加载失败：{timeSystemConfigError.Message}", timeSystemConfigError);
             yield break;
         }
 
@@ -185,10 +182,7 @@ public class GameRes : SingletonAutoMono<GameRes>
         }
         catch (System.Exception exception)
         {
-            loadingText = $"物品定义预检失败：{exception.Message}";
-            loadingProgress = 1f;
-            Debug.LogError(loadingText);
-            Debug.LogException(exception);
+            MarkResourceLoadingFailed($"物品定义预检失败：{exception.Message}", exception);
             yield break;
         }
 
@@ -197,6 +191,8 @@ public class GameRes : SingletonAutoMono<GameRes>
             new List<string> { "ItemPrefab", "Prefab" },
             redundantItemPrefabPaths,
             "加载运行时预制体"));
+        if (resourceLoadFailed)
+            yield break;
 
         loadingText = "加载 JSON 物品定义";
         int loadedItemDefinitionCount = 0;
@@ -205,17 +201,14 @@ public class GameRes : SingletonAutoMono<GameRes>
             this,
             count => loadedItemDefinitionCount = count,
             exception => itemDefinitionError = exception,
-            progress => loadingProgress = Mathf.Clamp01(progress)));
+            progress => loadingProgress = ClampIntermediateProgress(progress)));
         if (itemDefinitionError != null)
         {
-            loadingText = $"物品定义加载失败：{itemDefinitionError.Message}";
-            loadingProgress = 1f;
-            Debug.LogError(loadingText);
-            Debug.LogException(itemDefinitionError);
+            MarkResourceLoadingFailed($"物品定义加载失败：{itemDefinitionError.Message}", itemDefinitionError);
             yield break;
         }
         loadedAssetsCount += loadedItemDefinitionCount;
-        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+        loadingProgress = GetAssetLoadingProgress();
 
         loadingText = "加载 JSON Actor 定义";
         int loadedActorDefinitionCount = 0;
@@ -224,17 +217,14 @@ public class GameRes : SingletonAutoMono<GameRes>
             this,
             count => loadedActorDefinitionCount = count,
             exception => actorDefinitionError = exception,
-            progress => loadingProgress = Mathf.Clamp01(progress)));
+            progress => loadingProgress = ClampIntermediateProgress(progress)));
         if (actorDefinitionError != null)
         {
-            loadingText = $"Actor 定义加载失败：{actorDefinitionError.Message}";
-            loadingProgress = 1f;
-            Debug.LogError(loadingText);
-            Debug.LogException(actorDefinitionError);
+            MarkResourceLoadingFailed($"Actor 定义加载失败：{actorDefinitionError.Message}", actorDefinitionError);
             yield break;
         }
         loadedAssetsCount += loadedActorDefinitionCount;
-        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+        loadingProgress = GetAssetLoadingProgress();
 
         loadingText = "加载 JSON 动物技能";
         AnimalSkillCatalog loadedAnimalSkillCatalog = null;
@@ -244,10 +234,7 @@ public class GameRes : SingletonAutoMono<GameRes>
             exception => animalSkillError = exception));
         if (animalSkillError != null)
         {
-            loadingText = $"动物技能配置加载失败：{animalSkillError.Message}";
-            loadingProgress = 1f;
-            Debug.LogError(loadingText);
-            Debug.LogException(animalSkillError);
+            MarkResourceLoadingFailed($"动物技能配置加载失败：{animalSkillError.Message}", animalSkillError);
             yield break;
         }
 
@@ -261,10 +248,7 @@ public class GameRes : SingletonAutoMono<GameRes>
             exception => spawnerConfigError = exception));
         if (spawnerConfigError != null)
         {
-            loadingText = $"生物生成配置加载失败：{spawnerConfigError.Message}";
-            loadingProgress = 1f;
-            Debug.LogError(loadingText);
-            Debug.LogException(spawnerConfigError);
+            MarkResourceLoadingFailed($"生物生成配置加载失败：{spawnerConfigError.Message}", spawnerConfigError);
             yield break;
         }
 
@@ -279,14 +263,11 @@ public class GameRes : SingletonAutoMono<GameRes>
             exception => recipeLoadError = exception));
         if (recipeLoadError != null)
         {
-            loadingText = $"配方加载失败：{recipeLoadError.Message}";
-            loadingProgress = 1f;
-            Debug.LogError(loadingText);
-            Debug.LogException(recipeLoadError);
+            MarkResourceLoadingFailed($"配方加载失败：{recipeLoadError.Message}", recipeLoadError);
             yield break;
         }
         loadedAssetsCount += loadedRecipeCount;
-        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+        loadingProgress = GetAssetLoadingProgress();
 
         loadingText = "加载JSON Buff";
         int loadedBuffCount = 0;
@@ -297,14 +278,11 @@ public class GameRes : SingletonAutoMono<GameRes>
             exception => buffLoadError = exception));
         if (buffLoadError != null)
         {
-            loadingText = $"Buff 加载失败：{buffLoadError.Message}";
-            loadingProgress = 1f;
-            Debug.LogError(loadingText);
-            Debug.LogException(buffLoadError);
+            MarkResourceLoadingFailed($"Buff 加载失败：{buffLoadError.Message}", buffLoadError);
             yield break;
         }
         loadedAssetsCount += loadedBuffCount;
-        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+        loadingProgress = GetAssetLoadingProgress();
 
         loadingText = "加载 JSON 任务";
         int loadedQuestCount = 0;
@@ -314,14 +292,11 @@ public class GameRes : SingletonAutoMono<GameRes>
             exception => questLoadError = exception));
         if (questLoadError != null)
         {
-            loadingText = $"任务加载失败：{questLoadError.Message}";
-            loadingProgress = 1f;
-            Debug.LogError(loadingText);
-            Debug.LogException(questLoadError);
+            MarkResourceLoadingFailed($"任务加载失败：{questLoadError.Message}", questLoadError);
             yield break;
         }
         loadedAssetsCount += loadedQuestCount;
-        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+        loadingProgress = GetAssetLoadingProgress();
 
         loadingText = "加载 JSON 文字库";
         TextLibraryService loadedTextLibrary = null;
@@ -342,13 +317,15 @@ public class GameRes : SingletonAutoMono<GameRes>
             Debug.Log($"[TextLibrary] 已加载 {textLibraryService.EntryCount} 条文字，" +
                 $"{textLibraryService.LibraryIds.Count} 个分类");
         }
-        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+        loadingProgress = GetAssetLoadingProgress();
             
         yield return StartCoroutine(SyncLoadAssetsWithProgress<TileBase>(
             new List<string> { "TileBase" },
             tileBaseDict,
             null,
             "加载TileBase"));
+        if (resourceLoadFailed)
+            yield break;
 
         // 新增：加载 Tile_Block 资源（地块逻辑 ScriptableObject）
         yield return StartCoroutine(SyncLoadAssetsWithProgress<Tile_Block>(
@@ -356,6 +333,8 @@ public class GameRes : SingletonAutoMono<GameRes>
             TileBlockDict,
             null,
             "加载TileBlock SO"));
+        if (resourceLoadFailed)
+            yield break;
             
         // 新增：加载InventoryInit资源
         yield return StartCoroutine(SyncLoadAssetsWithProgress<Inventoryinit>(
@@ -363,6 +342,8 @@ public class GameRes : SingletonAutoMono<GameRes>
             InventoryInitDict,
             null,
             "加载初始库存"));
+        if (resourceLoadFailed)
+            yield break;
 
         // 新增：加载Skill资源
         yield return StartCoroutine(SyncLoadAssetsWithProgress<BaseSkill>(
@@ -370,6 +351,8 @@ public class GameRes : SingletonAutoMono<GameRes>
             SkillDict,
             null,
             "加载技能"));
+        if (resourceLoadFailed)
+            yield break;
 
         // 内建资源完成后再加载 MOD，确保 MOD 可以引用游戏本体内容。
         ModRuntimeManager modRuntime = ModRuntimeManager.Ensure(gameObject);
@@ -377,12 +360,11 @@ public class GameRes : SingletonAutoMono<GameRes>
         if (!modRuntime.IsReady)
         {
             ClearAllDictionaries();
-            loadingText = $"MOD 加载失败：{modRuntime.FailureReason}";
-            loadingProgress = 1f;
-            Debug.LogError(loadingText);
+            MarkResourceLoadingFailed($"MOD 加载失败：{modRuntime.FailureReason}");
             yield break;
         }
 
+        loadingProgress = 1f;
         isLoadFinish = true;
         showLoadingGUI = false; // 隐藏加载界面
         
@@ -408,7 +390,35 @@ public class GameRes : SingletonAutoMono<GameRes>
     private void ReportModLoadingProgress(string text, float progress)
     {
         loadingText = text;
-        loadingProgress = Mathf.Clamp01(progress);
+        loadingProgress = ClampIntermediateProgress(progress);
+    }
+
+    /// <summary>记录资源加载失败，避免错误状态伪装成 100% 完成。</summary>
+    private void MarkResourceLoadingFailed(string message, System.Exception exception = null)
+    {
+        resourceLoadFailed = true;
+        isLoadFinish = false;
+        showLoadingGUI = true;
+        loadingProgress = 0f;
+        loadingText = $"{message}（请查看日志）";
+        Debug.LogError($"[GameRes] {message}");
+        if (exception != null)
+            Debug.LogException(exception);
+    }
+
+    /// <summary>预留 1% 给最终注册，避免中途提前显示 100%。</summary>
+    private float ClampIntermediateProgress(float progress)
+    {
+        return Mathf.Clamp(progress, 0f, 0.99f);
+    }
+
+    /// <summary>按已处理数量计算中间进度。</summary>
+    private float GetAssetLoadingProgress()
+    {
+        if (totalAssetsToLoad <= 0)
+            return 0f;
+
+        return ClampIntermediateProgress((float)loadedAssetsCount / totalAssetsToLoad);
     }
 
     // 带进度的同步加载
@@ -431,18 +441,19 @@ public class GameRes : SingletonAutoMono<GameRes>
         // 等待加载完成，同时更新进度
         while (!handle.IsDone)
         {
-            // 更新进度（这里使用handle.PercentComplete，实际可能需要根据具体需求调整）
-            loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+            loadingProgress = GetAssetLoadingProgress();
             yield return null;
         }
 
-        // 阻塞等待
-        IList<T> assets = handle.WaitForCompletion();
         if (handle.Status != AsyncOperationStatus.Succeeded)
         {
-            Debug.LogError($"同步加载 {typeof(T).Name} 失败");
+            MarkResourceLoadingFailed(
+                $"加载 {typeof(T).Name} 失败：{handle.OperationException?.Message ?? "Addressables 操作未成功"}",
+                handle.OperationException);
             yield break;
         }
+
+        IList<T> assets = handle.Result;
 
         foreach (var asset in assets)
         {
@@ -468,13 +479,13 @@ public class GameRes : SingletonAutoMono<GameRes>
             // 每加载一定数量的资源就更新一次进度
             if (loadedAssetsCount % 10 == 0)
             {
-                loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+                loadingProgress = GetAssetLoadingProgress();
                 yield return null; // 让出控制权，避免卡顿
             }
         }
 
         // 更新进度
-        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+        loadingProgress = GetAssetLoadingProgress();
     }
 
     private System.Collections.IEnumerator SyncLoadPrefabsWithProgress(
@@ -494,7 +505,9 @@ public class GameRes : SingletonAutoMono<GameRes>
         }
         if (locationsHandle.Status != AsyncOperationStatus.Succeeded)
         {
-            Debug.LogError("无法解析 Prefab Addressables 位置");
+            MarkResourceLoadingFailed(
+                $"无法解析 Prefab Addressables 位置：{locationsHandle.OperationException?.Message ?? "Addressables 操作未成功"}",
+                locationsHandle.OperationException);
             yield break;
         }
 
@@ -512,12 +525,14 @@ public class GameRes : SingletonAutoMono<GameRes>
         while (!assetsHandle.IsDone)
         {
             loadingText = $"{progressText}（已跳过 {skippedCount} 个 JSON 变体）";
-            loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+            loadingProgress = GetAssetLoadingProgress();
             yield return null;
         }
         if (assetsHandle.Status != AsyncOperationStatus.Succeeded)
         {
-            Debug.LogError("加载运行时 Prefab 失败");
+            MarkResourceLoadingFailed(
+                $"加载运行时 Prefab 失败：{assetsHandle.OperationException?.Message ?? "Addressables 操作未成功"}",
+                assetsHandle.OperationException);
             yield break;
         }
 
@@ -534,7 +549,7 @@ public class GameRes : SingletonAutoMono<GameRes>
         }
 
         Debug.Log($"[GameRes] Prefab 加载计划：加载 {locations.Count}，跳过 JSON 旧变体 {skippedCount}");
-        loadingProgress = Mathf.Clamp01((float)loadedAssetsCount / totalAssetsToLoad);
+        loadingProgress = GetAssetLoadingProgress();
         Addressables.Release(locationsHandle);
     }
 
