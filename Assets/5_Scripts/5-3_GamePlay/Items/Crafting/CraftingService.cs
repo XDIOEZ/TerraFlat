@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using FlatWorld.Gameplay.Progress;
 using UnityEngine;
 
@@ -165,15 +166,16 @@ public static class CraftingService
     }
 }
 
-/// <summary>合成预览失败诊断；只在有输入且失败原因变化时记录，避免空面板初始化刷屏。</summary>
+/// <summary>合成预览失败诊断；按输入快照去重并输出配方线路上下文。</summary>
 public static class CraftingPreviewDiagnostics
 {
-    /// <summary>记录当前输入对应的预检失败原因，帮助定位配方、产物或库存阻塞。</summary>
+    /// <summary>记录当前输入对应的预检失败原因，帮助定位事件、目录、匹配或库存阻塞。</summary>
     public static void ReportFailure(
         string source,
         Inventory inputInventory,
         CraftingResult result,
-        ref string lastMessage)
+        ref string lastMessage,
+        CraftingCapabilities capabilities = null)
     {
         if (result == null || result.Success)
         {
@@ -187,11 +189,62 @@ public static class CraftingPreviewDiagnostics
         string message = string.IsNullOrWhiteSpace(result.Message)
             ? result.FailureReason.ToString()
             : result.Message;
-        if (string.Equals(lastMessage, message, StringComparison.Ordinal))
+        string inputSnapshot = DescribeInventory(inputInventory, capabilities?.InputSlotLimit ?? 0);
+        string diagnosticKey = $"{result.FailureReason}|{message}|{inputSnapshot}";
+        if (string.Equals(lastMessage, diagnosticKey, StringComparison.Ordinal))
             return;
 
-        lastMessage = message;
-        Debug.LogWarning($"[{source}] 配方检测失败：{message}");
+        lastMessage = diagnosticKey;
+        string matcherContext;
+        try
+        {
+            matcherContext = capabilities != null
+                ? CraftingRecipeMatcher.BuildDiagnostic(inputInventory, capabilities)
+                : "未提供制作能力，无法列出类型候选配方";
+        }
+        catch (Exception exception)
+        {
+            // Debug 诊断自身不得中断正常预览线路。
+            matcherContext = $"生成匹配诊断时异常：{exception.GetType().Name} / {exception.Message}";
+        }
+        Debug.LogWarning(
+            $"[{source}][CraftingDebug] 配方检测失败：{result.FailureReason} / {message}\n" +
+            $"输入快照：{inputSnapshot}\n" +
+            $"匹配上下文：{matcherContext}");
+    }
+
+    /// <summary>生成稳定的槽位快照，便于串联输入事件与匹配日志。</summary>
+    public static string DescribeInventory(Inventory inventory, int slotLimit = 0)
+    {
+        if (inventory?.Data?.itemSlots == null)
+            return "库存/Data/槽位为空";
+
+        int count = slotLimit > 0
+            ? Mathf.Min(slotLimit, inventory.Data.itemSlots.Count)
+            : inventory.Data.itemSlots.Count;
+        var builder = new StringBuilder();
+        builder.Append(inventory.Data.Name).Append(" [");
+        for (int i = 0; i < count; i++)
+        {
+            if (i > 0)
+                builder.Append(", ");
+
+            ItemData itemData = inventory.Data.itemSlots[i]?.itemData;
+            builder.Append(i).Append(':');
+            if (itemData == null)
+            {
+                builder.Append("空");
+                continue;
+            }
+
+            builder.Append(string.IsNullOrWhiteSpace(itemData.IDName) ? "<空ID>" : itemData.IDName.Trim());
+            builder.Append(" x").Append(itemData.Stack?.Amount ?? 0f);
+        }
+
+        builder.Append(']');
+        if (count < inventory.Data.itemSlots.Count)
+            builder.Append("（仅检查前 ").Append(count).Append("/").Append(inventory.Data.itemSlots.Count).Append(" 槽）");
+        return builder.ToString();
     }
 
     /// <summary>判断输入库存是否真的放入了材料，过滤打开面板时的空预览。</summary>

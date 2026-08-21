@@ -55,6 +55,80 @@ public static class CraftingRecipeMatcher
         return TryMatchRecipe(inputSlots, recipe, capabilities, out match);
     }
 
+    #region 调试诊断
+
+    /// <summary>汇总配方目录与最接近候选，Debug 仅观察数据，不改变正式匹配结果。</summary>
+    public static string BuildDiagnostic(Inventory inputInventory, CraftingCapabilities capabilities)
+    {
+        if (inputInventory?.Data?.itemSlots == null)
+            return "输入库存未初始化";
+        if (capabilities == null)
+            return "制作能力为空";
+
+        List<ItemSlot> inputSlots = GetInputSlots(inputInventory, capabilities.InputSlotLimit);
+        int totalRecipeCount = GameRes.Instance?.recipeById?.Count ?? 0;
+        List<RuntimeRecipe> typeCandidates = GetCandidateRecipes(capabilities.RecipeType).ToList();
+        List<RuntimeRecipe> supportedCandidates = typeCandidates
+            .Where(recipe => IsRecipeSupported(recipe, capabilities))
+            .ToList();
+        int occupiedSlotCount = inputSlots.Count(slot => slot?.itemData != null);
+
+        var nearbyRecipes = supportedCandidates
+            .Select(recipe => new
+            {
+                Recipe = recipe,
+                RequiredCount = CountRequiredIngredients(recipe.inputs.RowItems_List),
+                IdentityMatches = recipe.inputs.RowItems_List.Count(required =>
+                    !IsEmptyIngredient(required) &&
+                    inputSlots.Any(slot => MatchesIdentity(required, slot?.itemData)))
+            })
+            .Where(candidate => candidate.IdentityMatches > 0)
+            .OrderByDescending(candidate => candidate.Recipe.inputs.inputOrder == RecipeInputRule.规则合成)
+            .ThenByDescending(candidate => candidate.IdentityMatches)
+            .ThenBy(candidate => Math.Abs(candidate.RequiredCount - occupiedSlotCount))
+            .ThenBy(candidate => candidate.Recipe.Id, StringComparer.Ordinal)
+            .Take(3)
+            .ToList();
+
+        string catalogSummary =
+            $"类型={capabilities.RecipeType}, 输入槽={inputSlots.Count}, " +
+            $"目录总数={totalRecipeCount}, 同类型={typeCandidates.Count}, 能力内={supportedCandidates.Count}";
+        if (nearbyRecipes.Count == 0)
+            return $"{catalogSummary}；相同物品ID/Tag的候选=0（检查输入 ID 与配方 JSON）";
+
+        string nearbySummary = string.Join("；", nearbyRecipes.Select(candidate =>
+            $"{candidate.Recipe.Id}" +
+            $"({DescribeRule(candidate.Recipe)}, " +
+            $"{candidate.Recipe.inputs.GridWidth}x{candidate.Recipe.inputs.GridHeight}, " +
+            $"镜像={candidate.Recipe.enableMirrorCrafting}, " +
+            $"身份命中={candidate.IdentityMatches}/{candidate.RequiredCount}, " +
+            $"期望={DescribeRecipePattern(candidate.Recipe)})"));
+        return $"{catalogSummary}；最近候选={nearbySummary}";
+    }
+
+    /// <summary>按运行时槽序输出配方图案，和输入快照可直接逐槽对照。</summary>
+    private static string DescribeRecipePattern(RuntimeRecipe recipe)
+    {
+        return "[" + string.Join(", ", recipe.inputs.RowItems_List.Select((ingredient, index) =>
+        {
+            if (IsEmptyIngredient(ingredient))
+                return $"{index}:空";
+
+            string identity = ingredient.matchMode == MatchMode.ByTag
+                ? $"Tag:{ingredient.Tag?.Trim()}"
+                : ingredient.ItemName?.Trim();
+            string amount = ingredient.amount > 0f ? $" x{ingredient.amount}" : "（不消耗）";
+            return $"{index}:{identity}{amount}";
+        })) + "]";
+    }
+
+    private static string DescribeRule(RuntimeRecipe recipe)
+    {
+        return recipe.inputs.inputOrder == RecipeInputRule.规则合成 ? "有序" : "无序";
+    }
+
+    #endregion
+
     private static IEnumerable<RuntimeRecipe> GetCandidateRecipes(RecipeType recipeType)
     {
         if (GameRes.Instance?.recipeById == null)
@@ -62,7 +136,9 @@ public static class CraftingRecipeMatcher
 
         return GameRes.Instance.recipeById.Values
             .Where(recipe => recipe?.inputs != null && recipe.inputs.recipeType == recipeType)
-            .OrderByDescending(recipe => CountRequiredIngredients(recipe.inputs.RowItems_List))
+            // 有序图案比无序数量配方更具体，必须先匹配，避免大堆叠材料被建筑等宽泛配方截获。
+            .OrderByDescending(recipe => recipe.inputs.inputOrder == RecipeInputRule.规则合成)
+            .ThenByDescending(recipe => CountRequiredIngredients(recipe.inputs.RowItems_List))
             .ThenBy(recipe => recipe.Id, StringComparer.Ordinal);
     }
 
