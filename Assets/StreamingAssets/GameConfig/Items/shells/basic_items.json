@@ -741,14 +741,16 @@
       "id": "Rope",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Rope.prefab",
-      "gameName": "Rope",
+      "gameName": "绳子",
       "description": "结实的绳索，可用于制作工具、建筑和装备。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Rope"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_80]",
         "rendererLocalPosition": {
@@ -820,8 +822,8 @@
       "id": "Twine",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Twine.prefab",
-      "gameName": "Twine",
-      "description": "由纤维搓成的细绳，适合基础制作。",
+      "gameName": "藤蔓",
+      "description": "柔韧的植物藤蔓，可用于编织绳索和基础工具。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -3711,7 +3713,7 @@
       "id": "Fat",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Fat.prefab",
-      "gameName": "Fat",
+      "gameName": "脂肪",
       "description": "从动物组织取得的脂肪，可作为燃料或烹饪材料。",
       "durability": 1.0,
       "maxDurability": 1.0,

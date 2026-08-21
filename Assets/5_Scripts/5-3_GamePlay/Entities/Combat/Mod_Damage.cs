@@ -47,6 +47,8 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     [SerializeField, Tooltip("可选的“武器×受击材质”命中声音覆盖。")]
     private List<CombatImpactAudioOverride> impactAudioOverrides =
         new List<CombatImpactAudioOverride>();
+    [SerializeField, Tooltip("命中没有伤害接收器的碰撞体时，是否仍播放一次零伤害反馈。")]
+    private bool playImpactFeedbackOnNonDamageableHit;
 
     [SerializeField] private Collider2D damageCollider;
 
@@ -60,6 +62,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     private bool aiWindowOverlapScanEnabled;
     private bool lastColliderEnabled = false;
     private bool tileDamageAppliedThisWindow;
+    private bool nonDamageableImpactAppliedThisWindow;
 
     // 实现ModuleData属性
     public override ModuleData _Data
@@ -108,6 +111,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
         aiWindowOverlapScanEnabled = false;
         lastColliderEnabled = damageCollider != null && damageCollider.enabled;
         tileDamageAppliedThisWindow = false;
+        nonDamageableImpactAppliedThisWindow = false;
     }
 
     public override void Save()
@@ -160,7 +164,11 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
         // 碰撞检测和伤害处理逻辑
         if (damageCollider == null || !damageCollider.enabled) return;
         DamageReceiver receiver = WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(other);
-        if (receiver == null) return;
+        if (receiver == null)
+        {
+            TryPlayNonDamageableImpact(other);
+            return;
+        }
 
         // AI 伤害窗已主动扫描过的目标，不再被同一窗口内后续触发事件重复结算。
         if (aiWindowOverlapScanEnabled && aiWindowHitReceivers.Contains(receiver))
@@ -276,6 +284,27 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
             : (Vector2)receiver.transform.position;
     }
 
+    /// <summary>为原木等钝器补充命中不可伤害碰撞体时的一次性视觉反馈。</summary>
+    private void TryPlayNonDamageableImpact(Collider2D hitCollider)
+    {
+        if (!playImpactFeedbackOnNonDamageableHit ||
+            nonDamageableImpactAppliedThisWindow ||
+            hitCollider == null ||
+            !CanDealDamageNow() ||
+            AttackEffects == null ||
+            AttackEffects.Count == 0 ||
+            (item != null && hitCollider.transform.IsChildOf(item.transform)))
+        {
+            return;
+        }
+
+        Vector2 origin = damageCollider != null
+            ? damageCollider.bounds.center
+            : transform.position;
+        SpawnEffect(hitCollider.ClosestPoint(origin), 0f);
+        nonDamageableImpactAppliedThisWindow = true;
+    }
+
     private void TryApplyDamageToTilemap()
     {
         if (tileDamageAppliedThisWindow ||
@@ -307,6 +336,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     private void BeginTileDamageWindow()
     {
         tileDamageAppliedThisWindow = false;
+        nonDamageableImpactAppliedThisWindow = false;
         aiWindowHitReceivers.Clear();
         attackWindowHitReceivers.Clear();
     }
@@ -318,6 +348,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
         attackWindowHitReceivers.Clear();
         aiWindowOverlapScanEnabled = false;
         tileDamageAppliedThisWindow = false;
+        nonDamageableImpactAppliedThisWindow = false;
     }
 
     private bool CanDealDamageNow()

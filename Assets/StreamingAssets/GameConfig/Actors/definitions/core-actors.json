@@ -1028,6 +1028,12 @@
                   "DropChance": 1.0,
                   "MinAmount": 1,
                   "MaxAmount": 5
+                },
+                {
+                  "LootPrefabName": "Fat",
+                  "DropChance": 1.0,
+                  "MinAmount": 2,
+                  "MaxAmount": 4
                 }
               ],
               "DefenseValues": {
@@ -1781,6 +1787,12 @@
                   "DropChance": 1.0,
                   "MinAmount": 1,
                   "MaxAmount": 3
+                },
+                {
+                  "LootPrefabName": "Fat",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 2
                 }
               ],
               "DefenseValues": {

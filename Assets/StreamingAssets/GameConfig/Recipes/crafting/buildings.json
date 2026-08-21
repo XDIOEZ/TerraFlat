@@ -2,6 +2,32 @@
   "schemaVersion": 1,
   "recipes": [
     {
+      "id": "core:石门",
+      "displayName": "石门",
+      "recipeType": "crafting",
+      "inputRule": "ordered",
+      "gridWidth": 3,
+      "gridHeight": 3,
+      "allowMirror": true,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Ore_Stone", "tag": "", "amount": 1 },
+        { "slot": 1, "match": "exact_item", "itemId": "Ore_Stone", "tag": "", "amount": 1 },
+        { "slot": 2, "match": "exact_item", "itemId": "", "tag": "", "amount": 0 },
+        { "slot": 3, "match": "exact_item", "itemId": "Ore_Stone", "tag": "", "amount": 1 },
+        { "slot": 4, "match": "exact_item", "itemId": "Ore_Stone", "tag": "", "amount": 1 },
+        { "slot": 5, "match": "exact_item", "itemId": "", "tag": "", "amount": 0 },
+        { "slot": 6, "match": "exact_item", "itemId": "Ore_Stone", "tag": "", "amount": 1 },
+        { "slot": 7, "match": "exact_item", "itemId": "Ore_Stone", "tag": "", "amount": 1 },
+        { "slot": 8, "match": "exact_item", "itemId": "", "tag": "", "amount": 0 }
+      ],
+      "outputs": [
+        { "itemId": "Door_Stone_Summoner", "amount": 1 }
+      ],
+      "actions": []
+    },
+    {
       "id": "core:帐篷",
       "displayName": "帐篷",
       "recipeType": "crafting",

@@ -2,6 +2,47 @@
   "schemaVersion": 1,
   "recipes": [
     {
+      "id": "core:藤蔓=绳子",
+      "displayName": "藤蔓=绳子",
+      "recipeType": "crafting",
+      "inputRule": "ordered",
+      "gridWidth": 1,
+      "gridHeight": 3,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Twine", "tag": "", "amount": 1 },
+        { "slot": 1, "match": "exact_item", "itemId": "Twine", "tag": "", "amount": 1 },
+        { "slot": 2, "match": "exact_item", "itemId": "Twine", "tag": "", "amount": 1 }
+      ],
+      "outputs": [
+        { "itemId": "Rope", "amount": 1 }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:脂肪+木棍=火把",
+      "displayName": "脂肪+木棍=火把",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 2,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Fat", "tag": "", "amount": 1 },
+        { "slot": 1, "match": "exact_item", "itemId": "Stick_Wood", "tag": "", "amount": 1 },
+        { "slot": 2, "match": "exact_item", "itemId": "", "tag": "", "amount": 0 },
+        { "slot": 3, "match": "exact_item", "itemId": "", "tag": "", "amount": 0 }
+      ],
+      "outputs": [
+        { "itemId": "Torch", "amount": 1 }
+      ],
+      "actions": []
+    },
+    {
       "id": "core:打制石器",
       "displayName": "打制石器",
       "recipeType": "crafting",

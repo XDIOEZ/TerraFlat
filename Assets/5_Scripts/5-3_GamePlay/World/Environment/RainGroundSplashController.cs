@@ -219,7 +219,7 @@ public sealed class RainGroundSplashController : MonoBehaviour
 
     #region 地面采样与发射
 
-    /// <summary>优先在相机可见范围的已加载非水地形中寻找落点；地形尚未就绪时使用可视区域降级落点。</summary>
+    /// <summary>优先在相机可见范围的已加载地形中寻找落点，海面也保留雨滴水花。</summary>
     private bool TryFindVisibleGround(Camera targetCamera, ChunkMgr chunkMgr, out Vector3 splashPosition)
     {
         splashPosition = default;
@@ -244,8 +244,7 @@ public sealed class RainGroundSplashController : MonoBehaviour
                 continue;
 
             hasRuntimeSample = true;
-            TerrainCellFlags blockedFlags = TerrainCellFlags.Water | TerrainCellFlags.Blocking;
-            if (sample.TopTileId == 0 || (sample.Cell.Flags & blockedFlags) != 0)
+            if (sample.TopTileId == 0 || (sample.Cell.Flags & TerrainCellFlags.Blocking) != 0)
                 continue;
 
             splashPosition = fallbackPosition;

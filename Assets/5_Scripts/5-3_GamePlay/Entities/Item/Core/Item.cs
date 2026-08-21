@@ -389,7 +389,8 @@ public abstract class Item : MonoBehaviour
         MigrateDeprecatedAgricultureModuleData();
         bool firstStart = itemData.ModuleDataDic.Count == 0;
 
-        var modules = GetComponentsInChildren<Module>().ToList();
+        // 模板数据会收集停用模块，加载时也必须使用同一范围，避免矿物等 Prefab 被误判为缺失模块。
+        var modules = GetComponentsInChildren<Module>(true).ToList();
 
         if (firstStart)//第一次启动
         {
@@ -453,7 +454,7 @@ public abstract class Item : MonoBehaviour
 
                     @object.transform.SetParent(transform);
 
-                    mod = @object.GetComponentInChildren<Module>();
+                    mod = @object.GetComponentInChildren<Module>(true);
                     if (mod == null)
                     {
                         Debug.LogError($"物品 {gameObject.name} 无法修复模块 {modData.Name} " +

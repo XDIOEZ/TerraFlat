@@ -259,6 +259,7 @@
             "weaponAudioClass": 0,
             "attackAudioCueId": "",
             "impactAudioOverrides": [],
+            "playImpactFeedbackOnNonDamageableHit": true,
             "lastDamageTime": 0.0,
             "$transform": {
               "localPosition": {
