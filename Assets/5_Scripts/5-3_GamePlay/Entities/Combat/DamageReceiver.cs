@@ -223,6 +223,27 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     private bool _deathConsumedByExternalHandler;
 
+    #region Buff 受伤倍率
+
+    /// <summary>运行时最终受伤倍率；1 表示不受 Buff 影响，0.7 表示减伤 30%。</summary>
+    private float damageTakenMultiplier = 1f;
+
+    /// <summary>当前运行时最终受伤倍率。</summary>
+    public float DamageTakenMultiplier => damageTakenMultiplier;
+
+    /// <summary>叠加一个 Buff 提供的最终受伤倍率。</summary>
+    public void MultiplyDamageTakenMultiplier(float multiplier)
+    {
+        if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier <= 0f)
+            return;
+
+        damageTakenMultiplier *= multiplier;
+        if (float.IsNaN(damageTakenMultiplier) || float.IsInfinity(damageTakenMultiplier))
+            damageTakenMultiplier = 1f;
+    }
+
+    #endregion
+
     public bool ShowCanvas
     {
         get => IsPanelVisible();
@@ -256,6 +277,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     public override void Load()
     {
         ClearHitSlowdown();
+        damageTakenMultiplier = 1f;
         modData.ReadData(ref Data);
         UpgradeBodyPartData();
         NormalizeStatRanges();
@@ -316,6 +338,10 @@ public class DamageReceiver : Module, IRemoteNetworkModule
                 HidePanel();
             return;
         }
+
+        // 玩家生命值由专属状态面板展示，未配置世界血条时只跳过面板创建。
+        if (PanelPrefab == null)
+            return;
 
         if (PanleInstance != null) return;
         if (transform.gameObject.scene.IsValid() == false) return;//表示为Prefab状态，不显示面板
@@ -535,6 +561,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
         // 四种伤害分别减去对应防御，低于零的分量归零，最后再相加。
         float actualDamage = scaledDamage.CalculateAgainst(Defense);
+        actualDamage *= Mathf.Max(0f, damageTakenMultiplier);
 
         // 记录攻击者（根据是否造成实际伤害决定概率）
         if (damageSender.attacker != null)
@@ -687,6 +714,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     {
         if (Hp <= 0) return -1;
         damage *= GameDifficultyService.ResolveEnvironmentalDamageMultiplier(item);
+        damage *= Mathf.Max(0f, damageTakenMultiplier);
         if (damage <= 0f) return Hp;
 
         float hpBefore = Hp;

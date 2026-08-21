@@ -17,6 +17,11 @@
       "enabled": true
     },
     {
+      "id": "damage_reduction",
+      "path": "damage_reduction.json",
+      "enabled": true
+    },
+    {
       "id": "attribute_modifiers",
       "path": "attribute_modifiers.json",
       "enabled": true

@@ -26,6 +26,8 @@ public enum WildBoarState
 /// </summary>
 public partial class AI_WildBoar : AI_Base<WildBoarState>
 {
+	private const string DamageReductionBuffId = "减伤";
+
 	#region SaveData
 	[Serializable]
 	[MemoryPackable]
@@ -245,6 +247,8 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	protected override float DetectorRefreshInterval => detectorRefreshInterval;
 	protected override bool DebugLogEnabled => debugLog;
+	/// <summary>启用基类受伤事件监听，野猪受伤后刷新减伤 Buff。</summary>
+	protected override float DamageThreatMemoryDuration => 0.1f;
 	protected override bool IsMoveState(WildBoarState state) => state == WildBoarState.Move;
 	protected override bool IsIdleState(WildBoarState state) => state == WildBoarState.Idle;
 	#endregion
@@ -327,6 +331,16 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	protected override void OnPreEvaluate()
 	{
 		RefreshThreatTarget();
+	}
+
+	/// <summary>野猪受到有效伤害后获得 5 秒减伤 Buff。</summary>
+	protected override void OnDamageReceived(DamageReceiverDamageInfo damageInfo)
+	{
+		if (item == null || damageInfo == null || damageInfo.DamageValue <= 0f)
+			return;
+
+		BuffManager buffManager = item.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+		buffManager?.AddBuff(DamageReductionBuffId);
 	}
 
 	protected override void OnBeforeSwitchState(WildBoarState previous, WildBoarState next)

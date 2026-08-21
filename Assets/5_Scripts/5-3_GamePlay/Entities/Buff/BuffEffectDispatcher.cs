@@ -8,6 +8,7 @@ public static class BuffEffectTypeIds
     public const string FoodConsumeSpeedMultiplier = "core:food_consume_speed_multiplier";
     public const string WaterConsumeSpeedMultiplier = "core:water_consume_speed_multiplier";
     public const string TemperatureCoolingMultiplier = "core:temperature_cooling_multiplier";
+    public const string DamageTakenMultiplier = "core:damage_taken_multiplier";
     public const string Heal = "core:heal";
     public const string StaminaChange = "core:stamina_change";
     public const string NutritionChange = "core:nutrition_change";
@@ -29,6 +30,7 @@ public static class BuffEffectDispatcher
         Register(BuffEffectTypeIds.FoodConsumeSpeedMultiplier, ApplyFoodConsumeSpeedMultiplier);
         Register(BuffEffectTypeIds.WaterConsumeSpeedMultiplier, ApplyWaterConsumeSpeedMultiplier);
         Register(BuffEffectTypeIds.TemperatureCoolingMultiplier, ApplyTemperatureCoolingMultiplier);
+        Register(BuffEffectTypeIds.DamageTakenMultiplier, ApplyDamageTakenMultiplier);
         Register(BuffEffectTypeIds.Heal, ApplyHeal);
         Register(BuffEffectTypeIds.StaminaChange, ApplyStaminaChange);
         Register(BuffEffectTypeIds.NutritionChange, ApplyNutritionChange);
@@ -127,6 +129,14 @@ public static class BuffEffectDispatcher
         Item receiver = GetReceiver(runtime);
         Mod_Temperature temperature = receiver?.itemMods.GetMod_ByID(ModText.Temperature) as Mod_Temperature;
         temperature?.MultiplyRuntimeCoolingSpeed(effect.Value);
+    }
+
+    /// <summary>按 Buff 阶段调整接收者的最终受伤倍率，停止阶段由配置传入倒数倍率恢复。</summary>
+    private static void ApplyDamageTakenMultiplier(BuffEffectDefinition effect, BuffInstance runtime)
+    {
+        Item receiver = GetReceiver(runtime);
+        DamageReceiver damageReceiver = receiver?.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
+        damageReceiver?.MultiplyDamageTakenMultiplier(effect.Value);
     }
 
     private static void ApplyHeal(BuffEffectDefinition effect, BuffInstance runtime)

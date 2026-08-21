@@ -160,6 +160,7 @@ public static class BuffDefinitionFactory
             case BuffEffectTypeIds.FoodConsumeSpeedMultiplier:
             case BuffEffectTypeIds.WaterConsumeSpeedMultiplier:
             case BuffEffectTypeIds.TemperatureCoolingMultiplier:
+            case BuffEffectTypeIds.DamageTakenMultiplier:
                 if (effect.Value <= 0f)
                     throw new InvalidDataException($"{context}.value 必须大于 0");
                 break;

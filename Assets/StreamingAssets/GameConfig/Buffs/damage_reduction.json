@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "buffs": [
+    {
+      "id": "减伤",
+      "displayName": "减伤",
+      "description": "受到的伤害降低30%。",
+      "durationSeconds": 5.0,
+      "stackMode": "refresh_duration",
+      "effects": [
+        {
+          "phase": "start",
+          "typeId": "core:damage_taken_multiplier",
+          "value": 0.7
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:damage_taken_multiplier",
+          "value": 1.4285715
+        }
+      ]
+    }
+  ]
+}
