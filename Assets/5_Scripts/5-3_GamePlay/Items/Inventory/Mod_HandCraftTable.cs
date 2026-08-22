@@ -90,9 +90,6 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     public override void Save()
     {
-        if (inputInventory?.Data != null)
-            inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
-
         SaveInventoryState();
     }
 
@@ -243,6 +240,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     private void OnDestroy()
     {
+        UnbindCraftPreview();
         inputInventory?.UnbindSlotDataEvents();
         outputInventory?.UnbindSlotDataEvents();
 
@@ -256,6 +254,15 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         }
 
         ReleasePanelInputLock();
+    }
+
+    /// <summary>对象销毁时解除制作预览监听；保存过程不得改变运行时事件线路。</summary>
+    private void UnbindCraftPreview()
+    {
+        if (inputInventory?.Data != null)
+            inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
+        if (outputInventory?.Data != null)
+            outputInventory.Data.Event_OnDataChanged -= OnOutputSlotChanged;
     }
 
     private void EnsureInventoryPanelPrefabAssigned()

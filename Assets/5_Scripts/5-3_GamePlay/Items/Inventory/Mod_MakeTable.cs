@@ -37,17 +37,24 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
 
     private void OnDestroy()
     {
+        UnbindCraftPreview();
         inputInventory?.UnbindSlotDataEvents();
         outputInventory?.UnbindSlotDataEvents();
-
-        if (inputInventory?.Data != null)
-            inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
 
         if (mod_InteractReciver != null)
         {
             mod_InteractReciver.OnAction_Start -= Interact_Start;
             mod_InteractReciver.OnAction_Stop -= Interact_Stop;
         }
+    }
+
+    /// <summary>对象销毁时对称解除输入与输出预览监听。</summary>
+    private void UnbindCraftPreview()
+    {
+        if (inputInventory?.Data != null)
+            inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
+        if (outputInventory?.Data != null)
+            outputInventory.Data.Event_OnDataChanged -= OnOutputSlotChanged;
     }
 
     public override void Save()

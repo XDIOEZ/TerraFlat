@@ -42,6 +42,7 @@ public class Mod_HandMade : Module,IInventory
     private int _currentClickProgress;
     private CraftingOutputPreview _outputPreview;
     private string _lastCraftPreviewMessage;
+    private Mod_InteractReciver _interactReceiver;
     private static readonly CraftingCapabilities Capabilities = new CraftingCapabilities
     {
         RecipeType = RecipeType.Crafting,
@@ -75,8 +76,12 @@ public class Mod_HandMade : Module,IInventory
     public override void Save()
     {
         SavePanelPosition();
-        CleanupEventListeners();
         item.itemData.ModuleDataDic[_Data.Name] = _Data;
+    }
+
+    private void OnDestroy()
+    {
+        CleanupEventListeners();
     }
 
     #endregion
@@ -207,10 +212,18 @@ public class Mod_HandMade : Module,IInventory
         }
 
         // 设置交互事件
+        if (_interactReceiver != null)
+        {
+            _interactReceiver.OnAction_Start -= Interact_Start;
+            _interactReceiver.OnAction_Stop -= Interact_Stop;
+        }
+
+        _interactReceiver = null;
         if (item.itemMods.GetMod_ByID(ModText.Interact, out Mod_InteractReciver interactMod))
         {
-            interactMod.OnAction_Start += Interact_Start;
-            interactMod.OnAction_Stop += Interact_Stop;
+            _interactReceiver = interactMod;
+            _interactReceiver.OnAction_Start += Interact_Start;
+            _interactReceiver.OnAction_Stop += Interact_Stop;
         }
     }
 
@@ -219,11 +232,14 @@ public class Mod_HandMade : Module,IInventory
         workButton?.onClick.RemoveListener(OnCraftButtonClick);
         if (inputInventory?.Data != null)
             inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
+        if (outputInventory?.Data != null)
+            outputInventory.Data.Event_OnDataChanged -= OnOutputSlotChanged;
 
-        if (item.itemMods.GetMod_ByID(ModText.Interact, out Mod_InteractReciver interactMod))
+        if (_interactReceiver != null)
         {
-            interactMod.OnAction_Start -= Interact_Start;
-            interactMod.OnAction_Stop -= Interact_Stop;
+            _interactReceiver.OnAction_Start -= Interact_Start;
+            _interactReceiver.OnAction_Stop -= Interact_Stop;
+            _interactReceiver = null;
         }
     }
 
