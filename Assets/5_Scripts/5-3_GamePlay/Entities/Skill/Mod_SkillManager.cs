@@ -215,12 +215,16 @@ public class Mod_SkillManager : Module
             Debug.LogError("Mod_SkillManager_Item: item is null!");
             return;
         }
-        StopAllSkills();
         Data.SkillNames.Clear();
         Data.SkillNames.AddRange(SkillNameList);
         Data.CurrentSelectIndex = CurrentSelectSkilIndex;
         ModSaveData.WriteData(Data);
         item.itemData.ModuleDataDic[_Data.Name] = _Data;
+    }
+
+    public override void Unload()
+    {
+        StopAllSkills();
     }
 
     public override void Act()

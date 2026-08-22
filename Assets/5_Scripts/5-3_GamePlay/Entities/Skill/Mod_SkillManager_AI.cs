@@ -19,6 +19,18 @@ public class Mod_SkillManager_AI : Mod_SkillManager
         base.Save();
     }
 
+    public override void Unload()
+    {
+        if (animatorReceiver != null)
+        {
+            animatorReceiver.OnSkillStart -= UseSkill;
+            animatorReceiver.OnSkillStop -= StopSkill;
+            animatorReceiver = null;
+        }
+
+        base.Unload();
+    }
+
     public void UseSkill(int skillIndex)
     {
         CurrentSelectSkilIndex = skillIndex;
@@ -33,11 +45,6 @@ public class Mod_SkillManager_AI : Mod_SkillManager
     // 确保在对象销毁时清除事件挂接
     private void OnDestroy()
     {
-        // 清除事件挂接
-        if (animatorReceiver != null)
-        {
-            animatorReceiver.OnSkillStart -= UseSkill;
-            animatorReceiver.OnSkillStop -= StopSkill;
-        }
+        Unload();
     }
 }

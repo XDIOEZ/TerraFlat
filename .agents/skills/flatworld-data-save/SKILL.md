@@ -27,6 +27,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - 新版 WorldModel 的格子建筑写入 `ChunkTerrainData.BlockingTileId`，不会进入 `MapSave.items`；必须按“确定性生成基线 → RuntimeTileDeltas 差量 → 表现绑定”的顺序持久化和恢复。
 - 新版 WorldModel 的动态建筑 Item 不属于旧 `Chunk.RunTimeItems`；建筑存档要复用区块 `ChangedItems` 差量，按 `Mod_Building` 角色清理旧记录并在区块数据就绪后实例化恢复。
 - 自动/手动保存可分帧采集，但后台只处理不可变快照；旧任务不得覆盖更新的手动/退出保存。
+- `IRuntimeDataLifecycle.Save()` 只抓取持久化快照，禁止解绑事件、停止行为或释放资源；Item 退出、移除模块与回池统一调用 `Unload()`，重新加载前也必须先卸载旧运行态。
 - 地表 `WorldKey=PlanetId`；非地表用 `PlanetId__dimension__DimensionId`。`TopologyMode` 的当前默认值为 `Infinite=0`，世界字段按当前版本统一读写。
 - 任务 `flatworld.quests` 等未来版本必须拒绝写回；未知 MOD 记录应保留。
 - 玩家创建 JSON 位于 `StreamingAssets/GameConfig/Players`，不进入 MemoryPack 存档；只在无存档创建阶段注入，并在模块加载前同步到 `Data_Player.ModuleDataDic`；已有玩家存档始终优先于模板。

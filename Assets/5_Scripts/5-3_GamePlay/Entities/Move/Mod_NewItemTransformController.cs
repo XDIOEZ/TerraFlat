@@ -51,6 +51,9 @@ public class Mod_NewItemTransformController : Module
     {
         ModSaveData.ReadData(ref Data);
 
+        if (_luaEnv == null || _isLuaEnvDisposed)
+            InitializeLuaEnv();
+
         if (string.IsNullOrEmpty(Data.Function_Lua))
         {
             Data.Function_Lua = GetDefaultOrbitScript();
@@ -63,8 +66,13 @@ public class Mod_NewItemTransformController : Module
 
     public override void Save()
     {
-        DestroySpawnedItem();
         ModSaveData.WriteData(Data);
+    }
+
+    public override void Unload()
+    {
+        DisposeLuaResources();
+        DestroySpawnedItem();
     }
 
 public override void Act()
@@ -117,8 +125,7 @@ public override void Act()
 
     private void OnDestroy()
     {
-        DisposeLuaResources();
-        DestroySpawnedItem();
+        Unload();
     }
 
     private void DisposeLuaResources()

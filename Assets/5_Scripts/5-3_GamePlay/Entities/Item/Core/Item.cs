@@ -131,6 +131,7 @@ public abstract class Item : MonoBehaviour
 
     private bool isInitialized = false;
     private bool destructionHandled = false;
+    private bool modulesLoaded = false;
 
     public bool IsInitialized => isInitialized;
     public bool DestructionHandled => destructionHandled;
@@ -248,6 +249,7 @@ public abstract class Item : MonoBehaviour
         OnItemDestroy.Invoke(this);
         if (isInitialized && itemData != null)
             ModuleSave();
+        ModuleUnload();
     }
 
     /// <summary>
@@ -262,10 +264,13 @@ public abstract class Item : MonoBehaviour
         OnItemDestroy.Invoke(this);
         if (saveData && isInitialized && itemData != null)
             Save();
+        ModuleUnload();
+        isInitialized = false;
     }
 
     public void PrepareForPoolReuse()
     {
+        ModuleUnload();
         StopAllCoroutines();
         destructionHandled = false;
         isInitialized = false;
@@ -384,6 +389,8 @@ public abstract class Item : MonoBehaviour
     /// </summary>
     public void ModuleLoad()
     {
+        ModuleUnload();
+        modulesLoaded = true;
         itemMods.BindOwner(this);
         MarkModuleScheduleDirty();
         MigrateDeprecatedAgricultureModuleData();
@@ -573,6 +580,24 @@ public abstract class Item : MonoBehaviour
         {
             mod.Save();
         }
+    }
+
+    /// <summary>
+    /// 卸载所有已建立运行态的模块；与 ModuleSave 分离，避免自动保存改变事件线路。
+    /// </summary>
+    public void ModuleUnload()
+    {
+        if (!modulesLoaded)
+            return;
+
+        var mods = GetModsSnapshot();
+        foreach (Module mod in mods)
+        {
+            mod.Unload();
+        }
+
+        modulesLoaded = false;
+        ClearModuleSchedule();
     }
 
     #endregion

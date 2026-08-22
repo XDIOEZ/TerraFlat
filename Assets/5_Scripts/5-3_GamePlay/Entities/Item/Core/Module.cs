@@ -28,44 +28,11 @@ public enum ItemTickTier
     Slow
 }
 
-public abstract class Module : MonoBehaviour
+/// <summary>
+/// 物品功能模块基类；通过 Load/Save/Unload 分离运行态建立、数据快照与资源释放。
+/// </summary>
+public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 {
-    /*  参考代码
-   
- using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-public class Module_Equipment_Store : Module
-{
-           #region 基础参数
-
-    public Ex_ModData_MemoryPackable ModSaveData;
-    public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
-    #endregion
-
-
-    #region 模组参数
-
-    [SerializeReference]
-    public List<string> RawData = new List<string>();
-
-    public override void Load()
-    {
-        ModSaveData.ReadData(ref RawData);
-    }
-
-    public override void Save()
-    {
-        ModSaveData.WriteData(RawData);
-    }
-    #endregion
-
-    
-}
-
-
-    */
     public abstract ModuleData _Data { get; set; }
 
     /// <summary>
@@ -149,6 +116,12 @@ public class Module_Equipment_Store : Module
     [Button("Save")]
     public abstract void Save();
 
+    /// <summary>解除事件、输入与临时资源；无运行时绑定的模块无需重写。</summary>
+    [Button("Unload")]
+    public virtual void Unload()
+    {
+    }
+
     /// <summary>
     /// 应用联机端传来的模块数据。默认重新执行 Load，让继承 Module 的现有组件
     /// 无需逐个接入网络代码也能刷新运行时字段；有副作用的模块可重写此方法。
@@ -158,6 +131,7 @@ public class Module_Equipment_Store : Module
         if (data == null)
             return;
 
+        Unload();
         _Data = data;
         if (item != null && item.itemData != null && !string.IsNullOrEmpty(data.Name))
             item.itemData.ModuleDataDic[data.Name] = data;
@@ -259,31 +233,34 @@ public class Module_Equipment_Store : Module
     #region 移除模块
     public static Module REMOVEModFROMItem(Item item, ModuleData mod)
     {
-        Module module;
+        if (!item.Mods.TryGetValue(mod.Name, out Module module))
+            throw new InvalidOperationException($"物品 {item.name} 不包含模块实例 {mod.Name}。");
 
-        Destroy(item.Mods[mod.Name].gameObject);
-
-        item.Mods[mod.Name].Save();
-
-        module = item.Mods[mod.Name];
-
-        item.itemMods.RemoveMod(module); // 添加到字典
-
-        item.itemData.ModuleDataDic.Remove(mod.Name);
-
-        return module;
+        return RemoveRuntimeModule(item, module);
     }
 
     public static Module REMOVEModFROMItem(Item item, string name)
     {
-        Module module = item.itemMods.GetMod_ByID("入水特效");
+        Module module = item.Mods.TryGetValue(name, out Module namedModule)
+            ? namedModule
+            : item.itemMods.GetMod_ByID(name);
+        if (module == null)
+            throw new InvalidOperationException($"物品 {item.name} 不包含模块 {name}。");
 
-        Destroy(module.gameObject);
+        return RemoveRuntimeModule(item, module);
+    }
 
-        module.Save();
-
+    /// <summary>按卸载、移除数据、销毁对象的顺序结束模块生命周期。</summary>
+    private static Module RemoveRuntimeModule(Item item, Module module)
+    {
+        module.Unload();
         item.itemMods.RemoveMod(module);
 
+        if (!string.IsNullOrEmpty(module._Data?.Name))
+            item.itemData.ModuleDataDic.Remove(module._Data.Name);
+
+        Destroy(module.gameObject);
+        item.MarkModuleScheduleDirty();
         return module;
     }
     #endregion

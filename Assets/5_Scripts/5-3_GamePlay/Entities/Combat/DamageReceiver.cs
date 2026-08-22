@@ -102,9 +102,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         [Header("伤害者的UID列表")]
         public List<int> AttackersUIDs = new List<int>();
 
-        [Header("是否显示面板")]
-        public bool ShowCanvas = false;
-
         [Header("伤害接收间隔时间 (秒)")]
         [Min(0f)]
         public float DamageInterval = 0.1f;
@@ -264,7 +261,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     {
         _Data.ID = ModText.Hp;
         NormalizeStatRanges();
-        Data.ShowCanvas = false;
     }
 
 //TODO 创建一个利用[SerializeReference]实现的模块数据类 DamageReciver_Action(我已经实现了)
@@ -287,8 +283,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
             Equipment_Inventory = item.itemMods.GetMod_ByID(ModText.Equipment) as Mod_Inventory;
 
-        // 血条可见性是运行时表现，不从预制体或存档恢复。
-        Data.ShowCanvas = false;
         HidePanel();
     }
 
@@ -303,8 +297,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         modData.ReadData(ref Data);
         UpgradeBodyPartData();
         NormalizeStatRanges();
-        Data.ShowCanvas = false;
-
         if (item?.itemData != null && !string.IsNullOrEmpty(modData.Name))
             item.itemData.ModuleDataDic[modData.Name] = modData;
 
@@ -353,10 +345,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         DataUpdate += RefreshUI;
 
         RefreshUI();
-        // 兼容旧数据字段，但不再把临时的血条可见性写入存档。
-        Data.ShowCanvas = false;
-
-
         // ✅ 从 UI_Drag 中获取 rectTransform 并恢复位置
         var s = panel.GetComponentInChildren<UI_Drag>();
         if (s != null)
@@ -376,7 +364,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     [Button("隐藏面板")]
     public void HidePanel()
     {
-        Data.ShowCanvas = false;
         DataUpdate -= RefreshUI;
 
         if (PanleInstance == null)
@@ -520,10 +507,18 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     private void OnDestroy()
     {
+        Unload();
+    }
+
+    public override void Unload()
+    {
         ClearHitSlowdown();
 
         if (_handStateEventOwner != null)
+        {
             _handStateEventOwner.OnInHandChanged -= HandleInHandChanged;
+            _handStateEventOwner = null;
+        }
     }
 
 
@@ -531,7 +526,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule
     public override void Save()
     {
         SynchronizeOverallHealthFromBodyParts();
-        Data.ShowCanvas = false;
         modData.WriteData(Data);
         item.itemData.ModuleDataDic[_Data.Name] = modData;
     }

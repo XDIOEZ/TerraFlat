@@ -71,12 +71,21 @@ public class Mod_FlintStrike : Module, IInteractable
 
     public override void Save()
     {
+        ModSaveData.WriteData(RawData);
+    }
+
+    public override void Unload()
+    {
         UnbindItemActEvent();
         UnbindInteractEvents();
         if (InputInventory?.Data != null)
             InputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
         DestroyUI();
-        ModSaveData.WriteData(RawData);
+    }
+
+    private void OnDestroy()
+    {
+        Unload();
     }
 
     public override void ModUpdate(float deltaTime)

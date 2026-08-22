@@ -86,6 +86,11 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
     private void OnDestroy()
     {
+        Unload();
+    }
+
+    public override void Unload()
+    {
         if (EquipmentInventory?.Data != null)
             EquipmentInventory.Data.Event_OnDataChanged_TwoSlots -= UpdateEquipment;
 

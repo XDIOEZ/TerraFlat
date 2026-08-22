@@ -58,13 +58,17 @@ public partial class Mod_Hoe : Module
 
     public override void Save()
     {
-        UnbindItemActEvent();
         ModData.WriteData(Data);
+    }
+
+    public override void Unload()
+    {
+        UnbindItemActEvent();
     }
 
     private void OnDestroy()
     {
-        UnbindItemActEvent();
+        Unload();
     }
 
 #endregion

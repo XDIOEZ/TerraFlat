@@ -81,6 +81,11 @@ public class Mod_HandMade : Module,IInventory
 
     private void OnDestroy()
     {
+        Unload();
+    }
+
+    public override void Unload()
+    {
         CleanupEventListeners();
     }
 

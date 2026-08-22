@@ -37,6 +37,11 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
 
     private void OnDestroy()
     {
+        Unload();
+    }
+
+    public override void Unload()
+    {
         UnbindCraftPreview();
         inputInventory?.UnbindSlotDataEvents();
         outputInventory?.UnbindSlotDataEvents();
@@ -45,6 +50,7 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
         {
             mod_InteractReciver.OnAction_Start -= Interact_Start;
             mod_InteractReciver.OnAction_Stop -= Interact_Stop;
+            mod_InteractReciver = null;
         }
     }
 

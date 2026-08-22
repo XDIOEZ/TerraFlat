@@ -67,7 +67,8 @@ public class RuntimeSkill
             {
                 if (skill != null)
                 {
-                skill.Save();
+                    skill.Save();
+                    skill.Unload();
                     GameObject.Destroy(skill.gameObject);
                 }
             }

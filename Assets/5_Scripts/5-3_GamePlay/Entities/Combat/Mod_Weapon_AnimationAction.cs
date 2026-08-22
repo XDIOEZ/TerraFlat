@@ -92,13 +92,17 @@ public class Mod_Weapon_AnimationAction : Module
 
     public override void Save()
     {
-        UnbindAttackInput();
         ModSaveData.WriteData(RawData);
+    }
+
+    public override void Unload()
+    {
+        UnbindAttackInput();
     }
 
     private void OnDestroy()
     {
-        UnbindAttackInput();
+        Unload();
     }
 
     /// <summary>统一解除中央攻击语义，避免武器被直接销毁时残留订阅。</summary>

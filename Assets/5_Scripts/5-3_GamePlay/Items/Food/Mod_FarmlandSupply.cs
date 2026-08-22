@@ -41,12 +41,16 @@ public class Mod_FarmlandSupply : Module
 
     public override void Save()
     {
+    }
+
+    public override void Unload()
+    {
         UnbindActEvent();
     }
 
     private void OnDestroy()
     {
-        UnbindActEvent();
+        Unload();
     }
 
 #endregion

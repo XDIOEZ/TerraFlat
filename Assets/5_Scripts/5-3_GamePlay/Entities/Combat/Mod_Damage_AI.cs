@@ -49,6 +49,11 @@ public class Mod_Damage_AI : Mod_Damage,ITrunDirection
     public override void Save()
     {
         base.Save();
+    }
+
+    public override void Unload()
+    {
+        base.Unload();
         DOTween.Clear(transform);
     }
 

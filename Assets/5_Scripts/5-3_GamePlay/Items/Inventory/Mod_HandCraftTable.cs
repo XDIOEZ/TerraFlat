@@ -240,6 +240,11 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     private void OnDestroy()
     {
+        Unload();
+    }
+
+    public override void Unload()
+    {
         UnbindCraftPreview();
         inputInventory?.UnbindSlotDataEvents();
         outputInventory?.UnbindSlotDataEvents();

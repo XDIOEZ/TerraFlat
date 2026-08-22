@@ -1,6 +1,7 @@
 using UnityEngine;
 
-public class Skill : MonoBehaviour
+/// <summary>技能行为生命周期基类，保存快照与运行时清理必须分离。</summary>
+public class Skill : MonoBehaviour, IRuntimeDataLifecycle
 {
     [Header("运行时数据")]
     public RuntimeSkill runtimeSkill;
@@ -42,6 +43,12 @@ public class Skill : MonoBehaviour
 
     }
     public virtual void Save()
+    {
+
+    }
+
+    /// <summary>停止技能时释放运行时效果与资源。</summary>
+    public virtual void Unload()
     {
 
     }

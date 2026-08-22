@@ -22,6 +22,7 @@ public class Module_Equipment : Module
     List<Ex_ModData_MemoryPackable> equipment_ModuleData = new();
 
     List<ItemData> cached_ItemDatas = new();
+    private bool _runtimeEffectsActive;
 
 
     [SerializeReference]
@@ -47,6 +48,7 @@ public class Module_Equipment : Module
         Equipment_inventory.BindController(GameController);
 
         // 当背包数据变化时，根据发生变化的槽位刷新装备
+        Equipment_inventory.Data.Event_OnDataChanged_TwoSlots -= UpdateEquipment;
         Equipment_inventory.Data.Event_OnDataChanged_TwoSlots += UpdateEquipment;
 
         ModSaveData.ReadData(ref equipment_Instances);
@@ -54,6 +56,7 @@ public class Module_Equipment : Module
         EnsureEquipmentListSize();
 
         Init();
+        _runtimeEffectsActive = true;
     }
 
     // 确保 equipmentInstances 的长度至少与背包槽位数量一致
@@ -209,11 +212,21 @@ public class Module_Equipment : Module
         // 先把每个槽位当前的装备实例列表写回到各自的装备模块数据
         SaveAllEquipmentModuleData();
 
-        UnEquipAll();
-
         // 仍然写入自身 ModSaveData，作为整体备份
         ModSaveData.WriteData(equipment_Instances);
 
+    }
+
+    public override void Unload()
+    {
+        if (Equipment_inventory?.Data != null)
+            Equipment_inventory.Data.Event_OnDataChanged_TwoSlots -= UpdateEquipment;
+
+        if (!_runtimeEffectsActive)
+            return;
+
+        UnEquipAll();
+        _runtimeEffectsActive = false;
     }
     public override void Act()
     {

@@ -7,6 +7,7 @@ public partial class Mod_Defense : Module
 
     [Header("四类防御加成")]
     public CombatDefense DefenseValues = new CombatDefense();
+    private bool _isDefenseApplied;
 
     /// <summary>初始化防御模块的默认数据标识。</summary>
     public override void Awake()
@@ -28,18 +29,28 @@ public partial class Mod_Defense : Module
         {
             var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
             Hp.AddDefense(DefenseValues);
+            _isDefenseApplied = true;
         }
     }
 
-    /// <summary>卸载本模块对生命模块施加的四类防御。</summary>
+    /// <summary>防御数据由配置持有，不需要额外序列化。</summary>
     public override void Save()
     {
-        // 取消Load中的加成
+    }
+
+    /// <summary>卸载本模块对生命模块施加的四类防御。</summary>
+    public override void Unload()
+    {
+        if (!_isDefenseApplied)
+            return;
+
         if (item.Mods.ContainsKey(ModText.Hp))
         {
             var Hp = item.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
             Hp.RemoveDefense(DefenseValues);
         }
+
+        _isDefenseApplied = false;
     }
 
 }

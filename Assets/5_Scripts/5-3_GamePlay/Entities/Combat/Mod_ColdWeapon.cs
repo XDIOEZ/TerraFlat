@@ -165,18 +165,9 @@ public partial class Mod_ColdWeapon : Module
     {
         weaponData.ObserverState = BuildObserverState();
         Data.WriteData(weaponData);
-
-        if (item.Owner != null && cachedController != null)
-        {
-            cachedController.AttackStarted -= OnAttackStarted;
-            cachedController.AttackEnded -= OnAttackEnded;
-        }
-
-        // 取消订阅伤害事件，防止潜在引用泄漏
-        UnsubscribeDamageEvents();
     }
 
-    private void OnDestroy()
+    public override void Unload()
     {
         if (cachedController != null)
         {
@@ -184,7 +175,13 @@ public partial class Mod_ColdWeapon : Module
             cachedController.AttackEnded -= OnAttackEnded;
             cachedController = null;
         }
+
         UnsubscribeDamageEvents();
+    }
+
+    private void OnDestroy()
+    {
+        Unload();
     }
     #endregion
 

@@ -20,6 +20,9 @@ public class Skill_Laser : Skill
     
     [Tooltip("移动组件引用")]
     Mover mover;
+    private const float MovementSpeedMultiplier = 0.25f;
+    private bool _movementSpeedModified;
+    private bool _isUnloaded;
 
     #endregion
 
@@ -53,7 +56,8 @@ public class Skill_Laser : Skill
             runtimeSkill.skillSender.itemMods.GetMod_ByID(ModText.Mover, out mover); // 获取技能数据
             if (mover != null)
             {
-                mover.Data.Speed.MultiplicativeModifier *= 0.25f;
+                mover.Data.Speed.MultiplicativeModifier *= MovementSpeedMultiplier;
+                _movementSpeedModified = true;
             }
             else
             {
@@ -246,56 +250,43 @@ public class Skill_Laser : Skill
     [Tooltip("销毁时清理资源")]
     private void OnDestroy()
     {
-        // 检查runtimeSkill是否存在
-        if (runtimeSkill == null)
-        {
-            Debug.LogWarning("激光技能：OnDestroy中runtimeSkill为空！");
-            return;
-        }
-
-        // 检查skillSender是否存在，如果存在则保存模块
-        if (runtimeSkill.skillSender != null)
-        {
-            // 保存所有模块
-            foreach (var mod in mods)
-            {
-                if (mod != null)
-                {
-                    mod.Save();
-                }
-            }
-
-            // 销毁特效
-            if (laserEffect != null)
-            {
-                Destroy(laserEffect.gameObject);
-            }
-        }
-        else
-        {
-            // 如果skillSender不存在，直接清理特效
-            if (laserEffect != null)
-            {
-                Destroy(laserEffect.gameObject);
-            }
-        }
+        Unload();
     }
 
     public override void Save()
     {
-        // 保存所有模块
         foreach (var mod in mods)
         {
-            mod.Save();
+            if (mod != null)
+                mod.Save();
         }
 
-        // 恢复移动速度
-        if (mover != null)
+        mover?.Save();
+    }
+
+    public override void Unload()
+    {
+        if (_isUnloaded)
+            return;
+
+        _isUnloaded = true;
+        foreach (var mod in mods)
         {
-            mover.Data.Speed.MultiplicativeModifier /= 0.25f;
-            mover.Save();
+            if (mod != null)
+                mod.Unload();
         }
-       
+
+        if (_movementSpeedModified && mover != null)
+        {
+            mover.Data.Speed.MultiplicativeModifier /= MovementSpeedMultiplier;
+            _movementSpeedModified = false;
+        }
+
+        if (laserEffect != null)
+        {
+            Destroy(laserEffect.gameObject);
+            laserEffect = null;
+        }
     }
 
     #endregion
