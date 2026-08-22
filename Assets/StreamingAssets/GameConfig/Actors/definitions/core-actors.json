@@ -299,7 +299,6 @@
                 "Chopping": 1.0,
                 "Blunt": 1.0
               },
-              "ShowCanvas": true,
               "DamageInterval": 0.12,
               "DestroyDelay": 0.0,
               "LootTable": [
@@ -1007,7 +1006,6 @@
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
-              "ShowCanvas": true,
               "DamageInterval": 0.12,
               "DestroyDelay": 0.0,
               "LootTable": [
@@ -1766,7 +1764,6 @@
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
-              "ShowCanvas": true,
               "DamageInterval": 0.12,
               "DestroyDelay": 0.0,
               "LootTable": [
@@ -2344,7 +2341,6 @@
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
-              "ShowCanvas": true,
               "DamageInterval": 0.12,
               "DestroyDelay": 0.0,
               "LootTable": [],
