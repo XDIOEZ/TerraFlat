@@ -188,7 +188,7 @@ public class GameRes : SingletonAutoMono<GameRes>
             yield break;
         }
 
-        // 先解析 Addressables 位置，再过滤已迁入 JSON 的旧变体 Prefab。
+        // 先解析 Addressables 位置，再过滤 JSON 目录独占的 Prefab。
         yield return StartCoroutine(SyncLoadPrefabsWithProgress(
             new List<string> { "ItemPrefab", "Prefab" },
             redundantItemPrefabPaths,
@@ -513,12 +513,37 @@ public class GameRes : SingletonAutoMono<GameRes>
             yield break;
         }
 
+        // Actor 外壳只能由 ActorDefinition 目录加载；通用 Prefab 管线提前加载会产生重复实例与别名冲突。
+        AsyncOperationHandle<IList<IResourceLocation>> actorShellLocationsHandle =
+            Addressables.LoadResourceLocationsAsync(
+                ActorDefinitionCatalogLoader.ShellAddressableLabel,
+                typeof(GameObject));
+        while (!actorShellLocationsHandle.IsDone)
+        {
+            loadingText = progressText;
+            yield return null;
+        }
+        if (actorShellLocationsHandle.Status != AsyncOperationStatus.Succeeded)
+        {
+            MarkResourceLoadingFailed(
+                $"无法解析 ActorShell Addressables 位置：{actorShellLocationsHandle.OperationException?.Message ?? "Addressables 操作未成功"}",
+                actorShellLocationsHandle.OperationException);
+            Addressables.Release(locationsHandle);
+            yield break;
+        }
+
         excludedPaths ??= new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        var actorShellInternalIds = new HashSet<string>(
+            actorShellLocationsHandle.Result
+                .Where(location => location != null)
+                .Select(location => location.InternalId),
+            System.StringComparer.OrdinalIgnoreCase);
         List<IResourceLocation> locations = locationsHandle.Result
             .Where(location => location != null)
             .GroupBy(location => location.PrimaryKey, System.StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .Where(location => !excludedPaths.Contains((location.PrimaryKey ?? string.Empty).Replace('\\', '/')))
+            .Where(location => !actorShellInternalIds.Contains(location.InternalId))
             .ToList();
         int skippedCount = locationsHandle.Result.Count - locations.Count;
 
@@ -526,7 +551,7 @@ public class GameRes : SingletonAutoMono<GameRes>
             Addressables.LoadAssetsAsync<GameObject>(locations, null, true);
         while (!assetsHandle.IsDone)
         {
-            loadingText = $"{progressText}（已跳过 {skippedCount} 个 JSON 变体）";
+            loadingText = $"{progressText}（已跳过 {skippedCount} 个 JSON 专用 Prefab）";
             loadingProgress = GetAssetLoadingProgress();
             yield return null;
         }
@@ -550,8 +575,9 @@ public class GameRes : SingletonAutoMono<GameRes>
                 yield return null;
         }
 
-        Debug.Log($"[GameRes] Prefab 加载计划：加载 {locations.Count}，跳过 JSON 旧变体 {skippedCount}");
+        Debug.Log($"[GameRes] Prefab 加载计划：加载 {locations.Count}，跳过 JSON 专用 Prefab {skippedCount}");
         loadingProgress = GetAssetLoadingProgress();
+        Addressables.Release(actorShellLocationsHandle);
         Addressables.Release(locationsHandle);
     }
 

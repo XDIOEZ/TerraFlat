@@ -16,6 +16,7 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 public static class ActorDefinitionCatalogLoader
 {
     public const int SupportedSchemaVersion = 1;
+    public const string ShellAddressableLabel = "ActorShell";
     public const string RelativeActorRoot = "GameConfig/Actors";
     public const string ManifestFileName = "actor-manifest.json";
     public const string RelativeManifestPath = RelativeActorRoot + "/" + ManifestFileName;
