@@ -34,32 +34,141 @@ public static class ModuleJsonConfigurator
         if (module == null || string.IsNullOrWhiteSpace(json))
             return;
 
-        JObject parameters;
-        try
-        {
-            parameters = JObject.Parse(json);
-        }
-        catch (Exception exception)
-        {
-            throw new InvalidOperationException($"物品 {itemId} 的模块 {moduleName}({moduleId}) JSON 参数无效", exception);
-        }
-
-        ApplySpecialParameters(module, parameters);
-        foreach (JProperty property in parameters.Properties())
-        {
-            if (ReservedNames.Contains(property.Name))
-                throw new InvalidOperationException($"模块 {moduleName} 不允许配置保留字段：{property.Name}");
-            if (property.Name.StartsWith("$", StringComparison.Ordinal))
-                throw new InvalidOperationException($"模块 {moduleName} 包含未知特殊参数：{property.Name}");
-        }
+        JObject parameters = ParseParameters(itemId, moduleName, moduleId, json);
 
         try
         {
+            ValidateParameters(module, moduleName, parameters);
+            ApplySpecialParameters(module, parameters);
             JsonConvert.PopulateObject(parameters.ToString(Formatting.None), module, Settings);
         }
         catch (Exception exception)
         {
             throw new InvalidOperationException($"无法把 JSON 参数应用到物品 {itemId} 的模块 {moduleName}({moduleId})", exception);
+        }
+    }
+
+    /// <summary>按运行时同一套严格契约只读校验模块参数，不修改 Prefab 或运行时实例。</summary>
+    public static void Validate(Module module, string itemId, string moduleName, string moduleId, string json)
+    {
+        if (module == null || string.IsNullOrWhiteSpace(json))
+            return;
+
+        JObject parameters = ParseParameters(itemId, moduleName, moduleId, json);
+        try
+        {
+            ValidateParameters(module, moduleName, parameters);
+        }
+        catch (Exception exception)
+        {
+            throw new InvalidOperationException(
+                $"物品 {itemId} 的模块 {moduleName}({moduleId}) JSON 参数与 {module.GetType().Name} 不匹配",
+                exception);
+        }
+    }
+
+    /// <summary>解析模块参数根对象。</summary>
+    private static JObject ParseParameters(
+        string itemId,
+        string moduleName,
+        string moduleId,
+        string json)
+    {
+        try
+        {
+            return JObject.Parse(json);
+        }
+        catch (Exception exception)
+        {
+            throw new InvalidOperationException($"物品 {itemId} 的模块 {moduleName}({moduleId}) JSON 参数无效", exception);
+        }
+    }
+
+    /// <summary>校验普通字段及特殊块，确保内容配置不会延迟到实例化时才失败。</summary>
+    private static void ValidateParameters(Module module, string moduleName, JObject parameters)
+    {
+        JsonSerializer serializer = JsonSerializer.Create(Settings);
+        if (serializer.ContractResolver.ResolveContract(module.GetType()) is not JsonObjectContract contract)
+            throw new JsonSerializationException($"模块类型 {module.GetType().Name} 不是可配置对象");
+
+        ValidateTransformParameters(parameters["$transform"], serializer);
+        ValidateColliderParameters(module, parameters["$collider2D"], serializer);
+
+        foreach (JProperty property in parameters.Properties())
+        {
+            if (ReservedNames.Contains(property.Name))
+                throw new InvalidOperationException($"模块 {moduleName} 不允许配置保留字段：{property.Name}");
+            if (property.Name.StartsWith("$", StringComparison.Ordinal))
+            {
+                if (property.Name is "$transform" or "$collider2D")
+                    continue;
+                throw new InvalidOperationException($"模块 {moduleName} 包含未知特殊参数：{property.Name}");
+            }
+
+            JsonProperty target = contract.Properties.GetClosestMatchProperty(property.Name);
+            if (target == null || target.Ignored)
+                throw new JsonSerializationException(
+                    $"模块 {module.GetType().Name} 不包含可配置字段 {property.Name}");
+
+            property.Value.ToObject(target.PropertyType, serializer);
+        }
+    }
+
+    /// <summary>校验 Transform 特殊参数的字段和类型。</summary>
+    private static void ValidateTransformParameters(JToken token, JsonSerializer serializer)
+    {
+        if (token == null)
+            return;
+        if (token is not JObject transform)
+            throw new JsonSerializationException("$transform 必须是对象");
+
+        foreach (JProperty property in transform.Properties())
+        {
+            if (property.Name is not ("localPosition" or "localEulerAngles" or "localScale"))
+                throw new JsonSerializationException($"$transform 包含未知字段 {property.Name}");
+            property.Value.ToObject<Vector3>(serializer);
+        }
+    }
+
+    /// <summary>校验 Collider2D 特殊参数的字段、类型与目标组件。</summary>
+    private static void ValidateColliderParameters(Module module, JToken token, JsonSerializer serializer)
+    {
+        if (token == null)
+            return;
+        if (token is not JObject data)
+            throw new JsonSerializationException("$collider2D 必须是对象");
+
+        Collider2D collider = module.GetComponent<Collider2D>();
+        if (collider == null)
+            throw new MissingComponentException($"模块 {module.GetType().Name} 缺少 JSON 所需的 Collider2D");
+
+        foreach (JProperty property in data.Properties())
+        {
+            Type valueType = property.Name switch
+            {
+                "type" => typeof(string),
+                "enabled" or "isTrigger" => typeof(bool),
+                "offset" => typeof(Vector2),
+                "size" when collider is BoxCollider2D or CapsuleCollider2D => typeof(Vector2),
+                "edgeRadius" when collider is BoxCollider2D => typeof(float),
+                "radius" when collider is CircleCollider2D => typeof(float),
+                "direction" when collider is CapsuleCollider2D => typeof(int),
+                "points" when collider is PolygonCollider2D => typeof(Vector2[]),
+                _ => null
+            };
+            if (valueType == null)
+                throw new JsonSerializationException(
+                    $"{collider.GetType().Name} 不支持 $collider2D.{property.Name}");
+
+            property.Value.ToObject(valueType, serializer);
+        }
+
+        string configuredType = data.Value<string>("type");
+        if (!string.IsNullOrWhiteSpace(configuredType) &&
+            !string.Equals(configuredType, collider.GetType().Name, StringComparison.Ordinal))
+        {
+            throw new JsonSerializationException(
+                $"$collider2D.type={configuredType} 与目标组件 {collider.GetType().Name} 不一致");
         }
     }
 

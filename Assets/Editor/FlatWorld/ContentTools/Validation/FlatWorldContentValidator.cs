@@ -91,6 +91,8 @@ public static class FlatWorldContentValidator
     private const string ResourcesRoot = "Assets/Resources";
     private const string ItemRootAssetPath = "Assets/StreamingAssets/GameConfig/Items";
     private const string ItemManifestAssetPath = ItemRootAssetPath + "/item-manifest.json";
+    private const string ActorRootAssetPath = "Assets/StreamingAssets/GameConfig/Actors";
+    private const string ActorManifestAssetPath = ActorRootAssetPath + "/actor-manifest.json";
     private const string RecipeRootAssetPath = "Assets/StreamingAssets/GameConfig/Recipes";
     private const string RecipeManifestAssetPath = RecipeRootAssetPath + "/recipe-manifest.json";
     private const string WorldManagerPrefabPath = "Assets/2_Prefabs/Core/Managers/WorldManager.prefab";
@@ -155,6 +157,7 @@ public static class FlatWorldContentValidator
 
         RunRule(report, "FWC-SYS-001", PrefabRoot, "PrefabCatalog", () => BuildPrefabCatalog(context, report));
         RunRule(report, "FWC-SYS-011", ItemManifestAssetPath, "ItemDefinitionCatalog", () => ValidateItemDefinitions(context, report));
+        RunRule(report, "FWC-SYS-012", ActorManifestAssetPath, "ActorDefinitionCatalog", () => ValidateActorDefinitions(context, report));
         RunRule(report, "FWC-SYS-002", PrefabRoot, "ItemAndModule", () => ValidateItemsAndModules(context, report));
         RunRule(report, "FWC-SYS-003", RecipeManifestAssetPath, "RecipeCatalog", () => ValidateRecipes(context, report));
         RunRule(report, "FWC-SYS-004", PrefabRoot + "/Building", "BuildingPair", () => ValidateBuildings(context, report));
@@ -802,7 +805,190 @@ public static class FlatWorldContentValidator
                     $"模块 Prefab ID '{pair.Value.Prefab}' 无法解析。",
                     null);
             }
+
+            ValidateModuleJsonParameters(
+                context,
+                report,
+                definition,
+                pair.Key,
+                pair.Value,
+                assetPath);
         }
+    }
+
+    #endregion
+
+    #region Actor JSON 定义
+
+    /// <summary>校验 Actor 目录及其模块参数，避免生成到具体物种时才暴露配置漂移。</summary>
+    private static void ValidateActorDefinitions(
+        ValidationContext context,
+        FlatWorldContentValidationReport report)
+    {
+        IReadOnlyCollection<ItemDefinitionDto> definitions;
+        try
+        {
+            definitions = ActorDefinitionCatalogLoader.LoadBuiltInDefinitions();
+        }
+        catch (Exception exception)
+        {
+            AddError(
+                report,
+                "FWC-ACTORJSON-001",
+                ActorManifestAssetPath,
+                "ActorDefinitionCatalog",
+                exception.Message,
+                null);
+            return;
+        }
+
+        foreach (ItemDefinitionDto definition in definitions.Where(entry => entry != null && !entry.Abstract))
+        {
+            string actorField = $"actors[{definition.Id}]";
+            if (definition.Modules == null || definition.Modules.Count == 0)
+            {
+                AddError(
+                    report,
+                    "FWC-ACTORJSON-002",
+                    ActorManifestAssetPath,
+                    actorField + ".modules",
+                    "Actor 缺少模块配置。",
+                    null);
+                continue;
+            }
+
+            foreach (KeyValuePair<string, ItemModuleDefinitionDto> pair in definition.Modules)
+            {
+                string modulePrefabId = pair.Value?.Prefab?.Trim();
+                Module prototype = ResolveDefinitionModulePrototype(context, definition, modulePrefabId);
+                if (prototype == null)
+                {
+                    AddError(
+                        report,
+                        "FWC-ACTORJSON-003",
+                        ActorManifestAssetPath,
+                        $"{actorField}.modules[{pair.Key}].prefab",
+                        $"模块 Prefab ID '{pair.Value?.Prefab}' 无法解析到唯一 Module。",
+                        null);
+                    continue;
+                }
+
+                ValidateModuleJsonParameters(
+                    context,
+                    report,
+                    definition,
+                    pair.Key,
+                    pair.Value,
+                    ActorManifestAssetPath,
+                    prototype);
+            }
+        }
+    }
+
+    /// <summary>按真实模块类型校验定义参数，Item 与 Actor 共用同一运行时契约。</summary>
+    private static void ValidateModuleJsonParameters(
+        ValidationContext context,
+        FlatWorldContentValidationReport report,
+        ItemDefinitionDto definition,
+        string moduleName,
+        ItemModuleDefinitionDto moduleDefinition,
+        string assetPath,
+        Module resolvedPrototype = null)
+    {
+        if (moduleDefinition?.Parameters == null || !moduleDefinition.Parameters.HasValues)
+            return;
+
+        string modulePrefabId = moduleDefinition.Prefab?.Trim();
+        Module prototype = resolvedPrototype ??
+                           ResolveDefinitionModulePrototype(context, definition, modulePrefabId);
+        string field = $"definitions[{definition.Id}].modules[{moduleName}].parameters";
+        if (prototype == null)
+        {
+            AddError(
+                report,
+                "FWC-MODULEJSON-001",
+                assetPath,
+                field,
+                $"模块 Prefab ID '{moduleDefinition.Prefab}' 无法解析到唯一 Module，不能校验参数。",
+                null);
+            return;
+        }
+
+        try
+        {
+            ModuleJsonConfigurator.Validate(
+                prototype,
+                definition.Id,
+                moduleName,
+                string.IsNullOrWhiteSpace(moduleDefinition.Id) ? modulePrefabId : moduleDefinition.Id,
+                moduleDefinition.Parameters.ToString(Newtonsoft.Json.Formatting.None));
+        }
+        catch (Exception exception)
+        {
+            AddError(
+                report,
+                "FWC-MODULEJSON-002",
+                assetPath,
+                field,
+                $"{exception.Message}；{exception.GetBaseException().Message}",
+                prototype);
+        }
+    }
+
+    /// <summary>复用运行时模块选择规则解析参数目标类型。</summary>
+    private static Module ResolveDefinitionModulePrototype(
+        ValidationContext context,
+        ItemDefinitionDto definition,
+        string modulePrefabId)
+    {
+        if (string.IsNullOrWhiteSpace(modulePrefabId))
+            return null;
+
+        if (context.PrefabAliases.TryGetValue(modulePrefabId, out PrefabRecord moduleRecord))
+        {
+            Module module = FindMatchingModule(moduleRecord.Modules, modulePrefabId);
+            if (module != null)
+                return module;
+        }
+
+        if (!string.IsNullOrWhiteSpace(definition?.ShellPrefab) &&
+            context.PrefabAliases.TryGetValue(definition.ShellPrefab.Trim(), out PrefabRecord shellRecord))
+        {
+            Module module = FindMatchingModule(shellRecord.Modules, modulePrefabId, allowSingleFallback: false);
+            if (module != null)
+                return module;
+        }
+
+        if (!string.IsNullOrWhiteSpace(definition?.SourcePrefab))
+        {
+            GameObject sourcePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                definition.SourcePrefab.Trim().Replace('\\', '/'));
+            if (sourcePrefab != null)
+            {
+                return FindMatchingModule(
+                    sourcePrefab.GetComponentsInChildren<Module>(true),
+                    modulePrefabId,
+                    allowSingleFallback: false);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>优先按持久化 ID 匹配，多模块外壳禁止猜测第一个组件。</summary>
+    private static Module FindMatchingModule(
+        IReadOnlyCollection<Module> modules,
+        string modulePrefabId,
+        bool allowSingleFallback = true)
+    {
+        if (modules == null)
+            return null;
+
+        Module[] candidates = modules.Where(module => module != null).ToArray();
+        Module matched = candidates.FirstOrDefault(module => module.MatchesPersistedId(modulePrefabId));
+        if (matched != null)
+            return matched;
+        return allowSingleFallback && candidates.Length == 1 ? candidates[0] : null;
     }
 
     #endregion

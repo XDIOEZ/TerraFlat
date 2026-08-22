@@ -22,6 +22,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 注册/注销、保存/销毁各执行一次；`PrepareForDespawn` 与 `OnDestroy` 不得被外部重复调用。
 - 远程网络副本不进入本地 Tick、感知和存档索引。
 - 新模块同时检查脚本、ModuleData、模块/Item Prefab、Addressables 与 JSON 定义。
+- Item 与 Actor 的 `modules.*.parameters` 共用 `ModuleJsonConfigurator` 严格契约；删除或改名可配置字段后必须同步现行 JSON，并运行“FlatWorld/内容配置/校验全部本体内容”，禁止等到具体实例生成时才发现漂移。
 - Manifest 是唯一发现入口；包的最终 `shellPrefab` 必须与声明一致。
 - 内容工坊创建物品时只写继承差异：父定义和参考模块必须来自启用分包，Sprite 先生成稳定 Addressables 地址，JSON 写入前校验继承、重复 ID、文件指纹与分包外壳边界。
 - `RuntimeItemDefinition.IsActor` 只表示复用通用管线；Actor 还必须登记到 `GameRes.ActorDefinitions` 且外壳包含 `IAIActor`。
