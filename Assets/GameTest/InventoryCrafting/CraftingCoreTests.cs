@@ -154,6 +154,70 @@ namespace FlatWorld.GameTest.InventoryCrafting
             Assert.That(matched, Is.False);
         }
 
+        [Test]
+        [Category("InventoryCrafting.Core")]
+        public void Matcher_UnorderedOverlappingTags_FindsGlobalConsumptionPlan()
+        {
+            Inventory input = CreateInventory(
+                "输入",
+                20f,
+                CreateItem("shared", 5f, "a", "b"),
+                CreateItem("a_only", 4f, "a"),
+                CreateItem("b_only", 5f, "b"));
+            RuntimeRecipe recipe = new RuntimeRecipe
+            {
+                Id = "test_unordered_overlapping_tags",
+                inputs = new RuntimeRecipeInput
+                {
+                    GridWidth = 3,
+                    GridHeight = 1,
+                    inputOrder = RecipeInputRule.无规则合成,
+                    RowItems_List = new List<RuntimeRecipeIngredient>
+                    {
+                        Tag("b", 9),
+                        Tag("a", 5),
+                        Tag("a", 0)
+                    }
+                }
+            };
+
+            bool matched = CraftingRecipeMatcher.TryMatchRecipe(
+                input,
+                recipe,
+                new CraftingCapabilities { RecipeType = RecipeType.Crafting },
+                out CraftingRecipeMatch match);
+
+            Assert.That(matched, Is.True);
+            Assert.That(match.Consumptions, Has.Count.EqualTo(3));
+            Assert.That(match.Consumptions[0].Amount, Is.EqualTo(5f).Within(0.0001f));
+            Assert.That(match.Consumptions[1].Amount, Is.EqualTo(4f).Within(0.0001f));
+            Assert.That(match.Consumptions[2].Amount, Is.EqualTo(5f).Within(0.0001f));
+        }
+
+        [Test]
+        [Category("InventoryCrafting.Core")]
+        public void Transaction_MultipleNonStackableOutputs_RequireOneSlotPerUnit()
+        {
+            Inventory input = CreateInventory("输入", 10f, CreateItem("wood", 1f));
+            Inventory output = CreateInventory("输出", 5f, (ItemData)null);
+            ItemData heavyOutput = CreateItem("anvil", 2f);
+            heavyOutput.Stack.Volume = 5f;
+
+            bool prepared = CraftingTransaction.TryCreate(
+                input,
+                output,
+                CreateMatch(new CraftingConsumption(0, 1f)),
+                new[] { heavyOutput },
+                false,
+                out _,
+                out CraftingResult failure);
+
+            Assert.That(prepared, Is.False);
+            Assert.That(failure.FailureReason, Is.EqualTo(CraftingFailureReason.OutputSpaceInsufficient));
+            Assert.That(input.Data.itemSlots[0].itemData.Stack.Amount, Is.EqualTo(1f));
+            Assert.That(output.Data.itemSlots[0].itemData, Is.Null);
+        }
+
         private static CraftingRecipeMatch CreateMatch(params CraftingConsumption[] consumptions)
         {
             return new CraftingRecipeMatch(new RuntimeRecipe { Id = "test_recipe" }, false, consumptions);
@@ -201,13 +265,13 @@ namespace FlatWorld.GameTest.InventoryCrafting
             };
         }
 
-        private static RuntimeRecipeIngredient Tag(string tag)
+        private static RuntimeRecipeIngredient Tag(string tag, int amount = 1)
         {
             return new RuntimeRecipeIngredient
             {
                 matchMode = MatchMode.ByTag,
                 Tag = tag,
-                amount = 1
+                amount = amount
             };
         }
     }

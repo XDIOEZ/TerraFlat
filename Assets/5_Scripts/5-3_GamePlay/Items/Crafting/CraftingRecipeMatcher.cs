@@ -30,14 +30,19 @@ public static class CraftingRecipeMatcher
             return false;
         }
 
-        IEnumerable<RuntimeRecipe> recipes = GetCandidateRecipes(capabilities.RecipeType);
-        foreach (RuntimeRecipe recipe in recipes)
+        IReadOnlyList<RuntimeRecipe> recipes = GetCandidateRecipes(capabilities.RecipeType);
+        bool hasSupportedRecipe = false;
+        for (int recipeIndex = 0; recipeIndex < recipes.Count; recipeIndex++)
         {
+            RuntimeRecipe recipe = recipes[recipeIndex];
+            hasSupportedRecipe |= IsRecipeSupported(recipe, capabilities);
             if (TryMatchRecipe(inputSlots, recipe, capabilities, out match))
                 return true;
         }
 
-        failure = CraftingResult.Failed(CraftingFailureReason.RecipeNotFound, "当前输入没有匹配的配方");
+        failure = recipes.Count > 0 && !hasSupportedRecipe
+            ? CraftingResult.Failed(CraftingFailureReason.RecipeNotSupported, "当前制作入口不支持目录中的配方尺寸")
+            : CraftingResult.Failed(CraftingFailureReason.RecipeNotFound, "当前输入没有匹配的配方");
         return false;
     }
 
@@ -79,8 +84,8 @@ public static class CraftingRecipeMatcher
                 Recipe = recipe,
                 RequiredCount = CountRequiredIngredients(recipe.inputs.RowItems_List),
                 IdentityMatches = recipe.inputs.RowItems_List.Count(required =>
-                    !IsEmptyIngredient(required) &&
-                    inputSlots.Any(slot => MatchesIdentity(required, slot?.itemData)))
+                    !CraftingIngredientMatcher.IsEmpty(required) &&
+                    inputSlots.Any(slot => CraftingIngredientMatcher.MatchesIdentity(required, slot?.itemData)))
             })
             .Where(candidate => candidate.IdentityMatches > 0)
             .OrderByDescending(candidate => candidate.Recipe.inputs.inputOrder == RecipeInputRule.规则合成)
@@ -111,7 +116,7 @@ public static class CraftingRecipeMatcher
     {
         return "[" + string.Join(", ", recipe.inputs.RowItems_List.Select((ingredient, index) =>
         {
-            if (IsEmptyIngredient(ingredient))
+            if (CraftingIngredientMatcher.IsEmpty(ingredient))
                 return $"{index}:空";
 
             string identity = ingredient.matchMode == MatchMode.ByTag
@@ -129,22 +134,18 @@ public static class CraftingRecipeMatcher
 
     #endregion
 
-    private static IEnumerable<RuntimeRecipe> GetCandidateRecipes(RecipeType recipeType)
+    private static IReadOnlyList<RuntimeRecipe> GetCandidateRecipes(RecipeType recipeType)
     {
-        if (GameRes.Instance?.recipeById == null)
-            return Enumerable.Empty<RuntimeRecipe>();
-
-        return GameRes.Instance.recipeById.Values
-            .Where(recipe => recipe?.inputs != null && recipe.inputs.recipeType == recipeType)
-            // 有序图案比无序数量配方更具体，必须先匹配，避免大堆叠材料被建筑等宽泛配方截获。
-            .OrderByDescending(recipe => recipe.inputs.inputOrder == RecipeInputRule.规则合成)
-            .ThenByDescending(recipe => CountRequiredIngredients(recipe.inputs.RowItems_List))
-            .ThenBy(recipe => recipe.Id, StringComparer.Ordinal);
+        return GameRes.Instance != null
+            ? GameRes.Instance.GetRecipes(recipeType)
+            : Array.Empty<RuntimeRecipe>();
     }
 
     private static bool IsRecipeSupported(RuntimeRecipe recipe, CraftingCapabilities capabilities)
     {
         if (recipe?.inputs?.RowItems_List == null || recipe.inputs.RowItems_List.Count == 0)
+            return false;
+        if (recipe.inputs.recipeType != capabilities.RecipeType)
             return false;
         if (capabilities.MaxRecipeWidth > 0 && recipe.inputs.GridWidth > capabilities.MaxRecipeWidth)
             return false;
@@ -225,7 +226,7 @@ public static class CraftingRecipeMatcher
 
                 RuntimeRecipeIngredient required = recipe.inputs.RowItems_List[recipeIndex];
                 ItemData actual = inputSlots[inputIndex]?.itemData;
-                if (!Matches(required, actual))
+                if (!CraftingIngredientMatcher.Matches(required, actual))
                     return false;
                 if (required.amount > 0)
                     consumptions.Add(new CraftingConsumption(inputIndex, required.amount));
@@ -245,99 +246,40 @@ public static class CraftingRecipeMatcher
         out CraftingRecipeMatch match)
     {
         match = null;
-        int requiredSlotCount = recipe.inputs.RowItems_List.Count(required => !IsEmptyIngredient(required));
+        int requiredSlotCount = recipe.inputs.RowItems_List.Count(required => !CraftingIngredientMatcher.IsEmpty(required));
         int occupiedSlotCount = inputSlots.Count(slot => slot?.itemData != null);
         // 无规则配方只要求材料总量满足；同一种材料可以集中在一个堆叠槽中，不能强制玩家先把它拆成多个槽位。
         // 但额外放入未声明的材料仍然要拒绝，避免误匹配后被事务消耗。
         if (requiredSlotCount == 0 || occupiedSlotCount > requiredSlotCount)
             return false;
 
-        var remaining = new float[inputSlots.Count];
-        for (int i = 0; i < inputSlots.Count; i++)
-            remaining[i] = inputSlots[i]?.itemData?.Stack?.Amount ?? 0f;
-
-        var consumptions = new Dictionary<int, float>();
-        IEnumerable<RuntimeRecipeIngredient> requiredIngredients = recipe.inputs.RowItems_List
-            .Where(required => !IsEmptyIngredient(required))
-            .OrderBy(required => inputSlots.Count(slot => MatchesIdentity(required, slot?.itemData)))
-            .ThenByDescending(required => required.amount);
-        foreach (RuntimeRecipeIngredient required in requiredIngredients)
+        if (!CraftingMaterialAllocator.TryAllocate(
+                inputSlots,
+                recipe.inputs.RowItems_List,
+                out List<CraftingConsumption> consumptions))
         {
-            float need = required.amount;
-            bool foundMatch = false;
-            for (int i = 0; i < inputSlots.Count; i++)
-            {
-                ItemData itemData = inputSlots[i]?.itemData;
-                if (!MatchesIdentity(required, itemData))
-                    continue;
-
-                foundMatch = true;
-                if (need <= 0f)
-                    continue;
-
-                float consumed = Mathf.Min(need, remaining[i]);
-                if (consumed <= 0f)
-                    continue;
-
-                remaining[i] -= consumed;
-                need -= consumed;
-                consumptions[i] = consumptions.TryGetValue(i, out float previous) ? previous + consumed : consumed;
-                if (need <= 0f)
-                    break;
-            }
-
-            if (!foundMatch || need > 0.0001f)
-                return false;
+            return false;
         }
 
         foreach (ItemSlot slot in inputSlots)
         {
             if (slot?.itemData == null)
                 continue;
-            if (!recipe.inputs.RowItems_List.Any(required => !IsEmptyIngredient(required) && MatchesIdentity(required, slot.itemData)))
+            if (!recipe.inputs.RowItems_List.Any(required =>
+                    !CraftingIngredientMatcher.IsEmpty(required) &&
+                    CraftingIngredientMatcher.MatchesIdentity(required, slot.itemData)))
+            {
                 return false;
+            }
         }
 
-        match = new CraftingRecipeMatch(
-            recipe,
-            false,
-            consumptions.Select(pair => new CraftingConsumption(pair.Key, pair.Value)).ToList());
+        match = new CraftingRecipeMatch(recipe, false, consumptions);
         return true;
-    }
-
-    private static bool Matches(RuntimeRecipeIngredient required, ItemData actual)
-    {
-        if (IsEmptyIngredient(required))
-            return actual == null;
-        if (!MatchesIdentity(required, actual))
-            return false;
-        return required.amount <= 0f || actual.Stack != null && actual.Stack.Amount >= required.amount;
-    }
-
-    private static bool MatchesIdentity(RuntimeRecipeIngredient required, ItemData actual)
-    {
-        if (required == null || actual == null)
-            return false;
-        if (required.matchMode == MatchMode.ByTag)
-        {
-            string requiredTag = required.Tag?.Trim();
-            return !string.IsNullOrEmpty(requiredTag) &&
-                   actual.Tags != null &&
-                   actual.Tags.Any(tag => string.Equals(tag?.Trim(), requiredTag, StringComparison.OrdinalIgnoreCase));
-        }
-
-        return string.Equals(actual.IDName?.Trim(), required.ItemName?.Trim(), StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsEmptyIngredient(RuntimeRecipeIngredient ingredient)
-    {
-        return ingredient == null ||
-               ingredient.amount <= 0 && string.IsNullOrWhiteSpace(ingredient.ItemName) && string.IsNullOrWhiteSpace(ingredient.Tag);
     }
 
     private static int CountRequiredIngredients(IEnumerable<RuntimeRecipeIngredient> ingredients)
     {
-        return ingredients?.Count(ingredient => !IsEmptyIngredient(ingredient)) ?? 0;
+        return ingredients?.Count(ingredient => !CraftingIngredientMatcher.IsEmpty(ingredient)) ?? 0;
     }
 
     private static List<ItemSlot> GetInputSlots(Inventory inventory, int slotLimit)

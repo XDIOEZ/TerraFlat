@@ -25,11 +25,58 @@ public sealed class CraftingTransaction
         out CraftingTransaction transaction,
         out CraftingResult failure)
     {
+        return TryBuild(
+            inputInventory,
+            outputInventory,
+            match,
+            outputs,
+            allowOutputIntoInput,
+            true,
+            out transaction,
+            out failure);
+    }
+
+    /// <summary>只模拟扣料与全部产物放置，不保留回滚快照，也不创建可提交事务。</summary>
+    public static bool CanCreate(
+        Inventory inputInventory,
+        Inventory outputInventory,
+        CraftingRecipeMatch match,
+        IReadOnlyList<ItemData> outputs,
+        bool allowOutputIntoInput,
+        out CraftingResult failure)
+    {
+        return TryBuild(
+            inputInventory,
+            outputInventory,
+            match,
+            outputs,
+            allowOutputIntoInput,
+            false,
+            out _,
+            out failure);
+    }
+
+    /// <summary>构建制作快照；预览仅保留工作态，正式提交同时保留原始态。</summary>
+    private static bool TryBuild(
+        Inventory inputInventory,
+        Inventory outputInventory,
+        CraftingRecipeMatch match,
+        IReadOnlyList<ItemData> outputs,
+        bool allowOutputIntoInput,
+        bool retainTransaction,
+        out CraftingTransaction transaction,
+        out CraftingResult failure)
+    {
         transaction = null;
         failure = null;
         if (inputInventory?.Data?.itemSlots == null || outputInventory?.Data?.itemSlots == null || match == null)
         {
             failure = CraftingResult.Failed(CraftingFailureReason.InvalidInventory, "制作事务缺少有效库存或配方匹配");
+            return false;
+        }
+        if (outputs == null || outputs.Count == 0)
+        {
+            failure = CraftingResult.Failed(CraftingFailureReason.InvalidOutput, "制作事务没有有效产物", match.Recipe);
             return false;
         }
         if (inputInventory.Data.itemSlots.Exists(slot => slot == null) ||
@@ -40,14 +87,17 @@ public sealed class CraftingTransaction
         }
 
         var states = new List<InventoryState>();
-        InventoryState inputState = GetOrCreateState(states, inputInventory);
-        InventoryState outputState = GetOrCreateState(states, outputInventory);
+        InventoryState inputState = GetOrCreateState(states, inputInventory, retainTransaction);
+        InventoryState outputState = GetOrCreateState(states, outputInventory, retainTransaction);
 
         foreach (CraftingConsumption consumption in match.Consumptions)
         {
             if (!inputState.TryConsume(consumption.SlotIndex, consumption.Amount))
             {
-                failure = CraftingResult.Failed(CraftingFailureReason.MissingMaterials, "输入材料在事务预检时不足", match.Recipe);
+                failure = CraftingResult.Failed(
+                    CraftingFailureReason.MissingMaterials,
+                    "输入材料在事务预检时不足",
+                    match.Recipe);
                 return false;
             }
         }
@@ -66,7 +116,8 @@ public sealed class CraftingTransaction
             return false;
         }
 
-        transaction = new CraftingTransaction(states);
+        if (retainTransaction)
+            transaction = new CraftingTransaction(states);
         return true;
     }
 
@@ -100,7 +151,7 @@ public sealed class CraftingTransaction
         }
 
         var states = new List<InventoryState>();
-        InventoryState outputState = GetOrCreateState(states, outputInventory);
+        InventoryState outputState = GetOrCreateState(states, outputInventory, true);
         foreach (ItemData output in outputs)
         {
             if (outputState.TryAdd(output))
@@ -177,7 +228,10 @@ public sealed class CraftingTransaction
         committed = false;
     }
 
-    private static InventoryState GetOrCreateState(List<InventoryState> states, Inventory inventory)
+    private static InventoryState GetOrCreateState(
+        List<InventoryState> states,
+        Inventory inventory,
+        bool captureOriginalState)
     {
         foreach (InventoryState state in states)
         {
@@ -185,7 +239,7 @@ public sealed class CraftingTransaction
                 return state;
         }
 
-        var created = new InventoryState(inventory);
+        var created = new InventoryState(inventory, captureOriginalState);
         states.Add(created);
         return created;
     }
@@ -195,13 +249,21 @@ public sealed class CraftingTransaction
         private readonly List<ItemData> originalItems = new List<ItemData>();
         private readonly List<ItemData> workingItems = new List<ItemData>();
 
-        public InventoryState(Inventory inventory)
+        public InventoryState(Inventory inventory, bool captureOriginalState)
         {
             Inventory = inventory;
             foreach (ItemSlot slot in inventory.Data.itemSlots)
             {
-                originalItems.Add(Clone(slot?.itemData));
-                workingItems.Add(Clone(slot?.itemData));
+                ItemData snapshot = Clone(slot?.itemData);
+                if (captureOriginalState)
+                {
+                    originalItems.Add(snapshot);
+                    workingItems.Add(Clone(snapshot));
+                }
+                else
+                {
+                    workingItems.Add(snapshot);
+                }
             }
         }
 
@@ -245,22 +307,15 @@ public sealed class CraftingTransaction
 
         private bool TryAddCore(ItemData source)
         {
+            float unitVolume = source.Stack.Volume;
+            if (unitVolume <= CraftingIngredientMatcher.AmountEpsilon)
+                return false;
 
-            float unitVolume = source.Stack.Volume > 0f ? source.Stack.Volume : 1f;
             float remaining = source.Stack.Amount;
             if (unitVolume > 1f)
-            {
-                for (int i = 0; i < workingItems.Count; i++)
-                {
-                    if (workingItems[i] != null || Inventory.Data.itemSlots[i].SlotMaxVolume < unitVolume)
-                        continue;
-                    workingItems[i] = Clone(source);
-                    return true;
-                }
-                return false;
-            }
+                return TryAddNonStackable(source, unitVolume, remaining);
 
-            for (int i = 0; i < workingItems.Count && remaining > 0.0001f; i++)
+            for (int i = 0; i < workingItems.Count && remaining > CraftingIngredientMatcher.AmountEpsilon; i++)
             {
                 ItemData target = workingItems[i];
                 if (!CanStack(target, source))
@@ -275,7 +330,7 @@ public sealed class CraftingTransaction
                 remaining -= amountToAdd;
             }
 
-            for (int i = 0; i < workingItems.Count && remaining > 0.0001f; i++)
+            for (int i = 0; i < workingItems.Count && remaining > CraftingIngredientMatcher.AmountEpsilon; i++)
             {
                 if (workingItems[i] != null)
                     continue;
@@ -292,7 +347,32 @@ public sealed class CraftingTransaction
                 remaining -= amountToAdd;
             }
 
-            return remaining <= 0.0001f;
+            return remaining <= CraftingIngredientMatcher.AmountEpsilon;
+        }
+
+        /// <summary>体积大于 1 的物品不可堆叠，每个整数单位必须独占一个可容纳它的空槽。</summary>
+        private bool TryAddNonStackable(ItemData source, float unitVolume, float amount)
+        {
+            int unitCount = Mathf.RoundToInt(amount);
+            if (unitCount <= 0 || Mathf.Abs(amount - unitCount) > CraftingIngredientMatcher.AmountEpsilon)
+                return false;
+
+            for (int i = 0; i < workingItems.Count && unitCount > 0; i++)
+            {
+                if (workingItems[i] != null ||
+                    Inventory.Data.itemSlots[i].SlotMaxVolume + CraftingIngredientMatcher.AmountEpsilon < unitVolume)
+                {
+                    continue;
+                }
+
+                ItemData created = Clone(source);
+                created.Stack.Amount = 1f;
+                created.Stack.CanBePickedUp = false;
+                workingItems[i] = created;
+                unitCount--;
+            }
+
+            return unitCount == 0;
         }
 
         public void ApplyWorkingState()

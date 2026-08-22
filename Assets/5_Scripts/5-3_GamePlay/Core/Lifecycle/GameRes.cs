@@ -42,9 +42,11 @@ public class GameRes : SingletonAutoMono<GameRes>
     [ShowInInspector]
     public Dictionary<string, RuntimeRecipe> recipeDict = new Dictionary<string, RuntimeRecipe>();
 
-    [Header("配方ID字典")]
     [ShowInInspector]
-    public Dictionary<string, RuntimeRecipe> recipeById = new Dictionary<string, RuntimeRecipe>();
+    public IReadOnlyDictionary<string, RuntimeRecipe> recipeById => recipeCatalog.RecipesById;
+
+    /// <summary>运行时配方的权威索引；注册时构建类型候选顺序。</summary>
+    private readonly CraftingRecipeCatalog recipeCatalog = new CraftingRecipeCatalog();
 
     [Header("TileBase字典")]
     [ShowInInspector]
@@ -574,7 +576,7 @@ private void ClearAllDictionaries()
     SpawnerConfigCatalogService.Reset();
     legacyItemDataTemplates.Clear();
     recipeDict.Clear();
-    recipeById.Clear();
+    recipeCatalog.Clear();
     tileBaseDict.Clear();
     TileBlockDict.Clear();
     BuffDefinitions.Clear();
@@ -1000,11 +1002,17 @@ public void HotReloadAllResources()
     
     public RuntimeRecipe GetRecipe(string recipeName)
     {
-        if (recipeById.TryGetValue(recipeName, out RuntimeRecipe recipe))
+        if (recipeCatalog.TryGet(recipeName, out RuntimeRecipe recipe))
             return recipe;
 
         recipeDict.TryGetValue(recipeName, out recipe);
         return recipe;
+    }
+
+    /// <summary>返回按匹配优先级预排序的指定类型配方。</summary>
+    public IReadOnlyList<RuntimeRecipe> GetRecipes(RecipeType recipeType)
+    {
+        return recipeCatalog.GetByType(recipeType);
     }
 
     /// <summary>
@@ -1025,7 +1033,7 @@ public void HotReloadAllResources()
         if (recipeDict.TryGetValue(inputKey, out RuntimeRecipe existing))
             Debug.LogWarning($"[RecipeCatalog] 配方 {recipe.Id} 覆盖相同输入签名的配方 {existing.Id}：{inputKey}");
 
-        recipeById.Add(recipe.Id, recipe);
+        recipeCatalog.Register(recipe);
         recipeDict[inputKey] = recipe;
         LoadedCount++;
     }

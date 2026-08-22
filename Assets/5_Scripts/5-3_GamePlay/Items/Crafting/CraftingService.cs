@@ -16,7 +16,7 @@ public static class CraftingService
         Inventory outputInventory,
         CraftingCapabilities capabilities)
     {
-        return Prepare(inputInventory, outputInventory, capabilities, out _);
+        return Prepare(inputInventory, outputInventory, capabilities, false, out _);
     }
 
     public static CraftingResult Craft(
@@ -27,12 +27,17 @@ public static class CraftingService
     {
         if (inputInventory == null || outputInventory == null)
             return CraftingResult.Failed(CraftingFailureReason.InvalidInventory, "输入或输出库存为空");
-        if (!ActiveInventories.Add(inputInventory))
-            return CraftingResult.Failed(CraftingFailureReason.InventoryChanged, "该输入库存正在执行另一笔制作事务");
+        if (!TryAcquireInventories(inputInventory, outputInventory, out List<Inventory> acquiredInventories))
+            return CraftingResult.Failed(CraftingFailureReason.InventoryChanged, "输入或输出库存正在执行另一笔制作事务");
 
         try
         {
-            CraftingResult prepared = Prepare(inputInventory, outputInventory, capabilities, out CraftingTransaction transaction);
+            CraftingResult prepared = Prepare(
+                inputInventory,
+                outputInventory,
+                capabilities,
+                true,
+                out CraftingTransaction transaction);
             if (!prepared.Success)
                 return prepared;
 
@@ -59,7 +64,7 @@ public static class CraftingService
         }
         finally
         {
-            ActiveInventories.Remove(inputInventory);
+            ReleaseInventories(acquiredInventories);
         }
     }
 
@@ -67,6 +72,7 @@ public static class CraftingService
         Inventory inputInventory,
         Inventory outputInventory,
         CraftingCapabilities capabilities,
+        bool createTransaction,
         out CraftingTransaction transaction)
     {
         transaction = null;
@@ -79,20 +85,79 @@ public static class CraftingService
         if (!TryPrepareOutputs(match.Recipe, out List<ItemData> outputs, out CraftingResult outputFailure))
             return outputFailure;
 
-        if (!CraftingTransaction.TryCreate(
+        CraftingResult transactionFailure;
+        bool canCommit;
+        if (createTransaction)
+        {
+            canCommit = CraftingTransaction.TryCreate(
                 inputInventory,
                 outputInventory,
                 match,
                 outputs,
                 capabilities.AllowOutputIntoInput,
                 out transaction,
-                out CraftingResult transactionFailure))
+                out transactionFailure);
+        }
+        else
+        {
+            canCommit = CraftingTransaction.CanCreate(
+                inputInventory,
+                outputInventory,
+                match,
+                outputs,
+                capabilities.AllowOutputIntoInput,
+                out transactionFailure);
+        }
+
+        if (!canCommit)
         {
             return transactionFailure;
         }
 
         return CraftingResult.Succeeded(match.Recipe, outputs);
     }
+
+    #region 库存事务锁
+
+    /// <summary>同时锁定输入与输出库存，避免不同输入并发写入同一输出。</summary>
+    private static bool TryAcquireInventories(
+        Inventory inputInventory,
+        Inventory outputInventory,
+        out List<Inventory> acquiredInventories)
+    {
+        acquiredInventories = new List<Inventory>(2);
+        if (!TryAcquireInventory(inputInventory, acquiredInventories) ||
+            !TryAcquireInventory(outputInventory, acquiredInventories))
+        {
+            ReleaseInventories(acquiredInventories);
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TryAcquireInventory(Inventory inventory, List<Inventory> acquiredInventories)
+    {
+        for (int index = 0; index < acquiredInventories.Count; index++)
+        {
+            if (ReferenceEquals(acquiredInventories[index], inventory))
+                return true;
+        }
+
+        if (!ActiveInventories.Add(inventory))
+            return false;
+
+        acquiredInventories.Add(inventory);
+        return true;
+    }
+
+    private static void ReleaseInventories(IReadOnlyList<Inventory> inventories)
+    {
+        for (int index = 0; index < inventories.Count; index++)
+            ActiveInventories.Remove(inventories[index]);
+    }
+
+    #endregion
 
     private static bool TryPrepareOutputs(
         RuntimeRecipe recipe,
