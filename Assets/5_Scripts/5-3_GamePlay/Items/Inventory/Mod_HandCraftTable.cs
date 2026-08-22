@@ -342,7 +342,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     private void OnCraftButtonClick()
     {
         LogCraftDebug($"收到合成按钮点击：interactable={workButton != null && workButton.interactable}");
-        if (!TryGetCraftPreview(out _))
+        if (!TryGetCraftPreview(true, out _))
         {
             LogCraftDebug("按钮回调已进入，但提交前预检失败");
             ResetCraftProgress();
@@ -411,7 +411,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     private void RefreshCraftPreview()
     {
-        bool canCraft = TryGetCraftPreview(out ItemData previewItem);
+        bool canCraft = TryGetCraftPreview(false, out ItemData previewItem);
         RefreshCraftingPrompt(canCraft);
 
         if (_outputPreview == null)
@@ -573,7 +573,8 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         return result.Success;
     }
 
-    private bool TryGetCraftPreview(out ItemData previewItem)
+    /// <summary>预检制作结果；只有用户主动操作失败才输出未匹配诊断。</summary>
+    private bool TryGetCraftPreview(bool isUserInitiated, out ItemData previewItem)
     {
         CraftingResult result = CraftingService.Preview(inputInventory, outputInventory, Capabilities);
         string previousFailure = _lastCraftPreviewMessage;
@@ -581,6 +582,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             nameof(Mod_HandCraftTable),
             inputInventory,
             result,
+            isUserInitiated,
             ref _lastCraftPreviewMessage,
             Capabilities);
         if (result.Success && !string.IsNullOrEmpty(previousFailure))

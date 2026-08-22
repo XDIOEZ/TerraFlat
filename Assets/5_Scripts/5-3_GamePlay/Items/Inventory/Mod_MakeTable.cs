@@ -129,7 +129,7 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
 
     private void OnCraftButtonClick()
     {
-        if (!TryGetCraftPreview(out _))
+        if (!TryGetCraftPreview(true, out _))
         {
             ResetCraftProgress();
             return;
@@ -294,7 +294,7 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
         if (_outputPreview == null)
             return;
 
-        if (TryGetCraftPreview(out ItemData previewItem))
+        if (TryGetCraftPreview(false, out ItemData previewItem))
             _outputPreview.Show(previewItem, _currentClickProgress / (float)RequiredClickCount);
         else
             _outputPreview.Clear();
@@ -342,13 +342,15 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
         return result.Success;
     }
 
-    private bool TryGetCraftPreview(out ItemData previewItem)
+    /// <summary>预检制作结果；被动刷新不报告正常的未匹配状态。</summary>
+    private bool TryGetCraftPreview(bool isUserInitiated, out ItemData previewItem)
     {
         CraftingResult result = CraftingService.Preview(inputInventory, outputInventory, Capabilities);
         CraftingPreviewDiagnostics.ReportFailure(
             nameof(Mod_MakeTable),
             inputInventory,
             result,
+            isUserInitiated,
             ref _lastCraftPreviewMessage);
         previewItem = result.PrimaryOutput;
         return result.Success;

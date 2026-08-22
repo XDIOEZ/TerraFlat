@@ -234,15 +234,22 @@ public static class CraftingService
 /// <summary>合成预览失败诊断；按输入快照去重并输出配方线路上下文。</summary>
 public static class CraftingPreviewDiagnostics
 {
-    /// <summary>记录当前输入对应的预检失败原因，帮助定位事件、目录、匹配或库存阻塞。</summary>
+    /// <summary>记录当前输入对应的预检失败原因；被动刷新中的未匹配是正常预览状态。</summary>
     public static void ReportFailure(
         string source,
         Inventory inputInventory,
         CraftingResult result,
+        bool isUserInitiated,
         ref string lastMessage,
         CraftingCapabilities capabilities = null)
     {
         if (result == null || result.Success)
+        {
+            lastMessage = string.Empty;
+            return;
+        }
+
+        if (!isUserInitiated && result.FailureReason == CraftingFailureReason.RecipeNotFound)
         {
             lastMessage = string.Empty;
             return;
