@@ -1025,7 +1025,7 @@ MonoBehaviour:
         Vitamins: 500
         Max_Vitamins: 1000
       Max_EatingProgress: 3
-      ShowCanvas: 0
+      ShowCanvas: 1
       nutritionConsumeSpeed:
         BaseValue: 0.5
         BaseAdditive: 0
