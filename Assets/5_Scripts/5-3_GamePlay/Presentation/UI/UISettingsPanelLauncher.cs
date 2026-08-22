@@ -1,6 +1,7 @@
 // AI-Context: 设置菜单的“UI设置”入口和运行时 uGUI 面板；提供界面、移动摇杆和镜头预判偏好及即时持久化。
 
 using FlatWorld.Localization;
+using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -25,6 +26,14 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
     private TextMeshProUGUI cameraLookaheadValueText;
     private TextMeshProUGUI cameraSmoothingValueText;
     private TextMeshProUGUI statusText;
+    private ISettingsProvider uiSettingsProvider;
+    private ISettingsProvider cameraSettingsProvider;
+    private ISettingsSlider scaleSetting;
+    private ISettingsToggle safeAreaSetting;
+    private ISettingsToggle floatingMoveJoystickSetting;
+    private ISettingsToggle enablePinchZoomSetting;
+    private ISettingsSlider cameraLookaheadSetting;
+    private ISettingsSlider cameraSmoothingSetting;
     private bool isClamping;
 
     public static UISettingsPanelLauncher Ensure(Transform settingsPanel)
@@ -86,6 +95,18 @@ private void EnsureSettingsWindow()
         settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
             prefab,
             RuntimeUIPrefabKeys.UISettings);
+        uiSettingsProvider = UIUserSettings.SettingsProvider;
+        cameraSettingsProvider = CameraUserSettings.SettingsProvider;
+        scaleSetting = uiSettingsProvider.GetSlider(UIUserSettings.ScaleSettingKey);
+        safeAreaSetting = uiSettingsProvider.GetToggle(UIUserSettings.RespectSafeAreaSettingKey);
+        floatingMoveJoystickSetting =
+            uiSettingsProvider.GetToggle(UIUserSettings.FloatingMoveJoystickSettingKey);
+        enablePinchZoomSetting =
+            uiSettingsProvider.GetToggle(UIUserSettings.EnablePinchZoomSettingKey);
+        cameraLookaheadSetting =
+            cameraSettingsProvider.GetSlider(CameraUserSettings.LookaheadSettingKey);
+        cameraSmoothingSetting =
+            cameraSettingsProvider.GetSlider(CameraUserSettings.LookaheadSmoothingSettingKey);
         scaleSlider = settingsPanel.GetSlider("界面缩放");
         safeAreaToggle = settingsPanel.GetToggle("安全区域适配");
         floatingMoveJoystickToggle = settingsPanel.GetToggle("浮动移动摇杆");
@@ -116,22 +137,30 @@ private void EnsureSettingsWindow()
 
         if (scaleSlider != null)
         {
-            scaleSlider.minValue = UIUserSettings.MinimumScale;
-            scaleSlider.maxValue = UIUserSettings.MaximumScale;
+            scaleSlider.minValue = scaleSetting != null ? scaleSetting.MinValue : 0f;
+            scaleSlider.maxValue = scaleSetting != null ? scaleSetting.MaxValue : 1f;
             scaleSlider.wholeNumbers = false;
         }
 
         if (cameraLookaheadSlider != null)
         {
-            cameraLookaheadSlider.minValue = CameraUserSettings.MinimumLookahead;
-            cameraLookaheadSlider.maxValue = CameraUserSettings.MaximumLookahead;
+            cameraLookaheadSlider.minValue = cameraLookaheadSetting != null
+                ? cameraLookaheadSetting.MinValue
+                : 0f;
+            cameraLookaheadSlider.maxValue = cameraLookaheadSetting != null
+                ? cameraLookaheadSetting.MaxValue
+                : 1f;
             cameraLookaheadSlider.wholeNumbers = false;
         }
 
         if (cameraSmoothingSlider != null)
         {
-            cameraSmoothingSlider.minValue = CameraUserSettings.MinimumLookaheadSmoothing;
-            cameraSmoothingSlider.maxValue = CameraUserSettings.MaximumLookaheadSmoothing;
+            cameraSmoothingSlider.minValue = cameraSmoothingSetting != null
+                ? cameraSmoothingSetting.MinValue
+                : 0f;
+            cameraSmoothingSlider.maxValue = cameraSmoothingSetting != null
+                ? cameraSmoothingSetting.MaxValue
+                : 1f;
             cameraSmoothingSlider.wholeNumbers = false;
         }
 
@@ -154,77 +183,79 @@ private void EnsureSettingsWindow()
 
     private void OnScaleChanged(float value)
     {
-        float applied = UIUserSettings.SetScale(value);
-        scaleSlider.SetValueWithoutNotify(applied);
+        scaleSetting?.SetValue(value);
+        scaleSlider?.SetValueWithoutNotify(scaleSetting != null ? scaleSetting.Value : value);
         RefreshStatus();
         ClampWindowToCanvas();
     }
 
     private void OnSafeAreaChanged(bool value)
     {
-        UIUserSettings.SetRespectSafeArea(value);
+        safeAreaSetting?.SetValue(value);
         RefreshStatus();
         ClampWindowToCanvas();
     }
 
     private void OnFloatingMoveJoystickChanged(bool value)
     {
-        UIUserSettings.SetFloatingMoveJoystick(value);
+        floatingMoveJoystickSetting?.SetValue(value);
     }
 
     /// <summary>保存双指缩放偏好并让手机 HUD 立即清理旧触点状态。</summary>
     private void OnEnablePinchZoomChanged(bool value)
     {
-        UIUserSettings.SetEnablePinchZoom(value);
+        enablePinchZoomSetting?.SetValue(value);
     }
 
     private void OnCameraLookaheadChanged(float value)
     {
-        float applied = CameraUserSettings.SetLookahead(value);
-        cameraLookaheadSlider?.SetValueWithoutNotify(applied);
+        cameraLookaheadSetting?.SetValue(value);
+        cameraLookaheadSlider?.SetValueWithoutNotify(
+            cameraLookaheadSetting != null ? cameraLookaheadSetting.Value : value);
         RefreshCameraValues();
     }
 
     private void OnCameraSmoothingChanged(float value)
     {
-        float applied = CameraUserSettings.SetLookaheadSmoothing(value);
-        cameraSmoothingSlider?.SetValueWithoutNotify(applied);
+        cameraSmoothingSetting?.SetValue(value);
+        cameraSmoothingSlider?.SetValueWithoutNotify(
+            cameraSmoothingSetting != null ? cameraSmoothingSetting.Value : value);
         RefreshCameraValues();
     }
 
     private void ResetToDefault()
     {
-        UIUserSettings.ResetToDefaults();
-        CameraUserSettings.ResetToDefaults();
+        uiSettingsProvider?.ResetToDefaults();
+        cameraSettingsProvider?.ResetToDefaults();
         RefreshValues();
         ClampWindowToCanvas();
     }
 
     private void RefreshValues()
     {
-        if (scaleSlider != null)
-            scaleSlider.SetValueWithoutNotify(UIUserSettings.Scale);
-        if (safeAreaToggle != null)
-            safeAreaToggle.SetIsOnWithoutNotify(UIUserSettings.RespectSafeArea);
-        if (floatingMoveJoystickToggle != null)
-            floatingMoveJoystickToggle.SetIsOnWithoutNotify(UIUserSettings.FloatingMoveJoystick);
-        if (enablePinchZoomToggle != null)
-            enablePinchZoomToggle.SetIsOnWithoutNotify(UIUserSettings.EnablePinchZoom);
-        if (cameraLookaheadSlider != null)
-            cameraLookaheadSlider.SetValueWithoutNotify(CameraUserSettings.Lookahead);
-        if (cameraSmoothingSlider != null)
-            cameraSmoothingSlider.SetValueWithoutNotify(CameraUserSettings.LookaheadSmoothing);
+        if (scaleSlider != null && scaleSetting != null)
+            scaleSlider.SetValueWithoutNotify(scaleSetting.Value);
+        if (safeAreaToggle != null && safeAreaSetting != null)
+            safeAreaToggle.SetIsOnWithoutNotify(safeAreaSetting.Value);
+        if (floatingMoveJoystickToggle != null && floatingMoveJoystickSetting != null)
+            floatingMoveJoystickToggle.SetIsOnWithoutNotify(floatingMoveJoystickSetting.Value);
+        if (enablePinchZoomToggle != null && enablePinchZoomSetting != null)
+            enablePinchZoomToggle.SetIsOnWithoutNotify(enablePinchZoomSetting.Value);
+        if (cameraLookaheadSlider != null && cameraLookaheadSetting != null)
+            cameraLookaheadSlider.SetValueWithoutNotify(cameraLookaheadSetting.Value);
+        if (cameraSmoothingSlider != null && cameraSmoothingSetting != null)
+            cameraSmoothingSlider.SetValueWithoutNotify(cameraSmoothingSetting.Value);
         RefreshStatus();
     }
 
     private void RefreshStatus()
     {
-        if (scaleValueText != null)
-            scaleValueText.text = ToPercent(UIUserSettings.Scale);
+        if (scaleValueText != null && scaleSetting != null)
+            scaleValueText.text = ToPercent(scaleSetting.Value);
         RefreshCameraValues();
         if (statusText != null)
         {
-            statusText.text = UIUserSettings.RespectSafeArea
+            statusText.text = safeAreaSetting != null && safeAreaSetting.Value
                 ? FlatWorldLocalizationService.GetUiText("安全区域适配：开启（推荐）")
                 : FlatWorldLocalizationService.GetUiText("安全区域适配：关闭");
         }
@@ -232,10 +263,10 @@ private void EnsureSettingsWindow()
 
     private void RefreshCameraValues()
     {
-        if (cameraLookaheadValueText != null)
-            cameraLookaheadValueText.text = FormatSignedSeconds(CameraUserSettings.Lookahead);
-        if (cameraSmoothingValueText != null)
-            cameraSmoothingValueText.text = CameraUserSettings.LookaheadSmoothing.ToString("0.0");
+        if (cameraLookaheadValueText != null && cameraLookaheadSetting != null)
+            cameraLookaheadValueText.text = FormatSignedSeconds(cameraLookaheadSetting.Value);
+        if (cameraSmoothingValueText != null && cameraSmoothingSetting != null)
+            cameraSmoothingValueText.text = cameraSmoothingSetting.Value.ToString("0.0");
     }
 
 private void Close()

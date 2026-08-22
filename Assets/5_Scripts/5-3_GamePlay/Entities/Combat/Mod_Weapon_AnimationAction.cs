@@ -9,6 +9,8 @@ public class Mod_Weapon_AnimationAction : Module
     #region Config
     [Tooltip("武器动画树 Animator")]
     public Animator animator;//武器的动画树
+    [Tooltip("该武器唯一的伤害模块，必须在 Prefab 中显式绑定")]
+    [SerializeField] private Mod_Damage damageModule;
 
     [Tooltip("是否使用本地输入触发攻击")]
     [SerializeField] private bool useLocalInput = true;
@@ -65,6 +67,13 @@ public class Mod_Weapon_AnimationAction : Module
     public override void Load()
     {
         ModSaveData.ReadData(ref RawData);
+        cachedDamageModule = damageModule;
+
+        if (cachedDamageModule == null)
+        {
+            Debug.LogError($"{name} 未绑定 Mod_Damage，无法建立攻击伤害窗口。", this);
+            return;
+        }
 
         if (item.Owner != null)
         {
@@ -313,11 +322,6 @@ public class Mod_Weapon_AnimationAction : Module
     /// <summary>待机时关闭伤害碰撞体，防止 Prefab 默认值异常造成常驻伤害。</summary>
     private void DisableDamageOutsideAttack(bool force = false)
     {
-        if (cachedDamageModule == null && item != null)
-        {
-            cachedDamageModule = item.GetComponentInChildren<Mod_Damage>(true);
-        }
-
         if (cachedDamageModule != null && (force || cachedDamageModule.IsDamageEnabled()))
         {
             cachedDamageModule.SetDamageEnabled(false);

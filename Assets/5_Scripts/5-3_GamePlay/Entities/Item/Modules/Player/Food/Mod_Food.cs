@@ -119,6 +119,8 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
 
     [MemoryPackIgnore]
     private UnityEngine.InputSystem.InputAction _tabAction;
+    [MemoryPackIgnore]
+    private GameController _inputController;
 
     #endregion
 
@@ -181,6 +183,15 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     /// </summary>
     public override void Act()
     {
+        if (item == null || item.DestructionHandled || item.itemData?.Stack == null ||
+            item.itemData.Stack.Amount < 1f)
+            return;
+
+        // 同一个右键同时支持建筑和食用；建筑预览有效时由建筑模块优先消费本次动作。
+        Mod_Building building = item.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+        if (building != null && (building.IsPlacementPending || building.IsPlacementActionAvailable))
+            return;
+
         Item owner = item?.Owner;
         Mod_Food playerFood = owner?.itemMods?.GetMod_ByID(ModText.Food) as Mod_Food;
         if (playerFood == null)
@@ -217,8 +228,11 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         ReleaseRuntimeBindings(destroyPanel: true);
     }
 
-    private void OnTogglePanelPerformed(UnityEngine.InputSystem.InputAction.CallbackContext _)
+    private void OnTogglePanelPerformed(UnityEngine.InputSystem.InputAction.CallbackContext context)
     {
+        if (_inputController != null && !_inputController.IsGameplayInputAllowed(context))
+            return;
+
         TogglePanel();
     }
 
@@ -232,6 +246,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
         if (controller?._inputActions == null)
             return;
 
+        _inputController = controller;
         _tabAction = controller._inputActions.Win10.Tab;
         _tabAction.performed += OnTogglePanelPerformed;
     }
@@ -242,6 +257,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
             _tabAction.performed -= OnTogglePanelPerformed;
 
         _tabAction = null;
+        _inputController = null;
     }
 
     private void ReleaseRuntimeBindings(bool destroyPanel)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Settings;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -9,11 +10,20 @@ namespace FlatWorld.Audio
     /// 跨场景音频服务：事件解析、声源池、并发限制、优先级抢占、淡入淡出和用户音量。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class AudioService : MonoBehaviour
+    public sealed class AudioService : MonoBehaviour, ISettingsProvider
     {
         private const string RuntimeConfigResourcePath = "Audio/AudioRuntimeConfig";
         private const string CatalogResourcePath = "Audio/AudioCatalog";
         private const string SettingsKeyPrefix = "FlatWorld.Audio.v1.";
+
+        public const string SettingsProviderId = "audio";
+        public const string MasterVolumeSettingKey = "audio.masterVolume";
+        public const string MusicVolumeSettingKey = "audio.musicVolume";
+        public const string SfxVolumeSettingKey = "audio.sfxVolume";
+        public const string UiVolumeSettingKey = "audio.uiVolume";
+        public const string AmbientVolumeSettingKey = "audio.ambientVolume";
+        public const string VoiceVolumeSettingKey = "audio.voiceVolume";
+        public const string MutedSettingKey = "audio.muted";
 
         private static AudioService instance;
 
@@ -29,6 +39,10 @@ namespace FlatWorld.Audio
             new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private AudioUserSettings userSettings;
+        private readonly List<ISettingsSlider> settingSliders =
+            new List<ISettingsSlider>(6);
+        private readonly List<ISettingsToggle> settingToggles =
+            new List<ISettingsToggle>(1);
         private int maxVoices = 48;
         private int totalVoices;
         private int nextVoiceId = 1;
@@ -55,6 +69,14 @@ namespace FlatWorld.Audio
         public AudioCatalog Catalog => catalog;
         public int ActiveVoiceCount => activeVoices.Count;
         public int MaxVoices => maxVoices;
+
+        public string ProviderId => SettingsProviderId;
+        public string DisplayName => "音频";
+        public int Order => 10;
+        public IReadOnlyList<ISettingsToggle> ToggleSettings => settingToggles;
+        public IReadOnlyList<ISettingsSlider> SliderSettings => settingSliders;
+        public IReadOnlyList<ISettingsDropdown> DropdownSettings => Array.Empty<ISettingsDropdown>();
+        public IReadOnlyList<ISettingsSwitch> SwitchSettings => Array.Empty<ISettingsSwitch>();
 
         public event Action<AudioUserSettings> SettingsChanged;
 
@@ -84,6 +106,8 @@ namespace FlatWorld.Audio
             DontDestroyOnLoad(gameObject);
             LoadConfiguration();
             LoadUserSettings();
+            InitializeSettingsProvider();
+            SettingsProviderRegistry.Register(this);
             Prewarm(runtimeConfig != null ? runtimeConfig.InitialVoiceCount : 12);
         }
 
@@ -119,9 +143,91 @@ namespace FlatWorld.Audio
 
         private void OnDestroy()
         {
+            SettingsProviderRegistry.Unregister(this);
             if (instance == this)
                 instance = null;
         }
+
+        #region 设置提供者
+
+        /// <summary>把音频总线和静音状态以通用设置契约暴露给 UI。</summary>
+        private void InitializeSettingsProvider()
+        {
+            settingSliders.Clear();
+            settingToggles.Clear();
+
+            settingSliders.Add(new SettingsSlider(
+                new SettingDescriptor(
+                    MasterVolumeSettingKey,
+                    "主音量",
+                    SettingControlType.Slider,
+                    "audio",
+                    order: 0),
+                0f,
+                1f,
+                0.01f,
+                () => userSettings != null ? userSettings.Master : 1f,
+                value => SetMasterVolume(value)));
+            settingSliders.Add(CreateBusVolumeSetting(
+                MusicVolumeSettingKey,
+                "音乐音量",
+                AudioBus.Music,
+                1));
+            settingSliders.Add(CreateBusVolumeSetting(
+                SfxVolumeSettingKey,
+                "音效音量",
+                AudioBus.Sfx,
+                2));
+            settingSliders.Add(CreateBusVolumeSetting(
+                UiVolumeSettingKey,
+                "界面音量",
+                AudioBus.UI,
+                3));
+            settingSliders.Add(CreateBusVolumeSetting(
+                AmbientVolumeSettingKey,
+                "环境音量",
+                AudioBus.Ambient,
+                4));
+            settingSliders.Add(CreateBusVolumeSetting(
+                VoiceVolumeSettingKey,
+                "语音音量",
+                AudioBus.Voice,
+                5));
+
+            settingToggles.Add(new SettingsToggle(
+                new SettingDescriptor(
+                    MutedSettingKey,
+                    "静音",
+                    SettingControlType.Toggle,
+                    "audio",
+                    order: 0),
+                () => userSettings != null && userSettings.Muted,
+                value => SetMuted(value)));
+        }
+
+        private ISettingsSlider CreateBusVolumeSetting(
+            string key,
+            string displayName,
+            AudioBus bus,
+            int order)
+        {
+            return new SettingsSlider(
+                new SettingDescriptor(
+                    key,
+                    displayName,
+                    SettingControlType.Slider,
+                    "audio",
+                    order: order),
+                0f,
+                1f,
+                0.01f,
+                () => userSettings != null ? userSettings.GetBusVolume(bus) : 1f,
+                value => SetBusVolume(bus, value));
+        }
+
+        public void ResetToDefaults() => ResetUserSettings();
+
+        #endregion
 
         public void SetCatalog(AudioCatalog value)
         {

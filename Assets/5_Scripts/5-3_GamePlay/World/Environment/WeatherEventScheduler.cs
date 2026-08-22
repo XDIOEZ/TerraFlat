@@ -63,40 +63,6 @@ public static class WeatherEventScheduler
         config ??= new RainEventScheduleConfig();
         NormalizeWeatherValues(planetData);
 
-        if (planetData.WeatherDataVersion < CurrentDataVersion)
-        {
-            bool hasStructuredWeatherData = planetData.WeatherDataVersion >= 1;
-            if (!hasStructuredWeatherData || !Enum.IsDefined(typeof(WeatherPhase), planetData.WeatherPhase))
-            {
-                planetData.WeatherPhase = ResolveLegacyPhase(planetData);
-                planetData.WeatherPhaseStartedTotalTime = currentTotalTime;
-                planetData.WeatherEventSequence = planetData.WeatherPhase == WeatherPhase.Clear ? 0 : 1;
-            }
-
-            if (planetData.WeatherPhase == WeatherPhase.Clear)
-            {
-                planetData.WeatherPhaseStartedTotalTime = currentTotalTime;
-                planetData.WeatherPhaseEndTotalTime = 0f;
-                ScheduleNextDailyCheck(planetData, currentTotalTime, dayLength);
-            }
-            else if (!hasStructuredWeatherData || planetData.WeatherPhaseEndTotalTime <= currentTotalTime)
-            {
-                planetData.NextWeatherEventTotalTime = 0f;
-                planetData.WeatherPhaseStartedTotalTime = currentTotalTime;
-                planetData.WeatherPhaseEndTotalTime =
-                    currentTotalTime + GetPhaseDuration(
-                        planetData.WeatherPhase,
-                        planetData,
-                        dayLength,
-                        worldSeed,
-                        config);
-            }
-
-            planetData.WeatherDataVersion = CurrentDataVersion;
-            ApplyPhasePresentation(planetData, config);
-            return;
-        }
-
         if (!Enum.IsDefined(typeof(WeatherPhase), planetData.WeatherPhase))
             EnterClearPhase(planetData, currentTotalTime, dayLength, config);
         else if (planetData.WeatherPhase == WeatherPhase.Clear &&
@@ -107,11 +73,12 @@ public static class WeatherEventScheduler
             planetData.WeatherPhaseEndTotalTime =
                 currentTotalTime + GetPhaseDuration(
                     planetData.WeatherPhase,
-                    planetData,
-                    dayLength,
-                    worldSeed,
-                    config);
+                planetData,
+                dayLength,
+                worldSeed,
+                config);
 
+        planetData.WeatherDataVersion = CurrentDataVersion;
         ApplyPhasePresentation(planetData, config);
     }
 
@@ -376,19 +343,6 @@ public static class WeatherEventScheduler
                 planetData.WeatherIntensity = 0f;
                 break;
         }
-    }
-
-    private static WeatherPhase ResolveLegacyPhase(PlanetData planetData)
-    {
-        return planetData.CurrentWeather switch
-        {
-            WeatherType.Cloudy => WeatherPhase.Forecast,
-            WeatherType.Rain when planetData.WeatherIntensity >= 0.85f => WeatherPhase.RainHeavy,
-            WeatherType.Rain when planetData.WeatherIntensity >= 0.5f => WeatherPhase.RainSteady,
-            WeatherType.Rain => WeatherPhase.RainStarting,
-            WeatherType.Storm => WeatherPhase.RainHeavy,
-            _ => WeatherPhase.Clear
-        };
     }
 
     private static void NormalizeWeatherValues(PlanetData planetData)

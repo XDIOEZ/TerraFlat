@@ -10,7 +10,7 @@ using UnityEngine;
 /// 使用方式：
 /// 1. 在 AI 子类中声明字段: AI_AttackController _attack = new AI_AttackController();
 /// 2. OnBindExtraModules 中调用 _attack.Bind(item) 绑定伤害组件
-/// 3. UpdateExtraTimers 中调用 _attack.Update(deltaTime) 更新冷却和窗口
+/// 3. UpdateExtraTimers 中调用 _attack.Tick(deltaTime) 更新冷却和窗口
 /// 4. TickAttack 中使用 _attack.StartWindow / StopWindow 控制攻击
 /// 5. OnBeforeSwitchState 中处理进入/离开攻击状态的逻辑
 ///
@@ -118,11 +118,11 @@ public class AI_AttackController
 	}
 
 	/// <summary>
-	/// 每帧更新冷却和伤害窗口计时器。
+    /// 由所属 AI Module Tick 更新冷却和伤害窗口计时器。
 	/// 当伤害窗口到期时自动关闭伤害碰撞并进入冷却。
 	/// </summary>
-	public void Update(float deltaTime)
-	{
+    public void Tick(float deltaTime)
+    {
 		// 懒取消：如果 Bind() 时 Mod_Damage_AI 还未初始化，在此处重试
 		if (!_hasUnsubscribedDamageAI)
 		{
@@ -170,10 +170,17 @@ public class AI_AttackController
 		if (Cooldown > 0f)
 		{
 			_cooldownTimer = Mathf.Max(_cooldownTimer, Cooldown);
-		}
-	}
+        }
+    }
 
-	/// <summary>
+    /// <summary>兼容旧测试与 MOD 调用；正式 AI 运行链统一使用 Tick。</summary>
+    [System.Obsolete("请使用 Tick(deltaTime)，该入口仅为兼容旧调用保留。")]
+    public void Update(float deltaTime)
+    {
+        Tick(deltaTime);
+    }
+
+    /// <summary>
 	/// 开启攻击伤害窗口：
 	/// - 标记窗口已触发
 	/// - 起手阶段保持动画接收器的 IsAttacking 关闭

@@ -99,6 +99,18 @@ public sealed class EnvironmentInteractionRunner : MonoBehaviour
         effectDefinitions.Clear();
     }
 
+    /// <summary>更新当前环境移速效果的倍率；没有该效果时返回 false。</summary>
+    public bool TryUpdateMoveSpeedMultiplier(float multiplier)
+    {
+        for (int i = 0; i < activeEffects.Count; i++)
+        {
+            if (activeEffects[i] is MoveSpeedEnvironmentEffectInstance moveSpeedEffect)
+                return moveSpeedEffect.UpdateMultiplier(multiplier);
+        }
+
+        return false;
+    }
+
     public bool TryGetEffectDefinition<TDefinition>(out TDefinition definition)
         where TDefinition : class, IEnvironmentEffectDefinition
     {
@@ -249,7 +261,7 @@ public sealed class MoveSpeedEnvironmentEffectDefinition : IEnvironmentEffectDef
 public sealed class MoveSpeedEnvironmentEffectInstance : IEnvironmentEffectInstance
 {
     private readonly Mover mover;
-    private readonly float multiplier;
+    private float multiplier;
 
     public MoveSpeedEnvironmentEffectInstance(Item actor,
         MoveSpeedEnvironmentEffectDefinition definition)
@@ -268,6 +280,28 @@ public sealed class MoveSpeedEnvironmentEffectInstance : IEnvironmentEffectInsta
 
         mover.Speed.MultiplicativeModifier *= multiplier;
         IsApplied = true;
+        return true;
+    }
+
+    /// <summary>替换自身贡献的倍率，并保持其他移动速度来源不变。</summary>
+    public bool UpdateMultiplier(float nextMultiplier)
+    {
+        nextMultiplier = Mathf.Max(0.01f, nextMultiplier);
+        if (!IsApplied)
+        {
+            multiplier = nextMultiplier;
+            return Apply();
+        }
+
+        if (Mathf.Approximately(multiplier, nextMultiplier))
+            return true;
+
+        if (mover?.Speed == null)
+            return false;
+
+        mover.Speed.MultiplicativeModifier /= multiplier;
+        multiplier = nextMultiplier;
+        mover.Speed.MultiplicativeModifier *= multiplier;
         return true;
     }
 

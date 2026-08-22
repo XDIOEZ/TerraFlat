@@ -13,7 +13,6 @@ public partial class MonsterSpawnerSaveData
 [Serializable]
 public partial class SpawnerProgressSaveData
 {
-    public int DataVersion = 1;
     public float LastProcessedTotalTime = -1f;
     public int LastCheckedDay = -1;
     public int LastSpawnDay = -999;

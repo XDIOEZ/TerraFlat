@@ -239,6 +239,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1cf140e4e1874b10ab8dc111d4804906
+    m_Address: Assets/6_Art/Food/Item_Radish.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1c0b3ac6cd62afb45a3edd32a0b36876
     m_Address: "Assets/6_Art/Food/\u6930\u5B50\u58F3-\u7A7A.png"
     m_ReadOnly: 0
@@ -1209,6 +1215,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: aaa1c7d74f6b4f1e9b8a6c2d3e4f5a62
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_GroundPlant.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ab36d19445e99a54ca06f4650472e418
     m_Address: Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab
     m_ReadOnly: 0
@@ -1617,6 +1629,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e3b1f7fee12447349c23abadf81e474f
+    m_Address: Assets/6_Art/Food/Plant_Radish.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e1958d25f8baa7a48b6f0c754ee6317e
     m_Address: Assets/2_Prefabs/Gameplay/AI/WildBoar_Tree.prefab

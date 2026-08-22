@@ -2,6 +2,7 @@
     "name": "FlatWorld.Localization",
     "rootNamespace": "FlatWorld.Localization",
     "references": [
+        "Data",
         "Unity.Localization",
         "Unity.TextMeshPro"
     ],

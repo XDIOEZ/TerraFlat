@@ -47,6 +47,7 @@ public static class ModText
     #endregion
     #region G
     public static string Grow = "生长模块";
+    public static string GroundPlant = "地栽模块";
     #endregion
 
     #region P

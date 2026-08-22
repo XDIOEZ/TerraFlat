@@ -6,7 +6,6 @@ using MemoryPack;
 [Serializable]
 public partial class GameEventSaveData
 {
-    public int DataVersion = 2;
     public Dictionary<string, GameEventProgressSaveData> EventProgress = new();
     public List<ActiveGameEventSaveData> ActiveEvents = new();
 }

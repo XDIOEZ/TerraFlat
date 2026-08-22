@@ -221,6 +221,9 @@ public class Module_DiscardItem : Mod_BaseDroper
 
     private void OnDropButtonPressed(InputAction.CallbackContext context)
     {
+        if (!IsInputSourceAllowed(context))
+            return;
+
         isDropButtonPressed = true;
         dropButtonPressTime = 0f;
         isDropRepeatActive = false;
@@ -229,6 +232,9 @@ public class Module_DiscardItem : Mod_BaseDroper
 
     private void OnDropButtonReleased(InputAction.CallbackContext context)
     {
+        if (!IsInputSourceAllowed(context))
+            return;
+
         isDropButtonPressed = false;
         dropButtonPressTime = 0f;
         isDropRepeatActive = false;
@@ -295,12 +301,24 @@ public class Module_DiscardItem : Mod_BaseDroper
 
     private void OnCtrlPressed(InputAction.CallbackContext context)
     {
+        if (!IsInputSourceAllowed(context))
+            return;
+
         isCtrlPressed = true;
     }
 
     private void OnCtrlReleased(InputAction.CallbackContext context)
     {
+        if (!IsInputSourceAllowed(context))
+            return;
+
         isCtrlPressed = false;
+    }
+
+    /// <summary>手机方案下不让手柄快捷键进入丢弃状态。</summary>
+    private bool IsInputSourceAllowed(InputAction.CallbackContext context)
+    {
+        return GameController == null || GameController.IsGameplayInputAllowed(context);
     }
 
     public void OnDestroy()

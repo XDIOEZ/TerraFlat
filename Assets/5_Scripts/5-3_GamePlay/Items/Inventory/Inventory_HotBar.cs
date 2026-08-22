@@ -592,6 +592,9 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void OnScrollSwitch(InputAction.CallbackContext ctx)
     {
+        if (!IsInputSourceAllowed(ctx))
+            return;
+
         if (IsGameplayInputLocked())
         {
             return;
@@ -609,7 +612,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void OnPreviousHotbar(InputAction.CallbackContext context)
     {
-        if (!CanSwitchHotbarFromInput())
+        if (!IsInputSourceAllowed(context) || !CanSwitchHotbarFromInput())
             return;
 
         SwitchItem(CurrentIndex - 1);
@@ -617,7 +620,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void OnDirectHotbar(InputAction.CallbackContext context)
     {
-        if (IsGameplayInputLocked() || context.control == null)
+        if (!IsInputSourceAllowed(context) || IsGameplayInputLocked() || context.control == null)
             return;
 
         int targetIndex = context.action.GetBindingIndexForControl(context.control);
@@ -629,7 +632,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void OnNextHotbar(InputAction.CallbackContext context)
     {
-        if (!CanSwitchHotbarFromInput())
+        if (!IsInputSourceAllowed(context) || !CanSwitchHotbarFromInput())
             return;
 
         SwitchItem(CurrentIndex + 1);
@@ -638,6 +641,12 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     private bool CanSwitchHotbarFromInput()
     {
         return !IsGameplayInputLocked() && !IsPointerOverUI();
+    }
+
+    /// <summary>手机方案下隔离手柄快捷栏输入，保留键鼠和手机按钮的并行路径。</summary>
+    private bool IsInputSourceAllowed(InputAction.CallbackContext context)
+    {
+        return _inputController == null || _inputController.IsGameplayInputAllowed(context);
     }
 
 #endregion

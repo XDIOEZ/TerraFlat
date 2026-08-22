@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(BoxCollider2D))]
 public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
 {
     #region 伤害相关数据
@@ -95,10 +96,9 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     {
         NormalizeDamageValues();
 
-        // 初始化时尝试获取碰撞体组件
         if (damageCollider == null)
         {
-            damageCollider = GetComponent<Collider2D>();
+            Debug.LogError($"{name} 未配置伤害碰撞体引用，必须在 Prefab 中显式绑定 BoxCollider2D。", this);
         }
 
 
@@ -471,23 +471,24 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     }
 
     /// <summary>
-    /// 设置伤害逻辑启用状态（不负责开关Collider）
+    /// 设置伤害逻辑与伤害碰撞体的启用状态
     /// </summary>
     /// <param name="enabled">是否启用伤害检测</param>
     public void SetDamageEnabled(bool enabled)
     {
         if (damageCollider == null)
         {
-            damageCollider = GetComponent<Collider2D>();
+            Debug.LogError($"{name} 未配置伤害碰撞体引用，无法切换伤害窗口。", this);
+            return;
         }
 
-        bool wasEnabled = damageCollider != null && damageCollider.enabled;
-        if (damageCollider != null && damageCollider.enabled != enabled)
+        bool wasEnabled = damageCollider.enabled;
+        if (damageCollider.enabled != enabled)
         {
            damageCollider.enabled = enabled; // 先切换状态以确保触发器事件正确调用，从而维护内部接收器列表的准确性
         }
 
-        lastColliderEnabled = damageCollider != null && damageCollider.enabled;
+        lastColliderEnabled = damageCollider.enabled;
         if (enabled && !wasEnabled)
         {
             BeginTileDamageWindow();

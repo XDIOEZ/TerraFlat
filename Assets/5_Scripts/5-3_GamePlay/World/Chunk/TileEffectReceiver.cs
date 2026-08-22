@@ -43,10 +43,12 @@ public class TileEffectReceiver : Module
     private int activeRuntimeTileId;
     private Vector2Int activeGridPos;
     private bool hasActiveTileEffects;
+    private bool activeTileIsEdgeInteractionOnly;
     private bool isPreparedForWorldTransition;
     private EnvironmentInteractionRunner environmentInteractions;
 
     public bool HasActiveTileEffects => hasActiveTileEffects;
+    public bool IsActiveTileEdgeInteractionOnly => activeTileIsEdgeInteractionOnly;
     public EnvironmentInteractionRunner EnvironmentInteractions => EnsureEnvironmentInteractions();
     public override string CanonicalModuleId => ModText.TileEffectReceiver;
 
@@ -257,7 +259,7 @@ public class TileEffectReceiver : Module
         return false;
     }
 
-    /// <summary>在角色贴近边界时查找相邻水格，给水池交互保留小范围容错。</summary>
+    /// <summary>在角色贴近边界时查找相邻水格，仅给水边交互保留小范围容错。</summary>
     private bool TryResolveNearbyWater(Vector2Int gridPos, out TileEffectResolution resolution)
     {
         resolution = default;
@@ -275,7 +277,13 @@ public class TileEffectReceiver : Module
                 continue;
             }
 
-            resolution = candidate;
+            resolution = new TileEffectResolution(
+                candidate.TileBlock,
+                candidate.TileData,
+                candidate.Map,
+                candidate.RuntimeTerrain,
+                candidate.RuntimeTileId,
+                true);
             return true;
         }
 
@@ -321,6 +329,7 @@ public class TileEffectReceiver : Module
         activeRuntimeTerrain = resolution.RuntimeTerrain;
         activeRuntimeTileId = resolution.RuntimeTileId;
         activeGridPos = gridPos;
+        activeTileIsEdgeInteractionOnly = resolution.EdgeInteractionOnly;
         hasActiveTileEffects = true;
         isPreparedForWorldTransition = false;
         currentTileData = resolution.TileData;
@@ -333,6 +342,7 @@ public class TileEffectReceiver : Module
         activeTileMap = null;
         activeRuntimeTerrain = null;
         activeRuntimeTileId = 0;
+        activeTileIsEdgeInteractionOnly = false;
         hasActiveTileEffects = false;
         currentTileData = null;
     }
@@ -387,13 +397,14 @@ public class TileEffectReceiver : Module
     private readonly struct TileEffectResolution
     {
         public TileEffectResolution(Tile_Block tileBlock, TileData tileData, Map map,
-            ChunkTerrainData runtimeTerrain, int runtimeTileId)
+            ChunkTerrainData runtimeTerrain, int runtimeTileId, bool edgeInteractionOnly = false)
         {
             TileBlock = tileBlock;
             TileData = tileData;
             Map = map;
             RuntimeTerrain = runtimeTerrain;
             RuntimeTileId = runtimeTileId;
+            EdgeInteractionOnly = edgeInteractionOnly;
         }
 
         public Tile_Block TileBlock { get; }
@@ -401,6 +412,7 @@ public class TileEffectReceiver : Module
         public Map Map { get; }
         public ChunkTerrainData RuntimeTerrain { get; }
         public int RuntimeTileId { get; }
+        public bool EdgeInteractionOnly { get; }
     }
 
     #endregion

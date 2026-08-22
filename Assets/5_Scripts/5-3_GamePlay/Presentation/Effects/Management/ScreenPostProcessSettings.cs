@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using FlatWorld.Settings;
 using UnityEngine;
 
 /// <summary>
@@ -23,6 +25,9 @@ public static class ScreenPostProcessSettings
 
     public const ScreenPostProcessQuality DefaultQuality = ScreenPostProcessQuality.High;
 
+    public const string SettingsProviderId = "screen-effects";
+    public const string QualitySettingKey = "screenEffects.quality";
+
     #endregion
 
     #region 缓存与事件
@@ -32,6 +37,12 @@ public static class ScreenPostProcessSettings
 
     /// <summary>后处理质量实际改变后触发。</summary>
     public static event Action Changed;
+
+    private static readonly ISettingsProvider settingsProvider =
+        CreateSettingsProvider();
+
+    /// <summary>供主菜单设置使用的特效质量下拉列表契约。</summary>
+    public static ISettingsProvider SettingsProvider => RegisterSettingsProvider();
 
     public static ScreenPostProcessQuality Quality
     {
@@ -83,10 +94,79 @@ public static class ScreenPostProcessSettings
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeState()
     {
+        SettingsProviderRegistry.Unregister(settingsProvider);
         initialized = false;
         cachedQuality = DefaultQuality;
         Changed = null;
     }
+
+    #region 设置提供者
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterSettingsProviderOnLoad()
+    {
+        RegisterSettingsProvider();
+    }
+
+    private static ISettingsProvider RegisterSettingsProvider()
+    {
+        SettingsProviderRegistry.Register(settingsProvider);
+        return settingsProvider;
+    }
+
+    private static ISettingsProvider CreateSettingsProvider()
+    {
+        return new ScreenEffectsSettingsProvider();
+    }
+
+    private sealed class ScreenEffectsSettingsProvider : ISettingsProvider
+    {
+        private static readonly IReadOnlyList<SettingOption> Options =
+            new SettingOption[]
+            {
+                new SettingOption("high", "高"),
+                new SettingOption("medium", "中"),
+                new SettingOption("low", "低")
+            };
+
+        private readonly IReadOnlyList<ISettingsDropdown> dropdowns;
+
+        public ScreenEffectsSettingsProvider()
+        {
+            dropdowns = new ISettingsDropdown[]
+            {
+                new SettingsDropdown(
+                    new SettingDescriptor(
+                        QualitySettingKey,
+                        "特效质量",
+                        SettingControlType.Dropdown,
+                        "graphics",
+                        order: 1),
+                    Options,
+                    () => QualityIndex,
+                    index =>
+                    {
+                        SetQualityIndex(index);
+                        return null;
+                    })
+            };
+        }
+
+        public string ProviderId => SettingsProviderId;
+        public string DisplayName => "特效";
+        public int Order => 41;
+        public IReadOnlyList<ISettingsToggle> ToggleSettings =>
+            Array.Empty<ISettingsToggle>();
+        public IReadOnlyList<ISettingsSlider> SliderSettings =>
+            Array.Empty<ISettingsSlider>();
+        public IReadOnlyList<ISettingsDropdown> DropdownSettings => dropdowns;
+        public IReadOnlyList<ISettingsSwitch> SwitchSettings =>
+            Array.Empty<ISettingsSwitch>();
+
+        public void ResetToDefaults() => ScreenPostProcessSettings.ResetToDefaults();
+    }
+
+    #endregion
 
     private static void EnsureInitialized()
     {

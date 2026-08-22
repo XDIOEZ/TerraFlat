@@ -61,7 +61,7 @@ MonoBehaviour:
   OnDurabilityModified:
     _PersistentCalls: []
   updateInterval: 0
-  Data:
+  data:
     IDName: Spear_Iron
     GameName: Spear_Iron
     Description: "\u7269\u54C1\u540D\u79F0\uFF1ASpear_Iron\n\u7269\u54C1\u63CF\u8FF0\uFF1A\n\u7269\u54C1\u4F53\u79EF\uFF1A2\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue\n\u7269\u54C1\u6807\u7B7E\uFF1ATagDictionary:\r\n 
@@ -82,6 +82,7 @@ MonoBehaviour:
     ItemSpecialData: 
     inHand: 0
     Guid: 116566625
+    FactionId: 
     code: 
 --- !u!61 &5790643269967756921
 BoxCollider2D:
@@ -233,6 +234,125 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 1
+--- !u!1 &4103402572958266072
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9213605949375907716}
+  - component: {fileID: 4113570399385382067}
+  - component: {fileID: 6398440586324293994}
+  m_Layer: 8
+  m_Name: Mod_Damage
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &9213605949375907716
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4103402572958266072}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2154250548199247233}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4113570399385382067
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4103402572958266072}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 60f24a3c06829c84884da41d9cc84099, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  AttackEffects:
+  - {fileID: 7635046391721750622, guid: c7dc8a6dfe6cb24488ccff466b999811, type: 3}
+  - {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
+  DamageValues:
+    Cutting: 3
+    Piercing: 21
+    Chopping: 0
+    Blunt: 0
+  DamageInterval: 0.2
+  EnableOnTriggerEnterDamage: 1
+  OnlyDealDamageWhenInHand: 0
+  MaxAttackTargets: 1
+  EnableHitSlowdown: 1
+  HitSlowMultiplier: 0.5
+  HitSlowDuration: 0.35
+  tileDamageToolKind: 0
+  weaponAudioClass: 0
+  attackAudioCueId: 
+  impactAudioOverrides: []
+  playImpactFeedbackOnNonDamageableHit: 0
+  damageCollider: {fileID: 6398440586324293994}
+  lastDamageTime: 0
+  MemoryPackableData:
+    Name: 
+    ID: 
+    isRunning: 1
+    Type: 0
+    BitData: 
+--- !u!61 &6398440586324293994
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4103402572958266072}
+  m_Enabled: 0
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_UsedByComposite: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  serializedVersion: 2
+  m_Size: {x: 1, y: 1}
+  m_EdgeRadius: 0
 --- !u!1 &4737264786105266505
 GameObject:
   m_ObjectHideFlags: 0
@@ -279,6 +399,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   animator: {fileID: -6943409614173588924}
+  damageModule: {fileID: 4113570399385382067}
   useLocalInput: 0
   idleAnimationName: Idle_0
   attackAnimationNames:
@@ -292,28 +413,6 @@ MonoBehaviour:
     ID: 
     isRunning: 1
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
     BitData: 
   RawData: []
 --- !u!1 &6308792640219325701
@@ -345,89 +444,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 6400553414711313925}
   - {fileID: 7281605649021211030}
+  - {fileID: 9213605949375907716}
   m_Father: {fileID: 325939573301155603}
   m_LocalEulerAnglesHint: {x: 0, y: 178.259, z: 46.715}
---- !u!1001 &5257180166239399364
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 2154250548199247233}
-    m_Modifications:
-    - target: {fileID: 1163640551680355265, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0.45396253
-      objectReference: {fileID: 0}
-    - target: {fileID: 1163640551680355265, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0.4539626
-      objectReference: {fileID: 0}
-    - target: {fileID: 1163640551680355265, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1163640551680355265, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 0.9238795
-      objectReference: {fileID: 0}
-    - target: {fileID: 1163640551680355265, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1163640551680355265, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1163640551680355265, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0.38268346
-      objectReference: {fileID: 0}
-    - target: {fileID: 1163640551680355265, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1163640551680355265, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1163640551680355265, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: DamageValues.Cutting
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: DamageValues.Piercing
-      value: 21
-      objectReference: {fileID: 0}
-    - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: DamageValues.Chopping
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: DamageValues.Blunt
-      value: 0
-      objectReference: {fileID: 0}
-
-
-
-
-    - target: {fileID: 2747812879517624506, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-      propertyPath: m_Name
-      value: Mod_Damage
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
---- !u!4 &6400553414711313925 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 1163640551680355265, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-  m_PrefabInstance: {fileID: 5257180166239399364}
-  m_PrefabAsset: {fileID: 0}

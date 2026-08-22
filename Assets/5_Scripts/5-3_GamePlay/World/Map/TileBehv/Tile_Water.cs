@@ -26,7 +26,9 @@ public class Tile_Water : TileBlockBehaviour
     [Range(0f, 1f)] public float dirtyWaterInfectionChance = 0.2f;
 
     [Header("水体环境效果")]
-    [Tooltip("进入水体后的移动速度倍率；由环境实例维护，不进入 Buff 系统。")]
+    [Tooltip("水深为 0 时的移动速度倍率；默认浅水仅轻微减速。")]
+    [Range(0.01f, 1f)] public float shallowMoveSpeedMultiplier = 0.85f;
+    [Tooltip("水深为 1 时的移动速度倍率；由环境实例维护，不进入 Buff 系统。")]
     [Min(0.01f)] public float moveSpeedMultiplier = 0.5f;
 
     public override void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
@@ -38,10 +40,17 @@ public class Tile_Water : TileBlockBehaviour
         BuffManager buffManager = validItem ? item.GetComponentInChildren<BuffManager>() : null;
         TileData_Water water = tileData as TileData_Water;
         float depthValue = water != null ? Mathf.Clamp01(water.deepValue) : 0f;
-        SetWaterVisualState(item, depthValue, true);
+        bool edgeInteractionOnly = receiver != null && receiver.IsActiveTileEdgeInteractionOnly;
+        if (edgeInteractionOnly)
+        {
+            // 对象池复用时也要清掉上一轮真实入水留下的目标状态。
+            SetWaterVisualState(item, 0f, false);
+        }
+        else
+            SetWaterVisualState(item, depthValue, true);
 
         // 配置型 Buff 与环境动作相互独立；没有 BuffManager 的角色仍可获得动作定义。
-        if (validItem && buffManager != null && BuffInfo != null)
+        if (!edgeInteractionOnly && validItem && buffManager != null && BuffInfo != null)
         {
             foreach (string buffId in BuffInfo)
             {
@@ -53,7 +62,8 @@ public class Tile_Water : TileBlockBehaviour
         }
 
         ProvideWaterActions(item, water, receiver);
-        ProvideWaterEffects(receiver);
+        if (!edgeInteractionOnly)
+            ProvideWaterEffects(receiver, depthValue);
     }
 
     public override void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
@@ -86,8 +96,14 @@ public class Tile_Water : TileBlockBehaviour
         if (item == null || !(tileData is TileData_Water water))
             return;
 
-        // 持续刷新目标深度，允许区块运行时更新水深时平滑跟随。
-        SetWaterVisualState(item, Mathf.Clamp01(water.deepValue), true);
+        // 邻接水格只用于保留边缘交互，不得把沙地角色染成浸没状态或施加水下减速。
+        if (receiver != null && receiver.IsActiveTileEdgeInteractionOnly)
+            return;
+
+        // 持续刷新目标深度，允许区块运行时更新水深时同步跟随视觉和移速。
+        float depthValue = Mathf.Clamp01(water.deepValue);
+        SetWaterVisualState(item, depthValue, true);
+        ProvideWaterEffects(receiver, depthValue);
     }
 
     #region Visual State
@@ -131,11 +147,26 @@ public class Tile_Water : TileBlockBehaviour
             dirtyWaterInfectionChance));
     }
 
-    /// <summary>进入水体时创建角色独享的减速实例；清 Buff 不会影响该环境效果。</summary>
-    private void ProvideWaterEffects(TileEffectReceiver receiver)
+    /// <summary>根据水深计算并应用角色独享的减速实例；清 Buff 不会影响该环境效果。</summary>
+    private void ProvideWaterEffects(TileEffectReceiver receiver, float depthValue)
     {
-        receiver?.EnvironmentInteractions.SetAvailableEffects(
-            new MoveSpeedEnvironmentEffectDefinition(moveSpeedMultiplier));
+        EnvironmentInteractionRunner runner = receiver?.EnvironmentInteractions;
+        if (runner == null)
+            return;
+
+        float shallowMultiplier = Mathf.Clamp(shallowMoveSpeedMultiplier, 0.01f, 1f);
+        float deepMultiplier = Mathf.Clamp(moveSpeedMultiplier, 0.01f, shallowMultiplier);
+        float resolvedMultiplier = Mathf.Lerp(
+            shallowMultiplier,
+            deepMultiplier,
+            Mathf.Clamp01(depthValue));
+
+        // 水深动态变化时只更新已有实例，避免每帧清空并重建其他环境效果。
+        if (runner.TryUpdateMoveSpeedMultiplier(resolvedMultiplier))
+            return;
+
+        runner.SetAvailableEffects(
+            new MoveSpeedEnvironmentEffectDefinition(resolvedMultiplier));
     }
 
     #endregion

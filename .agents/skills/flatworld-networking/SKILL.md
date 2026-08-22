@@ -22,6 +22,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Mirror/KCP 联机启动、
 - 世界/Item 快照必须版本化、可往返；生成指纹或 MOD 集合不兼容时在入世前拒绝。
 - Chunk 按观察者并集流送；本地导航窗口仍只跟随 owned 玩家。
 - 网络 UI 从正式 Prefab 实例化，不运行时构造；网络玩家名称节点预制在 `Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab`。
+- `NetworkModeUIController` 常驻于 `NetworkGameBootstrap`，但联机面板和主菜单入口属于场景 UI；必须按 `GameStartScene` 加载与 `UIManager.InteractionSurfaceChanged` 幂等重建/重绑，不能只在 `Initialize` 中缓存一次引用。
 - 维度切换当前仅离线；完成服务器权威迁移协议前不得解除。
 
 ## 验证

@@ -126,6 +126,19 @@
         "ItemSpecialData": "",
         "inHand": false
       }
+    },
+    {
+      "id": "Seed_Radish",
+      "parent": "Seed_Apple",
+      "gameName": "萝卜种子",
+      "description": "种下后会长出萝卜；萝卜成熟时可以收获新的萝卜和种子。",
+      "modules": {
+        "Mod_Seed": {
+          "parameters": {
+            "harvestedCropName": "RadishCrop"
+          }
+        }
+      }
     }
   ]
 }

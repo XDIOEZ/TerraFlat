@@ -16,6 +16,7 @@ public class SettingCanvas : Module, IInstanceUI
     // 输入InputAction组件
     private PlayerInputActions playerInputActions;
     GameController gameController;
+    private Mod_PlayerDeathState playerDeathState;
     private bool settingsPauseActive;
     private float timeScaleBeforeSettings;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
@@ -35,6 +36,8 @@ public class SettingCanvas : Module, IInstanceUI
         gameController = item.itemMods.GetMod_ByID(ModText.Controller).GetComponent<GameController>();
         // 初始化输入系统
         playerInputActions = gameController._inputActions;
+        playerDeathState = item.itemMods.GetMod_ByID<Mod_PlayerDeathState>(
+            Mod_PlayerDeathState.ModuleId);
 
         // 绑定ESC按键事件
         playerInputActions.Win10.ESC.performed += OnEscapePressed;
@@ -52,6 +55,9 @@ public class SettingCanvas : Module, IInstanceUI
     // ESC按键响应
     private void OnEscapePressed(InputAction.CallbackContext context)
     {
+        if (gameController != null && !gameController.IsGameplayInputAllowed(context))
+            return;
+
         UIManager uiManager = UIManager.Instance;
         if (uiManager.WasCancelHandledThisFrame() ||
             uiManager.TryCloseTopmostCancelPanel(basePanel))
@@ -96,6 +102,8 @@ public class SettingCanvas : Module, IInstanceUI
         WorldStreamingSettingsPanelLauncher.Ensure(basePanel.transform);
         DifficultySettingsPanelLauncher.Ensure(basePanel.transform);
         InputBindingPanelLauncher.Ensure(basePanel.transform, gameController);
+        PlayerSuicideButton.Ensure(basePanel.transform, playerDeathState);
+        basePanel.RefreshUIComponents();
         SettingsActionListPagination.Ensure(basePanel.transform);
         basePanel.SetPanelName(PanelName);
         basePanel.PrepareForGamepadNavigation();

@@ -8,7 +8,6 @@ public partial class GameSaveData
     [ShowInInspector]
     public bool CustomDifficultyDropAllCarriedItems;
 
-    [ShowInInspector] public int CustomDifficultyDataVersion = 1;
     [ShowInInspector] public float CustomPlayerAttackMultiplier = 1f;
     [ShowInInspector] public float CustomCreatureAttackMultiplier = 1f;
     [ShowInInspector] public float CustomCreatureHealthMultiplier = 1f;

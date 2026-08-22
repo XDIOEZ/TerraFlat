@@ -110,8 +110,11 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             return;
         }
 
-        _toggleCallback = _ =>
+        _toggleCallback = context =>
         {
+            if (!_inputController.IsGameplayInputAllowed(context))
+                return;
+
             if (_inputController.IsGameplayInputLocked &&
                 (basePanel == null || !basePanel.IsOpen()) &&
                 !CanToggleFromMobileMenu())

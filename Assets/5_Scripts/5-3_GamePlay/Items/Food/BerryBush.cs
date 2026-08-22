@@ -4,9 +4,30 @@ using UnityEngine;
 
 /// <summary>
 /// 浆果丛：周期成熟后显示提示Sprite，玩家按E交互可在周围生成浆果物品。
+/// 当前库存和生产计时属于 Item 的持久化模块数据，区块卸载、手动保存和对象池复用都不能重新生成覆盖它们。
 /// </summary>
-public class BerryBush : MonoBehaviour, IInteractable
+public class BerryBush : Module, IInteractable, IItemPoolLifecycle
 {
+#region 模块数据
+
+	private const string BerryBushModuleId = "BerryBush";
+
+	public override string CanonicalModuleId => BerryBushModuleId;
+	public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+	public override float FixedTickInterval => 0.25f;
+
+	/// <summary>浆果库存和生产进度的持久化载体。</summary>
+	public BerryBushModuleData Data = new BerryBushModuleData();
+
+	public override ModuleData _Data
+	{
+		get => Data;
+		set => Data = value as BerryBushModuleData ??
+			throw new ArgumentException("[BerryBush] 模块数据类型错误。", nameof(value));
+	}
+
+#endregion
+
 #region 配置
 
 	[Header("产出配置")]
@@ -63,8 +84,11 @@ public class BerryBush : MonoBehaviour, IInteractable
 
 #region 生命周期
 
-	private void Awake()
+	public override void Awake()
 	{
+		EnsureDataContainer();
+		base.Awake();
+
 		if (string.IsNullOrWhiteSpace(BerryItemId))
 		{
 			throw new ArgumentException("[BerryBush] BerryItemId 不能为空。", nameof(BerryItemId));
@@ -78,7 +102,29 @@ public class BerryBush : MonoBehaviour, IInteractable
 		RefreshReadySpriteVisual();
 	}
 
-	private void Update()
+	public override void Load()
+	{
+		EnsureDataContainer();
+		if (Data.IsInitialized)
+		{
+			RestoreRuntimeState();
+		}
+		else
+		{
+			_currentBerryCount = 0;
+			_productionTimer = 0f;
+		}
+
+		RefreshReadySpriteVisual();
+	}
+
+	public override void Save()
+	{
+		EnsureDataContainer();
+		CaptureRuntimeState();
+	}
+
+	public override void ModUpdate(float deltaTime)
 	{
 		if (_currentBerryCount >= Mathf.Max(1, MaxBerryCount))
 		{
@@ -86,13 +132,14 @@ public class BerryBush : MonoBehaviour, IInteractable
 		}
 
 		_productionTimer +=
-			Time.deltaTime *
+			Mathf.Max(0f, deltaTime) *
 			GameDifficultyService.Current.Production.CropGrowthMultiplier;
 		if (_productionTimer >= Mathf.Max(0.1f, ProductionIntervalSeconds))
 		{
 			_productionTimer = 0f;
 			int batchSize = Mathf.Max(1, ProductionBatchSize);
 			_currentBerryCount = Mathf.Min(Mathf.Max(1, MaxBerryCount), _currentBerryCount + batchSize);
+			CaptureRuntimeState();
 			RefreshReadySpriteVisual();
 		}
 	}
@@ -138,6 +185,15 @@ public class BerryBush : MonoBehaviour, IInteractable
 	/// </summary>
 	public void InitializeNaturalStock(uint deterministicRandomValue)
 	{
+		EnsureDataContainer();
+		if (Data.IsInitialized)
+		{
+			// 已有区块差量时只恢复存档，不能再次按 GUID 生成初始库存覆盖玩家状态。
+			RestoreRuntimeState();
+			RefreshReadySpriteVisual();
+			return;
+		}
+
 		int capacity = Mathf.Max(1, MaxBerryCount);
 		int minCount = Mathf.Clamp(NaturalInitialBerryCountMin, 0, capacity);
 		int maxCount = Mathf.Clamp(NaturalInitialBerryCountMax, minCount, capacity);
@@ -145,6 +201,7 @@ public class BerryBush : MonoBehaviour, IInteractable
 
 		_currentBerryCount = minCount + (int)(deterministicRandomValue % range);
 		_productionTimer = 0f;
+		CaptureRuntimeState();
 		RefreshReadySpriteVisual();
 	}
 
@@ -160,12 +217,14 @@ public class BerryBush : MonoBehaviour, IInteractable
 		{
 			berry.DestroySelf();
 			_currentBerryCount = Mathf.Max(0, _currentBerryCount - 1);
+			CaptureRuntimeState();
 			RefreshReadySpriteVisual();
 			return;
 		}
 		ApplyParabolaThrowLikePlayerDrop(berry, harvestStartPos);
 
 		_currentBerryCount = Mathf.Max(0, _currentBerryCount - 1);
+		CaptureRuntimeState();
 		Debug.Log($"[BerryBush] 采摘完成，生成浆果数量={outputAmount}, 剩余库存={_currentBerryCount}, 物品ID={BerryItemId}");
 
 		RefreshReadySpriteVisual();
@@ -273,6 +332,65 @@ public class BerryBush : MonoBehaviour, IInteractable
 		}
 
 		return transform.position;
+	}
+
+#endregion
+
+#region 持久化与对象池
+
+	/// <summary>保证模块数据容器可用，并固定模块 ID。</summary>
+	private void EnsureDataContainer()
+	{
+		if (Data == null)
+		{
+			Data = new BerryBushModuleData();
+		}
+
+		Data.ID = BerryBushModuleId;
+	}
+
+	/// <summary>把模块数据恢复到运行时字段。</summary>
+	private void RestoreRuntimeState()
+	{
+		int capacity = Mathf.Max(1, MaxBerryCount);
+		_currentBerryCount = Mathf.Clamp(Data.CurrentBerryCount, 0, capacity);
+		_productionTimer = Mathf.Max(0f, Data.ProductionTimer);
+	}
+
+	/// <summary>把运行时库存和计时写回 ItemData。</summary>
+	private void CaptureRuntimeState()
+	{
+		if (Data == null)
+		{
+			return;
+		}
+
+		Data.CurrentBerryCount = Mathf.Clamp(_currentBerryCount, 0, Mathf.Max(1, MaxBerryCount));
+		Data.ProductionTimer = Mathf.Max(0f, _productionTimer);
+		Data.IsInitialized = true;
+	}
+
+	/// <summary>从对象池取出时清理上一次 Item 的运行时状态，等待新的 ItemData 驱动加载。</summary>
+	public void OnItemTakenFromPool()
+	{
+		ResetPoolRuntimeState();
+	}
+
+	/// <summary>回收到对象池时解除旧 ItemData 引用，避免下次新实例继承旧库存。</summary>
+	public void OnItemReturnedToPool()
+	{
+		ResetPoolRuntimeState();
+	}
+
+	private void ResetPoolRuntimeState()
+	{
+		Data = new BerryBushModuleData
+		{
+			ID = BerryBushModuleId
+		};
+		_currentBerryCount = 0;
+		_productionTimer = 0f;
+		RefreshReadySpriteVisual();
 	}
 
 #endregion

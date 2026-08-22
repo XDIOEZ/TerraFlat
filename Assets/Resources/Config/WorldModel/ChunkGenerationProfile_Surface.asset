@@ -194,7 +194,7 @@ MonoBehaviour:
   - Id: navigation.defaultCost
     Value: 1
   - Id: navigation.riverCost
-    Value: 5000
+    Value: 20000
   - Id: cave.portal.enabled
     Value: 1
   - Id: cave.portal.chunkChance
@@ -203,6 +203,12 @@ MonoBehaviour:
     Value: 3
   - Id: cave.portal.seedSalt
     Value: 7919
+  - Id: cave.portal.shrub.enabled
+    Value: 1
+  - Id: cave.portal.shrub.radius
+    Value: 7
+  - Id: cave.portal.shrub.chanceMultiplier
+    Value: 64
   textParameters:
   - Id: terrain.mode
     Value: surface
@@ -244,6 +250,26 @@ MonoBehaviour:
     MaxHeight: 1
     ProvidedTags:
     - Tree
+    CompanionOnly: 0
+    CompanionHostTag:
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
+  - RuleId: surface.forest.radish
+    ItemId: Radish
+    ItemCount: 1
+    SpawnChance: 0.001
+    SpawnChanceMultiplier: 1
+    BiomeMask: 32
+    MinTemperature: 0
+    MaxTemperature: 1
+    MinPrecipitation: 0
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    ProvidedTags: []
     CompanionOnly: 0
     CompanionHostTag:
     CompanionSpawnChance: 0
@@ -365,6 +391,26 @@ MonoBehaviour:
     MaxHeight: 1
     ProvidedTags:
     - Bush
+    CompanionOnly: 0
+    CompanionHostTag:
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
+  - RuleId: surface.grassland.radish
+    ItemId: Radish
+    ItemCount: 1
+    SpawnChance: 0.0015
+    SpawnChanceMultiplier: 1
+    BiomeMask: 16
+    MinTemperature: 0
+    MaxTemperature: 1
+    MinPrecipitation: 0
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    ProvidedTags: []
     CompanionOnly: 0
     CompanionHostTag:
     CompanionSpawnChance: 0

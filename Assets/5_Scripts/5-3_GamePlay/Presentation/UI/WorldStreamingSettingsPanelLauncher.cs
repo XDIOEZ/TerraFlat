@@ -1,6 +1,7 @@
 // AI-Context: 设置菜单的区块流送性能入口；模式写入 PlayerPrefs，并立即同步 ChunkMgr 调度器。
 using System.Collections.Generic;
 using FlatWorld.Localization;
+using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,17 +12,11 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour
 {
     private const string EntryButtonName = "流送性能";
 
-    private static readonly List<string> ModeLabels = new()
-    {
-        "自动（推荐）",
-        "流畅优先（单后台线程）",
-        "高吞吐（安全多线程）"
-    };
-
     private Button entryButton;
     private BasePanel settingsPanel;
     private TMP_Dropdown modeDropdown;
     private TextMeshProUGUI statusText;
+    private ISettingsDropdown modeSetting;
 
     public static WorldStreamingSettingsPanelLauncher Ensure(Transform settingsRoot)
     {
@@ -56,7 +51,8 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour
         EnsureWindow();
         if (settingsPanel == null)
             return;
-        modeDropdown?.SetValueWithoutNotify((int)WorldStreamingPreferences.Mode);
+        modeDropdown?.SetValueWithoutNotify(
+            modeSetting != null ? modeSetting.SelectedIndex : 0);
         RefreshStatus();
         settingsPanel.Open();
         settingsPanel.transform.SetAsLastSibling();
@@ -77,6 +73,8 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour
 
         settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
             prefab, RuntimeUIPrefabKeys.WorldStreamingSettings);
+        modeSetting = WorldStreamingPreferences.SettingsProvider.GetDropdown(
+            WorldStreamingPreferences.ModeSettingKey);
         modeDropdown = settingsPanel.GetComponentInChildren<TMP_Dropdown>(true);
         statusText = settingsPanel.GetText("状态文本");
         settingsPanel.GetButton("关闭按钮")?.onClick.AddListener(Close);
@@ -85,12 +83,7 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour
         if (modeDropdown != null)
         {
             modeDropdown.ClearOptions();
-            modeDropdown.AddOptions(new List<string>
-            {
-                FlatWorldLocalizationService.GetUiText(ModeLabels[0]),
-                FlatWorldLocalizationService.GetUiText(ModeLabels[1]),
-                FlatWorldLocalizationService.GetUiText(ModeLabels[2])
-            });
+            modeDropdown.AddOptions(GetSettingOptionLabels(modeSetting?.Options));
         }
         else
         {
@@ -102,10 +95,13 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour
 
     private void Apply()
     {
-        if (modeDropdown == null)
+        if (modeDropdown == null || modeSetting == null)
             return;
-        WorldStreamingPreferences.SetMode(
-            (WorldStreamingPerformanceMode)modeDropdown.value);
+        if (!modeSetting.TrySetSelectedIndex(modeDropdown.value, out string error))
+        {
+            statusText.text = FlatWorldLocalizationService.GetUiText(error);
+            return;
+        }
         RefreshStatus();
     }
 
@@ -117,7 +113,10 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour
         int workers = manager != null
             ? manager.EffectiveBackgroundGenerationConcurrency
             : WorldStreamingPreferences.ResolveBaseGenerationConcurrency(2);
-        statusText.text = WorldStreamingPreferences.Mode switch
+        WorldStreamingPerformanceMode mode = modeSetting != null
+            ? (WorldStreamingPerformanceMode)modeSetting.SelectedIndex
+            : WorldStreamingPreferences.Mode;
+        statusText.text = mode switch
         {
             WorldStreamingPerformanceMode.Smooth =>
                 FlatWorldLocalizationService.GetUiFormat(
@@ -156,6 +155,18 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour
                 return buttons[i];
         }
         return null;
+    }
+
+    private static List<string> GetSettingOptionLabels(
+        IReadOnlyList<SettingOption> options)
+    {
+        var labels = new List<string>(options?.Count ?? 0);
+        if (options == null)
+            return labels;
+
+        for (int i = 0; i < options.Count; i++)
+            labels.Add(FlatWorldLocalizationService.GetUiText(options[i]?.DisplayName));
+        return labels;
     }
 
     #endregion

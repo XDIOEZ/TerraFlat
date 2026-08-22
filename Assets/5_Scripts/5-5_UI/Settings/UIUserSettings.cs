@@ -1,6 +1,8 @@
 // AI-Context: 全局 UI 用户偏好与 CanvasScaler 应用器；缩放通过参考分辨率实现，保持锚点语义并使用 Expand 防止宽高比导致界面出框。
 
 using System;
+using System.Collections.Generic;
+using FlatWorld.Settings;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -23,6 +25,12 @@ public static class UIUserSettings
     public const float MaximumScale = 1.2f;
     public const float ScaleStep = 0.05f;
 
+    public const string SettingsProviderId = "ui";
+    public const string ScaleSettingKey = "ui.scale";
+    public const string RespectSafeAreaSettingKey = "ui.respectSafeArea";
+    public const string FloatingMoveJoystickSettingKey = "ui.floatingMoveJoystick";
+    public const string EnablePinchZoomSettingKey = "ui.enablePinchZoom";
+
     #endregion
 
     #region 缓存与事件
@@ -38,6 +46,12 @@ public static class UIUserSettings
 
     /// <summary>移动摇杆固定/浮动偏好改变时广播，避免无关 UI 设置触发摇杆重配。</summary>
     public static event Action MobileControlsChanged;
+
+    private static readonly ISettingsProvider settingsProvider =
+        CreateSettingsProvider();
+
+    /// <summary>供设置 UI 查找的 UI 偏好提供者；首次访问时自动注册。</summary>
+    public static ISettingsProvider SettingsProvider => RegisterSettingsProvider();
 
     public static float Scale
     {
@@ -163,6 +177,7 @@ public static class UIUserSettings
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeState()
     {
+        SettingsProviderRegistry.Unregister(settingsProvider);
         initialized = false;
         cachedScale = DefaultScale;
         cachedRespectSafeArea = true;
@@ -171,6 +186,94 @@ public static class UIUserSettings
         Changed = null;
         MobileControlsChanged = null;
     }
+
+    #region 设置提供者
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterSettingsProviderOnLoad()
+    {
+        RegisterSettingsProvider();
+    }
+
+    private static ISettingsProvider RegisterSettingsProvider()
+    {
+        SettingsProviderRegistry.Register(settingsProvider);
+        return settingsProvider;
+    }
+
+    private static ISettingsProvider CreateSettingsProvider()
+    {
+        return new UISettingsProvider();
+    }
+
+    private sealed class UISettingsProvider : ISettingsProvider
+    {
+        private readonly IReadOnlyList<ISettingsToggle> toggles;
+        private readonly IReadOnlyList<ISettingsSlider> sliders;
+
+        public UISettingsProvider()
+        {
+            sliders = new ISettingsSlider[]
+            {
+                new SettingsSlider(
+                    new SettingDescriptor(
+                        ScaleSettingKey,
+                        "界面缩放",
+                        SettingControlType.Slider,
+                        "ui",
+                        order: 0),
+                    MinimumScale,
+                    MaximumScale,
+                    ScaleStep,
+                    () => Scale,
+                    value => SetScale(value))
+            };
+            toggles = new ISettingsToggle[]
+            {
+                new SettingsToggle(
+                    new SettingDescriptor(
+                        RespectSafeAreaSettingKey,
+                        "安全区域适配",
+                        SettingControlType.Toggle,
+                        "ui",
+                        order: 0),
+                    () => RespectSafeArea,
+                    value => SetRespectSafeArea(value)),
+                new SettingsToggle(
+                    new SettingDescriptor(
+                        FloatingMoveJoystickSettingKey,
+                        "浮动移动摇杆",
+                        SettingControlType.Toggle,
+                        "ui",
+                        order: 1),
+                    () => FloatingMoveJoystick,
+                    value => SetFloatingMoveJoystick(value)),
+                new SettingsToggle(
+                    new SettingDescriptor(
+                        EnablePinchZoomSettingKey,
+                        "双指缩放",
+                        SettingControlType.Toggle,
+                        "ui",
+                        order: 2),
+                    () => EnablePinchZoom,
+                    value => SetEnablePinchZoom(value))
+            };
+        }
+
+        public string ProviderId => SettingsProviderId;
+        public string DisplayName => "界面";
+        public int Order => 20;
+        public IReadOnlyList<ISettingsToggle> ToggleSettings => toggles;
+        public IReadOnlyList<ISettingsSlider> SliderSettings => sliders;
+        public IReadOnlyList<ISettingsDropdown> DropdownSettings =>
+            Array.Empty<ISettingsDropdown>();
+        public IReadOnlyList<ISettingsSwitch> SwitchSettings =>
+            Array.Empty<ISettingsSwitch>();
+
+        public void ResetToDefaults() => UIUserSettings.ResetToDefaults();
+    }
+
+    #endregion
 
     private static void EnsureInitialized()
     {

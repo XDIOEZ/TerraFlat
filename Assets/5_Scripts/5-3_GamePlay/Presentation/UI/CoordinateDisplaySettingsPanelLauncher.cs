@@ -1,4 +1,5 @@
 using FlatWorld.Localization;
+using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -31,6 +32,7 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour
     private Button worldCoordinatesButton;
     private Button latitudeLongitudeButton;
     private TextMeshProUGUI statusText;
+    private ISettingsSwitch displayModeSetting;
     private bool isClamping;
 
     #endregion
@@ -76,8 +78,8 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour
         RefreshView();
         ClampWindowToCanvas();
         settingsPanel.PrepareForGamepadNavigation(
-            PlayerWorldCoordinateDisplayPreferences.Mode ==
-            PlayerWorldCoordinateDisplayMode.LatitudeLongitude
+            (displayModeSetting != null && displayModeSetting.SelectedIndex ==
+             (int)PlayerWorldCoordinateDisplayMode.LatitudeLongitude)
                 ? LatitudeLongitudeButtonName
                 : WorldCoordinatesButtonName);
         settingsPanel.Open();
@@ -102,6 +104,8 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour
         settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
             prefab,
             RuntimeUIPrefabKeys.CoordinateDisplaySettings);
+        displayModeSetting = PlayerWorldCoordinateDisplayPreferences.SettingsProvider
+            .GetSwitch(PlayerWorldCoordinateDisplayPreferences.ModeSettingKey);
         worldCoordinatesButton = settingsPanel.GetButton(WorldCoordinatesButtonName);
         latitudeLongitudeButton = settingsPanel.GetButton(LatitudeLongitudeButtonName);
         statusText = settingsPanel.GetText(StatusTextName);
@@ -111,7 +115,8 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour
         worldCoordinatesButton?.onClick.AddListener(SelectWorldCoordinates);
         latitudeLongitudeButton?.onClick.AddListener(SelectLatitudeLongitude);
 
-        if (worldCoordinatesButton == null || latitudeLongitudeButton == null || statusText == null)
+        if (worldCoordinatesButton == null || latitudeLongitudeButton == null ||
+            statusText == null || displayModeSetting == null)
             Debug.LogError("[CoordinateDisplaySettingsPanelLauncher] 显示设置 Prefab 控件命名契约不完整。", settingsPanel);
 
         ClampWindowToCanvas();
@@ -135,13 +140,18 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour
 
     private void SetDisplayMode(PlayerWorldCoordinateDisplayMode mode)
     {
-        PlayerWorldCoordinateDisplayPreferences.SetMode(mode);
+        if (displayModeSetting != null)
+            displayModeSetting.TrySetSelectedIndex((int)mode, out _);
         RefreshView();
     }
 
     private void RefreshView()
     {
-        PlayerWorldCoordinateDisplayMode mode = PlayerWorldCoordinateDisplayPreferences.Mode;
+        int selectedIndex = displayModeSetting != null
+            ? displayModeSetting.SelectedIndex
+            : (int)PlayerWorldCoordinateDisplayPreferences.DefaultMode;
+        PlayerWorldCoordinateDisplayMode mode =
+            (PlayerWorldCoordinateDisplayMode)selectedIndex;
         SetSelectionVisual(
             worldCoordinatesButton,
             mode == PlayerWorldCoordinateDisplayMode.WorldCoordinates);

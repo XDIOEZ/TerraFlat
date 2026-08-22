@@ -1,7 +1,9 @@
 // AI-Context: 自动保存的全局偏好与运行时调度器；偏好写入 PlayerPrefs，只有进入游戏世界后才按未缩放时间触发正式存档。
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using FlatWorld.Settings;
 using UnityEngine;
 
 public static class AutoSavePreferences
@@ -10,10 +12,19 @@ public static class AutoSavePreferences
     public const int MinIntervalMinutes = 1;
     public const int MaxIntervalMinutes = 1440;
 
+    public const string SettingsProviderId = "auto-save";
+    public const string IntervalSettingKey = "autoSave.interval";
+
     private const string EnabledKey = "FlatWorld.AutoSave.Enabled.v1";
     private const string IntervalMinutesKey = "FlatWorld.AutoSave.IntervalMinutes.v1";
 
     public static event Action Changed;
+
+    private static readonly ISettingsProvider settingsProvider =
+        CreateSettingsProvider();
+
+    /// <summary>供设置 UI 使用的自动保存下拉列表契约。</summary>
+    public static ISettingsProvider SettingsProvider => RegisterSettingsProvider();
 
     public static bool Enabled => PlayerPrefs.GetInt(EnabledKey, 1) != 0;
 
@@ -43,6 +54,110 @@ public static class AutoSavePreferences
         if (changed)
             Changed?.Invoke();
     }
+
+    #region 设置提供者
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterSettingsProviderOnLoad()
+    {
+        RegisterSettingsProvider();
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetRuntimeState()
+    {
+        SettingsProviderRegistry.Unregister(settingsProvider);
+        Changed = null;
+    }
+
+    private static ISettingsProvider RegisterSettingsProvider()
+    {
+        SettingsProviderRegistry.Register(settingsProvider);
+        return settingsProvider;
+    }
+
+    private static ISettingsProvider CreateSettingsProvider()
+    {
+        return new AutoSaveSettingsProvider();
+    }
+
+    private sealed class AutoSaveSettingsProvider : ISettingsProvider
+    {
+        private static readonly IReadOnlyList<SettingOption> Options =
+            new SettingOption[]
+            {
+                new SettingOption("disabled", "永远不自动保存"),
+                new SettingOption("1-minute", "每 1 分钟"),
+                new SettingOption("5-minutes", "每 5 分钟"),
+                new SettingOption("10-minutes", "每 10 分钟"),
+                new SettingOption("15-minutes", "每 15 分钟"),
+                new SettingOption("30-minutes", "每 30 分钟"),
+                new SettingOption("custom", "自定义间隔")
+            };
+
+        private static readonly int[] PresetMinutes = { 0, 1, 5, 10, 15, 30, -1 };
+        private readonly IReadOnlyList<ISettingsDropdown> dropdowns;
+
+        public AutoSaveSettingsProvider()
+        {
+            dropdowns = new ISettingsDropdown[]
+            {
+                new SettingsDropdown(
+                    new SettingDescriptor(
+                        IntervalSettingKey,
+                        "自动保存间隔",
+                        SettingControlType.Dropdown,
+                        "save",
+                        order: 0),
+                    Options,
+                    ResolveCurrentOptionIndex,
+                    TrySetPreset)
+            };
+        }
+
+        public string ProviderId => SettingsProviderId;
+        public string DisplayName => "自动保存";
+        public int Order => 50;
+        public IReadOnlyList<ISettingsToggle> ToggleSettings =>
+            Array.Empty<ISettingsToggle>();
+        public IReadOnlyList<ISettingsSlider> SliderSettings =>
+            Array.Empty<ISettingsSlider>();
+        public IReadOnlyList<ISettingsDropdown> DropdownSettings => dropdowns;
+        public IReadOnlyList<ISettingsSwitch> SwitchSettings =>
+            Array.Empty<ISettingsSwitch>();
+
+        public void ResetToDefaults() => Enable(DefaultIntervalMinutes);
+
+        private static int ResolveCurrentOptionIndex()
+        {
+            if (!Enabled)
+                return 0;
+
+            for (int i = 1; i < PresetMinutes.Length - 1; i++)
+            {
+                if (PresetMinutes[i] == IntervalMinutes)
+                    return i;
+            }
+
+            return PresetMinutes.Length - 1;
+        }
+
+        private static string TrySetPreset(int index)
+        {
+            if (index < 0 || index >= PresetMinutes.Length)
+                return "自动保存选项无效。";
+            if (index == PresetMinutes.Length - 1)
+                return "自定义间隔需要先输入分钟数。";
+
+            if (index == 0)
+                Disable();
+            else
+                Enable(PresetMinutes[index]);
+            return null;
+        }
+    }
+
+    #endregion
 }
 
 [DisallowMultipleComponent]

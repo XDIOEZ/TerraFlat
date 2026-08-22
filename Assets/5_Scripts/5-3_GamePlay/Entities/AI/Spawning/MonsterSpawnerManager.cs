@@ -182,7 +182,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     private void OnGameWorldExit()
     {
         CaptureSaveData(SaveDataMgr.Instance?.SaveData);
-        ClearTrackedPopulation();
+        // 世界退出时对象会随场景/区块一起销毁，不再唤醒本管理器主动休眠的实体。
+        ClearTrackedPopulation(restoreChunkDormantItems: false);
         ReleaseJsonRuntimeConfigs();
         _nextSpawnRetryTime.Clear();
         _nextRecoveryCheckTime.Clear();
@@ -200,7 +201,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
         ItemMgr.RuntimeItemInstantiated -= OnRuntimeItemInstantiated;
         ItemMgr.RuntimeItemDespawning -= OnRuntimeItemDespawning;
-        ClearTrackedPopulation();
+        // OnDestroy 可能发生在 Unity 正在卸载场景时，禁止对即将销毁的对象调用 SetActive。
+        ClearTrackedPopulation(restoreChunkDormantItems: false);
         ReleaseJsonRuntimeConfigs();
 
         base.OnDestroy();
@@ -249,6 +251,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void Update()
     {
+        if (GameManager.Instance == null || !GameManager.Instance.IsGameplayReady)
+            return;
+
         RefreshChunkDormancy();
 
         if (!GameNetwork.HasStateAuthority)
@@ -1096,9 +1101,10 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         _trackedPopulation = _trackedItems.Count;
     }
 
-    private void ClearTrackedPopulation()
+    private void ClearTrackedPopulation(bool restoreChunkDormantItems = true)
     {
-        RestoreChunkDormantItems();
+        if (restoreChunkDormantItems)
+            RestoreChunkDormantItems();
         foreach (DamageReceiver receiver in _deathReceivers.Keys)
         {
             if (receiver != null)
@@ -1399,15 +1405,6 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         {
             state = new SpawnerProgressSaveData();
             _runtimeStates[key] = state;
-        }
-
-        if (state.DataVersion < 1)
-        {
-            state.DataVersion = 1;
-            state.LastProcessedTotalTime = -1f;
-            state.AvailableBudget = -1;
-            state.LastBudgetRecoveryDay = -1;
-            state.PendingReplacementCount = 0;
         }
 
         state.TriggeredWindowIndices ??= new List<int>();

@@ -475,8 +475,6 @@ public class Chunk : MonoBehaviour
     #endregion
 
     #region 区块保存
-    private const float AutoSaveFrameBudgetSeconds = 0.0025f;
-
     public Chunk SaveChunk()
     {
         if (MapSave == null)
@@ -485,28 +483,20 @@ public class Chunk : MonoBehaviour
             return this;
         }
 
-        // Procedural chunks persist only changes against their deterministic baseline.
-        // Legacy chunks without a captured baseline continue through the full-snapshot path below.
-        if (SaveDataMgr.Instance != null && SaveDataMgr.Instance.TrySaveChunkDifferences(this))
+        SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
+        if (saveDataMgr == null)
         {
-            RefreshPositionDictionary();
+            Debug.LogError($"❌ 区块 {name} 缺少 SaveDataMgr，当前格式无法保存", this);
             return this;
         }
 
-        MapSave.items.Clear();
-
-        // 调用所有item的Save方法
-        foreach (var item in RunTimeItems.Values)
+        if (!saveDataMgr.TrySaveChunkDifferences(this))
         {
-            if (item == null || RuntimeAiEntityUtility.IsAiEntity(item)) continue;
-
-            item.Save();
-            MapSave.AddItemData(item.itemData);
+            Debug.LogError($"❌ 区块 {name} 缺少当前格式的程序化基线，无法保存差量", this);
+            return this;
         }
 
-        // 同时更新位置字典（确保位置字典数据一致）
         RefreshPositionDictionary();
-
         return this;
     }
 
@@ -523,79 +513,50 @@ public class Chunk : MonoBehaviour
             yield break;
         }
 
-        if (SaveDataMgr.Instance != null)
+        SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
+        if (saveDataMgr == null)
         {
-            bool differenceHandled = false;
-            Exception differenceFailure = null;
-            IEnumerator differenceRoutine = ForwardAutoSaveRoutine(
-                SaveDataMgr.Instance.TrySaveChunkDifferencesCoroutine(
-                    this,
-                    (handled, failure) =>
-                    {
-                        differenceHandled = handled;
-                        differenceFailure = failure;
-                    }),
-                failure =>
+            Exception failure = new InvalidOperationException(
+                $"区块 {name} 缺少 SaveDataMgr，当前格式无法保存");
+            Debug.LogError($"❌ {failure.Message}", this);
+            onFailure?.Invoke(failure);
+            yield break;
+        }
+
+        bool differenceHandled = false;
+        Exception differenceFailure = null;
+        IEnumerator differenceRoutine = ForwardAutoSaveRoutine(
+            saveDataMgr.TrySaveChunkDifferencesCoroutine(
+                this,
+                (handled, failure) =>
                 {
-                    if (differenceFailure == null)
-                        differenceFailure = failure;
-                });
-
-            while (differenceRoutine.MoveNext())
-                yield return differenceRoutine.Current;
-
-            if (differenceFailure != null)
+                    differenceHandled = handled;
+                    differenceFailure = failure;
+                }),
+            failure =>
             {
-                onFailure?.Invoke(differenceFailure);
-                yield break;
-            }
+                if (differenceFailure == null)
+                    differenceFailure = failure;
+            });
 
-            if (differenceHandled)
-            {
-                RefreshPositionDictionary(new List<Item>(RunTimeItems.Values));
-                yield break;
-            }
-        }
+        while (differenceRoutine.MoveNext())
+            yield return differenceRoutine.Current;
 
-        MapSave.items ??= new Dictionary<string, HashSet<ItemData>>();
-        MapSave.items.Clear();
-
-        List<Item> items = new List<Item>(RunTimeItems.Values);
-        float frameStart = Time.realtimeSinceStartup;
-        for (int i = 0; i < items.Count; i++)
+        if (differenceFailure != null)
         {
-            Item item = items[i];
-            if (item == null || RuntimeAiEntityUtility.IsAiEntity(item))
-                continue;
-
-            Exception itemFailure = null;
-            try
-            {
-                item.Save();
-                if (item.itemData != null)
-                    MapSave.AddItemData(item.itemData);
-            }
-            catch (Exception exception)
-            {
-                itemFailure = exception;
-                Debug.LogError($"[Chunk] 自动保存物品失败：{item.name}", item);
-                Debug.LogException(exception);
-            }
-
-            if (itemFailure != null)
-            {
-                onFailure?.Invoke(itemFailure);
-                yield break;
-            }
-
-            if (Time.realtimeSinceStartup - frameStart >= AutoSaveFrameBudgetSeconds)
-            {
-                frameStart = Time.realtimeSinceStartup;
-                yield return null;
-            }
+            onFailure?.Invoke(differenceFailure);
+            yield break;
         }
 
-        // 让位置索引使用当前稳定快照，避免跨帧期间字典被实体生命周期修改。
+        if (!differenceHandled)
+        {
+            Exception failure = new InvalidOperationException(
+                $"区块 {name} 缺少当前格式的程序化基线，无法保存差量");
+            Debug.LogError($"❌ {failure.Message}", this);
+            onFailure?.Invoke(failure);
+            yield break;
+        }
+
         RefreshPositionDictionary(new List<Item>(RunTimeItems.Values));
     }
 

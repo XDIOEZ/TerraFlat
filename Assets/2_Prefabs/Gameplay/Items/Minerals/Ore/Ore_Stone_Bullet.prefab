@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1271475636138967309}
   - component: {fileID: 1096267118403055914}
   - component: {fileID: 3927564738158104665}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Ore_Stone_Bullet
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -93,7 +93,7 @@ BoxCollider2D:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4926578369279844245}
-  m_Enabled: 1
+  m_Enabled: 0
   m_Density: 1
   m_Material: {fileID: 0}
   m_IncludeLayers:
@@ -155,7 +155,15 @@ MonoBehaviour:
   DamageInterval: -1
   EnableOnTriggerEnterDamage: 1
   OnlyDealDamageWhenInHand: 0
-  showDebugWarnings: 1
+  MaxAttackTargets: 1
+  EnableHitSlowdown: 1
+  HitSlowMultiplier: 0.5
+  HitSlowDuration: 0.35
+  tileDamageToolKind: 0
+  weaponAudioClass: 0
+  attackAudioCueId: 
+  impactAudioOverrides: []
+  playImpactFeedbackOnNonDamageableHit: 0
   damageCollider: {fileID: 1096267118403055914}
   lastDamageTime: 0
   MemoryPackableData:

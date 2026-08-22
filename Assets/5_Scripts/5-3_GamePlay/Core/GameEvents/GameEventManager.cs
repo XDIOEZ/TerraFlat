@@ -13,8 +13,6 @@ namespace FlatWorld.Gameplay.Events
     /// </summary>
     public sealed class GameEventManager : SingletonAutoMono<GameEventManager>
     {
-        private const int CurrentSaveDataVersion = 2;
-
         private readonly List<GameEventDefinition> definitions = new();
         private readonly Dictionary<string, GameEventDefinition> definitionsById =
             new(StringComparer.Ordinal);
@@ -228,7 +226,6 @@ namespace FlatWorld.Gameplay.Events
 
             saveData.GameEventData ??= new GameEventSaveData();
             runtimeData = saveData.GameEventData;
-            runtimeData.DataVersion = Mathf.Max(CurrentSaveDataVersion, runtimeData.DataVersion);
             runtimeData.EventProgress ??= new Dictionary<string, GameEventProgressSaveData>();
             runtimeData.ActiveEvents ??= new List<ActiveGameEventSaveData>();
 

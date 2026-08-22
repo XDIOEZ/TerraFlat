@@ -15,6 +15,7 @@ namespace FlatWorld.WorldModel
 
         // 缓存按“冻结地表配置 + 门户随机种子 + 正式概率格”区分；洞穴窗口通常只会命中极少数入口格。
         private const int MaxSurfacePortalSelectionCacheEntries = 512;
+        private const int SurfacePortalShrubSalt = 0x2c1b3c6d;
         private static readonly ConcurrentDictionary<SurfacePortalSelectionKey,
             Lazy<SurfacePortalSelection>> SurfacePortalSelections = new();
         private static readonly DeterministicChunkGenerator SurfacePortalTerrainGenerator = new();
@@ -151,11 +152,14 @@ namespace FlatWorld.WorldModel
             var portalCells = new HashSet<int>();
             AddSurfacePortals(request, terrain, settings, portalPlacements, claimedGuids,
                 portalCells);
-            if (portalPlacements.Count == 0)
+            var shrubPlacements = new List<NaturalItemPlacement>();
+            AddSurfacePortalShrubs(request, terrain, settings, ecology, portalPlacements,
+                shrubPlacements, claimedGuids);
+            if (portalPlacements.Count == 0 && shrubPlacements.Count == 0)
                 return ecology ?? ChunkEcologyData.Empty;
 
             var merged = new List<NaturalItemPlacement>((ecology?.Count ?? 0) +
-                portalPlacements.Count);
+                portalPlacements.Count + shrubPlacements.Count);
             IReadOnlyList<NaturalItemPlacement> existing = ecology?.Placements;
             if (existing != null)
             {
@@ -170,7 +174,189 @@ namespace FlatWorld.WorldModel
             }
             for (int i = 0; i < portalPlacements.Count; i++)
                 AddPlacement(merged, claimedGuids, portalPlacements[i]);
+            for (int i = 0; i < shrubPlacements.Count; i++)
+                AddPlacement(merged, claimedGuids, shrubPlacements[i]);
             return new ChunkEcologyData(merged);
+        }
+
+        #endregion
+
+        #region 洞穴入口周边灌木
+
+        /// <summary>
+        /// 在天然洞穴入口安全区外增加灌木概率。只复用草原/森林的 Bush 规则，
+        /// 因此沙漠、沙滩、石地和雪地不会因为靠近入口而长出灌木。
+        /// </summary>
+        private static void AddSurfacePortalShrubs(ChunkGenerationRequest request,
+            ChunkTerrainBuffer terrain, ChunkGenerationSettingsSnapshot settings,
+            ChunkEcologyData existingEcology,
+            IReadOnlyList<NaturalItemPlacement> portalPlacements,
+            List<NaturalItemPlacement> placements, HashSet<int> claimedGuids)
+        {
+            if (!settings.CavePortalShrubEnabled ||
+                settings.CavePortalShrubChanceMultiplier <= 0d ||
+                settings.CavePortalShrubRadius <= settings.CavePortalSafeRadius ||
+                portalPlacements == null || portalPlacements.Count == 0 ||
+                request.Profile.EcologyGlobalMultiplier <= 0d)
+            {
+                return;
+            }
+
+            IReadOnlyList<EcologySpawnRuleSnapshot> rules = request.Profile.EcologyRules;
+            if (rules == null || rules.Count == 0)
+                return;
+
+            var occupiedCells = new HashSet<int>();
+            IReadOnlyList<NaturalItemPlacement> existing = existingEcology?.Placements;
+            if (existing != null)
+            {
+                for (int i = 0; i < existing.Count; i++)
+                {
+                    NaturalItemPlacement placement = existing[i];
+                    occupiedCells.Add(placement.LocalY * terrain.Width + placement.LocalX);
+                }
+            }
+
+            for (int portalIndex = 0; portalIndex < portalPlacements.Count; portalIndex++)
+            {
+                NaturalItemPlacement portal = portalPlacements[portalIndex];
+                int portalWorldX = request.Topology.NormalizeX(
+                    request.Address.ChunkOrigin.X + portal.LocalX);
+                int portalWorldY = request.Topology.NormalizeY(
+                    request.Address.ChunkOrigin.Y + portal.LocalY);
+                int radius = settings.CavePortalShrubRadius;
+                int minX = portalWorldX - radius;
+                int maxX = portalWorldX + radius;
+                int minY = portalWorldY - radius;
+                int maxY = portalWorldY + radius;
+
+                for (int worldY = minY; worldY <= maxY; worldY++)
+                {
+                    for (int worldX = minX; worldX <= maxX; worldX++)
+                    {
+                        int offsetX = worldX - portalWorldX;
+                        int offsetY = worldY - portalWorldY;
+                        int distanceSquared = offsetX * offsetX + offsetY * offsetY;
+                        if (distanceSquared <= settings.CavePortalSafeRadius *
+                            settings.CavePortalSafeRadius || distanceSquared > radius * radius)
+                        {
+                            continue;
+                        }
+
+                        Int2 normalized = new(
+                            request.Topology.NormalizeX(worldX),
+                            request.Topology.NormalizeY(worldY));
+                        if (!TryGetLocalCell(request, terrain, normalized,
+                                out int localX, out int localY))
+                        {
+                            continue;
+                        }
+
+                        int cellKey = localY * terrain.Width + localX;
+                        if (!occupiedCells.Add(cellKey))
+                            continue;
+
+                        TerrainCell cell = terrain.GetCell(localX, localY);
+                        if (!IsSurfacePortalShrubCellAvailable(terrain, cell, localX, localY))
+                        {
+                            occupiedCells.Remove(cellKey);
+                            continue;
+                        }
+
+                        double temperature = ReadEnvironment(terrain, "temperature", localX,
+                            localY);
+                        double precipitation = ReadEnvironment(terrain, "precipitation", localX,
+                            localY);
+                        double height = ReadEnvironment(terrain, "height", localX, localY);
+                        double riverFloodplain = ReadEnvironment(terrain, "riverFloodplain",
+                            localX, localY);
+                        EcologySpawnRuleSnapshot rule = FindSurfacePortalShrubRule(
+                            rules, cell.BiomeId, temperature, precipitation, height,
+                            riverFloodplain);
+                        if (rule == null)
+                        {
+                            occupiedCells.Remove(cellKey);
+                            continue;
+                        }
+
+                        double chance = request.Profile.EcologyGlobalMultiplier *
+                            rule.SpawnChance * rule.SpawnChanceMultiplier *
+                            settings.CavePortalShrubChanceMultiplier;
+                        if (!PassesSurfacePortalShrubChance(request, normalized.X, normalized.Y,
+                                chance))
+                        {
+                            occupiedCells.Remove(cellKey);
+                            continue;
+                        }
+
+                        string ruleId = $"cave.portal.shrub.{rule.RuleId}";
+                        int guid = CaveLayoutKernel.CreatePlacementGuid(request,
+                            normalized.X, normalized.Y, ruleId);
+                        AddPlacement(placements, claimedGuids, new NaturalItemPlacement(guid,
+                            rule.ItemId, localX, localY, 0f, 0f, ruleId));
+                    }
+                }
+            }
+        }
+
+        /// <summary>只允许可行走、无结构且属于草原或森林的地表格进入入口灌木判定。</summary>
+        private static bool IsSurfacePortalShrubCellAvailable(ChunkTerrainBuffer terrain,
+            TerrainCell cell, int localX, int localY)
+        {
+            if ((cell.Flags & (TerrainCellFlags.Water | TerrainCellFlags.Blocking |
+                               TerrainCellFlags.Occupied)) != 0 ||
+                (cell.Flags & TerrainCellFlags.Walkable) == 0)
+            {
+                return false;
+            }
+
+            return (cell.BiomeId == (int)SurfaceBiomeKind.Grassland ||
+                    cell.BiomeId == (int)SurfaceBiomeKind.Forest) &&
+                   ReadEnvironment(terrain, "structure", localX, localY) < 0.5f;
+        }
+
+        /// <summary>从当前冻结 Profile 中找到符合环境条件的草原/森林 Bush 规则。</summary>
+        private static EcologySpawnRuleSnapshot FindSurfacePortalShrubRule(
+            IReadOnlyList<EcologySpawnRuleSnapshot> rules, int biomeId,
+            double temperature, double precipitation, double height,
+            double riverFloodplain)
+        {
+            if (biomeId != (int)SurfaceBiomeKind.Grassland &&
+                biomeId != (int)SurfaceBiomeKind.Forest)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < rules.Count; i++)
+            {
+                EcologySpawnRuleSnapshot rule = rules[i];
+                if (rule == null || rule.CompanionOnly ||
+                    !string.Equals(rule.ItemId, "Bush", StringComparison.OrdinalIgnoreCase) ||
+                    !rule.Matches(biomeId, temperature, precipitation, height,
+                        riverFloodplain))
+                {
+                    continue;
+                }
+
+                return rule;
+            }
+
+            return null;
+        }
+
+        /// <summary>使用独立盐值判定入口灌木，避免与普通生态随机流互相牵连。</summary>
+        private static bool PassesSurfacePortalShrubChance(ChunkGenerationRequest request,
+            int worldX, int worldY, double chance)
+        {
+            chance = Clamp01(chance);
+            if (chance <= 0d)
+                return false;
+            if (chance >= 1d)
+                return true;
+
+            uint state = CaveLayoutKernel.Hash(request.WorldSeed, worldX, worldY,
+                SurfacePortalShrubSalt);
+            return CaveLayoutKernel.NextUnitDouble(ref state) < chance;
         }
 
         #endregion

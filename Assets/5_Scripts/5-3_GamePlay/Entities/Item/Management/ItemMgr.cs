@@ -38,6 +38,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     #region 分级更新调度
 
     private readonly ItemTickScheduler _tickScheduler = new();
+    private bool _itemTickSuspended;
 
     [ShowInInspector, Sirenix.OdinInspector.ReadOnly] private int EveryFrameItemCount => _tickScheduler.EveryFrameCount;
     [ShowInInspector, Sirenix.OdinInspector.ReadOnly] private int FastTickItemCount => _tickScheduler.FastCount;
@@ -188,10 +189,18 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     {
         if (!IsWorldItemRuntimeActive())
         {
+            if (!_itemTickSuspended)
+            {
+                _tickScheduler.Pause(RuntimeItems);
+                _itemTickSuspended = true;
+            }
+
             // 退出世界后只结算并释放已提交的感知 Job，禁止旧场景实体继续 Tick。
             CompletePerceptionBatch(applyResults: false);
             return;
         }
+
+        _itemTickSuspended = false;
 
         CompletePerceptionBatch();
 
@@ -215,7 +224,9 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     private static bool IsWorldItemRuntimeActive()
     {
         GameManager gameManager = GameManager.Instance;
-        return gameManager != null && gameManager.IsInGameWorld;
+        return gameManager != null &&
+               gameManager.IsInGameWorld &&
+               gameManager.IsGameplayReady;
     }
 
     #endregion

@@ -111,6 +111,25 @@ internal sealed class ItemTickScheduler
         ProcessTier(slowBuckets, ref slowTimer, ref slowCursor, SlowSlice, deltaTime);
     }
 
+    /// <summary>加载页期间暂停调度并重置时间基准，恢复后不补算暂停期间的 Tick。</summary>
+    public void Pause(IReadOnlyList<Item> runtimeItems)
+    {
+        fastTimer = 0f;
+        normalTimer = 0f;
+        slowTimer = 0f;
+        fastCursor = -1;
+        normalCursor = -1;
+        slowCursor = -1;
+
+        float currentTime = Time.time;
+        for (int i = 0; i < runtimeItems.Count; i++)
+        {
+            Item item = runtimeItems[i];
+            if (item != null)
+                item.ResetScheduledTickClock(currentTime);
+        }
+    }
+
     public void Rebuild(IReadOnlyList<Item> runtimeItems)
     {
         everyFrameItems.Clear();

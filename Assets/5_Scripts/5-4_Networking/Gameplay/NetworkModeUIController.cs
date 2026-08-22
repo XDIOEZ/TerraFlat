@@ -3,6 +3,7 @@
 using System;
 using FlatWorld.Networking;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace FlatWorld.Networking.Gameplay
 {
@@ -12,25 +13,69 @@ namespace FlatWorld.Networking.Gameplay
     public sealed partial class NetworkModeUIController : MonoBehaviour, IInstanceUI
     {
         private FlatWorldGameNetworkManager networkManager;
+        private INetworkSession subscribedSession;
+        private bool initialized;
 
         public void Initialize(FlatWorldGameNetworkManager manager)
         {
+            if (manager == null)
+            {
+                Debug.LogError("[联机UI] 无法初始化：联机会话管理器为空。", this);
+                return;
+            }
+
+            if (initialized && networkManager == manager)
+            {
+                RequestUIRefresh();
+                return;
+            }
+
+            ReleaseSessionBindings();
             networkManager = manager;
             networkManager.GameplayStatusChanged += SetStatus;
-            GameNetwork.Session.StateChanged += OnSessionStateChanged;
-            GameNetwork.Session.Error += SetStatus;
-            StartCoroutine(CreatePanelWhenUIReady());
+            subscribedSession = GameNetwork.Session;
+            subscribedSession.StateChanged += OnSessionStateChanged;
+            subscribedSession.Error += SetStatus;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            initialized = true;
+            RequestUIRefresh();
         }
 
         private void OnDestroy()
         {
+            ReleaseSessionBindings();
+
+            ReleaseUIBindings();
+        }
+
+        /// <summary>释放会话和场景监听，避免常驻联机对象引用旧场景事件。</summary>
+        private void ReleaseSessionBindings()
+        {
             if (networkManager != null)
                 networkManager.GameplayStatusChanged -= SetStatus;
 
-            GameNetwork.Session.StateChanged -= OnSessionStateChanged;
-            GameNetwork.Session.Error -= SetStatus;
+            if (subscribedSession != null)
+            {
+                subscribedSession.StateChanged -= OnSessionStateChanged;
+                subscribedSession.Error -= SetStatus;
+                subscribedSession = null;
+            }
 
-            ReleaseUIBindings();
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            initialized = false;
+        }
+
+        /// <summary>场景重建后重新准备主菜单联机 UI；进入世界时只关闭残留面板。</summary>
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (scene.name == NetworkGameBootstrap.StartSceneName)
+            {
+                RequestUIRefresh();
+                return;
+            }
+
+            if (panel != null)
+                panel.Close();
         }
 
         private void StartHost()

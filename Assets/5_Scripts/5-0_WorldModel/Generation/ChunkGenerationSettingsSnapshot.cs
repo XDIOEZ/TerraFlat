@@ -375,6 +375,11 @@ namespace FlatWorld.WorldModel
                 GetInt(numbers, "cave.portal.chunkHeight", 0));
             CavePortalBaseSeed = GetInt(numbers, "cave.portal.baseSeed", 0);
             CavePortalSeedSalt = GetInt(numbers, "cave.portal.seedSalt", 7919);
+            CavePortalShrubEnabled = GetBool(numbers, "cave.portal.shrub.enabled", true);
+            CavePortalShrubRadius = Clamp(
+                GetInt(numbers, "cave.portal.shrub.radius", 7), 1, 32);
+            CavePortalShrubChanceMultiplier = Math.Max(0d, Finite(
+                GetDouble(numbers, "cave.portal.shrub.chanceMultiplier", 64d), 64d));
             CaveResourceDensity = Clamp01(
                 GetDouble(numbers, "cave.resource.density", 0.042d));
             CaveLooseOreDensity = Clamp01(
@@ -387,7 +392,7 @@ namespace FlatWorld.WorldModel
             DefaultNavigationCost = (short)Clamp(GetInt(numbers,
                 "navigation.defaultCost", 1), 1, short.MaxValue);
             RiverNavigationCost = (short)Clamp(GetInt(numbers,
-                "navigation.riverCost", 5000), DefaultNavigationCost, short.MaxValue);
+                "navigation.riverCost", 20000), DefaultNavigationCost, short.MaxValue);
         }
 
         /// <summary>生成地表还是洞穴。</summary>
@@ -555,6 +560,12 @@ namespace FlatWorld.WorldModel
         public int CavePortalChunkHeight { get; }
         public int CavePortalBaseSeed { get; }
         public int CavePortalSeedSalt { get; }
+        /// <summary>是否在地表天然洞穴入口周围额外生成灌木。</summary>
+        public bool CavePortalShrubEnabled { get; }
+        /// <summary>洞穴入口灌木外圈半径；入口安全半径以内不放置灌木。</summary>
+        public int CavePortalShrubRadius { get; }
+        /// <summary>入口周边灌木的额外生成概率倍率；只作用于草原和森林的 Bush 规则。</summary>
+        public double CavePortalShrubChanceMultiplier { get; }
         public string CavePortalItemId { get; }
         public string CavePortalTargetDimensionId { get; }
         /// <summary>洞壁矿脉与散落矿石的密度。</summary>

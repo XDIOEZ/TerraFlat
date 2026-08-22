@@ -15,6 +15,25 @@ public interface IScreenPostProcessEffect
     void Apply(ScreenPostProcessFrame frame, float unscaledDeltaTime);
 }
 
+#region 屏幕后处理质量档位接口
+
+/// <summary>标记可在低特效质量运行的屏幕后处理；低、中、高档位都会保留。</summary>
+public interface IScreenPostProcessLowQualityEffect
+{
+}
+
+/// <summary>标记需要至少中等特效质量的屏幕后处理；低档位会跳过。</summary>
+public interface IScreenPostProcessMediumQualityEffect
+{
+}
+
+/// <summary>标记只在高特效质量运行的屏幕后处理；中、低档位会跳过。</summary>
+public interface IScreenPostProcessHighQualityEffect
+{
+}
+
+#endregion
+
 /// <summary>
 /// 单帧后处理效果快照。当前提供 Vignette 通道，保留独立接口以便后续扩展其他 URP Volume 通道。
 /// </summary>
@@ -138,6 +157,9 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
                 continue;
             }
 
+            if (!IsEffectEnabledForQuality(effect))
+                continue;
+
             effect.Apply(frame, deltaTime);
         }
 
@@ -182,6 +204,19 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
     #endregion
 
     #region Volume 合成
+
+    /// <summary>按特效脚本实现的档位接口筛选当前质量允许提交的效果。</summary>
+    private static bool IsEffectEnabledForQuality(IScreenPostProcessEffect effect)
+    {
+        ScreenPostProcessQuality quality = ScreenPostProcessSettings.Quality;
+        if (effect is IScreenPostProcessHighQualityEffect)
+            return quality == ScreenPostProcessQuality.High;
+        if (effect is IScreenPostProcessMediumQualityEffect)
+            return quality != ScreenPostProcessQuality.Low;
+
+        // 低档接口和未标记接口都保持兼容，确保基础警示效果在移动端仍可见。
+        return true;
+    }
 
     /// <summary>创建仅属于本单例的运行时 Volume，不污染项目内置全局 Volume Profile。</summary>
     private void EnsureRuntimeVolume()

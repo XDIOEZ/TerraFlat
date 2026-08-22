@@ -21,6 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的多语言系统、Unity Loc
 - 静态 Prefab 文本由 Setup 扫描并自动绑定；动态文本用 `GetUiText/GetUiFormat`，在语言事件后刷新，模板同时登记英文覆盖。
 - 保留中文 fallback；玩家自由输入与开发调试输出通常不进正式表。
 - 新增语言需同时配置 Locale、String Table、选择 UI、同步工具和 Addressables。
+- 语言下拉设置由 `FlatWorldLocalizationService.SettingsProvider` 暴露为 `ISettingsDropdown`；Locale 代码是稳定 `SettingOption.Id`，主菜单只按 Provider/Key 绑定，不在 `GameManager.UI` 维护另一份语言列表。
 
 ## 工作流
 

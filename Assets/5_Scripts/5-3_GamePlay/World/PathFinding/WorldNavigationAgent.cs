@@ -32,6 +32,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     private int waypointIndex;
     private int requestId;
     private int pathRevision = -1;
+    private int pathCostRevision = -1;
     private int pathInvalidationRevision = -1;
     private int queuedValidationRevision = -1;
     private int immediatelyValidatedWaypointIndex = -1;
@@ -228,7 +229,9 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             return;
         }
 
-        if (hasPath && pathRevision != navigation.GridRevision)
+        if (hasPath &&
+            (pathRevision != navigation.GridRevision ||
+             pathCostRevision != navigation.PathCostRevision))
             ValidateStalePath(navigation, current);
 
         if (!hasPath &&
@@ -253,7 +256,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
         AdvanceReachedWaypoints(current);
         if (hasPath &&
-            pathRevision != navigation.GridRevision &&
+            (pathRevision != navigation.GridRevision ||
+             pathCostRevision != navigation.PathCostRevision) &&
             !ValidateStalePath(navigation, current))
         {
             ApplyVelocity(Vector2.zero, deltaTime);
@@ -316,6 +320,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         if (!result.Success ||
             navigation == null ||
             result.GridRevision != navigation.GridRevision ||
+            result.PathCostRevision != navigation.PathCostRevision ||
             result.Waypoints.Length == 0)
         {
             if (!hasPath)
@@ -337,30 +342,9 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             WorldNavigationGrid.WorldToCell(destination) !=
             WorldNavigationGrid.WorldToCell(submittedDestination);
 
-        Vector2 current = CurrentPosition;
+        // 首个路点已经由带权寻路和带权平滑生成；不再按几何 LOS 跨路点跳跃，
+        // 避免把绕开的河流或其他高代价地形重新拉直穿过。
         int initialWaypoint = 0;
-        if (navigation.IsWalkable(current))
-        {
-            initialWaypoint = -1;
-            int furthestCandidate = Mathf.Min(result.Waypoints.Length - 1, 8);
-            for (int i = furthestCandidate; i >= 0; i--)
-            {
-                if (!navigation.HasGridLineOfSight(current, result.Waypoints[i]))
-                    continue;
-
-                initialWaypoint = i;
-                break;
-            }
-
-            if (initialWaypoint < 0)
-            {
-                destinationDirty = true;
-                consecutiveFailures = Mathf.Min(consecutiveFailures + 1, 8);
-                lastFailureRevision = navigation.GridRevision;
-                nextRequestTime = Time.unscaledTime + Mathf.Max(0.05f, repathInterval);
-                return;
-            }
-        }
 
         waypoints = result.Waypoints;
         waypointIndex = initialWaypoint;
@@ -368,6 +352,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         activePathDestination = result.RequestedDestination;
         pathReachesDestination = result.ReachesDestination;
         pathRevision = result.GridRevision;
+        pathCostRevision = result.PathCostRevision;
         pathInvalidationRevision = navigation.PathInvalidationRevision;
         queuedValidationRevision = -1;
         immediatelyValidatedWaypointIndex = -1;
@@ -413,8 +398,19 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
     private bool ValidateStalePath(WorldNavigationManager navigation, Vector2 current)
     {
-        if (!hasPath || pathRevision == navigation.GridRevision)
+        if (!hasPath ||
+            (pathRevision == navigation.GridRevision &&
+             pathCostRevision == navigation.PathCostRevision))
             return hasPath;
+
+        if (pathCostRevision != navigation.PathCostRevision)
+        {
+            // 代价版本变化代表旧路线已不再保证最优，必须重新提交带权寻路。
+            InvalidateCurrentPath();
+            destinationDirty = true;
+            nextRequestTime = Time.unscaledTime;
+            return false;
+        }
 
         int currentInvalidationRevision = navigation.PathInvalidationRevision;
         if (pathInvalidationRevision == currentInvalidationRevision)
@@ -517,6 +513,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         waypointIndex = 0;
         waypoints = Array.Empty<Vector2>();
         pathRevision = -1;
+        pathCostRevision = -1;
         pathInvalidationRevision = -1;
         queuedValidationRevision = -1;
         immediatelyValidatedWaypointIndex = -1;

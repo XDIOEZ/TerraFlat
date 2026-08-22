@@ -71,7 +71,7 @@ public sealed class PlayerCreationTemplateConfig
         [JsonProperty("hungerActionEnabled")] public bool HungerActionEnabled = true;
         [JsonProperty("moveNutritionConsumeMultiplier")] public float MoveNutritionConsumeMultiplier = 1.6f;
         [JsonProperty("runNutritionConsumeMultiplier")] public float RunNutritionConsumeMultiplier = 2f;
-        [JsonProperty("runWaterConsumeMultiplier")] public float RunWaterConsumeMultiplier = 0.5f;
+        [JsonProperty("runWaterConsumeMultiplier")] public float RunWaterConsumeMultiplier = 0.25f;
     }
 
     [Serializable]

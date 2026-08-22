@@ -32,7 +32,7 @@ MonoBehaviour:
     hungerActionEnabled: 1
     moveNutritionConsumeMultiplier: 1.6
     runNutritionConsumeMultiplier: 2
-    runWaterConsumeMultiplier: 0.5
+    runWaterConsumeMultiplier: 0.25
   food:
     nutrition:
       Carbohydrates: 500

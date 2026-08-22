@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Settings;
 using UnityEngine;
 
 public enum GameDifficultyId
@@ -285,14 +286,6 @@ public static class GameDifficultyCatalog
         if (saveData == null)
             return new GameDifficultyRuleValues();
 
-        if (saveData.CustomDifficultyDataVersion <= 0)
-        {
-            return new GameDifficultyRuleValues
-            {
-                DropAllCarriedItems = saveData.CustomDifficultyDropAllCarriedItems
-            };
-        }
-
         var values = new GameDifficultyRuleValues
         {
             DropAllCarriedItems = saveData.CustomDifficultyDropAllCarriedItems,
@@ -326,7 +319,6 @@ public static class GameDifficultyCatalog
         values = values.Clone();
         values.Normalize();
 
-        saveData.CustomDifficultyDataVersion = 1;
         saveData.CustomDifficultyDropAllCarriedItems = values.DropAllCarriedItems;
         saveData.CustomPlayerAttackMultiplier = values.PlayerAttackMultiplier;
         saveData.CustomCreatureAttackMultiplier = values.CreatureAttackMultiplier;
@@ -352,7 +344,16 @@ public static class GameDifficultyCatalog
 /// </summary>
 public static class GameDifficultyService
 {
+    public const string SettingsProviderId = "difficulty";
+    public const string DifficultySettingKey = "difficulty.mode";
+
     public static event Action<GameDifficultyId> DifficultyChanged;
+
+    private static readonly ISettingsProvider settingsProvider =
+        CreateSettingsProvider();
+
+    /// <summary>供游戏内设置使用的难度按钮式切换契约。</summary>
+    public static ISettingsProvider SettingsProvider => RegisterSettingsProvider();
 
     private static GameSaveData cachedSaveData;
     private static GameDifficultyId cachedDifficultyId;
@@ -434,6 +435,92 @@ public static class GameDifficultyService
         error = null;
         return true;
     }
+
+    #region 设置提供者
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterSettingsProviderOnLoad()
+    {
+        RegisterSettingsProvider();
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetRuntimeState()
+    {
+        SettingsProviderRegistry.Unregister(settingsProvider);
+        cachedSaveData = null;
+        cachedDefinition = null;
+        DifficultyChanged = null;
+    }
+
+    private static ISettingsProvider RegisterSettingsProvider()
+    {
+        SettingsProviderRegistry.Register(settingsProvider);
+        return settingsProvider;
+    }
+
+    private static ISettingsProvider CreateSettingsProvider()
+    {
+        return new DifficultySettingsProvider();
+    }
+
+    private sealed class DifficultySettingsProvider : ISettingsProvider
+    {
+        private static readonly IReadOnlyList<SettingOption> Options =
+            new SettingOption[]
+            {
+                new SettingOption("simple", "简单"),
+                new SettingOption("hard", "困难"),
+                new SettingOption("custom", "自定义")
+            };
+
+        private readonly IReadOnlyList<ISettingsSwitch> switches;
+
+        public DifficultySettingsProvider()
+        {
+            switches = new ISettingsSwitch[]
+            {
+                new SettingsSwitch(
+                    new SettingDescriptor(
+                        DifficultySettingKey,
+                        "游戏难度",
+                        SettingControlType.Switch,
+                        "world",
+                        order: 0),
+                    Options,
+                    () => (int)CurrentId,
+                    TrySetDifficulty)
+            };
+        }
+
+        public string ProviderId => SettingsProviderId;
+        public string DisplayName => "难度";
+        public int Order => 80;
+        public IReadOnlyList<ISettingsToggle> ToggleSettings =>
+            Array.Empty<ISettingsToggle>();
+        public IReadOnlyList<ISettingsSlider> SliderSettings =>
+            Array.Empty<ISettingsSlider>();
+        public IReadOnlyList<ISettingsDropdown> DropdownSettings =>
+            Array.Empty<ISettingsDropdown>();
+        public IReadOnlyList<ISettingsSwitch> SwitchSettings => switches;
+
+        public void ResetToDefaults()
+        {
+            TrySetCurrent(GameDifficultyId.Simple, out _);
+        }
+
+        private static string TrySetDifficulty(int index)
+        {
+            if (index < 0 || index >= Options.Count)
+                return "游戏难度选项无效。";
+
+            return TrySetCurrent((GameDifficultyId)index, out string error)
+                ? null
+                : error;
+        }
+    }
+
+    #endregion
 
     #region 通用倍率工具
 

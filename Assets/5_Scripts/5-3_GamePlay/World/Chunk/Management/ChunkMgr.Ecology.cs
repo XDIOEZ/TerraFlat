@@ -13,7 +13,7 @@ public partial class ChunkMgr
 {
     #region 配置冻结
 
-    /// <summary>把新世界当前 Profile 的生态配置冻结到 PlanetData，旧世界则优先恢复已保存配置。</summary>
+    /// <summary>把当前 Profile 的生态配置冻结到 PlanetData，并恢复已保存配置。</summary>
     private static ChunkGenerationProfileSnapshot ApplyPersistedEcologyConfiguration(
         ChunkGenerationProfileSnapshot profile)
     {
@@ -48,11 +48,10 @@ public partial class ChunkMgr
             return profile;
         }
 
-        planet.Ecology.MigrateDeprecatedTreeCompanionRules();
         ChunkGenerationProfileSnapshot persistedProfile = profile.WithEcology(
             planet.Ecology.GlobalMultiplier,
             planet.Ecology.CreateRuleSnapshots());
-        // 迁移后同步真实规则指纹，避免联机仍拿旧伴生配置的指纹进行校验。
+        // 同步冻结规则指纹，供联机校验。
         planet.Ecology.ConfigurationFingerprint = persistedProfile.EcologyFingerprint;
         return persistedProfile;
     }
@@ -73,7 +72,6 @@ public partial class ChunkMgr
             return profile;
         }
 
-        planet.Ecology.Generation.MigrateCaveResourceDensityToThirtyPercent(profile);
         if (!planet.Ecology.TryApplyGenerationConfiguration(profile,
                 out ChunkGenerationProfileSnapshot restoredProfile))
         {

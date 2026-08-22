@@ -25,7 +25,7 @@
         "hungerActionEnabled": true,
         "moveNutritionConsumeMultiplier": 1.6,
         "runNutritionConsumeMultiplier": 2.0,
-        "runWaterConsumeMultiplier": 0.5
+        "runWaterConsumeMultiplier": 0.25
       },
       "food": {
         "nutrition": {

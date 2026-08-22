@@ -82,6 +82,18 @@ public class Mod_Building : Module
     public bool IsItemInInventory => IsSummoner && item != null && item.itemData != null && item.InHand && item.Owner != null;
     public bool IsPlacementPending => _placementPending;
     public bool IsDismantlePending => _dismantlePending;
+    /// <summary>当前建筑预览有效时，右键应由建筑动作优先处理。</summary>
+    public bool IsPlacementActionAvailable
+    {
+        get
+        {
+            if (!IsItemInInventory || _placementPending || !IsSummoner || GhostShadow == null)
+                return false;
+
+            Vector3 placement = NormalizePlacement(GhostShadow.transform.position);
+            return ValidatePlacement(placement, GetAuthorityPosition(), false, out _);
+        }
+    }
     public bool CanCommitDismantle => Data?.Role == BuildingRole.PlacedBuilding &&
                                       CurrentState is BuildingState.Installed or BuildingState.Damaged or
                                           BuildingState.Uninstalling;
@@ -206,7 +218,7 @@ public class Mod_Building : Module
     [Button]
     public virtual void Install()
     {
-        if (_placementPending || !IsItemInInventory)
+        if (item == null || item.DestructionHandled || _placementPending || !IsItemInInventory)
             return;
 
         if (!TryGetGhostPlacementPosition(out Vector3 placement))
@@ -1193,6 +1205,11 @@ public class Mod_Building : Module
         sourceRenderer = null;
         sourceRoot = null;
 
+        // 运行时物品定义可能复用通用 Prop 外壳；自身就是建筑时必须使用已应用定义 Sprite，
+        // 否则建筑预览会误读 Prop 预制体上的默认贴图。
+        if (UsesCurrentItemAsBuildingPrefab() && TryGetCurrentItemPreviewRenderer(out sourceRenderer, out sourceRoot))
+            return true;
+
         if (TryGetBuildingBodyPrefab(out GameObject buildingPrefab))
         {
             Item buildingItem = buildingPrefab.GetComponent<Item>();
@@ -1242,6 +1259,37 @@ public class Mod_Building : Module
         return false;
     }
 
+    private bool TryGetCurrentItemPreviewRenderer(
+        out SpriteRenderer sourceRenderer,
+        out Transform sourceRoot)
+    {
+        sourceRenderer = null;
+        sourceRoot = null;
+        if (item == null)
+            return false;
+
+        if (item.Sprite != null && item.Sprite.sprite != null)
+        {
+            sourceRenderer = item.Sprite;
+            sourceRoot = item.transform;
+            return true;
+        }
+
+        SpriteRenderer[] itemRenderers = item.GetComponentsInChildren<SpriteRenderer>(true);
+        for (int i = 0; i < itemRenderers.Length; i++)
+        {
+            SpriteRenderer candidate = itemRenderers[i];
+            if (candidate == null || candidate.sprite == null)
+                continue;
+
+            sourceRenderer = candidate;
+            sourceRoot = item.transform;
+            return true;
+        }
+
+        return false;
+    }
+
     /// <summary>返回真实放置预览使用的图片、局部坐标根节点与占地范围。</summary>
     public bool TryGetBuildingPreviewVisual(
         out SpriteRenderer sourceRenderer,
@@ -1258,6 +1306,14 @@ public class Mod_Building : Module
         if (!string.IsNullOrWhiteSpace(Data?.TileBlockId))
             return new Bounds(Vector3.zero, Vector3.one);
 
+        if (UsesCurrentItemAsBuildingPrefab())
+        {
+            BoxCollider2D currentItemCollider = item?.GetComponent<BoxCollider2D>();
+            currentItemCollider ??= item?.GetComponentInChildren<BoxCollider2D>(true);
+            if (currentItemCollider != null)
+                return GetColliderLocalBounds(item.transform, currentItemCollider);
+        }
+
         if (TryGetBuildingBodyPrefab(out GameObject buildingPrefab))
         {
             BoxCollider2D bodyCollider = buildingPrefab.GetComponent<BoxCollider2D>();
@@ -1267,6 +1323,12 @@ public class Mod_Building : Module
         }
 
         return GetPlacementBounds(Vector3.zero);
+    }
+
+    private bool UsesCurrentItemAsBuildingPrefab()
+    {
+        return item != null &&
+               string.Equals(Data?.BuildingPrefabId, item.itemData?.IDName, StringComparison.Ordinal);
     }
 
     private bool TryGetBuildingBodyPrefab(out GameObject buildingPrefab)

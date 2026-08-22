@@ -17,8 +17,8 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 4;
-    private const int ModdedSaveVersion = 3;
+    private const int CompactSaveVersion = 5;
+    private const int ModdedSaveVersion = 4;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
@@ -931,7 +931,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     }
 
     /// <summary>
-    /// Builds a delta against the deterministic baseline. Returns false for legacy/full-snapshot chunks.
+    /// 基于确定性基线构建当前格式的区块差量。
     /// </summary>
     public bool TrySaveChunkDifferences(Chunk chunk)
     {
@@ -948,8 +948,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             PlanetName = planetName,
             ChunkName = chunk.MapSave.Name,
             ChunkPosition = chunk.MapSave.MapPosition,
-            SunlightIntensity = chunk.MapSave.SunlightIntensity,
-            IsDelta = true
+            SunlightIntensity = chunk.MapSave.SunlightIntensity
         };
 
         HashSet<int> currentGuids = new HashSet<int>();
@@ -989,7 +988,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         CollectTileDifferences(chunk.Map.Data, baseline, delta.TileDeltas);
         CollectGrassDifferences(chunk.Map.Data, baseline, delta.GrassDeltas);
 
-        // Prevent the old full-snapshot path from retaining generated content in memory.
+        // 当前格式只保存差量，避免把生成基线重新塞回 MapSave。
         chunk.MapSave.items ??= new Dictionary<string, HashSet<ItemData>>();
         chunk.MapSave.items.Clear();
 
@@ -1027,8 +1026,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             PlanetName = planetName,
             ChunkName = chunk.MapSave.Name,
             ChunkPosition = chunk.MapSave.MapPosition,
-            SunlightIntensity = chunk.MapSave.SunlightIntensity,
-            IsDelta = true
+            SunlightIntensity = chunk.MapSave.SunlightIntensity
         };
 
         HashSet<int> currentGuids = new HashSet<int>();
@@ -1401,8 +1399,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         {
             PlanetName = planetName,
             ChunkName = ToChunkName(address),
-            ChunkPosition = new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y),
-            IsDelta = true
+            ChunkPosition = new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y)
         };
     }
 
@@ -1738,22 +1735,9 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         string key = BuildChunkKey(planetName, chunkName);
         savedItems ??= new List<ItemData>();
 
-        if (!chunkBaselines.ContainsKey(key) &&
-            !chunkDeltas.ContainsKey(key) &&
-            TryGetFullMapSave(planetName, chunkName, out MapSave fullMapSave))
-        {
-            ReplaceMapSaveRuntimeBuildingItems(fullMapSave, savedItems);
-            return;
-        }
-
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record == null)
         {
             record = CreateRuntimeChunkDelta(planetName, address);
-        }
-        else if (TryGetFullMapSave(planetName, chunkName, out MapSave existingFullMapSave))
-        {
-            // 一旦该区块已有差量，旧全量快照中的动态建筑必须移除，避免拆除后从全量快照复活。
-            ReplaceMapSaveRuntimeBuildingItems(existingFullMapSave, null);
         }
 
         record.ChangedItems ??= new List<ItemData>();
@@ -1777,42 +1761,6 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             chunkDeltas.Remove(key);
     }
 
-    private static void ReplaceMapSaveRuntimeBuildingItems(
-        MapSave mapSave,
-        List<ItemData> savedItems)
-    {
-        if (mapSave == null)
-            return;
-
-        savedItems ??= new List<ItemData>();
-        mapSave.items ??= new Dictionary<string, HashSet<ItemData>>();
-        var emptyGroups = new List<string>();
-        foreach (KeyValuePair<string, HashSet<ItemData>> pair in mapSave.items)
-        {
-            pair.Value?.RemoveWhere(IsRuntimeBuildingData);
-            if (pair.Value == null || pair.Value.Count == 0)
-                emptyGroups.Add(pair.Key);
-        }
-
-        for (int i = 0; i < emptyGroups.Count; i++)
-            mapSave.items.Remove(emptyGroups[i]);
-
-        for (int i = 0; i < savedItems.Count; i++)
-        {
-            ItemData data = savedItems[i];
-            if (data == null)
-                continue;
-
-            if (!mapSave.items.TryGetValue(data.IDName, out HashSet<ItemData> group))
-            {
-                group = new HashSet<ItemData>();
-                mapSave.items[data.IDName] = group;
-            }
-
-            group.Add(data);
-        }
-    }
-
     /// <summary>新版区块就绪时恢复该区块的全部动态建筑，包括建筑模块状态和耐久。</summary>
     public void RestoreRuntimeBuildingsForChunk(RuntimeWorldAddress address)
     {
@@ -1834,12 +1782,6 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             if (delta?.RemovedItemGuids != null)
                 removedGuids.UnionWith(delta.RemovedItemGuids);
             CollectRuntimeBuildingData(delta?.ChangedItems, candidates);
-        }
-
-        if (TryGetFullMapSave(planetName, chunkName, out MapSave mapSave) && mapSave.items != null)
-        {
-            foreach (HashSet<ItemData> items in mapSave.items.Values)
-                CollectRuntimeBuildingData(items, candidates);
         }
 
         var restoredGuids = new HashSet<int>();
@@ -1908,10 +1850,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
     #region Runtime AI persistence
 
-    /// <summary>
-    /// 从 ItemMgr 的 WorldAddress 索引采集 AI；旧全量 MapSave 保持全量格式，
-    /// 程序化或纯新版区块则复用 ChangedItems 数据槽，避免新增存档版本字段。
-    /// </summary>
+    /// <summary>从 ItemMgr 的 WorldAddress 索引采集 AI，并写入当前区块差量。</summary>
     private void CaptureRuntimeAiEntityStates()
     {
         ItemMgr itemManager = ItemMgr.Instance;
@@ -2070,12 +2009,6 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (chunkDeltas.TryGetValue(chunkKey, out ChunkSaveRecord delta))
             CollectRuntimeAiData(delta?.ChangedItems, candidates);
 
-        if (TryGetFullMapSave(planetName, chunkName, out MapSave mapSave) && mapSave.items != null)
-        {
-            foreach (HashSet<ItemData> items in mapSave.items.Values)
-                CollectRuntimeAiData(items, candidates);
-        }
-
         var restoredGuids = new HashSet<int>();
         for (int i = 0; i < candidates.Count; i++)
         {
@@ -2118,22 +2051,13 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     {
         string chunkName = ToChunkName(address);
         string key = BuildChunkKey(planetName, chunkName);
-        if (!chunkBaselines.ContainsKey(key) &&
-            !chunkDeltas.ContainsKey(key) &&
-            TryGetFullMapSave(planetName, chunkName, out MapSave fullMapSave))
-        {
-            ReplaceMapSaveRuntimeAiItems(fullMapSave, savedItems);
-            return;
-        }
-
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord record) || record == null)
         {
             record = new ChunkSaveRecord
             {
                 PlanetName = planetName,
                 ChunkName = chunkName,
-                ChunkPosition = new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y),
-                IsDelta = true
+                ChunkPosition = new Vector2Int(address.ChunkOrigin.X, address.ChunkOrigin.Y)
             };
         }
 
@@ -2147,44 +2071,6 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             chunkDeltas[key] = record;
         else
             chunkDeltas.Remove(key);
-    }
-
-    private static void ReplaceMapSaveRuntimeAiItems(MapSave mapSave, List<ItemData> savedItems)
-    {
-        mapSave.items ??= new Dictionary<string, HashSet<ItemData>>();
-        var emptyGroups = new List<string>();
-        foreach (KeyValuePair<string, HashSet<ItemData>> pair in mapSave.items)
-        {
-            pair.Value?.RemoveWhere(RuntimeAiEntityUtility.IsAiData);
-            if (pair.Value == null || pair.Value.Count == 0)
-                emptyGroups.Add(pair.Key);
-        }
-
-        for (int i = 0; i < emptyGroups.Count; i++)
-            mapSave.items.Remove(emptyGroups[i]);
-
-        for (int i = 0; i < savedItems.Count; i++)
-        {
-            ItemData data = savedItems[i];
-            if (data == null)
-                continue;
-            if (!mapSave.items.TryGetValue(data.IDName, out HashSet<ItemData> group))
-            {
-                group = new HashSet<ItemData>();
-                mapSave.items[data.IDName] = group;
-            }
-            group.Add(data);
-        }
-    }
-
-    private bool TryGetFullMapSave(string planetName, string chunkName, out MapSave mapSave)
-    {
-        mapSave = null;
-        return SaveData?.PlanetData_Dict != null &&
-               SaveData.PlanetData_Dict.TryGetValue(planetName, out PlanetData planet) &&
-               planet?.MapData_Dict != null &&
-               planet.MapData_Dict.TryGetValue(chunkName, out mapSave) &&
-               mapSave != null;
     }
 
     private static void CollectRuntimeAiData(IEnumerable<ItemData> source, List<ItemData> output)
@@ -2437,42 +2323,12 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             CoreSaveData = SerializeCoreDataWithoutChunks(saveData)
         };
 
-        HashSet<string> addedKeys = new HashSet<string>();
         foreach (KeyValuePair<string, ChunkSaveRecord> pair in chunkDeltas)
         {
             if (pair.Value == null || !pair.Value.HasChanges)
                 continue;
 
             envelope.ChunkRecords.Add(pair.Value);
-            addedKeys.Add(pair.Key);
-        }
-
-        if (saveData.PlanetData_Dict != null)
-        {
-            foreach (KeyValuePair<string, PlanetData> planetPair in saveData.PlanetData_Dict)
-            {
-                Dictionary<string, MapSave> maps = planetPair.Value?.MapData_Dict;
-                if (maps == null)
-                    continue;
-
-                foreach (KeyValuePair<string, MapSave> mapPair in maps)
-                {
-                    string key = BuildChunkKey(planetPair.Key, mapPair.Key);
-                    if (addedKeys.Contains(key) || chunkBaselines.ContainsKey(key) || mapPair.Value == null)
-                        continue;
-
-                    envelope.ChunkRecords.Add(new ChunkSaveRecord
-                    {
-                        PlanetName = planetPair.Key,
-                        ChunkName = mapPair.Key,
-                        ChunkPosition = mapPair.Value.MapPosition,
-                        SunlightIntensity = mapPair.Value.SunlightIntensity,
-                        IsDelta = false,
-                        FullSnapshot = mapPair.Value
-                    });
-                    addedKeys.Add(key);
-                }
-            }
         }
 
         envelope.ChunkRecords.Sort((a, b) =>
@@ -2567,7 +2423,6 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (saveData == null)
             throw new InvalidDataException("差异存档的核心数据为空");
 
-        saveData.PlanetData_Dict ??= new Dictionary<string, PlanetData>();
         if (envelope.ChunkRecords == null)
             return saveData;
 
@@ -2577,18 +2432,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             if (record == null || string.IsNullOrEmpty(record.PlanetName) || string.IsNullOrEmpty(record.ChunkName))
                 continue;
 
-            if (!saveData.PlanetData_Dict.TryGetValue(record.PlanetName, out PlanetData planet) || planet == null)
-                continue;
-
-            planet.MapData_Dict ??= new Dictionary<string, MapSave>();
-            if (record.IsDelta)
-            {
-                chunkDeltas[BuildChunkKey(record.PlanetName, record.ChunkName)] = record;
-            }
-            else if (record.FullSnapshot != null)
-            {
-                planet.MapData_Dict[record.ChunkName] = record.FullSnapshot;
-            }
+            chunkDeltas[BuildChunkKey(record.PlanetName, record.ChunkName)] = record;
         }
 
         return saveData;
@@ -2739,18 +2583,15 @@ public partial class ChunkSaveRecord
     public string ChunkName;
     public Vector2Int ChunkPosition;
     public float SunlightIntensity;
-    public bool IsDelta;
-    public MapSave FullSnapshot;
     public List<ItemData> ChangedItems = new();
     public List<int> RemovedItemGuids = new();
     public List<TileCellSaveDelta> TileDeltas = new();
     public List<GrassCellSaveDelta> GrassDeltas = new();
-    // 新版 WorldModel 的运行时阻挡地块差量；字段追加在末尾以保持旧存档兼容。
+    // 当前 WorldModel 的运行时阻挡地块差量。
     public List<RuntimeTileCellSaveDelta> RuntimeTileDeltas = new();
 
     [MemoryPackIgnore]
     public bool HasChanges =>
-        IsDelta &&
         ((ChangedItems?.Count ?? 0) > 0 ||
          (RemovedItemGuids?.Count ?? 0) > 0 ||
          (TileDeltas?.Count ?? 0) > 0 ||

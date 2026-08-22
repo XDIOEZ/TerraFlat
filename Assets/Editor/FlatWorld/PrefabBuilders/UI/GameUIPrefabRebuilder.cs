@@ -65,7 +65,7 @@ public static class GameUIPrefabRebuilder
         { InventoryPanelsRoot + "UI_ItemInfo.prefab", new[] { "面板", "信息", "销毁" } },
         { PlayerStatusRoot + "UI_ModuleSettings.prefab", new[] { "Panel", "Slider", "关闭页面" } },
         { PlayerStatusRoot + "UI_Health.prefab", new[] { "血量模块_世界面板", "背景", "血量" } },
-        { PlayerStatusRoot + "UI_Food.prefab", new[] { "碳水", "脂肪", "蛋白质", "水", "维生素", "体温", "DataText_体温" } },
+        { PlayerStatusRoot + "UI_Food.prefab", new[] { "血量", "碳水", "脂肪", "蛋白质", "水", "维生素", "体温", "DataText_血量", "DataText_体温" } },
         { PlayerStatusRoot + "UI_Sleep.prefab", new[] { "ZZZs" } }
     };
 
@@ -959,7 +959,8 @@ public static class GameUIPrefabRebuilder
             Stretch(rootRect);
 
         EnsureNutritionTemperatureRow(panel);
-        SetBottomLeft(panelRect, new Vector2(28f, 28f), new Vector2(326f, 196f));
+        EnsureNutritionHealthRow(panel);
+        SetBottomLeft(panelRect, new Vector2(28f, 28f), new Vector2(326f, 230f));
 
         // 参数 HUD 不使用卡片底板或装饰描边，避免透明区域遮挡世界和制造视觉焦点。
         Image panelImage = panel.GetComponent<Image>();
@@ -973,7 +974,7 @@ public static class GameUIPrefabRebuilder
         if (panelOutline != null)
             UnityEngine.Object.DestroyImmediate(panelOutline);
 
-        string[] sliders = { "碳水", "脂肪", "蛋白质", "水", "维生素", "体温" };
+        string[] sliders = { "血量", "碳水", "脂肪", "蛋白质", "水", "维生素", "体温" };
         for (int i = 0; i < sliders.Length; i++)
         {
             RectTransform slider = FindRect(panel, sliders[i]);
@@ -1048,6 +1049,39 @@ public static class GameUIPrefabRebuilder
             else if (label.text == "维生素")
             {
                 label.text = "体温";
+            }
+        }
+    }
+
+    /// <summary>从现有状态行复制玩家血量行，保持角色参数面板的统一视觉和绑定结构。</summary>
+    private static void EnsureNutritionHealthRow(Transform panel)
+    {
+        if (FindTransform(panel, "血量") != null)
+            return;
+
+        RectTransform source = FindRect(panel, "维生素");
+        if (source == null)
+            throw new InvalidOperationException("UI_Food 缺少可复用的维生素状态行。");
+
+        GameObject healthRow = UnityEngine.Object.Instantiate(source.gameObject, panel, false);
+        healthRow.name = "血量";
+
+        TextMeshProUGUI[] labels = healthRow.GetComponentsInChildren<TextMeshProUGUI>(true);
+        for (int i = 0; i < labels.Length; i++)
+        {
+            TextMeshProUGUI label = labels[i];
+            label.raycastTarget = false;
+            label.enableWordWrapping = false;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+
+            if (label.name.StartsWith("DataText_", StringComparison.Ordinal))
+            {
+                label.name = "DataText_血量";
+                label.text = "100/100";
+            }
+            else if (label.text == "维生素")
+            {
+                label.text = "血量";
             }
         }
     }

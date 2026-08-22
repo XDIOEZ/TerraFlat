@@ -6,7 +6,7 @@ using MemoryPack;
 /// <summary>
 /// 生态生成的世界级存档。
 /// 配置只保存字符串和数值；自然物的基线由世界种子重新生成，存档只记录被删除的 GUID
-/// 和发生过状态变化的 ItemData，从而兼容旧存档并避免区块保存体积随自然物数量线性膨胀。
+/// 和发生过状态变化的 ItemData，避免区块保存体积随自然物数量线性膨胀。
 /// </summary>
 [MemoryPackable]
 [Serializable]
@@ -22,7 +22,7 @@ public partial class EcologyWorldSaveData
     [MemoryPackInclude] public double GlobalMultiplier = 1d;
     [MemoryPackInclude] public List<EcologyRuleSaveData> Rules = new();
     [MemoryPackInclude] public List<EcologyChunkSaveData> Chunks = new();
-    // 追加字段保持旧 MemoryPack 存档可读；用于冻结洞穴布局、矿脉和地表入口参数。
+    // 冻结洞穴布局、矿脉和地表入口参数。
     [MemoryPackInclude] public WorldGenerationProfileSaveData Generation = new();
 
     [MemoryPackIgnore]
@@ -47,7 +47,7 @@ public partial class EcologyWorldSaveData
         CaptureGenerationConfiguration(profile);
     }
 
-    /// <summary>单独冻结完整 Profile，旧世界补写时不会覆盖已保存的生态规则。</summary>
+    /// <summary>单独冻结完整 Profile，不覆盖已保存的生态规则。</summary>
     public void CaptureGenerationConfiguration(ChunkGenerationProfileSnapshot profile)
     {
         if (profile == null)
@@ -88,38 +88,6 @@ public partial class EcologyWorldSaveData
             }
         }
         return snapshots;
-    }
-
-    /// <summary>把旧存档中错误绑定到树的木头与藤蔓改回群系独立散布。</summary>
-    public bool MigrateDeprecatedTreeCompanionRules()
-    {
-        if (DataVersion >= CurrentDataVersion || Rules == null)
-            return false;
-
-        bool changed = false;
-        for (int i = 0; i < Rules.Count; i++)
-        {
-            EcologyRuleSaveData rule = Rules[i];
-            if (rule == null || !rule.CompanionOnly ||
-                !string.Equals(rule.CompanionHostTag, "Tree", StringComparison.OrdinalIgnoreCase) ||
-                (!string.Equals(rule.ItemId, "Twine", StringComparison.OrdinalIgnoreCase) &&
-                 !string.Equals(rule.ItemId, "Log", StringComparison.OrdinalIgnoreCase)))
-            {
-                continue;
-            }
-
-            rule.CompanionOnly = false;
-            rule.CompanionHostTag = string.Empty;
-            rule.CompanionSpawnChance = 0d;
-            rule.CompanionOffsetX = 0d;
-            rule.CompanionOffsetY = 0d;
-            rule.CompanionMinRadius = 0d;
-            rule.CompanionMaxRadius = 0d;
-            changed = true;
-        }
-
-        DataVersion = CurrentDataVersion;
-        return changed;
     }
 
     /// <summary>获取或创建一个区块的生态差量记录。</summary>
@@ -197,7 +165,7 @@ public partial class EcologyWorldSaveData
 
 /// <summary>
 /// 生成 Profile 的通用持久化快照。
-/// 该数据不含 Unity 资源引用，地表入口、洞穴房间/隧道和矿脉参数都可在旧世界中保持冻结。
+/// 该数据不含 Unity 资源引用，用于冻结地表入口、洞穴房间/隧道和矿脉参数。
 /// </summary>
 [MemoryPackable]
 [Serializable]
@@ -266,44 +234,6 @@ public partial class WorldGenerationProfileSaveData
     {
         return profile != null && HasConfiguration &&
                string.Equals(ProfileId, profile.ProfileId, StringComparison.Ordinal);
-    }
-
-    /// <summary>旧矿洞存档仅迁移一次，把墙边矿物与地面散矿密度统一缩减到原来的 30%。</summary>
-    public bool MigrateCaveResourceDensityToThirtyPercent(
-        ChunkGenerationProfileSnapshot profile)
-    {
-        if (DataVersion >= CurrentDataVersion || !Matches(profile) ||
-            profile.Settings.Mode != ChunkGenerationMode.Cave)
-        {
-            return false;
-        }
-
-        bool changed = ScaleNumericParameter("cave.resource.density", 0.3d);
-        changed |= ScaleNumericParameter("cave.resource.looseDensity", 0.3d);
-        DataVersion = CurrentDataVersion;
-        return changed;
-    }
-
-    /// <summary>按键缩放一个已冻结的数值参数。</summary>
-    private bool ScaleNumericParameter(string id, double multiplier)
-    {
-        if (NumericParameters == null)
-            return false;
-
-        for (int i = 0; i < NumericParameters.Count; i++)
-        {
-            WorldGenerationNumericParameterSaveData parameter = NumericParameters[i];
-            if (parameter == null ||
-                !string.Equals(parameter.Id, id, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            parameter.Value *= multiplier;
-            return true;
-        }
-
-        return false;
     }
 
     /// <summary>构造后台生成器可直接使用的冻结 Profile。</summary>
@@ -390,7 +320,7 @@ public partial class CaveResourceRuleSaveData
     }
 }
 
-/// <summary>生态规则的 JSON/MemoryPack 兼容存档副本，不引用 ScriptableObject 或 Prefab。</summary>
+/// <summary>生态规则的 JSON/MemoryPack 存档副本，不引用 ScriptableObject 或 Prefab。</summary>
 [MemoryPackable]
 [Serializable]
 public partial class EcologyRuleSaveData
@@ -417,7 +347,7 @@ public partial class EcologyRuleSaveData
     public double CompanionOffsetY;
     public double CompanionMinRadius;
     public double CompanionMaxRadius;
-    // 新增字段放在旧字段末尾，避免改变旧 MemoryPack 数据的字段顺序。
+    // 当前规则的河流泛滥平原限制。
     public double MinRiverFloodplainStrength;
 
     #endregion

@@ -15,6 +15,7 @@ public readonly struct WorldNavigationPathResult
     public readonly Vector2[] Waypoints;
     public readonly bool ReachesDestination;
     public readonly int GridRevision;
+    public readonly int PathCostRevision;
 
     public WorldNavigationPathResult(
         int requestId,
@@ -23,7 +24,8 @@ public readonly struct WorldNavigationPathResult
         Vector2 resolvedDestination,
         Vector2[] waypoints,
         bool reachesDestination,
-        int gridRevision)
+        int gridRevision,
+        int pathCostRevision)
     {
         RequestId = requestId;
         Success = success;
@@ -32,6 +34,7 @@ public readonly struct WorldNavigationPathResult
         Waypoints = waypoints ?? Array.Empty<Vector2>();
         ReachesDestination = reachesDestination;
         GridRevision = gridRevision;
+        PathCostRevision = pathCostRevision;
     }
 }
 
@@ -92,6 +95,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
     public bool IsNavigationReady => Init && grid.CellCount > 0;
     public int GridRevision => grid.Revision;
     public int PathInvalidationRevision => grid.PathInvalidationRevision;
+    public int PathCostRevision => grid.PathCostRevision;
     public int RegisteredCellCount => grid.CellCount;
     public int PendingPathCount => requests.Count;
     public int QueuedAdmissionCount => admissionQueue.Count;
@@ -381,6 +385,21 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         => grid.HasLineOfSight(
             WorldNavigationGrid.WorldToCell(from),
             WorldNavigationGrid.WorldToCell(to));
+
+    /// <summary>检查直线中间没有比起终点更高代价的地形，供短路优化使用。</summary>
+    private bool HasNoHigherPenaltyGridLineOfSight(Vector2 from, Vector2 to)
+    {
+        Vector2Int fromCell = WorldNavigationGrid.WorldToCell(from);
+        Vector2Int toCell = WorldNavigationGrid.WorldToCell(to);
+        if (!grid.TryGetCell(fromCell, out WorldNavigationCell fromData) ||
+            !grid.TryGetCell(toCell, out WorldNavigationCell toData))
+        {
+            return false;
+        }
+
+        uint maxEndpointPenalty = Math.Max(fromData.Penalty, toData.Penalty);
+        return grid.HasLineOfSight(fromCell, toCell, maxEndpointPenalty);
+    }
 
     public bool IsPathStillValid(Vector2 currentPosition, IReadOnlyList<Vector2> waypoints, int waypointIndex)
     {
@@ -748,8 +767,13 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
 
         Vector2Int directDelta = WorldTopologyRuntime.ShortestDelta(start, goal);
         int directDistance = Mathf.Max(Mathf.Abs(directDelta.x), Mathf.Abs(directDelta.y));
+        bool directLineIsEndpointCostSafe =
+            directDistance <= Mathf.Max(1, maxDirectLineOfSightCells) &&
+            HasNoHigherPenaltyGridLineOfSight(
+                WorldNavigationGrid.CellCenter(start),
+                WorldNavigationGrid.CellCenter(goal));
         if (start == goal ||
-            (directDistance <= Mathf.Max(1, maxDirectLineOfSightCells) && grid.HasLineOfSight(start, goal)))
+            directLineIsEndpointCostSafe)
         {
             Vector2 resolved = goal == requestedGoal
                 ? WorldTopologyRuntime.NormalizePosition(request.Destination)
@@ -1032,7 +1056,8 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                 resolvedDestination,
                 waypoints,
                 reachesDestination,
-                grid.Revision)));
+                grid.Revision,
+                grid.PathCostRevision)));
     }
 
     private void ScheduleFailure(PathRequest request)
@@ -1050,7 +1075,8 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                 request.Destination,
                 Array.Empty<Vector2>(),
                 false,
-                grid.Revision)));
+                grid.Revision,
+                grid.PathCostRevision)));
     }
 
     private void EnqueueCompletion(CompletedRequest completed)
@@ -1121,9 +1147,13 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
             completionNodes.Remove(completed.Result.RequestId);
 
             WorldNavigationPathResult result = completed.Result;
-            if (result.Success && result.GridRevision != grid.Revision)
+            if (result.Success &&
+                (result.GridRevision != grid.Revision ||
+                 result.PathCostRevision != grid.PathCostRevision))
             {
-                bool pathRemainsWalkable = result.Waypoints.Length > 0 &&
+                bool pathCostChanged = result.PathCostRevision != grid.PathCostRevision;
+                bool pathRemainsWalkable = !pathCostChanged &&
+                                           result.Waypoints.Length > 0 &&
                                            IsPathStillValid(completed.Start, result.Waypoints, 0);
                 result = pathRemainsWalkable
                     ? new WorldNavigationPathResult(
@@ -1133,7 +1163,8 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                         result.ResolvedDestination,
                         result.Waypoints,
                         result.ReachesDestination,
-                        grid.Revision)
+                        grid.Revision,
+                        grid.PathCostRevision)
                     : new WorldNavigationPathResult(
                         result.RequestId,
                         false,
@@ -1141,7 +1172,8 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                         result.RequestedDestination,
                         Array.Empty<Vector2>(),
                         false,
-                        grid.Revision);
+                        grid.Revision,
+                        grid.PathCostRevision);
             }
 
             try

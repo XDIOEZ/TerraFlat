@@ -10,7 +10,7 @@ namespace FlatWorld.Networking.Gameplay
     /// </summary>
     public sealed class NetworkGameBootstrap : MonoBehaviour
     {
-        private const string StartSceneName = "GameStartScene";
+        internal const string StartSceneName = "GameStartScene";
         private const string PlayerResourcePath = "Networking/FlatWorldNetworkPlayer";
 
         private static NetworkGameBootstrap instance;

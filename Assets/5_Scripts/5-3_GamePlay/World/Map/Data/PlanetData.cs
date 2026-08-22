@@ -80,7 +80,7 @@ public partial class PlanetData
     [LabelText("天气强度"), Range(0f, 1f), PropertyTooltip("当前天气的强度，0表示无影响，1表示满强度。")]
     public float WeatherIntensity = 0f;
 
-    [LabelText("天气数据版本"), PropertyTooltip("天气事件存档结构版本，用于旧存档迁移。")]
+    [LabelText("天气数据版本"), PropertyTooltip("天气事件运行时数据版本。")]
     public int WeatherDataVersion = 0;
 
     [LabelText("天气阶段"), PropertyTooltip("权威天气事件当前所处阶段。")]
@@ -115,7 +115,7 @@ public partial class PlanetData
     [LabelText("World Topology")]
     public WorldTopologyMode TopologyMode = WorldTopologyMode.Infinite;
 
-    // Keep newly appended world-level data after all legacy fields so older MemoryPack saves remain readable.
+    // 世界级生态数据。
     [LabelText("生态世界数据")]
     public EcologyWorldSaveData Ecology = new();
     #endregion

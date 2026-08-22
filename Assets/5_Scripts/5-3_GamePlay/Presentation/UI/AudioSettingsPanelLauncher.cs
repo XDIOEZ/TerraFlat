@@ -1,6 +1,7 @@
 // AI-Context: 设置面板的音量入口与独立音量窗口；只使用 AudioService 的公开总线 API，不直接操作 AudioSource。
 using System.Collections.Generic;
 using FlatWorld.Audio;
+using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -14,11 +15,13 @@ public sealed class AudioSettingsPanelLauncher : MonoBehaviour
     {
         public Slider Slider;
         public TextMeshProUGUI ValueText;
+        public ISettingsSlider Setting;
     }
 
     private readonly List<VolumeRow> rows = new List<VolumeRow>(6);
     private Button entryButton;
     private BasePanel volumePanel;
+    private ISettingsProvider audioSettingsProvider;
 
     public static AudioSettingsPanelLauncher Ensure(Transform settingsPanel)
     {
@@ -82,6 +85,12 @@ private void EnsureVolumePanel()
         volumePanel.GetButton("恢复默认按钮")?.onClick.AddListener(ResetToDefault);
         volumePanel.GetButton("完成按钮")?.onClick.AddListener(Close);
 
+        SettingsProviderRegistry.TryGet(
+            AudioService.SettingsProviderId,
+            out audioSettingsProvider);
+        if (audioSettingsProvider == null)
+            audioSettingsProvider = AudioService.Instance;
+
         rows.Clear();
         BindVolumeRow("MasterVolume");
         BindVolumeRow("MusicVolume");
@@ -103,11 +112,20 @@ private void BindVolumeRow(string sliderName)
     {
         Slider slider = volumePanel.GetSlider(sliderName);
         TextMeshProUGUI valueText = volumePanel.GetText(sliderName + "_数值");
-        if (slider == null || valueText == null)
+        ISettingsSlider setting = FindVolumeSetting(sliderName);
+        if (slider == null || valueText == null || setting == null)
             return;
 
+        slider.minValue = setting.MinValue;
+        slider.maxValue = setting.MaxValue;
+        slider.SetValueWithoutNotify(setting.Value);
         slider.onValueChanged.AddListener(value => valueText.text = ToPercent(value));
-        rows.Add(new VolumeRow { Slider = slider, ValueText = valueText });
+        rows.Add(new VolumeRow
+        {
+            Slider = slider,
+            ValueText = valueText,
+            Setting = setting
+        });
     }
 
 
@@ -115,7 +133,7 @@ private void BindVolumeRow(string sliderName)
 
     private void ResetToDefault()
     {
-        AudioService.Instance.ResetUserSettings();
+        audioSettingsProvider?.ResetToDefaults();
         AudioSettingsPanelBinder.Ensure(volumePanel.transform);
         RefreshValues();
     }
@@ -125,13 +143,33 @@ private void RefreshValues()
         if (volumePanel == null)
             return;
 
-        AudioUserSettings settings = AudioService.Instance.UserSettings;
-        float[] values = { settings.Master, settings.Music, settings.Sfx, settings.UI, settings.Ambient, settings.Voice };
-        for (int i = 0; i < rows.Count && i < values.Length; i++)
+        for (int i = 0; i < rows.Count; i++)
         {
-            rows[i].Slider.SetValueWithoutNotify(values[i]);
-            rows[i].ValueText.text = ToPercent(values[i]);
+            ISettingsSlider setting = rows[i].Setting;
+            if (setting == null)
+                continue;
+
+            rows[i].Slider.SetValueWithoutNotify(setting.Value);
+            rows[i].ValueText.text = ToPercent(setting.Value);
         }
+    }
+
+    private ISettingsSlider FindVolumeSetting(string sliderName)
+    {
+        if (audioSettingsProvider == null)
+            return null;
+
+        string key = sliderName switch
+        {
+            "MasterVolume" => AudioService.MasterVolumeSettingKey,
+            "MusicVolume" => AudioService.MusicVolumeSettingKey,
+            "SfxVolume" => AudioService.SfxVolumeSettingKey,
+            "UIVolume" => AudioService.UiVolumeSettingKey,
+            "AmbientVolume" => AudioService.AmbientVolumeSettingKey,
+            "VoiceVolume" => AudioService.VoiceVolumeSettingKey,
+            _ => null
+        };
+        return audioSettingsProvider.GetSlider(key);
     }
 
 private void Close()

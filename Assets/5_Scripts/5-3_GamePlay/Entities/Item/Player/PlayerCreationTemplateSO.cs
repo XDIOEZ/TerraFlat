@@ -33,7 +33,7 @@ public sealed class PlayerCreationTemplateSO : ScriptableObject
         public bool hungerActionEnabled = true;
         [Min(0f)] public float moveNutritionConsumeMultiplier = 1.6f;
         [Min(0f)] public float runNutritionConsumeMultiplier = 2f;
-        [Min(0f)] public float runWaterConsumeMultiplier = 0.5f;
+        [Min(0f)] public float runWaterConsumeMultiplier = 0.25f;
     }
 
     [Serializable]

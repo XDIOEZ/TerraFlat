@@ -18,6 +18,7 @@ description: "Use when: 定位或修改 FlatWorld 的音频服务、AudioCue、�
 - `AudioService` 负责跨场景生命周期、池化、并发、优先级、淡入淡出与音量。
 - Catalog/Config 移动时同步 Resources 加载常量；循环 Cue 必须有明确停止和回收路径。
 - 战斗音效联动 `flatworld-combat`，UI 音效联动 `flatworld-ui`；角色台词和气泡属于 `flatworld-dialogue`。
+- 音量和静音设置由 `AudioService` 直接实现 `ISettingsProvider`，通过 `SettingsProviderRegistry` 暴露 Slider/Toggle；`FlatWorld.Audio` 只依赖 `Data` 中的设置契约，不依赖 UI 或 GamePlay。
 
 ## 验证
 

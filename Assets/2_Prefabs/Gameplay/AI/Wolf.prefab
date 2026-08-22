@@ -559,7 +559,7 @@ MonoBehaviour:
   weaponAudioClass: 0
   attackAudioCueId: 
   impactAudioOverrides: []
-  damageCollider: {fileID: 0}
+  damageCollider: {fileID: 7760505830373148388}
   lastDamageTime: 0
   MemoryPackableData:
     Name: 

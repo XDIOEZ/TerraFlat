@@ -2,6 +2,7 @@
 
 using System;
 using FlatWorld.Audio;
+using FlatWorld.Settings;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,6 +16,13 @@ public sealed class AudioSettingsPanelBinder : MonoBehaviour
     private Slider ambient;
     private Slider voice;
     private Toggle muted;
+    private ISettingsSlider masterSetting;
+    private ISettingsSlider musicSetting;
+    private ISettingsSlider sfxSetting;
+    private ISettingsSlider uiSetting;
+    private ISettingsSlider ambientSetting;
+    private ISettingsSlider voiceSetting;
+    private ISettingsToggle mutedSetting;
     private bool bound;
 
     public static AudioSettingsPanelBinder Ensure(Transform root)
@@ -47,17 +55,31 @@ public sealed class AudioSettingsPanelBinder : MonoBehaviour
         voice = FindSlider("语音音量", "VoiceVolume", "Voice Volume");
         muted = FindToggle("静音", "全部静音", "Mute", "Muted");
 
-        AudioUserSettings settings = AudioService.Instance.UserSettings;
-        SetSlider(master, settings.Master, OnMasterChanged);
-        SetSlider(music, settings.Music, OnMusicChanged);
-        SetSlider(sfx, settings.Sfx, OnSfxChanged);
-        SetSlider(ui, settings.UI, OnUiChanged);
-        SetSlider(ambient, settings.Ambient, OnAmbientChanged);
-        SetSlider(voice, settings.Voice, OnVoiceChanged);
-
-        if (muted != null)
+        if (!SettingsProviderRegistry.TryGet(
+                AudioService.SettingsProviderId,
+                out ISettingsProvider provider))
         {
-            muted.SetIsOnWithoutNotify(settings.Muted);
+            provider = AudioService.Instance;
+        }
+
+        masterSetting = provider.GetSlider(AudioService.MasterVolumeSettingKey);
+        musicSetting = provider.GetSlider(AudioService.MusicVolumeSettingKey);
+        sfxSetting = provider.GetSlider(AudioService.SfxVolumeSettingKey);
+        uiSetting = provider.GetSlider(AudioService.UiVolumeSettingKey);
+        ambientSetting = provider.GetSlider(AudioService.AmbientVolumeSettingKey);
+        voiceSetting = provider.GetSlider(AudioService.VoiceVolumeSettingKey);
+        mutedSetting = provider.GetToggle(AudioService.MutedSettingKey);
+
+        SetSlider(master, masterSetting, OnMasterChanged);
+        SetSlider(music, musicSetting, OnMusicChanged);
+        SetSlider(sfx, sfxSetting, OnSfxChanged);
+        SetSlider(ui, uiSetting, OnUiChanged);
+        SetSlider(ambient, ambientSetting, OnAmbientChanged);
+        SetSlider(voice, voiceSetting, OnVoiceChanged);
+
+        if (muted != null && mutedSetting != null)
+        {
+            muted.SetIsOnWithoutNotify(mutedSetting.Value);
             muted.onValueChanged.AddListener(OnMutedChanged);
         }
 
@@ -82,13 +104,13 @@ public sealed class AudioSettingsPanelBinder : MonoBehaviour
         bound = false;
     }
 
-    private void OnMasterChanged(float value) => AudioService.Instance.SetMasterVolume(value);
-    private void OnMusicChanged(float value) => AudioService.Instance.SetBusVolume(AudioBus.Music, value);
-    private void OnSfxChanged(float value) => AudioService.Instance.SetBusVolume(AudioBus.Sfx, value);
-    private void OnUiChanged(float value) => AudioService.Instance.SetBusVolume(AudioBus.UI, value);
-    private void OnAmbientChanged(float value) => AudioService.Instance.SetBusVolume(AudioBus.Ambient, value);
-    private void OnVoiceChanged(float value) => AudioService.Instance.SetBusVolume(AudioBus.Voice, value);
-    private void OnMutedChanged(bool value) => AudioService.Instance.SetMuted(value);
+    private void OnMasterChanged(float value) => masterSetting?.SetValue(value);
+    private void OnMusicChanged(float value) => musicSetting?.SetValue(value);
+    private void OnSfxChanged(float value) => sfxSetting?.SetValue(value);
+    private void OnUiChanged(float value) => uiSetting?.SetValue(value);
+    private void OnAmbientChanged(float value) => ambientSetting?.SetValue(value);
+    private void OnVoiceChanged(float value) => voiceSetting?.SetValue(value);
+    private void OnMutedChanged(bool value) => mutedSetting?.SetValue(value);
 
     private Slider FindSlider(params string[] names)
     {
@@ -117,14 +139,17 @@ public sealed class AudioSettingsPanelBinder : MonoBehaviour
         return null;
     }
 
-    private static void SetSlider(Slider slider, float value, UnityEngine.Events.UnityAction<float> callback)
+    private static void SetSlider(
+        Slider slider,
+        ISettingsSlider setting,
+        UnityEngine.Events.UnityAction<float> callback)
     {
-        if (slider == null)
+        if (slider == null || setting == null)
             return;
 
-        slider.minValue = 0f;
-        slider.maxValue = 1f;
-        slider.SetValueWithoutNotify(value);
+        slider.minValue = setting.MinValue;
+        slider.maxValue = setting.MaxValue;
+        slider.SetValueWithoutNotify(setting.Value);
         slider.onValueChanged.AddListener(callback);
     }
 

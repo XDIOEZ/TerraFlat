@@ -4,6 +4,7 @@ using System.Collections;
 using Mirror;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace FlatWorld.Networking.Gameplay
@@ -37,24 +38,103 @@ namespace FlatWorld.Networking.Gameplay
         private Button disconnectButton;
         private Button closeButton;
         private Button mainMenuMultiplayerButton;
+        private UIManager subscribedUIManager;
+        private Coroutine ensureUICoroutine;
 
         #endregion
 
         #region 面板生命周期
 
-        private IEnumerator CreatePanelWhenUIReady()
+        private IEnumerator EnsurePanelWhenUIReady()
         {
-            while (UIManager.Instance == null || UIManager.Instance.panelRoot == null ||
-                   GameRes.Instance == null || !GameRes.Instance.isLoadFinish)
-                yield return null;
-
-            panel = CreateNetworkPanel(UIManager.Instance.panelRoot);
-            if (panel == null)
+            while (isActiveAndEnabled &&
+                   SceneManager.GetActiveScene().name == NetworkGameBootstrap.StartSceneName)
             {
-                Debug.LogError($"[联机UI] 无法从 GameRes 实例化 {NetworkPanelKey}。", this);
-                yield break;
+                UIManager uiManager = UIManager.ExistingInstance;
+                if (uiManager == null)
+                    uiManager = UIManager.Instance;
+                if (uiManager == null || uiManager.panelRoot == null ||
+                    GameRes.Instance == null || !GameRes.Instance.isLoadFinish)
+                {
+                    yield return null;
+                    continue;
+                }
+
+                SubscribeToUIManager(uiManager);
+
+                if (!IsPanelAttachedTo(uiManager.panelRoot))
+                {
+                    DestroyCurrentPanel();
+                    panel = CreateNetworkPanel(uiManager.panelRoot);
+                    if (panel == null)
+                    {
+                        Debug.LogError($"[联机UI] 无法从 GameRes 实例化 {NetworkPanelKey}，将在稍后重试。", this);
+                        yield return new WaitForSecondsRealtime(1f);
+                        continue;
+                    }
+
+                    BindNetworkPanelControls();
+                }
+
+                TryBindMainMenuButton(uiManager);
+                if (panel != null && mainMenuMultiplayerButton != null)
+                    break;
+
+                yield return null;
             }
 
+            ensureUICoroutine = null;
+        }
+
+        /// <summary>只启动一个 UI 修复协程，覆盖首次启动、场景返回和 PanelRoot 重建。</summary>
+        private void RequestUIRefresh()
+        {
+            if (!isActiveAndEnabled ||
+                SceneManager.GetActiveScene().name != NetworkGameBootstrap.StartSceneName)
+                return;
+
+            if (ensureUICoroutine == null)
+                ensureUICoroutine = StartCoroutine(EnsurePanelWhenUIReady());
+        }
+
+        /// <summary>面板注册、销毁或切换时，立即检查联机入口是否需要重绑。</summary>
+        private void OnInteractionSurfaceChanged()
+        {
+            if (SceneManager.GetActiveScene().name != NetworkGameBootstrap.StartSceneName)
+                return;
+
+            UIManager uiManager = subscribedUIManager;
+            if (uiManager == null || !IsPanelAttachedTo(uiManager.panelRoot))
+            {
+                RequestUIRefresh();
+                return;
+            }
+
+            TryBindMainMenuButton(uiManager);
+        }
+
+        /// <summary>切换 PanelRoot 订阅对象，避免旧 UIManager 持有常驻控制器。</summary>
+        private void SubscribeToUIManager(UIManager uiManager)
+        {
+            if (subscribedUIManager == uiManager)
+                return;
+
+            if (subscribedUIManager != null)
+                subscribedUIManager.InteractionSurfaceChanged -= OnInteractionSurfaceChanged;
+
+            subscribedUIManager = uiManager;
+            subscribedUIManager.InteractionSurfaceChanged += OnInteractionSurfaceChanged;
+        }
+
+        /// <summary>检查当前联机面板是否仍挂在本次场景的 PanelRoot 下。</summary>
+        private bool IsPanelAttachedTo(Transform root)
+        {
+            return panel != null && root != null && panel.transform.parent == root;
+        }
+
+        /// <summary>实例化后只绑定一次联机面板控件。</summary>
+        private void BindNetworkPanelControls()
+        {
             playerNameInput = panel.GetInputField(PlayerNameInputKey);
             addressInput = panel.GetInputField(AddressInputKey);
             portInput = panel.GetInputField(PortInputKey);
@@ -65,35 +145,52 @@ namespace FlatWorld.Networking.Gameplay
             disconnectButton = panel.GetButton(DisconnectButtonKey);
             closeButton = panel.GetButton(CloseButtonKey);
 
-            playerNameInput?.SetTextWithoutNotify(NewWorldCreationRequest.CreateRandomPlayerName());
+            if (playerNameInput != null)
+                playerNameInput.SetTextWithoutNotify(NewWorldCreationRequest.CreateRandomPlayerName());
 
-            hostButton?.onClick.AddListener(StartHost);
-            joinButton?.onClick.AddListener(StartClient);
-            disconnectButton?.onClick.AddListener(StopSession);
-            closeButton?.onClick.AddListener(I_ClosePanel);
+            if (hostButton != null)
+                hostButton.onClick.AddListener(StartHost);
+            if (joinButton != null)
+                joinButton.onClick.AddListener(StartClient);
+            if (disconnectButton != null)
+                disconnectButton.onClick.AddListener(StopSession);
+            if (closeButton != null)
+                closeButton.onClick.AddListener(I_ClosePanel);
 
             SetStatus("离线：可创建主机，或粘贴好友提供的 UDP 穿透地址");
             RefreshInteractableState();
             panel.Close();
-            StartCoroutine(BindMainMenuButtonWhenReady());
         }
 
-        private IEnumerator BindMainMenuButtonWhenReady()
+        /// <summary>按当前主菜单实例幂等绑定联机入口，主菜单重建后自动切换引用。</summary>
+        private void TryBindMainMenuButton(UIManager uiManager)
         {
-            while (mainMenuMultiplayerButton == null)
-            {
-                if (UIManager.Instance.TryGetPanel(GameManager.MainMenuPanelKey, out BasePanel mainMenu))
-                {
-                    mainMenuMultiplayerButton = mainMenu.GetButton(GameManager.MainMenuMultiplayerButtonKey);
-                    if (mainMenuMultiplayerButton != null)
-                    {
-                        mainMenuMultiplayerButton.onClick.AddListener(I_ShowPanel);
-                        yield break;
-                    }
-                }
+            if (uiManager == null ||
+                !uiManager.TryGetPanel(GameManager.MainMenuPanelKey, out BasePanel mainMenu))
+                return;
 
-                yield return null;
-            }
+            Button candidate = mainMenu.GetButton(GameManager.MainMenuMultiplayerButtonKey);
+            if (candidate == null)
+                return;
+
+            if (candidate == mainMenuMultiplayerButton)
+                return;
+
+            if (mainMenuMultiplayerButton != null)
+                mainMenuMultiplayerButton.onClick.RemoveListener(I_ShowPanel);
+
+            mainMenuMultiplayerButton = candidate;
+            mainMenuMultiplayerButton.onClick.RemoveListener(I_ShowPanel);
+            mainMenuMultiplayerButton.onClick.AddListener(I_ShowPanel);
+        }
+
+        /// <summary>面板所属根变化时清理旧实例及其监听，避免 UIManager 留下重复面板。</summary>
+        private void DestroyCurrentPanel()
+        {
+            ReleaseNetworkPanelBindings();
+            if (panel != null)
+                panel.Destroy();
+            panel = null;
         }
 
         private void Update()
@@ -115,28 +212,42 @@ namespace FlatWorld.Networking.Gameplay
         public void I_ShowPanel()
         {
             if (panel == null)
+            {
+                RequestUIRefresh();
                 return;
+            }
 
             panel.Open();
             panel.transform.SetAsLastSibling();
         }
 
-        public void I_ClosePanel() => panel?.Close();
+        public void I_ClosePanel()
+        {
+            if (panel != null)
+                panel.Close();
+        }
 
-        public void I_TogglePanel() => panel?.Toggle();
+        public void I_TogglePanel()
+        {
+            if (panel != null)
+                panel.Toggle();
+        }
 
         private void RefreshInteractableState()
         {
-            if (hostButton == null)
-                return;
-
             bool offline = GameNetwork.Session.State == NetworkSessionState.Offline;
-            hostButton.interactable = offline;
-            joinButton.interactable = offline;
-            disconnectButton.interactable = !offline;
-            playerNameInput.interactable = offline;
-            addressInput.interactable = offline;
-            portInput.interactable = offline;
+            if (hostButton != null)
+                hostButton.interactable = offline;
+            if (joinButton != null)
+                joinButton.interactable = offline;
+            if (disconnectButton != null)
+                disconnectButton.interactable = !offline;
+            if (playerNameInput != null)
+                playerNameInput.interactable = offline;
+            if (addressInput != null)
+                addressInput.interactable = offline;
+            if (portInput != null)
+                portInput.interactable = offline;
         }
 
         private void SetStatus(string message)
@@ -147,11 +258,36 @@ namespace FlatWorld.Networking.Gameplay
 
         private void ReleaseUIBindings()
         {
-            hostButton?.onClick.RemoveListener(StartHost);
-            joinButton?.onClick.RemoveListener(StartClient);
-            disconnectButton?.onClick.RemoveListener(StopSession);
-            closeButton?.onClick.RemoveListener(I_ClosePanel);
-            mainMenuMultiplayerButton?.onClick.RemoveListener(I_ShowPanel);
+            ReleaseNetworkPanelBindings();
+            if (mainMenuMultiplayerButton != null)
+                mainMenuMultiplayerButton.onClick.RemoveListener(I_ShowPanel);
+
+            if (subscribedUIManager != null)
+                subscribedUIManager.InteractionSurfaceChanged -= OnInteractionSurfaceChanged;
+            subscribedUIManager = null;
+        }
+
+        /// <summary>清理当前联机面板控件监听，保证面板重建不会叠加回调。</summary>
+        private void ReleaseNetworkPanelBindings()
+        {
+            if (hostButton != null)
+                hostButton.onClick.RemoveListener(StartHost);
+            if (joinButton != null)
+                joinButton.onClick.RemoveListener(StartClient);
+            if (disconnectButton != null)
+                disconnectButton.onClick.RemoveListener(StopSession);
+            if (closeButton != null)
+                closeButton.onClick.RemoveListener(I_ClosePanel);
+
+            playerNameInput = null;
+            addressInput = null;
+            portInput = null;
+            statusText = null;
+            playerCountText = null;
+            hostButton = null;
+            joinButton = null;
+            disconnectButton = null;
+            closeButton = null;
         }
 
         #endregion

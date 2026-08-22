@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FlatWorld.Localization;
+using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,6 +16,7 @@ public sealed class DifficultySettingsPanelLauncher : MonoBehaviour
     private Button entryButton;
     private BasePanel settingsPanel;
     private TextMeshProUGUI statusText;
+    private ISettingsSwitch difficultySetting;
     private GameDifficultyId selectedDifficulty;
 
     public static DifficultySettingsPanelLauncher Ensure(Transform settingsPanel)
@@ -55,7 +57,9 @@ private void Open()
         if (settingsPanel == null)
             return;
 
-        selectedDifficulty = GameDifficultyService.CurrentId;
+        selectedDifficulty = difficultySetting != null
+            ? (GameDifficultyId)difficultySetting.SelectedIndex
+            : GameDifficultyService.CurrentId;
         RefreshSelectionVisuals();
         SetStatus(
             FlatWorldLocalizationService.GetUiFormat(
@@ -85,6 +89,8 @@ private void EnsureWindow()
         settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
             prefab,
             RuntimeUIPrefabKeys.DifficultySettings);
+        difficultySetting = GameDifficultyService.SettingsProvider.GetSwitch(
+            GameDifficultyService.DifficultySettingKey);
         statusText = settingsPanel.GetText("状态文本");
         optionButtons.Clear();
 
@@ -105,7 +111,8 @@ private void EnsureWindow()
         settingsPanel.GetButton("取消按钮")?.onClick.AddListener(Close);
         settingsPanel.GetButton("应用按钮")?.onClick.AddListener(Apply);
 
-        if (statusText == null || optionButtons.Count != definitions.Count)
+        if (statusText == null || optionButtons.Count != definitions.Count ||
+            difficultySetting == null)
             Debug.LogError("[DifficultySettingsPanelLauncher] 难度 Prefab 控件命名契约不完整。", settingsPanel);
 
         settingsPanel.PrepareForGamepadNavigation();
@@ -132,9 +139,12 @@ private void EnsureWindow()
 
     private void Apply()
     {
-        if (!GameDifficultyService.TrySetCurrent(selectedDifficulty, out string error))
+        if (!TryApplyDifficulty(out string error))
         {
-            SetStatus(FlatWorldLocalizationService.GetUiText(error), true);
+            SetStatus(
+                FlatWorldLocalizationService.GetUiText(
+                    error ?? "难度设置提供者尚未注册。"),
+                true);
             return;
         }
 
@@ -146,6 +156,19 @@ private void EnsureWindow()
                 "已应用：{0}。设置将在正常存档时写入磁盘。",
                 LocalizeDifficultyName(definition)),
             false);
+    }
+
+    private bool TryApplyDifficulty(out string error)
+    {
+        if (difficultySetting == null)
+        {
+            error = "难度设置提供者尚未注册。";
+            return false;
+        }
+
+        return difficultySetting.TrySetSelectedIndex(
+            (int)selectedDifficulty,
+            out error);
     }
 
     private void RefreshSelectionVisuals()

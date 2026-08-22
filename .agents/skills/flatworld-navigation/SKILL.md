@@ -17,6 +17,9 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、动态
 
 - 权威链：Tile 栈顶可走性/权重 + 动态建筑占地 → 脏格/脏区 → 稀疏 `WorldNavigationGrid`。
 - 新运行时世界注册导航时读取 `ChunkRuntime.Terrain` 的 `TerrainCell`，不读取旧 `TileData` SO；河流必须同时带 `Water | Walkable`，并使用有限的高 `NavigationCost`，海洋才保持不可通行。
+- 短距离直视线快捷路径只能在中间格代价不高于起终点代价时使用；包含河流等高代价格时必须进入带权寻路，不能只检查可走性。
+- `WorldNavigationAgent` 接收路径后的路点跳过也必须沿用同一代价限制；只用几何 LOS 会把已经绕开的高代价地形重新拉直穿过。
+- `WorldNavigationGrid.SetCell` 的可走格代价发生变化时必须使旧路径失效，否则运行中的 AI 会继续执行按旧权重生成的路线。
 - 运行时只用项目内置导航，不恢复 Aron Granberg A*，也不把 Physics2D 扫描当权威。
 - 移除覆盖层后恢复基础层权重；建筑不改 TileData。
 - 失败/未表现完成的 Chunk 不注册导航；View 入池或销毁前先 Unbind。

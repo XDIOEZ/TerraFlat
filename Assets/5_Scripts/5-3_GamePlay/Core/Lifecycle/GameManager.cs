@@ -207,9 +207,10 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             Debug.Log("[ExitGame] 已销毁 SunAndMoon 对象");
         }
 
-        // 清理所有区块
+        // 清理所有区块，同时停止新版 WorldModel 的后台生成、表现队列和 ChunkView。
+        // 只调用 ClearAllChunk 会遗漏运行时区块，退出后迟到的回调可能再次激活已销毁对象。
         Debug.Log("[ExitGame] 开始清理区块...");
-        ChunkMgr.Instance.ClearAllChunk();
+        ChunkMgr.Instance.OnSceneChange();
 
         // Chunk 对象池会在帧末销毁旧 Item，确认完成后再重建索引，
         // 避免下次 Event_GameWorldEnter 读取到已销毁的 GameItem。
@@ -586,6 +587,9 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
         // 标记玩家已进入游戏世界，各管理器可开始运行
         IsInGameWorld = true;
+        // 标准加载流程必须等加载页淡出后才允许玩法系统运行；
+        // 直接调用 RunWorld 的工具/联机路径没有加载页，可立即进入就绪态。
+        SetGameplayReady(!isWorldEntryInProgress);
 
         // 光照层管理器需要在区块开始加载前就绪，以便持续维护每格光照数据。
         _ = LightLayerMgr.Instance;

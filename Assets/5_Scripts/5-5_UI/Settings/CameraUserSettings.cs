@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using FlatWorld.Settings;
 using UnityEngine;
 
 /// <summary>
@@ -23,6 +25,10 @@ public static class CameraUserSettings
     public const float MaximumLookaheadSmoothing = 10f;
     public const float LookaheadSmoothingStep = 0.1f;
 
+    public const string SettingsProviderId = "camera";
+    public const string LookaheadSettingKey = "camera.lookahead";
+    public const string LookaheadSmoothingSettingKey = "camera.lookaheadSmoothing";
+
     #endregion
 
     #region 缓存与事件
@@ -33,6 +39,12 @@ public static class CameraUserSettings
 
     /// <summary>任一镜头偏好实际改变后广播一次。</summary>
     public static event Action Changed;
+
+    private static readonly ISettingsProvider settingsProvider =
+        CreateSettingsProvider();
+
+    /// <summary>供设置 UI 查找的镜头偏好提供者；首次访问时自动注册。</summary>
+    public static ISettingsProvider SettingsProvider => RegisterSettingsProvider();
 
     public static float Lookahead
     {
@@ -115,11 +127,82 @@ public static class CameraUserSettings
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeState()
     {
+        SettingsProviderRegistry.Unregister(settingsProvider);
         initialized = false;
         cachedLookahead = DefaultLookahead;
         cachedLookaheadSmoothing = DefaultLookaheadSmoothing;
         Changed = null;
     }
+
+    #region 设置提供者
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterSettingsProviderOnLoad()
+    {
+        RegisterSettingsProvider();
+    }
+
+    private static ISettingsProvider RegisterSettingsProvider()
+    {
+        SettingsProviderRegistry.Register(settingsProvider);
+        return settingsProvider;
+    }
+
+    private static ISettingsProvider CreateSettingsProvider()
+    {
+        return new CameraSettingsProvider();
+    }
+
+    private sealed class CameraSettingsProvider : ISettingsProvider
+    {
+        private readonly IReadOnlyList<ISettingsSlider> sliders;
+
+        public CameraSettingsProvider()
+        {
+            sliders = new ISettingsSlider[]
+            {
+                new SettingsSlider(
+                    new SettingDescriptor(
+                        LookaheadSettingKey,
+                        "镜头前探",
+                        SettingControlType.Slider,
+                        "camera",
+                        order: 0),
+                    MinimumLookahead,
+                    MaximumLookahead,
+                    LookaheadStep,
+                    () => Lookahead,
+                    value => SetLookahead(value)),
+                new SettingsSlider(
+                    new SettingDescriptor(
+                        LookaheadSmoothingSettingKey,
+                        "预判平滑",
+                        SettingControlType.Slider,
+                        "camera",
+                        order: 1),
+                    MinimumLookaheadSmoothing,
+                    MaximumLookaheadSmoothing,
+                    LookaheadSmoothingStep,
+                    () => LookaheadSmoothing,
+                    value => SetLookaheadSmoothing(value))
+            };
+        }
+
+        public string ProviderId => SettingsProviderId;
+        public string DisplayName => "镜头";
+        public int Order => 30;
+        public IReadOnlyList<ISettingsToggle> ToggleSettings =>
+            Array.Empty<ISettingsToggle>();
+        public IReadOnlyList<ISettingsSlider> SliderSettings => sliders;
+        public IReadOnlyList<ISettingsDropdown> DropdownSettings =>
+            Array.Empty<ISettingsDropdown>();
+        public IReadOnlyList<ISettingsSwitch> SwitchSettings =>
+            Array.Empty<ISettingsSwitch>();
+
+        public void ResetToDefaults() => CameraUserSettings.ResetToDefaults();
+    }
+
+    #endregion
 
     private static void EnsureInitialized()
     {

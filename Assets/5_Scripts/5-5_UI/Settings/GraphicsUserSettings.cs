@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using FlatWorld.Settings;
 using UnityEngine;
 
 /// <summary>
@@ -23,6 +25,9 @@ public static class GraphicsUserSettings
 
     public const GraphicsPreset DefaultPreset = GraphicsPreset.High;
 
+    public const string SettingsProviderId = "graphics";
+    public const string PresetSettingKey = "graphics.preset";
+
     #endregion
     #region 缓存与事件
 
@@ -31,6 +36,12 @@ public static class GraphicsUserSettings
 
     /// <summary>画质预设实际改变后触发。</summary>
     public static event Action Changed;
+
+    private static readonly ISettingsProvider settingsProvider =
+        CreateSettingsProvider();
+
+    /// <summary>供主菜单设置使用的画质下拉列表契约。</summary>
+    public static ISettingsProvider SettingsProvider => RegisterSettingsProvider();
 
     public static GraphicsPreset Preset
     {
@@ -99,10 +110,79 @@ public static class GraphicsUserSettings
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeState()
     {
+        SettingsProviderRegistry.Unregister(settingsProvider);
         initialized = false;
         cachedPreset = DefaultPreset;
         Changed = null;
     }
+
+    #region 设置提供者
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterSettingsProviderOnLoad()
+    {
+        RegisterSettingsProvider();
+    }
+
+    private static ISettingsProvider RegisterSettingsProvider()
+    {
+        SettingsProviderRegistry.Register(settingsProvider);
+        return settingsProvider;
+    }
+
+    private static ISettingsProvider CreateSettingsProvider()
+    {
+        return new GraphicsSettingsProvider();
+    }
+
+    private sealed class GraphicsSettingsProvider : ISettingsProvider
+    {
+        private static readonly IReadOnlyList<SettingOption> Options =
+            new SettingOption[]
+            {
+                new SettingOption("high", "高（推荐）"),
+                new SettingOption("medium", "中"),
+                new SettingOption("low", "低")
+            };
+
+        private readonly IReadOnlyList<ISettingsDropdown> dropdowns;
+
+        public GraphicsSettingsProvider()
+        {
+            dropdowns = new ISettingsDropdown[]
+            {
+                new SettingsDropdown(
+                    new SettingDescriptor(
+                        PresetSettingKey,
+                        "画质预设",
+                        SettingControlType.Dropdown,
+                        "graphics",
+                        order: 0),
+                    Options,
+                    () => PresetIndex,
+                    index =>
+                    {
+                        SetPresetIndex(index);
+                        return null;
+                    })
+            };
+        }
+
+        public string ProviderId => SettingsProviderId;
+        public string DisplayName => "画质";
+        public int Order => 40;
+        public IReadOnlyList<ISettingsToggle> ToggleSettings =>
+            Array.Empty<ISettingsToggle>();
+        public IReadOnlyList<ISettingsSlider> SliderSettings =>
+            Array.Empty<ISettingsSlider>();
+        public IReadOnlyList<ISettingsDropdown> DropdownSettings => dropdowns;
+        public IReadOnlyList<ISettingsSwitch> SwitchSettings =>
+            Array.Empty<ISettingsSwitch>();
+
+        public void ResetToDefaults() => GraphicsUserSettings.ResetToDefaults();
+    }
+
+    #endregion
 
     private static void EnsureInitialized()
     {

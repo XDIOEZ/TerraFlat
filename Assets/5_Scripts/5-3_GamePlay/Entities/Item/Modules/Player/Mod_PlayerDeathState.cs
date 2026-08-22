@@ -63,6 +63,7 @@ public partial class Mod_PlayerDeathState : Module
     private PlayerAdminController _adminController; // 管理员无敌状态
 
     private bool _isInDyingState; // 是否已进入濒死
+    private bool _forceSuicideRequested; // 设置页强制自杀请求，绕过管理员无敌
 
     /// <summary>供管理员无敌恢复与自动化验证读取当前濒死状态。</summary>
     public bool IsInDyingState => _isInDyingState;
@@ -152,6 +153,31 @@ public partial class Mod_PlayerDeathState : Module
         Data.HasSleepRespawnPoint = true;
         Data.SleepRespawnPoint = new Vector3(sleepPoint.x, sleepPoint.y, 0f);
         Debug.Log($"[Mod_PlayerDeathState] 已记录睡觉重生点: {Data.SleepRespawnPoint}");
+    }
+
+    /// <summary>从设置页强制触发玩家死亡流程；不受管理员无敌影响。</summary>
+    public void ForceSuicide()
+    {
+        if (_damageReceiver == null || _isInDyingState)
+        {
+            return;
+        }
+
+        _forceSuicideRequested = true;
+        try
+        {
+            _damageReceiver.Hp = 0f;
+            if (item != null)
+            {
+                ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+            }
+
+            _damageReceiver.ResolveNetworkAuthoritativeDeath();
+        }
+        finally
+        {
+            _forceSuicideRequested = false;
+        }
     }
 
     public void ExitToMainMenuFromDying()
@@ -487,7 +513,7 @@ public partial class Mod_PlayerDeathState : Module
 
     private void OnPlayerDead()
     {
-        if (HasAdminInvincibility())
+        if (!_forceSuicideRequested && HasAdminInvincibility())
         {
             _damageReceiver.ConsumeCurrentDeath();
             if (_isInDyingState)

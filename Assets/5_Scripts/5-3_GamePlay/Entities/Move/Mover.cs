@@ -60,6 +60,7 @@ public partial class Mover : Module
     private InputAction moveAction;
     private InputAction holdRunAction;
     private InputAction toggleRunAction;
+    private GameController inputController;
     public Rigidbody2D rb;
 
     // 输入判定、到达判定与过渡时间的稳定下限。
@@ -174,6 +175,7 @@ public partial class Mover : Module
         GameController controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
         if (controller != null)
         {
+            inputController = controller;
             moveAction = controller._inputActions.Win10.Move_Player;
             BindRunActions(
                 controller._inputActions.Win10.Shift,
@@ -225,7 +227,9 @@ public partial class Mover : Module
             }
         }
 
-        Vector2 input = moveAction.ReadValue<Vector2>();
+        Vector2 input = inputController != null
+            ? inputController.ReadMoveInput(moveAction)
+            : moveAction.ReadValue<Vector2>();
         bool isCurrentlyMoving = input.sqrMagnitude > InputMoveThresholdSqr;
 
         if (isCurrentlyMoving)
@@ -470,16 +474,25 @@ public partial class Mover : Module
 
     private void OnHoldRunActionStarted(InputAction.CallbackContext context)
     {
+        if (inputController != null && !inputController.IsGameplayInputAllowed(context))
+            return;
+
         HandleHoldRunInputPressed();
     }
 
     private void OnHoldRunActionCanceled(InputAction.CallbackContext context)
     {
+        if (inputController != null && !inputController.IsGameplayInputAllowed(context))
+            return;
+
         HandleHoldRunInputReleased();
     }
 
     private void OnToggleRunActionPerformed(InputAction.CallbackContext context)
     {
+        if (inputController != null && !inputController.IsGameplayInputAllowed(context))
+            return;
+
         HandleToggleRunInputPressed();
     }
 
@@ -508,7 +521,7 @@ public sealed class MovementHungerActionDefinition
 
     [Min(0f)]
     [Tooltip("奔跑时水分消耗倍率。")]
-    public float runWaterConsumeMultiplier = 0.5f;
+    public float runWaterConsumeMultiplier = 0.25f;
 
     /// <summary>校正运行时和 Inspector 可能写入的非法配置。</summary>
     public void ClampValues()

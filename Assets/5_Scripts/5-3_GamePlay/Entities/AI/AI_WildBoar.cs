@@ -324,7 +324,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 				Data.GrassSustenanceRemaining,
 				deltaTime);
 		}
-		_attack.Update(deltaTime);
+		_attack.Tick(deltaTime);
 		UpdateRageLevel(deltaTime);
 	}
 

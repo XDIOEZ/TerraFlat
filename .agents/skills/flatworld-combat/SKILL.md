@@ -27,6 +27,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 命中特效必须区分 `0` 与 `-1`：`0` 表示有效命中但被护甲完全抵消，应播放数字 0；`-1` 表示死亡、受伤冷却等无效结算，不应播放命中特效；可破坏 Tile 也应把零伤害命中返回给 `Mod_Damage`。
 - 玩家进入 `Mod_PlayerDeathState` 濒死状态后，`Mod_Food` 等被动生命模块不得继续改写 `DamageReceiver.Hp`，否则会把死亡状态抬成极低正数。
 - 启用身体部位生命时，普通总量回血只能分配给仍存活的部位，不能复活已耗尽的手脚；直接重生或满血赋值才允许恢复全部部位。
+- 武器的 `Mod_Damage` 必须是武器 Prefab 内的直接子物体，禁止再嵌套 `Mod_Damage.prefab` 实例；`Mod_Weapon_AnimationAction.damageModule` 与 `Mod_Damage.damageCollider` 必须显式序列化绑定，攻击动画曲线只负责开关已存在的碰撞体，运行时不得自动查找或补建。
 
 ## 验证
 

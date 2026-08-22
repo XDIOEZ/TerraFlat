@@ -166,6 +166,9 @@ public class Inventory
         // 记录回调与 Action，便于之后解绑
         _toggleCallback = ctx =>
         {
+            if (!gameController.IsGameplayInputAllowed(ctx))
+                return;
+
             if (gameController.IsGameplayInputLocked &&
                 (basePanel == null || !basePanel.IsOpen()) &&
                 !CanToggleFromMobileMenu())

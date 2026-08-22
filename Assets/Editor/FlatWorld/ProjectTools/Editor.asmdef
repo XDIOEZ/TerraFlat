@@ -12,6 +12,7 @@
         "FlatWorld.Localization",
         "Unity.Localization",
         "Unity.Localization.Editor",
+        "com.unity.cinemachine.editor",
         "Unity.TextMeshPro"
     ],
     "includePlatforms": [

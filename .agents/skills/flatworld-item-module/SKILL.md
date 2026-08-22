@@ -26,6 +26,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 内容工坊创建物品时只写继承差异：父定义和参考模块必须来自启用分包，Sprite 先生成稳定 Addressables 地址，JSON 写入前校验继承、重复 ID、文件指纹与分包外壳边界。
 - `RuntimeItemDefinition.IsActor` 只表示复用通用管线；Actor 还必须登记到 `GameRes.ActorDefinitions` 且外壳包含 `IAIActor`。
 - 堆叠身份统一由 `ItemData` 判定，空与 null 特殊数据按现有规范处理。
+- `ItemPicker` 不能只依赖 `OnTriggerEnter2D`：掉落/飞行或联机预约可能让物品先以不可拾取状态进入范围，状态恢复后应补偿检查，并限制为一次性请求以避免部分入包或网络请求重复执行。
 
 ## 验证
 

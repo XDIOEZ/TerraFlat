@@ -1,5 +1,7 @@
 // AI-Context: 区块流送性能模式的全局 PlayerPrefs；只控制客户端生成吞吐，不写入世界存档。
 using System;
+using System.Collections.Generic;
+using FlatWorld.Settings;
 using UnityEngine;
 
 /// <summary>
@@ -18,7 +20,16 @@ public static class WorldStreamingPreferences
 {
     private const string ModeKey = "FlatWorld.WorldStreaming.PerformanceMode.v1";
 
+    public const string SettingsProviderId = "world-streaming";
+    public const string ModeSettingKey = "worldStreaming.performanceMode";
+
     public static event Action Changed;
+
+    private static readonly ISettingsProvider settingsProvider =
+        CreateSettingsProvider();
+
+    /// <summary>供设置 UI 使用的区块流送模式下拉列表契约。</summary>
+    public static ISettingsProvider SettingsProvider => RegisterSettingsProvider();
 
     public static WorldStreamingPerformanceMode Mode
     {
@@ -57,4 +68,84 @@ public static class WorldStreamingPreferences
                 ChunkMgr.SafeBackgroundGenerationCeiling)
         };
     }
+
+    #region 设置提供者
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterSettingsProviderOnLoad()
+    {
+        RegisterSettingsProvider();
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetRuntimeState()
+    {
+        SettingsProviderRegistry.Unregister(settingsProvider);
+        Changed = null;
+    }
+
+    private static ISettingsProvider RegisterSettingsProvider()
+    {
+        SettingsProviderRegistry.Register(settingsProvider);
+        return settingsProvider;
+    }
+
+    private static ISettingsProvider CreateSettingsProvider()
+    {
+        return new WorldStreamingSettingsProvider();
+    }
+
+    private sealed class WorldStreamingSettingsProvider : ISettingsProvider
+    {
+        private static readonly IReadOnlyList<SettingOption> Options =
+            new SettingOption[]
+            {
+                new SettingOption("automatic", "自动（推荐）"),
+                new SettingOption("smooth", "流畅优先（单后台线程）"),
+                new SettingOption("throughput", "高吞吐（安全多线程）")
+            };
+
+        private readonly IReadOnlyList<ISettingsDropdown> dropdowns;
+
+        public WorldStreamingSettingsProvider()
+        {
+            dropdowns = new ISettingsDropdown[]
+            {
+                new SettingsDropdown(
+                    new SettingDescriptor(
+                        ModeSettingKey,
+                        "流送性能",
+                        SettingControlType.Dropdown,
+                        "world",
+                        order: 0),
+                    Options,
+                    () => (int)Mode,
+                    TrySetMode)
+            };
+        }
+
+        public string ProviderId => SettingsProviderId;
+        public string DisplayName => "区块流送";
+        public int Order => 60;
+        public IReadOnlyList<ISettingsToggle> ToggleSettings =>
+            Array.Empty<ISettingsToggle>();
+        public IReadOnlyList<ISettingsSlider> SliderSettings =>
+            Array.Empty<ISettingsSlider>();
+        public IReadOnlyList<ISettingsDropdown> DropdownSettings => dropdowns;
+        public IReadOnlyList<ISettingsSwitch> SwitchSettings =>
+            Array.Empty<ISettingsSwitch>();
+
+        public void ResetToDefaults() => SetMode(WorldStreamingPerformanceMode.Automatic);
+
+        private static string TrySetMode(int index)
+        {
+            if (index < 0 || index >= Options.Count)
+                return "区块流送模式无效。";
+
+            SetMode((WorldStreamingPerformanceMode)index);
+            return null;
+        }
+    }
+
+    #endregion
 }

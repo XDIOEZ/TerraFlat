@@ -62,6 +62,9 @@ public static class AI_DebugOverlay
 /// </summary>
 public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, Enum
 {
+    /// <summary>所有正式生物 AI 都由 ItemMgr 的 Module Tick 统一驱动，不使用独立 Unity Update。</summary>
+    public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
+
 #region ModuleData
 	public Ex_ModData_MemoryPackable ModData = new Ex_ModData_MemoryPackable();
 	public override ModuleData _Data

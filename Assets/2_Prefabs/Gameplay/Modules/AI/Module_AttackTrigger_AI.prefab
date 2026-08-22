@@ -101,7 +101,7 @@ MonoBehaviour:
   EnableOnTriggerEnterDamage: 1
   OnlyDealDamageWhenInHand: 0
   showDebugWarnings: 1
-  damageCollider: {fileID: 0}
+  damageCollider: {fileID: 5641593694245906890}
   lastDamageTime: 0
   MemoryPackableData:
     Name: 

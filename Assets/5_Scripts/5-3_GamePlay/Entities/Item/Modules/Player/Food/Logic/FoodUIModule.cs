@@ -3,12 +3,14 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 食物 UI 模块：负责食物参数面板的创建、显示、刷新、拖拽位置保存和销毁。
-/// UI 只读取食物运行时上下文，不参与营养计算、回血或进食结算。
+/// 食物 UI 模块：负责食物参数面板的创建、显示、刷新、拖拽位置保存和销毁，
+/// 并读取玩家 DamageReceiver 的权威生命值显示到角色参数面板。
+/// UI 只读取运行时状态，不参与营养计算、回血或进食结算。
 /// </summary>
 public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposable
 {
     private readonly IFoodRuntimeContext context;
+    private readonly DamageReceiver damageReceiver;
     private readonly GameObject panelPrefab;
     private readonly Func<GameObject> readPanelInstance;
     private readonly Action<GameObject> writePanelInstance;
@@ -17,6 +19,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
 
     public FoodUIModule(
         IFoodRuntimeContext context,
+        DamageReceiver damageReceiver,
         GameObject panelPrefab,
         Func<GameObject> readPanelInstance,
         Action<GameObject> writePanelInstance,
@@ -24,11 +27,13 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         Action<BasePanel> writePanel)
     {
         this.context = context;
+        this.damageReceiver = damageReceiver;
         this.panelPrefab = panelPrefab;
         this.readPanelInstance = readPanelInstance;
         this.writePanelInstance = writePanelInstance;
         this.readPanel = readPanel;
         this.writePanel = writePanel;
+        BindHealthChanged();
     }
 
     public string MechanicId => "core.ui";
@@ -84,15 +89,20 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     public void RefreshUI()
     {
         BasePanel panel = ResolvePanel();
-        if (panel == null || context.Data?.nutrition == null)
+        if (panel == null)
             return;
 
-        UpdateNutrition(panel, "碳水", context.Data.nutrition.Carbohydrates, context.Data.nutrition.Max_Carbohydrates);
-        UpdateNutrition(panel, "脂肪", context.Data.nutrition.Fat, context.Data.nutrition.Max_Fat);
-        UpdateNutrition(panel, "蛋白质", context.Data.nutrition.Protein, context.Data.nutrition.Max_Protein);
-        UpdateNutrition(panel, "水", context.Data.nutrition.Water, context.Data.nutrition.Max_Water);
-        UpdateNutrition(panel, "维生素", context.Data.nutrition.Vitamins, context.Data.nutrition.Max_Vitamins);
+        if (context.Data?.nutrition != null)
+        {
+            UpdateNutrition(panel, "碳水", context.Data.nutrition.Carbohydrates, context.Data.nutrition.Max_Carbohydrates);
+            UpdateNutrition(panel, "脂肪", context.Data.nutrition.Fat, context.Data.nutrition.Max_Fat);
+            UpdateNutrition(panel, "蛋白质", context.Data.nutrition.Protein, context.Data.nutrition.Max_Protein);
+            UpdateNutrition(panel, "水", context.Data.nutrition.Water, context.Data.nutrition.Max_Water);
+            UpdateNutrition(panel, "维生素", context.Data.nutrition.Vitamins, context.Data.nutrition.Max_Vitamins);
+        }
+
         UpdateTemperatureUI(panel);
+        UpdateHealthUI(panel);
     }
 
     public void SavePanelPosition()
@@ -130,6 +140,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
 
     public void Dispose()
     {
+        UnbindHealthChanged();
         DestroyPanel();
     }
 
@@ -243,6 +254,70 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         TMPro.TextMeshProUGUI text = panel.GetText($"DataText_{name}");
         if (text != null)
             text.text = $"{Mathf.RoundToInt(currentValue)}/{Mathf.RoundToInt(maxValue)}";
+    }
+
+    /// <summary>把玩家权威生命值同步到角色参数面板；普通食物面板隐藏该行。</summary>
+    private void UpdateHealthUI(BasePanel panel)
+    {
+        Slider slider = FindSlider(panel, "血量");
+        panel.TryGetText("DataText_血量", out TMPro.TextMeshProUGUI text);
+        bool showHealth = context.IsPlayer && damageReceiver != null;
+
+        if (slider != null)
+            slider.gameObject.SetActive(showHealth);
+
+        if (!showHealth)
+            return;
+
+        float maxHp = Mathf.Max(0f, damageReceiver.MaxHp);
+        float hp = Mathf.Clamp(damageReceiver.Hp, 0f, maxHp);
+        if (slider != null)
+        {
+            slider.minValue = 0f;
+            slider.maxValue = Mathf.Max(1f, maxHp);
+            slider.value = hp;
+        }
+
+        if (text != null)
+            text.text = $"{Mathf.RoundToInt(hp)}/{Mathf.RoundToInt(maxHp)}";
+    }
+
+    /// <summary>安静查找血量行，兼容旧版 Prefab 尚未重建时不刷屏输出警告。</summary>
+    private static Slider FindSlider(BasePanel panel, string name)
+    {
+        if (panel == null)
+            return null;
+
+        Slider[] sliders = panel.GetComponentsInChildren<Slider>(true);
+        for (int i = 0; i < sliders.Length; i++)
+        {
+            if (sliders[i] != null && string.Equals(sliders[i].name, name, StringComparison.Ordinal))
+                return sliders[i];
+        }
+
+        return null;
+    }
+
+    /// <summary>监听 DamageReceiver 的统一状态事件，确保受伤、回血和网络同步都能刷新面板。</summary>
+    private void BindHealthChanged()
+    {
+        if (damageReceiver == null)
+            return;
+
+        damageReceiver.OnAction -= HandleHealthChanged;
+        damageReceiver.OnAction += HandleHealthChanged;
+    }
+
+    /// <summary>解除生命值监听，避免玩家实例销毁后残留回调。</summary>
+    private void UnbindHealthChanged()
+    {
+        if (damageReceiver != null)
+            damageReceiver.OnAction -= HandleHealthChanged;
+    }
+
+    private void HandleHealthChanged(float _)
+    {
+        RefreshUI();
     }
 
     private void UpdateTemperatureUI(BasePanel panel)

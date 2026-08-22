@@ -5,7 +5,9 @@ using UnityEngine;
 /// 不修改 DamageReceiver 的结算；死亡和重生通过每帧校验生命比例保证表现不会残留。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class PlayerLowHealthPostProcessEffect : MonoBehaviour, IScreenPostProcessEffect
+public sealed class PlayerLowHealthPostProcessEffect : MonoBehaviour,
+    IScreenPostProcessEffect,
+    IScreenPostProcessLowQualityEffect
 {
     #region 配置
 

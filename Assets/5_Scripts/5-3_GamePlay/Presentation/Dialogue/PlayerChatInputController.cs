@@ -164,6 +164,9 @@ namespace FlatWorld.Dialogue
 
         private void HandleOpenChatPerformed(InputAction.CallbackContext context)
         {
+            if (gameController != null && !gameController.IsGameplayInputAllowed(context))
+                return;
+
             Keyboard keyboard = context.control?.device as Keyboard;
             if (keyboard != null &&
                 context.control == keyboard.tKey &&
@@ -177,6 +180,9 @@ namespace FlatWorld.Dialogue
 
         private void HandleCancelChatPerformed(InputAction.CallbackContext context)
         {
+            if (gameController != null && !gameController.IsGameplayInputAllowed(context))
+                return;
+
             if (!isOpen || EventSystemGuard.IsVirtualKeyboardOpen)
                 return;
 

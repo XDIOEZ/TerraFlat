@@ -61,13 +61,30 @@ public partial class GameManager
     private string worldEntryTargetId = string.Empty;
     private Coroutine worldEntryCompletionCoroutine;
     private bool isRespawnLoadingPresentationActive;
+    private bool isGameplayReady;
 
     public bool IsWorldEntryInProgress => isWorldEntryInProgress;
+
+    /// <summary>
+    /// 加载页完全隐藏前，禁止 Item/Module Tick、生态生成和玩家玩法输入。
+    /// 后台资源与区块仍可继续加载，只有加载页淡出完成后才解锁。
+    /// </summary>
+    public bool IsGameplayReady => isGameplayReady;
 
     /// <summary>
     /// 世界进入生命周期的只读通知。核心流程不要求存在任何订阅者。
     /// </summary>
     public event Action<WorldEntryProgressInfo> WorldEntryProgressChanged;
+
+    /// <summary>统一切换玩法闸门，确保输入锁和手机 HUD 在同一状态变化后同步刷新。</summary>
+    private void SetGameplayReady(bool ready)
+    {
+        if (isGameplayReady == ready)
+            return;
+
+        isGameplayReady = ready;
+        UIManager.ExistingInstance?.NotifyInteractionSurfaceChanged();
+    }
 
     partial void InitializeWorldEntryPresentation();
     partial void DisposeWorldEntryPresentation();
@@ -98,6 +115,7 @@ public partial class GameManager
         }
 
         isWorldEntryInProgress = true;
+        SetGameplayReady(false);
         worldEntryCompletesOnPlayerReady = completeOnPlayerReady;
         worldEntryPresentationMode = presentationMode;
         worldEntryTargetId = targetId ?? string.Empty;
@@ -122,6 +140,7 @@ public partial class GameManager
             return false;
 
         isRespawnLoadingPresentationActive = true;
+        SetGameplayReady(false);
         PublishWorldEntryProgress(new WorldEntryProgressInfo(
             "正在重生",
             "正在加载玩家周围区块…",
@@ -155,6 +174,15 @@ public partial class GameManager
             "周围区域已经准备完毕。",
             1f,
             WorldEntryProgressState.Completed));
+    }
+
+    /// <summary>加载页隐藏动画结束后，统一释放玩法运行闸门。</summary>
+    internal void NotifyWorldLoadingPresentationHidden()
+    {
+        if (!IsInGameWorld || isWorldEntryInProgress || isRespawnLoadingPresentationActive)
+            return;
+
+        SetGameplayReady(true);
     }
 
     private void OnWorldEntryPlayerReady(Player player)
@@ -303,6 +331,7 @@ public partial class GameManager
 
         // 进入世界失败后立即停止 ItemMgr Tick，并注销可能已半初始化的玩家。
         IsInGameWorld = false;
+        SetGameplayReady(false);
         if (ItemMgr.Instance != null && SaveDataMgr.Instance != null)
         {
             Player failedPlayer = ItemMgr.Instance.User_Player;
@@ -382,6 +411,7 @@ public partial class GameManager
 
         isWorldEntryInProgress = false;
         isRespawnLoadingPresentationActive = false;
+        SetGameplayReady(false);
         ResetCurrentWorldEntryContext();
     }
 }

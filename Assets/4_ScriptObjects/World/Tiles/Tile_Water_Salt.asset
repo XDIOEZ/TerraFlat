@@ -31,7 +31,7 @@ MonoBehaviour:
         position: {x: 0, y: 0, z: 0}
         DemolitionTime: 0
         workTime: 0
-        Penalty: 5000
+        Penalty: 20000
         IsWalkable: 1
         deepValue: 0.5
         salt: 80
@@ -44,4 +44,5 @@ MonoBehaviour:
         drinkTickSeconds: 1
         waterGainPerTick: 125
         dirtyWaterInfectionChance: 0.2
+        shallowMoveSpeedMultiplier: 0.85
         moveSpeedMultiplier: 0.5

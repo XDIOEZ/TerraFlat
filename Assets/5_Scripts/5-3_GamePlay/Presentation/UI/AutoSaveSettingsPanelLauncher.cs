@@ -1,6 +1,7 @@
 // AI-Context: 设置菜单的自动保存入口及运行时 uGUI 面板；下拉列表提供常用间隔与“永远不自动保存”，输入框提供自定义分钟数。
 using System.Collections.Generic;
 using FlatWorld.Localization;
+using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,6 +18,7 @@ public sealed class AutoSaveSettingsPanelLauncher : MonoBehaviour
     private TMP_Dropdown intervalDropdown;
     private TMP_InputField intervalInput;
     private TextMeshProUGUI statusText;
+    private ISettingsDropdown intervalSetting;
 
     public static AutoSaveSettingsPanelLauncher Ensure(Transform settingsPanel)
     {
@@ -80,6 +82,8 @@ private void EnsureWindow()
         settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
             prefab,
             RuntimeUIPrefabKeys.AutoSaveSettings);
+        intervalSetting = AutoSavePreferences.SettingsProvider.GetDropdown(
+            AutoSavePreferences.IntervalSettingKey);
         intervalDropdown = settingsPanel.GetComponentInChildren<TMP_Dropdown>(true);
         intervalInput = settingsPanel.GetInputField("自动保存间隔输入框");
         statusText = settingsPanel.GetText("状态文本");
@@ -94,7 +98,7 @@ private void EnsureWindow()
         if (intervalDropdown != null)
         {
             intervalDropdown.ClearOptions();
-            intervalDropdown.AddOptions(BuildPresetLabels());
+            intervalDropdown.AddOptions(BuildPresetLabels(intervalSetting?.Options));
             intervalDropdown.onValueChanged.AddListener(OnPresetChanged);
         }
 
@@ -122,7 +126,9 @@ private void EnsureWindow()
         if (intervalDropdown == null || intervalInput == null)
             return;
 
-        int selectedIndex = ResolveCurrentOptionIndex();
+        int selectedIndex = intervalSetting != null
+            ? intervalSetting.SelectedIndex
+            : ResolveCurrentOptionIndex();
         intervalDropdown.SetValueWithoutNotify(selectedIndex);
         intervalInput.SetTextWithoutNotify(AutoSavePreferences.IntervalMinutes.ToString());
         intervalInput.interactable = selectedIndex == CustomOptionIndex;
@@ -173,7 +179,11 @@ private void EnsureWindow()
         int selectedIndex = intervalDropdown.value;
         if (selectedIndex == 0)
         {
-            AutoSavePreferences.Disable();
+            if (!TryApplyPreset(selectedIndex, out string error))
+            {
+                SetStatus(FlatWorldLocalizationService.GetUiText(error), true);
+                return;
+            }
             SetCurrentStatus();
             return;
         }
@@ -194,11 +204,28 @@ private void EnsureWindow()
         else
         {
             minutes = PresetMinutes[selectedIndex];
+            if (!TryApplyPreset(selectedIndex, out string error))
+            {
+                SetStatus(FlatWorldLocalizationService.GetUiText(error), true);
+                return;
+            }
         }
 
-        AutoSavePreferences.Enable(minutes);
+        if (selectedIndex == CustomOptionIndex)
+            AutoSavePreferences.Enable(minutes);
         intervalInput.SetTextWithoutNotify(minutes.ToString());
         SetCurrentStatus();
+    }
+
+    private bool TryApplyPreset(int selectedIndex, out string error)
+    {
+        if (intervalSetting == null)
+        {
+            error = "自动保存设置提供者尚未注册。";
+            return false;
+        }
+
+        return intervalSetting.TrySetSelectedIndex(selectedIndex, out error);
     }
 
     private void SetCurrentStatus()
@@ -215,13 +242,15 @@ private void EnsureWindow()
                 false);
     }
 
-    private static List<string> BuildPresetLabels()
+    private static List<string> BuildPresetLabels(
+        IReadOnlyList<SettingOption> options)
     {
-        var labels = new List<string>(PresetMinutes.Length);
-        labels.Add(FlatWorldLocalizationService.GetUiText("永远不自动保存"));
-        for (int i = 1; i < PresetMinutes.Length - 1; i++)
-            labels.Add(FlatWorldLocalizationService.GetUiFormat("每 {0} 分钟", PresetMinutes[i]));
-        labels.Add(FlatWorldLocalizationService.GetUiText("自定义间隔"));
+        var labels = new List<string>(options?.Count ?? 0);
+        if (options == null)
+            return labels;
+
+        for (int i = 0; i < options.Count; i++)
+            labels.Add(FlatWorldLocalizationService.GetUiText(options[i]?.DisplayName));
         return labels;
     }
 

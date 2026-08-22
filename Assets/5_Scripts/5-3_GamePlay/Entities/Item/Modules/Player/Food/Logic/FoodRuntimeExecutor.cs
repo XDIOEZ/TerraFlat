@@ -469,6 +469,7 @@ public sealed class FoodRuntimeExecutor : IDisposable
         rulePipeline.Add(new FoodAudioModule(context));
         uiModule = new FoodUIModule(
             context,
+            damageReceiver,
             panelPrefab,
             readPanelInstance,
             writePanelInstance,

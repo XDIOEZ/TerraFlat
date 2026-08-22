@@ -107,6 +107,9 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private void OnInteractPressed(InputAction.CallbackContext ctx)
     {
+        if (gameController != null && !gameController.IsGameplayInputAllowed(ctx))
+            return;
+
         bool interacted = TryInteractAtCurrentPosition();
         if (!interacted)
             BeginEnvironmentActionHold();
@@ -129,6 +132,9 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private void OnInteractReleased(InputAction.CallbackContext ctx)
     {
+        if (gameController != null && !gameController.IsGameplayInputAllowed(ctx))
+            return;
+
         EndEnvironmentActionHold();
         if (IsGameplayInputLocked())
         {

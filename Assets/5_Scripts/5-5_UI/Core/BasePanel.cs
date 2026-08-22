@@ -616,7 +616,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
     private void OnDestroy()
     {
-        NotifyInteractionSurfaceChanged();
+        // 销毁阶段不再刷新交互面，避免 HUD 在对象销毁时重新激活或创建 UI。
         if (isOpen)
         {
             isOpen = false;
@@ -1108,6 +1108,9 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// <summary>通知全局 UI 交互面发生变化。</summary>
     private static void NotifyInteractionSurfaceChanged()
     {
+        if (!Application.isPlaying || UIManager.IsShuttingDown)
+            return;
+
         UIManager.ExistingInstance?.NotifyInteractionSurfaceChanged();
     }
 

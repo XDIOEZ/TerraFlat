@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using FlatWorld.Localization;
+using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,13 +28,6 @@ public partial class GameManager
     public const string MainMenuSettingsEffectsQualityKey = "特效质量下拉列表";
     public const string MainMenuSettingsLanguageDropdownKey = "游戏语言下拉列表";
     public const string MainMenuSettingsLanguageStatusTextKey = "设置状态";
-
-    private static readonly string[] MainMenuSettingsLocaleCodes = { "zh-CN", "en" };
-    private static readonly string[] MainMenuSettingsLanguageOptions = { "简体中文", "English" };
-    private static readonly string[] MainMenuSettingsQualityOptions =
-        { "高（推荐）", "中", "低" };
-    private static readonly string[] MainMenuSettingsEffectsQualityOptions =
-        { "高", "中", "低" };
 
     public const string NewGamePanelKey = "NewGame";
     public const string NewGameStartButtonKey = "开始新游戏";
@@ -233,7 +227,11 @@ public partial class GameManager
 
         HideDimensionLoadingViewImmediate();
         if (!EnsureWorldLoadingView())
+        {
+            if (progress.State == WorldEntryProgressState.Completed)
+                NotifyWorldLoadingPresentationHidden();
             return;
+        }
 
         if (worldLoadingHideCoroutine != null)
         {
@@ -257,7 +255,11 @@ public partial class GameManager
     private void PresentDimensionLoading(WorldEntryProgressInfo progress)
     {
         if (!EnsureDimensionLoadingView())
+        {
+            if (progress.State == WorldEntryProgressState.Completed)
+                NotifyWorldLoadingPresentationHidden();
             return;
+        }
 
         if (dimensionLoadingHideCoroutine != null)
         {
@@ -377,6 +379,7 @@ public partial class GameManager
         }
 
         HideDimensionLoadingViewImmediate();
+        NotifyWorldLoadingPresentationHidden();
     }
 
     private void HideDimensionLoadingViewImmediate()
@@ -574,6 +577,7 @@ public partial class GameManager
         }
 
         HideWorldLoadingView();
+        NotifyWorldLoadingPresentationHidden();
     }
 
     private void HideWorldLoadingView()
@@ -699,6 +703,12 @@ public partial class GameManager
     /// <summary>绑定主菜单画质预设和后处理质量下拉框，并立即应用到运行时。</summary>
     private static void BindMainMenuSettingsQuality(BasePanel panel)
     {
+        ISettingsDropdown qualitySetting =
+            GraphicsUserSettings.SettingsProvider.GetDropdown(
+                GraphicsUserSettings.PresetSettingKey);
+        ISettingsDropdown effectsQualitySetting =
+            ScreenPostProcessSettings.SettingsProvider.GetDropdown(
+                ScreenPostProcessSettings.QualitySettingKey);
         TMP_Dropdown qualityDropdown = GetMainMenuSettingsDropdown(
             panel,
             MainMenuSettingsQualityPresetKey);
@@ -706,7 +716,8 @@ public partial class GameManager
             panel,
             MainMenuSettingsEffectsQualityKey);
 
-        if (qualityDropdown == null || effectsQualityDropdown == null)
+        if (qualityDropdown == null || effectsQualityDropdown == null ||
+            qualitySetting == null || effectsQualitySetting == null)
         {
             Debug.LogError(
                 "[GameManager] 主菜单设置 Prefab 缺少画质预设或特效质量下拉列表。",
@@ -715,23 +726,38 @@ public partial class GameManager
         }
 
         qualityDropdown.ClearOptions();
-        qualityDropdown.AddOptions(new List<string>(MainMenuSettingsQualityOptions));
+        qualityDropdown.AddOptions(GetSettingOptionLabels(qualitySetting.Options));
         qualityDropdown.onValueChanged.AddListener(
-            selectedIndex => OnMainMenuSettingsQualityChanged(panel, selectedIndex));
+            selectedIndex => OnMainMenuSettingsQualityChanged(
+                panel,
+                qualitySetting,
+                selectedIndex));
 
         effectsQualityDropdown.ClearOptions();
         effectsQualityDropdown.AddOptions(
-            new List<string>(MainMenuSettingsEffectsQualityOptions));
+            GetSettingOptionLabels(effectsQualitySetting.Options));
         effectsQualityDropdown.onValueChanged.AddListener(
-            selectedIndex => OnMainMenuSettingsEffectsQualityChanged(panel, selectedIndex));
+            selectedIndex => OnMainMenuSettingsEffectsQualityChanged(
+                panel,
+                effectsQualitySetting,
+                selectedIndex));
 
         RefreshMainMenuSettingsQuality(panel);
     }
 
     /// <summary>应用主菜单的画质预设。</summary>
-    private static void OnMainMenuSettingsQualityChanged(BasePanel panel, int selectedIndex)
+    private static void OnMainMenuSettingsQualityChanged(
+        BasePanel panel,
+        ISettingsDropdown setting,
+        int selectedIndex)
     {
-        GraphicsUserSettings.SetPresetIndex(selectedIndex);
+        if (!setting.TrySetSelectedIndex(selectedIndex, out string error))
+        {
+            SetMainMenuSettingsStatus(panel, error);
+            RefreshMainMenuSettingsQuality(panel);
+            return;
+        }
+
         RefreshMainMenuSettingsQuality(panel);
         SetMainMenuSettingsStatus(panel, "画质设置已保存");
     }
@@ -739,9 +765,16 @@ public partial class GameManager
     /// <summary>应用主菜单的后处理特效质量。</summary>
     private static void OnMainMenuSettingsEffectsQualityChanged(
         BasePanel panel,
+        ISettingsDropdown setting,
         int selectedIndex)
     {
-        ScreenPostProcessSettings.SetQualityIndex(selectedIndex);
+        if (!setting.TrySetSelectedIndex(selectedIndex, out string error))
+        {
+            SetMainMenuSettingsStatus(panel, error);
+            RefreshMainMenuSettingsQuality(panel);
+            return;
+        }
+
         RefreshMainMenuSettingsQuality(panel);
         SetMainMenuSettingsStatus(panel, "特效质量设置已保存");
     }
@@ -749,8 +782,8 @@ public partial class GameManager
     /// <summary>恢复画质预设和后处理质量默认值。</summary>
     private static void ResetMainMenuSettings(BasePanel panel)
     {
-        GraphicsUserSettings.ResetToDefaults();
-        ScreenPostProcessSettings.ResetToDefaults();
+        GraphicsUserSettings.SettingsProvider.ResetToDefaults();
+        ScreenPostProcessSettings.SettingsProvider.ResetToDefaults();
         RefreshMainMenuSettingsQuality(panel);
         SetMainMenuSettingsStatus(panel, "画质与特效质量已恢复默认");
     }
@@ -765,18 +798,38 @@ public partial class GameManager
             panel,
             MainMenuSettingsEffectsQualityKey);
 
-        if (qualityDropdown != null)
+        ISettingsDropdown qualitySetting =
+            GraphicsUserSettings.SettingsProvider.GetDropdown(
+                GraphicsUserSettings.PresetSettingKey);
+        ISettingsDropdown effectsQualitySetting =
+            ScreenPostProcessSettings.SettingsProvider.GetDropdown(
+                ScreenPostProcessSettings.QualitySettingKey);
+
+        if (qualityDropdown != null && qualitySetting != null)
         {
-            qualityDropdown.SetValueWithoutNotify(GraphicsUserSettings.PresetIndex);
+            qualityDropdown.SetValueWithoutNotify(qualitySetting.SelectedIndex);
             qualityDropdown.RefreshShownValue();
         }
 
-        if (effectsQualityDropdown != null)
+        if (effectsQualityDropdown != null && effectsQualitySetting != null)
         {
             effectsQualityDropdown.SetValueWithoutNotify(
-                ScreenPostProcessSettings.QualityIndex);
+                effectsQualitySetting.SelectedIndex);
             effectsQualityDropdown.RefreshShownValue();
         }
+    }
+
+    /// <summary>把设置契约的稳定选项转换为当前 UI 下拉框的显示文本。</summary>
+    private static List<string> GetSettingOptionLabels(
+        IReadOnlyList<SettingOption> options)
+    {
+        var labels = new List<string>(options?.Count ?? 0);
+        if (options == null)
+            return labels;
+
+        for (int i = 0; i < options.Count; i++)
+            labels.Add(options[i]?.DisplayName ?? string.Empty);
+        return labels;
     }
 
     /// <summary>按节点名获取主菜单设置中的 TMP 下拉框。</summary>
@@ -799,8 +852,11 @@ public partial class GameManager
     /// <summary>绑定语言下拉框；当前提供简体中文和英语两个 Locale。</summary>
     private void BindMainMenuSettingsLanguage(BasePanel panel)
     {
+        ISettingsDropdown languageSetting =
+            FlatWorldLocalizationService.SettingsProvider.GetDropdown(
+                FlatWorldLocalizationService.LocaleSettingKey);
         TMP_Dropdown languageDropdown = GetMainMenuSettingsLanguageDropdown(panel);
-        if (languageDropdown == null)
+        if (languageDropdown == null || languageSetting == null)
         {
             Debug.LogError(
                 $"[GameManager] 主菜单设置 Prefab 缺少语言下拉列表：{MainMenuSettingsLanguageDropdownKey}",
@@ -810,33 +866,46 @@ public partial class GameManager
 
         FlatWorldLocalizationService.Initialize();
         languageDropdown.ClearOptions();
-        languageDropdown.AddOptions(new List<string>(MainMenuSettingsLanguageOptions));
+        languageDropdown.AddOptions(GetSettingOptionLabels(languageSetting.Options));
         languageDropdown.onValueChanged.AddListener(
-            selectedIndex => OnMainMenuSettingsLanguageChanged(panel, selectedIndex));
+            selectedIndex => OnMainMenuSettingsLanguageChanged(
+                panel,
+                languageSetting,
+                selectedIndex));
         RefreshMainMenuSettingsLanguage(panel);
     }
 
     /// <summary>按下拉索引切换语言，失败时恢复当前有效选择。</summary>
-    private static void OnMainMenuSettingsLanguageChanged(BasePanel panel, int selectedIndex)
+    private static void OnMainMenuSettingsLanguageChanged(
+        BasePanel panel,
+        ISettingsDropdown setting,
+        int selectedIndex)
     {
-        if (selectedIndex < 0 || selectedIndex >= MainMenuSettingsLocaleCodes.Length)
+        if (!TryApplyLanguage(setting, selectedIndex, out string error))
         {
             RefreshMainMenuSettingsLanguage(panel);
-            return;
-        }
-
-        string localeCode = MainMenuSettingsLocaleCodes[selectedIndex];
-        if (!FlatWorldLocalizationService.TrySetLocale(localeCode))
-        {
-            Debug.LogWarning($"[GameManager] 无法切换到未配置的语言：{localeCode}");
-            RefreshMainMenuSettingsLanguage(panel);
-            SetMainMenuSettingsLanguageStatus(
-                panel,
-                FlatWorldLocalizationService.GetUiFormat("语言切换失败：{0}", localeCode));
+            if (!string.IsNullOrEmpty(error))
+                SetMainMenuSettingsLanguageStatus(
+                    panel,
+                    FlatWorldLocalizationService.GetUiText(error));
             return;
         }
 
         RefreshMainMenuSettingsLanguage(panel);
+    }
+
+    private static bool TryApplyLanguage(
+        ISettingsDropdown setting,
+        int selectedIndex,
+        out string error)
+    {
+        if (setting == null)
+        {
+            error = "语言设置提供者尚未注册。";
+            return false;
+        }
+
+        return setting.TrySetSelectedIndex(selectedIndex, out error);
     }
 
     /// <summary>根据当前 Locale 回填下拉框，并显示即时保存状态。</summary>
@@ -846,10 +915,13 @@ public partial class GameManager
         if (languageDropdown == null)
             return;
 
-        int selectedIndex = Array.IndexOf(
-            MainMenuSettingsLocaleCodes,
-            FlatWorldLocalizationService.CurrentLocaleCode);
-        selectedIndex = selectedIndex < 0 ? 0 : selectedIndex;
+        ISettingsDropdown languageSetting =
+            FlatWorldLocalizationService.SettingsProvider.GetDropdown(
+                FlatWorldLocalizationService.LocaleSettingKey);
+        if (languageSetting == null)
+            return;
+
+        int selectedIndex = languageSetting.SelectedIndex;
         languageDropdown.SetValueWithoutNotify(selectedIndex);
         languageDropdown.RefreshShownValue();
         SetMainMenuSettingsLanguageStatus(

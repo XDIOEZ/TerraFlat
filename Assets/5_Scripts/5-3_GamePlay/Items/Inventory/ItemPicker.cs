@@ -98,6 +98,7 @@ public class ItemPicker : Module
     /// </summary>
     private bool canPickUp = true;
     private float nextInventoryFullPromptTime = -Mathf.Infinity;
+    private readonly HashSet<Item> deferredPickupItems = new HashSet<Item>();
 
     /// <summary>
     /// 综合判断是否可以拾取物品
@@ -162,10 +163,48 @@ public class ItemPicker : Module
     /// <param name="other">进入触发器的碰撞体</param>
     private void OnTriggerEnter2D(Collider2D other)
     {
+        TryPickUp(other, logMissingInventories: true);
+    }
+
+    /// <summary>
+    /// 物品可能在掉落飞行期间先进入拾取范围，待恢复可拾取后补做一次拾取。
+    /// </summary>
+    private void OnTriggerStay2D(Collider2D other)
+    {
+        Item pickAble = WorldTopologyColliderProxy.ResolveComponent<Item>(other);
+        if (pickAble?.itemData?.Stack == null)
+            return;
+
+        if (!pickAble.itemData.Stack.CanBePickedUp)
+        {
+            deferredPickupItems.Add(pickAble);
+            return;
+        }
+
+        if (deferredPickupItems.Contains(pickAble))
+            TryPickUp(other, logMissingInventories: false);
+    }
+
+    /// <summary>
+    /// 离开拾取范围时清理等待补偿拾取的物品。
+    /// </summary>
+    private void OnTriggerExit2D(Collider2D other)
+    {
+        Item pickAble = WorldTopologyColliderProxy.ResolveComponent<Item>(other);
+        if (pickAble != null)
+            deferredPickupItems.Remove(pickAble);
+    }
+
+    /// <summary>
+    /// 统一处理进入和持续停留触发器的拾取请求。
+    /// </summary>
+    private void TryPickUp(Collider2D other, bool logMissingInventories)
+    {
         // 检查物品栏列表是否为空
         if (AddTargetInventories.Count == 0)
         {
-            Debug.LogWarning($"[{nameof(ItemPicker)}] AddTargetInventories is empty on {gameObject.name}");
+            if (logMissingInventories)
+                Debug.LogWarning($"[{nameof(ItemPicker)}] AddTargetInventories is empty on {gameObject.name}");
             return;
         }
 
@@ -177,27 +216,33 @@ public class ItemPicker : Module
 
         // 获取物品组件
         Item pickAble = WorldTopologyColliderProxy.ResolveComponent<Item>(other);
+        if (pickAble?.itemData?.Stack == null)
+            return;
 
-        if (pickAble != null && pickAble.itemData.Stack.CanBePickedUp)
+        if (!pickAble.itemData.Stack.CanBePickedUp)
         {
-            if (ItemNetworkStateSerialization.BeginNetworkPickup(this, pickAble))
-            {
-                return;
-            }
-
-            pickAble.ModuleSave();
-            if (TryAcceptNetworkPickup(pickAble.itemData))
-            {
-                PlayPickupSuction(pickAble);
-                // 只在整组物品都已入包时回收世界物品；部分拾取要保留剩余数量。
-                if (!pickAble.itemData.Stack.CanBePickedUp)
-                    ItemMgr.Instance.DespawnItem(pickAble);
-                return;
-            }
-
-            ShowInventoryFullPrompt();
-            Debug.Log($"[{nameof(ItemPicker)}] All target inventories are full, cannot pick up item: {pickAble.itemData.IDName}");
+            deferredPickupItems.Add(pickAble);
+            return;
         }
+
+        deferredPickupItems.Remove(pickAble);
+        if (ItemNetworkStateSerialization.BeginNetworkPickup(this, pickAble))
+        {
+            return;
+        }
+
+        pickAble.ModuleSave();
+        if (TryAcceptNetworkPickup(pickAble.itemData))
+        {
+            PlayPickupSuction(pickAble);
+            // 只在整组物品都已入包时回收世界物品；部分拾取要保留剩余数量。
+            if (!pickAble.itemData.Stack.CanBePickedUp)
+                ItemMgr.Instance.DespawnItem(pickAble);
+            return;
+        }
+
+        ShowInventoryFullPrompt();
+        Debug.Log($"[{nameof(ItemPicker)}] All target inventories are full, cannot pick up item: {pickAble.itemData.IDName}");
     }
 
     /// <summary>拾取失败时按触发事件限频提示，不在空闲期间轮询或重复弹窗。</summary>

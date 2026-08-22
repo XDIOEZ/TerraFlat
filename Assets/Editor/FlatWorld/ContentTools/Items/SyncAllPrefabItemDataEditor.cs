@@ -1,5 +1,7 @@
 using UnityEditor;
 using UnityEngine;
+using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using UnityEditor.Animations;
 
@@ -13,6 +15,9 @@ public static class SyncAllPrefabItemDataEditor
     private const string AnimationTemplatePath = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/ChippedTool.prefab";
     private const string AnimationActionNodeName = "Module_Weapon_AnimationAction";
     private const string ModDamagePrefabPath = "Assets/2_Prefabs/Gameplay/Modules/Combat/Mod_Damage.prefab";
+    private const string ModDamagePrefabGuid = "605d848763ec2b14b894091dbe0dc2ee";
+    private const long ModDamageComponentFileId = 1601643870802310424L;
+    private const string DamageSenderLayerName = "DamageSender";
 
     [MenuItem("FlatWorld/同步所有Prefab ItemData（名字+Guid）")]
     public static void SyncAllPrefabItemsInAssets()
@@ -357,6 +362,68 @@ public static class SyncAllPrefabItemDataEditor
         }
     }
 
+    [MenuItem("FlatWorld/武器/修复伤害模块结构")]
+    [MenuItem("FlatWorld/Weapon/Repair Embedded Damage Modules")]
+    public static void RepairAllDamageModulePrefabStructures()
+    {
+        const string itemRoot = "Assets/2_Prefabs/Gameplay/Items";
+        string[] prefabGuids = AssetDatabase.FindAssets("t:Prefab", new[] { itemRoot });
+        int repaired = 0;
+        int skipped = 0;
+        int failed = 0;
+
+        try
+        {
+            for (int i = 0; i < prefabGuids.Length; i++)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(prefabGuids[i]);
+                EditorUtility.DisplayProgressBar(
+                    "修复伤害模块结构",
+                    $"处理中 {Path.GetFileNameWithoutExtension(path)} ({i + 1}/{prefabGuids.Length})",
+                    (float)i / Mathf.Max(1, prefabGuids.Length));
+
+                string sourceText = File.ReadAllText(path);
+                bool referencesDamagePrefab = sourceText.Contains($"guid: {ModDamagePrefabGuid}");
+                GameObject prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                bool hasDamageModule = prefabAsset != null &&
+                    prefabAsset.GetComponentInChildren<Mod_Damage>(true) != null;
+                bool hasAnimationAction = prefabAsset != null &&
+                    prefabAsset.GetComponentInChildren<Mod_Weapon_AnimationAction>(true) != null;
+
+                if (!referencesDamagePrefab && !hasDamageModule && !hasAnimationAction)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                try
+                {
+                    if (RepairSingleDamageModulePrefab(path))
+                    {
+                        repaired++;
+                    }
+                    else
+                    {
+                        skipped++;
+                    }
+                }
+                catch (System.Exception exception)
+                {
+                    failed++;
+                    Debug.LogError($"[DamageModuleRepair] 处理 {path} 失败：{exception.Message}\n{exception.StackTrace}");
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"[DamageModuleRepair] 完成。修复={repaired}, 跳过={skipped}, 失败={failed}, 总数={prefabGuids.Length}");
+        }
+        finally
+        {
+            EditorUtility.ClearProgressBar();
+        }
+    }
+
     [MenuItem("FlatWorld/武器/迁移这四个Axe为动画驱动")]
     public static void MigrateFourAxePrefabsToAnimationDriven()
     {
@@ -631,8 +698,8 @@ public static class SyncAllPrefabItemDataEditor
                 changed = true;
             }
 
-            // 4) 清理旧伤害层级：删除DamageSender，并将Mod_Damage挂到Render下
-            changed |= CleanupDamageHierarchy(prefabRoot);
+            // 4) 清理旧伤害层级：删除DamageSender，并绑定稳定的伤害节点
+            changed |= CleanupDamageHierarchy(prefabRoot, path);
 
             // 保证非Legacy武器至少带Modern标签
             if (hasItemData)
@@ -691,58 +758,157 @@ public static class SyncAllPrefabItemDataEditor
         return templateAnimator.runtimeAnimatorController;
     }
 
-    private static bool CleanupDamageHierarchy(GameObject prefabRoot)
+    private sealed class DamageSerializedOverride
+    {
+        public string propertyPath;
+        public string value;
+    }
+
+    private static bool RepairSingleDamageModulePrefab(string prefabPath)
+    {
+        Dictionary<string, DamageSerializedOverride> overrides = ReadDamageOverrides(prefabPath);
+        GameObject prefabRoot = PrefabUtility.LoadPrefabContents(prefabPath);
+        try
+        {
+            bool changed = CleanupDamageHierarchy(prefabRoot, prefabPath, overrides);
+            if (!changed)
+            {
+                return false;
+            }
+
+            PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath);
+            return true;
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(prefabRoot);
+        }
+    }
+
+    private static bool CleanupDamageHierarchy(
+        GameObject prefabRoot,
+        string prefabPath,
+        Dictionary<string, DamageSerializedOverride> overrides = null)
     {
         bool changed = false;
 
         Transform render = prefabRoot.transform.Find("Render");
         if (render == null)
         {
-            return false;
+            // 部分投掷物或手持工具没有 Render 外壳，伤害模块直接挂在物品根节点。
+            render = prefabRoot.transform;
         }
 
-        Transform modDamage = null;
-        Transform modDamageByName = prefabRoot.transform.Find("Mod_Damage");
-        if (modDamageByName != null)
-        {
-            modDamage = modDamageByName;
-        }
-        else
-        {
-            Mod_Damage damageComponent = prefabRoot.GetComponentInChildren<Mod_Damage>(true);
-            if (damageComponent != null)
-            {
-                modDamage = damageComponent.transform;
-            }
-        }
+        Mod_Damage damage = prefabRoot.GetComponentInChildren<Mod_Damage>(true);
+        Transform modDamage = damage != null ? damage.transform : null;
 
-        if (modDamage != null && modDamage.parent != render)
+        if (modDamage != null && PrefabUtility.IsAnyPrefabInstanceRoot(modDamage.gameObject))
         {
-            modDamage.SetParent(render, true);
+            PrefabUtility.UnpackPrefabInstance(
+                modDamage.gameObject,
+                PrefabUnpackMode.Completely,
+                InteractionMode.AutomatedAction);
             changed = true;
         }
 
         if (modDamage == null)
         {
-            GameObject modDamagePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ModDamagePrefabPath);
-            if (modDamagePrefab != null)
+            GameObject damageTemplate = AssetDatabase.LoadAssetAtPath<GameObject>(ModDamagePrefabPath);
+            if (damageTemplate == null)
             {
-                GameObject modDamageInstance = PrefabUtility.InstantiatePrefab(modDamagePrefab, prefabRoot.scene) as GameObject;
-                if (modDamageInstance != null)
-                {
-                    modDamageInstance.transform.SetParent(render, false);
-                    modDamageInstance.name = "Mod_Damage";
-                    changed = true;
-                }
+                throw new System.InvalidOperationException($"伤害模块模板不存在：{ModDamagePrefabPath}");
             }
+
+            // 复制为当前武器的普通子物体，禁止再创建嵌套 Prefab 实例。
+            GameObject damageObject = Object.Instantiate(damageTemplate);
+            damageObject.name = "Mod_Damage";
+            damageObject.transform.SetParent(render, false);
+            damage = damageObject.GetComponent<Mod_Damage>();
+            modDamage = damageObject.transform;
+            changed = true;
         }
-        else if (modDamage.name != "Mod_Damage")
+
+        if (modDamage.parent != render)
+        {
+            modDamage.SetParent(render, false);
+            changed = true;
+        }
+
+        if (modDamage.name != "Mod_Damage")
         {
             modDamage.name = "Mod_Damage";
             changed = true;
         }
 
-        var childrenToDelete = new System.Collections.Generic.List<Transform>();
+        if (!modDamage.gameObject.activeSelf)
+        {
+            modDamage.gameObject.SetActive(true);
+            changed = true;
+        }
+
+        int damageLayer = LayerMask.NameToLayer(DamageSenderLayerName);
+        if (damageLayer >= 0 && modDamage.gameObject.layer != damageLayer)
+        {
+            modDamage.gameObject.layer = damageLayer;
+            changed = true;
+        }
+
+        Collider2D collider = damage.GetComponent<Collider2D>();
+        if (collider == null)
+        {
+            throw new System.InvalidOperationException($"{prefabPath} 的 Mod_Damage 缺少 BoxCollider2D，Prefab 结构不完整。");
+        }
+
+        if (!collider.isTrigger)
+        {
+            collider.isTrigger = true;
+            changed = true;
+        }
+
+        if (collider.enabled)
+        {
+            collider.enabled = false;
+            changed = true;
+        }
+
+        SerializedObject damageSerializedObject = new SerializedObject(damage);
+        SerializedProperty damageColliderProperty = damageSerializedObject.FindProperty("damageCollider");
+        if (damageColliderProperty == null || damageColliderProperty.objectReferenceValue != collider)
+        {
+            if (damageColliderProperty == null)
+            {
+                throw new System.InvalidOperationException($"{prefabPath} 的 Mod_Damage 缺少 damageCollider 序列化字段。");
+            }
+
+            damageColliderProperty.objectReferenceValue = collider;
+            damageSerializedObject.ApplyModifiedPropertiesWithoutUndo();
+            changed = true;
+        }
+
+        if (overrides != null)
+        {
+            changed |= ApplyDamageOverrides(damage, overrides);
+        }
+
+        Mod_Weapon_AnimationAction action = prefabRoot.GetComponentInChildren<Mod_Weapon_AnimationAction>(true);
+        if (action != null)
+        {
+            SerializedObject actionSerializedObject = new SerializedObject(action);
+            SerializedProperty damageModuleProperty = actionSerializedObject.FindProperty("damageModule");
+            if (damageModuleProperty == null)
+            {
+                throw new System.InvalidOperationException($"{prefabPath} 的攻击动作缺少 damageModule 序列化字段。");
+            }
+
+            if (damageModuleProperty.objectReferenceValue != damage)
+            {
+                damageModuleProperty.objectReferenceValue = damage;
+                actionSerializedObject.ApplyModifiedPropertiesWithoutUndo();
+                changed = true;
+            }
+        }
+
+        var childrenToDelete = new List<Transform>();
         Transform[] allTransforms = prefabRoot.GetComponentsInChildren<Transform>(true);
         foreach (Transform child in allTransforms)
         {
@@ -766,6 +932,156 @@ public static class SyncAllPrefabItemDataEditor
 
             Object.DestroyImmediate(child.gameObject, true);
             changed = true;
+        }
+
+        return changed;
+    }
+
+    private static Dictionary<string, DamageSerializedOverride> ReadDamageOverrides(string prefabPath)
+    {
+        var result = new Dictionary<string, DamageSerializedOverride>();
+        var currentBlock = new List<DamageSerializedOverride>();
+        DamageSerializedOverride pending = null;
+        bool isDamagePrefabBlock = false;
+        bool isDamageComponentTarget = false;
+
+        string[] lines = File.ReadAllLines(prefabPath);
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i];
+            string trimmed = line.TrimStart();
+
+            if (line.StartsWith("--- !u!"))
+            {
+                CommitDamageOverride(currentBlock, pending);
+                if (isDamagePrefabBlock)
+                {
+                    foreach (DamageSerializedOverride item in currentBlock)
+                    {
+                        result[item.propertyPath] = item;
+                    }
+                }
+
+                currentBlock.Clear();
+                pending = null;
+                isDamagePrefabBlock = false;
+                isDamageComponentTarget = false;
+                continue;
+            }
+
+            if (trimmed.StartsWith("- target:"))
+            {
+                CommitDamageOverride(currentBlock, pending);
+                pending = null;
+                isDamageComponentTarget =
+                    trimmed.Contains($"fileID: {ModDamageComponentFileId}") &&
+                    trimmed.Contains($"guid: {ModDamagePrefabGuid}");
+                continue;
+            }
+
+            if (isDamageComponentTarget && trimmed.StartsWith("propertyPath:"))
+            {
+                CommitDamageOverride(currentBlock, pending);
+                pending = new DamageSerializedOverride
+                {
+                    propertyPath = trimmed.Substring("propertyPath:".Length).Trim()
+                };
+                continue;
+            }
+
+            if (isDamageComponentTarget && pending != null && trimmed.StartsWith("value:"))
+            {
+                pending.value = trimmed.Substring("value:".Length).Trim();
+                continue;
+            }
+
+            if (trimmed.StartsWith("m_SourcePrefab:") && trimmed.Contains($"guid: {ModDamagePrefabGuid}"))
+            {
+                isDamagePrefabBlock = true;
+            }
+        }
+
+        CommitDamageOverride(currentBlock, pending);
+        if (isDamagePrefabBlock)
+        {
+            foreach (DamageSerializedOverride item in currentBlock)
+            {
+                result[item.propertyPath] = item;
+            }
+        }
+
+        return result;
+    }
+
+    private static void CommitDamageOverride(
+        List<DamageSerializedOverride> currentBlock,
+        DamageSerializedOverride pending)
+    {
+        if (pending == null || string.IsNullOrEmpty(pending.propertyPath))
+        {
+            return;
+        }
+
+        currentBlock.Add(pending);
+    }
+
+    private static bool ApplyDamageOverrides(
+        Mod_Damage damage,
+        Dictionary<string, DamageSerializedOverride> overrides)
+    {
+        SerializedObject serializedObject = new SerializedObject(damage);
+        bool changed = false;
+
+        foreach (KeyValuePair<string, DamageSerializedOverride> pair in overrides)
+        {
+            SerializedProperty property = serializedObject.FindProperty(pair.Key);
+            if (property == null || string.IsNullOrEmpty(pair.Value.value))
+            {
+                continue;
+            }
+
+            if (property.propertyType == SerializedPropertyType.Integer &&
+                int.TryParse(pair.Value.value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int integerValue))
+            {
+                if (property.intValue != integerValue)
+                {
+                    property.intValue = integerValue;
+                    changed = true;
+                }
+            }
+            else if (property.propertyType == SerializedPropertyType.Float &&
+                     float.TryParse(pair.Value.value, NumberStyles.Float, CultureInfo.InvariantCulture, out float floatValue))
+            {
+                if (!Mathf.Approximately(property.floatValue, floatValue))
+                {
+                    property.floatValue = floatValue;
+                    changed = true;
+                }
+            }
+            else if (property.propertyType == SerializedPropertyType.Boolean)
+            {
+                bool boolValue = pair.Value.value == "1" ||
+                    pair.Value.value.Equals("true", System.StringComparison.OrdinalIgnoreCase);
+                if (property.boolValue != boolValue)
+                {
+                    property.boolValue = boolValue;
+                    changed = true;
+                }
+            }
+            else if (property.propertyType == SerializedPropertyType.Enum &&
+                     int.TryParse(pair.Value.value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int enumValue))
+            {
+                if (property.enumValueIndex != enumValue)
+                {
+                    property.enumValueIndex = enumValue;
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed)
+        {
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
         return changed;

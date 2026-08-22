@@ -166,45 +166,8 @@ public partial class TimeData
 
     public void EnsureDarkNightWindow()
     {
-        if (LightParams == null || LightParams.length == 0 || IsLegacyDefaultLightCurve())
+        if (LightParams == null || LightParams.length == 0)
             LightParams = CreateDefaultLightCurve();
-    }
-
-    private bool IsLegacyDefaultLightCurve()
-    {
-        Keyframe[] keys = LightParams.keys;
-
-        // 兼容旧版五关键帧曲线。
-        if (keys.Length == 5)
-        {
-            return Mathf.Approximately(keys[0].time, 0f) &&
-                   Mathf.Approximately(keys[1].time, 0.25f) &&
-                   Mathf.Approximately(keys[2].time, 0.5f) &&
-                   Mathf.Approximately(keys[3].time, 0.75f) &&
-                   Mathf.Approximately(keys[4].time, 1f) &&
-                   keys[0].value <= 0.2001f &&
-                   Mathf.Approximately(keys[1].value, 1f) &&
-                   Mathf.Approximately(keys[2].value, 1f) &&
-                   Mathf.Approximately(keys[3].value, 1f) &&
-                   keys[4].value <= 0.2001f;
-        }
-
-        // 兼容上一版七关键帧曲线，将完全黑夜从30%迁移为20%。
-        return keys.Length == 7 &&
-               Mathf.Approximately(keys[0].time, 0f) &&
-               Mathf.Approximately(keys[1].time, 0.15f) &&
-               Mathf.Approximately(keys[2].time, 0.25f) &&
-               Mathf.Approximately(keys[3].time, 0.5f) &&
-               Mathf.Approximately(keys[4].time, 0.75f) &&
-               Mathf.Approximately(keys[5].time, 0.85f) &&
-               Mathf.Approximately(keys[6].time, 1f) &&
-               keys[0].value <= 0.2001f &&
-               Mathf.Approximately(keys[1].value, 0f) &&
-               Mathf.Approximately(keys[2].value, 1f) &&
-               Mathf.Approximately(keys[3].value, 1f) &&
-               Mathf.Approximately(keys[4].value, 1f) &&
-               Mathf.Approximately(keys[5].value, 0f) &&
-               keys[6].value <= 0.2001f;
     }
 
     /// <summary>

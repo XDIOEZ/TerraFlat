@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using FlatWorld.Settings;
 using UnityEngine;
 using UnityEngine.Localization;
 using UnityEngine.Localization.Settings;
@@ -18,6 +20,8 @@ namespace FlatWorld.Localization
         public const string DefaultLocaleCode = "zh-CN";
         public const string FallbackLocaleCode = "en";
         public const string SavedLocaleKey = "FlatWorld.Localization.Locale";
+        public const string SettingsProviderId = "localization";
+        public const string LocaleSettingKey = "localization.locale";
 
         #endregion
 
@@ -27,6 +31,12 @@ namespace FlatWorld.Localization
 
         /// <summary>语言切换后发送当前 Locale Code，UI 组件可据此刷新文本。</summary>
         public static event Action<string> LanguageChanged;
+
+        private static readonly ISettingsProvider settingsProvider =
+            CreateSettingsProvider();
+
+        /// <summary>供设置 UI 使用的语言下拉列表契约。</summary>
+        public static ISettingsProvider SettingsProvider => RegisterSettingsProvider();
 
         /// <summary>当前语言代码；没有 Localization Settings 时回退到 PlayerPrefs 或默认语言。</summary>
         public static string CurrentLocaleCode
@@ -52,7 +62,18 @@ namespace FlatWorld.Localization
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void InitializeOnLoad()
         {
+            RegisterSettingsProvider();
             Initialize();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetRuntimeState()
+        {
+            SettingsProviderRegistry.Unregister(settingsProvider);
+            if (LocalizationSettings.HasSettings)
+                LocalizationSettings.SelectedLocaleChanged -= HandleSelectedLocaleChanged;
+            initialized = false;
+            LanguageChanged = null;
         }
 
         /// <summary>手动初始化；没有配置 Localization Settings 时保持可用并返回旧文本。</summary>
@@ -112,6 +133,83 @@ namespace FlatWorld.Localization
             }
 
             LanguageChanged?.Invoke(localeCode ?? string.Empty);
+        }
+
+        #endregion
+
+        #region 设置提供者
+
+        private static ISettingsProvider RegisterSettingsProvider()
+        {
+            SettingsProviderRegistry.Register(settingsProvider);
+            return settingsProvider;
+        }
+
+        private static ISettingsProvider CreateSettingsProvider()
+        {
+            return new LocalizationSettingsProvider();
+        }
+
+        private sealed class LocalizationSettingsProvider : ISettingsProvider
+        {
+            private static readonly IReadOnlyList<SettingOption> Options =
+                new SettingOption[]
+                {
+                    new SettingOption(DefaultLocaleCode, "简体中文"),
+                    new SettingOption(FallbackLocaleCode, "English")
+                };
+
+            private readonly IReadOnlyList<ISettingsDropdown> dropdowns;
+
+            public LocalizationSettingsProvider()
+            {
+                dropdowns = new ISettingsDropdown[]
+                {
+                    new SettingsDropdown(
+                        new SettingDescriptor(
+                            LocaleSettingKey,
+                            "游戏语言",
+                            SettingControlType.Dropdown,
+                            "language",
+                            order: 0),
+                        Options,
+                        ResolveSelectedIndex,
+                        TrySetLocaleByIndex)
+                };
+            }
+
+            public string ProviderId => SettingsProviderId;
+            public string DisplayName => "语言";
+            public int Order => 90;
+            public IReadOnlyList<ISettingsToggle> ToggleSettings =>
+                Array.Empty<ISettingsToggle>();
+            public IReadOnlyList<ISettingsSlider> SliderSettings =>
+                Array.Empty<ISettingsSlider>();
+            public IReadOnlyList<ISettingsDropdown> DropdownSettings => dropdowns;
+            public IReadOnlyList<ISettingsSwitch> SwitchSettings =>
+                Array.Empty<ISettingsSwitch>();
+
+            public void ResetToDefaults() => TrySetLocale(DefaultLocaleCode);
+
+            private static int ResolveSelectedIndex()
+            {
+                return string.Equals(
+                    CurrentLocaleCode,
+                    FallbackLocaleCode,
+                    StringComparison.OrdinalIgnoreCase)
+                    ? 1
+                    : 0;
+            }
+
+            private static string TrySetLocaleByIndex(int index)
+            {
+                if (index < 0 || index >= Options.Count)
+                    return "语言选项无效。";
+
+                return TrySetLocale(Options[index].Id)
+                    ? null
+                    : $"无法切换到语言：{Options[index].Id}";
+            }
         }
 
         #endregion

@@ -18,7 +18,7 @@ public class Mod_Equipment_Player : Mod_Equipment
     public string OpenPrimaryPanelsActionName = "Tab";
 
     [Range(0.5f, 1f)]
-    [Tooltip("Tab 组合面板的显示缩放比例")]
+    [Tooltip("玩家组合面板的显示缩放比例")]
     public float PrimaryPanelScale = 0.75f;
 
     private InputAction openPanelAction;
@@ -54,7 +54,11 @@ public class Mod_Equipment_Player : Mod_Equipment
             return;
         }
 
-        openPanelCallback = _ => ToggleEquipmentPanelFromInput();
+        openPanelCallback = context =>
+        {
+            if (inputController.IsGameplayInputAllowed(context))
+                ToggleEquipmentPanelFromInput();
+        };
         openPanelAction.performed += openPanelCallback;
 
         openPrimaryPanelsAction = inputController._inputActions.FindAction(OpenPrimaryPanelsActionName);
@@ -64,7 +68,11 @@ public class Mod_Equipment_Player : Mod_Equipment
             return;
         }
 
-        openPrimaryPanelsCallback = _ => TogglePrimaryPanelsFromInput();
+        openPrimaryPanelsCallback = context =>
+        {
+            if (inputController.IsGameplayInputAllowed(context))
+                TogglePrimaryPanelsFromInput();
+        };
         openPrimaryPanelsAction.performed += openPrimaryPanelsCallback;
     }
 
@@ -123,7 +131,7 @@ public class Mod_Equipment_Player : Mod_Equipment
         EquipmentInventory.basePanel.Toggle();
     }
 
-    /// <summary>Tab 统一切换玩家的合成、装备、背包三块主要面板。</summary>
+    /// <summary>统一切换玩家的合成、装备、背包三块主要面板。</summary>
     private void TogglePrimaryPanelsFromInput()
     {
         if (inputController != null && inputController.IsGameplayInputLocked && !HasAnyPrimaryPanelOpen())
@@ -133,7 +141,7 @@ public class Mod_Equipment_Player : Mod_Equipment
         Mod_Inventory bagModule = ResolveBagModule();
         if (craftTable == null || bagModule == null || EquipmentInventory == null)
         {
-            Debug.LogWarning("[Mod_Equipment_Player] Tab 面板组缺少合成、装备或背包模块，无法统一打开");
+            Debug.LogWarning("[Mod_Equipment_Player] 面板组缺少合成、装备或背包模块，无法统一打开");
             return;
         }
 

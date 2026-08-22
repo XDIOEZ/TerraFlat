@@ -865,13 +865,15 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     private void RefreshInteractionSurface()
     {
-        if (viewObject == null || changingViewState || !isActiveAndEnabled)
+        UIManager manager = UIManager.ExistingInstance;
+        if (!Application.isPlaying || UIManager.IsShuttingDown || manager == null ||
+            viewObject == null || changingViewState || !isActiveAndEnabled)
             return;
 
         bool blocked = controller != null && controller.IsGameplayInputLocked;
-        bool modalOpen = UIManager.Instance.HasOpenGameplayInputBlockingPanel();
+        bool modalOpen = manager.HasOpenGameplayInputBlockingPanel();
         bool gameplayVisible = !blocked && !modalOpen;
-        RectTransform safeRoot = UIManager.Instance.SafeAreaRoot;
+        RectTransform safeRoot = manager.SafeAreaRoot;
         Vector2 safeSize = safeRoot != null ? safeRoot.rect.size : new Vector2(Screen.width, Screen.height);
         bool geometryChanged = geometryInitialized &&
                                (safeSize != lastSafeAreaSize ||

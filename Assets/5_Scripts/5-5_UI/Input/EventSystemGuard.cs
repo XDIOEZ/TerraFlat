@@ -19,9 +19,18 @@ public static class EventSystemGuard
     private static InputAction pointerClickAction;
     private static GamepadUIRuntimeController runtimeController;
     private static bool gamepadMode;
+    private static bool gamepadModeEntryAllowed = true;
 
     /// <summary>当前 UI 是否由手柄驱动，供虚拟光标与玩法输入拦截判断。</summary>
     public static bool IsGamepadMode => gamepadMode;
+
+    /// <summary>手机方案下禁止普通手柄输入把全局 UI 切入手柄模式。</summary>
+    public static void SetGamepadModeEntryAllowed(bool allowed)
+    {
+        gamepadModeEntryAllowed = allowed;
+        if (!allowed)
+            SetGamepadMode(false);
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void RegisterSceneCallbacks()
@@ -364,6 +373,9 @@ public static class EventSystemGuard
     /// </summary>
     public static void SetGamepadMode(bool enabled)
     {
+        if (enabled && !gamepadModeEntryAllowed)
+            enabled = false;
+
         gamepadMode = enabled;
         EventSystem eventSystem = EventSystem.current;
         EnsureRuntimeController(eventSystem)?.SetGamepadMode(enabled);

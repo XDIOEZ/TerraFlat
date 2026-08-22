@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using FlatWorld.Settings;
 using UnityEngine;
 
 /// <summary>
@@ -24,11 +26,20 @@ public static class PlayerWorldCoordinateDisplayPreferences
     public const PlayerWorldCoordinateDisplayMode DefaultMode =
         PlayerWorldCoordinateDisplayMode.WorldCoordinates;
 
+    public const string SettingsProviderId = "coordinate-display";
+    public const string ModeSettingKey = "coordinateDisplay.mode";
+
     private static bool initialized;
     private static PlayerWorldCoordinateDisplayMode currentMode;
 
     /// <summary>显示格式实际变化后广播，常驻 HUD 无需逐帧读取偏好。</summary>
     public static event Action Changed;
+
+    private static readonly ISettingsProvider settingsProvider =
+        CreateSettingsProvider();
+
+    /// <summary>供显示设置面板使用的按钮式模式切换契约。</summary>
+    public static ISettingsProvider SettingsProvider => RegisterSettingsProvider();
 
     #endregion
 
@@ -71,10 +82,83 @@ public static class PlayerWorldCoordinateDisplayPreferences
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeCache()
     {
+        SettingsProviderRegistry.Unregister(settingsProvider);
         initialized = false;
         currentMode = DefaultMode;
         Changed = null;
     }
+
+    #region 设置提供者
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterSettingsProviderOnLoad()
+    {
+        RegisterSettingsProvider();
+    }
+
+    private static ISettingsProvider RegisterSettingsProvider()
+    {
+        SettingsProviderRegistry.Register(settingsProvider);
+        return settingsProvider;
+    }
+
+    private static ISettingsProvider CreateSettingsProvider()
+    {
+        return new CoordinateDisplaySettingsProvider();
+    }
+
+    private sealed class CoordinateDisplaySettingsProvider : ISettingsProvider
+    {
+        private static readonly IReadOnlyList<SettingOption> Options =
+            new SettingOption[]
+            {
+                new SettingOption("world", "世界坐标（X / Y）"),
+                new SettingOption("latitude-longitude", "经纬度（经度 / 纬度）")
+            };
+
+        private readonly IReadOnlyList<ISettingsSwitch> switches;
+
+        public CoordinateDisplaySettingsProvider()
+        {
+            switches = new ISettingsSwitch[]
+            {
+                new SettingsSwitch(
+                    new SettingDescriptor(
+                        ModeSettingKey,
+                        "坐标显示模式",
+                        SettingControlType.Switch,
+                        "display",
+                        order: 0),
+                    Options,
+                    () => (int)Mode,
+                    TrySetMode)
+            };
+        }
+
+        public string ProviderId => SettingsProviderId;
+        public string DisplayName => "显示";
+        public int Order => 70;
+        public IReadOnlyList<ISettingsToggle> ToggleSettings =>
+            Array.Empty<ISettingsToggle>();
+        public IReadOnlyList<ISettingsSlider> SliderSettings =>
+            Array.Empty<ISettingsSlider>();
+        public IReadOnlyList<ISettingsDropdown> DropdownSettings =>
+            Array.Empty<ISettingsDropdown>();
+        public IReadOnlyList<ISettingsSwitch> SwitchSettings => switches;
+
+        public void ResetToDefaults() => ResetToDefault();
+
+        private static string TrySetMode(int index)
+        {
+            if (index < 0 || index >= Options.Count)
+                return "坐标显示模式无效。";
+
+            SetMode((PlayerWorldCoordinateDisplayMode)index);
+            return null;
+        }
+    }
+
+    #endregion
 
     private static void EnsureInitialized()
     {

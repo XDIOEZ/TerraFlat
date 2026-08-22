@@ -298,7 +298,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		_alertTimer = DecrementTimer(_alertTimer, deltaTime);
 		_packAssistTimer = DecrementTimer(_packAssistTimer, deltaTime);
 		_packCallCooldownTimer = DecrementTimer(_packCallCooldownTimer, deltaTime);
-		_attack.Update(deltaTime);
+		_attack.Tick(deltaTime);
 	}
 
 	protected override void OnPreEvaluate()

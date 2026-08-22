@@ -886,7 +886,7 @@ namespace InputSystem
                 {
                     ""name"": """",
                     ""id"": ""7bbbd030-a567-491a-beb2-f01cc6043b1b"",
-                    ""path"": ""<Keyboard>/tab"",
+                    ""path"": ""<Keyboard>/backquote"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Keyboard&Mouse"",

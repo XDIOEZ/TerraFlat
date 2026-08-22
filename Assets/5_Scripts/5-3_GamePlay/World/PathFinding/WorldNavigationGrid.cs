@@ -36,9 +36,11 @@ public sealed class WorldNavigationGrid
     private int batchUpdateDepth;
     private bool batchHasChanges;
     private bool batchInvalidatesExistingPaths;
+    private bool batchChangesPathCost;
 
     public int Revision { get; private set; }
     public int PathInvalidationRevision { get; private set; }
+    public int PathCostRevision { get; private set; }
     public int CellCount => cells.Count;
 
     public static Vector2Int WorldToCell(Vector2 worldPosition)
@@ -75,6 +77,12 @@ public sealed class WorldNavigationGrid
             batchInvalidatesExistingPaths = false;
             PathInvalidationRevision++;
         }
+
+        if (batchUpdateDepth == 0 && batchChangesPathCost)
+        {
+            batchChangesPathCost = false;
+            PathCostRevision++;
+        }
     }
 
     public void Clear()
@@ -107,7 +115,12 @@ public sealed class WorldNavigationGrid
         bool willBeEffectivelyWalkable = next.Walkable && !blocked;
         cells[position] = next;
         RecordChangedCell(position);
-        MarkRevisionChanged(wasEffectivelyWalkable && !willBeEffectivelyWalkable);
+        // 代价变化会改变最优路径，单独记录代价版本供运行中的 Agent 重新寻路。
+        bool changesPathCost = wasEffectivelyWalkable && current.Penalty != next.Penalty;
+        bool invalidatesExistingPaths =
+            wasEffectivelyWalkable &&
+            !willBeEffectivelyWalkable;
+        MarkRevisionChanged(invalidatesExistingPaths, changesPathCost);
     }
 
     public bool RemoveCell(Vector2Int position)
@@ -336,23 +349,32 @@ public sealed class WorldNavigationGrid
         fullResetPending = true;
     }
 
-    private void MarkRevisionChanged(bool invalidatesExistingPaths = false)
+    private void MarkRevisionChanged(
+        bool invalidatesExistingPaths = false,
+        bool changesPathCost = false)
     {
         if (batchUpdateDepth > 0)
         {
             batchHasChanges = true;
             batchInvalidatesExistingPaths |= invalidatesExistingPaths;
+            batchChangesPathCost |= changesPathCost;
         }
         else
         {
             Revision++;
             if (invalidatesExistingPaths)
                 PathInvalidationRevision++;
+            if (changesPathCost)
+                PathCostRevision++;
         }
     }
 
     public bool HasLineOfSight(Vector2Int from, Vector2Int to)
         => HasLineOfSight(from, to, uint.MaxValue, enforcePenaltyLimit: false);
+
+    /// <summary>检查仅允许指定最大代价地形的直线路径。</summary>
+    public bool HasLineOfSight(Vector2Int from, Vector2Int to, uint maxPenalty)
+        => HasLineOfSight(from, to, maxPenalty, enforcePenaltyLimit: true);
 
     public bool CanSmoothPathSegment(IReadOnlyList<Vector2Int> rawPath, int startIndex, int endIndex)
     {

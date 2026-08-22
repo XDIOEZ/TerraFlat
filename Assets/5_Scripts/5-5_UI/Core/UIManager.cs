@@ -13,6 +13,19 @@ public class UIManager : MonoBehaviour
 {
     #region 单例模式
     private static UIManager _instance;
+    private static bool _isShuttingDown;
+
+    /// <summary>退出播放模式或应用退出时，禁止 UI 事件继续触发新的交互刷新。</summary>
+    public static bool IsShuttingDown => _isShuttingDown;
+
+    /// <summary>重置禁用域重载时残留的静态单例状态。</summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticState()
+    {
+        _instance = null;
+        _isShuttingDown = false;
+    }
+
     public static UIManager Instance
     {
         get
@@ -203,6 +216,23 @@ public class UIManager : MonoBehaviour
 
         InitializePanels();
         EnsurePanelRootExists();
+    }
+
+    /// <summary>退出播放模式前停止交互面事件，避免销毁阶段重新创建 UI。</summary>
+    private void OnApplicationQuit()
+    {
+        if (_instance == this)
+            _isShuttingDown = true;
+    }
+
+    /// <summary>清理单例引用和事件，避免场景卸载后继续访问已销毁的 UI。</summary>
+    private void OnDestroy()
+    {
+        if (_instance != this)
+            return;
+
+        _instance = null;
+        InteractionSurfaceChanged = null;
     }
 
     private void EnsurePanelRootExists()
@@ -421,6 +451,9 @@ public class UIManager : MonoBehaviour
     /// <summary>通知虚拟光标当前可命中的 UI 表面已经变化。</summary>
     public void NotifyInteractionSurfaceChanged()
     {
+        if (_isShuttingDown)
+            return;
+
         unchecked
         {
             interactionSurfaceRevision++;
