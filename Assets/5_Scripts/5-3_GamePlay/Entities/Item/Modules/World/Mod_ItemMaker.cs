@@ -36,6 +36,9 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
         [Tooltip("是否抛出物品")]
         public bool ThrowItem = true;
 
+        [Tooltip("将产出写入同一物品的库存接收模块，而不是直接生成世界物品")]
+        public bool StoreInModule;
+
         [Tooltip("是否自动销毁自身item/在达到生产上限时销毁")]
         public bool DestroySelf = false;
 
@@ -46,10 +49,16 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
         [Header("随机初始化相关参数")]
         [Tooltip("生产时间随机范围")]
         public Vector2 Random_ProductionTime = new Vector2(0f, 1000f);
+        [Tooltip("是否已经完成首次环境随机初始化")]
+        public bool IsInitialized;
 
         public void RandomInitialize()
         {
+            if (IsInitialized)
+                return;
+
             ProductionTime = Random.Range(Random_ProductionTime.x, Random_ProductionTime.y);
+            IsInitialized = true;
         }
     }
 
@@ -61,6 +70,10 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
     public Ex_ModData_MemoryPackable _ModDataMemoryPackable;
     public Mod_Grow growModule;
     public float ProductionSpeed = 1f; // 生产速度倍率
+    [Tooltip("生产进度是否受作物生长难度倍率影响")]
+    public bool UseCropGrowthMultiplier;
+
+    private IProductionStockReceiver[] stockReceivers = System.Array.Empty<IProductionStockReceiver>();
 
     public override ModuleData _Data
     {
@@ -75,6 +88,16 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
     public override void Load()
     {
         _ModDataMemoryPackable.ReadData(ref ProductionList);
+
+        stockReceivers = item.GetComponentsInChildren<IProductionStockReceiver>(true);
+        foreach (ItemProductionData data in ProductionList)
+        {
+            if (data.StoreInModule && !HasStockReceiver(data.itemName))
+            {
+                throw new MissingComponentException(
+                    $"[Mod_Production] 物品 {item.itemData.IDName} 的产出 {data.itemName} 缺少库存接收模块。");
+            }
+        }
 
         if (item.itemMods.ContainsKey_ID(ModText.Grow))
             growModule = item.itemMods.GetMod_ByID(ModText.Grow) as Mod_Grow;
@@ -108,13 +131,20 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
             if (data.MaxProductionCount != -1 && data.CurrentProductionCount >= data.MaxProductionCount)
                 continue;
 
+            if (data.StoreInModule && !HasAvailableStockReceiver(data.itemName))
+                continue;
+
             // 累加生产时间
-            data.ProductionTime += deltaTime * ProductionSpeed;
+            float difficultyMultiplier = UseCropGrowthMultiplier
+                ? GameDifficultyService.Current.Production.CropGrowthMultiplier
+                : 1f;
+            data.ProductionTime += deltaTime * ProductionSpeed * difficultyMultiplier;
 
             // 使用 while 确保不会漏算
             while (data.ProductionTime >= data.MaxProductionTime)
             {
-                ProduceItem(data);
+                if (!ProduceItem(data))
+                    break;
                 data.ProductionTime -= data.MaxProductionTime;
 
                 if (data.MaxProductionCount != -1 && data.CurrentProductionCount >= data.MaxProductionCount)
@@ -127,7 +157,7 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
 
     #region 生产逻辑
 
-    private void ProduceItem(ItemProductionData data)
+    private bool ProduceItem(ItemProductionData data)
     {
         float spawnProbability = Mathf.Clamp01(data.SpawnProbability);
         if (Random.value > spawnProbability)
@@ -139,11 +169,23 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
                 StartCoroutine(DestroyAfterFrame());
             }
 
-            return;
+            return true;
         }
 
         if (string.IsNullOrEmpty(data.itemName) && data.itemPrefab != null)
             data.itemName = data.itemPrefab.name;
+
+        int randomCount = Random.Range(data.itemCountMin, data.itemCountMax + 1);
+        if (data.StoreInModule)
+        {
+            int accepted = StoreProducedItems(data.itemName, randomCount);
+            if (accepted <= 0)
+                return false;
+
+            data.CurrentProductionCount++;
+            DestroyOwnerWhenFinished(data);
+            return true;
+        }
 
         Item item = ItemMgr.Instance.InstantiateItem(data.itemName, transform.position);
 
@@ -152,7 +194,6 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
             item.Load();
 
             // 在范围内随机取值
-            int randomCount = Random.Range(data.itemCountMin, data.itemCountMax + 1);
             item.itemData.Stack.Amount = randomCount;
 
             // 应用 ThrowItem 字段
@@ -171,11 +212,55 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
         }
 
         // 实现自动销毁功能
-        if (data.DestroySelf && data.MaxProductionCount != -1 && data.CurrentProductionCount >= data.MaxProductionCount)
+        DestroyOwnerWhenFinished(data);
+
+        return item != null;
+    }
+
+    /// <summary>达到有限生产上限后延迟回收拥有者。</summary>
+    private void DestroyOwnerWhenFinished(ItemProductionData data)
+    {
+        if (data.DestroySelf && data.MaxProductionCount != -1 &&
+            data.CurrentProductionCount >= data.MaxProductionCount)
         {
-            // 延迟一帧销毁，确保最后一次生产完成
             StartCoroutine(DestroyAfterFrame());
         }
+    }
+
+    /// <summary>判断同一物品上是否存在负责该产物的库存接收模块。</summary>
+    private bool HasStockReceiver(string itemName)
+    {
+        foreach (IProductionStockReceiver receiver in stockReceivers)
+        {
+            if (receiver != null && receiver.AcceptsProduction(itemName))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>只有接收模块仍有容量时才推进生产计时。</summary>
+    private bool HasAvailableStockReceiver(string itemName)
+    {
+        foreach (IProductionStockReceiver receiver in stockReceivers)
+        {
+            if (receiver != null && receiver.CanAcceptProduction(itemName))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>把产出交给同一物品的库存模块。</summary>
+    private int StoreProducedItems(string itemName, int amount)
+    {
+        foreach (IProductionStockReceiver receiver in stockReceivers)
+        {
+            if (receiver != null && receiver.CanAcceptProduction(itemName))
+                return receiver.AcceptProduction(itemName, amount);
+        }
+
+        return 0;
     }
 
     private System.Collections.IEnumerator DestroyAfterFrame()

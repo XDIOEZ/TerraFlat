@@ -5,7 +5,7 @@ using UnityEngine;
 [MemoryPackUnion(2, typeof(Inventory_ModuleData))]
 [MemoryPackUnion(3, typeof(Ex_ModData_MemoryPackable))]
 [MemoryPackUnion(4, typeof(ModData_FoodData))]
-[MemoryPackUnion(5, typeof(BerryBushModuleData))]
+[MemoryPackUnion(5, typeof(CollectableModuleData))]
 [System.Serializable]
 [MemoryPackable]
 public abstract partial class ModuleData
@@ -39,20 +39,17 @@ public enum ModuleType
 }
 
 /// <summary>
-/// 浆果丛的权威运行时状态。
-/// 自然浆果丛由确定性生成得到初始库存，之后的当前库存与生产计时必须随 ItemData 一起进入区块生态差量；
-/// IsInitialized 用于区分“尚未完成自然初始化”的新实例和“库存确实为 0”的已持久化实例。
+/// 通用采集模块的权威库存状态。
+/// 自然资源由确定性生成得到初始库存，之后的库存随 ItemData 进入区块生态差量；
+/// IsInitialized 用于区分“尚未完成自然初始化”和“库存确实为 0”。
 /// </summary>
 [System.Serializable]
 [MemoryPackable]
-public partial class BerryBushModuleData : ModuleData
+public partial class CollectableModuleData : ModuleData
 {
-    /// <summary>当前可采摘浆果数量。</summary>
-    public int CurrentBerryCount;
+    /// <summary>当前可采集库存。</summary>
+    public int CurrentStock;
 
-    /// <summary>距离下一批浆果成熟的累计秒数。</summary>
-    public float ProductionTimer;
-
-    /// <summary>是否已经写入过自然初始库存或运行时状态。</summary>
+    /// <summary>是否已经完成自然初始库存写入。</summary>
     public bool IsInitialized;
 }

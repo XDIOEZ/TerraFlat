@@ -5758,34 +5758,31 @@
         }
       },
       "modules": {
-        "BerryBush": {
-          "prefab": "Module_BerryBush",
-          "id": "BerryBush",
+        "采集模块": {
+          "prefab": "Module_Collectable",
+          "id": "采集模块",
           "enabled": true,
           "data": {
-            "CurrentBerryCount": 0,
-            "ProductionTimer": 0.0,
+            "CurrentStock": 0,
             "IsInitialized": false
           },
           "parameters": {
-            "BerryItemId": "Berry",
-            "ProductionIntervalSeconds": 405.0,
-            "ProductionBatchSize": 6,
-            "MaxBerryCount": 12,
-            "NaturalInitialBerryCountMin": 1,
-            "NaturalInitialBerryCountMax": 2,
+            "CollectItemId": "Berry",
+            "MaxStock": 12,
+            "NaturalInitialStockMin": 1,
+            "NaturalInitialStockMax": 2,
             "SpawnRadius": 1.2,
             "ThrowDuration": 0.5,
             "ThrowBezierOffset": 0.8,
             "ThrowArcHeight": 0.6,
-            "ReadySpriteLocalPositions": [
+            "IndicatorLocalPositions": [
               { "x": 0.25600004, "y": 0.549, "z": 0.0 },
               { "x": -0.11899996, "y": 0.7, "z": 0.0 },
               { "x": -0.28900003, "y": 0.389, "z": 0.0 }
             ],
-            "ReadySpriteScale": 0.2859,
-            "UseBushRendererSorting": true,
-            "ReadySpriteSortingOrderOffset": -1,
+            "IndicatorScale": 0.2859,
+            "FollowOwnerRendererSorting": true,
+            "IndicatorSortingOrderOffset": -1,
             "$collider2D": {
               "type": "BoxCollider2D",
               "enabled": true,
@@ -5793,6 +5790,36 @@
               "offset": { "x": 0.0, "y": 0.31134617 },
               "size": { "x": 1.0, "y": 0.592675 }
             }
+          }
+        },
+        "生产模块": {
+          "prefab": "Module_Production",
+          "id": "生产模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "ProductionList": [
+              {
+                "itemName": "Berry",
+                "itemCountMin": 6,
+                "itemCountMax": 6,
+                "MaxProductionTime": 405.0,
+                "ProductionTime": 0.0,
+                "MaxProductionCount": -1,
+                "CurrentProductionCount": 0,
+                "ThrowItem": false,
+                "StoreInModule": true,
+                "DestroySelf": false,
+                "SpawnProbability": 1.0,
+                "Random_ProductionTime": { "x": 0.0, "y": 405.0 },
+                "IsInitialized": false
+              }
+            ],
+            "ProductionSpeed": 1.0,
+            "UseCropGrowthMultiplier": true
           }
         }
       }

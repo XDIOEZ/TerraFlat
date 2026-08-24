@@ -1396,8 +1396,8 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: b7b90f43c6584e2ea1a4a45ad5d75d91
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_BerryBush.prefab
+  - m_GUID: 2201c5ebfd642f045830db1ad9f7feab
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_Collectable.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab

@@ -366,11 +366,10 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
 
                 spawnedItem.Load();
 
-                BerryBush berryBush = spawnedItem.GetComponentInChildren<BerryBush>(true);
-                if (berryBush != null)
-                {
-                    berryBush.InitializeNaturalStock(unchecked((uint)deterministicGuid));
-                }
+                INaturalResourceInitializer[] initializers =
+                    spawnedItem.GetComponentsInChildren<INaturalResourceInitializer>(true);
+                foreach (INaturalResourceInitializer initializer in initializers)
+                    initializer.InitializeNaturalResource(unchecked((uint)deterministicGuid));
 
                 spawnedItem.Initialize_Env(map.Data.EnvironmentLayers, localPos);
                 anySpawned = true;

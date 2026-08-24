@@ -265,8 +265,10 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
                     item.itemData.Stack.CanBePickedUp = false;
                 generatedPortalGuids.Add(placement.Guid);
             }
-            BerryBush berryBush = item.GetComponentInChildren<BerryBush>(true);
-            berryBush?.InitializeNaturalStock(unchecked((uint)placement.Guid));
+            INaturalResourceInitializer[] initializers =
+                item.GetComponentsInChildren<INaturalResourceInitializer>(true);
+            foreach (INaturalResourceInitializer initializer in initializers)
+                initializer.InitializeNaturalResource(unchecked((uint)placement.Guid));
             item.Initialize_Env(environmentLayers,
                 new Vector2Int(placement.LocalX, placement.LocalY));
             if (!placement.IsDimensionPortal)

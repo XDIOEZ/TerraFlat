@@ -12,6 +12,20 @@ public interface IEnvironmentAdjustable
     void AdjustByEnvironment(EnvironmentLayers layers, Vector2Int localPos);
 }
 
+/// <summary>自然资源首次生成时接收确定性随机种子的模块契约。</summary>
+public interface INaturalResourceInitializer
+{
+    void InitializeNaturalResource(uint deterministicRandomValue);
+}
+
+/// <summary>接收生产模块产出的库存模块契约。</summary>
+public interface IProductionStockReceiver
+{
+    bool AcceptsProduction(string itemId);
+    bool CanAcceptProduction(string itemId);
+    int AcceptProduction(string itemId, int amount);
+}
+
 public enum ModuleTickMode
 {
     EveryFrame,
