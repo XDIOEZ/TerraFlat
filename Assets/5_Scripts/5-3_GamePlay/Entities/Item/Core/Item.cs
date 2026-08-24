@@ -393,7 +393,6 @@ public abstract class Item : MonoBehaviour
         modulesLoaded = true;
         itemMods.BindOwner(this);
         MarkModuleScheduleDirty();
-        MigrateDeprecatedAgricultureModuleData();
         bool firstStart = itemData.ModuleDataDic.Count == 0;
 
         // 模板数据会收集停用模块，加载时也必须使用同一范围，避免矿物等 Prefab 被误判为缺失模块。
@@ -491,23 +490,27 @@ public abstract class Item : MonoBehaviour
                 }
             }
 
-            //收集未解决的模块 并添加修复
+            // Prefab 是运行时模块组合真源，JSON/存档只保存配置差异；剩余模块必须全部注册。
             if (tempMods.Mods_List.Count > 0)
             {
                 foreach (var LostMod in tempMods.Mods_List.Values)
                 {
                     foreach (var mod in LostMod)
                     {
+                        if (mod == null || mod._Data == null)
+                            continue;
+
                         NormalizeModuleDataId(mod, mod._Data);
-                        if (string.IsNullOrWhiteSpace(mod._Data.Name))
+                        if (string.IsNullOrWhiteSpace(mod._Data.Name) ||
+                            itemMods.ContainsKey_Name(mod._Data.Name) ||
+                            itemData.ModuleDataDic.ContainsKey(mod._Data.Name))
                         {
-                            Debug.LogWarning($"物品 {gameObject.name} 额外添加了模块 {mod._Data.Name} " +
-                          $" ID: {mod._Data.ID}，已自动修复。");
                             mod._Data.Name = Module.GenerateUniqueModName(mod._Data.ID);
-                            itemMods.AddMod(mod);
-                            itemData.ModuleDataDic[mod._Data.Name] = mod._Data;
-                            modsToInit.Add(mod);
                         }
+
+                        itemMods.AddMod(mod);
+                        itemData.ModuleDataDic[mod._Data.Name] = mod._Data;
+                        modsToInit.Add(mod);
                     }
 
                 }
@@ -537,36 +540,6 @@ public abstract class Item : MonoBehaviour
         string canonicalId = module.CanonicalModuleId;
         if (!string.IsNullOrWhiteSpace(canonicalId))
             data.ID = canonicalId.Trim();
-    }
-
-    /// <summary>
-    /// 在模块自动修复前清理旧农业链数据，避免区块重载后重新挂回已废弃实现。
-    /// </summary>
-    private void MigrateDeprecatedAgricultureModuleData()
-    {
-        if (itemData?.ModuleDataDic == null || itemData.ModuleDataDic.Count == 0)
-            return;
-
-        string deprecatedModuleId = itemData.IDName switch
-        {
-            "Apple" => ModText.PlantSeed,
-            "AppleTree" => "生产模块",
-            _ => null
-        };
-        if (string.IsNullOrEmpty(deprecatedModuleId))
-            return;
-
-        List<string> keysToRemove = itemData.ModuleDataDic
-            .Where(pair => pair.Value != null && pair.Value.ID == deprecatedModuleId)
-            .Select(pair => pair.Key)
-            .ToList();
-        foreach (string key in keysToRemove)
-            itemData.ModuleDataDic.Remove(key);
-
-        if (keysToRemove.Count > 0)
-        {
-            Debug.Log($"[Item] 已迁移 {itemData.IDName} 的旧农业模块数据：{deprecatedModuleId} ×{keysToRemove.Count}", this);
-        }
     }
 
     /// <summary>

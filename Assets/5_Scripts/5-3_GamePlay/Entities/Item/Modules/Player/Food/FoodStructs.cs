@@ -90,7 +90,11 @@ public partial class Mod_Food
 
         public float VitaminSelfHurt = 1f;
 
-        [Tooltip("蛋白质最低比例；设为 0 时只要有蛋白质即可回血")]
+        [Min(0f)]
+        [Tooltip("玩家开始回血所需的最低蛋白质数值；玩家蛋白质必须高于此值")]
+        public float PlayerProteinHealThreshold = 0f;
+
+        [Tooltip("非玩家实体使用的蛋白质最低比例")]
         public float HealNeedRatio = 0.6f;
     }
 

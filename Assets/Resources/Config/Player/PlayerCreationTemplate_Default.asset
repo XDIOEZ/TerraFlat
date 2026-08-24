@@ -35,18 +35,18 @@ MonoBehaviour:
     runWaterConsumeMultiplier: 0.25
   food:
     nutrition:
-      Carbohydrates: 500
-      Max_Carbohydrates: 1000
-      Fat: 500
-      Max_Fat: 1000
-      Protein: 500
-      Max_Protein: 1000
-      Water: 1500
-      Max_Water: 1500
-      Vitamins: 500
-      Max_Vitamins: 1000
-    nutritionConsumeSpeed: 0.5
-    waterConsumeSpeedRate: 1
+      Carbohydrates: 50
+      Max_Carbohydrates: 100
+      Fat: 50
+      Max_Fat: 100
+      Protein: 50
+      Max_Protein: 100
+      Water: 150
+      Max_Water: 150
+      Vitamins: 50
+      Max_Vitamins: 100
+    nutritionConsumeSpeed: 0.05
+    waterConsumeSpeedRate: 0.1
     nutritionConsumeRate: 1
     staminaRecoverSpeed: 1
     staminaConsumeSpeed: 0.5
@@ -56,6 +56,7 @@ MonoBehaviour:
     proteinSelfHurt: 1
     vitaminSelfHurt: 1
     healNeedRatio: 0.6
+    proteinHealThreshold: 60
   stamina:
     currentStamina: 100
     maxStamina: 100

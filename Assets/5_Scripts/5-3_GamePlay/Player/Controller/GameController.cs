@@ -118,6 +118,8 @@ public class GameController : Module
     private bool _mobileAimDirectionInitialized;
     private bool _mobileAttackActive;
     private bool _mobileAttackDraggedOutsideDeadZone;
+    private Vector3 _mobileCursorWorldPosition; // 手机准星当前唯一的世界目标
+    private bool _mobileCursorWorldPositionInitialized; // 是否已经生成可供玩法消费的手机世界目标
     private readonly PlayerAimCursorSystem _aimCursor = new();
     private Inventory_HotBar _playerHotBar;
     private Mod_InteractSender _interactionSender;
@@ -428,6 +430,9 @@ public class GameController : Module
 
     public Vector3 GetMouseWorldPosition() /// 获取指针世界坐标（鼠标或手柄虚拟光标）
     {
+        if (_preferredInputDevice == InputDeviceType.Mobile && _mobileCursorWorldPositionInitialized)
+            return _mobileCursorWorldPosition;
+
         return GetMouseWorldPosition(GetPointerScreenPosition());
     }
 
@@ -785,6 +790,7 @@ public class GameController : Module
         if (_preferredInputDevice != InputDeviceType.Mobile || _gamepadPointerActive ||
             UIManager.ExistingInstance?.HasOpenGameplayInputBlockingPanel() == true)
         {
+            _mobileCursorWorldPositionInitialized = false;
             EventSystemGuard.SetMobileAimCursorVisible(false);
             return;
         }
@@ -805,6 +811,7 @@ public class GameController : Module
 
         if (_mainCamera == null)
         {
+            _mobileCursorWorldPositionInitialized = false;
             _virtualCursorScreenPosition = _aimCursor.CalculateRadialScreenPosition(
                 GetPlayerScreenPosition(),
                 direction,
@@ -823,6 +830,8 @@ public class GameController : Module
             mobileAimStrength,
             MobileCursorMinWorldDistance,
             GetMobileCursorMaxWorldDistance());
+        _mobileCursorWorldPosition = mobileCursorWorldPosition;
+        _mobileCursorWorldPositionInitialized = true;
         Vector3 screenPosition = _mainCamera.WorldToScreenPoint(mobileCursorWorldPosition);
         _virtualCursorScreenPosition = new Vector2(screenPosition.x, screenPosition.y);
         _virtualCursorInitialized = true;
@@ -902,6 +911,8 @@ public class GameController : Module
         EventSystemGuard.SetMobileAimCursorVisible(false);
         _mobileAimStrength = 0f;
         _mobileAttackAimStrength = 0f;
+        _mobileCursorWorldPosition = default;
+        _mobileCursorWorldPositionInitialized = false;
         _mobileAttackActive = false;
         _mobileAttackDraggedOutsideDeadZone = false;
         _suppressMobileAttackUntilRelease = false;

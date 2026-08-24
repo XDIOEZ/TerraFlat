@@ -103,6 +103,92 @@
       ]
     },
     {
+      "id": "snow_rabbit_daily",
+      "scheduleMode": "timedWindows",
+      "ecologyGroup": "animals",
+      "requireGlobalDarkness": false,
+      "spawnTriggerTime": 720.0,
+      "spawnTimeTolerance": 1.0,
+      "spawnsPerDay": 1,
+      "minSpawnDistance": 15.0,
+      "maxSpawnDistance": 50.0,
+      "playerVisibilityExclusionDistance": 20.0,
+      "playerPopulationRadius": 60.0,
+      "perPlayerAliveLimit": 1,
+      "spawnSearchRetryCount": 8,
+      "spawnCount": 1,
+      "spawnChance": 1.0,
+      "daysBetweenSpawns": 1,
+      "groupAliveLimit": 1,
+      "maxEcologyBudget": 1,
+      "dailyBudgetRecovery": 1,
+      "recoveryTargetPopulation": 1,
+      "recoveryCheckInterval": 8.0,
+      "growthIntervalDays": 1,
+      "maxLifetimeSpawnCount": 64,
+      "asyncSpawnInterval": 0.0,
+      "unboundedDailyGrowth": false,
+      "ignorePopulationLimits": false,
+      "requireCompletelyDarkTile": false,
+      "maxAllowedTileLight": 1.0,
+      "allowedBiomeNames": [
+        "雪地"
+      ],
+      "recycleDistance": 110.0,
+      "recycleGraceSeconds": 20.0,
+      "spawnEntries": [
+        {
+          "prefabName": "Rabbit",
+          "probability": 1.0,
+          "ecologyCost": 1,
+          "speciesAliveLimit": 1
+        }
+      ]
+    },
+    {
+      "id": "snow_leopard_daily",
+      "scheduleMode": "timedWindows",
+      "ecologyGroup": "commonEnemies",
+      "requireGlobalDarkness": false,
+      "spawnTriggerTime": 1200.0,
+      "spawnTimeTolerance": 1.0,
+      "spawnsPerDay": 1,
+      "minSpawnDistance": 24.0,
+      "maxSpawnDistance": 55.0,
+      "playerVisibilityExclusionDistance": 24.0,
+      "playerPopulationRadius": 70.0,
+      "perPlayerAliveLimit": 1,
+      "spawnSearchRetryCount": 10,
+      "spawnCount": 1,
+      "spawnChance": 1.0,
+      "daysBetweenSpawns": 1,
+      "groupAliveLimit": 1,
+      "maxEcologyBudget": 2,
+      "dailyBudgetRecovery": 1,
+      "recoveryTargetPopulation": 1,
+      "recoveryCheckInterval": 10.0,
+      "growthIntervalDays": 1,
+      "maxLifetimeSpawnCount": 64,
+      "asyncSpawnInterval": 0.0,
+      "unboundedDailyGrowth": false,
+      "ignorePopulationLimits": false,
+      "requireCompletelyDarkTile": false,
+      "maxAllowedTileLight": 1.0,
+      "allowedBiomeNames": [
+        "雪地"
+      ],
+      "recycleDistance": 120.0,
+      "recycleGraceSeconds": 25.0,
+      "spawnEntries": [
+        {
+          "prefabName": "SnowLeopard",
+          "probability": 1.0,
+          "ecologyCost": 2,
+          "speciesAliveLimit": 1
+        }
+      ]
+    },
+    {
       "id": "ghost_milestone_growth",
       "scheduleMode": "dayMilestoneGrowth",
       "ecologyGroup": "nightEnemies",

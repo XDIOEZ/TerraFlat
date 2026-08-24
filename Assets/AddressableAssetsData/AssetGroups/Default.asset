@@ -461,6 +461,18 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a21a2a7915cc2b34c8a8889791573228
+    m_Address: Assets/2_Prefabs/World/ResourceNodes/Mines/Iceberg.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e0808ae7e3af6584eb730450267cb71b
+    m_Address: Assets/6_Art/Tilemap/IceTileset.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 41d17800f3397ad4085f635c2fd9b1f6
     m_Address: Assets/2_Prefabs/World/Space/Rocket.prefab
     m_ReadOnly: 0
@@ -499,6 +511,13 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 4449fdf41529cdf488d41484f92e53e9
     m_Address: flatworld.actor.shell.chicken
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorShell
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 45e4471df755aaa4984bb39358fad09a
+    m_Address: flatworld.actor.shell.rabbit
     m_ReadOnly: 0
     m_SerializedLabels:
     - ActorShell
@@ -1215,8 +1234,14 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: aaa1c7d74f6b4f1e9b8a6c2d3e4f5a62
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_GroundPlant.prefab
+  - m_GUID: 2b0ca2c28d93442b8a71400f4dd7d3ed
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_CropVisual.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d943eea62cf84fe4a9df7ba77282873e
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_Plantable.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1371,6 +1396,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b7b90f43c6584e2ea1a4a45ad5d75d91
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_BerryBush.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c107cb4a775f75a4ab50708e43ad3078
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Combat/Module_DamageReciver.prefab
     m_ReadOnly: 0
@@ -1457,6 +1488,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c9071f519ad95e14b8f643d82db1e458
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/Module_Food.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3a5b83e504544c94a8138c46c2805e2d
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/Module_HeldFood.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1601,6 +1638,13 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: dd531bf9262d2dd4bad34506f71b2385
     m_Address: flatworld.actor.shell.wolf
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorShell
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: aefab58f6f177ba499d703618cb85d47
+    m_Address: flatworld.actor.shell.snowleopard
     m_ReadOnly: 0
     m_SerializedLabels:
     - ActorShell
@@ -1839,12 +1883,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: ffe53350727c81c47b55bde5e24c3142
-    m_Address: Assets/2_Prefabs/World/ResourceNodes/Plants/Bush.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}

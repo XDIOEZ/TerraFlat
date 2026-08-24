@@ -775,6 +775,8 @@ public static class ItemDefinitionCatalogLoader
             modulePrefabIds.Add(moduleName, moduleId);
         }
 
+        AddAutomaticHealthModule(gameRes, shell, dto.Health, id, template, moduleParameters, modulePrefabIds);
+
         // Actor 由 AnimatorController 驱动 SpriteRenderer，永远不再解析 Sprite 子资源地址。
         Sprite sprite = isActor
             ? null
@@ -789,6 +791,7 @@ public static class ItemDefinitionCatalogLoader
             shell,
             template,
             dto.Visual,
+            dto.Health,
             sprite,
             moduleParameters,
             modulePrefabIds,
@@ -796,6 +799,72 @@ public static class ItemDefinitionCatalogLoader
             dto.DescriptionKey,
             animatorController,
             isActor);
+    }
+
+    private static void AddAutomaticHealthModule(GameRes gameRes, GameObject shell, ItemHealthDefinitionDto health, string itemId, ItemData template, Dictionary<string, string> moduleParameters, Dictionary<string, string> modulePrefabIds)
+    {
+        if (health == null || !health.HasHp) return;
+
+        const string moduleName = "生命值系统模块";
+        const string prefabId = "Module_DamageReciver";
+        if (template.ModuleDataDic.ContainsKey(moduleName) || modulePrefabIds.Values.Any(value => string.Equals(value, prefabId, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException($"物品 {itemId} 同时声明 health 和显式 {prefabId} 模块；请只保留 health 声明");
+
+        Module prototype = ResolveModulePrototype(gameRes, shell, prefabId);
+        if (prototype?._Data == null)
+            throw new InvalidDataException($"物品 {itemId} 的 health 找不到模块 Prefab：{prefabId}");
+
+        ModuleData moduleData = FastCloner.FastCloner.DeepClone<object>(prototype._Data) as ModuleData;
+        if (moduleData == null || moduleData.GetType() != prototype._Data.GetType())
+            throw new InvalidDataException($"物品 {itemId} 的 health 模块数据复制失败");
+        moduleData.Name = moduleName;
+        moduleData.ID = !string.IsNullOrWhiteSpace(prototype._Data.ID) ? prototype._Data.ID : moduleName;
+        moduleData.isRunning = true;
+        template.ModuleDataDic.Add(moduleName, moduleData);
+        modulePrefabIds.Add(moduleName, prefabId);
+
+        float maxHp = Mathf.Max(0.01f, health.MaxHp);
+        float hp = Mathf.Clamp(health.Hp, 0f, maxHp);
+        ItemDefenseDefinitionDto defense = health.Defense ?? new ItemDefenseDefinitionDto();
+        var parameters = new JObject
+        {
+            ["Data"] = new JObject
+            {
+                ["Hp"] = hp,
+                ["MaxHp"] = maxHp,
+                ["DefenseValues"] = new JObject
+                {
+                    ["Cutting"] = defense.Cutting,
+                    ["Piercing"] = defense.Piercing,
+                    ["Chopping"] = defense.Chopping,
+                    ["Blunt"] = defense.Blunt
+                }
+            }
+        };
+        if (health.ModuleLocalPosition.HasValue)
+        {
+            parameters["$transform"] = new JObject
+            {
+                ["localPosition"] = JToken.FromObject(health.ModuleLocalPosition.Value)
+            };
+        }
+
+        if (health.Collider != null)
+        {
+            ItemColliderDefinitionDto collider = health.Collider;
+            var colliderJson = new JObject();
+            if (!string.IsNullOrWhiteSpace(collider.Type)) colliderJson["type"] = collider.Type;
+            if (collider.Enabled.HasValue) colliderJson["enabled"] = collider.Enabled.Value;
+            if (collider.IsTrigger.HasValue) colliderJson["isTrigger"] = collider.IsTrigger.Value;
+            if (collider.Offset.HasValue) colliderJson["offset"] = JToken.FromObject(collider.Offset.Value);
+            if (collider.Size.HasValue) colliderJson["size"] = JToken.FromObject(collider.Size.Value);
+            if (collider.EdgeRadius.HasValue) colliderJson["edgeRadius"] = collider.EdgeRadius.Value;
+            if (collider.Radius.HasValue) colliderJson["radius"] = collider.Radius.Value;
+            if (collider.Direction.HasValue) colliderJson["direction"] = collider.Direction.Value;
+            if (collider.Points != null) colliderJson["points"] = JToken.FromObject(collider.Points);
+            parameters["$collider2D"] = colliderJson;
+        }
+        moduleParameters.Add(moduleName, parameters.ToString(Formatting.None));
     }
 
     private static void PopulateTemplateData(JObject data, ItemData template, string itemId)

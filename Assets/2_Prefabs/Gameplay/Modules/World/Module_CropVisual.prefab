@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &7168420315956713520
+--- !u!1 &720000000000000001
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,22 +8,22 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 7168420315956713521}
-  - component: {fileID: 7168420315956713522}
+  - component: {fileID: 720000000000000002}
+  - component: {fileID: 720000000000000003}
   m_Layer: 0
-  m_Name: Module_GroundPlant
+  m_Name: Module_CropVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &7168420315956713521
+--- !u!4 &720000000000000002
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7168420315956713520}
+  m_GameObject: {fileID: 720000000000000001}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -32,28 +32,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7168420315956713522
+--- !u!114 &720000000000000003
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7168420315956713520}
+  m_GameObject: {fileID: 720000000000000001}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a6f0c7d74f6b4f1e9b8a6c2d3e4f5a61, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  GroundPlantData:
-    Name: 
-    ID: "\u5730\u683D\u6A21\u5757"
+  CropVisualData:
+    Name: Module_CropVisual
+    ID: Mod_CropVisual
     isRunning: 1
     Type: 0
     BitData: 
-  harvestItemId: Radish
   buriedClip: 0.5
-  pullRadius: 1
-  pullDuration: 0.5
-  pullBezierOffset: 0.8
-  pullArcHeight: 0.6
+  buriedMaterial: {fileID: 2100000, guid: 06dc2608a1031034698c137f9f6cfbc8, type: 2}

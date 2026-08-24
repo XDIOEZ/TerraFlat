@@ -17,6 +17,12 @@ public class Mod_Droping : Module
     public Chunk LastChunk; // 上一帧 item 所处的 chunk
     private bool usesLegacyChunkOwnership;
 
+    /// <summary>只要掉落模块仍持有轨迹数据，物品就处于掉落阶段。</summary>
+    public static bool IsDropInProgress(Item targetItem)
+    {
+        return targetItem?.itemMods?.GetMod_ByID<Mod_Droping>(ModText.Drop)?.drop != null;
+    }
+
 	#endregion
 
     [Header("丢弃动画参数")]
@@ -43,7 +49,7 @@ public class Mod_Droping : Module
         LastChunk = usesLegacyChunkOwnership && item != null
             ? item.GetComponentInParent<Chunk>()
             : null;
-        if (item?.itemData?.Stack != null)
+        if (drop != null && item?.itemData?.Stack != null)
             item.itemData.Stack.CanBePickedUp = false;
     }
 
@@ -110,8 +116,12 @@ public class Mod_Droping : Module
                 // 确保 Chunk 内的位置索引记录的是最终落点，而不是动画起点。
                 LastChunk.AddItem(drop.item);
             }
-            drop.item.itemData.Stack.CanBePickedUp = true;
-            drop = null; // 销毁droping
+            Item landedItem = drop.item;
+            drop = null;
+
+            // 先结束掉落状态并移除驱动模块，再开放拾取，避免拾取回调与轨迹更新竞争同一物品。
+            Module.REMOVEModFROMItem(item, _Data);
+            landedItem.itemData.Stack.CanBePickedUp = true;
         }
     }
 
@@ -260,11 +270,11 @@ public class Mod_Droping : Module
             item = item
         };
         
+        item.itemData.Stack.CanBePickedUp = false;
         Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
         itemDrop.Load();
         itemDrop.drop = drop;
         itemDrop.arcHeight = arcHeight; // 传递弧高参数
-        item.itemData.Stack.CanBePickedUp = false;
     }
     
     /// <summary>

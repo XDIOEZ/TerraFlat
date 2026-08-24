@@ -316,6 +316,77 @@ public sealed class MoveSpeedEnvironmentEffectInstance : IEnvironmentEffectInsta
     }
 }
 
+/// <summary>移动表面效果定义，统一改变玩家和动物的加减速度。</summary>
+public sealed class MovementSurfaceResponseEnvironmentEffectDefinition : IEnvironmentEffectDefinition
+{
+    public const string StableEffectId = "environment.movement_surface_response";
+
+    public MovementSurfaceResponseEnvironmentEffectDefinition(
+        float accelerationMultiplier,
+        float decelerationMultiplier)
+    {
+        AccelerationMultiplier = Mathf.Max(0.01f, accelerationMultiplier);
+        DecelerationMultiplier = Mathf.Max(0.01f, decelerationMultiplier);
+    }
+
+    public string EffectId => StableEffectId;
+    public float AccelerationMultiplier { get; }
+    public float DecelerationMultiplier { get; }
+
+    public IEnvironmentEffectInstance CreateInstance(Item actor) =>
+        new MovementSurfaceResponseEnvironmentEffectInstance(actor, this);
+}
+
+/// <summary>移动表面效果实例，退出表面时恢复角色原本的移动响应。</summary>
+public sealed class MovementSurfaceResponseEnvironmentEffectInstance : IEnvironmentEffectInstance
+{
+    private readonly Item actor;
+    private readonly MovementSurfaceResponseEnvironmentEffectDefinition definition;
+    private Mover mover;
+    private float previousAccelerationMultiplier;
+    private float previousDecelerationMultiplier;
+
+    public MovementSurfaceResponseEnvironmentEffectInstance(
+        Item actor,
+        MovementSurfaceResponseEnvironmentEffectDefinition definition)
+    {
+        this.actor = actor;
+        this.definition = definition;
+    }
+
+    public string EffectId => MovementSurfaceResponseEnvironmentEffectDefinition.StableEffectId;
+    public bool IsApplied { get; private set; }
+
+    public bool Apply()
+    {
+        if (IsApplied || actor == null || definition == null)
+            return false;
+
+        mover = actor.itemMods?.GetMod_ByID<Mover>(ModText.Mover);
+        if (mover == null)
+            return false;
+
+        previousAccelerationMultiplier = mover.surfaceAccelerationMultiplier;
+        previousDecelerationMultiplier = mover.surfaceDecelerationMultiplier;
+        mover.SetSurfaceMovementResponse(
+            definition.AccelerationMultiplier,
+            definition.DecelerationMultiplier);
+        IsApplied = true;
+        return true;
+    }
+
+    public void Remove()
+    {
+        if (!IsApplied || mover == null)
+            return;
+
+        mover.SetSurfaceMovementResponse(
+            previousAccelerationMultiplier,
+            previousDecelerationMultiplier);
+        IsApplied = false;
+    }
+}
+
 /// <summary>水体来源类型，是当前环境事实，不属于可驱散或持久化的 Buff。</summary>
 public enum WaterEnvironmentKind
 {

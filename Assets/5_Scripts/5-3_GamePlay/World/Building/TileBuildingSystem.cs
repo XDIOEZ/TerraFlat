@@ -377,7 +377,17 @@ public static class TileBuildingSystem
             useDepth = false,
             useNormalAngle = false
         };
-        attackCollider.OverlapCollider(filter, OverlapBuffer);
+
+        // Tile/建筑伤害是显式查询通道，不能依赖 DamageSender 与 Tilemap Layer 是否允许物理接触。
+        // 这里只用攻击 Collider 的世界 AABB 做广相；TilemapDamageReceiver.TryResolveHit 会继续用
+        // 原始 attackCollider.ClosestPoint 做逐格精确验证，因此旋转武器不会因为 AABB 扩大而误伤。
+        Bounds attackBounds = attackCollider.bounds;
+        Physics2D.OverlapBox(
+            attackBounds.center,
+            attackBounds.size,
+            0f,
+            filter,
+            OverlapBuffer);
 
         bool found = false;
         TileBuildingHitCandidate best = default;

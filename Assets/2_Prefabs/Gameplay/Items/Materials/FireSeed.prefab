@@ -141,7 +141,7 @@ MonoBehaviour:
   DamageInterval: 0.2
   EnableOnTriggerEnterDamage: 1
   OnlyDealDamageWhenInHand: 0
-  MaxAttackTargets: 1
+  MaxAttackTargets: 3
   EnableHitSlowdown: 1
   HitSlowMultiplier: 0.5
   HitSlowDuration: 0.35
@@ -405,7 +405,7 @@ MonoBehaviour:
   m_Intensity: 0.28
   m_LightVolumeIntensity: 0.1
   m_LightVolumeIntensityEnabled: 0
-  m_ApplyToSortingLayers: 69fb64b5132694d400000000676586be63a00c27d9349123
+  m_ApplyToSortingLayers: 69fb64b5132694d400000000676586beb711ab6f63a00c27d9349123
   m_LightCookieSprite: {fileID: 0}
   m_DeprecatedPointLightCookieSprite: {fileID: 0}
   m_LightOrder: 0

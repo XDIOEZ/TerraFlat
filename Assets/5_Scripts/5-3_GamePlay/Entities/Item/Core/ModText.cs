@@ -42,16 +42,17 @@ public static class ModText
     #region F
     public static string FocusPoint = "FaceMouse模块";
     public static string Food = "食物模块";
+    public static string HeldFood = "手上食物模块";
     public static string Fuel = "燃料模块";
     public static string Furnace = "熔炉模块";
     #endregion
     #region G
     public static string Grow = "生长模块";
-    public static string GroundPlant = "地栽模块";
+    public static string CropVisual = "Mod_CropVisual";
     #endregion
 
     #region P
-    public static string PlantSeed = "农作物模块";
+    public static string Plantable = "Mod_Plantable";
     #endregion
 
 

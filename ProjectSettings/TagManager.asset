@@ -53,6 +53,9 @@ TagManager:
   - name: Player
     uniqueID: 3196478823
     locked: 0
+  - name: HeldFood
+    uniqueID: 1873482167
+    locked: 0
   - name: Water
     uniqueID: 655138915
     locked: 0

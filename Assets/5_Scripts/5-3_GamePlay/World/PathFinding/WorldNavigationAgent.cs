@@ -21,6 +21,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     [SerializeField, Min(0.001f)] private float progressDistanceThreshold = 0.02f;
 
     private Rigidbody2D body;
+    private Mover surfaceMover;
     private WorldNavigationManager navigationManager;
     private Vector2[] waypoints = Array.Empty<Vector2>();
     private Vector2 destination;
@@ -101,6 +102,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     public void Bind(Rigidbody2D rigidbody2D, WorldNavigationManager manager)
     {
         body = rigidbody2D != null ? rigidbody2D : GetComponent<Rigidbody2D>();
+        surfaceMover = body != null ? body.GetComponentInParent<Mover>() : null;
         if (manager != null)
             navigationManager = manager;
         lastProgressPosition = CurrentPosition;
@@ -178,7 +180,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         if (hasDestination &&
             (!hasPath || WorldTopologyRuntime.SqrDistance(destination, activePathDestination) > 0.0001f))
             destinationDirty = true;
-        ApplyVelocity(Vector2.zero, 0f);
+        ApplyVelocity(Vector2.zero, Time.deltaTime);
 
         if (!clearDestination)
             return;
@@ -324,7 +326,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             result.Waypoints.Length == 0)
         {
             if (!hasPath)
-                ApplyVelocity(Vector2.zero, 0f);
+                ApplyVelocity(Vector2.zero, Time.deltaTime);
             destinationDirty = true;
             consecutiveFailures = Mathf.Min(consecutiveFailures + 1, 8);
             lastFailureRevision = result.GridRevision;
@@ -489,7 +491,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         destinationDirty = false;
         waypointIndex = 0;
         waypoints = Array.Empty<Vector2>();
-        ApplyVelocity(Vector2.zero, 0f);
+        ApplyVelocity(Vector2.zero, Time.deltaTime);
     }
 
     private bool HasReachedCurrentDestination(Vector2 current)
@@ -533,7 +535,16 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         fallbackVelocity = velocity;
         if (body != null)
         {
-            body.velocity = velocity;
+            if (deltaTime <= 0f)
+            {
+                body.velocity = Vector2.zero;
+                return;
+            }
+
+            surfaceMover ??= body.GetComponentInParent<Mover>();
+            body.velocity = surfaceMover == null
+                ? velocity
+                : surfaceMover.SmoothSurfaceVelocity(body.velocity, velocity, deltaTime);
             return;
         }
 

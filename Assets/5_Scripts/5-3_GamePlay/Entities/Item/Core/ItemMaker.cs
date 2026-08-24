@@ -59,7 +59,7 @@ public class ItemMaker
     [Tooltip("根据ItemName和Amount掉落物品")]
     public void DropItemByNameAndAmount(string ItemName, float Amount, float DropRange,Transform transform)
     {
-        Item item = ItemMgr.Instance.InstantiateItem(ItemName).GetComponent<Item>();
+        Item item = ItemMgr.Instance.InstantiateItem(ItemName);
         item.itemData.Stack.Amount = Amount;
 
         Vector2 randomOffset = Random.insideUnitCircle * DropRange;
@@ -100,7 +100,7 @@ public class ItemMaker
         Vector2 endPos = startPos + new Vector3(Random.Range(-radius, radius), Random.Range(-radius, radius), 0f);
 
         // 启动抛物线动画协程
-        item.GetComponent<MonoBehaviour>().StartCoroutine(
+        item.StartCoroutine(
             ParabolaAnimation(
                 item.transform,
                 startPos,
@@ -121,8 +121,9 @@ public class ItemMaker
     {
         item.transform.position = WorldTopologyRuntime.NormalizePosition(startPos);
         ItemWorldPlacement.TryAttachWorldModelDrop(item, item.transform.position);
+        item.itemData.Stack.CanBePickedUp = false;
 
-        itemTransform.GetComponent<MonoBehaviour>().StartCoroutine(
+        item.StartCoroutine(
             ParabolaAnimation(
                 itemTransform,
                 startPos,
@@ -177,7 +178,10 @@ public class ItemMaker
 
         itemTransform.position = WorldTopologyRuntime.NormalizePosition(endPos);
 
-        item.StartCoroutine(LandingSettleEffect(itemTransform, item, Random.Range(bounceHeightMin, bounceHeightMax)));
+        yield return LandingSettleEffect(
+            itemTransform,
+            item,
+            Random.Range(bounceHeightMin, bounceHeightMax));
         item.itemData.Stack.CanBePickedUp = true;
     }
 

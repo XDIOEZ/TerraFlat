@@ -47,6 +47,13 @@ public partial class Mover : Module
     [Tooltip("松开移动输入后停止所需的时间（秒），保留极短惯性")]
     [Min(0.01f)] public float stopTransitionDuration = 0.07f;
 
+    [Header("移动表面响应")]
+    [Tooltip("当前表面对加速度的倍率；冰面降低该值即可产生打滑。")]
+    [Min(0.01f)] public float surfaceAccelerationMultiplier = 1f;
+
+    [Tooltip("当前表面对减速度的倍率；冰面降低该值即可保留惯性。")]
+    [Min(0.01f)] public float surfaceDecelerationMultiplier = 1f;
+
     public List<Vector2> MemoryPath_Forbidden = new();  // 禁止路径点
     public bool IsLock = false;
     public bool hightReaction = false;
@@ -149,6 +156,13 @@ public partial class Mover : Module
         set => Data.RunStaminaThreshold = value;
     }
 
+    /// <summary>设置当前移动表面对加速度和减速度的影响。</summary>
+    public void SetSurfaceMovementResponse(float accelerationMultiplier, float decelerationMultiplier)
+    {
+        surfaceAccelerationMultiplier = Mathf.Max(0.01f, accelerationMultiplier);
+        surfaceDecelerationMultiplier = Mathf.Max(0.01f, decelerationMultiplier);
+    }
+
     #endregion
 
     #region Unity 生命周期
@@ -157,6 +171,8 @@ public partial class Mover : Module
         _Data.ID = ModText.Mover;
         speedTransitionDuration = Mathf.Max(MinimumTransitionDuration, speedTransitionDuration);
         stopTransitionDuration = Mathf.Max(MinimumTransitionDuration, stopTransitionDuration);
+        surfaceAccelerationMultiplier = Mathf.Max(0.01f, surfaceAccelerationMultiplier);
+        surfaceDecelerationMultiplier = Mathf.Max(0.01f, surfaceDecelerationMultiplier);
         hungerAction?.ClampValues();
     }
 
@@ -348,29 +364,37 @@ public partial class Mover : Module
         UpdateMovementState();
     }
 
-    /// <summary>将当前物理速度平滑靠近输入所要求的目标速度。</summary>
-    private Vector2 CalculateSmoothedVelocity(Vector2 targetVelocity, float deltaTime)
+    /// <summary>将实际速度按当前移动表面的响应平滑到目标速度。</summary>
+    public Vector2 SmoothSurfaceVelocity(Vector2 currentVelocity, Vector2 targetVelocity, float deltaTime)
     {
         bool isStopping = targetVelocity.sqrMagnitude <= InputMoveThresholdSqr;
         float transitionDuration = isStopping
             ? stopTransitionDuration
             : speedTransitionDuration;
         float referenceSpeed = Mathf.Max(
-            Mathf.Max(rb.velocity.magnitude, targetVelocity.magnitude),
+            Mathf.Max(currentVelocity.magnitude, targetVelocity.magnitude),
             Mathf.Max(0f, Speed.Value));
         float minimumChangeRate = isStopping ? Mathf.Max(0f, slowDownSpeed) : 0f;
         float speedChangeRate = Mathf.Max(
             minimumChangeRate,
             referenceSpeed / Mathf.Max(MinimumTransitionDuration, transitionDuration));
+        float surfaceMultiplier = isStopping
+            ? surfaceDecelerationMultiplier
+            : surfaceAccelerationMultiplier;
         Vector2 nextVelocity = Vector2.MoveTowards(
-            rb.velocity,
+            currentVelocity,
             targetVelocity,
-            speedChangeRate * Mathf.Max(0f, deltaTime));
+            speedChangeRate * surfaceMultiplier * Mathf.Max(0f, deltaTime));
 
         float stopThreshold = Mathf.Max(0.001f, endSpeed);
         return isStopping && nextVelocity.sqrMagnitude <= stopThreshold * stopThreshold
             ? Vector2.zero
             : nextVelocity;
+    }
+
+    private Vector2 CalculateSmoothedVelocity(Vector2 targetVelocity, float deltaTime)
+    {
+        return SmoothSurfaceVelocity(rb.velocity, targetVelocity, deltaTime);
     }
 
     /// <summary>输入锁定时立即停止，避免模态界面打开后角色继续滑行。</summary>

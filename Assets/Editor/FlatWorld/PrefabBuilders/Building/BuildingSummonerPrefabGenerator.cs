@@ -18,6 +18,9 @@ public static class BuildingSummonerPrefabGenerator
     public const string ToolRoot = "Assets/2_Prefabs/Gameplay/Items/Tools";
     public const string ToolSummonerRoot = ToolRoot + "/Summoners";
 
+    // 建筑伤害模块由 Item.ModuleLoad 按模块数据注入，禁止在建筑 Prefab 中保留嵌套实例。
+    private const string DamageReceiverModulePrefabGuid = "c107cb4a775f75a4ab50708e43ad3078";
+
     private static readonly string[] SourceRoots = { BuildingRoot, ToolRoot };
     private static readonly string[] SummonerRoots = { SummonerRoot, ToolSummonerRoot };
 
@@ -257,6 +260,9 @@ public static class BuildingSummonerPrefabGenerator
         string itemId = role == BuildingRole.Summoner ? summonerId : buildingId;
         string roleValue = role == BuildingRole.Summoner ? "0" : "1";
 
+        // 旧嵌套实例会留下没有 GameObject 宿主的 stripped Transform；建筑运行时模块注册表才是唯一来源。
+        yaml = RemoveNestedPrefabInstances(yaml, DamageReceiverModulePrefabGuid);
+
         yaml = ReplaceObjectField(yaml, rootFileId, "  m_Name:", ToYamlString(itemId));
         yaml = ReplaceObjectField(yaml, itemFileId, "    IDName:", ToYamlString(itemId));
         yaml = ReplaceObjectField(
@@ -339,6 +345,68 @@ public static class BuildingSummonerPrefabGenerator
 
         File.WriteAllText(fullPath, yaml, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         return true;
+    }
+
+    /// <summary>移除指定模块的嵌套 Prefab 实例及其 stripped 子对象，避免生成建筑时复制悬空对象。</summary>
+    private static string RemoveNestedPrefabInstances(string yaml, string sourceGuid)
+    {
+        const string objectPattern = @"(?ms)^--- !u!\d+ &(?<fileId>\d+)(?: stripped)?\r?\n.*?(?=^--- !u!|\z)";
+        string sourceMarker = $"m_SourcePrefab: {{fileID: 100100000, guid: {sourceGuid}, type: 3}}";
+        MatchCollection objectMatches = Regex.Matches(yaml, objectPattern, RegexOptions.CultureInvariant);
+        HashSet<string> instanceIds = new(StringComparer.Ordinal);
+
+        foreach (Match match in objectMatches)
+        {
+            string block = match.Value;
+            if (block.Contains("PrefabInstance:", StringComparison.Ordinal) &&
+                block.Contains(sourceMarker, StringComparison.Ordinal))
+            {
+                instanceIds.Add(match.Groups["fileId"].Value);
+            }
+        }
+
+        if (instanceIds.Count == 0)
+            return yaml;
+
+        HashSet<string> removeFileIds = new(instanceIds, StringComparer.Ordinal);
+        foreach (Match match in objectMatches)
+        {
+            string block = match.Value;
+            foreach (string instanceId in instanceIds)
+            {
+                if (block.Contains($"m_PrefabInstance: {{fileID: {instanceId}}}", StringComparison.Ordinal))
+                {
+                    removeFileIds.Add(match.Groups["fileId"].Value);
+                    break;
+                }
+            }
+        }
+
+        // 从父 Transform 的 m_Children 中移除对应的 stripped Transform 引用。
+        foreach (string fileId in removeFileIds)
+        {
+            yaml = Regex.Replace(
+                yaml,
+                $"(?m)^[ \\t]*-\\s*\\{{fileID:\\s*{Regex.Escape(fileId)}\\}}\\r?\\n",
+                string.Empty,
+                RegexOptions.CultureInvariant);
+        }
+
+        // 重新定位对象块，因为上一步会改变字符串偏移量。
+        MatchCollection currentMatches = Regex.Matches(yaml, objectPattern, RegexOptions.CultureInvariant);
+        StringBuilder cleaned = new(yaml.Length);
+        int cursor = 0;
+        foreach (Match match in currentMatches)
+        {
+            if (!removeFileIds.Contains(match.Groups["fileId"].Value))
+                continue;
+
+            cleaned.Append(yaml, cursor, match.Index - cursor);
+            cursor = match.Index + match.Length;
+        }
+
+        cleaned.Append(yaml, cursor, yaml.Length - cursor);
+        return cleaned.ToString();
     }
 
     /// <summary>更新已有覆盖项；不存在时写入对应嵌套 PrefabInstance。</summary>

@@ -5,6 +5,11 @@
       "id": "core-actors",
       "path": "definitions/core-actors.json",
       "enabled": true
+    },
+    {
+      "id": "snow-actors",
+      "path": "definitions/snow-actors.json",
+      "enabled": true
     }
   ]
 }

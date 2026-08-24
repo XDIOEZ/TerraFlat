@@ -58,7 +58,9 @@ public class Mod_Building : Module
     public Ex_ModData BuildingData;
     public BuildingShadow GhostShadow;
     public BoxCollider2D boxCollider2D;
-    public DamageReceiver damageReceiver;
+    // 伤害模块由 ItemMods 注册表提供，禁止序列化嵌套 Prefab 的组件引用。
+    [NonSerialized]
+    private DamageReceiver damageReceiver;
     public UltEvent StartInstall = new();
     public UltEvent StartUnInstall = new();
     public UltEvent<BuildingState, BuildingState> OnStateChanged = new();
@@ -846,7 +848,8 @@ public class Mod_Building : Module
             return false;
         }
 
-        if (WorldTopologyRuntime.Distance(authorityPosition, position) > GetMaxPlacementDistance())
+        float maximumPlacementDistance = GetMaxPlacementDistance();
+        if (!IsWithinPlacementDistance(authorityPosition, position, maximumPlacementDistance))
         {
             reason = "目标超出建造距离";
             return false;
@@ -995,9 +998,9 @@ public class Mod_Building : Module
         boxCollider2D ??= GetComponent<BoxCollider2D>();
         boxCollider2D ??= item.GetComponentInChildren<BoxCollider2D>(true);
 
-        damageReceiver ??= item.GetMod<DamageReceiver>();
+        damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
         if (damageReceiver == null)
-            throw new MissingComponentException($"[Mod_Building] {item.name} 缺少 DamageReceiver");
+            throw new MissingComponentException($"[Mod_Building] {item.name} 缺少 DamageReceiver 模块");
     }
 
     private void BindRuntimeEvents()
@@ -1114,9 +1117,10 @@ public class Mod_Building : Module
     private void HandleGhostShadow()
     {
         Vector3 mouse = NormalizePlacement(GetPointerWorldPosition());
+        Vector3 authorityPosition = GetAuthorityPosition();
         float maximumPlacementDistance = GetMaxPlacementDistance();
-        float distance = WorldTopologyRuntime.Distance(GetAuthorityPosition(), mouse);
-        if (distance > maximumPlacementDistance + BoundsEpsilon)
+        float distance = WorldTopologyRuntime.Distance(authorityPosition, mouse);
+        if (!IsWithinPlacementDistance(authorityPosition, mouse, maximumPlacementDistance))
         {
             // 超出建造范围时不保留边界处的假预览，避免玩家误以为仍可放置。
             CleanupGhost();
@@ -1136,7 +1140,17 @@ public class Mod_Building : Module
             maximumPlacementDistance,
             distance));
         GhostShadow.UpdateAlpha(alpha);
-        GhostShadow.UpdateColor(!ValidatePlacement(mouse, GetAuthorityPosition(), false, out _));
+        GhostShadow.UpdateColor(!ValidatePlacement(mouse, authorityPosition, false, out _));
+    }
+
+    /// <summary>预览、点击放置和权威校验共用同一有效距离，并将准星边界视为可放置位置。</summary>
+    private bool IsWithinPlacementDistance(
+        Vector3 authorityPosition,
+        Vector3 placement,
+        float maximumPlacementDistance)
+    {
+        return WorldTopologyRuntime.Distance(authorityPosition, placement) <=
+               maximumPlacementDistance + BoundsEpsilon;
     }
 
     private void CreateGhostShadow()

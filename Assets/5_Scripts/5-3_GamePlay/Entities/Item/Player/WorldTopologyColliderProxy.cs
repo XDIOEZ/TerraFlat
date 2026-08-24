@@ -27,10 +27,21 @@ public sealed class WorldTopologyColliderProxy : MonoBehaviour
         Collider2D source = Resolve(collider);
         if (source == null)
             return null;
+
         T component = source.GetComponent<T>();
         component ??= source.GetComponentInParent<T>();
+        if (component != null)
+            return component;
+
         // 玩家碰撞体常在根节点，而 DamageReceiver 等模块在子节点，需要继续向下解析。
-        return component ?? source.GetComponentInChildren<T>(true);
+        component = source.GetComponentInChildren<T>(true);
+        if (component != null)
+            return component;
+
+        // Item 的碰撞体与功能模块不保证处于同一分支：例如碰撞体可能属于表现/成长模块，
+        // DamageReceiver 位于兄弟模块。最后回到最近的 Item 根，再搜索完整 Item 子树。
+        Item ownerItem = source.GetComponentInParent<Item>();
+        return ownerItem != null ? ownerItem.GetComponentInChildren<T>(true) : null;
     }
 }
 

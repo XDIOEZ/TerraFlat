@@ -12,6 +12,7 @@ using Random = UnityEngine.Random;
 /// <summary>
 /// 处理模块伤害接收与反馈动画
 /// </summary>
+[RequireComponent(typeof(BoxCollider2D))]
 public class DamageReceiver : Module, IRemoteNetworkModule
 {
     private const int CurrentBodyPartDataVersion = 1;
@@ -272,6 +273,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     public override void Load()
     {
+        CombatPhysicsChannels.AssignDamageReceiver(this);
         ClearHitSlowdown();
         damageTakenMultiplier = 1f;
         modData.ReadData(ref Data);
@@ -1651,13 +1653,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule
                 if (lootItem == null)
                     continue;
 
+                lootItem.Load();
                 lootItem.DropInRange();
-                // 确保战利品可以被拾取
-                if (lootItem.itemData != null)
-                {
-                    lootItem.itemData.Stack.CanBePickedUp = true;
-                    lootItem.Load(); // 确保物品正确加载
-                }
             }
         }
     }

@@ -318,6 +318,7 @@ MonoBehaviour:
   damageFleeDuration: 5
   threatTags:
   - Predator
+  - Wolf
   fleeFromPlayer: 1
   defaultMateDuration: 8
   animIdle: Stand

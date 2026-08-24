@@ -12,7 +12,7 @@ namespace FlatWorld.WorldModel
     public sealed class DeterministicChunkGenerator : IChunkPureGenerator
     {
         /// <summary>纯区块生成规则版本；气候、群系、河谷选路或河网筛选规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 26;
+        public const int CurrentGenerationSignature = 27;
 
         private readonly LegacyHydrologyKernel legacyHydrologyKernel = new();
         private readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<GeneratedHydrologyMap>>
@@ -405,9 +405,31 @@ namespace FlatWorld.WorldModel
             else if (biome == SurfaceBiomeKind.Snow)
             {
                 biomeId = (int)biome;
-                groundTileId = settings.SnowTileId;
+                bool iceLake = height <= settings.BeachLevel + 0.1d &&
+                               Hash01(request.WorldSeed, worldX, worldY, 0x7f4a7c15u) <
+                               settings.SnowIceLakeChance;
+                if (iceLake)
+                {
+                    groundTileId = settings.IceTileId;
+                }
+                else
+                {
+                    double snowVariant = Hash01(
+                        request.WorldSeed,
+                        worldX,
+                        worldY,
+                        0x9e3779b9u);
+                    groundTileId = snowVariant < 0.33d
+                        ? settings.SnowVariant2TileId
+                        : snowVariant < 0.66d
+                            ? settings.SnowVariant3TileId
+                            : settings.SnowTileId;
+                }
                 flags = TerrainCellFlags.Walkable;
                 navigationCost = (short)Math.Min(short.MaxValue, navigationCost + 1);
+
+                // 雪地的基础气温固定为零下 10 度，季节、天气等运行时修正仍由环境温度系统叠加。
+                temperatureCelsius = -10d;
             }
             else
             {
@@ -441,10 +463,15 @@ namespace FlatWorld.WorldModel
             terrain.SetEnvironmentValue("structure", x, y, 0f);
 
             // 草长不长只看世界种子、坐标和湿度，不用会变化的全局随机数，所以每次结果相同。
+            bool snowSurface = biome == SurfaceBiomeKind.Snow &&
+                               groundTileId != settings.IceTileId;
+            double grassDensity = snowSurface
+                ? settings.GrassDensity * settings.SnowGrassDensityMultiplier
+                : settings.GrassDensity;
             bool grass = (flags & TerrainCellFlags.Walkable) != 0 &&
-                         groundTileId == settings.GroundTileId &&
+                         (groundTileId == settings.GroundTileId || snowSurface) &&
                          Hash01(request.WorldSeed, worldX, worldY, 0x165667b1u) <
-                         settings.GrassDensity * (0.55d + moisture * 0.75d);
+                         grassDensity * (0.55d + moisture * 0.75d);
             terrain.SetGrass(x, y, grass ? GrassPresent : GrassEmpty);
             terrain.SetEnvironmentValue("grass", x, y, grass ? 1f : 0f);
         }

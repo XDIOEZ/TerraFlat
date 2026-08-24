@@ -29,19 +29,19 @@
       },
       "food": {
         "nutrition": {
-          "carbohydrates": 500.0,
-          "maxCarbohydrates": 1000.0,
-          "fat": 500.0,
-          "maxFat": 1000.0,
-          "protein": 500.0,
-          "maxProtein": 1000.0,
-          "water": 1500.0,
-          "maxWater": 1500.0,
-          "vitamins": 500.0,
-          "maxVitamins": 1000.0
+          "carbohydrates": 50.0,
+          "maxCarbohydrates": 100.0,
+          "fat": 50.0,
+          "maxFat": 100.0,
+          "protein": 50.0,
+          "maxProtein": 100.0,
+          "water": 150.0,
+          "maxWater": 150.0,
+          "vitamins": 50.0,
+          "maxVitamins": 100.0
         },
-        "nutritionConsumeSpeed": 0.5,
-        "waterConsumeSpeedRate": 1.0,
+        "nutritionConsumeSpeed": 0.05,
+        "waterConsumeSpeedRate": 0.1,
         "nutritionConsumeRate": 1.0,
         "staminaRecoverSpeed": 1.0,
         "staminaConsumeSpeed": 0.5,
@@ -50,7 +50,8 @@
         "waterSelfHurt": 1.0,
         "proteinSelfHurt": 1.0,
         "vitaminSelfHurt": 1.0,
-        "healNeedRatio": 0.6
+        "healNeedRatio": 0.6,
+        "proteinHealThreshold": 60.0
       },
       "stamina": {
         "currentStamina": 100.0,

@@ -17,7 +17,6 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     [SerializeReference]
     public List<string> RawData = new List<string>();
-    public Collider2D interactCollider;
     public GameController gameController;
     [ShowInInspector]
     public List<IInteractable> receiversInRange = new List<IInteractable>();
@@ -29,19 +28,13 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     public const float DefaultMaxInteractDistance = 2f;
     // 交互距离默认值；建筑放置距离运行时复用该值。
     public float maxInteractDistance = DefaultMaxInteractDistance;
-    private bool shouldDisableColliderAfterInteract;
-    // 出口可能在玩家已经到位后才生成；按键时主动扫描，避免只依赖首次物理触发回调。
+    // 交互是纯查询通道，不再创建或启用任何 Trigger；该缓冲区只服务 Physics2D Overlap 查询。
     private readonly Collider2D[] interactionOverlapBuffer = new Collider2D[32];
 
     public override void Load()
     {
         ModSaveData.ReadData(ref RawData);
-        interactCollider = GetComponent<Collider2D>();
         gameController = item != null ? item.GetComponentInChildren<GameController>() : null;
-
-        if (interactCollider != null)
-            interactCollider.enabled = false;
-
         BindInput();
     }
 
@@ -63,12 +56,6 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             EndEnvironmentActionHold();
             CancelCurrentInteraction();
             return;
-        }
-
-        if (shouldDisableColliderAfterInteract)
-        {
-            DisableInteractCollider();
-            shouldDisableColliderAfterInteract = false;
         }
 
         ValidateCurrentInteractionDistance();
@@ -121,12 +108,11 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// </summary>
     public bool TryInteractAtCurrentPosition()
     {
-        if (!IsLocalInteractionOwner() || IsGameplayInputLocked() || interactCollider == null)
+        if (!IsLocalInteractionOwner() || IsGameplayInputLocked())
             return false;
 
-        // 每次按下交互键时刷新范围缓存，避免使用过期触发器列表。
+        // 每次按下交互键都做一次纯查询，交互链不再启用任何 Physics2D Trigger。
         receiversInRange.Clear();
-        interactCollider.enabled = true;
         return RefreshReceiversAtCurrentPosition();
     }
 
@@ -136,15 +122,6 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             return;
 
         EndEnvironmentActionHold();
-        if (IsGameplayInputLocked())
-        {
-            return;
-        }
-
-        if (interactCollider == null)
-            return;
-
-        DisableInteractCollider();
     }
 
     /// <summary>把左键落点转换为世界交互，兼容石门等没有手持物品的 IInteractable。</summary>
@@ -165,11 +142,14 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         }
 
         Physics2D.SyncTransforms();
-        Collider2D[] colliders = Physics2D.OverlapPointAll(pointerWorld);
+        Collider2D[] colliders = Physics2D.OverlapPointAll(pointerWorld, InteractionQueryLayerMask);
         IInteractable selectedReceiver = null;
         float closestDistance = float.MaxValue;
         for (int i = 0; i < colliders.Length; i++)
         {
+            if (IsCombatOnlyCollider(colliders[i]))
+                continue;
+
             IInteractable receiver = WorldTopologyColliderProxy.ResolveComponent<IInteractable>(colliders[i]);
             Component receiverComponent = receiver as Component;
             if (!IsInteractionCandidate(receiver, receiverComponent))
@@ -202,7 +182,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// <summary>持续寻找当前真正会被交互键选中的目标，只更新本地视觉提示。</summary>
     private void RefreshInteractionPreview()
     {
-        if (!IsLocalInteractionOwner() || interactCollider == null ||
+        if (!IsLocalInteractionOwner() ||
             item == null || !item.gameObject.activeInHierarchy)
         {
             ClearInteractionPreview();
@@ -212,7 +192,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         SetInteractionPreview(FindClosestReceiverAtCurrentPosition(collectReceivers: false));
     }
 
-    /// <summary>统一处理扫描、按键、鼠标和触发器识别到的目标高亮。</summary>
+    /// <summary>统一处理半径查询、按键和鼠标点选识别到的目标高亮。</summary>
     private void SetInteractionPreview(IInteractable receiver)
     {
         Component receiverComponent = receiver as Component;
@@ -240,14 +220,15 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// <summary>扫描交互半径，按当前指向优先、距离规则兜底。</summary>
     private IInteractable FindClosestReceiverAtCurrentPosition(bool collectReceivers)
     {
-        if (item == null || interactCollider == null || !item.gameObject.activeInHierarchy)
+        if (item == null || !item.gameObject.activeInHierarchy)
             return null;
 
         Physics2D.SyncTransforms();
         int count = Physics2D.OverlapCircleNonAlloc(
             item.transform.position,
             Mathf.Max(0.01f, maxInteractDistance),
-            interactionOverlapBuffer);
+            interactionOverlapBuffer,
+            InteractionQueryLayerMask);
         IInteractable closestReceiver = null;
         float closestDistance = float.MaxValue;
         IInteractable directionalReceiver = null;
@@ -257,8 +238,11 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
         for (int i = 0; i < count; i++)
         {
-            IInteractable receiver = WorldTopologyColliderProxy.ResolveComponent<IInteractable>(
-                interactionOverlapBuffer[i]);
+            Collider2D overlap = interactionOverlapBuffer[i];
+            if (IsCombatOnlyCollider(overlap))
+                continue;
+
+            IInteractable receiver = WorldTopologyColliderProxy.ResolveComponent<IInteractable>(overlap);
             Component receiverComponent = receiver as Component;
             if (!IsInteractionCandidate(receiver, receiverComponent))
                 continue;
@@ -323,6 +307,32 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         {
             return false;
         }
+    }
+
+    private static int InteractionQueryLayerMask
+    {
+        get
+        {
+            int mask = Physics2D.DefaultRaycastLayers;
+            int senderLayer = CombatPhysicsChannels.DamageSenderLayer;
+            int receiverLayer = CombatPhysicsChannels.DamageReceiverLayer;
+            if (senderLayer >= 0)
+                mask &= ~(1 << senderLayer);
+            if (receiverLayer >= 0)
+                mask &= ~(1 << receiverLayer);
+            return mask;
+        }
+    }
+
+    /// <summary>伤害专用碰撞体不参与任何交互查询，避免交互链解析到 DamageSender / DamageReceiver。</summary>
+    private static bool IsCombatOnlyCollider(Collider2D collider)
+    {
+        if (collider == null)
+            return true;
+
+        int layer = collider.gameObject.layer;
+        return layer == CombatPhysicsChannels.DamageSenderLayer ||
+               layer == CombatPhysicsChannels.DamageReceiverLayer;
     }
 
     /// <summary>过滤自身及失效组件，保证描边目标与交互目标来源一致。</summary>
@@ -396,9 +406,6 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         currentReceiver = receiver;
         currentReceiverComponent = receiverComponent;
         currentReceiver.OnInteractStart(item);
-
-        // 交互建立后失活触发器，后续交互维持仅依赖距离检测。
-        shouldDisableColliderAfterInteract = true;
         return true;
     }
 
@@ -408,8 +415,6 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         ClearInteractionPreview();
         StopCurrentInteraction();
         receiversInRange.Clear();
-        DisableInteractCollider();
-        shouldDisableColliderAfterInteract = false;
     }
 
     private void StopCurrentInteraction()
@@ -431,7 +436,6 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         {
             receiversInRange.Remove(currentReceiver);
             StopCurrentInteraction();
-            DisableInteractCollider();
             return;
         }
 
@@ -441,15 +445,6 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
         receiversInRange.Remove(currentReceiver);
         StopCurrentInteraction();
-        DisableInteractCollider();
-    }
-
-    private void DisableInteractCollider()
-    {
-        if (interactCollider == null)
-            return;
-
-        interactCollider.enabled = false;
     }
 
     private bool IsGameplayInputLocked()
@@ -458,57 +453,6 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     }
 
     #endregion
-
-
-
-
-    private void OnTriggerEnter2D(Collider2D other)
-    {
-        if (interactCollider == null || !interactCollider.enabled)
-            return;
-
-        var receiver = WorldTopologyColliderProxy.ResolveComponent<IInteractable>(other);
-        Component receiverComponent = receiver as Component;
-        if (!IsInteractionCandidate(receiver, receiverComponent))
-            return;
-
-        if (!receiversInRange.Contains(receiver))
-            receiversInRange.Add(receiver);
-
-        if (currentReceiver != receiver &&
-            (previewReceiver == null || previewReceiver == receiver))
-            StartInteraction(receiver);
-    }
-
-    private void OnTriggerStay2D(Collider2D other)
-    {
-        if (interactCollider == null || !interactCollider.enabled)
-            return;
-
-        var receiver = WorldTopologyColliderProxy.ResolveComponent<IInteractable>(other);
-        Component receiverComponent = receiver as Component;
-        if (!IsInteractionCandidate(receiver, receiverComponent))
-            return;
-
-        if (!receiversInRange.Contains(receiver))
-            receiversInRange.Add(receiver);
-
-        if (currentReceiver != receiver &&
-            (previewReceiver == null || previewReceiver == receiver))
-            StartInteraction(receiver);
-    }
-
-    private void OnTriggerExit2D(Collider2D other)
-    {
-        var receiver = WorldTopologyColliderProxy.ResolveComponent<IInteractable>(other);
-        Component receiverComponent = receiver as Component;
-        if (receiver == null || receiverComponent == null)
-            return;
-
-        receiversInRange.Remove(receiver);
-        if (previewReceiver == receiver)
-            ClearInteractionPreview();
-    }
 }
 
 internal interface IFocusPoint

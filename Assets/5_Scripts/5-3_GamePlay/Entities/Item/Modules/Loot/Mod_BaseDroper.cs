@@ -118,12 +118,11 @@ public class Mod_BaseDroper : Module
             rotationSpeed = Random.Range(minRotationSpeed, maxRotationSpeed),
             item = item
         };
-        
+        item.itemData.Stack.CanBePickedUp = false;
         Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
         itemDrop.Load();
         itemDrop.drop = drop;
         itemDrop.arcHeight = arcHeight; // 传递弧高参数
-        item.itemData.Stack.CanBePickedUp = false;
     }
     
     /// <summary>
@@ -180,7 +179,6 @@ public class Mod_BaseDroper : Module
             if (t >= 1f)
             {
                 drops.RemoveAt(i);
-                drop.item.itemData.Stack.CanBePickedUp = true;
             }
         }
     }

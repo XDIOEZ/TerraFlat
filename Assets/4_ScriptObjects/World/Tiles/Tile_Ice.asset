@@ -17,7 +17,8 @@ MonoBehaviour:
   tileDataTemplate:
     rid: 6445419709040689158
   TileBase: {fileID: 11400000, guid: 4570b2336b6777244a21458eb41f0152, type: 2}
-  behaviours: []
+  behaviours:
+  - rid: 6445419709040689162
   references:
     version: 2
     RefIds:
@@ -32,3 +33,8 @@ MonoBehaviour:
         workTime: 0
         Penalty: 1000
         IsWalkable: 1
+    - rid: 6445419709040689162
+      type: {class: Tile_Ice, ns: , asm: GamePlay}
+      data:
+        accelerationMultiplier: 0.35
+        decelerationMultiplier: 0.15

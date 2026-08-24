@@ -23,8 +23,8 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
 
     [Header("攻击目标限制")]
     [Min(1)]
-    [Tooltip("每次攻击伤害窗口最多命中的实体数量；默认 1，群攻武器可按需调高。")]
-    public int MaxAttackTargets = 1;
+    [Tooltip("每次攻击伤害窗口最多命中的实体数量；默认 3，特殊单体武器可按需调低。")]
+    public int MaxAttackTargets = 3;
 
     [Header("受击减速效果")]
     [Tooltip("是否让被本次攻击命中的目标减速")]
@@ -58,12 +58,13 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     private float lastDamageTime = 0f;
     private List<DamageReceiver> insideReceivers = new List<DamageReceiver>();
     private readonly List<Collider2D> overlapColliders = new List<Collider2D>();
-    private readonly HashSet<DamageReceiver> aiWindowHitReceivers = new HashSet<DamageReceiver>();
+    private readonly HashSet<DamageReceiver> windowScanHitReceivers = new HashSet<DamageReceiver>();
     private readonly HashSet<DamageReceiver> attackWindowHitReceivers = new HashSet<DamageReceiver>();
-    private bool aiWindowOverlapScanEnabled;
+    private bool windowOverlapScanEnabled;
     private bool lastColliderEnabled = false;
     private bool tileDamageAppliedThisWindow;
     private bool nonDamageableImpactAppliedThisWindow;
+    private float damageRangeMultiplier = 1f;
 
     // 实现ModuleData属性
     public override ModuleData _Data
@@ -84,6 +85,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     #endregion
 
     #region IDamageSender 实现
+    /// <summary>伤害发送者保持为伤害物品自身；Owner 只用于排除自伤，不改写旧的攻击者语义。</summary>
     Item IDamageSender.attacker { get => item; set => item = value; }
     CombatDamage IDamageSender.DamageValues => ResolveDamageValues();
     bool IHitSlowdownSource.HitSlowdownEnabled => EnableHitSlowdown;
@@ -100,15 +102,18 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
         {
             Debug.LogError($"{name} 未配置伤害碰撞体引用，必须在 Prefab 中显式绑定 BoxCollider2D。", this);
         }
-
+        else
+        {
+            CombatPhysicsChannels.AssignDamageSender(damageCollider);
+        }
 
         // 初始化定时伤害相关数据
         lastDamageTime = 0f;
         insideReceivers.Clear();
         overlapColliders.Clear();
-        aiWindowHitReceivers.Clear();
+        windowScanHitReceivers.Clear();
         attackWindowHitReceivers.Clear();
-        aiWindowOverlapScanEnabled = false;
+        windowOverlapScanEnabled = false;
         lastColliderEnabled = damageCollider != null && damageCollider.enabled;
         tileDamageAppliedThisWindow = false;
         nonDamageableImpactAppliedThisWindow = false;
@@ -161,8 +166,13 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     #region 伤害处理
     public void OnTriggerEnter2D(Collider2D other)
     {
-        // 碰撞检测和伤害处理逻辑
-        if (damageCollider == null || !damageCollider.enabled) return;
+        // 伤害接触只接受 DamageReciver 层；交互、拾取、玩家身体等不会进入伤害解析链。
+        if (damageCollider == null || !damageCollider.enabled ||
+            !CombatPhysicsChannels.IsDamageReceiverCollider(other))
+        {
+            return;
+        }
+
         DamageReceiver receiver = WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(other);
         if (receiver == null)
         {
@@ -170,8 +180,12 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
             return;
         }
 
-        // AI 伤害窗已主动扫描过的目标，不再被同一窗口内后续触发事件重复结算。
-        if (aiWindowOverlapScanEnabled && aiWindowHitReceivers.Contains(receiver))
+        // 武器/投射物可能与拥有者的碰撞体重叠，攻击者自身永远不进入伤害候选列表。
+        if (IsDamageSourceReceiver(receiver))
+            return;
+
+        // 窗口起始扫描过的目标，不再被同一窗口内后续触发事件重复结算。
+        if (windowOverlapScanEnabled && windowScanHitReceivers.Contains(receiver))
             return;
 
         // 添加到内部接收器列表
@@ -199,13 +213,16 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
                 }
             }
 
-            if (aiWindowOverlapScanEnabled)
-                aiWindowHitReceivers.Add(receiver);
+            if (windowOverlapScanEnabled)
+                windowScanHitReceivers.Add(receiver);
         }
     }
 
     public void OnTriggerExit2D(Collider2D other)
     {
+        if (!CombatPhysicsChannels.IsDamageReceiverCollider(other))
+            return;
+
         // 从内部接收器列表中移除
         DamageReceiver receiver = WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(other);
         if (receiver != null)
@@ -234,14 +251,15 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     /// <summary>结算一次实体伤害，并优先使用本次实际命中的碰撞体定位特效。</summary>
     private void ApplyDamageToReceiver(DamageReceiver receiver, Collider2D hitCollider = null)
     {
-        if (!CanDealDamageNow() ||
-            !FactionRelationService.CanAttack(item, receiver?.item))
+        if (receiver == null ||
+            IsDamageSourceReceiver(receiver) ||
+            !CanDealDamageNow() ||
+            !FactionRelationService.CanAttack(item, receiver.item))
         {
             return;
         }
 
-        if (receiver == null ||
-            attackWindowHitReceivers.Contains(receiver) ||
+        if (attackWindowHitReceivers.Contains(receiver) ||
             attackWindowHitReceivers.Count >= Mathf.Max(1, MaxAttackTargets))
         {
             return;
@@ -337,18 +355,29 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     {
         tileDamageAppliedThisWindow = false;
         nonDamageableImpactAppliedThisWindow = false;
-        aiWindowHitReceivers.Clear();
+        windowScanHitReceivers.Clear();
         attackWindowHitReceivers.Clear();
+        ScanCurrentOverlapsAndApplyDamageForWindow();
     }
 
     private void EndDamageWindow()
     {
         insideReceivers.Clear();
-        aiWindowHitReceivers.Clear();
+        windowScanHitReceivers.Clear();
         attackWindowHitReceivers.Clear();
-        aiWindowOverlapScanEnabled = false;
+        windowOverlapScanEnabled = false;
         tileDamageAppliedThisWindow = false;
         nonDamageableImpactAppliedThisWindow = false;
+    }
+
+    /// <summary>判断接收器是否属于伤害物品自身或其拥有者；仅过滤自伤，不改变攻击者身份。</summary>
+    private bool IsDamageSourceReceiver(DamageReceiver receiver)
+    {
+        Item receiverItem = receiver?.item;
+        if (receiverItem == null)
+            return false;
+
+        return receiverItem == item || (item != null && receiverItem == item.Owner);
     }
 
     private bool CanDealDamageNow()
@@ -427,22 +456,41 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     #region 新增方法：控制伤害启用/禁用
 
     /// <summary>
-    /// AI 专用：伤害窗口开启后主动扫描当前重叠目标，弥补碰撞体后开时缺少 Enter 事件的问题。
+    /// 设置动物攻击使用的伤害范围倍率；只扩大碰撞盒尺寸，不改变伤害数值与攻击窗口。
     /// </summary>
-    protected void ScanCurrentOverlapsAndApplyDamageForAiWindow()
+    public virtual void SetDamageRangeMultiplier(float multiplier)
+    {
+        if (damageCollider is not BoxCollider2D boxCollider)
+            return;
+
+        float targetMultiplier = Mathf.Max(1f, multiplier);
+        if (Mathf.Approximately(damageRangeMultiplier, targetMultiplier))
+            return;
+
+        float relativeMultiplier = targetMultiplier / damageRangeMultiplier;
+        boxCollider.size *= relativeMultiplier;
+        boxCollider.edgeRadius *= relativeMultiplier;
+        damageRangeMultiplier = targetMultiplier;
+    }
+
+    /// <summary>
+    /// 伤害窗口开启后主动扫描当前重叠目标，弥补碰撞体后开时缺少 Enter 事件的问题。
+    /// </summary>
+    protected void ScanCurrentOverlapsAndApplyDamageForWindow()
     {
         if (damageCollider == null || !damageCollider.enabled)
             return;
 
-        aiWindowOverlapScanEnabled = true;
-        aiWindowHitReceivers.Clear();
+        windowOverlapScanEnabled = true;
+        windowScanHitReceivers.Clear();
         Physics2D.SyncTransforms();
         overlapColliders.Clear();
 
         ContactFilter2D filter = new ContactFilter2D
         {
             useTriggers = true,
-            useLayerMask = false,
+            useLayerMask = true,
+            layerMask = CombatPhysicsChannels.DamageReceiverMask,
             useDepth = false,
             useNormalAngle = false
         };
@@ -452,7 +500,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
         {
             Collider2D overlap = overlapColliders[i];
             DamageReceiver receiver = WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(overlap);
-            if (receiver == null || receiver.item == item || !aiWindowHitReceivers.Add(receiver))
+            if (receiver == null || IsDamageSourceReceiver(receiver) || !windowScanHitReceivers.Add(receiver))
                 continue;
 
             if (!insideReceivers.Contains(receiver))
@@ -512,9 +560,16 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
 
     public void StartAttack()
     {
-        SetDamageEnabled(true);
         // 碰撞体可能持续启用，开始新的动作时仍需重新计算本次可命中的目标数。
         attackWindowHitReceivers.Clear();
+        if (damageCollider != null && damageCollider.enabled)
+        {
+            BeginTileDamageWindow();
+        }
+        else
+        {
+            SetDamageEnabled(true);
+        }
         // 某些持续伤害模块的碰撞体可能已经启用，路由器会按攻击者去重。
         CombatAudioRouter.PlayWeaponAttack(this);
         lastDamageTime = Time.time; // 重置伤害计时
@@ -550,4 +605,95 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     }
 
     #endregion
+}
+
+/// <summary>
+/// FlatWorld 战斗物理通道的唯一配置入口。
+/// DamageSender 只与 DamageReciver 产生 Physics2D 接触；交互系统不使用 Trigger。
+/// </summary>
+public static class CombatPhysicsChannels
+{
+    public const string DamageReceiverLayerName = "DamageReciver";
+    public const string DamageSenderLayerName = "DamageSender";
+
+    private static bool collisionMatrixConfigured;
+
+    public static int DamageReceiverLayer => LayerMask.NameToLayer(DamageReceiverLayerName);
+    public static int DamageSenderLayer => LayerMask.NameToLayer(DamageSenderLayerName);
+
+    public static LayerMask DamageReceiverMask
+    {
+        get
+        {
+            int layer = DamageReceiverLayer;
+            return layer >= 0 ? 1 << layer : ~0;
+        }
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetRuntimeState()
+    {
+        collisionMatrixConfigured = false;
+    }
+
+    /// <summary>确保 DamageSender 不再与交互、玩家身体、拾取器、普通阻挡等层产生额外接触。</summary>
+    public static void EnsureConfigured()
+    {
+        if (collisionMatrixConfigured)
+            return;
+
+        int senderLayer = DamageSenderLayer;
+        int receiverLayer = DamageReceiverLayer;
+        if (senderLayer < 0 || receiverLayer < 0)
+        {
+            Debug.LogError(
+                $"战斗物理层缺失：{DamageSenderLayerName}={senderLayer}, {DamageReceiverLayerName}={receiverLayer}");
+            return;
+        }
+
+        for (int layer = 0; layer < 32; layer++)
+        {
+            Physics2D.IgnoreLayerCollision(senderLayer, layer, layer != receiverLayer);
+            Physics2D.IgnoreLayerCollision(receiverLayer, layer, layer != senderLayer);
+        }
+
+        collisionMatrixConfigured = true;
+    }
+
+    public static void AssignDamageSender(Collider2D collider)
+    {
+        EnsureConfigured();
+        int layer = DamageSenderLayer;
+        if (collider == null || layer < 0)
+            return;
+
+        collider.isTrigger = true;
+        collider.gameObject.layer = layer;
+    }
+
+    public static void AssignDamageReceiver(Component receiver)
+    {
+        EnsureConfigured();
+        int layer = DamageReceiverLayer;
+        if (receiver == null || layer < 0)
+            return;
+
+        Collider2D[] colliders = receiver.GetComponents<Collider2D>();
+        if (colliders.Length == 0)
+        {
+            Debug.LogError($"{receiver.name} 缺少 DamageReceiver 专用 Collider2D。", receiver);
+            return;
+        }
+
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            colliders[i].isTrigger = true;
+            colliders[i].gameObject.layer = layer;
+        }
+    }
+
+    public static bool IsDamageReceiverCollider(Collider2D collider)
+    {
+        return collider != null && collider.gameObject.layer == DamageReceiverLayer;
+    }
 }

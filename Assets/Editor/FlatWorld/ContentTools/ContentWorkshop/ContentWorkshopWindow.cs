@@ -71,7 +71,7 @@ namespace FlatWorld.Editor.ContentWorkshop
                 "seeds",
                 "Seed_Base",
                 "Seed_Apple",
-                "Mod_Seed"),
+                "Mod_Plantable"),
             new(
                 WorkshopItemTemplateKind.BuildingSummoner,
                 "建筑召唤器",

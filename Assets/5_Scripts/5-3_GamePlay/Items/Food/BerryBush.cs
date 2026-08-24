@@ -61,6 +61,13 @@ public class BerryBush : Module, IInteractable, IItemPoolLifecycle
 
 	[Header("成熟提示Sprite")]
 	public List<SpriteRenderer> ReadySpriteRenderers = new List<SpriteRenderer>(); // 成熟提示渲染器数组（按顺序逐个显示）
+	public List<Vector3> ReadySpriteLocalPositions = new List<Vector3>
+	{
+		new Vector3(0.25600004f, 0.549f, 0f),
+		new Vector3(-0.11899996f, 0.7f, 0f),
+		new Vector3(-0.28900003f, 0.389f, 0f)
+	};
+	[Min(0.01f)] public float ReadySpriteScale = 0.2859f;
 	public Sprite ReadySpriteOverride; // 手动覆盖成熟Sprite
 
 	[Header("成熟提示图层")]
@@ -94,7 +101,20 @@ public class BerryBush : Module, IInteractable, IItemPoolLifecycle
 			throw new ArgumentException("[BerryBush] BerryItemId 不能为空。", nameof(BerryItemId));
 		}
 
-		_bushRenderer = GetComponentInChildren<SpriteRenderer>();
+		Item ownerItem = GetComponentInParent<Item>();
+		_bushRenderer = ownerItem != null ? ownerItem.Sprite : null;
+		if (_bushRenderer == null && ownerItem != null)
+		{
+			SpriteRenderer[] ownerRenderers = ownerItem.GetComponentsInChildren<SpriteRenderer>(true);
+			for (int i = 0; i < ownerRenderers.Length; i++)
+			{
+				if (ownerRenderers[i] != null && !ownerRenderers[i].transform.IsChildOf(transform))
+				{
+					_bushRenderer = ownerRenderers[i];
+					break;
+				}
+			}
+		}
 		EnsureRendererList();
 
 		EnsureReadySpriteConfigured();
@@ -105,6 +125,10 @@ public class BerryBush : Module, IInteractable, IItemPoolLifecycle
 	public override void Load()
 	{
 		EnsureDataContainer();
+		EnsureRendererList();
+		ApplyReadySpriteLayout();
+		EnsureReadySpriteConfigured();
+		ApplyReadySpriteSorting();
 		if (Data.IsInitialized)
 		{
 			RestoreRuntimeState();
@@ -489,6 +513,62 @@ public class BerryBush : Module, IInteractable, IItemPoolLifecycle
 			}
 
 			ReadySpriteRenderers.Add(renderers[i]);
+		}
+
+		if (ReadySpriteRenderers.Count > 0)
+		{
+			return;
+		}
+
+		if (ReadySpriteLocalPositions == null || ReadySpriteLocalPositions.Count == 0)
+		{
+			return;
+		}
+
+		float scale = Mathf.Max(0.01f, ReadySpriteScale);
+		for (int i = 0; i < ReadySpriteLocalPositions.Count; i++)
+		{
+			GameObject marker = new GameObject($"ReadyBerry_{i + 1}");
+			marker.transform.SetParent(transform, false);
+			marker.transform.localPosition = ReadySpriteLocalPositions[i];
+			marker.transform.localScale = Vector3.one * scale;
+			ReadySpriteRenderers.Add(marker.AddComponent<SpriteRenderer>());
+		}
+	}
+
+	private void ApplyReadySpriteLayout()
+	{
+		if (ReadySpriteLocalPositions == null || ReadySpriteRenderers == null)
+			return;
+
+		float scale = Mathf.Max(0.01f, ReadySpriteScale);
+		for (int i = 0; i < ReadySpriteLocalPositions.Count; i++)
+		{
+			SpriteRenderer renderer;
+			if (i < ReadySpriteRenderers.Count && ReadySpriteRenderers[i] != null)
+			{
+				renderer = ReadySpriteRenderers[i];
+			}
+			else
+			{
+				GameObject marker = new GameObject($"ReadyBerry_{i + 1}");
+				marker.transform.SetParent(transform, false);
+				renderer = marker.AddComponent<SpriteRenderer>();
+				if (i < ReadySpriteRenderers.Count)
+					ReadySpriteRenderers[i] = renderer;
+				else
+					ReadySpriteRenderers.Add(renderer);
+			}
+
+			renderer.transform.localPosition = ReadySpriteLocalPositions[i];
+			renderer.transform.localScale = Vector3.one * scale;
+			renderer.gameObject.SetActive(true);
+		}
+
+		for (int i = ReadySpriteLocalPositions.Count; i < ReadySpriteRenderers.Count; i++)
+		{
+			if (ReadySpriteRenderers[i] != null)
+				ReadySpriteRenderers[i].gameObject.SetActive(false);
 		}
 	}
 

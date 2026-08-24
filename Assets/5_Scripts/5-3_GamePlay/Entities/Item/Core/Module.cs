@@ -84,8 +84,25 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
     public virtual void Awake()
     {
         if (_Data != null)
-            _Data.ID = CanonicalModuleId;
+            EnsureRuntimeIdentity();
     }
+
+    /// <summary>建立模块参与运行时索引所需的非空稳定身份。</summary>
+    internal void EnsureRuntimeIdentity()
+    {
+        if (_Data == null)
+            throw new InvalidOperationException($"模块 {gameObject.name} 缺少 ModuleData。");
+
+        string moduleId = CanonicalModuleId;
+        if (string.IsNullOrWhiteSpace(moduleId))
+            throw new InvalidOperationException($"模块 {gameObject.name} 缺少稳定 ID。");
+
+        _Data.ID = moduleId.Trim();
+        _Data.Name = string.IsNullOrWhiteSpace(_Data.Name)
+            ? GenerateUniqueModName(_Data.ID)
+            : _Data.Name.Trim();
+    }
+
     public void ModuleInit(Item item_, ModuleData data, ItemData itemData_ = null)
     {
         this.item = item_;
@@ -102,6 +119,8 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
         {
             _Data = data;
         }
+
+        EnsureRuntimeIdentity();
 
         GameRes.Instance?.ApplyItemModuleConfiguration(
             Item_Data?.IDName,
@@ -133,6 +152,7 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
 
         Unload();
         _Data = data;
+        EnsureRuntimeIdentity();
         if (item != null && item.itemData != null && !string.IsNullOrEmpty(data.Name))
             item.itemData.ModuleDataDic[data.Name] = data;
 

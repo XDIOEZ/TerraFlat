@@ -21,7 +21,7 @@ public class Tile_Water : TileBlockBehaviour
     [Tooltip("持续饮水的结算间隔。")]
     [Min(0.05f)] public float drinkTickSeconds = 1f;
     [Tooltip("每次饮水恢复的水分。")]
-    [Min(0f)] public float waterGainPerTick = 125f;
+    [Min(0f)] public float waterGainPerTick = 12.5f;
     [Tooltip("脏淡水每次饮水触发感染的概率。")]
     [Range(0f, 1f)] public float dirtyWaterInfectionChance = 0.2f;
 

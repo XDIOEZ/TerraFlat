@@ -78,8 +78,8 @@ public sealed class PlayerCreationTemplateConfig
     public sealed class FoodSettings
     {
         [JsonProperty("nutrition")] public NutritionSettings Nutrition = new();
-        [JsonProperty("nutritionConsumeSpeed")] public float NutritionConsumeSpeed = 0.5f;
-        [JsonProperty("waterConsumeSpeedRate")] public float WaterConsumeSpeedRate = 1f;
+        [JsonProperty("nutritionConsumeSpeed")] public float NutritionConsumeSpeed = 0.05f;
+        [JsonProperty("waterConsumeSpeedRate")] public float WaterConsumeSpeedRate = 0.1f;
         [JsonProperty("nutritionConsumeRate")] public float NutritionConsumeRate = 1f;
         [JsonProperty("staminaRecoverSpeed")] public float StaminaRecoverSpeed = 1f;
         [JsonProperty("staminaConsumeSpeed")] public float StaminaConsumeSpeed = 0.5f;
@@ -89,21 +89,22 @@ public sealed class PlayerCreationTemplateConfig
         [JsonProperty("proteinSelfHurt")] public float ProteinSelfHurt = 1f;
         [JsonProperty("vitaminSelfHurt")] public float VitaminSelfHurt = 1f;
         [JsonProperty("healNeedRatio")] public float HealNeedRatio = 0.6f;
+        [JsonProperty("proteinHealThreshold")] public float ProteinHealThreshold = 60f;
     }
 
     [Serializable]
     public sealed class NutritionSettings
     {
-        [JsonProperty("carbohydrates")] public float Carbohydrates = 500f;
-        [JsonProperty("maxCarbohydrates")] public float MaxCarbohydrates = 1000f;
-        [JsonProperty("fat")] public float Fat = 500f;
-        [JsonProperty("maxFat")] public float MaxFat = 1000f;
-        [JsonProperty("protein")] public float Protein = 500f;
-        [JsonProperty("maxProtein")] public float MaxProtein = 1000f;
-        [JsonProperty("water")] public float Water = 1500f;
-        [JsonProperty("maxWater")] public float MaxWater = 1500f;
-        [JsonProperty("vitamins")] public float Vitamins = 500f;
-        [JsonProperty("maxVitamins")] public float MaxVitamins = 1000f;
+        [JsonProperty("carbohydrates")] public float Carbohydrates = 50f;
+        [JsonProperty("maxCarbohydrates")] public float MaxCarbohydrates = 100f;
+        [JsonProperty("fat")] public float Fat = 50f;
+        [JsonProperty("maxFat")] public float MaxFat = 100f;
+        [JsonProperty("protein")] public float Protein = 50f;
+        [JsonProperty("maxProtein")] public float MaxProtein = 100f;
+        [JsonProperty("water")] public float Water = 150f;
+        [JsonProperty("maxWater")] public float MaxWater = 150f;
+        [JsonProperty("vitamins")] public float Vitamins = 50f;
+        [JsonProperty("maxVitamins")] public float MaxVitamins = 100f;
     }
 
     [Serializable]
@@ -209,7 +210,8 @@ public sealed class PlayerCreationTemplateConfig
             WaterSelfHurt = Mathf.Max(0f, Food.WaterSelfHurt),
             ProteinSelfHurt = Mathf.Max(0f, Food.ProteinSelfHurt),
             VitaminSelfHurt = Mathf.Max(0f, Food.VitaminSelfHurt),
-            HealNeedRatio = Mathf.Clamp01(Food.HealNeedRatio)
+            HealNeedRatio = Mathf.Clamp01(Food.HealNeedRatio),
+            PlayerProteinHealThreshold = Mathf.Max(0f, Food.ProteinHealThreshold)
         };
     }
 
@@ -366,6 +368,7 @@ public static class PlayerCreationTemplateJsonLoader
         ValidateFiniteNonNegative(profile.Food.VitaminSelfHurt, $"{profile.Id}.food.vitaminSelfHurt");
         if (!IsFinite(profile.Food.HealNeedRatio) || profile.Food.HealNeedRatio < 0f || profile.Food.HealNeedRatio > 1f)
             throw new InvalidDataException($"{profile.Id}.food.healNeedRatio 必须在 0 到 1 之间");
+        ValidateFiniteNonNegative(profile.Food.ProteinHealThreshold, $"{profile.Id}.food.proteinHealThreshold");
 
         ValidateNutrition(profile.Id, profile.Food.Nutrition);
         ValidateFiniteNonNegative(profile.Stamina.CurrentStamina, $"{profile.Id}.stamina.currentStamina");

@@ -29,6 +29,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 交互描边脚本只能保留在 `GamePlay` 程序集源目录，禁止在 `Assets/5-3_GamePlay` 与 `Assets/5_Scripts/5-3_GamePlay` 同时放置同名类型，否则会触发 CS0436。
 - 同时需要左右翻身与上下瞄准的 Transform 只能由 `Mod_FocusPoint` 写最终旋转；`Mod_TurnBack` 只提供 `CurrentTurnAngleY`，禁止把同一 Transform 再加入其方向控制列表，否则 Y 翻转会被 Z 瞄准覆盖。
 - 手机/手柄交互优先选择普通指向前方的可交互目标，前方没有目标时才按距离兜底；鼠标点击仍按落点精确选择。
+- 玩家交互发送器必须是纯 Physics2D 查询通道，不得拥有或临时启用 Trigger；`Module_Hand` 禁止挂载 Collider2D。交互查询必须跳过 `DamageSender`/`DamageReciver` 专用 Collider，避免交互与伤害系统产生接触回调或互相解析。
 - 手机准线的有效距离不能固定写在输入层；空手和普通物品应跟随交互发送器距离，手持建筑应跟随建筑模块的放置距离。
 - 玩家跑步模式与视觉状态分离：`Run` 只表示逻辑奔跑模式，`Move=false` 时 `Player.controller` 必须切换到 `Idle`；进入 `Run` 必须直接播放，不添加播放倍率渐起或 Animator 混合延迟，禁止修改全局 `Animator.speed`，否则会连带暂停攻击等其他动画。
 - `Mover_SaveData.isRunning` 是玩家奔跑开关的持久字段；输入锁定只停止位移，不清空该字段，跨维度重建后须在解锁输入后恢复。

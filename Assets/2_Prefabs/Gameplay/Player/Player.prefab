@@ -1007,6 +1007,7 @@ MonoBehaviour:
     ProteinSelfHurt: 1
     VitaminSelfHurt: 1
     HealNeedRatio: 0.6
+    PlayerProteinHealThreshold: 60
   FoodModData:
     Name: 
     ID: 
@@ -1014,27 +1015,27 @@ MonoBehaviour:
     Type: 0
     FoodData:
       nutrition:
-        Carbohydrates: 500
-        Max_Carbohydrates: 1000
-        Fat: 500
-        Max_Fat: 1000
-        Protein: 500
-        Max_Protein: 1000
-        Water: 1500
-        Max_Water: 1500
-        Vitamins: 500
-        Max_Vitamins: 1000
+        Carbohydrates: 50
+        Max_Carbohydrates: 100
+        Fat: 50
+        Max_Fat: 100
+        Protein: 50
+        Max_Protein: 100
+        Water: 150
+        Max_Water: 150
+        Vitamins: 50
+        Max_Vitamins: 100
       Max_EatingProgress: 3
       ShowCanvas: 1
       nutritionConsumeSpeed:
-        BaseValue: 0.5
+        BaseValue: 0.05
         BaseAdditive: 0
         AdditiveModifier: 0
         MultiplicativeModifier: 1
         FinalAdditive: 0
       FeelGood: 0
       PanelPosition: {x: 0, y: 0}
-      WaterConsumeSpeedRate: 1
+      WaterConsumeSpeedRate: 0.1
       nutritionConsumeRate: 1
     MechanicStates: []
   DataUpdate:
@@ -1970,10 +1971,6 @@ PrefabInstance:
     - target: {fileID: 2921982359085929768, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3998171314868163814, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}
-      propertyPath: m_Size.y
-      value: 0.3
       objectReference: {fileID: 0}
     - target: {fileID: 8767320128831433282, guid: c62241a5ed45f4d4090c1b7c06e3af4a, type: 3}
       propertyPath: m_Name

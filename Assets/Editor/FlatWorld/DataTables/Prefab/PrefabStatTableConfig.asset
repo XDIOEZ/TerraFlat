@@ -157,22 +157,6 @@ MonoBehaviour:
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
-  - Prefab: {fileID: 472936261257613889, guid: ffe53350727c81c47b55bde5e24c3142, type: 3}
-    PrefabPath: Assets/2_Prefabs/World/ResourceNodes/Plants/Bush.prefab
-    PrefabName: Bush
-    MaxHp: 50
-    Hp: 50
-    CuttingDefense: 1
-    PiercingDefense: 1
-    ChoppingDefense: 1
-    BluntDefense: 1
-    CuttingDamage: 0
-    PiercingDamage: 0
-    ChoppingDamage: 0
-    BluntDamage: 0
-    HasHp: 1
-    HasDefense: 1
-    HasDamage: 0
   - Prefab: {fileID: 6626571208127967517, guid: 4c2d602b69d751141870951cc6fcf398, type: 3}
     PrefabPath: Assets/2_Prefabs/World/Buildings/Chest_Wood.prefab
     PrefabName: Chest_Wood

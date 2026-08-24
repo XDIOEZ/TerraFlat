@@ -155,7 +155,7 @@ MonoBehaviour:
   DamageInterval: -1
   EnableOnTriggerEnterDamage: 1
   OnlyDealDamageWhenInHand: 0
-  MaxAttackTargets: 1
+  MaxAttackTargets: 3
   EnableHitSlowdown: 1
   HitSlowMultiplier: 0.5
   HitSlowDuration: 0.35

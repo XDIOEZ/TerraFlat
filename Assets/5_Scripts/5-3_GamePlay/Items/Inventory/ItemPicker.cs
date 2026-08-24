@@ -49,6 +49,14 @@ public class ItemPicker : Module
     {
         ModSaveData.WriteData(Data);
     }
+
+    /// <summary>清理碰撞补偿状态，避免物品复用或模块重载后残留旧拾取请求。</summary>
+    public override void Unload()
+    {
+        deferredPickupItems.Clear();
+        pickupAttemptedItems.Clear();
+    }
+
     public override void Act()
     {
         base.Act();
@@ -99,6 +107,8 @@ public class ItemPicker : Module
     private bool canPickUp = true;
     private float nextInventoryFullPromptTime = -Mathf.Infinity;
     private readonly HashSet<Item> deferredPickupItems = new HashSet<Item>();
+    // 当前接触期间已经发起过的拾取请求。
+    private readonly HashSet<Item> pickupAttemptedItems = new HashSet<Item>();
 
     /// <summary>
     /// 综合判断是否可以拾取物品
@@ -163,6 +173,13 @@ public class ItemPicker : Module
     /// <param name="other">进入触发器的碰撞体</param>
     private void OnTriggerEnter2D(Collider2D other)
     {
+        Item pickAble = WorldTopologyColliderProxy.ResolveComponent<Item>(other);
+        if (pickAble != null)
+        {
+            deferredPickupItems.Remove(pickAble);
+            pickupAttemptedItems.Remove(pickAble);
+        }
+
         TryPickUp(other, logMissingInventories: true);
     }
 
@@ -175,13 +192,16 @@ public class ItemPicker : Module
         if (pickAble?.itemData?.Stack == null)
             return;
 
-        if (!pickAble.itemData.Stack.CanBePickedUp)
+        if (Mod_Droping.IsDropInProgress(pickAble) ||
+            !pickAble.itemData.Stack.CanBePickedUp)
         {
             deferredPickupItems.Add(pickAble);
+            pickupAttemptedItems.Remove(pickAble);
             return;
         }
 
-        if (deferredPickupItems.Contains(pickAble))
+        if (deferredPickupItems.Remove(pickAble) ||
+            pickupAttemptedItems.Add(pickAble))
             TryPickUp(other, logMissingInventories: false);
     }
 
@@ -192,7 +212,10 @@ public class ItemPicker : Module
     {
         Item pickAble = WorldTopologyColliderProxy.ResolveComponent<Item>(other);
         if (pickAble != null)
+        {
             deferredPickupItems.Remove(pickAble);
+            pickupAttemptedItems.Remove(pickAble);
+        }
     }
 
     /// <summary>
@@ -219,13 +242,16 @@ public class ItemPicker : Module
         if (pickAble?.itemData?.Stack == null)
             return;
 
-        if (!pickAble.itemData.Stack.CanBePickedUp)
+        if (Mod_Droping.IsDropInProgress(pickAble) ||
+            !pickAble.itemData.Stack.CanBePickedUp)
         {
             deferredPickupItems.Add(pickAble);
+            pickupAttemptedItems.Remove(pickAble);
             return;
         }
 
         deferredPickupItems.Remove(pickAble);
+        pickupAttemptedItems.Add(pickAble);
         if (ItemNetworkStateSerialization.BeginNetworkPickup(this, pickAble))
         {
             return;
@@ -237,7 +263,10 @@ public class ItemPicker : Module
             PlayPickupSuction(pickAble);
             // 只在整组物品都已入包时回收世界物品；部分拾取要保留剩余数量。
             if (!pickAble.itemData.Stack.CanBePickedUp)
+            {
+                pickupAttemptedItems.Remove(pickAble);
                 ItemMgr.Instance.DespawnItem(pickAble);
+            }
             return;
         }
 

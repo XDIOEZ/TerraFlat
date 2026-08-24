@@ -28,7 +28,7 @@ MonoBehaviour:
         PrecipitationRange: {x: 0, y: 1}
         HeightRange: {x: 0, y: 1}
     ItemSpawn_NoSO:
-    - itemPrefab: {fileID: 472936261257613889, guid: ffe53350727c81c47b55bde5e24c3142, type: 3}
+    - itemPrefab: {fileID: 0}
       itemName: Bush
       itemCount: 1
       SpawnChance: 0.0015

@@ -64,25 +64,18 @@
         }
       },
       "modules": {
-        "Mod_Seed": {
-          "prefab": "Mod_Seed",
-          "id": "Mod_Seed",
+        "plantable": {
+          "prefab": "Module_Plantable",
+          "id": "Mod_Plantable",
           "enabled": true,
           "data": {
             "BitData": [],
             "Type": 0
           },
           "parameters": {
-            "Data": {
-              "isPlanted": false,
-              "plantedTilePos": {
-                "x": 0,
-                "y": 0
-              },
-              "growProgress": 0.0,
-              "growCompletionThreshold": 100.0
-            },
-            "harvestedCropName": "AppleTree",
+            "cropItemId": "AppleTree",
+            "maxPlantingDistance": 2.0,
+            "previewAlpha": 0.7,
             "$transform": {
               "localPosition": {
                 "x": 0.0,
@@ -133,9 +126,9 @@
       "gameName": "萝卜种子",
       "description": "种下后会长出萝卜；萝卜成熟时可以收获新的萝卜和种子。",
       "modules": {
-        "Mod_Seed": {
+        "plantable": {
           "parameters": {
-            "harvestedCropName": "RadishCrop"
+            "cropItemId": "RadishCrop"
           }
         }
       }

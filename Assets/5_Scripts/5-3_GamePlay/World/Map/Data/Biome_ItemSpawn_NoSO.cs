@@ -45,7 +45,11 @@ public class Biome_ItemSpawn_NoSO
     {
         if (itemPrefab == null)
         {
-            Debug.LogError("Item prefab is null");
+            // JSON 运行时物品允许只保留 ItemId；旧 prefab 仅用于尚未迁移的编辑器配置。
+            if (!string.IsNullOrWhiteSpace(itemName))
+                return;
+
+            Debug.LogError("Item prefab 和 itemName 不能同时为空");
             return;
         }
 

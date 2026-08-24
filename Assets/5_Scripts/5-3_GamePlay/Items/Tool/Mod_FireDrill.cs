@@ -141,7 +141,8 @@ public class Mod_FireDrill : Module, IInteractable
             return;
 
         ClosePanelAndClearTransferContext();
-        UIManager.Instance.DestroyPanel(basePanel);
+        // 模块销毁时只清理已经存在的 UI 管理器，禁止触发惰性单例重建 PanelRoot。
+        UIManager.ExistingInstance?.DestroyPanel(basePanel);
         basePanel = null;
         InputSlotUI = null;
         OutputSlotUI = null;

@@ -165,6 +165,9 @@ namespace FlatWorld.WorldModel
             SandTileId = GetInt(numbers, "terrain.sandTileId", GroundTileId);
             StoneTileId = GetInt(numbers, "terrain.stoneTileId", GroundTileId);
             SnowTileId = GetInt(numbers, "terrain.snowTileId", GroundTileId);
+            IceTileId = GetInt(numbers, "terrain.iceTileId", SnowTileId);
+            SnowVariant2TileId = GetInt(numbers, "terrain.snowVariant2TileId", SnowTileId);
+            SnowVariant3TileId = GetInt(numbers, "terrain.snowVariant3TileId", SnowTileId);
             CaveFloorTileId = GetInt(numbers, "cave.floorTileId", StoneTileId);
             CaveWallTileId = GetInt(numbers, "cave.wallTileId", StoneTileId);
             SeaLevel = Clamp01(GetDouble(numbers, "terrain.seaLevel", 0.30d));
@@ -174,6 +177,10 @@ namespace FlatWorld.WorldModel
                 BeachLevel,
                 1d);
             SnowTemperature = Clamp01(GetDouble(numbers, "terrain.snowTemperature", 0.18d));
+            SnowIceLakeChance = Clamp01(
+                GetDouble(numbers, "biome.snow.iceLakeChance", 0.08d));
+            SnowGrassDensityMultiplier = Clamp01(
+                GetDouble(numbers, "biome.snow.grassDensityMultiplier", 0.08d));
             DesertMinimumHeight = Clamp01(
                 GetDouble(numbers, "biome.desert.minimumHeight", 0.51d));
             DesertMaximumPrecipitation = Clamp01(
@@ -404,6 +411,9 @@ namespace FlatWorld.WorldModel
         public int SandTileId { get; }
         public int StoneTileId { get; }
         public int SnowTileId { get; }
+        public int IceTileId { get; }
+        public int SnowVariant2TileId { get; }
+        public int SnowVariant3TileId { get; }
         public int CaveFloorTileId { get; }
         public int CaveWallTileId { get; }
         /// <summary>高度低于这个数时生成海洋。</summary>
@@ -414,6 +424,10 @@ namespace FlatWorld.WorldModel
         public double MountainLevel { get; }
         /// <summary>温度低于这个数时可以生成雪地。</summary>
         public double SnowTemperature { get; }
+        /// <summary>雪地低洼处生成冰面的基础概率。</summary>
+        public double SnowIceLakeChance { get; }
+        /// <summary>雪地草地相对于普通草地的生成密度倍率。</summary>
+        public double SnowGrassDensityMultiplier { get; }
         /// <summary>旧版有序群系判定中沙漠允许的最低高度和最高降水。</summary>
         public double DesertMinimumHeight { get; }
         public double DesertMaximumPrecipitation { get; }

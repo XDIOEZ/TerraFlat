@@ -41,19 +41,19 @@ public sealed class PlayerCreationTemplateSO : ScriptableObject
     {
         public Nutrition nutrition = new Nutrition
         {
-            Carbohydrates = 500f,
-            Max_Carbohydrates = 1000f,
-            Fat = 500f,
-            Max_Fat = 1000f,
-            Protein = 500f,
-            Max_Protein = 1000f,
-            Water = 1500f,
-            Max_Water = 1500f,
-            Vitamins = 500f,
-            Max_Vitamins = 1000f
+            Carbohydrates = 50f,
+            Max_Carbohydrates = 100f,
+            Fat = 50f,
+            Max_Fat = 100f,
+            Protein = 50f,
+            Max_Protein = 100f,
+            Water = 150f,
+            Max_Water = 150f,
+            Vitamins = 50f,
+            Max_Vitamins = 100f
         };
-        [Min(0f)] public float nutritionConsumeSpeed = 0.5f;
-        [Min(0f)] public float waterConsumeSpeedRate = 1f;
+        [Min(0f)] public float nutritionConsumeSpeed = 0.05f;
+        [Min(0f)] public float waterConsumeSpeedRate = 0.1f;
         [Min(0f)] public float nutritionConsumeRate = 1f;
         [Min(0f)] public float staminaRecoverSpeed = 1f;
         [Min(0f)] public float staminaConsumeSpeed = 0.5f;
@@ -63,6 +63,7 @@ public sealed class PlayerCreationTemplateSO : ScriptableObject
         [Min(0f)] public float proteinSelfHurt = 1f;
         [Min(0f)] public float vitaminSelfHurt = 1f;
         [Range(0f, 1f)] public float healNeedRatio = 0.6f;
+        [Min(0f)] public float proteinHealThreshold = 60f;
     }
 
     [Serializable]
@@ -176,7 +177,8 @@ public sealed class PlayerCreationTemplateSO : ScriptableObject
             WaterSelfHurt = food.waterSelfHurt,
             ProteinSelfHurt = food.proteinSelfHurt,
             VitaminSelfHurt = food.vitaminSelfHurt,
-            HealNeedRatio = food.healNeedRatio
+            HealNeedRatio = food.healNeedRatio,
+            PlayerProteinHealThreshold = food.proteinHealThreshold
         };
     }
 

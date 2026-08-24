@@ -188,7 +188,8 @@
             "fleeRunDistance": 8.0,
             "damageFleeDuration": 5.0,
             "threatTags": [
-              "Predator"
+              "Predator",
+              "Wolf"
             ],
             "fleeFromPlayer": true,
             "defaultMateDuration": 8.0,

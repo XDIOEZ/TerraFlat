@@ -30,6 +30,10 @@ public class UIManager : MonoBehaviour
     {
         get
         {
+            // 关停阶段只允许读取现有实例，禁止惰性单例触发 Awake 并重新创建 PanelRoot。
+            if (_isShuttingDown)
+                return _instance;
+
             if (_instance == null)
             {
                 _instance = FindObjectOfType<UIManager>();
@@ -201,6 +205,13 @@ public class UIManager : MonoBehaviour
     #region 初始化
     private void Awake()
     {
+        // 退出播放模式后即使有迟到的对象回调，也不能再创建新的 UIManager。
+        if (_isShuttingDown)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         EventSystemGuard.EnsureExactlyOne();
 
         if (_instance == null)
@@ -231,12 +242,18 @@ public class UIManager : MonoBehaviour
         if (_instance != this)
             return;
 
+        // OnApplicationQuit 在编辑器强制停止播放时序中可能晚于其它对象的销毁回调。
+        _isShuttingDown = true;
         _instance = null;
         InteractionSurfaceChanged = null;
     }
 
     private void EnsurePanelRootExists()
     {
+        // 根节点失效时的重建只允许发生在正常运行阶段，销毁阶段必须保持无创建语义。
+        if (_isShuttingDown)
+            return;
+
         if (panelRoot != null)
         {
             CacheRootCanvas();

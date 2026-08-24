@@ -260,9 +260,24 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
     {
         for (int i = 0; i < spawnedConfigs.Count; i++)
         {
-            GameObject prefab = spawnedConfigs[i]?.itemPrefab;
-            Item prefabItem = prefab != null ? prefab.GetComponent<Item>() : null;
-            List<string> tags = prefabItem?.itemData?.Tags;
+            Biome_ItemSpawn_NoSO config = spawnedConfigs[i];
+            if (config == null)
+                continue;
+
+            List<string> tags = null;
+            if (!string.IsNullOrWhiteSpace(config.itemName))
+            {
+                ItemData runtimeData = GameRes.Instance?.CreateItemData(config.itemName);
+                tags = runtimeData?.Tags;
+            }
+
+            // 兼容尚未迁移到 JSON ItemId 的旧群系配置；新配置不再要求 itemPrefab。
+            if ((tags == null || tags.Count == 0) && config.itemPrefab != null)
+            {
+                Item prefabItem = config.itemPrefab.GetComponent<Item>();
+                tags = prefabItem?.itemData?.Tags;
+            }
+
             if (tags != null && tags.Count > 0 && tags.ContainsTag(hostTag))
                 return true;
         }

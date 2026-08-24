@@ -58,10 +58,12 @@ public sealed class FoodHealthModule : IFoodMechanic, IFoodTickObserver, IFoodRe
 
         Nutrition currentNutrition = context.Data.nutrition;
         float safeDelta = Mathf.Max(0f, timeDelta);
-        float proteinHealNeed = Mathf.Max(0f, currentNutrition.Max_Protein * state.HealNeedRatio);
+        float proteinHealNeed = context.IsPlayer
+            ? Mathf.Max(0f, state.PlayerProteinHealThreshold)
+            : Mathf.Max(0f, currentNutrition.Max_Protein * state.HealNeedRatio);
         bool hasProtein = currentNutrition.Protein > 0f;
         bool proteinReady = hasProtein &&
-            (state.HealNeedRatio <= 0f || currentNutrition.Protein >= proteinHealNeed);
+            currentNutrition.Protein > proteinHealNeed;
 
         if (!hasProtein)
         {

@@ -114,7 +114,9 @@ public sealed class FoodNutritionService
     private float buffNutritionConsumeMultiplier = 1f;
     private float buffWaterConsumeMultiplier = 1f;
 
-    private const float PlayerInitialFatMaximum = 1000f;
+    private const float PlayerInitialFatMaximum = 100f;
+    private const float PlayerNaturalVitaminLossPerSecond = 0.001f;
+    private const float DefaultNaturalVitaminLossPerSecond = 0.01f;
     private const float PlayerFatMaximumCap = PlayerInitialFatMaximum * 2f;
     private const float PlayerFatMaximumGrowthRatio = 0.5f;
 
@@ -209,7 +211,10 @@ public sealed class FoodNutritionService
                           BuffWaterConsumeMultiplier;
         food.nutrition.Water = Mathf.Max(0f, food.nutrition.Water - usedWater);
 
-        float naturalVitaminLoss = timeDelta * 0.01f;
+        float naturalVitaminLossPerSecond = context.IsPlayer
+            ? PlayerNaturalVitaminLossPerSecond
+            : DefaultNaturalVitaminLossPerSecond;
+        float naturalVitaminLoss = timeDelta * naturalVitaminLossPerSecond;
         food.nutrition.Vitamins = Mathf.Max(0f, food.nutrition.Vitamins - naturalVitaminLoss);
         return totalEnergy;
     }
@@ -460,6 +465,12 @@ public sealed class FoodRuntimeExecutor : IDisposable
         this.context = context ?? throw new ArgumentNullException(nameof(context));
         nutritionService = new FoodNutritionService(context);
         rulePipeline = new FoodRulePipeline(context);
+        Module_HeldFood heldFood = context.Item?.itemMods?.GetMod_ByID<Module_HeldFood>(ModText.HeldFood);
+        if (heldFood != null)
+        {
+            heldFood.BindFoodContext(context);
+            rulePipeline.Add(heldFood);
+        }
         rulePipeline.Add(new FoodSurvivalRule(
             nutritionService,
             stamina,
@@ -486,6 +497,7 @@ public sealed class FoodRuntimeExecutor : IDisposable
         if (initialized)
             return;
 
+        IceBlockFoodMechanicRegistration.EnsureRegistered();
         List<IFoodMechanic> registeredRules = FoodMechanicRegistry.CreateFor(context);
         for (int i = 0; i < registeredRules.Count; i++)
             rulePipeline.Add(registeredRules[i]);

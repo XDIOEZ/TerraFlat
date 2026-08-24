@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier:
   profileId: surface.default
-  generationSignature: 26
+  generationSignature: 27
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -31,6 +31,12 @@ MonoBehaviour:
     Value: 4
   - Id: terrain.snowTileId
     Value: 5
+  - Id: terrain.iceTileId
+    Value: 9
+  - Id: terrain.snowVariant2TileId
+    Value: 10
+  - Id: terrain.snowVariant3TileId
+    Value: 11
   - Id: terrain.seaLevel
     Value: 0.5
   - Id: terrain.beachLevel
@@ -167,6 +173,10 @@ MonoBehaviour:
     Value: 9
   - Id: grass.density
     Value: 0.24
+  - Id: biome.snow.iceLakeChance
+    Value: 0.08
+  - Id: biome.snow.grassDensityMultiplier
+    Value: 0.08
   - Id: structure.enabled
     Value: 1
   - Id: structure.regionSize
@@ -228,6 +238,12 @@ MonoBehaviour:
     Value: Tile_Snow
   - Id: tile.block.6
     Value: Tile_Water_Salt
+  - Id: tile.block.9
+    Value: Tile_Ice
+  - Id: tile.block.10
+    Value: Tile_Snow_Variant2
+  - Id: tile.block.11
+    Value: Tile_Snow_Variant3
   - Id: tile.block.8
     Value: TileBase_BuiltStoneWall
   - Id: cave.portal.itemId
@@ -634,6 +650,26 @@ MonoBehaviour:
     MaxHeight: 1
     ProvidedTags:
     - Tree
+    CompanionOnly: 0
+    CompanionHostTag:
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
+  - RuleId: surface.snow.iceberg
+    ItemId: Iceberg
+    ItemCount: 1
+    SpawnChance: 0.0003
+    SpawnChanceMultiplier: 1
+    BiomeMask: 64
+    MinTemperature: 0
+    MaxTemperature: 1
+    MinPrecipitation: 0
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    ProvidedTags: []
     CompanionOnly: 0
     CompanionHostTag:
     CompanionSpawnChance: 0

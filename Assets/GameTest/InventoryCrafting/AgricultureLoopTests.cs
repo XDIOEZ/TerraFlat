@@ -25,8 +25,8 @@ namespace FlatWorld.GameTest.InventoryCrafting
             Assert.That(food, Is.Not.Null);
             Assert.That(crop, Is.Not.Null);
             Assert.That(fertilizer, Is.Not.Null);
-            Assert.That(seed.GetComponentInChildren<Mod_Seed>(true), Is.Not.Null, "Seed_Apple 必须是唯一正式播种入口。");
-            Assert.That(food.GetComponentInChildren<Mod_Seed>(true), Is.Null, "Apple 只能作为食物，不能形成第二条播种入口。");
+            Assert.That(seed.GetComponentInChildren<Mod_Plantable>(true), Is.Not.Null, "Seed_Apple 必须通过统一种植模块进入播种入口。");
+            Assert.That(food.GetComponentInChildren<Mod_Plantable>(true), Is.Null, "Apple 只能作为食物，不能形成第二条播种入口。");
 
             Mod_Grow[] growthModules = crop.GetComponentsInChildren<Mod_Grow>(true);
             Assert.That(growthModules, Has.Length.EqualTo(1), "AppleTree 必须只保留一个 Mod_Grow。");

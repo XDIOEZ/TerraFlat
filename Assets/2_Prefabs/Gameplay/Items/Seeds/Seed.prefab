@@ -95,7 +95,7 @@ GameObject:
   - component: {fileID: 1129925864641423344}
   - component: {fileID: 1386745646125331531}
   m_Layer: 0
-  m_Name: Mod_Seed
+  m_Name: Mod_Plantable
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -129,11 +129,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  Data:
-    isPlanted: 0
-    plantedTilePos: {x: 0, y: 0}
-    growProgress: 0
-    growCompletionThreshold: 100
   ModData:
     Name: 
     ID: 
@@ -162,9 +157,9 @@ MonoBehaviour:
       Index: 0
     RuntimeOwnerSlotIndex: -1
     BitData: 
-  baseGrowthSpeed: 5
-  harvestedCropName: AppleTree
-  fertilityConsumePerSecond: 0.5
+  cropItemId: AppleTree
+  maxPlantingDistance: 2
+  previewAlpha: 0.7
 --- !u!1 &8585286343388931675
 GameObject:
   m_ObjectHideFlags: 0

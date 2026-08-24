@@ -82,6 +82,8 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
         _hitReceivers.Clear();
         _baseLocalPosition = transform.localPosition;
         _hitbox = GetComponent<Collider2D>();
+        if (_hitbox != null)
+            CombatPhysicsChannels.AssignDamageSender(_hitbox);
         ResolveDependencies();
         // GameRes 可能仍在加载技能目录，先静默尝试，真正调用技能时再严格报错。
         TryResolveDefinition(false);
@@ -289,7 +291,8 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
         ContactFilter2D filter = new ContactFilter2D
         {
             useTriggers = true,
-            useLayerMask = false,
+            useLayerMask = true,
+            layerMask = CombatPhysicsChannels.DamageReceiverMask,
             useDepth = false,
             useNormalAngle = false
         };
@@ -305,8 +308,11 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (_phase != ChargeAttackPhase.Rushing)
+        if (_phase != ChargeAttackPhase.Rushing ||
+            !CombatPhysicsChannels.IsDamageReceiverCollider(other))
+        {
             return;
+        }
 
         ApplyDamage(WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(other));
     }

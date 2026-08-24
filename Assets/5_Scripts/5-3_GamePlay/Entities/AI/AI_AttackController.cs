@@ -34,6 +34,12 @@ public class AI_AttackController
 #endregion
 
 #region Properties
+	/// <summary>动物实际伤害范围相对攻击检测范围的默认倍率。</summary>
+	public const float DefaultDamageRangeMultiplier = 1.5f;
+
+	/// <summary>当前攻击控制器使用的实际伤害范围倍率。</summary>
+	public float DamageRangeMultiplier { get; set; } = DefaultDamageRangeMultiplier;
+
 	/// <summary>攻击冷却时间（秒）</summary>
 	public float Cooldown { get; set; }
 
@@ -71,11 +77,12 @@ public class AI_AttackController
 	/// <summary>是否找到伤害组件</summary>
 	public bool HasDamageMods => _damageMods.Count > 0;
 
-	/// <summary>判断伤害模块是否属于需要在窗口起始帧补查重叠的 AI 触发器。</summary>
+	/// <summary>所有伤害模块都在窗口起始帧补查当前重叠目标。</summary>
 	public static bool ShouldScanCurrentOverlapsOnWindowStart(Mod_Damage damageMod)
 	{
-		return damageMod is Mod_Damage_AI;
+		return damageMod != null;
 	}
+
 #endregion
 
 #region Public API
@@ -92,7 +99,10 @@ public class AI_AttackController
 		{
 			Mod_Damage damageModule = damageModules[i];
 			if (damageModule != null)
+			{
 				_damageMods.Add(damageModule);
+				damageModule.SetDamageRangeMultiplier(DamageRangeMultiplier);
+			}
 		}
 
 		// 缓存 Mod_AnimatorController_Receiver，用于同步 IsAttacking 状态
@@ -263,20 +273,6 @@ public class AI_AttackController
 		// 视觉/事件状态与实际伤害窗口同时开始，首击和后续攻击使用同一时序。
 		SetAnimatorAttacking(true);
 		SetDamageEnabled(true);
-		ScanAIAttackOverlaps();
-	}
-
-	/// <summary>只扫描 AI 攻击触发器，避免影响武器伤害模块。</summary>
-	private void ScanAIAttackOverlaps()
-	{
-		for (int i = 0; i < _damageMods.Count; i++)
-		{
-			if (ShouldScanCurrentOverlapsOnWindowStart(_damageMods[i]) &&
-				_damageMods[i] is Mod_Damage_AI damageAI)
-			{
-				damageAI.ScanCurrentOverlapsAndApplyDamage();
-			}
-		}
 	}
 
 	/// <summary>

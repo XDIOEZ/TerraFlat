@@ -42,7 +42,7 @@ MonoBehaviour:
         - "\u6F6E\u6E7F"
         drinkHoldSeconds: 1
         drinkTickSeconds: 1
-        waterGainPerTick: 125
+        waterGainPerTick: 12.5
         dirtyWaterInfectionChance: 0.2
         shallowMoveSpeedMultiplier: 0.85
         moveSpeedMultiplier: 0.5

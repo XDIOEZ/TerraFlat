@@ -390,19 +390,19 @@ MonoBehaviour:
   - Prefab: {fileID: 4678875130974218576, guid: 46220fac86a489c48ab7f0d514bc3e40, type: 3}
     PrefabPath: Assets/2_Prefabs/Gameplay/Player/Player.prefab
     PrefabName: Player
-    Carbohydrates: 500
-    Fat: 500
-    Protein: 500
-    Water: 1500
-    Vitamins: 500
-    Max_Carbohydrates: 500
-    Max_Fat: 500
-    Max_Protein: 500
-    Max_Water: 1500
-    Max_Vitamins: 500
+    Carbohydrates: 50
+    Fat: 50
+    Protein: 50
+    Water: 150
+    Vitamins: 50
+    Max_Carbohydrates: 100
+    Max_Fat: 100
+    Max_Protein: 100
+    Max_Water: 150
+    Max_Vitamins: 100
     Max_EatingProgress: 3
-    nutritionConsumeSpeed: 0.5
-    WaterConsumeSpeedRate: 1
+    nutritionConsumeSpeed: 0.05
+    WaterConsumeSpeedRate: 0.1
     nutritionConsumeRate: 1
     EnableSpoilage: 1
     SpoilageIntervalSeconds: 1800

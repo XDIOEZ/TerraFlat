@@ -303,6 +303,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -1995,6 +2004,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -2171,6 +2189,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -2319,6 +2346,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "data": {
             "FoodData": {
@@ -2345,32 +2381,6 @@
           "data": {
             "BitData": "",
             "Type": 0
-          }
-        },
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": false,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":2.5,\"minVisibleDistance\":0.5,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Radish\",\"SummonerPrefabId\":\"Radish\"}",
-            "Type": 0
-          }
-        },
-        "地栽模块": {
-          "prefab": "Module_GroundPlant",
-          "id": "地栽模块",
-          "enabled": true,
-          "data": {
-            "BitData": "",
-            "Type": 0
-          },
-          "parameters": {
-            "harvestItemId": "Radish",
-            "buriedClip": 0.5,
-            "pullRadius": 1.0,
-            "pullDuration": 0.5,
-            "pullBezierOffset": 0.8,
-            "pullArcHeight": 0.6
           }
         }
       }
@@ -2468,6 +2478,18 @@
             "harvestFoodMin": 1,
             "harvestFoodMax": 2
           }
+        },
+        "cropVisual": {
+          "prefab": "Module_CropVisual",
+          "id": "Mod_CropVisual",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "buriedClip": 0.5
+          }
         }
       }
     },
@@ -2528,6 +2550,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -3020,6 +3051,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -3196,6 +3236,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -3372,6 +3421,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -3548,6 +3606,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -3771,6 +3838,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -3947,6 +4023,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -4123,6 +4208,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -4299,6 +4393,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -4475,6 +4578,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -4651,6 +4763,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -4827,6 +4948,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -5082,6 +5212,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -5258,6 +5397,15 @@
         }
       },
       "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
         "food": {
           "prefab": "Module_Food",
           "id": "食物模块",
@@ -5377,6 +5525,276 @@
         },
         "ItemSpecialData": "",
         "inHand": false
+      }
+    },
+    {
+      "id": "IceBlock",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "冰块",
+      "description": "从冰山中采集的冰块，可以食用以补充 10 点水分，但会使体温降低 5℃。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "47"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Tilemap/IceTileset.png"
+      },
+      "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
+        "food": {
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 0.0,
+                "Max_Carbohydrates": 0.0,
+                "Fat": 0.0,
+                "Max_Fat": 0.0,
+                "Protein": 0.0,
+                "Max_Protein": 0.0,
+                "Water": 10.0,
+                "Max_Water": 10.0,
+                "Vitamins": 0.0,
+                "Max_Vitamins": 0.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": false,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 0.0,
+                  "SpoilageTargetItemID": ""
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
+            "Type": 0
+          },
+          "parameters": {
+            "ConsumptionEnabled": true,
+            "ConsumeCompleteReplacementItemID": "",
+            "StaminaState": {
+              "StaminaRecoverSpeed": 0.0,
+              "StaminaConsumeSpeed": 0.0
+            },
+            "HealthState": {
+              "Enabled": false,
+              "HealSpeed": 0.0,
+              "WaterSelfHurt": 0.0,
+              "ProteinSelfHurt": 0.0,
+              "VitaminSelfHurt": 0.0,
+              "HealNeedRatio": 0.0
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Iceberg",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Mines/Iceberg.prefab",
+      "shellPrefab": "Iceberg",
+      "gameName": "小冰山",
+      "description": "冻结在雪地中的小型冰山，可采集并掉落冰块。",
+      "durability": 200.0,
+      "maxDurability": 200.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": false,
+      "tags": [
+        "Resource",
+        "Snow"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Tilemap/IceTileset.png"
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
+      "id": "Bush",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "Bush",
+      "description": "可自然生长并周期产出浆果的灌木。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": false,
+      "tags": ["35"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Plants/TX Plant.png[GrassLand_6]",
+        "rendererPath": "Render",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0.0, "y": 0.546875 },
+          "path": "",
+          "size": { "x": 1.25, "y": 1.09375 }
+        }
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 50.0,
+        "maxHp": 50.0,
+        "defense": { "cutting": 0.0, "piercing": 1.0, "chopping": 0.0, "blunt": 1.0 },
+        "moduleLocalPosition": { "x": 0.0, "y": 0.5, "z": 0.0 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0.0, "y": 0.0 },
+          "size": { "x": 1.0, "y": 1.0 }
+        }
+      },
+      "modules": {
+        "BerryBush": {
+          "prefab": "Module_BerryBush",
+          "id": "BerryBush",
+          "enabled": true,
+          "data": {
+            "CurrentBerryCount": 0,
+            "ProductionTimer": 0.0,
+            "IsInitialized": false
+          },
+          "parameters": {
+            "BerryItemId": "Berry",
+            "ProductionIntervalSeconds": 405.0,
+            "ProductionBatchSize": 6,
+            "MaxBerryCount": 12,
+            "NaturalInitialBerryCountMin": 1,
+            "NaturalInitialBerryCountMax": 2,
+            "SpawnRadius": 1.2,
+            "ThrowDuration": 0.5,
+            "ThrowBezierOffset": 0.8,
+            "ThrowArcHeight": 0.6,
+            "ReadySpriteLocalPositions": [
+              { "x": 0.25600004, "y": 0.549, "z": 0.0 },
+              { "x": -0.11899996, "y": 0.7, "z": 0.0 },
+              { "x": -0.28900003, "y": 0.389, "z": 0.0 }
+            ],
+            "ReadySpriteScale": 0.2859,
+            "UseBushRendererSorting": true,
+            "ReadySpriteSortingOrderOffset": -1,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": { "x": 0.0, "y": 0.31134617 },
+              "size": { "x": 1.0, "y": 0.592675 }
+            }
+          }
+        }
       }
     },
     {

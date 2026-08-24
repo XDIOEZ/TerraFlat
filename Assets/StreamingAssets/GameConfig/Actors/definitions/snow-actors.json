@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "actors": [
+    {
+      "id": "Rabbit",
+      "parent": "Chicken",
+      "shellPrefab": "CoreActor.Rabbit.Shell",
+      "shellAddress": "flatworld.actor.shell.rabbit",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Rabbit.prefab",
+      "gameName": "白兔",
+      "description": "生活在雪地中的白色兔子。",
+      "tags": [
+        "Rabbit",
+        "Animal",
+        "Prey"
+      ],
+      "visual": {
+        "animationState": "Stand",
+        "animatorControllerAddress": "flatworld.actor.animator.chicken",
+        "flipX": true
+      },
+      "modules": {
+        "ai": {
+          "prefab": "AI_Chicken",
+          "id": "Module_AI_Chicken",
+          "parameters": {
+            "debugLog": false,
+            "grassSustenanceDays": 6.0,
+            "eggItemId": "",
+            "layEggInterval": 999999.0,
+            "enableGrassForaging": true,
+            "edibleTags": [
+              "Food",
+              "Weed",
+              "Plant",
+              "Grass"
+            ]
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 7.5
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "rabbits"
+      }
+    },
+    {
+      "id": "SnowLeopard",
+      "parent": "Wolf",
+      "shellPrefab": "CoreActor.SnowLeopard.Shell",
+      "shellAddress": "flatworld.actor.shell.snowleopard",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/SnowLeopard.prefab",
+      "gameName": "雪豹",
+      "description": "在雪地中捕食兔子并主动攻击玩家的猛兽。",
+      "tags": [
+        "SnowLeopard",
+        "Predator",
+        "Animal"
+      ],
+      "visual": {
+        "animationState": "Idle",
+        "animatorControllerAddress": "flatworld.actor.animator.wolf",
+        "flipX": true
+      },
+      "modules": {
+        "ai": {
+          "prefab": "AI_SnowLeopard",
+          "id": "Module_AI_SnowLeopard",
+          "parameters": {
+            "debugLog": false,
+            "detectorRefreshInterval": 0.6,
+            "perceptionRangeSatiated": 8.0,
+            "perceptionRangeHungry": 24.0,
+            "chaseLossDistance": 30.0,
+            "preyReacquireDelay": 10.0,
+            "rabbitChaseDuration": 30.0,
+            "attackTriggerDistance": 1.4,
+            "attackCooldown": 1.2,
+            "attackDamageWindow": 0.25,
+            "attackDamageStartDelay": 0.35,
+            "attackRecoveryDuration": 0.25,
+            "enableWander": true,
+            "idleMinDuration": 0.8,
+            "idleMaxDuration": 2.2,
+            "wanderRadius": 5.0,
+            "wanderStopDistance": 0.4,
+            "wanderPauseMin": 0.8,
+            "wanderPauseMax": 2.5,
+            "wanderAvoidHighPenalty": true,
+            "wanderDangerPenalty": 1200,
+            "wanderSampleCount": 8,
+            "wanderPenaltyWeight": 1.0,
+            "animIdle": "Idle",
+            "animMove": "Move",
+            "animAlert": "Idle",
+            "animChase": "Move",
+            "animAttack": "Attack"
+          }
+        },
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 9.0
+              }
+            }
+          }
+        },
+        "damage": {
+          "parameters": {
+            "DamageValues": {
+              "Cutting": 10.0,
+              "Piercing": 10.0,
+              "Chopping": 1.0,
+              "Blunt": 1.0
+            }
+          }
+        },
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 200.0,
+              "MaxHp": 200.0,
+              "DefenseValues": {
+                "Cutting": 1.0,
+                "Piercing": 1.0,
+                "Chopping": 1.0,
+                "Blunt": 1.0
+              },
+              "LootTable": [
+                {
+                  "LootPrefabName": "Meat",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 3
+                },
+                {
+                  "LootPrefabName": "Fat",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 3
+                },
+                {
+                  "LootPrefabName": "Bone",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 3
+                },
+                {
+                  "LootPrefabName": "Leather",
+                  "DropChance": 1.0,
+                  "MinAmount": 2,
+                  "MaxAmount": 2
+                }
+              ]
+            }
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "snow_leopards"
+      }
+    }
+  ]
+}

@@ -106,6 +106,10 @@ public sealed class ItemDefinitionDto
     [JsonProperty("visual")]
     public ItemVisualDefinitionDto Visual;
 
+    /// <summary>可受伤对象的声明式配置；运行时会自动复用 Module_DamageReciver。</summary>
+    [JsonProperty("health", NullValueHandling = NullValueHandling.Ignore)]
+    public ItemHealthDefinitionDto Health;
+
     /// <summary>稳定模块名 -> 模块定义。稳定名会直接成为 ModuleDataDic 的键。</summary>
     [JsonProperty("modules")]
     public Dictionary<string, ItemModuleDefinitionDto> Modules = new();
@@ -209,6 +213,39 @@ public sealed class ItemColliderDefinitionDto
 }
 
 [Serializable]
+public sealed class ItemHealthDefinitionDto
+{
+    [JsonProperty("hasHp")]
+    public bool HasHp = true;
+
+    [JsonProperty("hp")]
+    public float Hp = 100f;
+
+    [JsonProperty("maxHp")]
+    public float MaxHp = 100f;
+
+    [JsonProperty("defense")]
+    public ItemDefenseDefinitionDto Defense = new();
+
+    /// <summary>DamageReceiver 模块节点相对 Item 根节点的位置。</summary>
+    [JsonProperty("moduleLocalPosition", NullValueHandling = NullValueHandling.Ignore)]
+    public Vector3? ModuleLocalPosition;
+
+    /// <summary>DamageReceiver 模块自己的受击 Collider，不与物品交互 Collider 混用。</summary>
+    [JsonProperty("collider", NullValueHandling = NullValueHandling.Ignore)]
+    public ItemColliderDefinitionDto Collider;
+}
+
+[Serializable]
+public sealed class ItemDefenseDefinitionDto
+{
+    [JsonProperty("cutting")] public float Cutting;
+    [JsonProperty("piercing")] public float Piercing;
+    [JsonProperty("chopping")] public float Chopping;
+    [JsonProperty("blunt")] public float Blunt;
+}
+
+[Serializable]
 public sealed class ItemModuleDefinitionDto
 {
     /// <summary>模块 Prefab ID；外壳已内置该模块时也使用同一个稳定 ID。</summary>
@@ -242,6 +279,7 @@ public sealed class RuntimeItemDefinition
     public string ShellPrefabId { get; }
     public GameObject ShellPrefab { get; }
     public ItemVisualDefinitionDto Visual { get; }
+    public ItemHealthDefinitionDto Health { get; }
     public string RendererPath => Visual?.RendererPath;
     public Sprite Sprite { get; }
     public RuntimeAnimatorController AnimatorController { get; }
@@ -269,6 +307,7 @@ public sealed class RuntimeItemDefinition
         GameObject shellPrefab,
         ItemData itemData,
         ItemVisualDefinitionDto visual,
+        ItemHealthDefinitionDto health,
         Sprite sprite,
         Dictionary<string, string> parameters,
         Dictionary<string, string> prefabIds,
@@ -282,6 +321,7 @@ public sealed class RuntimeItemDefinition
         ShellPrefab = shellPrefab;
         templateData = itemData;
         Visual = visual;
+        Health = health;
         Sprite = sprite;
         AnimatorController = animatorController;
         IsActor = isActor;

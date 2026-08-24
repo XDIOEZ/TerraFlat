@@ -145,6 +145,98 @@ namespace FlatWorld.GameTest.Combat
             }
         }
 
+        [Test]
+        [Category("Combat.Smoke")]
+        [Category("Smoke")]
+        public void ColliderResolutionFallsBackToOwningItemForSiblingDamageReceiver()
+        {
+            GameObject root = new GameObject("ColliderResolution_Test");
+            try
+            {
+                GameItem item = root.AddComponent<GameItem>();
+                item.BindData(new Data_GeneralItem());
+
+                GameObject colliderBranch = new GameObject("ColliderBranch");
+                colliderBranch.transform.SetParent(root.transform, false);
+                BoxCollider2D collider = colliderBranch.AddComponent<BoxCollider2D>();
+
+                GameObject receiverBranch = new GameObject("ReceiverBranch");
+                receiverBranch.transform.SetParent(root.transform, false);
+                DamageReceiver receiver = receiverBranch.AddComponent<DamageReceiver>();
+
+                DamageReceiver resolved =
+                    WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(collider);
+
+                Assert.That(resolved, Is.SameAs(receiver));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        [Category("PlayerInteraction.Smoke")]
+        [Category("Smoke")]
+        public void PlayerHandInteractionSenderHasNoPhysicsCollider()
+        {
+            const string path = "Assets/2_Prefabs/Gameplay/Items/Inventory/Module_Hand.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+
+            Assert.That(prefab, Is.Not.Null, $"玩家手部 Prefab 不存在：{path}");
+            Assert.That(prefab.GetComponent<Mod_InteractSender>(), Is.Not.Null,
+                "玩家手部必须保留 Mod_InteractSender 查询入口。");
+            Assert.That(prefab.GetComponent<Collider2D>(), Is.Null,
+                "交互发送器必须是纯查询通道，禁止重新挂载 Collider2D/Trigger。");
+        }
+
+        [Test]
+        [Category("Combat.Smoke")]
+        [Category("Smoke")]
+        public void DamageReceiverPrefabOwnsDedicatedTriggerCollider()
+        {
+            const string path = "Assets/2_Prefabs/Gameplay/Modules/Combat/Module_DamageReciver.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            DamageReceiver receiver = prefab != null ? prefab.GetComponent<DamageReceiver>() : null;
+            Collider2D collider = receiver != null ? receiver.GetComponent<Collider2D>() : null;
+
+            Assert.That(prefab, Is.Not.Null, $"伤害接收模块 Prefab 不存在：{path}");
+            Assert.That(receiver, Is.Not.Null, "伤害接收模块根节点缺少 DamageReceiver。");
+            Assert.That(collider, Is.Not.Null, "DamageReceiver 必须拥有自己的专用 Collider2D。");
+            Assert.That(collider.isTrigger, Is.True, "DamageReceiver 专用 Collider 必须是 Trigger。");
+            Assert.That(collider.gameObject.layer, Is.EqualTo(CombatPhysicsChannels.DamageReceiverLayer),
+                "DamageReceiver 专用 Collider 必须位于 DamageReciver Layer。");
+        }
+
+        [Test]
+        [Category("PlayerInteraction.Smoke")]
+        [Category("Combat.Smoke")]
+        public void DamageLayersRemainDedicatedAndDistinct()
+        {
+            int senderLayer = LayerMask.NameToLayer(CombatPhysicsChannels.DamageSenderLayerName);
+            int receiverLayer = LayerMask.NameToLayer(CombatPhysicsChannels.DamageReceiverLayerName);
+
+            Assert.That(senderLayer, Is.GreaterThanOrEqualTo(0), "缺少 DamageSender Layer。");
+            Assert.That(receiverLayer, Is.GreaterThanOrEqualTo(0), "缺少 DamageReciver Layer。");
+            Assert.That(senderLayer, Is.Not.EqualTo(receiverLayer),
+                "DamageSender 与 DamageReciver 必须保持独立 Layer。");
+
+            CombatPhysicsChannels.EnsureConfigured();
+            for (int layer = 0; layer < 32; layer++)
+            {
+                bool shouldIgnoreFromSender = layer != receiverLayer;
+                bool shouldIgnoreFromReceiver = layer != senderLayer;
+                Assert.That(
+                    Physics2D.GetIgnoreLayerCollision(senderLayer, layer),
+                    Is.EqualTo(shouldIgnoreFromSender),
+                    $"DamageSender 与 Layer {layer} 的接触矩阵错误。");
+                Assert.That(
+                    Physics2D.GetIgnoreLayerCollision(receiverLayer, layer),
+                    Is.EqualTo(shouldIgnoreFromReceiver),
+                    $"DamageReciver 与 Layer {layer} 的接触矩阵错误。");
+            }
+        }
+
         /// <summary>动物死亡必须按物种配置必掉骨头数量，且保留随机上下界。</summary>
         [Test]
         [Category("Combat.Smoke")]

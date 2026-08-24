@@ -97,8 +97,9 @@ namespace FlatWorld.Automation
 
             _interactionRetrySender =
                 context.Player.GetComponentInChildren<Mod_InteractSender>(true);
-            if (_interactionRetrySender?.interactCollider == null)
-                throw new InvalidOperationException("真实玩家缺少可用的交互发送器或探测碰撞体。");
+            // 交互发送器已改为 Physics2D Overlap 纯查询，不再依赖玩家侧交互 Trigger。
+            if (_interactionRetrySender == null)
+                throw new InvalidOperationException("真实玩家缺少可用的交互发送器。");
 
             _interactionRetryOriginalDistance = _interactionRetrySender.maxInteractDistance;
             _interactionRetryDistanceCaptured = true;

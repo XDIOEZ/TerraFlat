@@ -121,6 +121,11 @@ public class ItemMods
 
     public void AddMod(Module mod)
     {
+        if (mod == null)
+            throw new ArgumentNullException(nameof(mod));
+
+        // 所有模块索引统一从同一处建立身份，禁止空 ID/Name 进入字典。
+        mod.EnsureRuntimeIdentity();
 
         // 添加到 Mods
         Mods[mod._Data.Name] = mod;

@@ -315,11 +315,11 @@ namespace FlatWorld.GameTest.AI
             Assert.That(attackController.IsDamageWindowActive, Is.False);
         }
 
-        /// <summary>首击窗口必须补查 AI 触发器内已有目标，且不能把扫描扩散到武器模块。</summary>
+        /// <summary>首击窗口的重叠扫描必须由所有伤害模块共享。</summary>
         [Test]
         [Category("AI.Smoke")]
         [Category("Smoke")]
-        public void AttackControllerFirstWindowScansOnlyAIDamageModules()
+        public void AttackControllerFirstWindowUsesSharedDamageScan()
         {
             GameObject wildBoarPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab");
@@ -340,7 +340,7 @@ namespace FlatWorld.GameTest.AI
                     Is.True);
                 Assert.That(
                     AI_AttackController.ShouldScanCurrentOverlapsOnWindowStart(genericDamage),
-                    Is.False);
+                    Is.True);
             }
             finally
             {

@@ -42,7 +42,7 @@
       "displayName": "速度1",
       "description": "短时间提高移动速度。",
       "durationSeconds": 5.0,
-      "stackMode": "refresh_duration",
+      "stackMode": "extend_duration",
       "effects": [
         {
           "phase": "start",

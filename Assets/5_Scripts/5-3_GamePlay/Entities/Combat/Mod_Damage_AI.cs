@@ -58,6 +58,23 @@ public class Mod_Damage_AI : Mod_Damage,ITrunDirection
     }
 
     [SerializeField] private float xOffset = 0.5f;
+    private float baseXOffset;
+    private bool hasBaseXOffset;
+
+    /// <summary>同步放大 AI 伤害碰撞体尺寸与朝向偏移，保证前方实际伤害距离同比扩大。</summary>
+    public override void SetDamageRangeMultiplier(float multiplier)
+    {
+        if (!hasBaseXOffset)
+        {
+            baseXOffset = xOffset;
+            hasBaseXOffset = true;
+        }
+
+        float safeMultiplier = Mathf.Max(1f, multiplier);
+        base.SetDamageRangeMultiplier(safeMultiplier);
+        xOffset = baseXOffset * safeMultiplier;
+    }
+
     public void ToOtherDirection(Vector2 direction)
     {
         SnapToDirection(direction);
@@ -78,9 +95,4 @@ public class Mod_Damage_AI : Mod_Damage,ITrunDirection
         transform.localPosition = currentLocalPos;
     }
 
-    /// <summary>在 AI 伤害窗口开始时补查已经重叠的目标。</summary>
-    public void ScanCurrentOverlapsAndApplyDamage()
-    {
-        ScanCurrentOverlapsAndApplyDamageForAiWindow();
-    }
 }

@@ -127,8 +127,6 @@ public class Mover_AI : Mover
         CanMove = false;
         HasReachedTarget = true;
         NavigationAgent?.Stop();
-        if (rb != null)
-            rb.velocity = Vector2.zero;
     }
 
     public void ForceRepath()

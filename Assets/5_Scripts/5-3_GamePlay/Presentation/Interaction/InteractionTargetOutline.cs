@@ -3,25 +3,13 @@ using UnityEngine;
 
 /// <summary>
 /// 交互目标的本地白色描边。组件运行时挂在目标 Item/视觉根节点上，
-/// 通过多份白色 Sprite 轻微错位形成轮廓，不修改原始 SpriteRenderer 的材质。
+/// 每个源 SpriteRenderer 只创建一份略微放大的白色 Sprite 作为轮廓，
+/// 不修改原始 SpriteRenderer 的材质。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class InteractionTargetOutline : MonoBehaviour
 {
     private const float DefaultThicknessPixels = 2f;
-    private const int OutlineCopyCount = 8;
-
-    private static readonly Vector2[] OutlineDirections =
-    {
-        new Vector2(1f, 0f),
-        new Vector2(-1f, 0f),
-        new Vector2(0f, 1f),
-        new Vector2(0f, -1f),
-        new Vector2(0.7071f, 0.7071f),
-        new Vector2(-0.7071f, 0.7071f),
-        new Vector2(0.7071f, -0.7071f),
-        new Vector2(-0.7071f, -0.7071f)
-    };
 
     private static Shader outlineShader;
     private static Material sharedOutlineMaterial;
@@ -116,15 +104,15 @@ public sealed class InteractionTargetOutline : MonoBehaviour
             activeSourceRenderers.Add(source);
             OutlineEntry entry = GetOrCreateEntry(source);
             if (entry != null)
-                SyncOutlineRenderers(source, entry, material);
+                SyncOutlineRenderer(source, entry, material);
         }
 
         for (int i = outlineEntries.Count - 1; i >= 0; i--)
         {
             OutlineEntry entry = outlineEntries[i];
-            if (entry.Source == null || entry.Renderers == null)
+            if (entry.Source == null || entry.Renderer == null)
             {
-                DestroyEntryRenderers(entry);
+                DestroyEntryRenderer(entry);
                 outlineEntries.RemoveAt(i);
                 continue;
             }
@@ -139,14 +127,14 @@ public sealed class InteractionTargetOutline : MonoBehaviour
         for (int i = 0; i < outlineEntries.Count; i++)
         {
             OutlineEntry existing = outlineEntries[i];
-            if (existing.Source == source && existing.Renderers != null)
+            if (existing.Source == source && existing.Renderer != null)
                 return existing;
 
-            if (existing.Source == null || existing.Renderers == null)
+            if (existing.Source == null || existing.Renderer == null)
             {
-                DestroyEntryRenderers(existing);
+                DestroyEntryRenderer(existing);
                 existing.Source = source;
-                existing.Renderers = CreateOutlineRenderers(source);
+                existing.Renderer = CreateOutlineRenderer(source);
                 return existing;
             }
         }
@@ -154,71 +142,108 @@ public sealed class InteractionTargetOutline : MonoBehaviour
         OutlineEntry created = new OutlineEntry
         {
             Source = source,
-            Renderers = CreateOutlineRenderers(source)
+            Renderer = CreateOutlineRenderer(source)
         };
         outlineEntries.Add(created);
         return created;
     }
 
-    /// <summary>在源 Sprite 周围放置 8 个白色副本，形成稳定的像素级轮廓。</summary>
-    private void SyncOutlineRenderers(
+    /// <summary>
+    /// 同步单个白色副本，并按期望像素厚度在 X/Y 两轴分别放大。
+    /// 缩放时补偿 Sprite Pivot，使放大围绕可见区域中心进行，而不是围绕 Pivot 偏移。
+    /// </summary>
+    private void SyncOutlineRenderer(
         SpriteRenderer source,
         OutlineEntry entry,
         Material material)
     {
-        float pixelsPerUnit = source.sprite != null
-            ? Mathf.Max(0.01f, source.sprite.pixelsPerUnit)
-            : 1f;
-        float worldThickness = Mathf.Max(0.25f, thicknessPixels) / pixelsPerUnit;
+        SpriteRenderer outline = entry.Renderer;
+        if (outline == null)
+            return;
 
-        for (int i = 0; i < entry.Renderers.Length; i++)
-        {
-            SpriteRenderer outline = entry.Renderers[i];
-            if (outline == null)
-                continue;
+        outline.sharedMaterial = material;
+        outline.sprite = source.sprite;
+        outline.color = new Color(1f, 1f, 1f, source.color.a);
+        outline.flipX = source.flipX;
+        outline.flipY = source.flipY;
+        outline.maskInteraction = source.maskInteraction;
+        outline.sortingLayerID = source.sortingLayerID;
+        outline.sortingOrder = source.sortingOrder == int.MinValue
+            ? int.MinValue
+            : source.sortingOrder - 1;
+        outline.drawMode = source.drawMode;
+        outline.size = source.size;
+        outline.tileMode = source.tileMode;
 
-            outline.sharedMaterial = material;
-            outline.sprite = source.sprite;
-            outline.color = new Color(1f, 1f, 1f, source.color.a);
-            outline.flipX = source.flipX;
-            outline.flipY = source.flipY;
-            outline.maskInteraction = source.maskInteraction;
-            outline.sortingLayerID = source.sortingLayerID;
-            outline.sortingOrder = source.sortingOrder == int.MinValue
-                ? int.MinValue
-                : source.sortingOrder - 1;
-            outline.drawMode = source.drawMode;
-            outline.size = source.size;
-            outline.tileMode = source.tileMode;
-
-            // 描边渲染器是源节点的子节点，继承源节点的旋转与缩放；
-            // InverseTransformVector 保证不同缩放下仍然是固定像素厚度。
-            Vector3 worldOffset = OutlineDirections[i] * worldThickness;
-            outline.transform.localPosition = source.transform.InverseTransformVector(worldOffset);
-            outline.transform.localRotation = Quaternion.identity;
-            outline.transform.localScale = Vector3.one;
-            outline.enabled = highlighted && source.enabled &&
-                source.gameObject.activeInHierarchy && source.sprite != null;
-        }
+        Vector3 outlineScale = CalculateOutlineScale(source);
+        Vector3 visibleCenter = CalculateVisibleLocalCenter(source);
+        outline.transform.localPosition = new Vector3(
+            visibleCenter.x * (1f - outlineScale.x),
+            visibleCenter.y * (1f - outlineScale.y),
+            0f);
+        outline.transform.localRotation = Quaternion.identity;
+        outline.transform.localScale = outlineScale;
+        outline.enabled = highlighted && source.enabled &&
+            source.gameObject.activeInHierarchy && source.sprite != null;
     }
 
-    private static SpriteRenderer[] CreateOutlineRenderers(SpriteRenderer source)
+    private Vector3 CalculateOutlineScale(SpriteRenderer source)
     {
-        SpriteRenderer[] renderers = new SpriteRenderer[OutlineCopyCount];
-        for (int i = 0; i < renderers.Length; i++)
-        {
-            GameObject outlineObject = new GameObject("Interaction Outline");
-            outlineObject.hideFlags = HideFlags.DontSave;
-            outlineObject.layer = source.gameObject.layer;
-            outlineObject.transform.SetParent(source.transform, worldPositionStays: false);
+        Sprite sprite = source.sprite;
+        if (sprite == null)
+            return Vector3.one;
 
-            SpriteRenderer outline = outlineObject.AddComponent<SpriteRenderer>();
-            outline.hideFlags = HideFlags.DontSave;
-            outline.enabled = false;
-            renderers[i] = outline;
-        }
+        float pixelsPerUnit = Mathf.Max(0.01f, sprite.pixelsPerUnit);
+        float localThickness = Mathf.Max(0.25f, thicknessPixels) / pixelsPerUnit;
+        Vector2 renderedSize = GetRenderedLocalSize(source);
 
-        return renderers;
+        float scaleX = 1f + (2f * localThickness / Mathf.Max(0.0001f, Mathf.Abs(renderedSize.x)));
+        float scaleY = 1f + (2f * localThickness / Mathf.Max(0.0001f, Mathf.Abs(renderedSize.y)));
+        return new Vector3(scaleX, scaleY, 1f);
+    }
+
+    private static Vector3 CalculateVisibleLocalCenter(SpriteRenderer source)
+    {
+        Sprite sprite = source.sprite;
+        if (sprite == null)
+            return Vector3.zero;
+
+        Vector2 renderedSize = GetRenderedLocalSize(source);
+        Vector2 rectSize = sprite.rect.size;
+        float pivotX = rectSize.x > 0.0001f ? sprite.pivot.x / rectSize.x : 0.5f;
+        float pivotY = rectSize.y > 0.0001f ? sprite.pivot.y / rectSize.y : 0.5f;
+
+        float centerX = (0.5f - pivotX) * renderedSize.x;
+        float centerY = (0.5f - pivotY) * renderedSize.y;
+        if (source.flipX)
+            centerX = -centerX;
+        if (source.flipY)
+            centerY = -centerY;
+
+        return new Vector3(centerX, centerY, 0f);
+    }
+
+    private static Vector2 GetRenderedLocalSize(SpriteRenderer source)
+    {
+        if (source.sprite == null)
+            return Vector2.one;
+
+        return source.drawMode == SpriteDrawMode.Simple
+            ? (Vector2)source.sprite.bounds.size
+            : source.size;
+    }
+
+    private static SpriteRenderer CreateOutlineRenderer(SpriteRenderer source)
+    {
+        GameObject outlineObject = new GameObject("Interaction Outline");
+        outlineObject.hideFlags = HideFlags.DontSave;
+        outlineObject.layer = source.gameObject.layer;
+        outlineObject.transform.SetParent(source.transform, worldPositionStays: false);
+
+        SpriteRenderer outline = outlineObject.AddComponent<SpriteRenderer>();
+        outline.hideFlags = HideFlags.DontSave;
+        outline.enabled = false;
+        return outline;
     }
 
     private void DisableOutlineRenderers()
@@ -229,44 +254,25 @@ public sealed class InteractionTargetOutline : MonoBehaviour
 
     private static void SetEntryEnabled(OutlineEntry entry, bool enabled)
     {
-        if (entry?.Renderers == null)
-            return;
-
-        for (int i = 0; i < entry.Renderers.Length; i++)
-        {
-            if (entry.Renderers[i] != null)
-                entry.Renderers[i].enabled = enabled;
-        }
+        if (entry?.Renderer != null)
+            entry.Renderer.enabled = enabled;
     }
 
     private bool IsOutlineRenderer(SpriteRenderer candidate)
     {
         for (int i = 0; i < outlineEntries.Count; i++)
         {
-            SpriteRenderer[] renderers = outlineEntries[i].Renderers;
-            if (renderers == null)
-                continue;
-
-            for (int j = 0; j < renderers.Length; j++)
-            {
-                if (renderers[j] == candidate)
-                    return true;
-            }
+            if (outlineEntries[i].Renderer == candidate)
+                return true;
         }
 
         return false;
     }
 
-    private static void DestroyEntryRenderers(OutlineEntry entry)
+    private static void DestroyEntryRenderer(OutlineEntry entry)
     {
-        if (entry?.Renderers == null)
-            return;
-
-        for (int i = 0; i < entry.Renderers.Length; i++)
-        {
-            if (entry.Renderers[i] != null)
-                Destroy(entry.Renderers[i].gameObject);
-        }
+        if (entry?.Renderer != null)
+            Destroy(entry.Renderer.gameObject);
     }
 
     /// <summary>优先使用项目内白色轮廓 Shader，再回退到 URP/内置 Sprite Shader。</summary>
@@ -292,6 +298,6 @@ public sealed class InteractionTargetOutline : MonoBehaviour
     private sealed class OutlineEntry
     {
         public SpriteRenderer Source;
-        public SpriteRenderer[] Renderers;
+        public SpriteRenderer Renderer;
     }
 }
