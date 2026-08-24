@@ -23,6 +23,8 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 远程网络副本不进入本地 Tick、感知和存档索引。
 - 新模块同时检查脚本、ModuleData、模块/Item Prefab、Addressables 与 JSON 定义。
 - Item 与 Actor 的 `modules.*.parameters` 共用 `ModuleJsonConfigurator` 严格契约；删除或改名可配置字段后必须同步现行 JSON，并运行“FlatWorld/内容配置/校验全部本体内容”，禁止等到具体实例生成时才发现漂移。
+- 运行时生成模块参数时，`Vector2/Vector3` 必须显式写成 `x/y/z` 的 `JObject`；禁止 `JToken.FromObject(UnityEngine.Vector*)`，否则 Json.NET 会遍历 `normalized` 等计算属性并形成自引用。
+- JSON 定义实体的战利品以 `LootPrefabName` 稳定 ID 为权威；Prefab 不再保存冗余 `LootPrefab` 对象引用，避免资源重建后残留旧 FileID 并触发 PPtr 类型转换错误。
 - Manifest 是唯一发现入口；包的最终 `shellPrefab` 必须与声明一致。
 - 内容工坊创建物品时只写继承差异：父定义和参考模块必须来自启用分包，Sprite 先生成稳定 Addressables 地址，JSON 写入前校验继承、重复 ID、文件指纹与分包外壳边界。
 - `RuntimeItemDefinition.IsActor` 只表示复用通用管线；Actor 还必须登记到 `GameRes.ActorDefinitions` 且外壳包含 `IAIActor`。

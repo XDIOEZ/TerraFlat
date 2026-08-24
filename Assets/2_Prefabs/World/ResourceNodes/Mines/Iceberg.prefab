@@ -286,7 +286,7 @@ PrefabInstance:
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.data[0].LootPrefab
       value: 
-      objectReference: {fileID: 100100000, guid: 7fa1725ad46407f47a171f54026e684b, type: 3}
+      objectReference: {fileID: 0}
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.data[0].LootPrefabName
       value: IceBlock

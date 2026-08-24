@@ -845,7 +845,7 @@ public static class ItemDefinitionCatalogLoader
         {
             parameters["$transform"] = new JObject
             {
-                ["localPosition"] = JToken.FromObject(health.ModuleLocalPosition.Value)
+                ["localPosition"] = CreateVector3Token(health.ModuleLocalPosition.Value)
             };
         }
 
@@ -856,15 +856,45 @@ public static class ItemDefinitionCatalogLoader
             if (!string.IsNullOrWhiteSpace(collider.Type)) colliderJson["type"] = collider.Type;
             if (collider.Enabled.HasValue) colliderJson["enabled"] = collider.Enabled.Value;
             if (collider.IsTrigger.HasValue) colliderJson["isTrigger"] = collider.IsTrigger.Value;
-            if (collider.Offset.HasValue) colliderJson["offset"] = JToken.FromObject(collider.Offset.Value);
-            if (collider.Size.HasValue) colliderJson["size"] = JToken.FromObject(collider.Size.Value);
+            if (collider.Offset.HasValue) colliderJson["offset"] = CreateVector2Token(collider.Offset.Value);
+            if (collider.Size.HasValue) colliderJson["size"] = CreateVector2Token(collider.Size.Value);
             if (collider.EdgeRadius.HasValue) colliderJson["edgeRadius"] = collider.EdgeRadius.Value;
             if (collider.Radius.HasValue) colliderJson["radius"] = collider.Radius.Value;
             if (collider.Direction.HasValue) colliderJson["direction"] = collider.Direction.Value;
-            if (collider.Points != null) colliderJson["points"] = JToken.FromObject(collider.Points);
+            if (collider.Points != null) colliderJson["points"] = CreateVector2ArrayToken(collider.Points);
             parameters["$collider2D"] = colliderJson;
         }
         moduleParameters.Add(moduleName, parameters.ToString(Formatting.None));
+    }
+
+    /// <summary>按物品 JSON 契约显式序列化 Vector2，避免 Json.NET 遍历 Unity 计算属性。</summary>
+    private static JObject CreateVector2Token(Vector2 value)
+    {
+        return new JObject
+        {
+            ["x"] = value.x,
+            ["y"] = value.y
+        };
+    }
+
+    /// <summary>按物品 JSON 契约显式序列化 Vector3，避免 normalized 等计算属性形成自引用。</summary>
+    private static JObject CreateVector3Token(Vector3 value)
+    {
+        return new JObject
+        {
+            ["x"] = value.x,
+            ["y"] = value.y,
+            ["z"] = value.z
+        };
+    }
+
+    /// <summary>逐点构建碰撞轮廓数组，统一复用 Vector2 的稳定字段契约。</summary>
+    private static JArray CreateVector2ArrayToken(IEnumerable<Vector2> values)
+    {
+        var result = new JArray();
+        foreach (Vector2 value in values)
+            result.Add(CreateVector2Token(value));
+        return result;
     }
 
     private static void PopulateTemplateData(JObject data, ItemData template, string itemId)
