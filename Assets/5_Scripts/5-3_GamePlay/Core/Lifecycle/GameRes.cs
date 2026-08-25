@@ -9,7 +9,7 @@ using System.IO;
 using System.Linq;
 using FlatWorld.Gameplay.Quests;
 
-public class GameRes : SingletonAutoMono<GameRes>
+public partial class GameRes : SingletonAutoMono<GameRes>
 {
     #region 字段
 
@@ -101,18 +101,23 @@ public class GameRes : SingletonAutoMono<GameRes>
         // 初始化时显示加载界面
         showLoadingGUI = true;
         loadingText = "正在加载资源...";
+        InitializeResourceLoadingPresentation();
+        RefreshResourceLoadingPresentation();
         StartCoroutine(LoadResourcesWithProgress());
     }
 
+    /// <summary>刷新资源加载界面，并保留 F5 热重载入口。</summary>
     public void Update()
     {
-            // 这里可以添加一些调试输入，例如按下某个键可以重新加载资源
-            if (Input.GetKeyDown(KeyCode.F5))
-            {
-                Debug.Log("F5键被按下，开始热更新资源...");
-                showLoadingGUI = true;
-                StartCoroutine(LoadResourcesWithProgress());
-            }
+        RefreshResourceLoadingPresentation();
+
+        // 这里可以添加一些调试输入，例如按下某个键可以重新加载资源
+        if (Input.GetKeyDown(KeyCode.F5))
+        {
+            Debug.Log("F5键被按下，开始热更新资源...");
+            showLoadingGUI = true;
+            StartCoroutine(LoadResourcesWithProgress());
+        }
     }
 
     #endregion
@@ -1109,60 +1114,4 @@ public void HotReloadAllResources()
 
     #endregion
 
-    #region GUI进度条显示
-    
-    private void OnGUI()
-    {
-        if (!showLoadingGUI) return;
-
-        // 设置GUI样式
-        GUIStyle boxStyle = new GUIStyle(GUI.skin.box);
-        boxStyle.normal.background = MakeTex(2, 2, new Color(0f, 0f, 0f, 0.8f));
-        
-        GUIStyle labelStyle = new GUIStyle(GUI.skin.label);
-        labelStyle.fontSize = 16;
-        labelStyle.normal.textColor = Color.white;
-        labelStyle.alignment = TextAnchor.MiddleCenter;
-        
-        GUIStyle progressStyle = new GUIStyle(GUI.skin.box);
-        progressStyle.normal.background = MakeTex(2, 2, new Color(0.2f, 0.6f, 1f, 1f));
-
-        // 计算位置和尺寸
-        float width = 400;
-        float height = 100;
-        float x = (Screen.width - width) / 2;
-        float y = (Screen.height - height) / 2;
-
-        // 绘制背景框
-        GUI.Box(new Rect(x, y, width, height), "", boxStyle);
-        
-        // 绘制标题
-        GUI.Label(new Rect(x, y + 10, width, 20), loadingText, labelStyle);
-        
-        // 绘制进度条背景
-        GUI.Box(new Rect(x + 20, y + 40, width - 40, 20), "", GUI.skin.box);
-        
-        // 绘制进度条
-        GUI.Box(new Rect(x + 22, y + 42, (width - 44) * loadingProgress, 16), "", progressStyle);
-        
-        // 绘制进度文本
-        GUI.Label(new Rect(x, y + 65, width, 20), 
-                 $"{Mathf.RoundToInt(loadingProgress * 100)}%", labelStyle);
-    }
-    
-    // 创建纹理的辅助方法
-    private Texture2D MakeTex(int width, int height, Color col)
-    {
-        Color[] pix = new Color[width * height];
-        for (int i = 0; i < pix.Length; ++i)
-        {
-            pix[i] = col;
-        }
-        Texture2D result = new Texture2D(width, height);
-        result.SetPixels(pix);
-        result.Apply();
-        return result;
-    }
-    
-    #endregion
 }

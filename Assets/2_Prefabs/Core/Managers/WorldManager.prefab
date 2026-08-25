@@ -151,6 +151,7 @@ MonoBehaviour:
   LoadedCount: 0
   ADBLabels: []
   isLoadFinish: 0
+  resourceLoadingPrefab: {fileID: 5552011803808462458, guid: 63c6695ef248a43479328512440e2b8c, type: 3}
 --- !u!1 &3563432657672857351
 GameObject:
   m_ObjectHideFlags: 0

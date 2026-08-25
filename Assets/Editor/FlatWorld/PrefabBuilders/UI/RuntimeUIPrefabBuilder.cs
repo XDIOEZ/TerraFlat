@@ -25,6 +25,8 @@ public static class RuntimeUIPrefabBuilder
     private const string SettingsPanelsRoot = PrefabRoot + "Settings/Panels/";
     private const string SettingsComponentsRoot = PrefabRoot + "Settings/Components/";
     private const string UIRootPrefab = "Assets/Resources/UI/UIRoot.prefab";
+    /// <summary>承载 GameRes 直接引用的管理器 Prefab 路径。</summary>
+    private const string WorldManagerPrefab = "Assets/2_Prefabs/Core/Managers/WorldManager.prefab";
     private const string InventoryPanelsRoot = PrefabRoot + "Gameplay/Inventory/Panels/";
     private const string InventoryComponentsRoot = PrefabRoot + "Gameplay/Inventory/Components/";
     private const string NetworkPlayerPrefab = "Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab";
@@ -124,6 +126,7 @@ public static class RuntimeUIPrefabBuilder
         SaveNewPrefab(SettingsComponentsRoot + RuntimeUIPrefabKeys.InputBindingRow + ".prefab", BuildInputBindingRow);
         SaveNewPrefab(DialogueRoot + RuntimeUIPrefabKeys.PlayerChatInput + ".prefab", BuildPlayerChatInput);
         SaveNewPrefab(DialogueRoot + RuntimeUIPrefabKeys.CharacterSpeechBubble + ".prefab", BuildSpeechBubble);
+        SaveResourceLoadingPrefab();
         SaveNewPrefab(LoadingRoot + RuntimeUIPrefabKeys.WorldLoading + ".prefab", BuildWorldLoading);
         SaveDimensionLoadingPrefab();
         SavePlayerWorldCoordinatePrefab();
@@ -202,6 +205,24 @@ public static class RuntimeUIPrefabBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[Runtime UI] 已固化维度切换专属加载页并注册 Addressable。");
+    }
+
+    /// <summary>只重建启动资源加载面板，并把直接引用同步到 WorldManager。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Resource Loading UI")]
+    public static void RebuildResourceLoadingUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(LoadingRoot);
+        SaveResourceLoadingPrefab();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化启动资源加载 UGUI，并绑定到 WorldManager.prefab。");
     }
 
     /// <summary>只重建区块流送设置和入口，避免小改动重写全部运行时 Prefab。</summary>
@@ -420,6 +441,38 @@ public static class RuntimeUIPrefabBuilder
         string prefabPath = MobileRoot + RuntimeUIPrefabKeys.MobileControls + ".prefab";
         SaveNewPrefab(prefabPath, BuildMobileControlsHUD);
         EnsureRuntimePrefabAddressable(prefabPath);
+    }
+
+    /// <summary>保存启动资源加载面板、登记 Prefab 标签，并建立启动阶段可用的直接引用。</summary>
+    private static void SaveResourceLoadingPrefab()
+    {
+        string prefabPath = LoadingRoot + RuntimeUIPrefabKeys.ResourceLoading + ".prefab";
+        SaveNewPrefab(prefabPath, BuildResourceLoading);
+        EnsureRuntimePrefabAddressable(prefabPath);
+        BindResourceLoadingPrefab(prefabPath);
+    }
+
+    /// <summary>把资源加载 Prefab 直接绑定给 GameRes，避免启动时反向依赖 Addressables。</summary>
+    private static void BindResourceLoadingPrefab(string prefabPath)
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (prefab == null)
+            throw new FileNotFoundException($"找不到资源加载 Prefab：{prefabPath}", prefabPath);
+
+        UpdateExistingWorldPrefab(WorldManagerPrefab, root =>
+        {
+            GameRes gameRes = root.GetComponentInChildren<GameRes>(true);
+            if (gameRes == null)
+                throw new MissingComponentException($"{WorldManagerPrefab} 缺少 GameRes。");
+
+            SerializedObject serializedGameRes = new SerializedObject(gameRes);
+            SerializedProperty prefabProperty = serializedGameRes.FindProperty("resourceLoadingPrefab");
+            if (prefabProperty == null)
+                throw new System.MissingFieldException(nameof(GameRes), "resourceLoadingPrefab");
+
+            prefabProperty.objectReferenceValue = prefab;
+            serializedGameRes.ApplyModifiedPropertiesWithoutUndo();
+        });
     }
 
     /// <summary>保存维度加载页并登记为 GameRes 可寻址 Prefab。</summary>
@@ -856,6 +909,94 @@ public static class RuntimeUIPrefabBuilder
         return root;
     }
 
+    /// <summary>构建主菜单启动阶段使用的资源加载面板，确保长错误信息在手机上可读。</summary>
+    private static GameObject BuildResourceLoading()
+    {
+        GameObject root = new GameObject(
+            RuntimeUIPrefabKeys.ResourceLoading,
+            typeof(RectTransform),
+            typeof(Canvas),
+            typeof(CanvasScaler),
+            typeof(GraphicRaycaster),
+            typeof(CanvasGroup),
+            typeof(CanvasRenderer),
+            typeof(Image));
+        Stretch(root.GetComponent<RectTransform>());
+
+        Canvas canvas = root.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = UIManager.GlobalOverlaySortingOrder + 10;
+
+        CanvasScaler scaler = root.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
+        canvasGroup.alpha = 1f;
+        canvasGroup.interactable = true;
+        canvasGroup.blocksRaycasts = true;
+        root.AddComponent<FullScreenRectController>();
+
+        Image blocker = root.GetComponent<Image>();
+        blocker.color = new Color(0.005f, 0.012f, 0.018f, 0.42f);
+        blocker.raycastTarget = true;
+
+        GameObject card = CreateUIObject("资源加载内容", root.transform, typeof(Image), typeof(Shadow));
+        SetCentered(card.GetComponent<RectTransform>(), Vector2.zero, new Vector2(760f, 340f));
+        Image cardImage = card.GetComponent<Image>();
+        cardImage.color = new Color(0.025f, 0.043f, 0.058f, 0.98f);
+        cardImage.raycastTarget = true;
+        AddOutline(cardImage, Amber);
+        Shadow shadow = card.GetComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.72f);
+        shadow.effectDistance = new Vector2(8f, -8f);
+
+        VerticalLayoutGroup layout = card.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(42, 42, 30, 28);
+        layout.spacing = 14f;
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        TextMeshProUGUI title = CreateText(GameRes.ResourceLoadingTitleKey, card.transform, "正在准备游戏", 28f, Cream);
+        title.fontStyle = FontStyles.Bold;
+        title.alignment = TextAlignmentOptions.Center;
+        title.gameObject.AddComponent<LayoutElement>().preferredHeight = 46f;
+
+        TextMeshProUGUI status = CreateText(GameRes.ResourceLoadingStatusKey, card.transform, "正在加载资源…", 18f, Muted);
+        status.alignment = TextAlignmentOptions.Center;
+        status.enableWordWrapping = true;
+        status.overflowMode = TextOverflowModes.Ellipsis;
+        LayoutElement statusLayout = status.gameObject.AddComponent<LayoutElement>();
+        statusLayout.preferredHeight = 112f;
+        statusLayout.minHeight = 88f;
+
+        Slider progress = CreateSlider(GameRes.ResourceLoadingProgressKey, card.transform);
+        progress.interactable = false;
+        progress.value = 0f;
+        LayoutElement progressLayout = progress.GetComponent<LayoutElement>();
+        progressLayout.flexibleWidth = 0f;
+        progressLayout.preferredWidth = 650f;
+        progressLayout.preferredHeight = 30f;
+        Image progressFill = progress.fillRect.GetComponent<Image>();
+        progressFill.gameObject.name = GameRes.ResourceLoadingProgressFillKey;
+        progressFill.color = Teal;
+
+        TextMeshProUGUI percent = CreateText(GameRes.ResourceLoadingProgressTextKey, card.transform, "0%", 16f, Teal);
+        percent.alignment = TextAlignmentOptions.Center;
+        percent.gameObject.AddComponent<LayoutElement>().preferredHeight = 26f;
+
+        TextMeshProUGUI hint = CreateText("资源加载提示", card.transform, "若加载失败，这里会显示完整原因。", 14f, Muted);
+        hint.alignment = TextAlignmentOptions.Center;
+        hint.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+        return root;
+    }
+
+    /// <summary>构建进入世界阶段的全屏加载面板。</summary>
     private static GameObject BuildWorldLoading()
     {
         GameObject root = new GameObject(

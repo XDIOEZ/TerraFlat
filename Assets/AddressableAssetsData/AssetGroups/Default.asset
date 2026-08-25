@@ -734,6 +734,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 63c6695ef248a43479328512440e2b8c
+    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Loading/UI_ResourceLoading.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 648dac1c2de9b3544ad86849c39a90fd
     m_Address: Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe.prefab
     m_ReadOnly: 0

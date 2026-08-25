@@ -14,6 +14,8 @@ public static class RuntimeUIPrefabKeys
     public const string DifficultySettings = "UI_DifficultySettings";
     public const string InputBindingSettings = "UI_InputBindingSettings";
     public const string InputBindingRow = "UI_InputBindingRow";
+    /// <summary>启动资源加载面板的运行时键。</summary>
+    public const string ResourceLoading = "UI_ResourceLoading";
     public const string WorldLoading = "UI_WorldLoading";
     public const string DimensionLoading = "UI_DimensionLoading";
     public const string PlayerWorldCoordinate = "UI_PlayerWorldCoordinate";
