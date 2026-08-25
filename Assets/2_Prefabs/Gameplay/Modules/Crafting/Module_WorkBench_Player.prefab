@@ -65,7 +65,7 @@ MonoBehaviour:
       type: {class: Inventory_WorkBench_Player, ns: , asm: GamePlay}
       data:
         item: {fileID: 0}
-        InventoryPanel_Prefab: {fileID: 2639614329428065687, guid: 1a0739458f9b88b48a21f91e3b9165f5, type: 3}
+        InventoryPanel_Prefab: {fileID: 0}
         Data:
           Name: "\u5DE5\u4F5C\u53F0\u6A21\u5757Player"
           itemSlots:

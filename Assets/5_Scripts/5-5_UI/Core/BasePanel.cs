@@ -100,6 +100,8 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     public event Action Closed;
     /// <summary>领域面板可优先消费取消操作，例如关闭危险确认层而不是直接关闭整个面板。</summary>
     public Func<BaseEventData, bool> CancelOverride { get; set; }
+    /// <summary>全局返回快捷键可改为执行领域操作，例如主菜单先打开退出确认弹窗。</summary>
+    public Func<bool> CancelShortcutOverride { get; set; }
 
     /// <summary>
     /// 是否属于可由全局取消快捷键关闭的临时面板。
@@ -469,6 +471,12 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         Close();
     }
 
+    /// <summary>尝试由当前面板消费全局返回快捷键，返回 false 时继续执行默认关闭。</summary>
+    public bool TryHandleCancelShortcut()
+    {
+        return CancelShortcutOverride != null && CancelShortcutOverride.Invoke();
+    }
+
     private void EnsureAutomaticNavigation()
     {
         for (int i = 0; i < cachedSelectables.Count; i++)
@@ -626,6 +634,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         Opened = null;
         Closed = null;
         CancelOverride = null;
+        CancelShortcutOverride = null;
     }
 
     /// <summary>对象启停会改变活动面板集合，必须让顶层查询缓存失效。</summary>

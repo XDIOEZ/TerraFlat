@@ -491,6 +491,9 @@ public class UIManager : MonoBehaviour
             return false;
 
         NotifyCancelHandled();
+        if (panel.TryHandleCancelShortcut())
+            return true;
+
         panel.Close();
         return true;
     }

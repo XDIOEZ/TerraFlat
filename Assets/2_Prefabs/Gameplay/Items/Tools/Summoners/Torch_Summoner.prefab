@@ -408,6 +408,7 @@ Transform:
   - {fileID: 793706225745631514}
   - {fileID: 3349173214522782817}
   - {fileID: 233801405259438190}
+  - {fileID: 7124704697337900338}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!61 &3681087309403493207
@@ -560,6 +561,151 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   angleOffsetDegrees: -90
+--- !u!1 &8051387479475521460
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7124704697337900338}
+  - component: {fileID: 4050081302774068573}
+  - component: {fileID: 7150694752012627211}
+  m_Layer: 7
+  m_Name: Module_DamageReciver
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7124704697337900338
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8051387479475521460}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2335076056409787281}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!61 &4050081302774068573
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8051387479475521460}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_UsedByComposite: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  serializedVersion: 2
+  m_Size: {x: 1, y: 1}
+  m_EdgeRadius: 0
+--- !u!114 &7150694752012627211
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8051387479475521460}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66936691572dbd04a801f40fe0923069, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  modData:
+    Name: 
+    ID: "\u751F\u547D\u503C\u7CFB\u7EDF\u6A21\u5757"
+    isRunning: 1
+    Type: 0
+    BitData: 
+  Data:
+    Hp: 180
+    MaxHp: 180
+    UseBodyPartHealth: 0
+    TwoPartHitChance: 0.25
+    BodyPartDataVersion: 0
+    BodyParts: []
+    DefenseValues:
+      Cutting: 8
+      Piercing: 8
+      Chopping: 8
+      Blunt: 8
+    AttackersUIDs: 
+    DamageInterval: 0.12
+    DestroyDelay: 0
+    LootTable:
+    - LootPrefab: {fileID: 5065571277225119290, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
+      LootPrefabName: Chicken
+      DropChance: 0.001
+      MinAmount: 1
+      MaxAmount: 1
+  OnDead:
+    _PersistentCalls: []
+  HurtActions: []
+  DeathActions: []
+  impactAudioMaterial: 0
+  hurtAudioCueId: 
+  enableHitSlowdown: 1
+  hitSlowMultiplier: 0.5
+  hitSlowDuration: 0.35
+  flashCount: 1
+  flashDuration: 0.2
+  flashColor: {r: 1, g: 0.08, b: 0.08, a: 1}
+  shakeDuration: 0.15
+  shakeMagnitude: 0.1
+  PanelPrefab: {fileID: 7613977154932231161, guid: b614f979ae7094b42b6d0f058d4052cc, type: 3}
+  PanleInstance: {fileID: 0}
+  DataUpdate:
+    _PersistentCalls: []
+  UIValues: {fileID: 0}
+  HideUiDelayAfterLastDamage: 4
+  healthBarTopPadding: 0.16
+  healthBarWorldScale: 0.55
+  Equipment_Inventory: {fileID: 0}
+  enableDebugTools: 0
+  references:
+    version: 2
+    RefIds: []
 --- !u!1001 &1503584275506472771
 PrefabInstance:
   m_ObjectHideFlags: 0

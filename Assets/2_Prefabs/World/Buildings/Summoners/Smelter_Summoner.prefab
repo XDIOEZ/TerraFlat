@@ -51,28 +51,6 @@ MonoBehaviour:
     ID: 
     isRunning: 1
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
     BitData: 
   Data:
     SmeltingProgress: 10
@@ -177,7 +155,7 @@ MonoBehaviour:
   ignitionFuelValueOverride: 8
   ignitionMaxTemperatureOverride: 180
   basePanel: {fileID: 0}
-  UI_Prefab: {fileID: 2639614329428065687, guid: e92ff9f445bbe42498036ec3756abe05, type: 3}
+  UI_Prefab: {fileID: 2639614329428065687, guid: 6afd653fc5050c441a633e547e62c6f0, type: 3}
   WorkButton: {fileID: 0}
   progressSlider: {fileID: 0}
   fuelSlider: {fileID: 0}
@@ -375,10 +353,10 @@ MonoBehaviour:
   OnDurabilityModified:
     _PersistentCalls: []
   updateInterval: 0
-  Data:
+  data:
     IDName: "Smelter_Summoner"
     GameName: Smelter
-    Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
+    Description: "\u7528\u4E8E\u51B6\u70BC\u77FF\u77F3\u7684\u7194\u7089\u3002"
     Durability: 1
     MaxDurability: 1
     Tags:
@@ -394,6 +372,7 @@ MonoBehaviour:
     ItemSpecialData: 
     inHand: 0
     Guid: 2133285210
+    FactionId: 
     code: 
 --- !u!61 &4274464180475841882
 BoxCollider2D:

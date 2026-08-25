@@ -7,6 +7,7 @@ using UnityEditor;
 using UnityEditor.Localization;
 using UnityEngine;
 using UnityEngine.Localization;
+using UnityEngine.Localization.Platform.Android;
 using UnityEngine.Localization.Settings;
 using UnityEngine.Localization.Tables;
 using TMPro;
@@ -183,6 +184,8 @@ namespace FlatWorld.Localization.Editor
                 { "收起", "Collapse" },
                 { "展开", "Expand" },
                 { "设置", "Settings" },
+                { "退出游戏", "Exit Game" },
+                { "确定要退出游戏吗？", "Are you sure you want to exit the game?" },
                 { "继续旅程", "Continue Journey" },
                 { "开始旅程", "Begin Journey" },
                 { "新建世界", "New World" },
@@ -731,6 +734,7 @@ namespace FlatWorld.Localization.Editor
             StringTable uiChineseTable = EnsureTable(uiCollection, chinese);
             StringTable uiEnglishTable = EnsureTable(uiCollection, english);
             int uiCount = SyncUiEntries(uiChineseTable, uiEnglishTable);
+            EnsureAndroidAppInfoMetadata(settings, uiCollection);
 
             LocalizationEditorSettings.SetPreloadTableFlag(chineseTable, true);
             LocalizationEditorSettings.SetPreloadTableFlag(englishTable, true);
@@ -749,6 +753,38 @@ namespace FlatWorld.Localization.Editor
             AssetDatabase.Refresh();
 
             Debug.Log($"[FlatWorld Localization] 已完成设置：Locale=zh-CN/en，物品条目={itemCount}，任务文本={questTextCount}，UI 文本={uiCount}，Tables={FlatWorldLocalizationService.DefaultTable}/{FlatWorldLocalizationService.UiTable}");
+        }
+
+        #endregion
+
+        #region 平台元数据
+
+        /// <summary>将 Android 桌面名称绑定到已有的“平坦世界”多语言条目。</summary>
+        internal static void EnsureAndroidAppInfoMetadata(
+            LocalizationSettings settings,
+            StringTableCollection uiCollection)
+        {
+            if (settings == null)
+                throw new ArgumentNullException(nameof(settings));
+            if (uiCollection == null)
+                throw new ArgumentNullException(nameof(uiCollection));
+
+            string appNameKey = FlatWorldLocalizationService.GetUiTextKey("平坦世界");
+            SharedTableData.SharedTableEntry appNameEntry = uiCollection.SharedData.GetEntry(appNameKey);
+            if (appNameEntry == null)
+                throw new InvalidOperationException($"FlatWorldUI 缺少 Android 应用名称条目：{appNameKey}");
+
+            AppInfo appInfo = LocalizationSettings.Metadata.GetMetadata<AppInfo>();
+            if (appInfo == null)
+            {
+                appInfo = new AppInfo();
+                LocalizationSettings.Metadata.AddMetadata(appInfo);
+            }
+
+            appInfo.DisplayName = new LocalizedString(
+                uiCollection.TableCollectionNameReference,
+                appNameEntry.Id);
+            EditorUtility.SetDirty(settings);
         }
 
         #endregion

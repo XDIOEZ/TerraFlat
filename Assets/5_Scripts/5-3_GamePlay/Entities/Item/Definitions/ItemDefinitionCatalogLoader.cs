@@ -18,6 +18,19 @@ public static class ItemDefinitionCatalogLoader
     public const int SupportedSchemaVersion = 1;
     public const string RelativeItemRoot = "GameConfig/Items";
     public const string ManifestFileName = "item-manifest.json";
+
+    /// <summary>已由新模块 Prefab 或 JSON 外壳取代，不再进入通用 Prefab 注册表的旧资源。</summary>
+    private static readonly string[] ObsoleteRuntimePrefabPaths =
+    {
+        "Assets/2_Prefabs/Gameplay/Items/Inventory/Module_Furnace.prefab",
+        "Assets/2_Prefabs/Gameplay/Modules/AI/Module_MoverAI.prefab",
+        "Assets/2_Prefabs/Gameplay/Modules/Combat/AttackTrigger.prefab",
+        "Assets/2_Prefabs/Gameplay/Modules/Common/Module_FocusPoint.prefab",
+        "Assets/2_Prefabs/Gameplay/Modules/Managers/TileReciver.prefab",
+        "Assets/2_Prefabs/Gameplay/Modules/Movement/Module_Move.prefab",
+        "Assets/2_Prefabs/Gameplay/Modules/Movement/Mover.prefab",
+        "Assets/2_Prefabs/Gameplay/Modules/Variants/Module_SmeltingVariant.prefab"
+    };
     public const string RelativeManifestPath = RelativeItemRoot + "/" + ManifestFileName;
 
     public static string BuiltInItemRoot =>
@@ -336,6 +349,7 @@ public static class ItemDefinitionCatalogLoader
             if (!requiredPrefabIds.Contains(prefabId))
                 redundant.Add(path);
         }
+        redundant.UnionWith(ObsoleteRuntimePrefabPaths);
         return redundant;
     }
 
@@ -682,6 +696,7 @@ public static class ItemDefinitionCatalogLoader
             result = (JObject)ResolveOne(parentId, sources, resolved, resolving).DeepClone();
         }
 
+        RemoveReplacedModuleBodies(result, source);
         result.Merge(source, new JsonMergeSettings
         {
             MergeArrayHandling = MergeArrayHandling.Replace,
@@ -694,6 +709,33 @@ public static class ItemDefinitionCatalogLoader
         resolving.Remove(id);
         resolved.Add(id, result);
         return result;
+    }
+
+    /// <summary>子定义切换模块 Prefab 时丢弃父模块参数，避免把旧组件字段合并进新组件。</summary>
+    private static void RemoveReplacedModuleBodies(JObject inherited, JObject source)
+    {
+        if (inherited?["modules"] is not JObject inheritedModules ||
+            source?["modules"] is not JObject sourceModules)
+        {
+            return;
+        }
+
+        foreach (JProperty childModule in sourceModules.Properties())
+        {
+            if (childModule.Value is not JObject childBody ||
+                inheritedModules[childModule.Name] is not JObject inheritedBody)
+            {
+                continue;
+            }
+
+            string inheritedPrefab = inheritedBody.Value<string>("prefab")?.Trim();
+            string childPrefab = childBody.Value<string>("prefab")?.Trim();
+            if (!string.IsNullOrWhiteSpace(childPrefab) &&
+                !string.Equals(inheritedPrefab, childPrefab, StringComparison.OrdinalIgnoreCase))
+            {
+                inheritedModules.Remove(childModule.Name);
+            }
+        }
     }
 
     #endregion

@@ -17,12 +17,16 @@ public static class BuildingSummonerPrefabGenerator
     public const string SummonerRoot = BuildingRoot + "/Summoners";
     public const string ToolRoot = "Assets/2_Prefabs/Gameplay/Items/Tools";
     public const string ToolSummonerRoot = ToolRoot + "/Summoners";
+    public const string FoodRoot = "Assets/2_Prefabs/Gameplay/Items/Food";
+    public const string FoodSummonerRoot = FoodRoot + "/Summoners";
+    public const string SpaceRoot = "Assets/2_Prefabs/World/Space";
+    public const string SpaceSummonerRoot = SpaceRoot + "/Summoners";
 
     // 建筑伤害模块由 Item.ModuleLoad 按模块数据注入，禁止在建筑 Prefab 中保留嵌套实例。
     private const string DamageReceiverModulePrefabGuid = "c107cb4a775f75a4ab50708e43ad3078";
 
-    private static readonly string[] SourceRoots = { BuildingRoot, ToolRoot };
-    private static readonly string[] SummonerRoots = { SummonerRoot, ToolSummonerRoot };
+    private static readonly string[] SourceRoots = { BuildingRoot, ToolRoot, FoodRoot, SpaceRoot };
+    private static readonly string[] SummonerRoots = { SummonerRoot, ToolSummonerRoot, FoodSummonerRoot, SpaceSummonerRoot };
 
     private static readonly HashSet<string> PendingBuildingPaths = new(StringComparer.OrdinalIgnoreCase);
     private static bool _scheduled;
@@ -191,11 +195,7 @@ public static class BuildingSummonerPrefabGenerator
             buildingPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(buildingPath);
         }
 
-        string destinationRoot = buildingPath.StartsWith(
-            ToolRoot + "/",
-            StringComparison.OrdinalIgnoreCase)
-            ? ToolSummonerRoot
-            : SummonerRoot;
+        string destinationRoot = GetSummonerRoot(buildingPath);
         string summonerPath = $"{destinationRoot}/{MakeSafeFileName(summonerId)}.prefab";
         // Prefab variants cannot represent every custom ItemData value. Mirror the
         // source YAML instead and preserve an existing destination .meta file so
@@ -217,6 +217,18 @@ public static class BuildingSummonerPrefabGenerator
 
         summonerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(summonerPath);
         return changed;
+    }
+
+    /// <summary>按建筑本体所属玩法目录选择对应召唤器目录。</summary>
+    private static string GetSummonerRoot(string buildingPath)
+    {
+        if (buildingPath.StartsWith(ToolRoot + "/", StringComparison.OrdinalIgnoreCase))
+            return ToolSummonerRoot;
+        if (buildingPath.StartsWith(FoodRoot + "/", StringComparison.OrdinalIgnoreCase))
+            return FoodSummonerRoot;
+        if (buildingPath.StartsWith(SpaceRoot + "/", StringComparison.OrdinalIgnoreCase))
+            return SpaceSummonerRoot;
+        return SummonerRoot;
     }
 
     #region Prefab YAML 序列化
@@ -606,6 +618,10 @@ public static class BuildingSummonerPrefabGenerator
             AssetDatabase.CreateFolder(BuildingRoot, "Summoners");
         if (!AssetDatabase.IsValidFolder(ToolSummonerRoot))
             AssetDatabase.CreateFolder(ToolRoot, "Summoners");
+        if (!AssetDatabase.IsValidFolder(FoodSummonerRoot))
+            AssetDatabase.CreateFolder(FoodRoot, "Summoners");
+        if (!AssetDatabase.IsValidFolder(SpaceSummonerRoot))
+            AssetDatabase.CreateFolder(SpaceRoot, "Summoners");
     }
 
     private static GameObject LoadPlaceablePrefab(string prefabId)

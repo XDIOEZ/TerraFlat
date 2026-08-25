@@ -146,10 +146,10 @@ MonoBehaviour:
   OnDurabilityModified:
     _PersistentCalls: []
   updateInterval: 0
-  Data:
+  data:
     IDName: "Tent_Summoner"
     GameName: Tent
-    Description: "\u4EC0\u4E48\u90FD\u6CA1\u6709\u63CF\u8FF0"
+    Description: "\u53EF\u4F9B\u4F11\u606F\u4E0E\u906E\u853D\u7684\u5E10\u7BF7\u3002"
     Durability: 1
     MaxDurability: 1
     Tags:
@@ -165,6 +165,7 @@ MonoBehaviour:
     ItemSpecialData: 
     inHand: 0
     Guid: 138509677
+    FactionId: 
     code: 
 --- !u!61 &7595501820574997015
 BoxCollider2D:

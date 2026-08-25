@@ -16,6 +16,3 @@ MonoBehaviour:
   GenerationVersion: 2
   Definitions:
   - {fileID: 11400000, guid: 10e9a86fdf584e6488329ea23a104857, type: 2}
-  - {fileID: 11400000, guid: 772698442da74eb419380918663c858a, type: 2}
-  - {fileID: 11400000, guid: af8b51a6a9c0c4a4ea208771d3fc3a3a, type: 2}
-  - {fileID: 11400000, guid: e565245c4768f6047af1a83fe909823e, type: 2}

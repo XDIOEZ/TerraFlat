@@ -121,6 +121,7 @@ public static class FlatWorldContentValidator
         public readonly Dictionary<string, PrefabRecord> PrefabAliases = new(StringComparer.Ordinal);
         public readonly Dictionary<string, PrefabRecord> ItemIds = new(StringComparer.Ordinal);
         public readonly HashSet<string> ItemDefinitionIds = new(StringComparer.Ordinal);
+        public readonly Dictionary<string, ItemDefinitionDto> ItemDefinitions = new(StringComparer.Ordinal);
         public readonly HashSet<string> BiomeNames = new(StringComparer.Ordinal);
     }
 
@@ -178,15 +179,20 @@ public static class FlatWorldContentValidator
 
     #region Prefab、物品与模块
 
+    /// <summary>按 GameRes 的真实通用 Prefab 加载计划建立别名目录。</summary>
     private static void BuildPrefabCatalog(ValidationContext context, FlatWorldContentValidationReport report)
     {
         string[] prefabGuids = AssetDatabase.FindAssets("t:Prefab", new[] { PrefabRoot });
         Array.Sort(prefabGuids, StringComparer.Ordinal);
+        HashSet<string> excludedPaths = GetGenericPrefabExclusions();
 
         Dictionary<string, PrefabRecord> itemIdsIgnoreCase = new(StringComparer.OrdinalIgnoreCase);
         foreach (string guid in prefabGuids)
         {
             string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (excludedPaths.Contains(path))
+                continue;
+
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (prefab == null)
             {
@@ -366,14 +372,16 @@ public static class FlatWorldContentValidator
                     continue;
                 }
 
-                string moduleId = data.ID?.Trim();
+                string moduleId = module.CanonicalModuleId?.Trim();
                 if (string.IsNullOrWhiteSpace(moduleId))
                 {
-                    AddError(report, "FWC-MODULE-003", record.Path, module.GetType().Name + "._Data.ID", "模块 ID 为空。", module);
-                }
-                else
-                {
-                    ValidateModulePrefabReference(context, report, record.Path, module, moduleId);
+                    AddError(
+                        report,
+                        "FWC-MODULE-003",
+                        record.Path,
+                        module.GetType().Name + ".CanonicalModuleId",
+                        "模块无法建立运行时身份。",
+                        module);
                 }
 
                 string moduleName = data.Name?.Trim();
@@ -665,7 +673,10 @@ public static class FlatWorldContentValidator
                 ? sourcePath
                 : ItemManifestAssetPath;
             if (!definition.Abstract)
+            {
                 context.ItemDefinitionIds.Add(definition.Id);
+                context.ItemDefinitions[definition.Id] = definition;
+            }
             ValidateResolvedItemDefinition(
                 context,
                 report,
@@ -718,19 +729,6 @@ public static class FlatWorldContentValidator
                     field + ".sourcePrefab",
                     $"迁移源 '{sourcePrefabPath}' 不存在或缺少 ItemData。",
                     null);
-            }
-            else if (!string.Equals(
-                         sourceItem.itemData.IDName,
-                         definition.Id,
-                         StringComparison.OrdinalIgnoreCase))
-            {
-                AddError(
-                    report,
-                    "FWC-ITEMJSON-009",
-                    assetPath,
-                    field + ".sourcePrefab",
-                    $"迁移源 ItemData.IDName '{sourceItem.itemData.IDName}' 与定义 ID '{definition.Id}' 不一致。",
-                    sourcePrefab);
             }
         }
 
@@ -795,7 +793,8 @@ public static class FlatWorldContentValidator
             string modulePrefabId = pair.Value.Prefab?.Trim();
             if (string.IsNullOrWhiteSpace(modulePrefabId) ||
                 !context.PrefabAliases.ContainsKey(modulePrefabId) &&
-                !knownDefinitionIds.Contains(modulePrefabId))
+                !knownDefinitionIds.Contains(modulePrefabId) &&
+                ResolveDefinitionModulePrototype(context, definition, modulePrefabId) == null)
             {
                 AddError(
                     report,
@@ -844,6 +843,8 @@ public static class FlatWorldContentValidator
 
         foreach (ItemDefinitionDto definition in definitions.Where(entry => entry != null && !entry.Abstract))
         {
+            context.ItemDefinitionIds.Add(definition.Id);
+            context.ItemDefinitions[definition.Id] = definition;
             string actorField = $"actors[{definition.Id}]";
             if (definition.Modules == null || definition.Modules.Count == 0)
             {
@@ -1320,13 +1321,39 @@ public static class FlatWorldContentValidator
                     record.Item);
             }
 
-            if (record.Prefab.GetComponentInChildren<DamageReceiver>(true) == null)
-                AddError(report, "FWC-BUILDING-013", record.Path, "DamageReceiver", "建筑缺少必填生命值模块。", module);
+            if (record.Prefab.GetComponentInChildren<DamageReceiver>(true) == null &&
+                !DefinitionProvidesBuildingHealth(context, expectedSummonerId))
+            {
+                AddError(
+                    report,
+                    "FWC-BUILDING-013",
+                    record.Path,
+                    "DamageReceiver",
+                    $"建筑及其召唤器定义 '{expectedSummonerId}' 均未提供生命值模块。",
+                    module);
+            }
             if (record.Prefab.GetComponentInChildren<BoxCollider2D>(true) == null)
                 AddError(report, "FWC-BUILDING-014", record.Path, "BoxCollider2D", "建筑缺少必填占地碰撞体。", module);
             if (record.Prefab.GetComponentInChildren<SpriteRenderer>(true) == null)
                 AddError(report, "FWC-BUILDING-015", record.Path, "SpriteRenderer", "建筑缺少放置预览所需的 SpriteRenderer。", module);
         }
+    }
+
+    /// <summary>检查召唤器 JSON 是否会在运行时注入建筑生命值模块。</summary>
+    private static bool DefinitionProvidesBuildingHealth(ValidationContext context, string summonerId)
+    {
+        if (string.IsNullOrWhiteSpace(summonerId) ||
+            !context.ItemDefinitions.TryGetValue(summonerId, out ItemDefinitionDto definition))
+        {
+            return false;
+        }
+
+        if (definition.Health?.HasHp == true)
+            return true;
+
+        return definition.Modules?.Values.Any(module =>
+            module != null &&
+            string.Equals(module.Prefab?.Trim(), "Module_DamageReciver", StringComparison.Ordinal)) == true;
     }
 
     private static bool BuildingStatesMatch(Mod_Building.Building_Data left, Mod_Building.Building_Data right)
@@ -1337,7 +1364,7 @@ public static class FlatWorldContentValidator
         return left.Version == right.Version &&
                left.Role == right.Role &&
                left.State == right.State &&
-               string.Equals(left.SnapshotBase64, right.SnapshotBase64, StringComparison.Ordinal) &&
+               string.Equals(left.SnapshotBase64 ?? string.Empty, right.SnapshotBase64 ?? string.Empty, StringComparison.Ordinal) &&
                string.Equals(left.BuildingPrefabId, right.BuildingPrefabId, StringComparison.Ordinal) &&
                string.Equals(left.SummonerPrefabId, right.SummonerPrefabId, StringComparison.Ordinal);
     }
@@ -1408,7 +1435,8 @@ public static class FlatWorldContentValidator
                         AddError(report, "FWC-SPAWNER-007", path, field + ".PrefabName", $"生物 ID '{speciesId}' 已在 {ownerPath} 配置。", config);
                     else
                         speciesOwners[speciesId] = path;
-                    if (!context.PrefabAliases.ContainsKey(speciesId))
+                    if (!context.PrefabAliases.ContainsKey(speciesId) &&
+                        !context.ItemDefinitionIds.Contains(speciesId))
                         AddError(report, "FWC-SPAWNER-008", path, field + ".PrefabName", $"生物 ID '{speciesId}' 无法解析到 Prefab。", config);
                 }
 
@@ -1471,7 +1499,8 @@ public static class FlatWorldContentValidator
                 SpawnerSpawnEntryDefinition entry = config.SpawnEntries[entryIndex];
                 string speciesId = entry?.PrefabName?.Trim();
                 if (!string.IsNullOrWhiteSpace(speciesId) &&
-                    !context.PrefabAliases.ContainsKey(speciesId))
+                    !context.PrefabAliases.ContainsKey(speciesId) &&
+                    !context.ItemDefinitionIds.Contains(speciesId))
                 {
                     AddError(
                         report,
@@ -1607,6 +1636,10 @@ public static class FlatWorldContentValidator
         SerializedProperty chanceProperty = property.FindPropertyRelative("DropChance");
         SerializedProperty minProperty = property.FindPropertyRelative("MinAmount");
         SerializedProperty maxProperty = property.FindPropertyRelative("MaxAmount");
+        // Unity 会把 List<LootEntry> 容器也报告成 LootEntry；容器本身不是掉落条目。
+        if (prefabProperty == null && idProperty == null)
+            return;
+
         string field = property.propertyPath;
         string itemId = idProperty?.stringValue?.Trim();
 
@@ -1656,6 +1689,10 @@ public static class FlatWorldContentValidator
         SerializedProperty idProperty = property.FindPropertyRelative("lootName");
         SerializedProperty prefabProperty = property.FindPropertyRelative("lootPrefab");
         SerializedProperty amountProperty = property.FindPropertyRelative("lootAmountRange");
+        // Unity 会把 List<LootData> 容器也报告成 LootData；只校验真实元素。
+        if (prefabProperty == null && idProperty == null)
+            return;
+
         string field = property.propertyPath;
         string itemId = idProperty?.stringValue?.Trim();
 
@@ -1681,6 +1718,9 @@ public static class FlatWorldContentValidator
     private static void ValidateBiomes(ValidationContext context, FlatWorldContentValidationReport report)
     {
         string biomeRoot = ScriptObjectRoot + "/4-8_Biome";
+        if (!AssetDatabase.IsValidFolder(biomeRoot))
+            return;
+
         string[] guids = AssetDatabase.FindAssets("t:BiomeData", new[] { biomeRoot });
         Array.Sort(guids, StringComparer.Ordinal);
         Dictionary<string, string> biomePaths = new(StringComparer.Ordinal);
@@ -1882,15 +1922,26 @@ public static class FlatWorldContentValidator
             return;
         }
 
-        string prefabFolderGuid = AssetDatabase.AssetPathToGUID(PrefabRoot);
-        AddressableAssetEntry entry = settings.FindAssetEntry(prefabFolderGuid);
-        if (entry == null)
+        HashSet<string> genericExclusions = GetGenericPrefabExclusions();
+        HashSet<string> actorShellPaths = GetActorShellPaths();
+        foreach (string guid in FindAssetGuids("t:Prefab", PrefabRoot))
         {
-            AddError(report, "FWC-PREFAB-008", PrefabRoot, "Addressables.Entry", "Prefab 根目录未加入 Addressables，GameRes 无法加载本体 Prefab。", settings);
-        }
-        else if (!entry.labels.Contains("Prefab"))
-        {
-            AddError(report, "FWC-PREFAB-009", PrefabRoot, "Addressables.Labels", "Prefab 根目录缺少 'Prefab' 标签。", settings);
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (genericExclusions.Contains(path) && !actorShellPaths.Contains(path))
+                continue;
+
+            AddressableAssetEntry entry = settings.FindAssetEntry(guid);
+            string requiredLabel = actorShellPaths.Contains(path)
+                ? ActorDefinitionCatalogLoader.ShellAddressableLabel
+                : "Prefab";
+            if (entry == null)
+            {
+                AddError(report, "FWC-PREFAB-008", path, "Addressables.Entry", "运行时 Prefab 未加入 Addressables。", settings);
+            }
+            else if (!entry.labels.Contains(requiredLabel))
+            {
+                AddError(report, "FWC-PREFAB-009", path, "Addressables.Labels", $"运行时 Prefab 缺少 '{requiredLabel}' 标签。", settings);
+            }
         }
     }
 
@@ -1954,6 +2005,25 @@ public static class FlatWorldContentValidator
     #endregion
 
     #region 工具方法
+
+    /// <summary>返回通用 Prefab 标签加载阶段必须跳过的 JSON 专用资源。</summary>
+    private static HashSet<string> GetGenericPrefabExclusions()
+    {
+        HashSet<string> excludedPaths = ItemDefinitionCatalogLoader.GetRedundantBuiltInPrefabPaths();
+        excludedPaths.UnionWith(GetActorShellPaths());
+        return excludedPaths;
+    }
+
+    /// <summary>返回由 ActorDefinition 通过稳定地址独立加载的 Actor 外壳路径。</summary>
+    private static HashSet<string> GetActorShellPaths()
+    {
+        return new HashSet<string>(
+            ActorDefinitionCatalogLoader.LoadBuiltInDefinitions()
+                .Where(definition => definition != null && !definition.Abstract)
+                .Select(definition => definition.SourcePrefab?.Trim().Replace('\\', '/'))
+                .Where(path => !string.IsNullOrWhiteSpace(path)),
+            StringComparer.OrdinalIgnoreCase);
+    }
 
     private static IEnumerable<string> FindAssetGuids(string filter, params string[] roots)
     {

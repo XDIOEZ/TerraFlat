@@ -126,7 +126,7 @@ MonoBehaviour:
       type: {class: Inventory_Furnace, ns: , asm: GamePlay}
       data:
         item: {fileID: 0}
-        InventoryPanel_Prefab: {fileID: 2639614329428065687, guid: e92ff9f445bbe42498036ec3756abe05, type: 3}
+        InventoryPanel_Prefab: {fileID: 0}
         Data:
           Name: "\u7194\u7089\u6A21\u5757"
           itemSlots: []

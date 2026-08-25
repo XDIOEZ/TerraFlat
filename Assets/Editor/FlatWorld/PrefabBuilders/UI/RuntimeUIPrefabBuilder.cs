@@ -122,6 +122,7 @@ public static class RuntimeUIPrefabBuilder
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.UISettings + ".prefab", BuildInterfaceSettings);
         SaveCoordinateDisplaySettingsPrefab();
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.MainMenuSettings + ".prefab", BuildMainMenuSettings);
+        SaveMainMenuExitConfirmationPrefab();
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.AutoSaveSettings + ".prefab", BuildAutoSaveSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab", BuildWorldStreamingSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.DifficultySettings + ".prefab", BuildDifficultySettings);
@@ -288,6 +289,24 @@ public static class RuntimeUIPrefabBuilder
         Debug.Log("[Runtime UI] 已固化主菜单设置窗口 Prefab（大小、画质、语言占位项）。");
     }
 
+    /// <summary>只重建主菜单退出确认弹窗，并登记为运行时可寻址 Prefab。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Main Menu Exit Confirmation UI")]
+    public static void RebuildMainMenuExitConfirmationUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(MainMenuCoreRoot);
+        SaveMainMenuExitConfirmationPrefab();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化主菜单退出确认 Prefab。");
+    }
+
     /// <summary>只重建左上角常驻的玩家世界坐标 HUD，并确保其进入运行时 Prefab 索引。</summary>
     [MenuItem("FlatWorld/UI/Rebuild Player World Coordinate HUD")]
     public static void RebuildPlayerWorldCoordinateHUD()
@@ -417,6 +436,14 @@ public static class RuntimeUIPrefabBuilder
         {
             Object.DestroyImmediate(root);
         }
+    }
+
+    /// <summary>保存主菜单退出确认弹窗，并登记为 GameRes 可查询的正式运行时 Prefab。</summary>
+    private static void SaveMainMenuExitConfirmationPrefab()
+    {
+        string prefabPath = MainMenuCoreRoot + RuntimeUIPrefabKeys.MainMenuExitConfirmation + ".prefab";
+        SaveNewPrefab(prefabPath, BuildMainMenuExitConfirmation);
+        EnsureRuntimePrefabAddressable(prefabPath);
     }
 
     /// <summary>保存坐标 HUD 并注册 Prefab 标签，确保 GameRes 能按键名加载。</summary>
@@ -1518,6 +1545,52 @@ public static class RuntimeUIPrefabBuilder
         return root;
     }
 
+    /// <summary>构建主菜单退出确认窗口；取消是默认焦点，确认按钮才真正关闭应用。</summary>
+    private static GameObject BuildMainMenuExitConfirmation()
+    {
+        GameObject root = CreateModalPanelRoot(
+            RuntimeUIPrefabKeys.MainMenuExitConfirmation,
+            new Vector2(760f, 360f));
+        Transform dialog = root.transform.Find("设置对话框");
+        dialog.name = "退出确认对话框";
+        ConfigureMainMenuModalBackground(root, dialog, "退出确认");
+
+        CreateMainMenuSettingsHeader(
+            dialog,
+            "退出游戏",
+            GameManager.MainMenuExitConfirmationCloseButtonKey);
+
+        TextMeshProUGUI message = CreateText(
+            "退出确认提示",
+            dialog,
+            "确定要退出游戏吗？",
+            27f,
+            Cream);
+        message.alignment = TextAlignmentOptions.Center;
+        message.enableWordWrapping = true;
+        message.gameObject.AddComponent<LayoutElement>().preferredHeight = 120f;
+
+        Transform footer = CreateFooter(dialog);
+        footer.GetComponent<LayoutElement>().preferredHeight = 76f;
+        SetButtonLabelSize(CreateButton(
+            GameManager.MainMenuExitConfirmationCancelButtonKey,
+            footer,
+            "取消",
+            170f,
+            64f,
+            false), 21f);
+        Button confirmButton = CreateButton(
+            GameManager.MainMenuExitConfirmationConfirmButtonKey,
+            footer,
+            "退出游戏",
+            190f,
+            64f,
+            false);
+        confirmButton.GetComponent<Image>().color = Danger;
+        SetButtonLabelSize(confirmButton, 21f);
+        return root;
+    }
+
     /// <summary>构建主菜单设置窗口；运行时由 GameManager 绑定显示、画质、特效质量和语言设置。</summary>
     private static GameObject BuildMainMenuSettings()
     {
@@ -1525,7 +1598,7 @@ public static class RuntimeUIPrefabBuilder
             RuntimeUIPrefabKeys.MainMenuSettings,
             FlatWorldUIPanelMetrics.SharedModalCardSize);
         Transform dialog = root.transform.Find("设置对话框");
-        ConfigureMainMenuSettingsBackground(root, dialog);
+        ConfigureMainMenuModalBackground(root, dialog, "设置");
 
         CreateMainMenuSettingsHeader(dialog, "游戏设置", "关闭按钮");
 
@@ -1577,14 +1650,17 @@ public static class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>为主菜单设置页建立覆盖刘海区的暗幕、卡片投影和暖黑背景。</summary>
-    private static void ConfigureMainMenuSettingsBackground(GameObject root, Transform dialog)
+    /// <summary>为主菜单模态窗口建立覆盖刘海区的暗幕、卡片投影和暖黑背景。</summary>
+    private static void ConfigureMainMenuModalBackground(
+        GameObject root,
+        Transform dialog,
+        string objectNamePrefix)
     {
         Image rootBlocker = root.GetComponent<Image>();
         rootBlocker.color = new Color(0.004f, 0.008f, 0.012f, 0.01f);
 
         Image backdrop = CreateImage(
-            "设置全屏背景遮罩",
+            objectNamePrefix + "全屏背景遮罩",
             root.transform,
             new Color(0.004f, 0.009f, 0.013f, 0.88f));
         Stretch(backdrop.rectTransform);
@@ -1592,7 +1668,10 @@ public static class RuntimeUIPrefabBuilder
         backdrop.gameObject.AddComponent<FullScreenRectController>();
         backdrop.transform.SetAsFirstSibling();
 
-        Image shadow = CreateImage("设置主卡投影", root.transform, new Color(0f, 0f, 0f, 0.48f));
+        Image shadow = CreateImage(
+            objectNamePrefix + "主卡投影",
+            root.transform,
+            new Color(0f, 0f, 0f, 0.48f));
         SetCentered(
             shadow.rectTransform,
             new Vector2(14f, -16f),

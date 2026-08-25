@@ -28,6 +28,10 @@ public partial class GameManager
     public const string MainMenuSettingsEffectsQualityKey = "特效质量下拉列表";
     public const string MainMenuSettingsLanguageDropdownKey = "游戏语言下拉列表";
     public const string MainMenuSettingsLanguageStatusTextKey = "设置状态";
+    public const string MainMenuExitConfirmationPanelKey = RuntimeUIPrefabKeys.MainMenuExitConfirmation;
+    public const string MainMenuExitConfirmationCloseButtonKey = "关闭退出确认按钮";
+    public const string MainMenuExitConfirmationCancelButtonKey = "取消退出按钮";
+    public const string MainMenuExitConfirmationConfirmButtonKey = "确认退出按钮";
 
     public const string NewGamePanelKey = "NewGame";
     public const string NewGameStartButtonKey = "开始新游戏";
@@ -646,8 +650,53 @@ public partial class GameManager
         panel.SetButtonOnClick(MainMenuContinueButtonKey, OpenGameSaveManager);
         panel.SetButtonOnClick(MainMenuNewGameButtonKey, OpenNewGame);
         panel.SetButtonOnClick(MainMenuSettingsButtonKey, OpenMainMenuSettings);
+        panel.CancelShortcutOverride = OpenMainMenuExitConfirmation;
         panel.PrepareForGamepadNavigation(MainMenuContinueButtonKey, false);
         panel.Open();
+    }
+
+    /// <summary>主菜单收到 Escape、手柄取消或 Android 返回键时打开退出确认弹窗。</summary>
+    private bool OpenMainMenuExitConfirmation()
+    {
+        UIManager uiManager = UIManager.Instance;
+        if (uiManager.TryGetPanel(MainMenuExitConfirmationPanelKey, out BasePanel existingPanel))
+        {
+            existingPanel.Open();
+            return true;
+        }
+
+        GameObject prefab = GameRes.Instance?.GetPrefab(MainMenuExitConfirmationPanelKey, false);
+        if (prefab == null)
+        {
+            Debug.LogError(
+                $"[GameManager] 缺少主菜单退出确认 Prefab：{MainMenuExitConfirmationPanelKey}。请检查 Addressables/Prefab 标签。",
+                this);
+            return true;
+        }
+
+        BasePanel panel = uiManager.CreatePanelFromGameObject(prefab, MainMenuExitConfirmationPanelKey);
+        if (panel == null)
+        {
+            Debug.LogError("[GameManager] 主菜单退出确认 Prefab 实例化后未获得 BasePanel。", this);
+            return true;
+        }
+
+        panel.SetButtonOnClick(MainMenuExitConfirmationCloseButtonKey, panel.Close);
+        panel.SetButtonOnClick(MainMenuExitConfirmationCancelButtonKey, panel.Close);
+        panel.SetButtonOnClick(MainMenuExitConfirmationConfirmButtonKey, QuitApplicationFromMainMenu);
+        panel.PrepareForGamepadNavigation(MainMenuExitConfirmationCancelButtonKey);
+        panel.Open();
+        return true;
+    }
+
+    /// <summary>确认退出后关闭当前构建；编辑器中仅停止播放模式。</summary>
+    private void QuitApplicationFromMainMenu()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
 
     /// <summary>

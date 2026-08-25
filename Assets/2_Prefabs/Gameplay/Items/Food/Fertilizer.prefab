@@ -63,7 +63,7 @@ MonoBehaviour:
   Data:
     IDName: Fertilizer
     GameName: Fertilizer
-    Description: 
+    Description: "可改良土壤并促进作物生长的肥料。"
     Durability: 1
     MaxDurability: 1
     Tags:

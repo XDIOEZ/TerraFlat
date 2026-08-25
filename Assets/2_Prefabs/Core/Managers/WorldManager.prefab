@@ -52,6 +52,7 @@ MonoBehaviour:
   _spawnRetryInterval: 0.5
   _populationMaintenanceInterval: 2
   _recycleCheckInterval: 2
+  _trackedPopulation: 0
 --- !u!1 &2048257428238950690
 GameObject:
   m_ObjectHideFlags: 0
@@ -103,6 +104,26 @@ MonoBehaviour:
     Seed: 0
     Time: 0
     TimeSpeed: 1
+    Difficulty: 0
+    CustomDifficultyDropAllCarriedItems: 0
+    CustomPlayerAttackMultiplier: 1
+    CustomCreatureAttackMultiplier: 1
+    CustomCreatureHealthMultiplier: 1
+    CustomHungerDrainMultiplier: 1
+    CustomStaminaConsumptionMultiplier: 1
+    CustomStaminaRecoveryMultiplier: 1
+    CustomHealingMultiplier: 1
+    CustomEnvironmentalDamageMultiplier: 1
+    CustomTimeSpeedMultiplier: 1
+    CustomSpawnFrequencyMultiplier: 1
+    CustomSpawnPopulationMultiplier: 1
+    CustomLootAmountMultiplier: 1
+    CustomCropGrowthMultiplier: 1
+    CustomSmeltingSpeedMultiplier: 1
+    CustomFuelConsumptionMultiplier: 1
+    CustomCraftingOutputMultiplier: 1
+    GameEventData:
+      ActiveEvents: []
   CurrentContrrolPlayerName: 
 --- !u!1 &2247533266257833999
 GameObject:
@@ -245,6 +266,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56ba77687be176a4eb928751444bc0d3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _rainEventConfig:
+    DailyRainChance: 0.05
+    MinRainDurationDays: 0.5
+    MaxRainDurationDays: 1
+    ForecastDuration: 90
+    RainStartingDuration: 45
+    HeavyRainDuration: 150
+    RainEndingDuration: 60
+    RecoveryDuration: 90
+    ForecastIntensity: 0.3
+    StartingRainIntensity: 0.35
+    SteadyRainIntensity: 0.65
+    HeavyRainIntensity: 1
+    EndingRainIntensity: 0.3
+    RecoveryIntensity: 0.15
+  _deterministicSeedOverride: 0
   EnableDebugLog: 0
   _toggleDebugPanelKey: 293
   _debugPanelVisible: 0
@@ -323,9 +360,31 @@ MonoBehaviour:
     GlobalTemperature: 26
     CurrentWeather: 0
     WeatherIntensity: 0
+    WeatherDataVersion: 0
+    WeatherPhase: 0
+    WeatherPhaseStartedTotalTime: 0
+    WeatherPhaseEndTotalTime: 0
+    NextWeatherEventTotalTime: 0
+    WeatherRandomCursor: 0
+    WeatherEventSequence: 0
     RainTemperatureOffset: -4
     CloudyTemperatureOffset: -1
     StormTemperatureOffset: -6
+    TopologyMode: 0
+    Ecology:
+      DataVersion: 0
+      ProfileId: 
+      ConfigurationFingerprint: 0
+      GlobalMultiplier: 1
+      Rules: []
+      Chunks: []
+      Generation:
+        DataVersion: 0
+        ProfileId: 
+        GenerationFingerprint: 0
+        NumericParameters: []
+        TextParameters: []
+        CaveResourceRules: []
     name: 
     BodyId: 
     PrefabName: 
@@ -335,21 +394,42 @@ MonoBehaviour:
     OrbitAngularSpeed: 8
     OrbitStartAngle: 0
     OrbitClockwise: 0
-    SelfRotateSpee我不知不知道为啥我不  ReadyGameSaveData:
+    SelfRotateSpeed: 20
+  ReadyGameSaveData:
     saveName: defaultSaveName
     SaveSeed: 0
     Seed: 0
-    Time: 600
+    Time: 0
     TimeSpeed: 1
+    Difficulty: 0
+    CustomDifficultyDropAllCarriedItems: 0
+    CustomPlayerAttackMultiplier: 1
+    CustomCreatureAttackMultiplier: 1
+    CustomCreatureHealthMultiplier: 1
+    CustomHungerDrainMultiplier: 1
+    CustomStaminaConsumptionMultiplier: 1
+    CustomStaminaRecoveryMultiplier: 1
+    CustomHealingMultiplier: 1
+    CustomEnvironmentalDamageMultiplier: 1
+    CustomTimeSpeedMultiplier: 1
+    CustomSpawnFrequencyMultiplier: 1
+    CustomSpawnPopulationMultiplier: 1
+    CustomLootAmountMultiplier: 1
+    CustomCropGrowthMultiplier: 1
+    CustomSmeltingSpeedMultiplier: 1
+    CustomFuelConsumptionMultiplier: 1
+    CustomCraftingOutputMultiplier: 1
+    GameEventData:
+      ActiveEvents: []
+  spawnLandMaxSearchRadius: 512
+  spawnTerrainSampleBudget: 4096
+  spawnSeedAnchorRange: 512
   UIPrefab_HelloCanvas: {fileID: 1507728778053711830, guid: 8c8eb8cf412e3ca4d8845cecbc358d4d, type: 3}
   UIPrefab_SaveManager: {fileID: 7361205072839321340, guid: 70d725d8194078249a195891ee61da07, type: 3}
   UIPrefab_NewGame: {fileID: 5239021891057322782, guid: 0426f7891b648414fb89071a6f0276f7, type: 3}
   UIPrefab_ContextMenu: {fileID: 4647034535848735732, guid: 26098265c1fc4be4cbf641f826c955aa, type: 3}
   saveManagerPanelName: UI_SaveSelectionPanel
   saveManagerPanelNameLegacy: "\u5B58\u6863\u9009\u62E9\u9762\u677F"
-  spawnLandMaxSearchRadius: 512
-  spawnSeedAnchorRange: 512
-  spawnSearchRetryFrames: 60
 --- !u!114 &5620251106547435517
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -449,7 +529,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 212defbe379f6e04e832893eda7ea808, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  defaultPlayerCreationTemplateId: ''
+  defaultPlayerCreationTemplateId: 
+  maxPoolSizePerItem: 24
+  maxTotalPooledItems: 256
 --- !u!114 &6675140932819043210
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -460,8 +542,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4b1e6c3d7a904ef0a9a2b86f1d4c5e70, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   actorShadowPrefab: {fileID: 4309152267431885310, guid: 6d2a7f4c9e3148b3a5c0d7e1f2a6b8c9, type: 3}
   maxShadowAlpha: 0.55
   minSunlightToShow: 0.02
@@ -576,5 +658,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   OnChunkLoadFinish:
     _PersistentCalls: []
+  OnChunkLoadFailed:
+    _PersistentCalls: []
   maxChunkLoadPerFrame: 1
   maxConcurrentChunkLoads: 1
+  maxPooledChunkCount: 32
+  chunkLoadSpeedMultiplier: 1
+  unlimitedChunkLoadSpeed: 0
+  maxChunkPresentationsPerFrame: 1
+  defaultGenerationProfile: {fileID: 0}
+  backgroundGenerationConcurrency: 2
+  maxChunkCommitsPerFrame: 1
+  authoritativeSimulation: 1

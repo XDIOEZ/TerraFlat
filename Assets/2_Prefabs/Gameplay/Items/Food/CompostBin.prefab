@@ -51,28 +51,6 @@ MonoBehaviour:
     ID: Module_CompostBin
     isRunning: 1
     Type: 0
-    RuntimeOwnerInventoryData:
-      Name: 
-      itemSlots: []
-      Index: 0
-      IsInjected: 0
-      PanelPosition: {x: 0, y: 0, z: 0}
-      PanelIsOpen: 0
-      ToggleActionName: 
-      UIPrefabName: 
-      Event_RefreshUI:
-        _PersistentCalls: []
-      Event_OnBeforeDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged:
-        _PersistentCalls: []
-      Event_OnDataChanged_TwoSlots:
-        _PersistentCalls: []
-    RuntimeOwnerSlot:
-      CanAcceptTags: []
-      SlotMaxVolume: 0
-      Index: 0
-    RuntimeOwnerSlotIndex: -1
     BitData: 
   Data:
     InventoryName: "\u5806\u80A5\u6876"
@@ -188,7 +166,7 @@ GameObject:
   - component: {fileID: 1794119367010104825}
   - component: {fileID: 8903626303290165216}
   m_Layer: 6
-  m_Name: CompostBin
+  m_Name: "CompostBin"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -208,9 +186,9 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8862953953203771278}
-  - {fileID: 4672407707469248199}
   - {fileID: 2164232412512092784}
   - {fileID: 8586965221932423747}
+  - {fileID: 7983949329492649104}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1794119367010104825
@@ -238,11 +216,10 @@ MonoBehaviour:
   OnDurabilityModified:
     _PersistentCalls: []
   updateInterval: 0
-  Data:
-    IDName: CompostBin
+  data:
+    IDName: "CompostBin"
     GameName: CompostBin
-    Description: "\u7269\u54C1\u540D\u79F0\uFF1AWorkBench\n\u7269\u54C1\u63CF\u8FF0\uFF1A\n\u7269\u54C1\u4F53\u79EF\uFF1A100\n\u7269\u54C1\u8010\u4E45\u5EA6\uFF1A1\n\u662F\u5426\u53EF\u62FE\u53D6\uFF1ATrue\n\u7269\u54C1\u6807\u7B7E\uFF1ATagDictionary:\r\n 
-      Type:\r\n    - Construct\r\n  Material:\r\n    - Wood\r\n  MakeTag:\r\n\n\u7269\u54C1\u5806\u53E0\u4FE1\u606F\uFF1A\u7269\u4F53\u6570\u91CF:1\n\u7269\u54C1\u7279\u6B8A\u6570\u636E\uFF1A\n\u5168\u5C40\u552F\u4E00\u6807\u8BC6\uFF1A0"
+    Description: "\u5C06\u53EF\u8150\u7269\u8F6C\u5316\u4E3A\u80A5\u6599\u7684\u5806\u80A5\u7BB1\u3002"
     Durability: 1
     MaxDurability: 1
     Tags:
@@ -250,7 +227,7 @@ MonoBehaviour:
     Stack:
       Amount: 1
       Volume: 100
-      CanBePickedUp: 1
+      CanBePickedUp: 0
     transform:
       position: {x: 0, y: 0, z: 0}
       rotation: {x: 0, y: 0, z: 0, w: 0}
@@ -258,6 +235,7 @@ MonoBehaviour:
     ItemSpecialData: 
     inHand: 0
     Guid: 183041967
+    FactionId: 
     code: 
 --- !u!61 &8903626303290165216
 BoxCollider2D:
@@ -304,6 +282,151 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.99, y: 0.99}
   m_EdgeRadius: 0
+--- !u!1 &7174481531697352214
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7983949329492649104}
+  - component: {fileID: 3753857824053918975}
+  - component: {fileID: 8003169544777966761}
+  m_Layer: 7
+  m_Name: Module_DamageReciver
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7983949329492649104
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7174481531697352214}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5442148246565519529}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!61 &3753857824053918975
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7174481531697352214}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_UsedByComposite: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  serializedVersion: 2
+  m_Size: {x: 1, y: 1}
+  m_EdgeRadius: 0
+--- !u!114 &8003169544777966761
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7174481531697352214}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66936691572dbd04a801f40fe0923069, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  modData:
+    Name: 
+    ID: "\u751F\u547D\u503C\u7CFB\u7EDF\u6A21\u5757"
+    isRunning: 1
+    Type: 0
+    BitData: 
+  Data:
+    Hp: 180
+    MaxHp: 180
+    UseBodyPartHealth: 0
+    TwoPartHitChance: 0.25
+    BodyPartDataVersion: 0
+    BodyParts: []
+    DefenseValues:
+      Cutting: 8
+      Piercing: 8
+      Chopping: 8
+      Blunt: 8
+    AttackersUIDs: 
+    DamageInterval: 0.12
+    DestroyDelay: 0
+    LootTable:
+    - LootPrefab: {fileID: 5065571277225119290, guid: 4449fdf41529cdf488d41484f92e53e9, type: 3}
+      LootPrefabName: Chicken
+      DropChance: 0.001
+      MinAmount: 1
+      MaxAmount: 1
+  OnDead:
+    _PersistentCalls: []
+  HurtActions: []
+  DeathActions: []
+  impactAudioMaterial: 0
+  hurtAudioCueId: 
+  enableHitSlowdown: 1
+  hitSlowMultiplier: 0.5
+  hitSlowDuration: 0.35
+  flashCount: 1
+  flashDuration: 0.2
+  flashColor: {r: 1, g: 0.08, b: 0.08, a: 1}
+  shakeDuration: 0.15
+  shakeMagnitude: 0.1
+  PanelPrefab: {fileID: 7613977154932231161, guid: b614f979ae7094b42b6d0f058d4052cc, type: 3}
+  PanleInstance: {fileID: 0}
+  DataUpdate:
+    _PersistentCalls: []
+  UIValues: {fileID: 0}
+  HideUiDelayAfterLastDamage: 4
+  healthBarTopPadding: 0.16
+  healthBarWorldScale: 0.55
+  Equipment_Inventory: {fileID: 0}
+  enableDebugTools: 0
+  references:
+    version: 2
+    RefIds: []
 --- !u!1001 &132547897627720745
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -312,6 +435,26 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 5442148246565519529}
     m_Modifications:
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: BuildingData.BitData
+      value: '{"Version":3,"maxVisibleDistance":2.0,"minVisibleDistance":1.0,"State":0,"Role":1,"SnapshotBase64":null,"BuildingPrefabId":"CompostBin","SummonerPrefabId":"CompostBin_Summoner"}'
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.SummonerPrefabId
+      value: "CompostBin_Summoner"
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.BuildingPrefabId
+      value: "CompostBin"
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.Version
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
+      propertyPath: Data.Role
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2296275565012368985, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -443,111 +586,4 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 8311222262359347599, guid: bc05f0780d6922a4d81a1fc36a9e029e, type: 3}
   m_PrefabInstance: {fileID: 696066956404819457}
-  m_PrefabAsset: {fileID: 0}
---- !u!1001 &6477128732478372375
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 5442148246565519529}
-    m_Modifications:
-    - target: {fileID: 1470591457584899670, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_Name
-      value: "\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757"
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.Hp
-      value: 100
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.MaxHp
-      value: 100
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.DefenseValues.Cutting
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.DefenseValues.Piercing
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.DefenseValues.Chopping
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.DefenseValues.Blunt
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.ShowCanvas
-      value: 1
-      objectReference: {fileID: 0}
-
-
-
-
-
-    - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: Data.LootTable.Array.data[0].LootPrefabName
-      value: Chicken
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4890933514158232767, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_Size.y
-      value: 0.24759322
-      objectReference: {fileID: 0}
-    - target: {fileID: 4890933514158232767, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-      propertyPath: m_Offset.y
-      value: -0.3762034
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
---- !u!4 &4672407707469248199 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 1816314380302224592, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
-  m_PrefabInstance: {fileID: 6477128732478372375}
   m_PrefabAsset: {fileID: 0}

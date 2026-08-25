@@ -434,6 +434,8 @@ Shader "Game/2D/Sprite-Lit-Master"
             float _WaterWaveSpeed;
             float4 _ActorTint;
             float _ActorTintStrength;
+            float _ActorTintPulseSpeed;
+            float _ActorTintPulseAmplitude;
             float _HitFlash;
             float4 _HitFlashColor;
 
