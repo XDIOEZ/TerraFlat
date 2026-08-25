@@ -65,6 +65,9 @@ public sealed class GameLogManager : MonoBehaviour
     public static string LastWriteError => lastWriteError;
     public static int RuntimeLogVersion => Volatile.Read(ref runtimeLogVersion);
 
+    /// <summary>运行时内存日志最多保留的条数，也是复制条数设置的有效上限。</summary>
+    public static int RuntimeLogCapacity => MaxRuntimeLogEntries;
+
     public static bool IsCapturing
     {
         get
@@ -94,13 +97,7 @@ public sealed class GameLogManager : MonoBehaviour
         lock (WriteLock)
         {
             StringBuilder builder = new StringBuilder(Math.Min(runtimeLogCharacters + 256, boundedCharacters));
-            builder.Append("# FlatWorld Runtime Log\n");
-            builder.Append("# File: ").AppendLine(
-                string.IsNullOrWhiteSpace(currentLogFilePath) ? "<尚未创建>" : currentLogFilePath);
-            builder.Append("# Entries: ").Append(RuntimeEntries.Count)
-                .Append("  Warnings: ").Append(runtimeWarningCount)
-                .Append("  Errors: ").Append(runtimeErrorCount)
-                .AppendLine();
+            AppendRuntimeSnapshotHeaderNoLock(builder);
             builder.AppendLine();
 
             foreach (RuntimeLogEntry entry in RuntimeEntries)
@@ -123,6 +120,52 @@ public sealed class GameLogManager : MonoBehaviour
             truncated = true;
             return marker + builder.ToString(builder.Length - tailLength, tailLength);
         }
+    }
+
+    /// <summary>按日志条数生成最近内容的复制快照，保留完整日志记录而不从单条中间截断。</summary>
+    public static string GetRuntimeLogSnapshotByEntryCount(
+        int maxEntries,
+        out int copiedEntries,
+        out bool truncated)
+    {
+        int boundedEntries = Math.Max(1, Math.Min(maxEntries, MaxRuntimeLogEntries));
+        lock (WriteLock)
+        {
+            copiedEntries = Math.Min(boundedEntries, RuntimeEntries.Count);
+            int skippedEntries = RuntimeEntries.Count - copiedEntries;
+            truncated = skippedEntries > 0;
+
+            StringBuilder builder = new StringBuilder(Math.Min(runtimeLogCharacters + 256, MaxRuntimeLogCharacters));
+            AppendRuntimeSnapshotHeaderNoLock(builder);
+            builder.Append("# Copied: ").Append(copiedEntries).AppendLine();
+            if (truncated)
+            {
+                builder.Append("<较早的 ").Append(skippedEntries)
+                    .AppendLine(" 条日志已省略，仅复制最近内容>");
+            }
+
+            builder.AppendLine();
+            int index = 0;
+            foreach (RuntimeLogEntry entry in RuntimeEntries)
+            {
+                if (index++ >= skippedEntries)
+                    builder.Append(entry.Text);
+            }
+
+            return builder.ToString();
+        }
+    }
+
+    /// <summary>写入运行时日志快照的统一会话头。</summary>
+    private static void AppendRuntimeSnapshotHeaderNoLock(StringBuilder builder)
+    {
+        builder.Append("# FlatWorld Runtime Log\n");
+        builder.Append("# File: ").AppendLine(
+            string.IsNullOrWhiteSpace(currentLogFilePath) ? "<尚未创建>" : currentLogFilePath);
+        builder.Append("# Entries: ").Append(RuntimeEntries.Count)
+            .Append("  Warnings: ").Append(runtimeWarningCount)
+            .Append("  Errors: ").Append(runtimeErrorCount)
+            .AppendLine();
     }
 
     /// <summary>清空运行时面板使用的内存日志；磁盘会话日志保持不变。</summary>

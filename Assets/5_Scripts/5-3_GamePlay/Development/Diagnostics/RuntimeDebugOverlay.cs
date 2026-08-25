@@ -14,8 +14,11 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
     /// <summary>调试页最多展示的字符数。</summary>
     private const int DisplayCharacterLimit = 48 * 1024;
 
-    /// <summary>单次复制到系统剪贴板的最大字符数。</summary>
-    private const int ClipboardCharacterLimit = 12 * 1024;
+    /// <summary>首次运行时默认复制最近的日志条数。</summary>
+    private const int DefaultCopyEntryCount = 50;
+
+    /// <summary>复制条数设置的持久化键。</summary>
+    private const string CopyEntryCountPreferenceKey = "FlatWorld.RuntimeDebugOverlay.CopyEntryCount";
 
     #endregion
 
@@ -61,6 +64,9 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
     /// <summary>日志正文滚动视图。</summary>
     [SerializeField] private ScrollRect logScrollRect;
 
+    /// <summary>玩家输入的最近日志复制条数。</summary>
+    [SerializeField] private TMP_InputField copyEntryCountInput;
+
     #endregion
 
     #region 运行时状态
@@ -73,6 +79,9 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
 
     /// <summary>按下位置到按钮轴心的父级局部坐标偏移。</summary>
     private Vector2 toggleDragOffset;
+
+    /// <summary>当前生效的最近日志复制条数。</summary>
+    private int copyEntryCount;
 
     #endregion
 
@@ -89,11 +98,18 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
 
         instance = this;
         DontDestroyOnLoad(gameObject);
+        // 独立 Canvas 不经过 UIManager 面板动画，由自身建立可见缩放不变量。
+        transform.localScale = Vector3.one;
 
         Canvas rootCanvas = GetComponent<Canvas>();
         if (rootCanvas != null)
             rootCanvas.sortingOrder = UIManager.GlobalOverlaySortingOrder + 20;
 
+        copyEntryCount = Mathf.Clamp(
+            PlayerPrefs.GetInt(CopyEntryCountPreferenceKey, DefaultCopyEntryCount),
+            1,
+            GameLogManager.RuntimeLogCapacity);
+        RefreshCopyEntryCountInput();
         SetPanelVisible(false);
         RefreshPresentation(force: true);
     }
@@ -105,6 +121,7 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         BindButton(copyButton, CopyLogs);
         BindButton(clearButton, ClearLogs);
         BindButton(closeButton, ClosePanel);
+        BindCopyEntryCountInput();
     }
 
     /// <summary>解除悬浮窗按钮事件，避免禁用或销毁后的重复回调。</summary>
@@ -115,6 +132,7 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         UnbindButton(copyButton, CopyLogs);
         UnbindButton(clearButton, ClearLogs);
         UnbindButton(closeButton, ClosePanel);
+        UnbindCopyEntryCountInput();
     }
 
     /// <summary>清理跨场景单例引用。</summary>
@@ -262,17 +280,43 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         SetPanelVisible(false);
     }
 
-    /// <summary>复制最近日志，并严格执行单次剪贴板字符上限。</summary>
+    /// <summary>按照玩家设置复制最近若干条完整日志。</summary>
     private void CopyLogs()
     {
-        string snapshot = GameLogManager.GetRuntimeLogSnapshot(ClipboardCharacterLimit, out bool truncated);
+        ApplyCopyEntryCount(copyEntryCountInput != null ? copyEntryCountInput.text : copyEntryCount.ToString());
+        string snapshot = GameLogManager.GetRuntimeLogSnapshotByEntryCount(
+            copyEntryCount,
+            out int copiedEntries,
+            out bool truncated);
         GUIUtility.systemCopyBuffer = snapshot;
         if (statusText != null)
         {
             statusText.text = truncated
-                ? $"已复制最近 {snapshot.Length} 个字符，较早内容已省略。"
-                : $"已复制 {snapshot.Length} 个字符。";
+                ? $"已复制最近 {copiedEntries} 条日志，较早内容已省略。"
+                : $"已复制当前 {copiedEntries} 条日志。";
         }
+    }
+
+    /// <summary>校验、保存并回显玩家设置的日志复制条数。</summary>
+    private void ApplyCopyEntryCount(string rawValue)
+    {
+        int selectedCount = copyEntryCount;
+        if (int.TryParse(rawValue, out int parsedCount))
+            selectedCount = parsedCount;
+
+        copyEntryCount = Mathf.Clamp(selectedCount, 1, GameLogManager.RuntimeLogCapacity);
+        RefreshCopyEntryCountInput();
+        PlayerPrefs.SetInt(CopyEntryCountPreferenceKey, copyEntryCount);
+        PlayerPrefs.Save();
+        if (statusText != null)
+            statusText.text = $"复制时将取最近 {copyEntryCount} 条日志。";
+    }
+
+    /// <summary>把当前复制条数同步到输入框且不触发重复回调。</summary>
+    private void RefreshCopyEntryCountInput()
+    {
+        if (copyEntryCountInput != null)
+            copyEntryCountInput.SetTextWithoutNotify(copyEntryCount.ToString());
     }
 
     /// <summary>清空面板内存缓冲并保留磁盘会话日志。</summary>
@@ -332,7 +376,7 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
 
         logText.text = GameLogManager.GetRuntimeLogSnapshot(DisplayCharacterLimit, out bool truncated);
         if (truncated && statusText != null)
-            statusText.text = "页面只显示最近日志；复制按钮最多复制最近 12 KiB。";
+            statusText.text = "页面只显示最近内容；复制条数可在顶部手动设置。";
 
         LayoutRebuilder.MarkLayoutForRebuild(logText.rectTransform);
         if (logScrollRect != null)
@@ -358,6 +402,23 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
     {
         if (button != null)
             button.onClick.RemoveListener(action);
+    }
+
+    /// <summary>幂等绑定复制条数输入事件。</summary>
+    private void BindCopyEntryCountInput()
+    {
+        if (copyEntryCountInput == null)
+            return;
+
+        copyEntryCountInput.onEndEdit.RemoveListener(ApplyCopyEntryCount);
+        copyEntryCountInput.onEndEdit.AddListener(ApplyCopyEntryCount);
+    }
+
+    /// <summary>解除复制条数输入事件。</summary>
+    private void UnbindCopyEntryCountInput()
+    {
+        if (copyEntryCountInput != null)
+            copyEntryCountInput.onEndEdit.RemoveListener(ApplyCopyEntryCount);
     }
 
     #endregion

@@ -506,6 +506,8 @@ public static class RuntimeUIPrefabBuilder
     {
         string prefabPath = DebugRoot + RuntimeUIPrefabKeys.RuntimeDebugOverlay + ".prefab";
         SaveNewPrefab(prefabPath, BuildRuntimeDebugOverlay);
+        // Unity 保存新建的独立 Canvas 时可能重写根缩放，保存后再固化一次正式 Prefab。
+        UpdateExistingPrefab(prefabPath, root => root.transform.localScale = Vector3.one);
         EnsureRuntimePrefabAddressable(prefabPath);
         BindRuntimeDebugOverlayPrefab(prefabPath);
     }
@@ -1048,7 +1050,16 @@ public static class RuntimeUIPrefabBuilder
         TextMeshProUGUI summary = CreateText("日志数量摘要", panel.transform, "共 0 条    错误 0    警告 0", 16f, Muted);
         summary.enableWordWrapping = false;
         summary.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(summary.rectTransform, 265f, 22f, 355f, 30f);
+        SetTopLeft(summary.rectTransform, 265f, 22f, 220f, 30f);
+
+        TextMeshProUGUI copyCountLabel = CreateText("复制条数标题", panel.transform, "复制条数", 15f, Muted);
+        copyCountLabel.enableWordWrapping = false;
+        SetTopLeft(copyCountLabel.rectTransform, 493f, 23f, 70f, 30f);
+
+        TMP_InputField copyEntryCountInput = CreateInputField("复制日志条数输入框", panel.transform, "50");
+        copyEntryCountInput.contentType = TMP_InputField.ContentType.IntegerNumber;
+        copyEntryCountInput.characterLimit = 3;
+        SetTopLeft(copyEntryCountInput.GetComponent<RectTransform>(), 570f, 14f, 62f, 48f);
 
         Button closeButton = CreateButton("关闭调试页按钮", panel.transform, "关闭", 96f, 48f, false);
         SetTopRight(closeButton.GetComponent<RectTransform>(), 18f, 14f, 96f, 48f);
@@ -1119,7 +1130,7 @@ public static class RuntimeUIPrefabBuilder
         TextMeshProUGUI status = CreateText(
             "调试操作状态",
             panel.transform,
-            "复制上限：最近 12 KiB。",
+            "复制时将取最近 50 条日志。",
             14f,
             Muted);
         status.enableWordWrapping = false;
@@ -1142,6 +1153,7 @@ public static class RuntimeUIPrefabBuilder
         serializedController.FindProperty("logText").objectReferenceValue = logText;
         serializedController.FindProperty("statusText").objectReferenceValue = status;
         serializedController.FindProperty("logScrollRect").objectReferenceValue = scrollRect;
+        serializedController.FindProperty("copyEntryCountInput").objectReferenceValue = copyEntryCountInput;
         serializedController.ApplyModifiedPropertiesWithoutUndo();
 
         panel.SetActive(false);
