@@ -75,7 +75,7 @@ MonoBehaviour:
   data:
     IDName: MapCore
     GameName: MapCore
-    Description: "地图核心的数据节点。"
+    Description: "\u5730\u56FE\u6838\u5FC3\u7684\u6570\u636E\u8282\u70B9\u3002"
     Durability: 1
     MaxDurability: 1
     Tags:

@@ -442,9 +442,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9656fbe884409e2479382a64fd47943c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  toggleEnvironmentInfoKey: 284
-  setClearWeatherKey: 285
-  setRainWeatherKey: 288
+  toggleEnvironmentInfoInputKey: 96
+  setClearWeatherInputKey: 97
+  setRainWeatherInputKey: 100
   createOnFirstToggle: 1
   cleanupDuplicateDisplaysOnToggle: 1
 --- !u!114 &2693940703275175513
