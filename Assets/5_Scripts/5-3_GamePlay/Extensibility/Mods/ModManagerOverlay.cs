@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// 无需场景预制体的 MOD 管理入口。F10 可查看、启停、调整软顺序并安全重载内容。
@@ -55,7 +56,7 @@ public sealed class ModManagerOverlay : MonoBehaviour
 
     private void Update()
     {
-        if (!Input.GetKeyDown(KeyCode.F10))
+        if (Keyboard.current?.f10Key.wasPressedThisFrame != true)
             return;
 
         visible = !visible;

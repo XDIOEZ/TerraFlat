@@ -1,14 +1,15 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class GameDebugManager : MonoBehaviour
 {
 #region 显示设置
 
     [Header("调试快捷键")]
-    [SerializeField] private KeyCode toggleEnvironmentInfoKey = KeyCode.F3;
-    [SerializeField] private KeyCode setClearWeatherKey = KeyCode.F4;
+    [SerializeField] private Key toggleEnvironmentInfoInputKey = Key.F3;
+    [SerializeField] private Key setClearWeatherInputKey = Key.F4;
     // 强制下雨调试键避开 F5 资源热重载快捷键。
-    [SerializeField] private KeyCode setRainWeatherKey = KeyCode.F7;
+    [SerializeField] private Key setRainWeatherInputKey = Key.F7;
 
     [Header("实例化策略")]
     [SerializeField] private bool createOnFirstToggle = true;
@@ -26,17 +27,21 @@ public class GameDebugManager : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(toggleEnvironmentInfoKey))
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard == null)
+            return;
+
+        if (keyboard[toggleEnvironmentInfoInputKey].wasPressedThisFrame)
         {
             ToggleEnvironmentInfo();
         }
 
-        if (Input.GetKeyDown(setClearWeatherKey))
+        if (keyboard[setClearWeatherInputKey].wasPressedThisFrame)
         {
             SetClearWeather();
         }
 
-        if (Input.GetKeyDown(setRainWeatherKey))
+        if (keyboard[setRainWeatherInputKey].wasPressedThisFrame)
         {
             SetRainWeather();
         }

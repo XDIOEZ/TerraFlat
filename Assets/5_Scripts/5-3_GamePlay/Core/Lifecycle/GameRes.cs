@@ -5,6 +5,7 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using UnityEngine.Tilemaps;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using System.IO;
 using System.Linq;
 using FlatWorld.Gameplay.Quests;
@@ -111,8 +112,8 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     {
         RefreshResourceLoadingPresentation();
 
-        // 这里可以添加一些调试输入，例如按下某个键可以重新加载资源
-        if (Input.GetKeyDown(KeyCode.F5))
+        // 资源热重载是主菜单阶段也需生效的全局开发快捷键。
+        if (Keyboard.current?.f5Key.wasPressedThisFrame == true)
         {
             Debug.Log("F5键被按下，开始热更新资源...");
             showLoadingGUI = true;
