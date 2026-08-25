@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// 管理员相关输入与时间控制逻辑的独立 Mono 脚本。
@@ -156,8 +157,10 @@ public class PlayerAdminController : Module
         if (gameController != null && gameController.IsGameplayInputLocked)
             return;
 
+        Keyboard keyboard = Keyboard.current;
+
         // F1：切换管理员权限
-        if (Input.GetKeyDown(KeyCode.F1))
+        if (keyboard?.f1Key.wasPressedThisFrame == true)
         {
             Debug.Log("F1键被按下，切换管理员身份");
             player.Data.Name_User = AdminName;
@@ -168,8 +171,8 @@ public class PlayerAdminController : Module
 
         ApplyAdminRuntimeSettings();
         KeepAdminAlive();
-        HandleAdminInput();
-        HandleTimeScaleControl();
+        HandleAdminInput(keyboard);
+        HandleTimeScaleControl(keyboard);
     }
 
     private void OnGUI()
@@ -243,35 +246,38 @@ public class PlayerAdminController : Module
         return TrySetAdminInvincibilityEnabled(enabled);
     }
 
-    private void HandleAdminInput()
+    private void HandleAdminInput(Keyboard keyboard)
     {
+        if (keyboard == null)
+            return;
+
         // Ctrl + T：传送到鼠标位置，裸 T 留给聊天框
         if (TeleportToMouseShortcutEnabled &&
-            Input.GetKeyDown(KeyCode.T) &&
-            (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+            keyboard.tKey.wasPressedThisFrame &&
+            (keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed))
         {
             playerTraits?.TeleportToMousePosition();
         }
 
         // F2：初始化创造模式背包
-        if (Input.GetKeyDown(KeyCode.F2))
+        if (keyboard.f2Key.wasPressedThisFrame)
         {
             playerTraits?.InitializeCreativeInventoryForAdmin();
         }
 
         // F4：给予手持物品 (9999)
-        if (Input.GetKeyDown(KeyCode.F4))
+        if (keyboard.f4Key.wasPressedThisFrame)
         {
             AddAmountToCurrentHandItem(9999f);
         }
 
         // F5：给予背包全部物品 (999)
-        if (Input.GetKeyDown(KeyCode.F5))
+        if (keyboard.f5Key.wasPressedThisFrame)
         {
             AddAmountToAllBagItems(999f);
         }
 
-        if (Input.GetKeyDown(KeyCode.F8))
+        if (keyboard.f8Key.wasPressedThisFrame)
         {
             IncreaseAdminChunkLoadDistance();
         }
@@ -566,24 +572,27 @@ public class PlayerAdminController : Module
 
     #region 时间控制系统
 
-    private void HandleTimeScaleControl()
+    private void HandleTimeScaleControl(Keyboard keyboard)
     {
+        if (keyboard == null)
+            return;
+
         bool timeScaleChanged = false;
 
         // 加速
-        if (Input.GetKeyDown(KeyCode.Equals) || Input.GetKeyDown(KeyCode.KeypadPlus))
+        if (keyboard.equalsKey.wasPressedThisFrame || keyboard.numpadPlusKey.wasPressedThisFrame)
         {
             timeScaleChanged = TryUpdateTimeScale(timeScaleStep);
         }
 
         // 减速
-        if (Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus))
+        if (keyboard.minusKey.wasPressedThisFrame || keyboard.numpadMinusKey.wasPressedThisFrame)
         {
             timeScaleChanged = TryUpdateTimeScale(-timeScaleStep);
         }
 
         // 重置
-        if (Input.GetKeyDown(KeyCode.Alpha0) || Input.GetKeyDown(KeyCode.Keypad0))
+        if (keyboard.digit0Key.wasPressedThisFrame || keyboard.numpad0Key.wasPressedThisFrame)
         {
             ResetTimeScale();
             timeScaleChanged = true;

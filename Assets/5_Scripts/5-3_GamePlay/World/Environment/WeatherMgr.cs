@@ -1,6 +1,7 @@
 using System;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 {
@@ -16,7 +17,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
     private const float ResizeHandleSize = 18f; // 右下角缩放手柄尺寸
 
     public bool EnableDebugLog = false; // 是否输出天气处理调试日志
-    [SerializeField] private KeyCode _toggleDebugPanelKey = KeyCode.F12; // 天气调试面板快捷键
+    [SerializeField] private Key _toggleDebugPanelInputKey = Key.F12; // 天气调试面板快捷键
     [SerializeField] private bool _debugPanelVisible = false; // 天气调试面板显示状态
     [SerializeField] private Rect _debugWindowRect = new Rect(20f, 220f, 380f, 280f); // 调试面板位置和尺寸
     [SerializeField] private Vector2 _debugWindowMinSize = new Vector2(320f, 240f); // 调试面板最小尺寸
@@ -352,7 +353,8 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     private void Update()
     {
-        if (Input.GetKeyDown(_toggleDebugPanelKey))
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard != null && keyboard[_toggleDebugPanelInputKey].wasPressedThisFrame)
         {
             ToggleDebugPanel();
         }
@@ -382,7 +384,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
     private void DrawDebugWindow(int windowId)
     {
         Rect titleBarRect = new Rect(0f, 0f, _debugWindowRect.width, TitleBarHeight);
-        GUI.Label(titleBarRect, $"天气调试面板  [{_toggleDebugPanelKey}] 切换", _titleStyle);
+        GUI.Label(titleBarRect, $"天气调试面板  [{_toggleDebugPanelInputKey}] 切换", _titleStyle);
 
         Rect closeButtonRect = new Rect(_debugWindowRect.width - 26f, 4f, 22f, 20f);
         if (GUI.Button(closeButtonRect, "×", _buttonStyle))

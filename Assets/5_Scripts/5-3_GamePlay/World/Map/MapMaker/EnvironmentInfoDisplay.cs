@@ -1,6 +1,7 @@
 // 新建文件：EnvironmentInfoDisplay.cs
 
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Tilemaps;
 
 /// <summary>
@@ -96,8 +97,15 @@ public class EnvironmentInfoDisplay : MonoBehaviour
 
     private void Update()
     {
-        // 更新鼠标屏幕位置
-        mouseScreenPos = Input.mousePosition;
+        Pointer pointer = Pointer.current;
+        if (pointer == null)
+        {
+            isValidPosition = false;
+            return;
+        }
+
+        // 更新 Input System 当前指针屏幕位置。
+        mouseScreenPos = pointer.position.ReadValue();
         
         // 更新鼠标位置信息
         UpdateMouseInfo();
@@ -107,12 +115,13 @@ public class EnvironmentInfoDisplay : MonoBehaviour
         {
             int maxPage = (hoveredTileData != null) ? 1 : 0; // 0 或 1
 
-            if (Input.GetKeyDown(KeyCode.UpArrow))
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard?.upArrowKey.wasPressedThisFrame == true)
             {
                 currentPage--;
                 if (currentPage < 0) currentPage = maxPage;
             }
-            else if (Input.GetKeyDown(KeyCode.DownArrow))
+            else if (keyboard?.downArrowKey.wasPressedThisFrame == true)
             {
                 currentPage++;
                 if (currentPage > maxPage) currentPage = 0;

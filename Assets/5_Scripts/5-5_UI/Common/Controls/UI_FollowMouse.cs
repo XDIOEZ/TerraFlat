@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class UI_FollowMouse : MonoBehaviour
 {
@@ -56,11 +57,13 @@ public class UI_FollowMouse : MonoBehaviour
 
     private void FollowMousePosition()
     {
-        // 获取鼠标在屏幕中的位置
-        Vector3 mousePosition = Input.mousePosition;
+        Pointer pointer = Pointer.current;
+        if (pointer == null)
+            return;
 
-        // 将鼠标位置转换为世界坐标，并加上偏移
-        rectTransform.position = mousePosition + offset;
+        // 手持物视觉跟随 Input System 当前指针，同时支持鼠标与触屏。
+        Vector2 pointerPosition = pointer.position.ReadValue();
+        rectTransform.position = new Vector3(pointerPosition.x, pointerPosition.y, 0f) + offset;
     }
 
     public void EnableFollowMouse(bool enable)
