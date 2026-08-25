@@ -95,6 +95,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         public double AverageHeight;
         public double WaterRatio;
         public double WalkableRatio;
+        public double SnowRatio;
         public int EcologyRuleCount;
         public int EcologyPlacementCount;
         public int EcologyHostCount;
@@ -138,6 +139,8 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "terrain.seaLevel",
         "terrain.beachLevel",
         "terrain.mountainLevel",
+        "terrain.snowLineHeight",
+        "terrain.snowTemperature",
         "terrain.height.coordScale",
         "terrain.height.frequency",
         "terrain.height.octaves",
@@ -174,6 +177,8 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["terrain.seaLevel"] = "越高水域越多，越低陆地越多",
             ["terrain.beachLevel"] = "越高海岸边的沙滩带越宽",
             ["terrain.mountainLevel"] = "越低石质山地越多，越高山地越少",
+            ["terrain.snowLineHeight"] = "山地高度超过该值时覆盖为雪山；越低雪山越多",
+            ["terrain.snowTemperature"] = "非山地区域温度低于该值时生成雪原；越高雪原越多",
             ["terrain.noiseScale"] = "简化地形模式的起伏密度；越大变化越快",
             ["terrain.octaves"] = "简化地形模式的细节层数；越高越细、计算越慢",
             ["climate.noiseScale"] = "简化气候模式的区域密度；越大冷热干湿变化越快",
@@ -623,6 +628,8 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             DrawSlider("terrain.seaLevel", "海平面", 0f, 1f);
             DrawSlider("terrain.beachLevel", "沙滩上限", 0f, 1f);
             DrawSlider("terrain.mountainLevel", "山地阈值", 0f, 1f);
+            DrawSlider("terrain.snowLineHeight", "雪线高度", 0f, 1f);
+            DrawSlider("terrain.snowTemperature", "雪地温度阈值", 0f, 1f);
 
             EditorGUILayout.Space(3f);
             EditorGUILayout.LabelField("高度噪声", EditorStyles.miniBoldLabel);
@@ -870,6 +877,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         EditorGUILayout.LabelField("平均高度", previewResult.AverageHeight.ToString("0.0000"));
         EditorGUILayout.LabelField("水域占比", previewResult.WaterRatio.ToString("P2"));
         EditorGUILayout.LabelField("可行走占比", previewResult.WalkableRatio.ToString("P2"));
+        EditorGUILayout.LabelField("雪地占比", previewResult.SnowRatio.ToString("P2"));
         EditorGUILayout.LabelField("生态规则", $"{previewResult.EcologyRuleCount} 条");
         EditorGUILayout.LabelField("生态放置", $"{previewResult.EcologyPlacementCount} 个" +
             $"（宿主 {previewResult.EcologyHostCount}，伴生 {previewResult.EcologyCompanionCount}）");
@@ -1279,7 +1287,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
         string source = fromCache ? "缓存命中" : "生成完成";
         string quality = result.FastPreview ? "快速" : "精确";
-        statusMessage = $"{source}（{quality}）：seed={result.Seed}，水域 {result.WaterRatio:P2}，可行走 {result.WalkableRatio:P2}，生态 {result.EcologyPlacementCount} 个。";
+        statusMessage = $"{source}（{quality}）：seed={result.Seed}，水域 {result.WaterRatio:P2}，雪地 {result.SnowRatio:P2}，可行走 {result.WalkableRatio:P2}，生态 {result.EcologyPlacementCount} 个。";
         statusType = result.WaterRatio >= 0.995d
             ? MessageType.Error
             : MessageType.Info;
@@ -1545,6 +1553,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         double totalHeight = 0d;
         int waterCount = 0;
         int walkableCount = 0;
+        int snowCount = 0;
 
         for (int y = 0; y < input.Height; y++)
         {
@@ -1580,6 +1589,8 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
                     waterCount++;
                 if (terrain.IsWalkable(sampleX, sampleY))
                     walkableCount++;
+                if (cell.BiomeId == (int)SurfaceBiomeKind.Snow)
+                    snowCount++;
 
                 if (sampleX >= 0 && sampleX < terrain.Width &&
                     sampleY >= 0 && sampleY < terrain.Height)
@@ -1610,6 +1621,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             AverageHeight = totalHeight / cellCount,
             WaterRatio = waterCount / (double)cellCount,
             WalkableRatio = walkableCount / (double)cellCount,
+            SnowRatio = snowCount / (double)cellCount,
             EcologyRuleCount = input.Profile.Settings.Mode == ChunkGenerationMode.Cave
                 ? input.Profile.CaveResourceRules.Count
                 : input.Profile.EcologyRules.Count,

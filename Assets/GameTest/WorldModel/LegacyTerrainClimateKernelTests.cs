@@ -123,6 +123,9 @@ namespace FlatWorld.GameTest.WorldModel
 
             Assert.That(SurfaceBiomeClassifier.Resolve(
                     settings, 0.8d, 0.5d, 0.1d, 0.5d, false),
+                Is.EqualTo(SurfaceBiomeKind.Snow));
+            Assert.That(SurfaceBiomeClassifier.Resolve(
+                    settings, 0.73d, 0.5d, 0.1d, 0.5d, false),
                 Is.EqualTo(SurfaceBiomeKind.Stone));
             Assert.That(SurfaceBiomeClassifier.Resolve(
                     settings, 0.6d, 0.5d, 0.2d, 0.5d, false),

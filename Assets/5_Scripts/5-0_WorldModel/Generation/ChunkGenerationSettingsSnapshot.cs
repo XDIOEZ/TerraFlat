@@ -61,6 +61,8 @@ namespace FlatWorld.WorldModel
                 return SurfaceBiomeKind.Ocean;
             if (river)
                 return SurfaceBiomeKind.River;
+            if (height >= settings.SnowLineHeight)
+                return SurfaceBiomeKind.Snow;
             if (height >= settings.MountainLevel)
                 return SurfaceBiomeKind.Stone;
 
@@ -179,6 +181,10 @@ namespace FlatWorld.WorldModel
             MountainLevel = Clamp(
                 GetDouble(numbers, "terrain.mountainLevel", 0.72d),
                 BeachLevel,
+                1d);
+            SnowLineHeight = Clamp(
+                GetDouble(numbers, "terrain.snowLineHeight", MountainLevel + 0.02d),
+                MountainLevel,
                 1d);
             SnowTemperature = Clamp01(GetDouble(numbers, "terrain.snowTemperature", 0.18d));
             SnowIceLakeChance = Clamp01(
@@ -426,6 +432,8 @@ namespace FlatWorld.WorldModel
         public double BeachLevel { get; }
         /// <summary>高度达到这个数时使用可行走的石地表现二维山地。</summary>
         public double MountainLevel { get; }
+        /// <summary>高度达到这个数时，山地顶部覆盖为雪地。</summary>
+        public double SnowLineHeight { get; }
         /// <summary>温度低于这个数时可以生成雪地。</summary>
         public double SnowTemperature { get; }
         /// <summary>雪地低洼处生成冰面的基础概率。</summary>
