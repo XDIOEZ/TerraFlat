@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier:
   profileId: surface.default
-  generationSignature: 27
+  generationSignature: 28
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -43,6 +43,8 @@ MonoBehaviour:
     Value: 0.51
   - Id: terrain.mountainLevel
     Value: 0.72
+  - Id: terrain.snowTemperature
+    Value: 0.18
   - Id: terrain.noiseScale
     Value: 0.0085
   - Id: terrain.octaves

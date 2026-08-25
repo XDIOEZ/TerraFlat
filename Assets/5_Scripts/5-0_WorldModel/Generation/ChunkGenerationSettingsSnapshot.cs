@@ -75,6 +75,10 @@ namespace FlatWorld.WorldModel
                 if (height <= settings.BeachLevel)
                     return SurfaceBiomeKind.Beach;
 
+                // LegacyLand 只负责复用旧气候采样；雪地仍必须在森林兜底前参与正式群系判定。
+                if (temperature <= settings.SnowTemperature)
+                    return SurfaceBiomeKind.Snow;
+
                 bool grassland =
                     temperature >= settings.GrasslandMinimumTemperature &&
                     temperature <= settings.GrasslandMaximumTemperature &&
