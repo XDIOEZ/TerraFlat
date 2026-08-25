@@ -1000,7 +1000,10 @@ public static class RuntimeUIPrefabBuilder
             typeof(CanvasScaler),
             typeof(GraphicRaycaster),
             typeof(CanvasGroup));
-        Stretch(root.GetComponent<RectTransform>());
+        RectTransform rootRect = root.GetComponent<RectTransform>();
+        Stretch(rootRect);
+        // 独立 Canvas 不经过 UIManager 的打开动画，必须以可见缩放直接启动。
+        rootRect.localScale = Vector3.one;
 
         Canvas canvas = root.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;

@@ -1,12 +1,13 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
 /// 独立于 UIManager 与 Addressables 的运行时日志悬浮窗；折叠时只保留右上角入口，展开后显示有界日志快照。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class RuntimeDebugOverlay : MonoBehaviour
+public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     #region 限制
 
@@ -67,6 +68,12 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour
     /// <summary>上一次呈现的内存日志版本。</summary>
     private int presentedLogVersion = -1;
 
+    /// <summary>当前是否正在拖动常驻日志入口。</summary>
+    private bool isDraggingToggle;
+
+    /// <summary>按下位置到按钮轴心的父级局部坐标偏移。</summary>
+    private Vector2 toggleDragOffset;
+
     #endregion
 
     #region 生命周期
@@ -103,6 +110,7 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour
     /// <summary>解除悬浮窗按钮事件，避免禁用或销毁后的重复回调。</summary>
     private void OnDisable()
     {
+        isDraggingToggle = false;
         UnbindButton(toggleButton, TogglePanel);
         UnbindButton(copyButton, CopyLogs);
         UnbindButton(clearButton, ClearLogs);
@@ -120,6 +128,122 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour
     private void Update()
     {
         RefreshPresentation(force: false);
+    }
+
+    #endregion
+
+    #region 悬浮入口拖拽
+
+    /// <summary>只接受从日志入口开始的左键或单指拖拽，并取消本次点击以免误展开。</summary>
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        if (!TryGetToggleDragContext(eventData, eventData?.pressPosition ?? Vector2.zero, true,
+                out RectTransform toggleRect, out RectTransform boundsRect, out Vector2 pointerPosition))
+        {
+            return;
+        }
+
+        isDraggingToggle = true;
+        toggleDragOffset = GetPivotPositionInParent(toggleRect, boundsRect) - pointerPosition;
+        eventData.eligibleForClick = false;
+    }
+
+    /// <summary>让日志入口跟随指针移动，并始终限制在设备安全区内。</summary>
+    public void OnDrag(PointerEventData eventData)
+    {
+        if (!isDraggingToggle ||
+            !TryGetToggleDragContext(eventData, eventData.position, false,
+                out RectTransform toggleRect, out RectTransform boundsRect, out Vector2 pointerPosition))
+        {
+            return;
+        }
+
+        SetPivotPositionInParent(toggleRect, boundsRect, pointerPosition + toggleDragOffset);
+        ClampToggleToBounds(toggleRect, boundsRect);
+    }
+
+    /// <summary>结束拖拽并再次校正边界；普通点击仍由 Button 负责展开页面。</summary>
+    public void OnEndDrag(PointerEventData eventData)
+    {
+        if (!isDraggingToggle)
+            return;
+
+        isDraggingToggle = false;
+        if (toggleButton == null || !(toggleButton.transform is RectTransform toggleRect) ||
+            !(toggleRect.parent is RectTransform boundsRect))
+        {
+            return;
+        }
+
+        ClampToggleToBounds(toggleRect, boundsRect);
+    }
+
+    /// <summary>解析日志入口、安全区与指针局部坐标，拒绝其它面板控件发起的拖拽。</summary>
+    private bool TryGetToggleDragContext(
+        PointerEventData eventData,
+        Vector2 screenPosition,
+        bool requirePressInside,
+        out RectTransform toggleRect,
+        out RectTransform boundsRect,
+        out Vector2 pointerPosition)
+    {
+        toggleRect = toggleButton != null ? toggleButton.transform as RectTransform : null;
+        boundsRect = toggleRect != null ? toggleRect.parent as RectTransform : null;
+        pointerPosition = default;
+        return eventData != null &&
+               eventData.button == PointerEventData.InputButton.Left &&
+               toggleRect != null &&
+               boundsRect != null &&
+               (!requirePressInside ||
+                RectTransformUtility.RectangleContainsScreenPoint(
+                    toggleRect,
+                    eventData.pressPosition,
+                    eventData.pressEventCamera)) &&
+               RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                   boundsRect,
+                   screenPosition,
+                   eventData.pressEventCamera,
+                   out pointerPosition);
+    }
+
+    /// <summary>计算按钮轴心在安全区父节点中的局部位置。</summary>
+    private static Vector2 GetPivotPositionInParent(RectTransform rect, RectTransform parent)
+    {
+        return GetAnchorPositionInParent(rect, parent) + rect.anchoredPosition;
+    }
+
+    /// <summary>把目标轴心位置换算回 RectTransform 的锚点坐标。</summary>
+    private static void SetPivotPositionInParent(RectTransform rect, RectTransform parent, Vector2 pivotPosition)
+    {
+        rect.anchoredPosition = pivotPosition - GetAnchorPositionInParent(rect, parent);
+    }
+
+    /// <summary>取得固定锚点在父节点局部坐标中的位置。</summary>
+    private static Vector2 GetAnchorPositionInParent(RectTransform rect, RectTransform parent)
+    {
+        Rect parentRect = parent.rect;
+        return new Vector2(
+            Mathf.Lerp(parentRect.xMin, parentRect.xMax, rect.anchorMin.x),
+            Mathf.Lerp(parentRect.yMin, parentRect.yMax, rect.anchorMin.y));
+    }
+
+    /// <summary>把按钮完整限制在安全区内，不允许拖到屏幕外。</summary>
+    private static void ClampToggleToBounds(RectTransform rect, RectTransform parent)
+    {
+        Rect bounds = parent.rect;
+        Rect localRect = rect.rect;
+        Vector2 pivotPosition = GetPivotPositionInParent(rect, parent);
+        float width = localRect.width * Mathf.Abs(rect.localScale.x);
+        float height = localRect.height * Mathf.Abs(rect.localScale.y);
+        pivotPosition.x = Mathf.Clamp(
+            pivotPosition.x,
+            bounds.xMin + width * rect.pivot.x,
+            bounds.xMax - width * (1f - rect.pivot.x));
+        pivotPosition.y = Mathf.Clamp(
+            pivotPosition.y,
+            bounds.yMin + height * rect.pivot.y,
+            bounds.yMax - height * (1f - rect.pivot.y));
+        SetPivotPositionInParent(rect, parent, pivotPosition);
     }
 
     #endregion
