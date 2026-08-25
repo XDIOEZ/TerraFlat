@@ -4,7 +4,7 @@ namespace FlatWorld.WorldModel
 {
     /// <summary>
     /// 旧版 ChunkGenerator_Land 的单点气候结果。
-    /// 高度、温度和基础降水来自旧版三通道噪声中的对应通道，最终降水已叠加迎风增雨与背风雨影。
+    /// 高度、基础温度和基础降水来自旧版三通道噪声；温度已叠加海拔降温，最终降水已叠加迎风增雨与背风雨影。
     /// 风向始终是单位向量，可直接写入区块环境层。
     /// </summary>
     internal readonly struct LegacyClimateSample
@@ -65,9 +65,11 @@ namespace FlatWorld.WorldModel
         {
             NormalizeWorldCell(request, ref worldX, ref worldY);
             float height = SampleHeightAt(request, settings, worldX, worldY);
-            float temperature = SampleChannel(request, settings,
+            float baseTemperature = SampleChannel(request, settings,
                 settings.TemperatureNoise,
                 TemperatureChannelId, worldX, worldY);
+            float temperature = (float)settings.ApplyAltitudeTemperatureCooling(
+                height, baseTemperature);
             double temperatureCelsius = Lerp(
                 settings.TemperatureCelsiusMin,
                 settings.TemperatureCelsiusMax,

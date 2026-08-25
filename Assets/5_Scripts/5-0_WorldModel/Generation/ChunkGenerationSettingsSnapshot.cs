@@ -61,8 +61,11 @@ namespace FlatWorld.WorldModel
                 return SurfaceBiomeKind.Ocean;
             if (river)
                 return SurfaceBiomeKind.River;
-            if (height >= settings.SnowLineHeight)
+            if (temperature <= settings.SnowTemperature &&
+                precipitation >= settings.SnowMinimumPrecipitation)
+            {
                 return SurfaceBiomeKind.Snow;
+            }
             if (height >= settings.MountainLevel)
                 return SurfaceBiomeKind.Stone;
 
@@ -77,10 +80,6 @@ namespace FlatWorld.WorldModel
                 if (height <= settings.BeachLevel)
                     return SurfaceBiomeKind.Beach;
 
-                // LegacyLand 只负责复用旧气候采样；雪地仍必须在森林兜底前参与正式群系判定。
-                if (temperature <= settings.SnowTemperature)
-                    return SurfaceBiomeKind.Snow;
-
                 bool grassland =
                     temperature >= settings.GrasslandMinimumTemperature &&
                     temperature <= settings.GrasslandMaximumTemperature &&
@@ -91,8 +90,6 @@ namespace FlatWorld.WorldModel
 
             if (height <= settings.BeachLevel)
                 return SurfaceBiomeKind.Beach;
-            if (temperature <= settings.SnowTemperature)
-                return SurfaceBiomeKind.Snow;
             if (precipitation < settings.DesertMaximumPrecipitation)
                 return SurfaceBiomeKind.Desert;
             return moisture > 0.62d ? SurfaceBiomeKind.Forest : SurfaceBiomeKind.Grassland;
@@ -182,11 +179,9 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "terrain.mountainLevel", 0.72d),
                 BeachLevel,
                 1d);
-            SnowLineHeight = Clamp(
-                GetDouble(numbers, "terrain.snowLineHeight", MountainLevel + 0.02d),
-                MountainLevel,
-                1d);
             SnowTemperature = Clamp01(GetDouble(numbers, "terrain.snowTemperature", 0.18d));
+            SnowMinimumPrecipitation = Clamp01(
+                GetDouble(numbers, "terrain.snowMinimumPrecipitation", 0.55d));
             SnowIceLakeChance = Clamp01(
                 GetDouble(numbers, "biome.snow.iceLakeChance", 0.08d));
             SnowGrassDensityMultiplier = Clamp01(
@@ -236,6 +231,12 @@ namespace FlatWorld.WorldModel
             TemperatureCelsiusMax = Math.Max(
                 TemperatureCelsiusMin,
                 Finite(GetDouble(numbers, "climate.temperature.celsiusMax", 50d), 50d));
+            TemperatureAltitudeCoolingStart = Clamp01(GetDouble(
+                numbers, "climate.temperature.altitudeCoolingStart", SeaLevel));
+            TemperatureAltitudeCoolingStrength = Clamp(
+                GetDouble(numbers, "climate.temperature.altitudeCoolingStrength", 0.8d),
+                0d,
+                2d);
             HeightSecondaryBoostEnabled = GetBool(
                 numbers, "terrain.height.secondaryBoostEnabled", true);
             HeightSecondaryBoostStrength = NonNegativeFinite(
@@ -432,10 +433,10 @@ namespace FlatWorld.WorldModel
         public double BeachLevel { get; }
         /// <summary>高度达到这个数时使用可行走的石地表现二维山地。</summary>
         public double MountainLevel { get; }
-        /// <summary>高度达到这个数时，山地顶部覆盖为雪地。</summary>
-        public double SnowLineHeight { get; }
-        /// <summary>温度低于这个数时可以生成雪地。</summary>
+        /// <summary>实际温度低于这个数时具备积雪条件。</summary>
         public double SnowTemperature { get; }
+        /// <summary>降水高于这个数时才能形成雪地。</summary>
+        public double SnowMinimumPrecipitation { get; }
         /// <summary>雪地低洼处生成冰面的基础概率。</summary>
         public double SnowIceLakeChance { get; }
         /// <summary>雪地草地相对于普通草地的生成密度倍率。</summary>
@@ -470,6 +471,10 @@ namespace FlatWorld.WorldModel
         public TerrainNoiseChannelSettings TemperatureNoise { get; }
         public double TemperatureCelsiusMin { get; }
         public double TemperatureCelsiusMax { get; }
+        /// <summary>从这个高度开始按海拔降低实际温度。</summary>
+        public double TemperatureAltitudeCoolingStart { get; }
+        /// <summary>高度每上升 1 对归一化温度的降温强度。</summary>
+        public double TemperatureAltitudeCoolingStrength { get; }
         /// <summary>是否把高于和低于中值的高度差再次平方强化。</summary>
         public bool HeightSecondaryBoostEnabled { get; }
         public double HeightSecondaryBoostStrength { get; }
@@ -601,6 +606,14 @@ namespace FlatWorld.WorldModel
         public short DefaultNavigationCost { get; }
         /// <summary>河流的有限寻路代价；高于陆地，但不能把河流变成不可通行障碍。</summary>
         public short RiverNavigationCost { get; }
+
+        /// <summary>把气候通道的基础温度换算成受海拔影响的实际温度。</summary>
+        public double ApplyAltitudeTemperatureCooling(double height, double baseTemperature)
+        {
+            double elevation = Math.Max(0d,
+                Clamp01(height) - TemperatureAltitudeCoolingStart);
+            return Clamp01(baseTemperature - elevation * TemperatureAltitudeCoolingStrength);
+        }
 
         // 这些小方法只从当前这份设置里取值，不会偷偷读取全局设置。
         /// <summary>读取一个整数参数；找不到时返回默认值。</summary>

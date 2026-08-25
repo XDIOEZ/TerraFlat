@@ -12,7 +12,7 @@ namespace FlatWorld.WorldModel
     public sealed class DeterministicChunkGenerator : IChunkPureGenerator
     {
         /// <summary>纯区块生成规则版本；气候、群系、河谷选路或河网筛选规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 29;
+        public const int CurrentGenerationSignature = 30;
 
         private readonly LegacyHydrologyKernel legacyHydrologyKernel = new();
         private readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<GeneratedHydrologyMap>>
@@ -340,10 +340,10 @@ namespace FlatWorld.WorldModel
                 double temperatureNoise = Fractal(CreateSeed(request, 0x85ebca6bu),
                     worldX, worldY, settings.ClimateScale, settings.ClimateOctaves,
                     2.07d, 0.5d, request.Topology);
-                // 简化模式保留纬度与海拔降温；旧版 Land 模式使用独立温度通道。
+                // 两种气候算法都通过同一个海拔降温入口输出实际温度。
                 double latitudeCooling = Math.Min(0.34d, Math.Abs(worldY) * 0.000025d);
-                temperature = Clamp01(temperatureNoise - latitudeCooling -
-                                      Math.Max(0d, height - 0.68d) * 0.55d);
+                temperature = settings.ApplyAltitudeTemperatureCooling(
+                    height, temperatureNoise - latitudeCooling);
                 temperatureCelsius = -20d + temperature * 65d;
             }
             bool ocean = height < settings.SeaLevel;

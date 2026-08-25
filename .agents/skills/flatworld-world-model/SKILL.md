@@ -24,6 +24,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - 提交生成结果前校验世界纪元与请求版本；取消、失败和逐出路径必须释放结果及租约。
 - 生成保持固定种子和稳定签名；修改地形内容规则时同时使用 `flatworld-map`。
 - 新增 `SurfaceBiomeKind` 或群系条件时，必须覆盖 Profile 当前可选的全部分类算法；`LegacyLand` 只复用旧气候采样，不会自动继承其他分支的群系规则。
+- 雪地必须同时使用海拔修正后的实际温度与地形修正后的最终降水；海拔只通过降温提高积雪概率，不得单独把高地覆盖为雪。
 - Profile 新增地形 TileId 时，同时注册 `ChunkTilePaletteSO` 表现映射；`tile.block.*` 只负责玩法 TileBlock 解析，不能替代 Tilemap 调色板。
 - Unity 序列化的私有配置结构体字段不会被 C# 编译器识别为 Inspector 赋值；出现 CS0649 时只在对应字段范围使用局部禁用，不要为消警告改写运行时默认值。
 - 可走性联动 `flatworld-navigation`，维度地址联动 `flatworld-dimension`，快照持久化联动 `flatworld-data-save`。

@@ -139,8 +139,8 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "terrain.seaLevel",
         "terrain.beachLevel",
         "terrain.mountainLevel",
-        "terrain.snowLineHeight",
         "terrain.snowTemperature",
+        "terrain.snowMinimumPrecipitation",
         "terrain.height.coordScale",
         "terrain.height.frequency",
         "terrain.height.octaves",
@@ -152,6 +152,8 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         "terrain.height.secondaryBoostStrength",
         "climate.precipitation.coordScale",
         "climate.temperature.coordScale",
+        "climate.temperature.altitudeCoolingStart",
+        "climate.temperature.altitudeCoolingStrength",
         "river.enabled",
         "structure.enabled"
     };
@@ -177,8 +179,8 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["terrain.seaLevel"] = "越高水域越多，越低陆地越多",
             ["terrain.beachLevel"] = "越高海岸边的沙滩带越宽",
             ["terrain.mountainLevel"] = "越低石质山地越多，越高山地越少",
-            ["terrain.snowLineHeight"] = "山地高度超过该值时覆盖为雪山；越低雪山越多",
-            ["terrain.snowTemperature"] = "非山地区域温度低于该值时生成雪原；越高雪原越多",
+            ["terrain.snowTemperature"] = "实际温度低于该值时具备积雪条件；越高雪地越多",
+            ["terrain.snowMinimumPrecipitation"] = "降水高于该值才生成雪地；越高雪地越集中在湿润区",
             ["terrain.noiseScale"] = "简化地形模式的起伏密度；越大变化越快",
             ["terrain.octaves"] = "简化地形模式的细节层数；越高越细、计算越慢",
             ["climate.noiseScale"] = "简化气候模式的区域密度；越大冷热干湿变化越快",
@@ -200,6 +202,8 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["climate.precipitation.offsetX"] = "沿 X 方向平移整张降水噪声图",
             ["climate.precipitation.offsetY"] = "沿 Y 方向平移整张降水噪声图",
             ["climate.temperature.coordScale"] = "温度图坐标倍率；越大冷热区域越密集",
+            ["climate.temperature.altitudeCoolingStart"] = "超过该高度后开始按海拔降温",
+            ["climate.temperature.altitudeCoolingStrength"] = "海拔对温度的影响强度；越高山区越冷",
             ["climate.temperature.frequency"] = "温度图基础频率；越大冷热变化越快",
             ["climate.temperature.octaves"] = "温度图细节层数；越高局部温差越细碎",
             ["climate.temperature.lacunarity"] = "温度每层细节缩小的速度",
@@ -628,8 +632,8 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             DrawSlider("terrain.seaLevel", "海平面", 0f, 1f);
             DrawSlider("terrain.beachLevel", "沙滩上限", 0f, 1f);
             DrawSlider("terrain.mountainLevel", "山地阈值", 0f, 1f);
-            DrawSlider("terrain.snowLineHeight", "雪线高度", 0f, 1f);
             DrawSlider("terrain.snowTemperature", "雪地温度阈值", 0f, 1f);
+            DrawSlider("terrain.snowMinimumPrecipitation", "雪地最低降水", 0f, 1f);
 
             EditorGUILayout.Space(3f);
             EditorGUILayout.LabelField("高度噪声", EditorStyles.miniBoldLabel);
@@ -647,6 +651,8 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             EditorGUILayout.LabelField("气候与附加层", EditorStyles.miniBoldLabel);
             DrawDoubleField("climate.precipitation.coordScale", "降水坐标倍率");
             DrawDoubleField("climate.temperature.coordScale", "温度坐标倍率");
+            DrawSlider("climate.temperature.altitudeCoolingStart", "海拔降温起点", 0f, 1f);
+            DrawDoubleField("climate.temperature.altitudeCoolingStrength", "海拔降温强度");
             DrawToggle("river.enabled", "生成河流");
             DrawToggle("structure.enabled", "生成结构");
         }

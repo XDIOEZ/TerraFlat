@@ -226,6 +226,14 @@ namespace FlatWorld.GameTest.WorldModel
             Assert.That(profile.Settings.TemperatureNoise.Octaves, Is.EqualTo(4));
             Assert.That(profile.Settings.TemperatureCelsiusMin, Is.EqualTo(0d));
             Assert.That(profile.Settings.TemperatureCelsiusMax, Is.EqualTo(50d));
+            Assert.That(profile.Settings.TemperatureAltitudeCoolingStart,
+                Is.EqualTo(0.5d).Within(0.000001d));
+            Assert.That(profile.Settings.TemperatureAltitudeCoolingStrength,
+                Is.EqualTo(0.8d).Within(0.000001d));
+            Assert.That(profile.Settings.SnowTemperature,
+                Is.EqualTo(0.22d).Within(0.000001d));
+            Assert.That(profile.Settings.SnowMinimumPrecipitation,
+                Is.EqualTo(0.55d).Within(0.000001d));
             Assert.That(profile.Settings.WindRegionSize,
                 Is.EqualTo(256d).Within(0.000001d));
             Assert.That(profile.Settings.WindSeedSalt, Is.EqualTo(1779033703));

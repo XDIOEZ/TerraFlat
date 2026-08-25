@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace FlatWorld.GameTest.WorldModel
 {
-    /// <summary>验证无头气候核与旧 ChunkGenerator_Land 在固定输入下保持相同行为。</summary>
+    /// <summary>验证无头气候核复用旧 Land 噪声，并在其上统一叠加海拔降温。</summary>
     [Category("Map.Climate")]
     public sealed class LegacyTerrainClimateKernelTests
     {
@@ -31,14 +31,19 @@ namespace FlatWorld.GameTest.WorldModel
                     position, request.WorldSeed, null);
                 LegacyClimateSample actual = LegacyTerrainClimateKernel.SampleClimate(
                     request, profile.Settings, position.x, position.y);
+                double expectedTemperature = profile.Settings.ApplyAltitudeTemperatureCooling(
+                    expected.Environment.Height, expected.Environment.Temperature);
+                double expectedTemperatureCelsius = profile.Settings.TemperatureCelsiusMin +
+                    (profile.Settings.TemperatureCelsiusMax -
+                     profile.Settings.TemperatureCelsiusMin) * expectedTemperature;
 
                 Assert.That(actual.Height,
                     Is.EqualTo(expected.Environment.Height).Within(0.00001d), position.ToString());
                 Assert.That(actual.Temperature,
-                    Is.EqualTo(expected.Environment.Temperature).Within(0.00001d),
+                    Is.EqualTo(expectedTemperature).Within(0.00001d),
                     position.ToString());
                 Assert.That(actual.TemperatureCelsius,
-                    Is.EqualTo(expected.Environment.TemperatureCelsius).Within(0.0001d),
+                    Is.EqualTo(expectedTemperatureCelsius).Within(0.0001d),
                     position.ToString());
                 Assert.That(actual.BasePrecipitation,
                     Is.EqualTo(expected.BasePrecipitation).Within(0.00001d), position.ToString());
@@ -123,6 +128,12 @@ namespace FlatWorld.GameTest.WorldModel
 
             Assert.That(SurfaceBiomeClassifier.Resolve(
                     settings, 0.8d, 0.5d, 0.1d, 0.5d, false),
+                Is.EqualTo(SurfaceBiomeKind.Stone));
+            Assert.That(SurfaceBiomeClassifier.Resolve(
+                    settings, 0.8d, 0.1d, 0.7d, 0.7d, false),
+                Is.EqualTo(SurfaceBiomeKind.Snow));
+            Assert.That(SurfaceBiomeClassifier.Resolve(
+                    settings, 0.6d, 0.1d, 0.7d, 0.7d, false),
                 Is.EqualTo(SurfaceBiomeKind.Snow));
             Assert.That(SurfaceBiomeClassifier.Resolve(
                     settings, 0.73d, 0.5d, 0.1d, 0.5d, false),
