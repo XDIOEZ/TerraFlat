@@ -16,6 +16,8 @@ public static class RuntimeUIPrefabKeys
     public const string InputBindingRow = "UI_InputBindingRow";
     /// <summary>启动资源加载面板的运行时键。</summary>
     public const string ResourceLoading = "UI_ResourceLoading";
+    /// <summary>最早启动的运行时调试悬浮窗键。</summary>
+    public const string RuntimeDebugOverlay = "UI_RuntimeDebugOverlay";
     public const string WorldLoading = "UI_WorldLoading";
     public const string DimensionLoading = "UI_DimensionLoading";
     public const string PlayerWorldCoordinate = "UI_PlayerWorldCoordinate";

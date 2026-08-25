@@ -19,13 +19,15 @@ public static class RuntimeUIPrefabBuilder
     private const string DialogueRoot = PrefabRoot + "Gameplay/Dialogue/";
     private const string HudRoot = PrefabRoot + "Gameplay/HUD/";
     private const string LoadingRoot = PrefabRoot + "Gameplay/Loading/";
+    /// <summary>运行时诊断 UI 的正式 Prefab 目录。</summary>
+    private const string DebugRoot = PrefabRoot + "Gameplay/Debug/";
     private const string MobileRoot = PrefabRoot + "Gameplay/Mobile/";
     private const string BuffRoot = PrefabRoot + "Gameplay/Status/Buff/";
     private const string QuestRoot = PrefabRoot + "Gameplay/Status/Quest/";
     private const string SettingsPanelsRoot = PrefabRoot + "Settings/Panels/";
     private const string SettingsComponentsRoot = PrefabRoot + "Settings/Components/";
     private const string UIRootPrefab = "Assets/Resources/UI/UIRoot.prefab";
-    /// <summary>承载 GameRes 直接引用的管理器 Prefab 路径。</summary>
+    /// <summary>承载启动阶段直接引用的管理器 Prefab 路径。</summary>
     private const string WorldManagerPrefab = "Assets/2_Prefabs/Core/Managers/WorldManager.prefab";
     private const string InventoryPanelsRoot = PrefabRoot + "Gameplay/Inventory/Panels/";
     private const string InventoryComponentsRoot = PrefabRoot + "Gameplay/Inventory/Components/";
@@ -111,6 +113,7 @@ public static class RuntimeUIPrefabBuilder
         Directory.CreateDirectory(DialogueRoot);
         Directory.CreateDirectory(HudRoot);
         Directory.CreateDirectory(LoadingRoot);
+        Directory.CreateDirectory(DebugRoot);
         Directory.CreateDirectory(MobileRoot);
         Directory.CreateDirectory(BuffRoot);
         Directory.CreateDirectory(QuestRoot);
@@ -127,6 +130,7 @@ public static class RuntimeUIPrefabBuilder
         SaveNewPrefab(DialogueRoot + RuntimeUIPrefabKeys.PlayerChatInput + ".prefab", BuildPlayerChatInput);
         SaveNewPrefab(DialogueRoot + RuntimeUIPrefabKeys.CharacterSpeechBubble + ".prefab", BuildSpeechBubble);
         SaveResourceLoadingPrefab();
+        SaveRuntimeDebugOverlayPrefab();
         SaveNewPrefab(LoadingRoot + RuntimeUIPrefabKeys.WorldLoading + ".prefab", BuildWorldLoading);
         SaveDimensionLoadingPrefab();
         SavePlayerWorldCoordinatePrefab();
@@ -223,6 +227,24 @@ public static class RuntimeUIPrefabBuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[Runtime UI] 已固化启动资源加载 UGUI，并绑定到 WorldManager.prefab。");
+    }
+
+    /// <summary>只重建最早启动的运行时调试悬浮窗，并同步 WorldManager 直接引用。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Runtime Debug Overlay")]
+    public static void RebuildRuntimeDebugOverlayUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(DebugRoot);
+        SaveRuntimeDebugOverlayPrefab();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化运行时调试悬浮窗，并绑定到 WorldManager.prefab。");
     }
 
     /// <summary>只重建区块流送设置和入口，避免小改动重写全部运行时 Prefab。</summary>
@@ -450,6 +472,38 @@ public static class RuntimeUIPrefabBuilder
         SaveNewPrefab(prefabPath, BuildResourceLoading);
         EnsureRuntimePrefabAddressable(prefabPath);
         BindResourceLoadingPrefab(prefabPath);
+    }
+
+    /// <summary>保存调试悬浮窗、登记 Prefab 标签，并建立启动阶段可用的直接引用。</summary>
+    private static void SaveRuntimeDebugOverlayPrefab()
+    {
+        string prefabPath = DebugRoot + RuntimeUIPrefabKeys.RuntimeDebugOverlay + ".prefab";
+        SaveNewPrefab(prefabPath, BuildRuntimeDebugOverlay);
+        EnsureRuntimePrefabAddressable(prefabPath);
+        BindRuntimeDebugOverlayPrefab(prefabPath);
+    }
+
+    /// <summary>把调试悬浮窗 Prefab 绑定到高优先级启动器，避免依赖 GameRes 或 Addressables。</summary>
+    private static void BindRuntimeDebugOverlayPrefab(string prefabPath)
+    {
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (prefab == null)
+            throw new FileNotFoundException($"找不到调试悬浮窗 Prefab：{prefabPath}", prefabPath);
+
+        UpdateExistingWorldPrefab(WorldManagerPrefab, root =>
+        {
+            RuntimeDebugOverlayLauncher launcher = root.GetComponent<RuntimeDebugOverlayLauncher>();
+            if (launcher == null)
+                launcher = root.AddComponent<RuntimeDebugOverlayLauncher>();
+
+            SerializedObject serializedLauncher = new SerializedObject(launcher);
+            SerializedProperty prefabProperty = serializedLauncher.FindProperty("overlayPrefab");
+            if (prefabProperty == null)
+                throw new System.MissingFieldException(nameof(RuntimeDebugOverlayLauncher), "overlayPrefab");
+
+            prefabProperty.objectReferenceValue = prefab;
+            serializedLauncher.ApplyModifiedPropertiesWithoutUndo();
+        });
     }
 
     /// <summary>把资源加载 Prefab 直接绑定给 GameRes，避免启动时反向依赖 Addressables。</summary>
@@ -906,6 +960,161 @@ public static class RuntimeUIPrefabBuilder
         progressFill.fillAmount = 0f;
         Stretch(progressFill.rectTransform);
 
+        return root;
+    }
+
+    /// <summary>构建独立运行的日志悬浮窗，折叠入口和展开页都约束在设备安全区内。</summary>
+    private static GameObject BuildRuntimeDebugOverlay()
+    {
+        GameObject root = new GameObject(
+            RuntimeUIPrefabKeys.RuntimeDebugOverlay,
+            typeof(RectTransform),
+            typeof(Canvas),
+            typeof(CanvasScaler),
+            typeof(GraphicRaycaster),
+            typeof(CanvasGroup));
+        Stretch(root.GetComponent<RectTransform>());
+
+        Canvas canvas = root.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = UIManager.GlobalOverlaySortingOrder + 20;
+
+        CanvasScaler scaler = root.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
+        canvasGroup.alpha = 1f;
+        canvasGroup.interactable = true;
+        canvasGroup.blocksRaycasts = true;
+
+        GameObject safeArea = CreateUIObject("调试安全区", root.transform, typeof(SafeAreaRectController));
+        Stretch(safeArea.GetComponent<RectTransform>());
+
+        Button toggleButton = CreateButton("调试悬浮按钮", safeArea.transform, "日志  0", 150f, 62f, false);
+        SetTopRight(toggleButton.GetComponent<RectTransform>(), 22f, 22f, 150f, 62f);
+        toggleButton.GetComponent<Image>().color = new Color(0.12f, 0.22f, 0.25f, 0.98f);
+        SetButtonLabelSize(toggleButton, 18f);
+        TextMeshProUGUI toggleLabel = toggleButton.GetComponentInChildren<TextMeshProUGUI>(true);
+        toggleLabel.gameObject.name = "悬浮日志数量";
+
+        GameObject panel = CreateUIObject("调试页面", safeArea.transform, typeof(Image), typeof(Shadow));
+        SetTopRight(panel.GetComponent<RectTransform>(), 22f, 98f, 980f, 760f);
+        Image panelImage = panel.GetComponent<Image>();
+        panelImage.color = new Color(0.018f, 0.03f, 0.04f, 0.985f);
+        panelImage.raycastTarget = true;
+        AddOutline(panelImage, Amber);
+        Shadow shadow = panel.GetComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.72f);
+        shadow.effectDistance = new Vector2(8f, -8f);
+
+        TextMeshProUGUI title = CreateText("调试页标题", panel.transform, "运行日志 / DEBUG", 25f, Cream);
+        title.fontStyle = FontStyles.Bold;
+        title.enableWordWrapping = false;
+        SetTopLeft(title.rectTransform, 24f, 18f, 230f, 38f);
+
+        TextMeshProUGUI summary = CreateText("日志数量摘要", panel.transform, "共 0 条    错误 0    警告 0", 16f, Muted);
+        summary.enableWordWrapping = false;
+        summary.overflowMode = TextOverflowModes.Ellipsis;
+        SetTopLeft(summary.rectTransform, 265f, 22f, 355f, 30f);
+
+        Button closeButton = CreateButton("关闭调试页按钮", panel.transform, "关闭", 96f, 48f, false);
+        SetTopRight(closeButton.GetComponent<RectTransform>(), 18f, 14f, 96f, 48f);
+        Button clearButton = CreateButton("清空日志按钮", panel.transform, "清空", 96f, 48f, false);
+        SetTopRight(clearButton.GetComponent<RectTransform>(), 124f, 14f, 96f, 48f);
+        Button copyButton = CreateButton("复制日志按钮", panel.transform, "复制", 108f, 48f, true);
+        SetTopRight(copyButton.GetComponent<RectTransform>(), 230f, 14f, 108f, 48f);
+        SetButtonLabelSize(closeButton, 17f);
+        SetButtonLabelSize(clearButton, 17f);
+        SetButtonLabelSize(copyButton, 17f);
+
+        Image divider = CreateImage("页头分隔线", panel.transform, new Color(0.83f, 0.49f, 0.23f, 0.72f));
+        divider.raycastTarget = false;
+        RectTransform dividerRect = divider.rectTransform;
+        dividerRect.anchorMin = new Vector2(0f, 1f);
+        dividerRect.anchorMax = new Vector2(1f, 1f);
+        dividerRect.pivot = new Vector2(0.5f, 1f);
+        dividerRect.anchoredPosition = new Vector2(0f, -76f);
+        dividerRect.sizeDelta = new Vector2(-40f, 2f);
+
+        GameObject scrollRoot = CreateUIObject("日志滚动区", panel.transform, typeof(Image), typeof(ScrollRect));
+        RectTransform scrollRootRect = scrollRoot.GetComponent<RectTransform>();
+        scrollRootRect.anchorMin = Vector2.zero;
+        scrollRootRect.anchorMax = Vector2.one;
+        scrollRootRect.offsetMin = new Vector2(22f, 62f);
+        scrollRootRect.offsetMax = new Vector2(-22f, -90f);
+        Image scrollBackground = scrollRoot.GetComponent<Image>();
+        scrollBackground.color = new Color(0.006f, 0.012f, 0.016f, 0.96f);
+        scrollBackground.raycastTarget = true;
+        AddOutline(scrollBackground, Border);
+
+        GameObject viewport = CreateUIObject("Viewport", scrollRoot.transform, typeof(RectMask2D));
+        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
+        Stretch(viewportRect);
+        viewportRect.offsetMin = new Vector2(14f, 12f);
+        viewportRect.offsetMax = new Vector2(-14f, -12f);
+
+        TextMeshProUGUI logText = CreateText(
+            "日志正文",
+            viewport.transform,
+            "暂无运行日志。",
+            15f,
+            new Color(0.82f, 0.86f, 0.84f, 1f));
+        RectTransform logRect = logText.rectTransform;
+        logRect.anchorMin = new Vector2(0f, 1f);
+        logRect.anchorMax = new Vector2(1f, 1f);
+        logRect.pivot = new Vector2(0.5f, 1f);
+        logRect.anchoredPosition = Vector2.zero;
+        logRect.sizeDelta = Vector2.zero;
+        logText.alignment = TextAlignmentOptions.TopLeft;
+        logText.enableWordWrapping = true;
+        logText.overflowMode = TextOverflowModes.Overflow;
+        logText.richText = false;
+        logText.lineSpacing = 4f;
+        ContentSizeFitter contentFitter = logText.gameObject.AddComponent<ContentSizeFitter>();
+        contentFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        ScrollRect scrollRect = scrollRoot.GetComponent<ScrollRect>();
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.inertia = true;
+        scrollRect.decelerationRate = 0.12f;
+        scrollRect.scrollSensitivity = 34f;
+        scrollRect.viewport = viewportRect;
+        scrollRect.content = logRect;
+
+        TextMeshProUGUI status = CreateText(
+            "调试操作状态",
+            panel.transform,
+            "复制上限：最近 12 KiB。",
+            14f,
+            Muted);
+        status.enableWordWrapping = false;
+        status.overflowMode = TextOverflowModes.Ellipsis;
+        status.rectTransform.anchorMin = new Vector2(0f, 0f);
+        status.rectTransform.anchorMax = new Vector2(1f, 0f);
+        status.rectTransform.pivot = new Vector2(0.5f, 0f);
+        status.rectTransform.anchoredPosition = new Vector2(0f, 17f);
+        status.rectTransform.sizeDelta = new Vector2(-44f, 30f);
+
+        RuntimeDebugOverlay controller = root.AddComponent<RuntimeDebugOverlay>();
+        SerializedObject serializedController = new SerializedObject(controller);
+        serializedController.FindProperty("debugPanel").objectReferenceValue = panel;
+        serializedController.FindProperty("toggleButton").objectReferenceValue = toggleButton;
+        serializedController.FindProperty("copyButton").objectReferenceValue = copyButton;
+        serializedController.FindProperty("clearButton").objectReferenceValue = clearButton;
+        serializedController.FindProperty("closeButton").objectReferenceValue = closeButton;
+        serializedController.FindProperty("toggleLabel").objectReferenceValue = toggleLabel;
+        serializedController.FindProperty("summaryText").objectReferenceValue = summary;
+        serializedController.FindProperty("logText").objectReferenceValue = logText;
+        serializedController.FindProperty("statusText").objectReferenceValue = status;
+        serializedController.FindProperty("logScrollRect").objectReferenceValue = scrollRect;
+        serializedController.ApplyModifiedPropertiesWithoutUndo();
+
+        panel.SetActive(false);
         return root;
     }
 

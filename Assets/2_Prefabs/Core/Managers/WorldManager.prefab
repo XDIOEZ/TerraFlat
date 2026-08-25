@@ -269,6 +269,7 @@ GameObject:
   - component: {fileID: 2341746562113399121}
   - component: {fileID: 5620251106547435517}
   - component: {fileID: 2693940703275175513}
+  - component: {fileID: 4939125256281199578}
   m_Layer: 0
   m_Name: WorldManager
   m_TagString: Untagged
@@ -390,6 +391,19 @@ MonoBehaviour:
     _PersistentCalls: []
   OnSceneSwitch:
     _PersistentCalls: []
+--- !u!114 &4939125256281199578
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4565539948505994440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4d8a6afd6cbddd46a774d05a14215c0, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  overlayPrefab: {fileID: 8515459174737126461, guid: 0d1b3a0c73a0212498d83f06a0ea5372, type: 3}
 --- !u!1 &5482967027949208378
 GameObject:
   m_ObjectHideFlags: 0
