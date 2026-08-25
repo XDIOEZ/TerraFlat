@@ -122,38 +122,81 @@ public sealed class GameLogManager : MonoBehaviour
         }
     }
 
-    /// <summary>按日志条数生成最近内容的复制快照，保留完整日志记录而不从单条中间截断。</summary>
+    /// <summary>按去重日志槽位数生成最近内容的复制快照，保留完整日志记录而不从单条中间截断。</summary>
     public static string GetRuntimeLogSnapshotByEntryCount(
         int maxEntries,
         out int copiedEntries,
+        out int collapsedEntries,
         out bool truncated)
     {
         int boundedEntries = Math.Max(1, Math.Min(maxEntries, MaxRuntimeLogEntries));
         lock (WriteLock)
         {
-            copiedEntries = Math.Min(boundedEntries, RuntimeEntries.Count);
-            int skippedEntries = RuntimeEntries.Count - copiedEntries;
-            truncated = skippedEntries > 0;
+            List<RuntimeLogCopyGroup> groups = BuildRuntimeLogCopyGroupsNoLock();
+            copiedEntries = Math.Min(boundedEntries, groups.Count);
+            int skippedGroups = groups.Count - copiedEntries;
+            truncated = skippedGroups > 0;
+            collapsedEntries = 0;
 
             StringBuilder builder = new StringBuilder(Math.Min(runtimeLogCharacters + 256, MaxRuntimeLogCharacters));
             AppendRuntimeSnapshotHeaderNoLock(builder);
-            builder.Append("# Copied: ").Append(copiedEntries).AppendLine();
+            builder.Append("# CopiedSlots: ").Append(copiedEntries).AppendLine();
             if (truncated)
             {
-                builder.Append("<较早的 ").Append(skippedEntries)
-                    .AppendLine(" 条日志已省略，仅复制最近内容>");
+                builder.Append("<较早的 ").Append(skippedGroups)
+                    .AppendLine(" 类日志已省略，仅复制最近内容>");
             }
 
             builder.AppendLine();
-            int index = 0;
-            foreach (RuntimeLogEntry entry in RuntimeEntries)
+            for (int i = skippedGroups; i < groups.Count; i++)
             {
-                if (index++ >= skippedEntries)
-                    builder.Append(entry.Text);
+                RuntimeLogCopyGroup group = groups[i];
+                if (group.RepeatCount > 1)
+                {
+                    collapsedEntries += group.RepeatCount - 1;
+                    builder.Append("[重复 ×").Append(group.RepeatCount).AppendLine("]");
+                }
+
+                builder.Append(group.LatestEntry.Text);
             }
 
             return builder.ToString();
         }
+    }
+
+    /// <summary>按最后出现顺序合并相同级别、正文和堆栈的日志，供复制快照按槽位截取。</summary>
+    private static List<RuntimeLogCopyGroup> BuildRuntimeLogCopyGroupsNoLock()
+    {
+        List<RuntimeLogCopyGroup> groups = new List<RuntimeLogCopyGroup>();
+        int entryIndex = 0;
+        foreach (RuntimeLogEntry entry in RuntimeEntries)
+        {
+            RuntimeLogCopyGroup matchedGroup = null;
+            for (int i = 0; i < groups.Count; i++)
+            {
+                if (!groups[i].LatestEntry.HasSameContent(entry))
+                    continue;
+
+                matchedGroup = groups[i];
+                break;
+            }
+
+            if (matchedGroup == null)
+            {
+                groups.Add(new RuntimeLogCopyGroup(entry, entryIndex));
+            }
+            else
+            {
+                matchedGroup.LatestEntry = entry;
+                matchedGroup.LatestIndex = entryIndex;
+                matchedGroup.RepeatCount++;
+            }
+
+            entryIndex++;
+        }
+
+        groups.Sort((left, right) => left.LatestIndex.CompareTo(right.LatestIndex));
+        return groups;
     }
 
     /// <summary>写入运行时日志快照的统一会话头。</summary>
@@ -454,7 +497,7 @@ public sealed class GameLogManager : MonoBehaviour
 
         lock (WriteLock)
         {
-            CaptureRuntimeEntryNoLock(entry, type);
+            CaptureRuntimeEntryNoLock(entry, type, condition, stackTrace);
             if (writer == null)
                 return;
 
@@ -478,12 +521,16 @@ public sealed class GameLogManager : MonoBehaviour
     }
 
     /// <summary>把日志加入有界内存队列，达到条数或字符上限时优先移除最早内容。</summary>
-    private static void CaptureRuntimeEntryNoLock(string entry, LogType type)
+    private static void CaptureRuntimeEntryNoLock(
+        string entry,
+        LogType type,
+        string condition,
+        string stackTrace)
     {
         string limitedEntry = entry.Length <= MaxRuntimeEntryCharacters
             ? entry
             : entry.Substring(0, MaxRuntimeEntryCharacters) + "\n<单条日志已截断>\n\n";
-        RuntimeLogEntry runtimeEntry = new RuntimeLogEntry(limitedEntry, type);
+        RuntimeLogEntry runtimeEntry = new RuntimeLogEntry(limitedEntry, type, condition, stackTrace);
 
         while (RuntimeEntries.Count > 0 &&
                (RuntimeEntries.Count >= MaxRuntimeLogEntries ||
@@ -715,10 +762,14 @@ public sealed class GameLogManager : MonoBehaviour
     private readonly struct RuntimeLogEntry
     {
         /// <summary>创建一条已完成格式化的运行时日志记录。</summary>
-        public RuntimeLogEntry(string text, LogType type)
+        public RuntimeLogEntry(string text, LogType type, string condition, string stackTrace)
         {
             Text = text ?? string.Empty;
             Type = type;
+            ConditionLength = condition?.Length ?? 0;
+            StackTraceLength = stackTrace?.Length ?? 0;
+            ConditionHash = ComputeContentHash(condition);
+            StackTraceHash = ComputeContentHash(stackTrace);
             CharacterCount = Text.Length;
         }
 
@@ -728,8 +779,63 @@ public sealed class GameLogManager : MonoBehaviour
         /// <summary>Unity 日志级别。</summary>
         public LogType Type { get; }
 
+        /// <summary>原始正文长度，与稳定散列共同识别重复内容且不重复持有大字符串。</summary>
+        public int ConditionLength { get; }
+
+        /// <summary>原始堆栈长度。</summary>
+        public int StackTraceLength { get; }
+
+        /// <summary>原始正文的稳定 64 位散列。</summary>
+        public ulong ConditionHash { get; }
+
+        /// <summary>原始调用堆栈的稳定 64 位散列。</summary>
+        public ulong StackTraceHash { get; }
+
         /// <summary>正文字符数。</summary>
         public int CharacterCount { get; }
+
+        /// <summary>判断两条日志是否属于可堆叠的同一内容。</summary>
+        public bool HasSameContent(RuntimeLogEntry other)
+        {
+            return Type == other.Type &&
+                   ConditionLength == other.ConditionLength &&
+                   StackTraceLength == other.StackTraceLength &&
+                   ConditionHash == other.ConditionHash &&
+                   StackTraceHash == other.StackTraceHash;
+        }
+
+        /// <summary>逐字符计算稳定散列，避免为去重长期保存完整正文和堆栈副本。</summary>
+        private static ulong ComputeContentHash(string value)
+        {
+            const ulong offsetBasis = 14695981039346656037UL;
+            const ulong prime = 1099511628211UL;
+            ulong hash = offsetBasis;
+            if (string.IsNullOrEmpty(value))
+                return hash;
+
+            for (int i = 0; i < value.Length; i++)
+            {
+                hash ^= value[i];
+                hash *= prime;
+            }
+
+            return hash;
+        }
+    }
+
+    /// <summary>复制快照中的一个去重槽位，保存最后一次出现内容与累计次数。</summary>
+    private sealed class RuntimeLogCopyGroup
+    {
+        public RuntimeLogCopyGroup(RuntimeLogEntry entry, int latestIndex)
+        {
+            LatestEntry = entry;
+            LatestIndex = latestIndex;
+            RepeatCount = 1;
+        }
+
+        public RuntimeLogEntry LatestEntry { get; set; }
+        public int LatestIndex { get; set; }
+        public int RepeatCount { get; set; }
     }
 
     #endregion

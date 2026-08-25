@@ -287,13 +287,17 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         string snapshot = GameLogManager.GetRuntimeLogSnapshotByEntryCount(
             copyEntryCount,
             out int copiedEntries,
+            out int collapsedEntries,
             out bool truncated);
         GUIUtility.systemCopyBuffer = snapshot;
         if (statusText != null)
         {
+            string collapsedSummary = collapsedEntries > 0
+                ? $"，合并 {collapsedEntries} 条重复记录"
+                : string.Empty;
             statusText.text = truncated
-                ? $"已复制最近 {copiedEntries} 条日志，较早内容已省略。"
-                : $"已复制当前 {copiedEntries} 条日志。";
+                ? $"已复制最近 {copiedEntries} 个日志槽位{collapsedSummary}，较早类型已省略。"
+                : $"已复制当前 {copiedEntries} 个日志槽位{collapsedSummary}。";
         }
     }
 
@@ -309,7 +313,7 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         PlayerPrefs.SetInt(CopyEntryCountPreferenceKey, copyEntryCount);
         PlayerPrefs.Save();
         if (statusText != null)
-            statusText.text = $"复制时将取最近 {copyEntryCount} 条日志。";
+            statusText.text = $"复制时将取最近 {copyEntryCount} 个去重日志槽位。";
     }
 
     /// <summary>把当前复制条数同步到输入框且不触发重复回调。</summary>

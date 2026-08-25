@@ -1052,7 +1052,7 @@ public static class RuntimeUIPrefabBuilder
         summary.overflowMode = TextOverflowModes.Ellipsis;
         SetTopLeft(summary.rectTransform, 265f, 22f, 220f, 30f);
 
-        TextMeshProUGUI copyCountLabel = CreateText("复制条数标题", panel.transform, "复制条数", 15f, Muted);
+        TextMeshProUGUI copyCountLabel = CreateText("复制槽位标题", panel.transform, "复制槽位", 15f, Muted);
         copyCountLabel.enableWordWrapping = false;
         SetTopLeft(copyCountLabel.rectTransform, 493f, 23f, 70f, 30f);
 
@@ -1130,7 +1130,7 @@ public static class RuntimeUIPrefabBuilder
         TextMeshProUGUI status = CreateText(
             "调试操作状态",
             panel.transform,
-            "复制时将取最近 50 条日志。",
+            "复制时将取最近 50 个去重日志槽位。",
             14f,
             Muted);
         status.enableWordWrapping = false;
