@@ -2,6 +2,33 @@ using System;
 
 namespace FlatWorld.WorldModel
 {
+    /// <summary>洞穴单格对应的地表高度参考；缺少配对时保持旧洞穴规则。</summary>
+    internal readonly struct CaveSurfaceInfluenceSample
+    {
+        /// <summary>保存一格地表高度及其海洋、山地判定线。</summary>
+        public CaveSurfaceInfluenceSample(double height, double seaLevel, double mountainLevel)
+        {
+            HasHeightReference = true;
+            Height = height;
+            SeaLevel = seaLevel;
+            MountainLevel = mountainLevel;
+        }
+
+        /// <summary>是否成功取得冻结地表参数对应的高度。</summary>
+        public bool HasHeightReference { get; }
+        /// <summary>地表高度图在当前世界格的采样值。</summary>
+        public double Height { get; }
+        /// <summary>冻结地表 Profile 的海平面。</summary>
+        public double SeaLevel { get; }
+        /// <summary>冻结地表 Profile 的山地高度线。</summary>
+        public double MountainLevel { get; }
+        /// <summary>当前格的地表是否属于海洋。</summary>
+        public bool IsOcean => HasHeightReference && Height < SeaLevel;
+        /// <summary>当前高度是否位于允许生成地下水的地表高度带。</summary>
+        public bool AllowsGroundwater => !HasHeightReference ||
+            Height >= SeaLevel && Height < MountainLevel;
+    }
+
     /// <summary>
     /// 迁移旧矿洞的纯数据布局内核。
     /// 保留“椭圆房间 + 两段弯曲隧道 + 入口安全区 + 洞壁矿脉”的设计，不依赖 Unity、Map 或对象池，
@@ -53,9 +80,39 @@ namespace FlatWorld.WorldModel
 
         #region 洞穴布局
 
+        /// <summary>只使用冻结的地表 Profile、种子与拓扑复算当前格高度，不访问运行时地表区块。</summary>
+        internal static CaveSurfaceInfluenceSample SampleSurfaceInfluence(
+            ChunkGenerationRequest request, int worldX, int worldY)
+        {
+            CavePortalPairingSnapshot pairing = request.Profile.PortalPairing;
+            if (pairing == null ||
+                pairing.SurfaceProfile.Settings.Mode != ChunkGenerationMode.Surface)
+            {
+                return default;
+            }
+
+            ChunkGenerationRequest surfaceRequest = pairing.CreateSurfaceRequest(
+                request, request.Address.ChunkOrigin);
+            ChunkGenerationSettingsSnapshot surfaceSettings = pairing.SurfaceProfile.Settings;
+            double height = DeterministicChunkGenerator.SampleHeight(
+                surfaceRequest, surfaceSettings, worldX, worldY);
+            return new CaveSurfaceInfluenceSample(
+                height, surfaceSettings.SeaLevel, surfaceSettings.MountainLevel);
+        }
+
         /// <summary>判断世界格是否属于旧版房间、隧道或入口安全网络中的可行走洞穴。</summary>
         public static bool IsOpenAtWorld(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
+        {
+            CaveSurfaceInfluenceSample surfaceInfluence =
+                SampleSurfaceInfluence(request, worldX, worldY);
+            return IsOpenAtWorld(request, settings, worldX, worldY, surfaceInfluence);
+        }
+
+        /// <summary>使用已采样地表高度判断洞穴开放状态，避免同一格重复计算高度噪声。</summary>
+        internal static bool IsOpenAtWorld(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
+            CaveSurfaceInfluenceSample surfaceInfluence)
         {
             Int2 normalized = Normalize(request.Topology, new Int2(worldX, worldY));
             Point point = new(normalized.X + 0.5d, normalized.Y + 0.5d);
@@ -80,6 +137,12 @@ namespace FlatWorld.WorldModel
             }
 
             Int2 region = GetRegionCoordinates(request.Topology, settings, point);
+            if (ShouldSealSurfaceOceanRegion(
+                    request, settings, region, surfaceInfluence))
+            {
+                return false;
+            }
+
             for (int regionX = region.X - 1; regionX <= region.X + 1; regionX++)
             {
                 for (int regionY = region.Y - 1; regionY <= region.Y + 1; regionY++)
@@ -156,7 +219,19 @@ namespace FlatWorld.WorldModel
         public static double SampleGroundwaterDepth(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
         {
+            CaveSurfaceInfluenceSample surfaceInfluence =
+                SampleSurfaceInfluence(request, worldX, worldY);
+            return SampleGroundwaterDepth(
+                request, settings, worldX, worldY, surfaceInfluence);
+        }
+
+        /// <summary>使用已采样地表高度限制地下水，只允许海平面至山地线之间的地表高度带。</summary>
+        internal static double SampleGroundwaterDepth(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
+            CaveSurfaceInfluenceSample surfaceInfluence)
+        {
             if (!settings.CaveGroundwaterEnabled || settings.CaveGroundwaterRoomChance <= 0d ||
+                !surfaceInfluence.AllowsGroundwater ||
                 IsInsideDefaultSpawnSafeArea(request, settings, worldX, worldY))
                 return 0d;
 
@@ -386,6 +461,21 @@ namespace FlatWorld.WorldModel
         #endregion
 
         #region 房间、隧道与拓扑辅助
+
+        /// <summary>按洞穴逻辑区域稳定决定海洋下方是否封为石墙，避免逐格随机产生碎裂孔洞。</summary>
+        private static bool ShouldSealSurfaceOceanRegion(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, Int2 region,
+            CaveSurfaceInfluenceSample surfaceInfluence)
+        {
+            if (!surfaceInfluence.IsOcean || settings.CaveSurfaceOceanWallChance <= 0d)
+                return false;
+            if (settings.CaveSurfaceOceanWallChance >= 1d)
+                return true;
+
+            uint state = HashRoom(request.Topology, settings, request.WorldSeed,
+                region.X, region.Y, 0x62f5a91);
+            return NextUnitDouble(ref state) < settings.CaveSurfaceOceanWallChance;
+        }
 
         private static bool IsInsidePortalNetwork(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, Point point, int portalSeed)

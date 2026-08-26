@@ -88,9 +88,9 @@ namespace FlatWorld.WorldModel
     }
 
     /// <summary>
-    /// 矿洞出口用于复核地表入口的纯数据上下文。
-    /// 矿洞与地表使用不同的维度种子，不能只根据矿洞自身地形猜测入口；
-    /// 这里保存冻结后的地表 Profile、地表种子和拓扑，使后台生成可以得到与地表完全相同的候选结果。
+    /// 矿洞生成引用地表参数的纯数据上下文。
+    /// 矿洞与地表使用不同的维度种子，不能只根据矿洞自身地形猜测入口或高度；
+    /// 这里保存冻结后的地表 Profile、地表种子和拓扑，使后台生成可以复算入口与高度而不依赖已加载区块。
     /// </summary>
     public sealed class CavePortalPairingSnapshot
     {
@@ -121,6 +121,15 @@ namespace FlatWorld.WorldModel
         public ChunkGenerationTopologySnapshot SurfaceTopology { get; }
         /// <summary>纳入矿洞生成设置哈希的稳定配对指纹。</summary>
         public ulong Fingerprint { get; }
+
+        /// <summary>从矿洞任务派生地表纯生成请求，并始终保留地表自身的种子与拓扑。</summary>
+        public ChunkGenerationRequest CreateSurfaceRequest(
+            ChunkGenerationRequest referenceRequest, Int2 origin)
+        {
+            return new ChunkGenerationRequest(referenceRequest.WorldEpoch,
+                new WorldAddress(SurfaceDimensionId, origin), SurfaceWorldSeed,
+                referenceRequest.RequestVersion, SurfaceProfile, SurfaceTopology);
+        }
 
         private ulong CalculateFingerprint()
         {
@@ -264,7 +273,7 @@ namespace FlatWorld.WorldModel
         public IReadOnlyList<EcologySpawnRuleSnapshot> EcologyRules { get; }
         /// <summary>洞穴矿脉规则；列表顺序代表从稀有到常见的回退优先级。</summary>
         public IReadOnlyList<CaveResourceRuleSnapshot> CaveResourceRules { get; }
-        /// <summary>矿洞出口复核地表入口时使用的冻结配对上下文；地表 Profile 为空。</summary>
+        /// <summary>矿洞复算地表入口和高度时使用的冻结配对上下文；地表 Profile 为空。</summary>
         public CavePortalPairingSnapshot PortalPairing { get; }
         /// <summary>游戏自带生成器使用的、已经整理和检查过的设置。</summary>
         public ChunkGenerationSettingsSnapshot Settings { get; }
@@ -334,7 +343,7 @@ namespace FlatWorld.WorldModel
                 PortalPairing);
         }
 
-        /// <summary>附加跨维度入口配对上下文，并让它参与完整生成指纹。</summary>
+        /// <summary>附加跨维度地表参考上下文，并让它参与完整生成指纹。</summary>
         public ChunkGenerationProfileSnapshot WithCavePortalPairing(
             CavePortalPairingSnapshot portalPairing)
         {

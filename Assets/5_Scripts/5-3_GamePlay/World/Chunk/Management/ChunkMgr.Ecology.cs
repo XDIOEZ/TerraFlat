@@ -83,9 +83,9 @@ public partial class ChunkMgr
     }
 
     /// <summary>
-    /// 矿洞 Profile 注入地表入口的冻结配置。
-    /// 传送门概率和候选格以地表为唯一真源，洞穴只保留自己的目标维度和矿物规则，
-    /// 从而保证“地表有入口”时地下只会出现同一格的唯一出口。
+    /// 矿洞 Profile 注入冻结后的地表生成参考。
+    /// 传送门与高度影响都以地表参数、种子和拓扑为唯一真源，不读取已生成或已加载的地表区块，
+    /// 从而保证任意区块加载顺序下都能复算同一份地表结果。
     /// </summary>
     private static ChunkGenerationProfileSnapshot AttachCavePortalPairing(
         ChunkGenerationProfileSnapshot profile, int baseSeed)

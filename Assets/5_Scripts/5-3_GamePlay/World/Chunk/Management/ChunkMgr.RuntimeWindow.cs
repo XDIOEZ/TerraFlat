@@ -219,7 +219,7 @@ public partial class ChunkMgr
             baseSeed = 1;
         // 地表入口与矿洞出口必须共享同一份门户随机种子，不能使用各自维度派生种子。
         profile = profile.WithNumericParameter("cave.portal.baseSeed", baseSeed);
-        // 矿洞额外带入地表冻结 Profile，后台才能复算“实际可放”的同一个入口候选。
+        // 矿洞额外带入地表冻结 Profile，后台才能独立复算入口候选与地表高度。
         profile = AttachCavePortalPairing(profile, baseSeed);
         activeGenerationSnapshot = profile;
         ChunkGenerationTopologySnapshot topology = ResolveActiveGenerationTopology();

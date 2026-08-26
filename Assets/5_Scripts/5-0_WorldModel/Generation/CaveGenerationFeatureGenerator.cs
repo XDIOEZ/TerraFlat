@@ -502,8 +502,8 @@ namespace FlatWorld.WorldModel
                 ? new Int2(pairing.SurfaceTopology.NormalizeX(portalChunkOrigin.X),
                     pairing.SurfaceTopology.NormalizeY(portalChunkOrigin.Y))
                 : portalChunkOrigin;
-            ChunkGenerationRequest surfacePortalRequest = CreateSurfacePortalRequest(
-                request, pairing, pairing.SurfaceProfile, normalizedOrigin);
+            ChunkGenerationRequest surfacePortalRequest = pairing.CreateSurfaceRequest(
+                request, normalizedOrigin);
             var key = new SurfacePortalSelectionKey(pairing.Fingerprint,
                 CaveLayoutKernel.GetPortalSeed(surfacePortalRequest,
                     pairing.SurfaceProfile.Settings), normalizedOrigin);
@@ -558,16 +558,6 @@ namespace FlatWorld.WorldModel
             }
 
             return default;
-        }
-
-        /// <summary>构造仅用于复核地表入口的请求，始终保留地表自身种子和拓扑。</summary>
-        private static ChunkGenerationRequest CreateSurfacePortalRequest(
-            ChunkGenerationRequest referenceRequest, CavePortalPairingSnapshot pairing,
-            ChunkGenerationProfileSnapshot profile, Int2 origin)
-        {
-            return new ChunkGenerationRequest(referenceRequest.WorldEpoch,
-                new WorldAddress(pairing.SurfaceDimensionId, origin), pairing.SurfaceWorldSeed,
-                referenceRequest.RequestVersion, profile, pairing.SurfaceTopology);
         }
 
         /// <summary>从已有地表请求派生关闭入口物品阶段的纯地形复核请求。</summary>

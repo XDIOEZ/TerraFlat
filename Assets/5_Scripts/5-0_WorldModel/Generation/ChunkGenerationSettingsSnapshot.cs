@@ -362,6 +362,8 @@ namespace FlatWorld.WorldModel
             CaveSpawnY = Finite(GetDouble(numbers, "cave.spawn.y", 0.5d), 0.5d);
             CaveSpawnSafeRadius = NonNegativeFinite(
                 GetDouble(numbers, "cave.spawn.safeRadius", 4d), 4d);
+            CaveSurfaceOceanWallChance = Clamp01(GetDouble(
+                numbers, "cave.surfaceInfluence.oceanWallChance", 0.85d));
             CaveGroundwaterEnabled = GetBool(numbers, "cave.groundwater.enabled", false);
             CaveGroundwaterRoomChance = Clamp01(
                 GetDouble(numbers, "cave.groundwater.roomChance", 0.28d));
@@ -569,7 +571,9 @@ namespace FlatWorld.WorldModel
         public double CaveSpawnX { get; }
         public double CaveSpawnY { get; }
         public double CaveSpawnSafeRadius { get; }
-        /// <summary>洞室地下湖的确定性分布、水面半径与水深范围。</summary>
+        /// <summary>地表为海洋时，普通洞穴区域转为石墙的确定性概率。</summary>
+        public double CaveSurfaceOceanWallChance { get; }
+        /// <summary>洞室地下湖的确定性分布、水面半径与水深范围；高度带沿用地表海平面和山地线。</summary>
         public bool CaveGroundwaterEnabled { get; }
         public double CaveGroundwaterRoomChance { get; }
         public double CaveGroundwaterMinRadiusRatio { get; }

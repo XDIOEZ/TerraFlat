@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Cave
   m_EditorClassIdentifier:
   profileId: cave.default
-  generationSignature: 23
+  generationSignature: 24
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -41,6 +41,8 @@ MonoBehaviour:
     Value: 0.5
   - Id: cave.spawn.safeRadius
     Value: 4
+  - Id: cave.surfaceInfluence.oceanWallChance
+    Value: 0.85
   - Id: cave.groundwater.enabled
     Value: 1
   - Id: cave.groundwater.roomChance

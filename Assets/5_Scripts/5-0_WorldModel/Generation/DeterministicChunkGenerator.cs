@@ -476,8 +476,8 @@ namespace FlatWorld.WorldModel
             terrain.SetEnvironmentValue("grass", x, y, grass ? 1f : 0f);
         }
 
-        /// <summary>按世界种子和坐标采样地形高度，得到稳定的山地起伏值。</summary>
-        private static double SampleHeight(
+        /// <summary>按世界种子和坐标采样地形高度，供地表生成与洞穴地表参考共同复用。</summary>
+        internal static double SampleHeight(
             ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings,
             int worldX,
@@ -1555,10 +1555,14 @@ namespace FlatWorld.WorldModel
         {
             worldX = request.Topology.NormalizeX(worldX);
             worldY = request.Topology.NormalizeY(worldY);
+            CaveSurfaceInfluenceSample surfaceInfluence =
+                CaveLayoutKernel.SampleSurfaceInfluence(request, worldX, worldY);
             // 洞穴岩壁下保留石地；开放洞室可按世界区域形成跨 Chunk 连续的地下湖。
-            bool open = CaveLayoutKernel.IsOpenAtWorld(request, settings, worldX, worldY);
+            bool open = CaveLayoutKernel.IsOpenAtWorld(
+                request, settings, worldX, worldY, surfaceInfluence);
             double groundwaterDepth = open
-                ? CaveLayoutKernel.SampleGroundwaterDepth(request, settings, worldX, worldY)
+                ? CaveLayoutKernel.SampleGroundwaterDepth(
+                    request, settings, worldX, worldY, surfaceInfluence)
                 : 0d;
             bool groundwater = groundwaterDepth > 0d;
             TerrainCellFlags flags = !open
