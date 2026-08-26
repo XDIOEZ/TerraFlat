@@ -2,16 +2,18 @@ using System;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>洞穴单格对应的地表高度参考；缺少配对时保持旧洞穴规则。</summary>
+    /// <summary>洞穴单格对应的地表高度与基础群系参考；缺少配对时退回补充洞穴规则。</summary>
     internal readonly struct CaveSurfaceInfluenceSample
     {
-        /// <summary>保存一格地表高度及其海洋、山地判定线。</summary>
-        public CaveSurfaceInfluenceSample(double height, double seaLevel, double mountainLevel)
+        /// <summary>保存一格地表高度、基础群系及其海洋和山地判定线。</summary>
+        public CaveSurfaceInfluenceSample(double height, double seaLevel, double mountainLevel,
+            SurfaceBiomeKind biome)
         {
             HasHeightReference = true;
             Height = height;
             SeaLevel = seaLevel;
             MountainLevel = mountainLevel;
+            Biome = biome;
         }
 
         /// <summary>是否成功取得冻结地表参数对应的高度。</summary>
@@ -22,6 +24,8 @@ namespace FlatWorld.WorldModel
         public double SeaLevel { get; }
         /// <summary>冻结地表 Profile 的山地高度线。</summary>
         public double MountainLevel { get; }
+        /// <summary>由冻结地表参数直接算出的基础群系，不包含后续河流水文覆盖。</summary>
+        public SurfaceBiomeKind Biome { get; }
         /// <summary>当前格的地表是否属于海洋。</summary>
         public bool IsOcean => HasHeightReference && Height < SeaLevel;
         /// <summary>当前高度是否位于允许生成地下水的地表高度带。</summary>
@@ -30,9 +34,9 @@ namespace FlatWorld.WorldModel
     }
 
     /// <summary>
-    /// 迁移旧矿洞的纯数据布局内核。
-    /// 保留“椭圆房间 + 两段弯曲隧道 + 入口安全区 + 洞壁矿脉”的设计，不依赖 Unity、Map 或对象池，
-    /// 因此同一种子在任何区块生成顺序下都能得到相同结果。
+    /// 纯数据洞穴布局内核。
+    /// 以冻结地表参数算出的群系交界作为主通道，并保留稀疏房间支路、入口安全区和洞壁矿脉；
+    /// 全程不依赖 Unity、Map 或对象池，因此同一种子在任何区块生成顺序下都能得到相同结果。
     /// </summary>
     public static class CaveLayoutKernel
     {
@@ -80,7 +84,7 @@ namespace FlatWorld.WorldModel
 
         #region 洞穴布局
 
-        /// <summary>只使用冻结的地表 Profile、种子与拓扑复算当前格高度，不访问运行时地表区块。</summary>
+        /// <summary>只使用冻结的地表 Profile、种子与拓扑复算高度和基础群系，不访问运行时地表区块。</summary>
         internal static CaveSurfaceInfluenceSample SampleSurfaceInfluence(
             ChunkGenerationRequest request, int worldX, int worldY)
         {
@@ -94,13 +98,13 @@ namespace FlatWorld.WorldModel
             ChunkGenerationRequest surfaceRequest = pairing.CreateSurfaceRequest(
                 request, request.Address.ChunkOrigin);
             ChunkGenerationSettingsSnapshot surfaceSettings = pairing.SurfaceProfile.Settings;
-            double height = DeterministicChunkGenerator.SampleHeight(
-                surfaceRequest, surfaceSettings, worldX, worldY);
+            SurfaceBiomeKind biome = DeterministicChunkGenerator.SampleBaseSurfaceBiome(
+                surfaceRequest, surfaceSettings, worldX, worldY, out double height);
             return new CaveSurfaceInfluenceSample(
-                height, surfaceSettings.SeaLevel, surfaceSettings.MountainLevel);
+                height, surfaceSettings.SeaLevel, surfaceSettings.MountainLevel, biome);
         }
 
-        /// <summary>判断世界格是否属于旧版房间、隧道或入口安全网络中的可行走洞穴。</summary>
+        /// <summary>判断世界格是否属于群系交界主通道、稀疏支路或入口安全网络。</summary>
         public static bool IsOpenAtWorld(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
         {
@@ -109,7 +113,7 @@ namespace FlatWorld.WorldModel
             return IsOpenAtWorld(request, settings, worldX, worldY, surfaceInfluence);
         }
 
-        /// <summary>使用已采样地表高度判断洞穴开放状态，避免同一格重复计算高度噪声。</summary>
+        /// <summary>使用已采样地表参考判断洞穴开放状态，避免当前格重复计算地表参数。</summary>
         internal static bool IsOpenAtWorld(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
             CaveSurfaceInfluenceSample surfaceInfluence)
@@ -137,6 +141,12 @@ namespace FlatWorld.WorldModel
             }
 
             Int2 region = GetRegionCoordinates(request.Topology, settings, point);
+            if (IsInsideSurfaceBiomeBoundary(
+                    request, settings, normalized.X, normalized.Y, surfaceInfluence))
+            {
+                return true;
+            }
+
             if (ShouldSealSurfaceOceanRegion(
                     request, settings, region, surfaceInfluence))
             {
@@ -154,33 +164,24 @@ namespace FlatWorld.WorldModel
 
                     Room right = CreateRoom(request.Topology, settings, regionX + 1, regionY,
                         request.WorldSeed);
-                    if (IsInsideTunnel(request.Topology, settings, point, room.Center, right.Center,
+                    if (ShouldConnectSupplementalRooms(
+                            request, settings, regionX, regionY, horizontal: true) &&
+                        IsInsideTunnel(request.Topology, settings, point, room.Center, right.Center,
                             HashRoom(request.Topology, settings, request.WorldSeed, regionX,
-                                regionY, 101)))
+                                regionY, 1101)))
                     {
                         return true;
                     }
 
                     Room up = CreateRoom(request.Topology, settings, regionX, regionY + 1,
                         request.WorldSeed);
-                    if (IsInsideTunnel(request.Topology, settings, point, room.Center, up.Center,
+                    if (ShouldConnectSupplementalRooms(
+                            request, settings, regionX, regionY, horizontal: false) &&
+                        IsInsideTunnel(request.Topology, settings, point, room.Center, up.Center,
                             HashRoom(request.Topology, settings, request.WorldSeed, regionX,
-                                regionY, 211)))
+                                regionY, 1211)))
                     {
                         return true;
-                    }
-
-                    if ((HashRoom(request.Topology, settings, request.WorldSeed, regionX,
-                            regionY, 307) & 3u) == 0u)
-                    {
-                        Room diagonal = CreateRoom(request.Topology, settings, regionX + 1,
-                            regionY + 1, request.WorldSeed);
-                        if (IsInsideTunnel(request.Topology, settings, point, room.Center,
-                                diagonal.Center, HashRoom(request.Topology, settings,
-                                    request.WorldSeed, regionX, regionY, 401)))
-                        {
-                            return true;
-                        }
                     }
                 }
             }
@@ -237,6 +238,12 @@ namespace FlatWorld.WorldModel
 
             Int2 normalized = Normalize(request.Topology, new Int2(worldX, worldY));
             Point point = new(normalized.X + 0.5d, normalized.Y + 0.5d);
+            if (IsInsideSurfaceBiomeBoundary(
+                    request, settings, normalized.X, normalized.Y, surfaceInfluence))
+            {
+                return 0d;
+            }
+
             if (IsInsidePortalNetwork(request, settings, point, GetPortalSeed(request, settings)))
                 return 0d;
 
@@ -268,7 +275,7 @@ namespace FlatWorld.WorldModel
                     localX * localX / (radiusX * radiusX) +
                     localY * localY / (radiusY * radiusY));
                 double shorelineNoise = SampleNoise01(request.Topology, point,
-                    request.WorldSeed, 0.19d, 0x51f15e);
+                    request.WorldSeed, 0.19d / settings.WorldCoordinateDistanceScale, 0x51f15e);
                 double shoreline = 1d + (shorelineNoise - 0.5d) * 0.22d;
                 if (normalizedDistance >= shoreline)
                     continue;
@@ -462,6 +469,46 @@ namespace FlatWorld.WorldModel
 
         #region 房间、隧道与拓扑辅助
 
+        /// <summary>按地表参数比较四个方向的基础群系，把交界附近稳定扩展成地下主通道。</summary>
+        private static bool IsInsideSurfaceBiomeBoundary(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
+            CaveSurfaceInfluenceSample center)
+        {
+            if (!center.HasHeightReference || settings.CaveBiomeBoundaryHalfWidth <= 0d)
+                return false;
+
+            int distance = Math.Max(1, (int)Math.Ceiling(settings.CaveBiomeBoundaryHalfWidth));
+            return HasDifferentSurfaceBiome(request, center.Biome, worldX - distance, worldY) ||
+                   HasDifferentSurfaceBiome(request, center.Biome, worldX + distance, worldY) ||
+                   HasDifferentSurfaceBiome(request, center.Biome, worldX, worldY - distance) ||
+                   HasDifferentSurfaceBiome(request, center.Biome, worldX, worldY + distance);
+        }
+
+        /// <summary>比较目标格的纯参数基础群系，缺少地表参考时不制造伪交界。</summary>
+        private static bool HasDifferentSurfaceBiome(ChunkGenerationRequest request,
+            SurfaceBiomeKind centerBiome, int worldX, int worldY)
+        {
+            CaveSurfaceInfluenceSample neighbor =
+                SampleSurfaceInfluence(request, worldX, worldY);
+            return neighbor.HasHeightReference && neighbor.Biome != centerBiome;
+        }
+
+        /// <summary>每个房间保留一条主支路，另一方向按配置追加，避免入口落入孤立洞室。</summary>
+        private static bool ShouldConnectSupplementalRooms(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int regionX, int regionY, bool horizontal)
+        {
+            uint state = HashRoom(request.Topology, settings, request.WorldSeed,
+                regionX, regionY, 0x4f1bbcd);
+            bool primaryHorizontal = NextUnitDouble(ref state) < 0.5d;
+            if (horizontal == primaryHorizontal ||
+                settings.CaveNetworkExtraConnectionChance >= 1d)
+            {
+                return true;
+            }
+
+            return NextUnitDouble(ref state) < settings.CaveNetworkExtraConnectionChance;
+        }
+
         /// <summary>按洞穴逻辑区域稳定决定海洋下方是否封为石墙，避免逐格随机产生碎裂孔洞。</summary>
         private static bool ShouldSealSurfaceOceanRegion(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, Int2 region,
@@ -558,7 +605,8 @@ namespace FlatWorld.WorldModel
             double normalizedDistance = Math.Sqrt(
                 localX * localX / (room.RadiusX * room.RadiusX) +
                 localY * localY / (room.RadiusY * room.RadiusY));
-            double edgeNoise = SampleNoise01(topology, point, worldSeed, 0.16d, 503);
+            double edgeNoise = SampleNoise01(topology, point, worldSeed,
+                0.16d / settings.WorldCoordinateDistanceScale, 503);
             return normalizedDistance <= 1d + (edgeNoise - 0.5d) * 0.24d;
         }
 
@@ -574,15 +622,18 @@ namespace FlatWorld.WorldModel
                 return false;
 
             Point perpendicular = new(-direction.Y / length, direction.X / length);
+            double bendOffset = Math.Min(settings.CaveRegionSize * 0.28d,
+                5.5d * settings.WorldCoordinateDistanceScale);
             Point bendA = start + direction * 0.34d + perpendicular *
-                Lerp(-5.5d, 5.5d, NextUnitDouble(ref state));
+                Lerp(-bendOffset, bendOffset, NextUnitDouble(ref state));
             Point bendB = start + direction * 0.67d + perpendicular *
-                Lerp(-5.5d, 5.5d, NextUnitDouble(ref state));
+                Lerp(-bendOffset, bendOffset, NextUnitDouble(ref state));
             double radius = Lerp(settings.CaveTunnelMinRadius, settings.CaveTunnelMaxRadius,
                 NextUnitDouble(ref state));
             double edgeNoise = SampleNoise01(topology, point, unchecked((int)state),
-                0.21d, 883);
-            double effectiveRadius = radius + (edgeNoise - 0.5d) * 0.55d;
+                0.21d / settings.WorldCoordinateDistanceScale, 883);
+            double effectiveRadius = radius + (edgeNoise - 0.5d) * 0.55d *
+                settings.WorldCoordinateDistanceScale;
             double distance = Math.Min(DistanceToSegment(point, start, bendA),
                 Math.Min(DistanceToSegment(point, bendA, bendB),
                     DistanceToSegment(point, bendB, end)));

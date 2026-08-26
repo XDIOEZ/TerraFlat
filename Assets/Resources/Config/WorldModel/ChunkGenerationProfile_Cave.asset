@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Cave
   m_EditorClassIdentifier:
   profileId: cave.default
-  generationSignature: 24
+  generationSignature: 25
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -26,7 +26,7 @@ MonoBehaviour:
   - Id: cave.wallTileId
     Value: 7
   - Id: cave.regionSize
-    Value: 20
+    Value: 32
   - Id: cave.room.minRadius
     Value: 3.8
   - Id: cave.room.maxRadius
@@ -35,6 +35,10 @@ MonoBehaviour:
     Value: 1.35
   - Id: cave.tunnel.maxRadius
     Value: 2.15
+  - Id: cave.network.extraConnectionChance
+    Value: 0.28
+  - Id: cave.biomeBoundary.halfWidth
+    Value: 1.5
   - Id: cave.spawn.x
     Value: 0.5
   - Id: cave.spawn.y

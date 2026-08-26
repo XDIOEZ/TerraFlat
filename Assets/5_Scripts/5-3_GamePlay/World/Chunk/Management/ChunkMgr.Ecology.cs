@@ -111,6 +111,7 @@ public partial class ChunkMgr
         ChunkGenerationSettingsSnapshot sourceSettings = sourceProfile.Settings;
         // 即使旧矿洞存档还保留较早的入口参数，也要以它对应地表的冻结参数为准。
         profile = profile
+            .WithNumericParameter("world.coordinateScale", sourceSettings.WorldCoordinateScale)
             .WithNumericParameter("cave.portal.enabled", sourceSettings.CavePortalEnabled ? 1d : 0d)
             .WithNumericParameter("cave.portal.chunkChance", sourceSettings.CavePortalChunkChance)
             .WithNumericParameter("cave.portal.safeRadius", sourceSettings.CavePortalSafeRadius)

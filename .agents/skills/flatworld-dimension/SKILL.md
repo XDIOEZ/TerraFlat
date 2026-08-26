@@ -21,6 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的维度、星球表面/地�
 - 环绕世界由额外相机绘制平移副本，但 `Light2D` 等局部空间组件不会随画面自动平移；这类表现必须为当前可见世界镜像同步轻量代理，并将纯表现代理排除出光照、AI、存档等玩法查询。
 - 正式洞穴走 WorldModel 纯生成；`ChunkGenerator_Cave` 只保留旧 Map 兼容。
 - 洞穴规则需要参考地表时，只能使用 `CavePortalPairingSnapshot` 冻结的地表 Profile、派生种子与拓扑做纯采样；禁止查询已生成或已加载的地表 Chunk、Tilemap，配对指纹必须参与洞穴生成指纹。
+- 洞穴布局若要跟随地表尺度，必须从配对地表复制 `world.coordinateScale` 并统一换算距离参数；群系交界默认只复算基础气候群系，不引入依赖区域构建结果的水文覆盖。
 - 地表入口必须是已安装 MineEntrance；CaveExit 在基线完成后创建以进入差量。
 - 矿洞默认抑制天气/怪物生成，`FixedLighting` 是上限。
 - 当前只支持离线切换；服务器权威迁移协议完成前不得开放联机。

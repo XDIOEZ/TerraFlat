@@ -348,16 +348,29 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "entity.spawnCount", 0d) / 256d));
             ResourceMinSpacing = Clamp(GetInt(numbers, "resource.minSpacing", 5), 1, 64);
             CaveOpenThreshold = Clamp01(GetDouble(numbers, "cave.openThreshold", 0.52d));
-            CaveRegionSize = Clamp(GetInt(numbers, "cave.regionSize", 20), 4, 128);
-            CaveRoomMinRadius = Positive(GetDouble(numbers, "cave.room.minRadius", 3.8d), 3.8d);
+            CaveRegionSize = ScaleDistance(
+                GetInt(numbers, "cave.regionSize", 32), WorldCoordinateDistanceScale, 8, 512);
+            CaveRoomMinRadius = ScaleDistance(
+                Positive(GetDouble(numbers, "cave.room.minRadius", 3.8d), 3.8d),
+                WorldCoordinateDistanceScale, 0.75d, 128d);
             CaveRoomMaxRadius = Math.Max(
                 CaveRoomMinRadius,
-                Positive(GetDouble(numbers, "cave.room.maxRadius", 6.8d), 6.8d));
-            CaveTunnelMinRadius = Positive(
-                GetDouble(numbers, "cave.tunnel.minRadius", 1.35d), 1.35d);
+                ScaleDistance(Positive(
+                        GetDouble(numbers, "cave.room.maxRadius", 6.8d), 6.8d),
+                    WorldCoordinateDistanceScale, 0.75d, 128d));
+            CaveTunnelMinRadius = ScaleDistance(Positive(
+                    GetDouble(numbers, "cave.tunnel.minRadius", 1.35d), 1.35d),
+                WorldCoordinateDistanceScale, 0.5d, 32d);
             CaveTunnelMaxRadius = Math.Max(
                 CaveTunnelMinRadius,
-                Positive(GetDouble(numbers, "cave.tunnel.maxRadius", 2.15d), 2.15d));
+                ScaleDistance(Positive(
+                        GetDouble(numbers, "cave.tunnel.maxRadius", 2.15d), 2.15d),
+                    WorldCoordinateDistanceScale, 0.5d, 32d));
+            CaveNetworkExtraConnectionChance = Clamp01(GetDouble(
+                numbers, "cave.network.extraConnectionChance", 0.28d));
+            CaveBiomeBoundaryHalfWidth = ScaleDistance(NonNegativeFinite(GetDouble(
+                    numbers, "cave.biomeBoundary.halfWidth", 1.5d), 1.5d),
+                WorldCoordinateDistanceScale, 0d, 16d);
             CaveSpawnX = Finite(GetDouble(numbers, "cave.spawn.x", 0.5d), 0.5d);
             CaveSpawnY = Finite(GetDouble(numbers, "cave.spawn.y", 0.5d), 0.5d);
             CaveSpawnSafeRadius = NonNegativeFinite(
@@ -567,6 +580,10 @@ namespace FlatWorld.WorldModel
         public double CaveRoomMaxRadius { get; }
         public double CaveTunnelMinRadius { get; }
         public double CaveTunnelMaxRadius { get; }
+        /// <summary>每个房间的固定主支路之外，再增加第二方向连接的概率。</summary>
+        public double CaveNetworkExtraConnectionChance { get; }
+        /// <summary>地表基础群系交界向两侧扩展的地下通道半宽；0 表示关闭。</summary>
+        public double CaveBiomeBoundaryHalfWidth { get; }
         /// <summary>矿洞默认出生点及其不可放矿安全半径。</summary>
         public double CaveSpawnX { get; }
         public double CaveSpawnY { get; }
@@ -704,6 +721,12 @@ namespace FlatWorld.WorldModel
         {
             int scaled = (int)Math.Round(value * scale, MidpointRounding.AwayFromZero);
             return Clamp(scaled, min, max);
+        }
+
+        /// <summary>浮点距离参数按世界坐标倍率反向换算，并保留安全上下限。</summary>
+        private static double ScaleDistance(double value, double scale, double min, double max)
+        {
+            return Clamp(value * scale, min, max);
         }
 
         /// <summary>过滤负数和无穷数，保证坐标缩放参数可以安全参与计算。</summary>

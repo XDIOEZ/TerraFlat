@@ -85,7 +85,7 @@ namespace FlatWorld.WorldModel
                 ChunkEcologyData ecology;
                 if (cave)
                 {
-                    // 洞穴不走地表生态规则，改由迁移后的房间/隧道矿脉阶段输出纯 Item 放置记录。
+                    // 洞穴不走地表生态规则，改由洞穴布局的矿脉阶段输出纯 Item 放置记录。
                     ecology = CaveGenerationFeatureGenerator.GenerateCave(
                         request, terrain, cancellationToken);
                 }
@@ -474,6 +474,43 @@ namespace FlatWorld.WorldModel
                          grassDensity * (0.55d + moisture * 0.75d);
             terrain.SetGrass(x, y, grass ? GrassPresent : GrassEmpty);
             terrain.SetEnvironmentValue("grass", x, y, grass ? 1f : 0f);
+        }
+
+        /// <summary>按冻结参数采样不含河流覆盖的基础地表群系，并同时返回同格高度。</summary>
+        internal static SurfaceBiomeKind SampleBaseSurfaceBiome(
+            ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings,
+            int worldX,
+            int worldY,
+            out double height)
+        {
+            worldX = request.Topology.NormalizeX(worldX);
+            worldY = request.Topology.NormalizeY(worldY);
+            double temperature;
+            double precipitation;
+            if (settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand)
+            {
+                LegacyClimateSample climate = LegacyTerrainClimateKernel.SampleClimate(
+                    request, settings, worldX, worldY);
+                height = climate.Height;
+                temperature = climate.Temperature;
+                precipitation = climate.Precipitation;
+            }
+            else
+            {
+                height = SampleHeight(request, settings, worldX, worldY);
+                precipitation = SamplePrecipitation(request, settings, worldX, worldY);
+                double temperatureNoise = Fractal(CreateSeed(request, 0x85ebca6bu),
+                    worldX, worldY, settings.ClimateScale, settings.ClimateOctaves,
+                    2.07d, 0.5d, request.Topology);
+                double latitudeCooling = Math.Min(0.34d, Math.Abs(worldY) * 0.000025d);
+                temperature = settings.ApplyAltitudeTemperatureCooling(
+                    height, temperatureNoise - latitudeCooling);
+            }
+
+            double moisture = Clamp01(precipitation * 0.78d + (1d - height) * 0.22d);
+            return SurfaceBiomeClassifier.Resolve(
+                settings, height, temperature, precipitation, moisture, false);
         }
 
         /// <summary>按世界种子和坐标采样地形高度，供地表生成与洞穴地表参考共同复用。</summary>
@@ -1548,7 +1585,7 @@ namespace FlatWorld.WorldModel
 
         #endregion
 
-        /// <summary>根据迁移后的房间、隧道和入口安全网络生成洞穴地面或岩壁格。</summary>
+        /// <summary>根据群系交界主通道、稀疏支路和入口安全网络生成洞穴地面或岩壁格。</summary>
         private static void GenerateCaveCell(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, ChunkTerrainBuffer terrain,
             int x, int y, int worldX, int worldY)
