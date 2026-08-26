@@ -305,16 +305,10 @@ PrefabInstance:
       propertyPath: Data.ShowCanvas
       value: 1
       objectReference: {fileID: 0}
-
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.size
       value: 2
       objectReference: {fileID: 0}
-
-
-
-
-
     - target: {fileID: 1794842364952349929, guid: c107cb4a775f75a4ab50708e43ad3078, type: 3}
       propertyPath: Data.LootTable.Array.data[1].MaxAmount
       value: 2

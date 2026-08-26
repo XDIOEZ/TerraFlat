@@ -311,7 +311,6 @@ PrefabInstance:
       propertyPath: Data.MaxHp
       value: 400
       objectReference: {fileID: 0}
-
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.ShowCanvas
       value: 1
@@ -320,7 +319,6 @@ PrefabInstance:
       propertyPath: Data.MaxHp.BaseValue
       value: 400
       objectReference: {fileID: 0}
-
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.DefenseValues.Cutting
       value: 16
@@ -337,14 +335,10 @@ PrefabInstance:
       propertyPath: Data.DefenseValues.Blunt
       value: 5
       objectReference: {fileID: 0}
-
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.size
       value: 2
       objectReference: {fileID: 0}
-
-
-
     - target: {fileID: 3363133627395859476, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: Data.LootTable.Array.data[0].MaxAmount
       value: 3
@@ -381,7 +375,6 @@ PrefabInstance:
       propertyPath: Data.LootTable.Array.data[1].LootPrefabName
       value: Ore_Stone
       objectReference: {fileID: 0}
-
     - target: {fileID: 3418258393810232365, guid: a588cc1b750da76439797f1756447a6e, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
