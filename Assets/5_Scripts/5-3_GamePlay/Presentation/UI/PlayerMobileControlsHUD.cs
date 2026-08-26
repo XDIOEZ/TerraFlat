@@ -17,6 +17,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     private const string MoveZoneName = "移动摇杆";
     private const string AimZoneName = "普通指向区";
+    private const string HeldItemDropSurfaceName = "手持物丢弃区";
     private const string AimCursorName = "手机准线";
     private const string AttackZoneName = "攻击摇杆";
     private const string DrawerName = "菜单抽屉";
@@ -43,6 +44,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private GameObject drawer;
     private RectTransform mobileAimCursor;
     private MobileVirtualJoystick[] joysticks;
+    private MobileHeldItemDropSurface[] heldItemDropSurfaces;
     private MobileInputButton[] inputButtons;
     private Canvas hotbarCanvas;
     private Mover mover;
@@ -205,6 +207,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             drawer.SetActive(false);
 
         ConfigureJoysticks();
+        ConfigureHeldItemDropSurface();
         ConfigureVirtualButtons();
         CacheRunButtonVisual();
         ConfigureCameraZoomSlider();
@@ -485,6 +488,10 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         MobileVirtualJoystick joystick = zone.GetComponent<MobileVirtualJoystick>();
         if (joystick == null)
             joystick = zone.gameObject.AddComponent<MobileVirtualJoystick>();
+        MobileHeldItemDropSurface dropSurface = zone.GetComponent<MobileHeldItemDropSurface>();
+        if (dropSurface == null)
+            dropSurface = zone.gameObject.AddComponent<MobileHeldItemDropSurface>();
+        dropSurface.Configure(onlyRaycastWhileHoldingItem: false);
         joystick.Configure(
             role,
             baseRect,
@@ -508,6 +515,10 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         MobileVirtualJoystick joystick = zone.GetComponent<MobileVirtualJoystick>();
         if (joystick == null)
             joystick = zone.gameObject.AddComponent<MobileVirtualJoystick>();
+        MobileHeldItemDropSurface dropSurface = zone.GetComponent<MobileHeldItemDropSurface>();
+        if (dropSurface == null)
+            dropSurface = zone.gameObject.AddComponent<MobileHeldItemDropSurface>();
+        dropSurface.Configure(onlyRaycastWhileHoldingItem: false);
         joystick.ResetOwnership();
         if (baseRect != null)
             baseRect.anchoredPosition = Vector2.zero;
@@ -551,6 +562,20 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         zoneRect.pivot = new Vector2(0.5f, 0.5f);
         zoneRect.offsetMin = Vector2.zero;
         zoneRect.offsetMax = Vector2.zero;
+    }
+
+    /// <summary>绑定中间空白区的手持物长按丢弃面；无手持物时该层不参与射线。</summary>
+    private void ConfigureHeldItemDropSurface()
+    {
+        Transform surfaceNode = FindRequired(HeldItemDropSurfaceName);
+        if (surfaceNode == null)
+            return;
+
+        MobileHeldItemDropSurface surface = surfaceNode.GetComponent<MobileHeldItemDropSurface>();
+        if (surface == null)
+            surface = surfaceNode.gameObject.AddComponent<MobileHeldItemDropSurface>();
+        surface.Configure(onlyRaycastWhileHoldingItem: true);
+        heldItemDropSurfaces = viewObject.GetComponentsInChildren<MobileHeldItemDropSurface>(true);
     }
 
     /// <summary>触控偏好改变后释放旧触点，并即时重算左右捕获区。</summary>
@@ -953,6 +978,11 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     public void ResetAllTouchState()
     {
         ResetPinchZoom();
+        if (heldItemDropSurfaces != null)
+        {
+            for (int i = 0; i < heldItemDropSurfaces.Length; i++)
+                heldItemDropSurfaces[i]?.ResetGesture();
+        }
         if (joysticks != null)
         {
             for (int i = 0; i < joysticks.Length; i++)

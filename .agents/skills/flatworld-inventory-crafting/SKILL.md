@@ -38,6 +38,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 丢弃统一经过 `Module_DiscardItem.DropItemByCount`；扣减 `ItemSlot.Amount` 后除触发槽位事件外，还必须按快捷栏槽位索引显式刷新 UI，兼容手机入口没有 `ItemSlot_UI` 引用的情况。
 - 快捷栏拖拽到非 UI 区域后的整组丢弃由 `ItemSlot_UI` 世界长按回调转发到 `Module_DiscardItem`，落点使用触点屏幕坐标；UI 槽位长按放置路径保持独立。
 - 快捷栏物品拖入 `Inventory_Hand` 后，移动端摇杆必须让出当前触摸所有权，避免长按世界丢弃时浮动摇杆抢占操作。
+- 手机端已经拿起物品后的再次长按丢弃由 `MobileHeldItemDropSurface` 统一转发到 `Module_DiscardItem`；中间空白触控面只在 `Inventory_Hand` 有物品时参与射线，`ItemSlot_UI` 的拖拽射线必须继续把该组件视为世界落点。
 - 当前作物闭环为 `Seed_Apple → AppleTree → Apple + Seed_Apple`；`Mod_Grow` 是唯一成长状态机，倍率各乘一次。
 - 种植能力由 `Mod_Plantable` 独立提供；物品定义只配置 `cropItemId`，统一 `PlantingSummoner` 负责预览，禁止让种子复用 `Mod_Building` 的占地、快照或拆除链路。
 - 权威播种生成的作物 Item 承载 `Mod_Grow` 与 `Mod_CropVisual`；收获物 Item 只负责食用与掉落，不能把作物视觉模块挂到收获物上。

@@ -859,9 +859,8 @@ public class ItemSlot_UI : MonoBehaviour,
                 continue;
             }
 
-            // 手机普通指向区是透明的世界指向层，允许在其空白区域长按丢弃。
-            MobileVirtualJoystick joystick = hitObject.GetComponentInParent<MobileVirtualJoystick>();
-            if (joystick != null && joystick.IsWorldDropSurface)
+            // 手机丢弃触控面代表世界落点，不能被自身的透明 Graphic 判成 UI 障碍。
+            if (hitObject.GetComponentInParent<MobileHeldItemDropSurface>() != null)
                 continue;
 
             // 只拦截真实可操作控件，面板外的装饰 Image/Text 不应吞掉世界长按。

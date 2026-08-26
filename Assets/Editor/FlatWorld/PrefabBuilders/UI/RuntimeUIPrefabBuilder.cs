@@ -2443,8 +2443,25 @@ public static class RuntimeUIPrefabBuilder
         GameObject gameplay = CreateUIObject("玩法控制层", root.transform);
         Stretch(gameplay.GetComponent<RectTransform>());
 
+        // 手持物丢弃面位于所有玩法控件下方；平时不参与射线，只补齐三段区域中间的世界长按入口。
+        GameObject heldItemDropSurface = CreateUIObject(
+            "手持物丢弃区",
+            gameplay.transform,
+            typeof(Image),
+            typeof(MobileHeldItemDropSurface));
+        Stretch(heldItemDropSurface.GetComponent<RectTransform>());
+        Image heldItemDropHit = heldItemDropSurface.GetComponent<Image>();
+        heldItemDropHit.color = new Color(1f, 1f, 1f, 0.001f);
+        heldItemDropHit.raycastTarget = true;
+        heldItemDropSurface.GetComponent<MobileHeldItemDropSurface>()
+            .Configure(onlyRaycastWhileHoldingItem: true);
+
         // 透明捕获层仅覆盖右侧默认配置区，按钮和攻击摇杆随后创建以获得更高射线优先级。
-        GameObject aimZone = CreateUIObject("普通指向区", gameplay.transform, typeof(Image));
+        GameObject aimZone = CreateUIObject(
+            "普通指向区",
+            gameplay.transform,
+            typeof(Image),
+            typeof(MobileHeldItemDropSurface));
         RectTransform aimRect = aimZone.GetComponent<RectTransform>();
         aimRect.anchorMin = new Vector2(1f - UIUserSettings.DefaultRightControlZoneRatio, 0f);
         aimRect.anchorMax = Vector2.one;
@@ -2453,9 +2470,15 @@ public static class RuntimeUIPrefabBuilder
         Image aimCapture = aimZone.GetComponent<Image>();
         aimCapture.color = new Color(1f, 1f, 1f, 0.001f);
         aimCapture.raycastTarget = true;
+        aimZone.GetComponent<MobileHeldItemDropSurface>()
+            .Configure(onlyRaycastWhileHoldingItem: false);
         CreateJoystickVisual(aimZone.transform, Vector2.zero, 188f, floating: true);
 
-        GameObject moveZone = CreateUIObject("移动摇杆", gameplay.transform, typeof(Image));
+        GameObject moveZone = CreateUIObject(
+            "移动摇杆",
+            gameplay.transform,
+            typeof(Image),
+            typeof(MobileHeldItemDropSurface));
         RectTransform moveRect = moveZone.GetComponent<RectTransform>();
         moveRect.anchorMin = Vector2.zero;
         moveRect.anchorMax = new Vector2(UIUserSettings.DefaultLeftControlZoneRatio, 1f);
@@ -2464,6 +2487,8 @@ public static class RuntimeUIPrefabBuilder
         Image moveHit = moveZone.GetComponent<Image>();
         moveHit.color = new Color(1f, 1f, 1f, 0.001f);
         moveHit.raycastTarget = true;
+        moveZone.GetComponent<MobileHeldItemDropSurface>()
+            .Configure(onlyRaycastWhileHoldingItem: false);
         CreateJoystickVisual(moveZone.transform, Vector2.zero, 188f, floating: true);
 
         // 右侧操作组以安全区右下角为唯一定位基准，组内所有控件使用局部坐标对齐。
@@ -2476,7 +2501,11 @@ public static class RuntimeUIPrefabBuilder
             MobileActionGroupWidth,
             MobileActionGroupHeight);
 
-        GameObject attackZone = CreateUIObject("攻击摇杆", actionGroup.transform, typeof(Image));
+        GameObject attackZone = CreateUIObject(
+            "攻击摇杆",
+            actionGroup.transform,
+            typeof(Image),
+            typeof(MobileHeldItemDropSurface));
         SetBottomRight(
             attackZone.GetComponent<RectTransform>(),
             (MobileActionGroupWidth - MobileAttackZoneSize) * 0.5f,
@@ -2486,6 +2515,8 @@ public static class RuntimeUIPrefabBuilder
         Image attackHit = attackZone.GetComponent<Image>();
         attackHit.color = new Color(1f, 1f, 1f, 0.001f);
         attackHit.raycastTarget = true;
+        attackZone.GetComponent<MobileHeldItemDropSurface>()
+            .Configure(onlyRaycastWhileHoldingItem: false);
         CreateJoystickVisual(attackZone.transform, Vector2.zero, 188f, floating: false);
 
         CreateMobileButton(

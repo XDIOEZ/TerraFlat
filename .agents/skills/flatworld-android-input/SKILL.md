@@ -27,6 +27,7 @@ description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系�
 - 每个摇杆和按住型按钮独立持有自己的 `pointerId`。不得使用单个全局触摸、`Input.GetTouch(0)` 或共享“当前手指”。
 - `Inventory_Hand` 有有效物品时，`MobileVirtualJoystick` 不得取得触摸所有权；已有摇杆必须立即 `ResetOwnership`，避免拖拽丢弃期间生成浮动摇杆。
 - 快捷栏拖拽进入世界空白区后的长按检测必须复用 `ItemSlot_UI` 的独立 `pointerId` 与 EventSystem 射线；不得把其它 UI 区域当作世界落点。
+- 玩家已经拿起物品后的再次长按由 `MobileHeldItemDropSurface` 独立持有触点：左右摇杆和攻击区复用该组件，中间空白区使用位于所有玩法控件下方的专用触控面；中间触控面仅在 `Inventory_Hand` 有物品时参与射线，禁止为补齐丢弃入口而扩大摇杆区域或加入常驻全屏射线层。
 - 在输入锁、模态面板、暂停、失焦、后台、控件禁用、方向/尺寸变化、玩家销毁时，同时释放触摸所有权、移动、攻击按钮和攻击语义；清理必须幂等。
 - 保持 `EventSystemGuard` 的 `UIPointerBehavior.AllPointersAsIs` 与逐触点 UI 绑定；不要将多点触控合并为单指。
 - 保持右侧普通指向层位于功能按钮和攻击摇杆之后，只有空白区域能取得普通指向所有权；不要用全屏透明层遮住按钮射线。
