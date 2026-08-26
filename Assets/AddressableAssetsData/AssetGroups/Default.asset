@@ -1740,6 +1740,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e40b3eaad88f90e47aa1d2cc888ddb57
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_CameraControlSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e45dbb4b42ea2744ca150b60da37aae0
     m_Address: Assets/6_Art/Food/Item_WildDogMilk.png
     m_ReadOnly: 0

@@ -7,10 +7,12 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class Mod_Cam : Module
 {
+    private const float DefaultPovValue = 10f;
+
     [System.Serializable]
     private class CameraFollowSaveData
     {
-        public float PovValue = 10f;
+        public float PovValue = DefaultPovValue;
     }
 
     #region 字段声明
@@ -40,7 +42,7 @@ public class Mod_Cam : Module
     public GameObject CamPrefab;
     private GameObject instantiatedCamera;
     [SerializeField]
-    private float povValue = 10f;
+    private float povValue = DefaultPovValue;
 
     /// <summary>
     /// 当前目标正交尺寸（直接读取 vcam lens，避免 Cinemachine 同步延迟）
@@ -133,9 +135,11 @@ public class Mod_Cam : Module
         if (Vcam != null)
         {
             CacheCameraFollowDefaults();
-            ApplyCameraFollowSettings();
             LoadPovValue();
             Vcam.m_Lens.OrthographicSize = povValue;
+            if (ControllerCamera != null)
+                ControllerCamera.orthographicSize = povValue;
+            ApplyCameraFollowSettings();
         }
         GameController._mainCamera = ControllerCamera;
     
@@ -194,12 +198,26 @@ public class Mod_Cam : Module
         if (_framingTransposer == null || !_cameraFollowDefaultsCaptured)
             return;
 
-        float lookahead = CameraUserSettings.Lookahead;
+        float lookahead = GetZoomAdjustedLookahead();
         float inertia = Mathf.Max(0f, -lookahead);
         _framingTransposer.m_LookaheadTime = Mathf.Max(0f, lookahead);
         _framingTransposer.m_LookaheadSmoothing = CameraUserSettings.LookaheadSmoothing;
         _framingTransposer.m_XDamping = Mathf.Clamp(_baseXDamping + inertia, 0f, 20f);
         _framingTransposer.m_YDamping = Mathf.Clamp(_baseYDamping + inertia, 0f, 20f);
+    }
+
+    /// <summary>按当前拉远进度应用缩放影响系数，并保证负系数不会反转前探方向。</summary>
+    private float GetZoomAdjustedLookahead()
+    {
+        float maximumPov = Mathf.Max(DefaultPovValue + 0.001f, MaxPovValue);
+        float zoomOutProgress = Mathf.InverseLerp(
+            DefaultPovValue,
+            maximumPov,
+            CurrentOrthographicSize);
+        float multiplier = Mathf.Max(
+            0f,
+            1f + CameraUserSettings.LookaheadZoomInfluence * zoomOutProgress);
+        return CameraUserSettings.Lookahead * multiplier;
     }
 
     private void HandleCameraSettingsChanged()
@@ -239,6 +257,9 @@ public class Mod_Cam : Module
         povValue += delta;
         povValue = Mathf.Clamp(povValue, MinPovValue, MaxPovValue); // 限制视野范围
         Vcam.m_Lens.OrthographicSize = povValue;
+        if (ControllerCamera != null)
+            ControllerCamera.orthographicSize = povValue;
+        ApplyCameraFollowSettings();
 
         if (_chunkLoader == null)
         {
@@ -260,6 +281,7 @@ public class Mod_Cam : Module
         Vcam.m_Lens.OrthographicSize = povValue;
         if (ControllerCamera != null)
             ControllerCamera.orthographicSize = povValue;
+        ApplyCameraFollowSettings();
         _chunkLoader ??= GetComponentInParent<Mod_ChunkLoader>();
         _chunkLoader?.RefreshChunksForCameraView();
     }

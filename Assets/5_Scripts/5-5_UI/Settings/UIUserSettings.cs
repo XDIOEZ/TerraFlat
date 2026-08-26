@@ -145,6 +145,35 @@ public static class UIUserSettings
         MobileControlsChanged?.Invoke();
     }
 
+    /// <summary>只恢复界面页可见设置，不改动已经拆到镜头控制页的双指缩放。</summary>
+    public static void ResetInterfaceToDefaults()
+    {
+        EnsureInitialized();
+        bool visualChanged = !Mathf.Approximately(cachedScale, DefaultScale) ||
+                             !cachedRespectSafeArea;
+        bool mobileChanged = !cachedFloatingMoveJoystick;
+        if (!visualChanged && !mobileChanged)
+            return;
+
+        cachedScale = DefaultScale;
+        cachedRespectSafeArea = true;
+        cachedFloatingMoveJoystick = true;
+        PlayerPrefs.SetFloat(ScaleKey, DefaultScale);
+        PlayerPrefs.SetInt(RespectSafeAreaKey, 1);
+        PlayerPrefs.SetInt(FloatingMoveJoystickKey, 1);
+        PlayerPrefs.Save();
+        if (visualChanged)
+            Changed?.Invoke();
+        if (mobileChanged)
+            MobileControlsChanged?.Invoke();
+    }
+
+    /// <summary>只恢复镜头控制页的双指缩放开关。</summary>
+    public static void ResetPinchZoomToDefault()
+    {
+        SetEnablePinchZoom(false);
+    }
+
     public static void ResetToDefaults()
     {
         EnsureInitialized();

@@ -82,6 +82,7 @@ private void EnsureWindow()
         settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
             prefab,
             RuntimeUIPrefabKeys.AutoSaveSettings);
+        SettingsSubPanelInteractionGuard.Link(transform, settingsPanel);
         intervalSetting = AutoSavePreferences.SettingsProvider.GetDropdown(
             AutoSavePreferences.IntervalSettingKey);
         intervalDropdown = settingsPanel.GetComponentInChildren<TMP_Dropdown>(true);

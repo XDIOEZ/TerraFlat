@@ -73,6 +73,7 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour
 
         settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
             prefab, RuntimeUIPrefabKeys.WorldStreamingSettings);
+        SettingsSubPanelInteractionGuard.Link(transform, settingsPanel);
         modeSetting = WorldStreamingPreferences.SettingsProvider.GetDropdown(
             WorldStreamingPreferences.ModeSettingKey);
         modeDropdown = settingsPanel.GetComponentInChildren<TMP_Dropdown>(true);

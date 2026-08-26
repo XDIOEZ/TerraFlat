@@ -104,6 +104,7 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour
         settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
             prefab,
             RuntimeUIPrefabKeys.CoordinateDisplaySettings);
+        SettingsSubPanelInteractionGuard.Link(transform, settingsPanel);
         displayModeSetting = PlayerWorldCoordinateDisplayPreferences.SettingsProvider
             .GetSwitch(PlayerWorldCoordinateDisplayPreferences.ModeSettingKey);
         worldCoordinatesButton = settingsPanel.GetButton(WorldCoordinatesButtonName);
@@ -209,26 +210,13 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour
         if (settingsPanel == null || isClamping)
             return;
 
-        Canvas canvas = settingsPanel.GetComponentInParent<Canvas>();
-        RectTransform canvasRect = canvas != null ? canvas.transform as RectTransform : null;
-        RectTransform panelRect = settingsPanel.rectTransform;
-        if (canvasRect == null || panelRect == null)
-            return;
-
         isClamping = true;
         try
         {
-            Canvas.ForceUpdateCanvases();
-            Vector2 available = canvasRect.rect.size -
-                                new Vector2(CanvasSafeMargin * 2f, CanvasSafeMargin * 2f);
-            panelRect.SetSizeWithCurrentAnchors(
-                RectTransform.Axis.Horizontal,
-                Mathf.Min(PreferredWidth, Mathf.Max(1f, available.x)));
-            panelRect.SetSizeWithCurrentAnchors(
-                RectTransform.Axis.Vertical,
-                Mathf.Min(PreferredHeight, Mathf.Max(1f, available.y)));
-            panelRect.anchoredPosition = Vector2.zero;
-            LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+            SettingsPanelLayoutUtility.ClampToCanvas(
+                settingsPanel,
+                new Vector2(PreferredWidth, PreferredHeight),
+                CanvasSafeMargin);
         }
         finally
         {

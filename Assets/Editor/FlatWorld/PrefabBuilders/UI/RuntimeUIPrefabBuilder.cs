@@ -58,7 +58,8 @@ public static class RuntimeUIPrefabBuilder
 
     // 设置子分页统一使用更大的阅读尺寸，避免各页面视觉比例不一致。
     private static readonly Vector2 AudioSettingsSize = new Vector2(800f, 650f);
-    private static readonly Vector2 InterfaceSettingsSize = new Vector2(800f, 680f);
+    private static readonly Vector2 InterfaceSettingsSize = new Vector2(800f, 500f);
+    private static readonly Vector2 CameraControlSettingsSize = new Vector2(800f, 620f);
     private static readonly Vector2 CoordinateSettingsSize = new Vector2(800f, 500f);
     private static readonly Vector2 AutoSaveSettingsSize = new Vector2(820f, 540f);
     private static readonly Vector2 WorldStreamingSettingsSize = new Vector2(840f, 560f);
@@ -86,6 +87,7 @@ public static class RuntimeUIPrefabBuilder
         Directory.CreateDirectory(SettingsComponentsRoot);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.AudioSettings + ".prefab", BuildAudioSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.UISettings + ".prefab", BuildInterfaceSettings);
+        SaveCameraControlSettingsPrefab();
         SaveCoordinateDisplaySettingsPrefab();
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.AutoSaveSettings + ".prefab", BuildAutoSaveSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab", BuildWorldStreamingSettings);
@@ -120,6 +122,7 @@ public static class RuntimeUIPrefabBuilder
 
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.AudioSettings + ".prefab", BuildAudioSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.UISettings + ".prefab", BuildInterfaceSettings);
+        SaveCameraControlSettingsPrefab();
         SaveCoordinateDisplaySettingsPrefab();
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.MainMenuSettings + ".prefab", BuildMainMenuSettings);
         SaveMainMenuExitConfirmationPrefab();
@@ -174,7 +177,7 @@ public static class RuntimeUIPrefabBuilder
         Debug.Log("[Runtime UI] 已固化手机多点触控 HUD、安全区根节点，并挂载到 Player.prefab。");
     }
 
-    /// <summary>只重建 UI 设置页，供界面、移动摇杆和镜头预判偏好调整使用。</summary>
+    /// <summary>只重建界面与镜头控制设置页，并同步设置入口分页。</summary>
     [MenuItem("FlatWorld/UI/Rebuild Interface Settings UI")]
     public static void RebuildInterfaceSettingsUI()
     {
@@ -189,9 +192,13 @@ public static class RuntimeUIPrefabBuilder
         string prefabPath = SettingsPanelsRoot + RuntimeUIPrefabKeys.UISettings + ".prefab";
         SaveNewPrefab(prefabPath, BuildInterfaceSettings);
         EnsureRuntimePrefabAddressable(prefabPath);
+        SaveCameraControlSettingsPrefab();
+        UpdateExistingPrefab(
+            MainMenuCoreRoot + "UI_ActionList.prefab",
+            ConfigureSettingsActionListPages);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[Runtime UI] 已固化 UI 设置页、移动摇杆模式和镜头预判设置。");
+        Debug.Log("[Runtime UI] 已固化界面设置、镜头控制与设置入口分页。");
     }
 
     /// <summary>只重建维度切换加载页，避免覆盖用户正在调整的其它运行时 UI。</summary>
@@ -563,6 +570,15 @@ public static class RuntimeUIPrefabBuilder
     {
         string prefabPath = LoadingRoot + RuntimeUIPrefabKeys.DimensionLoading + ".prefab";
         SaveNewPrefab(prefabPath, BuildDimensionLoading);
+        EnsureRuntimePrefabAddressable(prefabPath);
+    }
+
+    /// <summary>保存镜头控制设置页并登记为 GameRes 可寻址 Prefab。</summary>
+    private static void SaveCameraControlSettingsPrefab()
+    {
+        string prefabPath =
+            SettingsPanelsRoot + RuntimeUIPrefabKeys.CameraControlSettings + ".prefab";
+        SaveNewPrefab(prefabPath, BuildCameraControlSettings);
         EnsureRuntimePrefabAddressable(prefabPath);
     }
 
@@ -1460,11 +1476,11 @@ public static class RuntimeUIPrefabBuilder
     private static GameObject BuildInterfaceSettings()
     {
         GameObject root = CreatePanelRoot(RuntimeUIPrefabKeys.UISettings, InterfaceSettingsSize);
-        CreateSettingsHeader(root.transform, "UI 设置", "关闭按钮");
+        CreateSettingsHeader(root.transform, "界面设置", "关闭按钮");
         CreateSettingsHint(
             root.transform,
-            "调整会立即应用并自动保存。镜头前探正值为提前跟随，负值为惯性；负值绝对值越大，惯性越强。预判平滑越大越稳，但响应越慢。",
-            64f);
+            "调整会立即应用并自动保存；界面缩放会统一放大或缩小所有正式 UI。",
+            44f);
 
         GameObject scaleRow = CreateRow("界面缩放行", root.transform, 52f);
         CreateRowLabel(scaleRow.transform, "界面缩放", 112f);
@@ -1492,6 +1508,27 @@ public static class RuntimeUIPrefabBuilder
         Toggle joystickToggle = CreateToggle("浮动移动摇杆", joystickRow.transform);
         joystickToggle.isOn = true;
 
+        TextMeshProUGUI status = CreateText("状态文本", root.transform, "安全区域适配：开启（推荐）", 16f, Muted);
+        status.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
+
+        Transform footer = CreateFooter(root.transform);
+        CreateSettingsButton("恢复默认按钮", footer, "恢复默认", 132f, 42f, false);
+        CreateSettingsButton("完成按钮", footer, "完成", 104f, 42f, true);
+        return root;
+    }
+
+    /// <summary>构建独立镜头控制页，承载移动端缩放与三个预判参数。</summary>
+    private static GameObject BuildCameraControlSettings()
+    {
+        GameObject root = CreatePanelRoot(
+            RuntimeUIPrefabKeys.CameraControlSettings,
+            CameraControlSettingsSize);
+        CreateSettingsHeader(root.transform, "镜头控制", "关闭按钮");
+        CreateSettingsHint(
+            root.transform,
+            "双指缩放默认关闭。镜头前探正值为提前跟随，负值为惯性；缩放影响系数为正时拉远会增强预测，为负时会减弱。",
+            64f);
+
         GameObject pinchZoomRow = CreateRow("双指缩放行", root.transform, 48f);
         TextMeshProUGUI pinchZoomLabel = CreateText(
             "双指缩放说明",
@@ -1504,26 +1541,56 @@ public static class RuntimeUIPrefabBuilder
         pinchZoomToggle.isOn = false;
 
         GameObject lookaheadRow = CreateRow("镜头前探行", root.transform, 52f);
-        CreateRowLabel(lookaheadRow.transform, "镜头前探", 112f);
+        CreateRowLabel(lookaheadRow.transform, "镜头前探", 128f);
         Slider lookaheadSlider = CreateSlider("镜头前探", lookaheadRow.transform);
         lookaheadSlider.minValue = CameraUserSettings.MinimumLookahead;
         lookaheadSlider.maxValue = CameraUserSettings.MaximumLookahead;
         lookaheadSlider.value = CameraUserSettings.DefaultLookahead;
-        TextMeshProUGUI lookaheadValue = CreateText("镜头前探数值", lookaheadRow.transform, "+0.22s", 16f, Amber);
+        TextMeshProUGUI lookaheadValue = CreateText(
+            "镜头前探数值",
+            lookaheadRow.transform,
+            "+0.00s",
+            16f,
+            Amber);
         lookaheadValue.alignment = TextAlignmentOptions.MidlineRight;
-        lookaheadValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 72f;
+        lookaheadValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 76f;
 
         GameObject smoothingRow = CreateRow("预判平滑行", root.transform, 52f);
-        CreateRowLabel(smoothingRow.transform, "预判平滑", 112f);
+        CreateRowLabel(smoothingRow.transform, "预判平滑", 128f);
         Slider smoothingSlider = CreateSlider("预判平滑", smoothingRow.transform);
         smoothingSlider.minValue = CameraUserSettings.MinimumLookaheadSmoothing;
         smoothingSlider.maxValue = CameraUserSettings.MaximumLookaheadSmoothing;
         smoothingSlider.value = CameraUserSettings.DefaultLookaheadSmoothing;
-        TextMeshProUGUI smoothingValue = CreateText("预判平滑数值", smoothingRow.transform, "0.5", 16f, Amber);
+        TextMeshProUGUI smoothingValue = CreateText(
+            "预判平滑数值",
+            smoothingRow.transform,
+            "0.0",
+            16f,
+            Amber);
         smoothingValue.alignment = TextAlignmentOptions.MidlineRight;
-        smoothingValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 52f;
+        smoothingValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 76f;
 
-        TextMeshProUGUI status = CreateText("状态文本", root.transform, "安全区域适配：开启（推荐）", 16f, Muted);
+        GameObject influenceRow = CreateRow("缩放影响系数行", root.transform, 52f);
+        CreateRowLabel(influenceRow.transform, "缩放影响系数", 128f);
+        Slider influenceSlider = CreateSlider("缩放影响系数", influenceRow.transform);
+        influenceSlider.minValue = CameraUserSettings.MinimumLookaheadZoomInfluence;
+        influenceSlider.maxValue = CameraUserSettings.MaximumLookaheadZoomInfluence;
+        influenceSlider.value = CameraUserSettings.DefaultLookaheadZoomInfluence;
+        TextMeshProUGUI influenceValue = CreateText(
+            "缩放影响系数数值",
+            influenceRow.transform,
+            "+0.00",
+            16f,
+            Amber);
+        influenceValue.alignment = TextAlignmentOptions.MidlineRight;
+        influenceValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 76f;
+
+        TextMeshProUGUI status = CreateText(
+            "状态文本",
+            root.transform,
+            "调整会立即应用并自动保存。",
+            16f,
+            Muted);
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
 
         Transform footer = CreateFooter(root.transform);
@@ -1658,7 +1725,7 @@ public static class RuntimeUIPrefabBuilder
 
         Transform footer = CreateFooter(dialog);
         footer.GetComponent<LayoutElement>().preferredHeight = 76f;
-        Button resetButton = CreateButton("恢复默认按钮", footer, "恢复默认", 160f, 60f, false);
+        Button resetButton = CreateButton("恢复默认按钮", footer, "恢复所有设置", 210f, 60f, false);
         resetButton.GetComponent<Image>().color = MainMenuSettingsSurface;
         SetButtonLabelSize(resetButton, 20f);
         SetButtonLabelSize(CreateButton("返回按钮", footer, "返回", 130f, 60f, true), 20f);
@@ -1990,7 +2057,7 @@ public static class RuntimeUIPrefabBuilder
 
     /// <summary>
     /// 将原本堆在同一 ScrollRect 中的设置入口拆成三页。
-    /// 每页最多四项，分页控制固定在滚动区域下方，避免入口继续向下溢出。
+    /// 每页最多五项，分页控制固定在滚动区域下方，避免入口继续向下溢出。
     /// </summary>
     private static void ConfigureSettingsActionListPages(GameObject root)
     {
@@ -2014,6 +2081,7 @@ public static class RuntimeUIPrefabBuilder
 
         MoveEntryToPage(root.transform, interfacePage, "音量调节");
         MoveEntryToPage(root.transform, interfacePage, "UI设置");
+        MoveEntryToPage(root.transform, interfacePage, "镜头控制");
         MoveEntryToPage(root.transform, interfacePage, "显示设置");
         MoveEntryToPage(root.transform, interfacePage, "按键绑定");
 
@@ -2024,6 +2092,7 @@ public static class RuntimeUIPrefabBuilder
         MoveEntryToPage(root.transform, sessionPage, "保存游戏");
         MoveEntryToPage(root.transform, sessionPage, "保存并回到主界面按钮");
         MoveEntryToPage(root.transform, sessionPage, "保存并退出游戏按钮");
+        MoveEntryToPage(root.transform, sessionPage, "恢复所有设置");
 
         interfacePage.SetSiblingIndex(0);
         worldPage.SetSiblingIndex(1);

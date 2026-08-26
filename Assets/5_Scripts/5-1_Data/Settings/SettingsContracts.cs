@@ -296,6 +296,25 @@ namespace FlatWorld.Settings
 
             return providers.TryGetValue(providerId, out provider);
         }
+
+        /// <summary>按稳定顺序恢复当前已注册的全部设置提供者，并返回实际调用数量。</summary>
+        public static int ResetAllToDefaults()
+        {
+            var snapshot = new List<ISettingsProvider>(providers.Values);
+            snapshot.Sort((left, right) =>
+            {
+                int order = left.Order.CompareTo(right.Order);
+                return order != 0
+                    ? order
+                    : StringComparer.OrdinalIgnoreCase.Compare(
+                        left.ProviderId,
+                        right.ProviderId);
+            });
+
+            for (int i = 0; i < snapshot.Count; i++)
+                snapshot[i].ResetToDefaults();
+            return snapshot.Count;
+        }
     }
 
     /// <summary>按稳定 Key 查找具体控件契约，避免每个 UI 适配器重复遍历列表。</summary>

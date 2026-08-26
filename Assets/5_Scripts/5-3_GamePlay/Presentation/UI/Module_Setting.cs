@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Sirenix.OdinInspector;
 using FlatWorld.Networking;
+using FlatWorld.Settings;
 
 public class SettingCanvas : Module, IInstanceUI
 {
@@ -59,8 +60,7 @@ public class SettingCanvas : Module, IInstanceUI
             return;
 
         UIManager uiManager = UIManager.Instance;
-        if (uiManager.WasCancelHandledThisFrame() ||
-            uiManager.TryCloseTopmostCancelPanel(basePanel))
+        if (uiManager.WasCancelHandledThisFrame() || TryCloseChildSettingsPanel())
         {
             return;
         }
@@ -97,12 +97,14 @@ public class SettingCanvas : Module, IInstanceUI
         BindButton(UIText.ExitWithoutSavingButtons, ExitAppWithoutSaving);
         AudioSettingsPanelLauncher.Ensure(basePanel.transform);
         UISettingsPanelLauncher.Ensure(basePanel.transform);
+        CameraControlSettingsPanelLauncher.Ensure(basePanel.transform);
         CoordinateDisplaySettingsPanelLauncher.Ensure(basePanel.transform);
         AutoSaveSettingsPanelLauncher.Ensure(basePanel.transform);
         WorldStreamingSettingsPanelLauncher.Ensure(basePanel.transform);
         DifficultySettingsPanelLauncher.Ensure(basePanel.transform);
         InputBindingPanelLauncher.Ensure(basePanel.transform, gameController);
         PlayerSuicideButton.Ensure(basePanel.transform, playerDeathState);
+        BindButton(new[] { "恢复所有设置" }, ResetAllSettings);
         basePanel.RefreshUIComponents();
         SettingsActionListPagination.Ensure(basePanel.transform);
         basePanel.SetPanelName(PanelName);
@@ -138,7 +140,8 @@ public class SettingCanvas : Module, IInstanceUI
             // 根据当前状态切换显示与隐藏
             if (basePanel.IsVisible())
             {
-                basePanel.Close();
+                if (!TryCloseChildSettingsPanel())
+                    basePanel.Close();
             }
             else
             {
@@ -173,7 +176,22 @@ public class SettingCanvas : Module, IInstanceUI
         if (basePanel == null)
             throw new System.InvalidOperationException("[SettingCanvas] basePanel 为空，无法关闭设置面板");
 
-        basePanel.Close();
+        if (!TryCloseChildSettingsPanel())
+            basePanel.Close();
+    }
+
+    /// <summary>优先关闭设置二级页，防止主菜单在子页仍打开时先被关闭。</summary>
+    private bool TryCloseChildSettingsPanel()
+    {
+        return basePanel != null &&
+               UIManager.Instance.TryCloseTopmostCancelPanel(basePanel);
+    }
+
+    /// <summary>恢复全部已注册设置与两类输入绑定默认值。</summary>
+    private void ResetAllSettings()
+    {
+        SettingsProviderRegistry.ResetAllToDefaults();
+        gameController?.InputBindings?.ResetToDefaults();
     }
 
     public void I_TogglePanel()

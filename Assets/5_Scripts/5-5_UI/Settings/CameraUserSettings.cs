@@ -4,8 +4,8 @@ using FlatWorld.Settings;
 using UnityEngine;
 
 /// <summary>
-/// 全局镜头预判偏好。前探值允许 -2～1 秒：正值使用 Cinemachine 前探，负值关闭前探并按绝对值增加镜头阻尼，
-/// 负值的绝对值越大代表惯性越强；预判平滑值范围为 0～10，数值越大越稳定但响应越慢。偏好通过 PlayerPrefs 保存，
+/// 全局镜头预判偏好。前探值允许 -2～1 秒：正值使用 Cinemachine 前探，负值关闭前探并按绝对值增加镜头阻尼；
+/// 缩放影响系数允许负值，并按镜头拉远进度增强或减弱前探/惯性。偏好通过 PlayerPrefs 保存，
 /// 相机模块订阅 Changed 后会在运行时立即应用，不写入世界存档或玩家实体数据。
 /// </summary>
 public static class CameraUserSettings
@@ -14,20 +14,27 @@ public static class CameraUserSettings
 
     private const string LookaheadKey = "FlatWorld.Camera.Lookahead";
     private const string LookaheadSmoothingKey = "FlatWorld.Camera.LookaheadSmoothing";
+    private const string LookaheadZoomInfluenceKey = "FlatWorld.Camera.LookaheadZoomInfluence";
 
-    public const float DefaultLookahead = 0.22f;
+    public const float DefaultLookahead = 0f;
     public const float MinimumLookahead = -2f;
     public const float MaximumLookahead = 1f;
     public const float LookaheadStep = 0.01f;
 
-    public const float DefaultLookaheadSmoothing = 0.5f;
+    public const float DefaultLookaheadSmoothing = 0f;
     public const float MinimumLookaheadSmoothing = 0f;
     public const float MaximumLookaheadSmoothing = 10f;
     public const float LookaheadSmoothingStep = 0.1f;
 
+    public const float DefaultLookaheadZoomInfluence = 0f;
+    public const float MinimumLookaheadZoomInfluence = -1f;
+    public const float MaximumLookaheadZoomInfluence = 2f;
+    public const float LookaheadZoomInfluenceStep = 0.05f;
+
     public const string SettingsProviderId = "camera";
     public const string LookaheadSettingKey = "camera.lookahead";
     public const string LookaheadSmoothingSettingKey = "camera.lookaheadSmoothing";
+    public const string LookaheadZoomInfluenceSettingKey = "camera.lookaheadZoomInfluence";
 
     #endregion
 
@@ -36,6 +43,7 @@ public static class CameraUserSettings
     private static bool initialized;
     private static float cachedLookahead = DefaultLookahead;
     private static float cachedLookaheadSmoothing = DefaultLookaheadSmoothing;
+    private static float cachedLookaheadZoomInfluence = DefaultLookaheadZoomInfluence;
 
     /// <summary>任一镜头偏好实际改变后广播一次。</summary>
     public static event Action Changed;
@@ -61,6 +69,15 @@ public static class CameraUserSettings
         {
             EnsureInitialized();
             return cachedLookaheadSmoothing;
+        }
+    }
+
+    public static float LookaheadZoomInfluence
+    {
+        get
+        {
+            EnsureInitialized();
+            return cachedLookaheadZoomInfluence;
         }
     }
 
@@ -103,19 +120,44 @@ public static class CameraUserSettings
         return sanitized;
     }
 
-    /// <summary>恢复镜头前探与预判平滑默认值。</summary>
+    /// <summary>保存镜头拉远时对前探或惯性的影响系数；负值减弱，正值增强。</summary>
+    public static float SetLookaheadZoomInfluence(float value)
+    {
+        EnsureInitialized();
+        float sanitized = Sanitize(
+            value,
+            MinimumLookaheadZoomInfluence,
+            MaximumLookaheadZoomInfluence,
+            LookaheadZoomInfluenceStep,
+            DefaultLookaheadZoomInfluence);
+        if (Mathf.Approximately(cachedLookaheadZoomInfluence, sanitized))
+            return cachedLookaheadZoomInfluence;
+
+        cachedLookaheadZoomInfluence = sanitized;
+        PlayerPrefs.SetFloat(LookaheadZoomInfluenceKey, sanitized);
+        PlayerPrefs.Save();
+        Changed?.Invoke();
+        return sanitized;
+    }
+
+    /// <summary>恢复镜头前探、预判平滑与缩放影响系数默认值。</summary>
     public static void ResetToDefaults()
     {
         EnsureInitialized();
         bool changed = !Mathf.Approximately(cachedLookahead, DefaultLookahead) ||
-                       !Mathf.Approximately(cachedLookaheadSmoothing, DefaultLookaheadSmoothing);
+                       !Mathf.Approximately(cachedLookaheadSmoothing, DefaultLookaheadSmoothing) ||
+                       !Mathf.Approximately(
+                           cachedLookaheadZoomInfluence,
+                           DefaultLookaheadZoomInfluence);
         if (!changed)
             return;
 
         cachedLookahead = DefaultLookahead;
         cachedLookaheadSmoothing = DefaultLookaheadSmoothing;
+        cachedLookaheadZoomInfluence = DefaultLookaheadZoomInfluence;
         PlayerPrefs.SetFloat(LookaheadKey, cachedLookahead);
         PlayerPrefs.SetFloat(LookaheadSmoothingKey, cachedLookaheadSmoothing);
+        PlayerPrefs.SetFloat(LookaheadZoomInfluenceKey, cachedLookaheadZoomInfluence);
         PlayerPrefs.Save();
         Changed?.Invoke();
     }
@@ -131,6 +173,7 @@ public static class CameraUserSettings
         initialized = false;
         cachedLookahead = DefaultLookahead;
         cachedLookaheadSmoothing = DefaultLookaheadSmoothing;
+        cachedLookaheadZoomInfluence = DefaultLookaheadZoomInfluence;
         Changed = null;
     }
 
@@ -184,7 +227,19 @@ public static class CameraUserSettings
                     MaximumLookaheadSmoothing,
                     LookaheadSmoothingStep,
                     () => LookaheadSmoothing,
-                    value => SetLookaheadSmoothing(value))
+                    value => SetLookaheadSmoothing(value)),
+                new SettingsSlider(
+                    new SettingDescriptor(
+                        LookaheadZoomInfluenceSettingKey,
+                        "缩放影响系数",
+                        SettingControlType.Slider,
+                        "camera",
+                        order: 2),
+                    MinimumLookaheadZoomInfluence,
+                    MaximumLookaheadZoomInfluence,
+                    LookaheadZoomInfluenceStep,
+                    () => LookaheadZoomInfluence,
+                    value => SetLookaheadZoomInfluence(value))
             };
         }
 
@@ -221,6 +276,14 @@ public static class CameraUserSettings
             MaximumLookaheadSmoothing,
             LookaheadSmoothingStep,
             DefaultLookaheadSmoothing);
+        cachedLookaheadZoomInfluence = Sanitize(
+            PlayerPrefs.GetFloat(
+                LookaheadZoomInfluenceKey,
+                DefaultLookaheadZoomInfluence),
+            MinimumLookaheadZoomInfluence,
+            MaximumLookaheadZoomInfluence,
+            LookaheadZoomInfluenceStep,
+            DefaultLookaheadZoomInfluence);
         initialized = true;
     }
 

@@ -329,7 +329,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     private bool IsGameplayTouchAvailable()
     {
-        return ShouldShow() &&
+        return UIUserSettings.EnablePinchZoom &&
+               ShouldShow() &&
                viewObject != null &&
                viewObject.activeInHierarchy &&
                gameplayLayer != null &&

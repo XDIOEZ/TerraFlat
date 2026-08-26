@@ -828,13 +828,13 @@ public partial class GameManager
         SetMainMenuSettingsStatus(panel, "特效质量设置已保存");
     }
 
-    /// <summary>恢复画质预设和后处理质量默认值。</summary>
+    /// <summary>恢复主菜单当前已注册的全部设置默认值。</summary>
     private static void ResetMainMenuSettings(BasePanel panel)
     {
-        GraphicsUserSettings.SettingsProvider.ResetToDefaults();
-        ScreenPostProcessSettings.SettingsProvider.ResetToDefaults();
+        SettingsProviderRegistry.ResetAllToDefaults();
         RefreshMainMenuSettingsQuality(panel);
-        SetMainMenuSettingsStatus(panel, "画质与特效质量已恢复默认");
+        RefreshMainMenuSettingsLanguage(panel);
+        SetMainMenuSettingsStatus(panel, "所有设置已恢复默认");
     }
 
     /// <summary>按持久化设置回填两个画质下拉框。</summary>

@@ -89,6 +89,7 @@ private void EnsureWindow()
         settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
             prefab,
             RuntimeUIPrefabKeys.DifficultySettings);
+        SettingsSubPanelInteractionGuard.Link(transform, settingsPanel);
         difficultySetting = GameDifficultyService.SettingsProvider.GetSwitch(
             GameDifficultyService.DifficultySettingKey);
         statusText = settingsPanel.GetText("状态文本");

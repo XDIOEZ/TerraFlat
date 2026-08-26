@@ -1,4 +1,4 @@
-// AI-Context: 设置菜单的“UI设置”入口和运行时 uGUI 面板；提供界面、移动摇杆和镜头预判偏好及即时持久化。
+// AI-Context: 设置菜单的“UI设置”入口；只负责界面缩放、安全区与移动摇杆，不再承载镜头控制。
 
 using FlatWorld.Localization;
 using FlatWorld.Settings;
@@ -6,12 +6,13 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>连接设置主菜单与正式界面设置 Prefab，并即时持久化三项界面偏好。</summary>
 [DisallowMultipleComponent]
 public sealed class UISettingsPanelLauncher : MonoBehaviour
 {
     private const string EntryButtonName = "UI设置";
-    private const float PreferredWidth = 620f;
-    private const float PreferredHeight = 680f;
+    private const float PreferredWidth = 800f;
+    private const float PreferredHeight = 500f;
     private const float CanvasSafeMargin = 32f;
 
     private Button entryButton;
@@ -19,41 +20,31 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
     private Slider scaleSlider;
     private Toggle safeAreaToggle;
     private Toggle floatingMoveJoystickToggle;
-    private Toggle enablePinchZoomToggle;
-    private Slider cameraLookaheadSlider;
-    private Slider cameraSmoothingSlider;
     private TextMeshProUGUI scaleValueText;
-    private TextMeshProUGUI cameraLookaheadValueText;
-    private TextMeshProUGUI cameraSmoothingValueText;
     private TextMeshProUGUI statusText;
-    private ISettingsProvider uiSettingsProvider;
-    private ISettingsProvider cameraSettingsProvider;
     private ISettingsSlider scaleSetting;
     private ISettingsToggle safeAreaSetting;
     private ISettingsToggle floatingMoveJoystickSetting;
-    private ISettingsToggle enablePinchZoomSetting;
-    private ISettingsSlider cameraLookaheadSetting;
-    private ISettingsSlider cameraSmoothingSetting;
     private bool isClamping;
 
-    public static UISettingsPanelLauncher Ensure(Transform settingsPanel)
+    /// <summary>在设置主面板上复用或挂载入口适配器。</summary>
+    public static UISettingsPanelLauncher Ensure(Transform settingsRoot)
     {
-        if (settingsPanel == null)
+        if (settingsRoot == null)
             return null;
 
         UISettingsPanelLauncher launcher =
-            settingsPanel.GetComponent<UISettingsPanelLauncher>();
+            settingsRoot.GetComponent<UISettingsPanelLauncher>();
         if (launcher == null)
-            launcher = settingsPanel.gameObject.AddComponent<UISettingsPanelLauncher>();
+            launcher = settingsRoot.gameObject.AddComponent<UISettingsPanelLauncher>();
         launcher.EnsureEntryButton();
         return launcher;
     }
 
-private void EnsureEntryButton()
+    /// <summary>查找并绑定设置主菜单中的界面设置入口。</summary>
+    private void EnsureEntryButton()
     {
-        if (entryButton == null)
-            entryButton = FindButton(transform, EntryButtonName);
-
+        entryButton ??= FindButton(transform, EntryButtonName);
         if (entryButton == null)
         {
             Debug.LogError(
@@ -66,7 +57,8 @@ private void EnsureEntryButton()
         entryButton.onClick.AddListener(Open);
     }
 
-private void Open()
+    /// <summary>刷新设置值后打开界面设置子页。</summary>
+    private void Open()
     {
         EnsureSettingsWindow();
         if (settingsPanel == null)
@@ -78,7 +70,8 @@ private void Open()
         settingsPanel.transform.SetAsLastSibling();
     }
 
-private void EnsureSettingsWindow()
+    /// <summary>从正式 Prefab 创建并绑定界面设置控件。</summary>
+    private void EnsureSettingsWindow()
     {
         if (settingsPanel != null)
             return;
@@ -95,27 +88,16 @@ private void EnsureSettingsWindow()
         settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
             prefab,
             RuntimeUIPrefabKeys.UISettings);
-        uiSettingsProvider = UIUserSettings.SettingsProvider;
-        cameraSettingsProvider = CameraUserSettings.SettingsProvider;
+        SettingsSubPanelInteractionGuard.Link(transform, settingsPanel);
+        ISettingsProvider uiSettingsProvider = UIUserSettings.SettingsProvider;
         scaleSetting = uiSettingsProvider.GetSlider(UIUserSettings.ScaleSettingKey);
         safeAreaSetting = uiSettingsProvider.GetToggle(UIUserSettings.RespectSafeAreaSettingKey);
         floatingMoveJoystickSetting =
             uiSettingsProvider.GetToggle(UIUserSettings.FloatingMoveJoystickSettingKey);
-        enablePinchZoomSetting =
-            uiSettingsProvider.GetToggle(UIUserSettings.EnablePinchZoomSettingKey);
-        cameraLookaheadSetting =
-            cameraSettingsProvider.GetSlider(CameraUserSettings.LookaheadSettingKey);
-        cameraSmoothingSetting =
-            cameraSettingsProvider.GetSlider(CameraUserSettings.LookaheadSmoothingSettingKey);
         scaleSlider = settingsPanel.GetSlider("界面缩放");
         safeAreaToggle = settingsPanel.GetToggle("安全区域适配");
         floatingMoveJoystickToggle = settingsPanel.GetToggle("浮动移动摇杆");
-        enablePinchZoomToggle = settingsPanel.GetToggle("双指缩放");
-        cameraLookaheadSlider = settingsPanel.GetSlider("镜头前探");
-        cameraSmoothingSlider = settingsPanel.GetSlider("预判平滑");
         scaleValueText = settingsPanel.GetText("界面缩放数值");
-        cameraLookaheadValueText = settingsPanel.GetText("镜头前探数值");
-        cameraSmoothingValueText = settingsPanel.GetText("预判平滑数值");
         statusText = settingsPanel.GetText("状态文本");
 
         settingsPanel.GetButton("关闭按钮")?.onClick.AddListener(Close);
@@ -124,44 +106,20 @@ private void EnsureSettingsWindow()
         scaleSlider?.onValueChanged.AddListener(OnScaleChanged);
         safeAreaToggle?.onValueChanged.AddListener(OnSafeAreaChanged);
         floatingMoveJoystickToggle?.onValueChanged.AddListener(OnFloatingMoveJoystickChanged);
-        enablePinchZoomToggle?.onValueChanged.AddListener(OnEnablePinchZoomChanged);
-        cameraLookaheadSlider?.onValueChanged.AddListener(OnCameraLookaheadChanged);
-        cameraSmoothingSlider?.onValueChanged.AddListener(OnCameraSmoothingChanged);
 
-        if (scaleSlider == null || safeAreaToggle == null || floatingMoveJoystickToggle == null ||
-            enablePinchZoomToggle == null ||
-            cameraLookaheadSlider == null || cameraSmoothingSlider == null ||
-            scaleValueText == null || cameraLookaheadValueText == null ||
-            cameraSmoothingValueText == null || statusText == null)
-            Debug.LogError("[UISettingsPanelLauncher] UI 设置 Prefab 控件命名契约不完整。", settingsPanel);
+        if (scaleSlider == null || safeAreaToggle == null ||
+            floatingMoveJoystickToggle == null || scaleValueText == null || statusText == null)
+        {
+            Debug.LogError(
+                "[UISettingsPanelLauncher] 界面设置 Prefab 控件命名契约不完整。",
+                settingsPanel);
+        }
 
         if (scaleSlider != null)
         {
-            scaleSlider.minValue = scaleSetting != null ? scaleSetting.MinValue : 0f;
-            scaleSlider.maxValue = scaleSetting != null ? scaleSetting.MaxValue : 1f;
+            scaleSlider.minValue = scaleSetting?.MinValue ?? UIUserSettings.MinimumScale;
+            scaleSlider.maxValue = scaleSetting?.MaxValue ?? UIUserSettings.MaximumScale;
             scaleSlider.wholeNumbers = false;
-        }
-
-        if (cameraLookaheadSlider != null)
-        {
-            cameraLookaheadSlider.minValue = cameraLookaheadSetting != null
-                ? cameraLookaheadSetting.MinValue
-                : 0f;
-            cameraLookaheadSlider.maxValue = cameraLookaheadSetting != null
-                ? cameraLookaheadSetting.MaxValue
-                : 1f;
-            cameraLookaheadSlider.wholeNumbers = false;
-        }
-
-        if (cameraSmoothingSlider != null)
-        {
-            cameraSmoothingSlider.minValue = cameraSmoothingSetting != null
-                ? cameraSmoothingSetting.MinValue
-                : 0f;
-            cameraSmoothingSlider.maxValue = cameraSmoothingSetting != null
-                ? cameraSmoothingSetting.MaxValue
-                : 1f;
-            cameraSmoothingSlider.wholeNumbers = false;
         }
 
         ClampWindowToCanvas();
@@ -169,26 +127,16 @@ private void EnsureSettingsWindow()
         settingsPanel.Close();
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
+    /// <summary>写入界面缩放并重新限制当前子页尺寸。</summary>
     private void OnScaleChanged(float value)
     {
         scaleSetting?.SetValue(value);
-        scaleSlider?.SetValueWithoutNotify(scaleSetting != null ? scaleSetting.Value : value);
+        scaleSlider?.SetValueWithoutNotify(scaleSetting?.Value ?? value);
         RefreshStatus();
         ClampWindowToCanvas();
     }
 
+    /// <summary>写入安全区域偏好并刷新状态。</summary>
     private void OnSafeAreaChanged(bool value)
     {
         safeAreaSetting?.SetValue(value);
@@ -196,41 +144,21 @@ private void EnsureSettingsWindow()
         ClampWindowToCanvas();
     }
 
+    /// <summary>写入移动摇杆浮动或固定偏好。</summary>
     private void OnFloatingMoveJoystickChanged(bool value)
     {
         floatingMoveJoystickSetting?.SetValue(value);
     }
 
-    /// <summary>保存双指缩放偏好并让手机 HUD 立即清理旧触点状态。</summary>
-    private void OnEnablePinchZoomChanged(bool value)
-    {
-        enablePinchZoomSetting?.SetValue(value);
-    }
-
-    private void OnCameraLookaheadChanged(float value)
-    {
-        cameraLookaheadSetting?.SetValue(value);
-        cameraLookaheadSlider?.SetValueWithoutNotify(
-            cameraLookaheadSetting != null ? cameraLookaheadSetting.Value : value);
-        RefreshCameraValues();
-    }
-
-    private void OnCameraSmoothingChanged(float value)
-    {
-        cameraSmoothingSetting?.SetValue(value);
-        cameraSmoothingSlider?.SetValueWithoutNotify(
-            cameraSmoothingSetting != null ? cameraSmoothingSetting.Value : value);
-        RefreshCameraValues();
-    }
-
+    /// <summary>只恢复界面页可见的三项默认设置。</summary>
     private void ResetToDefault()
     {
-        uiSettingsProvider?.ResetToDefaults();
-        cameraSettingsProvider?.ResetToDefaults();
+        UIUserSettings.ResetInterfaceToDefaults();
         RefreshValues();
         ClampWindowToCanvas();
     }
 
+    /// <summary>从设置提供者回填全部界面控件。</summary>
     private void RefreshValues()
     {
         if (scaleSlider != null && scaleSetting != null)
@@ -239,20 +167,14 @@ private void EnsureSettingsWindow()
             safeAreaToggle.SetIsOnWithoutNotify(safeAreaSetting.Value);
         if (floatingMoveJoystickToggle != null && floatingMoveJoystickSetting != null)
             floatingMoveJoystickToggle.SetIsOnWithoutNotify(floatingMoveJoystickSetting.Value);
-        if (enablePinchZoomToggle != null && enablePinchZoomSetting != null)
-            enablePinchZoomToggle.SetIsOnWithoutNotify(enablePinchZoomSetting.Value);
-        if (cameraLookaheadSlider != null && cameraLookaheadSetting != null)
-            cameraLookaheadSlider.SetValueWithoutNotify(cameraLookaheadSetting.Value);
-        if (cameraSmoothingSlider != null && cameraSmoothingSetting != null)
-            cameraSmoothingSlider.SetValueWithoutNotify(cameraSmoothingSetting.Value);
         RefreshStatus();
     }
 
+    /// <summary>刷新缩放百分比与安全区域状态文案。</summary>
     private void RefreshStatus()
     {
         if (scaleValueText != null && scaleSetting != null)
             scaleValueText.text = ToPercent(scaleSetting.Value);
-        RefreshCameraValues();
         if (statusText != null)
         {
             statusText.text = safeAreaSetting != null && safeAreaSetting.Value
@@ -261,56 +183,44 @@ private void EnsureSettingsWindow()
         }
     }
 
-    private void RefreshCameraValues()
-    {
-        if (cameraLookaheadValueText != null && cameraLookaheadSetting != null)
-            cameraLookaheadValueText.text = FormatSignedSeconds(cameraLookaheadSetting.Value);
-        if (cameraSmoothingValueText != null && cameraSmoothingSetting != null)
-            cameraSmoothingValueText.text = cameraSmoothingSetting.Value.ToString("0.0");
-    }
-
-private void Close()
+    /// <summary>关闭界面设置子页。</summary>
+    private void Close()
     {
         settingsPanel?.Close();
     }
 
-private void OnRectTransformDimensionsChange()
+    /// <summary>根画布尺寸变化时重新限制子页面板。</summary>
+    private void OnRectTransformDimensionsChange()
     {
         if (settingsPanel != null)
             ClampWindowToCanvas();
     }
 
-private void OnDestroy()
+    /// <summary>解除入口事件并销毁运行时创建的子页。</summary>
+    private void OnDestroy()
     {
         if (entryButton != null)
             entryButton.onClick.RemoveListener(Open);
         if (settingsPanel != null)
+        {
+            settingsPanel.Close();
             Destroy(settingsPanel.gameObject);
+        }
     }
 
-private void ClampWindowToCanvas()
+    /// <summary>用统一视觉边距规则限制界面设置页尺寸。</summary>
+    private void ClampWindowToCanvas()
     {
         if (settingsPanel == null || isClamping)
-            return;
-
-        Canvas canvas = settingsPanel.GetComponentInParent<Canvas>();
-        RectTransform canvasRect = canvas != null ? canvas.transform as RectTransform : null;
-        RectTransform panelRect = settingsPanel.rectTransform;
-        if (canvasRect == null || panelRect == null)
             return;
 
         isClamping = true;
         try
         {
-            Canvas.ForceUpdateCanvases();
-            Vector2 available = canvasRect.rect.size -
-                                new Vector2(CanvasSafeMargin * 2f, CanvasSafeMargin * 2f);
-            float width = Mathf.Min(PreferredWidth, Mathf.Max(1f, available.x));
-            float height = Mathf.Min(PreferredHeight, Mathf.Max(1f, available.y));
-            panelRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
-            panelRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
-            panelRect.anchoredPosition = Vector2.zero;
-            LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+            SettingsPanelLayoutUtility.ClampToCanvas(
+                settingsPanel,
+                new Vector2(PreferredWidth, PreferredHeight),
+                CanvasSafeMargin);
         }
         finally
         {
@@ -318,32 +228,14 @@ private void ClampWindowToCanvas()
         }
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    /// <summary>把缩放比例转换为整数百分比。</summary>
     private static string ToPercent(float value)
     {
         return Mathf.RoundToInt(value * 100f) + "%";
     }
 
-    private static string FormatSignedSeconds(float value)
-    {
-        return (value >= 0f ? "+" : string.Empty) + value.ToString("0.00") + "s";
-    }
-
-
-private static Button FindButton(Transform root, string buttonName)
+    /// <summary>按节点名查找任意层级中的按钮。</summary>
+    private static Button FindButton(Transform root, string buttonName)
     {
         Button[] buttons = root.GetComponentsInChildren<Button>(true);
         for (int i = 0; i < buttons.Length; i++)

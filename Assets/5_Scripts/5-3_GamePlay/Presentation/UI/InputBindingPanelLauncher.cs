@@ -188,6 +188,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
         bindingPanel = UIManager.Instance.CreatePanelFromGameObject(
             prefab,
             RuntimeUIPrefabKeys.InputBindingSettings);
+        SettingsSubPanelInteractionGuard.Link(transform, bindingPanel);
         dialogRect = FindTransform(bindingPanel.transform, "按键绑定面板") as RectTransform;
         Transform bindingList = FindTransform(bindingPanel.transform, "绑定列表");
         ScrollRect bindingScrollRect = bindingList != null

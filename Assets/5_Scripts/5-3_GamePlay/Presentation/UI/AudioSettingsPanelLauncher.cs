@@ -81,6 +81,7 @@ private void EnsureVolumePanel()
         volumePanel = UIManager.Instance.CreatePanelFromGameObject(
             prefab,
             RuntimeUIPrefabKeys.AudioSettings);
+        SettingsSubPanelInteractionGuard.Link(transform, volumePanel);
         volumePanel.GetButton("关闭按钮")?.onClick.AddListener(Close);
         volumePanel.GetButton("恢复默认按钮")?.onClick.AddListener(ResetToDefault);
         volumePanel.GetButton("完成按钮")?.onClick.AddListener(Close);
