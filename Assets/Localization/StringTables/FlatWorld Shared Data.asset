@@ -843,6 +843,54 @@ MonoBehaviour:
     m_Key: quest.flatworld.survival_mining_path.objective.smelt_copper
     m_Metadata:
       m_Items: []
+  - m_Id: 6403757195223040
+    m_Key: item.Radish.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331904
+    m_Key: item.Radish.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331905
+    m_Key: item.RadishCrop.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331906
+    m_Key: item.RadishCrop.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331907
+    m_Key: item.IceBlock.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331908
+    m_Key: item.IceBlock.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331909
+    m_Key: item.Iceberg.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331910
+    m_Key: item.Iceberg.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331911
+    m_Key: item.Bush.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331912
+    m_Key: item.Bush.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757287497728
+    m_Key: item.Seed_Radish.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757287497729
+    m_Key: item.Seed_Radish.description
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

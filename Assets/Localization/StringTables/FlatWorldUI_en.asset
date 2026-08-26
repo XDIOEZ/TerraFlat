@@ -1949,6 +1949,85 @@ MonoBehaviour:
     m_Localized: Are you sure you want to exit the game?
     m_Metadata:
       m_Items: []
+  - m_Id: 6357769873088512
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357769910837248
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357769919225856
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357769919225857
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357769923420160
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357769923420161
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357769923420162
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357769923420163
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357770376404992
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357770376404993
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357770376404994
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357770531594240
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357770711949312
+    m_Localized: Camera Controls
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357770711949313
+    m_Localized: Restore All Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357771135574016
+    m_Localized: Pinch zoom is off by default. Positive lookahead moves the camera
+      ahead; negative values add inertia. Positive zoom influence strengthens prediction
+      when zoomed out, while negative values weaken it.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357771135574017
+    m_Localized: Zoom Influence
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357771135574018
+    m_Localized: Changes apply immediately and are saved automatically.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357771265597440
+    m_Localized: Changes apply immediately and are saved automatically. UI scale
+      resizes all production UI consistently.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6357771357872128
+    m_Localized: All settings restored to defaults
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

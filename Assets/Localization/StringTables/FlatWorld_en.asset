@@ -415,7 +415,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4887326738
-    m_Localized: Raw meat.
+    m_Localized: Eating raw meat has a 50% chance to cause infection for 120 seconds.
     m_Metadata:
       m_Items: []
   - m_Id: 4887326739
@@ -847,6 +847,54 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 3818405410463744
     m_Localized: Quest Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757195223040
+    m_Localized: Radish
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331904
+    m_Localized: Radish.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331905
+    m_Localized: RadishCrop
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331906
+    m_Localized: RadishCrop.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331907
+    m_Localized: IceBlock
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331908
+    m_Localized: IceBlock.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331909
+    m_Localized: Iceberg
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331910
+    m_Localized: Iceberg.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331911
+    m_Localized: Bush
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757262331912
+    m_Localized: Bush.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757287497728
+    m_Localized: Seed Radish
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6403757287497729
+    m_Localized: Seed Radish.
     m_Metadata:
       m_Items: []
   references:

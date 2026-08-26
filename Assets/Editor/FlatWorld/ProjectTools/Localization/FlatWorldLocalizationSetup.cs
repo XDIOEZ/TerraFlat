@@ -114,7 +114,7 @@ namespace FlatWorld.Localization.Editor
                 { "Egg", "An egg from an animal." },
                 { "Egg_Cooked", "A cooked egg." },
                 { "Knife_Flint", "A small blade made from flint." },
-                { "Meat", "Raw meat." },
+                { "Meat", "Eating raw meat has a 50% chance to cause infection for 120 seconds." },
                 { "Meat_Cooked", "Cooked meat." },
                 { "Meat_Dehydrate", "Dehydrated meat." },
                 { "Meat_Rotten", "Rotten meat. It should not be eaten." },
@@ -256,13 +256,17 @@ namespace FlatWorld.Localization.Editor
                 { "返回", "Back" },
                 { "关闭", "Close" },
                 { "恢复默认", "Restore Defaults" },
+                { "恢复所有设置", "Restore All Settings" },
+                { "所有设置已恢复默认", "All settings restored to defaults" },
                 { "选项", "Options" },
                 { "UI设置", "UI Settings" },
                 { "UI 设置", "UI Settings" },
                 { "界面设置", "Interface Settings" },
                 { "界面缩放", "UI Scale" },
+                { "镜头控制", "Camera Controls" },
                 { "镜头前探", "Camera Lookahead" },
                 { "预判平滑", "Lookahead Smoothing" },
+                { "缩放影响系数", "Zoom Influence" },
                 { "浮动移动摇杆（关闭则固定）", "Floating Move Joystick (Off: Fixed)" },
                 { "双指缩放（关闭则禁用）", "Pinch Zoom (Off: Disabled)" },
                 { "安全区域适配：开启（推荐）", "Safe Area: On (Recommended)" },
@@ -460,6 +464,9 @@ namespace FlatWorld.Localization.Editor
                 { "体温", "Body Temperature" },
                 { "RESTING / 世界在篝火外继续流动", "RESTING / THE WORLD CONTINUES OUTSIDE THE CAMPFIRE" },
                 { "主音量控制全部声音；其他通道可以单独调整。设置会自动保存。", "Master volume controls all sounds; other channels can be adjusted separately. Settings are saved automatically." },
+                { "调整会立即应用并自动保存。", "Changes apply immediately and are saved automatically." },
+                { "调整会立即应用并自动保存；界面缩放会统一放大或缩小所有正式 UI。", "Changes apply immediately and are saved automatically. UI scale resizes all production UI consistently." },
+                { "双指缩放默认关闭。镜头前探正值为提前跟随，负值为惯性；缩放影响系数为正时拉远会增强预测，为负时会减弱。", "Pinch zoom is off by default. Positive lookahead moves the camera ahead; negative values add inertia. Positive zoom influence strengthens prediction when zoomed out, while negative values weaken it." },
                 { "调整会立即应用并自动保存。镜头前探正值为提前跟随，负值为惯性；负值绝对值越大，惯性越强。预判平滑越大越稳，但响应越慢。", "Changes apply immediately and are saved automatically. Positive lookahead moves the camera ahead; negative values add inertia, and more negative means stronger inertia. Higher smoothing is steadier but slower to respond." },
                 { "自动保存只在游戏世界中按现实时间运行，设置会立即保存。", "Auto-save runs in the game world using real time; settings are saved immediately." },
                 { "当前设置：每 10 分钟自动保存。", "Current setting: auto-save every 10 minutes." },
@@ -883,6 +890,10 @@ namespace FlatWorld.Localization.Editor
         private static string GetEnglishUiText(string sourceText)
         {
             string normalized = sourceText?.Trim() ?? string.Empty;
+            string translatedText;
+            if (EnglishUiOverrides.TryGetValue(normalized, out translatedText))
+                return translatedText;
+
             if (normalized.StartsWith("Assets\\", StringComparison.Ordinal))
                 return "Debug message";
             if (normalized.IndexOf("创建你的世界", StringComparison.Ordinal) >= 0)
@@ -894,10 +905,6 @@ namespace FlatWorld.Localization.Editor
                 return "Camera Lookahead";
             if (normalized.IndexOf("预判平滑", StringComparison.Ordinal) >= 0)
                 return "Lookahead Smoothing";
-
-            string translatedText;
-            if (EnglishUiOverrides.TryGetValue(normalized, out translatedText))
-                return translatedText;
 
             translatedText = normalized;
             var orderedReplacements = new List<KeyValuePair<string, string>>(EnglishUiPhraseReplacements);
