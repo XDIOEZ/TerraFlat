@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using FlatWorld.WorldModel;
 using FlatWorld.GameTest.Shared;
@@ -553,12 +554,19 @@ namespace FlatWorld.GameTest.Navigation
                 Assert.That(actor.GetComponent<WorldNavigationAgent>(), Is.Not.Null, actors[i]);
             }
 
+            GameObject mineShell = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/2_Prefabs/Gameplay/Items/Common/MineResource.prefab");
+            Assert.That(mineShell, Is.Not.Null);
+            Assert.That(mineShell.GetComponent<WorldNavigationObstacle>(), Is.Not.Null,
+                "通用矿物外壳必须登记动态导航障碍。");
+
+            Dictionary<string, ItemDefinitionDto> itemDefinitions = ItemDefinitionCatalogLoader
+                .LoadBuiltInDefinitions()
+                .ToDictionary(definition => definition.Id, System.StringComparer.OrdinalIgnoreCase);
             string[] mines = { "Mine_Coal", "Mine_Copper", "Mine_Iron", "Mine_Stone", "Mine_Tin" };
             for (int i = 0; i < mines.Length; i++)
             {
-                GameObject mine = AssetDatabase.LoadAssetAtPath<GameObject>(
-                    $"Assets/2_Prefabs/World/ResourceNodes/Mines/{mines[i]}.prefab");
-                Assert.That(mine.GetComponent<WorldNavigationObstacle>(), Is.Not.Null, mines[i]);
+                Assert.That(itemDefinitions[mines[i]].ShellPrefab, Is.EqualTo("MineResource"), mines[i]);
             }
         }
 

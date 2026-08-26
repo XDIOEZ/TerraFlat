@@ -431,28 +431,6 @@ MonoBehaviour:
     SpoilageTargetItemID: Meat_Rotten
     HasNutrition: 1
     HasSpoilage: 1
-  - Prefab: {fileID: 463977462678543879, guid: a2d494b844ece424088d4bfb48532082, type: 3}
-    PrefabPath: Assets/2_Prefabs/Gameplay/Items/Food/Weed.prefab
-    PrefabName: Weed
-    Carbohydrates: 500
-    Fat: 500
-    Protein: 500
-    Water: 500
-    Vitamins: 500
-    Max_Carbohydrates: 500
-    Max_Fat: 500
-    Max_Protein: 500
-    Max_Water: 500
-    Max_Vitamins: 500
-    Max_EatingProgress: 3
-    nutritionConsumeSpeed: 0
-    WaterConsumeSpeedRate: 0
-    nutritionConsumeRate: 0
-    EnableSpoilage: 1
-    SpoilageIntervalSeconds: 1800
-    SpoilageTargetItemID: Meat_Rotten
-    HasNutrition: 1
-    HasSpoilage: 1
   - Prefab: {fileID: 4766519559426352308, guid: 63385f96683848648b48555cb0876c19, type: 3}
     PrefabPath: Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab
     PrefabName: WildBoar

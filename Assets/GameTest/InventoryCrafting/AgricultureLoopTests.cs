@@ -1,4 +1,6 @@
 using NUnit.Framework;
+using Newtonsoft.Json.Linq;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -9,7 +11,6 @@ namespace FlatWorld.GameTest.InventoryCrafting
     {
         private const string SeedPath = "Assets/2_Prefabs/Gameplay/Items/Seeds/Seed.prefab";
         private const string FoodPath = "Assets/2_Prefabs/Gameplay/Items/Food/Apple.prefab";
-        private const string CropPath = "Assets/2_Prefabs/World/ResourceNodes/Plants/AppleTree.prefab";
         private const string FertilizerPath = "Assets/2_Prefabs/Gameplay/Items/Food/Fertilizer.prefab";
 
         [Test]
@@ -18,29 +19,29 @@ namespace FlatWorld.GameTest.InventoryCrafting
         {
             GameObject seed = AssetDatabase.LoadAssetAtPath<GameObject>(SeedPath);
             GameObject food = AssetDatabase.LoadAssetAtPath<GameObject>(FoodPath);
-            GameObject crop = AssetDatabase.LoadAssetAtPath<GameObject>(CropPath);
             GameObject fertilizer = AssetDatabase.LoadAssetAtPath<GameObject>(FertilizerPath);
+            ItemDefinitionDto crop = ItemDefinitionCatalogLoader.LoadBuiltInDefinitions()
+                .Single(definition => definition.Id == "AppleTree");
 
             Assert.That(seed, Is.Not.Null);
             Assert.That(food, Is.Not.Null);
-            Assert.That(crop, Is.Not.Null);
             Assert.That(fertilizer, Is.Not.Null);
             Assert.That(seed.GetComponentInChildren<Mod_Plantable>(true), Is.Not.Null, "Seed_Apple 必须通过统一种植模块进入播种入口。");
             Assert.That(food.GetComponentInChildren<Mod_Plantable>(true), Is.Null, "Apple 只能作为食物，不能形成第二条播种入口。");
 
-            Mod_Grow[] growthModules = crop.GetComponentsInChildren<Mod_Grow>(true);
-            Assert.That(growthModules, Has.Length.EqualTo(1), "AppleTree 必须只保留一个 Mod_Grow。");
-            Assert.That(crop.GetComponentInChildren<Mod_Production>(true), Is.Null, "AppleTree 不得继续无限自动生产。");
-#pragma warning disable CS0618
-            Assert.That(crop.GetComponentInChildren<Mod_PlantGrow>(true), Is.Null, "正式作物不得挂载旧 Mod_PlantGrow。");
-#pragma warning restore CS0618
-            Assert.That(growthModules[0].GetComponent<Collider2D>(), Is.Not.Null, "成熟作物必须能被交互发送器检测。");
+            ItemModuleDefinitionDto[] growthModules = crop.Modules.Values
+                .Where(module => module.Prefab == "Module_Growth")
+                .ToArray();
+            Assert.That(growthModules, Has.Length.EqualTo(1), "AppleTree JSON 必须只声明一个生长模块。");
+            Assert.That(crop.Modules.Values.Any(module => module.Prefab == "Module_Production"), Is.False,
+                "AppleTree 不得继续无限自动生产。");
+            Assert.That(growthModules[0].Parameters["$collider2D"], Is.Not.Null,
+                "成熟作物必须声明可供交互发送器检测的 Collider。");
             Assert.That(fertilizer.GetComponentInChildren<Mod_FarmlandSupply>(true), Is.Not.Null, "肥料必须能补充耕地水肥。");
 
-            SerializedObject serializedGrow = new SerializedObject(growthModules[0]);
-            Assert.That(serializedGrow.FindProperty("allowCultivatedHarvest").boolValue, Is.True);
-            Assert.That(serializedGrow.FindProperty("harvestSeedItemId").stringValue, Is.EqualTo("Seed_Apple"));
-            Assert.That(serializedGrow.FindProperty("harvestFoodItemId").stringValue, Is.EqualTo("Apple"));
+            Assert.That(growthModules[0].Parameters.Value<bool>("allowCultivatedHarvest"), Is.True);
+            Assert.That(growthModules[0].Parameters.Value<string>("harvestSeedItemId"), Is.EqualTo("Seed_Apple"));
+            Assert.That(growthModules[0].Parameters.Value<string>("harvestFoodItemId"), Is.EqualTo("Apple"));
         }
 
         [Test]

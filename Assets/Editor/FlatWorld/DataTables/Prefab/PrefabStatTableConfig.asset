@@ -13,22 +13,6 @@ MonoBehaviour:
   m_Name: PrefabStatTableConfig
   m_EditorClassIdentifier: 
   Rows:
-  - Prefab: {fileID: 480202971505006560, guid: ce24645065817804fbd6156e223ca429, type: 3}
-    PrefabPath: Assets/2_Prefabs/World/ResourceNodes/Plants/AppleTree.prefab
-    PrefabName: AppleTree
-    MaxHp: 180
-    Hp: 200
-    CuttingDefense: 8
-    PiercingDefense: 8
-    ChoppingDefense: 8
-    BluntDefense: 8
-    CuttingDamage: 0
-    PiercingDamage: 0
-    ChoppingDamage: 0
-    BluntDamage: 0
-    HasHp: 1
-    HasDefense: 1
-    HasDamage: 0
   - Prefab: {fileID: 2799532577642217657, guid: 961591bf5cfada64fb2f54e29e11b405, type: 3}
     PrefabPath: Assets/2_Prefabs/Gameplay/Items/Weapons/Axes/Axe_Bronze.prefab
     PrefabName: Axe_Bronze
@@ -365,86 +349,6 @@ MonoBehaviour:
     HasHp: 0
     HasDefense: 0
     HasDamage: 1
-  - Prefab: {fileID: 2383149550844687321, guid: 58df281e8bb89684ca779ca6009f0c54, type: 3}
-    PrefabPath: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Coal.prefab
-    PrefabName: Mine_Coal
-    MaxHp: 300
-    Hp: 300
-    CuttingDefense: 20
-    PiercingDefense: 20
-    ChoppingDefense: 20
-    BluntDefense: 20
-    CuttingDamage: 0
-    PiercingDamage: 0
-    ChoppingDamage: 0
-    BluntDamage: 0
-    HasHp: 1
-    HasDefense: 1
-    HasDamage: 0
-  - Prefab: {fileID: 1127970862557664809, guid: 471c4ce24372590429646f3580bb9fd3, type: 3}
-    PrefabPath: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Copper.prefab
-    PrefabName: Mine_Copper
-    MaxHp: 200
-    Hp: 200
-    CuttingDefense: 25
-    PiercingDefense: 25
-    ChoppingDefense: 25
-    BluntDefense: 25
-    CuttingDamage: 0
-    PiercingDamage: 0
-    ChoppingDamage: 0
-    BluntDamage: 0
-    HasHp: 1
-    HasDefense: 1
-    HasDamage: 0
-  - Prefab: {fileID: 2383149550844687321, guid: d583767306a467b47a8ffff035dc9395, type: 3}
-    PrefabPath: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Iron.prefab
-    PrefabName: Mine_Iron
-    MaxHp: 300
-    Hp: 300
-    CuttingDefense: 30
-    PiercingDefense: 30
-    ChoppingDefense: 30
-    BluntDefense: 30
-    CuttingDamage: 0
-    PiercingDamage: 0
-    ChoppingDamage: 0
-    BluntDamage: 0
-    HasHp: 1
-    HasDefense: 1
-    HasDamage: 0
-  - Prefab: {fileID: 4005766048098034071, guid: 3dfc40753affecf47b6d630f4d9a4668, type: 3}
-    PrefabPath: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Stone.prefab
-    PrefabName: Mine_Stone
-    MaxHp: 180
-    Hp: 180
-    CuttingDefense: 20
-    PiercingDefense: 20
-    ChoppingDefense: 20
-    BluntDefense: 20
-    CuttingDamage: 0
-    PiercingDamage: 0
-    ChoppingDamage: 0
-    BluntDamage: 0
-    HasHp: 1
-    HasDefense: 1
-    HasDamage: 0
-  - Prefab: {fileID: 2383149550844687321, guid: 742285658deda7b44a8723ac170c91f4, type: 3}
-    PrefabPath: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Tin.prefab
-    PrefabName: Mine_Tin
-    MaxHp: 400
-    Hp: 400
-    CuttingDefense: 20
-    PiercingDefense: 20
-    ChoppingDefense: 20
-    BluntDefense: 20
-    CuttingDamage: 0
-    PiercingDamage: 0
-    ChoppingDamage: 0
-    BluntDamage: 0
-    HasHp: 1
-    HasDefense: 1
-    HasDamage: 0
   - Prefab: {fileID: 2747812879517624506, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
     PrefabPath: Assets/2_Prefabs/Gameplay/Modules/Combat/Mod_Damage.prefab
     PrefabName: Mod_Damage
@@ -918,23 +822,6 @@ MonoBehaviour:
     PiercingDefense: 5
     ChoppingDefense: 5
     BluntDefense: 5
-    CuttingDamage: 0
-    PiercingDamage: 0
-    ChoppingDamage: 0
-    BluntDamage: 0
-    HasHp: 1
-    HasDefense: 1
-    HasDamage: 0
-  - Prefab: {fileID: 2462440452985786027, guid: a588cc1b750da76439797f1756447a6e, type: 3}
-    PrefabPath: "Assets/2_Prefabs/Gameplay/Modules/Variants/\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757
-      \u77FF\u7269.prefab"
-    PrefabName: "\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757 \u77FF\u7269"
-    MaxHp: 180
-    Hp: 100
-    CuttingDefense: 8
-    PiercingDefense: 8
-    ChoppingDefense: 8
-    BluntDefense: 8
     CuttingDamage: 0
     PiercingDamage: 0
     ChoppingDamage: 0

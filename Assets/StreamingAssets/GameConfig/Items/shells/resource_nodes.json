@@ -10,9 +10,14 @@
       }
     },
     {
+      "id": "MineResource_Base",
+      "abstract": true,
+      "parent": "WorldResource_Base",
+      "shellPrefab": "MineResource"
+    },
+    {
       "id": "AppleTree",
       "parent": "WorldResource_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Plants/AppleTree.prefab",
       "gameName": "苹果树",
       "description": "一颗可以生产苹果的树",
       "durability": 1.0,
@@ -326,7 +331,6 @@
     {
       "id": "Tree_Coconut",
       "parent": "WorldResource_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Plants/Tree_Coconut.prefab",
       "gameName": "Tree_Coconut",
       "description": "椰子树",
       "durability": 1.0,
@@ -689,8 +693,7 @@
     },
     {
       "id": "Mine_Coal",
-      "parent": "WorldResource_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Coal.prefab",
+      "parent": "MineResource_Base",
       "gameName": "Mine_Coal",
       "description": "可以开采煤矿的矿点。",
       "durability": 1.0,
@@ -865,8 +868,7 @@
     },
     {
       "id": "Mine_Copper",
-      "parent": "WorldResource_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Copper.prefab",
+      "parent": "MineResource_Base",
       "gameName": "铜矿",
       "description": "深埋岩壁的铜色矿体，闪烁着金属光泽。开采后可提炼铜，用于打造工具与武器。",
       "durability": 1.0,
@@ -1041,8 +1043,7 @@
     },
     {
       "id": "Mine_Iron",
-      "parent": "WorldResource_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Iron.prefab",
+      "parent": "MineResource_Base",
       "gameName": "Mine_Iron",
       "description": "可以开采铁矿的矿点。",
       "durability": 1.0,
@@ -1217,8 +1218,7 @@
     },
     {
       "id": "Mine_Stone",
-      "parent": "WorldResource_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Stone.prefab",
+      "parent": "MineResource_Base",
       "gameName": "Mine_Stone",
       "description": "可以开采石料的矿点。",
       "durability": 1.0,
@@ -1387,8 +1387,7 @@
     },
     {
       "id": "Mine_Tin",
-      "parent": "WorldResource_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Tin.prefab",
+      "parent": "MineResource_Base",
       "gameName": "Mine_Tin",
       "description": "可以开采锡矿的矿点。",
       "durability": 1.0,
@@ -1563,8 +1562,7 @@
     },
     {
       "id": "Iceberg",
-      "parent": "WorldResource_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Mines/Iceberg.prefab",
+      "parent": "MineResource_Base",
       "gameName": "Iceberg",
       "description": "冻结在雪地中的小型冰山，可采集并掉落冰块。",
       "durability": 1.0,

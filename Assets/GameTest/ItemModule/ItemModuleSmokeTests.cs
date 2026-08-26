@@ -48,7 +48,7 @@ namespace FlatWorld.GameTest.ItemModule
 
             string[] expectedCategories =
             {
-                "basic_items", "tools", "weapons", "equipment", "seeds", "building_summoners"
+                "basic_items", "resource_nodes", "tools", "weapons", "equipment", "seeds", "building_summoners"
             };
             string[] actualCategories = manifest.Packages
                 .Where(package => package.Enabled)

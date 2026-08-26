@@ -31,8 +31,7 @@ internal static class CodexPrefabAndXluaProbeRunner
                 "Assets/2_Prefabs/Gameplay/Modules/Combat/Mod_ColdWeapon.prefab",
                 "Assets/2_Prefabs/Gameplay/Modules/Combat/Module_DamageReciver.prefab",
                 "Assets/2_Prefabs/Gameplay/Modules/Variants/DamageSender Axe.prefab",
-                "Assets/2_Prefabs/Gameplay/Modules/Variants/DamageSender Pickaxe.prefab",
-                "Assets/2_Prefabs/Gameplay/Modules/Variants/伤害接受模块 矿物.prefab"
+                "Assets/2_Prefabs/Gameplay/Modules/Variants/DamageSender Pickaxe.prefab"
             };
             var prefabs = new List<object>(paths.Length);
             foreach (string path in paths)

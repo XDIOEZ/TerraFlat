@@ -5678,7 +5678,6 @@
     {
       "id": "Bush",
       "parent": "BasicItem_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Plants/Bush.prefab",
       "gameName": "Bush",
       "description": "可自然生长并周期产出浆果的灌木。",
       "durability": 1.0,
@@ -5793,7 +5792,6 @@
     {
       "id": "Weed",
       "parent": "BasicItem_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Weed.prefab",
       "gameName": "Weed",
       "description": "随处可见的杂草。",
       "durability": 1.0,

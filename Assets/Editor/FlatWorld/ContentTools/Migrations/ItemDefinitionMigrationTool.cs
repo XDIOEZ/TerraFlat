@@ -26,8 +26,6 @@ public static class ItemDefinitionMigrationTool
     private const string PackageRootPath = CatalogRootPath + "/shells";
     private const string RequestPath = "Temp/FlatWorldItemDefinitionMigration.request";
     private const string ItemSpriteLabel = "ItemSprite";
-    private const string WeedSourcePath = "Assets/2_Prefabs/Gameplay/Items/Food/Weed.prefab";
-    private const string WeedAppearanceModulePath = "Assets/2_Prefabs/Gameplay/Modules/World/Mod_WeedAppearance.prefab";
 
     /// <summary>物品定义文件按玩法类别命名，避免文件名绑定某个具体物品或运行时外壳。</summary>
     private static readonly ItemPackageCategory[] PackageCategories =
@@ -47,9 +45,18 @@ public static class ItemDefinitionMigrationTool
             shellPrefab.EndsWith("_Summoner", StringComparison.OrdinalIgnoreCase))
     };
 
+    /// <summary>已经以 JSON 为权威、无需再从具体 Prefab 导出的定义。</summary>
     private static readonly HashSet<string> PreservedIds = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Knife_Base", "Dagger_Stone", "Dagger_Copper", "Dagger_Bone", "Knife_Flint"
+        "Knife_Base", "Dagger_Stone", "Dagger_Copper", "Dagger_Bone", "Knife_Flint",
+        "WorldResource_Base", "MineResource_Base", "AppleTree", "Tree_Coconut", "Mine_Coal", "Mine_Copper",
+        "Mine_Iron", "Mine_Stone", "Mine_Tin", "Iceberg", "Bush", "Weed"
+    };
+
+    /// <summary>预览统计时不计入运行时物品数量的抽象定义。</summary>
+    private static readonly HashSet<string> PreservedAbstractIds = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Knife_Base", "WorldResource_Base", "MineResource_Base"
     };
 
     private static readonly HashSet<string> EquipmentInstanceTypeNames = new(StringComparer.Ordinal)
@@ -114,22 +121,7 @@ public static class ItemDefinitionMigrationTool
                 "Assets/2_Prefabs/Gameplay/Items/Food/Meat_Dehydrate.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/Meat_Rotten.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/Tea.prefab",
-                "Assets/2_Prefabs/Gameplay/Items/Food/Weed.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Materials/Humus.prefab"
-            }),
-        new(
-            "WorldResource_Base",
-            "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
-            new[]
-            {
-                "Assets/2_Prefabs/World/ResourceNodes/Plants/AppleTree.prefab",
-                "Assets/2_Prefabs/World/ResourceNodes/Plants/Tree_Coconut.prefab",
-                "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Coal.prefab",
-                "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Copper.prefab",
-                "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Iron.prefab",
-                "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Stone.prefab",
-                "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Tin.prefab",
-                "Assets/2_Prefabs/World/ResourceNodes/Mines/Iceberg.prefab"
             }),
         new(
             "Equipment_Base",
@@ -283,8 +275,6 @@ public static class ItemDefinitionMigrationTool
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
             throw new InvalidOperationException("请先退出 PlayMode 再执行物品 JSON 迁移。运行时状态不会被迁移器修改。");
-
-        EnsureWeedAppearanceModulePrefab();
 
         JObject existingRoot = File.Exists(ManifestPath)
             ? ItemDefinitionCatalogLoader.LoadBuiltInSourceCatalog()
@@ -505,7 +495,9 @@ public static class ItemDefinitionMigrationTool
         string sourceId = source?.Value<string>("id")?.Trim();
         string parentId = source?.Value<string>("parent")?.Trim();
         if (string.Equals(sourceId, "WorldResource_Base", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(parentId, "WorldResource_Base", StringComparison.OrdinalIgnoreCase))
+            string.Equals(sourceId, "MineResource_Base", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(parentId, "WorldResource_Base", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(parentId, "MineResource_Base", StringComparison.OrdinalIgnoreCase))
         {
             return "resource_nodes";
         }
@@ -555,6 +547,8 @@ public static class ItemDefinitionMigrationTool
             JObject copy = (JObject)source.DeepClone();
             if (PreservedSourcePaths.TryGetValue(id, out string sourcePath))
                 copy["sourcePrefab"] = sourcePath;
+            else
+                copy.Remove("sourcePrefab");
             output.Add(copy);
         }
     }
@@ -1167,9 +1161,12 @@ public static class ItemDefinitionMigrationTool
     private static MigrationPreview BuildPreview()
     {
         var lines = new List<string>();
-        int itemCount = PreservedIds.Count - 1;
-        int redundant = Math.Max(0, PreservedIds.Count - 2);
-        var shells = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Dagger_Stone" };
+        int itemCount = PreservedIds.Count - PreservedAbstractIds.Count;
+        int redundant = Math.Max(0, PreservedSourcePaths.Count - 1);
+        var shells = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Dagger_Stone", "Prop", "MineResource"
+        };
         foreach (MigrationGroup group in Groups)
         {
             itemCount += group.SourcePaths.Length;
@@ -1206,27 +1203,6 @@ public static class ItemDefinitionMigrationTool
         return item.GetComponentsInChildren<Collider2D>(true)
             .FirstOrDefault(collider => collider.transform == item.transform ||
                                         collider.GetComponentInParent<Module>(true) == null);
-    }
-
-    /// <summary>把 Weed 的资源引用外观组件提取为可复用模块 Prefab。</summary>
-    private static void EnsureWeedAppearanceModulePrefab()
-    {
-        GameObject source = LoadPrefab(WeedSourcePath);
-        Mod_WeedAppearance sourceModule = source.GetComponent<Mod_WeedAppearance>();
-        if (sourceModule == null)
-            throw new InvalidDataException($"{WeedSourcePath} 缺少 Mod_WeedAppearance");
-
-        GameObject root = new("Mod_WeedAppearance");
-        try
-        {
-            Mod_WeedAppearance targetModule = root.AddComponent<Mod_WeedAppearance>();
-            EditorUtility.CopySerialized(sourceModule, targetModule);
-            PrefabUtility.SaveAsPrefabAsset(root, WeedAppearanceModulePath);
-        }
-        finally
-        {
-            UnityEngine.Object.DestroyImmediate(root);
-        }
     }
 
     internal static string GetRelativePath(Transform root, Transform child)
