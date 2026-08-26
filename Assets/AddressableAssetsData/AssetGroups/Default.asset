@@ -746,6 +746,12 @@ MonoBehaviour:
     - ActorShell
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 63a1baa750206ac489d03ee04b8f2ca0
+    m_Address: Assets/6_Art/Items/Plants/TX Plant.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 63c6695ef248a43479328512440e2b8c
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Loading/UI_ResourceLoading.prefab
     m_ReadOnly: 0
@@ -1673,6 +1679,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d96f7e5356373074589a478609cba9db
+    m_Address: Assets/6_Art/Food/Item_WildDogMilk_Gray.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: dbe0fdf0241e35442b1a020284fc6eb3
     m_Address: Assets/2_Prefabs/World/Buildings/Bonfire.prefab
     m_ReadOnly: 0
@@ -1724,6 +1736,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e3b1f7fee12447349c23abadf81e474f
     m_Address: Assets/6_Art/Food/Plant_Radish.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e45dbb4b42ea2744ca150b60da37aae0
+    m_Address: Assets/6_Art/Food/Item_WildDogMilk.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite

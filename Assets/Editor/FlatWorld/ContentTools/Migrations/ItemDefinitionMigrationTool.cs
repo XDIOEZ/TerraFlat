@@ -307,6 +307,64 @@ public static class ItemDefinitionMigrationTool
         ValidateCatalogInternal(ItemDefinitionCatalogLoader.LoadBuiltInDefinitions(), true);
     }
 
+    /// <summary>把当前物品目录引用的全部 Sprite 主资源同步到 Addressables 稳定地址。</summary>
+    [MenuItem("FlatWorld/物品JSON迁移/同步物品 Sprite Addressables")]
+    public static void SynchronizeSpriteAddressables()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            throw new InvalidOperationException("请先退出 PlayMode 再同步物品 Sprite Addressables。");
+
+        AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
+        if (settings == null)
+            throw new InvalidOperationException("AddressableAssetSettings 未初始化");
+
+        int createdCount = 0;
+        int updatedCount = 0;
+        var processedGuids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (ItemDefinitionDto definition in ItemDefinitionCatalogLoader.LoadBuiltInDefinitions())
+        {
+            string spriteAddress = definition?.Visual?.SpriteAddress?.Trim();
+            if (definition == null || definition.Abstract || string.IsNullOrWhiteSpace(spriteAddress))
+                continue;
+
+            if (!ItemDefinitionCatalogLoader.TryLoadEditorSprite(
+                    spriteAddress,
+                    out Sprite sprite,
+                    out string error))
+            {
+                throw new InvalidDataException($"物品 {definition.Id} 的 Sprite 无法解析：{error}");
+            }
+
+            string assetPath = AssetDatabase.GetAssetPath(sprite).Replace('\\', '/');
+            string guid = AssetDatabase.AssetPathToGUID(assetPath);
+            if (string.IsNullOrWhiteSpace(guid))
+                throw new InvalidDataException($"物品 {definition.Id} 的 Sprite 不是项目资源：{spriteAddress}");
+            if (!processedGuids.Add(guid))
+                continue;
+
+            AddressableAssetEntry entry = settings.FindAssetEntry(guid);
+            bool entryCreated = entry == null;
+            if (entryCreated)
+            {
+                entry = settings.CreateOrMoveEntry(guid, settings.DefaultGroup, false, false);
+                createdCount++;
+            }
+
+            bool entryChanged = !string.Equals(entry.address, assetPath, StringComparison.Ordinal) ||
+                                !entry.labels.Contains(ItemSpriteLabel);
+            entry.address = assetPath;
+            entry.SetLabel(ItemSpriteLabel, true, true, false);
+            if (entryChanged && !entryCreated)
+                updatedCount++;
+        }
+
+        settings.SetDirty(AddressableAssetSettings.ModificationEvent.BatchModification, null, true);
+        AssetDatabase.SaveAssetIfDirty(settings.DefaultGroup);
+        AssetDatabase.SaveAssetIfDirty(settings);
+        Debug.Log(
+            $"[ItemDefinitionMigration] 已同步物品 Sprite Addressables：新增 {createdCount}，更新 {updatedCount}。");
+    }
+
     #endregion
 
     #region 类别分包

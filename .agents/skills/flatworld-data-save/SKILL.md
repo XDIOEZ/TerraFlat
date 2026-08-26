@@ -22,6 +22,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - Item/Recipe JSON 是唯一内容真源；Manifest 不自动扫描目录。移动资源还要核对 Address、标签和运行时字典键。
 - Actor JSON 位于 `GameConfig/Actors`，使用独立 Manifest；外壳/Sprite/Animator 的 `flatworld.actor.*` 地址由 GUID 跟随移动，`sourcePrefab` 仅供编辑器。
 - Android/Player 构建必须启用 Addressables 随 Player 自动构建（`m_BuildAddressablesWithPlayerBuild: 1`），否则 `GameRes` 在真机包内可能拿到缺失或过期的本地 Catalog。
+- 编辑器通过 `AddressableAssetSettings` 新增或修改条目后，必须显式保存条目所属的 `AddressableAssetGroup`；只保存 Settings 可能让条目停留在内存，未进入 Git 与后续构建。
 - Sprite 地址只有在源图是 Multiple 切片时才追加 `[子资源名]`；单 Sprite 图必须使用主资源地址。Unity 2022.3 + Addressables 1.22.3 Fast Mode 遇到无效子资源地址可能在 `AssetDatabaseProvider.LoadAssetSubObject` 抛空引用，编辑器加载路径需先做资源存在性和子资源名称校验。
 - Tile 栈只通过 `Data_TileMap` API 读写；区块差量保留基线、ChangedItems、删除 GUID 与确定性 ID 语义。
 - 新版 WorldModel 的格子建筑写入 `ChunkTerrainData.BlockingTileId`，不会进入 `MapSave.items`；必须按“确定性生成基线 → RuntimeTileDeltas 差量 → 表现绑定”的顺序持久化和恢复。

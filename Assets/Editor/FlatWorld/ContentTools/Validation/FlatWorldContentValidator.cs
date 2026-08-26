@@ -91,6 +91,7 @@ public static class FlatWorldContentValidator
     private const string ResourcesRoot = "Assets/Resources";
     private const string ItemRootAssetPath = "Assets/StreamingAssets/GameConfig/Items";
     private const string ItemManifestAssetPath = ItemRootAssetPath + "/item-manifest.json";
+    private const string ItemSpriteAddressableLabel = "ItemSprite";
     private const string ActorRootAssetPath = "Assets/StreamingAssets/GameConfig/Actors";
     private const string ActorManifestAssetPath = ActorRootAssetPath + "/actor-manifest.json";
     private const string RecipeRootAssetPath = "Assets/StreamingAssets/GameConfig/Recipes";
@@ -687,6 +688,7 @@ public static class FlatWorldContentValidator
         }
     }
 
+    /// <summary>校验继承展开后的物品定义及其运行时资源契约。</summary>
     private static void ValidateResolvedItemDefinition(
         ValidationContext context,
         FlatWorldContentValidationReport report,
@@ -731,6 +733,8 @@ public static class FlatWorldContentValidator
                     null);
             }
         }
+
+        ValidateItemSpriteAddressable(report, definition, assetPath, field);
 
         if (string.IsNullOrWhiteSpace(definition.GameName))
         {
@@ -812,6 +816,73 @@ public static class FlatWorldContentValidator
                 pair.Key,
                 pair.Value,
                 assetPath);
+        }
+    }
+
+    /// <summary>校验物品 Sprite 可解析，并按 JSON 稳定地址进入 Addressables 构建目录。</summary>
+    private static void ValidateItemSpriteAddressable(
+        FlatWorldContentValidationReport report,
+        ItemDefinitionDto definition,
+        string assetPath,
+        string field)
+    {
+        string spriteAddress = definition.Visual?.SpriteAddress?.Trim();
+        if (string.IsNullOrWhiteSpace(spriteAddress))
+            return;
+
+        if (!ItemDefinitionCatalogLoader.TryLoadEditorSprite(
+                spriteAddress,
+                out Sprite sprite,
+                out string error))
+        {
+            AddError(
+                report,
+                "FWC-ITEMJSON-016",
+                assetPath,
+                field + ".visual.spriteAddress",
+                error,
+                null);
+            return;
+        }
+
+        string spriteAssetPath = AssetDatabase.GetAssetPath(sprite).Replace('\\', '/');
+        string guid = AssetDatabase.AssetPathToGUID(spriteAssetPath);
+        AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
+        AddressableAssetEntry entry = string.IsNullOrWhiteSpace(guid) || settings == null
+            ? null
+            : settings.FindAssetEntry(guid);
+        if (entry == null)
+        {
+            AddError(
+                report,
+                "FWC-ITEMJSON-017",
+                assetPath,
+                field + ".visual.spriteAddress",
+                $"Sprite 主资源 '{spriteAssetPath}' 未加入 Addressables。",
+                settings);
+            return;
+        }
+
+        if (!string.Equals(entry.address, spriteAssetPath, StringComparison.Ordinal))
+        {
+            AddError(
+                report,
+                "FWC-ITEMJSON-018",
+                assetPath,
+                field + ".visual.spriteAddress",
+                $"Sprite Addressables 地址应为 '{spriteAssetPath}'，实际为 '{entry.address}'。",
+                settings);
+        }
+
+        if (!entry.labels.Contains(ItemSpriteAddressableLabel))
+        {
+            AddError(
+                report,
+                "FWC-ITEMJSON-019",
+                assetPath,
+                field + ".visual.spriteAddress",
+                $"Sprite Addressables 条目缺少 '{ItemSpriteAddressableLabel}' 标签。",
+                settings);
         }
     }
 
