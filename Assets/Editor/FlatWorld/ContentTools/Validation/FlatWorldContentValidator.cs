@@ -1268,7 +1268,7 @@ public static class FlatWorldContentValidator
     private static bool ItemExists(ValidationContext context, string itemId)
     {
         return !string.IsNullOrWhiteSpace(itemId) &&
-               (context.ItemDefinitionIds.Contains(itemId) || context.PrefabAliases.ContainsKey(itemId));
+               context.ItemDefinitionIds.Contains(itemId);
     }
 
     #endregion
@@ -1718,7 +1718,7 @@ public static class FlatWorldContentValidator
         {
             AddError(report, "FWC-LOOT-001", assetPath, field + ".LootPrefabName", "战利品物品 ID 为空。", owner);
         }
-        else if (!context.PrefabAliases.ContainsKey(itemId))
+        else if (!context.ItemDefinitionIds.Contains(itemId))
         {
             AddError(report, "FWC-LOOT-002", assetPath, field + ".LootPrefabName", $"战利品物品 ID '{itemId}' 不存在。", owner);
         }
@@ -1769,7 +1769,7 @@ public static class FlatWorldContentValidator
 
         if (string.IsNullOrWhiteSpace(itemId))
             AddError(report, "FWC-LOOT-008", assetPath, field + ".lootName", "旧战利品物品 ID 为空。", owner);
-        else if (!context.PrefabAliases.ContainsKey(itemId))
+        else if (!context.ItemDefinitionIds.Contains(itemId))
             AddError(report, "FWC-LOOT-009", assetPath, field + ".lootName", $"旧战利品物品 ID '{itemId}' 不存在。", owner);
 
         if (prefabProperty != null && prefabProperty.objectReferenceInstanceIDValue != 0 && prefabProperty.objectReferenceValue == null)
@@ -1869,26 +1869,8 @@ public static class FlatWorldContentValidator
             string itemId = entry.itemName?.Trim();
             if (string.IsNullOrWhiteSpace(itemId))
                 AddError(report, "FWC-BIOME-008", path, field + ".itemName", "群系生成物 ID 为空。", biome);
-            else if (!context.PrefabAliases.ContainsKey(itemId))
+            else if (!context.ItemDefinitionIds.Contains(itemId))
                 AddError(report, "FWC-BIOME-009", path, field + ".itemName", $"群系生成物 ID '{itemId}' 不存在。", biome);
-
-            if (entry.itemPrefab == null)
-            {
-                AddError(report, "FWC-BIOME-010", path, field + ".itemPrefab", "群系生成物 Prefab 引用为空。", biome);
-            }
-            else
-            {
-                Item prefabItem = entry.itemPrefab.GetComponent<Item>();
-                string referencedId = prefabItem?.itemData?.IDName;
-                if (string.IsNullOrWhiteSpace(referencedId))
-                {
-                    AddError(report, "FWC-BIOME-011", path, field + ".itemPrefab", "引用的 Prefab 缺少 Item 或 ItemData.IDName。", biome);
-                }
-                else if (!string.IsNullOrWhiteSpace(itemId) && !string.Equals(referencedId, itemId, StringComparison.Ordinal))
-                {
-                    AddError(report, "FWC-BIOME-012", path, field + ".itemPrefab", $"Prefab 物品 ID '{referencedId}' 与 itemName '{itemId}' 不一致。", biome);
-                }
-            }
 
             if (entry.itemCount <= 0)
                 AddError(report, "FWC-BIOME-013", path, field + ".itemCount", "生成数量必须大于 0。", biome);

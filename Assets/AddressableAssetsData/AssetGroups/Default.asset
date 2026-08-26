@@ -359,12 +359,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 2b439f796a647c74a8ac03a9b68b0259
-    m_Address: Assets/2_Prefabs/World/ResourceNodes/Plants/Tree_Coconut.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2cf443899d309994e8491f7fa4e3026b
     m_Address: Assets/2_Prefabs/World/Buildings/Tent.prefab
     m_ReadOnly: 0
@@ -485,12 +479,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 3dfc40753affecf47b6d630f4d9a4668
-    m_Address: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Stone.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 41d17800f3397ad4085f635c2fd9b1f6
     m_Address: Assets/2_Prefabs/World/Space/Rocket.prefab
     m_ReadOnly: 0
@@ -558,12 +546,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 471c4ce24372590429646f3580bb9fd3
-    m_Address: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Copper.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 473f485126015cc4b84fb49bca1191ea
     m_Address: Assets/6_Art/Items/Tool_Weapon.png
@@ -657,12 +639,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5819de873e8913b42a726562edbd0bdb
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Movement/Module_MoveSpeed.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 58df281e8bb89684ca779ca6009f0c54
-    m_Address: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Coal.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -880,12 +856,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7213ccb23a9d80848845ec3342cb9e9a
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControls.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 742285658deda7b44a8723ac170c91f4
-    m_Address: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Tin.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1185,12 +1155,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: a21a2a7915cc2b34c8a8889791573228
-    m_Address: Assets/2_Prefabs/World/ResourceNodes/Mines/Iceberg.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a22deda0be9d7904b9557728d6986f2d
     m_Address: Assets/6_Art/Items/Materials/Ingots/Item_ingot_003.png
     m_ReadOnly: 0
@@ -1202,12 +1166,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: a2d494b844ece424088d4bfb48532082
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Food/Weed.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a34e2fcafdaf4624d88a4ed6f0a3090e
     m_Address: Assets/6_Art/Items/Weapons/Item_Weapon_006.png
@@ -1229,13 +1187,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a52a21712cdc8eb4ca21707fc3604247
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/HUD/UI_PlayerWorldCoordinate.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: a588cc1b750da76439797f1756447a6e
-    m_Address: "Assets/2_Prefabs/Gameplay/Modules/Variants/\u4F24\u5BB3\u63A5\u53D7\u6A21\u5757
-      \u77FF\u7269.prefab"
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1571,12 +1522,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: ce24645065817804fbd6156e223ca429
-    m_Address: Assets/2_Prefabs/World/ResourceNodes/Plants/AppleTree.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: cf1ad0f47355fcb488d9bff25b95f68b
     m_Address: flatworld.actor.sprite.wolf
     m_ReadOnly: 0
@@ -1654,12 +1599,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ActorVisual
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: d583767306a467b47a8ffff035dc9395
-    m_Address: Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Iron.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d5de42ffc1564ed4ab0ce836b7db9477
     m_Address: Assets/2_Prefabs/World/Buildings/BuildingShadow.prefab
@@ -1962,8 +1901,26 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: ffe53350727c81c47b55bde5e24c3142
-    m_Address: Assets/2_Prefabs/World/ResourceNodes/Plants/Bush.prefab
+  - m_GUID: 3bef92dcc858f1740877ac7b97a60a3f
+    m_Address: "Assets/6_Art/Env/\u6930\u5B50\u6811.png"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 513506228e739ea46b4c301966a0eed6
+    m_Address: Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6df0b1447e3beb544885a199f6bcd63d
+    m_Address: Assets/6_Art/Items/Plants/Tree/tree-set1/64x64/trees-set1-64_6.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0fe7cd8a650b7a74fb3857c2cf6c66f8
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Mod_WeedAppearance.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab

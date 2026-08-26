@@ -28,8 +28,7 @@ MonoBehaviour:
         PrecipitationRange: {x: 0, y: 1}
         HeightRange: {x: 0, y: 1}
     ItemSpawn_NoSO:
-    - itemPrefab: {fileID: 480202971505006560, guid: 2b439f796a647c74a8ac03a9b68b0259, type: 3}
-      itemName: Tree_Coconut
+    - itemName: Tree_Coconut
       itemCount: 1
       SpawnChance: 0.01
       environmentConditionRange:

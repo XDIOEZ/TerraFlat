@@ -1,0 +1,89 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7286036393415948555
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 607642390508304798}
+  - component: {fileID: 7547233339594157249}
+  m_Layer: 0
+  m_Name: Mod_WeedAppearance
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &607642390508304798
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7286036393415948555}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7547233339594157249
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7286036393415948555}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03ed35fbdcce73c48a68da5b32fdc647, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  item: {fileID: 0}
+  ModSaveData:
+    Name:
+    ID: WeedAppearance
+    isRunning: 1
+    Type: 0
+    BitData:
+  targetRenderer: {fileID: 0}
+  variants:
+  - {fileID: 317918403, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 636411898, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -624116570, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -1494673022, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 668895493, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 1911465596, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 495791750, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 1639504845, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 1959538330, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 1845185204, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -1426977360, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 190259301, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 30340575, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 833825652, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -1678236127, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 274606644, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -1609205062, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 1539415170, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -1044374240, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 797321148, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -165523133, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -1239050697, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -1916335671, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -1853101693, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 1790454761, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 1629315464, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 2114044093, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 2108189807, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -724680328, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 573281935, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: 554762029, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  - {fileID: -1528234758, guid: 0389d777920d856458f6db3a2e122e34, type: 3}
+  allowHorizontalFlip: 1
+  scaleRange: {x: 0.9, y: 1.12}

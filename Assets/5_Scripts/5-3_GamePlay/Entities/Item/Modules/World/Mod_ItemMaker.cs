@@ -13,9 +13,6 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
     [MemoryPackable]
     public partial class ItemProductionData
     {
-        [MemoryPackIgnore]
-        public GameObject itemPrefab;
-
         public string itemName;
         [Tooltip("生产物品数量的最小值")]
         public int itemCountMin = 1;
@@ -172,9 +169,6 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
             return true;
         }
 
-        if (string.IsNullOrEmpty(data.itemName) && data.itemPrefab != null)
-            data.itemName = data.itemPrefab.name;
-
         int randomCount = Random.Range(data.itemCountMin, data.itemCountMax + 1);
         if (data.StoreInModule)
         {
@@ -303,35 +297,13 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
 
     #region 验证和编辑器方法
 
-    private void OnValiDate()
-    {
-        foreach (var data in ProductionList)
-        {
-            if (data.itemPrefab == null)
-            {
-                Debug.LogError("❌ ItemPrefab is null in ItemProductionData!");
-                continue;
-            }
-
-            if (string.IsNullOrEmpty(data.itemName))
-                data.itemName = data.itemPrefab.GetComponent<Item>().itemData.IDName;
-        }
-    }
-
     private void OnValidate()
     {
         foreach (var data in ProductionList)
         {
             data.SpawnProbability = Mathf.Clamp01(data.SpawnProbability);
-
-            if (data.itemPrefab == null)
-            {
-                continue;
-            }
-
-            // 更新Prefab的名称作为itemName
-            if (data.itemPrefab != null)
-                data.itemName = data.itemPrefab.name;
+            if (string.IsNullOrWhiteSpace(data.itemName))
+                Debug.LogError("生产条目必须填写 JSON 物品 ID", this);
 
             // 确保最小值不大于最大值
             if (data.itemCountMin > data.itemCountMax)

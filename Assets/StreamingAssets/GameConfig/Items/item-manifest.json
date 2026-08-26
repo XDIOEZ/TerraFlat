@@ -12,6 +12,11 @@
       "enabled": true
     },
     {
+      "id": "resource_nodes",
+      "path": "shells/resource_nodes.json",
+      "enabled": true
+    },
+    {
       "id": "equipment",
       "path": "shells/equipment.json",
       "enabled": true

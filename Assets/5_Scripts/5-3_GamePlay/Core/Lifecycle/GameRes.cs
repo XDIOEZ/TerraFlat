@@ -36,9 +36,6 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     public Dictionary<string, RuntimeItemDefinition> ActorDefinitions =
         new Dictionary<string, RuntimeItemDefinition>(System.StringComparer.OrdinalIgnoreCase);
 
-    private readonly Dictionary<string, ItemData> legacyItemDataTemplates =
-        new Dictionary<string, ItemData>(System.StringComparer.OrdinalIgnoreCase);
-
     [Header("配方字典")]
     [ShowInInspector]
     public Dictionary<string, RuntimeRecipe> recipeDict = new Dictionary<string, RuntimeRecipe>();
@@ -606,7 +603,6 @@ private void ClearAllDictionaries()
     ActorDefinitions.Clear();
     ActorDefinitionCatalogLoader.ResetRuntimeCatalog();
     SpawnerConfigCatalogService.Reset();
-    legacyItemDataTemplates.Clear();
     recipeDict.Clear();
     recipeCatalog.Clear();
     tileBaseDict.Clear();
@@ -895,7 +891,7 @@ public void HotReloadAllResources()
     }
 
     /// <summary>
-    /// 获取物品界面显示信息；显式 JSON 图标优先，缺失时回退到物品外壳 Prefab 的 SpriteRenderer。
+    /// 获取 JSON 物品定义中的界面显示信息。
     /// </summary>
     public bool TryGetItemPresentation(string itemId, out string displayName, out Sprite sprite)
     {
@@ -905,107 +901,42 @@ public void HotReloadAllResources()
             return false;
 
         string requestedId = itemId.Trim();
-        if (TryGetItemDefinition(requestedId, out RuntimeItemDefinition definition))
+        if (!TryGetItemDefinition(requestedId, out RuntimeItemDefinition definition))
         {
-            displayName = definition.DisplayName;
-            sprite = definition.Sprite;
-            if (sprite != null)
-                return true;
-
-            // JSON 物品可能只描述玩法和外壳，图标继续复用外壳上的现有 SpriteRenderer。
-            return TryGetPrefabPresentation(
-                requestedId,
-                definition.ShellPrefab,
-                ref displayName,
-                out sprite);
+            Debug.LogError($"物品 {requestedId} 没有 JSON 定义");
+            return false;
         }
 
-        return TryGetPrefabPresentation(requestedId, null, ref displayName, out sprite);
-    }
-
-    /// <summary>从物品外壳读取旧 Prefab 图标，兼容未填写 visual.spriteAddress 的物品。</summary>
-    private bool TryGetPrefabPresentation(
-        string itemId,
-        GameObject preferredPrefab,
-        ref string displayName,
-        out Sprite sprite)
-    {
-        sprite = null;
-        GameObject prefab = preferredPrefab;
-        if (prefab == null && !AllPrefabs.TryGetValue(itemId, out prefab))
-            return false;
-        if (prefab == null)
-            return false;
-
-        Item item = prefab.GetComponent<Item>() ?? prefab.GetComponentInChildren<Item>(true);
-        if (string.IsNullOrWhiteSpace(displayName))
+        displayName = definition.DisplayName;
+        sprite = definition.Sprite;
+        if (sprite == null)
         {
-            displayName = !string.IsNullOrWhiteSpace(item?.itemData?.GameName)
-                ? item.itemData.GameName
-                : itemId;
+            Debug.LogError($"物品 {requestedId} 的 JSON 定义缺少 visual.spriteAddress");
+            return false;
         }
 
-        sprite = item?.Sprite != null
-            ? item.Sprite.sprite
-            : prefab.GetComponentInChildren<SpriteRenderer>(true)?.sprite;
-        return sprite != null;
+        return true;
     }
 
-    /// <summary>按物品 ID 创建数据；JSON 定义优先，未迁移物品回退到旧 Prefab。</summary>
+    /// <summary>按物品 ID 创建数据；JSON 目录是唯一权威来源。</summary>
     public ItemData CreateItemData(string itemId)
     {
         if (string.IsNullOrWhiteSpace(itemId))
             throw new System.ArgumentException("物品 ID 不能为空", nameof(itemId));
 
         string requestedId = itemId.Trim();
-        ItemData data;
-        if (TryGetItemDefinition(requestedId, out RuntimeItemDefinition definition))
-        {
-            data = definition.CreateItemData();
-        }
-        else
-        {
-            if (!legacyItemDataTemplates.TryGetValue(requestedId, out ItemData template))
-            {
-                GameObject prefab = GetPrefab(requestedId, false);
-                Item item = prefab != null ? prefab.GetComponent<Item>() : null;
-                template = item?.Get_NewItemData();
-                if (template != null)
-                {
-                    template.Guid = 0;
-                    legacyItemDataTemplates.Add(requestedId, template);
-                }
-            }
+        if (!TryGetItemDefinition(requestedId, out RuntimeItemDefinition definition))
+            throw new InvalidDataException($"物品 {requestedId} 没有 JSON 定义");
 
-            data = template != null
-                ? FastCloner.FastCloner.DeepClone(template)
-                : null;
-        }
-
-        if (data != null)
-        {
-            data.IDName = requestedId;
-            data.Guid = System.Guid.NewGuid().GetHashCode();
-        }
+        ItemData data = definition.CreateItemData();
+        data.IDName = requestedId;
+        data.Guid = System.Guid.NewGuid().GetHashCode();
         return data;
     }
 
     public IReadOnlyList<string> GetAllItemIds()
     {
-        var ids = new HashSet<string>(ItemDefinitions.Keys, System.StringComparer.OrdinalIgnoreCase);
-        var definitionShells = new HashSet<GameObject>();
-        foreach (RuntimeItemDefinition definition in ItemDefinitions.Values)
-            definitionShells.Add(definition.ShellPrefab);
-
-        foreach (KeyValuePair<string, GameObject> pair in AllPrefabs)
-        {
-            if (pair.Value == null || definitionShells.Contains(pair.Value))
-                continue;
-            Item item = pair.Value.GetComponent<Item>();
-            if (item?.itemData != null && item is not Player && item is not Map)
-                ids.Add(item.itemData.IDName);
-        }
-        return new List<string>(ids);
+        return ItemDefinitions.Keys.OrderBy(id => id, System.StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     public void ApplyItemModuleConfiguration(string itemId, string moduleName, Module module, ModuleData data)

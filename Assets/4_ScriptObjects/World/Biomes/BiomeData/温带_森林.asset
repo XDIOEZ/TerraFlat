@@ -28,8 +28,7 @@ MonoBehaviour:
         PrecipitationRange: {x: 0, y: 1}
         HeightRange: {x: 0, y: 1}
     ItemSpawn_NoSO:
-    - itemPrefab: {fileID: 6540100855143504370, guid: 1268a95b1493d8f4c90a92f2678788c1, type: 3}
-      itemName: Twine
+    - itemName: Twine
       itemCount: 1
       SpawnChance: 0.0028125
       SpawnChanceMultiplier: 1
@@ -43,16 +42,14 @@ MonoBehaviour:
       CompanionSpawnOffset: {x: 0, y: 0}
       CompanionSpawnMinRadius: 0
       CompanionSpawnRadius: 0
-    - itemPrefab: {fileID: 0}
-      itemName: Bush
+    - itemName: Bush
       itemCount: 1
       SpawnChance: 0.003375
       environmentConditionRange:
         TemperatureRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}
         HeightRange: {x: 0, y: 1}
-    - itemPrefab: {fileID: 4005766048098034071, guid: 3dfc40753affecf47b6d630f4d9a4668, type: 3}
-      itemName: Mine_Stone
+    - itemName: Mine_Stone
       itemCount: 1
       SpawnChance: 0.0005
       SpawnChanceMultiplier: 2.5
@@ -60,8 +57,7 @@ MonoBehaviour:
         TemperatureRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}
         HeightRange: {x: 0, y: 1}
-    - itemPrefab: {fileID: 6080359168784707265, guid: e20f69bbb0a50124ca7520292175eeff, type: 3}
-      itemName: Log
+    - itemName: Log
       itemCount: 1
       SpawnChance: 0.006
       environmentConditionRange:
@@ -72,8 +68,7 @@ MonoBehaviour:
       CompanionSpawnChance: 0
       CompanionOnly: 0
       CompanionSpawnOffset: {x: 0, y: 0}
-    - itemPrefab: {fileID: 7163685170478514667, guid: 76afaf461fddb7e4c8771cb15aea456f, type: 3}
-      itemName: Stick_Wood
+    - itemName: Stick_Wood
       itemCount: 1
       SpawnChance: 0.00140625
       SpawnChanceMultiplier: 1.5
@@ -81,8 +76,7 @@ MonoBehaviour:
         TemperatureRange: {x: 0.4, y: 1}
         PrecipitationRange: {x: 0.4, y: 1}
         HeightRange: {x: 0, y: 1}
-    - itemPrefab: {fileID: 480202971505006560, guid: ce24645065817804fbd6156e223ca429, type: 3}
-      itemName: AppleTree
+    - itemName: AppleTree
       itemCount: 1
       SpawnChance: 0.015
       environmentConditionRange:

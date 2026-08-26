@@ -103,8 +103,6 @@ public partial class ItemMgr
     public Item InstantiateItem(string itemName, Vector3 position = default, Quaternion rotation = default, Vector3 scale = default, GameObject parent = null)
     {
         ItemData templateData = GameRes.Instance.CreateItemData(itemName);
-        if (templateData == null)
-            throw new InvalidOperationException($"找不到物品定义或有效 Prefab: {itemName}");
         return InstantiateItem(templateData, position, rotation, scale, parent);
     }
 
@@ -120,8 +118,6 @@ public partial class ItemMgr
         GameObject parent = null)
     {
         ItemData templateData = GameRes.Instance.CreateItemData(itemName);
-        if (templateData == null)
-            throw new InvalidOperationException($"找不到物品定义或有效 Prefab: {itemName}");
         templateData.Guid = deterministicGuid == 0 ? 1 : deterministicGuid;
         return InstantiateItem(templateData, position, rotation, scale, parent);
     }
@@ -140,8 +136,6 @@ public partial class ItemMgr
             throw new ArgumentOutOfRangeException(nameof(authoritativeGuid), "网络 Item GUID 不能为 0");
 
         ItemData data = GameRes.Instance.CreateItemData(itemName);
-        if (data == null)
-            throw new InvalidOperationException($"找不到物品定义或有效 Prefab: {itemName}");
         data.Guid = authoritativeGuid;
         return InstantiateItem(data, position, rotation, scale);
     }

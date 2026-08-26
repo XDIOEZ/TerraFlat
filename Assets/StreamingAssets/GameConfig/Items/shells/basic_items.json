@@ -5676,53 +5676,9 @@
       }
     },
     {
-      "id": "Iceberg",
-      "parent": "BasicItem_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Mines/Iceberg.prefab",
-      "shellPrefab": "Iceberg",
-      "gameName": "小冰山",
-      "description": "冻结在雪地中的小型冰山，可采集并掉落冰块。",
-      "durability": 200.0,
-      "maxDurability": 200.0,
-      "amount": 1.0,
-      "volume": 1.0,
-      "canBePickedUp": false,
-      "tags": [
-        "Resource",
-        "Snow"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Tilemap/IceTileset.png"
-      },
-      "modules": {},
-      "itemData": {
-        "code": "",
-        "transform": {
-          "position": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0
-          },
-          "rotation": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0,
-            "w": 0.0
-          },
-          "scale": {
-            "x": 1.0,
-            "y": 1.0,
-            "z": 1.0
-          }
-        },
-        "ItemSpecialData": "",
-        "inHand": false
-      }
-    },
-    {
       "id": "Bush",
       "parent": "BasicItem_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Plants/Bush.prefab",
       "gameName": "Bush",
       "description": "可自然生长并周期产出浆果的灌木。",
       "durability": 1.0,
@@ -5832,6 +5788,206 @@
       "description": "可用于制作和建造的石质材料。",
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_404.png"
+      }
+    },
+    {
+      "id": "Weed",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Weed.prefab",
+      "gameName": "Weed",
+      "description": "随处可见的杂草。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": false,
+      "tags": [
+        "Plant"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Plants/GrassAndFlower.png[GrassAndFlower_0]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.5,
+            "y": 0.5
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "WeedAppearance": {
+          "prefab": "Mod_WeedAppearance",
+          "id": "WeedAppearance",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "allowHorizontalFlip": true,
+            "scaleRange": {
+              "x": 0.9,
+              "y": 1.12
+            },
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "food": {
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 4.0,
+                "Max_Carbohydrates": 4.0,
+                "Fat": 0.0,
+                "Max_Fat": 0.0,
+                "Protein": 1.0,
+                "Max_Protein": 1.0,
+                "Water": 3.0,
+                "Max_Water": 3.0,
+                "Vitamins": 6.0,
+                "Max_Vitamins": 6.0
+              },
+              "Max_EatingProgress": 3.0,
+              "ShowCanvas": false,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0
+            },
+            "MechanicStates": [],
+            "Type": 0
+          },
+          "parameters": {
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "HealInterval": 0.0,
+              "HealAmount": 0.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "PlayerProteinHealThreshold": 0.0,
+              "HealNeedRatio": 0.6
+            },
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "ConsumeKind": 0,
+            "ConsumptionEnabled": true,
+            "ConsumeCompleteReplacementItemID": "",
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false,
+        "FactionId": ""
       }
     }
   ]

@@ -29,6 +29,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 运行时生成模块参数时，`Vector2/Vector3` 必须显式写成 `x/y/z` 的 `JObject`；禁止 `JToken.FromObject(UnityEngine.Vector*)`，否则 Json.NET 会遍历 `normalized` 等计算属性并形成自引用。
 - JSON 定义实体的战利品以 `LootPrefabName` 稳定 ID 为权威；Prefab 不再保存冗余 `LootPrefab` 对象引用，避免资源重建后残留旧 FileID 并触发 PPtr 类型转换错误。
 - Manifest 是唯一发现入口；包的最终 `shellPrefab` 必须与声明一致。
+- `GameRes.CreateItemData`、群系生成与生产模块只接受 Manifest 中存在的 JSON 物品 ID；缺失定义必须直接报错，禁止回退到同名 Prefab。`sourcePrefab` 只用于编辑器迁移定位，不得加入运行时依赖。
 - 内容工坊创建物品时只写继承差异：父定义和参考模块必须来自启用分包，Sprite 先生成稳定 Addressables 地址，JSON 写入前校验继承、重复 ID、文件指纹与分包外壳边界。
 - `RuntimeItemDefinition.IsActor` 只表示复用通用管线；Actor 还必须登记到 `GameRes.ActorDefinitions` 且外壳包含 `IAIActor`。
 - 堆叠身份统一由 `ItemData` 判定，空与 null 特殊数据按现有规范处理。

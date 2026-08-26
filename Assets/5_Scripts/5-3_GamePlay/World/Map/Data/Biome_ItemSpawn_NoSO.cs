@@ -3,8 +3,6 @@ using UnityEngine;
 [System.Serializable]
 public class Biome_ItemSpawn_NoSO
 {
-    public GameObject itemPrefab;
-
     public string itemName = "";
 
     [Min(1)]
@@ -43,23 +41,7 @@ public class Biome_ItemSpawn_NoSO
 
     public void OnValidate()
     {
-        if (itemPrefab == null)
-        {
-            // JSON 运行时物品允许只保留 ItemId；旧 prefab 仅用于尚未迁移的编辑器配置。
-            if (!string.IsNullOrWhiteSpace(itemName))
-                return;
-
-            Debug.LogError("Item prefab 和 itemName 不能同时为空");
-            return;
-        }
-
-        Item prefabItem = itemPrefab.GetComponent<Item>();
-        if (prefabItem == null || prefabItem.itemData == null)
-        {
-            Debug.LogError($"Item prefab {itemPrefab.name} 缺少 Item 或 ItemData");
-            return;
-        }
-
-        itemName = prefabItem.itemData.IDName;
+        if (string.IsNullOrWhiteSpace(itemName))
+            Debug.LogError("群系生成物必须填写 JSON 物品 ID");
     }
 }

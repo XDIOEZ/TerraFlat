@@ -1,0 +1,1735 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "WorldResource_Base",
+      "abstract": true,
+      "shellPrefab": "Prop",
+      "visual": {
+        "rendererPath": "Render"
+      }
+    },
+    {
+      "id": "AppleTree",
+      "parent": "WorldResource_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Plants/AppleTree.prefab",
+      "gameName": "苹果树",
+      "description": "一颗可以生产苹果的树",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 2.0,
+      "canBePickedUp": false,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Plants/Tree/tree-set1/64x64/trees-set1-64_6.png[trees-set1-64_6]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0008162111,
+            "y": -0.02826345
+          },
+          "path": "",
+          "size": {
+            "x": 0.4,
+            "y": 0.2
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 180.0,
+              "MaxHp": 200.0,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.25,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "DefenseValues": {
+                "Cutting": 2.0,
+                "Piercing": 4.0,
+                "Chopping": 0.0,
+                "Blunt": 1.5
+              },
+              "AttackersUIDs": [],
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0,
+              "LootTable": [
+                {
+                  "LootPrefabName": "Chicken",
+                  "DropChance": 0.001,
+                  "MinAmount": 1,
+                  "MaxAmount": 1
+                }
+              ]
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": true,
+            "hitSlowMultiplier": 0.5,
+            "hitSlowDuration": 0.35,
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "flashColor": {
+              "r": 1.0,
+              "g": 0.08,
+              "b": 0.08,
+              "a": 1.0
+            },
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.16,
+            "healthBarWorldScale": 0.55,
+            "enableDebugTools": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0202717781,
+                "y": 0.318521768
+              },
+              "size": {
+                "x": 0.322394371,
+                "y": 0.91883105
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
+        "生长模块": {
+          "prefab": "Module_Growth",
+          "id": "生长模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "minimumWaterGrowthMultiplier": 0.5,
+            "minimumFertilityGrowthMultiplier": 0.5,
+            "waterConsumePerSecond": 0.02,
+            "fertilityConsumePerSecond": 0.00035,
+            "rainWaterPerSecond": 0.08,
+            "rainGrowthBonus": 0.15,
+            "allowCultivatedHarvest": true,
+            "harvestFoodItemId": "Apple",
+            "harvestSeedItemId": "Seed_Apple",
+            "harvestFoodMin": 2,
+            "harvestFoodMax": 4,
+            "Data": {
+              "isCultivatedCrop": false,
+              "plantedTilePos": {
+                "x": 0,
+                "y": 0
+              },
+              "isMature": false,
+              "isHarvested": false,
+              "growthStatus": 0,
+              "environmentInitialized": false,
+              "environmentGrowthMultiplier": 1.0,
+              "growState": 0,
+              "growState_Value": [
+                0.0,
+                20.0,
+                50.0,
+                100.0
+              ],
+              "growState_Scale": [
+                0.12,
+                0.24,
+                1.2,
+                1.2
+              ],
+              "GrowProgress": 0.0,
+              "MaxGrowProgress": 100.0,
+              "GrowSpeed": 0.1
+            },
+            "growState_MaxHealthRatios": [
+              0.25,
+              0.5,
+              0.75,
+              1.0
+            ],
+            "matureMaxHealth": 200.0,
+            "stageLoots": [
+              {
+                "lootEntries": [
+                  {
+                    "LootPrefabName": "Stick",
+                    "DropChance": 1.0,
+                    "MinAmount": 1,
+                    "MaxAmount": 1
+                  },
+                  {
+                    "LootPrefabName": "Leaf",
+                    "DropChance": 1.0,
+                    "MinAmount": 1,
+                    "MaxAmount": 1
+                  }
+                ]
+              },
+              {
+                "lootEntries": [
+                  {
+                    "LootPrefabName": "Leaf",
+                    "DropChance": 1.0,
+                    "MinAmount": 1,
+                    "MaxAmount": 1
+                  },
+                  {
+                    "LootPrefabName": "Log",
+                    "DropChance": 1.0,
+                    "MinAmount": 1,
+                    "MaxAmount": 1
+                  },
+                  {
+                    "LootPrefabName": "Stick",
+                    "DropChance": 1.0,
+                    "MinAmount": 1,
+                    "MaxAmount": 1
+                  }
+                ]
+              },
+              {
+                "lootEntries": [
+                  {
+                    "LootPrefabName": "Log",
+                    "DropChance": 1.0,
+                    "MinAmount": 1,
+                    "MaxAmount": 2
+                  },
+                  {
+                    "LootPrefabName": "Leaf",
+                    "DropChance": 1.0,
+                    "MinAmount": 1,
+                    "MaxAmount": 1
+                  }
+                ]
+              }
+            ],
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 0.8,
+                "y": 0.8
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false,
+        "FactionId": ""
+      }
+    },
+    {
+      "id": "Tree_Coconut",
+      "parent": "WorldResource_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Plants/Tree_Coconut.prefab",
+      "gameName": "Tree_Coconut",
+      "description": "椰子树",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 2.0,
+      "canBePickedUp": false,
+      "tags": [
+        "Tree"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Env/椰子树.png[椰子树]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0008162111,
+            "y": -0.02826345
+          },
+          "path": "",
+          "size": {
+            "x": 0.4,
+            "y": 0.2
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 180.0,
+              "MaxHp": 180.0,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.25,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "DefenseValues": {
+                "Cutting": 2.0,
+                "Piercing": 4.0,
+                "Chopping": 0.0,
+                "Blunt": 1.5
+              },
+              "AttackersUIDs": [],
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0,
+              "LootTable": [
+                {
+                  "LootPrefabName": "Chicken",
+                  "DropChance": 0.001,
+                  "MinAmount": 1,
+                  "MaxAmount": 1
+                }
+              ]
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": true,
+            "hitSlowMultiplier": 0.5,
+            "hitSlowDuration": 0.35,
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "flashColor": {
+              "r": 1.0,
+              "g": 0.08,
+              "b": 0.08,
+              "a": 1.0
+            },
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.16,
+            "healthBarWorldScale": 0.55,
+            "enableDebugTools": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0202717781,
+                "y": 0.318521768
+              },
+              "size": {
+                "x": 0.322394371,
+                "y": 0.91883105
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
+        "生长模块": {
+          "prefab": "Module_Growth",
+          "id": "生长模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "minimumWaterGrowthMultiplier": 0.5,
+            "minimumFertilityGrowthMultiplier": 0.5,
+            "waterConsumePerSecond": 0.02,
+            "fertilityConsumePerSecond": 0.00035,
+            "rainWaterPerSecond": 0.08,
+            "rainGrowthBonus": 0.15,
+            "allowCultivatedHarvest": false,
+            "harvestFoodItemId": "",
+            "harvestSeedItemId": "",
+            "harvestFoodMin": 2,
+            "harvestFoodMax": 4,
+            "Data": {
+              "isCultivatedCrop": false,
+              "plantedTilePos": {
+                "x": 0,
+                "y": 0
+              },
+              "isMature": false,
+              "isHarvested": false,
+              "growthStatus": 0,
+              "environmentInitialized": false,
+              "environmentGrowthMultiplier": 1.0,
+              "growState": 0,
+              "growState_Value": [
+                0.0,
+                20.0,
+                50.0,
+                100.0
+              ],
+              "growState_Scale": [
+                0.12,
+                0.24,
+                1.2,
+                1.2
+              ],
+              "GrowProgress": 0.0,
+              "MaxGrowProgress": 100.0,
+              "GrowSpeed": 0.1
+            },
+            "growState_MaxHealthRatios": [
+              0.25,
+              0.5,
+              0.75,
+              1.0
+            ],
+            "matureMaxHealth": 200.0,
+            "stageLoots": [
+              {
+                "lootEntries": [
+                  {
+                    "LootPrefabName": "Stick",
+                    "DropChance": 1.0,
+                    "MinAmount": 1,
+                    "MaxAmount": 1
+                  },
+                  {
+                    "LootPrefabName": "Leaf",
+                    "DropChance": 1.0,
+                    "MinAmount": 1,
+                    "MaxAmount": 1
+                  }
+                ]
+              },
+              {
+                "lootEntries": [
+                  {
+                    "LootPrefabName": "Leaf",
+                    "DropChance": 1.0,
+                    "MinAmount": 1,
+                    "MaxAmount": 1
+                  },
+                  {
+                    "LootPrefabName": "Log",
+                    "DropChance": 1.0,
+                    "MinAmount": 1,
+                    "MaxAmount": 1
+                  },
+                  {
+                    "LootPrefabName": "Stick",
+                    "DropChance": 1.0,
+                    "MinAmount": 1,
+                    "MaxAmount": 1
+                  }
+                ]
+              },
+              {
+                "lootEntries": [
+                  {
+                    "LootPrefabName": "Log",
+                    "DropChance": 1.0,
+                    "MinAmount": 1,
+                    "MaxAmount": 2
+                  },
+                  {
+                    "LootPrefabName": "Leaf",
+                    "DropChance": 1.0,
+                    "MinAmount": 1,
+                    "MaxAmount": 1
+                  }
+                ]
+              }
+            ],
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 0.8,
+                "y": 0.8
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
+        "生产模块": {
+          "prefab": "Module_Production",
+          "id": "生产模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "ProductionList": [
+              {
+                "itemName": "Coconut_Green",
+                "itemCountMin": 1,
+                "itemCountMax": 1,
+                "MaxProductionTime": 2000.0,
+                "ProductionTime": 80.0,
+                "MaxProductionCount": -1,
+                "CurrentProductionCount": 0,
+                "ThrowItem": true,
+                "StoreInModule": false,
+                "DestroySelf": false,
+                "SpawnProbability": 1.0,
+                "Random_ProductionTime": {
+                  "x": 0.0,
+                  "y": 1000.0
+                },
+                "IsInitialized": false
+              }
+            ],
+            "ProductionSpeed": 1.0,
+            "UseCropGrowthMultiplier": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false,
+        "FactionId": ""
+      }
+    },
+    {
+      "id": "Mine_Coal",
+      "parent": "WorldResource_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Coal.prefab",
+      "gameName": "Mine_Coal",
+      "description": "可以开采煤矿的矿点。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 2.0,
+      "canBePickedUp": false,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png[FD_Minerals_Stones_104]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 300.0,
+              "MaxHp": 300.0,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.25,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "DefenseValues": {
+                "Cutting": 10.0,
+                "Piercing": 3.0,
+                "Chopping": 12.0,
+                "Blunt": 3.0
+              },
+              "AttackersUIDs": [],
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0,
+              "LootTable": [
+                {
+                  "LootPrefabName": "Ore_Coal",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 3
+                },
+                {
+                  "LootPrefabName": "Ore_Stone",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 2
+                }
+              ]
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": true,
+            "hitSlowMultiplier": 0.5,
+            "hitSlowDuration": 0.35,
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "flashColor": {
+              "r": 1.0,
+              "g": 0.08,
+              "b": 0.08,
+              "a": 1.0
+            },
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.16,
+            "healthBarWorldScale": 0.55,
+            "enableDebugTools": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false,
+        "FactionId": ""
+      }
+    },
+    {
+      "id": "Mine_Copper",
+      "parent": "WorldResource_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Copper.prefab",
+      "gameName": "铜矿",
+      "description": "深埋岩壁的铜色矿体，闪烁着金属光泽。开采后可提炼铜，用于打造工具与武器。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 100.0,
+      "canBePickedUp": false,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png[FD_Minerals_Stones_88]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.99,
+            "y": 0.99
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 200.0,
+              "MaxHp": 200.0,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.25,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "DefenseValues": {
+                "Cutting": 14.0,
+                "Piercing": 8.0,
+                "Chopping": 16.0,
+                "Blunt": 6.0
+              },
+              "AttackersUIDs": [],
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0,
+              "LootTable": [
+                {
+                  "LootPrefabName": "Ore_Copper",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 3
+                },
+                {
+                  "LootPrefabName": "Ore_Stone",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 2
+                }
+              ]
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": true,
+            "hitSlowMultiplier": 0.5,
+            "hitSlowDuration": 0.35,
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "flashColor": {
+              "r": 1.0,
+              "g": 0.08,
+              "b": 0.08,
+              "a": 1.0
+            },
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.16,
+            "healthBarWorldScale": 0.55,
+            "enableDebugTools": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false,
+        "FactionId": ""
+      }
+    },
+    {
+      "id": "Mine_Iron",
+      "parent": "WorldResource_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Iron.prefab",
+      "gameName": "Mine_Iron",
+      "description": "可以开采铁矿的矿点。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 100.0,
+      "canBePickedUp": false,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png[FD_Minerals_Stones_69]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 300.0,
+              "MaxHp": 300.0,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.25,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "DefenseValues": {
+                "Cutting": 18.0,
+                "Piercing": 13.0,
+                "Chopping": 20.0,
+                "Blunt": 8.0
+              },
+              "AttackersUIDs": [],
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0,
+              "LootTable": [
+                {
+                  "LootPrefabName": "Ore_Iron",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 3
+                },
+                {
+                  "LootPrefabName": "Ore_Stone",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 2
+                }
+              ]
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": true,
+            "hitSlowMultiplier": 0.5,
+            "hitSlowDuration": 0.35,
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "flashColor": {
+              "r": 1.0,
+              "g": 0.08,
+              "b": 0.08,
+              "a": 1.0
+            },
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.16,
+            "healthBarWorldScale": 0.55,
+            "enableDebugTools": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false,
+        "FactionId": ""
+      }
+    },
+    {
+      "id": "Mine_Stone",
+      "parent": "WorldResource_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Stone.prefab",
+      "gameName": "Mine_Stone",
+      "description": "可以开采石料的矿点。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 100.0,
+      "canBePickedUp": false,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png[FD_Minerals_Stones_90]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 180.0,
+              "MaxHp": 180.0,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.25,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "DefenseValues": {
+                "Cutting": 12.0,
+                "Piercing": 2.0,
+                "Chopping": 14.0,
+                "Blunt": 2.0
+              },
+              "AttackersUIDs": [],
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0,
+              "LootTable": [
+                {
+                  "LootPrefabName": "Ore_Stone",
+                  "DropChance": 1.0,
+                  "MinAmount": 2,
+                  "MaxAmount": 4
+                }
+              ]
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": true,
+            "hitSlowMultiplier": 0.5,
+            "hitSlowDuration": 0.35,
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "flashColor": {
+              "r": 1.0,
+              "g": 0.08,
+              "b": 0.08,
+              "a": 1.0
+            },
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.16,
+            "healthBarWorldScale": 0.55,
+            "enableDebugTools": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false,
+        "FactionId": ""
+      }
+    },
+    {
+      "id": "Mine_Tin",
+      "parent": "WorldResource_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Tin.prefab",
+      "gameName": "Mine_Tin",
+      "description": "可以开采锡矿的矿点。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 100.0,
+      "canBePickedUp": false,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png[FD_Minerals_Stones_87]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 400.0,
+              "MaxHp": 400.0,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.25,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "DefenseValues": {
+                "Cutting": 16.0,
+                "Piercing": 7.0,
+                "Chopping": 18.0,
+                "Blunt": 5.0
+              },
+              "AttackersUIDs": [],
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0,
+              "LootTable": [
+                {
+                  "LootPrefabName": "Ore_Tin",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 3
+                },
+                {
+                  "LootPrefabName": "Ore_Stone",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 2
+                }
+              ]
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": true,
+            "hitSlowMultiplier": 0.5,
+            "hitSlowDuration": 0.35,
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "flashColor": {
+              "r": 1.0,
+              "g": 0.08,
+              "b": 0.08,
+              "a": 1.0
+            },
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.16,
+            "healthBarWorldScale": 0.55,
+            "enableDebugTools": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false,
+        "FactionId": ""
+      }
+    },
+    {
+      "id": "Iceberg",
+      "parent": "WorldResource_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/ResourceNodes/Mines/Iceberg.prefab",
+      "gameName": "Iceberg",
+      "description": "冻结在雪地中的小型冰山，可采集并掉落冰块。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 100.0,
+      "canBePickedUp": false,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png[FD_Minerals_Stones_90]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 180.0,
+              "MaxHp": 180.0,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.25,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "DefenseValues": {
+                "Cutting": 12.0,
+                "Piercing": 2.0,
+                "Chopping": 14.0,
+                "Blunt": 2.0
+              },
+              "AttackersUIDs": [],
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0,
+              "LootTable": [
+                {
+                  "LootPrefabName": "IceBlock",
+                  "DropChance": 1.0,
+                  "MinAmount": 1,
+                  "MaxAmount": 3
+                }
+              ]
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": true,
+            "hitSlowMultiplier": 0.5,
+            "hitSlowDuration": 0.35,
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "flashColor": {
+              "r": 1.0,
+              "g": 0.08,
+              "b": 0.08,
+              "a": 1.0
+            },
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.16,
+            "healthBarWorldScale": 0.55,
+            "enableDebugTools": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false,
+        "FactionId": ""
+      }
+    }
+  ]
+}

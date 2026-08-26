@@ -26,6 +26,8 @@ public static class ItemDefinitionMigrationTool
     private const string PackageRootPath = CatalogRootPath + "/shells";
     private const string RequestPath = "Temp/FlatWorldItemDefinitionMigration.request";
     private const string ItemSpriteLabel = "ItemSprite";
+    private const string WeedSourcePath = "Assets/2_Prefabs/Gameplay/Items/Food/Weed.prefab";
+    private const string WeedAppearanceModulePath = "Assets/2_Prefabs/Gameplay/Modules/World/Mod_WeedAppearance.prefab";
 
     /// <summary>物品定义文件按玩法类别命名，避免文件名绑定某个具体物品或运行时外壳。</summary>
     private static readonly ItemPackageCategory[] PackageCategories =
@@ -112,7 +114,22 @@ public static class ItemDefinitionMigrationTool
                 "Assets/2_Prefabs/Gameplay/Items/Food/Meat_Dehydrate.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/Meat_Rotten.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/Tea.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Food/Weed.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Materials/Humus.prefab"
+            }),
+        new(
+            "WorldResource_Base",
+            "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+            new[]
+            {
+                "Assets/2_Prefabs/World/ResourceNodes/Plants/AppleTree.prefab",
+                "Assets/2_Prefabs/World/ResourceNodes/Plants/Tree_Coconut.prefab",
+                "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Coal.prefab",
+                "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Copper.prefab",
+                "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Iron.prefab",
+                "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Stone.prefab",
+                "Assets/2_Prefabs/World/ResourceNodes/Mines/Mine_Tin.prefab",
+                "Assets/2_Prefabs/World/ResourceNodes/Mines/Iceberg.prefab"
             }),
         new(
             "Equipment_Base",
@@ -267,6 +284,8 @@ public static class ItemDefinitionMigrationTool
         if (EditorApplication.isPlayingOrWillChangePlaymode)
             throw new InvalidOperationException("请先退出 PlayMode 再执行物品 JSON 迁移。运行时状态不会被迁移器修改。");
 
+        EnsureWeedAppearanceModulePrefab();
+
         JObject existingRoot = File.Exists(ManifestPath)
             ? ItemDefinitionCatalogLoader.LoadBuiltInSourceCatalog()
             : new JObject();
@@ -391,7 +410,7 @@ public static class ItemDefinitionMigrationTool
                 throw new InvalidDataException($"物品 {id} 无法按 shellPrefab 分类");
             }
 
-            string packageName = ResolvePackageCategory(definition.ShellPrefab.Trim());
+            string packageName = ResolvePackageCategory(source, definition);
             if (!packageItems.TryGetValue(packageName, out JArray items))
             {
                 items = new JArray();
@@ -480,9 +499,18 @@ public static class ItemDefinitionMigrationTool
             : result;
     }
 
-    /// <summary>依据最终运行时外壳返回稳定的物品类别名。</summary>
-    private static string ResolvePackageCategory(string shellPrefab)
+    /// <summary>世界资源与普通道具共用 Prop 外壳，但必须保持独立分包。</summary>
+    private static string ResolvePackageCategory(JObject source, ItemDefinitionDto definition)
     {
+        string sourceId = source?.Value<string>("id")?.Trim();
+        string parentId = source?.Value<string>("parent")?.Trim();
+        if (string.Equals(sourceId, "WorldResource_Base", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(parentId, "WorldResource_Base", StringComparison.OrdinalIgnoreCase))
+        {
+            return "resource_nodes";
+        }
+
+        string shellPrefab = definition?.ShellPrefab?.Trim();
         foreach (ItemPackageCategory category in PackageCategories)
         {
             if (category.Matches(shellPrefab))
@@ -769,7 +797,9 @@ public static class ItemDefinitionMigrationTool
             ["localEulerAngles"] = Vector3Token(module.transform.localEulerAngles),
             ["localScale"] = Vector3Token(module.transform.localScale)
         };
-        Collider2D collider = module.GetComponent<Collider2D>();
+        Collider2D collider = module.GetComponent<Item>() == null
+            ? module.GetComponent<Collider2D>()
+            : null;
         if (collider != null)
             parameters["$collider2D"] = SerializeCollider(collider, null);
         return parameters;
@@ -1174,7 +1204,29 @@ public static class ItemDefinitionMigrationTool
     private static Collider2D FindItemCollider(Item item)
     {
         return item.GetComponentsInChildren<Collider2D>(true)
-            .FirstOrDefault(collider => collider.GetComponentInParent<Module>(true) == null);
+            .FirstOrDefault(collider => collider.transform == item.transform ||
+                                        collider.GetComponentInParent<Module>(true) == null);
+    }
+
+    /// <summary>把 Weed 的资源引用外观组件提取为可复用模块 Prefab。</summary>
+    private static void EnsureWeedAppearanceModulePrefab()
+    {
+        GameObject source = LoadPrefab(WeedSourcePath);
+        Mod_WeedAppearance sourceModule = source.GetComponent<Mod_WeedAppearance>();
+        if (sourceModule == null)
+            throw new InvalidDataException($"{WeedSourcePath} 缺少 Mod_WeedAppearance");
+
+        GameObject root = new("Mod_WeedAppearance");
+        try
+        {
+            Mod_WeedAppearance targetModule = root.AddComponent<Mod_WeedAppearance>();
+            EditorUtility.CopySerialized(sourceModule, targetModule);
+            PrefabUtility.SaveAsPrefabAsset(root, WeedAppearanceModulePath);
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(root);
+        }
     }
 
     internal static string GetRelativePath(Transform root, Transform child)

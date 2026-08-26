@@ -264,19 +264,8 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
             if (config == null)
                 continue;
 
-            List<string> tags = null;
-            if (!string.IsNullOrWhiteSpace(config.itemName))
-            {
-                ItemData runtimeData = GameRes.Instance?.CreateItemData(config.itemName);
-                tags = runtimeData?.Tags;
-            }
-
-            // 兼容尚未迁移到 JSON ItemId 的旧群系配置；新配置不再要求 itemPrefab。
-            if ((tags == null || tags.Count == 0) && config.itemPrefab != null)
-            {
-                Item prefabItem = config.itemPrefab.GetComponent<Item>();
-                tags = prefabItem?.itemData?.Tags;
-            }
+            ItemData runtimeData = GameRes.Instance.CreateItemData(config.itemName);
+            List<string> tags = runtimeData.Tags;
 
             if (tags != null && tags.Count > 0 && tags.ContainsTag(hostTag))
                 return true;
