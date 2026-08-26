@@ -31,11 +31,12 @@ namespace FlatWorld.WorldModel
         public SurfaceBiomeKind Biome { get; }
         /// <summary>当前格的地表是否属于海洋。</summary>
         public bool IsOcean => HasHeightReference && Height < SeaLevel;
-        /// <summary>当前高度是否位于允许生成地下水的地表高度带。</summary>
-        public bool AllowsGroundwater => !HasHeightReference ||
-            Height >= SeaLevel && Height < MountainLevel;
-        /// <summary>按地表降水缩放地下湖形成概率；缺少配对参考时保留原概率。</summary>
-        public double GroundwaterFormationWeight => HasHeightReference ? Precipitation : 1d;
+        /// <summary>判断当前地表高度与降水是否同时满足地下湖形成条件。</summary>
+        public bool SupportsGroundwater(double minimumPrecipitation) =>
+            HasHeightReference &&
+            Height >= SeaLevel &&
+            Height < MountainLevel &&
+            Precipitation >= minimumPrecipitation;
     }
 
     /// <summary>
@@ -221,7 +222,7 @@ namespace FlatWorld.WorldModel
         }
 
         /// <summary>
-        /// 在洞室内部采样确定性的地下湖水深；出生区、天然出口及其连接通道始终保持干燥。
+        /// 在达到地表最低降水阈值的洞室内部采样确定性的地下湖水深；出生区、天然出口及其连接通道始终保持干燥。
         /// 以世界区域而非区块坐标选湖，保证湖面跨 Chunk 连续且不受加载顺序影响。
         /// </summary>
         public static double SampleGroundwaterDepth(ChunkGenerationRequest request,
@@ -233,13 +234,14 @@ namespace FlatWorld.WorldModel
                 request, settings, worldX, worldY, surfaceInfluence);
         }
 
-        /// <summary>使用已采样地表高度限制地下水，并按当前区域的最终降水缩放成湖概率。</summary>
+        /// <summary>使用已采样地表高度与最终降水阈值决定地下湖是否形成，不再执行随机成湖判定。</summary>
         internal static double SampleGroundwaterDepth(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
             CaveSurfaceInfluenceSample surfaceInfluence)
         {
-            if (!settings.CaveGroundwaterEnabled || settings.CaveGroundwaterRoomChance <= 0d ||
-                !surfaceInfluence.AllowsGroundwater ||
+            if (!settings.CaveGroundwaterEnabled ||
+                !surfaceInfluence.SupportsGroundwater(
+                    settings.CaveGroundwaterMinimumPrecipitation) ||
                 IsInsideDefaultSpawnSafeArea(request, settings, worldX, worldY))
                 return 0d;
 
@@ -261,11 +263,6 @@ namespace FlatWorld.WorldModel
             {
                 uint state = HashRoom(request.Topology, settings, request.WorldSeed,
                     regionX, regionY, 0x2f6e2b1);
-                double formationChance = settings.CaveGroundwaterRoomChance *
-                    surfaceInfluence.GroundwaterFormationWeight;
-                if (NextUnitDouble(ref state) >= formationChance)
-                    continue;
-
                 Room room = CreateRoom(request.Topology, settings, regionX, regionY,
                     request.WorldSeed);
                 double radiusRatio = Lerp(settings.CaveGroundwaterMinRadiusRatio,

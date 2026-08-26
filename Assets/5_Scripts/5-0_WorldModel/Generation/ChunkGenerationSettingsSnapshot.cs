@@ -378,8 +378,8 @@ namespace FlatWorld.WorldModel
             CaveSurfaceOceanWallChance = Clamp01(GetDouble(
                 numbers, "cave.surfaceInfluence.oceanWallChance", 0.85d));
             CaveGroundwaterEnabled = GetBool(numbers, "cave.groundwater.enabled", false);
-            CaveGroundwaterRoomChance = Clamp01(
-                GetDouble(numbers, "cave.groundwater.roomChance", 0.28d));
+            CaveGroundwaterMinimumPrecipitation = Clamp01(
+                GetDouble(numbers, "cave.groundwater.minimumPrecipitation", 0.72d));
             CaveGroundwaterMinRadiusRatio = Clamp(
                 GetDouble(numbers, "cave.groundwater.minRadiusRatio", 0.42d), 0.15d, 0.9d);
             CaveGroundwaterMaxRadiusRatio = Clamp(
@@ -590,9 +590,9 @@ namespace FlatWorld.WorldModel
         public double CaveSpawnSafeRadius { get; }
         /// <summary>地表为海洋时，普通洞穴区域转为石墙的确定性概率。</summary>
         public double CaveSurfaceOceanWallChance { get; }
-        /// <summary>洞室地下湖的确定性分布、水面半径与水深范围；高度带与成湖概率分别沿用地表高度和降水。</summary>
+        /// <summary>洞室地下湖的确定性分布、水面半径与水深范围；地表高度带与最低降水阈值共同决定是否成湖。</summary>
         public bool CaveGroundwaterEnabled { get; }
-        public double CaveGroundwaterRoomChance { get; }
+        public double CaveGroundwaterMinimumPrecipitation { get; }
         public double CaveGroundwaterMinRadiusRatio { get; }
         public double CaveGroundwaterMaxRadiusRatio { get; }
         public double CaveGroundwaterMinDepth { get; }

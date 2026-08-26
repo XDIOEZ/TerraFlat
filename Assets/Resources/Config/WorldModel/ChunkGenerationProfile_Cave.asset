@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Cave
   m_EditorClassIdentifier:
   profileId: cave.default
-  generationSignature: 26
+  generationSignature: 27
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -49,8 +49,8 @@ MonoBehaviour:
     Value: 0.85
   - Id: cave.groundwater.enabled
     Value: 1
-  - Id: cave.groundwater.roomChance
-    Value: 0.28
+  - Id: cave.groundwater.minimumPrecipitation
+    Value: 0.72
   - Id: cave.groundwater.minRadiusRatio
     Value: 0.42
   - Id: cave.groundwater.maxRadiusRatio

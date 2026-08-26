@@ -279,7 +279,7 @@ namespace FlatWorld.GameTest.WorldModel
                 ["cave.floorTileId"] = 4d,
                 ["cave.wallTileId"] = 7d,
                 ["cave.groundwater.enabled"] = groundwaterEnabled ? 1d : 0d,
-                ["cave.groundwater.roomChance"] = 1d,
+                ["cave.groundwater.minimumPrecipitation"] = 0d,
                 ["cave.groundwater.minRadiusRatio"] = 0.42d,
                 ["cave.groundwater.maxRadiusRatio"] = 0.68d,
                 ["cave.groundwater.minDepth"] = 0.25d,
