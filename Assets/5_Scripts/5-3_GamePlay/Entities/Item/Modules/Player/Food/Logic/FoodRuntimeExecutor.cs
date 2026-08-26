@@ -498,6 +498,7 @@ public sealed class FoodRuntimeExecutor : IDisposable
             return;
 
         IceBlockFoodMechanicRegistration.EnsureRegistered();
+        RawMeatInfectionMechanicRegistration.EnsureRegistered();
         List<IFoodMechanic> registeredRules = FoodMechanicRegistry.CreateFor(context);
         for (int i = 0; i < registeredRules.Count; i++)
             rulePipeline.Add(registeredRules[i]);

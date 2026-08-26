@@ -4156,7 +4156,7 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Meat.prefab",
       "gameName": "Meat",
-      "description": "未经烹饪的生肉，应加热后再食用。",
+      "description": "未经烹饪的生肉，直接食用有50%概率感染120秒，应加热后再食用。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
