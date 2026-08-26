@@ -590,7 +590,7 @@ namespace FlatWorld.WorldModel
         public double CaveSpawnSafeRadius { get; }
         /// <summary>地表为海洋时，普通洞穴区域转为石墙的确定性概率。</summary>
         public double CaveSurfaceOceanWallChance { get; }
-        /// <summary>洞室地下湖的确定性分布、水面半径与水深范围；高度带沿用地表海平面和山地线。</summary>
+        /// <summary>洞室地下湖的确定性分布、水面半径与水深范围；高度带与成湖概率分别沿用地表高度和降水。</summary>
         public bool CaveGroundwaterEnabled { get; }
         public double CaveGroundwaterRoomChance { get; }
         public double CaveGroundwaterMinRadiusRatio { get; }

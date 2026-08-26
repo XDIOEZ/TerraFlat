@@ -2,15 +2,16 @@ using System;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>洞穴单格对应的地表高度与基础群系参考；缺少配对时退回补充洞穴规则。</summary>
+    /// <summary>洞穴单格对应的地表高度、降水与基础群系参考；缺少配对时退回补充洞穴规则。</summary>
     internal readonly struct CaveSurfaceInfluenceSample
     {
-        /// <summary>保存一格地表高度、基础群系及其海洋和山地判定线。</summary>
-        public CaveSurfaceInfluenceSample(double height, double seaLevel, double mountainLevel,
-            SurfaceBiomeKind biome)
+        /// <summary>保存一格地表高度、最终降水、基础群系及其海洋和山地判定线。</summary>
+        public CaveSurfaceInfluenceSample(double height, double precipitation, double seaLevel,
+            double mountainLevel, SurfaceBiomeKind biome)
         {
             HasHeightReference = true;
             Height = height;
+            Precipitation = Math.Max(0d, Math.Min(1d, precipitation));
             SeaLevel = seaLevel;
             MountainLevel = mountainLevel;
             Biome = biome;
@@ -20,6 +21,8 @@ namespace FlatWorld.WorldModel
         public bool HasHeightReference { get; }
         /// <summary>地表高度图在当前世界格的采样值。</summary>
         public double Height { get; }
+        /// <summary>冻结地表 Profile 在当前世界格复算出的最终降水值。</summary>
+        public double Precipitation { get; }
         /// <summary>冻结地表 Profile 的海平面。</summary>
         public double SeaLevel { get; }
         /// <summary>冻结地表 Profile 的山地高度线。</summary>
@@ -31,6 +34,8 @@ namespace FlatWorld.WorldModel
         /// <summary>当前高度是否位于允许生成地下水的地表高度带。</summary>
         public bool AllowsGroundwater => !HasHeightReference ||
             Height >= SeaLevel && Height < MountainLevel;
+        /// <summary>按地表降水缩放地下湖形成概率；缺少配对参考时保留原概率。</summary>
+        public double GroundwaterFormationWeight => HasHeightReference ? Precipitation : 1d;
     }
 
     /// <summary>
@@ -84,7 +89,7 @@ namespace FlatWorld.WorldModel
 
         #region 洞穴布局
 
-        /// <summary>只使用冻结的地表 Profile、种子与拓扑复算高度和基础群系，不访问运行时地表区块。</summary>
+        /// <summary>只使用冻结的地表 Profile、种子与拓扑复算高度、最终降水和基础群系，不访问运行时地表区块。</summary>
         internal static CaveSurfaceInfluenceSample SampleSurfaceInfluence(
             ChunkGenerationRequest request, int worldX, int worldY)
         {
@@ -99,9 +104,11 @@ namespace FlatWorld.WorldModel
                 request, request.Address.ChunkOrigin);
             ChunkGenerationSettingsSnapshot surfaceSettings = pairing.SurfaceProfile.Settings;
             SurfaceBiomeKind biome = DeterministicChunkGenerator.SampleBaseSurfaceBiome(
-                surfaceRequest, surfaceSettings, worldX, worldY, out double height);
+                surfaceRequest, surfaceSettings, worldX, worldY, out double height,
+                out double precipitation);
             return new CaveSurfaceInfluenceSample(
-                height, surfaceSettings.SeaLevel, surfaceSettings.MountainLevel, biome);
+                height, precipitation, surfaceSettings.SeaLevel, surfaceSettings.MountainLevel,
+                biome);
         }
 
         /// <summary>判断世界格是否属于群系交界主通道、稀疏支路或入口安全网络。</summary>
@@ -226,7 +233,7 @@ namespace FlatWorld.WorldModel
                 request, settings, worldX, worldY, surfaceInfluence);
         }
 
-        /// <summary>使用已采样地表高度限制地下水，只允许海平面至山地线之间的地表高度带。</summary>
+        /// <summary>使用已采样地表高度限制地下水，并按当前区域的最终降水缩放成湖概率。</summary>
         internal static double SampleGroundwaterDepth(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
             CaveSurfaceInfluenceSample surfaceInfluence)
@@ -254,7 +261,9 @@ namespace FlatWorld.WorldModel
             {
                 uint state = HashRoom(request.Topology, settings, request.WorldSeed,
                     regionX, regionY, 0x2f6e2b1);
-                if (NextUnitDouble(ref state) >= settings.CaveGroundwaterRoomChance)
+                double formationChance = settings.CaveGroundwaterRoomChance *
+                    surfaceInfluence.GroundwaterFormationWeight;
+                if (NextUnitDouble(ref state) >= formationChance)
                     continue;
 
                 Room room = CreateRoom(request.Topology, settings, regionX, regionY,

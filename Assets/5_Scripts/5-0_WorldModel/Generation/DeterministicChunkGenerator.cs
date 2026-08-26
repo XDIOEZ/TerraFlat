@@ -476,18 +476,18 @@ namespace FlatWorld.WorldModel
             terrain.SetEnvironmentValue("grass", x, y, grass ? 1f : 0f);
         }
 
-        /// <summary>按冻结参数采样不含河流覆盖的基础地表群系，并同时返回同格高度。</summary>
+        /// <summary>按冻结参数采样不含河流覆盖的基础地表群系，并同时返回同格高度与最终降水。</summary>
         internal static SurfaceBiomeKind SampleBaseSurfaceBiome(
             ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings,
             int worldX,
             int worldY,
-            out double height)
+            out double height,
+            out double precipitation)
         {
             worldX = request.Topology.NormalizeX(worldX);
             worldY = request.Topology.NormalizeY(worldY);
             double temperature;
-            double precipitation;
             if (settings.SurfaceClimateAlgorithm == SurfaceClimateAlgorithm.LegacyLand)
             {
                 LegacyClimateSample climate = LegacyTerrainClimateKernel.SampleClimate(
