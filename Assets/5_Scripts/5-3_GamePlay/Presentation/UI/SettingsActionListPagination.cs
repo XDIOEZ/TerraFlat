@@ -4,47 +4,55 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 管理游戏内设置入口列表的固定三分页。
-/// 视觉节点由 UI_ActionList.prefab 固化，脚本仅切换页面和维护手柄焦点，避免入口继续在 ScrollRect 中纵向溢出。
+/// 管理游戏内设置入口列表的“世界”和“保存退出”两张内容页。
+/// 五个专项设置入口已经提升为顶部页签按钮，仍由各自 Launcher 打开正式设置页。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class SettingsActionListPagination : MonoBehaviour
 {
     #region 节点命名契约
 
-    public const string InterfacePageName = "设置分页_界面";
     public const string WorldPageName = "设置分页_世界";
     public const string SessionPageName = "设置分页_会话";
-    public const string PreviousButtonName = "设置上一页按钮";
-    public const string NextButtonName = "设置下一页按钮";
-    public const string PageTextName = "设置页码文本";
+    public const string TabBarName = "设置分页栏";
+    public const string WorldTabButtonName = "设置页签_世界";
+    public const string SessionTabButtonName = "设置页签_会话";
 
     private static readonly string[] PageNames =
     {
-        InterfacePageName,
         WorldPageName,
         SessionPageName
     };
 
     private static readonly string[] FirstButtonNames =
     {
-        "音量调节",
         "自动保存",
         "保存游戏"
     };
+
+    private static readonly string[] TabButtonNames =
+    {
+        WorldTabButtonName,
+        SessionTabButtonName
+    };
+
+    private static readonly Color ActiveTabColor = new Color(0.16f, 0.40f, 0.42f, 1f);
+    private static readonly Color InactiveTabColor = new Color(0.094f, 0.212f, 0.247f, 0.99f);
+    private static readonly Color ActiveLabelColor = new Color(0.95f, 0.91f, 0.81f, 1f);
+    private static readonly Color InactiveLabelColor = new Color(0.66f, 0.72f, 0.73f, 1f);
 
     #endregion
 
     #region 运行时状态
 
-    private readonly Transform[] pages = new Transform[3];
-    private readonly Button[] firstButtons = new Button[3];
+    private readonly Transform[] pages = new Transform[2];
+    private readonly Button[] firstButtons = new Button[2];
+    private readonly Button[] tabButtons = new Button[2];
+    private readonly Image[] tabBackgrounds = new Image[2];
+    private readonly TextMeshProUGUI[] tabLabels = new TextMeshProUGUI[2];
 
     private BasePanel basePanel;
     private RectTransform contentRect;
-    private Button previousButton;
-    private Button nextButton;
-    private TextMeshProUGUI pageText;
     private int currentPage;
     private bool configured;
 
@@ -71,12 +79,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     {
         basePanel = GetComponent<BasePanel>();
         contentRect = FindTransform(transform, "Content") as RectTransform;
-        previousButton = FindButton(transform, PreviousButtonName);
-        nextButton = FindButton(transform, NextButtonName);
-        pageText = FindText(transform, PageTextName);
-
-        configured = contentRect != null && previousButton != null &&
-                     nextButton != null && pageText != null;
+        configured = contentRect != null && FindTransform(transform, TabBarName) != null;
         for (int index = 0; index < PageNames.Length; index++)
         {
             pages[index] = FindTransform(transform, PageNames[index]);
@@ -85,6 +88,16 @@ public sealed class SettingsActionListPagination : MonoBehaviour
                 ? FindButton(pages[index], FirstButtonNames[index])
                 : null;
             configured &= firstButtons[index] != null;
+
+            tabButtons[index] = FindButton(transform, TabButtonNames[index]);
+            configured &= tabButtons[index] != null;
+            tabBackgrounds[index] = tabButtons[index] != null
+                ? tabButtons[index].GetComponent<Image>()
+                : null;
+            tabLabels[index] = tabButtons[index] != null
+                ? tabButtons[index].GetComponentInChildren<TextMeshProUGUI>(true)
+                : null;
+            configured &= tabBackgrounds[index] != null && tabLabels[index] != null;
         }
 
         if (!configured)
@@ -93,10 +106,10 @@ public sealed class SettingsActionListPagination : MonoBehaviour
             return;
         }
 
-        previousButton.onClick.RemoveListener(ShowPreviousPage);
-        previousButton.onClick.AddListener(ShowPreviousPage);
-        nextButton.onClick.RemoveListener(ShowNextPage);
-        nextButton.onClick.AddListener(ShowNextPage);
+        tabButtons[0].onClick.RemoveListener(ShowWorldPage);
+        tabButtons[0].onClick.AddListener(ShowWorldPage);
+        tabButtons[1].onClick.RemoveListener(ShowSessionPage);
+        tabButtons[1].onClick.AddListener(ShowSessionPage);
         ShowPage(0, false);
     }
 
@@ -104,14 +117,14 @@ public sealed class SettingsActionListPagination : MonoBehaviour
 
     #region 分页切换
 
-    private void ShowPreviousPage()
+    private void ShowWorldPage()
     {
-        ShowPage(currentPage - 1, true);
+        ShowPage(0, true);
     }
 
-    private void ShowNextPage()
+    private void ShowSessionPage()
     {
-        ShowPage(currentPage + 1, true);
+        ShowPage(1, true);
     }
 
     private void ShowPage(int pageIndex, bool focusFirstButton)
@@ -121,11 +134,12 @@ public sealed class SettingsActionListPagination : MonoBehaviour
 
         currentPage = Mathf.Clamp(pageIndex, 0, pages.Length - 1);
         for (int index = 0; index < pages.Length; index++)
+        {
+            bool active = index == currentPage;
             pages[index].gameObject.SetActive(index == currentPage);
-
-        previousButton.interactable = currentPage > 0;
-        nextButton.interactable = currentPage < pages.Length - 1;
-        pageText.SetText("PAGE  {0} / {1}", currentPage + 1, pages.Length);
+            tabBackgrounds[index].color = active ? ActiveTabColor : InactiveTabColor;
+            tabLabels[index].color = active ? ActiveLabelColor : InactiveLabelColor;
+        }
 
         if (contentRect != null)
             LayoutRebuilder.MarkLayoutForRebuild(contentRect);
@@ -156,10 +170,10 @@ public sealed class SettingsActionListPagination : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (previousButton != null)
-            previousButton.onClick.RemoveListener(ShowPreviousPage);
-        if (nextButton != null)
-            nextButton.onClick.RemoveListener(ShowNextPage);
+        if (tabButtons[0] != null)
+            tabButtons[0].onClick.RemoveListener(ShowWorldPage);
+        if (tabButtons[1] != null)
+            tabButtons[1].onClick.RemoveListener(ShowSessionPage);
     }
 
     private static Transform FindTransform(Transform root, string objectName)
@@ -184,18 +198,6 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         {
             if (buttons[index] != null && buttons[index].name == buttonName)
                 return buttons[index];
-        }
-
-        return null;
-    }
-
-    private static TextMeshProUGUI FindText(Transform root, string textName)
-    {
-        TextMeshProUGUI[] texts = root.GetComponentsInChildren<TextMeshProUGUI>(true);
-        for (int index = 0; index < texts.Length; index++)
-        {
-            if (texts[index] != null && texts[index].name == textName)
-                return texts[index];
         }
 
         return null;

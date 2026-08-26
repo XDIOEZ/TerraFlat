@@ -2057,6 +2057,14 @@ MonoBehaviour:
     m_Localized: 'Touch Zones: Left {0} | Center {1} | Right {2}'
     m_Metadata:
       m_Items: []
+  - m_Id: 6496292877283328
+    m_Localized: Interface
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6496292927614976
+    m_Localized: Save & Exit
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

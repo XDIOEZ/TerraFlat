@@ -1995,6 +1995,14 @@ MonoBehaviour:
     m_Key: ui.text.F6DCB7E7
     m_Metadata:
       m_Items: []
+  - m_Id: 6496292877283328
+    m_Key: ui.text.0196846B
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6496292927614976
+    m_Key: ui.text.7BE58B7C
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

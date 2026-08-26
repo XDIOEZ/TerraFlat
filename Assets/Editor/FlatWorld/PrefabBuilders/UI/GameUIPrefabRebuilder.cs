@@ -816,12 +816,19 @@ public static class GameUIPrefabRebuilder
 
     private static void BuildActionList(GameObject root)
     {
-        RectTransform frame = PrepareWindow(root, 580f, 720f, "功能列表", "ACTIONS / QUICK ENTRY", "选择一项操作继续");
-        AddSection(frame, "AVAILABLE", "可用操作", 24f, 104f, 532f, 522f);
+        RectTransform frame = PrepareWindow(
+            root,
+            1440f,
+            810f,
+            "功能列表",
+            "ACTIONS / QUICK ENTRY",
+            "选择一项操作继续");
+        ConfigureResponsiveActionListFrame(root, frame);
+
         RectTransform scroll = FindRect(root.transform, "Scroll View");
         if (scroll != null)
         {
-            SetTopLeft(scroll, 54f, 156f, 472f, 390f);
+            SetStretchWithMargins(scroll, 54f, 84f, 54f, 174f);
 
             RectTransform content = FindRect(scroll, "Content");
             if (content != null)
@@ -853,6 +860,57 @@ public static class GameUIPrefabRebuilder
         RectTransform oldInfo = FindDirectRect(root.transform, "信息");
         if (oldInfo != null)
             oldInfo.gameObject.SetActive(false);
+    }
+
+    /// <summary>让设置主面板占满父安全区的九成，并使框架装饰跟随面板伸缩。</summary>
+    private static void ConfigureResponsiveActionListFrame(GameObject root, RectTransform frame)
+    {
+        RectTransform rootRect = root.GetComponent<RectTransform>();
+        rootRect.anchorMin = new Vector2(0.05f, 0.05f);
+        rootRect.anchorMax = new Vector2(0.95f, 0.95f);
+        rootRect.pivot = new Vector2(0.5f, 0.5f);
+        rootRect.anchoredPosition = Vector2.zero;
+        rootRect.sizeDelta = Vector2.zero;
+
+        RectTransform inner = FindRect(frame, "FWUI_InnerField");
+        if (inner != null)
+            SetStretchWithMargins(inner, 14f, 66f, 14f, 92f);
+
+        RectTransform header = FindRect(frame, "FWUI_Header");
+        if (header != null)
+            SetTopStretch(header, 0f, 0f, 0f, 78f);
+
+        RectTransform eyebrow = FindRect(frame, "FWUI_眉题");
+        if (eyebrow != null)
+            SetTopStretch(eyebrow, 24f, 120f, 13f, 22f);
+
+        RectTransform title = FindRect(frame, "FWUI_标题");
+        if (title != null)
+            SetTopStretch(title, 24f, 130f, 33f, 38f);
+
+        RectTransform headerRule = FindRect(frame, "FWUI_HeaderRule");
+        if (headerRule != null)
+            SetTopStretch(headerRule, 0f, 0f, 77f, 1f);
+
+        RectTransform footerHint = FindRect(frame, "FWUI_FooterHint");
+        if (footerHint != null)
+        {
+            footerHint.anchorMin = Vector2.zero;
+            footerHint.anchorMax = new Vector2(1f, 0f);
+            footerHint.pivot = Vector2.zero;
+            footerHint.offsetMin = new Vector2(24f, 16f);
+            footerHint.offsetMax = new Vector2(-286f, 40f);
+        }
+
+        RectTransform topTick = FindRect(frame, "FWUI_TickTop");
+        if (topTick != null)
+        {
+            topTick.anchorMin = Vector2.one;
+            topTick.anchorMax = Vector2.one;
+            topTick.pivot = Vector2.one;
+            topTick.anchoredPosition = new Vector2(-24f, 0f);
+            topTick.sizeDelta = new Vector2(68f, 2f);
+        }
     }
 
     private static void BuildSaveContextMenu(GameObject root)
@@ -1736,6 +1794,36 @@ public static class GameUIPrefabRebuilder
         rect.pivot = new Vector2(0f, 1f);
         rect.anchoredPosition = new Vector2(x, -y);
         rect.sizeDelta = new Vector2(width, height);
+    }
+
+    /// <summary>使用四侧安全边距让矩形随父级完整伸缩。</summary>
+    private static void SetStretchWithMargins(
+        RectTransform rect,
+        float left,
+        float bottom,
+        float right,
+        float top)
+    {
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.offsetMin = new Vector2(left, bottom);
+        rect.offsetMax = new Vector2(-right, -top);
+    }
+
+    /// <summary>固定高度并横向拉伸，供标题栏等屏幕相对区域使用。</summary>
+    private static void SetTopStretch(
+        RectTransform rect,
+        float left,
+        float right,
+        float top,
+        float height)
+    {
+        rect.anchorMin = new Vector2(0f, 1f);
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0.5f, 1f);
+        rect.offsetMin = new Vector2(left, -top - height);
+        rect.offsetMax = new Vector2(-right, -top);
     }
 
     /// <summary>将 HUD 子面板固定到 Canvas 左下角，并保留安全边距。</summary>

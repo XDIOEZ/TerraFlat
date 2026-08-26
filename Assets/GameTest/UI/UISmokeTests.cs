@@ -918,7 +918,7 @@ namespace FlatWorld.GameTest.UI
         [Test]
         [Category("UI.Smoke")]
         [Category("Smoke")]
-        public void CoordinateDisplaySettingsAndActionListPagerFollowContract()
+        public void CoordinateDisplaySettingsAndPromotedActionListTabsFollowContract()
         {
             const string displaySettingsPath =
                 "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_CoordinateDisplaySettings.prefab";
@@ -933,13 +933,16 @@ namespace FlatWorld.GameTest.UI
                 "完成按钮");
             AssertPrefabContains(
                 actionListPath,
-                SettingsActionListPagination.InterfacePageName,
                 SettingsActionListPagination.WorldPageName,
                 SettingsActionListPagination.SessionPageName,
-                SettingsActionListPagination.PreviousButtonName,
-                SettingsActionListPagination.NextButtonName,
-                SettingsActionListPagination.PageTextName,
-                "显示设置");
+                SettingsActionListPagination.TabBarName,
+                SettingsActionListPagination.WorldTabButtonName,
+                SettingsActionListPagination.SessionTabButtonName,
+                "音量调节",
+                "UI设置",
+                "显示设置",
+                "按键绑定",
+                "镜头控制");
 
             GameObject displaySettings = AssetDatabase.LoadAssetAtPath<GameObject>(displaySettingsPath)
                 ?? throw new AssertionException($"缺少显示设置 Prefab：{displaySettingsPath}");
@@ -950,9 +953,25 @@ namespace FlatWorld.GameTest.UI
 
             GameObject actionList = AssetDatabase.LoadAssetAtPath<GameObject>(actionListPath)
                 ?? throw new AssertionException($"缺少设置入口 Prefab：{actionListPath}");
+            RectTransform actionListRoot = actionList.GetComponent<RectTransform>()
+                ?? throw new AssertionException("设置入口根节点缺少 RectTransform。");
+            Assert.That(actionListRoot.anchorMin, Is.EqualTo(new Vector2(0.05f, 0.05f)));
+            Assert.That(actionListRoot.anchorMax, Is.EqualTo(new Vector2(0.95f, 0.95f)));
+            Assert.That(actionListRoot.sizeDelta, Is.EqualTo(Vector2.zero));
+
             ScrollRect scroll = actionList.GetComponentsInChildren<ScrollRect>(true)
                 .Single(item => item.name == "Scroll View");
             Assert.That(scroll.vertical, Is.False, "分页列表不能继续依赖纵向滚动。");
+            Assert.That(
+                actionList.GetComponentsInChildren<Button>(true)
+                    .Any(item => item.name == "设置上一页按钮" || item.name == "设置下一页按钮"),
+                Is.False,
+                "顶部页签模式不应继续保留左右翻页按钮。");
+            Assert.That(
+                actionList.GetComponentsInChildren<RectTransform>(true)
+                    .Any(item => item.name == "设置分页_界面" || item.name == "设置页签_界面"),
+                Is.False,
+                "五个专项设置入口提升为页签后不应继续保留界面总页。");
 
             RectTransform content = actionList.GetComponentsInChildren<RectTransform>(true)
                 .Single(item => item.name == "Content");
@@ -961,7 +980,6 @@ namespace FlatWorld.GameTest.UI
 
             string[] pageNames =
             {
-                SettingsActionListPagination.InterfacePageName,
                 SettingsActionListPagination.WorldPageName,
                 SettingsActionListPagination.SessionPageName
             };
@@ -974,11 +992,23 @@ namespace FlatWorld.GameTest.UI
                 Assert.That(page.GetComponent<VerticalLayoutGroup>(), Is.Not.Null, pageNames[index]);
             }
 
-            Button displayEntry = actionList.GetComponentsInChildren<Button>(true)
-                .Single(item => item.name == "显示设置");
-            Assert.That(
-                displayEntry.transform.parent.name,
-                Is.EqualTo(SettingsActionListPagination.InterfacePageName));
+            string[] promotedEntryNames =
+            {
+                "音量调节",
+                "UI设置",
+                "显示设置",
+                "按键绑定",
+                "镜头控制"
+            };
+            foreach (string entryName in promotedEntryNames)
+            {
+                Button entry = actionList.GetComponentsInChildren<Button>(true)
+                    .Single(item => item.name == entryName);
+                Assert.That(
+                    entry.transform.parent.name,
+                    Is.EqualTo(SettingsActionListPagination.TabBarName),
+                    entryName);
+            }
         }
 
 

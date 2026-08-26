@@ -71,6 +71,26 @@ public static class RuntimeUIPrefabBuilder
 
     #region 重建入口
 
+    /// <summary>只重建设置主面板与顶部页签，避免覆盖任何设置子页面。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Settings Action List UI")]
+    public static void RebuildSettingsActionListUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        GameUIPrefabRebuilder.RebuildActionListUI();
+        UpdateExistingPrefab(
+            MainMenuCoreRoot + "UI_ActionList.prefab",
+            ConfigureSettingsActionListPages);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化九成屏幕设置主面板与顶部页签。");
+    }
+
     /// <summary>只重建设置入口和全部设置子分页，避免改动无关运行时 UI。</summary>
     [MenuItem("FlatWorld/UI/Rebuild All Settings Pages UI")]
     public static void RebuildAllSettingsPagesUI()
@@ -2095,8 +2115,8 @@ public static class RuntimeUIPrefabBuilder
     #region 现有 Prefab 固化
 
     /// <summary>
-    /// 将原本堆在同一 ScrollRect 中的设置入口拆成三页。
-    /// 每页最多五项，分页控制固定在滚动区域下方，避免入口继续向下溢出。
+    /// 将五个专项设置入口提升为顶部页签，内容区只保留世界与保存退出两页。
+    /// 顶部按钮继续保留原节点名，由既有 Launcher 直接打开对应正式设置页。
     /// </summary>
     private static void ConfigureSettingsActionListPages(GameObject root)
     {
@@ -2105,24 +2125,15 @@ public static class RuntimeUIPrefabBuilder
         if (content == null || scrollRect == null)
             throw new MissingReferenceException("UI_ActionList.prefab 缺少 Content 或 Scroll View。");
 
-        SetTopLeft(scrollRect, 54f, 156f, 472f, 390f);
+        SetStretchWithMargins(scrollRect, 54f, 84f, 54f, 174f);
         ConfigureActionListScroll(scrollRect, content);
 
-        Transform interfacePage = EnsureActionListPage(
-            content,
-            SettingsActionListPagination.InterfacePageName);
         Transform worldPage = EnsureActionListPage(
             content,
             SettingsActionListPagination.WorldPageName);
         Transform sessionPage = EnsureActionListPage(
             content,
             SettingsActionListPagination.SessionPageName);
-
-        MoveEntryToPage(root.transform, interfacePage, "音量调节");
-        MoveEntryToPage(root.transform, interfacePage, "UI设置");
-        MoveEntryToPage(root.transform, interfacePage, "镜头控制");
-        MoveEntryToPage(root.transform, interfacePage, "显示设置");
-        MoveEntryToPage(root.transform, interfacePage, "按键绑定");
 
         MoveEntryToPage(root.transform, worldPage, "自动保存");
         MoveEntryToPage(root.transform, worldPage, "流送性能");
@@ -2133,13 +2144,12 @@ public static class RuntimeUIPrefabBuilder
         MoveEntryToPage(root.transform, sessionPage, "保存并退出游戏按钮");
         MoveEntryToPage(root.transform, sessionPage, "恢复所有设置");
 
-        interfacePage.SetSiblingIndex(0);
-        worldPage.SetSiblingIndex(1);
-        sessionPage.SetSiblingIndex(2);
-        interfacePage.gameObject.SetActive(true);
-        worldPage.gameObject.SetActive(false);
+        worldPage.SetSiblingIndex(0);
+        sessionPage.SetSiblingIndex(1);
+        worldPage.gameObject.SetActive(true);
         sessionPage.gameObject.SetActive(false);
-        EnsureActionListPagerControls(root.transform);
+        EnsureActionListTabBar(root.transform);
+        RemoveObsoleteActionListPagerControls(root.transform);
     }
 
     /// <summary>设置分页列表的视口与 Content，彻底移除旧的纵向滚动布局所有权。</summary>
@@ -2197,9 +2207,9 @@ public static class RuntimeUIPrefabBuilder
         layout.padding = new RectOffset(0, 0, 0, 0);
         layout.spacing = 16f;
         layout.childAlignment = TextAnchor.UpperCenter;
-        layout.childControlWidth = false;
+        layout.childControlWidth = true;
         layout.childControlHeight = true;
-        layout.childForceExpandWidth = false;
+        layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
         return page;
     }
@@ -2218,62 +2228,121 @@ public static class RuntimeUIPrefabBuilder
 
         LayoutElement element = button.GetComponent<LayoutElement>() ??
                                 button.gameObject.AddComponent<LayoutElement>();
-        element.preferredWidth = 360f;
+        element.preferredWidth = -1f;
         element.preferredHeight = 64f;
-        button.GetComponent<RectTransform>().sizeDelta = new Vector2(360f, 64f);
+        element.flexibleWidth = 1f;
+        button.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 64f);
         ConfigureButtonVisual(button, false, entryName);
         SetButtonLabelSize(button, 18f);
     }
 
-    /// <summary>创建固定在列表底部的翻页按钮与页码文本。</summary>
-    private static void EnsureActionListPagerControls(Transform root)
+    /// <summary>创建类似浏览器页签的顶部横向分页栏。</summary>
+    private static void EnsureActionListTabBar(Transform root)
     {
-        Button previous = EnsureActionListPagerButton(
-            root,
-            SettingsActionListPagination.PreviousButtonName,
-            "上一页");
-        SetTopLeft(previous.GetComponent<RectTransform>(), 54f, 566f, 136f, 44f);
-
-        TextMeshProUGUI pageText = FindTransform(
-            root,
-            SettingsActionListPagination.PageTextName)?.GetComponent<TextMeshProUGUI>();
-        if (pageText == null)
-        {
-            pageText = CreateText(
-                SettingsActionListPagination.PageTextName,
+        Transform tabBar = FindTransform(root, SettingsActionListPagination.TabBarName);
+        if (tabBar == null)
+            tabBar = CreateUIObject(
+                SettingsActionListPagination.TabBarName,
                 root,
-                "PAGE  1 / 3",
-                15f,
-                Muted);
+                typeof(Image)).transform;
+
+        RectTransform tabBarRect = tabBar as RectTransform;
+        SetTopStretch(tabBarRect, 54f, 54f, 90f, 68f);
+
+        Image background = tabBar.GetComponent<Image>() ?? tabBar.gameObject.AddComponent<Image>();
+        background.color = Surface;
+        background.raycastTarget = false;
+        AddOutline(background, Border);
+
+        HorizontalLayoutGroup layout = tabBar.GetComponent<HorizontalLayoutGroup>() ??
+                                       tabBar.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.padding = new RectOffset(4, 4, 4, 4);
+        layout.spacing = 8f;
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = true;
+
+        Button audioTab = EnsureActionListTabButton(root, tabBar, "音量调节", "音量调节");
+        Button uiTab = EnsureActionListTabButton(root, tabBar, "UI设置", "UI设置");
+        Button displayTab = EnsureActionListTabButton(root, tabBar, "显示设置", "显示设置");
+        Button bindingTab = EnsureActionListTabButton(root, tabBar, "按键绑定", "按键绑定");
+        Button cameraTab = EnsureActionListTabButton(root, tabBar, "镜头控制", "镜头控制");
+        Button worldTab = EnsureActionListTabButton(
+            root,
+            tabBar,
+            SettingsActionListPagination.WorldTabButtonName,
+            "世界");
+        Button sessionTab = EnsureActionListTabButton(
+            root,
+            tabBar,
+            SettingsActionListPagination.SessionTabButtonName,
+            "保存与退出");
+
+        Button[] orderedTabs =
+        {
+            audioTab,
+            uiTab,
+            displayTab,
+            bindingTab,
+            cameraTab,
+            worldTab,
+            sessionTab
+        };
+        for (int index = 0; index < orderedTabs.Length; index++)
+        {
+            orderedTabs[index].transform.SetSiblingIndex(index);
+            orderedTabs[index].GetComponent<Image>().color = SurfaceRaised;
         }
 
-        pageText.fontStyle = FontStyles.Bold;
-        pageText.alignment = TextAlignmentOptions.Center;
-        pageText.raycastTarget = false;
-        SetTopLeft(pageText.rectTransform, 210f, 566f, 160f, 44f);
-
-        Button next = EnsureActionListPagerButton(
-            root,
-            SettingsActionListPagination.NextButtonName,
-            "下一页");
-        SetTopLeft(next.GetComponent<RectTransform>(), 390f, 566f, 136f, 44f);
-        SetButtonLabelSize(previous, 16f);
-        SetButtonLabelSize(next, 16f);
+        worldTab.GetComponent<Image>().color = new Color(0.16f, 0.40f, 0.42f, 1f);
+        sessionTab.GetComponent<Image>().color = SurfaceRaised;
+        tabBar.SetAsLastSibling();
     }
 
-    private static Button EnsureActionListPagerButton(
+    /// <summary>复用或创建单个分页页签，并交给横向布局分配宽度。</summary>
+    private static Button EnsureActionListTabButton(
         Transform root,
+        Transform tabBar,
         string buttonName,
         string caption)
     {
         Button button = FindTransform(root, buttonName)?.GetComponent<Button>();
         if (button == null)
-            button = CreateButton(buttonName, root, caption, 112f, 38f, false);
+            button = CreateButton(buttonName, tabBar, caption, 120f, 60f, false);
 
         button.gameObject.name = buttonName;
         button.gameObject.SetActive(true);
+        button.transform.SetParent(tabBar, false);
         ConfigureButtonVisual(button, false, caption);
+        LayoutElement element = button.GetComponent<LayoutElement>() ??
+                                button.gameObject.AddComponent<LayoutElement>();
+        element.preferredWidth = 120f;
+        element.preferredHeight = 60f;
+        element.flexibleWidth = 1f;
+        SetButtonLabelSize(button, 16f);
         return button;
+    }
+
+    /// <summary>移除旧界面总页及左右翻页节点，确保 Prefab 只保留新的页签导航。</summary>
+    private static void RemoveObsoleteActionListPagerControls(Transform root)
+    {
+        string[] obsoleteNames =
+        {
+            "设置上一页按钮",
+            "设置页码文本",
+            "设置下一页按钮",
+            "设置页签_界面",
+            "设置分页_界面"
+        };
+
+        for (int index = 0; index < obsoleteNames.Length; index++)
+        {
+            Transform obsolete = FindTransform(root, obsoleteNames[index]);
+            if (obsolete != null)
+                Object.DestroyImmediate(obsolete.gameObject);
+        }
     }
 
     private static void AddInventorySortButton(GameObject root)
@@ -3413,6 +3482,36 @@ public static class RuntimeUIPrefabBuilder
         rect.pivot = new Vector2(0f, 1f);
         rect.anchoredPosition = new Vector2(left, -top);
         rect.sizeDelta = new Vector2(width, height);
+    }
+
+    /// <summary>使用四侧边距让矩形随父级完整伸缩。</summary>
+    private static void SetStretchWithMargins(
+        RectTransform rect,
+        float left,
+        float bottom,
+        float right,
+        float top)
+    {
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.offsetMin = new Vector2(left, bottom);
+        rect.offsetMax = new Vector2(-right, -top);
+    }
+
+    /// <summary>固定高度并横向拉伸，供顶部页签栏使用。</summary>
+    private static void SetTopStretch(
+        RectTransform rect,
+        float left,
+        float right,
+        float top,
+        float height)
+    {
+        rect.anchorMin = new Vector2(0f, 1f);
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0.5f, 1f);
+        rect.offsetMin = new Vector2(left, -top - height);
+        rect.offsetMax = new Vector2(-right, -top);
     }
 
     private static void SetTopRight(RectTransform rect, float right, float top, float width, float height)

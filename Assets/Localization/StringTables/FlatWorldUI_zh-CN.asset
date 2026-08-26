@@ -2028,6 +2028,14 @@ MonoBehaviour:
       {1}\uFF5C\u53F3 {2}"
     m_Metadata:
       m_Items: []
+  - m_Id: 6496292877283328
+    m_Localized: "\u754C\u9762"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6496292927614976
+    m_Localized: "\u4FDD\u5B58\u4E0E\u9000\u51FA"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
