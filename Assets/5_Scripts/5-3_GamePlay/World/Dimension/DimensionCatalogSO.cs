@@ -33,27 +33,6 @@ public sealed class DimensionLoadingTheme
 }
 
 [Serializable]
-public sealed class DimensionResourceRule
-{
-    public string ItemId;
-    [Range(0f, 1f)] public float VeinThreshold;
-    [Min(0.0001f)] public float VeinScale = 0.04f;
-    public int NoiseOffset;
-
-    public DimensionResourceRule()
-    {
-    }
-
-    public DimensionResourceRule(string itemId, float veinThreshold, float veinScale, int noiseOffset)
-    {
-        ItemId = itemId;
-        VeinThreshold = veinThreshold;
-        VeinScale = veinScale;
-        NoiseOffset = noiseOffset;
-    }
-}
-
-[Serializable]
 public sealed class DimensionDefinition
 {
     public string DimensionId = WorldAddress.SurfaceDimensionId;
@@ -81,16 +60,6 @@ public sealed class DimensionDefinition
 
     [Header("加载页主题")]
     public DimensionLoadingTheme LoadingTheme = new();
-
-    [Header("矿洞生成")]
-    [Range(0f, 1f)] public float CaveEntranceChunkChance = 0.04f;
-    [Min(1f)] public float CaveEntranceSafeRadius = 3f;
-    public string CaveFloorTileId = "TileBase_Stone";
-    public string CaveWallTileId = "TileBase_StoneWall";
-    [Range(0f, 0.5f)] public float CaveResourceDensity = 0.042f;
-    [Range(0f, 0.1f)] public float CaveLooseOreDensity = 0.0012f;
-    [Min(0f)] public float CaveSafeRadius = 4f;
-    public List<DimensionResourceRule> CaveResources = new();
 
     public static DimensionDefinition CreateSurface()
     {
@@ -134,23 +103,6 @@ public sealed class DimensionDefinition
             {
                 BackgroundColor = new Color(0.055f, 0.055f, 0.065f, 1f),
                 AccentColor = new Color(0.95f, 0.62f, 0.22f, 1f)
-            },
-            CaveEntranceChunkChance = 0.04f,
-            CaveEntranceSafeRadius = 3f,
-            CaveFloorTileId = "TileBase_Stone",
-            CaveWallTileId = "TileBase_StoneWall",
-            CaveResourceDensity = 0.042f,
-            CaveLooseOreDensity = 0.0012f,
-            CaveSafeRadius = 4f,
-            CaveResources = new List<DimensionResourceRule>
-            {
-                // SelectResource evaluates top-to-bottom and uses the final rule as fallback.
-                // Keep rare ores first and stone last to guarantee descending abundance.
-                new DimensionResourceRule("Mine_Tin", 0.82f, 0.032f, 2207),
-                new DimensionResourceRule("Mine_Iron", 0.77f, 0.036f, 1103),
-                new DimensionResourceRule("Mine_Copper", 0.70f, 0.044f, 3301),
-                new DimensionResourceRule("Mine_Coal", 0.61f, 0.052f, 4409),
-                new DimensionResourceRule("Mine_Stone", 0f, 0.06f, 5501)
             }
         };
     }

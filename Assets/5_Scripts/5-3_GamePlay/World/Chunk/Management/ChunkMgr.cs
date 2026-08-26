@@ -1242,7 +1242,6 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             return false;
         }
 
-        DimensionManager.Instance.ConfigureMap(map);
         WorldGenerationRuntimeHooks.ApplyBeforeMapGeneration(map);
 
         // 配置地图属性

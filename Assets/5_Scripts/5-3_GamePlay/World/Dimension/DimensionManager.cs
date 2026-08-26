@@ -13,11 +13,6 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
     [SerializeField] private DimensionCatalogSO catalog;
 
-    // Retained for backward compatibility with worlds created by the temporary
-    // runtime-portal implementation. Formal mine entrances no longer bind this path.
-    private readonly Dictionary<Vector2Int, GameObject> runtimePortals = new();
-    private readonly List<Vector2Int> stalePortalCells = new();
-    private ChunkMgr boundChunkManager;
     private bool isTransitioning;
 
     public WorldAddress ActiveAddress { get; private set; }
@@ -127,20 +122,6 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             hash = (hash ^ (uint)(definition?.SeedSalt ?? 0)) * 16777619u;
             int result = (int)hash;
             return result == 0 ? 1 : result;
-        }
-    }
-
-    public void ConfigureMap(Map map)
-    {
-        if (map == null || ActiveDefinition == null)
-            return;
-
-        if (ActiveDefinition.GenerationMode == DimensionGenerationMode.Cave)
-        {
-            map.mapGenerators = new List<ChunkGeneratorBase>
-            {
-                new ChunkGenerator_Cave()
-            };
         }
     }
 
@@ -593,212 +574,6 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         ActivateWorldFromScene(SceneManager.GetActiveScene().name);
     }
 
-    private IEnumerator RefreshPortalsNextFrame(Player player)
-    {
-        yield return null;
-        if (player == null ||
-            ActiveDefinition == null ||
-            string.IsNullOrWhiteSpace(ActiveDefinition.PortalTargetDimensionId))
-        {
-            yield break;
-        }
-
-        ClearRuntimePortals();
-        BindChunkManager();
-        if (boundChunkManager == null)
-            yield break;
-
-        List<Chunk> loadedChunks = new(boundChunkManager.Chunk_Dic_Active_ByPos.Values);
-        for (int i = 0; i < loadedChunks.Count; i++)
-            TrySpawnPortalsForChunk(loadedChunks[i]);
-    }
-
-    private void BindChunkManager()
-    {
-        ChunkMgr current = ChunkMgr.Instance;
-        if (boundChunkManager == current)
-            return;
-
-        UnbindChunkManager();
-        boundChunkManager = current;
-        if (boundChunkManager != null)
-            boundChunkManager.OnChunkLoadFinish.DynamicCalls += TrySpawnPortalsForChunk;
-    }
-
-    private void UnbindChunkManager()
-    {
-        if (boundChunkManager != null)
-            boundChunkManager.OnChunkLoadFinish.DynamicCalls -= TrySpawnPortalsForChunk;
-        boundChunkManager = null;
-    }
-
-    private void TrySpawnPortalsForChunk(Chunk chunk)
-    {
-        PruneStaleRuntimePortals();
-        if (chunk == null ||
-            !chunk.IsReady ||
-            chunk.Map == null ||
-            ActiveDefinition == null ||
-            string.IsNullOrWhiteSpace(ActiveDefinition.PortalTargetDimensionId))
-        {
-            return;
-        }
-
-        if (ActiveAddress.IsSurface)
-            TrySpawnSurfaceEntrance(chunk);
-        else if (ActiveDefinition.GenerationMode == DimensionGenerationMode.Cave)
-            SpawnKnownCaveEntrances(chunk);
-    }
-
-    private void TrySpawnSurfaceEntrance(Chunk chunk)
-    {
-        LoadCatalog();
-        DimensionDefinition caveDefinition = catalog.Find(ActiveDefinition.PortalTargetDimensionId);
-        if (caveDefinition == null || caveDefinition.GenerationMode != DimensionGenerationMode.Cave)
-            return;
-
-        Vector2 rawChunkSize = ChunkMgr.GetChunkSize();
-        Vector2Int chunkSize = new Vector2Int(
-            Mathf.Max(1, Mathf.RoundToInt(rawChunkSize.x)),
-            Mathf.Max(1, Mathf.RoundToInt(rawChunkSize.y)));
-        Vector2Int chunkOrigin = chunk.MapSave?.MapPosition
-            ?? Chunk.GetChunkPosition(chunk.transform.position, chunkSize);
-        int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
-        int caveSeed = GetGenerationSeed(
-            baseSeed,
-            ActiveAddress.WithDimension(caveDefinition.DimensionId),
-            caveDefinition);
-        if (!DimensionPortalLayout.ShouldGenerateEntrance(
-                chunkOrigin,
-                caveSeed,
-                caveDefinition.CaveEntranceChunkChance))
-        {
-            return;
-        }
-
-        for (int candidateIndex = 0;
-             candidateIndex < DimensionPortalLayout.CandidateCount;
-             candidateIndex++)
-        {
-            Vector2Int cell = DimensionPortalLayout.GetCandidateCell(
-                chunkOrigin,
-                chunkSize,
-                caveSeed,
-                candidateIndex);
-            TileData topTile = chunk.Map.GetTopTile(cell);
-            if (topTile == null || topTile is TileData_Water || !topTile.IsWalkable)
-                continue;
-
-            Vector3 portalPosition = new Vector3(cell.x + 0.5f, cell.y + 0.5f, 0f);
-            if (chunk.TryGetItemsByPosition(portalPosition, out List<Item> items) &&
-                items.Exists(existingItem => existingItem != null && existingItem != chunk.Map))
-            {
-                continue;
-            }
-
-            SpawnRuntimePortal(chunk, portalPosition, caveDefinition.DimensionId);
-            DimensionTravelProgressStore.AddPortalAnchor(
-                ItemMgr.Instance?.User_Player?.Data,
-                ActiveAddress.PlanetId,
-                portalPosition);
-            return;
-        }
-    }
-
-    private void SpawnKnownCaveEntrances(Chunk chunk)
-    {
-        Data_Player playerData = ItemMgr.Instance?.User_Player?.Data;
-        List<Vector3> anchors = DimensionTravelProgressStore.GetPortalAnchors(
-            playerData,
-            ActiveAddress.PlanetId);
-        if (anchors.Count == 0)
-            return;
-
-        Vector2 rawChunkSize = ChunkMgr.GetChunkSize();
-        Vector2Int chunkSize = new Vector2Int(
-            Mathf.Max(1, Mathf.RoundToInt(rawChunkSize.x)),
-            Mathf.Max(1, Mathf.RoundToInt(rawChunkSize.y)));
-        Vector2Int chunkOrigin = chunk.MapSave?.MapPosition
-            ?? Chunk.GetChunkPosition(chunk.transform.position, chunkSize);
-        for (int i = 0; i < anchors.Count; i++)
-        {
-            if (Chunk.GetChunkPosition(anchors[i], chunkSize) == chunkOrigin)
-            {
-                SpawnRuntimePortal(
-                    chunk,
-                    anchors[i],
-                    ActiveDefinition.PortalTargetDimensionId);
-            }
-        }
-    }
-
-    private void SpawnRuntimePortal(Chunk ownerChunk, Vector3 position, string targetDimensionId)
-    {
-        Vector2Int portalCell = new Vector2Int(
-            Mathf.FloorToInt(position.x),
-            Mathf.FloorToInt(position.y));
-        if (runtimePortals.TryGetValue(portalCell, out GameObject existingPortal))
-        {
-            if (existingPortal != null)
-                return;
-            runtimePortals.Remove(portalCell);
-        }
-
-        GameObject portalObject = new GameObject(
-            $"DimensionPortal_{targetDimensionId}_{portalCell.x}_{portalCell.y}");
-        Scene ownerScene = ownerChunk.gameObject.scene;
-        if (ownerScene.IsValid())
-            SceneManager.MoveGameObjectToScene(portalObject, ownerScene);
-        portalObject.transform.SetParent(ownerChunk.transform, true);
-        portalObject.transform.position = position;
-
-        SpriteRenderer renderer = portalObject.AddComponent<SpriteRenderer>();
-        GameObject stonePrefab = GameRes.Instance?.GetPrefab("Mine_Stone", false);
-        renderer.sprite = stonePrefab != null
-            ? stonePrefab.GetComponentInChildren<SpriteRenderer>(true)?.sprite
-            : null;
-        renderer.color = ActiveDefinition.GenerationMode == DimensionGenerationMode.Cave
-            ? new Color(0.35f, 0.85f, 1f, 1f)
-            : new Color(0.72f, 0.35f, 1f, 1f);
-        renderer.sortingOrder = 50;
-        portalObject.transform.localScale = new Vector3(1.35f, 1.35f, 1f);
-
-        CircleCollider2D collider = portalObject.AddComponent<CircleCollider2D>();
-        collider.isTrigger = true;
-        collider.radius = 0.75f;
-
-        DimensionPortal portal = portalObject.AddComponent<DimensionPortal>();
-        portal.Initialize(targetDimensionId);
-        runtimePortals[portalCell] = portalObject;
-    }
-
-    private void PruneStaleRuntimePortals()
-    {
-        stalePortalCells.Clear();
-        foreach (KeyValuePair<Vector2Int, GameObject> pair in runtimePortals)
-        {
-            GameObject portal = pair.Value;
-            if (portal == null)
-            {
-                stalePortalCells.Add(pair.Key);
-                continue;
-            }
-
-            Vector2Int currentCell = new Vector2Int(
-                Mathf.FloorToInt(portal.transform.position.x),
-                Mathf.FloorToInt(portal.transform.position.y));
-            if (currentCell != pair.Key)
-            {
-                Destroy(portal);
-                stalePortalCells.Add(pair.Key);
-            }
-        }
-
-        for (int i = 0; i < stalePortalCells.Count; i++)
-            runtimePortals.Remove(stalePortalCells[i]);
-        stalePortalCells.Clear();
-    }
-
     private void OnActiveSceneChanged(Scene oldScene, Scene newScene)
     {
         if (GameManager.Instance != null && GameManager.Instance.IsInGameWorld && newScene.IsValid())
@@ -811,23 +586,6 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
     {
         return sourceAddress.IsSurface && targetAddress.DimensionId == WorldAddress.CaveDimensionId ||
                sourceAddress.DimensionId == WorldAddress.CaveDimensionId && targetAddress.IsSurface;
-    }
-
-    // Compatibility helper for saves/tests produced while portals used 1:1 world coordinates.
-    public static Vector3 GetCorrespondingPosition(Vector3 sourcePosition)
-    {
-        return sourcePosition;
-    }
-
-    private void ClearRuntimePortals()
-    {
-        foreach (GameObject portal in runtimePortals.Values)
-        {
-            if (portal != null)
-                Destroy(portal);
-        }
-        runtimePortals.Clear();
-        stalePortalCells.Clear();
     }
 
     private static PortalTransitionContext ResolvePortalTransition(

@@ -383,7 +383,6 @@ public class Chunk : MonoBehaviour
     {
         item.transform.SetPositionAndRotation(itemData.transform.position, itemData.transform.rotation);
         item.transform.localScale = itemData.transform.scale;
-        ChunkGenerator_Cave.ApplyGeneratedResourceTransform(DimensionManager.Instance?.ActiveDefinition, item);
     }
 
     #endregion

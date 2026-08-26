@@ -1,6 +1,6 @@
 ---
 name: flatworld-dimension
-description: "Use when: 定位或修改 FlatWorld 的维度、星球表面/地下矿洞切换、世界地址、动态世界 Scene、维度独立地图与种子、维度入口、维度环境覆盖或未来星球旅行。关键词：DimensionManager、WorldAddress、DimensionPortal、DimensionCatalogSO、ChunkGenerator_Cave。"
+description: "Use when: 定位或修改 FlatWorld 的维度、星球表面/地下矿洞切换、世界地址、动态世界 Scene、维度独立地图与种子、维度入口、维度环境覆盖或未来星球旅行。关键词：DimensionManager、WorldAddress、DimensionPortal、DimensionCatalogSO、CaveLayoutKernel。"
 ---
 
 # FlatWorld 维度
@@ -19,7 +19,7 @@ description: "Use when: 定位或修改 FlatWorld 的维度、星球表面/地�
 - 维度切换的 `Event_PlayerEnterWorld` 只表示玩家实例已创建，不能作为加载页完成信号；专属呈现必须等 `AreRuntimeWindowPresentationsReady`、出口/地块效果及物理同步后由 `DimensionManager` 显式完成。诊断阈值只能告警，不能放行未完成窗口。
 - 玩家位置与入口锚点保存在 `ItemSpecialData` 的 `flatworld.dimensions`，不改 MemoryPack 布局。
 - 环绕世界由额外相机绘制平移副本，但 `Light2D` 等局部空间组件不会随画面自动平移；这类表现必须为当前可见世界镜像同步轻量代理，并将纯表现代理排除出光照、AI、存档等玩法查询。
-- 正式洞穴走 WorldModel 纯生成；`ChunkGenerator_Cave` 只保留旧 Map 兼容。
+- 洞穴只走 WorldModel 的 Profile、`DeterministicChunkGenerator`、`CaveLayoutKernel` 与 `CaveGenerationFeatureGenerator`；旧 Map 不再维护独立洞穴生成器或采样器。
 - 洞穴规则需要参考地表时，只能使用 `CavePortalPairingSnapshot` 冻结的地表 Profile、派生种子与拓扑做纯采样；禁止查询已生成或已加载的地表 Chunk、Tilemap，配对指纹必须参与洞穴生成指纹。
 - 洞穴布局若要跟随地表尺度，必须从配对地表复制 `world.coordinateScale` 并统一换算距离参数；群系交界默认只复算基础气候群系，不引入依赖区域构建结果的水文覆盖。
 - 地表入口必须是已安装 MineEntrance；CaveExit 在基线完成后创建以进入差量。

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using FlatWorld.Gameplay.Progress;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -271,66 +270,6 @@ public static class DimensionTravelProgressStore
 
         position = new Vector3(x.Value, y.Value, z.Value);
         return true;
-    }
-
-    #endregion
-
-    #region 旧版坐标入口兼容
-
-    public static bool AddPortalAnchor(Data_Player playerData, string planetId, Vector3 position)
-    {
-        if (playerData == null ||
-            string.IsNullOrWhiteSpace(planetId) ||
-            !IsFinite(position.x) ||
-            !IsFinite(position.y) ||
-            !IsFinite(position.z))
-        {
-            return false;
-        }
-
-        string normalizedPlanetId = new WorldAddress(
-            planetId,
-            WorldAddress.SurfaceDimensionId).PlanetId;
-        string anchorKey = $"{Mathf.FloorToInt(position.x)}:{Mathf.FloorToInt(position.y)}";
-        JObject dimensionData = ItemSpecialDataJsonStore.ReadNamespace(playerData, NamespaceKey);
-        JObject allAnchors = dimensionData[PortalAnchorsKey] as JObject ?? new JObject();
-        JObject planetAnchors = allAnchors[normalizedPlanetId] as JObject ?? new JObject();
-        if (planetAnchors[anchorKey] != null)
-            return false;
-
-        planetAnchors[anchorKey] = SerializePosition(position);
-        allAnchors[normalizedPlanetId] = planetAnchors;
-        dimensionData[PortalAnchorsKey] = allAnchors;
-        ItemSpecialDataJsonStore.WriteNamespace(playerData, NamespaceKey, dimensionData);
-        return true;
-    }
-
-    public static List<Vector3> GetPortalAnchors(Data_Player playerData, string planetId)
-    {
-        List<Vector3> result = new();
-        if (playerData == null || string.IsNullOrWhiteSpace(planetId))
-            return result;
-
-        string normalizedPlanetId = new WorldAddress(
-            planetId,
-            WorldAddress.SurfaceDimensionId).PlanetId;
-        JObject dimensionData = ItemSpecialDataJsonStore.ReadNamespace(playerData, NamespaceKey);
-        if (dimensionData[PortalAnchorsKey] is not JObject allAnchors ||
-            allAnchors[normalizedPlanetId] is not JObject planetAnchors)
-        {
-            return result;
-        }
-
-        foreach (JProperty property in planetAnchors.Properties())
-        {
-            if (property.Value is JObject storedPosition &&
-                TryParsePosition(storedPosition, out Vector3 position))
-            {
-                result.Add(position);
-            }
-        }
-
-        return result;
     }
 
     #endregion
