@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 /// <summary>
-/// 正式手机 HUD 的多指摇杆。每个实例只认领自己的 pointerId：左摇杆写移动、右半屏浮动区写普通指向、
+/// 正式手机 HUD 的多指摇杆。每个实例只认领自己的 pointerId：左侧触控区写移动、右侧触控区写普通指向、
 /// 固定攻击摇杆以底座自身为触点坐标系，让摇杆头直接跟随手指；按下瞬间写攻击按钮并持续更新攻击方向，避免不同手指互相抢占。
 /// </summary>
 [DisallowMultipleComponent]
@@ -28,6 +28,8 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
     [SerializeField, Min(1f)] private float radius = 92f;
     [SerializeField, Range(0f, 0.95f)] private float deadZone = PlayerAimCursorSystem.DefaultDeadZone;
     [SerializeField] private bool floatingOrigin;
+    // 移动与普通指向摇杆空闲时隐藏视觉，固定攻击摇杆保持常驻。
+    [SerializeField] private bool showOnlyWhileOwned;
 
     private RectTransform interactionRect;
     private Camera eventCamera;
@@ -78,13 +80,15 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
             ResetOwnership();
     }
 
+    /// <summary>配置摇杆职责、坐标系、死区与触点持有期间的可见性。</summary>
     public void Configure(
         JoystickRole joystickRole,
         RectTransform joystickBase,
         RectTransform knob,
         float joystickRadius,
         bool useFloatingOrigin,
-        float joystickDeadZone)
+        float joystickDeadZone,
+        bool hideVisualUntilOwned)
     {
         // 切换固定/浮动模式前先按旧配置释放，避免底座位置与输入值残留。
         ResetOwnership();
@@ -94,10 +98,9 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         radius = Mathf.Max(1f, joystickRadius);
         floatingOrigin = useFloatingOrigin;
         deadZone = Mathf.Clamp(joystickDeadZone, 0f, 0.95f);
+        showOnlyWhileOwned = hideVisualUntilOwned;
         CacheReferences();
         ResetOwnership();
-        if (baseCanvasGroup != null)
-            baseCanvasGroup.alpha = floatingOrigin ? 0f : 1f;
     }
 
     private void CacheReferences()
@@ -144,13 +147,14 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
             // 浮动摇杆只移动视觉底座；输入原点仍锁定在命中区坐标系，避免移动底座后重复换算。
             originLocal = pointerLocal;
             baseRect.anchoredPosition = originLocal;
-            SetFloatingVisualVisible(true);
         }
         else
         {
             // 固定摇杆的触点直接换算到底座自身坐标，原点永远是摇杆底座中心，消除父节点锚点带来的固定偏移。
             originLocal = Vector2.zero;
         }
+
+        SetOwnershipVisualVisible(true);
 
         if (role == JoystickRole.Attack)
             MobileInputRuntime.SetButton(MobileVirtualButton.Attack, true);
@@ -327,7 +331,7 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
             knobRect.anchoredPosition = Vector2.zero;
         if (floatingOrigin && baseRect != null)
             baseRect.anchoredPosition = fixedBasePosition;
-        SetFloatingVisualVisible(false);
+        SetOwnershipVisualVisible(false);
 
         switch (role)
         {
@@ -345,13 +349,13 @@ public sealed class MobileVirtualJoystick : MonoBehaviour,
         }
     }
 
-    /// <summary>浮动指向只在当前手指持有区域时显示反馈，空闲时保持透明。</summary>
-    private void SetFloatingVisualVisible(bool visible)
+    /// <summary>按配置只在当前手指持有区域时显示摇杆反馈，攻击摇杆等常驻控件不受影响。</summary>
+    private void SetOwnershipVisualVisible(bool visible)
     {
-        if (!floatingOrigin || baseCanvasGroup == null)
+        if (baseCanvasGroup == null)
             return;
 
-        baseCanvasGroup.alpha = visible ? 1f : 0f;
+        baseCanvasGroup.alpha = !showOnlyWhileOwned || visible ? 1f : 0f;
         baseCanvasGroup.interactable = false;
         baseCanvasGroup.blocksRaycasts = false;
     }

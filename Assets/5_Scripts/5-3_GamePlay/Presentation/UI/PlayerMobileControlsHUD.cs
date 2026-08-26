@@ -452,20 +452,24 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     #region 控件绑定
 
+    /// <summary>按当前设置绑定移动、普通指向与攻击摇杆。</summary>
     private void ConfigureJoysticks()
     {
         ApplyMoveJoystickMode();
+        ApplyAimJoystickRegion();
         float deadZone = GetAimJoystickDeadZone();
         ConfigureJoystick(AimZoneName, MobileVirtualJoystick.JoystickRole.Aim, floating: true, deadZone: deadZone);
         ConfigureJoystick(AttackZoneName, MobileVirtualJoystick.JoystickRole.Attack, floating: false, deadZone: deadZone);
         joysticks = viewObject.GetComponentsInChildren<MobileVirtualJoystick>(true);
     }
 
+    /// <summary>读取玩家控制器统一配置的摇杆死区。</summary>
     private float GetAimJoystickDeadZone()
     {
         return controller != null ? controller.AimDeadZone : PlayerAimCursorSystem.DefaultDeadZone;
     }
 
+    /// <summary>按节点契约配置指定职责的手机摇杆。</summary>
     private void ConfigureJoystick(
         string nodeName,
         MobileVirtualJoystick.JoystickRole role,
@@ -481,10 +485,17 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         MobileVirtualJoystick joystick = zone.GetComponent<MobileVirtualJoystick>();
         if (joystick == null)
             joystick = zone.gameObject.AddComponent<MobileVirtualJoystick>();
-        joystick.Configure(role, baseRect, knobRect, 92f, floating, deadZone);
+        joystick.Configure(
+            role,
+            baseRect,
+            knobRect,
+            92f,
+            floating,
+            deadZone,
+            hideVisualUntilOwned: role != MobileVirtualJoystick.JoystickRole.Attack);
     }
 
-    /// <summary>按玩家偏好在左半屏浮动区与左下角固定区之间切换，复用同一摇杆实例。</summary>
+    /// <summary>按玩家偏好在左侧配置区浮动模式与左下角固定模式之间切换，复用同一摇杆实例。</summary>
     private void ApplyMoveJoystickMode()
     {
         Transform zone = FindRequired(MoveZoneName);
@@ -505,7 +516,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (floating)
         {
             zoneRect.anchorMin = Vector2.zero;
-            zoneRect.anchorMax = new Vector2(0.5f, 1f);
+            zoneRect.anchorMax = new Vector2(UIUserSettings.LeftControlZoneRatio, 1f);
             zoneRect.pivot = new Vector2(0.5f, 0.5f);
             zoneRect.offsetMin = Vector2.zero;
             zoneRect.offsetMax = Vector2.zero;
@@ -524,9 +535,25 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             knobRect,
             92f,
             floating,
-            GetAimJoystickDeadZone());
+            GetAimJoystickDeadZone(),
+            hideVisualUntilOwned: true);
     }
 
+    /// <summary>把普通指向摇杆的透明捕获层限制在右侧配置区，中间区域不接管触点。</summary>
+    private void ApplyAimJoystickRegion()
+    {
+        RectTransform zoneRect = FindRequired(AimZoneName) as RectTransform;
+        if (zoneRect == null)
+            return;
+
+        zoneRect.anchorMin = new Vector2(1f - UIUserSettings.RightControlZoneRatio, 0f);
+        zoneRect.anchorMax = Vector2.one;
+        zoneRect.pivot = new Vector2(0.5f, 0.5f);
+        zoneRect.offsetMin = Vector2.zero;
+        zoneRect.offsetMax = Vector2.zero;
+    }
+
+    /// <summary>触控偏好改变后释放旧触点，并即时重算左右捕获区。</summary>
     private void HandleMobileControlsSettingsChanged()
     {
         if (viewObject == null)
@@ -534,6 +561,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
         ResetAllTouchState();
         ApplyMoveJoystickMode();
+        ApplyAimJoystickRegion();
         joysticks = viewObject.GetComponentsInChildren<MobileVirtualJoystick>(true);
     }
 

@@ -1,4 +1,4 @@
-// AI-Context: 设置菜单的“UI设置”入口；只负责界面缩放、安全区与移动摇杆，不再承载镜头控制。
+// AI-Context: 设置菜单的“UI设置”入口；负责界面缩放、安全区、移动摇杆模式与左右触控区，不再承载镜头控制。
 
 using FlatWorld.Localization;
 using FlatWorld.Settings;
@@ -6,23 +6,30 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>连接设置主菜单与正式界面设置 Prefab，并即时持久化三项界面偏好。</summary>
+/// <summary>连接设置主菜单与正式界面设置 Prefab，并即时持久化界面及手机触控区偏好。</summary>
 [DisallowMultipleComponent]
 public sealed class UISettingsPanelLauncher : MonoBehaviour
 {
     private const string EntryButtonName = "UI设置";
     private const float PreferredWidth = 800f;
-    private const float PreferredHeight = 500f;
+    private const float PreferredHeight = 680f;
     private const float CanvasSafeMargin = 32f;
 
     private Button entryButton;
     private BasePanel settingsPanel;
     private Slider scaleSlider;
+    private Slider leftControlZoneSlider;
+    private Slider rightControlZoneSlider;
     private Toggle safeAreaToggle;
     private Toggle floatingMoveJoystickToggle;
     private TextMeshProUGUI scaleValueText;
+    private TextMeshProUGUI leftControlZoneValueText;
+    private TextMeshProUGUI rightControlZoneValueText;
+    private TextMeshProUGUI controlZoneStatusText;
     private TextMeshProUGUI statusText;
     private ISettingsSlider scaleSetting;
+    private ISettingsSlider leftControlZoneSetting;
+    private ISettingsSlider rightControlZoneSetting;
     private ISettingsToggle safeAreaSetting;
     private ISettingsToggle floatingMoveJoystickSetting;
     private bool isClamping;
@@ -91,40 +98,62 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
         SettingsSubPanelInteractionGuard.Link(transform, settingsPanel);
         ISettingsProvider uiSettingsProvider = UIUserSettings.SettingsProvider;
         scaleSetting = uiSettingsProvider.GetSlider(UIUserSettings.ScaleSettingKey);
+        leftControlZoneSetting =
+            uiSettingsProvider.GetSlider(UIUserSettings.LeftControlZoneRatioSettingKey);
+        rightControlZoneSetting =
+            uiSettingsProvider.GetSlider(UIUserSettings.RightControlZoneRatioSettingKey);
         safeAreaSetting = uiSettingsProvider.GetToggle(UIUserSettings.RespectSafeAreaSettingKey);
         floatingMoveJoystickSetting =
             uiSettingsProvider.GetToggle(UIUserSettings.FloatingMoveJoystickSettingKey);
         scaleSlider = settingsPanel.GetSlider("界面缩放");
+        leftControlZoneSlider = settingsPanel.GetSlider("左侧触控区比例");
+        rightControlZoneSlider = settingsPanel.GetSlider("右侧触控区比例");
         safeAreaToggle = settingsPanel.GetToggle("安全区域适配");
         floatingMoveJoystickToggle = settingsPanel.GetToggle("浮动移动摇杆");
         scaleValueText = settingsPanel.GetText("界面缩放数值");
+        leftControlZoneValueText = settingsPanel.GetText("左侧触控区数值");
+        rightControlZoneValueText = settingsPanel.GetText("右侧触控区数值");
+        controlZoneStatusText = settingsPanel.GetText("触控区域比例文本");
         statusText = settingsPanel.GetText("状态文本");
 
         settingsPanel.GetButton("关闭按钮")?.onClick.AddListener(Close);
         settingsPanel.GetButton("恢复默认按钮")?.onClick.AddListener(ResetToDefault);
         settingsPanel.GetButton("完成按钮")?.onClick.AddListener(Close);
         scaleSlider?.onValueChanged.AddListener(OnScaleChanged);
+        leftControlZoneSlider?.onValueChanged.AddListener(OnLeftControlZoneChanged);
+        rightControlZoneSlider?.onValueChanged.AddListener(OnRightControlZoneChanged);
         safeAreaToggle?.onValueChanged.AddListener(OnSafeAreaChanged);
         floatingMoveJoystickToggle?.onValueChanged.AddListener(OnFloatingMoveJoystickChanged);
 
-        if (scaleSlider == null || safeAreaToggle == null ||
-            floatingMoveJoystickToggle == null || scaleValueText == null || statusText == null)
+        if (scaleSlider == null || leftControlZoneSlider == null ||
+            rightControlZoneSlider == null || safeAreaToggle == null ||
+            floatingMoveJoystickToggle == null || scaleValueText == null ||
+            leftControlZoneValueText == null || rightControlZoneValueText == null ||
+            controlZoneStatusText == null || statusText == null)
         {
             Debug.LogError(
                 "[UISettingsPanelLauncher] 界面设置 Prefab 控件命名契约不完整。",
                 settingsPanel);
         }
 
-        if (scaleSlider != null)
-        {
-            scaleSlider.minValue = scaleSetting?.MinValue ?? UIUserSettings.MinimumScale;
-            scaleSlider.maxValue = scaleSetting?.MaxValue ?? UIUserSettings.MaximumScale;
-            scaleSlider.wholeNumbers = false;
-        }
+        ConfigureSlider(scaleSlider, scaleSetting);
+        ConfigureSlider(leftControlZoneSlider, leftControlZoneSetting);
+        ConfigureSlider(rightControlZoneSlider, rightControlZoneSetting);
 
         ClampWindowToCanvas();
         settingsPanel.PrepareForGamepadNavigation("界面缩放");
         settingsPanel.Close();
+    }
+
+    /// <summary>按设置契约配置滑动条范围与连续取值。</summary>
+    private static void ConfigureSlider(Slider slider, ISettingsSlider setting)
+    {
+        if (slider == null || setting == null)
+            return;
+
+        slider.minValue = setting.MinValue;
+        slider.maxValue = setting.MaxValue;
+        slider.wholeNumbers = false;
     }
 
     /// <summary>写入界面缩放并重新限制当前子页尺寸。</summary>
@@ -134,6 +163,22 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
         scaleSlider?.SetValueWithoutNotify(scaleSetting?.Value ?? value);
         RefreshStatus();
         ClampWindowToCanvas();
+    }
+
+    /// <summary>写入左侧移动摇杆触控区比例并刷新三段占比。</summary>
+    private void OnLeftControlZoneChanged(float value)
+    {
+        leftControlZoneSetting?.SetValue(value);
+        leftControlZoneSlider?.SetValueWithoutNotify(leftControlZoneSetting?.Value ?? value);
+        RefreshStatus();
+    }
+
+    /// <summary>写入右侧普通指向触控区比例并刷新三段占比。</summary>
+    private void OnRightControlZoneChanged(float value)
+    {
+        rightControlZoneSetting?.SetValue(value);
+        rightControlZoneSlider?.SetValueWithoutNotify(rightControlZoneSetting?.Value ?? value);
+        RefreshStatus();
     }
 
     /// <summary>写入安全区域偏好并刷新状态。</summary>
@@ -150,7 +195,7 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
         floatingMoveJoystickSetting?.SetValue(value);
     }
 
-    /// <summary>只恢复界面页可见的三项默认设置。</summary>
+    /// <summary>只恢复界面页可见的界面与触控区设置。</summary>
     private void ResetToDefault()
     {
         UIUserSettings.ResetInterfaceToDefaults();
@@ -163,6 +208,10 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
     {
         if (scaleSlider != null && scaleSetting != null)
             scaleSlider.SetValueWithoutNotify(scaleSetting.Value);
+        if (leftControlZoneSlider != null && leftControlZoneSetting != null)
+            leftControlZoneSlider.SetValueWithoutNotify(leftControlZoneSetting.Value);
+        if (rightControlZoneSlider != null && rightControlZoneSetting != null)
+            rightControlZoneSlider.SetValueWithoutNotify(rightControlZoneSetting.Value);
         if (safeAreaToggle != null && safeAreaSetting != null)
             safeAreaToggle.SetIsOnWithoutNotify(safeAreaSetting.Value);
         if (floatingMoveJoystickToggle != null && floatingMoveJoystickSetting != null)
@@ -170,11 +219,23 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
         RefreshStatus();
     }
 
-    /// <summary>刷新缩放百分比与安全区域状态文案。</summary>
+    /// <summary>刷新缩放、三段触控区百分比与安全区域状态文案。</summary>
     private void RefreshStatus()
     {
         if (scaleValueText != null && scaleSetting != null)
             scaleValueText.text = ToPercent(scaleSetting.Value);
+        if (leftControlZoneValueText != null && leftControlZoneSetting != null)
+            leftControlZoneValueText.text = ToPercent(leftControlZoneSetting.Value);
+        if (rightControlZoneValueText != null && rightControlZoneSetting != null)
+            rightControlZoneValueText.text = ToPercent(rightControlZoneSetting.Value);
+        if (controlZoneStatusText != null)
+        {
+            controlZoneStatusText.text = FlatWorldLocalizationService.GetUiFormat(
+                "触控区域比例：左 {0}｜中 {1}｜右 {2}",
+                ToPercent(UIUserSettings.LeftControlZoneRatio),
+                ToPercent(UIUserSettings.CenterControlZoneRatio),
+                ToPercent(UIUserSettings.RightControlZoneRatio));
+        }
         if (statusText != null)
         {
             statusText.text = safeAreaSetting != null && safeAreaSetting.Value

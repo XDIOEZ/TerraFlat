@@ -19,17 +19,26 @@ public static class UIUserSettings
     private const string RespectSafeAreaKey = "FlatWorld.UI.RespectSafeArea";
     private const string FloatingMoveJoystickKey = "FlatWorld.Mobile.FloatingMoveJoystick";
     private const string EnablePinchZoomKey = "FlatWorld.Mobile.EnablePinchZoom";
+    private const string LeftControlZoneRatioKey = "FlatWorld.Mobile.LeftControlZoneRatio";
+    private const string RightControlZoneRatioKey = "FlatWorld.Mobile.RightControlZoneRatio";
 
     public const float DefaultScale = 1f;
     public const float MinimumScale = 0.75f;
     public const float MaximumScale = 1.2f;
     public const float ScaleStep = 0.05f;
+    public const float DefaultLeftControlZoneRatio = 0.33f;
+    public const float DefaultRightControlZoneRatio = 0.33f;
+    public const float MinimumControlZoneRatio = 0.2f;
+    public const float MaximumControlZoneRatio = 0.4f;
+    public const float ControlZoneRatioStep = 0.01f;
 
     public const string SettingsProviderId = "ui";
     public const string ScaleSettingKey = "ui.scale";
     public const string RespectSafeAreaSettingKey = "ui.respectSafeArea";
     public const string FloatingMoveJoystickSettingKey = "ui.floatingMoveJoystick";
     public const string EnablePinchZoomSettingKey = "ui.enablePinchZoom";
+    public const string LeftControlZoneRatioSettingKey = "ui.leftControlZoneRatio";
+    public const string RightControlZoneRatioSettingKey = "ui.rightControlZoneRatio";
 
     #endregion
 
@@ -40,11 +49,13 @@ public static class UIUserSettings
     private static bool cachedRespectSafeArea = true;
     private static bool cachedFloatingMoveJoystick = true;
     private static bool cachedEnablePinchZoom;
+    private static float cachedLeftControlZoneRatio = DefaultLeftControlZoneRatio;
+    private static float cachedRightControlZoneRatio = DefaultRightControlZoneRatio;
 
     /// <summary>任一 UI 偏好实际改变后广播一次。</summary>
     public static event Action Changed;
 
-    /// <summary>移动摇杆固定/浮动偏好改变时广播，避免无关 UI 设置触发摇杆重配。</summary>
+    /// <summary>手机摇杆模式或左右触控分区改变时广播，避免无关 UI 设置触发摇杆重配。</summary>
     public static event Action MobileControlsChanged;
 
     private static readonly ISettingsProvider settingsProvider =
@@ -86,6 +97,36 @@ public static class UIUserSettings
         {
             EnsureInitialized();
             return cachedEnablePinchZoom;
+        }
+    }
+
+    /// <summary>安全区域内由左侧移动摇杆接收触点的屏幕宽度比例。</summary>
+    public static float LeftControlZoneRatio
+    {
+        get
+        {
+            EnsureInitialized();
+            return cachedLeftControlZoneRatio;
+        }
+    }
+
+    /// <summary>安全区域内由右侧普通指向摇杆接收触点的屏幕宽度比例。</summary>
+    public static float RightControlZoneRatio
+    {
+        get
+        {
+            EnsureInitialized();
+            return cachedRightControlZoneRatio;
+        }
+    }
+
+    /// <summary>中间预留操作区使用左右区域之外的剩余宽度。</summary>
+    public static float CenterControlZoneRatio
+    {
+        get
+        {
+            EnsureInitialized();
+            return Mathf.Max(0f, 1f - cachedLeftControlZoneRatio - cachedRightControlZoneRatio);
         }
     }
 
@@ -145,22 +186,62 @@ public static class UIUserSettings
         MobileControlsChanged?.Invoke();
     }
 
+    /// <summary>保存左侧移动摇杆触控区比例并即时刷新手机 HUD。</summary>
+    public static float SetLeftControlZoneRatio(float value)
+    {
+        EnsureInitialized();
+        float sanitized = SanitizeControlZoneRatio(value);
+        if (Mathf.Approximately(cachedLeftControlZoneRatio, sanitized))
+            return cachedLeftControlZoneRatio;
+
+        cachedLeftControlZoneRatio = sanitized;
+        PlayerPrefs.SetFloat(LeftControlZoneRatioKey, sanitized);
+        PlayerPrefs.Save();
+        MobileControlsChanged?.Invoke();
+        return sanitized;
+    }
+
+    /// <summary>保存右侧普通指向触控区比例并即时刷新手机 HUD。</summary>
+    public static float SetRightControlZoneRatio(float value)
+    {
+        EnsureInitialized();
+        float sanitized = SanitizeControlZoneRatio(value);
+        if (Mathf.Approximately(cachedRightControlZoneRatio, sanitized))
+            return cachedRightControlZoneRatio;
+
+        cachedRightControlZoneRatio = sanitized;
+        PlayerPrefs.SetFloat(RightControlZoneRatioKey, sanitized);
+        PlayerPrefs.Save();
+        MobileControlsChanged?.Invoke();
+        return sanitized;
+    }
+
     /// <summary>只恢复界面页可见设置，不改动已经拆到镜头控制页的双指缩放。</summary>
     public static void ResetInterfaceToDefaults()
     {
         EnsureInitialized();
         bool visualChanged = !Mathf.Approximately(cachedScale, DefaultScale) ||
                              !cachedRespectSafeArea;
-        bool mobileChanged = !cachedFloatingMoveJoystick;
+        bool mobileChanged = !cachedFloatingMoveJoystick ||
+                             !Mathf.Approximately(
+                                 cachedLeftControlZoneRatio,
+                                 DefaultLeftControlZoneRatio) ||
+                             !Mathf.Approximately(
+                                 cachedRightControlZoneRatio,
+                                 DefaultRightControlZoneRatio);
         if (!visualChanged && !mobileChanged)
             return;
 
         cachedScale = DefaultScale;
         cachedRespectSafeArea = true;
         cachedFloatingMoveJoystick = true;
+        cachedLeftControlZoneRatio = DefaultLeftControlZoneRatio;
+        cachedRightControlZoneRatio = DefaultRightControlZoneRatio;
         PlayerPrefs.SetFloat(ScaleKey, DefaultScale);
         PlayerPrefs.SetInt(RespectSafeAreaKey, 1);
         PlayerPrefs.SetInt(FloatingMoveJoystickKey, 1);
+        PlayerPrefs.SetFloat(LeftControlZoneRatioKey, DefaultLeftControlZoneRatio);
+        PlayerPrefs.SetFloat(RightControlZoneRatioKey, DefaultRightControlZoneRatio);
         PlayerPrefs.Save();
         if (visualChanged)
             Changed?.Invoke();
@@ -180,19 +261,36 @@ public static class UIUserSettings
         bool changed = !Mathf.Approximately(cachedScale, DefaultScale) ||
                        !cachedRespectSafeArea ||
                        !cachedFloatingMoveJoystick ||
+                       !Mathf.Approximately(
+                           cachedLeftControlZoneRatio,
+                           DefaultLeftControlZoneRatio) ||
+                       !Mathf.Approximately(
+                           cachedRightControlZoneRatio,
+                           DefaultRightControlZoneRatio) ||
                        cachedEnablePinchZoom;
         if (!changed)
             return;
 
         cachedScale = DefaultScale;
         cachedRespectSafeArea = true;
-        bool mobileControlsChanged = !cachedFloatingMoveJoystick || cachedEnablePinchZoom;
+        bool mobileControlsChanged = !cachedFloatingMoveJoystick ||
+                                     cachedEnablePinchZoom ||
+                                     !Mathf.Approximately(
+                                         cachedLeftControlZoneRatio,
+                                         DefaultLeftControlZoneRatio) ||
+                                     !Mathf.Approximately(
+                                         cachedRightControlZoneRatio,
+                                         DefaultRightControlZoneRatio);
         cachedFloatingMoveJoystick = true;
         cachedEnablePinchZoom = false;
+        cachedLeftControlZoneRatio = DefaultLeftControlZoneRatio;
+        cachedRightControlZoneRatio = DefaultRightControlZoneRatio;
         PlayerPrefs.SetFloat(ScaleKey, DefaultScale);
         PlayerPrefs.SetInt(RespectSafeAreaKey, 1);
         PlayerPrefs.SetInt(FloatingMoveJoystickKey, 1);
         PlayerPrefs.SetInt(EnablePinchZoomKey, 0);
+        PlayerPrefs.SetFloat(LeftControlZoneRatioKey, DefaultLeftControlZoneRatio);
+        PlayerPrefs.SetFloat(RightControlZoneRatioKey, DefaultRightControlZoneRatio);
         PlayerPrefs.Save();
         Changed?.Invoke();
         if (mobileControlsChanged)
@@ -212,6 +310,8 @@ public static class UIUserSettings
         cachedRespectSafeArea = true;
         cachedFloatingMoveJoystick = true;
         cachedEnablePinchZoom = false;
+        cachedLeftControlZoneRatio = DefaultLeftControlZoneRatio;
+        cachedRightControlZoneRatio = DefaultRightControlZoneRatio;
         Changed = null;
         MobileControlsChanged = null;
     }
@@ -255,7 +355,31 @@ public static class UIUserSettings
                     MaximumScale,
                     ScaleStep,
                     () => Scale,
-                    value => SetScale(value))
+                    value => SetScale(value)),
+                new SettingsSlider(
+                    new SettingDescriptor(
+                        LeftControlZoneRatioSettingKey,
+                        "左侧触控区比例",
+                        SettingControlType.Slider,
+                        "mobile",
+                        order: 1),
+                    MinimumControlZoneRatio,
+                    MaximumControlZoneRatio,
+                    ControlZoneRatioStep,
+                    () => LeftControlZoneRatio,
+                    value => SetLeftControlZoneRatio(value)),
+                new SettingsSlider(
+                    new SettingDescriptor(
+                        RightControlZoneRatioSettingKey,
+                        "右侧触控区比例",
+                        SettingControlType.Slider,
+                        "mobile",
+                        order: 2),
+                    MinimumControlZoneRatio,
+                    MaximumControlZoneRatio,
+                    ControlZoneRatioStep,
+                    () => RightControlZoneRatio,
+                    value => SetRightControlZoneRatio(value))
             };
             toggles = new ISettingsToggle[]
             {
@@ -313,6 +437,10 @@ public static class UIUserSettings
         cachedRespectSafeArea = PlayerPrefs.GetInt(RespectSafeAreaKey, 1) != 0;
         cachedFloatingMoveJoystick = PlayerPrefs.GetInt(FloatingMoveJoystickKey, 1) != 0;
         cachedEnablePinchZoom = PlayerPrefs.GetInt(EnablePinchZoomKey, 0) != 0;
+        cachedLeftControlZoneRatio = SanitizeControlZoneRatio(
+            PlayerPrefs.GetFloat(LeftControlZoneRatioKey, DefaultLeftControlZoneRatio));
+        cachedRightControlZoneRatio = SanitizeControlZoneRatio(
+            PlayerPrefs.GetFloat(RightControlZoneRatioKey, DefaultRightControlZoneRatio));
         initialized = true;
     }
 
@@ -320,6 +448,13 @@ public static class UIUserSettings
     {
         float clamped = Mathf.Clamp(value, MinimumScale, MaximumScale);
         return Mathf.Round(clamped / ScaleStep) * ScaleStep;
+    }
+
+    /// <summary>把左右触控区限制为稳定百分比，确保中间始终至少保留 20% 宽度。</summary>
+    private static float SanitizeControlZoneRatio(float value)
+    {
+        float clamped = Mathf.Clamp(value, MinimumControlZoneRatio, MaximumControlZoneRatio);
+        return Mathf.Round(clamped / ControlZoneRatioStep) * ControlZoneRatioStep;
     }
 
     #endregion

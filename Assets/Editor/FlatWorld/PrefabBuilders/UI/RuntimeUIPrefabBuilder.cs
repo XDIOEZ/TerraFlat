@@ -58,7 +58,7 @@ public static class RuntimeUIPrefabBuilder
 
     // 设置子分页统一使用更大的阅读尺寸，避免各页面视觉比例不一致。
     private static readonly Vector2 AudioSettingsSize = new Vector2(800f, 650f);
-    private static readonly Vector2 InterfaceSettingsSize = new Vector2(800f, 500f);
+    private static readonly Vector2 InterfaceSettingsSize = new Vector2(800f, 680f);
     private static readonly Vector2 CameraControlSettingsSize = new Vector2(800f, 620f);
     private static readonly Vector2 CoordinateSettingsSize = new Vector2(800f, 500f);
     private static readonly Vector2 AutoSaveSettingsSize = new Vector2(820f, 540f);
@@ -1473,14 +1473,15 @@ public static class RuntimeUIPrefabBuilder
         return root;
     }
 
+    /// <summary>构建界面缩放、安全区、移动摇杆模式与触控分区设置页。</summary>
     private static GameObject BuildInterfaceSettings()
     {
         GameObject root = CreatePanelRoot(RuntimeUIPrefabKeys.UISettings, InterfaceSettingsSize);
         CreateSettingsHeader(root.transform, "界面设置", "关闭按钮");
         CreateSettingsHint(
             root.transform,
-            "调整会立即应用并自动保存；界面缩放会统一放大或缩小所有正式 UI。",
-            44f);
+            "左右触控区决定移动和普通指向摇杆的响应范围；中间区域保留给后续操作。调整会立即保存。",
+            54f);
 
         GameObject scaleRow = CreateRow("界面缩放行", root.transform, 52f);
         CreateRowLabel(scaleRow.transform, "界面缩放", 112f);
@@ -1507,6 +1508,44 @@ public static class RuntimeUIPrefabBuilder
         joystickLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         Toggle joystickToggle = CreateToggle("浮动移动摇杆", joystickRow.transform);
         joystickToggle.isOn = true;
+
+        GameObject leftZoneRow = CreateRow("左侧触控区比例行", root.transform, 52f);
+        CreateRowLabel(leftZoneRow.transform, "左侧触控区", 128f);
+        Slider leftZoneSlider = CreateSlider("左侧触控区比例", leftZoneRow.transform);
+        leftZoneSlider.minValue = UIUserSettings.MinimumControlZoneRatio;
+        leftZoneSlider.maxValue = UIUserSettings.MaximumControlZoneRatio;
+        leftZoneSlider.value = UIUserSettings.DefaultLeftControlZoneRatio;
+        TextMeshProUGUI leftZoneValue = CreateText(
+            "左侧触控区数值",
+            leftZoneRow.transform,
+            "33%",
+            16f,
+            Amber);
+        leftZoneValue.alignment = TextAlignmentOptions.MidlineRight;
+        leftZoneValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 58f;
+
+        GameObject rightZoneRow = CreateRow("右侧触控区比例行", root.transform, 52f);
+        CreateRowLabel(rightZoneRow.transform, "右侧触控区", 128f);
+        Slider rightZoneSlider = CreateSlider("右侧触控区比例", rightZoneRow.transform);
+        rightZoneSlider.minValue = UIUserSettings.MinimumControlZoneRatio;
+        rightZoneSlider.maxValue = UIUserSettings.MaximumControlZoneRatio;
+        rightZoneSlider.value = UIUserSettings.DefaultRightControlZoneRatio;
+        TextMeshProUGUI rightZoneValue = CreateText(
+            "右侧触控区数值",
+            rightZoneRow.transform,
+            "33%",
+            16f,
+            Amber);
+        rightZoneValue.alignment = TextAlignmentOptions.MidlineRight;
+        rightZoneValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 58f;
+
+        TextMeshProUGUI zoneStatus = CreateText(
+            "触控区域比例文本",
+            root.transform,
+            "触控区域比例：左 33%｜中 34%｜右 33%",
+            16f,
+            Amber);
+        zoneStatus.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
 
         TextMeshProUGUI status = CreateText("状态文本", root.transform, "安全区域适配：开启（推荐）", 16f, Muted);
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
@@ -2379,7 +2418,7 @@ public static class RuntimeUIPrefabBuilder
     }
 
     /// <summary>
-    /// 构建 Android 横屏的正式手机控制层。普通指向区先创建并置于按钮之后，按钮和攻击摇杆作为后续兄弟拥有更高射线优先级。
+    /// 构建 Android 横屏的正式手机控制层。左右摇杆默认使用 33% 触控区，中间 34% 留空；按钮和攻击摇杆拥有更高射线优先级。
     /// </summary>
     private static GameObject BuildMobileControlsHUD()
     {
@@ -2404,10 +2443,10 @@ public static class RuntimeUIPrefabBuilder
         GameObject gameplay = CreateUIObject("玩法控制层", root.transform);
         Stretch(gameplay.GetComponent<RectTransform>());
 
-        // 透明捕获层仅覆盖右半屏空白区，按钮和攻击摇杆随后创建以获得更高射线优先级。
+        // 透明捕获层仅覆盖右侧默认配置区，按钮和攻击摇杆随后创建以获得更高射线优先级。
         GameObject aimZone = CreateUIObject("普通指向区", gameplay.transform, typeof(Image));
         RectTransform aimRect = aimZone.GetComponent<RectTransform>();
-        aimRect.anchorMin = new Vector2(0.5f, 0f);
+        aimRect.anchorMin = new Vector2(1f - UIUserSettings.DefaultRightControlZoneRatio, 0f);
         aimRect.anchorMax = Vector2.one;
         aimRect.offsetMin = Vector2.zero;
         aimRect.offsetMax = Vector2.zero;
@@ -2419,7 +2458,7 @@ public static class RuntimeUIPrefabBuilder
         GameObject moveZone = CreateUIObject("移动摇杆", gameplay.transform, typeof(Image));
         RectTransform moveRect = moveZone.GetComponent<RectTransform>();
         moveRect.anchorMin = Vector2.zero;
-        moveRect.anchorMax = new Vector2(0.5f, 1f);
+        moveRect.anchorMax = new Vector2(UIUserSettings.DefaultLeftControlZoneRatio, 1f);
         moveRect.offsetMin = Vector2.zero;
         moveRect.offsetMax = Vector2.zero;
         Image moveHit = moveZone.GetComponent<Image>();

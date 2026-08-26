@@ -1,6 +1,6 @@
 ---
 name: flatworld-android-input
-description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系统。Use when: 处理触摸、多点触控、虚拟摇杆、右半屏指向、攻击摇杆、FlatWorldMobileDevice、Mobile 控制方案、手机 HUD、安全区、Android 返回键、移动端输入锁清理，或排查手机交互/使用误触发攻击、移动与攻击卡住、触控被 UI 吞掉、刘海遮挡等问题。关键词：FlatWorldMobileDevice、MobileInputRuntime、MobileVirtualJoystick、PlayerMobileControlsHUD、MobileAim_Player、MobileAttackAim_Player。"
+description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系统。Use when: 处理触摸、多点触控、虚拟摇杆、右侧触控区指向、攻击摇杆、FlatWorldMobileDevice、Mobile 控制方案、手机 HUD、安全区、Android 返回键、移动端输入锁清理，或排查手机交互/使用误触发攻击、移动与攻击卡住、触控被 UI 吞掉、刘海遮挡等问题。关键词：FlatWorldMobileDevice、MobileInputRuntime、MobileVirtualJoystick、PlayerMobileControlsHUD、MobileAim_Player、MobileAttackAim_Player。"
 ---
 
 # FlatWorld Android 输入系统导航
@@ -32,7 +32,7 @@ description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系�
 - 保持右侧普通指向层位于功能按钮和攻击摇杆之后，只有空白区域能取得普通指向所有权；不要用全屏透明层遮住按钮射线。
 - 手机控制根正常游戏时必须排在同级常驻 HUD 后方，让任务追踪等真实按钮优先接收射线；菜单抽屉展开时也属于临时交互层，必须把包含抽屉的控制根临时提到最上层，关闭抽屉或模态面板后必须恢复到底层。
 - 手机 HUD 的菜单/返回入口必须放在独立的常驻控制层，不能和移动、指向、攻击、交互、使用、奔跑一起放入玩法控制层；模态玩法面板打开时菜单仍可展开作为背包/制作等并行入口，Android 返回键或 Escape 才优先关闭最上层可取消面板。
-- 左手移动摇杆的固定/浮动偏好统一由 `UIUserSettings.FloatingMoveJoystick` 持久化；切换模式必须先释放当前触点，浮动模式覆盖左半屏并在按下点出现，固定模式复用同一摇杆实例与底座坐标算法。
+- 左右摇杆捕获区统一读取 `UIUserSettings.LeftControlZoneRatio` 与 `RightControlZoneRatio`，中间剩余区域不得被透明摇杆层接管；比例改变时必须先释放已有触点再重算边界。移动摇杆的固定/浮动偏好继续由 `FloatingMoveJoystick` 持久化，移动与普通指向摇杆仅在各自区域取得触点后显示，固定攻击摇杆不受该可见性规则影响。
 - 正式手机视觉以 `UI_MobileControls.prefab` 为真相并挂到 `UIManager.SafeAreaRoot`；运行时只绑定行为和现有 HUD，不拼装另一套视觉。
 - 手机快捷栏锚点必须与玩法控制层同级，不能成为玩法层子节点；模态背包只隐藏摇杆和玩法按钮，快捷栏需保持可见并提升到面板之上参与拖放。
 - `UI_HotBar.prefab` 自带独立 Canvas；模态容器打开时仅调整手机 HUD 根节点兄弟顺序不足以保证快捷栏获得射线，必须临时启用快捷栏 Canvas 的 `overrideSorting` 并提升排序，关闭容器后恢复原始值。

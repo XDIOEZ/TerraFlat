@@ -2028,6 +2028,35 @@ MonoBehaviour:
     m_Localized: All settings restored to defaults
     m_Metadata:
       m_Items: []
+  - m_Id: 6367998174126080
+    m_Localized: The left and right touch zones control the move and aim joysticks.
+      The center stays free for future actions. Changes are saved immediately.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6367998425784320
+    m_Localized: Left Touch Zone
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6367998425784321
+    m_Localized: Right Touch Zone
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6367998425784322
+    m_Localized: 'Touch Zones: Left 33% | Center 34% | Right 33%'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6367998769717248
+    m_Localized: Left Touch Zone Ratio
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6367998769717249
+    m_Localized: Right Touch Zone Ratio
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6367998769717250
+    m_Localized: 'Touch Zones: Left {0} | Center {1} | Right {2}'
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
