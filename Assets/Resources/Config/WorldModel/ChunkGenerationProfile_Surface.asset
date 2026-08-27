@@ -264,7 +264,7 @@ MonoBehaviour:
     ItemId: AppleTree
     ItemCount: 1
     SpawnChance: 0.0015
-    SpawnChanceMultiplier: 1
+    SpawnChanceMultiplier: 2
     BiomeMask: 32
     MinTemperature: 0
     MaxTemperature: 1
@@ -345,7 +345,7 @@ MonoBehaviour:
     ItemId: Mine_Stone
     ItemCount: 1
     SpawnChance: 0.00005
-    SpawnChanceMultiplier: 2.5
+    SpawnChanceMultiplier: 5
     BiomeMask: 32
     MinTemperature: 0
     MaxTemperature: 1
@@ -467,7 +467,7 @@ MonoBehaviour:
     ItemId: Mine_Stone
     ItemCount: 1
     SpawnChance: 0.00005
-    SpawnChanceMultiplier: 1
+    SpawnChanceMultiplier: 2
     BiomeMask: 16
     MinTemperature: 0
     MaxTemperature: 1
@@ -588,7 +588,7 @@ MonoBehaviour:
     ItemId: Mine_Stone
     ItemCount: 1
     SpawnChance: 0.0005
-    SpawnChanceMultiplier: 1
+    SpawnChanceMultiplier: 2
     BiomeMask: 128
     MinTemperature: 0
     MaxTemperature: 1
@@ -648,7 +648,7 @@ MonoBehaviour:
     ItemId: Tree_Coconut
     ItemCount: 1
     SpawnChance: 0.001
-    SpawnChanceMultiplier: 1
+    SpawnChanceMultiplier: 2
     BiomeMask: 4
     MinTemperature: 0
     MaxTemperature: 1

@@ -3987,7 +3987,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.6627451, g: 0.34509805, b: 0.16078432, a: 0.98}
+  m_Color: {r: 0.094, g: 0.212, b: 0.247, a: 0.99}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -4026,10 +4026,10 @@ MonoBehaviour:
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 1, g: 0.84313726, b: 0.65882355, a: 1}
-    m_PressedColor: {r: 0.7254902, g: 0.7647059, b: 0.7529412, a: 0.82}
-    m_SelectedColor: {r: 0.8980392, g: 0.60784316, b: 0.34901962, a: 1}
-    m_DisabledColor: {r: 0.46666667, g: 0.49019608, b: 0.4862745, a: 0.48}
+    m_HighlightedColor: {r: 1.12, g: 1.08, b: 1, a: 1}
+    m_PressedColor: {r: 0.74, g: 0.78, b: 0.8, a: 1}
+    m_SelectedColor: {r: 0.9411765, g: 0.6392157, b: 0.3529412, a: 1}
+    m_DisabledColor: {r: 0.45, g: 0.45, b: 0.45, a: 0.55}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.11
   m_SpriteState:
@@ -4060,7 +4060,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_EffectColor: {r: 0.94509804, g: 0.6901961, b: 0.42352942, a: 0.36}
+  m_EffectColor: {r: 0.55, g: 0.68, b: 0.7, a: 0.28}
   m_EffectDistance: {x: 1, y: -1}
   m_UseGraphicAlpha: 1
 --- !u!114 &8235862017901432061
