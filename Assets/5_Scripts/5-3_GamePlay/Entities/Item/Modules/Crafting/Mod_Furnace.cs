@@ -209,7 +209,8 @@ public class Mod_Furnace : Module, IInteractable
 
     public void OnValidate()
     {
-        _Data.Name = ModText.Furnace;
+        ModSaveData ??= new Ex_ModData_MemoryPackable();
+        ModSaveData.Name = ModText.Furnace;
     }
 
     public override void ModUpdate(float deltaTime)

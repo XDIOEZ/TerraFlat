@@ -50,7 +50,8 @@ public class Mod_FireDrill : Module, IInteractable
 
     private void OnValidate()
     {
-        _Data.ID = "钻木取火模块";
+        ModSaveData ??= new Ex_ModData_MemoryPackable();
+        ModSaveData.ID = "钻木取火模块";
     }
 
     public override void Load()

@@ -1,0 +1,139 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1457684247012670416
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 25667647205304195}
+  - component: {fileID: 1224930525022268390}
+  m_Layer: 9
+  m_Name: BuildingFeature_WorkBench_Mod_MakeTable
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &25667647205304195
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1457684247012670416}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1224930525022268390
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1457684247012670416}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a231a8634d814d4190ca8f2c6382275, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModSaveData:
+    Name: "\u5DE5\u4F5C\u53F0\u6A21\u5757"
+    ID: 
+    isRunning: 1
+    Type: 0
+    BitData: 
+  RawData: []
+  inputInventory:
+    item: {fileID: 0}
+    InventoryPanel_Prefab: {fileID: 0}
+    basePanel: {fileID: 0}
+    Data:
+      Name: 
+      itemSlots:
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    itemSlot_UI: []
+  outputInventory:
+    item: {fileID: 0}
+    InventoryPanel_Prefab: {fileID: 0}
+    basePanel: {fileID: 0}
+    Data:
+      Name: 
+      itemSlots:
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    itemSlot_UI: []
+  basePanel: {fileID: 0}
+  InventoryPanel_Prefab: {fileID: 2639614329428065687, guid: b33b36a78f5818647976e4e5b86efe8c, type: 3}
+  mod_InteractReciver: {fileID: 0}
+  workButton: {fileID: 0}
+  workbenchLevel: 1
+  baseClickCount: 6
+  clickReductionPerLevel: 1
+  minClickCount: 1

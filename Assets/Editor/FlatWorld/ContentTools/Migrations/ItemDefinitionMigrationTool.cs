@@ -37,18 +37,21 @@ public static class ItemDefinitionMigrationTool
             string.Equals(shellPrefab, "Pickaxe", StringComparison.OrdinalIgnoreCase)),
         new("weapons", shellPrefab =>
             string.Equals(shellPrefab, "Dagger_Copper", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(shellPrefab, "Spear", StringComparison.OrdinalIgnoreCase)),
+            string.Equals(shellPrefab, "Spear", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(shellPrefab, "Torch", StringComparison.OrdinalIgnoreCase)),
         new("equipment", shellPrefab =>
             string.Equals(shellPrefab, "Chestplate_Iron", StringComparison.OrdinalIgnoreCase)),
         new("seeds", shellPrefab => string.Equals(shellPrefab, "Seed", StringComparison.OrdinalIgnoreCase)),
         new("building_summoners", shellPrefab =>
-            shellPrefab.EndsWith("_Summoner", StringComparison.OrdinalIgnoreCase))
+            string.Equals(shellPrefab, "BuildingSummonerShell", StringComparison.OrdinalIgnoreCase)),
+        new("building_bodies", shellPrefab =>
+            string.Equals(shellPrefab, "BuildingBodyShell", StringComparison.OrdinalIgnoreCase))
     };
 
     /// <summary>已经以 JSON 为权威、无需再从具体 Prefab 导出的定义。</summary>
     private static readonly HashSet<string> PreservedIds = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Knife_Base", "Dagger_Stone", "Dagger_Copper", "Dagger_Bone", "Knife_Flint",
+        "Knife_Base", "Dagger_Stone", "Dagger_Copper", "Dagger_Bone", "Knife_Flint", "Torch",
         "WorldResource_Base", "MineResource_Base", "AppleTree", "Tree_Coconut", "Mine_Coal", "Mine_Copper",
         "Mine_Iron", "Mine_Stone", "Mine_Tin", "Iceberg", "Bush", "Weed"
     };
@@ -72,7 +75,8 @@ public static class ItemDefinitionMigrationTool
         ["Dagger_Stone"] = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger.prefab",
         ["Dagger_Copper"] = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger_Copper.prefab",
         ["Dagger_Bone"] = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger_Bone.prefab",
-        ["Knife_Flint"] = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Knife_Flint.prefab"
+        ["Knife_Flint"] = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Knife_Flint.prefab",
+        ["Torch"] = "Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab"
     };
 
     private static readonly MigrationGroup[] Groups =
@@ -176,74 +180,7 @@ public static class ItemDefinitionMigrationTool
         new(
             "Seed_Base",
             "Assets/2_Prefabs/Gameplay/Items/Seeds/Seed.prefab",
-            new[] { "Assets/2_Prefabs/Gameplay/Items/Seeds/Seed.prefab" }),
-        // 建筑召唤器保留各自的 Item Prefab 作为运行时外壳；JSON 只接管 ItemData/ModuleData，
-        // 这样建筑放置、快照、占地和专用 UI/组件引用仍由原召唤器壳体提供。
-        new(
-            "BuildingSummoner_BlastFurnace_Base",
-            "Assets/2_Prefabs/World/Buildings/Summoners/BlastFurnace_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/BlastFurnace_Summoner.prefab" },
-            preserveShellModuleFields: true),
-        new(
-            "BuildingSummoner_Bonfire_Base",
-            "Assets/2_Prefabs/World/Buildings/Summoners/Bonfire_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Bonfire_Summoner.prefab" },
-            preserveShellModuleFields: true),
-        new(
-            "BuildingSummoner_ChestWood_Base",
-            "Assets/2_Prefabs/World/Buildings/Summoners/Chest_Wood_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Chest_Wood_Summoner.prefab" },
-            preserveShellModuleFields: true),
-        new(
-            "BuildingSummoner_DoorStone_Base",
-            "Assets/2_Prefabs/World/Buildings/Summoners/Door_Stone_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Door_Stone_Summoner.prefab" },
-            preserveShellModuleFields: true),
-        new(
-            "BuildingSummoner_DoorWood_Base",
-            "Assets/2_Prefabs/World/Buildings/Summoners/Door_Wood_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Door_Wood_Summoner.prefab" },
-            preserveShellModuleFields: true),
-        new(
-            "BuildingSummoner_Meatrack_Base",
-            "Assets/2_Prefabs/World/Buildings/Summoners/Meatrack_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Meatrack_Summoner.prefab" },
-            preserveShellModuleFields: true),
-        new(
-            "BuildingSummoner_MineEntrance_Base",
-            "Assets/2_Prefabs/World/Buildings/Summoners/MineEntrance_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/MineEntrance_Summoner.prefab" },
-            preserveShellModuleFields: true),
-        new(
-            "BuildingSummoner_Scarecrow_Base",
-            "Assets/2_Prefabs/World/Buildings/Summoners/Scarecrow_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Scarecrow_Summoner.prefab" },
-            preserveShellModuleFields: true),
-        new(
-            "BuildingSummoner_Smelter_Base",
-            "Assets/2_Prefabs/World/Buildings/Summoners/Smelter_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Smelter_Summoner.prefab" },
-            preserveShellModuleFields: true),
-        new(
-            "BuildingSummoner_Tent_Base",
-            "Assets/2_Prefabs/World/Buildings/Summoners/Tent_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Tent_Summoner.prefab" },
-            preserveShellModuleFields: true),
-        new(
-            "BuildingSummoner_WallStone_Base",
-            "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Stone_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Stone_Summoner.prefab" },
-            preserveShellModuleFields: true),
-        new(
-            "BuildingSummoner_WallWood_Base",
-            "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab" },
-            preserveShellModuleFields: true),
-        new(
-            "BuildingSummoner_WorkBench_Base",
-            "Assets/2_Prefabs/World/Buildings/Summoners/WorkBench_Summoner.prefab",
-            new[] { "Assets/2_Prefabs/World/Buildings/Summoners/WorkBench_Summoner.prefab" },
-            preserveShellModuleFields: true)
+            new[] { "Assets/2_Prefabs/Gameplay/Items/Seeds/Seed.prefab" })
     };
 
     #endregion
@@ -541,16 +478,31 @@ public static class ItemDefinitionMigrationTool
         foreach (JObject source in items.OfType<JObject>())
         {
             string id = source.Value<string>("id");
-            if (!PreservedIds.Contains(id ?? string.Empty))
+            bool buildingShellDefinition = IsBuildingShellDefinition(source);
+            if (!PreservedIds.Contains(id ?? string.Empty) && !buildingShellDefinition)
                 continue;
 
             JObject copy = (JObject)source.DeepClone();
             if (PreservedSourcePaths.TryGetValue(id, out string sourcePath))
                 copy["sourcePrefab"] = sourcePath;
-            else
+            else if (!buildingShellDefinition)
                 copy.Remove("sourcePrefab");
             output.Add(copy);
         }
+    }
+
+    /// <summary>识别由专用建筑迁移器维护的共享召唤器与本体定义。</summary>
+    private static bool IsBuildingShellDefinition(JObject source)
+    {
+        string id = source?.Value<string>("id")?.Trim();
+        string parent = source?.Value<string>("parent")?.Trim();
+        string shell = source?.Value<string>("shellPrefab")?.Trim();
+        return string.Equals(id, "BuildingSummoner_Base", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(id, "BuildingBody_Base", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(parent, "BuildingSummoner_Base", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(parent, "BuildingBody_Base", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(shell, "BuildingSummonerShell", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(shell, "BuildingBodyShell", StringComparison.OrdinalIgnoreCase);
     }
 
     private static Dictionary<string, JObject> BuildExistingDefinitions(JObject existingRoot)

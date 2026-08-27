@@ -1,7 +1,23 @@
 using UnityEngine;
 
-public sealed class DimensionPortal : MonoBehaviour, IInteractable, IItemPoolLifecycle
+/// <summary>维度入口功能模块；可由自然入口或通用建筑本体 Shell 复用。</summary>
+public sealed class DimensionPortal : Module, IInteractable, IItemPoolLifecycle
 {
+    #region 模块数据
+
+    private const string PortalModuleId = "维度入口模块";
+
+    [SerializeField] private Ex_ModData moduleData = new Ex_ModData { ID = PortalModuleId };
+    public override ModuleData _Data
+    {
+        get => moduleData;
+        set => moduleData = value as Ex_ModData ?? new Ex_ModData { ID = PortalModuleId };
+    }
+
+    public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
+
+    #endregion
+
     #region 配置
 
     [SerializeField] private string targetDimensionId;
@@ -9,6 +25,48 @@ public sealed class DimensionPortal : MonoBehaviour, IInteractable, IItemPoolLif
 
     public string TargetDimensionId => targetDimensionId;
     public bool RequiresInstalledBuilding => requiresInstalledBuilding;
+
+    #endregion
+
+    #region 模块生命周期
+
+    /// <summary>建立维度入口模块的稳定身份。</summary>
+    public override void Awake()
+    {
+        EnsureModuleData();
+        base.Awake();
+    }
+
+    /// <summary>加载时缓存入口所属 Item 与建筑模块。</summary>
+    public override void Load()
+    {
+        EnsureModuleData();
+        CachePortalContext();
+    }
+
+    /// <summary>维度入口当前没有额外持久化状态。</summary>
+    public override void Save()
+    {
+        EnsureModuleData();
+    }
+
+    /// <summary>卸载时清除一次交互与对象池缓存。</summary>
+    public override void Unload()
+    {
+        ResetRuntimeState();
+    }
+
+    /// <summary>维度入口不参与统一 Tick。</summary>
+    public override void ModUpdate(float deltaTime)
+    {
+    }
+
+    /// <summary>保证旧 Prefab 反序列化后也拥有可注册的模块数据。</summary>
+    private void EnsureModuleData()
+    {
+        moduleData ??= new Ex_ModData();
+        moduleData.ID = PortalModuleId;
+    }
 
     #endregion
 

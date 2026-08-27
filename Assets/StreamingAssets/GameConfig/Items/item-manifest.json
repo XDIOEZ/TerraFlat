@@ -35,6 +35,11 @@
       "id": "building_summoners",
       "path": "shells/building_summoners.json",
       "enabled": true
+    },
+    {
+      "id": "building_bodies",
+      "path": "shells/building_bodies.json",
+      "enabled": true
     }
   ]
 }

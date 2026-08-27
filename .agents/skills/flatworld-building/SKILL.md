@@ -8,7 +8,8 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 ## 入口
 
 - 主链：`Assets/5_Scripts/5-3_GamePlay/World/Building/{Mod_Building,BuildingShadow,BuildingOccupancyRegistry}.cs`
-- 建筑召唤器物品定义：`Assets/StreamingAssets/GameConfig/Items/shells/building_summoners.json`；同一类别文件包含 13 个召唤器各自的抽象基类和具体定义。
+- 建筑 JSON：`Assets/StreamingAssets/GameConfig/Items/shells/{building_summoners,building_bodies}.json`；召唤器统一使用 `BuildingSummonerShell`，动态本体统一使用 `BuildingBodyShell`。
+- 建筑 Shell/模块迁移：`Assets/Editor/FlatWorld/ContentTools/Migrations/BuildingShellMigrationTool.cs`；差异玩法位于 `Assets/2_Prefabs/Gameplay/Modules/Building/`。
 - 门/堆肥：同目录 `Mod_Door.cs`、`Mod_CompostBin.cs`
 - 结构：`World/Map/Structures/{ChunkGenerator_Structures,StructureData,StructureItemAuthoring}.cs`
 - 结构资源：`Assets/4_ScriptObjects/World/Structures/`
@@ -18,11 +19,14 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 `Summoner → BuildingShadow 校验 → PlacedBuilding → 注册占地 → 导航脏格`；拆除反向生成带 Snapshot 的 Summoner，成功后才删除建筑。
 
 - 以 `BuildingRole` 区分 Summoner/PlacedBuilding，禁止用血量或位置推断。
+- 无快照的新放置必须通过 `GameRes.CreateItemData(BuildingPrefabId)` 创建本体 JSON 数据；禁止再克隆 Summoner 数据后改 ID。拆除快照仍由 Summoner 携带并优先恢复。
+- 通用建筑本体只提供 `Item + SpriteRenderer + BoxCollider2D`；伤害由 JSON `health` 注入，门、容器、工作台等反馈由独立 `IInteractable` Module 提供，不再依赖通用 `Mod_InteractReciver` 转发。
+- 手持火把与建筑火把职责不同：手持物保持 `Torch`，建筑本体使用 `Torch_Building`，`Torch_Summoner` 只能指向后者。
 - 动态建筑保持 GameObject + Collider + `BuildingOccupancyRegistry`，不得写入地形 `TileData`。
-- 静态岩壁/结构墙才使用 Blocking Tile；Tile 栈只通过 `Data_TileMap` API 读写。
+- 静态岩壁/结构墙才使用 Blocking Tile；例如 `Wall_Stone` 只有 Summoner JSON，不创建动态本体定义。Tile 栈只通过 `Data_TileMap` API 读写。
 - 新版 WorldModel 的玩家格子建筑虽使用 `ChunkTerrainData.BlockingTileId`，仍必须接入存档的运行时区块差量；不能只依赖 `MapSave.items`。
 - 新版 WorldModel 的动态建筑 Item 不挂旧 `Chunk.RunTimeItems`；必须按 `Mod_Building` 的角色筛选，在 `ChangedItems` 中保存完整 `ItemData`，并在区块就绪后恢复模块状态/耐久。
-- `BuildingShadow` 的 `sourceRenderer` 与 `sourceRoot` 必须来自同一对象层级；本体 prefab 可能没有 SpriteRenderer，此时只能用手持实例的 Sprite 和手持实例根节点配对，禁止跨对象计算局部偏移。
+- `BuildingShadow` 的 `sourceRenderer` 与 `sourceRoot` 必须来自同一对象层级；共享本体 Shell 资源本身没有 Sprite，预览应从 `RuntimeItemDefinition` 创建无模块的轻量预览源，同时使用本体 JSON Collider 计算占地，禁止回退到召唤器图标或共享 Shell 默认尺寸。
 - 带 `Building_Data.TileBlockId` 的建筑最终由 `TileBuildingSystem` 写入 Tilemap，预览图片与占地范围必须以格心为锚点，不能继承本体 Sprite 子节点的局部偏移。
 - 建筑模块对 `DamageReceiver` 等模块的依赖必须在加载阶段从 `ItemMods` 注册表解析；禁止序列化嵌套模块 Prefab 的组件引用，模块缺失修复后原引用可能成为无效组件。
 - 占地算法或安装/拆除顺序变化时联动 `flatworld-navigation` 与 `flatworld-map`。

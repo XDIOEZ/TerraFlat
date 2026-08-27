@@ -485,9 +485,14 @@ public class Mod_CompostBin : Module, IInteractable
             return UI_Prefab;
         }
 
+        if (!Application.isPlaying)
+        {
+            return null;
+        }
+
         if (GameRes.Instance != null)
         {
-            GameObject prefab = GameRes.Instance.GetPrefab("UI_CompostBin");
+            GameObject prefab = GameRes.Instance.GetPrefab("UI_CompostBin", false);
             if (prefab != null)
             {
                 return prefab;

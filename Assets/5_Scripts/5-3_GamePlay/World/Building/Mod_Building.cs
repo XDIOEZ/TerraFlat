@@ -57,6 +57,8 @@ public class Mod_Building : Module
     public Building_Data Data = new();
     public Ex_ModData BuildingData;
     public BuildingShadow GhostShadow;
+    private GameObject _definitionPreviewSource;
+    private string _definitionPreviewItemId;
     public BoxCollider2D boxCollider2D;
     // 伤害模块由 ItemMods 注册表提供，禁止序列化嵌套 Prefab 的组件引用。
     [NonSerialized]
@@ -411,8 +413,7 @@ public class Mod_Building : Module
             }
             else
             {
-                placedData = FastCloner.FastCloner.DeepClone(summonerData);
-                placedData.IDName = buildingPrefabId;
+                placedData = GameRes.Instance.CreateItemData(buildingPrefabId);
             }
         }
         catch (Exception exception)
@@ -661,11 +662,18 @@ public class Mod_Building : Module
 
     public void CleanupGhost()
     {
-        if (GhostShadow == null)
-            return;
+        if (GhostShadow != null)
+        {
+            Destroy(GhostShadow.gameObject);
+            GhostShadow = null;
+        }
 
-        Destroy(GhostShadow.gameObject);
-        GhostShadow = null;
+        if (_definitionPreviewSource != null)
+        {
+            Destroy(_definitionPreviewSource);
+            _definitionPreviewSource = null;
+            _definitionPreviewItemId = null;
+        }
     }
 
     public void ReleasePlacementOccupancy()
@@ -979,6 +987,18 @@ public class Mod_Building : Module
         if (!string.IsNullOrWhiteSpace(Data?.TileBlockId))
             return new Bounds(position, Vector3.one);
 
+        if (Data?.Role == BuildingRole.Summoner &&
+            TryGetDefinitionPreviewSource(out GameObject definitionPreview))
+        {
+            BoxCollider2D definitionCollider = definitionPreview.GetComponent<BoxCollider2D>();
+            if (definitionCollider != null)
+            {
+                Bounds definitionBounds = GetColliderLocalBounds(definitionPreview.transform, definitionCollider);
+                definitionBounds.center += position;
+                return definitionBounds;
+            }
+        }
+
         if (boxCollider2D == null)
             return new Bounds(position, Vector3.one * 0.9f);
 
@@ -1224,6 +1244,14 @@ public class Mod_Building : Module
         if (UsesCurrentItemAsBuildingPrefab() && TryGetCurrentItemPreviewRenderer(out sourceRenderer, out sourceRoot))
             return true;
 
+        if (TryGetDefinitionPreviewSource(out GameObject definitionPreview))
+        {
+            sourceRenderer = definitionPreview.GetComponentInChildren<SpriteRenderer>(true);
+            sourceRoot = definitionPreview.transform;
+            if (sourceRenderer != null && sourceRenderer.sprite != null)
+                return true;
+        }
+
         if (TryGetBuildingBodyPrefab(out GameObject buildingPrefab))
         {
             Item buildingItem = buildingPrefab.GetComponent<Item>();
@@ -1328,6 +1356,13 @@ public class Mod_Building : Module
                 return GetColliderLocalBounds(item.transform, currentItemCollider);
         }
 
+        if (TryGetDefinitionPreviewSource(out GameObject definitionPreview))
+        {
+            BoxCollider2D definitionCollider = definitionPreview.GetComponent<BoxCollider2D>();
+            if (definitionCollider != null)
+                return GetColliderLocalBounds(definitionPreview.transform, definitionCollider);
+        }
+
         if (TryGetBuildingBodyPrefab(out GameObject buildingPrefab))
         {
             BoxCollider2D bodyCollider = buildingPrefab.GetComponent<BoxCollider2D>();
@@ -1337,6 +1372,86 @@ public class Mod_Building : Module
         }
 
         return GetPlacementBounds(Vector3.zero);
+    }
+
+    /// <summary>按建筑本体 JSON 创建一个无模块、不可见的轻量预览源。</summary>
+    private bool TryGetDefinitionPreviewSource(out GameObject previewSource)
+    {
+        previewSource = null;
+        string buildingId = Data?.BuildingPrefabId;
+        if (string.IsNullOrWhiteSpace(buildingId))
+            buildingId = GetBuildingPrefabId(item?.itemData?.IDName);
+        if (string.IsNullOrWhiteSpace(buildingId) || GameRes.Instance == null ||
+            !GameRes.Instance.TryGetItemDefinition(buildingId, out RuntimeItemDefinition definition) ||
+            definition?.Sprite == null)
+        {
+            return false;
+        }
+
+        if (_definitionPreviewSource == null ||
+            !string.Equals(_definitionPreviewItemId, buildingId, StringComparison.Ordinal))
+        {
+            if (_definitionPreviewSource != null)
+                Destroy(_definitionPreviewSource);
+            _definitionPreviewSource = CreateDefinitionPreviewSource(definition);
+            _definitionPreviewItemId = buildingId;
+        }
+
+        previewSource = _definitionPreviewSource;
+        return previewSource != null;
+    }
+
+    /// <summary>把运行时定义中的图片、渲染参数与 BoxCollider 配置还原到预览专用对象。</summary>
+    private static GameObject CreateDefinitionPreviewSource(RuntimeItemDefinition definition)
+    {
+        GameObject root = new GameObject($"{definition.Id}_BuildingPreview")
+        {
+            hideFlags = HideFlags.HideAndDontSave
+        };
+        GameObject renderObject = new GameObject("Render")
+        {
+            hideFlags = HideFlags.HideAndDontSave
+        };
+        renderObject.transform.SetParent(root.transform, false);
+
+        ItemVisualDefinitionDto visual = definition.Visual;
+        SpriteRenderer renderer = renderObject.AddComponent<SpriteRenderer>();
+        renderer.sprite = definition.Sprite;
+        if (visual?.RendererLocalPosition.HasValue == true)
+            renderObject.transform.localPosition = visual.RendererLocalPosition.Value;
+        if (visual?.RendererLocalEulerAngles.HasValue == true)
+            renderObject.transform.localEulerAngles = visual.RendererLocalEulerAngles.Value;
+        if (visual?.RendererLocalScale.HasValue == true)
+            renderObject.transform.localScale = visual.RendererLocalScale.Value;
+        if (visual?.Color.HasValue == true)
+            renderer.color = visual.Color.Value;
+        if (visual?.FlipX.HasValue == true)
+            renderer.flipX = visual.FlipX.Value;
+        if (visual?.FlipY.HasValue == true)
+            renderer.flipY = visual.FlipY.Value;
+        if (!string.IsNullOrWhiteSpace(visual?.SortingLayerName))
+            renderer.sortingLayerName = visual.SortingLayerName;
+        if (visual?.SortingOrder.HasValue == true)
+            renderer.sortingOrder = visual.SortingOrder.Value;
+
+        ItemColliderDefinitionDto colliderDefinition = visual?.Collider;
+        if (colliderDefinition != null)
+        {
+            BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
+            if (colliderDefinition.Enabled.HasValue)
+                collider.enabled = colliderDefinition.Enabled.Value;
+            if (colliderDefinition.IsTrigger.HasValue)
+                collider.isTrigger = colliderDefinition.IsTrigger.Value;
+            if (colliderDefinition.Offset.HasValue)
+                collider.offset = colliderDefinition.Offset.Value;
+            if (colliderDefinition.Size.HasValue)
+                collider.size = colliderDefinition.Size.Value;
+            if (colliderDefinition.EdgeRadius.HasValue)
+                collider.edgeRadius = colliderDefinition.EdgeRadius.Value;
+        }
+
+        root.SetActive(false);
+        return root;
     }
 
     private bool UsesCurrentItemAsBuildingPrefab()

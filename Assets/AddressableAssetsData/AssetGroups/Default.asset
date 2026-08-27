@@ -47,12 +47,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 02ddd1e1b0c823d4cb6c6d5efe0eb359
-    m_Address: Assets/2_Prefabs/World/Buildings/Summoners/Meatrack_Summoner.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 03533b7d72493a24d92611920ea24b4f
     m_Address: Assets/6_Art/Building/Wall_Wood_Medium.png
     m_ReadOnly: 0
@@ -179,14 +173,14 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 0fef65f5e875799469dd020d5fdaf4f6
-    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Debug/UI_DebugScrollView.prefab
+  - m_GUID: 0fe7cd8a650b7a74fb3857c2cf6c66f8
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Mod_WeedAppearance.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 10f28c4bb987c9948bab5bcd57ecb926
-    m_Address: Assets/2_Prefabs/World/Buildings/Summoners/Scarecrow_Summoner.prefab
+  - m_GUID: 0fef65f5e875799469dd020d5fdaf4f6
+    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Debug/UI_DebugScrollView.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -245,6 +239,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1b604e9c39e490f45a512a0c3b20a102
+    m_Address: Assets/2_Prefabs/Gameplay/Items/Common/MineResource.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1b6dd32ba60554e4b9129e54cd9c8f6a
     m_Address: Assets/6_Art/Food/Item_Food_013.png
     m_ReadOnly: 0
@@ -275,6 +275,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 202484ce051fe244f90bc65b86c34619
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Tent_Mod_Tent.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 20fa46eba2a77114f8e5b6ae80b2af5a
     m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_TileReciver.prefab
     m_ReadOnly: 0
@@ -289,6 +295,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2201c5ebfd642f045830db1ad9f7feab
     m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_Collectable.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 222e93e3df7d2e2419c911ff9b67fc2a
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Chest_Wood_Mod_Inventory.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -323,26 +335,20 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 296e945b0a9dda44b9a5d58075d795da
-    m_Address: Assets/2_Prefabs/World/Buildings/Scarecrow.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 29938b1287529f34fa0ffe33aac52ce1
     m_Address: Assets/6_Art/Items/Weapons/Item_Weapon_032.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 2ac7438069ffb464980388cdb844aef5
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Combat/AttackTrigger.prefab
+  - m_GUID: 29a571d4ac9410140867db2fcf6646c2
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_SparkMaker_Mod_FireDrill.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 2acfce0c4e0c5ff4e86ae5352b33299c
-    m_Address: Assets/2_Prefabs/World/Buildings/Summoners/MineEntrance_Summoner.prefab
+  - m_GUID: 2ac7438069ffb464980388cdb844aef5
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Combat/AttackTrigger.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -355,12 +361,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2b3a984870a8c114f9ac30088f5aadf0
     m_Address: Assets/2_Prefabs/World/Tiles/TileItem_Stone.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 2cf443899d309994e8491f7fa4e3026b
-    m_Address: Assets/2_Prefabs/World/Buildings/Tent.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -389,18 +389,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 3206a0b4db2f5564ca00d3dcf354bc77
-    m_Address: Assets/2_Prefabs/World/Buildings/Summoners/WorkBench_Summoner.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 32c99d8f834e6894fbb07320774a30be
-    m_Address: Assets/2_Prefabs/World/Buildings/Summoners/Smelter_Summoner.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 337af568711ba9442ad340dc4cf5cadc
     m_Address: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Sword_Bronze.prefab
     m_ReadOnly: 0
@@ -412,12 +400,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 356700cc834eab64a82a57f57ff3ffec
-    m_Address: Assets/2_Prefabs/World/Buildings/Summoners/Door_Wood_Summoner.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 35ac961aa6c4ef249978ccaa5e039afd
     m_Address: Assets/2_Prefabs/World/Dimensions/CaveExit.prefab
@@ -437,12 +419,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 38596f03f2136a34b91d1e6cfb2e8777
-    m_Address: Assets/2_Prefabs/World/Buildings/Door_Wood.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 38a8e9aeab95ec449a3606e2283fa18d
     m_Address: Assets/2_Prefabs/Gameplay/Modules/AI/Module_Base_AI.prefab
     m_ReadOnly: 0
@@ -454,6 +430,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 392f49685d31b894f8ba9907a27e9e5e
+    m_Address: "Assets/6_Art/Food/\u5806\u80A5\u6876.png"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3a5b83e504544c94a8138c46c2805e2d
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/Module_HeldFood.prefab
@@ -467,6 +449,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3bef92dcc858f1740877ac7b97a60a3f
+    m_Address: "Assets/6_Art/Env/\u6930\u5B50\u6811.png"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3c46ab8e0ed4f064685fd412d78b98ee
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/Module_DiscardItem.prefab
     m_ReadOnly: 0
@@ -475,12 +463,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3dd470cc7fe3a724db6e455263253c29
     m_Address: "Assets/2_Prefabs/World/Space/\u5730\u7403.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 41d17800f3397ad4085f635c2fd9b1f6
-    m_Address: Assets/2_Prefabs/World/Space/Rocket.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -553,17 +535,17 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4754222086b2ca04b9d6ec8e0dbd0321
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Smelter_Mod_Furnace.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 484f9f8cde0587f44b49f5fb8d8732b3
     m_Address: Assets/6_Art/Items/Equipment/Wood Equipment/Wood Chestplate.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 4c2d602b69d751141870951cc6fcf398
-    m_Address: Assets/2_Prefabs/World/Buildings/Chest_Wood.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 4cb534e9d0f40154c903e5b80d013024
     m_Address: "Assets/6_Art/Food/\u6930\u8089.png"
@@ -577,11 +559,23 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4e7d3b72f00a66f4497aa208cda4dc6a
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Door_Wood_Mod_Door.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5132a6b17bc20a34ba0177cce336d330
     m_Address: Assets/2_Prefabs/World/Tiles/TileItem_Snow.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 513506228e739ea46b4c301966a0eed6
+    m_Address: Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 515d3c3d90817df4a95fbacce9bdea68
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Status/Player/UI_ModuleOpenButton.prefab
@@ -589,8 +583,20 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 51b892f22b1704a46b90597ac6bb5d77
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Door_Stone_Mod_Door.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 52846d0816513ac489300d4d4c7f5c1c
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/Module_Player.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 54197a14f8ddd674fbe82f4ef78d2883
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_WorkBench_Mod_MakeTable.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -625,12 +631,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 56f687a312c1c9f44a02b7622dbd5ef4
-    m_Address: Assets/2_Prefabs/World/Buildings/Summoners/Chest_Wood_Summoner.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5723168605491a440939c98a7a3f6e7a
     m_Address: Assets/6_Art/Food/Item_Food_009.png
     m_ReadOnly: 0
@@ -639,12 +639,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5819de873e8913b42a726562edbd0bdb
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Movement/Module_MoveSpeed.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 593cb509fd710a24aaeb539d5d1b2cb9
-    m_Address: Assets/2_Prefabs/World/Buildings/Summoners/Door_Stone_Summoner.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -681,6 +675,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5de7be0374cdef34fb44ea8b4db43440
     m_Address: Assets/2_Prefabs/Core/Managers/Time/TimeSystem.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5eda240c8cb9ec64d8368d6aeff94749
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_BlastFurnace_Mod_Furnace.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -776,6 +776,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 69c58992491b92e46864d7be17f5f748
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Meatrack_Meatrack.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6afd653fc5050c441a633e547e62c6f0
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_Furnace.prefab
     m_ReadOnly: 0
@@ -818,11 +824,23 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6d83f81f0a18c8e459afbee4daf95859
+    m_Address: Assets/2_Prefabs/Gameplay/Items/Common/BuildingSummonerShell.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6dad61aac020ddd4a802165922117e55
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Panels/UI_Bag.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6df0b1447e3beb544885a199f6bcd63d
+    m_Address: Assets/6_Art/Items/Plants/Tree/tree-set1/64x64/trees-set1-64_6.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6e88f70a7af617045af34ab8be235fbf
     m_Address: Mod_LuaBehaviour
@@ -832,12 +850,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6f04f63db18870946977a64dc9373560
     m_Address: Assets/2_Prefabs/Gameplay/Items/Tools/Hoes/Hoe_Stone.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 6f255a5a1b82c1b46b564cdae5f72880
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -872,12 +884,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 7939cd1121d1caf48a4f4bcb810d16d2
-    m_Address: Assets/2_Prefabs/World/Buildings/BlastFurnace.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7c4d3c190401db54db1675f7e9f60bae
     m_Address: flatworld.actor.animator.chicken
     m_ReadOnly: 0
@@ -889,6 +895,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7f9a023388082d74ca8fc3997c0d91e6
+    m_Address: Assets/6_Art/Building/Rocket.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7fa1725ad46407f47a171f54026e684b
     m_Address: Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab
@@ -902,8 +914,8 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 80b43ebacdbd03246a46c10b9692be80
-    m_Address: Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab
+  - m_GUID: 80f03fab627fc4d4f84df8396ba2d58b
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Torch_Building_Mod_LightSource.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -934,12 +946,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 85010448eb6bc8d4695b75a6845d1c00
     m_Address: Assets/2_Prefabs/Gameplay/AI/Chicken_Tree.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 863d4517d8f443f4da9cb1cd400b1ead
-    m_Address: Assets/2_Prefabs/World/Buildings/Summoners/Wall_Stone_Summoner.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1010,6 +1016,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9048a0e1e6aef0840973148d49b9a15a
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Bonfire_Mod_LightSource.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9168c85045bbd8149bdba27743573e33
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Status/Quest/UI_QuestTracker.prefab
     m_ReadOnly: 0
@@ -1028,20 +1040,8 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 92c40ea4c73544d4e9061baa2ca3b5ee
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/SparkMaker_Summoner.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 953b7b5b07a613949b9263e579a3f146
     m_Address: Assets/2_Prefabs/Gameplay/Items/Inventory/Module_Hotbar.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 955350c909684f84783e1dcd827d163e
-    m_Address: Assets/2_Prefabs/World/Buildings/Summoners/Tent_Summoner.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1054,6 +1054,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 96b781ca01a5169469e6113a54a33ae6
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/ItemTransformController.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 96d4b9747c4fa0049b2147c195719ffd
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Rocket_Module_Fly.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1100,6 +1106,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9c89398d757cce44fa7d980b81489146
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Scarecrow_Mod_Equipment.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9d6c3cee7e6aea74d892677e88925c7f
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Common/Module_FocusPoint.prefab
     m_ReadOnly: 0
@@ -1136,12 +1148,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Skill
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: a00706d638acbb2499172cab668bf016
-    m_Address: Assets/2_Prefabs/World/Buildings/Door_Stone.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a0dc5a480ea75bf4d9d7b74bfdf2c4dc
     m_Address: Assets/6_Art/Food/Tea.png
@@ -1276,12 +1282,6 @@ MonoBehaviour:
     - ActorShell
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: af14255b14a12bf40908624fb3ef8d0b
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Food/Summoners/CompostBin_Summoner.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: afedc3279fc9e4642ba49ebc62089d51
     m_Address: Assets/6_Art/Items/Weapons/Item_Weapon_021.png
     m_ReadOnly: 0
@@ -1336,12 +1336,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: b7bb17f855b07ef47a96ea42eefb4d19
-    m_Address: Assets/2_Prefabs/World/Buildings/Wall_Wood.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b81ac21ec38797245a976d9f921b2bd4
     m_Address: Assets/6_Art/Food/pixelate (1).png
     m_ReadOnly: 0
@@ -1350,12 +1344,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: bb680c5a720608844a39de820c689aa6
     m_Address: "Assets/2_Prefabs/World/Map/\u5730\u9762.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: bbeb9613546705242ad5f2b362253355
-    m_Address: Assets/2_Prefabs/World/Buildings/Meatrack.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1390,12 +1378,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: bef35c376aeb59546adadda04aaa61f7
-    m_Address: Assets/2_Prefabs/World/Buildings/Summoners/Bonfire_Summoner.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: bf674b2448ea7454a845f005c9ab05e1
     m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_AutoSaveSettings.prefab
     m_ReadOnly: 0
@@ -1422,12 +1404,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c56368145ed98b84da8f176212fb6b75
     m_Address: Assets/2_Prefabs/2-1_UI/Settings/Components/UI_InputBindingRow.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: c56ada92b0ffaf94fafaa99c1bd0f0c6
-    m_Address: Assets/2_Prefabs/World/Buildings/Wall_Stone.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1480,12 +1456,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: c81a87a3667f93340a56b3e016a55c95
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Tools/SparkMaker.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c9071f519ad95e14b8f643d82db1e458
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/Module_Food.prefab
     m_ReadOnly: 0
@@ -1509,12 +1479,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: cca6f0741d956684bbb9a6c9ea0fe5c7
-    m_Address: Assets/2_Prefabs/World/Buildings/WorkBench.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ccad8bf9dc67f074b879b09d279d497a
     m_Address: Assets/6_Art/Items/Tools/Flint.png
@@ -1542,12 +1506,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d053d623af3d3ba49a09e3bd67e7b696
     m_Address: Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: d11f29cf83ce4dd46932f8463f0e81f7
-    m_Address: Assets/2_Prefabs/World/Buildings/Smelter.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1612,6 +1570,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d753f470df155514dba86a343fe0ad84
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Bonfire_Mod_Furnace.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d943eea62cf84fe4a9df7ba77282873e
     m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_Plantable.prefab
     m_ReadOnly: 0
@@ -1624,8 +1588,8 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: dbe0fdf0241e35442b1a020284fc6eb3
-    m_Address: Assets/2_Prefabs/World/Buildings/Bonfire.prefab
+  - m_GUID: dcf6df01e9f77f84f8fc8d241b5dee78
+    m_Address: Assets/2_Prefabs/Gameplay/Items/Common/BuildingBodyShell.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1654,12 +1618,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: e00b181a6243dfe4ba98db751aa25634
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Food/CompostBin.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e0808ae7e3af6584eb730450267cb71b
     m_Address: Assets/6_Art/Tilemap/IceTileset.png
@@ -1703,6 +1661,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e79aed5c0d139814da460f1afbbe4a1b
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_MineEntrance_DimensionPortal.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e815ac9fdcd49fd478b8159a2da77694
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Rendering/Shadow.prefab
     m_ReadOnly: 0
@@ -1720,12 +1684,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: e8bfaef07b026a54da8a2e2fd6559c58
-    m_Address: Assets/2_Prefabs/World/Buildings/MineEntrance.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e93fb2825dd39564687eb4afe114ce36
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Panels/UI_ItemInfo.prefab
@@ -1829,14 +1787,14 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: f885d956305b04b4d9be0d53393d435c
-    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Components/UI_HandSlot.prefab
+  - m_GUID: f7eb62eb686fb2e43bde12fdd9fadb61
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_CompostBin_Mod_CompostBin.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: f8bb8b9f59d14134aa1dbf93ed5554b6
-    m_Address: Assets/2_Prefabs/World/Buildings/Summoners/BlastFurnace_Summoner.prefab
+  - m_GUID: f885d956305b04b4d9be0d53393d435c
+    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Components/UI_HandSlot.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1877,12 +1835,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: fce50f15421b81241bef640c37546fe7
-    m_Address: Assets/2_Prefabs/World/Space/Summoners/Rocket_Summoner.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fd8723ea4457a3a48aa43f299cc9b24f
     m_Address: "Assets/2_Prefabs/World/Space/\u901A\u7528\u661F\u4F53.prefab"
     m_ReadOnly: 0
@@ -1900,36 +1852,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 3bef92dcc858f1740877ac7b97a60a3f
-    m_Address: "Assets/6_Art/Env/\u6930\u5B50\u6811.png"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 513506228e739ea46b4c301966a0eed6
-    m_Address: Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 6df0b1447e3beb544885a199f6bcd63d
-    m_Address: Assets/6_Art/Items/Plants/Tree/tree-set1/64x64/trees-set1-64_6.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 0fe7cd8a650b7a74fb3857c2cf6c66f8
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Mod_WeedAppearance.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 1b604e9c39e490f45a512a0c3b20a102
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Common/MineResource.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}

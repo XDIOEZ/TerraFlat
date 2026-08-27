@@ -6,7 +6,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Mod_Inventory : Module, IInventory, IInstanceUI
+public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
 {
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => 0.25f;
@@ -44,6 +44,8 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
     [Tooltip("Inventory对应的BasePanel缓存字典")]
     [ReadOnly]
     public SerializedDictionary<Inventory, BasePanel> inventoryBasePanelCache = new();
+
+    private Mod_InteractReciver interactReceiver;
 
     #endregion
 
@@ -133,13 +135,14 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
             }
         }
         // 获取交互模块引用
+        UnbindInteractionReceiver();
         if (item != null && item.itemMods != null)
         {
-            var interactMod = item.itemMods.GetMod_ByID<Mod_InteractReciver>(ModText.Interact);
-            if (interactMod != null)
+            interactReceiver = item.itemMods.GetMod_ByID<Mod_InteractReciver>(ModText.Interact);
+            if (interactReceiver != null)
             {
-                interactMod.OnAction_Start += Interact_Start;
-                interactMod.OnAction_Stop += Interact_Stop;
+                interactReceiver.OnAction_Start += Interact_Start;
+                interactReceiver.OnAction_Stop += Interact_Stop;
             }
         }
         else
@@ -151,6 +154,24 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
         Mod_Equipment equipment = item?.GetComponentsInChildren<Mod_Equipment>(true)
             .FirstOrDefault();
         equipment?.RefreshBagStorageSlots();
+    }
+
+    /// <summary>卸载容器时解除旧交互桥接并清理临时转移目标。</summary>
+    public override void Unload()
+    {
+        UnbindInteractionReceiver();
+        Interact_Stop(null);
+    }
+
+    /// <summary>对称解除兼容旧 Prefab 的交互接收器事件。</summary>
+    private void UnbindInteractionReceiver()
+    {
+        if (interactReceiver == null)
+            return;
+
+        interactReceiver.OnAction_Start -= Interact_Start;
+        interactReceiver.OnAction_Stop -= Interact_Stop;
+        interactReceiver = null;
     }
 
     private void NewMethod(Inventory currentInventory)
@@ -259,6 +280,19 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI
     #endregion
 
     #region 交互方法
+
+    /// <summary>由统一玩家交互入口打开容器。</summary>
+    public void OnInteractStart(Item playerItem)
+    {
+        Interact_Start(playerItem);
+    }
+
+    /// <summary>由统一玩家交互入口关闭容器。</summary>
+    public void OnInteractCancel(Item playerItem)
+    {
+        Interact_Stop(playerItem);
+    }
+
     //玩家与此发生交互
     public void Interact_Start(Item item_)
     {

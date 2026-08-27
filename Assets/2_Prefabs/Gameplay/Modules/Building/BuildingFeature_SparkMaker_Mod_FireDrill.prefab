@@ -1,0 +1,113 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5438772473637161004
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6332058426701500305}
+  - component: {fileID: 4348254171468051502}
+  m_Layer: 0
+  m_Name: BuildingFeature_SparkMaker_Mod_FireDrill
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6332058426701500305
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5438772473637161004}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4348254171468051502
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5438772473637161004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3dffcfe1c5fe5a948b1bfd9acb82535b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModSaveData:
+    Name: 
+    ID: "\u94BB\u6728\u53D6\u706B\u6A21\u5757"
+    isRunning: 1
+    Type: 0
+    BitData: 
+  RawData: []
+  InputInventory:
+    item: {fileID: 0}
+    InventoryPanel_Prefab: {fileID: 0}
+    basePanel: {fileID: 0}
+    Data:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    itemSlot_UI: []
+  OutputInventory:
+    item: {fileID: 0}
+    InventoryPanel_Prefab: {fileID: 0}
+    basePanel: {fileID: 0}
+    Data:
+      Name: 
+      itemSlots: []
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    itemSlot_UI: []
+  basePanel: {fileID: 0}
+  UI_Prefab: {fileID: 2639614329428065687, guid: 5b952bf558866bc499d7e8c320ea5530, type: 3}
+  FrictionButton: {fileID: 0}
+  CloseButton: {fileID: 0}
+  InputSlotUI: {fileID: 0}
+  OutputSlotUI: {fileID: 0}
+  FireSeedItemID: FireSeed
+  TinderItemIds:
+  - Leaf
+  TinderTags:
+  - "\u706B\u7ED2"
+  RequiredClickCount: 20
+  ClickIncrement: 1
+  FirstClickBonus: 5
+  DecayRatePerSecond: 5

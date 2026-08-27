@@ -2,24 +2,24 @@
   "schemaVersion": 1,
   "items": [
     {
-      "id": "BuildingSummoner_Base",
+      "id": "BuildingBody_Base",
       "abstract": true,
-      "shellPrefab": "BuildingSummonerShell",
+      "shellPrefab": "BuildingBodyShell",
       "visual": {
         "rendererPath": "Render"
       }
     },
     {
-      "id": "BlastFurnace_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/BlastFurnace_Summoner.prefab",
+      "id": "BlastFurnace",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/BlastFurnace.prefab",
       "gameName": "BlastFurnace",
       "description": "高炉：一种炉子，其中燃烧是通过压力下的空气流动来强制进行的，尤其是用于还原铁矿石的炉子。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -102,7 +102,37 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"BlastFurnace\",\"SummonerPrefabId\":\"BlastFurnace_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"BlastFurnace\",\"SummonerPrefabId\":\"BlastFurnace_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 100.23,
+                "y": 100.23
+              },
+              "MaxTemperature": 100.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        },
+        "熔炉模块": {
+          "prefab": "BuildingFeature_BlastFurnace_Mod_Furnace",
+          "id": "熔炉模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
             "Type": 0
           }
         }
@@ -133,16 +163,16 @@
       }
     },
     {
-      "id": "Bonfire_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Bonfire_Summoner.prefab",
+      "id": "Bonfire",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Bonfire.prefab",
       "gameName": "Bonfire",
       "description": "用于照明、取暖与烹饪的火堆。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -225,7 +255,60 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Bonfire\",\"SummonerPrefabId\":\"Bonfire_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Bonfire\",\"SummonerPrefabId\":\"Bonfire_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "熔炉模块": {
+          "prefab": "BuildingFeature_Bonfire_Mod_Furnace",
+          "id": "熔炉模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [
+              2,
+              0,
+              0,
+              72,
+              67,
+              0,
+              0,
+              72,
+              67,
+              0,
+              0,
+              72,
+              68
+            ],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 200.0,
+                "y": 200.0
+              },
+              "MaxTemperature": 800.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        },
+        "Module_LightSource": {
+          "prefab": "BuildingFeature_Bonfire_Mod_LightSource",
+          "id": "Module_LightSource",
+          "enabled": true,
+          "data": {
+            "BitData": null,
             "Type": 0
           }
         }
@@ -256,16 +339,16 @@
       }
     },
     {
-      "id": "Chest_Wood_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Chest_Wood_Summoner.prefab",
+      "id": "Chest_Wood",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Chest_Wood.prefab",
       "gameName": "Chest_Wood",
       "description": "用于存放物品的木制箱子。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -348,7 +431,23 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Chest_Wood\",\"SummonerPrefabId\":\"Chest_Wood_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Chest_Wood\",\"SummonerPrefabId\":\"Chest_Wood_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "UI_背包": {
+          "prefab": "BuildingFeature_Chest_Wood_Mod_Inventory",
+          "id": "UI_背包",
+          "enabled": true,
+          "data": {
+            "Data": {},
+            "PanleRectPosition": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "InventoryInitName": "",
+            "BasePanelIsOpen": true,
             "Type": 0
           }
         }
@@ -379,16 +478,16 @@
       }
     },
     {
-      "id": "Door_Stone_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Door_Stone_Summoner.prefab",
+      "id": "Door_Stone",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Door_Stone.prefab",
       "gameName": "石门",
       "description": "可以开关的厚重石门。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -471,7 +570,16 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Stone\",\"SummonerPrefabId\":\"Door_Stone_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Stone\",\"SummonerPrefabId\":\"Door_Stone_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "Door": {
+          "prefab": "BuildingFeature_Door_Stone_Mod_Door",
+          "id": "Door",
+          "enabled": true,
+          "data": {
+            "BitData": "",
             "Type": 0
           }
         }
@@ -502,16 +610,16 @@
       }
     },
     {
-      "id": "Door_Wood_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Door_Wood_Summoner.prefab",
+      "id": "Door_Wood",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Door_Wood.prefab",
       "gameName": "Door_Wood",
       "description": "可安装在建筑中的木门。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -594,7 +702,16 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Wood\",\"SummonerPrefabId\":\"Door_Wood_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Door_Wood\",\"SummonerPrefabId\":\"Door_Wood_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "Door": {
+          "prefab": "BuildingFeature_Door_Wood_Mod_Door",
+          "id": "Door",
+          "enabled": true,
+          "data": {
+            "BitData": "",
             "Type": 0
           }
         }
@@ -625,16 +742,16 @@
       }
     },
     {
-      "id": "Meatrack_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Meatrack_Summoner.prefab",
+      "id": "Meatrack",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Meatrack.prefab",
       "gameName": "Meatrack",
       "description": "高炉：一种炉子，其中燃烧是通过压力下的空气流动来强制进行的，尤其是用于还原铁矿石的炉子。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -717,7 +834,16 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Meatrack\",\"SummonerPrefabId\":\"Meatrack_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Meatrack\",\"SummonerPrefabId\":\"Meatrack_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "晾肉架模块": {
+          "prefab": "BuildingFeature_Meatrack_Meatrack",
+          "id": "晾肉架模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
             "Type": 0
           }
         }
@@ -748,16 +874,16 @@
       }
     },
     {
-      "id": "MineEntrance_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/MineEntrance_Summoner.prefab",
+      "id": "MineEntrance",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/MineEntrance.prefab",
       "gameName": "矿坑入口",
       "description": "安装后可通往地下矿洞，并在矿洞中生成对应出口。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -840,7 +966,16 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MineEntrance\",\"SummonerPrefabId\":\"MineEntrance_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"MineEntrance\",\"SummonerPrefabId\":\"MineEntrance_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "维度入口模块": {
+          "prefab": "BuildingFeature_MineEntrance_DimensionPortal",
+          "id": "维度入口模块",
+          "enabled": true,
+          "data": {
+            "BitData": null,
             "Type": 0
           }
         }
@@ -871,16 +1006,16 @@
       }
     },
     {
-      "id": "Scarecrow_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Scarecrow_Summoner.prefab",
+      "id": "Scarecrow",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Scarecrow.prefab",
       "gameName": "Scarecrow",
       "description": "用于保护农田的稻草人。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 10.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -963,7 +1098,16 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Scarecrow\",\"SummonerPrefabId\":\"Scarecrow_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Scarecrow\",\"SummonerPrefabId\":\"Scarecrow_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "Module_Equipment": {
+          "prefab": "BuildingFeature_Scarecrow_Mod_Equipment",
+          "id": "Module_Equipment",
+          "enabled": true,
+          "data": {
+            "BitData": [],
             "Type": 0
           }
         }
@@ -994,16 +1138,16 @@
       }
     },
     {
-      "id": "Smelter_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Smelter_Summoner.prefab",
+      "id": "Smelter",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Smelter.prefab",
       "gameName": "Smelter",
       "description": "用于冶炼矿石的熔炉。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 200.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -1086,8 +1230,38 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Smelter\",\"SummonerPrefabId\":\"Smelter_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Smelter\",\"SummonerPrefabId\":\"Smelter_Summoner\"}",
             "Type": 0
+          }
+        },
+        "熔炉模块": {
+          "prefab": "BuildingFeature_Smelter_Mod_Furnace",
+          "id": "熔炉模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 100.23,
+                "y": 100.23
+              },
+              "MaxTemperature": 100.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
           }
         }
       },
@@ -1117,16 +1291,16 @@
       }
     },
     {
-      "id": "Tent_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Tent_Summoner.prefab",
+      "id": "Tent",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Tent.prefab",
       "gameName": "Tent",
       "description": "可供休息与遮蔽的帐篷。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 2.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -1209,130 +1383,16 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Tent\",\"SummonerPrefabId\":\"Tent_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Tent\",\"SummonerPrefabId\":\"Tent_Summoner\"}",
             "Type": 0
           }
-        }
-      },
-      "itemData": {
-        "code": "",
-        "transform": {
-          "position": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0
-          },
-          "rotation": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0,
-            "w": 0.0
-          },
-          "scale": {
-            "x": 1.0,
-            "y": 1.0,
-            "z": 1.0
-          }
         },
-        "ItemSpecialData": "",
-        "inHand": false,
-        "FactionId": ""
-      }
-    },
-    {
-      "id": "Wall_Stone_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Stone_Summoner.prefab",
-      "gameName": "石墙",
-      "description": "由坚固石块砌成的防御墙体。",
-      "durability": 1.0,
-      "maxDurability": 1.0,
-      "amount": 1.0,
-      "volume": 1.0,
-      "canBePickedUp": true,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png[Wall_Stone_Medium]",
-        "rendererLocalPosition": {
-          "x": 0.0,
-          "y": -0.5,
-          "z": 0.0
-        },
-        "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "rendererLocalScale": {
-          "x": 1.0,
-          "y": 1.0,
-          "z": 1.0
-        },
-        "color": {
-          "r": 1.0,
-          "g": 1.0,
-          "b": 1.0,
-          "a": 1.0
-        },
-        "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
-        "collider": {
-          "type": "BoxCollider2D",
+        "帐篷模块": {
+          "prefab": "BuildingFeature_Tent_Mod_Tent",
+          "id": "帐篷模块",
           "enabled": true,
-          "isTrigger": false,
-          "offset": {
-            "x": 0.0,
-            "y": 0.0
-          },
-          "path": "",
-          "size": {
-            "x": 1.0,
-            "y": 1.0
-          },
-          "edgeRadius": 0.0
-        }
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
-        "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
-        },
-        "moduleLocalPosition": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0.0,
-            "y": 0.0
-          },
-          "size": {
-            "x": 1.0,
-            "y": 1.0
-          },
-          "edgeRadius": 0.0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Stone\",\"SummonerPrefabId\":\"Wall_Stone_Summoner\",\"TileBlockId\":\"TileBase_BuiltStoneWall\"}",
+            "BitData": null,
             "Type": 0
           }
         }
@@ -1363,16 +1423,16 @@
       }
     },
     {
-      "id": "Wall_Wood_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab",
+      "id": "Wall_Wood",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Wall_Wood.prefab",
       "gameName": "Chest_Wood",
       "description": "用于阻挡通行的木墙。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -1455,7 +1515,7 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Wood\",\"SummonerPrefabId\":\"Wall_Wood_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Wood\",\"SummonerPrefabId\":\"Wall_Wood_Summoner\"}",
             "Type": 0
           }
         }
@@ -1486,16 +1546,16 @@
       }
     },
     {
-      "id": "WorkBench_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/WorkBench_Summoner.prefab",
+      "id": "WorkBench",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/Buildings/WorkBench.prefab",
       "gameName": "WorkBench",
       "description": "用于制作物品的工作台。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 100.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -1578,7 +1638,16 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"WorkBench\",\"SummonerPrefabId\":\"WorkBench_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"WorkBench\",\"SummonerPrefabId\":\"WorkBench_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "Module_WorkBench": {
+          "prefab": "BuildingFeature_WorkBench_Mod_MakeTable",
+          "id": "Module_WorkBench",
+          "enabled": true,
+          "data": {
+            "BitData": [],
             "Type": 0
           }
         }
@@ -1609,16 +1678,16 @@
       }
     },
     {
-      "id": "SparkMaker_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/SparkMaker_Summoner.prefab",
+      "id": "SparkMaker",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/SparkMaker.prefab",
       "gameName": "SparkMaker",
       "description": "通过摩擦产生火种的生火工具。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 5.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -1701,7 +1770,16 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SparkMaker\",\"SummonerPrefabId\":\"SparkMaker_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"SparkMaker\",\"SummonerPrefabId\":\"SparkMaker_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "钻木取火模块": {
+          "prefab": "BuildingFeature_SparkMaker_Mod_FireDrill",
+          "id": "钻木取火模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
             "Type": 0
           }
         }
@@ -1732,16 +1810,16 @@
       }
     },
     {
-      "id": "Torch_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab",
+      "id": "Torch_Building",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab",
       "gameName": "Torch",
-      "description": "用于放置火把照明设施的工具。",
+      "description": "Torch，可用于建造。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "Modern"
       ],
@@ -1824,7 +1902,16 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Torch_Building\",\"SummonerPrefabId\":\"Torch_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Torch_Building\",\"SummonerPrefabId\":\"Torch_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "Module_LightSource": {
+          "prefab": "BuildingFeature_Torch_Building_Mod_LightSource",
+          "id": "Module_LightSource",
+          "enabled": true,
+          "data": {
+            "BitData": [],
             "Type": 0
           }
         }
@@ -1855,16 +1942,16 @@
       }
     },
     {
-      "id": "CompostBin_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Summoners/CompostBin_Summoner.prefab",
+      "id": "CompostBin",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/CompostBin.prefab",
       "gameName": "CompostBin",
       "description": "将可腐物转化为肥料的堆肥箱。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 100.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -1947,7 +2034,16 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"CompostBin\",\"SummonerPrefabId\":\"CompostBin_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"CompostBin\",\"SummonerPrefabId\":\"CompostBin_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "Module_CompostBin": {
+          "prefab": "BuildingFeature_CompostBin_Mod_CompostBin",
+          "id": "Module_CompostBin",
+          "enabled": true,
+          "data": {
+            "BitData": "",
             "Type": 0
           }
         }
@@ -1978,16 +2074,16 @@
       }
     },
     {
-      "id": "Rocket_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Space/Summoners/Rocket_Summoner.prefab",
+      "id": "Rocket",
+      "parent": "BuildingBody_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/Space/Rocket.prefab",
       "gameName": "Rocket",
       "description": "用于往返星球与太空的火箭。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
       "volume": 1.0,
-      "canBePickedUp": true,
+      "canBePickedUp": false,
       "tags": [
         "35"
       ],
@@ -2070,7 +2166,16 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Rocket\",\"SummonerPrefabId\":\"Rocket_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Rocket\",\"SummonerPrefabId\":\"Rocket_Summoner\"}",
+            "Type": 0
+          }
+        },
+        "飞行模块": {
+          "prefab": "BuildingFeature_Rocket_Module_Fly",
+          "id": "飞行模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
             "Type": 0
           }
         }

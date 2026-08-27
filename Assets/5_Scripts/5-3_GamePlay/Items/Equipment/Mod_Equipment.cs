@@ -40,12 +40,18 @@ public class Mod_Equipment : Module, IInventory, IInteractable, IInstanceUI
 
     #region 生命周期
 
-    public void OnValidate() => _Data.Name = ModText.Equipment_Module;
+    public void OnValidate()
+    {
+        ModSaveData ??= new Ex_ModData_MemoryPackable();
+        ModSaveData.Name = ModText.Equipment_Module;
+    }
 
     public override void Awake()
     {
-        if (string.IsNullOrEmpty(_Data.ID))
-            _Data.ID = ModText.Equipment_Module;
+        ModSaveData ??= new Ex_ModData_MemoryPackable();
+        if (string.IsNullOrEmpty(ModSaveData.ID))
+            ModSaveData.ID = ModText.Equipment_Module;
+        base.Awake();
     }
 
     public override void Load()

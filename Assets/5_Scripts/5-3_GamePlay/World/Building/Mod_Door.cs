@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using FlatWorld.Audio;
 using UnityEngine;
 
@@ -113,9 +114,12 @@ public class Mod_Door : Module, IInteractable
 
     private void CacheReferences()
     {
+        Item ownerItem = item ?? GetComponentInParent<Item>();
+
         if (DoorRenderer == null)
         {
             DoorRenderer = GetComponent<SpriteRenderer>();
+            DoorRenderer ??= ownerItem?.GetComponentInChildren<SpriteRenderer>(true);
         }
 
         if (DoorCollider == null)
@@ -132,6 +136,12 @@ public class Mod_Door : Module, IInteractable
 
             if (DoorCollider == null && colliders.Length > 0)
                 DoorCollider = colliders[0];
+
+            if (DoorCollider == null && ownerItem != null)
+            {
+                DoorCollider = ownerItem.GetComponentsInChildren<BoxCollider2D>(true)
+                    .FirstOrDefault(collider => collider != null && !collider.isTrigger);
+            }
         }
 
         EnsureInteractionCollider();

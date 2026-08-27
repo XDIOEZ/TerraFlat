@@ -1,0 +1,165 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &4677258519102867415
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7726956549993551631}
+  - component: {fileID: 215992678395791045}
+  m_Layer: 0
+  m_Name: BuildingFeature_Bonfire_Mod_Furnace
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7726956549993551631
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4677258519102867415}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &215992678395791045
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4677258519102867415}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad65527c12ec3e84f85360e3f7b2ba93, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModSaveData:
+    Name: "\u7194\u7089\u6A21\u5757"
+    ID: 
+    isRunning: 1
+    Type: 0
+    BitData: 
+  Data:
+    SmeltingProgress: 10
+    MaxSmeltingSpeed: 10
+    SmeltingSpeed: 10
+    Temperature: 20
+    MaxTemperature: 0
+    MaxTemperatureLimit: 300
+    IsSmelting: 0
+    TemperatureUpSpeed: 10
+    TemperatureDownSpeed: 50
+  RawData: []
+  InputInventory:
+    item: {fileID: 0}
+    InventoryPanel_Prefab: {fileID: 0}
+    basePanel: {fileID: 0}
+    Data:
+      Name: 
+      itemSlots:
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    itemSlot_UI: []
+  OutputInventory:
+    item: {fileID: 0}
+    InventoryPanel_Prefab: {fileID: 0}
+    basePanel: {fileID: 0}
+    Data:
+      Name: 
+      itemSlots:
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    itemSlot_UI: []
+  FuelInventory:
+    item: {fileID: 0}
+    InventoryPanel_Prefab: {fileID: 0}
+    basePanel: {fileID: 0}
+    Data:
+      Name: 
+      itemSlots:
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
+      Index: 0
+      IsInjected: 0
+      PanelPosition: {x: 0, y: 0, z: 0}
+      PanelIsOpen: 0
+      ToggleActionName: 
+      UIPrefabName: 
+      Event_RefreshUI:
+        _PersistentCalls: []
+      Event_OnBeforeDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged:
+        _PersistentCalls: []
+      Event_OnDataChanged_TwoSlots:
+        _PersistentCalls: []
+    itemSlot_UI: []
+  mod_Fuel: {fileID: 0}
+  ignitionItemIds:
+  - FireSeed
+  ignitionTags:
+  - "\u706B\u79CD"
+  ignitionFuelValueOverride: 8
+  ignitionMaxTemperatureOverride: 180
+  basePanel: {fileID: 0}
+  UI_Prefab: {fileID: 2639614329428065687, guid: ca4e9b1fb55d2354882fd54109ad9dfa, type: 3}
+  WorkButton: {fileID: 0}
+  progressSlider: {fileID: 0}
+  fuelSlider: {fileID: 0}
+  temperatureSlider: {fileID: 0}
+  TemperatureText: {fileID: 0}

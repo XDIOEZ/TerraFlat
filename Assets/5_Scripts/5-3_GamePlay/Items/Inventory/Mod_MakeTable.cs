@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class Mod_MakeTable : Module, IInventory, IInstanceUI
+public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
 {
     #region 基础参数
 
@@ -30,8 +30,11 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
     {
         mod_InteractReciver = item.GetComponentInChildren<Mod_InteractReciver>();
         RestoreInventoryState();
-        mod_InteractReciver.OnAction_Start += Interact_Start;
-        mod_InteractReciver.OnAction_Stop += Interact_Stop;
+        if (mod_InteractReciver != null)
+        {
+            mod_InteractReciver.OnAction_Start += Interact_Start;
+            mod_InteractReciver.OnAction_Stop += Interact_Stop;
+        }
         InitData();
     }
 
@@ -121,7 +124,8 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
 
     public void OnValidate()
     {
-        _Data.Name = ModText.WorkBench;
+        ModSaveData ??= new Ex_ModData_MemoryPackable();
+        ModSaveData.Name = ModText.WorkBench;
     }
 
 
@@ -358,6 +362,20 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI
 
     /// <summary>
     /// 玩家开始交互。
+    /// </summary>
+    public void OnInteractStart(Item playerItem)
+    {
+        Interact_Start(playerItem);
+    }
+
+    /// <summary>由统一玩家交互入口关闭工作台。</summary>
+    public void OnInteractCancel(Item playerItem)
+    {
+        Interact_Stop(playerItem);
+    }
+
+    /// <summary>
+    /// 兼容旧交互接收器的工作台打开入口。
     /// </summary>
     public void Interact_Start(Item playerItem)
     {

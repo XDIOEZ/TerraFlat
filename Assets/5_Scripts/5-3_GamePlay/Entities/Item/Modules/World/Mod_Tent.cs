@@ -5,8 +5,24 @@ using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-public class Mod_Tent : MonoBehaviour, IInteractable
+/// <summary>帐篷交互模块；作为独立 Module Prefab 挂载到通用建筑本体 Shell。</summary>
+public class Mod_Tent : Module, IInteractable
 {
+    #region 模块数据
+
+    private const string TentModuleId = "帐篷模块";
+
+    public Ex_ModData ModData = new Ex_ModData { ID = TentModuleId };
+    public override ModuleData _Data
+    {
+        get => ModData;
+        set => ModData = value as Ex_ModData ?? new Ex_ModData { ID = TentModuleId };
+    }
+
+    public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
+
+    #endregion
+
     #region 配置
 
     public GameObject basePanel;
@@ -62,6 +78,64 @@ public class Mod_Tent : MonoBehaviour, IInteractable
     private bool dayTimeScaleApplied;
     private float cachedDayTimeScale = 1f;
     private string cachedTimeScaleSceneName;
+
+    #endregion
+
+    #region 模块生命周期
+
+    /// <summary>建立帐篷模块的稳定数据身份。</summary>
+    public override void Awake()
+    {
+        EnsureModuleData();
+        base.Awake();
+    }
+
+    /// <summary>帐篷没有持续运行态，加载时只校正模块数据。</summary>
+    public override void Load()
+    {
+        EnsureModuleData();
+    }
+
+    /// <summary>帐篷当前没有额外持久化状态。</summary>
+    public override void Save()
+    {
+        EnsureModuleData();
+    }
+
+    /// <summary>回收模块时释放输入锁、时间倍率与临时睡眠面板。</summary>
+    public override void Unload()
+    {
+        if (sleepingRoutine != null)
+            StopCoroutine(sleepingRoutine);
+        if (panelFadeRoutine != null)
+            StopCoroutine(panelFadeRoutine);
+        StopZzzFloat();
+        UnlockPlayerMovementInput();
+        RestoreDayNightTimeScale();
+
+        if (sleepPanel != null)
+            UIManager.ExistingInstance?.DestroyPanel(sleepPanel);
+
+        sleepPanel = null;
+        sleepCanvasGroup = null;
+        sleepPanelRect = null;
+        basePanel = null;
+        currentPlayer = null;
+        sleepingRoutine = null;
+        panelFadeRoutine = null;
+    }
+
+    /// <summary>帐篷不参与统一 Tick。</summary>
+    public override void ModUpdate(float deltaTime)
+    {
+    }
+
+    /// <summary>保证旧 Prefab 反序列化后也拥有可注册的模块数据。</summary>
+    private void EnsureModuleData()
+    {
+        ModData ??= new Ex_ModData();
+        ModData.ID = TentModuleId;
+    }
 
     #endregion
 
