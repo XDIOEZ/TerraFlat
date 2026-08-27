@@ -23,6 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 远程网络副本不进入本地 Tick、感知和存档索引。
 - 新模块同时检查脚本、ModuleData、模块/Item Prefab、Addressables 与 JSON 定义。
 - JSON 本体按职责组合通用模块；单个资源节点的名称和玩法配置不能成为专用模块 Prefab。周期资源应由生产模块写入库存接收契约，再由采集模块处理交互和掉落。
+- 通用世界实体外壳只能提供 `Item`、表现节点与查询 Collider；作物等玩法必须由 JSON 组合模块。成熟交互的可扩展副作用通过 `ICropHarvestAction` 注册，权威状态模块只负责按顺序调度动作与结束实体生命周期。
 - Prefab 必须由 Unity 序列化生成，禁止手写根对象 `fileID: 100100000`；该值是 Prefab 资产保留 ID，把它分配给 GameObject 会触发 `GameObject to Prefab` 的 PPtr 转换错误。
 - 批量调整 Prefab override 后不得在 `m_Modification.m_Modifications` 序列中留下空项；Unity 会把对应 `PrefabInstance` 判为损坏并在导入时删除整个嵌套模块，修改后必须重新导入并核对实际层级。
 - Item 与 Actor 的 `modules.*.parameters` 共用 `ModuleJsonConfigurator` 严格契约；删除或改名可配置字段后必须同步现行 JSON，并运行“FlatWorld/内容配置/校验全部本体内容”，禁止等到具体实例生成时才发现漂移。

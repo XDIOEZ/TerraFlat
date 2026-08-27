@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Crop_Base",
+      "abstract": true,
+      "parent": "BasicItem_Base",
+      "shellPrefab": "CropShell",
+      "canBePickedUp": false,
+      "visual": {
+        "rendererPath": "Render"
+      },
+      "modules": {
+        "crop": {
+          "prefab": "Module_Crop",
+          "id": "Mod_Crop",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "stage": 0,
+              "normalizedGrowth": 0.0,
+              "isPlanted": false,
+              "plantedTilePosition": {
+                "x": 0,
+                "y": 0
+              },
+              "isHarvested": false,
+              "growthStatus": 0
+            },
+            "growthDurationSeconds": 500.0,
+            "minimumWaterGrowthMultiplier": 0.5,
+            "minimumFertilityGrowthMultiplier": 0.5,
+            "waterConsumePerSecond": 0.02,
+            "fertilityConsumePerSecond": 0.00035,
+            "rainWaterPerSecond": 0.08,
+            "rainGrowthBonus": 0.15
+          }
+        },
+        "cropYield": {
+          "prefab": "Module_CropYield",
+          "id": "Mod_CropYield",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "outputs": []
+          }
+        },
+        "cropVisual": {
+          "prefab": "Module_CropVisual",
+          "id": "Mod_CropVisual",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "buriedClip": 0.5,
+            "seedlingScale": 0.25,
+            "matureScale": 1.0
+          }
+        }
+      }
+    },
+    {
+      "id": "RadishCrop",
+      "parent": "Crop_Base",
+      "gameName": "萝卜植株",
+      "description": "埋在耕地中的萝卜；成熟后交互即可拔起。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": false,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Plant_Radish.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.7,
+            "y": 0.65
+          }
+        }
+      },
+      "modules": {
+        "crop": {
+          "parameters": {
+            "Data": {
+              "stage": 1,
+              "normalizedGrowth": 1.0,
+              "isPlanted": false,
+              "plantedTilePosition": {
+                "x": 0,
+                "y": 0
+              },
+              "isHarvested": false,
+              "growthStatus": 4
+            }
+          }
+        },
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              {
+                "itemId": "Radish",
+                "minAmount": 1,
+                "maxAmount": 2,
+                "probability": 1.0
+              },
+              {
+                "itemId": "Seed_Radish",
+                "minAmount": 1,
+                "maxAmount": 1,
+                "probability": 0.25
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

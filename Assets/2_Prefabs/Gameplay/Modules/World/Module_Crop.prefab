@@ -9,9 +9,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 720000000000000002}
-  - component: {fileID: 720000000000000003}
+  - component: {fileID: 2219911924492787387}
   m_Layer: 0
-  m_Name: Module_CropVisual
+  m_Name: Module_Crop
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -32,7 +32,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &720000000000000003
+--- !u!114 &2219911924492787387
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -41,17 +41,27 @@ MonoBehaviour:
   m_GameObject: {fileID: 720000000000000001}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a6f0c7d74f6b4f1e9b8a6c2d3e4f5a61, type: 3}
+  m_Script: {fileID: 11500000, guid: 7938c4eddc1b5584581fc3d7667f7916, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  CropVisualData:
-    Name: Module_CropVisual
-    ID: Mod_CropVisual
+  ModData:
+    Name: 
+    ID: 
     isRunning: 1
     Type: 0
     BitData: 
-  buriedClip: 0.5
-  buriedMaterial: {fileID: 2100000, guid: 06dc2608a1031034698c137f9f6cfbc8, type: 2}
-  seedlingScale: 0.25
-  matureScale: 1
+  Data:
+    stage: 0
+    normalizedGrowth: 0
+    isPlanted: 0
+    plantedTilePosition: {x: 0, y: 0}
+    isHarvested: 0
+    growthStatus: 0
+  growthDurationSeconds: 500
+  minimumWaterGrowthMultiplier: 0.5
+  minimumFertilityGrowthMultiplier: 0.5
+  waterConsumePerSecond: 0.02
+  fertilityConsumePerSecond: 0.00035
+  rainWaterPerSecond: 0.08
+  rainGrowthBonus: 0.15

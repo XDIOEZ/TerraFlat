@@ -39,9 +39,10 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 快捷栏拖拽到非 UI 区域后的整组丢弃由 `ItemSlot_UI` 世界长按回调转发到 `Module_DiscardItem`，落点使用触点屏幕坐标；UI 槽位长按放置路径保持独立。
 - 快捷栏物品拖入 `Inventory_Hand` 后，移动端摇杆必须让出当前触摸所有权，避免长按世界丢弃时浮动摇杆抢占操作。
 - 手机端已经拿起物品后的再次长按丢弃由 `MobileHeldItemDropSurface` 统一转发到 `Module_DiscardItem`；中间空白触控面只在 `Inventory_Hand` 有物品时参与射线，`ItemSlot_UI` 的拖拽射线必须继续把该组件视为世界落点。
-- 当前作物闭环为 `Seed_Apple → AppleTree → Apple + Seed_Apple`；`Mod_Grow` 是唯一成长状态机，倍率各乘一次。
-- 种植能力由 `Mod_Plantable` 独立提供；物品定义只配置 `cropItemId`，统一 `PlantingSummoner` 负责预览，禁止让种子复用 `Mod_Building` 的占地、快照或拆除链路。
-- 权威播种生成的作物 Item 承载 `Mod_Grow` 与 `Mod_CropVisual`；收获物 Item 只负责食用与掉落，不能把作物视觉模块挂到收获物上。
+- `Mod_Plantable` 只通过 `IPlantableCrop` 初始化幼苗并判断地块占用；作物定义只配置 `cropItemId`，统一 `PlantingSummoner` 负责预览，禁止写死依赖某个成长模块或复用 `Mod_Building` 链路。
+- 普通农作物使用 `CropShell + Mod_Crop + Mod_CropYield + Mod_CropVisual`：`Mod_Crop` 只保存两阶段权威状态并调度 `ICropHarvestAction`，产物表和其他收获副作用必须拆成独立动作模块。
+- 世界植株与收获物必须保留独立 Item ID；种下时把植株重置为幼苗，成熟交互后由动作生成食物/种子并销毁植株，不能把世界植株直接改成食物实例。
+- `Mod_Grow` 继续承担树木与自然植物成长，并实现 `IPlantableCrop` 接入同一播种入口；水肥、天气与 `CropGrowthMultiplier` 在权威成长模块中各结算一次。
 - 使用 `_BodyClip` 裁剪作物精灵时，必须给 `Mod_CropVisual` 绑定支持该属性的 `Sprite-Lit-Master` 材质；通用 `Prop` 外壳默认材质不提供 BodyClip。
 - 废弃 `Module_Equipment.cs` 不再使用。
 - `Mod_Food` 的被动生命联动必须读取 `Mod_PlayerDeathState`；玩家濒死或 `DamageReceiver.Hp <= 0` 时停止回血与生存伤害，避免死亡状态被抬成极低正数。

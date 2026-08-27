@@ -2,8 +2,8 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// 作物表现模块：只负责把作物精灵裁成半埋状态，不参与种植、成长或收获交互。
-/// 使用 Sprite-Lit-Master 的 BodyClip 保留地上部分，具体作物的成长缩放仍由 Mod_Grow 控制。
+/// 作物表现模块：把作物精灵裁成半埋状态，并把 Mod_Crop 的连续进度映射为缩放。
+/// 不参与种植、成长结算或收获交互，对象卸载时恢复外壳原始材质与缩放。
 /// </summary>
 public sealed class Mod_CropVisual : Module
 {
@@ -42,6 +42,13 @@ public sealed class Mod_CropVisual : Module
     [SerializeField]
     private Material buriedMaterial;
 
+    [Header("成长缩放")]
+    [SerializeField, Range(0.01f, 1f)]
+    private float seedlingScale = 0.25f;
+
+    [SerializeField, Min(0.01f)]
+    private float matureScale = 1f;
+
     #endregion
 
     #region 运行时
@@ -50,6 +57,9 @@ public sealed class Mod_CropVisual : Module
     private MaterialPropertyBlock propertyBlock;
     private Material originalMaterial;
     private bool materialOverridden;
+    private Mod_Crop cropModule;
+    private Vector3 originalLocalScale;
+    private bool scaleCaptured;
 
     #endregion
 
@@ -75,8 +85,16 @@ public sealed class Mod_CropVisual : Module
         if (buriedMaterial == null)
             throw new MissingReferenceException("[Mod_CropVisual] 未配置支持 BodyClip 的 Sprite-Lit-Master 材质。");
 
+        cropModule = item.GetComponentInChildren<Mod_Crop>(true);
+        if (cropModule == null)
+            throw new MissingComponentException("[Mod_CropVisual] 所属作物缺少 Mod_Crop。");
+
+        originalLocalScale = spriteRenderer.transform.localScale;
+        scaleCaptured = true;
         ApplyBuriedMaterial();
         ApplyVisualState();
+        cropModule.GrowthChanged += HandleGrowthChanged;
+        ApplyGrowthScale(cropModule.NormalizedGrowth);
     }
 
     public override void Save()
@@ -86,7 +104,9 @@ public sealed class Mod_CropVisual : Module
 
     public override void Unload()
     {
+        UnbindCrop();
         ClearVisualState();
+        RestoreOriginalScale();
         RestoreOriginalMaterial();
         spriteRenderer = null;
         propertyBlock = null;
@@ -94,13 +114,56 @@ public sealed class Mod_CropVisual : Module
 
     private void OnDisable()
     {
+        UnbindCrop();
         ClearVisualState();
+        RestoreOriginalScale();
         RestoreOriginalMaterial();
     }
 
     private void OnDestroy()
     {
         Unload();
+    }
+
+    #endregion
+
+    #region 成长表现
+
+    private void HandleGrowthChanged(Mod_Crop source, float normalizedGrowth)
+    {
+        if (source == cropModule)
+            ApplyGrowthScale(normalizedGrowth);
+    }
+
+    /// <summary>在幼苗与成熟缩放之间连续插值。</summary>
+    private void ApplyGrowthScale(float normalizedGrowth)
+    {
+        if (!scaleCaptured || spriteRenderer == null)
+            return;
+
+        float scale = Mathf.Lerp(seedlingScale, matureScale, Mathf.Clamp01(normalizedGrowth));
+        spriteRenderer.transform.localScale = new Vector3(
+            originalLocalScale.x * scale,
+            originalLocalScale.y * scale,
+            originalLocalScale.z);
+    }
+
+    private void UnbindCrop()
+    {
+        if (cropModule != null)
+            cropModule.GrowthChanged -= HandleGrowthChanged;
+        cropModule = null;
+    }
+
+    /// <summary>避免对象池复用时残留上一株作物的成长缩放。</summary>
+    private void RestoreOriginalScale()
+    {
+        if (!scaleCaptured || spriteRenderer == null)
+            return;
+
+        spriteRenderer.transform.localScale = originalLocalScale;
+        originalLocalScale = Vector3.one;
+        scaleCaptured = false;
     }
 
     #endregion
@@ -148,6 +211,13 @@ public sealed class Mod_CropVisual : Module
         spriteRenderer.sharedMaterial = originalMaterial;
         originalMaterial = null;
         materialOverridden = false;
+    }
+
+    private void OnValidate()
+    {
+        buriedClip = Mathf.Clamp01(buriedClip);
+        seedlingScale = Mathf.Clamp(seedlingScale, 0.01f, 1f);
+        matureScale = Mathf.Max(seedlingScale, matureScale);
     }
 
     #endregion

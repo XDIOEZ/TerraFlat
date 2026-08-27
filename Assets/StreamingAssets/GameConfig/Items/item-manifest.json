@@ -32,6 +32,11 @@
       "enabled": true
     },
     {
+      "id": "crops",
+      "path": "shells/crops.json",
+      "enabled": true
+    },
+    {
       "id": "building_summoners",
       "path": "shells/building_summoners.json",
       "enabled": true

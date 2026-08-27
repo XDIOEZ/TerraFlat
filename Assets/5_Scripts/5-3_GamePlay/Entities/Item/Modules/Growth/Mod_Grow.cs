@@ -28,7 +28,7 @@ public partial class GrowData
 }
 
 
-public partial class Mod_Grow : Module, IInteractable
+public partial class Mod_Grow : Module, IInteractable, IPlantableCrop
 {
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => 0.25f;

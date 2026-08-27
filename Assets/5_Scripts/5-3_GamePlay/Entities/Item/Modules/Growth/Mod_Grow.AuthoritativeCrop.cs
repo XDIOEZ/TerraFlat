@@ -152,6 +152,12 @@ public partial class Mod_Grow
 
 #region 播种初始化与环境迁移
 
+    /// <summary>通过统一种植契约把树木初始化为耕地幼苗。</summary>
+    public void InitializePlantedCrop(Vector2Int tilePosition)
+    {
+        InitializeCultivatedCrop(tilePosition, 0f);
+    }
+
     public void InitializeCultivatedCrop(Vector2Int tilePos, float normalizedProgress = 0f)
     {
         Data.isCultivatedCrop = true;

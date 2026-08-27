@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>
 /// 种植能力模块：物品只要挂载本模块，就会进入统一种植预览和放置链路。
 /// 模块本身只保存作物 Item ID 与放置配置；耕地校验、作物生成和种子消耗集中在这里，
-/// 作物的成长状态由 Mod_Grow 负责，作物的半埋显示由 Mod_CropVisual 负责。
+/// 具体成长实现只需实现 IPlantableCrop，种子模块不依赖某个成长组件。
 /// </summary>
 public sealed class Mod_Plantable : Module
 {
@@ -133,7 +133,7 @@ public sealed class Mod_Plantable : Module
             return;
         }
 
-        Item crop = TryCreateCultivatedCrop(target, normalizedProgress: 0f);
+        Item crop = TryCreateCultivatedCrop(target);
         if (crop == null)
             return;
 
@@ -331,7 +331,7 @@ public sealed class Mod_Plantable : Module
 
         foreach (Item candidate in items)
         {
-            if (candidate?.itemMods?.ContainsKey_ID(ModText.Grow) == true)
+            if (candidate != null && candidate.GetComponentsInChildren<IPlantableCrop>(true).Length > 0)
                 return true;
         }
 
@@ -342,7 +342,7 @@ public sealed class Mod_Plantable : Module
 
     #region 作物生成与种子消耗
 
-    private Item TryCreateCultivatedCrop(PlantingTarget target, float normalizedProgress)
+    private Item TryCreateCultivatedCrop(PlantingTarget target)
     {
         if (ItemMgr.Instance == null || string.IsNullOrWhiteSpace(cropItemId))
         {
@@ -365,11 +365,12 @@ public sealed class Mod_Plantable : Module
                 throw new MissingComponentException($"作物 {cropItemId} 缺少堆叠数据。");
 
             crop.itemData.Stack.CanBePickedUp = false;
-            Mod_Grow grow = crop.itemMods?.GetMod_ByID(ModText.Grow) as Mod_Grow;
-            if (grow == null)
-                throw new MissingComponentException($"作物 {cropItemId} 缺少权威 Mod_Grow。");
+            IPlantableCrop[] plantingModules = crop.GetComponentsInChildren<IPlantableCrop>(true);
+            if (plantingModules.Length != 1)
+                throw new MissingComponentException(
+                    $"作物 {cropItemId} 必须且只能包含一个 IPlantableCrop，当前数量={plantingModules.Length}。");
 
-            grow.InitializeCultivatedCrop(target.tilePosition, normalizedProgress);
+            plantingModules[0].InitializePlantedCrop(target.tilePosition);
             return crop;
         }
         catch (Exception exception)

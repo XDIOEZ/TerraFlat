@@ -71,6 +71,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 04755d9d95153f5418b13547ef229b45
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_Crop.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 04d78b873e1da2341a6666c85506542b
     m_Address: Assets/2_Prefabs/World/Map/MapEdge.prefab
     m_ReadOnly: 0
@@ -154,6 +160,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0f78b62d1a8e1a44c9bb0cb44973f405
+    m_Address: Assets/2_Prefabs/Gameplay/Items/Common/CropShell.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0fa9b0096397a854fa8c73a07541d090
     m_Address: Assets/4_ScriptObjects/Gameplay/Inventory
@@ -1566,6 +1578,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d6b00dfad111de046a0fb9da3fb4ff53
     m_Address: Assets/2_Prefabs/Gameplay/Skills/Item_Summon.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d6d73ced519af3e46ab06c89819b4f00
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_CropYield.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab

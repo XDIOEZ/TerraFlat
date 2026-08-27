@@ -21,6 +21,9 @@ public static class ModText
     public static string Composite = "组合模块";
     public static string Controller = "Controller模块";
     public static string ColdWeapon = "冷兵器攻击模块";
+    public static string Crop = "Mod_Crop";
+    public static string CropVisual = "Mod_CropVisual";
+    public static string CropYield = "Mod_CropYield";
 
     public static string ChunkLoader = "区块加载模块";
     #endregion
@@ -48,7 +51,6 @@ public static class ModText
     #endregion
     #region G
     public static string Grow = "生长模块";
-    public static string CropVisual = "Mod_CropVisual";
     #endregion
 
     #region P
