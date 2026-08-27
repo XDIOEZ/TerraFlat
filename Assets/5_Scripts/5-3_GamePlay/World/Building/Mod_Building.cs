@@ -1417,6 +1417,7 @@ public class Mod_Building : Module
         ItemVisualDefinitionDto visual = definition.Visual;
         SpriteRenderer renderer = renderObject.AddComponent<SpriteRenderer>();
         renderer.sprite = definition.Sprite;
+        renderer.spriteSortPoint = SpriteSortPoint.Pivot;
         if (visual?.RendererLocalPosition.HasValue == true)
             renderObject.transform.localPosition = visual.RendererLocalPosition.Value;
         if (visual?.RendererLocalEulerAngles.HasValue == true)

@@ -49,6 +49,8 @@ public static class ItemDefinitionRuntime
 
             if (definition.Sprite != null)
                 renderer.sprite = definition.Sprite;
+            // 世界物品统一以 Sprite 导入 Pivot 作为透明排序锚点，通用外壳不得退回几何中心排序。
+            renderer.spriteSortPoint = SpriteSortPoint.Pivot;
             if (visual.RendererLocalPosition.HasValue)
                 renderer.transform.localPosition = visual.RendererLocalPosition.Value;
             if (visual.RendererLocalEulerAngles.HasValue)
