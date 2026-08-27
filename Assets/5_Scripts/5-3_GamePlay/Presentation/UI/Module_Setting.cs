@@ -60,7 +60,7 @@ public class SettingCanvas : Module, IInstanceUI
             return;
 
         UIManager uiManager = UIManager.Instance;
-        if (uiManager.WasCancelHandledThisFrame() || TryCloseChildSettingsPanel())
+        if (uiManager.WasCancelHandledThisFrame())
         {
             return;
         }
@@ -81,6 +81,7 @@ public class SettingCanvas : Module, IInstanceUI
         I_TogglePanel();
     }
 
+    /// <summary>创建唯一设置主面板，并把各设置逻辑绑定到十个内嵌分页。</summary>
     private bool EnsurePanelCreated()
     {
         if (basePanel != null && basePanel.gameObject != null)
@@ -90,23 +91,40 @@ public class SettingCanvas : Module, IInstanceUI
             throw new System.InvalidOperationException("[SettingCanvas] SettingCanvasPrefab 为空，无法创建设置面板");
 
         basePanel = UIManager.Instance.CreatePanelFromGameObject(SettingCanvasPrefab);
-        AudioSettingsPanelBinder.Ensure(basePanel.transform);
         BindButton(UIText.ExitButtons, ExitGame);
         BindButton(UIText.SaveButtons, SaveGame);
         BindButton(UIText.CloseButtons, ClossApp);
         BindButton(UIText.ExitWithoutSavingButtons, ExitAppWithoutSaving);
-        AudioSettingsPanelLauncher.Ensure(basePanel.transform);
-        UISettingsPanelLauncher.Ensure(basePanel.transform);
-        CameraControlSettingsPanelLauncher.Ensure(basePanel.transform);
-        CoordinateDisplaySettingsPanelLauncher.Ensure(basePanel.transform);
-        AutoSaveSettingsPanelLauncher.Ensure(basePanel.transform);
-        WorldStreamingSettingsPanelLauncher.Ensure(basePanel.transform);
-        DifficultySettingsPanelLauncher.Ensure(basePanel.transform);
-        InputBindingPanelLauncher.Ensure(basePanel.transform, gameController);
+
+        SettingsActionListPagination pagination =
+            SettingsActionListPagination.Ensure(basePanel.transform);
+        Transform worldPage = pagination?.GetPageRoot(SettingsActionListPagination.WorldPageName);
+        AudioSettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.AudioPageName));
+        UISettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.InterfacePageName));
+        CameraControlSettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.CameraPageName));
+        CoordinateDisplaySettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.DisplayPageName));
+        AutoSaveSettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.AutoSavePageName),
+            pagination);
+        WorldStreamingSettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.WorldStreamingPageName),
+            pagination);
+        DifficultySettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.DifficultyPageName),
+            worldPage,
+            pagination);
+        InputBindingPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.InputBindingPageName),
+            basePanel,
+            gameController);
         PlayerSuicideButton.Ensure(basePanel.transform, playerDeathState);
         BindButton(new[] { "恢复所有设置" }, ResetAllSettings);
         basePanel.RefreshUIComponents();
-        SettingsActionListPagination.Ensure(basePanel.transform);
+        pagination?.RefreshPageLifecycles();
         basePanel.SetPanelName(PanelName);
         basePanel.PrepareForGamepadNavigation();
         basePanel.Opened += AcquirePanelInputLock;
@@ -139,10 +157,7 @@ public class SettingCanvas : Module, IInstanceUI
         {
             // 根据当前状态切换显示与隐藏
             if (basePanel.IsVisible())
-            {
-                if (!TryCloseChildSettingsPanel())
-                    basePanel.Close();
-            }
+                basePanel.Close();
             else
             {
                 OpenSettingsPanel();
@@ -176,15 +191,7 @@ public class SettingCanvas : Module, IInstanceUI
         if (basePanel == null)
             throw new System.InvalidOperationException("[SettingCanvas] basePanel 为空，无法关闭设置面板");
 
-        if (!TryCloseChildSettingsPanel())
-            basePanel.Close();
-    }
-
-    /// <summary>优先关闭设置二级页，防止主菜单在子页仍打开时先被关闭。</summary>
-    private bool TryCloseChildSettingsPanel()
-    {
-        return basePanel != null &&
-               UIManager.Instance.TryCloseTopmostCancelPanel(basePanel);
+        basePanel.Close();
     }
 
     /// <summary>恢复全部已注册设置与两类输入绑定默认值。</summary>

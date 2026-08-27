@@ -1,22 +1,14 @@
-// AI-Context: 设置菜单的“UI设置”入口；负责界面缩放、安全区、移动摇杆模式与左右触控区，不再承载镜头控制。
-
+// AI-Context: 设置主面板内嵌界面页；负责界面缩放、安全区、移动摇杆与左右触控区。
 using FlatWorld.Localization;
 using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>连接设置主菜单与正式界面设置 Prefab，并即时持久化界面及手机触控区偏好。</summary>
+/// <summary>绑定内嵌界面设置页，并即时持久化界面与手机触控区偏好。</summary>
 [DisallowMultipleComponent]
-public sealed class UISettingsPanelLauncher : MonoBehaviour
+public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecycle
 {
-    private const string EntryButtonName = "UI设置";
-    private const float PreferredWidth = 800f;
-    private const float PreferredHeight = 680f;
-    private const float CanvasSafeMargin = 32f;
-
-    private Button entryButton;
-    private BasePanel settingsPanel;
     private Slider scaleSlider;
     private Slider leftControlZoneSlider;
     private Slider rightControlZoneSlider;
@@ -27,122 +19,76 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
     private TextMeshProUGUI rightControlZoneValueText;
     private TextMeshProUGUI controlZoneStatusText;
     private TextMeshProUGUI statusText;
+    private Button resetButton;
     private ISettingsSlider scaleSetting;
     private ISettingsSlider leftControlZoneSetting;
     private ISettingsSlider rightControlZoneSetting;
     private ISettingsToggle safeAreaSetting;
     private ISettingsToggle floatingMoveJoystickSetting;
-    private bool isClamping;
+    private bool initialized;
 
-    /// <summary>在设置主面板上复用或挂载入口适配器。</summary>
-    public static UISettingsPanelLauncher Ensure(Transform settingsRoot)
+    /// <summary>在指定内嵌页面根节点上复用或挂载界面设置控制器。</summary>
+    public static UISettingsPanelLauncher Ensure(Transform pageRoot)
     {
-        if (settingsRoot == null)
+        if (pageRoot == null)
             return null;
 
-        UISettingsPanelLauncher launcher =
-            settingsRoot.GetComponent<UISettingsPanelLauncher>();
+        UISettingsPanelLauncher launcher = pageRoot.GetComponent<UISettingsPanelLauncher>();
         if (launcher == null)
-            launcher = settingsRoot.gameObject.AddComponent<UISettingsPanelLauncher>();
-        launcher.EnsureEntryButton();
+            launcher = pageRoot.gameObject.AddComponent<UISettingsPanelLauncher>();
+        launcher.Initialize();
         return launcher;
     }
 
-    /// <summary>查找并绑定设置主菜单中的界面设置入口。</summary>
-    private void EnsureEntryButton()
+    /// <summary>解析页面局部控件并绑定界面设置 Provider。</summary>
+    private void Initialize()
     {
-        entryButton ??= FindButton(transform, EntryButtonName);
-        if (entryButton == null)
-        {
-            Debug.LogError(
-                $"[UISettingsPanelLauncher] Prefab 缺少入口按钮“{EntryButtonName}”。",
-                this);
-            return;
-        }
-
-        entryButton.onClick.RemoveListener(Open);
-        entryButton.onClick.AddListener(Open);
-    }
-
-    /// <summary>刷新设置值后打开界面设置子页。</summary>
-    private void Open()
-    {
-        EnsureSettingsWindow();
-        if (settingsPanel == null)
+        if (initialized)
             return;
 
-        RefreshValues();
-        ClampWindowToCanvas();
-        settingsPanel.Open();
-        settingsPanel.transform.SetAsLastSibling();
-    }
-
-    /// <summary>从正式 Prefab 创建并绑定界面设置控件。</summary>
-    private void EnsureSettingsWindow()
-    {
-        if (settingsPanel != null)
-            return;
-
-        GameObject prefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.UISettings);
-        if (prefab == null)
-        {
-            Debug.LogError(
-                $"[UISettingsPanelLauncher] 缺少 Prefab：{RuntimeUIPrefabKeys.UISettings}。",
-                this);
-            return;
-        }
-
-        settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
-            prefab,
-            RuntimeUIPrefabKeys.UISettings);
-        SettingsSubPanelInteractionGuard.Link(transform, settingsPanel);
-        ISettingsProvider uiSettingsProvider = UIUserSettings.SettingsProvider;
-        scaleSetting = uiSettingsProvider.GetSlider(UIUserSettings.ScaleSettingKey);
+        ISettingsProvider provider = UIUserSettings.SettingsProvider;
+        scaleSetting = provider.GetSlider(UIUserSettings.ScaleSettingKey);
         leftControlZoneSetting =
-            uiSettingsProvider.GetSlider(UIUserSettings.LeftControlZoneRatioSettingKey);
+            provider.GetSlider(UIUserSettings.LeftControlZoneRatioSettingKey);
         rightControlZoneSetting =
-            uiSettingsProvider.GetSlider(UIUserSettings.RightControlZoneRatioSettingKey);
-        safeAreaSetting = uiSettingsProvider.GetToggle(UIUserSettings.RespectSafeAreaSettingKey);
+            provider.GetSlider(UIUserSettings.RightControlZoneRatioSettingKey);
+        safeAreaSetting = provider.GetToggle(UIUserSettings.RespectSafeAreaSettingKey);
         floatingMoveJoystickSetting =
-            uiSettingsProvider.GetToggle(UIUserSettings.FloatingMoveJoystickSettingKey);
-        scaleSlider = settingsPanel.GetSlider("界面缩放");
-        leftControlZoneSlider = settingsPanel.GetSlider("左侧触控区比例");
-        rightControlZoneSlider = settingsPanel.GetSlider("右侧触控区比例");
-        safeAreaToggle = settingsPanel.GetToggle("安全区域适配");
-        floatingMoveJoystickToggle = settingsPanel.GetToggle("浮动移动摇杆");
-        scaleValueText = settingsPanel.GetText("界面缩放数值");
-        leftControlZoneValueText = settingsPanel.GetText("左侧触控区数值");
-        rightControlZoneValueText = settingsPanel.GetText("右侧触控区数值");
-        controlZoneStatusText = settingsPanel.GetText("触控区域比例文本");
-        statusText = settingsPanel.GetText("状态文本");
+            provider.GetToggle(UIUserSettings.FloatingMoveJoystickSettingKey);
 
-        settingsPanel.GetButton("关闭按钮")?.onClick.AddListener(Close);
-        settingsPanel.GetButton("恢复默认按钮")?.onClick.AddListener(ResetToDefault);
-        settingsPanel.GetButton("完成按钮")?.onClick.AddListener(Close);
+        scaleSlider = FindComponent<Slider>(transform, "界面缩放");
+        leftControlZoneSlider = FindComponent<Slider>(transform, "左侧触控区比例");
+        rightControlZoneSlider = FindComponent<Slider>(transform, "右侧触控区比例");
+        safeAreaToggle = FindComponent<Toggle>(transform, "安全区域适配");
+        floatingMoveJoystickToggle = FindComponent<Toggle>(transform, "浮动移动摇杆");
+        scaleValueText = FindComponent<TextMeshProUGUI>(transform, "界面缩放数值");
+        leftControlZoneValueText = FindComponent<TextMeshProUGUI>(transform, "左侧触控区数值");
+        rightControlZoneValueText = FindComponent<TextMeshProUGUI>(transform, "右侧触控区数值");
+        controlZoneStatusText = FindComponent<TextMeshProUGUI>(transform, "触控区域比例文本");
+        statusText = FindComponent<TextMeshProUGUI>(transform, "状态文本");
+        resetButton = FindComponent<Button>(transform, "恢复默认按钮");
+
+        ConfigureSlider(scaleSlider, scaleSetting);
+        ConfigureSlider(leftControlZoneSlider, leftControlZoneSetting);
+        ConfigureSlider(rightControlZoneSlider, rightControlZoneSetting);
         scaleSlider?.onValueChanged.AddListener(OnScaleChanged);
         leftControlZoneSlider?.onValueChanged.AddListener(OnLeftControlZoneChanged);
         rightControlZoneSlider?.onValueChanged.AddListener(OnRightControlZoneChanged);
         safeAreaToggle?.onValueChanged.AddListener(OnSafeAreaChanged);
         floatingMoveJoystickToggle?.onValueChanged.AddListener(OnFloatingMoveJoystickChanged);
+        resetButton?.onClick.AddListener(ResetToDefault);
+        initialized = true;
 
         if (scaleSlider == null || leftControlZoneSlider == null ||
             rightControlZoneSlider == null || safeAreaToggle == null ||
             floatingMoveJoystickToggle == null || scaleValueText == null ||
             leftControlZoneValueText == null || rightControlZoneValueText == null ||
-            controlZoneStatusText == null || statusText == null)
+            controlZoneStatusText == null || statusText == null || resetButton == null)
         {
             Debug.LogError(
-                "[UISettingsPanelLauncher] 界面设置 Prefab 控件命名契约不完整。",
-                settingsPanel);
+                "[UISettingsPanelLauncher] 内嵌界面设置页控件命名契约不完整。",
+                this);
         }
-
-        ConfigureSlider(scaleSlider, scaleSetting);
-        ConfigureSlider(leftControlZoneSlider, leftControlZoneSetting);
-        ConfigureSlider(rightControlZoneSlider, rightControlZoneSetting);
-
-        ClampWindowToCanvas();
-        settingsPanel.PrepareForGamepadNavigation("界面缩放");
-        settingsPanel.Close();
     }
 
     /// <summary>按设置契约配置滑动条范围与连续取值。</summary>
@@ -156,16 +102,15 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
         slider.wholeNumbers = false;
     }
 
-    /// <summary>写入界面缩放并重新限制当前子页尺寸。</summary>
+    /// <summary>写入界面缩放并刷新显示状态。</summary>
     private void OnScaleChanged(float value)
     {
         scaleSetting?.SetValue(value);
         scaleSlider?.SetValueWithoutNotify(scaleSetting?.Value ?? value);
         RefreshStatus();
-        ClampWindowToCanvas();
     }
 
-    /// <summary>写入左侧移动摇杆触控区比例并刷新三段占比。</summary>
+    /// <summary>写入左侧移动摇杆触控区比例。</summary>
     private void OnLeftControlZoneChanged(float value)
     {
         leftControlZoneSetting?.SetValue(value);
@@ -173,7 +118,7 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
         RefreshStatus();
     }
 
-    /// <summary>写入右侧普通指向触控区比例并刷新三段占比。</summary>
+    /// <summary>写入右侧普通指向触控区比例。</summary>
     private void OnRightControlZoneChanged(float value)
     {
         rightControlZoneSetting?.SetValue(value);
@@ -186,7 +131,6 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
     {
         safeAreaSetting?.SetValue(value);
         RefreshStatus();
-        ClampWindowToCanvas();
     }
 
     /// <summary>写入移动摇杆浮动或固定偏好。</summary>
@@ -195,15 +139,14 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
         floatingMoveJoystickSetting?.SetValue(value);
     }
 
-    /// <summary>只恢复界面页可见的界面与触控区设置。</summary>
+    /// <summary>恢复界面页可见设置的默认值。</summary>
     private void ResetToDefault()
     {
         UIUserSettings.ResetInterfaceToDefaults();
         RefreshValues();
-        ClampWindowToCanvas();
     }
 
-    /// <summary>从设置提供者回填全部界面控件。</summary>
+    /// <summary>从设置 Provider 回填全部界面控件。</summary>
     private void RefreshValues()
     {
         if (scaleSlider != null && scaleSetting != null)
@@ -219,7 +162,7 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
         RefreshStatus();
     }
 
-    /// <summary>刷新缩放、三段触控区百分比与安全区域状态文案。</summary>
+    /// <summary>刷新缩放、触控区百分比与安全区域状态文案。</summary>
     private void RefreshStatus()
     {
         if (scaleValueText != null && scaleSetting != null)
@@ -236,6 +179,7 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
                 ToPercent(UIUserSettings.CenterControlZoneRatio),
                 ToPercent(UIUserSettings.RightControlZoneRatio));
         }
+
         if (statusText != null)
         {
             statusText.text = safeAreaSetting != null && safeAreaSetting.Value
@@ -244,65 +188,42 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour
         }
     }
 
-    /// <summary>关闭界面设置子页。</summary>
-    private void Close()
+    /// <summary>界面页显示时重新读取当前设置。</summary>
+    public void OnSettingsPageShown()
     {
-        settingsPanel?.Close();
+        RefreshValues();
     }
 
-    /// <summary>根画布尺寸变化时重新限制子页面板。</summary>
-    private void OnRectTransformDimensionsChange()
+    /// <summary>界面页隐藏时无需保留额外草稿。</summary>
+    public void OnSettingsPageHidden()
     {
-        if (settingsPanel != null)
-            ClampWindowToCanvas();
     }
 
-    /// <summary>解除入口事件并销毁运行时创建的子页。</summary>
+    /// <summary>解除本控制器注册的全部 UI 监听。</summary>
     private void OnDestroy()
     {
-        if (entryButton != null)
-            entryButton.onClick.RemoveListener(Open);
-        if (settingsPanel != null)
-        {
-            settingsPanel.Close();
-            Destroy(settingsPanel.gameObject);
-        }
+        scaleSlider?.onValueChanged.RemoveListener(OnScaleChanged);
+        leftControlZoneSlider?.onValueChanged.RemoveListener(OnLeftControlZoneChanged);
+        rightControlZoneSlider?.onValueChanged.RemoveListener(OnRightControlZoneChanged);
+        safeAreaToggle?.onValueChanged.RemoveListener(OnSafeAreaChanged);
+        floatingMoveJoystickToggle?.onValueChanged.RemoveListener(OnFloatingMoveJoystickChanged);
+        resetButton?.onClick.RemoveListener(ResetToDefault);
     }
 
-    /// <summary>用统一视觉边距规则限制界面设置页尺寸。</summary>
-    private void ClampWindowToCanvas()
-    {
-        if (settingsPanel == null || isClamping)
-            return;
-
-        isClamping = true;
-        try
-        {
-            SettingsPanelLayoutUtility.ClampToCanvas(
-                settingsPanel,
-                new Vector2(PreferredWidth, PreferredHeight),
-                CanvasSafeMargin);
-        }
-        finally
-        {
-            isClamping = false;
-        }
-    }
-
-    /// <summary>把缩放比例转换为整数百分比。</summary>
+    /// <summary>把比例转换为整数百分比。</summary>
     private static string ToPercent(float value)
     {
         return Mathf.RoundToInt(value * 100f) + "%";
     }
 
-    /// <summary>按节点名查找任意层级中的按钮。</summary>
-    private static Button FindButton(Transform root, string buttonName)
+    /// <summary>在页面局部按名称查找指定组件。</summary>
+    private static T FindComponent<T>(Transform root, string objectName) where T : Component
     {
-        Button[] buttons = root.GetComponentsInChildren<Button>(true);
-        for (int i = 0; i < buttons.Length; i++)
+        T[] components = root.GetComponentsInChildren<T>(true);
+        for (int index = 0; index < components.Length; index++)
         {
-            if (buttons[i] != null && buttons[i].name == buttonName)
-                return buttons[i];
+            if (components[index] != null && components[index].name == objectName)
+                return components[index];
         }
 
         return null;

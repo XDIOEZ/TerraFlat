@@ -3,129 +3,134 @@ using FlatWorld.Localization;
 using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
+/// <summary>
+/// 绑定内嵌难度页的草稿选择与提交逻辑。
+/// 页面每次显示都从当前存档难度重新建草稿，取消仅返回世界入口而不写入设置。
+/// </summary>
 [DisallowMultipleComponent]
-public sealed class DifficultySettingsPanelLauncher : MonoBehaviour
+public sealed class DifficultySettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecycle
 {
     private const string EntryButtonName = "游戏难度";
 
     private readonly Dictionary<GameDifficultyId, Button> optionButtons =
         new Dictionary<GameDifficultyId, Button>();
+    private readonly Dictionary<GameDifficultyId, UnityAction> optionCallbacks =
+        new Dictionary<GameDifficultyId, UnityAction>();
 
     private Button entryButton;
-    private BasePanel settingsPanel;
+    private Button cancelButton;
+    private Button applyButton;
     private TextMeshProUGUI statusText;
     private ISettingsSwitch difficultySetting;
+    private SettingsActionListPagination pagination;
     private GameDifficultyId selectedDifficulty;
+    private bool initialized;
 
-    public static DifficultySettingsPanelLauncher Ensure(Transform settingsPanel)
+    #region 初始化
+
+    /// <summary>在指定内嵌页上建立唯一难度绑定器。</summary>
+    public static DifficultySettingsPanelLauncher Ensure(
+        Transform pageRoot,
+        Transform worldPageRoot,
+        SettingsActionListPagination ownerPagination)
     {
-        if (settingsPanel == null)
+        if (pageRoot == null)
             return null;
 
         DifficultySettingsPanelLauncher launcher =
-            settingsPanel.GetComponent<DifficultySettingsPanelLauncher>();
+            pageRoot.GetComponent<DifficultySettingsPanelLauncher>();
         if (launcher == null)
-            launcher = settingsPanel.gameObject.AddComponent<DifficultySettingsPanelLauncher>();
+            launcher = pageRoot.gameObject.AddComponent<DifficultySettingsPanelLauncher>();
 
-        launcher.EnsureEntryButton();
+        launcher.Initialize(worldPageRoot, ownerPagination);
         return launcher;
     }
 
-private void EnsureEntryButton()
+    /// <summary>只从本页查找表单控件，并从世界入口页取得标签按钮。</summary>
+    private void Initialize(Transform worldPageRoot, SettingsActionListPagination ownerPagination)
     {
-        if (entryButton == null)
-            entryButton = FindButton(transform, EntryButtonName);
-
-        if (entryButton == null)
+        pagination = ownerPagination;
+        entryButton = FindButton(worldPageRoot, EntryButtonName);
+        if (initialized)
         {
-            Debug.LogError(
-                $"[DifficultySettingsPanelLauncher] Prefab 缺少入口按钮“{EntryButtonName}”。",
-                this);
+            UpdateEntryLabel();
             return;
         }
 
-        entryButton.onClick.RemoveListener(Open);
-        entryButton.onClick.AddListener(Open);
+        initialized = true;
+        difficultySetting = GameDifficultyService.SettingsProvider.GetSwitch(
+            GameDifficultyService.DifficultySettingKey);
+        statusText = FindComponent<TextMeshProUGUI>(transform, "状态文本");
+        cancelButton = FindButton(transform, "取消按钮");
+        applyButton = FindButton(transform, "应用按钮");
+
+        IReadOnlyList<GameDifficultyDefinition> definitions = GameDifficultyCatalog.All;
+        for (int i = 0; i < definitions.Count; i++)
+        {
+            GameDifficultyId id = definitions[i].Id;
+            Button option = FindButton(transform, $"难度_{id}");
+            if (option == null)
+                continue;
+
+            UnityAction callback = () => SelectDifficulty(id);
+            option.onClick.AddListener(callback);
+            optionButtons[id] = option;
+            optionCallbacks[id] = callback;
+        }
+
+        cancelButton?.onClick.AddListener(Cancel);
+        applyButton?.onClick.AddListener(Apply);
+
+        if (entryButton == null || statusText == null || cancelButton == null ||
+            applyButton == null || difficultySetting == null ||
+            optionButtons.Count != definitions.Count)
+        {
+            Debug.LogError(
+                "[DifficultySettingsPanelLauncher] 内嵌难度页控件命名契约不完整。",
+                this);
+        }
+
         UpdateEntryLabel();
     }
 
-private void Open()
+    #endregion
+
+    #region 页面生命周期
+
+    /// <summary>页面显示时丢弃旧草稿并重新读取当前已应用难度。</summary>
+    public void OnSettingsPageShown()
     {
-        EnsureWindow();
-        if (settingsPanel == null)
-            return;
+        if (difficultySetting == null)
+        {
+            difficultySetting = GameDifficultyService.SettingsProvider.GetSwitch(
+                GameDifficultyService.DifficultySettingKey);
+        }
 
         selectedDifficulty = difficultySetting != null
             ? (GameDifficultyId)difficultySetting.SelectedIndex
             : GameDifficultyService.CurrentId;
         RefreshSelectionVisuals();
+        UpdateEntryLabel();
         SetStatus(
             FlatWorldLocalizationService.GetUiFormat(
                 "当前存档难度：{0}",
                 LocalizeDifficultyName(GameDifficultyService.Current)),
             false);
-        settingsPanel.Open();
-        settingsPanel.transform.SetAsLastSibling();
-        Canvas.ForceUpdateCanvases();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(settingsPanel.rectTransform);
     }
 
-private void EnsureWindow()
+    /// <summary>页面隐藏时不提交草稿，下次显示会重新读取已应用值。</summary>
+    public void OnSettingsPageHidden()
     {
-        if (settingsPanel != null)
-            return;
-
-        GameObject prefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.DifficultySettings);
-        if (prefab == null)
-        {
-            Debug.LogError(
-                $"[DifficultySettingsPanelLauncher] 缺少 Prefab：{RuntimeUIPrefabKeys.DifficultySettings}。",
-                this);
-            return;
-        }
-
-        settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
-            prefab,
-            RuntimeUIPrefabKeys.DifficultySettings);
-        SettingsSubPanelInteractionGuard.Link(transform, settingsPanel);
-        difficultySetting = GameDifficultyService.SettingsProvider.GetSwitch(
-            GameDifficultyService.DifficultySettingKey);
-        statusText = settingsPanel.GetText("状态文本");
-        optionButtons.Clear();
-
-        IReadOnlyList<GameDifficultyDefinition> definitions = GameDifficultyCatalog.All;
-        for (int i = 0; i < definitions.Count; i++)
-        {
-            GameDifficultyDefinition definition = definitions[i];
-            Button option = settingsPanel.GetButton($"难度_{definition.Id}");
-            if (option == null)
-                continue;
-
-            GameDifficultyId id = definition.Id;
-            option.onClick.AddListener(() => SelectDifficulty(id));
-            optionButtons[id] = option;
-        }
-
-        settingsPanel.GetButton("关闭按钮")?.onClick.AddListener(Close);
-        settingsPanel.GetButton("取消按钮")?.onClick.AddListener(Close);
-        settingsPanel.GetButton("应用按钮")?.onClick.AddListener(Apply);
-
-        if (statusText == null || optionButtons.Count != definitions.Count ||
-            difficultySetting == null)
-            Debug.LogError("[DifficultySettingsPanelLauncher] 难度 Prefab 控件命名契约不完整。", settingsPanel);
-
-        settingsPanel.PrepareForGamepadNavigation();
-        settingsPanel.Close();
     }
 
+    #endregion
 
+    #region 草稿操作
 
-
-
-
-
+    /// <summary>只更新当前页草稿与选中样式。</summary>
     private void SelectDifficulty(GameDifficultyId difficulty)
     {
         selectedDifficulty = difficulty;
@@ -138,6 +143,7 @@ private void EnsureWindow()
             false);
     }
 
+    /// <summary>提交难度草稿并停留在当前分页显示结果。</summary>
     private void Apply()
     {
         if (!TryApplyDifficulty(out string error))
@@ -159,6 +165,13 @@ private void EnsureWindow()
             false);
     }
 
+    /// <summary>放弃难度草稿并返回世界入口页。</summary>
+    private void Cancel()
+    {
+        pagination?.ShowWorldPage();
+    }
+
+    /// <summary>通过现有难度设置提供者提交选中值。</summary>
     private bool TryApplyDifficulty(out string error)
     {
         if (difficultySetting == null)
@@ -172,6 +185,11 @@ private void EnsureWindow()
             out error);
     }
 
+    #endregion
+
+    #region 视图刷新
+
+    /// <summary>刷新难度选项的选中颜色。</summary>
     private void RefreshSelectionVisuals()
     {
         foreach (KeyValuePair<GameDifficultyId, Button> pair in optionButtons)
@@ -185,6 +203,7 @@ private void EnsureWindow()
         }
     }
 
+    /// <summary>刷新世界入口按钮上的当前难度名称。</summary>
     private void UpdateEntryLabel()
     {
         if (entryButton == null)
@@ -197,6 +216,7 @@ private void EnsureWindow()
                 LocalizeDifficultyName(GameDifficultyService.Current)));
     }
 
+    /// <summary>显示当前操作结果或错误。</summary>
     private void SetStatus(string message, bool isError)
     {
         if (statusText == null)
@@ -206,26 +226,8 @@ private void EnsureWindow()
         statusText.color = isError ? FlatWorldUITheme.Danger : FlatWorldUITheme.Teal;
     }
 
-private void Close()
-    {
-        settingsPanel?.Close();
-    }
-
-private void OnDestroy()
-    {
-        if (entryButton != null)
-            entryButton.onClick.RemoveListener(Open);
-        if (settingsPanel != null)
-            Destroy(settingsPanel.gameObject);
-    }
-
-
-
-
-
-
-
-private static void SetButtonLabel(Button button, string label)
+    /// <summary>更新按钮的 TMP 或旧版文本组件。</summary>
+    private static void SetButtonLabel(Button button, string label)
     {
         if (button == null)
             return;
@@ -242,6 +244,7 @@ private static void SetButtonLabel(Button button, string label)
             legacyText.text = label;
     }
 
+    /// <summary>取得当前语言下的难度名称。</summary>
     private static string LocalizeDifficultyName(GameDifficultyDefinition definition)
     {
         if (definition == null)
@@ -250,20 +253,44 @@ private static void SetButtonLabel(Button button, string label)
         return FlatWorldLocalizationService.GetUiText(definition.DisplayName);
     }
 
+    #endregion
 
+    #region 清理与局部查找
 
-
-
-
-private static Button FindButton(Transform root, string buttonName)
+    /// <summary>解除本页注册的按钮事件。</summary>
+    private void OnDestroy()
     {
-        Button[] buttons = root.GetComponentsInChildren<Button>(true);
-        for (int i = 0; i < buttons.Length; i++)
+        foreach (KeyValuePair<GameDifficultyId, UnityAction> pair in optionCallbacks)
         {
-            if (buttons[i] != null && buttons[i].name == buttonName)
-                return buttons[i];
+            if (optionButtons.TryGetValue(pair.Key, out Button button) && button != null)
+                button.onClick.RemoveListener(pair.Value);
+        }
+
+        cancelButton?.onClick.RemoveListener(Cancel);
+        applyButton?.onClick.RemoveListener(Apply);
+    }
+
+    /// <summary>在给定页面范围内按名称查找按钮。</summary>
+    private static Button FindButton(Transform root, string buttonName)
+    {
+        return FindComponent<Button>(root, buttonName);
+    }
+
+    /// <summary>在给定页面范围内按名称查找指定组件。</summary>
+    private static T FindComponent<T>(Transform root, string objectName) where T : Component
+    {
+        if (root == null)
+            return null;
+
+        T[] components = root.GetComponentsInChildren<T>(true);
+        for (int i = 0; i < components.Length; i++)
+        {
+            if (components[i] != null && components[i].name == objectName)
+                return components[i];
         }
 
         return null;
     }
+
+    #endregion
 }

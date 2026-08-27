@@ -388,9 +388,14 @@ namespace FlatWorld.GameTest.UI
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_WorldStreamingSettings.prefab");
             RectTransform rect = prefab.GetComponent<RectTransform>();
-            Assert.That(rect.sizeDelta.x, Is.LessThanOrEqualTo(680f));
-            Assert.That(rect.sizeDelta.y, Is.LessThanOrEqualTo(420f));
-            Assert.That(prefab.GetComponent<VerticalLayoutGroup>(), Is.Not.Null);
+            Assert.That(rect.anchorMin, Is.EqualTo(Vector2.zero));
+            Assert.That(rect.anchorMax, Is.EqualTo(Vector2.one));
+            Assert.That(prefab.GetComponent<BasePanel>(), Is.Null);
+            Assert.That(prefab.GetComponent<ScrollRect>(), Is.Not.Null);
+            Assert.That(
+                prefab.GetComponentsInChildren<VerticalLayoutGroup>(true)
+                    .Any(item => item.name == "PageContent"),
+                Is.True);
         }
 
         [Test]
@@ -757,7 +762,7 @@ namespace FlatWorld.GameTest.UI
 
             Assert.That(
                 inputBindingLauncherSource,
-                Does.Contain("bindingPanel?.RefreshUIComponents();"),
+                Does.Contain("parentPanel?.RefreshUIComponents();"),
                 "动态生成按键行后必须显式提交 BasePanel 层级快照。");
             Assert.That(inputBindingLauncherSource, Does.Contain("pooledRows"));
             Assert.That(inputBindingLauncherSource, Does.Contain("RetainedRowCount"));
@@ -795,11 +800,9 @@ namespace FlatWorld.GameTest.UI
             Assert.That(contentMarkerSource, Does.Not.Contain("void Update()"));
 
             Assert.That(paginationSource, Does.Contain("RefreshGamepadNavigationState"));
-            Assert.That(paginationSource, Does.Contain("LayoutRebuilder.MarkLayoutForRebuild"));
-            Assert.That(paginationSource, Does.Not.Contain("Canvas.ForceUpdateCanvases()"));
-            Assert.That(
-                paginationSource,
-                Does.Not.Contain("LayoutRebuilder.ForceRebuildLayoutImmediate"));
+            Assert.That(paginationSource, Does.Contain("ISettingsPageLifecycle"));
+            Assert.That(paginationSource, Does.Contain("LayoutRebuilder.ForceRebuildLayoutImmediate"));
+            Assert.That(paginationSource, Does.Contain("Canvas.ForceUpdateCanvases()"));
 
             Assert.That(coordinatePreferencesSource, Does.Contain("public static event Action Changed;"));
             Assert.That(coordinateHudSource, Does.Contain("WaitForSecondsRealtime"));
@@ -918,7 +921,7 @@ namespace FlatWorld.GameTest.UI
         [Test]
         [Category("UI.Smoke")]
         [Category("Smoke")]
-        public void CoordinateDisplaySettingsAndPromotedActionListTabsFollowContract()
+        public void InGameSettingsUsesOnePanelWithTenEmbeddedPages()
         {
             const string displaySettingsPath =
                 "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_CoordinateDisplaySettings.prefab";
@@ -929,12 +932,19 @@ namespace FlatWorld.GameTest.UI
                 displaySettingsPath,
                 "世界坐标模式按钮",
                 "经纬度模式按钮",
-                "状态文本",
-                "完成按钮");
+                "状态文本");
             AssertPrefabContains(
                 actionListPath,
                 SettingsActionListPagination.WorldPageName,
                 SettingsActionListPagination.SessionPageName,
+                SettingsActionListPagination.InterfacePageName,
+                SettingsActionListPagination.InputBindingPageName,
+                SettingsActionListPagination.DisplayPageName,
+                SettingsActionListPagination.CameraPageName,
+                SettingsActionListPagination.AudioPageName,
+                SettingsActionListPagination.AutoSavePageName,
+                SettingsActionListPagination.WorldStreamingPageName,
+                SettingsActionListPagination.DifficultyPageName,
                 SettingsActionListPagination.TabBarName,
                 SettingsActionListPagination.WorldTabButtonName,
                 SettingsActionListPagination.SessionTabButtonName,
@@ -948,8 +958,14 @@ namespace FlatWorld.GameTest.UI
                 ?? throw new AssertionException($"缺少显示设置 Prefab：{displaySettingsPath}");
             RectTransform displayRoot = displaySettings.GetComponent<RectTransform>()
                 ?? throw new AssertionException("显示设置根节点缺少 RectTransform。");
-            Assert.That(displayRoot.sizeDelta, Is.EqualTo(new Vector2(620f, 360f)));
-            Assert.That(displaySettings.GetComponent<VerticalLayoutGroup>(), Is.Not.Null);
+            Assert.That(displayRoot.anchorMin, Is.EqualTo(Vector2.zero));
+            Assert.That(displayRoot.anchorMax, Is.EqualTo(Vector2.one));
+            Assert.That(displaySettings.GetComponent<BasePanel>(), Is.Null);
+            Assert.That(displaySettings.GetComponent<ScrollRect>(), Is.Not.Null);
+            Assert.That(
+                displaySettings.GetComponentsInChildren<Button>(true)
+                    .Any(item => item.name == "关闭按钮" || item.name == "完成按钮"),
+                Is.False);
 
             GameObject actionList = AssetDatabase.LoadAssetAtPath<GameObject>(actionListPath)
                 ?? throw new AssertionException($"缺少设置入口 Prefab：{actionListPath}");
@@ -958,6 +974,10 @@ namespace FlatWorld.GameTest.UI
             Assert.That(actionListRoot.anchorMin, Is.EqualTo(new Vector2(0.05f, 0.05f)));
             Assert.That(actionListRoot.anchorMax, Is.EqualTo(new Vector2(0.95f, 0.95f)));
             Assert.That(actionListRoot.sizeDelta, Is.EqualTo(Vector2.zero));
+            Assert.That(
+                actionList.GetComponentsInChildren<BasePanel>(true).Length,
+                Is.EqualTo(1),
+                "游戏内设置必须只保留主面板上的一个 BasePanel。");
 
             ScrollRect scroll = actionList.GetComponentsInChildren<ScrollRect>(true)
                 .Single(item => item.name == "Scroll View");
@@ -973,32 +993,117 @@ namespace FlatWorld.GameTest.UI
                 Is.False,
                 "五个专项设置入口提升为页签后不应继续保留界面总页。");
 
-            RectTransform content = actionList.GetComponentsInChildren<RectTransform>(true)
-                .Single(item => item.name == "Content");
+            RectTransform content = scroll.content;
             Assert.That(content.GetComponent<GridLayoutGroup>(), Is.Null);
             Assert.That(content.GetComponent<ContentSizeFitter>(), Is.Null);
 
             string[] pageNames =
             {
                 SettingsActionListPagination.WorldPageName,
-                SettingsActionListPagination.SessionPageName
+                SettingsActionListPagination.InterfacePageName,
+                SettingsActionListPagination.InputBindingPageName,
+                SettingsActionListPagination.DisplayPageName,
+                SettingsActionListPagination.CameraPageName,
+                SettingsActionListPagination.AudioPageName,
+                SettingsActionListPagination.SessionPageName,
+                SettingsActionListPagination.AutoSavePageName,
+                SettingsActionListPagination.WorldStreamingPageName,
+                SettingsActionListPagination.DifficultyPageName
             };
             for (int index = 0; index < pageNames.Length; index++)
             {
-                RectTransform page = actionList.GetComponentsInChildren<RectTransform>(true)
-                    .Single(item => item.name == pageNames[index]);
+                RectTransform page = content.Find(pageNames[index]) as RectTransform;
+                Assert.That(page, Is.Not.Null, pageNames[index]);
                 Assert.That(page.anchorMin, Is.EqualTo(Vector2.zero), pageNames[index]);
                 Assert.That(page.anchorMax, Is.EqualTo(Vector2.one), pageNames[index]);
-                Assert.That(page.GetComponent<VerticalLayoutGroup>(), Is.Not.Null, pageNames[index]);
+            }
+
+            Assert.That(
+                content.Find(SettingsActionListPagination.WorldPageName)
+                    .GetComponent<VerticalLayoutGroup>(),
+                Is.Not.Null);
+            Assert.That(
+                content.Find(SettingsActionListPagination.SessionPageName)
+                    .GetComponent<VerticalLayoutGroup>(),
+                Is.Not.Null);
+
+            string[] embeddedPageNames =
+            {
+                SettingsActionListPagination.InterfacePageName,
+                SettingsActionListPagination.InputBindingPageName,
+                SettingsActionListPagination.DisplayPageName,
+                SettingsActionListPagination.CameraPageName,
+                SettingsActionListPagination.AudioPageName,
+                SettingsActionListPagination.AutoSavePageName,
+                SettingsActionListPagination.WorldStreamingPageName,
+                SettingsActionListPagination.DifficultyPageName
+            };
+            string[] embeddedPrefabPaths =
+            {
+                "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_InterfaceSettings.prefab",
+                "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_InputBindingSettings.prefab",
+                "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_CoordinateDisplaySettings.prefab",
+                "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_CameraControlSettings.prefab",
+                "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_AudioSettings.prefab",
+                "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_AutoSaveSettings.prefab",
+                "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_WorldStreamingSettings.prefab",
+                "Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_DifficultySettings.prefab"
+            };
+            for (int index = 0; index < embeddedPageNames.Length; index++)
+            {
+                Transform page = content.Find(embeddedPageNames[index]);
+                Assert.That(page.childCount, Is.EqualTo(1), embeddedPageNames[index]);
+                GameObject source = PrefabUtility.GetCorrespondingObjectFromSource(
+                    page.GetChild(0).gameObject);
+                GameObject expected = AssetDatabase.LoadAssetAtPath<GameObject>(
+                    embeddedPrefabPaths[index]);
+                Assert.That(source, Is.EqualTo(expected), embeddedPageNames[index]);
+            }
+
+            string[] immediatePagePaths =
+            {
+                embeddedPrefabPaths[0],
+                embeddedPrefabPaths[1],
+                embeddedPrefabPaths[2],
+                embeddedPrefabPaths[3],
+                embeddedPrefabPaths[4]
+            };
+            foreach (string prefabPath in immediatePagePaths)
+            {
+                GameObject pagePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+                string[] buttonNames = pagePrefab.GetComponentsInChildren<Button>(true)
+                    .Select(item => item.name)
+                    .ToArray();
+                Assert.That(buttonNames, Does.Not.Contain("关闭按钮"), prefabPath);
+                Assert.That(buttonNames, Does.Not.Contain("完成按钮"), prefabPath);
+                Assert.That(pagePrefab.GetComponent<BasePanel>(), Is.Null, prefabPath);
+            }
+
+            string[] draftPagePaths =
+            {
+                embeddedPrefabPaths[5],
+                embeddedPrefabPaths[6],
+                embeddedPrefabPaths[7]
+            };
+            foreach (string prefabPath in draftPagePaths)
+            {
+                GameObject pagePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+                string[] buttonNames = pagePrefab.GetComponentsInChildren<Button>(true)
+                    .Select(item => item.name)
+                    .ToArray();
+                Assert.That(buttonNames, Does.Contain("取消按钮"), prefabPath);
+                Assert.That(buttonNames, Does.Contain("应用按钮"), prefabPath);
+                Assert.That(buttonNames, Does.Not.Contain("关闭按钮"), prefabPath);
+                Assert.That(pagePrefab.GetComponent<BasePanel>(), Is.Null, prefabPath);
             }
 
             string[] promotedEntryNames =
             {
-                "音量调节",
                 "UI设置",
-                "显示设置",
                 "按键绑定",
-                "镜头控制"
+                "显示设置",
+                "镜头控制",
+                "音量调节"
             };
             foreach (string entryName in promotedEntryNames)
             {

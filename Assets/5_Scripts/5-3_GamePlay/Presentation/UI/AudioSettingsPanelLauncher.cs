@@ -1,90 +1,50 @@
-// AI-Context: 设置面板的音量入口与独立音量窗口；只使用 AudioService 的公开总线 API，不直接操作 AudioSource。
+// AI-Context: 设置主面板内嵌音量页；只使用 AudioService 的设置 Provider，不创建独立窗口。
 using System.Collections.Generic;
 using FlatWorld.Audio;
 using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
+/// <summary>绑定内嵌音量页的六个通道、百分比文本与恢复默认操作。</summary>
 [DisallowMultipleComponent]
-public sealed class AudioSettingsPanelLauncher : MonoBehaviour
+public sealed class AudioSettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecycle
 {
-    private const string EntryButtonName = "音量调节";
-
+    /// <summary>缓存单个音量通道的控件、设置和文本刷新回调。</summary>
     private sealed class VolumeRow
     {
         public Slider Slider;
         public TextMeshProUGUI ValueText;
         public ISettingsSlider Setting;
+        public UnityAction<float> RefreshLabel;
     }
 
     private readonly List<VolumeRow> rows = new List<VolumeRow>(6);
-    private Button entryButton;
-    private BasePanel volumePanel;
     private ISettingsProvider audioSettingsProvider;
+    private AudioSettingsPanelBinder settingsBinder;
+    private Button resetButton;
+    private bool initialized;
 
-    public static AudioSettingsPanelLauncher Ensure(Transform settingsPanel)
+    /// <summary>在指定内嵌页面根节点上复用或挂载音量控制器。</summary>
+    public static AudioSettingsPanelLauncher Ensure(Transform pageRoot)
     {
-        if (settingsPanel == null)
+        if (pageRoot == null)
             return null;
 
-        AudioSettingsPanelLauncher launcher = settingsPanel.GetComponent<AudioSettingsPanelLauncher>();
+        AudioSettingsPanelLauncher launcher =
+            pageRoot.GetComponent<AudioSettingsPanelLauncher>();
         if (launcher == null)
-            launcher = settingsPanel.gameObject.AddComponent<AudioSettingsPanelLauncher>();
-        launcher.EnsureEntryButton();
+            launcher = pageRoot.gameObject.AddComponent<AudioSettingsPanelLauncher>();
+        launcher.Initialize();
         return launcher;
     }
 
-private void EnsureEntryButton()
+    /// <summary>解析页面局部控件并建立设置写入和显示刷新。</summary>
+    private void Initialize()
     {
-        if (entryButton == null)
-            entryButton = FindButton(transform, EntryButtonName);
-
-        if (entryButton == null)
-        {
-            Debug.LogError(
-                $"[AudioSettingsPanelLauncher] Prefab 缺少入口按钮“{EntryButtonName}”。",
-                this);
+        if (initialized)
             return;
-        }
-
-        entryButton.onClick.RemoveListener(Open);
-        entryButton.onClick.AddListener(Open);
-    }
-
-private void Open()
-    {
-        EnsureVolumePanel();
-        if (volumePanel == null)
-            return;
-
-        volumePanel.Open();
-        volumePanel.transform.SetAsLastSibling();
-        AudioSettingsPanelBinder.Ensure(volumePanel.transform);
-        RefreshValues();
-    }
-
-private void EnsureVolumePanel()
-    {
-        if (volumePanel != null)
-            return;
-
-        GameObject prefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.AudioSettings);
-        if (prefab == null)
-        {
-            Debug.LogError(
-                $"[AudioSettingsPanelLauncher] 缺少 Prefab：{RuntimeUIPrefabKeys.AudioSettings}。",
-                this);
-            return;
-        }
-
-        volumePanel = UIManager.Instance.CreatePanelFromGameObject(
-            prefab,
-            RuntimeUIPrefabKeys.AudioSettings);
-        SettingsSubPanelInteractionGuard.Link(transform, volumePanel);
-        volumePanel.GetButton("关闭按钮")?.onClick.AddListener(Close);
-        volumePanel.GetButton("恢复默认按钮")?.onClick.AddListener(ResetToDefault);
-        volumePanel.GetButton("完成按钮")?.onClick.AddListener(Close);
 
         SettingsProviderRegistry.TryGet(
             AudioService.SettingsProviderId,
@@ -92,69 +52,71 @@ private void EnsureVolumePanel()
         if (audioSettingsProvider == null)
             audioSettingsProvider = AudioService.Instance;
 
-        rows.Clear();
+        settingsBinder = AudioSettingsPanelBinder.Ensure(transform);
+        resetButton = FindButton(transform, "恢复默认按钮");
+        resetButton?.onClick.AddListener(ResetToDefault);
+
         BindVolumeRow("MasterVolume");
         BindVolumeRow("MusicVolume");
         BindVolumeRow("SfxVolume");
         BindVolumeRow("UIVolume");
         BindVolumeRow("AmbientVolume");
         BindVolumeRow("VoiceVolume");
+        initialized = true;
 
-        if (rows.Count != 6)
-            Debug.LogError("[AudioSettingsPanelLauncher] 音量 Prefab 控件命名契约不完整。", volumePanel);
-
-        AudioSettingsPanelBinder.Ensure(volumePanel.transform);
-        RefreshValues();
-        volumePanel.PrepareForGamepadNavigation("MasterVolume");
-        volumePanel.Close();
+        if (rows.Count != 6 || resetButton == null)
+        {
+            Debug.LogError(
+                "[AudioSettingsPanelLauncher] 内嵌音量页控件命名契约不完整。",
+                this);
+        }
     }
 
-private void BindVolumeRow(string sliderName)
+    /// <summary>绑定一个音量滑动条与对应百分比文本。</summary>
+    private void BindVolumeRow(string sliderName)
     {
-        Slider slider = volumePanel.GetSlider(sliderName);
-        TextMeshProUGUI valueText = volumePanel.GetText(sliderName + "_数值");
+        Slider slider = FindSlider(transform, sliderName);
+        TextMeshProUGUI valueText = FindText(transform, sliderName + "_数值");
         ISettingsSlider setting = FindVolumeSetting(sliderName);
         if (slider == null || valueText == null || setting == null)
             return;
 
         slider.minValue = setting.MinValue;
         slider.maxValue = setting.MaxValue;
-        slider.SetValueWithoutNotify(setting.Value);
-        slider.onValueChanged.AddListener(value => valueText.text = ToPercent(value));
+        UnityAction<float> refreshLabel = value => valueText.text = ToPercent(value);
+        slider.onValueChanged.AddListener(refreshLabel);
         rows.Add(new VolumeRow
         {
             Slider = slider,
             ValueText = valueText,
-            Setting = setting
+            Setting = setting,
+            RefreshLabel = refreshLabel
         });
     }
 
-
-
-
+    /// <summary>恢复音频 Provider 默认值并同步全部控件。</summary>
     private void ResetToDefault()
     {
         audioSettingsProvider?.ResetToDefaults();
-        AudioSettingsPanelBinder.Ensure(volumePanel.transform);
+        settingsBinder?.Bind();
         RefreshValues();
     }
 
-private void RefreshValues()
+    /// <summary>从音频设置 Provider 回填六个滑动条和百分比文本。</summary>
+    private void RefreshValues()
     {
-        if (volumePanel == null)
-            return;
-
-        for (int i = 0; i < rows.Count; i++)
+        for (int index = 0; index < rows.Count; index++)
         {
-            ISettingsSlider setting = rows[i].Setting;
-            if (setting == null)
+            VolumeRow row = rows[index];
+            if (row.Setting == null)
                 continue;
 
-            rows[i].Slider.SetValueWithoutNotify(setting.Value);
-            rows[i].ValueText.text = ToPercent(setting.Value);
+            row.Slider.SetValueWithoutNotify(row.Setting.Value);
+            row.ValueText.text = ToPercent(row.Setting.Value);
         }
     }
 
+    /// <summary>按控件名解析对应音频设置项。</summary>
     private ISettingsSlider FindVolumeSetting(string sliderName)
     {
         if (audioSettingsProvider == null)
@@ -173,44 +135,71 @@ private void RefreshValues()
         return audioSettingsProvider.GetSlider(key);
     }
 
-private void Close()
+    /// <summary>音量页显示时重新绑定当前服务并刷新权威值。</summary>
+    public void OnSettingsPageShown()
     {
-        volumePanel?.Close();
+        settingsBinder?.Bind();
+        RefreshValues();
     }
 
-private void OnDestroy()
+    /// <summary>音量页隐藏时无需保留额外草稿。</summary>
+    public void OnSettingsPageHidden()
     {
-        if (entryButton != null)
-            entryButton.onClick.RemoveListener(Open);
-        if (volumePanel != null)
-            Destroy(volumePanel.gameObject);
     }
 
+    /// <summary>解除本控制器注册的按钮和滑动条监听。</summary>
+    private void OnDestroy()
+    {
+        if (resetButton != null)
+            resetButton.onClick.RemoveListener(ResetToDefault);
+        for (int index = 0; index < rows.Count; index++)
+        {
+            VolumeRow row = rows[index];
+            if (row?.Slider != null && row.RefreshLabel != null)
+                row.Slider.onValueChanged.RemoveListener(row.RefreshLabel);
+        }
+    }
 
-
-
-
-
-
-
-
-
-
-
-
+    /// <summary>把标准化音量转换为整数百分比。</summary>
     private static string ToPercent(float value)
     {
         return Mathf.RoundToInt(Mathf.Clamp01(value) * 100f) + "%";
     }
 
-
-private static Button FindButton(Transform root, string buttonName)
+    /// <summary>在页面局部按名称查找按钮。</summary>
+    private static Button FindButton(Transform root, string buttonName)
     {
         Button[] buttons = root.GetComponentsInChildren<Button>(true);
-        for (int i = 0; i < buttons.Length; i++)
+        for (int index = 0; index < buttons.Length; index++)
         {
-            if (buttons[i] != null && buttons[i].name == buttonName)
-                return buttons[i];
+            if (buttons[index] != null && buttons[index].name == buttonName)
+                return buttons[index];
+        }
+
+        return null;
+    }
+
+    /// <summary>在页面局部按名称查找滑动条。</summary>
+    private static Slider FindSlider(Transform root, string sliderName)
+    {
+        Slider[] sliders = root.GetComponentsInChildren<Slider>(true);
+        for (int index = 0; index < sliders.Length; index++)
+        {
+            if (sliders[index] != null && sliders[index].name == sliderName)
+                return sliders[index];
+        }
+
+        return null;
+    }
+
+    /// <summary>在页面局部按名称查找 TMP 文本。</summary>
+    private static TextMeshProUGUI FindText(Transform root, string textName)
+    {
+        TextMeshProUGUI[] texts = root.GetComponentsInChildren<TextMeshProUGUI>(true);
+        for (int index = 0; index < texts.Length; index++)
+        {
+            if (texts[index] != null && texts[index].name == textName)
+                return texts[index];
         }
 
         return null;

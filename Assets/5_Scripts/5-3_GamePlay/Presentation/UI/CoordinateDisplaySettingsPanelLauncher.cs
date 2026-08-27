@@ -5,147 +5,79 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 从游戏内设置列表打开“显示设置”页面，并持久化左上角 HUD 的世界坐标/经纬度显示方式。
+/// 绑定内嵌显示设置页，并持久化左上角 HUD 的世界坐标或经纬度显示方式。
 /// 页面只控制本地展示，不改变世界坐标或存档数据。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour
+public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecycle
 {
-    #region 控件命名与布局参数
-
-    private const string EntryButtonName = "显示设置";
     private const string WorldCoordinatesButtonName = "世界坐标模式按钮";
     private const string LatitudeLongitudeButtonName = "经纬度模式按钮";
-    private const string StatusTextName = "状态文本";
-    private const string CloseButtonName = "关闭按钮";
-    private const string CompleteButtonName = "完成按钮";
-    private const float PreferredWidth = 620f;
-    private const float PreferredHeight = 360f;
-    private const float CanvasSafeMargin = 32f;
 
-    #endregion
-
-    #region 运行时引用
-
-    private Button entryButton;
-    private BasePanel settingsPanel;
     private Button worldCoordinatesButton;
     private Button latitudeLongitudeButton;
     private TextMeshProUGUI statusText;
     private ISettingsSwitch displayModeSetting;
-    private bool isClamping;
+    private bool initialized;
 
-    #endregion
-
-    #region 初始化与打开
-
-    /// <summary>将显示设置入口绑定到游戏内设置列表。</summary>
-    public static CoordinateDisplaySettingsPanelLauncher Ensure(Transform settingsRoot)
+    /// <summary>在指定内嵌页面根节点上复用或挂载显示设置控制器。</summary>
+    public static CoordinateDisplaySettingsPanelLauncher Ensure(Transform pageRoot)
     {
-        if (settingsRoot == null)
+        if (pageRoot == null)
             return null;
 
         CoordinateDisplaySettingsPanelLauncher launcher =
-            settingsRoot.GetComponent<CoordinateDisplaySettingsPanelLauncher>();
+            pageRoot.GetComponent<CoordinateDisplaySettingsPanelLauncher>();
         if (launcher == null)
-            launcher = settingsRoot.gameObject.AddComponent<CoordinateDisplaySettingsPanelLauncher>();
-
-        launcher.EnsureEntryButton();
+            launcher = pageRoot.gameObject.AddComponent<CoordinateDisplaySettingsPanelLauncher>();
+        launcher.Initialize();
         return launcher;
     }
 
-    private void EnsureEntryButton()
+    /// <summary>解析页面局部控件并绑定坐标显示设置 Provider。</summary>
+    private void Initialize()
     {
-        entryButton ??= FindButton(transform, EntryButtonName);
-        if (entryButton == null)
-        {
-            Debug.LogError(
-                $"[CoordinateDisplaySettingsPanelLauncher] Prefab 缺少入口按钮“{EntryButtonName}”。",
-                this);
-            return;
-        }
-
-        entryButton.onClick.RemoveListener(Open);
-        entryButton.onClick.AddListener(Open);
-    }
-
-    private void Open()
-    {
-        EnsureSettingsPanel();
-        if (settingsPanel == null)
+        if (initialized)
             return;
 
-        RefreshView();
-        ClampWindowToCanvas();
-        settingsPanel.PrepareForGamepadNavigation(
-            (displayModeSetting != null && displayModeSetting.SelectedIndex ==
-             (int)PlayerWorldCoordinateDisplayMode.LatitudeLongitude)
-                ? LatitudeLongitudeButtonName
-                : WorldCoordinatesButtonName);
-        settingsPanel.Open();
-        settingsPanel.transform.SetAsLastSibling();
-    }
-
-    private void EnsureSettingsPanel()
-    {
-        if (settingsPanel != null)
-            return;
-
-        GameObject prefab = GameRes.Instance?.GetPrefab(
-            RuntimeUIPrefabKeys.CoordinateDisplaySettings);
-        if (prefab == null)
-        {
-            Debug.LogError(
-                $"[CoordinateDisplaySettingsPanelLauncher] 缺少 Prefab：{RuntimeUIPrefabKeys.CoordinateDisplaySettings}。",
-                this);
-            return;
-        }
-
-        settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
-            prefab,
-            RuntimeUIPrefabKeys.CoordinateDisplaySettings);
-        SettingsSubPanelInteractionGuard.Link(transform, settingsPanel);
         displayModeSetting = PlayerWorldCoordinateDisplayPreferences.SettingsProvider
             .GetSwitch(PlayerWorldCoordinateDisplayPreferences.ModeSettingKey);
-        worldCoordinatesButton = settingsPanel.GetButton(WorldCoordinatesButtonName);
-        latitudeLongitudeButton = settingsPanel.GetButton(LatitudeLongitudeButtonName);
-        statusText = settingsPanel.GetText(StatusTextName);
-
-        settingsPanel.GetButton(CloseButtonName)?.onClick.AddListener(Close);
-        settingsPanel.GetButton(CompleteButtonName)?.onClick.AddListener(Close);
+        worldCoordinatesButton = FindComponent<Button>(transform, WorldCoordinatesButtonName);
+        latitudeLongitudeButton = FindComponent<Button>(transform, LatitudeLongitudeButtonName);
+        statusText = FindComponent<TextMeshProUGUI>(transform, "状态文本");
         worldCoordinatesButton?.onClick.AddListener(SelectWorldCoordinates);
         latitudeLongitudeButton?.onClick.AddListener(SelectLatitudeLongitude);
+        initialized = true;
 
         if (worldCoordinatesButton == null || latitudeLongitudeButton == null ||
             statusText == null || displayModeSetting == null)
-            Debug.LogError("[CoordinateDisplaySettingsPanelLauncher] 显示设置 Prefab 控件命名契约不完整。", settingsPanel);
-
-        ClampWindowToCanvas();
-        settingsPanel.PrepareForGamepadNavigation(WorldCoordinatesButtonName);
-        settingsPanel.Close();
+        {
+            Debug.LogError(
+                "[CoordinateDisplaySettingsPanelLauncher] 内嵌显示设置页控件命名契约不完整。",
+                this);
+        }
     }
 
-    #endregion
-
-    #region 设置应用
-
+    /// <summary>选择世界坐标显示方式。</summary>
     private void SelectWorldCoordinates()
     {
         SetDisplayMode(PlayerWorldCoordinateDisplayMode.WorldCoordinates);
     }
 
+    /// <summary>选择经纬度显示方式。</summary>
     private void SelectLatitudeLongitude()
     {
         SetDisplayMode(PlayerWorldCoordinateDisplayMode.LatitudeLongitude);
     }
 
+    /// <summary>提交显示方式并刷新页内选中状态。</summary>
     private void SetDisplayMode(PlayerWorldCoordinateDisplayMode mode)
     {
-        if (displayModeSetting != null)
-            displayModeSetting.TrySetSelectedIndex((int)mode, out _);
+        displayModeSetting?.TrySetSelectedIndex((int)mode, out _);
         RefreshView();
     }
 
+    /// <summary>根据当前权威设置刷新两个选项和状态文本。</summary>
     private void RefreshView()
     {
         int selectedIndex = displayModeSetting != null
@@ -168,6 +100,7 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour
         }
     }
 
+    /// <summary>设置一个显示方式按钮的选中颜色。</summary>
     private static void SetSelectionVisual(Button button, bool selected)
     {
         if (button?.targetGraphic == null)
@@ -178,63 +111,34 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour
             : FlatWorldUITheme.Surface;
     }
 
-    #endregion
-
-    #region 生命周期与布局
-
-    private void OnRectTransformDimensionsChange()
+    /// <summary>显示设置页显示时重新读取当前模式。</summary>
+    public void OnSettingsPageShown()
     {
-        if (settingsPanel != null)
-            ClampWindowToCanvas();
+        RefreshView();
     }
 
+    /// <summary>显示设置页隐藏时无需保留额外草稿。</summary>
+    public void OnSettingsPageHidden()
+    {
+    }
+
+    /// <summary>解除页面按钮监听。</summary>
     private void OnDestroy()
     {
-        if (entryButton != null)
-            entryButton.onClick.RemoveListener(Open);
-        if (worldCoordinatesButton != null)
-            worldCoordinatesButton.onClick.RemoveListener(SelectWorldCoordinates);
-        if (latitudeLongitudeButton != null)
-            latitudeLongitudeButton.onClick.RemoveListener(SelectLatitudeLongitude);
-        if (settingsPanel != null)
-            Destroy(settingsPanel.gameObject);
+        worldCoordinatesButton?.onClick.RemoveListener(SelectWorldCoordinates);
+        latitudeLongitudeButton?.onClick.RemoveListener(SelectLatitudeLongitude);
     }
 
-    private void Close()
+    /// <summary>在页面局部按名称查找指定组件。</summary>
+    private static T FindComponent<T>(Transform root, string objectName) where T : Component
     {
-        settingsPanel?.Close();
-    }
-
-    private void ClampWindowToCanvas()
-    {
-        if (settingsPanel == null || isClamping)
-            return;
-
-        isClamping = true;
-        try
+        T[] components = root.GetComponentsInChildren<T>(true);
+        for (int index = 0; index < components.Length; index++)
         {
-            SettingsPanelLayoutUtility.ClampToCanvas(
-                settingsPanel,
-                new Vector2(PreferredWidth, PreferredHeight),
-                CanvasSafeMargin);
-        }
-        finally
-        {
-            isClamping = false;
-        }
-    }
-
-    private static Button FindButton(Transform root, string buttonName)
-    {
-        Button[] buttons = root.GetComponentsInChildren<Button>(true);
-        for (int index = 0; index < buttons.Length; index++)
-        {
-            if (buttons[index] != null && buttons[index].name == buttonName)
-                return buttons[index];
+            if (components[index] != null && components[index].name == objectName)
+                return components[index];
         }
 
         return null;
     }
-
-    #endregion
 }

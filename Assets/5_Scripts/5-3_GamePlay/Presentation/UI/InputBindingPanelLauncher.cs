@@ -2,20 +2,16 @@ using System.Collections.Generic;
 using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 /// <summary>
-/// 管理设置页的按键绑定入口、模态面板和可复用绑定行。
-/// 绑定行只在容量不足时实例化；取消按键仅在面板打开期间轮询，关闭时立即释放玩法输入租约。
+/// 管理内嵌按键绑定页与可复用绑定行。
+/// 浏览页面复用主设置面板的玩法输入锁，只有交互式重绑由 InputBindingService 暂停 ActionMap。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class InputBindingPanelLauncher : MonoBehaviour
+public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLifecycle
 {
-    private const string EntryButtonName = "按键绑定";
-    private static readonly Vector2 PreferredDialogSize = new Vector2(920f, 820f);
-    private const float DialogSafeMargin = 64f;
-
+    /// <summary>保存一条可复用绑定行的控件引用。</summary>
     private sealed class BindingRow
     {
         public GameObject Root;
@@ -31,18 +27,17 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
 
     private GameController gameController;
     private InputBindingService bindingService;
-    private Button entryButton;
-    private BasePanel bindingPanel;
-    private RectTransform dialogRect;
+    private BasePanel parentPanel;
+    private RectTransform pageRect;
     private Transform content;
     private GameObject rowPrefab;
     private TextMeshProUGUI statusText;
     private TMP_Dropdown controlModeDropdown;
     private Button keyboardMouseTabButton;
     private Button gamepadTabButton;
+    private Button resetButton;
     private InputBindingDeviceGroup currentDeviceGroup = InputBindingDeviceGroup.KeyboardMouse;
-    private bool panelSuspendedInput;
-    private int suppressEscapeCloseFrame = -1;
+    private bool controlsBound;
 
     /// <summary>当前页面实际显示的绑定行数量。</summary>
     public int ActiveRowCount => rows.Count;
@@ -50,86 +45,93 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
     /// <summary>当前保留的绑定行总数，供 Profiler 检查是否发生重复实例化。</summary>
     public int RetainedRowCount => rows.Count + pooledRows.Count;
 
-    #region 初始化与面板生命周期
+    #region 初始化与页面生命周期
 
+    /// <summary>在指定内嵌页上建立唯一按键绑定器。</summary>
     public static InputBindingPanelLauncher Ensure(
-        Transform settingsPanel,
-        GameController gameController)
+        Transform pageRoot,
+        BasePanel ownerPanel,
+        GameController controller)
     {
-        if (settingsPanel == null)
+        if (pageRoot == null)
             return null;
 
         InputBindingPanelLauncher launcher =
-            settingsPanel.GetComponent<InputBindingPanelLauncher>();
+            pageRoot.GetComponent<InputBindingPanelLauncher>();
         if (launcher == null)
-            launcher = settingsPanel.gameObject.AddComponent<InputBindingPanelLauncher>();
+            launcher = pageRoot.gameObject.AddComponent<InputBindingPanelLauncher>();
 
-        launcher.Initialize(gameController);
-        launcher.EnsureEntryButton();
-        FlatWorldLocalizationService.LanguageChanged -= launcher.HandleLanguageChanged;
-        FlatWorldLocalizationService.LanguageChanged += launcher.HandleLanguageChanged;
-        // 入口按钮仍可调用禁用组件的方法；只有子面板打开期间才需要轮询取消按键。
-        launcher.enabled = launcher.bindingPanel != null && launcher.bindingPanel.IsVisible();
+        launcher.Initialize(ownerPanel, controller);
         return launcher;
     }
 
-    private void Initialize(GameController controller)
+    /// <summary>绑定本页控件，并接入当前玩家的输入绑定服务。</summary>
+    private void Initialize(BasePanel ownerPanel, GameController controller)
     {
+        parentPanel = ownerPanel;
+        BindPageControls();
+
         InputBindingService nextService = controller != null ? controller.InputBindings : null;
-        if (ReferenceEquals(gameController, controller) &&
-            ReferenceEquals(bindingService, nextService))
+        if (!ReferenceEquals(bindingService, nextService))
         {
-            return;
+            if (bindingService != null)
+                bindingService.BindingsChanged -= RefreshRows;
+
+            if (bindingService != null && bindingService.IsRebinding)
+                bindingService.CancelActiveRebind();
+
+            gameController = controller;
+            bindingService = nextService;
+            if (bindingService != null)
+                bindingService.BindingsChanged += RefreshRows;
+        }
+        else
+        {
+            gameController = controller;
         }
 
-        if (bindingService != null)
-            bindingService.BindingsChanged -= RefreshRows;
-
-        ReleaseInputLock();
-        gameController = controller;
-        bindingService = nextService;
-
-        if (bindingService != null)
-            bindingService.BindingsChanged += RefreshRows;
-
-        if (bindingPanel != null && bindingPanel.IsVisible())
-            RebuildRows();
+        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
+        FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
     }
 
-    private void EnsureEntryButton()
+    /// <summary>只在按键页根节点内取得控件，避免命中下拉模板的同名节点。</summary>
+    private void BindPageControls()
     {
-        if (entryButton == null)
-            entryButton = FindButton(transform, EntryButtonName);
+        if (controlsBound)
+            return;
 
-        if (entryButton == null)
+        controlsBound = true;
+        pageRect = transform as RectTransform;
+        Transform bindingList = FindTransform(transform, "绑定列表");
+        ScrollRect bindingScrollRect = bindingList != null
+            ? bindingList.GetComponent<ScrollRect>()
+            : null;
+        content = bindingScrollRect != null ? bindingScrollRect.content : null;
+        statusText = FindText(transform, "状态文本");
+        controlModeDropdown = FindDropdown(transform, "控制模式下拉列表");
+        keyboardMouseTabButton = FindButton(transform, "键鼠分页按钮");
+        gamepadTabButton = FindButton(transform, "手柄分页按钮");
+        resetButton = FindButton(transform, "恢复默认按钮");
+        rowPrefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.InputBindingRow);
+
+        controlModeDropdown?.onValueChanged.AddListener(HandleControlModeChanged);
+        keyboardMouseTabButton?.onClick.AddListener(ShowKeyboardMouseBindings);
+        gamepadTabButton?.onClick.AddListener(ShowGamepadBindings);
+        resetButton?.onClick.AddListener(ResetToDefaults);
+
+        if (bindingList == null || bindingScrollRect == null || content == null ||
+            statusText == null || controlModeDropdown == null ||
+            keyboardMouseTabButton == null || gamepadTabButton == null ||
+            resetButton == null)
         {
             Debug.LogError(
-                $"[InputBindingPanelLauncher] Prefab 缺少入口按钮“{EntryButtonName}”。",
+                "[InputBindingPanelLauncher] 内嵌按键绑定页控件命名契约不完整。",
                 this);
-            return;
         }
-
-        entryButton.onClick.RemoveListener(Open);
-        entryButton.onClick.AddListener(Open);
     }
 
-    private void Update()
-    {
-        if (bindingPanel == null || !bindingPanel.IsVisible() || bindingService == null)
-            return;
-
-        if (bindingService.IsRebinding || Time.frameCount == suppressEscapeCloseFrame)
-            return;
-
-        bool keyboardCanceled = Keyboard.current != null &&
-                                Keyboard.current.escapeKey.wasPressedThisFrame;
-        bool gamepadCanceled = Gamepad.current != null &&
-                               Gamepad.current.buttonEast.wasPressedThisFrame;
-        if (keyboardCanceled || gamepadCanceled)
-            Close();
-    }
-
-    private void Open()
+    /// <summary>页面显示时刷新当前控制方式、绑定行与导航快照。</summary>
+    public void OnSettingsPageShown()
     {
         if (bindingService == null)
         {
@@ -139,97 +141,36 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
             return;
         }
 
-        EnsurePanel();
-        if (bindingPanel == null)
-            return;
-
-        if (!panelSuspendedInput)
-        {
-            gameController?.AcquireGameplayInputLock(this);
-            bindingService.SuspendGameplayInput();
-            panelSuspendedInput = true;
-        }
-
-        UpdateDialogSize();
-        RebuildRows();
-        RefreshControlModeDropdown();
-        SetStatus(GetDevicePageHint());
-        bindingPanel.Open();
-        bindingPanel.transform.SetAsLastSibling();
-        RequestLocalLayoutRebuild();
-        enabled = true;
-    }
-
-    private void Close()
-    {
-        if (bindingService != null && bindingService.IsRebinding)
-            bindingService.CancelActiveRebind();
-
-        bindingPanel?.Close();
-        ReleaseInputLock();
-        enabled = false;
-    }
-
-    private void EnsurePanel()
-    {
-        if (bindingPanel != null)
-            return;
-
-        GameObject prefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.InputBindingSettings);
-        rowPrefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.InputBindingRow);
-        if (prefab == null || rowPrefab == null)
+        if (rowPrefab == null)
+            rowPrefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.InputBindingRow);
+        if (rowPrefab == null)
         {
             Debug.LogError(
-                $"[InputBindingPanelLauncher] 缺少 Prefab：{RuntimeUIPrefabKeys.InputBindingSettings} / {RuntimeUIPrefabKeys.InputBindingRow}。",
+                $"[InputBindingPanelLauncher] 缺少 Prefab：{RuntimeUIPrefabKeys.InputBindingRow}。",
                 this);
             return;
         }
 
-        bindingPanel = UIManager.Instance.CreatePanelFromGameObject(
-            prefab,
-            RuntimeUIPrefabKeys.InputBindingSettings);
-        SettingsSubPanelInteractionGuard.Link(transform, bindingPanel);
-        dialogRect = FindTransform(bindingPanel.transform, "按键绑定面板") as RectTransform;
-        Transform bindingList = FindTransform(bindingPanel.transform, "绑定列表");
-        ScrollRect bindingScrollRect = bindingList != null
-            ? bindingList.GetComponent<ScrollRect>()
-            : null;
-        // 下拉框模板也有名为 Content 的节点，必须从绑定列表的 ScrollRect 取真实内容容器。
-        content = bindingScrollRect != null ? bindingScrollRect.content : null;
-        statusText = bindingPanel.GetText("状态文本");
-        controlModeDropdown = FindDropdown(bindingPanel.transform, "控制模式下拉列表");
-        keyboardMouseTabButton = bindingPanel.GetButton("键鼠分页按钮");
-        gamepadTabButton = bindingPanel.GetButton("手柄分页按钮");
-
-        bindingPanel.GetButton("关闭按钮")?.onClick.AddListener(Close);
-        bindingPanel.GetButton("恢复默认按钮")?.onClick.AddListener(ResetToDefaults);
-        bindingPanel.GetButton("完成按钮")?.onClick.AddListener(Close);
-        controlModeDropdown?.onValueChanged.AddListener(HandleControlModeChanged);
-        keyboardMouseTabButton?.onClick.AddListener(ShowKeyboardMouseBindings);
-        gamepadTabButton?.onClick.AddListener(ShowGamepadBindings);
-        bindingPanel.Closed += HandlePanelClosed;
-
-        if (dialogRect == null || bindingList == null || bindingScrollRect == null || content == null ||
-            statusText == null || controlModeDropdown == null ||
-            keyboardMouseTabButton == null || gamepadTabButton == null)
-        {
-            Debug.LogError("[InputBindingPanelLauncher] 按键绑定 Prefab 控件命名契约不完整。", bindingPanel);
-            bindingPanel.Close();
-            return;
-        }
-
-        SetDeviceGroup(InputBindingDeviceGroup.KeyboardMouse);
+        RebuildRows();
         RefreshControlModeDropdown();
-        bindingPanel.PrepareForGamepadNavigation("控制模式下拉列表", false);
-        UpdateDialogSize();
-        bindingPanel.Close();
+        SetStatus(GetDevicePageHint());
+        RequestLocalLayoutRebuild();
+    }
+
+    /// <summary>页面隐藏或总设置关闭时取消重绑并恢复页内交互。</summary>
+    public void OnSettingsPageHidden()
+    {
+        if (bindingService != null && bindingService.IsRebinding)
+            bindingService.CancelActiveRebind();
+
+        SetRowsInteractable(true);
     }
 
     #endregion
 
     #region 绑定行复用
 
-    /// <summary>按当前设备页复用现有行；切页只改变数据和显隐，不再销毁 GameObject。</summary>
+    /// <summary>按当前设备页复用现有行；切页只改变数据和显隐。</summary>
     private void RebuildRows()
     {
         ReleaseActiveRows();
@@ -259,16 +200,14 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
         UpdateTabVisuals();
         RequestLocalLayoutRebuild();
 
-        // 只有新增槽位才重建层级快照；纯复用只刷新导航状态。
+        // 新增行会改变控件集合，纯复用只需刷新现有导航状态。
         if (createdRow)
-            bindingPanel?.RefreshUIComponents();
+            parentPanel?.RefreshUIComponents();
         else
-            bindingPanel?.RefreshGamepadNavigationState();
-
-        if (bindingPanel != null && bindingPanel.IsVisible())
-            bindingPanel.PrepareForGamepadNavigation("修改按钮", false);
+            parentPanel?.RefreshGamepadNavigationState();
     }
 
+    /// <summary>优先从池中取得绑定行，容量不足时再实例化。</summary>
     private BindingRow AcquireRow(ref bool createdRow)
     {
         BindingRow row = null;
@@ -292,6 +231,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
         return row;
     }
 
+    /// <summary>从现有行 Prefab 创建并绑定一条可复用记录。</summary>
     private BindingRow CreateRow()
     {
         GameObject rowObject = Instantiate(rowPrefab, content, false);
@@ -320,6 +260,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
         return row;
     }
 
+    /// <summary>隐藏当前绑定行并放回页面私有对象池。</summary>
     private void ReleaseActiveRows()
     {
         for (int i = 0; i < rows.Count; i++)
@@ -336,19 +277,20 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
         rows.Clear();
     }
 
+    /// <summary>标记按键列表和分页根节点重新布局。</summary>
     private void RequestLocalLayoutRebuild()
     {
         if (content is RectTransform contentRect)
             LayoutRebuilder.MarkLayoutForRebuild(contentRect);
-        if (dialogRect != null)
-            LayoutRebuilder.MarkLayoutForRebuild(dialogRect);
+        if (pageRect != null)
+            LayoutRebuilder.MarkLayoutForRebuild(pageRect);
     }
 
     #endregion
 
     #region 分页与绑定操作
 
-    /// <summary>按当前语言重建三个控制方式选项，并保持已保存的手动选择。</summary>
+    /// <summary>按当前语言重建控制方式选项，并保持已保存的手动选择。</summary>
     private void RefreshControlModeDropdown()
     {
         if (controlModeDropdown == null)
@@ -381,24 +323,28 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
             FlatWorldLocalizationService.GetUiFormat(
                 "控制方式已切换为：{0}。",
                 controlModeDropdown.options[controlModeDropdown.value].text));
-        bindingPanel?.RefreshGamepadNavigationState();
+        parentPanel?.RefreshGamepadNavigationState();
     }
 
+    /// <summary>语言变化时刷新控制方式下拉框。</summary>
     private void HandleLanguageChanged(string localeCode)
     {
         RefreshControlModeDropdown();
     }
 
+    /// <summary>切换到键鼠绑定页。</summary>
     private void ShowKeyboardMouseBindings()
     {
         SetDeviceGroup(InputBindingDeviceGroup.KeyboardMouse);
     }
 
+    /// <summary>切换到手柄绑定页。</summary>
     private void ShowGamepadBindings()
     {
         SetDeviceGroup(InputBindingDeviceGroup.Gamepad);
     }
 
+    /// <summary>切换绑定设备分组并复用行刷新内容。</summary>
     private void SetDeviceGroup(InputBindingDeviceGroup deviceGroup)
     {
         if (bindingService != null && bindingService.IsRebinding)
@@ -409,6 +355,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
         SetStatus(GetDevicePageHint());
     }
 
+    /// <summary>刷新键鼠与手柄页签的选中色。</summary>
     private void UpdateTabVisuals()
     {
         SetTabVisual(
@@ -419,6 +366,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
             currentDeviceGroup == InputBindingDeviceGroup.Gamepad);
     }
 
+    /// <summary>设置一个设备页签的选中颜色。</summary>
     private static void SetTabVisual(Button button, bool selected)
     {
         if (button?.targetGraphic != null)
@@ -429,17 +377,19 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
         }
     }
 
+    /// <summary>开始交互式重绑，并在回调中恢复当前页交互。</summary>
     private void BeginRebind(BindingRow row)
     {
-        if (bindingService == null || row == null)
+        if (bindingService == null || row?.Entry == null)
             return;
 
+        string displayName = row.Entry.DisplayName;
         SetRowsInteractable(false);
         row.BindingText.text = FlatWorldLocalizationService.GetUiText("等待输入…");
         SetStatus(
             FlatWorldLocalizationService.GetUiFormat(
                 "正在修改“{0}”；Esc / 手柄 B 取消，绑定该键时改用 Backspace / Start。",
-                FlatWorldLocalizationService.GetUiText(row.Entry.DisplayName)));
+                FlatWorldLocalizationService.GetUiText(displayName)));
         bindingService.BeginInteractiveRebind(row.Entry, result =>
         {
             SetRowsInteractable(true);
@@ -451,10 +401,10 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
                     SetStatus(
                         FlatWorldLocalizationService.GetUiFormat(
                             "“{0}”已保存。",
-                            FlatWorldLocalizationService.GetUiText(row.Entry.DisplayName)));
+                            FlatWorldLocalizationService.GetUiText(displayName)));
                     break;
                 case InputRebindStatus.Canceled:
-                    suppressEscapeCloseFrame = Time.frameCount;
+                    UIManager.ExistingInstance?.NotifyCancelHandled();
                     SetStatus(FlatWorldLocalizationService.GetUiText("已取消本次修改。"));
                     break;
                 case InputRebindStatus.Conflict:
@@ -477,17 +427,15 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
         });
     }
 
-    /// <summary>清除当前设备页选中操作的绑定，并让空绑定立即显示为未绑定。</summary>
+    /// <summary>清除当前设备页选中操作的绑定。</summary>
     private void ClearBinding(BindingRow row)
     {
-        if (bindingService == null || row == null || bindingService.IsRebinding)
+        if (bindingService == null || row?.Entry == null || bindingService.IsRebinding)
             return;
 
         if (!bindingService.ClearBinding(row.Entry))
         {
-            SetStatus(
-                FlatWorldLocalizationService.GetUiText("清除绑定失败。"),
-                true);
+            SetStatus(FlatWorldLocalizationService.GetUiText("清除绑定失败。"), true);
             return;
         }
 
@@ -498,6 +446,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
                 FlatWorldLocalizationService.GetUiText(row.Entry.DisplayName)));
     }
 
+    /// <summary>恢复当前设备页的默认绑定。</summary>
     private void ResetToDefaults()
     {
         if (bindingService == null)
@@ -511,6 +460,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
                 FlatWorldLocalizationService.GetUiText(GetDevicePageName())));
     }
 
+    /// <summary>刷新所有已显示行的绑定文本。</summary>
     private void RefreshRows()
     {
         if (bindingService == null)
@@ -519,14 +469,12 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
         for (int i = 0; i < rows.Count; i++)
         {
             BindingRow row = rows[i];
-            if (row?.BindingText != null)
-            {
-                row.BindingText.text =
-                    bindingService.GetBindingDisplayString(row.Entry);
-            }
+            if (row?.BindingText != null && row.Entry != null)
+                row.BindingText.text = bindingService.GetBindingDisplayString(row.Entry);
         }
     }
 
+    /// <summary>统一锁定或恢复页内重绑相关控件。</summary>
     private void SetRowsInteractable(bool interactable)
     {
         for (int i = 0; i < rows.Count; i++)
@@ -543,8 +491,11 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
             gamepadTabButton.interactable = interactable;
         if (controlModeDropdown != null)
             controlModeDropdown.interactable = interactable;
+        if (resetButton != null)
+            resetButton.interactable = interactable;
     }
 
+    /// <summary>显示当前操作结果或错误。</summary>
     private void SetStatus(string message, bool isError = false)
     {
         if (statusText == null)
@@ -556,6 +507,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
             : new Color(0.69f, 0.78f, 0.79f);
     }
 
+    /// <summary>取得当前设备分页的操作提示。</summary>
     private string GetDevicePageHint()
     {
         return FlatWorldLocalizationService.GetUiFormat(
@@ -563,6 +515,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
             FlatWorldLocalizationService.GetUiText(GetDevicePageName()));
     }
 
+    /// <summary>取得当前设备分页名称。</summary>
     private string GetDevicePageName()
     {
         return currentDeviceGroup == InputBindingDeviceGroup.Gamepad
@@ -572,49 +525,9 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
 
     #endregion
 
-    #region 布局、输入租约与清理
+    #region 清理与局部查找
 
-    private void UpdateDialogSize()
-    {
-        if (dialogRect == null)
-            return;
-
-        Canvas canvas = dialogRect.GetComponentInParent<Canvas>();
-        RectTransform canvasRect = canvas != null
-            ? canvas.transform as RectTransform
-            : null;
-        Vector2 canvasSize = canvasRect != null
-            ? canvasRect.rect.size
-            : new Vector2(Screen.width, Screen.height);
-        Vector2 available = new Vector2(
-            Mathf.Max(1f, canvasSize.x - DialogSafeMargin),
-            Mathf.Max(1f, canvasSize.y - DialogSafeMargin));
-
-        dialogRect.SetSizeWithCurrentAnchors(
-            RectTransform.Axis.Horizontal,
-            Mathf.Min(PreferredDialogSize.x, available.x));
-        dialogRect.SetSizeWithCurrentAnchors(
-            RectTransform.Axis.Vertical,
-            Mathf.Min(PreferredDialogSize.y, available.y));
-    }
-
-    private void ReleaseInputLock()
-    {
-        if (!panelSuspendedInput)
-            return;
-
-        bindingService?.ResumeGameplayInput();
-        gameController?.ReleaseGameplayInputLock(this);
-        panelSuspendedInput = false;
-    }
-
-    /// <summary>面板被全局取消路由关闭时也必须释放玩法输入租约。</summary>
-    private void HandlePanelClosed()
-    {
-        ReleaseInputLock();
-        enabled = false;
-    }
-
+    /// <summary>解除页面事件，并保证销毁时没有残留重绑操作。</summary>
     private void OnDestroy()
     {
         if (bindingService != null)
@@ -624,26 +537,14 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
                 bindingService.CancelActiveRebind();
         }
 
-        if (entryButton != null)
-            entryButton.onClick.RemoveListener(Open);
-        if (keyboardMouseTabButton != null)
-            keyboardMouseTabButton.onClick.RemoveListener(ShowKeyboardMouseBindings);
-        if (gamepadTabButton != null)
-            gamepadTabButton.onClick.RemoveListener(ShowGamepadBindings);
-        if (controlModeDropdown != null)
-            controlModeDropdown.onValueChanged.RemoveListener(HandleControlModeChanged);
+        keyboardMouseTabButton?.onClick.RemoveListener(ShowKeyboardMouseBindings);
+        gamepadTabButton?.onClick.RemoveListener(ShowGamepadBindings);
+        resetButton?.onClick.RemoveListener(ResetToDefaults);
+        controlModeDropdown?.onValueChanged.RemoveListener(HandleControlModeChanged);
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
-        if (bindingPanel != null)
-            bindingPanel.Closed -= HandlePanelClosed;
-        ReleaseInputLock();
-        if (bindingPanel != null)
-            Destroy(bindingPanel.gameObject);
     }
 
-    #endregion
-
-    #region 组件查询
-
+    /// <summary>在当前页面内按名称查找 Transform。</summary>
     private static Transform FindTransform(Transform root, string objectName)
     {
         Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
@@ -656,37 +557,35 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour
         return null;
     }
 
+    /// <summary>在当前页面内按名称查找按钮。</summary>
     private static Button FindButton(Transform root, string buttonName)
     {
-        Button[] buttons = root.GetComponentsInChildren<Button>(true);
-        for (int i = 0; i < buttons.Length; i++)
-        {
-            if (buttons[i] != null && buttons[i].name == buttonName)
-                return buttons[i];
-        }
-
-        return null;
+        return FindComponent<Button>(root, buttonName);
     }
 
+    /// <summary>在当前页面内按名称查找 TMP 文本。</summary>
     private static TextMeshProUGUI FindText(Transform root, string textName)
     {
-        TextMeshProUGUI[] texts = root.GetComponentsInChildren<TextMeshProUGUI>(true);
-        for (int i = 0; i < texts.Length; i++)
-        {
-            if (texts[i] != null && texts[i].name == textName)
-                return texts[i];
-        }
-
-        return null;
+        return FindComponent<TextMeshProUGUI>(root, textName);
     }
 
+    /// <summary>在当前页面内按名称查找 TMP 下拉框。</summary>
     private static TMP_Dropdown FindDropdown(Transform root, string dropdownName)
     {
-        TMP_Dropdown[] dropdowns = root.GetComponentsInChildren<TMP_Dropdown>(true);
-        for (int i = 0; i < dropdowns.Length; i++)
+        return FindComponent<TMP_Dropdown>(root, dropdownName);
+    }
+
+    /// <summary>在当前页面内按名称查找指定组件。</summary>
+    private static T FindComponent<T>(Transform root, string objectName) where T : Component
+    {
+        if (root == null)
+            return null;
+
+        T[] components = root.GetComponentsInChildren<T>(true);
+        for (int i = 0; i < components.Length; i++)
         {
-            if (dropdowns[i] != null && dropdowns[i].name == dropdownName)
-                return dropdowns[i];
+            if (components[i] != null && components[i].name == objectName)
+                return components[i];
         }
 
         return null;

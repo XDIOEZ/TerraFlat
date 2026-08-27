@@ -1,21 +1,13 @@
-// AI-Context: 设置菜单的“镜头控制”入口；承载双指缩放、镜头前探、预判平滑和缩放影响系数。
-
+// AI-Context: 设置主面板内嵌镜头控制页；承载双指缩放、镜头前探、平滑与缩放影响。
 using FlatWorld.Settings;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>连接设置主菜单与正式镜头控制 Prefab，并即时持久化全部镜头偏好。</summary>
+/// <summary>绑定内嵌镜头控制页，并即时持久化全部镜头偏好。</summary>
 [DisallowMultipleComponent]
-public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour
+public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecycle
 {
-    private const string EntryButtonName = "镜头控制";
-    private const float PreferredWidth = 800f;
-    private const float PreferredHeight = 620f;
-    private const float CanvasSafeMargin = 32f;
-
-    private Button entryButton;
-    private BasePanel settingsPanel;
     private Toggle pinchZoomToggle;
     private Slider lookaheadSlider;
     private Slider smoothingSlider;
@@ -23,76 +15,34 @@ public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour
     private TextMeshProUGUI lookaheadValueText;
     private TextMeshProUGUI smoothingValueText;
     private TextMeshProUGUI zoomInfluenceValueText;
+    private Button resetButton;
     private ISettingsToggle pinchZoomSetting;
     private ISettingsSlider lookaheadSetting;
     private ISettingsSlider smoothingSetting;
     private ISettingsSlider zoomInfluenceSetting;
     private ISettingsProvider cameraSettingsProvider;
-    private bool isClamping;
+    private bool initialized;
 
-    /// <summary>在设置主面板上复用或挂载镜头控制入口适配器。</summary>
-    public static CameraControlSettingsPanelLauncher Ensure(Transform settingsRoot)
+    /// <summary>在指定内嵌页面根节点上复用或挂载镜头控制器。</summary>
+    public static CameraControlSettingsPanelLauncher Ensure(Transform pageRoot)
     {
-        if (settingsRoot == null)
+        if (pageRoot == null)
             return null;
 
         CameraControlSettingsPanelLauncher launcher =
-            settingsRoot.GetComponent<CameraControlSettingsPanelLauncher>();
+            pageRoot.GetComponent<CameraControlSettingsPanelLauncher>();
         if (launcher == null)
-            launcher = settingsRoot.gameObject.AddComponent<CameraControlSettingsPanelLauncher>();
-        launcher.EnsureEntryButton();
+            launcher = pageRoot.gameObject.AddComponent<CameraControlSettingsPanelLauncher>();
+        launcher.Initialize();
         return launcher;
     }
 
-    /// <summary>查找并绑定设置主菜单中的镜头控制入口。</summary>
-    private void EnsureEntryButton()
+    /// <summary>解析页面局部控件并绑定镜头设置 Provider。</summary>
+    private void Initialize()
     {
-        entryButton ??= FindButton(transform, EntryButtonName);
-        if (entryButton == null)
-        {
-            Debug.LogError(
-                $"[CameraControlSettingsPanelLauncher] Prefab 缺少入口按钮“{EntryButtonName}”。",
-                this);
-            return;
-        }
-
-        entryButton.onClick.RemoveListener(Open);
-        entryButton.onClick.AddListener(Open);
-    }
-
-    /// <summary>刷新设置值后打开镜头控制子页。</summary>
-    private void Open()
-    {
-        EnsureSettingsWindow();
-        if (settingsPanel == null)
+        if (initialized)
             return;
 
-        RefreshValues();
-        ClampWindowToCanvas();
-        settingsPanel.Open();
-        settingsPanel.transform.SetAsLastSibling();
-    }
-
-    /// <summary>从正式 Prefab 创建并绑定镜头控制控件。</summary>
-    private void EnsureSettingsWindow()
-    {
-        if (settingsPanel != null)
-            return;
-
-        GameObject prefab = GameRes.Instance?.GetPrefab(
-            RuntimeUIPrefabKeys.CameraControlSettings);
-        if (prefab == null)
-        {
-            Debug.LogError(
-                $"[CameraControlSettingsPanelLauncher] 缺少 Prefab：{RuntimeUIPrefabKeys.CameraControlSettings}。",
-                this);
-            return;
-        }
-
-        settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
-            prefab,
-            RuntimeUIPrefabKeys.CameraControlSettings);
-        SettingsSubPanelInteractionGuard.Link(transform, settingsPanel);
         ISettingsProvider uiProvider = UIUserSettings.SettingsProvider;
         cameraSettingsProvider = CameraUserSettings.SettingsProvider;
         pinchZoomSetting = uiProvider.GetToggle(UIUserSettings.EnablePinchZoomSettingKey);
@@ -102,37 +52,33 @@ public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour
         zoomInfluenceSetting = cameraSettingsProvider.GetSlider(
             CameraUserSettings.LookaheadZoomInfluenceSettingKey);
 
-        pinchZoomToggle = settingsPanel.GetToggle("双指缩放");
-        lookaheadSlider = settingsPanel.GetSlider("镜头前探");
-        smoothingSlider = settingsPanel.GetSlider("预判平滑");
-        zoomInfluenceSlider = settingsPanel.GetSlider("缩放影响系数");
-        lookaheadValueText = settingsPanel.GetText("镜头前探数值");
-        smoothingValueText = settingsPanel.GetText("预判平滑数值");
-        zoomInfluenceValueText = settingsPanel.GetText("缩放影响系数数值");
-
-        settingsPanel.GetButton("关闭按钮")?.onClick.AddListener(Close);
-        settingsPanel.GetButton("恢复默认按钮")?.onClick.AddListener(ResetToDefault);
-        settingsPanel.GetButton("完成按钮")?.onClick.AddListener(Close);
-        pinchZoomToggle?.onValueChanged.AddListener(OnPinchZoomChanged);
-        lookaheadSlider?.onValueChanged.AddListener(OnLookaheadChanged);
-        smoothingSlider?.onValueChanged.AddListener(OnSmoothingChanged);
-        zoomInfluenceSlider?.onValueChanged.AddListener(OnZoomInfluenceChanged);
-
-        if (pinchZoomToggle == null || lookaheadSlider == null || smoothingSlider == null ||
-            zoomInfluenceSlider == null || lookaheadValueText == null ||
-            smoothingValueText == null || zoomInfluenceValueText == null)
-        {
-            Debug.LogError(
-                "[CameraControlSettingsPanelLauncher] 镜头控制 Prefab 控件命名契约不完整。",
-                settingsPanel);
-        }
+        pinchZoomToggle = FindComponent<Toggle>(transform, "双指缩放");
+        lookaheadSlider = FindComponent<Slider>(transform, "镜头前探");
+        smoothingSlider = FindComponent<Slider>(transform, "预判平滑");
+        zoomInfluenceSlider = FindComponent<Slider>(transform, "缩放影响系数");
+        lookaheadValueText = FindComponent<TextMeshProUGUI>(transform, "镜头前探数值");
+        smoothingValueText = FindComponent<TextMeshProUGUI>(transform, "预判平滑数值");
+        zoomInfluenceValueText = FindComponent<TextMeshProUGUI>(transform, "缩放影响系数数值");
+        resetButton = FindComponent<Button>(transform, "恢复默认按钮");
 
         ConfigureSlider(lookaheadSlider, lookaheadSetting);
         ConfigureSlider(smoothingSlider, smoothingSetting);
         ConfigureSlider(zoomInfluenceSlider, zoomInfluenceSetting);
-        ClampWindowToCanvas();
-        settingsPanel.PrepareForGamepadNavigation("双指缩放");
-        settingsPanel.Close();
+        pinchZoomToggle?.onValueChanged.AddListener(OnPinchZoomChanged);
+        lookaheadSlider?.onValueChanged.AddListener(OnLookaheadChanged);
+        smoothingSlider?.onValueChanged.AddListener(OnSmoothingChanged);
+        zoomInfluenceSlider?.onValueChanged.AddListener(OnZoomInfluenceChanged);
+        resetButton?.onClick.AddListener(ResetToDefault);
+        initialized = true;
+
+        if (pinchZoomToggle == null || lookaheadSlider == null || smoothingSlider == null ||
+            zoomInfluenceSlider == null || lookaheadValueText == null ||
+            smoothingValueText == null || zoomInfluenceValueText == null || resetButton == null)
+        {
+            Debug.LogError(
+                "[CameraControlSettingsPanelLauncher] 内嵌镜头控制页控件命名契约不完整。",
+                this);
+        }
     }
 
     /// <summary>按设置契约配置滑动条范围与连续取值。</summary>
@@ -146,7 +92,7 @@ public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour
         slider.wholeNumbers = false;
     }
 
-    /// <summary>写入双指缩放偏好并让手机 HUD 清理已有触点。</summary>
+    /// <summary>写入双指缩放偏好。</summary>
     private void OnPinchZoomChanged(bool value)
     {
         pinchZoomSetting?.SetValue(value);
@@ -184,7 +130,7 @@ public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour
         RefreshValues();
     }
 
-    /// <summary>从设置提供者回填全部镜头控制值。</summary>
+    /// <summary>从设置 Provider 回填全部镜头控制值。</summary>
     private void RefreshValues()
     {
         if (pinchZoomToggle != null && pinchZoomSetting != null)
@@ -209,49 +155,25 @@ public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour
             zoomInfluenceValueText.text = FormatSigned(zoomInfluenceSetting.Value, "0.00");
     }
 
-    /// <summary>关闭镜头控制子页。</summary>
-    private void Close()
+    /// <summary>镜头页显示时重新读取当前设置。</summary>
+    public void OnSettingsPageShown()
     {
-        settingsPanel?.Close();
+        RefreshValues();
     }
 
-    /// <summary>根画布尺寸变化时重新限制子页面板。</summary>
-    private void OnRectTransformDimensionsChange()
+    /// <summary>镜头页隐藏时无需保留额外草稿。</summary>
+    public void OnSettingsPageHidden()
     {
-        if (settingsPanel != null)
-            ClampWindowToCanvas();
     }
 
-    /// <summary>解除入口事件并销毁运行时创建的子页。</summary>
+    /// <summary>解除本控制器注册的全部 UI 监听。</summary>
     private void OnDestroy()
     {
-        if (entryButton != null)
-            entryButton.onClick.RemoveListener(Open);
-        if (settingsPanel != null)
-        {
-            settingsPanel.Close();
-            Destroy(settingsPanel.gameObject);
-        }
-    }
-
-    /// <summary>用统一视觉边距规则限制镜头控制页尺寸。</summary>
-    private void ClampWindowToCanvas()
-    {
-        if (settingsPanel == null || isClamping)
-            return;
-
-        isClamping = true;
-        try
-        {
-            SettingsPanelLayoutUtility.ClampToCanvas(
-                settingsPanel,
-                new Vector2(PreferredWidth, PreferredHeight),
-                CanvasSafeMargin);
-        }
-        finally
-        {
-            isClamping = false;
-        }
+        pinchZoomToggle?.onValueChanged.RemoveListener(OnPinchZoomChanged);
+        lookaheadSlider?.onValueChanged.RemoveListener(OnLookaheadChanged);
+        smoothingSlider?.onValueChanged.RemoveListener(OnSmoothingChanged);
+        zoomInfluenceSlider?.onValueChanged.RemoveListener(OnZoomInfluenceChanged);
+        resetButton?.onClick.RemoveListener(ResetToDefault);
     }
 
     /// <summary>把数值格式化为始终带正负号的显示文本。</summary>
@@ -260,14 +182,14 @@ public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour
         return (value >= 0f ? "+" : string.Empty) + value.ToString(format) + suffix;
     }
 
-    /// <summary>按节点名查找任意层级中的按钮。</summary>
-    private static Button FindButton(Transform root, string buttonName)
+    /// <summary>在页面局部按名称查找指定组件。</summary>
+    private static T FindComponent<T>(Transform root, string objectName) where T : Component
     {
-        Button[] buttons = root.GetComponentsInChildren<Button>(true);
-        for (int i = 0; i < buttons.Length; i++)
+        T[] components = root.GetComponentsInChildren<T>(true);
+        for (int index = 0; index < components.Length; index++)
         {
-            if (buttons[i] != null && buttons[i].name == buttonName)
-                return buttons[i];
+            if (components[index] != null && components[index].name == objectName)
+                return components[index];
         }
 
         return null;

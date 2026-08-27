@@ -1,4 +1,4 @@
-// AI-Context: 设置菜单的区块流送性能入口；模式写入 PlayerPrefs，并立即同步 ChunkMgr 调度器。
+// AI-Context: 设置主面板内嵌区块流送性能页；模式仅在点击应用时提交。
 using System.Collections.Generic;
 using FlatWorld.Localization;
 using FlatWorld.Settings;
@@ -6,110 +6,94 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>打开区块流送性能设置，并在自动、流畅和高吞吐模式之间切换。</summary>
+/// <summary>绑定内嵌流送性能页，并在自动、流畅和高吞吐模式之间切换。</summary>
 [DisallowMultipleComponent]
-public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour
+public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecycle
 {
-    private const string EntryButtonName = "流送性能";
-
-    private Button entryButton;
-    private BasePanel settingsPanel;
+    private SettingsActionListPagination pagination;
     private TMP_Dropdown modeDropdown;
     private TextMeshProUGUI statusText;
+    private Button cancelButton;
+    private Button applyButton;
     private ISettingsDropdown modeSetting;
+    private bool initialized;
 
-    public static WorldStreamingSettingsPanelLauncher Ensure(Transform settingsRoot)
+    /// <summary>在指定内嵌页面根节点上复用或挂载流送性能控制器。</summary>
+    public static WorldStreamingSettingsPanelLauncher Ensure(
+        Transform pageRoot,
+        SettingsActionListPagination pagination)
     {
-        if (settingsRoot == null)
+        if (pageRoot == null)
             return null;
+
         WorldStreamingSettingsPanelLauncher launcher =
-            settingsRoot.GetComponent<WorldStreamingSettingsPanelLauncher>();
+            pageRoot.GetComponent<WorldStreamingSettingsPanelLauncher>();
         if (launcher == null)
-            launcher = settingsRoot.gameObject.AddComponent<WorldStreamingSettingsPanelLauncher>();
-        launcher.EnsureEntryButton();
+            launcher = pageRoot.gameObject.AddComponent<WorldStreamingSettingsPanelLauncher>();
+        launcher.Initialize(pagination);
         return launcher;
     }
 
-    #region 窗口生命周期
-
-    private void EnsureEntryButton()
+    /// <summary>解析页面局部控件并绑定流送设置 Provider。</summary>
+    private void Initialize(SettingsActionListPagination ownerPagination)
     {
-        if (entryButton != null)
+        pagination = ownerPagination;
+        if (initialized)
             return;
-        entryButton = FindButton(transform, EntryButtonName);
-        if (entryButton == null)
-        {
-            Debug.LogError($"[WorldStreamingSettings] Prefab 缺少入口按钮“{EntryButtonName}”。", this);
-            return;
-        }
-        entryButton.onClick.RemoveListener(Open);
-        entryButton.onClick.AddListener(Open);
-    }
 
-    private void Open()
-    {
-        EnsureWindow();
-        if (settingsPanel == null)
-            return;
-        modeDropdown?.SetValueWithoutNotify(
-            modeSetting != null ? modeSetting.SelectedIndex : 0);
-        RefreshStatus();
-        settingsPanel.Open();
-        settingsPanel.transform.SetAsLastSibling();
-        Canvas.ForceUpdateCanvases();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(settingsPanel.rectTransform);
-    }
-
-    private void EnsureWindow()
-    {
-        if (settingsPanel != null)
-            return;
-        GameObject prefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.WorldStreamingSettings);
-        if (prefab == null)
-        {
-            Debug.LogError($"[WorldStreamingSettings] 缺少 Prefab：{RuntimeUIPrefabKeys.WorldStreamingSettings}。", this);
-            return;
-        }
-
-        settingsPanel = UIManager.Instance.CreatePanelFromGameObject(
-            prefab, RuntimeUIPrefabKeys.WorldStreamingSettings);
-        SettingsSubPanelInteractionGuard.Link(transform, settingsPanel);
         modeSetting = WorldStreamingPreferences.SettingsProvider.GetDropdown(
             WorldStreamingPreferences.ModeSettingKey);
-        modeDropdown = settingsPanel.GetComponentInChildren<TMP_Dropdown>(true);
-        statusText = settingsPanel.GetText("状态文本");
-        settingsPanel.GetButton("关闭按钮")?.onClick.AddListener(Close);
-        settingsPanel.GetButton("取消按钮")?.onClick.AddListener(Close);
-        settingsPanel.GetButton("应用按钮")?.onClick.AddListener(Apply);
+        modeDropdown = FindComponent<TMP_Dropdown>(transform, "性能模式下拉列表");
+        statusText = FindComponent<TextMeshProUGUI>(transform, "状态文本");
+        cancelButton = FindComponent<Button>(transform, "取消按钮");
+        applyButton = FindComponent<Button>(transform, "应用按钮");
+
         if (modeDropdown != null)
         {
             modeDropdown.ClearOptions();
             modeDropdown.AddOptions(GetSettingOptionLabels(modeSetting?.Options));
         }
-        else
+
+        cancelButton?.onClick.AddListener(Cancel);
+        applyButton?.onClick.AddListener(Apply);
+        initialized = true;
+
+        if (modeDropdown == null || statusText == null || cancelButton == null ||
+            applyButton == null || modeSetting == null)
         {
-            Debug.LogError("[WorldStreamingSettings] Prefab 缺少性能模式下拉列表。", settingsPanel);
+            Debug.LogError(
+                "[WorldStreamingSettings] 内嵌流送性能页控件命名契约不完整。",
+                this);
         }
-        settingsPanel.PrepareForGamepadNavigation();
-        settingsPanel.Close();
     }
 
+    /// <summary>提交当前下拉草稿并刷新实际调度状态。</summary>
     private void Apply()
     {
         if (modeDropdown == null || modeSetting == null)
             return;
         if (!modeSetting.TrySetSelectedIndex(modeDropdown.value, out string error))
         {
-            statusText.text = FlatWorldLocalizationService.GetUiText(error);
+            if (statusText != null)
+                statusText.text = FlatWorldLocalizationService.GetUiText(error);
             return;
         }
+
         RefreshStatus();
     }
 
+    /// <summary>放弃当前视图草稿并返回世界设置入口页。</summary>
+    private void Cancel()
+    {
+        pagination?.ShowWorldPage();
+    }
+
+    /// <summary>根据已生效模式刷新并发数和说明文本。</summary>
     private void RefreshStatus()
     {
         if (statusText == null)
             return;
+
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         int workers = manager != null
             ? manager.EffectiveBackgroundGenerationConcurrency
@@ -133,42 +117,47 @@ public sealed class WorldStreamingSettingsPanelLauncher : MonoBehaviour
         };
     }
 
-    private void Close() => settingsPanel?.Close();
+    /// <summary>流送页显示时丢弃旧草稿并读取已生效模式。</summary>
+    public void OnSettingsPageShown()
+    {
+        modeDropdown?.SetValueWithoutNotify(modeSetting != null ? modeSetting.SelectedIndex : 0);
+        RefreshStatus();
+    }
 
+    /// <summary>流送页隐藏时不提交当前下拉草稿。</summary>
+    public void OnSettingsPageHidden()
+    {
+    }
+
+    /// <summary>解除页面按钮监听。</summary>
     private void OnDestroy()
     {
-        if (entryButton != null)
-            entryButton.onClick.RemoveListener(Open);
-        if (settingsPanel != null)
-            Destroy(settingsPanel.gameObject);
+        cancelButton?.onClick.RemoveListener(Cancel);
+        applyButton?.onClick.RemoveListener(Apply);
     }
 
-    #endregion
-
-    #region 查找
-
-    private static Button FindButton(Transform root, string buttonName)
-    {
-        Button[] buttons = root.GetComponentsInChildren<Button>(true);
-        for (int i = 0; i < buttons.Length; i++)
-        {
-            if (buttons[i] != null && buttons[i].name == buttonName)
-                return buttons[i];
-        }
-        return null;
-    }
-
-    private static List<string> GetSettingOptionLabels(
-        IReadOnlyList<SettingOption> options)
+    /// <summary>把稳定选项元数据转换为本地化下拉标签。</summary>
+    private static List<string> GetSettingOptionLabels(IReadOnlyList<SettingOption> options)
     {
         var labels = new List<string>(options?.Count ?? 0);
         if (options == null)
             return labels;
 
-        for (int i = 0; i < options.Count; i++)
-            labels.Add(FlatWorldLocalizationService.GetUiText(options[i]?.DisplayName));
+        for (int index = 0; index < options.Count; index++)
+            labels.Add(FlatWorldLocalizationService.GetUiText(options[index]?.DisplayName));
         return labels;
     }
 
-    #endregion
+    /// <summary>在页面局部按名称查找指定组件。</summary>
+    private static T FindComponent<T>(Transform root, string objectName) where T : Component
+    {
+        T[] components = root.GetComponentsInChildren<T>(true);
+        for (int index = 0; index < components.Length; index++)
+        {
+            if (components[index] != null && components[index].name == objectName)
+                return components[index];
+        }
+
+        return null;
+    }
 }
