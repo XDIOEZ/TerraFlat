@@ -32,7 +32,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         _CausticColor("焦散颜色", Color) = (0.28, 0.86, 0.92, 1)
         _CausticStrength("焦散强度", Range(0, 1)) = 0.08
         _FoamColor("泡沫颜色", Color) = (0.76, 0.96, 1, 1)
-        _WhitecapStrength("浪峰白沫", Range(0, 1)) = 0.08
+        _WhitecapStrength("浪峰白沫", Range(0, 1)) = 0.24
 
         [Header(Shore)]
         _EdgeColor("岸线暗部", Color) = (0.035, 0.022, 0.015, 1)
@@ -331,8 +331,12 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 + float2(time * 0.052, -time * 0.033)
                 + float2(4.6, 26.3));
             float crestHeight = height + max(detailA, detailB) * 0.12;
-            surface.whitecap = smoothstep(0.7, 0.92, crestHeight)
-                * smoothstep(0.44, 0.68, whitecapNoiseA * whitecapNoiseB)
+            float foamBreakup = smoothstep(0.36, 0.66, whitecapNoiseA * whitecapNoiseB);
+            float rippleFoam = max(crestA, crestB * 0.65)
+                * lerp(0.28, 1.0, foamBreakup);
+            float swellFoam = smoothstep(0.7, 0.92, crestHeight)
+                * smoothstep(0.44, 0.68, whitecapNoiseA * whitecapNoiseB);
+            surface.whitecap = saturate(max(rippleFoam, swellFoam * 0.72))
                 * saturate(_WhitecapStrength)
                 * _FoamColor.a;
             return surface;
@@ -409,6 +413,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
 
         Pass
         {
+            Name "Universal2D"
             Tags { "LightMode" = "Universal2D" }
 
             HLSLPROGRAM
@@ -492,6 +497,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         // 非 2D Renderer 下保留同样的水面表现，方便 Scene 视图检查。
         Pass
         {
+            Name "UniversalForward"
             Tags { "LightMode" = "UniversalForward" }
 
             HLSLPROGRAM
