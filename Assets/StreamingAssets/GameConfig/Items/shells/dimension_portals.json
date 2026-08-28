@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "DimensionPortal_Base",
+      "abstract": true,
+      "shellPrefab": "BuildingBodyShell",
+      "visual": {
+        "rendererPath": "Render"
+      }
+    },
+    {
+      "id": "CaveExit",
+      "parent": "DimensionPortal_Base",
+      "sourcePrefab": "Assets/2_Prefabs/World/Dimensions/CaveExit.prefab",
+      "gameName": "矿洞出口",
+      "description": "返回与此出口绑定的地表矿坑入口。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": false,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Env/Dimension/CaveEntrance_Natural.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.03
+          },
+          "path": "",
+          "size": {
+            "x": 1.94,
+            "y": 1.22
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "维度入口模块": {
+          "prefab": "BuildingFeature_MineEntrance_DimensionPortal",
+          "id": "维度入口模块",
+          "enabled": true,
+          "data": {
+            "BitData": null,
+            "Type": 0
+          },
+          "parameters": {
+            "targetDimensionId": "surface",
+            "requiresInstalledBuilding": false,
+            "blocksNavigation": true
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false,
+        "FactionId": ""
+      }
+    }
+  ]
+}

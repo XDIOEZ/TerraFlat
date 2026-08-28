@@ -22,9 +22,11 @@ public sealed class DimensionPortal : Module, IInteractable, IItemPoolLifecycle
 
     [SerializeField] private string targetDimensionId;
     [SerializeField] private bool requiresInstalledBuilding;
+    [SerializeField] private bool blocksNavigation;
 
     public string TargetDimensionId => targetDimensionId;
     public bool RequiresInstalledBuilding => requiresInstalledBuilding;
+    public bool BlocksNavigation => blocksNavigation;
 
     #endregion
 
@@ -42,6 +44,7 @@ public sealed class DimensionPortal : Module, IInteractable, IItemPoolLifecycle
     {
         EnsureModuleData();
         CachePortalContext();
+        EnsureNavigationObstacle();
     }
 
     /// <summary>维度入口当前没有额外持久化状态。</summary>
@@ -123,6 +126,7 @@ public sealed class DimensionPortal : Module, IInteractable, IItemPoolLifecycle
         transitionRequested = false;
         portalItem = ownerItem;
         building = ownerItem?.GetComponentInChildren<Mod_Building>(true);
+        EnsureNavigationObstacle();
     }
 
     public void OnInteractStart(Item playerItem)
@@ -169,6 +173,18 @@ public sealed class DimensionPortal : Module, IInteractable, IItemPoolLifecycle
         portalItem ??= GetComponentInParent<Item>();
         if (portalItem != null)
             building ??= portalItem.GetComponentInChildren<Mod_Building>(true);
+    }
+
+    /// <summary>按入口定义为通用 Item Shell 注册导航占地。</summary>
+    private void EnsureNavigationObstacle()
+    {
+        if (!blocksNavigation || portalItem == null ||
+            portalItem.TryGetComponent(out WorldNavigationObstacle _))
+        {
+            return;
+        }
+
+        portalItem.gameObject.AddComponent<WorldNavigationObstacle>();
     }
 
     private Vector2Int GetCurrentCell()

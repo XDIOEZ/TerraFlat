@@ -413,12 +413,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 35ac961aa6c4ef249978ccaa5e039afd
-    m_Address: Assets/2_Prefabs/World/Dimensions/CaveExit.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 36f0b47149ae978459b4bb8863638d94
     m_Address: "Assets/2_Prefabs/World/Space/\u91D1\u661F.prefab"
     m_ReadOnly: 0
@@ -1521,6 +1515,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d0b4017a0d7e4d45b73d560418f70a21
+    m_Address: Assets/6_Art/Env/Dimension/CaveEntrance_Natural.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d18a42050ee44b141961b1b517915c87
     m_Address: Assets/6_Art/Items/Tools/Item_Tool_077.png

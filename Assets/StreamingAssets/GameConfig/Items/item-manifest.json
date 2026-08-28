@@ -45,6 +45,11 @@
       "id": "building_bodies",
       "path": "shells/building_bodies.json",
       "enabled": true
+    },
+    {
+      "id": "dimension_portals",
+      "path": "shells/dimension_portals.json",
+      "enabled": true
     }
   ]
 }
