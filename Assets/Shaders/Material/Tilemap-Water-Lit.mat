@@ -41,7 +41,6 @@ Material:
     - _EdgeStrength: 0.72
     - _EdgeWidth: 0.2
     - _EnableExternalAlpha: 0
-    - _PixelDensity: 16
     - _ShoreStrength: 0.16
     - _SurfaceTint: 0.2
     - _WaveScale: 5.5
