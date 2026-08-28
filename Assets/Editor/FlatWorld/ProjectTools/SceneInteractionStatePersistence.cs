@@ -10,7 +10,7 @@ namespace FlatWorld.EditorTools
 {
     /// <summary>
     /// 持久化 Hierarchy 原生“眼睛 / 手”状态（Scene Visibility / Scene Picking）。
-    /// 数据仅保存在本机 EditorPrefs，不修改场景、Prefab 或运行时存档。
+    /// 数据仅保存在本机 EditorPrefs；运行时动态场景按层级变化增量恢复，最短间隔为 1 秒。
     /// </summary>
     [InitializeOnLoad]
     internal static class SceneInteractionStatePersistence
@@ -25,13 +25,12 @@ namespace FlatWorld.EditorTools
         private const string PreferencePrefix = "FlatWorld.SceneInteractionStatePersistence.";
         private const string NullGlobalId =
             "GlobalObjectId_V1-0-00000000000000000000000000000000-0-0";
-        private const double RuntimeNamePollIntervalSeconds = 1.0d;
+        private const double RuntimeRestoreIntervalSeconds = 1.0d;
 
         [Serializable]
         private sealed class Database
         {
             public List<Entry> entries = new List<Entry>();
-            public List<RuntimeNameEntry> runtimeNameEntries = new List<RuntimeNameEntry>();
         }
 
         [Serializable]
@@ -43,17 +42,8 @@ namespace FlatWorld.EditorTools
             public bool pickingDisabled;
         }
 
-        [Serializable]
-        private sealed class RuntimeNameEntry
-        {
-            public string name;
-            public bool hidden;
-            public bool pickingDisabled;
-        }
-
         private struct Snapshot
         {
-            public string name;
             public string globalId;
             public string fallbackKey;
             public bool hidden;
@@ -65,8 +55,9 @@ namespace FlatWorld.EditorTools
         private static bool suppressEvents;
         private static bool transitionInProgress;
         private static bool captureQueued;
+        private static bool runtimeRestorePending;
         private static int restorePasses;
-        private static double lastRuntimeNamePollTime;
+        private static double lastRuntimeRestoreTime;
 
         private static string ProjectKey =>
             Hash128.Compute(Application.dataPath.Replace('\\', '/').ToLowerInvariant()).ToString();
@@ -103,6 +94,10 @@ namespace FlatWorld.EditorTools
             SceneManager.sceneUnloaded -= OnRuntimeSceneUnloaded;
             SceneManager.sceneUnloaded += OnRuntimeSceneUnloaded;
 
+            EditorApplication.hierarchyChanged -= OnHierarchyChanged;
+            EditorApplication.hierarchyChanged += OnHierarchyChanged;
+            EditorApplication.update -= RestoreRuntimeObjects;
+            EditorApplication.update += RestoreRuntimeObjects;
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             AssemblyReloadEvents.beforeAssemblyReload -= SaveBeforeReload;
@@ -155,7 +150,43 @@ namespace FlatWorld.EditorTools
         private static void OnRuntimeSceneUnloaded(Scene scene)
         {
             if (EditorApplication.isPlaying)
-                BeginTransition();
+            {
+                // CreateScene 不触发 sceneLoaded；卸载旧场景后必须主动结束有限恢复。
+                QueueRestore();
+            }
+        }
+
+        /// <summary>动态对象进入 Hierarchy 后标记一次增量恢复。</summary>
+        private static void OnHierarchyChanged()
+        {
+            if (IsEnabled && EditorApplication.isPlaying)
+                runtimeRestorePending = true;
+        }
+
+        /// <summary>按层级变化恢复晚于切场景流程生成的运行时对象。</summary>
+        private static void RestoreRuntimeObjects()
+        {
+            if (!runtimeRestorePending || !IsEnabled || !EditorApplication.isPlaying ||
+                transitionInProgress || suppressEvents)
+            {
+                return;
+            }
+
+            double now = EditorApplication.timeSinceStartup;
+            if (now - lastRuntimeRestoreTime < RuntimeRestoreIntervalSeconds)
+                return;
+
+            runtimeRestorePending = false;
+            lastRuntimeRestoreTime = now;
+
+            // 用户刚点的新状态优先写入数据库，避免轮询把操作反向覆盖。
+            FlushCapture();
+            EnsureDatabase();
+            if (database.entries.Count == 0)
+                return;
+
+            ApplySavedStates();
+            previous = BuildSnapshot();
         }
 
         private static void OnPlayModeStateChanged(PlayModeStateChange state)
@@ -193,6 +224,7 @@ namespace FlatWorld.EditorTools
             }
 
             transitionInProgress = true;
+            runtimeRestorePending = true;
             restorePasses = Mathf.Max(restorePasses, 3);
             EditorApplication.delayCall -= RestorePass;
             EditorApplication.delayCall += RestorePass;
@@ -551,7 +583,9 @@ namespace FlatWorld.EditorTools
             Menu.SetChecked(EnabledMenu, enabled);
             transitionInProgress = false;
             captureQueued = false;
+            runtimeRestorePending = false;
             restorePasses = 0;
+            lastRuntimeRestoreTime = 0d;
 
             if (enabled)
             {
