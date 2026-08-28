@@ -8,15 +8,15 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         [Header(Water Surface)]
         _DeepColor("深水颜色", Color) = (0.08, 0.34, 0.56, 1)
         _ShallowColor("浅水颜色", Color) = (0.18, 0.68, 0.78, 1)
-        _SurfaceTint("水面染色强度", Range(0, 1)) = 0.12
-        _WaveColor("波纹高光", Color) = (0.72, 0.94, 0.98, 0.82)
-        _WaveStrength("波纹强度", Range(0, 1)) = 0.2
-        _WaveScale("波纹密度", Range(0.25, 16)) = 3.2
-        _WaveSpeed("流动速度", Range(-3, 3)) = 0.45
-        _WaveThreshold("高光阈值", Range(-1, 1)) = 0.58
-        _WaveSoftness("高光柔和度", Range(0.01, 0.5)) = 0.18
+        _SurfaceTint("水面染色强度", Range(0, 1)) = 0.06
+        _WaveColor("波纹高光", Color) = (0.72, 0.94, 0.98, 0.68)
+        _WaveStrength("波纹强度", Range(0, 1)) = 0.18
+        _WaveScale("波纹密度", Range(0.25, 16)) = 2.45
+        _WaveSpeed("流动速度", Range(-3, 3)) = 0.32
+        _WaveThreshold("高光阈值", Range(-1, 1)) = 0.78
+        _WaveSoftness("高光柔和度", Range(0.01, 0.5)) = 0.12
         _PixelDensity("像素采样密度", Range(1, 64)) = 32
-        _WaveDistortion("波纹弯曲程度", Range(0, 1.5)) = 0.42
+        _WaveDistortion("波纹弯曲程度", Range(0, 3)) = 1.65
         _FlowDirection("流动方向", Vector) = (1, 0.35, 0, 0)
 
         [Header(Shore)]
@@ -71,7 +71,29 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             return floor(positionWS * density + 0.5) / density;
         }
 
-        /// <summary>用双向连续波与低频弯曲生成自然、断续且跨 Chunk 连贯的水纹。</summary>
+        /// <summary>生成稳定的二维随机值，避免程序波纹形成规则重复图案。</summary>
+        float WaterHash(float2 cell)
+        {
+            float3 value = frac(float3(cell.xyx) * float3(0.1031, 0.103, 0.0973));
+            value += dot(value, value.yzx + 33.33);
+            return frac((value.x + value.y) * value.z);
+        }
+
+        /// <summary>在世界空间插值随机值，为流向弯曲和波峰断续提供连续噪声。</summary>
+        float WaterNoise(float2 position)
+        {
+            float2 cell = floor(position);
+            float2 local = frac(position);
+            float2 blend = local * local * (3.0 - 2.0 * local);
+            float bottom = lerp(WaterHash(cell), WaterHash(cell + float2(1.0, 0.0)), blend.x);
+            float top = lerp(
+                WaterHash(cell + float2(0.0, 1.0)),
+                WaterHash(cell + float2(1.0, 1.0)),
+                blend.x);
+            return lerp(bottom, top, blend.y);
+        }
+
+        /// <summary>用噪声扭曲两种方向的波峰，并把长条波纹裁成不规则短段。</summary>
         half2 CalculateWaterPattern(float2 positionWS)
         {
             float2 direction = _FlowDirection.xy;
@@ -80,24 +102,55 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             float2 pixelPosition = QuantizeWaterPosition(positionWS);
             float time = _Time.y * _WaveSpeed;
 
-            float longitudinal = dot(pixelPosition, direction) * _WaveScale;
-            float transverse = dot(pixelPosition, lateral) * _WaveScale;
-            half bend = sin(transverse * 0.34 - time * 0.42) * _WaveDistortion;
-            float primaryPhase = longitudinal + time + bend;
-            float secondaryPhase = transverse * 0.72 - time * 0.67
-                + sin(longitudinal * 0.3 + time * 0.22) * _WaveDistortion * 0.75;
+            float2 drift = float2(time * 0.035, -time * 0.023);
+            float warpA = WaterNoise(pixelPosition * 0.11 + drift);
+            float warpB = WaterNoise(
+                pixelPosition * 0.145
+                + float2(19.37, 7.91)
+                + float2(-drift.y, drift.x));
+            float2 warpedPosition = pixelPosition
+                + direction * (warpA - 0.5) * _WaveDistortion
+                + lateral * (warpB - 0.5) * _WaveDistortion * 1.35;
+
+            float2 secondaryDirection = direction * 0.62 + lateral * 0.78;
+            secondaryDirection *= rsqrt(max(dot(secondaryDirection, secondaryDirection), 0.001));
+            float primaryPhase = dot(warpedPosition, direction) * _WaveScale
+                + time
+                + (warpB - 0.5) * 1.4;
+            float secondaryPhase = dot(warpedPosition, secondaryDirection) * _WaveScale * 0.78
+                - time * 0.63
+                + (warpA - 0.5) * 1.8;
             half primary = sin(primaryPhase);
             half secondary = sin(secondaryPhase);
-            half wave = primary * 0.68h + secondary * 0.32h;
 
-            half depthBlend = saturate(0.5h + wave * 0.22h);
-            half crest = smoothstep(
+            float2 secondaryLateral = float2(-secondaryDirection.y, secondaryDirection.x);
+            float primarySegmentNoise = WaterNoise(
+                float2(
+                    dot(pixelPosition, lateral) * 0.28 + time * 0.018,
+                    dot(pixelPosition, direction) * 0.075 - time * 0.006)
+                + float2(5.23, 17.61));
+            float secondarySegmentNoise = WaterNoise(
+                float2(
+                    dot(pixelPosition, secondaryLateral) * 0.24 - time * 0.013,
+                    dot(pixelPosition, secondaryDirection) * 0.065 + time * 0.005)
+                + float2(23.47, 3.83));
+            half primarySegment = smoothstep(0.52h, 0.72h, primarySegmentNoise);
+            half secondarySegment = smoothstep(0.62h, 0.8h, secondarySegmentNoise);
+            half primaryCrest = smoothstep(
                 _WaveThreshold,
                 _WaveThreshold + max(_WaveSoftness, 0.001h),
                 primary);
-            half breakup = smoothstep(-0.35h, 0.62h, secondary);
+            half secondaryCrest = smoothstep(
+                _WaveThreshold + 0.1h,
+                _WaveThreshold + 0.1h + max(_WaveSoftness, 0.001h),
+                secondary);
+            half crest = max(
+                primaryCrest * primarySegment,
+                secondaryCrest * secondarySegment * 0.3h);
+
+            half broadVariation = (warpA - 0.5h) * 0.65h + (warpB - 0.5h) * 0.35h;
+            half depthBlend = saturate(0.5h + broadVariation * 0.14h);
             half highlight = crest
-                * lerp(0.18h, 1.0h, breakup)
                 * saturate(_WaveStrength)
                 * _WaveColor.a;
             return half2(depthBlend, highlight);
