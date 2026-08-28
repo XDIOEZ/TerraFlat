@@ -46,7 +46,8 @@ Material:
     - _FoamSpeed: 0.72
     - _NormalStrength: 0.32
     - _PixelDensity: 64
-    - _ReflectionStrength: 0.18
+    - _ReflectionSmoothness: 0.72
+    - _ReflectionStrength: 0.42
     - _RippleScale: 1.8
     - _RippleShadowStrength: 0.08
     - _RippleStrength: 0.22
@@ -69,6 +70,7 @@ Material:
     - _FlowDirection: {r: 1, g: 0.35, b: 0, a: 0}
     - _FoamColor: {r: 0.76, g: 0.96, b: 1, a: 1}
     - _ReflectionColor: {r: 0.24, g: 0.72, b: 0.9, a: 1}
+    - _ReflectionDirection: {r: -0.35, g: 0.18, b: 0.92, a: 0}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
     - _RippleColor: {r: 0.38, g: 0.78, b: 0.88, a: 1}
     - _ShallowColor: {r: 0.04, g: 0.55, b: 0.62, a: 1}

@@ -23,8 +23,10 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         _RippleShadowStrength("浪背暗部", Range(0, 0.5)) = 0.08
 
         [Header(Reflection And Foam)]
-        _ReflectionColor("天空反光", Color) = (0.24, 0.72, 0.9, 1)
-        _ReflectionStrength("天空反光强度", Range(0, 1)) = 0.18
+        _ReflectionColor("镜面反射颜色", Color) = (0.24, 0.72, 0.9, 1)
+        _ReflectionStrength("镜面反射强度", Range(0, 1)) = 0.42
+        _ReflectionSmoothness("镜面反射平滑度", Range(0, 1)) = 0.72
+        _ReflectionDirection("镜面环境方向", Vector) = (-0.35, 0.18, 0.92, 0)
         _SpecularColor("太阳高光", Color) = (0.9, 0.98, 1, 1)
         _SpecularStrength("太阳高光强度", Range(0, 1)) = 0.3
         _SpecularPower("太阳高光锐度", Range(4, 96)) = 48
@@ -72,6 +74,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         half4 _EdgeColor;
         half4 _ShoreColor;
         float4 _FlowDirection;
+        float4 _ReflectionDirection;
         float4 _SunDirection;
         half _SurfaceTint;
         float _SwellScale;
@@ -85,6 +88,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         half _RippleWidth;
         half _RippleShadowStrength;
         half _ReflectionStrength;
+        half _ReflectionSmoothness;
         half _SpecularStrength;
         float _SpecularPower;
         half _CausticStrength;
@@ -260,8 +264,22 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 * (1.0 - max(crestA, crestB))
                 * saturate(_RippleShadowStrength);
 
+            // 以俯视相机入射方向反射虚拟环境方向，让镜面亮块真实跟随波面法线移动。
+            float3 mirrorDirection = _ReflectionDirection.xyz;
+            mirrorDirection *= rsqrt(max(dot(mirrorDirection, mirrorDirection), 0.001));
+            float3 reflectedView = reflect(float3(0.0, 0.0, -1.0), normalWS);
+            float mirrorAlignment = saturate(dot(reflectedView, mirrorDirection));
+            float mirrorExponent = exp2(lerp(1.5, 6.0, saturate(_ReflectionSmoothness)));
+            float mirrorLobe = pow(mirrorAlignment, mirrorExponent);
+            float mirrorBreakup = saturate(
+                0.64
+                + (macroA - 0.5) * 0.5
+                + (macroB - 0.5) * 0.32
+                + height * 0.07);
+            float coherentMirror = mirrorLobe
+                * lerp(mirrorBreakup, 1.0, saturate(_ReflectionSmoothness));
             float fresnel = saturate((1.0 - normalWS.z) * 3.5);
-            surface.reflection = saturate(0.06 + fresnel * fresnel)
+            surface.reflection = saturate(coherentMirror + fresnel * fresnel * 0.22)
                 * saturate(_ReflectionStrength)
                 * _ReflectionColor.a;
 

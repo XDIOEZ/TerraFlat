@@ -23,8 +23,10 @@ Shader "FlatWorld/2D/Tilemap Polluted Water Lit"
         _RippleShadowStrength("浪背暗部", Range(0, 0.5)) = 0.2
 
         [Header(Reflection And Foam)]
-        _ReflectionColor("天空反光", Color) = (0.07, 0.15, 0.06, 1)
-        _ReflectionStrength("天空反光强度", Range(0, 1)) = 0.08
+        _ReflectionColor("镜面反射颜色", Color) = (0.1, 0.22, 0.07, 0.82)
+        _ReflectionStrength("镜面反射强度", Range(0, 1)) = 0.14
+        _ReflectionSmoothness("镜面反射平滑度", Range(0, 1)) = 0.32
+        _ReflectionDirection("镜面环境方向", Vector) = (-0.3, 0.12, 0.88, 0)
         _SpecularColor("太阳高光", Color) = (0.36, 0.45, 0.22, 1)
         _SpecularStrength("太阳高光强度", Range(0, 1)) = 0.12
         _SpecularPower("太阳高光锐度", Range(4, 96)) = 20

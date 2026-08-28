@@ -23,8 +23,10 @@ Shader "FlatWorld/2D/Tilemap Clean Water Lit"
         _RippleShadowStrength("浪背暗部", Range(0, 0.5)) = 0.035
 
         [Header(Reflection And Foam)]
-        _ReflectionColor("天空反光", Color) = (1, 0.72, 0.38, 0.7)
-        _ReflectionStrength("天空反光强度", Range(0, 1)) = 0.14
+        _ReflectionColor("镜面反射颜色", Color) = (1, 0.82, 0.58, 0.82)
+        _ReflectionStrength("镜面反射强度", Range(0, 1)) = 0.38
+        _ReflectionSmoothness("镜面反射平滑度", Range(0, 1)) = 0.86
+        _ReflectionDirection("镜面环境方向", Vector) = (-0.25, 0.35, 0.9, 0)
         _SpecularColor("太阳高光", Color) = (1, 0.9, 0.7, 1)
         _SpecularStrength("太阳高光强度", Range(0, 1)) = 0.28
         _SpecularPower("太阳高光锐度", Range(4, 96)) = 56
