@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 public partial class ChunkMgr
@@ -78,6 +79,7 @@ public partial class ChunkMgr
     private readonly Queue<RuntimePrefetchRequest> runtimePrefetchQueue = new();
     private readonly HashSet<RuntimeWorldAddress> runtimePrefetchTargets = new();
     private readonly Queue<PooledChunkViewEntry> chunkViewPool = new();
+    private Transform runtimeChunkViewRoot;
     private bool runtimeWindowUsesLocalPresentation;
     private Coroutine runtimePresentationCoroutine;
     private int runtimePresentationInProgressCount;
@@ -567,6 +569,7 @@ public partial class ChunkMgr
     /// <summary>优先从对象池取出 ChunkView，没有可用对象时才实例化新的。</summary>
     private ChunkView AcquireChunkView(ChunkView prefab)
     {
+        Transform viewRoot = GetRuntimeChunkViewRoot();
         while (chunkViewPool.Count > 0)
         {
             PooledChunkViewEntry entry = chunkViewPool.Dequeue();
@@ -574,10 +577,32 @@ public partial class ChunkMgr
             if (pooled == null)
                 continue;
 
+            pooled.transform.SetParent(viewRoot, false);
             pooled.PrepareForPoolReuse();
             return pooled;
         }
-        return Instantiate(prefab, transform);
+        return Instantiate(prefab, viewRoot);
+    }
+
+    /// <summary>
+    /// 区块表现必须属于当前世界场景；ChunkMgr 随 WorldManager 常驻，但不能把自然物带入 DDOL 场景。
+    /// </summary>
+    private Transform GetRuntimeChunkViewRoot()
+    {
+        Scene activeScene = SceneManager.GetActiveScene();
+        if (!activeScene.IsValid() || !activeScene.isLoaded)
+            throw new InvalidOperationException("[ChunkMgr] 当前没有可承载区块表现的已加载场景。");
+
+        if (runtimeChunkViewRoot != null &&
+            runtimeChunkViewRoot.gameObject.scene == activeScene)
+        {
+            return runtimeChunkViewRoot;
+        }
+
+        GameObject rootObject = new GameObject("RuntimeChunkViews");
+        SceneManager.MoveGameObjectToScene(rootObject, activeScene);
+        runtimeChunkViewRoot = rootObject.transform;
+        return runtimeChunkViewRoot;
     }
 
     /// <summary>后台生成完成后修复画面绑定，处理旧任务晚到或区块被回收的情况。</summary>
@@ -671,7 +696,7 @@ public partial class ChunkMgr
         binding.View = null;
         view.Unbind();
         view.gameObject.SetActive(false);
-        view.transform.SetParent(transform, false);
+        view.transform.SetParent(GetRuntimeChunkViewRoot(), false);
         chunkViewPool.Enqueue(new PooledChunkViewEntry(view, Time.realtimeSinceStartup));
     }
 
