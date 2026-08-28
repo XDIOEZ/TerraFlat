@@ -23,11 +23,22 @@ public sealed class InteractionTargetOutline : MonoBehaviour
     private readonly List<SpriteRenderer> sourceRenderers = new(8);
     private readonly List<OutlineEntry> outlineEntries = new(8);
     private readonly HashSet<SpriteRenderer> activeSourceRenderers = new();
-    private readonly MaterialPropertyBlock sourcePropertyBlock = new();
-    private readonly MaterialPropertyBlock outlinePropertyBlock = new();
+    private MaterialPropertyBlock sourcePropertyBlock;
+    private MaterialPropertyBlock outlinePropertyBlock;
     private bool highlighted;
 
     public bool IsHighlighted => highlighted;
+
+    #region 生命周期
+
+    /// <summary>在 Unity 生命周期内创建原生渲染参数容器。</summary>
+    private void Awake()
+    {
+        sourcePropertyBlock = new MaterialPropertyBlock();
+        outlinePropertyBlock = new MaterialPropertyBlock();
+    }
+
+    #endregion
 
     /// <summary>为交互组件所属的 Item 获取或创建本地描边控制器。</summary>
     public static InteractionTargetOutline GetOrCreate(Component interactable)
