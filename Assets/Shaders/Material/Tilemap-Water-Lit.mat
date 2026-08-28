@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Tilemap-Water-Lit
-  m_Shader: {fileID: 4800000, guid: 9f2c1a6e7b8d4c55a3e1f09b6d2c7a41, type: 3}
+  m_Shader: {fileID: 4800000, guid: 9b7e519d31c6485eb1d1d499a1142e63, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -41,9 +41,22 @@ Material:
     - _EdgeStrength: 0.72
     - _EdgeWidth: 0.2
     - _EnableExternalAlpha: 0
+    - _PixelDensity: 16
+    - _ShoreStrength: 0.16
+    - _SurfaceTint: 0.2
+    - _WaveScale: 5.5
+    - _WaveSoftness: 0.14
+    - _WaveSpeed: 0.75
+    - _WaveStrength: 0.28
+    - _WaveThreshold: 0.48
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _DeepColor: {r: 0.08, g: 0.34, b: 0.56, a: 1}
     - _EdgeColor: {r: 0.035, g: 0.022, b: 0.015, a: 1}
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
+    - _FlowDirection: {r: 1, g: 0.35, b: 0, a: 0}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
+    - _ShallowColor: {r: 0.18, g: 0.68, b: 0.78, a: 1}
+    - _ShoreColor: {r: 0.48, g: 0.85, b: 0.92, a: 1}
+    - _WaveColor: {r: 0.65, g: 0.96, b: 1, a: 1}
   m_BuildTextureStacks: []
