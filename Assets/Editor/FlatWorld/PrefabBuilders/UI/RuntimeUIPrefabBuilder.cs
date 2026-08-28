@@ -461,6 +461,26 @@ public static class RuntimeUIPrefabBuilder
         Debug.Log("[Runtime UI] 已固化按键绑定面板与绑定行 Prefab。");
     }
 
+    /// <summary>只重建按键绑定面板布局，保留动态绑定行 Prefab 的稳定文件 ID。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Input Binding Panel UI")]
+    public static void RebuildInputBindingPanelUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(SettingsPanelsRoot);
+        SaveNewPrefab(
+            SettingsPanelsRoot + RuntimeUIPrefabKeys.InputBindingSettings + ".prefab",
+            BuildInputBindingSettings);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化横向紧凑的按键绑定面板 Prefab。");
+    }
+
     private static void SaveNewPrefab(string path, System.Func<GameObject> factory)
     {
         GameObject root = factory();
@@ -1929,24 +1949,12 @@ public static class RuntimeUIPrefabBuilder
         GameObject root = CreateFixedSettingsPageRoot(RuntimeUIPrefabKeys.InputBindingSettings);
         Transform content = root.transform;
 
-        CreateSettingsHeader(content, "按键绑定");
-        CreateSettingsHint(content, "先选择玩法控制方式；键鼠与手柄按键可在下方分别修改。", 42f);
-
-        GameObject controlModeRow = CreateRow("控制方式行", content, 58f);
-        CreateRowLabel(controlModeRow.transform, "控制方式", 122f);
-        TMP_Dropdown controlModeDropdown = CreateDropdown("控制模式下拉列表", controlModeRow.transform);
-        LayoutElement controlModeElement = controlModeDropdown.gameObject.AddComponent<LayoutElement>();
-        controlModeElement.flexibleWidth = 1f;
-        controlModeElement.preferredHeight = 46f;
-        controlModeDropdown.ClearOptions();
-        controlModeDropdown.AddOptions(new List<string>
-        {
-            "电脑键鼠控制",
-            "手柄控制",
-            "手机触屏控制"
-        });
-        controlModeDropdown.value = 0;
-        controlModeDropdown.RefreshShownValue();
+        // 固定区预算：上下边距 24 + 顶栏 56 + 设备栏 36 + 底栏 42 + 三段间距 24 = 182；
+        // 列表最小高度 180，总需求 362，窄屏仍优先保住玩家实际修改按键的区域。
+        VerticalLayoutGroup pageLayout = root.GetComponent<VerticalLayoutGroup>();
+        pageLayout.padding = new RectOffset(20, 20, 12, 12);
+        pageLayout.spacing = 8f;
+        CreateCompactInputBindingHeader(content);
 
         GameObject deviceTabs = CreateUIObject("设备分页", content);
         deviceTabs.AddComponent<LayoutElement>().preferredHeight = 36f;
@@ -1961,11 +1969,104 @@ public static class RuntimeUIPrefabBuilder
         CreateButton("手柄分页按钮", deviceTabs.transform, "手柄", 132f, 34f, false);
 
         CreateBindingScrollView(content);
-        TextMeshProUGUI status = CreateText("状态文本", content, "选择一项后按下新按键。", 13f, Muted);
-        status.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
-        Transform footer = CreateFooter(content);
-        CreateButton("恢复默认按钮", footer, "恢复默认", 112f, 36f, false);
+        CreateCompactInputBindingFooter(content);
         return root;
+    }
+
+    /// <summary>标题、单行说明与控制方式共用一条横向顶栏，避免文字各占一整行。</summary>
+    private static void CreateCompactInputBindingHeader(Transform parent)
+    {
+        GameObject header = CreateUIObject("按键绑定顶部栏", parent, typeof(Image));
+        header.AddComponent<LayoutElement>().preferredHeight = 56f;
+        Image background = header.GetComponent<Image>();
+        background.color = SurfaceRaised;
+        background.raycastTarget = false;
+
+        HorizontalLayoutGroup layout = header.AddComponent<HorizontalLayoutGroup>();
+        layout.padding = new RectOffset(16, 14, 5, 5);
+        layout.spacing = 12f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
+
+        TextMeshProUGUI title = CreateText("标题文本", header.transform, "按键绑定", 22f, Cream);
+        title.fontStyle = FontStyles.Bold;
+        title.enableWordWrapping = false;
+        title.overflowMode = TextOverflowModes.Ellipsis;
+        LayoutElement titleElement = title.gameObject.AddComponent<LayoutElement>();
+        titleElement.minWidth = 130f;
+        titleElement.preferredWidth = 150f;
+
+        TextMeshProUGUI hint = CreateText(
+            "说明文本",
+            header.transform,
+            "先选择玩法控制方式；键鼠与手柄按键可在下方分别修改。",
+            14f,
+            Muted);
+        hint.enableWordWrapping = false;
+        hint.overflowMode = TextOverflowModes.Ellipsis;
+        LayoutElement hintElement = hint.gameObject.AddComponent<LayoutElement>();
+        hintElement.minWidth = 140f;
+        hintElement.preferredWidth = 300f;
+        hintElement.flexibleWidth = 1f;
+
+        TextMeshProUGUI modeLabel = CreateText(
+            "控制方式标签",
+            header.transform,
+            "控制方式",
+            15f,
+            Cream);
+        modeLabel.enableWordWrapping = false;
+        modeLabel.overflowMode = TextOverflowModes.Ellipsis;
+        LayoutElement modeLabelElement = modeLabel.gameObject.AddComponent<LayoutElement>();
+        modeLabelElement.minWidth = 96f;
+        modeLabelElement.preferredWidth = 110f;
+
+        TMP_Dropdown controlModeDropdown = CreateDropdown(
+            "控制模式下拉列表",
+            header.transform);
+        LayoutElement controlModeElement =
+            controlModeDropdown.gameObject.AddComponent<LayoutElement>();
+        controlModeElement.minWidth = 240f;
+        controlModeElement.preferredWidth = 320f;
+        controlModeElement.preferredHeight = 42f;
+        controlModeElement.flexibleWidth = 1f;
+        controlModeDropdown.ClearOptions();
+        controlModeDropdown.AddOptions(new List<string>
+        {
+            "电脑键鼠控制",
+            "手柄控制",
+            "手机触屏控制"
+        });
+        controlModeDropdown.value = 0;
+        controlModeDropdown.RefreshShownValue();
+    }
+
+    /// <summary>状态说明与恢复按钮共用一条横向底栏，状态过长时只做单行省略。</summary>
+    private static void CreateCompactInputBindingFooter(Transform parent)
+    {
+        GameObject footer = CreateUIObject("按键绑定底部栏", parent);
+        footer.AddComponent<LayoutElement>().preferredHeight = 42f;
+        HorizontalLayoutGroup layout = footer.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 12f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        TextMeshProUGUI status = CreateText(
+            "状态文本",
+            footer.transform,
+            "选择一项后按下新按键。",
+            13f,
+            Muted);
+        status.enableWordWrapping = false;
+        status.overflowMode = TextOverflowModes.Ellipsis;
+        status.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        CreateButton("恢复默认按钮", footer.transform, "恢复默认", 112f, 36f, false);
     }
 
     private static GameObject BuildInputBindingRow()
