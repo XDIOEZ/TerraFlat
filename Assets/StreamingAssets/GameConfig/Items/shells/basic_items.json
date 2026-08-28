@@ -5629,7 +5629,7 @@
             ],
             "IndicatorScale": 0.2859,
             "FollowOwnerRendererSorting": true,
-            "IndicatorSortingOrderOffset": -1,
+            "IndicatorSortingOrderOffset": 1,
             "$collider2D": {
               "type": "BoxCollider2D",
               "enabled": true,

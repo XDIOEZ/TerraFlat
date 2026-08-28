@@ -114,6 +114,6 @@ MonoBehaviour:
   IndicatorScale: 0.2859
   IndicatorSpriteOverride: {fileID: 0}
   FollowOwnerRendererSorting: 1
-  IndicatorSortingOrderOffset: -1
+  IndicatorSortingOrderOffset: 1
   IndicatorSortingLayerName: Default
   IndicatorSortingOrder: 0

@@ -55,7 +55,7 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
 
     [Header("库存提示图层")]
     public bool FollowOwnerRendererSorting = true;
-    public int IndicatorSortingOrderOffset = -1;
+    public int IndicatorSortingOrderOffset = 1;
     public string IndicatorSortingLayerName = "Default";
     public int IndicatorSortingOrder;
 
@@ -76,6 +76,7 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
     {
         EnsureDataContainer();
         base.Awake();
+        EnsureIndicatorRenderers();
     }
 
     public override void Load()
@@ -84,12 +85,7 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
         EnsureDataContainer();
         Data.CurrentStock = Mathf.Clamp(Data.CurrentStock, 0, Mathf.Max(1, MaxStock));
 
-        ResolveOwnerRenderer();
-        EnsureIndicatorRenderers();
-        ApplyIndicatorLayout();
-        ApplyIndicatorSprite();
-        ApplyIndicatorSorting();
-        RefreshIndicatorVisual();
+        RefreshIndicatorPresentation();
     }
 
     public override void Save()
@@ -124,7 +120,7 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
         int accepted = Mathf.Min(amount, Mathf.Max(1, MaxStock) - Data.CurrentStock);
         Data.CurrentStock += accepted;
         Data.IsInitialized = true;
-        RefreshIndicatorVisual();
+        RefreshIndicatorPresentation();
         return accepted;
     }
 
@@ -134,7 +130,7 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
         EnsureDataContainer();
         if (Data.IsInitialized)
         {
-            RefreshIndicatorVisual();
+            RefreshIndicatorPresentation();
             return;
         }
 
@@ -145,7 +141,7 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
 
         Data.CurrentStock = minCount + (int)(deterministicRandomValue % range);
         Data.IsInitialized = true;
-        RefreshIndicatorVisual();
+        RefreshIndicatorPresentation();
     }
 
     #endregion
@@ -230,13 +226,28 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
 
     #region 库存提示
 
+    /// <summary>根据当前库存完整重建并刷新可采集物提示。</summary>
+    private void RefreshIndicatorPresentation()
+    {
+        ResolveOwnerRenderer();
+        EnsureIndicatorRenderers();
+        ApplyIndicatorLayout();
+        ApplyIndicatorSprite();
+        ApplyIndicatorSorting();
+        RefreshIndicatorVisual();
+    }
+
     private void ResolveOwnerRenderer()
     {
-        ownerRenderer = item?.Sprite;
+        Item ownerItem = item != null ? item : GetComponentInParent<Item>();
+        ownerRenderer = ownerItem?.Sprite;
         if (ownerRenderer != null)
             return;
 
-        SpriteRenderer[] renderers = item.GetComponentsInChildren<SpriteRenderer>(true);
+        if (ownerItem == null)
+            return;
+
+        SpriteRenderer[] renderers = ownerItem.GetComponentsInChildren<SpriteRenderer>(true);
         foreach (SpriteRenderer renderer in renderers)
         {
             if (renderer != null && !renderer.transform.IsChildOf(transform))
@@ -250,17 +261,22 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
     private void EnsureIndicatorRenderers()
     {
         IndicatorRenderers ??= new List<SpriteRenderer>();
-        if (IndicatorRenderers.Count > 0)
-            return;
-
+        IndicatorLocalPositions ??= new List<Vector3>();
         float scale = Mathf.Max(0.01f, IndicatorScale);
         for (int i = 0; i < IndicatorLocalPositions.Count; i++)
         {
+            if (i < IndicatorRenderers.Count && IndicatorRenderers[i] != null)
+                continue;
+
             GameObject marker = new GameObject($"CollectIndicator_{i + 1}");
             marker.transform.SetParent(transform, false);
             marker.transform.localPosition = IndicatorLocalPositions[i];
             marker.transform.localScale = Vector3.one * scale;
-            IndicatorRenderers.Add(marker.AddComponent<SpriteRenderer>());
+            SpriteRenderer renderer = marker.AddComponent<SpriteRenderer>();
+            if (i < IndicatorRenderers.Count)
+                IndicatorRenderers[i] = renderer;
+            else
+                IndicatorRenderers.Add(renderer);
         }
     }
 
