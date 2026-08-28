@@ -14,7 +14,7 @@ public partial class EcologyWorldSaveData
 {
     #region 世界配置
 
-    public const int CurrentDataVersion = 3;
+    public const int CurrentDataVersion = 4;
 
     [MemoryPackInclude] public int DataVersion;
     [MemoryPackInclude] public string ProfileId;
@@ -26,9 +26,22 @@ public partial class EcologyWorldSaveData
     [MemoryPackInclude] public WorldGenerationProfileSaveData Generation = new();
 
     [MemoryPackIgnore]
-    public bool HasConfiguration => DataVersion > 0 && Rules != null;
+    public bool HasConfiguration => DataVersion == CurrentDataVersion && Rules != null;
+    [MemoryPackIgnore]
+    public bool HasUnsupportedConfiguration => DataVersion > 0 &&
+                                               DataVersion != CurrentDataVersion;
     [MemoryPackIgnore]
     public bool HasGenerationConfiguration => Generation != null && Generation.HasConfiguration;
+
+    /// <summary>生态规则结构改变后直接拒绝旧存档，避免用缺失字段静默重排自然物。</summary>
+    public void EnsureCompatibleVersion()
+    {
+        if (HasUnsupportedConfiguration)
+        {
+            throw new InvalidOperationException(
+                $"生态存档版本不兼容：存档={DataVersion}，当前={CurrentDataVersion}。请创建新世界。");
+        }
+    }
 
     /// <summary>首次进入世界时冻结当前 Profile 的生态配置。</summary>
     public void CaptureConfiguration(ChunkGenerationProfileSnapshot profile)
@@ -332,6 +345,10 @@ public partial class EcologyRuleSaveData
     public int ItemCount = 1;
     public double SpawnChance;
     public double SpawnChanceMultiplier = 1d;
+    public EcologyDistributionMode DistributionMode;
+    public int PatchSpacing = 24;
+    public double PatchRadius = 2.5d;
+    public double PatchChance = 1d;
     public int BiomeMask;
     public double MinTemperature;
     public double MaxTemperature = 1d;
@@ -364,6 +381,10 @@ public partial class EcologyRuleSaveData
             ItemCount = snapshot.ItemCount,
             SpawnChance = snapshot.SpawnChance,
             SpawnChanceMultiplier = snapshot.SpawnChanceMultiplier,
+            DistributionMode = snapshot.DistributionMode,
+            PatchSpacing = snapshot.PatchSpacing,
+            PatchRadius = snapshot.PatchRadius,
+            PatchChance = snapshot.PatchChance,
             BiomeMask = snapshot.BiomeMask,
             MinTemperature = snapshot.MinTemperature,
             MaxTemperature = snapshot.MaxTemperature,
@@ -410,7 +431,11 @@ public partial class EcologyRuleSaveData
             CompanionOffsetY,
             CompanionMinRadius,
             CompanionMaxRadius,
-            MinRiverFloodplainStrength);
+            MinRiverFloodplainStrength,
+            DistributionMode,
+            PatchSpacing,
+            PatchRadius,
+            PatchChance);
     }
 
     #endregion

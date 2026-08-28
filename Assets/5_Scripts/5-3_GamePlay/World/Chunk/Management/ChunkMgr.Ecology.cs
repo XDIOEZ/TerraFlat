@@ -34,6 +34,9 @@ public partial class ChunkMgr
         if (profile == null || planet == null)
             return profile;
 
+        planet.Ecology ??= new EcologyWorldSaveData();
+        planet.Ecology.EnsureCompatibleVersion();
+
         // 完整 Profile 同样需要冻结：矿洞的房间/隧道、矿脉和入口参数不能随 SO 后续改动重排。
         profile = ApplyPersistedGenerationConfiguration(profile, planet);
 

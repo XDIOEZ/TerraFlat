@@ -6,6 +6,16 @@ using System.Threading;
 namespace FlatWorld.WorldModel
 {
     /// <summary>
+    /// 自然物的空间分布方式。Uniform 逐格独立判定；Patch 先确定稀疏聚落，再在聚落范围内判定，
+    /// 适合种子传播后形成的小片植被，且不改变生态规则的群系与环境过滤职责。
+    /// </summary>
+    public enum EcologyDistributionMode : byte
+    {
+        Uniform = 0,
+        Patch = 1
+    }
+
+    /// <summary>
     /// 一条自然生态物品规则的无 Unity 配置副本。
     /// 概率按“每个候选地块一次判定”计算，所有字段都能直接转换为 JSON。
     /// </summary>
@@ -34,12 +44,18 @@ namespace FlatWorld.WorldModel
             double companionOffsetY = 0d,
             double companionMinRadius = 0d,
             double companionMaxRadius = 0d,
-            double minRiverFloodplainStrength = 0d)
+            double minRiverFloodplainStrength = 0d,
+            EcologyDistributionMode distributionMode = EcologyDistributionMode.Uniform,
+            int patchSpacing = 24,
+            double patchRadius = 2.5d,
+            double patchChance = 1d)
         {
             if (string.IsNullOrWhiteSpace(ruleId))
                 throw new ArgumentException("Ecology rule id is required.", nameof(ruleId));
             if (string.IsNullOrWhiteSpace(itemId))
                 throw new ArgumentException("Ecology item id is required.", nameof(itemId));
+            if (!Enum.IsDefined(typeof(EcologyDistributionMode), distributionMode))
+                throw new ArgumentOutOfRangeException(nameof(distributionMode));
 
             RuleId = ruleId.Trim();
             ItemId = itemId.Trim();
@@ -62,6 +78,11 @@ namespace FlatWorld.WorldModel
             CompanionMinRadius = Math.Max(0d, Finite(companionMinRadius, 0d));
             CompanionMaxRadius = Math.Max(CompanionMinRadius, Finite(companionMaxRadius, 0d));
             MinRiverFloodplainStrength = Clamp01(minRiverFloodplainStrength);
+            DistributionMode = distributionMode;
+            PatchSpacing = Math.Max(2, patchSpacing);
+            PatchRadius = Math.Max(0.5d, Math.Min(PatchSpacing * 0.5d,
+                Finite(patchRadius, 2.5d)));
+            PatchChance = Clamp01(patchChance);
         }
 
         public string RuleId { get; }
@@ -87,6 +108,14 @@ namespace FlatWorld.WorldModel
         public double CompanionMaxRadius { get; }
         /// <summary>最低河流冲积影响强度；大于 0 时只在河岸附近生成。</summary>
         public double MinRiverFloodplainStrength { get; }
+        /// <summary>自然物逐格均匀生成，或先形成稀疏小聚落。</summary>
+        public EcologyDistributionMode DistributionMode { get; }
+        /// <summary>聚落候选网格的边长；相邻网格各自最多形成一个聚落。</summary>
+        public int PatchSpacing { get; }
+        /// <summary>单个聚落的格子半径，上限为候选网格边长的一半。</summary>
+        public double PatchRadius { get; }
+        /// <summary>每个候选网格实际形成聚落的概率。</summary>
+        public double PatchChance { get; }
 
         #endregion
 
@@ -219,6 +248,7 @@ namespace FlatWorld.WorldModel
         private const uint PlacementSalt = 0x6e636f6cU;
         private const uint CompanionSalt = 0x636f6d70U;
         private const uint OffsetSalt = 0x6f666673U;
+        private const uint PatchSalt = 0x70617463U;
 
         #endregion
 
@@ -274,6 +304,8 @@ namespace FlatWorld.WorldModel
                     double precipitation = ReadEnvironment(terrain, "precipitation", x, y);
                     double height = ReadEnvironment(terrain, "height", x, y);
                     double riverFloodplain = ReadEnvironment(terrain, "riverFloodplain", x, y);
+                    int worldX = request.Topology.NormalizeX(startX + x);
+                    int worldY = request.Topology.NormalizeY(startY + y);
 
                     // 先处理宿主规则，保证伴生物的宿主关系与规则顺序无关。
                     for (int ruleIndex = 0; ruleIndex < hostRules.Count; ruleIndex++)
@@ -284,9 +316,11 @@ namespace FlatWorld.WorldModel
                         {
                             continue;
                         }
+                        if (!MatchesDistribution(request, worldX, worldY, rule))
+                            continue;
                         double chance = Clamp01(globalMultiplier * rule.SpawnChance *
                             rule.SpawnChanceMultiplier);
-                        if (!PassesChance(request, startX + x, startY + y, rule, chance,
+                        if (!PassesChance(request, worldX, worldY, rule, chance,
                             PlacementSalt))
                         {
                             continue;
@@ -294,7 +328,7 @@ namespace FlatWorld.WorldModel
 
                         for (int itemIndex = 0; itemIndex < rule.ItemCount; itemIndex++)
                         {
-                            int guid = CreateGuid(request, startX + x, startY + y,
+                            int guid = CreateGuid(request, worldX, worldY,
                                 rule, itemIndex, 0, claimedGuids);
                             placements.Add(new NaturalItemPlacement(guid, rule.ItemId, x, y,
                                 0f, 0f, rule.RuleId));
@@ -320,11 +354,13 @@ namespace FlatWorld.WorldModel
                         {
                             continue;
                         }
+                        if (!MatchesDistribution(request, worldX, worldY, rule))
+                            continue;
 
                         double companionChance = rule.CompanionSpawnChance;
                         double chance = Clamp01(globalMultiplier * companionChance *
                             rule.SpawnChanceMultiplier);
-                        if (!PassesChance(request, startX + x, startY + y, rule, chance,
+                        if (!PassesChance(request, worldX, worldY, rule, chance,
                             CompanionSalt))
                         {
                             continue;
@@ -332,9 +368,9 @@ namespace FlatWorld.WorldModel
 
                         for (int itemIndex = 0; itemIndex < rule.ItemCount; itemIndex++)
                         {
-                            int guid = CreateGuid(request, startX + x, startY + y,
+                            int guid = CreateGuid(request, worldX, worldY,
                                 rule, itemIndex, hostGuid, claimedGuids);
-                            ResolveCompanionOffset(request, startX + x, startY + y, rule,
+                            ResolveCompanionOffset(request, worldX, worldY, rule,
                                 itemIndex, out float offsetX, out float offsetY);
                             placements.Add(new NaturalItemPlacement(guid, rule.ItemId, x, y,
                                 offsetX, offsetY, rule.RuleId, hostGuid));
@@ -367,6 +403,132 @@ namespace FlatWorld.WorldModel
             int x, int y)
         {
             return terrain.TryGetEnvironmentValue(layerId, x, y, out float value) ? value : 0d;
+        }
+
+        /// <summary>按规则选择逐格生成或聚落生成。</summary>
+        private static bool MatchesDistribution(ChunkGenerationRequest request,
+            int worldX, int worldY, EcologySpawnRuleSnapshot rule)
+        {
+            switch (rule.DistributionMode)
+            {
+                case EcologyDistributionMode.Uniform:
+                    return true;
+                case EcologyDistributionMode.Patch:
+                    return IsInsideActivePatch(request, worldX, worldY, rule);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(rule.DistributionMode));
+            }
+        }
+
+        /// <summary>
+        /// 通过全局粗网格稳定地产生小聚落；查询相邻九格可保证跨 Chunk 边界仍属于同一聚落。
+        /// Wrapped 世界使用规范化网格编号与最短环绕距离，边界两侧不会把同一聚落切断。
+        /// </summary>
+        private static bool IsInsideActivePatch(ChunkGenerationRequest request,
+            int worldX, int worldY, EcologySpawnRuleSnapshot rule)
+        {
+            int spacing = rule.PatchSpacing;
+            ulong seed = CreateSeed(request, rule.RuleId, PatchSalt);
+            ChunkGenerationTopologySnapshot topology = request.Topology;
+            if (!topology.IsWrapped)
+            {
+                int basePatchX = FloorDiv(worldX, spacing);
+                int basePatchY = FloorDiv(worldY, spacing);
+                for (int offsetY = -1; offsetY <= 1; offsetY++)
+                for (int offsetX = -1; offsetX <= 1; offsetX++)
+                {
+                    int patchX = basePatchX + offsetX;
+                    int patchY = basePatchY + offsetY;
+                    long originX = (long)patchX * spacing;
+                    long originY = (long)patchY * spacing;
+                    if (ContainsPatchCell(seed, patchX, patchY, originX, originY,
+                            spacing, spacing, worldX, worldY, 0, 0, rule))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            int normalizedX = topology.NormalizeX(worldX);
+            int normalizedY = topology.NormalizeY(worldY);
+            int relativeX = normalizedX - topology.Min.X;
+            int relativeY = normalizedY - topology.Min.Y;
+            int patchCountX = DivideRoundUp(topology.Span.X, spacing);
+            int patchCountY = DivideRoundUp(topology.Span.Y, spacing);
+            int baseWrappedPatchX = relativeX / spacing;
+            int baseWrappedPatchY = relativeY / spacing;
+            for (int offsetY = -1; offsetY <= 1; offsetY++)
+            for (int offsetX = -1; offsetX <= 1; offsetX++)
+            {
+                int patchX = PositiveModulo(baseWrappedPatchX + offsetX, patchCountX);
+                int patchY = PositiveModulo(baseWrappedPatchY + offsetY, patchCountY);
+                int relativeOriginX = patchX * spacing;
+                int relativeOriginY = patchY * spacing;
+                int patchWidth = Math.Min(spacing, topology.Span.X - relativeOriginX);
+                int patchHeight = Math.Min(spacing, topology.Span.Y - relativeOriginY);
+                long originX = (long)topology.Min.X + relativeOriginX;
+                long originY = (long)topology.Min.Y + relativeOriginY;
+                if (ContainsPatchCell(seed, patchX, patchY, originX, originY,
+                        patchWidth, patchHeight, normalizedX, normalizedY,
+                        topology.Span.X, topology.Span.Y, rule))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>判断候选网格是否启用，并检查目标格是否落在其圆形聚落内。</summary>
+        private static bool ContainsPatchCell(ulong seed, int patchX, int patchY,
+            long originX, long originY, int patchWidth, int patchHeight,
+            int worldX, int worldY, int wrapSpanX, int wrapSpanY,
+            EcologySpawnRuleSnapshot rule)
+        {
+            if (rule.PatchChance <= 0d)
+                return false;
+            if (rule.PatchChance < 1d &&
+                Hash01(seed, patchX, patchY) > rule.PatchChance)
+            {
+                return false;
+            }
+
+            long centerX = originX + Hash(seed ^ 0x9e3779b97f4a7c15UL, patchX, patchY) %
+                (uint)patchWidth;
+            long centerY = originY + Hash(seed ^ 0xc2b2ae3d27d4eb4fUL, patchX, patchY) %
+                (uint)patchHeight;
+            double deltaX = worldX - centerX;
+            double deltaY = worldY - centerY;
+            if (wrapSpanX > 0)
+                deltaX = ShortestWrappedDelta(deltaX, wrapSpanX);
+            if (wrapSpanY > 0)
+                deltaY = ShortestWrappedDelta(deltaY, wrapSpanY);
+            return deltaX * deltaX + deltaY * deltaY <= rule.PatchRadius * rule.PatchRadius;
+        }
+
+        private static int FloorDiv(int value, int divisor)
+        {
+            int quotient = value / divisor;
+            return value % divisor < 0 ? quotient - 1 : quotient;
+        }
+
+        private static int DivideRoundUp(int value, int divisor) =>
+            (int)(((long)value + divisor - 1L) / divisor);
+
+        private static int PositiveModulo(int value, int modulus)
+        {
+            int result = value % modulus;
+            return result < 0 ? result + modulus : result;
+        }
+
+        private static double ShortestWrappedDelta(double value, int span)
+        {
+            double halfSpan = span * 0.5d;
+            if (value > halfSpan)
+                return value - span;
+            if (value < -halfSpan)
+                return value + span;
+            return value;
         }
 
         private static bool PassesChance(ChunkGenerationRequest request, int worldX, int worldY,

@@ -4,6 +4,10 @@ using FlatWorld.WorldModel;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
+/// <summary>
+/// Unity 侧的生态规则配置；负责声明物品、环境过滤、空间分布与伴生关系，
+/// 并在开始后台生成前一次性转换为不引用 Unity 对象的只读快照。
+/// </summary>
 [Serializable]
 public sealed class EcologySpawnRuleConfig
 {
@@ -12,6 +16,13 @@ public sealed class EcologySpawnRuleConfig
     [LabelText("生成数量"), Min(1)] public int ItemCount = 1;
     [LabelText("基础概率"), Range(0f, 1f)] public float SpawnChance;
     [LabelText("概率倍率"), Min(0f)] public float SpawnChanceMultiplier = 1f;
+    [LabelText("空间分布")] public EcologyDistributionMode DistributionMode;
+    [LabelText("聚落候选间距"), Min(2), Tooltip("每个方形候选网格最多形成一个聚落。")]
+    public int PatchSpacing = 24;
+    [LabelText("聚落半径"), Min(0.5f), Tooltip("只用于 Patch 分布，最大按候选间距的一半计算。")]
+    public float PatchRadius = 2.5f;
+    [LabelText("聚落形成概率"), Range(0f, 1f), Tooltip("每个候选网格实际形成聚落的概率。")]
+    public float PatchChance = 1f;
     [LabelText("群系位掩码"), Tooltip("0 表示全部地表群系；1<<SurfaceBiomeKind 表示指定群系。")] public int BiomeMask;
     [LabelText("最低温度"), Range(0f, 1f)] public float MinTemperature;
     [LabelText("最高温度"), Range(0f, 1f)] public float MaxTemperature = 1f;
@@ -54,7 +65,11 @@ public sealed class EcologySpawnRuleConfig
             CompanionOffsetY,
             CompanionMinRadius,
             CompanionMaxRadius,
-            MinRiverFloodplainStrength);
+            MinRiverFloodplainStrength,
+            DistributionMode,
+            PatchSpacing,
+            PatchRadius,
+            PatchChance);
     }
 }
 

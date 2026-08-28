@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier:
   profileId: surface.default
-  generationSignature: 30
+  generationSignature: 31
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -284,8 +284,12 @@ MonoBehaviour:
   - RuleId: surface.forest.radish
     ItemId: RadishCrop
     ItemCount: 1
-    SpawnChance: 0.001
+    SpawnChance: 0.45
     SpawnChanceMultiplier: 1
+    DistributionMode: 1
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 0.14
     BiomeMask: 32
     MinTemperature: 0
     MaxTemperature: 1
@@ -425,8 +429,12 @@ MonoBehaviour:
   - RuleId: surface.grassland.radish
     ItemId: RadishCrop
     ItemCount: 1
-    SpawnChance: 0.0015
+    SpawnChance: 0.45
     SpawnChanceMultiplier: 1
+    DistributionMode: 1
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 0.2
     BiomeMask: 16
     MinTemperature: 0
     MaxTemperature: 1

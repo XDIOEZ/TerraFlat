@@ -423,6 +423,10 @@ namespace FlatWorld.WorldModel
                 AddLong(ref hash, rule.ItemCount);
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.SpawnChance));
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.SpawnChanceMultiplier));
+                AddLong(ref hash, (int)rule.DistributionMode);
+                AddLong(ref hash, rule.PatchSpacing);
+                AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.PatchRadius));
+                AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.PatchChance));
                 AddLong(ref hash, rule.BiomeMask);
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.MinTemperature));
                 AddLong(ref hash, BitConverter.DoubleToInt64Bits(rule.MaxTemperature));
