@@ -299,6 +299,7 @@ Shader "Game/2D/Sprite-Lit-Master"
             TEXTURE2D(_NormalMap);
             SAMPLER(sampler_NormalMap);
             half4 _NormalMap_ST;
+            float _BodyClip;
             float _BodyMinV;
             float _BodyMaxV;
             float _WaterY;
@@ -351,6 +352,7 @@ Shader "Game/2D/Sprite-Lit-Master"
 
                 float bodyRange = max(1e-5, _BodyMaxV - _BodyMinV);
                 float bodyV = saturate((i.localY - _BodyMinV) / bodyRange);
+                clip(bodyV - _BodyClip);
                 float feather = max(1e-5, _WaterFeather);
                 float worldMode = saturate(_WaterWorldSpace);
                 float referenceHeight = max(1e-5, _WaterReferenceHeight);
@@ -415,6 +417,7 @@ Shader "Game/2D/Sprite-Lit-Master"
             float4 _MainTex_ST;
             float4 _Color;
             half4 _RendererColor;
+            float _BodyClip;
             float _BodyMinV;
             float _BodyMaxV;
             float _WaterY;
@@ -466,6 +469,7 @@ Shader "Game/2D/Sprite-Lit-Master"
 
                 float bodyRange = max(1e-5, _BodyMaxV - _BodyMinV);
                 float bodyV = saturate((i.localY - _BodyMinV) / bodyRange);
+                clip(bodyV - _BodyClip);
                 float waterBlend = saturate(_WaterEnabled);
                 if (waterBlend > 0.0001)
                 {

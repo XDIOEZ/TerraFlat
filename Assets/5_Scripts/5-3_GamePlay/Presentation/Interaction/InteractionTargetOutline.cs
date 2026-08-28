@@ -11,6 +11,9 @@ public sealed class InteractionTargetOutline : MonoBehaviour
 {
     private const float DefaultThicknessPixels = 2f;
 
+    private static readonly int BodyClipProperty = Shader.PropertyToID("_BodyClip");
+    private static readonly int BodyMinVProperty = Shader.PropertyToID("_BodyMinV");
+    private static readonly int BodyMaxVProperty = Shader.PropertyToID("_BodyMaxV");
     private static Shader outlineShader;
     private static Material sharedOutlineMaterial;
 
@@ -20,6 +23,8 @@ public sealed class InteractionTargetOutline : MonoBehaviour
     private readonly List<SpriteRenderer> sourceRenderers = new(8);
     private readonly List<OutlineEntry> outlineEntries = new(8);
     private readonly HashSet<SpriteRenderer> activeSourceRenderers = new();
+    private readonly MaterialPropertyBlock sourcePropertyBlock = new();
+    private readonly MaterialPropertyBlock outlinePropertyBlock = new();
     private bool highlighted;
 
     public bool IsHighlighted => highlighted;
@@ -183,8 +188,29 @@ public sealed class InteractionTargetOutline : MonoBehaviour
             0f);
         outline.transform.localRotation = Quaternion.identity;
         outline.transform.localScale = outlineScale;
+        SyncRendererClipState(source, outline);
         outline.enabled = highlighted && source.enabled &&
             source.gameObject.activeInHierarchy && source.sprite != null;
+    }
+
+    /// <summary>同步源渲染器的局部裁剪状态，避免描边重新显示已剔除的像素。</summary>
+    private void SyncRendererClipState(SpriteRenderer source, SpriteRenderer outline)
+    {
+        Material sourceMaterial = source.sharedMaterial;
+        if (sourceMaterial == null || !sourceMaterial.HasProperty(BodyClipProperty))
+        {
+            outline.SetPropertyBlock(null);
+            return;
+        }
+
+        sourcePropertyBlock.Clear();
+        source.GetPropertyBlock(sourcePropertyBlock);
+
+        outlinePropertyBlock.Clear();
+        outlinePropertyBlock.SetFloat(BodyClipProperty, sourcePropertyBlock.GetFloat(BodyClipProperty));
+        outlinePropertyBlock.SetFloat(BodyMinVProperty, sourcePropertyBlock.GetFloat(BodyMinVProperty));
+        outlinePropertyBlock.SetFloat(BodyMaxVProperty, sourcePropertyBlock.GetFloat(BodyMaxVProperty));
+        outline.SetPropertyBlock(outlinePropertyBlock);
     }
 
     private Vector3 CalculateOutlineScale(SpriteRenderer source)

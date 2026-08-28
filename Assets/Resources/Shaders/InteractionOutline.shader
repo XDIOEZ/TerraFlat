@@ -10,6 +10,9 @@ Shader "Game/2D/Interaction-Outline"
         [HideInInspector] _Flip("Flip", Vector) = (1, 1, 1, 1)
         [HideInInspector] _AlphaTex("External Alpha", 2D) = "white" {}
         [HideInInspector] _EnableExternalAlpha("Enable External Alpha", Float) = 0
+        [HideInInspector] _BodyClip("Body Clip", Float) = 0
+        [HideInInspector] _BodyMinV("Body Min V", Float) = 0
+        [HideInInspector] _BodyMaxV("Body Max V", Float) = 1
     }
 
     SubShader
@@ -42,6 +45,7 @@ Shader "Game/2D/Interaction-Outline"
                 float4 positionCS : SV_POSITION;
                 half4 color : COLOR;
                 float2 uv : TEXCOORD0;
+                float localY : TEXCOORD1;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -52,6 +56,9 @@ Shader "Game/2D/Interaction-Outline"
                 float4 _MainTex_ST;
                 float4 _Color;
                 float4 _OutlineColor;
+                float _BodyClip;
+                float _BodyMinV;
+                float _BodyMaxV;
             CBUFFER_END
 
             float4 _RendererColor;
@@ -64,6 +71,7 @@ Shader "Game/2D/Interaction-Outline"
 
                 output.positionCS = TransformObjectToHClip(input.positionOS);
                 output.uv = TRANSFORM_TEX(input.uv, _MainTex);
+                output.localY = input.positionOS.y;
                 output.color = input.color * _Color * _RendererColor * _OutlineColor;
                 return output;
             }
@@ -72,6 +80,9 @@ Shader "Game/2D/Interaction-Outline"
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 half4 texel = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
+                float bodyRange = max(1e-5, _BodyMaxV - _BodyMinV);
+                float bodyV = saturate((input.localY - _BodyMinV) / bodyRange);
+                clip(bodyV - _BodyClip);
                 return half4(input.color.rgb, input.color.a * texel.a);
             }
         ENDHLSL
