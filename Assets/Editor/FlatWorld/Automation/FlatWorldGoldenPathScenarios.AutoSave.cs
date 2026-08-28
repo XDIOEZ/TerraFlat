@@ -83,7 +83,7 @@ namespace FlatWorld.Automation
                     $"AutoSave: 保存改变了全局时间缩放：{autoSaveInitialTimeScale} -> {Time.timeScale}。");
             }
 
-            // 同一场景继续验证玩家点击“保存游戏”走的是分帧快照与后台写盘路径。
+            // 同一场景继续验证玩家点击“保存”走的是分帧快照与后台写盘路径。
             if (!manualSaveRequested)
             {
                 manualSaveRequested = true;

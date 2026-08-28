@@ -13,7 +13,7 @@ public sealed class PlayerSuicideButton : MonoBehaviour
     #region 节点命名契约
 
     public const string ButtonName = "自杀按钮";
-    private const string SourceButtonName = "不保存直接退出";
+    private const string SourceButtonName = UIText.ReturnToDesktopButton;
 
     #endregion
 

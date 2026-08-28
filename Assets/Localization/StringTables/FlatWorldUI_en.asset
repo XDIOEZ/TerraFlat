@@ -2065,6 +2065,22 @@ MonoBehaviour:
     m_Localized: Save & Exit
     m_Metadata:
       m_Items: []
+  - m_Id: 7242194936049664
+    m_Localized: Save
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7242194969604096
+    m_Localized: Return to Main Menu
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7242194969604097
+    m_Localized: Exit to Desktop
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7242194973798400
+    m_Localized: Save before exiting?
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

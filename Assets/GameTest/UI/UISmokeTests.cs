@@ -477,16 +477,29 @@ namespace FlatWorld.GameTest.UI
         [Test]
         [Category("UI.Smoke")]
         [Category("UI.Layout")]
-        public void SettingsSessionPageProvidesExitWithoutSavingAction()
+        public void SettingsSessionPageUsesSingleSaveExitConfirmation()
         {
             const string prefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_ActionList.prefab";
             const string settingSourcePath =
                 "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/Module_Setting.cs";
+            const string confirmationSourcePath =
+                "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/SettingsExitConfirmationController.cs";
 
-            AssertPrefabContains(prefabPath, "设置分页_会话", "不保存直接退出");
+            AssertPrefabContains(
+                prefabPath,
+                "设置分页_会话",
+                UIText.SaveButton,
+                UIText.ReturnToMainMenuButton,
+                UIText.ReturnToDesktopButton,
+                SettingsExitConfirmationController.LayerName,
+                SettingsExitConfirmationController.CancelButtonName,
+                SettingsExitConfirmationController.ConfirmButtonName);
             string source = File.ReadAllText(settingSourcePath);
-            Assert.That(source, Does.Contain("BindButton(UIText.ExitWithoutSavingButtons, ExitAppWithoutSaving)"));
-            Assert.That(source, Does.Contain("saveCurrentGame: false"));
+            string confirmationSource = File.ReadAllText(confirmationSourcePath);
+            Assert.That(source, Does.Contain("SettingsExitConfirmationController.Ensure"));
+            Assert.That(source, Does.Contain("saveCurrentGame: saveBeforeExit"));
+            Assert.That(confirmationSource, Does.Contain("CompleteDecision(false)"));
+            Assert.That(confirmationSource, Does.Contain("CompleteDecision(true)"));
         }
 
         [Test]

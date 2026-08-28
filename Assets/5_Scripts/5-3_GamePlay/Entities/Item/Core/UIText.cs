@@ -1,23 +1,14 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
 /// <summary>
-/// 存放 UI 静态文本/按钮名，避免硬编码
+/// 集中声明玩家实体 UI 的稳定节点名契约；运行时绑定与 Editor Prefab 构建器共用同一名称，
+/// 避免保存、返回主界面和返回桌面的行为因文案调整而脱节。
 /// </summary>
 public static class UIText
 {
-    #region SettingPanelButtons
-    // 返回主菜单相关按钮名候选
-    public static readonly string[] ExitButtons = new[] { "保存并回到主界面按钮" }; // 返回主菜单按钮组
+    #region 设置会话页
 
-    // 保存游戏相关按钮名候选
-    public static readonly string[] SaveButtons = new[] { "保存游戏"}; // 保存相关按钮组
+    public const string SaveButton = "保存";
+    public const string ReturnToMainMenuButton = "返回游戏主界面";
+    public const string ReturnToDesktopButton = "返回桌面";
 
-    // 退出/关闭游戏相关按钮名候选
-    public static readonly string[] CloseButtons = new[] { "保存并退出游戏按钮"}; // 退出游戏按钮组
-
-    // 不保存直接退出游戏相关按钮名候选
-    public static readonly string[] ExitWithoutSavingButtons = new[] { "不保存直接退出" };
     #endregion
 }

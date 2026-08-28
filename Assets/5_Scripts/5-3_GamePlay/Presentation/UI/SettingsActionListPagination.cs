@@ -86,7 +86,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         "世界坐标模式按钮",
         "双指缩放",
         "MasterVolume",
-        "保存游戏",
+        UIText.SaveButton,
         "自动保存间隔下拉列表",
         "性能模式下拉列表",
         "难度_Simple"

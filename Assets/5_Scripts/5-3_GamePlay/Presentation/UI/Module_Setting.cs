@@ -6,6 +6,11 @@ using Sirenix.OdinInspector;
 using FlatWorld.Networking;
 using FlatWorld.Settings;
 
+/// <summary>
+/// 玩家设置面板模块：负责实例化正式 UI_ActionList Prefab、绑定设置分页与世界会话操作，
+/// 并统一管理面板期间的玩法输入锁和单机暂停。返回主界面与返回桌面共用一个保存退出确认层，
+/// 最终保存与清理仍交给 GameManager 的权威退出流程。
+/// </summary>
 public class SettingCanvas : Module, IInstanceUI
 {
     [ReadOnly]
@@ -18,6 +23,9 @@ public class SettingCanvas : Module, IInstanceUI
     private PlayerInputActions playerInputActions;
     GameController gameController;
     private Mod_PlayerDeathState playerDeathState;
+    private SettingsExitConfirmationController exitConfirmation;
+    private Button returnToMainMenuButton;
+    private Button returnToDesktopButton;
     private bool settingsPauseActive;
     private float timeScaleBeforeSettings;
     public override ModuleData _Data { get { return ModSaveData; } set { ModSaveData = (Ex_ModData_MemoryPackable)value; } }
@@ -65,6 +73,12 @@ public class SettingCanvas : Module, IInstanceUI
             return;
         }
 
+        if (exitConfirmation != null && exitConfirmation.TryClose())
+        {
+            uiManager.NotifyCancelHandled();
+            return;
+        }
+
         // Android 返回键顺序：临时面板之后先关闭不锁玩法的手机抽屉，再切换设置面板。
         if (PlayerMobileControlsHUD.TryCloseActiveDrawer())
         {
@@ -91,10 +105,16 @@ public class SettingCanvas : Module, IInstanceUI
             throw new System.InvalidOperationException("[SettingCanvas] SettingCanvasPrefab 为空，无法创建设置面板");
 
         basePanel = UIManager.Instance.CreatePanelFromGameObject(SettingCanvasPrefab);
-        BindButton(UIText.ExitButtons, ExitGame);
-        BindButton(UIText.SaveButtons, SaveGame);
-        BindButton(UIText.CloseButtons, ClossApp);
-        BindButton(UIText.ExitWithoutSavingButtons, ExitAppWithoutSaving);
+        BindButton(UIText.SaveButton, SaveGame);
+        returnToMainMenuButton = BindButton(
+            UIText.ReturnToMainMenuButton,
+            RequestReturnToMainMenu);
+        returnToDesktopButton = BindButton(
+            UIText.ReturnToDesktopButton,
+            RequestReturnToDesktop);
+        exitConfirmation = SettingsExitConfirmationController.Ensure(
+            basePanel,
+            ExecuteExitDecision);
 
         SettingsActionListPagination pagination =
             SettingsActionListPagination.Ensure(basePanel.transform);
@@ -122,7 +142,7 @@ public class SettingCanvas : Module, IInstanceUI
             basePanel,
             gameController);
         PlayerSuicideButton.Ensure(basePanel.transform, playerDeathState);
-        BindButton(new[] { "恢复所有设置" }, ResetAllSettings);
+        BindButton("恢复所有设置", ResetAllSettings);
         basePanel.RefreshUIComponents();
         pagination?.RefreshPageLifecycles();
         basePanel.SetPanelName(PanelName);
@@ -134,20 +154,19 @@ public class SettingCanvas : Module, IInstanceUI
         return true;
     }
 
-    private void BindButton(string[] buttonNames, UnityEngine.Events.UnityAction action)
+    /// <summary>按唯一 Prefab 节点名绑定行为，节点缺失时直接中止面板初始化。</summary>
+    private Button BindButton(string buttonName, UnityEngine.Events.UnityAction action)
     {
-        foreach (string buttonName in buttonNames)
+        Button button = basePanel.GetButton(buttonName);
+        if (button == null)
         {
-            Button button = basePanel.GetButton(buttonName);
-            if (button != null)
-            {
-                button.onClick.RemoveListener(action);
-                button.onClick.AddListener(action);
-                return;
-            }
+            throw new System.NullReferenceException(
+                $"[SettingCanvas] 未找到按钮：{buttonName}");
         }
 
-        throw new System.NullReferenceException($"[SettingCanvas] 未找到按钮：{string.Join(" / ", buttonNames)}");
+        button.onClick.RemoveListener(action);
+        button.onClick.AddListener(action);
+        return button;
     }
 
     // 切换面板显示/隐藏状态
@@ -212,48 +231,58 @@ public class SettingCanvas : Module, IInstanceUI
         TogglePanel();
     }
 
-    // 返回主菜单
-    public void ExitGame()
+    #region 会话操作
+
+    /// <summary>打开返回游戏主界面的保存确认。</summary>
+    private void RequestReturnToMainMenu()
     {
-        // 通过协程返回主菜单场景
-        // 注意：这里的调用者是SettingCanvas所在的Module，不是普通MonoBehaviour
-        GameManager.Instance.StartCoroutine(GameManager.Instance.BackToHelloScene_Coroutine(item));
+        exitConfirmation.Open(SettingsExitDestination.MainMenu, returnToMainMenuButton);
     }
-    public void SaveGame()
+
+    /// <summary>打开返回桌面的保存确认。</summary>
+    private void RequestReturnToDesktop()
+    {
+        exitConfirmation.Open(SettingsExitDestination.Desktop, returnToDesktopButton);
+    }
+
+    /// <summary>只保存当前世界，不关闭设置面板。</summary>
+    private void SaveGame()
     {
         GameManager.Instance.SaveGame();
     }
-    public void ClossApp()
-    {
-        // 注意：这里的调用者是SettingCanvas所在的Module，不是普通MonoBehaviour
-        GameManager.Instance.StartCoroutine(GameManager.Instance.BackToHelloScene_Coroutine(item, () =>
-        {
-#if UNITY_EDITOR
-            // 在编辑器模式下停止播放
-            UnityEditor.EditorApplication.isPlaying = false;
 
+    /// <summary>按确认层决策进入 GameManager 的权威退出与清理流程。</summary>
+    private void ExecuteExitDecision(
+        SettingsExitDestination destination,
+        bool saveBeforeExit)
+    {
+        if (destination == SettingsExitDestination.MainMenu)
+        {
+            GameManager.Instance.StartCoroutine(
+                GameManager.Instance.BackToHelloScene_Coroutine(
+                    item,
+                    saveCurrentGame: saveBeforeExit));
+            return;
+        }
+
+        GameManager.Instance.StartCoroutine(
+            GameManager.Instance.BackToHelloScene_Coroutine(
+                item,
+                onComplete: QuitApplication,
+                saveCurrentGame: saveBeforeExit));
+    }
+
+    /// <summary>退出游戏构建；编辑器中对应停止播放。</summary>
+    private static void QuitApplication()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
 #else
-        // 在构建版本中退出应用
         Application.Quit();
 #endif
-        }));
     }
 
-    /// <summary>跳过当前世界写盘，完成运行时清理后直接退出应用。</summary>
-    public void ExitAppWithoutSaving()
-    {
-        GameManager.Instance.StartCoroutine(GameManager.Instance.BackToHelloScene_Coroutine(
-            item,
-            () =>
-            {
-#if UNITY_EDITOR
-                UnityEditor.EditorApplication.isPlaying = false;
-#else
-                Application.Quit();
-#endif
-            },
-            saveCurrentGame: false));
-    }
+    #endregion
 
     // 对象销毁时取消事件绑定
     private void OnDestroy()

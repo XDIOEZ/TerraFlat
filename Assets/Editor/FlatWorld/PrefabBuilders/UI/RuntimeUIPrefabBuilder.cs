@@ -82,6 +82,25 @@ public static class RuntimeUIPrefabBuilder
         Debug.Log("[Runtime UI] 已固化单面板设置主界面、顶部页签与十页容器。");
     }
 
+    /// <summary>只刷新设置会话页的保存/退出入口与确认层，保留其余设置节点和本地文件 ID。</summary>
+    [MenuItem("FlatWorld/UI/Refresh Settings Session Actions UI")]
+    public static void RefreshSettingsSessionActionsUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        UpdateExistingPrefab(
+            MainMenuCoreRoot + "UI_ActionList.prefab",
+            ConfigureSettingsSessionActions);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已刷新设置会话页的保存退出入口与确认层。");
+    }
+
     /// <summary>只重建设置入口和全部设置子分页，避免改动无关运行时 UI。</summary>
     [MenuItem("FlatWorld/UI/Rebuild All Settings Pages UI")]
     public static void RebuildAllSettingsPagesUI()
@@ -2107,10 +2126,7 @@ public static class RuntimeUIPrefabBuilder
         MoveEntryToPage(root.transform, worldPage, "流送性能");
         MoveEntryToPage(root.transform, worldPage, "游戏难度");
 
-        MoveEntryToPage(root.transform, sessionPage, "保存游戏");
-        MoveEntryToPage(root.transform, sessionPage, "保存并回到主界面按钮");
-        MoveEntryToPage(root.transform, sessionPage, "保存并退出游戏按钮");
-        MoveEntryToPage(root.transform, sessionPage, "恢复所有设置");
+        ConfigureSettingsSessionActions(root.transform, sessionPage);
 
         Transform interfacePage = EnsureEmbeddedActionListPage(
             content,
@@ -2159,6 +2175,36 @@ public static class RuntimeUIPrefabBuilder
         sessionPage.gameObject.SetActive(false);
         EnsureActionListTabBar(root.transform);
         RemoveObsoleteActionListPagerControls(root.transform);
+    }
+
+    /// <summary>定位正式会话分页并仅刷新该分页及其共用确认层。</summary>
+    private static void ConfigureSettingsSessionActions(GameObject root)
+    {
+        RectTransform scrollRect = FindTransform(root.transform, "Scroll View") as RectTransform;
+        ScrollRect scroll = scrollRect != null ? scrollRect.GetComponent<ScrollRect>() : null;
+        Transform content = scroll != null ? scroll.content : null;
+        if (content == null)
+            throw new MissingReferenceException("UI_ActionList.prefab 缺少 Content 或 Scroll View。");
+
+        Transform sessionPage = EnsureActionListPage(
+            content,
+            SettingsActionListPagination.SessionPageName);
+        ConfigureSettingsSessionActions(root.transform, sessionPage);
+    }
+
+    /// <summary>把会话页固化为三个稳定入口，并重建唯一保存退出确认层。</summary>
+    private static void ConfigureSettingsSessionActions(Transform root, Transform sessionPage)
+    {
+        RemoveObsoleteSessionExitEntries(root);
+        MoveEntryToPage(root, sessionPage, UIText.SaveButton);
+        MoveEntryToPage(root, sessionPage, UIText.ReturnToMainMenuButton);
+        MoveEntryToPage(root, sessionPage, UIText.ReturnToDesktopButton);
+        MoveEntryToPage(root, sessionPage, "恢复所有设置");
+        FindDirectChild(sessionPage, UIText.SaveButton).SetSiblingIndex(0);
+        FindDirectChild(sessionPage, UIText.ReturnToMainMenuButton).SetSiblingIndex(1);
+        FindDirectChild(sessionPage, UIText.ReturnToDesktopButton).SetSiblingIndex(2);
+        FindDirectChild(sessionPage, "恢复所有设置").SetSiblingIndex(3);
+        RebuildSettingsExitConfirmation(root);
     }
 
     /// <summary>设置分页列表的视口与 Content，彻底移除旧的纵向滚动布局所有权。</summary>
@@ -2293,6 +2339,131 @@ public static class RuntimeUIPrefabBuilder
         button.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 64f);
         ConfigureButtonVisual(button, false, entryName);
         SetButtonLabelSize(button, 18f);
+    }
+
+    /// <summary>删除旧会话页的组合式保存/退出入口，新 Prefab 只保留三个单一职责按钮。</summary>
+    private static void RemoveObsoleteSessionExitEntries(Transform root)
+    {
+        string[] obsoleteNames =
+        {
+            "保存游戏",
+            "保存并回到主界面按钮",
+            "保存并退出游戏按钮",
+            "不保存直接退出"
+        };
+
+        for (int index = 0; index < obsoleteNames.Length; index++)
+        {
+            Transform obsolete = FindTransform(root, obsoleteNames[index]);
+            if (obsolete != null)
+                Object.DestroyImmediate(obsolete.gameObject);
+        }
+    }
+
+    /// <summary>
+    /// 重建会话页共用的保存退出确认层；340 高度的内容预算为上下边距 56 + 提示 150 + 间距 18 + 按钮区 72 = 296。
+    /// 遮罩是设置面板的最后一个兄弟节点，鼠标射线与手柄焦点均不会穿透到底层分页。
+    /// </summary>
+    private static void RebuildSettingsExitConfirmation(Transform root)
+    {
+        Transform existing = FindTransform(
+            root,
+            SettingsExitConfirmationController.LayerName);
+        if (existing != null)
+            Object.DestroyImmediate(existing.gameObject);
+
+        GameObject layer = CreateUIObject(
+            SettingsExitConfirmationController.LayerName,
+            root,
+            typeof(CanvasRenderer),
+            typeof(Image));
+        Stretch(layer.GetComponent<RectTransform>());
+        Image blocker = layer.GetComponent<Image>();
+        blocker.color = new Color(0.008f, 0.014f, 0.018f, 0.82f);
+        blocker.raycastTarget = true;
+
+        GameObject dialog = CreateUIObject(
+            SettingsExitConfirmationController.DialogName,
+            layer.transform,
+            typeof(CanvasRenderer),
+            typeof(Image));
+        SetCentered(
+            dialog.GetComponent<RectTransform>(),
+            Vector2.zero,
+            new Vector2(720f, 340f));
+        Image dialogBackground = dialog.GetComponent<Image>();
+        dialogBackground.color = Canvas;
+        dialogBackground.raycastTarget = true;
+        AddOutline(dialogBackground, Amber);
+        Shadow shadow = dialog.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.62f);
+        shadow.effectDistance = new Vector2(8f, -8f);
+
+        VerticalLayoutGroup dialogLayout = dialog.AddComponent<VerticalLayoutGroup>();
+        dialogLayout.padding = new RectOffset(36, 36, 28, 28);
+        dialogLayout.spacing = 18f;
+        dialogLayout.childAlignment = TextAnchor.MiddleCenter;
+        dialogLayout.childControlWidth = true;
+        dialogLayout.childControlHeight = true;
+        dialogLayout.childForceExpandWidth = true;
+        dialogLayout.childForceExpandHeight = false;
+
+        TextMeshProUGUI prompt = CreateText(
+            SettingsExitConfirmationController.PromptName,
+            dialog.transform,
+            "是否保存再退出",
+            30f,
+            Cream);
+        prompt.alignment = TextAlignmentOptions.Center;
+        prompt.enableWordWrapping = true;
+        prompt.enableAutoSizing = true;
+        prompt.fontSizeMin = 22f;
+        prompt.fontSizeMax = 30f;
+        prompt.gameObject.AddComponent<LayoutElement>().preferredHeight = 150f;
+
+        GameObject actions = CreateUIObject("确认操作区", dialog.transform);
+        actions.AddComponent<LayoutElement>().preferredHeight = 72f;
+        HorizontalLayoutGroup actionLayout = actions.AddComponent<HorizontalLayoutGroup>();
+        actionLayout.spacing = 28f;
+        actionLayout.childAlignment = TextAnchor.MiddleCenter;
+        actionLayout.childControlWidth = false;
+        actionLayout.childControlHeight = true;
+        actionLayout.childForceExpandWidth = false;
+        actionLayout.childForceExpandHeight = false;
+
+        Button cancelButton = CreateButton(
+            SettingsExitConfirmationController.CancelButtonName,
+            actions.transform,
+            "取消",
+            180f,
+            64f,
+            false);
+        cancelButton.GetComponent<Image>().color = new Color(0.30f, 0.33f, 0.35f, 1f);
+        SetButtonLabelSize(cancelButton, 22f);
+
+        Button confirmButton = CreateButton(
+            SettingsExitConfirmationController.ConfirmButtonName,
+            actions.transform,
+            "确认",
+            180f,
+            64f,
+            true);
+        confirmButton.GetComponent<Image>().color = new Color(0.91f, 0.68f, 0.18f, 1f);
+        SetButtonLabelSize(confirmButton, 22f);
+
+        cancelButton.navigation = new Navigation
+        {
+            mode = Navigation.Mode.Explicit,
+            selectOnRight = confirmButton
+        };
+        confirmButton.navigation = new Navigation
+        {
+            mode = Navigation.Mode.Explicit,
+            selectOnLeft = cancelButton
+        };
+
+        layer.transform.SetAsLastSibling();
+        layer.SetActive(false);
     }
 
     /// <summary>创建类似浏览器页签的顶部横向分页栏。</summary>

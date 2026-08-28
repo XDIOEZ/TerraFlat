@@ -60,7 +60,18 @@ public static class GameUIPrefabRebuilder
         { CraftingRoot + "UI_FlintStrike.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
         { ScreensRoot + "UI_Death.prefab", new[] { "重生", "回到主菜单" } },
         { PlayerStatusRoot + "UI_ModuleList.prefab", new[] { "Dropdown", "Template", "Content" } },
-        { MainMenuCoreRoot + "UI_ActionList.prefab", new[] { "Scroll View", "保存游戏", "保存并回到主界面按钮", "保存并退出游戏按钮", "关闭" } },
+        { MainMenuCoreRoot + "UI_ActionList.prefab", new[]
+            {
+                "Scroll View",
+                UIText.SaveButton,
+                UIText.ReturnToMainMenuButton,
+                UIText.ReturnToDesktopButton,
+                SettingsExitConfirmationController.LayerName,
+                SettingsExitConfirmationController.CancelButtonName,
+                SettingsExitConfirmationController.ConfirmButtonName,
+                "关闭"
+            }
+        },
         { InventoryPanelsRoot + "UI_ItemContextMenu.prefab", new[] { "控制面板", "销毁面板", "使用物品", "查看物品信息", "丢弃一个", "丢弃整组" } },
         { InventoryPanelsRoot + "UI_ItemInfo.prefab", new[] { "面板", "信息", "销毁" } },
         { PlayerStatusRoot + "UI_ModuleSettings.prefab", new[] { "Panel", "Slider", "关闭页面" } },
