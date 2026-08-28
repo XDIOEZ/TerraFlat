@@ -37,27 +37,37 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _CausticStrength: 0.08
     - _CornerStrength: 0.18
+    - _DetailScale: 3.8
     - _EdgeStrength: 0.72
     - _EdgeWidth: 0.2
     - _EnableExternalAlpha: 0
-    - _PixelDensity: 32
+    - _FoamSpeed: 0.72
+    - _NormalStrength: 0.32
+    - _PixelDensity: 64
+    - _ReflectionStrength: 0.18
+    - _ShoreFoamStrength: 0.68
     - _ShoreStrength: 0.16
-    - _SurfaceTint: 0.06
-    - _WaveDistortion: 1.65
-    - _WaveScale: 2.45
-    - _WaveSoftness: 0.12
-    - _WaveSpeed: 0.32
-    - _WaveStrength: 0.18
-    - _WaveThreshold: 0.78
+    - _SpecularPower: 48
+    - _SpecularStrength: 0.3
+    - _SurfaceTint: 0.45
+    - _SwellScale: 0.68
+    - _WaveDistortion: 1.4
+    - _WaveSpeed: 0.42
+    - _WhitecapStrength: 0.08
     m_Colors:
+    - _CausticColor: {r: 0.28, g: 0.86, b: 0.92, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _DeepColor: {r: 0.08, g: 0.34, b: 0.56, a: 1}
+    - _DeepColor: {r: 0.015, g: 0.15, b: 0.3, a: 1}
     - _EdgeColor: {r: 0.035, g: 0.022, b: 0.015, a: 1}
     - _Flip: {r: 1, g: 1, b: 1, a: 1}
     - _FlowDirection: {r: 1, g: 0.35, b: 0, a: 0}
+    - _FoamColor: {r: 0.76, g: 0.96, b: 1, a: 1}
+    - _ReflectionColor: {r: 0.24, g: 0.72, b: 0.9, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
-    - _ShallowColor: {r: 0.18, g: 0.68, b: 0.78, a: 1}
+    - _ShallowColor: {r: 0.04, g: 0.55, b: 0.62, a: 1}
     - _ShoreColor: {r: 0.48, g: 0.85, b: 0.92, a: 1}
-    - _WaveColor: {r: 0.72, g: 0.94, b: 0.98, a: 0.68}
+    - _SpecularColor: {r: 0.9, g: 0.98, b: 1, a: 1}
+    - _SunDirection: {r: 0.28, g: 0.42, b: 0.86, a: 0}
   m_BuildTextureStacks: []
