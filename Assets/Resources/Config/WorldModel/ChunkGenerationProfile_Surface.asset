@@ -282,7 +282,7 @@ MonoBehaviour:
     CompanionMinRadius: 0
     CompanionMaxRadius: 0
   - RuleId: surface.forest.radish
-    ItemId: Radish
+    ItemId: RadishCrop
     ItemCount: 1
     SpawnChance: 0.001
     SpawnChanceMultiplier: 1
@@ -423,7 +423,7 @@ MonoBehaviour:
     CompanionMinRadius: 0
     CompanionMaxRadius: 0
   - RuleId: surface.grassland.radish
-    ItemId: Radish
+    ItemId: RadishCrop
     ItemCount: 1
     SpawnChance: 0.0015
     SpawnChanceMultiplier: 1
