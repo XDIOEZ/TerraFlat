@@ -8,13 +8,15 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         [Header(Water Surface)]
         _DeepColor("深水颜色", Color) = (0.08, 0.34, 0.56, 1)
         _ShallowColor("浅水颜色", Color) = (0.18, 0.68, 0.78, 1)
-        _SurfaceTint("水面染色强度", Range(0, 1)) = 0.2
-        _WaveColor("波纹高光", Color) = (0.65, 0.96, 1, 1)
-        _WaveStrength("波纹强度", Range(0, 1)) = 0.28
-        _WaveScale("波纹密度", Range(0.25, 16)) = 5.5
-        _WaveSpeed("流动速度", Range(-3, 3)) = 0.75
-        _WaveThreshold("高光阈值", Range(-1, 1)) = 0.48
-        _WaveSoftness("高光柔和度", Range(0.01, 0.5)) = 0.14
+        _SurfaceTint("水面染色强度", Range(0, 1)) = 0.12
+        _WaveColor("波纹高光", Color) = (0.72, 0.94, 0.98, 0.82)
+        _WaveStrength("波纹强度", Range(0, 1)) = 0.2
+        _WaveScale("波纹密度", Range(0.25, 16)) = 3.2
+        _WaveSpeed("流动速度", Range(-3, 3)) = 0.45
+        _WaveThreshold("高光阈值", Range(-1, 1)) = 0.58
+        _WaveSoftness("高光柔和度", Range(0.01, 0.5)) = 0.18
+        _PixelDensity("像素采样密度", Range(1, 64)) = 32
+        _WaveDistortion("波纹弯曲程度", Range(0, 1.5)) = 0.42
         _FlowDirection("流动方向", Vector) = (1, 0.35, 0, 0)
 
         [Header(Shore)]
@@ -55,47 +57,53 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         float _WaveSpeed;
         half _WaveThreshold;
         half _WaveSoftness;
+        float _PixelDensity;
+        half _WaveDistortion;
         half _EdgeWidth;
         half _EdgeStrength;
         half _CornerStrength;
         half _ShoreStrength;
 
-        /// <summary>用折线波近似正弦波，避免移动端顶点阶段的三角函数开销。</summary>
-        half TriangleWave(float phase)
+        /// <summary>将世界坐标锁定到细像素格，保持像素画风并避免波纹随镜头抖动。</summary>
+        float2 QuantizeWaterPosition(float2 positionWS)
         {
-            const float inverseTwoPi = 0.159154943;
-            return abs(frac(phase * inverseTwoPi - 0.25) - 0.5) * 4.0h - 1.0h;
+            float density = max(_PixelDensity, 1.0);
+            return floor(positionWS * density + 0.5) / density;
         }
 
-        /// <summary>只在 Tile 顶点生成水纹参数，交给 GPU 插值后供像素阶段直接混色。</summary>
+        /// <summary>用双向连续波与低频弯曲生成自然、断续且跨 Chunk 连贯的水纹。</summary>
         half2 CalculateWaterPattern(float2 positionWS)
         {
             float2 direction = _FlowDirection.xy;
             direction *= rsqrt(max(dot(direction, direction), 0.001));
             float2 lateral = float2(-direction.y, direction.x);
+            float2 pixelPosition = QuantizeWaterPosition(positionWS);
             float time = _Time.y * _WaveSpeed;
 
-            half primary = TriangleWave(dot(positionWS, direction) * _WaveScale + time);
-            half secondary = TriangleWave(
-                dot(positionWS, lateral) * _WaveScale * 0.73 - time * 0.67);
-            half modulation = TriangleWave(
-                dot(positionWS, float2(0.37, 1.0)) * _WaveScale * 0.43 + time * 0.27);
-            half wave = primary * 0.62h + secondary * 0.28h + modulation * 0.1h;
+            float longitudinal = dot(pixelPosition, direction) * _WaveScale;
+            float transverse = dot(pixelPosition, lateral) * _WaveScale;
+            half bend = sin(transverse * 0.34 - time * 0.42) * _WaveDistortion;
+            float primaryPhase = longitudinal + time + bend;
+            float secondaryPhase = transverse * 0.72 - time * 0.67
+                + sin(longitudinal * 0.3 + time * 0.22) * _WaveDistortion * 0.75;
+            half primary = sin(primaryPhase);
+            half secondary = sin(secondaryPhase);
+            half wave = primary * 0.68h + secondary * 0.32h;
 
-            half depthBlend = saturate(wave * 0.5 + 0.5);
+            half depthBlend = saturate(0.5h + wave * 0.22h);
             half crest = smoothstep(
                 _WaveThreshold,
                 _WaveThreshold + max(_WaveSoftness, 0.001h),
-                wave);
-            half dash = smoothstep(
-                -0.15h,
-                0.45h,
-                TriangleWave(dot(positionWS, lateral) * _WaveScale * 1.85 + time * 0.35));
-            half highlight = crest * dash * saturate(_WaveStrength) * _WaveColor.a;
+                primary);
+            half breakup = smoothstep(-0.35h, 0.62h, secondary);
+            half highlight = crest
+                * lerp(0.18h, 1.0h, breakup)
+                * saturate(_WaveStrength)
+                * _WaveColor.a;
             return half2(depthBlend, highlight);
         }
 
-        /// <summary>像素阶段只执行两次颜色混合，避免大面积水域产生高昂片元开销。</summary>
+        /// <summary>以稳定底色承载轻微明暗变化，并叠加细窄、断续的波峰高光。</summary>
         half3 ApplyWaterSurface(half3 sourceColor, half2 waterPattern)
         {
             half3 waterTint = lerp(_DeepColor.rgb, _ShallowColor.rgb, waterPattern.x);
@@ -176,7 +184,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 half2 lightingUV : TEXCOORD1;
                 float2 localPosition : TEXCOORD2;
                 half4 shoreMask : TEXCOORD3;
-                half2 waterPattern : TEXCOORD4;
+                float2 positionWS : TEXCOORD4;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -199,11 +207,10 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 output.positionCS = TransformObjectToHClip(input.positionOS);
-                float2 positionWS = TransformObjectToWorld(input.positionOS).xy;
+                output.positionWS = TransformObjectToWorld(input.positionOS).xy;
                 output.uv = input.uv;
                 output.localPosition = input.positionOS.xy;
                 output.shoreMask = input.color;
-                output.waterPattern = CalculateWaterPattern(positionWS);
                 output.lightingUV = half2(ComputeScreenPos(output.positionCS / output.positionCS.w).xy);
                 return output;
             }
@@ -214,7 +221,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             {
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= _Color * _RendererColor;
-                main.rgb = ApplyWaterSurface(main.rgb, input.waterPattern);
+                main.rgb = ApplyWaterSurface(main.rgb, CalculateWaterPattern(input.positionWS));
                 half recess = ComputeRecessShadow(input.localPosition, input.shoreMask);
                 main.rgb = ApplyShore(main.rgb, recess);
 
@@ -252,7 +259,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 float2 uv : TEXCOORD0;
                 float2 localPosition : TEXCOORD1;
                 half4 shoreMask : TEXCOORD2;
-                half2 waterPattern : TEXCOORD3;
+                float2 positionWS : TEXCOORD3;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -262,11 +269,10 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 output.positionCS = TransformObjectToHClip(input.positionOS);
-                float2 positionWS = TransformObjectToWorld(input.positionOS).xy;
+                output.positionWS = TransformObjectToWorld(input.positionOS).xy;
                 output.uv = input.uv;
                 output.localPosition = input.positionOS.xy;
                 output.shoreMask = input.color;
-                output.waterPattern = CalculateWaterPattern(positionWS);
                 return output;
             }
 
@@ -274,7 +280,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             {
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= _Color * _RendererColor;
-                main.rgb = ApplyWaterSurface(main.rgb, input.waterPattern);
+                main.rgb = ApplyWaterSurface(main.rgb, CalculateWaterPattern(input.positionWS));
                 half recess = ComputeRecessShadow(input.localPosition, input.shoreMask);
                 main.rgb = ApplyShore(main.rgb, recess);
                 return main;
