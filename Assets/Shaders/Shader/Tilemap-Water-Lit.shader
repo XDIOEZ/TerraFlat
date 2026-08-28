@@ -16,6 +16,11 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         _NormalStrength("表面起伏", Range(0, 0.8)) = 0.32
         _PixelDensity("表面采样密度", Range(1, 128)) = 64
         _FlowDirection("流动方向", Vector) = (1, 0.35, 0, 0)
+        _RippleColor("浪脊颜色", Color) = (0.38, 0.78, 0.88, 1)
+        _RippleStrength("浪脊强度", Range(0, 1)) = 0.22
+        _RippleScale("浪纹尺度", Range(0.25, 6)) = 1.8
+        _RippleWidth("浪脊宽度", Range(0.04, 0.45)) = 0.1
+        _RippleShadowStrength("浪背暗部", Range(0, 0.5)) = 0.08
 
         [Header(Reflection And Foam)]
         _ReflectionColor("天空反光", Color) = (0.24, 0.72, 0.9, 1)
@@ -63,6 +68,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         half4 _SpecularColor;
         half4 _CausticColor;
         half4 _FoamColor;
+        half4 _RippleColor;
         half4 _EdgeColor;
         half4 _ShoreColor;
         float4 _FlowDirection;
@@ -74,6 +80,10 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         float _PixelDensity;
         half _WaveDistortion;
         half _NormalStrength;
+        half _RippleStrength;
+        float _RippleScale;
+        half _RippleWidth;
+        half _RippleShadowStrength;
         half _ReflectionStrength;
         half _SpecularStrength;
         float _SpecularPower;
@@ -119,6 +129,8 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         struct WaterSurfaceData
         {
             half depthBlend;
+            half ripple;
+            half rippleShadow;
             half reflection;
             half caustic;
             half specular;
@@ -183,6 +195,70 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 + (macroA - 0.5) * 0.5
                 + (macroB - 0.5) * 0.2
                 + height * 0.11);
+
+            // 中尺度浪脊与大涌浪共用扭曲坐标，再用低频噪声切成自然短段。
+            float rippleWarp = WaterNoise(
+                pixelPosition * 0.19
+                + float2(-time * 0.045, time * 0.032)
+                + float2(16.8, 7.4)) - 0.5;
+            float ripplePhaseA = dot(warpedPosition, direction) * _RippleScale
+                + time * 0.82
+                + (macroB - 0.5) * 2.6
+                + (macroA - 0.5) * 0.9
+                + rippleWarp * 3.2;
+            float ripplePhaseB = dot(warpedPosition, swellDirection) * _RippleScale * 1.43
+                - time * 0.57
+                + (macroA - 0.5) * 2.9
+                + (macroB - 0.5) * 0.7
+                - rippleWarp * 2.15;
+            float rippleWaveA = sin(ripplePhaseA);
+            float rippleWaveB = sin(ripplePhaseB);
+            float crestExponent = 4.0 / max(_RippleWidth, 0.01);
+            float crestA = pow(saturate(rippleWaveA * 0.5 + 0.5), crestExponent);
+            float crestB = pow(saturate(rippleWaveB * 0.5 + 0.5), crestExponent * 1.12);
+            float2 rippleLateralB = float2(-swellDirection.y, swellDirection.x);
+
+            float segmentA = WaterNoise(
+                float2(
+                    dot(pixelPosition, lateral) * 0.58 + time * 0.055,
+                    dot(pixelPosition, direction) * 0.13 - time * 0.018)
+                + float2(5.7, 19.3));
+            float segmentB = WaterNoise(
+                float2(
+                    dot(pixelPosition, rippleLateralB) * 0.64 - time * 0.046,
+                    dot(pixelPosition, swellDirection) * 0.15 + time * 0.016)
+                + float2(27.4, 3.8));
+            float segmentDetailA = WaterNoise(
+                float2(
+                    dot(pixelPosition, lateral) * 1.21 - time * 0.085,
+                    dot(pixelPosition, direction) * 0.22 + time * 0.021)
+                + float2(34.1, 11.6));
+            float segmentDetailB = WaterNoise(
+                float2(
+                    dot(pixelPosition, rippleLateralB) * 1.34 + time * 0.074,
+                    dot(pixelPosition, swellDirection) * 0.25 - time * 0.018)
+                + float2(8.9, 36.2));
+            float segmentGateA = smoothstep(0.28, 0.5, segmentA * segmentDetailA);
+            float segmentGateB = smoothstep(0.31, 0.53, segmentB * segmentDetailB);
+            crestA *= segmentGateA;
+            crestB *= segmentGateB * 0.28;
+            surface.ripple = max(crestA, crestB)
+                * saturate(_RippleStrength)
+                * _RippleColor.a;
+
+            // 浪脊后方的窄暗带强化起伏，不把整片水面压暗。
+            float shadowA = pow(
+                saturate(sin(ripplePhaseA - 0.3) * 0.5 + 0.5),
+                crestExponent * 0.82)
+                * segmentGateA;
+            float shadowB = pow(
+                saturate(sin(ripplePhaseB - 0.25) * 0.5 + 0.5),
+                crestExponent * 0.9)
+                * segmentGateB
+                * 0.2;
+            surface.rippleShadow = max(shadowA, shadowB)
+                * (1.0 - max(crestA, crestB))
+                * saturate(_RippleShadowStrength);
 
             float fresnel = saturate((1.0 - normalWS.z) * 3.5);
             surface.reflection = saturate(0.06 + fresnel * fresnel)
@@ -267,8 +343,10 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         {
             half3 waterTint = lerp(_DeepColor.rgb, _ShallowColor.rgb, surface.depthBlend);
             sourceColor = lerp(sourceColor, waterTint, saturate(_SurfaceTint));
+            sourceColor = lerp(sourceColor, _DeepColor.rgb, surface.rippleShadow);
             sourceColor += _CausticColor.rgb * surface.caustic;
             sourceColor = lerp(sourceColor, _ReflectionColor.rgb, surface.reflection);
+            sourceColor = lerp(sourceColor, _RippleColor.rgb, surface.ripple);
             sourceColor = lerp(sourceColor, _SpecularColor.rgb, surface.specular);
             sourceColor = lerp(sourceColor, _FoamColor.rgb, surface.whitecap);
             return saturate(sourceColor);
