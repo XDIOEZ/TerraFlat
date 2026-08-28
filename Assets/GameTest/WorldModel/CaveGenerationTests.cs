@@ -207,7 +207,7 @@ namespace FlatWorld.GameTest.WorldModel
                 CaveObservation cave = GenerateCave(profile, 91357,
                     new Int2(chunkX * profile.Width, chunkY * profile.Height));
                 List<NaturalItemPlacement> vines = cave.Placements.FindAll(
-                    placement => placement.ItemId == "Twine" &&
+                    placement => placement.ItemId == "TwineCrop" &&
                                  placement.RuleId == "cave.vine.twine");
                 vineCells += vines.Count;
                 foreach (NaturalItemPlacement vine in vines)
@@ -299,6 +299,7 @@ namespace FlatWorld.GameTest.WorldModel
             var texts = new Dictionary<string, string>
             {
                 ["terrain.mode"] = "cave",
+                ["cave.vine.itemId"] = "TwineCrop",
                 ["cave.portal.itemId"] = "CaveExit",
                 ["cave.portal.targetDimensionId"] = "surface"
             };

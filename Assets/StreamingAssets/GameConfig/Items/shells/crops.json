@@ -156,6 +156,94 @@
           }
         }
       }
+    },
+    {
+      "id": "TwineCrop",
+      "parent": "Crop_Base",
+      "gameName": "藤蔓植株",
+      "description": "自然生长的藤蔓；成熟后交互可采集柔韧的藤蔓。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": false,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Plants/Tree/item302.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 0.75,
+          "y": 0.75,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.75,
+            "y": 0.75
+          }
+        }
+      },
+      "modules": {
+        "crop": {
+          "parameters": {
+            "Data": {
+              "stage": 1,
+              "normalizedGrowth": 1.0,
+              "isPlanted": false,
+              "plantedTilePosition": {
+                "x": 0,
+                "y": 0
+              },
+              "isHarvested": false,
+              "growthStatus": 4
+            }
+          }
+        },
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              {
+                "itemId": "Twine",
+                "minAmount": 1,
+                "maxAmount": 2,
+                "probability": 1.0
+              }
+            ]
+          }
+        },
+        "cropVisual": {
+          "parameters": {
+            "buriedClip": 0.0
+          }
+        }
+      }
     }
   ]
 }

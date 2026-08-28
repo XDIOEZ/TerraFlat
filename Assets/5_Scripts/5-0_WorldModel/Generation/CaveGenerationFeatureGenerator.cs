@@ -652,7 +652,7 @@ namespace FlatWorld.WorldModel
 
         #region 可采集藤蔓
 
-        /// <summary>复用现有 Twine 自然物，使矿洞藤蔓可拾取、可存档并能参与制作。</summary>
+        /// <summary>生成可交互收获的藤蔓植株，使矿洞藤蔓与地表使用同一作物契约。</summary>
         private static bool TryAddVine(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
             int localX, int localY, List<NaturalItemPlacement> placements,
@@ -669,7 +669,8 @@ namespace FlatWorld.WorldModel
             float offsetY = (float)Lerp(-0.12d, 0.12d,
                 CaveLayoutKernel.NextUnitDouble(ref state));
             int guid = CaveLayoutKernel.CreatePlacementGuid(request, worldX, worldY, ruleId);
-            AddPlacement(placements, claimedGuids, new NaturalItemPlacement(guid, "Twine",
+            AddPlacement(placements, claimedGuids, new NaturalItemPlacement(guid,
+                settings.CaveVineItemId,
                 localX, localY, offsetX, offsetY, ruleId));
             return true;
         }

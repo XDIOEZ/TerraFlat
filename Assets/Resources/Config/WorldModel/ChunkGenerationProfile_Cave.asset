@@ -90,6 +90,8 @@ MonoBehaviour:
     Value: Tile_Water_Fresh
   - Id: tile.block.7
     Value: TileBase_StoneWall
+  - Id: cave.vine.itemId
+    Value: TwineCrop
   - Id: cave.portal.itemId
     Value: CaveExit
   - Id: cave.portal.targetDimensionId

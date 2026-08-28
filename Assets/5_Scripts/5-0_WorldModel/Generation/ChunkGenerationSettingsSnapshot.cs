@@ -396,6 +396,9 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "cave.vine.wetMultiplier", 2.5d), 1d, 10d);
             CaveVineDryMultiplier = Clamp01(
                 GetDouble(numbers, "cave.vine.dryMultiplier", 0.2d));
+            CaveVineItemId = CaveVineEnabled
+                ? GetRequiredText(texts, "cave.vine.itemId")
+                : string.Empty;
             CavePortalEnabled = GetBool(numbers, "cave.portal.enabled", true);
             CavePortalChunkChance = Clamp01(
                 GetDouble(numbers, "cave.portal.chunkChance", 0d));
@@ -603,6 +606,8 @@ namespace FlatWorld.WorldModel
         public double CaveVineWetMultiplier { get; }
         /// <summary>远离地下水时的藤蔓概率倍率，默认保留原概率的 20%。</summary>
         public double CaveVineDryMultiplier { get; }
+        /// <summary>洞壁自然生成的藤蔓植株物品 ID。</summary>
+        public string CaveVineItemId { get; }
         /// <summary>跨维度天然入口的成对布局参数。</summary>
         public bool CavePortalEnabled { get; }
         public double CavePortalChunkChance { get; }
@@ -653,6 +658,17 @@ namespace FlatWorld.WorldModel
         private static string GetText(IReadOnlyDictionary<string, string> values, string key,
             string fallback) => values.TryGetValue(key, out string value) &&
                                !string.IsNullOrWhiteSpace(value) ? value : fallback;
+
+        /// <summary>读取必填文本参数；缺失时直接拒绝构造当前生成配置。</summary>
+        private static string GetRequiredText(
+            IReadOnlyDictionary<string, string> values,
+            string key)
+        {
+            if (values.TryGetValue(key, out string value) && !string.IsNullOrWhiteSpace(value))
+                return value;
+            throw new ArgumentException(
+                $"Missing required generation text parameter: {key}", nameof(values));
+        }
 
         /// <summary>严格解析河流算法，避免配置拼写错误时静默换成另一套世界生成规则。</summary>
         private static RiverGenerationAlgorithm ParseRiverAlgorithm(string value)

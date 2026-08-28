@@ -302,7 +302,7 @@ MonoBehaviour:
     CompanionMinRadius: 0
     CompanionMaxRadius: 0
   - RuleId: surface.forest.twine
-    ItemId: Twine
+    ItemId: TwineCrop
     ItemCount: 1
     SpawnChance: 0.00028125
     SpawnChanceMultiplier: 1
