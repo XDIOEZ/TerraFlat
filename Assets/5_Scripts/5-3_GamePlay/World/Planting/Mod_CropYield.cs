@@ -91,11 +91,13 @@ public sealed class Mod_CropYield : Module, ICropHarvestAction
             if (finalAmount <= 0)
                 continue;
 
-            SpawnWorldItem(context, output.itemId, finalAmount);
+            for (int i = 0; i < finalAmount; i++)
+                SpawnWorldItem(context, output.itemId);
         }
     }
 
-    private static void SpawnWorldItem(CropHarvestContext context, string itemId, int amount)
+    /// <summary>生成一个数量为 1 的掉落实例，让每份产物独立弹出。</summary>
+    private static void SpawnWorldItem(CropHarvestContext context, string itemId)
     {
         GameObject parent = context.CropItem.transform.parent != null
             ? context.CropItem.transform.parent.gameObject
@@ -114,7 +116,7 @@ public sealed class Mod_CropYield : Module, ICropHarvestAction
         if (product.itemData?.Stack == null)
             throw new MissingComponentException($"[Mod_CropYield] 收获物品 {itemId} 缺少堆叠数据。");
 
-        product.itemData.Stack.Amount = amount;
+        product.itemData.Stack.Amount = 1;
         product.DropInRange();
     }
 
