@@ -36,6 +36,11 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     public Dictionary<string, RuntimeItemDefinition> ActorDefinitions =
         new Dictionary<string, RuntimeItemDefinition>(System.StringComparer.OrdinalIgnoreCase);
 
+    [Header("JSON 战利品表字典")]
+    [ShowInInspector]
+    public Dictionary<string, RuntimeLootTable> LootTables =
+        new Dictionary<string, RuntimeLootTable>(System.StringComparer.OrdinalIgnoreCase);
+
     [Header("配方字典")]
     [ShowInInspector]
     public Dictionary<string, RuntimeRecipe> recipeDict = new Dictionary<string, RuntimeRecipe>();
@@ -164,6 +169,21 @@ public partial class GameRes : SingletonAutoMono<GameRes>
 
         TimeSystemConfigService.ReplaceCatalog(loadedTimeSystemConfig);
         GameManager.Instance?.ApplyDefaultTimeSystemProfile();
+
+        loadingText = "加载 JSON 战利品表";
+        IReadOnlyList<RuntimeLootTable> loadedLootTables = null;
+        System.Exception lootTableError = null;
+        yield return StartCoroutine(LootTableCatalogLoader.LoadBuiltInAsync(
+            tables => loadedLootTables = tables,
+            exception => lootTableError = exception));
+        if (lootTableError != null)
+        {
+            MarkResourceLoadingFailed($"战利品库加载失败：{lootTableError.Message}", lootTableError);
+            yield break;
+        }
+
+        foreach (RuntimeLootTable lootTable in loadedLootTables)
+            RegisterLootTable(lootTable);
 
         // 默认标签
         if (ADBLabels.Count == 0)
@@ -601,6 +621,7 @@ private void ClearAllDictionaries()
     AllPrefabs.Clear();
     ItemDefinitions.Clear();
     ActorDefinitions.Clear();
+    LootTables.Clear();
     ActorDefinitionCatalogLoader.ResetRuntimeCatalog();
     SpawnerConfigCatalogService.Reset();
     recipeDict.Clear();
@@ -810,6 +831,29 @@ public void HotReloadAllResources()
         // 兼容仍以 AllPrefabs.ContainsKey 判断物品是否存在的配方与玩法代码。
         AllPrefabs[definition.Id] = definition.ShellPrefab;
         LoadedCount++;
+    }
+
+    /// <summary>按稳定 ID 注册战利品表；重复 ID 视为配置错误。</summary>
+    public void RegisterLootTable(RuntimeLootTable lootTable)
+    {
+        if (lootTable == null || string.IsNullOrWhiteSpace(lootTable.Id))
+            throw new InvalidDataException("注册的战利品表或 ID 为空");
+        if (LootTables.ContainsKey(lootTable.Id))
+            throw new InvalidDataException($"战利品表 ID 冲突：{lootTable.Id}");
+
+        LootTables.Add(lootTable.Id, lootTable);
+    }
+
+    /// <summary>按稳定 ID 查询战利品表。</summary>
+    public bool TryGetLootTable(string lootTableId, out RuntimeLootTable lootTable)
+    {
+        if (string.IsNullOrWhiteSpace(lootTableId))
+        {
+            lootTable = null;
+            return false;
+        }
+
+        return LootTables.TryGetValue(lootTableId.Trim(), out lootTable);
     }
 
     /// <summary>注册 JSON Actor；同时进入通用 ItemDefinition 管线以复用对象池与存档。</summary>

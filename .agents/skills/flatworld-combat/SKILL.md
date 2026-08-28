@@ -15,6 +15,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 ## 不变量
 
 - `DamageReceiver` 是生命、受伤、死亡与通用战利品的唯一权威；不要恢复第二套 Health 模块。
+- JSON Item/Actor 的死亡掉落统一在 `GameConfig/LootTables/loot-tables.json` 以稳定 ID 定义，并由实体顶层 `lootTableId` 引用；禁止同时保留内联 `Data.LootTable`，运行时会把表展开到唯一 `DamageReceiver`。
 - 客户端远程副本只应用权威结果，不重复计算伤害、死亡或掉落。
 - 管理员无敌通过监听伤害回满并在死亡回调兜底，不改写权威结算；关闭后必须解除监听。
 - 技能由 `GameRes.SkillDict` 注册；移动资源同时检查 Addressables `Skill` 标签。

@@ -110,6 +110,10 @@ public sealed class ItemDefinitionDto
     [JsonProperty("health", NullValueHandling = NullValueHandling.Ignore)]
     public ItemHealthDefinitionDto Health;
 
+    /// <summary>死亡掉落所引用的全局战利品表稳定 ID。</summary>
+    [JsonProperty("lootTableId", NullValueHandling = NullValueHandling.Ignore)]
+    public string LootTableId;
+
     /// <summary>稳定模块名 -> 模块定义。稳定名会直接成为 ModuleDataDic 的键。</summary>
     [JsonProperty("modules")]
     public Dictionary<string, ItemModuleDefinitionDto> Modules = new();
@@ -280,6 +284,7 @@ public sealed class RuntimeItemDefinition
     public GameObject ShellPrefab { get; }
     public ItemVisualDefinitionDto Visual { get; }
     public ItemHealthDefinitionDto Health { get; }
+    public string LootTableId { get; }
     public string RendererPath => Visual?.RendererPath;
     public Sprite Sprite { get; }
     public RuntimeAnimatorController AnimatorController { get; }
@@ -308,6 +313,7 @@ public sealed class RuntimeItemDefinition
         ItemData itemData,
         ItemVisualDefinitionDto visual,
         ItemHealthDefinitionDto health,
+        string lootTableId,
         Sprite sprite,
         Dictionary<string, string> parameters,
         Dictionary<string, string> prefabIds,
@@ -322,6 +328,7 @@ public sealed class RuntimeItemDefinition
         templateData = itemData;
         Visual = visual;
         Health = health;
+        LootTableId = lootTableId;
         Sprite = sprite;
         AnimatorController = animatorController;
         IsActor = isActor;

@@ -28,7 +28,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 批量调整 Prefab override 后不得在 `m_Modification.m_Modifications` 序列中留下空项；Unity 会把对应 `PrefabInstance` 判为损坏并在导入时删除整个嵌套模块，修改后必须重新导入并核对实际层级。
 - Item 与 Actor 的 `modules.*.parameters` 共用 `ModuleJsonConfigurator` 严格契约；删除或改名可配置字段后必须同步现行 JSON，并运行“FlatWorld/内容配置/校验全部本体内容”，禁止等到具体实例生成时才发现漂移。
 - 运行时生成模块参数时，`Vector2/Vector3` 必须显式写成 `x/y/z` 的 `JObject`；禁止 `JToken.FromObject(UnityEngine.Vector*)`，否则 Json.NET 会遍历 `normalized` 等计算属性并形成自引用。
-- JSON 定义实体的战利品以 `LootPrefabName` 稳定 ID 为权威；Prefab 不再保存冗余 `LootPrefab` 对象引用，避免资源重建后残留旧 FileID 并触发 PPtr 类型转换错误。
+- JSON 定义实体的死亡战利品由顶层 `lootTableId` 引用全局 `GameConfig/LootTables/loot-tables.json`；表内 `itemId` 是稳定 ItemDefinition ID，运行时才展开为 `LootPrefabName`，禁止再内联 `Data.LootTable` 或保存 `LootPrefab` 对象引用。
 - Manifest 是唯一发现入口；包的最终 `shellPrefab` 必须与声明一致。
 - JSON 通用 Item Shell 的 SpriteRenderer 必须使用 `SpriteSortPoint.Pivot`；运行时换图也要重新写入该值，透明排序锚点以 Sprite 导入 Pivot 为唯一权威。
 - `GameRes.CreateItemData`、群系生成与生产模块只接受 Manifest 中存在的 JSON 物品 ID；缺失定义必须直接报错，禁止回退到同名 Prefab。`sourcePrefab` 只用于编辑器迁移定位，不得加入运行时依赖。

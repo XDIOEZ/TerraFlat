@@ -53,6 +53,12 @@ public static class ItemDefinitionCatalogLoader
             throw new ArgumentNullException(nameof(gameRes));
 
         List<ItemDefinitionDto> dtos = LoadBuiltInDefinitions();
+        if (dtos.Any(dto => !string.IsNullOrWhiteSpace(dto.LootTableId)) && gameRes.LootTables.Count == 0)
+        {
+            foreach (RuntimeLootTable lootTable in LootTableCatalogLoader.LoadBuiltIn())
+                gameRes.RegisterLootTable(lootTable);
+        }
+        ValidateLootTableItemIds(gameRes, dtos);
         var definitions = new List<RuntimeItemDefinition>(dtos.Count);
 
         // 先完整构建，避免失败时只注册了一半目录。
@@ -166,6 +172,7 @@ public static class ItemDefinitionCatalogLoader
         try
         {
             dtos = ResolveLoadedPackages(loadedPackages);
+            ValidateLootTableItemIds(gameRes, dtos);
         }
         catch (Exception exception)
         {
@@ -456,6 +463,37 @@ public static class ItemDefinitionCatalogLoader
         }
 
         return definitions;
+    }
+
+    /// <summary>校验所有被本体物品引用的表只会掉落已注册的具体 ItemDefinition ID。</summary>
+    private static void ValidateLootTableItemIds(
+        GameRes gameRes,
+        IReadOnlyCollection<ItemDefinitionDto> definitions)
+    {
+        var concreteItemIds = new HashSet<string>(
+            definitions
+                .Where(definition => definition != null && !definition.Abstract)
+                .Select(definition => definition.Id?.Trim())
+                .Where(id => !string.IsNullOrWhiteSpace(id)),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (string tableId in definitions
+                     .Select(definition => definition?.LootTableId?.Trim())
+                     .Where(id => !string.IsNullOrWhiteSpace(id))
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!gameRes.TryGetLootTable(tableId, out RuntimeLootTable table))
+                throw new InvalidDataException($"物品定义引用了不存在的战利品表：{tableId}");
+
+            foreach (RuntimeLootTableEntry entry in table.Entries)
+            {
+                if (!concreteItemIds.Contains(entry.ItemId))
+                {
+                    throw new InvalidDataException(
+                        $"战利品表 {table.Id} 引用了不存在或抽象的 ItemDefinition：{entry.ItemId}");
+                }
+            }
+        }
     }
 
     private static JObject CreateCombinedCatalog(IEnumerable<JObject> roots)
@@ -755,6 +793,13 @@ public static class ItemDefinitionCatalogLoader
         if (string.IsNullOrWhiteSpace(shellId))
             throw new InvalidDataException($"物品 {id} 缺少 shellPrefab");
 
+        RuntimeLootTable lootTable = null;
+        if (!string.IsNullOrWhiteSpace(dto.LootTableId) &&
+            !gameRes.TryGetLootTable(dto.LootTableId, out lootTable))
+        {
+            throw new InvalidDataException($"物品 {id} 引用了不存在的战利品表：{dto.LootTableId}");
+        }
+
         GameObject shell;
         if (preloadedShells != null)
         {
@@ -788,6 +833,7 @@ public static class ItemDefinitionCatalogLoader
         template.ModuleDataDic = new Dictionary<string, ModuleData>(StringComparer.Ordinal);
         var moduleParameters = new Dictionary<string, string>(StringComparer.Ordinal);
         var modulePrefabIds = new Dictionary<string, string>(StringComparer.Ordinal);
+        bool lootTableBound = false;
         foreach (KeyValuePair<string, ItemModuleDefinitionDto> pair in dto.Modules ?? new())
         {
             string moduleName = pair.Key?.Trim();
@@ -813,11 +859,35 @@ public static class ItemDefinitionCatalogLoader
             if (moduleDto.Enabled.HasValue)
                 moduleData.isRunning = moduleDto.Enabled.Value;
             template.ModuleDataDic.Add(moduleName, moduleData);
-            moduleParameters.Add(moduleName, moduleDto.Parameters?.ToString(Formatting.None));
+
+            JObject parameters = moduleDto.Parameters == null
+                ? null
+                : (JObject)moduleDto.Parameters.DeepClone();
+            if (lootTable != null &&
+                string.Equals(moduleId, "Module_DamageReciver", StringComparison.OrdinalIgnoreCase))
+            {
+                if (lootTableBound)
+                    throw new InvalidDataException($"物品 {id} 包含多个死亡掉落接收器，无法绑定战利品表 {lootTable.Id}");
+                parameters = BindLootTableParameters(parameters, lootTable, id);
+                lootTableBound = true;
+            }
+
+            moduleParameters.Add(moduleName, parameters?.ToString(Formatting.None));
             modulePrefabIds.Add(moduleName, moduleId);
         }
 
-        AddAutomaticHealthModule(gameRes, shell, dto.Health, id, template, moduleParameters, modulePrefabIds);
+        AddAutomaticHealthModule(
+            gameRes,
+            shell,
+            dto.Health,
+            lootTable,
+            id,
+            template,
+            moduleParameters,
+            modulePrefabIds);
+        lootTableBound |= lootTable != null && dto.Health?.HasHp == true;
+        if (lootTable != null && !lootTableBound)
+            throw new InvalidDataException($"物品 {id} 引用了战利品表 {lootTable.Id}，但没有 DamageReceiver");
 
         // Actor 由 AnimatorController 驱动 SpriteRenderer，永远不再解析 Sprite 子资源地址。
         Sprite sprite = isActor
@@ -834,6 +904,7 @@ public static class ItemDefinitionCatalogLoader
             template,
             dto.Visual,
             dto.Health,
+            lootTable?.Id,
             sprite,
             moduleParameters,
             modulePrefabIds,
@@ -843,7 +914,15 @@ public static class ItemDefinitionCatalogLoader
             isActor);
     }
 
-    private static void AddAutomaticHealthModule(GameRes gameRes, GameObject shell, ItemHealthDefinitionDto health, string itemId, ItemData template, Dictionary<string, string> moduleParameters, Dictionary<string, string> modulePrefabIds)
+    private static void AddAutomaticHealthModule(
+        GameRes gameRes,
+        GameObject shell,
+        ItemHealthDefinitionDto health,
+        RuntimeLootTable lootTable,
+        string itemId,
+        ItemData template,
+        Dictionary<string, string> moduleParameters,
+        Dictionary<string, string> modulePrefabIds)
     {
         if (health == null || !health.HasHp) return;
 
@@ -883,6 +962,9 @@ public static class ItemDefinitionCatalogLoader
                 }
             }
         };
+        if (lootTable != null)
+            ((JObject)parameters["Data"])["LootTable"] = lootTable.CreateDamageReceiverEntries();
+
         if (health.ModuleLocalPosition.HasValue)
         {
             parameters["$transform"] = new JObject
@@ -907,6 +989,38 @@ public static class ItemDefinitionCatalogLoader
             parameters["$collider2D"] = colliderJson;
         }
         moduleParameters.Add(moduleName, parameters.ToString(Formatting.None));
+    }
+
+    /// <summary>把表引用展开到显式 DamageReceiver 参数，并拒绝两套掉落来源并存。</summary>
+    private static JObject BindLootTableParameters(
+        JObject parameters,
+        RuntimeLootTable lootTable,
+        string itemId)
+    {
+        parameters ??= new JObject();
+        JObject data;
+        if (parameters["Data"] == null)
+        {
+            data = new JObject();
+            parameters["Data"] = data;
+        }
+        else if (parameters["Data"] is JObject configuredData)
+        {
+            data = configuredData;
+        }
+        else
+        {
+            throw new InvalidDataException($"物品 {itemId} 的 DamageReceiver.Data 必须是对象");
+        }
+
+        if (data.Property("LootTable", StringComparison.OrdinalIgnoreCase) != null)
+        {
+            throw new InvalidDataException(
+                $"物品 {itemId} 同时声明 lootTableId 和内联 LootTable；请只保留 ID 引用");
+        }
+
+        data["LootTable"] = lootTable.CreateDamageReceiverEntries();
+        return parameters;
     }
 
     /// <summary>按物品 JSON 契约显式序列化 Vector2，避免 Json.NET 遍历 Unity 计算属性。</summary>
