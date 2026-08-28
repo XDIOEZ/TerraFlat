@@ -2,10 +2,16 @@
 using MemoryPack;
 using UnityEngine;
 
+/// <summary>
+/// 水体地块数据；海洋水深由高度层统一换算，河流仍使用水文系统提供的独立深度。
+/// 海平面内的归一化高度采用平方曲线，使近岸到深海的高低差更明显。
+/// </summary>
 [System.Serializable]
 [MemoryPackable]
 public partial class TileData_Water : TileData
 {
+    private const float SeaLevel = 0.5f;
+
     public float deepValue = 0f;
     public float salt = 0;
     public override void Initialize_Env(EnvironmentLayers layers, int x, int y)
@@ -16,10 +22,13 @@ public partial class TileData_Water : TileData
         deepValue = CalculateDepthFromHeight(layers.Height[x, y]);
     }
 
+    /// <summary>将海平面内的高度平方后反算水深，保持岸线位置并扩大海底深度差。</summary>
     public static float CalculateDepthFromHeight(float height)
     {
-        return (0.5f - height) / 0.5f;
+        float normalizedHeight = Mathf.Clamp01(height / SeaLevel);
+        return 1f - normalizedHeight * normalizedHeight;
     }
+
     /// <summary>
     /// 重写ToString方法，返回水地块的详细信息（中文格式）
     /// </summary>
