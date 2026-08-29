@@ -306,6 +306,26 @@ public static class RuntimeUIPrefabBuilder
         Debug.Log("[Runtime UI] 已固化区块流送性能设置 Prefab 与入口按钮。");
     }
 
+    /// <summary>只重建自动保存设置页，避免触控布局调整重写其它设置 Prefab。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Auto Save Settings UI")]
+    public static void RebuildAutoSaveSettingsUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Runtime UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        Directory.CreateDirectory(SettingsPanelsRoot);
+        SaveNewPrefab(
+            SettingsPanelsRoot + RuntimeUIPrefabKeys.AutoSaveSettings + ".prefab",
+            BuildAutoSaveSettings);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Runtime UI] 已固化移动端可触控的自动保存设置 Prefab。");
+    }
+
     /// <summary>只重建主菜单设置窗口，便于单独调整显示、画质和语言的占位布局。</summary>
     [MenuItem("FlatWorld/UI/Rebuild Main Menu Settings UI")]
     public static void RebuildMainMenuSettingsUI()
@@ -1864,26 +1884,29 @@ public static class RuntimeUIPrefabBuilder
         CreateSettingsHeader(content, "自动保存");
         CreateSettingsHint(content, "自动保存只在游戏世界中按现实时间运行，设置会立即保存。", 48f);
 
-        GameObject modeRow = CreateRow("保存模式", content, 52f);
+        GameObject modeRow = CreateRow("保存模式", content, 72f);
         CreateRowLabel(modeRow.transform, "保存模式", 130f);
         TMP_Dropdown dropdown = CreateDropdown("自动保存间隔下拉列表", modeRow.transform);
-        dropdown.gameObject.AddComponent<LayoutElement>().preferredWidth = 402f;
+        ConfigureTouchSettingsDropdown(dropdown, 402f);
 
-        GameObject inputRow = CreateRow("自定义间隔", content, 52f);
+        GameObject inputRow = CreateRow("自定义间隔", content, 72f);
         CreateRowLabel(inputRow.transform, "间隔（分钟）", 130f);
         TMP_InputField input = CreateInputField("自动保存间隔输入框", inputRow.transform, "输入 1–1440");
         input.contentType = TMP_InputField.ContentType.IntegerNumber;
-        input.gameObject.AddComponent<LayoutElement>().preferredWidth = 340f;
+        LayoutElement inputLayout = input.gameObject.AddComponent<LayoutElement>();
+        inputLayout.preferredWidth = 340f;
+        inputLayout.preferredHeight = 64f;
         TextMeshProUGUI range = CreateText("范围提示", inputRow.transform, "1–1440", 15f, Muted);
         range.alignment = TextAlignmentOptions.MidlineRight;
         range.gameObject.AddComponent<LayoutElement>().preferredWidth = 62f;
 
         TextMeshProUGUI status = CreateText("状态文本", content, "当前设置：每 10 分钟自动保存。", 16f, Teal);
-        status.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
+        status.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
 
         Transform footer = CreateFooter(content);
-        CreateSettingsButton("取消按钮", footer, "取消", 104f, 42f, false);
-        CreateSettingsButton("应用按钮", footer, "应用", 116f, 42f, true);
+        footer.GetComponent<LayoutElement>().preferredHeight = 76f;
+        SetButtonLabelSize(CreateSettingsButton("取消按钮", footer, "取消", 132f, 60f, false), 18f);
+        SetButtonLabelSize(CreateSettingsButton("应用按钮", footer, "应用", 144f, 60f, true), 18f);
         return root;
     }
 
@@ -3564,6 +3587,20 @@ public static class RuntimeUIPrefabBuilder
         dropdown.itemText = itemLabel;
         template.SetActive(false);
         return dropdown;
+    }
+
+    /// <summary>把设置页下拉框扩为移动端稳定触发的尺寸，避免在滚动页中把点按误判为拖动。</summary>
+    private static void ConfigureTouchSettingsDropdown(TMP_Dropdown dropdown, float preferredWidth)
+    {
+        LayoutElement rootLayout = dropdown.gameObject.AddComponent<LayoutElement>();
+        rootLayout.preferredWidth = preferredWidth;
+        rootLayout.preferredHeight = 64f;
+        dropdown.captionText.fontSize = 20f;
+        dropdown.itemText.fontSize = 19f;
+
+        Transform item = dropdown.itemText.transform.parent;
+        item.GetComponent<LayoutElement>().preferredHeight = 60f;
+        dropdown.template.sizeDelta = new Vector2(0f, 360f);
     }
 
     private static void CreateDifficultyOption(Transform parent, GameDifficultyDefinition definition, bool selected)
