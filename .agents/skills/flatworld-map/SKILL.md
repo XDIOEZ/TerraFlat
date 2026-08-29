@@ -25,6 +25,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 生成保持固定种子、稳定 BiomeId/顺序和统一噪声、气候、水文规则。
 - 修改算法时考虑生成签名、旧存档、联机指纹和 Wrapped 坐标。
 - 雪山地表固定使用纯白 `Tile_Snow`，禁止按随机噪声混入雪地变体；若未来恢复变体，只能按温度区间确定。
+- 萝卜聚落由 `surface.forest.radish` 与 `surface.grassland.radish` 两条独立规则控制；全局调整时必须同步审计两条，`PatchChance` 控制聚落数量，`SpawnChance` 与 `PatchRadius` 控制聚落内部密度。
 - 洞穴入口联动 `flatworld-dimension`，可走性联动 `flatworld-navigation`，差量联动 `flatworld-data-save`。
 - 地块可提供环境动作与被动效果定义，但共享 `TileBlockBehaviour` 只保存规则；玩家长按、Tick、环境倍率等实例状态必须留在角色侧运行器。
 
