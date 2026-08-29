@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier:
   profileId: surface.default
-  generationSignature: 31
+  generationSignature: 32
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -33,10 +33,6 @@ MonoBehaviour:
     Value: 5
   - Id: terrain.iceTileId
     Value: 9
-  - Id: terrain.snowVariant2TileId
-    Value: 10
-  - Id: terrain.snowVariant3TileId
-    Value: 11
   - Id: terrain.seaLevel
     Value: 0.5
   - Id: terrain.beachLevel

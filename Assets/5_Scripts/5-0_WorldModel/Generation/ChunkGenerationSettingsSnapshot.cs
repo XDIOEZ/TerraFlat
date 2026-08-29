@@ -169,8 +169,6 @@ namespace FlatWorld.WorldModel
             StoneTileId = GetInt(numbers, "terrain.stoneTileId", GroundTileId);
             SnowTileId = GetInt(numbers, "terrain.snowTileId", GroundTileId);
             IceTileId = GetInt(numbers, "terrain.iceTileId", SnowTileId);
-            SnowVariant2TileId = GetInt(numbers, "terrain.snowVariant2TileId", SnowTileId);
-            SnowVariant3TileId = GetInt(numbers, "terrain.snowVariant3TileId", SnowTileId);
             CaveFloorTileId = GetInt(numbers, "cave.floorTileId", StoneTileId);
             CaveWallTileId = GetInt(numbers, "cave.wallTileId", StoneTileId);
             SeaLevel = Clamp01(GetDouble(numbers, "terrain.seaLevel", 0.30d));
@@ -441,8 +439,6 @@ namespace FlatWorld.WorldModel
         public int StoneTileId { get; }
         public int SnowTileId { get; }
         public int IceTileId { get; }
-        public int SnowVariant2TileId { get; }
-        public int SnowVariant3TileId { get; }
         public int CaveFloorTileId { get; }
         public int CaveWallTileId { get; }
         /// <summary>高度低于这个数时生成海洋。</summary>

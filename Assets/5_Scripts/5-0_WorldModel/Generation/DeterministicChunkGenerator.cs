@@ -12,7 +12,7 @@ namespace FlatWorld.WorldModel
     public sealed class DeterministicChunkGenerator : IChunkPureGenerator
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 31;
+        public const int CurrentGenerationSignature = 32;
 
         private readonly LegacyHydrologyKernel legacyHydrologyKernel = new();
         private readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<GeneratedHydrologyMap>>
@@ -414,16 +414,8 @@ namespace FlatWorld.WorldModel
                 }
                 else
                 {
-                    double snowVariant = Hash01(
-                        request.WorldSeed,
-                        worldX,
-                        worldY,
-                        0x9e3779b9u);
-                    groundTileId = snowVariant < 0.33d
-                        ? settings.SnowVariant2TileId
-                        : snowVariant < 0.66d
-                            ? settings.SnowVariant3TileId
-                            : settings.SnowTileId;
+                    // 雪山地表统一使用纯白雪地；视觉差异不能再由随机哈希决定。
+                    groundTileId = settings.SnowTileId;
                 }
                 flags = TerrainCellFlags.Walkable;
                 navigationCost = (short)Math.Min(short.MaxValue, navigationCost + 1);
