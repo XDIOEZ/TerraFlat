@@ -22,6 +22,7 @@ Shader "FlatWorld/2D/Grass Sway Lit"
         _GrassSecondaryStrength("次级摆动", Range(0, 1)) = 0.35
         _GrassSpriteHeight("草地精灵高度", Range(0.01, 2)) = 0.5
         _GrassTileAnchor("Tile 锚点 Y", Range(0, 1)) = 0.5
+        [Toggle] _GrassUseObjectRoot("使用对象根部弯曲", Float) = 0
         _GrassDirection("风向", Vector) = (1, 0, 0, 0)
     }
 
@@ -48,11 +49,19 @@ Shader "FlatWorld/2D/Grass Sway Lit"
         float _GrassSecondaryStrength;
         float _GrassSpriteHeight;
         float _GrassTileAnchor;
+        float _GrassUseObjectRoot;
         float4 _GrassDirection;
+        float _GlobalWindStrength;
 
-        // 根据精灵在 Tile 单元内的高度计算弯曲权重，让根部保持稳定。
+        // Tilemap 按单元锚点取局部高度，独立 Sprite 则直接以对象原点固定根部。
         float GrassBendWeight(float3 positionOS)
         {
+            if (_GrassUseObjectRoot > 0.5)
+            {
+                float objectHeight = saturate(positionOS.y / max(_GrassSpriteHeight, 0.001));
+                return pow(objectHeight, max(_GrassBendPower, 0.01));
+            }
+
             float localY = frac(positionOS.y) - _GrassTileAnchor;
             if (localY > 0.5)
                 localY -= 1.0;
@@ -67,7 +76,8 @@ Shader "FlatWorld/2D/Grass Sway Lit"
         // 在 GPU 顶点阶段计算连续风场，所有草地 Tilemap 共用一份材质参数。
         float3 ApplyGrassSway(float3 positionOS)
         {
-            if (_GrassSwayEnabled < 0.5 || _GrassSwayAmplitude <= 0.0001)
+            float windStrength = saturate(_GlobalWindStrength);
+            if (_GrassSwayEnabled < 0.5 || _GrassSwayAmplitude <= 0.0001 || windStrength <= 0.0001)
                 return positionOS;
 
             float2 direction = _GrassDirection.xy;
@@ -82,6 +92,7 @@ Shader "FlatWorld/2D/Grass Sway Lit"
                 time * 0.63 + phase * 1.71 + worldPosition.y * _GrassSwayFrequency * 0.73);
             float sway = (primary + secondary * _GrassSecondaryStrength)
                 * _GrassSwayAmplitude
+                * windStrength
                 * GrassBendWeight(positionOS);
 
             positionOS.xy += direction * sway;

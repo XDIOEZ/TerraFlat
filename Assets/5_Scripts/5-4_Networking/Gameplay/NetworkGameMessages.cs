@@ -150,6 +150,7 @@ namespace FlatWorld.Networking.Gameplay
         public WeatherType Weather;
         public WeatherPhase Phase;
         public float Intensity;
+        public float WindStrength;
         public float PhaseStartedTotalTime;
         public float PhaseEndTotalTime;
         public float NextWeatherEventTotalTime;

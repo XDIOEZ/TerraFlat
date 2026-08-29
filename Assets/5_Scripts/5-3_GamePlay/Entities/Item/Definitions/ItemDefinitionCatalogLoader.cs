@@ -296,13 +296,56 @@ public static class ItemDefinitionCatalogLoader
         }
 #endif
 
+        string[] materialAddresses = dtos
+            .Where(dto => !dto.Abstract && !string.IsNullOrWhiteSpace(dto.Visual?.MaterialAddress))
+            .Select(dto => dto.Visual.MaterialAddress.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var materials = new Dictionary<string, Material>(StringComparer.OrdinalIgnoreCase);
+#if UNITY_EDITOR
+        foreach (string address in materialAddresses)
+        {
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(address);
+            if (material == null)
+            {
+                failed?.Invoke(new InvalidDataException($"找不到物品共享材质：{address}"));
+                yield break;
+            }
+
+            materials[address] = material;
+        }
+#else
+        var materialHandles = new Dictionary<string, AsyncOperationHandle<Material>>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (string address in materialAddresses)
+            materialHandles[address] = Addressables.LoadAssetAsync<Material>(address);
+
+        while (materialHandles.Values.Any(handle => !handle.IsDone))
+            yield return null;
+
+        foreach (KeyValuePair<string, AsyncOperationHandle<Material>> pair in materialHandles)
+        {
+            if (pair.Value.Status != AsyncOperationStatus.Succeeded || pair.Value.Result == null)
+            {
+                failed?.Invoke(new InvalidDataException($"找不到物品材质 Addressable：{pair.Key}"));
+                yield break;
+            }
+
+            materials[pair.Key] = pair.Value.Result;
+        }
+#endif
+
         var definitions = new List<RuntimeItemDefinition>(dtos.Count);
         try
         {
             foreach (ItemDefinitionDto dto in dtos)
             {
                 if (!dto.Abstract)
-                    definitions.Add(BuildRuntimeDefinition(gameRes, dto, sprites));
+                    definitions.Add(BuildRuntimeDefinition(
+                        gameRes,
+                        dto,
+                        sprites,
+                        preloadedMaterials: materials));
             }
             foreach (RuntimeItemDefinition definition in definitions)
                 gameRes.RegisterItemDefinition(definition);
@@ -784,7 +827,8 @@ public static class ItemDefinitionCatalogLoader
         IReadOnlyDictionary<string, Sprite> preloadedSprites = null,
         IReadOnlyDictionary<string, RuntimeAnimatorController> preloadedControllers = null,
         bool isActor = false,
-        IReadOnlyDictionary<string, GameObject> preloadedShells = null)
+        IReadOnlyDictionary<string, GameObject> preloadedShells = null,
+        IReadOnlyDictionary<string, Material> preloadedMaterials = null)
     {
         string id = dto.Id?.Trim();
         string shellId = dto.ShellPrefab?.Trim();
@@ -893,6 +937,8 @@ public static class ItemDefinitionCatalogLoader
         Sprite sprite = isActor
             ? null
             : ResolveSprite(dto.Visual?.SpriteAddress, id, preloadedSprites);
+        Material material = ResolveMaterial(dto.Visual?.MaterialAddress, id, preloadedMaterials) ??
+                            ResolveShellRendererMaterial(shell, dto.Visual?.RendererPath);
         RuntimeAnimatorController animatorController = ResolveAnimatorController(
             dto.Visual?.AnimatorControllerAddress,
             id,
@@ -911,7 +957,8 @@ public static class ItemDefinitionCatalogLoader
             dto.LabelKey,
             dto.DescriptionKey,
             animatorController,
-            isActor);
+            isActor,
+            material);
     }
 
     private static void AddAutomaticHealthModule(
@@ -1155,6 +1202,58 @@ public static class ItemDefinitionCatalogLoader
         if (handle.Status != AsyncOperationStatus.Succeeded || sprite == null)
             throw new InvalidDataException($"物品 {itemId} 找不到 Sprite Addressable：{address}");
         return sprite;
+    }
+
+    /// <summary>解析物品世界渲染器使用的共享材质。</summary>
+    private static Material ResolveMaterial(
+        string address,
+        string itemId,
+        IReadOnlyDictionary<string, Material> preloadedMaterials)
+    {
+        if (string.IsNullOrWhiteSpace(address))
+            return null;
+
+        string key = address.Trim();
+        if (preloadedMaterials != null)
+        {
+            if (preloadedMaterials.TryGetValue(key, out Material preloaded) && preloaded != null)
+                return preloaded;
+            throw new InvalidDataException($"物品 {itemId} 找不到预加载材质：{key}");
+        }
+
+#if UNITY_EDITOR
+        if (key.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+        {
+            Material editorMaterial = AssetDatabase.LoadAssetAtPath<Material>(key);
+            if (editorMaterial != null)
+                return editorMaterial;
+            throw new InvalidDataException($"物品 {itemId} 找不到共享材质：{key}");
+        }
+#endif
+        AsyncOperationHandle<Material> handle = Addressables.LoadAssetAsync<Material>(key);
+        Material material = handle.WaitForCompletion();
+        if (handle.Status != AsyncOperationStatus.Succeeded || material == null)
+            throw new InvalidDataException($"物品 {itemId} 找不到材质 Addressable：{address}");
+        return material;
+    }
+
+    /// <summary>记录共享外壳的默认材质，确保对象池切换定义时不会串用上一个物品的材质。</summary>
+    private static Material ResolveShellRendererMaterial(GameObject shell, string rendererPath)
+    {
+        if (shell == null)
+            return null;
+
+        SpriteRenderer renderer = null;
+        if (!string.IsNullOrWhiteSpace(rendererPath))
+        {
+            Transform target = shell.transform.Find(rendererPath);
+            renderer = target != null ? target.GetComponent<SpriteRenderer>() : null;
+        }
+
+        renderer ??= shell.GetComponentsInChildren<SpriteRenderer>(true)
+            .FirstOrDefault(candidate => candidate.sprite != null);
+        renderer ??= shell.GetComponentInChildren<SpriteRenderer>(true);
+        return renderer != null ? renderer.sharedMaterial : null;
     }
 
     /// <summary>解析动画控制器；Actor 与普通物品共用同一套视觉应用管线。</summary>

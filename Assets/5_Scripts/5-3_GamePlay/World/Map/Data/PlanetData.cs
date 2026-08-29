@@ -32,6 +32,7 @@ public partial class PlanetData
     public const float DefaultNoiseScale = 0.01f;
     public const float MinNoiseScale = 0f;
     public const float MaxNoiseScale = 100f;
+    public const float DefaultWindStrength = 0.35f;
 
     /// <summary>判断世界坐标缩放是否可用于程序生成。</summary>
     public static bool IsValidNoiseScale(float value)
@@ -79,6 +80,9 @@ public partial class PlanetData
 
     [LabelText("天气强度"), Range(0f, 1f), PropertyTooltip("当前天气的强度，0表示无影响，1表示满强度。")]
     public float WeatherIntensity = 0f;
+
+    [LabelText("全局风力"), Range(0f, 1f), PropertyTooltip("星球当前的全局风力，统一控制草木摆动幅度。")]
+    public float WindStrength = DefaultWindStrength;
 
     [LabelText("天气数据版本"), PropertyTooltip("天气事件运行时数据版本。")]
     public int WeatherDataVersion = 0;

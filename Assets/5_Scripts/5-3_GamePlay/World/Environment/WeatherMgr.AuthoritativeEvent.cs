@@ -10,6 +10,7 @@ public readonly struct WeatherStateSnapshot
     public readonly WeatherType Weather;
     public readonly WeatherPhase Phase;
     public readonly float Intensity;
+    public readonly float WindStrength;
     public readonly float PhaseStartedTotalTime;
     public readonly float PhaseEndTotalTime;
     public readonly float NextWeatherEventTotalTime;
@@ -23,6 +24,7 @@ public readonly struct WeatherStateSnapshot
         Weather = planetData != null ? planetData.CurrentWeather : WeatherType.Clear;
         Phase = planetData != null ? planetData.WeatherPhase : WeatherPhase.Clear;
         Intensity = planetData != null ? Mathf.Clamp01(planetData.WeatherIntensity) : 0f;
+        WindStrength = planetData != null ? Mathf.Clamp01(planetData.WindStrength) : 0f;
         PhaseStartedTotalTime = planetData?.WeatherPhaseStartedTotalTime ?? 0f;
         PhaseEndTotalTime = planetData?.WeatherPhaseEndTotalTime ?? 0f;
         NextWeatherEventTotalTime = planetData?.NextWeatherEventTotalTime ?? 0f;
@@ -48,6 +50,7 @@ public partial class WeatherMgr
     private WeatherType _lastFeedbackWeather = (WeatherType)(-1);
     private WeatherPhase _lastFeedbackPhase = (WeatherPhase)(-1);
     private float _lastFeedbackIntensity = -1f;
+    private float _lastFeedbackWindStrength = -1f;
 
 #endregion
 
@@ -266,6 +269,7 @@ public partial class WeatherMgr
         WeatherType weather,
         WeatherPhase phase,
         float intensity,
+        float windStrength,
         float phaseStartedTotalTime,
         float phaseEndTotalTime,
         float nextWeatherEventTotalTime,
@@ -287,6 +291,7 @@ public partial class WeatherMgr
         planetData.CurrentWeather = weather;
         planetData.WeatherPhase = phase;
         planetData.WeatherIntensity = Mathf.Clamp01(intensity);
+        planetData.WindStrength = Mathf.Clamp01(windStrength);
         planetData.WeatherPhaseStartedTotalTime = phaseStartedTotalTime;
         planetData.WeatherPhaseEndTotalTime = phaseEndTotalTime;
         planetData.NextWeatherEventTotalTime = nextWeatherEventTotalTime;
@@ -325,9 +330,11 @@ public partial class WeatherMgr
         WeatherType weather = GetCurrentWeather();
         WeatherPhase phase = GetCurrentWeatherPhase();
         float intensity = GetCurrentWeatherIntensity();
+        float windStrength = GetCurrentWindStrength();
         if (weather == _lastFeedbackWeather &&
             phase == _lastFeedbackPhase &&
-            Mathf.Approximately(intensity, _lastFeedbackIntensity))
+            Mathf.Approximately(intensity, _lastFeedbackIntensity) &&
+            Mathf.Approximately(windStrength, _lastFeedbackWindStrength))
         {
             return;
         }
@@ -339,9 +346,11 @@ public partial class WeatherMgr
     {
         RefreshRainEffect();
         RefreshRainAudio();
+        RefreshWindFeedback();
         _lastFeedbackWeather = GetCurrentWeather();
         _lastFeedbackPhase = GetCurrentWeatherPhase();
         _lastFeedbackIntensity = GetCurrentWeatherIntensity();
+        _lastFeedbackWindStrength = GetCurrentWindStrength();
     }
 
     private void RefreshRainAudio()
@@ -366,6 +375,8 @@ public partial class WeatherMgr
 
     private void DeactivateWeatherFeedback()
     {
+        DeactivateWindFeedback();
+
         if (_rainEffectInstance != null)
             _rainEffectInstance.SetActive(false);
 
@@ -377,6 +388,7 @@ public partial class WeatherMgr
         _lastFeedbackWeather = (WeatherType)(-1);
         _lastFeedbackPhase = (WeatherPhase)(-1);
         _lastFeedbackIntensity = -1f;
+        _lastFeedbackWindStrength = -1f;
     }
 
 #endregion

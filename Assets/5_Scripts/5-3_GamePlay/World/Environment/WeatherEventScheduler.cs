@@ -348,6 +348,7 @@ public static class WeatherEventScheduler
     private static void NormalizeWeatherValues(PlanetData planetData)
     {
         planetData.WeatherIntensity = Mathf.Clamp01(planetData.WeatherIntensity);
+        planetData.WindStrength = Mathf.Clamp01(planetData.WindStrength);
         planetData.RainTemperatureOffset = Mathf.Min(0f, planetData.RainTemperatureOffset);
         planetData.CloudyTemperatureOffset = Mathf.Min(0f, planetData.CloudyTemperatureOffset);
         planetData.StormTemperatureOffset = Mathf.Min(

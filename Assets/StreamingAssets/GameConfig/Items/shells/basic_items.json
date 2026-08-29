@@ -5580,6 +5580,7 @@
       "tags": ["35"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/TX Plant.png[GrassLand_6]",
+        "materialAddress": "Assets/Shaders/Material/Bush-Sway-Lit.mat",
         "rendererPath": "Render",
         "collider": {
           "type": "BoxCollider2D",

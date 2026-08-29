@@ -92,6 +92,7 @@ public static class FlatWorldContentValidator
     private const string ItemRootAssetPath = "Assets/StreamingAssets/GameConfig/Items";
     private const string ItemManifestAssetPath = ItemRootAssetPath + "/item-manifest.json";
     private const string ItemSpriteAddressableLabel = "ItemSprite";
+    private const string ItemMaterialAddressableLabel = "ItemMaterial";
     private const string ActorRootAssetPath = "Assets/StreamingAssets/GameConfig/Actors";
     private const string ActorManifestAssetPath = ActorRootAssetPath + "/actor-manifest.json";
     private const string RecipeRootAssetPath = "Assets/StreamingAssets/GameConfig/Recipes";
@@ -735,6 +736,7 @@ public static class FlatWorldContentValidator
         }
 
         ValidateItemSpriteAddressable(report, definition, assetPath, field);
+        ValidateItemMaterialAddressable(report, definition, assetPath, field);
 
         if (string.IsNullOrWhiteSpace(definition.GameName))
         {
@@ -882,6 +884,71 @@ public static class FlatWorldContentValidator
                 assetPath,
                 field + ".visual.spriteAddress",
                 $"Sprite Addressables 条目缺少 '{ItemSpriteAddressableLabel}' 标签。",
+                settings);
+        }
+    }
+
+    /// <summary>校验物品共享材质可解析，并进入 Addressables 构建目录。</summary>
+    private static void ValidateItemMaterialAddressable(
+        FlatWorldContentValidationReport report,
+        ItemDefinitionDto definition,
+        string assetPath,
+        string field)
+    {
+        string materialAddress = definition.Visual?.MaterialAddress?.Trim();
+        if (string.IsNullOrWhiteSpace(materialAddress))
+            return;
+
+        Material material = AssetDatabase.LoadAssetAtPath<Material>(materialAddress);
+        if (material == null)
+        {
+            AddError(
+                report,
+                "FWC-ITEMJSON-020",
+                assetPath,
+                field + ".visual.materialAddress",
+                $"共享材质 '{materialAddress}' 不存在或不是 Material。",
+                null);
+            return;
+        }
+
+        string materialAssetPath = AssetDatabase.GetAssetPath(material).Replace('\\', '/');
+        string guid = AssetDatabase.AssetPathToGUID(materialAssetPath);
+        AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
+        AddressableAssetEntry entry = string.IsNullOrWhiteSpace(guid) || settings == null
+            ? null
+            : settings.FindAssetEntry(guid);
+        if (entry == null)
+        {
+            AddError(
+                report,
+                "FWC-ITEMJSON-021",
+                assetPath,
+                field + ".visual.materialAddress",
+                $"共享材质 '{materialAssetPath}' 未加入 Addressables。",
+                settings);
+            return;
+        }
+
+        if (!string.Equals(entry.address, materialAssetPath, StringComparison.Ordinal))
+        {
+            AddError(
+                report,
+                "FWC-ITEMJSON-022",
+                assetPath,
+                field + ".visual.materialAddress",
+                $"材质 Addressables 地址应为 '{materialAssetPath}'，实际为 '{entry.address}'。",
+                settings);
+        }
+
+        if (!entry.labels.Contains(ItemMaterialAddressableLabel))
+        {
+            AddError(
+                report,
+                "FWC-ITEMJSON-023",
+                assetPath,
+                field + ".visual.materialAddress",
+                $"材质 Addressables 条目缺少 '{ItemMaterialAddressableLabel}' 标签。",
                 settings);
         }
     }

@@ -84,6 +84,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         }
 
         planetData.WeatherIntensity = Mathf.Clamp01(planetData.WeatherIntensity);
+        planetData.WindStrength = Mathf.Clamp01(planetData.WindStrength);
         planetData.RainTemperatureOffset = Mathf.Min(0f, planetData.RainTemperatureOffset);
         planetData.CloudyTemperatureOffset = Mathf.Min(0f, planetData.CloudyTemperatureOffset);
         planetData.StormTemperatureOffset = Mathf.Min(planetData.RainTemperatureOffset, planetData.StormTemperatureOffset);
@@ -399,6 +400,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         GUILayout.Label($"当前天气: {CurrentWeather}", _labelStyle);
         GUILayout.Label($"天气阶段: {CurrentWeatherPhase}", _valueStyle);
         GUILayout.Label($"天气强度: {CurrentWeatherIntensity:F2}", _valueStyle);
+        GUILayout.Label($"全局风力: {CurrentWindStrength:F2}", _valueStyle);
         GUILayout.Label($"阶段剩余: {CurrentWeatherRemainingTime:F1} 秒", _valueStyle);
         GUILayout.Label($"天气修正: {CurrentWeatherTemperatureOffset:F2} ℃", _valueStyle);
 
@@ -429,6 +431,12 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
         if (planetData != null)
         {
+            GUILayout.Space(8f);
+            GUILayout.Label("风力", _labelStyle);
+            float nextWindStrength = GUILayout.HorizontalSlider(planetData.WindStrength, 0f, 1f);
+            if (!Mathf.Approximately(nextWindStrength, planetData.WindStrength))
+                SetWindStrength(nextWindStrength);
+
             GUILayout.Space(8f);
             GUILayout.Label("雨强度", _labelStyle);
             float nextIntensity = GUILayout.HorizontalSlider(planetData.WeatherIntensity, 0f, 1f);

@@ -128,6 +128,10 @@ public sealed class ItemVisualDefinitionDto
     [JsonProperty("spriteAddress")]
     public string SpriteAddress;
 
+    /// <summary>世界 SpriteRenderer 使用的共享材质 Addressable 地址。</summary>
+    [JsonProperty("materialAddress", NullValueHandling = NullValueHandling.Ignore)]
+    public string MaterialAddress;
+
     /// <summary>MOD AssetBundle 名；与 spriteAsset 配合覆盖本体 Sprite。</summary>
     [JsonProperty("spriteBundle", NullValueHandling = NullValueHandling.Ignore)]
     public string SpriteBundle;
@@ -287,6 +291,7 @@ public sealed class RuntimeItemDefinition
     public string LootTableId { get; }
     public string RendererPath => Visual?.RendererPath;
     public Sprite Sprite { get; }
+    public Material Material { get; }
     public RuntimeAnimatorController AnimatorController { get; }
     public bool IsActor { get; }
 
@@ -320,7 +325,8 @@ public sealed class RuntimeItemDefinition
         string labelKey,
         string descriptionKey,
         RuntimeAnimatorController animatorController = null,
-        bool isActor = false)
+        bool isActor = false,
+        Material material = null)
     {
         Id = id;
         ShellPrefabId = shellPrefabId;
@@ -330,6 +336,7 @@ public sealed class RuntimeItemDefinition
         Health = health;
         LootTableId = lootTableId;
         Sprite = sprite;
+        Material = material;
         AnimatorController = animatorController;
         IsActor = isActor;
         LabelKey = string.IsNullOrWhiteSpace(labelKey)

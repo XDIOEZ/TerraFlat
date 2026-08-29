@@ -26,6 +26,7 @@ public static class ItemDefinitionMigrationTool
     private const string PackageRootPath = CatalogRootPath + "/shells";
     private const string RequestPath = "Temp/FlatWorldItemDefinitionMigration.request";
     private const string ItemSpriteLabel = "ItemSprite";
+    private const string ItemMaterialLabel = "ItemMaterial";
 
     /// <summary>物品定义文件按玩法类别命名，避免文件名绑定某个具体物品或运行时外壳。</summary>
     private static readonly ItemPackageCategory[] PackageCategories =
@@ -253,12 +254,12 @@ public static class ItemDefinitionMigrationTool
         ValidateCatalogInternal(ItemDefinitionCatalogLoader.LoadBuiltInDefinitions(), true);
     }
 
-    /// <summary>把当前物品目录引用的全部 Sprite 主资源同步到 Addressables 稳定地址。</summary>
-    [MenuItem("FlatWorld/物品JSON迁移/同步物品 Sprite Addressables")]
-    public static void SynchronizeSpriteAddressables()
+    /// <summary>把当前物品目录引用的 Sprite 与共享材质同步到 Addressables 稳定地址。</summary>
+    [MenuItem("FlatWorld/物品JSON迁移/同步物品视觉 Addressables")]
+    public static void SynchronizeVisualAddressables()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode)
-            throw new InvalidOperationException("请先退出 PlayMode 再同步物品 Sprite Addressables。");
+            throw new InvalidOperationException("请先退出 PlayMode 再同步物品视觉 Addressables。");
 
         AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
         if (settings == null)
@@ -266,8 +267,10 @@ public static class ItemDefinitionMigrationTool
 
         int createdCount = 0;
         int updatedCount = 0;
+        int materialCount = 0;
+        List<ItemDefinitionDto> definitions = ItemDefinitionCatalogLoader.LoadBuiltInDefinitions();
         var processedGuids = new HashSet<string>(StringComparer.Ordinal);
-        foreach (ItemDefinitionDto definition in ItemDefinitionCatalogLoader.LoadBuiltInDefinitions())
+        foreach (ItemDefinitionDto definition in definitions)
         {
             string spriteAddress = definition?.Visual?.SpriteAddress?.Trim();
             if (definition == null || definition.Abstract || string.IsNullOrWhiteSpace(spriteAddress))
@@ -304,11 +307,46 @@ public static class ItemDefinitionMigrationTool
                 updatedCount++;
         }
 
+        foreach (ItemDefinitionDto definition in definitions)
+        {
+            string materialAddress = definition?.Visual?.MaterialAddress?.Trim();
+            if (definition == null || definition.Abstract || string.IsNullOrWhiteSpace(materialAddress))
+                continue;
+
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(materialAddress);
+            if (material == null)
+                throw new InvalidDataException($"物品 {definition.Id} 的共享材质无法解析：{materialAddress}");
+
+            string assetPath = AssetDatabase.GetAssetPath(material).Replace('\\', '/');
+            string guid = AssetDatabase.AssetPathToGUID(assetPath);
+            if (string.IsNullOrWhiteSpace(guid))
+                throw new InvalidDataException($"物品 {definition.Id} 的共享材质不是项目资源：{materialAddress}");
+            if (!processedGuids.Add(guid))
+                continue;
+
+            AddressableAssetEntry entry = settings.FindAssetEntry(guid);
+            bool entryCreated = entry == null;
+            if (entryCreated)
+            {
+                entry = settings.CreateOrMoveEntry(guid, settings.DefaultGroup, false, false);
+                createdCount++;
+            }
+
+            bool entryChanged = !string.Equals(entry.address, assetPath, StringComparison.Ordinal) ||
+                                !entry.labels.Contains(ItemMaterialLabel);
+            entry.address = assetPath;
+            entry.SetLabel(ItemMaterialLabel, true, true, false);
+            if (entryChanged && !entryCreated)
+                updatedCount++;
+            materialCount++;
+        }
+
         settings.SetDirty(AddressableAssetSettings.ModificationEvent.BatchModification, null, true);
         AssetDatabase.SaveAssetIfDirty(settings.DefaultGroup);
         AssetDatabase.SaveAssetIfDirty(settings);
         Debug.Log(
-            $"[ItemDefinitionMigration] 已同步物品 Sprite Addressables：新增 {createdCount}，更新 {updatedCount}。");
+            $"[ItemDefinitionMigration] 已同步物品视觉 Addressables：新增 {createdCount}，" +
+            $"更新 {updatedCount}，共享材质 {materialCount}。");
     }
 
     #endregion

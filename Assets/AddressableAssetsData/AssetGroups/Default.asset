@@ -878,6 +878,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7559be8c1187b03488b747c429c8c897
+    m_Address: Assets/Shaders/Material/Bush-Sway-Lit.mat
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemMaterial
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 76afaf461fddb7e4c8771cb15aea456f
     m_Address: Assets/2_Prefabs/Gameplay/Items/Common/Stick.prefab
     m_ReadOnly: 0
