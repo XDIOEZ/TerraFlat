@@ -264,7 +264,7 @@ MonoBehaviour:
     ItemId: AppleTree
     ItemCount: 1
     SpawnChance: 0.0015
-    SpawnChanceMultiplier: 2
+    SpawnChanceMultiplier: 4
     BiomeMask: 32
     MinTemperature: 0
     MaxTemperature: 1
