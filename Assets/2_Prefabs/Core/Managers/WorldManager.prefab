@@ -443,7 +443,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   toggleEnvironmentInfoInputKey: 96
-  setClearWeatherInputKey: 97
+  setClearWeatherInputKey: 99
   setRainWeatherInputKey: 100
   createOnFirstToggle: 1
   cleanupDuplicateDisplaysOnToggle: 1

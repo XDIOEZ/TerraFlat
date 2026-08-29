@@ -4,7 +4,6 @@
     "references": [
         "FlatWorld.Audio",
         "FlatWorld.Dialogue",
-        "FlatWorld.Gameplay.Debug",
         "FlatWorld.Guide",
         "FlatWorld.Networking.Core",
         "Effect",

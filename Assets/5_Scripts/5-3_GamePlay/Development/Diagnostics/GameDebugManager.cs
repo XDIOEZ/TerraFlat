@@ -7,7 +7,8 @@ public class GameDebugManager : MonoBehaviour
 
     [Header("调试快捷键")]
     [SerializeField] private Key toggleEnvironmentInfoInputKey = Key.F3;
-    [SerializeField] private Key setClearWeatherInputKey = Key.F4;
+    // F4 由 PlayerAdminController 的管理员物品操作独占，天气调试固定使用 F6。
+    [SerializeField] private Key setClearWeatherInputKey = Key.F6;
     // 强制下雨调试键避开 F5 资源热重载快捷键。
     [SerializeField] private Key setRainWeatherInputKey = Key.F7;
 
