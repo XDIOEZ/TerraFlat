@@ -31,6 +31,7 @@ Shader "Game/2D/Interaction-Outline"
 
         HLSLINCLUDE
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/Core2D.hlsl"
 
             struct OutlineAttributes
             {
@@ -69,10 +70,16 @@ Shader "Game/2D/Interaction-Outline"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
+                #ifdef UNITY_INSTANCING_ENABLED
+                    input.positionOS = UnityFlipSprite(input.positionOS, unity_SpriteFlip);
+                #endif
                 output.positionCS = TransformObjectToHClip(input.positionOS);
                 output.uv = TRANSFORM_TEX(input.uv, _MainTex);
                 output.localY = input.positionOS.y;
                 output.color = input.color * _Color * _RendererColor * _OutlineColor;
+                #ifdef UNITY_INSTANCING_ENABLED
+                    output.color *= unity_SpriteColor;
+                #endif
                 return output;
             }
 

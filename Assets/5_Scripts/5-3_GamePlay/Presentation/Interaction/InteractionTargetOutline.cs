@@ -11,6 +11,7 @@ public sealed class InteractionTargetOutline : MonoBehaviour
 {
     private const float DefaultThicknessPixels = 2f;
 
+    private static readonly int MainTextureProperty = Shader.PropertyToID("_MainTex");
     private static readonly int BodyClipProperty = Shader.PropertyToID("_BodyClip");
     private static readonly int BodyMinVProperty = Shader.PropertyToID("_BodyMinV");
     private static readonly int BodyMaxVProperty = Shader.PropertyToID("_BodyMaxV");
@@ -218,6 +219,9 @@ public sealed class InteractionTargetOutline : MonoBehaviour
         source.GetPropertyBlock(sourcePropertyBlock);
 
         outlinePropertyBlock.Clear();
+        // 写入裁剪参数会替换代理 Renderer 的属性块，必须同时恢复 Sprite 的逐渲染器贴图。
+        if (outline.sprite != null)
+            outlinePropertyBlock.SetTexture(MainTextureProperty, outline.sprite.texture);
         outlinePropertyBlock.SetFloat(BodyClipProperty, sourcePropertyBlock.GetFloat(BodyClipProperty));
         outlinePropertyBlock.SetFloat(BodyMinVProperty, sourcePropertyBlock.GetFloat(BodyMinVProperty));
         outlinePropertyBlock.SetFloat(BodyMaxVProperty, sourcePropertyBlock.GetFloat(BodyMaxVProperty));
