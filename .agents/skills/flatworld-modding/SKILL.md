@@ -23,6 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的 MOD 扫描、manifest、�
 - 玩家创建模板可在任意 `definitionFiles` JSON 的 `playerCreationTemplates` 数组中声明；裸 ID 自动归属当前 MOD 命名空间，继承使用 `parent`，修改本体或其他已注册模板使用 `patchFiles` 的 `target: playerTemplate:<id>`，切换默认模板使用 `target: playerTemplateCatalog` 的 `defaultProfileId` Patch；玩家创建配置不写入存档。
 - `actors` 可继承本体/同批 MOD Actor，深度覆盖 modules；Bundle 外观用 sprite/animator 成对字段。
 - Actor Lua 必须使用 `Mod_LuaBehaviour`，运行时强制所属 modId 并校验 scriptPath 不越界；AssetBundle 不承载新 C# 代码。
+- xLua 托管程序集名固定为 `XLua.Runtime`，原生 P/Invoke 库名保持 `xlua`；调整托管名时必须同步程序集限定反射字符串与 `Gen/link.xml`，避免在不区分大小写的平台与 `xlua.dll` 冲突。
 - ModSetHash/存档记录或加入世界握手变化联动 Networking 与 Data；具体定义联动对应领域 Skill。
 
 ## 验证

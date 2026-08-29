@@ -48,7 +48,7 @@ internal static class CodexPrefabAndXluaProbeRunner
                 });
             }
 
-            Type luaType = Type.GetType("XLua.LuaDLL.Lua, Xlua", true);
+            Type luaType = Type.GetType("XLua.LuaDLL.Lua, XLua.Runtime", true);
             MethodInfo versionMethod = luaType.GetMethod("xlua_get_lib_version", BindingFlags.Static | BindingFlags.Public);
             if (versionMethod == null)
                 throw new MissingMethodException(luaType.FullName, "xlua_get_lib_version");
