@@ -285,7 +285,7 @@ MonoBehaviour:
     DistributionMode: 1
     PatchSpacing: 24
     PatchRadius: 2.5
-    PatchChance: 0.042
+    PatchChance: 0.0126
     BiomeMask: 32
     MinTemperature: 0
     MaxTemperature: 1
