@@ -349,6 +349,9 @@ namespace FlatWorld.Editor.ContentWorkshop
 
         private void DrawIngredientCanvas()
         {
+            if (!recipeDraft.IsHeating)
+                EditorGUILayout.HelpBox("普通合成只比较材料种类与总量，清单中的摆放位置不参与配方匹配。", MessageType.Info);
+
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             EditorGUILayout.BeginVertical(GUILayout.Width(IngredientSlotSize * 3f + 14f));
@@ -369,7 +372,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             eraseMode = GUILayout.Toggle(eraseMode, "橡皮擦", "Button", GUILayout.Width(82f));
-            if (GUILayout.Button("清空九宫格", GUILayout.Width(105f)))
+            if (GUILayout.Button(recipeDraft.IsHeating ? "清空九宫格" : "清空材料", GUILayout.Width(105f)))
             {
                 foreach (WorkshopIngredientDraft ingredient in recipeDraft.Ingredients)
                     ingredient.Clear();
@@ -505,14 +508,10 @@ namespace FlatWorld.Editor.ContentWorkshop
 
             if (!heating)
             {
-                recipeDraft.Ordered = EditorGUILayout.Popup(
-                    "摆放规则",
-                    recipeDraft.Ordered ? 0 : 1,
-                    new[] { "形状必须一致", "材料齐全即可" }) == 0;
-                GUI.enabled = recipeDraft.Ordered;
-                recipeDraft.AllowMirror = EditorGUILayout.Toggle("允许左右镜像", recipeDraft.AllowMirror);
-                recipeDraft.AutoTrim = EditorGUILayout.Toggle("自动裁掉外围空格", recipeDraft.AutoTrim);
-                GUI.enabled = true;
+                recipeDraft.Ordered = false;
+                recipeDraft.AllowMirror = false;
+                recipeDraft.AutoTrim = true;
+                EditorGUILayout.LabelField("匹配方式", "材料种类与总量（位置无关）");
             }
             else
             {
@@ -634,9 +633,9 @@ namespace FlatWorld.Editor.ContentWorkshop
             int tagIngredients = recipeDraft.Ingredients.Count(ingredient => ingredient.IsTag);
             int outputs = recipeDraft.Outputs.Count(output => !string.IsNullOrWhiteSpace(output.ItemId));
             return $"{ingredients} 个材料槽（{tagIngredients} 个标签材料） · {outputs} 个产物 · " +
-                   (recipeDraft.IsHeating
-                       ? $"温度 {recipeDraft.Temperature:0}–{recipeDraft.MaxTemperature:0}°C"
-                       : recipeDraft.Ordered ? "固定形状" : "无序合成");
+                    (recipeDraft.IsHeating
+                        ? $"温度 {recipeDraft.Temperature:0}–{recipeDraft.MaxTemperature:0}°C"
+                        : "材料位置无关");
         }
 
         private void SaveRecipe()

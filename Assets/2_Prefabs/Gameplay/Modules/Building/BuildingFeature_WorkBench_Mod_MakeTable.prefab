@@ -68,24 +68,6 @@ MonoBehaviour:
       - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
-      - CanAcceptTags: []
-        SlotMaxVolume: 0
-        Index: 0
-      - CanAcceptTags: []
-        SlotMaxVolume: 0
-        Index: 0
-      - CanAcceptTags: []
-        SlotMaxVolume: 0
-        Index: 0
-      - CanAcceptTags: []
-        SlotMaxVolume: 0
-        Index: 0
-      - CanAcceptTags: []
-        SlotMaxVolume: 0
-        Index: 0
-      - CanAcceptTags: []
-        SlotMaxVolume: 0
-        Index: 0
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}

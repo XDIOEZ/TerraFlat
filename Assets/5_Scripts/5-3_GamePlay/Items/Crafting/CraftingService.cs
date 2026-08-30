@@ -16,7 +16,17 @@ public static class CraftingService
         Inventory outputInventory,
         CraftingCapabilities capabilities)
     {
-        return Prepare(inputInventory, outputInventory, capabilities, false, out _);
+        return Prepare(inputInventory, outputInventory, capabilities, null, false, out _);
+    }
+
+    /// <summary>预检玩家明确选择的配方，不再回退到目录中的首个匹配项。</summary>
+    public static CraftingResult PreviewRecipe(
+        Inventory inputInventory,
+        Inventory outputInventory,
+        CraftingCapabilities capabilities,
+        RuntimeRecipe recipe)
+    {
+        return Prepare(inputInventory, outputInventory, capabilities, recipe, false, out _);
     }
 
     public static CraftingResult Craft(
@@ -24,6 +34,35 @@ public static class CraftingService
         Inventory outputInventory,
         CraftingCapabilities capabilities,
         Player actor = null)
+    {
+        return CraftInternal(inputInventory, outputInventory, capabilities, null, actor);
+    }
+
+    /// <summary>原子提交玩家在候选列表中明确选择的配方。</summary>
+    public static CraftingResult CraftRecipe(
+        Inventory inputInventory,
+        Inventory outputInventory,
+        CraftingCapabilities capabilities,
+        RuntimeRecipe recipe,
+        Player actor = null)
+    {
+        return CraftInternal(inputInventory, outputInventory, capabilities, recipe, actor);
+    }
+
+    /// <summary>只创建配方产物数据，供候选列表和输出槽展示，不检查库存空间。</summary>
+    public static CraftingResult DescribeRecipe(RuntimeRecipe recipe)
+    {
+        return TryPrepareOutputs(recipe, out List<ItemData> outputs, out CraftingResult failure)
+            ? CraftingResult.Succeeded(recipe, outputs)
+            : failure;
+    }
+
+    private static CraftingResult CraftInternal(
+        Inventory inputInventory,
+        Inventory outputInventory,
+        CraftingCapabilities capabilities,
+        RuntimeRecipe recipe,
+        Player actor)
     {
         if (inputInventory == null || outputInventory == null)
             return CraftingResult.Failed(CraftingFailureReason.InvalidInventory, "输入或输出库存为空");
@@ -36,6 +75,7 @@ public static class CraftingService
                 inputInventory,
                 outputInventory,
                 capabilities,
+                recipe,
                 true,
                 out CraftingTransaction transaction);
             if (!prepared.Success)
@@ -72,6 +112,7 @@ public static class CraftingService
         Inventory inputInventory,
         Inventory outputInventory,
         CraftingCapabilities capabilities,
+        RuntimeRecipe requestedRecipe,
         bool createTransaction,
         out CraftingTransaction transaction)
     {
@@ -79,8 +120,19 @@ public static class CraftingService
         if (inputInventory?.Data?.itemSlots == null || outputInventory?.Data?.itemSlots == null)
             return CraftingResult.Failed(CraftingFailureReason.InvalidInventory, "输入或输出库存未初始化");
 
-        if (!CraftingRecipeMatcher.TryMatch(inputInventory, capabilities, out CraftingRecipeMatch match, out CraftingResult matchFailure))
-            return matchFailure;
+        CraftingRecipeMatch match;
+        if (requestedRecipe == null)
+        {
+            if (!CraftingRecipeMatcher.TryMatch(inputInventory, capabilities, out match, out CraftingResult matchFailure))
+                return matchFailure;
+        }
+        else if (!CraftingRecipeMatcher.TryMatchRecipe(inputInventory, requestedRecipe, capabilities, out match))
+        {
+            return CraftingResult.Failed(
+                CraftingFailureReason.RecipeNotFound,
+                "当前材料不再满足所选配方",
+                requestedRecipe);
+        }
 
         if (!TryPrepareOutputs(match.Recipe, out List<ItemData> outputs, out CraftingResult outputFailure))
             return outputFailure;

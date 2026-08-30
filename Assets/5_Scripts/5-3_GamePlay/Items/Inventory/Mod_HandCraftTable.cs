@@ -18,14 +18,14 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     [SerializeReference]
     public List<string> RawData = new List<string>();
-    [Tooltip("2x2输入容器（输入_1~输入_4）")]
+    [Tooltip("手工制作输入容器（输入_1~输入_2）")]
     public Inventory inputInventory;
-    [Tooltip("输出容器（仅输出_1）")]
+    [Tooltip("手工制作输出容器（输出_1~输出_2）")]
     public Inventory outputInventory;
     public BasePanel basePanel;
     public GameObject InventoryPanel_Prefab;
     [Tooltip("手工合成台UI预制体名，Inspector未手动拖拽时会按此名称从GameRes回填")]
-    public string InventoryPanelPrefabName = "UI_WorkBench";
+    public string InventoryPanelPrefabName = "UI_HandCraftTable";
 
     [Header("交互组件")]
     [Tooltip("合成按钮")]
@@ -41,11 +41,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     [Tooltip("每次合成最少需要点击次数")]
     public int minClickCount = 1;
 
-    private int _currentClickProgress;
-    private CraftingOutputPreview _outputPreview;
-    private string _lastCraftPreviewMessage;
-    private bool? _lastCanCraft;
-    private TextMeshProUGUI _craftingHintText;
+    private CraftingStationController _craftingController;
     private GameController _inputController;
     private InputAction _toggleAction;
     private Action<InputAction.CallbackContext> _toggleCallback;
@@ -53,21 +49,15 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     {
         RecipeType = RecipeType.Crafting,
         InputSlotLimit = InputSlotCount,
-        MaxRecipeWidth = 2,
-        MaxRecipeHeight = 2,
-        AllowCompactGrid = false,
-        AllowOutputIntoInput = true
+        AllowOutputIntoInput = false
     };
 
     private int RequiredClickCount => Mathf.Max(minClickCount, baseClickCount - (Mathf.Max(1, workbenchLevel) - 1) * clickReductionPerLevel);
 
-    private const int InputSlotCount = 4;
-    private const int OutputSlotCount = 1;
-    private const string CraftingHintName = "FWUI_FooterHint";
+    private const int InputSlotCount = 2;
+    private const int OutputSlotCount = 2;
     private const string InputInventorySaveKey = "handcraft.input";
     private const string OutputInventorySaveKey = "handcraft.output";
-    private const string WaitingHint = "放入材料 · 核对配方 · 开始制作";
-    private const string ReadyHint = "配方已匹配 · 点击开始制作";
     [Header("调试")]
     [Tooltip("是否输出手工合成详细调试日志")]
     public bool EnableCraftDebug = true;
@@ -245,7 +235,8 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     public override void Unload()
     {
-        UnbindCraftPreview();
+        _craftingController?.Dispose();
+        _craftingController = null;
         inputInventory?.UnbindSlotDataEvents();
         outputInventory?.UnbindSlotDataEvents();
 
@@ -261,15 +252,6 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         ReleasePanelInputLock();
     }
 
-    /// <summary>对象销毁时解除制作预览监听；保存过程不得改变运行时事件线路。</summary>
-    private void UnbindCraftPreview()
-    {
-        if (inputInventory?.Data != null)
-            inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
-        if (outputInventory?.Data != null)
-            outputInventory.Data.Event_OnDataChanged -= OnOutputSlotChanged;
-    }
-
     private void EnsureInventoryPanelPrefabAssigned()
     {
         if (InventoryPanel_Prefab != null)
@@ -279,25 +261,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             return;
 
         if (!string.IsNullOrWhiteSpace(InventoryPanelPrefabName))
-        {
             InventoryPanel_Prefab = GameRes.Instance.GetPrefab(InventoryPanelPrefabName);
-            if (InventoryPanel_Prefab != null)
-                return;
-        }
-
-        string[] fallbackPrefabNames = { "UI_WorkBench", "UI_HandCraftTable", "UI_MakeTable" };
-        foreach (string prefabName in fallbackPrefabNames)
-        {
-            if (string.Equals(prefabName, InventoryPanelPrefabName, System.StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            InventoryPanel_Prefab = GameRes.Instance.GetPrefab(prefabName);
-            if (InventoryPanel_Prefab != null)
-            {
-                InventoryPanelPrefabName = prefabName;
-                return;
-            }
-        }
     }
 
     public void InitData()
@@ -309,15 +273,11 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     public void InitUI()
     {
-        _currentClickProgress = 0;
-        _lastCanCraft = null;
-
         BindInputSlots();
-        BindOutputSlot();
+        BindOutputSlots();
 
         inputInventory.SyncData();
         outputInventory.SyncData();
-        BindCraftPreview();
 
         workButton = basePanel.GetButton("合成按钮");
         if (workButton == null)
@@ -326,9 +286,15 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
             return;
         }
 
-        workButton.onClick.RemoveListener(OnCraftButtonClick);
-        workButton.onClick.AddListener(OnCraftButtonClick);
-        _craftingHintText = basePanel.GetText(CraftingHintName);
+        _craftingController?.Dispose();
+        _craftingController = new CraftingStationController(
+            basePanel,
+            inputInventory,
+            outputInventory,
+            Capabilities,
+            () => RequiredClickCount,
+            ResolveCraftActor,
+            LogCraftDebug);
         LogCraftDebug(
             $"线路绑定完成：输入槽={inputInventory.Data.itemSlots.Count}，" +
             $"输出槽={outputInventory.Data.itemSlots.Count}，按钮={workButton.name}，" +
@@ -336,107 +302,6 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
         inputInventory.RefreshUI();
         outputInventory.RefreshUI();
-        RefreshCraftPreview();
-    }
-
-    private void OnCraftButtonClick()
-    {
-        LogCraftDebug($"收到合成按钮点击：interactable={workButton != null && workButton.interactable}");
-        if (!TryGetCraftPreview(true, out _))
-        {
-            LogCraftDebug("按钮回调已进入，但提交前预检失败");
-            ResetCraftProgress();
-            return;
-        }
-
-        _currentClickProgress++;
-        int requiredClickCount = RequiredClickCount;
-        _currentClickProgress = Mathf.Min(_currentClickProgress, requiredClickCount);
-        _outputPreview?.SetProgress(_currentClickProgress / (float)requiredClickCount);
-        LogCraftDebug($"点击进度：{_currentClickProgress}/{requiredClickCount}，等级={workbenchLevel}");
-
-        if (_currentClickProgress < requiredClickCount)
-            return;
-
-        bool craftResult = Craft(inputInventory, outputInventory);
-        ResetCraftProgress();
-        RefreshCraftPreview();
-        if (craftResult)
-            _outputPreview?.PlaySuccess();
-
-        if (!craftResult)
-        {
-            LogCraftDebug("合成失败，已重置点击进度");
-        }
-    }
-
-    private void BindCraftPreview()
-    {
-        if (outputInventory.itemSlot_UI.Count == 0)
-        {
-            LogCraftDebug("预览线路绑定中止：输出 UI 槽位数量为 0");
-            return;
-        }
-
-        _outputPreview = CraftingOutputPreview.Attach(basePanel, outputInventory.itemSlot_UI[0]);
-        inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
-        inputInventory.Data.Event_OnDataChanged += OnInputSlotChanged;
-        outputInventory.Data.Event_OnDataChanged -= OnOutputSlotChanged;
-        outputInventory.Data.Event_OnDataChanged += OnOutputSlotChanged;
-        LogCraftDebug($"预览线路已连接：预览组件={(_outputPreview != null ? "有效" : "为空")}");
-    }
-
-    private void OnInputSlotChanged(ItemSlot changedSlot)
-    {
-        LogCraftDebug(
-            $"收到输入变化事件：槽={changedSlot?.Index.ToString() ?? "null"}，" +
-            $"当前={CraftingPreviewDiagnostics.DescribeInventory(inputInventory, InputSlotCount)}");
-        ResetCraftProgress();
-        RefreshCraftPreview();
-    }
-
-    private void OnOutputSlotChanged(ItemSlot changedSlot)
-    {
-        LogCraftDebug(
-            $"收到输出变化事件：槽={changedSlot?.Index.ToString() ?? "null"}，" +
-            $"当前={CraftingPreviewDiagnostics.DescribeInventory(outputInventory, OutputSlotCount)}");
-        RefreshCraftPreview();
-    }
-
-    private void ResetCraftProgress()
-    {
-        _currentClickProgress = 0;
-        _outputPreview?.SetProgress(0f);
-    }
-
-    private void RefreshCraftPreview()
-    {
-        bool canCraft = TryGetCraftPreview(false, out ItemData previewItem);
-        RefreshCraftingPrompt(canCraft);
-
-        if (_outputPreview == null)
-            return;
-
-        if (canCraft)
-            _outputPreview.Show(previewItem, _currentClickProgress / (float)RequiredClickCount);
-        else
-            _outputPreview.Clear();
-    }
-
-    /// <summary>同步配方匹配提示与制作按钮可用状态。</summary>
-    private void RefreshCraftingPrompt(bool canCraft)
-    {
-        if (workButton != null)
-            workButton.interactable = canCraft;
-
-        if (_craftingHintText != null)
-            _craftingHintText.text = canCraft ? ReadyHint : WaitingHint;
-
-        if (_lastCanCraft != canCraft)
-        {
-            LogCraftDebug($"预览状态切换：canCraft={canCraft}，按钮可交互={workButton != null && workButton.interactable}");
-            _lastCanCraft = canCraft;
-        }
     }
 
     private void BindInputSlots()
@@ -457,19 +322,21 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         }
     }
 
-    private void BindOutputSlot()
+    private void BindOutputSlots()
     {
         outputInventory.itemSlot_UI.Clear();
+        for (int i = 1; i <= OutputSlotCount; i++)
+        {
+            Button button = basePanel.GetButton($"输出_{i}");
+            if (button == null)
+                throw new System.NullReferenceException($"[Mod_HandCraftTable] 未找到输出按钮 输出_{i}");
 
-        var button = basePanel.GetButton("输出_1");
-        if (button == null)
-            throw new System.NullReferenceException("[Mod_HandCraftTable] 未找到输出按钮 输出_1");
+            ItemSlot_UI slotUI = button.GetComponent<ItemSlot_UI>();
+            if (slotUI == null)
+                throw new System.NullReferenceException($"[Mod_HandCraftTable] 输出_{i} 缺少 ItemSlot_UI");
 
-        var slotUI = button.GetComponent<ItemSlot_UI>();
-        if (slotUI == null)
-            throw new System.NullReferenceException("[Mod_HandCraftTable] 输出_1 缺少 ItemSlot_UI");
-
-        outputInventory.BindSlotUI(slotUI, 0);
+            outputInventory.BindSlotUI(slotUI, i - 1);
+        }
     }
 
     private Inventory GetPlayerHandInventory()
@@ -505,11 +372,11 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         if (outputInventory == null || outputInventory.Data == null)
             throw new System.NullReferenceException("[Mod_HandCraftTable] outputInventory 未配置");
 
-        if (inputInventory.Data.itemSlots.Count < InputSlotCount)
-            throw new System.InvalidOperationException($"[Mod_HandCraftTable] 输入槽位不足，至少需要 {InputSlotCount} 个");
+        if (inputInventory.Data.itemSlots.Count != InputSlotCount)
+            throw new System.InvalidOperationException($"[Mod_HandCraftTable] 输入槽位必须为 {InputSlotCount} 个");
 
-        if (outputInventory.Data.itemSlots.Count < OutputSlotCount)
-            throw new System.InvalidOperationException("[Mod_HandCraftTable] 输出槽位不足，至少需要 1 个");
+        if (outputInventory.Data.itemSlots.Count != OutputSlotCount)
+            throw new System.InvalidOperationException($"[Mod_HandCraftTable] 输出槽位必须为 {OutputSlotCount} 个");
     }
 
     public Inventory GetDefaultTargetInventory()
@@ -551,49 +418,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
 #endregion
 
-#region 合成逻辑
-
-    public bool Craft(Inventory inputInv, Inventory outputInv)
-    {
-        LogCraftDebug(
-            $"开始制作事务：输入={CraftingPreviewDiagnostics.DescribeInventory(inputInv, InputSlotCount)}，" +
-            $"输出={CraftingPreviewDiagnostics.DescribeInventory(outputInv, OutputSlotCount)}");
-        CraftingResult result = CraftingService.Craft(inputInv, outputInv, Capabilities, ResolveCraftActor());
-        if (!result.Success)
-        {
-            LogCraftDebug($"制作事务失败：{result.FailureReason} / {result.Message}");
-        }
-        else
-        {
-            ItemData output = result.PrimaryOutput;
-            LogCraftDebug(
-                $"制作事务成功：配方={result.Recipe?.Id ?? "<空>"}，" +
-                $"主产物={output?.IDName ?? "<空>"} x{output?.Stack?.Amount ?? 0f}");
-        }
-        return result.Success;
-    }
-
-    /// <summary>预检制作结果；只有用户主动操作失败才输出未匹配诊断。</summary>
-    private bool TryGetCraftPreview(bool isUserInitiated, out ItemData previewItem)
-    {
-        CraftingResult result = CraftingService.Preview(inputInventory, outputInventory, Capabilities);
-        string previousFailure = _lastCraftPreviewMessage;
-        CraftingPreviewDiagnostics.ReportFailure(
-            nameof(Mod_HandCraftTable),
-            inputInventory,
-            result,
-            isUserInitiated,
-            ref _lastCraftPreviewMessage,
-            Capabilities);
-        if (result.Success && !string.IsNullOrEmpty(previousFailure))
-        {
-            LogCraftDebug(
-                $"预览匹配恢复：配方={result.Recipe?.Id ?? "<空>"}，" +
-                $"主产物={result.PrimaryOutput?.IDName ?? "<空>"}");
-        }
-        previewItem = result.PrimaryOutput;
-        return result.Success;
-    }
+    #region 合成日志
 
     private Player ResolveCraftActor()
     {

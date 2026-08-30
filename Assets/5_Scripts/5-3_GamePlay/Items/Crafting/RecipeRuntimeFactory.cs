@@ -43,6 +43,11 @@ public static class RecipeRuntimeFactory
         string id = NormalizeRequired(dto.Id, "配方 id");
         RecipeType recipeType = ParseRecipeType(dto.RecipeType, id);
         RecipeInputRule inputRule = ParseInputRule(dto.InputRule, id);
+        if (recipeType == RecipeType.Crafting && inputRule != RecipeInputRule.无规则合成)
+            throw new InvalidDataException($"配方 {id} 是普通合成，inputRule 必须为 unordered");
+        if (recipeType == RecipeType.Crafting && dto.AllowMirror)
+            throw new InvalidDataException($"配方 {id} 是无位置合成，allowMirror 必须为 false");
+
         List<RecipeIngredientDto> sourceInputs = dto.Inputs ?? new List<RecipeIngredientDto>();
         int inputCount = sourceInputs.Count == 0 ? Math.Max(0, dto.GridWidth * dto.GridHeight) : sourceInputs.Max(input => input.Slot) + 1;
         int width = dto.GridWidth > 0 ? dto.GridWidth : InferGridWidth(inputCount);

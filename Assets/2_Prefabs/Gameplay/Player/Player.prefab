@@ -1110,12 +1110,6 @@ MonoBehaviour:
       - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
-      - CanAcceptTags: []
-        SlotMaxVolume: 0
-        Index: 0
-      - CanAcceptTags: []
-        SlotMaxVolume: 0
-        Index: 0
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
@@ -1141,6 +1135,9 @@ MonoBehaviour:
       - CanAcceptTags: []
         SlotMaxVolume: 0
         Index: 0
+      - CanAcceptTags: []
+        SlotMaxVolume: 0
+        Index: 0
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}
@@ -1158,7 +1155,7 @@ MonoBehaviour:
     itemSlot_UI: []
   basePanel: {fileID: 0}
   InventoryPanel_Prefab: {fileID: 2639614329428065687, guid: f548d8c788434c54db52f9aa1e5cc5ac, type: 3}
-  InventoryPanelPrefabName: UI_WorkBench
+  InventoryPanelPrefabName: UI_HandCraftTable
   workButton: {fileID: 0}
   ToggleActionName: H
   workbenchLevel: 1

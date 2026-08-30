@@ -8,7 +8,7 @@
       "inputRule": "unordered",
       "gridWidth": 2,
       "gridHeight": 2,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -60,7 +60,7 @@
       "inputRule": "unordered",
       "gridWidth": 2,
       "gridHeight": 2,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -115,7 +115,7 @@
       "inputRule": "unordered",
       "gridWidth": 2,
       "gridHeight": 2,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -170,7 +170,7 @@
       "inputRule": "unordered",
       "gridWidth": 3,
       "gridHeight": 3,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -253,7 +253,7 @@
       "inputRule": "unordered",
       "gridWidth": 2,
       "gridHeight": 2,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -308,7 +308,7 @@
       "inputRule": "unordered",
       "gridWidth": 3,
       "gridHeight": 3,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -391,7 +391,7 @@
       "inputRule": "unordered",
       "gridWidth": 2,
       "gridHeight": 2,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -439,7 +439,7 @@
       "inputRule": "unordered",
       "gridWidth": 2,
       "gridHeight": 2,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -487,7 +487,7 @@
       "inputRule": "unordered",
       "gridWidth": 3,
       "gridHeight": 3,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -570,7 +570,7 @@
       "inputRule": "unordered",
       "gridWidth": 2,
       "gridHeight": 2,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [

@@ -1782,7 +1782,8 @@ public static class InventoryPanelLayout
 {
     public const float PanelMargin = 18f;
     private const float DefaultBagWidth = 706f;
-    private const float DefaultCraftingWidth = 726f;
+    private const float DefaultCraftingWidth = 1344f;
+    private const float FullScreenCraftingThreshold = 0.65f;
 
     /// <summary>把背包放到画布左侧，并保留统一的小边距。</summary>
     public static void ApplyDefaultBagPosition(RectTransform panel)
@@ -1809,6 +1810,12 @@ public static class InventoryPanelLayout
         Canvas.ForceUpdateCanvases();
         float canvasWidth = parent.rect.width > 0f ? parent.rect.width : Screen.width;
         float panelWidth = panel.rect.width > 0f ? panel.rect.width : panel.sizeDelta.x;
+        if (!left && panelWidth >= canvasWidth * FullScreenCraftingThreshold)
+        {
+            panel.anchoredPosition = new Vector2(0f, panel.anchoredPosition.y);
+            return;
+        }
+
         float bagWidth = left ? panelWidth : DefaultBagWidth;
         float craftingWidth = left ? DefaultCraftingWidth : panelWidth;
         float pairWidth = bagWidth + PanelMargin + craftingWidth;

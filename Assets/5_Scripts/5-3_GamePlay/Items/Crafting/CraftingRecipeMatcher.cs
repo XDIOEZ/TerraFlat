@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEngine;
 
 /// <summary>
-/// 统一处理有序、无序、标签、镜像与大网格中的紧凑配方匹配。
+/// 统一处理配方匹配：普通合成只比较材料身份与总量，加热加工保留有序、镜像和网格规则。
 /// </summary>
 public static class CraftingRecipeMatcher
 {
@@ -15,6 +15,21 @@ public static class CraftingRecipeMatcher
         out CraftingResult failure)
     {
         match = null;
+        if (!TryMatchAll(inputInventory, capabilities, out IReadOnlyList<CraftingRecipeMatch> matches, out failure))
+            return false;
+
+        match = matches[0];
+        return true;
+    }
+
+    /// <summary>返回当前材料能够制作的全部配方，顺序沿用目录的稳定优先级。</summary>
+    public static bool TryMatchAll(
+        Inventory inputInventory,
+        CraftingCapabilities capabilities,
+        out IReadOnlyList<CraftingRecipeMatch> matches,
+        out CraftingResult failure)
+    {
+        matches = Array.Empty<CraftingRecipeMatch>();
         failure = null;
 
         if (inputInventory?.Data?.itemSlots == null || capabilities == null)
@@ -31,17 +46,24 @@ public static class CraftingRecipeMatcher
         }
 
         IReadOnlyList<RuntimeRecipe> recipes = GetCandidateRecipes(capabilities.RecipeType);
+        var matchedRecipes = new List<CraftingRecipeMatch>();
         bool hasSupportedRecipe = false;
         for (int recipeIndex = 0; recipeIndex < recipes.Count; recipeIndex++)
         {
             RuntimeRecipe recipe = recipes[recipeIndex];
             hasSupportedRecipe |= IsRecipeSupported(recipe, capabilities);
-            if (TryMatchRecipe(inputSlots, recipe, capabilities, out match))
-                return true;
+            if (TryMatchRecipe(inputSlots, recipe, capabilities, out CraftingRecipeMatch recipeMatch))
+                matchedRecipes.Add(recipeMatch);
+        }
+
+        if (matchedRecipes.Count > 0)
+        {
+            matches = matchedRecipes;
+            return true;
         }
 
         failure = recipes.Count > 0 && !hasSupportedRecipe
-            ? CraftingResult.Failed(CraftingFailureReason.RecipeNotSupported, "当前制作入口不支持目录中的配方尺寸")
+            ? CraftingResult.Failed(CraftingFailureReason.RecipeNotSupported, "当前制作入口不支持目录中的配方")
             : CraftingResult.Failed(CraftingFailureReason.RecipeNotFound, "当前输入没有匹配的配方");
         return false;
     }
@@ -129,6 +151,9 @@ public static class CraftingRecipeMatcher
 
     private static string DescribeRule(RuntimeRecipe recipe)
     {
+        if (recipe.inputs.recipeType == RecipeType.Crafting)
+            return "材料位置无关";
+
         return recipe.inputs.inputOrder == RecipeInputRule.规则合成 ? "有序" : "无序";
     }
 
@@ -147,6 +172,11 @@ public static class CraftingRecipeMatcher
             return false;
         if (recipe.inputs.recipeType != capabilities.RecipeType)
             return false;
+
+        // 普通合成只比较材料身份与总量，网格尺寸不再表示制作能力。
+        if (capabilities.RecipeType == RecipeType.Crafting)
+            return true;
+
         if (capabilities.MaxRecipeWidth > 0 && recipe.inputs.GridWidth > capabilities.MaxRecipeWidth)
             return false;
         if (capabilities.MaxRecipeHeight > 0 && recipe.inputs.GridHeight > capabilities.MaxRecipeHeight)
@@ -164,7 +194,8 @@ public static class CraftingRecipeMatcher
         if (!IsRecipeSupported(recipe, capabilities))
             return false;
 
-        if (recipe.inputs.inputOrder == RecipeInputRule.规则合成)
+        if (capabilities.RecipeType != RecipeType.Crafting &&
+            recipe.inputs.inputOrder == RecipeInputRule.规则合成)
         {
             return TryMatchOrdered(inputSlots, recipe, capabilities, false, out match) ||
                    recipe.enableMirrorCrafting && TryMatchOrdered(inputSlots, recipe, capabilities, true, out match);
@@ -246,11 +277,9 @@ public static class CraftingRecipeMatcher
         out CraftingRecipeMatch match)
     {
         match = null;
-        int requiredSlotCount = recipe.inputs.RowItems_List.Count(required => !CraftingIngredientMatcher.IsEmpty(required));
-        int occupiedSlotCount = inputSlots.Count(slot => slot?.itemData != null);
-        // 无规则配方只要求材料总量满足；同一种材料可以集中在一个堆叠槽中，不能强制玩家先把它拆成多个槽位。
-        // 但额外放入未声明的材料仍然要拒绝，避免误匹配后被事务消耗。
-        if (requiredSlotCount == 0 || occupiedSlotCount > requiredSlotCount)
+        // 无位置配方只要求材料总量满足；同一种材料既可以集中堆叠，也可以分散在任意输入槽。
+        // 额外放入未声明的材料仍然拒绝，避免误匹配后只消耗其中一部分材料。
+        if (!recipe.inputs.RowItems_List.Any(required => !CraftingIngredientMatcher.IsEmpty(required)))
             return false;
 
         if (!CraftingMaterialAllocator.TryAllocate(

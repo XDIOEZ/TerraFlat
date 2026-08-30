@@ -79,7 +79,7 @@ namespace FlatWorld.GameTest.InventoryCrafting
 
         [Test]
         [Category("InventoryCrafting.Core")]
-        public void Matcher_CompactMirroredTagRecipe_ReturnsExactConsumptionPlan()
+        public void Matcher_CraftingRecipe_IgnoresSlotPositionsAndReturnsConsumptionPlan()
         {
             Inventory input = CreateInventory(
                 "输入",
@@ -120,7 +120,7 @@ namespace FlatWorld.GameTest.InventoryCrafting
             bool matched = CraftingRecipeMatcher.TryMatchRecipe(input, recipe, capabilities, out CraftingRecipeMatch match);
 
             Assert.That(matched, Is.True);
-            Assert.That(match.Mirrored, Is.True);
+            Assert.That(match.Mirrored, Is.False);
             Assert.That(match.Consumptions, Has.Count.EqualTo(4));
             Assert.That(match.Consumptions[0].SlotIndex, Is.EqualTo(0));
             Assert.That(match.Consumptions[1].SlotIndex, Is.EqualTo(1));
@@ -152,6 +152,39 @@ namespace FlatWorld.GameTest.InventoryCrafting
                 out _);
 
             Assert.That(matched, Is.False);
+        }
+
+        [Test]
+        [Category("InventoryCrafting.Core")]
+        public void Matcher_PositionlessRecipe_AllowsSameMaterialAcrossSlots()
+        {
+            Inventory input = CreateInventory(
+                "输入",
+                10f,
+                CreateItem("stone", 1f),
+                CreateItem("stone", 2f));
+            RuntimeRecipe recipe = new RuntimeRecipe
+            {
+                Id = "test_positionless_split_stack",
+                inputs = new RuntimeRecipeInput
+                {
+                    GridWidth = 1,
+                    GridHeight = 1,
+                    inputOrder = RecipeInputRule.无规则合成,
+                    RowItems_List = new List<RuntimeRecipeIngredient> { Exact("stone", 3) }
+                }
+            };
+
+            bool matched = CraftingRecipeMatcher.TryMatchRecipe(
+                input,
+                recipe,
+                new CraftingCapabilities { RecipeType = RecipeType.Crafting },
+                out CraftingRecipeMatch match);
+
+            Assert.That(matched, Is.True);
+            Assert.That(match.Consumptions, Has.Count.EqualTo(2));
+            Assert.That(match.Consumptions[0].Amount, Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(match.Consumptions[1].Amount, Is.EqualTo(2f).Within(0.0001f));
         }
 
         [Test]
@@ -255,13 +288,13 @@ namespace FlatWorld.GameTest.InventoryCrafting
             };
         }
 
-        private static RuntimeRecipeIngredient Exact(string id)
+        private static RuntimeRecipeIngredient Exact(string id, int amount = 1)
         {
             return new RuntimeRecipeIngredient
             {
                 matchMode = MatchMode.ExactItem,
                 ItemName = id,
-                amount = 1
+                amount = amount
             };
         }
 

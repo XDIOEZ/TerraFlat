@@ -2019,6 +2019,22 @@ MonoBehaviour:
     m_Key: ui.text.35BC8486
     m_Metadata:
       m_Items: []
+  - m_Id: 7927087911317504
+    m_Key: ui.text.46E92DCA
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7927087949066240
+    m_Key: ui.text.90806F62
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7927087949066241
+    m_Key: ui.text.8DE18CBE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7927087949066242
+    m_Key: ui.text.2B8A9983
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

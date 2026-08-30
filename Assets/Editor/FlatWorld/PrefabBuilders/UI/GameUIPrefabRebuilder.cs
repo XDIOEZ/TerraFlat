@@ -52,8 +52,8 @@ public static class GameUIPrefabRebuilder
     {
         { InventoryPanelsRoot + "UI_Bag.prefab", new[] { "Scroll View", "Content", "关闭" } },
         { InventoryPanelsRoot + "UI_Equipment.prefab", new[] { "UI_Content", "关闭" } },
-        { CraftingRoot + "UI_HandCraftTable.prefab", new[] { "输入_1", "输入_2", "输入_3", "输入_4", "输出_1", "合成按钮", "关闭", "Progress" } },
-        { CraftingRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_9", "输出_1", "输出_2", "合成按钮", "关闭", "Progress" } },
+        { CraftingRoot + "UI_HandCraftTable.prefab", new[] { "输入_1", "输入_2", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, "合成按钮", "关闭" } },
+        { CraftingRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_3", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, "合成按钮", "关闭" } },
         { CraftingRoot + "UI_Furnace.prefab", new[] { "输入_1", "输入_2", "输入_3", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "合成按钮", "关闭" } },
         { CraftingRoot + "UI_Bonfire.prefab", new[] { "输入_1", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "合成按钮", "关闭" } },
         { CraftingRoot + "UI_FireDrill.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
@@ -108,7 +108,7 @@ public static class GameUIPrefabRebuilder
             new BuildTarget(InventoryPanelsRoot + "UI_Equipment.prefab", root => BuildScrollWindow(root, 526f, 566f, "装备", "EQUIPMENT / LOADOUT", "将装备拖入槽位以更新生存配置", 2, new Vector2(112f, 112f))),
             new BuildTarget(CraftingRoot + "UI_CompostBin.prefab", root => BuildScrollWindow(root, 646f, 468f, "堆肥箱", "COMPOST / RESOURCE CYCLE", "投入可腐物 · 等待自然转化", 5, new Vector2(88f, 88f))),
             new BuildTarget(CraftingRoot + "UI_MeatRack.prefab", root => BuildScrollWindow(root, 646f, 468f, "晾肉架", "MEAT RACK / PRESERVATION", "保持通风 · 留意加工进度", 5, new Vector2(88f, 88f))),
-            new BuildTarget(CraftingRoot + "UI_HandCraftTable.prefab", root => BuildCraftWindow(root, "手工制作", "CRAFTING / BASIC WORK", 4, false)),
+            new BuildTarget(CraftingRoot + "UI_HandCraftTable.prefab", root => BuildCraftingSelectionWindow(root, "手工制作", "CRAFTING / BASIC WORK", 2)),
             new BuildTarget(CraftingRoot + "UI_FireDrill.prefab", root => BuildCraftWindow(root, "钻木取火", "FIRECRAFT / FRICTION", 1, true)),
             new BuildTarget(CraftingRoot + "UI_FlintStrike.prefab", root => BuildCraftWindow(root, "燧石取火", "FIRECRAFT / SPARK", 1, true)),
             new BuildTarget(CraftingRoot + "UI_MakerTable.prefab", BuildMakerTable),
@@ -336,6 +336,45 @@ public static class GameUIPrefabRebuilder
             : "[Game UI] 功能列表按钮重建失败，请检查控制台。");
     }
 
+    [MenuItem("FlatWorld/UI/重构合成候选界面")]
+    public static void RebuildCraftingSelectionUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Game UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        BuildTarget[] targets =
+        {
+            new BuildTarget(
+                CraftingRoot + "UI_HandCraftTable.prefab",
+                root => BuildCraftingSelectionWindow(root, "手工制作", "CRAFTING / BASIC WORK", 2)),
+            new BuildTarget(CraftingRoot + "UI_MakerTable.prefab", BuildMakerTable)
+        };
+
+        int rebuilt = 0;
+        AssetDatabase.StartAssetEditing();
+        try
+        {
+            foreach (BuildTarget target in targets)
+            {
+                if (RebuildSinglePrefab(target))
+                    rebuilt++;
+            }
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log($"[Game UI] 合成候选界面重建完成：{rebuilt}/{targets.Length} 个 Prefab。");
+        ValidateRebuiltUI();
+    }
+
     [MenuItem("FlatWorld/UI/重建矩形进度条UI")]
     public static void RebuildRectangularProgressBars()
     {
@@ -539,34 +578,47 @@ public static class GameUIPrefabRebuilder
         EnsureCraftingOutputPreviewLayers(root.transform);
     }
 
+    /// <summary>
+    /// 构建移动端合成选择面板：左侧放大材料槽，中间滚动展示全部可制作配方，右侧显示双产物预览。
+    /// 面板按 1920×1080 参考画布的 70% 设计，边框只保留 1 像素，主要点击目标不低于 60 逻辑像素。
+    /// </summary>
+    private static void BuildCraftingSelectionWindow(GameObject root, string title, string eyebrow, int inputCount)
+    {
+        const float width = 1344f;
+        const float height = 756f;
+        const float sectionTop = 98f;
+        const float sectionHeight = 568f;
+
+        RemoveNamedSlots(root.transform, "输入_", inputCount);
+        RemoveNamedSlots(root.transform, "输出_", 2);
+        EnsureNamedSlot(root.transform, "输出_1", "输出_2");
+
+        RectTransform frame = PrepareWindow(
+            root,
+            width,
+            height,
+            title,
+            eyebrow,
+            "放入材料 · 选择配方 · 开始制作");
+        ResizeCraftingFooter(frame, width, height);
+
+        AddSection(frame, "INPUT", "输入材料", 20f, sectionTop, 376f, sectionHeight);
+        AddSection(frame, "RECIPES", "可制作配方", 408f, sectionTop, 524f, sectionHeight);
+        AddSection(frame, "OUTPUT", "制作产物", 944f, sectionTop, 380f, sectionHeight);
+
+        LayoutCraftingSlots(root.transform, "输入_", inputCount, 20f, 168f, 376f, inputCount == 2 ? 136f : 112f);
+        LayoutCraftingSlots(root.transform, "输出_", 2, 944f, 168f, 380f, 136f);
+        BuildRecipeCandidateScroll(frame, 424f, 164f, 492f, 486f);
+
+        SetLegacyCraftingProgressActive(root.transform, false);
+        PlaceCraftingActionButton(root.transform, "开始制作");
+        PlaceCraftingCloseButton(root.transform);
+        EnsureCraftingOutputPreviewLayers(root.transform);
+    }
+
     private static void BuildMakerTable(GameObject root)
     {
-        const float width = 824f;
-        const float height = 604f;
-        RectTransform frame = PrepareWindow(root, width, height, "制作台", "WORKBENCH / REFINED CRAFT", "组合多种材料 · 产物完成后移入背包");
-        AddSection(frame, "MATERIAL MATRIX", "材料矩阵", 24f, 104f, 510f, 400f);
-        AddSection(frame, "RESULT", "制作结果", 556f, 104f, 244f, 400f);
-        AddFlowArrow(frame, 544f, 280f);
-
-        for (int i = 1; i <= 9; i++)
-        {
-            int column = (i - 1) % 3;
-            int row = (i - 1) / 3;
-            RectTransform slot = FindRect(root.transform, $"输入_{i}");
-            if (slot != null)
-                SetTopLeft(slot, 76f + column * 132f, 168f + row * 112f, 96f, 96f);
-        }
-
-        for (int i = 1; i <= 2; i++)
-        {
-            RectTransform slot = FindRect(root.transform, $"输出_{i}");
-            if (slot != null)
-                SetTopLeft(slot, 630f, 178f + (i - 1) * 132f, 104f, 104f);
-        }
-
-        PlaceProgress(root.transform, 48f, height - 82f, 464f, 14f);
-        PlaceActionButton(root.transform, "合成按钮", width, height, "开始制作");
-        EnsureCraftingOutputPreviewLayers(root.transform);
+        BuildCraftingSelectionWindow(root, "制作台", "WORKBENCH / REFINED CRAFT", 3);
     }
 
     private static void BuildFurnace(GameObject root, bool bonfire)
@@ -1496,6 +1548,226 @@ public static class GameUIPrefabRebuilder
         buttonRect.sizeDelta = new Vector2(228f, 46f);
         ConfigureActionButton(buttonRect.gameObject, caption, true);
     }
+
+    #region 合成候选界面
+
+    /// <summary>将普通合成面板底栏扩大到可容纳 60 像素触控按钮，并给内容区留出明确间距。</summary>
+    private static void ResizeCraftingFooter(RectTransform chrome, float width, float height)
+    {
+        RectTransform inner = FindRect(chrome, "FWUI_InnerField");
+        if (inner != null)
+            SetTopLeft(inner, 14f, 92f, width - 28f, height - 176f);
+
+        RectTransform footer = FindRect(chrome, "FWUI_Footer");
+        if (footer != null)
+            footer.sizeDelta = new Vector2(0f, 76f);
+
+        RectTransform hint = FindRect(chrome, "FWUI_FooterHint");
+        if (hint != null)
+        {
+            hint.anchoredPosition = new Vector2(24f, 24f);
+            hint.sizeDelta = new Vector2(width - 390f, 26f);
+        }
+    }
+
+    /// <summary>删除超过站点能力的旧槽位；开发期配置直接服从当前结构，不保留旧九宫格。</summary>
+    private static void RemoveNamedSlots(Transform root, string prefix, int keepCount)
+    {
+        ItemSlot_UI[] slots = root.GetComponentsInChildren<ItemSlot_UI>(true);
+        foreach (ItemSlot_UI slot in slots)
+        {
+            if (slot == null || !slot.name.StartsWith(prefix, StringComparison.Ordinal))
+                continue;
+
+            string suffix = slot.name.Substring(prefix.Length);
+            if (int.TryParse(suffix, out int index) && index > keepCount)
+                UnityEngine.Object.DestroyImmediate(slot.gameObject);
+        }
+    }
+
+    /// <summary>从同组正式槽位复制缺少的节点，保留 ItemSlot_UI 的完整图层与引用。</summary>
+    private static void EnsureNamedSlot(Transform root, string sourceName, string targetName)
+    {
+        if (FindRect(root, targetName) != null)
+            return;
+
+        RectTransform source = FindRect(root, sourceName);
+        if (source == null)
+            throw new MissingReferenceException($"{root.name} 缺少可复制的槽位 {sourceName}");
+
+        GameObject clone = UnityEngine.Object.Instantiate(source.gameObject, source.parent, false);
+        clone.name = targetName;
+        clone.SetActive(true);
+    }
+
+    /// <summary>把业务槽位归一到面板根节点，避免旧 LayoutGroup 再次改写移动端布局。</summary>
+    private static void LayoutCraftingSlots(
+        Transform root,
+        string prefix,
+        int count,
+        float areaX,
+        float top,
+        float areaWidth,
+        float size)
+    {
+        const float spacing = 16f;
+        float rowWidth = count * size + Mathf.Max(0, count - 1) * spacing;
+        float left = areaX + (areaWidth - rowWidth) * 0.5f;
+
+        for (int index = 1; index <= count; index++)
+        {
+            RectTransform slot = FindRect(root, prefix + index);
+            if (slot == null)
+                throw new MissingReferenceException($"{root.name} 缺少槽位 {prefix}{index}");
+
+            slot.SetParent(root, false);
+            slot.localScale = Vector3.one;
+            slot.SetAsLastSibling();
+            SetTopLeft(slot, left + (index - 1) * (size + spacing), top, size, size);
+        }
+    }
+
+    /// <summary>创建候选配方滚动容器及隐藏行模板；运行时只克隆该模板并绑定实际配方。</summary>
+    private static void BuildRecipeCandidateScroll(
+        RectTransform chrome,
+        float x,
+        float y,
+        float width,
+        float height)
+    {
+        Image listSurface = CreateImage("FWUI_RecipeScroll", chrome, new Color(0.025f, 0.060f, 0.077f, 0.86f));
+        SetTopLeft(listSurface.rectTransform, x, y, width, height);
+        listSurface.raycastTarget = true;
+        AddOutline(listSurface, new Color(0.55f, 0.68f, 0.70f, 0.14f));
+
+        ScrollRect scroll = listSurface.gameObject.AddComponent<ScrollRect>();
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 46f;
+
+        Image viewportImage = CreateImage("FWUI_RecipeViewport", listSurface.transform, new Color(1f, 1f, 1f, 0.001f));
+        SetStretchWithMargins(viewportImage.rectTransform, 8f, 8f, 8f, 8f);
+        viewportImage.raycastTarget = true;
+        viewportImage.gameObject.AddComponent<RectMask2D>();
+
+        RectTransform content = CreateRect(CraftingStationController.CandidateContentName, viewportImage.transform);
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = new Vector2(1f, 1f);
+        content.pivot = new Vector2(0.5f, 1f);
+        content.anchoredPosition = Vector2.zero;
+        content.sizeDelta = Vector2.zero;
+
+        VerticalLayoutGroup layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(4, 4, 4, 4);
+        layout.spacing = 8f;
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        ContentSizeFitter fitter = content.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        Image templateImage = CreateImage(
+            CraftingStationController.CandidateTemplateName,
+            content,
+            SurfaceRaised);
+        templateImage.raycastTarget = true;
+        AddOutline(templateImage, new Color(0.55f, 0.68f, 0.70f, 0.18f));
+        LayoutElement templateLayout = templateImage.gameObject.AddComponent<LayoutElement>();
+        templateLayout.minHeight = 84f;
+        templateLayout.preferredHeight = 84f;
+
+        Button templateButton = templateImage.gameObject.AddComponent<Button>();
+        templateButton.targetGraphic = templateImage;
+        templateButton.navigation = new Navigation { mode = Navigation.Mode.None };
+        ColorBlock colors = templateButton.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(1.12f, 1.10f, 1.04f, 1f);
+        colors.pressedColor = new Color(0.76f, 0.82f, 0.80f, 1f);
+        colors.selectedColor = FlatWorldUITheme.Selection;
+        colors.fadeDuration = 0.08f;
+        templateButton.colors = colors;
+        templateImage.gameObject.AddComponent<FlatWorldUIFeedback>();
+
+        Image icon = CreateImage(CraftingStationController.CandidateIconName, templateImage.transform, Color.white);
+        SetTopLeft(icon.rectTransform, 12f, 10f, 64f, 64f);
+        icon.preserveAspect = true;
+
+        TextMeshProUGUI label = CreateText(
+            CraftingStationController.CandidateLabelName,
+            templateImage.transform,
+            string.Empty,
+            20f,
+            Cream,
+            FontStyles.Bold,
+            TextAlignmentOptions.Left);
+        SetTopLeft(label.rectTransform, 90f, 15f, width - 208f, 54f);
+        label.enableWordWrapping = true;
+        label.overflowMode = TextOverflowModes.Ellipsis;
+
+        TextMeshProUGUI amount = CreateText(
+            CraftingStationController.CandidateAmountName,
+            templateImage.transform,
+            string.Empty,
+            18f,
+            Amber,
+            FontStyles.Bold,
+            TextAlignmentOptions.Center);
+        SetTopLeft(amount.rectTransform, width - 116f, 20f, 82f, 44f);
+
+        templateImage.gameObject.SetActive(false);
+        scroll.viewport = viewportImage.rectTransform;
+        scroll.content = content;
+        scroll.verticalNormalizedPosition = 1f;
+    }
+
+    /// <summary>旧版单配方进度条已由双输出槽预览取代。</summary>
+    private static void SetLegacyCraftingProgressActive(Transform root, bool active)
+    {
+        RectTransform progress = FindDirectRect(root, "Progress");
+        if (progress != null)
+            progress.gameObject.SetActive(active);
+
+        RectTransform background = FindDirectRect(root, "Image_1");
+        if (background != null)
+            background.gameObject.SetActive(active);
+    }
+
+    private static void PlaceCraftingActionButton(Transform root, string caption)
+    {
+        RectTransform button = FindRect(root, "合成按钮");
+        if (button == null)
+            throw new MissingReferenceException($"{root.name} 缺少合成按钮");
+
+        button.anchorMin = new Vector2(1f, 0f);
+        button.anchorMax = new Vector2(1f, 0f);
+        button.pivot = new Vector2(1f, 0f);
+        button.anchoredPosition = new Vector2(-20f, 8f);
+        button.sizeDelta = new Vector2(320f, 60f);
+        button.SetAsLastSibling();
+        ConfigureActionButton(button.gameObject, caption, true);
+    }
+
+    private static void PlaceCraftingCloseButton(Transform root)
+    {
+        RectTransform close = FindDirectRect(root, "关闭");
+        if (close == null)
+            throw new MissingReferenceException($"{root.name} 缺少关闭按钮");
+
+        close.anchorMin = Vector2.one;
+        close.anchorMax = Vector2.one;
+        close.pivot = Vector2.one;
+        close.anchoredPosition = new Vector2(-12f, -9f);
+        close.sizeDelta = new Vector2(60f, 60f);
+        close.SetAsLastSibling();
+        ConfigureActionButton(close.gameObject, "×", false);
+    }
+
+    #endregion
 
     private static void PlaceCloseButton(Transform root, float width)
     {

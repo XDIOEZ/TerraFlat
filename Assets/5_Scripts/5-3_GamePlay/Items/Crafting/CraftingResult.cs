@@ -18,7 +18,7 @@ public enum CraftingFailureReason
 }
 
 /// <summary>
-/// 制作能力描述；入口只声明能力，不再实现制作算法。
+/// 制作能力描述；普通合成仅限制可读取的输入槽，加热加工继续保留网格能力参数。
 /// </summary>
 public sealed class CraftingCapabilities
 {

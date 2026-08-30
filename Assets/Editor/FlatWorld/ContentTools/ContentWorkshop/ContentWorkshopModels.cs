@@ -182,8 +182,8 @@ namespace FlatWorld.Editor.ContentWorkshop
         public string DisplayName;
         public string PackageId;
         public bool IsHeating;
-        public bool Ordered = true;
-        public bool AllowMirror = true;
+        public bool Ordered;
+        public bool AllowMirror;
         public bool AutoTrim = true;
         public float Temperature;
         public float MaxTemperature = 2000f;
@@ -205,8 +205,8 @@ namespace FlatWorld.Editor.ContentWorkshop
             {
                 IsHeating = heating,
                 PackageId = packageId,
-                Ordered = !heating,
-                AllowMirror = !heating,
+                Ordered = false,
+                AllowMirror = false,
                 AutoTrim = true,
                 Id = WorkshopIdUtility.CreateTimestampId(heating ? "heating" : "recipe")
             };
@@ -238,9 +238,11 @@ namespace FlatWorld.Editor.ContentWorkshop
                 DisplayName = source.DisplayName,
                 PackageId = record.PackageId,
                 IsHeating = string.Equals(source.RecipeType, "smelting", StringComparison.OrdinalIgnoreCase),
-                Ordered = string.Equals(source.InputRule, "ordered", StringComparison.OrdinalIgnoreCase),
-                AllowMirror = source.AllowMirror,
-                AutoTrim = false,
+                Ordered = string.Equals(source.RecipeType, "smelting", StringComparison.OrdinalIgnoreCase) &&
+                          string.Equals(source.InputRule, "ordered", StringComparison.OrdinalIgnoreCase),
+                AllowMirror = string.Equals(source.RecipeType, "smelting", StringComparison.OrdinalIgnoreCase) &&
+                              source.AllowMirror,
+                AutoTrim = !string.Equals(source.RecipeType, "smelting", StringComparison.OrdinalIgnoreCase),
                 Temperature = source.Temperature,
                 MaxTemperature = source.MaxTemperature,
                 OriginalGridWidth = Mathf.Clamp(source.GridWidth, 1, CanvasWidth),
@@ -332,8 +334,8 @@ namespace FlatWorld.Editor.ContentWorkshop
                 Id = Id.Trim(),
                 DisplayName = DisplayName.Trim(),
                 RecipeType = IsHeating ? "smelting" : "crafting",
-                InputRule = Ordered ? "ordered" : "unordered",
-                AllowMirror = Ordered && AllowMirror,
+                InputRule = IsHeating && Ordered ? "ordered" : "unordered",
+                AllowMirror = IsHeating && Ordered && AllowMirror,
                 Temperature = IsHeating ? Mathf.Max(0f, Temperature) : 0f,
                 MaxTemperature = IsHeating ? Mathf.Max(Temperature, MaxTemperature) : 2000f,
                 Outputs = Outputs.Select(output => new RecipeOutputDto

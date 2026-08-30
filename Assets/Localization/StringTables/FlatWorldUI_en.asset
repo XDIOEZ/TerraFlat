@@ -2081,6 +2081,22 @@ MonoBehaviour:
     m_Localized: Save before exiting?
     m_Metadata:
       m_Items: []
+  - m_Id: 7927087911317504
+    m_Localized: "Add materials \xB7 select a recipe \xB7 start crafting"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7927087949066240
+    m_Localized: Input Materials
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7927087949066241
+    m_Localized: Craftable Recipes
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7927087949066242
+    m_Localized: Crafted Outputs
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

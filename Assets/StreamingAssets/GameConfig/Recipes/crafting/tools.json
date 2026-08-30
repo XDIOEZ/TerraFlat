@@ -5,7 +5,7 @@
       "id": "core:藤蔓=绳子",
       "displayName": "藤蔓=绳子",
       "recipeType": "crafting",
-      "inputRule": "ordered",
+      "inputRule": "unordered",
       "gridWidth": 1,
       "gridHeight": 3,
       "allowMirror": false,
@@ -46,10 +46,10 @@
       "id": "core:打制石器",
       "displayName": "打制石器",
       "recipeType": "crafting",
-      "inputRule": "ordered",
+      "inputRule": "unordered",
       "gridWidth": 2,
       "gridHeight": 2,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -145,7 +145,7 @@
       "inputRule": "unordered",
       "gridWidth": 3,
       "gridHeight": 3,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -225,10 +225,10 @@
       "id": "core:石斧",
       "displayName": "石斧",
       "recipeType": "crafting",
-      "inputRule": "ordered",
+      "inputRule": "unordered",
       "gridWidth": 3,
       "gridHeight": 3,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -311,7 +311,7 @@
       "inputRule": "unordered",
       "gridWidth": 3,
       "gridHeight": 3,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -394,7 +394,7 @@
       "inputRule": "unordered",
       "gridWidth": 3,
       "gridHeight": 3,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -477,7 +477,7 @@
       "inputRule": "unordered",
       "gridWidth": 3,
       "gridHeight": 3,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -560,7 +560,7 @@
       "inputRule": "unordered",
       "gridWidth": 3,
       "gridHeight": 3,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [
@@ -643,7 +643,7 @@
       "inputRule": "unordered",
       "gridWidth": 3,
       "gridHeight": 3,
-      "allowMirror": true,
+      "allowMirror": false,
       "temperature": 0.0,
       "maxTemperature": 2000.0,
       "inputs": [

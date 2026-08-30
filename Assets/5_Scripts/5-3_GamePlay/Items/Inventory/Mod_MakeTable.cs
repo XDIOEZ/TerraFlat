@@ -25,6 +25,8 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
 
     private const string InputInventorySaveKey = "maketable.input";
     private const string OutputInventorySaveKey = "maketable.output";
+    private const int InputSlotCount = 3;
+    private const int OutputSlotCount = 2;
 
     public override void Load()
     {
@@ -45,7 +47,8 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
 
     public override void Unload()
     {
-        UnbindCraftPreview();
+        _craftingController?.Dispose();
+        _craftingController = null;
         inputInventory?.UnbindSlotDataEvents();
         outputInventory?.UnbindSlotDataEvents();
 
@@ -57,15 +60,6 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
         }
     }
 
-    /// <summary>对象销毁时对称解除输入与输出预览监听。</summary>
-    private void UnbindCraftPreview()
-    {
-        if (inputInventory?.Data != null)
-            inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
-        if (outputInventory?.Data != null)
-            outputInventory.Data.Event_OnDataChanged -= OnOutputSlotChanged;
-    }
-
     public override void Save()
     {
         SaveInventoryState();
@@ -74,7 +68,7 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
 
     #region 库存存档
 
-    /// <summary>读取工作台输入/输出槽位；旧 RawData 格式不存在库存时保持兼容。</summary>
+    /// <summary>读取工作台输入/输出槽位；槽位数量由当前 Prefab 契约严格校验。</summary>
     private void RestoreInventoryState()
     {
         Inventory_ModuleData savedData = InventoryModuleDataPersistence.TryRead(ModSaveData);
@@ -110,13 +104,11 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
     [Tooltip("每次合成最少需要点击次数")]
     public int minClickCount = 1;
 
-    private int _currentClickProgress;
-    private CraftingOutputPreview _outputPreview;
-    private string _lastCraftPreviewMessage;
+    private CraftingStationController _craftingController;
     private static readonly CraftingCapabilities Capabilities = new CraftingCapabilities
     {
         RecipeType = RecipeType.Crafting,
-        AllowCompactGrid = true,
+        InputSlotLimit = InputSlotCount,
         AllowOutputIntoInput = false
     };
 
@@ -131,39 +123,9 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
 
     #region 事件处理
 
-    private void OnCraftButtonClick()
-    {
-        if (!TryGetCraftPreview(true, out _))
-        {
-            ResetCraftProgress();
-            return;
-        }
-
-        _currentClickProgress++;
-        int requiredClickCount = RequiredClickCount;
-        _currentClickProgress = Mathf.Min(_currentClickProgress, requiredClickCount);
-        _outputPreview?.SetProgress(_currentClickProgress / (float)requiredClickCount);
-        Debug.Log($"[Mod_MakeTable] 点击进度：{_currentClickProgress}/{requiredClickCount}，等级={workbenchLevel}");
-
-        if (_currentClickProgress < requiredClickCount)
-            return;
-
-        bool craftResult = Craft(inputInventory, outputInventory);
-        ResetCraftProgress();
-        RefreshCraftPreview();
-        if (craftResult)
-            _outputPreview?.PlaySuccess();
-
-        if (!craftResult)
-        {
-            Debug.Log("[Mod_MakeTable] 合成失败，已重置点击进度");
-        }
-
-    }
-
-
     public void InitData()
     {
+        ValidateInventoryConfig();
         InitializeInventoryData(inputInventory, nameof(inputInventory));
         InitializeInventoryData(outputInventory, nameof(outputInventory));
     }
@@ -241,70 +203,35 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
     /// </summary>
     public void InitUI()
     {
-        _currentClickProgress = 0;
-
         // 绑定槽位 UI
-        BindSlotsByPrefix(inputInventory, "输入");
-        BindSlotsByPrefix(outputInventory, "输出");
+        BindSlotsByPrefix(inputInventory, "输入", InputSlotCount);
+        BindSlotsByPrefix(outputInventory, "输出", OutputSlotCount);
 
         // 同步 UI 数据
         inputInventory.SyncData();
         outputInventory.SyncData();
-        BindCraftPreview();
 
         // 绑定合成按钮
         workButton = basePanel.GetButton("合成按钮");
-        workButton.onClick.RemoveListener(OnCraftButtonClick);
-        workButton.onClick.AddListener(OnCraftButtonClick);
+        if (workButton == null)
+            throw new System.InvalidOperationException("[Mod_MakeTable] 面板缺少合成按钮");
+
+        _craftingController?.Dispose();
+        _craftingController = new CraftingStationController(
+            basePanel,
+            inputInventory,
+            outputInventory,
+            Capabilities,
+            () => RequiredClickCount,
+            ResolveCraftActor);
 
         // 初始化UI显示
         basePanel?.Close();
         inputInventory.RefreshUI();
         outputInventory.RefreshUI();
-        RefreshCraftPreview();
     }
 
-    private void BindCraftPreview()
-    {
-        if (outputInventory.itemSlot_UI.Count == 0)
-            return;
-
-        _outputPreview = CraftingOutputPreview.Attach(basePanel, outputInventory.itemSlot_UI[0]);
-        inputInventory.Data.Event_OnDataChanged -= OnInputSlotChanged;
-        inputInventory.Data.Event_OnDataChanged += OnInputSlotChanged;
-        outputInventory.Data.Event_OnDataChanged -= OnOutputSlotChanged;
-        outputInventory.Data.Event_OnDataChanged += OnOutputSlotChanged;
-    }
-
-    private void OnInputSlotChanged(ItemSlot _)
-    {
-        ResetCraftProgress();
-        RefreshCraftPreview();
-    }
-
-    private void OnOutputSlotChanged(ItemSlot _)
-    {
-        RefreshCraftPreview();
-    }
-
-    private void ResetCraftProgress()
-    {
-        _currentClickProgress = 0;
-        _outputPreview?.SetProgress(0f);
-    }
-
-    private void RefreshCraftPreview()
-    {
-        if (_outputPreview == null)
-            return;
-
-        if (TryGetCraftPreview(false, out ItemData previewItem))
-            _outputPreview.Show(previewItem, _currentClickProgress / (float)RequiredClickCount);
-        else
-            _outputPreview.Clear();
-    }
-
-    private void BindSlotsByPrefix(Inventory inventory, string prefix)
+    private void BindSlotsByPrefix(Inventory inventory, string prefix, int slotCount)
     {
         if (inventory == null || inventory.Data == null || inventory.Data.itemSlots == null)
         {
@@ -314,50 +241,31 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
 
         inventory.itemSlot_UI.Clear();
 
-        int boundIndex = 0;
-        int maxTry = Mathf.Max(inventory.Data.itemSlots.Count, 12);
-        for (int i = 1; i <= maxTry; i++)
+        for (int i = 1; i <= slotCount; i++)
         {
-            if (boundIndex >= inventory.Data.itemSlots.Count)
-                break;
-
-            var button = basePanel.GetButton($"{prefix}_{i}");
+            Button button = basePanel.GetButton($"{prefix}_{i}");
             if (button == null)
-                continue;
+                throw new System.InvalidOperationException($"[Mod_MakeTable] 面板缺少 {prefix}_{i}");
 
-            var slotUI = button.GetComponent<ItemSlot_UI>();
+            ItemSlot_UI slotUI = button.GetComponent<ItemSlot_UI>();
             if (slotUI == null)
-                continue;
+                throw new System.InvalidOperationException($"[Mod_MakeTable] {prefix}_{i} 缺少 ItemSlot_UI");
 
-            inventory.BindSlotUI(slotUI, boundIndex);
-            boundIndex++;
+            inventory.BindSlotUI(slotUI, i - 1);
         }
     }
 
-    /// <summary>
-    /// 通过公共事务执行制作。
-    /// </summary>
-    public bool Craft(Inventory inputInv, Inventory outputInv)
+    private void ValidateInventoryConfig()
     {
-        Player actor = item as Player ?? item?.Owner as Player ?? item?.GetComponentInParent<Player>();
-        CraftingResult result = CraftingService.Craft(inputInv, outputInv, Capabilities, actor);
-        if (!result.Success)
-            Debug.LogWarning($"[Mod_MakeTable] 合成失败：{result.Message}");
-        return result.Success;
+        if (inputInventory?.Data?.itemSlots == null || inputInventory.Data.itemSlots.Count != InputSlotCount)
+            throw new System.InvalidOperationException($"[Mod_MakeTable] 输入槽位必须为 {InputSlotCount} 个");
+        if (outputInventory?.Data?.itemSlots == null || outputInventory.Data.itemSlots.Count != OutputSlotCount)
+            throw new System.InvalidOperationException($"[Mod_MakeTable] 输出槽位必须为 {OutputSlotCount} 个");
     }
 
-    /// <summary>预检制作结果；被动刷新不报告正常的未匹配状态。</summary>
-    private bool TryGetCraftPreview(bool isUserInitiated, out ItemData previewItem)
+    private Player ResolveCraftActor()
     {
-        CraftingResult result = CraftingService.Preview(inputInventory, outputInventory, Capabilities);
-        CraftingPreviewDiagnostics.ReportFailure(
-            nameof(Mod_MakeTable),
-            inputInventory,
-            result,
-            isUserInitiated,
-            ref _lastCraftPreviewMessage);
-        previewItem = result.PrimaryOutput;
-        return result.Success;
+        return item as Player ?? item?.Owner as Player ?? item?.GetComponentInParent<Player>();
     }
 
     /// <summary>

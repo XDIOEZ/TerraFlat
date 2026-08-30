@@ -11,7 +11,7 @@ public sealed class RuntimeRecipe
     public string DisplayName;
     public RuntimeRecipeInput inputs = new RuntimeRecipeInput();
     public RuntimeRecipeOutput outputs = new RuntimeRecipeOutput();
-    public bool enableMirrorCrafting = true;
+    public bool enableMirrorCrafting;
     public List<RuntimeRecipeAction> action = new List<RuntimeRecipeAction>();
     public float Temperature;
     public float Temperature_Max = 2000f;
@@ -23,7 +23,7 @@ public sealed class RuntimeRecipeInput
 {
     public List<RuntimeRecipeIngredient> RowItems_List = new List<RuntimeRecipeIngredient>();
     public RecipeType recipeType = RecipeType.Crafting;
-    public RecipeInputRule inputOrder = RecipeInputRule.规则合成;
+    public RecipeInputRule inputOrder = RecipeInputRule.无规则合成;
     public int GridWidth;
     public int GridHeight;
 

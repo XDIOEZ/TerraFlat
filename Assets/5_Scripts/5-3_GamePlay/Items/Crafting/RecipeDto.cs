@@ -61,7 +61,7 @@ public sealed class RecipeDto
     public string RecipeType = "crafting";
 
     [JsonProperty("inputRule")]
-    public string InputRule = "ordered";
+    public string InputRule = "unordered";
 
     [JsonProperty("gridWidth")]
     public int GridWidth;
@@ -70,7 +70,7 @@ public sealed class RecipeDto
     public int GridHeight;
 
     [JsonProperty("allowMirror")]
-    public bool AllowMirror = true;
+    public bool AllowMirror;
 
     [JsonProperty("temperature")]
     public float Temperature;
