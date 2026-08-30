@@ -371,16 +371,16 @@ namespace FlatWorld.WorldModel
             {
                 biomeId = (int)biome;
                 groundTileId = settings.SaltWaterTileId;
-                flags = TerrainCellFlags.Water;
-                navigationCost = short.MaxValue;
+                flags = TerrainCellFlags.Water | TerrainCellFlags.Walkable;
+                navigationCost = settings.WaterNavigationCost;
             }
             else if (biome == SurfaceBiomeKind.River)
             {
                 biomeId = (int)biome;
                 groundTileId = settings.FreshWaterTileId;
-                // 河流只是高代价地形：有陆路时 A* 优先绕行，唯一通路是河时仍可渡河。
+                // 水域只是高代价地形：有陆路时 A* 优先绕行，唯一通路是水面时仍可通过。
                 flags = TerrainCellFlags.Water | TerrainCellFlags.Walkable;
-                navigationCost = settings.RiverNavigationCost;
+                navigationCost = settings.WaterNavigationCost;
             }
             else if (biome == SurfaceBiomeKind.Stone)
             {
@@ -1596,11 +1596,16 @@ namespace FlatWorld.WorldModel
             bool groundwater = groundwaterDepth > 0d;
             TerrainCellFlags flags = !open
                 ? TerrainCellFlags.Blocking
-                : groundwater ? TerrainCellFlags.Water : TerrainCellFlags.Walkable;
+                : groundwater
+                    ? TerrainCellFlags.Water | TerrainCellFlags.Walkable
+                    : TerrainCellFlags.Walkable;
             int groundTileId = groundwater ? settings.FreshWaterTileId : settings.CaveFloorTileId;
+            short navigationCost = !open
+                ? short.MaxValue
+                : groundwater ? settings.WaterNavigationCost : settings.DefaultNavigationCost;
             terrain.SetCell(x, y, new TerrainCell(groundTileId, 0,
                 open ? 0 : settings.CaveWallTileId, 100,
-                open && !groundwater ? settings.DefaultNavigationCost : short.MaxValue, flags));
+                navigationCost, flags));
             terrain.SetEnvironmentValue("height", x, y,
                 groundwater ? (float)(1d - groundwaterDepth) : open ? 1f : 0f);
             terrain.SetEnvironmentValue("temperature", x, y, 0.38f);

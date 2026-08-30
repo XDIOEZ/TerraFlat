@@ -207,7 +207,7 @@ MonoBehaviour:
     Value: 0.5
   - Id: navigation.defaultCost
     Value: 1
-  - Id: navigation.riverCost
+  - Id: navigation.waterCost
     Value: 20000
   - Id: cave.portal.enabled
     Value: 1

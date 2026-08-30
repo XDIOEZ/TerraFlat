@@ -425,8 +425,8 @@ namespace FlatWorld.WorldModel
                 Mode == ChunkGenerationMode.Cave ? "surface" : "cave");
             DefaultNavigationCost = (short)Clamp(GetInt(numbers,
                 "navigation.defaultCost", 1), 1, short.MaxValue);
-            RiverNavigationCost = (short)Clamp(GetInt(numbers,
-                "navigation.riverCost", 20000), DefaultNavigationCost, short.MaxValue);
+            WaterNavigationCost = (short)Clamp(GetInt(numbers,
+                "navigation.waterCost", 20000), DefaultNavigationCost, short.MaxValue);
         }
 
         /// <summary>生成地表还是洞穴。</summary>
@@ -626,8 +626,8 @@ namespace FlatWorld.WorldModel
         public double CaveLooseOreDensity { get; }
         /// <summary>普通地面默认有多难走；数字越大，寻路越不喜欢走。</summary>
         public short DefaultNavigationCost { get; }
-        /// <summary>河流的有限寻路代价；高于陆地，但不能把河流变成不可通行障碍。</summary>
-        public short RiverNavigationCost { get; }
+        /// <summary>水域的有限寻路代价；高于陆地，但所有水格仍参与带权寻路。</summary>
+        public short WaterNavigationCost { get; }
 
         /// <summary>把气候通道的基础温度换算成受海拔影响的实际温度。</summary>
         public double ApplyAltitudeTemperatureCooling(double height, double baseTemperature)

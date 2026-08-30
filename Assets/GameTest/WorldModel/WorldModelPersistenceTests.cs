@@ -281,7 +281,7 @@ namespace FlatWorld.GameTest.WorldModel
                 Is.EqualTo(0.35d).Within(0.000001d));
             Assert.That(profile.Settings.RiverLakeChance,
                 Is.EqualTo(0.75d).Within(0.000001d));
-            Assert.That(profile.Settings.RiverNavigationCost,
+            Assert.That(profile.Settings.WaterNavigationCost,
                 Is.GreaterThan(profile.Settings.DefaultNavigationCost));
             Assert.That(profile.NumericParameters.ContainsKey("river.noiseScale"), Is.False);
 
@@ -304,23 +304,36 @@ namespace FlatWorld.GameTest.WorldModel
             int alluvialCells = 0;
             int grassCells = 0;
             int typedFreshWaterCells = 0;
+            int waterCells = 0;
             foreach (ChunkRuntime chunk in world.Chunks.Values)
             {
                 ChunkTerrainData terrain = chunk.Terrain;
                 for (int y = 0; y < terrain.Height; y++)
                 for (int x = 0; x < terrain.Width; x++)
                 {
+                    TerrainCell terrainCell = terrain.GetCell(x, y);
+                    if ((terrainCell.Flags & TerrainCellFlags.Water) != 0)
+                    {
+                        Assert.That(
+                            (terrainCell.Flags & TerrainCellFlags.Walkable) != 0,
+                            Is.True,
+                            "所有水域都必须作为高代价节点参与带权寻路。");
+                        Assert.That(
+                            terrainCell.NavigationCost,
+                            Is.EqualTo(profile.Settings.WaterNavigationCost));
+                        waterCells++;
+                    }
+
                     if (terrain.TryGetEnvironmentValue("riverDepth", x, y, out float depth) &&
                         depth > 0f)
                     {
-                        TerrainCell riverCell = terrain.GetCell(x, y);
                         Assert.That(
-                            (riverCell.Flags & TerrainCellFlags.Walkable) != 0,
+                            (terrainCell.Flags & TerrainCellFlags.Walkable) != 0,
                             Is.True,
                             "淡水河必须是高代价可通行地形，不能注册成导航障碍。");
                         Assert.That(
-                            riverCell.NavigationCost,
-                            Is.EqualTo(profile.Settings.RiverNavigationCost));
+                            terrainCell.NavigationCost,
+                            Is.EqualTo(profile.Settings.WaterNavigationCost));
                         riverCells++;
                         Assert.That(
                             terrain.TryGetEnvironmentValue("riverKind", x, y, out float kind),
@@ -359,6 +372,8 @@ namespace FlatWorld.GameTest.WorldModel
                 "The default local window must contain visible grass detail coverage.");
             Assert.That(typedFreshWaterCells, Is.EqualTo(riverCells),
                 "Every fresh-water cell must expose riverKind and riverSurfaceLevel.");
+            Assert.That(waterCells, Is.GreaterThan(riverCells),
+                "地表海水与淡水都必须进入统一的高代价水域规则。");
         }
 
         [Test]

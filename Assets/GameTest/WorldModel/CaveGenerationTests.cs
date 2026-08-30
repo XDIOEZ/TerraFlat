@@ -246,6 +246,9 @@ namespace FlatWorld.GameTest.WorldModel
                 water[x, y] = (cell.Flags & TerrainCellFlags.Water) != 0;
                 if (!water[x, y])
                     continue;
+                Assert.That(walkable[x, y], Is.True,
+                    "地下水格必须可通行，并由寻路代价控制动物是否绕行。");
+                Assert.That(cell.NavigationCost, Is.EqualTo(profile.Settings.WaterNavigationCost));
                 waterCellCount++;
                 if (chunk.Terrain.TryGetEnvironmentValue("riverDepth", x, y, out float depth) &&
                     depth >= 0.5f)

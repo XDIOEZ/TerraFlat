@@ -81,6 +81,8 @@ MonoBehaviour:
     Value: 0.0012
   - Id: navigation.defaultCost
     Value: 1
+  - Id: navigation.waterCost
+    Value: 20000
   textParameters:
   - Id: terrain.mode
     Value: cave
