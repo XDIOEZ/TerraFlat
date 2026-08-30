@@ -265,12 +265,6 @@ public class PlayerAdminController : Module
             playerTraits?.InitializeCreativeInventoryForAdmin();
         }
 
-        // F4：给予手持物品 (9999)
-        if (keyboard.f4Key.wasPressedThisFrame)
-        {
-            AddAmountToCurrentHandItem(9999f);
-        }
-
         // F5：给予背包全部物品 (999)
         if (keyboard.f5Key.wasPressedThisFrame)
         {
