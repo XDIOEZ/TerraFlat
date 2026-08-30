@@ -33,7 +33,7 @@ public partial class MonsterSpawnerManager
             request == null ||
             request.Count <= 0 ||
             string.IsNullOrWhiteSpace(request.PrefabId) ||
-            ItemMgr.Instance == null ||
+            _itemManager == null ||
             DimensionManager.Instance?.ActiveDefinition?.EnableMonsterSpawning == false)
         {
             return 0;
@@ -137,14 +137,13 @@ public partial class MonsterSpawnerManager
         return false;
     }
 
-    private static bool IsEventBiomeAllowed(List<string> allowedBiomes, Vector3 worldPosition)
+    private bool IsEventBiomeAllowed(List<string> allowedBiomes, Vector3 worldPosition)
     {
         if (allowedBiomes == null || allowedBiomes.Count == 0)
             return true;
 
         Vector2Int worldCell = new(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y));
-        ChunkMgr runtimeManager = ChunkMgr.Instance;
-        if (runtimeManager != null && runtimeManager.TryGetRuntimeBiomeName(
+        if (_chunkManager != null && _chunkManager.TryGetRuntimeBiomeName(
                 worldCell + new Vector2(0.5f, 0.5f), out string runtimeBiomeName))
         {
             return IsAllowedBiomeName(allowedBiomes, runtimeBiomeName, runtimeBiomeName);
@@ -153,7 +152,7 @@ public partial class MonsterSpawnerManager
         return false;
     }
 
-    private static bool IsEventLightAllowed(
+    private bool IsEventLightAllowed(
         GameEventCreatureSpawnRequest request,
         Vector3 worldPosition)
     {
@@ -161,8 +160,8 @@ public partial class MonsterSpawnerManager
         if (!needsCheck)
             return true;
 
-        if (LightLayerMgr.Instance == null ||
-            !LightLayerMgr.Instance.TryGetLightLevel(worldPosition, out float lightLevel))
+        if (_lightLayerManager == null ||
+            !_lightLayerManager.TryGetLightLevel(worldPosition, out float lightLevel))
         {
             return false;
         }
@@ -175,7 +174,7 @@ public partial class MonsterSpawnerManager
 
     #region 事件生物初始化校验
 
-    private static bool TrySpawnEventCreature(
+    private bool TrySpawnEventCreature(
         string prefabId,
         Vector3 position,
         out Item spawnedItem)
@@ -183,7 +182,7 @@ public partial class MonsterSpawnerManager
         spawnedItem = null;
         try
         {
-            spawnedItem = ItemMgr.Instance.InstantiateItem(
+            spawnedItem = _itemManager.InstantiateItem(
                 prefabId,
                 position,
                 Quaternion.identity,
@@ -232,14 +231,14 @@ public partial class MonsterSpawnerManager
         return false;
     }
 
-    private static void DespawnFailedEventCreature(Item spawnedItem)
+    private void DespawnFailedEventCreature(Item spawnedItem)
     {
-        if (spawnedItem == null || spawnedItem.DestructionHandled || ItemMgr.Instance == null)
+        if (spawnedItem == null || spawnedItem.DestructionHandled || _itemManager == null)
             return;
 
         try
         {
-            ItemMgr.Instance.DespawnItem(spawnedItem, saveData: false);
+            _itemManager.DespawnItem(spawnedItem, saveData: false);
         }
         catch (Exception cleanupException)
         {

@@ -7,7 +7,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 
 /// <summary>
 /// AI 实体识别工具。运行时识别 IAIActor、生态物种及旧 Prefab 的兼容标记模块，
-/// 存档数据识别 AI 模块 ID 与生成器物种目录，用于让实体生命周期脱离旧 Chunk/Map 对象。
+/// 存档数据识别 AI 模块 ID 与怪物管理器物种目录，用于让实体生命周期脱离旧 Chunk/Map 对象。
 /// </summary>
 internal static class RuntimeAiEntityUtility
 {
@@ -21,7 +21,7 @@ internal static class RuntimeAiEntityUtility
         if (item == null || item is Player || item is Map)
             return false;
 
-        if (MonsterSpawnerManager.IsRegisteredSpeciesId(item.itemData?.IDName) ||
+        if (MonsterManager.IsRegisteredSpeciesId(item.itemData?.IDName) ||
             item.GetComponentInChildren<Mod_ItemChunkAssigner>(true) != null)
         {
             return true;
@@ -56,7 +56,7 @@ internal static class RuntimeAiEntityUtility
             }
         }
 
-        return MonsterSpawnerManager.IsRegisteredSpeciesId(data.IDName);
+        return MonsterManager.IsRegisteredSpeciesId(data.IDName);
     }
 
     private static bool IsAiModuleId(string value)

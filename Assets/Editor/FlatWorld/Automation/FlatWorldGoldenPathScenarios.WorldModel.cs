@@ -100,11 +100,11 @@ namespace FlatWorld.Automation
                 ItemMgr.Instance.GetItemByGuid(_modelVisibilityCreature.itemData?.Guid ?? 0) !=
                 _modelVisibilityCreature)
                 throw new InvalidOperationException("无法创建用于区块实体显隐验证的 Chicken。");
-            MonsterSpawnerManager spawner = MonsterSpawnerManager.Instance;
-            if (spawner == null)
-                throw new InvalidOperationException("区块实体显隐验证缺少正式生态管理器。");
+            MonsterManager monsterManager = MonsterManager.Instance;
+            if (monsterManager == null)
+                throw new InvalidOperationException("区块实体显隐验证缺少怪物生命周期管理器。");
             _modelVisibilityCreatureRecycleProtection =
-                spawner.AcquireEcologyRecycleProtection(_modelVisibilityCreature);
+                monsterManager.AcquireEcologyRecycleProtection(_modelVisibilityCreature);
             _modelVisibilityCreature.Load();
             Mover_AI probeMover =
                 _modelVisibilityCreature.itemMods.GetMod_ByID<Mover_AI>(ModText.Mover) ??
