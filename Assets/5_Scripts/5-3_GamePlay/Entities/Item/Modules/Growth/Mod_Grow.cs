@@ -1,8 +1,6 @@
 ﻿using MemoryPack;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
-using static DamageReceiver;
 
 [System.Serializable]
 [MemoryPackable]
@@ -60,18 +58,9 @@ public partial class Mod_Grow : Module, IInteractable, IPlantableCrop
         成熟,
     }
 
-    // 缓存DamageReceiver组件
+    // 缓存 DamageReceiver 组件
     private DamageReceiver cachedDamageReceiver;
     private int lastAppliedHealthStage = -1;
-
-[System.Serializable]
-public class LootEntryCollection
-{
-    public List<LootEntry> lootEntries = new List<LootEntry>();
-}
-
-[Header("各生长阶段的战利品")]
-public List<LootEntryCollection> stageLoots = new List<LootEntryCollection>();
 
     public override void Awake()
     {
@@ -119,8 +108,8 @@ public List<LootEntryCollection> stageLoots = new List<LootEntryCollection>();
 
 
    /// <summary>
-/// 合并视觉与行为的一次性更新（当进度改变且希望同时更新视觉与行为时使用）。
-/// 保证阶段变更时：先更新 Data.growState -> 更新视觉 -> 添加战利品（若未添加过）。
+/// 合并视觉与生命值的一次性更新。
+/// 保证阶段变更时先更新权威阶段，再同步缩放与最大生命值。
 /// </summary>
 private void UpdateVisualAndBehavior()
 {
@@ -139,20 +128,6 @@ private void UpdateVisualAndBehavior()
                 float scale = (i < Data.growState_Scale.Count) ? Data.growState_Scale[i] : 1f;
                 item.transform.localScale = new Vector3(scale, scale, 1);
                 ApplyStageHealth(true);
-
-                // 执行阶段相关的行为（添加战利品），避免重复添加
-                if (cachedDamageReceiver != null && i > 0 && stageLoots != null && stageLoots.Count >= i && stageLoots[i - 1] != null)
-                {
-                    // 添加该阶段的所有战利品
-                    foreach (LootEntry lootEntry in stageLoots[i - 1].lootEntries)
-                    {
-                        if (lootEntry != null && !cachedDamageReceiver.Data.LootTable.Contains(lootEntry))
-                        {
-                            cachedDamageReceiver.Data.LootTable.Add(lootEntry);
-                        }
-                    }
-//                    Debug.Log($"植物进入{Data.growState}阶段，添加{stageLoots[i].lootEntries.Count}个战利品");
-                }
             }
             break;
         }
@@ -207,24 +182,6 @@ private void ApplyStageHealth(bool force = false)
 
 public void OnValidate()
 {
-    // 确保每个 LootEntry 的 PrefabName 等字段被更新
-    if (stageLoots != null)
-    {
-        foreach (var lootList in stageLoots)
-        {
-            if (lootList != null)
-            {
-                foreach (var loot in lootList.lootEntries)
-                {
-                    if (loot != null)
-                    {
-                        loot.OnValidate();
-                    }
-                }
-            }
-        }
-    }
-
     // 保证阈值、缩放等列表长度合理（可选容错）
     if (Data.growState_Value == null) Data.growState_Value = new List<float>() { 0, 20, 50, 100 };
     if (Data.growState_Scale == null) Data.growState_Scale = new List<float>() { 0.1f, 0.2f, 0.6f, 1f };

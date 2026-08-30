@@ -71,6 +71,7 @@
           "edgeRadius": 0.0
         }
       },
+      "lootTableId": "Tree_Default",
       "modules": {
         "生命值系统模块": {
           "prefab": "Module_DamageReciver",
@@ -96,15 +97,7 @@
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0,
-              "LootTable": [
-                {
-                  "LootPrefabName": "Chicken",
-                  "DropChance": 0.001,
-                  "MinAmount": 1,
-                  "MaxAmount": 1
-                }
-              ]
+              "DestroyDelay": 0.0
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -213,62 +206,6 @@
               1.0
             ],
             "matureMaxHealth": 200.0,
-            "stageLoots": [
-              {
-                "lootEntries": [
-                  {
-                    "LootPrefabName": "Stick",
-                    "DropChance": 1.0,
-                    "MinAmount": 1,
-                    "MaxAmount": 1
-                  },
-                  {
-                    "LootPrefabName": "Leaf",
-                    "DropChance": 1.0,
-                    "MinAmount": 1,
-                    "MaxAmount": 1
-                  }
-                ]
-              },
-              {
-                "lootEntries": [
-                  {
-                    "LootPrefabName": "Leaf",
-                    "DropChance": 1.0,
-                    "MinAmount": 1,
-                    "MaxAmount": 1
-                  },
-                  {
-                    "LootPrefabName": "Log",
-                    "DropChance": 1.0,
-                    "MinAmount": 1,
-                    "MaxAmount": 1
-                  },
-                  {
-                    "LootPrefabName": "Stick",
-                    "DropChance": 1.0,
-                    "MinAmount": 1,
-                    "MaxAmount": 1
-                  }
-                ]
-              },
-              {
-                "lootEntries": [
-                  {
-                    "LootPrefabName": "Log",
-                    "DropChance": 1.0,
-                    "MinAmount": 1,
-                    "MaxAmount": 2
-                  },
-                  {
-                    "LootPrefabName": "Leaf",
-                    "DropChance": 1.0,
-                    "MinAmount": 1,
-                    "MaxAmount": 1
-                  }
-                ]
-              }
-            ],
             "$transform": {
               "localPosition": {
                 "x": 0.0,
@@ -384,6 +321,7 @@
           "edgeRadius": 0.0
         }
       },
+      "lootTableId": "Tree_Default",
       "modules": {
         "生命值系统模块": {
           "prefab": "Module_DamageReciver",
@@ -409,15 +347,7 @@
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0,
-              "LootTable": [
-                {
-                  "LootPrefabName": "Chicken",
-                  "DropChance": 0.001,
-                  "MinAmount": 1,
-                  "MaxAmount": 1
-                }
-              ]
+              "DestroyDelay": 0.0
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -526,62 +456,6 @@
               1.0
             ],
             "matureMaxHealth": 200.0,
-            "stageLoots": [
-              {
-                "lootEntries": [
-                  {
-                    "LootPrefabName": "Stick",
-                    "DropChance": 1.0,
-                    "MinAmount": 1,
-                    "MaxAmount": 1
-                  },
-                  {
-                    "LootPrefabName": "Leaf",
-                    "DropChance": 1.0,
-                    "MinAmount": 1,
-                    "MaxAmount": 1
-                  }
-                ]
-              },
-              {
-                "lootEntries": [
-                  {
-                    "LootPrefabName": "Leaf",
-                    "DropChance": 1.0,
-                    "MinAmount": 1,
-                    "MaxAmount": 1
-                  },
-                  {
-                    "LootPrefabName": "Log",
-                    "DropChance": 1.0,
-                    "MinAmount": 1,
-                    "MaxAmount": 1
-                  },
-                  {
-                    "LootPrefabName": "Stick",
-                    "DropChance": 1.0,
-                    "MinAmount": 1,
-                    "MaxAmount": 1
-                  }
-                ]
-              },
-              {
-                "lootEntries": [
-                  {
-                    "LootPrefabName": "Log",
-                    "DropChance": 1.0,
-                    "MinAmount": 1,
-                    "MaxAmount": 2
-                  },
-                  {
-                    "LootPrefabName": "Leaf",
-                    "DropChance": 1.0,
-                    "MinAmount": 1,
-                    "MaxAmount": 1
-                  }
-                ]
-              }
-            ],
             "$transform": {
               "localPosition": {
                 "x": 0.0,

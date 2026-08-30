@@ -23,6 +23,29 @@
           "maxAmount": 2
         }
       ]
+    },
+    {
+      "id": "Tree_Default",
+      "entries": [
+        {
+          "itemId": "Stick_Wood",
+          "probability": 1.0,
+          "minAmount": 2,
+          "maxAmount": 2
+        },
+        {
+          "itemId": "Leaf",
+          "probability": 1.0,
+          "minAmount": 3,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Log",
+          "probability": 1.0,
+          "minAmount": 2,
+          "maxAmount": 3
+        }
+      ]
     }
   ]
 }
