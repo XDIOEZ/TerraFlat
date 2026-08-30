@@ -897,6 +897,230 @@ MonoBehaviour:
     m_Localized: Seed Radish.
     m_Metadata:
       m_Items: []
+  - m_Id: 7973075325726720
+    m_Localized: Weed
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075447361536
+    m_Localized: Weed.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915968
+    m_Localized: BlastFurnace
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915969
+    m_Localized: BlastFurnace.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915970
+    m_Localized: Bonfire
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915971
+    m_Localized: Bonfire.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915972
+    m_Localized: Chest Wood
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915973
+    m_Localized: Chest Wood.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915974
+    m_Localized: Door Stone
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915975
+    m_Localized: Door Stone.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915976
+    m_Localized: Door Wood
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915977
+    m_Localized: Door Wood.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915978
+    m_Localized: Meatrack
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915979
+    m_Localized: Food that can be eaten.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915980
+    m_Localized: MineEntrance
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915981
+    m_Localized: MineEntrance.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915982
+    m_Localized: Scarecrow
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915983
+    m_Localized: Scarecrow.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915984
+    m_Localized: Smelter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915985
+    m_Localized: Smelter.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915986
+    m_Localized: Tent
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915987
+    m_Localized: Tent.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915988
+    m_Localized: Wall Wood
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915989
+    m_Localized: Wall Wood.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915990
+    m_Localized: WorkBench
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915991
+    m_Localized: WorkBench.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915992
+    m_Localized: SparkMaker
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915993
+    m_Localized: SparkMaker.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915994
+    m_Localized: Torch Building
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915995
+    m_Localized: Torch Building.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915996
+    m_Localized: CompostBin
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915997
+    m_Localized: CompostBin.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915998
+    m_Localized: Rocket
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075480915999
+    m_Localized: Rocket.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075522859008
+    m_Localized: CompostBin Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075522859009
+    m_Localized: CompostBin Summoner.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075522859010
+    m_Localized: Rocket Summoner
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075522859011
+    m_Localized: Rocket Summoner.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075527053312
+    m_Localized: TwineCrop
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075527053313
+    m_Localized: TwineCrop.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075527053314
+    m_Localized: CaveExit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075527053315
+    m_Localized: CaveExit.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075560607744
+    m_Localized: AppleTree
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075560607745
+    m_Localized: AppleTree.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075560607746
+    m_Localized: Tree Coconut
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075560607747
+    m_Localized: Tree Coconut.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075560607748
+    m_Localized: Mine Coal
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075560607749
+    m_Localized: Mine Coal.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075560607750
+    m_Localized: Mine Copper
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075560607751
+    m_Localized: Mine Copper.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075560607752
+    m_Localized: Mine Iron
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075560607753
+    m_Localized: Mine Iron.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075560607754
+    m_Localized: Mine Stone
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075560607755
+    m_Localized: Mine Stone.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075560607756
+    m_Localized: Mine Tin
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7973075560607757
+    m_Localized: Mine Tin.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

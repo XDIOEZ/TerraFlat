@@ -502,7 +502,7 @@
               {
                 "itemName": "Coconut_Green",
                 "itemCountMin": 1,
-                "itemCountMax": 1,
+                "itemCountMax": 2,
                 "MaxProductionTime": 2000.0,
                 "ProductionTime": 80.0,
                 "MaxProductionCount": -1,
@@ -510,7 +510,7 @@
                 "ThrowItem": true,
                 "StoreInModule": false,
                 "DestroySelf": false,
-                "SpawnProbability": 1.0,
+                "SpawnProbability": 0.1,
                 "Random_ProductionTime": {
                   "x": 0.0,
                   "y": 1000.0
