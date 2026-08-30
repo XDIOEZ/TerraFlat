@@ -6,10 +6,10 @@ using UnityEngine.UI;
 /// <summary>
 /// 管理设置会话页的唯一保存退出确认层：记录返回主界面或桌面的目标，并将“取消”解释为
 /// 不保存直接退出、“确认”解释为保存后退出。视觉节点全部来自 UI_ActionList Prefab，本组件只负责状态、
-/// 焦点与决策回调；Escape、Android 返回键和手柄取消都优先关闭确认层。
+/// 焦点与决策回调；点击两颗决策按钮以外的区域，或按 Escape、Android 返回键和手柄取消，均只关闭确认层。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class SettingsExitConfirmationController : MonoBehaviour
+public sealed class SettingsExitConfirmationController : MonoBehaviour, IPointerClickHandler
 {
     #region 节点契约
 
@@ -117,6 +117,16 @@ public sealed class SettingsExitConfirmationController : MonoBehaviour
 
         Hide(true);
         return true;
+    }
+
+    /// <summary>点击两颗决策按钮以外的区域时放弃退出，并恢复发起按钮焦点。</summary>
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData.button != PointerEventData.InputButton.Left)
+            return;
+
+        if (TryClose())
+            eventData.Use();
     }
 
     /// <summary>左侧灰色“取消”表示取消保存，按当前目标直接退出。</summary>
