@@ -6,8 +6,6 @@ using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEditor.AddressableAssets;
 using UnityEditor.AddressableAssets.Settings;
-using UnityEditor.Build;
-using UnityEditor.Build.Reporting;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -21,8 +19,7 @@ public enum FlatWorldContentValidationSeverity
 
 public enum FlatWorldContentValidationMode
 {
-    Manual,
-    Build
+    Manual
 }
 
 public sealed class FlatWorldContentValidationIssue
@@ -2284,41 +2281,4 @@ public static class FlatWorldContentValidator
     }
 
     #endregion
-}
-
-/// <summary>正式构建前执行同一套只读内容校验；存在错误时阻止构建。</summary>
-public sealed class FlatWorldContentValidationBuildHook : IPreprocessBuildWithReport
-{
-    /// <summary>CI 测试包用于显式跳过尚未清零的本体内容校验。</summary>
-    private const string SkipValidationArgument = "-skipFlatWorldContentValidation";
-
-    public int callbackOrder => -1000;
-
-    /// <summary>正式构建默认执行内容校验，仅允许带显式参数的测试构建跳过。</summary>
-    public void OnPreprocessBuild(BuildReport report)
-    {
-        if (ShouldSkipValidation())
-        {
-            Debug.LogWarning(
-                $"[FlatWorldContentValidation] 检测到 {SkipValidationArgument}，本次测试构建跳过内容校验。");
-            return;
-        }
-
-        FlatWorldContentValidationReport validationReport = FlatWorldContentValidator.ValidateAll(
-            FlatWorldContentValidationMode.Build,
-            true);
-        if (validationReport.HasErrors)
-        {
-            throw new BuildFailedException(
-                $"FlatWorld 本体内容校验失败：{validationReport.ErrorCount} 个错误，{validationReport.WarningCount} 个警告。" +
-                $" 请通过菜单“{FlatWorldContentValidator.MenuPath}”查看详细资源路径、字段和错误 ID。");
-        }
-    }
-
-    /// <summary>检查当前 Unity 命令行是否明确请求跳过内容校验。</summary>
-    private static bool ShouldSkipValidation()
-    {
-        return Environment.GetCommandLineArgs().Any(argument =>
-            string.Equals(argument, SkipValidationArgument, StringComparison.OrdinalIgnoreCase));
-    }
 }
