@@ -1,39 +1,85 @@
 #if UNITY_EDITOR
+using System;
 using System.IO;
+using System.Threading;
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// 监听 Assets 目录变化，并由后台线程按固定间隔合并刷新请求。
+/// 后台线程不调用 Unity API，最终资源刷新始终由 Editor 主线程执行。
+/// </summary>
 [InitializeOnLoad]
 public static class AutomaticAssetRefresher
 {
-    // 最小刷新间隔，防止频繁刷新
-    private const double MinRefreshIntervalSeconds = 0.5d;
-    private static bool pendingRefresh;
-    private static double nextAllowedRefreshTime;
-    private static double lastChangeTime;
-    private static FileSystemWatcher watcher;
-    // EditorPrefs key 控制是否启用自动刷新
+    #region 常量与状态
+
+    // 后台线程检查文件变化的固定间隔。
+    private const int PollingIntervalMilliseconds = 500;
+
+    // 程序集重载或退出时等待后台线程结束的最长时间。
+    private const int WorkerJoinTimeoutMilliseconds = 2000;
+
+    // EditorPrefs 中保存自动刷新开关的键。
     private const string EditorPrefKey = "FlatWorld_AutoAssetRefresh_Enabled";
-    private static bool IsEnabled() => EditorPrefs.GetBool(EditorPrefKey, true);
-    private static void SetEnabled(bool enabled)
+
+    // 保护监听器与后台线程的创建和释放。
+    private static readonly object LifecycleLock = new object();
+
+    // 以整数保存开关，便于跨线程原子读取。
+    private static int enabledState;
+
+    // 标记文件系统已经发生变化。
+    private static int fileChangesPending;
+
+    // 标记主线程需要执行资源刷新。
+    private static int mainThreadRefreshPending;
+
+    // 监听 Assets 目录的文件变化。
+    private static FileSystemWatcher watcher;
+
+    // 按固定间隔合并变化的后台线程。
+    private static Thread pollingThread;
+
+    // 通知后台线程停止轮询。
+    private static ManualResetEvent pollingStopSignal;
+
+    #endregion
+
+    #region 初始化与菜单
+
+    /// <summary>
+    /// 初始化自动刷新服务并绑定 Editor 生命周期。
+    /// </summary>
+    static AutomaticAssetRefresher()
     {
-        EditorPrefs.SetBool(EditorPrefKey, enabled);
+        bool enabled = EditorPrefs.GetBool(EditorPrefKey, true);
+        Volatile.Write(ref enabledState, enabled ? 1 : 0);
+
         if (enabled)
         {
-            StartWatcher();
+            StartPolling();
         }
-        else
-        {
-            StopWatcher();
-        }
+
+        EditorApplication.update += OnEditorUpdate;
+        AssemblyReloadEvents.beforeAssemblyReload += Shutdown;
+        EditorApplication.quitting += Shutdown;
     }
+
+    /// <summary>
+    /// 切换自动刷新开关。
+    /// </summary>
     [MenuItem("Tools/Auto Asset Refresh/Enable Auto Refresh")]
     public static void ToggleAutoRefreshMenu()
     {
         bool enabled = !IsEnabled();
         SetEnabled(enabled);
-        UnityEngine.Debug.Log($"[AutoAssetRefresh] 自动刷新已{(enabled ? "启用" : "禁用")}");
+        Debug.Log($"[AutoAssetRefresh] 自动刷新已{(enabled ? "启用" : "禁用")}");
     }
+
+    /// <summary>
+    /// 同步菜单勾选状态。
+    /// </summary>
     [MenuItem("Tools/Auto Asset Refresh/Enable Auto Refresh", true)]
     public static bool ToggleAutoRefreshMenuValidate()
     {
@@ -41,96 +87,237 @@ public static class AutomaticAssetRefresher
         return true;
     }
 
-    static AutomaticAssetRefresher()
+    /// <summary>
+    /// 返回当前自动刷新是否启用。
+    /// </summary>
+    private static bool IsEnabled()
     {
-        // 仅在启用时启动文件监听器
-        if (IsEnabled())
-        {
-            StartWatcher();
-        }
-        EditorApplication.update += OnEditorUpdate;
-        EditorApplication.quitting += StopWatcher;
+        return Volatile.Read(ref enabledState) == 1;
     }
 
+    /// <summary>
+    /// 保存开关并启动或停止后台轮询。
+    /// </summary>
+    private static void SetEnabled(bool enabled)
+    {
+        EditorPrefs.SetBool(EditorPrefKey, enabled);
+        Volatile.Write(ref enabledState, enabled ? 1 : 0);
+
+        if (enabled)
+        {
+            StartPolling();
+            return;
+        }
+
+        StopPolling();
+    }
+
+    /// <summary>
+    /// 在 Unity 主线程处理后台线程提交的刷新请求。
+    /// </summary>
     private static void OnEditorUpdate()
     {
-        if (!pendingRefresh)
+        if (Interlocked.Exchange(ref mainThreadRefreshPending, 0) == 0)
         {
             return;
         }
 
-        double now = EditorApplication.timeSinceStartup;
-        if (now - lastChangeTime < MinRefreshIntervalSeconds)
+        if (!IsEnabled())
         {
             return;
         }
 
-        if (now < nextAllowedRefreshTime)
+        if (EditorApplication.isCompiling || EditorApplication.isUpdating)
         {
+            Interlocked.Exchange(ref mainThreadRefreshPending, 1);
             return;
         }
 
-        pendingRefresh = false;
-        nextAllowedRefreshTime = now + MinRefreshIntervalSeconds;
         AssetDatabase.Refresh();
-        UnityEngine.Debug.Log("[AutoAssetRefresh] 已刷新资源数据库");
-    }
-    //请求
-    public static void RequestRefresh()
-    {
-        if (!IsEnabled())
-        {
-            return;
-        }
-        pendingRefresh = true;
-        lastChangeTime = EditorApplication.timeSinceStartup;
+        Debug.Log("[AutoAssetRefresh] 已由主线程刷新资源数据库");
     }
 
-    private static void StartWatcher()
+    /// <summary>
+    /// 停止后台资源并解除 Editor 生命周期订阅。
+    /// </summary>
+    private static void Shutdown()
     {
-        if (!IsEnabled())
+        StopPolling();
+        EditorApplication.update -= OnEditorUpdate;
+        AssemblyReloadEvents.beforeAssemblyReload -= Shutdown;
+        EditorApplication.quitting -= Shutdown;
+    }
+
+    #endregion
+
+    #region 后台轮询
+
+    /// <summary>
+    /// 启动文件监听器与固定间隔轮询线程。
+    /// </summary>
+    private static void StartPolling()
+    {
+        lock (LifecycleLock)
         {
-            return;
+            if (pollingThread != null)
+            {
+                return;
+            }
+
+            FileSystemWatcher createdWatcher = CreateWatcher(Application.dataPath);
+            ManualResetEvent createdStopSignal = new ManualResetEvent(false);
+            Thread createdThread = new Thread(() => PollForChanges(createdStopSignal))
+            {
+                IsBackground = true,
+                Name = "FlatWorld Auto Asset Refresh Poller"
+            };
+
+            watcher = createdWatcher;
+            pollingStopSignal = createdStopSignal;
+            pollingThread = createdThread;
+
+            createdThread.Start();
+            createdWatcher.EnableRaisingEvents = true;
         }
-        if (watcher != null)
+    }
+
+    /// <summary>
+    /// 每隔固定时间把文件变化合并为一个主线程刷新请求。
+    /// </summary>
+    private static void PollForChanges(ManualResetEvent stopSignal)
+    {
+        while (!stopSignal.WaitOne(PollingIntervalMilliseconds))
         {
-            return;
+            if (!IsEnabled())
+            {
+                continue;
+            }
+
+            if (Interlocked.Exchange(ref fileChangesPending, 0) == 0)
+            {
+                continue;
+            }
+
+            Interlocked.Exchange(ref mainThreadRefreshPending, 1);
+        }
+    }
+
+    /// <summary>
+    /// 停止文件监听器并等待后台轮询线程退出。
+    /// </summary>
+    private static void StopPolling()
+    {
+        FileSystemWatcher watcherToDispose;
+        ManualResetEvent stopSignalToDispose;
+        Thread threadToJoin;
+
+        lock (LifecycleLock)
+        {
+            watcherToDispose = watcher;
+            stopSignalToDispose = pollingStopSignal;
+            threadToJoin = pollingThread;
+
+            watcher = null;
+            pollingStopSignal = null;
+            pollingThread = null;
         }
 
-        string assetsPath = Application.dataPath;
-        watcher = new FileSystemWatcher(assetsPath)
+        DisposeWatcher(watcherToDispose);
+        stopSignalToDispose?.Set();
+
+        bool threadStopped = threadToJoin == null
+            || !threadToJoin.IsAlive
+            || threadToJoin.Join(WorkerJoinTimeoutMilliseconds);
+
+        if (threadStopped)
+        {
+            stopSignalToDispose?.Dispose();
+        }
+        else
+        {
+            Debug.LogWarning("[AutoAssetRefresh] 后台轮询线程未在限定时间内结束");
+        }
+
+        Interlocked.Exchange(ref fileChangesPending, 0);
+        Interlocked.Exchange(ref mainThreadRefreshPending, 0);
+    }
+
+    #endregion
+
+    #region 文件变化监听
+
+    /// <summary>
+    /// 创建只负责报告 Assets 目录变化的文件监听器。
+    /// </summary>
+    private static FileSystemWatcher CreateWatcher(string assetsPath)
+    {
+        FileSystemWatcher createdWatcher = new FileSystemWatcher(assetsPath)
         {
             IncludeSubdirectories = true,
             NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName,
             Filter = "*.*"
         };
 
-        watcher.Changed += OnFileChanged;
-        watcher.Created += OnFileChanged;
-        watcher.Deleted += OnFileChanged;
-        watcher.Renamed += OnFileRenamed;
-        watcher.EnableRaisingEvents = true;
+        createdWatcher.Changed += OnFileChanged;
+        createdWatcher.Created += OnFileChanged;
+        createdWatcher.Deleted += OnFileChanged;
+        createdWatcher.Renamed += OnFileRenamed;
+        return createdWatcher;
     }
 
-    private static void StopWatcher()
+    /// <summary>
+    /// 释放文件监听器及其事件订阅。
+    /// </summary>
+    private static void DisposeWatcher(FileSystemWatcher watcherToDispose)
     {
-        if (watcher == null)
+        if (watcherToDispose == null)
         {
             return;
         }
 
-        watcher.EnableRaisingEvents = false;
-        watcher.Changed -= OnFileChanged;
-        watcher.Created -= OnFileChanged;
-        watcher.Deleted -= OnFileChanged;
-        watcher.Renamed -= OnFileRenamed;
-        watcher.Dispose();
-        watcher = null;
+        watcherToDispose.EnableRaisingEvents = false;
+        watcherToDispose.Changed -= OnFileChanged;
+        watcherToDispose.Created -= OnFileChanged;
+        watcherToDispose.Deleted -= OnFileChanged;
+        watcherToDispose.Renamed -= OnFileRenamed;
+        watcherToDispose.Dispose();
     }
 
-    private static void OnFileChanged(object sender, FileSystemEventArgs e)
+    /// <summary>
+    /// 记录普通文件变化，等待后台线程合并处理。
+    /// </summary>
+    private static void OnFileChanged(object sender, FileSystemEventArgs eventArgs)
     {
-        if (IsIgnoredPath(e.FullPath))
+        RequestRefresh(eventArgs.FullPath);
+    }
+
+    /// <summary>
+    /// 记录文件重命名，等待后台线程合并处理。
+    /// </summary>
+    private static void OnFileRenamed(object sender, RenamedEventArgs eventArgs)
+    {
+        RequestRefresh(eventArgs.FullPath);
+    }
+
+    /// <summary>
+    /// 提交一次不绑定具体路径的资源刷新请求。
+    /// </summary>
+    public static void RequestRefresh()
+    {
+        if (!IsEnabled())
+        {
+            return;
+        }
+
+        Interlocked.Exchange(ref fileChangesPending, 1);
+    }
+
+    /// <summary>
+    /// 过滤无关文件后提交资源刷新请求。
+    /// </summary>
+    private static void RequestRefresh(string fullPath)
+    {
+        if (IsIgnoredPath(fullPath))
         {
             return;
         }
@@ -138,16 +325,9 @@ public static class AutomaticAssetRefresher
         RequestRefresh();
     }
 
-    private static void OnFileRenamed(object sender, RenamedEventArgs e)
-    {
-        if (IsIgnoredPath(e.FullPath))
-        {
-            return;
-        }
-
-        RequestRefresh();
-    }
-
+    /// <summary>
+    /// 判断文件变化是否不需要触发 Unity 资源刷新。
+    /// </summary>
     private static bool IsIgnoredPath(string fullPath)
     {
         if (string.IsNullOrEmpty(fullPath))
@@ -156,17 +336,22 @@ public static class AutomaticAssetRefresher
         }
 
         string fileName = Path.GetFileName(fullPath);
-        if (fileName.EndsWith(".tmp") || fileName.EndsWith(".csproj") || fileName.EndsWith(".sln"))
-        {
-            return true;
-        }
-
-        return false;
+        return fileName.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase)
+            || fileName.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)
+            || fileName.EndsWith(".sln", StringComparison.OrdinalIgnoreCase);
     }
+
+    #endregion
 }
 
+/// <summary>
+/// 在 Unity 保存资源后向自动刷新服务提交合并请求。
+/// </summary>
 public class AutoAssetRefreshOnSaveProcessor : AssetModificationProcessor
 {
+    /// <summary>
+    /// 记录本次资源保存并保持原始保存路径不变。
+    /// </summary>
     private static string[] OnWillSaveAssets(string[] paths)
     {
         if (paths != null && paths.Length > 0)
