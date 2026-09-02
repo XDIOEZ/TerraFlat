@@ -35,6 +35,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 快捷栏选中框属于当前槽位背景层，切换时必须重新挂到目标槽位并置为首个兄弟；数量文本和物品图标保持在其上方，不能依赖独立 Canvas 的任意 `sortingOrder`。
 - 玩家行囊的键鼠点击无条件使用 `Inventory_Hand`，不能因携带槽为空而回退当前快捷栏；快捷栏选中槽只参与手柄确认与角色当前装备，不参与 PC 背包交换。
 - 快捷栏收到 Mobile `RightClick` 时必须允许当前手持物执行 `Act`，不能因触点位于手机“使用”按钮上而被 `IsPointerOverUI()` 拦截；键鼠右键仍保留 UI 遮挡检查。
+- 物品菜单只能为实现 `IInventoryContextUseHandler` 的物品创建临时实例并执行 `Act`；建筑、工具等持有型动作必须把真实槽位物品转入快捷栏，关闭阻断世界准星的来源面板，待手持实例与预览就绪后再使用，禁止临时实例伪造 `InHand`。
 - 快捷栏生成的手持物只注册到玩家 `Mod_FocusPoint`；左右翻身角由该模块读取 `Mod_TurnBack.CurrentTurnAngleY` 后与 Z 轴瞄准一次性合成，不能再把手持物根节点注册进 `controlledTransforms_Direction`。
 - 丢弃统一经过 `Module_DiscardItem.DropItemByCount`；扣减 `ItemSlot.Amount` 后除触发槽位事件外，还必须按快捷栏槽位索引显式刷新 UI，兼容手机入口没有 `ItemSlot_UI` 引用的情况。
 - 快捷栏拖拽到非 UI 区域后的整组丢弃由 `ItemSlot_UI` 世界长按回调转发到 `Module_DiscardItem`，落点使用触点屏幕坐标；UI 槽位长按放置路径保持独立。

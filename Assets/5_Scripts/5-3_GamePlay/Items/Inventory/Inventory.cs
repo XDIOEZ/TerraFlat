@@ -834,7 +834,7 @@ public class Inventory
             return;
         }
 
-        currentMenuInstance.Init(itemSlot_UI[index], slot, item, Data, index);
+        currentMenuInstance.Init(itemSlot_UI[index], slot, item, Data, index, this);
         _activeContextMenuPanel = menuPanel;
 
         RectTransform menuRect = currentMenuInstance.GetComponent<RectTransform>();
@@ -1234,6 +1234,83 @@ public class Inventory
     {
         return item is Player && Data?.Name == ModText.Bag;
     }
+
+    #region 库存物品使用
+
+    /// <summary>把需要真实手持实例的槽位物品转入玩家快捷栏，并排队执行一次使用。</summary>
+    public bool TryQueueHeldItemUse(int sourceIndex)
+    {
+        if (Data?.itemSlots == null || sourceIndex < 0 || sourceIndex >= Data.itemSlots.Count)
+            return false;
+
+        ItemSlot sourceSlot = Data.itemSlots[sourceIndex];
+        if (sourceSlot?.itemData == null)
+            return false;
+
+        Inventory_HotBar.HotBarRuntimeInventory hotbarInventory = ResolvePlayerHotBarRuntimeInventory();
+        if (hotbarInventory?.Owner == null || hotbarInventory.Data?.itemSlots == null ||
+            hotbarInventory.Data.itemSlots.Count == 0)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(Data, hotbarInventory.Data))
+            return hotbarInventory.Owner.TryQueueSlotUse(sourceIndex, sourceSlot.itemData);
+
+        int preferredIndex = Mathf.Clamp(
+            hotbarInventory.Owner.CurrentIndex,
+            0,
+            hotbarInventory.Data.itemSlots.Count - 1);
+        if (TryMoveOneItemToHotbar(sourceSlot, hotbarInventory, preferredIndex, out ItemData preferredData))
+            return hotbarInventory.Owner.TryQueueSlotUse(preferredIndex, preferredData);
+
+        for (int index = 0; index < hotbarInventory.Data.itemSlots.Count; index++)
+        {
+            if (index == preferredIndex)
+                continue;
+
+            if (TryMoveOneItemToHotbar(sourceSlot, hotbarInventory, index, out ItemData targetData))
+                return hotbarInventory.Owner.TryQueueSlotUse(index, targetData);
+        }
+
+        return false;
+    }
+
+    /// <summary>解析当前库存对应的本地玩家快捷栏运行时，兼容快捷栏自身与外部容器。</summary>
+    private Inventory_HotBar.HotBarRuntimeInventory ResolvePlayerHotBarRuntimeInventory()
+    {
+        if (this is Inventory_HotBar.HotBarRuntimeInventory currentHotbar && currentHotbar.Owner != null)
+            return currentHotbar;
+
+        return GetPlayerHotBarInventory() as Inventory_HotBar.HotBarRuntimeInventory;
+    }
+
+    /// <summary>尝试把源槽中的一个物品转入指定快捷栏槽位，并返回实际承载的数据。</summary>
+    private bool TryMoveOneItemToHotbar(
+        ItemSlot sourceSlot,
+        Inventory_HotBar.HotBarRuntimeInventory hotbarInventory,
+        int targetIndex,
+        out ItemData targetData)
+    {
+        targetData = null;
+        if (sourceSlot?.itemData == null || hotbarInventory?.Data?.itemSlots == null ||
+            targetIndex < 0 || targetIndex >= hotbarInventory.Data.itemSlots.Count)
+        {
+            return false;
+        }
+
+        ItemSlot targetSlot = hotbarInventory.Data.itemSlots[targetIndex];
+        if (targetSlot == null || !hotbarInventory.CanAcceptQuickTransfer(sourceSlot, targetSlot))
+            return false;
+
+        if (!Data.TransferItemQuantityTo(sourceSlot, hotbarInventory.Data, targetSlot, 1))
+            return false;
+
+        targetData = targetSlot.itemData;
+        return targetData != null;
+    }
+
+    #endregion
 
     public virtual void OnShiftQuickTransfer(int index)
     {

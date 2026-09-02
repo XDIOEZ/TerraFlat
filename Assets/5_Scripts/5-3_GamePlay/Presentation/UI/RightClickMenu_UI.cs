@@ -17,6 +17,8 @@ public class RightClickMenu_UI : MonoBehaviour
     Item SlotOwner; // 槽位所属物品（通常为容器或玩家）
     private Inventory_Data ownerInventoryData; // 槽位所属库存数据
     private int ownerSlotIndex = -1; // 槽位在库存中的索引
+    private Inventory ownerInventory; // 槽位所属库存运行时
+    private BasePanel sourcePanel; // 槽位所在的来源面板
     private GameController gameController;
     private Module_DiscardItem discardModule;
     private Button dropStackButton;
@@ -27,12 +29,20 @@ public class RightClickMenu_UI : MonoBehaviour
     /// <summary>
     /// 初始化右键菜单并绑定按钮事件。
     /// </summary>
-    public void Init(ItemSlot_UI _itemSlotUI, ItemSlot _itemSlot, Item _SlotOwner, Inventory_Data _ownerInventoryData = null, int _ownerSlotIndex = -1)
+    public void Init(
+        ItemSlot_UI _itemSlotUI,
+        ItemSlot _itemSlot,
+        Item _SlotOwner,
+        Inventory_Data _ownerInventoryData = null,
+        int _ownerSlotIndex = -1,
+        Inventory _ownerInventory = null)
     {
         itemSlotUI = _itemSlotUI;
         itemSlot = _itemSlot;
         ownerInventoryData = _ownerInventoryData;
         ownerSlotIndex = _ownerSlotIndex;
+        ownerInventory = _ownerInventory;
+        sourcePanel = itemSlotUI != null ? itemSlotUI.GetComponentInParent<BasePanel>() : null;
         basePanel = GetComponent<BasePanel>();
         if (basePanel == null)
         {
@@ -76,7 +86,7 @@ public class RightClickMenu_UI : MonoBehaviour
     }
 
     /// <summary>
-    /// 临时实例化并执行物品 Act 行为，然后立即回收实例。
+    /// 库存上下文物品使用临时实例；需要手持状态的物品统一进入快捷栏后执行。
     /// </summary>
     public void UseItem()
     {
@@ -86,14 +96,56 @@ public class RightClickMenu_UI : MonoBehaviour
             return;
         }
 
-        // 右键“使用”只触发行为，不直接改动场景中的持久实例。
-        Item item = ItemMgr.Instance.InstantiateItem(itemSlot.itemData);
-        item.Load();
-        item.Owner = SlotOwner;
-        Mod_Food food = item.itemMods?.GetMod_ByID<Mod_Food>(ModText.Food);
-        food?.BindRuntimeInventoryContext(ownerInventoryData, itemSlot, ownerSlotIndex);
-        item.Act();
-        ItemMgr.Instance.DespawnItem(item);
+        Item runtimeItem = ItemMgr.Instance.InstantiateItem(itemSlot.itemData);
+        runtimeItem.Owner = SlotOwner;
+        runtimeItem.Load();
+        bool usedFromInventory = TryUseFromInventoryContext(runtimeItem);
+        ItemMgr.Instance.DespawnItem(runtimeItem);
+        if (usedFromInventory)
+            return;
+
+        if (ownerInventory != null && ownerInventory.TryQueueHeldItemUse(ownerSlotIndex))
+        {
+            ClosePanelsForHeldUse();
+            return;
+        }
+
+        Debug.LogWarning("[RightClickMenu_UI.UseItem] 物品需要先进入有空位的快捷栏才能使用");
+    }
+
+    /// <summary>只允许显式实现库存使用契约的模块通过临时实例执行动作。</summary>
+    private bool TryUseFromInventoryContext(Item runtimeItem)
+    {
+        if (runtimeItem == null)
+            return false;
+
+        Module[] modules = runtimeItem.GetComponentsInChildren<Module>(true);
+        for (int index = 0; index < modules.Length; index++)
+        {
+            if (modules[index] is not IInventoryContextUseHandler handler)
+                continue;
+
+            handler.BindInventoryUseContext(ownerInventoryData, itemSlot, ownerSlotIndex);
+            runtimeItem.Act();
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>关闭会阻断世界准星的来源面板，并确保当前物品菜单同步回收。</summary>
+    private void ClosePanelsForHeldUse()
+    {
+        bool menuClosedBySourceInventory = false;
+        if (sourcePanel != null && sourcePanel.IsGameplayInputBlocking)
+        {
+            menuClosedBySourceInventory = ownerInventory != null &&
+                                          ReferenceEquals(ownerInventory.basePanel, sourcePanel);
+            sourcePanel.Close();
+        }
+
+        if (!menuClosedBySourceInventory)
+            DestroyPanel();
     }
 
     /// <summary>

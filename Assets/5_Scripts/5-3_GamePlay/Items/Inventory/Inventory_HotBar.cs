@@ -4,6 +4,7 @@ using DG.Tweening;
 using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -165,6 +166,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     private InputAction _directHotbarAction;
     private InputAction _previousHotbarAction;
     private InputAction _nextHotbarAction;
+    private Coroutine _queuedSlotUseCoroutine;
 
     public Inventory_Data Data => RuntimeInventory?.Data;
     public List<ItemSlot_UI> itemSlot_UI => RuntimeInventory?.itemSlot_UI;
@@ -674,6 +676,58 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     public Inventory GetDefaultTargetInventory()
     {
         return RuntimeInventory;
+    }
+
+    /// <summary>验证目标槽位后排队使用，给面板关闭、手持实例加载和放置预览各留出更新时间。</summary>
+    public bool TryQueueSlotUse(int slotIndex, ItemData expectedData)
+    {
+        if (!IsExpectedSlotData(slotIndex, expectedData))
+            return false;
+
+        if (_queuedSlotUseCoroutine != null)
+            StopCoroutine(_queuedSlotUseCoroutine);
+
+        _queuedSlotUseCoroutine = StartCoroutine(UseSlotWhenReady(slotIndex, expectedData));
+        return true;
+    }
+
+    /// <summary>等待模态面板释放输入后选中物品，再等待一帧让建筑等持续型模块生成预览。</summary>
+    private IEnumerator UseSlotWhenReady(int slotIndex, ItemData expectedData)
+    {
+        yield return null;
+        if (!IsExpectedSlotData(slotIndex, expectedData))
+        {
+            _queuedSlotUseCoroutine = null;
+            yield break;
+        }
+
+        if (CurrentIndex != slotIndex || CurentSelectItem == null ||
+            !ReferenceEquals(CurentSelectItem.itemData, expectedData))
+        {
+            SwitchItem(slotIndex);
+        }
+        else
+        {
+            SyncCurrentHeldItemWithSlot();
+        }
+
+        yield return null;
+        if (IsExpectedSlotData(slotIndex, expectedData) && CurrentIndex == slotIndex &&
+            CurentSelectItem != null && ReferenceEquals(CurentSelectItem.itemData, expectedData))
+        {
+            CurentSelectItem.Act();
+        }
+
+        _queuedSlotUseCoroutine = null;
+    }
+
+    /// <summary>确认排队期间槽位及其数据引用没有被其他库存操作替换。</summary>
+    private bool IsExpectedSlotData(int slotIndex, ItemData expectedData)
+    {
+        return expectedData != null && Data?.itemSlots != null &&
+               slotIndex >= 0 && slotIndex < Data.itemSlots.Count &&
+               Data.itemSlots[slotIndex] != null &&
+               ReferenceEquals(Data.itemSlots[slotIndex].itemData, expectedData);
     }
 
     public bool TryDropHeldItemAtScreenPosition(Vector2 screenPosition)

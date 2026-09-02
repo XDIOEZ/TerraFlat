@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UltEvents;
 
-public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
+public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInventoryContextUseHandler
 {
     public override string CanonicalModuleId => ModText.Food;
 
@@ -209,6 +209,12 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle
     public void BindRuntimeInventoryContext(Inventory_Data inventoryData, ItemSlot slot, int slotIndex)
     {
         _runtimeExecutor?.BindInventoryContext(inventoryData, slot, slotIndex);
+    }
+
+    /// <summary>声明食物可从任意库存槽直接使用，并将消耗写回该槽位。</summary>
+    public void BindInventoryUseContext(Inventory_Data inventoryData, ItemSlot slot, int slotIndex)
+    {
+        BindRuntimeInventoryContext(inventoryData, slot, slotIndex);
     }
 
     public void OnItemTakenFromPool()
