@@ -63,7 +63,9 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
 
     #region 运行时
 
-    private readonly Dictionary<string, Sprite> spriteCache = new Dictionary<string, Sprite>();
+    /// <summary>按物品 ID 缓存采集物的运行时视觉定义。</summary>
+    private readonly Dictionary<string, RuntimeItemDefinition> itemDefinitionCache =
+        new Dictionary<string, RuntimeItemDefinition>(StringComparer.OrdinalIgnoreCase);
     private SpriteRenderer ownerRenderer;
 
     public int CurrentStock => Data?.CurrentStock ?? 0;
@@ -232,7 +234,7 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
         ResolveOwnerRenderer();
         EnsureIndicatorRenderers();
         ApplyIndicatorLayout();
-        ApplyIndicatorSprite();
+        ApplyIndicatorAppearance();
         ApplyIndicatorSorting();
         RefreshIndicatorVisual();
     }
@@ -299,15 +301,27 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
         }
     }
 
-    private void ApplyIndicatorSprite()
+    /// <summary>让库存提示复用采集物的权威 Sprite 与受光材质。</summary>
+    private void ApplyIndicatorAppearance()
     {
+        RuntimeItemDefinition definition = ResolveRuntimeItemDefinition(CollectItemId);
         Sprite sprite = IndicatorSpriteOverride != null
             ? IndicatorSpriteOverride
-            : ResolveRuntimeItemSprite(CollectItemId);
+            : definition.Sprite;
+        if (sprite == null)
+            throw new MissingReferenceException(
+                $"[Mod_Collectable] 找不到采集物图标，物品ID={CollectItemId}");
+        if (definition.Material == null)
+            throw new MissingReferenceException(
+                $"[Mod_Collectable] 找不到采集物材质，物品ID={CollectItemId}");
+
         foreach (SpriteRenderer renderer in IndicatorRenderers)
         {
-            if (renderer != null)
-                renderer.sprite = sprite;
+            if (renderer == null)
+                continue;
+
+            renderer.sprite = sprite;
+            renderer.sharedMaterial = definition.Material;
         }
     }
 
@@ -363,21 +377,21 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
         return transform.position;
     }
 
-    private Sprite ResolveRuntimeItemSprite(string itemId)
+    /// <summary>从运行时目录解析并缓存采集物定义。</summary>
+    private RuntimeItemDefinition ResolveRuntimeItemDefinition(string itemId)
     {
-        if (spriteCache.TryGetValue(itemId, out Sprite cached))
+        if (itemDefinitionCache.TryGetValue(itemId, out RuntimeItemDefinition cached))
             return cached;
 
         if (GameRes.Instance == null ||
-            !GameRes.Instance.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition) ||
-            definition.Sprite == null)
+            !GameRes.Instance.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition))
         {
             throw new MissingReferenceException(
-                $"[Mod_Collectable] 找不到采集物图标，物品ID={itemId}");
+                $"[Mod_Collectable] 找不到采集物定义，物品ID={itemId}");
         }
 
-        spriteCache[itemId] = definition.Sprite;
-        return definition.Sprite;
+        itemDefinitionCache[itemId] = definition;
+        return definition;
     }
 
     #endregion
