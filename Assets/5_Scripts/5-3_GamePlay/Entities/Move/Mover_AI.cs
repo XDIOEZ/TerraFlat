@@ -100,7 +100,26 @@ public class Mover_AI : Mover
         HasReachedTarget = NavigationAgent.ReachedDestination;
     }
 
+    /// <summary>提交不限制路径总代价的普通移动目标。</summary>
     public void SetDestination(Vector2 destination, bool forceRepath = false)
+    {
+        SubmitDestination(destination, int.MaxValue, forceRepath);
+    }
+
+    /// <summary>提交只有路径总代价严格小于上限时才接受的移动目标。</summary>
+    public void SetCostLimitedDestination(
+        Vector2 destination,
+        int maximumPathCostExclusive,
+        bool forceRepath = false)
+    {
+        SubmitDestination(destination, Mathf.Max(1, maximumPathCostExclusive), forceRepath);
+    }
+
+    /// <summary>统一同步移动模块状态并把目标交给导航代理。</summary>
+    private void SubmitDestination(
+        Vector2 destination,
+        int maximumPathCostExclusive,
+        bool forceRepath)
     {
         bool isNewRequest =
             !hasDestination ||
@@ -116,7 +135,13 @@ public class Mover_AI : Mover
             return;
 
         NavigationAgent.MaxSpeed = SpeedValue;
-        NavigationAgent.SetDestination(destination, forceRepath);
+        if (maximumPathCostExclusive == int.MaxValue)
+            NavigationAgent.SetDestination(destination, forceRepath);
+        else
+            NavigationAgent.SetCostLimitedDestination(
+                destination,
+                maximumPathCostExclusive,
+                forceRepath);
 
         if (isNewRequest || forceRepath)
             lastSubmittedDestination = destination;

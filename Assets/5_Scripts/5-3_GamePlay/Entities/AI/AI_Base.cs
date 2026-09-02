@@ -771,6 +771,12 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		_mover.SetDestination(target);
 	}
 
+	/// <summary>仅在带权路径总代价严格小于动物上限时接受新的追击路线。</summary>
+	protected void MoveToChaseTarget(Vector3 target, int maximumPathCostExclusive)
+	{
+		_mover.SetCostLimitedDestination(target, maximumPathCostExclusive);
+	}
+
 	/// <summary>远离指定位置方向移动</summary>
 	protected void MoveAwayFrom(Vector3 sourcePosition, float distance)
 	{

@@ -138,6 +138,9 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	public float attackTriggerDistance = 1.4f;
 	[HorizontalGroup("配置/行为/战斗/Hr2"), LabelText("追击放弃"), SuffixLabel("米", true), MinValue(0.1f)]
 	public float chaseLossDistance = 44f;
+	/// <summary>狼接受新追击路线的总代价上限，不包含上限本身。</summary>
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), LabelText("路径代价上限"), MinValue(1)]
+	public int chasePathCostLimit = 440;
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), HorizontalGroup("配置/行为/战斗/Hr3"), LabelText("攻击冷却"), SuffixLabel("秒", true), MinValue(0f)]
 	public float attackCooldown = 2f;
@@ -525,7 +528,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		Vector3 chaseTarget = _hasChaseFormationTarget
 			? _chaseFormationTarget
 			: _currentThreat.transform.position;
-		MoveTo(chaseTarget);
+		MoveToChaseTarget(chaseTarget, chasePathCostLimit);
 		FaceTarget(chaseTarget);
 		TryCallNearbyWolves();
 	}

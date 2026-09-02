@@ -58,6 +58,8 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
     [Min(0.1f)] public float perceptionRangeSatiated = 8f;
     [Min(0.1f)] public float perceptionRangeHungry = 24f;
     [Min(0.1f)] public float chaseLossDistance = 30f;
+    /// <summary>雪豹接受新追击路线的总代价上限，不包含上限本身。</summary>
+    [Min(1)] public int chasePathCostLimit = 300;
     [Min(0f)] public float preyReacquireDelay = 10f;
 
     [Header("捕食")]
@@ -310,7 +312,7 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
             }
         }
 
-        MoveTo(currentTarget.transform.position);
+        MoveToChaseTarget(currentTarget.transform.position, chasePathCostLimit);
         FaceTarget(currentTarget.transform.position);
     }
 

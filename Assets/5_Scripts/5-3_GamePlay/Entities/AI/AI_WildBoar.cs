@@ -164,6 +164,9 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	public float chaseTriggerDistance = 12f;
 	[HorizontalGroup("配置/行为/追击/Hr1"), LabelText("放弃距离"), SuffixLabel("米", true), MinValue(0.1f)]
 	public float chaseLossDistance = 20f;
+	/// <summary>野猪接受新追击路线的总代价上限，不包含上限本身。</summary>
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/追击"), LabelText("路径代价上限"), MinValue(1)]
+	public int chasePathCostLimit = 200;
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/追击"), LabelText("威胁标签")]
 	public List<string> chaseThreatTags = new List<string> { "Player" };
@@ -522,7 +525,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		}
 
 		// 追击目标是玩家左右两侧的站位点，并补偿 Mover_AI 自带的到达停止距离。
-		MoveTo(navigationTarget);
+		MoveToChaseTarget(navigationTarget, chasePathCostLimit);
 		FaceTarget(_attackPositionTarget);
 	}
 

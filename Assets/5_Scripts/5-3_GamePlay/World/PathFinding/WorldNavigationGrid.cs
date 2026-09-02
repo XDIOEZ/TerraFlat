@@ -316,6 +316,55 @@ public sealed class WorldNavigationGrid
         return true;
     }
 
+    /// <summary>按导航网格的实际相邻移动规则计算一条直线路径的总代价。</summary>
+    public bool TryCalculateLineTraversalCost(
+        Vector2Int from,
+        Vector2Int to,
+        out int totalCost)
+    {
+        totalCost = 0;
+        from = NormalizeCell(from);
+        to = NormalizeCell(to);
+        if (!IsWalkable(from) || !IsWalkable(to))
+            return false;
+
+        Vector2Int shortest = WorldTopologyRuntime.ShortestDelta(from, to);
+        Vector2Int unwrappedTo = from + shortest;
+        int x = from.x;
+        int y = from.y;
+        int dx = Mathf.Abs(shortest.x);
+        int dy = Mathf.Abs(shortest.y);
+        int stepX = shortest.x >= 0 ? 1 : -1;
+        int stepY = shortest.y >= 0 ? 1 : -1;
+        int error = dx - dy;
+
+        while (x != unwrappedTo.x || y != unwrappedTo.y)
+        {
+            Vector2Int previous = NormalizeCell(new Vector2Int(x, y));
+            int doubledError = error * 2;
+
+            if (doubledError > -dy)
+            {
+                error -= dy;
+                x += stepX;
+            }
+
+            if (doubledError < dx)
+            {
+                error += dx;
+                y += stepY;
+            }
+
+            Vector2Int next = NormalizeCell(new Vector2Int(x, y));
+            if (!CanTraverse(previous, next, out int traversalCost))
+                return false;
+
+            totalCost += traversalCost;
+        }
+
+        return true;
+    }
+
     /// <summary>
     /// Returns mutations accumulated since the navigation manager last synchronized. The
     /// sparse grid has one consumer, so draining avoids keeping an unbounded revision journal.

@@ -14,6 +14,8 @@ public readonly struct WorldNavigationPathResult
     public readonly Vector2 ResolvedDestination;
     public readonly Vector2[] Waypoints;
     public readonly bool ReachesDestination;
+    /// <summary>带权导航用于本次路径结果判定的总代价。</summary>
+    public readonly int TotalCost;
     public readonly int GridRevision;
     public readonly int PathCostRevision;
 
@@ -24,6 +26,7 @@ public readonly struct WorldNavigationPathResult
         Vector2 resolvedDestination,
         Vector2[] waypoints,
         bool reachesDestination,
+        int totalCost,
         int gridRevision,
         int pathCostRevision)
     {
@@ -33,6 +36,7 @@ public readonly struct WorldNavigationPathResult
         ResolvedDestination = resolvedDestination;
         Waypoints = waypoints ?? Array.Empty<Vector2>();
         ReachesDestination = reachesDestination;
+        TotalCost = totalCost;
         GridRevision = gridRevision;
         PathCostRevision = pathCostRevision;
     }
@@ -767,18 +771,25 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
 
         Vector2Int directDelta = WorldTopologyRuntime.ShortestDelta(start, goal);
         int directDistance = Mathf.Max(Mathf.Abs(directDelta.x), Mathf.Abs(directDelta.y));
+        int directPathCost = 0;
         bool directLineIsEndpointCostSafe =
             directDistance <= Mathf.Max(1, maxDirectLineOfSightCells) &&
             HasNoHigherPenaltyGridLineOfSight(
                 WorldNavigationGrid.CellCenter(start),
-                WorldNavigationGrid.CellCenter(goal));
+                WorldNavigationGrid.CellCenter(goal)) &&
+            grid.TryCalculateLineTraversalCost(start, goal, out directPathCost);
         if (start == goal ||
             directLineIsEndpointCostSafe)
         {
             Vector2 resolved = goal == requestedGoal
                 ? WorldTopologyRuntime.NormalizePosition(request.Destination)
                 : WorldNavigationGrid.CellCenter(goal);
-            ScheduleSuccess(request, resolved, new[] { resolved }, true);
+            ScheduleSuccess(
+                request,
+                resolved,
+                new[] { resolved },
+                true,
+                start == goal ? 0 : directPathCost);
             return;
         }
 
@@ -796,13 +807,15 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                 Mathf.Max(2, maxPathCellsPerResult),
                 out Vector2[] cachedPath,
                 out Vector2 resolvedDestination,
-                out bool cachedPathReachesDestination))
+                out bool cachedPathReachesDestination,
+                out int cachedPathCost))
         {
             ScheduleSuccess(
                 request,
                 resolvedDestination,
                 cachedPath,
-                cachedPathReachesDestination);
+                cachedPathReachesDestination,
+                cachedPathCost);
             return;
         }
 
@@ -910,9 +923,15 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                         Mathf.Max(2, maxPathCellsPerResult),
                         out Vector2[] waypoints,
                         out Vector2 resolvedDestination,
-                        out bool reachesDestination))
+                        out bool reachesDestination,
+                        out int totalCost))
                 {
-                    ScheduleSuccess(request, resolvedDestination, waypoints, reachesDestination);
+                    ScheduleSuccess(
+                        request,
+                        resolvedDestination,
+                        waypoints,
+                        reachesDestination,
+                        totalCost);
                 }
                 else
                 {
@@ -1041,7 +1060,8 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         PathRequest request,
         Vector2 resolvedDestination,
         Vector2[] waypoints,
-        bool reachesDestination)
+        bool reachesDestination,
+        int totalCost)
     {
         DetachRequestFromField(request);
         RemoveFromAdmissionQueue(request);
@@ -1056,6 +1076,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                 resolvedDestination,
                 waypoints,
                 reachesDestination,
+                totalCost,
                 grid.Revision,
                 grid.PathCostRevision)));
     }
@@ -1075,6 +1096,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                 request.Destination,
                 Array.Empty<Vector2>(),
                 false,
+                int.MaxValue,
                 grid.Revision,
                 grid.PathCostRevision)));
     }
@@ -1163,6 +1185,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                         result.ResolvedDestination,
                         result.Waypoints,
                         result.ReachesDestination,
+                        result.TotalCost,
                         grid.Revision,
                         grid.PathCostRevision)
                     : new WorldNavigationPathResult(
@@ -1172,6 +1195,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                         result.RequestedDestination,
                         Array.Empty<Vector2>(),
                         false,
+                        int.MaxValue,
                         grid.Revision,
                         grid.PathCostRevision);
             }
@@ -1470,14 +1494,17 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
             int maxPathCells,
             out Vector2[] waypoints,
             out Vector2 resolvedDestination,
-            out bool reachesDestination)
+            out bool reachesDestination,
+            out int totalCost)
         {
             reachesDestination = false;
+            totalCost = int.MaxValue;
             resolvedDestination = request.GoalCell == WorldNavigationGrid.WorldToCell(request.Destination)
                 ? WorldTopologyRuntime.NormalizePosition(request.Destination)
                 : WorldNavigationGrid.CellCenter(request.GoalCell);
 
-            if (start != Goal && !nextTowardGoal.ContainsKey(start))
+            if (!costs.TryGetValue(start, out totalCost) ||
+                (start != Goal && !nextTowardGoal.ContainsKey(start)))
             {
                 waypoints = null;
                 return false;
