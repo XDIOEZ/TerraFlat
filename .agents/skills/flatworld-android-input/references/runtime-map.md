@@ -23,7 +23,7 @@
 | 摇杆 | `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/MobileVirtualJoystick.cs` | 每实例持有 `pointerId`；移动、浮动指向与攻击摇杆写入 |
 | 按钮 | `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/MobileInputButton.cs` | 按住/抬起转换为虚拟设备按钮并可靠释放 |
 | HUD 控制器 | `Assets/5_Scripts/5-3_GamePlay/Presentation/UI/PlayerMobileControlsHUD.cs` | 本地玩家可见性、Prefab 绑定、抽屉、快捷栏、面板联动和总清理 |
-| 正式视觉 | `Assets/2_Prefabs/2-1_UI/Runtime/Mobile/UI_MobileControls.prefab` | 控件布局、射线顺序与节点命名契约 |
+| 正式视觉 | `Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControls.prefab` | 控件布局、射线顺序与节点命名契约 |
 | Prefab 构建 | `Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder.cs` | `FlatWorld/UI/Rebuild Mobile Controls UI`，生成正式手机 UI |
 | Prefab 键 | `Assets/5_Scripts/5-5_UI/Core/RuntimeUIPrefabKeys.cs` | 手机控制 Prefab 的稳定寻址键 |
 

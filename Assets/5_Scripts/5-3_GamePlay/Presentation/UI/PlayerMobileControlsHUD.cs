@@ -26,8 +26,9 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private const float MoveZoneMarginX = 76f;
     private const float MoveZoneMarginY = 54f;
     private const float FixedMoveZoneSize = 230f;
-    private const float PinchZoomSensitivity = 0.015f;
-    private const float PinchZoomNoiseThreshold = 1f;
+    // 双指纵向缩放的灵敏度与像素噪声阈值。
+    private const float TwoFingerZoomSensitivity = 0.015f;
+    private const float TwoFingerZoomNoiseThreshold = 1f;
 
     private static readonly Color RunOffColor = new(0.094f, 0.212f, 0.247f, 0.99f);
     private static readonly Color RunOnColor = new(0.26f, 0.61f, 0.57f, 1f);
@@ -74,9 +75,10 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private Vector2 hotbarOriginalAnchoredPosition;
     private Vector2 hotbarOriginalSizeDelta;
     private Vector3 hotbarOriginalLocalScale;
-    private int pinchPointerIdA = int.MinValue;
-    private int pinchPointerIdB = int.MinValue;
-    private float previousPinchDistance;
+    // 当前双指缩放配对及上一帧中心点。
+    private int zoomPointerIdA = int.MinValue;
+    private int zoomPointerIdB = int.MinValue;
+    private Vector2 previousTwoFingerCenter;
 
     public bool IsDrawerOpen => drawer != null && drawer.activeSelf;
     /// <summary>本地手机菜单抽屉是否打开，用于允许背包和制作面板并行切换。</summary>
@@ -292,11 +294,11 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     {
         if (!IsGameplayTouchAvailable())
         {
-            ResetPinchZoom();
+            ResetTwoFingerZoom();
             return;
         }
 
-        UpdatePinchZoom();
+        UpdateTwoFingerZoom();
     }
 
     private void LateUpdate()
@@ -328,8 +330,9 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     #endregion
 
-    #region 双指缩放
+    #region 中间区双指缩放
 
+    /// <summary>仅在手机玩法层可交互时处理双指镜头缩放。</summary>
     private bool IsGameplayTouchAvailable()
     {
         return UIUserSettings.EnablePinchZoom &&
@@ -342,11 +345,12 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
                !controller.IsGameplayInputLocked;
     }
 
-    private void UpdatePinchZoom()
+    /// <summary>追踪中间区内的两个触点，并把双指中心的纵向位移转换为镜头缩放。</summary>
+    private void UpdateTwoFingerZoom()
     {
-        if (pinchPointerIdA == int.MinValue || pinchPointerIdB == int.MinValue)
+        if (zoomPointerIdA == int.MinValue || zoomPointerIdB == int.MinValue)
         {
-            if (!TryGetFirstTwoActiveTouches(
+            if (!TryGetFirstTwoActiveCenterTouches(
                     out int firstId,
                     out int secondId,
                     out Vector2 firstPosition,
@@ -355,33 +359,38 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
                 return;
             }
 
-            pinchPointerIdA = firstId;
-            pinchPointerIdB = secondId;
-            previousPinchDistance = Vector2.Distance(firstPosition, secondPosition);
+            zoomPointerIdA = firstId;
+            zoomPointerIdB = secondId;
+            previousTwoFingerCenter = (firstPosition + secondPosition) * 0.5f;
             return;
         }
 
-        if (!TryGetTouchPosition(pinchPointerIdA, out Vector2 firstTouchPosition) ||
-            !TryGetTouchPosition(pinchPointerIdB, out Vector2 secondTouchPosition))
+        if (!TryGetTouchPosition(zoomPointerIdA, out Vector2 firstTouchPosition) ||
+            !TryGetTouchPosition(zoomPointerIdB, out Vector2 secondTouchPosition) ||
+            !IsPositionInCenterControlZone(firstTouchPosition) ||
+            !IsPositionInCenterControlZone(secondTouchPosition))
         {
-            ResetPinchZoom();
+            ResetTwoFingerZoom();
             return;
         }
 
-        float currentPinchDistance = Vector2.Distance(firstTouchPosition, secondTouchPosition);
-        float distanceDelta = currentPinchDistance - previousPinchDistance;
-        previousPinchDistance = currentPinchDistance;
-        if (Mathf.Abs(distanceDelta) < PinchZoomNoiseThreshold)
+        Vector2 currentCenter = (firstTouchPosition + secondTouchPosition) * 0.5f;
+        Vector2 centerDelta = currentCenter - previousTwoFingerCenter;
+        previousTwoFingerCenter = currentCenter;
+        if (Mathf.Abs(centerDelta.y) < TwoFingerZoomNoiseThreshold ||
+            Mathf.Abs(centerDelta.y) <= Mathf.Abs(centerDelta.x))
             return;
 
         Mod_Cam cameraModule = GetComponentInChildren<Mod_Cam>(true);
         if (cameraModule == null || cameraModule.Vcam == null)
             return;
 
-        cameraModule.ChangeCameraView(-distanceDelta * PinchZoomSensitivity);
+        // 向上滑对应滚轮向上：减小正交尺寸并拉近镜头。
+        cameraModule.ChangeCameraView(-centerDelta.y * TwoFingerZoomSensitivity);
     }
 
-    private static bool TryGetFirstTwoActiveTouches(
+    /// <summary>从当前触摸中取得最先出现的两个中间区触点，左右摇杆区触点不参与缩放。</summary>
+    private bool TryGetFirstTwoActiveCenterTouches(
         out int firstId,
         out int secondId,
         out Vector2 firstPosition,
@@ -406,10 +415,14 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             if (touchId < 0)
                 continue;
 
+            Vector2 touchPosition = touch.position.ReadValue();
+            if (!IsPositionInCenterControlZone(touchPosition))
+                continue;
+
             if (firstId == int.MinValue)
             {
                 firstId = touchId;
-                firstPosition = touch.position.ReadValue();
+                firstPosition = touchPosition;
                 continue;
             }
 
@@ -417,13 +430,14 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
                 continue;
 
             secondId = touchId;
-            secondPosition = touch.position.ReadValue();
+            secondPosition = touchPosition;
             return true;
         }
 
         return false;
     }
 
+    /// <summary>按触点 ID 读取仍处于按下状态的屏幕坐标。</summary>
     private static bool TryGetTouchPosition(int touchId, out Vector2 position)
     {
         position = default;
@@ -444,11 +458,38 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         return false;
     }
 
-    private void ResetPinchZoom()
+    /// <summary>判断屏幕坐标是否位于左右摇杆捕获区之间的中间区域。</summary>
+    private bool IsPositionInCenterControlZone(Vector2 screenPosition)
     {
-        pinchPointerIdA = int.MinValue;
-        pinchPointerIdB = int.MinValue;
-        previousPinchDistance = 0f;
+        RectTransform rootRect = viewObject != null ? viewObject.transform as RectTransform : null;
+        if (rootRect == null || rootRect.rect.width <= Mathf.Epsilon)
+            return false;
+
+        Canvas canvas = rootRect.GetComponentInParent<Canvas>();
+        Camera eventCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? canvas.worldCamera
+            : null;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                rootRect,
+                screenPosition,
+                eventCamera,
+                out Vector2 localPosition) ||
+            !rootRect.rect.Contains(localPosition))
+        {
+            return false;
+        }
+
+        float normalizedX = Mathf.InverseLerp(rootRect.rect.xMin, rootRect.rect.xMax, localPosition.x);
+        return normalizedX > UIUserSettings.LeftControlZoneRatio &&
+               normalizedX < 1f - UIUserSettings.RightControlZoneRatio;
+    }
+
+    /// <summary>释放双指缩放的触点配对与位移基线。</summary>
+    private void ResetTwoFingerZoom()
+    {
+        zoomPointerIdA = int.MinValue;
+        zoomPointerIdB = int.MinValue;
+        previousTwoFingerCenter = default;
     }
 
     #endregion
@@ -977,7 +1018,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     public void ResetAllTouchState()
     {
-        ResetPinchZoom();
+        ResetTwoFingerZoom();
         if (heldItemDropSurfaces != null)
         {
             for (int i = 0; i < heldItemDropSurfaces.Length; i++)
