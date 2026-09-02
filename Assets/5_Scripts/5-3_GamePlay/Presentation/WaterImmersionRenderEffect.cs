@@ -3,6 +3,7 @@ using UnityEngine;
 /// <summary>
 /// 水体浸没渲染效果模块。
 /// deepValue 仍然控制角色被水面覆盖的高度：浅水保持主体可见，深水逐步把水线推到头部下方。
+/// 基础淹没偏移只修正视觉水线，不改写水格深度、移动速度或其他玩法结算。
 /// 水下区域通过染色和透明度表现，不再使用硬裁剪；效果由 ActorRenderEffectController 统一提交。
 /// </summary>
 public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
@@ -30,6 +31,10 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
     #region Inspector
 
     [Header("深度映射")]
+    [Tooltip("进入真实水格后额外增加的基础淹没高度，单位为对象身体归一化高度。")]
+    [Range(0f, 1f)]
+    [SerializeField] private float immersionBaseOffset = 0.3f;
+
     [Tooltip("将水格 deepValue 映射到角色身体高度；最高值保留头部区域。")]
     [SerializeField] private AnimationCurve depthToSurface = new AnimationCurve(
         new Keyframe(0f, 0f),
@@ -106,15 +111,18 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
 
     #region Lifecycle
 
+    /// <summary>初始化深度曲线并缓存主体渲染器。</summary>
     private void Awake()
     {
         EnsureCurves();
         CacheReferenceRenderer();
     }
 
+    /// <summary>在编辑器改值时约束所有水体表现参数。</summary>
     private void OnValidate()
     {
         EnsureCurves();
+        immersionBaseOffset = Mathf.Clamp01(immersionBaseOffset);
         waterFeather = Mathf.Clamp(waterFeather, 0.001f, 0.2f);
         waterLineWidth = Mathf.Clamp(waterLineWidth, 0.001f, 0.2f);
         underwaterAlpha = Mathf.Clamp01(underwaterAlpha);
@@ -139,11 +147,13 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
 
     #region Effect Module
 
+    /// <summary>水体浸没仅作用于 SpriteRenderer。</summary>
     protected override bool AppliesTo(Renderer renderer)
     {
         return renderer is SpriteRenderer;
     }
 
+    /// <summary>平滑水深状态并计算当前帧统一水线参数。</summary>
     protected override void PrepareFrame(float deltaTime)
     {
         float smoothTime = Mathf.Max(0.0001f, transitionSeconds);
@@ -162,12 +172,13 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
             Mathf.Infinity,
             deltaTime);
 
-        currentSurfaceV = Mathf.Clamp01(depthToSurface.Evaluate(Mathf.Clamp01(currentDepth)));
+        currentSurfaceV = ResolveSurfaceHeight(currentDepth);
         currentTintStrength = Mathf.Clamp01(depthToTintStrength.Evaluate(Mathf.Clamp01(currentDepth)));
         currentLineStrength = Mathf.Clamp01(depthToLineStrength.Evaluate(Mathf.Clamp01(currentDepth)));
         UpdateWorldWaterSurface();
     }
 
+    /// <summary>把当前帧水体参数写入共享材质属性块。</summary>
     protected override void ApplyEffect(Renderer renderer, MaterialPropertyBlock block, float deltaTime)
     {
         float blend = Mathf.Clamp01(currentBlend);
@@ -187,6 +198,17 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
         block.SetFloat(WaterWaveAmplitudeId, Mathf.Clamp01(waterWaveAmplitude));
         block.SetFloat(WaterWaveFrequencyId, Mathf.Max(0f, waterWaveFrequency));
         block.SetFloat(WaterWaveSpeedId, Mathf.Max(0f, waterWaveSpeed));
+    }
+
+    #endregion
+
+    #region Depth Mapping
+
+    /// <summary>在水深曲线结果上叠加基础视觉偏移，浅滩也至少淹没对象下部。</summary>
+    private float ResolveSurfaceHeight(float depth)
+    {
+        float mappedSurface = depthToSurface.Evaluate(Mathf.Clamp01(depth));
+        return Mathf.Clamp01(mappedSurface + immersionBaseOffset);
     }
 
     #endregion
