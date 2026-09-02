@@ -108,6 +108,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         UIUserSettings.MobileControlsChanged += HandleMobileControlsSettingsChanged;
         AndroidSystemGestureInsets.Changed -= HandleSystemGestureInsetsChanged;
         AndroidSystemGestureInsets.Changed += HandleSystemGestureInsetsChanged;
+        Canvas.willRenderCanvases -= RefreshAimCursorBeforeCanvasRender;
+        Canvas.willRenderCanvases += RefreshAimCursorBeforeCanvasRender;
         RefreshAvailability();
     }
 
@@ -120,6 +122,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             controller.ActiveInputDeviceChanged -= HandleInputDeviceChanged;
         UIUserSettings.MobileControlsChanged -= HandleMobileControlsSettingsChanged;
         AndroidSystemGestureInsets.Changed -= HandleSystemGestureInsetsChanged;
+        Canvas.willRenderCanvases -= RefreshAimCursorBeforeCanvasRender;
         UnbindRunStateVisual();
         UnsubscribeInteractionSurface();
         if (activeLocalHud == this)
@@ -129,8 +132,10 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         SetViewActive(false);
     }
 
+    /// <summary>销毁时解除 Canvas 回调并释放运行时手机界面。</summary>
     private void OnDestroy()
     {
+        Canvas.willRenderCanvases -= RefreshAimCursorBeforeCanvasRender;
         UnsubscribeInteractionSurface();
         if (viewObject != null)
             Destroy(viewObject);
@@ -322,7 +327,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         UpdateTwoFingerZoom();
     }
 
-    private void LateUpdate()
+    /// <summary>Canvas 渲染前按本帧最终玩家和相机位置刷新正式手机准线。</summary>
+    private void RefreshAimCursorBeforeCanvasRender()
     {
         if (mobileAimCursor == null || controller == null || viewObject == null ||
             !ShouldShow() || !viewObject.activeInHierarchy ||
@@ -335,13 +341,16 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (rootRect == null)
             return;
 
+        if (!controller.TryRefreshMobileAimCursorScreenPosition(out Vector2 screenPosition))
+            return;
+
         Canvas canvas = rootRect.GetComponentInParent<Canvas>();
         Camera eventCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
             ? canvas.worldCamera
             : null;
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
                 rootRect,
-                controller.GetPointerScreenPosition(),
+                screenPosition,
                 eventCamera,
                 out Vector2 localPosition))
         {

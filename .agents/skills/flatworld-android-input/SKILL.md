@@ -46,7 +46,7 @@ description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系�
 - 当前输入设备变化只更新指针/UI状态，不得调用 `MobileInputRuntime.ResetAll()` 或清空触摸所有权；触摸清理只能由输入锁、模态面板、生命周期和真实控件失效触发。
 - 手机方案下 Shift 等键盘修饰键只由对应玩法模块消费，不参与设备切换；真实鼠标或 Device Simulator 转发的 Touchscreen 点击才退出手柄 UI/虚拟光标模式。不得切走手机 HUD、清空触摸或继续使用旧的虚拟光标位置判断 UI 命中。
 - 双指缩放必须按两个独立 `TouchControl.touchId` 持续跟踪，仅在玩法控制层可见且未锁定时生效；两个触点都必须位于左右控制区之间的中间区域，并只用双指中心点的纵向位移缩放，左右区域永久留给摇杆；视野变化统一调用 `Mod_Cam.ChangeCameraView`，禁止使用 `Input.GetTouch(0)` 或直接改相机尺寸。
-- 手机最终径向朝向的准线复用 `GamepadCursorGraphic`，正式节点必须位于 `UI_MobileControls.prefab` 并由 `PlayerMobileControlsHUD` 定位；不得只修改手柄 UI 虚拟光标。
+- 手机最终径向朝向的准线复用 `GamepadCursorGraphic`，正式节点必须位于 `UI_MobileControls.prefab`，并由 `PlayerMobileControlsHUD` 在 `Canvas.willRenderCanvases` 阶段按本帧最终玩家与相机位置投影；不要再启用 `GamepadUIRuntimeController` 的手机光标视觉，否则两套准线会因更新阶段不同产生一帧错位。
 - 手机准线的世界距离必须按当前手持物动态取值：空手或非建筑复用 `Mod_InteractSender.maxInteractDistance`，建筑召唤器复用 `Mod_Building.Data.maxVisibleDistance`。
 - `PlayerMobileControlsHUD` 允许仅在旧 Addressables/缓存 Prefab 缺少正式准线节点时补建兼容节点，正常视觉仍以 `UI_MobileControls.prefab` 为准。
 - 手机进入玩法时准线要按 `Mod_TurnBack.currentDirection` 初始化并立即显示，不能要求玩家先触摸普通指向区才出现。

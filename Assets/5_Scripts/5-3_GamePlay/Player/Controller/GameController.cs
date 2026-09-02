@@ -409,6 +409,20 @@ public class GameController : Module
         return Input.mousePosition;
     }
 
+    /// <summary>在 UI 即将渲染时，用本帧最终玩家与相机位置刷新手机准线屏幕坐标。</summary>
+    public bool TryRefreshMobileAimCursorScreenPosition(out Vector2 screenPosition)
+    {
+        if (!CanUpdateMobileRadialCursor())
+        {
+            screenPosition = default;
+            return false;
+        }
+
+        UpdateMobileRadialCursor();
+        screenPosition = _virtualCursorScreenPosition;
+        return _virtualCursorInitialized;
+    }
+
     public bool IsPointerOverUI()
     {
         if (EventSystemGuard.IsGamepadUISelectionActive)
@@ -784,11 +798,10 @@ public class GameController : Module
             UpdateMobileRadialCursor();
     }
 
-    /// <summary>按玩家当前位置和最后有效的手机方向/力度更新准线，使准线跟随玩家移动。</summary>
+    /// <summary>按玩家当前位置和最后有效方向更新手机世界目标及其屏幕投影。</summary>
     private void UpdateMobileRadialCursor()
     {
-        if (_preferredInputDevice != InputDeviceType.Mobile || _gamepadPointerActive ||
-            UIManager.ExistingInstance?.HasOpenGameplayInputBlockingPanel() == true)
+        if (!CanUpdateMobileRadialCursor())
         {
             _mobileCursorWorldPositionInitialized = false;
             EventSystemGuard.SetMobileAimCursorVisible(false);
@@ -819,7 +832,6 @@ public class GameController : Module
                 new Vector2(Screen.width, Screen.height),
                 CursorClampPadding);
             _virtualCursorInitialized = true;
-            EventSystemGuard.NotifyMobileAimCursorPosition(_virtualCursorScreenPosition);
             return;
         }
 
@@ -835,7 +847,14 @@ public class GameController : Module
         Vector3 screenPosition = _mainCamera.WorldToScreenPoint(mobileCursorWorldPosition);
         _virtualCursorScreenPosition = new Vector2(screenPosition.x, screenPosition.y);
         _virtualCursorInitialized = true;
-        EventSystemGuard.NotifyMobileAimCursorPosition(_virtualCursorScreenPosition);
+    }
+
+    /// <summary>判断正式手机准线当前是否允许更新和显示。</summary>
+    private bool CanUpdateMobileRadialCursor()
+    {
+        return _preferredInputDevice == InputDeviceType.Mobile &&
+               !_gamepadPointerActive &&
+               UIManager.ExistingInstance?.HasOpenGameplayInputBlockingPanel() != true;
     }
 
     private float GetMobileCursorMaxWorldDistance()
