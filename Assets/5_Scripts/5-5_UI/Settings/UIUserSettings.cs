@@ -22,9 +22,16 @@ public static class UIUserSettings
     private const string LeftControlZoneRatioKey = "FlatWorld.Mobile.LeftControlZoneRatio";
     private const string RightControlZoneRatioKey = "FlatWorld.Mobile.RightControlZoneRatio";
 
-    public const float DefaultScale = 1f;
-    public const float MinimumScale = 0.75f;
-    public const float MaximumScale = 1.2f;
+    /// <summary>新配置与恢复默认时采用的界面缩放倍率。</summary>
+    public const float DefaultScale = 1.5f;
+
+    /// <summary>界面缩放允许的最小倍率。</summary>
+    public const float MinimumScale = 0.25f;
+
+    /// <summary>界面缩放允许的最大倍率。</summary>
+    public const float MaximumScale = 3.25f;
+
+    /// <summary>界面缩放每次调整的倍率步长。</summary>
     public const float ScaleStep = 0.05f;
     public const float DefaultLeftControlZoneRatio = 0.33f;
     public const float DefaultRightControlZoneRatio = 0.33f;
@@ -602,6 +609,7 @@ public sealed class UIScaleController : MonoBehaviour
         }
     }
 
+    /// <summary>把当前界面偏好应用到所属根 Canvas。</summary>
     public void ApplyCurrentSettings()
     {
         if (isApplying)
@@ -615,7 +623,7 @@ public sealed class UIScaleController : MonoBehaviour
         try
         {
             // SafeAreaRoot 已经负责裁出可交互区域，CanvasScaler 不应再次缩小整套 UI。
-            float effectiveScale = Mathf.Max(0.5f, UIUserSettings.Scale);
+            float effectiveScale = UIUserSettings.Scale;
 
             canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             canvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;

@@ -1562,8 +1562,13 @@ public static class RuntimeUIPrefabBuilder
         Slider slider = CreateSlider("界面缩放", scaleRow.transform);
         slider.minValue = UIUserSettings.MinimumScale;
         slider.maxValue = UIUserSettings.MaximumScale;
-        slider.value = 1f;
-        TextMeshProUGUI valueText = CreateText("界面缩放数值", scaleRow.transform, "100%", 16f, Amber);
+        slider.value = UIUserSettings.DefaultScale;
+        TextMeshProUGUI valueText = CreateText(
+            "界面缩放数值",
+            scaleRow.transform,
+            $"{Mathf.RoundToInt(UIUserSettings.DefaultScale * 100f)}%",
+            16f,
+            Amber);
         valueText.alignment = TextAlignmentOptions.MidlineRight;
         valueText.gameObject.AddComponent<LayoutElement>().preferredWidth = 58f;
 
