@@ -4,9 +4,9 @@ using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
 /// <summary>
-/// Renders translated images of the canonical world whenever the main camera
-/// crosses a wrapped boundary. The copies are cameras only; no gameplay object
-/// is cloned and the main camera remains the sole audio/UI/post-process owner.
+/// 主相机跨越环绕边界时，用平移后的 Overlay 相机补绘标准世界镜像。
+/// 副本只负责画面与灯光，不复制玩法对象；存在副本时，屏幕后处理会转交给最后一台活动副本，
+/// 确保 Vignette 等全屏效果在完整相机栈合成后只执行一次。
 /// </summary>
 [DefaultExecutionOrder(10000)]
 public sealed class WrappedWorldCameraRenderer : MonoBehaviour
@@ -24,16 +24,22 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
     private CinemachineVirtualCamera virtualCamera;
     private Transform followTarget;
     private bool warnedAboutReplicaLimit;
+    // 记录转交前的主相机后处理状态，退出环绕边界时原样恢复。
+    private bool sourcePostProcessingWasEnabled;
+    // 标记当前是否由最后一台活动副本负责屏幕后处理。
+    private bool isPostProcessingTransferred;
     private float nextLightSourceRefreshTime;
 
     public int ActiveReplicaCount { get; private set; }
     public IReadOnlyList<Camera> Replicas => replicas;
 
+    /// <summary>绑定真实主相机、虚拟相机与跟随目标。</summary>
     internal void Configure(
         Camera camera,
         CinemachineVirtualCamera cinemachineCamera,
         Transform target)
     {
+        RestoreSourcePostProcessing();
         RemoveReplicasFromSourceStack();
         sourceCamera = camera;
         sourceCameraData = sourceCamera != null
@@ -44,28 +50,34 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         enabled = sourceCamera != null;
     }
 
+    /// <summary>仅绑定真实主相机，供无需 Cinemachine 跟随修正的调用方使用。</summary>
     public void Configure(Camera camera)
     {
         Configure(camera, null, null);
     }
 
+    /// <summary>订阅本地玩家的世界环绕事件。</summary>
     private void OnEnable()
     {
         WorldTopologyRuntime.LocalPlayerPositionWrapped -= HandlePositionWrapped;
         WorldTopologyRuntime.LocalPlayerPositionWrapped += HandlePositionWrapped;
     }
 
+    /// <summary>停用时恢复主相机后处理并关闭全部渲染副本。</summary>
     private void OnDisable()
     {
         WorldTopologyRuntime.LocalPlayerPositionWrapped -= HandlePositionWrapped;
+        RestoreSourcePostProcessing();
         RemoveReplicasFromSourceStack();
         DisableAllReplicas();
         DisableAllReplicaLights();
     }
 
+    /// <summary>销毁时解除相机栈并释放运行时创建的相机与灯光代理。</summary>
     private void OnDestroy()
     {
         WorldTopologyRuntime.LocalPlayerPositionWrapped -= HandlePositionWrapped;
+        RestoreSourcePostProcessing();
         RemoveReplicasFromSourceStack();
         for (int i = 0; i < replicas.Count; i++)
         {
@@ -82,11 +94,13 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         replicaLights.Clear();
     }
 
+    /// <summary>在相机移动完成后同步环绕世界副本及其最终后处理所有权。</summary>
     private void LateUpdate()
     {
         if (sourceCamera == null || !sourceCamera.enabled ||
             !WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds))
         {
+            RestoreSourcePostProcessing();
             DisableAllReplicas();
             DisableAllReplicaLights();
             return;
@@ -115,6 +129,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
                 sourceCamera.transform.rotation);
         }
 
+        SynchronizePostProcessingOwnership(count);
         RefreshReplicaLights(bounds, count);
 
         if (requiredImages.Count > MaximumReplicaCameras && !warnedAboutReplicaLimit)
@@ -328,6 +343,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
 
     #endregion
 
+    /// <summary>计算当前视野与环绕世界边界相交时需要补绘的世界镜像。</summary>
     private void BuildRequiredImages(WorldTopologyBounds bounds)
     {
         requiredImages.Clear();
@@ -371,6 +387,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
             (left.sqrMagnitude).CompareTo(right.sqrMagnitude));
     }
 
+    /// <summary>按需扩充相机副本池，并把所需副本加入主相机栈。</summary>
     private void EnsurePool(int count)
     {
         while (replicas.Count < count)
@@ -398,6 +415,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         }
     }
 
+    /// <summary>把真实主相机的通用渲染参数同步到指定副本。</summary>
     private void CopySourceSettings(Camera replica, int index)
     {
         replica.CopyFrom(sourceCamera);
@@ -410,6 +428,70 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         replica.stereoTargetEye = StereoTargetEyeMask.None;
     }
 
+    /// <summary>
+    /// 把后处理转交给最后一台活动 Overlay，让效果作用于完整相机栈，
+    /// 同时沿用真实主相机的 Volume 采样位置，避免环绕平移改变局部 Volume 判定。
+    /// </summary>
+    private void SynchronizePostProcessingOwnership(int activeReplicaCount)
+    {
+        if (sourceCameraData == null ||
+            sourceCameraData.renderType != CameraRenderType.Base ||
+            activeReplicaCount <= 0)
+        {
+            RestoreSourcePostProcessing();
+            return;
+        }
+
+        if (!isPostProcessingTransferred)
+        {
+            sourcePostProcessingWasEnabled = sourceCameraData.renderPostProcessing;
+            isPostProcessingTransferred = true;
+        }
+        else if (sourceCameraData.renderPostProcessing)
+        {
+            // 允许更早执行的相机服务在运行时重新开启后处理。
+            sourcePostProcessingWasEnabled = true;
+        }
+
+        sourceCameraData.renderPostProcessing = false;
+        Transform volumeTrigger = sourceCameraData.volumeTrigger != null
+            ? sourceCameraData.volumeTrigger
+            : sourceCamera.transform;
+
+        for (int i = 0; i < replicas.Count; i++)
+        {
+            Camera replica = replicas[i];
+            if (replica == null)
+                continue;
+
+            UniversalAdditionalCameraData replicaData =
+                replica.GetUniversalAdditionalCameraData();
+            replicaData.volumeLayerMask = sourceCameraData.volumeLayerMask;
+            replicaData.volumeTrigger = volumeTrigger;
+            replicaData.renderPostProcessing =
+                sourcePostProcessingWasEnabled && i == activeReplicaCount - 1;
+        }
+    }
+
+    /// <summary>把后处理所有权还给真实主相机，并关闭所有副本的后处理。</summary>
+    private void RestoreSourcePostProcessing()
+    {
+        if (isPostProcessingTransferred && sourceCameraData != null)
+            sourceCameraData.renderPostProcessing = sourcePostProcessingWasEnabled;
+
+        isPostProcessingTransferred = false;
+        sourcePostProcessingWasEnabled = false;
+        for (int i = 0; i < replicas.Count; i++)
+        {
+            Camera replica = replicas[i];
+            if (replica == null)
+                continue;
+
+            replica.GetUniversalAdditionalCameraData().renderPostProcessing = false;
+        }
+    }
+
+    /// <summary>在玩家发生环绕位移时同步修正 Cinemachine 的跟随缓存。</summary>
     private void HandlePositionWrapped(WorldWrapEvent wrapEvent)
     {
         if (virtualCamera == null || followTarget == null)
@@ -417,6 +499,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         virtualCamera.OnTargetObjectWarped(followTarget, wrapEvent.WorldShift);
     }
 
+    /// <summary>关闭全部相机副本并清空活动计数。</summary>
     private void DisableAllReplicas()
     {
         ActiveReplicaCount = 0;
@@ -427,6 +510,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         }
     }
 
+    /// <summary>从当前真实主相机栈移除全部运行时副本。</summary>
     private void RemoveReplicasFromSourceStack()
     {
         if (sourceCameraData == null || sourceCameraData.renderType != CameraRenderType.Base)

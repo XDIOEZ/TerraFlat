@@ -35,6 +35,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - `Mover_SaveData.isRunning` 是玩家奔跑开关的持久字段；输入锁定只停止位移，不清空该字段，跨维度重建后须在解锁输入后恢复。
 - 玩家创建参数来自 `StreamingAssets/GameConfig/Players/player-creation-manifest.json`，由 `PlayerCreationTemplateCatalogService` 在新档案 `Player.Load()` 前解析并注入；MOD 可在 definition JSON 中增加 `playerCreationTemplates`，或用 `playerTemplate:ID` Patch 修改模板；已有存档不得再次套用模板。
 - `Player.prefab` 根的环绕控制只处理本地玩家且仅在 Wrapped 拓扑启用。
+- 环绕世界副本以 URP Overlay 加入主相机栈；存在活动副本时，屏幕后处理必须从 Base 转交给最后一台活动 Overlay，并沿用真实主相机的 Volume Layer Mask 与 Trigger，退出边界后再恢复 Base，否则 Vignette 等全屏效果会被后绘制的副本覆盖或按错误世界坐标采样。
 - 玩家实体非 Trigger 碰撞体固定使用 Player 层，不递归覆盖模块 Trigger 专用层。
 - UI 焦点联动 `flatworld-ui`，网络身份联动 `flatworld-networking`，移动可走性联动 `flatworld-navigation`。
 
