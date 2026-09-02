@@ -1153,7 +1153,7 @@ namespace FlatWorld.Localization.Editor
                     string legacyDescription = item.Value<string>("description") ?? string.Empty;
                     string englishName = GetEnglishName(itemId);
                     string englishDescription = GetEnglishDescription(itemId, englishName);
-                    SetChineseValue(chineseTable, labelKey, legacyName);
+                    SetChineseItemName(chineseTable, labelKey, legacyName);
                     SetChineseValue(chineseTable, descriptionKey, legacyDescription);
                     SetEnglishValue(englishTable, labelKey, englishName, legacyName, itemId);
                     SetEnglishValue(englishTable, descriptionKey, englishDescription, legacyDescription, itemId);
@@ -1162,6 +1162,41 @@ namespace FlatWorld.Localization.Editor
             }
 
             return itemCount;
+        }
+
+        /// <summary>同步物品中文名，并替换由旧物品 ID 遗留的英文标识符。</summary>
+        private static void SetChineseItemName(StringTable table, string key, string value)
+        {
+            StringTableEntry entry = table.GetEntry(key);
+            if (entry == null)
+            {
+                table.AddEntry(key, value ?? string.Empty);
+                return;
+            }
+
+            string sourceValue = value ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(entry.Value) ||
+                IsDebugItemDescription(entry.Value) ||
+                (ContainsChinese(sourceValue) && IsIdentifierLike(entry.Value)))
+            {
+                entry.Value = sourceValue;
+            }
+        }
+
+        /// <summary>判断文本是否仍是由字母、数字和常用分隔符组成的配置标识符。</summary>
+        private static bool IsIdentifierLike(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            foreach (char character in value.Trim())
+            {
+                bool asciiLetterOrDigit = character <= 127 && char.IsLetterOrDigit(character);
+                if (!asciiLetterOrDigit && character != '_' && character != '-' && character != '.')
+                    return false;
+            }
+
+            return true;
         }
 
         private static void SetChineseValue(StringTable table, string key, string value)

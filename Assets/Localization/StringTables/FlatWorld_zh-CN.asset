@@ -507,7 +507,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277925027840
-    m_Localized: BlastFurnace
+    m_Localized: "\u9AD8\u7089"
     m_Metadata:
       m_Items: []
   - m_Id: 357277958582272
@@ -515,7 +515,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277958582273
-    m_Localized: Bonfire
+    m_Localized: "\u7BDD\u706B"
     m_Metadata:
       m_Items: []
   - m_Id: 357277958582274
@@ -547,7 +547,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277971165184
-    m_Localized: Chest_Wood
+    m_Localized: "\u6728\u7BB1"
     m_Metadata:
       m_Items: []
   - m_Id: 357277971165185
@@ -563,7 +563,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277983748096
-    m_Localized: Door_Wood
+    m_Localized: "\u6728\u95E8"
     m_Metadata:
       m_Items: []
   - m_Id: 357277983748097
@@ -571,11 +571,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277992136704
-    m_Localized: Meatrack
+    m_Localized: "\u667E\u8089\u67B6"
     m_Metadata:
       m_Items: []
   - m_Id: 357277992136705
-    m_Localized: "\u9AD8\u7089\uFF1A\u4E00\u79CD\u7089\u5B50\uFF0C\u5176\u4E2D\u71C3\u70E7\u662F\u901A\u8FC7\u538B\u529B\u4E0B\u7684\u7A7A\u6C14\u6D41\u52A8\u6765\u5F3A\u5236\u8FDB\u884C\u7684\uFF0C\u5C24\u5176\u662F\u7528\u4E8E\u8FD8\u539F\u94C1\u77FF\u77F3\u7684\u7089\u5B50\u3002"
+    m_Localized: "\u7528\u4E8E\u667E\u6652\u548C\u52A0\u5DE5\u8089\u7C7B\u7684\u67B6\u5B50\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 357277992136706
@@ -595,7 +595,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357278059245570
-    m_Localized: Scarecrow
+    m_Localized: "\u7A3B\u8349\u4EBA"
     m_Metadata:
       m_Items: []
   - m_Id: 357278059245571
@@ -603,7 +603,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357278071828480
-    m_Localized: Smelter
+    m_Localized: "\u7194\u7089"
     m_Metadata:
       m_Items: []
   - m_Id: 357278071828481
@@ -611,7 +611,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357278092800000
-    m_Localized: Tent
+    m_Localized: "\u5E10\u7BF7"
     m_Metadata:
       m_Items: []
   - m_Id: 357278092800001
@@ -627,7 +627,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357278101188608
-    m_Localized: Chest_Wood
+    m_Localized: "\u6728\u5899"
     m_Metadata:
       m_Items: []
   - m_Id: 357278101188609
@@ -635,7 +635,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357278105382912
-    m_Localized: WorkBench
+    m_Localized: "\u5DE5\u4F5C\u53F0"
     m_Metadata:
       m_Items: []
   - m_Id: 357278105382913
@@ -906,7 +906,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915968
-    m_Localized: BlastFurnace
+    m_Localized: "\u9AD8\u7089"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915969
@@ -914,7 +914,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915970
-    m_Localized: Bonfire
+    m_Localized: "\u7BDD\u706B"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915971
@@ -922,7 +922,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915972
-    m_Localized: Chest_Wood
+    m_Localized: "\u6728\u7BB1"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915973
@@ -938,7 +938,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915976
-    m_Localized: Door_Wood
+    m_Localized: "\u6728\u95E8"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915977
@@ -946,11 +946,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915978
-    m_Localized: Meatrack
+    m_Localized: "\u667E\u8089\u67B6"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915979
-    m_Localized: "\u9AD8\u7089\uFF1A\u4E00\u79CD\u7089\u5B50\uFF0C\u5176\u4E2D\u71C3\u70E7\u662F\u901A\u8FC7\u538B\u529B\u4E0B\u7684\u7A7A\u6C14\u6D41\u52A8\u6765\u5F3A\u5236\u8FDB\u884C\u7684\uFF0C\u5C24\u5176\u662F\u7528\u4E8E\u8FD8\u539F\u94C1\u77FF\u77F3\u7684\u7089\u5B50\u3002"
+    m_Localized: "\u7528\u4E8E\u667E\u6652\u548C\u52A0\u5DE5\u8089\u7C7B\u7684\u67B6\u5B50\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915980
@@ -962,7 +962,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915982
-    m_Localized: Scarecrow
+    m_Localized: "\u7A3B\u8349\u4EBA"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915983
@@ -970,7 +970,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915984
-    m_Localized: Smelter
+    m_Localized: "\u7194\u7089"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915985
@@ -978,7 +978,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915986
-    m_Localized: Tent
+    m_Localized: "\u5E10\u7BF7"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915987
@@ -986,7 +986,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915988
-    m_Localized: Chest_Wood
+    m_Localized: "\u6728\u5899"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915989
@@ -994,7 +994,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915990
-    m_Localized: WorkBench
+    m_Localized: "\u5DE5\u4F5C\u53F0"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915991
@@ -1002,7 +1002,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915992
-    m_Localized: SparkMaker
+    m_Localized: "\u94BB\u6728\u53D6\u706B\u5DE5\u5177"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915993
@@ -1010,15 +1010,15 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915994
-    m_Localized: Torch
+    m_Localized: "\u706B\u628A"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915995
-    m_Localized: "Torch\uFF0C\u53EF\u7528\u4E8E\u5EFA\u9020\u3002"
+    m_Localized: "\u53EF\u653E\u7F6E\u5728\u5730\u9762\u5E76\u63D0\u4F9B\u7167\u660E\u7684\u706B\u628A\u3002"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915996
-    m_Localized: CompostBin
+    m_Localized: "\u5806\u80A5\u7BB1"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915997
@@ -1026,7 +1026,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915998
-    m_Localized: Rocket
+    m_Localized: "\u706B\u7BAD"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915999
@@ -1034,7 +1034,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075522859008
-    m_Localized: CompostBin
+    m_Localized: "\u5806\u80A5\u7BB1"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075522859009
@@ -1042,7 +1042,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075522859010
-    m_Localized: Rocket
+    m_Localized: "\u706B\u7BAD"
     m_Metadata:
       m_Items: []
   - m_Id: 7973075522859011

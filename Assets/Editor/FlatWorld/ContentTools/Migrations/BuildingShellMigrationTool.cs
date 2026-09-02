@@ -24,6 +24,8 @@ public static class BuildingShellMigrationTool
     private const string SummonerShellPath = "Assets/2_Prefabs/Gameplay/Items/Common/BuildingSummonerShell.prefab";
     private const string BodyShellPath = "Assets/2_Prefabs/Gameplay/Items/Common/BuildingBodyShell.prefab";
     private const string FeatureModuleRoot = "Assets/2_Prefabs/Gameplay/Modules/Building";
+    // 不再要求被复用的手持物 Prefab 内嵌建筑职责。
+    private const string BuildingModulePath = "Assets/2_Prefabs/Gameplay/Modules/World/Module_Building.prefab";
     private const string DamageModulePath = "Assets/2_Prefabs/Gameplay/Modules/Combat/Module_DamageReciver.prefab";
     private const string SummonerPackagePath = "Assets/StreamingAssets/GameConfig/Items/shells/building_summoners.json";
     private const string BodyPackagePath = "Assets/StreamingAssets/GameConfig/Items/shells/building_bodies.json";
@@ -33,23 +35,23 @@ public static class BuildingShellMigrationTool
 
     private static readonly BuildingEntry[] Entries =
     {
-        new("BlastFurnace", "Assets/2_Prefabs/World/Buildings/BlastFurnace.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/BlastFurnace_Summoner.prefab"),
-        new("Bonfire", "Assets/2_Prefabs/World/Buildings/Bonfire.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Bonfire_Summoner.prefab"),
-        new("Chest_Wood", "Assets/2_Prefabs/World/Buildings/Chest_Wood.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Chest_Wood_Summoner.prefab"),
-        new("Door_Stone", "Assets/2_Prefabs/World/Buildings/Door_Stone.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Door_Stone_Summoner.prefab"),
-        new("Door_Wood", "Assets/2_Prefabs/World/Buildings/Door_Wood.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Door_Wood_Summoner.prefab"),
-        new("Meatrack", "Assets/2_Prefabs/World/Buildings/Meatrack.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Meatrack_Summoner.prefab"),
-        new("MineEntrance", "Assets/2_Prefabs/World/Buildings/MineEntrance.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/MineEntrance_Summoner.prefab"),
-        new("Scarecrow", "Assets/2_Prefabs/World/Buildings/Scarecrow.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Scarecrow_Summoner.prefab"),
-        new("Smelter", "Assets/2_Prefabs/World/Buildings/Smelter.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Smelter_Summoner.prefab"),
-        new("Tent", "Assets/2_Prefabs/World/Buildings/Tent.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Tent_Summoner.prefab"),
-        new("Wall_Stone", "Assets/2_Prefabs/World/Buildings/Wall_Stone.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Stone_Summoner.prefab", true),
-        new("Wall_Wood", "Assets/2_Prefabs/World/Buildings/Wall_Wood.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab"),
-        new("WorkBench", "Assets/2_Prefabs/World/Buildings/WorkBench.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/WorkBench_Summoner.prefab"),
-        new("SparkMaker", "Assets/2_Prefabs/Gameplay/Items/Tools/SparkMaker.prefab", "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/SparkMaker_Summoner.prefab"),
-        new("Torch_Building", "Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab", "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab", sourceBodyId: "Torch", preserveBodyPrefabRuntime: true),
-        new("CompostBin", "Assets/2_Prefabs/Gameplay/Items/Food/CompostBin.prefab", "Assets/2_Prefabs/Gameplay/Items/Food/Summoners/CompostBin_Summoner.prefab"),
-        new("Rocket", "Assets/2_Prefabs/World/Space/Rocket.prefab", "Assets/2_Prefabs/World/Space/Summoners/Rocket_Summoner.prefab")
+        new("BlastFurnace", "高炉", "Assets/2_Prefabs/World/Buildings/BlastFurnace.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/BlastFurnace_Summoner.prefab"),
+        new("Bonfire", "篝火", "Assets/2_Prefabs/World/Buildings/Bonfire.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Bonfire_Summoner.prefab"),
+        new("Chest_Wood", "木箱", "Assets/2_Prefabs/World/Buildings/Chest_Wood.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Chest_Wood_Summoner.prefab"),
+        new("Door_Stone", "石门", "Assets/2_Prefabs/World/Buildings/Door_Stone.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Door_Stone_Summoner.prefab"),
+        new("Door_Wood", "木门", "Assets/2_Prefabs/World/Buildings/Door_Wood.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Door_Wood_Summoner.prefab"),
+        new("Meatrack", "晾肉架", "Assets/2_Prefabs/World/Buildings/Meatrack.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Meatrack_Summoner.prefab"),
+        new("MineEntrance", "矿坑入口", "Assets/2_Prefabs/World/Buildings/MineEntrance.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/MineEntrance_Summoner.prefab"),
+        new("Scarecrow", "稻草人", "Assets/2_Prefabs/World/Buildings/Scarecrow.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Scarecrow_Summoner.prefab"),
+        new("Smelter", "熔炉", "Assets/2_Prefabs/World/Buildings/Smelter.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Smelter_Summoner.prefab"),
+        new("Tent", "帐篷", "Assets/2_Prefabs/World/Buildings/Tent.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Tent_Summoner.prefab"),
+        new("Wall_Stone", "石墙", "Assets/2_Prefabs/World/Buildings/Wall_Stone.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Stone_Summoner.prefab", true),
+        new("Wall_Wood", "木墙", "Assets/2_Prefabs/World/Buildings/Wall_Wood.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab"),
+        new("WorkBench", "工作台", "Assets/2_Prefabs/World/Buildings/WorkBench.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/WorkBench_Summoner.prefab"),
+        new("SparkMaker", "钻木取火工具", "Assets/2_Prefabs/Gameplay/Items/Tools/SparkMaker.prefab", "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/SparkMaker_Summoner.prefab"),
+        new("Torch_Building", "火把", "Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab", "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab", sourceBodyId: "Torch", preserveBodyPrefabRuntime: true),
+        new("CompostBin", "堆肥箱", "Assets/2_Prefabs/Gameplay/Items/Food/CompostBin.prefab", "Assets/2_Prefabs/Gameplay/Items/Food/Summoners/CompostBin_Summoner.prefab"),
+        new("Rocket", "火箭", "Assets/2_Prefabs/World/Space/Rocket.prefab", "Assets/2_Prefabs/World/Space/Summoners/Rocket_Summoner.prefab")
     };
 
     #endregion
@@ -148,6 +150,7 @@ public static class BuildingShellMigrationTool
                 throw new MissingComponentException($"共享建筑 Shell 缺少 Item/itemData：{targetPath}");
             item.itemData.IDName = shellName;
             item.itemData.GameName = shellName;
+            item.itemData.Description = string.Empty;
             item.itemData.ModuleDataDic = new Dictionary<string, ModuleData>(StringComparer.Ordinal);
 
             PrefabUtility.SaveAsPrefabAsset(root, targetPath);
@@ -379,8 +382,8 @@ public static class BuildingShellMigrationTool
                 ["id"] = definitionId,
                 ["parent"] = parentId,
                 ["sourcePrefab"] = sourcePath,
-                ["gameName"] = data.GameName,
-                ["description"] = ResolveDescription(data, existingDefinition),
+                ["gameName"] = entry.DisplayName,
+                ["description"] = ResolveDescription(entry.DisplayName, data, existingDefinition),
                 ["durability"] = data.Durability,
                 ["maxDurability"] = data.MaxDurability,
                 ["amount"] = data.Stack?.Amount ?? 1f,
@@ -476,44 +479,58 @@ public static class BuildingShellMigrationTool
         bool includeFeatures,
         HashSet<string> generatedFeaturePaths)
     {
+        GameObject fallbackBuildingRoot = null;
         Mod_Building building = sourceRoot.GetComponentInChildren<Mod_Building>(true);
         if (building == null)
-            throw new MissingComponentException($"建筑迁移源缺少 Mod_Building：{sourceRoot.name}");
-        building.ConfigurePrefabRole(role, entry.BodyId, entry.SummonerId);
-
-        JObject modules = new JObject
         {
-            ["建筑模块"] = BuildModuleDefinition(building, "Module_Building", false)
-        };
-        if (!includeFeatures)
+            fallbackBuildingRoot = PrefabUtility.LoadPrefabContents(BuildingModulePath);
+            building = fallbackBuildingRoot.GetComponentInChildren<Mod_Building>(true);
+        }
+        if (building == null)
+            throw new MissingComponentException($"无法取得通用 Mod_Building：{sourceRoot.name}");
+
+        try
+        {
+            building.ConfigurePrefabRole(role, entry.BodyId, entry.SummonerId);
+            JObject modules = new JObject
+            {
+                ["建筑模块"] = BuildModuleDefinition(building, "Module_Building", false)
+            };
+            if (!includeFeatures)
+                return modules;
+
+            var nameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (Module module in sourceRoot.GetComponentsInChildren<Module>(true))
+            {
+                if (module == null || module._Data == null || ShouldSkipFeatureModule(module))
+                    continue;
+
+                string moduleId = ItemDefinitionMigrationTool.ResolveModuleId(module);
+                nameCounts.TryGetValue(moduleId, out int count);
+                nameCounts[moduleId] = ++count;
+                string stableName = count == 1 ? moduleId : $"{moduleId}_{count}";
+
+                bool reused = TryResolveExistingModulePrefab(module, out string modulePrefab);
+                if (!reused)
+                    modulePrefab = EnsureFeatureModulePrefab(entry, sourceRoot, module, generatedFeaturePaths);
+                modules[stableName] = BuildModuleDefinition(module, modulePrefab, reused);
+            }
+
+            if (sourceRoot.GetComponentInChildren<Light2D>(true) != null &&
+                sourceRoot.GetComponentInChildren<Mod_LightSource>(true) == null)
+            {
+                Mod_LightSource lightModule = CreateLightSourceModule(sourceRoot);
+                string modulePrefab = EnsureFeatureModulePrefab(entry, sourceRoot, lightModule, generatedFeaturePaths);
+                modules[ItemDefinitionMigrationTool.ResolveModuleId(lightModule)] =
+                    BuildModuleDefinition(lightModule, modulePrefab, false);
+            }
             return modules;
-
-        var nameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        foreach (Module module in sourceRoot.GetComponentsInChildren<Module>(true))
-        {
-            if (module == null || module._Data == null || ShouldSkipFeatureModule(module))
-                continue;
-
-            string moduleId = ItemDefinitionMigrationTool.ResolveModuleId(module);
-            nameCounts.TryGetValue(moduleId, out int count);
-            nameCounts[moduleId] = ++count;
-            string stableName = count == 1 ? moduleId : $"{moduleId}_{count}";
-
-            bool reused = TryResolveExistingModulePrefab(module, out string modulePrefab);
-            if (!reused)
-                modulePrefab = EnsureFeatureModulePrefab(entry, sourceRoot, module, generatedFeaturePaths);
-            modules[stableName] = BuildModuleDefinition(module, modulePrefab, reused);
         }
-
-        if (sourceRoot.GetComponentInChildren<Light2D>(true) != null &&
-            sourceRoot.GetComponentInChildren<Mod_LightSource>(true) == null)
+        finally
         {
-            Mod_LightSource lightModule = CreateLightSourceModule(sourceRoot);
-            string modulePrefab = EnsureFeatureModulePrefab(entry, sourceRoot, lightModule, generatedFeaturePaths);
-            modules[ItemDefinitionMigrationTool.ResolveModuleId(lightModule)] =
-                BuildModuleDefinition(lightModule, modulePrefab, false);
+            if (fallbackBuildingRoot != null)
+                PrefabUtility.UnloadPrefabContents(fallbackBuildingRoot);
         }
-        return modules;
     }
 
     /// <summary>把旧建筑上的裸 Light2D 包装成可独立组合的光源模块。</summary>
@@ -564,7 +581,7 @@ public static class BuildingShellMigrationTool
     }
 
     /// <summary>优先保留已经人工清洗过的说明，避免旧 Prefab 调试串重新进入 JSON。</summary>
-    private static string ResolveDescription(ItemData data, JObject existingDefinition)
+    private static string ResolveDescription(string displayName, ItemData data, JObject existingDefinition)
     {
         string source = data?.Description;
         bool polluted = !string.IsNullOrWhiteSpace(source) &&
@@ -578,7 +595,7 @@ public static class BuildingShellMigrationTool
         string existing = existingDefinition?.Value<string>("description");
         return !string.IsNullOrWhiteSpace(existing)
             ? existing.Trim()
-            : $"{(string.IsNullOrWhiteSpace(data?.GameName) ? data?.IDName : data.GameName)}，可用于建造。";
+            : $"{displayName}，可用于建造。";
     }
 
     /// <summary>读取当前目录，以便迁移时保留人工维护的建筑文案。</summary>
@@ -779,6 +796,7 @@ public static class BuildingShellMigrationTool
         /// <summary>创建一条建筑迁移配置。</summary>
         public BuildingEntry(
             string bodyId,
+            string displayName,
             string bodyPath,
             string summonerPath,
             bool usesTilemap = false,
@@ -786,6 +804,7 @@ public static class BuildingShellMigrationTool
             bool preserveBodyPrefabRuntime = false)
         {
             BodyId = bodyId;
+            DisplayName = displayName;
             SourceBodyId = string.IsNullOrWhiteSpace(sourceBodyId) ? bodyId : sourceBodyId;
             BodyPath = bodyPath;
             SummonerPath = summonerPath;
@@ -794,6 +813,8 @@ public static class BuildingShellMigrationTool
         }
 
         public string BodyId { get; }
+        /// <summary>建筑在中文环境中的默认显示名。</summary>
+        public string DisplayName { get; }
         public string SourceBodyId { get; }
         public string BodyPath { get; }
         public string SummonerPath { get; }

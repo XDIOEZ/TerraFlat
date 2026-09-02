@@ -586,17 +586,19 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             yield break;
         }
 
+        var moduleAliasCandidates = new Dictionary<string, GameObject>(System.StringComparer.Ordinal);
         foreach (GameObject prefab in assetsHandle.Result)
         {
             if (prefab == null)
                 continue;
             RegisterPrefabAlias(prefab.name, prefab);
-            HandlePrefab(prefab);
+            CollectPrefabAliases(prefab, moduleAliasCandidates);
             LoadedCount++;
             loadedAssetsCount++;
             if (loadedAssetsCount % 10 == 0)
                 yield return null;
         }
+        RegisterUniqueModuleAliases(moduleAliasCandidates);
 
         Debug.Log($"[GameRes] Prefab 加载计划：加载 {locations.Count}，跳过 JSON 专用 Prefab {skippedCount}");
         loadingProgress = GetAssetLoadingProgress();
@@ -689,8 +691,8 @@ public void HotReloadAllResources()
       //  Debug.Log($"同步加载 {typeof(T).Name} 完成，数量：{assets.Count}");
     }
 
-    // 专门处理 Prefab 的额外逻辑：把 Item ID 和独立模块 ID 也加入字典
-    private void HandlePrefab(GameObject prefab)
+    /// <summary>收集 Item 主别名与独立模块的候选别名。</summary>
+    private void CollectPrefabAliases(GameObject prefab, IDictionary<string, GameObject> moduleAliasCandidates)
     {
         var item = prefab.GetComponent<Item>();
         if (item != null)
@@ -704,8 +706,42 @@ public void HotReloadAllResources()
             if (module == null)
                 continue;
 
-            RegisterPrefabAlias(module.CanonicalModuleId, prefab);
-            RegisterPrefabAlias(module._Data?.ID, prefab);
+            CollectModuleAlias(moduleAliasCandidates, module.CanonicalModuleId, prefab);
+            CollectModuleAlias(moduleAliasCandidates, module._Data?.ID, prefab);
+        }
+    }
+
+    /// <summary>记录唯一模块别名；多个 Prefab 共用玩法 ID 时将该别名标记为不可直接实例化。</summary>
+    private static void CollectModuleAlias(
+        IDictionary<string, GameObject> moduleAliasCandidates,
+        string key,
+        GameObject prefab)
+    {
+        if (prefab == null || string.IsNullOrWhiteSpace(key))
+            return;
+
+        string normalizedKey = key.Trim();
+        if (!moduleAliasCandidates.TryGetValue(normalizedKey, out GameObject existingPrefab))
+        {
+            moduleAliasCandidates[normalizedKey] = prefab;
+            return;
+        }
+
+        if (existingPrefab != prefab)
+            moduleAliasCandidates[normalizedKey] = null;
+    }
+
+    /// <summary>只登记能够唯一解析且不会遮蔽 Prefab 主地址的模块别名。</summary>
+    private void RegisterUniqueModuleAliases(IReadOnlyDictionary<string, GameObject> moduleAliasCandidates)
+    {
+        foreach (KeyValuePair<string, GameObject> pair in moduleAliasCandidates)
+        {
+            if (pair.Value == null)
+                continue;
+            if (AllPrefabs.TryGetValue(pair.Key, out GameObject primaryPrefab) && primaryPrefab != pair.Value)
+                continue;
+
+            RegisterPrefabAlias(pair.Key, pair.Value);
         }
     }
 

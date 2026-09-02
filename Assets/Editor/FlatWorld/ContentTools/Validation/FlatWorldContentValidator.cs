@@ -121,7 +121,22 @@ public static class FlatWorldContentValidator
         public readonly Dictionary<string, PrefabRecord> ItemIds = new(StringComparer.Ordinal);
         public readonly HashSet<string> ItemDefinitionIds = new(StringComparer.Ordinal);
         public readonly Dictionary<string, ItemDefinitionDto> ItemDefinitions = new(StringComparer.Ordinal);
+        // 记录展开后定义所属的原始 JSON 分包。
+        public readonly Dictionary<string, string> ItemDefinitionSourcePaths = new(StringComparer.Ordinal);
+        // 记录只承担运行时模板职责的 Item Shell ID。
+        public readonly HashSet<string> ItemShellPrefabIds = new(StringComparer.Ordinal);
         public readonly HashSet<string> BiomeNames = new(StringComparer.Ordinal);
+    }
+
+    /// <summary>保存一个 JSON 建筑定义及其展开后的建筑关系数据。</summary>
+    private sealed class BuildingDefinitionRecord
+    {
+        /// <summary>定义所属的 JSON 分包路径。</summary>
+        public string AssetPath;
+        /// <summary>已经展开继承关系的物品定义。</summary>
+        public ItemDefinitionDto Definition;
+        /// <summary>建筑模块内的关系状态。</summary>
+        public Mod_Building.Building_Data State;
     }
 
     private sealed class ResourceRequirement
@@ -186,6 +201,7 @@ public static class FlatWorldContentValidator
         HashSet<string> excludedPaths = GetGenericPrefabExclusions();
 
         Dictionary<string, PrefabRecord> itemIdsIgnoreCase = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, PrefabRecord> moduleAliasCandidates = new(StringComparer.Ordinal);
         foreach (string guid in prefabGuids)
         {
             string path = AssetDatabase.GUIDToAssetPath(guid);
@@ -225,18 +241,8 @@ public static class FlatWorldContentValidator
                     if (module == null)
                         continue;
 
-                    RegisterPrefabAlias(
-                        context,
-                        report,
-                        module.CanonicalModuleId,
-                        record,
-                        "Module.CanonicalModuleId");
-                    RegisterPrefabAlias(
-                        context,
-                        report,
-                        module._Data?.ID,
-                        record,
-                        "ModuleData.ID");
+                    CollectModuleAlias(moduleAliasCandidates, module.CanonicalModuleId, record);
+                    CollectModuleAlias(moduleAliasCandidates, module._Data?.ID, record);
                 }
 
                 continue;
@@ -299,8 +305,11 @@ public static class FlatWorldContentValidator
 
             RegisterPrefabAlias(context, report, itemId, record, "ItemData.IDName");
         }
+
+        RegisterUniqueModuleAliases(context, moduleAliasCandidates);
     }
 
+    /// <summary>登记必须保持唯一的 Prefab 主地址或 Item ID。</summary>
     private static void RegisterPrefabAlias(
         ValidationContext context,
         FlatWorldContentValidationReport report,
@@ -326,6 +335,40 @@ public static class FlatWorldContentValidator
         context.PrefabAliases[key] = record;
     }
 
+    /// <summary>收集模块兼容别名；同一玩法 ID 对应多个变体时将其标记为不可直接解析。</summary>
+    private static void CollectModuleAlias(
+        IDictionary<string, PrefabRecord> moduleAliasCandidates,
+        string key,
+        PrefabRecord record)
+    {
+        if (record == null || string.IsNullOrWhiteSpace(key))
+            return;
+
+        string normalizedKey = key.Trim();
+        if (!moduleAliasCandidates.TryGetValue(normalizedKey, out PrefabRecord existingRecord))
+        {
+            moduleAliasCandidates[normalizedKey] = record;
+            return;
+        }
+
+        if (existingRecord != record)
+            moduleAliasCandidates[normalizedKey] = null;
+    }
+
+    /// <summary>让校验目录与 GameRes 一致，只保留唯一且不遮蔽主地址的模块别名。</summary>
+    private static void RegisterUniqueModuleAliases(
+        ValidationContext context,
+        IReadOnlyDictionary<string, PrefabRecord> moduleAliasCandidates)
+    {
+        foreach (KeyValuePair<string, PrefabRecord> pair in moduleAliasCandidates)
+        {
+            if (pair.Value == null || context.PrefabAliases.ContainsKey(pair.Key))
+                continue;
+
+            context.PrefabAliases[pair.Key] = pair.Value;
+        }
+    }
+
     private static void ValidateItemsAndModules(ValidationContext context, FlatWorldContentValidationReport report)
     {
         foreach (PrefabRecord record in context.ItemPrefabs)
@@ -335,7 +378,8 @@ public static class FlatWorldContentValidator
                 continue;
 
             // 已迁移物品的运行时文字来自 JSON；旧 Prefab 只承担外壳或迁移定位职责。
-            if (!context.ItemDefinitionIds.Contains(record.ItemId))
+            if (!context.ItemDefinitionIds.Contains(record.ItemId) &&
+                !context.ItemShellPrefabIds.Contains(record.ItemId))
                 ValidateItemText(record, report);
             if (item.itemData.Stack == null)
             {
@@ -496,7 +540,8 @@ public static class FlatWorldContentValidator
                 continue;
             }
 
-            if (!context.PrefabAliases.ContainsKey(moduleId))
+            bool embeddedModule = HasEmbeddedModule(record.Modules, moduleId);
+            if (!embeddedModule && !context.PrefabAliases.ContainsKey(moduleId))
             {
                 AddError(
                     report,
@@ -507,6 +552,28 @@ public static class FlatWorldContentValidator
                     record.Item);
             }
         }
+    }
+
+    /// <summary>安全检查物品外壳是否已经内置指定持久化模块。</summary>
+    private static bool HasEmbeddedModule(IEnumerable<Module> modules, string moduleId)
+    {
+        foreach (Module module in modules ?? Enumerable.Empty<Module>())
+        {
+            if (module == null)
+                continue;
+
+            try
+            {
+                if (module.MatchesPersistedId(moduleId))
+                    return true;
+            }
+            catch
+            {
+                // 模块自身的数据读取错误会由前一阶段报告，这里只避免中断其余目录校验。
+            }
+        }
+
+        return false;
     }
 
     private static void ValidateItemText(PrefabRecord record, FlatWorldContentValidationReport report)
@@ -671,6 +738,9 @@ public static class FlatWorldContentValidator
             string assetPath = sourcePaths.TryGetValue(definition.Id, out string sourcePath)
                 ? sourcePath
                 : ItemManifestAssetPath;
+            context.ItemDefinitionSourcePaths[definition.Id] = assetPath;
+            if (!string.IsNullOrWhiteSpace(definition.ShellPrefab))
+                context.ItemShellPrefabIds.Add(definition.ShellPrefab.Trim());
             if (!definition.Abstract)
             {
                 context.ItemDefinitionIds.Add(definition.Id);
@@ -711,11 +781,7 @@ public static class FlatWorldContentValidator
                 null);
         }
 
-        if (string.IsNullOrWhiteSpace(definition.SourcePrefab))
-        {
-            AddWarning(report, "FWC-ITEMJSON-101", assetPath, field + ".sourcePrefab", "缺少编辑器迁移源定位。", null);
-        }
-        else
+        if (!string.IsNullOrWhiteSpace(definition.SourcePrefab))
         {
             string sourcePrefabPath = definition.SourcePrefab.Trim().Replace('\\', '/');
             GameObject sourcePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(sourcePrefabPath);
@@ -1341,10 +1407,13 @@ public static class FlatWorldContentValidator
 
     private static void ValidateBuildings(ValidationContext context, FlatWorldContentValidationReport report)
     {
+        ValidateBuildingDefinitions(context, report);
+
         Dictionary<string, PrefabRecord> buildingRecords = new(StringComparer.Ordinal);
         foreach (PrefabRecord record in context.ItemPrefabs)
         {
             if (string.IsNullOrWhiteSpace(record.ItemId) ||
+                context.ItemDefinitionIds.Contains(record.ItemId) ||
                 !record.Modules.Any(module => module is Mod_Building) ||
                 buildingRecords.ContainsKey(record.ItemId))
             {
@@ -1472,6 +1541,211 @@ public static class FlatWorldContentValidator
             if (record.Prefab.GetComponentInChildren<SpriteRenderer>(true) == null)
                 AddError(report, "FWC-BUILDING-015", record.Path, "SpriteRenderer", "建筑缺少放置预览所需的 SpriteRenderer。", module);
         }
+    }
+
+    /// <summary>按运行时权威 JSON 校验建筑召唤器、本体与 Tilemap 建筑关系。</summary>
+    private static void ValidateBuildingDefinitions(
+        ValidationContext context,
+        FlatWorldContentValidationReport report)
+    {
+        Dictionary<string, BuildingDefinitionRecord> records = new(StringComparer.Ordinal);
+        foreach (ItemDefinitionDto definition in context.ItemDefinitions.Values)
+        {
+            if (!TryReadBuildingDefinition(context, report, definition, out BuildingDefinitionRecord record))
+                continue;
+
+            records[definition.Id] = record;
+        }
+
+        foreach (BuildingDefinitionRecord record in records.Values)
+            ValidateBuildingDefinitionRecord(records, report, record);
+    }
+
+    /// <summary>从物品定义的通用建筑模块中读取持久化关系数据。</summary>
+    private static bool TryReadBuildingDefinition(
+        ValidationContext context,
+        FlatWorldContentValidationReport report,
+        ItemDefinitionDto definition,
+        out BuildingDefinitionRecord record)
+    {
+        record = null;
+        if (definition?.Modules == null)
+            return false;
+
+        List<KeyValuePair<string, ItemModuleDefinitionDto>> buildingModules = definition.Modules
+            .Where(pair => pair.Value != null &&
+                           (string.Equals(pair.Key, ModText.Building, StringComparison.Ordinal) ||
+                            string.Equals(pair.Value.Id, ModText.Building, StringComparison.Ordinal) ||
+                            string.Equals(pair.Value.Prefab, "Module_Building", StringComparison.Ordinal)))
+            .ToList();
+        if (buildingModules.Count == 0)
+            return false;
+
+        string assetPath = GetItemDefinitionAssetPath(context, definition.Id);
+        string field = $"items[{definition.Id}].modules";
+        if (buildingModules.Count != 1)
+        {
+            AddError(
+                report,
+                "FWC-BUILDINGJSON-001",
+                assetPath,
+                field,
+                $"建筑定义应且只能包含一个通用建筑模块，当前数量：{buildingModules.Count}。",
+                null);
+            return false;
+        }
+
+        JToken bitDataToken = buildingModules[0].Value.Data?["BitData"];
+        string bitData = bitDataToken?.Type == JTokenType.String
+            ? bitDataToken.Value<string>()
+            : null;
+        if (string.IsNullOrWhiteSpace(bitData))
+        {
+            AddError(
+                report,
+                "FWC-BUILDINGJSON-002",
+                assetPath,
+                field + ".data.BitData",
+                "建筑关系数据为空或不是 JSON 字符串。",
+                null);
+            return false;
+        }
+
+        try
+        {
+            Mod_Building.Building_Data state = JObject.Parse(bitData)
+                .ToObject<Mod_Building.Building_Data>();
+            if (state == null)
+                throw new InvalidDataException("反序列化结果为空");
+
+            record = new BuildingDefinitionRecord
+            {
+                AssetPath = assetPath,
+                Definition = definition,
+                State = state
+            };
+            return true;
+        }
+        catch (Exception exception)
+        {
+            AddError(
+                report,
+                "FWC-BUILDINGJSON-003",
+                assetPath,
+                field + ".data.BitData",
+                $"建筑关系 JSON 无法读取：{exception.Message}",
+                null);
+            return false;
+        }
+    }
+
+    /// <summary>校验单个 JSON 建筑的角色、身份、拾取规则与配对关系。</summary>
+    private static void ValidateBuildingDefinitionRecord(
+        IReadOnlyDictionary<string, BuildingDefinitionRecord> records,
+        FlatWorldContentValidationReport report,
+        BuildingDefinitionRecord record)
+    {
+        ItemDefinitionDto definition = record.Definition;
+        Mod_Building.Building_Data state = record.State;
+        string field = $"items[{definition.Id}].modules[{ModText.Building}].data.BitData";
+        if (state.Role != BuildingRole.Summoner && state.Role != BuildingRole.PlacedBuilding)
+        {
+            AddError(report, "FWC-BUILDINGJSON-004", record.AssetPath, field, $"建筑角色值无效：{state.Role}。", null);
+            return;
+        }
+
+        bool isSummoner = state.Role == BuildingRole.Summoner;
+        if (string.IsNullOrWhiteSpace(state.BuildingPrefabId) ||
+            string.IsNullOrWhiteSpace(state.SummonerPrefabId))
+        {
+            AddError(report, "FWC-BUILDINGJSON-005", record.AssetPath, field, "建筑本体或召唤器 ID 为空。", null);
+            return;
+        }
+
+        string expectedDefinitionId = isSummoner ? state.SummonerPrefabId : state.BuildingPrefabId;
+        if (!string.Equals(definition.Id, expectedDefinitionId, StringComparison.Ordinal))
+        {
+            AddError(
+                report,
+                "FWC-BUILDINGJSON-006",
+                record.AssetPath,
+                field,
+                $"{state.Role} 定义 ID 应为 '{expectedDefinitionId}'，实际为 '{definition.Id}'。",
+                null);
+        }
+
+        bool expectedPickup = isSummoner;
+        if (!definition.CanBePickedUp.HasValue || definition.CanBePickedUp.Value != expectedPickup)
+        {
+            AddError(
+                report,
+                "FWC-BUILDINGJSON-007",
+                record.AssetPath,
+                $"items[{definition.Id}].canBePickedUp",
+                expectedPickup ? "建筑召唤器必须可拾取。" : "世界建筑本体不得可拾取。",
+                null);
+        }
+
+        if (definition.Health?.HasHp != true)
+        {
+            AddError(
+                report,
+                "FWC-BUILDINGJSON-008",
+                record.AssetPath,
+                $"items[{definition.Id}].health",
+                "建筑定义缺少生命值配置。",
+                null);
+        }
+
+        if (!string.IsNullOrWhiteSpace(state.TileBlockId))
+        {
+            if (!isSummoner)
+            {
+                AddError(
+                    report,
+                    "FWC-BUILDINGJSON-009",
+                    record.AssetPath,
+                    field,
+                    "Tilemap 建筑只能保留召唤器定义，不应生成动态本体定义。",
+                    null);
+            }
+            return;
+        }
+
+        string pairId = isSummoner ? state.BuildingPrefabId : state.SummonerPrefabId;
+        if (!records.TryGetValue(pairId, out BuildingDefinitionRecord pair))
+        {
+            AddError(
+                report,
+                "FWC-BUILDINGJSON-010",
+                record.AssetPath,
+                field,
+                $"缺少配对建筑定义：{pairId}",
+                null);
+            return;
+        }
+
+        BuildingRole expectedPairRole = isSummoner ? BuildingRole.PlacedBuilding : BuildingRole.Summoner;
+        if (pair.State.Role != expectedPairRole ||
+            !string.Equals(pair.State.BuildingPrefabId, state.BuildingPrefabId, StringComparison.Ordinal) ||
+            !string.Equals(pair.State.SummonerPrefabId, state.SummonerPrefabId, StringComparison.Ordinal))
+        {
+            AddError(
+                report,
+                "FWC-BUILDINGJSON-011",
+                pair.AssetPath,
+                $"items[{pair.Definition.Id}].modules[{ModText.Building}].data.BitData",
+                $"与 '{definition.Id}' 配对的建筑角色或关系 ID 不一致。",
+                null);
+        }
+    }
+
+    /// <summary>返回物品定义所属分包路径，缺失映射时回退到 Manifest。</summary>
+    private static string GetItemDefinitionAssetPath(ValidationContext context, string definitionId)
+    {
+        return context.ItemDefinitionSourcePaths.TryGetValue(definitionId, out string assetPath)
+            ? assetPath
+            : ItemManifestAssetPath;
     }
 
     /// <summary>检查召唤器 JSON 是否会在运行时注入建筑生命值模块。</summary>

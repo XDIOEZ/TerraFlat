@@ -29,7 +29,8 @@ public static class ItemDefinitionCatalogLoader
         "Assets/2_Prefabs/Gameplay/Modules/Managers/TileReciver.prefab",
         "Assets/2_Prefabs/Gameplay/Modules/Movement/Module_Move.prefab",
         "Assets/2_Prefabs/Gameplay/Modules/Movement/Mover.prefab",
-        "Assets/2_Prefabs/Gameplay/Modules/Variants/Module_SmeltingVariant.prefab"
+        "Assets/2_Prefabs/Gameplay/Modules/Variants/Module_SmeltingVariant.prefab",
+        "Assets/2_Prefabs/World/Buildings/Wall_Stone.prefab"
     };
     public const string RelativeManifestPath = RelativeItemRoot + "/" + ManifestFileName;
 
