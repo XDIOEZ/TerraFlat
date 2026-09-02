@@ -364,7 +364,7 @@ public static class RuntimeUIPrefabBuilder
         Debug.Log("[Runtime UI] 已固化主菜单退出确认 Prefab。");
     }
 
-    /// <summary>只重建左上角常驻的玩家世界坐标 HUD，并确保其进入运行时 Prefab 索引。</summary>
+    /// <summary>只重建左上角常驻的玩家坐标与 FPS HUD，并确保其进入运行时 Prefab 索引。</summary>
     [MenuItem("FlatWorld/UI/Rebuild Player World Coordinate HUD")]
     public static void RebuildPlayerWorldCoordinateHUD()
     {
@@ -523,7 +523,7 @@ public static class RuntimeUIPrefabBuilder
         EnsureRuntimePrefabAddressable(prefabPath);
     }
 
-    /// <summary>保存坐标 HUD 并注册 Prefab 标签，确保 GameRes 能按键名加载。</summary>
+    /// <summary>保存坐标与 FPS HUD 并注册 Prefab 标签，确保 GameRes 能按键名加载。</summary>
     private static void SavePlayerWorldCoordinatePrefab()
     {
         string prefabPath = HudRoot + RuntimeUIPrefabKeys.PlayerWorldCoordinate + ".prefab";
@@ -652,7 +652,7 @@ public static class RuntimeUIPrefabBuilder
         EnsureRuntimePrefabAddressable(prefabPath);
     }
 
-    /// <summary>保存坐标显示设置并登记为可由 GameRes 查询的正式运行时 Prefab。</summary>
+    /// <summary>保存左上角 HUD 设置并登记为可由 GameRes 查询的正式运行时 Prefab。</summary>
     private static void SaveCoordinateDisplaySettingsPrefab()
     {
         string prefabPath = SettingsPanelsRoot + RuntimeUIPrefabKeys.CoordinateDisplaySettings + ".prefab";
@@ -713,18 +713,25 @@ public static class RuntimeUIPrefabBuilder
 
     #region 系统 UI
 
-    /// <summary>构建固定在屏幕左上角的非交互坐标文本，只保留玩家需要读取的坐标值。</summary>
+    /// <summary>构建固定在屏幕左上角的坐标与 FPS 信息，两行共用根节点以保证不会重叠。</summary>
     private static GameObject BuildPlayerWorldCoordinateHUD()
     {
         GameObject root = CreateUIObject(RuntimeUIPrefabKeys.PlayerWorldCoordinate, null);
         RectTransform rootRect = root.GetComponent<RectTransform>();
-        SetTopLeft(rootRect, 28f, 28f, 240f, 30f);
+        SetTopLeft(rootRect, 28f, 28f, 240f, 58f);
 
         TextMeshProUGUI coordinates = CreateText("坐标文本", root.transform, "X  +0.0    Y  +0.0", 16f, Cream);
         coordinates.fontStyle = FontStyles.Bold;
         coordinates.enableWordWrapping = false;
         coordinates.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(coordinates.rectTransform, 0f, 0f, 240f, 30f);
+        SetTopLeft(coordinates.rectTransform, 0f, 0f, 240f, 28f);
+
+        TextMeshProUGUI fps = CreateText("FPS文本", root.transform, "FPS  --", 15f, Cream);
+        fps.fontStyle = FontStyles.Bold;
+        fps.enableWordWrapping = false;
+        fps.overflowMode = TextOverflowModes.Ellipsis;
+        fps.gameObject.SetActive(PlayerWorldCoordinateDisplayPreferences.DefaultShowFps);
+        SetTopLeft(fps.rectTransform, 0f, 30f, 240f, 26f);
 
         return root;
     }
@@ -1715,14 +1722,14 @@ public static class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>构建 HUD 坐标格式选择页；两种显示立即写入本地偏好，不会修改世界或存档坐标。</summary>
+    /// <summary>构建左上角 HUD 设置页；坐标格式与 FPS 显隐均立即写入本地偏好。</summary>
     private static GameObject BuildCoordinateDisplaySettings()
     {
         GameObject root = CreateSettingsPageRoot(
             RuntimeUIPrefabKeys.CoordinateDisplaySettings,
             out Transform content);
         CreateSettingsHeader(content, "显示设置");
-        CreateSettingsHint(content, "选择屏幕左上角坐标卡片的显示方式；切换会立即生效并自动保存。", 48f);
+        CreateSettingsHint(content, "调整会立即应用并自动保存。", 48f);
 
         CreateSettingsSection(content, "坐标显示", "POSITION HUD");
         GameObject modeRow = CreateRow("坐标显示方式行", content, 54f);
@@ -1737,6 +1744,13 @@ public static class RuntimeUIPrefabBuilder
             16f,
             Muted);
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
+
+        CreateSettingsSection(content, "FPS", "PERFORMANCE HUD");
+        GameObject fpsRow = CreateRow("FPS显示行", content, 54f);
+        TextMeshProUGUI fpsLabel = CreateText("FPS显示标签", fpsRow.transform, "FPS", 17f, Cream);
+        fpsLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        Toggle fpsToggle = CreateToggle("FPS显示开关", fpsRow.transform);
+        fpsToggle.isOn = PlayerWorldCoordinateDisplayPreferences.DefaultShowFps;
 
         return root;
     }

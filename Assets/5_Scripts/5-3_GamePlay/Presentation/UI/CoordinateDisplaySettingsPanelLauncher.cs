@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 绑定内嵌显示设置页，并持久化左上角 HUD 的世界坐标或经纬度显示方式。
+/// 绑定内嵌显示设置页，并持久化左上角 HUD 的坐标格式与 FPS 显隐。
 /// 页面只控制本地展示，不改变世界坐标或存档数据。
 /// </summary>
 [DisallowMultipleComponent]
@@ -13,11 +13,14 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour, ISet
 {
     private const string WorldCoordinatesButtonName = "世界坐标模式按钮";
     private const string LatitudeLongitudeButtonName = "经纬度模式按钮";
+    private const string ShowFpsToggleName = "FPS显示开关";
 
     private Button worldCoordinatesButton;
     private Button latitudeLongitudeButton;
+    private Toggle showFpsToggle;
     private TextMeshProUGUI statusText;
     private ISettingsSwitch displayModeSetting;
+    private ISettingsToggle showFpsSetting;
     private bool initialized;
 
     /// <summary>在指定内嵌页面根节点上复用或挂载显示设置控制器。</summary>
@@ -34,23 +37,29 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour, ISet
         return launcher;
     }
 
-    /// <summary>解析页面局部控件并绑定坐标显示设置 Provider。</summary>
+    /// <summary>解析页面局部控件并绑定左上角 HUD 设置 Provider。</summary>
     private void Initialize()
     {
         if (initialized)
             return;
 
-        displayModeSetting = PlayerWorldCoordinateDisplayPreferences.SettingsProvider
+        ISettingsProvider provider = PlayerWorldCoordinateDisplayPreferences.SettingsProvider;
+        displayModeSetting = provider
             .GetSwitch(PlayerWorldCoordinateDisplayPreferences.ModeSettingKey);
+        showFpsSetting = provider
+            .GetToggle(PlayerWorldCoordinateDisplayPreferences.ShowFpsSettingKey);
         worldCoordinatesButton = FindComponent<Button>(transform, WorldCoordinatesButtonName);
         latitudeLongitudeButton = FindComponent<Button>(transform, LatitudeLongitudeButtonName);
+        showFpsToggle = FindComponent<Toggle>(transform, ShowFpsToggleName);
         statusText = FindComponent<TextMeshProUGUI>(transform, "状态文本");
         worldCoordinatesButton?.onClick.AddListener(SelectWorldCoordinates);
         latitudeLongitudeButton?.onClick.AddListener(SelectLatitudeLongitude);
+        showFpsToggle?.onValueChanged.AddListener(SetShowFps);
         initialized = true;
 
         if (worldCoordinatesButton == null || latitudeLongitudeButton == null ||
-            statusText == null || displayModeSetting == null)
+            showFpsToggle == null || statusText == null || displayModeSetting == null ||
+            showFpsSetting == null)
         {
             Debug.LogError(
                 "[CoordinateDisplaySettingsPanelLauncher] 内嵌显示设置页控件命名契约不完整。",
@@ -77,7 +86,15 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour, ISet
         RefreshView();
     }
 
-    /// <summary>根据当前权威设置刷新两个选项和状态文本。</summary>
+    /// <summary>提交 FPS 显隐并立即回填权威值。</summary>
+    private void SetShowFps(bool visible)
+    {
+        showFpsSetting?.SetValue(visible);
+        if (showFpsToggle != null && showFpsSetting != null)
+            showFpsToggle.SetIsOnWithoutNotify(showFpsSetting.Value);
+    }
+
+    /// <summary>根据当前权威设置刷新坐标选项、FPS 开关和状态文本。</summary>
     private void RefreshView()
     {
         int selectedIndex = displayModeSetting != null
@@ -91,6 +108,8 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour, ISet
         SetSelectionVisual(
             latitudeLongitudeButton,
             mode == PlayerWorldCoordinateDisplayMode.LatitudeLongitude);
+        if (showFpsToggle != null && showFpsSetting != null)
+            showFpsToggle.SetIsOnWithoutNotify(showFpsSetting.Value);
 
         if (statusText != null)
         {
@@ -127,6 +146,7 @@ public sealed class CoordinateDisplaySettingsPanelLauncher : MonoBehaviour, ISet
     {
         worldCoordinatesButton?.onClick.RemoveListener(SelectWorldCoordinates);
         latitudeLongitudeButton?.onClick.RemoveListener(SelectLatitudeLongitude);
+        showFpsToggle?.onValueChanged.RemoveListener(SetShowFps);
     }
 
     /// <summary>在页面局部按名称查找指定组件。</summary>

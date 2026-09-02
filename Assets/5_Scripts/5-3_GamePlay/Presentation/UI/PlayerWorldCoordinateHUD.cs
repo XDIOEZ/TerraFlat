@@ -3,8 +3,8 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// 为本地玩家维护一个屏幕左上角的世界坐标 HUD。
-/// 仅实例化已制作好的 UI_PlayerWorldCoordinate Prefab；本地玩家以 10Hz 刷新动态坐标，远端玩家不启动轮询。
+/// 为本地玩家维护一个屏幕左上角的坐标与 FPS 信息 HUD。
+/// 仅实例化已制作好的 UI_PlayerWorldCoordinate Prefab；坐标以 10Hz 刷新，FPS 以 0.5 秒窗口采样，远端玩家不启动轮询。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Player))]
@@ -15,33 +15,42 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     public const string ViewName = "PlayerWorldCoordinateHUD";
 
     private const string CoordinateTextNodeName = "坐标文本";
+    private const string FpsTextNodeName = "FPS文本";
     private const string CoordinateFormat = "X  {0:0.0}    Y  {1:0.0}";
     private const string GeographicFormat = "经 {0:0.00}°  纬 {1:0.00}°";
+    private const string FpsFormat = "FPS  {0:0}";
     private const float RefreshIntervalSeconds = 0.1f;
+    private const float FpsSampleIntervalSeconds = 0.5f;
 
     private Player player;
     private GameObject viewObject;
     private RectTransform viewRect;
     private TextMeshProUGUI coordinateText;
+    private TextMeshProUGUI fpsText;
     private int lastCoordinateX = int.MinValue;
     private int lastCoordinateY = int.MinValue;
+    private int lastFpsSampleFrame = -1;
+    private int lastDisplayedFps = -1;
+    private float lastFpsSampleTime = -1f;
     private PlayerWorldCoordinateDisplayMode lastDisplayMode =
         (PlayerWorldCoordinateDisplayMode)(-1);
     private bool missingPrefabLogged;
     private Coroutine refreshCoroutine;
 
-    /// <summary>Profiler 可读取的坐标刷新节拍次数。</summary>
+    /// <summary>Profiler 可读取的 HUD 刷新节拍次数。</summary>
     public int RefreshTickCount { get; private set; }
 
     #endregion
 
     #region Unity 生命周期
 
+    /// <summary>缓存当前 HUD 所属玩家。</summary>
     private void Awake()
     {
         ResolvePlayer();
     }
 
+    /// <summary>订阅本地玩家资格与显示偏好，并恢复 HUD。</summary>
     private void OnEnable()
     {
         ResolvePlayer();
@@ -52,6 +61,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         RefreshForProfileContext();
     }
 
+    /// <summary>解除事件与刷新循环，并隐藏 HUD。</summary>
     private void OnDisable()
     {
         if (player != null)
@@ -62,6 +72,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         SetViewActive(false);
     }
 
+    /// <summary>销毁由本组件实例化的 HUD 视图。</summary>
     private void OnDestroy()
     {
         if (viewObject != null)
@@ -72,7 +83,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
 
     #region HUD 刷新
 
-    /// <summary>仅本地玩家创建并显示坐标 HUD，远端玩家不会重复生成界面。</summary>
+    /// <summary>仅本地玩家创建并显示左上角信息 HUD，远端玩家不会重复生成界面。</summary>
     private void RefreshVisibility()
     {
         ResolvePlayer();
@@ -87,6 +98,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
 
         SetViewActive(true);
         RefreshCoordinateText();
+        RefreshFpsDisplay();
     }
 
     /// <summary>实例化已有视觉 Prefab，并让常驻 HUD 位于普通弹窗的下方。</summary>
@@ -105,7 +117,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
                 viewRect.SetAsFirstSibling();
             }
 
-            return coordinateText != null;
+            return coordinateText != null && fpsText != null;
         }
 
         GameObject prefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.PlayerWorldCoordinate, false);
@@ -125,13 +137,16 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         viewRect = viewObject.GetComponent<RectTransform>();
         Transform textNode = viewObject.transform.Find(CoordinateTextNodeName);
         coordinateText = textNode != null ? textNode.GetComponent<TextMeshProUGUI>() : null;
-        if (viewRect == null || coordinateText == null)
+        Transform fpsNode = viewObject.transform.Find(FpsTextNodeName);
+        fpsText = fpsNode != null ? fpsNode.GetComponent<TextMeshProUGUI>() : null;
+        if (viewRect == null || coordinateText == null || fpsText == null)
         {
-            Debug.LogError("[PlayerWorldCoordinateHUD] 坐标 HUD Prefab 控件命名契约不完整。", viewObject);
+            Debug.LogError("[PlayerWorldCoordinateHUD] 左上角信息 HUD Prefab 控件命名契约不完整。", viewObject);
             Destroy(viewObject);
             viewObject = null;
             viewRect = null;
             coordinateText = null;
+            fpsText = null;
             return false;
         }
 
@@ -139,6 +154,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         lastCoordinateX = int.MinValue;
         lastCoordinateY = int.MinValue;
         lastDisplayMode = (PlayerWorldCoordinateDisplayMode)(-1);
+        InvalidateFpsSample();
         return true;
     }
 
@@ -166,6 +182,72 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         }
 
         coordinateText.SetText(CoordinateFormat, coordinateX * 0.1f, coordinateY * 0.1f);
+    }
+
+    /// <summary>根据持久化开关控制 FPS 文本，并仅在开启时采样刷新。</summary>
+    private void RefreshFpsDisplay()
+    {
+        bool shouldShow = PlayerWorldCoordinateDisplayPreferences.ShowFps;
+        if (!shouldShow)
+        {
+            if (fpsText.gameObject.activeSelf)
+                fpsText.gameObject.SetActive(false);
+            InvalidateFpsSample();
+            return;
+        }
+
+        if (!fpsText.gameObject.activeSelf)
+        {
+            fpsText.gameObject.SetActive(true);
+            BeginFpsSample();
+            return;
+        }
+
+        RefreshFpsText();
+    }
+
+    /// <summary>以当前帧和真实时间作为下一个 FPS 采样窗口的起点。</summary>
+    private void BeginFpsSample()
+    {
+        lastFpsSampleFrame = Time.frameCount;
+        lastFpsSampleTime = Time.unscaledTime;
+        lastDisplayedFps = -1;
+        fpsText.SetText("FPS  --");
+    }
+
+    /// <summary>按固定真实时间窗口计算 FPS，仅在整数显示值变化时写入 TMP。</summary>
+    private void RefreshFpsText()
+    {
+        if (lastFpsSampleFrame < 0 || lastFpsSampleTime < 0f)
+        {
+            BeginFpsSample();
+            return;
+        }
+
+        float sampleTime = Time.unscaledTime;
+        float elapsed = sampleTime - lastFpsSampleTime;
+        if (elapsed < FpsSampleIntervalSeconds)
+            return;
+
+        int sampleFrame = Time.frameCount;
+        int displayedFps = Mathf.Max(
+            0,
+            Mathf.RoundToInt((sampleFrame - lastFpsSampleFrame) / elapsed));
+        lastFpsSampleFrame = sampleFrame;
+        lastFpsSampleTime = sampleTime;
+        if (displayedFps == lastDisplayedFps)
+            return;
+
+        lastDisplayedFps = displayedFps;
+        fpsText.SetText(FpsFormat, displayedFps);
+    }
+
+    /// <summary>停止沿用旧采样窗口，避免重新显示时统计隐藏期间的帧数。</summary>
+    private void InvalidateFpsSample()
+    {
+        lastFpsSampleFrame = -1;
+        lastFpsSampleTime = -1f;
+        lastDisplayedFps = -1;
     }
 
     /// <summary>
@@ -210,8 +292,12 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         return PlanetData.DefaultRadius;
     }
 
+    /// <summary>切换本地 HUD 根节点显隐。</summary>
     private void SetViewActive(bool active)
     {
+        if (!active)
+            InvalidateFpsSample();
+
         if (viewObject != null && viewObject.activeSelf != active)
             viewObject.SetActive(active);
     }
@@ -220,21 +306,25 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
 
     #region 玩家资格与辅助
 
+    /// <summary>缓存当前组件所属的玩家。</summary>
     private void ResolvePlayer()
     {
         player ??= GetComponent<Player>();
     }
 
+    /// <summary>仅允许已启用的本地玩家维护屏幕 HUD。</summary>
     private bool CanDisplay()
     {
         return isActiveAndEnabled && player != null && player.IsLocalProfile;
     }
 
+    /// <summary>玩家本地资格变化后重建 HUD 刷新状态。</summary>
     private void HandleProfileContextChanged()
     {
         RefreshForProfileContext();
     }
 
+    /// <summary>显示偏好变化后立即刷新坐标格式与 FPS 显隐。</summary>
     private void HandleDisplayPreferenceChanged()
     {
         lastDisplayMode = (PlayerWorldCoordinateDisplayMode)(-1);
@@ -254,10 +344,11 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
 
         RefreshVisibility();
         if (refreshCoroutine == null)
-            refreshCoroutine = StartCoroutine(RefreshCoordinatesCoroutine());
+            refreshCoroutine = StartCoroutine(RefreshHudCoroutine());
     }
 
-    private IEnumerator RefreshCoordinatesCoroutine()
+    /// <summary>以低频真实时间节拍刷新左上角动态信息。</summary>
+    private IEnumerator RefreshHudCoroutine()
     {
         WaitForSecondsRealtime wait = new WaitForSecondsRealtime(RefreshIntervalSeconds);
         while (CanDisplay())
@@ -273,6 +364,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         refreshCoroutine = null;
     }
 
+    /// <summary>停止本地 HUD 的低频刷新循环。</summary>
     private void StopRefreshLoop()
     {
         if (refreshCoroutine == null)
