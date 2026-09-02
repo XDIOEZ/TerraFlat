@@ -35,6 +35,8 @@ public class Mod_Building : Module
     public static int CurrentBuildingDataVersion => CurrentDataVersion;
     private const uint BlockedTilePenalty = 1000;
     private const float BoundsEpsilon = 0.001f;
+    // 格心吸附相对准星原始落点在单轴上的最大偏差。
+    private const float PlacementCellHalfExtent = 0.5f;
     private const int MaxEmbeddedSnapshotBytes = 320 * 1024;
     private const string StatefulSummonerPrefix = "building-snapshot:";
 
@@ -1163,14 +1165,20 @@ public class Mod_Building : Module
         GhostShadow.UpdateColor(!ValidatePlacement(mouse, authorityPosition, false, out _));
     }
 
-    /// <summary>预览、点击放置和权威校验共用同一有效距离，并将准星边界视为可放置位置。</summary>
+    /// <summary>按目标格子的最近边缘校验距离，保留每轴半格的格心吸附余量。</summary>
     private bool IsWithinPlacementDistance(
         Vector3 authorityPosition,
         Vector3 placement,
         float maximumPlacementDistance)
     {
-        return WorldTopologyRuntime.Distance(authorityPosition, placement) <=
-               maximumPlacementDistance + BoundsEpsilon;
+        Vector2 wrappedDelta = WorldTopologyRuntime.ShortestDelta(
+            new Vector2(authorityPosition.x, authorityPosition.y),
+            new Vector2(placement.x, placement.y));
+        Vector2 distanceToCell = new(
+            Mathf.Max(0f, Mathf.Abs(wrappedDelta.x) - PlacementCellHalfExtent),
+            Mathf.Max(0f, Mathf.Abs(wrappedDelta.y) - PlacementCellHalfExtent));
+        float allowedDistance = Mathf.Max(0f, maximumPlacementDistance) + BoundsEpsilon;
+        return distanceToCell.sqrMagnitude <= allowedDistance * allowedDistance;
     }
 
     private void CreateGhostShadow()
