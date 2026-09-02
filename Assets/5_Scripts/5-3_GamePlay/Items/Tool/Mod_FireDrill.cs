@@ -166,6 +166,12 @@ public class Mod_FireDrill : Module, IInteractable
 
         basePanel = UIManager.Instance.CreatePanelFromGameObject(UI_Prefab);
 
+        // 专用制作面板也必须进入统一左右布局，避免置顶背包覆盖移动端输入槽。
+        RectTransform panelRect = basePanel.Dragger != null
+            ? basePanel.Dragger.rectTransform
+            : basePanel.rectTransform;
+        InventoryPanelLayout.ApplyDefaultCraftingPosition(panelRect);
+
         EnsureUIBindingsOnOpen();
 
         InputInventory.SyncData();

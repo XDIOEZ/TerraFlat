@@ -40,6 +40,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 丢弃统一经过 `Module_DiscardItem.DropItemByCount`；扣减 `ItemSlot.Amount` 后除触发槽位事件外，还必须按快捷栏槽位索引显式刷新 UI，兼容手机入口没有 `ItemSlot_UI` 引用的情况。
 - 快捷栏拖拽到非 UI 区域后的整组丢弃由 `ItemSlot_UI` 世界长按回调转发到 `Module_DiscardItem`，落点使用触点屏幕坐标；UI 槽位长按放置路径保持独立。
 - 快捷栏物品拖入 `Inventory_Hand` 后，移动端摇杆必须让出当前触摸所有权，避免长按世界丢弃时浮动摇杆抢占操作。
+- 与背包并行打开的专用制作面板创建后必须调用 `InventoryPanelLayout.ApplyDefaultCraftingPosition`；只让背包靠左会在窄屏、安全区或 UI 缩放后由置顶背包覆盖左侧输入槽射线。
 - 手机端已经拿起物品后的再次长按丢弃由 `MobileHeldItemDropSurface` 统一转发到 `Module_DiscardItem`；中间空白触控面只在 `Inventory_Hand` 有物品时参与射线，`ItemSlot_UI` 的拖拽射线必须继续把该组件视为世界落点。
 - `Mod_Plantable` 只通过 `IPlantableCrop` 初始化幼苗并判断地块占用；作物定义只配置 `cropItemId`，统一 `PlantingSummoner` 负责预览，禁止写死依赖某个成长模块或复用 `Mod_Building` 链路。
 - 普通农作物使用 `CropShell + Mod_Crop + Mod_CropYield + Mod_CropVisual`：`Mod_Crop` 只保存两阶段权威状态并调度 `ICropHarvestAction`，产物表和其他收获副作用必须拆成独立动作模块。
