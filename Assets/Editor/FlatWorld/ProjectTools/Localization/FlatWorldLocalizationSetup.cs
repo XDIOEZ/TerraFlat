@@ -338,6 +338,7 @@ namespace FlatWorld.Localization.Editor
                 { "玩家：0 / 2", "Players: 0 / 2" },
                 { "与好友共同生存", "Survive together with friends." },
                 { "角色会在这里说话", "Characters will speak here." },
+                { "这个建筑不能放置在那里", "This building cannot be placed there." },
                 { "输入消息，按 Enter 发送（/ 开头可用于命令）", "Enter a message and press Enter to send (/ at the beginning can be used for commands)." },
                 { "创建你的世界，或粘贴好友提供的地址", "Create your world or paste the address provided by a friend." },
                 { "纯地形数据在后台生成；Tilemap、碰撞和导航始终在主线程逐帧绘制。", "Terrain data is generated in the background; tilemaps, collisions, and navigation are drawn frame by frame on the main thread." },

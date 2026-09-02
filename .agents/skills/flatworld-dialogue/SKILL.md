@@ -20,6 +20,7 @@ description: "Use when: 定位或修改 FlatWorld 的角色自言自语、屏幕
 - 一次性完成标记通过共享 `ItemSpecialDataJsonStore` 命名空间保存，保留其他系统未知字段。
 - Facts 从权威状态读取；扫描普通物品时缺少可选模块应静默跳过，避免重复警告。
 - 随机候选测试使用唯一候选或固定随机状态。
+- 玩法程序集通过语义事件请求角色反馈，`FlatWorld.Dialogue` 内的独立桥接负责本地玩家筛选、本地化和 `Say`；禁止让 `GamePlay` 反向引用 Dialogue，也不要把具体玩法订阅塞入通用调度器。
 - 文本本地化联动 `flatworld-localization`；气泡层级/节点联动 UI；存档或网络身份变化联动对应 Skill。
 
 ## 验证

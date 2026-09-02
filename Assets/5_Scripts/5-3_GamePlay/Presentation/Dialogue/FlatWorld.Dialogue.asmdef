@@ -4,6 +4,7 @@
     "references": [
         "Data",
         "GamePlay",
+        "FlatWorld.Localization",
         "FlatWorld.Utilities",
         "UI",
         "Unity.InputSystem",

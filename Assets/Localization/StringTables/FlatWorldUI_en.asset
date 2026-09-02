@@ -2097,6 +2097,10 @@ MonoBehaviour:
     m_Localized: Crafted Outputs
     m_Metadata:
       m_Items: []
+  - m_Id: 8889292883058688
+    m_Localized: This building cannot be placed there.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FlatWorld.Gameplay.Building;
 using FlatWorld.Gameplay.Progress;
 using Sirenix.OdinInspector;
 using UltEvents;
@@ -235,6 +236,8 @@ public class Mod_Building : Module
 
         if (!ValidatePlacement(placement, GetAuthorityPosition(), true, out string reason))
         {
+            BuildingPlacementFeedbackEvents.PublishPlacementRejected(
+                ResolvePlacementActor());
             Debug.LogWarning($"[建筑安装] {reason}", item);
             return;
         }
