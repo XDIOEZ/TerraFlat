@@ -51,5 +51,3 @@ MonoBehaviour:
     isRunning: 1
     Type: 0
     BitData: 
-  cropDirection: 0
-  maskPadding: 0

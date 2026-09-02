@@ -50,6 +50,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 废弃 `Module_Equipment.cs` 不再使用。
 - `Mod_Food` 的被动生命联动必须读取 `Mod_PlayerDeathState`；玩家濒死或 `DamageReceiver.Hp <= 0` 时停止回血与生存伤害，避免死亡状态被抬成极低正数。
 - `Mod_Food.HealthState` 的回血判定只看蛋白质；`HealInterval/HealAmount` 大于 0 时按间隔一次性回血，动物继续使用 `HealNeedRatio`，玩家创建模板通过 `proteinHealThreshold` 配置绝对蛋白质门槛。
+- `Module_HeldFood` 的咬痕只读取 `EatingProgress` 与 `Max_EatingProgress`，按物品 GUID 确定性重建当前轮廓遮罩，不重复持久化随机点；实际口数取最大进度的向上整数，最后一口直接清空残余区域。
 
 ## 验证
 

@@ -1,27 +1,26 @@
 using UnityEngine;
 
 /// <summary>
-/// 手持食物的独立表现模块：食物每完成一口使用，就按照 Food.Max_EatingProgress
-/// 与 EatingProgress 的比例缩小 SpriteMask 的可见区域；模块只在 Item.InHand 时
-/// 创建遮罩，不改变营养结算、库存数量和食物本体数据。
+/// 手持食物的独立表现模块：每完成一口使用，就在食物当前轮廓上确定性选点并裁出圆形咬痕。
+/// 咬痕半径由 Food.Max_EatingProgress 决定，最后一口直接清空；模块不修改营养、库存或食物存档。
 /// </summary>
 public sealed class Module_HeldFood : Module, IFoodMechanic, IFoodStateObserver
 {
+    /// <summary>模块注册 ID。</summary>
     public const string ModuleId = "手上食物模块";
+
+    /// <summary>确保运行时 SpriteMask 只影响手持食物。</summary>
     private const string HeldFoodSortingLayerName = "HeldFood";
 
-    public enum CropDirection
-    {
-        RightToLeft,
-        LeftToRight,
-        TopToBottom,
-        BottomToTop
-    }
+    /// <summary>进食进度比较容差。</summary>
+    private const float ProgressEpsilon = 0.0001f;
 
     #region 模块数据
 
+    /// <summary>模块自身不保存表现数据，仅保留标准模块载体。</summary>
     public Ex_ModData_MemoryPackable ModData = new Ex_ModData_MemoryPackable();
 
+    /// <summary>访问标准模块数据。</summary>
     public override ModuleData _Data
     {
         get => ModData;
@@ -30,40 +29,67 @@ public sealed class Module_HeldFood : Module, IFoodMechanic, IFoodStateObserver
 
     #endregion
 
-    #region 表现配置
-
-    [Header("手持食物裁剪")]
-    [Tooltip("食物从哪一侧逐步裁掉")]
-    [SerializeField]
-    private CropDirection cropDirection = CropDirection.RightToLeft;
-
-    [Tooltip("遮罩边缘的额外像素单位，避免裁剪边缘出现缝隙")]
-    [SerializeField, Min(0f)]
-    private float maskPadding;
-
-    #endregion
-
     #region 运行时状态
 
+    /// <summary>食用次数和食物配置的权威运行时上下文。</summary>
     private IFoodRuntimeContext foodContext;
+
+    /// <summary>当前被遮罩的手持食物渲染器。</summary>
     private SpriteRenderer targetRenderer;
+
+    /// <summary>当前被遮罩的食物 Sprite。</summary>
     private Sprite cachedTargetSprite;
-    private SpriteMask cropMask;
-    private Sprite cropMaskSprite;
+
+    /// <summary>限制手持食物可见区域的运行时遮罩。</summary>
+    private SpriteMask biteMask;
+
+    /// <summary>承载圆形咬痕像素的运行时纹理。</summary>
+    private Texture2D biteMaskTexture;
+
+    /// <summary>供 SpriteMask 使用的运行时 Sprite。</summary>
+    private Sprite biteMaskSprite;
+
+    /// <summary>当前食物外形对应的咬痕几何生成器。</summary>
+    private FoodBiteMaskGenerator biteMaskGenerator;
+
+    /// <summary>遮罩接管前的 SpriteMask 交互方式。</summary>
     private SpriteMaskInteraction originalMaskInteraction;
+
+    /// <summary>是否已记录原 SpriteMask 交互方式。</summary>
     private bool hasOriginalMaskInteraction;
+
+    /// <summary>遮罩接管前的 Sorting Layer。</summary>
     private int originalSortingLayerID;
+
+    /// <summary>遮罩接管前的排序值。</summary>
     private int originalSortingOrder;
+
+    /// <summary>是否已记录原排序配置。</summary>
     private bool hasOriginalSorting;
 
+    /// <summary>已经提交到纹理的食用口数。</summary>
+    private int appliedBiteCount = -1;
+
+    /// <summary>已经提交到纹理的最大口数。</summary>
+    private int appliedMaximumBiteCount = -1;
+
+    /// <summary>已经提交到纹理的确定性随机种子。</summary>
+    private int appliedRandomSeed;
+
+    /// <summary>表现模块不参与 Tick。</summary>
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
+
+    /// <summary>食物规则管线中的稳定机制 ID。</summary>
     public string MechanicId => "food.held.visual";
+
+    /// <summary>在通用反馈后刷新手持食物表现。</summary>
     public int Priority => 20;
 
     #endregion
 
     #region 生命周期
 
+    /// <summary>绑定手持状态变化并恢复当前食用进度的遮罩。</summary>
     public override void Load()
     {
         if (item == null)
@@ -74,6 +100,7 @@ public sealed class Module_HeldFood : Module, IFoodMechanic, IFoodStateObserver
         RefreshMask();
     }
 
+    /// <summary>解绑手持状态并释放所有运行时遮罩对象。</summary>
     public override void Unload()
     {
         if (item != null)
@@ -92,19 +119,20 @@ public sealed class Module_HeldFood : Module, IFoodMechanic, IFoodStateObserver
 
     #region 食物状态观察
 
-    /// <summary>由食物执行器绑定当前运行时上下文，并立即恢复保存的进食比例。</summary>
+    /// <summary>绑定当前食物运行时上下文并恢复已完成的咬痕。</summary>
     public void BindFoodContext(IFoodRuntimeContext context)
     {
         foodContext = context;
         RefreshMask();
     }
 
-    /// <summary>每次进食进度变化后刷新手持物的可见比例。</summary>
+    /// <summary>进食进度变化后刷新圆形咬痕。</summary>
     public void OnFoodStateChanged(FoodStateChangedContext _)
     {
         RefreshMask();
     }
 
+    /// <summary>只在物品位于手上时保留遮罩对象。</summary>
     private void HandleInHandChanged(bool inHand)
     {
         if (inHand)
@@ -117,6 +145,7 @@ public sealed class Module_HeldFood : Module, IFoodMechanic, IFoodStateObserver
 
     #region 遮罩表现
 
+    /// <summary>把当前食用进度转换为确定性的圆形咬痕遮罩。</summary>
     private void RefreshMask()
     {
         if (item == null || !item.InHand || foodContext == null)
@@ -125,24 +154,36 @@ public sealed class Module_HeldFood : Module, IFoodMechanic, IFoodStateObserver
             return;
         }
 
-        if (!EnsureMask())
+        Food food = foodContext.Data;
+        float maximumProgress = Mathf.Max(ProgressEpsilon, food?.Max_EatingProgress ?? 1f);
+        int maximumBites = Mathf.Max(1, Mathf.CeilToInt(maximumProgress));
+        if (!EnsureMask(maximumBites))
             return;
 
-        Food food = foodContext.Data;
-        float maxBites = Mathf.Max(1f, food?.Max_EatingProgress ?? 1f);
-        float eatenBites = Mathf.Clamp(foodContext.EatingProgress, 0f, maxBites);
-        float visibleRatio = 1f - eatenBites / maxBites;
-        ApplyVisibleRatio(visibleRatio);
+        float eatingProgress = Mathf.Max(0f, foodContext.EatingProgress);
+        bool isFinalBite = eatingProgress >= maximumProgress - ProgressEpsilon;
+        int completedBites = isFinalBite
+            ? maximumBites
+            : Mathf.Clamp(Mathf.FloorToInt(eatingProgress + ProgressEpsilon), 0, maximumBites - 1);
+        int randomSeed = CreateBiteSeed(maximumBites);
+        ApplyBiteMask(completedBites, maximumBites, randomSeed);
     }
 
-    private bool EnsureMask()
+    /// <summary>为当前食物 Sprite 创建或复用运行时圆形遮罩。</summary>
+    private bool EnsureMask(int maximumBites)
     {
         SpriteRenderer renderer = ResolveTargetRenderer();
         if (renderer == null || renderer.sprite == null)
             return false;
 
-        if (cropMask != null && targetRenderer == renderer && cachedTargetSprite == renderer.sprite)
+        if (biteMask != null &&
+            biteMaskGenerator != null &&
+            targetRenderer == renderer &&
+            cachedTargetSprite == renderer.sprite &&
+            appliedMaximumBiteCount == maximumBites)
+        {
             return true;
+        }
 
         ReleaseMask();
         targetRenderer = renderer;
@@ -155,70 +196,88 @@ public sealed class Module_HeldFood : Module, IFoodMechanic, IFoodStateObserver
         renderer.sortingLayerName = HeldFoodSortingLayerName;
         renderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
 
-        GameObject maskObject = new GameObject("HeldFoodCropMask");
-        maskObject.transform.SetParent(renderer.transform, false);
-        cropMask = maskObject.AddComponent<SpriteMask>();
-        cropMaskSprite = Sprite.Create(
-            Texture2D.whiteTexture,
-            new Rect(0f, 0f, 1f, 1f),
-            new Vector2(0.5f, 0.5f),
-            1f);
-        cropMask.sprite = cropMaskSprite;
-        cropMask.isCustomRangeActive = true;
-        cropMask.frontSortingLayerID = renderer.sortingLayerID;
-        cropMask.backSortingLayerID = renderer.sortingLayerID;
-        cropMask.frontSortingOrder = renderer.sortingOrder + 1;
-        cropMask.backSortingOrder = renderer.sortingOrder - 1;
+        biteMaskGenerator = new FoodBiteMaskGenerator(renderer.sprite, maximumBites);
+        CreateMaskTexture();
+        CreateMaskObject(renderer);
+        appliedBiteCount = -1;
+        appliedMaximumBiteCount = maximumBites;
         return true;
     }
 
-    private void ApplyVisibleRatio(float visibleRatio)
+    /// <summary>创建承载咬痕像素的运行时纹理和 Sprite。</summary>
+    private void CreateMaskTexture()
     {
-        if (cropMask == null || targetRenderer == null || targetRenderer.sprite == null)
-            return;
-
-        float ratio = Mathf.Clamp01(visibleRatio);
-        if (ratio <= 0.0001f)
+        biteMaskTexture = new Texture2D(
+            biteMaskGenerator.Width,
+            biteMaskGenerator.Height,
+            TextureFormat.RGBA32,
+            false,
+            true)
         {
-            cropMask.enabled = false;
-            return;
-        }
+            name = "HeldFoodBiteMaskTexture",
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp
+        };
+        biteMaskGenerator.Build(0, 0);
+        biteMaskTexture.SetPixels32(biteMaskGenerator.MaskPixels);
+        biteMaskTexture.Apply(false, false);
 
-        Bounds spriteBounds = targetRenderer.sprite.bounds;
-        float width = Mathf.Max(0.0001f, spriteBounds.size.x);
-        float height = Mathf.Max(0.0001f, spriteBounds.size.y);
-        bool horizontal = cropDirection == CropDirection.RightToLeft ||
-                          cropDirection == CropDirection.LeftToRight;
-        float visibleSize = horizontal ? width * ratio : height * ratio;
-        visibleSize = Mathf.Clamp(visibleSize + Mathf.Max(0f, maskPadding), 0.0001f,
-            horizontal ? width : height);
-
-        Vector3 localPosition = spriteBounds.center;
-        Vector3 localScale = new Vector3(width, height, 1f);
-        if (horizontal)
-        {
-            bool cropFromRight = cropDirection == CropDirection.RightToLeft;
-            localPosition.x = cropFromRight
-                ? spriteBounds.max.x - visibleSize * 0.5f
-                : spriteBounds.min.x + visibleSize * 0.5f;
-            localScale.x = visibleSize;
-        }
-        else
-        {
-            bool cropFromTop = cropDirection == CropDirection.TopToBottom;
-            localPosition.y = cropFromTop
-                ? spriteBounds.max.y - visibleSize * 0.5f
-                : spriteBounds.min.y + visibleSize * 0.5f;
-            localScale.y = visibleSize;
-        }
-
-        cropMask.enabled = true;
-        Transform maskTransform = cropMask.transform;
-        maskTransform.localPosition = localPosition;
-        maskTransform.localRotation = Quaternion.identity;
-        maskTransform.localScale = localScale;
+        biteMaskSprite = Sprite.Create(
+            biteMaskTexture,
+            new Rect(0f, 0f, biteMaskTexture.width, biteMaskTexture.height),
+            new Vector2(0.5f, 0.5f),
+            1f,
+            0,
+            SpriteMeshType.FullRect);
+        biteMaskSprite.name = "HeldFoodBiteMaskSprite";
     }
 
+    /// <summary>创建 SpriteMask 并对齐目标食物的本地边界和排序范围。</summary>
+    private void CreateMaskObject(SpriteRenderer renderer)
+    {
+        GameObject maskObject = new GameObject("HeldFoodBiteMask");
+        maskObject.transform.SetParent(renderer.transform, false);
+        biteMask = maskObject.AddComponent<SpriteMask>();
+        biteMask.sprite = biteMaskSprite;
+        biteMask.alphaCutoff = 0.5f;
+        biteMask.isCustomRangeActive = true;
+        biteMask.frontSortingLayerID = renderer.sortingLayerID;
+        biteMask.backSortingLayerID = renderer.sortingLayerID;
+        biteMask.frontSortingOrder = renderer.sortingOrder + 1;
+        biteMask.backSortingOrder = renderer.sortingOrder - 1;
+
+        Bounds spriteBounds = biteMaskGenerator.SpriteBounds;
+        Transform maskTransform = biteMask.transform;
+        maskTransform.localPosition = spriteBounds.center;
+        maskTransform.localRotation = Quaternion.identity;
+        maskTransform.localScale = new Vector3(
+            spriteBounds.size.x / biteMaskSprite.bounds.size.x,
+            spriteBounds.size.y / biteMaskSprite.bounds.size.y,
+            1f);
+    }
+
+    /// <summary>仅在口数或随机序列变化时更新遮罩纹理。</summary>
+    private void ApplyBiteMask(int completedBites, int maximumBites, int randomSeed)
+    {
+        if (biteMask == null || biteMaskTexture == null || biteMaskGenerator == null)
+            return;
+        if (appliedBiteCount == completedBites &&
+            appliedMaximumBiteCount == maximumBites &&
+            appliedRandomSeed == randomSeed)
+        {
+            return;
+        }
+
+        bool hasVisibleFood = biteMaskGenerator.Build(completedBites, randomSeed);
+        biteMaskTexture.SetPixels32(biteMaskGenerator.MaskPixels);
+        biteMaskTexture.Apply(false, false);
+        biteMask.enabled = hasVisibleFood;
+        appliedBiteCount = completedBites;
+        appliedMaximumBiteCount = maximumBites;
+        appliedRandomSeed = randomSeed;
+    }
+
+    /// <summary>读取食物本体 SpriteRenderer，忽略没有 Sprite 的模块子对象。</summary>
     private SpriteRenderer ResolveTargetRenderer()
     {
         if (targetRenderer != null && targetRenderer.sprite != null)
@@ -238,6 +297,40 @@ public sealed class Module_HeldFood : Module, IFoodMechanic, IFoodStateObserver
         return null;
     }
 
+    /// <summary>由物品 GUID、定义 ID 和 Sprite 生成跨重新持有稳定的随机种子。</summary>
+    private int CreateBiteSeed(int maximumBites)
+    {
+        unchecked
+        {
+            int hash = 17;
+            hash = hash * 31 + (item?.itemData?.Guid ?? 0);
+            hash = hash * 31 + GetStableStringHash(item?.itemData?.IDName);
+            hash = hash * 31 + GetStableStringHash(cachedTargetSprite?.name);
+            hash = hash * 31 + maximumBites;
+            return hash;
+        }
+    }
+
+    /// <summary>计算不依赖运行时进程盐值的稳定字符串哈希。</summary>
+    private static int GetStableStringHash(string value)
+    {
+        unchecked
+        {
+            uint hash = 2166136261;
+            if (!string.IsNullOrEmpty(value))
+            {
+                for (int i = 0; i < value.Length; i++)
+                {
+                    hash ^= value[i];
+                    hash *= 16777619;
+                }
+            }
+
+            return (int)hash;
+        }
+    }
+
+    /// <summary>恢复渲染器原状态并销毁运行时遮罩资源。</summary>
     private void ReleaseMask()
     {
         if (targetRenderer != null && hasOriginalMaskInteraction)
@@ -247,18 +340,27 @@ public sealed class Module_HeldFood : Module, IFoodMechanic, IFoodStateObserver
             targetRenderer.sortingLayerID = originalSortingLayerID;
             targetRenderer.sortingOrder = originalSortingOrder;
         }
+        if (biteMask != null)
+            biteMask.enabled = false;
 
-        DestroyRuntimeObject(cropMask != null ? cropMask.gameObject : null);
-        DestroyRuntimeObject(cropMaskSprite);
+        DestroyRuntimeObject(biteMask != null ? biteMask.gameObject : null);
+        DestroyRuntimeObject(biteMaskSprite);
+        DestroyRuntimeObject(biteMaskTexture);
 
         targetRenderer = null;
         cachedTargetSprite = null;
-        cropMask = null;
-        cropMaskSprite = null;
+        biteMask = null;
+        biteMaskTexture = null;
+        biteMaskSprite = null;
+        biteMaskGenerator = null;
         hasOriginalMaskInteraction = false;
         hasOriginalSorting = false;
+        appliedBiteCount = -1;
+        appliedMaximumBiteCount = -1;
+        appliedRandomSeed = 0;
     }
 
+    /// <summary>按运行模式安全销毁临时 Unity 对象。</summary>
     private static void DestroyRuntimeObject(Object target)
     {
         if (target == null)
