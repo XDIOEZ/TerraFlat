@@ -63,6 +63,29 @@ namespace FlatWorld.GameTest.Buff
             AssertInfectionTintConfiguration("Assets/2_Prefabs/Gameplay/Modules/Animation/Module_Animator_AI.prefab");
         }
 
+        /// <summary>脱水 Buff 必须每秒扣除三点水分，并在重复获得时累加十秒时长。</summary>
+        [Test]
+        [Category("Buff.Smoke")]
+        [Category("Smoke")]
+        public void DehydrationBuffUsesStackingWaterLossDefinition()
+        {
+            List<BuffDefinition> definitions = BuffCatalogLoader.LoadBuiltInDefinitions();
+            BuffDefinition dehydration = definitions.Find(
+                definition => definition.Id == DehydrationBuffIds.Dehydration);
+
+            Assert.That(dehydration, Is.Not.Null, "本体目录必须注册脱水 Buff。");
+            Assert.That(dehydration.DurationSeconds, Is.EqualTo(10f));
+            Assert.That(dehydration.TickIntervalSeconds, Is.EqualTo(1f));
+            Assert.That(dehydration.StackMode, Is.EqualTo(BuffStackMode.ExtendDuration));
+            Assert.That(dehydration.TickEffects.Count, Is.EqualTo(1));
+
+            BuffEffectDefinition tickEffect = dehydration.TickEffects[0];
+            Assert.That(tickEffect.TypeId, Is.EqualTo(BuffEffectTypeIds.NutritionChange));
+            Assert.That(tickEffect.TargetId, Is.EqualTo("water"));
+            Assert.That(tickEffect.Value, Is.EqualTo(-3f));
+            Assert.That(tickEffect.IsHandlerCached, Is.True);
+        }
+
         [Test]
         [Category("Buff.Smoke")]
         [Category("Smoke")]
@@ -71,7 +94,7 @@ namespace FlatWorld.GameTest.Buff
             List<BuffDefinition> definitions = BuffCatalogLoader.LoadBuiltInDefinitions();
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            Assert.That(definitions, Has.Count.EqualTo(11));
+            Assert.That(definitions, Has.Count.EqualTo(14));
             foreach (BuffDefinition definition in definitions)
                 Assert.That(ids.Add(definition.Id), Is.True, $"本体 Buff 清单包含重复 ID：{definition.Id}");
         }

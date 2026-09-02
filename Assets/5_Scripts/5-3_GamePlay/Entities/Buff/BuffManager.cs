@@ -496,3 +496,9 @@ public static class InfectionBuffIds
 {
     public const string Infection = "感染";
 }
+
+/// <summary>脱水类 Buff 的稳定 ID，供饮水玩法与测试统一引用。</summary>
+public static class DehydrationBuffIds
+{
+    public const string Dehydration = "脱水";
+}

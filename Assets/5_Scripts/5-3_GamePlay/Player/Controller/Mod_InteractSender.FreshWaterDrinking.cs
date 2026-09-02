@@ -422,7 +422,7 @@ public sealed class DrinkWaterActionDefinition : IEnvironmentActionDefinition
         new DrinkWaterActionInstance(actor, this);
 }
 
-/// <summary>单个角色的一次喝水实例，维护长按、Tick、补水、感染与反馈。</summary>
+/// <summary>单个角色的一次喝水实例，维护长按、Tick、补水、水质后果与反馈。</summary>
 public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
 {
     private const string DrinkEffectName = "Particle_BeEat";
@@ -494,6 +494,7 @@ public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
         tickElapsed = 0f;
     }
 
+    /// <summary>结算一次饮水：恢复当前水源配置的水分，并根据水质附加对应 Buff。</summary>
     public bool ProcessPulse(float infectionRoll, bool playFeedback = true)
     {
         if (food?.Data?.nutrition == null || definition == null)
@@ -504,9 +505,17 @@ public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
             nutrition.Water + definition.WaterGainPerTick, 0f, nutrition.Max_Water);
         food.NotifyStateChanged();
 
-        if (definition.WaterKind == WaterEnvironmentKind.DirtyFresh &&
-            Mathf.Clamp01(infectionRoll) < definition.DirtyInfectionChance)
-            buffManager?.AddBuff(InfectionBuffIds.Infection);
+        switch (definition.WaterKind)
+        {
+            case WaterEnvironmentKind.DirtyFresh
+                when Mathf.Clamp01(infectionRoll) < definition.DirtyInfectionChance:
+                buffManager?.AddBuff(InfectionBuffIds.Infection);
+                break;
+
+            case WaterEnvironmentKind.Salt:
+                buffManager?.AddBuff(DehydrationBuffIds.Dehydration);
+                break;
+        }
 
         if (playFeedback)
             PlayFeedback();

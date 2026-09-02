@@ -59,6 +59,9 @@ namespace FlatWorld.Automation
 
             float originalWater = food.Data.nutrition.Water;
             bool hadInfection = buffManager.HasBuff(InfectionBuffIds.Infection);
+            bool hadDehydration = buffManager.TryGetBuff(
+                DehydrationBuffIds.Dehydration, out BuffInstance originalDehydration);
+            float originalDehydrationDuration = originalDehydration?.RemainingDuration ?? 0f;
             DrinkWaterActionInstance lastDrinkAction = null;
             CaptureTileEffectPosition(player, mover, receiver);
             try
@@ -157,12 +160,16 @@ namespace FlatWorld.Automation
                     {
                         throw new InvalidOperationException("盐水未提供盐水饮用动作定义。");
                     }
+                    if (Mathf.Abs(saltWaterDefinition.WaterGainPerTick - 10f) >
+                        TileEffectTolerance)
+                        throw new InvalidOperationException("盐水单次饮用补水量不是配置要求的10点。");
 
                     float saltDrinkStartWater = Mathf.Min(
                         food.Data.nutrition.Water,
-                        food.Data.nutrition.Max_Water - saltWaterDefinition.WaterGainPerTick);
+                        food.Data.nutrition.Max_Water - saltWaterDefinition.WaterGainPerTick * 2f);
                     food.Data.nutrition.Water = saltDrinkStartWater;
                     food.DataUpdate?.Invoke();
+                    float dehydrationDurationBeforeDrink = originalDehydration?.RemainingDuration ?? 0f;
                     if (!interactSender.BeginEnvironmentActionHold())
                         throw new InvalidOperationException("盐水环境无法开始长按饮水动作。");
                     lastDrinkAction = receiver.EnvironmentInteractions.ActiveAction as DrinkWaterActionInstance;
@@ -170,9 +177,31 @@ namespace FlatWorld.Automation
                         throw new InvalidOperationException("盐水环境没有创建角色独享的喝水动作实例。");
                     interactSender.TickEnvironmentInteraction(1.01f);
                     if (Mathf.Abs(food.Data.nutrition.Water -
-                                  (saltDrinkStartWater + saltWaterDefinition.WaterGainPerTick)) >
+                                   (saltDrinkStartWater + saltWaterDefinition.WaterGainPerTick)) >
                         TileEffectTolerance)
-                        throw new InvalidOperationException("盐水未复用现有长按饮水补水逻辑。");
+                        throw new InvalidOperationException("盐水没有按独立配置补充10点水分。");
+                    if (!buffManager.TryGetBuff(
+                            DehydrationBuffIds.Dehydration, out BuffInstance dehydration) ||
+                        dehydration.Definition?.DurationSeconds is not float dehydrationStackSeconds)
+                    {
+                        throw new InvalidOperationException("盐水饮用后没有获得限时脱水 Buff。");
+                    }
+                    if (Mathf.Abs(dehydration.RemainingDuration -
+                                  (dehydrationDurationBeforeDrink + dehydrationStackSeconds)) >
+                        TileEffectTolerance)
+                        throw new InvalidOperationException("首次饮用海水没有增加一份脱水时长。");
+
+                    float dehydrationDurationAfterFirstDrink = dehydration.RemainingDuration;
+                    if (!lastDrinkAction.ProcessPulse(1f, false))
+                        throw new InvalidOperationException("连续饮用海水的第二次结算失败。");
+                    if (Mathf.Abs(food.Data.nutrition.Water -
+                                  (saltDrinkStartWater + saltWaterDefinition.WaterGainPerTick * 2f)) >
+                        TileEffectTolerance)
+                        throw new InvalidOperationException("连续饮用海水没有再次补充10点水分。");
+                    if (Mathf.Abs(dehydration.RemainingDuration -
+                                  (dehydrationDurationAfterFirstDrink + dehydrationStackSeconds)) >
+                        TileEffectTolerance)
+                        throw new InvalidOperationException("重复饮用海水没有累加脱水持续时间。");
                     interactSender.EndEnvironmentActionHold();
                 }
 
@@ -199,6 +228,11 @@ namespace FlatWorld.Automation
                 food.DataUpdate?.Invoke();
                 if (!hadInfection)
                     buffManager.RemoveBuff(InfectionBuffIds.Infection);
+                if (hadDehydration)
+                    buffManager.TrySetBuffDuration(
+                        DehydrationBuffIds.Dehydration, originalDehydrationDuration);
+                else
+                    buffManager.RemoveBuff(DehydrationBuffIds.Dehydration);
                 RestoreTileEffectPosition();
             }
         }

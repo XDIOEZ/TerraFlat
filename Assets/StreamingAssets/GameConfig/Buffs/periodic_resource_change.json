@@ -15,6 +15,22 @@
           "value": 100.0
         }
       ]
+    },
+    {
+      "id": "脱水",
+      "displayName": "脱水",
+      "description": "饮用海水导致脱水，每秒流失3点水分；再次饮用海水会延长持续时间。",
+      "durationSeconds": 10.0,
+      "tickIntervalSeconds": 1.0,
+      "stackMode": "extend_duration",
+      "effects": [
+        {
+          "phase": "tick",
+          "typeId": "core:nutrition_change",
+          "targetId": "water",
+          "value": -3.0
+        }
+      ]
     }
   ]
 }

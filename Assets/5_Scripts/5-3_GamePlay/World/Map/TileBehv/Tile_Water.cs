@@ -20,8 +20,10 @@ public class Tile_Water : TileBlockBehaviour
     [Min(0f)] public float drinkHoldSeconds = 1f;
     [Tooltip("持续饮水的结算间隔。")]
     [Min(0.05f)] public float drinkTickSeconds = 1f;
-    [Tooltip("每次饮水恢复的水分。")]
+    [Tooltip("每次饮用淡水恢复的水分。")]
     [Min(0f)] public float waterGainPerTick = 12.5f;
+    [Tooltip("每次饮用海水恢复的水分；海水还会同时附加脱水 Buff。")]
+    [Min(0f)] public float saltWaterGainPerTick = 10f;
     [Tooltip("脏淡水每次饮水触发感染的概率。")]
     [Range(0f, 1f)] public float dirtyWaterInfectionChance = 0.2f;
 
@@ -163,11 +165,14 @@ public class Tile_Water : TileBlockBehaviour
         WaterEnvironmentKind waterKind = water.salt > SaltWaterThreshold
             ? WaterEnvironmentKind.Salt
             : WaterEnvironmentKind.DirtyFresh;
+        float resolvedWaterGain = waterKind == WaterEnvironmentKind.Salt
+            ? saltWaterGainPerTick
+            : waterGainPerTick;
         runner.SetAvailableActions(new DrinkWaterActionDefinition(
             waterKind,
             drinkHoldSeconds,
             drinkTickSeconds,
-            waterGainPerTick,
+            resolvedWaterGain,
             dirtyWaterInfectionChance));
     }
 

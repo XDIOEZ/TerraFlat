@@ -13,7 +13,7 @@ namespace FlatWorld.GameTest.PlayerInteraction
             data = RequireData<Data_GeneralItem>(value);
     }
 
-    /// <summary>验证水体动作定义为每个角色创建独立实例，并正确处理长按、补水与脏水感染。</summary>
+    /// <summary>验证水体动作定义为每个角色创建独立实例，并正确处理长按、补水与水质后果。</summary>
     public sealed class EnvironmentDrinkingTests
     {
         [Test]
@@ -50,12 +50,39 @@ namespace FlatWorld.GameTest.PlayerInteraction
             Assert.That(fixture.Runner.AvailableActionCount, Is.Zero);
         }
 
+        /// <summary>饮用海水必须补十点水分、添加脱水，并在重复饮用时只累加持续时间。</summary>
+        [Test]
+        [Category("PlayerInteraction.Input")]
+        public void SaltWaterHydratesAndStacksDehydrationDuration()
+        {
+            using var fixture = new EnvironmentDrinkingFixture();
+            fixture.Provide(WaterEnvironmentKind.Salt, 10f);
+            Assert.That(fixture.Runner.BeginPreferredAction(), Is.True);
+
+            DrinkWaterActionInstance saltWater = fixture.ActiveDrink;
+            Assert.That(saltWater.ProcessPulse(1f, false), Is.True);
+            Assert.That(fixture.Food.Data.nutrition.Water, Is.EqualTo(110f));
+            Assert.That(fixture.BuffManager.TryGetBuff(
+                DehydrationBuffIds.Dehydration, out BuffInstance dehydration), Is.True);
+            Assert.That(dehydration.RemainingDuration, Is.EqualTo(10f));
+
+            Assert.That(saltWater.ProcessPulse(1f, false), Is.True);
+            Assert.That(fixture.Food.Data.nutrition.Water, Is.EqualTo(120f));
+            Assert.That(dehydration.RemainingDuration, Is.EqualTo(20f));
+
+            fixture.BuffManager.Tick(1f);
+            Assert.That(fixture.Food.Data.nutrition.Water, Is.EqualTo(117f));
+            Assert.That(dehydration.RemainingDuration, Is.EqualTo(19f));
+        }
+
         private sealed class EnvironmentDrinkingFixture : IDisposable
         {
             private readonly GameObject itemObject;
             private readonly GameRes gameRes;
             private readonly BuffDefinition previousInfection;
             private readonly bool hadPreviousInfection;
+            private readonly BuffDefinition previousDehydration;
+            private readonly bool hadPreviousDehydration;
 
             public BuffManager BuffManager { get; }
             public Mod_Food Food { get; }
@@ -67,11 +94,17 @@ namespace FlatWorld.GameTest.PlayerInteraction
             {
                 gameRes = GameRes.Instance;
                 Assert.That(gameRes, Is.Not.Null);
-                BuffDefinition infection = BuffCatalogLoader.LoadBuiltInDefinitions()
-                    .Single(definition => definition.Id == InfectionBuffIds.Infection);
+                BuffDefinition[] definitions = BuffCatalogLoader.LoadBuiltInDefinitions().ToArray();
+                BuffDefinition infection = definitions.Single(
+                    definition => definition.Id == InfectionBuffIds.Infection);
                 hadPreviousInfection = gameRes.BuffDefinitions.TryGetValue(
                     infection.Id, out previousInfection);
                 gameRes.BuffDefinitions[infection.Id] = infection;
+                BuffDefinition dehydration = definitions.Single(
+                    definition => definition.Id == DehydrationBuffIds.Dehydration);
+                hadPreviousDehydration = gameRes.BuffDefinitions.TryGetValue(
+                    dehydration.Id, out previousDehydration);
+                gameRes.BuffDefinitions[dehydration.Id] = dehydration;
 
                 itemObject = new GameObject("EnvironmentDrinkingTestPlayer");
                 itemObject.SetActive(false);
@@ -94,9 +127,10 @@ namespace FlatWorld.GameTest.PlayerInteraction
                 itemObject.SetActive(true);
             }
 
-            public void Provide(WaterEnvironmentKind kind) =>
+            /// <summary>向运行器提供指定水质与单次补水量的饮水动作。</summary>
+            public void Provide(WaterEnvironmentKind kind, float waterGain = 125f) =>
                 Runner.SetAvailableActions(
-                    new DrinkWaterActionDefinition(kind, 1f, 1f, 125f, 0.2f));
+                    new DrinkWaterActionDefinition(kind, 1f, 1f, waterGain, 0.2f));
 
             public void Dispose()
             {
@@ -106,6 +140,10 @@ namespace FlatWorld.GameTest.PlayerInteraction
                     gameRes.BuffDefinitions[InfectionBuffIds.Infection] = previousInfection;
                 else
                     gameRes.BuffDefinitions.Remove(InfectionBuffIds.Infection);
+                if (hadPreviousDehydration)
+                    gameRes.BuffDefinitions[DehydrationBuffIds.Dehydration] = previousDehydration;
+                else
+                    gameRes.BuffDefinitions.Remove(DehydrationBuffIds.Dehydration);
             }
 
             private static Ex_ModData_MemoryPackable CreateModuleData(string id, string name) =>
