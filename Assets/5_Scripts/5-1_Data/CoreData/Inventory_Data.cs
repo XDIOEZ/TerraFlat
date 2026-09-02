@@ -288,6 +288,31 @@ public partial class Inventory_Data
 
     #region 拖拽放置
 
+    /// <summary>把来源槽直接移动、合并或交换到目标槽，并分别通知双方库存监听器。</summary>
+    public bool DropItemSlotTo(ItemSlot sourceSlot, Inventory_Data targetInventory, ItemSlot targetSlot)
+    {
+        if (sourceSlot == null || targetInventory == null || targetSlot == null ||
+            itemSlots == null || targetInventory.itemSlots == null ||
+            !itemSlots.Contains(sourceSlot) || !targetInventory.itemSlots.Contains(targetSlot))
+            return false;
+
+        if (ReferenceEquals(sourceSlot, targetSlot))
+            return true;
+
+        ItemData sourceData = sourceSlot.itemData;
+        if (sourceData?.Stack == null)
+            return false;
+
+        ItemData targetData = targetSlot.itemData;
+        if (targetData == null || targetData.CanStackWith(sourceData))
+        {
+            int sourceAmount = Mathf.CeilToInt(sourceData.Stack.Amount);
+            return TransferItemQuantityTo(sourceSlot, targetInventory, targetSlot, sourceAmount);
+        }
+
+        return SwapItemSlotsTo(sourceSlot, targetInventory, targetSlot);
+    }
+
     /// <summary>将手持整组物品放入当前槽位：空槽放入、同类合并、异类交换；拖拽和长按整组放置共用。</summary>
     public bool DropDraggedItem(ItemSlot localSlot, Inventory_Data handInventory, ItemSlot handSlot)
     {
@@ -297,19 +322,7 @@ public partial class Inventory_Data
             ReferenceEquals(localSlot, handSlot))
             return false;
 
-        ItemData handData = handSlot.itemData;
-        if (handData?.Stack == null)
-            return false;
-
-        ItemData localData = localSlot.itemData;
-        if (localData == null || localData.CanStackWith(handData))
-        {
-            int handAmount = Mathf.CeilToInt(handData.Stack.Amount);
-            return handInventory.TransferItemQuantityTo(handSlot, this, localSlot, handAmount);
-        }
-
-        // 拖到不同物品上时保持原有拖拽交换语义。
-        return SwapItemSlotsTo(localSlot, handInventory, handSlot);
+        return handInventory.DropItemSlotTo(handSlot, this, localSlot);
     }
 
     #endregion

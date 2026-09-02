@@ -89,16 +89,16 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         }
 
         /// <summary>半组拖拽后同步快捷栏手持物和联机状态。</summary>
-        public override bool OnTouchHalfDragBegin(int index)
+        public override InventoryDragTransaction OnTouchHalfDragBegin(int index)
         {
-            bool handled = base.OnTouchHalfDragBegin(index);
-            if (handled)
+            InventoryDragTransaction transaction = base.OnTouchHalfDragBegin(index);
+            if (transaction != null)
             {
                 Owner?.SyncCurrentHeldItemWithSlot();
                 Owner?.NotifyOwnerNetworkStateChanged();
             }
 
-            return handled;
+            return transaction;
         }
 
         public override bool OnTouchWorldLongPress(Vector2 screenPosition)

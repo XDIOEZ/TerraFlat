@@ -6,6 +6,88 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FlatWorld.Gameplay.Progress;
 using UnityEngine.InputSystem;
+
+/// <summary>
+/// 保存一次物品拖拽的事务边界；命中槽位时直接提交来源与目标，未命中时才切换到手部携带流程。
+/// </summary>
+public sealed class InventoryDragTransaction
+{
+    private Func<Inventory, int, bool> _dropHandler;
+    private readonly Func<bool> _prepareFallbackHandler;
+    private readonly Func<Inventory, int, bool> _fallbackDropHandler;
+    private bool _fallbackPrepared;
+    private bool _completed;
+
+    /// <summary>拖拽时是否需要隐藏来源槽内容，避免原物品与拖拽图标重复显示。</summary>
+    public bool HideSourceVisual { get; private set; }
+
+    /// <summary>创建一次可提交、可按需转入手部槽的拖拽事务。</summary>
+    public InventoryDragTransaction(
+        Func<Inventory, int, bool> dropHandler,
+        Func<bool> prepareFallbackHandler,
+        Func<Inventory, int, bool> fallbackDropHandler,
+        bool hideSourceVisual,
+        bool fallbackPrepared = false)
+    {
+        _dropHandler = dropHandler;
+        _prepareFallbackHandler = prepareFallbackHandler;
+        _fallbackDropHandler = fallbackDropHandler;
+        HideSourceVisual = hideSourceVisual;
+        _fallbackPrepared = fallbackPrepared;
+    }
+
+    /// <summary>尝试把当前拖拽物直接提交到指定库存槽位。</summary>
+    public bool TryDrop(Inventory targetInventory, int targetIndex)
+    {
+        if (_completed || _dropHandler == null || targetInventory == null)
+            return false;
+
+        if (!_dropHandler(targetInventory, targetIndex))
+            return false;
+
+        _completed = true;
+        return true;
+    }
+
+    /// <summary>按需把尚未提交的来源物品转入手部槽，并切换后续放置来源。</summary>
+    public bool PrepareFallback()
+    {
+        if (_completed)
+            return false;
+
+        if (_fallbackPrepared)
+            return true;
+
+        if (_prepareFallbackHandler == null || !_prepareFallbackHandler())
+            return false;
+
+        if (_fallbackDropHandler != null)
+            _dropHandler = _fallbackDropHandler;
+
+        _fallbackPrepared = true;
+        HideSourceVisual = false;
+        return true;
+    }
+
+    /// <summary>标记拖拽物已由世界交互消费，阻止后续重复放置。</summary>
+    public void Resolve()
+    {
+        _completed = true;
+    }
+
+    /// <summary>结束拖拽；仅在未命中槽位时按要求准备手部携带回退。</summary>
+    public void Complete(bool prepareFallback)
+    {
+        if (_completed)
+            return;
+
+        if (prepareFallback)
+            PrepareFallback();
+
+        _completed = true;
+    }
+}
+
 [System.Serializable]
 public class Inventory
 {
@@ -947,14 +1029,14 @@ public class Inventory
         return true;
     }
 
-    /// <summary>触屏长按更久后拖拽时，只把源堆的一半转入玩家手部槽位。</summary>
-    public virtual bool OnTouchHalfDragBegin(int index)
+    /// <summary>触屏长按更久后拖拽时，只把源堆的一半转入玩家手部槽位并建立拖拽事务。</summary>
+    public virtual InventoryDragTransaction OnTouchHalfDragBegin(int index)
     {
         if (!TryGetPlayerHandSlots(index, out Inventory handInventory, out ItemSlot localSlot, out ItemSlot handSlot) ||
             localSlot.itemData?.Stack == null)
-            return false;
+            return null;
 
-        // 手上已有物品时沿用原有整组拖拽/交换语义，避免半组拆分覆盖手上物品。
+        // 手上已有物品时改用整组直接拖拽，避免半组拆分覆盖手上物品。
         if (handSlot.itemData != null)
             return OnMouseDragBegin(index);
 
@@ -962,14 +1044,22 @@ public class Inventory
         int sourceAmount = Mathf.FloorToInt(localSlot.itemData.Stack.Amount);
         int halfAmount = Mathf.Max(1, Mathf.CeilToInt(sourceAmount * 0.5f));
         if (!Data.TransferItemQuantityTo(localSlot, handInventory.Data, handSlot, halfAmount))
-            return false;
+            return null;
 
         RefreshUI(index);
         handInventory.RefreshUI(handSlot.Index);
         _touchTapFlow = HasHeldItem(handInventory)
             ? TouchTapFlow.PutDown
             : TouchTapFlow.None;
-        return true;
+
+        ItemData draggedItem = handSlot.itemData;
+        return new InventoryDragTransaction(
+            (targetInventory, targetIndex) =>
+                handInventory.TryDropDraggedSlot(handSlot, draggedItem, targetInventory, targetIndex),
+            null,
+            null,
+            false,
+            true);
     }
 
     public virtual bool OnTouchWorldLongPress(Vector2 screenPosition)
@@ -1006,49 +1096,135 @@ public class Inventory
         return localSlot != null && handSlot != null;
     }
 
-    /// <summary>
-    /// 鼠标拖拽必须固定使用玩家手上槽位，避免玩家行囊的普通点击规则把物品送入快捷栏。
-    /// </summary>
-    public virtual bool OnMouseDragBegin(int index)
+    /// <summary>创建以当前槽为来源的直接拖拽事务，不在拖拽开始时改写手部槽。</summary>
+    public virtual InventoryDragTransaction OnMouseDragBegin(int index)
     {
-        if (Data == null || Data.itemSlots == null || index < 0 || index >= Data.itemSlots.Count)
-            return false;
+        if (Data == null || Data.itemSlots == null || index < 0 || index >= Data.itemSlots.Count ||
+            Data.itemSlots[index]?.itemData?.Stack == null)
+            return null;
 
-        Inventory handInventory = GetPlayerHandInventory();
-        if (!IsValidQuickTransferTarget(handInventory))
-        {
-            Debug.LogWarning($"[Inventory.OnMouseDragBegin] 玩家手上库存不可用，当前库存={Data.Name}, 索引={index}");
-            return false;
-        }
+        ItemSlot sourceSlot = Data.itemSlots[index];
+        ItemData draggedItem = sourceSlot.itemData;
+        Inventory fallbackInventory = null;
+        ItemSlot fallbackSlot = null;
+        ItemData fallbackItem = null;
 
-        DefaultTarget_Inventory = handInventory;
-        ProcessSlotInteraction(index, SlotInteractionSource.MouseDrag);
-        bool hasHeldItem = HasHeldItem(handInventory);
-        _touchTapFlow = hasHeldItem
-            ? TouchTapFlow.PutDown
-            : TouchTapFlow.None;
-        return hasHeldItem;
+        return new InventoryDragTransaction(
+            (targetInventory, targetIndex) =>
+                TryDropDraggedSlot(sourceSlot, draggedItem, targetInventory, targetIndex),
+            () => TryMoveDraggedSlotToHand(
+                sourceSlot,
+                draggedItem,
+                out fallbackInventory,
+                out fallbackSlot,
+                out fallbackItem),
+            (targetInventory, targetIndex) =>
+                fallbackInventory != null &&
+                fallbackInventory.TryDropDraggedSlot(fallbackSlot, fallbackItem, targetInventory, targetIndex),
+            true);
     }
 
-    /// <summary>拖拽结束时把玩家手上整堆物品定向放入目标槽位。</summary>
-    public virtual void OnMouseDragDrop(int index)
+    /// <summary>让目标槽提交来源拖拽事务。</summary>
+    public virtual bool OnMouseDragDrop(int index, InventoryDragTransaction transaction)
     {
-        if (!TryGetPlayerHandSlots(index, out Inventory handInventory, out ItemSlot localSlot, out ItemSlot handSlot) ||
-            handSlot.itemData == null || !CanAcceptQuickTransfer(handSlot, localSlot))
-            return;
+        return transaction?.TryDrop(this, index) == true;
+    }
 
-        if (!Data.DropDraggedItem(localSlot, handInventory.Data, handSlot))
-            return;
+    /// <summary>把来源槽直接移动、合并或交换到目标槽，并校验交换双方的接收规则。</summary>
+    private bool TryDropDraggedSlot(
+        ItemSlot sourceSlot,
+        ItemData draggedItem,
+        Inventory targetInventory,
+        int targetIndex)
+    {
+        if (!IsCurrentDragSource(sourceSlot, draggedItem) ||
+            !IsValidQuickTransferTarget(targetInventory) ||
+            targetIndex < 0 || targetIndex >= targetInventory.Data.itemSlots.Count)
+            return false;
 
-        RefreshUI(index);
-        handInventory.RefreshUI(handSlot.Index);
+        ItemSlot targetSlot = targetInventory.Data.itemSlots[targetIndex];
+        if (targetSlot == null)
+            return false;
 
-        if (this is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory)
-            hotBarInventory.SyncHeldItemImmediately();
+        if (ReferenceEquals(sourceSlot, targetSlot))
+            return true;
 
+        if (!targetInventory.CanAcceptQuickTransfer(sourceSlot, targetSlot))
+            return false;
+
+        ItemData targetItem = targetSlot.itemData;
+        bool swapsDifferentItems = targetItem != null && !targetItem.CanStackWith(draggedItem);
+        if (swapsDifferentItems &&
+            (!CanAcceptQuickTransfer(targetSlot, sourceSlot) ||
+             !CanHoldWholeStack(targetSlot, draggedItem) ||
+             !CanHoldWholeStack(sourceSlot, targetItem)))
+            return false;
+
+        if (!Data.DropItemSlotTo(sourceSlot, targetInventory.Data, targetSlot))
+            return false;
+
+        int sourceIndex = Data.itemSlots.IndexOf(sourceSlot);
+        if (sourceIndex >= 0)
+            RefreshUI(sourceIndex);
+        targetInventory.RefreshUI(targetIndex);
+        SyncHotBarAfterDrag(this);
+        if (!ReferenceEquals(this, targetInventory))
+            SyncHotBarAfterDrag(targetInventory);
+
+        _touchTapFlow = TouchTapFlow.None;
+        targetInventory._touchTapFlow = TouchTapFlow.None;
+        return true;
+    }
+
+    /// <summary>未命中槽位时才把拖拽物转入玩家手部槽，并返回新的携带来源。</summary>
+    private bool TryMoveDraggedSlotToHand(
+        ItemSlot sourceSlot,
+        ItemData draggedItem,
+        out Inventory handInventory,
+        out ItemSlot handSlot,
+        out ItemData handItem)
+    {
+        handInventory = GetPlayerHandInventory();
+        handSlot = null;
+        handItem = null;
+        if (!IsCurrentDragSource(sourceSlot, draggedItem) ||
+            !IsValidQuickTransferTarget(handInventory) ||
+            ReferenceEquals(this, handInventory))
+            return false;
+
+        handSlot = handInventory.Data.itemSlots[0];
+        if (!TryDropDraggedSlot(sourceSlot, draggedItem, handInventory, 0))
+            return false;
+
+        handItem = handSlot.itemData;
         _touchTapFlow = HasHeldItem(handInventory)
             ? TouchTapFlow.PutDown
             : TouchTapFlow.None;
+        return handItem?.Stack != null;
+    }
+
+    /// <summary>确认拖拽期间来源槽仍持有创建事务时的同一物品实例。</summary>
+    private bool IsCurrentDragSource(ItemSlot sourceSlot, ItemData draggedItem)
+    {
+        return Data?.itemSlots != null &&
+               sourceSlot != null &&
+               draggedItem?.Stack != null &&
+               Data.itemSlots.Contains(sourceSlot) &&
+               ReferenceEquals(sourceSlot.itemData, draggedItem);
+    }
+
+    /// <summary>判断一个槽位能否完整容纳指定物品堆，供异类交换使用。</summary>
+    private static bool CanHoldWholeStack(ItemSlot slot, ItemData itemData)
+    {
+        return slot != null && itemData?.Stack != null &&
+               itemData.Stack.CurrentVolume <= slot.SlotMaxVolume + 0.0001f;
+    }
+
+    /// <summary>拖拽改变快捷栏槽位后立即刷新玩家手持实例。</summary>
+    private static void SyncHotBarAfterDrag(Inventory inventory)
+    {
+        if (inventory is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory)
+            hotBarInventory.SyncHeldItemImmediately();
     }
 
     /// <summary>
@@ -1072,8 +1248,7 @@ public class Inventory
     private enum SlotInteractionSource
     {
         KeyboardMouse,
-        Gamepad,
-        MouseDrag
+        Gamepad
     }
 
     /// <summary>
@@ -1106,16 +1281,6 @@ public class Inventory
     /// </summary>
     private bool TryResolveSlotInteractionTarget(SlotInteractionSource source)
     {
-        if (source == SlotInteractionSource.MouseDrag)
-        {
-            Inventory handInventory = GetPlayerHandInventory();
-            if (IsValidQuickTransferTarget(handInventory))
-            {
-                DefaultTarget_Inventory = handInventory;
-                return true;
-            }
-        }
-
         if (IsPlayerBagInventory() && source == SlotInteractionSource.Gamepad)
         {
             Inventory hotBar = GetPlayerHotBarInventory();

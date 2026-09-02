@@ -51,11 +51,11 @@ public class ItemSlot_UI : MonoBehaviour,
     [Tooltip("Shift+左键快速转移事件")]
     public UltEvent<int> OnShiftQuickTransfer = new UltEvent<int>();
 
-    /// <summary>鼠标或触屏拖拽开始时，把源物品明确转入玩家手上槽位。</summary>
-    public System.Func<int, bool> OnMouseDragBegin { get; set; }
+    /// <summary>鼠标或触屏拖拽开始时，创建保留来源槽的拖拽事务。</summary>
+    public System.Func<int, InventoryDragTransaction> OnMouseDragBegin { get; set; }
 
-    /// <summary>鼠标或触屏拖拽结束时，在目标槽执行定向放置事务。</summary>
-    public System.Action<int> OnMouseDragDrop { get; set; }
+    /// <summary>鼠标或触屏拖拽结束时，由目标槽提交来源拖拽事务。</summary>
+    public System.Func<int, InventoryDragTransaction, bool> OnMouseDragDrop { get; set; }
 
     /// <summary>触屏轻触入口，允许快捷栏将轻触与物品交换分开处理。</summary>
     public System.Action<int> OnTouchTap { get; set; }
@@ -66,8 +66,8 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>触屏拖拽物品后在世界非 UI 区域长按的入口。</summary>
     public System.Func<Vector2, bool> OnTouchWorldLongPress { get; set; }
 
-    /// <summary>触屏长按更久后开始拖拽时，把源堆拆出一半的入口。</summary>
-    public System.Func<int, bool> OnTouchHalfDragBegin { get; set; }
+    /// <summary>触屏长按更久后开始拖拽时，把源堆拆出一半并建立拖拽事务。</summary>
+    public System.Func<int, InventoryDragTransaction> OnTouchHalfDragBegin { get; set; }
 
     /// <summary>桌面轻触入口；空手时保持选中语义，拖拽后手持整组时用于单件分发。</summary>
     public System.Action<int> OnDesktopTap { get; set; }
@@ -91,6 +91,8 @@ public class ItemSlot_UI : MonoBehaviour,
     private bool suppressDesktopTapAfterDrag;
     private RectTransform mouseDragGhost;
     private ItemSlot_UI mouseDragHoverSlot;
+    private InventoryDragTransaction activeDragTransaction;
+    private bool hideSourceContentWhileDragging;
     private bool dragHoverOutlineEnabled;
     private Color dragHoverOutlineColor;
     private Vector2 dragHoverOutlineDistance;
@@ -138,8 +140,10 @@ public class ItemSlot_UI : MonoBehaviour,
         EnsureSelectionOutline();
     }
 
+    /// <summary>销毁槽位时收束未完成拖拽并解除所有运行时回调。</summary>
     public void OnDestroy()
     {
+        CompleteActiveDrag(true, false);
         OnLeftClick.Clear();
         OnGamepadSubmit.Clear();
         OnRightClick.Clear();
@@ -154,6 +158,14 @@ public class ItemSlot_UI : MonoBehaviour,
         _OnScroll.Clear();
         if (selectionOutlineCreated && selectionOutline != null)
             Destroy(selectionOutline);
+        EndMouseDragVisual();
+        CancelTouchPress();
+    }
+
+    /// <summary>槽位面板停用时收束未完成拖拽，避免事务悬挂。</summary>
+    private void OnDisable()
+    {
+        CompleteActiveDrag(true, false);
         EndMouseDragVisual();
         CancelTouchPress();
     }
@@ -192,6 +204,8 @@ public class ItemSlot_UI : MonoBehaviour,
 
         UpdateItemAmount();
         UpdateItemIcon();
+        if (hideSourceContentWhileDragging)
+            HideSlotContent();
     }
 
     public void Click(PointerEventData eventData)
@@ -235,12 +249,10 @@ public class ItemSlot_UI : MonoBehaviour,
         OnDesktopTap?.Invoke(slotIndex);
     }
 
-    private void HandleMouseDragDrop()
+    /// <summary>让当前目标槽尝试提交指定拖拽事务。</summary>
+    private bool HandleMouseDragDrop(InventoryDragTransaction transaction)
     {
-        if (OnMouseDragDrop != null)
-            OnMouseDragDrop.Invoke(slotIndex);
-        else
-            HandleLeftClick();
+        return OnMouseDragDrop?.Invoke(slotIndex, transaction) == true;
     }
 
     private void HandleRightClick()
@@ -417,6 +429,7 @@ public class ItemSlot_UI : MonoBehaviour,
             eventData.useDragThreshold = true;
     }
 
+    /// <summary>根据输入类型创建整组或半组拖拽事务并显示跟随图标。</summary>
     public void OnBeginDrag(PointerEventData eventData)
     {
         if (IsTouchPointer(eventData))
@@ -426,12 +439,14 @@ public class ItemSlot_UI : MonoBehaviour,
             if (eventData.button == PointerEventData.InputButton.Left && touchPressStartedWithItem)
             {
                 Sprite touchDraggedSprite = image != null ? image.sprite : null;
-                System.Func<int, bool> beginDrag = touchHalfDragReady
+                System.Func<int, InventoryDragTransaction> beginDrag = touchHalfDragReady
                     ? OnTouchHalfDragBegin ?? OnMouseDragBegin
                     : OnMouseDragBegin;
-                touchItemDragActive = beginDrag?.Invoke(slotIndex) == true;
+                activeDragTransaction = beginDrag?.Invoke(slotIndex);
+                touchItemDragActive = activeDragTransaction != null;
                 if (touchItemDragActive)
                 {
+                    SetSourceContentHidden(activeDragTransaction.HideSourceVisual);
                     CreateMouseDragGhost(touchDraggedSprite, eventData.position);
                     UpdateMouseDragHover(eventData);
                 }
@@ -453,13 +468,15 @@ public class ItemSlot_UI : MonoBehaviour,
             return;
 
         Sprite draggedSprite = image != null ? image.sprite : null;
-        mouseDragActive = OnMouseDragBegin?.Invoke(slotIndex) == true;
+        activeDragTransaction = OnMouseDragBegin?.Invoke(slotIndex);
+        mouseDragActive = activeDragTransaction != null;
         if (!mouseDragActive)
         {
             mousePressStartedWithItem = false;
             return;
         }
 
+        SetSourceContentHidden(activeDragTransaction.HideSourceVisual);
         CreateMouseDragGhost(draggedSprite, eventData.position);
         UpdateMouseDragHover(eventData);
     }
@@ -487,6 +504,7 @@ public class ItemSlot_UI : MonoBehaviour,
         UpdateMouseDragHover(eventData);
     }
 
+    /// <summary>命中槽位时提交直接交换，未命中时才把拖拽物切换到手部槽。</summary>
     public void OnEndDrag(PointerEventData eventData)
     {
         if (IsTouchPointer(eventData))
@@ -494,9 +512,10 @@ public class ItemSlot_UI : MonoBehaviour,
             if (touchItemDragActive)
             {
                 ItemSlot_UI touchTargetSlot = FindSlotUnderPointer(eventData);
-                if (touchTargetSlot != null && touchTargetSlot.isActiveAndEnabled)
-                    touchTargetSlot.HandleMouseDragDrop();
-                // 松手未命中槽位时不提交放下事务，整组物品继续留在玩家手上供后续单件分发。
+                bool hasTouchTarget = touchTargetSlot != null && touchTargetSlot.isActiveAndEnabled;
+                if (hasTouchTarget)
+                    touchTargetSlot.HandleMouseDragDrop(activeDragTransaction);
+                CompleteActiveDrag(!hasTouchTarget);
                 touchItemDragActive = false;
                 touchPressStartedWithItem = false;
                 EndMouseDragVisual();
@@ -516,9 +535,10 @@ public class ItemSlot_UI : MonoBehaviour,
             return;
 
         ItemSlot_UI targetSlot = FindSlotUnderPointer(eventData);
-        if (targetSlot != null && targetSlot.isActiveAndEnabled)
-            targetSlot.HandleMouseDragDrop();
-        // 松手未命中槽位时保留手上整组物品，不调用源槽位的放下逻辑。
+        bool hasTarget = targetSlot != null && targetSlot.isActiveAndEnabled;
+        if (hasTarget)
+            targetSlot.HandleMouseDragDrop(activeDragTransaction);
+        CompleteActiveDrag(!hasTarget);
         mousePressStartedWithItem = false;
         mouseDragActive = false;
         suppressDesktopTapAfterDrag = true;
@@ -557,9 +577,15 @@ public class ItemSlot_UI : MonoBehaviour,
         if (touchPointerId != pointerId || !touchItemDragActive)
             yield break;
 
+        if (activeDragTransaction == null || !activeDragTransaction.PrepareFallback())
+            yield break;
+
+        SetSourceContentHidden(activeDragTransaction.HideSourceVisual);
         if (OnTouchWorldLongPress?.Invoke(touchWorldPointerPosition) != true)
             yield break;
 
+        activeDragTransaction.Resolve();
+        CompleteActiveDrag(false);
         touchLongPressTriggered = true;
         touchItemDragActive = false;
         touchPressStartedWithItem = false;
@@ -906,6 +932,39 @@ public class ItemSlot_UI : MonoBehaviour,
         if (mouseDragGhost != null)
             Destroy(mouseDragGhost.gameObject);
         mouseDragGhost = null;
+    }
+
+    /// <summary>结束当前拖拽事务并按最终数据恢复来源槽显示。</summary>
+    private void CompleteActiveDrag(bool prepareFallback, bool refreshSource = true)
+    {
+        InventoryDragTransaction transaction = activeDragTransaction;
+        activeDragTransaction = null;
+        transaction?.Complete(prepareFallback);
+        hideSourceContentWhileDragging = false;
+        if (refreshSource)
+            RefreshUI();
+    }
+
+    /// <summary>切换来源槽内容可见性，拖拽图标仍由独立幽灵节点显示。</summary>
+    private void SetSourceContentHidden(bool hidden)
+    {
+        hideSourceContentWhileDragging = hidden;
+        if (hidden)
+        {
+            HideSlotContent();
+            return;
+        }
+
+        RefreshUI();
+    }
+
+    /// <summary>隐藏来源槽的物品图标和数量文本。</summary>
+    private void HideSlotContent()
+    {
+        if (image != null)
+            image.gameObject.SetActive(false);
+        if (text != null)
+            text.enabled = false;
     }
 
     /// <summary>
