@@ -54,15 +54,25 @@ public sealed class DamageTextEffect : GameEffect
     [Min(0.01f)] public float appearDuration = 0.18f;
     [Min(1f)] public float criticalScale = 1.35f;
 
+    /// <summary>达到最大显示倍率时所需的绝对数值。</summary>
+    [Header("数值大小")]
+    [Min(0.01f)] public float magnitudeForMaximumScale = 50f;
+
+    /// <summary>零数值伤害数字使用的最小显示倍率。</summary>
+    [Min(0.1f)] public float minimumMagnitudeScale = 0.8f;
+
+    /// <summary>极高数值伤害数字允许的最大显示倍率。</summary>
+    [Min(0.1f)] public float maximumMagnitudeScale = 1.8f;
+
     [Header("伤害类型颜色")]
-    public Color normalColor = new Color(1f, 0.32f, 0.22f, 1f);
-    public Color criticalColor = new Color(1f, 0.86f, 0.2f, 1f);
-    public Color cuttingColor = new Color(1f, 0.55f, 0.25f, 1f);
-    public Color bluntColor = new Color(0.85f, 0.85f, 0.9f, 1f);
-    public Color piercingColor = new Color(0.75f, 0.55f, 1f, 1f);
-    public Color fireColor = new Color(1f, 0.2f, 0.06f, 1f);
-    public Color iceColor = new Color(0.25f, 0.82f, 1f, 1f);
-    public Color poisonColor = new Color(0.55f, 1f, 0.25f, 1f);
+    public Color normalColor = Color.red;
+    public Color criticalColor = Color.red;
+    public Color cuttingColor = Color.red;
+    public Color bluntColor = Color.red;
+    public Color piercingColor = Color.red;
+    public Color fireColor = Color.red;
+    public Color iceColor = Color.red;
+    public Color poisonColor = Color.red;
     public Color healColor = new Color(0.25f, 1f, 0.45f, 1f);
 
     #endregion
@@ -174,7 +184,8 @@ public sealed class DamageTextEffect : GameEffect
         targetPosition = startPosition + direction * (moveSpeed * Mathf.Max(0.05f, fadeDuration)) + randomOffset;
         float styleScale = effectData.Style == DamageTextStyle.Critical ? criticalScale : 1f;
         float dataScale = Mathf.Max(0.1f, effectData.ScaleMultiplier <= 0f ? 1f : effectData.ScaleMultiplier);
-        targetLocalScale = baseLocalScale * styleScale * dataScale;
+        float magnitudeScale = GetMagnitudeScale(effectData.Value);
+        targetLocalScale = baseLocalScale * styleScale * dataScale * magnitudeScale;
         isAnimating = true;
     }
 
@@ -256,6 +267,16 @@ public sealed class DamageTextEffect : GameEffect
             default:
                 return normalColor;
         }
+    }
+
+    /// <summary>把显示数值线性映射到有上限的缩放倍率，避免极端伤害遮挡画面。</summary>
+    private float GetMagnitudeScale(float value)
+    {
+        float minimumScale = Mathf.Max(0.1f, minimumMagnitudeScale);
+        float maximumScale = Mathf.Max(minimumScale, maximumMagnitudeScale);
+        float maximumMagnitude = Mathf.Max(0.01f, magnitudeForMaximumScale);
+        float normalizedMagnitude = Mathf.Clamp01(Mathf.Abs(value) / maximumMagnitude);
+        return Mathf.Lerp(minimumScale, maximumScale, normalizedMagnitude);
     }
 
     /// <summary>平滑减速移动曲线。</summary>

@@ -252,12 +252,15 @@ MonoBehaviour:
   moveDirection: {x: 0, y: 1}
   appearDuration: 0.18
   criticalScale: 1.35
-  normalColor: {r: 1, g: 0.32, b: 0.22, a: 1}
-  criticalColor: {r: 1, g: 0.86, b: 0.2, a: 1}
-  cuttingColor: {r: 1, g: 0.55, b: 0.25, a: 1}
-  bluntColor: {r: 0.85, g: 0.85, b: 0.9, a: 1}
-  piercingColor: {r: 0.75, g: 0.55, b: 1, a: 1}
-  fireColor: {r: 1, g: 0.2, b: 0.06, a: 1}
-  iceColor: {r: 0.25, g: 0.82, b: 1, a: 1}
-  poisonColor: {r: 0.55, g: 1, b: 0.25, a: 1}
+  magnitudeForMaximumScale: 50
+  minimumMagnitudeScale: 0.8
+  maximumMagnitudeScale: 1.8
+  normalColor: {r: 1, g: 0, b: 0, a: 1}
+  criticalColor: {r: 1, g: 0, b: 0, a: 1}
+  cuttingColor: {r: 1, g: 0, b: 0, a: 1}
+  bluntColor: {r: 1, g: 0, b: 0, a: 1}
+  piercingColor: {r: 1, g: 0, b: 0, a: 1}
+  fireColor: {r: 1, g: 0, b: 0, a: 1}
+  iceColor: {r: 1, g: 0, b: 0, a: 1}
+  poisonColor: {r: 1, g: 0, b: 0, a: 1}
   healColor: {r: 0.25, g: 1, b: 0.45, a: 1}
