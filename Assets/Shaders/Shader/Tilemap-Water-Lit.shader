@@ -9,6 +9,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         _DeepColor("深海颜色", Color) = (0.015, 0.15, 0.3, 1)
         _ShallowColor("浅海颜色", Color) = (0.04, 0.55, 0.62, 1)
         _SurfaceTint("海水染色强度", Range(0, 1)) = 0.45
+        _DepthDarkening("深水压暗强度", Range(0, 1)) = 0.72
         _SwellScale("涌浪尺度", Range(0.05, 4)) = 0.68
         _DetailScale("细浪尺度", Range(0.5, 12)) = 3.8
         _WaveSpeed("海流速度", Range(-3, 3)) = 0.42
@@ -87,6 +88,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         float4 _SunDirection;
         float4 _MoonReflectionPosition;
         half _SurfaceTint;
+        half _DepthDarkening;
         float _SwellScale;
         float _DetailScale;
         float _WaveSpeed;
@@ -147,6 +149,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         /// <summary>汇总海面各层光学信息，供水色、反光、焦散与白沫统一混合。</summary>
         struct WaterSurfaceData
         {
+            half waterDepth;
             half depthBlend;
             half ripple;
             half rippleShadow;
@@ -156,6 +159,17 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             half whitecap;
             half moonReflection;
         };
+
+        /// <summary>从 Tile Color 同时解出四向岸线位与当前格子的真实水深。</summary>
+        void DecodeWaterTileData(half4 encodedData, out half4 shoreMask, out half waterDepth)
+        {
+            const half depthChannelScale = 0.45h;
+            const half contactChannelOffset = 0.55h;
+            shoreMask = step(0.5h, encodedData);
+            half4 depthChannels = (encodedData - shoreMask * contactChannelOffset)
+                / depthChannelScale;
+            waterDepth = saturate(dot(depthChannels, half4(0.25h, 0.25h, 0.25h, 0.25h)));
+        }
 
         /// <summary>利用屏幕位置和既有波形生成圆形月面及向下延伸的碎光带。</summary>
         half ComputeMoonReflection(
@@ -217,7 +231,10 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         }
 
         /// <summary>叠加大涌浪和多方向细浪，并汇总海面各层光学信息。</summary>
-        WaterSurfaceData CalculateWaterSurface(float2 positionWS, float2 screenUV)
+        WaterSurfaceData CalculateWaterSurface(
+            float2 positionWS,
+            float2 screenUV,
+            half waterDepth)
         {
             WaterSurfaceData surface = (WaterSurfaceData)0;
             float2 direction = _FlowDirection.xy;
@@ -269,11 +286,14 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 -gradient.y * _NormalStrength,
                 1.0));
 
-            surface.depthBlend = saturate(
-                0.45
-                + (macroA - 0.5) * 0.5
-                + (macroB - 0.5) * 0.2
-                + height * 0.11);
+            // 权威水深决定整体明暗，噪声只在中间深度保留轻微的自然过渡。
+            surface.waterDepth = smoothstep(0.0h, 1.0h, saturate(waterDepth));
+            half depthVariation = (
+                (macroA - 0.5) * 0.12
+                + (macroB - 0.5) * 0.05
+                + height * 0.025)
+                * (surface.waterDepth * (1.0h - surface.waterDepth) * 4.0h);
+            surface.depthBlend = saturate(1.0h - surface.waterDepth + depthVariation);
 
             // 中尺度浪脊与大涌浪共用扭曲坐标，再用低频噪声切成自然短段。
             float rippleWarp = WaterNoise(
@@ -447,7 +467,12 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         half3 ApplyWaterSurface(half3 sourceColor, WaterSurfaceData surface)
         {
             half3 waterTint = lerp(_DeepColor.rgb, _ShallowColor.rgb, surface.depthBlend);
-            sourceColor = lerp(sourceColor, waterTint, saturate(_SurfaceTint));
+            half tintStrength = lerp(
+                saturate(_SurfaceTint),
+                1.0h,
+                surface.waterDepth);
+            sourceColor = lerp(sourceColor, waterTint, tintStrength);
+            sourceColor *= 1.0h - saturate(surface.waterDepth * _DepthDarkening);
             sourceColor = lerp(sourceColor, _DeepColor.rgb, surface.rippleShadow);
             sourceColor += _CausticColor.rgb * surface.caustic;
             sourceColor = lerp(sourceColor, _ReflectionColor.rgb, surface.reflection);
@@ -550,7 +575,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 float2 uv : TEXCOORD0;
                 half2 lightingUV : TEXCOORD1;
                 float2 localPosition : TEXCOORD2;
-                half4 shoreMask : TEXCOORD3;
+                half4 waterTileData : TEXCOORD3;
                 float2 positionWS : TEXCOORD4;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -578,7 +603,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 output.positionWS = TransformObjectToWorld(input.positionOS).xy;
                 output.uv = input.uv;
                 output.localPosition = input.positionOS.xy;
-                output.shoreMask = input.color;
+                output.waterTileData = input.color;
                 output.lightingUV = half2(ComputeScreenPos(output.positionCS / output.positionCS.w).xy);
                 return output;
             }
@@ -590,9 +615,15 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             {
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= _Color * _RendererColor;
-                WaterSurfaceData waterSurface = CalculateWaterSurface(input.positionWS, input.lightingUV);
+                half4 shoreMask;
+                half waterDepth;
+                DecodeWaterTileData(input.waterTileData, shoreMask, waterDepth);
+                WaterSurfaceData waterSurface = CalculateWaterSurface(
+                    input.positionWS,
+                    input.lightingUV,
+                    waterDepth);
                 main.rgb = ApplyWaterSurface(main.rgb, waterSurface);
-                half recess = ComputeRecessShadow(input.localPosition, input.shoreMask);
+                half recess = ComputeRecessShadow(input.localPosition, shoreMask);
                 main.rgb = ApplyShore(main.rgb, recess, input.positionWS);
 
                 half4 lightMask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, input.uv);
@@ -631,7 +662,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 float2 localPosition : TEXCOORD1;
-                half4 shoreMask : TEXCOORD2;
+                half4 waterTileData : TEXCOORD2;
                 float2 positionWS : TEXCOORD3;
                 float2 screenUV : TEXCOORD4;
                 UNITY_VERTEX_OUTPUT_STEREO
@@ -647,7 +678,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 output.positionWS = TransformObjectToWorld(input.positionOS).xy;
                 output.uv = input.uv;
                 output.localPosition = input.positionOS.xy;
-                output.shoreMask = input.color;
+                output.waterTileData = input.color;
                 float4 screenPosition = ComputeScreenPos(output.positionCS);
                 output.screenUV = screenPosition.xy / max(screenPosition.w, 0.0001);
                 return output;
@@ -658,9 +689,15 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             {
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= _Color * _RendererColor;
-                WaterSurfaceData waterSurface = CalculateWaterSurface(input.positionWS, input.screenUV);
+                half4 shoreMask;
+                half waterDepth;
+                DecodeWaterTileData(input.waterTileData, shoreMask, waterDepth);
+                WaterSurfaceData waterSurface = CalculateWaterSurface(
+                    input.positionWS,
+                    input.screenUV,
+                    waterDepth);
                 main.rgb = ApplyWaterSurface(main.rgb, waterSurface);
-                half recess = ComputeRecessShadow(input.localPosition, input.shoreMask);
+                half recess = ComputeRecessShadow(input.localPosition, shoreMask);
                 main.rgb = ApplyShore(main.rgb, recess, input.positionWS);
                 main.rgb = ApplyMoonReflection(main.rgb, waterSurface.moonReflection);
                 return main;

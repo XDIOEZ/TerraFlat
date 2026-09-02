@@ -9,6 +9,7 @@ Shader "FlatWorld/2D/Tilemap Clean Water Lit"
         _DeepColor("深水颜色", Color) = (0.22, 0.055, 0.012, 1)
         _ShallowColor("浅水颜色", Color) = (1, 0.48, 0.08, 1)
         _SurfaceTint("水面染色强度", Range(0, 1)) = 0.68
+        _DepthDarkening("深水压暗强度", Range(0, 1)) = 0.55
         _SwellScale("涌浪尺度", Range(0.05, 4)) = 0.42
         _DetailScale("细浪尺度", Range(0.5, 12)) = 4.4
         _WaveSpeed("水流速度", Range(-3, 3)) = 0.26

@@ -7,12 +7,21 @@ using UnityEngine.Tilemaps;
 /// 新版区块的基础 Tilemap 表现层。
 ///
 /// 地表陆地、地表水岸、矿洞墙脚和水体分别使用对应的 Tilemap 表现层。
-/// 左、右、下、上四个接触方向编码到 Tile Color RGBA，由 Tilemap Shader 绘制渐变，
+/// 左、右、下、上四个接触方向与水深共同编码到 Tile Color RGBA，由 Tilemap Shader 绘制渐变，
 /// 不再为接触阴影创建 SpriteRenderer 游戏对象。Tile Color 只作为表现数据。
 /// </summary>
 public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
 {
     #region 配置与状态
+
+    /// <summary>水深占据颜色通道低值区间，给岸线方向位保留稳定阈值。</summary>
+    private const float WaterDepthChannelScale = 0.45f;
+    /// <summary>岸线方向位偏移，与 Shader 端的解码常量保持一致。</summary>
+    private const float WaterContactChannelOffset = 0.55f;
+    /// <summary>河流与地下水使用的权威水深层。</summary>
+    private const string RiverDepthLayerId = "riverDepth";
+    /// <summary>海洋深度换算使用的权威高度层。</summary>
+    private const string HeightLayerId = "height";
 
     [SerializeField] private ChunkTilePaletteSO palette;
     [SerializeField] private Tilemap groundTilemap;
@@ -178,12 +187,12 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
         if (surfaceWater != null)
         {
             waterTilemap.SetTilesBlock(bounds, surfaceWater);
-            ApplyWaterEdgeMasks(waterTilemap, terrain);
+            ApplyWaterShaderData(waterTilemap, terrain);
         }
         if (caveWater != null)
         {
             caveWaterTilemap.SetTilesBlock(bounds, caveWater);
-            ApplyWaterEdgeMasks(caveWaterTilemap, terrain);
+            ApplyWaterShaderData(caveWaterTilemap, terrain);
         }
         if (back != null)
             backTilemap.SetTilesBlock(bounds, back);
@@ -245,8 +254,8 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
         }
     }
 
-    /// <summary>RGBA 分别编码左、右、下、上岸线，Shader 在对应水格内侧绘制暗边。</summary>
-    private void ApplyWaterEdgeMasks(Tilemap targetTilemap, ChunkTerrainData terrain)
+    /// <summary>把四向岸线与真实水深共同编码到水格颜色，供三个水面 Shader 共用。</summary>
+    private void ApplyWaterShaderData(Tilemap targetTilemap, ChunkTerrainData terrain)
     {
         if (targetTilemap == null)
             return;
@@ -262,9 +271,38 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
                 Vector3Int position = new(x, y, 0);
                 targetTilemap.SetTileFlags(position, TileFlags.None);
                 targetTilemap.SetColor(position,
-                    BuildContactMask(terrain, x, y, ContactKind.Land));
+                    BuildWaterShaderData(terrain, x, y));
             }
         }
+    }
+
+    /// <summary>每个颜色通道以高位记录岸线方向，并在低位重复记录该格水深。</summary>
+    private Color BuildWaterShaderData(ChunkTerrainData terrain, int x, int y)
+    {
+        float depthSignal = ResolveWaterDepth(terrain, x, y) * WaterDepthChannelScale;
+        return new Color(
+            depthSignal + (IsContactNeighbour(terrain, x - 1, y, ContactKind.Land)
+                ? WaterContactChannelOffset : 0f),
+            depthSignal + (IsContactNeighbour(terrain, x + 1, y, ContactKind.Land)
+                ? WaterContactChannelOffset : 0f),
+            depthSignal + (IsContactNeighbour(terrain, x, y - 1, ContactKind.Land)
+                ? WaterContactChannelOffset : 0f),
+            depthSignal + (IsContactNeighbour(terrain, x, y + 1, ContactKind.Land)
+                ? WaterContactChannelOffset : 0f));
+    }
+
+    /// <summary>优先读取河流或地下水深度，海洋则复用玩法系统的高度换算规则。</summary>
+    private static float ResolveWaterDepth(ChunkTerrainData terrain, int x, int y)
+    {
+        if (terrain.TryGetEnvironmentValue(RiverDepthLayerId, x, y,
+                out float hydrologyDepth) && hydrologyDepth > 0f)
+        {
+            return Mathf.Clamp01(hydrologyDepth);
+        }
+
+        return terrain.TryGetEnvironmentValue(HeightLayerId, x, y, out float height)
+            ? Mathf.Clamp01(TileData_Water.CalculateDepthFromHeight(height))
+            : 0f;
     }
 
     /// <summary>RGBA 分别表示左、右、下、上是否需要绘制接触阴影。</summary>
