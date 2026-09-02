@@ -36,6 +36,14 @@ Shader "FlatWorld/2D/Tilemap Clean Water Lit"
         _FoamColor("泡沫颜色", Color) = (1, 0.82, 0.55, 0.65)
         _WhitecapStrength("浪峰泡沫", Range(0, 1)) = 0.025
 
+        [Header(Moon Reflection)]
+        _MoonReflectionColor("月光倒影颜色", Color) = (1, 0.9, 0.72, 1)
+        _MoonReflectionStrength("月光倒影强度", Range(0, 8)) = 3.4
+        _MoonReflectionPosition("月光倒影屏幕位置", Vector) = (0.68, 0.62, 0, 0)
+        _MoonDiscRadius("月面倒影半径", Range(0.01, 0.2)) = 0.05
+        _MoonTrailLength("月光带长度", Range(0.01, 0.7)) = 0.3
+        _MoonTrailWidth("月光带宽度", Range(0.005, 0.2)) = 0.055
+
         [Header(Shore)]
         _EdgeColor("岸线暗部", Color) = (0.12, 0.03, 0.006, 1)
         _EdgeWidth("岸线宽度", Range(0.03, 0.45)) = 0.16

@@ -36,6 +36,14 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         _FoamColor("泡沫颜色", Color) = (0.76, 0.96, 1, 1)
         _WhitecapStrength("浪峰白沫", Range(0, 1)) = 0.24
 
+        [Header(Moon Reflection)]
+        _MoonReflectionColor("月光倒影颜色", Color) = (0.72, 0.86, 1, 1)
+        _MoonReflectionStrength("月光倒影强度", Range(0, 8)) = 4.2
+        _MoonReflectionPosition("月光倒影屏幕位置", Vector) = (0.68, 0.62, 0, 0)
+        _MoonDiscRadius("月面倒影半径", Range(0.01, 0.2)) = 0.055
+        _MoonTrailLength("月光带长度", Range(0.01, 0.7)) = 0.34
+        _MoonTrailWidth("月光带宽度", Range(0.005, 0.2)) = 0.065
+
         [Header(Shore)]
         _EdgeColor("岸线暗部", Color) = (0.035, 0.022, 0.015, 1)
         _EdgeWidth("岸线宽度", Range(0.03, 0.45)) = 0.2
@@ -71,11 +79,13 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         half4 _CausticColor;
         half4 _FoamColor;
         half4 _RippleColor;
+        half4 _MoonReflectionColor;
         half4 _EdgeColor;
         half4 _ShoreColor;
         float4 _FlowDirection;
         float4 _ReflectionDirection;
         float4 _SunDirection;
+        float4 _MoonReflectionPosition;
         half _SurfaceTint;
         float _SwellScale;
         float _DetailScale;
@@ -93,6 +103,11 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         float _SpecularPower;
         half _CausticStrength;
         half _WhitecapStrength;
+        half _MoonReflectionStrength;
+        float _MoonDiscRadius;
+        float _MoonTrailLength;
+        float _MoonTrailWidth;
+        half _GlobalMoonlightIntensity;
         half _EdgeWidth;
         half _EdgeStrength;
         half _CornerStrength;
@@ -139,10 +154,70 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             half caustic;
             half specular;
             half whitecap;
+            half moonReflection;
         };
 
-        /// <summary>叠加大涌浪和多方向细浪，并由波面梯度构造俯视角伪法线。</summary>
-        WaterSurfaceData CalculateWaterSurface(float2 positionWS)
+        /// <summary>利用屏幕位置和既有波形生成圆形月面及向下延伸的碎光带。</summary>
+        half ComputeMoonReflection(
+            float2 screenUV,
+            float height,
+            float macroA,
+            float macroB,
+            float detailA,
+            float detailB,
+            float time)
+        {
+            half moonStrength = saturate(
+                _GlobalMoonlightIntensity * max(_MoonReflectionStrength, 0.0h))
+                * _MoonReflectionColor.a;
+            UNITY_BRANCH
+            if (moonStrength <= 0.0001h)
+                return 0.0h;
+
+            float aspect = max(_ScreenParams.x / max(_ScreenParams.y, 1.0), 0.001);
+            float2 moonDelta = screenUV - _MoonReflectionPosition.xy;
+            float correctedX = moonDelta.x * aspect;
+            float discRadius = max(_MoonDiscRadius, 0.001);
+            float discWaveShift = (height * 0.08 + macroA - macroB) * discRadius * 0.16;
+            float discDistance = length(float2(correctedX + discWaveShift, moonDelta.y));
+            half disc = 1.0h - smoothstep(discRadius * 0.72, discRadius, discDistance);
+            half halo = (1.0h - smoothstep(discRadius, discRadius * 1.85, discDistance)) * 0.2h;
+            half discBreakup = lerp(
+                0.62h,
+                1.0h,
+                smoothstep(-0.55, 0.65, height + (macroA - macroB) * 0.7));
+
+            float belowMoon = -moonDelta.y;
+            float trailLength = max(_MoonTrailLength, 0.001);
+            float trailProgress = saturate(belowMoon / trailLength);
+            half trailRange = step(0.0, belowMoon)
+                * (1.0h - smoothstep(trailLength * 0.72, trailLength, belowMoon));
+            float trailWidth = max(_MoonTrailWidth, 0.001)
+                * lerp(0.6, 1.55, trailProgress);
+            float trailWaveShift = (
+                height * 0.28
+                + (macroA - macroB) * 0.32
+                + sin(screenUV.y * 58.0 - time * 1.7) * 0.16)
+                * trailWidth;
+            half trailCenter = 1.0h - smoothstep(
+                trailWidth * 0.2,
+                trailWidth,
+                abs(correctedX + trailWaveShift));
+            float stripeWave = sin(screenUV.y * 220.0 + time * 2.3 + macroA * 4.0);
+            half stripeBreakup = lerp(
+                0.18h,
+                1.0h,
+                smoothstep(-0.42, 0.62, stripeWave + detailA * 0.24 + detailB * 0.14));
+            half trail = trailRange
+                * trailCenter
+                * stripeBreakup
+                * lerp(1.0h, 0.42h, trailProgress);
+
+            return saturate(disc * discBreakup + halo + trail) * moonStrength;
+        }
+
+        /// <summary>叠加大涌浪和多方向细浪，并汇总海面各层光学信息。</summary>
+        WaterSurfaceData CalculateWaterSurface(float2 positionWS, float2 screenUV)
         {
             WaterSurfaceData surface = (WaterSurfaceData)0;
             float2 direction = _FlowDirection.xy;
@@ -357,6 +432,14 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             surface.whitecap = saturate(max(rippleFoam, swellFoam * 0.72))
                 * saturate(_WhitecapStrength)
                 * _FoamColor.a;
+            surface.moonReflection = ComputeMoonReflection(
+                screenUV,
+                height,
+                macroA,
+                macroB,
+                detailA,
+                detailB,
+                time);
             return surface;
         }
 
@@ -372,6 +455,13 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             sourceColor = lerp(sourceColor, _SpecularColor.rgb, surface.specular);
             sourceColor = lerp(sourceColor, _FoamColor.rgb, surface.whitecap);
             return saturate(sourceColor);
+        }
+
+        /// <summary>在场景 2D 光照之后叠加月光，避免夜间亮度被重复相乘。</summary>
+        half3 ApplyMoonReflection(half3 sourceColor, half moonReflection)
+        {
+            half3 reflectedLight = _MoonReflectionColor.rgb * saturate(moonReflection);
+            return saturate(sourceColor + reflectedLight * (1.0h - sourceColor));
         }
 
         /// <summary>RGBA 分别读取左、右、下、上岸线，计算水格内侧的渐变遮罩。</summary>
@@ -478,6 +568,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             SHAPE_LIGHT(3)
             #endif
 
+            /// <summary>准备 2D 光照、岸线、世界位置与屏幕位置数据。</summary>
             Varyings WaterVertex(Attributes input)
             {
                 Varyings output = (Varyings)0;
@@ -494,11 +585,13 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
 
             #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/CombinedShapeLightShared.hlsl"
 
+            /// <summary>合成受 2D 灯光影响的水面，并在末尾叠加月光倒影。</summary>
             half4 WaterFragment(Varyings input) : SV_Target
             {
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= _Color * _RendererColor;
-                main.rgb = ApplyWaterSurface(main.rgb, CalculateWaterSurface(input.positionWS));
+                WaterSurfaceData waterSurface = CalculateWaterSurface(input.positionWS, input.lightingUV);
+                main.rgb = ApplyWaterSurface(main.rgb, waterSurface);
                 half recess = ComputeRecessShadow(input.localPosition, input.shoreMask);
                 main.rgb = ApplyShore(main.rgb, recess, input.positionWS);
 
@@ -507,7 +600,9 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 InputData2D inputData;
                 InitializeSurfaceData(main.rgb, main.a, lightMask, surfaceData);
                 InitializeInputData(input.uv, input.lightingUV, inputData);
-                return CombinedShapeLightShared(surfaceData, inputData);
+                half4 lit = CombinedShapeLightShared(surfaceData, inputData);
+                lit.rgb = ApplyMoonReflection(lit.rgb, waterSurface.moonReflection);
+                return lit;
             }
             ENDHLSL
         }
@@ -538,9 +633,11 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 float2 localPosition : TEXCOORD1;
                 half4 shoreMask : TEXCOORD2;
                 float2 positionWS : TEXCOORD3;
+                float2 screenUV : TEXCOORD4;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
+            /// <summary>准备非 2D Renderer 下的水面与屏幕位置数据。</summary>
             Varyings UnlitVertex(Attributes input)
             {
                 Varyings output = (Varyings)0;
@@ -551,16 +648,21 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 output.uv = input.uv;
                 output.localPosition = input.positionOS.xy;
                 output.shoreMask = input.color;
+                float4 screenPosition = ComputeScreenPos(output.positionCS);
+                output.screenUV = screenPosition.xy / max(screenPosition.w, 0.0001);
                 return output;
             }
 
+            /// <summary>合成非 2D Renderer 下的水面及月光倒影。</summary>
             half4 UnlitFragment(Varyings input) : SV_Target
             {
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= _Color * _RendererColor;
-                main.rgb = ApplyWaterSurface(main.rgb, CalculateWaterSurface(input.positionWS));
+                WaterSurfaceData waterSurface = CalculateWaterSurface(input.positionWS, input.screenUV);
+                main.rgb = ApplyWaterSurface(main.rgb, waterSurface);
                 half recess = ComputeRecessShadow(input.localPosition, input.shoreMask);
                 main.rgb = ApplyShore(main.rgb, recess, input.positionWS);
+                main.rgb = ApplyMoonReflection(main.rgb, waterSurface.moonReflection);
                 return main;
             }
             ENDHLSL
