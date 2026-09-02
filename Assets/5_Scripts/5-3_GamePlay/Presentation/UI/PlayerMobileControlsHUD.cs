@@ -97,6 +97,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         mover = GetComponentInChildren<Mover>(true);
     }
 
+    /// <summary>绑定本地玩家、设置与系统手势边距变化，并刷新手机 HUD 可见性。</summary>
     private void OnEnable()
     {
         if (player != null)
@@ -105,9 +106,12 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             controller.ActiveInputDeviceChanged += HandleInputDeviceChanged;
         UIUserSettings.MobileControlsChanged -= HandleMobileControlsSettingsChanged;
         UIUserSettings.MobileControlsChanged += HandleMobileControlsSettingsChanged;
+        AndroidSystemGestureInsets.Changed -= HandleSystemGestureInsetsChanged;
+        AndroidSystemGestureInsets.Changed += HandleSystemGestureInsetsChanged;
         RefreshAvailability();
     }
 
+    /// <summary>解绑运行时事件并释放所有手机触摸与快捷栏临时布局。</summary>
     private void OnDisable()
     {
         if (player != null)
@@ -115,6 +119,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (controller != null)
             controller.ActiveInputDeviceChanged -= HandleInputDeviceChanged;
         UIUserSettings.MobileControlsChanged -= HandleMobileControlsSettingsChanged;
+        AndroidSystemGestureInsets.Changed -= HandleSystemGestureInsetsChanged;
         UnbindRunStateVisual();
         UnsubscribeInteractionSurface();
         if (activeLocalHud == this)
@@ -131,16 +136,30 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             Destroy(viewObject);
     }
 
+    /// <summary>失焦时释放触摸，恢复焦点时重新读取可能变化的 Android 手势区。</summary>
     private void OnApplicationFocus(bool hasFocus)
     {
         if (!hasFocus)
+        {
             ResetAllTouchState();
+            return;
+        }
+
+        if (ShouldShow())
+            AndroidSystemGestureInsets.RequestRefresh();
     }
 
+    /// <summary>进入后台时释放触摸，回到前台时重新读取 Android 手势区。</summary>
     private void OnApplicationPause(bool paused)
     {
         if (paused)
+        {
             ResetAllTouchState();
+            return;
+        }
+
+        if (ShouldShow())
+            AndroidSystemGestureInsets.RequestRefresh();
     }
 
     #endregion
@@ -162,6 +181,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         RefreshAvailability();
     }
 
+    /// <summary>只为本地 Mobile 控制方案创建并刷新正式手机 HUD。</summary>
     private void RefreshAvailability()
     {
         if (!ShouldShow())
@@ -175,6 +195,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         }
 
         activeLocalHud = this;
+        AndroidSystemGestureInsets.RequestRefresh();
         EnsureView();
         BindRunStateVisual();
         SubscribeInteractionSurface();
@@ -773,9 +794,10 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         hotbarSetupCoroutine = null;
     }
 
+    /// <summary>将快捷栏缩放并放置到安全区及 Android 强制系统手势区之上。</summary>
     private bool TryConfigureHotbarWidth()
     {
-        Transform hotbarAnchor = FindRequired("快捷栏锚点");
+        RectTransform hotbarAnchor = FindRequired("快捷栏锚点") as RectTransform;
         Inventory_HotBar hotbar = GetComponentInChildren<Inventory_HotBar>(true);
         RectTransform hotbarRect = hotbar?.RuntimeInventory?.basePanel?.transform as RectTransform;
         if (hotbarAnchor == null || hotbarRect == null)
@@ -795,8 +817,9 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             hotbarRect.SetParent(hotbarAnchor, false);
         hotbarRect.SetAsLastSibling();
         CacheHotbarCanvas(hotbarRect);
-        float safeWidth = UIManager.Instance.SafeAreaRoot != null
-            ? UIManager.Instance.SafeAreaRoot.rect.width
+        RectTransform safeRoot = UIManager.Instance.SafeAreaRoot;
+        float safeWidth = safeRoot != null
+            ? safeRoot.rect.width
             : 1920f;
         float targetWidth = Mathf.Min(760f, safeWidth * 0.44f);
         float sourceWidth = Mathf.Max(1f, hotbarRect.rect.width);
@@ -804,9 +827,26 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         hotbarRect.localScale = Vector3.one * scale;
         hotbarRect.anchorMin = hotbarRect.anchorMax = new Vector2(0.5f, 0f);
         hotbarRect.pivot = new Vector2(0.5f, 0f);
-        hotbarRect.anchoredPosition = Vector2.zero;
+        Rect occupiedScreenArea = UIUserSettings.RespectSafeArea
+            ? Screen.safeArea
+            : new Rect(0f, 0f, Screen.width, Screen.height);
+        float gestureBottomPadding = AndroidSystemGestureInsets.GetAdditionalBottomPadding(
+            safeRoot,
+            occupiedScreenArea);
+        hotbarRect.anchoredPosition = new Vector2(0f, gestureBottomPadding);
         ApplyHotbarInteractionPriority(UIManager.Instance.HasOpenGameplayInputBlockingPanel());
         return true;
+    }
+
+    /// <summary>系统手势边距变化后立即重新放置手机快捷栏。</summary>
+    private void HandleSystemGestureInsetsChanged()
+    {
+        if (!isActiveAndEnabled || !ShouldShow())
+            return;
+
+        hotbarConfigured = TryConfigureHotbarWidth();
+        if (!hotbarConfigured && hotbarSetupCoroutine == null)
+            hotbarSetupCoroutine = StartCoroutine(ConfigureHotbarWhenReady());
     }
 
     /// <summary>记录快捷栏在首次切入手机 HUD 前的桌面父节点和布局。</summary>
@@ -958,6 +998,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             manager.InteractionSurfaceChanged -= RefreshInteractionSurface;
     }
 
+    /// <summary>根据面板输入锁、设备与几何变化刷新手机玩法层和快捷栏层级。</summary>
     private void RefreshInteractionSurface()
     {
         UIManager manager = UIManager.ExistingInstance;
@@ -978,6 +1019,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         lastSafeAreaSize = safeSize;
         lastScreenWidth = Screen.width;
         lastScreenHeight = Screen.height;
+        if (geometryChanged)
+            AndroidSystemGestureInsets.RequestRefresh();
 
         // 菜单抽屉用于在背包与制作面板之间切换，不能因玩法面板获得输入锁而自动收起。
         if (gameplayLayer != null)

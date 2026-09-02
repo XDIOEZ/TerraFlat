@@ -36,6 +36,7 @@ description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系�
 - 左右摇杆捕获区统一读取 `UIUserSettings.LeftControlZoneRatio` 与 `RightControlZoneRatio`，中间剩余区域不得被透明摇杆层接管；比例改变时必须先释放已有触点再重算边界。移动摇杆的固定/浮动偏好继续由 `FloatingMoveJoystick` 持久化，移动与普通指向摇杆仅在各自区域取得触点后显示，固定攻击摇杆不受该可见性规则影响。
 - 正式手机视觉以 `UI_MobileControls.prefab` 为真相并挂到 `UIManager.SafeAreaRoot`；运行时只绑定行为和现有 HUD，不拼装另一套视觉。
 - 手机快捷栏锚点必须与玩法控制层同级，不能成为玩法层子节点；模态背包只隐藏摇杆和玩法按钮，快捷栏需保持可见并提升到面板之上参与拖放。
+- Android 底部回到桌面/多任务手势属于强制系统手势区，不能靠 `setSystemGestureExclusionRects` 屏蔽；快捷栏等带上滑操作的控件必须读取 `WindowInsets` 的 `mandatorySystemGestures` 并只补齐尚未被 `Screen.safeArea` 覆盖的边距。
 - `UI_HotBar.prefab` 自带独立 Canvas；模态容器打开时仅调整手机 HUD 根节点兄弟顺序不足以保证快捷栏获得射线，必须临时启用快捷栏 Canvas 的 `overrideSorting` 并提升排序，关闭容器后恢复原始值。
 - 快捷栏槽内的选中框切换时必须重新挂到目标槽位并按槽位兄弟顺序置底；手机模态提升的是快捷栏整体 Canvas，不能用整体排序覆盖槽内物品数量文本。
 - 面板接管玩法输入必须独立于手柄导航资格：`BasePanel` 默认阻断玩法输入，快捷栏、手部库存和状态条等常驻 HUD 必须显式调用 `SetGameplayInputBlocking(false)`；不能因为某个面板未调用 `PrepareForGamepadNavigation` 就让手机摇杆继续生效。

@@ -47,6 +47,7 @@
 |---|---|
 | 多指被合并、第二根手指无效 | `Assets/5_Scripts/5-5_UI/Input/EventSystemGuard.cs` 的逐触点绑定和 `AllPointersAsIs` |
 | 刘海遮挡、横屏翻转或尺寸变化 | `Assets/5_Scripts/5-5_UI/Common/Controls/SafeAreaRectController.cs`、`Assets/5_Scripts/5-5_UI/Core/UIManager.cs`、`Assets/Resources/UI/UIRoot.prefab` |
+| 底部上滑触发回到桌面/多任务手势 | `Assets/5_Scripts/5-5_UI/Common/Controls/AndroidSystemGestureInsets.cs` 读取强制手势边距，`PlayerMobileControlsHUD` 只避让快捷栏 |
 | 面板打开后仍能移动/攻击 | `UIManager.InteractionSurfaceChanged`、`PlayerMobileControlsHUD.RefreshInteractionSurface()`、`GameController.CancelActiveAttackAndMobileInput()` |
 | 按钮会改变普通朝向 | `UI_MobileControls.prefab` 的层级/射线顺序和指向捕获层范围 |
 | 快捷栏与摇杆重叠 | `PlayerMobileControlsHUD.TryConfigureHotbarWidth()`；上限为安全区宽度 44% 与 760 参考像素的较小值 |
