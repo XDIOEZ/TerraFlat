@@ -30,6 +30,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 角色水体效果覆盖会旋转的手持物等附属 Sprite 时，水面高度与波浪横轴必须使用角色统一的世界空间坐标；保留本地坐标模式只用于不旋转的旧材质兼容，避免水线随物品旋转成竖线。
 - 浅滩最低淹没高度属于 `WaterImmersionRenderEffect` 的纯视觉映射，应在 `depthToSurface` 曲线结果后叠加身体归一化偏移；禁止改写 `TileData_Water.deepValue`，该值还会参与水中移速等玩法结算。
 - `TileEffectReceiver` 的邻接水格容错只服务于水边交互；`Tile_Water` 必须根据 `IsActiveTileEdgeInteractionOnly` 阻断浸没视觉、脚底阴影、Buff 和移动速度效果，避免站在沙格边缘的角色被误判为入水。
+- `TileEffectReceiver` 在地块来源变化时会于同一帧依次调用旧地块 `OnExit` 和新地块 `OnEnter`；一次性入水效果必须由角色侧保存真实浸水状态，并合并连续水格之间的同帧切换，不能把每个水格都当成重新入水。
 - `Assets/2_Prefabs/Gameplay/Modules/Rendering/Shadow.prefab` 是 URP `ShadowCaster2D` 投影组件，不是实体脚底贴图；实体可视阴影应复用 `ActorShadowManager` 的独立注册和水体显隐入口。
 - Editor 脚本留在 Editor 程序集/目录；生产程序集不得反向引用 `FlatWorld.Gameplay.Debug`。
 - 运行时世界由 `SceneManager.CreateScene` 动态创建，不会触发 `SceneManager.sceneLoaded`；监听运行时 Hierarchy 的 Editor 工具必须同时处理旧场景卸载与后续 `hierarchyChanged`，且不能用无界切换标记长期屏蔽用户操作。`hierarchyChanged` 热路径必须从少量已保存记录定向解析对象，禁止组合 `Resources.FindObjectsOfTypeAll` 与 `GlobalObjectId.GetGlobalObjectIdSlow` 全场景扫描，否则跨场景引用会制造警告并造成 `EditorLoop` 尖峰。

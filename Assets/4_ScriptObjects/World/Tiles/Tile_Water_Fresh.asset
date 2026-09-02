@@ -46,3 +46,5 @@ MonoBehaviour:
         dirtyWaterInfectionChance: 0.2
         shallowMoveSpeedMultiplier: 0.85
         moveSpeedMultiplier: 0.5
+        entryTemperatureDrop: 10
+        entryTemperatureFloor: 10

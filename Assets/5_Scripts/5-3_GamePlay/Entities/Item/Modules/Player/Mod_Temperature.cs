@@ -63,6 +63,9 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
     private DamageReceiver _damageReceiver; // 血量模块引用
     private float _damageTickTimer; // 温度伤害计时器
+    private bool _isInWater; // 当前是否处于真实水体中
+    private int _lastWaterExitFrame = -1; // 最近一次退出真实水体的帧
+    private bool _lastWaterExitWasActive; // 最近一次退出前是否确实处于水中
 
 #endregion
 
@@ -76,11 +79,13 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         }
     }
 
+    /// <summary>恢复体温数据并重置不应跨生命周期保留的水体状态。</summary>
     public override void Load()
     {
         modData.ReadData(ref Data);
         TemperatureMgr.Instance.NormalizeData(Data);
         _damageTickTimer = 0f;
+        ResetWaterExposureState();
 
         _damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
         item.OnInit_Env += AdjustByEnvironment;
@@ -148,6 +153,30 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         Data.AmbientTemperature = TemperatureMgr.Instance.GetGlobalAmbientTemperature();
     }
 
+    /// <summary>同步真实入水状态，并在首次进入连续水域时执行一次带下限的降温。</summary>
+    public void SetWaterExposure(bool inWater, float temperatureDrop, float minimumTemperature)
+    {
+        if (!inWater)
+        {
+            _lastWaterExitWasActive = _isInWater;
+            _lastWaterExitFrame = Time.frameCount;
+            _isInWater = false;
+            return;
+        }
+
+        if (_isInWater)
+            return;
+
+        bool continuedAcrossWaterTiles =
+            _lastWaterExitWasActive && _lastWaterExitFrame == Time.frameCount;
+        _isInWater = true;
+        _lastWaterExitWasActive = false;
+        if (continuedAcrossWaterTiles || !GameNetwork.HasStateAuthority)
+            return;
+
+        ApplyCoolingWithFloor(temperatureDrop, minimumTemperature);
+    }
+
     public void MultiplyRuntimeCoolingSpeed(float multiplier)
     {
         if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier <= 0f)
@@ -170,6 +199,27 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 #endregion
 
 #region 私有方法
+
+    /// <summary>按指定降幅降低体温，但不加热已低于下限的角色。</summary>
+    private void ApplyCoolingWithFloor(float temperatureDrop, float minimumTemperature)
+    {
+        float resolvedDrop = Mathf.Max(0f, temperatureDrop);
+        float resolvedMinimum = Mathf.Max(0f, minimumTemperature);
+        if (resolvedDrop <= 0f || Data.CurrentTemperature <= resolvedMinimum)
+            return;
+
+        SetTemperatureInternal(Mathf.Max(
+            resolvedMinimum,
+            Data.CurrentTemperature - resolvedDrop));
+    }
+
+    /// <summary>清除仅属于当前运行实例的入水判定状态。</summary>
+    private void ResetWaterExposureState()
+    {
+        _isInWater = false;
+        _lastWaterExitFrame = -1;
+        _lastWaterExitWasActive = false;
+    }
 
     private void SetTemperatureInternal(float value)
     {

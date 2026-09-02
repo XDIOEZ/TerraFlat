@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// 水体地块逻辑行为
-/// 负责水体表现、配置型环境 Buff，以及向角色提供无状态的喝水动作定义。
+/// 负责水体表现、配置型环境 Buff、入水降温，以及向角色提供无状态的喝水动作定义。
 /// 作为 TileBlockBehaviour 的具体实现，通过组合到 Tile_Block 中使用。
 /// </summary>
 [System.Serializable]
@@ -30,7 +30,12 @@ public class Tile_Water : TileBlockBehaviour
     [Range(0.01f, 1f)] public float shallowMoveSpeedMultiplier = 0.85f;
     [Tooltip("水深为 1 时的移动速度倍率；由环境实例维护，不进入 Buff 系统。")]
     [Min(0.01f)] public float moveSpeedMultiplier = 0.5f;
+    [Tooltip("首次进入一片连续水域时固定降低的体温。")]
+    [Min(0f)] public float entryTemperatureDrop = 10f;
+    [Tooltip("入水降温不能把角色体温压到低于该值。")]
+    [Min(0f)] public float entryTemperatureFloor = 10f;
 
+    /// <summary>进入水格时启用真实水体状态、环境 Buff、动作与被动效果。</summary>
     public override void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
     {
         if (item == null)
@@ -41,6 +46,7 @@ public class Tile_Water : TileBlockBehaviour
         TileData_Water water = tileData as TileData_Water;
         float depthValue = water != null ? Mathf.Clamp01(water.deepValue) : 0f;
         bool edgeInteractionOnly = receiver != null && receiver.IsActiveTileEdgeInteractionOnly;
+        SetWaterTemperatureState(item, !edgeInteractionOnly);
         if (edgeInteractionOnly)
         {
             // 对象池复用时也要清掉上一轮真实入水留下的目标状态。
@@ -66,10 +72,12 @@ public class Tile_Water : TileBlockBehaviour
             ProvideWaterEffects(receiver, depthValue);
     }
 
+    /// <summary>离开水格时撤销水体状态、环境 Buff、动作与被动效果。</summary>
     public override void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
     {
         if (item == null)
             return;
+        SetWaterTemperatureState(item, false);
         SetWaterVisualState(item, 0f, false);
 
         // 移除 Buff
@@ -91,6 +99,7 @@ public class Tile_Water : TileBlockBehaviour
         receiver?.EnvironmentInteractions.ClearAvailableEffects();
     }
 
+    /// <summary>持续同步真实水格的水深与移动速度影响。</summary>
     public override void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
     {
         if (item == null || !(tileData is TileData_Water water))
@@ -105,6 +114,21 @@ public class Tile_Water : TileBlockBehaviour
         SetWaterVisualState(item, depthValue, true);
         ProvideWaterEffects(receiver, depthValue);
     }
+
+    #region Temperature State
+
+    /// <summary>把真实入水状态和本水体的降温参数交给角色体温模块。</summary>
+    private void SetWaterTemperatureState(Item item, bool inWater)
+    {
+        Mod_Temperature temperature = item?.itemMods?.GetMod_ByID<Mod_Temperature>(
+            ModText.Temperature);
+        temperature?.SetWaterExposure(
+            inWater,
+            entryTemperatureDrop,
+            entryTemperatureFloor);
+    }
+
+    #endregion
 
     #region Visual State
 
