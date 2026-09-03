@@ -25,6 +25,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 多产物必须全部放下才提交；失败不扣料、不部分产出。体积大于 1 的非堆叠产物每个单位必须独占一个容量足够的空槽，不能把 `amount > 1` 整组塞进单槽。`amount=0` 参与签名但不消耗。
 - `RecipeType.Crafting` 必须配置 `inputRule: "unordered"` 且 `allowMirror: false`；普通合成只比较材料身份与总量，同类材料可以集中堆叠或分散在任意输入槽。加热加工才允许有序、镜像和网格规则。
 - 普通合成输入必须通过 `CraftingRecipeMatcher.TryMatchAll` 保留全部材料候选，`CraftingStationController` 统一维护候选、选择、进度与双输出预览，最终使用所选 `RuntimeRecipe` 精确预检和原子提交，禁止重新回退到目录首个匹配项。Exact/Tag 候选重叠时扣料计划必须按全部需求做全局容量分配，禁止逐项贪心消耗。
+- `GameRes.recipeDict` 是尚未迁移 `CraftingService` 的熔炼流程专用旧输入签名索引；`RecipeType.Crafting` 允许相同输入对应多个候选，必须只注册到 `CraftingRecipeCatalog`，禁止写入这个单值字典或把同输入多候选误判为冲突。
 - 配方动作在库存事务成功后执行；异常恢复快照。玩法进度信号只在最终成功后发布。
 - 制作输入变化、事务扣料和面板初始化都会被动刷新预览；此时 `RecipeNotFound` 是合法的“当前无配方”状态，应清空预览且不输出 Warning。只有用户主动提交前检查失败，或库存、产物等结构性异常，才输出制作诊断。
 - 制作模块的 `Save()` 只负责持久化，不能解绑输入、输出、按钮或交互监听；这些运行时事件统一在 `Unload()` 中成对清理，由 Item 退出、移除模块与回池生命周期调用，否则自动保存会让预览与制作按钮永久失效。

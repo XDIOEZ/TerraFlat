@@ -41,7 +41,8 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     public Dictionary<string, RuntimeLootTable> LootTables =
         new Dictionary<string, RuntimeLootTable>(System.StringComparer.OrdinalIgnoreCase);
 
-    [Header("配方字典")]
+    /// <summary>仅供尚未迁移 CraftingService 的熔炼流程按输入签名查询；普通合成使用 recipeCatalog 多候选目录。</summary>
+    [Header("旧熔炼输入签名字典")]
     [ShowInInspector]
     public Dictionary<string, RuntimeRecipe> recipeDict = new Dictionary<string, RuntimeRecipe>();
 
@@ -1059,7 +1060,7 @@ public void HotReloadAllResources()
     }
 
     /// <summary>
-    /// 注册校验后的运行时配方，同时建立 ID 与旧输入签名索引。
+    /// 注册校验后的运行时配方；普通合成进入多候选目录，旧输入签名索引仅保留给熔炼流程。
     /// </summary>
     public void RegisterRecipe(RuntimeRecipe recipe, bool replaceExistingSignature)
     {
@@ -1067,17 +1068,24 @@ public void HotReloadAllResources()
             throw new System.IO.InvalidDataException("注册的运行时配方或配方 ID 为空");
         if (recipeById.ContainsKey(recipe.Id))
             throw new System.IO.InvalidDataException($"配方 ID 冲突：{recipe.Id}");
+        if (recipe.inputs == null)
+            throw new System.IO.InvalidDataException($"配方 {recipe.Id} 缺少输入定义");
 
-        string inputKey = recipe.inputs?.ToString();
-        if (string.IsNullOrWhiteSpace(inputKey))
-            throw new System.IO.InvalidDataException($"配方 {recipe.Id} 无法生成输入签名");
-        if (recipeDict.ContainsKey(inputKey) && !replaceExistingSignature)
-            throw new System.IO.InvalidDataException($"配方输入签名冲突：{recipe.Id} -> {inputKey}");
-        if (recipeDict.TryGetValue(inputKey, out RuntimeRecipe existing))
-            Debug.LogWarning($"[RecipeCatalog] 配方 {recipe.Id} 覆盖相同输入签名的配方 {existing.Id}：{inputKey}");
+        string inputKey = null;
+        if (recipe.inputs.recipeType != RecipeType.Crafting)
+        {
+            inputKey = recipe.inputs.ToString();
+            if (string.IsNullOrWhiteSpace(inputKey))
+                throw new System.IO.InvalidDataException($"配方 {recipe.Id} 无法生成输入签名");
+            if (recipeDict.ContainsKey(inputKey) && !replaceExistingSignature)
+                throw new System.IO.InvalidDataException($"配方输入签名冲突：{recipe.Id} -> {inputKey}");
+            if (recipeDict.TryGetValue(inputKey, out RuntimeRecipe existing))
+                Debug.LogWarning($"[RecipeCatalog] 配方 {recipe.Id} 覆盖相同输入签名的配方 {existing.Id}：{inputKey}");
+        }
 
         recipeCatalog.Register(recipe);
-        recipeDict[inputKey] = recipe;
+        if (inputKey != null)
+            recipeDict[inputKey] = recipe;
         LoadedCount++;
     }
     
