@@ -40,7 +40,8 @@ Material:
     - _CausticStrength: 0.16
     - _CornerStrength: 0.12
     - _DetailScale: 4.4
-    - _DepthDarkening: 0.55
+    - _DepthContrast: 0.5
+    - _DepthDarkening: 0.28
     - _EdgeStrength: 0.35
     - _EdgeWidth: 0.16
     - _EnableExternalAlpha: 0
