@@ -534,6 +534,18 @@ public partial class GameRes : SingletonAutoMono<GameRes>
             MarkResourceLoadingFailed(
                 $"无法解析 Prefab Addressables 位置：{locationsHandle.OperationException?.Message ?? "Addressables 操作未成功"}",
                 locationsHandle.OperationException);
+            Addressables.Release(locationsHandle);
+            yield break;
+        }
+
+        // Prefab 是后续 Item/Actor JSON 建立运行时定义的基础；空结果必须在这里终止，
+        // 不能继续到首个物品后再伪装成单一模块 Prefab 缺失。
+        if (locationsHandle.Result == null || locationsHandle.Result.Count == 0)
+        {
+            MarkResourceLoadingFailed(
+                $"Prefab Addressables 标签未解析到任何 GameObject：{string.Join(", ", labels)}。" +
+                "这通常表示禁用 Domain Reload 后复用了失效的 Locator，或 Addressables 标签/Play Mode Script 配置不完整。");
+            Addressables.Release(locationsHandle);
             yield break;
         }
 

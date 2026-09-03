@@ -1348,6 +1348,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b7ce2989414eb1346a0fc26644684c67
+    m_Address: Assets/6_Art/Items/pot.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b81ac21ec38797245a976d9f921b2bd4
     m_Address: Assets/6_Art/Food/pixelate (1).png
     m_ReadOnly: 0

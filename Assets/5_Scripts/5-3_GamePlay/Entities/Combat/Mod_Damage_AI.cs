@@ -16,8 +16,8 @@ public class Mod_Damage_AI : Mod_Damage,ITrunDirection
         if (item != null && item.itemMods != null)
         {
             // 使用修复后的ModText类获取正确的模块ID
-            TrunBody = item.itemMods.GetMod_ByID(ModText.TrunBody) as Mod_TurnBack;
-            animator = item.itemMods.GetMod_ByID(ModText.AnimatorReceiver) as Mod_AnimatorController_Receiver;
+            TrunBody = item.GetComponentInChildren<Mod_TurnBack>(true);
+            animator = item.GetComponentInChildren<Mod_AnimatorController_Receiver>(true);
             
             // 只有在模块存在时才添加事件监听器
             if (TrunBody != null)

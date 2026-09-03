@@ -369,6 +369,9 @@
       "id": "Basket_Grass",
       "parent": "Equipment_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Equipment/StorageBag_Leather.prefab",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/pot.png"
+      },
       "gameName": "编制草笼",
       "description": "用藤蔓和叶子编制的草笼，可提供 4 个额外储物格。",
       "durability": 1.0,

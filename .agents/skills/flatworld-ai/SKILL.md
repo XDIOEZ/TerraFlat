@@ -23,6 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - 正式 Chicken/WildBoar/Wolf/Ghost 由 Actor JSON 提供名称、视觉和模块参数；Prefab 只保留组件结构、事件引用与回退值。
 - 动物被动回血统一由 `Mod_Food.HealthState` 依据蛋白质驱动；`AI_Base` 不管理回血，长间隔回血使用 `HealthState.HealInterval/HealAmount` 配置。
 - Actor 外壳、AnimatorController 使用 `flatworld.actor.*` Addressables 地址；Actor 的 SpriteRenderer 由动画状态机驱动，运行时不得读取 Actor 的 Sprite 子资源或 `sourcePrefab`。
+- Actor 外壳中的 `Mod_AnimatorController_Receiver`、`Mod_TurnBack` 属于结构组件，不一定进入 JSON `itemMods` 字典；绑定时必须从 Item 层级查找，禁止按模块 ID 查询并误报缺失。
 - `ActorShell` 标签的 Prefab 只由 `ActorDefinitionCatalogLoader` 加载并注册；即使资源同时带有通用 `Prefab` 标签，`GameRes` 的通用加载计划也必须排除它们，避免 Addressables 重复实例造成 Actor ID 别名冲突。
 - `Mod_TurnBack` 按动画素材默认朝向控制 Y 轴翻转；狼的素材默认朝右，因此 Wolf Actor JSON 的 `visual.flipX` 必须保持 `false`，否则初始镜像会与运行时转向叠加，表现为背对目标移动。
 - Actor 模块参数中的 `LayerMask` 使用 JSON 位掩码整数；`ModuleJsonConfigurator` 负责将数值转换到 `LayerMask.value`，不要直接依赖 Json.NET 的默认转换。

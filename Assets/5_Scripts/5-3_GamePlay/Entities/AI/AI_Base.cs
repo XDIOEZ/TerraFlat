@@ -881,7 +881,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 
 		item.itemMods.GetMod_ByID(ModText.Detector, out _detector);
 		item.itemMods.GetMod_ByID(ModText.Hp, out _hp);
-		item.itemMods.GetMod_ByID(ModText.TrunBody, out _turnBody);
+		_turnBody = item.GetComponentInChildren<Mod_TurnBack>(true);
 		item.GetMod(out _animator);
 		BindDamageThreatEvents();
 

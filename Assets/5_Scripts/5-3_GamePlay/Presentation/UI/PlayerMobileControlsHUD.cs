@@ -23,6 +23,10 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private const string DrawerName = "菜单抽屉";
     private const string GameplayLayerName = "玩法控制层";
     private const string PersistentLayerName = "常驻控制层";
+    private const string HotbarAnchorName = "快捷栏锚点";
+    private const string BackpackButtonName = "背包";
+    private const float HotbarBackpackButtonSize = 82f;
+    private const float HotbarBackpackGap = 12f;
     private const float MoveZoneMarginX = 76f;
     private const float MoveZoneMarginY = 54f;
     private const float FixedMoveZoneSize = 230f;
@@ -48,6 +52,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private MobileHeldItemDropSurface[] heldItemDropSurfaces;
     private MobileInputButton[] inputButtons;
     private Canvas hotbarCanvas;
+    private RectTransform hotbarBackpackButton;
+    private Transform hotbarBackpackHome;
     private Mover mover;
     private Image runButtonImage;
     private Outline runButtonOutline;
@@ -230,6 +236,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         gameplayLayer = FindRequired(GameplayLayerName)?.gameObject;
         persistentLayer = FindRequired(PersistentLayerName)?.gameObject;
         drawer = FindRequired(DrawerName)?.gameObject;
+        hotbarBackpackButton = FindRequired(BackpackButtonName) as RectTransform;
+        hotbarBackpackHome = hotbarBackpackButton != null ? hotbarBackpackButton.parent : null;
         EnsureAimCursorVisual();
         if (drawer != null)
             drawer.SetActive(false);
@@ -668,7 +676,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         ConfigureVirtualButton("交互", MobileVirtualButton.Interact);
         ConfigureVirtualButton("使用", MobileVirtualButton.Use);
         ConfigureVirtualButton("奔跑", MobileVirtualButton.Run);
-        ConfigureVirtualButton("背包", MobileVirtualButton.Inventory);
+        ConfigureVirtualButton(BackpackButtonName, MobileVirtualButton.Inventory);
         ConfigureVirtualButton("装备", MobileVirtualButton.Equipment);
         ConfigureVirtualButton("制作", MobileVirtualButton.Crafting);
         ConfigureVirtualButton("状态", MobileVirtualButton.Survival);
@@ -808,7 +816,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     /// <summary>将快捷栏缩放并放置到安全区及 Android 强制系统手势区之上。</summary>
     private bool TryConfigureHotbarWidth()
     {
-        RectTransform hotbarAnchor = FindRequired("快捷栏锚点") as RectTransform;
+        RectTransform hotbarAnchor = FindRequired(HotbarAnchorName) as RectTransform;
         Inventory_HotBar hotbar = GetComponentInChildren<Inventory_HotBar>(true);
         RectTransform hotbarRect = hotbar?.RuntimeInventory?.basePanel?.transform as RectTransform;
         if (hotbarAnchor == null || hotbarRect == null)
@@ -827,6 +835,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (hotbarRect.parent != hotbarAnchor)
             hotbarRect.SetParent(hotbarAnchor, false);
         hotbarRect.SetAsLastSibling();
+        AttachBackpackButtonToHotbar(hotbarRect);
         CacheHotbarCanvas(hotbarRect);
         RectTransform safeRoot = UIManager.Instance.SafeAreaRoot;
         float safeWidth = safeRoot != null
@@ -881,9 +890,46 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         hotbarOriginalLayoutCached = hotbarOriginalParent != null;
     }
 
+    /// <summary>将背包入口挂入真实快捷栏 Canvas，并排在九格快捷栏最右侧。</summary>
+    private void AttachBackpackButtonToHotbar(RectTransform hotbarRect)
+    {
+        if (hotbarBackpackButton == null || hotbarRect == null)
+            return;
+
+        LayoutElement layout = hotbarBackpackButton.GetComponent<LayoutElement>();
+        if (layout != null)
+            layout.ignoreLayout = true;
+        if (hotbarBackpackButton.parent != hotbarRect)
+            hotbarBackpackButton.SetParent(hotbarRect, false);
+
+        hotbarBackpackButton.anchorMin = hotbarBackpackButton.anchorMax = new Vector2(1f, 0.5f);
+        hotbarBackpackButton.pivot = new Vector2(0f, 0.5f);
+        hotbarBackpackButton.anchoredPosition = new Vector2(HotbarBackpackGap, 0f);
+        hotbarBackpackButton.sizeDelta = Vector2.one * HotbarBackpackButtonSize;
+        hotbarBackpackButton.localScale = Vector3.one;
+        hotbarBackpackButton.SetAsLastSibling();
+    }
+
+    /// <summary>把背包入口移回手机 HUD，避免切回桌面控制后继续跟随共用快捷栏显示。</summary>
+    private void RestoreBackpackButtonToMobileHud()
+    {
+        if (hotbarBackpackButton == null || hotbarBackpackHome == null)
+            return;
+
+        if (hotbarBackpackButton.parent != hotbarBackpackHome)
+            hotbarBackpackButton.SetParent(hotbarBackpackHome, false);
+        hotbarBackpackButton.anchorMin = hotbarBackpackButton.anchorMax = new Vector2(1f, 0.5f);
+        hotbarBackpackButton.pivot = new Vector2(0f, 0.5f);
+        hotbarBackpackButton.anchoredPosition = new Vector2(HotbarBackpackGap, 0f);
+        hotbarBackpackButton.sizeDelta = Vector2.one * HotbarBackpackButtonSize;
+        hotbarBackpackButton.localScale = Vector3.one;
+        hotbarBackpackButton.SetAsLastSibling();
+    }
+
     /// <summary>切换到 PC 或销毁手机 HUD 前，将共用快捷栏还原到 SafeAreaRoot。</summary>
     private void RestoreHotbarToOriginalParent()
     {
+        RestoreBackpackButtonToMobileHud();
         if (!hotbarOriginalLayoutCached || hotbarOriginalRect == null ||
             hotbarOriginalParent == null || !hotbarOriginalParent.gameObject.activeInHierarchy)
         {

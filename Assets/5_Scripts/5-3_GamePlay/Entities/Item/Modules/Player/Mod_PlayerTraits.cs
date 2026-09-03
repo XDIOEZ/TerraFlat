@@ -19,6 +19,7 @@ public class Mod_PlayerTraits : Module
 
     private Player player;
     private PlayerAdminController adminController;
+    private GameController gameController;
 
     public override void Awake()
     {
@@ -33,6 +34,8 @@ public class Mod_PlayerTraits : Module
         {
             player = GetComponentInParent<Player>();
         }
+
+        gameController = GetComponentInParent<GameController>();
     }
 
     public override void Save()
@@ -151,25 +154,18 @@ public class Mod_PlayerTraits : Module
             return;
         }
 
-        var mainCamera = Camera.main;
-        if (mainCamera == null)
+        if (gameController == null)
         {
-            Debug.LogWarning("TeleportToMousePosition() failed: main camera not found");
+            gameController = GetComponentInParent<GameController>();
+        }
+
+        if (gameController == null)
+        {
+            Debug.LogWarning("[Mod_PlayerTraits] 未找到 GameController，无法读取指针世界坐标");
             return;
         }
 
-        // 获取鼠标屏幕坐标
-        Vector3 mouseScreenPosition = Input.mousePosition;
-
-        // 屏幕坐标转世界坐标（2D，z=0）
-        Vector3 mouseWorldPosition = mainCamera.ScreenToWorldPoint(
-            new Vector3(mouseScreenPosition.x, mouseScreenPosition.y, 0));
-
-        // 保持 z 为 0（2D）
-        mouseWorldPosition.z = 0;
-        mouseWorldPosition = WorldTopologyRuntime.NormalizePosition(mouseWorldPosition);
-
-        // 设置玩家位置
+        Vector3 mouseWorldPosition = gameController.GetMouseWorldPosition();
         target.transform.position = mouseWorldPosition;
 
         Debug.Log($"玩家已传送到位置: {mouseWorldPosition}");

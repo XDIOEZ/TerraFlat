@@ -61,7 +61,8 @@ public class UIManager : MonoBehaviour
     public GameObject[] panelPrefabs;
     public const int GameplayHudSortingOrder = 0;
     public const int HotbarModalSortingOrder = 1000;
-    public const int HeldItemSortingOrder = 1001;
+    /// <summary>指针手持物是纯视觉拖拽层，固定占用 Canvas 排序上限，始终高于其它游戏 UI。</summary>
+    public const int HeldItemSortingOrder = 32767;
     /// <summary>设置面板的基础 Canvas 层级；高于玩法 HUD，低于加载和调试全屏覆盖层。</summary>
     public const int SettingsPanelSortingOrder = 2000;
     public const int GlobalOverlaySortingOrder = 32000;

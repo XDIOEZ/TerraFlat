@@ -51,6 +51,8 @@ public static class RuntimeUIPrefabBuilder
     private const float MobileActionGap = 16f;
     private const float MobileActionGroupWidth = MobileActionButtonSize * 2f + MobileActionGap;
     private const float MobileActionGroupHeight = MobileAttackZoneSize + MobileActionGap + MobileActionButtonSize;
+    private const float MobileHotbarBackpackButtonSize = 82f;
+    private const float MobileHotbarBackpackGap = 12f;
     // 主菜单设置使用更暖、更低亮度的独立背景，避免通用设置页的蓝绿色底板抢占视觉焦点。
     private static readonly Color MainMenuSettingsCanvas = new Color(0.052f, 0.031f, 0.026f, 1f);
     private static readonly Color MainMenuSettingsSurface = new Color(0.036f, 0.061f, 0.068f, 1f);
@@ -2995,6 +2997,7 @@ public static class RuntimeUIPrefabBuilder
         hotbarRect.pivot = new Vector2(0.5f, 0f);
         hotbarRect.anchoredPosition = new Vector2(0f, 16f);
         hotbarRect.sizeDelta = new Vector2(760f, 126f);
+        CreateMobileHotbarBackpackButton(hotbarAnchor.transform);
 
         BuildMobileDrawer(root.transform);
         return root;
@@ -3061,7 +3064,6 @@ public static class RuntimeUIPrefabBuilder
         Button closeButton = CreateButton("关闭抽屉", drawer.transform, "关闭", 88f, 52f, false);
         SetTopRight(closeButton.GetComponent<RectTransform>(), 16f, 16f, 88f, 52f);
 
-        CreateButton("背包", buttonGrid.transform, "背包", 184f, 66f, true);
         CreateButton("装备", buttonGrid.transform, "装备", 184f, 66f, false);
         CreateButton("制作", buttonGrid.transform, "制作", 184f, 66f, false);
         CreateButton("状态", buttonGrid.transform, "生存状态", 184f, 66f, false);
@@ -3087,6 +3089,27 @@ public static class RuntimeUIPrefabBuilder
         zoomRect.pivot = new Vector2(0.5f, 0f);
         zoomRect.offsetMin = new Vector2(24f, 24f);
         zoomRect.offsetMax = new Vector2(-24f, 76f);
+    }
+
+    /// <summary>创建手机端快捷栏右侧的常驻背包入口；运行时会将它挂入真实快捷栏 Canvas 以继承模态排序。</summary>
+    private static void CreateMobileHotbarBackpackButton(Transform hotbarAnchor)
+    {
+        Button button = CreateButton(
+            "背包",
+            hotbarAnchor,
+            "背包",
+            MobileHotbarBackpackButtonSize,
+            MobileHotbarBackpackButtonSize,
+            true);
+        LayoutElement layout = button.GetComponent<LayoutElement>();
+        layout.ignoreLayout = true;
+
+        RectTransform rect = button.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = new Vector2(1f, 0.5f);
+        rect.pivot = new Vector2(0f, 0.5f);
+        rect.anchoredPosition = new Vector2(MobileHotbarBackpackGap, 0f);
+        rect.sizeDelta = Vector2.one * MobileHotbarBackpackButtonSize;
+        SetButtonLabelSize(button, 14f);
     }
 
     private static void CreateMobileButton(

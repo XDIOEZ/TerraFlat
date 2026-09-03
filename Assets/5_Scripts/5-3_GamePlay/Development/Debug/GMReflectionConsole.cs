@@ -1868,6 +1868,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             {
                 if (string.IsNullOrWhiteSpace(itemId) ||
                     !discoveredIds.Add(itemId) ||
+                    gameRes.TryGetActorDefinition(itemId, out _) ||
                     !gameRes.TryGetItemPresentation(
                         itemId,
                         out string displayName,

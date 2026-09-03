@@ -21,7 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 角色颜色等共享 Shader 参数通过现有 MPB 控制器提交，避免多个组件互相覆盖。
 - Unity 2D 使用 URP/Light2D；修改 Shader 前核对材质实际 Shader 与 Pass。
 - 共用海水 `UsePass` 的包装 Shader 必须声明公共 Pass 新增的同名材质属性；月光等夜间自发光倒影应在 `CombinedShapeLightShared` 之后合成，避免全局夜间光照被重复相乘。
-- Water Tilemap 的 Tile Color 低值区以 `0–0.45` 按 RGBA 编码左下、右下、左上、右上角点水深，公共水面 Shader 在格内双线性插值；同一通道再以 `0.55` 编码左、右、下、上岸线方向位。调整 `ChunkTilemapRenderer` 或公共水面 Shader 时必须同步编码、解码与角点顺序，包装 Shader 继续声明公共 Pass 使用的全部属性。
+- Water Tilemap 的 Tile Color 每个通道以 `0–0.45` 重复编码水深，岸线方向位再增加 `0.55`；调整 `ChunkTilemapRenderer` 或公共水面 Shader 时必须同步编码与解码常量，包装 Shader 继续声明公共 Pass 使用的全部属性。
 - 运行时动态创建、用于展示世界物品图标的 `SpriteRenderer` 不得依赖 `AddComponent` 默认材质；应复用 `RuntimeItemDefinition.Material` 的物品材质与外壳回退，确保提示表现和真实物品一致接收 Light2D。
 - 草木风摆由 `WeatherMgr` 写入 `_GlobalWindStrength` Shader 全局参数；材质只保存自身基础幅度。Tilemap 使用单元锚点弯曲，底部 Pivot 的独立 Sprite 使用对象根部弯曲，且所有 URP 2D 活跃 Pass 必须复用同一顶点位移。
 - 屏幕后处理依赖当前 `QualitySettings` 的 `customRenderPipeline`；不能只检查编辑器当前质量档位，所有可选档位都必须引用项目内实际存在的 URP 资源，否则 Scene 视图可能可见而 Game/Android 画面不可见。

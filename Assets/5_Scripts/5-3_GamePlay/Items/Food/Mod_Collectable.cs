@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>
 /// 通用采集模块：保存资源库存、接收生产模块产出，并把一次交互转换成一个世界掉落物。
@@ -67,6 +68,7 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
     private readonly Dictionary<string, RuntimeItemDefinition> itemDefinitionCache =
         new Dictionary<string, RuntimeItemDefinition>(StringComparer.OrdinalIgnoreCase);
     private SpriteRenderer ownerRenderer;
+    private SortingGroup ownerSortingGroup; // 让主体与库存提示作为同一个世界深度单元参与 Y 排序
 
     public int CurrentStock => Data?.CurrentStock ?? 0;
 
@@ -243,21 +245,33 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
     {
         Item ownerItem = item != null ? item : GetComponentInParent<Item>();
         ownerRenderer = ownerItem?.Sprite;
-        if (ownerRenderer != null)
-            return;
-
-        if (ownerItem == null)
-            return;
-
-        SpriteRenderer[] renderers = ownerItem.GetComponentsInChildren<SpriteRenderer>(true);
-        foreach (SpriteRenderer renderer in renderers)
+        if (ownerRenderer == null && ownerItem != null)
         {
-            if (renderer != null && !renderer.transform.IsChildOf(transform))
+            SpriteRenderer[] renderers = ownerItem.GetComponentsInChildren<SpriteRenderer>(true);
+            foreach (SpriteRenderer renderer in renderers)
             {
-                ownerRenderer = renderer;
-                return;
+                if (renderer != null && !renderer.transform.IsChildOf(transform))
+                {
+                    ownerRenderer = renderer;
+                    break;
+                }
             }
         }
+
+        SyncOwnerSortingGroup(ownerItem);
+    }
+
+    /// <summary>把主体与提示图标作为一个整体参与世界 Y 排序，避免提示的内部高层级压过角色。</summary>
+    private void SyncOwnerSortingGroup(Item ownerItem)
+    {
+        if (!FollowOwnerRendererSorting || ownerItem == null || ownerRenderer == null)
+            return;
+
+        ownerSortingGroup ??= ownerItem.GetComponent<SortingGroup>();
+        ownerSortingGroup ??= ownerItem.gameObject.AddComponent<SortingGroup>();
+        ownerSortingGroup.enabled = true;
+        ownerSortingGroup.sortingLayerID = ownerRenderer.sortingLayerID;
+        ownerSortingGroup.sortingOrder = ownerRenderer.sortingOrder;
     }
 
     private void EnsureIndicatorRenderers()
@@ -327,6 +341,9 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
 
     private void ApplyIndicatorSorting()
     {
+        if (FollowOwnerRendererSorting && ownerRenderer != null)
+            SyncOwnerSortingGroup(item != null ? item : GetComponentInParent<Item>());
+
         foreach (SpriteRenderer renderer in IndicatorRenderers)
         {
             if (renderer == null)

@@ -32,6 +32,7 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
     private bool _hasTimeLightValue;
     private float _nextActiveRefreshTime;
     private float _nextInactiveRefreshTime;
+    private bool _lightSourceCacheInitialized;
 
     private void Update()
     {
@@ -97,8 +98,9 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
         if (!chunkMgr.TryGetRuntimeTerrainTile(worldPos, out RuntimeTerrainTileSample sample))
             return false;
 
-        // 怪物生成查询必须使用即时值，避免恰好发生在周期刷新之前。
-        RefreshLightSourceCache();
+        // 热路径只读取缓存的光源引用；光源强度/位置仍逐次实时读取。
+        // 过去这里每次查询都会 FindObjectsOfType，怪物生成一次位置搜索会触发 5~16 次全场景扫描并制造大量 GC。
+        EnsureLightSourceCacheInitialized();
         Vector2 cellCenter = new Vector2(sample.WorldCell.x + 0.5f, sample.WorldCell.y + 0.5f);
         lightLevel = EvaluateLightAt(cellCenter);
         sample.Terrain.SetEnvironmentValue(
@@ -111,12 +113,22 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
         return TryGetLightLevel(worldPos, out float lightLevel) && lightLevel <= darknessEpsilon;
     }
 
+    /// <summary>首次查询前只允许初始化一次，后续成员变化由 Update 的低频刷新负责。</summary>
+    private void EnsureLightSourceCacheInitialized()
+    {
+        if (!_lightSourceCacheInitialized)
+            RefreshLightSourceCache();
+    }
+
     private void RefreshLightSourceCache()
     {
         _otherGlobalLights.Clear();
         _pointLights.Clear();
 
-        Light2D[] lights = FindObjectsOfType<Light2D>(false);
+        // 不需要 Unity 默认的实例排序；低频扫描只负责维护成员集合。
+        Light2D[] lights = FindObjectsByType<Light2D>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None);
         for (int i = 0; i < lights.Length; i++)
         {
             Light2D light = lights[i];
@@ -134,6 +146,8 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
             else if (light.lightType == Light2D.LightType.Point)
                 _pointLights.Add(light);
         }
+
+        _lightSourceCacheInitialized = true;
     }
 
     private float EvaluateLightAt(Vector2 worldPos)
@@ -143,6 +157,9 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
         for (int i = 0; i < _pointLights.Count && value < 1f; i++)
         {
             Light2D light = _pointLights[i];
+            if (!IsActiveLight(light, Light2D.LightType.Point))
+                continue;
+
             value += EvaluatePointLight(light, worldPos, Mathf.Max(0f, light.pointLightOuterRadius));
         }
 
@@ -156,10 +173,23 @@ public class LightLayerMgr : SingletonAutoMono<LightLayerMgr>
         for (int i = 0; i < _otherGlobalLights.Count; i++)
         {
             Light2D light = _otherGlobalLights[i];
+            if (!IsActiveLight(light, Light2D.LightType.Global))
+                continue;
+
             value += GetColorBrightness(light.color) * Mathf.Max(0f, light.intensity);
         }
 
         return Mathf.Clamp01(value);
+    }
+
+    /// <summary>缓存允许短暂保留已禁用/销毁引用，查询时必须无分配地过滤。</summary>
+    private static bool IsActiveLight(Light2D light, Light2D.LightType expectedType)
+    {
+        return light != null &&
+               light.enabled &&
+               light.gameObject.activeInHierarchy &&
+               light.intensity > 0f &&
+               light.lightType == expectedType;
     }
 
     private static float EvaluatePointLight(Light2D light, Vector2 worldPos, float outerRadius)

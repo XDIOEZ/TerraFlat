@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 手持食物的独立表现模块：每完成一口使用，就在食物当前轮廓上确定性选点并裁出圆形咬痕。
+/// 手持食物的独立表现模块：每完成一口使用，就在食物原始外轮廓上确定性随机选点并裁出圆形咬痕。
 /// 咬痕半径由 Food.Max_EatingProgress 决定，最后一口直接清空；模块不修改营养、库存或食物存档。
 /// </summary>
 public sealed class Module_HeldFood : Module, IFoodMechanic, IFoodStateObserver
@@ -145,7 +145,7 @@ public sealed class Module_HeldFood : Module, IFoodMechanic, IFoodStateObserver
 
     #region 遮罩表现
 
-    /// <summary>把当前食用进度转换为确定性的圆形咬痕遮罩。</summary>
+    /// <summary>把当前食用进度转换为沿食物外轮廓随机分布的圆形咬痕遮罩。</summary>
     private void RefreshMask()
     {
         if (item == null || !item.InHand || foodContext == null)
@@ -297,7 +297,10 @@ public sealed class Module_HeldFood : Module, IFoodMechanic, IFoodStateObserver
         return null;
     }
 
-    /// <summary>由物品 GUID、定义 ID 和 Sprite 生成跨重新持有稳定的随机种子。</summary>
+    /// <summary>
+    /// 由物品 GUID、定义 ID、Sprite 和当前堆叠数量生成跨重新持有稳定的随机种子。
+    /// 每吃完一整份后堆叠数量会变化，因此下一份食物会从不同的外轮廓位置开始产生咬痕。
+    /// </summary>
     private int CreateBiteSeed(int maximumBites)
     {
         unchecked
@@ -306,6 +309,7 @@ public sealed class Module_HeldFood : Module, IFoodMechanic, IFoodStateObserver
             hash = hash * 31 + (item?.itemData?.Guid ?? 0);
             hash = hash * 31 + GetStableStringHash(item?.itemData?.IDName);
             hash = hash * 31 + GetStableStringHash(cachedTargetSprite?.name);
+            hash = hash * 31 + Mathf.RoundToInt(item?.itemData?.Stack?.Amount ?? 0f);
             hash = hash * 31 + maximumBites;
             return hash;
         }

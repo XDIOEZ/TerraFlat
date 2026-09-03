@@ -6,7 +6,7 @@ public class UI_FollowMouse : MonoBehaviour
     #region 层级与交互契约
 
     [SerializeField, Min(0)]
-    [Tooltip("跟随指针的手持物显示层，必须高于快捷栏模态层。")]
+    [Tooltip("跟随指针的手持物显示层，必须高于所有游戏 UI。")]
     private int sortingOrder = UIManager.HeldItemSortingOrder;
 
     private Canvas canvas;
@@ -71,7 +71,7 @@ public class UI_FollowMouse : MonoBehaviour
         followMouse = enable;
     }
 
-    /// <summary>统一手持物 Canvas 排序，并缓存其非交互显示属性。</summary>
+    /// <summary>统一手持物 Canvas 到全局最顶层，并缓存其非交互显示属性。</summary>
     private void EnsurePresentationLayer()
     {
         canvas ??= GetComponent<Canvas>();

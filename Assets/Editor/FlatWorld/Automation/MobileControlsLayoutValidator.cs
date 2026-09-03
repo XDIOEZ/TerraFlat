@@ -22,6 +22,8 @@ namespace FlatWorld.Automation
         private const float MobileActionGap = 16f;
         private const float MobileActionGroupWidth = MobileActionButtonSize * 2f + MobileActionGap;
         private const float MobileActionGroupHeight = MobileAttackZoneSize + MobileActionGap + MobileActionButtonSize;
+        private const float MobileHotbarBackpackButtonSize = 82f;
+        private const float MobileHotbarBackpackGap = 12f;
 
         #region 菜单入口
 
@@ -41,6 +43,7 @@ namespace FlatWorld.Automation
             Transform persistent = RequireNode(mobilePrefab.transform, "常驻控制层");
             Transform menu = RequireNode(persistent, "菜单");
             Transform hotbar = RequireNode(mobilePrefab.transform, "快捷栏锚点");
+            Transform backpack = RequireNode(hotbar, "背包");
             Transform drawer = RequireNode(mobilePrefab.transform, "菜单抽屉");
             Transform zoom = RequireNode(drawer, "镜头缩放");
 
@@ -48,6 +51,20 @@ namespace FlatWorld.Automation
                 throw new InvalidOperationException("菜单按钮必须独立于玩法控制层，模态面板打开时仍需保留返回入口。");
             if (hotbar.parent != mobilePrefab.transform)
                 throw new InvalidOperationException("快捷栏锚点必须独立于玩法控制层，才能在打开背包时保持显示。");
+            if (backpack.parent != hotbar)
+                throw new InvalidOperationException("手机背包入口必须从菜单抽屉移到快捷栏锚点下。");
+            LayoutElement backpackLayout = backpack.GetComponent<LayoutElement>();
+            if (backpackLayout == null || !backpackLayout.ignoreLayout)
+                throw new InvalidOperationException("快捷栏背包入口必须忽略九格快捷栏布局。");
+            RectTransform backpackRect = (RectTransform)backpack;
+            Vector2 rightMiddle = new Vector2(1f, 0.5f);
+            if (backpackRect.anchorMin != rightMiddle || backpackRect.anchorMax != rightMiddle ||
+                backpackRect.pivot != new Vector2(0f, 0.5f) ||
+                backpackRect.anchoredPosition != new Vector2(MobileHotbarBackpackGap, 0f) ||
+                backpackRect.sizeDelta != Vector2.one * MobileHotbarBackpackButtonSize)
+            {
+                throw new InvalidOperationException("快捷栏背包入口必须紧贴九格快捷栏最右侧并保持单槽尺寸。");
+            }
 
             if (heldItemDrop.GetSiblingIndex() >= aim.GetSiblingIndex() ||
                 aim.GetSiblingIndex() >= move.GetSiblingIndex() ||

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 将食物 Sprite 的紧密网格光栅化为可见区域，并按当前轮廓依次生成圆形咬痕。
+/// 将食物 Sprite 的紧密网格光栅化为可见区域，并从原始外轮廓随机生成圆形咬痕。
 /// 该类只负责确定性几何计算，不持有 SpriteMask、Texture2D 或其他场景对象。
 /// </summary>
 internal sealed class FoodBiteMaskGenerator
@@ -114,7 +114,7 @@ internal sealed class FoodBiteMaskGenerator
         var random = new System.Random(randomSeed);
         for (int biteIndex = 0; biteIndex < biteCount; biteIndex++)
         {
-            CollectBoundaryPoints();
+            CollectOuterBoundaryPoints();
             if (boundaryPoints.Count == 0)
                 break;
 
@@ -242,25 +242,26 @@ internal sealed class FoodBiteMaskGenerator
         visibleCellCount = 0;
     }
 
-    /// <summary>从当前可见单元与空白单元的交界处收集轮廓点。</summary>
-    private void CollectBoundaryPoints()
+    /// <summary>从原始 Sprite 外轮廓收集仍然可见的候选点，避免新咬痕沿旧缺口继续向同一位置扩张。</summary>
+    private void CollectOuterBoundaryPoints()
     {
         boundaryPoints.Clear();
         for (int y = 0; y < Height; y++)
         {
             for (int x = 0; x < Width; x++)
             {
-                if (!IsVisibleCell(x, y))
+                int index = GetIndex(x, y);
+                if (!visibleCells[index] || !sourceCells[index])
                     continue;
 
                 Vector2 center = GetCellCenter(x, y);
-                if (!IsVisibleCell(x - 1, y))
+                if (!IsSourceCell(x - 1, y))
                     boundaryPoints.Add(new Vector2(center.x - cellWidth * 0.5f, center.y));
-                if (!IsVisibleCell(x + 1, y))
+                if (!IsSourceCell(x + 1, y))
                     boundaryPoints.Add(new Vector2(center.x + cellWidth * 0.5f, center.y));
-                if (!IsVisibleCell(x, y - 1))
+                if (!IsSourceCell(x, y - 1))
                     boundaryPoints.Add(new Vector2(center.x, center.y - cellHeight * 0.5f));
-                if (!IsVisibleCell(x, y + 1))
+                if (!IsSourceCell(x, y + 1))
                     boundaryPoints.Add(new Vector2(center.x, center.y + cellHeight * 0.5f));
             }
         }
@@ -333,10 +334,10 @@ internal sealed class FoodBiteMaskGenerator
         }
     }
 
-    /// <summary>判断网格坐标是否仍属于当前可见食物区域。</summary>
-    private bool IsVisibleCell(int x, int y)
+    /// <summary>判断网格坐标是否属于原始食物 Sprite 区域。</summary>
+    private bool IsSourceCell(int x, int y)
     {
-        return x >= 0 && x < Width && y >= 0 && y < Height && visibleCells[GetIndex(x, y)];
+        return x >= 0 && x < Width && y >= 0 && y < Height && sourceCells[GetIndex(x, y)];
     }
 
     /// <summary>把遮罩网格坐标转换为一维索引。</summary>

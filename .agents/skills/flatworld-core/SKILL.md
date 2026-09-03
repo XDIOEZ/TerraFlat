@@ -22,6 +22,7 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 - `GameManager` 是新建、继续、运行、退出世界的权威；`GameWorldSceneManager` 不是。
 - 动态维度 Scene 不进 Build Settings，以 `WorldKey` 命名并复用 `RunWorld()`。
 - 资源加载保持本体先于 MOD；注册失败不得留下半初始化字典。
+- 禁用 Domain Reload 时不得让 Addressables 静态实例跨 Play 会话复用失效 Locator；进入 Play 前刷新实例，且通用 Prefab 标签查询为 0 时必须在 `GameRes` 入口失败，不能拖到 ItemDefinition 阶段误报单个模块缺失。
 - `GameRes` 会随 `WorldManager` Prefab 再次出现在 `GameStartScene`；跨场景存活实例已存在时，重复实例不得启动资源加载协程，否则会先清空目录、再随重复对象销毁而中断加载。时间系统 JSON 必须在 `GameRes` 允许创建新世界前完成加载，玩家覆盖文件无效时保留内建配置。
 - 基于 `SingletonMono<T>` 的跨场景管理器必须按 Unity null 语义恢复已销毁的静态引用，且场景副本不得覆盖有效实例，否则返回主菜单再进入时会把运行时回调发送给已销毁对象。
 - 创建/网络提升/远程副本都显式设置 Player ProfileContext，玩家事件只触发一次。

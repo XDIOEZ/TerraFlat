@@ -794,10 +794,18 @@ public class ItemSlot_UI : MonoBehaviour,
         GameObject ghostObject = new GameObject(
             "InventoryDragGhost",
             typeof(RectTransform),
+            typeof(Canvas),
             typeof(CanvasRenderer),
             typeof(Image));
         ghostObject.transform.SetParent(rootCanvas.transform, false);
         ghostObject.transform.SetAsLastSibling();
+
+        // 拖拽图标使用独立顶层 Canvas；仅靠根 Canvas 的兄弟顺序会被快捷栏/模态页的独立 Canvas 压住。
+        Canvas ghostCanvas = ghostObject.GetComponent<Canvas>();
+        ghostCanvas.overrideSorting = true;
+        ghostCanvas.sortingLayerID = rootCanvas.sortingLayerID;
+        ghostCanvas.sortingOrder = UIManager.HeldItemSortingOrder;
+
         mouseDragGhost = ghostObject.GetComponent<RectTransform>();
         mouseDragGhost.sizeDelta = image != null
             ? image.rectTransform.rect.size
@@ -816,7 +824,9 @@ public class ItemSlot_UI : MonoBehaviour,
         if (mouseDragGhost == null)
             return;
 
-        Canvas rootCanvas = mouseDragGhost.GetComponentInParent<Canvas>();
+        Canvas rootCanvas = mouseDragGhost.parent != null
+            ? mouseDragGhost.parent.GetComponentInParent<Canvas>()?.rootCanvas
+            : null;
         RectTransform canvasRect = rootCanvas != null ? rootCanvas.transform as RectTransform : null;
         Camera eventCamera = rootCanvas != null && rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay
             ? rootCanvas.worldCamera

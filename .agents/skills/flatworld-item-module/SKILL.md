@@ -22,6 +22,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 注册/注销、保存/销毁各执行一次；`PrepareForDespawn` 与 `OnDestroy` 不得被外部重复调用。
 - 远程网络副本不进入本地 Tick、感知和存档索引。
 - 新模块同时检查脚本、ModuleData、模块/Item Prefab、Addressables 与 JSON 定义。
+- 遇到“物品找不到模块 Prefab”时先核对 `[GameRes] Prefab 加载计划`；若通用 Prefab 数量为 0，根因是全局 Addressables/Locator 启动失败，禁止误改首个报错物品的 JSON 或模块 Prefab。
 - JSON 本体按职责组合通用模块；单个资源节点的名称和玩法配置不能成为专用模块 Prefab。周期资源应由生产模块写入库存接收契约，再由采集模块处理交互和掉落。
 - 通用世界实体外壳只能提供 `Item`、表现节点与查询 Collider；作物等玩法必须由 JSON 组合模块。成熟交互的可扩展副作用通过 `ICropHarvestAction` 注册，权威状态模块只负责按顺序调度动作与结束实体生命周期。
 - Prefab 必须由 Unity 序列化生成，禁止手写根对象 `fileID: 100100000`；该值是 Prefab 资产保留 ID，把它分配给 GameObject 会触发 `GameObject to Prefab` 的 PPtr 转换错误。
@@ -31,6 +32,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - JSON 定义实体的死亡战利品由顶层 `lootTableId` 引用全局 `GameConfig/LootTables/loot-tables.json`；表内 `itemId` 是稳定 ItemDefinition ID，运行时才展开为 `LootPrefabName`，禁止再内联 `Data.LootTable` 或保存 `LootPrefab` 对象引用。
 - Manifest 是唯一发现入口；包的最终 `shellPrefab` 必须与声明一致。
 - JSON 通用 Item Shell 的 SpriteRenderer 必须使用 `SpriteSortPoint.Pivot`；运行时换图也要重新写入该值，透明排序锚点以 Sprite 导入 Pivot 为唯一权威。
+- 世界物品若由主体 SpriteRenderer + 子提示/装饰 SpriteRenderer 组成，子层级需要 `sortingOrder` 偏移时必须用根 `SortingGroup` 把整件物品作为一个 Y 深度单元；禁止让子 Renderer 的正偏移直接跨过角色等外部实体的世界排序。
 - 世界物品可用 `visual.materialAddress` 声明共享 Addressable 材质；运行时定义必须在对象池复用时显式恢复“配置材质或外壳默认材质”，避免共用 Shell 把上一个物品的材质带给下一个实例。
 - `GameRes.CreateItemData`、群系生成与生产模块只接受 Manifest 中存在的 JSON 物品 ID；缺失定义必须直接报错，禁止回退到同名 Prefab。`sourcePrefab` 只用于编辑器迁移定位，不得加入运行时依赖。
 - 具体 Prefab 删除后，JSON 必须同步移除 `sourcePrefab`，迁移器则把这类无源定义登记为手工保留项；否则再次执行全量迁移会误删权威 JSON。
