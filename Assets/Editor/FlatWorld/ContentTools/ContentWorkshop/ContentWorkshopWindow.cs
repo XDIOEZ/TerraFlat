@@ -11,7 +11,7 @@ namespace FlatWorld.Editor.ContentWorkshop
 {
     /// <summary>
     /// FlatWorld 面向策划与 UGC 创作者的内容工坊。
-    /// 通过物品图鉴、九宫格、热加工预设和物品模板生成现有 JSON 配置，避免手工维护 ID 与槽位编号。
+    /// 通过物品图鉴、滚动材料清单、热加工预设和物品模板生成现有 JSON 配置，避免手工维护 ID 与槽位编号。
     /// </summary>
     internal sealed class ContentWorkshopWindow : EditorWindow
     {
@@ -20,7 +20,9 @@ namespace FlatWorld.Editor.ContentWorkshop
         private const string MenuPath = "FlatWorld/内容配置/内容工坊";
         private const float PaletteWidth = 310f;
         private const float InspectorWidth = 315f;
-        private const float IngredientSlotSize = 92f;
+        private const float HeatingIngredientSlotSize = 92f;
+        private const float CraftingRecipeListHeight = 140f;
+        private const float CraftingIngredientListHeight = 250f;
 
         private static readonly WorkshopItemTemplate[] ItemTemplates =
         {
@@ -103,6 +105,8 @@ namespace FlatWorld.Editor.ContentWorkshop
         private bool showAdvancedRecipe;
         private bool showAdvancedItem;
         private Vector2 paletteScroll;
+        private Vector2 recipeListScroll;
+        private Vector2 ingredientListScroll;
         private Vector2 recipeEditorScroll;
         private Vector2 inspectorScroll;
         private Vector2 templateScroll;
@@ -171,10 +175,11 @@ namespace FlatWorld.Editor.ContentWorkshop
 
         #region 顶部与状态
 
+        /// <summary>绘制内容工坊页面切换与重新加载入口。</summary>
         private void DrawTopToolbar()
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar, GUILayout.Height(28f));
-            if (GUILayout.Button("九宫格合成", PageButtonStyle(ContentWorkshopPage.Crafting), GUILayout.Width(105f)))
+            if (GUILayout.Button("滚动列表合成", PageButtonStyle(ContentWorkshopPage.Crafting), GUILayout.Width(115f)))
                 SwitchPage(ContentWorkshopPage.Crafting);
             if (GUILayout.Button("熔炼与烹饪", PageButtonStyle(ContentWorkshopPage.Heating), GUILayout.Width(115f)))
                 SwitchPage(ContentWorkshopPage.Heating);
@@ -244,6 +249,7 @@ namespace FlatWorld.Editor.ContentWorkshop
 
         #region 配方工作区
 
+        /// <summary>绘制配方编辑器的图鉴、主体和规则面板。</summary>
         private void DrawRecipeWorkspace(bool heating)
         {
             if (recipeDraft == null || recipeDraft.IsHeating != heating)
@@ -256,6 +262,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             EditorGUILayout.EndHorizontal();
         }
 
+        /// <summary>绘制滚动列表合成或热加工的中央编辑区域。</summary>
         private void DrawRecipeEditor(bool heating)
         {
             EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
@@ -267,18 +274,22 @@ namespace FlatWorld.Editor.ContentWorkshop
 
             GUILayout.Space(10f);
             GUILayout.Label(
-                heating ? "将原料放入加工托盘" : "像玩家一样摆出配方",
+                heating ? "将原料放入加工托盘" : "配置工作台材料清单",
                 centeredTitleStyle);
             GUILayout.Label(
-                eraseMode
-                    ? "橡皮擦已启用：点击格子清空"
+                heating
+                    ? eraseMode
+                        ? "橡皮擦已启用：点击格子清空"
+                        : selectedPaletteItem == null
+                            ? "先从左侧图鉴选择物品"
+                            : $"已选择“{selectedPaletteItem.DisplayName}”：点击格子放入，右键清空"
                     : selectedPaletteItem == null
-                        ? "先从左侧图鉴选择物品"
-                        : $"已选择“{selectedPaletteItem.DisplayName}”：点击格子放入，右键清空",
+                        ? "先从左侧图鉴选择物品，再添加到材料清单"
+                        : $"已选择“{selectedPaletteItem.DisplayName}”：点击下方按钮添加材料",
                 EditorStyles.centeredGreyMiniLabel);
             GUILayout.Space(8f);
 
-            DrawIngredientCanvas();
+            DrawIngredientEditor();
             GUILayout.Space(16f);
             DrawOutputs();
             GUILayout.Space(12f);
@@ -288,10 +299,17 @@ namespace FlatWorld.Editor.ContentWorkshop
             EditorGUILayout.EndVertical();
         }
 
+        /// <summary>普通合成使用可滚动配方列表，热加工保留紧凑下拉选择。</summary>
         private void DrawRecipeSelectionBar(bool heating)
         {
-            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
             IReadOnlyList<WorkshopRecipeRecord> records = GetPageRecipes(heating);
+            if (!heating)
+            {
+                DrawCraftingRecipeSelectionList(records);
+                return;
+            }
+
+            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
             string[] options = new[] { "— 选择已有配方继续编辑 —" }
                 .Concat(records.Select(record => $"[{record.PackageId}] {record.DisplayName}"))
                 .ToArray();
@@ -313,6 +331,67 @@ namespace FlatWorld.Editor.ContentWorkshop
             EditorGUILayout.EndHorizontal();
         }
 
+        /// <summary>绘制工作台已有配方的滚动选择列表。</summary>
+        private void DrawCraftingRecipeSelectionList(IReadOnlyList<WorkshopRecipeRecord> records)
+        {
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label($"工作台配方 · {records.Count} 条", EditorStyles.boldLabel);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("新建", GUILayout.Width(68f)))
+                CreateNewRecipe(false);
+            if (recipeDraft.IsExisting && GUILayout.Button("恢复磁盘版本", GUILayout.Width(105f)))
+            {
+                WorkshopRecipeRecord record = repository.FindRecipe(recipeDraft.OriginalId);
+                if (record != null)
+                    LoadRecipe(record);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            recipeListScroll = EditorGUILayout.BeginScrollView(
+                recipeListScroll,
+                GUILayout.Height(CraftingRecipeListHeight));
+            if (records.Count == 0)
+            {
+                EditorGUILayout.HelpBox("当前没有工作台配方，点击“新建”开始创建。", MessageType.None);
+            }
+            else
+            {
+                for (int index = 0; index < records.Count; index++)
+                    DrawCraftingRecipeSelectionEntry(records[index], index);
+            }
+            EditorGUILayout.EndScrollView();
+            EditorGUILayout.EndVertical();
+        }
+
+        /// <summary>绘制一条可选择的工作台配方摘要。</summary>
+        private void DrawCraftingRecipeSelectionEntry(WorkshopRecipeRecord record, int index)
+        {
+            RecipeOutputDto output = record.Definition?.Outputs?.FirstOrDefault();
+            WorkshopItemEntry outputItem = repository.FindItem(output?.ItemId);
+            string outputText = outputItem == null
+                ? output?.ItemId ?? "未配置产物"
+                : outputItem.DisplayName;
+            bool selected = string.Equals(
+                recipeDraft.OriginalId,
+                record.Definition?.Id,
+                StringComparison.OrdinalIgnoreCase);
+            Color oldBackground = GUI.backgroundColor;
+            if (selected)
+                GUI.backgroundColor = new Color(0.55f, 0.8f, 1f);
+            var content = new GUIContent(
+                $"{record.DisplayName}\n{record.PackageId} · 产物：{outputText}",
+                GetIconTexture(outputItem?.Icon),
+                record.Definition?.Id);
+            if (GUILayout.Button(content, GUILayout.Height(46f)))
+            {
+                selectedExistingRecipeIndex = index + 1;
+                LoadRecipe(record);
+            }
+            GUI.backgroundColor = oldBackground;
+        }
+
+        /// <summary>绘制热加工方式预设。</summary>
         private void DrawHeatingPresetSelector()
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
@@ -326,6 +405,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             EditorGUILayout.EndVertical();
         }
 
+        /// <summary>绘制单个热加工预设按钮并应用其温度规则。</summary>
         private void DrawHeatingPresetButton(
             WorkshopHeatingPreset preset,
             string title,
@@ -347,21 +427,119 @@ namespace FlatWorld.Editor.ContentWorkshop
             GUI.backgroundColor = oldBackground;
         }
 
-        private void DrawIngredientCanvas()
+        /// <summary>按配方类型绘制无限材料清单或热加工位置画布。</summary>
+        private void DrawIngredientEditor()
         {
-            if (!recipeDraft.IsHeating)
-                EditorGUILayout.HelpBox("普通合成只比较材料种类与总量，清单中的摆放位置不参与配方匹配。", MessageType.Info);
+            if (recipeDraft.IsHeating)
+                DrawHeatingIngredientCanvas();
+            else
+                DrawCraftingIngredientList();
+        }
 
+        /// <summary>绘制不限条目数量的普通合成材料清单。</summary>
+        private void DrawCraftingIngredientList()
+        {
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label($"材料清单 · {recipeDraft.CraftingIngredients.Count} 种", EditorStyles.boldLabel);
+            GUILayout.FlexibleSpace();
+            GUI.enabled = selectedPaletteItem != null;
+            if (GUILayout.Button("添加左侧所选材料", GUILayout.Width(135f)))
+            {
+                int previousCount = recipeDraft.CraftingIngredients.Count;
+                selectedIngredientIndex = recipeDraft.AddCraftingIngredient(selectedPaletteItem.Id);
+                if (recipeDraft.CraftingIngredients.Count > previousCount)
+                    ingredientListScroll.y = float.MaxValue;
+            }
+            GUI.enabled = recipeDraft.CraftingIngredients.Count > 0;
+            if (GUILayout.Button("清空", GUILayout.Width(55f)))
+            {
+                recipeDraft.ClearIngredients();
+                selectedIngredientIndex = -1;
+            }
+            GUI.enabled = true;
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.HelpBox(
+                "普通合成只比较材料身份与总量。清单没有条目上限，保存后按连续的一维输入写入配方。",
+                MessageType.Info);
+            ingredientListScroll = EditorGUILayout.BeginScrollView(
+                ingredientListScroll,
+                GUILayout.Height(CraftingIngredientListHeight));
+            if (recipeDraft.CraftingIngredients.Count == 0)
+            {
+                EditorGUILayout.HelpBox("材料清单为空。请从左侧选择物品后点击“添加左侧所选材料”。", MessageType.None);
+            }
+            else
+            {
+                for (int index = 0; index < recipeDraft.CraftingIngredients.Count; index++)
+                {
+                    if (DrawCraftingIngredientRow(index))
+                        break;
+                }
+            }
+            EditorGUILayout.EndScrollView();
+            EditorGUILayout.EndVertical();
+        }
+
+        /// <summary>绘制一条普通合成材料，并返回该条目是否已被移除。</summary>
+        private bool DrawCraftingIngredientRow(int index)
+        {
+            WorkshopIngredientDraft ingredient = recipeDraft.CraftingIngredients[index];
+            WorkshopItemEntry item = repository.FindItem(ingredient.ItemId);
+            string identity = ingredient.IsTag
+                ? $"任意标签：{ingredient.Tag}"
+                : item?.DisplayName ?? ingredient.ItemId;
+            string amount = ingredient.Amount == 0 ? "需要存在 · 不消耗" : $"消耗 {ingredient.Amount}";
+
+            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+            Color oldBackground = GUI.backgroundColor;
+            if (selectedIngredientIndex == index)
+                GUI.backgroundColor = new Color(0.55f, 0.8f, 1f);
+            var content = new GUIContent(
+                $"{index + 1}. {identity}\n{amount}",
+                GetIconTexture(item?.Icon),
+                ingredient.IsTag ? ingredient.Tag : ingredient.ItemId);
+            if (GUILayout.Button(content, GUILayout.Height(48f)))
+                selectedIngredientIndex = index;
+            GUI.backgroundColor = oldBackground;
+
+            GUI.enabled = selectedPaletteItem != null;
+            if (GUILayout.Button("替换", GUILayout.Width(48f), GUILayout.Height(48f)))
+            {
+                ingredient.SetItem(selectedPaletteItem.Id);
+                selectedIngredientIndex = index;
+            }
+            GUI.enabled = true;
+            if (GUILayout.Button("移除", GUILayout.Width(48f), GUILayout.Height(48f)))
+            {
+                recipeDraft.RemoveCraftingIngredientAt(index);
+                if (selectedIngredientIndex == index)
+                    selectedIngredientIndex = Mathf.Min(index, recipeDraft.CraftingIngredients.Count - 1);
+                else if (selectedIngredientIndex > index)
+                    selectedIngredientIndex--;
+                if (recipeDraft.CraftingIngredients.Count == 0)
+                    selectedIngredientIndex = -1;
+                EditorGUILayout.EndHorizontal();
+                return true;
+            }
+            EditorGUILayout.EndHorizontal();
+            return false;
+        }
+
+        /// <summary>绘制热加工仍需使用的 3×3 位置画布。</summary>
+        private void DrawHeatingIngredientCanvas()
+        {
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            EditorGUILayout.BeginVertical(GUILayout.Width(IngredientSlotSize * 3f + 14f));
-            for (int row = 0; row < WorkshopRecipeDraft.CanvasHeight; row++)
+            EditorGUILayout.BeginVertical(GUILayout.Width(HeatingIngredientSlotSize * 3f + 14f));
+            for (int row = 0; row < WorkshopRecipeDraft.HeatingCanvasHeight; row++)
             {
                 EditorGUILayout.BeginHorizontal();
-                for (int column = 0; column < WorkshopRecipeDraft.CanvasWidth; column++)
+                for (int column = 0; column < WorkshopRecipeDraft.HeatingCanvasWidth; column++)
                 {
-                    int index = row * WorkshopRecipeDraft.CanvasWidth + column;
-                    DrawIngredientSlot(index);
+                    int index = row * WorkshopRecipeDraft.HeatingCanvasWidth + column;
+                    DrawHeatingIngredientSlot(index);
                 }
                 EditorGUILayout.EndHorizontal();
             }
@@ -372,25 +550,25 @@ namespace FlatWorld.Editor.ContentWorkshop
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             eraseMode = GUILayout.Toggle(eraseMode, "橡皮擦", "Button", GUILayout.Width(82f));
-            if (GUILayout.Button(recipeDraft.IsHeating ? "清空九宫格" : "清空材料", GUILayout.Width(105f)))
+            if (GUILayout.Button("清空加工托盘", GUILayout.Width(105f)))
             {
-                foreach (WorkshopIngredientDraft ingredient in recipeDraft.Ingredients)
-                    ingredient.Clear();
+                recipeDraft.ClearIngredients();
                 selectedIngredientIndex = -1;
             }
             GUILayout.FlexibleSpace();
             EditorGUILayout.EndHorizontal();
         }
 
-        private void DrawIngredientSlot(int index)
+        /// <summary>绘制热加工画布中的单个材料槽。</summary>
+        private void DrawHeatingIngredientSlot(int index)
         {
-            WorkshopIngredientDraft ingredient = recipeDraft.Ingredients[index];
+            WorkshopIngredientDraft ingredient = recipeDraft.HeatingIngredients[index];
             WorkshopItemEntry item = repository.FindItem(ingredient.ItemId);
             Rect rect = GUILayoutUtility.GetRect(
-                IngredientSlotSize,
-                IngredientSlotSize,
-                GUILayout.Width(IngredientSlotSize),
-                GUILayout.Height(IngredientSlotSize));
+                HeatingIngredientSlotSize,
+                HeatingIngredientSlotSize,
+                GUILayout.Width(HeatingIngredientSlotSize),
+                GUILayout.Height(HeatingIngredientSlotSize));
 
             Color oldBackground = GUI.backgroundColor;
             if (selectedIngredientIndex == index)
@@ -427,16 +605,17 @@ namespace FlatWorld.Editor.ContentWorkshop
                     EditorStyles.centeredGreyMiniLabel);
             }
 
-            HandleIngredientSlotInput(rect, index);
+            HandleHeatingIngredientSlotInput(rect, index);
         }
 
-        private void HandleIngredientSlotInput(Rect rect, int index)
+        /// <summary>处理热加工材料槽的放入、选择与清空操作。</summary>
+        private void HandleHeatingIngredientSlotInput(Rect rect, int index)
         {
             Event current = Event.current;
             if (!rect.Contains(current.mousePosition) || current.type != EventType.MouseDown)
                 return;
 
-            WorkshopIngredientDraft ingredient = recipeDraft.Ingredients[index];
+            WorkshopIngredientDraft ingredient = recipeDraft.HeatingIngredients[index];
             if (current.button == 1 || eraseMode)
             {
                 ingredient.Clear();
@@ -452,6 +631,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             Repaint();
         }
 
+        /// <summary>绘制主产物与副产物编辑区。</summary>
         private void DrawOutputs()
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
@@ -487,6 +667,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             EditorGUILayout.EndVertical();
         }
 
+        /// <summary>绘制配方保存入口。</summary>
         private void DrawRecipePrimaryActions()
         {
             EditorGUILayout.BeginHorizontal();
@@ -497,6 +678,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             EditorGUILayout.EndHorizontal();
         }
 
+        /// <summary>绘制当前配方和材料的详细规则。</summary>
         private void DrawRecipeInspector(bool heating, float width)
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox, GUILayout.Width(width));
@@ -553,16 +735,22 @@ namespace FlatWorld.Editor.ContentWorkshop
             EditorGUILayout.EndVertical();
         }
 
+        /// <summary>编辑当前选中材料的数量与匹配方式。</summary>
         private void DrawSelectedIngredientInspector()
         {
-            GUILayout.Label("当前材料槽", EditorStyles.boldLabel);
-            if (selectedIngredientIndex < 0 || selectedIngredientIndex >= recipeDraft.Ingredients.Length)
+            GUILayout.Label("当前材料", EditorStyles.boldLabel);
+            IReadOnlyList<WorkshopIngredientDraft> ingredients = recipeDraft.ActiveIngredients;
+            if (selectedIngredientIndex < 0 || selectedIngredientIndex >= ingredients.Count)
             {
-                EditorGUILayout.HelpBox("点击九宫格中的一个材料槽，可以调整数量或改成标签材料。", MessageType.None);
+                EditorGUILayout.HelpBox(
+                    recipeDraft.IsHeating
+                        ? "点击加工托盘中的材料槽，可以调整数量或改成标签材料。"
+                        : "点击材料清单中的一项，可以调整数量或改成标签材料。",
+                    MessageType.None);
                 return;
             }
 
-            WorkshopIngredientDraft ingredient = recipeDraft.Ingredients[selectedIngredientIndex];
+            WorkshopIngredientDraft ingredient = ingredients[selectedIngredientIndex];
             if (ingredient.IsEmpty)
             {
                 EditorGUILayout.HelpBox("当前格为空。从左侧选择物品，然后再次点击该格。", MessageType.None);
@@ -572,7 +760,9 @@ namespace FlatWorld.Editor.ContentWorkshop
             WorkshopItemEntry item = repository.FindItem(ingredient.ItemId);
             GUILayout.Label(ingredient.IsTag ? $"任意带有“{ingredient.Tag}”标签的物品" : item?.DisplayName ?? ingredient.ItemId,
                 EditorStyles.wordWrappedLabel);
-            ingredient.Amount = Mathf.Max(1, EditorGUILayout.IntField("消耗数量", ingredient.Amount));
+            ingredient.Amount = Mathf.Max(0, EditorGUILayout.IntField("消耗数量", ingredient.Amount));
+            if (ingredient.Amount == 0)
+                EditorGUILayout.HelpBox("数量为 0 时，该材料必须存在，但合成后不会被消耗。", MessageType.Info);
             bool useTag = EditorGUILayout.Toggle("允许同标签替代", ingredient.IsTag);
             if (useTag)
             {
@@ -587,21 +777,26 @@ namespace FlatWorld.Editor.ContentWorkshop
                 ingredient.SetItem(selectedPaletteItem.Id);
             }
 
-            if (GUILayout.Button("清空当前材料槽"))
+            if (GUILayout.Button(recipeDraft.IsHeating ? "清空当前材料槽" : "移除当前材料"))
             {
-                ingredient.Clear();
+                if (recipeDraft.IsHeating)
+                    ingredient.Clear();
+                else
+                    recipeDraft.RemoveCraftingIngredientAt(selectedIngredientIndex);
                 selectedIngredientIndex = -1;
             }
         }
 
+        /// <summary>收集当前材料可选的标签集合。</summary>
         private string[] GetTagOptions(WorkshopItemEntry item)
         {
             string[] preferred = item?.Definition?.Tags?
                 .Where(tag => !string.IsNullOrWhiteSpace(tag))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray() ?? Array.Empty<string>();
-            string currentTag = selectedIngredientIndex >= 0
-                ? recipeDraft.Ingredients[selectedIngredientIndex].Tag
+            IReadOnlyList<WorkshopIngredientDraft> ingredients = recipeDraft.ActiveIngredients;
+            string currentTag = selectedIngredientIndex >= 0 && selectedIngredientIndex < ingredients.Count
+                ? ingredients[selectedIngredientIndex].Tag
                 : null;
             string[] all = new[] { currentTag }.Concat(preferred).Concat(repository.KnownTags)
                 .Where(tag => !string.IsNullOrWhiteSpace(tag))
@@ -610,6 +805,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             return all.Length > 0 ? all : new[] { "Material" };
         }
 
+        /// <summary>绘制当前配方可写入的业务分包选择。</summary>
         private void DrawRecipePackagePopup(bool heating)
         {
             WorkshopPackageOption[] packages = repository.RecipePackages
@@ -627,17 +823,20 @@ namespace FlatWorld.Editor.ContentWorkshop
             recipeDraft.PackageId = packages[next].Id;
         }
 
+        /// <summary>生成当前配方的简短状态摘要。</summary>
         private string BuildRecipeSummary()
         {
-            int ingredients = recipeDraft.Ingredients.Count(ingredient => !ingredient.IsEmpty);
-            int tagIngredients = recipeDraft.Ingredients.Count(ingredient => ingredient.IsTag);
+            IReadOnlyList<WorkshopIngredientDraft> activeIngredients = recipeDraft.ActiveIngredients;
+            int ingredients = activeIngredients.Count(ingredient => !ingredient.IsEmpty);
+            int tagIngredients = activeIngredients.Count(ingredient => ingredient.IsTag);
             int outputs = recipeDraft.Outputs.Count(output => !string.IsNullOrWhiteSpace(output.ItemId));
-            return $"{ingredients} 个材料槽（{tagIngredients} 个标签材料） · {outputs} 个产物 · " +
+            return $"{ingredients} 种材料（{tagIngredients} 个标签材料） · {outputs} 个产物 · " +
                     (recipeDraft.IsHeating
                         ? $"温度 {recipeDraft.Temperature:0}–{recipeDraft.MaxTemperature:0}°C"
-                        : "材料位置无关");
+                        : "无限清单 · 材料位置无关");
         }
 
+        /// <summary>校验并保存当前配方。</summary>
         private void SaveRecipe()
         {
             try
@@ -657,6 +856,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             }
         }
 
+        /// <summary>为当前页面创建空白配方。</summary>
         private void CreateNewRecipe(bool heating)
         {
             if (repository == null)
@@ -669,6 +869,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             showAdvancedRecipe = false;
         }
 
+        /// <summary>把已有配方载入编辑草稿。</summary>
         private void LoadRecipe(WorkshopRecipeRecord record)
         {
             recipeDraft = WorkshopRecipeDraft.FromRecord(record);
@@ -678,6 +879,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             statusType = MessageType.Info;
         }
 
+        /// <summary>获取当前配方类型的全部已载入记录。</summary>
         private IReadOnlyList<WorkshopRecipeRecord> GetPageRecipes(bool heating)
         {
             return repository.Recipes
@@ -687,6 +889,7 @@ namespace FlatWorld.Editor.ContentWorkshop
                 .ToArray();
         }
 
+        /// <summary>判断配方分包是否属于当前工作站类型。</summary>
         private static bool IsPackageForPage(string packageId, bool heating)
         {
             bool isHeatingPackage = packageId?.StartsWith("cooking/", StringComparison.OrdinalIgnoreCase) == true ||
@@ -694,6 +897,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             return heating == isHeatingPackage;
         }
 
+        /// <summary>按热加工预设选择默认业务分包。</summary>
         private void SelectDefaultHeatingPackage(WorkshopHeatingPreset preset)
         {
             string prefix = preset switch

@@ -117,6 +117,7 @@ namespace FlatWorld.Editor.ContentWorkshop
         public bool IsTag => !string.IsNullOrWhiteSpace(Tag);
         public bool IsEmpty => string.IsNullOrWhiteSpace(ItemId) && string.IsNullOrWhiteSpace(Tag);
 
+        /// <summary>复制材料草稿，供列表归并与保存转换使用。</summary>
         public WorkshopIngredientDraft Clone()
         {
             return new WorkshopIngredientDraft
@@ -127,20 +128,25 @@ namespace FlatWorld.Editor.ContentWorkshop
             };
         }
 
+        /// <summary>切换为精确物品匹配；新材料默认消耗 1 个，已有催化物保留零消耗。</summary>
         public void SetItem(string itemId)
         {
+            bool wasEmpty = IsEmpty;
             ItemId = itemId?.Trim();
             Tag = null;
-            Amount = Mathf.Max(1, Amount);
+            Amount = wasEmpty ? 1 : Mathf.Max(0, Amount);
         }
 
+        /// <summary>切换为标签匹配；新材料默认消耗 1 个，已有催化物保留零消耗。</summary>
         public void SetTag(string tag)
         {
+            bool wasEmpty = IsEmpty;
             Tag = tag?.Trim();
             ItemId = null;
-            Amount = Mathf.Max(1, Amount);
+            Amount = wasEmpty ? 1 : Mathf.Max(0, Amount);
         }
 
+        /// <summary>清空材料并恢复新条目的默认消耗量。</summary>
         public void Clear()
         {
             ItemId = null;
@@ -167,13 +173,13 @@ namespace FlatWorld.Editor.ContentWorkshop
     }
 
     /// <summary>
-    /// 配方编辑草稿。始终使用 3×3 创作画布，保存时再按规则裁剪成运行时 DTO 所需尺寸。
+    /// 配方编辑草稿。普通合成使用不限长度的无位置材料清单，热加工继续使用 3×3 位置画布。
     /// </summary>
     [Serializable]
     internal sealed class WorkshopRecipeDraft
     {
-        public const int CanvasWidth = 3;
-        public const int CanvasHeight = 3;
+        public const int HeatingCanvasWidth = 3;
+        public const int HeatingCanvasHeight = 3;
 
         public string OriginalId;
         public string OriginalPackageId;
@@ -187,18 +193,23 @@ namespace FlatWorld.Editor.ContentWorkshop
         public bool AutoTrim = true;
         public float Temperature;
         public float MaxTemperature = 2000f;
-        public int OriginalGridWidth = CanvasWidth;
-        public int OriginalGridHeight = CanvasHeight;
+        public int OriginalGridWidth = HeatingCanvasWidth;
+        public int OriginalGridHeight = HeatingCanvasHeight;
         public WorkshopHeatingPreset HeatingPreset = WorkshopHeatingPreset.Cooking;
-        public readonly WorkshopIngredientDraft[] Ingredients =
-            Enumerable.Range(0, CanvasWidth * CanvasHeight)
+        public readonly List<WorkshopIngredientDraft> CraftingIngredients = new();
+        public readonly WorkshopIngredientDraft[] HeatingIngredients =
+            Enumerable.Range(0, HeatingCanvasWidth * HeatingCanvasHeight)
                 .Select(_ => new WorkshopIngredientDraft())
                 .ToArray();
         public readonly List<WorkshopOutputDraft> Outputs = new();
         public readonly List<RecipeActionDto> Actions = new();
 
         public bool IsExisting => !string.IsNullOrWhiteSpace(OriginalId);
+        public IReadOnlyList<WorkshopIngredientDraft> ActiveIngredients => IsHeating
+            ? (IReadOnlyList<WorkshopIngredientDraft>)HeatingIngredients
+            : CraftingIngredients;
 
+        /// <summary>创建与目标工作站类型对应的空白配方草稿。</summary>
         public static WorkshopRecipeDraft CreateNew(bool heating, string packageId)
         {
             var draft = new WorkshopRecipeDraft
@@ -216,17 +227,20 @@ namespace FlatWorld.Editor.ContentWorkshop
             return draft;
         }
 
+        /// <summary>载入现有配方；普通合成会把旧网格按材料身份归并为滚动列表数据。</summary>
         public static WorkshopRecipeDraft FromRecord(WorkshopRecipeRecord record)
         {
             if (record?.Definition == null)
                 throw new ArgumentNullException(nameof(record));
 
             RecipeDto source = record.Definition;
-            if (source.GridWidth > CanvasWidth || source.GridHeight > CanvasHeight)
+            bool isHeating = string.Equals(source.RecipeType, "smelting", StringComparison.OrdinalIgnoreCase);
+            if (isHeating &&
+                (source.GridWidth > HeatingCanvasWidth || source.GridHeight > HeatingCanvasHeight))
             {
                 throw new InvalidOperationException(
                     $"配方 {source.Id} 使用 {source.GridWidth}×{source.GridHeight} 网格，" +
-                    $"超过内容工坊当前支持的 {CanvasWidth}×{CanvasHeight} 上限。为避免截断，已拒绝载入。");
+                    $"超过内容工坊当前支持的 {HeatingCanvasWidth}×{HeatingCanvasHeight} 上限。为避免截断，已拒绝载入。");
             }
 
             var draft = new WorkshopRecipeDraft
@@ -237,34 +251,22 @@ namespace FlatWorld.Editor.ContentWorkshop
                 Id = source.Id,
                 DisplayName = source.DisplayName,
                 PackageId = record.PackageId,
-                IsHeating = string.Equals(source.RecipeType, "smelting", StringComparison.OrdinalIgnoreCase),
-                Ordered = string.Equals(source.RecipeType, "smelting", StringComparison.OrdinalIgnoreCase) &&
+                IsHeating = isHeating,
+                Ordered = isHeating &&
                           string.Equals(source.InputRule, "ordered", StringComparison.OrdinalIgnoreCase),
-                AllowMirror = string.Equals(source.RecipeType, "smelting", StringComparison.OrdinalIgnoreCase) &&
-                              source.AllowMirror,
-                AutoTrim = !string.Equals(source.RecipeType, "smelting", StringComparison.OrdinalIgnoreCase),
+                AllowMirror = isHeating && source.AllowMirror,
+                AutoTrim = !isHeating,
                 Temperature = source.Temperature,
                 MaxTemperature = source.MaxTemperature,
-                OriginalGridWidth = Mathf.Clamp(source.GridWidth, 1, CanvasWidth),
-                OriginalGridHeight = Mathf.Clamp(source.GridHeight, 1, CanvasHeight)
+                OriginalGridWidth = Mathf.Clamp(source.GridWidth, 1, HeatingCanvasWidth),
+                OriginalGridHeight = Mathf.Clamp(source.GridHeight, 1, HeatingCanvasHeight)
             };
 
-            foreach (RecipeIngredientDto input in source.Inputs ?? new List<RecipeIngredientDto>())
-            {
-                if (input == null || source.GridWidth <= 0)
-                    continue;
-                int row = input.Slot / source.GridWidth;
-                int column = input.Slot % source.GridWidth;
-                if (row < 0 || row >= CanvasHeight || column < 0 || column >= CanvasWidth)
-                    continue;
-
-                WorkshopIngredientDraft slot = draft.Ingredients[row * CanvasWidth + column];
-                slot.Amount = Mathf.Max(1, input.Amount);
-                if (string.Equals(input.Match, "tag", StringComparison.OrdinalIgnoreCase))
-                    slot.SetTag(input.Tag);
-                else
-                    slot.SetItem(input.ItemId);
-            }
+            Dictionary<int, int> craftingSlotRemap = isHeating
+                ? null
+                : draft.LoadCraftingInputs(source.Inputs);
+            if (isHeating)
+                draft.LoadHeatingInputs(source);
 
             foreach (RecipeOutputDto output in source.Outputs ?? new List<RecipeOutputDto>())
             {
@@ -282,13 +284,161 @@ namespace FlatWorld.Editor.ContentWorkshop
             foreach (RecipeActionDto action in source.Actions ?? new List<RecipeActionDto>())
             {
                 if (action != null)
-                    draft.Actions.Add(action);
+                    draft.Actions.Add(CloneAction(action, craftingSlotRemap));
             }
 
             draft.HeatingPreset = GuessHeatingPreset(record.PackageId, source.Temperature);
             return draft;
         }
 
+        /// <summary>向普通合成材料清单加入所选物品，重复物品直接返回已有条目。</summary>
+        public int AddCraftingIngredient(string itemId)
+        {
+            string normalizedId = itemId?.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedId))
+                return -1;
+
+            int existingIndex = CraftingIngredients.FindIndex(ingredient =>
+                !ingredient.IsTag &&
+                string.Equals(ingredient.ItemId, normalizedId, StringComparison.OrdinalIgnoreCase));
+            if (existingIndex >= 0)
+                return existingIndex;
+            var ingredient = new WorkshopIngredientDraft();
+            ingredient.SetItem(normalizedId);
+            CraftingIngredients.Add(ingredient);
+            return CraftingIngredients.Count - 1;
+        }
+
+        /// <summary>移除普通合成材料并保持滚动清单连续。</summary>
+        public void RemoveCraftingIngredientAt(int index)
+        {
+            if (index < 0 || index >= CraftingIngredients.Count)
+                return;
+            CraftingIngredients.RemoveAt(index);
+            foreach (RecipeActionDto action in Actions)
+            {
+                if (action.SlotIndex == index)
+                    action.SlotIndex = -1;
+                else if (action.SlotIndex > index)
+                    action.SlotIndex--;
+            }
+        }
+
+        /// <summary>清空当前配方类型使用的全部材料。</summary>
+        public void ClearIngredients()
+        {
+            if (!IsHeating)
+            {
+                CraftingIngredients.Clear();
+                foreach (RecipeActionDto action in Actions)
+                    action.SlotIndex = -1;
+                return;
+            }
+
+            foreach (WorkshopIngredientDraft ingredient in HeatingIngredients)
+                ingredient.Clear();
+        }
+
+        /// <summary>把旧普通合成网格按物品或标签身份合并为不限长度的材料清单。</summary>
+        private Dictionary<int, int> LoadCraftingInputs(IEnumerable<RecipeIngredientDto> inputs)
+        {
+            var slotRemap = new Dictionary<int, int>();
+            foreach (RecipeIngredientDto input in inputs ?? Enumerable.Empty<RecipeIngredientDto>())
+            {
+                if (!TryCreateIngredient(input, out WorkshopIngredientDraft ingredient))
+                    continue;
+
+                int targetIndex = CraftingIngredients.FindIndex(existing =>
+                    HasSameIdentity(existing, ingredient));
+                if (targetIndex < 0)
+                {
+                    CraftingIngredients.Add(ingredient);
+                    targetIndex = CraftingIngredients.Count - 1;
+                }
+                else
+                {
+                    long totalAmount = (long)CraftingIngredients[targetIndex].Amount + ingredient.Amount;
+                    CraftingIngredients[targetIndex].Amount = (int)Math.Min(int.MaxValue, totalAmount);
+                }
+
+                slotRemap[input.Slot] = targetIndex;
+            }
+
+            return slotRemap;
+        }
+
+        /// <summary>把热加工输入按原槽位载入 3×3 画布。</summary>
+        private void LoadHeatingInputs(RecipeDto source)
+        {
+            foreach (RecipeIngredientDto input in source.Inputs ?? Enumerable.Empty<RecipeIngredientDto>())
+            {
+                if (!TryCreateIngredient(input, out WorkshopIngredientDraft ingredient) || source.GridWidth <= 0)
+                    continue;
+
+                int row = input.Slot / source.GridWidth;
+                int column = input.Slot % source.GridWidth;
+                if (row < 0 || row >= HeatingCanvasHeight || column < 0 || column >= HeatingCanvasWidth)
+                    continue;
+
+                HeatingIngredients[row * HeatingCanvasWidth + column] = ingredient;
+            }
+        }
+
+        /// <summary>从 JSON 输入创建非空材料草稿，并保留零消耗催化物。</summary>
+        private static bool TryCreateIngredient(RecipeIngredientDto input, out WorkshopIngredientDraft ingredient)
+        {
+            ingredient = null;
+            if (input == null)
+                return false;
+
+            bool useTag = string.Equals(input.Match, "tag", StringComparison.OrdinalIgnoreCase);
+            string identity = useTag ? input.Tag?.Trim() : input.ItemId?.Trim();
+            if (string.IsNullOrWhiteSpace(identity))
+                return false;
+
+            ingredient = new WorkshopIngredientDraft();
+            if (useTag)
+                ingredient.SetTag(identity);
+            else
+                ingredient.SetItem(identity);
+            ingredient.Amount = Mathf.Max(0, input.Amount);
+            return true;
+        }
+
+        /// <summary>比较两个材料草稿是否表示同一个精确物品或标签。</summary>
+        private static bool HasSameIdentity(WorkshopIngredientDraft left, WorkshopIngredientDraft right)
+        {
+            if (left == null || right == null || left.IsTag != right.IsTag)
+                return false;
+            return string.Equals(
+                left.IsTag ? left.Tag : left.ItemId,
+                right.IsTag ? right.Tag : right.ItemId,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>复制配方动作，并把旧网格槽位映射到普通合成材料清单。</summary>
+        private static RecipeActionDto CloneAction(
+            RecipeActionDto source,
+            IReadOnlyDictionary<int, int> craftingSlotRemap)
+        {
+            int slotIndex = source.SlotIndex;
+            if (craftingSlotRemap != null)
+            {
+                slotIndex = craftingSlotRemap.TryGetValue(slotIndex, out int remappedIndex)
+                    ? remappedIndex
+                    : -1;
+            }
+
+            return new RecipeActionDto
+            {
+                Type = source.Type,
+                TargetRole = source.TargetRole,
+                Value = source.Value,
+                SlotIndex = slotIndex
+            };
+        }
+
+        /// <summary>应用热加工预设及其温度和排序规则。</summary>
         public void ApplyHeatingPreset(WorkshopHeatingPreset preset)
         {
             HeatingPreset = preset;
@@ -318,6 +468,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             }
         }
 
+        /// <summary>校验当前草稿并转换为运行时配方 DTO。</summary>
         public RecipeDto BuildDto()
         {
             if (string.IsNullOrWhiteSpace(Id))
@@ -326,7 +477,7 @@ namespace FlatWorld.Editor.ContentWorkshop
                 throw new InvalidOperationException("请填写玩家看到的配方名称。");
             if (Outputs.Count == 0 || Outputs.Any(output => string.IsNullOrWhiteSpace(output.ItemId)))
                 throw new InvalidOperationException("配方至少需要一个有效产物。");
-            if (Ingredients.All(ingredient => ingredient.IsEmpty))
+            if (ActiveIngredients.All(ingredient => ingredient.IsEmpty))
                 throw new InvalidOperationException("请至少放入一种材料。");
 
             var dto = new RecipeDto
@@ -350,43 +501,57 @@ namespace FlatWorld.Editor.ContentWorkshop
             return dto;
         }
 
+        /// <summary>按配方类型生成连续清单或热加工网格输入。</summary>
         private void BuildInputs(RecipeDto dto)
         {
+            if (!IsHeating)
+            {
+                List<WorkshopIngredientDraft> compact = CraftingIngredients
+                    .Where(ingredient => !ingredient.IsEmpty)
+                    .Select(ingredient => ingredient.Clone())
+                    .ToList();
+                dto.GridWidth = compact.Count;
+                dto.GridHeight = 1;
+                for (int index = 0; index < compact.Count; index++)
+                    dto.Inputs.Add(ToDto(compact[index], index));
+                return;
+            }
+
             if (!AutoTrim)
             {
                 dto.GridWidth = IsExisting
-                    ? Mathf.Clamp(OriginalGridWidth, 1, CanvasWidth)
-                    : CanvasWidth;
+                    ? Mathf.Clamp(OriginalGridWidth, 1, HeatingCanvasWidth)
+                    : HeatingCanvasWidth;
                 dto.GridHeight = IsExisting
-                    ? Mathf.Clamp(OriginalGridHeight, 1, CanvasHeight)
-                    : CanvasHeight;
-                CopyCanvasRegion(dto, 0, 0, dto.GridWidth, dto.GridHeight);
+                    ? Mathf.Clamp(OriginalGridHeight, 1, HeatingCanvasHeight)
+                    : HeatingCanvasHeight;
+                CopyHeatingCanvasRegion(dto, 0, 0, dto.GridWidth, dto.GridHeight);
                 return;
             }
 
             if (!Ordered)
             {
-                List<WorkshopIngredientDraft> compact = Ingredients
+                List<WorkshopIngredientDraft> compact = HeatingIngredients
                     .Where(ingredient => !ingredient.IsEmpty)
                     .Select(ingredient => ingredient.Clone())
                     .ToList();
-                dto.GridWidth = Mathf.Min(CanvasWidth, compact.Count);
+                dto.GridWidth = Mathf.Min(HeatingCanvasWidth, compact.Count);
                 dto.GridHeight = Mathf.CeilToInt((float)compact.Count / dto.GridWidth);
                 for (int index = 0; index < compact.Count; index++)
                     dto.Inputs.Add(ToDto(compact[index], index));
                 return;
             }
 
-            int minRow = CanvasHeight;
+            int minRow = HeatingCanvasHeight;
             int maxRow = -1;
-            int minColumn = CanvasWidth;
+            int minColumn = HeatingCanvasWidth;
             int maxColumn = -1;
-            for (int index = 0; index < Ingredients.Length; index++)
+            for (int index = 0; index < HeatingIngredients.Length; index++)
             {
-                if (Ingredients[index].IsEmpty)
+                if (HeatingIngredients[index].IsEmpty)
                     continue;
-                int row = index / CanvasWidth;
-                int column = index % CanvasWidth;
+                int row = index / HeatingCanvasWidth;
+                int column = index % HeatingCanvasWidth;
                 minRow = Mathf.Min(minRow, row);
                 maxRow = Mathf.Max(maxRow, row);
                 minColumn = Mathf.Min(minColumn, column);
@@ -395,17 +560,18 @@ namespace FlatWorld.Editor.ContentWorkshop
 
             dto.GridWidth = maxColumn - minColumn + 1;
             dto.GridHeight = maxRow - minRow + 1;
-            CopyCanvasRegion(dto, minRow, minColumn, dto.GridWidth, dto.GridHeight);
+            CopyHeatingCanvasRegion(dto, minRow, minColumn, dto.GridWidth, dto.GridHeight);
         }
 
-        private void CopyCanvasRegion(RecipeDto dto, int startRow, int startColumn, int width, int height)
+        /// <summary>把热加工画布中的指定矩形区域写入 DTO。</summary>
+        private void CopyHeatingCanvasRegion(RecipeDto dto, int startRow, int startColumn, int width, int height)
         {
             for (int row = 0; row < height; row++)
             {
                 for (int column = 0; column < width; column++)
                 {
                     WorkshopIngredientDraft ingredient =
-                        Ingredients[(startRow + row) * CanvasWidth + startColumn + column];
+                        HeatingIngredients[(startRow + row) * HeatingCanvasWidth + startColumn + column];
                     if (ingredient.IsEmpty)
                         continue;
                     dto.Inputs.Add(ToDto(ingredient, row * width + column));
@@ -413,6 +579,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             }
         }
 
+        /// <summary>把单个材料草稿转换为运行时输入槽数据。</summary>
         private static RecipeIngredientDto ToDto(WorkshopIngredientDraft ingredient, int slot)
         {
             return new RecipeIngredientDto
@@ -421,10 +588,11 @@ namespace FlatWorld.Editor.ContentWorkshop
                 Match = ingredient.IsTag ? "tag" : "exact_item",
                 ItemId = ingredient.IsTag ? null : ingredient.ItemId?.Trim(),
                 Tag = ingredient.IsTag ? ingredient.Tag?.Trim() : null,
-                Amount = Mathf.Max(1, ingredient.Amount)
+                Amount = Mathf.Max(0, ingredient.Amount)
             };
         }
 
+        /// <summary>根据分包与温度推断热加工预设。</summary>
         private static WorkshopHeatingPreset GuessHeatingPreset(string packageId, float temperature)
         {
             if (packageId?.StartsWith("cooking/", StringComparison.OrdinalIgnoreCase) == true)

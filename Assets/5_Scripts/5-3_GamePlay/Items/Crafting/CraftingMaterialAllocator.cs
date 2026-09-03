@@ -58,7 +58,7 @@ public static class CraftingIngredientMatcher
 
 /// <summary>
 /// 无序配方材料分配器；通过容量流一次求出全局可行的扣料计划，避免 Exact/Tag 重叠时贪心误判。
-/// 输入与配方网格最多为 3×3，流网络规模固定且很小。
+/// 流网络按当前材料清单与工作站输入槽动态构建，不依赖旧九宫格尺寸。
 /// </summary>
 public static class CraftingMaterialAllocator
 {
