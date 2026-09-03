@@ -101,6 +101,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 08868ceb1c31f6341a0be7a5d3d8bf50
+    m_Address: "Assets/6_Art/Items/Plants/\u706B\u79CD.png"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 08d3d4e1050f6084f867e5cf9aa1e058
     m_Address: Assets/6_Art/Food/Item_Food_Fruit.png
     m_ReadOnly: 0
@@ -1849,12 +1855,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fd8723ea4457a3a48aa43f299cc9b24f
     m_Address: "Assets/2_Prefabs/World/Space/\u901A\u7528\u661F\u4F53.prefab"
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: fe41e37ac04bf324085013b7d80b586c
-    m_Address: Assets/2_Prefabs/Gameplay/Items/Materials/FireSeed.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab

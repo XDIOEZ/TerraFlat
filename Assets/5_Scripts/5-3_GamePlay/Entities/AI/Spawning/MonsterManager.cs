@@ -57,19 +57,29 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
     private static readonly HashSet<string> RegisteredSpeciesIds = new(StringComparer.Ordinal);
     private readonly Dictionary<string, SpawnerConfig> _configBySpecies = new(StringComparer.Ordinal);
     private readonly Dictionary<Item, Registration> _registrations = new();
-    private readonly Dictionary<SpawnerConfig, int> _groupCounts = new();
-    private readonly Dictionary<string, int> _speciesCounts = new(StringComparer.Ordinal);
+    private readonly Dictionary<SpawnerConfig, int> _activeGroupCounts = new();
+    private readonly Dictionary<string, int> _activeSpeciesCounts = new(StringComparer.Ordinal);
     private readonly Dictionary<DamageReceiver, Item> _itemByDeathReceiver = new();
     private readonly Dictionary<Item, DamageReceiver> _deathReceiverByItem = new();
     private readonly Dictionary<Item, int> _ecologyRecycleProtectionCounts = new();
     private readonly List<Item> _cleanupItems = new(64);
-    private int _populationLimitedCount;
+    private int _activePopulationLimitedCount;
+    private int _activeCountFrame = -1;
+    private bool _activeCountsDirty = true;
     private bool _ownsSingleton;
 
     [ShowInInspector, ReadOnly]
     public int Count => _registrations.Count;
 
-    public int PopulationLimitedCount => _populationLimitedCount;
+    /// <summary>仅统计当前激活且仍受全局上限约束的怪物。</summary>
+    public int PopulationLimitedCount
+    {
+        get
+        {
+            EnsureActiveCountsCurrent();
+            return _activePopulationLimitedCount;
+        }
+    }
 
     /// <summary>怪物完成注册时通知需要建立附属状态的系统。</summary>
     public event Action<Item, SpawnerConfig> MonsterRegistered;
@@ -195,10 +205,7 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
 
         var registration = new Registration(item, config, speciesId);
         _registrations.Add(item, registration);
-        IncrementCount(_groupCounts, config);
-        IncrementCount(_speciesCounts, speciesId);
-        if (!config.UnboundedDailyGrowth && !config.IgnorePopulationLimits)
-            _populationLimitedCount++;
+        InvalidateActiveCounts();
 
         DamageReceiver receiver = item.GetComponentInChildren<DamageReceiver>(true);
         if (receiver != null && !_itemByDeathReceiver.ContainsKey(receiver))
@@ -218,10 +225,7 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
             return;
 
         _registrations.Remove(item);
-        DecrementCount(_groupCounts, registration.Config);
-        DecrementCount(_speciesCounts, registration.SpeciesId);
-        if (!registration.Config.UnboundedDailyGrowth && !registration.Config.IgnorePopulationLimits)
-            _populationLimitedCount = Mathf.Max(0, _populationLimitedCount - 1);
+        InvalidateActiveCounts();
 
         _ecologyRecycleProtectionCounts.Remove(item);
         if (!_deathReceiverByItem.TryGetValue(item, out DamageReceiver receiver))
@@ -262,13 +266,15 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
         }
 
         _registrations.Clear();
-        _groupCounts.Clear();
-        _speciesCounts.Clear();
+        _activeGroupCounts.Clear();
+        _activeSpeciesCounts.Clear();
         _itemByDeathReceiver.Clear();
         _deathReceiverByItem.Clear();
         _ecologyRecycleProtectionCounts.Clear();
         _cleanupItems.Clear();
-        _populationLimitedCount = 0;
+        _activePopulationLimitedCount = 0;
+        _activeCountFrame = -1;
+        _activeCountsDirty = true;
     }
 
     private void OnMonsterDeathStarted(DamageReceiver receiver)
@@ -288,6 +294,23 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
 
     #region 查询接口
 
+    /// <summary>只有激活且尚未进入销毁流程的怪物才占用生态生成上限。</summary>
+    public static bool IsActiveForPopulationLimits(Item item)
+    {
+        return item != null &&
+               !item.DestructionHandled &&
+               item.gameObject.activeInHierarchy;
+    }
+
+    /// <summary>实体显隐变化后使本帧活动数量缓存失效。</summary>
+    public void NotifyPopulationActivityChanged(Item item)
+    {
+        if (ReferenceEquals(item, null) || !_registrations.ContainsKey(item))
+            return;
+
+        InvalidateActiveCounts();
+    }
+
     public bool Contains(Item item)
     {
         return item != null && _registrations.ContainsKey(item);
@@ -305,15 +328,20 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
 
     public int GetGroupCount(SpawnerConfig config)
     {
-        return config != null && _groupCounts.TryGetValue(config, out int count) ? count : 0;
+        if (config == null)
+            return 0;
+
+        EnsureActiveCountsCurrent();
+        return _activeGroupCounts.TryGetValue(config, out int count) ? count : 0;
     }
 
     public int GetSpeciesCount(string speciesId)
     {
-        return !string.IsNullOrWhiteSpace(speciesId) &&
-               _speciesCounts.TryGetValue(speciesId, out int count)
-            ? count
-            : 0;
+        if (string.IsNullOrWhiteSpace(speciesId))
+            return 0;
+
+        EnsureActiveCountsCurrent();
+        return _activeSpeciesCounts.TryGetValue(speciesId, out int count) ? count : 0;
     }
 
     /// <summary>复制稳定快照，调用方可在回收实体时安全遍历。</summary>
@@ -337,7 +365,8 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
         foreach (Registration registration in _registrations.Values)
         {
             Item item = registration.Item;
-            if (item != null && registration.Config == config &&
+            if (IsActiveForPopulationLimits(item) &&
+                registration.Config == config &&
                 WorldTopologyRuntime.SqrDistance(item.transform.position, center) <= radiusSqr)
             {
                 count++;
@@ -392,21 +421,44 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
 
     #region 计数工具
 
+    /// <summary>每帧至多重建一次活动种群计数，兼容外部层级显隐变化。</summary>
+    private void EnsureActiveCountsCurrent()
+    {
+        int currentFrame = Time.frameCount;
+        if (!_activeCountsDirty && _activeCountFrame == currentFrame)
+            return;
+
+        _activeGroupCounts.Clear();
+        _activeSpeciesCounts.Clear();
+        _activePopulationLimitedCount = 0;
+
+        foreach (Registration registration in _registrations.Values)
+        {
+            if (!IsActiveForPopulationLimits(registration.Item))
+                continue;
+
+            IncrementCount(_activeGroupCounts, registration.Config);
+            IncrementCount(_activeSpeciesCounts, registration.SpeciesId);
+            if (!registration.Config.UnboundedDailyGrowth &&
+                !registration.Config.IgnorePopulationLimits)
+            {
+                _activePopulationLimitedCount++;
+            }
+        }
+
+        _activeCountFrame = currentFrame;
+        _activeCountsDirty = false;
+    }
+
+    private void InvalidateActiveCounts()
+    {
+        _activeCountsDirty = true;
+    }
+
     private static void IncrementCount<TKey>(Dictionary<TKey, int> counts, TKey key)
     {
         counts.TryGetValue(key, out int count);
         counts[key] = count + 1;
-    }
-
-    private static void DecrementCount<TKey>(Dictionary<TKey, int> counts, TKey key)
-    {
-        if (!counts.TryGetValue(key, out int count))
-            return;
-
-        if (count <= 1)
-            counts.Remove(key);
-        else
-            counts[key] = count - 1;
     }
 
     #endregion

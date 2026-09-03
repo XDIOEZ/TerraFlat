@@ -974,7 +974,11 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         foreach (Item item in _chunkDormantItems)
         {
             if (item != null && !item.DestructionHandled && !item.gameObject.activeSelf)
+            {
                 item.gameObject.SetActive(true);
+                if (_monsterManager != null)
+                    _monsterManager.NotifyPopulationActivityChanged(item);
+            }
         }
 
         _chunkDormantItems.Clear();
@@ -1020,13 +1024,17 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             {
                 _chunkDormantItems.Add(item);
                 item.gameObject.SetActive(false);
+                _monsterManager.NotifyPopulationActivityChanged(item);
             }
 
             return;
         }
 
         if (_chunkDormantItems.Remove(item) && !item.gameObject.activeSelf)
+        {
             item.gameObject.SetActive(true);
+            _monsterManager.NotifyPopulationActivityChanged(item);
+        }
     }
 
     private void OnMonsterDeathStarted(Item item, SpawnerConfig config)
@@ -1063,8 +1071,12 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             MonsterManager.Registration registration = _monsterSnapshot[registrationIndex];
             Item item = registration.Item;
             SpawnerConfig config = registration.Config;
-            if (item == null || item.itemData == null || config == null)
+            if (!MonsterManager.IsActiveForPopulationLimits(item) ||
+                item.itemData == null ||
+                config == null)
+            {
                 continue;
+            }
 
             string speciesId = registration.SpeciesId;
             _overflowSpeciesCounts.TryGetValue(speciesId, out int speciesCount);
@@ -1124,7 +1136,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             {
                 MonsterManager.Registration registration = _monsterSnapshot[registrationIndex];
                 Item candidate = registration.Item;
-                if (candidate == null ||
+                if (!MonsterManager.IsActiveForPopulationLimits(candidate) ||
                     registration.Config != config ||
                     pendingOverflow.Contains(candidate))
                 {

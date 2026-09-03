@@ -143,7 +143,8 @@ public static class ItemDefinitionMigrationTool
             new[]
             {
                 "Assets/2_Prefabs/Gameplay/Items/Common/Stick.prefab",
-                "Assets/2_Prefabs/Gameplay/Items/Common/Log.prefab"
+                "Assets/2_Prefabs/Gameplay/Items/Common/Log.prefab",
+                "Assets/2_Prefabs/Gameplay/Items/Materials/FireSeed.prefab"
             }),
         new(
             "Axe_Base",

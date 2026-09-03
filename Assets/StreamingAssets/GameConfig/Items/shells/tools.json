@@ -395,6 +395,224 @@
       }
     },
     {
+      "id": "FireSeed",
+      "parent": "WoodTool_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Materials/FireSeed.prefab",
+      "gameName": "FireSeed",
+      "description": "适合引火的干燥火种。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Plants/火种.png[火种]",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 315.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DamageValues": {
+              "Cutting": 0.0,
+              "Piercing": 0.0,
+              "Chopping": 0.0,
+              "Blunt": 5.0
+            },
+            "DamageInterval": 0.2,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "MaxAttackTargets": 3,
+            "EnableHitSlowdown": true,
+            "HitSlowMultiplier": 0.5,
+            "HitSlowDuration": 0.35,
+            "tileDamageToolKind": 0,
+            "weaponAudioClass": 0,
+            "attackAudioCueId": "",
+            "impactAudioOverrides": [],
+            "playImpactFeedbackOnNonDamageableHit": false,
+            "lastDamageTime": 0.0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 1.0,
+                "y": 1.0
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
+        "animation": {
+          "prefab": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "useLocalInput": false,
+            "idleAnimationName": "Idle_0",
+            "attackAnimationNames": [
+              "Attack_2"
+            ],
+            "comboWindowOverride": -1.0,
+            "comboWindowGrace": 0.05,
+            "loopComboOnHold": true,
+            "attackSpeedMultiplier": 1.0,
+            "$transform": {
+              "localPosition": {
+                "x": -18.3141975,
+                "y": 138.992645,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "MaxTemperature": 500.0
+            },
+            "lightBaseIntensity": 0.28,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": true,
+            "$transform": {
+              "localPosition": {
+                "x": 34.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 2.0,
+                "y": 2.0,
+                "z": 2.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false,
+        "FactionId": ""
+      }
+    },
+    {
       "id": "Axe_Base",
       "abstract": true,
       "shellPrefab": "Axe",
