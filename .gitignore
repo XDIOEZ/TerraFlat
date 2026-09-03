@@ -33,6 +33,7 @@
 ExportedObj/
 .consulo/
 *.csproj
+*.csproj.meta
 *.unityproj
 *.sln
 *.suo
@@ -59,6 +60,7 @@ sysinfo.txt
 *.apk
 *.aab
 *.unitypackage
+*.unitypackage.meta
 *.app
 
 # Local full-project archives are too large for GitHub and must stay outside Git history.
@@ -73,6 +75,9 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Windows/Codex accidental device-name output
+/nul
 
 # Codex temporary files
 /.codex-tmp/
