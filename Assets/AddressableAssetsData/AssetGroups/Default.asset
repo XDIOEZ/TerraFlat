@@ -655,12 +655,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 59ea3cb6a2f6eec4ba71f287f1c5e03d
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Crafting/Module_WorkBench_Player.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5a96499898ce6c9439cd1b78525d7b66
     m_Address: "Assets/2_Prefabs/World/Map/\u5BFB\u8DEF.prefab"
     m_ReadOnly: 0
@@ -1476,12 +1470,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ca4e9b1fb55d2354882fd54109ad9dfa
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_Bonfire.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: caae0063482ab824ca16a7bcf2cf8dfe
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Crafting/Module_WorkBench.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab

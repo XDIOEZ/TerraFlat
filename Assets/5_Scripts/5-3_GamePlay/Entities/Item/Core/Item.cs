@@ -430,42 +430,50 @@ public abstract class Item : MonoBehaviour
             {
                 tempMods.AddMod(mod);
             }
-
-
-            //通过数据进行匹配修复
-            foreach (ModuleData modData in itemData.ModuleDataDic.Values)
+            // 通过逻辑 ID 与定义中的具体 Prefab 地址共同匹配，支持同一玩法模块的多个 Prefab 变体。
+            foreach (KeyValuePair<string, ModuleData> pair in itemData.ModuleDataDic)
             {
+                string stableName = pair.Key;
+                ModuleData modData = pair.Value;
                 if (modData == null || string.IsNullOrWhiteSpace(modData.ID))
                 {
                     Debug.LogWarning($"物品 {gameObject.name} 包含没有有效 ID 的模块数据，已跳过自动修复。", this);
                     continue;
                 }
 
-                Module mod = tempMods.FindModByPersistedId(modData.ID);//待安装数据模块引用
+                string modulePrefabId = ResolveModulePrefabId(stableName, modData.ID);
+                Module mod = tempMods.FindModByPersistedId(modData.ID);
+                if (mod == null &&
+                    !string.Equals(modulePrefabId, modData.ID, StringComparison.OrdinalIgnoreCase))
+                {
+                    mod = tempMods.FindModByPersistedId(modulePrefabId);
+                }
 
-                //不存在模块
+                // 不存在模块时，按定义中的具体 Prefab 地址修复。
                 if (mod == null)
                 {
-
                     Debug.LogWarning($"物品 {gameObject.name} 丢失了模块 {modData.Name} " +
-                        $" ID: {modData.ID}，下面开始尝试自动修复。");
+                        $" ID: {modData.ID}，Prefab: {modulePrefabId}，下面开始尝试自动修复。");
 
-                    GameObject @object = GameRes.Instance?.InstantiatePrefab(modData.ID);
-                    if (@object == null)
+                    GameObject moduleObject = GameRes.Instance?.InstantiatePrefab(modulePrefabId, parent: transform);
+                    if (moduleObject == null)
                     {
                         Debug.LogError($"物品 {gameObject.name} 无法修复模块 {modData.Name} " +
-                            $" ID: {modData.ID}：找不到对应的模块 Prefab。", this);
+                            $" ID: {modData.ID}，Prefab: {modulePrefabId}：找不到对应的模块 Prefab。", this);
                         continue;
                     }
 
-                    @object.transform.SetParent(transform);
+                    moduleObject.name = modulePrefabId;
+                    moduleObject.transform.localPosition = Vector3.zero;
+                    moduleObject.transform.localRotation = Quaternion.identity;
+                    moduleObject.transform.localScale = Vector3.one;
 
-                    mod = @object.GetComponentInChildren<Module>(true);
+                    mod = FindModuleForData(moduleObject, modData.ID, modulePrefabId);
                     if (mod == null)
                     {
                         Debug.LogError($"物品 {gameObject.name} 无法修复模块 {modData.Name} " +
-                            $" ID: {modData.ID}：Prefab 未包含 Module 组件。", @object);
-                        Destroy(@object);
+                            $" ID: {modData.ID}，Prefab: {modulePrefabId}：未找到匹配的 Module 组件。", moduleObject);
+                        Destroy(moduleObject);
                         continue;
                     }
 
@@ -473,19 +481,16 @@ public abstract class Item : MonoBehaviour
                     mod._Data = modData;
 
                     itemMods.AddMod(mod);
-
-                    modsToInit.Add(mod);//添加到待初始化列表
+                    modsToInit.Add(mod);
                 }
-
-                else//存在模块
+                else
                 {
                     tempMods.RemoveMod(mod);
 
                     NormalizeModuleDataId(mod, modData);
                     mod._Data = modData;
 
-                    modsToInit.Add(mod);//添加到待初始化列表
-
+                    modsToInit.Add(mod);
                     itemMods.AddMod(mod);
                 }
             }
@@ -512,16 +517,13 @@ public abstract class Item : MonoBehaviour
                         itemData.ModuleDataDic[mod._Data.Name] = mod._Data;
                         modsToInit.Add(mod);
                     }
-
                 }
             }
-
 
             // 全部加入Mods后再统一初始化（防止初始化中找不到其他模块）
             foreach (var mod in modsToInit)
             {
                 mod.ModuleInit(this, mod._Data);
-
             }
             foreach (var mod in modsToInit)
             {
@@ -532,9 +534,37 @@ public abstract class Item : MonoBehaviour
         MarkModuleScheduleDirty();
     }
 
+    /// <summary>按当前 Item 定义把持久化逻辑 ID 解析为具体模块 Prefab 地址。</summary>
+    private string ResolveModulePrefabId(string stableName, string persistedId)
+    {
+        if (GameRes.Instance == null ||
+            string.IsNullOrWhiteSpace(itemData?.IDName) ||
+            !GameRes.Instance.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition definition))
+        {
+            return persistedId;
+        }
+
+        string prefabId = definition.GetModulePrefabId(stableName, persistedId);
+        return string.IsNullOrWhiteSpace(prefabId) ? persistedId : prefabId.Trim();
+    }
+
+    /// <summary>从修复 Prefab 中选择与逻辑 ID 或具体 Prefab ID 对应的模块。</summary>
+    private static Module FindModuleForData(GameObject moduleObject, string persistedId, string prefabId)
+    {
+        Module[] candidates = moduleObject?.GetComponentsInChildren<Module>(true);
+        if (candidates == null || candidates.Length == 0)
+            return null;
+
+        Module matched = candidates.FirstOrDefault(candidate =>
+            candidate != null &&
+            (candidate.MatchesPersistedId(persistedId) || candidate.MatchesPersistedId(prefabId)));
+        return matched ?? (candidates.Length == 1 ? candidates[0] : null);
+    }
+
+    /// <summary>仅在模块数据缺少 ID 时使用组件的规范 ID 补全。</summary>
     private static void NormalizeModuleDataId(Module module, ModuleData data)
     {
-        if (module == null || data == null)
+        if (module == null || data == null || !string.IsNullOrWhiteSpace(data.ID))
             return;
 
         string canonicalId = module.CanonicalModuleId;
