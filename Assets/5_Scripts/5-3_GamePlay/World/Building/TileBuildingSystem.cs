@@ -40,23 +40,21 @@ public readonly struct TileBuildingCell
 public readonly struct TileBuildingHitCandidate
 {
     public TileBuildingHitCandidate(
-        TilemapDamageReceiver receiver,
-        Vector2Int cell,
+        TileBuildingCell target,
         Vector2 hitPoint,
         float forwardDistance,
         float lateralDistance,
         float attackDistance)
     {
-        Receiver = receiver;
-        Cell = cell;
+        Target = target;
         HitPoint = hitPoint;
         ForwardDistance = forwardDistance;
         LateralDistance = lateralDistance;
         AttackDistance = attackDistance;
     }
 
-    public TilemapDamageReceiver Receiver { get; }
-    public Vector2Int Cell { get; }
+    public TileBuildingCell Target { get; }
+    public Vector2Int Cell => Target.Position;
     public Vector2 HitPoint { get; }
     public float ForwardDistance { get; }
     public float LateralDistance { get; }
@@ -98,6 +96,9 @@ public readonly struct TileBuildingDamageResult
 /// </summary>
 public static class TileBuildingSystem
 {
+    /// <summary>运行时区块中每格建筑累计损伤使用的权威环境层。</summary>
+    public const string RuntimeDamageLayerId = "flatworld.tileBuilding.damage";
+
     private static readonly List<Collider2D> OverlapBuffer = new List<Collider2D>(16);
     private static readonly HashSet<int> VisitedReceivers = new HashSet<int>();
 
@@ -179,6 +180,7 @@ public static class TileBuildingSystem
         return true;
     }
 
+    /// <summary>在旧 Map 或新版 ChunkTerrainData 的阻挡层中放置一格建筑。</summary>
     public static bool TryPlace(
         Vector3 worldPosition,
         string tileBlockId,
@@ -246,6 +248,7 @@ public static class TileBuildingSystem
 
             placedCell = new TileBuildingCell(runtimeChunk, runtimeTile.WorldCell,
                 runtimeTile.LocalCell, runtimeTileId, tileBlockId);
+            ResetRuntimeDamage(terrain, runtimeTile.LocalCell);
             SaveDataMgr.Instance?.RecordRuntimeTerrainChange(placedCell);
             CellPlaced?.Invoke(placedCell);
             return true;
@@ -314,6 +317,7 @@ public static class TileBuildingSystem
             return false;
         }
 
+        ResetRuntimeDamage(terrain, placedCell.LocalPosition);
         SaveDataMgr.Instance?.RecordRuntimeTerrainChange(placedCell);
 
         if (spawnDrop)
@@ -325,6 +329,7 @@ public static class TileBuildingSystem
         return true;
     }
 
+    /// <summary>从旧 Map.Data 中移除一格阻挡建筑并按需生成掉落。</summary>
     public static bool TryRemove(
         Map map,
         Vector2Int cell,
@@ -346,6 +351,7 @@ public static class TileBuildingSystem
         return true;
     }
 
+    /// <summary>从权威区块与旧 Tilemap 中选择最近命中格，并结算一次建筑伤害。</summary>
     public static bool TryDamageNearest(
         Mod_Damage sender,
         Collider2D attackCollider,
@@ -359,6 +365,8 @@ public static class TileBuildingSystem
         if (ItemNetworkStateSerialization.DeferLocalDestruction())
             return false;
 
+        // 项目关闭了 Physics2D 自动同步；动画当帧移动/旋转武器后，读取 Bounds 前先刷新物理姿态。
+        Physics2D.SyncTransforms();
         Vector2 attackCenter = attackCollider.bounds.center;
         Vector2 origin = ResolveAttackOrigin(sender, attackCenter);
         Vector2 direction = attackCenter - origin;
@@ -366,8 +374,13 @@ public static class TileBuildingSystem
             direction = attackCollider.transform.right;
         direction.Normalize();
 
-        // 项目关闭了 Physics2D 自动同步；动画当帧移动/旋转武器后，查询前必须刷新物理姿态。
-        Physics2D.SyncTransforms();
+        // 新版区块直接读取 ChunkTerrainData 权威阻挡层，不依赖 Tilemap 表现是否带 Receiver 或处于何种物理层。
+        bool found = TryFindRuntimeHitCandidate(
+            attackCollider,
+            origin,
+            direction,
+            out TileBuildingHitCandidate best);
+
         OverlapBuffer.Clear();
         VisitedReceivers.Clear();
         ContactFilter2D filter = new ContactFilter2D
@@ -389,8 +402,6 @@ public static class TileBuildingSystem
             filter,
             OverlapBuffer);
 
-        bool found = false;
-        TileBuildingHitCandidate best = default;
         for (int i = 0; i < OverlapBuffer.Count; i++)
         {
             Collider2D overlap = OverlapBuffer[i];
@@ -412,6 +423,7 @@ public static class TileBuildingSystem
         return found && TryDamage(best, sender, out result);
     }
 
+    /// <summary>按工具门槛、难度倍率、防御和建筑最低武器伤害计算最终数值。</summary>
     public static float CalculateDamage(
         TileBuildingDamageProfile profile,
         IDamageSender sender,
@@ -431,16 +443,31 @@ public static class TileBuildingSystem
 
         float multiplier = GameDifficultyService.ResolveDirectDamageMultiplier(sender.attacker, null);
         CombatDamage scaledDamage = sender.DamageValues.Scaled(multiplier);
-        return scaledDamage.CalculateAgainst(profile.ResolveDefense());
+        float calculatedDamage = scaledDamage.CalculateAgainst(profile.ResolveDefense());
+        if (scaledDamage.TotalCombatPower > 0f && profile.MinimumWeaponDamage > 0f)
+            calculatedDamage = Mathf.Max(calculatedDamage, profile.MinimumWeaponDamage);
+        return calculatedDamage;
     }
 
+    /// <summary>按命中目标所属的权威地形分派到新版区块或旧 Map 伤害链。</summary>
     private static bool TryDamage(
         TileBuildingHitCandidate hit,
         Mod_Damage sender,
         out TileBuildingDamageResult result)
     {
+        return hit.Target.UsesRuntimeTerrain
+            ? TryDamageRuntime(hit, sender, out result)
+            : TryDamageLegacy(hit, sender, out result);
+    }
+
+    /// <summary>结算旧 Map.Data 中带 TileData_CellBuilding 状态的格子建筑伤害。</summary>
+    private static bool TryDamageLegacy(
+        TileBuildingHitCandidate hit,
+        Mod_Damage sender,
+        out TileBuildingDamageResult result)
+    {
         result = default;
-        Map map = hit.Receiver != null ? hit.Receiver.BoundMap : null;
+        Map map = hit.Target.Map;
         if (!TryGetTopBlockingTile(map, hit.Cell, out int topIndex, out TileData topTile))
             return false;
 
@@ -508,6 +535,187 @@ public static class TileBuildingSystem
         return true;
     }
 
+    /// <summary>结算 ChunkTerrainData 阻挡层建筑伤害，并把累计损伤同步到运行时差量。</summary>
+    private static bool TryDamageRuntime(
+        TileBuildingHitCandidate hit,
+        Mod_Damage sender,
+        out TileBuildingDamageResult result)
+    {
+        result = default;
+        TileBuildingCell target = hit.Target;
+        RuntimeChunk runtimeChunk = target.RuntimeChunk;
+        ChunkTerrainData terrain = runtimeChunk?.Terrain;
+        if (runtimeChunk == null || runtimeChunk.DataStatus != ChunkDataStatus.Ready ||
+            terrain == null || terrain.IsDisposed)
+        {
+            return false;
+        }
+
+        int localX = target.LocalPosition.x;
+        int localY = target.LocalPosition.y;
+        if ((uint)localX >= (uint)terrain.Width || (uint)localY >= (uint)terrain.Height)
+            return false;
+
+        TerrainCell current = terrain.GetCell(localX, localY);
+        if (current.BlockingTileId == 0 ||
+            (target.RuntimeTileId != 0 && current.BlockingTileId != target.RuntimeTileId))
+        {
+            return false;
+        }
+
+        TileBuildingDamageProfile profile = ResolveRuntimeProfile(target);
+        if (profile?.Damageable != true)
+            return false;
+
+        float maxHealth = Mathf.Max(1f, profile.MaxHealth);
+        float accumulatedDamage = ResolveRuntimeDamage(terrain, target.LocalPosition, maxHealth);
+        float remainingHealth = Mathf.Max(0f, maxHealth - accumulatedDamage);
+        float calculatedDamage = CalculateDamage(profile, sender, out _);
+        if (calculatedDamage <= 0f)
+        {
+            result = new TileBuildingDamageResult(
+                null,
+                target.Position,
+                hit.HitPoint,
+                0f,
+                remainingHealth,
+                false,
+                profile.ImpactMaterial);
+            return true;
+        }
+
+        float appliedDamage = Mathf.Min(calculatedDamage, remainingHealth);
+        if (appliedDamage <= 0f)
+            return false;
+
+        accumulatedDamage = Mathf.Min(maxHealth, accumulatedDamage + appliedDamage);
+        remainingHealth = Mathf.Max(0f, maxHealth - accumulatedDamage);
+        bool destroyed = remainingHealth <= 0f;
+        if (destroyed)
+        {
+            if (!terrain.TryRemoveBlockingTile(localX, localY, current.BlockingTileId))
+                return false;
+            ResetRuntimeDamage(terrain, target.LocalPosition);
+            SpawnDrop(profile, target.Position);
+        }
+        else
+        {
+            terrain.SetEnvironmentValue(
+                RuntimeDamageLayerId,
+                localX,
+                localY,
+                accumulatedDamage);
+        }
+
+        SaveDataMgr.Instance?.RecordRuntimeTerrainChange(target);
+        result = new TileBuildingDamageResult(
+            null,
+            target.Position,
+            hit.HitPoint,
+            appliedDamage,
+            remainingHealth,
+            destroyed,
+            profile.ImpactMaterial);
+        CellDamaged?.Invoke(result);
+        if (destroyed)
+            CellDestroyed?.Invoke(result);
+        return true;
+    }
+
+    /// <summary>从新版区块权威阻挡层中选出与攻击形状真正相交且最靠前的格子。</summary>
+    private static bool TryFindRuntimeHitCandidate(
+        Collider2D attackCollider,
+        Vector2 attackOrigin,
+        Vector2 attackDirection,
+        out TileBuildingHitCandidate candidate)
+    {
+        candidate = default;
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        if (chunkManager?.RuntimeChunks == null)
+            return false;
+
+        const float epsilon = 0.0001f;
+        Bounds attackBounds = attackCollider.bounds;
+        int minX = Mathf.FloorToInt(attackBounds.min.x - epsilon);
+        int maxX = Mathf.FloorToInt(attackBounds.max.x + epsilon);
+        int minY = Mathf.FloorToInt(attackBounds.min.y - epsilon);
+        int maxY = Mathf.FloorToInt(attackBounds.max.y + epsilon);
+        Vector2 attackCenter = attackBounds.center;
+        bool found = false;
+        TileBuildingHitCandidate best = default;
+
+        for (int x = minX; x <= maxX; x++)
+        {
+            for (int y = minY; y <= maxY; y++)
+            {
+                Vector2 queryCenter = new Vector2(x + 0.5f, y + 0.5f);
+                if (!chunkManager.TryGetRuntimeTerrainTile(
+                        queryCenter,
+                        out RuntimeTerrainTileSample sample) ||
+                    sample.Cell.BlockingTileId == 0 ||
+                    !chunkManager.TryGetChunkRuntime(sample.Address, out RuntimeChunk runtimeChunk) ||
+                    !TryResolveRuntimeTileBlockId(
+                        chunkManager,
+                        sample.Cell.BlockingTileId,
+                        out string tileBlockId) ||
+                    !TryGetRuntimeCellHitPoint(
+                        attackCollider,
+                        new Vector2Int(x, y),
+                        queryCenter,
+                        out Vector2 hitPoint))
+                {
+                    continue;
+                }
+
+                Vector2 fromOrigin = queryCenter - attackOrigin;
+                float forward = Vector2.Dot(fromOrigin, attackDirection);
+                if (forward < -epsilon)
+                    continue;
+
+                float lateral = Mathf.Abs(
+                    attackDirection.x * fromOrigin.y -
+                    attackDirection.y * fromOrigin.x);
+                float distance = (queryCenter - attackCenter).sqrMagnitude;
+                TileBuildingCell target = new TileBuildingCell(
+                    runtimeChunk,
+                    sample.WorldCell,
+                    sample.LocalCell,
+                    sample.Cell.BlockingTileId,
+                    tileBlockId);
+                TileBuildingHitCandidate current = new TileBuildingHitCandidate(
+                    target,
+                    hitPoint,
+                    Mathf.Max(0f, forward),
+                    lateral,
+                    distance);
+
+                if (!found || IsBetterCandidate(current, best))
+                {
+                    found = true;
+                    best = current;
+                }
+            }
+        }
+
+        candidate = best;
+        return found;
+    }
+
+    /// <summary>用攻击 Collider 的最近点验证它是否真正进入指定的一格世界方块。</summary>
+    private static bool TryGetRuntimeCellHitPoint(
+        Collider2D attackCollider,
+        Vector2Int queryCell,
+        Vector2 cellCenter,
+        out Vector2 hitPoint)
+    {
+        hitPoint = attackCollider.ClosestPoint(cellCenter);
+        const float epsilon = 0.0001f;
+        return hitPoint.x >= queryCell.x - epsilon &&
+               hitPoint.x <= queryCell.x + 1f + epsilon &&
+               hitPoint.y >= queryCell.y - epsilon &&
+               hitPoint.y <= queryCell.y + 1f + epsilon;
+    }
+
     private static bool TryGetLoadedMap(Vector2Int cell, out Map map, out string reason)
     {
         map = null;
@@ -559,6 +767,23 @@ public static class TileBuildingSystem
         return false;
     }
 
+    /// <summary>把新版地形中的数字阻挡 TileId 解析回稳定的 Tile_Block ID。</summary>
+    private static bool TryResolveRuntimeTileBlockId(
+        ChunkMgr chunkManager,
+        int runtimeTileId,
+        out string tileBlockId)
+    {
+        tileBlockId = null;
+        if (chunkManager == null || runtimeTileId <= 0)
+            return false;
+
+        IReadOnlyDictionary<string, string> textParameters =
+            chunkManager.ActiveGenerationProfile?.TextParameters;
+        return textParameters != null &&
+               textParameters.TryGetValue($"tile.block.{runtimeTileId}", out tileBlockId) &&
+               !string.IsNullOrWhiteSpace(tileBlockId);
+    }
+
     private static bool TryGetTopBlockingTile(
         Map map,
         Vector2Int cell,
@@ -582,13 +807,66 @@ public static class TileBuildingSystem
         return definition?.damageProfile;
     }
 
+    /// <summary>从运行时数字 TileId 或已知稳定 ID 解析对应的格子建筑伤害配置。</summary>
     private static TileBuildingDamageProfile ResolveRuntimeProfile(TileBuildingCell placedCell)
     {
-        if (GameRes.Instance == null || string.IsNullOrWhiteSpace(placedCell.TileBlockId))
+        if (GameRes.Instance == null)
             return null;
 
-        Tile_Block definition = GameRes.Instance.GetTileBlock(placedCell.TileBlockId);
+        string tileBlockId = placedCell.TileBlockId;
+        if (string.IsNullOrWhiteSpace(tileBlockId) &&
+            !TryResolveRuntimeTileBlockId(
+                ChunkMgr.Instance,
+                placedCell.RuntimeTileId,
+                out tileBlockId))
+        {
+            return null;
+        }
+
+        Tile_Block definition = GameRes.Instance.GetTileBlock(tileBlockId);
         return definition?.damageProfile;
+    }
+
+    /// <summary>读取并校正一格运行时建筑已经累计的损伤值。</summary>
+    private static float ResolveRuntimeDamage(
+        ChunkTerrainData terrain,
+        Vector2Int localPosition,
+        float maxHealth)
+    {
+        if (terrain == null ||
+            !terrain.TryGetEnvironmentValue(
+                RuntimeDamageLayerId,
+                localPosition.x,
+                localPosition.y,
+                out float accumulatedDamage))
+        {
+            return 0f;
+        }
+
+        return Mathf.Clamp(accumulatedDamage, 0f, Mathf.Max(1f, maxHealth));
+    }
+
+    /// <summary>清除已拆除或新放置建筑格中可能遗留的运行时损伤。</summary>
+    private static void ResetRuntimeDamage(
+        ChunkTerrainData terrain,
+        Vector2Int localPosition)
+    {
+        if (terrain == null ||
+            !terrain.TryGetEnvironmentValue(
+                RuntimeDamageLayerId,
+                localPosition.x,
+                localPosition.y,
+                out float accumulatedDamage) ||
+            Mathf.Approximately(accumulatedDamage, 0f))
+        {
+            return;
+        }
+
+        terrain.SetEnvironmentValue(
+            RuntimeDamageLayerId,
+            localPosition.x,
+            localPosition.y,
+            0f);
     }
 
     private static void RefreshBlockingState(Map map, Vector2Int cell)

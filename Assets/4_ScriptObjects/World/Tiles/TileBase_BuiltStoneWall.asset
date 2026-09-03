@@ -25,7 +25,8 @@ MonoBehaviour:
       Piercing: 5
       Chopping: 5
       Blunt: 5
-    RequiredTool: 1
+    RequiredTool: 0
+    MinimumWeaponDamage: 1
     ImpactMaterial: 4
     DropItemId: Wall_Stone_Summoner
     DropAmount: 1

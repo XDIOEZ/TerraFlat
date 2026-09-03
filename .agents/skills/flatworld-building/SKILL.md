@@ -25,6 +25,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 动态建筑保持 GameObject + Collider + `BuildingOccupancyRegistry`，不得写入地形 `TileData`。
 - 静态岩壁/结构墙才使用 Blocking Tile；例如 `Wall_Stone` 只有 Summoner JSON，不创建动态本体定义。Tile 栈只通过 `Data_TileMap` API 读写。
 - 新版 WorldModel 的玩家格子建筑虽使用 `ChunkTerrainData.BlockingTileId`，仍必须接入存档的运行时区块差量；不能只依赖 `MapSave.items`。
+- 新版格子建筑的耐久或累计损伤必须与 `BlockingTileId` 一起保存在 `ChunkTerrainData`，并进入 `RuntimeTileDeltas`；否则区块回收或重载后会回满。
 - 新版 WorldModel 的动态建筑 Item 不挂旧 `Chunk.RunTimeItems`；必须按 `Mod_Building` 的角色筛选，在 `ChangedItems` 中保存完整 `ItemData`，并在区块就绪后恢复模块状态/耐久。
 - `BuildingShadow` 的 `sourceRenderer` 与 `sourceRoot` 必须来自同一对象层级；共享本体 Shell 资源本身没有 Sprite，预览应从 `RuntimeItemDefinition` 创建无模块的轻量预览源，同时使用本体 JSON Collider 计算占地，禁止回退到召唤器图标或共享 Shell 默认尺寸。
 - 带 `Building_Data.TileBlockId` 的建筑最终由 `TileBuildingSystem` 写入 Tilemap，预览图片与占地范围必须以格心为锚点，不能继承本体 Sprite 子节点的局部偏移。

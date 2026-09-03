@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -17,8 +17,8 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 6;
-    private const int ModdedSaveVersion = 5;
+    private const int CompactSaveVersion = 7;
+    private const int ModdedSaveVersion = 6;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
@@ -1211,20 +1211,35 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             if ((uint)x >= (uint)terrain.Width || (uint)y >= (uint)terrain.Height)
                 continue;
 
+            TerrainCell current = terrain.GetCell(x, y);
             if (cell.BlockingTileId == 0)
             {
-                TerrainCell current = terrain.GetCell(x, y);
                 if (current.BlockingTileId != 0)
-                    terrain.TryRemoveBlockingTile(x, y, current.BlockingTileId);
+                {
+                    if (!terrain.TryRemoveBlockingTile(x, y, current.BlockingTileId))
+                        continue;
+                }
             }
-            else
+            else if (current.BlockingTileId != cell.BlockingTileId)
             {
-                terrain.TrySetBlockingTile(x, y, cell.BlockingTileId);
+                if (current.BlockingTileId != 0 &&
+                    !terrain.TryRemoveBlockingTile(x, y, current.BlockingTileId))
+                {
+                    continue;
+                }
+
+                if (!terrain.TrySetBlockingTile(x, y, cell.BlockingTileId))
+                    continue;
             }
+
+            float accumulatedDamage = cell.BlockingTileId == 0
+                ? 0f
+                : Mathf.Max(0f, cell.AccumulatedDamage);
+            WriteRuntimeBuildingDamage(terrain, x, y, accumulatedDamage);
         }
     }
 
-    /// <summary>放置或拆除运行时格子建筑后立即更新内存差量，保证区块被流送回收前也不会丢失修改。</summary>
+    /// <summary>放置、受损或拆除运行时格子建筑后立即更新内存差量，避免区块回收时丢失状态。</summary>
     public void RecordRuntimeTerrainChange(TileBuildingCell placedCell)
     {
         if (!GameNetwork.HasStateAuthority || SaveData == null ||
@@ -1253,8 +1268,10 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             return;
 
         int blockingTileId = terrain.GetCell(x, y).BlockingTileId;
+        float accumulatedDamage = ReadRuntimeBuildingDamage(terrain, x, y);
         SetRuntimeTileDelta(key, planetName, chunk.Address, placedCell.LocalPosition,
-            blockingTileId, baseline.GetBlockingTileId(x, y));
+            blockingTileId, accumulatedDamage, baseline.GetBlockingTileId(x, y),
+            baseline.GetAccumulatedDamage(x, y));
         runtimeTerrainDirtyChunks.Add(key);
     }
 
@@ -1292,6 +1309,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         runtimeTerrainDirtyChunks.Clear();
     }
 
+    /// <summary>为当前运行时区块建立一次程序化阻挡层与建筑损伤基线。</summary>
     private bool TryEnsureRuntimeChunkBaseline(
         string key,
         ChunkRuntime chunk,
@@ -1317,30 +1335,47 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 blockingTileIds[y * terrain.Width + x] = terrain.GetCell(x, y).BlockingTileId;
         }
 
-        baseline = new RuntimeChunkBaseline(chunk, terrain.Width, terrain.Height, blockingTileIds);
+        if (!terrain.TryCopyEnvironmentLayer(
+                TileBuildingSystem.RuntimeDamageLayerId,
+                out float[] accumulatedDamage))
+        {
+            accumulatedDamage = Array.Empty<float>();
+        }
+
+        baseline = new RuntimeChunkBaseline(
+            chunk,
+            terrain.Width,
+            terrain.Height,
+            blockingTileIds,
+            accumulatedDamage);
         runtimeChunkBaselines[key] = baseline;
         return true;
     }
 
+    /// <summary>更新一格运行时阻挡 Tile 与累计建筑损伤的最小差量。</summary>
     private void SetRuntimeTileDelta(
         string key,
         string planetName,
         RuntimeWorldAddress address,
         Vector2Int localPosition,
         int blockingTileId,
-        int baselineBlockingTileId)
+        float accumulatedDamage,
+        int baselineBlockingTileId,
+        float baselineAccumulatedDamage)
     {
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta) || delta == null)
             delta = CreateRuntimeChunkDelta(planetName, address);
 
         delta.RuntimeTileDeltas ??= new List<RuntimeTileCellSaveDelta>();
         delta.RuntimeTileDeltas.RemoveAll(cell => cell.LocalPosition == localPosition);
-        if (blockingTileId != baselineBlockingTileId)
+        if (blockingTileId != baselineBlockingTileId ||
+            !Mathf.Approximately(accumulatedDamage, baselineAccumulatedDamage))
         {
             delta.RuntimeTileDeltas.Add(new RuntimeTileCellSaveDelta
             {
                 LocalPosition = localPosition,
-                BlockingTileId = blockingTileId
+                BlockingTileId = blockingTileId,
+                AccumulatedDamage = Mathf.Max(0f, accumulatedDamage)
             });
             delta.RuntimeTileDeltas.Sort(CompareRuntimeTileDelta);
             chunkDeltas[key] = delta;
@@ -1351,6 +1386,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             chunkDeltas.Remove(key);
     }
 
+    /// <summary>保存前按完整区块状态重建运行时地形差量。</summary>
     private void RefreshRuntimeChunkDelta(
         string key,
         string planetName,
@@ -1368,13 +1404,20 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             for (int y = 0; y < terrain.Height; y++)
             {
                 int currentBlockingTileId = terrain.GetCell(x, y).BlockingTileId;
-                if (currentBlockingTileId == baseline.GetBlockingTileId(x, y))
+                float currentAccumulatedDamage = ReadRuntimeBuildingDamage(terrain, x, y);
+                if (currentBlockingTileId == baseline.GetBlockingTileId(x, y) &&
+                    Mathf.Approximately(
+                        currentAccumulatedDamage,
+                        baseline.GetAccumulatedDamage(x, y)))
+                {
                     continue;
+                }
 
                 changes.Add(new RuntimeTileCellSaveDelta
                 {
                     LocalPosition = new Vector2Int(x, y),
-                    BlockingTileId = currentBlockingTileId
+                    BlockingTileId = currentBlockingTileId,
+                    AccumulatedDamage = currentAccumulatedDamage
                 });
             }
         }
@@ -1389,6 +1432,48 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         delta ??= CreateRuntimeChunkDelta(planetName, address);
         delta.RuntimeTileDeltas = changes;
         chunkDeltas[key] = delta;
+    }
+
+    /// <summary>读取新版区块中一格建筑已累计的损伤；缺少专用环境层时视为未受损。</summary>
+    private static float ReadRuntimeBuildingDamage(ChunkTerrainData terrain, int x, int y)
+    {
+        return terrain != null &&
+               terrain.TryGetEnvironmentValue(
+                   TileBuildingSystem.RuntimeDamageLayerId,
+                   x,
+                   y,
+                   out float accumulatedDamage)
+            ? Mathf.Max(0f, accumulatedDamage)
+            : 0f;
+    }
+
+    /// <summary>恢复一格建筑损伤，并避免为了写入默认零值额外创建整张环境层数组。</summary>
+    private static void WriteRuntimeBuildingDamage(
+        ChunkTerrainData terrain,
+        int x,
+        int y,
+        float accumulatedDamage)
+    {
+        if (terrain == null)
+            return;
+
+        float safeDamage = Mathf.Max(0f, accumulatedDamage);
+        bool hasLayer = terrain.TryGetEnvironmentValue(
+            TileBuildingSystem.RuntimeDamageLayerId,
+            x,
+            y,
+            out float currentDamage);
+        if ((!hasLayer && Mathf.Approximately(safeDamage, 0f)) ||
+            (hasLayer && Mathf.Approximately(currentDamage, safeDamage)))
+        {
+            return;
+        }
+
+        terrain.SetEnvironmentValue(
+            TileBuildingSystem.RuntimeDamageLayerId,
+            x,
+            y,
+            safeDamage);
     }
 
     private static ChunkSaveRecord CreateRuntimeChunkDelta(
@@ -2524,24 +2609,44 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <summary>新版区块的程序化阻挡层基线；用弱引用避免玩家探索过多区块后长期持有运行时对象。</summary>
     private sealed class RuntimeChunkBaseline
     {
-        public RuntimeChunkBaseline(ChunkRuntime chunk, int width, int height, int[] blockingTileIds)
+        /// <summary>复制程序化区块基线，避免后续运行时修改污染比较源。</summary>
+        public RuntimeChunkBaseline(
+            ChunkRuntime chunk,
+            int width,
+            int height,
+            int[] blockingTileIds,
+            float[] accumulatedDamage)
         {
             ChunkReference = new WeakReference(chunk);
             Width = width;
             Height = height;
             BlockingTileIds = blockingTileIds ?? Array.Empty<int>();
+            AccumulatedDamage = accumulatedDamage ?? Array.Empty<float>();
         }
 
         public WeakReference ChunkReference { get; }
         public int Width { get; }
         public int Height { get; }
         public int[] BlockingTileIds { get; }
+        /// <summary>程序化基线中每格建筑已经累计的损伤；空数组表示全为零。</summary>
+        public float[] AccumulatedDamage { get; }
 
         public int GetBlockingTileId(int x, int y)
         {
             if ((uint)x >= (uint)Width || (uint)y >= (uint)Height)
                 return 0;
             return BlockingTileIds[y * Width + x];
+        }
+
+        /// <summary>读取程序化基线中一格建筑的累计损伤。</summary>
+        public float GetAccumulatedDamage(int x, int y)
+        {
+            if ((uint)x >= (uint)Width || (uint)y >= (uint)Height)
+                return 0f;
+            int index = y * Width + x;
+            return (uint)index < (uint)AccumulatedDamage.Length
+                ? AccumulatedDamage[index]
+                : 0f;
         }
     }
 
@@ -2621,4 +2726,6 @@ public partial class RuntimeTileCellSaveDelta
 {
     public Vector2Int LocalPosition;
     public int BlockingTileId;
+    // 0 表示该格建筑满耐久或当前没有阻挡建筑。
+    public float AccumulatedDamage;
 }

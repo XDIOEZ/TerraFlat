@@ -18,6 +18,7 @@ public sealed class TilemapDamageReceiver : MonoBehaviour
         tilemapCollider = targetCollider;
     }
 
+    /// <summary>在旧 Map Tilemap 中找出与攻击形状相交且排序最优的阻挡格。</summary>
     public bool TryResolveHit(
         Collider2D attackCollider,
         Vector2 attackOrigin,
@@ -62,9 +63,9 @@ public sealed class TilemapDamageReceiver : MonoBehaviour
                     attackDirection.x * fromOrigin.y -
                     attackDirection.y * fromOrigin.x);
                 float distance = (center - attackCenter).sqrMagnitude;
+                TileBuildingCell target = new TileBuildingCell(map, worldCell);
                 TileBuildingHitCandidate current = new TileBuildingHitCandidate(
-                    this,
-                    worldCell,
+                    target,
                     hitPoint,
                     Mathf.Max(0f, forward),
                     lateral,

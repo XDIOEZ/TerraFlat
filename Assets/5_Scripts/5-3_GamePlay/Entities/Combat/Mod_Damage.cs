@@ -351,6 +351,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
                Time.time - lastDamageTime >= DamageInterval;
     }
 
+    /// <summary>重置本次攻击命中集合，并立即补查当前重叠的实体与格子建筑。</summary>
     private void BeginTileDamageWindow()
     {
         tileDamageAppliedThisWindow = false;
@@ -358,6 +359,8 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
         windowScanHitReceivers.Clear();
         attackWindowHitReceivers.Clear();
         ScanCurrentOverlapsAndApplyDamageForWindow();
+        // 动画可能在同一帧内开关伤害 Collider，窗口开启时立即补一次格子建筑查询。
+        TryApplyDamageToTilemap();
     }
 
     private void EndDamageWindow()
@@ -558,6 +561,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
         return damageCollider != null && damageCollider.enabled;
     }
 
+    /// <summary>开始新的攻击窗口；伤害冷却只由真正命中负责更新时间。</summary>
     public void StartAttack()
     {
         // 碰撞体可能持续启用，开始新的动作时仍需重新计算本次可命中的目标数。
@@ -572,7 +576,6 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
         }
         // 某些持续伤害模块的碰撞体可能已经启用，路由器会按攻击者去重。
         CombatAudioRouter.PlayWeaponAttack(this);
-        lastDamageTime = Time.time; // 重置伤害计时
     }
     public void StopAttack()
     {

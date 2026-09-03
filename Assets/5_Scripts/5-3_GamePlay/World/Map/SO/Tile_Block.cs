@@ -22,8 +22,12 @@ public sealed class TileBuildingDamageProfile
     [Tooltip("格子建筑的切割、穿刺、劈砍、钝击防御。")]
     public CombatDefense DefenseValues = new CombatDefense();
 
-    [Tooltip("None 表示不限制工具类型。石墙/岩壁应配置为 Pickaxe。")]
+    [Tooltip("None 表示任意武器可攻击；天然岩壁等资源地块可配置为 Pickaxe。")]
     public TileDamageToolKind RequiredTool = TileDamageToolKind.None;
+
+    [Min(0f)]
+    [Tooltip("通过工具限制后，任意有攻击力的武器对该建筑至少造成的伤害；0 表示不保底。")]
+    public float MinimumWeaponDamage;
 
     public CombatImpactMaterial ImpactMaterial = CombatImpactMaterial.Default;
 
