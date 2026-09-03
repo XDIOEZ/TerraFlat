@@ -11,7 +11,10 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInvent
 {
     public override string CanonicalModuleId => ModText.Food;
 
-    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
+    /// <summary>没有持续营养或规则工作的静态食物退出物品 Tick 调度。</summary>
+    public override ModuleTickMode TickMode => _runtimeExecutor?.RequiresFoodTick == true
+        ? ModuleTickMode.FixedInterval
+        : ModuleTickMode.Disabled;
     public override float FixedTickInterval => 0.1f;
 
     [MemoryPackable]
@@ -130,6 +133,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInvent
         base.Awake();
     }
 
+    /// <summary>构建食物运行时并刷新该物品的 Tick 调度状态。</summary>
     public override void Load()
     {
         FoodModData ??= new ModData_FoodData();
@@ -156,6 +160,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInvent
             () => panelUI,
             value => panelUI = value);
         _runtimeExecutor.Initialize();
+        InvalidateTickSchedule();
         BindTabInput();
 
         // 根据保存的状态决定是否显示面板
@@ -242,13 +247,14 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInvent
         TogglePanel();
     }
 
+    /// <summary>在角色拥有控制器模块时绑定参数面板快捷键。</summary>
     private void BindTabInput()
     {
         UnbindTabInput();
         if (item?.itemMods == null)
             return;
 
-        item.itemMods.GetMod_ByID(ModText.Controller, out GameController controller);
+        GameController controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
         if (controller?._inputActions == null)
             return;
 
@@ -266,10 +272,12 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInvent
         _inputController = null;
     }
 
+    /// <summary>释放食物运行时、输入和面板绑定。</summary>
     private void ReleaseRuntimeBindings(bool destroyPanel)
     {
         _runtimeExecutor?.Dispose();
         _runtimeExecutor = null;
+        InvalidateTickSchedule();
 
         if (item != null)
             item.OnAct -= Act;
@@ -393,6 +401,7 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInvent
 
     #region 工具方法
 
+    /// <summary>静默解析只在角色食物上存在的可选运行时模块。</summary>
     private void ResolveFoodRuntimeModules()
     {
         if (item == null || item.itemMods == null)
@@ -400,9 +409,9 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInvent
             return;
         }
 
-        item.itemMods.GetMod_ByID(ModText.Stamina, out _stamina);
-        item.itemMods.GetMod_ByID(ModText.Hp, out _damageReceiver);
-        item.itemMods.GetMod_ByID(Mod_PlayerDeathState.ModuleId, out _deathState);
+        _stamina = item.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
+        _damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        _deathState = item.itemMods.GetMod_ByID<Mod_PlayerDeathState>(Mod_PlayerDeathState.ModuleId);
     }
 
     public void RestoreOnRespawn()

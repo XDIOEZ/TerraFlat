@@ -69,8 +69,24 @@ public sealed class FoodRulePipeline : IDisposable
     public void OnUse(FoodUseContext value) => Each("使用", rule =>
         (rule as IFoodUseRule)?.OnFoodUse(value));
 
+    /// <summary>判断当前规则集合是否存在需要持续调度的 Tick 观察者。</summary>
+    public bool HasActiveTickObservers()
+    {
+        for (int i = 0; i < rules.Count; i++)
+        {
+            if (ShouldTick(rules[i]))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>只推进当前声明为活跃的 Tick 观察者。</summary>
     public void OnTick(FoodTickContext value) => Each("Tick", rule =>
-        (rule as IFoodTickObserver)?.OnFoodTick(value));
+    {
+        if (ShouldTick(rule))
+            ((IFoodTickObserver)rule).OnFoodTick(value);
+    });
 
     public void OnConsumed(FoodConsumeResult value) => Each("吃完", rule =>
         (rule as IFoodConsumptionObserver)?.OnFoodConsumed(value));
@@ -147,6 +163,15 @@ public sealed class FoodRulePipeline : IDisposable
                 item.StateKey, provider.StateKey, StringComparison.Ordinal));
         if (state?.Payload != null)
             Run(rule, "恢复", _ => provider.RestoreState(state.Payload));
+    }
+
+    /// <summary>兼容未声明调度策略的扩展规则，并过滤明确休眠的观察者。</summary>
+    private static bool ShouldTick(IFoodMechanic rule)
+    {
+        if (!(rule is IFoodTickObserver))
+            return false;
+
+        return !(rule is IFoodTickRequirement requirement) || requirement.RequiresFoodTick;
     }
 
     private static void Run(IFoodMechanic rule, string stage, Action<IFoodMechanic> action)

@@ -41,6 +41,12 @@ public interface IFoodTickObserver
     void OnFoodTick(FoodTickContext context);
 }
 
+/// <summary>允许 Tick 观察者声明当前是否需要持续调度。</summary>
+public interface IFoodTickRequirement
+{
+    bool RequiresFoodTick { get; }
+}
+
 /// <summary>完整吃完一份食物时执行。</summary>
 public interface IFoodConsumptionObserver
 {

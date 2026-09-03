@@ -136,6 +136,10 @@ public sealed class FoodNutritionService
     public float BuffNutritionConsumeMultiplier => buffNutritionConsumeMultiplier;
     public float BuffWaterConsumeMultiplier => buffWaterConsumeMultiplier;
 
+    /// <summary>基础营养配置存在持续消耗时才需要周期推进。</summary>
+    public bool RequiresFoodTick => context.Data?.nutrition != null &&
+        context.Data.nutritionConsumeRate > 0f;
+
     public void SetMovementNutritionConsumeMultiplier(float multiplier)
     {
         if (!IsFiniteNonNegative(multiplier))
@@ -365,7 +369,7 @@ public static class FoodConsumptionService
 /// <summary>
 /// 食物生存规则：只处理体力恢复和体力对应的营养消耗。
 /// </summary>
-public sealed class FoodSurvivalRule : IFoodMechanic, IFoodTickObserver
+public sealed class FoodSurvivalRule : IFoodMechanic, IFoodTickObserver, IFoodTickRequirement
 {
     private readonly FoodNutritionService nutritionService;
     private readonly Mod_Stamina stamina;
@@ -373,6 +377,9 @@ public sealed class FoodSurvivalRule : IFoodMechanic, IFoodTickObserver
 
     public string MechanicId => "core.survival";
     public int Priority => 90;
+
+    /// <summary>只有绑定体力模块的角色才需要推进生存规则。</summary>
+    public bool RequiresFoodTick => stamina?.Data != null;
 
     public FoodSurvivalRule(
         FoodNutritionService nutritionService,
@@ -491,6 +498,10 @@ public sealed class FoodRuntimeExecutor : IDisposable
 
     public IFoodRuntimeContext Context => context;
     public FoodNutritionService Nutrition => nutritionService;
+
+    /// <summary>汇总营养服务和扩展规则的持续调度需求。</summary>
+    public bool RequiresFoodTick => nutritionService.RequiresFoodTick ||
+        rulePipeline.HasActiveTickObservers();
 
     public void Initialize()
     {

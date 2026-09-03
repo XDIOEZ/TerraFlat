@@ -320,10 +320,11 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         RefreshUI();
     }
 
+    /// <summary>存在体温模块时刷新体温显示，否则显示空值。</summary>
     private void UpdateTemperatureUI(BasePanel panel)
     {
-        Mod_Temperature temperature = null;
-        context.Item?.itemMods?.GetMod_ByID(ModText.Temperature, out temperature);
+        Mod_Temperature temperature =
+            context.Item?.itemMods?.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
         Slider slider = panel.GetSlider("体温");
         TMPro.TextMeshProUGUI dataText = panel.GetText("DataText_体温");
         if (temperature?.Data == null)
