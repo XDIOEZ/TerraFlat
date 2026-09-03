@@ -1929,10 +1929,6 @@ MonoBehaviour:
     m_Localized: 'Save time: --'
     m_Metadata:
       m_Items: []
-  - m_Id: 3772423276683264
-    m_Localized: 'Pinch Zoom (Off: Disabled)'
-    m_Metadata:
-      m_Items: []
   - m_Id: 3772423608033280
     m_Localized: 'Save time: {0}'
     m_Metadata:
@@ -2003,12 +1999,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 6357770711949313
     m_Localized: Restore All Settings
-    m_Metadata:
-      m_Items: []
-  - m_Id: 6357771135574016
-    m_Localized: Pinch zoom is off by default. Positive lookahead moves the camera
-      ahead; negative values add inertia. Positive zoom influence strengthens prediction
-      when zoomed out, while negative values weaken it.
     m_Metadata:
       m_Items: []
   - m_Id: 6357771135574017
@@ -2099,6 +2089,17 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 8889292883058688
     m_Localized: This building cannot be placed there.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9217444746452992
+    m_Localized: Pinch zoom is disabled at 0; higher values respond faster. Positive
+      lookahead moves the camera ahead; negative values add inertia. Positive zoom
+      influence strengthens prediction when zoomed out, while negative values weaken
+      it.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 9217444792590336
+    m_Localized: Pinch Zoom Sensitivity
     m_Metadata:
       m_Items: []
   references:

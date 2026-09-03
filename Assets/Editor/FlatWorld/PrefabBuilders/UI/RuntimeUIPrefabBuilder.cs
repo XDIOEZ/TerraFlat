@@ -1650,19 +1650,24 @@ public static class RuntimeUIPrefabBuilder
         CreateSettingsHeader(content, "镜头控制");
         CreateSettingsHint(
             content,
-            "双指缩放默认关闭。镜头前探正值为提前跟随，负值为惯性；缩放影响系数为正时拉远会增强预测，为负时会减弱。",
+            "双指缩放灵敏度为 0 时关闭，数值越大响应越快。镜头前探正值为提前跟随，负值为惯性；缩放影响系数为正时拉远会增强预测，为负时会减弱。",
             64f);
 
-        GameObject pinchZoomRow = CreateRow("双指缩放行", content, 48f);
-        TextMeshProUGUI pinchZoomLabel = CreateText(
-            "双指缩放说明",
+        GameObject pinchZoomRow = CreateRow("双指缩放行", content, 52f);
+        CreateRowLabel(pinchZoomRow.transform, "双指缩放灵敏度", 128f);
+        Slider pinchZoomSlider = CreateSlider("双指缩放灵敏度", pinchZoomRow.transform);
+        pinchZoomSlider.minValue = UIUserSettings.MinimumPinchZoomSensitivity;
+        pinchZoomSlider.maxValue = UIUserSettings.MaximumPinchZoomSensitivity;
+        pinchZoomSlider.wholeNumbers = true;
+        pinchZoomSlider.value = UIUserSettings.DefaultPinchZoomSensitivity;
+        TextMeshProUGUI pinchZoomValue = CreateText(
+            "双指缩放灵敏度数值",
             pinchZoomRow.transform,
-            "双指缩放（关闭则禁用）",
-            17f,
-            Cream);
-        pinchZoomLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        Toggle pinchZoomToggle = CreateToggle("双指缩放", pinchZoomRow.transform);
-        pinchZoomToggle.isOn = false;
+            "0",
+            16f,
+            Amber);
+        pinchZoomValue.alignment = TextAlignmentOptions.MidlineRight;
+        pinchZoomValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 76f;
 
         GameObject lookaheadRow = CreateRow("镜头前探行", content, 52f);
         CreateRowLabel(lookaheadRow.transform, "镜头前探", 128f);

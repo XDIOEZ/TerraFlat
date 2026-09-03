@@ -26,8 +26,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private const float MoveZoneMarginX = 76f;
     private const float MoveZoneMarginY = 54f;
     private const float FixedMoveZoneSize = 230f;
-    // 双指纵向缩放的灵敏度与像素噪声阈值。
-    private const float TwoFingerZoomSensitivity = 0.015f;
+    // 设置值 100 对应原有缩放速度，0 表示关闭。
+    private const float TwoFingerZoomSensitivityPerUnit = 0.00015f;
     private const float TwoFingerZoomNoiseThreshold = 1f;
 
     private static readonly Color RunOffColor = new(0.094f, 0.212f, 0.247f, 0.99f);
@@ -365,7 +365,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     /// <summary>仅在手机玩法层可交互时处理双指镜头缩放。</summary>
     private bool IsGameplayTouchAvailable()
     {
-        return UIUserSettings.EnablePinchZoom &&
+        return UIUserSettings.PinchZoomSensitivity > 0f &&
                ShouldShow() &&
                viewObject != null &&
                viewObject.activeInHierarchy &&
@@ -416,7 +416,9 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             return;
 
         // 向上滑对应滚轮向上：减小正交尺寸并拉近镜头。
-        cameraModule.ChangeCameraView(-centerDelta.y * TwoFingerZoomSensitivity);
+        float sensitivity = UIUserSettings.PinchZoomSensitivity *
+                            TwoFingerZoomSensitivityPerUnit;
+        cameraModule.ChangeCameraView(-centerDelta.y * sensitivity);
     }
 
     /// <summary>从当前触摸中取得最先出现的两个中间区触点，左右摇杆区触点不参与缩放。</summary>

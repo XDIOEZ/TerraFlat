@@ -8,15 +8,16 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecycle
 {
-    private Toggle pinchZoomToggle;
+    private Slider pinchZoomSensitivitySlider;
     private Slider lookaheadSlider;
     private Slider smoothingSlider;
     private Slider zoomInfluenceSlider;
+    private TextMeshProUGUI pinchZoomSensitivityValueText;
     private TextMeshProUGUI lookaheadValueText;
     private TextMeshProUGUI smoothingValueText;
     private TextMeshProUGUI zoomInfluenceValueText;
     private Button resetButton;
-    private ISettingsToggle pinchZoomSetting;
+    private ISettingsSlider pinchZoomSensitivitySetting;
     private ISettingsSlider lookaheadSetting;
     private ISettingsSlider smoothingSetting;
     private ISettingsSlider zoomInfluenceSetting;
@@ -45,34 +46,40 @@ public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour, ISetting
 
         ISettingsProvider uiProvider = UIUserSettings.SettingsProvider;
         cameraSettingsProvider = CameraUserSettings.SettingsProvider;
-        pinchZoomSetting = uiProvider.GetToggle(UIUserSettings.EnablePinchZoomSettingKey);
+        pinchZoomSensitivitySetting = uiProvider.GetSlider(
+            UIUserSettings.PinchZoomSensitivitySettingKey);
         lookaheadSetting = cameraSettingsProvider.GetSlider(CameraUserSettings.LookaheadSettingKey);
         smoothingSetting = cameraSettingsProvider.GetSlider(
             CameraUserSettings.LookaheadSmoothingSettingKey);
         zoomInfluenceSetting = cameraSettingsProvider.GetSlider(
             CameraUserSettings.LookaheadZoomInfluenceSettingKey);
 
-        pinchZoomToggle = FindComponent<Toggle>(transform, "双指缩放");
+        pinchZoomSensitivitySlider = FindComponent<Slider>(transform, "双指缩放灵敏度");
         lookaheadSlider = FindComponent<Slider>(transform, "镜头前探");
         smoothingSlider = FindComponent<Slider>(transform, "预判平滑");
         zoomInfluenceSlider = FindComponent<Slider>(transform, "缩放影响系数");
+        pinchZoomSensitivityValueText = FindComponent<TextMeshProUGUI>(
+            transform,
+            "双指缩放灵敏度数值");
         lookaheadValueText = FindComponent<TextMeshProUGUI>(transform, "镜头前探数值");
         smoothingValueText = FindComponent<TextMeshProUGUI>(transform, "预判平滑数值");
         zoomInfluenceValueText = FindComponent<TextMeshProUGUI>(transform, "缩放影响系数数值");
         resetButton = FindComponent<Button>(transform, "恢复默认按钮");
 
+        ConfigureSlider(pinchZoomSensitivitySlider, pinchZoomSensitivitySetting);
         ConfigureSlider(lookaheadSlider, lookaheadSetting);
         ConfigureSlider(smoothingSlider, smoothingSetting);
         ConfigureSlider(zoomInfluenceSlider, zoomInfluenceSetting);
-        pinchZoomToggle?.onValueChanged.AddListener(OnPinchZoomChanged);
+        pinchZoomSensitivitySlider?.onValueChanged.AddListener(OnPinchZoomSensitivityChanged);
         lookaheadSlider?.onValueChanged.AddListener(OnLookaheadChanged);
         smoothingSlider?.onValueChanged.AddListener(OnSmoothingChanged);
         zoomInfluenceSlider?.onValueChanged.AddListener(OnZoomInfluenceChanged);
         resetButton?.onClick.AddListener(ResetToDefault);
         initialized = true;
 
-        if (pinchZoomToggle == null || lookaheadSlider == null || smoothingSlider == null ||
-            zoomInfluenceSlider == null || lookaheadValueText == null ||
+        if (pinchZoomSensitivitySlider == null || lookaheadSlider == null ||
+            smoothingSlider == null || zoomInfluenceSlider == null ||
+            pinchZoomSensitivityValueText == null || lookaheadValueText == null ||
             smoothingValueText == null || zoomInfluenceValueText == null || resetButton == null)
         {
             Debug.LogError(
@@ -89,13 +96,16 @@ public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour, ISetting
 
         slider.minValue = setting.MinValue;
         slider.maxValue = setting.MaxValue;
-        slider.wholeNumbers = false;
+        slider.wholeNumbers = setting.Step >= 1f;
     }
 
-    /// <summary>写入双指缩放偏好。</summary>
-    private void OnPinchZoomChanged(bool value)
+    /// <summary>写入双指缩放灵敏度，0 值由运行时解释为关闭。</summary>
+    private void OnPinchZoomSensitivityChanged(float value)
     {
-        pinchZoomSetting?.SetValue(value);
+        pinchZoomSensitivitySetting?.SetValue(value);
+        pinchZoomSensitivitySlider?.SetValueWithoutNotify(
+            pinchZoomSensitivitySetting?.Value ?? value);
+        RefreshValueTexts();
     }
 
     /// <summary>写入带符号的镜头前探值。</summary>
@@ -125,7 +135,7 @@ public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour, ISetting
     /// <summary>恢复镜头控制页的四项默认设置。</summary>
     private void ResetToDefault()
     {
-        UIUserSettings.ResetPinchZoomToDefault();
+        UIUserSettings.ResetPinchZoomSensitivityToDefault();
         cameraSettingsProvider?.ResetToDefaults();
         RefreshValues();
     }
@@ -133,8 +143,8 @@ public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour, ISetting
     /// <summary>从设置 Provider 回填全部镜头控制值。</summary>
     private void RefreshValues()
     {
-        if (pinchZoomToggle != null && pinchZoomSetting != null)
-            pinchZoomToggle.SetIsOnWithoutNotify(pinchZoomSetting.Value);
+        if (pinchZoomSensitivitySlider != null && pinchZoomSensitivitySetting != null)
+            pinchZoomSensitivitySlider.SetValueWithoutNotify(pinchZoomSensitivitySetting.Value);
         if (lookaheadSlider != null && lookaheadSetting != null)
             lookaheadSlider.SetValueWithoutNotify(lookaheadSetting.Value);
         if (smoothingSlider != null && smoothingSetting != null)
@@ -144,9 +154,11 @@ public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour, ISetting
         RefreshValueTexts();
     }
 
-    /// <summary>刷新三个镜头参数的数值文本。</summary>
+    /// <summary>刷新双指缩放和三个镜头参数的数值文本。</summary>
     private void RefreshValueTexts()
     {
+        if (pinchZoomSensitivityValueText != null && pinchZoomSensitivitySetting != null)
+            pinchZoomSensitivityValueText.text = pinchZoomSensitivitySetting.Value.ToString("0");
         if (lookaheadValueText != null && lookaheadSetting != null)
             lookaheadValueText.text = FormatSigned(lookaheadSetting.Value, "0.00", "s");
         if (smoothingValueText != null && smoothingSetting != null)
@@ -169,7 +181,8 @@ public sealed class CameraControlSettingsPanelLauncher : MonoBehaviour, ISetting
     /// <summary>解除本控制器注册的全部 UI 监听。</summary>
     private void OnDestroy()
     {
-        pinchZoomToggle?.onValueChanged.RemoveListener(OnPinchZoomChanged);
+        pinchZoomSensitivitySlider?.onValueChanged.RemoveListener(
+            OnPinchZoomSensitivityChanged);
         lookaheadSlider?.onValueChanged.RemoveListener(OnLookaheadChanged);
         smoothingSlider?.onValueChanged.RemoveListener(OnSmoothingChanged);
         zoomInfluenceSlider?.onValueChanged.RemoveListener(OnZoomInfluenceChanged);

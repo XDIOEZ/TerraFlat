@@ -84,7 +84,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         "界面缩放",
         "控制模式下拉列表",
         "世界坐标模式按钮",
-        "双指缩放",
+        "双指缩放灵敏度",
         "MasterVolume",
         UIText.SaveButton,
         "自动保存间隔下拉列表",
