@@ -26,6 +26,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - `DamageReceiver` 与实际受击 `Collider2D` 不保证位于同一节点；Collider 还可能位于同一 Item 的兄弟模块。组件解析在当前节点/父级/子级都失败时必须回到最近的 Item 根搜索完整子树；命中特效应优先使用碰撞回调传入的 Collider 定位，并在缺失时回退子级、父级或接收器中心，禁止直接假定 `receiver.GetComponent<Collider2D>()` 非空。
 - ItemDefinition 的模块 JSON 不应写入 `AttackEffects: []` 等 Unity 资源引用集合；运行时 `PopulateObject` 会用空数组覆盖 Prefab 引用，导致命中特效被清空。迁移器应跳过 `UnityEngine.Object` 集合。
 - 命中特效必须区分 `0` 与 `-1`：`0` 表示有效命中但被护甲完全抵消，应播放数字 0；`-1` 表示死亡、受伤冷却等无效结算，不应播放命中特效；可破坏 Tile 也应把零伤害命中返回给 `Mod_Damage`。
+- 概率命中状态不要硬编码进 `Mod_Damage`；伤害模块只发布实体命中目标与结算结果，`DamageOnHitBuffApplier` 等独立组件再通过目标 `BuffManager` 添加状态。`0` 仍属于有效实体命中并可触发状态，负数无效结算不触发；Tile 伤害不发布实体命中事件。
 - 玩家进入 `Mod_PlayerDeathState` 濒死状态后，`Mod_Food` 等被动生命模块不得继续改写 `DamageReceiver.Hp`，否则会把死亡状态抬成极低正数。
 - 启用身体部位生命时，普通总量回血只能分配给仍存活的部位，不能复活已耗尽的手脚；直接重生或满血赋值才允许恢复全部部位。
 - 武器的 `Mod_Damage` 必须是武器 Prefab 内的直接子物体，禁止再嵌套 `Mod_Damage.prefab` 实例；`Mod_Weapon_AnimationAction.damageModule` 与 `Mod_Damage.damageCollider` 必须显式序列化绑定，攻击动画曲线只负责开关已存在的碰撞体，运行时不得自动查找或补建。

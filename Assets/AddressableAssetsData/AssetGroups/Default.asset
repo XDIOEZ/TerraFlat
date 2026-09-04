@@ -860,6 +860,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6f255a5a1b82c1b46b564cdae5f72880
+    m_Address: Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6f27a587bf720974ca9a865de93b5e99
     m_Address: Assets/2_Prefabs/Gameplay/Skills/Stone_KnifeThrowing.prefab
     m_ReadOnly: 0

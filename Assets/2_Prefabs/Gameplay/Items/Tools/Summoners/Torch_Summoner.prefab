@@ -383,6 +383,7 @@ GameObject:
   - component: {fileID: 1045927130170377979}
   - component: {fileID: 4273094557522732137}
   - component: {fileID: 7643096827154029811}
+  - component: {fileID: 8123456789012345678}
   m_Layer: 0
   m_Name: "Torch_Summoner"
   m_TagString: Untagged
@@ -561,6 +562,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   angleOffsetDegrees: -90
+--- !u!114 &8123456789012345678
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6598347724538692461}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c7a1d8f3b2e4c5d8a6f0b1c2d3e4f50, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  damageModule: {fileID: 1304715907743360776}
+  buffId: "\u71C3\u70E7"
+  applicationChance: 0.25
 --- !u!1 &8051387479475521460
 GameObject:
   m_ObjectHideFlags: 0
@@ -728,11 +744,11 @@ PrefabInstance:
       objectReference: {fileID: 3681087309403493207}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: BuildingData.BitData
-      value: '{"Version":3,"maxVisibleDistance":2.0,"minVisibleDistance":1.0,"State":0,"Role":0,"SnapshotBase64":null,"BuildingPrefabId":"Torch","SummonerPrefabId":"Torch_Summoner"}'
+      value: '{"Version":3,"maxVisibleDistance":2.0,"minVisibleDistance":1.0,"State":0,"Role":0,"SnapshotBase64":null,"BuildingPrefabId":"Torch_Building","SummonerPrefabId":"Torch_Summoner"}'
       objectReference: {fileID: 0}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: Data.BuildingPrefabId
-      value: "Torch"
+      value: "Torch_Building"
       objectReference: {fileID: 0}
     - target: {fileID: 982652896453492170, guid: aa1366b7aaea32e4bb00bbfd19554890, type: 3}
       propertyPath: Data.SummonerPrefabId

@@ -21,7 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 以 `BuildingRole` 区分 Summoner/PlacedBuilding，禁止用血量或位置推断。
 - 无快照的新放置必须通过 `GameRes.CreateItemData(BuildingPrefabId)` 创建本体 JSON 数据；禁止再克隆 Summoner 数据后改 ID。拆除快照仍由 Summoner 携带并优先恢复。
 - 通用建筑本体只提供 `Item + SpriteRenderer + BoxCollider2D`；伤害由 JSON `health` 注入，门、容器、工作台等反馈由独立 `IInteractable` Module 提供，不再依赖通用 `Mod_InteractReciver` 转发。
-- 手持火把与建筑火把职责不同：手持物保持 `Torch`，建筑本体使用 `Torch_Building`，`Torch_Summoner` 只能指向后者；手持 Prefab 不得再内嵌 `Mod_Building`，迁移器从通用 `Module_Building` 生成建筑关系。
+- 火把的手持职责与落地建筑本体保持分离：落地后统一使用 `Torch_Building`，`Torch_Summoner` 只能指向后者；普通 Summoner 继续使用 `BuildingSummonerShell`，但 `Torch_Summoner` 因同时承担手持攻击与动态 2D 点光源，是允许使用专用运行时 Shell 的例外，其 Prefab 内的 Animator、`Mod_Damage` 与 Light2D 必须成套保留。独立手持物 `Torch` 不得内嵌 `Mod_Building`。
 - 动态建筑保持 GameObject + Collider + `BuildingOccupancyRegistry`，不得写入地形 `TileData`。
 - 静态岩壁/结构墙才使用 Blocking Tile；例如 `Wall_Stone` 只有 Summoner JSON，不创建动态本体定义。Tile 栈只通过 `Data_TileMap` API 读写。
 - 新版 WorldModel 的玩家格子建筑虽使用 `ChunkTerrainData.BlockingTileId`，仍必须接入存档的运行时区块差量；不能只依赖 `MapSave.items`。
