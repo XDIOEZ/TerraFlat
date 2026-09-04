@@ -55,8 +55,9 @@
         "Temp/": true,
         "UserSettings/": true
     },
-    "dotnet.defaultSolution": "FlatWorld.sln",
-    "dotnet.preferCSharpExtension": true,
+    "<<<<<<<HEADdotnet.defaultSolution": "FlatWorld.sln",
+    "=======dotnet.defaultSolution": "TerraFlat-master.sln",
+    ">>>>>>>origin/masterdotnet.preferCSharpExtension": true,
     "workbench.editorAssociations": {
         "*.prefab": "unityPrefabBrowser.prefabEditor"
     },
@@ -65,5 +66,6 @@
     "chat.permissions.default": "autoApprove",
     "chat.autopilot.advanced.enabled": true,
     "gcmp.commit.customInstructions": "生成详细的提交消息,简短但是全面的描述此次提交对系统的修改",
-    "gcmp.commit.format": "custom"
+    "gcmp.commit.format": "custom",
+    "dotnet.defaultSolution": "FlatWorld.sln"
 }

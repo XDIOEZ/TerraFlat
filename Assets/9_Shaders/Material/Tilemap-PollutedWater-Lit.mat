@@ -45,6 +45,10 @@ Material:
     - _EdgeWidth: 0.24
     - _EnableExternalAlpha: 0
     - _FoamSpeed: 0.16
+<<<<<<< HEAD:Assets/Shaders/Material/Tilemap-PollutedWater-Lit.mat
+=======
+    - _TideCyclesPerDay: 2
+>>>>>>> origin/master:Assets/9_Shaders/Material/Tilemap-PollutedWater-Lit.mat
     - _NormalStrength: 0.18
     - _PixelDensity: 48
     - _ReflectionSmoothness: 0.32

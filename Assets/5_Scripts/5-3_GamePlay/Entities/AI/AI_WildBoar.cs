@@ -167,6 +167,11 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	/// <summary>野猪接受新追击路线的总代价上限，不包含上限本身。</summary>
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/追击"), LabelText("路径代价上限"), MinValue(1)]
 	public int chasePathCostLimit = 200;
+<<<<<<< HEAD
+=======
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/追击"), LabelText("路径重试间隔"), SuffixLabel("秒", true), MinValue(0.1f)]
+	public float chasePathRetryDelay = 3f;
+>>>>>>> origin/master
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/追击"), LabelText("威胁标签")]
 	public List<string> chaseThreatTags = new List<string> { "Player" };
@@ -525,7 +530,15 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		}
 
 		// 追击目标是玩家左右两侧的站位点，并补偿 Mover_AI 自带的到达停止距离。
+<<<<<<< HEAD
 		MoveToChaseTarget(navigationTarget, chasePathCostLimit);
+=======
+		WorldNavigationDestinationResult moveResult =
+			MoveToChaseTarget(navigationTarget, chasePathCostLimit);
+		if (TryHandleRejectedChasePath(moveResult, _currentThreat, chasePathRetryDelay))
+			return;
+
+>>>>>>> origin/master
 		FaceTarget(_attackPositionTarget);
 	}
 
@@ -630,6 +643,10 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	private bool ShouldChase()
 	{
 		Item threat = _currentThreat;
+<<<<<<< HEAD
+=======
+		if (IsChaseTargetBlockedByPathCost(threat)) return false;
+>>>>>>> origin/master
 
 		if (_currentState == WildBoarState.Chase)
 		{
@@ -649,6 +666,11 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	{
 		if (_currentThreat == null)
 			return _alertCooldownTimer > 0f;
+<<<<<<< HEAD
+=======
+		if (IsChaseTargetBlockedByPathCost(_currentThreat))
+			return false;
+>>>>>>> origin/master
 
 		// 警觉状态只维持到倒计时结束；结束后必须放行后续追击判断，避免永久卡在警觉。
 		if (_currentState == WildBoarState.Alert)

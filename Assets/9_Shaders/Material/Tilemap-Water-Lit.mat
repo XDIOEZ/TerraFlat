@@ -45,6 +45,10 @@ Material:
     - _EdgeWidth: 0.2
     - _EnableExternalAlpha: 0
     - _FoamSpeed: 0.72
+<<<<<<< HEAD:Assets/Shaders/Material/Tilemap-Water-Lit.mat
+=======
+    - _TideCyclesPerDay: 2
+>>>>>>> origin/master:Assets/9_Shaders/Material/Tilemap-Water-Lit.mat
     - _NormalStrength: 0.32
     - _PixelDensity: 64
     - _ReflectionSmoothness: 0.72

@@ -860,6 +860,15 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+<<<<<<< HEAD
+=======
+  - m_GUID: 6f255a5a1b82c1b46b564cdae5f72880
+    m_Address: Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+>>>>>>> origin/master
   - m_GUID: 6f27a587bf720974ca9a865de93b5e99
     m_Address: Assets/2_Prefabs/Gameplay/Skills/Stone_KnifeThrowing.prefab
     m_ReadOnly: 0
@@ -879,7 +888,11 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7559be8c1187b03488b747c429c8c897
+<<<<<<< HEAD
     m_Address: Assets/Shaders/Material/Bush-Sway-Lit.mat
+=======
+    m_Address: Assets/9_Shaders/Material/Bush-Sway-Lit.mat
+>>>>>>> origin/master
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemMaterial

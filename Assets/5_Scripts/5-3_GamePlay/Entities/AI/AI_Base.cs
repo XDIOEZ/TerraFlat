@@ -111,6 +111,12 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	[SerializeField, ReadOnly] private float _damageThreatRemain;
 	private Vector3 _lastDamageThreatPosition;
 	private DamageReceiver _damageEventSource;
+<<<<<<< HEAD
+=======
+	// 路径代价拒绝后暂时屏蔽同一追击目标，避免状态机立即重复追击。
+	private Item _pathCostRejectedChaseTarget;
+	private float _pathCostRejectedChaseRetryTimer;
+>>>>>>> origin/master
 #endregion
 
 #region CachedModules
@@ -227,6 +233,10 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		_hasWanderTarget = false;
 		_lastPlayedAnimation = null;
 		ClearRecentDamageThreat();
+<<<<<<< HEAD
+=======
+		ClearPathCostRejectedChaseTarget();
+>>>>>>> origin/master
 
 		BindCommonModules();
 		_animalSkills.ResetRuntime();
@@ -258,6 +268,10 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 
 		// 通用计时器递减（不限状态的计时器）
 		_wanderWaitTimer = DecrementTimer(_wanderWaitTimer, deltaTime);
+<<<<<<< HEAD
+=======
+		TickPathCostRejectedChaseTarget(deltaTime);
+>>>>>>> origin/master
 
 		// 感知请求按原有计时器刷新；状态条件按固定间隔评估，避免逐帧重复扫描同一快照。
 		TryRefreshDetector();
@@ -618,6 +632,39 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		_lastDamageThreatPosition = transform.position;
 	}
 
+<<<<<<< HEAD
+=======
+	/// <summary>推进路径代价拒绝冷却，并在到期时允许原目标重新寻路。</summary>
+	private void TickPathCostRejectedChaseTarget(float deltaTime)
+	{
+		if (_pathCostRejectedChaseTarget == null)
+		{
+			ClearPathCostRejectedChaseTarget();
+			return;
+		}
+
+		_pathCostRejectedChaseRetryTimer = DecrementTimer(
+			_pathCostRejectedChaseRetryTimer,
+			deltaTime);
+		if (_pathCostRejectedChaseRetryTimer > 0f)
+			return;
+
+		_pathCostRejectedChaseTarget = null;
+		if (_mover != null &&
+		    _mover.DestinationResult == WorldNavigationDestinationResult.RejectedByPathCost)
+		{
+			_mover.ForceRepath();
+		}
+	}
+
+	/// <summary>清空路径代价拒绝目标及其重试计时。</summary>
+	private void ClearPathCostRejectedChaseTarget()
+	{
+		_pathCostRejectedChaseTarget = null;
+		_pathCostRejectedChaseRetryTimer = 0f;
+	}
+
+>>>>>>> origin/master
 	private void TickDamageThreatMemory(float deltaTime)
 	{
 		if (_damageThreatRemain <= 0f)
@@ -771,10 +818,42 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		_mover.SetDestination(target);
 	}
 
+<<<<<<< HEAD
 	/// <summary>仅在带权路径总代价严格小于动物上限时接受新的追击路线。</summary>
 	protected void MoveToChaseTarget(Vector3 target, int maximumPathCostExclusive)
 	{
 		_mover.SetCostLimitedDestination(target, maximumPathCostExclusive);
+=======
+	/// <summary>提交受总代价限制的追击目标，并返回当前异步导航结果。</summary>
+	protected WorldNavigationDestinationResult MoveToChaseTarget(
+		Vector3 target,
+		int maximumPathCostExclusive)
+	{
+		return _mover.SetCostLimitedDestination(target, maximumPathCostExclusive);
+	}
+
+	/// <summary>消费路径代价拒绝结果，并在重试间隔内屏蔽同一追击目标。</summary>
+	protected bool TryHandleRejectedChasePath(
+		WorldNavigationDestinationResult result,
+		Item chaseTarget,
+		float retryDelay)
+	{
+		if (result != WorldNavigationDestinationResult.RejectedByPathCost || chaseTarget == null)
+			return false;
+
+		_pathCostRejectedChaseTarget = chaseTarget;
+		_pathCostRejectedChaseRetryTimer = Mathf.Max(0.1f, retryDelay);
+		StopMove();
+		return true;
+	}
+
+	/// <summary>判断指定目标是否仍处于路径代价拒绝后的重试冷却中。</summary>
+	protected bool IsChaseTargetBlockedByPathCost(Item chaseTarget)
+	{
+		return chaseTarget != null &&
+		       chaseTarget == _pathCostRejectedChaseTarget &&
+		       _pathCostRejectedChaseRetryTimer > 0f;
+>>>>>>> origin/master
 	}
 
 	/// <summary>远离指定位置方向移动</summary>

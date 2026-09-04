@@ -36,6 +36,11 @@ public class Tile_Water : TileBlockBehaviour
     [Min(0f)] public float entryTemperatureDrop = 10f;
     [Tooltip("入水降温不能把角色体温压到低于该值。")]
     [Min(0f)] public float entryTemperatureFloor = 10f;
+<<<<<<< HEAD
+=======
+    [Tooltip("首次入水降温平滑过渡到目标体温所需的时间。")]
+    [Min(0.1f)] public float entryTemperatureTransitionSeconds = 5f;
+>>>>>>> origin/master
 
     /// <summary>进入水格时启用真实水体状态、环境 Buff、动作与被动效果。</summary>
     public override void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
@@ -127,7 +132,12 @@ public class Tile_Water : TileBlockBehaviour
         temperature?.SetWaterExposure(
             inWater,
             entryTemperatureDrop,
+<<<<<<< HEAD
             entryTemperatureFloor);
+=======
+            entryTemperatureFloor,
+            entryTemperatureTransitionSeconds);
+>>>>>>> origin/master
     }
 
     #endregion

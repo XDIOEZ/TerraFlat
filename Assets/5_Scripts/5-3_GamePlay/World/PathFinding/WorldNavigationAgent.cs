@@ -1,6 +1,19 @@
 using System;
 using UnityEngine;
 
+<<<<<<< HEAD
+=======
+/// <summary>导航代理对当前目的地请求给出的正式结果。</summary>
+public enum WorldNavigationDestinationResult
+{
+    None,
+    Pending,
+    Accepted,
+    Reached,
+    RejectedByPathCost
+}
+
+>>>>>>> origin/master
 /// <summary>
 /// Lightweight movement client for WorldNavigationManager. It owns only one request and one
 /// compact waypoint list, so thousands of agents do not each run their own path search.
@@ -51,8 +64,11 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     private bool hasPath;
     private bool pathReachesDestination;
     private bool destinationDirty;
+<<<<<<< HEAD
     // 新路径超限后保留旧路径，但阻止旧路径结束后的自动续算。
     private bool destinationRejectedByPathCost;
+=======
+>>>>>>> origin/master
 
     public float MaxSpeed { get; set; } = 3f;
     public bool CanMove { get; set; } = true;
@@ -64,6 +80,13 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     public Vector2 ResolvedDestination => resolvedDestination;
     public Vector2 Velocity => body != null ? body.velocity : fallbackVelocity;
     public int PathRevision => pathRevision;
+<<<<<<< HEAD
+=======
+    public WorldNavigationDestinationResult DestinationResult { get; private set; }
+
+    private bool DestinationRejectedByPathCost =>
+        DestinationResult == WorldNavigationDestinationResult.RejectedByPathCost;
+>>>>>>> origin/master
 
     internal static System.Collections.Generic.IReadOnlyList<WorldNavigationAgent> ActiveAgents =>
         ActiveAgentRegistry;
@@ -171,14 +194,22 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             destinationPathCostLimitExclusive = maximumPathCostExclusive;
             CancelPendingRequest();
             InvalidateCurrentPath();
+<<<<<<< HEAD
             destinationRejectedByPathCost = false;
+=======
+            DestinationResult = WorldNavigationDestinationResult.Pending;
+>>>>>>> origin/master
             nextRequestTime = 0f;
         }
 
         if (changed)
         {
             consecutiveFailures = 0;
+<<<<<<< HEAD
             destinationRejectedByPathCost = false;
+=======
+            DestinationResult = WorldNavigationDestinationResult.Pending;
+>>>>>>> origin/master
         }
 
         if (!pathCostPolicyChanged &&
@@ -208,6 +239,10 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         {
             CancelPendingRequest();
             InvalidateCurrentPath();
+<<<<<<< HEAD
+=======
+            DestinationResult = WorldNavigationDestinationResult.Pending;
+>>>>>>> origin/master
             nextRequestTime = 0f;
         }
     }
@@ -230,7 +265,11 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         hasPath = false;
         pathReachesDestination = false;
         destinationDirty = false;
+<<<<<<< HEAD
         destinationRejectedByPathCost = false;
+=======
+        DestinationResult = WorldNavigationDestinationResult.None;
+>>>>>>> origin/master
         destinationPathCostLimitExclusive = int.MaxValue;
         submittedPathCostLimitExclusive = int.MaxValue;
         waypoints = Array.Empty<Vector2>();
@@ -245,7 +284,11 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
         CancelPendingRequest();
         InvalidateCurrentPath();
+<<<<<<< HEAD
         destinationRejectedByPathCost = false;
+=======
+        DestinationResult = WorldNavigationDestinationResult.Pending;
+>>>>>>> origin/master
         destinationDirty = true;
         nextRequestTime = 0f;
     }
@@ -290,7 +333,11 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         }
 
         bool shouldRequestPath =
+<<<<<<< HEAD
             destinationDirty || (!hasPath && !destinationRejectedByPathCost);
+=======
+            destinationDirty || (!hasPath && !DestinationRejectedByPathCost);
+>>>>>>> origin/master
         if (shouldRequestPath &&
             requestId <= 0 &&
             Time.unscaledTime >= nextRequestTime)
@@ -314,7 +361,11 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
         if (!hasPath || waypointIndex >= waypoints.Length)
         {
+<<<<<<< HEAD
             if (destinationRejectedByPathCost)
+=======
+            if (DestinationRejectedByPathCost)
+>>>>>>> origin/master
             {
                 ReachedDestination = false;
                 ApplyVelocity(Vector2.zero, deltaTime);
@@ -361,6 +412,10 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         navigationManager = navigation;
         submittedDestination = destination;
         submittedPathCostLimitExclusive = destinationPathCostLimitExclusive;
+<<<<<<< HEAD
+=======
+        DestinationResult = WorldNavigationDestinationResult.Pending;
+>>>>>>> origin/master
         destinationDirty = false;
         nextRequestTime = Time.unscaledTime + Mathf.Max(0.05f, repathInterval);
         requestId = navigation.RequestPath(current, submittedDestination, OnPathCompleted);
@@ -401,7 +456,11 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         if (result.TotalCost >= submittedPathCostLimitExclusive)
         {
             // 拒绝新路线时不覆盖仍在执行的旧路线；目标再次明显移动后才重新评估。
+<<<<<<< HEAD
             destinationRejectedByPathCost = true;
+=======
+            DestinationResult = WorldNavigationDestinationResult.RejectedByPathCost;
+>>>>>>> origin/master
             destinationDirty = destinationMovedToAnotherCell;
             if (destinationDirty)
                 nextRequestTime = Time.unscaledTime;
@@ -425,7 +484,11 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         queuedValidationRevision = -1;
         immediatelyValidatedWaypointIndex = -1;
         hasPath = true;
+<<<<<<< HEAD
         destinationRejectedByPathCost = false;
+=======
+        DestinationResult = WorldNavigationDestinationResult.Accepted;
+>>>>>>> origin/master
         ReachedDestination = false;
         consecutiveFailures = 0;
 
@@ -474,7 +537,11 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
         if (pathCostRevision != navigation.PathCostRevision)
         {
+<<<<<<< HEAD
             if (destinationRejectedByPathCost)
+=======
+            if (DestinationRejectedByPathCost)
+>>>>>>> origin/master
             {
                 // 已决定走完旧路线时，纯代价变化不应强制替换这条仍可通行的路线。
                 pathCostRevision = navigation.PathCostRevision;
@@ -515,7 +582,11 @@ public sealed class WorldNavigationAgent : MonoBehaviour
              !navigation.HasGridLineOfSight(current, waypoints[waypointIndex])))
         {
             InvalidateCurrentPath();
+<<<<<<< HEAD
             destinationDirty = !destinationRejectedByPathCost;
+=======
+            destinationDirty = !DestinationRejectedByPathCost;
+>>>>>>> origin/master
             if (destinationDirty)
                 nextRequestTime = Time.unscaledTime;
             return false;
@@ -535,7 +606,11 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         }
 
         InvalidateCurrentPath();
+<<<<<<< HEAD
         destinationDirty = !destinationRejectedByPathCost;
+=======
+        destinationDirty = !DestinationRejectedByPathCost;
+>>>>>>> origin/master
         if (destinationDirty)
             nextRequestTime = Time.unscaledTime;
         return false;
@@ -556,7 +631,11 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
         lastProgressPosition = current;
         lastProgressTime = Time.time;
+<<<<<<< HEAD
         if (destinationRejectedByPathCost)
+=======
+        if (DestinationRejectedByPathCost)
+>>>>>>> origin/master
         {
             // 旧路线已经无法继续时直接结束，不为已判定超限的目标创建新路线。
             InvalidateCurrentPath();
@@ -570,6 +649,10 @@ public sealed class WorldNavigationAgent : MonoBehaviour
     {
         CancelPendingRequest();
         ReachedDestination = true;
+<<<<<<< HEAD
+=======
+        DestinationResult = WorldNavigationDestinationResult.Reached;
+>>>>>>> origin/master
         hasPath = false;
         pathReachesDestination = false;
         destinationDirty = false;
