@@ -35,6 +35,10 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
     private IDisposable chunkCommittedSubscription;
     private bool renderCaveWater;
 
+    /// <summary>阻挡层渲染器，为裂缝等格子表现提供一致的材质与排序基准。</summary>
+    public TilemapRenderer BlockingTilemapRenderer =>
+        blockingTilemap != null ? blockingTilemap.GetComponent<TilemapRenderer>() : null;
+
     #endregion
 
     #region 绑定与生命周期

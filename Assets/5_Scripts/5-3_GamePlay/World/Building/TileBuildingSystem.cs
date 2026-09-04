@@ -106,6 +106,46 @@ public static class TileBuildingSystem
     public static event Action<TileBuildingDamageResult> CellDamaged;
     public static event Action<TileBuildingDamageResult> CellDestroyed;
 
+    /// <summary>读取运行时阻挡格的权威受损比例，供区块表现从存档状态重建裂缝。</summary>
+    public static bool TryGetRuntimeDamageFraction(
+        RuntimeChunk runtimeChunk,
+        Vector2Int localPosition,
+        out float damageFraction)
+    {
+        damageFraction = 0f;
+        ChunkTerrainData terrain = runtimeChunk?.Terrain;
+        if (runtimeChunk == null || runtimeChunk.DataStatus != ChunkDataStatus.Ready ||
+            terrain == null || terrain.IsDisposed ||
+            (uint)localPosition.x >= (uint)terrain.Width ||
+            (uint)localPosition.y >= (uint)terrain.Height)
+        {
+            return false;
+        }
+
+        TerrainCell current = terrain.GetCell(localPosition.x, localPosition.y);
+        if (current.BlockingTileId == 0)
+            return false;
+
+        Int2 origin = runtimeChunk.Address.ChunkOrigin;
+        Vector2Int worldPosition = new Vector2Int(
+            origin.X + localPosition.x,
+            origin.Y + localPosition.y);
+        TileBuildingCell cell = new TileBuildingCell(
+            runtimeChunk,
+            worldPosition,
+            localPosition,
+            current.BlockingTileId,
+            null);
+        TileBuildingDamageProfile profile = ResolveRuntimeProfile(cell);
+        if (profile?.Damageable != true)
+            return false;
+
+        float maxHealth = Mathf.Max(1f, profile.MaxHealth);
+        float accumulatedDamage = ResolveRuntimeDamage(terrain, localPosition, maxHealth);
+        damageFraction = Mathf.Clamp01(accumulatedDamage / maxHealth);
+        return true;
+    }
+
     /// <summary>只做放置资格检查，不改动地图；建筑虚影和右键放置共用这条规则。</summary>
     public static bool CanPlace(Vector3 worldPosition, string tileBlockId, out string reason)
     {
