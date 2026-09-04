@@ -879,7 +879,7 @@ MonoBehaviour:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7559be8c1187b03488b747c429c8c897
-    m_Address: Assets/Shaders/Material/Bush-Sway-Lit.mat
+    m_Address: Assets/9_Shaders/Material/Bush-Sway-Lit.mat
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemMaterial

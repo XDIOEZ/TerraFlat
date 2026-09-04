@@ -14,7 +14,7 @@ namespace FlatWorld.GameTest.EffectsTools
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Management/VisualEffectManager.cs", "VisualEffectManager");
             GameTestAssertions.AssertScriptType("Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Runtime/Text/DamageTextEffect.cs", "DamageTextEffect");
             GameTestAssertions.AssertFolderContainsAsset("Assets/2_Prefabs/Effects", "t:Prefab");
-            GameTestAssertions.AssertFolderContainsAsset("Assets/Shaders", "t:Shader");
+            GameTestAssertions.AssertFolderContainsAsset("Assets/9_Shaders", "t:Shader");
         }
     }
 }

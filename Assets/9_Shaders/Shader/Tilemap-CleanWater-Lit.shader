@@ -17,6 +17,7 @@ Shader "FlatWorld/2D/Tilemap Clean Water Lit"
         _NormalStrength("表面起伏", Range(0, 0.8)) = 0.22
         _PixelDensity("表面采样密度", Range(1, 128)) = 64
         _FlowDirection("流动方向", Vector) = (0.7, 0.28, 0, 0)
+        _TideCyclesPerDay("每日潮汐循环次数", Range(1, 4)) = 2.0
         _RippleColor("浪脊颜色", Color) = (1, 0.68, 0.3, 0.8)
         _RippleStrength("浪脊强度", Range(0, 1)) = 0.1
         _RippleScale("浪纹尺度", Range(0.25, 6)) = 2.3

@@ -2,13 +2,13 @@ using UnityEngine;
 
 /// <summary>
 /// 雪地地块行为：玩家和动物在雪地上移动速度降低 10%，并在进入雪地时记录可衰减的脚印。
-/// 脚印生命周期默认为 10 秒，具体表现由 SnowFootprintTrail 负责，便于后续替换脚印材质。
+/// 脚印默认完整保留 60 秒，具体表现由 SnowFootprintTrail 负责，便于后续替换脚印材质。
 /// </summary>
 [System.Serializable]
 public sealed class Tile_Snow : TileBlockBehaviour
 {
     [SerializeField, Min(0.01f)] private float moveSpeedMultiplier = 0.9f;
-    [SerializeField, Min(0.1f)] private float footprintLifetime = 10f;
+    [SerializeField, Min(0.1f)] private float footprintLifetime = 60f;
 
     public override void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
     {

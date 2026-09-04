@@ -17,6 +17,7 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         _NormalStrength("表面起伏", Range(0, 0.8)) = 0.32
         _PixelDensity("表面采样密度", Range(1, 128)) = 64
         _FlowDirection("流动方向", Vector) = (1, 0.35, 0, 0)
+        _TideCyclesPerDay("每日潮汐循环次数", Range(1, 4)) = 2.0
         _RippleColor("浪脊颜色", Color) = (0.38, 0.78, 0.88, 1)
         _RippleStrength("浪脊强度", Range(0, 1)) = 0.22
         _RippleScale("浪纹尺度", Range(0.25, 6)) = 1.8
@@ -84,6 +85,8 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         half4 _EdgeColor;
         half4 _ShoreColor;
         float4 _FlowDirection;
+        float _TideCyclesPerDay;
+        float _GlobalGameDay;
         float4 _ReflectionDirection;
         float4 _SunDirection;
         float4 _MoonReflectionPosition;
@@ -122,6 +125,26 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         {
             float density = max(_PixelDensity, 1.0);
             return floor(positionWS * density + 0.5) / density;
+        }
+
+        /// <summary>读取材质定义的潮流轴；潮汐只沿该轴往返，不再让整片水面持续绕圈。</summary>
+        float2 ResolveWaterFlowAxis()
+        {
+            float2 baseDirection = _FlowDirection.xy;
+            float baseLengthSq = dot(baseDirection, baseDirection);
+            return baseLengthSq > 0.0001
+                ? baseDirection * rsqrt(baseLengthSq)
+                : float2(1.0, 0.0);
+        }
+
+        /// <summary>用半日潮的积分相位驱动往返流动；相位到达峰谷时流速自然降为零后反向。</summary>
+        float ResolveTideFlowPhase(float flowSpeed)
+        {
+            const float fullTurn = 6.28318530718;
+            const float tideTravel = 96.0;
+            float cyclesPerDay = max(_TideCyclesPerDay, 0.01);
+            float tideAngle = _GlobalGameDay * cyclesPerDay * fullTurn;
+            return sin(tideAngle) * flowSpeed * tideTravel;
         }
 
         /// <summary>生成稳定的二维随机值，避免程序波纹形成规则重复图案。</summary>
@@ -237,13 +260,13 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
             half waterDepth)
         {
             WaterSurfaceData surface = (WaterSurfaceData)0;
-            float2 direction = _FlowDirection.xy;
-            direction *= rsqrt(max(dot(direction, direction), 0.001));
+            float2 direction = ResolveWaterFlowAxis();
             float2 lateral = float2(-direction.y, direction.x);
             float2 pixelPosition = QuantizeWaterPosition(positionWS);
-            float time = _Time.y * _WaveSpeed;
+            float time = ResolveTideFlowPhase(_WaveSpeed);
 
-            float2 drift = float2(time * 0.018, -time * 0.012);
+            float2 drift = direction * time * 0.018
+                - lateral * time * 0.006;
             float macroA = WaterNoise(pixelPosition * 0.065 + drift);
             float macroB = WaterNoise(
                 pixelPosition * 0.11
@@ -507,13 +530,16 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
         half3 ApplyShore(half3 sourceColor, half recess, float2 positionWS)
         {
             half shoreBand = saturate(recess * (1.0h - recess) * 4.0h);
-            float foamTime = _Time.y * _FoamSpeed;
+            float foamTime = ResolveTideFlowPhase(_FoamSpeed);
+            float2 flowDirection = ResolveWaterFlowAxis();
+            float2 flowLateral = float2(-flowDirection.y, flowDirection.x);
             float foamNoise = WaterNoise(
                 positionWS * 0.58
-                + float2(foamTime * 0.04, -foamTime * 0.03)
+                + flowDirection * foamTime * 0.04
+                - flowLateral * foamTime * 0.012
                 + float2(11.3, 27.1));
             half foamPulse = 0.7h + 0.3h * sin(
-                dot(positionWS, _FlowDirection.xy) * 1.25
+                dot(positionWS, flowDirection) * 1.25
                 + foamTime
                 + foamNoise * 2.4);
             half foam = saturate(shoreBand * (0.45h + foamNoise * 0.75h) * foamPulse)

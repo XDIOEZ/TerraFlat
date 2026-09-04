@@ -45,6 +45,7 @@ Material:
     - _EdgeWidth: 0.24
     - _EnableExternalAlpha: 0
     - _FoamSpeed: 0.16
+    - _TideCyclesPerDay: 2
     - _NormalStrength: 0.18
     - _PixelDensity: 48
     - _ReflectionSmoothness: 0.32

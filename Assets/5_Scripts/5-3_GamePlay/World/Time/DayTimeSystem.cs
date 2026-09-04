@@ -1,4 +1,4 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -11,6 +11,10 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
     // 海水月光倒影读取的全局 Shader 参数。
     private static readonly int GlobalMoonlightIntensityShaderId =
         Shader.PropertyToID("_GlobalMoonlightIntensity");
+
+    // 视觉 Shader 读取的绝对游戏日进度，用于让表现严格跟随世界时间而不是运行时长。
+    private static readonly int GlobalGameDayShaderId =
+        Shader.PropertyToID("_GlobalGameDay");
 
     public event Action<string, float, float> TimeAdvanced;
     public event Action<string, int, int> DayChanged;
@@ -43,6 +47,7 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
     private void OnEnable()
     {
         SetGlobalMoonlightIntensity(0f);
+        SetGlobalGameDay(0f);
         SubscribeGameManagerEvents();
     }
 
@@ -58,6 +63,7 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
     {
         UnsubscribeGameManagerEvents();
         SetGlobalMoonlightIntensity(0f);
+        SetGlobalGameDay(0f);
     }
 
     private void SubscribeGameManagerEvents()
@@ -102,6 +108,7 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
         }
 
         SetGlobalMoonlightIntensity(0f);
+        SetGlobalGameDay(0f);
         WorldTimeDict?.Clear();
         SceneLightingRateDict?.Clear();
         appliedPresentationProfileId = string.Empty;
@@ -158,6 +165,7 @@ private void TimeRun(string sceneName, float deltaTime)
             float lighting = GetLighting(currentSceneName);
             Color lightColor = GetLightColor(currentSceneName);
             float moonlight = GetMoonReflectionIntensity(currentSceneName, lighting);
+            SetGlobalGameDay(GetAbsoluteGameDay(currentSceneName));
             SetGlobalLight(lighting, lightColor, moonlight);
         }
     }
@@ -200,6 +208,27 @@ private void TimeRun(string sceneName, float deltaTime)
     private void SetGlobalMoonlightIntensity(float intensity)
     {
         Shader.SetGlobalFloat(GlobalMoonlightIntensityShaderId, Mathf.Clamp01(intensity));
+    }
+
+    /// <summary>
+    /// 发布绝对游戏日进度，让水面等纯视觉 Shader 可以随世界时间稳定变化。
+    /// </summary>
+    private void SetGlobalGameDay(float gameDay)
+    {
+        Shader.SetGlobalFloat(GlobalGameDayShaderId, Mathf.Max(0f, gameDay));
+    }
+
+    /// <summary>
+    /// 获取当前场景解析后的绝对游戏日，存档恢复或跳时后仍保持确定结果。
+    /// </summary>
+    private float GetAbsoluteGameDay(string sceneName)
+    {
+        if (!TryGetResolvedTimeData(sceneName, out _, out TimeData timeData) || timeData == null)
+            return 0f;
+
+        float dayLength = Mathf.Max(1f, timeData.DayLength);
+        float dayProgress = Mathf.Repeat(timeData.CurrentTime, dayLength) / dayLength;
+        return Mathf.Max(0, timeData.TotalDays) + dayProgress;
     }
 
     private Color GetLightColor(string sceneName)
@@ -372,6 +401,7 @@ private void TimeRun(string sceneName, float deltaTime)
         float lighting = GetLighting(sceneName);
         Color lightColor = GetLightColor(sceneName);
         float moonlight = GetMoonReflectionIntensity(sceneName, lighting);
+        SetGlobalGameDay(GetAbsoluteGameDay(sceneName));
         SetGlobalLight(lighting, lightColor, moonlight);
     }
 
