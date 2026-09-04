@@ -201,6 +201,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	protected override float DamageThreatMemoryDuration => damageFleeDuration;
 	protected override bool IsMoveState(ChickenState state) => state == ChickenState.Move;
 	protected override bool IsIdleState(ChickenState state) => state == ChickenState.Idle;
+	protected override bool IsSleepState(ChickenState state) => state == ChickenState.Sleep;
 	#endregion
 
 	#region Lifecycle

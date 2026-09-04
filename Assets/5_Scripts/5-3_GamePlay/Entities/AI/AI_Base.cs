@@ -122,6 +122,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	[SerializeField, ReadOnly] protected Mod_ItemDetector _detector;
 	[SerializeField, ReadOnly] protected Mod_AnimatorController _animator;
 	[SerializeField, ReadOnly] protected Mod_TurnBack _turnBody;
+	[SerializeField, ReadOnly] protected ActorSleepVisualEffectController _sleepVisual;
 	// 动物技能由独立 Module 组合，AI 基类只提供统一收集与生命周期入口。
 	protected readonly AI_AnimalSkillController _animalSkills = new AI_AnimalSkillController();
 #endregion
@@ -165,6 +166,9 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 
 	/// <summary>判断是否为待机状态（进入时重置待机计时器）</summary>
 	protected virtual bool IsIdleState(TState state) => false;
+
+	/// <summary>判断是否为睡眠状态，供统一睡眠表现同步。</summary>
+	protected virtual bool IsSleepState(TState state) => false;
 
 	/// <summary>
 	/// How long this animal remembers the source that hurt it.
@@ -243,6 +247,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		TryRefreshDetector();
 		OnPreEvaluate();
 		PlayStateAnimation(_currentState, true);
+		SynchronizeSleepVisual(_currentState);
 	}
 
 	public override void ModUpdate(float deltaTime)
@@ -445,7 +450,15 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		}
 
 		PlayStateAnimation(next);
+		SynchronizeSleepVisual(next);
 		OnStateChanged?.Invoke(previous, next);
+	}
+
+	/// <summary>把权威 AI 状态同步给独立的睡眠表现组件。</summary>
+	private void SynchronizeSleepVisual(TState state)
+	{
+		if (_sleepVisual != null)
+			_sleepVisual.SetSleeping(item.transform, IsSleepState(state));
 	}
 #endregion
 
@@ -942,6 +955,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		item.itemMods.GetMod_ByID(ModText.Detector, out _detector);
 		item.itemMods.GetMod_ByID(ModText.Hp, out _hp);
 		_turnBody = item.GetComponentInChildren<Mod_TurnBack>(true);
+		_sleepVisual = item.GetComponentInChildren<ActorSleepVisualEffectController>(true);
 		item.GetMod(out _animator);
 		BindDamageThreatEvents();
 

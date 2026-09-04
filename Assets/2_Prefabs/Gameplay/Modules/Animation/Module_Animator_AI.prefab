@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 912345678901234572}
   - component: {fileID: 912345678901234574}
   - component: {fileID: 834762951406283742}
+  - component: {fileID: 912345678901234576}
   m_Layer: 0
   m_Name: Module_Animator_AI
   m_TagString: Untagged
@@ -43,6 +44,20 @@ MonoBehaviour:
   outerRadius: 5
   infectionTint: {r: 0.3, g: 0.78, b: 0.28, a: 1}
   infectionTintStrength: 0.18
+--- !u!114 &912345678901234576
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2231892886818212503}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a9231dea769cf94cb23289f4c58be2b, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  effectName: SleepZZZEffect
+  localOffset: {x: 0.28, y: 0.58, z: 0}
 --- !u!4 &45469955551787273
 Transform:
   m_ObjectHideFlags: 0

@@ -1124,6 +1124,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 388afa80973304c4d9142b0199989fb1
+    m_Address: Assets/2_Prefabs/Effects/SleepZZZEffect.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 99e86f308e574534bae5d88a9b404146
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Movement/Mover.prefab
     m_ReadOnly: 0

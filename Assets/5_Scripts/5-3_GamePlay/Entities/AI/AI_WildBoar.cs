@@ -256,6 +256,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	protected override float DamageThreatMemoryDuration => 0.1f;
 	protected override bool IsMoveState(WildBoarState state) => state == WildBoarState.Move;
 	protected override bool IsIdleState(WildBoarState state) => state == WildBoarState.Idle;
+	protected override bool IsSleepState(WildBoarState state) => state == WildBoarState.Sleep;
 	#endregion
 
 	#region Lifecycle
