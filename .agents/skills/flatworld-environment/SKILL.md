@@ -25,6 +25,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 向 Shader 发布月光表现值时应保留 `GetLighting` 已应用的场景采光率与维度上限，并在系统禁用或退出世界时清零全局参数，避免关闭域重载后残留上一局状态。
 - `LightLayerMgr.TryGetLightLevel` 属于怪物生成等高频查询热路径，只能读取已缓存的 Light2D 成员并实时采样其强度/位置；禁止在单次格子查询里调用 `FindObjectsOfType/FindObjectsByType`，光源成员集合统一由低频刷新维护。
 - 新世界时间参数来自 `GameConfig/Time/time-system.json` 的 Profile；Profile ID 与限时边界随 `TimeData` 存档，旧存档缺失时回退默认时间系统。
+- 入水瞬时降温由 `Mod_Temperature` 自己维护平滑目标；装备等外部系统只能通过水体降温保护通道影响速度，禁止直接改河流过渡时间。保护值 0 表示无保护、1 表示完全阻止入水降温，多来源按加法叠加并由体温模块统一限制。
 - 伤害语义联动 `flatworld-combat`，维度覆盖联动 `flatworld-dimension`，雨视觉联动 Effects Skill。
 
 ## 验证

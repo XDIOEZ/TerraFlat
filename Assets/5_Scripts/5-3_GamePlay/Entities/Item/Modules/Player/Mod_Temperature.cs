@@ -66,6 +66,10 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     private bool _isInWater; // 当前是否处于真实水体中
     private int _lastWaterExitFrame = -1; // 最近一次退出真实水体的帧
     private bool _lastWaterExitWasActive; // 最近一次退出前是否确实处于水中
+    private bool _hasWaterEntryCoolingTarget; // 是否存在尚未完成的入水降温目标
+    private float _waterEntryCoolingTargetTemperature; // 本次入水降温的目标体温
+    private float _waterEntryCoolingSpeed; // 本次入水降温速度(℃/s)
+    private float _waterCoolingProtection; // 装备等来源累计提供的入水降温保护，1 表示完全免疫
 
 #endregion
 
@@ -105,6 +109,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
             return;
 
         Data.AmbientTemperature = TemperatureMgr.Instance.GetGlobalAmbientTemperature();
+        ProcessWaterEntryCooling(deltaTime);
         TemperatureMgr.Instance.ProcessTemperature(Data, _damageReceiver, deltaTime, SetTemperatureInternal, ref _damageTickTimer);
     }
 
@@ -153,8 +158,12 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         Data.AmbientTemperature = TemperatureMgr.Instance.GetGlobalAmbientTemperature();
     }
 
-    /// <summary>同步真实入水状态，并在首次进入连续水域时执行一次带下限的降温。</summary>
-    public void SetWaterExposure(bool inWater, float temperatureDrop, float minimumTemperature)
+    /// <summary>同步真实入水状态，并在首次进入连续水域时启动一次带下限的平滑降温。</summary>
+    public void SetWaterExposure(
+        bool inWater,
+        float temperatureDrop,
+        float minimumTemperature,
+        float transitionSeconds)
     {
         if (!inWater)
         {
@@ -174,7 +183,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         if (continuedAcrossWaterTiles || !GameNetwork.HasStateAuthority)
             return;
 
-        ApplyCoolingWithFloor(temperatureDrop, minimumTemperature);
+        BeginWaterEntryCooling(temperatureDrop, minimumTemperature, transitionSeconds);
     }
 
     public void MultiplyRuntimeCoolingSpeed(float multiplier)
@@ -191,6 +200,30 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
             100f);
     }
 
+    /// <summary>叠加入水降温保护；0.8 表示只保留 20% 的入水降温速度，1 及以上表示完全阻止入水降温。</summary>
+    public void AddWaterCoolingProtection(float protection)
+    {
+        if (float.IsNaN(protection) || float.IsInfinity(protection) || protection < 0f)
+        {
+            Debug.LogWarning($"[Mod_Temperature] 忽略无效入水降温保护：{protection}", this);
+            return;
+        }
+
+        _waterCoolingProtection += protection;
+    }
+
+    /// <summary>移除先前叠加的入水降温保护。</summary>
+    public void RemoveWaterCoolingProtection(float protection)
+    {
+        if (float.IsNaN(protection) || float.IsInfinity(protection) || protection < 0f)
+        {
+            Debug.LogWarning($"[Mod_Temperature] 忽略无效入水降温保护移除值：{protection}", this);
+            return;
+        }
+
+        _waterCoolingProtection = Mathf.Max(0f, _waterCoolingProtection - protection);
+    }
+
     public bool IsComfortable()
     {
         return Data.CurrentTemperature >= Data.ColdDamageStart && Data.CurrentTemperature <= Data.HotDamageStart;
@@ -200,17 +233,74 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
 #region 私有方法
 
-    /// <summary>按指定降幅降低体温，但不加热已低于下限的角色。</summary>
-    private void ApplyCoolingWithFloor(float temperatureDrop, float minimumTemperature)
+    /// <summary>建立入水降温目标，在指定时间内逐步完成降温而不是瞬间跳变。</summary>
+    private void BeginWaterEntryCooling(
+        float temperatureDrop,
+        float minimumTemperature,
+        float transitionSeconds)
     {
         float resolvedDrop = Mathf.Max(0f, temperatureDrop);
         float resolvedMinimum = Mathf.Max(0f, minimumTemperature);
         if (resolvedDrop <= 0f || Data.CurrentTemperature <= resolvedMinimum)
+        {
+            ClearWaterEntryCooling();
+            return;
+        }
+
+        _waterEntryCoolingTargetTemperature = Mathf.Max(
+            resolvedMinimum,
+            Data.CurrentTemperature - resolvedDrop);
+        float coolingDistance = Data.CurrentTemperature - _waterEntryCoolingTargetTemperature;
+        if (coolingDistance <= 0f)
+        {
+            ClearWaterEntryCooling();
+            return;
+        }
+
+        float resolvedTransitionSeconds = Mathf.Max(0.1f, transitionSeconds);
+        _waterEntryCoolingSpeed = coolingDistance / resolvedTransitionSeconds;
+        _hasWaterEntryCoolingTarget = true;
+    }
+
+    /// <summary>仅在真实浸水期间把体温平滑推进到本次入水目标，环境自身的温度变化仍独立结算。</summary>
+    private void ProcessWaterEntryCooling(float deltaTime)
+    {
+        if (!_hasWaterEntryCoolingTarget)
             return;
 
-        SetTemperatureInternal(Mathf.Max(
-            resolvedMinimum,
-            Data.CurrentTemperature - resolvedDrop));
+        if (!_isInWater)
+        {
+            if (Time.frameCount > _lastWaterExitFrame)
+                ClearWaterEntryCooling();
+            return;
+        }
+
+        if (Data.CurrentTemperature <= _waterEntryCoolingTargetTemperature)
+        {
+            ClearWaterEntryCooling();
+            return;
+        }
+
+        float waterCoolingSpeedMultiplier = Mathf.Clamp01(1f - _waterCoolingProtection);
+        if (waterCoolingSpeedMultiplier <= 0f)
+            return;
+
+        float nextTemperature = Mathf.MoveTowards(
+            Data.CurrentTemperature,
+            _waterEntryCoolingTargetTemperature,
+            _waterEntryCoolingSpeed * waterCoolingSpeedMultiplier * Mathf.Max(0f, deltaTime));
+        SetTemperatureInternal(nextTemperature);
+
+        if (Data.CurrentTemperature <= _waterEntryCoolingTargetTemperature)
+            ClearWaterEntryCooling();
+    }
+
+    /// <summary>清除当前入水降温插值状态。</summary>
+    private void ClearWaterEntryCooling()
+    {
+        _hasWaterEntryCoolingTarget = false;
+        _waterEntryCoolingTargetTemperature = 0f;
+        _waterEntryCoolingSpeed = 0f;
     }
 
     /// <summary>清除仅属于当前运行实例的入水判定状态。</summary>
@@ -219,6 +309,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         _isInWater = false;
         _lastWaterExitFrame = -1;
         _lastWaterExitWasActive = false;
+        ClearWaterEntryCooling();
     }
 
     private void SetTemperatureInternal(float value)
