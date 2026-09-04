@@ -68,7 +68,6 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
     private readonly Dictionary<string, RuntimeItemDefinition> itemDefinitionCache =
         new Dictionary<string, RuntimeItemDefinition>(StringComparer.OrdinalIgnoreCase);
     private SpriteRenderer ownerRenderer;
-    private SortingGroup ownerSortingGroup; // 让主体与库存提示作为同一个世界深度单元参与 Y 排序
 
     public int CurrentStock => Data?.CurrentStock ?? 0;
 
@@ -267,11 +266,16 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
         if (!FollowOwnerRendererSorting || ownerItem == null || ownerRenderer == null)
             return;
 
-        ownerSortingGroup ??= ownerItem.GetComponent<SortingGroup>();
-        ownerSortingGroup ??= ownerItem.gameObject.AddComponent<SortingGroup>();
-        ownerSortingGroup.enabled = true;
-        ownerSortingGroup.sortingLayerID = ownerRenderer.sortingLayerID;
-        ownerSortingGroup.sortingOrder = ownerRenderer.sortingOrder;
+        SortingGroup sortingGroup = ownerItem.GetComponent<SortingGroup>();
+        if (sortingGroup == null)
+        {
+            throw new MissingComponentException(
+                $"[Mod_Collectable] 物品 {ownerItem.name} 的外壳缺少 SortingGroup，无法把主体与采集提示作为同一深度单元排序。");
+        }
+
+        sortingGroup.enabled = true;
+        sortingGroup.sortingLayerID = ownerRenderer.sortingLayerID;
+        sortingGroup.sortingOrder = ownerRenderer.sortingOrder;
     }
 
     private void EnsureIndicatorRenderers()
