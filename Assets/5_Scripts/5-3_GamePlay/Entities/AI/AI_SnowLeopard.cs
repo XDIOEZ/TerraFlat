@@ -60,10 +60,7 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
     [Min(0.1f)] public float chaseLossDistance = 30f;
     /// <summary>雪豹接受新追击路线的总代价上限，不包含上限本身。</summary>
     [Min(1)] public int chasePathCostLimit = 300;
-<<<<<<< HEAD
-=======
     [Min(0.1f)] public float chasePathRetryDelay = 3f;
->>>>>>> origin/master
     [Min(0f)] public float preyReacquireDelay = 10f;
 
     [Header("捕食")]
@@ -277,11 +274,8 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
     {
         if (!IsLivingTarget(currentTarget))
             return false;
-<<<<<<< HEAD
-=======
         if (IsChaseTargetBlockedByPathCost(currentTarget))
             return false;
->>>>>>> origin/master
 
         float chaseDistance = _currentState == SnowLeopardState.Chase ||
                               _currentState == SnowLeopardState.Attack
@@ -293,10 +287,7 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
     private bool ShouldAlert()
     {
         return IsLivingTarget(currentTarget) &&
-<<<<<<< HEAD
-=======
                !IsChaseTargetBlockedByPathCost(currentTarget) &&
->>>>>>> origin/master
                DistanceTo(currentTarget.transform) <= GetPerceptionRange();
     }
 
@@ -325,16 +316,12 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
             }
         }
 
-<<<<<<< HEAD
-        MoveToChaseTarget(currentTarget.transform.position, chasePathCostLimit);
-=======
         WorldNavigationDestinationResult moveResult = MoveToChaseTarget(
             currentTarget.transform.position,
             chasePathCostLimit);
         if (TryHandleRejectedChasePath(moveResult, currentTarget, chasePathRetryDelay))
             return;
 
->>>>>>> origin/master
         FaceTarget(currentTarget.transform.position);
     }
 

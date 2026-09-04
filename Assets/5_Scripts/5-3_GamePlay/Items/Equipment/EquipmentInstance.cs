@@ -7,10 +7,7 @@ using MemoryPack;
 [MemoryPackUnion(1, typeof(EquipmentInstance_Bag))]
 [MemoryPackUnion(2, typeof(EquipmentInstance_Speed))]
 [MemoryPackUnion(3, typeof(EquipmentInstance_Defense))]
-<<<<<<< HEAD
-=======
 [MemoryPackUnion(4, typeof(EquipmentInstance_WaterInsulation))]
->>>>>>> origin/master
 public abstract partial class EquipmentInstance
 {
     public string Name;

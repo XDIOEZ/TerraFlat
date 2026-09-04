@@ -79,12 +79,9 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     /// </summary>
     public event System.Action<float> OnDamageApplied;
 
-<<<<<<< HEAD
-=======
     /// <summary>实体伤害完成后发布目标与结算结果；0 表示有效命中，负数表示本次结算无效。</summary>
     public event System.Action<DamageReceiver, float> OnReceiverDamageResolved;
 
->>>>>>> origin/master
     public CombatWeaponAudioClass WeaponAudioClass => weaponAudioClass;
     public string AttackAudioCueId => attackAudioCueId;
     public TileDamageToolKind TileDamageToolKind => tileDamageToolKind;
@@ -284,10 +281,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
         }
 
         // 触发伤害完成事件（无论伤害是否大于 0 都会触发）
-<<<<<<< HEAD
-=======
         OnReceiverDamageResolved?.Invoke(receiver, acDamage);
->>>>>>> origin/master
         OnDamageApplied?.Invoke(acDamage);
 
 

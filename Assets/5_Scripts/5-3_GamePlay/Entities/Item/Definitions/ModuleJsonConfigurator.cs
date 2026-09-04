@@ -275,12 +275,8 @@ public static class ModuleJsonConfigurator
                 [nameof(EquipmentInstance_Debug)] = typeof(EquipmentInstance_Debug),
                 [nameof(EquipmentInstance_Bag)] = typeof(EquipmentInstance_Bag),
                 [nameof(EquipmentInstance_Speed)] = typeof(EquipmentInstance_Speed),
-<<<<<<< HEAD
-                [nameof(EquipmentInstance_Defense)] = typeof(EquipmentInstance_Defense)
-=======
                 [nameof(EquipmentInstance_Defense)] = typeof(EquipmentInstance_Defense),
                 [nameof(EquipmentInstance_WaterInsulation)] = typeof(EquipmentInstance_WaterInsulation)
->>>>>>> origin/master
             };
 
         public override bool CanWrite => false;

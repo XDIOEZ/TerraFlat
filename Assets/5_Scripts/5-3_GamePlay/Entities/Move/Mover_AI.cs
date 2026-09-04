@@ -46,14 +46,11 @@ public class Mover_AI : Mover
     public float SpeedValue => Speed.Value;
     public bool HasActiveDestination => hasDestination;
     public bool IsPathPending => NavigationAgent != null && NavigationAgent.PathPending;
-<<<<<<< HEAD
-=======
     public WorldNavigationDestinationResult DestinationResult => NavigationAgent != null
         ? NavigationAgent.DestinationResult
         : hasDestination
             ? WorldNavigationDestinationResult.Pending
             : WorldNavigationDestinationResult.None;
->>>>>>> origin/master
     public bool IsActuallyMoving =>
         CanMove &&
         hasDestination &&
@@ -115,20 +112,13 @@ public class Mover_AI : Mover
     }
 
     /// <summary>提交只有路径总代价严格小于上限时才接受的移动目标。</summary>
-<<<<<<< HEAD
-    public void SetCostLimitedDestination(
-=======
     public WorldNavigationDestinationResult SetCostLimitedDestination(
->>>>>>> origin/master
         Vector2 destination,
         int maximumPathCostExclusive,
         bool forceRepath = false)
     {
         SubmitDestination(destination, Mathf.Max(1, maximumPathCostExclusive), forceRepath);
-<<<<<<< HEAD
-=======
         return DestinationResult;
->>>>>>> origin/master
     }
 
     /// <summary>统一同步移动模块状态并把目标交给导航代理。</summary>

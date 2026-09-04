@@ -40,11 +40,7 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
     private TextMeshProUGUI countText;
     private TextMeshProUGUI emptyText;
     private Button toggleButton;
-<<<<<<< HEAD
-    private bool isExpanded = true;
-=======
     private bool isExpanded;
->>>>>>> origin/master
     private bool missingPrefabLogged;
 
     private readonly List<QuestTrackerRowView> rowViews = new(MaximumVisibleQuestCount);
@@ -70,10 +66,7 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
 
     private void Awake()
     {
-<<<<<<< HEAD
-=======
         isExpanded = PlayerQuestTrackerPreferences.Expanded;
->>>>>>> origin/master
         ResolvePlayer();
     }
 
@@ -454,10 +447,7 @@ public sealed class PlayerQuestTrackerHUD : MonoBehaviour
     private void ToggleExpanded()
     {
         isExpanded = !isExpanded;
-<<<<<<< HEAD
-=======
         PlayerQuestTrackerPreferences.SetExpanded(isExpanded);
->>>>>>> origin/master
         ApplyExpandedState();
     }
 

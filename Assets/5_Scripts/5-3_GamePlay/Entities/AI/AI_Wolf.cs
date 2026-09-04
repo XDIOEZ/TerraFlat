@@ -141,11 +141,8 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	/// <summary>狼接受新追击路线的总代价上限，不包含上限本身。</summary>
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), LabelText("路径代价上限"), MinValue(1)]
 	public int chasePathCostLimit = 440;
-<<<<<<< HEAD
-=======
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), LabelText("路径重试间隔"), SuffixLabel("秒", true), MinValue(0.1f)]
 	public float chasePathRetryDelay = 3f;
->>>>>>> origin/master
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/战斗"), HorizontalGroup("配置/行为/战斗/Hr3"), LabelText("攻击冷却"), SuffixLabel("秒", true), MinValue(0f)]
 	public float attackCooldown = 2f;
@@ -533,15 +530,11 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		Vector3 chaseTarget = _hasChaseFormationTarget
 			? _chaseFormationTarget
 			: _currentThreat.transform.position;
-<<<<<<< HEAD
-		MoveToChaseTarget(chaseTarget, chasePathCostLimit);
-=======
 		WorldNavigationDestinationResult moveResult =
 			MoveToChaseTarget(chaseTarget, chasePathCostLimit);
 		if (TryHandleRejectedChasePath(moveResult, _currentThreat, chasePathRetryDelay))
 			return;
 
->>>>>>> origin/master
 		FaceTarget(chaseTarget);
 		TryCallNearbyWolves();
 	}
@@ -666,10 +659,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	private bool ShouldChase()
 	{
 		if (_currentThreat == null) return false;
-<<<<<<< HEAD
-=======
 		if (IsChaseTargetBlockedByPathCost(_currentThreat)) return false;
->>>>>>> origin/master
 		bool alreadyEngaged = _currentState == WolfState.Chase || _currentState == WolfState.Attack;
 		float chaseDistance = alreadyEngaged ? chaseLossDistance : chaseTriggerDistance;
 
@@ -694,10 +684,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 	private bool ShouldAlert()
 	{
 		if (_currentThreat == null) return _alertTimer > 0f;
-<<<<<<< HEAD
-=======
 		if (IsChaseTargetBlockedByPathCost(_currentThreat)) return false;
->>>>>>> origin/master
 
 		if (IsWithinEffectivePerceptionRange(_currentThreat, alertDetectDistance))
 		{
