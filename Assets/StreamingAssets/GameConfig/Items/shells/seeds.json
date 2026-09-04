@@ -132,6 +132,19 @@
           }
         }
       }
+    },
+    {
+      "id": "Seed_Mushroom",
+      "parent": "Seed_Radish",
+      "gameName": "蘑菇孢子",
+      "description": "种下后会长出蘑菇；成熟时可以收获蘑菇，并有机会得到新的孢子。",
+      "modules": {
+        "plantable": {
+          "parameters": {
+            "cropItemId": "MushroomCrop"
+          }
+        }
+      }
     }
   ]
 }

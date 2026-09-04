@@ -238,7 +238,7 @@ namespace FlatWorld.WorldModel
     }
 
     /// <summary>
-    /// 在已完成的纯地形上执行生态阶段。
+    /// 在已完成的纯地形上执行可配置生态阶段。
     /// 宿主和伴生物都由规则声明，不读取 Prefab 标签，因此后台生成可以完全无头运行。
     /// </summary>
     public static class ChunkEcologyGenerator
@@ -263,8 +263,7 @@ namespace FlatWorld.WorldModel
         {
             if (terrain == null)
                 throw new ArgumentNullException(nameof(terrain));
-            if (request.Profile.Settings.Mode != ChunkGenerationMode.Surface ||
-                globalMultiplier <= 0d || rules == null || rules.Count == 0)
+            if (globalMultiplier <= 0d || rules == null || rules.Count == 0)
             {
                 return ChunkEcologyData.Empty;
             }

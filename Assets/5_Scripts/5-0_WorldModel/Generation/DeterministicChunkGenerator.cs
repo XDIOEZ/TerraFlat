@@ -85,7 +85,7 @@ namespace FlatWorld.WorldModel
                 ChunkEcologyData ecology;
                 if (cave)
                 {
-                    // 洞穴不走地表生态规则，改由洞穴布局的矿脉阶段输出纯 Item 放置记录。
+                    // 洞穴阶段合并当前 Profile 的植物规则、入口、藤蔓与矿物放置记录。
                     ecology = CaveGenerationFeatureGenerator.GenerateCave(
                         request, terrain, cancellationToken);
                 }

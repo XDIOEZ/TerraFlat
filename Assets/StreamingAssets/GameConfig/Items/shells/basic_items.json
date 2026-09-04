@@ -2386,6 +2386,50 @@
       }
     },
     {
+      "id": "Mushroom",
+      "parent": "Radish",
+      "gameName": "蘑菇",
+      "description": "生长在地下洞穴中的食用蘑菇，可以直接食用，也可以用孢子种植。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Mushroom/Item_Mushroom.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.75,
+            "y": 0.7
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 12.0,
+                "Max_Carbohydrates": 12.0,
+                "Fat": 0.5,
+                "Max_Fat": 0.5,
+                "Protein": 5.0,
+                "Max_Protein": 5.0,
+                "Water": 24.0,
+                "Max_Water": 24.0,
+                "Vitamins": 12.0,
+                "Max_Vitamins": 12.0
+              },
+              "Max_EatingProgress": 1.2
+            }
+          }
+        }
+      }
+    },
+    {
       "id": "Coconut_Addle",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Addle.prefab",

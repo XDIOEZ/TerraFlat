@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Cave
   m_EditorClassIdentifier:
   profileId: cave.default
-  generationSignature: 27
+  generationSignature: 28
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -99,7 +99,31 @@ MonoBehaviour:
   - Id: cave.portal.targetDimensionId
     Value: surface
   ecologyGlobalMultiplier: 1
-  ecologyRules: []
+  ecologyRules:
+  - RuleId: cave.flora.mushroom
+    ItemId: MushroomCrop
+    ItemCount: 1
+    SpawnChance: 0.42
+    SpawnChanceMultiplier: 1
+    DistributionMode: 1
+    PatchSpacing: 12
+    PatchRadius: 2.5
+    PatchChance: 0.08
+    BiomeMask: 0
+    MinTemperature: 0
+    MaxTemperature: 1
+    MinPrecipitation: 0
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    ProvidedTags: []
+    CompanionOnly: 0
+    CompanionHostTag:
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
   caveResourceRules:
   - RuleId: cave.resource.tin
     ItemId: Mine_Tin

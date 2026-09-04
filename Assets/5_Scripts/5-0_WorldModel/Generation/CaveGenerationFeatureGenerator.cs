@@ -7,7 +7,7 @@ namespace FlatWorld.WorldModel
 {
     /// <summary>
     /// 新版区块的洞穴物品阶段。
-    /// 地形完成后在纯数据中输出可采集藤蔓、洞壁矿脉、散落矿石和跨维度传送门，主线程只负责由 ChunkView 实例化。
+    /// 地形完成后在纯数据中合并可配置植物、藤蔓、矿物和跨维度传送门，主线程只负责由 ChunkView 实例化。
     /// </summary>
     public static class CaveGenerationFeatureGenerator
     {
@@ -89,6 +89,9 @@ namespace FlatWorld.WorldModel
             var portalCells = new HashSet<int>();
             AddCavePortals(request, terrain, settings, placements, claimedGuids, portalCells,
                 cancellationToken);
+            var occupiedCells = new HashSet<int>(portalCells);
+            AddConfiguredCaveFlora(request, terrain, settings, placements, claimedGuids,
+                occupiedCells, cancellationToken);
 
             IReadOnlyList<CaveResourceRuleSnapshot> resourceRules =
                 request.Profile.CaveResourceRules;
@@ -100,7 +103,7 @@ namespace FlatWorld.WorldModel
                 {
                     if (((localY * terrain.Width + localX) & 63) == 0)
                         cancellationToken.ThrowIfCancellationRequested();
-                    if (portalCells.Contains(localY * terrain.Width + localX))
+                    if (occupiedCells.Contains(localY * terrain.Width + localX))
                         continue;
 
                     TerrainCell cell = terrain.GetCell(localX, localY);
@@ -646,6 +649,43 @@ namespace FlatWorld.WorldModel
         {
             int quotient = value / divisor;
             return value % divisor < 0 ? quotient - 1 : quotient;
+        }
+
+        #endregion
+
+        #region 可配置洞穴植物
+
+        /// <summary>执行洞穴 Profile 的生态规则，并让入口和出生安全区保持空旷。</summary>
+        private static void AddConfiguredCaveFlora(ChunkGenerationRequest request,
+            ChunkTerrainBuffer terrain, ChunkGenerationSettingsSnapshot settings,
+            List<NaturalItemPlacement> placements, HashSet<int> claimedGuids,
+            HashSet<int> occupiedCells, CancellationToken cancellationToken)
+        {
+            ChunkEcologyData flora = ChunkEcologyGenerator.Generate(
+                request,
+                terrain,
+                request.Profile.EcologyGlobalMultiplier,
+                request.Profile.EcologyRules,
+                cancellationToken);
+            IReadOnlyList<NaturalItemPlacement> floraPlacements = flora.Placements;
+            for (int i = 0; i < floraPlacements.Count; i++)
+            {
+                NaturalItemPlacement placement = floraPlacements[i];
+                int cellKey = placement.LocalY * terrain.Width + placement.LocalX;
+                int worldX = request.Topology.NormalizeX(
+                    request.Address.ChunkOrigin.X + placement.LocalX);
+                int worldY = request.Topology.NormalizeY(
+                    request.Address.ChunkOrigin.Y + placement.LocalY);
+                if (occupiedCells.Contains(cellKey) ||
+                    CaveLayoutKernel.IsInsideDefaultSpawnSafeArea(
+                        request, settings, worldX, worldY))
+                {
+                    continue;
+                }
+
+                AddPlacement(placements, claimedGuids, placement);
+                occupiedCells.Add(cellKey);
+            }
         }
 
         #endregion

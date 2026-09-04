@@ -158,6 +158,64 @@
       }
     },
     {
+      "id": "MushroomCrop",
+      "parent": "RadishCrop",
+      "gameName": "蘑菇植株",
+      "description": "生长在阴暗地下的蘑菇；成熟后交互即可采集。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Mushroom/Plant_Mushroom.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.8,
+            "y": 0.75
+          }
+        }
+      },
+      "modules": {
+        "crop": {
+          "parameters": {
+            "growthDurationSeconds": 420.0,
+            "minimumWaterGrowthMultiplier": 0.35,
+            "waterConsumePerSecond": 0.012,
+            "fertilityConsumePerSecond": 0.00025
+          }
+        },
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              {
+                "itemId": "Mushroom",
+                "minAmount": 1,
+                "maxAmount": 3,
+                "probability": 1.0
+              },
+              {
+                "itemId": "Seed_Mushroom",
+                "minAmount": 1,
+                "maxAmount": 1,
+                "probability": 0.3
+              }
+            ]
+          }
+        },
+        "cropVisual": {
+          "parameters": {
+            "buriedClip": 0.0,
+            "seedlingScale": 0.3,
+            "matureScale": 1.0
+          }
+        }
+      }
+    },
+    {
       "id": "TwineCrop",
       "parent": "Crop_Base",
       "gameName": "藤蔓植株",

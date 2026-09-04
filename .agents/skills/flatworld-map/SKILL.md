@@ -12,6 +12,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 地图数据与存档：`Assets/5_Scripts/5-3_GamePlay/World/Map/Data/`
 - 资源：`Assets/2_Prefabs/World/Map/`、`Assets/7_Tiles/`、`Assets/4_ScriptObjects/World/{Tiles,Biomes,Structures}/`
 - 当前地表自然物密度以 `Assets/Resources/Config/WorldModel/ChunkGenerationProfile_Surface.asset` 的 `ecologyRules` 为权威；`BiomeData.TerrainConfig.ItemSpawn_NoSO` 属于旧生成链，不用于调整 WorldModel 生态数量。生态规则会在首次进入新世界时冻结到 `PlanetData`，后续配置调整只作用于新世界，不静默改写现有存档。
+- 洞穴可配置植物同样使用 `Assets/Resources/Config/WorldModel/ChunkGenerationProfile_Cave.asset` 的 `ecologyRules`；洞穴生成按“入口 → 配置植物 → 藤蔓/矿物”占格，出生安全区不生成配置植物。
 - Chunk 运行时、生成调度和表现绑定改用 `flatworld-world-model`。
 
 ## 主链
