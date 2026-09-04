@@ -55,7 +55,7 @@
         "Temp/": true,
         "UserSettings/": true
     },
-    "dotnet.defaultSolution": "FlatWorld.sln",
+    "dotnet.defaultSolution": "TerraFlat-master.sln",
     "dotnet.preferCSharpExtension": true,
     "workbench.editorAssociations": {
         "*.prefab": "unityPrefabBrowser.prefabEditor"
