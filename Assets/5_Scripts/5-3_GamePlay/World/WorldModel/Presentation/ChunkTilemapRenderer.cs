@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FlatWorld.WorldModel;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -30,6 +31,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
     [SerializeField] private Tilemap backTilemap;
     [SerializeField] private Tilemap blockingTilemap;
 
+    private readonly List<NeighbourTerrainSubscription> neighbourTerrainSubscriptions = new(4);
     private WorldRuntime boundWorld;
     private ChunkRuntime boundChunk;
     private IDisposable chunkCommittedSubscription;
@@ -55,6 +57,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
         if (boundWorld != null)
             chunkCommittedSubscription =
                 boundWorld.Events.Subscribe<ChunkCommitted>(HandleChunkCommitted);
+        RefreshNeighbourTerrainSubscriptions();
     }
 
     public void Bind(ChunkRuntime chunk)
@@ -74,6 +77,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
         if (caveWaterTilemap != null)
             caveWaterTilemap.gameObject.SetActive(renderCaveWater);
         boundChunk.Terrain.Changed += HandleTerrainChanged;
+        RefreshNeighbourTerrainSubscriptions();
         Render(chunk.Terrain);
     }
 
@@ -81,6 +85,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
     {
         if (boundChunk?.Terrain != null)
             boundChunk.Terrain.Changed -= HandleTerrainChanged;
+        ClearNeighbourTerrainSubscriptions();
         if (groundTilemap != null)
             groundTilemap.ClearAllTiles();
         if (waterTilemap != null)
@@ -133,7 +138,74 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
             (changed.X == origin.X && changed.Y == origin.Y - height) ||
             (changed.X == origin.X && changed.Y == origin.Y + height);
         if (isNeighbour)
+        {
+            RefreshNeighbourTerrainSubscriptions();
             Render(boundChunk.Terrain);
+        }
+    }
+
+    /// <summary>订阅四个正交相邻区块；边界墙变化时，本区块对应墙脚阴影也必须更新。</summary>
+    private void RefreshNeighbourTerrainSubscriptions()
+    {
+        ClearNeighbourTerrainSubscriptions();
+        if (boundWorld == null || boundChunk?.Terrain == null)
+            return;
+
+        ChunkTerrainData terrain = boundChunk.Terrain;
+        SubscribeNeighbourTerrain(-terrain.Width, 0);
+        SubscribeNeighbourTerrain(terrain.Width, 0);
+        SubscribeNeighbourTerrain(0, -terrain.Height);
+        SubscribeNeighbourTerrain(0, terrain.Height);
+    }
+
+    private void SubscribeNeighbourTerrain(int offsetX, int offsetY)
+    {
+        Int2 origin = boundChunk.Address.ChunkOrigin;
+        var address = new FlatWorld.WorldModel.WorldAddress(boundChunk.Address.DimensionId,
+            new Int2(origin.X + offsetX, origin.Y + offsetY));
+        if (!boundWorld.TryGetChunkTerrain(address, out ChunkTerrainData neighbourTerrain))
+            return;
+
+        Action<ChunkTerrainChanged> handler = changed =>
+            HandleNeighbourTerrainChanged(neighbourTerrain, offsetX, offsetY, changed);
+        neighbourTerrain.Changed += handler;
+        neighbourTerrainSubscriptions.Add(
+            new NeighbourTerrainSubscription(neighbourTerrain, handler));
+    }
+
+    private void HandleNeighbourTerrainChanged(
+        ChunkTerrainData neighbourTerrain,
+        int offsetX,
+        int offsetY,
+        ChunkTerrainChanged changed)
+    {
+        if (boundChunk?.Terrain == null ||
+            (changed.Kind != TerrainChangeKind.Cell &&
+             changed.Kind != TerrainChangeKind.TileStack))
+        {
+            return;
+        }
+
+        bool touchesSharedEdge = offsetX < 0
+            ? changed.LocalCell.X == neighbourTerrain.Width - 1
+            : offsetX > 0
+                ? changed.LocalCell.X == 0
+                : offsetY < 0
+                    ? changed.LocalCell.Y == neighbourTerrain.Height - 1
+                    : changed.LocalCell.Y == 0;
+        if (touchesSharedEdge)
+            Render(boundChunk.Terrain);
+    }
+
+    private void ClearNeighbourTerrainSubscriptions()
+    {
+        for (int i = 0; i < neighbourTerrainSubscriptions.Count; i++)
+        {
+            NeighbourTerrainSubscription subscription = neighbourTerrainSubscriptions[i];
+            subscription.Terrain.Changed -= subscription.Handler;
+        }
+
+        neighbourTerrainSubscriptions.Clear();
     }
 
     #endregion
@@ -409,6 +481,20 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
         Wall,
         Land,
         Stone
+    }
+
+    private readonly struct NeighbourTerrainSubscription
+    {
+        public NeighbourTerrainSubscription(
+            ChunkTerrainData terrain,
+            Action<ChunkTerrainChanged> handler)
+        {
+            Terrain = terrain;
+            Handler = handler;
+        }
+
+        public ChunkTerrainData Terrain { get; }
+        public Action<ChunkTerrainChanged> Handler { get; }
     }
 
     #endregion
