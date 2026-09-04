@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,6 +11,8 @@ using UnityEngine.UI;
 /// </summary>
 public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposable
 {
+    private const float StatusBarTransitionDuration = 0.24f;
+
     private readonly IFoodRuntimeContext context;
     private readonly DamageReceiver damageReceiver;
     private readonly GameObject panelPrefab;
@@ -16,6 +20,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     private readonly Action<GameObject> writePanelInstance;
     private readonly Func<BasePanel> readPanel;
     private readonly Action<BasePanel> writePanel;
+    private readonly Dictionary<Slider, float> statusBarTargets = new Dictionary<Slider, float>();
 
     public FoodUIModule(
         IFoodRuntimeContext context,
@@ -126,6 +131,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
     public void DestroyPanel()
     {
         GameObject panelInstance = readPanelInstance?.Invoke();
+        StopStatusBarTransitions();
         writePanel?.Invoke(null);
         writePanelInstance?.Invoke(null);
 
@@ -242,14 +248,11 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             graphic.raycastTarget = false;
     }
 
-    private static void UpdateNutrition(BasePanel panel, string name, float currentValue, float maxValue)
+    private void UpdateNutrition(BasePanel panel, string name, float currentValue, float maxValue)
     {
         Slider slider = panel.GetSlider(name);
         if (slider != null)
-        {
-            slider.maxValue = maxValue;
-            slider.value = currentValue;
-        }
+            SetStatusBarValue(slider, 0f, maxValue, currentValue);
 
         TMPro.TextMeshProUGUI text = panel.GetText($"DataText_{name}");
         if (text != null)
@@ -272,11 +275,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         float maxHp = Mathf.Max(0f, damageReceiver.MaxHp);
         float hp = Mathf.Clamp(damageReceiver.Hp, 0f, maxHp);
         if (slider != null)
-        {
-            slider.minValue = 0f;
-            slider.maxValue = Mathf.Max(1f, maxHp);
-            slider.value = hp;
-        }
+            SetStatusBarValue(slider, 0f, Mathf.Max(1f, maxHp), hp);
 
         if (text != null)
             text.text = $"{Mathf.RoundToInt(hp)}/{Mathf.RoundToInt(maxHp)}";
@@ -338,15 +337,67 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         float hotStart = Mathf.Max(coldStart + 1f, temperature.Data.HotDamageStart);
         float buffer = Mathf.Max(2f, (hotStart - coldStart) * 0.2f);
         if (slider != null)
-        {
-            slider.minValue = coldStart - buffer;
-            slider.maxValue = hotStart + buffer;
-            slider.value = temperature.Data.CurrentTemperature;
-        }
+            SetStatusBarValue(
+                slider,
+                coldStart - buffer,
+                hotStart + buffer,
+                temperature.Data.CurrentTemperature);
 
         if (dataText != null)
             dataText.text = $"{temperature.Data.CurrentTemperature:0.0}°C";
     }
+
+    #region 状态条过渡
+
+    /// <summary>首次绑定直接同步，后续变化用非缩放时间平滑推动填充条左右移动。</summary>
+    private void SetStatusBarValue(Slider slider, float minValue, float maxValue, float targetValue)
+    {
+        float safeMaxValue = Mathf.Max(minValue, maxValue);
+        float clampedTarget = Mathf.Clamp(targetValue, minValue, safeMaxValue);
+        slider.minValue = minValue;
+        slider.maxValue = safeMaxValue;
+
+        if (!statusBarTargets.TryGetValue(slider, out float previousTarget))
+        {
+            statusBarTargets.Add(slider, clampedTarget);
+            slider.SetValueWithoutNotify(clampedTarget);
+            return;
+        }
+
+        if (Mathf.Approximately(previousTarget, clampedTarget))
+            return;
+
+        statusBarTargets[slider] = clampedTarget;
+        DOTween.Kill(slider, false);
+        if (Mathf.Approximately(slider.value, clampedTarget))
+        {
+            slider.SetValueWithoutNotify(clampedTarget);
+            return;
+        }
+
+        DOTween.To(
+                () => slider.value,
+                value => slider.SetValueWithoutNotify(value),
+                clampedTarget,
+                StatusBarTransitionDuration)
+            .SetId(slider)
+            .SetEase(Ease.OutCubic)
+            .SetUpdate(true);
+    }
+
+    /// <summary>释放面板前终止所有状态条动画，避免销毁后仍访问 Slider。</summary>
+    private void StopStatusBarTransitions()
+    {
+        foreach (Slider slider in statusBarTargets.Keys)
+        {
+            if (slider != null)
+                DOTween.Kill(slider, false);
+        }
+
+        statusBarTargets.Clear();
+    }
+
+    #endregion
 
     private static void ClampInsideCanvas(RectTransform panelRect, float margin)
     {
