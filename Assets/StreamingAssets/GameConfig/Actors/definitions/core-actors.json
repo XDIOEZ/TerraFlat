@@ -1228,6 +1228,7 @@
             "chaseTriggerDistance": 12.0,
             "chaseLossDistance": 20.0,
             "chasePathCostLimit": 200,
+            "chasePathRetryDelay": 3.0,
             "chaseThreatTags": [
               "Player"
             ],
@@ -2113,6 +2114,7 @@
             "attackTriggerDistance": 1.4,
             "chaseLossDistance": 44.0,
             "chasePathCostLimit": 440,
+            "chasePathRetryDelay": 3.0,
             "attackCooldown": 2.0,
             "attackDamageWindow": 0.333333343,
             "attackDamageStartDelay": 0.5,

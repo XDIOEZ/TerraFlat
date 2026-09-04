@@ -80,6 +80,7 @@
             "perceptionRangeHungry": 24.0,
             "chaseLossDistance": 30.0,
             "chasePathCostLimit": 300,
+            "chasePathRetryDelay": 3.0,
             "preyReacquireDelay": 10.0,
             "rabbitChaseDuration": 30.0,
             "attackTriggerDistance": 1.4,

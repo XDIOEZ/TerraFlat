@@ -37,6 +37,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - 需要短时保留正式生态生物用于跨区块、存档或可见性验证时，使用 `MonsterManager.AcquireEcologyRecycleProtection` 的作用域租约；它只绕过数量与距离回收，不能阻止区块休眠显隐或调用方的正式 `DespawnItem`，并且必须在清理路径释放。
 - 移动/可走性改动联动 `flatworld-navigation`；伤害联动 `flatworld-combat`；注册/存档联动 Item/Data Skill。
 - 追击路径代价限制统一通过 `AI_Base.MoveToChaseTarget` 提交；具体动物只配置自身上限，闲逛、逃跑和外部推进仍使用不受限的普通移动入口。
+- 使用路径代价限制的追击必须消费 `RejectedByPathCost`，并通过 `AI_Base.TryHandleRejectedChasePath` 暂停同一目标后再重试；禁止让状态机继续停留在无可执行路线的追击状态。
 - 使用 `AI_AttackController` 的动物，前摇、伤害窗口和后摇由控制器统一驱动；修改攻击时序时必须同步 Actor JSON、Prefab 回退值与 `Attack.anim` 的 `IsAttacking` 曲线，避免配置与可视/伤害帧错位。
 - 可组合动物技能统一实现 `IAnimalCombatSkill` 并作为 Item Module 挂载；`AI_Base` 会自动收集到 `_animalSkills`，技能自行控制移动时状态节点必须使用 `CreateStateNode`，不能套用每帧停车的 `CreateStoppedActionStateNode`。
 - 动物技能数值来自 `Assets/StreamingAssets/GameConfig/Skills/animal-skills.json`，Actor JSON 只声明模块和技能模板 ID；独立技能碰撞模块不要继承 `Mod_Damage`，否则会被 `AI_AttackController` 当作普通攻击窗口一起启停。
