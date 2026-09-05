@@ -6,7 +6,6 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 
 /// <summary>
@@ -192,7 +191,7 @@ public static class ActorDefinitionCatalogLoader
 
         var shellHandles = shellAddresses.ToDictionary(
             pair => pair.Key,
-            pair => Addressables.LoadAssetAsync<GameObject>(pair.Value),
+            pair => gameRes.ResourceAssets.Load<GameObject>(pair.Value),
             StringComparer.OrdinalIgnoreCase);
         string[] controllerAddresses = concrete
             .Select(definition => definition.Visual?.AnimatorControllerAddress?.Trim())
@@ -201,7 +200,7 @@ public static class ActorDefinitionCatalogLoader
             .ToArray();
         var controllerHandles = controllerAddresses.ToDictionary(
             address => address,
-            Addressables.LoadAssetAsync<RuntimeAnimatorController>,
+            address => gameRes.ResourceAssets.Load<RuntimeAnimatorController>(address),
             StringComparer.OrdinalIgnoreCase);
 
         while (shellHandles.Values.Any(handle => !handle.IsDone) ||

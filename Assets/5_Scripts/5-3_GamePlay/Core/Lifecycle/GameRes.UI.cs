@@ -85,6 +85,7 @@ public partial class GameRes
     /// <summary>销毁加载界面并释放单例引用。</summary>
     protected override void OnDestroy()
     {
+        DisposeResourceSession();
         DisposeResourceLoadingPresentation();
         base.OnDestroy();
     }

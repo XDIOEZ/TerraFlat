@@ -9,7 +9,8 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 
 - 世界生命周期：`Assets/5_Scripts/5-3_GamePlay/Core/Lifecycle/GameManager.cs`
 - UI 绑定：同目录 `GameManager.UI.cs`
-- 资源启动：同目录 `GameRes.cs`
+- 资源门面：同目录 `GameRes.cs`；会话：`GameRes.Loading.cs`；阶段组合：`GameRes.LoadPlan.cs`
+- 阶段执行/所有权/校验：同目录 `ResourceLoadPipeline.cs`、`ResourceAssetScope.cs`、`ResourceCatalogValidation.cs`
 - 场景服务：同目录 `SceneMgr.cs`
 - 保存：同目录 `{AutoSaveController,SaveDataMgr}.cs`
 
@@ -21,7 +22,10 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 
 - `GameManager` 是新建、继续、运行、退出世界的权威；`GameWorldSceneManager` 不是。
 - 动态维度 Scene 不进 Build Settings，以 `WorldKey` 命名并复用 `RunWorld()`。
-- 资源加载保持本体先于 MOD；注册失败不得留下半初始化字典。
+- 资源启动只有 `TryReloadResources` 一个入口，加载中不创建第二条会话；世界进入中、世界运行中或仍有存活 Item 时禁止更换目录。`isLoadFinish` 只由 `LoadState.Ready` 派生，不得由各目录单独发布成功。
+- 新目录在 `GameRes.LoadPlan.cs` 注册阶段及依赖；阶段内返回嵌套 `IEnumerator`，禁止 `StartCoroutine` 脱离 `ResourceLoadPipeline` 的异常、超时与取消管理。
+- 本体资源句柄发出时即交给 `ResourceAssetScope` 持有，成功保留到目录卸载，失败/取消统一释放；卸载必须先处理 MOD 与物品池，再清空派生目录、释放资源，禁止用自动创建单例的查询入口做销毁清理。
+- 本体先校验再加载 MOD，合并后再次通过 `ResourceCatalogValidation` 才发布 Ready。新系统通过 `IResourceCatalogValidator` 接入引用校验，不把玩法资源约束塞进通用加载器；静态目录检查入口为 `FlatWorld/诊断/检查 Addressables 目录`。
 - 编辑器普通 Play 与完整流程入口统一启用 Domain Reload 和 Scene Reload（`m_EnterPlayModeOptionsEnabled: 0`），由 Unity 一次性重建 Addressables、单例与静态事件；禁止反射替换 Addressables 私有实例来模拟局部重置。通用 Prefab 标签查询为 0 时必须在 `GameRes` 入口失败；排查时区分静态目录缺失与运行时 Locator 状态，不能仅凭空查询断言根因。
 - `GameRes` 会随 `WorldManager` Prefab 再次出现在 `GameStartScene`；跨场景存活实例已存在时，重复实例不得启动资源加载协程，否则会先清空目录、再随重复对象销毁而中断加载。时间系统 JSON 必须在 `GameRes` 允许创建新世界前完成加载，玩家覆盖文件无效时保留内建配置。
 - 基于 `SingletonMono<T>` 的跨场景管理器必须按 Unity null 语义恢复已销毁的静态引用，且场景副本不得覆盖有效实例，否则返回主菜单再进入时会把运行时回调发送给已销毁对象。

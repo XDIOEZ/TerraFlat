@@ -10,11 +10,14 @@ public class SyncAllExcel
     {
         Debug.Log("开始同步所有道具数据");
 
-        EditorUtility.DisplayProgressBar("同步道具数据", "正在准备资源，请稍候...", 0f);
-        // 然后去做 GameRes.Awake()
-
+        if (!Application.isPlaying || _isChecking)
+        {
+            Debug.LogWarning("请在运行中的主菜单执行同步，并等待上一次同步结束。");
+            return;
+        }
         var gameRes = GameRes.Instance;
-        gameRes.LoadResourcesSync();
+        if (!gameRes.TryReloadResources()) return;
+        EditorUtility.DisplayProgressBar("同步道具数据", "正在准备资源，请稍候...", 0f);
 
         // 轮询资源是否加载完成
         EditorApplication.update += CheckResourcesLoaded;
@@ -33,7 +36,15 @@ public class SyncAllExcel
             _gameRes = GameRes.Instance;
         }
 
-        if (_gameRes.AllPrefabs != null && _gameRes.AllPrefabs.Count > 0)
+        if (_gameRes.LoadState == ResourceLoadState.Failed)
+        {
+            EditorApplication.update -= CheckResourcesLoaded;
+            _isChecking = false;
+            EditorUtility.ClearProgressBar();
+            Debug.LogError(_gameRes.LastLoadError);
+            return;
+        }
+        if (_gameRes.isLoadFinish)
         {
             EditorApplication.update -= CheckResourcesLoaded;
             _isChecking = false;

@@ -262,6 +262,13 @@ public static class TimeSystemConfigService
         Version++;
     }
 
+    /// <summary>资源会话失败或卸载时，清除本次目录并使派生缓存失效。</summary>
+    internal static void Reset()
+    {
+        Catalog = null;
+        Version++;
+    }
+
     public static bool TryGetProfile(string profileId, out TimeSystemProfileConfig profile)
     {
         profile = null;

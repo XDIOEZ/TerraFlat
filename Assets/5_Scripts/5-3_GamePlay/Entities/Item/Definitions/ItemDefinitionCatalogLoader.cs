@@ -6,7 +6,6 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -88,18 +87,10 @@ public static class ItemDefinitionCatalogLoader
         return CreateCombinedCatalog(ReadBuiltInPackages().Select(package => package.Root));
     }
 
-    public static IEnumerator LoadBuiltInAsync(
-        GameRes gameRes,
-        Action<int> completed,
-        Action<Exception> failed,
-        Action<float> progress = null)
+    /// <summary>异步读取 Manifest 与分包，一次解析结果同时供 Prefab 计划和定义构建使用。</summary>
+    public static IEnumerator LoadBuiltInDefinitionsAsync(
+        Action<List<ItemDefinitionDto>> completed, Action<Exception> failed, Action<float> progress = null)
     {
-        if (gameRes == null)
-        {
-            failed?.Invoke(new ArgumentNullException(nameof(gameRes)));
-            yield break;
-        }
-
         string manifestJson = null;
         Exception readError = null;
         yield return StreamingAssetsTextLoader.ReadAllTextAsync(
@@ -173,7 +164,6 @@ public static class ItemDefinitionCatalogLoader
         try
         {
             dtos = ResolveLoadedPackages(loadedPackages);
-            ValidateLootTableItemIds(gameRes, dtos);
         }
         catch (Exception exception)
         {
@@ -181,160 +171,51 @@ public static class ItemDefinitionCatalogLoader
             yield break;
         }
 
-        // JSON 外壳由定义目录显式预加载，避免通用 Prefab 别名的加载顺序决定 shellPrefab 结果。
+        completed(dtos);
+    }
+
+    /// <summary>从解析后的定义构建运行时目录；所有资源请求交由 GameRes 会话持有。</summary>
+    public static IEnumerator LoadBuiltInAsync(
+        GameRes gameRes, Action<int> completed, Action<Exception> failed,
+        Action<float> progress = null, List<ItemDefinitionDto> preparedDefinitions = null)
+    {
+        if (gameRes == null) throw new ArgumentNullException(nameof(gameRes));
+        List<ItemDefinitionDto> dtos = preparedDefinitions;
+        if (dtos == null)
+        {
+            Exception error = null;
+            yield return LoadBuiltInDefinitionsAsync(value => dtos = value, exception => error = exception, progress);
+            if (error != null) { failed?.Invoke(error); yield break; }
+        }
+        ValidateLootTableItemIds(gameRes, dtos);
+
+        // shellPrefab 引用通用 Prefab 目录；只有 shellAddress 才声明独立外壳资源。
+        // sourcePrefab 仅是编辑器迁移来源，不参与运行时资源加载。
         var shellAddresses = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (ItemDefinitionDto dto in dtos)
+        foreach (ItemDefinitionDto dto in dtos.Where(dto => !dto.Abstract && !string.IsNullOrWhiteSpace(dto.ShellAddress)))
         {
-            if (dto.Abstract || string.IsNullOrWhiteSpace(dto.ShellPrefab) ||
-                string.IsNullOrWhiteSpace(dto.SourcePrefab))
-            {
-                continue;
-            }
-
             string shellId = dto.ShellPrefab.Trim();
-            string sourcePath = dto.SourcePrefab.Trim().Replace('\\', '/');
-            if (string.Equals(
-                    Path.GetFileNameWithoutExtension(sourcePath),
-                    shellId,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                shellAddresses.TryAdd(shellId, sourcePath);
-            }
+            string address = dto.ShellAddress.Trim();
+            if (shellAddresses.TryGetValue(shellId, out string existing) && existing != address)
+                throw new InvalidDataException($"物品外壳 {shellId} 同时声明不同地址：{existing} / {address}");
+            shellAddresses[shellId] = address;
         }
-
-#if UNITY_EDITOR
-        // Fast Mode 下只读取已经导入的 Prefab。Play Mode 内强制重新导入会触发
-        // PrefabImporter 不一致警告，也会让资源目录初始化产生额外抖动。
         foreach (KeyValuePair<string, string> pair in shellAddresses)
         {
-            GameObject shell = AssetDatabase.LoadAssetAtPath<GameObject>(pair.Value);
-            Item shellItem = shell != null ? shell.GetComponent<Item>() : null;
-            if (shellItem?.itemData == null)
-            {
-                string componentTypes = shell == null
-                    ? "<none>"
-                    : string.Join(",", shell.GetComponents<Component>()
-                        .Where(component => component != null)
-                        .Select(component => component.GetType().Name));
-                failed?.Invoke(new InvalidDataException(
-                    $"内置物品外壳 Prefab 无效：{pair.Key} → {pair.Value}；" +
-                    $"result={shell?.name ?? "<null>"}，" +
-                    $"components={componentTypes}，item={shellItem?.GetType().Name ?? "<null>"}，" +
-                    $"itemData={(shellItem?.itemData == null ? "null" : shellItem.itemData.IDName)}"));
-                yield break;
-            }
+            var handle = gameRes.ResourceAssets.Load<GameObject>(pair.Value);
+            yield return handle;
+            GameObject shell = ResourceAssetScope.Require(handle, $"Item Shell {pair.Key} -> {pair.Value}");
+            if (shell.GetComponent<Item>()?.itemData == null)
+                throw new InvalidDataException($"物品外壳不是有效 Item：{pair.Key} -> {pair.Value}");
             gameRes.RegisterPrefabAlias(pair.Key, shell);
         }
-#else
-        var shellHandles = new Dictionary<string, AsyncOperationHandle<GameObject>>(
-            StringComparer.OrdinalIgnoreCase);
-        foreach (KeyValuePair<string, string> pair in shellAddresses)
-            shellHandles[pair.Key] = Addressables.LoadAssetAsync<GameObject>(pair.Value);
 
-        while (shellHandles.Values.Any(handle => !handle.IsDone))
-            yield return null;
-
-        foreach (KeyValuePair<string, AsyncOperationHandle<GameObject>> pair in shellHandles)
-        {
-            GameObject shell = pair.Value.Result;
-            Item shellItem = shell != null ? shell.GetComponent<Item>() : null;
-            if (pair.Value.Status != AsyncOperationStatus.Succeeded || shellItem?.itemData == null)
-            {
-                string componentTypes = shell == null
-                    ? "<none>"
-                    : string.Join(",", shell.GetComponents<Component>()
-                        .Where(component => component != null)
-                        .Select(component => component.GetType().Name));
-                failed?.Invoke(new InvalidDataException(
-                    $"物品外壳 Addressable 无效：{pair.Key} → {shellAddresses[pair.Key]}；" +
-                    $"status={pair.Value.Status}，result={shell?.name ?? "<null>"}，" +
-                    $"components={componentTypes}，item={shellItem?.GetType().Name ?? "<null>"}，" +
-                    $"itemData={(shellItem?.itemData == null ? "null" : shellItem.itemData.IDName)}"));
-                yield break;
-            }
-            gameRes.RegisterPrefabAlias(pair.Key, shell);
-        }
-#endif
-
-        string[] addresses = dtos
-            .Where(dto => !dto.Abstract && !string.IsNullOrWhiteSpace(dto.Visual?.SpriteAddress))
-            .Select(dto => dto.Visual.SpriteAddress.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
         var sprites = new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
-#if UNITY_EDITOR
-        // Fast Mode 下直接读取 AssetDatabase，绕过 Addressables 1.22.3 的子资源空引用缺陷。
-        foreach (string address in addresses)
-        {
-            if (!TryLoadEditorSprite(address, out Sprite sprite, out string error))
-            {
-                failed?.Invoke(new InvalidDataException(error));
-                yield break;
-            }
-
-            sprites[address] = sprite;
-        }
-#else
-        var handles = new Dictionary<string, AsyncOperationHandle<Sprite>>(StringComparer.OrdinalIgnoreCase);
-        foreach (string address in addresses)
-            handles[address] = Addressables.LoadAssetAsync<Sprite>(address);
-
-        while (handles.Values.Any(handle => !handle.IsDone))
-        {
-            int done = handles.Values.Count(handle => handle.IsDone);
-            progress?.Invoke(addresses.Length == 0 ? 0.9f : 0.2f + 0.7f * done / addresses.Length);
-            yield return null;
-        }
-
-        foreach (KeyValuePair<string, AsyncOperationHandle<Sprite>> pair in handles)
-        {
-            if (pair.Value.Status != AsyncOperationStatus.Succeeded || pair.Value.Result == null)
-            {
-                failed?.Invoke(new InvalidDataException($"找不到物品 Sprite Addressable：{pair.Key}"));
-                yield break;
-            }
-            sprites[pair.Key] = pair.Value.Result;
-        }
-#endif
-
-        string[] materialAddresses = dtos
-            .Where(dto => !dto.Abstract && !string.IsNullOrWhiteSpace(dto.Visual?.MaterialAddress))
-            .Select(dto => dto.Visual.MaterialAddress.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
         var materials = new Dictionary<string, Material>(StringComparer.OrdinalIgnoreCase);
-#if UNITY_EDITOR
-        foreach (string address in materialAddresses)
-        {
-            Material material = AssetDatabase.LoadAssetAtPath<Material>(address);
-            if (material == null)
-            {
-                failed?.Invoke(new InvalidDataException($"找不到物品共享材质：{address}"));
-                yield break;
-            }
-
-            materials[address] = material;
-        }
-#else
-        var materialHandles = new Dictionary<string, AsyncOperationHandle<Material>>(
-            StringComparer.OrdinalIgnoreCase);
-        foreach (string address in materialAddresses)
-            materialHandles[address] = Addressables.LoadAssetAsync<Material>(address);
-
-        while (materialHandles.Values.Any(handle => !handle.IsDone))
-            yield return null;
-
-        foreach (KeyValuePair<string, AsyncOperationHandle<Material>> pair in materialHandles)
-        {
-            if (pair.Value.Status != AsyncOperationStatus.Succeeded || pair.Value.Result == null)
-            {
-                failed?.Invoke(new InvalidDataException($"找不到物品材质 Addressable：{pair.Key}"));
-                yield break;
-            }
-
-            materials[pair.Key] = pair.Value.Result;
-        }
-#endif
+        var controllers = new Dictionary<string, RuntimeAnimatorController>(StringComparer.OrdinalIgnoreCase);
+        yield return LoadVisualAssets(gameRes, dtos, sprites, dto => dto.Visual?.SpriteAddress, progress);
+        yield return LoadVisualAssets(gameRes, dtos, materials, dto => dto.Visual?.MaterialAddress, progress);
+        yield return LoadVisualAssets(gameRes, dtos, controllers, dto => dto.Visual?.AnimatorControllerAddress, progress);
 
         var definitions = new List<RuntimeItemDefinition>(dtos.Count);
         try
@@ -346,6 +227,7 @@ public static class ItemDefinitionCatalogLoader
                         gameRes,
                         dto,
                         sprites,
+                        controllers,
                         preloadedMaterials: materials));
             }
             foreach (RuntimeItemDefinition definition in definitions)
@@ -358,9 +240,45 @@ public static class ItemDefinitionCatalogLoader
         }
 
         progress?.Invoke(1f);
-        Debug.Log($"[ItemDefinitionCatalog] 已从 {enabledPackages.Length} 个分包异步加载 " +
+        Debug.Log($"[ItemDefinitionCatalog] 已异步加载 " +
                   $"{definitions.Count} 个物品：{BuiltInManifestPath}");
         completed?.Invoke(definitions.Count);
+    }
+
+    /// <summary>批量加载某类视觉资源；地址去重、句柄所有权和失败语义由资源会话统一负责。</summary>
+    private static IEnumerator LoadVisualAssets<T>(GameRes gameRes, IEnumerable<ItemDefinitionDto> definitions,
+        IDictionary<string, T> output, Func<ItemDefinitionDto, string> select, Action<float> progress)
+        where T : UnityEngine.Object
+    {
+        string[] addresses = definitions.Where(dto => !dto.Abstract).Select(select)
+            .Where(address => !string.IsNullOrWhiteSpace(address)).Select(address => address.Trim())
+            .Distinct(StringComparer.Ordinal).ToArray();
+        // 每批最多 16 个请求，兼顾移动端内存峰值与本地/远程资源吞吐。
+        const int batchSize = 16;
+        for (int start = 0; start < addresses.Length; start += batchSize)
+        {
+            int count = Math.Min(batchSize, addresses.Length - start);
+            var batch = new List<AsyncOperationHandle<T>>(count);
+            for (int i = 0; i < count; i++)
+            {
+                string address = addresses[start + i];
+#if UNITY_EDITOR
+                // 先检查 Sprite 子资源名称，避免 Fast Mode 将错误名称送入包内部后才抛空引用。
+                if (typeof(T) == typeof(Sprite) && address.StartsWith("Assets/", StringComparison.Ordinal) &&
+                    !TryLoadEditorSprite(address, out _, out string error))
+                    throw new InvalidDataException(error);
+#endif
+                batch.Add(gameRes.ResourceAssets.Load<T>(address));
+            }
+            while (batch.Any(handle => !handle.IsDone))
+            {
+                progress?.Invoke(0.2f + 0.6f * (start + batch.Sum(handle => handle.PercentComplete)) / addresses.Length);
+                yield return null;
+            }
+            for (int i = 0; i < count; i++)
+                output.Add(addresses[start + i], ResourceAssetScope.Require(batch[i], $"{typeof(T).Name} -> {addresses[start + i]}"));
+            progress?.Invoke(0.2f + 0.6f * (start + count) / addresses.Length);
+        }
     }
 
     /// <summary>
@@ -369,15 +287,12 @@ public static class ItemDefinitionCatalogLoader
     /// </summary>
     public static HashSet<string> GetRedundantBuiltInPrefabPaths()
     {
-        // APK/JAR 内的 StreamingAssets 不能同步读取；此时只是不做旧 Prefab 过滤，
-        // 后续异步 Manifest 加载仍会建立权威定义。
-        if (StreamingAssetsTextLoader.RequiresWebRequest(BuiltInManifestPath) ||
-            !File.Exists(BuiltInManifestPath))
-        {
-            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        }
+        return GetRedundantBuiltInPrefabPaths(LoadBuiltInDefinitions());
+    }
 
-        List<ItemDefinitionDto> definitions = LoadBuiltInDefinitions();
+    /// <summary>按已解析的 Manifest 生成排除清单，所有平台使用同一份定义。</summary>
+    public static HashSet<string> GetRedundantBuiltInPrefabPaths(IEnumerable<ItemDefinitionDto> definitions)
+    {
         var requiredPrefabIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (ItemDefinitionDto definition in definitions)
         {
@@ -632,14 +547,6 @@ public static class ItemDefinitionCatalogLoader
         }
 
         UnityEngine.Object mainAsset = AssetDatabase.LoadMainAssetAtPath(assetPath);
-        if (mainAsset == null)
-        {
-            AssetDatabase.ImportAsset(
-                assetPath,
-                ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
-            mainAsset = AssetDatabase.LoadMainAssetAtPath(assetPath);
-        }
-
         if (mainAsset == null)
         {
             error = $"Sprite Addressable '{key}' 的主资源无法加载：{assetPath}。";
@@ -923,6 +830,7 @@ public static class ItemDefinitionCatalogLoader
                 lootTableBound = true;
             }
 
+            ModuleJsonConfigurator.Validate(prototype, id, moduleName, moduleData.ID, parameters?.ToString(Formatting.None));
             moduleParameters.Add(moduleName, parameters?.ToString(Formatting.None));
             modulePrefabIds.Add(moduleName, moduleId);
         }
@@ -943,11 +851,11 @@ public static class ItemDefinitionCatalogLoader
         // Actor 由 AnimatorController 驱动 SpriteRenderer，永远不再解析 Sprite 子资源地址。
         Sprite sprite = isActor
             ? null
-            : ResolveSprite(dto.Visual?.SpriteAddress, id, preloadedSprites);
-        Material material = ResolveMaterial(dto.Visual?.MaterialAddress, id, preloadedMaterials) ??
+            : ResolveSprite(gameRes, dto.Visual?.SpriteAddress, id, preloadedSprites);
+        Material material = ResolveMaterial(gameRes, dto.Visual?.MaterialAddress, id, preloadedMaterials) ??
                             ResolveShellRendererMaterial(shell, dto.Visual?.RendererPath);
         RuntimeAnimatorController animatorController = ResolveAnimatorController(
-            dto.Visual?.AnimatorControllerAddress,
+            gameRes, dto.Visual?.AnimatorControllerAddress,
             id,
             preloadedControllers);
         return new RuntimeItemDefinition(
@@ -1161,8 +1069,11 @@ public static class ItemDefinitionCatalogLoader
     }
 
     private static Module ResolveModulePrototype(GameRes gameRes, GameObject shell, string moduleId)
+        => FindModulePrototype(shell, gameRes.GetPrefab(moduleId, false), moduleId);
+
+    /// <summary>构建、运行时校验和编辑器预检共用模块定位规则，支持外壳内嵌模块的持久化身份。</summary>
+    public static Module FindModulePrototype(GameObject shell, GameObject modulePrefab, string moduleId)
     {
-        GameObject modulePrefab = gameRes.GetPrefab(moduleId, false);
         if (modulePrefab != null)
         {
             // 一个旧模块 Prefab 可能同时包含 Item 和多个 Module，必须按持久化 ID 选中目标类型，不能取第一个组件。
@@ -1175,12 +1086,12 @@ public static class ItemDefinitionCatalogLoader
                 return candidates[0];
         }
 
-        return shell.GetComponentsInChildren<Module>(true)
+        return shell == null ? null : shell.GetComponentsInChildren<Module>(true)
             .FirstOrDefault(candidate => candidate != null && candidate.MatchesPersistedId(moduleId));
     }
 
     private static Sprite ResolveSprite(
-        string address,
+        GameRes gameRes, string address,
         string itemId,
         IReadOnlyDictionary<string, Sprite> preloadedSprites)
     {
@@ -1195,16 +1106,8 @@ public static class ItemDefinitionCatalogLoader
             throw new InvalidDataException($"物品 {itemId} 找不到预加载 Sprite：{key}");
         }
 
-#if UNITY_EDITOR
-        if (key.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
-        {
-            if (TryLoadEditorSprite(key, out Sprite editorSprite, out string editorError))
-                return editorSprite;
 
-            throw new InvalidDataException($"物品 {itemId} 的 Sprite 无法解析：{editorError}");
-        }
-#endif
-        AsyncOperationHandle<Sprite> handle = Addressables.LoadAssetAsync<Sprite>(key);
+        AsyncOperationHandle<Sprite> handle = gameRes.ResourceAssets.Load<Sprite>(key);
         Sprite sprite = handle.WaitForCompletion();
         if (handle.Status != AsyncOperationStatus.Succeeded || sprite == null)
             throw new InvalidDataException($"物品 {itemId} 找不到 Sprite Addressable：{address}");
@@ -1213,7 +1116,7 @@ public static class ItemDefinitionCatalogLoader
 
     /// <summary>解析物品世界渲染器使用的共享材质。</summary>
     private static Material ResolveMaterial(
-        string address,
+        GameRes gameRes, string address,
         string itemId,
         IReadOnlyDictionary<string, Material> preloadedMaterials)
     {
@@ -1228,16 +1131,8 @@ public static class ItemDefinitionCatalogLoader
             throw new InvalidDataException($"物品 {itemId} 找不到预加载材质：{key}");
         }
 
-#if UNITY_EDITOR
-        if (key.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
-        {
-            Material editorMaterial = AssetDatabase.LoadAssetAtPath<Material>(key);
-            if (editorMaterial != null)
-                return editorMaterial;
-            throw new InvalidDataException($"物品 {itemId} 找不到共享材质：{key}");
-        }
-#endif
-        AsyncOperationHandle<Material> handle = Addressables.LoadAssetAsync<Material>(key);
+
+        AsyncOperationHandle<Material> handle = gameRes.ResourceAssets.Load<Material>(key);
         Material material = handle.WaitForCompletion();
         if (handle.Status != AsyncOperationStatus.Succeeded || material == null)
             throw new InvalidDataException($"物品 {itemId} 找不到材质 Addressable：{address}");
@@ -1265,7 +1160,7 @@ public static class ItemDefinitionCatalogLoader
 
     /// <summary>解析动画控制器；Actor 与普通物品共用同一套视觉应用管线。</summary>
     private static RuntimeAnimatorController ResolveAnimatorController(
-        string address,
+        GameRes gameRes, string address,
         string itemId,
         IReadOnlyDictionary<string, RuntimeAnimatorController> preloadedControllers)
     {
@@ -1285,7 +1180,7 @@ public static class ItemDefinitionCatalogLoader
         }
 
         AsyncOperationHandle<RuntimeAnimatorController> handle =
-            Addressables.LoadAssetAsync<RuntimeAnimatorController>(key);
+            gameRes.ResourceAssets.Load<RuntimeAnimatorController>(key);
         RuntimeAnimatorController controller = handle.WaitForCompletion();
         if (handle.Status != AsyncOperationStatus.Succeeded || controller == null)
             throw new InvalidDataException($"物品 {itemId} 找不到动画控制器 Addressable：{address}");

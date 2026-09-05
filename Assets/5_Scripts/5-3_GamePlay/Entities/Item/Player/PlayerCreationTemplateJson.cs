@@ -425,6 +425,15 @@ public static class PlayerCreationTemplateCatalogService
 
     public static string DefaultProfileId => defaultProfileId;
 
+    /// <summary>资源会话失败或卸载时，清除全部本体和扩展模板。</summary>
+    internal static void Reset()
+    {
+        Sources.Clear();
+        ResolvedSources.Clear();
+        defaultProfileId = builtInDefaultProfileId = string.Empty;
+        dirty = true;
+    }
+
     /// <summary>替换内建目录并清除旧 MOD 配置。</summary>
     public static void ReplaceBuiltIn(PlayerCreationTemplateCatalogConfig catalog)
     {

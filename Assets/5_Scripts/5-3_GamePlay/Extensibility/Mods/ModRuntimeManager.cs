@@ -134,9 +134,9 @@ public sealed class ModRuntimeManager : MonoBehaviour
         if (State == ModLoadState.Loading)
             yield break;
 
+        UnloadAll();
         State = ModLoadState.Loading;
         FailureReason = null;
-        UnloadAll();
         Directory.CreateDirectory(ModsRootPath);
 
         IEnumerator routine = LoadEnabledModsCore(gameRes, reportProgress);
@@ -1972,11 +1972,14 @@ public sealed class ModRuntimeManager : MonoBehaviour
         }
     }
 
+    /// <summary>本体资源会话重载或失败时，先释放依赖旧目录的 MOD 状态。</summary>
+    internal void UnloadForResourceReload() => UnloadAll();
+
     private void UnloadAll(bool keepFailureState = false)
     {
         UnbindGameEvents();
 
-        GameRes gameRes = GameRes.Instance;
+        GameRes gameRes = GameRes.ExistingInstance;
         for (int index = registeredActorIds.Count - 1; index >= 0; index--)
             gameRes?.UnregisterExternalActorDefinition(registeredActorIds[index]);
         registeredActorIds.Clear();

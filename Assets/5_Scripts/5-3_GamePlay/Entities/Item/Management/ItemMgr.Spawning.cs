@@ -26,6 +26,9 @@ public partial class ItemMgr
 
     public int TotalPooledItemCount => _itemObjectPool.TotalCount;
 
+    /// <summary>由主菜单资源重载入口调用，释放所有依赖旧目录的缓存实体。</summary>
+    internal void ClearResourcePools() => _itemObjectPool.Clear();
+
     #endregion
 
     #region Instantiate

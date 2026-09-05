@@ -13,6 +13,21 @@ internal sealed class ItemObjectPool
 
     private Transform poolRoot;
 
+    /// <summary>重载目录前清空旧实例，防止复用旧模块结构和已释放的外观资源。</summary>
+    public void Clear()
+    {
+        foreach (Queue<Item> pool in Pools.Values)
+            while (pool.Count > 0)
+            {
+                Item item = pool.Dequeue();
+                if (item != null) UnityEngine.Object.Destroy(item.gameObject);
+            }
+        Pools.Clear();
+        TotalCount = 0;
+        if (poolRoot != null) UnityEngine.Object.Destroy(poolRoot.gameObject);
+        poolRoot = null;
+    }
+
     public GameObject Acquire(string itemId, Func<string, GameObject> spawn)
     {
         if (Pools.TryGetValue(itemId, out Queue<Item> pool))
