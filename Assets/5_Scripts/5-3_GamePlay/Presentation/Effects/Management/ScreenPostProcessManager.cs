@@ -88,6 +88,7 @@ public sealed class ScreenPostProcessFrame
 /// <summary>
 /// FlatWorld 全局后处理单例。运行时创建常驻 URP Volume，统一合成所有屏幕后处理效果，
 /// 不修改全局 Volume Profile 资产；Vignette 强度为 0 时自动停用该组件，避免常态增加渲染开销。
+/// 只提交 Volume 参数，相机栈的执行顺序和后处理开关由 WrappedWorldCameraRenderer 管理。
 /// </summary>
 [DefaultExecutionOrder(-1000)]
 public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProcessManager>
@@ -111,7 +112,6 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
     private Volume runtimeVolume;
     private VolumeProfile runtimeProfile;
     private Vignette vignette;
-    private UniversalAdditionalCameraData postProcessCameraData;
     private float currentVignetteIntensity;
     private float vignetteIntensityVelocity;
     private bool hasInitialized;
@@ -144,7 +144,6 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
             return;
 
         EnsureRuntimeVolume();
-        EnsureMainCameraPostProcess();
         frame.Reset();
 
         float deltaTime = Mathf.Max(0f, Time.unscaledDeltaTime);
@@ -352,23 +351,4 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
 
     #endregion
 
-    #region 相机适配
-
-    /// <summary>主相机由场景/Prefab 提供；这里只确保它启用了 URP 后处理，不接管相机生命周期。</summary>
-    private void EnsureMainCameraPostProcess()
-    {
-        Camera mainCamera = Camera.main;
-        if (mainCamera == null)
-            return;
-
-        UniversalAdditionalCameraData cameraData =
-            mainCamera.GetComponent<UniversalAdditionalCameraData>();
-        if (cameraData == null)
-            return;
-
-        postProcessCameraData = cameraData;
-        postProcessCameraData.renderPostProcessing = true;
-    }
-
-    #endregion
 }
