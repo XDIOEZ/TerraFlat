@@ -28,6 +28,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 命中特效必须区分 `0` 与 `-1`：`0` 表示有效命中但被护甲完全抵消，应播放数字 0；`-1` 表示死亡、受伤冷却等无效结算，不应播放命中特效；可破坏 Tile 也应把零伤害命中返回给 `Mod_Damage`。
 - 概率命中状态不要硬编码进 `Mod_Damage`；伤害模块只发布实体命中目标与结算结果，`DamageOnHitBuffApplier` 等独立组件再通过目标 `BuffManager` 添加状态。`0` 仍属于有效实体命中并可触发状态，负数无效结算不触发；Tile 伤害不发布实体命中事件。
 - 玩家进入 `Mod_PlayerDeathState` 濒死状态后，`Mod_Food` 等被动生命模块不得继续改写 `DamageReceiver.Hp`，否则会把死亡状态抬成极低正数。
+- 濒死控制与界面属于血量的派生运行态，须在本地玩家 `Event_PlayerEnterWorld`（全部模块加载后）按权威血量恢复；不能依赖模块 Load 顺序，也不能重放 `OnDead`，否则读档会重复死亡掉落。
 - 启用身体部位生命时，普通总量回血只能分配给仍存活的部位，不能复活已耗尽的手脚；直接重生或满血赋值才允许恢复全部部位。
 - 武器的 `Mod_Damage` 必须是武器实例内的直接子物体，禁止再嵌套 `Mod_Damage.prefab` 实例；Prefab 组合可显式序列化跨模块引用，JSON 组合则必须在所有模块注册后通过 `IItemModuleDependencyBinder` 按唯一稳定 ID 绑定，禁止层级搜索或静默补建。攻击动画曲线只负责开关已存在的碰撞体。
 - 动画武器的伤害盒必须跟随 `Render` 下实际武器 `SpriteRenderer` 的局部位置、旋转、缩放与 Sprite 边界；同时处理 `flipX/flipY` 对 Pivot 偏移的反转。禁止把 `Mod_Damage` 固定在 `Render` 原点并沿用模板的默认 1×1 BoxCollider，否则武器旋转后会出现大面积错位。

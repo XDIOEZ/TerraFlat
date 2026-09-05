@@ -7,6 +7,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 玩家死亡状态模块：监听 DamageReceiver 的死亡事件，处理濒死UI、重生与回主菜单。
+/// 进入世界时从已加载的权威血量恢复濒死控制与界面，不重放死亡结算或掉落。
 /// </summary>
 public partial class Mod_PlayerDeathState : Module
 {
@@ -121,6 +122,10 @@ public partial class Mod_PlayerDeathState : Module
 
         _damageReceiver.OnDead -= OnPlayerDead;
         _damageReceiver.OnDead += OnPlayerDead;
+
+        // 模块 Load 顺序不保证生命数据先就绪，等全部玩家模块加载完成后再恢复状态。
+        GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
+        GameManager.Event_PlayerEnterWorld += RestoreDyingStateOnWorldEnter;
     }
 
     public override void Save()
@@ -129,12 +134,18 @@ public partial class Mod_PlayerDeathState : Module
         item.itemData.ModuleDataDic[_Data.Name] = ModData;
     }
 
-    private void OnDestroy()
+    public override void Unload()
     {
+        GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
         if (_damageReceiver != null)
         {
             _damageReceiver.OnDead -= OnPlayerDead;
         }
+    }
+
+    private void OnDestroy()
+    {
+        Unload();
 
         if (_gameController != null)
         {
@@ -511,6 +522,20 @@ public partial class Mod_PlayerDeathState : Module
 
 #region 死亡监听
 
+    /// <summary>读档恢复零血量玩家的待重生状态，只恢复界面和操作限制。</summary>
+    private void RestoreDyingStateOnWorldEnter(Player enteredPlayer)
+    {
+        if (enteredPlayer != _player || !enteredPlayer.IsLocalProfile)
+            return;
+
+        GameManager.Event_PlayerEnterWorld -= RestoreDyingStateOnWorldEnter;
+        if (_damageReceiver.Hp > 0f || _isInDyingState)
+            return;
+
+        EnterDyingState();
+        Debug.Log("[Mod_PlayerDeathState] 已从零血量存档恢复濒死状态，等待玩家选择重生。");
+    }
+
     private void OnPlayerDead()
     {
         if (!_forceSuicideRequested && HasAdminInvincibility())
@@ -536,17 +561,25 @@ public partial class Mod_PlayerDeathState : Module
             return;
         }
 
-        _isInDyingState = true;
-        _gameController.SetGameplayInputLocked(true);
         _damageReceiver.ConsumeCurrentDeath();
         _damageReceiver.Hp = 0f;
         _damageReceiver.Data.AttackersUIDs.Clear();
+        EnterDyingState();
 
         if (GameDifficultyService.Current.PlayerDeath.DropAllCarriedItems)
         {
             int droppedStackCount = PlayerDeathInventoryDropper.DropAll(_player);
             Debug.Log($"[Mod_PlayerDeathState] 困难难度死亡掉落完成，共掉落 {droppedStackCount} 组物品");
         }
+
+        Debug.Log($"[Mod_PlayerDeathState] 玩家进入濒死状态，场景={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
+    }
+
+    /// <summary>新死亡与读档共用的濒死表现入口，死亡惩罚只在 OnPlayerDead 中执行。</summary>
+    private void EnterDyingState()
+    {
+        _isInDyingState = true;
+        _gameController.SetGameplayInputLocked(true);
 
         if (_mover != null)
         {
@@ -560,7 +593,6 @@ public partial class Mod_PlayerDeathState : Module
         }
 
         ShowDyingPanel();
-        Debug.Log($"[Mod_PlayerDeathState] 玩家进入濒死状态，场景={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
     }
 
     /// <summary>判断当前玩家是否处于管理员无敌状态。</summary>
