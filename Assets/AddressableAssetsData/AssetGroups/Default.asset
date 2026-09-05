@@ -830,6 +830,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6d28233e3a65781418a7cc4c0885be94
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_VisualEffectsSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6d2a7f4c9e3148b3a5c0d7e1f2a6b8c9
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Rendering/ActorShadow.prefab
     m_ReadOnly: 0

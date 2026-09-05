@@ -9,7 +9,7 @@ using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 using UnityEngine.UI;
 
-public static class RuntimeUIPrefabBuilder
+public static partial class RuntimeUIPrefabBuilder
 {
     #region 路径与视觉常量
 
@@ -68,7 +68,7 @@ public static class RuntimeUIPrefabBuilder
 
     #region 重建入口
 
-    /// <summary>只重建设置主面板与十页容器，不重建八个设置页资产。</summary>
+    /// <summary>只重建设置主面板与分页容器，不重建设置页资产。</summary>
     [MenuItem("FlatWorld/UI/Rebuild Settings Action List UI")]
     public static void RebuildSettingsActionListUI()
     {
@@ -125,6 +125,7 @@ public static class RuntimeUIPrefabBuilder
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.UISettings + ".prefab", BuildInterfaceSettings);
         SaveCameraControlSettingsPrefab();
         SaveCoordinateDisplaySettingsPrefab();
+        SaveVisualEffectsSettingsPrefab();
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.AutoSaveSettings + ".prefab", BuildAutoSaveSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab", BuildWorldStreamingSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.DifficultySettings + ".prefab", BuildDifficultySettings);
@@ -160,6 +161,7 @@ public static class RuntimeUIPrefabBuilder
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.UISettings + ".prefab", BuildInterfaceSettings);
         SaveCameraControlSettingsPrefab();
         SaveCoordinateDisplaySettingsPrefab();
+        SaveVisualEffectsSettingsPrefab();
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.MainMenuSettings + ".prefab", BuildMainMenuSettings);
         SaveMainMenuExitConfirmationPrefab();
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.AutoSaveSettings + ".prefab", BuildAutoSaveSettings);
@@ -2257,7 +2259,7 @@ public static class RuntimeUIPrefabBuilder
 
     #region 现有 Prefab 固化
 
-    /// <summary>把七个顶部入口和三个世界子页固化为同一主面板内的十个分页。</summary>
+    /// <summary>把顶部入口和世界子页固化为同一主面板内的分页。</summary>
     private static void ConfigureSettingsActionListPages(GameObject root)
     {
         RectTransform scrollRect = FindTransform(root.transform, "Scroll View") as RectTransform;
@@ -2302,6 +2304,10 @@ public static class RuntimeUIPrefabBuilder
             content,
             SettingsActionListPagination.AudioPageName,
             SettingsPanelsRoot + RuntimeUIPrefabKeys.AudioSettings + ".prefab");
+        Transform visualEffectsPage = EnsureEmbeddedActionListPage(
+            content,
+            SettingsActionListPagination.VisualEffectsPageName,
+            SettingsPanelsRoot + RuntimeUIPrefabKeys.VisualEffectsSettings + ".prefab");
         Transform autoSavePage = EnsureEmbeddedActionListPage(
             content,
             SettingsActionListPagination.AutoSavePageName,
@@ -2321,10 +2327,11 @@ public static class RuntimeUIPrefabBuilder
         displayPage.SetSiblingIndex(3);
         cameraPage.SetSiblingIndex(4);
         audioPage.SetSiblingIndex(5);
-        sessionPage.SetSiblingIndex(6);
-        autoSavePage.SetSiblingIndex(7);
-        streamingPage.SetSiblingIndex(8);
-        difficultyPage.SetSiblingIndex(9);
+        visualEffectsPage.SetSiblingIndex(6);
+        sessionPage.SetSiblingIndex(7);
+        autoSavePage.SetSiblingIndex(8);
+        streamingPage.SetSiblingIndex(9);
+        difficultyPage.SetSiblingIndex(10);
         worldPage.gameObject.SetActive(true);
         sessionPage.gameObject.SetActive(false);
         EnsureActionListTabBar(root.transform);
@@ -2653,6 +2660,7 @@ public static class RuntimeUIPrefabBuilder
         Button displayTab = EnsureActionListTabButton(root, tabBar, "显示设置", "显示设置");
         Button bindingTab = EnsureActionListTabButton(root, tabBar, "按键绑定", "按键绑定");
         Button cameraTab = EnsureActionListTabButton(root, tabBar, "镜头控制", "镜头控制");
+        Button visualEffectsTab = EnsureActionListTabButton(root, tabBar, "视觉特效", "视觉特效");
         Button worldTab = EnsureActionListTabButton(
             root,
             tabBar,
@@ -2672,6 +2680,7 @@ public static class RuntimeUIPrefabBuilder
             displayTab,
             cameraTab,
             audioTab,
+            visualEffectsTab,
             sessionTab
         };
         for (int index = 0; index < orderedTabs.Length; index++)

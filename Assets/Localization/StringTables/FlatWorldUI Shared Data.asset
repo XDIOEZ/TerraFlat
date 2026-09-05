@@ -2003,6 +2003,30 @@ MonoBehaviour:
     m_Key: ui.text.8BCF9D0B
     m_Metadata:
       m_Items: []
+  - m_Id: 10044445559795712
+    m_Key: ui.text.A0B69CF9
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10044445584961536
+    m_Key: ui.text.E2609EB2
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10044445584961537
+    m_Key: ui.text.D44CAB13
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10044445584961538
+    m_Key: ui.text.6547B17E
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10044445584961539
+    m_Key: ui.text.4382A31A
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10044445584961540
+    m_Key: ui.text.201E4BB6
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

@@ -1,0 +1,80 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Tilemap-Water-Stylized-Lit
+  m_Shader: {fileID: 4800000, guid: 9b7e519d31c6485eb1d1d499a1142e63, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - FLATWORLD_WATER_STYLIZED
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _AlphaTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaskTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _CausticStrength: 0.08
+    - _CornerStrength: 0.18
+    - _DetailScale: 3.8
+    - _EdgeWidth: 0.2
+    - _EnableExternalAlpha: 0
+    - _FoamSpeed: 0.72
+    - _TideCyclesPerDay: 2
+    - _NormalStrength: 0.32
+    - _PixelDensity: 64
+    - _ReflectionSmoothness: 0.72
+    - _ReflectionStrength: 0.42
+    - _RippleScale: 1.8
+    - _RippleShadowStrength: 0.08
+    - _RippleStrength: 0.22
+    - _RippleWidth: 0.1
+    - _ShoreFoamStrength: 0.68
+    - _ShoreStrength: 0.16
+    - _SpecularPower: 48
+    - _SpecularStrength: 0.3
+    - _SurfaceTint: 0.45
+    - _SwellScale: 0.68
+    - _WaveDistortion: 1.4
+    - _WaveSpeed: 0.42
+    - _WhitecapStrength: 0.24
+    m_Colors:
+    - _CausticColor: {r: 0.28, g: 0.86, b: 0.92, a: 1}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _DeepColor: {r: 0.015, g: 0.15, b: 0.3, a: 1}
+    - _Flip: {r: 1, g: 1, b: 1, a: 1}
+    - _FlowDirection: {r: 1, g: 0.35, b: 0, a: 0}
+    - _FoamColor: {r: 0.76, g: 0.96, b: 1, a: 1}
+    - _ReflectionColor: {r: 0.24, g: 0.72, b: 0.9, a: 1}
+    - _ReflectionDirection: {r: -0.35, g: 0.18, b: 0.92, a: 0}
+    - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
+    - _RippleColor: {r: 0.38, g: 0.78, b: 0.88, a: 1}
+    - _ShallowColor: {r: 0.04, g: 0.55, b: 0.62, a: 1}
+    - _ShoreColor: {r: 0.48, g: 0.85, b: 0.92, a: 1}
+    - _SpecularColor: {r: 0.9, g: 0.98, b: 1, a: 1}
+    - _SunDirection: {r: 0.28, g: 0.42, b: 0.86, a: 0}
+  m_BuildTextureStacks: []

@@ -8,6 +8,7 @@ public static class RuntimeUIPrefabKeys
     public const string AudioSettings = "UI_AudioSettings";
     public const string UISettings = "UI_InterfaceSettings";
     public const string CameraControlSettings = "UI_CameraControlSettings";
+    public const string VisualEffectsSettings = "UI_VisualEffectsSettings";
     public const string CoordinateDisplaySettings = "UI_CoordinateDisplaySettings";
     public const string MainMenuSettings = "UI_MainMenuSettings";
     public const string MainMenuExitConfirmation = "UI_MainMenuExitConfirmation";

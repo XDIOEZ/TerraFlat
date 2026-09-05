@@ -15,7 +15,7 @@ internal interface ISettingsPageLifecycle
 }
 
 /// <summary>
-/// 管理游戏内设置主面板的七个顶部入口与三个世界设置子页。
+/// 管理游戏内设置主面板的八个顶部入口与三个世界设置子页。
 /// 所有页面均为 UI_ActionList Prefab 内的现成节点，切换时只改变显隐。
 /// </summary>
 [DisallowMultipleComponent]
@@ -30,6 +30,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     public const string DisplayPageName = "设置分页_显示设置";
     public const string CameraPageName = "设置分页_镜头控制";
     public const string AudioPageName = "设置分页_音量调节";
+    public const string VisualEffectsPageName = "设置分页_视觉特效";
     public const string AutoSavePageName = "设置分页_自动保存";
     public const string WorldStreamingPageName = "设置分页_流送性能";
     public const string DifficultyPageName = "设置分页_游戏难度";
@@ -47,6 +48,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         DisplayPageName,
         CameraPageName,
         AudioPageName,
+        VisualEffectsPageName,
         SessionPageName,
         AutoSavePageName,
         WorldStreamingPageName,
@@ -61,6 +63,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         "显示设置",
         "镜头控制",
         "音量调节",
+        "视觉特效",
         SessionTabButtonName
     };
 
@@ -73,6 +76,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         4,
         5,
         6,
+        7,
         0,
         0,
         0
@@ -86,6 +90,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         "世界坐标模式按钮",
         "双指缩放灵敏度",
         "MasterVolume",
+        "风格化水体按钮",
         UIText.SaveButton,
         "自动保存间隔下拉列表",
         "性能模式下拉列表",
@@ -191,7 +196,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         return scrollRect != null ? scrollRect.content : null;
     }
 
-    /// <summary>为七个顶部按钮绑定各自的主分页。</summary>
+    /// <summary>为顶部按钮绑定各自的主分页。</summary>
     private void BindTabButtons()
     {
         for (int index = 0; index < tabButtons.Length; index++)
@@ -361,7 +366,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
             FocusCurrentPageFirstSelectable();
     }
 
-    /// <summary>刷新七个顶部页签的选中与未选中颜色。</summary>
+    /// <summary>刷新顶部页签的选中与未选中颜色。</summary>
     private void RefreshTabVisuals(int activeTabIndex)
     {
         for (int index = 0; index < tabButtons.Length; index++)

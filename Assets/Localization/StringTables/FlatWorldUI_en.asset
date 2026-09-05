@@ -2066,6 +2066,30 @@ MonoBehaviour:
     m_Localized: Pinch Zoom Sensitivity
     m_Metadata:
       m_Items: []
+  - m_Id: 10044445559795712
+    m_Localized: Visual Effects
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10044445584961536
+    m_Localized: Water Style
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10044445584961537
+    m_Localized: Stylized
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10044445584961538
+    m_Localized: Realistic
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10044445584961539
+    m_Localized: 'Stylized: vivid water colors, distinct ripples and foam.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10044445584961540
+    m_Localized: 'Realistic: softer colors, flowing waves and subtle glints.'
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

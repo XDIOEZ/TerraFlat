@@ -259,6 +259,7 @@ GameObject:
   - component: {fileID: 8001}
   - component: {fileID: 8002}
   - component: {fileID: 8003}
+  - component: {fileID: 8004}
   m_Layer: 0
   m_Name: CaveWater
   m_TagString: Untagged
@@ -337,6 +338,7 @@ GameObject:
   - component: {fileID: 9001}
   - component: {fileID: 9002}
   - component: {fileID: 9003}
+  - component: {fileID: 9004}
   m_Layer: 0
   m_Name: Water
   m_TagString: Untagged
@@ -719,3 +721,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c8e9cf5b42b4d2a8f6c1e7a3d5b9041, type: 3}
   m_Name:
   m_EditorClassIdentifier:
+--- !u!114 &8004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d40b0fba2a6df9f4291b78f8dae743f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  waterRenderer: {fileID: 8003}
+  stylizedMaterial: {fileID: 2100000, guid: 377979fffed94e07a2ec70118f552b1d, type: 2}
+  realisticMaterial: {fileID: 2100000, guid: c4a8f6d21b7e4c8095d3a1f6e2b7c4d9, type: 2}
+--- !u!114 &9004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d40b0fba2a6df9f4291b78f8dae743f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  waterRenderer: {fileID: 9003}
+  stylizedMaterial: {fileID: 2100000, guid: 377979fffed94e07a2ec70118f552b1d, type: 2}
+  realisticMaterial: {fileID: 2100000, guid: c4a8f6d21b7e4c8095d3a1f6e2b7c4d9, type: 2}
