@@ -48,7 +48,14 @@ Shader "Game/2D/Sprite-Lit-Master"
 
     SubShader
     {
-        Tags {"Queue" = "Transparent" "RenderType" = "Transparent" "RenderPipeline" = "UniversalPipeline" }
+        // 裁剪和局部水线依赖每个 Sprite 的本地顶点；合批会预变换顶点，破坏该坐标约定。
+        Tags
+        {
+            "Queue" = "Transparent"
+            "RenderType" = "Transparent"
+            "RenderPipeline" = "UniversalPipeline"
+            "DisableBatching" = "True"
+        }
 
         Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
         Cull Off
@@ -182,7 +189,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 const half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, i.uv.xy);
 
                 // === 下半身剔除：根据 _BodyMinV/_BodyMaxV (实际传入 Local Y) 和 _BodyClip 控制 ===
-                // 因为改成了本地坐标 Y (i.uv.z) 替代 uv.y，这能完美免疫贴图旋转切片影响！
+                // 使用未合批的本地 Y，避免图集旋转、世界位置和成长缩放改变裁剪比例。
                 float bodyRange = max(1e-5, _BodyMaxV - _BodyMinV);
                 float bodyV = saturate((i.uv.z - _BodyMinV) / bodyRange);
                 if (bodyV < _BodyClip)

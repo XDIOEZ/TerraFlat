@@ -23,6 +23,8 @@ Shader "Game/2D/Interaction-Outline"
             "RenderType" = "Transparent"
             "RenderPipeline" = "UniversalPipeline"
             "CanUseSpriteAtlas" = "True"
+            // 与主体保持同一本地坐标裁剪约定，禁止合批预变换代理 Sprite 的顶点。
+            "DisableBatching" = "True"
         }
 
         Blend SrcAlpha OneMinusSrcAlpha
