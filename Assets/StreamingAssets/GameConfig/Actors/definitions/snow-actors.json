@@ -53,6 +53,7 @@
     },
     {
       "id": "SnowLeopard",
+      "lootTableId": "SnowLeopard_Default",
       "parent": "Wolf",
       "shellPrefab": "CoreActor.SnowLeopard.Shell",
       "shellAddress": "flatworld.actor.shell.snowleopard",
@@ -135,33 +136,7 @@
                 "Piercing": 1.0,
                 "Chopping": 1.0,
                 "Blunt": 1.0
-              },
-              "LootTable": [
-                {
-                  "LootPrefabName": "Meat",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 3
-                },
-                {
-                  "LootPrefabName": "Fat",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 3
-                },
-                {
-                  "LootPrefabName": "Bone",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 3
-                },
-                {
-                  "LootPrefabName": "Leather",
-                  "DropChance": 1.0,
-                  "MinAmount": 2,
-                  "MaxAmount": 2
-                }
-              ]
+              }
             }
           }
         }

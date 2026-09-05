@@ -15,6 +15,9 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 ## 不变量
 
 - `DamageReceiver` 是生命、受伤、死亡与通用战利品的唯一权威；不要恢复第二套 Health 模块。
+- 普通攻击、环境伤害和部位伤害共用 `ResolveDamage`：先提交限定在 `0..MaxHp` 的血量与实际损失快照，再发布回调；部位数值计算不能夹带事件。权威同步、死亡收尾和结算锁释放属于必经生命周期，不能排在可能抛异常的表现/掉落之后而失去执行保证。
+- 死亡入口必须在通知观察者前登记一次性状态；重入、延迟销毁和权威结果重复到达不得重放死亡/掉落。普通回血不复活，显式复活或新实例加载才重置死亡标记，Unload 必须取消旧实例的延迟销毁任务。
+- `LootEntry.LootPrefabName` 实际保存稳定物品 ID；编辑器选择 Prefab 时取 `Item.itemData.IDName`，禁止取 `GameObject.name`，例如骨头 `Bone` 的通用外壳名是 `Prop`。Item/Actor 目录加载阶段必须校验表引用和模块内嵌掉落，不能等到死亡时才验证生成物身份。
 - JSON Item/Actor 的死亡掉落统一在 `GameConfig/LootTables/loot-tables.json` 以稳定 ID 定义，并由实体顶层 `lootTableId` 引用；禁止同时保留内联 `Data.LootTable`，运行时会把表展开到唯一 `DamageReceiver`。
 - 客户端远程副本只应用权威结果，不重复计算伤害、死亡或掉落。
 - 管理员无敌通过监听伤害回满并在死亡回调兜底，不改写权威结算；关闭后必须解除监听。

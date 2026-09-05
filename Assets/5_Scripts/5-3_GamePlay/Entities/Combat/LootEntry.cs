@@ -11,7 +11,7 @@ public class LootEntry
     [UnityEngine.Serialization.FormerlySerializedAs("LootPrefab")]
     public GameObject LootPrefab;
 
-    [Tooltip("战利品预制体名称")]
+    [Tooltip("战利品的稳定 ItemDefinition ID，与通用外壳名称无关")]
     [SerializeField]
     [ReadOnly]
     public string LootPrefabName = "";
@@ -30,10 +30,13 @@ public class LootEntry
     public void OnValidate()
     {
 #if UNITY_EDITOR
-        // 更新预制体名称
+        // Prefab 只用于编辑器选取，生成物身份必须来自 Item 数据，不能取通用外壳名。
         if (LootPrefab != null)
         {
-            LootPrefabName = LootPrefab.name;
+            Item lootItem = LootPrefab.GetComponent<Item>();
+            if (lootItem?.itemData == null || string.IsNullOrWhiteSpace(lootItem.itemData.IDName))
+                throw new System.InvalidOperationException($"战利品 Prefab {LootPrefab.name} 缺少物品 ID。");
+            LootPrefabName = lootItem.itemData.IDName;
         }
         
         // 确保掉落数量范围有效

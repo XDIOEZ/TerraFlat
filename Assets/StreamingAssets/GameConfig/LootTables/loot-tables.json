@@ -46,6 +46,116 @@
           "maxAmount": 3
         }
       ]
+    },
+    {
+      "id": "Chicken_Default",
+      "entries": [
+        {
+          "itemId": "Chicken",
+          "probability": 0.001,
+          "minAmount": 1,
+          "maxAmount": 1
+        },
+        {
+          "itemId": "Meat",
+          "probability": 0.8,
+          "minAmount": 1,
+          "maxAmount": 2
+        },
+        {
+          "itemId": "Bone",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 1
+        }
+      ]
+    },
+    {
+      "id": "WildBoar_Default",
+      "entries": [
+        {
+          "itemId": "Chicken",
+          "probability": 0.001,
+          "minAmount": 1,
+          "maxAmount": 1
+        },
+        {
+          "itemId": "Meat",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Bone",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 5
+        },
+        {
+          "itemId": "Fat",
+          "probability": 1.0,
+          "minAmount": 2,
+          "maxAmount": 4
+        }
+      ]
+    },
+    {
+      "id": "Wolf_Default",
+      "entries": [
+        {
+          "itemId": "Chicken",
+          "probability": 0.001,
+          "minAmount": 1,
+          "maxAmount": 1
+        },
+        {
+          "itemId": "Meat",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Bone",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Fat",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "SnowLeopard_Default",
+      "entries": [
+        {
+          "itemId": "Meat",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Fat",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Bone",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Leather",
+          "probability": 1.0,
+          "minAmount": 2,
+          "maxAmount": 2
+        }
+      ]
     }
   ]
 }

@@ -424,8 +424,8 @@ public static class ItemDefinitionCatalogLoader
         return definitions;
     }
 
-    /// <summary>校验所有被本体物品引用的表只会掉落已注册的具体 ItemDefinition ID。</summary>
-    private static void ValidateLootTableItemIds(
+    /// <summary>在目录注册前统一校验 Item/Actor 的表引用与模块掉落 ID，禁止通用外壳名进入生成链路。</summary>
+    internal static void ValidateLootTableItemIds(
         GameRes gameRes,
         IReadOnlyCollection<ItemDefinitionDto> definitions)
     {
@@ -435,6 +435,31 @@ public static class ItemDefinitionCatalogLoader
                 .Select(definition => definition.Id?.Trim())
                 .Where(id => !string.IsNullOrWhiteSpace(id)),
             StringComparer.OrdinalIgnoreCase);
+        concreteItemIds.UnionWith(gameRes.ItemDefinitions.Keys);
+
+        foreach (ItemDefinitionDto definition in definitions)
+        {
+            if (definition?.Modules == null)
+                continue;
+            foreach (KeyValuePair<string, ItemModuleDefinitionDto> module in definition.Modules)
+            {
+                if (module.Value?.Parameters == null)
+                    continue;
+
+                // 受伤动作等嵌套 LootEntry 同样必须在加载时校验，不能等概率命中才发现错误。
+                foreach (JProperty property in module.Value.Parameters.Descendants().OfType<JProperty>())
+                {
+                    if (!string.Equals(property.Name, nameof(LootEntry.LootPrefabName), StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    string lootItemId = property.Value.Type == JTokenType.String
+                        ? property.Value.Value<string>()?.Trim()
+                        : null;
+                    if (string.IsNullOrWhiteSpace(lootItemId) || !concreteItemIds.Contains(lootItemId))
+                        throw new InvalidDataException(
+                            $"物品 {definition.Id} 模块 {module.Key}/{property.Path} 引用了不存在或抽象的 ItemDefinition：{lootItemId}");
+                }
+            }
+        }
 
         foreach (string tableId in definitions
                      .Select(definition => definition?.LootTableId?.Trim())

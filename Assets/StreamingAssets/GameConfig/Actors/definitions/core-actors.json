@@ -3,6 +3,7 @@
   "actors": [
     {
       "id": "Chicken",
+      "lootTableId": "Chicken_Default",
       "shellPrefab": "CoreActor.Chicken.Shell",
       "shellAddress": "flatworld.actor.shell.chicken",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Chicken.prefab",
@@ -301,27 +302,7 @@
                 "Blunt": 1.0
               },
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0,
-              "LootTable": [
-                {
-                  "LootPrefabName": "Chicken",
-                  "DropChance": 0.001,
-                  "MinAmount": 1,
-                  "MaxAmount": 1
-                },
-                {
-                  "LootPrefabName": "Meat",
-                  "DropChance": 0.8,
-                  "MinAmount": 1,
-                  "MaxAmount": 2
-                },
-                {
-                  "LootPrefabName": "Prop",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 1
-                }
-              ]
+              "DestroyDelay": 0.0
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -708,6 +689,7 @@
     },
     {
       "id": "WildBoar",
+      "lootTableId": "WildBoar_Default",
       "shellPrefab": "CoreActor.WildBoar.Shell",
       "shellAddress": "flatworld.actor.shell.wildboar",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab",
@@ -1007,32 +989,6 @@
               "BodyParts": [],
               "DamageInterval": 0.12,
               "DestroyDelay": 0.0,
-              "LootTable": [
-                {
-                  "LootPrefabName": "Chicken",
-                  "DropChance": 0.001,
-                  "MinAmount": 1,
-                  "MaxAmount": 1
-                },
-                {
-                  "LootPrefabName": "Meat",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 3
-                },
-                {
-                  "LootPrefabName": "Prop",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 5
-                },
-                {
-                  "LootPrefabName": "Fat",
-                  "DropChance": 1.0,
-                  "MinAmount": 2,
-                  "MaxAmount": 4
-                }
-              ],
               "DefenseValues": {
                 "Cutting": 5.0,
                 "Piercing": 5.0,
@@ -1466,6 +1422,7 @@
     },
     {
       "id": "Wolf",
+      "lootTableId": "Wolf_Default",
       "shellPrefab": "CoreActor.Wolf.Shell",
       "shellAddress": "flatworld.actor.shell.wolf",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Wolf.prefab",
@@ -1765,32 +1722,6 @@
               "BodyParts": [],
               "DamageInterval": 0.12,
               "DestroyDelay": 0.0,
-              "LootTable": [
-                {
-                  "LootPrefabName": "Chicken",
-                  "DropChance": 0.001,
-                  "MinAmount": 1,
-                  "MaxAmount": 1
-                },
-                {
-                  "LootPrefabName": "Meat",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 3
-                },
-                {
-                  "LootPrefabName": "Prop",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 3
-                },
-                {
-                  "LootPrefabName": "Fat",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 2
-                }
-              ],
               "DefenseValues": {
                 "Cutting": 3.0,
                 "Piercing": 3.0,

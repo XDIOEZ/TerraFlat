@@ -138,6 +138,7 @@ public static class ActorDefinitionCatalogLoader
             List<JObject> resolved = ItemDefinitionCatalogLoader.ResolveDefinitionObjects(catalogs);
             CacheResolvedSources(resolved);
             definitions = ConvertResolvedDefinitions(resolved);
+            ItemDefinitionCatalogLoader.ValidateLootTableItemIds(gameRes, definitions);
         }
         catch (Exception exception)
         {
