@@ -1115,6 +1115,22 @@ MonoBehaviour:
     m_Key: item.Mine_Tin.description
     m_Metadata:
       m_Items: []
+  - m_Id: 10123767297519616
+    m_Key: item.Mushroom.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10123767377211392
+    m_Key: item.FireSeed.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10123767377211393
+    m_Key: item.Seed_Mushroom.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10123767377211394
+    m_Key: item.MushroomCrop.name
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

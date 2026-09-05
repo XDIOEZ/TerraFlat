@@ -940,20 +940,12 @@ public abstract class Item : MonoBehaviour
 
 #if UNITY_EDITOR
     /// <summary>
-    /// 初始化ItemData（编辑器上下文菜单）
+    /// 从物体名设置稳定定义 ID，不覆盖作者填写的显示名或说明。
     /// </summary>
-    [ContextMenu("初始化ItemData")]
+    [ContextMenu("从物体名设置定义 ID")]
     private void InitItemData()
     {
         itemData.IDName = this.gameObject.name;
-        itemData.GameName = this.gameObject.name;
-
-        if (itemData.Description == "")
-        {
-            itemData.Description = "";
-            itemData.Description = itemData.ToString();
-        }
-
     }
 
     /// <summary>

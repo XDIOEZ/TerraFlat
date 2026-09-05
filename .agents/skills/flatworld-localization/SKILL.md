@@ -18,6 +18,8 @@ description: "Use when: 定位或修改 FlatWorld 的多语言系统、Unity Loc
 - 使用 Unity Localization 1.4.5；Locale 为 `zh-CN`/`en`，默认中文，选择存于 `FlatWorld.Localization.Locale`。
 - `FlatWorld` 表放 Item/Quest 等内容；`FlatWorldUI` 放正式 UI；角色台词预留独立 `FlatWorldDialogue`。
 - Key 必须稳定：Item 使用显式 label/description key；UI 使用 `GetUiTextKey(sourceText)`；不可用英文译文或显示名作业务 ID。
+- 物品名称分三层：`id/ItemData.IDName` 是稳定引用，定义 `gameName` 是本体默认中文名，`Assets/Localization/ItemNames.en.json` 保存按 ID 关联的英文译名；`FlatWorld` 表的名称条目由这两份源数据生成，不能直接改生成表或拆分 ID 猜译名。界面读取 `RuntimeItemDefinition.DisplayName`，绑定使用 `LabelKey` 与 `SourceDisplayName`，不读取存档里的名称缓存。
+- 物品名称同步使用正式 Manifest 和继承解析结果，在写表前校验完整的中文名、英文译名和名称键冲突；继承只复用玩法和外观，子物品不得隐式继承父级 `gameName/labelKey/descriptionKey`。
 - 静态 Prefab 文本由 Setup 扫描并自动绑定；动态文本用 `GetUiText/GetUiFormat`，在语言事件后刷新，模板同时登记英文覆盖。
 - 动态物品名称可用 `LocalizedTextBinder` 显式绑定物品定义的 `LabelKey`；运行时静态文本扫描必须尊重已有绑定，不能根据当前显示的中文覆盖其内容表与 key。
 - `GetEnglishUiText` 必须先匹配完整文本的精确覆盖，再执行关键词/子串回退；否则包含控件名的长提示会被错误翻译成单个短标签。
@@ -29,7 +31,7 @@ description: "Use when: 定位或修改 FlatWorld 的多语言系统、Unity Loc
 
 1. 判断文本属于内容、UI、对话还是调试；选目标表与稳定 key。
 2. 修改 JSON/Prefab/动态赋值点和英文覆盖。
-3. 执行 Unity 菜单 `FlatWorld/Localization/Setup Default Tables`，核对中英文、占位符与 Addressables。
+3. 仅物品名称变更执行 `FlatWorld/Localization/Sync Item Names`；需要全量内容和 UI 同步时执行 `FlatWorld/Localization/Setup Default Tables`，核对中英文、占位符与 Addressables。
 4. UI 文字联动 `flatworld-ui`；Item/Quest/Dialogue 只加载命中的领域 Skill。
 5. 默认只做静态诊断、编译、Console 与人工切换语言，不主动运行 Test Runner。
 

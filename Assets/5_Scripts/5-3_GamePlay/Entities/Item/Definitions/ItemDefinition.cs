@@ -49,6 +49,7 @@ public sealed class ItemDefinitionPackageDto
 [Serializable]
 public sealed class ItemDefinitionDto
 {
+    /// <summary>稳定业务 ID；名称或语言变化不得改变此标识。</summary>
     [JsonProperty("id")]
     public string Id;
 
@@ -69,9 +70,11 @@ public sealed class ItemDefinitionDto
     [JsonProperty("sourcePrefab")]
     public string SourcePrefab;
 
+    /// <summary>作者填写的默认显示名；本体使用中文，不从 ID 推导。</summary>
     [JsonProperty("gameName")]
     public string GameName;
 
+    /// <summary>可选名称翻译键；省略时使用当前物品 ID 生成，不继承父物品的键。</summary>
     [JsonProperty("labelKey")]
     public string LabelKey;
 
@@ -301,15 +304,14 @@ public sealed class RuntimeItemDefinition
     /// <summary>说明在 String Table 中的稳定 key。</summary>
     public string DescriptionKey { get; }
 
-    /// <summary>按当前语言返回物品显示名；没有表时回退到 JSON gameName 或 ID。</summary>
-    public string DisplayName => FlatWorldLocalizationService.Get(LabelKey, LegacyDisplayName);
+    /// <summary>定义中的默认名称，独立于业务 ID 和当前语言，供文本绑定使用。</summary>
+    public string SourceDisplayName => templateData.GameName;
+
+    /// <summary>按名称键查询当前语言；界面统一使用此属性，不读取存档里的 GameName。</summary>
+    public string DisplayName => FlatWorldLocalizationService.Get(LabelKey, SourceDisplayName);
 
     /// <summary>按当前语言返回物品说明；没有表时回退到 JSON description。</summary>
     public string Description => FlatWorldLocalizationService.Get(DescriptionKey, templateData?.Description ?? string.Empty);
-
-    private string LegacyDisplayName => string.IsNullOrWhiteSpace(templateData?.GameName)
-        ? Id
-        : templateData.GameName;
 
     public RuntimeItemDefinition(
         string id,

@@ -86,7 +86,7 @@ public sealed class HotbarItemNameHUD : MonoBehaviour
         }
 
         // 使用内容表的显式名称 key，切换语言只刷新文字，不重置动画计时。
-        nameBinding.Configure(FlatWorldLocalizationService.DefaultTable, definition.LabelKey, definition.DisplayName);
+        nameBinding.Configure(FlatWorldLocalizationService.DefaultTable, definition.LabelKey, definition.SourceDisplayName);
 
         nameGroup.alpha = 1f;
         fadeTween = DOTween.To(() => nameGroup.alpha, value => nameGroup.alpha = value, 0f, fadeSeconds)

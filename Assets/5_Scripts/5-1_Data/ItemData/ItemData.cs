@@ -25,10 +25,10 @@ using FastCloner.Code;
 [System.Serializable]
 public abstract partial class ItemData
 {
-    [Tooltip("物品名称")]
+    [Tooltip("物品定义 ID：稳定标识，用于存档、配方和查找，不作为界面显示名")]
     public string IDName;
 
-    [Tooltip("物品名称")]
+    [Tooltip("默认名称：来自定义的 gameName；界面按 ID 查询 RuntimeItemDefinition.DisplayName 获取当前语言名称")]
     public string GameName;
 
     [Tooltip("物品描述")]
@@ -72,7 +72,8 @@ public abstract partial class ItemData
     public override string ToString()
     {
         string str =
-            $"物品名称：{IDName}\n" +
+            $"物品定义 ID：{IDName}\n" +
+            $"物品默认名称：{GameName}\n" +
             $"物品描述：{Description}\n" +
             $"物品体积：{Stack.Volume}\n" +
             $"物品耐久度：{Durability}\n" +

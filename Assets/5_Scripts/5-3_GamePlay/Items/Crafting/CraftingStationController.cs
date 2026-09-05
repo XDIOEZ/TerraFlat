@@ -486,7 +486,7 @@ public sealed class CraftingStationController : IDisposable
                 binder.Configure(
                     FlatWorldLocalizationService.DefaultTable,
                     definition.LabelKey,
-                    displayName);
+                    definition.SourceDisplayName);
                 return;
             }
 

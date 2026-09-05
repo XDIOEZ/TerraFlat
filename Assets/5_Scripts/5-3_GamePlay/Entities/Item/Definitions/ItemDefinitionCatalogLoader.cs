@@ -776,6 +776,10 @@ public static class ItemDefinitionCatalogLoader
             if (!sources.ContainsKey(parentId))
                 throw new InvalidDataException($"物品 {id} 找不到 parent：{parentId}");
             result = (JObject)ResolveOne(parentId, sources, resolved, resolving).DeepClone();
+            // 外观和玩法可继承，显示名称与翻译键属于当前定义的身份，必须独立声明或生成。
+            result.Remove("gameName");
+            result.Remove("labelKey");
+            result.Remove("descriptionKey");
         }
 
         RemoveReplacedModuleBodies(result, source);
@@ -863,7 +867,9 @@ public static class ItemDefinitionCatalogLoader
         PopulateTemplateData(dto.ItemData, template, id);
         template.IDName = id;
         template.Guid = 0;
-        if (!string.IsNullOrWhiteSpace(dto.GameName)) template.GameName = dto.GameName;
+        if (string.IsNullOrWhiteSpace(dto.GameName))
+            throw new InvalidDataException($"物品 {id} 缺少默认显示名 gameName，不能使用 ID 或外壳名替代。");
+        template.GameName = dto.GameName.Trim();
         if (dto.Description != null) template.Description = dto.Description;
         if (dto.Durability.HasValue) template.Durability = dto.Durability.Value;
         if (dto.MaxDurability.HasValue) template.MaxDurability = dto.MaxDurability.Value;

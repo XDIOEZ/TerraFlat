@@ -16,9 +16,9 @@ namespace FlatWorld.Localization.Editor
 {
     /// <summary>
     /// 创建/同步 FlatWorld 的简体中文与英语 Locale 和物品 String Table。
-    /// 中文沿用当前 JSON 文本，英语由本工具生成；菜单可重复执行且不会覆盖人工英文翻译。
+    /// 物品名由 JSON 中文名和显式英文资源生成，其他内容按各自表的同步规则维护。
     /// </summary>
-    public static class FlatWorldLocalizationSetup
+    public static partial class FlatWorldLocalizationSetup
     {
         #region 路径与配置
 
@@ -29,78 +29,12 @@ namespace FlatWorld.Localization.Editor
         private const string ChineseLocalePath = LocaleFolder + "/zh-CN.asset";
         private const string EnglishLocalePath = LocaleFolder + "/en.asset";
 
-        private static readonly Dictionary<string, string> EnglishNameOverrides =
-            new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                { "Apple", "Apple" },
-                { "Axe_Bronze", "Bronze Axe" },
-                { "Axe_Copper", "Copper Axe" },
-                { "Axe_Flint", "Flint Axe" },
-                { "Axe_Iron", "Iron Axe" },
-                { "Axe_RawIron", "Raw Iron Axe" },
-                { "Axe_Stone", "Stone Axe" },
-                { "Berry", "Wild Berry" },
-                { "Bone", "Bone" },
-                { "CharredMatter", "Charred Matter" },
-                { "Coconut_Addle", "Cooked Coconut" },
-                { "Coconut_Green", "Green Coconut" },
-                { "Coconut_Half", "Half Coconut" },
-                { "Coconut_Nude", "Husked Coconut" },
-                { "Coconut_Shell", "Coconut Shell" },
-                { "Coconut_Water", "Coconut Water" },
-                { "Coconut_WaterSalt", "Salted Coconut Water" },
-                { "CoconutMeat", "Coconut Meat" },
-                { "Dagger_Bone", "Bone Dagger" },
-                { "Dagger_Copper", "Copper Dagger" },
-                { "Dagger_Stone", "Stone Dagger" },
-                { "Earth", "Earth" },
-                { "Egg", "Egg" },
-                { "Egg_Cooked", "Cooked Egg" },
-                { "Fat", "Fat" },
-                { "Ingot_Bronze", "Bronze Ingot" },
-                { "Ingot_Copper", "Copper Ingot" },
-                { "Ingot_RawIron", "Raw Iron Ingot" },
-                { "Ingot_Steel", "Steel Ingot" },
-                { "Ingot_Tin", "Tin Ingot" },
-                { "Ingot_WroughtIron", "Wrought Iron Ingot" },
-                { "Knife_Flint", "Flint Knife" },
-                { "Leaf", "Leaf" },
-                { "Leather", "Leather" },
-                { "Log", "Log" },
-                { "Meat", "Raw Meat" },
-                { "Meat_Cooked", "Cooked Meat" },
-                { "Meat_Dehydrate", "Dehydrated Meat" },
-                { "Meat_Rotten", "Rotten Meat" },
-                { "Ore_Coal", "Coal Ore" },
-                { "Ore_Copper", "Copper Ore" },
-                { "Ore_Flint", "Flint Ore" },
-                { "Ore_Iron", "Iron Ore" },
-                { "Ore_MagicalStone", "Magic Stone Ore" },
-                { "Ore_Tin", "Tin Ore" },
-                { "Pickaxe_Bronze", "Bronze Pickaxe" },
-                { "Pickaxe_Copper", "Copper Pickaxe" },
-                { "Pickaxe_Iron", "Iron Pickaxe" },
-                { "Pickaxe_RawIron", "Raw Iron Pickaxe" },
-                { "Pickaxe_Stone", "Stone Pickaxe" },
-                { "Plank", "Plank" },
-                { "RawHide", "Raw Hide" },
-                { "Rope", "Rope" },
-                { "Seed_Apple", "Apple Seed" },
-                { "Spear_Copper", "Copper Spear" },
-                { "Spear_Iron", "Iron Spear" },
-                { "Spear_Stone", "Stone Spear" },
-                { "Spear_Stone_Animation", "Stone Spear" },
-                { "Stick_Wood", "Wooden Stick" },
-                { "Tea", "Tea" },
-                { "Twine", "Twine" }
-            };
-
         private static readonly Dictionary<string, string> EnglishDescriptionOverrides =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 { "Apple", "A fresh apple. An apple a day keeps the doctor away." },
                 { "Berry", "A small wild berry that restores a little hunger when eaten." },
-                { "Coconut_Addle", "A cooked coconut dish." },
+                { "Coconut_Addle", "A spoiled coconut. It should not be eaten." },
                 { "Coconut_Green", "A young green coconut." },
                 { "Coconut_Half", "Half of a coconut." },
                 { "Coconut_Nude", "A coconut with its husk removed." },
@@ -1105,97 +1039,6 @@ namespace FlatWorld.Localization.Editor
             syncedKeys.Add(normalizedKey);
         }
 
-        private static int SyncItemEntries(StringTable chineseTable, StringTable englishTable)
-        {
-            string itemRoot = Path.Combine(Application.dataPath, "StreamingAssets/GameConfig/Items");
-            if (!Directory.Exists(itemRoot))
-                return 0;
-
-            int itemCount = 0;
-            foreach (string file in Directory.GetFiles(itemRoot, "*.json", SearchOption.AllDirectories))
-            {
-                JObject root;
-                try
-                {
-                    root = JObject.Parse(File.ReadAllText(file));
-                }
-                catch (Exception exception)
-                {
-                    Debug.LogWarning($"[FlatWorld Localization] 跳过无法解析的物品 JSON：{file}\n{exception.Message}");
-                    continue;
-                }
-
-                if (!(root["items"] is JArray items))
-                    continue;
-
-                foreach (JToken token in items)
-                {
-                    if (!(token is JObject item) || item.Value<bool?>("abstract") == true)
-                        continue;
-
-                    string itemId = item.Value<string>("id")?.Trim();
-                    if (string.IsNullOrWhiteSpace(itemId))
-                        continue;
-
-                    string labelKey = item.Value<string>("labelKey");
-                    string descriptionKey = item.Value<string>("descriptionKey");
-                    labelKey = string.IsNullOrWhiteSpace(labelKey)
-                        ? FlatWorldLocalizationService.GetItemLabelKey(itemId)
-                        : labelKey.Trim();
-                    descriptionKey = string.IsNullOrWhiteSpace(descriptionKey)
-                        ? FlatWorldLocalizationService.GetItemDescriptionKey(itemId)
-                        : descriptionKey.Trim();
-
-                    string legacyName = item.Value<string>("gameName") ?? itemId;
-                    string legacyDescription = item.Value<string>("description") ?? string.Empty;
-                    string englishName = GetEnglishName(itemId);
-                    string englishDescription = GetEnglishDescription(itemId, englishName);
-                    SetChineseItemName(chineseTable, labelKey, legacyName);
-                    SetChineseValue(chineseTable, descriptionKey, legacyDescription);
-                    SetEnglishValue(englishTable, labelKey, englishName, legacyName, itemId);
-                    SetEnglishValue(englishTable, descriptionKey, englishDescription, legacyDescription, itemId);
-                    itemCount++;
-                }
-            }
-
-            return itemCount;
-        }
-
-        /// <summary>同步物品中文名，并替换由旧物品 ID 遗留的英文标识符。</summary>
-        private static void SetChineseItemName(StringTable table, string key, string value)
-        {
-            StringTableEntry entry = table.GetEntry(key);
-            if (entry == null)
-            {
-                table.AddEntry(key, value ?? string.Empty);
-                return;
-            }
-
-            string sourceValue = value ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(entry.Value) ||
-                IsDebugItemDescription(entry.Value) ||
-                (ContainsChinese(sourceValue) && IsIdentifierLike(entry.Value)))
-            {
-                entry.Value = sourceValue;
-            }
-        }
-
-        /// <summary>判断文本是否仍是由字母、数字和常用分隔符组成的配置标识符。</summary>
-        private static bool IsIdentifierLike(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return false;
-
-            foreach (char character in value.Trim())
-            {
-                bool asciiLetterOrDigit = character <= 127 && char.IsLetterOrDigit(character);
-                if (!asciiLetterOrDigit && character != '_' && character != '-' && character != '.')
-                    return false;
-            }
-
-            return true;
-        }
-
         private static void SetChineseValue(StringTable table, string key, string value)
         {
             StringTableEntry entry = table.GetEntry(key);
@@ -1258,15 +1101,6 @@ namespace FlatWorld.Localization.Editor
             return "Quest Text";
         }
 
-        private static string GetEnglishName(string itemId)
-        {
-            string translatedName;
-            if (EnglishNameOverrides.TryGetValue(itemId, out translatedName))
-                return translatedName;
-
-            return SplitIdentifier(itemId);
-        }
-
         private static string GetEnglishDescription(string itemId, string englishName)
         {
             string translatedDescription;
@@ -1295,22 +1129,6 @@ namespace FlatWorld.Localization.Editor
                 return "A seed that can grow into an apple tree.";
 
             return $"{englishName}.";
-        }
-
-        private static string SplitIdentifier(string itemId)
-        {
-            if (string.IsNullOrWhiteSpace(itemId))
-                return string.Empty;
-
-            string value = itemId
-                .Replace("RawIron", "Raw Iron")
-                .Replace("WroughtIron", "Wrought Iron")
-                .Replace("MagicalStone", "Magic Stone")
-                .Replace("CharredMatter", "Charred Matter")
-                .Replace("CoconutMeat", "Coconut Meat")
-                .Replace("RawHide", "Raw Hide");
-            string[] parts = value.Split('_');
-            return string.Join(" ", parts);
         }
 
         private static bool ContainsChinese(string value)

@@ -51,7 +51,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4778274822
-    m_Localized: Raw Iron Axe
+    m_Localized: Pig Iron Axe
     m_Metadata:
       m_Items: []
   - m_Id: 4778274823
@@ -123,7 +123,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4807634944
-    m_Localized: Raw Iron Pickaxe
+    m_Localized: Pig Iron Pickaxe
     m_Metadata:
       m_Items: []
   - m_Id: 4807634945
@@ -155,7 +155,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4878938116
-    m_Localized: Earth
+    m_Localized: Soil
     m_Metadata:
       m_Items: []
   - m_Id: 4878938117
@@ -203,7 +203,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4878938128
-    m_Localized: Twine
+    m_Localized: Vine
     m_Metadata:
       m_Items: []
   - m_Id: 4878938129
@@ -227,7 +227,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4878938134
-    m_Localized: Raw Iron Ingot
+    m_Localized: Pig Iron Ingot
     m_Metadata:
       m_Items: []
   - m_Id: 4878938135
@@ -275,7 +275,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4878938146
-    m_Localized: Flint Ore
+    m_Localized: Flint
     m_Metadata:
       m_Items: []
   - m_Id: 4878938147
@@ -323,7 +323,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4878938158
-    m_Localized: Cooked Coconut
+    m_Localized: Spoiled Coconut
     m_Metadata:
       m_Items: []
   - m_Id: 4878938159
@@ -427,7 +427,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4887326741
-    m_Localized: Dehydrated Meat
+    m_Localized: Dried Meat
     m_Metadata:
       m_Items: []
   - m_Id: 4887326742
@@ -507,7 +507,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277925027840
-    m_Localized: BlastFurnace Summoner
+    m_Localized: Blast Furnace
     m_Metadata:
       m_Items: []
   - m_Id: 357277958582272
@@ -515,7 +515,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277958582273
-    m_Localized: Bonfire Summoner
+    m_Localized: Bonfire
     m_Metadata:
       m_Items: []
   - m_Id: 357277958582274
@@ -523,7 +523,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277962776576
-    m_Localized: Chestplate Iron
+    m_Localized: Iron Chestplate
     m_Metadata:
       m_Items: []
   - m_Id: 357277962776577
@@ -531,7 +531,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277962776578
-    m_Localized: Chestplate Twine
+    m_Localized: Vine Chestplate
     m_Metadata:
       m_Items: []
   - m_Id: 357277962776579
@@ -539,7 +539,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277962776580
-    m_Localized: Chestplate Wood
+    m_Localized: Wooden Chestplate
     m_Metadata:
       m_Items: []
   - m_Id: 357277962776581
@@ -547,7 +547,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277971165184
-    m_Localized: Chest Wood Summoner
+    m_Localized: Wooden Chest
     m_Metadata:
       m_Items: []
   - m_Id: 357277971165185
@@ -555,7 +555,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277979553792
-    m_Localized: Door Stone Summoner
+    m_Localized: Stone Door
     m_Metadata:
       m_Items: []
   - m_Id: 357277979553793
@@ -563,7 +563,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277983748096
-    m_Localized: Door Wood Summoner
+    m_Localized: Wooden Door
     m_Metadata:
       m_Items: []
   - m_Id: 357277983748097
@@ -571,7 +571,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277992136704
-    m_Localized: Meatrack Summoner
+    m_Localized: Meat Drying Rack
     m_Metadata:
       m_Items: []
   - m_Id: 357277992136705
@@ -579,7 +579,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357277992136706
-    m_Localized: MineEntrance Summoner
+    m_Localized: Mine Entrance
     m_Metadata:
       m_Items: []
   - m_Id: 357277992136707
@@ -595,7 +595,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357278059245570
-    m_Localized: Scarecrow Summoner
+    m_Localized: Scarecrow
     m_Metadata:
       m_Items: []
   - m_Id: 357278059245571
@@ -603,7 +603,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357278071828480
-    m_Localized: Smelter Summoner
+    m_Localized: Smelter
     m_Metadata:
       m_Items: []
   - m_Id: 357278071828481
@@ -611,7 +611,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357278092800000
-    m_Localized: Tent Summoner
+    m_Localized: Tent
     m_Metadata:
       m_Items: []
   - m_Id: 357278092800001
@@ -619,7 +619,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357278096994304
-    m_Localized: Wall Stone Summoner
+    m_Localized: Stone Wall
     m_Metadata:
       m_Items: []
   - m_Id: 357278096994305
@@ -627,7 +627,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357278101188608
-    m_Localized: Wall Wood Summoner
+    m_Localized: Wooden Wall
     m_Metadata:
       m_Items: []
   - m_Id: 357278101188609
@@ -635,7 +635,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 357278105382912
-    m_Localized: WorkBench Summoner
+    m_Localized: Workbench
     m_Metadata:
       m_Items: []
   - m_Id: 357278105382913
@@ -710,7 +710,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 1679033391210496
-    m_Localized: Ore Stone
+    m_Localized: Stone
     m_Metadata:
       m_Items: []
   - m_Id: 1679033445736448
@@ -718,7 +718,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 1679033454125056
-    m_Localized: SparkMaker Summoner
+    m_Localized: Fire Drill
     m_Metadata:
       m_Items: []
   - m_Id: 1679033454125057
@@ -726,7 +726,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 1679033475096576
-    m_Localized: FlintStrike
+    m_Localized: Fire Striker
     m_Metadata:
       m_Items: []
   - m_Id: 1679033475096577
@@ -734,7 +734,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 1679033483485184
-    m_Localized: ChippedTool
+    m_Localized: Chipped Stone Tool
     m_Metadata:
       m_Items: []
   - m_Id: 1679033483485185
@@ -750,7 +750,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 2189623678644224
-    m_Localized: Torch Summoner
+    m_Localized: Torch
     m_Metadata:
       m_Items: []
   - m_Id: 2189623766724608
@@ -758,7 +758,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 3818404710014976
-    m_Localized: WildDogMilk
+    m_Localized: Wild Dog Milk
     m_Metadata:
       m_Items: []
   - m_Id: 3818405100085248
@@ -766,7 +766,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 3818405100085249
-    m_Localized: WildDogMilk Gray
+    m_Localized: Wild Dog Milk
     m_Metadata:
       m_Items: []
   - m_Id: 3818405100085250
@@ -774,7 +774,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 3818405150416896
-    m_Localized: Basket Grass
+    m_Localized: Woven Grass Basket
     m_Metadata:
       m_Items: []
   - m_Id: 3818405150416897
@@ -858,7 +858,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 6403757262331905
-    m_Localized: RadishCrop
+    m_Localized: Radish Plant
     m_Metadata:
       m_Items: []
   - m_Id: 6403757262331906
@@ -866,7 +866,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 6403757262331907
-    m_Localized: IceBlock
+    m_Localized: Ice Block
     m_Metadata:
       m_Items: []
   - m_Id: 6403757262331908
@@ -874,7 +874,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 6403757262331909
-    m_Localized: Iceberg
+    m_Localized: Small Iceberg
     m_Metadata:
       m_Items: []
   - m_Id: 6403757262331910
@@ -890,7 +890,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 6403757287497728
-    m_Localized: Seed Radish
+    m_Localized: Radish Seed
     m_Metadata:
       m_Items: []
   - m_Id: 6403757287497729
@@ -906,7 +906,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915968
-    m_Localized: BlastFurnace
+    m_Localized: Blast Furnace
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915969
@@ -922,7 +922,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915972
-    m_Localized: Chest Wood
+    m_Localized: Wooden Chest
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915973
@@ -930,7 +930,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915974
-    m_Localized: Door Stone
+    m_Localized: Stone Door
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915975
@@ -938,7 +938,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915976
-    m_Localized: Door Wood
+    m_Localized: Wooden Door
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915977
@@ -946,7 +946,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915978
-    m_Localized: Meatrack
+    m_Localized: Meat Drying Rack
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915979
@@ -954,7 +954,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915980
-    m_Localized: MineEntrance
+    m_Localized: Mine Entrance
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915981
@@ -986,7 +986,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915988
-    m_Localized: Wall Wood
+    m_Localized: Wooden Wall
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915989
@@ -994,7 +994,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915990
-    m_Localized: WorkBench
+    m_Localized: Workbench
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915991
@@ -1002,7 +1002,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915992
-    m_Localized: SparkMaker
+    m_Localized: Fire Drill
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915993
@@ -1010,7 +1010,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915994
-    m_Localized: Torch Building
+    m_Localized: Torch
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915995
@@ -1018,7 +1018,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915996
-    m_Localized: CompostBin
+    m_Localized: Compost Bin
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915997
@@ -1034,7 +1034,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075522859008
-    m_Localized: CompostBin Summoner
+    m_Localized: Compost Bin
     m_Metadata:
       m_Items: []
   - m_Id: 7973075522859009
@@ -1042,7 +1042,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075522859010
-    m_Localized: Rocket Summoner
+    m_Localized: Rocket
     m_Metadata:
       m_Items: []
   - m_Id: 7973075522859011
@@ -1050,7 +1050,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075527053312
-    m_Localized: TwineCrop
+    m_Localized: Vine Plant
     m_Metadata:
       m_Items: []
   - m_Id: 7973075527053313
@@ -1058,7 +1058,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075527053314
-    m_Localized: CaveExit
+    m_Localized: Cave Exit
     m_Metadata:
       m_Items: []
   - m_Id: 7973075527053315
@@ -1066,7 +1066,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607744
-    m_Localized: AppleTree
+    m_Localized: Apple Tree
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607745
@@ -1074,7 +1074,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607746
-    m_Localized: Tree Coconut
+    m_Localized: Coconut Palm
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607747
@@ -1082,7 +1082,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607748
-    m_Localized: Mine Coal
+    m_Localized: Coal Deposit
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607749
@@ -1090,7 +1090,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607750
-    m_Localized: Mine Copper
+    m_Localized: Copper Deposit
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607751
@@ -1098,7 +1098,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607752
-    m_Localized: Mine Iron
+    m_Localized: Iron Deposit
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607753
@@ -1106,7 +1106,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607754
-    m_Localized: Mine Stone
+    m_Localized: Stone Deposit
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607755
@@ -1114,11 +1114,27 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607756
-    m_Localized: Mine Tin
+    m_Localized: Tin Deposit
     m_Metadata:
       m_Items: []
   - m_Id: 7973075560607757
     m_Localized: Mine Tin.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10123767297519616
+    m_Localized: Mushroom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10123767377211392
+    m_Localized: Tinder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10123767377211393
+    m_Localized: Mushroom Spores
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10123767377211394
+    m_Localized: Mushroom Plant
     m_Metadata:
       m_Items: []
   references:

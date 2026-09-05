@@ -13,7 +13,7 @@
       "id": "Seed_Apple",
       "parent": "Seed_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Seeds/Seed.prefab",
-      "gameName": "Seed_Apple",
+      "gameName": "苹果种子",
       "description": "一天一苹果,医生远离我",
       "durability": 1.0,
       "maxDurability": 1.0,
