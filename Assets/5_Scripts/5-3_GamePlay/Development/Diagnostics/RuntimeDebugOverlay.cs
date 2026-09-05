@@ -30,6 +30,12 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
     /// <summary>当前是否已经存在有效的调试悬浮窗。</summary>
     public static bool HasInstance => instance != null;
 
+    /// <summary>由 GM 所在调试程序集订阅，避免 GamePlay 反向引用调试程序集。</summary>
+    public static event System.Action GmPanelOpenRequested;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetGmPanelRequest() => GmPanelOpenRequested = null;
+
     #endregion
 
     #region Prefab 引用
@@ -48,6 +54,9 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
 
     /// <summary>关闭调试页面的按钮。</summary>
     [SerializeField] private Button closeButton;
+
+    /// <summary>打开 GM 管理面板的触屏与鼠标共用入口。</summary>
+    [SerializeField] private Button openGmButton;
 
     /// <summary>悬浮按钮上的日志数量文本。</summary>
     [SerializeField] private TextMeshProUGUI toggleLabel;
@@ -121,6 +130,7 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         BindButton(copyButton, CopyLogs);
         BindButton(clearButton, ClearLogs);
         BindButton(closeButton, ClosePanel);
+        BindButton(openGmButton, OpenGmPanel);
         BindCopyEntryCountInput();
     }
 
@@ -132,6 +142,7 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
         UnbindButton(copyButton, CopyLogs);
         UnbindButton(clearButton, ClearLogs);
         UnbindButton(closeButton, ClosePanel);
+        UnbindButton(openGmButton, OpenGmPanel);
         UnbindCopyEntryCountInput();
     }
 
@@ -278,6 +289,13 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
     private void ClosePanel()
     {
         SetPanelVisible(false);
+    }
+
+    /// <summary>收起高层日志窗口后打开 GM，避免日志挡住 GM 操作。</summary>
+    private void OpenGmPanel()
+    {
+        SetPanelVisible(false);
+        GmPanelOpenRequested?.Invoke();
     }
 
     /// <summary>按照玩家设置复制最近若干条完整日志。</summary>

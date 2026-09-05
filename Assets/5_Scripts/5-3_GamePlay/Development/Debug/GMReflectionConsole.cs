@@ -110,10 +110,13 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         ApplyPersistedTogglePreferences();
         RestartRestorePreferences();
         SceneManager.activeSceneChanged += OnActiveSceneChanged;
+        RuntimeDebugOverlay.GmPanelOpenRequested += OpenWindow;
     }
 
     private void OnDestroy()
     {
+        CancelTeleportTargeting();
+        RuntimeDebugOverlay.GmPanelOpenRequested -= OpenWindow;
         SceneManager.activeSceneChanged -= OnActiveSceneChanged;
         if (restorePreferencesCoroutine != null)
             StopCoroutine(restorePreferencesCoroutine);
@@ -126,6 +129,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         UpdateBuffTargetListIfNeeded();
         RefreshResponsiveLayoutIfCanvasChanged();
+        HandleTeleportInput();
 
         if (Keyboard.current?.f4Key.wasPressedThisFrame != true)
             return;
@@ -138,6 +142,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void OnActiveSceneChanged(Scene previous, Scene next)
     {
+        CancelTeleportTargeting();
         HandleBuffTargetingSceneChanged();
         HandleQuestPageSceneChanged();
         ApplyPersistedTogglePreferences();
@@ -216,6 +221,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void SetWindowVisible(bool visible)
     {
+        CancelTeleportTargeting();
         if (airdropBrowserRoot != null)
             airdropBrowserRoot.SetActive(false);
         if (aiCreatureBrowserRoot != null)
@@ -228,6 +234,12 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         ClampTabbedWindowToCanvas();
         RefreshRuntimeData();
         SetStatus("GM 窗口已打开：反射命令仅作用于当前运行场景。", new Color(0.35f, 0.95f, 0.85f));
+    }
+
+    /// <summary>日志按钮与外部 UI 统一打开当前 GM 实例。</summary>
+    private void OpenWindow()
+    {
+        SetWindowVisible(true);
     }
 
     #region UI

@@ -251,14 +251,6 @@ public class PlayerAdminController : Module
         if (keyboard == null)
             return;
 
-        // Ctrl + T：传送到鼠标位置，裸 T 留给聊天框
-        if (TeleportToMouseShortcutEnabled &&
-            keyboard.tKey.wasPressedThisFrame &&
-            (keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed))
-        {
-            playerTraits?.TeleportToMousePosition();
-        }
-
         // F2：初始化创造模式背包
         if (keyboard.f2Key.wasPressedThisFrame)
         {

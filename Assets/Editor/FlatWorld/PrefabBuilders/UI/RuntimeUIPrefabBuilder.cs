@@ -1172,13 +1172,17 @@ public static partial class RuntimeUIPrefabBuilder
         SetButtonLabelSize(clearButton, 17f);
         SetButtonLabelSize(copyButton, 17f);
 
+        Button openGmButton = CreateButton("打开GM面板按钮", panel.transform, "打开 GM 面板", 220f, 60f, true);
+        SetTopLeft(openGmButton.GetComponent<RectTransform>(), 24f, 80f, 220f, 60f);
+        SetButtonLabelSize(openGmButton, 19f);
+
         Image divider = CreateImage("页头分隔线", panel.transform, new Color(0.83f, 0.49f, 0.23f, 0.72f));
         divider.raycastTarget = false;
         RectTransform dividerRect = divider.rectTransform;
         dividerRect.anchorMin = new Vector2(0f, 1f);
         dividerRect.anchorMax = new Vector2(1f, 1f);
         dividerRect.pivot = new Vector2(0.5f, 1f);
-        dividerRect.anchoredPosition = new Vector2(0f, -76f);
+        dividerRect.anchoredPosition = new Vector2(0f, -154f);
         dividerRect.sizeDelta = new Vector2(-40f, 2f);
 
         GameObject scrollRoot = CreateUIObject("日志滚动区", panel.transform, typeof(Image), typeof(ScrollRect));
@@ -1186,7 +1190,7 @@ public static partial class RuntimeUIPrefabBuilder
         scrollRootRect.anchorMin = Vector2.zero;
         scrollRootRect.anchorMax = Vector2.one;
         scrollRootRect.offsetMin = new Vector2(22f, 62f);
-        scrollRootRect.offsetMax = new Vector2(-22f, -90f);
+        scrollRootRect.offsetMax = new Vector2(-22f, -168f);
         Image scrollBackground = scrollRoot.GetComponent<Image>();
         scrollBackground.color = new Color(0.006f, 0.012f, 0.016f, 0.96f);
         scrollBackground.raycastTarget = true;
@@ -1249,6 +1253,7 @@ public static partial class RuntimeUIPrefabBuilder
         serializedController.FindProperty("copyButton").objectReferenceValue = copyButton;
         serializedController.FindProperty("clearButton").objectReferenceValue = clearButton;
         serializedController.FindProperty("closeButton").objectReferenceValue = closeButton;
+        serializedController.FindProperty("openGmButton").objectReferenceValue = openGmButton;
         serializedController.FindProperty("toggleLabel").objectReferenceValue = toggleLabel;
         serializedController.FindProperty("summaryText").objectReferenceValue = summary;
         serializedController.FindProperty("logText").objectReferenceValue = logText;

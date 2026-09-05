@@ -177,30 +177,45 @@ public class Mod_PlayerTraits : Module
     }
 
     /// <summary>
-    /// 将玩家传送到鼠标的世界坐标
+    /// 将本地玩家传送到当前统一指针位置，供反射命令调用。
     /// </summary>
     public void TeleportToMousePosition()
     {
-        if (!TryGetPlayer(out var target))
-        {
-            return;
-        }
+        if (gameController == null)
+            gameController = GetComponentInParent<GameController>();
+
+        if (gameController != null)
+            TryTeleportToScreenPosition(gameController.GetPointerScreenPosition());
+    }
+
+    /// <summary>快捷键与触屏点选共用的传送落地；同步刚体、玩家数据和周边区块。</summary>
+    public bool TryTeleportToScreenPosition(Vector2 screenPosition)
+    {
+        if (!TryGetPlayer(out Player target) || !target.IsLocalProfile || target.Data == null)
+            return false;
 
         if (gameController == null)
-        {
-            gameController = GetComponentInParent<GameController>();
-        }
+            gameController = target.GetComponent<GameController>();
 
         if (gameController == null)
         {
             Debug.LogWarning("[Mod_PlayerTraits] 未找到 GameController，无法读取指针世界坐标");
-            return;
+            return false;
         }
 
-        Vector3 mouseWorldPosition = gameController.GetMouseWorldPosition();
-        target.transform.position = mouseWorldPosition;
+        Vector3 destination = gameController.GetMouseWorldPosition(screenPosition);
+        destination.z = target.transform.position.z;
+        Rigidbody2D body = target.GetComponent<Rigidbody2D>();
+        body.velocity = Vector2.zero;
+        body.angularVelocity = 0f;
+        body.position = destination;
+        target.transform.position = destination;
+        target.Data.transform.position = destination;
+        ChunkMgr.ExistingInstance?.ResetChunkLoadQueue();
+        target.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader)?.RefreshChunksAroundPlayer();
 
-        Debug.Log($"玩家已传送到位置: {mouseWorldPosition}");
+        Debug.Log($"[GM] 玩家已传送到位置: {destination}");
+        return true;
     }
 
     private bool TryGetPlayer(out Player target)

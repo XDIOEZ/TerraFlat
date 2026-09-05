@@ -81,7 +81,12 @@ public sealed partial class GMReflectionConsole
             typeof(CanvasScaler),
             typeof(GraphicRaycaster));
         canvasObject.transform.SetParent(transform, false);
-        gmCanvasRect = canvasObject.GetComponent<RectTransform>();
+        GameObject safeArea = CreateUiObject("GM Safe Area", canvasObject.transform);
+        gmCanvasRect = safeArea.GetComponent<RectTransform>();
+        gmCanvasRect.anchorMin = Vector2.zero;
+        gmCanvasRect.anchorMax = Vector2.one;
+        gmCanvasRect.offsetMin = gmCanvasRect.offsetMax = Vector2.zero;
+        safeArea.AddComponent<SafeAreaRectController>();
 
         Canvas canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -92,7 +97,7 @@ public sealed partial class GMReflectionConsole
         scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.matchWidthOrHeight = 0.5f;
 
-        windowRoot = CreateUiObject("GM Tabbed Window", canvasObject.transform);
+        windowRoot = CreateUiObject("GM Tabbed Window", safeArea.transform);
         gmWindowRect = windowRoot.GetComponent<RectTransform>();
         gmWindowRect.anchorMin = gmWindowRect.anchorMax = new Vector2(0.5f, 0.5f);
         gmWindowRect.pivot = new Vector2(0.5f, 0.5f);
@@ -143,8 +148,9 @@ public sealed partial class GMReflectionConsole
         BindGameEventManager();
         RebuildGameEventPage();
         RebuildCommandPage();
-        BuildAirdropBrowser(canvasObject.transform);
-        BuildAiCreatureBrowser(canvasObject.transform);
+        BuildAirdropBrowser(safeArea.transform);
+        BuildAiCreatureBrowser(safeArea.transform);
+        BuildTeleportTargeting(canvasObject.transform);
         int savedPageIndex = GMConsolePreferences.ActivePageIndex;
         GmPageId savedPage = Enum.IsDefined(typeof(GmPageId), savedPageIndex)
             ? (GmPageId)savedPageIndex
@@ -160,7 +166,7 @@ public sealed partial class GMReflectionConsole
     private void BuildTabbedHeader()
     {
         GameObject header = CreateUiObject("Header", windowRoot.transform);
-        header.AddComponent<LayoutElement>().preferredHeight = 54f;
+        header.AddComponent<LayoutElement>().preferredHeight = 74f;
         header.AddComponent<Image>().color = new Color(0.063f, 0.153f, 0.188f, 1f);
 
         HorizontalLayoutGroup layout = header.AddComponent<HorizontalLayoutGroup>();
@@ -187,7 +193,7 @@ public sealed partial class GMReflectionConsole
         shortcut.alignment = TextAlignmentOptions.Right;
         shortcut.gameObject.AddComponent<LayoutElement>().preferredWidth = 130f;
 
-        Button closeButton = CreateButton(header.transform, "关闭", () => SetWindowVisible(false), 68f, 34f);
+        Button closeButton = CreateButton(header.transform, "关闭", () => SetWindowVisible(false), 96f, 60f);
         closeButton.GetComponent<Image>().color = new Color(0.09f, 0.17f, 0.20f, 1f);
     }
 
@@ -376,9 +382,9 @@ public sealed partial class GMReflectionConsole
     private void BuildPlayerPage()
     {
         GmPageView page = CreatePage(GmPageId.Player);
-        AddPageIntro(page.Content, "玩家与管理", "玩家权限、传送、背包以及跑图速度设置。所有按钮只影响当前运行中的玩家。 ");
+        AddPageIntro(page.Content, "玩家与管理", "电脑 Ctrl+T 传送到鼠标位置；手机或电脑均可点击“点选传送”，再点击场景选择位置。");
 
-        Transform grid = CreateActionGrid(page.Content, 4, 256f, 36f, 8);
+        Transform grid = CreateActionGrid(page.Content, 4, 256f, 60f, 8);
         CreateSearchableButton(grid, GmPageId.Player, "设为管理员", "管理员 admin 权限", SetAdministrator);
         adminInvincibilityButton = CreateSearchableButton(
             grid,
@@ -386,12 +392,14 @@ public sealed partial class GMReflectionConsole
             "管理员无敌：需权限",
             "管理员 无敌 开关 生命 死亡 invincibility god mode",
             ToggleAdminInvincibility);
-        CreateSearchableButton(
+        Button teleportButton = CreateSearchableButton(
             grid,
             GmPageId.Player,
-            "传送至鼠标",
-            "传送 鼠标 teleport",
-            () => InvokeByTypeName("Mod_PlayerTraits", "TeleportToMousePosition"));
+            "点选传送",
+            "传送 鼠标 手机 触屏 teleport",
+            BeginTeleportTargeting,
+            60f);
+        teleportButton.GetComponentInChildren<TextMeshProUGUI>().fontSize = 18f;
         teleportShortcutButton = CreateSearchableButton(
             grid,
             GmPageId.Player,
