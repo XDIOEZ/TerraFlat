@@ -1095,8 +1095,9 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (viewObject.activeSelf)
         {
             // 正常游戏时让常驻 HUD 的真实按钮优先接收射线，右侧指向区只响应空白位置。
-            // 抽屉展开后它本身成为交互层，必须覆盖任务追踪 HUD；其它模态面板打开后再把快捷栏提到最上层参与拖放。
-            if (modalOpen || IsDrawerOpen)
+            // 正式面板打开时手机菜单必须沉底，不能在面板 BringToFront 的通知中反过来遮挡面板。
+            // 仅无正式面板时才将展开的抽屉提到 HUD 前方；快捷栏仍由独立 Canvas 保持拖放优先级。
+            if (IsDrawerOpen && !modalOpen)
                 viewObject.transform.SetAsLastSibling();
             else
                 viewObject.transform.SetAsFirstSibling();
