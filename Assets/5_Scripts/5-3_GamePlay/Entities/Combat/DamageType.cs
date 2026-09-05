@@ -2,6 +2,16 @@ using System;
 using MemoryPack;
 using UnityEngine;
 
+/// <summary>四类伤害的稳定标识；None 表示没有正值伤害，不选择类型特效。</summary>
+public enum CombatDamageKind
+{
+    None,
+    Cutting,
+    Piercing,
+    Chopping,
+    Blunt
+}
+
 /// <summary>
 /// 四类攻击数值。总战斗力只用于评价，实际结算会逐类减去对应防御后再求和。
 /// </summary>
@@ -16,6 +26,40 @@ public partial class CombatDamage
 
     [MemoryPackIgnore]
     public float TotalCombatPower => Cutting + Piercing + Chopping + Blunt;
+
+    #region 表现分类
+
+    /// <summary>选择攻击数值占比最大的类型；并列依次优先切割、穿刺、劈砍、钝击。</summary>
+    [MemoryPackIgnore]
+    public CombatDamageKind DominantKind
+    {
+        get
+        {
+            float highest = 0f;
+            CombatDamageKind kind = CombatDamageKind.None;
+            if (Cutting > highest)
+            {
+                highest = Cutting;
+                kind = CombatDamageKind.Cutting;
+            }
+            if (Piercing > highest)
+            {
+                highest = Piercing;
+                kind = CombatDamageKind.Piercing;
+            }
+            if (Chopping > highest)
+            {
+                highest = Chopping;
+                kind = CombatDamageKind.Chopping;
+            }
+            if (Blunt > highest)
+                kind = CombatDamageKind.Blunt;
+
+            return kind;
+        }
+    }
+
+    #endregion
 
     [MemoryPackConstructor]
     public CombatDamage()

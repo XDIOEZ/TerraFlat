@@ -547,8 +547,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  AttackEffects:
-  - {fileID: 7635046391721750622, guid: c7dc8a6dfe6cb24488ccff466b999811, type: 3}
+  impactEffectSet: {fileID: 11400000, guid: 08da4cb31d294597a82d3c28c19d7516, type: 2}
+  AttackEffects: []
   DamageValues:
     Cutting: 3
     Piercing: 2

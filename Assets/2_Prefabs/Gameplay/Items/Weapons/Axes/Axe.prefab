@@ -195,8 +195,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
+  impactEffectSet: {fileID: 11400000, guid: 08da4cb31d294597a82d3c28c19d7516, type: 2}
   AttackEffects:
-  - {fileID: 7635046391721750622, guid: c7dc8a6dfe6cb24488ccff466b999811, type: 3}
   - {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
   DamageValues:
     Cutting: 1

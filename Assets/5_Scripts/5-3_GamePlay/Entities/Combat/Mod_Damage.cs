@@ -7,6 +7,9 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
 {
     #region 伤害相关数据
     [Header("攻击特效")]
+    [SerializeField, Tooltip("按本次攻击占比最大的伤害类型播放一个命中特效。")]
+    private CombatImpactEffectSet impactEffectSet;
+    [Tooltip("每次有效命中都播放的通用特效，例如伤害数字；不重复放入类型命中特效。")]
     public List<GameEffect> AttackEffects = new List<GameEffect>();
 
     [Header("四类攻击伤害")]
@@ -294,7 +297,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
         float acDamage = receiver.Hurt(this);
 
         // DamageReceiver 与受击 Collider 可能位于不同层级，不能假定接收器节点自身带 Collider。
-        if (acDamage >= 0f && AttackEffects != null && AttackEffects.Count > 0)
+        if (acDamage >= 0f)
         {
             Vector2 hitPoint = ResolveHitPoint(receiver, hitCollider);
             SpawnEffect(hitPoint, acDamage);
@@ -333,8 +336,6 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
             nonDamageableImpactAppliedThisWindow ||
             hitCollider == null ||
             !CanDealDamageNow() ||
-            AttackEffects == null ||
-            AttackEffects.Count == 0 ||
             (item != null && hitCollider.transform.IsChildOf(item.transform)))
         {
             return;
@@ -362,7 +363,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
             return;
 
         tileDamageAppliedThisWindow = true;
-        if (result.AppliedDamage >= 0f && AttackEffects != null && AttackEffects.Count > 0)
+        if (result.AppliedDamage >= 0f)
             SpawnEffect(result.HitPoint, result.AppliedDamage);
         OnDamageApplied?.Invoke(result.AppliedDamage);
         lastDamageTime = Time.time;
@@ -415,47 +416,45 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
         return item.InHand;
     }
 
+    /// <summary>有效命中播放一个主伤害类型特效，再播放独立的数字等通用反馈。</summary>
     private void SpawnEffect(Vector2 hitPoint, float damage)
     {
-        // 特效生成逻辑
         VisualEffectManager effectManager = VisualEffectManager.Instance;
+        CombatDamageKind kind = ResolveDamageValues().DominantKind;
+        if (impactEffectSet != null)
+            PlayHitEffect(impactEffectSet.GetPrefab(kind), effectManager, hitPoint, damage, kind);
+
+        if (AttackEffects == null)
+            return;
+
         foreach (GameEffect effectPrefab in AttackEffects)
-        {
-            if (effectPrefab != null)
-            {
-                GameEffect effect = effectManager != null
-                    ? effectManager.GetGameEffectFromPool(effectPrefab)
-                    : Instantiate(effectPrefab);
-                effect.transform.position = new Vector3(hitPoint.x, hitPoint.y, 0f);
-                object effectData = effect is DamageTextEffect
-                    ? BuildDamageTextData(damage)
-                    : damage;
-                effect.Effect(transform, effectData);
-            }
-        }
+            PlayHitEffect(effectPrefab, effectManager, hitPoint, damage, kind);
     }
 
-    /// <summary>按占比最大的有效伤害类型选择伤害数字样式。</summary>
-    private DamageTextEffectData BuildDamageTextData(float damage)
+    /// <summary>从现有对象池播放命中特效，类型动画与数字共用相同的命中坐标。</summary>
+    private void PlayHitEffect(GameEffect prefab, VisualEffectManager manager, Vector2 hitPoint,
+        float damage, CombatDamageKind kind)
     {
-        DamageTextStyle style = DamageTextStyle.Normal;
-        CombatDamage values = ResolveDamageValues();
-        float highest = values.Cutting;
-        if (highest > 0f)
-            style = DamageTextStyle.Cutting;
-        if (values.Piercing > highest)
-        {
-            highest = values.Piercing;
-            style = DamageTextStyle.Piercing;
-        }
-        if (values.Chopping > highest)
-        {
-            highest = values.Chopping;
-            style = DamageTextStyle.Cutting;
-        }
-        if (values.Blunt > highest)
-            style = DamageTextStyle.Blunt;
+        if (prefab == null)
+            return;
 
+        GameEffect effect = manager != null ? manager.GetGameEffectFromPool(prefab) : Instantiate(prefab);
+        effect.transform.position = new Vector3(hitPoint.x, hitPoint.y, 0f);
+        object effectData = effect is DamageTextEffect ? BuildDamageTextData(damage, kind) : damage;
+        effect.Effect(transform, effectData);
+    }
+
+    /// <summary>数字与命中动画共用同一个主伤害类型，劈砍继续使用刃器数字样式。</summary>
+    private static DamageTextEffectData BuildDamageTextData(float damage, CombatDamageKind kind)
+    {
+        DamageTextStyle style = kind switch
+        {
+            CombatDamageKind.Cutting => DamageTextStyle.Cutting,
+            CombatDamageKind.Chopping => DamageTextStyle.Cutting,
+            CombatDamageKind.Piercing => DamageTextStyle.Piercing,
+            CombatDamageKind.Blunt => DamageTextStyle.Blunt,
+            _ => DamageTextStyle.Normal
+        };
         return new DamageTextEffectData(damage, style);
     }
 
