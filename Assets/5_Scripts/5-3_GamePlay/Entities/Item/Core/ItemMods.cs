@@ -77,6 +77,23 @@ public class ItemMods
         return modules[0] as T;
     }
 
+    /// <summary>按稳定 ID 解析唯一模块；缺失、重复或类型不符都立即中止装配。</summary>
+    public T RequireSingleModById<T>(string modID) where T : Module
+    {
+        if (string.IsNullOrWhiteSpace(modID))
+            throw new ArgumentException("模块 ID 不能为空。", nameof(modID));
+
+        if (!Mods_List.TryGetValue(modID, out List<Module> modules) || modules.Count == 0)
+            throw new InvalidOperationException($"物品 {_owner?.name} 缺少必需模块：{modID}");
+        if (modules.Count != 1)
+            throw new InvalidOperationException($"物品 {_owner?.name} 的模块 {modID} 必须唯一，实际数量：{modules.Count}");
+        if (modules[0] is not T typed)
+            throw new InvalidOperationException(
+                $"物品 {_owner?.name} 的模块 {modID} 类型应为 {typeof(T).Name}，实际为 {modules[0]?.GetType().Name}");
+
+        return typed;
+    }
+
     /// <summary>
     /// Resolves a persisted module ID. Older entity prefabs can initialize a module
     /// with a shared runtime ID (for example, the generic AI ID), while their saved

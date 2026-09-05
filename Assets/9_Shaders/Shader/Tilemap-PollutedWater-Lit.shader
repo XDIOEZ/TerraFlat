@@ -4,12 +4,13 @@ Shader "FlatWorld/2D/Tilemap Polluted Water Lit"
     {
         [PerRendererData] _MainTex("水面贴图", 2D) = "white" {}
         _MaskTex("灯光遮罩", 2D) = "white" {}
+        [PerRendererData] _WaterDepthTexture("水深场", 2D) = "black" {}
+        [HideInInspector] _WaterDepthUvScaleOffset("水深纹理坐标", Vector) = (1,1,0,0)
 
         [Header(Polluted Water Surface)]
         _DeepColor("深水颜色", Color) = (0.005, 0.025, 0.012, 1)
         _ShallowColor("浅水颜色", Color) = (0.065, 0.16, 0.055, 1)
         _SurfaceTint("水面染色强度", Range(0, 1)) = 0.78
-        _DepthDarkening("深水压暗强度", Range(0, 1)) = 0.75
         _SwellScale("涌浪尺度", Range(0.05, 4)) = 0.5
         _DetailScale("细浪尺度", Range(0.5, 12)) = 2.7
         _WaveSpeed("水流速度", Range(-3, 3)) = 0.14
@@ -17,10 +18,7 @@ Shader "FlatWorld/2D/Tilemap Polluted Water Lit"
         _NormalStrength("表面起伏", Range(0, 0.8)) = 0.18
         _PixelDensity("表面采样密度", Range(1, 128)) = 48
         _FlowDirection("流动方向", Vector) = (0.55, 0.18, 0, 0)
-<<<<<<< HEAD:Assets/Shaders/Shader/Tilemap-PollutedWater-Lit.shader
-=======
         _TideCyclesPerDay("每日潮汐循环次数", Range(1, 4)) = 2.0
->>>>>>> origin/master:Assets/9_Shaders/Shader/Tilemap-PollutedWater-Lit.shader
         _RippleColor("浪脊颜色", Color) = (0.18, 0.32, 0.12, 0.75)
         _RippleStrength("浪脊强度", Range(0, 1)) = 0.09
         _RippleScale("浪纹尺度", Range(0.25, 6)) = 1.3
@@ -50,9 +48,7 @@ Shader "FlatWorld/2D/Tilemap Polluted Water Lit"
         _MoonTrailWidth("月光带宽度", Range(0.005, 0.2)) = 0.05
 
         [Header(Shore)]
-        _EdgeColor("岸线暗部", Color) = (0.003, 0.007, 0.002, 1)
         _EdgeWidth("岸线宽度", Range(0.03, 0.45)) = 0.24
-        _EdgeStrength("岸线暗部强度", Range(0, 1)) = 0.85
         _CornerStrength("转角叠加强度", Range(0, 1)) = 0.2
         _ShoreColor("岸线亮部", Color) = (0.16, 0.28, 0.08, 1)
         _ShoreStrength("岸线亮部强度", Range(0, 1)) = 0.08

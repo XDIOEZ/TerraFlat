@@ -25,6 +25,8 @@ public partial class ChunkMgr
     private ChunkGenerationProfileSnapshot activeGenerationSnapshot;
     private long runtimeEpoch;
     private WorldRuntimeHost runtimeHost;
+    /// <summary>管理器进入终止阶段后，不再保存生态快照或重新创建世界运行时。</summary>
+    internal bool IsWorldRuntimeShuttingDown { get; private set; }
 
     public WorldRuntime WorldRuntime => runtimeChunkManager?.World;
     public IReadOnlyDictionary<RuntimeWorldAddress, ChunkRuntime> Chunks =>
@@ -59,8 +61,14 @@ public partial class ChunkMgr
     protected override void OnDestroy()
     {
         WorldStreamingPreferences.Changed -= ApplyWorldStreamingPreferences;
-        ShutdownWorldRuntime();
-        base.OnDestroy();
+        try
+        {
+            ShutdownWorldRuntime();
+        }
+        finally
+        {
+            base.OnDestroy();
+        }
     }
 
     /// <summary>请求生成一个区块的数据；真正的计算会交给后台生成器。</summary>
@@ -146,6 +154,9 @@ public partial class ChunkMgr
     /// <summary>推进纯世界模拟，并修复后台生成完成后的画面绑定。</summary>
     internal void AdvanceWorldRuntime(float deltaSeconds)
     {
+        if (IsWorldRuntimeShuttingDown)
+            return;
+
         using (WorldRuntimeAdvanceMarker.Auto())
         {
             runtimeChunkManager?.Advance(deltaSeconds, authoritativeSimulation,
@@ -195,19 +206,43 @@ public partial class ChunkMgr
     /// <summary>彻底关闭世界运行时，释放区块、任务和事件资源。</summary>
     private void ShutdownWorldRuntime()
     {
-        ClearRuntimeWindowBindings();
-        if (runtimeChunkManager == null)
+        if (IsWorldRuntimeShuttingDown)
             return;
-        WorldRuntime world = runtimeChunkManager.World;
-        runtimeChunkManager.Dispose();
-        runtimeChunkManager = null;
-        activeGenerationSnapshot = null;
-        world.Dispose();
+
+        IsWorldRuntimeShuttingDown = true;
+        if (runtimeHost != null)
+            runtimeHost.Bind(null);
+        runtimeChunkManager?.CancelAllRequests();
+        try
+        {
+            ClearRuntimeWindowBindings();
+        }
+        finally
+        {
+            // 表现清理发生异常时，后台任务与纯数据仍必须释放，原始异常继续上报。
+            RuntimeChunkMgr manager = runtimeChunkManager;
+            runtimeChunkManager = null;
+            activeGenerationSnapshot = null;
+            if (manager != null)
+            {
+                WorldRuntime world = manager.World;
+                try
+                {
+                    manager.Dispose();
+                }
+                finally
+                {
+                    world.Dispose();
+                }
+            }
+        }
     }
 
     /// <summary>确保世界运行时已经创建；未创建时立即初始化。</summary>
     private void EnsureWorldRuntime()
     {
+        if (IsWorldRuntimeShuttingDown)
+            throw new ObjectDisposedException(nameof(ChunkMgr));
         if (runtimeChunkManager == null)
             InitializeWorldRuntime();
     }

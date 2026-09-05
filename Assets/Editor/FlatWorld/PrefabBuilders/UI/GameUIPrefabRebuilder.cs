@@ -52,8 +52,8 @@ public static class GameUIPrefabRebuilder
     {
         { InventoryPanelsRoot + "UI_Bag.prefab", new[] { "Scroll View", "Content", "关闭" } },
         { InventoryPanelsRoot + "UI_Equipment.prefab", new[] { "UI_Content", "关闭" } },
-        { CraftingRoot + "UI_HandCraftTable.prefab", new[] { "输入_1", "输入_2", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, "合成按钮", "关闭" } },
-        { CraftingRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_3", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, "合成按钮", "关闭" } },
+        { CraftingRoot + "UI_HandCraftTable.prefab", new[] { "输入_1", "输入_4", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, "合成按钮", "关闭" } },
+        { CraftingRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_5", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, "合成按钮", "关闭" } },
         { CraftingRoot + "UI_Furnace.prefab", new[] { "输入_1", "输入_2", "输入_3", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "合成按钮", "关闭" } },
         { CraftingRoot + "UI_Bonfire.prefab", new[] { "输入_1", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "合成按钮", "关闭" } },
         { CraftingRoot + "UI_FireDrill.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
@@ -72,8 +72,6 @@ public static class GameUIPrefabRebuilder
                 "关闭"
             }
         },
-        { InventoryPanelsRoot + "UI_ItemContextMenu.prefab", new[] { "控制面板", "销毁面板", "使用物品", "查看物品信息", "丢弃一个", "丢弃整组" } },
-        { InventoryPanelsRoot + "UI_ItemInfo.prefab", new[] { "面板", "信息", "销毁" } },
         { PlayerStatusRoot + "UI_ModuleSettings.prefab", new[] { "Panel", "Slider", "关闭页面" } },
         { PlayerStatusRoot + "UI_Health.prefab", new[] { "血量模块_世界面板", "背景", "血量" } },
         { PlayerStatusRoot + "UI_Food.prefab", new[] { "血量", "碳水", "脂肪", "蛋白质", "水", "维生素", "体温", "DataText_血量", "DataText_体温" } },
@@ -108,7 +106,7 @@ public static class GameUIPrefabRebuilder
             new BuildTarget(InventoryPanelsRoot + "UI_Equipment.prefab", root => BuildScrollWindow(root, 526f, 566f, "装备", "EQUIPMENT / LOADOUT", "将装备拖入槽位以更新生存配置", 2, new Vector2(112f, 112f))),
             new BuildTarget(CraftingRoot + "UI_CompostBin.prefab", root => BuildScrollWindow(root, 646f, 468f, "堆肥箱", "COMPOST / RESOURCE CYCLE", "投入可腐物 · 等待自然转化", 5, new Vector2(88f, 88f))),
             new BuildTarget(CraftingRoot + "UI_MeatRack.prefab", root => BuildScrollWindow(root, 646f, 468f, "晾肉架", "MEAT RACK / PRESERVATION", "保持通风 · 留意加工进度", 5, new Vector2(88f, 88f))),
-            new BuildTarget(CraftingRoot + "UI_HandCraftTable.prefab", root => BuildCraftingSelectionWindow(root, "手工制作", "CRAFTING / BASIC WORK", 2)),
+            new BuildTarget(CraftingRoot + "UI_HandCraftTable.prefab", root => BuildCraftingSelectionWindow(root, "手工制作", "CRAFTING / BASIC WORK", 4)),
             new BuildTarget(CraftingRoot + "UI_FireDrill.prefab", root => BuildCraftWindow(root, "钻木取火", "FIRECRAFT / FRICTION", 1, true)),
             new BuildTarget(CraftingRoot + "UI_FlintStrike.prefab", root => BuildCraftWindow(root, "燧石取火", "FIRECRAFT / SPARK", 1, true)),
             new BuildTarget(CraftingRoot + "UI_MakerTable.prefab", BuildMakerTable),
@@ -120,8 +118,6 @@ public static class GameUIPrefabRebuilder
             new BuildTarget(PlayerStatusRoot + "UI_ModuleList.prefab", BuildGameModuleSelector),
             new BuildTarget(MainMenuCoreRoot + "UI_ActionList.prefab", BuildActionList),
             new BuildTarget(MainMenuSaveRoot + "UI_SaveContextMenu.prefab", BuildSaveContextMenu),
-            new BuildTarget(InventoryPanelsRoot + "UI_ItemContextMenu.prefab", BuildItemContextMenu),
-            new BuildTarget(InventoryPanelsRoot + "UI_ItemInfo.prefab", BuildItemInfo),
             new BuildTarget(InventoryComponentsRoot + "UI_HandSlot.prefab", BuildSlot),
             new BuildTarget(PlayerStatusRoot + "UI_ModuleOpenButton.prefab", BuildBaseButton),
             new BuildTarget(PlayerStatusRoot + "UI_ModuleButton.prefab", BuildBaseButton),
@@ -350,7 +346,7 @@ public static class GameUIPrefabRebuilder
         {
             new BuildTarget(
                 CraftingRoot + "UI_HandCraftTable.prefab",
-                root => BuildCraftingSelectionWindow(root, "手工制作", "CRAFTING / BASIC WORK", 2)),
+                root => BuildCraftingSelectionWindow(root, "手工制作", "CRAFTING / BASIC WORK", 4)),
             new BuildTarget(CraftingRoot + "UI_MakerTable.prefab", BuildMakerTable)
         };
 
@@ -591,6 +587,8 @@ public static class GameUIPrefabRebuilder
 
         RemoveNamedSlots(root.transform, "输入_", inputCount);
         RemoveNamedSlots(root.transform, "输出_", 2);
+        for (int index = 2; index <= inputCount; index++)
+            EnsureNamedSlot(root.transform, "输入_1", $"输入_{index}");
         EnsureNamedSlot(root.transform, "输出_1", "输出_2");
 
         RectTransform frame = PrepareWindow(
@@ -606,8 +604,9 @@ public static class GameUIPrefabRebuilder
         AddSection(frame, "RECIPES", "可制作配方", 408f, sectionTop, 524f, sectionHeight);
         AddSection(frame, "OUTPUT", "制作产物", 944f, sectionTop, 380f, sectionHeight);
 
-        LayoutCraftingSlots(root.transform, "输入_", inputCount, 20f, 168f, 376f, inputCount == 2 ? 136f : 112f);
-        LayoutCraftingSlots(root.transform, "输出_", 2, 944f, 168f, 380f, 136f);
+        int inputColumns = inputCount <= 4 ? 2 : 3;
+        LayoutCraftingSlots(root.transform, "输入_", inputCount, 20f, 168f, 376f, inputCount == 2 ? 136f : 112f, inputColumns);
+        LayoutCraftingSlots(root.transform, "输出_", 2, 944f, 168f, 380f, 136f, 2);
         BuildRecipeCandidateScroll(frame, 424f, 164f, 492f, 486f);
 
         SetLegacyCraftingProgressActive(root.transform, false);
@@ -618,7 +617,24 @@ public static class GameUIPrefabRebuilder
 
     private static void BuildMakerTable(GameObject root)
     {
-        BuildCraftingSelectionWindow(root, "制作台", "WORKBENCH / REFINED CRAFT", 3);
+        BuildCraftingSelectionWindow(root, "制作台", "WORKBENCH / REFINED CRAFT", 5);
+        RemoveMakerFlowArrow(root.transform);
+    }
+
+    /// <summary>制作台不再显示旧的输入到输出方向箭头；仅清理该面板根节点上的历史视觉。</summary>
+    private static void RemoveMakerFlowArrow(Transform root)
+    {
+        Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
+        foreach (Transform transform in transforms)
+        {
+            bool isLegacyRootArrow = transform != null &&
+                                     transform.parent == root &&
+                                     string.Equals(transform.name, "Image", StringComparison.Ordinal);
+            bool isGeneratedFlowArrow = transform != null &&
+                                        transform.name.StartsWith("FWUI_FlowArrow_", StringComparison.Ordinal);
+            if (isLegacyRootArrow || isGeneratedFlowArrow)
+                UnityEngine.Object.DestroyImmediate(transform.gameObject);
+        }
     }
 
     private static void BuildFurnace(GameObject root, bool bonfire)
@@ -663,11 +679,52 @@ public static class GameUIPrefabRebuilder
 
         RectTransform sliders = FindRect(root.transform, "Slider");
         if (sliders != null)
-            SetTopLeft(sliders, bonfire ? 270f : 316f, 184f, bonfire ? 202f : 220f, 170f);
+        {
+            if (bonfire)
+            {
+                // 篝火的两个状态条统一为横向并下移，避免旧旋转燃料条穿过流程箭头。
+                SetTopLeft(sliders, 274f, 272f, 192f, 92f);
+                sliders.localScale = Vector3.one;
+
+                RectTransform processBar = FindRect(sliders, "熔炼进度条");
+                if (processBar != null)
+                {
+                    processBar.localScale = Vector3.one;
+                    processBar.localRotation = Quaternion.identity;
+                    SetTopLeft(processBar, 0f, 0f, 192f, 16f);
+                }
+
+                RectTransform fuelBar = FindRect(sliders, "燃料显示条");
+                if (fuelBar != null)
+                {
+                    fuelBar.localScale = Vector3.one;
+                    fuelBar.localRotation = Quaternion.identity;
+                    SetTopLeft(fuelBar, 0f, 44f, 192f, 16f);
+                }
+            }
+            else
+            {
+                SetTopLeft(sliders, 316f, 184f, 220f, 170f);
+            }
+        }
 
         RectTransform illustration = FindDirectRect(root.transform, bonfire ? "Image_1" : "Image_2");
         if (illustration != null)
-            SetTopLeft(illustration, bonfire ? 302f : 350f, 152f, 132f, 132f);
+        {
+            if (bonfire)
+            {
+                SetTopLeft(illustration, 314f, 184f, 112f, 64f);
+                if (illustration.TryGetComponent(out Image illustrationImage))
+                {
+                    illustrationImage.preserveAspect = true;
+                    illustrationImage.raycastTarget = false;
+                }
+            }
+            else
+            {
+                SetTopLeft(illustration, 350f, 152f, 132f, 132f);
+            }
+        }
 
         PlaceActionButton(root.transform, "合成按钮", width, height, bonfire ? "开始处理" : "启动熔炼");
     }
@@ -987,82 +1044,6 @@ public static class GameUIPrefabRebuilder
         PlaceTopLeft(panel, "Button_ReName", 24f, 174f, 276f, 50f);
         PlaceTopLeft(panel, "删除按钮", 24f, 236f, 276f, 50f);
         PlaceTopLeft(panel, "Button_Close", 24f, 298f, 276f, 40f);
-    }
-
-    private static void BuildItemContextMenu(GameObject root)
-    {
-        Transform panel = FindTransform(root.transform, "控制面板");
-        if (panel == null)
-            return;
-
-        EnsureContextMenuButton(panel, "丢弃一个", "丢弃一个");
-        EnsureContextMenuButton(panel, "丢弃整组", "丢弃整组");
-        ConfigureFloatingCard(panel, 310f, 528f, "物品操作", "ITEM / ACTIONS");
-        RectTransform scroll = FindRect(panel, "Scroll View");
-        if (scroll != null)
-            SetTopLeft(scroll, 20f, 94f, 270f, 350f);
-        RectTransform destroy = FindRect(panel, "销毁面板");
-        if (destroy != null)
-            SetTopLeft(destroy, 20f, 458f, 270f, 50f);
-    }
-
-    /// <summary>在编辑器构建期补齐手机物品菜单动作，运行时只负责绑定现有正式节点。</summary>
-    private static void EnsureContextMenuButton(Transform panel, string name, string caption)
-    {
-        if (FindTransform(panel, name) != null)
-            return;
-
-        Transform content = FindTransform(panel, "Content") ?? FindTransform(panel, "Scroll View") ?? panel;
-        GameObject buttonObject = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
-        buttonObject.transform.SetParent(content, false);
-        Image image = buttonObject.GetComponent<Image>();
-        image.color = SurfaceRaised;
-        buttonObject.GetComponent<Button>().targetGraphic = image;
-        LayoutElement element = buttonObject.AddComponent<LayoutElement>();
-        element.preferredWidth = 250f;
-        element.preferredHeight = 50f;
-
-        GameObject labelObject = new GameObject("Text (TMP)", typeof(RectTransform), typeof(TextMeshProUGUI));
-        labelObject.transform.SetParent(buttonObject.transform, false);
-        TextMeshProUGUI label = labelObject.GetComponent<TextMeshProUGUI>();
-        label.font = font;
-        label.text = caption;
-        label.fontSize = 16f;
-        label.color = Cream;
-        label.alignment = TextAlignmentOptions.Center;
-        label.raycastTarget = false;
-        Stretch(label.rectTransform);
-    }
-
-    private static void BuildItemInfo(GameObject root)
-    {
-        Transform panel = FindTransform(root.transform, "面板");
-        if (panel == null)
-            return;
-
-        ConfigureFloatingCard(panel, 468f, 590f, "物品详情", "ITEM / FIELD NOTES");
-        RectTransform panelRect = panel as RectTransform;
-        if (panelRect != null)
-            panelRect.localScale = Vector3.one;
-
-        PlaceTopLeft(panel, "Image", 30f, 112f, 112f, 112f);
-        PlaceTopLeft(panel, "信息", 164f, 112f, 270f, 380f);
-        PlaceTopLeft(panel, "销毁", 30f, 516f, 404f, 50f);
-
-        TextMeshProUGUI infoText = FindTransform(panel, "信息")?.GetComponent<TextMeshProUGUI>();
-        if (infoText != null)
-        {
-            infoText.font = font;
-            infoText.fontSize = 16f;
-            infoText.enableAutoSizing = true;
-            infoText.fontSizeMin = 13f;
-            infoText.fontSizeMax = 16f;
-            infoText.fontStyle = FontStyles.Normal;
-            infoText.alignment = TextAlignmentOptions.TopLeft;
-            infoText.enableWordWrapping = true;
-            infoText.overflowMode = TextOverflowModes.Page;
-            infoText.rectTransform.localScale = Vector3.one;
-        }
     }
 
     private static void BuildNutritionHud(GameObject root)
@@ -1608,11 +1589,11 @@ public static class GameUIPrefabRebuilder
         float areaX,
         float top,
         float areaWidth,
-        float size)
+        float size,
+        int maxColumns)
     {
         const float spacing = 16f;
-        float rowWidth = count * size + Mathf.Max(0, count - 1) * spacing;
-        float left = areaX + (areaWidth - rowWidth) * 0.5f;
+        int columns = Mathf.Clamp(maxColumns, 1, count);
 
         for (int index = 1; index <= count; index++)
         {
@@ -1620,10 +1601,16 @@ public static class GameUIPrefabRebuilder
             if (slot == null)
                 throw new MissingReferenceException($"{root.name} 缺少槽位 {prefix}{index}");
 
+            int zeroBased = index - 1;
+            int row = zeroBased / columns;
+            int column = zeroBased % columns;
+            int itemsInRow = Mathf.Min(columns, count - row * columns);
+            float rowWidth = itemsInRow * size + Mathf.Max(0, itemsInRow - 1) * spacing;
+            float left = areaX + (areaWidth - rowWidth) * 0.5f;
             slot.SetParent(root, false);
             slot.localScale = Vector3.one;
             slot.SetAsLastSibling();
-            SetTopLeft(slot, left + (index - 1) * (size + spacing), top, size, size);
+            SetTopLeft(slot, left + column * (size + spacing), top + row * (size + spacing), size, size);
         }
     }
 

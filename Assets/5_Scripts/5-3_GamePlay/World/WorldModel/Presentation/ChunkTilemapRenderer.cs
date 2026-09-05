@@ -8,17 +8,13 @@ using UnityEngine.Tilemaps;
 /// 新版区块的基础 Tilemap 表现层。
 ///
 /// 地表陆地、地表水岸、矿洞墙脚和水体分别使用对应的 Tilemap 表现层。
-/// 左、右、下、上四个接触方向与水深共同编码到 Tile Color RGBA，由 Tilemap Shader 绘制渐变，
-/// 不再为接触阴影创建 SpriteRenderer 游戏对象。Tile Color 只作为表现数据。
+/// 左、右、下、上四个接触方向编码到 Tile Color RGBA，连续水深由每个 Chunk 的独立纹理提供，
+/// 不再让岸线位与水深共用颜色通道，也不为接触阴影创建 SpriteRenderer 游戏对象。
 /// </summary>
 public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
 {
     #region 配置与状态
 
-    /// <summary>水深占据颜色通道低值区间，给岸线方向位保留稳定阈值。</summary>
-    private const float WaterDepthChannelScale = 0.45f;
-    /// <summary>岸线方向位偏移，与 Shader 端的解码常量保持一致。</summary>
-    private const float WaterContactChannelOffset = 0.55f;
     /// <summary>河流与地下水使用的权威水深层。</summary>
     private const string RiverDepthLayerId = "riverDepth";
     /// <summary>海洋深度换算使用的权威高度层。</summary>
@@ -31,10 +27,16 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
     [SerializeField] private Tilemap backTilemap;
     [SerializeField] private Tilemap blockingTilemap;
 
-    private readonly List<NeighbourTerrainSubscription> neighbourTerrainSubscriptions = new(4);
+    private readonly List<NeighbourTerrainSubscription> neighbourTerrainSubscriptions = new(8);
+    private static readonly int WaterDepthTextureId = Shader.PropertyToID("_WaterDepthTexture");
+    private static readonly int WaterDepthUvScaleOffsetId =
+        Shader.PropertyToID("_WaterDepthUvScaleOffset");
     private WorldRuntime boundWorld;
     private ChunkRuntime boundChunk;
     private IDisposable chunkCommittedSubscription;
+    private MaterialPropertyBlock waterPropertyBlock;
+    private Texture2D waterDepthTexture;
+    private Color32[] waterDepthPixels;
     private bool renderCaveWater;
 
     /// <summary>阻挡层渲染器，为裂缝等格子表现提供一致的材质与排序基准。</summary>
@@ -45,7 +47,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
 
     #region 绑定与生命周期
 
-    /// <summary>注入当前世界，用于计算跨 Chunk 的地下水岸线方向。</summary>
+    /// <summary>注入当前世界，用于计算跨 Chunk 的接触方向与连续水深边界。</summary>
     public void SetWorld(WorldRuntime worldRuntime)
     {
         if (ReferenceEquals(boundWorld, worldRuntime))
@@ -106,6 +108,17 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
         boundChunk = null;
     }
 
+    private void OnDestroy()
+    {
+        if (boundChunk?.Terrain != null)
+            boundChunk.Terrain.Changed -= HandleTerrainChanged;
+        chunkCommittedSubscription?.Dispose();
+        chunkCommittedSubscription = null;
+        ClearNeighbourTerrainSubscriptions();
+        if (waterDepthTexture != null)
+            Destroy(waterDepthTexture);
+    }
+
     private void HandleTerrainChanged(ChunkTerrainChanged changed)
     {
         if (boundChunk?.Terrain == null)
@@ -114,11 +127,11 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
             changed.Kind != TerrainChangeKind.TileStack)
             return;
 
-        // 接触方向会连带影响四个邻格，地形变化时刷新本 Chunk 的轻量 Tilemap 数据。
+        // 接触方向与连续水深边界会影响邻格，地形变化时刷新本 Chunk 的轻量 Tilemap 数据。
         Render(boundChunk.Terrain);
     }
 
-    /// <summary>相邻区块生成后刷新边界格的岸向数据。</summary>
+    /// <summary>相邻区块生成后刷新边界格的岸向与水深纹理边框。</summary>
     private void HandleChunkCommitted(ChunkCommitted committed)
     {
         if (boundChunk?.Terrain == null ||
@@ -132,11 +145,12 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
         int height = boundChunk.Terrain.Height;
         Int2 origin = boundChunk.Address.ChunkOrigin;
         Int2 changed = committed.Address.ChunkOrigin;
+        int deltaX = changed.X - origin.X;
+        int deltaY = changed.Y - origin.Y;
         bool isNeighbour =
-            (changed.X == origin.X - width && changed.Y == origin.Y) ||
-            (changed.X == origin.X + width && changed.Y == origin.Y) ||
-            (changed.X == origin.X && changed.Y == origin.Y - height) ||
-            (changed.X == origin.X && changed.Y == origin.Y + height);
+            (deltaX == -width || deltaX == 0 || deltaX == width) &&
+            (deltaY == -height || deltaY == 0 || deltaY == height) &&
+            (deltaX != 0 || deltaY != 0);
         if (isNeighbour)
         {
             RefreshNeighbourTerrainSubscriptions();
@@ -144,7 +158,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
         }
     }
 
-    /// <summary>订阅四个正交相邻区块；边界墙变化时，本区块对应墙脚阴影也必须更新。</summary>
+    /// <summary>订阅八个相邻区块；正交边界负责接触遮罩，对角区块补齐水深纹理边角。</summary>
     private void RefreshNeighbourTerrainSubscriptions()
     {
         ClearNeighbourTerrainSubscriptions();
@@ -156,6 +170,10 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
         SubscribeNeighbourTerrain(terrain.Width, 0);
         SubscribeNeighbourTerrain(0, -terrain.Height);
         SubscribeNeighbourTerrain(0, terrain.Height);
+        SubscribeNeighbourTerrain(-terrain.Width, -terrain.Height);
+        SubscribeNeighbourTerrain(terrain.Width, -terrain.Height);
+        SubscribeNeighbourTerrain(-terrain.Width, terrain.Height);
+        SubscribeNeighbourTerrain(terrain.Width, terrain.Height);
     }
 
     private void SubscribeNeighbourTerrain(int offsetX, int offsetY)
@@ -186,14 +204,13 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
             return;
         }
 
-        bool touchesSharedEdge = offsetX < 0
+        bool touchesSharedX = offsetX == 0 || (offsetX < 0
             ? changed.LocalCell.X == neighbourTerrain.Width - 1
-            : offsetX > 0
-                ? changed.LocalCell.X == 0
-                : offsetY < 0
-                    ? changed.LocalCell.Y == neighbourTerrain.Height - 1
-                    : changed.LocalCell.Y == 0;
-        if (touchesSharedEdge)
+            : changed.LocalCell.X == 0);
+        bool touchesSharedY = offsetY == 0 || (offsetY < 0
+            ? changed.LocalCell.Y == neighbourTerrain.Height - 1
+            : changed.LocalCell.Y == 0);
+        if (touchesSharedX && touchesSharedY)
             Render(boundChunk.Terrain);
     }
 
@@ -330,7 +347,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
         }
     }
 
-    /// <summary>把四向岸线与真实水深共同编码到水格颜色，供三个水面 Shader 共用。</summary>
+    /// <summary>Tile Color 只写岸线方向，连续水深通过独立纹理提交给当前 Chunk 渲染器。</summary>
     private void ApplyWaterShaderData(Tilemap targetTilemap, ChunkTerrainData terrain)
     {
         if (targetTilemap == null)
@@ -346,25 +363,133 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
 
                 Vector3Int position = new(x, y, 0);
                 targetTilemap.SetTileFlags(position, TileFlags.None);
-                targetTilemap.SetColor(position,
-                    BuildWaterShaderData(terrain, x, y));
+                targetTilemap.SetColor(position, BuildWaterShoreMask(terrain, x, y));
             }
         }
+
+        ApplyWaterDepthTexture(targetTilemap, terrain);
     }
 
-    /// <summary>每个颜色通道以高位记录岸线方向，并在低位重复记录该格水深。</summary>
-    private Color BuildWaterShaderData(ChunkTerrainData terrain, int x, int y)
+    /// <summary>RGBA 分别记录左、右、下、上岸线方向。</summary>
+    private Color BuildWaterShoreMask(ChunkTerrainData terrain, int x, int y)
     {
-        float depthSignal = ResolveWaterDepth(terrain, x, y) * WaterDepthChannelScale;
         return new Color(
-            depthSignal + (IsContactNeighbour(terrain, x - 1, y, ContactKind.Land)
-                ? WaterContactChannelOffset : 0f),
-            depthSignal + (IsContactNeighbour(terrain, x + 1, y, ContactKind.Land)
-                ? WaterContactChannelOffset : 0f),
-            depthSignal + (IsContactNeighbour(terrain, x, y - 1, ContactKind.Land)
-                ? WaterContactChannelOffset : 0f),
-            depthSignal + (IsContactNeighbour(terrain, x, y + 1, ContactKind.Land)
-                ? WaterContactChannelOffset : 0f));
+            IsContactNeighbour(terrain, x - 1, y, ContactKind.Land) ? 1f : 0f,
+            IsContactNeighbour(terrain, x + 1, y, ContactKind.Land) ? 1f : 0f,
+            IsContactNeighbour(terrain, x, y - 1, ContactKind.Land) ? 1f : 0f,
+            IsContactNeighbour(terrain, x, y + 1, ContactKind.Land) ? 1f : 0f);
+    }
+
+    /// <summary>建立包含一格邻区边框的水深纹理，让 GPU 在水格中心之间连续插值。</summary>
+    private void ApplyWaterDepthTexture(Tilemap targetTilemap, ChunkTerrainData terrain)
+    {
+        int textureWidth = terrain.Width + 2;
+        int textureHeight = terrain.Height + 2;
+        EnsureWaterDepthTexture(textureWidth, textureHeight);
+        for (int textureY = 0; textureY < textureHeight; textureY++)
+        {
+            for (int textureX = 0; textureX < textureWidth; textureX++)
+            {
+                float depth = ResolveExtendedWaterDepth(
+                    terrain,
+                    textureX - 1,
+                    textureY - 1);
+                byte encodedDepth = (byte)Mathf.RoundToInt(Mathf.Clamp01(depth) * 255f);
+                waterDepthPixels[textureY * textureWidth + textureX] =
+                    new Color32(encodedDepth, 0, 0, byte.MaxValue);
+            }
+        }
+
+        waterDepthTexture.SetPixels32(waterDepthPixels);
+        waterDepthTexture.Apply(false, false);
+
+        TilemapRenderer targetRenderer = targetTilemap.GetComponent<TilemapRenderer>();
+        if (targetRenderer == null)
+            throw new InvalidOperationException("Water Tilemap requires a TilemapRenderer.");
+
+        waterPropertyBlock ??= new MaterialPropertyBlock();
+        targetRenderer.GetPropertyBlock(waterPropertyBlock);
+        waterPropertyBlock.SetTexture(WaterDepthTextureId, waterDepthTexture);
+        // Tilemap 合批后顶点不保证处于 Chunk 局部空间，显式从世界坐标映射到水深纹理。
+        Vector3 waterOrigin = targetTilemap.CellToWorld(Vector3Int.zero);
+        waterPropertyBlock.SetVector(WaterDepthUvScaleOffsetId, new Vector4(
+            1f / textureWidth,
+            1f / textureHeight,
+            (1f - waterOrigin.x) / textureWidth,
+            (1f - waterOrigin.y) / textureHeight));
+        targetRenderer.SetPropertyBlock(waterPropertyBlock);
+    }
+
+    /// <summary>按 Chunk 尺寸复用深度纹理与像素缓存。</summary>
+    private void EnsureWaterDepthTexture(int width, int height)
+    {
+        if (waterDepthTexture != null &&
+            waterDepthTexture.width == width &&
+            waterDepthTexture.height == height)
+        {
+            return;
+        }
+
+        if (waterDepthTexture != null)
+            Destroy(waterDepthTexture);
+        waterDepthTexture = new Texture2D(width, height, TextureFormat.RGBA32, false, true)
+        {
+            name = $"WaterDepth_{GetInstanceID()}",
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp,
+            hideFlags = HideFlags.HideAndDontSave
+        };
+        waterDepthPixels = new Color32[width * height];
+    }
+
+    /// <summary>非水格沿用周围水格平均深度，避免岸线参与颜色渐变。</summary>
+    private float ResolveExtendedWaterDepth(ChunkTerrainData terrain, int x, int y)
+    {
+        if (TryResolveWaterDepth(terrain, x, y, out float depth))
+            return depth;
+
+        // 邻区边框落在陆地时，先向当前 Chunk 边缘延展，避免取样范围越过第二圈邻格。
+        int sampleX = Mathf.Clamp(x, 0, terrain.Width - 1);
+        int sampleY = Mathf.Clamp(y, 0, terrain.Height - 1);
+        if ((sampleX != x || sampleY != y) &&
+            TryResolveWaterDepth(terrain, sampleX, sampleY, out depth))
+        {
+            return depth;
+        }
+
+        float depthTotal = 0f;
+        int waterCount = 0;
+        for (int offsetY = -1; offsetY <= 1; offsetY++)
+        {
+            for (int offsetX = -1; offsetX <= 1; offsetX++)
+            {
+                if (!TryResolveWaterDepth(terrain, sampleX + offsetX, sampleY + offsetY,
+                        out float neighbourDepth))
+                {
+                    continue;
+                }
+
+                depthTotal += neighbourDepth;
+                waterCount++;
+            }
+        }
+
+        return waterCount > 0 ? depthTotal / waterCount : 0f;
+    }
+
+    /// <summary>读取当前格或邻区水格的权威深度。</summary>
+    private bool TryResolveWaterDepth(ChunkTerrainData terrain, int x, int y, out float depth)
+    {
+        depth = 0f;
+        if (!TryResolveTerrainCell(terrain, x, y,
+                out ChunkTerrainData resolvedTerrain, out int localX, out int localY,
+                out TerrainCell cell) || !IsWater(cell))
+        {
+            return false;
+        }
+
+        depth = ResolveWaterDepth(resolvedTerrain, localX, localY);
+        return true;
     }
 
     /// <summary>优先读取河流或地下水深度，海洋则复用玩法系统的高度换算规则。</summary>
@@ -404,16 +529,30 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
         };
     }
 
-    /// <summary>读取本区块或已就绪的正交相邻区块格子。</summary>
+    /// <summary>读取本区块或已就绪的八方向相邻区块格子。</summary>
     private bool TryGetCell(ChunkTerrainData terrain, int x, int y, out TerrainCell cell)
     {
+        return TryResolveTerrainCell(terrain, x, y, out _, out _, out _, out cell);
+    }
+
+    /// <summary>把越界坐标解析到相邻 Chunk，并返回实际地形与局部坐标。</summary>
+    private bool TryResolveTerrainCell(ChunkTerrainData terrain, int x, int y,
+        out ChunkTerrainData resolvedTerrain, out int resolvedX, out int resolvedY,
+        out TerrainCell cell)
+    {
+        resolvedTerrain = null;
+        resolvedX = 0;
+        resolvedY = 0;
+        cell = default;
         if (x >= 0 && x < terrain.Width && y >= 0 && y < terrain.Height)
         {
+            resolvedTerrain = terrain;
+            resolvedX = x;
+            resolvedY = y;
             cell = terrain.GetCell(x, y);
             return true;
         }
 
-        cell = default;
         if (boundWorld == null || boundChunk == null)
             return false;
 
@@ -450,7 +589,10 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
             return false;
         }
 
-        cell = neighbourTerrain.GetCell(localX, localY);
+        resolvedTerrain = neighbourTerrain;
+        resolvedX = localX;
+        resolvedY = localY;
+        cell = resolvedTerrain.GetCell(resolvedX, resolvedY);
         return true;
     }
 

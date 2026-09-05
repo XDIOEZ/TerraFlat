@@ -338,7 +338,7 @@ public class Module_DiscardItem : Mod_BaseDroper
     #region 物品丢弃接口
 
     /// <summary>
-    /// 丢弃当前明确选择的物品：优先手持槽，其次快捷栏选中槽。手机抽屉固定传入 1，物品菜单可传入整组数量；
+    /// 丢弃当前明确选择的物品：优先手持槽，其次快捷栏选中槽。手机抽屉固定传入 1；
     /// 不依赖 Ctrl 或鼠标悬停，因此触屏调用不会命中其它 UI 槽位。
     /// </summary>
     public bool TryDropCurrentSelection(int count)

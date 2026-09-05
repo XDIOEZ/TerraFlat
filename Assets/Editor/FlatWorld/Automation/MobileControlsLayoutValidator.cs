@@ -85,7 +85,7 @@ namespace FlatWorld.Automation
             RequireDropSurface(move, false);
             RequireDropSurface(attack, false);
             RequireNode(run, "状态标记").GetComponent<Image>();
-            RequireNode(drawer, "抽屉按钮区").GetComponent<GridLayoutGroup>();
+            RequireNode(drawer, "抽屉按钮区").GetComponent<VerticalLayoutGroup>();
             RequireSlider(zoom);
             RequireMobileButtons(mobilePrefab.transform);
             RequireInfrastructurePrefabs();
@@ -136,7 +136,7 @@ namespace FlatWorld.Automation
         {
             string[] required =
             {
-                "交互", "使用", "奔跑", "菜单", "背包", "装备", "制作", "状态",
+                "交互", "使用", "奔跑", "菜单", "背包", "装备", "制作",
                 "丢弃一个", "设置"
             };
             for (int i = 0; i < required.Length; i++)
@@ -273,13 +273,16 @@ namespace FlatWorld.Automation
                 throw new InvalidOperationException($"{screenWidth}x{screenHeight} 安全区中快捷栏会与摇杆重叠。");
             if (hotbarRect.sizeDelta.x < targetHotbarWidth - 0.01f)
                 throw new InvalidOperationException("快捷栏锚点不足以承载宽度上限。");
-            if (drawerRect.sizeDelta.x > safeWidth || drawerRect.sizeDelta.y > screenHeight)
+            float drawerHeight = screenHeight * (drawerRect.anchorMax.y - drawerRect.anchorMin.y) + drawerRect.sizeDelta.y;
+            if (drawerRect.sizeDelta.x > safeWidth || drawerHeight > screenHeight)
                 throw new InvalidOperationException($"{screenWidth}x{screenHeight} 安全区无法容纳手机抽屉。");
-            if (zoom.parent != drawer || zoomRect.anchorMin != new Vector2(0f, 0f) ||
-                zoomRect.anchorMax != new Vector2(1f, 0f) || zoomRect.offsetMin.y < 16f ||
+            ScrollRect drawerScroll = RequireNode(drawer, "菜单滚动区").GetComponent<ScrollRect>();
+            if (drawerScroll == null || zoom.parent.parent != drawerScroll.content ||
+                zoomRect.anchorMin != new Vector2(0f, 0f) ||
+                zoomRect.anchorMax != new Vector2(1f, 0f) || zoomRect.offsetMin.y < 0f ||
                 zoomRect.offsetMax.y <= zoomRect.offsetMin.y)
             {
-                throw new InvalidOperationException("镜头缩放滑动条必须固定在手机菜单抽屉底部并横向拉伸。");
+                throw new InvalidOperationException("镜头缩放滑动条必须位于抽屉滚动列表的独立条目内，并在条目内横向拉伸。");
             }
         }
 

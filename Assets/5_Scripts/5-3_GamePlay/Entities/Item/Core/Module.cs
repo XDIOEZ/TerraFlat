@@ -26,6 +26,12 @@ public interface IProductionStockReceiver
     int AcceptProduction(string itemId, int amount);
 }
 
+/// <summary>在所有模块完成注册后解析跨模块依赖，禁止用层级搜索猜测依赖对象。</summary>
+public interface IItemModuleDependencyBinder
+{
+    void BindModuleDependencies(ItemMods modules);
+}
+
 public enum ModuleTickMode
 {
     EveryFrame,

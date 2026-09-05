@@ -339,12 +339,16 @@ public static class BuildingShellMigrationTool
     /// <summary>创建声明共享 Shell 与渲染器路径的抽象定义。</summary>
     private static JObject BuildBaseDefinition(string id, string shellPrefab)
     {
+        JObject visual = new JObject { ["rendererPath"] = "Render" };
+        if (string.Equals(id, "BuildingBody_Base", StringComparison.Ordinal))
+            visual["collider"] = new JObject { ["type"] = nameof(BoxCollider2D) };
+
         return new JObject
         {
             ["id"] = id,
             ["abstract"] = true,
             ["shellPrefab"] = shellPrefab,
-            ["visual"] = new JObject { ["rendererPath"] = "Render" }
+            ["visual"] = visual
         };
     }
 
@@ -392,7 +396,7 @@ public static class BuildingShellMigrationTool
                 ["tags"] = new JArray((data.Tags ?? new List<string>())
                     .Where(tag => !string.IsNullOrWhiteSpace(tag))
                     .Select(tag => tag.Trim())),
-                ["visual"] = BuildVisual(sourceItem, renderer, sourcePath),
+                ["visual"] = BuildVisual(sourceItem, renderer, sourcePath, role),
                 ["health"] = BuildHealth(sourceRoot),
                 ["modules"] = BuildModules(entry, sourceRoot, role, includeFeatures, generatedFeaturePaths)
             };
@@ -407,13 +411,17 @@ public static class BuildingShellMigrationTool
     }
 
     /// <summary>构建主 Sprite、Transform 与通用 Shell 根碰撞体配置。</summary>
-    private static JObject BuildVisual(Item sourceItem, SpriteRenderer renderer, string sourcePath)
+    private static JObject BuildVisual(
+        Item sourceItem,
+        SpriteRenderer renderer,
+        string sourcePath,
+        BuildingRole role)
     {
         Collider2D collider = FindPrimaryCollider(sourceItem);
         if (collider is not BoxCollider2D)
             throw new InvalidDataException($"通用建筑 Shell 目前只支持 BoxCollider2D：{sourcePath}");
 
-        return new JObject
+        JObject visual = new JObject
         {
             ["spriteAddress"] = EnsureSpriteAddressable(renderer.sprite, sourcePath),
             ["rendererLocalPosition"] = ItemDefinitionMigrationTool.Vector3Token(renderer.transform.localPosition),
@@ -423,9 +431,26 @@ public static class BuildingShellMigrationTool
             ["flipX"] = renderer.flipX,
             ["flipY"] = renderer.flipY,
             ["sortingLayerName"] = renderer.sortingLayerName,
-            ["sortingOrder"] = renderer.sortingOrder,
-            ["collider"] = ItemDefinitionMigrationTool.SerializeCollider(collider, string.Empty)
+            ["sortingOrder"] = renderer.sortingOrder
         };
+
+        visual["collider"] = role == BuildingRole.PlacedBuilding
+            ? BuildBuildingColliderOverride((BoxCollider2D)collider)
+            : ItemDefinitionMigrationTool.SerializeCollider(collider, string.Empty);
+        if (visual["collider"] is JObject colliderOverride && !colliderOverride.HasValues)
+            visual.Remove("collider");
+        return visual;
+    }
+
+    /// <summary>建筑本体只写相对 1×1、零偏移默认值的碰撞差异。</summary>
+    private static JObject BuildBuildingColliderOverride(BoxCollider2D collider)
+    {
+        var result = new JObject();
+        if (collider.size != Vector2.one)
+            result["size"] = ItemDefinitionMigrationTool.Vector2Token(collider.size);
+        if (collider.offset != Vector2.zero)
+            result["offset"] = ItemDefinitionMigrationTool.Vector2Token(collider.offset);
+        return result;
     }
 
     /// <summary>把 DamageReceiver 的生命、防御与受击 Trigger 迁移到 health 配置。</summary>

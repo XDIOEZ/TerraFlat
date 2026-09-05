@@ -61,11 +61,8 @@ namespace FlatWorld.WorldModel
                 return SurfaceBiomeKind.Ocean;
             if (river)
                 return SurfaceBiomeKind.River;
-            if (temperature <= settings.SnowTemperature &&
-                precipitation >= settings.SnowMinimumPrecipitation)
-            {
+            if (IsSnowClimate(settings, temperature, precipitation))
                 return SurfaceBiomeKind.Snow;
-            }
             if (height >= settings.MountainLevel)
                 return SurfaceBiomeKind.Stone;
 
@@ -93,6 +90,16 @@ namespace FlatWorld.WorldModel
             if (precipitation < settings.DesertMaximumPrecipitation)
                 return SurfaceBiomeKind.Desert;
             return moisture > 0.62d ? SurfaceBiomeKind.Forest : SurfaceBiomeKind.Grassland;
+        }
+
+        /// <summary>判断当前气候是否属于雪地条件，供河流等覆盖层读取其底层气候。</summary>
+        internal static bool IsSnowClimate(
+            ChunkGenerationSettingsSnapshot settings,
+            double temperature,
+            double precipitation)
+        {
+            return temperature <= settings.SnowTemperature &&
+                   precipitation >= settings.SnowMinimumPrecipitation;
         }
 
         #endregion

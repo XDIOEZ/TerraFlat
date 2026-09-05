@@ -366,8 +366,6 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  OnRightClick:
-    _PersistentCalls: []
   OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &2055930607545525624
@@ -541,8 +539,6 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  OnRightClick:
-    _PersistentCalls: []
   OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &582651285120734836
@@ -715,8 +711,6 @@ MonoBehaviour:
   OnLeftClick:
     _PersistentCalls: []
   _OnScroll:
-    _PersistentCalls: []
-  OnRightClick:
     _PersistentCalls: []
   OnShiftQuickTransfer:
     _PersistentCalls: []
@@ -1389,8 +1383,6 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  OnRightClick:
-    _PersistentCalls: []
   OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &4639739115379791426
@@ -1564,8 +1556,6 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  OnRightClick:
-    _PersistentCalls: []
   OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &6892363462367969972
@@ -1738,8 +1728,6 @@ MonoBehaviour:
   OnLeftClick:
     _PersistentCalls: []
   _OnScroll:
-    _PersistentCalls: []
-  OnRightClick:
     _PersistentCalls: []
   OnShiftQuickTransfer:
     _PersistentCalls: []
@@ -2562,8 +2550,6 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  OnRightClick:
-    _PersistentCalls: []
   OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &5130000967231433293
@@ -2812,8 +2798,6 @@ MonoBehaviour:
   OnLeftClick:
     _PersistentCalls: []
   _OnScroll:
-    _PersistentCalls: []
-  OnRightClick:
     _PersistentCalls: []
   OnShiftQuickTransfer:
     _PersistentCalls: []
@@ -3331,8 +3315,6 @@ MonoBehaviour:
   OnLeftClick:
     _PersistentCalls: []
   _OnScroll:
-    _PersistentCalls: []
-  OnRightClick:
     _PersistentCalls: []
   OnShiftQuickTransfer:
     _PersistentCalls: []

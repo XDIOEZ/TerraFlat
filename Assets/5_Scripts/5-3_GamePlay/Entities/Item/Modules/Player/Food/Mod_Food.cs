@@ -1,13 +1,12 @@
-﻿using AYellowpaper.SerializedCollections;
-using DG.Tweening;
+﻿using DG.Tweening;
 using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
 using UnityEngine;
-using UnityEngine.UI;
 using UltEvents;
 
-public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInventoryContextUseHandler
+/// <summary>维护食物运行时与营养规则；本地玩家的参数 HUD 随模块加载创建、随卸载释放，不提供显隐开关。</summary>
+public partial class Mod_Food : Module, IItemPoolLifecycle
 {
     public override string CanonicalModuleId => ModText.Food;
 
@@ -120,11 +119,6 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInvent
     public float BuffNutritionConsumeMultiplier => _runtimeExecutor?.Nutrition.BuffNutritionConsumeMultiplier ?? 1f;
     public float BuffWaterConsumeMultiplier => _runtimeExecutor?.Nutrition.BuffWaterConsumeMultiplier ?? 1f;
 
-    [MemoryPackIgnore]
-    private UnityEngine.InputSystem.InputAction _tabAction;
-    [MemoryPackIgnore]
-    private GameController _inputController;
-
     #endregion
 
     #region 生命周期方法
@@ -161,14 +155,6 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInvent
             value => panelUI = value);
         _runtimeExecutor.Initialize();
         InvalidateTickSchedule();
-        BindTabInput();
-
-        // 根据保存的状态决定是否显示面板
-        if (Data.ShowCanvas)
-        {
-            ShowPanel();
-        }
-
         if (item != null)
         {
             item.OnAct -= Act;
@@ -183,6 +169,13 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInvent
         // 保存面板位置
         _runtimeExecutor?.SavePanelPosition();
     }
+
+    /// <summary>模块卸载时释放运行时和 HUD，避免离开世界后残留参数面板。</summary>
+    public override void Unload()
+    {
+        ReleaseRuntimeBindings();
+    }
+
     /// <summary>
     /// 调用吃的行为
     /// </summary>
@@ -208,72 +201,25 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInvent
         playerFood.Eat(BeEater: this);
     }
 
-    /// <summary>
-    /// 为右键临时使用实例绑定真实库存槽位，确保多次点击写回同一份物品数据。
-    /// </summary>
-    public void BindRuntimeInventoryContext(Inventory_Data inventoryData, ItemSlot slot, int slotIndex)
-    {
-        _runtimeExecutor?.BindInventoryContext(inventoryData, slot, slotIndex);
-    }
-
-    /// <summary>声明食物可从任意库存槽直接使用，并将消耗写回该槽位。</summary>
-    public void BindInventoryUseContext(Inventory_Data inventoryData, ItemSlot slot, int slotIndex)
-    {
-        BindRuntimeInventoryContext(inventoryData, slot, slotIndex);
-    }
-
     public void OnItemTakenFromPool()
     {
         ConsumeCompleted = null;
-        ReleaseRuntimeBindings(destroyPanel: true);
+        ReleaseRuntimeBindings();
     }
 
     public void OnItemReturnedToPool()
     {
         ConsumeCompleted = null;
-        ReleaseRuntimeBindings(destroyPanel: true);
+        ReleaseRuntimeBindings();
     }
 
     private void OnDestroy()
     {
-        ReleaseRuntimeBindings(destroyPanel: true);
+        ReleaseRuntimeBindings();
     }
 
-    private void OnTogglePanelPerformed(UnityEngine.InputSystem.InputAction.CallbackContext context)
-    {
-        if (_inputController != null && !_inputController.IsGameplayInputAllowed(context))
-            return;
-
-        TogglePanel();
-    }
-
-    /// <summary>在角色拥有控制器模块时绑定参数面板快捷键。</summary>
-    private void BindTabInput()
-    {
-        UnbindTabInput();
-        if (item?.itemMods == null)
-            return;
-
-        GameController controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
-        if (controller?._inputActions == null)
-            return;
-
-        _inputController = controller;
-        _tabAction = controller._inputActions.Win10.Tab;
-        _tabAction.performed += OnTogglePanelPerformed;
-    }
-
-    private void UnbindTabInput()
-    {
-        if (_tabAction != null)
-            _tabAction.performed -= OnTogglePanelPerformed;
-
-        _tabAction = null;
-        _inputController = null;
-    }
-
-    /// <summary>释放食物运行时、输入和面板绑定。</summary>
-    private void ReleaseRuntimeBindings(bool destroyPanel)
+    /// <summary>释放食物运行时和常驻参数面板。</summary>
+    private void ReleaseRuntimeBindings()
     {
         _runtimeExecutor?.Dispose();
         _runtimeExecutor = null;
@@ -282,7 +228,6 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInvent
         if (item != null)
             item.OnAct -= Act;
 
-        UnbindTabInput();
         DOTween.Kill(item?.transform);
     }
 
@@ -333,44 +278,6 @@ public partial class Mod_Food : Module, IInstanceUI, IItemPoolLifecycle, IInvent
         else
             DataUpdate?.Invoke();
     }
-    #endregion
-
-    #region 面板管理
-    [Button("显示面板")]
-    public void ShowPanel()
-    {
-        _runtimeExecutor?.ShowPanel();
-    }
-
-    [Button("隐藏面板")]
-    public void HidePanel()
-    {
-        _runtimeExecutor?.HidePanel();
-    }
-
-    [Button("切换面板")]
-    public void TogglePanel()
-    {
-        _runtimeExecutor?.TogglePanel();
-    }
-
-    public void I_ShowPanel()
-    {
-        ShowPanel();
-    }
-
-    public void I_ClosePanel()
-    {
-        HidePanel();
-    }
-
-    public void I_TogglePanel()
-    {
-        TogglePanel();
-    }
-
-
-
     #endregion
 
     #region UI更新

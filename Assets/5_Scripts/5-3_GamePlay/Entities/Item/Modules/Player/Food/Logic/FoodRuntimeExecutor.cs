@@ -516,6 +516,7 @@ public sealed class FoodRuntimeExecutor : IDisposable
 
         rulePipeline.Initialize();
         initialized = true;
+        uiModule.Initialize();
     }
 
     public void Tick(float deltaTime)
@@ -527,11 +528,6 @@ public sealed class FoodRuntimeExecutor : IDisposable
         rulePipeline.OnTick(tickContext);
         nutritionService.ConsumeNutrition(tickContext.DeltaTime * context.Data.nutritionConsumeRate);
         context.NotifyStateChanged();
-    }
-
-    public void BindInventoryContext(Inventory_Data inventoryData, ItemSlot slot, int slotIndex)
-    {
-        context.ItemOperations.BindInventoryContext(inventoryData, slot, slotIndex);
     }
 
     public void ConsumeInto(IFoodRuntimeContext consumer)
@@ -585,9 +581,6 @@ public sealed class FoodRuntimeExecutor : IDisposable
         context.NotifyStateChanged();
     }
 
-    public void ShowPanel() => uiModule.ShowPanel();
-    public void HidePanel() => uiModule.HidePanel();
-    public void TogglePanel() => uiModule.TogglePanel();
     public void RefreshPanel() => uiModule.RefreshUI();
     public void SavePanelPosition() => uiModule.SavePanelPosition();
 

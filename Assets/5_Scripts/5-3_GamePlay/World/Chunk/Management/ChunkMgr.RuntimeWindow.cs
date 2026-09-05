@@ -696,7 +696,7 @@ public partial class ChunkMgr
         binding.View = null;
         view.Unbind();
         view.gameObject.SetActive(false);
-        view.transform.SetParent(GetRuntimeChunkViewRoot(), false);
+        // View 已属于创建时的世界根节点，回收不创建根节点，也不迁移到其它场景。
         chunkViewPool.Enqueue(new PooledChunkViewEntry(view, Time.realtimeSinceStartup));
     }
 
@@ -725,8 +725,8 @@ public partial class ChunkMgr
         }
     }
 
-    /// <summary>解除指定区块的画面绑定，并把 ChunkView 放回对象池。</summary>
-    private void DeactivateRuntimeBinding(RuntimeWorldAddress address)
+    /// <summary>先移除区块登记；正常流送回池，整个窗口关闭时直接销毁 View。</summary>
+    private void DeactivateRuntimeBinding(RuntimeWorldAddress address, bool recycleView = true)
     {
         if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
             return;
@@ -734,7 +734,16 @@ public partial class ChunkMgr
         binding.PresentationQueued = false;
         binding.PendingChunk = null;
         runtimePresentationQueue.Remove(address);
-        RecycleRuntimeChunkView(binding);
+        if (recycleView)
+        {
+            RecycleRuntimeChunkView(binding);
+        }
+        else
+        {
+            ChunkView view = binding.View;
+            binding.View = null;
+            DestroyRuntimeChunkView(view);
+        }
     }
 
     /// <summary>清空全部区块画面绑定和窗口目标记录。</summary>
@@ -751,10 +760,11 @@ public partial class ChunkMgr
             runtimePrefetchCoroutine = null;
         }
 
+        // 整个窗口关闭后不会复用这些 View，直接销毁，禁止先入池再申请场景根节点。
         runtimeWindowRemovalBuffer.Clear();
         runtimeWindowRemovalBuffer.AddRange(activeRuntimeBindings.Keys);
         for (int i = 0; i < runtimeWindowRemovalBuffer.Count; i++)
-            DeactivateRuntimeBinding(runtimeWindowRemovalBuffer[i]);
+            DeactivateRuntimeBinding(runtimeWindowRemovalBuffer[i], recycleView: false);
         runtimeWindowRemovalBuffer.Clear();
         runtimeWindowTargets.Clear();
         runtimeWindowUsesLocalPresentation = false;

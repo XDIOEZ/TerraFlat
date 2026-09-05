@@ -1019,28 +1019,12 @@ MonoBehaviour:
     m_Key: ui.text.DE8A1007
     m_Metadata:
       m_Items: []
-  - m_Id: 7970140160
-    m_Key: ui.text.F9A9E8BE
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7970140161
-    m_Key: ui.text.FECE0320
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7970140162
-    m_Key: ui.text.F514A243
-    m_Metadata:
-      m_Items: []
   - m_Id: 8037249024
     m_Key: ui.text.276DCE7B
     m_Metadata:
       m_Items: []
   - m_Id: 8045637632
     m_Key: ui.text.D6F0751E
-    m_Metadata:
-      m_Items: []
-  - m_Id: 8070803456
-    m_Key: ui.text.0961B85A
     m_Metadata:
       m_Items: []
   - m_Id: 8083386368
@@ -1407,10 +1391,6 @@ MonoBehaviour:
     m_Key: ui.text.097A2CD6
     m_Metadata:
       m_Items: []
-  - m_Id: 6726494367798
-    m_Key: ui.text.23587C58
-    m_Metadata:
-      m_Items: []
   - m_Id: 6726494367799
     m_Key: ui.text.BF9BBFA2
     m_Metadata:
@@ -1461,10 +1441,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 6726494367811
     m_Key: ui.text.EEADC37E
-    m_Metadata:
-      m_Items: []
-  - m_Id: 6726494367812
-    m_Key: ui.text.30B36612
     m_Metadata:
       m_Items: []
   - m_Id: 6726494367813
@@ -1695,16 +1671,8 @@ MonoBehaviour:
     m_Key: ui.text.991D233E
     m_Metadata:
       m_Items: []
-  - m_Id: 1644392407982080
-    m_Key: ui.text.B829F0A2
-    m_Metadata:
-      m_Items: []
   - m_Id: 1644392525422592
     m_Key: ui.text.AE49E298
-    m_Metadata:
-      m_Items: []
-  - m_Id: 1644392525422593
-    m_Key: ui.text.298C8B31
     m_Metadata:
       m_Items: []
   - m_Id: 1644392525422594

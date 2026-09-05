@@ -232,13 +232,13 @@ public static class CraftingService
                 return false;
             }
 
-            if (GameRes.Instance?.AllPrefabs == null ||
-                !GameRes.Instance.AllPrefabs.TryGetValue(output.ItemName, out GameObject prefab) ||
-                prefab == null)
+            // 配方产物与运行时实例都以 ItemDefinitions 为真源；Prefab 只是可选表现壳，不能决定配方可用性。
+            if (GameRes.Instance == null ||
+                !GameRes.Instance.TryGetItemDefinition(output.ItemName, out _))
             {
                 failure = CraftingResult.Failed(
                     CraftingFailureReason.InvalidOutput,
-                    $"找不到产物 Prefab：{output.ItemName}",
+                    $"找不到产物定义：{output.ItemName}",
                     recipe);
                 return false;
             }

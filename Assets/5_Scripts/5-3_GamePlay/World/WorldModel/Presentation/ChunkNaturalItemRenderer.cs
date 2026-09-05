@@ -10,6 +10,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// ChunkView 的自然生态与临时掉落物表现适配器。
 /// 后台只返回 NaturalItemPlacement；本组件在主线程通过 ItemMgr 创建现有 Item，显式挂在
 /// NaturalItems 子节点，并在区块卸载前把权威状态写回 PlanetData 的生态差量存档。
+/// 应用退出不保存生态差量；已有管理器仍存活时正常注销物品，依赖引用仅在绑定和登记时获取。
 /// </summary>
 public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
 {
@@ -22,6 +23,10 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
     private readonly HashSet<int> generatedPortalGuids = new();
     private ChunkRuntime boundChunk;
     private EnvironmentLayers environmentLayers;
+    // 绑定时记录依赖，销毁阶段不再通过单例搜索场景。
+    private ItemMgr itemManager;
+    private ChunkMgr chunkManager;
+    private bool applicationQuitting;
     private bool unbinding;
 
     public int SpawnedItemCount => spawnedItems.Count;
@@ -35,9 +40,12 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
     /// <summary>登记区块临时掉落物，使解绑时回收它而不写入生态存档。</summary>
     public void RegisterTransientItem(Item item)
     {
-        if (item == null || item.DestructionHandled || !transientItems.Add(item))
+        if (applicationQuitting || unbinding || item == null || item.DestructionHandled ||
+            !transientItems.Add(item))
             return;
 
+        if (itemManager == null)
+            itemManager = ItemMgr.Instance;
         item.OnItemDestroy -= HandleTransientItemDestroy;
         item.OnItemDestroy += HandleTransientItemDestroy;
     }
@@ -67,12 +75,16 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
             return;
 
         Unbind();
+        itemManager = ItemMgr.GetInstance();
+        chunkManager = ChunkMgr.ExistingInstance;
         boundChunk = chunk;
         environmentLayers = BuildEnvironmentLayers(chunk.Terrain);
 
         IReadOnlyList<NaturalItemPlacement> placements = chunk.Ecology?.Placements;
         if (placements == null || placements.Count == 0)
             return;
+        if (itemManager == null || chunkManager == null)
+            throw new InvalidOperationException("绑定自然物需要有效的 ItemMgr 和 ChunkMgr。");
 
         for (int i = 0; i < placements.Count; i++)
             SpawnPlacement(placements[i]);
@@ -82,16 +94,16 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
             Physics2D.SyncTransforms();
     }
 
-    /// <summary>捕获权威 Item 状态后安全回收到 ItemMgr 对象池。</summary>
+    /// <summary>正常解绑时保存并注销物品；管理器已销毁时只解除登记，由场景销毁子对象。</summary>
     public void Unbind()
     {
-        if (boundChunk == null && spawnedItems.Count == 0 && transientItems.Count == 0)
+        if (unbinding || (boundChunk == null && spawnedItems.Count == 0 && transientItems.Count == 0))
             return;
 
-        CaptureState();
         unbinding = true;
         try
         {
+            CaptureState();
             var items = new List<Item>(spawnedItems.Values);
             foreach (Item transientItem in transientItems)
             {
@@ -106,8 +118,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
                     continue;
                 item.OnItemDestroy -= HandleNaturalItemDestroy;
                 item.OnItemDestroy -= HandleTransientItemDestroy;
-                if (ItemMgr.Instance != null && !item.DestructionHandled)
-                    ItemMgr.Instance.DespawnItem(item, saveData: false, detachFromChunk: false);
+                if (itemManager != null && !item.DestructionHandled)
+                    itemManager.DespawnItem(item, saveData: false, detachFromChunk: false);
             }
         }
         finally
@@ -117,15 +129,20 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
             generatedPortalGuids.Clear();
             environmentLayers = null;
             boundChunk = null;
+            itemManager = null;
+            chunkManager = null;
             unbinding = false;
         }
     }
 
+    /// <summary>停止播放和关闭程序都在对象销毁前关闭生态保存，避免把退出误记为采集。</summary>
+    private void OnApplicationQuit() => applicationQuitting = true;
+
     /// <summary>保存当前自然物状态，不改变实例生命周期。</summary>
     public void CaptureState()
     {
-        if (boundChunk == null || !GameNetwork.HasStateAuthority ||
-            ChunkMgr.Instance == null)
+        if (applicationQuitting || boundChunk == null || chunkManager == null ||
+            chunkManager.IsWorldRuntimeShuttingDown || !GameNetwork.HasStateAuthority)
         {
             return;
         }
@@ -144,7 +161,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
             {
                 item.Save();
                 ItemData snapshot = FastCloner.FastCloner.DeepClone(item.itemData);
-                ChunkMgr.Instance.CaptureNaturalItemState(address, snapshot);
+                chunkManager.CaptureNaturalItemState(address, snapshot);
             }
             catch (Exception exception)
             {
@@ -157,17 +174,23 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
     /// <summary>自动保存专用的自然物分帧快照，避免一次克隆全部表现物。</summary>
     public IEnumerator CaptureStateCoroutine()
     {
-        if (boundChunk == null || !GameNetwork.HasStateAuthority ||
-            ChunkMgr.Instance == null)
+        if (applicationQuitting || boundChunk == null || chunkManager == null ||
+            chunkManager.IsWorldRuntimeShuttingDown || !GameNetwork.HasStateAuthority)
         {
             yield break;
         }
 
         RuntimeWorldAddress address = boundChunk.Address;
+        ChunkRuntime capturedChunk = boundChunk;
         List<KeyValuePair<int, Item>> items = new List<KeyValuePair<int, Item>>(spawnedItems);
         float frameStart = Time.realtimeSinceStartup;
         for (int i = 0; i < items.Count; i++)
         {
+            // 分帧期间发生退出或重新绑定时，旧快照不能继续写回世界。
+            if (applicationQuitting || !ReferenceEquals(boundChunk, capturedChunk) ||
+                chunkManager == null || chunkManager.IsWorldRuntimeShuttingDown)
+                yield break;
+
             KeyValuePair<int, Item> pair = items[i];
             Item item = pair.Value;
             if (item != null && item.itemData != null && !item.DestructionHandled &&
@@ -177,7 +200,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
                 {
                     item.Save();
                     ItemData snapshot = FastCloner.FastCloner.DeepClone(item.itemData);
-                    ChunkMgr.Instance.CaptureNaturalItemState(address, snapshot);
+                    chunkManager.CaptureNaturalItemState(address, snapshot);
                 }
                 catch (Exception exception)
                 {
@@ -201,15 +224,15 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
     /// <summary>应用删除/状态覆盖后实例化一个自然物。</summary>
     private void SpawnPlacement(NaturalItemPlacement placement)
     {
-        if (boundChunk == null || ItemMgr.Instance == null || placement.Guid == 0 ||
+        if (boundChunk == null || itemManager == null || placement.Guid == 0 ||
             string.IsNullOrWhiteSpace(placement.ItemId))
         {
             return;
         }
 
         RuntimeWorldAddress address = boundChunk.Address;
-        if (ChunkMgr.Instance != null &&
-            ChunkMgr.Instance.IsNaturalItemRemoved(address, placement.Guid))
+        if (chunkManager != null &&
+            chunkManager.IsNaturalItemRemoved(address, placement.Guid))
         {
             return;
         }
@@ -221,8 +244,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
         Quaternion rotation = Quaternion.identity;
         Vector3 scale = Vector3.one;
         ItemData changedData = null;
-        if (ChunkMgr.Instance != null)
-            ChunkMgr.Instance.TryGetNaturalItemOverride(address, placement.Guid, out changedData);
+        if (chunkManager != null)
+            chunkManager.TryGetNaturalItemOverride(address, placement.Guid, out changedData);
 
         Item item = null;
         try
@@ -235,12 +258,12 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
                     rotation = changedData.transform.rotation;
                     scale = changedData.transform.scale;
                 }
-                item = ItemMgr.Instance.InstantiateItem(
+                item = itemManager.InstantiateItem(
                     changedData, position, rotation, scale, gameObject);
             }
             else
             {
-                item = ItemMgr.Instance.InstantiateItemDeterministic(
+                item = itemManager.InstantiateItemDeterministic(
                     placement.ItemId,
                     placement.Guid,
                     position,
@@ -277,8 +300,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
         }
         catch (Exception exception)
         {
-            if (item != null && ItemMgr.Instance != null && !item.DestructionHandled)
-                ItemMgr.Instance.DespawnItem(item, saveData: false, detachFromChunk: false);
+            if (item != null && itemManager != null && !item.DestructionHandled)
+                itemManager.DespawnItem(item, saveData: false, detachFromChunk: false);
             Debug.LogWarning(
                 $"[ChunkNaturalItemRenderer] 自然物实例化失败：{placement.ItemId}，规则={placement.RuleId}，{exception.Message}",
                 this);
@@ -288,13 +311,13 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
     /// <summary>自然物被玩家采集或其它系统销毁时写入删除列表。</summary>
     private void HandleNaturalItemDestroy(Item item)
     {
-        if (unbinding || item == null || item.itemData == null)
+        if (applicationQuitting || unbinding || item == null || item.itemData == null)
             return;
 
         int guid = item.itemData.Guid;
         spawnedItems.Remove(guid);
-        if (boundChunk != null && ChunkMgr.Instance != null)
-            ChunkMgr.Instance.MarkNaturalItemRemoved(boundChunk.Address, guid);
+        if (boundChunk != null && chunkManager != null && !chunkManager.IsWorldRuntimeShuttingDown)
+            chunkManager.MarkNaturalItemRemoved(boundChunk.Address, guid);
     }
 
     #endregion

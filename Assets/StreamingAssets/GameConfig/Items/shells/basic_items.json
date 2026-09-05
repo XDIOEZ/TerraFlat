@@ -331,7 +331,6 @@
                 "Max_Vitamins": 2.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -2032,7 +2031,6 @@
                 "Max_Vitamins": 20.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -2217,7 +2215,6 @@
                 "Max_Vitamins": 12.0
               },
               "Max_EatingProgress": 1.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -2514,7 +2511,6 @@
                 "Max_Vitamins": 0.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -3015,7 +3011,6 @@
                 "Max_Vitamins": 4.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -3200,7 +3195,6 @@
                 "Max_Vitamins": 0.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -3385,7 +3379,6 @@
                 "Max_Vitamins": 8.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -3570,7 +3563,6 @@
                 "Max_Vitamins": 8.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -3802,7 +3794,6 @@
                 "Max_Vitamins": 10.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -3987,7 +3978,6 @@
                 "Max_Vitamins": 0.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -4172,7 +4162,6 @@
                 "Max_Vitamins": 5.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -4357,7 +4346,6 @@
                 "Max_Vitamins": 7.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -4542,7 +4530,6 @@
                 "Max_Vitamins": 5.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -4727,7 +4714,6 @@
                 "Max_Vitamins": 0.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -4912,7 +4898,6 @@
                 "Max_Vitamins": 6.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -5176,7 +5161,6 @@
                 "Max_Vitamins": 0.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -5361,7 +5345,6 @@
                 "Max_Vitamins": 0.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -5509,7 +5492,6 @@
                 "Max_Vitamins": 0.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,
@@ -5624,11 +5606,7 @@
       "tags": ["35"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/TX Plant.png[GrassLand_6]",
-<<<<<<< HEAD
-        "materialAddress": "Assets/Shaders/Material/Bush-Sway-Lit.mat",
-=======
         "materialAddress": "Assets/9_Shaders/Material/Bush-Sway-Lit.mat",
->>>>>>> origin/master
         "rendererPath": "Render",
         "collider": {
           "type": "BoxCollider2D",
@@ -5840,7 +5818,6 @@
                 "Max_Vitamins": 6.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 0.0,
                 "BaseAdditive": 0.0,

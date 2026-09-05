@@ -18,7 +18,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     [SerializeReference]
     public List<string> RawData = new List<string>();
-    [Tooltip("手工制作输入容器（输入_1~输入_2）")]
+    [Tooltip("手工制作输入容器（输入_1~输入_4）")]
     public Inventory inputInventory;
     [Tooltip("手工制作输出容器（输出_1~输出_2）")]
     public Inventory outputInventory;
@@ -54,7 +54,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
     private int RequiredClickCount => Mathf.Max(minClickCount, baseClickCount - (Mathf.Max(1, workbenchLevel) - 1) * clickReductionPerLevel);
 
-    private const int InputSlotCount = 2;
+    private const int InputSlotCount = 4;
     private const int OutputSlotCount = 2;
     private const string InputInventorySaveKey = "handcraft.input";
     private const string OutputInventorySaveKey = "handcraft.output";

@@ -38,7 +38,7 @@
 | `interact` | `E` | 世界对象交互 |
 | `use` | `RightClick` | 当前快捷栏物品 `Act` |
 | `run` | `ToggleRun` | 奔跑切换 |
-| `inventory` / `equipment` / `crafting` / `survival` | `B` / `P` / `H` / `Tab` | 打开正式面板 |
+| `inventory` / `equipment` / `crafting` | `B` / `P` / `H` | 打开正式面板 |
 | `settings` | `ESC` | 统一返回栈与设置 |
 
 ## UI、触控与安全区
@@ -60,7 +60,7 @@
 - 武器只监听 `AttackStarted`/`AttackEnded`：`Assets/5_Scripts/5-3_GamePlay/Entities/Combat/Mod_Weapon_AnimationAction.cs`、`Assets/5_Scripts/5-3_GamePlay/Entities/Combat/Mod_ColdWeapon.cs`。
 - 建造和世界指向：`Assets/5_Scripts/5-3_GamePlay/World/Building/Mod_Building.cs`。
 - 锄地、农田补给和种植：`Assets/5_Scripts/5-3_GamePlay/Items/Food/Mod_Hoe.cs`、`Assets/5_Scripts/5-3_GamePlay/Items/Food/Mod_FarmlandSupply.cs`、`Assets/5_Scripts/5-3_GamePlay/World/Planting/Mod_Plantable.cs`。
-- 丢弃、槽位长按和物品菜单：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Inventory/Module_DiscardItem.cs`、`Assets/5_Scripts/5-3_GamePlay/Items/Inventory/ItemSlot_UI.cs`、`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/RightClickMenu_UI.cs`。
+- 丢弃与槽位长按：`Assets/5_Scripts/5-3_GamePlay/Entities/Item/Modules/Inventory/Module_DiscardItem.cs`、`Assets/5_Scripts/5-3_GamePlay/Items/Inventory/ItemSlot_UI.cs`。
 - Android 帧率与质量启动配置：`Assets/5_Scripts/5-3_GamePlay/Core/MobilePlatformBootstrap.cs`；平台序列化配置位于 `ProjectSettings/ProjectSettings.asset` 和 `ProjectSettings/QualitySettings.asset`。
 
 ## 定位命令

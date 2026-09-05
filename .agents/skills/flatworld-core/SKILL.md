@@ -25,6 +25,7 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 - 禁用 Domain Reload 时不得让 Addressables 静态实例跨 Play 会话复用失效 Locator；进入 Play 前刷新实例，且通用 Prefab 标签查询为 0 时必须在 `GameRes` 入口失败，不能拖到 ItemDefinition 阶段误报单个模块缺失。
 - `GameRes` 会随 `WorldManager` Prefab 再次出现在 `GameStartScene`；跨场景存活实例已存在时，重复实例不得启动资源加载协程，否则会先清空目录、再随重复对象销毁而中断加载。时间系统 JSON 必须在 `GameRes` 允许创建新世界前完成加载，玩家覆盖文件无效时保留内建配置。
 - 基于 `SingletonMono<T>` 的跨场景管理器必须按 Unity null 语义恢复已销毁的静态引用，且场景副本不得覆盖有效实例，否则返回主菜单再进入时会把运行时回调发送给已销毁对象。
+- 停止播放/关闭程序的对象销毁顺序不能承担业务依赖：清理使用绑定时保存的管理器和事件源引用，禁止重新查找单例或创建场景/池根节点；整个 Chunk 窗口关闭时直接销毁 View，正常流送才入池。表现清理必须可重复调用，终止时取消后台生成并保证纯运行时最终释放；应用退出不能记成自然物被采集。
 - 创建/网络提升/远程副本都显式设置 Player ProfileContext，玩家事件只触发一次。
 - 新玩家由 `ItemMgr` 在 `Player.Load()` 前应用 `PlayerCreationTemplateCatalogService` 解析的 JSON 模板；内建目录位于 `GameConfig/Players`，MOD 在同一资源就绪阶段注册，已有存档和跨维度重建不重新覆盖创建参数。
 - UI 逻辑留在 `GameManager.UI.cs`；加载视觉来自 Prefab，不在运行时拼装。

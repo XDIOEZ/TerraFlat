@@ -23,7 +23,6 @@ public class ItemSlot_UI : MonoBehaviour,
     ISubmitHandler,
     ISelectHandler,
     IDeselectHandler,
-    IGamepadContextActionHandler,
     IGamepadPrimaryActionHandler
 {
     #region 字段
@@ -46,8 +45,6 @@ public class ItemSlot_UI : MonoBehaviour,
 
     public UltEvent<int, float> _OnScroll = new UltEvent<int, float>();
 
-    public UltEvent<int> OnRightClick = new UltEvent<int>();
-
     [Tooltip("Shift+左键快速转移事件")]
     public UltEvent<int> OnShiftQuickTransfer = new UltEvent<int>();
 
@@ -60,7 +57,7 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>触屏轻触入口，允许快捷栏将轻触与物品交换分开处理。</summary>
     public System.Action<int> OnTouchTap { get; set; }
 
-    /// <summary>触屏长按入口；返回 true 表示已完成整组放置并阻止物品菜单。</summary>
+    /// <summary>触屏长按入口；返回 true 表示已完成整组放置。</summary>
     public System.Func<int, bool> OnTouchLongPress { get; set; }
 
     /// <summary>触屏拖拽物品后在世界非 UI 区域长按的入口。</summary>
@@ -110,7 +107,6 @@ public class ItemSlot_UI : MonoBehaviour,
     private Vector2 touchPressPosition;
     private bool touchMovedTooFar;
     private bool touchLongPressTriggered;
-    private bool touchLongPressMenuPending;
     private bool touchHalfDragReady;
     private bool touchPressStartedWithItem;
     private bool touchItemDragActive;
@@ -146,7 +142,6 @@ public class ItemSlot_UI : MonoBehaviour,
         CompleteActiveDrag(true, false);
         OnLeftClick.Clear();
         OnGamepadSubmit.Clear();
-        OnRightClick.Clear();
         OnShiftQuickTransfer.Clear();
         OnMouseDragBegin = null;
         OnMouseDragDrop = null;
@@ -217,10 +212,6 @@ public class ItemSlot_UI : MonoBehaviour,
             else
                 HandleDesktopTap();
         }
-        else if (eventData.button == PointerEventData.InputButton.Right)
-        {
-            HandleRightClick();
-        }
     }
     #endregion
 
@@ -238,10 +229,7 @@ public class ItemSlot_UI : MonoBehaviour,
 
     private void HandleTouchLongPress()
     {
-        if (OnTouchLongPress?.Invoke(slotIndex) == true)
-            return;
-
-        CreateRightClickUI();
+        OnTouchLongPress?.Invoke(slotIndex);
     }
 
     private void HandleDesktopTap()
@@ -255,10 +243,6 @@ public class ItemSlot_UI : MonoBehaviour,
         return OnMouseDragDrop?.Invoke(slotIndex, transaction) == true;
     }
 
-    private void HandleRightClick()
-    {
-        CreateRightClickUI();
-    }
     #endregion
 
     #region 滚轮事件处理
@@ -288,13 +272,6 @@ public class ItemSlot_UI : MonoBehaviour,
     }
     #endregion
 
-    #region 创建右键菜单方法
-    void CreateRightClickUI()
-    {
-        OnRightClick.Invoke(slotIndex);
-    }
-    #endregion
-
     #region 接口实现
     public void OnPointerDown(PointerEventData eventData)
     {
@@ -316,7 +293,7 @@ public class ItemSlot_UI : MonoBehaviour,
             return;
         }
 
-        // 触屏轻触延后到抬起确认，以便 0.45 秒长按能独立打开物品菜单而不先交换槽位。
+        // 触屏轻触延后到抬起确认，让长按整组放置与轻触交换保持互斥。
         if (eventData.button == PointerEventData.InputButton.Left && isTouch)
         {
             CancelTouchPress();
@@ -333,8 +310,6 @@ public class ItemSlot_UI : MonoBehaviour,
             return;
         }
 
-        if (eventData.button == PointerEventData.InputButton.Right)
-            HandleRightClick();
     }
 
     public void OnPointerEnter(PointerEventData eventData)
@@ -359,7 +334,7 @@ public class ItemSlot_UI : MonoBehaviour,
         if (eventData == null || eventData.pointerId != touchPointerId)
             return;
 
-        // 指针离开槽位等同超过移动阈值，禁止滑动背包时误弹长按菜单。
+        // 指针离开槽位等同超过移动阈值，禁止滑动背包时误触长按操作。
         touchMovedTooFar = true;
         if (touchLongPressCoroutine != null)
         {
@@ -374,9 +349,9 @@ public class ItemSlot_UI : MonoBehaviour,
         if (eventData.button == PointerEventData.InputButton.Left && eventData.pointerId == touchPointerId)
         {
             bool shouldTap = !touchMovedTooFar && !touchLongPressTriggered;
-            bool shouldShowLongPressMenu = !touchMovedTooFar && touchLongPressMenuPending;
+            bool shouldHandleLongPress = !touchMovedTooFar && touchPressStartedWithItem && touchLongPressTriggered;
             CancelTouchPress();
-            if (shouldShowLongPressMenu)
+            if (shouldHandleLongPress)
                 HandleTouchLongPress();
             else if (shouldTap)
                 HandleTouchTap();
@@ -554,9 +529,7 @@ public class ItemSlot_UI : MonoBehaviour,
             yield break;
 
         touchLongPressTriggered = true;
-        if (touchPressStartedWithItem)
-            touchLongPressMenuPending = true;
-        else
+        if (!touchPressStartedWithItem)
             HandleTouchLongPress();
     }
 
@@ -620,7 +593,6 @@ public class ItemSlot_UI : MonoBehaviour,
         touchPointerId = int.MinValue;
         touchMovedTooFar = false;
         touchPressStartedWithItem = false;
-        touchLongPressMenuPending = false;
         CancelTouchHalfDragReady();
     }
 
@@ -697,18 +669,6 @@ public class ItemSlot_UI : MonoBehaviour,
         }
 
         return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
-    }
-
-    /// <summary>
-    /// 手柄次要键打开当前槽位的物品操作菜单。
-    /// </summary>
-    public bool HandleGamepadContextAction()
-    {
-        if (!isActiveAndEnabled)
-            return false;
-
-        CreateRightClickUI();
-        return true;
     }
 
     /// <summary>

@@ -1,173 +1,308 @@
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 雪地脚印表现组件。组件只记录移动轨迹，默认完整保留 60 秒后再按点龄渐隐；
-/// LineRenderer 的材质可直接替换为脚印纹理，因此不会把脚印贴图写死在逻辑中。
+/// 雪地脚印表现组件：按步距在世界空间发射左右交替的独立矩形脚印。
+/// 脚印由单个 ParticleSystem 承载，避免为长期历史轨迹持续创建大量 GameObject；
+/// 离开雪地只停止新脚印生成，已有脚印继续保留并在完整寿命结束后渐隐。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class SnowFootprintTrail : MonoBehaviour
 {
-    private const float FadeDuration = 3f;
+    private const string DefaultShaderName = "FlatWorld/Environment/Snow Footprint";
+    private const float FootprintDepthOffset = -0.02f;
 
-    private struct FootprintPoint
-    {
-        public Vector3 Position;
-        public float Time;
+    [Header("步态")]
+    [SerializeField, Min(0.01f)] private float stepDistance = 0.28f;
+    [SerializeField, Min(0f)] private float lateralOffset = 0.075f;
+    [SerializeField] private Vector2 footprintSize = new(0.12f, 0.22f);
 
-        public FootprintPoint(Vector3 position, float time)
-        {
-            Position = position;
-            Time = time;
-        }
-    }
-
+    [Header("生命周期")]
     [SerializeField, Min(0.1f)] private float lifetime = 60f;
-    [SerializeField, Min(0.01f)] private float minimumPointDistance = 0.18f;
-    [SerializeField, Min(0.01f)] private float lineWidth = 0.12f;
+    [SerializeField, Min(0.05f)] private float fadeDuration = 3f;
+    [SerializeField, Min(64)] private int maxFootprints = 2048;
+
+    [Header("渲染")]
     [SerializeField] private Material footprintMaterial;
+    [SerializeField] private int sortingOrder = -1;
 
-    private readonly List<FootprintPoint> points = new();
-    private LineRenderer lineRenderer;
     private bool surfaceActive;
-    private bool hasLastPoint;
-    private Vector3 lastPoint;
+    private bool hasLastStepPosition;
+    private bool nextFootIsLeft = true;
+    private Vector2 lastStepPosition;
 
-    /// <summary>设置脚印完整保留时间。</summary>
+    private GameObject footprintObject;
+    private ParticleSystem footprintParticles;
+    private ParticleSystemRenderer footprintRenderer;
+    private Material runtimeMaterial;
+    private bool missingShaderLogged;
+
+    #region 对外接口
+
+    /// <summary>设置脚印完整保留时间，淡出时间独立由 fadeDuration 控制。</summary>
     public void ConfigureLifetime(float seconds)
     {
         lifetime = Mathf.Max(0.1f, seconds);
+        ApplyParticleLifetimeSettings();
     }
 
     /// <summary>启用或停用脚印采样；停用时保留已有脚印并继续自然衰减。</summary>
     public void SetSurfaceActive(bool active)
     {
+        if (surfaceActive == active)
+            return;
+
         surfaceActive = active;
-        EnsureRenderer();
         if (!active)
         {
-            hasLastPoint = false;
-            lineRenderer.enabled = points.Count > 0;
+            hasLastStepPosition = false;
             return;
         }
 
-        lineRenderer.enabled = true;
+        EnsureFootprintParticleSystem();
+        lastStepPosition = transform.position;
+        hasLastStepPosition = true;
     }
 
-    /// <summary>记录雪地移动轨迹，并持续清理超过保留期的最旧脚印。</summary>
+    #endregion
+
+    #region 运行时采样
+
+    /// <summary>位移达到一步距离后，仅生成当前应落下的左脚或右脚脚印。</summary>
     private void LateUpdate()
     {
-        if (!surfaceActive && points.Count == 0)
+        if (!surfaceActive)
             return;
 
-        EnsureRenderer();
-        float now = Time.time;
-        if (surfaceActive && (!hasLastPoint ||
-            (transform.position - lastPoint).sqrMagnitude >= minimumPointDistance * minimumPointDistance)
-           )
+        Vector2 currentPosition = transform.position;
+        if (!hasLastStepPosition)
         {
-            points.Add(new FootprintPoint(transform.position, now));
-            lastPoint = transform.position;
-            hasLastPoint = true;
-        }
-
-        float oldestAllowedTime = now - lifetime - FadeDuration;
-        int firstValidIndex = 0;
-        while (firstValidIndex < points.Count && points[firstValidIndex].Time < oldestAllowedTime)
-            firstValidIndex++;
-
-        if (firstValidIndex > 0)
-            points.RemoveRange(0, firstValidIndex);
-
-        RebuildLine(now);
-        if (!surfaceActive && points.Count == 0)
-            lineRenderer.enabled = false;
-    }
-
-    /// <summary>确保脚印使用独立的世界空间 LineRenderer 表现。</summary>
-    private void EnsureRenderer()
-    {
-        if (lineRenderer == null)
-        {
-            lineRenderer = GetComponent<LineRenderer>();
-            if (lineRenderer == null)
-            {
-                GameObject lineObject = new("SnowFootprints");
-                lineObject.transform.SetParent(transform, false);
-                lineRenderer = lineObject.AddComponent<LineRenderer>();
-            }
-
-            lineRenderer.useWorldSpace = true;
-            lineRenderer.alignment = LineAlignment.TransformZ;
-            lineRenderer.textureMode = LineTextureMode.Tile;
-            lineRenderer.numCapVertices = 0;
-            lineRenderer.numCornerVertices = 0;
-            lineRenderer.sortingOrder = -1;
-        }
-
-        lineRenderer.widthMultiplier = lineWidth;
-        if (footprintMaterial != null)
-        {
-            lineRenderer.sharedMaterial = footprintMaterial;
-        }
-        else if (lineRenderer.sharedMaterial == null)
-        {
-            Shader shader = Shader.Find("Sprites/Default");
-            if (shader != null)
-            {
-                lineRenderer.sharedMaterial = new Material(shader)
-                {
-                    color = new Color(0.7f, 0.78f, 0.82f, 0.8f),
-                    hideFlags = HideFlags.HideAndDontSave
-                };
-            }
-        }
-    }
-
-    /// <summary>根据每个轨迹点的年龄重建位置与末段渐隐透明度。</summary>
-    private void RebuildLine(float now)
-    {
-        if (points.Count == 0)
-        {
-            lineRenderer.positionCount = 0;
+            lastStepPosition = currentPosition;
+            hasLastStepPosition = true;
             return;
         }
 
-        lineRenderer.positionCount = points.Count;
-        GradientAlphaKey[] alphaKeys = new GradientAlphaKey[points.Count];
-        GradientColorKey[] colorKeys =
+        Vector2 movement = currentPosition - lastStepPosition;
+        if (movement.sqrMagnitude < stepDistance * stepDistance)
+            return;
+
+        Vector2 moveDirection = movement.normalized;
+        if (EmitFootprint(currentPosition, moveDirection))
+            nextFootIsLeft = !nextFootIsLeft;
+
+        lastStepPosition = currentPosition;
+    }
+
+    /// <summary>根据移动方向求左右法线偏移，并发射一枚世界空间矩形脚印。</summary>
+    private bool EmitFootprint(Vector2 centerPosition, Vector2 moveDirection)
+    {
+        EnsureFootprintParticleSystem();
+        if (footprintParticles == null || ResolveFootprintMaterial() == null)
+            return false;
+
+        Vector2 perpendicular = new(-moveDirection.y, moveDirection.x);
+        float side = nextFootIsLeft ? 1f : -1f;
+        Vector2 footprintPosition = centerPosition + perpendicular * (side * lateralOffset);
+        // Billboard 粒子的屏幕旋转方向与世界空间 SignedAngle 相反；反号后长边才会沿实际移动方向。
+        float rotation = -Vector2.SignedAngle(Vector2.up, moveDirection);
+        float totalLifetime = lifetime + fadeDuration;
+
+        ParticleSystem.EmitParams emitParams = new()
         {
-            new(Color.white, 0f),
-            new(Color.white, 1f)
+            position = new Vector3(
+                footprintPosition.x,
+                footprintPosition.y,
+                transform.position.z + FootprintDepthOffset),
+            startColor = Color.white,
+            startLifetime = totalLifetime,
+            startSize3D = new Vector3(footprintSize.x, footprintSize.y, 1f),
+            rotation = rotation
         };
 
-        for (int i = 0; i < points.Count; i++)
-        {
-            FootprintPoint point = points[i];
-            float fadeAge = Mathf.Max(0f, now - point.Time - lifetime);
-            float fade01 = Mathf.Clamp01(fadeAge / FadeDuration);
-            float alpha = Mathf.Pow(1f - fade01, 0.7f);
-            lineRenderer.SetPosition(i, point.Position + Vector3.back * 0.02f);
-            alphaKeys[i] = new GradientAlphaKey(
-                alpha,
-                points.Count == 1 ? 0f : (float)i / (points.Count - 1));
-        }
-
-        Gradient gradient = new();
-        gradient.SetKeys(colorKeys, alphaKeys);
-        lineRenderer.colorGradient = gradient;
+        footprintParticles.Emit(emitParams, 1);
+        return true;
     }
 
-    /// <summary>实体禁用时彻底释放当前运行时轨迹状态。</summary>
+    #endregion
+
+    #region 粒子系统
+
+    /// <summary>创建一次独立于角色层级的世界空间粒子系统，历史脚印不会跟着角色移动。</summary>
+    private void EnsureFootprintParticleSystem()
+    {
+        if (footprintParticles != null)
+        {
+            Material material = ResolveFootprintMaterial();
+            if (footprintRenderer != null && material != null && footprintRenderer.sharedMaterial != material)
+                footprintRenderer.sharedMaterial = material;
+            return;
+        }
+
+        footprintObject = new GameObject($"SnowFootprints_{GetInstanceID()}")
+        {
+            layer = gameObject.layer,
+            hideFlags = HideFlags.DontSave
+        };
+
+        Scene ownerScene = gameObject.scene;
+        if (ownerScene.IsValid() && ownerScene.isLoaded && footprintObject.scene != ownerScene)
+            SceneManager.MoveGameObjectToScene(footprintObject, ownerScene);
+
+        footprintObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+        footprintObject.transform.localScale = Vector3.one;
+
+        footprintParticles = footprintObject.AddComponent<ParticleSystem>();
+        footprintRenderer = footprintParticles.GetComponent<ParticleSystemRenderer>();
+        ConfigureFootprintParticleSystem();
+        footprintParticles.Play(false);
+    }
+
+    /// <summary>配置无自动发射、世界空间模拟的长寿命矩形脚印粒子。</summary>
+    private void ConfigureFootprintParticleSystem()
+    {
+        ParticleSystem.MainModule main = footprintParticles.main;
+        main.loop = true;
+        main.playOnAwake = false;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+        main.startSpeed = 0f;
+        main.startSize3D = true;
+        main.startSizeX = new ParticleSystem.MinMaxCurve(footprintSize.x);
+        main.startSizeY = new ParticleSystem.MinMaxCurve(footprintSize.y);
+        main.startSizeZ = new ParticleSystem.MinMaxCurve(1f);
+        main.startColor = Color.white;
+        main.gravityModifier = 0f;
+        main.maxParticles = maxFootprints;
+
+        ParticleSystem.EmissionModule emission = footprintParticles.emission;
+        emission.enabled = false;
+
+        ParticleSystem.ShapeModule shape = footprintParticles.shape;
+        shape.enabled = false;
+
+        ParticleSystem.VelocityOverLifetimeModule velocity = footprintParticles.velocityOverLifetime;
+        velocity.enabled = false;
+
+        ParticleSystem.SizeOverLifetimeModule size = footprintParticles.sizeOverLifetime;
+        size.enabled = false;
+
+        ApplyParticleLifetimeSettings();
+
+        if (footprintRenderer == null)
+            return;
+
+        footprintRenderer.renderMode = ParticleSystemRenderMode.Billboard;
+        footprintRenderer.alignment = ParticleSystemRenderSpace.View;
+        footprintRenderer.sortingOrder = sortingOrder;
+        footprintRenderer.enableGPUInstancing = true;
+        footprintRenderer.sharedMaterial = ResolveFootprintMaterial();
+    }
+
+    /// <summary>保持约 lifetime 秒完全可见，并仅在最后 fadeDuration 秒渐隐。</summary>
+    private void ApplyParticleLifetimeSettings()
+    {
+        if (footprintParticles == null)
+            return;
+
+        float totalLifetime = lifetime + fadeDuration;
+        ParticleSystem.MainModule main = footprintParticles.main;
+        main.startLifetime = totalLifetime;
+        main.maxParticles = maxFootprints;
+
+        float fadeStart = Mathf.Clamp01(lifetime / totalLifetime);
+        Gradient fadeGradient = new();
+        fadeGradient.SetKeys(
+            new[]
+            {
+                new GradientColorKey(Color.white, 0f),
+                new GradientColorKey(Color.white, 1f)
+            },
+            new[]
+            {
+                new GradientAlphaKey(1f, 0f),
+                new GradientAlphaKey(1f, fadeStart),
+                new GradientAlphaKey(0f, 1f)
+            });
+
+        ParticleSystem.ColorOverLifetimeModule color = footprintParticles.colorOverLifetime;
+        color.enabled = true;
+        color.color = fadeGradient;
+    }
+
+    /// <summary>优先使用 Inspector 材质；动态组件未配置材质时使用专用 Shader 创建共享运行时材质。</summary>
+    private Material ResolveFootprintMaterial()
+    {
+        if (footprintMaterial != null)
+            return footprintMaterial;
+
+        if (runtimeMaterial != null)
+            return runtimeMaterial;
+
+        Shader shader = Shader.Find(DefaultShaderName);
+        if (shader == null)
+        {
+            if (!missingShaderLogged)
+            {
+                Debug.LogError($"SnowFootprintTrail 找不到 Shader：{DefaultShaderName}", this);
+                missingShaderLogged = true;
+            }
+            return null;
+        }
+
+        runtimeMaterial = new Material(shader)
+        {
+            name = "Snow Footprint (Runtime)",
+            hideFlags = HideFlags.HideAndDontSave
+        };
+        return runtimeMaterial;
+    }
+
+    #endregion
+
+    #region 生命周期
+
+    /// <summary>实体真正禁用时清掉自己的全部运行时脚印状态。</summary>
     private void OnDisable()
     {
         surfaceActive = false;
-        points.Clear();
-        hasLastPoint = false;
-        if (lineRenderer != null)
+        hasLastStepPosition = false;
+        nextFootIsLeft = true;
+        missingShaderLogged = false;
+
+        if (footprintParticles != null)
+            footprintParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+        footprintParticles = null;
+        footprintRenderer = null;
+
+        if (footprintObject != null)
         {
-            lineRenderer.positionCount = 0;
-            lineRenderer.enabled = false;
+            footprintObject.SetActive(false);
+            Destroy(footprintObject);
+            footprintObject = null;
+        }
+
+        if (runtimeMaterial != null)
+        {
+            Destroy(runtimeMaterial);
+            runtimeMaterial = null;
         }
     }
+
+#if UNITY_EDITOR
+    /// <summary>编辑器中保持可调参数为有效范围。</summary>
+    private void OnValidate()
+    {
+        stepDistance = Mathf.Max(0.01f, stepDistance);
+        lateralOffset = Mathf.Max(0f, lateralOffset);
+        footprintSize.x = Mathf.Max(0.01f, footprintSize.x);
+        footprintSize.y = Mathf.Max(0.01f, footprintSize.y);
+        lifetime = Mathf.Max(0.1f, lifetime);
+        fadeDuration = Mathf.Max(0.05f, fadeDuration);
+        maxFootprints = Mathf.Max(64, maxFootprints);
+        ApplyParticleLifetimeSettings();
+    }
+#endif
+
+    #endregion
 }

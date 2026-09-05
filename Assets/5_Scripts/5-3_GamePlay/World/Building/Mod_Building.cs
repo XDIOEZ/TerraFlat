@@ -1448,21 +1448,17 @@ public class Mod_Building : Module
         if (visual?.SortingOrder.HasValue == true)
             renderer.sortingOrder = visual.SortingOrder.Value;
 
+        // 建筑占地默认 1×1、零偏移；JSON 只声明非默认差异，预览与最终 Shell 使用同一语义。
         ItemColliderDefinitionDto colliderDefinition = visual?.Collider;
-        if (colliderDefinition != null)
-        {
-            BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
-            if (colliderDefinition.Enabled.HasValue)
-                collider.enabled = colliderDefinition.Enabled.Value;
-            if (colliderDefinition.IsTrigger.HasValue)
-                collider.isTrigger = colliderDefinition.IsTrigger.Value;
-            if (colliderDefinition.Offset.HasValue)
-                collider.offset = colliderDefinition.Offset.Value;
-            if (colliderDefinition.Size.HasValue)
-                collider.size = colliderDefinition.Size.Value;
-            if (colliderDefinition.EdgeRadius.HasValue)
-                collider.edgeRadius = colliderDefinition.EdgeRadius.Value;
-        }
+        BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
+        collider.size = colliderDefinition?.Size ?? Vector2.one;
+        collider.offset = colliderDefinition?.Offset ?? Vector2.zero;
+        if (colliderDefinition?.Enabled.HasValue == true)
+            collider.enabled = colliderDefinition.Enabled.Value;
+        if (colliderDefinition?.IsTrigger.HasValue == true)
+            collider.isTrigger = colliderDefinition.IsTrigger.Value;
+        if (colliderDefinition?.EdgeRadius.HasValue == true)
+            collider.edgeRadius = colliderDefinition.EdgeRadius.Value;
 
         root.SetActive(false);
         return root;

@@ -38,8 +38,7 @@ namespace FlatWorld.Mobile
         [InputControl(name = "inventory", layout = "Button", bit = 4, displayName = "背包")]
         [InputControl(name = "equipment", layout = "Button", bit = 5, displayName = "装备")]
         [InputControl(name = "crafting", layout = "Button", bit = 6, displayName = "制作")]
-        [InputControl(name = "survival", layout = "Button", bit = 7, displayName = "生存状态")]
-        [InputControl(name = "settings", layout = "Button", bit = 8, displayName = "设置与返回")]
+        [InputControl(name = "settings", layout = "Button", bit = 7, displayName = "设置与返回")]
         [FieldOffset(24)]
         public uint buttons;
 
@@ -67,7 +66,6 @@ namespace FlatWorld.Mobile
         public ButtonControl inventory { get; private set; }
         public ButtonControl equipment { get; private set; }
         public ButtonControl crafting { get; private set; }
-        public ButtonControl survival { get; private set; }
         public ButtonControl settings { get; private set; }
 
         public static FlatWorldMobileDevice current { get; private set; }
@@ -100,7 +98,6 @@ namespace FlatWorld.Mobile
             inventory = GetChildControl<ButtonControl>(nameof(inventory));
             equipment = GetChildControl<ButtonControl>(nameof(equipment));
             crafting = GetChildControl<ButtonControl>(nameof(crafting));
-            survival = GetChildControl<ButtonControl>(nameof(survival));
             settings = GetChildControl<ButtonControl>(nameof(settings));
         }
 
@@ -130,8 +127,7 @@ namespace FlatWorld.Mobile
         Inventory = 4,
         Equipment = 5,
         Crafting = 6,
-        Survival = 7,
-        Settings = 8
+        Settings = 7
     }
 
     /// <summary>

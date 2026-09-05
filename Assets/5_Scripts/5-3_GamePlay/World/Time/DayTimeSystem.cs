@@ -12,6 +12,10 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
     private static readonly int GlobalMoonlightIntensityShaderId =
         Shader.PropertyToID("_GlobalMoonlightIntensity");
 
+    // 月亮从黄昏到夜晚的独立出现进度，供水面控制尺寸与渐亮动画。
+    private static readonly int GlobalMoonAppearanceShaderId =
+        Shader.PropertyToID("_GlobalMoonAppearance");
+
     // 视觉 Shader 读取的绝对游戏日进度，用于让表现严格跟随世界时间而不是运行时长。
     private static readonly int GlobalGameDayShaderId =
         Shader.PropertyToID("_GlobalGameDay");
@@ -47,6 +51,7 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
     private void OnEnable()
     {
         SetGlobalMoonlightIntensity(0f);
+        SetGlobalMoonAppearance(0f);
         SetGlobalGameDay(0f);
         SubscribeGameManagerEvents();
     }
@@ -63,6 +68,7 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
     {
         UnsubscribeGameManagerEvents();
         SetGlobalMoonlightIntensity(0f);
+        SetGlobalMoonAppearance(0f);
         SetGlobalGameDay(0f);
     }
 
@@ -108,6 +114,7 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
         }
 
         SetGlobalMoonlightIntensity(0f);
+        SetGlobalMoonAppearance(0f);
         SetGlobalGameDay(0f);
         WorldTimeDict?.Clear();
         SceneLightingRateDict?.Clear();
@@ -165,8 +172,9 @@ private void TimeRun(string sceneName, float deltaTime)
             float lighting = GetLighting(currentSceneName);
             Color lightColor = GetLightColor(currentSceneName);
             float moonlight = GetMoonReflectionIntensity(currentSceneName, lighting);
+            float moonAppearance = GetMoonAppearance(currentSceneName);
             SetGlobalGameDay(GetAbsoluteGameDay(currentSceneName));
-            SetGlobalLight(lighting, lightColor, moonlight);
+            SetGlobalLight(lighting, lightColor, moonlight, moonAppearance);
         }
     }
 
@@ -181,7 +189,7 @@ private void TimeRun(string sceneName, float deltaTime)
     /// <summary>
     /// 设置全局光源以及供水面使用的最终月光强度。
     /// </summary>
-    private void SetGlobalLight(float intensity, Color color, float moonlightIntensity)
+    private void SetGlobalLight(float intensity, Color color, float moonlightIntensity, float moonAppearance)
     {
         if (GlobalLight != null)
         {
@@ -200,6 +208,7 @@ private void TimeRun(string sceneName, float deltaTime)
         }
 
         SetGlobalMoonlightIntensity(moonlightIntensity);
+        SetGlobalMoonAppearance(moonAppearance);
     }
 
     /// <summary>
@@ -208,6 +217,14 @@ private void TimeRun(string sceneName, float deltaTime)
     private void SetGlobalMoonlightIntensity(float intensity)
     {
         Shader.SetGlobalFloat(GlobalMoonlightIntensityShaderId, Mathf.Clamp01(intensity));
+    }
+
+    /// <summary>
+    /// 发布黄昏到夜晚的月亮出现进度，和月相亮度解耦。
+    /// </summary>
+    private void SetGlobalMoonAppearance(float appearance)
+    {
+        Shader.SetGlobalFloat(GlobalMoonAppearanceShaderId, Mathf.Clamp01(appearance));
     }
 
     /// <summary>
@@ -388,9 +405,35 @@ private void TimeRun(string sceneName, float deltaTime)
             return 0f;
 
         float sceneLightingScale = Mathf.Max(0f, finalLighting / baseLighting);
-        float daylightRatio = Mathf.Clamp01(daylight / moonlight);
-        float nightVisibility = 1f - Mathf.SmoothStep(0f, 1f, daylightRatio);
+        float nightVisibility = GetMoonAppearance(timeData);
         return Mathf.Clamp01(moonlight * sceneLightingScale * nightVisibility);
+    }
+
+    /// <summary>
+    /// 计算月亮从黄昏到夜晚的平滑出现进度；提前于完全入夜开始，避免瞬间弹出。
+    /// </summary>
+    private float GetMoonAppearance(string sceneName)
+    {
+        return TryGetResolvedTimeData(sceneName, out _, out TimeData timeData)
+            ? GetMoonAppearance(timeData)
+            : 0f;
+    }
+
+    private float GetMoonAppearance(TimeData timeData)
+    {
+        if (timeData == null)
+            return 0f;
+
+        float dayLength = Mathf.Max(1f, timeData.DayLength);
+        float timeRatio = Mathf.Repeat(timeData.CurrentTime, dayLength) / dayLength;
+        float daylight = Mathf.Max(0f, timeData.LightParams.Evaluate(timeRatio));
+        float moonlight = GetMoonlightIntensity(timeData);
+        if (moonlight <= Mathf.Epsilon)
+            return 0f;
+
+        // 当日光下降到月光约 1.75 倍时就开始出现，到完全入夜时自然到 1。
+        float duskRatio = Mathf.Clamp01(daylight / Mathf.Max(moonlight * 1.75f, Mathf.Epsilon));
+        return 1f - Mathf.SmoothStep(0f, 1f, duskRatio);
     }
     
     /// <summary>
@@ -401,8 +444,9 @@ private void TimeRun(string sceneName, float deltaTime)
         float lighting = GetLighting(sceneName);
         Color lightColor = GetLightColor(sceneName);
         float moonlight = GetMoonReflectionIntensity(sceneName, lighting);
+        float moonAppearance = GetMoonAppearance(sceneName);
         SetGlobalGameDay(GetAbsoluteGameDay(sceneName));
-        SetGlobalLight(lighting, lightColor, moonlight);
+        SetGlobalLight(lighting, lightColor, moonlight, moonAppearance);
     }
 
     /// <summary>

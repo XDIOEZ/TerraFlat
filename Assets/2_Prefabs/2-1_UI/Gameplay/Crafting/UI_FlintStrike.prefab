@@ -1159,8 +1159,6 @@ MonoBehaviour:
     _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
-  OnRightClick:
-    _PersistentCalls: []
   OnShiftQuickTransfer:
     _PersistentCalls: []
 --- !u!114 &766817966130253579
@@ -2294,8 +2292,6 @@ MonoBehaviour:
   OnLeftClick:
     _PersistentCalls: []
   _OnScroll:
-    _PersistentCalls: []
-  OnRightClick:
     _PersistentCalls: []
   OnShiftQuickTransfer:
     _PersistentCalls: []

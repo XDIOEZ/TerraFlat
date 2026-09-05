@@ -125,8 +125,6 @@ public class Inventory
     private InputAction _boundToggleAction;
     private Action<InputAction.CallbackContext> _toggleCallback;
     private bool _isProcessingGamepadSubmit;
-    // 当前背包打开的物品上下文菜单；关闭背包时必须随背包一起回收。
-    private BasePanel _activeContextMenuPanel;
 
     // 轻触同类物品时记录当前是连续拿取还是连续放置，不引入独立状态机。
     private enum TouchTapFlow
@@ -332,9 +330,6 @@ public class Inventory
             return;
         }
 
-        if (basePanel.IsOpen())
-            CloseActiveContextMenu();
-
         basePanel.Toggle();
         if (basePanel.IsOpen())
         {
@@ -408,8 +403,6 @@ public class Inventory
             basePanel.Opened += AcquirePanelInputLock;
             basePanel.Closed += ReleasePanelInputLock;
         }
-        basePanel.Closed += CloseActiveContextMenu;
-
         // 普通背包 Prefab 可能以可见状态保存；先统一为关闭态，确保随后 Open 能触发输入锁事件。
         // 快捷栏与手部库存保留 Prefab 的显示状态，不参与这次归一化。
         if (usesModalGameplayInputLock)
@@ -464,18 +457,6 @@ public class Inventory
     private void ReleasePanelInputLock()
     {
         _boundController?.ReleaseGameplayInputLock(this);
-    }
-
-    /// <summary>
-    /// 回收当前库存派生的右键菜单及其物品详情子面板，避免父背包关闭后留下悬空 UI。
-    /// </summary>
-    private void CloseActiveContextMenu()
-    {
-        if (_activeContextMenuPanel == null)
-            return;
-
-        _activeContextMenuPanel.Destroy();
-        _activeContextMenuPanel = null;
     }
 
     private void ResolvePanelInputController()
@@ -646,7 +627,6 @@ public class Inventory
             itemSlotUI.OnLeftClick.Clear();
             itemSlotUI.OnGamepadSubmit.Clear();
             itemSlotUI._OnScroll.Clear();
-            itemSlotUI.OnRightClick.Clear();
             itemSlotUI.OnShiftQuickTransfer.Clear();
             itemSlotUI.OnMouseDragBegin = null;
             itemSlotUI.OnMouseDragDrop = null;
@@ -659,7 +639,6 @@ public class Inventory
             itemSlotUI.OnLeftClick += OnLeftClick;
             itemSlotUI.OnGamepadSubmit += OnGamepadSubmit;
             itemSlotUI._OnScroll += OnScroll;
-            itemSlotUI.OnRightClick += OnRightClick;
             itemSlotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
             itemSlotUI.OnMouseDragBegin = OnMouseDragBegin;
             itemSlotUI.OnMouseDragDrop = OnMouseDragDrop;
@@ -722,7 +701,6 @@ public class Inventory
         slotUI.OnLeftClick.Clear();
         slotUI.OnGamepadSubmit.Clear();
         slotUI._OnScroll.Clear();
-        slotUI.OnRightClick.Clear();
         slotUI.OnShiftQuickTransfer.Clear();
         slotUI.OnMouseDragBegin = null;
         slotUI.OnMouseDragDrop = null;
@@ -735,7 +713,6 @@ public class Inventory
         slotUI.OnLeftClick += OnLeftClick;
         slotUI.OnGamepadSubmit += OnGamepadSubmit;
         slotUI._OnScroll += OnScroll;
-        slotUI.OnRightClick += OnRightClick;
         slotUI.OnShiftQuickTransfer += OnShiftQuickTransfer;
         slotUI.OnMouseDragBegin = OnMouseDragBegin;
         slotUI.OnMouseDragDrop = OnMouseDragDrop;
@@ -858,78 +835,6 @@ public class Inventory
 
     #region 鼠标事件处理
 
-    void OnRightClick(int index)
-    {
-        if (Data == null || Data.itemSlots == null)
-        {
-            Debug.LogError("[Inventory.OnRightClick] Data 或 itemSlots 为空");
-            return;
-        }
-
-        if (itemSlot_UI == null)
-        {
-            Debug.LogError("[Inventory.OnRightClick] itemSlot_UI 为空");
-            return;
-        }
-
-        if (index < 0 || index >= Data.itemSlots.Count)
-        {
-            Debug.LogError($"[Inventory.OnRightClick] 索引越界: {index}");
-            return;
-        }
-
-        if (index >= itemSlot_UI.Count || itemSlot_UI[index] == null)
-        {
-            Debug.LogError($"[Inventory.OnRightClick] itemSlot_UI 索引无效: {index}");
-            return;
-        }
-
-        ItemSlot slot = Data.itemSlots[index];
-        if (slot == null || slot.itemData == null)
-        {
-            return;
-        }
-
-        GameObject menuPrefab = GameRes.Instance.GetPrefab("UI_ItemContextMenu");
-        if (menuPrefab == null)
-        {
-            Debug.LogError("[Inventory.OnRightClick] 未找到预制体: UI_ItemContextMenu");
-            return;
-        }
-
-        RightClickMenu_UI menuPrefabUI = menuPrefab.GetComponent<RightClickMenu_UI>();
-        if (menuPrefabUI == null)
-        {
-            Debug.LogError("[Inventory.OnRightClick] 右键菜单预制体缺少 RightClickMenu_UI 组件");
-            return;
-        }
-
-        CloseActiveContextMenu();
-
-        BasePanel menuPanel = UIManager.Instance.CreatePanelFromGameObject(menuPrefab);
-        RightClickMenu_UI currentMenuInstance = menuPanel != null
-            ? menuPanel.GetComponent<RightClickMenu_UI>()
-            : null;
-        if (currentMenuInstance == null)
-        {
-            Debug.LogError("[Inventory.OnRightClick] 右键菜单实例缺少 RightClickMenu_UI 组件");
-            return;
-        }
-
-        currentMenuInstance.Init(itemSlot_UI[index], slot, item, Data, index, this);
-        _activeContextMenuPanel = menuPanel;
-
-        RectTransform menuRect = currentMenuInstance.GetComponent<RectTransform>();
-        if (currentMenuInstance.basePanel != null && currentMenuInstance.basePanel.Dragger != null && currentMenuInstance.basePanel.Dragger.rectTransform != null)
-        {
-            currentMenuInstance.basePanel.Dragger.rectTransform.position = itemSlot_UI[index].transform.position;
-        }
-        else if (menuRect != null)
-        {
-            menuRect.position = itemSlot_UI[index].transform.position;
-        }
-    }
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnScroll(int index, float direction)
     {
@@ -1009,7 +914,7 @@ public class Inventory
             handSlot.itemData == null || !CanAcceptQuickTransfer(handSlot, localSlot))
             return false;
 
-        // 长按只允许整组放入空槽或同类槽，异类槽继续交给物品菜单处理。
+        // 长按只允许整组放入空槽或同类槽，异类槽不执行操作。
         if (localSlot.itemData != null && !localSlot.itemData.CanStackWith(handSlot.itemData))
             return false;
 
@@ -1399,83 +1304,6 @@ public class Inventory
     {
         return item is Player && Data?.Name == ModText.Bag;
     }
-
-    #region 库存物品使用
-
-    /// <summary>把需要真实手持实例的槽位物品转入玩家快捷栏，并排队执行一次使用。</summary>
-    public bool TryQueueHeldItemUse(int sourceIndex)
-    {
-        if (Data?.itemSlots == null || sourceIndex < 0 || sourceIndex >= Data.itemSlots.Count)
-            return false;
-
-        ItemSlot sourceSlot = Data.itemSlots[sourceIndex];
-        if (sourceSlot?.itemData == null)
-            return false;
-
-        Inventory_HotBar.HotBarRuntimeInventory hotbarInventory = ResolvePlayerHotBarRuntimeInventory();
-        if (hotbarInventory?.Owner == null || hotbarInventory.Data?.itemSlots == null ||
-            hotbarInventory.Data.itemSlots.Count == 0)
-        {
-            return false;
-        }
-
-        if (ReferenceEquals(Data, hotbarInventory.Data))
-            return hotbarInventory.Owner.TryQueueSlotUse(sourceIndex, sourceSlot.itemData);
-
-        int preferredIndex = Mathf.Clamp(
-            hotbarInventory.Owner.CurrentIndex,
-            0,
-            hotbarInventory.Data.itemSlots.Count - 1);
-        if (TryMoveOneItemToHotbar(sourceSlot, hotbarInventory, preferredIndex, out ItemData preferredData))
-            return hotbarInventory.Owner.TryQueueSlotUse(preferredIndex, preferredData);
-
-        for (int index = 0; index < hotbarInventory.Data.itemSlots.Count; index++)
-        {
-            if (index == preferredIndex)
-                continue;
-
-            if (TryMoveOneItemToHotbar(sourceSlot, hotbarInventory, index, out ItemData targetData))
-                return hotbarInventory.Owner.TryQueueSlotUse(index, targetData);
-        }
-
-        return false;
-    }
-
-    /// <summary>解析当前库存对应的本地玩家快捷栏运行时，兼容快捷栏自身与外部容器。</summary>
-    private Inventory_HotBar.HotBarRuntimeInventory ResolvePlayerHotBarRuntimeInventory()
-    {
-        if (this is Inventory_HotBar.HotBarRuntimeInventory currentHotbar && currentHotbar.Owner != null)
-            return currentHotbar;
-
-        return GetPlayerHotBarInventory() as Inventory_HotBar.HotBarRuntimeInventory;
-    }
-
-    /// <summary>尝试把源槽中的一个物品转入指定快捷栏槽位，并返回实际承载的数据。</summary>
-    private bool TryMoveOneItemToHotbar(
-        ItemSlot sourceSlot,
-        Inventory_HotBar.HotBarRuntimeInventory hotbarInventory,
-        int targetIndex,
-        out ItemData targetData)
-    {
-        targetData = null;
-        if (sourceSlot?.itemData == null || hotbarInventory?.Data?.itemSlots == null ||
-            targetIndex < 0 || targetIndex >= hotbarInventory.Data.itemSlots.Count)
-        {
-            return false;
-        }
-
-        ItemSlot targetSlot = hotbarInventory.Data.itemSlots[targetIndex];
-        if (targetSlot == null || !hotbarInventory.CanAcceptQuickTransfer(sourceSlot, targetSlot))
-            return false;
-
-        if (!Data.TransferItemQuantityTo(sourceSlot, hotbarInventory.Data, targetSlot, 1))
-            return false;
-
-        targetData = targetSlot.itemData;
-        return targetData != null;
-    }
-
-    #endregion
 
     public virtual void OnShiftQuickTransfer(int index)
     {

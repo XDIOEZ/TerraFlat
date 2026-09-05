@@ -442,7 +442,6 @@
                 "Max_Vitamins": 500.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 1.0,
                 "BaseAdditive": 0.0,
@@ -788,7 +787,6 @@
                 "Max_Vitamins": 500.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 1.0,
                 "BaseAdditive": 0.0,
@@ -1104,7 +1102,6 @@
           },
           "parameters": {
             "xOffset": 0.5,
-            "AttackEffects": [],
             "DamageValues": {
               "Cutting": 0.0,
               "Piercing": 2.0,
@@ -1228,10 +1225,7 @@
             "chaseTriggerDistance": 12.0,
             "chaseLossDistance": 20.0,
             "chasePathCostLimit": 200,
-<<<<<<< HEAD
-=======
             "chasePathRetryDelay": 3.0,
->>>>>>> origin/master
             "chaseThreatTags": [
               "Player"
             ],
@@ -1551,7 +1545,6 @@
                 "Max_Vitamins": 500.0
               },
               "Max_EatingProgress": 3.0,
-              "ShowCanvas": false,
               "nutritionConsumeSpeed": {
                 "BaseValue": 1.0,
                 "BaseAdditive": 0.0,
@@ -1867,7 +1860,6 @@
           },
           "parameters": {
             "xOffset": 0.65,
-            "AttackEffects": [],
             "DamageValues": {
               "Cutting": 3.0,
               "Piercing": 2.0,
@@ -2117,10 +2109,7 @@
             "attackTriggerDistance": 1.4,
             "chaseLossDistance": 44.0,
             "chasePathCostLimit": 440,
-<<<<<<< HEAD
-=======
             "chasePathRetryDelay": 3.0,
->>>>>>> origin/master
             "attackCooldown": 2.0,
             "attackDamageWindow": 0.333333343,
             "attackDamageStartDelay": 0.5,
@@ -2250,7 +2239,6 @@
             "Type": 0
           },
           "parameters": {
-            "AttackEffects": [],
             "DamageValues": {
               "Cutting": 0.0,
               "Piercing": 0.0,

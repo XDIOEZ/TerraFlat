@@ -53,6 +53,10 @@ public static class RuntimeUIPrefabBuilder
     private const float MobileActionGroupHeight = MobileAttackZoneSize + MobileActionGap + MobileActionButtonSize;
     private const float MobileHotbarBackpackButtonSize = 82f;
     private const float MobileHotbarBackpackGap = 12f;
+    // 右侧抽屉为单列滚动列表；三角开关保留至少 60 逻辑像素的触控宽度。
+    private const float MobileDrawerWidth = 280f;
+    private const float MobileDrawerButtonHeight = 76f;
+    private const float MobileDrawerToggleWidth = 60f;
     // 主菜单设置使用更暖、更低亮度的独立背景，避免通用设置页的蓝绿色底板抢占视觉焦点。
     private static readonly Color MainMenuSettingsCanvas = new Color(0.052f, 0.031f, 0.026f, 1f);
     private static readonly Color MainMenuSettingsSurface = new Color(0.036f, 0.061f, 0.068f, 1f);
@@ -2984,11 +2988,11 @@ public static class RuntimeUIPrefabBuilder
             MobileActionButtonSize);
         CreateMobileButton("奔跑", gameplay.transform, "奔跑", new Vector2(0f, 0.5f), new Vector2(76f, 0f), 104f);
 
-        // 设置与菜单并列固定在右上角，不能随模态面板一起隐藏；设置更靠右，菜单作为返回/退出入口。
+        // 设置与右侧菜单开关独立于玩法层，打开模态面板时仍能切换菜单。
         GameObject persistent = CreateUIObject("常驻控制层", root.transform);
         Stretch(persistent.GetComponent<RectTransform>());
         CreateMobileButton("设置", persistent.transform, "设置", new Vector2(1f, 1f), new Vector2(-58f, -58f), 100f);
-        CreateMobileButton("菜单", persistent.transform, "菜单", new Vector2(1f, 1f), new Vector2(-166f, -58f), 100f);
+        CreateMobileDrawerToggle(persistent.transform);
 
         // 快捷栏独立于玩法控制层，打开背包等模态面板时仍可见、可拖放。
         GameObject hotbarAnchor = CreateUIObject("快捷栏锚点", root.transform);
@@ -3025,60 +3029,99 @@ public static class RuntimeUIPrefabBuilder
         knobImage.raycastTarget = false;
     }
 
+    /// <summary>创建右侧居中的三角开关，图形方向由 HUD 随抽屉开关状态旋转。</summary>
+    private static void CreateMobileDrawerToggle(Transform parent)
+    {
+        GameObject root = CreateUIObject("菜单", parent, typeof(Image), typeof(Button));
+        RectTransform rect = root.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 0.5f);
+        rect.anchoredPosition = new Vector2(-10f, 0f);
+        rect.sizeDelta = new Vector2(MobileDrawerToggleWidth, 100f);
+
+        Image background = root.GetComponent<Image>();
+        background.color = SurfaceRaised;
+        AddOutline(background, Border);
+        Button button = root.GetComponent<Button>();
+        button.targetGraphic = background;
+        button.navigation = new Navigation { mode = Navigation.Mode.None };
+        ConfigureButtonColors(button);
+        root.AddComponent<FlatWorldUIFeedback>();
+
+        GameObject arrow = CreateUIObject("菜单箭头", root.transform, typeof(CanvasRenderer), typeof(UITriangleGraphic));
+        SetCentered(arrow.GetComponent<RectTransform>(), Vector2.zero, new Vector2(22f, 28f));
+        UITriangleGraphic graphic = arrow.GetComponent<UITriangleGraphic>();
+        graphic.color = Cream;
+        graphic.raycastTarget = false;
+    }
+
+    /// <summary>构建右侧居中的窄抽屉，纵向占安全区 44%；按钮与缩放控件统一放入可裁剪滚动列表。</summary>
     private static void BuildMobileDrawer(Transform parent)
     {
         GameObject drawer = CreateUIObject("菜单抽屉", parent, typeof(Image));
         RectTransform drawerRect = drawer.GetComponent<RectTransform>();
-        drawerRect.anchorMin = new Vector2(1f, 0.5f);
-        drawerRect.anchorMax = new Vector2(1f, 0.5f);
+        drawerRect.anchorMin = new Vector2(1f, 0.28f);
+        drawerRect.anchorMax = new Vector2(1f, 0.72f);
         drawerRect.pivot = new Vector2(1f, 0.5f);
-        drawerRect.anchoredPosition = new Vector2(-20f, 0f);
-        drawerRect.sizeDelta = new Vector2(430f, 690f);
+        drawerRect.anchoredPosition = new Vector2(-MobileDrawerToggleWidth - 20f, 0f);
+        drawerRect.sizeDelta = new Vector2(MobileDrawerWidth, 0f);
         Image background = drawer.GetComponent<Image>();
         background.color = Canvas;
         background.raycastTarget = true;
         AddOutline(background, Amber);
 
-        TextMeshProUGUI title = CreateText("抽屉标题", drawer.transform, "手机菜单", 22f, Cream);
-        title.fontStyle = FontStyles.Bold;
-        RectTransform titleRect = title.rectTransform;
-        titleRect.anchorMin = new Vector2(0f, 1f);
-        titleRect.anchorMax = new Vector2(1f, 1f);
-        titleRect.pivot = new Vector2(0.5f, 1f);
-        titleRect.anchoredPosition = new Vector2(0f, -16f);
-        titleRect.sizeDelta = new Vector2(-112f, 48f);
+        GameObject scrollObject = CreateUIObject("菜单滚动区", drawer.transform, typeof(ScrollRect));
+        RectTransform scrollRect = scrollObject.GetComponent<RectTransform>();
+        Stretch(scrollRect);
+        scrollRect.offsetMin = new Vector2(16f, 16f);
+        scrollRect.offsetMax = new Vector2(-16f, -16f);
 
-        GameObject buttonGrid = CreateUIObject("抽屉按钮区", drawer.transform);
-        RectTransform gridRect = buttonGrid.GetComponent<RectTransform>();
-        gridRect.anchorMin = Vector2.zero;
-        gridRect.anchorMax = Vector2.one;
-        gridRect.offsetMin = new Vector2(22f, 22f);
-        gridRect.offsetMax = new Vector2(-22f, -82f);
-        GridLayoutGroup grid = buttonGrid.AddComponent<GridLayoutGroup>();
-        grid.cellSize = new Vector2(184f, 66f);
-        grid.spacing = new Vector2(14f, 14f);
-        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        grid.constraintCount = 2;
+        GameObject viewport = CreateUIObject("Viewport", scrollObject.transform, typeof(Image), typeof(RectMask2D));
+        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
+        Stretch(viewportRect);
+        viewport.GetComponent<Image>().color = Color.clear;
+        viewport.GetComponent<Image>().raycastTarget = true;
 
-        // 关闭按钮收进标题区，底部留出 14px 间隙，避免压住网格第一行按钮。
-        Button closeButton = CreateButton("关闭抽屉", drawer.transform, "关闭", 88f, 52f, false);
-        SetTopRight(closeButton.GetComponent<RectTransform>(), 16f, 16f, 88f, 52f);
+        GameObject content = CreateUIObject("抽屉按钮区", viewport.transform, typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+        RectTransform contentRect = content.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.sizeDelta = Vector2.zero;
+        VerticalLayoutGroup layout = content.GetComponent<VerticalLayoutGroup>();
+        layout.spacing = 12f;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        content.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        CreateButton("装备", buttonGrid.transform, "装备", 184f, 66f, false);
-        CreateButton("制作", buttonGrid.transform, "制作", 184f, 66f, false);
-        CreateButton("状态", buttonGrid.transform, "生存状态", 184f, 66f, false);
-        CreateButton("丢弃一个", buttonGrid.transform, "丢弃一个", 184f, 66f, false);
-        // 镜头缩放单独占用抽屉底部横向区域，避免继续用两个按钮离散调整视野。
-        TextMeshProUGUI zoomLabel = CreateText("镜头缩放标签", drawer.transform, "镜头缩放", 16f, Cream);
+        ScrollRect scroll = scrollObject.GetComponent<ScrollRect>();
+        scroll.viewport = viewportRect;
+        scroll.content = contentRect;
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 32f;
+
+        foreach (string buttonName in new[] { "装备", "制作", "丢弃一个" })
+        {
+            Button button = CreateButton(buttonName, content.transform, buttonName, MobileDrawerWidth - 32f, MobileDrawerButtonHeight, false);
+            SetButtonLabelSize(button, 22f);
+        }
+
+        // 缩放也是列表条目，窄屏或大 UI 缩放时可滚动到达，不占用固定页脚。
+        GameObject zoomRow = CreateUIObject("镜头缩放区", content.transform, typeof(LayoutElement));
+        zoomRow.GetComponent<LayoutElement>().preferredHeight = 110f;
+        TextMeshProUGUI zoomLabel = CreateText("镜头缩放标签", zoomRow.transform, "镜头缩放", 20f, Cream);
         zoomLabel.alignment = TextAlignmentOptions.MidlineLeft;
         RectTransform zoomLabelRect = zoomLabel.rectTransform;
-        zoomLabelRect.anchorMin = new Vector2(0f, 0f);
-        zoomLabelRect.anchorMax = new Vector2(1f, 0f);
-        zoomLabelRect.pivot = new Vector2(0.5f, 0f);
-        zoomLabelRect.offsetMin = new Vector2(24f, 82f);
-        zoomLabelRect.offsetMax = new Vector2(-24f, 112f);
+        zoomLabelRect.anchorMin = new Vector2(0f, 1f);
+        zoomLabelRect.anchorMax = new Vector2(1f, 1f);
+        zoomLabelRect.pivot = new Vector2(0.5f, 1f);
+        zoomLabelRect.anchoredPosition = Vector2.zero;
+        zoomLabelRect.sizeDelta = new Vector2(0f, 34f);
 
-        Slider zoomSlider = CreateSlider("镜头缩放", drawer.transform);
+        Slider zoomSlider = CreateSlider("镜头缩放", zoomRow.transform);
         zoomSlider.minValue = 5f;
         zoomSlider.maxValue = 20f;
         zoomSlider.value = 10f;
@@ -3087,8 +3130,9 @@ public static class RuntimeUIPrefabBuilder
         zoomRect.anchorMin = new Vector2(0f, 0f);
         zoomRect.anchorMax = new Vector2(1f, 0f);
         zoomRect.pivot = new Vector2(0.5f, 0f);
-        zoomRect.offsetMin = new Vector2(24f, 24f);
-        zoomRect.offsetMax = new Vector2(-24f, 76f);
+        zoomRect.offsetMin = new Vector2(0f, 4f);
+        zoomRect.offsetMax = new Vector2(0f, 64f);
+        drawer.SetActive(false);
     }
 
     /// <summary>创建手机端快捷栏右侧的常驻背包入口；运行时会将它挂入真实快捷栏 Canvas 以继承模态排序。</summary>

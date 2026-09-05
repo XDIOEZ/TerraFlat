@@ -49,7 +49,4 @@ MonoBehaviour:
         moveSpeedMultiplier: 0.5
         entryTemperatureDrop: 10
         entryTemperatureFloor: 10
-<<<<<<< HEAD
-=======
         entryTemperatureTransitionSeconds: 5
->>>>>>> origin/master

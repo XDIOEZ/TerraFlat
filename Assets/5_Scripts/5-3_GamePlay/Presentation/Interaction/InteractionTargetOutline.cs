@@ -9,7 +9,7 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class InteractionTargetOutline : MonoBehaviour
 {
-    private const float DefaultThicknessPixels = 2f;
+    private const float DefaultThicknessPixels = 1f;
 
     private static readonly int MainTextureProperty = Shader.PropertyToID("_MainTex");
     private static readonly int BodyClipProperty = Shader.PropertyToID("_BodyClip");

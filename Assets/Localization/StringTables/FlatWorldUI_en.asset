@@ -1049,28 +1049,12 @@ MonoBehaviour:
     m_Localized: Please wait. You will enter automatically when the world is ready.
     m_Metadata:
       m_Items: []
-  - m_Id: 7970140160
-    m_Localized: Item Actions
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7970140161
-    m_Localized: Use Item
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7970140162
-    m_Localized: View Item Info
-    m_Metadata:
-      m_Items: []
   - m_Id: 8037249024
     m_Localized: Save Entries
     m_Metadata:
       m_Items: []
   - m_Id: 8045637632
     m_Localized: Select  /  Right-click to Manage
-    m_Metadata:
-      m_Items: []
-  - m_Id: 8070803456
-    m_Localized: Item Details
     m_Metadata:
       m_Items: []
   - m_Id: 8083386368
@@ -1452,10 +1436,6 @@ MonoBehaviour:
     m_Localized: Run
     m_Metadata:
       m_Items: []
-  - m_Id: 6726494367798
-    m_Localized: Character Stats Panel
-    m_Metadata:
-      m_Items: []
   - m_Id: 6726494367799
     m_Localized: Camera Zoom Modifier
     m_Metadata:
@@ -1506,10 +1486,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 6726494367811
     m_Localized: Virtual Cursor
-    m_Metadata:
-      m_Items: []
-  - m_Id: 6726494367812
-    m_Localized: Nutrition Panel
     m_Metadata:
       m_Items: []
   - m_Id: 6726494367813
@@ -1741,16 +1717,8 @@ MonoBehaviour:
     m_Localized: Camera -
     m_Metadata:
       m_Items: []
-  - m_Id: 1644392407982080
-    m_Localized: Drop Stack
-    m_Metadata:
-      m_Items: []
   - m_Id: 1644392525422592
     m_Localized: Status
-    m_Metadata:
-      m_Items: []
-  - m_Id: 1644392525422593
-    m_Localized: Confirm Again
     m_Metadata:
       m_Items: []
   - m_Id: 1644392525422594

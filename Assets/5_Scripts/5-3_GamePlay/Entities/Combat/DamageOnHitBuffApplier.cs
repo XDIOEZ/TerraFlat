@@ -1,12 +1,12 @@
 using UnityEngine;
 
 /// <summary>
-/// 命中附加 Buff 组件：监听指定伤害模块的实体命中结果，并按概率给有效命中的目标添加 Buff。
-/// 该组件不参与伤害计算，也不会作用于格子建筑，因此可被燃烧、中毒、冰冻等武器效果复用。
+/// 命中附加 Buff 模块：监听指定伤害模块的实体命中结果，并按概率给有效命中的目标添加 Buff。
+/// 该模块不参与伤害计算，也不会作用于格子建筑，因此可被燃烧、中毒、冰冻等武器效果复用。
 /// </summary>
-public sealed class DamageOnHitBuffApplier : MonoBehaviour
+public sealed class DamageOnHitBuffApplier : Module, IItemModuleDependencyBinder
 {
-    [SerializeField, Tooltip("负责发布实体命中结果的伤害模块，必须在 Prefab 中显式绑定。")]
+    [SerializeField, Tooltip("负责发布实体命中结果的伤害模块；Prefab 可显式绑定，JSON 组合由 ItemMods 绑定。")]
     private Mod_Damage damageModule;
 
     [SerializeField, Tooltip("命中成功后尝试添加的稳定 Buff ID。")]
@@ -15,21 +15,40 @@ public sealed class DamageOnHitBuffApplier : MonoBehaviour
     [SerializeField, Range(0f, 1f), Tooltip("每次有效实体命中附加 Buff 的概率。")]
     private float applicationChance = 0.25f;
 
-    /// <summary>启用时订阅伤害模块的实体命中结果。</summary>
-    private void OnEnable()
-    {
-        if (damageModule == null)
-        {
-            Debug.LogError($"{name} 未绑定 Mod_Damage，无法附加命中 Buff。", this);
-            return;
-        }
+    [SerializeField] private Ex_ModData_MemoryPackable moduleData = new();
 
+    public override ModuleData _Data
+    {
+        get => moduleData;
+        set => moduleData = (Ex_ModData_MemoryPackable)value;
+    }
+
+    public override string CanonicalModuleId => "Module_DamageOnHitBuff";
+    public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
+
+    /// <summary>从 ItemMods 唯一稳定 ID 绑定伤害模块，并校验 Prefab 显式引用没有漂移。</summary>
+    public void BindModuleDependencies(ItemMods modules)
+    {
+        Mod_Damage resolved = modules.RequireSingleModById<Mod_Damage>("Mod_Damage");
+        if (damageModule != null && damageModule != resolved)
+            throw new System.InvalidOperationException($"{name} 的伤害引用与 ItemMods 注册结果不一致。");
+
+        damageModule = resolved;
+    }
+
+    /// <summary>模块加载时订阅伤害结算。</summary>
+    public override void Load()
+    {
         damageModule.OnReceiverDamageResolved -= HandleReceiverDamageResolved;
         damageModule.OnReceiverDamageResolved += HandleReceiverDamageResolved;
     }
 
-    /// <summary>禁用时解除订阅，兼容对象池复用。</summary>
-    private void OnDisable()
+    public override void Save()
+    {
+    }
+
+    /// <summary>模块卸载时解除订阅，兼容对象池复用。</summary>
+    public override void Unload()
     {
         if (damageModule != null)
             damageModule.OnReceiverDamageResolved -= HandleReceiverDamageResolved;

@@ -130,7 +130,7 @@ namespace FlatWorld.GameTest.InventoryCrafting
 
         [Test]
         [Category("InventoryCrafting.Core")]
-        public void Matcher_UnorderedRecipe_RejectsExtraOccupiedSlots()
+        public void Matcher_CraftingRecipe_AllowsUnusedExtraOccupiedSlots()
         {
             Inventory input = CreateInventory("输入", 10f, CreateItem("wood", 1f), CreateItem("stone", 1f));
             RuntimeRecipe recipe = new RuntimeRecipe
@@ -149,6 +149,36 @@ namespace FlatWorld.GameTest.InventoryCrafting
                 input,
                 recipe,
                 new CraftingCapabilities { RecipeType = RecipeType.Crafting },
+                out CraftingRecipeMatch match);
+
+            Assert.That(matched, Is.True);
+            Assert.That(match.Consumptions, Has.Count.EqualTo(1));
+            Assert.That(match.Consumptions[0].SlotIndex, Is.EqualTo(0));
+            Assert.That(match.Consumptions[0].Amount, Is.EqualTo(1f).Within(0.0001f));
+        }
+
+        [Test]
+        [Category("InventoryCrafting.Core")]
+        public void Matcher_SmeltingUnorderedRecipe_StillRejectsUnusedExtraOccupiedSlots()
+        {
+            Inventory input = CreateInventory("输入", 10f, CreateItem("ore", 1f), CreateItem("stone", 1f));
+            RuntimeRecipe recipe = new RuntimeRecipe
+            {
+                Id = "test_smelting_unordered_extra",
+                inputs = new RuntimeRecipeInput
+                {
+                    recipeType = RecipeType.Smelting,
+                    GridWidth = 1,
+                    GridHeight = 1,
+                    inputOrder = RecipeInputRule.无规则合成,
+                    RowItems_List = new List<RuntimeRecipeIngredient> { Exact("ore") }
+                }
+            };
+
+            bool matched = CraftingRecipeMatcher.TryMatchRecipe(
+                input,
+                recipe,
+                new CraftingCapabilities { RecipeType = RecipeType.Smelting },
                 out _);
 
             Assert.That(matched, Is.False);

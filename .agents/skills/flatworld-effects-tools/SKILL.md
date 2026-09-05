@@ -7,10 +7,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 ## 入口
 
-<<<<<<< HEAD
-=======
 - 项目自有 Shader 资源统一放在 `Assets/9_Shaders/`：Shader 源文件放 `Shader/`，材质放 `Material/`，Volume 配置放 `Volume/`；必须依赖 `Resources.Load` 的 Shader/材质放在 `Assets/9_Shaders/Resources/` 下并保持原逻辑资源路径。不要再创建 `Assets/Shaders`、`Assets/Resources/Shaders` 或其它散落的项目自有 Shader 资源目录；第三方插件资源保持原目录不移动。
->>>>>>> origin/master
 - 运行时视觉：`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Management/VisualEffectManager.cs`、`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Runtime/`
 - 角色渲染：`Assets/5_Scripts/5-3_GamePlay/Presentation/{ActorRenderEffectController,ActorRenderColorEffect,WaterImmersionRenderEffect}.cs`
 - 实体脚底阴影：`Assets/5_Scripts/5-3_GamePlay/Presentation/ActorShadowManager.cs` 与 `Assets/2_Prefabs/Gameplay/Modules/Rendering/ActorShadow.prefab`；阴影使用场景级 `ActorShadows` 根节点和 `Shadow` Sorting Layer，不挂到实体或 `RuntimeEntities` 下。
@@ -21,15 +18,16 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 - 先确认触发系统及 Prefab/材质/Shader 的真实引用来源，再改表现。
 - 池化特效每次取出时重置 Transform、Animator、颜色和生命周期；回收/禁用时清理订阅与状态。
+- 需要在角色 `OnDisable` 中立即回收的池化特效不能挂到该角色层级下，否则归池 `SetParent` 会与父级激活/停用过程冲突；Owner 登记与 Transform 父级分开，睡眠 ZZZ 由单位缩放的独立特效根节点持有并在 `LateUpdate` 跟随。区块休眠不等于退出 AI 睡眠状态，停用时只释放可见实例，重新激活时恢复仍有效的表现请求。
+- 粒子 `VelocityModule` 的线性 X/Y/Z 必须使用同一种 `minMaxState`；2D 特效即使 Z 速度恒为零，也应使用与 X/Y 相同的模式并把上下限都设为零，避免 `Particle Velocity curves must all be in the same mode`。
+- `ParticleSystem.EmitParams.rotation` 使用欧拉角度数；2D `Billboard` 粒子按世界移动方向旋转时，屏幕旋转正负方向与 `Vector2.SignedAngle(Vector2.up, direction)` 相反，应使用其反号，否则水平/垂直方向看似正常但 45° 斜向会转成垂直朝向。
 - 伤害数字的最终颜色由 `DamageTextEffect` 样式或调用数据覆盖，不能只改 TMP 的 Prefab 字色；数值到显示倍率的映射也由该表现组件负责，战斗结算只传递实际伤害值与样式。
 - 角色颜色等共享 Shader 参数通过现有 MPB 控制器提交，避免多个组件互相覆盖。
 - Unity 2D 使用 URP/Light2D；修改 Shader 前核对材质实际 Shader 与 Pass。
-- 共用海水 `UsePass` 的包装 Shader 必须声明公共 Pass 新增的同名材质属性；月光等夜间自发光倒影应在 `CombinedShapeLightShared` 之后合成，避免全局夜间光照被重复相乘。
-- Water Tilemap 的 Tile Color 每个通道以 `0–0.45` 重复编码水深，岸线方向位再增加 `0.55`；调整 `ChunkTilemapRenderer` 或公共水面 Shader 时必须同步编码与解码常量，包装 Shader 继续声明公共 Pass 使用的全部属性。
-<<<<<<< HEAD
-=======
+- 共用海水 `UsePass` 的包装 Shader 必须声明公共 Pass 新增的同名材质属性；月光等夜间自发光倒影应在 `CombinedShapeLightShared` 之后合成，避免全局夜间光照被重复相乘。月亮出现动画读取 `DayTimeSystem` 发布的 `_GlobalMoonAppearance`，尺寸/渐亮与 `_GlobalMoonlightIntensity` 的月相亮度分离，避免新月把月面永久缩小。
+- Water Tilemap 的 Tile Color RGBA 只编码左、右、下、上岸线方向；水深必须由每个 Chunk 独立的带一格邻区边框纹理提供，并在格子中心之间使用双线性采样，禁止再把连续水深与岸线位打包进同一颜色通道。包装 Shader 必须继续声明公共 Pass 使用的全部属性。
+- Tilemap 合批后 `POSITION` 不保证是 Chunk 局部坐标；水深与岸线使用世界坐标，MPB 的 `_WaterDepthUvScaleOffset` 必须扣除水层原点再加入一格纹理边框。当前世界网格每格为 1 单位且原点对齐整数，不要用 `unity_WorldToObject` 恢复已被合批丢失的局部坐标。
 - 水面潮流使用 `DayTimeSystem` 发布的 `_GlobalGameDay` 驱动，并沿材质 `_FlowDirection` 轴按 `_TideCyclesPerDay` 往返；方向性水纹不要改回基于 `_Time` 的持续旋转，否则跳时、读档与游戏时间倍率会和潮汐表现脱节。
->>>>>>> origin/master
 - 运行时动态创建、用于展示世界物品图标的 `SpriteRenderer` 不得依赖 `AddComponent` 默认材质；应复用 `RuntimeItemDefinition.Material` 的物品材质与外壳回退，确保提示表现和真实物品一致接收 Light2D。
 - 草木风摆由 `WeatherMgr` 写入 `_GlobalWindStrength` Shader 全局参数；材质只保存自身基础幅度。Tilemap 使用单元锚点弯曲，底部 Pivot 的独立 Sprite 使用对象根部弯曲，且所有 URP 2D 活跃 Pass 必须复用同一顶点位移。
 - 屏幕后处理依赖当前 `QualitySettings` 的 `customRenderPipeline`；不能只检查编辑器当前质量档位，所有可选档位都必须引用项目内实际存在的 URP 资源，否则 Scene 视图可能可见而 Game/Android 画面不可见。
@@ -40,14 +38,11 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 浅滩最低淹没高度属于 `WaterImmersionRenderEffect` 的纯视觉映射，应在 `depthToSurface` 曲线结果后叠加身体归一化偏移；禁止改写 `TileData_Water.deepValue`，该值还会参与水中移速等玩法结算。
 - `TileEffectReceiver` 的邻接水格容错只服务于水边交互；`Tile_Water` 必须根据 `IsActiveTileEdgeInteractionOnly` 阻断浸没视觉、脚底阴影、Buff 和移动速度效果，避免站在沙格边缘的角色被误判为入水。
 - `TileEffectReceiver` 在地块来源变化时会于同一帧依次调用旧地块 `OnExit` 和新地块 `OnEnter`；一次性入水效果必须由角色侧保存真实浸水状态，并合并连续水格之间的同帧切换，不能把每个水格都当成重新入水。
-<<<<<<< HEAD
-=======
-- 雪地脚印等带历史轨迹的地表表现不能在 Tile `OnExit` 时清空历史；跨相邻同类地块同样会先 Exit 再 Enter，应只停止新轨迹采样，让已有轨迹继续按自身寿命逐步淘汰。
->>>>>>> origin/master
+- 雪地脚印等带历史轨迹的地表表现不能在 Tile `OnExit` 时清空历史；跨相邻同类地块同样会先 Exit 再 Enter，应只停止新轨迹采样，让已有轨迹继续按自身寿命逐步淘汰。`SnowFootprintTrail` 当前由 `Tile_Snow` 运行时 `AddComponent`，默认表现资源不能只依赖 Prefab/Inspector 预先赋值，必须保证动态创建后也能解析到专用 Shader/材质配置。
 - `Assets/2_Prefabs/Gameplay/Modules/Rendering/Shadow.prefab` 是 URP `ShadowCaster2D` 投影组件，不是实体脚底贴图；实体可视阴影应复用 `ActorShadowManager` 的独立注册和水体显隐入口。
 - `Presentation/Effects/Runtime/` 受独立 `Effect.asmdef` 隔离，不能反向引用主 `GamePlay` 程序集中的 `VisualEffectManager`；需要名称池管理器的角色表现控制器应放在 `Presentation/` 主程序集，或先抽取无环依赖的公共契约。
 - Editor 脚本留在 Editor 程序集/目录；生产程序集不得反向引用 `FlatWorld.Gameplay.Debug`。
-- 运行时世界由 `SceneManager.CreateScene` 动态创建，不会触发 `SceneManager.sceneLoaded`；监听运行时 Hierarchy 的 Editor 工具必须同时处理旧场景卸载与后续 `hierarchyChanged`，且不能用无界切换标记长期屏蔽用户操作。`hierarchyChanged` 热路径必须从少量已保存记录定向解析对象，禁止组合 `Resources.FindObjectsOfTypeAll` 与 `GlobalObjectId.GetGlobalObjectIdSlow` 全场景扫描，否则跨场景引用会制造警告并造成 `EditorLoop` 尖峰。
+- 运行时世界由 `SceneManager.CreateScene` 动态创建，不会触发 `SceneManager.sceneLoaded`；监听运行时 Hierarchy 的 Editor 工具必须同时处理旧场景卸载与后续 `hierarchyChanged`，且不能用无界切换标记长期屏蔽用户操作。`hierarchyChanged` 热路径必须从少量已保存记录定向解析对象，禁止组合 `Resources.FindObjectsOfTypeAll` 与 `GlobalObjectId.GetGlobalObjectIdSlow` 全场景扫描，否则跨场景引用会制造警告并造成 `EditorLoop` 尖峰；调用 `GlobalObjectIdentifierToObjectSlow` 前必须确认 ID 所属场景已加载，场景切换空窗直接跳过，否则 Unity 原生层会触发 `manager != NULL` 断言。
 - 内容工坊保持在 `Assets/Editor/FlatWorld/ContentTools/ContentWorkshop/`，只把可验证的差异写回 JSON，不在运行时程序集引入编辑器依赖。
 - 业务日志用 `GameLogManager` 的 `[WORK]` 接口；不要制造每帧重复警告。
 - `GMReflectionConsole` 独占 F4 作为 GM 调试面板开关；管理员手持物品加量由面板按钮调用，`GameDebugManager` 的晴天快捷键必须在脚本默认值与 `WorldManager.prefab` 序列化值中都使用 F6，禁止运行时反射改键。

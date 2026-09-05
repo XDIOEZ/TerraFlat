@@ -5,8 +5,8 @@ using UnityEngine.Rendering.Universal;
 
 /// <summary>
 /// 主相机跨越环绕边界时，用平移后的 Overlay 相机补绘标准世界镜像。
-/// 副本只负责画面与灯光，不复制玩法对象；存在副本时，屏幕后处理会转交给最后一台活动副本，
-/// 确保 Vignette 等全屏效果在完整相机栈合成后只执行一次。
+/// 副本只负责画面与灯光，不复制玩法对象；URP 14 的屏幕后处理必须由 Base 主相机开启，
+/// 这样 Vignette 等全屏效果会在完整 Camera Stack 合成后统一应用。
 /// </summary>
 [DefaultExecutionOrder(10000)]
 public sealed class WrappedWorldCameraRenderer : MonoBehaviour
@@ -24,10 +24,6 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
     private CinemachineVirtualCamera virtualCamera;
     private Transform followTarget;
     private bool warnedAboutReplicaLimit;
-    // 记录转交前的主相机后处理状态，退出环绕边界时原样恢复。
-    private bool sourcePostProcessingWasEnabled;
-    // 标记当前是否由最后一台活动副本负责屏幕后处理。
-    private bool isPostProcessingTransferred;
     private float nextLightSourceRefreshTime;
 
     public int ActiveReplicaCount { get; private set; }
@@ -39,7 +35,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         CinemachineVirtualCamera cinemachineCamera,
         Transform target)
     {
-        RestoreSourcePostProcessing();
+        DisableReplicaPostProcessing();
         RemoveReplicasFromSourceStack();
         sourceCamera = camera;
         sourceCameraData = sourceCamera != null
@@ -67,7 +63,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
     private void OnDisable()
     {
         WorldTopologyRuntime.LocalPlayerPositionWrapped -= HandlePositionWrapped;
-        RestoreSourcePostProcessing();
+        DisableReplicaPostProcessing();
         RemoveReplicasFromSourceStack();
         DisableAllReplicas();
         DisableAllReplicaLights();
@@ -77,7 +73,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
     private void OnDestroy()
     {
         WorldTopologyRuntime.LocalPlayerPositionWrapped -= HandlePositionWrapped;
-        RestoreSourcePostProcessing();
+        DisableReplicaPostProcessing();
         RemoveReplicasFromSourceStack();
         for (int i = 0; i < replicas.Count; i++)
         {
@@ -100,7 +96,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         if (sourceCamera == null || !sourceCamera.enabled ||
             !WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds))
         {
-            RestoreSourcePostProcessing();
+            DisableReplicaPostProcessing();
             DisableAllReplicas();
             DisableAllReplicaLights();
             return;
@@ -129,7 +125,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
                 sourceCamera.transform.rotation);
         }
 
-        SynchronizePostProcessingOwnership(count);
+        DisableReplicaPostProcessing();
         RefreshReplicaLights(bounds, count);
 
         if (requiredImages.Count > MaximumReplicaCameras && !warnedAboutReplicaLimit)
@@ -401,6 +397,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
             UniversalAdditionalCameraData cameraData =
                 replica.GetUniversalAdditionalCameraData();
             cameraData.renderType = CameraRenderType.Overlay;
+            cameraData.renderPostProcessing = false;
             replicas.Add(replica);
         }
 
@@ -429,58 +426,11 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
     }
 
     /// <summary>
-    /// 把后处理转交给最后一台活动 Overlay，让效果作用于完整相机栈，
-    /// 同时沿用真实主相机的 Volume 采样位置，避免环绕平移改变局部 Volume 判定。
+    /// URP 14 的 Overlay 相机不能独立执行后处理；后处理由 Base 相机对整个 Camera Stack 统一处理。
+    /// 因此这里只明确关闭副本后处理，绝不能再关闭主相机的 renderPostProcessing。
     /// </summary>
-    private void SynchronizePostProcessingOwnership(int activeReplicaCount)
+    private void DisableReplicaPostProcessing()
     {
-        if (sourceCameraData == null ||
-            sourceCameraData.renderType != CameraRenderType.Base ||
-            activeReplicaCount <= 0)
-        {
-            RestoreSourcePostProcessing();
-            return;
-        }
-
-        if (!isPostProcessingTransferred)
-        {
-            sourcePostProcessingWasEnabled = sourceCameraData.renderPostProcessing;
-            isPostProcessingTransferred = true;
-        }
-        else if (sourceCameraData.renderPostProcessing)
-        {
-            // 允许更早执行的相机服务在运行时重新开启后处理。
-            sourcePostProcessingWasEnabled = true;
-        }
-
-        sourceCameraData.renderPostProcessing = false;
-        Transform volumeTrigger = sourceCameraData.volumeTrigger != null
-            ? sourceCameraData.volumeTrigger
-            : sourceCamera.transform;
-
-        for (int i = 0; i < replicas.Count; i++)
-        {
-            Camera replica = replicas[i];
-            if (replica == null)
-                continue;
-
-            UniversalAdditionalCameraData replicaData =
-                replica.GetUniversalAdditionalCameraData();
-            replicaData.volumeLayerMask = sourceCameraData.volumeLayerMask;
-            replicaData.volumeTrigger = volumeTrigger;
-            replicaData.renderPostProcessing =
-                sourcePostProcessingWasEnabled && i == activeReplicaCount - 1;
-        }
-    }
-
-    /// <summary>把后处理所有权还给真实主相机，并关闭所有副本的后处理。</summary>
-    private void RestoreSourcePostProcessing()
-    {
-        if (isPostProcessingTransferred && sourceCameraData != null)
-            sourceCameraData.renderPostProcessing = sourcePostProcessingWasEnabled;
-
-        isPostProcessingTransferred = false;
-        sourcePostProcessingWasEnabled = false;
         for (int i = 0; i < replicas.Count; i++)
         {
             Camera replica = replicas[i];

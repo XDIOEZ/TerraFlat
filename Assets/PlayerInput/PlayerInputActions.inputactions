@@ -211,15 +211,6 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
-                },
-                {
-                    "name": "Tab",
-                    "type": "Button",
-                    "id": "68cd0693-34a0-460f-885d-8a51b06161a7",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -797,28 +788,6 @@
                 },
                 {
                     "name": "",
-                    "id": "7bbbd030-a567-491a-beb2-f01cc6043b1b",
-                    "path": "<Keyboard>/backquote",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Keyboard&Mouse",
-                    "action": "Tab",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "31f72f57-cd1a-42cd-93a9-9db5b02dcae4",
-                    "path": "<Gamepad>/select",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Gamepad",
-                    "action": "Tab",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
                     "id": "2b1ae201-38d8-4bb2-9291-7fba61453201",
                     "path": "<FlatWorldMobileDevice>/interact",
                     "interactions": "",
@@ -880,17 +849,6 @@
                     "processors": "",
                     "groups": "Mobile",
                     "action": "H",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "2b1ae207-38d8-4bb2-9291-7fba61453207",
-                    "path": "<FlatWorldMobileDevice>/survival",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "Mobile",
-                    "action": "Tab",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

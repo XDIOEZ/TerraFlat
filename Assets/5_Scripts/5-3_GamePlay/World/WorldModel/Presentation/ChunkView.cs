@@ -97,22 +97,38 @@ public sealed class ChunkView : MonoBehaviour
         }
     }
 
+    /// <summary>先终止绑定与事件回调，再解除表现；重复禁用、销毁不再次清理。</summary>
     public void Unbind()
     {
+        if (chunk == null && world == null)
+            return;
+
         bindVersion++;
-        for (int i = renderers.Count - 1; i >= 0; i--)
-            renderers[i].Unbind();
-        committedSubscription?.Dispose();
-        committedSubscription = null;
-        navigationLease?.Dispose();
-        navigationLease = null;
-        presentationLease?.Dispose();
-        presentationLease = null;
-        tilemapRenderer?.SetWorld(null);
         chunk = null;
         world = null;
         navigationEnabled = false;
         presentationComplete = false;
+        committedSubscription?.Dispose();
+        committedSubscription = null;
+        try
+        {
+            for (int i = renderers.Count - 1; i >= 0; i--)
+            {
+                // 接口引用不具备 Unity null 语义，子组件可能已先于 View 销毁。
+                if (renderers[i] is MonoBehaviour behaviour && behaviour != null)
+                    renderers[i].Unbind();
+            }
+        }
+        finally
+        {
+            renderers.Clear();
+            navigationLease?.Dispose();
+            navigationLease = null;
+            presentationLease?.Dispose();
+            presentationLease = null;
+            if (tilemapRenderer != null)
+                tilemapRenderer.SetWorld(null);
+        }
     }
 
     /// <summary>保存当前 ChunkView 下自然物的权威状态。</summary>

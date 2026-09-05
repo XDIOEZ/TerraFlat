@@ -521,7 +521,6 @@ public class GameController : Module
         _inputActions.Win10.ToggleRun.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.Ctrl.performed += UpdateCurrentInputDevice;
         _inputActions.Win10.ESC.performed += UpdateCurrentInputDevice;
-        _inputActions.Win10.Tab.performed += UpdateCurrentInputDevice;
     }
 
     private void UnregisterInputCallbacks() /// 取消输入监听
@@ -556,7 +555,6 @@ public class GameController : Module
         _inputActions.Win10.ToggleRun.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.Ctrl.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.ESC.performed -= UpdateCurrentInputDevice;
-        _inputActions.Win10.Tab.performed -= UpdateCurrentInputDevice;
     }
 
     /// <summary>切换并保存玩家选择的玩法控制方案；UI 指针动作不受玩法绑定遮罩影响。</summary>
@@ -922,16 +920,14 @@ public class GameController : Module
             AttackEnded?.Invoke();
     }
 
-    /// <summary>由输入锁、暂停、失焦、禁用和销毁共同调用，杜绝移动或攻击卡住。</summary>
+    /// <summary>释放输入锁、暂停和失焦等场景的持续输入，保留最后有效瞄准，杜绝移动或攻击卡住。</summary>
     public void CancelActiveAttackAndMobileInput()
     {
         MobileInputRuntime.ResetAll();
         DeactivateGamepadInput();
         EventSystemGuard.SetMobileAimCursorVisible(false);
-        _mobileAimStrength = 0f;
+        // 普通瞄准的方向、力度和世界目标属于保留状态，释放触摸不能把准星拉回玩家中心。
         _mobileAttackAimStrength = 0f;
-        _mobileCursorWorldPosition = default;
-        _mobileCursorWorldPositionInitialized = false;
         _mobileAttackActive = false;
         _mobileAttackDraggedOutsideDeadZone = false;
         _suppressMobileAttackUntilRelease = false;

@@ -32,6 +32,8 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     private Map _cachedMap;
     private Transform _externalPlayerTransform;
+    // 记录实际订阅者，销毁时不再查询可能已经卸载的 GameManager。
+    private GameManager _lifecycleGameManager;
 
     #endregion
 
@@ -163,8 +165,8 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     public void Start()
     {
-        // Debug.Log("物品加载完毕");
-        GameManager.Instance.BackToHelloScene_Event_Start += CleanupNullItems;
+        _lifecycleGameManager = GameManager.Instance;
+        _lifecycleGameManager.BackToHelloScene_Event_Start += CleanupNullItems;
     }
 
     protected override void OnDestroy()
@@ -172,10 +174,11 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         CompletePerceptionBatch(false);
         DisposePerceptionJobData();
 
-        if (GameManager.Instance != null)
+        if (_lifecycleGameManager != null)
         {
-            GameManager.Instance.BackToHelloScene_Event_Start -= CleanupNullItems;
+            _lifecycleGameManager.BackToHelloScene_Event_Start -= CleanupNullItems;
         }
+        _lifecycleGameManager = null;
 
         base.OnDestroy();
     }

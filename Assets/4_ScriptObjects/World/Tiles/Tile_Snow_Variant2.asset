@@ -37,8 +37,4 @@ MonoBehaviour:
       type: {class: Tile_Snow, ns: , asm: GamePlay}
       data:
         moveSpeedMultiplier: 0.9
-<<<<<<< HEAD
-        footprintLifetime: 10
-=======
         footprintLifetime: 60
->>>>>>> origin/master

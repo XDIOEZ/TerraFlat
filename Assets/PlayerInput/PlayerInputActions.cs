@@ -299,15 +299,6 @@ namespace InputSystem
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
-                },
-                {
-                    ""name"": ""Tab"",
-                    ""type"": ""Button"",
-                    ""id"": ""68cd0693-34a0-460f-885d-8a51b06161a7"",
-                    ""expectedControlType"": """",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -885,28 +876,6 @@ namespace InputSystem
                 },
                 {
                     ""name"": """",
-                    ""id"": ""7bbbd030-a567-491a-beb2-f01cc6043b1b"",
-                    ""path"": ""<Keyboard>/backquote"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": ""Keyboard&Mouse"",
-                    ""action"": ""Tab"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""31f72f57-cd1a-42cd-93a9-9db5b02dcae4"",
-                    ""path"": ""<Gamepad>/select"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": ""Gamepad"",
-                    ""action"": ""Tab"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
                     ""id"": ""2b1ae201-38d8-4bb2-9291-7fba61453201"",
                     ""path"": ""<FlatWorldMobileDevice>/interact"",
                     ""interactions"": """",
@@ -968,17 +937,6 @@ namespace InputSystem
                     ""processors"": """",
                     ""groups"": ""Mobile"",
                     ""action"": ""H"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""2b1ae207-38d8-4bb2-9291-7fba61453207"",
-                    ""path"": ""<FlatWorldMobileDevice>/survival"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": ""Mobile"",
-                    ""action"": ""Tab"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -1062,7 +1020,6 @@ namespace InputSystem
             m_Win10_LeftClick = m_Win10.FindAction("LeftClick", throwIfNotFound: true);
             m_Win10_P = m_Win10.FindAction("P", throwIfNotFound: true);
             m_Win10_H = m_Win10.FindAction("H", throwIfNotFound: true);
-            m_Win10_Tab = m_Win10.FindAction("Tab", throwIfNotFound: true);
         }
 
         ~@PlayerInputActions()
@@ -1166,7 +1123,6 @@ namespace InputSystem
         private readonly InputAction m_Win10_LeftClick;
         private readonly InputAction m_Win10_P;
         private readonly InputAction m_Win10_H;
-        private readonly InputAction m_Win10_Tab;
         /// <summary>
         /// Provides access to input actions defined in input action map "Win10".
         /// </summary>
@@ -1271,10 +1227,6 @@ namespace InputSystem
             /// </summary>
             public InputAction @H => m_Wrapper.m_Win10_H;
             /// <summary>
-            /// Provides access to the underlying input action "Win10/Tab".
-            /// </summary>
-            public InputAction @Tab => m_Wrapper.m_Win10_Tab;
-            /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
             public InputActionMap Get() { return m_Wrapper.m_Win10; }
@@ -1369,9 +1321,6 @@ namespace InputSystem
                 @H.started += instance.OnH;
                 @H.performed += instance.OnH;
                 @H.canceled += instance.OnH;
-                @Tab.started += instance.OnTab;
-                @Tab.performed += instance.OnTab;
-                @Tab.canceled += instance.OnTab;
             }
 
             /// <summary>
@@ -1452,9 +1401,6 @@ namespace InputSystem
                 @H.started -= instance.OnH;
                 @H.performed -= instance.OnH;
                 @H.canceled -= instance.OnH;
-                @Tab.started -= instance.OnTab;
-                @Tab.performed -= instance.OnTab;
-                @Tab.canceled -= instance.OnTab;
             }
 
             /// <summary>
@@ -1695,13 +1641,6 @@ namespace InputSystem
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnH(InputAction.CallbackContext context);
-            /// <summary>
-            /// Method invoked when associated input action "Tab" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
-            /// </summary>
-            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
-            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
-            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-            void OnTab(InputAction.CallbackContext context);
         }
     }
 }

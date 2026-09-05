@@ -357,6 +357,8 @@ namespace FlatWorld.WorldModel
                 precipitation * 0.78d + (1d - height) * 0.22d + floodplain * 0.18d);
             SurfaceBiomeKind biome = SurfaceBiomeClassifier.Resolve(
                 settings, height, temperature, precipitation, moisture, river);
+            bool frozenRiver = river && SurfaceBiomeClassifier.IsSnowClimate(
+                settings, temperature, precipitation);
             bool mountain = biome == SurfaceBiomeKind.Stone;
             bool alluvial =
                 (biome is SurfaceBiomeKind.Grassland or SurfaceBiomeKind.Forest) &&
@@ -377,10 +379,22 @@ namespace FlatWorld.WorldModel
             else if (biome == SurfaceBiomeKind.River)
             {
                 biomeId = (int)biome;
-                groundTileId = settings.FreshWaterTileId;
-                // 水域只是高代价地形：有陆路时 A* 优先绕行，唯一通路是水面时仍可通过。
-                flags = TerrainCellFlags.Water | TerrainCellFlags.Walkable;
-                navigationCost = settings.WaterNavigationCost;
+                if (frozenRiver)
+                {
+                    // 河流仍保留 River 群系编号和水文数据，但雪地气候下改用真正的冰地块；
+                    // 同时移除 Water 标记，避免冰块继续走水面 Tilemap/水体玩法效果。
+                    groundTileId = settings.IceTileId;
+                    flags = TerrainCellFlags.Walkable;
+                    navigationCost = (short)Math.Min(short.MaxValue, navigationCost + 1);
+                    temperatureCelsius = -10d;
+                }
+                else
+                {
+                    groundTileId = settings.FreshWaterTileId;
+                    // 水域只是高代价地形：有陆路时 A* 优先绕行，唯一通路是水面时仍可通过。
+                    flags = TerrainCellFlags.Water | TerrainCellFlags.Walkable;
+                    navigationCost = settings.WaterNavigationCost;
+                }
             }
             else if (biome == SurfaceBiomeKind.Stone)
             {

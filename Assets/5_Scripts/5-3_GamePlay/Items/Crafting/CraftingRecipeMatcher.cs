@@ -22,7 +22,7 @@ public static class CraftingRecipeMatcher
         return true;
     }
 
-    /// <summary>返回当前材料能够制作的全部配方，顺序沿用目录的稳定优先级。</summary>
+    /// <summary>返回当前材料能够制作的全部配方；普通合成允许使用输入材料的任意可满足子集，顺序沿用目录的稳定优先级。</summary>
     public static bool TryMatchAll(
         Inventory inputInventory,
         CraftingCapabilities capabilities,
@@ -278,7 +278,8 @@ public static class CraftingRecipeMatcher
     {
         match = null;
         // 无位置配方只要求材料总量满足；同一种材料既可以集中堆叠，也可以分散在任意输入槽。
-        // 额外放入未声明的材料仍然拒绝，避免误匹配后只消耗其中一部分材料。
+        // 普通合成把配方需求视为当前输入材料的子集：扫描完整配方目录即可等价覆盖左侧材料的全部可用组合，
+        // 未被所选配方使用的额外材料继续留在输入槽。加热加工仍保持严格输入，避免改变其既有语义。
         if (!recipe.inputs.RowItems_List.Any(required => !CraftingIngredientMatcher.IsEmpty(required)))
             return false;
 
@@ -290,15 +291,18 @@ public static class CraftingRecipeMatcher
             return false;
         }
 
-        foreach (ItemSlot slot in inputSlots)
+        if (recipe.inputs.recipeType != RecipeType.Crafting)
         {
-            if (slot?.itemData == null)
-                continue;
-            if (!recipe.inputs.RowItems_List.Any(required =>
-                    !CraftingIngredientMatcher.IsEmpty(required) &&
-                    CraftingIngredientMatcher.MatchesIdentity(required, slot.itemData)))
+            foreach (ItemSlot slot in inputSlots)
             {
-                return false;
+                if (slot?.itemData == null)
+                    continue;
+                if (!recipe.inputs.RowItems_List.Any(required =>
+                        !CraftingIngredientMatcher.IsEmpty(required) &&
+                        CraftingIngredientMatcher.MatchesIdentity(required, slot.itemData)))
+                {
+                    return false;
+                }
             }
         }
 

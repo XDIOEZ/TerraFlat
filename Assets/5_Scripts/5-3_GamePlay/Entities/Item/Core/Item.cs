@@ -413,6 +413,7 @@ public abstract class Item : MonoBehaviour
             // 所有模块加入Mods后统一初始化
             foreach (var mod in Mods.Values)
             {
+                BindModuleDependencies(mod);
                 mod.ModuleInit(this, null);
             }
             foreach (var mod in Mods.Values)
@@ -523,6 +524,7 @@ public abstract class Item : MonoBehaviour
             // 全部加入Mods后再统一初始化（防止初始化中找不到其他模块）
             foreach (var mod in modsToInit)
             {
+                BindModuleDependencies(mod);
                 mod.ModuleInit(this, mod._Data);
             }
             foreach (var mod in modsToInit)
@@ -532,6 +534,13 @@ public abstract class Item : MonoBehaviour
         }
 
         MarkModuleScheduleDirty();
+    }
+
+    /// <summary>模块注册完成后统一解析显式依赖，确保初始化顺序不影响组合结果。</summary>
+    private void BindModuleDependencies(Module module)
+    {
+        if (module is IItemModuleDependencyBinder binder)
+            binder.BindModuleDependencies(itemMods);
     }
 
     /// <summary>按当前 Item 定义把持久化逻辑 ID 解析为具体模块 Prefab 地址。</summary>

@@ -25,7 +25,7 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
 
     private const string InputInventorySaveKey = "maketable.input";
     private const string OutputInventorySaveKey = "maketable.output";
-    private const int InputSlotCount = 3;
+    private const int InputSlotCount = 5;
     private const int OutputSlotCount = 2;
 
     public override void Load()

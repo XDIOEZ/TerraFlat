@@ -619,12 +619,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 541e52aaac751114695281ff755dd515
-    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Panels/UI_ItemContextMenu.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 54b04d56d01340446a63b5317921045a
     m_Address: Assets/6_Art/Items/Tools/Item_Tool_165.png
     m_ReadOnly: 0
@@ -723,6 +717,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 605d848763ec2b14b894091dbe0dc2ee
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Combat/Mod_Damage.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 60ad9b6e4f8a4c4aa4c994837d4534b1
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Combat/Module_DamageOnHitBuff.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1732,12 +1732,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: e93fb2825dd39564687eb4afe114ce36
-    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Panels/UI_ItemInfo.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e996c081176bb7b479f0b1296fcb4175
     m_Address: Assets/2_Prefabs/Gameplay/Items/Food/Fertilizer.prefab

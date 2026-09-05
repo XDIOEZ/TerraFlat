@@ -47,6 +47,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private GameObject gameplayLayer;
     private GameObject persistentLayer;
     private GameObject drawer;
+    private RectTransform drawerArrow; // 菜单展开时向右，收起时向左。
     private RectTransform mobileAimCursor;
     private MobileVirtualJoystick[] joysticks;
     private MobileHeldItemDropSurface[] heldItemDropSurfaces;
@@ -236,6 +237,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         gameplayLayer = FindRequired(GameplayLayerName)?.gameObject;
         persistentLayer = FindRequired(PersistentLayerName)?.gameObject;
         drawer = FindRequired(DrawerName)?.gameObject;
+        drawerArrow = FindRequired("菜单箭头") as RectTransform;
         hotbarBackpackButton = FindRequired(BackpackButtonName) as RectTransform;
         hotbarBackpackHome = hotbarBackpackButton != null ? hotbarBackpackButton.parent : null;
         EnsureAimCursorVisual();
@@ -677,9 +679,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         ConfigureVirtualButton("使用", MobileVirtualButton.Use);
         ConfigureVirtualButton("奔跑", MobileVirtualButton.Run);
         ConfigureVirtualButton(BackpackButtonName, MobileVirtualButton.Inventory);
-        ConfigureVirtualButton("装备", MobileVirtualButton.Equipment);
-        ConfigureVirtualButton("制作", MobileVirtualButton.Crafting);
-        ConfigureVirtualButton("状态", MobileVirtualButton.Survival);
         inputButtons = viewObject.GetComponentsInChildren<MobileInputButton>(true);
     }
 
@@ -742,7 +741,9 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private void ConfigureCommands()
     {
         BindClick("菜单", ToggleDrawer);
-        BindClick("关闭抽屉", CloseDrawer);
+        // 滚动条目只在完整点击后脉冲输入，避免按下准备拖动时就打开玩法面板。
+        BindClick("装备", () => StartCoroutine(PulseVirtualButton(MobileVirtualButton.Equipment)));
+        BindClick("制作", () => StartCoroutine(PulseVirtualButton(MobileVirtualButton.Crafting)));
         BindClick("丢弃一个", DropOne);
         BindClick("设置", OpenSettingsFromButton);
     }
@@ -989,23 +990,27 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
     public void ToggleDrawer()
     {
-        if (drawer == null)
-            return;
-
-        UIManager manager = UIManager.ExistingInstance;
-        // 菜单抽屉是背包、制作等玩法面板的并行入口，面板打开时仍允许展开。
-        drawer.SetActive(!drawer.activeSelf);
-        if (drawer.activeSelf)
-            RefreshCameraZoomSlider();
-        manager?.NotifyInteractionSurfaceChanged();
+        SetDrawerOpen(!IsDrawerOpen);
     }
 
     public void CloseDrawer()
     {
-        if (drawer == null || !drawer.activeSelf)
+        SetDrawerOpen(false);
+    }
+
+    /// <summary>统一更新抽屉、方向图标和交互层，点击开关与返回操作共享同一状态。</summary>
+    private void SetDrawerOpen(bool open)
+    {
+        if (drawer == null || drawer.activeSelf == open)
             return;
-        drawer.SetActive(false);
-        UIManager.Instance.NotifyInteractionSurfaceChanged();
+
+        UIManager manager = UIManager.ExistingInstance;
+        // 菜单抽屉是背包、制作等玩法面板的并行入口，面板打开时仍允许展开。
+        drawer.SetActive(open);
+        drawerArrow.localRotation = Quaternion.Euler(0f, 0f, open ? 180f : 0f);
+        if (open)
+            RefreshCameraZoomSlider();
+        manager?.NotifyInteractionSurfaceChanged();
     }
 
     public static bool TryCloseActiveDrawer()
@@ -1025,8 +1030,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     /// <summary>独立设置按钮先收起抽屉，再脉冲设置 Action，确保返回栈正确打开设置面板。</summary>
     private void OpenSettingsFromButton()
     {
-        if (drawer != null)
-            drawer.SetActive(false);
+        CloseDrawer();
         StartCoroutine(PulseVirtualButton(MobileVirtualButton.Settings));
     }
 

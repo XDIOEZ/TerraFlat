@@ -417,8 +417,26 @@ namespace FlatWorld.EditorTools
             if (string.IsNullOrEmpty(value) || !GlobalObjectId.TryParse(value, out GlobalObjectId id))
                 return null;
 
+            // Unity 只允许解析所属场景已加载的场景对象，否则原生层会触发 manager 断言。
+            if (!IsGlobalIdSceneLoaded(id))
+                return null;
+
             GameObject go = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(id) as GameObject;
             return IsLoadedSceneObject(go) ? go : null;
+        }
+
+        /// <summary>确认稳定 ID 指向当前已加载的普通场景。</summary>
+        private static bool IsGlobalIdSceneLoaded(GlobalObjectId id)
+        {
+            if (id.identifierType != 2)
+                return false;
+
+            string scenePath = AssetDatabase.GUIDToAssetPath(id.assetGUID.ToString());
+            if (string.IsNullOrEmpty(scenePath))
+                return false;
+
+            Scene scene = SceneManager.GetSceneByPath(scenePath);
+            return scene.IsValid() && scene.isLoaded && !EditorSceneManager.IsPreviewScene(scene);
         }
 
         /// <summary>通过“场景标识|层级路径”精确定位对象。</summary>

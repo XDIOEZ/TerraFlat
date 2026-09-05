@@ -1782,8 +1782,13 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
         try
         {
-            command.Method.Invoke(command.Target, command.Arguments);
-            SetStatus($"已执行：{command.Category} / {command.Label}", new Color(0.35f, 0.95f, 0.85f));
+            object result = command.Method.Invoke(command.Target, command.Arguments);
+            string resultMessage = result as string;
+            SetStatus(
+                string.IsNullOrWhiteSpace(resultMessage)
+                    ? $"已执行：{command.Category} / {command.Label}"
+                    : resultMessage,
+                new Color(0.35f, 0.95f, 0.85f));
         }
         catch (TargetInvocationException exception)
         {

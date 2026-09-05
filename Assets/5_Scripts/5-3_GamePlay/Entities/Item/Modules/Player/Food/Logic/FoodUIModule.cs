@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 食物 UI 模块：负责食物参数面板的创建、显示、刷新、拖拽位置保存和销毁，
+/// 食物 UI 模块：仅为本地玩家创建常驻参数 HUD，负责刷新、位置保存和销毁，
 /// 并读取玩家 DamageReceiver 的权威生命值显示到角色参数面板。
 /// UI 只读取运行时状态，不参与营养计算、回血或进食结算。
 /// </summary>
@@ -50,46 +50,19 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
         RefreshUI();
     }
 
-    public void ShowPanel()
+    #region 常驻 HUD 生命周期
+
+    /// <summary>本地玩家加载后创建并显示 HUD，普通食物、动物和远端玩家不创建面板。</summary>
+    public void Initialize()
     {
-        if (!EnsurePanelExists())
+        if (!(context.Item is Player player) || !player.IsLocalProfile)
             return;
 
-        OpenPanel();
-    }
-
-    public void HidePanel()
-    {
-        BasePanel panel = ResolvePanel();
-        if (panel == null)
-            return;
-
-        panel.Close();
-        context.Data.ShowCanvas = false;
-        SavePanelPosition();
-    }
-
-    public void TogglePanel()
-    {
-        if (context.Item != null)
-        {
-            GameController controller = context.Item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
-            if (controller != null && controller.IsGameplayInputLocked)
-                return;
-        }
-
-        BasePanel panel = ResolvePanel();
-        if (panel == null)
-        {
-            ShowPanel();
-            return;
-        }
-
-        if (panel.IsOpen())
-            HidePanel();
-        else
+        if (EnsurePanelExists())
             OpenPanel();
     }
+
+    #endregion
 
     public void RefreshUI()
     {
@@ -209,7 +182,6 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
 
         panel.Open();
         SetStatusHudInputTransparent(panel);
-        context.Data.ShowCanvas = true;
         RefreshUI();
     }
 
@@ -259,7 +231,7 @@ public sealed class FoodUIModule : IFoodMechanic, IFoodStateObserver, IDisposabl
             text.text = $"{Mathf.RoundToInt(currentValue)}/{Mathf.RoundToInt(maxValue)}";
     }
 
-    /// <summary>把玩家权威生命值同步到角色参数面板；普通食物面板隐藏该行。</summary>
+    /// <summary>把本地玩家的权威生命值同步到常驻参数面板。</summary>
     private void UpdateHealthUI(BasePanel panel)
     {
         Slider slider = FindSlider(panel, "血量");

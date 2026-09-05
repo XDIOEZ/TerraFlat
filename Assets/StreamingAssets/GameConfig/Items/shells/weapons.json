@@ -952,7 +952,7 @@
     {
       "id": "Torch",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab",
-      "shellPrefab": "Torch",
+      "shellPrefab": "Stick",
       "gameName": "火把",
       "description": "可照亮周围环境的简易火把，由木棍和燃料制成。",
       "visual": {
@@ -1053,7 +1053,7 @@
           }
         },
         "light": {
-          "prefab": "Module_LightSource",
+          "prefab": "BuildingFeature_Torch_Building_Mod_LightSource",
           "id": "Module_LightSource",
           "enabled": true,
           "parameters": {
@@ -1063,6 +1063,19 @@
               "Range": 8.0,
               "InnerRadius": 0.1
             }
+          }
+        },
+        "hitBuff": {
+          "prefab": "Module_DamageOnHitBuff",
+          "id": "Module_DamageOnHitBuff",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "buffId": "燃烧",
+            "applicationChance": 0.25
           }
         }
       }

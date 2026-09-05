@@ -78,70 +78,102 @@ public class Mod_PlayerTraits : Module
     /// <summary>
     /// 管理员初始化创造模式背包（供 PlayerAdminController 调用）
     /// </summary>
-    public void InitializeCreativeInventoryForAdmin()
+    public string InitializeCreativeInventoryForAdmin()
     {
         if (!TryGetPlayer(out var target))
         {
-            return;
+            return "创造背包失败：未找到玩家。";
         }
 
         // 获取玩家背包模块
         var bagMod = target.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag);
         if (bagMod == null || bagMod.inventory == null)
         {
-            Debug.LogError("[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 找不到背包 Mod_Inventory 或 inventory 为空");
-            return;
+            const string message = "创造背包失败：找不到玩家背包。";
+            Debug.LogError($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] {message}");
+            return message;
         }
 
-        // 收集所有 Item prefab，为每个生成独立 ItemData
-        if (GameRes.Instance == null || GameRes.Instance.AllPrefabs == null)
+        // ItemDefinitions 是可创建物品唯一真源，不再回到 Prefab 别名筛选。
+        if (GameRes.Instance == null)
         {
-            Debug.LogError("[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] GameRes.Instance 或 AllPrefabs 为空");
-            return;
+            const string message = "创造背包失败：物品目录尚未初始化。";
+            Debug.LogError($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] {message}");
+            return message;
         }
 
         IReadOnlyList<string> itemIds = GameRes.Instance.GetAllItemIds();
         var creativeItems = new List<ItemData>(itemIds.Count);
+        var uncreatableItemIds = new List<string>();
+        int actorCount = 0;
 
         foreach (string itemId in itemIds)
         {
-            GameObject prefab = GameRes.Instance.GetPrefab(itemId, false);
-            if (prefab == null)
+            // Actor 与普通 Item 共用定义目录，但不能进入背包。
+            if (!GameRes.Instance.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition))
             {
+                uncreatableItemIds.Add(itemId);
                 continue;
             }
 
-            var itemComponent = prefab.GetComponent<Item>();
-            // 跳过非 Item、Player 和 Map（避免把自己或地图塞进背包）
-            if (itemComponent == null || itemComponent is Player || itemComponent is Map)
+            if (definition.IsActor)
             {
+                actorCount++;
                 continue;
             }
 
-            // 生成新 ItemData，避免污染 prefab 本体
-            ItemData data = GameRes.Instance.CreateItemData(itemId);
-            if (data == null)
+            ItemData data;
+            try
             {
+                data = GameRes.Instance.CreateItemData(itemId);
+            }
+            catch (System.Exception exception)
+            {
+                uncreatableItemIds.Add(itemId);
+                Debug.LogError($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 物品 {itemId} 无法创建：{exception.Message}");
                 continue;
             }
 
+            if (data?.Stack == null)
+            {
+                uncreatableItemIds.Add(itemId);
+                Debug.LogError($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 物品 {itemId} 没有有效的堆叠数据。");
+                continue;
+            }
+
+            data.Stack.Amount = 1f;
             creativeItems.Add(data);
         }
 
         if (creativeItems.Count == 0)
         {
-            Debug.LogWarning("[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 在 AllPrefabs 中未找到任何可用的 Item 预制体");
-            return;
+            const string message = "创造背包未添加物品：当前定义目录为空。";
+            Debug.LogWarning($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] {message}");
+            return message;
         }
 
         // 按物品数量扩展背包容量
         bagMod.inventory.AddSlotsAtRuntime(creativeItems.Count);
 
-        // 将生成的 ItemData 放入背包
+        int addedCount = 0;
+        var capacityFailedItemIds = new List<string>();
         foreach (var data in creativeItems)
         {
-            bagMod.inventory.Data.TryAddItem(data, true);
+            bool fullyAdded = bagMod.inventory.Data.TryAddItem(data, true, out float addedAmount);
+            if (fullyAdded && addedAmount >= data.Stack.Amount)
+                addedCount++;
+            else
+                capacityFailedItemIds.Add(data.IDName);
         }
+
+        string summary = $"创造背包完成：成功 {addedCount} 种，容量不足 {capacityFailedItemIds.Count} 种，" +
+                         $"不可创建 {uncreatableItemIds.Count} 种，排除 Actor {actorCount} 种，共扫描 {itemIds.Count} 条定义。";
+        if (capacityFailedItemIds.Count > 0)
+            Debug.LogWarning($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 背包容量不足：{string.Join(", ", capacityFailedItemIds)}");
+        if (uncreatableItemIds.Count > 0)
+            Debug.LogError($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 不可创建物品：{string.Join(", ", uncreatableItemIds)}");
+        Debug.Log($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] {summary}");
+        return summary;
     }
 
     /// <summary>

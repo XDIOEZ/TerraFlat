@@ -79,7 +79,6 @@ public static class FlatWorldUITheme
         ("UI_FireDrill", "钻木取火", "FIRECRAFT  /  生火作业"),
         ("UI_FlintStrike", "燧石取火", "FIRECRAFT  /  生火作业"),
         ("UI_ModuleList", "生存状态", "SURVIVAL  /  模块状态"),
-        ("UI_ItemInfo", "物品详情", "ITEM  /  观察记录"),
         ("UI_ActionList", "功能列表", "ACTIONS  /  快捷入口"),
         ("UI_Debug", "调试面板", "DEVELOPMENT  /  运行信息")
     };

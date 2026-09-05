@@ -871,6 +871,8 @@ public static class SyncAllPrefabItemDataEditor
             changed = true;
         }
 
+        changed |= SyncWeaponDamageColliderToSprite(prefabPath, render, modDamage, collider);
+
         SerializedObject damageSerializedObject = new SerializedObject(damage);
         SerializedProperty damageColliderProperty = damageSerializedObject.FindProperty("damageCollider");
         if (damageColliderProperty == null || damageColliderProperty.objectReferenceValue != collider)
@@ -931,6 +933,119 @@ public static class SyncAllPrefabItemDataEditor
             }
 
             Object.DestroyImmediate(child.gameObject, true);
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    /// <summary>让动画武器的伤害盒与 Render 下唯一的武器 Sprite 使用同一局部变换与图形边界。</summary>
+    private static bool SyncWeaponDamageColliderToSprite(
+        string prefabPath,
+        Transform render,
+        Transform modDamage,
+        Collider2D collider)
+    {
+        if (!prefabPath.StartsWith(WeaponRootFolder + "/", System.StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (!(collider is BoxCollider2D boxCollider))
+        {
+            throw new System.InvalidOperationException($"{prefabPath} 的 Mod_Damage 必须使用 BoxCollider2D。");
+        }
+
+        SpriteRenderer weaponRenderer = null;
+        SpriteRenderer[] renderers = render.GetComponentsInChildren<SpriteRenderer>(true);
+        foreach (SpriteRenderer candidate in renderers)
+        {
+            if (candidate == null ||
+                candidate.sprite == null ||
+                candidate.transform == modDamage ||
+                candidate.transform.IsChildOf(modDamage))
+            {
+                continue;
+            }
+
+            if (weaponRenderer != null)
+            {
+                throw new System.InvalidOperationException(
+                    $"{prefabPath} 的 Render 下存在多个武器 SpriteRenderer，无法唯一绑定 Mod_Damage。");
+            }
+
+            weaponRenderer = candidate;
+        }
+
+        if (weaponRenderer == null)
+        {
+            throw new System.InvalidOperationException(
+                $"{prefabPath} 的 Render 下没有可绑定的武器 SpriteRenderer。");
+        }
+
+        Transform visualTransform = weaponRenderer.transform;
+        Vector3 desiredPosition;
+        Quaternion desiredRotation;
+        Vector3 desiredScale;
+
+        if (visualTransform == render)
+        {
+            desiredPosition = Vector3.zero;
+            desiredRotation = Quaternion.identity;
+            desiredScale = Vector3.one;
+        }
+        else
+        {
+            if (visualTransform.parent != render)
+            {
+                throw new System.InvalidOperationException(
+                    $"{prefabPath} 的武器 SpriteRenderer 必须直接位于 Render 下，才能稳定绑定伤害盒。");
+            }
+
+            desiredPosition = visualTransform.localPosition;
+            desiredRotation = visualTransform.localRotation;
+            desiredScale = visualTransform.localScale;
+        }
+
+        bool changed = false;
+        if ((modDamage.localPosition - desiredPosition).sqrMagnitude > 0.000001f)
+        {
+            modDamage.localPosition = desiredPosition;
+            changed = true;
+        }
+
+        if (Quaternion.Angle(modDamage.localRotation, desiredRotation) > 0.001f)
+        {
+            modDamage.localRotation = desiredRotation;
+            changed = true;
+        }
+
+        if ((modDamage.localScale - desiredScale).sqrMagnitude > 0.000001f)
+        {
+            modDamage.localScale = desiredScale;
+            changed = true;
+        }
+
+        Vector2 desiredOffset = weaponRenderer.sprite.bounds.center;
+        if (weaponRenderer.flipX)
+        {
+            desiredOffset.x = -desiredOffset.x;
+        }
+        if (weaponRenderer.flipY)
+        {
+            desiredOffset.y = -desiredOffset.y;
+        }
+
+        Vector2 desiredSize = weaponRenderer.sprite.bounds.size;
+        if ((boxCollider.offset - desiredOffset).sqrMagnitude > 0.000001f)
+        {
+            boxCollider.offset = desiredOffset;
+            changed = true;
+        }
+
+        if ((boxCollider.size - desiredSize).sqrMagnitude > 0.000001f)
+        {
+            boxCollider.size = desiredSize;
             changed = true;
         }
 

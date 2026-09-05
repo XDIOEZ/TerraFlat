@@ -17,8 +17,8 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 7;
-    private const int ModdedSaveVersion = 6;
+    private const int CompactSaveVersion = 8;
+    private const int ModdedSaveVersion = 7;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";

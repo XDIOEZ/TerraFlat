@@ -91,7 +91,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  AttackEffects: []
+  AttackEffects:
+  - {fileID: 7635046391721750622, guid: c7dc8a6dfe6cb24488ccff466b999811, type: 3}
   DamageValues:
     Cutting: 0
     Piercing: 0

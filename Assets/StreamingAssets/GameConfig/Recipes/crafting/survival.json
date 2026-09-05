@@ -302,6 +302,47 @@
       ]
     },
     {
+      "id": "core:木棍_切削合成",
+      "displayName": "木棍_切削合成",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "tag",
+          "itemId": "",
+          "tag": "Axe",
+          "amount": 0
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Log",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Stick_Wood",
+          "amount": 4
+        }
+      ],
+      "actions": [
+        {
+          "type": "change_durability",
+          "targetRole": "Axe",
+          "value": 1.0,
+          "slotIndex": 0
+        }
+      ]
+    },
+    {
       "id": "core:木质盔甲",
       "displayName": "木质盔甲",
       "recipeType": "crafting",

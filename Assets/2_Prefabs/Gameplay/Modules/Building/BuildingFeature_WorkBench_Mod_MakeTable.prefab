@@ -60,14 +60,20 @@ MonoBehaviour:
       Name: 
       itemSlots:
       - CanAcceptTags: []
-        SlotMaxVolume: 0
+        SlotMaxVolume: 100
         Index: 0
       - CanAcceptTags: []
-        SlotMaxVolume: 0
-        Index: 0
+        SlotMaxVolume: 100
+        Index: 1
       - CanAcceptTags: []
-        SlotMaxVolume: 0
-        Index: 0
+        SlotMaxVolume: 100
+        Index: 2
+      - CanAcceptTags: []
+        SlotMaxVolume: 100
+        Index: 3
+      - CanAcceptTags: []
+        SlotMaxVolume: 100
+        Index: 4
       Index: 0
       IsInjected: 0
       PanelPosition: {x: 0, y: 0, z: 0}

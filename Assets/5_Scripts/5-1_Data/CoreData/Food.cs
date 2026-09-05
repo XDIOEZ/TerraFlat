@@ -9,7 +9,6 @@ public partial class Food
 {
     public Nutrition nutrition = new();//营养值
     public float Max_EatingProgress = 3;//最大进度
-    public bool ShowCanvas = false;//面板显示状态
     public GameValue_float nutritionConsumeSpeed = new(0f);
 
     public bool FeelGood = false; // ← 加在这里

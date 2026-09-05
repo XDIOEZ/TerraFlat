@@ -27,6 +27,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 手机 HUD 的菜单/返回入口必须独立于可隐藏的玩法控制层；模态玩法面板打开时保留该入口并允许背包/制作等面板并行打开，Android 返回键或 Escape 优先关闭最上层可取消面板，避免移动端失去退出路径。
 - 主菜单属于不可直接关闭的根面板；Android 返回键、Escape 或手柄取消应通过 `BasePanel.CancelShortcutOverride` 打开正式退出确认 Prefab，只有确认按钮退出应用，取消或再次返回只关闭确认层。
 - 坐标、角色状态等信息型 HUD 使用屏幕角落锚点和透明容器，只显示会随运行时变化的字段/状态条；禁止为这类 HUD 添加整块背景、卡片标题或装饰性介绍文字。
+- 角色参数 HUD 由 FoodUIModule 随模块生命周期创建/释放，只为已设定 IsLocalProfile 的本地 Player 创建；Food 模块也用于动物和静态食物，不能按模块存在或保存的 UI 显隐状态决定是否创建 HUD。
 - 常驻组件事件驱动；禁止等待绑定或比较静态状态的 Update/LateUpdate 和逐帧 `GetComponent*`。
 - 动态列表复用条目；结构变化才局部 MarkLayoutForRebuild，数值/颜色更新不强制布局。热路径禁止 ForceUpdateCanvases/ForceRebuild。
 - 动态列表的通用节点名（如 `Content`）不得在整个面板全局查找；必须从所属 `ScrollRect` 或业务容器取引用，避免与 Dropdown 模板等同名节点串容器。
@@ -49,7 +50,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 ## Prefab 与目录约束
 
 - 创建 UI Prefab 时必须按用途放入 `Assets/2_Prefabs/2-1_UI/` 下合适的分类目录；优先复用 `Common`、`Gameplay`、`MainMenu`、`Settings`，不要把 Prefab 直接堆在 UI 根目录。现有分类都不匹配时，才新增职责明确的子目录。
-- 普通合成正式 Prefab 为 `Gameplay/Crafting/UI_HandCraftTable.prefab` 与 `UI_MakerTable.prefab`：参考画布下固定 1344×756（约占 1920×1080 的 70%），边框 1 像素，主要按钮高度不低于 60；节点契约为 `输入_1...`、`输出_1/2`、`配方候选内容`、隐藏的 `配方候选模板`、`合成按钮`、`关闭`。运行时只复用模板生成候选项，不拼装视觉层级。
+- 普通合成正式 Prefab 为 `Gameplay/Crafting/UI_HandCraftTable.prefab` 与 `UI_MakerTable.prefab`：参考画布下固定 1344×756（约占 1920×1080 的 70%），边框 1 像素，主要按钮高度不低于 60；手工台契约为 `输入_1...输入_4`，世界制作台为 `输入_1...输入_5`，两者共用 `输出_1/2`、`配方候选内容`、隐藏的 `配方候选模板`、`合成按钮`、`关闭`。运行时只复用模板生成候选项，不拼装视觉层级；`UI_MakerTable` 根节点不得保留旧 `Image` 流程箭头。
 - 新增正式 Prefab 必须位于 Addressables `Prefab` 标签范围，并登记稳定加载键；移动或重命名资源时保留 `.meta`，同步检查加载键与引用。
 - `5-5_UI` 的子目录统一继承根 `UI.asmdef`；整理脚本时使用 `AssetDatabase.MoveAsset` 连同 `.meta` 移动，不新建子程序集或重生成 GUID，避免 Prefab 上的 MonoScript 引用失效。
 

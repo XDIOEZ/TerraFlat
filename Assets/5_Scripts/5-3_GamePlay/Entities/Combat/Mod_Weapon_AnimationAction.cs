@@ -4,12 +4,12 @@ using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class Mod_Weapon_AnimationAction : Module
+public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
 {
     #region Config
     [Tooltip("武器动画树 Animator")]
     public Animator animator;//武器的动画树
-    [Tooltip("该武器唯一的伤害模块，必须在 Prefab 中显式绑定")]
+    [Tooltip("该武器唯一的伤害模块；Prefab 可显式绑定，JSON 组合由 ItemMods 绑定")]
     [SerializeField] private Mod_Damage damageModule;
 
     [Tooltip("是否使用本地输入触发攻击")]
@@ -75,6 +75,20 @@ public class Mod_Weapon_AnimationAction : Module
             return;
         }
 
+        SpriteRenderer weaponRenderer = item.Sprite;
+        if (weaponRenderer == null)
+        {
+            weaponRenderer = item.GetComponentInChildren<SpriteRenderer>(true);
+            item.Sprite = weaponRenderer;
+        }
+        if (weaponRenderer == null || weaponRenderer.sprite == null)
+        {
+            Debug.LogError($"{name} 找不到有效的武器 SpriteRenderer，无法绑定伤害区域。", this);
+            return;
+        }
+
+        cachedDamageModule.BindToWeaponRenderer(weaponRenderer);
+
         if (item.Owner != null)
         {
             cachedController = item.Owner.GetComponentInChildren<GameController>();
@@ -93,6 +107,16 @@ public class Mod_Weapon_AnimationAction : Module
     public override void Save()
     {
         ModSaveData.WriteData(RawData);
+    }
+
+    /// <summary>从 ItemMods 唯一稳定 ID 绑定伤害模块，并校验 Prefab 显式引用没有漂移。</summary>
+    public void BindModuleDependencies(ItemMods modules)
+    {
+        Mod_Damage resolved = modules.RequireSingleModById<Mod_Damage>("Mod_Damage");
+        if (damageModule != null && damageModule != resolved)
+            throw new System.InvalidOperationException($"{name} 的伤害引用与 ItemMods 注册结果不一致。");
+
+        damageModule = resolved;
     }
 
     public override void Unload()

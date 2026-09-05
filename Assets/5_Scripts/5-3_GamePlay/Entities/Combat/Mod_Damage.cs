@@ -53,6 +53,12 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
 
     [SerializeField] private Collider2D damageCollider;
 
+    // 动画武器命中盒绑定：以实际武器 SpriteRenderer 为唯一空间权威。
+    private SpriteRenderer boundWeaponRenderer;
+    private Sprite boundWeaponSprite;
+    private bool boundWeaponFlipX;
+    private bool boundWeaponFlipY;
+
     // 定时伤害相关
     [SerializeField]
     private float lastDamageTime = 0f;
@@ -127,8 +133,22 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
         // 保存逻辑可以后续实现
     }
 
+    /// <summary>Animator 更新后再次同步武器命中盒，保证伤害区域始终跟随实际武器画面。</summary>
+    private void LateUpdate()
+    {
+        SyncBoundWeaponHitbox();
+    }
+
     public override void ModUpdate(float deltaTime)
     {
+        // 没有动画动作模块的简易近战武器也必须在拿到手时绑定实际 Sprite 区域。
+        if (boundWeaponRenderer == null &&
+            item != null && item.InHand &&
+            item.Sprite != null && item.Sprite.sprite != null)
+        {
+            BindToWeaponRenderer(item.Sprite);
+        }
+
         if (damageCollider != null)
         {
             bool colliderEnabled = damageCollider.enabled;
@@ -358,6 +378,8 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
     /// <summary>重置本次攻击命中集合，并立即补查当前重叠的实体与格子建筑。</summary>
     private void BeginTileDamageWindow()
     {
+        // 攻击窗口可能由动画曲线在本帧开启，先同步实际武器姿态再做主动重叠扫描。
+        SyncBoundWeaponHitbox();
         tileDamageAppliedThisWindow = false;
         nonDamageableImpactAppliedThisWindow = false;
         windowScanHitReceivers.Clear();
@@ -478,6 +500,71 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
         boxCollider.size *= relativeMultiplier;
         boxCollider.edgeRadius *= relativeMultiplier;
         damageRangeMultiplier = targetMultiplier;
+    }
+
+    /// <summary>把动画武器的伤害盒绑定到实际 SpriteRenderer；位置、旋转、缩放与 Sprite 边界都由画面本身决定。</summary>
+    public void BindToWeaponRenderer(SpriteRenderer weaponRenderer)
+    {
+        if (weaponRenderer == null || weaponRenderer.sprite == null)
+            throw new System.InvalidOperationException($"{name} 无法绑定武器伤害区域：SpriteRenderer 或 Sprite 为空。");
+        if (damageCollider is not BoxCollider2D)
+            throw new MissingComponentException($"{name} 的动画武器伤害区域必须使用 BoxCollider2D。");
+
+        boundWeaponRenderer = weaponRenderer;
+        boundWeaponSprite = null;
+        SyncBoundWeaponHitbox(forceShapeSync: true);
+    }
+
+    /// <summary>同步动画武器伤害盒的空间姿态，并在 Sprite/翻转变化时刷新盒体边界。</summary>
+    private void SyncBoundWeaponHitbox(bool forceShapeSync = false)
+    {
+        if (boundWeaponRenderer == null || damageCollider is not BoxCollider2D boxCollider)
+            return;
+
+        Transform rendererTransform = boundWeaponRenderer.transform;
+        Transform damageParent = transform.parent;
+        if (damageParent == rendererTransform.parent)
+        {
+            transform.localPosition = rendererTransform.localPosition;
+            transform.localRotation = rendererTransform.localRotation;
+            transform.localScale = rendererTransform.localScale;
+        }
+        else
+        {
+            transform.SetPositionAndRotation(rendererTransform.position, rendererTransform.rotation);
+            Vector3 rendererWorldScale = rendererTransform.lossyScale;
+            Vector3 parentWorldScale = damageParent != null ? damageParent.lossyScale : Vector3.one;
+            transform.localScale = new Vector3(
+                DivideScale(rendererWorldScale.x, parentWorldScale.x),
+                DivideScale(rendererWorldScale.y, parentWorldScale.y),
+                DivideScale(rendererWorldScale.z, parentWorldScale.z));
+        }
+
+        Sprite sprite = boundWeaponRenderer.sprite;
+        bool flipX = boundWeaponRenderer.flipX;
+        bool flipY = boundWeaponRenderer.flipY;
+        if (!forceShapeSync && sprite == boundWeaponSprite && flipX == boundWeaponFlipX && flipY == boundWeaponFlipY)
+            return;
+
+        if (sprite == null)
+            throw new System.InvalidOperationException($"{name} 绑定的武器 Sprite 在运行时变为空。");
+
+        Bounds spriteBounds = sprite.bounds;
+        Vector2 center = spriteBounds.center;
+        if (flipX) center.x = -center.x;
+        if (flipY) center.y = -center.y;
+
+        boxCollider.offset = center;
+        boxCollider.size = (Vector2)spriteBounds.size * damageRangeMultiplier;
+        boundWeaponSprite = sprite;
+        boundWeaponFlipX = flipX;
+        boundWeaponFlipY = flipY;
+    }
+
+    /// <summary>把世界缩放转换成当前父节点下的局部缩放。</summary>
+    private static float DivideScale(float worldScale, float parentWorldScale)
+    {
+        return Mathf.Approximately(parentWorldScale, 0f) ? 0f : worldScale / parentWorldScale;
     }
 
     /// <summary>
