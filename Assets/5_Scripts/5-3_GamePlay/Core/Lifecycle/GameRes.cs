@@ -544,7 +544,8 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         {
             MarkResourceLoadingFailed(
                 $"Prefab Addressables 标签未解析到任何 GameObject：{string.Join(", ", labels)}。" +
-                "这通常表示禁用 Domain Reload 后复用了失效的 Locator，或 Addressables 标签/Play Mode Script 配置不完整。");
+                $"当前目录：{string.Join(", ", Addressables.ResourceLocators.Select(locator => $"{locator.LocatorId} ({locator.GetType().Name})"))}。" +
+                "请核对当前目录中的 Prefab 标签与 GameObject 类型；编辑器可使用 FlatWorld/诊断/检查 Addressables 目录 对照配置。");
             Addressables.Release(locationsHandle);
             yield break;
         }
