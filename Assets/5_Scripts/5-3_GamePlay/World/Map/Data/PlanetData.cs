@@ -72,8 +72,9 @@ public partial class PlanetData
     [Tooltip("星球是否自动生成地图")]
     public bool AutoGenerateMap = true;
 
-    [LabelText("基础温度"), SuffixLabel("℃", true), PropertyTooltip("该星球不包含天气修正的基础环境温度。")]
-    public float GlobalTemperature = 26f;
+    public const float DefaultGlobalTemperature = 26f; // 生成气候的星球温度基准
+    [LabelText("基础温度"), SuffixLabel("℃", true), PropertyTooltip("默认 26℃ 保留生成地块温度；调高或调低时，整张地图叠加相对于 26℃ 的差值。")]
+    public float GlobalTemperature = DefaultGlobalTemperature;
 
     [LabelText("当前天气"), PropertyTooltip("该星球当前天气类型。")]
     public WeatherType CurrentWeather = WeatherType.Clear;

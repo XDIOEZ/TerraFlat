@@ -97,9 +97,6 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
     public override void Save()
     {
-        if (TemperatureMgr.Instance != null)
-            Data.AmbientTemperature = TemperatureMgr.Instance.GetGlobalAmbientTemperature();
-
         modData?.WriteData(Data);
     }
 
@@ -108,18 +105,26 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         if (!GameNetwork.HasStateAuthority)
             return;
 
-        Data.AmbientTemperature = TemperatureMgr.Instance.GetGlobalAmbientTemperature();
+        // 只对已经加载的脚下地块结算；不把未就绪区块当成全局温度。
+        if (!TemperatureMgr.Instance.TryGetAmbientTemperature(item.transform.position, out float ambient))
+            return;
+
+        Data.AmbientTemperature = ambient;
         ProcessWaterEntryCooling(deltaTime);
         TemperatureMgr.Instance.ProcessTemperature(Data, _damageReceiver, deltaTime, SetTemperatureInternal, ref _damageTickTimer);
     }
 
-    private void OnDestroy()
+    public override void Unload()
     {
         if (item != null)
         {
             item.OnInit_Env -= AdjustByEnvironment;
         }
+        ResetWaterExposureState();
+        base.Unload();
     }
+
+    private void OnDestroy() => Unload();
 
 #endregion
 
@@ -132,10 +137,9 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
             return;
         }
 
-        float ambientTemperature = layers.TemperatureCelsius[localPos.x, localPos.y];
-        TemperatureMgr.Instance.SetGlobalAmbientTemperature(ambientTemperature);
-    Data.AmbientTemperature = TemperatureMgr.Instance.GetGlobalAmbientTemperature();
-    Debug.Log($"[Mod_Temperature] 环境初始化完成，基础温度={ambientTemperature:F1}℃，有效环境温度={Data.AmbientTemperature:F1}℃，当前体温={Data.CurrentTemperature:F1}℃");
+        // 初始化只写本角色，后续由当前位置的权威温度场持续更新。
+        Data.AmbientTemperature = layers.TemperatureCelsius[localPos.x, localPos.y] +
+                                  TemperatureMgr.Instance.AmbientFieldOffset;
     }
 
 #endregion
@@ -154,8 +158,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
     public void SetAmbientTemperature(float value)
     {
-        TemperatureMgr.Instance.SetGlobalAmbientTemperature(value);
-        Data.AmbientTemperature = TemperatureMgr.Instance.GetGlobalAmbientTemperature();
+        Data.AmbientTemperature = value;
     }
 
     /// <summary>同步真实入水状态，并在首次进入连续水域时启动一次带下限的平滑降温。</summary>

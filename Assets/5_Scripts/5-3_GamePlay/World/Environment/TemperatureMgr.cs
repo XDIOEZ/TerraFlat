@@ -2,7 +2,8 @@ using System;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-public class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
+/// <summary>统一逐格环境温度查询与角色体温结算；局部冷热源由空间缓存独立维护，角色每 0.25 秒采样一次。</summary>
+public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 {
 #region 字段
 
@@ -102,7 +103,7 @@ public class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         }
 
         float targetTemperature =
-            GetGlobalAmbientTemperature() + data.Insulation + data.RuntimeAmbientOffset;
+            data.AmbientTemperature + data.Insulation + data.RuntimeAmbientOffset;
         float changeSpeed = data.ChangeSpeed * Mathf.Max(0f, data.RuntimeChangeSpeedMultiplier);
         if (targetTemperature < data.CurrentTemperature)
             changeSpeed *= Mathf.Max(0f, data.RuntimeCoolingSpeedMultiplier);
@@ -118,7 +119,9 @@ public class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             return DefaultAmbientTemperature;
         }
 
-        return planetData.GlobalTemperature + WeatherMgr.CalculateWeatherTemperatureOffset(planetData);
+        float weatherOffset = DimensionManager.ExistingInstance?.ActiveDefinition?.SuppressWeather == true
+            ? 0f : WeatherMgr.CalculateWeatherTemperatureOffset(planetData);
+        return planetData.GlobalTemperature + weatherOffset;
     }
 
     public void SetGlobalAmbientTemperature(float value)
@@ -135,6 +138,7 @@ public class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         }
 
         planetData.GlobalTemperature = value;
+        fieldContextFrame = -1;
 
         if (EnableDebugLog)
         {

@@ -14,6 +14,7 @@ internal static class GMConsolePreferences
     private const string NavigationPathKey = KeyPrefix + "NavigationPath";
     private const string AnimalDebugOverlayKey = KeyPrefix + "AnimalDebugOverlay";
     private const string ActivePageKey = KeyPrefix + "ActivePage";
+    private const string TemperatureOverlayKey = KeyPrefix + "TemperatureOverlay";
 
     #region 读取
 
@@ -36,6 +37,8 @@ internal static class GMConsolePreferences
         PlayerPrefs.GetInt(AnimalDebugOverlayKey, 0) != 0;
 
     public static int ActivePageIndex => PlayerPrefs.GetInt(ActivePageKey, 0);
+
+    public static bool TemperatureOverlayVisible => PlayerPrefs.GetInt(TemperatureOverlayKey, 0) != 0;
 
     #endregion
 
@@ -80,6 +83,12 @@ internal static class GMConsolePreferences
     public static void SetActivePageIndex(int pageIndex)
     {
         PlayerPrefs.SetInt(ActivePageKey, pageIndex);
+        PlayerPrefs.Save();
+    }
+
+    public static void SetTemperatureOverlayVisible(bool visible)
+    {
+        PlayerPrefs.SetInt(TemperatureOverlayKey, visible ? 1 : 0);
         PlayerPrefs.Save();
     }
 

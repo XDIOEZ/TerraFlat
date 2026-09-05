@@ -104,6 +104,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void Awake()
     {
         DontDestroyOnLoad(gameObject);
+        temperatureOverlay = gameObject.AddComponent<GMTemperatureOverlay>();
         EnsureEventSystem();
         BuildWindow();
         ApplyPersistedTogglePreferences();
@@ -152,7 +153,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     #region GM 偏好恢复
 
     /// <summary>立即恢复不依赖场景对象的 GM 开关。</summary>
-    private static void ApplyPersistedTogglePreferences()
+    private void ApplyPersistedTogglePreferences()
     {
         bool teleportEnabled = GMConsolePreferences.TeleportShortcutEnabled;
         if (PlayerAdminController.TeleportToMouseShortcutEnabled != teleportEnabled)
@@ -162,6 +163,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             GMConsolePreferences.NavigationPathVisible);
 
         AI_DebugOverlay.SetVisible(GMConsolePreferences.AnimalDebugOverlayVisible);
+        temperatureOverlay.SetVisible(GMConsolePreferences.TemperatureOverlayVisible);
+        RefreshTemperatureOverlayButton();
     }
 
     /// <summary>场景切换后等待玩家与区块管理器出现，再恢复运行时倍率。</summary>
@@ -1307,6 +1310,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshNavigationPathButton();
         RefreshAnimalDebugOverlayButton();
         RefreshItemIds();
+        RefreshTemperatureOverlayButton();
         RefreshAiCreatureIds();
         RefreshStructureOptions();
         RebuildReflectedCommands();

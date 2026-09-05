@@ -21,7 +21,8 @@ public sealed partial class GMReflectionConsole
         Structures,
         GameEvents,
         Commands,
-        Quests
+        Quests,
+        Layers
     }
 
     private sealed class GmPageView
@@ -127,6 +128,7 @@ public sealed partial class GMReflectionConsole
         BuildQuestPage();
         BuildSpawnPage();
         BuildWorldPage();
+        BuildLayersPage();
         BuildStructurePage();
         gameEventPageContent = CreatePage(GmPageId.GameEvents).Content;
         commandPageContent = CreatePage(GmPageId.Commands).Content;
@@ -294,10 +296,13 @@ public sealed partial class GMReflectionConsole
         CreateTab(content.transform, GmPageId.Quests, "任务", 100f);
         CreateTab(content.transform, GmPageId.Spawn, "生成", 128f);
         CreateTab(content.transform, GmPageId.World, "世界", 100f);
+        CreateTab(content.transform, GmPageId.Layers, "层级显示", 128f);
         CreateTab(content.transform, GmPageId.Structures, "遗迹", 100f);
         CreateTab(content.transform, GmPageId.GameEvents, "事件", 110f);
         CreateTab(content.transform, GmPageId.Commands, "命令", 110f);
-        contentRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 911f);
+        // 页签总宽从实际子项计算，新增分页后仍可横向滚动到最后一页。
+        ContentSizeFitter tabSize = content.AddComponent<ContentSizeFitter>();
+        tabSize.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
     }
 
     private void CreateTab(Transform parent, GmPageId pageId, string label, float width)
@@ -1261,6 +1266,7 @@ public sealed partial class GMReflectionConsole
             GmPageId.GameEvents => "游戏事件",
             GmPageId.Commands => "调试命令",
             GmPageId.Quests => "任务",
+            GmPageId.Layers => "层级显示",
             _ => pageId.ToString()
         };
     }
