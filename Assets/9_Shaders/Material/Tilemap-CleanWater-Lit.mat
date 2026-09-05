@@ -45,7 +45,6 @@ Material:
     - _FoamSpeed: 0.35
     - _TideCyclesPerDay: 2
     - _NormalStrength: 0.22
-    - _PixelDensity: 64
     - _ReflectionSmoothness: 0.86
     - _ReflectionStrength: 0.38
     - _RippleScale: 2.3
