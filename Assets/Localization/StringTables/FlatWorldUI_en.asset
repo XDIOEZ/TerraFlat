@@ -1705,10 +1705,6 @@ MonoBehaviour:
     m_Localized: Crafting
     m_Metadata:
       m_Items: []
-  - m_Id: 1644391640424452
-    m_Localized: Drop One
-    m_Metadata:
-      m_Items: []
   - m_Id: 1644391640424453
     m_Localized: Camera +
     m_Metadata:

@@ -3103,7 +3103,7 @@ public static class RuntimeUIPrefabBuilder
         scroll.movementType = ScrollRect.MovementType.Clamped;
         scroll.scrollSensitivity = 32f;
 
-        foreach (string buttonName in new[] { "装备", "制作", "丢弃一个" })
+        foreach (string buttonName in new[] { "装备", "制作" })
         {
             Button button = CreateButton(buttonName, content.transform, buttonName, MobileDrawerWidth - 32f, MobileDrawerButtonHeight, false);
             SetButtonLabelSize(button, 22f);

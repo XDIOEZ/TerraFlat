@@ -647,7 +647,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         zoneRect.offsetMax = Vector2.zero;
     }
 
-    /// <summary>绑定中间空白区的手持物长按丢弃面；无手持物时该层不参与射线。</summary>
+    /// <summary>绑定中间空白区的手持物轻点/长按丢弃面；无手持物时该层不参与射线。</summary>
     private void ConfigureHeldItemDropSurface()
     {
         Transform surfaceNode = FindRequired(HeldItemDropSurfaceName);
@@ -744,7 +744,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         // 滚动条目只在完整点击后脉冲输入，避免按下准备拖动时就打开玩法面板。
         BindClick("装备", () => StartCoroutine(PulseVirtualButton(MobileVirtualButton.Equipment)));
         BindClick("制作", () => StartCoroutine(PulseVirtualButton(MobileVirtualButton.Crafting)));
-        BindClick("丢弃一个", DropOne);
         BindClick("设置", OpenSettingsFromButton);
     }
 
@@ -1019,12 +1018,6 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             return false;
         activeLocalHud.CloseDrawer();
         return true;
-    }
-
-    private void DropOne()
-    {
-        Module_DiscardItem dropper = GetComponentInChildren<Module_DiscardItem>(true);
-        dropper?.TryDropCurrentSelection(1);
     }
 
     /// <summary>独立设置按钮先收起抽屉，再脉冲设置 Action，确保返回栈正确打开设置面板。</summary>

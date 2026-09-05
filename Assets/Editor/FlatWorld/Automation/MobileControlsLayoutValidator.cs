@@ -137,7 +137,7 @@ namespace FlatWorld.Automation
             string[] required =
             {
                 "交互", "使用", "奔跑", "菜单", "背包", "装备", "制作",
-                "丢弃一个", "设置"
+                "设置"
             };
             for (int i = 0; i < required.Length; i++)
             {

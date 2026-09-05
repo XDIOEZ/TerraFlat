@@ -679,7 +679,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     public bool TryDropHeldItemAtScreenPosition(Vector2 screenPosition)
     {
         Module_DiscardItem discardModule = item?.GetComponentInChildren<Module_DiscardItem>(true);
-        return discardModule?.TryDropCurrentSelectionAtScreenPosition(screenPosition) == true;
+        return discardModule?.TryDropHeldItemAtScreenPosition(screenPosition) == true;
     }
 
     private bool IsGameplayInputLocked()

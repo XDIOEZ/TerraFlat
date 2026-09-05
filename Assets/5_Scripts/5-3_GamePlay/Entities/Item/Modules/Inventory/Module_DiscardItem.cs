@@ -337,54 +337,22 @@ public class Module_DiscardItem : Mod_BaseDroper
 
     #region 物品丢弃接口
 
-    /// <summary>
-    /// 丢弃当前明确选择的物品：优先手持槽，其次快捷栏选中槽。手机抽屉固定传入 1；
-    /// 不依赖 Ctrl 或鼠标悬停，因此触屏调用不会命中其它 UI 槽位。
-    /// </summary>
-    public bool TryDropCurrentSelection(int count)
-    {
-        if (count <= 0)
-            return false;
-
-        ItemSlot handSlot = hand?.HandInventory?.Data?.itemSlots != null &&
-                            hand.HandInventory.Data.Index >= 0 &&
-                            hand.HandInventory.Data.Index < hand.HandInventory.Data.itemSlots.Count
-            ? hand.HandInventory.Data.itemSlots[hand.HandInventory.Data.Index]
-            : null;
-        if (handSlot?.itemData != null && handSlot.Amount > 0)
-        {
-            DropItemByCount(handSlot, Mathf.Min(count, handSlot.Amount));
-            return true;
-        }
-
-        ItemSlot hotbarSlot = Hotbar?.CurrentSelectItemSlot;
-        if (hotbarSlot?.itemData == null || hotbarSlot.Amount <= 0)
-            return false;
-
-        DropItemByCount(hotbarSlot, Mathf.Min(count, hotbarSlot.Amount));
-        DestroyHeldObjectIfEmpty(hotbarSlot);
-        return true;
-    }
-
-    public bool TryDropCurrentSelectionAtScreenPosition(Vector2 screenPosition)
+    /// <summary>在指定世界落点丢弃手部携带物；count 为空时丢整组，指定数量时最多扣减现有数量。</summary>
+    public bool TryDropHeldItemAtScreenPosition(Vector2 screenPosition, int? count = null)
     {
         ItemSlot handSlot = hand?.HandInventory?.Data?.itemSlots != null &&
                             hand.HandInventory.Data.Index >= 0 &&
                             hand.HandInventory.Data.Index < hand.HandInventory.Data.itemSlots.Count
             ? hand.HandInventory.Data.itemSlots[hand.HandInventory.Data.Index]
             : null;
-        if (handSlot?.itemData != null && handSlot.Amount > 0)
-        {
-            DropItemByCount(handSlot, handSlot.Amount, screenPosition);
-            return true;
-        }
-
-        ItemSlot hotbarSlot = Hotbar?.CurrentSelectItemSlot;
-        if (hotbarSlot?.itemData == null || hotbarSlot.Amount <= 0)
+        if (handSlot?.itemData == null || handSlot.Amount <= 0)
             return false;
 
-        DropItemByCount(hotbarSlot, hotbarSlot.Amount, screenPosition);
-        DestroyHeldObjectIfEmpty(hotbarSlot);
+        int dropCount = count.HasValue ? Mathf.Min(count.Value, handSlot.Amount) : handSlot.Amount;
+        if (dropCount <= 0)
+            return false;
+
+        DropItemByCount(handSlot, dropCount, screenPosition);
         return true;
     }
 

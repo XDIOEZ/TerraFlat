@@ -300,7 +300,6 @@ namespace FlatWorld.Localization.Editor
                 { "使用", "Use" },
                 { "菜单", "Menu" },
                 { "状态", "Status" },
-                { "丢弃一个", "Drop One" },
                 { "镜头缩放", "Camera Zoom" },
                 { "删除", "Delete" },
                 { "重命名", "Rename" },
