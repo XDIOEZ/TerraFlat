@@ -81,7 +81,8 @@ namespace FlatWorld.Localization
             }
         }
 
-        private bool HasBinding => !string.IsNullOrWhiteSpace(key);
+        /// <summary>已有明确绑定的文本不再由静态 UI 扫描器重新推断 key。</summary>
+        public bool HasBinding => !string.IsNullOrWhiteSpace(key);
 
         private void HandleLanguageChanged(string _)
         {

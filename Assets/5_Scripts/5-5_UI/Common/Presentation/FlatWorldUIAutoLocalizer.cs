@@ -34,6 +34,8 @@ public static class FlatWorldUIAutoLocalizer
                 continue;
 
             LocalizedTextBinder binder = text.GetComponent<LocalizedTextBinder>();
+            if (binder != null && binder.HasBinding)
+                continue;
             if (binder == null)
                 binder = text.gameObject.AddComponent<LocalizedTextBinder>();
 

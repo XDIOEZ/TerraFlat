@@ -19,6 +19,7 @@ description: "Use when: 定位或修改 FlatWorld 的多语言系统、Unity Loc
 - `FlatWorld` 表放 Item/Quest 等内容；`FlatWorldUI` 放正式 UI；角色台词预留独立 `FlatWorldDialogue`。
 - Key 必须稳定：Item 使用显式 label/description key；UI 使用 `GetUiTextKey(sourceText)`；不可用英文译文或显示名作业务 ID。
 - 静态 Prefab 文本由 Setup 扫描并自动绑定；动态文本用 `GetUiText/GetUiFormat`，在语言事件后刷新，模板同时登记英文覆盖。
+- 动态物品名称可用 `LocalizedTextBinder` 显式绑定物品定义的 `LabelKey`；运行时静态文本扫描必须尊重已有绑定，不能根据当前显示的中文覆盖其内容表与 key。
 - `GetEnglishUiText` 必须先匹配完整文本的精确覆盖，再执行关键词/子串回退；否则包含控件名的长提示会被错误翻译成单个短标签。
 - 保留中文 fallback；玩家自由输入与开发调试输出通常不进正式表。
 - 新增语言需同时配置 Locale、String Table、选择 UI、同步工具和 Addressables。

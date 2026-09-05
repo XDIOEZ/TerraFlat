@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
@@ -177,6 +178,29 @@ public static class GameUIPrefabRebuilder
         AssetDatabase.Refresh();
         Debug.Log($"[Game UI] 已完成 {rebuilt}/{targets.Count} 个 Prefab 的结构级重构；业务节点名称全部保留。");
         ValidateRebuiltUI();
+    }
+
+    /// <summary>仅更新快捷栏名称提示，保留九格槽位和现有快捷栏样式。</summary>
+    [MenuItem("FlatWorld/UI/重建手持物名称提示")]
+    public static void RebuildHotbarItemNameHUD()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+            throw new InvalidOperationException($"缺少统一字体：{FontPath}");
+
+        string path = HudRoot + "UI_HotBar.prefab";
+        GameObject root = PrefabUtility.LoadPrefabContents(path);
+        try
+        {
+            BuildHotbarItemName(root);
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+
+        Debug.Log("[Game UI] 已更新快捷栏上方的手持物名称提示。");
     }
 
     [MenuItem("FlatWorld/UI/修复快捷栏UI")]
@@ -810,6 +834,66 @@ public static class GameUIPrefabRebuilder
             if (child.GetComponent("ItemSlot_UI") != null)
                 BuildSlot(child.gameObject);
         }
+
+        BuildHotbarItemName(root);
+    }
+
+    /// <summary>名称底板位于快捷栏上方 14 像素，320×52，不参与九格布局或触控射线。</summary>
+    private static void BuildHotbarItemName(GameObject root)
+    {
+        RectTransform plate = FindDirectRect(root.transform, "手持物名称提示") ??
+                              CreateRect("手持物名称提示", root.transform);
+        plate.anchorMin = plate.anchorMax = new Vector2(0.5f, 1f);
+        plate.pivot = new Vector2(0.5f, 0f);
+        plate.anchoredPosition = new Vector2(0f, 14f);
+        plate.sizeDelta = new Vector2(320f, 52f);
+        plate.localScale = Vector3.one;
+        LayoutElement layout = plate.GetComponent<LayoutElement>();
+        if (layout == null)
+            layout = plate.gameObject.AddComponent<LayoutElement>();
+        layout.ignoreLayout = true;
+
+        Image background = EnsureImage(plate.gameObject);
+        background.sprite = null;
+        background.color = new Color(0.22f, 0.22f, 0.22f, 0.65f);
+        background.raycastTarget = false;
+        CanvasGroup group = plate.GetComponent<CanvasGroup>();
+        if (group == null)
+            group = plate.gameObject.AddComponent<CanvasGroup>();
+        group.alpha = 0f;
+        group.interactable = false;
+        group.blocksRaycasts = false;
+
+        Transform existingLabel = plate.Find("手持物名称");
+        TextMeshProUGUI label = existingLabel != null
+            ? existingLabel.GetComponent<TextMeshProUGUI>()
+            : CreateText("手持物名称", plate, string.Empty, 32f, Color.white, FontStyles.Normal, TextAlignmentOptions.Center);
+        Stretch(label.rectTransform);
+        label.rectTransform.offsetMin = new Vector2(18f, 4f);
+        label.rectTransform.offsetMax = new Vector2(-18f, -4f);
+        label.text = string.Empty;
+        label.font = font;
+        label.color = Color.white;
+        label.alignment = TextAlignmentOptions.Center;
+        label.fontSize = 32f;
+        label.enableAutoSizing = true;
+        label.fontSizeMin = 20f;
+        label.fontSizeMax = 32f;
+        label.enableWordWrapping = false;
+        label.overflowMode = TextOverflowModes.Ellipsis;
+        label.richText = false;
+        label.raycastTarget = false;
+        if (label.GetComponent<LocalizedTextBinder>() == null)
+            label.gameObject.AddComponent<LocalizedTextBinder>();
+
+        HotbarItemNameHUD presenter = root.GetComponent<HotbarItemNameHUD>();
+        if (presenter == null)
+            presenter = root.AddComponent<HotbarItemNameHUD>();
+        SerializedObject serialized = new SerializedObject(presenter);
+        serialized.FindProperty("nameGroup").objectReferenceValue = group;
+        serialized.FindProperty("nameText").objectReferenceValue = label;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        SetUILayerRecursively(plate.gameObject);
     }
 
     private static void BuildHandSlot(GameObject root)

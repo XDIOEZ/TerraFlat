@@ -527,14 +527,22 @@ public class Inventory
         // 加载Slot UI预制体
         ItemSlot_Prefab = GameRes.Instance.GetPrefab("UI_Slot");
 
-        // 同步槽位数量与 itemSlots 保持一致
-        int currentCount = ItemSlot_Parent.childCount;
+        // 只管理实际槽位，名称提示等附属 UI 不参与数量同步。
         int targetCount = Data.itemSlots.Count;
+        int currentCount = 0;
+        itemSlot_UI.Clear();
 
         // 运行时不直接销毁多余槽位，避免在触发器/动画等回调链里触发 DestroyImmediate 报错。
-        for (int i = 0; i < currentCount; i++)
+        for (int i = 0; i < ItemSlot_Parent.childCount; i++)
         {
-            ItemSlot_Parent.GetChild(i).gameObject.SetActive(i < targetCount);
+            ItemSlot_UI slot = ItemSlot_Parent.GetChild(i).GetComponent<ItemSlot_UI>();
+            if (slot == null)
+                continue;
+
+            bool required = currentCount++ < targetCount;
+            slot.gameObject.SetActive(required);
+            if (required)
+                itemSlot_UI.Add(slot);
         }
 
         // 创建缺少的槽位
@@ -542,15 +550,7 @@ public class Inventory
         {
             GameObject item = GameObject.Instantiate(ItemSlot_Prefab, ItemSlot_Parent, false);
             item.SetActive(true);
-        }
-
-        // 重建UI列表并绑定数据
-        itemSlot_UI.Clear();
-        for (int i = 0; i < targetCount; i++)
-        {
-            var ui = ItemSlot_Parent.GetChild(i).GetComponent<ItemSlot_UI>();
-            if (ui != null)
-                itemSlot_UI.Add(ui);
+            itemSlot_UI.Add(item.GetComponent<ItemSlot_UI>());
         }
 
         // 同步 UI 数据
@@ -1640,10 +1640,11 @@ public class Inventory
     public void SyncSlotCount()
     {
         Data.itemSlots.Clear();
-        int currentCount = ItemSlot_Parent.childCount;
+        // 编辑器同步与运行时遵守相同的槽位边界，忽略附属 UI。
         for (int i = 0; i < ItemSlot_Parent.childCount; i++)
         {
-            Data.itemSlots.Add(new ItemSlot());
+            if (ItemSlot_Parent.GetChild(i).GetComponent<ItemSlot_UI>() != null)
+                Data.itemSlots.Add(new ItemSlot());
         }
     }
 

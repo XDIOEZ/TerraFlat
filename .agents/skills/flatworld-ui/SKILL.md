@@ -22,6 +22,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 同一 `PanelRoot` 下的面板置顶/置底必须使用 `SetAsLastSibling`/`SetAsFirstSibling`；全局层级序号只能用于独立 Canvas 的 `sortingOrder`，不能直接当作兄弟索引。
 - 不经过 `UIManager`/`BasePanel` 打开流程的独立 Canvas，Prefab 根节点必须显式固化 `localScale = Vector3.one`；不能依赖面板动画在运行时恢复可见缩放。
 - 槽位内的选中框、背景和装饰必须按槽内兄弟顺序分层；选中框切换时必须跟随当前槽位，不得留在旧槽位后再用世界坐标跨槽移动。
+- 快捷栏的附属提示随 `UI_HotBar` 缩放和安全区移动，必须用 `LayoutElement.ignoreLayout` 排除在九格布局外，并保持图形与 CanvasGroup 输入透明；`Inventory.InitUI` 按实际 `ItemSlot_UI` 统计和管理槽位，不能按容器全部子节点计数。手持名称读取实际装备的快捷栏物品，不能与 `Inventory_Hand` 的拖拽携带物混用。
 - 设置类模态页（主设置及其子页）需要独立高层 Canvas 与 `GraphicRaycaster`；非交互对话气泡在玩法模态打开时隐藏，避免首帧或跨 Canvas 绘制顺序造成遮挡。
 - 常驻 HUD 不拦截输入，Graphic 关闭 raycastTarget；若 HUD 提供展开/收起功能，只允许开关按钮接收 raycast，内容和装饰元素仍必须输入透明；模态面板才获取输入锁和顶层手柄焦点，关闭/失败路径释放。
 - 手机 HUD 的菜单/返回入口必须独立于可隐藏的玩法控制层；模态玩法面板打开时保留该入口并允许背包/制作等面板并行打开，Android 返回键或 Escape 优先关闭最上层可取消面板，避免移动端失去退出路径。

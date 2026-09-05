@@ -156,6 +156,9 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     [ReadOnly] public Item CurentSelectItem;
     [ReadOnly] public GameObject currentObject;
 
+    /// <summary>实际手持物建立或卸下时通知表现观察者；数量、耐久刷新不重复触发。</summary>
+    public event Action<ItemData> HeldItemChanged;
+
     private Mod_FocusPoint faceMouse;
     private Mod_TurnBack turnBody;
     private ActorRenderEffectController actorRenderEffects;
@@ -289,6 +292,8 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     {
         UnbindHotbarInput();
         RuntimeInventory?.UnbindController();
+        HeldItemChanged?.Invoke(null);
+        HeldItemChanged = null;
     }
 
     public override void ModUpdate(float deltaTime)
@@ -375,6 +380,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void OnInventoryInitUI()
     {
+        RuntimeInventory.basePanel.GetComponent<HotbarItemNameHUD>().Bind(this);
         if (itemSlot_UI == null || itemSlot_UI.Count == 0)
         {
             return;
@@ -765,6 +771,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
         CurentSelectItem = null;
         currentObject = null;
+        HeldItemChanged?.Invoke(null);
     }
 
 #endregion
@@ -804,6 +811,8 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         currentObject = itemInstance.gameObject;
 
         faceMouse?.AddRotationTarget(tf);
+
+        HeldItemChanged?.Invoke(data);
 
         // 手持物的 Y 转身与 Z 瞄准统一由 FocusPoint 合成，不能再交给 TurnBody 重复写旋转。
     }
