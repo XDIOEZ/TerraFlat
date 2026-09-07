@@ -33,6 +33,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 运行时动态创建、用于展示世界物品图标的 `SpriteRenderer` 不得依赖 `AddComponent` 默认材质；应复用 `RuntimeItemDefinition.Material` 的物品材质与外壳回退，确保提示表现和真实物品一致接收 Light2D。
 - 草木风摆由 `WeatherMgr` 写入 `_GlobalWindStrength` Shader 全局参数；材质只保存自身基础幅度。Tilemap 使用单元锚点弯曲，底部 Pivot 的独立 Sprite 使用对象根部弯曲，且所有 URP 2D 活跃 Pass 必须复用同一顶点位移。
 - 屏幕后处理依赖当前 `QualitySettings` 的 `customRenderPipeline`；不能只检查编辑器当前质量档位，所有可选档位都必须引用项目内实际存在的 URP 资源，否则 Scene 视图可能可见而 Game/Android 画面不可见。
+- 世界常态后处理由 `WorldManager/Global Volume` 引用 `Assets/9_Shaders/Volume/Global Volume Profile.asset`；`WorldManager` 跨场景常驻，因此 `WorldPostProcessQuality` 必须绑定同一 Prefab 内 `GameManager` 的进出世界事件，只在世界内启用 Volume，退出时释放克隆的 Profile 和所有 VolumeComponent。调色保持在该资产内，画质只调整泛光采样；状态警示继续由优先级 100 的 `ScreenPostProcessManager` 独立合成。URP 14 的 `Volume.profile` 自动克隆所有子组件，但 `Volume` 本身不负责销毁克隆，必须由持有者清理。
 - 屏幕后处理脚本按最低支持质量只实现一个档位标记接口：Low 可在所有档位运行，Medium 需中/高档，High 仅高档；未标记效果保持旧行为。
 - 运行时 Sprite 描边若复制 `SortingGroup` 内的渲染器，描边 Renderer 必须放到组外并排在主体之后；URP 2D 自定义 Sprite Shader 必须包含 `Core2D.hlsl`，同时保留 SpriteRenderer 的逐渲染器属性。
 - 描边等代理 `SpriteRenderer` 必须同步源 Renderer 的 MPB 局部裁剪参数；代理写入自有 MPB 时必须同时写回 Sprite 的 `_MainTex`，避免逐渲染器贴图被默认白图替换。`Universal2D`、`NormalsRendering`、`UniversalForward` 等实际参与的 Shader Pass 必须使用同一坐标与阈值，避免代理或回退 Pass 重新显示已剔除像素。

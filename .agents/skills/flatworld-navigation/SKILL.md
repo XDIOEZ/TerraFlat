@@ -22,6 +22,7 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、动态
 - `WorldNavigationGrid.SetCell` 的可走格代价发生变化时必须使旧路径失效，否则运行中的 AI 会继续执行按旧权重生成的路线。
 - 限制移动总代价时读取 `WorldNavigationPathResult.TotalCost`；异步新路径超限不能覆盖当前已接受路径，导航代理应让旧路径走完并停止自动续算，只有目标再次明显移动才重新评估。
 - `WorldNavigationAgent.DestinationResult` 是当前目的地请求的权威结果；上层必须消费 `RejectedByPathCost`，不能通过速度为零或是否持有路径反推拒绝原因。
+- 追击总代价上限必须随 `RequestPath` 传入共享搜索；Dijkstra 前沿代价达到某个请求上限时，只结束该请求并返回明确的代价拒绝，不能等完整搜索结束才判断，也不能取消同目标其它成员的请求。拒绝、成功、取消和失败都须清理起点等待链与上限索引；缓存路径只能使用已结算起点的代价，不能把尚未收敛的暂定代价当成超限依据。
 - 运行时只用项目内置导航，不恢复 Aron Granberg A*，也不把 Physics2D 扫描当权威。
 - 移除覆盖层后恢复基础层权重；建筑不改 TileData。
 - 失败/未表现完成的 Chunk 不注册导航；View 入池或销毁前先 Unbind。

@@ -24,6 +24,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - Actor 与 Item 分批注册，死亡掉落可引用同批 Actor（如极低概率掉落 Chicken）；校验必须合并当前批次的具体定义 ID 与已注册 Item ID，不能只查询尚未完成的运行时注册表。死亡掉落继承使用顶层 `lootTableId`，子 Actor 替换表时不得残留内联 `Data.LootTable`。
 - 动物被动回血统一由 `Mod_Food.HealthState` 依据蛋白质驱动；`AI_Base` 不管理回血，长间隔回血使用 `HealthState.HealInterval/HealAmount` 配置。
 - Actor 外壳、AnimatorController 使用 `flatworld.actor.*` Addressables 地址；Actor 的 SpriteRenderer 由动画状态机驱动，运行时不得读取 Actor 的 Sprite 子资源或 `sourcePrefab`。
+- 复用动物状态机但更换整套动作素材时，使用 `AnimatorOverrideController` 覆盖所有被引用的动作，并同步外壳与 Actor JSON 的控制器 Addressables 地址；禁止通过 `LateUpdate` 写入静态 Sprite 覆盖 Animator，否则会冻结动画，误绑未切片图集时还会把全部帧同时显示。
 - Actor 外壳中的 `Mod_AnimatorController_Receiver`、`Mod_TurnBack` 属于结构组件，不一定进入 JSON `itemMods` 字典；绑定时必须从 Item 层级查找，禁止按模块 ID 查询并误报缺失。
 - `ActorShell` 标签的 Prefab 只由 `ActorDefinitionCatalogLoader` 加载并注册；即使资源同时带有通用 `Prefab` 标签，`GameRes` 的通用加载计划也必须排除它们，避免 Addressables 重复实例造成 Actor ID 别名冲突。
 - `Mod_TurnBack` 按动画素材默认朝向控制 Y 轴翻转；狼的素材默认朝右，因此 Wolf Actor JSON 的 `visual.flipX` 必须保持 `false`，否则初始镜像会与运行时转向叠加，表现为背对目标移动。
@@ -40,6 +41,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - 追击路径代价限制统一通过 `AI_Base.MoveToChaseTarget` 提交；具体动物只配置自身上限，闲逛、逃跑和外部推进仍使用不受限的普通移动入口。
 - 使用路径代价限制的追击必须消费 `RejectedByPathCost`，并通过 `AI_Base.TryHandleRejectedChasePath` 暂停同一目标后再重试；禁止让状态机继续停留在无可执行路线的追击状态。
 - 使用 `AI_AttackController` 的动物，前摇、伤害窗口和后摇由控制器统一驱动；修改攻击时序时必须同步 Actor JSON、Prefab 回退值与 `Attack.anim` 的 `IsAttacking` 曲线，避免配置与可视/伤害帧错位。
+- 攻击状态条件应先保留已经开始的 `IsAttackLocked` 攻击，再判断新攻击的冷却与起手距离；冷却中不能仅凭距离进入停车攻击节点，否则目标后退会造成反复切换，且 `OnExitAttackState` 重置冷却会进一步推迟下一击。近身起手距离与远处感知追击范围、实际伤害盒是三个独立概念。
 - 可组合动物技能统一实现 `IAnimalCombatSkill` 并作为 Item Module 挂载；`AI_Base` 会自动收集到 `_animalSkills`，技能自行控制移动时状态节点必须使用 `CreateStateNode`，不能套用每帧停车的 `CreateStoppedActionStateNode`。
 - 动物技能数值来自 `Assets/StreamingAssets/GameConfig/Skills/animal-skills.json`，Actor JSON 只声明模块和技能模板 ID；独立技能碰撞模块不要继承 `Mod_Damage`，否则会被 `AI_AttackController` 当作普通攻击窗口一起启停。
 

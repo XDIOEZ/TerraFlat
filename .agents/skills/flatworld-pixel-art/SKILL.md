@@ -33,6 +33,7 @@ python .agents/skills/flatworld-pixel-art/scripts/validate_pixel_asset.py <sprit
 - 禁止抗锯齿、渐变、照片纹理、高频噪点、无关背景、地面、投影、光晕、文字、Logo、水印或无法在最终尺寸辨认的装饰；半透明特效等明确例外按消费方单独制定规则。
 - 仅生成美术时不创建 Prefab、Animator、SO 或玩法代码；需要接入时再读取对应 FlatWorld 领域 Skill，通过 Unity MCP 操作时读取 `unity-mcp-orchestrator`。
 - 不复制其他资源的 GUID；仅在目标 `.meta` 已存在时精确修改导入字段。高清设计源默认不进 Addressables，也不挂到 Prefab。
+- 铺满整格的地面 Tile 使用中心 Pivot、全幅不透明画布和当前地块 PPU；不要套用物品的透明四角/底部对齐检查，否则拼接时会露出原地形。其 Sprite 图标可复用同一图，运行时地面不能保留图标安全留白。
 - 最终报告资产类别、画布尺寸、主体边界、可见颜色数、透明度、动画/单帧状态、Unity 导入设置、使用的提示词/模式和必要人工观感检查。
 
 ## Skill 维护原则

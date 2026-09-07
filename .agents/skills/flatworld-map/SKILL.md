@@ -23,6 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 
 - 本 Skill 负责地图内容规则；WorldModel 负责 Chunk 生命周期、并发、租约和表现绑定。
 - Tile 栈只通过 API 修改；静态 Blocking Tile 与动态建筑占地不要混用。
+- 将水改成普通地面时必须同时替换 `GroundTileId`、清除 `Water` 标记并恢复生成 Profile 的 `navigation.defaultCost`；原水深等环境数据仍属于地形环境，不应随平台改写。目标使用无行为的普通 Tile 模板，不能只盖一张图片，否则水行为、寻路和建筑资格会继续读取旧水格。
 - 生成保持固定种子、稳定 BiomeId/顺序和统一噪声、气候、水文规则。
 - 修改算法时考虑生成签名、旧存档、联机指纹和 Wrapped 坐标。
 - 雪山地表固定使用纯白 `Tile_Snow`，禁止按随机噪声混入雪地变体；若未来恢复变体，只能按温度区间确定。
