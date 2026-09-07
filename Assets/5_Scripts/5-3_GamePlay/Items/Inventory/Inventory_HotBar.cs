@@ -105,7 +105,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
             return Owner?.TryDropHeldItemAtScreenPosition(screenPosition) == true;
         }
 
-        /// <summary>桌面空手轻触快捷栏选中槽位；手持整组时沿用单件取放事务。</summary>
+        /// <summary>桌面空手点击快捷栏选中槽位；手持物品时执行整组放置、合并或交换。</summary>
         public override void OnDesktopTap(int index)
         {
             if (Owner?.RuntimeInventory != null && Owner.RuntimeInventory.HasTouchHeldItem())

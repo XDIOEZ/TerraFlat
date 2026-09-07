@@ -66,7 +66,7 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>触屏长按更久后开始拖拽时，把源堆拆出一半并建立拖拽事务。</summary>
     public System.Func<int, InventoryDragTransaction> OnTouchHalfDragBegin { get; set; }
 
-    /// <summary>桌面轻触入口；空手时保持选中语义，拖拽后手持整组时用于单件分发。</summary>
+    /// <summary>桌面左键入口；背包执行整组取放，快捷栏空手时选中槽位。</summary>
     public System.Action<int> OnDesktopTap { get; set; }
 
     private GameObject currentMenuInstance;

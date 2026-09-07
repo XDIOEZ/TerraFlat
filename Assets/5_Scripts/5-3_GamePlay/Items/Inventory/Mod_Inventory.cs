@@ -115,6 +115,7 @@ public class Mod_Inventory : Module, IInventory, IInstanceUI, IInteractable
             currentInventory.DefaultTarget_Inventory = handInventory != null ? handInventory : Inventory_Hand.PlayerHand;
 
             // 初始化库存
+            CreativeInventoryState.Restore(currentInventory);
             currentInventory.InitData();
             BindController();
 

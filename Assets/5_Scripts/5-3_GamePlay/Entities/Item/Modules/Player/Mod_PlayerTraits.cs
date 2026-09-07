@@ -75,11 +75,15 @@ public class Mod_PlayerTraits : Module
         damageReceiver.ForceHurt(damageReceiver.Hp + damageReceiver.MaxHp + 99999f);
     }
 
+    #region 创造背包
+
     /// <summary>
-    /// 管理员初始化创造模式背包（供 PlayerAdminController 调用）
+    /// 管理员每次为每种非 Actor 物品增加 100 个，已有物品原位累加，缺少物品新增槽位，不受普通堆叠容量限制。
     /// </summary>
     public string InitializeCreativeInventoryForAdmin()
     {
+        const float amountPerItem = 100f;
+
         if (!TryGetPlayer(out var target))
         {
             return "创造背包失败：未找到玩家。";
@@ -102,10 +106,21 @@ public class Mod_PlayerTraits : Module
             return message;
         }
 
+        // 同类物品只选一个已有槽位补充，避免拆分堆叠后一次点击重复加量。
+        var existingSlotIndices = new Dictionary<string, int>();
+        var bagData = bagMod.inventory.Data;
+        for (int i = 0; i < bagData.itemSlots.Count; i++)
+        {
+            ItemData existingItem = bagData.itemSlots[i].itemData;
+            if (existingItem != null && !existingSlotIndices.ContainsKey(existingItem.IDName))
+                existingSlotIndices.Add(existingItem.IDName, i);
+        }
+
         IReadOnlyList<string> itemIds = GameRes.Instance.GetAllItemIds();
         var creativeItems = new List<ItemData>(itemIds.Count);
         var uncreatableItemIds = new List<string>();
         int actorCount = 0;
+        int replenishedCount = 0;
 
         foreach (string itemId in itemIds)
         {
@@ -119,6 +134,14 @@ public class Mod_PlayerTraits : Module
             if (definition.IsActor)
             {
                 actorCount++;
+                continue;
+            }
+
+            if (existingSlotIndices.TryGetValue(itemId, out int existingSlotIndex))
+            {
+                // 走库存数量变更事件，保留原物品状态并允许创造模式超量堆叠。
+                bagData.ChangeItemDataAmount(existingSlotIndex, amountPerItem);
+                replenishedCount++;
                 continue;
             }
 
@@ -141,40 +164,40 @@ public class Mod_PlayerTraits : Module
                 continue;
             }
 
-            data.Stack.Amount = 1f;
+            data.Stack.Amount = amountPerItem;
             creativeItems.Add(data);
         }
 
-        if (creativeItems.Count == 0)
+        if (creativeItems.Count == 0 && replenishedCount == 0)
         {
             const string message = "创造背包未添加物品：当前定义目录为空。";
             Debug.LogWarning($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] {message}");
             return message;
         }
 
-        // 按物品数量扩展背包容量
-        bagMod.inventory.AddSlotsAtRuntime(creativeItems.Count);
+        // 只为缺少的物品扩容，重复补充已有物品时不新增整套槽位。
+        int firstCreativeSlotIndex = bagData.itemSlots.Count;
+        if (creativeItems.Count > 0)
+            bagMod.inventory.AddSlotsAtRuntime(creativeItems.Count);
 
-        int addedCount = 0;
-        var capacityFailedItemIds = new List<string>();
-        foreach (var data in creativeItems)
+        for (int i = 0; i < creativeItems.Count; i++)
         {
-            bool fullyAdded = bagMod.inventory.Data.TryAddItem(data, true, out float addedAmount);
-            if (fullyAdded && addedAmount >= data.Stack.Amount)
-                addedCount++;
-            else
-                capacityFailedItemIds.Add(data.IDName);
+            ItemData data = creativeItems[i];
+            data.Stack.CanBePickedUp = false;
+            bagData.SetOne_ItemData(firstCreativeSlotIndex + i, data);
         }
+        CreativeInventoryState.Enable(target, bagMod.inventory);
+        bagMod.inventory.RefreshUI();
 
-        string summary = $"创造背包完成：成功 {addedCount} 种，容量不足 {capacityFailedItemIds.Count} 种，" +
-                         $"不可创建 {uncreatableItemIds.Count} 种，排除 Actor {actorCount} 种，共扫描 {itemIds.Count} 条定义。";
-        if (capacityFailedItemIds.Count > 0)
-            Debug.LogWarning($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 背包容量不足：{string.Join(", ", capacityFailedItemIds)}");
+        string summary = $"创造背包完成：新增 {creativeItems.Count} 种，补充 {replenishedCount} 种，每种增加 {amountPerItem} 个，" +
+                         $"不可创建 {uncreatableItemIds.Count} 种，排除 Actor {actorCount} 种，共扫描 {itemIds.Count} 条定义；已启用无限格数，自动保留空槽。";
         if (uncreatableItemIds.Count > 0)
             Debug.LogError($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 不可创建物品：{string.Join(", ", uncreatableItemIds)}");
         Debug.Log($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] {summary}");
         return summary;
     }
+
+    #endregion
 
     /// <summary>
     /// 将本地玩家传送到当前统一指针位置，供反射命令调用。

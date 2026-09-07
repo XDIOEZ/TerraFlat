@@ -71,7 +71,7 @@ public partial class Inventory_Data
         Event_OnBeforeDataChanged.Invoke(itemSlot);
         itemSlot.itemData = null;
         Event_RefreshUI.Invoke(index);
-        Event_OnDataChanged.Invoke(itemSlot);
+        NotifyItemDataChanged(itemSlot);
     }
 
     public void SetOne_ItemData(int index, ItemData inputItemData)
@@ -79,7 +79,7 @@ public partial class Inventory_Data
         EnsureRuntimeEvents();
         Event_OnBeforeDataChanged.Invoke(itemSlots[index]);
         itemSlots[index].itemData = inputItemData;
-        Event_OnDataChanged.Invoke(itemSlots[index]);
+        NotifyItemDataChanged(itemSlots[index]);
     }
 
     public ItemSlot GetItemSlot(int index)
@@ -94,7 +94,7 @@ public partial class Inventory_Data
         EnsureRuntimeEvents();
         Event_OnBeforeDataChanged.Invoke(itemSlots[index]);
         itemSlots[index].itemData.Stack.Amount += amount;
-        Event_OnDataChanged.Invoke(itemSlots[index]);
+        NotifyItemDataChanged(itemSlots[index]);
     }
 
     #endregion
@@ -152,7 +152,7 @@ public partial class Inventory_Data
             Event_OnBeforeDataChanged.Invoke(localSlot);
             // 统一在交换完成后再触发事件
             Event_RefreshUI.Invoke(index);
-            Event_OnDataChanged.Invoke(localSlot);
+            NotifyItemDataChanged(localSlot);
             Event_OnDataChanged_TwoSlots.Invoke(localSlot, inputSlotHand);
             return;
         }
@@ -165,7 +165,7 @@ public partial class Inventory_Data
 
             Event_OnBeforeDataChanged.Invoke(localSlot);
             Event_RefreshUI.Invoke(index);
-            Event_OnDataChanged.Invoke(localSlot);
+            NotifyItemDataChanged(localSlot);
             Event_OnDataChanged_TwoSlots.Invoke(localSlot, inputSlotHand);
             return;
         }
@@ -176,7 +176,7 @@ public partial class Inventory_Data
             Event_OnBeforeDataChanged.Invoke(localSlot);
             localSlot.Change(inputSlotHand);
             Event_RefreshUI.Invoke(index);
-            Event_OnDataChanged.Invoke(localSlot);
+            NotifyItemDataChanged(localSlot);
             Event_OnDataChanged_TwoSlots.Invoke(localSlot, inputSlotHand);
             return;
         }
@@ -187,7 +187,7 @@ public partial class Inventory_Data
             Event_OnBeforeDataChanged.Invoke(localSlot);
             localSlot.Change(inputSlotHand);
             Event_RefreshUI.Invoke(index);
-            Event_OnDataChanged.Invoke(localSlot);
+            NotifyItemDataChanged(localSlot);
             Event_OnDataChanged_TwoSlots.Invoke(localSlot, inputSlotHand);
             Debug.Log("特殊交换");
             return;
@@ -201,7 +201,7 @@ public partial class Inventory_Data
 
             Event_OnBeforeDataChanged.Invoke(localSlot);
             Event_RefreshUI.Invoke(index);
-            Event_OnDataChanged.Invoke(localSlot);
+            NotifyItemDataChanged(localSlot);
             Event_OnDataChanged_TwoSlots.Invoke(localSlot, inputSlotHand);
             return;
         }
@@ -210,7 +210,7 @@ public partial class Inventory_Data
         localSlot.Change(inputSlotHand);
         Event_RefreshUI.Invoke(index);
         Event_OnBeforeDataChanged.Invoke(localSlot);
-        Event_OnDataChanged.Invoke(localSlot);
+        NotifyItemDataChanged(localSlot);
         Event_OnDataChanged_TwoSlots.Invoke(localSlot, inputSlotHand);
         Debug.Log($"(物品不同)交换物品槽位:{index} 物品:{inputSlotHand.itemData.IDName}");
     }
@@ -277,8 +277,8 @@ public partial class Inventory_Data
         targetSlot.RefreshUI();
         Event_RefreshUI.Invoke(localSlot.Index);
         targetInventory.Event_RefreshUI.Invoke(targetSlot.Index);
-        Event_OnDataChanged.Invoke(localSlot);
-        targetInventory.Event_OnDataChanged.Invoke(targetSlot);
+        NotifyItemDataChanged(localSlot);
+        targetInventory.NotifyItemDataChanged(targetSlot);
         Event_OnDataChanged_TwoSlots.Invoke(localSlot, targetSlot);
         targetInventory.Event_OnDataChanged_TwoSlots.Invoke(targetSlot, localSlot);
         return true;
@@ -397,31 +397,49 @@ public partial class Inventory_Data
     public bool TryAddItem(ItemData inputItemData, bool doAdd, out float addedAmount)
     {
         addedAmount = 0f;
-        if (inputItemData == null) return false;
+        if (inputItemData?.Stack == null || inputItemData.Stack.Amount <= 0f) return false;
 
         float unitVolume = inputItemData.Stack.Volume;
+        if (unitVolume <= 0f) return false;
         float remainingAmount = inputItemData.Stack.Amount;
         float originalAmount = Mathf.Max(0f, remainingAmount);
         bool addedAny = false;
 
+        // 无限库存的只读预检承诺可动态增加普通槽，不提前分配空格或改动物品。
+        if (HasUnlimitedSlots && !doAdd && unitVolume <= DefaultSlotVolume)
+        {
+            addedAmount = originalAmount;
+            return true;
+        }
+        if (doAdd)
+            EnsureSpareSlot();
+
         // 非堆叠物品（体积大于1）
         if (unitVolume > 1)
         {
-            for (int i = 0; i < itemSlots.Count; i++)
+            for (int i = 0; i < itemSlots.Count && remainingAmount > 0f; i++)
             {
-                if (itemSlots[i].itemData == null)
+                ItemSlot slot = itemSlots[i];
+                if (slot.itemData != null || slot.SlotMaxVolume < unitVolume)
+                    continue;
+
+                // 创造模式可丢出多件工具，重新拾取时仍按每格一件拆分。
+                float toAdd = Mathf.Min(remainingAmount, 1f);
+                if (doAdd)
                 {
-                    if (doAdd)
-                    {
-                        SetOne_ItemData(i, inputItemData);
-                        Event_RefreshUI.Invoke(i);
-                        inputItemData.Stack.CanBePickedUp = false;
-                    }
-                    addedAmount = originalAmount;
-                    return true;
+                    ItemData newItem = CloneForStackSplit(inputItemData);
+                    newItem.Stack.Amount = toAdd;
+                    newItem.Stack.CanBePickedUp = false;
+                    SetOne_ItemData(i, newItem);
+                    Event_RefreshUI.Invoke(i);
                 }
+                remainingAmount -= toAdd;
             }
-            return false;
+
+            addedAmount = originalAmount - remainingAmount;
+            if (doAdd && remainingAmount <= 0.0001f)
+                inputItemData.Stack.CanBePickedUp = false;
+            return addedAmount > 0f;
         }
 
         // 堆叠物品（体积为1）
@@ -440,7 +458,7 @@ public partial class Inventory_Data
 
             float currentVol = slot.itemData.Stack.CurrentVolume;
             float canAdd = slot.SlotMaxVolume - currentVol;
-            float toAdd = Mathf.Min(remainingAmount, canAdd);
+            float toAdd = Mathf.Min(remainingAmount, canAdd / unitVolume);
             if (toAdd <= 0f) continue;
 
             if (doAdd)
@@ -465,13 +483,14 @@ public partial class Inventory_Data
 
             float currentVol = 0f;
             float canAdd = slot.SlotMaxVolume - currentVol;
-            float toAdd = Mathf.Min(remainingAmount, canAdd);
+            float toAdd = Mathf.Min(remainingAmount, canAdd / unitVolume);
             if (toAdd <= 0f) continue;
 
             if (doAdd)
             {
-                var newItem = FastCloner.FastCloner.DeepClone(inputItemData);
+                var newItem = CloneForStackSplit(inputItemData);
                 newItem.Stack.Amount = toAdd;
+                newItem.Stack.CanBePickedUp = false;
                 SetOne_ItemData(i, newItem);
                 Event_RefreshUI.Invoke(i);
             }
@@ -504,8 +523,8 @@ public partial class Inventory_Data
             return false;
 
         // 兼容旧调用：调用方仍被视为两个槽位的共同事件所有者。
-        Event_OnDataChanged.Invoke(slotFrom);
-        Event_OnDataChanged.Invoke(slotTo);
+        NotifyItemDataChanged(slotFrom);
+        NotifyItemDataChanged(slotTo);
         return true;
     }
 
@@ -541,8 +560,8 @@ public partial class Inventory_Data
         Event_RefreshUI.Invoke(slotFrom.Index);
         targetInventory.Event_RefreshUI.Invoke(slotTo.Index);
 
-        Event_OnDataChanged.Invoke(slotFrom);
-        targetInventory.Event_OnDataChanged.Invoke(slotTo);
+        NotifyItemDataChanged(slotFrom);
+        targetInventory.NotifyItemDataChanged(slotTo);
         Event_OnDataChanged_TwoSlots.Invoke(slotFrom, slotTo);
         targetInventory.Event_OnDataChanged_TwoSlots.Invoke(slotTo, slotFrom);
         return true;
@@ -802,7 +821,7 @@ public partial class Inventory_Data
             slot.Index = i;
             slot.RefreshUI();
             Event_RefreshUI.Invoke(i);
-            Event_OnDataChanged.Invoke(slot);
+            NotifyItemDataChanged(slot);
         }
 
         return true;

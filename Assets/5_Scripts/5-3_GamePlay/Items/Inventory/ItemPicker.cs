@@ -301,15 +301,17 @@ public class ItemPicker : Module
             return false;
 
         float requestedAmount = Mathf.Max(0f, itemData.Stack.Amount);
+        float remainingAmount = requestedAmount;
         foreach (IInventory inventory in AddTargetInventories)
         {
             Inventory targetInventory = inventory?.GetDefaultTargetInventory();
             if (targetInventory?.Data == null)
                 continue;
 
+            itemData.Stack.Amount = remainingAmount;
             if (!allowPartial &&
                 (!targetInventory.Data.TryAddItem(itemData, false, out float availableAmount) ||
-                 availableAmount + 0.0001f < requestedAmount))
+                 availableAmount + 0.0001f < remainingAmount))
             {
                 continue;
             }
@@ -318,32 +320,31 @@ public class ItemPicker : Module
                 addedAmount <= 0f)
                 continue;
 
-            bool fullyAdded = addedAmount + 0.0001f >= requestedAmount;
-            if (fullyAdded)
-            {
-                itemData.Stack.CanBePickedUp = false;
-            }
-            else
-            {
-                itemData.Stack.Amount = Mathf.Max(0f, requestedAmount - addedAmount);
-                itemData.Stack.CanBePickedUp = true;
-            }
-
+            // 快捷栏只能容纳一部分时，余量继续进入主背包，不能提前结束此次拾取。
+            remainingAmount = Mathf.Max(0f, remainingAmount - addedAmount);
             targetInventory.RefreshUI();
-            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
-            DimensionManager dimensionManager = DimensionManager.ExistingInstance;
-            string dimensionId = dimensionManager != null && dimensionManager.ActiveAddress.IsValid
-                ? dimensionManager.ActiveAddress.DimensionId
-                : null;
-            GameplayProgressEvents.PublishPickupSucceeded(
-                item as Player,
-                itemData.IDName,
-                addedAmount,
-                dimensionId);
-            return true;
+            if (remainingAmount <= 0.0001f)
+                break;
         }
 
-        return false;
+        float totalAddedAmount = requestedAmount - remainingAmount;
+        if (totalAddedAmount <= 0f)
+            return false;
+
+        bool fullyAdded = remainingAmount <= 0.0001f;
+        itemData.Stack.Amount = fullyAdded ? requestedAmount : remainingAmount;
+        itemData.Stack.CanBePickedUp = !fullyAdded;
+        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+        DimensionManager dimensionManager = DimensionManager.ExistingInstance;
+        string dimensionId = dimensionManager != null && dimensionManager.ActiveAddress.IsValid
+            ? dimensionManager.ActiveAddress.DimensionId
+            : null;
+        GameplayProgressEvents.PublishPickupSucceeded(
+            item as Player,
+            itemData.IDName,
+            totalAddedAmount,
+            dimensionId);
+        return true;
     }
 
     /// <summary>

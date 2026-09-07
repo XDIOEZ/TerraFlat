@@ -154,7 +154,12 @@ public class Inventory
 
     public virtual void ModUpdate(float deltaTime)
     {
-        // 基类只负责统一调度模块数据更新。
+        // 合并同一轮拾取或拖放产生的扩容，在模块 Tick 统一补齐槽位 UI。
+        if (Data != null && Data.HasUnlimitedSlots)
+        {
+            Data.EnsureSpareSlot();
+            SyncExpandedSlotUI();
+        }
         UpdateModuleData(deltaTime);
     }
 
@@ -486,6 +491,8 @@ public class Inventory
         if (DefaultTarget_Inventory == null)
             DefaultTarget_Inventory = Inventory_Hand.PlayerHand;
 
+        Data.EnsureSpareSlot();
+
         // 初始化物品槽位数据
         for (int i = 0; i < Data.itemSlots.Count; i++)
         {
@@ -496,7 +503,7 @@ public class Inventory
             // Inventory 可能复用存档中的 ItemSlot，先清理上一轮玩家/UI 的旧监听。
             slot.onSlotDataChanged.Clear();
             slot.Index = i;
-            slot.SlotMaxVolume = 100;
+            slot.SlotMaxVolume = Inventory_Data.DefaultSlotVolume;
         }
 
         // 初始化事件系统
@@ -815,6 +822,9 @@ public class Inventory
 
     public void RefreshUI()
     {
+        if (SyncExpandedSlotUI())
+            return;
+
         if (itemSlot_UI == null)
             return;
 
@@ -838,20 +848,20 @@ public class Inventory
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void OnScroll(int index, float direction)
     {
-        if (!TryEnsureDefaultTargetInventory())
+        if (direction == 0f ||
+            !TryGetPlayerHandSlots(index, out Inventory handInventory, out ItemSlot localSlot, out ItemSlot handSlot))
             return;
 
-        if (Data == null || Data.itemSlots == null || index < 0 || index >= Data.itemSlots.Count)
+        // 滚轮只在当前槽与鼠标携带槽间转移，并分别通知两个库存，不能借用快捷栏目标。
+        bool transferred = direction > 0f
+            ? handInventory.TryTransferQuickQuantity(handSlot, this, localSlot, 1)
+            : TryTransferQuickQuantity(localSlot, handInventory, handSlot, 1);
+        if (!transferred)
             return;
 
-        if (direction > 0)
-        {
-            Data.TransferItemQuantity(DefaultTarget_Inventory.Data.itemSlots[0], Data.itemSlots[index], 1);
-        }
-        else if (direction < 0)
-        {
-            Data.TransferItemQuantity(Data.itemSlots[index], DefaultTarget_Inventory.Data.itemSlots[0], 1);
-        }
+        _touchTapFlow = !HasHeldItem(handInventory)
+            ? TouchTapFlow.None
+            : direction < 0f ? TouchTapFlow.Pickup : TouchTapFlow.PutDown;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -960,7 +970,7 @@ public class Inventory
         ItemData draggedItem = handSlot.itemData;
         return new InventoryDragTransaction(
             (targetInventory, targetIndex) =>
-                handInventory.TryDropDraggedSlot(handSlot, draggedItem, targetInventory, targetIndex),
+                handInventory.TryDropSlotTo(handSlot, draggedItem, targetInventory, targetIndex),
             null,
             null,
             false,
@@ -972,11 +982,17 @@ public class Inventory
         return false;
     }
 
-    /// <summary>桌面空手轻触不改变库存；拖拽后手上有整组物品时，轻触执行单件取放。</summary>
+    /// <summary>桌面左键整组拿取、放置、合并或交换；逐件取放由滚轮独立处理。</summary>
     public virtual void OnDesktopTap(int index)
     {
-        if (HasTouchHeldItem())
-            OnTouchTap(index);
+        if (!TryGetPlayerHandSlots(index, out Inventory handInventory, out ItemSlot localSlot, out ItemSlot handSlot))
+            return;
+
+        // 点击与拖放共用整组事务，统一校验容量、双向接收规则并同步快捷栏手持物。
+        if (handSlot.itemData != null)
+            handInventory.TryDropSlotTo(handSlot, handSlot.itemData, this, index);
+        else if (localSlot.itemData != null)
+            TryDropSlotTo(localSlot, localSlot.itemData, handInventory, handSlot.Index);
     }
 
     /// <summary>判断当前库存是否存在可继续执行单件取放的手持物品。</summary>
@@ -1016,7 +1032,7 @@ public class Inventory
 
         return new InventoryDragTransaction(
             (targetInventory, targetIndex) =>
-                TryDropDraggedSlot(sourceSlot, draggedItem, targetInventory, targetIndex),
+                TryDropSlotTo(sourceSlot, draggedItem, targetInventory, targetIndex),
             () => TryMoveDraggedSlotToHand(
                 sourceSlot,
                 draggedItem,
@@ -1025,7 +1041,7 @@ public class Inventory
                 out fallbackItem),
             (targetInventory, targetIndex) =>
                 fallbackInventory != null &&
-                fallbackInventory.TryDropDraggedSlot(fallbackSlot, fallbackItem, targetInventory, targetIndex),
+                fallbackInventory.TryDropSlotTo(fallbackSlot, fallbackItem, targetInventory, targetIndex),
             true);
     }
 
@@ -1036,7 +1052,7 @@ public class Inventory
     }
 
     /// <summary>把来源槽直接移动、合并或交换到目标槽，并校验交换双方的接收规则。</summary>
-    private bool TryDropDraggedSlot(
+    private bool TryDropSlotTo(
         ItemSlot sourceSlot,
         ItemData draggedItem,
         Inventory targetInventory,
@@ -1098,7 +1114,7 @@ public class Inventory
             return false;
 
         handSlot = handInventory.Data.itemSlots[0];
-        if (!TryDropDraggedSlot(sourceSlot, draggedItem, handInventory, 0))
+        if (!TryDropSlotTo(sourceSlot, draggedItem, handInventory, 0))
             return false;
 
         handItem = handSlot.itemData;
@@ -1541,6 +1557,17 @@ public class Inventory
     #endregion
 
     #region 运行时容量调整
+
+    /// <summary>数据新增槽位后只同步表现层，不重置库存数据与业务监听。</summary>
+    private bool SyncExpandedSlotUI()
+    {
+        if (basePanel == null || Data == null || !Data.HasUnlimitedSlots ||
+            itemSlot_UI.Count == Data.itemSlots.Count)
+            return false;
+
+        InitUI();
+        return true;
+    }
 
     /// <summary>
     /// 将外部装备提供的槽位临时挂入当前库存。槽位对象本身由装备持有，
