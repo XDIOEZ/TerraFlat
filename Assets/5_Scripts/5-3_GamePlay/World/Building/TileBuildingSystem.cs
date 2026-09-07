@@ -15,10 +15,12 @@ public readonly struct TileBuildingCell
         LocalPosition = position;
         RuntimeTileId = 0;
         TileBlockId = null;
+        ReplacedGroundCell = null;
     }
 
     public TileBuildingCell(RuntimeChunk runtimeChunk, Vector2Int position,
-        Vector2Int localPosition, int runtimeTileId, string tileBlockId)
+        Vector2Int localPosition, int runtimeTileId, string tileBlockId,
+        TerrainCell? replacedGroundCell = null)
     {
         Map = null;
         Position = position;
@@ -26,6 +28,7 @@ public readonly struct TileBuildingCell
         LocalPosition = localPosition;
         RuntimeTileId = runtimeTileId;
         TileBlockId = tileBlockId;
+        ReplacedGroundCell = replacedGroundCell;
     }
 
     public Map Map { get; }
@@ -34,6 +37,8 @@ public readonly struct TileBuildingCell
     public Vector2Int LocalPosition { get; }
     public int RuntimeTileId { get; }
     public string TileBlockId { get; }
+    /// <summary>地表铺设事务的原格快照，仅用于材料扣减失败时原样回滚。</summary>
+    public TerrainCell? ReplacedGroundCell { get; }
     public bool UsesRuntimeTerrain => RuntimeChunk != null;
 }
 
@@ -94,7 +99,7 @@ public readonly struct TileBuildingDamageResult
 /// 墙壁等非工作方块的权威运行时入口。新区块把状态保存在 ChunkTerrainData 的
 /// BlockingTileId，旧 Map.Data 仅作为兼容回退，不创建每格 GameObject。
 /// </summary>
-public static class TileBuildingSystem
+public static partial class TileBuildingSystem
 {
     /// <summary>运行时区块中每格建筑累计损伤使用的权威环境层。</summary>
     public const string RuntimeDamageLayerId = "flatworld.tileBuilding.damage";
@@ -160,6 +165,9 @@ public static class TileBuildingSystem
             reason = $"找不到格子建筑定义：{tileBlockId}";
             return false;
         }
+
+        if (definition.groundPlacement != null)
+            return TryResolveGroundPlacement(cell, definition, out _, out _, out reason);
 
         if (!BlockingTilemapLayer.IsBlockingTile(definition.tileDataTemplate))
         {
@@ -239,6 +247,9 @@ public static class TileBuildingSystem
             reason = $"找不到格子建筑定义：{tileBlockId}";
             return false;
         }
+
+        if (definition.groundPlacement != null)
+            return TryPlaceGround(cell, definition, out placedCell, out reason);
 
         if (!BlockingTilemapLayer.IsBlockingTile(definition.tileDataTemplate))
         {
@@ -328,6 +339,9 @@ public static class TileBuildingSystem
         bool spawnDrop,
         out string reason)
     {
+        if (placedCell.ReplacedGroundCell.HasValue)
+            return TryRollbackGround(placedCell, out reason);
+
         if (!placedCell.UsesRuntimeTerrain)
             return TryRemove(placedCell.Map, placedCell.Position, spawnDrop, out reason);
 

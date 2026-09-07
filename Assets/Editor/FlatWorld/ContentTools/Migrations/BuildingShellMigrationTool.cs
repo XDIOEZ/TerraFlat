@@ -46,7 +46,7 @@ public static class BuildingShellMigrationTool
         new("Smelter", "熔炉", "Assets/2_Prefabs/World/Buildings/Smelter.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Smelter_Summoner.prefab"),
         new("Tent", "帐篷", "Assets/2_Prefabs/World/Buildings/Tent.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Tent_Summoner.prefab"),
         new("Wall_Stone", "石墙", "Assets/2_Prefabs/World/Buildings/Wall_Stone.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Stone_Summoner.prefab", true),
-        new("Wall_Wood", "木墙", "Assets/2_Prefabs/World/Buildings/Wall_Wood.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab"),
+        new("Wall_Wood", "木墙", "Assets/2_Prefabs/World/Buildings/Wall_Wood.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab", true),
         new("WorkBench", "工作台", "Assets/2_Prefabs/World/Buildings/WorkBench.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/WorkBench_Summoner.prefab"),
         new("SparkMaker", "钻木取火工具", "Assets/2_Prefabs/Gameplay/Items/Tools/SparkMaker.prefab", "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/SparkMaker_Summoner.prefab"),
         new("Torch_Building", "火把", "Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab", "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab", sourceBodyId: "Torch", preserveBodyPrefabRuntime: true),

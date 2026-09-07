@@ -281,7 +281,7 @@ public class Mod_Building : Module
             }
 
             TileBuildingSystem.TryRemove(placedCell, spawnDrop: false, out _);
-            Debug.LogWarning("[格子建筑安装] 消耗建造材料失败，已回滚墙体", item);
+            Debug.LogWarning("[格子建筑安装] 消耗建造材料失败，已回滚地块", item);
             return;
         }
 
@@ -880,6 +880,9 @@ public class Mod_Building : Module
             // 格子建筑的合法性以建筑阻挡层数据为准，不能再用 TilemapCollider2D 的边界判断相邻格。
             if (!TileBuildingSystem.CanPlace(position, Data.TileBlockId, out reason))
                 return false;
+            // 地表铺设独立校验来源格与占用，不能再用水格的原通行代价否决平台。
+            if (TileBuildingSystem.IsGroundPlacement(Data.TileBlockId))
+                return true;
         }
         else if (!CheckWorldObstacles(bounds, out reason))
         {
@@ -1205,8 +1208,7 @@ public class Mod_Building : Module
             GhostShadow.InitShadow(
                 source,
                 sourceRoot,
-                footprint,
-                copySourceOffset: string.IsNullOrWhiteSpace(Data.TileBlockId));
+                footprint);
         }
         catch (Exception exception)
         {
@@ -1249,6 +1251,15 @@ public class Mod_Building : Module
     {
         sourceRenderer = null;
         sourceRoot = null;
+
+        // 格子建筑直接读取最终 Tile 的图片和变换，保持高墙 Pivot、缩放与格心偏移一致。
+        if (!string.IsNullOrWhiteSpace(Data?.TileBlockId))
+        {
+            GameObject tilePreview = GetTilePreviewSource();
+            sourceRenderer = tilePreview.GetComponentInChildren<SpriteRenderer>(true);
+            sourceRoot = tilePreview.transform;
+            return true;
+        }
 
         // 运行时物品定义可能复用通用 Prop 外壳；自身就是建筑时必须使用已应用定义 Sprite，
         // 否则建筑预览会误读 Prop 预制体上的默认贴图。
@@ -1384,6 +1395,45 @@ public class Mod_Building : Module
 
         return GetPlacementBounds(Vector3.zero);
     }
+
+    #region 格子建筑预览
+
+    /// <summary>以格心为根节点复刻静态 Tile 的视觉变换，占地仍由独立的一格 Bounds 描述。</summary>
+    private GameObject GetTilePreviewSource()
+    {
+        string previewId = "tile:" + Data.TileBlockId;
+        if (_definitionPreviewSource != null &&
+            string.Equals(_definitionPreviewItemId, previewId, StringComparison.Ordinal))
+            return _definitionPreviewSource;
+
+        UnityEngine.Tilemaps.Tile tile = GameRes.Instance?.GetTileBlock(Data.TileBlockId)?.
+            GetTileBaseAsset() as UnityEngine.Tilemaps.Tile;
+        if (tile == null || tile.sprite == null)
+            throw new InvalidOperationException($"格子建筑 {Data.TileBlockId} 缺少静态 Tile 或 Sprite。");
+
+        if (_definitionPreviewSource != null)
+            Destroy(_definitionPreviewSource);
+        _definitionPreviewSource = new GameObject($"{Data.TileBlockId}_BuildingPreview")
+        {
+            hideFlags = HideFlags.HideAndDontSave
+        };
+        GameObject renderObject = new GameObject("Render")
+        {
+            hideFlags = HideFlags.HideAndDontSave
+        };
+        renderObject.transform.SetParent(_definitionPreviewSource.transform, false);
+        renderObject.transform.localPosition = tile.transform.GetColumn(3);
+        renderObject.transform.localRotation = tile.transform.rotation;
+        renderObject.transform.localScale = tile.transform.lossyScale;
+        SpriteRenderer renderer = renderObject.AddComponent<SpriteRenderer>();
+        renderer.sprite = tile.sprite;
+        renderer.color = tile.color;
+        _definitionPreviewSource.SetActive(false);
+        _definitionPreviewItemId = previewId;
+        return _definitionPreviewSource;
+    }
+
+    #endregion
 
     /// <summary>按建筑本体 JSON 创建一个无模块、不可见的轻量预览源。</summary>
     private bool TryGetDefinitionPreviewSource(out GameObject previewSource)

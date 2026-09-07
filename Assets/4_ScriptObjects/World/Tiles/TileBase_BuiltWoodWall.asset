@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75b116e5f0ea93c45a60dada7fdafd73, type: 3}
+  m_Name: TileBase_BuiltWoodWall
+  m_EditorClassIdentifier:
+  tileItemName: TileBase_BuiltWoodWall
+  displayName: "\u6728\u5899"
+  tileDataTemplate:
+    rid: 7812649051734021163
+  TileBase: {fileID: 11400000, guid: 02a5d0b65e8f45099f335ba7bc9af039, type: 2}
+  damageProfile:
+    Damageable: 1
+    MaxHealth: 100
+    DefenseValues:
+      Cutting: 5
+      Piercing: 5
+      Chopping: 0
+      Blunt: 0
+    RequiredTool: 0
+    MinimumWeaponDamage: 1
+    ImpactMaterial: 3
+    DropItemId: Wall_Wood_Summoner
+    DropAmount: 1
+  behaviours: []
+  references:
+    version: 2
+    RefIds:
+    - rid: 7812649051734021163
+      type: {class: TileData_CellBuilding, ns: , asm: Data}
+      data:
+        ID: TileBase_BuiltWoodWall
+        Name: TileBase_BuiltWoodWall
+        TileTag: Blocking
+        position: {x: 0, y: 0, z: 0}
+        DemolitionTime: 200
+        workTime: 0
+        Penalty: 0
+        IsWalkable: 0
+        Version: 1
+        CurrentHp: 100

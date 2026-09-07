@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75b116e5f0ea93c45a60dada7fdafd73, type: 3}
+  m_Name: Tile_WaterPlatform
+  m_EditorClassIdentifier: 
+  tileItemName: Tile_WaterPlatform
+  displayName: "\u6C34\u4E0A\u5E73\u53F0"
+  tileDataTemplate:
+    rid: 6445419709040689160
+  TileBase: {fileID: 11400000, guid: 99334949bf6f4657959354285418527b, type: 2}
+  groundPlacement:
+    rid: 6445419709040689161
+  damageProfile:
+    Damageable: 0
+    MaxHealth: 100
+    DefenseValues:
+      Cutting: 0
+      Piercing: 0
+      Chopping: 0
+      Blunt: 0
+    RequiredTool: 0
+    MinimumWeaponDamage: 0
+    ImpactMaterial: 1
+    DropItemId: 
+    DropAmount: 0
+  behaviours: []
+  references:
+    version: 2
+    RefIds:
+    - rid: 6445419709040689160
+      type: {class: TileData_Universal, ns: , asm: Data}
+      data:
+        ID: Tile_WaterPlatform
+        Name: Tile_WaterPlatform
+        TileTag: 
+        position: {x: 0, y: 0, z: 0}
+        DemolitionTime: 0
+        workTime: 0
+        Penalty: 1000
+        IsWalkable: 1
+    - rid: 6445419709040689161
+      type: {class: GroundTilePlacementRule, ns: , asm: GamePlay}
+      data:
+        RequiredSourceFlags: 4

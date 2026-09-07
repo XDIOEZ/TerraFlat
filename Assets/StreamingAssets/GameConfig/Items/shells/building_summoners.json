@@ -1367,7 +1367,7 @@
       "parent": "BuildingSummoner_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab",
       "gameName": "木墙",
-      "description": "用于阻挡通行的木墙。",
+      "description": "由木板搭建的防御墙体，容易被劈砍和钝击破坏。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1421,13 +1421,13 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 100.0,
+        "maxHp": 100.0,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "cutting": 5.0,
+          "piercing": 5.0,
+          "chopping": 0.0,
+          "blunt": 0.0
         },
         "moduleLocalPosition": {
           "x": 0.0,
@@ -1455,7 +1455,7 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Wood\",\"SummonerPrefabId\":\"Wall_Wood_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Wall_Wood\",\"SummonerPrefabId\":\"Wall_Wood_Summoner\",\"TileBlockId\":\"TileBase_BuiltWoodWall\"}",
             "Type": 0
           }
         }
@@ -2098,6 +2098,39 @@
         "ItemSpecialData": "",
         "inHand": false,
         "FactionId": ""
+      }
+    },
+    {
+      "id": "WaterPlatform_Summoner",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "水上平台",
+      "description": "只能铺设在水中的木板平台。铺好后成为普通地面，可正常行走并继续放置建筑。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [
+        "35"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Tile.png"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 1.0,
+        "maxHp": 1.0
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"WaterPlatform\",\"SummonerPrefabId\":\"WaterPlatform_Summoner\",\"TileBlockId\":\"Tile_WaterPlatform\"}",
+            "Type": 0
+          }
+        }
       }
     }
   ]

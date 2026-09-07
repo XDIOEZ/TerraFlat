@@ -15,7 +15,7 @@ namespace FlatWorld.Automation
             Completed
         }
 
-        private const string GoldenBuildingSummonerId = "Wall_Wood_Summoner";
+        private const string GoldenBuildingSummonerId = "Chest_Wood_Summoner";
         private const string GoldenStoneWallTileBlockId = "TileBase_BuiltStoneWall";
         private const int GoldenStoneWallRuntimeTileId = 8;
         private const string BuildingPreviewSortingLayer = "Shadow";
@@ -100,7 +100,7 @@ namespace FlatWorld.Automation
             }
 
             VerifyBuildingShadow(summonerModule);
-            // 先清理木墙实体，复用已验证的安全格测试新区块石墙，避免动态占地影响候选搜索。
+            // 先清理木箱实体，复用已验证的安全格测试新区块石墙，避免动态占地影响候选搜索。
             CleanupBuildingPlacementObjects();
             RunLegacyStoneWallPreviewScenario(context);
             CleanupBuildingPlacementObjects();

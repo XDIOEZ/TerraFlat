@@ -70,6 +70,10 @@ public class Tile_Block : ScriptableObject
     [Header("对应的 Unity TileBase 资源")]
     public TileBase TileBase;
 
+    [Header("地表铺设（为空时沿用阻挡墙规则）")]
+    [SerializeReference]
+    public GroundTilePlacementRule groundPlacement;
+
     [Header("格子建筑伤害")]
     public TileBuildingDamageProfile damageProfile = new TileBuildingDamageProfile();
 
