@@ -145,6 +145,19 @@
           }
         }
       }
+    },
+    {
+      "id": "Seed_Berry",
+      "parent": "Seed_Radish",
+      "gameName": "浆果种子",
+      "description": "种在耕地上，成熟后可收获浆果和种子。",
+      "modules": {
+        "plantable": {
+          "parameters": {
+            "cropItemId": "BerryCrop"
+          }
+        }
+      }
     }
   ]
 }

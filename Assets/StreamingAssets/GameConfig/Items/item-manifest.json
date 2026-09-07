@@ -50,6 +50,11 @@
       "id": "dimension_portals",
       "path": "shells/dimension_portals.json",
       "enabled": true
+    },
+    {
+      "id": "hoes",
+      "path": "shells/hoes.json",
+      "enabled": true
     }
   ]
 }

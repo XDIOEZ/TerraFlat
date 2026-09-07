@@ -302,6 +302,57 @@
           }
         }
       }
+    },
+    {
+      "id": "BerryCrop",
+      "parent": "RadishCrop",
+      "gameName": "浆果植株",
+      "description": "种在耕地中的浆果植株；成熟后交互采收。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Plants/TX Plant.png[GrassLand_6]",
+        "collider": {
+          "size": {
+            "x": 0.8,
+            "y": 0.8
+          },
+          "offset": {
+            "x": 0,
+            "y": 0.4
+          }
+        }
+      },
+      "modules": {
+        "crop": {
+          "parameters": {
+            "growthDurationSeconds": 420
+          }
+        },
+        "cropVisual": {
+          "parameters": {
+            "buriedClip": 0,
+            "seedlingScale": 0.25,
+            "matureScale": 0.75
+          }
+        },
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              {
+                "itemId": "Berry",
+                "minAmount": 2,
+                "maxAmount": 4,
+                "probability": 1
+              },
+              {
+                "itemId": "Seed_Berry",
+                "minAmount": 1,
+                "maxAmount": 2,
+                "probability": 1
+              }
+            ]
+          }
+        }
+      }
     }
   ]
 }

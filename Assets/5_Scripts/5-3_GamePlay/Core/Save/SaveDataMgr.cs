@@ -15,15 +15,16 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// <summary>
 /// 游戏存档与加载系统，负责管理游戏数据的保存和加载功能
 /// </summary>
-public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
+public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 8;
-    private const int ModdedSaveVersion = 7;
+    private const int CompactSaveVersion = 10;
+    private const int ModdedSaveVersion = 8;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
     private const string LastExitTimeSuffix = ".lastplayed";
-    private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'2' };
+    // 完整地表差量使用新封装头，在反序列化嵌套地块前直接拒绝旧布局。
+    private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'5' };
     private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'3' };
     private static readonly object SaveFileLock = new object();
     private static readonly object SaveRevisionLock = new object();
@@ -1178,8 +1179,8 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     #region Runtime terrain persistence
 
     /// <summary>
-    /// 新版 WorldModel 区块生成完成后恢复玩家修改的阻挡地块。
-    /// 先记录程序化生成的原始阻挡层，再把存档差量覆盖到当前区块，避免把地形基线直接写进存档。
+    /// 新版 WorldModel 区块生成完成后恢复玩家修改的地表与阻挡地块。
+    /// 先记录程序化生成的完整核心地形，再覆盖差量，确保平台下的水不会在重载后恢复。
     /// </summary>
     public void RestoreRuntimeTerrainForChunk(RuntimeWorldAddress address, ChunkRuntime chunk)
     {
@@ -1211,32 +1212,14 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             if ((uint)x >= (uint)terrain.Width || (uint)y >= (uint)terrain.Height)
                 continue;
 
-            TerrainCell current = terrain.GetCell(x, y);
-            if (cell.BlockingTileId == 0)
-            {
-                if (current.BlockingTileId != 0)
-                {
-                    if (!terrain.TryRemoveBlockingTile(x, y, current.BlockingTileId))
-                        continue;
-                }
-            }
-            else if (current.BlockingTileId != cell.BlockingTileId)
-            {
-                if (current.BlockingTileId != 0 &&
-                    !terrain.TryRemoveBlockingTile(x, y, current.BlockingTileId))
-                {
-                    continue;
-                }
-
-                if (!terrain.TrySetBlockingTile(x, y, cell.BlockingTileId))
-                    continue;
-            }
+            terrain.SetCell(x, y, cell.ToTerrainCell());
 
             float accumulatedDamage = cell.BlockingTileId == 0
                 ? 0f
                 : Mathf.Max(0f, cell.AccumulatedDamage);
             WriteRuntimeBuildingDamage(terrain, x, y, accumulatedDamage);
         }
+        RestoreAgricultureTerrain(chunk, delta);
     }
 
     /// <summary>放置、受损或拆除运行时格子建筑后立即更新内存差量，避免区块回收时丢失状态。</summary>
@@ -1267,10 +1250,10 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if ((uint)x >= (uint)terrain.Width || (uint)y >= (uint)terrain.Height)
             return;
 
-        int blockingTileId = terrain.GetCell(x, y).BlockingTileId;
+        TerrainCell currentCell = terrain.GetCell(x, y);
         float accumulatedDamage = ReadRuntimeBuildingDamage(terrain, x, y);
         SetRuntimeTileDelta(key, planetName, chunk.Address, placedCell.LocalPosition,
-            blockingTileId, accumulatedDamage, baseline.GetBlockingTileId(x, y),
+            currentCell, accumulatedDamage, baseline.GetCell(x, y),
             baseline.GetAccumulatedDamage(x, y));
         runtimeTerrainDirtyChunks.Add(key);
     }
@@ -1309,7 +1292,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         runtimeTerrainDirtyChunks.Clear();
     }
 
-    /// <summary>为当前运行时区块建立一次程序化阻挡层与建筑损伤基线。</summary>
+    /// <summary>为当前运行时区块建立一次完整核心地形与建筑损伤基线。</summary>
     private bool TryEnsureRuntimeChunkBaseline(
         string key,
         ChunkRuntime chunk,
@@ -1328,11 +1311,11 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         }
 
         ChunkTerrainData terrain = chunk.Terrain;
-        int[] blockingTileIds = new int[terrain.CellCount];
+        TerrainCell[] cells = new TerrainCell[terrain.CellCount];
         for (int x = 0; x < terrain.Width; x++)
         {
             for (int y = 0; y < terrain.Height; y++)
-                blockingTileIds[y * terrain.Width + x] = terrain.GetCell(x, y).BlockingTileId;
+                cells[y * terrain.Width + x] = terrain.GetCell(x, y);
         }
 
         if (!terrain.TryCopyEnvironmentLayer(
@@ -1346,21 +1329,21 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             chunk,
             terrain.Width,
             terrain.Height,
-            blockingTileIds,
+            cells,
             accumulatedDamage);
         runtimeChunkBaselines[key] = baseline;
         return true;
     }
 
-    /// <summary>更新一格运行时阻挡 Tile 与累计建筑损伤的最小差量。</summary>
+    /// <summary>更新一格完整核心地形与累计建筑损伤的最小差量。</summary>
     private void SetRuntimeTileDelta(
         string key,
         string planetName,
         RuntimeWorldAddress address,
         Vector2Int localPosition,
-        int blockingTileId,
+        TerrainCell currentCell,
         float accumulatedDamage,
-        int baselineBlockingTileId,
+        TerrainCell baselineCell,
         float baselineAccumulatedDamage)
     {
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta) || delta == null)
@@ -1368,15 +1351,11 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         delta.RuntimeTileDeltas ??= new List<RuntimeTileCellSaveDelta>();
         delta.RuntimeTileDeltas.RemoveAll(cell => cell.LocalPosition == localPosition);
-        if (blockingTileId != baselineBlockingTileId ||
+        if (!currentCell.Equals(baselineCell) ||
             !Mathf.Approximately(accumulatedDamage, baselineAccumulatedDamage))
         {
-            delta.RuntimeTileDeltas.Add(new RuntimeTileCellSaveDelta
-            {
-                LocalPosition = localPosition,
-                BlockingTileId = blockingTileId,
-                AccumulatedDamage = Mathf.Max(0f, accumulatedDamage)
-            });
+            delta.RuntimeTileDeltas.Add(RuntimeTileCellSaveDelta.Capture(
+                localPosition, currentCell, accumulatedDamage));
             delta.RuntimeTileDeltas.Sort(CompareRuntimeTileDelta);
             chunkDeltas[key] = delta;
             return;
@@ -1403,9 +1382,9 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         {
             for (int y = 0; y < terrain.Height; y++)
             {
-                int currentBlockingTileId = terrain.GetCell(x, y).BlockingTileId;
+                TerrainCell currentCell = terrain.GetCell(x, y);
                 float currentAccumulatedDamage = ReadRuntimeBuildingDamage(terrain, x, y);
-                if (currentBlockingTileId == baseline.GetBlockingTileId(x, y) &&
+                if (currentCell.Equals(baseline.GetCell(x, y)) &&
                     Mathf.Approximately(
                         currentAccumulatedDamage,
                         baseline.GetAccumulatedDamage(x, y)))
@@ -1413,12 +1392,8 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                     continue;
                 }
 
-                changes.Add(new RuntimeTileCellSaveDelta
-                {
-                    LocalPosition = new Vector2Int(x, y),
-                    BlockingTileId = currentBlockingTileId,
-                    AccumulatedDamage = currentAccumulatedDamage
-                });
+                changes.Add(RuntimeTileCellSaveDelta.Capture(
+                    new Vector2Int(x, y), currentCell, currentAccumulatedDamage));
             }
         }
 
@@ -2490,7 +2465,7 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (!HasSaveHeader(payload, CompactSaveMagic))
         {
             throw new SaveVersionIncompatibleException(
-                "无头旧二进制存档与当前地形栈格式不兼容。不会迁移、覆盖或删除该存档。");
+                "存档封装与当前完整地形差量版本不兼容。不会迁移、覆盖或删除该存档。");
         }
 
         byte[] body = new byte[payload.Length - CompactSaveMagic.Length];
@@ -2614,28 +2589,29 @@ public class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             ChunkRuntime chunk,
             int width,
             int height,
-            int[] blockingTileIds,
+            TerrainCell[] cells,
             float[] accumulatedDamage)
         {
             ChunkReference = new WeakReference(chunk);
             Width = width;
             Height = height;
-            BlockingTileIds = blockingTileIds ?? Array.Empty<int>();
+            Cells = cells;
             AccumulatedDamage = accumulatedDamage ?? Array.Empty<float>();
         }
 
         public WeakReference ChunkReference { get; }
         public int Width { get; }
         public int Height { get; }
-        public int[] BlockingTileIds { get; }
+        public TerrainCell[] Cells { get; }
         /// <summary>程序化基线中每格建筑已经累计的损伤；空数组表示全为零。</summary>
         public float[] AccumulatedDamage { get; }
 
-        public int GetBlockingTileId(int x, int y)
+        /// <summary>读取程序化基线中的完整格子属性。</summary>
+        public TerrainCell GetCell(int x, int y)
         {
             if ((uint)x >= (uint)Width || (uint)y >= (uint)Height)
-                return 0;
-            return BlockingTileIds[y * Width + x];
+                throw new ArgumentOutOfRangeException(nameof(x));
+            return Cells[y * Width + x];
         }
 
         /// <summary>读取程序化基线中一格建筑的累计损伤。</summary>
@@ -2692,8 +2668,9 @@ public partial class ChunkSaveRecord
     public List<int> RemovedItemGuids = new();
     public List<TileCellSaveDelta> TileDeltas = new();
     public List<GrassCellSaveDelta> GrassDeltas = new();
-    // 当前 WorldModel 的运行时阻挡地块差量。
+    // 当前 WorldModel 的完整核心地形差量，包含地表铺设和阻挡墙。
     public List<RuntimeTileCellSaveDelta> RuntimeTileDeltas = new();
+    public List<AgricultureCellSaveData> AgricultureCells = new(); // 独立农业状态
 
     [MemoryPackIgnore]
     public bool HasChanges =>
@@ -2701,7 +2678,8 @@ public partial class ChunkSaveRecord
          (RemovedItemGuids?.Count ?? 0) > 0 ||
          (TileDeltas?.Count ?? 0) > 0 ||
          (GrassDeltas?.Count ?? 0) > 0 ||
-         (RuntimeTileDeltas?.Count ?? 0) > 0);
+         (RuntimeTileDeltas?.Count ?? 0) > 0 ||
+         (AgricultureCells?.Count ?? 0) > 0);
 }
 
 [MemoryPackable]
@@ -2725,7 +2703,33 @@ public partial class GrassCellSaveDelta
 public partial class RuntimeTileCellSaveDelta
 {
     public Vector2Int LocalPosition;
+    public int GroundTileId;
+    public int BackTileId;
     public int BlockingTileId;
+    public int BiomeId;
+    public short NavigationCost;
+    public TerrainCellFlags Flags;
     // 0 表示该格建筑满耐久或当前没有阻挡建筑。
     public float AccumulatedDamage;
+
+    /// <summary>捕获核心地形，避免不同修改入口只保存自己关心的墙或水标记。</summary>
+    public static RuntimeTileCellSaveDelta Capture(Vector2Int localPosition,
+        TerrainCell cell, float accumulatedDamage)
+    {
+        return new RuntimeTileCellSaveDelta
+        {
+            LocalPosition = localPosition,
+            GroundTileId = cell.GroundTileId,
+            BackTileId = cell.BackTileId,
+            BlockingTileId = cell.BlockingTileId,
+            BiomeId = cell.BiomeId,
+            NavigationCost = cell.NavigationCost,
+            Flags = cell.Flags,
+            AccumulatedDamage = Mathf.Max(0f, accumulatedDamage)
+        };
+    }
+
+    /// <summary>按当前版本原样还原地形；不推测、迁移或补齐旧格式字段。</summary>
+    public TerrainCell ToTerrainCell() => new TerrainCell(
+        GroundTileId, BackTileId, BlockingTileId, BiomeId, NavigationCost, Flags);
 }

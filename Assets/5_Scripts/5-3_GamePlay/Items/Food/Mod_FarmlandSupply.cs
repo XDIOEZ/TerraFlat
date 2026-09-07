@@ -1,4 +1,5 @@
 using System;
+using FlatWorld.Networking;
 using UnityEngine;
 
 /// <summary>
@@ -61,22 +62,16 @@ public class Mod_FarmlandSupply : Module
     {
         base.Act();
 
-        if (item == null || item.Owner == null)
+        if (!GameNetwork.HasStateAuthority || item == null || !item.InHand || item.Owner == null)
         {
             Debug.LogWarning("[Mod_FarmlandSupply] 补给失败：物品未被玩家持有", item);
             return;
         }
 
-        if (Camera.main == null)
-        {
-            Debug.LogWarning("[Mod_FarmlandSupply] 补给失败：缺少主摄像机", item);
-            return;
-        }
-
         GameController controller = ResolveOwnerController();
-        Vector3 mouseWorldPosition = controller != null
-            ? controller.GetMouseWorldPosition()
-            : Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        if (controller == null)
+            return;
+        Vector3 mouseWorldPosition = controller.GetMouseWorldPosition();
         mouseWorldPosition = WorldTopologyRuntime.NormalizePosition(mouseWorldPosition);
         if (!TryResolveFarmland(mouseWorldPosition, out Vector2Int tilePos, out TileData_Farmland farmlandData))
         {
@@ -97,6 +92,9 @@ public class Mod_FarmlandSupply : Module
             return;
         }
 
+        if (!FarmlandSystem.IsWithinReach(item.Owner.transform.position, tilePos, 2f))
+            return;
+        FarmlandSystem.CommitSoil(farmlandData);
         item.itemData.Stack.Amount--;
         item.OnUIRefresh?.Invoke();
         Debug.Log(
@@ -113,20 +111,9 @@ public class Mod_FarmlandSupply : Module
         out Vector2Int tilePos,
         out TileData_Farmland farmlandData)
     {
-        tilePos = default;
-        farmlandData = null;
-
-        if (ChunkMgr.Instance == null)
-            return false;
-
-        ChunkMgr.Instance.GetChunkBy_ItemPosition(worldPosition, out Chunk chunk);
-        if (chunk == null || chunk.Map == null || chunk.Map.tileMap == null)
-            return false;
-
-        Vector3Int cellPosition = chunk.Map.tileMap.WorldToCell(worldPosition);
-        tilePos = new Vector2Int(cellPosition.x, cellPosition.y);
-        farmlandData = chunk.Map.GetTileAt(tilePos, 0) as TileData_Farmland;
-        return farmlandData != null;
+        Vector3 normalized = WorldTopologyRuntime.NormalizePosition(worldPosition);
+        tilePos = new Vector2Int(Mathf.FloorToInt(normalized.x), Mathf.FloorToInt(normalized.y));
+        return FarmlandSystem.TryReadSoil(tilePos, out farmlandData);
     }
 
 #endregion

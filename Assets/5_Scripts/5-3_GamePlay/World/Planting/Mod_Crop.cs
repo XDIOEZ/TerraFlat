@@ -213,6 +213,7 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop
         float safeDeltaTime = Mathf.Max(0f, deltaTime);
         ApplyRainWater(farmlandData, safeDeltaTime);
         farmlandData.NormalizeValues();
+        FarmlandSystem.CommitSoil(farmlandData);
 
         if (farmlandData.waterValue <= 0f)
         {
@@ -238,6 +239,7 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop
 
         farmlandData.ConsumeWater(waterConsumePerSecond * safeDeltaTime);
         farmlandData.ConsumeFertility(fertilityConsumePerSecond * safeDeltaTime);
+        FarmlandSystem.CommitSoil(farmlandData);
         SetGrowthStatus(CropGrowthStatus.Growing);
 
         Data.normalizedGrowth = Mathf.Clamp01(Data.normalizedGrowth + growthDelta);
@@ -246,23 +248,8 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop
             SetStage(CropStage.Mature);
     }
 
-    private bool TryResolveFarmland(out TileData_Farmland farmlandData)
-    {
-        farmlandData = null;
-        if (ChunkMgr.Instance == null)
-            return false;
-
-        Vector3 worldCenter = new(
-            Data.plantedTilePosition.x + 0.5f,
-            Data.plantedTilePosition.y + 0.5f,
-            0f);
-        ChunkMgr.Instance.GetChunkBy_ItemPosition(worldCenter, out Chunk chunk);
-        if (chunk?.Map == null)
-            return false;
-
-        farmlandData = chunk.Map.GetTileAt(Data.plantedTilePosition, 0) as TileData_Farmland;
-        return farmlandData != null;
-    }
+    private bool TryResolveFarmland(out TileData_Farmland farmlandData) =>
+        FarmlandSystem.TryReadSoil(Data.plantedTilePosition, out farmlandData);
 
     private float CalculateFarmlandGrowthMultiplier(TileData_Farmland farmlandData)
     {

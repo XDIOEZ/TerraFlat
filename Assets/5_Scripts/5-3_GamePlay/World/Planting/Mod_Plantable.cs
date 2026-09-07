@@ -1,4 +1,5 @@
 using System;
+using FlatWorld.Networking;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -120,7 +121,7 @@ public sealed class Mod_Plantable : Module
     {
         base.Act();
 
-        if (item == null || !item.InHand || item.Owner == null)
+        if (!GameNetwork.HasStateAuthority || item == null || !item.InHand || item.Owner == null)
             return;
 
         if (!TryResolveOwnerController(out GameController controller))
@@ -143,6 +144,9 @@ public sealed class Mod_Plantable : Module
             Debug.LogError("[种植] 作物已生成但种子扣除失败，已回滚作物。", item);
             return;
         }
+
+        target.agriculture.RegisterCrop(target.tilePosition, crop);
+        target.agriculture.CaptureState();
 
         Debug.Log($"[种植] {cropItemId} 已种下，地块={target.tilePosition}，剩余种子={item.itemData.Stack.Amount}", item);
         if (item.itemData.Stack.Amount <= 0f)
@@ -226,29 +230,21 @@ public sealed class Mod_Plantable : Module
             return false;
         }
 
-        if (!TryResolveMap(pointerWorldPosition, out Map map) || map.tileMap == null)
+        if (ChunkMgr.ExistingInstance == null ||
+            !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(pointerWorldPosition, out var sample) ||
+            !ChunkMgr.ExistingInstance.TryGetRuntimeChunkView(sample.Address, out ChunkView view) ||
+            !FarmlandSystem.IsOpen(sample))
         {
-            reason = "目标地块不在已加载地图中";
+            reason = "目标地块未加载或被建筑占用";
             return false;
         }
-
-        Vector3 normalizedPointer = WorldTopologyRuntime.NormalizePosition(pointerWorldPosition);
-        Vector3Int cell = map.tileMap.WorldToCell(normalizedPointer);
-        Vector2Int tilePosition = new(cell.x, cell.y);
-        Vector3 worldCenter = map.tileMap.GetCellCenterWorld(cell);
-
-        if (!TryResolveChunk(worldCenter, out Chunk chunk))
+        Vector2Int tilePosition = sample.WorldCell;
+        Vector3 worldCenter = new(tilePosition.x + 0.5f, tilePosition.y + 0.5f, 0f);
+        if (!FarmlandSystem.TryReadSoil(tilePosition, out TileData_Farmland farmland))
         {
-            reason = "目标地块所在区块尚未加载";
+            reason = "请先把地块锄成耕地";
             return false;
         }
-
-        if (!TryGetFarmland(map, tilePosition, out TileData_Farmland farmland))
-        {
-            reason = $"地块 {tilePosition} 不是可种植耕地";
-            return false;
-        }
-
         farmland.NormalizeValues();
         if (farmland.waterValue <= 0f)
         {
@@ -268,74 +264,28 @@ public sealed class Mod_Plantable : Module
             return false;
         }
 
-        float distance = WorldTopologyRuntime.Distance(item.Owner.transform.position, worldCenter);
-        if (distance > Mathf.Max(0.1f, maxPlantingDistance))
+        if (!FarmlandSystem.IsWithinReach(item.Owner.transform.position, tilePosition, maxPlantingDistance))
         {
             reason = "目标地块超出种植范围";
             return false;
         }
 
-        if (HasCropOccupyingTile(chunk, worldCenter))
+        if (FarmlandSystem.HasWorldPlant(tilePosition))
         {
             reason = $"地块 {tilePosition} 已有作物，不能重复种植";
             return false;
         }
 
-        target = new PlantingTarget(tilePosition, worldCenter, chunk);
+        target = new PlantingTarget(tilePosition, worldCenter, view.GetComponent<ChunkAgricultureRenderer>());
         return true;
     }
 
     private bool TryResolvePreviewCell(Vector3 pointerWorldPosition, out Vector3 cellCenter)
     {
         cellCenter = WorldTopologyRuntime.NormalizePosition(pointerWorldPosition);
-        if (!TryResolveMap(pointerWorldPosition, out Map map) || map.tileMap == null)
-            return false;
-
-        Vector3Int cell = map.tileMap.WorldToCell(cellCenter);
-        cellCenter = map.tileMap.GetCellCenterWorld(cell);
-        return true;
-    }
-
-    private static bool TryGetFarmland(Map map, Vector2Int tilePosition, out TileData_Farmland farmland)
-    {
-        farmland = map?.GetTileAt(tilePosition, 0) as TileData_Farmland;
-        return farmland != null;
-    }
-
-    private static bool TryResolveMap(Vector3 worldPosition, out Map map)
-    {
-        map = null;
-        if (ChunkMgr.Instance == null)
-            return false;
-
-        Vector3 normalizedPosition = WorldTopologyRuntime.NormalizePosition(worldPosition);
-        ChunkMgr.Instance.GetChunkBy_ItemPosition(normalizedPosition, out Chunk chunk);
-        map = chunk?.Map;
-        return map != null;
-    }
-
-    private static bool TryResolveChunk(Vector3 worldPosition, out Chunk chunk)
-    {
-        chunk = null;
-        if (ChunkMgr.Instance == null)
-            return false;
-
-        ChunkMgr.Instance.GetChunkBy_ItemPosition(worldPosition, out chunk);
-        return chunk != null;
-    }
-
-    private static bool HasCropOccupyingTile(Chunk chunk, Vector3 worldCenter)
-    {
-        if (chunk == null || !chunk.TryGetItemsByPosition(worldCenter, out List<Item> items) || items == null)
-            return false;
-
-        foreach (Item candidate in items)
-        {
-            if (candidate != null && candidate.GetComponentsInChildren<IPlantableCrop>(true).Length > 0)
-                return true;
-        }
-
-        return false;
+        cellCenter = new Vector3(Mathf.Floor(cellCenter.x) + 0.5f, Mathf.Floor(cellCenter.y) + 0.5f, 0f);
+        return ChunkMgr.ExistingInstance != null &&
+            ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(cellCenter, out _);
     }
 
     #endregion
@@ -358,7 +308,7 @@ public sealed class Mod_Plantable : Module
                 target.worldCenter,
                 Quaternion.identity,
                 Vector3.one,
-                target.chunk.gameObject);
+                target.agriculture.gameObject);
             crop.Load();
             crop.SetInHand(false);
             if (crop.itemData?.Stack == null)
@@ -420,13 +370,13 @@ public sealed class Mod_Plantable : Module
     {
         public readonly Vector2Int tilePosition;
         public readonly Vector3 worldCenter;
-        public readonly Chunk chunk;
+        public readonly ChunkAgricultureRenderer agriculture;
 
-        public PlantingTarget(Vector2Int tilePosition, Vector3 worldCenter, Chunk chunk)
+        public PlantingTarget(Vector2Int tilePosition, Vector3 worldCenter, ChunkAgricultureRenderer agriculture)
         {
             this.tilePosition = tilePosition;
             this.worldCenter = worldCenter;
-            this.chunk = chunk;
+            this.agriculture = agriculture;
         }
     }
 

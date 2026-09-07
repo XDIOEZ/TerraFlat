@@ -219,6 +219,7 @@ public partial class Mod_Grow
 
             ApplyRainWater(farmlandData, deltaTime);
             farmlandData.NormalizeValues();
+            FarmlandSystem.CommitSoil(farmlandData);
 
             if (farmlandData.waterValue <= 0f)
             {
@@ -249,6 +250,7 @@ public partial class Mod_Grow
             {
                 farmlandData.ConsumeWater(waterConsumePerSecond * deltaTime);
                 farmlandData.ConsumeFertility(fertilityConsumePerSecond * deltaTime);
+                FarmlandSystem.CommitSoil(farmlandData);
             }
         }
         else
@@ -327,24 +329,8 @@ public partial class Mod_Grow
         return true;
     }
 
-    private bool TryResolveFarmland(out TileData_Farmland farmlandData)
-    {
-        farmlandData = null;
-        if (ChunkMgr.Instance == null || item == null)
-            return false;
-
-        Vector3 worldCenter = new Vector3(Data.plantedTilePos.x + 0.5f, Data.plantedTilePos.y + 0.5f, 0f);
-        ChunkMgr.Instance.GetChunkBy_ItemPosition(worldCenter, out Chunk chunk);
-        if (chunk == null || chunk.Map == null)
-            return false;
-
-        TileData tileData = chunk.Map.GetTileAt(Data.plantedTilePos, 0);
-        if (tileData is not TileData_Farmland resolved)
-            return false;
-
-        farmlandData = resolved;
-        return true;
-    }
+    private bool TryResolveFarmland(out TileData_Farmland farmlandData) =>
+        FarmlandSystem.TryReadSoil(Data.plantedTilePos, out farmlandData);
 
     private void ApplyRainWater(TileData_Farmland farmlandData, float deltaTime)
     {

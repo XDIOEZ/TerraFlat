@@ -40,6 +40,11 @@
       "id": "smelting/alloys",
       "path": "smelting/alloys.json",
       "enabled": true
+    },
+    {
+      "id": "crafting/agriculture",
+      "path": "crafting/agriculture.json",
+      "enabled": true
     }
   ]
 }

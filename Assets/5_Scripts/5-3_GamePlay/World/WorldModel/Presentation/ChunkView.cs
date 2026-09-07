@@ -134,6 +134,7 @@ public sealed class ChunkView : MonoBehaviour
     /// <summary>保存当前 ChunkView 下自然物的权威状态。</summary>
     public void CaptureNaturalItemState()
     {
+        GetComponent<ChunkAgricultureRenderer>().CaptureState();
         ChunkNaturalItemRenderer renderer = GetComponentInChildren<ChunkNaturalItemRenderer>(true);
         renderer?.CaptureState();
     }
@@ -161,6 +162,7 @@ public sealed class ChunkView : MonoBehaviour
     /// <summary>自动保存专用的自然物分帧快照入口。</summary>
     public IEnumerator CaptureNaturalItemStateCoroutine()
     {
+        GetComponent<ChunkAgricultureRenderer>().CaptureState();
         ChunkNaturalItemRenderer renderer = GetComponentInChildren<ChunkNaturalItemRenderer>(true);
         if (renderer == null)
             yield break;
@@ -260,6 +262,8 @@ public sealed class ChunkView : MonoBehaviour
             return 5;
         if (renderer is ChunkNaturalItemRenderer)
             return 6;
+        if (renderer is ChunkAgricultureRenderer)
+            return 7;
         return 2;
     }
 }

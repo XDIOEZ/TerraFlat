@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:hoe_wood",
+      "displayName": "木锄头",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "allowMirror": false,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Log",
+          "amount": 2
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Hoe_Wood",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:hoe_stone",
+      "displayName": "石锄头",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "allowMirror": false,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ore_Stone",
+          "amount": 2
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Hoe_Stone",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:hoe_copper",
+      "displayName": "铜锄头",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "allowMirror": false,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "amount": 2
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Hoe_Copper",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:hoe_iron",
+      "displayName": "铁锄头",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "allowMirror": false,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "amount": 2
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Hoe_Iron",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:berry_seeds",
+      "displayName": "提取浆果种子",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "allowMirror": false,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Berry",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Seed_Berry",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:radish_seeds",
+      "displayName": "提取萝卜种子",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "allowMirror": false,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Radish",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Seed_Radish",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    }
+  ]
+}
