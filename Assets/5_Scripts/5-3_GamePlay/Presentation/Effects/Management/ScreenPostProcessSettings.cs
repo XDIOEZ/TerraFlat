@@ -4,7 +4,7 @@ using FlatWorld.Settings;
 using UnityEngine;
 
 /// <summary>
-/// 后处理质量档位。高/中/低分别控制后处理边缘柔和度、强度和脉冲动画，
+/// 后处理质量档位。高/中/低控制世界泛光成本及警示暗角的强度、柔和度和脉冲动画，
 /// 仅保存玩家的画质偏好，不承载任何玩法规则。
 /// </summary>
 public enum ScreenPostProcessQuality

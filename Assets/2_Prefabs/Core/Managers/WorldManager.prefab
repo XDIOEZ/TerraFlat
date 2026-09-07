@@ -63,8 +63,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3e21f224973762e438c68faf6f068e13, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2048257428238950690
 GameObject:
   m_ObjectHideFlags: 0
@@ -182,8 +182,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   LoadedCount: 0
-  ADBLabels: []
-  isLoadFinish: 0
   resourceLoadingPrefab: {fileID: 5552011803808462458, guid: 63c6695ef248a43479328512440e2b8c, type: 3}
 --- !u!1 &3563432657672857351
 GameObject:
@@ -195,6 +193,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2158920630664488977}
   - component: {fileID: 2774324081146142469}
+  - component: {fileID: 5837248620173946120}
   m_Layer: 0
   m_Name: Global Volume
   m_TagString: Untagged
@@ -234,6 +233,19 @@ MonoBehaviour:
   blendDistance: 0
   weight: 1
   sharedProfile: {fileID: 11400000, guid: ec205a5e3ef5d6b49ba00791799edcc5, type: 2}
+--- !u!114 &5837248620173946120
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3563432657672857351}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0454bcaf5a6745408d20de11b5b3a4eb, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  gameManager: {fileID: 2341746562113399121}
 --- !u!1 &4147786669370695384
 GameObject:
   m_ObjectHideFlags: 0
@@ -295,7 +307,7 @@ MonoBehaviour:
     RecoveryIntensity: 0.15
   _deterministicSeedOverride: 0
   EnableDebugLog: 0
-  _toggleDebugPanelKey: 293
+  _toggleDebugPanelInputKey: 105
   _debugPanelVisible: 0
   _debugWindowRect:
     serializedVersion: 2
@@ -372,6 +384,7 @@ MonoBehaviour:
     GlobalTemperature: 26
     CurrentWeather: 0
     WeatherIntensity: 0
+    WindStrength: 0.35
     WeatherDataVersion: 0
     WeatherPhase: 0
     WeatherPhaseStartedTotalTime: 0
@@ -493,8 +506,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4d8a6afd6cbddd46a774d05a14215c0, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   overlayPrefab: {fileID: 8515459174737126461, guid: 0d1b3a0c73a0212498d83f06a0ea5372, type: 3}
 --- !u!1 &5482967027949208378
 GameObject:
