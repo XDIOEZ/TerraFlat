@@ -16,6 +16,8 @@ public readonly struct WorldNavigationPathResult
     public readonly bool ReachesDestination;
     /// <summary>带权导航用于本次路径结果判定的总代价。</summary>
     public readonly int TotalCost;
+    /// <summary>搜索已确认最小总代价达到请求上限，无需继续展开。</summary>
+    public readonly bool RejectedByPathCost;
     public readonly int GridRevision;
     public readonly int PathCostRevision;
 
@@ -28,7 +30,8 @@ public readonly struct WorldNavigationPathResult
         bool reachesDestination,
         int totalCost,
         int gridRevision,
-        int pathCostRevision)
+        int pathCostRevision,
+        bool rejectedByPathCost = false)
     {
         RequestId = requestId;
         Success = success;
@@ -37,6 +40,7 @@ public readonly struct WorldNavigationPathResult
         Waypoints = waypoints ?? Array.Empty<Vector2>();
         ReachesDestination = reachesDestination;
         TotalCost = totalCost;
+        RejectedByPathCost = rejectedByPathCost;
         GridRevision = gridRevision;
         PathCostRevision = pathCostRevision;
     }
@@ -618,13 +622,14 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
     public int RequestPath(
         Vector2 start,
         Vector2 destination,
-        Action<WorldNavigationPathResult> callback)
+        Action<WorldNavigationPathResult> callback,
+        int maximumPathCostExclusive = int.MaxValue)
     {
         int requestId = nextRequestId++;
         if (nextRequestId <= 0)
             nextRequestId = 1;
 
-        PathRequest request = new(requestId, start, destination, callback);
+        PathRequest request = new(requestId, start, destination, callback, Mathf.Max(1, maximumPathCostExclusive));
         requests[requestId] = request;
         QueueForAdmission(request);
         return requestId;
@@ -826,7 +831,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
             return;
         }
 
-        request.FieldNode = field.AddWaitingRequest(start, request.Id);
+        request.FieldNode = field.AddWaitingRequest(start, request.Id, request.MaximumPathCostExclusive);
         request.Field = field;
     }
 
@@ -905,6 +910,28 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
 
         bool hasMoreAtCurrentCell = false;
         int remainingBuilds = Mathf.Max(1, maxPathBuildsPerExpansion);
+        // Dijkstra 前沿是尚未结算起点的代价下界；只拒绝已超限的请求，保留同目标的其它请求。
+        while (remainingBuilds > 0 && field.HasCostRejectedRequests(current.Cost))
+        {
+            int rejectedRequestId = field.TakeCostRejectedRequest();
+            if (requests.TryGetValue(rejectedRequestId, out PathRequest rejectedRequest))
+                SchedulePathCostRejection(rejectedRequest, current.Cost);
+            remainingBuilds--;
+
+            if (pathStopwatch.IsRunning &&
+                pathStopwatch.Elapsed.TotalMilliseconds >= Mathf.Max(0.1f, maxPathMillisecondsPerFrame))
+            {
+                break;
+            }
+        }
+
+        if (remainingBuilds == 0 || field.HasCostRejectedRequests(current.Cost))
+        {
+            field.Requeue(current);
+            field.ExpandedCells--;
+            return true;
+        }
+
         while (remainingBuilds-- > 0 &&
                field.TakeWaitingRequests(
                    current.Cell,
@@ -1063,6 +1090,12 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         bool reachesDestination,
         int totalCost)
     {
+        if (totalCost >= request.MaximumPathCostExclusive)
+        {
+            SchedulePathCostRejection(request, totalCost);
+            return;
+        }
+
         DetachRequestFromField(request);
         RemoveFromAdmissionQueue(request);
         requests.Remove(request.Id);
@@ -1079,6 +1112,28 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                 totalCost,
                 grid.Revision,
                 grid.PathCostRevision)));
+    }
+
+    /// <summary>以明确的代价拒绝完成请求，让 AI 进入放弃追击和冷却流程。</summary>
+    private void SchedulePathCostRejection(PathRequest request, int minimumTotalCost)
+    {
+        DetachRequestFromField(request);
+        RemoveFromAdmissionQueue(request);
+        requests.Remove(request.Id);
+        EnqueueCompletion(new CompletedRequest(
+            request.Callback,
+            request.Start,
+            new WorldNavigationPathResult(
+                request.Id,
+                false,
+                request.Destination,
+                request.Destination,
+                Array.Empty<Vector2>(),
+                false,
+                minimumTotalCost,
+                grid.Revision,
+                grid.PathCostRevision,
+                rejectedByPathCost: true)));
     }
 
     private void ScheduleFailure(PathRequest request)
@@ -1270,6 +1325,8 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         public readonly Vector2 Start;
         public readonly Vector2 Destination;
         public readonly Action<WorldNavigationPathResult> Callback;
+        /// <summary>本请求允许的总代价上界，不包含边界值。</summary>
+        public readonly int MaximumPathCostExclusive;
         public Vector2Int StartCell;
         public Vector2Int GoalCell;
         public int PreparedRevision;
@@ -1278,12 +1335,14 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         public LinkedListNode<int> AdmissionNode;
         public bool AdmissionQueued => AdmissionNode != null;
 
-        public PathRequest(int id, Vector2 start, Vector2 destination, Action<WorldNavigationPathResult> callback)
+        public PathRequest(int id, Vector2 start, Vector2 destination, Action<WorldNavigationPathResult> callback,
+            int maximumPathCostExclusive)
         {
             Id = id;
             Start = start;
             Destination = destination;
             Callback = callback;
+            MaximumPathCostExclusive = maximumPathCostExclusive;
         }
     }
 
@@ -1308,8 +1367,13 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
     {
         private readonly WorldNavigationGrid.MinHeap frontier = new();
         private readonly Dictionary<Vector2Int, int> costs = new(1024);
+        // 只有从优先队列取出的格子才具有最终最短代价，暂定代价不能用于超限判定。
+        private readonly HashSet<Vector2Int> settledCells = new();
         private readonly Dictionary<Vector2Int, Vector2Int> nextTowardGoal = new(1024);
         private readonly Dictionary<Vector2Int, LinkedList<int>> waitingByStart = new(32);
+        // 同一目标按请求上限分别结束，避免一只狼取消整群共用的搜索。
+        private readonly SortedSet<(int Limit, int RequestId)> costLimitedRequests = new();
+        private readonly Dictionary<int, int> requestCostLimits = new(32);
         private int waitingCount;
         private int minX;
         private int maxX;
@@ -1335,7 +1399,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
             frontier.Push(goal, 0, 0);
         }
 
-        public LinkedListNode<int> AddWaitingRequest(Vector2Int start, int requestId)
+        public LinkedListNode<int> AddWaitingRequest(Vector2Int start, int requestId, int maximumPathCostExclusive)
         {
             if (!waitingByStart.TryGetValue(start, out LinkedList<int> ids))
             {
@@ -1345,6 +1409,11 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
 
             LinkedListNode<int> node = ids.AddLast(requestId);
             waitingCount++;
+            if (maximumPathCostExclusive < int.MaxValue)
+            {
+                costLimitedRequests.Add((maximumPathCostExclusive, requestId));
+                requestCostLimits.Add(requestId, maximumPathCostExclusive);
+            }
             return node;
         }
 
@@ -1357,10 +1426,31 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                 return;
             }
 
+            RemoveRequestCostLimit(node.Value);
             ids.Remove(node);
             waitingCount--;
             if (ids.Count == 0)
                 waitingByStart.Remove(start);
+        }
+
+        /// <summary>最小未处理上限已被搜索前沿达到时，可直接结束该请求。</summary>
+        public bool HasCostRejectedRequests(int minimumTotalCost)
+            => costLimitedRequests.Count > 0 && costLimitedRequests.Min.Limit <= minimumTotalCost;
+
+        public int TakeCostRejectedRequest()
+        {
+            int requestId = costLimitedRequests.Min.RequestId;
+            RemoveRequestCostLimit(requestId);
+            return requestId;
+        }
+
+        private void RemoveRequestCostLimit(int requestId)
+        {
+            if (!requestCostLimits.TryGetValue(requestId, out int limit))
+                return;
+
+            costLimitedRequests.Remove((limit, requestId));
+            requestCostLimits.Remove(requestId);
         }
 
         public bool IsAffected(IReadOnlyList<Vector2Int> changedCells)
@@ -1401,7 +1491,10 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
             while (frontier.TryPop(out entry))
             {
                 if (costs.TryGetValue(entry.Cell, out int knownCost) && knownCost == entry.Cost)
+                {
+                    settledCells.Add(entry.Cell);
                     return true;
+                }
             }
             return false;
         }
@@ -1444,6 +1537,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
             {
                 LinkedListNode<int> node = ids.First;
                 ids.RemoveFirst();
+                RemoveRequestCostLimit(node.Value);
                 result.Add(node.Value);
                 waitingCount--;
             }
@@ -1476,6 +1570,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                 {
                     LinkedListNode<int> node = selectedIds.First;
                     selectedIds.RemoveFirst();
+                    RemoveRequestCostLimit(node.Value);
                     result.Add(node.Value);
                     waitingCount--;
                 }
@@ -1503,7 +1598,8 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                 ? WorldTopologyRuntime.NormalizePosition(request.Destination)
                 : WorldNavigationGrid.CellCenter(request.GoalCell);
 
-            if (!costs.TryGetValue(start, out totalCost) ||
+            if (!settledCells.Contains(start) ||
+                !costs.TryGetValue(start, out totalCost) ||
                 (start != Goal && !nextTowardGoal.ContainsKey(start)))
             {
                 waypoints = null;
@@ -1572,6 +1668,8 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         public void ClearWaitingRequests()
         {
             waitingByStart.Clear();
+            costLimitedRequests.Clear();
+            requestCostLimits.Clear();
             waitingCount = 0;
         }
     }

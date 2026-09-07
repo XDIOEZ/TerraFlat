@@ -289,17 +289,17 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 150.0,
-              "MaxHp": 150.0,
+              "Hp": 75.0,
+              "MaxHp": 75.0,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
               "BodyParts": [],
               "DefenseValues": {
-                "Cutting": 1.0,
-                "Piercing": 1.0,
-                "Chopping": 1.0,
-                "Blunt": 1.0
+                "Cutting": 0.5,
+                "Piercing": 0.5,
+                "Chopping": 0.5,
+                "Blunt": 0.5
               },
               "DamageInterval": 0.12,
               "DestroyDelay": 0.0
@@ -981,8 +981,8 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 300.0,
-              "MaxHp": 300.0,
+              "Hp": 150.0,
+              "MaxHp": 150.0,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
@@ -990,10 +990,10 @@
               "DamageInterval": 0.12,
               "DestroyDelay": 0.0,
               "DefenseValues": {
-                "Cutting": 5.0,
-                "Piercing": 5.0,
-                "Chopping": 5.0,
-                "Blunt": 5.0
+                "Cutting": 2.5,
+                "Piercing": 2.5,
+                "Chopping": 2.5,
+                "Blunt": 2.5
               }
             },
             "impactAudioMaterial": 0,
@@ -1714,8 +1714,8 @@
           },
           "parameters": {
             "Data": {
-              "Hp": 200.0,
-              "MaxHp": 200.0,
+              "Hp": 100.0,
+              "MaxHp": 100.0,
               "UseBodyPartHealth": false,
               "TwoPartHitChance": 0.25,
               "BodyPartDataVersion": 0,
@@ -1723,10 +1723,10 @@
               "DamageInterval": 0.12,
               "DestroyDelay": 0.0,
               "DefenseValues": {
-                "Cutting": 3.0,
-                "Piercing": 3.0,
-                "Chopping": 3.0,
-                "Blunt": 3.0
+                "Cutting": 1.5,
+                "Piercing": 1.5,
+                "Chopping": 1.5,
+                "Blunt": 1.5
               }
             },
             "impactAudioMaterial": 0,

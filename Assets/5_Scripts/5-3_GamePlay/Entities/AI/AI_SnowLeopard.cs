@@ -15,6 +15,7 @@ public enum SnowLeopardState
 /// <summary>
 /// 雪豹 AI：饥饿前后使用不同感知半径，始终会主动攻击玩家，但只有饥饿时才把兔子纳入目标。
 /// 目标在进入追击时锁定；兔子追击最多持续 30 秒，成功捕食后恢复一整天饥饿计时。
+/// 攻击冷却期间保持追击，默认接近到 1.2 单位才起手；实际伤害盒沿用动物公共的 1.5 倍范围。
 /// </summary>
 public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
 {
@@ -66,8 +67,9 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
     [Header("捕食")]
     [Min(0.1f)] public float rabbitChaseDuration = 30f;
 
+    /// <summary>停止追击并起手的距离，应小于实际伤害范围，给目标后退留出余量。</summary>
     [Header("攻击")]
-    [Min(0.1f)] public float attackTriggerDistance = 1.4f;
+    [Min(0.1f)] public float attackTriggerDistance = 1.2f;
     [Min(0f)] public float attackCooldown = 1.2f;
     [Min(0.01f)] public float attackDamageWindow = 0.25f;
     [Min(0f)] public float attackDamageStartDelay = 0.35f;
@@ -266,6 +268,10 @@ public sealed partial class AI_SnowLeopard : AI_Base<SnowLeopardState>
 
         if (_currentState == SnowLeopardState.Attack && attack.IsAttackLocked)
             return true;
+
+        // 冷却中继续追击，避免反复进入停车攻击状态，并在退出时重新开始冷却。
+        if (!attack.IsCooldownDone)
+            return false;
 
         return DistanceTo(currentTarget.transform) <= attackTriggerDistance;
     }

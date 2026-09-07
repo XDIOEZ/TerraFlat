@@ -377,7 +377,8 @@ public sealed class WorldNavigationAgent : MonoBehaviour
         DestinationResult = WorldNavigationDestinationResult.Pending;
         destinationDirty = false;
         nextRequestTime = Time.unscaledTime + Mathf.Max(0.05f, repathInterval);
-        requestId = navigation.RequestPath(current, submittedDestination, OnPathCompleted);
+        requestId = navigation.RequestPath(current, submittedDestination, OnPathCompleted,
+            submittedPathCostLimitExclusive);
     }
 
     private void OnPathCompleted(WorldNavigationPathResult result)
@@ -387,11 +388,10 @@ public sealed class WorldNavigationAgent : MonoBehaviour
 
         requestId = 0;
         WorldNavigationManager navigation = navigationManager;
-        if (!result.Success ||
-            navigation == null ||
+        if (navigation == null ||
             result.GridRevision != navigation.GridRevision ||
             result.PathCostRevision != navigation.PathCostRevision ||
-            result.Waypoints.Length == 0)
+            (!result.RejectedByPathCost && (!result.Success || result.Waypoints.Length == 0)))
         {
             if (!hasPath)
                 ApplyVelocity(Vector2.zero, Time.deltaTime);
@@ -412,7 +412,7 @@ public sealed class WorldNavigationAgent : MonoBehaviour
             WorldNavigationGrid.WorldToCell(destination) !=
             WorldNavigationGrid.WorldToCell(submittedDestination);
 
-        if (result.TotalCost >= submittedPathCostLimitExclusive)
+        if (result.RejectedByPathCost)
         {
             // 拒绝新路线时不覆盖仍在执行的旧路线；目标再次明显移动后才重新评估。
             DestinationResult = WorldNavigationDestinationResult.RejectedByPathCost;

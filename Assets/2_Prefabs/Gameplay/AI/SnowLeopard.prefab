@@ -312,7 +312,6 @@ GameObject:
   - component: {fileID: 3390413730269729025}
   - component: {fileID: 1288942645159647224}
   - component: {fileID: 3895622847554756567}
-  - component: {fileID: 9000000000000000002}
   m_Layer: 0
   m_Name: SnowLeopard
   m_TagString: Untagged
@@ -715,12 +714,12 @@ MonoBehaviour:
   chaseSeparationMaxOffset: 0.2
   alertDetectDistance: 20
   chaseTriggerDistance: 28
-  attackTriggerDistance: 1.4
+  attackTriggerDistance: 1.2
   chaseLossDistance: 44
   attackCooldown: 2
-  attackDamageWindow: 0.33333334
-  attackDamageStartDelay: 0.5
-  attackRecoveryDuration: 0.35
+  attackDamageWindow: 0.25
+  attackDamageStartDelay: 0.35
+  attackRecoveryDuration: 0.25
   alertKeepDuration: 2
   fleeTriggerHpRate: 0.22
   fleeSafeHpRate: 0.45
@@ -1008,15 +1007,19 @@ PrefabInstance:
     - target: {fileID: 1252656688152752650, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
       propertyPath: m_Controller
       value: 
-      objectReference: {fileID: 9100000, guid: 6c0d68a959e78d545b0b889726a21dcc, type: 2}
+      objectReference: {fileID: 22100000, guid: 5777ba571e604288a5b52bf21ab99ecf, type: 2}
     - target: {fileID: 2231892886818212503, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
       propertyPath: m_Name
       value: "AI\u52A8\u753B\u6A21\u5757"
       objectReference: {fileID: 0}
     - target: {fileID: 5802457204138852704, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
+      propertyPath: m_FlipX
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5802457204138852704, guid: a84f90f79ba86a34aa88b8e752960665, type: 3}
       propertyPath: m_Sprite
       value: 
-      objectReference: {fileID: -72012255, guid: cf1ad0f47355fcb488d9bff25b95f68b, type: 3}
+      objectReference: {fileID: 21300001, guid: 00297b286ff6b9941b61d3f414c85963, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1315,16 +1318,3 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 7302776498946767464, guid: 98884601a3d373a40ab86aff00f45a08, type: 3}
   m_PrefabInstance: {fileID: 8610956316120800619}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &9000000000000000002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4766519559426352308}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cbc7641d478007a4a98a2632cab33fb7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  overrideSprite: {fileID: 21300000, guid: 00297b286ff6b9941b61d3f414c85963, type: 3}

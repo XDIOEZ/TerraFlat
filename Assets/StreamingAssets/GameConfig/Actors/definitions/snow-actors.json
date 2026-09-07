@@ -16,8 +16,8 @@
       ],
       "visual": {
         "animationState": "Stand",
-        "animatorControllerAddress": "flatworld.actor.animator.chicken",
-        "flipX": true
+        "animatorControllerAddress": "flatworld.actor.animator.rabbit",
+        "flipX": false
       },
       "modules": {
         "ai": {
@@ -67,8 +67,8 @@
       ],
       "visual": {
         "animationState": "Idle",
-        "animatorControllerAddress": "flatworld.actor.animator.wolf",
-        "flipX": true
+        "animatorControllerAddress": "flatworld.actor.animator.snowleopard",
+        "flipX": false
       },
       "modules": {
         "ai": {
@@ -84,7 +84,7 @@
             "chasePathRetryDelay": 3.0,
             "preyReacquireDelay": 10.0,
             "rabbitChaseDuration": 30.0,
-            "attackTriggerDistance": 1.4,
+            "attackTriggerDistance": 1.2,
             "attackCooldown": 1.2,
             "attackDamageWindow": 0.25,
             "attackDamageStartDelay": 0.35,
@@ -129,13 +129,13 @@
         "health": {
           "parameters": {
             "Data": {
-              "Hp": 200.0,
-              "MaxHp": 200.0,
+              "Hp": 100.0,
+              "MaxHp": 100.0,
               "DefenseValues": {
-                "Cutting": 1.0,
-                "Piercing": 1.0,
-                "Chopping": 1.0,
-                "Blunt": 1.0
+                "Cutting": 0.5,
+                "Piercing": 0.5,
+                "Chopping": 0.5,
+                "Blunt": 0.5
               }
             }
           }

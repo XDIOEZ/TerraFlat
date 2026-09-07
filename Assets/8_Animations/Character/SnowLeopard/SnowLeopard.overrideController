@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: SnowLeopard
+  m_Controller: {fileID: 9100000, guid: 6c0d68a959e78d545b0b889726a21dcc, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 7400000, guid: dcd398cfb39122e41ac8b00f951b7e3f, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 8a008548587f403c81a60a7ff263bb57, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: ddda81d8d8cd7704ba21cfdcfc65c859, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: c102791de6124355889e3619a55ffb67, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 22bc6480fec940847b9f747d1ef46bd6, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: a800b4befea54ff68860c89c59aa3dc5, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: cd9825163acf08c42aba15725a98bcd1, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: e98da9cab6f448399f42d2521713fd7d, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 26fd846133afd6149a199166d4688765, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 66947e33206741e1866e4d1a47c75f82, type: 2}
