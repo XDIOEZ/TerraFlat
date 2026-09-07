@@ -371,7 +371,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         CreateButton(quickGrid.transform, "传送至鼠标", () => InvokeByTypeName("Mod_PlayerTraits", "TeleportToMousePosition"), 0f, 32f);
         CreateButton(quickGrid.transform, "创造背包", () => InvokeByTypeName("Mod_PlayerTraits", "InitializeCreativeInventoryForAdmin"), 0f, 32f);
         CreateButton(quickGrid.transform, "手持 +9999", () => InvokeByTypeName("PlayerAdminController", "AddAmountToCurrentHandItem", 9999f), 0f, 32f);
-        CreateButton(quickGrid.transform, "背包 +999", () => InvokeByTypeName("PlayerAdminController", "AddAmountToAllBagItems", 999f), 0f, 32f);
+        CreateButton(quickGrid.transform, "背包 +100", () => InvokeByTypeName("PlayerAdminController", "AddAmountToAllBagItems", 100f), 0f, 32f);
         CreateButton(quickGrid.transform, "时间 -0.5", () => InvokeByTypeName("PlayerAdminController", "TryUpdateTimeScale", -0.5f), 0f, 32f);
         CreateButton(quickGrid.transform, "时间重置", () => InvokeByTypeName("PlayerAdminController", "ResetTimeScale"), 0f, 32f);
         CreateButton(quickGrid.transform, "区块距离 +1", () => InvokeByTypeName("PlayerAdminController", "IncreaseAdminChunkLoadDistance"), 0f, 32f);
@@ -501,7 +501,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshPlayerMoveSpeedButton();
         CreateButton(quickGrid.transform, "创造背包", () => InvokeByTypeName("Mod_PlayerTraits", "InitializeCreativeInventoryForAdmin"), 0f, 35f);
         CreateButton(quickGrid.transform, "手持 +9999", () => InvokeByTypeName("PlayerAdminController", "AddAmountToCurrentHandItem", 9999f), 0f, 35f);
-        CreateButton(quickGrid.transform, "背包 +999", () => InvokeByTypeName("PlayerAdminController", "AddAmountToAllBagItems", 999f), 0f, 35f);
+        CreateButton(quickGrid.transform, "背包 +100", () => InvokeByTypeName("PlayerAdminController", "AddAmountToAllBagItems", 100f), 0f, 35f);
         CreateButton(quickGrid.transform, "时间 -0.5", () => InvokeByTypeName("PlayerAdminController", "TryUpdateTimeScale", -0.5f), 0f, 35f);
         CreateButton(quickGrid.transform, "时间重置", () => InvokeByTypeName("PlayerAdminController", "ResetTimeScale"), 0f, 35f);
         CreateButton(quickGrid.transform, "区块距离 +1", () => InvokeByTypeName("PlayerAdminController", "IncreaseAdminChunkLoadDistance"), 0f, 35f);
@@ -1704,7 +1704,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         AddNamedCommand("管理员", "刷新区块", "Mod_ChunkLoader", "RefreshChunksAroundPlayer");
         AddNamedCommand("管理员", "区块距离 +1", "PlayerAdminController", "IncreaseAdminChunkLoadDistance");
         AddNamedCommand("管理员", "手持 +9999", "PlayerAdminController", "AddAmountToCurrentHandItem", 9999f);
-        AddNamedCommand("管理员", "背包 +999", "PlayerAdminController", "AddAmountToAllBagItems", 999f);
+        AddNamedCommand("管理员", "背包 +100", "PlayerAdminController", "AddAmountToAllBagItems", 100f);
         AddNamedCommand("管理员", "时间恢复", "PlayerAdminController", "ResetTimeScale");
         AddNamedCommand("管理员", "时间 +0.5", "PlayerAdminController", "TryUpdateTimeScale", 0.5f);
         AddNamedCommand("管理员", "时间 -0.5", "PlayerAdminController", "TryUpdateTimeScale", -0.5f);

@@ -406,6 +406,8 @@ namespace FlatWorld.Localization.Editor
                 { "水", "Water" },
                 { "维生素", "Vitamins" },
                 { "体温", "Body Temperature" },
+                { "环境温度  {0:0.0}℃", "Ambient  {0:0.0}°C" },
+                { "环境温度  --℃", "Ambient  --°C" },
                 { "RESTING / 世界在篝火外继续流动", "RESTING / THE WORLD CONTINUES OUTSIDE THE CAMPFIRE" },
                 { "主音量控制全部声音；其他通道可以单独调整。设置会自动保存。", "Master volume controls all sounds; other channels can be adjusted separately. Settings are saved automatically." },
                 { "调整会立即应用并自动保存。", "Changes apply immediately and are saved automatically." },

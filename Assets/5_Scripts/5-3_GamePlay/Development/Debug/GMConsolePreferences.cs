@@ -15,6 +15,7 @@ internal static class GMConsolePreferences
     private const string AnimalDebugOverlayKey = KeyPrefix + "AnimalDebugOverlay";
     private const string ActivePageKey = KeyPrefix + "ActivePage";
     private const string TemperatureOverlayKey = KeyPrefix + "TemperatureOverlay";
+    private const string TemperatureOverlayTransparencyKey = KeyPrefix + "TemperatureOverlayTransparency";
 
     #region 读取
 
@@ -39,6 +40,9 @@ internal static class GMConsolePreferences
     public static int ActivePageIndex => PlayerPrefs.GetInt(ActivePageKey, 0);
 
     public static bool TemperatureOverlayVisible => PlayerPrefs.GetInt(TemperatureOverlayKey, 0) != 0;
+
+    // 42% 透明度保留温度层原先 0.58 的覆盖强度。
+    public static float TemperatureOverlayTransparency => PlayerPrefs.GetFloat(TemperatureOverlayTransparencyKey, 0.42f);
 
     #endregion
 
@@ -91,6 +95,15 @@ internal static class GMConsolePreferences
         PlayerPrefs.SetInt(TemperatureOverlayKey, visible ? 1 : 0);
         PlayerPrefs.Save();
     }
+
+    /// <summary>滑动期间只更新内存偏好，交互结束后再统一写盘。</summary>
+    public static void SetTemperatureOverlayTransparency(float transparency)
+    {
+        PlayerPrefs.SetFloat(TemperatureOverlayTransparencyKey, Mathf.Clamp01(transparency));
+    }
+
+    /// <summary>提交连续交互产生的偏好；正常退出时 Unity 也会保存 PlayerPrefs。</summary>
+    public static void SavePendingChanges() => PlayerPrefs.Save();
 
     #endregion
 

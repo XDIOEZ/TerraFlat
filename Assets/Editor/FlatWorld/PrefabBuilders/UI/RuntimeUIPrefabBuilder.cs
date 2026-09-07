@@ -721,12 +721,12 @@ public static partial class RuntimeUIPrefabBuilder
 
     #region 系统 UI
 
-    /// <summary>构建固定在屏幕左上角的坐标与 FPS 信息，两行共用根节点以保证不会重叠。</summary>
+    /// <summary>构建左上角的坐标、FPS 与环境温度三行信息，固定行距且不拦截输入。</summary>
     private static GameObject BuildPlayerWorldCoordinateHUD()
     {
         GameObject root = CreateUIObject(RuntimeUIPrefabKeys.PlayerWorldCoordinate, null);
         RectTransform rootRect = root.GetComponent<RectTransform>();
-        SetTopLeft(rootRect, 28f, 28f, 240f, 58f);
+        SetTopLeft(rootRect, 28f, 28f, 240f, 86f);
 
         TextMeshProUGUI coordinates = CreateText("坐标文本", root.transform, "X  +0.0    Y  +0.0", 16f, Cream);
         coordinates.fontStyle = FontStyles.Bold;
@@ -740,6 +740,13 @@ public static partial class RuntimeUIPrefabBuilder
         fps.overflowMode = TextOverflowModes.Ellipsis;
         fps.gameObject.SetActive(PlayerWorldCoordinateDisplayPreferences.DefaultShowFps);
         SetTopLeft(fps.rectTransform, 0f, 30f, 240f, 26f);
+
+        TextMeshProUGUI temperature = CreateText(PlayerWorldCoordinateHUD.AmbientTemperatureTextNodeName,
+            root.transform, PlayerWorldCoordinateHUD.AmbientTemperatureUnavailableText, 15f, Cream);
+        temperature.fontStyle = FontStyles.Bold;
+        temperature.enableWordWrapping = false;
+        temperature.overflowMode = TextOverflowModes.Ellipsis;
+        SetTopLeft(temperature.rectTransform, 0f, 58f, 240f, 26f);
 
         return root;
     }

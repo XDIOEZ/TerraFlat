@@ -422,9 +422,9 @@ public sealed partial class GMReflectionConsole
         CreateSearchableButton(
             grid,
             GmPageId.Player,
-            "背包 +999",
+            "背包 +100",
             "背包 物品 数量",
-            () => InvokeByTypeName("PlayerAdminController", "AddAmountToAllBagItems", 999f));
+            () => InvokeByTypeName("PlayerAdminController", "AddAmountToAllBagItems", 100f));
 
         RefreshTeleportShortcutButton();
         RefreshAdminInvincibilityButton();

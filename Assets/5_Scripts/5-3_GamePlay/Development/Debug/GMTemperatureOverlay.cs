@@ -16,6 +16,7 @@ internal sealed class GMTemperatureOverlay : MonoBehaviour
     private const int SamplesPerFrame = 2048;
     private const float RefreshInterval = 0.25f;
     private static readonly ProfilerMarker SampleMarker = new("FlatWorld.GM.TemperatureOverlay");
+    private static readonly int OpacityId = Shader.PropertyToID("_Opacity"); // 材质整体不透明度
     private readonly Color32[] pixels = new Color32[TextureSize * TextureSize];
     private readonly Vector3[] vertices = new Vector3[4];
     private readonly Vector2[] uvs = new Vector2[4];
@@ -36,12 +37,25 @@ internal sealed class GMTemperatureOverlay : MonoBehaviour
     private float nextRefreshTime;
 
     public bool Visible { get; private set; }
+    public float Transparency { get; private set; } // 0 为不透明，1 为完全透明
 
     #endregion
 
     #region 开关与生命周期
 
-    private void Awake() => enabled = false;
+    private void Awake()
+    {
+        SetTransparency(GMConsolePreferences.TemperatureOverlayTransparency);
+        enabled = false;
+    }
+
+    /// <summary>只更新材质参数，已上传纹理立即生效；未创建材质时保留设置。</summary>
+    public void SetTransparency(float transparency)
+    {
+        Transparency = Mathf.Clamp01(transparency);
+        if (material != null)
+            material.SetFloat(OpacityId, 1f - Transparency);
+    }
 
     /// <summary>GM 面板关闭不影响眼镜；只有此开关控制采样与覆盖层。</summary>
     public void SetVisible(bool visible)
@@ -183,7 +197,6 @@ internal sealed class GMTemperatureOverlay : MonoBehaviour
             band < 2f ? Color.Lerp(Color.cyan, new Color(0.18f, 0.85f, 0.30f), band - 1f) :
             band < 3f ? Color.Lerp(new Color(0.18f, 0.85f, 0.30f), Color.yellow, band - 2f) :
             Color.Lerp(Color.yellow, new Color(1f, 0.08f, 0.04f), band - 3f);
-        color.a = 0.58f;
         return color;
     }
 
@@ -210,6 +223,7 @@ internal sealed class GMTemperatureOverlay : MonoBehaviour
         };
         material = new Material(shader) { name = "GM Temperature Overlay", hideFlags = HideFlags.DontSave };
         material.mainTexture = texture;
+        material.SetFloat(OpacityId, 1f - Transparency);
         mesh = new Mesh { name = "GM Temperature Quad", hideFlags = HideFlags.DontSave };
         mesh.MarkDynamic();
         mesh.vertices = vertices;

@@ -1,10 +1,11 @@
 using System.Collections;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// 为本地玩家维护一个屏幕左上角的坐标与 FPS 信息 HUD。
-/// 仅实例化已制作好的 UI_PlayerWorldCoordinate Prefab；坐标以 10Hz 刷新，FPS 以 0.5 秒窗口采样，远端玩家不启动轮询。
+/// 为本地玩家维护屏幕左上角的坐标、FPS 和脚下地块环境温度 HUD。
+/// 仅实例化正式 Prefab；坐标与环境温度以 10Hz 采样，FPS 使用 0.5 秒窗口，显示值不变时不重写文本。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Player))]
@@ -13,6 +14,9 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     #region 常量与运行时状态
 
     public const string ViewName = "PlayerWorldCoordinateHUD";
+    public const string AmbientTemperatureTextNodeName = "环境温度文本";
+    public const string AmbientTemperatureFormat = "环境温度  {0:0.0}℃";
+    public const string AmbientTemperatureUnavailableText = "环境温度  --℃";
 
     private const string CoordinateTextNodeName = "坐标文本";
     private const string FpsTextNodeName = "FPS文本";
@@ -27,6 +31,11 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private RectTransform viewRect;
     private TextMeshProUGUI coordinateText;
     private TextMeshProUGUI fpsText;
+    private TextMeshProUGUI ambientTemperatureText; // 当前地块的环境读数，与体温模块的当前体温独立
+    private string localizedTemperatureFormat;
+    private string localizedTemperatureUnavailableText;
+    private int lastTemperatureTenths = int.MinValue;
+    private bool temperatureDisplayInitialized;
     private int lastCoordinateX = int.MinValue;
     private int lastCoordinateY = int.MinValue;
     private int lastFpsSampleFrame = -1;
@@ -57,6 +66,8 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         if (player != null)
             player.ProfileContextChanged += HandleProfileContextChanged;
         PlayerWorldCoordinateDisplayPreferences.Changed += HandleDisplayPreferenceChanged;
+        FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
+        RefreshTemperatureLocalization();
 
         RefreshForProfileContext();
     }
@@ -67,6 +78,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         if (player != null)
             player.ProfileContextChanged -= HandleProfileContextChanged;
         PlayerWorldCoordinateDisplayPreferences.Changed -= HandleDisplayPreferenceChanged;
+        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
 
         StopRefreshLoop();
         SetViewActive(false);
@@ -99,6 +111,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         SetViewActive(true);
         RefreshCoordinateText();
         RefreshFpsDisplay();
+        RefreshAmbientTemperatureText();
     }
 
     /// <summary>实例化已有视觉 Prefab，并让常驻 HUD 位于普通弹窗的下方。</summary>
@@ -117,7 +130,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
                 viewRect.SetAsFirstSibling();
             }
 
-            return coordinateText != null && fpsText != null;
+            return coordinateText != null && fpsText != null && ambientTemperatureText != null;
         }
 
         GameObject prefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.PlayerWorldCoordinate, false);
@@ -139,7 +152,9 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         coordinateText = textNode != null ? textNode.GetComponent<TextMeshProUGUI>() : null;
         Transform fpsNode = viewObject.transform.Find(FpsTextNodeName);
         fpsText = fpsNode != null ? fpsNode.GetComponent<TextMeshProUGUI>() : null;
-        if (viewRect == null || coordinateText == null || fpsText == null)
+        Transform temperatureNode = viewObject.transform.Find(AmbientTemperatureTextNodeName);
+        ambientTemperatureText = temperatureNode != null ? temperatureNode.GetComponent<TextMeshProUGUI>() : null;
+        if (viewRect == null || coordinateText == null || fpsText == null || ambientTemperatureText == null)
         {
             Debug.LogError("[PlayerWorldCoordinateHUD] 左上角信息 HUD Prefab 控件命名契约不完整。", viewObject);
             Destroy(viewObject);
@@ -147,6 +162,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
             viewRect = null;
             coordinateText = null;
             fpsText = null;
+            ambientTemperatureText = null;
             return false;
         }
 
@@ -155,7 +171,39 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         lastCoordinateY = int.MinValue;
         lastDisplayMode = (PlayerWorldCoordinateDisplayMode)(-1);
         InvalidateFpsSample();
+        temperatureDisplayInitialized = false;
         return true;
+    }
+
+    /// <summary>复用热力图的逐格温度入口，未加载时显示空读数；四舍五入到 0.1℃ 后去重刷新。</summary>
+    private void RefreshAmbientTemperatureText()
+    {
+        bool available = TemperatureMgr.Instance.TryGetAmbientTemperature(player.transform.position, out float temperature);
+        int tenths = available ? Mathf.RoundToInt(temperature * 10f) : int.MinValue;
+        if (temperatureDisplayInitialized && tenths == lastTemperatureTenths)
+            return;
+
+        temperatureDisplayInitialized = true;
+        lastTemperatureTenths = tenths;
+        if (available)
+            ambientTemperatureText.SetText(localizedTemperatureFormat, tenths * 0.1f);
+        else
+            ambientTemperatureText.SetText(localizedTemperatureUnavailableText);
+    }
+
+    /// <summary>只在语言变化时查询温度文案，低频采样循环只负责数值。</summary>
+    private void RefreshTemperatureLocalization()
+    {
+        localizedTemperatureFormat = FlatWorldLocalizationService.GetUiText(AmbientTemperatureFormat);
+        localizedTemperatureUnavailableText = FlatWorldLocalizationService.GetUiText(AmbientTemperatureUnavailableText);
+        temperatureDisplayInitialized = false;
+    }
+
+    private void HandleLanguageChanged(string localeCode)
+    {
+        RefreshTemperatureLocalization();
+        if (CanDisplay() && ambientTemperatureText != null)
+            RefreshAmbientTemperatureText();
     }
 
     /// <summary>仅在显示值改变时写入 TMP，避免静止状态产生无效刷新和字符串分配。</summary>

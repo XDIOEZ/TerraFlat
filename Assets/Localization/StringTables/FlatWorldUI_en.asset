@@ -2090,6 +2090,14 @@ MonoBehaviour:
     m_Localized: 'Realistic: softer colors, flowing waves and subtle glints.'
     m_Metadata:
       m_Items: []
+  - m_Id: 10044445584961541
+    m_Localized: "Ambient  {0:0.0}\u00b0C"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10044445584961542
+    m_Localized: "Ambient  --\u00b0C"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

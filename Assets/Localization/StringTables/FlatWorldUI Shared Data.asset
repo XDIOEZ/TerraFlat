@@ -2027,6 +2027,14 @@ MonoBehaviour:
     m_Key: ui.text.201E4BB6
     m_Metadata:
       m_Items: []
+  - m_Id: 10044445584961541
+    m_Key: ui.text.09F5325B
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10044445584961542
+    m_Key: ui.text.A6B83CA3
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

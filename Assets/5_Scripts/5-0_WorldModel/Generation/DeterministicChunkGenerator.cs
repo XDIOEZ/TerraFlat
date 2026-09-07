@@ -12,7 +12,7 @@ namespace FlatWorld.WorldModel
     public sealed class DeterministicChunkGenerator : IChunkPureGenerator
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 32;
+        public const int CurrentGenerationSignature = 34;
 
         private readonly LegacyHydrologyKernel legacyHydrologyKernel = new();
         private readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<GeneratedHydrologyMap>>
@@ -402,6 +402,9 @@ namespace FlatWorld.WorldModel
                 biomeId = (int)biome;
                 groundTileId = settings.StoneTileId;
                 flags = TerrainCellFlags.Walkable;
+
+                // 山地基础气温固定为 10℃，天气与局部冷热源仍由环境温度系统叠加。
+                temperatureCelsius = 10d;
             }
             else if (biome == SurfaceBiomeKind.Beach)
             {
