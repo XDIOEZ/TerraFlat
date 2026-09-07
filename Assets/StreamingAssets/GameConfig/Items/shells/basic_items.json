@@ -2203,16 +2203,16 @@
           "data": {
             "FoodData": {
               "nutrition": {
-                "Carbohydrates": 15.0,
-                "Max_Carbohydrates": 15.0,
-                "Fat": 1.0,
-                "Max_Fat": 1.0,
-                "Protein": 1.0,
-                "Max_Protein": 1.0,
-                "Water": 20.0,
-                "Max_Water": 20.0,
-                "Vitamins": 12.0,
-                "Max_Vitamins": 12.0
+                "Carbohydrates": 3.0,
+                "Max_Carbohydrates": 3.0,
+                "Fat": 0.2,
+                "Max_Fat": 0.2,
+                "Protein": 0.2,
+                "Max_Protein": 0.2,
+                "Water": 4.0,
+                "Max_Water": 4.0,
+                "Vitamins": 2.4,
+                "Max_Vitamins": 2.4
               },
               "Max_EatingProgress": 1.0,
               "nutritionConsumeSpeed": {
