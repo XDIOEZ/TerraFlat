@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 958c54338f944234e89ef98fd9a244eb, type: 3}
   m_Name: ChunkGenerationProfile_Cave
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   profileId: cave.default
   generationSignature: 28
   chunkWidth: 16
@@ -98,6 +98,10 @@ MonoBehaviour:
     Value: CaveExit
   - Id: cave.portal.targetDimensionId
     Value: surface
+  - Id: tile.block.13
+    Value: Tile_WaterPlatform
+  - Id: tile.block.14
+    Value: Tile_Farmland
   ecologyGlobalMultiplier: 1
   ecologyRules:
   - RuleId: cave.flora.mushroom
@@ -116,9 +120,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0

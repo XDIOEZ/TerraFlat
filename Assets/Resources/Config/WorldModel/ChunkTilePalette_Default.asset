@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 88d35e6c7a3eba746bf10c0ea4248632, type: 3}
   m_Name: ChunkTilePalette_Default
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   entries:
   - TileId: 1
     Tile: {fileID: 11400000, guid: 6d0eadd27bd6e5745af12546e6ae687d, type: 2}
@@ -35,3 +35,9 @@ MonoBehaviour:
     Tile: {fileID: 11400000, guid: 75b142e9dd8bce640af2e1e2ea38c618, type: 2}
   - TileId: 11
     Tile: {fileID: 11400000, guid: 4b14e281e4a4a3b439e094156af59e76, type: 2}
+  - TileId: 12
+    Tile: {fileID: 11400000, guid: 02a5d0b65e8f45099f335ba7bc9af039, type: 2}
+  - TileId: 13
+    Tile: {fileID: 11400000, guid: 99334949bf6f4657959354285418527b, type: 2}
+  - TileId: 14
+    Tile: {fileID: 11400000, guid: 859d3cbb5d9d1744f81de89976978b08, type: 2}

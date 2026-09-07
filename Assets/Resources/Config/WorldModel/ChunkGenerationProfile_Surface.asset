@@ -11,9 +11,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 958c54338f944234e89ef98fd9a244eb, type: 3}
   m_Name: ChunkGenerationProfile_Surface
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 33
+  generationSignature: 34
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -250,10 +250,16 @@ MonoBehaviour:
     Value: Tile_Snow_Variant3
   - Id: tile.block.8
     Value: TileBase_BuiltStoneWall
+  - Id: tile.block.12
+    Value: TileBase_BuiltWoodWall
   - Id: cave.portal.itemId
     Value: CaveExit
   - Id: cave.portal.targetDimensionId
     Value: cave
+  - Id: tile.block.13
+    Value: Tile_WaterPlatform
+  - Id: tile.block.14
+    Value: Tile_Farmland
   ecologyGlobalMultiplier: 1
   ecologyRules:
   - RuleId: surface.forest.appleTree
@@ -261,6 +267,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.0015
     SpawnChanceMultiplier: 8
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 32
     MinTemperature: 0
     MaxTemperature: 1
@@ -268,10 +278,11 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags:
     - Tree
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -293,9 +304,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -306,6 +318,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.00028125
     SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 32
     MinTemperature: 0
     MaxTemperature: 1
@@ -313,9 +329,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -326,6 +343,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.00045
     SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 32
     MinTemperature: 0
     MaxTemperature: 1
@@ -333,9 +354,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -346,6 +368,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.00005
     SpawnChanceMultiplier: 5
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 32
     MinTemperature: 0
     MaxTemperature: 1
@@ -353,9 +379,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -366,6 +393,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.0006
     SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 32
     MinTemperature: 0
     MaxTemperature: 1
@@ -373,9 +404,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -386,6 +418,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.000140625
     SpawnChanceMultiplier: 1.5
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 32
     MinTemperature: 0
     MaxTemperature: 1
@@ -393,9 +429,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -406,6 +443,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.0002
     SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 16
     MinTemperature: 0
     MaxTemperature: 1
@@ -413,10 +454,11 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags:
     - Bush
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -438,9 +480,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -451,6 +494,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0
     SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 16
     MinTemperature: 0
     MaxTemperature: 1
@@ -472,6 +519,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.00005
     SpawnChanceMultiplier: 2
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 16
     MinTemperature: 0
     MaxTemperature: 1
@@ -479,9 +530,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -492,6 +544,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.00875
     SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 0
     MinTemperature: 0
     MaxTemperature: 1
@@ -502,7 +558,7 @@ MonoBehaviour:
     MinRiverFloodplainStrength: 0.05
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -513,6 +569,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.008
     SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 16
     MinTemperature: 0
     MaxTemperature: 1
@@ -520,9 +580,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -533,6 +594,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.00004
     SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 128
     MinTemperature: 0
     MaxTemperature: 1
@@ -540,9 +605,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -553,6 +619,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.00004
     SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 128
     MinTemperature: 0
     MaxTemperature: 1
@@ -560,9 +630,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -573,6 +644,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.00002
     SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 128
     MinTemperature: 0
     MaxTemperature: 1
@@ -580,9 +655,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -593,6 +669,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.0005
     SpawnChanceMultiplier: 2
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 128
     MinTemperature: 0
     MaxTemperature: 1
@@ -600,9 +680,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -613,6 +694,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.0005
     SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 128
     MinTemperature: 0
     MaxTemperature: 1
@@ -620,9 +705,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -633,6 +719,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.00002
     SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 128
     MinTemperature: 0
     MaxTemperature: 1
@@ -640,9 +730,10 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -653,6 +744,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.001
     SpawnChanceMultiplier: 2
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 4
     MinTemperature: 0
     MaxTemperature: 1
@@ -660,10 +755,11 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags:
     - Tree
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -674,6 +770,10 @@ MonoBehaviour:
     ItemCount: 1
     SpawnChance: 0.0003
     SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
     BiomeMask: 64
     MinTemperature: 0
     MaxTemperature: 1
@@ -681,11 +781,13 @@ MonoBehaviour:
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1
+    MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 0
-    CompanionHostTag:
+    CompanionHostTag: 
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0
     CompanionMinRadius: 0
     CompanionMaxRadius: 0
+  caveResourceRules: []
