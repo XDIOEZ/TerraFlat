@@ -6,7 +6,8 @@
       "abstract": true,
       "shellPrefab": "Prop",
       "visual": {
-        "rendererPath": "Render"
+        "rendererPath": "Render",
+        "materialAddress": "Assets/9_Shaders/Material/Sprite-Lit-Master.mat"
       }
     },
     {
@@ -237,6 +238,20 @@
               },
               "edgeRadius": 0.0
             }
+          }
+        },
+        "plantClimate": {
+          "prefab": "Module_PlantClimate",
+          "id": "Mod_PlantClimate",
+          "enabled": true,
+          "data": {},
+          "parameters": {
+            "autonomous": true,
+            "minimumSurvivalTemperature": -15,
+            "minimumGrowthTemperature": 0,
+            "maximumGrowthTemperature": 35,
+            "maximumSurvivalTemperature": 45,
+            "fatalExposureHours": 12
           }
         }
       },
@@ -538,6 +553,20 @@
               }
             }
           }
+        },
+        "plantClimate": {
+          "prefab": "Module_PlantClimate",
+          "id": "Mod_PlantClimate",
+          "enabled": true,
+          "data": {},
+          "parameters": {
+            "autonomous": true,
+            "minimumSurvivalTemperature": 0,
+            "minimumGrowthTemperature": 10,
+            "maximumGrowthTemperature": 35,
+            "maximumSurvivalTemperature": 45,
+            "fatalExposureHours": 12
+          }
         }
       },
       "itemData": {
@@ -712,6 +741,19 @@
               },
               "edgeRadius": 0.0
             }
+          }
+        },
+        "harvestRequirement": {
+          "prefab": "Module_ResourceHarvest",
+          "id": "Mod_ResourceHarvest",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "requiredTool": 1,
+            "minimumTier": 1
           }
         }
       },
@@ -888,6 +930,19 @@
               "edgeRadius": 0.0
             }
           }
+        },
+        "harvestRequirement": {
+          "prefab": "Module_ResourceHarvest",
+          "id": "Mod_ResourceHarvest",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "requiredTool": 1,
+            "minimumTier": 1
+          }
         }
       },
       "itemData": {
@@ -1063,6 +1118,19 @@
               "edgeRadius": 0.0
             }
           }
+        },
+        "harvestRequirement": {
+          "prefab": "Module_ResourceHarvest",
+          "id": "Mod_ResourceHarvest",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "requiredTool": 1,
+            "minimumTier": 2
+          }
         }
       },
       "itemData": {
@@ -1231,6 +1299,19 @@
               },
               "edgeRadius": 0.0
             }
+          }
+        },
+        "harvestRequirement": {
+          "prefab": "Module_ResourceHarvest",
+          "id": "Mod_ResourceHarvest",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "requiredTool": 1,
+            "minimumTier": 1
           }
         }
       },
@@ -1406,6 +1487,19 @@
               },
               "edgeRadius": 0.0
             }
+          }
+        },
+        "harvestRequirement": {
+          "prefab": "Module_ResourceHarvest",
+          "id": "Mod_ResourceHarvest",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "requiredTool": 1,
+            "minimumTier": 2
           }
         }
       },

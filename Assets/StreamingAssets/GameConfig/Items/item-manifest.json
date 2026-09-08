@@ -55,6 +55,11 @@
       "id": "hoes",
       "path": "shells/hoes.json",
       "enabled": true
+    },
+    {
+      "id": "ancient_stage",
+      "path": "shells/ancient_stage.json",
+      "enabled": true
     }
   ]
 }

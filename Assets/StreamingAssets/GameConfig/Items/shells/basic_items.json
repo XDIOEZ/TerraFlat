@@ -6,7 +6,8 @@
       "abstract": true,
       "shellPrefab": "Prop",
       "visual": {
-        "rendererPath": "Render"
+        "rendererPath": "Render",
+        "materialAddress": "Assets/9_Shaders/Material/Sprite-Lit-Master.mat"
       }
     },
     {
@@ -5603,7 +5604,9 @@
       "amount": 1.0,
       "volume": 1.0,
       "canBePickedUp": false,
-      "tags": ["35"],
+      "tags": [
+        "35"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/TX Plant.png[GrassLand_6]",
         "materialAddress": "Assets/9_Shaders/Material/Bush-Sway-Lit.mat",
@@ -5612,23 +5615,44 @@
           "type": "BoxCollider2D",
           "enabled": true,
           "isTrigger": true,
-          "offset": { "x": 0.0, "y": 0.546875 },
+          "offset": {
+            "x": 0.0,
+            "y": 0.546875
+          },
           "path": "",
-          "size": { "x": 1.25, "y": 1.09375 }
+          "size": {
+            "x": 1.25,
+            "y": 1.09375
+          }
         }
       },
       "health": {
         "hasHp": true,
         "hp": 50.0,
         "maxHp": 50.0,
-        "defense": { "cutting": 0.0, "piercing": 1.0, "chopping": 0.0, "blunt": 1.0 },
-        "moduleLocalPosition": { "x": 0.0, "y": 0.5, "z": 0.0 },
+        "defense": {
+          "cutting": 0.0,
+          "piercing": 1.0,
+          "chopping": 0.0,
+          "blunt": 1.0
+        },
+        "moduleLocalPosition": {
+          "x": 0.0,
+          "y": 0.5,
+          "z": 0.0
+        },
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
           "isTrigger": true,
-          "offset": { "x": 0.0, "y": 0.0 },
-          "size": { "x": 1.0, "y": 1.0 }
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
         }
       },
       "lootTableId": "Bush_Default",
@@ -5651,9 +5675,21 @@
             "ThrowBezierOffset": 0.8,
             "ThrowArcHeight": 0.6,
             "IndicatorLocalPositions": [
-              { "x": 0.25600004, "y": 0.549, "z": 0.0 },
-              { "x": -0.11899996, "y": 0.7, "z": 0.0 },
-              { "x": -0.28900003, "y": 0.389, "z": 0.0 }
+              {
+                "x": 0.25600004,
+                "y": 0.549,
+                "z": 0.0
+              },
+              {
+                "x": -0.11899996,
+                "y": 0.7,
+                "z": 0.0
+              },
+              {
+                "x": -0.28900003,
+                "y": 0.389,
+                "z": 0.0
+              }
             ],
             "IndicatorScale": 0.2859,
             "FollowOwnerRendererSorting": true,
@@ -5662,8 +5698,14 @@
               "type": "BoxCollider2D",
               "enabled": true,
               "isTrigger": true,
-              "offset": { "x": 0.0, "y": 0.31134617 },
-              "size": { "x": 1.0, "y": 0.592675 }
+              "offset": {
+                "x": 0.0,
+                "y": 0.31134617
+              },
+              "size": {
+                "x": 1.0,
+                "y": 0.592675
+              }
             }
           }
         },
@@ -5689,7 +5731,10 @@
                 "StoreInModule": true,
                 "DestroySelf": false,
                 "SpawnProbability": 1.0,
-                "Random_ProductionTime": { "x": 0.0, "y": 405.0 },
+                "Random_ProductionTime": {
+                  "x": 0.0,
+                  "y": 405.0
+                },
                 "IsInitialized": false
               }
             ],

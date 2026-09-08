@@ -260,6 +260,20 @@ MonoBehaviour:
     Value: Tile_WaterPlatform
   - Id: tile.block.14
     Value: Tile_Farmland
+  - Id: tile.block.15
+    Value: Tile_Platform_Stone
+  - Id: tile.block.16
+    Value: Tile_Platform_Copper
+  - Id: tile.block.17
+    Value: Tile_Platform_Iron
+  - Id: tile.block.18
+    Value: Tile_Platform_Bronze
+  - Id: tile.block.19
+    Value: Tile_Wall_Copper
+  - Id: tile.block.20
+    Value: Tile_Wall_Iron
+  - Id: tile.block.21
+    Value: Tile_Wall_Bronze
   ecologyGlobalMultiplier: 1
   ecologyRules:
   - RuleId: surface.forest.appleTree
@@ -782,6 +796,106 @@ MonoBehaviour:
     MinHeight: 0
     MaxHeight: 1
     MinRiverFloodplainStrength: 0
+    ProvidedTags: []
+    CompanionOnly: 0
+    CompanionHostTag: 
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
+  - RuleId: surface.ancient.herb
+    ItemId: HerbCrop
+    ItemCount: 1
+    SpawnChance: 0.00045
+    SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
+    BiomeMask: 48
+    MinTemperature: 0
+    MaxTemperature: 1
+    MinPrecipitation: 0
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    MinRiverFloodplainStrength: 0
+    ProvidedTags: []
+    CompanionOnly: 0
+    CompanionHostTag: 
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
+  - RuleId: surface.ancient.foxtail
+    ItemId: FoxtailCrop
+    ItemCount: 1
+    SpawnChance: 0.001
+    SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
+    BiomeMask: 48
+    MinTemperature: 0
+    MaxTemperature: 1
+    MinPrecipitation: 0
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    MinRiverFloodplainStrength: 0
+    ProvidedTags: []
+    CompanionOnly: 0
+    CompanionHostTag: 
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
+  - RuleId: surface.ancient.willow
+    ItemId: Tree_Willow
+    ItemCount: 1
+    SpawnChance: 0.002
+    SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
+    BiomeMask: 48
+    MinTemperature: 0
+    MaxTemperature: 1
+    MinPrecipitation: 0
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    MinRiverFloodplainStrength: 0.1
+    ProvidedTags: []
+    CompanionOnly: 0
+    CompanionHostTag: 
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
+  - RuleId: surface.ancient.clay
+    ItemId: ClayDeposit
+    ItemCount: 1
+    SpawnChance: 0.008
+    SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
+    BiomeMask: 52
+    MinTemperature: 0
+    MaxTemperature: 1
+    MinPrecipitation: 0
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    MinRiverFloodplainStrength: 0.1
     ProvidedTags: []
     CompanionOnly: 0
     CompanionHostTag: 

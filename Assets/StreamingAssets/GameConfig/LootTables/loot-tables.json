@@ -156,6 +156,57 @@
           "maxAmount": 2
         }
       ]
+    },
+    {
+      "id": "Ancient_Niter",
+      "entries": [
+        {
+          "itemId": "Ore_Niter",
+          "probability": 1,
+          "minAmount": 2,
+          "maxAmount": 4
+        }
+      ]
+    },
+    {
+      "id": "Ancient_Clay",
+      "entries": [
+        {
+          "itemId": "Clay",
+          "probability": 1,
+          "minAmount": 4,
+          "maxAmount": 8
+        }
+      ]
+    },
+    {
+      "id": "Ancient_Willow",
+      "entries": [
+        {
+          "itemId": "WillowBranch",
+          "probability": 1,
+          "minAmount": 2,
+          "maxAmount": 4
+        },
+        {
+          "itemId": "WillowBark",
+          "probability": 1,
+          "minAmount": 2,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Log_Wood",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 2
+        },
+        {
+          "itemId": "Seed_Willow",
+          "probability": 1,
+          "minAmount": 1,
+          "maxAmount": 1
+        }
+      ]
     }
   ]
 }

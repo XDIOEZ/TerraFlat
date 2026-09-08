@@ -9,7 +9,8 @@
         "rendererPath": "Render",
         "collider": {
           "type": "BoxCollider2D"
-        }
+        },
+        "materialAddress": "Assets/9_Shaders/Material/Sprite-Lit-Master.mat"
       }
     },
     {
@@ -123,6 +124,13 @@
             "BitData": [],
             "Type": 0
           }
+        },
+        "vesselHeating": {
+          "prefab": "Module_VesselHeating",
+          "id": "Mod_VesselHeating",
+          "enabled": true,
+          "data": {},
+          "parameters": {}
         }
       },
       "itemData": {
@@ -284,6 +292,13 @@
             "BitData": null,
             "Type": 0
           }
+        },
+        "vesselHeating": {
+          "prefab": "Module_VesselHeating",
+          "id": "Mod_VesselHeating",
+          "enabled": true,
+          "data": {},
+          "parameters": {}
         }
       },
       "itemData": {
@@ -1147,6 +1162,13 @@
             "burnSpeedMultiplier": 1.0,
             "igniteWhileHeld": false
           }
+        },
+        "vesselHeating": {
+          "prefab": "Module_VesselHeating",
+          "id": "Mod_VesselHeating",
+          "enabled": true,
+          "data": {},
+          "parameters": {}
         }
       },
       "itemData": {

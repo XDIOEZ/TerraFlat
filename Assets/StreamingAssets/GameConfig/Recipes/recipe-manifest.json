@@ -45,6 +45,11 @@
       "id": "crafting/agriculture",
       "path": "crafting/agriculture.json",
       "enabled": true
+    },
+    {
+      "id": "crafting/ancient_stage",
+      "path": "crafting/ancient_stage.json",
+      "enabled": true
     }
   ]
 }

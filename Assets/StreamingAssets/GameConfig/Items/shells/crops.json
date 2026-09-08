@@ -65,6 +65,16 @@
             "seedlingScale": 0.25,
             "matureScale": 1.0
           }
+        },
+        "plantClimate": {
+          "prefab": "Module_PlantClimate",
+          "id": "Mod_PlantClimate",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {}
         }
       }
     },
@@ -211,6 +221,14 @@
             "buriedClip": 0.0,
             "seedlingScale": 0.3,
             "matureScale": 1.0
+          }
+        },
+        "plantClimate": {
+          "parameters": {
+            "minimumSurvivalTemperature": -5,
+            "minimumGrowthTemperature": 0,
+            "maximumGrowthTemperature": 25,
+            "maximumSurvivalTemperature": 32
           }
         }
       }

@@ -95,6 +95,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 06dc2608a1031034698c137f9f6cfbc8
+    m_Address: Assets/9_Shaders/Material/Sprite-Lit-Master.mat
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemMaterial
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 08640f772c27ee944929981f9566590b
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Loading/UI_DimensionLoading.prefab
     m_ReadOnly: 0
@@ -239,6 +245,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1766669dee1b5ec4291a7072eef29dce
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_SeasonSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1786879d924b75a48b0e065c2f7f8174
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Common/Module_Interaction.prefab
     m_ReadOnly: 0
@@ -274,6 +286,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1bd35a781c1cc6648bb24eccba86c9ae
+    m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Wall_Bronze.asset
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - TileBlock
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1c0b3ac6cd62afb45a3edd32a0b36876
     m_Address: "Assets/6_Art/Food/\u6930\u5B50\u58F3-\u7A7A.png"
@@ -316,6 +334,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 214c5253d83298f4f93245c597631481
+    m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Wall_Iron.asset
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - TileBlock
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 215a9df040199634fb89efb65997fb42
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Status/Player/UI_Food.prefab
@@ -401,6 +425,18 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2c1f10bbc486ef24d8a77835c0cf994e
+    m_Address: Module_FarmlandSupply
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2e1c2287982f8f14781056bf998e4720
+    m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Platform_Iron.asset
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - TileBlock
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2ede27bbfd3cd8d4091b0184b9807686
     m_Address: Assets/6_Art/Generated/Mushroom/Item_Mushroom.png
     m_ReadOnly: 0
@@ -415,6 +451,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 30335a1d847f20547aba60b7da974cf8
     m_Address: Assets/2_Prefabs/Gameplay/Items/Inventory/Module_Bag.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3088dd90c9bbe9546b70b08e791bb1bb
+    m_Address: Module_DismantleSupport
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -589,6 +631,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4a60fa102ac359342a4e19f9b40d1db0
+    m_Address: Module_VesselHeating
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 4cb534e9d0f40154c903e5b80d013024
     m_Address: "Assets/6_Art/Food/\u6930\u8089.png"
     m_ReadOnly: 0
@@ -612,6 +660,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5134ba53bb785b9468ac3eeec826e7e9
+    m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Platform_Stone.asset
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - TileBlock
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 513506228e739ea46b4c301966a0eed6
     m_Address: Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png
@@ -673,8 +727,20 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5777ba571e604288a5b52bf21ab99ecf
+    m_Address: flatworld.actor.animator.snowleopard
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5819de873e8913b42a726562edbd0bdb
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Movement/Module_MoveSpeed.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 58e92d778d29aa24dbdd941cb7e02df3
+    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Containers/UI_WaterVessel.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -818,6 +884,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 68e7eab0b855559418e35c0680b5bf25
+    m_Address: Module_SweatBalance
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 69c58992491b92e46864d7be17f5f748
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Meatrack_Meatrack.prefab
     m_ReadOnly: 0
@@ -847,12 +919,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 5777ba571e604288a5b52bf21ab99ecf
-    m_Address: flatworld.actor.animator.snowleopard
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6c0d68a959e78d545b0b889726a21dcc
     m_Address: flatworld.actor.animator.wolf
@@ -956,17 +1022,17 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7874f2af7408e294d9f1d7809c943692
+    m_Address: Module_ResourceHarvest
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 789943bea24026d43aff45dba8a66fc9
     m_Address: Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Stone.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: c63e308dac924d56bb7591761c68856c
-    m_Address: flatworld.actor.animator.rabbit
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7c4d3c190401db54db1675f7e9f60bae
     m_Address: flatworld.actor.animator.chicken
@@ -1036,6 +1102,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 836fbd41b9b72734da4d344c04abb89a
     m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Farmland.asset
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - TileBlock
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 847aec62604c1c746973939ad5f38c1c
+    m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Wall_Copper.asset
     m_ReadOnly: 0
     m_SerializedLabels:
     - TileBlock
@@ -1129,6 +1201,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 92107f94d72fca04e9c4a6edac9223ff
+    m_Address: "Assets/6_Art/Food/\u80A5\u6599.png"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9242b06f74fcedc44bae433e9bd5e3ab
     m_Address: Assets/6_Art/Items/Plants/Tree/item296.png
@@ -1450,11 +1528,23 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b8a181b9fffedc149b00d5dfa89381f3
+    m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Platform_Bronze.asset
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - TileBlock
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: bb680c5a720608844a39de820c689aa6
     m_Address: "Assets/2_Prefabs/World/Map/\u5730\u9762.prefab"
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bbabd61494cb49a4cb666e18688d12d8
+    m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Platform_Copper.asset
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - TileBlock
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: bc05f0780d6922a4d81a1fc36a9e029e
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Common/Module_Renderer.prefab
@@ -1498,6 +1588,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c22279f6290cb234484dd4e03987f001
+    m_Address: Module_WaterVessel
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c42240ced9693a44480444691dac2be3
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Dialogue/UI_CharacterSpeechBubble.prefab
     m_ReadOnly: 0
@@ -1527,6 +1623,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c63e308dac924d56bb7591761c68856c
+    m_Address: flatworld.actor.animator.rabbit
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c6cf9338f948d7443923ed0066456b11
     m_Address: Assets/6_Art/Items/Tent.png
@@ -1623,6 +1725,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d19e5e27866056149b9c3cd622ff9959
+    m_Address: Module_ConsumableBuff
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d24e46f0dd4ed92499330994f5eeb75d
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_MeatRack.prefab
@@ -1843,6 +1951,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ef2a888dba596134b8df58b62bae5ee6
     m_Address: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Needle_Bone.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f0950fa9b6ce9b84387b1b5ccdc5b15e
+    m_Address: Module_PlantClimate
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
