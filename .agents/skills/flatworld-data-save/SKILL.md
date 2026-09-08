@@ -26,13 +26,16 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - Sprite 地址只有在源图是 Multiple 切片时才追加 `[子资源名]`；单 Sprite 图必须使用主资源地址。Unity 2022.3 + Addressables 1.22.3 Fast Mode 遇到无效子资源地址可能在 `AssetDatabaseProvider.LoadAssetSubObject` 抛空引用，编辑器加载路径需先做资源存在性和子资源名称校验。
 - Tile 栈只通过 `Data_TileMap` API 读写；区块差量保留基线、ChangedItems、删除 GUID 与确定性 ID 语义。
 - 新版 WorldModel 的格子建筑写入 `ChunkTerrainData.BlockingTileId`，不会进入 `MapSave.items`；必须按“确定性生成基线 → RuntimeTileDeltas 差量 → 表现绑定”的顺序持久化和恢复。
-- `RuntimeTileDeltas` 与基线保存完整 `TerrainCell`（地表、背层、阻挡层、群系、导航代价、Flags）及建筑损伤；不能只存阻挡层，否则铺水平台会在重载后恢复水属性。嵌套 MemoryPack 布局变化必须在解析嵌套数据前拒绝旧格式，可更换外层格式头，不能依赖完整反序列化之后才比较版本。
+- `RuntimeTileDeltas` 与基线保存完整 `TerrainCell`（地表、背层、阻挡层、群系、导航代价、Flags）及建筑损伤；水上平台另外通过 `SupportCells` 保存支撑层，底层水属性本就应保留。嵌套 MemoryPack 布局变化必须在解析嵌套数据前拒绝旧格式，可更换外层格式头，不能依赖完整反序列化之后才比较版本。
 - 新版 WorldModel 的动态建筑 Item 不属于旧 `Chunk.RunTimeItems`；建筑存档要复用区块 `ChangedItems` 差量，按 `Mod_Building` 角色清理旧记录并在区块数据就绪后实例化恢复。
 - 自动/手动保存可分帧采集，但后台只处理不可变快照；旧任务不得覆盖更新的手动/退出保存。
 - `IRuntimeDataLifecycle.Save()` 只抓取持久化快照，禁止解绑事件、停止行为或释放资源；Item 退出、移除模块与回池统一调用 `Unload()`，重新加载前也必须先卸载旧运行态。
 - 地表 `WorldKey=PlanetId`；非地表用 `PlanetId__dimension__DimensionId`。`TopologyMode` 的当前默认值为 `Infinite=0`，世界字段按当前版本统一读写。
 - 任务 `flatworld.quests` 等未来版本必须拒绝写回；未知 MOD 记录应保留。
 - 玩家创建 JSON 位于 `StreamingAssets/GameConfig/Players`，不进入 MemoryPack 存档；只在无存档创建阶段注入，并在模块加载前同步到 `Data_Player.ModuleDataDic`；已有玩家存档始终优先于模板。
+
+- `ChunkSaveRecord.HasChanges` 必须计入独立的农业和平台状态；恢复支撑必须在导航及表现绑定之前，不能只有当前帧可行走、重载后丢失平台。
+- 时间保存同时复制季节配置和历史区间；积雪、植物冷热暴露、自然补位年份、陶罐水质／加工进度、盐分负担各有独立状态，不能在渲染绑定或 UI 打开时重置。
 
 ## 工作流与验证
 

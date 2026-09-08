@@ -23,6 +23,8 @@ description: "Use when: 定位或修改 FlatWorld 的角色自言自语、屏幕
 - 玩法程序集通过语义事件请求角色反馈，`FlatWorld.Dialogue` 内的独立桥接负责本地玩家筛选、本地化和 `Say`；禁止让 `GamePlay` 反向引用 Dialogue，也不要把具体玩法订阅塞入通用调度器。
 - 文本本地化联动 `flatworld-localization`；气泡层级/节点联动 UI；存档或网络身份变化联动对应 Skill。
 
+- 季节预告通过 `SeasonSpeechContextContributor` 提供比例化 Fact，由配置台词消费；`weather.isRaining` 表达既有降水过程，区分雨雪文案需额外读取 `weather.isSnowing`，不能将雪天继续描述为淋雨。即时物品失败反馈经通用事件适配到气泡，不让采集、容器业务引用 UI。
+
 ## 验证
 
 - 覆盖 Fact→Provider→调度→Presenter、优先级/冷却、一次性恢复、远程副本隔离及解除订阅。

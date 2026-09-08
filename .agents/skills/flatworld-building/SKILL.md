@@ -23,7 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 通用建筑本体只提供 `Item + SpriteRenderer + BoxCollider2D`；伤害由 JSON `health` 注入，门、容器、工作台等反馈由独立 `IInteractable` Module 提供，不再依赖通用 `Mod_InteractReciver` 转发。
 - 火把的手持职责与落地建筑本体保持分离：落地后统一使用 `Torch_Building`，`Torch_Summoner` 只能指向后者；手持攻击、命中 Buff 与光源均由 JSON 组合通用模块，禁止为火把保留专用运行时 Shell。独立手持物 `Torch` 不得内嵌 `Mod_Building`。
 - 动态建筑保持 GameObject + Collider + `BuildingOccupancyRegistry`，不得写入地形 `TileData`。
-- 地表铺设由 `Tile_Block.groundPlacement` 与 `TileBuildingSystem.GroundPlacement` 负责来源约束和地形替换，不占用 Blocking 层；预览与提交共用来源格/占用校验，不能再用原水格的高导航代价否决放置。材料扣减失败须通过事务中的原 `TerrainCell` 回滚，不能把平台删除成空地。
+- 平台铺设由 `Tile_Block.groundPlacement` 与 `TileBuildingSystem.GroundPlacement` 负责，写入 `TerrainSupportLayer`，不替换底层水格、不占用 Blocking 层；预览、角色水域效果、建造和导航必须读取有效支撑面。扣料失败回滚支撑值，主动拆除撤销支撑而不重建水格。
 - 静态岩壁/结构墙才使用 Blocking Tile；例如 `Wall_Stone`、`Wall_Wood` 只有 Summoner JSON，不创建动态本体定义。Tile 栈只通过 `Data_TileMap` API 读写。
 - 新版 WorldModel 的玩家格子建筑虽使用 `ChunkTerrainData.BlockingTileId`，仍必须接入存档的运行时区块差量；不能只依赖 `MapSave.items`。
 - 新版格子建筑的耐久或累计损伤必须与 `BlockingTileId` 一起保存在 `ChunkTerrainData`，并进入 `RuntimeTileDeltas`；否则区块回收或重载后会回满。
@@ -38,6 +38,8 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - `GamePlay` 程序集不能反向引用已依赖它的 `FlatWorld.Dialogue`；放置失败等玩家反馈由玩法层发布语义事件，再由 Dialogue 表现桥接，并且只能在实际 `Install` 提交失败时发布，禁止从逐帧虚影校验中触发。
 - 建筑模块对 `DamageReceiver` 等模块的依赖必须在加载阶段从 `ItemMods` 注册表解析；禁止序列化嵌套模块 Prefab 的组件引用，模块缺失修复后原引用可能成为无效组件。
 - 占地算法或安装/拆除顺序变化时联动 `flatworld-navigation` 与 `flatworld-map`。
+
+- 主动拆平台同时检查前后建筑层、设施占地和角色／世界物品占用；返还物完成装配后才撤销支撑。返还装配异常必须清理未完成物件，不能遗留可捡返还物又保留原平台。
 
 ## 验证
 

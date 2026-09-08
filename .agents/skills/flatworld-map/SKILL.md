@@ -23,13 +23,15 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 
 - 本 Skill 负责地图内容规则；WorldModel 负责 Chunk 生命周期、并发、租约和表现绑定。
 - Tile 栈只通过 API 修改；静态 Blocking Tile 与动态建筑占地不要混用。
-- 将水改成普通地面时必须同时替换 `GroundTileId`、清除 `Water` 标记并恢复生成 Profile 的 `navigation.defaultCost`；原水深等环境数据仍属于地形环境，不应随平台改写。目标使用无行为的普通 Tile 模板，不能只盖一张图片，否则水行为、寻路和建筑资格会继续读取旧水格。
+- 真正填水改地形时，地表身份、Water 标记与通行成本应同步变化；水上平台不属于填水，使用独立 `TerrainSupportLayer` 和有效地表查询，原始水格、水深等保持不变。不能只盖图片或把平台存成永久陆地。
 - 生成保持固定种子、稳定 BiomeId/顺序和统一噪声、气候、水文规则。
 - 修改算法时考虑生成签名、旧存档、联机指纹和 Wrapped 坐标。
 - 雪山地表固定使用纯白 `Tile_Snow`，禁止按随机噪声混入雪地变体；若未来恢复变体，只能按温度区间确定。
 - 萝卜聚落由 `surface.forest.radish` 与 `surface.grassland.radish` 两条独立规则控制；全局调整时必须同步审计两条，`PatchChance` 控制聚落数量，`SpawnChance` 与 `PatchRadius` 控制聚落内部密度。
 - 洞穴入口联动 `flatworld-dimension`，可走性联动 `flatworld-navigation`，差量联动 `flatworld-data-save`。
 - 地块可提供环境动作与被动效果定义，但共享 `TileBlockBehaviour` 只保存规则；玩家长按、Tick、环境倍率等实例状态必须留在角色侧运行器。
+
+- 自然植物恢复资格由 `INaturalRenewalPolicy` 记录到生态存档的 `RenewalYears`；只有生成成功才清除移除标记和补位计划。玩家种植不参加自然补位，建筑、耕地及平台所在格不补野生植物。
 
 ## 验证
 

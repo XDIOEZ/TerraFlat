@@ -29,6 +29,8 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、动态
 - 本地导航窗口只跟随 owned 玩家；远程副本不移动它。
 - Wrapped 世界只规范化窗口；一期不在两侧建立图邻接边，AI 不跨缝寻路。
 
+- 水上平台的可走性和代价来自 `TerrainSupportLayer.GetSurfaceCell`；构建导航窗口和增量更新都读取有效支撑面，原始 `TerrainCell` 保留水格身份。平台变化须发布同一格的导航脏区。
+
 ## 验证
 
 - 使用确定地图和起终点，覆盖可达、不可达、动态阻挡、跨 Chunk 边缘与请求取消。

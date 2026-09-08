@@ -58,6 +58,12 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - `Mod_Food` 仅在基础营养持续消耗或 `IFoodTickObserver` 规则要求时进入 `FixedInterval`；无角色模块的静态世界食物应休眠，库存腐败仍由 `IModuleDataTickObserver` 独立推进，可选角色模块必须静默查询。
 - `Module_HeldFood` 的咬痕只读取 `EatingProgress` 与 `Max_EatingProgress`，按物品 GUID 确定性重建当前轮廓遮罩，不重复持久化随机点；实际口数取最大进度的向上整数，最后一口直接清空残余区域。
 
+- `IInventoryHeatTreatment` 处理输入槽里的状态型容器，普通熔炼复用 `CraftingRecipeMatcher` 和 `CraftingTransaction`。制盐必须先确保输出事务成功再减海水，处理进度属于容器而非炉体；满输出时不清水、不重复发盐。
+- 水罐靠物品体积大于 1 的既有规则禁止堆叠，水量／水质在模块状态中；不得只按同一物品 ID 合并不同状态的罐。部分转移保持水量守恒，归属、活体和距离在每次动作时检查。
+- 食物机制除了目录注册，也组合消费物本身实现 `IFoodMechanic` 的模块；药品使用守卫与消费完成观察者应接入这条链，不在按钮响应时直接回血。
+- `CraftingOutputRules` 在预检和真实提交共用；防腐加工的新鲜度必须来自匹配计划实际消耗的原料，保留最差剩余比例，不能读取整份输入库存或重建全新寿命。
+- 植物环境通过 `IPlantEnvironmentCondition` 与 `PlantClimateTimeline` 结算；自主耐候树木只向成长器提供 `IPlantGrowthConstraint`，不能被两个模块重复推进。补算游标未追上当前时钟时禁止抢先收获。
+
 ## 验证
 
 - 覆盖满包、回滚、普通合成多候选精确选择、Tag 全局分配、加热镜像/紧凑网格、快捷栏/手持同步、输入锁和作物存档往返。
