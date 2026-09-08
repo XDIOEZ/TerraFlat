@@ -158,13 +158,7 @@ public partial class WeatherMgr
         if (planetData == null)
             return;
 
-        int transitions = WeatherEventScheduler.Advance(
-            planetData,
-            oldTotalTime,
-            newTotalTime,
-            GetCurrentDayLength(),
-            GetDeterministicSeed(),
-            _rainEventConfig);
+        int transitions = AdvanceWeatherAndSnow(planetData, oldTotalTime, newTotalTime);
         if (transitions <= 0)
             return;
 
@@ -355,7 +349,7 @@ public partial class WeatherMgr
 
     private void RefreshRainAudio()
     {
-        if (!IsRaining())
+        if (!IsRaining() || lastSnowing)
         {
             if (_rainAudioHandle.IsPlaying)
                 _rainAudioHandle.Stop(0.8f);
@@ -376,6 +370,8 @@ public partial class WeatherMgr
     private void DeactivateWeatherFeedback()
     {
         DeactivateWindFeedback();
+        if (snowEffect != null) snowEffect.SetActive(false);
+        lastSnowing = false;
 
         if (_rainEffectInstance != null)
             _rainEffectInstance.SetActive(false);

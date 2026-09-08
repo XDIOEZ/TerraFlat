@@ -42,6 +42,8 @@ namespace FlatWorld.Dialogue
         public const string WeatherPhase = "weather.phase";
         public const string WeatherIntensity = "weather.intensity";
         public const string WeatherIsRaining = "weather.isRaining";
+        public const string WeatherIsSnowing = "weather.isSnowing";
+        public const string SeasonPreparation = "season.preparation";
         public const string WeatherIsExposed = "weather.isExposed";
         public const string WeatherHasHeatSource = "weather.hasHeatSource";
         public const string WeatherRemainingSeconds = "weather.remainingSeconds";

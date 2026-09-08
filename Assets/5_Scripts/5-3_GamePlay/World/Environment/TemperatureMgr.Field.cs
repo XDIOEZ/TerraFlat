@@ -72,7 +72,7 @@ public partial class TemperatureMgr
         float weatherOffset = dimension?.ActiveDefinition?.SuppressWeather == true
             ? 0f : WeatherMgr.CalculateWeatherTemperatureOffset(planet);
         ambientFieldOffset = planet != null
-            ? planet.GlobalTemperature - PlanetData.DefaultGlobalTemperature + weatherOffset : 0f;
+            ? planet.GlobalTemperature - PlanetData.DefaultGlobalTemperature + weatherOffset + DayTimeSystem.GetSeasonTemperatureOffset() : 0f;
     }
 
     #endregion
@@ -81,6 +81,14 @@ public partial class TemperatureMgr
 
     /// <summary>只读已加载区块的生成温度并叠加天气和局部冷热源；不生成区块、不复制环境数组。</summary>
     public bool TryGetAmbientTemperature(Vector2 worldPosition, out float temperature)
+        => TrySampleTemperature(worldPosition, true, out temperature);
+
+    /// <summary>读取群系与星球气候基温，供历史季节补算；不把当前天气或短时火源延伸到过去。</summary>
+    public bool TryGetClimateBaseline(Vector2 worldPosition, out float temperature)
+        => TrySampleTemperature(worldPosition, false, out temperature);
+
+    /// <summary>共用地块查询，按需要叠加当前季节、天气及局部热源。</summary>
+    private bool TrySampleTemperature(Vector2 worldPosition, bool includeTransient, out float temperature)
     {
         PrepareFieldContext();
         temperature = 0f;
@@ -104,7 +112,9 @@ public partial class TemperatureMgr
             !terrain.TryGetEnvironmentValue("temperature.celsius", x, y, out float baseline))
             return false;
 
-        temperature = baseline + ambientFieldOffset + localTemperatureField.Sample(cell);
+        temperature = includeTransient
+            ? baseline + ambientFieldOffset + localTemperatureField.Sample(cell)
+            : baseline + (fieldPlanet.GlobalTemperature - PlanetData.DefaultGlobalTemperature);
         return true;
     }
 

@@ -145,7 +145,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
 
     public void RefreshRainEffect()
     {
-        if (!IsRaining())
+        if (RefreshSnowEffect() || !IsRaining())
         {
             if (_rainEffectInstance != null)
             {
@@ -361,6 +361,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         }
 
         MaintainWeatherEventSystem();
+        MaintainSnowPresentation();
         if (_rainEffectInstance != null && _rainEffectInstance.activeSelf)
             SyncRainEffectTransform(_rainEffectInstance.transform);
     }

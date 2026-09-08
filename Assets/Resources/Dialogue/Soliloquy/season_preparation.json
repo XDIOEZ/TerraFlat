@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "season.prepare.spring",
+      "topic": "season.preparation",
+      "triggers": [
+        "StateChanged"
+      ],
+      "priority": "Need",
+      "conditions": [
+        {
+          "fact": "season.preparation",
+          "operator": "Equal",
+          "value": "Spring"
+        }
+      ],
+      "lines": [
+        "天渐渐热了，得备好陶罐、饮水和一点腌肉。"
+      ],
+      "duration": 4,
+      "cooldown": 120,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    },
+    {
+      "id": "season.prepare.summer",
+      "topic": "season.preparation",
+      "triggers": [
+        "StateChanged"
+      ],
+      "priority": "Need",
+      "conditions": [
+        {
+          "fact": "season.preparation",
+          "operator": "Equal",
+          "value": "Summer"
+        }
+      ],
+      "lines": [
+        "快到秋天了，趁天气合适多种些粮食和药草。"
+      ],
+      "duration": 4,
+      "cooldown": 120,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    },
+    {
+      "id": "season.prepare.autumn",
+      "topic": "season.preparation",
+      "triggers": [
+        "StateChanged"
+      ],
+      "priority": "Need",
+      "conditions": [
+        {
+          "fact": "season.preparation",
+          "operator": "Equal",
+          "value": "Autumn"
+        }
+      ],
+      "lines": [
+        "冬天快到了，食物、药材和来年的种子都得留一份。"
+      ],
+      "duration": 4,
+      "cooldown": 120,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    },
+    {
+      "id": "season.prepare.winter",
+      "topic": "season.preparation",
+      "triggers": [
+        "StateChanged"
+      ],
+      "priority": "Need",
+      "conditions": [
+        {
+          "fact": "season.preparation",
+          "operator": "Equal",
+          "value": "Winter"
+        }
+      ],
+      "lines": [
+        "天要回暖了，等融雪后用留下的种子重新播种。"
+      ],
+      "duration": 4,
+      "cooldown": 120,
+      "once": false,
+      "completionFlag": "",
+      "enabled": true
+    }
+  ]
+}

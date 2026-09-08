@@ -74,6 +74,7 @@ namespace FlatWorld.Dialogue
                 CharacterSpeechFacts.WeatherIntensity,
                 intensity.ToString("0.000", CultureInfo.InvariantCulture));
             context.SetFact(CharacterSpeechFacts.WeatherIsRaining, weatherManager.IsRaining().ToString());
+            context.SetFact(CharacterSpeechFacts.WeatherIsSnowing, weatherManager.IsSnowingAt(transform.position).ToString());
             context.SetFact(CharacterSpeechFacts.WeatherIsExposed, IsRainExposed.ToString());
             context.SetFact(CharacterSpeechFacts.WeatherHasHeatSource, HasNearbyHeatSource.ToString());
             context.SetFact(

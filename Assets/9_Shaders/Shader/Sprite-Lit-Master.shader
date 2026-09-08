@@ -39,6 +39,7 @@ Shader "Game/2D/Sprite-Lit-Master"
         _DissolveTex ("Dissolve Noise", 2D) = "white" {}
 
         // Legacy properties，保持与官方 Sprite-Lit-Default 一致，方便管线处理
+        _SnowCoverage("Seasonal Snow", Range(0,1)) = 0
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
         [HideInInspector] _RendererColor("RendererColor", Color) = (1,1,1,1)
         [HideInInspector] _Flip("Flip", Vector) = (1,1,1,1)
@@ -122,6 +123,7 @@ Shader "Game/2D/Sprite-Lit-Master"
             float _BodyClip;
             float _BodyMinV;
             float _BodyMaxV;
+            float _SnowCoverage;
             float _WaterEnabled;
             float _WaterSurfaceV;
             float _WaterFeather;
@@ -194,6 +196,10 @@ Shader "Game/2D/Sprite-Lit-Master"
                 float bodyV = saturate((i.uv.z - _BodyMinV) / bodyRange);
                 if (bodyV < _BodyClip)
                     discard;
+
+                // 雪顶沿原图轮廓合成，后续受击、水体和溶解继续生效。
+                float snowMask = smoothstep(0.8 - _SnowCoverage * 0.3, 0.9 - _SnowCoverage * 0.3, bodyV);
+                main.rgb = lerp(main.rgb, half3(0.88, 0.94, 1.0), snowMask * saturate(_SnowCoverage));
 
                 // === 水下表现：保留身体轮廓，用染色和透明度表达浸没程度 ===
                 float waterBlend = saturate(_WaterEnabled);
@@ -309,6 +315,7 @@ Shader "Game/2D/Sprite-Lit-Master"
             float _BodyClip;
             float _BodyMinV;
             float _BodyMaxV;
+            float _SnowCoverage;
             float _WaterY;
             float _WaterWorldSpace;
             float _WaterReferenceHeight;
@@ -427,6 +434,7 @@ Shader "Game/2D/Sprite-Lit-Master"
             float _BodyClip;
             float _BodyMinV;
             float _BodyMaxV;
+            float _SnowCoverage;
             float _WaterY;
             float _WaterWorldSpace;
             float _WaterReferenceHeight;
@@ -477,6 +485,8 @@ Shader "Game/2D/Sprite-Lit-Master"
                 float bodyRange = max(1e-5, _BodyMaxV - _BodyMinV);
                 float bodyV = saturate((i.localY - _BodyMinV) / bodyRange);
                 clip(bodyV - _BodyClip);
+                float snowMask = smoothstep(0.8 - _SnowCoverage * 0.3, 0.9 - _SnowCoverage * 0.3, bodyV);
+                mainTex.rgb = lerp(mainTex.rgb, half3(0.88, 0.94, 1.0), snowMask * saturate(_SnowCoverage));
                 float waterBlend = saturate(_WaterEnabled);
                 if (waterBlend > 0.0001)
                 {
