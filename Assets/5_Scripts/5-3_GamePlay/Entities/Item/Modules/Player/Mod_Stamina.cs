@@ -5,8 +5,18 @@ using UltEvents;
 using UnityEngine;
 using UnityEngine.UI;
 
-public partial class Mod_Stamina : Module
+public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
 {
+    private readonly List<IStaminaCapacityModifier> capacityModifiers = new(); // 独立容量来源。
+    /// <summary>缓存影响体力容量的模块，体力模块不依赖缺盐等具体玩法。</summary>
+    public void BindModuleDependencies(ItemMods modules)
+    {
+        capacityModifiers.Clear();
+        foreach (Module module in modules.Mods.Values)
+            if (module is IStaminaCapacityModifier modifier) capacityModifiers.Add(modifier);
+    }
+    /// <summary>容量变化后限制当前值，并通知现有 HUD。</summary>
+    public void RefreshCapacity() => CurrentValue = Data.CurrentStamina;
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
 
     [System.Serializable]
@@ -109,7 +119,13 @@ public partial class Mod_Stamina : Module
     // 最大体力值 - 只读属性，不受事件影响
     public float MaxValue
     {
-        get => Data.MaxStamina;
+        get
+        {
+            float multiplier = 1f;
+            foreach (IStaminaCapacityModifier modifier in capacityModifiers)
+                multiplier *= modifier.StaminaCapacityMultiplier;
+            return Data.MaxStamina * multiplier;
+        }
         // 移除了 setter，使其成为只读属性
     }
 }

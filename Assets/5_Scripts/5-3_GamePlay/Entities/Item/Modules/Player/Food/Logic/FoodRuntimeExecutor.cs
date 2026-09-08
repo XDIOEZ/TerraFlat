@@ -514,6 +514,11 @@ public sealed class FoodRuntimeExecutor : IDisposable
         for (int i = 0; i < registeredRules.Count; i++)
             rulePipeline.Add(registeredRules[i]);
 
+        // 物品可以用独立模块声明食用规则，通用食物流程不依赖药品或盐等具体内容。
+        foreach (Module module in context.Item.itemMods.Mods.Values)
+            if (module is IFoodMechanic mechanic)
+                rulePipeline.Add(mechanic);
+
         rulePipeline.Initialize();
         initialized = true;
         uiModule.Initialize();

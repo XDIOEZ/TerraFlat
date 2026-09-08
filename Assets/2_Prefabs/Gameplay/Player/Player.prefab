@@ -88,15 +88,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 66936691572dbd04a801f40fe0923069, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   item: {fileID: 0}
   modData:
-    Name:
+    Name: 
     ID: "\u751F\u547D\u503C\u7CFB\u7EDF\u6A21\u5757"
     isRunning: 1
     Type: 0
-    BitData:
+    BitData: 
   Data:
     Hp: 100
     MaxHp: 100
@@ -109,8 +109,7 @@ MonoBehaviour:
       Piercing: 0
       Chopping: 0
       Blunt: 0
-    AttackersUIDs:
-    ShowCanvas: 0
+    AttackersUIDs: 
     DamageInterval: 0.1
     DestroyDelay: 0
     LootTable: []
@@ -119,7 +118,7 @@ MonoBehaviour:
   HurtActions: []
   DeathActions: []
   impactAudioMaterial: 0
-  hurtAudioCueId:
+  hurtAudioCueId: 
   enableHitSlowdown: 1
   hitSlowMultiplier: 0.5
   hitSlowDuration: 0.35
@@ -444,6 +443,7 @@ GameObject:
   - component: {fileID: 7771519609891206622}
   - component: {fileID: 5448549703196689227}
   - component: {fileID: 6173150566168055718}
+  - component: {fileID: 3000418337859302239}
   m_Layer: 10
   m_Name: Player
   m_TagString: Untagged
@@ -485,6 +485,7 @@ Transform:
   - {fileID: 2583823434517663508}
   - {fileID: 4464676328456984453}
   - {fileID: 4469299423806421341}
+  - {fileID: 7800387507517919720}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &8862278864143937418
@@ -624,7 +625,7 @@ MonoBehaviour:
   data:
     IDName: Player
     GameName: "\u73A9\u5BB6"
-    Description: "玩家角色。"
+    Description: "\u73A9\u5BB6\u89D2\u8272\u3002"
     Durability: 1
     MaxDurability: 1
     Tags:
@@ -640,7 +641,7 @@ MonoBehaviour:
     ItemSpecialData: 
     inHand: 0
     Guid: -112887599
-    FactionId:
+    FactionId: 
     CurrentSceneName: "\u5730\u7403"
     hp:
       value: 30
@@ -649,12 +650,6 @@ MonoBehaviour:
       OnValueChanged:
         _PersistentCalls: []
     defense:
-      defenseStrength: 5
-      defenseToughness: 5
-      defenseMagic: 0
-      maxDefenseStrength: 0
-      maxDefenseToughness: 0
-      maxDefenseMagic: 0
       Cutting: 5
       Piercing: 5
       Chopping: 5
@@ -941,6 +936,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 621197c51f97a6241b0a9b940526dc19, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &3000418337859302239
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74645882d423ed3439f928ab4285b603, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7418924436426645882
 GameObject:
   m_ObjectHideFlags: 0
@@ -1000,8 +1007,8 @@ MonoBehaviour:
     WaterSelfHurt: 1
     ProteinSelfHurt: 1
     VitaminSelfHurt: 1
-    HealNeedRatio: 0.6
     PlayerProteinHealThreshold: 60
+    HealNeedRatio: 0.6
   FoodModData:
     Name: 
     ID: 
@@ -1041,7 +1048,7 @@ MonoBehaviour:
     StaminaConsumeSpeed: 0.5
   ConsumeKind: 0
   ConsumptionEnabled: 1
-  ConsumeCompleteReplacementItemID:
+  ConsumeCompleteReplacementItemID: 
 --- !u!1 &7574631112993380532
 GameObject:
   m_ObjectHideFlags: 0
@@ -2043,6 +2050,68 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 6058014041233322486, guid: 992baff2372d5b447946a74b230d5ca4, type: 3}
   m_PrefabInstance: {fileID: 6095688695363029839}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &6718061409333132412
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 7343432311901774332}
+    m_Modifications:
+    - target: {fileID: 2612053854947223980, guid: 68e7eab0b855559418e35c0680b5bf25, type: 3}
+      propertyPath: m_Name
+      value: Module_SweatBalance
+      objectReference: {fileID: 0}
+    - target: {fileID: 3565674831876697492, guid: 68e7eab0b855559418e35c0680b5bf25, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3565674831876697492, guid: 68e7eab0b855559418e35c0680b5bf25, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3565674831876697492, guid: 68e7eab0b855559418e35c0680b5bf25, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3565674831876697492, guid: 68e7eab0b855559418e35c0680b5bf25, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3565674831876697492, guid: 68e7eab0b855559418e35c0680b5bf25, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3565674831876697492, guid: 68e7eab0b855559418e35c0680b5bf25, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3565674831876697492, guid: 68e7eab0b855559418e35c0680b5bf25, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3565674831876697492, guid: 68e7eab0b855559418e35c0680b5bf25, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3565674831876697492, guid: 68e7eab0b855559418e35c0680b5bf25, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3565674831876697492, guid: 68e7eab0b855559418e35c0680b5bf25, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 68e7eab0b855559418e35c0680b5bf25, type: 3}
+--- !u!4 &7800387507517919720 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3565674831876697492, guid: 68e7eab0b855559418e35c0680b5bf25, type: 3}
+  m_PrefabInstance: {fileID: 6718061409333132412}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &7562058293398815227
 PrefabInstance:

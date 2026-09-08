@@ -137,6 +137,9 @@ public static class CraftingService
         if (!TryPrepareOutputs(match.Recipe, out List<ItemData> outputs, out CraftingResult outputFailure))
             return outputFailure;
 
+        if (!CraftingOutputRules.Prepare(inputInventory, match, outputs, out string stateError))
+            return CraftingResult.Failed(CraftingFailureReason.InvalidOutput, stateError, match.Recipe);
+
         CraftingResult transactionFailure;
         bool canCommit;
         if (createTransaction)

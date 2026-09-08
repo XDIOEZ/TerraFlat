@@ -10,6 +10,7 @@ public static class BuffEffectTypeIds
     public const string TemperatureCoolingMultiplier = "core:temperature_cooling_multiplier";
     public const string DamageTakenMultiplier = "core:damage_taken_multiplier";
     public const string Heal = "core:heal";
+    public const string MaxHealthPercentHeal = "core:max_health_percent_heal";
     public const string StaminaChange = "core:stamina_change";
     public const string NutritionChange = "core:nutrition_change";
     public const string TrueDamage = "core:true_damage";
@@ -32,6 +33,7 @@ public static class BuffEffectDispatcher
         Register(BuffEffectTypeIds.TemperatureCoolingMultiplier, ApplyTemperatureCoolingMultiplier);
         Register(BuffEffectTypeIds.DamageTakenMultiplier, ApplyDamageTakenMultiplier);
         Register(BuffEffectTypeIds.Heal, ApplyHeal);
+        Register(BuffEffectTypeIds.MaxHealthPercentHeal, ApplyMaxHealthPercentHeal);
         Register(BuffEffectTypeIds.StaminaChange, ApplyStaminaChange);
         Register(BuffEffectTypeIds.NutritionChange, ApplyNutritionChange);
         Register(BuffEffectTypeIds.TrueDamage, ApplyTrueDamage);
@@ -137,6 +139,14 @@ public static class BuffEffectDispatcher
         Item receiver = GetReceiver(runtime);
         DamageReceiver damageReceiver = receiver?.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
         damageReceiver?.MultiplyDamageTakenMultiplier(effect.Value);
+    }
+
+    /// <summary>按生命上限比例调用统一治疗入口，沿用营养成本与禁止复活规则。</summary>
+    private static void ApplyMaxHealthPercentHeal(BuffEffectDefinition effect, BuffInstance runtime)
+    {
+        DamageReceiver health = GetReceiver(runtime)?.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        if (health != null && effect.Value > 0f)
+            health.Heal(health.MaxHp * effect.Value);
     }
 
     private static void ApplyHeal(BuffEffectDefinition effect, BuffInstance runtime)

@@ -172,6 +172,7 @@ public static class BuffDefinitionFactory
                 break;
 
             case BuffEffectTypeIds.MaxHealthPercentTrueDamage:
+            case BuffEffectTypeIds.MaxHealthPercentHeal:
                 if (effect.Value < 0f || effect.Value > 1f)
                     throw new InvalidDataException($"{context}.value 必须位于 0 到 1 之间");
                 break;
