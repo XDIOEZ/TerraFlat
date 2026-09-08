@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 4469299423806421341}
   - component: {fileID: 3638360995494413321}
   - component: {fileID: 8165384964757949843}
+  - component: {fileID: 7148620964132695157}
   m_Layer: 7
   m_Name: Module_DamageReciver
   m_TagString: Untagged
@@ -141,6 +142,25 @@ MonoBehaviour:
   references:
     version: 2
     RefIds: []
+--- !u!114 &7148620964132695157
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 980285892626113258}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c934580d68b24fc45bbf600ba6fe8bf7, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  damageTextPrefab: {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
+  damageTextOffset: {x: 0, y: 0.2}
+  bodyPartTextOffset: {x: 0, y: -0.28}
+  bodyPartLineSpacing: 0.22
+  bodyPartTextScale: 0.6
+  bodyPartTextWidthMultiplier: 6
+  bodyPartTextColor: {r: 1, g: 0.82, b: 0.45, a: 1}
 --- !u!1 &1408008954124956922
 GameObject:
   m_ObjectHideFlags: 0
