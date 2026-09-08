@@ -66,6 +66,8 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	private float _sleepCooldownTimer;
 	private float _grassSearchCooldown;
 	private bool _layEggTriggered;
+	private DayTimeSystem _eggTimeSystem;
+	private string _eggTimeSceneName;
 	private Vector3 _fleeTarget;
 	#endregion
 
@@ -135,11 +137,15 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	[FoldoutGroup("移动与觅食"), PropertyOrder(52), LabelText("权重惩罚系数"), MinValue(0f)]
 	public float wanderPenaltyWeight = 1f;
 
-	[FoldoutGroup("下蛋参数"), PropertyOrder(50), LabelText("鸡蛋物品ID")]
+	[FoldoutGroup("下蛋参数"), PropertyOrder(50), LabelText("是否成年")]
+	public bool isAdult = true;
+	[FoldoutGroup("下蛋参数"), PropertyOrder(51), LabelText("启用产蛋")]
+	public bool enableEggLaying = true;
+	[FoldoutGroup("下蛋参数"), PropertyOrder(52), LabelText("鸡蛋物品ID")]
 	public string eggItemId = "Egg";
-	[FoldoutGroup("下蛋参数"), PropertyOrder(51), LabelText("下蛋周期"), SuffixLabel("秒", true), MinValue(1f)]
-	public float layEggInterval = 2880f;
-	[FoldoutGroup("下蛋参数"), PropertyOrder(52), LabelText("下蛋动作时长"), SuffixLabel("秒", true), MinValue(0.1f)]
+	[FoldoutGroup("下蛋参数"), PropertyOrder(53), LabelText("下蛋周期"), SuffixLabel("天", true), MinValue(0.1f)]
+	public float layEggIntervalDays = 2f;
+	[FoldoutGroup("下蛋参数"), PropertyOrder(54), LabelText("下蛋动作时长"), SuffixLabel("秒", true), MinValue(0.1f)]
 	public float layEggDuration = 2f;
 
 	[FoldoutGroup("逃跑参数"), PropertyOrder(55), LabelText("逃跑触发距离"), SuffixLabel("米", true), MinValue(0.1f)]
@@ -211,6 +217,13 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		_currentState = Data.State;
 		_idleRemainTimer = GetIdleDuration();
 		InitializeAI();
+		BindEggWorldTime();
+	}
+
+	public override void Unload()
+	{
+		UnbindEggWorldTime();
+		base.Unload();
 	}
 
 	public override void Save()
@@ -286,6 +299,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	protected override void UpdateExtraTimers(float deltaTime)
 	{
+		EnsureEggWorldTimeBinding();
 		_mateRequestRemain = DecrementTimer(_mateRequestRemain, deltaTime);
 		_sleepCooldownTimer = DecrementTimer(_sleepCooldownTimer, deltaTime);
 		_grassSearchCooldown = DecrementTimer(_grassSearchCooldown, deltaTime);
@@ -296,7 +310,8 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 				deltaTime);
 		}
 		ApplyGrassSustenanceState();
-		Data.EggTimer += deltaTime;
+		if (!CanAccumulateEggProgress())
+			Data.EggTimer = 0f;
 	}
 
 	protected override void OnBeforeSwitchState(ChickenState previous, ChickenState next)
@@ -442,7 +457,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		if (_stateElapsed < layEggDuration || _layEggTriggered) return;
 
 		SpawnEgg();
-		Data.EggTimer = 0f;
+		Data.EggTimer = Mathf.Max(0f, Data.EggTimer - GetLayEggIntervalDuration());
 		_layEggTriggered = true;
 	}
 
@@ -536,11 +551,13 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	private bool ShouldLayEgg()
 	{
+		if (!CanAccumulateEggProgress())
+			return false;
+
 		if (_currentState == ChickenState.LayEgg)
-		{
 			return !_layEggTriggered;
-		}
-		return Data.EggTimer >= layEggInterval;
+
+		return Data.EggTimer >= GetLayEggIntervalDuration();
 	}
 
 	private bool ShouldForage()
@@ -717,16 +734,78 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	private float GetGrassSustenanceDuration()
 	{
-		const float fallbackDayLength = 1440f;
-		float dayLength = fallbackDayLength;
-		if (DayTimeSystem.Instance != null &&
-		    DayTimeSystem.Instance.WorldTimeDict.TryGetValue(gameObject.scene.name, out TimeData timeData) &&
-		    timeData != null)
+		return GetCurrentDayLength() * Mathf.Max(0.1f, grassSustenanceDays);
+	}
+
+	/// <summary>只有成年、允许产蛋且配置了有效蛋物品 ID 的鸡才累计产蛋进度。</summary>
+	private bool CanAccumulateEggProgress()
+	{
+		return isAdult && enableEggLaying && !string.IsNullOrWhiteSpace(eggItemId);
+	}
+
+	/// <summary>时间系统或所属场景变化后重新绑定，避免早于时间系统加载的动物漏掉产蛋计时。</summary>
+	private void EnsureEggWorldTimeBinding()
+	{
+		DayTimeSystem current = DayTimeSystem.Instance;
+		string sceneName = gameObject.scene.name;
+		if (_eggTimeSystem == current && string.Equals(_eggTimeSceneName, sceneName, StringComparison.Ordinal))
+			return;
+
+		BindEggWorldTime();
+	}
+
+	/// <summary>绑定权威世界时间；时间加速、跳时与跨日都通过同一事件累计产蛋进度。</summary>
+	private void BindEggWorldTime()
+	{
+		UnbindEggWorldTime();
+		_eggTimeSystem = DayTimeSystem.Instance;
+		if (_eggTimeSystem == null)
+			return;
+
+		_eggTimeSceneName = gameObject.scene.name;
+		_eggTimeSystem.TimeAdvanced += HandleEggWorldTimeAdvanced;
+	}
+
+	private void UnbindEggWorldTime()
+	{
+		if (_eggTimeSystem != null)
+			_eggTimeSystem.TimeAdvanced -= HandleEggWorldTimeAdvanced;
+		_eggTimeSystem = null;
+		_eggTimeSceneName = null;
+	}
+
+	private void HandleEggWorldTimeAdvanced(string sceneName, float oldTotalTime, float newTotalTime)
+	{
+		if (!string.Equals(sceneName, _eggTimeSceneName, StringComparison.Ordinal))
+			return;
+
+		if (!CanAccumulateEggProgress())
 		{
-			dayLength = Mathf.Max(1f, timeData.DayLength);
+			Data.EggTimer = 0f;
+			return;
 		}
 
-		return dayLength * Mathf.Max(0.1f, grassSustenanceDays);
+		Data.EggTimer += Mathf.Max(0f, newTotalTime - oldTotalTime);
+	}
+
+	/// <summary>按当前世界的一天长度换算产蛋周期，避免固定秒数与世界时间配置脱节。</summary>
+	private float GetLayEggIntervalDuration()
+	{
+		return GetCurrentDayLength() * Mathf.Max(0.1f, layEggIntervalDays);
+	}
+
+	/// <summary>读取当前世界一天的权威长度；时间系统未就绪时使用项目默认 1440 秒。</summary>
+	private float GetCurrentDayLength()
+	{
+		const float fallbackDayLength = 1440f;
+		if (DayTimeSystem.Instance == null ||
+		    !DayTimeSystem.Instance.WorldTimeDict.TryGetValue(gameObject.scene.name, out TimeData timeData) ||
+		    timeData == null)
+		{
+			return fallbackDayLength;
+		}
+
+		return Mathf.Max(1f, timeData.DayLength);
 	}
 
 	private void SpawnEgg()

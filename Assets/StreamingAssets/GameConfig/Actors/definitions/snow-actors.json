@@ -26,8 +26,10 @@
           "parameters": {
             "debugLog": false,
             "grassSustenanceDays": 6.0,
+            "isAdult": true,
+            "enableEggLaying": false,
             "eggItemId": "",
-            "layEggInterval": 999999.0,
+            "layEggIntervalDays": 2.0,
             "enableGrassForaging": true,
             "edibleTags": [
               "Food",

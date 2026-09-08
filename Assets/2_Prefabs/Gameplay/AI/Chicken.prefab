@@ -309,8 +309,10 @@ MonoBehaviour:
   wanderDangerPenalty: 1200
   wanderSampleCount: 8
   wanderPenaltyWeight: 1
+  isAdult: 1
+  enableEggLaying: 1
   eggItemId: Egg
-  layEggInterval: 2880
+  layEggIntervalDays: 2
   layEggDuration: 2
   fleeTriggerDistance: 6
   fleeSafeDistance: 10
