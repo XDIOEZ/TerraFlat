@@ -6,7 +6,7 @@ using MemoryPack;
 using UnityEngine.SceneManagement;
 using System;
 
-public class DayTimeSystem : SingletonMono<DayTimeSystem>
+public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
 {
     // 海水月光倒影读取的全局 Shader 参数。
     private static readonly int GlobalMoonlightIntensityShaderId =
@@ -50,6 +50,7 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
     /// </summary>
     private void OnEnable()
     {
+        RegisterSeasonSettings();
         SetGlobalMoonlightIntensity(0f);
         SetGlobalMoonAppearance(0f);
         SetGlobalGameDay(0f);
@@ -66,6 +67,7 @@ public class DayTimeSystem : SingletonMono<DayTimeSystem>
     /// </summary>
     private void OnDisable()
     {
+        UnregisterSeasonSettings();
         UnsubscribeGameManagerEvents();
         SetGlobalMoonlightIntensity(0f);
         SetGlobalMoonAppearance(0f);
@@ -716,6 +718,9 @@ public partial class SerializableTimeData
     public float NewMoonNightIntensity;
     public float FullMoonNightIntensity;
     public float InitialMoonPhase;
+    public SeasonCycleSettings Seasons; // 当前世界的四季参数
+    public double SeasonOffsetDays; // 调整季长后的日历偏移
+    public List<SeasonCalendarHistoryEntry> SeasonHistory; // 改季长前的历史，供离开区块后的补算读取。
 
     [MemoryPackConstructor]
     public SerializableTimeData(float currentTime,
@@ -731,7 +736,10 @@ public partial class SerializableTimeData
                                 float lunarCycleDays,
                                 float newMoonNightIntensity,
                                 float fullMoonNightIntensity,
-                                float initialMoonPhase)
+                                float initialMoonPhase,
+                                SeasonCycleSettings seasons,
+                                double seasonOffsetDays,
+                                List<SeasonCalendarHistoryEntry> seasonHistory)
     {
         CurrentTime = currentTime;
         DayLength = dayLength;
@@ -747,6 +755,9 @@ public partial class SerializableTimeData
         NewMoonNightIntensity = newMoonNightIntensity;
         FullMoonNightIntensity = fullMoonNightIntensity;
         InitialMoonPhase = initialMoonPhase;
+        Seasons = seasons;
+        SeasonOffsetDays = seasonOffsetDays;
+        SeasonHistory = seasonHistory;
     }
 
     // 从运行时 TimeData 抽数据
@@ -764,6 +775,9 @@ public partial class SerializableTimeData
         NewMoonNightIntensity = timeData.NewMoonNightIntensity;
         FullMoonNightIntensity = timeData.FullMoonNightIntensity;
         InitialMoonPhase = timeData.InitialMoonPhase;
+        Seasons = timeData.Seasons.Copy();
+        SeasonOffsetDays = timeData.SeasonOffsetDays;
+        SeasonHistory = SeasonCalendar.CopyHistory(timeData.SeasonHistory);
 
         // AnimationCurve → 数组
         if (timeData.LightParams != null && timeData.LightParams.keys != null)
@@ -781,6 +795,9 @@ public partial class SerializableTimeData
     // 还原回运行时 TimeData
     public TimeData ToTimeData()
     {
+        if (Seasons == null || double.IsNaN(SeasonOffsetDays) || double.IsInfinity(SeasonOffsetDays))
+            throw new System.IO.InvalidDataException("当前版本存档的季节数据无效，停止加载。");
+        Seasons.Validate();
         // 重建曲线
         var curve = new AnimationCurve();
         if (LightParamsKeys != null)
@@ -806,7 +823,10 @@ public partial class SerializableTimeData
             LunarCycleDays = LunarCycleDays,
             NewMoonNightIntensity = NewMoonNightIntensity,
             FullMoonNightIntensity = FullMoonNightIntensity,
-            InitialMoonPhase = InitialMoonPhase
+            InitialMoonPhase = InitialMoonPhase,
+            Seasons = Seasons.Copy(),
+            SeasonOffsetDays = SeasonOffsetDays,
+            SeasonHistory = SeasonCalendar.CopyHistory(SeasonHistory)
         };
 
         timeData.EnsureTimeSystemDefaults();

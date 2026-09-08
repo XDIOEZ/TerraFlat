@@ -166,6 +166,9 @@ public static class TimeSystemConfigLoader
         ValidateLightCurve(profile);
         ValidateGradient(profile);
         ValidateMoon(profile);
+        if (profile.Seasons == null)
+            throw new InvalidDataException($"时间系统 Profile {profile.Id} 缺少 seasons 配置");
+        profile.Seasons.Validate();
         ValidatePresentation(profile);
     }
 

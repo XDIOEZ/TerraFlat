@@ -35,6 +35,16 @@
           { "alpha": 1.0, "time": 1.0 }
         ]
       },
+      "seasons": {
+        "springDays": 6.0,
+        "summerDays": 6.0,
+        "autumnDays": 6.0,
+        "winterDays": 6.0,
+        "springTemperatureOffset": 0.0,
+        "summerTemperatureOffset": 12.0,
+        "autumnTemperatureOffset": 0.0,
+        "winterTemperatureOffset": -30.0
+      },
       "moon": {
         "cycleDays": 29.53,
         "newMoonNightIntensity": 0.035,
@@ -81,6 +91,16 @@
           { "alpha": 1.0, "time": 1.0 }
         ]
       },
+      "seasons": {
+        "springDays": 6.0,
+        "summerDays": 6.0,
+        "autumnDays": 6.0,
+        "winterDays": 6.0,
+        "springTemperatureOffset": 0.0,
+        "summerTemperatureOffset": 12.0,
+        "autumnTemperatureOffset": 0.0,
+        "winterTemperatureOffset": -30.0
+      },
       "moon": {
         "cycleDays": 29.53,
         "newMoonNightIntensity": 0.035,
@@ -126,6 +146,16 @@
           { "alpha": 1.0, "time": 0.0 },
           { "alpha": 1.0, "time": 1.0 }
         ]
+      },
+      "seasons": {
+        "springDays": 6.0,
+        "summerDays": 6.0,
+        "autumnDays": 6.0,
+        "winterDays": 6.0,
+        "springTemperatureOffset": 0.0,
+        "summerTemperatureOffset": 12.0,
+        "autumnTemperatureOffset": 0.0,
+        "winterTemperatureOffset": -30.0
       },
       "moon": {
         "cycleDays": 29.53,

@@ -11,7 +11,7 @@ public partial class SaveDataMgr
 {
     #region 农业差量
 
-    private ChunkSaveRecord GetAgricultureRecord(RuntimeWorldAddress address, bool create)
+    private ChunkSaveRecord GetRuntimeChunkRecord(RuntimeWorldAddress address, bool create)
     {
         string planet = ResolveRuntimePlanetName();
         string key = BuildChunkKey(planet, ToChunkName(address));
@@ -29,7 +29,7 @@ public partial class SaveDataMgr
     {
         if (!GameNetwork.HasStateAuthority || SaveData == null)
             return;
-        ChunkSaveRecord record = GetAgricultureRecord(sample.Address, true);
+        ChunkSaveRecord record = GetRuntimeChunkRecord(sample.Address, true);
         AgricultureCellSaveData cell = record.AgricultureCells.Find(c => c.LocalPosition == sample.LocalCell);
         if (cell == null)
         {
@@ -47,7 +47,7 @@ public partial class SaveDataMgr
     {
         if (!GameNetwork.HasStateAuthority || SaveData == null)
             return;
-        var record = GetAgricultureRecord(address, true);
+        var record = GetRuntimeChunkRecord(address, true);
         var cell = record.AgricultureCells.Find(c => c.LocalPosition == local);
         if (cell == null)
             throw new InvalidOperationException("种植格缺少农业状态，必须先完成锄地。");
@@ -55,7 +55,7 @@ public partial class SaveDataMgr
     }
 
     public IReadOnlyList<AgricultureCellSaveData> GetAgricultureCells(RuntimeWorldAddress address) =>
-        GetAgricultureRecord(address, false)?.AgricultureCells ?? (IReadOnlyList<AgricultureCellSaveData>)Array.Empty<AgricultureCellSaveData>();
+        GetRuntimeChunkRecord(address, false)?.AgricultureCells ?? (IReadOnlyList<AgricultureCellSaveData>)Array.Empty<AgricultureCellSaveData>();
 
     /// <summary>地形差量恢复后、表现绑定前恢复农业权威层。</summary>
     private static void RestoreAgricultureTerrain(ChunkRuntime chunk, ChunkSaveRecord record)

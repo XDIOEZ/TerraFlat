@@ -59,6 +59,13 @@ public partial class TimeData
 
     [Tooltip("新世界第 0 天的月相位置")]
     public float InitialMoonPhase = 0.5f;
+
+    [Tooltip("随世界保存的四季长度与当地温度偏移")]
+    public SeasonCycleSettings Seasons = new();
+
+    [Tooltip("修改季长时保留当前季节进度的日历偏移，不改变绝对游戏时间")]
+    public double SeasonOffsetDays;
+    public System.Collections.Generic.List<SeasonCalendarHistoryEntry> SeasonHistory = new(); // 调整季长前的历史气候参数。
     
     public TimeData() { }
 
@@ -83,7 +90,10 @@ public partial class TimeData
             LunarCycleDays = LunarCycleDays,
             NewMoonNightIntensity = NewMoonNightIntensity,
             FullMoonNightIntensity = FullMoonNightIntensity,
-            InitialMoonPhase = InitialMoonPhase
+            InitialMoonPhase = InitialMoonPhase,
+            Seasons = Seasons.Copy(),
+            SeasonOffsetDays = SeasonOffsetDays,
+            SeasonHistory = SeasonCalendar.CopyHistory(SeasonHistory)
         };
     }
 

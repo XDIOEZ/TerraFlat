@@ -17,15 +17,15 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 10;
-    private const int ModdedSaveVersion = 8;
+    private const int CompactSaveVersion = 11;
+    private const int ModdedSaveVersion = 9;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
     private const string LastExitTimeSuffix = ".lastplayed";
-    // 完整地表差量使用新封装头，在反序列化嵌套地块前直接拒绝旧布局。
-    private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'5' };
-    private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'3' };
+    // 季节与世界状态采用当前布局，先检查封装头，再解析嵌套 MemoryPack 数据。
+    private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'6' };
+    private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'4' };
     private static readonly object SaveFileLock = new object();
     private static readonly object SaveRevisionLock = new object();
     private static readonly Dictionary<string, long> LatestSaveRevisions =
@@ -1220,6 +1220,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             WriteRuntimeBuildingDamage(terrain, x, y, accumulatedDamage);
         }
         RestoreAgricultureTerrain(chunk, delta);
+        RestoreSupportTerrain(chunk, delta);
     }
 
     /// <summary>放置、受损或拆除运行时格子建筑后立即更新内存差量，避免区块回收时丢失状态。</summary>
@@ -2670,6 +2671,7 @@ public partial class ChunkSaveRecord
     public List<GrassCellSaveDelta> GrassDeltas = new();
     // 当前 WorldModel 的完整核心地形差量，包含地表铺设和阻挡墙。
     public List<RuntimeTileCellSaveDelta> RuntimeTileDeltas = new();
+    public List<SupportCellSaveData> SupportCells = new(); // 独立支撑面
     public List<AgricultureCellSaveData> AgricultureCells = new(); // 独立农业状态
 
     [MemoryPackIgnore]
@@ -2679,7 +2681,8 @@ public partial class ChunkSaveRecord
          (TileDeltas?.Count ?? 0) > 0 ||
          (GrassDeltas?.Count ?? 0) > 0 ||
          (RuntimeTileDeltas?.Count ?? 0) > 0 ||
-         (AgricultureCells?.Count ?? 0) > 0);
+         (AgricultureCells?.Count ?? 0) > 0 ||
+         (SupportCells?.Count ?? 0) > 0);
 }
 
 [MemoryPackable]

@@ -51,6 +51,7 @@ public sealed class TimeSystemProfileConfig
     public List<TimeSystemCurveKeyConfig> LightCurve = new();
     public TimeSystemGradientConfig DayNightGradient = new();
     public TimeSystemMoonConfig Moon = new();
+    public SeasonCycleSettings Seasons = new(); // 新世界四季参数
     public TimeSystemPresentationConfig Presentation = new();
 
     #endregion
@@ -75,7 +76,8 @@ public sealed class TimeSystemProfileConfig
             LunarCycleDays = Mathf.Max(1f, Moon?.CycleDays ?? 29.53f),
             NewMoonNightIntensity = Mathf.Clamp01(Moon?.NewMoonNightIntensity ?? 0.035f),
             FullMoonNightIntensity = Mathf.Clamp01(Moon?.FullMoonNightIntensity ?? 0.18f),
-            InitialMoonPhase = Mathf.Repeat(Moon?.InitialPhase ?? 0.5f, 1f)
+            InitialMoonPhase = Mathf.Repeat(Moon?.InitialPhase ?? 0.5f, 1f),
+            Seasons = Seasons.Copy()
         };
 
         timeData.EnsureTimeSystemDefaults();

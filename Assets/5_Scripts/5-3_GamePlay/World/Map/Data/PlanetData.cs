@@ -27,6 +27,7 @@ public enum WorldTopologyMode
 [System.Serializable]
 public partial class PlanetData
 {
+    public SnowCoverState SeasonalSnow = new(); // 季节覆盖独立于天然雪地与地形身份。
     #region 世界生成默认值
     public const int DefaultRadius = 1000;
     public const float DefaultNoiseScale = 0.01f;
