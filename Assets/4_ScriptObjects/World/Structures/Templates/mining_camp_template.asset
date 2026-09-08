@@ -1,0 +1,133 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01a4fcb029854204cbec132dca2026eb, type: 3}
+  m_Name: mining_camp_template
+  m_EditorClassIdentifier: 
+  TemplateId: mining_camp_template
+  Version: 1
+  Size: {x: 12, y: 10}
+  Pivot: {x: 6, y: 5}
+  TileStamps:
+  - LocalPosition: {x: 2, y: 7}
+    TileBlock: {fileID: 11400000, guid: 2637c879c3294e268d2a8af9e2907536, type: 2}
+    WriteMode: 2
+  - LocalPosition: {x: 3, y: 7}
+    TileBlock: {fileID: 11400000, guid: 2637c879c3294e268d2a8af9e2907536, type: 2}
+    WriteMode: 2
+  - LocalPosition: {x: 4, y: 7}
+    TileBlock: {fileID: 11400000, guid: 2637c879c3294e268d2a8af9e2907536, type: 2}
+    WriteMode: 2
+  - LocalPosition: {x: 2, y: 6}
+    TileBlock: {fileID: 11400000, guid: 2637c879c3294e268d2a8af9e2907536, type: 2}
+    WriteMode: 2
+  - LocalPosition: {x: 8, y: 7}
+    TileBlock: {fileID: 11400000, guid: 2637c879c3294e268d2a8af9e2907536, type: 2}
+    WriteMode: 2
+  - LocalPosition: {x: 9, y: 7}
+    TileBlock: {fileID: 11400000, guid: 2637c879c3294e268d2a8af9e2907536, type: 2}
+    WriteMode: 2
+  ItemStamps:
+  - ItemPrefabId: Tent
+    MemberId: shelter
+    LocalPosition: {x: 3.5, y: 4.5}
+    RotationZ: 0
+    Scale: {x: 1, y: 1, z: 1}
+    OrientationMode: 0
+    Optional: 0
+    SpawnChance: 1
+    SeedSalt: 83071
+    ContainerContents:
+      OverrideContents: 0
+      TargetInventoryIndex: 0
+      TargetInventoryName: 
+      Items: []
+  - ItemPrefabId: Bonfire
+    MemberId: old-fire
+    LocalPosition: {x: 7.5, y: 4.5}
+    RotationZ: 0
+    Scale: {x: 1, y: 1, z: 1}
+    OrientationMode: 0
+    Optional: 0
+    SpawnChance: 1
+    SeedSalt: 83071
+    ContainerContents:
+      OverrideContents: 0
+      TargetInventoryIndex: 0
+      TargetInventoryName: 
+      Items: []
+  - ItemPrefabId: Mine_Iron
+    MemberId: iron-vein
+    LocalPosition: {x: 9.5, y: 6.5}
+    RotationZ: 0
+    Scale: {x: 1, y: 1, z: 1}
+    OrientationMode: 0
+    Optional: 0
+    SpawnChance: 1
+    SeedSalt: 83071
+    ContainerContents:
+      OverrideContents: 0
+      TargetInventoryIndex: 0
+      TargetInventoryName: 
+      Items: []
+  - ItemPrefabId: Mine_Stone
+    MemberId: stone-pile
+    LocalPosition: {x: 10.5, y: 2.5}
+    RotationZ: 0
+    Scale: {x: 1, y: 1, z: 1}
+    OrientationMode: 0
+    Optional: 0
+    SpawnChance: 1
+    SeedSalt: 83071
+    ContainerContents:
+      OverrideContents: 0
+      TargetInventoryIndex: 0
+      TargetInventoryName: 
+      Items: []
+  - ItemPrefabId: Chest_Wood
+    MemberId: ore-cache
+    LocalPosition: {x: 5.5, y: 6.5}
+    RotationZ: 0
+    Scale: {x: 1, y: 1, z: 1}
+    OrientationMode: 0
+    Optional: 0
+    SpawnChance: 1
+    SeedSalt: 83071
+    ContainerContents:
+      OverrideContents: 1
+      TargetInventoryIndex: 0
+      TargetInventoryName: 
+      Items:
+      - SlotIndex: 0
+        ItemPrefabId: Ore_Iron
+        Amount: 6
+      - SlotIndex: 1
+        ItemPrefabId: Ore_Coal
+        Amount: 4
+      - SlotIndex: 2
+        ItemPrefabId: Ore_Copper
+        Amount: 2
+      - SlotIndex: 3
+        ItemPrefabId: Ore_Tin
+        Amount: 1
+      - SlotIndex: 4
+        ItemPrefabId: MinersNote
+        Amount: 1
+  Markers:
+  - Type: 0
+    MarkerId: entrance
+    LocalPosition: {x: 6, y: 1}
+    Size: {x: 1, y: 1}
+    ContentId: 
+    RotationZ: 0
+    OrientationMode: 0
+    Chance: 1
+    SeedSalt: 0
