@@ -42,6 +42,7 @@ public static class FarmlandSystem
     }
 
     public static bool IsOpen(RuntimeTerrainTileSample sample) =>
+        TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) == 0 &&
         sample.Cell.GroundTileId != 0 && sample.Cell.BackTileId == 0 && sample.Cell.BlockingTileId == 0 &&
         (sample.Cell.Flags & (TerrainCellFlags.Water | TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0 &&
         sample.Terrain.GetTileLayerCount(sample.LocalCell.x, sample.LocalCell.y) == 1 &&

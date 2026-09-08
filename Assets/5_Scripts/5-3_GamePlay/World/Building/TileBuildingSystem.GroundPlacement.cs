@@ -1,10 +1,10 @@
 using System;
+using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UnityEngine;
 
 /// <summary>
-/// 普通地面的铺设事务：验证来源地形，替换权威地表并记录差量。
-/// 不占用 Blocking 层或动态建筑格，后续建筑直接沿用普通地面规则。
+/// 可移除支撑面的铺设事务；基础水体保持原值，平台单独保存，后续建筑读取有效表面。
 /// </summary>
 public static partial class TileBuildingSystem
 {
@@ -32,14 +32,15 @@ public static partial class TileBuildingSystem
             return false;
         }
 
-        TerrainCell cell = sample.Cell;
+        TerrainCell cell = sample.Terrain.GetCell(sample.LocalCell.x, sample.LocalCell.y);
         TerrainCellFlags required = definition.groundPlacement.RequiredSourceFlags;
         if ((cell.Flags & required) != required)
         {
             reason = required == TerrainCellFlags.Water ? "水上平台只能铺在水里" : "目标地形不满足铺设条件";
             return false;
         }
-        if (cell.GroundTileId == 0 || cell.BackTileId != 0 || cell.BlockingTileId != 0 ||
+        if (TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) != 0 ||
+            cell.GroundTileId == 0 || cell.BackTileId != 0 || cell.BlockingTileId != 0 ||
             (cell.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) != 0 ||
             sample.Terrain.GetTileLayerCount(sample.LocalCell.x, sample.LocalCell.y) != 1 ||
             BuildingOccupancyRegistry.IsOccupied(sample.WorldCell))
@@ -61,7 +62,7 @@ public static partial class TileBuildingSystem
         return true;
     }
 
-    /// <summary>替换单格地表；Changed 事件驱动水面、邻岸、地块效果和导航更新。</summary>
+    /// <summary>增加独立支撑面，并同步持久化和通行查询。</summary>
     private static bool TryPlaceGround(Vector2Int worldCell, Tile_Block definition,
         out TileBuildingCell placedCell, out string reason)
     {
@@ -83,10 +84,9 @@ public static partial class TileBuildingSystem
         short cost = (short)Math.Clamp(configuredCost, 1d, short.MaxValue);
         placedCell = new TileBuildingCell(chunk, sample.WorldCell, sample.LocalCell,
             tileId, definition.tileItemName, sample.Cell);
-        TerrainCell ground = new TerrainCell(tileId, 0, 0, sample.Cell.BiomeId,
-            cost, TerrainCellFlags.Walkable);
-        sample.Terrain.SetCell(sample.LocalCell.x, sample.LocalCell.y, ground);
-        SaveDataMgr.Instance?.RecordRuntimeTerrainChange(placedCell);
+        TerrainSupportLayer.Set(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y, tileId, cost);
+        SaveDataMgr.Instance?.RecordSupportCell(sample);
+        RefreshSupportNavigation(sample.WorldCell);
         CellPlaced?.Invoke(placedCell);
         return true;
     }
@@ -103,15 +103,79 @@ public static partial class TileBuildingSystem
         }
         Vector2Int local = placedCell.LocalPosition;
         TerrainCell current = terrain.GetCell(local.x, local.y);
-        if (current.GroundTileId != placedCell.RuntimeTileId || current.BackTileId != 0 ||
+        if (TerrainSupportLayer.GetTileId(terrain, local.x, local.y) != placedCell.RuntimeTileId || current.BackTileId != 0 ||
             current.BlockingTileId != 0 || BuildingOccupancyRegistry.IsOccupied(placedCell.Position))
         {
             reason = "铺设格已经被修改，无法回滚";
             return false;
         }
 
-        terrain.SetCell(local.x, local.y, placedCell.ReplacedGroundCell.Value);
-        SaveDataMgr.Instance?.RecordRuntimeTerrainChange(placedCell);
+        TerrainSupportLayer.Set(terrain, local.x, local.y, 0, 0);
+        SaveDataMgr.Instance?.RecordSupportCell(new RuntimeTerrainTileSample(placedCell.RuntimeChunk.Address,
+            terrain, placedCell.Position, local, current, terrain.GetTopTileId(local.x, local.y)));
+        RefreshSupportNavigation(placedCell.Position);
+        return true;
+    }
+
+    /// <summary>更新平台格的导航，不改变周围水域的基础代价。</summary>
+    private static void RefreshSupportNavigation(Vector2Int cell) =>
+        WorldNavigationManager.Instance?.QueueNavigationRegion(new RectInt(cell.x, cell.y, 1, 1));
+
+    /// <summary>主动拆除只允许空平台；返还物先创建成功，再撤销支撑状态。</summary>
+    public static bool TryDismantleSupport(Vector2Int worldCell, out string reason)
+    {
+        reason = null;
+        if (!GameNetwork.HasStateAuthority)
+            return false;
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
+        if (manager == null || !manager.TryGetRuntimeTerrainTile((Vector2)worldCell + Vector2.one * 0.5f, out RuntimeTerrainTileSample sample))
+            return false;
+        int tileId = TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y);
+        if (tileId == 0 || !TryResolveRuntimeTileBlockId(manager, tileId, out string blockId))
+        {
+            reason = "这里没有可拆的平台。";
+            return false;
+        }
+        TerrainCell baseCell = sample.Terrain.GetCell(sample.LocalCell.x, sample.LocalCell.y);
+        if (baseCell.BackTileId != 0 || baseCell.BlockingTileId != 0 || BuildingOccupancyRegistry.IsOccupied(sample.WorldCell))
+        {
+            reason = "请先移走平台上的建筑。";
+            return false;
+        }
+        var occupants = new System.Collections.Generic.List<Item>();
+        var uniqueItems = new System.Collections.Generic.HashSet<Item>();
+        ItemMgr.Instance.QueryItemsInCircleNonAlloc((Vector2)sample.WorldCell + Vector2.one * 0.5f,
+            2f, ~0, null, occupants, uniqueItems);
+        foreach (Item occupant in occupants)
+        {
+            if (occupant == null || occupant.DestructionHandled || occupant.InHand || occupant.Owner != null)
+                continue;
+            Vector2 position = WorldTopologyRuntime.NormalizePosition(occupant.transform.position);
+            if (Mathf.FloorToInt(position.x) == sample.WorldCell.x && Mathf.FloorToInt(position.y) == sample.WorldCell.y)
+            {
+                reason = "请先移走平台上的角色和物品。";
+                return false;
+            }
+        }
+        string refundId = GameRes.Instance.GetTileBlock(blockId).groundPlacement.RefundItemId;
+        if (string.IsNullOrEmpty(refundId))
+            throw new InvalidOperationException($"平台缺少拆除返还物品：{blockId}");
+        Item refund = ItemMgr.Instance.InstantiateItem(refundId,
+            new Vector3(sample.WorldCell.x + 0.5f, sample.WorldCell.y + 0.5f), Quaternion.identity, Vector3.one);
+        if (refund == null)
+            return false;
+        try
+        {
+            refund.Load();
+        }
+        catch
+        {
+            ItemMgr.Instance.DespawnItem(refund, saveData: false);
+            throw;
+        }
+        TerrainSupportLayer.Set(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y, 0, 0);
+        SaveDataMgr.Instance.RecordSupportCell(sample);
+        RefreshSupportNavigation(sample.WorldCell);
         return true;
     }
 

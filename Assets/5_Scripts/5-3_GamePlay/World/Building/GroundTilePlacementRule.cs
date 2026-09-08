@@ -11,4 +11,5 @@ public sealed class GroundTilePlacementRule
 {
     [Tooltip("原地形必须具备的全部标记；水上平台设为 Water。")]
     public TerrainCellFlags RequiredSourceFlags = TerrainCellFlags.Water;
+    public string RefundItemId; // 主动拆除返还的平台物品。
 }

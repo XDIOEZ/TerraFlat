@@ -75,7 +75,7 @@ public static class WaterPlatformAssetBuilder
             IsWalkable = true,
             Penalty = 1000
         };
-        block.groundPlacement = new GroundTilePlacementRule();
+        block.groundPlacement = new GroundTilePlacementRule { RefundItemId = "WaterPlatform_Summoner" };
         block.behaviours.Clear();
         block.damageProfile = new TileBuildingDamageProfile();
         EditorUtility.SetDirty(block);

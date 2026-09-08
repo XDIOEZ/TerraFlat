@@ -245,7 +245,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
                     Vector2Int worldCell = WorldNavigationGrid.NormalizeCell(new Vector2Int(
                         chunk.Address.ChunkOrigin.X + x,
                         chunk.Address.ChunkOrigin.Y + y));
-                    TerrainCell terrainCell = terrain.GetCell(x, y);
+                    TerrainCell terrainCell = TerrainSupportLayer.GetSurfaceCell(terrain, x, y);
                     bool walkable = (terrainCell.Flags & TerrainCellFlags.Walkable) != 0 &&
                                     (terrainCell.Flags & TerrainCellFlags.Blocking) == 0;
                     walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldCell, walkable);
@@ -592,7 +592,7 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         if ((uint)localX >= (uint)sourceChunk.Terrain.Width ||
             (uint)localY >= (uint)sourceChunk.Terrain.Height)
             return false;
-        TerrainCell terrainCell = sourceChunk.Terrain.GetCell(localX, localY);
+        TerrainCell terrainCell = TerrainSupportLayer.GetSurfaceCell(sourceChunk.Terrain, localX, localY);
         bool walkable = (terrainCell.Flags & TerrainCellFlags.Walkable) != 0 &&
                         (terrainCell.Flags & TerrainCellFlags.Blocking) == 0;
         cell = new WorldNavigationCell(

@@ -48,6 +48,10 @@ public static class ChunkRuntimeTileEffectResolver
             return false;
 
         int tileId = terrain.GetTopTileId(localCell.x, localCell.y);
+        TerrainCell effective = TerrainSupportLayer.GetSurfaceCell(terrain, localCell.x, localCell.y);
+        int supportId = TerrainSupportLayer.GetTileId(terrain, localCell.x, localCell.y);
+        if (supportId != 0 && effective.BlockingTileId == 0 && effective.BackTileId == 0)
+            tileId = supportId;
         string parameterId = TileBlockParameterPrefix + tileId;
         if (tileId == 0 || !profile.TextParameters.TryGetValue(parameterId, out string tileBlockId) ||
             string.IsNullOrWhiteSpace(tileBlockId))
@@ -117,9 +121,11 @@ public partial class ChunkMgr
         if ((uint)localCell.x >= (uint)terrain.Width || (uint)localCell.y >= (uint)terrain.Height)
             return false;
 
-        TerrainCell cell = terrain.GetCell(localCell.x, localCell.y);
+        TerrainCell cell = TerrainSupportLayer.GetSurfaceCell(terrain, localCell.x, localCell.y);
+        int supportId = TerrainSupportLayer.GetTileId(terrain, localCell.x, localCell.y);
         sample = new RuntimeTerrainTileSample(address, terrain, worldCell, localCell, cell,
-            terrain.GetTopTileId(localCell.x, localCell.y));
+            supportId != 0 && cell.BlockingTileId == 0 && cell.BackTileId == 0
+                ? supportId : terrain.GetTopTileId(localCell.x, localCell.y));
         return true;
     }
 

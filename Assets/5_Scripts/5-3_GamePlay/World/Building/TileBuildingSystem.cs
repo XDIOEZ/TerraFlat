@@ -192,8 +192,8 @@ public static partial class TileBuildingSystem
             }
 
             ChunkTerrainData terrain = runtimeTile.Terrain;
-            if (runtimeTile.TopTileId == 0 || !terrain.IsWalkable(
-                    runtimeTile.LocalCell.x, runtimeTile.LocalCell.y))
+            if (runtimeTile.TopTileId == 0 || (runtimeTile.Cell.Flags & TerrainCellFlags.Walkable) == 0 ||
+                (runtimeTile.Cell.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) != 0)
             {
                 reason = $"地块 {cell} 不可建造或已有阻挡方块";
                 return false;
