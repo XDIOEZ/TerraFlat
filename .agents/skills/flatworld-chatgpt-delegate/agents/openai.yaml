@@ -1,0 +1,4 @@
+interface:
+  display_name: "FlatWorld：Codex 规划，ChatGPT 执行"
+  short_description: "由 Codex 规划并派发 FlatWorld 任务给普通 ChatGPT 执行，跟进修改与验收"
+  default_prompt: "使用 $flatworld-chatgpt-delegate，由 Codex 规划我的 FlatWorld 任务，交给 ChatGPT 实际修改并跟进验收。"
