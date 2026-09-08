@@ -38,7 +38,7 @@ public static class UIUserSettings
     public const float MinimumControlZoneRatio = 0.2f;
     public const float MaximumControlZoneRatio = 0.4f;
     public const float ControlZoneRatioStep = 0.01f;
-    public const float DefaultPinchZoomSensitivity = 0f;
+    public const float DefaultPinchZoomSensitivity = 100f;
     public const float MinimumPinchZoomSensitivity = 0f;
     public const float MaximumPinchZoomSensitivity = 300f;
     public const float PinchZoomSensitivityStep = 1f;
