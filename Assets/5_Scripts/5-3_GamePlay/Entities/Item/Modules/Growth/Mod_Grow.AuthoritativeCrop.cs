@@ -410,6 +410,7 @@ public partial class Mod_Grow
     public bool CanInteract(Item playerItem)
     {
         return playerItem != null &&
+            CanHarvestInEnvironment() &&
             allowCultivatedHarvest &&
             Data != null &&
             Data.isCultivatedCrop &&
@@ -418,9 +419,10 @@ public partial class Mod_Grow
             !_harvestInProgress;
     }
 
+    /// <summary>采集开始时复核环境结算、种植来源和一次性收获状态。</summary>
     public void OnInteractStart(Item playerItem)
     {
-        if (!allowCultivatedHarvest || !Data.isCultivatedCrop)
+        if (playerItem == null || !CanHarvestInEnvironment() || !allowCultivatedHarvest || !Data.isCultivatedCrop)
             return;
 
         if (Data.isHarvested || _harvestInProgress)
@@ -478,11 +480,11 @@ public partial class Mod_Grow
         if (ItemMgr.Instance == null || GameRes.Instance == null)
             throw new InvalidOperationException("农业收获所需的 ItemMgr 或 GameRes 尚未初始化");
 
-        if (string.IsNullOrWhiteSpace(harvestSeedItemId) || GameRes.Instance.GetPrefab(harvestSeedItemId) == null)
-            throw new InvalidOperationException($"找不到收获种子 Prefab：{harvestSeedItemId}");
+        if (string.IsNullOrWhiteSpace(harvestSeedItemId) || !GameRes.Instance.TryGetItemDefinition(harvestSeedItemId, out _))
+            throw new InvalidOperationException($"找不到收获种子定义：{harvestSeedItemId}");
 
-        if (string.IsNullOrWhiteSpace(harvestFoodItemId) || GameRes.Instance.GetPrefab(harvestFoodItemId) == null)
-            throw new InvalidOperationException($"找不到收获食物 Prefab：{harvestFoodItemId}");
+        if (string.IsNullOrWhiteSpace(harvestFoodItemId) || !GameRes.Instance.TryGetItemDefinition(harvestFoodItemId, out _))
+            throw new InvalidOperationException($"找不到收获食物定义：{harvestFoodItemId}");
     }
 
     private void SpawnHarvestItem(string itemId, int amount)

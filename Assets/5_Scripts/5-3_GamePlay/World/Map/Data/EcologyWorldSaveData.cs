@@ -14,7 +14,7 @@ public partial class EcologyWorldSaveData
 {
     #region 世界配置
 
-    public const int CurrentDataVersion = 4;
+    public const int CurrentDataVersion = 5;
 
     [MemoryPackInclude] public int DataVersion;
     [MemoryPackInclude] public string ProfileId;
@@ -452,6 +452,7 @@ public partial class EcologyChunkSaveData
     public int ChunkY;
     public List<int> RemovedGuids = new();
     public List<ItemData> ChangedItems = new();
+    public Dictionary<int, int> RenewalYears = new(); // 删除的自然资源最早恢复年份。
 
     #endregion
 

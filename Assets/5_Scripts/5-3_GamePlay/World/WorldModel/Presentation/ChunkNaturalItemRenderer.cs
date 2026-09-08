@@ -28,6 +28,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
     private ChunkMgr chunkManager;
     private bool applicationQuitting;
     private bool unbinding;
+    private float nextRenewalCheck; // 春季低频分批补位。
+    private int renewalCursor; // 每次最多检查四个自然生成点。
 
     public int SpawnedItemCount => spawnedItems.Count;
 
@@ -231,11 +233,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
         }
 
         RuntimeWorldAddress address = boundChunk.Address;
-        if (chunkManager != null &&
-            chunkManager.IsNaturalItemRemoved(address, placement.Guid))
-        {
-            return;
-        }
+        bool renewing = chunkManager.IsNaturalItemRemoved(address, placement.Guid);
+        if (renewing && (!chunkManager.IsNaturalRenewalDue(address, placement.Guid) || !CanRenewAt(placement))) return;
 
         Vector3 position = new Vector3(
             address.ChunkOrigin.X + placement.LocalX + 0.5f + placement.OffsetX,
@@ -297,6 +296,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
             if (!placement.IsDimensionPortal)
                 item.OnItemDestroy += HandleNaturalItemDestroy;
             spawnedItems[placement.Guid] = item;
+            if (renewing) chunkManager.CompleteNaturalRenewal(address, placement.Guid);
         }
         catch (Exception exception)
         {
@@ -317,7 +317,41 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
         int guid = item.itemData.Guid;
         spawnedItems.Remove(guid);
         if (boundChunk != null && chunkManager != null && !chunkManager.IsWorldRuntimeShuttingDown)
+        {
             chunkManager.MarkNaturalItemRemoved(boundChunk.Address, guid);
+            foreach (Module module in item.itemMods.Mods.Values)
+                if (module is INaturalRenewalPolicy policy && policy.TryGetRenewalYear(out int year))
+                    chunkManager.ScheduleNaturalRenewal(boundChunk.Address, guid, year);
+        }
+    }
+
+    /// <summary>春季逐步补回已被移除的自然植物，不扫描或加载窗口以外的区块。</summary>
+    private void Update()
+    {
+        if (unbinding || boundChunk?.Ecology?.Placements == null || Time.unscaledTime < nextRenewalCheck ||
+            !GameNetwork.HasStateAuthority || !DayTimeSystem.Instance.TryGetCurrentSeason(out SeasonSnapshot season) ||
+            season.Season != WorldSeason.Spring) return;
+        nextRenewalCheck = Time.unscaledTime + 1f;
+        IReadOnlyList<NaturalItemPlacement> placements = boundChunk.Ecology.Placements;
+        for (int i = 0; i < 4 && placements.Count > 0; i++)
+        {
+            NaturalItemPlacement placement = placements[renewalCursor++ % placements.Count];
+            if (!spawnedItems.ContainsKey(placement.Guid) && chunkManager.IsNaturalRenewalDue(boundChunk.Address, placement.Guid))
+            {
+                SpawnPlacement(placement);
+                break;
+            }
+        }
+    }
+    /// <summary>恢复点必须仍为空地，禁止覆盖玩家建筑、耕地或平台。</summary>
+    private bool CanRenewAt(NaturalItemPlacement placement)
+    {
+        var cell = boundChunk.Terrain.GetCell(placement.LocalX, placement.LocalY);
+        Vector2Int world = new(boundChunk.Address.ChunkOrigin.X + placement.LocalX,
+            boundChunk.Address.ChunkOrigin.Y + placement.LocalY);
+        return cell.BlockingTileId == 0 && cell.BackTileId == 0 && !FarmlandSystem.IsFarmland(cell) &&
+            TerrainSupportLayer.GetTileId(boundChunk.Terrain, placement.LocalX, placement.LocalY) == 0 &&
+            !BuildingOccupancyRegistry.IsOccupied(world);
     }
 
     #endregion

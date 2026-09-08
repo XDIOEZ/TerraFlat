@@ -1,4 +1,4 @@
-﻿using MemoryPack;
+using MemoryPack;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -26,8 +26,41 @@ public partial class GrowData
 }
 
 
-public partial class Mod_Grow : Module, IInteractable, IPlantableCrop
+public partial class Mod_Grow : Module, IInteractable, IPlantableCrop, INaturalRenewalPolicy, IItemModuleDependencyBinder
 {
+    private readonly List<IPlantGrowthConstraint> growthConstraints = new(); // 独立环境模块提供的成长和采集限制。
+
+    /// <summary>树木只读取环境限制，冷热暴露仍由独立模块推进。</summary>
+    public void BindModuleDependencies(ItemMods modules)
+    {
+        growthConstraints.Clear();
+        foreach (Module module in modules.Mods.Values)
+            if (module is IPlantGrowthConstraint constraint)
+                growthConstraints.Add(constraint);
+    }
+
+    /// <summary>区块卸载与对象回池时解除环境依赖和事件。</summary>
+    public override void Unload()
+    {
+        growthConstraints.Clear();
+        if (item != null) item.OnInit_Env -= AdjustByEnvironment;
+    }
+
+    /// <summary>环境补算完成前和死亡后均不可采集。</summary>
+    private bool CanHarvestInEnvironment()
+    {
+        foreach (IPlantGrowthConstraint constraint in growthConstraints)
+            if (!constraint.CanHarvest) return false;
+        return true;
+    }
+    /// <summary>自然树木在来年春季允许生态补位，人工种植仍需留种重播。</summary>
+    public bool TryGetRenewalYear(out int year)
+    {
+        year = 0;
+        if (Data.isCultivatedCrop || !DayTimeSystem.Instance.TryGetCurrentSeason(out SeasonSnapshot season)) return false;
+        year = season.Year + 1;
+        return true;
+    }
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => 0.25f;
 
@@ -140,9 +173,13 @@ private void UpdateVisualAndBehavior()
         ModData.WriteData(Data);
     }
 
+    /// <summary>读取环境成长倍率后推进树木生长，不重复结算冷热暴露。</summary>
     public override void ModUpdate(float deltaTime)
     {
-        UpdateAuthoritativeGrowth(deltaTime);
+        float multiplier = 1f;
+        foreach (IPlantGrowthConstraint constraint in growthConstraints)
+            multiplier *= constraint.GrowthMultiplier;
+        if (multiplier > 0f) UpdateAuthoritativeGrowth(deltaTime * multiplier);
     }
 
 private void ApplyStageHealth(bool force = false)

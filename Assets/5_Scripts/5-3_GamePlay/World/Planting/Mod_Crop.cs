@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using FlatWorld.Networking;
 using MemoryPack;
 using UnityEngine;
 
@@ -28,10 +30,43 @@ public partial class CropRuntimeData
 
     [Header("成长反馈状态")]
     public CropGrowthStatus growthStatus = CropGrowthStatus.Growing;
+
+    public bool simulationInitialized; // 是否已经建立世界时间游标。
+    public double lastSimulatedTime; // 最后完成结算的绝对游戏秒。
 }
 
-public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop
+public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IItemModuleDependencyBinder, INaturalResourceInitializer, INaturalRenewalPolicy
 {
+    private readonly List<IPlantEnvironmentCondition> environmentConditions = new(); // 独立植物环境能力。
+    public float ClimateStress { get; private set; } // 表现读取的最严重受害比例。
+
+    /// <summary>仅自然植物在来年春季恢复；玩家农田不会借助生态刷新免费补种。</summary>
+    public bool TryGetRenewalYear(out int year)
+    {
+        year = 0;
+        if (Data.isPlanted || !DayTimeSystem.Instance.TryGetCurrentSeason(out SeasonSnapshot season)) return false;
+        year = season.Year + 1;
+        return true;
+    }
+
+    /// <summary>在所有模块注册后解析可替换的环境条件。</summary>
+    public void BindModuleDependencies(ItemMods modules)
+    {
+        environmentConditions.Clear();
+        foreach (Module module in modules.Mods.Values)
+            if (module is IPlantEnvironmentCondition condition)
+                environmentConditions.Add(condition);
+    }
+
+    /// <summary>首次发现野生植物时从当前季节起点补算，避免冬季新开区块凭空产生丰收。</summary>
+    public void InitializeNaturalResource(uint deterministicRandomValue)
+    {
+        if (Data.simulationInitialized || !TryReadWorldClock(out TimeData clock, out double now))
+            return;
+        SeasonSnapshot season = SeasonCalendar.Sample(clock);
+        Data.lastSimulatedTime = Math.Max(0d, now - season.ElapsedDays * clock.DayLength);
+        Data.simulationInitialized = true;
+    }
     #region 模块数据
 
     public Ex_ModData_MemoryPackable ModData = new();
@@ -137,6 +172,8 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop
 
     public override void Unload()
     {
+        environmentConditions.Clear();
+        ClimateStress = 0f;
         harvestActions = Array.Empty<ICropHarvestAction>();
         harvestInProgress = false;
         GrowthChanged = null;
@@ -147,7 +184,7 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop
 
     public override void ModUpdate(float deltaTime)
     {
-        AdvanceGrowth(deltaTime);
+        AdvanceWorldState();
     }
 
     #endregion
@@ -162,6 +199,10 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop
         Data.plantedTilePosition = tilePosition;
         Data.isHarvested = false;
         Data.normalizedGrowth = 0f;
+        foreach (IPlantEnvironmentCondition condition in environmentConditions)
+            condition.ResetEnvironment();
+        Data.simulationInitialized = TryReadWorldClock(out _, out double now);
+        Data.lastSimulatedTime = now;
         SetStage(CropStage.Seedling);
         SetGrowthStatus(CropGrowthStatus.Growing, false);
         GrowthChanged?.Invoke(this, 0f);
@@ -199,7 +240,43 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop
 
     #region 权威成长结算
 
-    private void AdvanceGrowth(float deltaTime)
+    /// <summary>读取活动维度引用的绝对世界时钟。</summary>
+    private static bool TryReadWorldClock(out TimeData clock, out double now)
+    {
+        clock = null;
+        now = 0d;
+        if (DayTimeSystem.Instance == null || !DayTimeSystem.Instance.TryGetActiveTimeData(out clock))
+            return false;
+        now = (double)clock.TotalDays * clock.DayLength + clock.CurrentTime;
+        return true;
+    }
+
+    /// <summary>按世界时间分段补算成长与受害，每帧有界处理，离区期间不沿用返回时天气。</summary>
+    private void AdvanceWorldState()
+    {
+        if (!GameNetwork.HasStateAuthority || Data == null || Data.isHarvested ||
+            !TryReadWorldClock(out TimeData clock, out double now))
+            return;
+        if (!Data.simulationInitialized || now < Data.lastSimulatedTime)
+        {
+            Data.lastSimulatedTime = now;
+            Data.simulationInitialized = true;
+        }
+        float previousStress = ClimateStress;
+        if (!PlantClimateTimeline.Advance(item, clock, now, ref Data.lastSimulatedTime,
+                environmentConditions, AdvanceGrowth, out float stress))
+        {
+            Data.isHarvested = true;
+            item.DestroySelf();
+            return;
+        }
+        ClimateStress = stress;
+        if (!Mathf.Approximately(previousStress, ClimateStress))
+            GrowthChanged?.Invoke(this, NormalizedGrowth);
+    }
+
+    /// <summary>消费同一段世界时间的耕地资源，温度不适时暂停成长。</summary>
+    private void AdvanceGrowth(float deltaTime, float environmentMultiplier, bool historical)
     {
         if (Data == null || !Data.isPlanted || Data.isHarvested || Data.stage == CropStage.Mature)
             return;
@@ -211,9 +288,16 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop
         }
 
         float safeDeltaTime = Mathf.Max(0f, deltaTime);
-        ApplyRainWater(farmlandData, safeDeltaTime);
+        if (!historical)
+            ApplyRainWater(farmlandData, safeDeltaTime);
         farmlandData.NormalizeValues();
         FarmlandSystem.CommitSoil(farmlandData);
+
+        if (environmentMultiplier <= 0f)
+        {
+            SetGrowthStatus(CropGrowthStatus.TemperatureStress);
+            return;
+        }
 
         if (farmlandData.waterValue <= 0f)
         {
@@ -228,7 +312,7 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop
         }
 
         float farmlandMultiplier = CalculateFarmlandGrowthMultiplier(farmlandData);
-        float weatherMultiplier = ResolveWeatherGrowthMultiplier();
+        float weatherMultiplier = (historical ? 1f : ResolveWeatherGrowthMultiplier()) * environmentMultiplier;
         float difficultyMultiplier = GameDifficultyService.Current.Production.CropGrowthMultiplier;
         float growthDelta = safeDeltaTime / growthDurationSeconds *
                             farmlandMultiplier *
@@ -302,11 +386,16 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop
     {
         return playerItem != null &&
                Data != null &&
+               !HasPendingEnvironment() &&
                Data.stage == CropStage.Mature &&
                !Data.isHarvested &&
                !harvestInProgress &&
                harvestActions.Length > 0;
     }
+
+    /// <summary>历史状态尚未结算时暂缓收获，避免重载首帧绕过气候死亡。</summary>
+    private bool HasPendingEnvironment() => TryReadWorldClock(out _, out double now) &&
+        (!Data.simulationInitialized || now - Data.lastSimulatedTime > 1d);
 
     public void OnInteractStart(Item playerItem)
     {
@@ -374,6 +463,7 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop
             CropGrowthStatus.NeedsFertility => "耕地缺肥，成长暂停",
             CropGrowthStatus.Mature => "作物已经成熟，可以交互收获",
             CropGrowthStatus.Harvested => "作物已经完成收获",
+            CropGrowthStatus.TemperatureStress => "温度不适，成长暂停，持续受害会枯萎",
             _ => "成长条件恢复，作物继续成长"
         };
         Debug.Log($"[Mod_Crop] {message}，作物={item?.itemData?.IDName}，地块={Data.plantedTilePosition}", item);

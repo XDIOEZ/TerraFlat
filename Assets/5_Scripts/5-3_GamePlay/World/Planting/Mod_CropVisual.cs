@@ -60,6 +60,7 @@ public sealed class Mod_CropVisual : Module
     private Mod_Crop cropModule;
     private Vector3 originalLocalScale;
     private bool scaleCaptured;
+    private Color originalColor; // 受害颜色叠加前的定义颜色。
 
     #endregion
 
@@ -90,6 +91,7 @@ public sealed class Mod_CropVisual : Module
             throw new MissingComponentException("[Mod_CropVisual] 所属作物缺少 Mod_Crop。");
 
         originalLocalScale = spriteRenderer.transform.localScale;
+        originalColor = spriteRenderer.color;
         scaleCaptured = true;
         ApplyBuriedMaterial();
         ApplyVisualState();
@@ -142,6 +144,7 @@ public sealed class Mod_CropVisual : Module
             return;
 
         float scale = Mathf.Lerp(seedlingScale, matureScale, Mathf.Clamp01(normalizedGrowth));
+        spriteRenderer.color = Color.Lerp(originalColor, new Color(0.58f, 0.42f, 0.20f, originalColor.a), cropModule.ClimateStress);
         spriteRenderer.transform.localScale = new Vector3(
             originalLocalScale.x * scale,
             originalLocalScale.y * scale,
@@ -162,6 +165,7 @@ public sealed class Mod_CropVisual : Module
             return;
 
         spriteRenderer.transform.localScale = originalLocalScale;
+        spriteRenderer.color = originalColor;
         originalLocalScale = Vector3.one;
         scaleCaptured = false;
     }
