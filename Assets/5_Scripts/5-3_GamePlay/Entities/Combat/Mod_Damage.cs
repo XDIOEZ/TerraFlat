@@ -3,8 +3,17 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(BoxCollider2D))]
-public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource
+public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHarvestTool
 {
+    #region 资源工具能力
+    [SerializeField] private ResourceToolKind harvestKind; // 采集工具类别。
+    [SerializeField, Min(0)] private int harvestTier; // 开采等级，与战斗伤害分离。
+    [SerializeField, Min(0.01f)] private float harvestEfficiency = 1f; // 资源伤害倍率。
+    public ResourceToolKind HarvestKind => harvestKind;
+    public int HarvestTier => harvestTier;
+    public float HarvestEfficiency => harvestEfficiency;
+    #endregion
+
     #region 伤害相关数据
     [Header("攻击特效")]
     [SerializeField, Tooltip("按本次攻击占比最大的伤害类型播放一个命中特效。")]

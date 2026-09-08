@@ -23,7 +23,7 @@
         {
           "slot": 2,
           "match": "exact_item",
-          "itemId": "Twine",
+          "itemId": "Rope",
           "amount": 1
         }
       ],
@@ -57,7 +57,7 @@
         {
           "slot": 2,
           "match": "exact_item",
-          "itemId": "Twine",
+          "itemId": "Rope",
           "amount": 1
         }
       ],
@@ -91,7 +91,7 @@
         {
           "slot": 2,
           "match": "exact_item",
-          "itemId": "Twine",
+          "itemId": "Rope",
           "amount": 1
         }
       ],
@@ -125,7 +125,7 @@
         {
           "slot": 2,
           "match": "exact_item",
-          "itemId": "Twine",
+          "itemId": "Rope",
           "amount": 1
         }
       ],

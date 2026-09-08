@@ -22,7 +22,7 @@
         {
           "slot": 1,
           "match": "exact_item",
-          "itemId": "Twine",
+          "itemId": "Rope",
           "tag": "",
           "amount": 1
         },
@@ -69,9 +69,9 @@
         },
         {
           "slot": 1,
-          "match": "tag",
-          "itemId": "",
-          "tag": "Rope",
+          "match": "exact_item",
+          "itemId": "Rope",
+          "tag": "",
           "amount": 1
         },
         {

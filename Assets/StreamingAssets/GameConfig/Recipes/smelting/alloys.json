@@ -78,7 +78,7 @@
       "outputs": [
         {
           "itemId": "Ingot_Bronze",
-          "amount": 1
+          "amount": 10
         }
       ],
       "actions": []
@@ -112,7 +112,7 @@
       "outputs": [
         {
           "itemId": "Ingot_Bronze",
-          "amount": 1
+          "amount": 5
         }
       ],
       "actions": []

@@ -4,14 +4,25 @@
     {
       "id": "progression.metallurgy.first-raw-iron",
       "topic": "progression.metallurgy.first-raw-iron",
-      "triggers": ["StateChanged", "Idle"],
+      "triggers": [
+        "StateChanged",
+        "Idle"
+      ],
       "priority": "Ambient",
       "conditions": [
-        { "fact": "metallurgy.firstRawIronSmelted", "operator": "Equal", "value": "True" },
-        { "fact": "metallurgy.firstMetalToolCrafted", "operator": "Equal", "value": "False" }
+        {
+          "fact": "metallurgy.firstRawIronSmelted",
+          "operator": "Equal",
+          "value": "True"
+        },
+        {
+          "fact": "metallurgy.firstMetalToolCrafted",
+          "operator": "Equal",
+          "value": "False"
+        }
       ],
       "lines": [
-        "第一块粗铁锭成了。再备些木料和绳子，就能做一把耐用的粗铁工具。"
+        "第一块粗铁锭成了。备好木柄和绳子，就能制作简易铁镐。"
       ],
       "duration": 5.2,
       "cooldown": 60,
@@ -22,13 +33,20 @@
     {
       "id": "progression.metallurgy.first-metal-tool",
       "topic": "progression.metallurgy.first-metal-tool",
-      "triggers": ["StateChanged", "Idle"],
+      "triggers": [
+        "StateChanged",
+        "Idle"
+      ],
       "priority": "Ambient",
       "conditions": [
-        { "fact": "metallurgy.firstMetalToolCrafted", "operator": "Equal", "value": "True" }
+        {
+          "fact": "metallurgy.firstMetalToolCrafted",
+          "operator": "Equal",
+          "value": "True"
+        }
       ],
       "lines": [
-        "粗铁工具到手了。接下来可以继续提炼熟铁，再挑战更结实的装备。"
+        "简易铁镐到手了。先备好食物和饮水，再去寻找铜锡或废弃矿工营地。"
       ],
       "duration": 5.0,
       "cooldown": 60,

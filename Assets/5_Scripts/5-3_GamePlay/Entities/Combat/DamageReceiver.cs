@@ -14,8 +14,18 @@ using Random = UnityEngine.Random;
 /// 受伤反馈在数值提交后执行；死亡每次生命只结算一次，掉落异常不能中断实体生命周期。
 /// </summary>
 [RequireComponent(typeof(BoxCollider2D))]
-public class DamageReceiver : Module, IRemoteNetworkModule
+public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependencyBinder
 {
+    private readonly List<IIncomingDamageRule> incomingDamageRules = new(); // 已装配的受击规则。
+
+    /// <summary>从模块注册表缓存受击规则，避免把具体资源玩法耦合进生命系统。</summary>
+    public void BindModuleDependencies(ItemMods modules)
+    {
+        incomingDamageRules.Clear();
+        foreach (Module module in modules.Mods.Values)
+            if (module is IIncomingDamageRule rule)
+                incomingDamageRules.Add(rule);
+    }
     private const int CurrentBodyPartDataVersion = 1;
     // 玩家每恢复 1 点生命值消耗 1 点蛋白质。
     private const float PlayerHealingProteinCostPerHp = 1f;
@@ -522,6 +532,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
     public override void Unload()
     {
+        incomingDamageRules.Clear();
         ClearHitSlowdown();
         if (_deathCoroutine != null)
         {
@@ -551,6 +562,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         item.itemData.ModuleDataDic[_Data.Name] = modData;
     }
 
+    /// <summary>先校验阵营及可组合受击规则，再统一结算伤害、耐久与死亡。</summary>
     public virtual float Hurt(IDamageSender damageSender)
     {
         if (_resolvingDamage || _deathHandled || Hp <= 0 || item == null || damageSender == null) return -1;
@@ -558,6 +570,17 @@ public class DamageReceiver : Module, IRemoteNetworkModule
         // 阵营关系是实体伤害的最终防线，避免碰撞、武器或其他攻击模块绕过 AI 选敌误伤队友。
         if (!FactionRelationService.CanAttack(damageSender.attacker, item))
             return -1;
+
+        float ruleMultiplier = 1f;
+        foreach (IIncomingDamageRule rule in incomingDamageRules)
+        {
+            float multiplier = rule.GetDamageMultiplier(damageSender);
+            if (multiplier <= 0f)
+                return -1;
+            if (float.IsNaN(multiplier) || float.IsInfinity(multiplier))
+                throw new InvalidOperationException("受击规则必须返回有限倍率。");
+            ruleMultiplier *= multiplier;
+        }
 
         // ⏱️ 受伤间隔判断
         if (Time.time - lastDamageTime < Data.DamageInterval)
@@ -574,7 +597,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule
 
         // 四种伤害分别减去对应防御，低于零的分量归零，最后再相加。
         float actualDamage = scaledDamage.CalculateAgainst(Defense);
-        actualDamage *= Mathf.Max(0f, damageTakenMultiplier);
+        actualDamage *= Mathf.Max(0f, damageTakenMultiplier) * ruleMultiplier;
 
         // 记录攻击者（根据是否造成实际伤害决定概率）
         if (damageSender.attacker != null)

@@ -1708,7 +1708,7 @@
       "parent": "Pickaxe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe.prefab",
       "gameName": "石镐",
-      "description": "以石材制成的矿镐，适合开采浅层矿物。",
+      "description": "开采等级 1；使用镐头开采对应等级以下的矿物。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1812,7 +1812,10 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            }
+            },
+            "harvestKind": 1,
+            "harvestTier": 1,
+            "harvestEfficiency": 1
           }
         },
         "animation": {
@@ -1883,7 +1886,7 @@
       "parent": "Pickaxe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Copper.prefab",
       "gameName": "铜镐",
-      "description": "以铜制成的矿镐，比石镐更耐用。",
+      "description": "开采等级 2；使用镐头开采对应等级以下的矿物。",
       "durability": 200.0,
       "maxDurability": 200.0,
       "amount": 1.0,
@@ -2027,7 +2030,10 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            }
+            },
+            "harvestKind": 1,
+            "harvestTier": 2,
+            "harvestEfficiency": 1.15
           }
         }
       },
@@ -2060,7 +2066,7 @@
       "parent": "Pickaxe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Bronze.prefab",
       "gameName": "青铜镐",
-      "description": "以青铜制成的矿镐，适合开采较硬矿层。",
+      "description": "开采等级 4；使用镐头开采对应等级以下的矿物。可开采硝石。",
       "durability": 200.0,
       "maxDurability": 200.0,
       "amount": 1.0,
@@ -2164,7 +2170,10 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            }
+            },
+            "harvestKind": 1,
+            "harvestTier": 4,
+            "harvestEfficiency": 2.1
           }
         },
         "animation": {
@@ -2234,8 +2243,8 @@
       "id": "Pickaxe_RawIron",
       "parent": "Pickaxe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_RawIron.prefab",
-      "gameName": "生铁镐",
-      "description": "用粗铁锭制作的金属镐，是从石器迈入铁器阶段的第一件采矿工具。",
+      "gameName": "简易铁镐",
+      "description": "开采等级 3；使用镐头开采对应等级以下的矿物。",
       "durability": 200.0,
       "maxDurability": 200.0,
       "amount": 1.0,
@@ -2341,7 +2350,10 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            }
+            },
+            "harvestKind": 1,
+            "harvestTier": 3,
+            "harvestEfficiency": 1.35
           }
         },
         "animation": {
@@ -2412,7 +2424,7 @@
       "parent": "Pickaxe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_Iron.prefab",
       "gameName": "铁镐",
-      "description": "用熟铁锭制作的坚固铁镐，适合持续开采更坚硬的矿层。",
+      "description": "开采等级 4；使用镐头开采对应等级以下的矿物。可开采硝石。",
       "durability": 200.0,
       "maxDurability": 200.0,
       "amount": 1.0,
@@ -2518,7 +2530,10 @@
                 "x": 1.0,
                 "y": 1.0
               }
-            }
+            },
+            "harvestKind": 1,
+            "harvestTier": 4,
+            "harvestEfficiency": 1.8
           }
         },
         "animation": {

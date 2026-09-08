@@ -356,7 +356,7 @@
         {
           "slot": 0,
           "match": "exact_item",
-          "itemId": "Twine",
+          "itemId": "Rope",
           "tag": "",
           "amount": 1
         },
@@ -370,7 +370,7 @@
         {
           "slot": 2,
           "match": "exact_item",
-          "itemId": "Twine",
+          "itemId": "Rope",
           "tag": "",
           "amount": 1
         },
