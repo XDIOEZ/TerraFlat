@@ -190,6 +190,11 @@ public partial class Mod_Food : Module, IItemPoolLifecycle
         if (building != null && (building.IsPlacementPending || building.IsPlacementActionAvailable))
             return;
 
+        // 稻谷这类“食物也是种子”的物品：指向有效耕地时让种植动作优先，否则才按食物处理。
+        Mod_Plantable plantable = item.itemMods?.GetMod_ByID<Mod_Plantable>(ModText.Plantable);
+        if (plantable != null && plantable.IsPlantingActionAvailable)
+            return;
+
         Item owner = item?.Owner;
         Mod_Food playerFood = owner?.itemMods?.GetMod_ByID(ModText.Food) as Mod_Food;
         if (playerFood == null)

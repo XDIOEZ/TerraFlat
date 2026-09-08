@@ -2131,6 +2131,265 @@
       }
     },
     {
+      "id": "Peach",
+      "parent": "Apple",
+      "gameName": "桃子",
+      "description": "香甜多汁的桃子，以碳水和维生素为主；完整吃完后可立即恢复 5 点生命。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Peach/Peach_Idle.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 30.0,
+                "Max_Carbohydrates": 30.0,
+                "Fat": 0.5,
+                "Max_Fat": 0.5,
+                "Protein": 0.5,
+                "Max_Protein": 0.5,
+                "Water": 35.0,
+                "Max_Water": 35.0,
+                "Vitamins": 25.0,
+                "Max_Vitamins": 25.0
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "RiceGrain",
+      "parent": "Apple",
+      "gameName": "稻谷",
+      "description": "带壳的稻谷，口感粗糙但可以直接食用；它同时也是水稻种子，并可进一步研磨成大米。",
+      "volume": 0.2,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Rice/RiceGrain_Icon.png",
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.45
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 20.0,
+                "Max_Carbohydrates": 20.0,
+                "Fat": 1.0,
+                "Max_Fat": 1.0,
+                "Protein": 2.0,
+                "Max_Protein": 2.0,
+                "Water": 1.0,
+                "Max_Water": 1.0,
+                "Vitamins": 2.0,
+                "Max_Vitamins": 2.0
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": false,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 7200.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        },
+        "plantable": {
+          "prefab": "Module_Plantable",
+          "id": "Mod_Plantable",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "cropItemId": "RiceCrop",
+            "maxPlantingDistance": 2.0,
+            "previewAlpha": 0.7
+          }
+        }
+      }
+    },
+    {
+      "id": "Rice",
+      "parent": "Apple",
+      "gameName": "大米",
+      "description": "去壳后的生大米，可以直接食用，主要补充碳水和少量蛋白质。",
+      "volume": 0.2,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Rice/Rice_Icon.png",
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 0.9,
+            "y": 0.65
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 20.0,
+                "Max_Carbohydrates": 20.0,
+                "Fat": 1.0,
+                "Max_Fat": 1.0,
+                "Protein": 2.0,
+                "Max_Protein": 2.0,
+                "Water": 1.0,
+                "Max_Water": 1.0,
+                "Vitamins": 2.0,
+                "Max_Vitamins": 2.0
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": false,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 7200.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "CookedRice",
+      "parent": "Apple",
+      "gameName": "米饭",
+      "description": "煮熟后聚成一团的米饭，以碳水和蛋白质为主要营养，并补充少量维生素。",
+      "volume": 0.6,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/CookedRice/CookedRice_Icon.png",
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 0.7,
+            "y": 0.48
+          }
+        }
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 55.0,
+                "Max_Carbohydrates": 55.0,
+                "Fat": 1.0,
+                "Max_Fat": 1.0,
+                "Protein": 15.0,
+                "Max_Protein": 15.0,
+                "Water": 12.0,
+                "Max_Water": 12.0,
+                "Vitamins": 4.0,
+                "Max_Vitamins": 4.0
+              },
+              "Max_EatingProgress": 3.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
       "id": "Berry",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Berry.prefab",
@@ -5906,6 +6165,134 @@
         "inHand": false,
         "FactionId": ""
       }
+    },
+    {
+      "id": "Resin",
+      "parent": "BasicItem_Base",
+      "gameName": "树脂",
+      "description": "砍伐松树获得的黏稠树脂，可与木炭混合制作树脂胶水。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/resources_basic.png[resources_basic_38]",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "path": "",
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 0.6,
+            "y": 0.6
+          }
+        }
+      },
+      "modules": {}
+    },
+    {
+      "id": "Charcoal",
+      "parent": "BasicItem_Base",
+      "gameName": "木炭",
+      "description": "原木烧制而成的木炭，可作为燃料，也可与树脂制作树脂胶水。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/resources_basic.png[resources_basic_41]",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "path": "",
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 0.6,
+            "y": 0.6
+          }
+        }
+      },
+      "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 100.2,
+                "y": 100.2
+              },
+              "MaxTemperature": 1800.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        }
+      }
+    },
+    {
+      "id": "Glue",
+      "parent": "BasicItem_Base",
+      "gameName": "树脂胶水",
+      "description": "由松脂和木炭混合制成的黑色黏稠胶体，可用于黏合材料。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ResinGlue/ResinGlue_Idle.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "path": "",
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 0.6,
+            "y": 0.6
+          }
+        }
+      },
+      "modules": {}
+    },
+    {
+      "id": "DrilledLog",
+      "parent": "BasicItem_Base",
+      "gameName": "钻孔原木",
+      "description": "用火种缓慢炭烧出孔洞的原木，是制作木锤的锤头坯料。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Plants/Tree/item296.png"
+      },
+      "modules": {}
     }
   ]
 }

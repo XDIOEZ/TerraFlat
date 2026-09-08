@@ -19,6 +19,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 - `durationSeconds: null` 表示永久；Tick Buff 的间隔必须大于 0；extend/refresh 只用于正持续时间。
 - Handler 在定义构建时缓存，运行 Tick 不做反射或字符串查找。
 - 新效果需同时增加稳定 typeId、Dispatcher 注册和参数校验。
+- `core:temperature_warming` 在 start/stop 按 Buff 实例登记、撤销临时增温，start 必须配置正 `value` 和 `upperLimit`；不要在 Tick 中反复加温，也不要在 Stop 固定减去配置值。受限增温和基础体温由 `Mod_Temperature` 分层结算，重复食用使用续期而不重复登记来源。
 - 内容分包只决定归档；运行时语义仍由 `category`/effects 决定。
 - “当前位于某环境、可执行某操作”以及只在环境内生效的减速等被动影响，不使用可清除 Buff；只有潮湿、感染、中毒等角色状态进入 BuffManager。
 - Buff 的只读调试表现可从 `BuffManager.ActiveBuffs` 读取 `BuffInstance.Definition.DisplayName` 与剩余时间；表现层不得通过显示逻辑修改、续期或移除 Buff。

@@ -135,6 +135,8 @@ public static class BuffDefinitionFactory
         string typeId = NormalizeRequired(dto.TypeId, $"Buff {buffId} effects[{index}].typeId")
             .ToLowerInvariant();
         ValidateFinite(dto.Value, $"Buff {buffId} effects[{index}].value");
+        if (dto.UpperLimit.HasValue)
+            ValidateFinite(dto.UpperLimit.Value, $"Buff {buffId} effects[{index}].upperLimit");
 
         var effect = new BuffEffectDefinition
         {
@@ -142,7 +144,8 @@ public static class BuffDefinitionFactory
             Phase = ParsePhase(dto.Phase, buffId, index),
             TargetId = dto.TargetId?.Trim(),
             RequiredTag = dto.RequiredTag?.Trim(),
-            Value = dto.Value
+            Value = dto.Value,
+            UpperLimit = dto.UpperLimit
         };
 
         ValidateEffectParameters(effect, buffId, index);
@@ -156,6 +159,15 @@ public static class BuffDefinitionFactory
         string context = $"Buff {buffId} effects[{index}]";
         switch (effect.TypeId)
         {
+            case BuffEffectTypeIds.TemperatureWarming:
+                if (effect.Phase == BuffEffectPhase.Tick ||
+                    (effect.Phase == BuffEffectPhase.Start &&
+                     (effect.Value <= 0f || !effect.UpperLimit.HasValue)))
+                {
+                    throw new InvalidDataException($"{context} 临时增温仅支持 start/stop，start 必须配置正 value 和 upperLimit");
+                }
+                break;
+
             case BuffEffectTypeIds.MoveSpeedMultiplier:
             case BuffEffectTypeIds.FoodConsumeSpeedMultiplier:
             case BuffEffectTypeIds.WaterConsumeSpeedMultiplier:

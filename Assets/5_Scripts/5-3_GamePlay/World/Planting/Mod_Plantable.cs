@@ -49,6 +49,19 @@ public sealed class Mod_Plantable : Module
     private PlantingSummoner plantingSummoner;
     private GameController ownerController;
 
+    /// <summary>当前指向有效耕地时，本模块保留这次使用动作，供食物等并存模块做优先级仲裁。</summary>
+    public bool IsPlantingActionAvailable
+    {
+        get
+        {
+            if (!GameNetwork.HasStateAuthority || item == null || !item.InHand || item.Owner == null)
+                return false;
+            if (!TryResolveOwnerController(out GameController controller))
+                return false;
+            return TryResolvePlantingTarget(controller.GetMouseWorldPosition(), out _, out _);
+        }
+    }
+
     #endregion
 
     #region 生命周期
@@ -130,7 +143,9 @@ public sealed class Mod_Plantable : Module
         Vector3 pointerWorldPosition = controller.GetMouseWorldPosition();
         if (!TryResolvePlantingTarget(pointerWorldPosition, out PlantingTarget target, out string reason))
         {
-            Debug.LogWarning($"[种植] {reason}", item);
+            // 同一物品既是食物又是种子时，无效耕地应让食用动作自然接管，避免每次进食都刷种植警告。
+            if (item.itemMods?.GetMod_ByID(ModText.Food) is not Mod_Food)
+                Debug.LogWarning($"[种植] {reason}", item);
             return;
         }
 

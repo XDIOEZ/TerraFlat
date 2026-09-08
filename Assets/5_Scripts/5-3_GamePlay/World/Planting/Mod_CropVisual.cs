@@ -2,8 +2,9 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// 作物表现模块：把作物精灵裁成半埋状态，并把 Mod_Crop 的连续进度映射为缩放。
-/// 不参与种植、成长结算或收获交互，对象卸载时恢复外壳原始材质与缩放。
+/// 作物表现模块：把作物精灵裁成半埋状态，并把 Mod_Crop 的连续进度映射为离散阶段 Sprite 或缩放。
+/// visual.spriteStates 配齐 seedling/growing/mature 时优先切换三阶段图片；未配置时保留旧的连续缩放表现。
+/// 不参与种植、成长结算或收获交互，对象卸载时恢复外壳原始材质、Sprite 与缩放。
 /// </summary>
 public sealed class Mod_CropVisual : Module
 {
@@ -49,6 +50,11 @@ public sealed class Mod_CropVisual : Module
     [SerializeField, Min(0.01f)]
     private float matureScale = 1f;
 
+    [Header("阶段图切换")]
+    [SerializeField, Range(0.01f, 0.99f)]
+    [Tooltip("配置三阶段 Sprite 时，成长进度达到该值后从幼苗图切换为生长期图；成熟图固定在 100% 时启用。")]
+    private float growingVisualThreshold = 0.34f;
+
     #endregion
 
     #region 运行时
@@ -60,6 +66,11 @@ public sealed class Mod_CropVisual : Module
     private Mod_Crop cropModule;
     private Vector3 originalLocalScale;
     private bool scaleCaptured;
+    private Sprite originalSprite;
+    private Sprite seedlingSprite;
+    private Sprite growingSprite;
+    private Sprite matureSprite;
+    private bool useDiscreteGrowthSprites;
 
     #endregion
 
@@ -91,10 +102,11 @@ public sealed class Mod_CropVisual : Module
 
         originalLocalScale = spriteRenderer.transform.localScale;
         scaleCaptured = true;
+        originalSprite = spriteRenderer.sprite;
+        ResolveGrowthSprites();
         ApplyBuriedMaterial();
-        ApplyVisualState();
         cropModule.GrowthChanged += HandleGrowthChanged;
-        ApplyGrowthScale(cropModule.NormalizedGrowth);
+        ApplyGrowthVisual(cropModule.NormalizedGrowth);
     }
 
     public override void Save()
@@ -107,6 +119,7 @@ public sealed class Mod_CropVisual : Module
         UnbindCrop();
         ClearVisualState();
         RestoreOriginalScale();
+        RestoreOriginalSprite();
         RestoreOriginalMaterial();
         spriteRenderer = null;
         propertyBlock = null;
@@ -117,6 +130,7 @@ public sealed class Mod_CropVisual : Module
         UnbindCrop();
         ClearVisualState();
         RestoreOriginalScale();
+        RestoreOriginalSprite();
         RestoreOriginalMaterial();
     }
 
@@ -132,10 +146,60 @@ public sealed class Mod_CropVisual : Module
     private void HandleGrowthChanged(Mod_Crop source, float normalizedGrowth)
     {
         if (source == cropModule)
-            ApplyGrowthScale(normalizedGrowth);
+            ApplyGrowthVisual(normalizedGrowth);
     }
 
-    /// <summary>在幼苗与成熟缩放之间连续插值。</summary>
+    /// <summary>优先使用三阶段 Sprite；没有阶段图时再使用旧的连续缩放。</summary>
+    private void ApplyGrowthVisual(float normalizedGrowth)
+    {
+        if (!useDiscreteGrowthSprites)
+        {
+            ApplyGrowthScale(normalizedGrowth);
+            ApplyVisualState();
+            return;
+        }
+
+        float growth = Mathf.Clamp01(normalizedGrowth);
+        Sprite target = growth >= 1f
+            ? matureSprite
+            : growth >= growingVisualThreshold
+                ? growingSprite
+                : seedlingSprite;
+        if (spriteRenderer.sprite != target)
+            spriteRenderer.sprite = target;
+
+        if (scaleCaptured)
+            spriteRenderer.transform.localScale = originalLocalScale;
+        ApplyVisualState();
+    }
+
+    /// <summary>从运行时物品定义解析三阶段 Sprite；只要声明其中一张，就要求三张全部存在。</summary>
+    private void ResolveGrowthSprites()
+    {
+        useDiscreteGrowthSprites = false;
+        seedlingSprite = null;
+        growingSprite = null;
+        matureSprite = null;
+
+        if (GameRes.Instance == null || item?.itemData == null ||
+            !GameRes.Instance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition))
+        {
+            return;
+        }
+
+        bool hasSeedling = definition.TryGetVisualStateSprite("seedling", out seedlingSprite);
+        bool hasGrowing = definition.TryGetVisualStateSprite("growing", out growingSprite);
+        bool hasMature = definition.TryGetVisualStateSprite("mature", out matureSprite);
+        if (!hasSeedling && !hasGrowing && !hasMature)
+            return;
+        if (!hasSeedling || !hasGrowing || !hasMature)
+            throw new InvalidOperationException(
+                $"[Mod_CropVisual] 作物 {item.itemData.IDName} 的 visual.spriteStates 必须同时配置 seedling/growing/mature。");
+
+        useDiscreteGrowthSprites = true;
+    }
+
+    /// <summary>在幼苗与成熟缩放之间连续插值，作为没有阶段图的兼容表现。</summary>
     private void ApplyGrowthScale(float normalizedGrowth)
     {
         if (!scaleCaptured || spriteRenderer == null)
@@ -164,6 +228,18 @@ public sealed class Mod_CropVisual : Module
         spriteRenderer.transform.localScale = originalLocalScale;
         originalLocalScale = Vector3.one;
         scaleCaptured = false;
+    }
+
+    /// <summary>避免共享 CropShell 被对象池复用后残留上一种作物的阶段图。</summary>
+    private void RestoreOriginalSprite()
+    {
+        if (spriteRenderer != null && originalSprite != null)
+            spriteRenderer.sprite = originalSprite;
+        originalSprite = null;
+        seedlingSprite = null;
+        growingSprite = null;
+        matureSprite = null;
+        useDiscreteGrowthSprites = false;
     }
 
     #endregion
@@ -218,6 +294,7 @@ public sealed class Mod_CropVisual : Module
         buriedClip = Mathf.Clamp01(buriedClip);
         seedlingScale = Mathf.Clamp(seedlingScale, 0.01f, 1f);
         matureScale = Mathf.Max(seedlingScale, matureScale);
+        growingVisualThreshold = Mathf.Clamp(growingVisualThreshold, 0.01f, 0.99f);
     }
 
     #endregion

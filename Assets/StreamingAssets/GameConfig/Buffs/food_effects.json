@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "buffs": [
+    {
+      "id": "辣",
+      "displayName": "辣",
+      "category": "general",
+      "description": "持续 60 秒，每 10 秒损失 0.1 点生命；期间最多增温 5℃，这部分增温不会超过 30℃。再次食用刷新持续时间，增温与伤害频率不叠加。",
+      "durationSeconds": 60.0,
+      "tickIntervalSeconds": 10.0,
+      "stackMode": "refresh_duration",
+      "effects": [
+        { "phase": "start", "typeId": "core:temperature_warming", "value": 5.0, "upperLimit": 30.0 },
+        { "phase": "tick", "typeId": "core:true_damage", "value": 0.1 },
+        { "phase": "stop", "typeId": "core:temperature_warming", "value": 0.0 }
+      ]
+    }
+  ]
+}

@@ -53,6 +53,8 @@ public sealed class BuffEffectDefinition
     public string TargetId { get; internal set; }
     public string RequiredTag { get; internal set; }
     public float Value { get; internal set; }
+    /// <summary>临时增温允许达到的最高体温；只约束此效果增加的温度。</summary>
+    public float? UpperLimit { get; internal set; }
 
     [NonSerialized]
     private BuffEffectHandler cachedHandler;

@@ -353,6 +353,98 @@
           }
         }
       }
+    },
+    {
+      "id": "RiceCrop",
+      "parent": "Crop_Base",
+      "gameName": "水稻",
+      "description": "种在耕地中的水稻；成长过程中依次经历幼苗、生长期和成熟期，收获的稻谷也能继续播种。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": false,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Rice/RiceCrop_Seedling.png",
+        "spriteStates": {
+          "seedling": "Assets/6_Art/Generated/Rice/RiceCrop_Seedling.png",
+          "growing": "Assets/6_Art/Generated/Rice/RiceCrop_Growing.png",
+          "mature": "Assets/6_Art/Generated/Rice/RiceCrop_Mature.png"
+        },
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.42
+          },
+          "path": "",
+          "size": {
+            "x": 0.8,
+            "y": 0.95
+          }
+        }
+      },
+      "modules": {
+        "crop": {
+          "parameters": {
+            "growthDurationSeconds": 650.0,
+            "minimumWaterGrowthMultiplier": 0.65,
+            "minimumFertilityGrowthMultiplier": 0.5,
+            "waterConsumePerSecond": 0.028,
+            "fertilityConsumePerSecond": 0.0004,
+            "rainWaterPerSecond": 0.1,
+            "rainGrowthBonus": 0.18
+          }
+        },
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              {
+                "itemId": "RiceGrain",
+                "minAmount": 4,
+                "maxAmount": 7,
+                "probability": 1.0
+              }
+            ]
+          }
+        },
+        "cropVisual": {
+          "parameters": {
+            "buriedClip": 0.08,
+            "seedlingScale": 1.0,
+            "matureScale": 1.0,
+            "growingVisualThreshold": 0.35
+          }
+        }
+      }
     }
   ]
 }

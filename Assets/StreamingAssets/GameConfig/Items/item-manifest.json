@@ -37,6 +37,11 @@
       "enabled": true
     },
     {
+      "id": "chili",
+      "path": "shells/chili.json",
+      "enabled": true
+    },
+    {
       "id": "building_summoners",
       "path": "shells/building_summoners.json",
       "enabled": true

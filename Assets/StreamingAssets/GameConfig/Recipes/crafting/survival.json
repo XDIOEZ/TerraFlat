@@ -651,6 +651,156 @@
         }
       ],
       "actions": []
+    },
+    {
+      "id": "core:胶水",
+      "displayName": "树脂胶水",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Resin",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Charcoal",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Glue",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:钻孔原木",
+      "displayName": "钻孔原木",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Log",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "FireSeed",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "DrilledLog",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:木锤_树脂胶水",
+      "displayName": "木锤（树脂胶水）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "DrilledLog",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Glue",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "WoodHammer",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:木锤_藤蔓",
+      "displayName": "木锤（藤蔓）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "DrilledLog",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Twine",
+          "tag": "",
+          "amount": 4
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "WoodHammer",
+          "amount": 1
+        }
+      ],
+      "actions": []
     }
   ]
 }

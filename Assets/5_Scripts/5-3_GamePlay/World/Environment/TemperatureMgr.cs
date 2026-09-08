@@ -47,7 +47,8 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         DamageReceiver damageReceiver,
         float deltaTime,
         Action<float> onTemperatureChanged,
-        ref float damageTickTimer)
+        ref float damageTickTimer,
+        float? naturalTemperature = null)
     {
         if (data == null)
         {
@@ -59,7 +60,7 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             throw new ArgumentNullException(nameof(onTemperatureChanged));
         }
 
-        float nextTemperature = EvaluateNextTemperature(data, deltaTime);
+        float nextTemperature = EvaluateNextTemperature(data, deltaTime, naturalTemperature);
         onTemperatureChanged(nextTemperature);
 
         if (damageReceiver == null)
@@ -95,7 +96,8 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
         }
     }
 
-    public float EvaluateNextTemperature(Mod_Temperature.TemperatureData data, float deltaTime)
+    public float EvaluateNextTemperature(Mod_Temperature.TemperatureData data, float deltaTime,
+        float? naturalTemperature = null)
     {
         if (data == null)
         {
@@ -104,11 +106,13 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 
         float targetTemperature =
             data.AmbientTemperature + data.Insulation + data.RuntimeAmbientOffset;
+        // 临时 Buff 增温不参与环境趋近计算，伤害仍读取回调提交后的有效体温。
+        float currentTemperature = naturalTemperature ?? data.CurrentTemperature;
         float changeSpeed = data.ChangeSpeed * Mathf.Max(0f, data.RuntimeChangeSpeedMultiplier);
-        if (targetTemperature < data.CurrentTemperature)
+        if (targetTemperature < currentTemperature)
             changeSpeed *= Mathf.Max(0f, data.RuntimeCoolingSpeedMultiplier);
 
-        return Mathf.MoveTowards(data.CurrentTemperature, targetTemperature, changeSpeed * deltaTime);
+        return Mathf.MoveTowards(currentTemperature, targetTemperature, changeSpeed * deltaTime);
     }
 
     public float GetGlobalAmbientTemperature()
