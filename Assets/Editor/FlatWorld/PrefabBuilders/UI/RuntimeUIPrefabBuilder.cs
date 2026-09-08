@@ -721,12 +721,12 @@ public static partial class RuntimeUIPrefabBuilder
 
     #region 系统 UI
 
-    /// <summary>构建左上角的坐标、FPS 与环境温度三行信息，固定行距且不拦截输入。</summary>
+    /// <summary>构建左上角的坐标、FPS、环境温度与季节信息，固定行距且不拦截输入。</summary>
     private static GameObject BuildPlayerWorldCoordinateHUD()
     {
         GameObject root = CreateUIObject(RuntimeUIPrefabKeys.PlayerWorldCoordinate, null);
         RectTransform rootRect = root.GetComponent<RectTransform>();
-        SetTopLeft(rootRect, 28f, 28f, 240f, 86f);
+        SetTopLeft(rootRect, 28f, 28f, 290f, 114f);
 
         TextMeshProUGUI coordinates = CreateText("坐标文本", root.transform, "X  +0.0    Y  +0.0", 16f, Cream);
         coordinates.fontStyle = FontStyles.Bold;
@@ -747,6 +747,12 @@ public static partial class RuntimeUIPrefabBuilder
         temperature.enableWordWrapping = false;
         temperature.overflowMode = TextOverflowModes.Ellipsis;
         SetTopLeft(temperature.rectTransform, 0f, 58f, 240f, 26f);
+
+        TextMeshProUGUI season = CreateText(PlayerWorldCoordinateHUD.SeasonTextNodeName,
+            root.transform, "第 1 年 · 春季 · 第 1 天", 15f, Cream);
+        season.enableWordWrapping = false;
+        season.overflowMode = TextOverflowModes.Ellipsis;
+        SetTopLeft(season.rectTransform, 0f, 86f, 290f, 26f);
 
         return root;
     }
@@ -2348,6 +2354,7 @@ public static partial class RuntimeUIPrefabBuilder
         sessionPage.gameObject.SetActive(false);
         EnsureActionListTabBar(root.transform);
         RemoveObsoleteActionListPagerControls(root.transform);
+        EnsureSeasonSettingsPage(root);
     }
 
     /// <summary>定位正式会话分页并仅刷新该分页及其共用确认层。</summary>

@@ -1131,6 +1131,358 @@ MonoBehaviour:
     m_Key: item.MushroomCrop.name
     m_Metadata:
       m_Items: []
+  - m_Id: 11141662175649792
+    m_Key: item.Seed_Berry.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331456
+    m_Key: item.BerryCrop.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331457
+    m_Key: item.WaterPlatform_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331458
+    m_Key: item.Hoe_Wood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331459
+    m_Key: item.Hoe_Stone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331460
+    m_Key: item.Hoe_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331461
+    m_Key: item.Hoe_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331462
+    m_Key: item.Herb.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331463
+    m_Key: item.FoxtailEar.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331464
+    m_Key: item.Straw.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331465
+    m_Key: item.WillowBranch.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331466
+    m_Key: item.WillowBark.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331467
+    m_Key: item.Sieve.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331468
+    m_Key: item.Clay.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331469
+    m_Key: item.Ore_Niter.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720064
+    m_Key: item.HerbCrop.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720065
+    m_Key: item.FoxtailCrop.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720066
+    m_Key: item.MilletCrop.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720067
+    m_Key: item.Seed_Herb.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720068
+    m_Key: item.Seed_Millet.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720069
+    m_Key: item.Seed_Willow.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720070
+    m_Key: item.Millet.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720071
+    m_Key: item.Millet_Cooked.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720072
+    m_Key: item.HerbPoultice.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720073
+    m_Key: item.Mine_Niter.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720074
+    m_Key: item.ClayDeposit.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720075
+    m_Key: item.Tree_Willow.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720076
+    m_Key: item.Shovel_Stone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720077
+    m_Key: item.Platform_Stone_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720078
+    m_Key: item.Platform_Copper_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720079
+    m_Key: item.Wall_Copper_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720080
+    m_Key: item.Platform_Iron_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720081
+    m_Key: item.Wall_Iron_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720082
+    m_Key: item.Platform_Bronze_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720083
+    m_Key: item.Wall_Bronze_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720084
+    m_Key: item.Crowbar.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720085
+    m_Key: item.ClayJarBlank.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720086
+    m_Key: item.ClayJar.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720087
+    m_Key: item.Salt.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720088
+    m_Key: item.Meat_Cured.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662574108672
+    m_Key: item.Fertilizer.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662574108673
+    m_Key: item.MinersNote.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662582497280
+    m_Key: item.Mushroom.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662586691584
+    m_Key: item.FireSeed.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662586691585
+    m_Key: item.Seed_Mushroom.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662586691586
+    m_Key: item.Seed_Berry.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662590885888
+    m_Key: item.MushroomCrop.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662590885889
+    m_Key: item.BerryCrop.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662595080192
+    m_Key: item.WaterPlatform_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662599274496
+    m_Key: item.Hoe_Wood.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662603468800
+    m_Key: item.Hoe_Stone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662603468801
+    m_Key: item.Hoe_Copper.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662603468802
+    m_Key: item.Hoe_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662603468803
+    m_Key: item.Herb.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662603468804
+    m_Key: item.FoxtailEar.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663104
+    m_Key: item.Straw.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663105
+    m_Key: item.WillowBranch.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663106
+    m_Key: item.WillowBark.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663107
+    m_Key: item.Sieve.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663108
+    m_Key: item.Clay.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663109
+    m_Key: item.Ore_Niter.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663110
+    m_Key: item.HerbCrop.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663111
+    m_Key: item.FoxtailCrop.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857408
+    m_Key: item.MilletCrop.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857409
+    m_Key: item.Seed_Herb.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857410
+    m_Key: item.Seed_Millet.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857411
+    m_Key: item.Seed_Willow.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857412
+    m_Key: item.Millet.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857413
+    m_Key: item.Millet_Cooked.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857414
+    m_Key: item.HerbPoultice.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857415
+    m_Key: item.Mine_Niter.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857416
+    m_Key: item.ClayDeposit.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857417
+    m_Key: item.Tree_Willow.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857418
+    m_Key: item.Shovel_Stone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857419
+    m_Key: item.Platform_Stone_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857420
+    m_Key: item.Platform_Copper_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051712
+    m_Key: item.Wall_Copper_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051713
+    m_Key: item.Platform_Iron_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051714
+    m_Key: item.Wall_Iron_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051715
+    m_Key: item.Platform_Bronze_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051716
+    m_Key: item.Wall_Bronze_Summoner.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051717
+    m_Key: item.Crowbar.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051718
+    m_Key: item.ClayJarBlank.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051719
+    m_Key: item.ClayJar.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051720
+    m_Key: item.Salt.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051721
+    m_Key: item.Meat_Cured.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051722
+    m_Key: item.Fertilizer.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051723
+    m_Key: item.MinersNote.description
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

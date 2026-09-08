@@ -52,7 +52,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         SessionPageName,
         AutoSavePageName,
         WorldStreamingPageName,
-        DifficultyPageName
+        DifficultyPageName,
+        SeasonSettingsPanel.PageName
     };
 
     private static readonly string[] TabButtonNames =
@@ -79,6 +80,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         7,
         0,
         0,
+        0,
         0
     };
 
@@ -94,7 +96,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         UIText.SaveButton,
         "自动保存间隔下拉列表",
         "性能模式下拉列表",
-        "难度_Simple"
+        "难度_Simple",
+        "季节天数_0"
     };
 
     private static readonly Color ActiveTabColor = new Color(0.16f, 0.40f, 0.42f, 1f);
@@ -213,6 +216,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         BindPageButton(pages[WorldPageIndex], "自动保存", AutoSavePageName);
         BindPageButton(pages[WorldPageIndex], "流送性能", WorldStreamingPageName);
         BindPageButton(pages[WorldPageIndex], "游戏难度", DifficultyPageName);
+        BindPageButton(pages[WorldPageIndex], "季节长度", SeasonSettingsPanel.PageName);
     }
 
     /// <summary>把一个页面内按钮绑定到目标分页。</summary>

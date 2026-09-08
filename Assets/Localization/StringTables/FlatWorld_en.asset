@@ -123,7 +123,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4807634944
-    m_Localized: Pig Iron Pickaxe
+    m_Localized: Simple Iron Pickaxe
     m_Metadata:
       m_Items: []
   - m_Id: 4807634945
@@ -1135,6 +1135,363 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 10123767377211394
     m_Localized: Mushroom Plant
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662175649792
+    m_Localized: Berry Seeds
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331456
+    m_Localized: Berry Plant
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331457
+    m_Localized: Wooden Water Platform
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331458
+    m_Localized: Wooden Hoe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331459
+    m_Localized: Stone Hoe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331460
+    m_Localized: Copper Hoe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331461
+    m_Localized: Iron Hoe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331462
+    m_Localized: Herb
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331463
+    m_Localized: Foxtail Seed Head
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331464
+    m_Localized: Straw
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331465
+    m_Localized: Willow Branch
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331466
+    m_Localized: Willow Bark
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331467
+    m_Localized: Sieve
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331468
+    m_Localized: Clay
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662557331469
+    m_Localized: Niter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720064
+    m_Localized: Herb Plant
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720065
+    m_Localized: Foxtail Grass
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720066
+    m_Localized: Millet Plant
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720067
+    m_Localized: Herb Seeds
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720068
+    m_Localized: Millet Seeds
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720069
+    m_Localized: Willow Seeds
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720070
+    m_Localized: Millet Grain
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720071
+    m_Localized: Cooked Millet
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720072
+    m_Localized: Herbal Poultice
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720073
+    m_Localized: Niter Deposit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720074
+    m_Localized: Riverbank Clay
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720075
+    m_Localized: Willow Tree
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720076
+    m_Localized: Stone Shovel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720077
+    m_Localized: Stone Platform
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720078
+    m_Localized: Copper Platform
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720079
+    m_Localized: Copper Wall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720080
+    m_Localized: Iron Platform
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720081
+    m_Localized: Iron Wall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720082
+    m_Localized: Bronze Platform
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720083
+    m_Localized: Bronze Wall
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720084
+    m_Localized: Crowbar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720085
+    m_Localized: Unfired Clay Jar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720086
+    m_Localized: Clay Jar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720087
+    m_Localized: Salt
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662565720088
+    m_Localized: Cured Meat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662574108672
+    m_Localized: Fertilizer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662574108673
+    m_Localized: Miner Notes
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662582497280
+    m_Localized: Mushroom.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662586691584
+    m_Localized: Tinder.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662586691585
+    m_Localized: Mushroom Spores.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662586691586
+    m_Localized: Berry Seeds.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662590885888
+    m_Localized: Mushroom Plant.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662590885889
+    m_Localized: Berry Plant.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662595080192
+    m_Localized: Wooden Water Platform.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662599274496
+    m_Localized: Wooden Hoe.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662603468800
+    m_Localized: Stone Hoe.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662603468801
+    m_Localized: Copper Hoe.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662603468802
+    m_Localized: Iron Hoe.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662603468803
+    m_Localized: Herb.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662603468804
+    m_Localized: Foxtail Seed Head.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663104
+    m_Localized: Straw.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663105
+    m_Localized: Willow Branch.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663106
+    m_Localized: Willow Bark.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663107
+    m_Localized: Sieve.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663108
+    m_Localized: Clay.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663109
+    m_Localized: Raw material that can be processed into useful resources.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663110
+    m_Localized: Herb Plant.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662607663111
+    m_Localized: Foxtail Grass.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857408
+    m_Localized: Millet Plant.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857409
+    m_Localized: Herb Seeds.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857410
+    m_Localized: Millet Seeds.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857411
+    m_Localized: Willow Seeds.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857412
+    m_Localized: Millet Grain.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857413
+    m_Localized: Cooked Millet.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857414
+    m_Localized: Restores 10% maximum health over 30 seconds. Healing still requires
+      protein.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857415
+    m_Localized: Niter Deposit.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857416
+    m_Localized: Riverbank Clay.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857417
+    m_Localized: Willow Tree.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857418
+    m_Localized: Stone Shovel.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857419
+    m_Localized: Stone Platform.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662611857420
+    m_Localized: Copper Platform.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051712
+    m_Localized: Copper Wall.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051713
+    m_Localized: Iron Platform.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051714
+    m_Localized: Iron Wall.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051715
+    m_Localized: Bronze Platform.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051716
+    m_Localized: Bronze Wall.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051717
+    m_Localized: Crowbar.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051718
+    m_Localized: Fire in a furnace at 600 degrees Celsius to make a clay jar.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051719
+    m_Localized: Holds 8 servings. Fill it at a water source; boil fresh water or
+      evaporate seawater in a furnace.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051720
+    m_Localized: Eases salt deficiency gradually and is used to cure meat. Does not
+      replace water.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051721
+    m_Localized: Longer shelf life, with freshness inherited from the raw meat. Fresh
+      ingredients last 9 default game days.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051722
+    m_Localized: Fertilizer.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11141662616051723
+    m_Localized: Copper tools can mine iron. Make simple iron tools with raw iron,
+      wooden handles and rope; alloy copper and tin at nine to one for bronze.
     m_Metadata:
       m_Items: []
   references:

@@ -17,6 +17,9 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     public const string AmbientTemperatureTextNodeName = "环境温度文本";
     public const string AmbientTemperatureFormat = "环境温度  {0:0.0}℃";
     public const string AmbientTemperatureUnavailableText = "环境温度  --℃";
+    public const string SeasonTextNodeName = "季节文本";
+    public const string SeasonFormat = "第 {0} 年 · {1} · 第 {2} 天";
+    private static readonly string[] SeasonNames = { "春季", "夏季", "秋季", "冬季" };
 
     private const string CoordinateTextNodeName = "坐标文本";
     private const string FpsTextNodeName = "FPS文本";
@@ -32,6 +35,10 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private TextMeshProUGUI coordinateText;
     private TextMeshProUGUI fpsText;
     private TextMeshProUGUI ambientTemperatureText; // 当前地块的环境读数，与体温模块的当前体温独立
+    private TextMeshProUGUI seasonText; // 当前年份与季节
+    private int lastSeasonYear = -1;
+    private int lastSeasonIndex = -1;
+    private int lastSeasonDay = -1;
     private string localizedTemperatureFormat;
     private string localizedTemperatureUnavailableText;
     private int lastTemperatureTenths = int.MinValue;
@@ -112,6 +119,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         RefreshCoordinateText();
         RefreshFpsDisplay();
         RefreshAmbientTemperatureText();
+        RefreshSeasonText();
     }
 
     /// <summary>实例化已有视觉 Prefab，并让常驻 HUD 位于普通弹窗的下方。</summary>
@@ -130,7 +138,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
                 viewRect.SetAsFirstSibling();
             }
 
-            return coordinateText != null && fpsText != null && ambientTemperatureText != null;
+            return coordinateText != null && fpsText != null && ambientTemperatureText != null && seasonText != null;
         }
 
         GameObject prefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.PlayerWorldCoordinate, false);
@@ -154,7 +162,8 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         fpsText = fpsNode != null ? fpsNode.GetComponent<TextMeshProUGUI>() : null;
         Transform temperatureNode = viewObject.transform.Find(AmbientTemperatureTextNodeName);
         ambientTemperatureText = temperatureNode != null ? temperatureNode.GetComponent<TextMeshProUGUI>() : null;
-        if (viewRect == null || coordinateText == null || fpsText == null || ambientTemperatureText == null)
+        seasonText = viewObject.transform.Find(SeasonTextNodeName)?.GetComponent<TextMeshProUGUI>();
+        if (viewRect == null || coordinateText == null || fpsText == null || ambientTemperatureText == null || seasonText == null)
         {
             Debug.LogError("[PlayerWorldCoordinateHUD] 左上角信息 HUD Prefab 控件命名契约不完整。", viewObject);
             Destroy(viewObject);
@@ -163,6 +172,7 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
             coordinateText = null;
             fpsText = null;
             ambientTemperatureText = null;
+            seasonText = null;
             return false;
         }
 
@@ -172,7 +182,24 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
         lastDisplayMode = (PlayerWorldCoordinateDisplayMode)(-1);
         InvalidateFpsSample();
         temperatureDisplayInitialized = false;
+        lastSeasonYear = -1;
         return true;
+    }
+
+    /// <summary>只在日历显示值变化时更新季节文字，不逐帧创建本地化字符串。</summary>
+    private void RefreshSeasonText()
+    {
+        if (seasonText == null || DayTimeSystem.Instance == null ||
+            !DayTimeSystem.Instance.TryGetCurrentSeason(out SeasonSnapshot season))
+            return;
+        int day = Mathf.FloorToInt(season.ElapsedDays) + 1;
+        if (lastSeasonYear == season.Year && lastSeasonIndex == (int)season.Season && lastSeasonDay == day)
+            return;
+        lastSeasonYear = season.Year;
+        lastSeasonIndex = (int)season.Season;
+        lastSeasonDay = day;
+        seasonText.text = FlatWorldLocalizationService.GetUiFormat(SeasonFormat,
+            season.Year, FlatWorldLocalizationService.GetUiText(SeasonNames[lastSeasonIndex]), day);
     }
 
     /// <summary>复用热力图的逐格温度入口，未加载时显示空读数；四舍五入到 0.1℃ 后去重刷新。</summary>
@@ -202,6 +229,8 @@ public sealed class PlayerWorldCoordinateHUD : MonoBehaviour
     private void HandleLanguageChanged(string localeCode)
     {
         RefreshTemperatureLocalization();
+        lastSeasonYear = -1;
+        RefreshSeasonText();
         if (CanDisplay() && ambientTemperatureText != null)
             RefreshAmbientTemperatureText();
     }

@@ -15,6 +15,7 @@ public static class RuntimeUIPrefabKeys
     public const string AutoSaveSettings = "UI_AutoSaveSettings";
     public const string WorldStreamingSettings = "UI_WorldStreamingSettings";
     public const string DifficultySettings = "UI_DifficultySettings";
+    public const string SeasonSettings = "UI_SeasonSettings";
     public const string InputBindingSettings = "UI_InputBindingSettings";
     public const string InputBindingRow = "UI_InputBindingRow";
     /// <summary>启动资源加载面板的运行时键。</summary>

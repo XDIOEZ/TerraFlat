@@ -2091,11 +2091,171 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 10044445584961541
-    m_Localized: "Ambient  {0:0.0}\u00b0C"
+    m_Localized: "Ambient  {0:0.0}\xB0C"
     m_Metadata:
       m_Items: []
   - m_Id: 10044445584961542
-    m_Localized: "Ambient  --\u00b0C"
+    m_Localized: "Ambient  --\xB0C"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095675570741248
+    m_Localized: Clay Jar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095675818205184
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095675818205185
+    m_Localized: Use the held jar on water to fill it. Place it in a furnace input
+      slot to boil water or make salt.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095675818205186
+    m_Localized: Drink
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095675818205187
+    m_Localized: Pour from Held Jar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095675818205188
+    m_Localized: Empty Jar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095676954861568
+    m_Localized: UI Text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095677256851456
+    m_Localized: "Year 1 \xB7 Spring \xB7 Day 1"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095679077179392
+    m_Localized: Season Length
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095679089762304
+    m_Localized: By default, each season lasts 6 days and a year lasts 24 days. Adjust
+      seasons separately while keeping current seasonal progress.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095679089762305
+    m_Localized: Spring
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095679089762306
+    m_Localized: Game days
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095679089762307
+    m_Localized: Summer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095679089762308
+    m_Localized: Autumn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095679089762309
+    m_Localized: Winter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095679089762310
+    m_Localized: 24 days per year
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740224
+    m_Localized: Water Status
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740225
+    m_Localized: Empty
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740226
+    m_Localized: Fresh water (boil first)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740227
+    m_Localized: Drinking water
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740228
+    m_Localized: Seawater (evaporate for salt)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740229
+    m_Localized: '{0}  {1} / {2} servings
+
+      Heating: {3:0} s'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740230
+    m_Localized: Empty the jar before filling it with a different type of water.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740231
+    m_Localized: Filled with seawater. Heat it to make salt.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740232
+    m_Localized: Filled with fresh water. Boil it before drinking.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740233
+    m_Localized: Too hot and thirsty. Drink water and rest somewhere cool.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740234
+    m_Localized: Sweating has lowered my stamina capacity. I need some salty food.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740235
+    m_Localized: The ingredient has spoiled and cannot be cured.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740236
+    m_Localized: There is no removable platform here.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740237
+    m_Localized: Remove the buildings on the platform first.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680578740238
+    m_Localized: Clear people and items from the platform first.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680595517440
+    m_Localized: "Year {0} \xB7 {1} \xB7 Day {2}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680595517441
+    m_Localized: '{0} days per year. Changes preserve current seasonal progress.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680595517442
+    m_Localized: Each season must have a finite length greater than zero.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680595517443
+    m_Localized: Season lengths can only be changed in a world you manage.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11095680595517444
+    m_Localized: Enter a world first.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11099997863927808
+    m_Localized: Use a shovel to dig this resource.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11099998031699968
+    m_Localized: Use a pickaxe to mine this resource.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 11099998031699969
+    m_Localized: This deposit requires a higher-tier pickaxe.
     m_Metadata:
       m_Items: []
   references:
