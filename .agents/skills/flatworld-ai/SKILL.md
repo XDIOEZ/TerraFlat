@@ -23,6 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - 正式 Chicken/WildBoar/Wolf/Ghost 由 Actor JSON 提供名称、视觉和模块参数；Prefab 只保留组件结构、事件引用与回退值。
 - Actor 与 Item 分批注册，死亡掉落可引用同批 Actor（如极低概率掉落 Chicken）；校验必须合并当前批次的具体定义 ID 与已注册 Item ID，不能只查询尚未完成的运行时注册表。死亡掉落继承使用顶层 `lootTableId`，子 Actor 替换表时不得残留内联 `Data.LootTable`。
 - 动物被动回血统一由 `Mod_Food.HealthState` 依据蛋白质驱动；`AI_Base` 不管理回血，长间隔回血使用 `HealthState.HealInterval/HealAmount` 配置。
+- `AI_Chicken` 的产蛋周期使用当前世界 `TimeData.DayLength * layEggIntervalDays`，进度由 `DayTimeSystem.TimeAdvanced` 的权威游戏时间推进量累计，只在 `isAdult && enableEggLaying && eggItemId` 有效时生效；Rabbit 复用鸡 AI 时必须显式 `enableEggLaying=false`，禁止再用超大秒数伪禁用产蛋。
 - Actor 外壳、AnimatorController 使用 `flatworld.actor.*` Addressables 地址；Actor 的 SpriteRenderer 由动画状态机驱动，运行时不得读取 Actor 的 Sprite 子资源或 `sourcePrefab`。
 - 复用动物状态机但更换整套动作素材时，使用 `AnimatorOverrideController` 覆盖所有被引用的动作，并同步外壳与 Actor JSON 的控制器 Addressables 地址；禁止通过 `LateUpdate` 写入静态 Sprite 覆盖 Animator，否则会冻结动画，误绑未切片图集时还会把全部帧同时显示。
 - Actor 外壳中的 `Mod_AnimatorController_Receiver`、`Mod_TurnBack` 属于结构组件，不一定进入 JSON `itemMods` 字典；绑定时必须从 Item 层级查找，禁止按模块 ID 查询并误报缺失。

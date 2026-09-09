@@ -20,7 +20,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - `PlanetData.WindStrength` 是独立于降雨强度的星球级权威状态；修改必须经 `WeatherMgr.SetWindStrength` 发布天气快照，Client 只应用复制值，离开世界或 `SuppressWeather` 维度时清零 Shader 全局表现但不改存档值。
 - 静态降水层影响地形/生态，不等于动态天气强度。
 - 普通 Client 不调度天气或体温伤害，只应用服务器状态。
-- 角色体温和调试温度层必须共用 `TemperatureMgr.TryGetAmbientTemperature`：读取已加载 `ChunkTerrainData` 的 `temperature.celsius`，叠加星球基准相对 `PlanetData.DefaultGlobalTemperature` 的差值、当前维度允许的天气修正和局部源；未加载返回 false，禁止为查询触发生成或复制整层数组。角色初始化只能更新自身 `AmbientTemperature`，不能把某个出生格温度写回星球全局值。
+- 角色体温、资源产量和调试温度层必须共用 `TemperatureMgr.TryGetAmbientTemperature`：读取已加载 `ChunkTerrainData` 的 `temperature.celsius`，叠加星球基准相对 `PlanetData.DefaultGlobalTemperature` 的差值、当前维度允许的天气修正和局部源；未加载返回 false，禁止为查询触发生成或复制整层数组。角色初始化只能更新自身 `AmbientTemperature`，不能把某个出生格温度写回星球全局值。
 - 群系基础气温在 `DeterministicChunkGenerator.GenerateSurfaceCell` 完成群系分类后写入 `temperature.celsius`；不要为调整摄氏度改写归一化的 `temperature`，后者仍参与群系判定与生态分布。规则变化需递增纯生成器与地表 Profile 的生成签名，保持噪声布局版本不变。
 - 局部冷热源是可重建的影响层，来源模块负责燃料/供电/保存并在停用、回池时撤销注册；不能把临时偏移写回生成气候，否则卸载后无法恢复并会污染地图差量。修改源快照只使覆盖分区失效，查询缓存不扫描全部来源；环形边界同时归一化分区键并使用最短距离，避免世界接缝出现断层或重复贡献。
 - 设备组件 `LocalTemperatureSource` 的强度表示中心摄氏度增量（负值制冷），不是功率或绝对目标温度；恒温器应由设备控制器根据当前地块温度计算有效强度。当前影响层不保存热惯性，撤销源会立即撤销其环境增量；需要蓄热/热传导时应引入独立状态层，不能悄悄改变来源参数语义。
@@ -31,6 +31,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - `LightLayerMgr.TryGetLightLevel` 属于怪物生成等高频查询热路径，只能读取已缓存的 Light2D 成员并实时采样其强度/位置；禁止在单次格子查询里调用 `FindObjectsOfType/FindObjectsByType`，光源成员集合统一由低频刷新维护。
 - 新世界时间参数来自 `GameConfig/Time/time-system.json` 的 Profile；Profile ID、限时边界与日历随 `TimeData` 存档，只读取当前外层版本，不以缺失字段回退默认配置兼容旧档。
 - 入水瞬时降温由 `Mod_Temperature` 自己维护平滑目标；装备等外部系统只能通过水体降温保护通道影响速度，禁止直接改河流过渡时间。保护值 0 表示无保护、1 表示完全阻止入水降温，多来源按加法叠加并由体温模块统一限制。
+- 临时增温由 `Mod_Temperature.Warming` 按来源登记，取各来源中最强的有效增量；上限只约束该增温，不压低原本较高的体温。环境与入水变化推进基础体温，伤害/UI 读取最终有效体温；保存时制作基础体温副本，不能把增温写入存档后在 Buff 恢复时再加一次，也不能在保存时修改或清除运行态。
 - 伤害语义联动 `flatworld-combat`，维度覆盖联动 `flatworld-dimension`，雨视觉联动 Effects Skill。
 
 - 季节日历只从 `SeasonCalendar` 取快照；调整四季长度保留年、季、进度和绝对时钟，并记录 `SeasonHistory`。植物与积雪的历史补算使用 `SampleHistorical`，不能拿新季长重算过去的温害。

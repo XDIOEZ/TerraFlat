@@ -2608,6 +2608,22 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Flint.png"
       }
+    },
+    {
+      "id": "WoodHammer",
+      "parent": "WoodTool_Base",
+      "gameName": "木锤",
+      "description": "以钻孔原木为锤头、木棍为柄，并用树脂胶水或藤蔓固定的木制锤子。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 2.0,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WoodHammer/WoodHammer_Icon.png"
+      },
+      "modules": {}
     }
   ]
 }

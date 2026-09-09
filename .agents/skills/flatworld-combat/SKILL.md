@@ -29,6 +29,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - `DamageReceiver` 与实际受击 `Collider2D` 不保证位于同一节点；Collider 还可能位于同一 Item 的兄弟模块。组件解析在当前节点/父级/子级都失败时必须回到最近的 Item 根搜索完整子树；命中特效应优先使用碰撞回调传入的 Collider 定位，并在缺失时回退子级、父级或接收器中心，禁止直接假定 `receiver.GetComponent<Collider2D>()` 非空。
 - ItemDefinition 的模块 JSON 不应写入 `AttackEffects: []` 等 Unity 资源引用集合；运行时 `PopulateObject` 会用空数组覆盖 Prefab 引用，导致命中特效被清空。迁移器应跳过 `UnityEngine.Object` 集合。
 - 类型命中特效由 `Mod_Damage.impactEffectSet` 显式引用 `CombatImpactEffectSet`，`AttackEffects` 只放数字等每次都播放的通用反馈；不能用通用列表是否为空阻断命中形状。动画与数字统一读取攻击数值 `CombatDamage.DominantKind`，不要按武器名称分类或分别实现占比比较；映射资源留在 GamePlay 程序集，避免 Effect 反向引用战斗程序集。
+- 玩家自身的受击伤害数字与部位提示应在接收侧订阅 `DamageReceiver.OnDamageReceived` 统一保证，不能依赖攻击者 `Mod_Damage.AttackEffects`（AI 攻击资源可以为空）；部位提示必须读取同一笔 `DamageReceiverDamageInfo.BodyPartHits`，禁止再次随机部位。
 - 命中特效必须区分 `0` 与 `-1`：`0` 表示有效命中但被护甲完全抵消，应播放数字 0；`-1` 表示死亡、受伤冷却等无效结算，不应播放命中特效；可破坏 Tile 也应把零伤害命中返回给 `Mod_Damage`。
 - 概率命中状态不要硬编码进 `Mod_Damage`；伤害模块只发布实体命中目标与结算结果，`DamageOnHitBuffApplier` 等独立组件再通过目标 `BuffManager` 添加状态。`0` 仍属于有效实体命中并可触发状态，负数无效结算不触发；Tile 伤害不发布实体命中事件。
 - 玩家进入 `Mod_PlayerDeathState` 濒死状态后，`Mod_Food` 等被动生命模块不得继续改写 `DamageReceiver.Hp`，否则会把死亡状态抬成极低正数。

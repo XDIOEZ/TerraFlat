@@ -3,7 +3,7 @@
   "quests": [
     {
       "id": "flatworld:first_chipped_tool",
-      "definitionVersion": 2,
+      "definitionVersion": 3,
       "titleKey": "quest.flatworld.survival_mining_path.title",
       "title": "从石器到铜锭",
       "descriptionKey": "quest.flatworld.survival_mining_path.description",
@@ -206,7 +206,7 @@
               "required": 1,
               "parameters": {
                 "eventType": "smelt.succeeded",
-                "targetId": "Ore_Coal"
+                "targetId": "Charcoal"
               }
             }
           ]

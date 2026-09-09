@@ -302,6 +302,32 @@ MonoBehaviour:
     CompanionOffsetY: 0
     CompanionMinRadius: 0
     CompanionMaxRadius: 0
+  - RuleId: surface.forest.pineTree
+    ItemId: Tree_Pine
+    ItemCount: 1
+    SpawnChance: 0.0015
+    SpawnChanceMultiplier: 2
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
+    BiomeMask: 32
+    MinTemperature: 0
+    MaxTemperature: 1
+    MinPrecipitation: 0
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    MinRiverFloodplainStrength: 0
+    ProvidedTags:
+    - Tree
+    CompanionOnly: 0
+    CompanionHostTag:
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
   - RuleId: surface.forest.radish
     ItemId: RadishCrop
     ItemCount: 1

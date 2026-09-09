@@ -281,6 +281,24 @@
       }
     },
     {
+      "id": "PeachTree",
+      "parent": "AppleTree",
+      "gameName": "桃树",
+      "description": "结果的桃树，成熟时可以采桃；砍倒后也会掉落桃子。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/PeachTree/PeachTree_Idle.png"
+      },
+      "lootTableId": "Tree_Peach",
+      "modules": {
+        "生长模块": {
+          "parameters": {
+            "harvestFoodItemId": "Peach",
+            "harvestSeedItemId": ""
+          }
+        }
+      }
+    },
+    {
       "id": "Tree_Coconut",
       "parent": "WorldResource_Base",
       "gameName": "椰子树",
@@ -1695,6 +1713,237 @@
         "ItemSpecialData": "",
         "inHand": false,
         "FactionId": ""
+      }
+    },
+    {
+      "id": "Tree_Pine",
+      "parent": "WorldResource_Base",
+      "gameName": "松树",
+      "description": "森林中生长的松树，砍伐后可获得原木和树脂；所在地越温暖，树脂产量越高。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 2.0,
+      "canBePickedUp": false,
+      "tags": [
+        "Tree"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/PineTree/PineTree_Idle.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": false,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.4,
+            "y": 0.2
+          },
+          "edgeRadius": 0.0
+        }
+      },
+      "lootTableId": "Tree_Pine",
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 200.0,
+              "MaxHp": 200.0,
+              "UseBodyPartHealth": false,
+              "TwoPartHitChance": 0.25,
+              "BodyPartDataVersion": 0,
+              "BodyParts": [],
+              "DefenseValues": {
+                "Cutting": 2.0,
+                "Piercing": 4.0,
+                "Chopping": 0.0,
+                "Blunt": 1.5
+              },
+              "AttackersUIDs": [],
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0
+            },
+            "impactAudioMaterial": 0,
+            "hurtAudioCueId": "",
+            "enableHitSlowdown": true,
+            "hitSlowMultiplier": 0.5,
+            "hitSlowDuration": 0.35,
+            "flashCount": 1,
+            "flashDuration": 0.2,
+            "flashColor": {
+              "r": 1.0,
+              "g": 0.08,
+              "b": 0.08,
+              "a": 1.0
+            },
+            "shakeDuration": 0.15,
+            "shakeMagnitude": 0.1,
+            "HideUiDelayAfterLastDamage": 4.0,
+            "healthBarTopPadding": 0.16,
+            "healthBarWorldScale": 0.55,
+            "enableDebugTools": false,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.42
+              },
+              "size": {
+                "x": 0.42,
+                "y": 1.0
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
+        "生长模块": {
+          "prefab": "Module_Growth",
+          "id": "生长模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "minimumWaterGrowthMultiplier": 0.5,
+            "minimumFertilityGrowthMultiplier": 0.5,
+            "waterConsumePerSecond": 0.02,
+            "fertilityConsumePerSecond": 0.00035,
+            "rainWaterPerSecond": 0.08,
+            "rainGrowthBonus": 0.15,
+            "allowCultivatedHarvest": false,
+            "harvestFoodItemId": "",
+            "harvestSeedItemId": "",
+            "harvestFoodMin": 2,
+            "harvestFoodMax": 4,
+            "Data": {
+              "growState": 0,
+              "growState_Value": [
+                0.0,
+                20.0,
+                50.0,
+                100.0
+              ],
+              "growState_Scale": [
+                0.12,
+                0.24,
+                1.2,
+                1.2
+              ],
+              "GrowProgress": 0.0,
+              "MaxGrowProgress": 100.0,
+              "GrowSpeed": 0.1
+            },
+            "growState_MaxHealthRatios": [
+              0.25,
+              0.5,
+              0.75,
+              1.0
+            ],
+            "matureMaxHealth": 200.0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 0.8,
+                "y": 0.8
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
+        "温度产量模块": {
+          "prefab": "Module_TemperatureYield",
+          "id": "温度产量模块",
+          "enabled": true,
+          "data": {
+            "BitData": ""
+          },
+          "parameters": {
+            "OutputItemId": "Resin",
+            "ColdTemperatureCelsius": 0.0,
+            "WarmTemperatureCelsius": 25.0,
+            "ColdMultiplier": 1.0,
+            "WarmMultiplier": 4.0
+          }
+        }
       }
     }
   ]

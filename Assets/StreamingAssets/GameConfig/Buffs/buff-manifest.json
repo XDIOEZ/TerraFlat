@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "food_effects",
+      "path": "food_effects.json",
+      "enabled": true
+    },
+    {
       "id": "periodic_damage",
       "path": "periodic_damage.json",
       "enabled": true

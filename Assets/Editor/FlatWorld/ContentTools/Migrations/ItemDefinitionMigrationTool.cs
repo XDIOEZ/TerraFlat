@@ -54,7 +54,8 @@ public static class ItemDefinitionMigrationTool
     {
         "Knife_Base", "Dagger_Stone", "Dagger_Copper", "Dagger_Bone", "Knife_Flint", "Torch",
         "WorldResource_Base", "MineResource_Base", "AppleTree", "Tree_Coconut", "Mine_Coal", "Mine_Copper",
-        "Mine_Iron", "Mine_Stone", "Mine_Tin", "Iceberg", "Bush", "Weed"
+        "Mine_Iron", "Mine_Stone", "Mine_Tin", "Iceberg", "Bush", "Weed",
+        "Tree_Pine", "Resin", "Charcoal", "Glue", "DrilledLog", "WoodHammer"
     };
 
     /// <summary>预览统计时不计入运行时物品数量的抽象定义。</summary>

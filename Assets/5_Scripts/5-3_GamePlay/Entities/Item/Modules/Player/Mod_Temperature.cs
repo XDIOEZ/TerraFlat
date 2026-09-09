@@ -41,6 +41,14 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
         [MemoryPackIgnore]
         public float RuntimeCoolingSpeedMultiplier = 1f; // 仅在体温下降时生效的运行时倍率
+
+        /// <summary>制作独立存档快照，只替换基础体温，不修改仍在运行的有效体温。</summary>
+        public TemperatureData CreateSaveSnapshot(float naturalTemperature)
+        {
+            var snapshot = (TemperatureData)MemberwiseClone();
+            snapshot.CurrentTemperature = naturalTemperature;
+            return snapshot;
+        }
     }
 
 #endregion
@@ -86,6 +94,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     /// <summary>恢复体温数据并重置不应跨生命周期保留的水体状态。</summary>
     public override void Load()
     {
+        ResetTemporaryWarming();
         modData.ReadData(ref Data);
         TemperatureMgr.Instance.NormalizeData(Data);
         _damageTickTimer = 0f;
@@ -97,7 +106,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
     public override void Save()
     {
-        modData?.WriteData(Data);
+        modData?.WriteData(Data.CreateSaveSnapshot(NaturalTemperature));
     }
 
     public override void ModUpdate(float deltaTime)
@@ -111,7 +120,8 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
         Data.AmbientTemperature = ambient;
         ProcessWaterEntryCooling(deltaTime);
-        TemperatureMgr.Instance.ProcessTemperature(Data, _damageReceiver, deltaTime, SetTemperatureInternal, ref _damageTickTimer);
+        TemperatureMgr.Instance.ProcessTemperature(Data, _damageReceiver, deltaTime,
+            SetNaturalTemperature, ref _damageTickTimer, NaturalTemperature);
     }
 
     public override void Unload()
@@ -121,6 +131,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
             item.OnInit_Env -= AdjustByEnvironment;
         }
         ResetWaterExposureState();
+        ResetTemporaryWarming();
         base.Unload();
     }
 
@@ -148,12 +159,12 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
     public void AddTemperature(float value)
     {
-        SetTemperatureInternal(Data.CurrentTemperature + value);
+        SetNaturalTemperature(NaturalTemperature + value);
     }
 
     public void SetTemperature(float value)
     {
-        SetTemperatureInternal(value);
+        SetNaturalTemperature(value);
     }
 
     public void SetAmbientTemperature(float value)
@@ -244,7 +255,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     {
         float resolvedDrop = Mathf.Max(0f, temperatureDrop);
         float resolvedMinimum = Mathf.Max(0f, minimumTemperature);
-        if (resolvedDrop <= 0f || Data.CurrentTemperature <= resolvedMinimum)
+        if (resolvedDrop <= 0f || NaturalTemperature <= resolvedMinimum)
         {
             ClearWaterEntryCooling();
             return;
@@ -252,8 +263,8 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
         _waterEntryCoolingTargetTemperature = Mathf.Max(
             resolvedMinimum,
-            Data.CurrentTemperature - resolvedDrop);
-        float coolingDistance = Data.CurrentTemperature - _waterEntryCoolingTargetTemperature;
+            NaturalTemperature - resolvedDrop);
+        float coolingDistance = NaturalTemperature - _waterEntryCoolingTargetTemperature;
         if (coolingDistance <= 0f)
         {
             ClearWaterEntryCooling();
@@ -278,7 +289,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
             return;
         }
 
-        if (Data.CurrentTemperature <= _waterEntryCoolingTargetTemperature)
+        if (NaturalTemperature <= _waterEntryCoolingTargetTemperature)
         {
             ClearWaterEntryCooling();
             return;
@@ -289,12 +300,12 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
             return;
 
         float nextTemperature = Mathf.MoveTowards(
-            Data.CurrentTemperature,
+            NaturalTemperature,
             _waterEntryCoolingTargetTemperature,
             _waterEntryCoolingSpeed * waterCoolingSpeedMultiplier * Mathf.Max(0f, deltaTime));
-        SetTemperatureInternal(nextTemperature);
+        SetNaturalTemperature(nextTemperature);
 
-        if (Data.CurrentTemperature <= _waterEntryCoolingTargetTemperature)
+        if (NaturalTemperature <= _waterEntryCoolingTargetTemperature)
             ClearWaterEntryCooling();
     }
 

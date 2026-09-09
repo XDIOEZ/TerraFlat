@@ -47,6 +47,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 022b08e9b2017c94e9223192e076622d
+    m_Address: Assets/6_Art/Generated/Chili/ChiliTree_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 03533b7d72493a24d92611920ea24b4f
     m_Address: Assets/6_Art/Building/Wall_Wood_Medium.png
     m_ReadOnly: 0
@@ -323,6 +329,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1ff417421e1173141bae88614aca6a22
+    m_Address: Assets/6_Art/Generated/Chili/ChiliTree_Growing.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 202484ce051fe244f90bc65b86c34619
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Tent_Mod_Tent.prefab
     m_ReadOnly: 0
@@ -383,6 +395,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 26ef607c55e8dea4ca0ffdbf873c22e9
+    m_Address: Assets/6_Art/Generated/Rice/Rice_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 277576181c69cb04bae7907eee0e7bb0
     m_Address: Assets/2_Prefabs/World/Map/MapCore.prefab
     m_ReadOnly: 0
@@ -394,6 +412,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 28b90fa43e08750428294c7d4ec6f545
+    m_Address: Assets/6_Art/Generated/Rice/RiceCrop_Seedling.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 29938b1287529f34fa0ffe33aac52ce1
     m_Address: Assets/6_Art/Items/Weapons/Item_Weapon_032.png
@@ -431,6 +455,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 2e1970801c1dd2b45a096e6ebf2be981
+    m_Address: Assets/6_Art/Generated/Peach/Peach_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2e1c2287982f8f14781056bf998e4720
     m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Platform_Iron.asset
     m_ReadOnly: 0
@@ -460,6 +490,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 30ac1884b639b284aae63618e0f548ee
+    m_Address: Assets/6_Art/Generated/WoodHammer/WoodHammer_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 314fc0b19c2478b459f9cf3665a4d841
     m_Address: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/ChippedTool.prefab
@@ -721,6 +757,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5712a19fbac535840803f6efdce3f650
+    m_Address: Assets/6_Art/Generated/Rice/RiceCrop_Growing.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5723168605491a440939c98a7a3f6e7a
     m_Address: Assets/6_Art/Food/Item_Food_009.png
     m_ReadOnly: 0
@@ -762,6 +804,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - TileBlock
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5b8aedc1d2ec8b34799e888e2fbaf632
+    m_Address: Assets/6_Art/Generated/Rice/RiceGrain_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5b952bf558866bc499d7e8c320ea5530
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_FireDrill.prefab
@@ -998,6 +1046,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 71e7014c314745d4ea8ce16c7cd267e2
+    m_Address: Assets/6_Art/Generated/PineTree/PineTree_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7213ccb23a9d80848845ec3342cb9e9a
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControls.prefab
     m_ReadOnly: 0
@@ -1018,6 +1072,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 76baa19f888761c45be4ff969cd06576
     m_Address: HoeShell
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 773b3b7d37935a2478fc567ce42fe770
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_TemperatureYield.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1359,6 +1419,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a3f088204b0a27542838f566d87b8a55
+    m_Address: Assets/6_Art/Generated/Chili/Chili_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a427477b3d8f14d43a13bb2a3620ef8e
     m_Address: "Assets/6_Art/Food/\u6930\u5B50\u58F3-\u810F\u6C34.png"
     m_ReadOnly: 0
@@ -1533,6 +1599,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - TileBlock
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b8b3886b2f4c7434b8a2a1599659ef70
+    m_Address: Assets/6_Art/Generated/Rice/RiceCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: bb680c5a720608844a39de820c689aa6
     m_Address: "Assets/2_Prefabs/World/Map/\u5730\u9762.prefab"
@@ -1895,6 +1967,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e7c829501b614b045bfdb2861abed935
+    m_Address: Assets/6_Art/Generated/CookedRice/CookedRice_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: e815ac9fdcd49fd478b8159a2da77694
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Rendering/Shadow.prefab
     m_ReadOnly: 0
@@ -1979,6 +2057,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f4a0bf8415b541c4a9ab416158853162
+    m_Address: Assets/6_Art/Generated/PeachTree/PeachTree_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f4b1ad2c128ff8f47919ef031ff61bb7
     m_Address: Assets/6_Art/Items/Tools/Item_Tool_399.png
     m_ReadOnly: 0
@@ -2045,6 +2129,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fad052ca14f469d459bed8046c121ee6
+    m_Address: Assets/6_Art/Generated/ResinGlue/ResinGlue_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fb25fd29dbd41ca4eb8c394cf2df0185
     m_Address: Assets/6_Art/Items/Weapons/Item_Weapon_033.png
     m_ReadOnly: 0
@@ -2077,6 +2167,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fee68fa8026ccf1459d9d4b36eae05a3
     m_Address: Assets/6_Art/Items/Tools/Item_Tool_402.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ff8bd4b9d465da04fa604a649df27157
+    m_Address: Assets/6_Art/Generated/Chili/ChiliTree_Seedling.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite

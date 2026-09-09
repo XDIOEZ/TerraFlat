@@ -13,6 +13,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 本体定义：`Assets/StreamingAssets/GameConfig/Items/item-manifest.json`
 - 模板化物品编辑：`Assets/Editor/FlatWorld/ContentTools/ContentWorkshop/`
 - Actor 定义复用 Item/Module 实例化与池化：`Entities/AI/Definitions/ActorDefinitionCatalogLoader.cs`
+- 资源产出倍率契约与聚合：`Entities/Item/Modules/World/ResourceYieldUtility.cs`；温度修饰：`Mod_TemperatureYield.cs`。
 
 ## 主链与不变量
 
@@ -30,6 +31,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - Item 与 Actor 的 `modules.*.parameters` 共用 `ModuleJsonConfigurator` 严格契约；删除或改名可配置字段后必须同步现行 JSON，并运行“FlatWorld/内容配置/校验全部本体内容”，禁止等到具体实例生成时才发现漂移。
 - 运行时生成模块参数时，`Vector2/Vector3` 必须显式写成 `x/y/z` 的 `JObject`；禁止 `JToken.FromObject(UnityEngine.Vector*)`，否则 Json.NET 会遍历 `normalized` 等计算属性并形成自引用。
 - JSON 定义实体的死亡战利品由顶层 `lootTableId` 引用全局 `GameConfig/LootTables/loot-tables.json`；表内 `itemId` 是稳定 ItemDefinition ID，运行时才展开为 `LootPrefabName`，禁止再内联 `Data.LootTable` 或保存 `LootPrefab` 对象引用。
+- 产出修饰统一实现 `IResourceYieldModifier`，由 `ResourceYieldUtility.GetMultiplier(资源实体, 产物ID)` 聚合有效模块；外部采集设备应传资源源头而非自身。每条产出链只在最终数量或累计生产进度中应用一次，整数掉落与难度倍率合并后统一随机取整，禁止重复放大或改写基础战利品表。
 - Manifest 是唯一发现入口；包的最终 `shellPrefab` 必须与声明一致。启动只异步解析一次 Item Manifest，Prefab 排除计划和物品构建共用该结果，Android 不得退回另一套发现规则。
 - 本体 Item/Actor 的 Sprite、材质、动画和独立外壳请求由 `GameRes.ResourceAssets` 持有；新增加载分支不能丢失句柄所有权。`shellPrefab` 引用通用目录，独立加载只接受 `shellAddress`，禁止从编辑器 `sourcePrefab` 推导运行时外壳。
 - 每个具体定义必须独立填写默认显示名 `gameName`；`id` 与名称翻译键分别承担业务引用和界面查询职责。继承不能把父物品的名称或翻译键带入子物品，编辑器也不能把 GameObject 名和 `ItemData.ToString()` 写成显示名与说明。

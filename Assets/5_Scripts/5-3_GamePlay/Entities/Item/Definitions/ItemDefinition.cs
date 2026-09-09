@@ -131,6 +131,10 @@ public sealed class ItemVisualDefinitionDto
     [JsonProperty("spriteAddress")]
     public string SpriteAddress;
 
+    /// <summary>按稳定状态名声明额外 Sprite；例如作物的 seedling/growing/mature。</summary>
+    [JsonProperty("spriteStates", NullValueHandling = NullValueHandling.Ignore)]
+    public Dictionary<string, string> SpriteStates;
+
     /// <summary>世界 SpriteRenderer 使用的共享材质 Addressable 地址。</summary>
     [JsonProperty("materialAddress", NullValueHandling = NullValueHandling.Ignore)]
     public string MaterialAddress;
@@ -285,6 +289,7 @@ public sealed class RuntimeItemDefinition
     private readonly ItemData templateData;
     private readonly Dictionary<string, string> moduleParameters;
     private readonly Dictionary<string, string> modulePrefabIds;
+    private readonly Dictionary<string, Sprite> visualStateSprites;
 
     public string Id { get; }
     public string ShellPrefabId { get; }
@@ -328,7 +333,8 @@ public sealed class RuntimeItemDefinition
         string descriptionKey,
         RuntimeAnimatorController animatorController = null,
         bool isActor = false,
-        Material material = null)
+        Material material = null,
+        Dictionary<string, Sprite> stateSprites = null)
     {
         Id = id;
         ShellPrefabId = shellPrefabId;
@@ -349,6 +355,19 @@ public sealed class RuntimeItemDefinition
             : descriptionKey.Trim();
         moduleParameters = parameters ?? new Dictionary<string, string>(StringComparer.Ordinal);
         modulePrefabIds = prefabIds ?? new Dictionary<string, string>(StringComparer.Ordinal);
+        visualStateSprites = stateSprites ?? new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>按状态名读取已由资源目录统一持有的额外 Sprite。</summary>
+    public bool TryGetVisualStateSprite(string stateName, out Sprite sprite)
+    {
+        if (string.IsNullOrWhiteSpace(stateName))
+        {
+            sprite = null;
+            return false;
+        }
+
+        return visualStateSprites.TryGetValue(stateName.Trim(), out sprite) && sprite != null;
     }
 
     public ItemData CreateItemData()

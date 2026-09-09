@@ -94,4 +94,7 @@ public sealed class BuffEffectDto
     [JsonProperty("value")]
     public float Value;
 
+    [JsonProperty("upperLimit")]
+    public float? UpperLimit;
+
 }

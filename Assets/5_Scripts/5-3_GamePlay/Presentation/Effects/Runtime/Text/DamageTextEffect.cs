@@ -24,6 +24,9 @@ public struct DamageTextEffectData
     public bool UseColorOverride;
     public Color ColorOverride;
     public float ScaleMultiplier;
+    public bool UseTextOverride;
+    public string TextOverride;
+    public float TextWidthMultiplier;
 
     public DamageTextEffectData(float value, DamageTextStyle style = DamageTextStyle.Normal)
     {
@@ -32,6 +35,9 @@ public struct DamageTextEffectData
         UseColorOverride = false;
         ColorOverride = Color.white;
         ScaleMultiplier = 1f;
+        UseTextOverride = false;
+        TextOverride = null;
+        TextWidthMultiplier = 1f;
     }
 }
 
@@ -86,6 +92,7 @@ public sealed class DamageTextEffect : GameEffect
     private Vector3 targetPosition;
     private Vector3 baseLocalScale = Vector3.one;
     private Vector3 targetLocalScale = Vector3.one;
+    private Vector2 baseTextSizeDelta = Vector2.one;
     private bool hasCachedText;
     private bool isAnimating;
 
@@ -160,7 +167,19 @@ public sealed class DamageTextEffect : GameEffect
         StopAnimationAndReset();
 
         DamageTextEffectData effectData = ParseData(data);
-        TMP_text.SetText("{0:0}", effectData.Value);
+        if (effectData.UseTextOverride)
+        {
+            TMP_text.SetText(effectData.TextOverride ?? string.Empty);
+            float widthMultiplier = Mathf.Max(1f,
+                effectData.TextWidthMultiplier <= 0f ? 1f : effectData.TextWidthMultiplier);
+            TMP_text.rectTransform.sizeDelta = new Vector2(
+                baseTextSizeDelta.x * widthMultiplier,
+                baseTextSizeDelta.y);
+        }
+        else
+        {
+            TMP_text.SetText("{0:0}", effectData.Value);
+        }
 
         Color styleColor = effectData.UseColorOverride
             ? effectData.ColorOverride
@@ -205,6 +224,7 @@ public sealed class DamageTextEffect : GameEffect
         if (!hasCachedText)
         {
             baseTextColor = TMP_text.color;
+            baseTextSizeDelta = TMP_text.rectTransform.sizeDelta;
             hasCachedText = true;
         }
 
@@ -221,7 +241,10 @@ public sealed class DamageTextEffect : GameEffect
         targetLocalScale = baseLocalScale;
 
         if (TMP_text != null)
+        {
             TMP_text.color = baseTextColor;
+            TMP_text.rectTransform.sizeDelta = baseTextSizeDelta;
+        }
     }
 
     /// <summary>兼容旧 float 数据并解析新的样式数据。</summary>

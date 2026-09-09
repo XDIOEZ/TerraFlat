@@ -213,9 +213,9 @@ public static class ItemDefinitionCatalogLoader
         var sprites = new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
         var materials = new Dictionary<string, Material>(StringComparer.OrdinalIgnoreCase);
         var controllers = new Dictionary<string, RuntimeAnimatorController>(StringComparer.OrdinalIgnoreCase);
-        yield return LoadVisualAssets(gameRes, dtos, sprites, dto => dto.Visual?.SpriteAddress, progress);
-        yield return LoadVisualAssets(gameRes, dtos, materials, dto => dto.Visual?.MaterialAddress, progress);
-        yield return LoadVisualAssets(gameRes, dtos, controllers, dto => dto.Visual?.AnimatorControllerAddress, progress);
+        yield return LoadVisualAssets(gameRes, dtos, sprites, SelectVisualSpriteAddresses, progress);
+        yield return LoadVisualAssets(gameRes, dtos, materials, dto => SelectOptionalAddress(dto.Visual?.MaterialAddress), progress);
+        yield return LoadVisualAssets(gameRes, dtos, controllers, dto => SelectOptionalAddress(dto.Visual?.AnimatorControllerAddress), progress);
 
         var definitions = new List<RuntimeItemDefinition>(dtos.Count);
         try
@@ -247,10 +247,11 @@ public static class ItemDefinitionCatalogLoader
 
     /// <summary>批量加载某类视觉资源；地址去重、句柄所有权和失败语义由资源会话统一负责。</summary>
     private static IEnumerator LoadVisualAssets<T>(GameRes gameRes, IEnumerable<ItemDefinitionDto> definitions,
-        IDictionary<string, T> output, Func<ItemDefinitionDto, string> select, Action<float> progress)
+        IDictionary<string, T> output, Func<ItemDefinitionDto, IEnumerable<string>> select, Action<float> progress)
         where T : UnityEngine.Object
     {
-        string[] addresses = definitions.Where(dto => !dto.Abstract).Select(select)
+        string[] addresses = definitions.Where(dto => !dto.Abstract)
+            .SelectMany(dto => select(dto) ?? Enumerable.Empty<string>())
             .Where(address => !string.IsNullOrWhiteSpace(address)).Select(address => address.Trim())
             .Distinct(StringComparer.Ordinal).ToArray();
         // 每批最多 16 个请求，兼顾移动端内存峰值与本地/远程资源吞吐。
@@ -279,6 +280,29 @@ public static class ItemDefinitionCatalogLoader
                 output.Add(addresses[start + i], ResourceAssetScope.Require(batch[i], $"{typeof(T).Name} -> {addresses[start + i]}"));
             progress?.Invoke(0.2f + 0.6f * (start + count) / addresses.Length);
         }
+    }
+
+    /// <summary>枚举一个物品定义需要预载的主 Sprite 与额外状态 Sprite。</summary>
+    private static IEnumerable<string> SelectVisualSpriteAddresses(ItemDefinitionDto dto)
+    {
+        if (!string.IsNullOrWhiteSpace(dto?.Visual?.SpriteAddress))
+            yield return dto.Visual.SpriteAddress;
+
+        if (dto?.Visual?.SpriteStates == null)
+            yield break;
+
+        foreach (string address in dto.Visual.SpriteStates.Values)
+        {
+            if (!string.IsNullOrWhiteSpace(address))
+                yield return address;
+        }
+    }
+
+    /// <summary>把可空的单地址适配为统一的多地址加载入口。</summary>
+    private static IEnumerable<string> SelectOptionalAddress(string address)
+    {
+        if (!string.IsNullOrWhiteSpace(address))
+            yield return address;
     }
 
     /// <summary>
@@ -877,6 +901,9 @@ public static class ItemDefinitionCatalogLoader
         Sprite sprite = isActor
             ? null
             : ResolveSprite(gameRes, dto.Visual?.SpriteAddress, id, preloadedSprites);
+        Dictionary<string, Sprite> stateSprites = isActor
+            ? new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase)
+            : ResolveVisualStateSprites(gameRes, dto.Visual?.SpriteStates, id, preloadedSprites);
         Material material = ResolveMaterial(gameRes, dto.Visual?.MaterialAddress, id, preloadedMaterials) ??
                             ResolveShellRendererMaterial(shell, dto.Visual?.RendererPath);
         RuntimeAnimatorController animatorController = ResolveAnimatorController(
@@ -898,7 +925,33 @@ public static class ItemDefinitionCatalogLoader
             dto.DescriptionKey,
             animatorController,
             isActor,
-            material);
+            material,
+            stateSprites);
+    }
+
+    /// <summary>解析并固化额外视觉状态 Sprite，运行时模块只按状态名读取，不再重复发资源请求。</summary>
+    private static Dictionary<string, Sprite> ResolveVisualStateSprites(
+        GameRes gameRes,
+        IReadOnlyDictionary<string, string> stateAddresses,
+        string itemId,
+        IReadOnlyDictionary<string, Sprite> preloadedSprites)
+    {
+        var result = new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
+        if (stateAddresses == null)
+            return result;
+
+        foreach (KeyValuePair<string, string> pair in stateAddresses)
+        {
+            string stateName = pair.Key?.Trim();
+            if (string.IsNullOrWhiteSpace(stateName))
+                throw new InvalidDataException($"物品 {itemId} 的 visual.spriteStates 包含空状态名。");
+            if (string.IsNullOrWhiteSpace(pair.Value))
+                throw new InvalidDataException($"物品 {itemId} 的视觉状态 {stateName} 缺少 Sprite 地址。");
+            if (!result.TryAdd(stateName, ResolveSprite(gameRes, pair.Value, itemId, preloadedSprites)))
+                throw new InvalidDataException($"物品 {itemId} 的视觉状态重复：{stateName}");
+        }
+
+        return result;
     }
 
     private static void AddAutomaticHealthModule(
