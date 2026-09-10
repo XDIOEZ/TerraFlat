@@ -97,33 +97,6 @@
       "actions": []
     },
     {
-      "id": "core:熟谷饭",
-      "displayName": "熟谷饭",
-      "recipeType": "smelting",
-      "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": true,
-      "temperature": 100,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "slot": 0,
-          "match": "exact_item",
-          "itemId": "Millet",
-          "tag": "",
-          "amount": 2
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "Millet_Cooked",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
       "id": "core:石铲",
       "displayName": "石铲",
       "recipeType": "crafting",

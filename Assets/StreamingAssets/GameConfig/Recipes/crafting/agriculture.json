@@ -180,6 +180,28 @@
         }
       ],
       "actions": []
+    },
+    {
+      "id": "core:rice_dehusk",
+      "displayName": "稻谷脱壳",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "allowMirror": false,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "RiceGrain",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Rice",
+          "amount": 1
+        }
+      ],
+      "actions": []
     }
   ]
 }

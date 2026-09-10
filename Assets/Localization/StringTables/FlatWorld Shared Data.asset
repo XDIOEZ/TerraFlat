@@ -1219,10 +1219,6 @@ MonoBehaviour:
     m_Key: item.Millet.name
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662565720071
-    m_Key: item.Millet_Cooked.name
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662565720072
     m_Key: item.HerbPoultice.name
     m_Metadata:
@@ -1401,10 +1397,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 11141662611857412
     m_Key: item.Millet.description
-    m_Metadata:
-      m_Items: []
-  - m_Id: 11141662611857413
-    m_Key: item.Millet_Cooked.description
     m_Metadata:
       m_Items: []
   - m_Id: 11141662611857414

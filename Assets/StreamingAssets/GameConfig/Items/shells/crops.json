@@ -322,10 +322,11 @@
       }
     },
     {
-      "id": "BerryCrop",
+      "id": "SmallCrop_Base",
+      "abstract": true,
       "parent": "RadishCrop",
-      "gameName": "浆果植株",
-      "description": "种在耕地中的浆果植株；成熟后交互采收。",
+      "gameName": "小型作物模板",
+      "description": "小型地上作物的生长表现模板；采收后移除植株。",
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/TX Plant.png[GrassLand_6]",
         "collider": {
@@ -354,20 +355,54 @@
         },
         "cropYield": {
           "parameters": {
-            "outputs": [
-              {
-                "itemId": "Berry",
-                "minAmount": 2,
-                "maxAmount": 4,
-                "probability": 1
-              },
-              {
-                "itemId": "Seed_Berry",
-                "minAmount": 1,
-                "maxAmount": 2,
-                "probability": 1
-              }
-            ]
+            "outputs": []
+          }
+        }
+      }
+    },
+    {
+      "id": "BerryCrop",
+      "parent": "Bush",
+      "gameName": "浆果植株",
+      "description": "种在耕地中的浆果灌木；长成后周期结果，采摘浆果保留植株。",
+      "modules": {
+        "生长模块": {
+          "prefab": "Module_Growth",
+          "id": "生长模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "allowCultivatedHarvest": false,
+            "matureMaxHealth": 50,
+            "Data": {
+              "growState": 0,
+              "growState_Value": [0, 20, 50, 100],
+              "growState_Scale": [0.25, 0.4, 0.6, 0.75],
+              "GrowProgress": 0,
+              "MaxGrowProgress": 100,
+              "GrowSpeed": 0.23809524
+            }
+          }
+        },
+        "采集模块": {
+          "data": {
+            "CurrentStock": 0,
+            "IsInitialized": true
+          }
+        },
+        "plantClimate": {
+          "prefab": "Module_PlantClimate",
+          "id": "Mod_PlantClimate",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "autonomous": true
           }
         }
       }

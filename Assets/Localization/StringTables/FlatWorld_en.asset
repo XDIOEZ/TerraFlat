@@ -1225,10 +1225,6 @@ MonoBehaviour:
     m_Localized: Millet Grain
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662565720071
-    m_Localized: Cooked Millet
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662565720072
     m_Localized: Herbal Poultice
     m_Metadata:
@@ -1407,10 +1403,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 11141662611857412
     m_Localized: Millet Grain.
-    m_Metadata:
-      m_Items: []
-  - m_Id: 11141662611857413
-    m_Localized: Cooked Millet.
     m_Metadata:
       m_Items: []
   - m_Id: 11141662611857414

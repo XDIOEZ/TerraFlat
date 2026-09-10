@@ -81,6 +81,33 @@
         }
       ],
       "actions": []
+    },
+    {
+      "id": "core:大米=米饭",
+      "displayName": "大米=米饭",
+      "recipeType": "smelting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": true,
+      "temperature": 100.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Rice",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "CookedRice",
+          "amount": 1
+        }
+      ],
+      "actions": []
     }
   ]
 }

@@ -150,7 +150,7 @@
       "id": "Seed_Berry",
       "parent": "Seed_Radish",
       "gameName": "浆果种子",
-      "description": "种在耕地上，成熟后可收获浆果和种子。",
+      "description": "种在耕地上长成浆果灌木；成熟后周期结果，采摘后植株保留。",
       "modules": {
         "plantable": {
           "parameters": {

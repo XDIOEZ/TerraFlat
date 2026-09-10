@@ -35,6 +35,8 @@ python .agents/skills/flatworld-pixel-art/scripts/validate_pixel_asset.py <sprit
 - 禁止抗锯齿、渐变、照片纹理、高频噪点、无关背景、地面、投影、光晕、文字、Logo、水印或无法在最终尺寸辨认的装饰；半透明特效等明确例外按消费方单独制定规则。
 - 仅生成美术时不创建 Prefab、Animator、SO 或玩法代码；需要接入时再读取对应 FlatWorld 领域 Skill，通过 Unity MCP 操作时读取 `unity-mcp-orchestrator`。
 - 不复制其他资源的 GUID；仅在目标 `.meta` 已存在时精确修改导入字段。高清设计源默认不进 Addressables，也不挂到 Prefab。
+- 替换 JSON 定义物品的贴图时，先核对 `visual.spriteAddress`，它可能覆盖外壳 Prefab 的 Sprite；若旧引用指向共享地形图集，应为道具生成独立 Sprite 并同步注册同址 `ItemSprite` Addressables 条目，禁止直接覆盖共享图集。
+- 将继承其他物品贴图的染色占位物替换为独立成图时，同步检查 `visual.color` 与继承的 `rendererLocalScale`；原有乘色会改变新图配色，成图通常显式设为白色，尺寸则结合继承缩放和 PPU 验收。
 - 手持工具的 Pivot 必须对齐实际握柄，不能机械套用图标中心；先核对外壳 `Render` 层级和 JSON `visual.rendererLocalPosition`，避免导入 Pivot 与外壳偏移重复补偿。PNG 以左上计像素，Unity Pivot 以左下归一化；像素中心 `(x, y)` 对应 `((x + 0.5) / width, 1 - (y + 0.5) / height)`。
 - 铺满整格的地面 Tile 使用中心 Pivot、全幅不透明画布和当前地块 PPU；不要套用物品的透明四角/底部对齐检查，否则拼接时会露出原地形。其 Sprite 图标可复用同一图，运行时地面不能保留图标安全留白。
 - 最终报告资产类别、画布尺寸、主体边界、可见颜色数、透明度、动画/单帧状态、Unity 导入设置、使用的提示词/模式和必要人工观感检查；同时说明选用了哪些同类项目素材作为画风/比例参考，并确认新素材在相同世界尺度下没有因更高像素密度而产生明显风格跳变。

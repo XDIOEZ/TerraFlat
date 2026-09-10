@@ -1530,7 +1530,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Materials/Ores/FD_Minerals_Stones.png[FD_Minerals_Stones_90]",
+        "spriteAddress": "Assets/6_Art/Generated/Iceberg/Iceberg_Idle.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

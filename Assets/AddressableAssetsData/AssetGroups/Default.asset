@@ -17,6 +17,42 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: 6acd77b7260baa04491cf92c6c54368e
+    m_Address: Assets/6_Art/Generated/Mine_Niter/Mine_Niter_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: eedab32e33cc679428f24bd9cc8e0ee9
+    m_Address: Assets/6_Art/Generated/Iceberg/Iceberg_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3dd2f7c7c0b0400b9257283f045be322
+    m_Address: Assets/6_Art/Generated/Herb/Herb_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8390c4191207400fa1450b402e5bb870
+    m_Address: Assets/6_Art/Generated/Herb/HerbCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 01a9304d3ad266244b7df528f1428837
+    m_Address: Assets/6_Art/Generated/DrilledLog/DrilledLog_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dea9fb99d4fe46f43b72ab76fe049ec4
+    m_Address: Assets/6_Art/Generated/WillowBark/WillowBark_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 00321e829cd3f504ebf5c22b9aeff708
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Components/UI_Slot.prefab
     m_ReadOnly: 0
@@ -2227,6 +2263,42 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 65a146c3ad866a44d8c9dcf0bbeabc25
     m_Address: Assets/6_Art/Generated/Archery/Arrow_Iron_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0694072e92f676145b728f4417449224
+    m_Address: Assets/6_Art/Generated/IceBlock/IceBlock_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 48480798b43ff4342b289d840991d67f
+    m_Address: Assets/6_Art/Generated/FoxtailEar/FoxtailEar_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dedf355ddf8a2ee46a9451bdb26f8c52
+    m_Address: Assets/6_Art/Generated/ClayDeposit/ClayDeposit_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b4806a56d8c892148add45ca6c765561
+    m_Address: Assets/6_Art/Generated/CuredMeat/CuredMeat_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fcc1fc6afdc05604d9368aa332bc00fc
+    m_Address: Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a1425257ed90d7e45bb1a9eb6f7e89b7
+    m_Address: Assets/6_Art/Generated/ClayJarBlank/ClayJarBlank_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite

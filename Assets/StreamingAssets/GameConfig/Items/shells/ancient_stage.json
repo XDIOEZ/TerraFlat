@@ -7,10 +7,11 @@
       "gameName": "药草",
       "description": "用于制作草药包，成熟药草植株同时提供种子。",
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Herb/Herb_Icon.png",
         "color": {
-          "r": 0.6,
+          "r": 1,
           "g": 1,
-          "b": 0.5,
+          "b": 1,
           "a": 1
         }
       }
@@ -21,10 +22,11 @@
       "gameName": "狗尾草穗",
       "description": "用筛具筛选三份草穗，得到一份谷子种子。",
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/FoxtailEar/FoxtailEar_Icon.png",
         "color": {
           "r": 1,
-          "g": 0.9,
-          "b": 0.45,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       }
@@ -55,10 +57,11 @@
       "gameName": "柳树皮",
       "description": "可加工成绳子；后续医药原料。",
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WillowBark/WillowBark_Idle.png",
         "color": {
-          "r": 0.7,
-          "g": 0.6,
-          "b": 0.45,
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1
         }
       }
@@ -99,14 +102,15 @@
     },
     {
       "id": "HerbCrop",
-      "parent": "BerryCrop",
+      "parent": "SmallCrop_Base",
       "gameName": "药草植株",
       "description": "成熟后采收；可留种种植。持续受寒或受热会枯萎。",
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Herb/HerbCrop_Mature.png",
         "color": {
-          "r": 0.6,
+          "r": 1,
           "g": 1,
-          "b": 0.55,
+          "b": 1,
           "a": 1
         }
       },
@@ -143,7 +147,7 @@
     },
     {
       "id": "FoxtailCrop",
-      "parent": "BerryCrop",
+      "parent": "SmallCrop_Base",
       "gameName": "狗尾草",
       "description": "成熟后采收；可留种种植。持续受寒或受热会枯萎。",
       "visual": {
@@ -187,7 +191,7 @@
     },
     {
       "id": "MilletCrop",
-      "parent": "BerryCrop",
+      "parent": "SmallCrop_Base",
       "gameName": "谷子植株",
       "description": "成熟后采收；可留种种植。持续受寒或受热会枯萎。",
       "visual": {
@@ -280,10 +284,11 @@
       "gameName": "谷粒",
       "description": "可以使用。",
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Rice/RiceGrain_Icon.png",
         "color": {
           "r": 1,
-          "g": 0.85,
-          "b": 0.45,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       },
@@ -312,58 +317,6 @@
                   "EnableSpoilage": true,
                   "SpoilageElapsedSeconds": 0,
                   "SpoilageIntervalSeconds": 12960,
-                  "SpoilageTargetItemID": "Humus"
-                }
-              },
-              {
-                "StateKey": "food.consumption",
-                "Data": {
-                  "EatingProgress": 0
-                }
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": "Millet_Cooked",
-      "parent": "Berry",
-      "gameName": "熟谷饭",
-      "description": "可以使用。",
-      "visual": {
-        "color": {
-          "r": 1,
-          "g": 0.85,
-          "b": 0.45,
-          "a": 1
-        }
-      },
-      "modules": {
-        "food": {
-          "data": {
-            "FoodData": {
-              "nutrition": {
-                "Carbohydrates": 55,
-                "Max_Carbohydrates": 55,
-                "Fat": 1,
-                "Max_Fat": 1,
-                "Protein": 6,
-                "Max_Protein": 6,
-                "Water": 8,
-                "Max_Water": 8,
-                "Vitamins": 3,
-                "Max_Vitamins": 3
-              },
-              "Max_EatingProgress": 1.5
-            },
-            "MechanicStates": [
-              {
-                "StateKey": "food.spoilage",
-                "Data": {
-                  "EnableSpoilage": true,
-                  "SpoilageElapsedSeconds": 0,
-                  "SpoilageIntervalSeconds": 5400,
                   "SpoilageTargetItemID": "Humus"
                 }
               },
@@ -450,9 +403,10 @@
       "gameName": "硝石矿",
       "description": "使用对应工具开采。",
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Mine_Niter/Mine_Niter_Idle.png",
         "color": {
-          "r": 0.7,
-          "g": 0.9,
+          "r": 1,
+          "g": 1,
           "b": 1,
           "a": 1
         }
@@ -487,10 +441,11 @@
       "gameName": "河岸黏土",
       "description": "使用对应工具开采。",
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ClayDeposit/ClayDeposit_Idle.png",
         "color": {
-          "r": 0.7,
-          "g": 0.4,
-          "b": 0.25,
+          "r": 1,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       },
@@ -756,7 +711,11 @@
       "id": "ClayJarBlank",
       "parent": "Clay",
       "gameName": "陶罐坯",
-      "description": "在熔炉中达到 600℃ 后烧成陶罐。"
+      "description": "在熔炉中达到 600℃ 后烧成陶罐。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ClayJarBlank/ClayJarBlank_Icon.png",
+        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+      }
     },
     {
       "id": "ClayJar",
@@ -774,10 +733,11 @@
         }
       },
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png",
         "color": {
-          "r": 0.85,
-          "g": 0.65,
-          "b": 0.4,
+          "r": 1,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       }
@@ -916,10 +876,11 @@
         }
       },
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/CuredMeat/CuredMeat_Icon.png",
         "color": {
-          "r": 0.8,
-          "g": 0.55,
-          "b": 0.5,
+          "r": 1,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       }
