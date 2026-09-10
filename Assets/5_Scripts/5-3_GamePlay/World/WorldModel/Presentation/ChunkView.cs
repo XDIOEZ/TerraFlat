@@ -18,7 +18,6 @@ public sealed class ChunkView : MonoBehaviour
     private bool navigationEnabled;
     private int bindVersion;
     private bool presentationComplete;
-    private ChunkTilemapRenderer tilemapRenderer;
     private ChunkLightOccluderRenderer lightOccluderRenderer;
 
     public ChunkRuntime Model => chunk;
@@ -32,7 +31,6 @@ public sealed class ChunkView : MonoBehaviour
     {
         EnsureNaturalItemRenderer();
         EnsureLightOccluderRenderer();
-        tilemapRenderer = GetComponentInChildren<ChunkTilemapRenderer>(true);
     }
 
     public void Bind(WorldRuntime worldRuntime, ChunkRuntime chunkRuntime, bool includeNavigation = true)
@@ -121,13 +119,16 @@ public sealed class ChunkView : MonoBehaviour
         }
         finally
         {
+            // 即使某个表现器解绑失败，也必须释放世界事件订阅，避免池化后继续收到旧世界通知。
+            for (int i = 0; i < renderers.Count; i++)
+                if (renderers[i] is IWorldAwareChunkViewRenderer worldAware &&
+                    renderers[i] is MonoBehaviour behaviour && behaviour != null)
+                    worldAware.SetWorld(null);
             renderers.Clear();
             navigationLease?.Dispose();
             navigationLease = null;
             presentationLease?.Dispose();
             presentationLease = null;
-            if (tilemapRenderer != null)
-                tilemapRenderer.SetWorld(null);
         }
     }
 
@@ -234,15 +235,17 @@ public sealed class ChunkView : MonoBehaviour
         Unbind();
         world = worldRuntime;
         chunk = chunkRuntime;
-        tilemapRenderer?.SetWorld(worldRuntime);
         navigationEnabled = includeNavigation;
         presentationComplete = false;
         transform.position = new Vector3(chunk.Address.ChunkOrigin.X, chunk.Address.ChunkOrigin.Y, 0f);
+        CacheRenderers();
+        for (int i = 0; i < renderers.Count; i++)
+            if (renderers[i] is IWorldAwareChunkViewRenderer worldAware)
+                worldAware.SetWorld(worldRuntime);
         presentationLease = chunk.AcquireLease(ChunkLeaseKind.Presentation);
         if (includeNavigation)
             navigationLease = chunk.AcquireLease(ChunkLeaseKind.Navigation);
         committedSubscription = world.Events.Subscribe<ChunkCommitted>(HandleChunkCommitted);
-        CacheRenderers();
     }
 
     /// <summary>先让地面可见，再补环境、碰撞、草地和导航。</summary>

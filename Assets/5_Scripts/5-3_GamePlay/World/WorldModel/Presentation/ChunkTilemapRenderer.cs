@@ -11,7 +11,7 @@ using UnityEngine.Tilemaps;
 /// 左、右、下、上四个接触方向编码到 Tile Color RGBA，连续水深由每个 Chunk 的独立纹理提供，
 /// 不再让岸线位与水深共用颜色通道，也不为接触阴影创建 SpriteRenderer 游戏对象。
 /// </summary>
-public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer
+public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IWorldAwareChunkViewRenderer
 {
     #region 配置与状态
 
