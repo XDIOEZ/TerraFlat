@@ -84,6 +84,7 @@ crashlytics-build.properties
 
 # Local task outputs
 /outputs/
+/output/
 
 # Legacy Plastic SCM workspace files
 /cloaked.conf
