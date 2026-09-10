@@ -158,6 +158,96 @@
       ]
     },
     {
+      "id": "Mine_Coal_Default",
+      "entries": [
+        {
+          "itemId": "Ore_Coal",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Ore_Stone",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Mine_Copper_Default",
+      "entries": [
+        {
+          "itemId": "Ore_Copper",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Ore_Stone",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Mine_Iron_Default",
+      "entries": [
+        {
+          "itemId": "Ore_Iron",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Ore_Stone",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Mine_Stone_Default",
+      "entries": [
+        {
+          "itemId": "Ore_Stone",
+          "probability": 1.0,
+          "minAmount": 2,
+          "maxAmount": 4
+        }
+      ]
+    },
+    {
+      "id": "Mine_Tin_Default",
+      "entries": [
+        {
+          "itemId": "Ore_Tin",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Ore_Stone",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Iceberg_Default",
+      "entries": [
+        {
+          "itemId": "IceBlock",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 3
+        }
+      ]
+    },
+    {
       "id": "Ancient_Niter",
       "entries": [
         {
@@ -195,7 +285,7 @@
           "maxAmount": 3
         },
         {
-          "itemId": "Log_Wood",
+          "itemId": "Log",
           "probability": 1,
           "minAmount": 1,
           "maxAmount": 2
@@ -231,6 +321,35 @@
         },
         {
           "itemId": "Peach",
+          "probability": 1.0,
+          "minAmount": 2,
+          "maxAmount": 4
+        }
+      ]
+    },
+    {
+      "id": "Tree_Orange",
+      "entries": [
+        {
+          "itemId": "Stick_Wood",
+          "probability": 1.0,
+          "minAmount": 2,
+          "maxAmount": 2
+        },
+        {
+          "itemId": "Leaf",
+          "probability": 1.0,
+          "minAmount": 3,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Log",
+          "probability": 1.0,
+          "minAmount": 2,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Orange",
           "probability": 1.0,
           "minAmount": 2,
           "maxAmount": 4

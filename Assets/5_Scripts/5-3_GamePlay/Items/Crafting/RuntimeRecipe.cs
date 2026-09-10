@@ -9,6 +9,7 @@ public sealed class RuntimeRecipe
 {
     public string Id;
     public string DisplayName;
+    public string RequiredStation = string.Empty;
     public RuntimeRecipeInput inputs = new RuntimeRecipeInput();
     public RuntimeRecipeOutput outputs = new RuntimeRecipeOutput();
     public bool enableMirrorCrafting;

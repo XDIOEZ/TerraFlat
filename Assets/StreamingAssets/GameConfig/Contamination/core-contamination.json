@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "contaminations": [
+    {
+      "id": "core:filth",
+      "displayName": "脏污度",
+      "description": "地块总体卫生状况。腐烂物、粪便和污水等机制可提高该值；具体疾病仍由独立病原负荷决定。",
+      "category": "filth",
+      "minimumValue": 0.0,
+      "maximumValue": 1.0,
+      "defaultValue": 0.0
+    },
+    {
+      "id": "core:plant_blight",
+      "displayName": "枯萎病原负荷",
+      "description": "植物枯萎类病原体在地块中的环境负荷，供农作物病害系统读取。",
+      "category": "pathogen",
+      "minimumValue": 0.0,
+      "maximumValue": 1.0,
+      "defaultValue": 0.0
+    },
+    {
+      "id": "core:animal_plague",
+      "displayName": "动物瘟疫病原负荷",
+      "description": "动物瘟疫类病原体在地块中的环境负荷，供动物暴露与传播系统读取。",
+      "category": "pathogen",
+      "minimumValue": 0.0,
+      "maximumValue": 1.0,
+      "defaultValue": 0.0
+    },
+    {
+      "id": "core:mosquito_pressure",
+      "displayName": "蚊媒压力",
+      "description": "表示蚊媒活动和繁殖压力；未来疟疾等蚊媒疾病应通过该指标参与传播，而不是作为土壤细菌处理。",
+      "category": "vector",
+      "minimumValue": 0.0,
+      "maximumValue": 1.0,
+      "defaultValue": 0.0
+    }
+  ]
+}

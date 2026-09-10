@@ -23,6 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 - 内容分包只决定归档；运行时语义仍由 `category`/effects 决定。
 - “当前位于某环境、可执行某操作”以及只在环境内生效的减速等被动影响，不使用可清除 Buff；只有潮湿、感染、中毒等角色状态进入 BuffManager。
 - Buff 的只读调试表现可从 `BuffManager.ActiveBuffs` 读取 `BuffInstance.Definition.DisplayName` 与剩余时间；表现层不得通过显示逻辑修改、续期或移除 Buff。
+- 出血状态固定使用互斥等级 `出血1/出血2/出血3`；统一通过 `BuffManager.ApplyBleedingTier` 应用，更低等级只续期当前更高等级，更高等级替换低等级。历史 `失血/流血/出血` 只作为存档迁移别名存在，不能重新作为内容或玩法 ID 使用。
 
 ## 工作流与验证
 

@@ -268,7 +268,7 @@ MonoBehaviour:
      sortingOrderOffset: 1
      tint: {r: 1, g: 1, b: 1, a: 1}
   particleEffects:
-   - buffId: 出血|流血|失血
+   - buffId: 出血1|出血2|出血3
      effectName: BloodDropStatusEffect
      horizontalOffsetNormalized: 0
      verticalOffsetNormalized: 0.06

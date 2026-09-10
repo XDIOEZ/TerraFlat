@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FlatWorld · Item Wiki</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="site-shell">
+    <header class="wiki-header pixel-frame">
+        <div class="brand-block">
+            <div class="brand-kicker">FLATWORLD ARCHIVE</div>
+            <h1>物品百科</h1>
+            <div class="brand-subtitle">ITEM COMPENDIUM · JSON LIVE VIEW</div>
+        </div>
+
+        <nav class="header-pages" aria-label="Wiki 页面">
+            <button id="catalogViewButton" class="header-page-button active" type="button">
+                <span>01</span>
+                <strong>档案浏览</strong>
+                <small>ITEM ARCHIVE</small>
+            </button>
+            <button id="overviewViewButton" class="header-page-button" type="button">
+                <span>02</span>
+                <strong>全物品总览</strong>
+                <small>ITEM ATLAS</small>
+            </button>
+        </nav>
+
+        <div class="header-tools">
+            <label class="search-box" for="globalSearch">
+                <span class="search-icon">⌕</span>
+                <input id="globalSearch" type="search" autocomplete="off"
+                       placeholder="搜索名称、ID、标签、模块或任意数值…">
+                <kbd>/</kbd>
+            </label>
+            <button id="settingsButton" class="settings-button" type="button" title="Wiki 设置" aria-label="打开 Wiki 设置">⚙</button>
+            <button id="reloadButton" class="pixel-button" type="button">↻ 重新读取 JSON</button>
+        </div>
+    </header>
+
+    <div id="statusBar" class="status-bar" role="status">
+        <span class="status-dot"></span>
+        <span id="statusText">正在读取物品目录…</span>
+    </div>
+
+    <main class="book-stage" aria-live="polite">
+        <div class="book-shadow"></div>
+
+        <section id="catalogBook" class="book pixel-frame">
+            <div class="book-corner corner-tl"></div>
+            <div class="book-corner corner-tr"></div>
+            <div class="book-corner corner-bl"></div>
+            <div class="book-corner corner-br"></div>
+
+            <aside class="book-page page-left">
+                <div class="page-ornament">
+                    <span></span><strong>INDEX</strong><span></span>
+                </div>
+
+                <div class="summary-strip">
+                    <div><strong id="countConcrete">—</strong><span>可用物品</span></div>
+                    <div><strong id="countAbstract">—</strong><span>抽象模板</span></div>
+                    <div><strong id="countPackages">—</strong><span>JSON 分包</span></div>
+                </div>
+
+                <div class="filter-grid">
+                    <label>
+                        <span>分类</span>
+                        <select id="categorySelect"></select>
+                    </label>
+                    <label>
+                        <span>分包</span>
+                        <select id="packageSelect"></select>
+                    </label>
+                    <label>
+                        <span>排序</span>
+                        <select id="sortSelect">
+                            <option value="name">名称</option>
+                            <option value="id">稳定 ID</option>
+                            <option value="package">分包</option>
+                        </select>
+                    </label>
+                    <label class="toggle-field">
+                        <input id="showAbstract" type="checkbox">
+                        <span class="toggle-box"></span>
+                        <span>显示抽象模板</span>
+                    </label>
+                </div>
+
+                <div class="list-caption">
+                    <span id="resultCount">0 条结果</span>
+                    <span class="live-badge">LIVE JSON</span>
+                </div>
+
+                <div id="itemList" class="item-list" tabindex="0"></div>
+            </aside>
+
+            <div class="book-spine" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+
+            <article class="book-page page-right" id="detailPage">
+                <div class="page-ornament compact-ornament">
+                    <span></span><strong>ENTRY</strong><span></span>
+                </div>
+                <div id="detailContent" class="detail-content">
+                    <div class="detail-empty-line">正在准备物品档案…</div>
+                </div>
+            </article>
+
+            <nav id="categoryTabs" class="category-tabs" aria-label="快速分类"></nav>
+            <button id="indexCollapseButton" class="index-collapse-button" type="button"
+                    aria-controls="catalogBook" aria-expanded="true" title="收起索引页">
+                <span class="index-collapse-icon">◀</span>
+                <span class="index-collapse-text">收起索引</span>
+            </button>
+        </section>
+
+        <section id="overviewBook" class="overview-book pixel-frame" hidden>
+            <div class="book-corner corner-tl"></div>
+            <div class="book-corner corner-tr"></div>
+            <div class="book-corner corner-bl"></div>
+            <div class="book-corner corner-br"></div>
+
+            <div class="page-ornament overview-ornament">
+                <span></span><strong>ITEM ATLAS</strong><span></span>
+            </div>
+
+            <div class="overview-heading">
+                <div>
+                    <div class="overview-kicker">FLATWORLD ITEM ATLAS</div>
+                    <h2>全物品总览</h2>
+                    <p>大面积浏览当前全部 Item。点击任意卡片即可回到档案页查看完整数据。</p>
+                </div>
+                <div class="overview-total"><strong id="overviewCount">0</strong><span>当前显示</span></div>
+            </div>
+
+            <div class="overview-toolbar">
+                <label>
+                    <span>分类</span>
+                    <select id="overviewCategorySelect"></select>
+                </label>
+                <label>
+                    <span>分包</span>
+                    <select id="overviewPackageSelect"></select>
+                </label>
+                <label>
+                    <span>排序</span>
+                    <select id="overviewSortSelect">
+                        <option value="name">名称</option>
+                        <option value="id">稳定 ID</option>
+                        <option value="package">分包</option>
+                    </select>
+                </label>
+                <label class="overview-toggle">
+                    <input id="overviewShowAbstract" type="checkbox">
+                    <span class="toggle-box"></span>
+                    <span>显示抽象模板</span>
+                </label>
+            </div>
+
+            <div id="overviewGrid" class="overview-grid"></div>
+        </section>
+
+        <section id="settingsBook" class="settings-book pixel-frame" hidden>
+            <div class="book-corner corner-tl"></div>
+            <div class="book-corner corner-tr"></div>
+            <div class="book-corner corner-bl"></div>
+            <div class="book-corner corner-br"></div>
+
+            <div class="page-ornament overview-ornament">
+                <span></span><strong>SETTINGS</strong><span></span>
+            </div>
+
+            <div class="settings-heading">
+                <div>
+                    <div class="overview-kicker">ITEM WIKI PREFERENCES</div>
+                    <h2>Wiki 设置</h2>
+                    <p>这些选项只保存在当前浏览器，不会写入游戏 JSON。</p>
+                </div>
+            </div>
+
+            <div class="settings-grid">
+                <section class="settings-card">
+                    <div class="settings-card-copy">
+                        <strong>索引面板位置</strong>
+                        <span>切换 INDEX 面板显示在书页左侧或右侧，折叠按钮会自动跟随。</span>
+                    </div>
+                    <label class="settings-switch" for="indexSideToggle">
+                        <span class="settings-side-label">左侧</span>
+                        <input id="indexSideToggle" type="checkbox">
+                        <span class="settings-switch-track"><span></span></span>
+                        <span class="settings-side-label">右侧</span>
+                    </label>
+                    <div class="settings-current">当前：<strong id="indexSideValue">左侧</strong></div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <footer class="wiki-footer">
+        <span>数据源：../GameConfig/Items/item-manifest.json</span>
+        <span>JSON 是唯一真源 · Wiki 编辑会校验并回写真实分包</span>
+    </footer>
+</div>
+
+<div id="lootModal" class="modal-shell" hidden>
+    <section class="modal-panel loot-modal-panel pixel-frame" role="dialog" aria-modal="true" aria-labelledby="lootModalTitle">
+        <header class="modal-header">
+            <div>
+                <div class="modal-kicker">LOOT TABLE</div>
+                <h2 id="lootModalTitle">战利品表</h2>
+            </div>
+            <button id="lootModalClose" class="modal-close" type="button" aria-label="关闭">×</button>
+        </header>
+        <div id="lootModalBody" class="modal-body"></div>
+    </section>
+</div>
+
+<div id="imageZoomModal" class="modal-shell image-zoom-shell" hidden>
+    <section class="modal-panel image-zoom-panel pixel-frame" role="dialog" aria-modal="true" aria-labelledby="imageZoomTitle">
+        <header class="modal-header">
+            <div>
+                <div class="modal-kicker">ITEM SPRITE</div>
+                <h2 id="imageZoomTitle">物品大图</h2>
+                <div id="imageZoomMeta" class="editor-meta"></div>
+            </div>
+            <button id="imageZoomClose" class="modal-close" type="button" aria-label="关闭">×</button>
+        </header>
+        <div id="imageZoomBody" class="image-zoom-body"></div>
+    </section>
+</div>
+
+<template id="moduleTemplate">
+    <details class="module-card" open>
+        <summary>
+            <span class="module-name"></span>
+            <span class="module-meta"></span>
+        </summary>
+        <div class="module-body"></div>
+    </details>
+</template>
+
+<script src="app.js" defer></script>
+</body>
+</html>

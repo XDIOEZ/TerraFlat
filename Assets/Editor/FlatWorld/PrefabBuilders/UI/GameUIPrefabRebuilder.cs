@@ -16,6 +16,7 @@ public static class GameUIPrefabRebuilder
 {
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
     private const string SelectBoxSpritePath = "Assets/6_Art/UI/Inventory_UI/Inventory_select.png";
+    private const string PixelBlueGoldAtlasPath = "Assets/6_Art/UI/PixelBlueGold/PixelBlueGold_UI.png";
     private const string PrefabRoot = "Assets/2_Prefabs/2-1_UI/";
     private const string CommonControlsRoot = PrefabRoot + "Common/Controls/";
     private const string MainMenuCoreRoot = PrefabRoot + "MainMenu/Core/";
@@ -26,6 +27,7 @@ public static class GameUIPrefabRebuilder
     private const string InventoryPanelsRoot = PrefabRoot + "Gameplay/Inventory/Panels/";
     private const string ScreensRoot = PrefabRoot + "Gameplay/Screens/";
     private const string PlayerStatusRoot = PrefabRoot + "Gameplay/Status/Player/";
+    private const string BagPrefabPath = InventoryPanelsRoot + "UI_Bag.prefab";
     private const string SlotPrefabPath = InventoryComponentsRoot + "UI_Slot.prefab";
 
     private static readonly string[] CraftingPreviewPrefabPaths =
@@ -51,7 +53,7 @@ public static class GameUIPrefabRebuilder
 
     private static readonly Dictionary<string, string[]> BindingContracts = new Dictionary<string, string[]>
     {
-        { InventoryPanelsRoot + "UI_Bag.prefab", new[] { "Scroll View", "Content", "关闭" } },
+        { BagPrefabPath, new[] { "Scroll View", "Content", "关闭" } },
         { InventoryPanelsRoot + "UI_Equipment.prefab", new[] { "UI_Content", "关闭" } },
         { CraftingRoot + "UI_HandCraftTable.prefab", new[] { "输入_1", "输入_4", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, "合成按钮", "关闭" } },
         { CraftingRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_5", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, "合成按钮", "关闭" } },
@@ -103,7 +105,7 @@ public static class GameUIPrefabRebuilder
 
         List<BuildTarget> targets = new List<BuildTarget>
         {
-            new BuildTarget(InventoryPanelsRoot + "UI_Bag.prefab", root => BuildScrollWindow(root, 706f, 640f, "行囊", "INVENTORY / FIELD KIT", "整理携带物资 · 拖拽交换位置", 5, new Vector2(96f, 96f))),
+            new BuildTarget(BagPrefabPath, BuildPixelBlueGoldBagPreview),
             new BuildTarget(InventoryPanelsRoot + "UI_Equipment.prefab", root => BuildScrollWindow(root, 526f, 566f, "装备", "EQUIPMENT / LOADOUT", "将装备拖入槽位以更新生存配置", 2, new Vector2(112f, 112f))),
             new BuildTarget(CraftingRoot + "UI_CompostBin.prefab", root => BuildScrollWindow(root, 646f, 468f, "堆肥箱", "COMPOST / RESOURCE CYCLE", "投入可腐物 · 等待自然转化", 5, new Vector2(88f, 88f))),
             new BuildTarget(CraftingRoot + "UI_MeatRack.prefab", root => BuildScrollWindow(root, 646f, 468f, "晾肉架", "MEAT RACK / PRESERVATION", "保持通风 · 留意加工进度", 5, new Vector2(88f, 88f))),
@@ -178,6 +180,66 @@ public static class GameUIPrefabRebuilder
         AssetDatabase.Refresh();
         Debug.Log($"[Game UI] 已完成 {rebuilt}/{targets.Count} 个 Prefab 的结构级重构；业务节点名称全部保留。");
         ValidateRebuiltUI();
+    }
+
+    /// <summary>只重构行囊面板，便于独立预览 PixelBlueGold 背包版式而不影响其他游戏内 UI。</summary>
+    [MenuItem("FlatWorld/UI/重构 PixelBlueGold 行囊")]
+    public static void RebuildPixelBlueGoldBag()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+            throw new InvalidOperationException($"缺少统一字体：{FontPath}");
+
+        GameObject root = PrefabUtility.LoadPrefabContents(BagPrefabPath);
+        try
+        {
+            RemoveGeneratedArt(root.transform);
+            BuildPixelBlueGoldBagPreview(root);
+            SetUILayerRecursively(root);
+            NormalizeCanvasLayers(root.transform);
+            NormalizeTypography(root.transform);
+            NormalizeControls(root.transform);
+            FlatWorldUITheme.Apply(root.transform);
+            EditorUtility.SetDirty(root);
+            PrefabUtility.SaveAsPrefabAsset(root, BagPrefabPath);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Game UI] 已按 PixelBlueGold 版式重构行囊面板。");
+    }
+
+    /// <summary>仅重构通用物品槽位，便于独立调整背包/装备等库存界面的槽位视觉。</summary>
+    [MenuItem("FlatWorld/UI/重构基础物品槽位")]
+    public static void RebuildBaseInventorySlot()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+            throw new InvalidOperationException($"缺少统一字体：{FontPath}");
+
+        GameObject root = PrefabUtility.LoadPrefabContents(SlotPrefabPath);
+        try
+        {
+            BuildSlot(root);
+            SetUILayerRecursively(root);
+            NormalizeTypography(root.transform);
+            NormalizeControls(root.transform);
+            FlatWorldUITheme.Apply(root.transform);
+            EditorUtility.SetDirty(root);
+            PrefabUtility.SaveAsPrefabAsset(root, SlotPrefabPath);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[Game UI] 已按 PixelBlueGold 风格重构基础物品槽位。");
     }
 
     /// <summary>仅更新快捷栏名称提示，保留九格槽位和现有快捷栏样式。</summary>
@@ -565,6 +627,238 @@ public static class GameUIPrefabRebuilder
             scrollRect.scrollSensitivity = 34f;
             scrollRect.movementType = ScrollRect.MovementType.Clamped;
         }
+    }
+
+    /// <summary>构建 PixelBlueGold 风格的行囊样板；使用横向七列布局和素材化框架，避免只给旧界面换色。</summary>
+    private static void BuildPixelBlueGoldBagPreview(GameObject root)
+    {
+        const float width = 800f;
+        const float height = 640f;
+
+        RectTransform chrome = PrepareWindow(root, width, height, "行囊", string.Empty, string.Empty);
+        ApplyPixelBlueGoldWindowSkin(root, "关闭", "整理");
+
+        Sprite panelCream = LoadPixelBlueGoldSprite("Panel_Cream_1");
+        Sprite creamBevel = LoadPixelBlueGoldSprite("Panel_CreamBevel");
+        Sprite inventoryIcon = LoadPixelBlueGoldSprite("InventoryIcon_R01_C01");
+        if (panelCream == null || creamBevel == null || inventoryIcon == null)
+            throw new MissingReferenceException($"{root.name} 无法加载 PixelBlueGold 行囊专用素材");
+
+        // 行囊只保留标题与必要操作；旧眉题、页脚说明和纯色装饰线会削弱素材本身的像素层次。
+        DestroyGeneratedElement(chrome, "FWUI_眉题");
+        DestroyGeneratedElement(chrome, "FWUI_FooterHint");
+        DestroyGeneratedElement(chrome, "FWUI_TickTop");
+        DestroyGeneratedElement(chrome, "FWUI_TickBottom");
+
+        RectTransform title = FindRect(chrome, "FWUI_标题");
+        if (title != null)
+        {
+            SetTopLeft(title, 82f, 17f, width - 170f, 42f);
+            TMP_Text titleText = title.GetComponent<TMP_Text>();
+            if (titleText != null)
+            {
+                titleText.fontSize = 30f;
+                titleText.color = Cream;
+            }
+        }
+
+        // 大面积浅色内容板直接承担槽位承托，减少旧版“深底 + 浅卡片 + 深槽”的多层嵌套感。
+        RectTransform innerField = FindRect(chrome, "FWUI_InnerField");
+        if (innerField != null)
+        {
+            SetTopLeft(innerField, 24f, 92f, width - 48f, 484f);
+            ApplySlicedSprite(innerField.GetComponent<Image>(), panelCream);
+            innerField.SetSiblingIndex(Mathf.Min(3, innerField.parent.childCount - 1));
+        }
+
+        Image iconPlate = CreateImage("FWUI_BagIconPlate", chrome, Color.white);
+        ApplySlicedSprite(iconPlate, creamBevel);
+        SetTopLeft(iconPlate.rectTransform, 17f, 13f, 52f, 52f);
+
+        Image icon = CreateImage("FWUI_BagIcon", chrome, Color.white);
+        icon.sprite = inventoryIcon;
+        icon.type = Image.Type.Simple;
+        icon.preserveAspect = true;
+        icon.raycastTarget = false;
+        SetTopLeft(icon.rectTransform, 27f, 23f, 32f, 32f);
+
+        RectTransform scroll = FindRect(root.transform, "Scroll View");
+        if (scroll != null)
+        {
+            SetTopLeft(scroll, 48f, 112f, width - 96f, 448f);
+            Image scrollImage = scroll.GetComponent<Image>();
+            if (scrollImage != null)
+            {
+                scrollImage.sprite = null;
+                scrollImage.color = Color.clear;
+                scrollImage.raycastTarget = false;
+            }
+        }
+
+        GridLayoutGroup grid = root.GetComponentInChildren<GridLayoutGroup>(true);
+        if (grid != null)
+        {
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = 7;
+            grid.cellSize = new Vector2(80f, 80f);
+            grid.spacing = new Vector2(8f, 8f);
+            grid.padding = new RectOffset(8, 8, 8, 8);
+            grid.childAlignment = TextAnchor.UpperCenter;
+        }
+
+        ScrollRect scrollRect = root.GetComponentInChildren<ScrollRect>(true);
+        if (scrollRect != null)
+        {
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.scrollSensitivity = 34f;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        }
+
+        RectTransform sortButton = FindDirectRect(root.transform, "整理");
+        if (sortButton != null)
+        {
+            sortButton.anchorMin = new Vector2(1f, 0f);
+            sortButton.anchorMax = new Vector2(1f, 0f);
+            sortButton.pivot = new Vector2(1f, 0f);
+            sortButton.anchoredPosition = new Vector2(-22f, 8f);
+            sortButton.sizeDelta = new Vector2(148f, 50f);
+            TMP_Text label = sortButton.GetComponentInChildren<TMP_Text>(true);
+            if (label != null)
+            {
+                label.text = "整理";
+                label.fontSize = 17f;
+                label.color = Surface;
+            }
+        }
+
+        RectTransform closeButton = FindDirectRect(root.transform, "关闭");
+        if (closeButton != null)
+        {
+            closeButton.anchorMin = Vector2.one;
+            closeButton.anchorMax = Vector2.one;
+            closeButton.pivot = Vector2.one;
+            closeButton.anchoredPosition = new Vector2(-16f, -13f);
+            closeButton.sizeDelta = new Vector2(52f, 52f);
+            TMP_Text label = closeButton.GetComponentInChildren<TMP_Text>(true);
+            if (label != null)
+            {
+                label.text = "×";
+                label.fontSize = 22f;
+                label.color = Surface;
+            }
+        }
+    }
+
+    /// <summary>删除当前生成框架中的指定节点，供专用面板裁掉不需要的装饰文案。</summary>
+    private static void DestroyGeneratedElement(Transform root, string objectName)
+    {
+        Transform target = FindTransform(root, objectName);
+        if (target != null)
+            UnityEngine.Object.DestroyImmediate(target.gameObject);
+    }
+
+    /// <summary>将正式窗口的框架、内容区和指定按钮替换为 PixelBlueGold 图集中的可拉伸九宫格素材。</summary>
+    private static void ApplyPixelBlueGoldWindowSkin(GameObject root, params string[] creamButtonNames)
+    {
+        Sprite panelBlue = LoadPixelBlueGoldSprite("Panel_Blue_1");
+        Sprite panelCream = LoadPixelBlueGoldSprite("Panel_Cream_1");
+        Sprite creamBevel = LoadPixelBlueGoldSprite("Panel_CreamBevel");
+
+        if (panelBlue == null || panelCream == null || creamBevel == null)
+            throw new MissingReferenceException($"{root.name} 无法加载 PixelBlueGold 核心九宫格素材");
+
+        ApplySlicedSprite(root.GetComponent<Image>(), panelBlue);
+        ApplyNamedSlicedSprite(root.transform, "FWUI_Body", panelBlue);
+        ApplyNamedSlicedSprite(root.transform, "FWUI_InnerField", panelBlue);
+        ApplyNamedSlicedSprite(root.transform, "FWUI_Header", panelBlue);
+        ApplyNamedSlicedSprite(root.transform, "FWUI_Footer", panelBlue);
+
+        Image[] images = root.GetComponentsInChildren<Image>(true);
+        foreach (Image image in images)
+        {
+            if (image != null && image.name.StartsWith("FWUI_Section_", StringComparison.Ordinal))
+                ApplySlicedSprite(image, panelCream);
+        }
+
+        TextMeshProUGUI[] texts = root.GetComponentsInChildren<TextMeshProUGUI>(true);
+        foreach (TextMeshProUGUI text in texts)
+        {
+            if (text == null)
+                continue;
+
+            if (text.name.StartsWith("FWUI_SectionTitle_", StringComparison.Ordinal))
+                text.color = Surface;
+            else if (text.name.StartsWith("FWUI_SectionEyebrow_", StringComparison.Ordinal))
+                text.color = new Color(0.58f, 0.33f, 0.12f, 1f);
+        }
+
+        if (creamButtonNames == null)
+            return;
+
+        foreach (string buttonName in creamButtonNames)
+        {
+            RectTransform buttonRect = FindRect(root.transform, buttonName);
+            if (buttonRect == null)
+                continue;
+
+            Image buttonImage = buttonRect.GetComponent<Image>();
+            ApplySlicedSprite(buttonImage, creamBevel);
+
+            TMP_Text label = buttonRect.GetComponentInChildren<TMP_Text>(true);
+            if (label != null)
+                label.color = Surface;
+        }
+    }
+
+    /// <summary>按切片名称从 PixelBlueGold Multiple Sprite 图集中读取正式 Sprite。</summary>
+    private static Sprite LoadPixelBlueGoldSprite(string spriteName)
+    {
+        UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath(PixelBlueGoldAtlasPath);
+        foreach (UnityEngine.Object asset in assets)
+        {
+            if (asset is Sprite sprite && string.Equals(sprite.name, spriteName, StringComparison.Ordinal))
+                return sprite;
+        }
+
+        Debug.LogError($"[Game UI] PixelBlueGold 缺少切片：{spriteName}");
+        return null;
+    }
+
+    /// <summary>给指定节点应用九宫格 Sprite；节点不存在时保持原结构不变。</summary>
+    private static void ApplyNamedSlicedSprite(Transform root, string objectName, Sprite sprite)
+    {
+        RectTransform rect = FindRect(root, objectName);
+        if (rect != null)
+            ApplySlicedSprite(rect.GetComponent<Image>(), sprite);
+    }
+
+    /// <summary>应用不染色的 Sliced Sprite，保留像素边框并关闭无意义的比例拉伸。</summary>
+    private static void ApplySlicedSprite(Image image, Sprite sprite)
+    {
+        if (image == null || sprite == null)
+            return;
+
+        image.sprite = sprite;
+        image.type = Image.Type.Sliced;
+        image.preserveAspect = false;
+        image.color = Color.white;
+        image.pixelsPerUnitMultiplier = 1f;
+
+        // PixelBlueGold 的 Panel 素材已经自带边框与阴影，再叠 Outline 会让像素边缘发黑变厚。
+        if (IsPixelBlueGoldSprite(sprite))
+        {
+            Outline outline = image.GetComponent<Outline>();
+            if (outline != null)
+                UnityEngine.Object.DestroyImmediate(outline);
+        }
+    }
+
+    /// <summary>判断 Sprite 是否来自当前统一 PixelBlueGold 图集。</summary>
+    private static bool IsPixelBlueGoldSprite(Sprite sprite)
+    {
+        return sprite != null &&
+               string.Equals(AssetDatabase.GetAssetPath(sprite), PixelBlueGoldAtlasPath, StringComparison.Ordinal);
     }
 
     private static void BuildCraftWindow(GameObject root, string title, string eyebrow, int inputCount, bool compact)
@@ -1305,29 +1599,88 @@ public static class GameUIPrefabRebuilder
         copy.characterSpacing = 3f;
     }
 
+    /// <summary>使用 PixelBlueGold 的槽位状态素材构建统一物品槽位，并保留物品图标、数量和制作预览层契约。</summary>
     private static void BuildSlot(GameObject root)
     {
+        Sprite normalSprite = LoadPixelBlueGoldSprite("SlotSmall_R01_C01");
+        Sprite hoverSprite = LoadPixelBlueGoldSprite("SlotSmall_R01_C02");
+        Sprite pressedSprite = LoadPixelBlueGoldSprite("SlotSmall_R02_C01");
+        Sprite disabledSprite = LoadPixelBlueGoldSprite("SlotSmall_R02_C02");
+        Sprite selectedSprite = LoadPixelBlueGoldSprite("SlotGold_R02_C01");
+        if (normalSprite == null || hoverSprite == null || pressedSprite == null ||
+            disabledSprite == null || selectedSprite == null)
+        {
+            throw new MissingReferenceException($"{root.name} 无法加载 PixelBlueGold 槽位状态素材");
+        }
+
         RectTransform rect = root.GetComponent<RectTransform>();
-        if (rect != null && (rect.sizeDelta.x < 72f || rect.sizeDelta.y < 72f))
-            rect.sizeDelta = new Vector2(82f, 82f);
+        if (rect != null)
+            rect.sizeDelta = new Vector2(96f, 96f);
 
         Image image = EnsureImage(root);
-        image.color = new Color(0.10f, 0.17f, 0.18f, 0.98f);
-        image.sprite = null;
+        image.color = Color.white;
+        image.sprite = normalSprite;
         image.type = Image.Type.Simple;
-        AddOutline(image, new Color(0.83f, 0.49f, 0.23f, 0.30f));
+        image.preserveAspect = true;
+
+        // PixelBlueGold 槽位自身已有像素边框；常驻 Outline 会把边缘再次外扩，改由 ItemSlot_UI 只在焦点/拖拽时显示交互描边。
+        Outline rootOutline = image.GetComponent<Outline>();
+        if (rootOutline != null)
+            UnityEngine.Object.DestroyImmediate(rootOutline);
 
         Button button = root.GetComponent<Button>();
         if (button != null)
         {
-            ColorBlock colors = button.colors;
-            colors.highlightedColor = new Color(1.18f, 1.10f, 0.94f, 1f);
-            colors.pressedColor = new Color(0.76f, 0.82f, 0.80f, 1f);
-            colors.fadeDuration = 0.08f;
-            button.colors = colors;
+            button.targetGraphic = image;
+            button.transition = Selectable.Transition.SpriteSwap;
+            SpriteState spriteState = button.spriteState;
+            spriteState.highlightedSprite = hoverSprite;
+            spriteState.pressedSprite = pressedSprite;
+            spriteState.selectedSprite = selectedSprite;
+            spriteState.disabledSprite = disabledSprite;
+            button.spriteState = spriteState;
         }
 
         RuntimeUIPrefabBuilder.AddCraftingPreviewLayers(root);
+
+        ItemSlot_UI slot = root.GetComponent<ItemSlot_UI>();
+        if (slot != null)
+        {
+            if (slot.image != null)
+            {
+                slot.image.rectTransform.sizeDelta = new Vector2(72f, 72f);
+                slot.image.color = Color.white;
+                slot.image.preserveAspect = true;
+                slot.image.raycastTarget = false;
+            }
+
+            if (slot.text != null)
+            {
+                RectTransform amountRect = slot.text.rectTransform;
+                amountRect.anchorMin = new Vector2(1f, 0f);
+                amountRect.anchorMax = new Vector2(1f, 0f);
+                amountRect.pivot = new Vector2(1f, 0f);
+                amountRect.anchoredPosition = new Vector2(-7f, 7f);
+                amountRect.sizeDelta = new Vector2(42f, 24f);
+
+                slot.text.fontSize = 20f;
+                slot.text.enableAutoSizing = true;
+                slot.text.fontSizeMin = 12f;
+                slot.text.fontSizeMax = 20f;
+                slot.text.alignment = TextAlignmentOptions.BottomRight;
+                slot.text.enableWordWrapping = false;
+                slot.text.raycastTarget = false;
+                slot.text.color = new Color(0.992f, 0.820f, 0.475f, 1f);
+                AddOutline(slot.text, new Color(0.078f, 0.137f, 0.227f, 0.96f));
+            }
+        }
+
+        Image ghost = FindNamedImage(root.transform, "Crafting Output Ghost");
+        Image reveal = FindNamedImage(root.transform, "Crafting Output Reveal");
+        if (ghost != null)
+            ghost.rectTransform.sizeDelta = new Vector2(72f, 72f);
+        if (reveal != null)
+            reveal.rectTransform.sizeDelta = new Vector2(72f, 72f);
     }
 
     private static int RepairBaseSlotPreview(GameObject root)
@@ -2030,7 +2383,7 @@ public static class GameUIPrefabRebuilder
                 continue;
 
             Image image = button.targetGraphic as Image ?? button.GetComponent<Image>();
-            if (image != null)
+            if (image != null && !IsPixelBlueGoldSprite(image.sprite))
             {
                 image.sprite = null;
                 image.type = Image.Type.Simple;

@@ -5,6 +5,16 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 # FlatWorld UI
 
+## 统一视觉风格（新建 UI 必须遵守）
+
+- 后续新建及重新设计的游戏 UI，统一使用 `Assets/6_Art/UI/PixelBlueGold/PixelBlueGold_UI.png` 的蓝灰、米白、暖金像素风素材；不能自行换用其他 UI 素材包或另起一套视觉风格，除非用户明确指定。
+- 该图集已按控件切为 Multiple Sprite；切片名称、原图左上角坐标和九宫格边框见同目录 `SpriteCatalog.csv`。优先直接引用现有 Sprite，不重复导出图片或通过颜色块替代已有面板、槽位、按钮和图标。
+- 默认蓝灰主面板使用 `Panel_Blue_1`，浅色内容区使用 `Panel_Cream_1`，强调控件可用 `Panel_CreamBevel`；其他 `Panel_Style*`、装饰木框及羊皮纸是同包备选，不在同一界面随意混搭全部变体。暖金用于选中、焦点和重要操作，状态色仍表达原有玩法语义。
+- `Panel_*`、`Input_Cream` 已设置 Sprite Border，可拉伸控件使用 `Image.Type.Sliced`，保留边角；小图标保持比例、使用 `Simple`，组合型 `Slider*`、`Meter*` 不能直接当作独立滑块或填充条拉伸，需要按真实交互职责选择/复用其子元素。
+- 图集保持 Point、无压缩、关闭 Mipmap、原始尺寸、透明通道、100 PPU；优先整数视觉缩放，不使用双线性过滤模糊像素边缘。文字继续使用现有 TMP/本地化字体与移动端字号、触控尺寸约束，不照搬图集中示例像素字作为玩家文案。
+- 缺少的控件沿用本图集的配色、边框厚度、阴影方向和像素密度扩展；正式视觉仍落在可复用控件/Prefab 中，通用 UI 不引用具体玩法类。仅修改业务行为时，不顺带整体翻修既有界面。
+- 移动图集需保留 `.meta`；已经被引用的切片名称、spriteID 和 internalID 必须稳定，禁止无差别重新自动切图而破坏引用。原图是多种尺寸布局，不能对整图统一按 16×16 切分。
+
 ## 入口
 
 - 生命周期：`Assets/5_Scripts/5-5_UI/Core/{UIManager,BasePanel}.cs`
@@ -13,6 +23,72 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 游戏内 UI：`Assets/5_Scripts/5-3_GamePlay/Presentation/UI/`
 - Prefab：`Assets/2_Prefabs/2-1_UI/`；根：`Assets/Resources/UI/UIRoot.prefab`
 - 运行时键/构建器：`Assets/5_Scripts/5-5_UI/Core/RuntimeUIPrefabKeys.cs`、`Assets/Editor/FlatWorld/PrefabBuilders/UI/RuntimeUIPrefabBuilder.cs`
+
+## UI Prefab 索引
+
+`UI_ActionList.prefab` - 设置功能列表面板
+`UI_AudioSettings.prefab` - 音频设置面板
+`UI_AutoSaveSettings.prefab` - 自动保存设置面板
+`UI_Bag.prefab` - 背包面板
+`UI_BasePanel.prefab` - 通用基础面板模板
+`UI_BaseText.prefab` - 通用基础文本模板
+`UI_Bonfire.prefab` - 篝火制作面板
+`UI_BuffStatus.prefab` - 状态效果面板
+`UI_BuffStatusItem.prefab` - 状态效果条目模板
+`UI_CameraControlSettings.prefab` - 相机控制设置面板
+`UI_CharacterSpeechBubble.prefab` - 角色对话气泡
+`UI_CompostBin.prefab` - 堆肥桶交互面板
+`UI_CoordinateDisplaySettings.prefab` - 坐标显示设置面板
+`UI_Death.prefab` - 玩家死亡界面
+`UI_Debug.prefab` - 调试面板
+`UI_DebugScrollView.prefab` - 调试滚动列表面板
+`UI_DifficultySettings.prefab` - 难度设置面板
+`UI_DimensionLoading.prefab` - 维度加载面板
+`UI_Equipment.prefab` - 装备面板
+`UI_FireDrill.prefab` - 钻木取火面板
+`UI_FlintStrike.prefab` - 燧石取火面板
+`UI_Food.prefab` - 玩家饱食状态面板
+`UI_Furnace.prefab` - 熔炉制作面板
+`UI_Hand.prefab` - 手持物面板
+`UI_HandCraftTable.prefab` - 手工制作面板
+`UI_HandSlot.prefab` - 手持槽位组件
+`UI_Health.prefab` - 玩家生命状态面板
+`UI_HotBar.prefab` - 快捷栏面板
+`UI_InputBindingRow.prefab` - 按键绑定行组件
+`UI_InputBindingSettings.prefab` - 按键绑定设置面板
+`UI_InterfaceSettings.prefab` - 界面设置面板
+`UI_MainMenu.prefab` - 主菜单面板
+`UI_MainMenuExitConfirmation.prefab` - 主菜单退出确认面板
+`UI_MainMenuSettings.prefab` - 主菜单设置面板
+`UI_MakerTable.prefab` - 制作台面板
+`UI_MeatRack.prefab` - 晾肉架面板
+`UI_MobileControls.prefab` - 移动端控制面板
+`UI_ModuleButton.prefab` - 角色状态模块按钮
+`UI_ModuleList.prefab` - 生存状态模块列表
+`UI_ModuleOpenButton.prefab` - 生存状态列表打开按钮
+`UI_ModuleSettings.prefab` - 状态模块设置面板
+`UI_NetworkMode.prefab` - 联机模式选择面板
+`UI_NewGame.prefab` - 新建世界面板
+`UI_PlayerChatInput.prefab` - 玩家聊天输入面板
+`UI_PlayerWorldCoordinate.prefab` - 玩家世界坐标 HUD
+`UI_QuestTracker.prefab` - 任务追踪面板
+`UI_QuestTrackerItem.prefab` - 任务追踪条目模板
+`UI_ResourceLoading.prefab` - 资源加载面板
+`UI_RuntimeDebugOverlay.prefab` - 运行时调试覆盖层
+`UI_SaveContextMenu.prefab` - 存档上下文菜单
+`UI_SaveSelectionButton.prefab` - 存档选择按钮组件
+`UI_SaveSelectionPanel.prefab` - 存档选择面板
+`UI_SaveStatus.prefab` - 存档状态提示 HUD
+`UI_SeasonSettings.prefab` - 季节设置面板
+`UI_SelectBox.prefab` - 通用选择框控件
+`UI_Sleep.prefab` - 玩家睡眠状态面板
+`UI_Slider.prefab` - 通用滑动条控件
+`UI_Slot.prefab` - 通用物品槽位组件
+`UI_VisualEffectsSettings.prefab` - 视觉效果设置面板
+`UI_WaterVessel.prefab` - 水容器交互面板
+`UI_WorldLoading.prefab` - 世界加载面板
+`UI_WorldStreamingSettings.prefab` - 世界流式加载设置面板
+`UIRoot.prefab` - UI 根节点预制体
 
 ## 架构与运行时约束
 
@@ -36,7 +112,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - EventSystem 反馈保持唯一非缩放 Tween，重入先 Kill，失活/销毁清理。
 - 手机准线是 `UI_MobileControls.prefab` 的非交互 Graphic，由 `PlayerMobileControlsHUD` 按统一屏幕指针定位；不得让准线 Graphic 参与射线或手柄焦点。
 - 旧缓存 Prefab 缺少手机准线节点时允许由 HUD 做一次性兼容补齐，不能把该兜底扩展成运行时拼装整套手机 UI。
-- GM 调试面板由 `GMReflectionConsole` 运行时动态构建，不通过正式 UI Prefab；可持久化的调试开关统一放入 `GMConsolePreferences`，按钮状态需在场景切换和面板刷新时同步。
+- GM 调试面板由 `GMReflectionConsole` 运行时动态构建，不通过正式 UI Prefab；可持久化的调试开关统一放入 `GMConsolePreferences`，按钮状态需在场景切换和面板刷新时同步。图层页的世界观察模式由 `GMWorldLayerOverlay` 统一承载，同一时刻只显示一种热力图，避免温度与污染颜色叠加失真。
 - 日志页的 GM 入口广播 `RuntimeDebugOverlay.GmPanelOpenRequested`，由 `GMReflectionConsole` 订阅；日志属于 GamePlay，而 GM 属于依赖 GamePlay 的 `FlatWorld.Gameplay.Debug`，禁止反向直接引用。日志 Canvas 排序高于 GM，打开 GM 前先收起日志页。GM 点选传送层仅在主动选点时启用，持有独立触点和玩法输入锁；关闭、失焦和换场景必须释放。
 - GM 分页枚举数值由 `ActivePageIndex` 保存；新页追加枚举项，显示顺序由 `BuildTabBar` 决定。页签横向内容宽度由布局计算，禁止恢复手写总宽而截断末尾分页。世界观察层独立于 GM 窗口显隐，关闭窗口只收起操作界面，不能顺带关闭观察层。
 - 主菜单控件名集中在 `GameManager.UI.cs`；定向构建 Prefab，避免无关重写。

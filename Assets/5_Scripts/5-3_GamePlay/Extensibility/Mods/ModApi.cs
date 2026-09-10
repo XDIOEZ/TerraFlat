@@ -50,6 +50,42 @@ public sealed class ModApi
         return manager.GetDefinitionInfoJson(contentId);
     }
 
+    /// <summary>判断本体或任意已加载 MOD 是否注册了指定污染指标。</summary>
+    public bool HasContaminationDefinition(string contaminationId)
+    {
+        string id = ResolveContaminationId(contaminationId);
+        return GameRes.ExistingInstance?.GetContaminationDefinition(id) != null;
+    }
+
+    /// <summary>读取已加载世界地格的污染值；未知定义或未加载区块会抛出明确错误。</summary>
+    public double GetContaminationValue(string contaminationId, float x, float y)
+    {
+        string id = ResolveContaminationId(contaminationId);
+        if (!ContaminationSystem.TryGetValue(new Vector2(x, y), id, out float value))
+            throw new InvalidOperationException($"无法读取污染值，定义不存在或地格未加载：{id} @ ({x},{y})");
+        return value;
+    }
+
+    /// <summary>设置已加载世界地格的污染值；无命名空间 ID 自动归属当前 MOD。</summary>
+    public bool SetContaminationValue(string contaminationId, float x, float y, float value)
+    {
+        manager.EnsureWorldMutationAllowed("SetContaminationValue");
+        return ContaminationSystem.TrySetValue(
+            new Vector2(x, y),
+            ResolveContaminationId(contaminationId),
+            value);
+    }
+
+    /// <summary>增减已加载世界地格的污染负荷。</summary>
+    public bool AddContaminationValue(string contaminationId, float x, float y, float delta)
+    {
+        manager.EnsureWorldMutationAllowed("AddContaminationValue");
+        return ContaminationSystem.TryAddValue(
+            new Vector2(x, y),
+            ResolveContaminationId(contaminationId),
+            delta);
+    }
+
     public void EmitEvent(string eventName, string payloadJson = "{}")
     {
         manager.EmitModEvent(ModId, eventName, payloadJson);
@@ -129,6 +165,15 @@ public sealed class ModApi
     public void SetGlobalState(string json)
     {
         manager.SetGlobalState(ModId, json);
+    }
+
+    /// <summary>MOD API 中裸污染 ID 默认使用当前 MOD 命名空间，同时允许显式引用 core 或依赖 MOD。</summary>
+    private string ResolveContaminationId(string contaminationId)
+    {
+        if (string.IsNullOrWhiteSpace(contaminationId))
+            throw new ArgumentException("污染 ID 不能为空", nameof(contaminationId));
+        string trimmed = contaminationId.Trim();
+        return trimmed.Contains(":", StringComparison.Ordinal) ? trimmed : $"{ModId}:{trimmed}";
     }
 }
 

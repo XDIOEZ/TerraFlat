@@ -32,6 +32,7 @@ public static class BuildingShellMigrationTool
     private const string ManifestPath = "Assets/StreamingAssets/GameConfig/Items/item-manifest.json";
     private const string ItemSpriteLabel = "ItemSprite";
     private const string PrefabLabel = "Prefab";
+    private const string PlacedBuildingDisplayNameSuffix = "建筑";
 
     private static readonly BuildingEntry[] Entries =
     {
@@ -386,7 +387,7 @@ public static class BuildingShellMigrationTool
                 ["id"] = definitionId,
                 ["parent"] = parentId,
                 ["sourcePrefab"] = sourcePath,
-                ["gameName"] = entry.DisplayName,
+                ["gameName"] = ResolveDisplayName(entry.DisplayName, role),
                 ["description"] = ResolveDescription(entry.DisplayName, data, existingDefinition),
                 ["durability"] = data.Durability,
                 ["maxDurability"] = data.MaxDurability,
@@ -408,6 +409,16 @@ public static class BuildingShellMigrationTool
         {
             PrefabUtility.UnloadPrefabContents(sourceRoot);
         }
+    }
+
+    /// <summary>建筑本体名称追加“建筑”后缀，召唤器名称保持原始物品名。</summary>
+    private static string ResolveDisplayName(string displayName, BuildingRole role)
+    {
+        if (role != BuildingRole.PlacedBuilding ||
+            displayName.EndsWith(PlacedBuildingDisplayNameSuffix, StringComparison.Ordinal))
+            return displayName;
+
+        return displayName + PlacedBuildingDisplayNameSuffix;
     }
 
     /// <summary>构建主 Sprite、Transform 与通用 Shell 根碰撞体配置。</summary>

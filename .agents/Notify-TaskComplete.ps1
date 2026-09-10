@@ -1,10 +1,15 @@
 param(
     [string]$Title = "ChatGPT",
     [string]$Message = "Task completed.",
+    [int]$DelaySeconds = 30,
     [int]$DurationMilliseconds = 5000
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($DelaySeconds -gt 0) {
+    Start-Sleep -Seconds $DelaySeconds
+}
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing

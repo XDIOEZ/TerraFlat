@@ -650,6 +650,7 @@ MonoBehaviour:
     MaxDurability: 1
     Tags:
     - Player
+    - Blood
     Stack:
       Amount: 1
       Volume: 500

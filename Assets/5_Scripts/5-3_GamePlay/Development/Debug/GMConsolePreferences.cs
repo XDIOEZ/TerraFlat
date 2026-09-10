@@ -16,6 +16,7 @@ internal static class GMConsolePreferences
     private const string ActivePageKey = KeyPrefix + "ActivePage";
     private const string TemperatureOverlayKey = KeyPrefix + "TemperatureOverlay";
     private const string TemperatureOverlayTransparencyKey = KeyPrefix + "TemperatureOverlayTransparency";
+    private const string WorldLayerOverlayModeKey = KeyPrefix + "WorldLayerOverlayMode";
 
     #region 读取
 
@@ -39,10 +40,25 @@ internal static class GMConsolePreferences
 
     public static int ActivePageIndex => PlayerPrefs.GetInt(ActivePageKey, 0);
 
-    public static bool TemperatureOverlayVisible => PlayerPrefs.GetInt(TemperatureOverlayKey, 0) != 0;
+    /// <summary>新版本统一保存观察层模式；没有新键时继承旧温度眼镜开关。</summary>
+    public static GmWorldLayerMode WorldLayerOverlayMode
+    {
+        get
+        {
+            if (!PlayerPrefs.HasKey(WorldLayerOverlayModeKey))
+                return PlayerPrefs.GetInt(TemperatureOverlayKey, 0) != 0
+                    ? GmWorldLayerMode.Temperature
+                    : GmWorldLayerMode.Off;
+
+            int value = PlayerPrefs.GetInt(WorldLayerOverlayModeKey, 0);
+            return System.Enum.IsDefined(typeof(GmWorldLayerMode), value)
+                ? (GmWorldLayerMode)value
+                : GmWorldLayerMode.Off;
+        }
+    }
 
     // 42% 透明度保留温度层原先 0.58 的覆盖强度。
-    public static float TemperatureOverlayTransparency => PlayerPrefs.GetFloat(TemperatureOverlayTransparencyKey, 0.42f);
+    public static float WorldLayerOverlayTransparency => PlayerPrefs.GetFloat(TemperatureOverlayTransparencyKey, 0.42f);
 
     #endregion
 
@@ -90,14 +106,16 @@ internal static class GMConsolePreferences
         PlayerPrefs.Save();
     }
 
-    public static void SetTemperatureOverlayVisible(bool visible)
+    /// <summary>保存当前世界观察层；同时同步旧温度键，开发期回退版本时仍保持合理状态。</summary>
+    public static void SetWorldLayerOverlayMode(GmWorldLayerMode mode)
     {
-        PlayerPrefs.SetInt(TemperatureOverlayKey, visible ? 1 : 0);
+        PlayerPrefs.SetInt(WorldLayerOverlayModeKey, (int)mode);
+        PlayerPrefs.SetInt(TemperatureOverlayKey, mode == GmWorldLayerMode.Temperature ? 1 : 0);
         PlayerPrefs.Save();
     }
 
     /// <summary>滑动期间只更新内存偏好，交互结束后再统一写盘。</summary>
-    public static void SetTemperatureOverlayTransparency(float transparency)
+    public static void SetWorldLayerOverlayTransparency(float transparency)
     {
         PlayerPrefs.SetFloat(TemperatureOverlayTransparencyKey, Mathf.Clamp01(transparency));
     }

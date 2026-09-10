@@ -1,0 +1,27 @@
+{
+    "name": "FlatWorld.GameplayMCP.Editor",
+    "rootNamespace": "FlatWorld.GameplayMCP",
+    "references": [
+        "MCPForUnity.Editor",
+        "GamePlay",
+        "Data",
+        "FlatWorld.Utilities",
+        "FlatWorld.WorldModel",
+        "FlatWorld.Localization",
+        "Unity.Localization",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "Newtonsoft.Json"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

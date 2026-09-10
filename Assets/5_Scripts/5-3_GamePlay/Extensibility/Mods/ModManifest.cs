@@ -120,6 +120,10 @@ public sealed class ModDefinitionDocument
     [JsonProperty("buffs")]
     public List<BuffDefinitionDto> Buffs = new();
 
+    /// <summary>地块污染指标定义；运行时数值通过 ContaminationSystem 持久化。</summary>
+    [JsonProperty("contaminations")]
+    public List<ContaminationDefinitionDto> Contaminations = new();
+
     [JsonProperty("playerCreationTemplates")]
     public List<PlayerCreationTemplateConfig> PlayerCreationTemplates = new();
 }

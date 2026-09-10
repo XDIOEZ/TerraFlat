@@ -35,6 +35,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - 玩家创建 JSON 位于 `StreamingAssets/GameConfig/Players`，不进入 MemoryPack 存档；只在无存档创建阶段注入，并在模块加载前同步到 `Data_Player.ModuleDataDic`；已有玩家存档始终优先于模板。
 
 - `ChunkSaveRecord.HasChanges` 必须计入独立的农业和平台状态；恢复支撑必须在导航及表现绑定之前，不能只有当前帧可行走、重载后丢失平台。
+- 地块污染使用 `ChunkSaveRecord.ContaminationCells` 保存偏离定义默认值的稀疏差量；污染定义 ID 与数值一起持久化，恢复时必须要求当前本体/MOD 已注册该定义，禁止静默丢弃未知污染状态。
 - 时间保存同时复制季节配置和历史区间；积雪、植物冷热暴露、自然补位年份、陶罐水质／加工进度、盐分负担各有独立状态，不能在渲染绑定或 UI 打开时重置。
 
 ## 工作流与验证

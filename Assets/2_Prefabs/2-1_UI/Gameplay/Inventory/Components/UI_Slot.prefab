@@ -14,7 +14,6 @@ GameObject:
   - component: {fileID: 8358718560466821998}
   - component: {fileID: 1656811458794994956}
   - component: {fileID: 1897026508324542599}
-  - component: {fileID: 2165513561064293494}
   m_Layer: 5
   m_Name: UI_Slot
   m_TagString: Untagged
@@ -42,7 +41,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 97, y: 97}
+  m_SizeDelta: {x: 96, y: 96}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6677842552759495523
 CanvasRenderer:
@@ -65,14 +64,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.15294118, g: 0.22745098, b: 0.23529412, a: 0.98}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 21300786, guid: 5df45aaa27057db4a84ad39736c09e79, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -99,10 +98,15 @@ MonoBehaviour:
   text: {fileID: 5987402943460504640}
   OnLeftClick:
     _PersistentCalls: []
+  OnGamepadSubmit:
+    _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
   OnShiftQuickTransfer:
     _PersistentCalls: []
+  touchLongPressSeconds: 0.45
+  touchHalfDragReadySeconds: 0.85
+  touchMoveTolerance: 16
 --- !u!114 &1656811458794994956
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -122,20 +126,20 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 1
+  m_Transition: 2
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
     m_PressedColor: {r: 0.7254902, g: 0.7647059, b: 0.7529412, a: 0.82}
-    m_SelectedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
+    m_SelectedColor: {r: 0.8862745, g: 0.72156864, b: 0.47058824, a: 1}
     m_DisabledColor: {r: 0.46666667, g: 0.49019608, b: 0.4862745, a: 0.48}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.11
   m_SpriteState:
-    m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 0}
-    m_SelectedSprite: {fileID: 0}
-    m_DisabledSprite: {fileID: 0}
+    m_HighlightedSprite: {fileID: 21300788, guid: 5df45aaa27057db4a84ad39736c09e79, type: 3}
+    m_PressedSprite: {fileID: 21300792, guid: 5df45aaa27057db4a84ad39736c09e79, type: 3}
+    m_SelectedSprite: {fileID: 21300924, guid: 5df45aaa27057db4a84ad39736c09e79, type: 3}
+    m_DisabledSprite: {fileID: 21300794, guid: 5df45aaa27057db4a84ad39736c09e79, type: 3}
   m_AnimationTriggers:
     m_NormalTrigger: Normal
     m_HighlightedTrigger: Highlighted
@@ -176,21 +180,6 @@ MonoBehaviour:
             m_StringArgument: 
             m_BoolArgument: 0
           m_CallState: 2
---- !u!114 &2165513561064293494
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1383055589276552779}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_EffectColor: {r: 0.83, g: 0.49, b: 0.23, a: 0.3}
-  m_EffectDistance: {x: 1, y: -1}
-  m_UseGraphicAlpha: 1
 --- !u!1 &1880365795885363789
 GameObject:
   m_ObjectHideFlags: 0
@@ -226,7 +215,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 80, y: 80}
+  m_SizeDelta: {x: 72, y: 72}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5657316508720695331
 CanvasRenderer:
@@ -277,6 +266,7 @@ GameObject:
   - component: {fileID: 1321875119114876541}
   - component: {fileID: 1664548898811630168}
   - component: {fileID: 5987402943460504640}
+  - component: {fileID: 2721589907586433117}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -300,9 +290,9 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -2.9, y: 5.8}
-  m_SizeDelta: {x: 30, y: 30}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -7, y: 7}
+  m_SizeDelta: {x: 42, y: 24}
+  m_Pivot: {x: 1, y: 0}
 --- !u!222 &1664548898811630168
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -325,7 +315,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -341,7 +331,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4278190080
-  m_fontColor: {r: 0.9490196, g: 0.9137255, b: 0.8392157, a: 1}
+  m_fontColor: {r: 0.992, g: 0.82, b: 0.475, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -358,15 +348,15 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
+  m_fontSize: 20
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
-  m_fontSizeMin: 0
-  m_fontSizeMax: 72
+  m_fontSizeMin: 12
+  m_fontSizeMax: 20
   m_fontStyle: 1
-  m_HorizontalAlignment: 2
-  m_VerticalAlignment: 512
+  m_HorizontalAlignment: 4
+  m_VerticalAlignment: 1024
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
@@ -374,7 +364,7 @@ MonoBehaviour:
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0
-  m_enableWordWrapping: 1
+  m_enableWordWrapping: 0
   m_wordWrappingRatios: 0.4
   m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
@@ -400,6 +390,21 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &2721589907586433117
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2521079893433492295}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_EffectColor: {r: 0.078, g: 0.137, b: 0.227, a: 0.96}
+  m_EffectDistance: {x: 1, y: -1}
+  m_UseGraphicAlpha: 1
 --- !u!1 &2927750187308154529
 GameObject:
   m_ObjectHideFlags: 0
@@ -436,7 +441,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 80, y: 80}
+  m_SizeDelta: {x: 72, y: 72}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2670888321861710898
 CanvasRenderer:
@@ -511,7 +516,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 80, y: 80}
+  m_SizeDelta: {x: 72, y: 72}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4082137723961457030
 CanvasRenderer:

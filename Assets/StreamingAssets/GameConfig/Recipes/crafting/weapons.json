@@ -96,6 +96,170 @@
         }
       ],
       "actions": []
+    },
+    {
+      "id": "core:木弓",
+      "displayName": "木弓",
+      "recipeType": "crafting",
+      "requiredStation": "workbench",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 3
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Rope",
+          "tag": "",
+          "amount": 3
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Bow_Wood",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:木箭",
+      "displayName": "木箭",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Arrow_Wood",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:石箭",
+      "displayName": "石箭",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ore_Stone",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Arrow_Stone",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:铜箭",
+      "displayName": "铜箭",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Arrow_Copper",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:铁箭",
+      "displayName": "铁箭",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Arrow_Iron",
+          "amount": 1
+        }
+      ],
+      "actions": []
     }
   ]
 }

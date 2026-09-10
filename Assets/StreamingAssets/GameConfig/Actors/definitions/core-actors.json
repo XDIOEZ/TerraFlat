@@ -15,7 +15,9 @@
       "volume": 1.0,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "Animal",
+        "Blood"
       ],
       "visual": {
         "rendererPath": "Module_Animator_AI",
@@ -703,7 +705,9 @@
       "volume": 1.0,
       "canBePickedUp": false,
       "tags": [
-        "WildBoar"
+        "WildBoar",
+        "Animal",
+        "Blood"
       ],
       "visual": {
         "rendererPath": "Module_Animator_AI",
@@ -1436,7 +1440,9 @@
       "volume": 1.0,
       "canBePickedUp": false,
       "tags": [
-        "Wolf"
+        "Wolf",
+        "Animal",
+        "Blood"
       ],
       "visual": {
         "rendererPath": "AI动画模块",

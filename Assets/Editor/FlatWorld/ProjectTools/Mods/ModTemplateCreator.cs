@@ -90,6 +90,16 @@ public static class ModTemplateCreator
             Volume = 1f,
             CanBePickedUp = true
         });
+        document.Contaminations.Add(new ContaminationDefinitionDto
+        {
+            Id = "example.flatworld.mod:spore_load",
+            DisplayName = "示例孢子负荷",
+            Description = "演示 MOD 注册自定义地块污染指标；Lua 可通过 Contamination API 读写。",
+            Category = "pathogen",
+            MinimumValue = 0f,
+            MaximumValue = 1f,
+            DefaultValue = 0f
+        });
         JObject root = JObject.FromObject(document);
         root["actors"] = new JArray
         {
@@ -242,6 +252,7 @@ return M
 - 单纯换皮不需要制作新 AI Prefab；自定义 Prefab 仍必须只使用游戏提供的组件。
 
 - `Defs/items.json`：物品 Def 和继承。
+- `contaminations`：注册自定义污染指标；ID 必须使用 MOD 命名空间，Lua 可调用 `Get/Set/AddContaminationValue`。
 - `Patches/balance.json`：set/add/remove/replace/merge/test Patch。
 - `Localization/`：按语言注册命名空间文本。
 - `Settings/settings.json`：client/world/server 设置 schema。

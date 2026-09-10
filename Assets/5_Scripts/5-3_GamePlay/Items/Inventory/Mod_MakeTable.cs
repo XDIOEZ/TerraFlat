@@ -108,6 +108,7 @@ public class Mod_MakeTable : Module, IInventory, IInstanceUI, IInteractable
     private static readonly CraftingCapabilities Capabilities = new CraftingCapabilities
     {
         RecipeType = RecipeType.Crafting,
+        StationId = "workbench",
         InputSlotLimit = InputSlotCount,
         AllowOutputIntoInput = false
     };

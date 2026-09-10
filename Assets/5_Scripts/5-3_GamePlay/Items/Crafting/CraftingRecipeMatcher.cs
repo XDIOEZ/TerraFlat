@@ -172,6 +172,11 @@ public static class CraftingRecipeMatcher
             return false;
         if (recipe.inputs.recipeType != capabilities.RecipeType)
             return false;
+        if (!string.IsNullOrWhiteSpace(recipe.RequiredStation) &&
+            !string.Equals(recipe.RequiredStation, capabilities.StationId, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
 
         // 普通合成只比较材料身份与总量，网格尺寸不再表示制作能力。
         if (capabilities.RecipeType == RecipeType.Crafting)

@@ -12,6 +12,7 @@
       "tags": [
         "Rabbit",
         "Animal",
+        "Blood",
         "Prey"
       ],
       "visual": {
@@ -65,7 +66,8 @@
       "tags": [
         "SnowLeopard",
         "Predator",
-        "Animal"
+        "Animal",
+        "Blood"
       ],
       "visual": {
         "animationState": "Idle",

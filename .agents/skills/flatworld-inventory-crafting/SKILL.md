@@ -21,7 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 配方 JSON 是唯一真源；旧 Recipe/CookRecipe SO 只作 MOD 兼容，不恢复双重维护。
 - 内容工坊的普通合成使用不限长度的滚动材料清单，保存为连续的一维输入；载入旧网格配方时按材料身份归并数量，并保留 `amount=0` 的不消耗工具。只有热加工继续使用 3×3 位置画布。保存前必须使用运行时配方工厂校验整份启用目录，并保留已有配方的未知顶层字段。
 - 所有制作入口调用 `CraftingService`；匹配由 `CraftingRecipeMatcher`，扣料/产出由 `CraftingTransaction` 原子提交。
-- 玩家手工台 `Mod_HandCraftTable` 与世界工作台 `Mod_MakeTable` 均使用 `RecipeType.Crafting`；配方 JSON 没有独立工作站字段，需要两者通用时只配置 `recipeType: "crafting"`。当前手工台固定 4 输入/2 输出，当前工作台固定 5 输入/2 输出，运行时与 Prefab 序列化槽位必须严格一致；槽位数属于具体工作站能力，未来工作站可声明更多输入槽，配方、内容工坊和普通合成匹配器不得设置全局材料数量上限。
+- 玩家手工台 `Mod_HandCraftTable` 与世界工作台 `Mod_MakeTable` 均使用 `RecipeType.Crafting`；配方通过可选 `requiredStation` 区分制作入口：留空表示任意普通制作入口，`handcraft` 表示随身手工，`workbench` 表示世界工作台。匹配器用 `CraftingCapabilities.StationId` 做能力过滤，MOD 可复用字符串 ID 扩展新工作站，禁止按具体配方 ID 硬编码。当前手工台固定 4 输入/2 输出，当前工作台固定 5 输入/2 输出，运行时与 Prefab 序列化槽位必须严格一致；槽位数属于具体工作站能力，未来工作站可声明更多输入槽，配方、内容工坊和普通合成匹配器不得设置全局材料数量上限。
 - 多产物必须全部放下才提交；失败不扣料、不部分产出。体积大于 1 的非堆叠产物每个单位必须独占一个容量足够的空槽，不能把 `amount > 1` 整组塞进单槽。`amount=0` 参与签名但不消耗。
 - `RecipeType.Crafting` 必须配置 `inputRule: "unordered"` 且 `allowMirror: false`；普通合成只比较材料身份与总量，同类材料可以集中堆叠或分散在任意输入槽。配方需求按当前输入的可满足子集匹配，额外放入的无关材料不得屏蔽候选，也不得在制作所选配方时被扣除；因此候选扫描配方目录即可覆盖输入材料的全部可制作组合。加热加工才允许有序、镜像和网格规则，并继续保持严格输入语义。
 - 普通合成输入必须通过 `CraftingRecipeMatcher.TryMatchAll` 保留全部材料候选，`CraftingStationController` 统一维护候选、选择、进度与双输出预览，最终使用所选 `RuntimeRecipe` 精确预检和原子提交，禁止重新回退到目录首个匹配项。Exact/Tag 候选重叠时扣料计划必须按全部需求做全局容量分配，禁止逐项贪心消耗。
@@ -39,6 +39,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 创造背包的无限格数由 `CreativeInventoryState` 存在玩家 `flatworld.creativeInventory` 命名空间，`Mod_Inventory.Load` 在初始化槽位前恢复到 `Inventory_Data` 的运行时策略，不改 MemoryPack 布局。库存事务通过 `NotifyItemDataChanged` 维护尾部空槽；容量预检必须纯只读并计入可动态扩容的空间。新增槽的 UI 只同步表现，不重新初始化库存业务事件；快捷栏部分拾取后的余量必须继续尝试主背包，最后统一发布拾取数量。
 - 快捷栏收到 Mobile `RightClick` 时必须允许当前手持物执行 `Act`，不能因触点位于手机“使用”按钮上而被 `IsPointerOverUI()` 拦截；键鼠右键仍保留 UI 遮挡检查。
 - 快捷栏生成的手持物只注册到玩家 `Mod_FocusPoint`；左右翻身角由该模块读取 `Mod_TurnBack.CurrentTurnAngleY` 后与 Z 轴瞄准一次性合成，不能再把手持物根节点注册进 `controlledTransforms_Direction`。
+- 需要“只从物品所在库存取料”的玩法统一使用 `InventoryContextResolver` 按 `ItemData` 引用/Guid 解析真实所属 `Inventory`；快捷栏手持物会命中 `Inventory_HotBar.RuntimeInventory`，普通背包命中对应 `Mod_Inventory.InventoryInstances`。实际扣除使用 `Inventory_Data.TryConsumeFirstByTag/TryConsumeFromSlot` 事务入口，不能直接改 `Stack.Amount`，否则快捷栏 UI、数据事件和后续持久化会失步。
 - 丢弃统一经过 `Module_DiscardItem.DropItemByCount`；扣减 `ItemSlot.Amount` 后除触发槽位事件外，还必须按快捷栏槽位索引显式刷新 UI，兼容手机入口没有 `ItemSlot_UI` 引用的情况。
 - 快捷栏拖拽到非 UI 区域后的整组丢弃由 `ItemSlot_UI` 世界长按回调转发到 `Module_DiscardItem`，落点使用触点屏幕坐标；UI 槽位长按放置路径保持独立。
 - 快捷栏物品拖入 `Inventory_Hand` 后，移动端摇杆必须让出当前触摸所有权，避免长按世界丢弃时浮动摇杆抢占操作。
@@ -52,6 +53,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 作物需要多张成长图时，在物品 `visual.spriteStates` 同时声明 `seedling/growing/mature`，由 `Mod_CropVisual` 根据 `normalizedGrowth` 派生表现阶段；不得为了中间画面给 `CropStage` 增加持久化阶段。只要声明任一阶段图就必须三张齐全，对象池卸载时恢复外壳原 Sprite。
 - 世界植株与收获物必须保留独立 Item ID；种下时把植株重置为幼苗，成熟交互后由动作生成食物/种子并销毁植株，不能把世界植株直接改成食物实例。
 - `Mod_Grow` 继续承担树木与自然植物成长，并实现 `IPlantableCrop` 接入同一播种入口；水肥、天气与 `CropGrowthMultiplier` 在权威成长模块中各结算一次。
+- 苹果/桃/柑橘这类果树优先复用 `AppleTree` 与 `Apple` 的 JSON 继承链：果实只覆盖营养、腐败和视觉，果树只覆盖采收物、气候、战利品和视觉；若需要野生生成，再单独在地表 `ecologyRules` 注册稳定规则，禁止为每种果树复制一套成长代码。
 - 使用 `_BodyClip` 裁剪作物精灵时，必须给 `Mod_CropVisual` 绑定支持该属性的 `Sprite-Lit-Master` 材质；通用 `Prop` 外壳默认材质不提供 BodyClip。
 - `_BodyMinV/_BodyMaxV` 实际传入 `Sprite.bounds` 的本地 Y，不是 UV；主体和交互描边 Shader 都必须保留 `DisableBatching=True`，否则精灵合批预变换顶点后可能按世界位置误裁整株作物。不能通过提高 Sorting Order 修复，也不能只保护主体而遗漏描边 Pass。
 - 废弃 `Module_Equipment.cs` 不再使用。

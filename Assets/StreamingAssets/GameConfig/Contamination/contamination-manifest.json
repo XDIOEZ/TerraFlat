@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    {
+      "id": "core",
+      "path": "core-contamination.json",
+      "enabled": true
+    }
+  ]
+}

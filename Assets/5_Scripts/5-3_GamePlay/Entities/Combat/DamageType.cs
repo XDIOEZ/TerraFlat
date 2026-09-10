@@ -97,11 +97,18 @@ public partial class CombatDamage
     /// <summary>按四类独立减法计算最终伤害。</summary>
     public float CalculateAgainst(CombatDefense defense)
     {
+        return ResolveAgainst(defense).TotalCombatPower;
+    }
+
+    /// <summary>按四类防御分别结算并返回实际穿透后的伤害分量，供后续受击状态按真实伤害类型判断。</summary>
+    public CombatDamage ResolveAgainst(CombatDefense defense)
+    {
         defense ??= CombatDefense.Zero;
-        return Mathf.Max(0f, Cutting - defense.Cutting) +
-               Mathf.Max(0f, Piercing - defense.Piercing) +
-               Mathf.Max(0f, Chopping - defense.Chopping) +
-               Mathf.Max(0f, Blunt - defense.Blunt);
+        return new CombatDamage(
+            Mathf.Max(0f, Cutting - defense.Cutting),
+            Mathf.Max(0f, Piercing - defense.Piercing),
+            Mathf.Max(0f, Chopping - defense.Chopping),
+            Mathf.Max(0f, Blunt - defense.Blunt));
     }
 }
 /// <summary>

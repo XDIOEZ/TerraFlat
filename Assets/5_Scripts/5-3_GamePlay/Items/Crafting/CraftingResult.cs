@@ -23,6 +23,7 @@ public enum CraftingFailureReason
 public sealed class CraftingCapabilities
 {
     public RecipeType RecipeType = RecipeType.Crafting;
+    public string StationId = string.Empty;
     public int InputSlotLimit;
     public int MaxRecipeWidth;
     public int MaxRecipeHeight;

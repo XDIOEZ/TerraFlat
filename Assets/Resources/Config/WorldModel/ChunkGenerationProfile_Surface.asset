@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 34
+  generationSignature: 35
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -289,6 +289,32 @@ MonoBehaviour:
     MinTemperature: 0
     MaxTemperature: 1
     MinPrecipitation: 0
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    MinRiverFloodplainStrength: 0
+    ProvidedTags:
+    - Tree
+    CompanionOnly: 0
+    CompanionHostTag: 
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
+  - RuleId: surface.forest.orangeTree
+    ItemId: OrangeTree
+    ItemCount: 1
+    SpawnChance: 0.0015
+    SpawnChanceMultiplier: 3
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
+    BiomeMask: 32
+    MinTemperature: 0.55
+    MaxTemperature: 1
+    MinPrecipitation: 0.35
     MaxPrecipitation: 1
     MinHeight: 0
     MaxHeight: 1

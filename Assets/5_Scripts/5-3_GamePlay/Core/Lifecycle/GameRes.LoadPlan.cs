@@ -50,13 +50,15 @@ public partial class GameRes
             () => LoadCatalog<int>((done, fail) => RecipeCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
         plan.Add("buffs", "加载状态效果", 2,
             () => LoadCatalog<int>((done, fail) => BuffCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "items");
+        plan.Add("contamination", "加载污染层定义", 1,
+            () => LoadCatalog<int>((done, fail) => ContaminationCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }));
         plan.Add("quests", "加载任务目录", 2,
             () => LoadCatalog<int>(QuestCatalogLoader.LoadBuiltInAsync, _ => { }), "items");
         plan.Add("texts", "加载文字库", 1,
             () => LoadCatalog<TextLibraryService>(TextLibraryCatalogLoader.LoadBuiltInAsync, value => textLibraryService = value));
         plan.Add("validate-built-in", "校验本体资源引用", 3,
             () => RunAction(() => ResourceCatalogValidation.Validate(this)),
-            "players", "time", "items", "actors", "animal-skills", "spawners", "recipes", "buffs", "quests", "texts", "inventory", "skills");
+            "players", "time", "items", "actors", "animal-skills", "spawners", "recipes", "buffs", "contamination", "quests", "texts", "inventory", "skills");
         plan.Add("mods", "加载扩展内容", 5, () => LoadModCatalog(plan), "validate-built-in");
         plan.Add("validate-final", "校验最终资源目录", 3,
             () => RunAction(() =>

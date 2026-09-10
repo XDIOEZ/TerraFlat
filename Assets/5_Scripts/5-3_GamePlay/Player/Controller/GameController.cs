@@ -8,7 +8,7 @@ using InputSystem;
 using FlatWorld.Mobile;
 
 [RequireComponent(typeof(Item))]
-public class GameController : Module
+public partial class GameController : Module
 {
     private const string PreferredInputDeviceKey = "FlatWorld.Input.PreferredDevice";
     private const float MoveInputEpsilonSqr = 0.0001f;
@@ -35,6 +35,10 @@ public class GameController : Module
     /// <summary>判断某个设备是否可以进入当前玩家的世界玩法；手机方案隔离手柄世界输入。</summary>
     public bool IsGameplayInputAllowed(InputDevice device)
     {
+        // 外部 Agent 接管期间只接收带专用 Usage 的虚拟设备，真实设备继续退出玩法仲裁。
+        if (HasExternalGameplayControl)
+            return IsExternalGameplayInputDevice(device);
+
         if (device is FlatWorldMobileDevice)
             return _preferredInputDevice == InputDeviceType.Mobile;
 
@@ -53,6 +57,9 @@ public class GameController : Module
     /// <summary>读取经过输入源仲裁的玩家移动值，避免手机摇杆被手柄左摇杆抢占。</summary>
     public Vector2 ReadMoveInput(InputAction fallbackAction)
     {
+        if (TryReadExternalMoveInput(out Vector2 externalInput))
+            return externalInput;
+
         if (_preferredInputDevice == InputDeviceType.Mobile)
         {
             Vector2 mobileInput = MobileInputRuntime.State.move;
@@ -208,6 +215,7 @@ public class GameController : Module
 
         UnregisterInputCallbacks();
         CancelActiveAttackAndMobileInput();
+        ResetExternalGameplayControl();
         _inputActions.Disable();
     }
 
@@ -227,6 +235,7 @@ public class GameController : Module
     public void OnDestroy()
     {
         CancelActiveAttackAndMobileInput();
+        ResetExternalGameplayControl();
         EventSystemGuard.SetGamepadModeEntryAllowed(true);
         InputBindings?.Dispose();
         if (InputBindings != null)
@@ -444,6 +453,9 @@ public class GameController : Module
 
     public Vector3 GetMouseWorldPosition() /// 获取指针世界坐标（鼠标或手柄虚拟光标）
     {
+        if (TryGetExternalAimWorldPosition(out Vector3 externalAimWorldPosition))
+            return externalAimWorldPosition;
+
         if (_preferredInputDevice == InputDeviceType.Mobile && _mobileCursorWorldPositionInitialized)
             return _mobileCursorWorldPosition;
 

@@ -461,6 +461,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 056389816b4d4928a41f75c679ca206f
+    m_Address: Assets/6_Art/Generated/Orange/Orange_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2e1c2287982f8f14781056bf998e4720
     m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Platform_Iron.asset
     m_ReadOnly: 0
@@ -2063,6 +2069,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 342e344225bf45639e0c256f3160191c
+    m_Address: Assets/6_Art/Generated/OrangeTree/OrangeTree_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f4b1ad2c128ff8f47919ef031ff61bb7
     m_Address: Assets/6_Art/Items/Tools/Item_Tool_399.png
     m_ReadOnly: 0
@@ -2173,6 +2185,48 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ff8bd4b9d465da04fa604a649df27157
     m_Address: Assets/6_Art/Generated/Chili/ChiliTree_Seedling.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9f5e8707b2ad4073838ef7857a4e75d6
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Combat/Mod_Bow.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: af97ee232e5b4fd3b88976a642989324
+    m_Address: Assets/2_Prefabs/Gameplay/Modules/Combat/Mod_Projectile.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ea723336336767e46bbd91ed35a20635
+    m_Address: Assets/6_Art/Generated/Archery/WoodBow_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5df34798b64bbb447961dd7d6c665129
+    m_Address: Assets/6_Art/Generated/Archery/Arrow_Wood_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a9a36fbedc8d09047b08323781bf7f47
+    m_Address: Assets/6_Art/Generated/Archery/Arrow_Stone_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 877cf282663109243952565edb137b36
+    m_Address: Assets/6_Art/Generated/Archery/Arrow_Copper_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 65a146c3ad866a44d8c9dcf0bbeabc25
+    m_Address: Assets/6_Art/Generated/Archery/Arrow_Iron_Icon.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite

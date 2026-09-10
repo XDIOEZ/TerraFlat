@@ -303,6 +303,13 @@ public static class FlatWorldUITheme
             if (image == null || IsProtectedArtwork(image.transform))
                 continue;
 
+            // PixelBlueGold 图集已经把色彩、边框和阴影烘焙进 Sprite；主题层只保留原色，不能再次把素材染成旧深色主题。
+            if (IsPixelBlueGoldSprite(image.sprite))
+            {
+                image.color = Color.white;
+                continue;
+            }
+
             if (image.GetComponent<Selectable>() != null)
                 continue;
 
@@ -353,13 +360,18 @@ public static class FlatWorldUITheme
 
             Graphic target = button.targetGraphic != null ? button.targetGraphic : button.GetComponent<Graphic>();
             bool slotButton = IsSlotTransform(button.transform);
+            bool pixelBlueGoldSlot = slotButton && target is Image slotImage && IsPixelBlueGoldSlotSprite(slotImage.sprite);
+            bool pixelBlueGoldButton = target is Image buttonImage && IsPixelBlueGoldSprite(buttonImage.sprite);
             bool primary = ContainsAny(button.name, PrimaryActionWords);
             bool destructive = ContainsAny(button.name, DestructiveActionWords);
             bool close = ContainsAny(button.name, "关闭", "返回", "Close", "Back");
 
             if (target != null)
             {
-                if (slotButton)
+                // PixelBlueGold 控件已经把视觉层次画在 Sprite 内，不能再用主题色二次染色。
+                if (pixelBlueGoldButton)
+                    target.color = Color.white;
+                else if (slotButton)
                     target.color = Hex("273A3C", 0.98f);
                 else if (destructive)
                     target.color = Hex("51282A", 0.96f);
@@ -370,20 +382,31 @@ public static class FlatWorldUITheme
                 else
                     target.color = SurfaceRaised;
 
-                if (!slotButton)
+                if (!slotButton && !pixelBlueGoldButton)
                     AddOutline(target, destructive ? Hex("D87968", 0.30f) : primary ? Hex("F1B06C", 0.36f) : Border);
             }
 
             ColorBlock colors = button.colors;
-            colors.normalColor = Color.white;
-            colors.highlightedColor = slotButton
-                ? Hex("F4D6A2")
-                : primary ? Hex("FFD7A8") : Hex("D5E3DF");
-            colors.pressedColor = Hex("B9C3C0", 0.82f);
-            colors.selectedColor = slotButton
-                ? Hex("E2B878")
-                : primary ? AccentHover : destructive ? Hex("E06F5E") : Selection;
-            colors.disabledColor = Hex("777D7C", 0.48f);
+            if (pixelBlueGoldButton)
+            {
+                colors.normalColor = Color.white;
+                colors.highlightedColor = Color.white;
+                colors.pressedColor = Hex("D7D7D7");
+                colors.selectedColor = Color.white;
+                colors.disabledColor = Hex("808080", 0.58f);
+            }
+            else
+            {
+                colors.normalColor = Color.white;
+                colors.highlightedColor = slotButton
+                    ? Hex("F4D6A2")
+                    : primary ? Hex("FFD7A8") : Hex("D5E3DF");
+                colors.pressedColor = Hex("B9C3C0", 0.82f);
+                colors.selectedColor = slotButton
+                    ? Hex("E2B878")
+                    : primary ? AccentHover : destructive ? Hex("E06F5E") : Selection;
+                colors.disabledColor = Hex("777D7C", 0.48f);
+            }
             colors.colorMultiplier = 1f;
             colors.fadeDuration = 0.11f;
             button.colors = colors;
@@ -391,11 +414,33 @@ public static class FlatWorldUITheme
             TextMeshProUGUI[] labels = button.GetComponentsInChildren<TextMeshProUGUI>(true);
             foreach (TextMeshProUGUI label in labels)
             {
+                // 物品槽内部 TMP 是数量角标而不是按钮标题，其颜色由槽位 Prefab 自己负责。
+                if (pixelBlueGoldSlot || pixelBlueGoldButton)
+                    continue;
+
                 label.color = TextPrimary;
                 if (!slotButton)
                     label.fontStyle |= FontStyles.Bold;
             }
         }
+    }
+
+    /// <summary>判断槽位是否正在使用统一 PixelBlueGold 状态 Sprite。</summary>
+    private static bool IsPixelBlueGoldSlotSprite(Sprite sprite)
+    {
+        if (!IsPixelBlueGoldSprite(sprite) || string.IsNullOrEmpty(sprite.name))
+            return false;
+
+        return sprite.name.StartsWith("SlotSmall_", StringComparison.Ordinal) ||
+               sprite.name.StartsWith("SlotGold_", StringComparison.Ordinal);
+    }
+
+    /// <summary>判断 Sprite 是否来自项目统一的 PixelBlueGold UI 图集。</summary>
+    private static bool IsPixelBlueGoldSprite(Sprite sprite)
+    {
+        return sprite != null &&
+               sprite.texture != null &&
+               string.Equals(sprite.texture.name, "PixelBlueGold_UI", StringComparison.Ordinal);
     }
 
     private static void StyleInputFields(Transform root)

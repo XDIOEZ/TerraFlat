@@ -1079,6 +1079,249 @@
           }
         }
       }
+    },
+    {
+      "id": "Bow_Base",
+      "abstract": true,
+      "shellPrefab": "Prop",
+      "visual": {
+        "rendererPath": "Render",
+        "materialAddress": "Assets/9_Shaders/Material/Sprite-Lit-Master.mat"
+      }
+    },
+    {
+      "id": "Bow_Wood",
+      "parent": "Bow_Base",
+      "gameName": "木弓",
+      "description": "由木材与绳索制成的基础弓。按住攻击键蓄力，松开后消耗同一库存中的一支箭射出。",
+      "durability": 100.0,
+      "maxDurability": 100.0,
+      "amount": 1.0,
+      "volume": 2.0,
+      "canBePickedUp": true,
+      "tags": [
+        "Bow",
+        "RangedWeapon",
+        "Wood"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Archery/WoodBow_Icon.png"
+      },
+      "modules": {
+        "bow": {
+          "prefab": "Mod_Bow",
+          "id": "Mod_Bow",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "AmmoTag": "Arrow",
+            "FullChargeSeconds": 1.0,
+            "MaxAimDistance": 24.0,
+            "SpawnForwardOffset": 0.45,
+            "NockedArrowStartLocalPosition": {
+              "x": 0.14,
+              "y": 0.0,
+              "z": -0.01
+            },
+            "NockedArrowFullChargeLocalPosition": {
+              "x": -0.06,
+              "y": 0.0,
+              "z": -0.01
+            },
+            "NockedArrowLocalAngleDegrees": -45.0,
+            "NockedArrowLocalScale": {
+              "x": 0.82,
+              "y": 0.82,
+              "z": 1.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Arrow_Base",
+      "abstract": true,
+      "shellPrefab": "Prop",
+      "visual": {
+        "rendererPath": "Render",
+        "materialAddress": "Assets/9_Shaders/Material/Sprite-Lit-Master.mat"
+      },
+      "modules": {
+        "projectile": {
+          "prefab": "Mod_Projectile",
+          "id": "Mod_Projectile",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "MinSpeed": 5.0,
+            "MaxSpeed": 12.0,
+            "MinDamageMultiplier": 0.35,
+            "MaxDamageMultiplier": 1.0,
+            "MaxFlightSeconds": 2.5,
+            "RecoveryChance": 0.5,
+            "SpriteForwardAngleDegrees": 45.0
+          }
+        }
+      }
+    },
+    {
+      "id": "Arrow_Wood",
+      "parent": "Arrow_Base",
+      "gameName": "木箭",
+      "description": "削尖木材制成的基础箭矢。射出后有 50% 概率保留下来并可再次拾取。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": ["Arrow", "Wood"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Archery/Arrow_Wood_Icon.png"
+      },
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "parameters": {
+            "DamageValues": {
+              "Cutting": 0.0,
+              "Piercing": 3.0,
+              "Chopping": 0.0,
+              "Blunt": 0.0
+            },
+            "DamageInterval": -1.0,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "MaxAttackTargets": 1,
+            "EnableHitSlowdown": false,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {"x": 0.0, "y": 0.0},
+              "size": {"x": 0.7, "y": 0.18}
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Arrow_Stone",
+      "parent": "Arrow_Base",
+      "gameName": "石箭",
+      "description": "装有石制箭头的箭矢。射出后有 50% 概率保留下来并可再次拾取。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": ["Arrow", "Stone"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Archery/Arrow_Stone_Icon.png"
+      },
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "parameters": {
+            "DamageValues": {"Cutting": 0.0, "Piercing": 5.0, "Chopping": 0.0, "Blunt": 0.0},
+            "DamageInterval": -1.0,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "MaxAttackTargets": 1,
+            "EnableHitSlowdown": false,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {"x": 0.0, "y": 0.0},
+              "size": {"x": 0.7, "y": 0.18}
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Arrow_Copper",
+      "parent": "Arrow_Base",
+      "gameName": "铜箭",
+      "description": "装有铜制箭头的箭矢。射出后有 50% 概率保留下来并可再次拾取。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": ["Arrow", "Copper"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Archery/Arrow_Copper_Icon.png"
+      },
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "parameters": {
+            "DamageValues": {"Cutting": 0.0, "Piercing": 7.0, "Chopping": 0.0, "Blunt": 0.0},
+            "DamageInterval": -1.0,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "MaxAttackTargets": 1,
+            "EnableHitSlowdown": false,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {"x": 0.0, "y": 0.0},
+              "size": {"x": 0.7, "y": 0.18}
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "Arrow_Iron",
+      "parent": "Arrow_Base",
+      "gameName": "铁箭",
+      "description": "装有铁制箭头的箭矢。射出后有 50% 概率保留下来并可再次拾取。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": true,
+      "tags": ["Arrow", "Iron"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Archery/Arrow_Iron_Icon.png"
+      },
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "parameters": {
+            "DamageValues": {"Cutting": 0.0, "Piercing": 9.0, "Chopping": 0.0, "Blunt": 0.0},
+            "DamageInterval": -1.0,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "MaxAttackTargets": 1,
+            "EnableHitSlowdown": false,
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": false,
+              "isTrigger": true,
+              "offset": {"x": 0.0, "y": 0.0},
+              "size": {"x": 0.7, "y": 0.18}
+            }
+          }
+        }
+      }
     }
   ]
 }

@@ -1,4 +1,4 @@
-﻿using FastCloner.Code;
+using FastCloner.Code;
 using MemoryPack;
 using Sirenix.OdinInspector;
 using System;
@@ -380,6 +380,43 @@ public partial class Inventory_Data
         }
 
         return null;
+    }
+
+    /// <summary>从首个带指定标签的槽位消费整数数量，并完整触发库存数据与 UI 事件。</summary>
+    public bool TryConsumeFirstByTag(string tagName, int amount, out ItemData consumedItemData)
+    {
+        consumedItemData = null;
+        if (string.IsNullOrWhiteSpace(tagName))
+            throw new ArgumentException("tagName 不能为空。", nameof(tagName));
+        if (amount <= 0)
+            throw new ArgumentOutOfRangeException(nameof(amount), "消费数量必须大于 0。");
+
+        ItemSlot sourceSlot = FindFirstByTag(tagName);
+        return TryConsumeFromSlot(sourceSlot, amount, out consumedItemData);
+    }
+
+    /// <summary>从指定槽位消费整数数量；用于弹药、燃料等需要保持库存事务边界的玩法。</summary>
+    public bool TryConsumeFromSlot(ItemSlot sourceSlot, int amount, out ItemData consumedItemData)
+    {
+        consumedItemData = null;
+        if (sourceSlot == null || amount <= 0 || itemSlots == null || !itemSlots.Contains(sourceSlot))
+            return false;
+
+        ItemData sourceData = sourceSlot.itemData;
+        if (sourceData?.Stack == null || sourceData.Stack.Amount < amount)
+            return false;
+
+        EnsureRuntimeEvents();
+        Event_OnBeforeDataChanged.Invoke(sourceSlot);
+        consumedItemData = sourceData;
+        sourceData.Stack.Amount -= amount;
+        if (sourceData.Stack.Amount <= 0f)
+            sourceSlot.itemData = null;
+
+        sourceSlot.RefreshUI();
+        Event_RefreshUI.Invoke(sourceSlot.Index);
+        NotifyItemDataChanged(sourceSlot);
+        return true;
     }
 
     [Obsolete("请改用 FindFirstByTag(tagName)。")]

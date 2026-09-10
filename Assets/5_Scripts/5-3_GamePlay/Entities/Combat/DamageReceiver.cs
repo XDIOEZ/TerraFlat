@@ -595,9 +595,12 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         CombatDamage senderDamage = damageSender.DamageValues ?? new CombatDamage();
         CombatDamage scaledDamage = senderDamage.Scaled(difficultyDamageMultiplier);
 
-        // 四种伤害分别减去对应防御，低于零的分量归零，最后再相加。
-        float actualDamage = scaledDamage.CalculateAgainst(Defense);
-        actualDamage *= Mathf.Max(0f, damageTakenMultiplier) * ruleMultiplier;
+        // 四种伤害分别减去对应防御，并保留穿透后的类型分量供受击状态规则读取。
+        float finalDamageMultiplier = Mathf.Max(0f, damageTakenMultiplier) * ruleMultiplier;
+        CombatDamage resolvedDamageValues = scaledDamage
+            .ResolveAgainst(Defense)
+            .Scaled(finalDamageMultiplier);
+        float actualDamage = resolvedDamageValues.TotalCombatPower;
 
         // 记录攻击者（根据是否造成实际伤害决定概率）
         if (damageSender.attacker != null)
@@ -615,19 +618,34 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         float durabilityDamage = difficultyDamageMultiplier > 0f
             ? (actualDamage > 0f ? 1f : 0.5f)
             : 0f;
-        return ResolveDamage(actualDamage, damageSender, randomBodyParts: true, durabilityDamage: durabilityDamage);
+        return ResolveDamage(
+            actualDamage,
+            damageSender,
+            randomBodyParts: true,
+            durabilityDamage: durabilityDamage,
+            resolvedDamageValues: resolvedDamageValues);
     }
 
     #region 统一伤害结算
 
     /// <summary>先完成纯生命数值提交，再发布反馈；离开结算作用域时必须完成权威同步和死亡收尾。</summary>
-    private float ResolveDamage(float damage, IDamageSender sender, bool randomBodyParts, float durabilityDamage)
+    private float ResolveDamage(
+        float damage,
+        IDamageSender sender,
+        bool randomBodyParts,
+        float durabilityDamage,
+        CombatDamage resolvedDamageValues = null)
     {
         if (float.IsNaN(damage) || float.IsInfinity(damage) || damage < 0f)
             throw new ArgumentOutOfRangeException(nameof(damage), "伤害必须是有限非负数。");
 
         float hpBefore = Hp;
-        DamageReceiverDamageInfo damageInfo = CreateDamageInfo(sender, 0f, hpBefore, hpBefore);
+        DamageReceiverDamageInfo damageInfo = CreateDamageInfo(
+            sender,
+            0f,
+            hpBefore,
+            hpBefore,
+            resolvedDamageValues: resolvedDamageValues);
         _resolvingDamage = true;
         try
         {
@@ -1563,6 +1581,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
     {
         CombatAudioRouter.PlayImpact(this, damageInfo);
         OnDamageReceived?.Invoke(damageInfo);
+        DamageReceivedStatusEffectRegistry.Publish(damageInfo);
         DispatchDamageActions(HurtActions, damageInfo);
     }
 
@@ -1590,7 +1609,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         float damageValue,
         float hpBefore,
         float hpAfter,
-        List<BodyPartDamageInfo> bodyPartHits = null)
+        List<BodyPartDamageInfo> bodyPartHits = null,
+        CombatDamage resolvedDamageValues = null)
     {
         return new DamageReceiverDamageInfo
         {
@@ -1601,6 +1621,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
             DamageValue = damageValue,
             SenderDamageValue = damageSender?.DamageValues?.TotalCombatPower ?? damageValue,
             SenderDamageValues = damageSender?.DamageValues,
+            ResolvedDamageValues = resolvedDamageValues,
             HpBefore = hpBefore,
             HpAfter = hpAfter,
             IsFatal = hpAfter <= 0f,

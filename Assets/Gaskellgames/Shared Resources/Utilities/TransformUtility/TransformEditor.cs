@@ -28,6 +28,9 @@ namespace Gaskellgames
         private static string iconUnlinked = "UnLinked";
         private GUIStyle iconButtonStyle = new GUIStyle();
         private GUIStyle buttonStyle2 = new GUIStyle();
+        private Texture2D iconButtonNormalTexture; // Inspector 按钮普通态临时纹理。
+        private Texture2D iconButtonHoverTexture; // Inspector 按钮悬停态临时纹理。
+        private Texture2D iconButtonActiveTexture; // Inspector 按钮按下态临时纹理。
         
         GUIContent positionLabel = new GUIContent("Position", "The local position of this gameObject, relative to it's parent gameObject");
         GUIContent rotationLabel = new GUIContent("Rotation","The local rotation of this gameObject, relative to it's parent gameObject");
@@ -40,6 +43,13 @@ namespace Gaskellgames
             m_LocalRotation = serializedObject.FindProperty("m_LocalRotation");
             m_LocalScale = serializedObject.FindProperty("m_LocalScale");
             //m_ConstrainProportionsScale = serializedObject.FindProperty("m_ConstrainProportionsScale");
+            CreateButtons();
+        }
+
+        /// <summary>释放自定义 Inspector 创建的临时纹理，避免 Editor 重绘后原生纹理长期滞留。</summary>
+        private void OnDisable()
+        {
+            DestroyButtonTextures();
         }
         
         #endregion
@@ -56,7 +66,6 @@ namespace Gaskellgames
             Transform transformTarget = (Transform)target;
             float defaultLabelWidth = EditorGUIUtility.labelWidth;
             Color defaultBackground = GUI.backgroundColor;
-            CreateButtons();
             serializedObject.Update();
             
             // position
@@ -156,9 +165,14 @@ namespace Gaskellgames
 
         #region Private Functions
 
+        /// <summary>初始化按钮样式与一次性纹理；OnInspectorGUI 重绘期间不再重复分配 Texture2D。</summary>
         private void CreateButtons()
         {
             repaintPositions = new Rect[5];
+
+            iconButtonNormalTexture = CreateButtonTexture(InspectorUtility.blankColor, InspectorUtility.blankColor);
+            iconButtonHoverTexture = CreateButtonTexture(InspectorUtility.buttonHoverColor, InspectorUtility.blankColor);
+            iconButtonActiveTexture = CreateButtonTexture(InspectorUtility.buttonActiveColor, InspectorUtility.buttonActiveBorderColor);
             
             // button style 1
             iconButtonStyle.fontSize = 9;
@@ -166,13 +180,41 @@ namespace Gaskellgames
             iconButtonStyle.normal.textColor = InspectorUtility.textNormalColor;
             iconButtonStyle.hover.textColor = InspectorUtility.textNormalColor;
             iconButtonStyle.active.textColor = InspectorUtility.textNormalColor;
-            iconButtonStyle.normal.background = InspectorUtility.CreateTexture(20, 20, 1, true, InspectorUtility.blankColor, InspectorUtility.blankColor);
-            iconButtonStyle.hover.background = InspectorUtility.CreateTexture(20, 20, 1, true, InspectorUtility.buttonHoverColor, InspectorUtility.blankColor);
-            iconButtonStyle.active.background = InspectorUtility.CreateTexture(20, 20, 1, true, InspectorUtility.buttonActiveColor, InspectorUtility.buttonActiveBorderColor);
+            iconButtonStyle.normal.background = iconButtonNormalTexture;
+            iconButtonStyle.hover.background = iconButtonHoverTexture;
+            iconButtonStyle.active.background = iconButtonActiveTexture;
             
             // button style 2
             buttonStyle2.fontSize = 10;
             buttonStyle2.normal.textColor = InspectorUtility.textDisabledColor;
+        }
+
+        /// <summary>创建不参与资源保存的 Inspector 临时按钮纹理。</summary>
+        private static Texture2D CreateButtonTexture(Color32 backgroundColor, Color32 borderColor)
+        {
+            Texture2D texture = InspectorUtility.CreateTexture(20, 20, 1, true, backgroundColor, borderColor);
+            texture.hideFlags = HideFlags.HideAndDontSave;
+            return texture;
+        }
+
+        /// <summary>解除 GUIStyle 引用并销毁本 Inspector 实例拥有的全部临时纹理。</summary>
+        private void DestroyButtonTextures()
+        {
+            iconButtonStyle.normal.background = null;
+            iconButtonStyle.hover.background = null;
+            iconButtonStyle.active.background = null;
+            DestroyTexture(ref iconButtonNormalTexture);
+            DestroyTexture(ref iconButtonHoverTexture);
+            DestroyTexture(ref iconButtonActiveTexture);
+        }
+
+        /// <summary>安全销毁一个 Editor 临时纹理并清空托管引用。</summary>
+        private static void DestroyTexture(ref Texture2D texture)
+        {
+            if (texture == null)
+                return;
+            Object.DestroyImmediate(texture);
+            texture = null;
         }
         
         private void ScaleGUI(Transform transformTarget)

@@ -299,6 +299,34 @@
       }
     },
     {
+      "id": "OrangeTree",
+      "parent": "AppleTree",
+      "gameName": "橘子树",
+      "description": "喜温暖湿润环境的果树，成熟后可以采摘橘子。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/OrangeTree/OrangeTree_Idle.png"
+      },
+      "lootTableId": "Tree_Orange",
+      "modules": {
+        "生长模块": {
+          "parameters": {
+            "harvestFoodItemId": "Orange",
+            "harvestSeedItemId": ""
+          }
+        },
+        "plantClimate": {
+          "parameters": {
+            "autonomous": true,
+            "minimumSurvivalTemperature": -5,
+            "minimumGrowthTemperature": 8,
+            "maximumGrowthTemperature": 35,
+            "maximumSurvivalTemperature": 42,
+            "fatalExposureHours": 12
+          }
+        }
+      }
+    },
+    {
       "id": "Tree_Coconut",
       "parent": "WorldResource_Base",
       "gameName": "椰子树",
@@ -617,6 +645,7 @@
       "parent": "MineResource_Base",
       "gameName": "煤矿脉",
       "description": "可以开采煤矿的矿点。",
+      "lootTableId": "Mine_Coal_Default",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -693,21 +722,7 @@
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0,
-              "LootTable": [
-                {
-                  "LootPrefabName": "Ore_Coal",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 3
-                },
-                {
-                  "LootPrefabName": "Ore_Stone",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 2
-                }
-              ]
+              "DestroyDelay": 0.0
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -805,6 +820,7 @@
       "parent": "MineResource_Base",
       "gameName": "铜矿脉",
       "description": "深埋岩壁的铜色矿体，闪烁着金属光泽。开采后可提炼铜，用于打造工具与武器。",
+      "lootTableId": "Mine_Copper_Default",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -881,21 +897,7 @@
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0,
-              "LootTable": [
-                {
-                  "LootPrefabName": "Ore_Copper",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 3
-                },
-                {
-                  "LootPrefabName": "Ore_Stone",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 2
-                }
-              ]
+              "DestroyDelay": 0.0
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -993,6 +995,7 @@
       "parent": "MineResource_Base",
       "gameName": "铁矿脉",
       "description": "可以开采铁矿的矿点。",
+      "lootTableId": "Mine_Iron_Default",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1069,21 +1072,7 @@
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0,
-              "LootTable": [
-                {
-                  "LootPrefabName": "Ore_Iron",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 3
-                },
-                {
-                  "LootPrefabName": "Ore_Stone",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 2
-                }
-              ]
+              "DestroyDelay": 0.0
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1181,6 +1170,7 @@
       "parent": "MineResource_Base",
       "gameName": "石矿",
       "description": "可以开采石料的矿点。",
+      "lootTableId": "Mine_Stone_Default",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1257,15 +1247,7 @@
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0,
-              "LootTable": [
-                {
-                  "LootPrefabName": "Ore_Stone",
-                  "DropChance": 1.0,
-                  "MinAmount": 2,
-                  "MaxAmount": 4
-                }
-              ]
+              "DestroyDelay": 0.0
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1363,6 +1345,7 @@
       "parent": "MineResource_Base",
       "gameName": "锡矿脉",
       "description": "可以开采锡矿的矿点。",
+      "lootTableId": "Mine_Tin_Default",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1439,21 +1422,7 @@
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0,
-              "LootTable": [
-                {
-                  "LootPrefabName": "Ore_Tin",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 3
-                },
-                {
-                  "LootPrefabName": "Ore_Stone",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 2
-                }
-              ]
+              "DestroyDelay": 0.0
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",
@@ -1551,6 +1520,7 @@
       "parent": "MineResource_Base",
       "gameName": "小冰山",
       "description": "冻结在雪地中的小型冰山，可采集并掉落冰块。",
+      "lootTableId": "Iceberg_Default",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1627,15 +1597,7 @@
               },
               "AttackersUIDs": [],
               "DamageInterval": 0.12,
-              "DestroyDelay": 0.0,
-              "LootTable": [
-                {
-                  "LootPrefabName": "IceBlock",
-                  "DropChance": 1.0,
-                  "MinAmount": 1,
-                  "MaxAmount": 3
-                }
-              ]
+              "DestroyDelay": 0.0
             },
             "impactAudioMaterial": 0,
             "hurtAudioCueId": "",

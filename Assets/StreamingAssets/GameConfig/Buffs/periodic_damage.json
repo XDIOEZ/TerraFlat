@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "buffs": [
     {
-      "id": "失血",
-      "displayName": "失血",
+      "id": "出血1",
+      "displayName": "出血1",
       "category": "blood_loss",
-      "description": "轻度失血：每2秒损失1点生命和2点水分；每次喝水延长5秒。",
+      "description": "轻度出血：每2秒损失1点生命和2点水分；每次喝水延长5秒。",
       "durationSeconds": 30.0,
       "tickIntervalSeconds": 2.0,
       "stackMode": "refresh_duration",
@@ -25,10 +25,10 @@
       ]
     },
     {
-      "id": "流血",
-      "displayName": "流血",
+      "id": "出血2",
+      "displayName": "出血2",
       "category": "blood_loss",
-      "description": "中度流血：每2秒损失2点生命和5点水分；每次喝水延长10秒。",
+      "description": "中度出血：每2秒损失2点生命和5点水分；每次喝水延长10秒。",
       "durationSeconds": 30.0,
       "tickIntervalSeconds": 2.0,
       "stackMode": "refresh_duration",
@@ -48,8 +48,8 @@
       ]
     },
     {
-      "id": "出血",
-      "displayName": "出血",
+      "id": "出血3",
+      "displayName": "出血3",
       "category": "blood_loss",
       "description": "重度出血：每2秒损失3点生命和10点水分；每次喝水延长20秒。",
       "durationSeconds": 30.0,

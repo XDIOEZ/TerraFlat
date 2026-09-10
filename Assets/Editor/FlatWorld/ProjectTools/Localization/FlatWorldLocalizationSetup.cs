@@ -415,7 +415,7 @@ namespace FlatWorld.Localization.Editor
                 { "玩家及手持武器造成的伤害", "Damage dealt by the player and held weapons" },
                 { "非玩家攻击者造成的伤害", "Damage dealt by non-player attackers" },
                 { "生物与可破坏实体的等效耐久", "Equivalent durability of creatures and destructible entities" },
-                { "饥饿、温度、流血与真实伤害", "Hunger, temperature, bleeding, and true damage" },
+                { "饥饿、温度、出血与真实伤害", "Hunger, temperature, bleeding, and true damage" },
                 { "营养与水分自然消耗速度", "Natural drain rate of nutrition and hydration" },
                 { "移动、奔跑与攻击耐力消耗", "Stamina cost of moving, running, and attacking" },
                 { "营养充足时的耐力恢复", "Stamina recovery when well nourished" },

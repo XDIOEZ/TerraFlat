@@ -10,6 +10,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 时间：`Assets/5_Scripts/5-3_GamePlay/World/Time/{DayTimeSystem,TimeData,DayNightTimeManager}.cs`
 - 天气与风力：`World/Environment/{WeatherMgr,WeatherMgr.Wind,WeatherEventScheduler,RainEffectController,RainGroundSplashController}.cs`
 - 光照/温度：`World/Environment/{LightLayerMgr,TemperatureMgr}.cs`
+- 污染：`World/Environment/Contamination/`；本体定义位于 `StreamingAssets/GameConfig/Contamination/`。
 - 逐格温度入口：`TemperatureMgr.Field.cs`；冷热源空间缓存与设备组件：`LocalTemperatureField.cs`、`LocalTemperatureSource.cs`。
 - 存档：`World/Map/Data/{PlanetData,PlanetTimeData}.cs`
 
@@ -24,6 +25,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 群系基础气温在 `DeterministicChunkGenerator.GenerateSurfaceCell` 完成群系分类后写入 `temperature.celsius`；不要为调整摄氏度改写归一化的 `temperature`，后者仍参与群系判定与生态分布。规则变化需递增纯生成器与地表 Profile 的生成签名，保持噪声布局版本不变。
 - 局部冷热源是可重建的影响层，来源模块负责燃料/供电/保存并在停用、回池时撤销注册；不能把临时偏移写回生成气候，否则卸载后无法恢复并会污染地图差量。修改源快照只使覆盖分区失效，查询缓存不扫描全部来源；环形边界同时归一化分区键并使用最短距离，避免世界接缝出现断层或重复贡献。
 - 设备组件 `LocalTemperatureSource` 的强度表示中心摄氏度增量（负值制冷），不是功率或绝对目标温度；恒温器应由设备控制器根据当前地块温度计算有效强度。当前影响层不保存热惯性，撤销源会立即撤销其环境增量；需要蓄热/热传导时应引入独立状态层，不能悄悄改变来源参数语义。
+- 污染指标统一注册为 `ContaminationDefinition`，权威值保存在 `ChunkTerrainData` 的 `flatworld.contamination.<definitionId>` 环境层；运行时修改必须走 `ContaminationSystem`，禁止直接 `SetEnvironmentValue`，否则会绕过服务器权威、污染差量存档和变化通知。脏污度与具体病原负荷是同一系统内不同指标，不能合并成单一“越脏就拥有所有疾病”的数值。
 - 维度 `FixedLighting` 是光照上限；SuppressWeather 会关闭天气与雨效。
 - 运行时全局光由 `TimeSystem.prefab` 中的 `DayTimeSystem + Light2D` 持有；`GameStartScene` 不得再注入独立 `DayTimeSystem`，否则会抢占单例并使带光源的运行时 Prefab 被销毁。
 - 月相应基于 `TimeData.TotalDays + CurrentTime / DayLength` 计算，不能只使用日内时间；月光先作为昼夜曲线的夜间下限，再经过采光率与维度固定光照上限。

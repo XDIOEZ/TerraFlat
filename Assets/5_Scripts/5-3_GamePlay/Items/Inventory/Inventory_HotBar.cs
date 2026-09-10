@@ -659,6 +659,19 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
 #region 对外兼容接口
 
+    /// <summary>通过正式快捷栏切换流程选择指定槽位，供非物理输入控制源复用。</summary>
+    public bool TrySelectSlot(int index)
+    {
+        if (IsGameplayInputLocked() || Data?.itemSlots == null ||
+            index < 0 || index >= Mathf.Min(MaxIndex, HotBarMaxVolume))
+        {
+            return false;
+        }
+
+        SwitchItem(index);
+        return true;
+    }
+
     public void RefreshUI(int index)
     {
         RuntimeInventory?.RefreshUI(index);

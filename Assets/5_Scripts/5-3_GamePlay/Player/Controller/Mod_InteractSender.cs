@@ -116,6 +116,25 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         return RefreshReceiversAtCurrentPosition();
     }
 
+    /// <summary>通过正式交互距离与目标规则尝试和指定对象交互，供非物理输入控制源复用。</summary>
+    public bool TryInteractTarget(IInteractable receiver)
+    {
+        if (!IsLocalInteractionOwner() || IsGameplayInputLocked())
+            return false;
+
+        Component receiverComponent = receiver as Component;
+        if (!IsInteractionCandidate(receiver, receiverComponent))
+            return false;
+
+        float distance = WorldTopologyRuntime.Distance(
+            item.transform.position,
+            receiverComponent.transform.position);
+        if (distance > maxInteractDistance)
+            return false;
+
+        return StartInteraction(receiver);
+    }
+
     private void OnInteractReleased(InputAction.CallbackContext ctx)
     {
         if (gameController != null && !gameController.IsGameplayInputAllowed(ctx))

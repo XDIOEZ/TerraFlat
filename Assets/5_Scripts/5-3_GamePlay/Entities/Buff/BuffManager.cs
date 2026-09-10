@@ -89,6 +89,7 @@ public class BuffManager : Module
             ActiveBuffs = new Dictionary<string, BuffInstance>(StringComparer.OrdinalIgnoreCase);
         }
 
+        MigrateLegacyBleedingBuffs();
         InitializeBuffs();
         BindFoodEvents();
     }
@@ -152,6 +153,53 @@ public class BuffManager : Module
     }
 
     #region 旧版迁移
+
+    /// <summary>把历史失血/流血/出血 ID 迁移为出血1/2/3，并把同时存在的多个等级收敛为最高等级。</summary>
+    private void MigrateLegacyBleedingBuffs()
+    {
+        if (ActiveBuffs.Count == 0)
+            return;
+
+        var migrated = new Dictionary<string, BuffInstance>(StringComparer.OrdinalIgnoreCase);
+        BuffInstance strongestBleeding = null;
+        int strongestTier = 0;
+
+        foreach (KeyValuePair<string, BuffInstance> pair in ActiveBuffs)
+        {
+            BuffInstance runtime = pair.Value;
+            if (runtime == null)
+                continue;
+
+            string normalizedId = BloodLossBuffIds.NormalizePersistedId(
+                string.IsNullOrWhiteSpace(runtime.DefinitionId) ? pair.Key : runtime.DefinitionId);
+            runtime.DefinitionId = normalizedId;
+
+            if (BloodLossBuffIds.TryGetTier(normalizedId, out int tier))
+            {
+                if (strongestBleeding == null ||
+                    tier > strongestTier ||
+                    (tier == strongestTier &&
+                     runtime.RemainingDurationSeconds > strongestBleeding.RemainingDurationSeconds))
+                {
+                    strongestBleeding = runtime;
+                    strongestTier = tier;
+                }
+
+                continue;
+            }
+
+            migrated[pair.Key] = runtime;
+        }
+
+        if (strongestBleeding != null)
+        {
+            string strongestId = BloodLossBuffIds.GetIdForTier(strongestTier);
+            strongestBleeding.DefinitionId = strongestId;
+            migrated[strongestId] = strongestBleeding;
+        }
+
+        ActiveBuffs = migrated;
+    }
 
     /// <summary>识别移动饥饿 Buff 的历史 ID，保证旧存档不会恢复可驱散的旧实现。</summary>
     private static bool IsLegacyMovementHungerBuff(string buffId)
@@ -229,6 +277,41 @@ public class BuffManager : Module
     #endregion
 
     #region 查询与延时
+
+    /// <summary>应用互斥的出血等级；更低等级不会覆盖更高等级，更高等级会替换已有低等级。</summary>
+    public bool ApplyBleedingTier(int tier)
+    {
+        string targetId = BloodLossBuffIds.GetIdForTier(tier);
+        int highestActiveTier = 0;
+        string highestActiveId = null;
+
+        for (int currentTier = 1; currentTier <= BloodLossBuffIds.MaxTier; currentTier++)
+        {
+            string currentId = BloodLossBuffIds.GetIdForTier(currentTier);
+            if (!HasBuff(currentId))
+                continue;
+
+            highestActiveTier = currentTier;
+            highestActiveId = currentId;
+        }
+
+        // 低等级命中只能续期当前更严重的出血，不能把伤势降级。
+        if (highestActiveTier > tier && !string.IsNullOrEmpty(highestActiveId))
+            return AddBuff(highestActiveId);
+
+        // 先确保目标等级成功加入，再清理旧等级，避免目录缺失时把已有状态先删掉。
+        if (!AddBuff(targetId))
+            return false;
+
+        for (int currentTier = 1; currentTier <= BloodLossBuffIds.MaxTier; currentTier++)
+        {
+            string currentId = BloodLossBuffIds.GetIdForTier(currentTier);
+            if (!string.Equals(currentId, targetId, StringComparison.OrdinalIgnoreCase))
+                RemoveBuff(currentId);
+        }
+
+        return true;
+    }
 
     public bool HasBuff(string buffId)
     {
@@ -440,22 +523,22 @@ public class BuffManager : Module
 
     #region 调试入口
 
-    [Button("调试：添加失血")]
-    private void DebugAddBloodLoss()
+    [Button("调试：添加出血1")]
+    private void DebugAddBleeding1()
     {
-        DebugAddBuff(BloodLossBuffIds.BloodLoss);
+        ApplyBleedingTier(1);
     }
 
-    [Button("调试：添加流血")]
-    private void DebugAddBleeding()
+    [Button("调试：添加出血2")]
+    private void DebugAddBleeding2()
     {
-        DebugAddBuff(BloodLossBuffIds.Bleeding);
+        ApplyBleedingTier(2);
     }
 
-    [Button("调试：添加出血")]
-    private void DebugAddHemorrhage()
+    [Button("调试：添加出血3")]
+    private void DebugAddBleeding3()
     {
-        DebugAddBuff(BloodLossBuffIds.Hemorrhage);
+        ApplyBleedingTier(3);
     }
 
     [Button("调试：模拟完整喝水一次")]
@@ -481,9 +564,52 @@ public class BuffManager : Module
 
 public static class BloodLossBuffIds
 {
-    public const string BloodLoss = "失血";
-    public const string Bleeding = "流血";
-    public const string Hemorrhage = "出血";
+    public const int MaxTier = 3;
+    public const string Bleeding1 = "出血1";
+    public const string Bleeding2 = "出血2";
+    public const string Bleeding3 = "出血3";
+
+    private const string LegacyBloodLoss = "失血";
+    private const string LegacyBleeding = "流血";
+    private const string LegacyHemorrhage = "出血";
+
+    /// <summary>按等级返回稳定 Buff ID；等级范围固定为 1..3。</summary>
+    public static string GetIdForTier(int tier)
+    {
+        return tier switch
+        {
+            1 => Bleeding1,
+            2 => Bleeding2,
+            3 => Bleeding3,
+            _ => throw new ArgumentOutOfRangeException(nameof(tier), tier, "出血等级必须位于 1..3。")
+        };
+    }
+
+    /// <summary>解析当前正式出血 ID 的等级。</summary>
+    public static bool TryGetTier(string buffId, out int tier)
+    {
+        tier = 0;
+        if (string.Equals(buffId, Bleeding1, StringComparison.OrdinalIgnoreCase))
+            tier = 1;
+        else if (string.Equals(buffId, Bleeding2, StringComparison.OrdinalIgnoreCase))
+            tier = 2;
+        else if (string.Equals(buffId, Bleeding3, StringComparison.OrdinalIgnoreCase))
+            tier = 3;
+
+        return tier > 0;
+    }
+
+    /// <summary>迁移历史失血、流血、出血 ID；其他 Buff 原样返回。</summary>
+    public static string NormalizePersistedId(string buffId)
+    {
+        if (string.Equals(buffId, LegacyBloodLoss, StringComparison.OrdinalIgnoreCase))
+            return Bleeding1;
+        if (string.Equals(buffId, LegacyBleeding, StringComparison.OrdinalIgnoreCase))
+            return Bleeding2;
+        if (string.Equals(buffId, LegacyHemorrhage, StringComparison.OrdinalIgnoreCase))
+            return Bleeding3;
+        return buffId;
+    }
 }
 
 public static class BurningBuffIds

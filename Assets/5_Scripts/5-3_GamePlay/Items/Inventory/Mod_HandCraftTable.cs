@@ -48,6 +48,7 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
     private static readonly CraftingCapabilities Capabilities = new CraftingCapabilities
     {
         RecipeType = RecipeType.Crafting,
+        StationId = "handcraft",
         InputSlotLimit = InputSlotCount,
         AllowOutputIntoInput = false
     };

@@ -906,7 +906,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915968
-    m_Localized: Blast Furnace
+    m_Localized: Blast Furnace Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915969
@@ -914,7 +914,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915970
-    m_Localized: Bonfire
+    m_Localized: Bonfire Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915971
@@ -922,7 +922,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915972
-    m_Localized: Wooden Chest
+    m_Localized: Wooden Chest Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915973
@@ -930,7 +930,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915974
-    m_Localized: Stone Door
+    m_Localized: Stone Door Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915975
@@ -938,7 +938,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915976
-    m_Localized: Wooden Door
+    m_Localized: Wooden Door Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915977
@@ -946,7 +946,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915978
-    m_Localized: Meat Drying Rack
+    m_Localized: Meat Drying Rack Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915979
@@ -954,7 +954,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915980
-    m_Localized: Mine Entrance
+    m_Localized: Mine Entrance Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915981
@@ -962,7 +962,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915982
-    m_Localized: Scarecrow
+    m_Localized: Scarecrow Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915983
@@ -970,7 +970,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915984
-    m_Localized: Smelter
+    m_Localized: Smelter Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915985
@@ -978,7 +978,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915986
-    m_Localized: Tent
+    m_Localized: Tent Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915987
@@ -994,7 +994,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915990
-    m_Localized: Workbench
+    m_Localized: Workbench Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915991
@@ -1002,7 +1002,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915992
-    m_Localized: Fire Drill
+    m_Localized: Fire Drill Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915993
@@ -1010,7 +1010,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915994
-    m_Localized: Torch
+    m_Localized: Torch Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915995
@@ -1018,7 +1018,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915996
-    m_Localized: Compost Bin
+    m_Localized: Compost Bin Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915997
@@ -1026,7 +1026,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915998
-    m_Localized: Rocket
+    m_Localized: Rocket Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915999

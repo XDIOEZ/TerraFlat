@@ -60,6 +60,10 @@ public sealed class RecipeDto
     [JsonProperty("recipeType")]
     public string RecipeType = "crafting";
 
+    /// <summary>可选的制作站 ID；留空表示任意支持该配方类型的制作入口都可使用。</summary>
+    [JsonProperty("requiredStation")]
+    public string RequiredStation = string.Empty;
+
     [JsonProperty("inputRule")]
     public string InputRule = "unordered";
 

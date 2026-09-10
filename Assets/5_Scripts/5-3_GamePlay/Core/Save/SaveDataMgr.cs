@@ -17,14 +17,14 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 11;
+    private const int CompactSaveVersion = 12;
     private const int ModdedSaveVersion = 9;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
     private const string LastExitTimeSuffix = ".lastplayed";
     // 季节与世界状态采用当前布局，先检查封装头，再解析嵌套 MemoryPack 数据。
-    private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'6' };
+    private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'7' };
     private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'4' };
     private static readonly object SaveFileLock = new object();
     private static readonly object SaveRevisionLock = new object();
@@ -1197,14 +1197,13 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (!TryEnsureRuntimeChunkBaseline(key, chunk, out _))
             return;
 
-        if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta) ||
-            delta?.RuntimeTileDeltas == null)
+        if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta) || delta == null)
         {
             return;
         }
 
         ChunkTerrainData terrain = chunk.Terrain;
-        for (int i = 0; i < delta.RuntimeTileDeltas.Count; i++)
+        for (int i = 0; i < (delta.RuntimeTileDeltas?.Count ?? 0); i++)
         {
             RuntimeTileCellSaveDelta cell = delta.RuntimeTileDeltas[i];
             int x = cell.LocalPosition.x;
@@ -1221,6 +1220,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         }
         RestoreAgricultureTerrain(chunk, delta);
         RestoreSupportTerrain(chunk, delta);
+        RestoreContaminationTerrain(chunk, delta);
     }
 
     /// <summary>放置、受损或拆除运行时格子建筑后立即更新内存差量，避免区块回收时丢失状态。</summary>
@@ -2673,6 +2673,7 @@ public partial class ChunkSaveRecord
     public List<RuntimeTileCellSaveDelta> RuntimeTileDeltas = new();
     public List<SupportCellSaveData> SupportCells = new(); // 独立支撑面
     public List<AgricultureCellSaveData> AgricultureCells = new(); // 独立农业状态
+    public List<ContaminationCellSaveData> ContaminationCells = new(); // 独立污染状态
 
     [MemoryPackIgnore]
     public bool HasChanges =>
@@ -2682,7 +2683,8 @@ public partial class ChunkSaveRecord
          (GrassDeltas?.Count ?? 0) > 0 ||
          (RuntimeTileDeltas?.Count ?? 0) > 0 ||
          (AgricultureCells?.Count ?? 0) > 0 ||
-         (SupportCells?.Count ?? 0) > 0);
+         (SupportCells?.Count ?? 0) > 0 ||
+         (ContaminationCells?.Count ?? 0) > 0);
 }
 
 [MemoryPackable]

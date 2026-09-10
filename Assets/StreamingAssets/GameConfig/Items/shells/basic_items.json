@@ -2179,6 +2179,53 @@
       }
     },
     {
+      "id": "Orange",
+      "parent": "Apple",
+      "gameName": "橘子",
+      "description": "酸甜多汁的柑橘类水果，富含水分和维生素。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Orange/Orange_Idle.png"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 25.0,
+                "Max_Carbohydrates": 25.0,
+                "Fat": 0.3,
+                "Max_Fat": 0.3,
+                "Protein": 0.5,
+                "Max_Protein": 0.5,
+                "Water": 45.0,
+                "Max_Water": 45.0,
+                "Vitamins": 35.0,
+                "Max_Vitamins": 35.0
+              },
+              "Max_EatingProgress": 2.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
       "id": "RiceGrain",
       "parent": "Apple",
       "gameName": "稻谷",

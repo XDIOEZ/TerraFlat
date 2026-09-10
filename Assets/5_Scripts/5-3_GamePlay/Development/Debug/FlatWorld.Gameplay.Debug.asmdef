@@ -4,6 +4,7 @@
     "references": [
         "GamePlay",
         "Data",
+        "FlatWorld.WorldModel",
         "FlatWorld.Utilities",
         "UI",
         "Kybernetik.UltEvents",

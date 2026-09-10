@@ -62,6 +62,9 @@ public static class RecipeRuntimeFactory
         {
             Id = id,
             DisplayName = string.IsNullOrWhiteSpace(dto.DisplayName) ? id : dto.DisplayName.Trim(),
+            RequiredStation = string.IsNullOrWhiteSpace(dto.RequiredStation)
+                ? string.Empty
+                : dto.RequiredStation.Trim(),
             enableMirrorCrafting = dto.AllowMirror,
             Temperature = dto.Temperature,
             Temperature_Max = dto.MaxTemperature,

@@ -104,7 +104,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private void Awake()
     {
         DontDestroyOnLoad(gameObject);
-        temperatureOverlay = gameObject.AddComponent<GMTemperatureOverlay>();
+        worldLayerOverlay = gameObject.AddComponent<GMWorldLayerOverlay>();
         EnsureEventSystem();
         BuildWindow();
         ApplyPersistedTogglePreferences();
@@ -168,8 +168,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             GMConsolePreferences.NavigationPathVisible);
 
         AI_DebugOverlay.SetVisible(GMConsolePreferences.AnimalDebugOverlayVisible);
-        temperatureOverlay.SetVisible(GMConsolePreferences.TemperatureOverlayVisible);
-        RefreshTemperatureOverlayButton();
+        worldLayerOverlay.SetMode(GMConsolePreferences.WorldLayerOverlayMode);
+        RefreshWorldLayerOverlayButtons();
     }
 
     /// <summary>场景切换后等待玩家与区块管理器出现，再恢复运行时倍率。</summary>
@@ -1322,7 +1322,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshNavigationPathButton();
         RefreshAnimalDebugOverlayButton();
         RefreshItemIds();
-        RefreshTemperatureOverlayButton();
+        RefreshWorldLayerOverlayButtons();
         RefreshAiCreatureIds();
         RefreshStructureOptions();
         RebuildReflectedCommands();

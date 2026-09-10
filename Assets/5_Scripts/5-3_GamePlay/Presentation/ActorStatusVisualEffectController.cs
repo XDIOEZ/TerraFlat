@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>
 /// 通用角色状态视觉控制器。
 /// 监听角色 BuffManager 的添加、移除和续期事件，为状态提供附着式 Sprite 序列、低强度光晕或 VisualEffectManager 池化特效；当前燃烧使用八帧火焰，
-/// 出血/流血/失血复用一个持续循环的红色血滴粒子，光耀复用圆形精灵叠加轻微呼吸光。后续中毒、冰冻等状态只需在 Animator 模块 Prefab 追加配置，无需侵入 Buff 的伤害或 Tick 逻辑。
+/// 出血1/2/3复用一个持续循环的红色血滴粒子，光耀复用圆形精灵叠加轻微呼吸光。后续中毒、冰冻等状态只需在 Animator 模块 Prefab 追加配置，无需侵入 Buff 的伤害或 Tick 逻辑。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class ActorStatusVisualEffectController : MonoBehaviour
@@ -631,7 +631,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
             SetVisualActive(visual, active);
     }
 
-    /// <summary>按事件即时校验复合 Buff 粒子表现，支持出血、流血和失血共用一个池化实例。</summary>
+    /// <summary>按事件即时校验复合 Buff 粒子表现，支持出血1/2/3共用一个池化实例。</summary>
     private void SetParticleVisualsForBuff(string buffId)
     {
         if (string.IsNullOrWhiteSpace(buffId))

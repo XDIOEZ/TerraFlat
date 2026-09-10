@@ -11,6 +11,7 @@ public class DamageReceiverDamageInfo
     public float DamageValue;
     public float SenderDamageValue;
     public CombatDamage SenderDamageValues;
+    public CombatDamage ResolvedDamageValues;
     public float HpBefore;
     public float HpAfter;
     public bool IsFatal;

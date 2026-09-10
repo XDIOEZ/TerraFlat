@@ -351,7 +351,7 @@ public static class NewGamePrefabBuilder
         CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyPlayerAttackSliderKey, "玩家伤害", "玩家及手持武器造成的伤害", 0f);
         CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyCreatureAttackSliderKey, "生物伤害", "非玩家攻击者造成的伤害", 68f);
         CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyCreatureHealthSliderKey, "生物生命", "生物与可破坏实体的等效耐久", 136f);
-        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyEnvironmentalDamageSliderKey, "环境伤害", "饥饿、温度、流血与真实伤害", 204f);
+        CreateDifficultySlider(page.transform, font, GameManager.NewGameDifficultyEnvironmentalDamageSliderKey, "环境伤害", "饥饿、温度、出血与真实伤害", 204f);
     }
 
     private static void BuildCustomSurvivalPage(Transform parent, TMP_FontAsset font)

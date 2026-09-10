@@ -62,6 +62,8 @@ public sealed class ModRuntimeManager : MonoBehaviour
     private readonly List<string> registeredActorIds = new();
     private readonly List<PendingRecipeDefinition> pendingRecipeDefinitions = new();
     private readonly List<PendingBuffDefinition> pendingBuffDefinitions = new();
+    private readonly List<PendingContaminationDefinition> pendingContaminationDefinitions = new();
+    private readonly List<string> registeredContaminationIds = new();
     private readonly List<PendingQuestDefinition> pendingQuestDefinitions = new();
     private readonly List<PendingPlayerCreationTemplate> pendingPlayerCreationTemplates = new();
     private readonly List<PendingPatchDocument> pendingPatchDocuments = new();
@@ -200,6 +202,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
         ProcessActorDefinitions(gameRes);
         ProcessRecipeDefinitions(gameRes);
         ProcessBuffDefinitions(gameRes);
+        ProcessContaminationDefinitions(gameRes);
         ProcessQuestDefinitions();
         ProcessPlayerCreationTemplates();
         QuestCatalog.FinalizeRegistration();
@@ -435,6 +438,29 @@ public sealed class ModRuntimeManager : MonoBehaviour
                 }
                 ValidateContentId(package.Manifest.Id, buff.Id);
                 pendingBuffDefinitions.Add(new PendingBuffDefinition(package, definitionFile, buffIndex++, buff));
+            }
+
+            int contaminationIndex = 0;
+            foreach (JToken token in document["contaminations"] as JArray ?? new JArray())
+            {
+                ContaminationDefinitionDto contamination;
+                try
+                {
+                    contamination = ContaminationDefinitionFactory.DeserializeDefinition(token);
+                }
+                catch (Exception exception)
+                {
+                    throw new InvalidDataException(
+                        $"MOD {package.Manifest.Id} 污染 Def 无效：{definitionFile}#{contaminationIndex}",
+                        exception);
+                }
+
+                ValidateContentId(package.Manifest.Id, contamination.Id);
+                pendingContaminationDefinitions.Add(new PendingContaminationDefinition(
+                    package,
+                    definitionFile,
+                    contaminationIndex++,
+                    contamination));
             }
 
             int questIndex = 0;
@@ -930,6 +956,32 @@ public sealed class ModRuntimeManager : MonoBehaviour
                 Materialized = true
             };
             Debug.Log($"[MOD:{pending.Package.Manifest.Id}] 已注册 JSON Buff：{definition.Id}");
+        }
+    }
+
+    /// <summary>注册 MOD 污染指标；定义只声明环境负荷语义，具体感染或扩散仍由独立玩法模块消费。</summary>
+    private void ProcessContaminationDefinitions(GameRes gameRes)
+    {
+        foreach (PendingContaminationDefinition pending in pendingContaminationDefinitions)
+        {
+            ContaminationDefinitionDto dto = pending.Definition;
+            if (!string.IsNullOrWhiteSpace(dto.LabelKey))
+                dto.DisplayName = ModLocalizationRegistry.Translate(dto.LabelKey, dto.DisplayName);
+            if (!string.IsNullOrWhiteSpace(dto.DescriptionKey))
+                dto.Description = ModLocalizationRegistry.Translate(dto.DescriptionKey, dto.Description);
+
+            ContaminationDefinition definition = ContaminationDefinitionFactory.Build(dto);
+            gameRes.RegisterContaminationDefinition(definition);
+            registeredContaminationIds.Add(definition.Id);
+            definitionInfos[definition.Id] = new ModDefinitionInfo
+            {
+                Id = definition.Id,
+                DeclaringModId = pending.Package.Manifest.Id,
+                SourceFile = pending.File,
+                SourceIndex = pending.Index,
+                Materialized = true
+            };
+            Debug.Log($"[MOD:{pending.Package.Manifest.Id}] 已注册污染定义：{definition.Id}");
         }
     }
 
@@ -1983,6 +2035,9 @@ public sealed class ModRuntimeManager : MonoBehaviour
         for (int index = registeredActorIds.Count - 1; index >= 0; index--)
             gameRes?.UnregisterExternalActorDefinition(registeredActorIds[index]);
         registeredActorIds.Clear();
+        for (int index = registeredContaminationIds.Count - 1; index >= 0; index--)
+            gameRes?.UnregisterExternalContaminationDefinition(registeredContaminationIds[index]);
+        registeredContaminationIds.Clear();
 
         foreach (ModLuaRuntime runtime in luaRuntimes.Values)
             runtime.Dispose();
@@ -2009,6 +2064,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
         pendingActorDefinitions.Clear();
         pendingRecipeDefinitions.Clear();
         pendingBuffDefinitions.Clear();
+        pendingContaminationDefinitions.Clear();
         pendingQuestDefinitions.Clear();
         pendingPlayerCreationTemplates.Clear();
         pendingPatchDocuments.Clear();
@@ -2120,6 +2176,26 @@ public sealed class ModRuntimeManager : MonoBehaviour
         public string File { get; }
         public int Index { get; }
         public BuffDefinitionDto Definition { get; }
+    }
+
+    private sealed class PendingContaminationDefinition
+    {
+        public PendingContaminationDefinition(
+            ModPackage package,
+            string file,
+            int index,
+            ContaminationDefinitionDto definition)
+        {
+            Package = package;
+            File = file;
+            Index = index;
+            Definition = definition;
+        }
+
+        public ModPackage Package { get; }
+        public string File { get; }
+        public int Index { get; }
+        public ContaminationDefinitionDto Definition { get; }
     }
 
     private sealed class PendingQuestDefinition

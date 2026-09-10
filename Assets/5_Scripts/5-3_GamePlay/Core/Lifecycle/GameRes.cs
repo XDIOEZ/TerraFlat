@@ -1,4 +1,4 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine.Tilemaps;
 using UnityEngine;
@@ -58,6 +58,11 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     [ShowInInspector]
     public Dictionary<string, BuffDefinition> BuffDefinitions =
         new Dictionary<string, BuffDefinition>(System.StringComparer.OrdinalIgnoreCase);
+
+    [Header("污染定义字典")]
+    [ShowInInspector]
+    public Dictionary<string, ContaminationDefinition> ContaminationDefinitions =
+        new Dictionary<string, ContaminationDefinition>(System.StringComparer.OrdinalIgnoreCase);
 
     [System.NonSerialized]
     private TextLibraryService textLibraryService = TextLibraryService.Empty;
@@ -276,6 +281,15 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         return definition;
     }
 
+    /// <summary>按稳定 ID 查询污染指标定义。</summary>
+    public ContaminationDefinition GetContaminationDefinition(string contaminationId)
+    {
+        if (string.IsNullOrWhiteSpace(contaminationId))
+            return null;
+        ContaminationDefinitions.TryGetValue(contaminationId.Trim(), out ContaminationDefinition definition);
+        return definition;
+    }
+
     public void RegisterItemDefinition(RuntimeItemDefinition definition)
     {
         if (definition == null || string.IsNullOrWhiteSpace(definition.Id) || definition.ShellPrefab == null)
@@ -463,6 +477,31 @@ public partial class GameRes : SingletonAutoMono<GameRes>
 
         BuffDefinitions[id] = definition;
         LoadedCount++;
+    }
+
+    /// <summary>注册一个本体或 MOD 污染定义；重复 ID 直接拒绝。</summary>
+    public void RegisterContaminationDefinition(ContaminationDefinition definition)
+    {
+        if (definition == null || string.IsNullOrWhiteSpace(definition.Id))
+            throw new InvalidDataException("注册的污染定义或 ID 为空");
+
+        string id = definition.Id.Trim();
+        if (ContaminationDefinitions.ContainsKey(id))
+            throw new InvalidDataException($"污染定义 ID 冲突：{id}");
+        ContaminationDefinitions.Add(id, definition);
+        LoadedCount++;
+    }
+
+    /// <summary>仅供 MOD 加载失败或资源重载时回滚外部污染定义。</summary>
+    public bool UnregisterExternalContaminationDefinition(string contaminationId)
+    {
+        if (string.IsNullOrWhiteSpace(contaminationId) ||
+            !ContaminationDefinitions.Remove(contaminationId.Trim()))
+        {
+            return false;
+        }
+        LoadedCount = Mathf.Max(0, LoadedCount - 1);
+        return true;
     }
     
     public RuntimeRecipe GetRecipe(string recipeName)
