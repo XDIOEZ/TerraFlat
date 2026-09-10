@@ -51,6 +51,9 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private RectTransform mobileAimCursor;
     private MobileVirtualJoystick[] joysticks;
     private MobileHeldItemDropSurface[] heldItemDropSurfaces;
+    private Transform heldItemDropSurfaceTransform;
+    private Transform heldItemDropSurfaceHomeParent;
+    private int heldItemDropSurfaceHomeSiblingIndex = -1;
     private MobileInputButton[] inputButtons;
     private Canvas hotbarCanvas;
     private RectTransform hotbarBackpackButton;
@@ -658,6 +661,11 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (surface == null)
             surface = surfaceNode.gameObject.AddComponent<MobileHeldItemDropSurface>();
         surface.Configure(onlyRaycastWhileHoldingItem: true);
+
+        // 记录正式 Prefab 中的原始父级；背包模态打开时只临时迁移这一层，关闭后恢复。
+        heldItemDropSurfaceTransform = surfaceNode;
+        heldItemDropSurfaceHomeParent = surfaceNode.parent;
+        heldItemDropSurfaceHomeSiblingIndex = surfaceNode.GetSiblingIndex();
         heldItemDropSurfaces = viewObject.GetComponentsInChildren<MobileHeldItemDropSurface>(true);
     }
 
@@ -1062,6 +1070,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
         bool blocked = controller != null && controller.IsGameplayInputLocked;
         bool modalOpen = manager.HasOpenGameplayInputBlockingPanel();
+        bool playerBagOpen = modalOpen && IsPlayerBagPanelOpen();
         bool gameplayVisible = !blocked && !modalOpen;
         RectTransform safeRoot = manager.SafeAreaRoot;
         Vector2 safeSize = safeRoot != null ? safeRoot.rect.size : new Vector2(Screen.width, Screen.height);
@@ -1075,6 +1084,10 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         lastScreenHeight = Screen.height;
         if (geometryChanged)
             AndroidSystemGestureInsets.RequestRefresh();
+
+        // 背包打开时仍允许在面板外的世界空白区域轻点/长按丢弃手上物品。
+        // 丢弃面临时放到常驻层最底部，因此背包、槽位、按钮仍优先吃掉自己的射线。
+        RefreshHeldItemDropSurfaceParent(playerBagOpen);
 
         // 菜单抽屉用于在背包与制作面板之间切换，不能因玩法面板获得输入锁而自动收起。
         if (gameplayLayer != null)
@@ -1112,6 +1125,50 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
         if (!gameplayVisible || geometryChanged)
             ResetAllTouchState();
+    }
+
+    /// <summary>判断本地玩家自己的行囊面板是否处于打开状态。</summary>
+    private bool IsPlayerBagPanelOpen()
+    {
+        Mod_Inventory bag = player?.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag);
+        if (bag?.InventoryInstances == null)
+            return false;
+
+        for (int i = 0; i < bag.InventoryInstances.Count; i++)
+        {
+            Inventory inventory = bag.InventoryInstances[i];
+            if (inventory?.basePanel != null && inventory.basePanel.IsOpen())
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>背包模态期间把世界丢弃面迁到常驻层；离开背包后恢复正式 Prefab 层级。</summary>
+    private void RefreshHeldItemDropSurfaceParent(bool usePersistentLayer)
+    {
+        if (heldItemDropSurfaceTransform == null || heldItemDropSurfaceHomeParent == null ||
+            persistentLayer == null)
+        {
+            return;
+        }
+
+        Transform targetParent = usePersistentLayer
+            ? persistentLayer.transform
+            : heldItemDropSurfaceHomeParent;
+        if (heldItemDropSurfaceTransform.parent == targetParent)
+            return;
+
+        heldItemDropSurfaceTransform.SetParent(targetParent, false);
+        if (usePersistentLayer)
+        {
+            heldItemDropSurfaceTransform.SetAsFirstSibling();
+            return;
+        }
+
+        int maxSiblingIndex = Mathf.Max(0, targetParent.childCount - 1);
+        heldItemDropSurfaceTransform.SetSiblingIndex(
+            Mathf.Clamp(heldItemDropSurfaceHomeSiblingIndex, 0, maxSiblingIndex));
     }
 
     public void ResetAllTouchState()
