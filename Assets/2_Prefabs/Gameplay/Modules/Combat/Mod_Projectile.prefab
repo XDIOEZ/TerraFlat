@@ -45,8 +45,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   item: {fileID: 0}
-  MinSpeed: 5
-  MaxSpeed: 12
+  MinSpeed: 25
+  MaxSpeed: 60
+  FlightLinearDrag: 0.12
+  VirtualGravity: 9.8
   MinDamageMultiplier: 0.35
   MaxDamageMultiplier: 1
   MaxFlightSeconds: 2.5

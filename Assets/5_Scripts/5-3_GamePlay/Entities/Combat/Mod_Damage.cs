@@ -103,6 +103,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
     public CombatWeaponAudioClass WeaponAudioClass => weaponAudioClass;
     public string AttackAudioCueId => attackAudioCueId;
     public TileDamageToolKind TileDamageToolKind => tileDamageToolKind;
+    public Collider2D DamageCollider => damageCollider;
     #endregion
 
     #region IDamageSender 实现
@@ -200,6 +201,18 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
 
     #region 伤害处理
     public void OnTriggerEnter2D(Collider2D other)
+    {
+        ProcessDamageColliderHit(other);
+    }
+
+    /// <summary>供高速投射物的射线/碰撞体扫掠复用同一套命中结算，避免绕过 Mod_Damage。</summary>
+    public void ProcessExplicitColliderHit(Collider2D other)
+    {
+        ProcessDamageColliderHit(other);
+    }
+
+    /// <summary>统一处理 Trigger 与显式扫掠得到的伤害碰撞体。</summary>
+    private void ProcessDamageColliderHit(Collider2D other)
     {
         // 伤害接触只接受 DamageReciver 层；交互、拾取、玩家身体等不会进入伤害解析链。
         if (damageCollider == null || !damageCollider.enabled ||

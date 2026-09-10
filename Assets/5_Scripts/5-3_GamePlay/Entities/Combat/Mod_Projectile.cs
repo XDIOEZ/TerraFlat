@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// 通用物品投射模块：负责把带 Mod_Damage 的物品以刚体方式发射、按蓄力缩放速度与伤害，
-/// 首次有效命中或飞行超时后停止，并按可配置概率保留为可拾取世界物品。
+/// 用碰撞体扫掠补足高速 Trigger 的帧间穿透，并以轻微空气阻力和虚拟抛物线高度决定落地停止。
 /// </summary>
 public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 {
@@ -11,10 +11,16 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     #region 配置
 
     [Min(0f), Tooltip("最低蓄力时的飞行速度。")]
-    public float MinSpeed = 5f;
+    public float MinSpeed = 25f;
 
     [Min(0f), Tooltip("满蓄力时的飞行速度。")]
-    public float MaxSpeed = 12f;
+    public float MaxSpeed = 60f;
+
+    [Min(0f), Tooltip("飞行中的线性空气阻力；只让水平速度缓慢衰减，不负责决定落地。")]
+    public float FlightLinearDrag = 0.12f;
+
+    [Min(0.01f), Tooltip("虚拟抛物线使用的重力；仅用于计算箭矢离地高度与落地时机。")]
+    public float VirtualGravity = 9.8f;
 
     [Range(0f, 1f), Tooltip("最低蓄力时的伤害倍率。")]
     public float MinDamageMultiplier = 0.35f;
@@ -22,7 +28,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     [Min(0f), Tooltip("满蓄力时的伤害倍率。")]
     public float MaxDamageMultiplier = 1f;
 
-    [Min(0.05f), Tooltip("没有命中目标时最多飞行多少秒。")]
+    [Min(0.05f), Tooltip("没有命中目标时一次完整虚拟抛物线的飞行时长，同时作为安全上限。")]
     public float MaxFlightSeconds = 2.5f;
 
     [Range(0f, 1f), Tooltip("投射结束后保留为可拾取物品的概率；箭矢默认 50%。")]
@@ -43,6 +49,11 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     private Rigidbody2D _body;
     private CombatDamage _baseDamage;
     private float _flightRemain;
+    private float _flightElapsed;
+    private float _virtualLaunchVerticalSpeed;
+    private float _virtualHeight;
+    private Vector2 _lastFlightPosition;
+    private readonly RaycastHit2D[] _sweepHits = new RaycastHit2D[16];
     private bool _isFlying;
     private bool _endingFlight;
 
@@ -78,6 +89,10 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _isFlying = false;
         _endingFlight = false;
         _flightRemain = 0f;
+        _flightElapsed = 0f;
+        _virtualLaunchVerticalSpeed = 0f;
+        _virtualHeight = 0f;
+        _lastFlightPosition = item != null ? (Vector2)item.transform.position : Vector2.zero;
     }
 
     /// <summary>投射物没有额外持久化运行态。</summary>
@@ -85,15 +100,27 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     {
     }
 
-    /// <summary>飞行期间维护空间索引，并在超时后按落地规则处理回收。</summary>
+    /// <summary>飞行期间补做帧间碰撞体扫掠，并按虚拟抛物线高度决定落地。</summary>
     public override void ModUpdate(float deltaTime)
     {
         if (!_isFlying)
             return;
 
+        SweepFlightPath();
+        if (!_isFlying)
+            return;
+
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
-        _flightRemain -= Mathf.Max(0f, deltaTime);
-        if (_flightRemain <= 0f)
+
+        float step = Mathf.Max(0f, deltaTime);
+        _flightElapsed += step;
+        _flightRemain -= step;
+
+        float gravity = Mathf.Max(0.01f, VirtualGravity);
+        _virtualHeight = _virtualLaunchVerticalSpeed * _flightElapsed -
+                         0.5f * gravity * _flightElapsed * _flightElapsed;
+
+        if ((_flightElapsed > 0f && _virtualHeight <= 0f) || _flightRemain <= 0f)
             FinishFlight();
     }
 
@@ -104,6 +131,9 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             _damage.OnReceiverDamageResolved -= HandleReceiverDamageResolved;
         _isFlying = false;
         _endingFlight = false;
+        _flightRemain = 0f;
+        _flightElapsed = 0f;
+        _virtualHeight = 0f;
     }
 
     #region 发射与停止
@@ -130,8 +160,10 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         EnsureBody();
         _body.bodyType = RigidbodyType2D.Dynamic;
         _body.gravityScale = 0f;
+        _body.drag = Mathf.Max(0f, FlightLinearDrag);
         _body.constraints = RigidbodyConstraints2D.FreezeRotation;
         _body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        _body.interpolation = RigidbodyInterpolation2D.Interpolate;
         _body.velocity = normalizedDirection * speed;
 
         float angle = Mathf.Atan2(normalizedDirection.y, normalizedDirection.x) * Mathf.Rad2Deg;
@@ -139,11 +171,103 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
         _damage.SetDamageValues(_baseDamage.Scaled(damageMultiplier));
         _damage.MaxAttackTargets = 1;
-        _damage.StartAttack();
 
-        _flightRemain = Mathf.Max(0.05f, MaxFlightSeconds);
+        float flightSeconds = Mathf.Max(0.05f, MaxFlightSeconds);
+        float virtualGravity = Mathf.Max(0.01f, VirtualGravity);
+        _flightRemain = flightSeconds;
+        _flightElapsed = 0f;
+        _virtualLaunchVerticalSpeed = 0.5f * virtualGravity * flightSeconds;
+        _virtualHeight = 0f;
+        _lastFlightPosition = _body.position;
         _endingFlight = false;
         _isFlying = true;
+
+        // 先进入飞行态再开伤害窗，确保出生点附近的有效命中也能立即结束箭矢。
+        _damage.StartAttack();
+    }
+
+    /// <summary>用伤害盒扫过上一帧到当前帧的完整路径，补足高速 Trigger 可能漏掉的目标。</summary>
+    private void SweepFlightPath()
+    {
+        Vector2 currentPosition = _body != null ? _body.position : (Vector2)item.transform.position;
+        Vector2 displacement = currentPosition - _lastFlightPosition;
+        float distance = displacement.magnitude;
+        if (distance <= 0.0001f)
+        {
+            _lastFlightPosition = currentPosition;
+            return;
+        }
+
+        if (!(_damage.DamageCollider is BoxCollider2D damageBox) || !damageBox.enabled)
+        {
+            _lastFlightPosition = currentPosition;
+            return;
+        }
+
+        Vector2 direction = displacement / distance;
+        Vector2 currentColliderCenter = damageBox.transform.TransformPoint(damageBox.offset);
+        Vector2 castOrigin = currentColliderCenter - displacement;
+        Vector3 lossyScale = damageBox.transform.lossyScale;
+        Vector2 castSize = new Vector2(
+            damageBox.size.x * Mathf.Abs(lossyScale.x),
+            damageBox.size.y * Mathf.Abs(lossyScale.y));
+        float castAngle = damageBox.transform.eulerAngles.z;
+
+        int hitCount = Physics2D.BoxCastNonAlloc(
+            castOrigin,
+            castSize,
+            castAngle,
+            direction,
+            _sweepHits,
+            distance,
+            CombatPhysicsChannels.DamageReceiverMask);
+        SortSweepHitsByDistance(hitCount);
+
+        for (int i = 0; i < hitCount && _isFlying; i++)
+        {
+            Collider2D hitCollider = _sweepHits[i].collider;
+            if (hitCollider == null)
+                continue;
+
+            Vector2 impactPosition = _lastFlightPosition +
+                                     direction * Mathf.Clamp(_sweepHits[i].distance, 0f, distance);
+            if (_body != null)
+                _body.position = impactPosition;
+            else
+                item.transform.position = impactPosition;
+
+            _damage.ProcessExplicitColliderHit(hitCollider);
+            if (!_isFlying)
+            {
+                _lastFlightPosition = impactPosition;
+                ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
+                return;
+            }
+
+            if (_body != null)
+                _body.position = currentPosition;
+            else
+                item.transform.position = currentPosition;
+        }
+
+        _lastFlightPosition = currentPosition;
+    }
+
+    /// <summary>NonAlloc Cast 不保证顺序；按距离排序，确保先处理路径上最近的目标。</summary>
+    private void SortSweepHitsByDistance(int count)
+    {
+        for (int i = 1; i < count; i++)
+        {
+            RaycastHit2D value = _sweepHits[i];
+            int j = i - 1;
+            while (j >= 0 && _sweepHits[j].distance > value.distance)
+            {
+                _sweepHits[j + 1] = _sweepHits[j];
+                j--;
+            }
+
+            _sweepHits[j + 1] = value;
+        }
     }
 
     /// <summary>首次有效实体命中后立即结束飞行；无效结算不会吞掉箭矢。</summary>
@@ -168,8 +292,12 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         {
             _body.velocity = Vector2.zero;
             _body.angularVelocity = 0f;
+            _body.drag = 0f;
             _body.bodyType = RigidbodyType2D.Kinematic;
         }
+
+        _flightRemain = 0f;
+        _virtualHeight = 0f;
 
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
         bool recover = Random.value < Mathf.Clamp01(RecoveryChance);
@@ -202,9 +330,11 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         EnsureBody();
         _body.bodyType = RigidbodyType2D.Kinematic;
         _body.gravityScale = 0f;
+        _body.drag = 0f;
         _body.velocity = Vector2.zero;
         _body.angularVelocity = 0f;
         _body.constraints = RigidbodyConstraints2D.FreezeRotation;
+        _body.interpolation = RigidbodyInterpolation2D.None;
     }
 
     #endregion

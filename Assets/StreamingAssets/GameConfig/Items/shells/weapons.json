@@ -1105,7 +1105,8 @@
         "Wood"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Archery/WoodBow_Icon.png"
+        "spriteAddress": "Assets/6_Art/Generated/Archery/WoodBow_Icon.png",
+        "flipX": true
       },
       "modules": {
         "bow": {
@@ -1121,6 +1122,7 @@
             "FullChargeSeconds": 1.0,
             "MaxAimDistance": 24.0,
             "SpawnForwardOffset": 0.45,
+            "StaminaConsumePerSecond": 5.0,
             "NockedArrowStartLocalPosition": {
               "x": 0.14,
               "y": 0.0,
@@ -1159,8 +1161,10 @@
             "Type": 0
           },
           "parameters": {
-            "MinSpeed": 5.0,
-            "MaxSpeed": 12.0,
+            "MinSpeed": 25.0,
+            "MaxSpeed": 60.0,
+            "FlightLinearDrag": 0.12,
+            "VirtualGravity": 9.8,
             "MinDamageMultiplier": 0.35,
             "MaxDamageMultiplier": 1.0,
             "MaxFlightSeconds": 2.5,

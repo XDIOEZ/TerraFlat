@@ -42,7 +42,8 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - `DamageSender` 与 `DamageReciver` 是战斗专用 Trigger 对，Physics2D 矩阵中两层都只能与彼此接触；交互、拾取、玩家身体和普通阻挡不得与任一伤害层建立接触对。`DamageReceiver` 必须自带同节点专用 Trigger Collider，禁止借用 Item 根的普通阻挡 Collider；冲撞技能等物理伤害发送器也必须归入 `DamageSender`。Tile/建筑伤害继续使用不依赖接触矩阵的显式空间查询。
 - 带 `Owner` 的武器、投射物仍保持伤害物品自身作为 `IDamageSender.attacker`，兼容资源节点、难度与既有结算语义；防自伤只在 Trigger、主动重叠扫描和最终结算入口额外排除 `item.Owner`，禁止为了防自伤全局改写攻击者身份。
 - 受击后附加状态统一消费 `DamageReceiverDamageInfo`，具体规则通过 `DamageReceivedStatusEffectRegistry` 注册，禁止把出血/中毒等业务硬编码进 `Mod_Damage`。需要按真实伤害类型判定时读取 `ResolvedDamageValues`（已应用难度、防御和受击倍率），并按 `DamageValue` 裁掉过量伤害；玩家/动物出血只认切割、穿刺、劈砍分量，纯钝击和被防御完全抵消的分量不能触发。
-- 玩家弓类远程武器使用 `Mod_Bow` 监听 `GameController.AttackStarted/AttackEnded` 完成按住蓄力与松开发射；弹药只通过通用 `Arrow` 标签和同库存事务选择，不按木/石/铜/铁写特殊分支。箭矢自身组合 `Mod_Projectile + Mod_Damage`：前者只负责飞行、蓄力倍率与落地回收，后者继续作为唯一伤害发送器；两者用 `IItemModuleDependencyBinder` 显式绑定，使新增 MOD 箭种只需遵守相同模块契约即可接入。
+- 玩家弓类远程武器使用 `Mod_Bow` 监听 `GameController.AttackStarted/AttackEnded` 完成按住蓄力与松开发射；持续拉弓时通过持有者的 `Mod_Stamina` 按秒消耗体力，松开、取消或卸载后必须立即停止消耗，消耗统一走 `Mod_Stamina.AddStamina` 以保留难度倍率。弹药只通过通用 `Arrow` 标签和同库存事务选择，不按木/石/铜/铁写特殊分支。箭矢自身组合 `Mod_Projectile + Mod_Damage`：前者只负责飞行、蓄力倍率与落地回收，后者继续作为唯一伤害发送器；两者用 `IItemModuleDependencyBinder` 显式绑定，使新增 MOD 箭种只需遵守相同模块契约即可接入。
+- 高速箭矢不能只依赖 Trigger 回调和 Rigidbody2D Continuous；`Mod_Projectile` 应使用 `Mod_Damage` 的实际伤害盒对上一帧到当前帧做 NonAlloc 形状扫掠，再把命中交回 `Mod_Damage` 的统一结算入口，避免高速穿过窄目标时漏伤害。
 - 出血资格使用稳定 `Blood` 标签表达“该实体有血”，不要用 `Player`/`Animal` 类型或物种标签代替。玩家和有血动物可以同时保留自己的分类标签；幽灵、机械体等无血实体只要不声明 `Blood` 就不会触发刃伤出血规则，MOD 生物也通过同一标签接入。
 
 ## 验证

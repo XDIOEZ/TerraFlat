@@ -49,6 +49,7 @@ MonoBehaviour:
   FullChargeSeconds: 1
   MaxAimDistance: 24
   SpawnForwardOffset: 0.45
+  StaminaConsumePerSecond: 5
   NockedArrowStartLocalPosition: {x: 0.14, y: 0, z: -0.01}
   NockedArrowFullChargeLocalPosition: {x: -0.06, y: 0, z: -0.01}
   NockedArrowLocalAngleDegrees: -45

@@ -22,6 +22,9 @@ public sealed class Mod_Bow : Module
     [Min(0f), Tooltip("箭矢生成点相对射手中心沿瞄准方向的前移距离。")]
     public float SpawnForwardOffset = 0.45f;
 
+    [Min(0f), Tooltip("持续拉弓时每秒消耗的体力；最终消耗仍经过游戏难度倍率。")]
+    public float StaminaConsumePerSecond = 5f;
+
     [Tooltip("搭箭开始时箭矢在弓物体下的局部位置。")]
     public Vector3 NockedArrowStartLocalPosition = new Vector3(0.14f, 0f, -0.01f);
 
@@ -43,6 +46,7 @@ public sealed class Mod_Bow : Module
     #region 运行时状态
 
     private GameController _controller;
+    private Mod_Stamina _ownerStamina;
     private Inventory _sourceInventory;
     private GameObject _nockedArrowObject;
     private SpriteRenderer _nockedArrowRenderer;
@@ -86,7 +90,11 @@ public sealed class Mod_Bow : Module
             return;
         }
 
-        _chargeSeconds += Mathf.Max(0f, deltaTime);
+        float safeDeltaTime = Mathf.Max(0f, deltaTime);
+        if (_ownerStamina != null && StaminaConsumePerSecond > 0f)
+            _ownerStamina.AddStamina(-StaminaConsumePerSecond * safeDeltaTime);
+
+        _chargeSeconds += safeDeltaTime;
         UpdateNockedArrowVisual(GetCharge01());
     }
 
@@ -147,6 +155,7 @@ public sealed class Mod_Bow : Module
         if (ammoSlot?.itemData?.Stack == null || ammoSlot.itemData.Stack.Amount < 1f)
             return;
 
+        _ownerStamina = item.Owner.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
         _charging = true;
         _chargeSeconds = 0f;
         CreateNockedArrowVisual(ammoSlot.itemData.IDName);
@@ -168,6 +177,7 @@ public sealed class Mod_Bow : Module
 
         float charge01 = GetCharge01();
         _charging = false;
+        _ownerStamina = null;
         DestroyNockedArrowVisual();
 
         if (_sourceInventory?.Data == null || item == null || item.Owner == null || !item.InHand)
@@ -223,6 +233,7 @@ public sealed class Mod_Bow : Module
     {
         _charging = false;
         _chargeSeconds = 0f;
+        _ownerStamina = null;
         _sourceInventory = null;
         DestroyNockedArrowVisual();
     }
