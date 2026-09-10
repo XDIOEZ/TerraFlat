@@ -45,8 +45,8 @@ MonoBehaviour:
         waterGainPerTick: 12.5
         saltWaterGainPerTick: 10
         dirtyWaterInfectionChance: 0.2
-        shallowMoveSpeedMultiplier: 0.85
-        moveSpeedMultiplier: 0.5
+        shallowMoveSpeedMultiplier: 0.5
+        moveSpeedMultiplier: 0.2
         entryTemperatureDrop: 10
         entryTemperatureFloor: 10
         entryTemperatureTransitionSeconds: 5

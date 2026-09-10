@@ -223,6 +223,8 @@ namespace FlatWorld.WorldModel
                                0.004d) * worldFrequencyScale;
             HeightOctaves = Clamp(GetInt(numbers, "terrain.octaves", 4), 1, 8);
             ClimateOctaves = Clamp(GetInt(numbers, "climate.octaves", 3), 1, 8);
+            OceanMoistureFloor = Clamp01(
+                GetDouble(numbers, "climate.ocean.moistureFloor", 0.85d));
             SurfaceClimateAlgorithm = ParseSurfaceClimateAlgorithm(
                 GetText(texts, "climate.algorithm", "simple"));
             HeightNoise = CreateNoiseChannel(numbers, "terrain.height", 2d, 0.05d, 5,
@@ -482,6 +484,8 @@ namespace FlatWorld.WorldModel
         public int HeightOctaves { get; }
         /// <summary>气候随机图叠加多少层细节。</summary>
         public int ClimateOctaves { get; }
+        /// <summary>海洋格环境湿度的最低值，避免海面比普通陆地更干燥。</summary>
+        public double OceanMoistureFloor { get; }
         /// <summary>地表高度和降水使用哪套采样规则。</summary>
         public SurfaceClimateAlgorithm SurfaceClimateAlgorithm { get; }
         /// <summary>旧版 Land 高度噪声通道。</summary>

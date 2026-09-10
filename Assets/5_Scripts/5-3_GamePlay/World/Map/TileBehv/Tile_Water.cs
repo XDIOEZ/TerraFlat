@@ -28,10 +28,10 @@ public class Tile_Water : TileBlockBehaviour
     [Range(0f, 1f)] public float dirtyWaterInfectionChance = 0.2f;
 
     [Header("水体环境效果")]
-    [Tooltip("水深为 0 时的移动速度倍率；默认浅水仅轻微减速。")]
-    [Range(0.01f, 1f)] public float shallowMoveSpeedMultiplier = 0.85f;
-    [Tooltip("水深为 1 时的移动速度倍率；由环境实例维护，不进入 Buff 系统。")]
-    [Min(0.01f)] public float moveSpeedMultiplier = 0.5f;
+    [Tooltip("水深为 0 时的移动速度倍率；进入水体即至少降低 50% 移速。")]
+    [Range(0.01f, 1f)] public float shallowMoveSpeedMultiplier = 0.5f;
+    [Tooltip("水深为 1 时的移动速度倍率；最深水体最多降低 80% 移速，由环境实例维护，不进入 Buff 系统。")]
+    [Min(0.01f)] public float moveSpeedMultiplier = 0.2f;
     [Tooltip("首次进入一片连续水域时固定降低的体温。")]
     [Min(0f)] public float entryTemperatureDrop = 10f;
     [Tooltip("入水降温不能把角色体温压到低于该值。")]
