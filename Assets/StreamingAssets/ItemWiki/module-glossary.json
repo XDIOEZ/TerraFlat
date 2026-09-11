@@ -93,6 +93,21 @@
     "ConsumptionEnabled": "允许食用",
     "HealthState": "生命状态",
     "StaminaState": "体力状态",
+    "StaminaRecoverSpeed": "体力恢复速度",
+    "StaminaConsumeSpeed": "恢复体力时营养消耗速度",
+    "Enabled": "启用",
+    "HealSpeed": "回血速度",
+    "HealInterval": "回血间隔",
+    "HealAmount": "单次回血量",
+    "WaterSelfHurt": "缺水伤害",
+    "ProteinSelfHurt": "缺蛋白伤害",
+    "VitaminSelfHurt": "缺维生素伤害",
+    "PlayerProteinHealThreshold": "玩家回血蛋白阈值",
+    "HealNeedRatio": "回血蛋白比例",
+    "CueId": "音效 Cue ID",
+    "VolumeScale": "音量倍率",
+    "PitchMin": "最低音高",
+    "PitchMax": "最高音高",
     "FoodData": "食物数据",
     "MechanicStates": "机制状态",
     "nutrition": "营养",
@@ -110,6 +125,16 @@
     "nutritionConsumeSpeed": "营养消耗速度",
     "WaterConsumeSpeedRate": "水分消耗速率",
     "nutritionConsumeRate": "营养消耗倍率",
+    "BaseValue": "基础值",
+    "BaseAdditive": "基础加成",
+    "AdditiveModifier": "百分比加成",
+    "MultiplicativeModifier": "乘算修正",
+    "FinalAdditive": "最终加成",
+    "FeelGood": "愉悦标记",
+    "PanelPosition": "面板位置",
+    "localPosition": "局部位置",
+    "localEulerAngles": "局部旋转",
+    "localScale": "局部缩放",
     "outputs": "产出列表",
     "growthDurationSeconds": "成长时长（秒）",
     "waterConsumePerSecond": "每秒耗水",
@@ -198,5 +223,187 @@
     "MaxFlightSeconds": "最大飞行时间",
     "RecoveryChance": "回收概率",
     "SpriteForwardAngleDegrees": "Sprite 前向角度"
+  },
+  "fieldHelp": {
+    "food.parameters.StaminaState.StaminaRecoverSpeed": {
+      "description": "角色体力未满时，每秒自动恢复的体力值。运行时实际恢复量为该值 × 经过的秒数。",
+      "effect": "数值越大，体力恢复越快；设为 0 会关闭这一部分自动体力恢复。",
+      "unit": "体力/秒",
+      "range": ">= 0"
+    },
+    "food.parameters.StaminaState.StaminaConsumeSpeed": {
+      "description": "角色正在恢复体力时，额外推进营养消耗的速度。每秒会按该值调用一次营养消耗流程。",
+      "effect": "数值越大，恢复体力期间碳水、脂肪、蛋白质和水分等生存资源下降得越快。",
+      "unit": "倍率/秒",
+      "range": ">= 0"
+    },
+    "food.parameters.HealthState.Enabled": {
+      "description": "食物生命规则总开关。关闭后不会执行蛋白质回血、缺蛋白伤害、缺水伤害和缺维生素伤害。",
+      "effect": "false 会整体停用这组生命与营养联动规则。"
+    },
+    "food.parameters.HealthState.HealSpeed": {
+      "description": "满足蛋白质回血条件、且未启用离散回血时的连续回血速度。实际恢复量为该值 × 秒数。",
+      "effect": "只在生命未满且蛋白质高于回血门槛时生效；HealInterval > 0 时改用 HealAmount 离散回血。",
+      "unit": "生命/秒",
+      "range": ">= 0"
+    },
+    "food.parameters.HealthState.HealInterval": {
+      "description": "离散回血的时间间隔。大于 0 时，不再使用 HealSpeed 连续回血，而是每到间隔恢复一次 HealAmount。",
+      "effect": "设为 0 使用连续回血；设为正数则切换成周期性回血。",
+      "unit": "秒",
+      "range": ">= 0"
+    },
+    "food.parameters.HealthState.HealAmount": {
+      "description": "启用离散回血后，每次回血触发恢复的生命值。",
+      "effect": "只有 HealInterval > 0 且该值 > 0 时才会产生离散回血。",
+      "unit": "生命/次",
+      "range": ">= 0"
+    },
+    "food.parameters.HealthState.WaterSelfHurt": {
+      "description": "水分降到 0 时，每 5 秒受到一次的缺水伤害。",
+      "effect": "数值越大，完全缺水后的生存压力越高。",
+      "unit": "生命/5秒",
+      "range": ">= 0"
+    },
+    "food.parameters.HealthState.ProteinSelfHurt": {
+      "description": "蛋白质降到 0 时，每秒受到一次的饥饿伤害。",
+      "effect": "数值越大，蛋白质耗尽后的掉血速度越快。",
+      "unit": "生命/秒",
+      "range": ">= 0"
+    },
+    "food.parameters.HealthState.VitaminSelfHurt": {
+      "description": "维生素降到 0 时持续受到的伤害速度。运行时按该值 × 秒数结算。",
+      "effect": "数值越大，维生素耗尽后的持续伤害越高。",
+      "unit": "生命/秒",
+      "range": ">= 0"
+    },
+    "food.parameters.HealthState.PlayerProteinHealThreshold": {
+      "description": "玩家角色开始通过蛋白质恢复生命所需的最低蛋白质绝对值。蛋白质必须严格高于该门槛。",
+      "effect": "只用于玩家；数值越高，玩家越难满足自然回血条件。",
+      "range": ">= 0"
+    },
+    "food.parameters.HealthState.HealNeedRatio": {
+      "description": "非玩家实体自然回血所需的最低蛋白质比例，门槛 = 最大蛋白质 × 该比例。",
+      "effect": "该值不用于玩家；数值越高，动物等实体越难满足回血条件。",
+      "unit": "比例",
+      "range": "0 ~ 1"
+    },
+    "food.parameters.ConsumeAudio.Enabled": {
+      "description": "进食音效开关。关闭后食用操作不会播放 ConsumeAudio 配置的声音。",
+      "effect": "只影响听觉反馈，不改变营养结算或食用进度。"
+    },
+    "food.parameters.ConsumeAudio.CueId": {
+      "description": "进食时播放的 AudioCatalog Cue ID。留空时运行时回退到默认 food.eat。",
+      "effect": "可以替换成 food.crunch、food.drink 等已登记 Cue，从而区分不同食物的听感。"
+    },
+    "food.parameters.ConsumeAudio.VolumeScale": {
+      "description": "进食音效相对 Cue 原始音量的额外倍率。",
+      "effect": "1 为原倍率，低于 1 更轻，高于 1 更响。",
+      "unit": "倍率",
+      "range": "0 ~ 2"
+    },
+    "food.parameters.ConsumeAudio.PitchMin": {
+      "description": "每次进食播放音效时随机音高的下界。运行时会与 PitchMax 自动取较小值作为下界。",
+      "effect": "与 PitchMax 拉开差距可以减少连续进食时声音完全重复的感觉。",
+      "unit": "音高倍率",
+      "range": ">= 0.01"
+    },
+    "food.parameters.ConsumeAudio.PitchMax": {
+      "description": "每次进食播放音效时随机音高的上界。运行时会保证它不低于最终下界。",
+      "effect": "与 PitchMin 相同会固定音高；区间越宽，随机变化越明显。",
+      "unit": "音高倍率",
+      "range": ">= 0.01"
+    },
+    "food.parameters.ConsumeKind": {
+      "description": "食用类型枚举：0 = Solid（固体食物），1 = Drink（饮品）。Drink 完整喝下一份后会额外触发饮水玩法事件。",
+      "effect": "用于让下游玩法区分进食与饮水，不改变基础营养相加规则。",
+      "range": "0 / 1"
+    },
+    "food.parameters.ConsumptionEnabled": {
+      "description": "是否允许这个物品响应食用操作并提供营养。关闭后仍保留食物数据与相关计时状态。",
+      "effect": "false 时物品不能被正常吃下或喝下。"
+    },
+    "food.parameters.ConsumeCompleteReplacementItemID": {
+      "description": "完整食用达到次数后，用指定 Item ID 替换原库存槽位中的物品；留空则按普通食物直接消耗一份。",
+      "effect": "适合瓶装饮料、罐头等食用后应留下容器或残留物的物品。"
+    },
+    "food.data.FoodData.nutrition.Carbohydrates": {
+      "description": "该食物提供的碳水数值；完整食用后会加到消费者当前碳水中，并受消费者碳水容量上限限制。",
+      "effect": "角色日常能量消耗优先扣碳水，再扣脂肪和蛋白质。",
+      "range": ">= 0"
+    },
+    "food.data.FoodData.nutrition.Fat": {
+      "description": "该食物提供的脂肪数值；完整食用后加到消费者当前脂肪中，并受脂肪容量上限限制。",
+      "effect": "碳水耗尽后，生存能量消耗会继续扣除脂肪。",
+      "range": ">= 0"
+    },
+    "food.data.FoodData.nutrition.Protein": {
+      "description": "该食物提供的蛋白质数值；完整食用后加到消费者当前蛋白质中，并受蛋白质容量上限限制。",
+      "effect": "蛋白质同时参与自然回血门槛；完全耗尽时还会触发缺蛋白伤害。",
+      "range": ">= 0"
+    },
+    "food.data.FoodData.nutrition.Water": {
+      "description": "该食物或饮品提供的水分数值；完整食用后加到消费者当前水分中，并受水分容量上限限制。",
+      "effect": "水分为 0 时会进入缺水伤害逻辑。",
+      "range": ">= 0"
+    },
+    "food.data.FoodData.nutrition.Vitamins": {
+      "description": "该食物提供的维生素数值；完整食用后加到消费者当前维生素中，并受维生素容量上限限制。",
+      "effect": "维生素会随时间自然下降，降到 0 后触发持续缺维生素伤害。",
+      "range": ">= 0"
+    },
+    "food.data.FoodData.nutrition.Max_Carbohydrates": {
+      "description": "该 FoodData 自身的碳水容量上限，用于比例计算和状态上限。作为被食用食物时不会覆盖消费者自己的碳水容量。",
+      "range": ">= 0"
+    },
+    "food.data.FoodData.nutrition.Max_Fat": {
+      "description": "该 FoodData 自身的脂肪容量上限。作为普通食物被吃掉时不会直接覆盖消费者脂肪容量。",
+      "range": ">= 0"
+    },
+    "food.data.FoodData.nutrition.Max_Protein": {
+      "description": "该 FoodData 自身的蛋白质容量上限，也是非玩家实体按 HealNeedRatio 计算回血门槛的基准。",
+      "range": ">= 0"
+    },
+    "food.data.FoodData.nutrition.Max_Water": {
+      "description": "该 FoodData 自身的水分容量上限，用于限制当前 Water。作为食物被吃掉时不会覆盖消费者自己的水分容量。",
+      "range": ">= 0"
+    },
+    "food.data.FoodData.nutrition.Max_Vitamins": {
+      "description": "该 FoodData 自身的维生素容量上限，用于限制当前 Vitamins。作为食物被吃掉时不会覆盖消费者自己的维生素容量。",
+      "range": ">= 0"
+    },
+    "food.data.FoodData.Max_EatingProgress": {
+      "description": "完整吃完一份食物需要累积的食用次数。每次成功使用增加 1，达到该值后才扣除或替换物品并结算营养。",
+      "effect": "数值越大，同一份食物需要更多口才能吃完；手持食物咬痕表现也使用这个值。",
+      "unit": "次",
+      "range": "> 0"
+    },
+    "food.data.FoodData.WaterConsumeSpeedRate": {
+      "description": "角色生存 Tick 中每秒基础水分消耗速率，会继续乘移动和 Buff 的水分消耗倍率。",
+      "effect": "数值越大，角色口渴速度越快。",
+      "unit": "水分/秒",
+      "range": ">= 0"
+    },
+    "food.data.FoodData.MechanicStates": {
+      "description": "食物可扩展机制的运行时状态数组，例如腐败计时、当前食用进度等。它属于状态数据，不是单一玩法数值。",
+      "effect": "直接编辑会同时影响对应机制的持久化状态，修改前应确认 StateKey 对应的具体机制。"
+    },
+    "BaseValue": {
+      "description": "GameValue_float 的基础值。最终值公式为 ((基础值 + 基础加成) × (1 + 百分比加成)) × 乘算修正 + 最终加成。"
+    },
+    "BaseAdditive": {
+      "description": "在百分比加成计算之前直接加到 BaseValue 上的基础加算项，通常承载装备、Buff 等固定数值加成。"
+    },
+    "AdditiveModifier": {
+      "description": "GameValue_float 的百分比加成项；0.2 表示在基础值与基础加成之和上增加 20%。",
+      "unit": "比例"
+    },
+    "MultiplicativeModifier": {
+      "description": "GameValue_float 的乘算修正，会在基础值和百分比加成结算后整体相乘。",
+      "unit": "倍率"
+    },
+    "FinalAdditive": {
+      "description": "GameValue_float 最后一步直接追加的固定值，不再参与前面的百分比或乘算修正。"
+    }
   }
 }

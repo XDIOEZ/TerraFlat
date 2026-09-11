@@ -79,7 +79,7 @@
         packageHashes: new Map(),
         resolvedById: new Map(),
         lootTables: new Map(),
-        moduleGlossary: { modules: {}, fields: {} },
+        moduleGlossary: { modules: {}, fields: {}, fieldHelp: {} },
         itemMetadata: { schemaVersion: 1, items: {} },
         entries: [],
         selectedId: null,
@@ -108,9 +108,15 @@
         resultCount: document.getElementById("resultCount"),
         categoryTabs: document.getElementById("categoryTabs"),
         indexCollapseButton: document.getElementById("indexCollapseButton"),
+        indexToolsPanel: document.getElementById("indexToolsPanel"),
+        indexToolsCollapseButton: document.getElementById("indexToolsCollapseButton"),
         countConcrete: document.getElementById("countConcrete"),
         countAbstract: document.getElementById("countAbstract"),
         countPackages: document.getElementById("countPackages"),
+        previousItemButton: document.getElementById("previousItemButton"),
+        nextItemButton: document.getElementById("nextItemButton"),
+        locateItemButton: document.getElementById("locateItemButton"),
+        detailPosition: document.getElementById("detailPosition"),
         detailContent: document.getElementById("detailContent"),
         moduleTemplate: document.getElementById("moduleTemplate"),
         overviewCount: document.getElementById("overviewCount"),
@@ -137,6 +143,7 @@
         bindEvents();
         restoreIndexSideState();
         restoreIndexCollapseState();
+        restoreIndexToolsCollapseState();
         if (location.protocol === "file:") {
             setStatus("error", "浏览器禁止 file:// 页面直接读取 JSON。请双击同目录的“打开物品Wiki.cmd”。");
             return;
@@ -158,8 +165,12 @@
         els.packageSelect.addEventListener("change", renderList);
         els.sortSelect.addEventListener("change", renderList);
         els.showAbstract.addEventListener("change", renderList);
+        els.previousItemButton.addEventListener("click", () => navigateRelativeItem(-1));
+        els.nextItemButton.addEventListener("click", () => navigateRelativeItem(1));
+        els.locateItemButton.addEventListener("click", locateSelectedItemInIndex);
         els.reloadButton.addEventListener("click", loadCatalog);
         els.indexCollapseButton.addEventListener("click", toggleIndexPanel);
+        els.indexToolsCollapseButton.addEventListener("click", toggleIndexToolsPanel);
         els.catalogViewButton.addEventListener("click", () => setView("catalog"));
         els.overviewViewButton.addEventListener("click", () => setView("overview"));
         els.settingsButton.addEventListener("click", () => setView("settings"));
@@ -189,7 +200,24 @@
                 els.globalSearch.focus();
                 els.globalSearch.select();
             }
+            if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && canUseCatalogPageKeys(event)) {
+                event.preventDefault();
+                navigateRelativeItem(event.key === "ArrowLeft" ? -1 : 1);
+            }
         });
+        window.addEventListener("resize", () => hideModuleFieldTooltip());
+        window.addEventListener("scroll", () => hideModuleFieldTooltip(), true);
+    }
+
+    // 仅在档案浏览且未编辑文本/打开弹窗时接管左右方向键，避免干扰输入框与原生控件。
+    function canUseCatalogPageKeys(event) {
+        if (state.activeView !== "catalog") return false;
+        if (!els.imageZoomModal.hidden || !els.lootModal.hidden) return false;
+        if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return false;
+
+        const target = event.target instanceof Element ? event.target : document.activeElement;
+        if (!target) return true;
+        return !target.closest("input, textarea, select, [contenteditable='true'], .inline-editing");
     }
 
     // 恢复索引页左右位置；这是浏览器偏好，不写入项目配置。
@@ -241,6 +269,30 @@
             ? (right ? "◀" : "▶")
             : (right ? "▶" : "◀");
         els.indexCollapseButton.querySelector(".index-collapse-text").textContent = collapsed ? "展开索引" : "收起索引";
+    }
+
+    // 恢复索引工具面板上次使用的折叠状态。
+    function restoreIndexToolsCollapseState() {
+        const collapsed = localStorage.getItem("flatworld.itemWiki.indexToolsCollapsed") === "1";
+        setIndexToolsCollapsed(collapsed, false);
+    }
+
+    // 切换统计与筛选工具面板的折叠状态。
+    function toggleIndexToolsPanel() {
+        const collapsed = !els.indexToolsPanel.classList.contains("is-collapsed");
+        setIndexToolsCollapsed(collapsed, true);
+    }
+
+    // 应用索引工具面板折叠状态，并同步按钮与无障碍信息。
+    function setIndexToolsCollapsed(collapsed, persist) {
+        els.indexToolsPanel.classList.toggle("is-collapsed", collapsed);
+        els.indexToolsCollapseButton.setAttribute("aria-expanded", String(!collapsed));
+        els.indexToolsCollapseButton.title = collapsed ? "展开索引工具" : "收起索引工具";
+        els.indexToolsCollapseButton.querySelector(".index-tools-collapse-icon").textContent = collapsed ? "▼" : "▲";
+        els.indexToolsCollapseButton.querySelector(".index-tools-collapse-text").textContent = collapsed ? "展开" : "收起";
+        if (persist) {
+            localStorage.setItem("flatworld.itemWiki.indexToolsCollapsed", collapsed ? "1" : "0");
+        }
     }
 
     // 从 Manifest 读取全部启用分包，并按项目运行时规则解析继承。
@@ -295,7 +347,7 @@
                 .map(table => [String(table.id).toLowerCase(), table]));
             state.moduleGlossary = moduleGlossary && moduleGlossary.schemaVersion === 1
                 ? moduleGlossary
-                : { modules: {}, fields: {} };
+                : { modules: {}, fields: {}, fieldHelp: {} };
 
             renderFilters();
             updateSummary();
@@ -329,7 +381,8 @@
         if (!response.ok) throw new Error(`${response.status} ${response.statusText} · ${path}`);
         const bytes = await response.arrayBuffer();
         const text = new TextDecoder("utf-8").decode(bytes).replace(/^\uFEFF/, "");
-        return { data: JSON.parse(text), hash: await sha256(bytes) };
+        const hash = globalThis.crypto?.subtle ? await sha256(bytes) : "";
+        return { data: JSON.parse(text), hash };
     }
 
     // 使用浏览器 WebCrypto 计算 SHA-256，格式与本地写入服务一致。
@@ -623,8 +676,8 @@
         els.countPackages.textContent = String(state.packages.length);
     }
 
-    // 根据当前筛选器绘制左页索引。
-    function renderList() {
+    // 获取左页索引当前筛选与排序后的条目，供列表和前后浏览共同使用。
+    function getCatalogEntries() {
         const query = els.globalSearch.value.trim().toLowerCase();
         const category = els.categorySelect.value || "全部";
         const packageId = els.packageSelect.value || "全部";
@@ -648,18 +701,26 @@
                 default: return a.displayName.localeCompare(b.displayName, "zh-CN", { numeric: true });
             }
         });
+        return entries;
+    }
+
+    // 根据当前筛选器绘制左页索引。
+    function renderList() {
+        const entries = getCatalogEntries();
 
         els.resultCount.textContent = `${entries.length} 条结果`;
         els.itemList.innerHTML = "";
 
         if (!entries.length) {
             els.itemList.innerHTML = `<div class="no-data">没有符合当前条件的物品。</div>`;
+            updateDetailNavigation();
             return;
         }
 
         const fragment = document.createDocumentFragment();
         for (const entry of entries) fragment.appendChild(createItemRow(entry));
         els.itemList.appendChild(fragment);
+        updateDetailNavigation();
     }
 
     // 创建单条物品索引，并异步填充 Sprite 图标。
@@ -699,6 +760,89 @@
             row.classList.toggle("selected", row.dataset.itemId.toLowerCase() === entry.id.toLowerCase());
         });
         renderDetail(entry);
+        updateDetailNavigation();
+    }
+
+    // 按当前索引筛选和排序顺序切换到相邻物品，并让索引行跟随滚动。
+    function navigateRelativeItem(offset) {
+        const entries = getCatalogEntries();
+        const currentIndex = entries.findIndex(entry => entry.id.toLowerCase() === String(state.selectedId || "").toLowerCase());
+        if (currentIndex < 0) return;
+        const target = entries[currentIndex + offset];
+        if (!target) return;
+        selectItem(target.id);
+        const selectedRow = Array.from(els.itemList.querySelectorAll(".item-row"))
+            .find(row => row.dataset.itemId.toLowerCase() === target.id.toLowerCase());
+        selectedRow?.scrollIntoView({ block: "nearest" });
+    }
+
+    // 展开 INDEX 并把当前详情对应的条目滚动到列表中央；必要时只解除会隐藏该条目的筛选条件。
+    function locateSelectedItemInIndex() {
+        const selectedId = String(state.selectedId || "");
+        const entry = state.entries.find(candidate => candidate.id.toLowerCase() === selectedId.toLowerCase());
+        if (!entry) return;
+
+        setIndexCollapsed(false, true);
+
+        let needsRender = false;
+        if (els.categorySelect.value !== "全部" && els.categorySelect.value !== entry.category) {
+            els.categorySelect.value = entry.category;
+            needsRender = true;
+        }
+        if (els.packageSelect.value !== "全部" && els.packageSelect.value !== entry.package.id) {
+            els.packageSelect.value = entry.package.id;
+            needsRender = true;
+        }
+        if (entry.final.abstract === true && !els.showAbstract.checked) {
+            els.showAbstract.checked = true;
+            needsRender = true;
+        }
+        const query = els.globalSearch.value.trim().toLowerCase();
+        if (query && !entry.searchBlob.includes(query)) {
+            els.globalSearch.value = "";
+            needsRender = true;
+            renderOverview();
+        }
+        if (needsRender) {
+            syncCategoryTabs();
+            renderList();
+        }
+
+        const row = Array.from(els.itemList.querySelectorAll(".item-row"))
+            .find(candidate => candidate.dataset.itemId.toLowerCase() === entry.id.toLowerCase());
+        if (!row) return;
+
+        requestAnimationFrame(() => {
+            const listRect = els.itemList.getBoundingClientRect();
+            const rowRect = row.getBoundingClientRect();
+            const centeredTop = els.itemList.scrollTop + rowRect.top - listRect.top - (listRect.height - rowRect.height) / 2;
+            const maxScrollTop = Math.max(0, els.itemList.scrollHeight - els.itemList.clientHeight);
+            els.itemList.scrollTo({
+                top: Math.max(0, Math.min(centeredTop, maxScrollTop)),
+                behavior: "smooth"
+            });
+
+            row.classList.remove("index-located");
+            void row.offsetWidth;
+            row.classList.add("index-located");
+            window.setTimeout(() => row.classList.remove("index-located"), 900);
+        });
+    }
+
+    // 同步详情页前后箭头、当前位置和边界禁用状态。
+    function updateDetailNavigation() {
+        const entries = getCatalogEntries();
+        const currentIndex = entries.findIndex(entry => entry.id.toLowerCase() === String(state.selectedId || "").toLowerCase());
+        const previous = currentIndex > 0 ? entries[currentIndex - 1] : null;
+        const next = currentIndex >= 0 && currentIndex < entries.length - 1 ? entries[currentIndex + 1] : null;
+
+        els.previousItemButton.disabled = !previous;
+        els.nextItemButton.disabled = !next;
+        els.previousItemButton.title = previous ? `上一个：${previous.displayName}` : "已经是当前结果的第一个物品";
+        els.nextItemButton.title = next ? `下一个：${next.displayName}` : "已经是当前结果的最后一个物品";
+        els.detailPosition.textContent = currentIndex >= 0
+            ? `${currentIndex + 1} / ${entries.length}`
+            : (entries.length ? `— / ${entries.length}` : "0 / 0");
     }
 
     // URL Hash 优先恢复上次条目，否则选择当前第一个可用物品。
@@ -992,13 +1136,70 @@
         for (const [label, value, editTarget] of stats) {
             const card = document.createElement("div");
             card.className = "stat-card";
-            card.innerHTML = `<span>${escapeHtml(label)}</span><strong>${escapeHtml(formatValue(value))}</strong>`;
+            const labelElement = document.createElement("span");
+            labelElement.textContent = label;
+            const valueRow = document.createElement("div");
+            valueRow.className = "stat-card-value-row";
+            const valueElement = document.createElement("strong");
+            valueElement.textContent = formatValue(value);
+            valueRow.appendChild(valueElement);
+            card.append(labelElement, valueRow);
             if (entry && editTarget) {
                 attachInlineEditor(card, entry, { ...editTarget, value, label });
+            }
+            if (entry && editTarget?.path === "visual.spriteAddress") {
+                appendAtlasQuickView(valueRow, entry, value);
             }
             grid.appendChild(card);
         }
         return grid;
+    }
+
+    // 图集子 Sprite 在地址旁提供来源图集快捷入口，方便开发者核对素材位置与整体画风。
+    function appendAtlasQuickView(valueRow, entry, spriteAddress) {
+        const source = parseUnitySpriteAddress(spriteAddress);
+        if (!source?.subObjectName) return;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "atlas-quick-button";
+        button.textContent = "↗ 查看图集";
+        button.title = `打开来源图集：${getLikelyAtlasAssetPath(source.assetPath)}`;
+        button.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            openAtlasQuickView(entry, spriteAddress);
+        });
+        button.addEventListener("dblclick", event => event.stopPropagation());
+        valueRow.appendChild(button);
+    }
+
+    // 打开来源图集；切片文件按“图集名_序号.png”导出时优先回溯到同目录原图集。
+    async function openAtlasQuickView(entry, spriteAddress) {
+        const source = parseUnitySpriteAddress(spriteAddress);
+        if (!source?.subObjectName) return;
+
+        const candidate = getLikelyAtlasAssetPath(source.assetPath);
+        let atlasAddress = source.assetPath;
+        if (candidate !== source.assetPath) {
+            try {
+                const atlas = await loadSprite(candidate);
+                if (atlas) atlasAddress = candidate;
+            } catch {
+                // 没有对应原图集时退回当前 Sprite 图片，避免快捷入口直接失效。
+            }
+        }
+
+        openImageZoom(entry, {
+            address: atlasAddress,
+            title: `${entry.displayName} · 来源图集`,
+            context: `子 Sprite：${source.subObjectName}`
+        });
+    }
+
+    // 识别项目中常见的“图集名_序号.png”切片命名，推导同目录原始图集路径。
+    function getLikelyAtlasAssetPath(assetPath) {
+        return String(assetPath || "").replace(/_\d+(?=\.(?:png|jpg|jpeg|webp)$)/i, "");
     }
 
     // 绘制 source.parent 链，最终条目放在末尾。
@@ -1109,6 +1310,7 @@
             data.className = "module-field-value";
             data.textContent = formatted;
             card.append(label, data);
+            attachModuleFieldTooltip(card, stableName, sectionName, path, value);
             attachInlineEditor(card, entry, {
                 sourceType: "module",
                 sourceName: stableName,
@@ -1122,6 +1324,127 @@
         return grid;
     }
 
+    // 给模块参数绑定悬浮说明；说明数据独立维护在 module-glossary.json，避免把业务语义硬编码进页面逻辑。
+    function attachModuleFieldTooltip(host, stableName, sectionName, path, value) {
+        if (!host) return;
+        const help = resolveModuleFieldHelp(stableName, sectionName, path);
+        host.classList.add("has-field-help");
+        host.addEventListener("mouseenter", () => showModuleFieldTooltip(host, help, stableName, sectionName, path, value));
+        host.addEventListener("mouseleave", () => hideModuleFieldTooltip(host));
+        host.addEventListener("focus", () => showModuleFieldTooltip(host, help, stableName, sectionName, path, value));
+        host.addEventListener("blur", () => hideModuleFieldTooltip(host));
+    }
+
+    // 按“模块+分区+完整路径 → 完整路径 → 叶字段”查找说明，允许同名字段在不同模块拥有不同语义。
+    function resolveModuleFieldHelp(stableName, sectionName, path) {
+        const dictionary = state.moduleGlossary?.fieldHelp || {};
+        const leaf = String(path).split(".").pop();
+        const candidates = [
+            `${stableName}.${sectionName}.${path}`,
+            `${stableName}.${path}`,
+            `${sectionName}.${path}`,
+            path,
+            leaf
+        ];
+        let record = null;
+        for (const key of candidates) {
+            if (Object.prototype.hasOwnProperty.call(dictionary, key)) {
+                record = dictionary[key];
+                break;
+            }
+        }
+
+        if (typeof record === "string") {
+            return { description: record };
+        }
+        if (isPlainObject(record)) {
+            return record;
+        }
+        return {
+            description: `用于配置“${humanizePath(path)}”。该字段尚未登记更细的运行时说明，可通过原始字段路径继续定位实现。`
+        };
+    }
+
+    // 显示固定定位的参数说明浮层，避免被书页滚动容器裁切。
+    function showModuleFieldTooltip(host, help, stableName, sectionName, path, value) {
+        if (!host || host.classList.contains("inline-editing")) return;
+        const tooltip = ensureModuleFieldTooltip();
+        const qualifiedPath = `${stableName}.${sectionName}.${path}`;
+        const meta = [
+            help?.unit ? `<span><b>单位</b>${escapeHtml(help.unit)}</span>` : "",
+            help?.range ? `<span><b>范围</b>${escapeHtml(help.range)}</span>` : "",
+            `<span><b>类型</b>${escapeHtml(describeValueType(value))}</span>`
+        ].filter(Boolean).join("");
+
+        tooltip.innerHTML = `
+            <div class="field-tooltip-kicker">PARAMETER GUIDE</div>
+            <div class="field-tooltip-title">${escapeHtml(humanizePath(path))}</div>
+            <div class="field-tooltip-path">${escapeHtml(qualifiedPath)}</div>
+            <div class="field-tooltip-description">${escapeHtml(help?.description || "暂无说明")}</div>
+            ${help?.effect ? `<div class="field-tooltip-effect"><b>影响</b>${escapeHtml(help.effect)}</div>` : ""}
+            <div class="field-tooltip-meta">${meta}</div>
+            <div class="field-tooltip-current"><b>当前值</b><code>${escapeHtml(formatValue(value))}</code></div>
+            <div class="field-tooltip-edit-hint">双击该词条可直接编辑并自动保存</div>
+        `;
+        tooltip.hidden = false;
+        tooltip.dataset.hostId = qualifiedPath;
+        tooltip._fieldTooltipHost = host;
+        positionModuleFieldTooltip(host, tooltip);
+    }
+
+    // 懒创建全局参数说明浮层。
+    function ensureModuleFieldTooltip() {
+        let tooltip = document.getElementById("moduleFieldTooltip");
+        if (tooltip) return tooltip;
+        tooltip = document.createElement("div");
+        tooltip.id = "moduleFieldTooltip";
+        tooltip.className = "field-tooltip";
+        tooltip.setAttribute("role", "tooltip");
+        tooltip.hidden = true;
+        document.body.appendChild(tooltip);
+        return tooltip;
+    }
+
+    // 把浮层限制在视口内，优先显示在词条上方，空间不足时自动翻到下方。
+    function positionModuleFieldTooltip(host, tooltip) {
+        const margin = 10;
+        const viewportPadding = 10;
+        const hostRect = host.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+        let left = hostRect.left + (hostRect.width - tooltipRect.width) / 2;
+        left = Math.max(viewportPadding, Math.min(left, window.innerWidth - tooltipRect.width - viewportPadding));
+
+        let top = hostRect.top - tooltipRect.height - margin;
+        if (top < viewportPadding) top = hostRect.bottom + margin;
+        if (top + tooltipRect.height > window.innerHeight - viewportPadding) {
+            top = Math.max(viewportPadding, window.innerHeight - tooltipRect.height - viewportPadding);
+        }
+
+        tooltip.style.left = `${Math.round(left)}px`;
+        tooltip.style.top = `${Math.round(top)}px`;
+    }
+
+    // 隐藏当前参数说明；传入 host 时只关闭属于该词条的浮层，避免焦点切换误关新说明。
+    function hideModuleFieldTooltip(host = null) {
+        const tooltip = document.getElementById("moduleFieldTooltip");
+        if (!tooltip || tooltip.hidden) return;
+        if (host && tooltip._fieldTooltipHost !== host) return;
+        tooltip.hidden = true;
+        tooltip.dataset.hostId = "";
+        tooltip._fieldTooltipHost = null;
+    }
+
+    // 把 JSON 值类型翻译成开发者可直接理解的类型提示。
+    function describeValueType(value) {
+        if (value === null) return "null";
+        if (Array.isArray(value)) return "数组";
+        if (isPlainObject(value)) return "对象";
+        if (typeof value === "boolean") return "布尔开关";
+        if (typeof value === "number") return "数值";
+        if (typeof value === "string") return "文本";
+        return typeof value;
+    }
+
     // 把当前词条变成可直接双击编辑的字段；编辑完成后立即写回权威 JSON。
     function attachInlineEditor(host, entry, target) {
         if (!host || !entry || !target) return;
@@ -1129,7 +1452,9 @@
         host.tabIndex = 0;
         host.setAttribute("role", "button");
         host.setAttribute("aria-label", `${target.label || target.path}，双击编辑并自动保存`);
-        host.title = "双击直接编辑并自动保存到 JSON";
+        if (!host.classList.contains("has-field-help")) {
+            host.title = "双击直接编辑并自动保存到 JSON";
+        }
         host.addEventListener("dblclick", event => {
             event.preventDefault();
             event.stopPropagation();
@@ -1145,6 +1470,7 @@
     // 进入内联编辑态；Enter/失焦保存，Esc 取消，复杂 JSON 使用 Ctrl+Enter 保存。
     async function beginInlineEdit(host, entry, target) {
         if (host.classList.contains("inline-editing")) return;
+        hideModuleFieldTooltip();
         if (!state.writable) {
             await checkWriteCapability();
             if (!state.writable) {
@@ -1520,12 +1846,14 @@
         });
     }
 
-    // 读取原始 Sprite，并提供滚轮缩放、按钮缩放和拖拽平移。
-    async function openImageZoom(entry) {
-        const address = entry?.final?.visual?.spriteAddress;
+    // 读取原始 Sprite，并提供滚轮缩放、按钮缩放和拖拽平移；也可直接检查其来源图集。
+    async function openImageZoom(entry, options = {}) {
+        const address = options.address || entry?.final?.visual?.spriteAddress;
         if (!address) return;
-        els.imageZoomTitle.textContent = entry.displayName;
-        els.imageZoomMeta.textContent = `${entry.id} · ${address}`;
+        const title = options.title || entry.displayName;
+        const context = options.context ? ` · ${options.context}` : "";
+        els.imageZoomTitle.textContent = title;
+        els.imageZoomMeta.textContent = `${entry.id}${context} · ${address}`;
         els.imageZoomBody.innerHTML = `<div class="image-zoom-loading">正在读取 Sprite…</div>`;
         els.imageZoomModal.hidden = false;
         try {
@@ -1685,8 +2013,9 @@
             }, { once: true });
             const caption = document.createElement("div");
             caption.className = "image-zoom-caption";
-            caption.innerHTML = `<strong>${escapeHtml(entry.displayName)}</strong>` +
+            caption.innerHTML = `<strong>${escapeHtml(title)}</strong>` +
                 `<span>${escapeHtml(entry.id)}</span>` +
+                (options.context ? `<span>${escapeHtml(options.context)}</span>` : "") +
                 `<small>${escapeHtml(address)}</small>`;
             els.imageZoomBody.append(toolbar, stage, caption);
             updateBaseSize();
@@ -1702,21 +2031,32 @@
         els.imageZoomBody.innerHTML = "";
     }
 
+    // 拆分 Unity Sprite Address，统一识别普通贴图与图集子 Sprite。
+    function parseUnitySpriteAddress(spriteAddress) {
+        if (!spriteAddress || typeof spriteAddress !== "string") return null;
+        const match = spriteAddress.match(/^(Assets\/.+?\.(?:png|jpg|jpeg|webp))(?:\[([^\]]+)\])?$/i);
+        if (!match) return null;
+        return {
+            assetPath: match[1],
+            subObjectName: match[2] || null,
+            url: `../../../${match[1]}`
+        };
+    }
+
     // 解析 Unity Sprite Address；对子 Sprite 读取同名 .meta 获取裁剪矩形。
     function loadSprite(spriteAddress) {
         if (state.spriteCache.has(spriteAddress)) return state.spriteCache.get(spriteAddress);
         const promise = (async () => {
-            const match = spriteAddress.match(/^(Assets\/.+?\.(?:png|jpg|jpeg|webp))(?:\[([^\]]+)\])?$/i);
-            if (!match) return null;
-            const assetPath = match[1];
-            const subObjectName = match[2];
+            const source = parseUnitySpriteAddress(spriteAddress);
+            if (!source) return null;
+            const { assetPath, subObjectName, url } = source;
             // Sprite 仍位于项目 Assets 下；当前页面从 StreamingAssets/ItemWiki 相对回到仓库根目录读取。
-            const url = `../../../${assetPath}`;
             if (!subObjectName) {
                 const image = await loadImage(url);
                 return {
                     kind: "image",
                     url,
+                    assetPath,
                     width: image.naturalWidth || image.width,
                     height: image.naturalHeight || image.height
                 };
@@ -1729,8 +2069,22 @@
             if (!metaResponse.ok) return null;
             const meta = await metaResponse.text();
             const rect = findUnitySpriteRect(meta, subObjectName);
-            if (!rect) return null;
-            return { kind: "cropped", image, ...rect };
+            if (!rect) {
+                // Unity 的 Single Sprite 仍可能以 `Texture.png[SpriteName]` 作为 Addressables 子对象地址，
+                // 但其 .meta 不会生成 spriteSheet.sprites 裁剪矩形；这种情况应直接显示整张贴图。
+                if (/^\s*spriteMode:\s*1\s*$/m.test(meta)) {
+                    return {
+                        kind: "image",
+                        url,
+                        assetPath,
+                        subObjectName,
+                        width: image.naturalWidth || image.width,
+                        height: image.naturalHeight || image.height
+                    };
+                }
+                return null;
+            }
+            return { kind: "cropped", image, url, assetPath, subObjectName, ...rect };
         })();
         state.spriteCache.set(spriteAddress, promise);
         return promise;

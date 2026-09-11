@@ -24,7 +24,7 @@ import webbrowser
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 
 WIKI_DIRECTORY = Path(__file__).resolve().parent
@@ -36,6 +36,15 @@ BACKUP_ROOT = PROJECT_ROOT / "Library" / "FlatWorldItemWiki" / "Backups"
 ITEM_METADATA_FILE = WIKI_DIRECTORY / "item-metadata.json"
 MAX_REQUEST_BYTES = 2 * 1024 * 1024
 SAVE_LOCK = threading.Lock()
+WIKI_URL_PATH = "/Assets/StreamingAssets/ItemWiki/"
+PUBLIC_WIKI_FILES = {
+    "app.js",
+    "index.html",
+    "item-metadata.json",
+    "module-glossary.json",
+    "styles.css",
+}
+PUBLIC_IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp")
 
 
 class WikiValidationError(Exception):
@@ -409,6 +418,8 @@ def save_item(payload: dict[str, Any]) -> dict[str, Any]:
 class WikiRequestHandler(SimpleHTTPRequestHandler):
     """同时提供静态 Wiki 与受限 JSON 写入 API。"""
 
+    public_readonly = False
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, directory=str(PROJECT_ROOT), **kwargs)
 
@@ -422,15 +433,97 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def end_headers(self) -> None:
+        """公开模式补充基础浏览器安全响应头，避免页面被第三方站点嵌入。"""
+        request_path = urlparse(self.path).path
+        if request_path == WIKI_URL_PATH.rstrip("/") or request_path.startswith(WIKI_URL_PATH):
+            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
+        if self.public_readonly:
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Referrer-Policy", "no-referrer")
+        super().end_headers()
+
+    def is_public_static_path_allowed(self, request_path: str) -> bool:
+        """公开模式只放行 Wiki 页面、Item 配置、战利品表和 Sprite 所需文件。"""
+        decoded = unquote(request_path)
+        if "\\" in decoded or "\x00" in decoded:
+            return False
+        raw_parts = decoded.split("/")
+        if any(part in {".", ".."} for part in raw_parts):
+            return False
+
+        normalized = PurePosixPath(decoded.lstrip("/")).as_posix()
+        lower = normalized.lower()
+        wiki_prefix = "assets/streamingassets/itemwiki/"
+        if lower == wiki_prefix.rstrip("/"):
+            return True
+        if lower.startswith(wiki_prefix):
+            relative = normalized[len(wiki_prefix):]
+            return "/" not in relative and relative.lower() in PUBLIC_WIKI_FILES
+
+        item_prefix = "assets/streamingassets/gameconfig/items/"
+        if lower.startswith(item_prefix) and lower.endswith(".json"):
+            return True
+        if lower == "assets/streamingassets/gameconfig/loottables/loot-tables.json":
+            return True
+
+        if lower.startswith("assets/"):
+            if lower.endswith(PUBLIC_IMAGE_SUFFIXES):
+                return True
+            if any(lower.endswith(f"{suffix}.meta") for suffix in PUBLIC_IMAGE_SUFFIXES):
+                return True
+        return False
+
+    def send_wiki_redirect(self) -> None:
+        """把公开根地址直接重定向到 Wiki 首页，避免展示项目目录。"""
+        self.send_response(302)
+        self.send_header("Location", WIKI_URL_PATH)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_GET(self) -> None:
         """返回服务能力或普通静态资源。"""
-        if urlparse(self.path).path == "/api/wiki/status":
-            self.send_json(200, {"writable": True, "service": "FlatWorldItemWiki", "version": 1})
+        request_path = urlparse(self.path).path
+        if request_path == "/api/wiki/status":
+            self.send_json(
+                200,
+                {
+                    "writable": not self.public_readonly,
+                    "publicReadOnly": self.public_readonly,
+                    "service": "FlatWorldItemWiki",
+                    "version": 1,
+                },
+            )
             return
+        if self.public_readonly:
+            if request_path == "/":
+                self.send_wiki_redirect()
+                return
+            if not self.is_public_static_path_allowed(request_path):
+                self.send_error(404, "Not Found")
+                return
         super().do_GET()
+
+    def do_HEAD(self) -> None:
+        """公开模式对 HEAD 使用与 GET 相同的静态文件白名单。"""
+        request_path = urlparse(self.path).path
+        if self.public_readonly:
+            if request_path == "/":
+                self.send_wiki_redirect()
+                return
+            if request_path != "/api/wiki/status" and not self.is_public_static_path_allowed(request_path):
+                self.send_error(404, "Not Found")
+                return
+        super().do_HEAD()
 
     def do_POST(self) -> None:
         """处理 Item 写入 API，其他 POST 一律拒绝。"""
+        if self.public_readonly:
+            self.send_json(403, {"ok": False, "error": "公开 Wiki 为只读模式，禁止写入项目数据。"})
+            return
         if urlparse(self.path).path != "/api/items/save":
             self.send_json(404, {"ok": False, "error": "未知 API"})
             return
@@ -454,15 +547,20 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
 
 
 def main() -> None:
-    """启动仅绑定本机回环地址的开发者 Wiki 服务。"""
+    """启动本机 Wiki 服务；公开分享时可切换为严格只读白名单模式。"""
     parser = argparse.ArgumentParser(description="FlatWorld Item Wiki local server")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--no-browser", action="store_true", help="只启动服务，不自动打开浏览器")
+    parser.add_argument("--public-readonly", action="store_true", help="启用公开分享只读白名单模式")
+    parser.add_argument("--strict-port", action="store_true", help="端口被占用时直接失败，不自动顺延")
     args = parser.parse_args()
+
+    WikiRequestHandler.public_readonly = args.public_readonly
 
     server = None
     selected_port = args.port
-    for candidate in range(args.port, args.port + 20):
+    candidates = (args.port,) if args.strict_port else range(args.port, args.port + 20)
+    for candidate in candidates:
         try:
             server = ExclusiveThreadingHTTPServer(("127.0.0.1", candidate), WikiRequestHandler)
             selected_port = candidate
@@ -470,11 +568,15 @@ def main() -> None:
         except OSError:
             continue
     if server is None:
-        raise RuntimeError(f"端口 {args.port}..{args.port + 19} 均被占用，无法启动 Item Wiki。")
+        port_range = str(args.port) if args.strict_port else f"{args.port}..{args.port + 19}"
+        raise RuntimeError(f"端口 {port_range} 被占用，无法启动 Item Wiki。")
 
-    wiki_url = f"http://127.0.0.1:{selected_port}/Assets/StreamingAssets/ItemWiki/"
+    wiki_url = f"http://127.0.0.1:{selected_port}{WIKI_URL_PATH}"
     print(f"[Item Wiki] {wiki_url}")
-    print("[Item Wiki] JSON edit API enabled for localhost only. Press Ctrl+C to stop.")
+    if args.public_readonly:
+        print("[Item Wiki] Public read-only allowlist enabled. Press Ctrl+C to stop.")
+    else:
+        print("[Item Wiki] JSON edit API enabled for localhost only. Press Ctrl+C to stop.")
     if not args.no_browser:
         webbrowser.open(wiki_url)
     try:
