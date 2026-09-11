@@ -1,4 +1,4 @@
-// AI-Context: 编辑器主界面 Prefab 重建器；根节点直接组合 BasePanel，修改视觉时必须保留控件命名契约。
+// AI-Context: 编辑器主界面 Prefab 构建与局部换肤；只换肤时保留所有节点、RectTransform 和控件命名契约。
 
 using TMPro;
 using UnityEditor;
@@ -8,19 +8,109 @@ using UnityEngine.UI;
 public static class MainMenuPrefabBuilder
 {
     private const string PrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab";
-    private const string BackgroundPath = "Assets/6_Art/UI/MainMenu/FlatWorld_MainMenu_Background.png";
+    private const string BackgroundSourcePath = "Assets/6_Art/UI/MainMenu/FlatWorld_MainMenu_Background.png";
+    private const string BackgroundPath = "Assets/6_Art/UI/MainMenu/FlatWorld_MainMenu_Background_BlueGreen.png";
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
 
-    private static readonly Color Ink = new Color(0.025f, 0.043f, 0.058f, 0.94f);
-    private static readonly Color InkSoft = new Color(0.045f, 0.075f, 0.095f, 0.94f);
-    private static readonly Color Cream = new Color(0.95f, 0.91f, 0.81f, 1f);
-    private static readonly Color Muted = new Color(0.66f, 0.72f, 0.73f, 1f);
-    private static readonly Color Amber = new Color(0.83f, 0.49f, 0.23f, 1f);
-    private static readonly Color Teal = new Color(0.26f, 0.61f, 0.57f, 1f);
+    #region 主菜单专属配色
+
+    // 参考图的中性灰按钮、近白文字与淡金点缀，不修改游戏内通用主题。
+    private static readonly Color ButtonFace = new Color32(88, 88, 88, 255);
+    private static readonly Color ButtonBorder = new Color32(55, 55, 55, 255);
+    private static readonly Color Label = new Color32(236, 238, 239, 255);
+    private static readonly Color Muted = new Color32(207, 207, 207, 255);
+    private static readonly Color Accent = new Color32(215, 197, 106, 255);
+    private static readonly Color TitleShadow = new Color32(12, 17, 20, 200);
+    private static readonly Color Atmosphere = new Color(0.025f, 0.04f, 0.035f, 0.08f);
+
+    #endregion
+
+    #region 原位换肤
+
+    /// <summary>只改正式 Prefab 的颜色与背景引用，不重建节点，不触碰布局、文字或事件。</summary>
+    [MenuItem("FlatWorld/UI/应用主菜单参考图风格（保持布局）")]
+    public static void ApplyReferenceStyle()
+    {
+        MainMenuBackdropBaker.Bake(BackgroundSourcePath, BackgroundPath);
+        ConfigureBackgroundImporter();
+        Sprite background = AssetDatabase.LoadAssetAtPath<Sprite>(BackgroundPath);
+        if (background == null)
+            throw new System.InvalidOperationException("[MainMenu] 无法加载蓝绿背景。");
+
+        GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+        try
+        {
+            Image world = RequireComponent<Image>(root, "全屏背景/世界远景");
+            world.sprite = background;
+            world.color = Color.white;
+            RequireComponent<Image>(root, "全屏背景/氛围压暗").color = Atmosphere;
+            RequireComponent<Image>(root, "品牌区/标题分隔线").color = Accent;
+
+            // 菜单容器仍保留原有尺寸与输入遮挡，只移除卡片及侧边装饰的视觉。
+            Image card = RequireComponent<Image>(root, "旅程菜单卡");
+            card.color = Color.clear;
+            card.GetComponent<Outline>().effectColor = Color.clear;
+            RequireComponent<Image>(root, "旅程菜单卡/菜单强调线").color = Color.clear;
+            RequireComponent<Image>(root, "旅程菜单卡/联机模式/联机状态").color = ButtonBorder;
+
+            foreach (Button button in root.GetComponentsInChildren<Button>(true))
+            {
+                button.GetComponent<Image>().color = ButtonFace;
+                button.GetComponent<Outline>().effectColor = ButtonBorder;
+                ApplyButtonColors(button);
+            }
+
+            foreach (TMP_Text text in root.GetComponentsInChildren<TMP_Text>(true))
+            {
+                string name = text.gameObject.name;
+                text.color = name == "标题阴影" ? TitleShadow
+                    : name.EndsWith("_序号", System.StringComparison.Ordinal) || name == "设置眉题" ? Accent
+                    : name.EndsWith("_说明", System.StringComparison.Ordinal) || name.EndsWith("箭头", System.StringComparison.Ordinal) ? Muted
+                    : Label;
+            }
+
+            PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+
+        // 只保存目标资源，避免写入当前项目中无关的脏资源。
+        AssetDatabase.SaveAssetIfDirty(AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath));
+        Debug.Log("[MainMenu] 参考图风格已应用：灰色按钮、白字淡金、柔焦蓝绿背景；布局与功能保持不变。");
+    }
+
+    /// <summary>路径失配时直接停止，避免对错误节点或半套结构静默换肤。</summary>
+    private static T RequireComponent<T>(GameObject root, string path) where T : Component
+    {
+        Transform child = root.transform.Find(path);
+        T component = child != null ? child.GetComponent<T>() : null;
+        if (component == null)
+            throw new System.InvalidOperationException($"[MainMenu] 缺少样式节点 {path} / {typeof(T).Name}。");
+        return component;
+    }
+
+    /// <summary>仅变更按钮颜色状态；不使用通用主题的彩色选中态，也不改变导航或点击事件。</summary>
+    private static void ApplyButtonColors(Button button)
+    {
+        ColorBlock colors = button.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(1.28f, 1.28f, 1.28f, 1f);
+        colors.pressedColor = new Color(0.74f, 0.74f, 0.74f, 1f);
+        colors.selectedColor = colors.highlightedColor;
+        colors.disabledColor = new Color(0.6f, 0.6f, 0.6f, 0.6f);
+        colors.colorMultiplier = 1f;
+        colors.fadeDuration = 0.1f;
+        button.colors = colors;
+    }
+
+    #endregion
 
     [MenuItem("FlatWorld/UI/重建主界面美术")]
     public static void RebuildMainMenu()
     {
+        MainMenuBackdropBaker.Bake(BackgroundSourcePath, BackgroundPath);
         ConfigureBackgroundImporter();
 
         TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
@@ -51,7 +141,7 @@ public static class MainMenuPrefabBuilder
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[MainMenu] 主界面美术已重建：像素远景、品牌区、菜单卡与联机入口。");
+        Debug.Log("[MainMenu] 主界面美术已重建：蓝绿柔焦远景、白字淡金、灰色菜单与联机入口。");
     }
 
     private static void ConfigureBackgroundImporter()
@@ -59,12 +149,16 @@ public static class MainMenuPrefabBuilder
         AssetDatabase.ImportAsset(BackgroundPath, ImportAssetOptions.ForceSynchronousImport);
         TextureImporter importer = AssetImporter.GetAtPath(BackgroundPath) as TextureImporter;
         if (importer == null)
-            return;
+            throw new System.InvalidOperationException("[MainMenu] 无法取得蓝绿背景的纹理导入器。");
 
+        // 检查所有将写入的设置，避免仅颜色空间或压缩发生变化时跳过保存，导致配色无法复现。
         bool changed = importer.textureType != TextureImporterType.Sprite ||
                        importer.spriteImportMode != SpriteImportMode.Single ||
                        importer.mipmapEnabled ||
+                       importer.alphaIsTransparency ||
+                       !importer.sRGBTexture ||
                        importer.maxTextureSize != 2048 ||
+                       importer.textureCompression != TextureImporterCompression.Uncompressed ||
                        importer.filterMode != FilterMode.Bilinear ||
                        importer.wrapMode != TextureWrapMode.Clamp;
 
@@ -74,7 +168,8 @@ public static class MainMenuPrefabBuilder
         importer.alphaIsTransparency = false;
         importer.sRGBTexture = true;
         importer.maxTextureSize = 2048;
-        importer.textureCompression = TextureImporterCompression.CompressedHQ;
+        // 柔焦背景包含大面积蓝灰渐变，关闭块压缩，保留参考图的配色和连续色阶。
+        importer.textureCompression = TextureImporterCompression.Uncompressed;
         importer.filterMode = FilterMode.Bilinear;
         importer.wrapMode = TextureWrapMode.Clamp;
 
@@ -126,7 +221,7 @@ public static class MainMenuPrefabBuilder
         backgroundFitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
         backgroundFitter.aspectRatio = sprite.rect.width / sprite.rect.height;
 
-        Image atmosphere = CreateImage("氛围压暗", fullScreenBackground, new Color(0.015f, 0.035f, 0.055f, 0.08f));
+        Image atmosphere = CreateImage("氛围压暗", fullScreenBackground, Atmosphere);
         Stretch(atmosphere.rectTransform);
         atmosphere.raycastTarget = false;
     }
@@ -140,14 +235,14 @@ public static class MainMenuPrefabBuilder
         brand.anchoredPosition = new Vector2(76f, -60f);
         brand.sizeDelta = new Vector2(720f, 270f);
 
-        TMP_Text shadow = CreateText("标题阴影", brand, "平坦世界", font, 100f, new Color(0.015f, 0.025f, 0.03f, 0.72f), FontStyles.Bold, TextAlignmentOptions.Left);
+        TMP_Text shadow = CreateText("标题阴影", brand, "平坦世界", font, 100f, TitleShadow, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(shadow.rectTransform, new Vector2(7f, -48f), new Vector2(700f, 122f), new Vector2(0f, 1f));
 
-        TMP_Text title = CreateText("主标题", brand, "平坦世界", font, 100f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        TMP_Text title = CreateText("主标题", brand, "平坦世界", font, 100f, Label, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(title.rectTransform, new Vector2(0f, -41f), new Vector2(700f, 122f), new Vector2(0f, 1f));
         title.characterSpacing = 2f;
 
-        Image divider = CreateImage("标题分隔线", brand, Amber);
+        Image divider = CreateImage("标题分隔线", brand, Accent);
         SetRect(divider.rectTransform, new Vector2(0f, -176f), new Vector2(86f, 4f), new Vector2(0f, 1f));
         divider.raycastTarget = false;
 
@@ -155,7 +250,7 @@ public static class MainMenuPrefabBuilder
 
     private static void BuildMenuCard(Transform root, TMP_FontAsset font)
     {
-        Image card = CreateImage("旅程菜单卡", root, Ink);
+        Image card = CreateImage("旅程菜单卡", root, Color.clear);
         RectTransform cardRect = card.rectTransform;
         cardRect.anchorMin = Vector2.zero;
         cardRect.anchorMax = Vector2.zero;
@@ -165,11 +260,11 @@ public static class MainMenuPrefabBuilder
         card.raycastTarget = true;
 
         Outline cardOutline = card.gameObject.AddComponent<Outline>();
-        cardOutline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.25f);
+        cardOutline.effectColor = Color.clear;
         cardOutline.effectDistance = new Vector2(1f, -1f);
         cardOutline.useGraphicAlpha = true;
 
-        Image accent = CreateImage("菜单强调线", card.transform, Amber);
+        Image accent = CreateImage("菜单强调线", card.transform, Color.clear);
         accent.rectTransform.anchorMin = new Vector2(0f, 0f);
         accent.rectTransform.anchorMax = new Vector2(0f, 1f);
         accent.rectTransform.pivot = new Vector2(0f, 0.5f);
@@ -177,9 +272,9 @@ public static class MainMenuPrefabBuilder
         accent.rectTransform.sizeDelta = new Vector2(5f, 0f);
         accent.raycastTarget = false;
 
-        CreateMenuButton(card.transform, font, GameManager.MainMenuContinueButtonKey, "01", "继续旅程", "载入已有世界", 40f, false, false);
-        CreateMenuButton(card.transform, font, GameManager.MainMenuNewGameButtonKey, "02", "新建世界", "自定义你的开局", 154f, false, false);
-        CreateMenuButton(card.transform, font, GameManager.MainMenuMultiplayerButtonKey, "03", "联机模式", "与好友共同生存", 268f, false, true);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuContinueButtonKey, "01", "继续旅程", "载入已有世界", 40f, false);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuNewGameButtonKey, "02", "新建世界", "自定义你的开局", 154f, false);
+        CreateMenuButton(card.transform, font, GameManager.MainMenuMultiplayerButtonKey, "03", "联机模式", "与好友共同生存", 268f, true);
     }
 
     /// <summary>创建主菜单右上角的设置入口；当前只负责展示，不绑定设置逻辑。</summary>
@@ -199,12 +294,12 @@ public static class MainMenuPrefabBuilder
         rect.anchorMax = Vector2.one;
         rect.pivot = Vector2.one;
         rect.anchoredPosition = new Vector2(-76f, -60f);
-        rect.sizeDelta = new Vector2(220f, 96f);
+        rect.sizeDelta = new Vector2(180f, 72f);
 
         Image image = buttonObject.GetComponent<Image>();
-        image.color = InkSoft;
+        image.color = ButtonFace;
         Outline outline = buttonObject.AddComponent<Outline>();
-        outline.effectColor = new Color(0.55f, 0.68f, 0.70f, 0.30f);
+        outline.effectColor = ButtonBorder;
         outline.effectDistance = new Vector2(1f, -1f);
         outline.useGraphicAlpha = true;
 
@@ -212,49 +307,41 @@ public static class MainMenuPrefabBuilder
         button.targetGraphic = image;
         button.transition = Selectable.Transition.ColorTint;
         button.navigation = new Navigation { mode = Navigation.Mode.None };
-        ColorBlock colors = button.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = new Color(1.18f, 1.15f, 1.08f, 1f);
-        colors.pressedColor = new Color(0.74f, 0.78f, 0.80f, 1f);
-        colors.selectedColor = FlatWorldUITheme.Selection;
-        colors.disabledColor = new Color(0.45f, 0.45f, 0.45f, 0.55f);
-        colors.colorMultiplier = 1f;
-        colors.fadeDuration = 0.12f;
-        button.colors = colors;
+        ApplyButtonColors(button);
 
         TMP_Text eyebrow = CreateText(
             "设置眉题",
             buttonObject.transform,
             "OPTIONS",
             font,
-            11f,
-            Amber,
+            10f,
+            Accent,
             FontStyles.Bold,
             TextAlignmentOptions.Left);
         eyebrow.characterSpacing = 2f;
-        SetRect(eyebrow.rectTransform, new Vector2(20f, -17f), new Vector2(150f, 20f), new Vector2(0f, 1f));
+        SetRect(eyebrow.rectTransform, new Vector2(16f, -12f), new Vector2(118f, 18f), new Vector2(0f, 1f));
 
         TMP_Text title = CreateText(
             "设置标题",
             buttonObject.transform,
             "设置",
             font,
-            24f,
-            Cream,
+            20f,
+            Label,
             FontStyles.Bold,
             TextAlignmentOptions.Left);
-        SetRect(title.rectTransform, new Vector2(20f, -43f), new Vector2(150f, 34f), new Vector2(0f, 1f));
+        SetRect(title.rectTransform, new Vector2(16f, -33f), new Vector2(118f, 28f), new Vector2(0f, 1f));
 
         TMP_Text arrow = CreateText(
             "设置箭头",
             buttonObject.transform,
             ">",
             font,
-            22f,
+            18f,
             Muted,
             FontStyles.Bold,
             TextAlignmentOptions.Center);
-        SetRect(arrow.rectTransform, new Vector2(-22f, 0f), new Vector2(28f, 36f), Vector2.one * 0.5f);
+        SetRect(arrow.rectTransform, new Vector2(-19f, 0f), new Vector2(24f, 30f), Vector2.one * 0.5f);
     }
 
     private static void CreateMenuButton(
@@ -265,10 +352,8 @@ public static class MainMenuPrefabBuilder
         string title,
         string subtitle,
         float top,
-        bool primary,
         bool online)
     {
-        Color baseColor = primary ? new Color(0.70f, 0.36f, 0.16f, 0.98f) : InkSoft;
         GameObject buttonObject = new GameObject(objectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
         buttonObject.layer = LayerMask.NameToLayer("UI");
         buttonObject.transform.SetParent(parent, false);
@@ -281,10 +366,10 @@ public static class MainMenuPrefabBuilder
         rect.sizeDelta = new Vector2(-48f, 104f);
 
         Image image = buttonObject.GetComponent<Image>();
-        image.color = baseColor;
+        image.color = ButtonFace;
 
         Outline outline = buttonObject.AddComponent<Outline>();
-        outline.effectColor = primary ? new Color(1f, 0.71f, 0.38f, 0.42f) : new Color(0.55f, 0.68f, 0.70f, 0.22f);
+        outline.effectColor = ButtonBorder;
         outline.effectDistance = new Vector2(1f, -1f);
         outline.useGraphicAlpha = true;
 
@@ -292,35 +377,27 @@ public static class MainMenuPrefabBuilder
         button.targetGraphic = image;
         button.transition = Selectable.Transition.ColorTint;
         button.navigation = new Navigation { mode = Navigation.Mode.None };
-        ColorBlock colors = button.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = primary ? new Color(1.13f, 1.08f, 0.98f, 1f) : new Color(1.22f, 1.19f, 1.12f, 1f);
-        colors.pressedColor = new Color(0.74f, 0.78f, 0.80f, 1f);
-        colors.selectedColor = FlatWorldUITheme.Selection;
-        colors.disabledColor = new Color(0.45f, 0.45f, 0.45f, 0.55f);
-        colors.colorMultiplier = 1f;
-        colors.fadeDuration = 0.12f;
-        button.colors = colors;
+        ApplyButtonColors(button);
 
-        TMP_Text number = CreateText(objectName + "_序号", buttonObject.transform, index, font, 18f, primary ? Cream : Amber, FontStyles.Bold, TextAlignmentOptions.Center);
+        TMP_Text number = CreateText(objectName + "_序号", buttonObject.transform, index, font, 18f, Accent, FontStyles.Bold, TextAlignmentOptions.Center);
         SetRect(number.rectTransform, new Vector2(16f, 0f), new Vector2(54f, 104f), new Vector2(0f, 0.5f));
 
-        TMP_Text titleText = CreateText(objectName + "_标题", buttonObject.transform, title, font, 27f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
+        TMP_Text titleText = CreateText(objectName + "_标题", buttonObject.transform, title, font, 27f, Label, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(titleText.rectTransform, new Vector2(88f, 13f), new Vector2(280f, 38f), new Vector2(0f, 0.5f));
 
-        TMP_Text subtitleText = CreateText(objectName + "_说明", buttonObject.transform, subtitle, font, 17f, primary ? new Color(0.96f, 0.86f, 0.73f, 0.9f) : Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        TMP_Text subtitleText = CreateText(objectName + "_说明", buttonObject.transform, subtitle, font, 17f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
         SetRect(subtitleText.rectTransform, new Vector2(88f, -23f), new Vector2(300f, 28f), new Vector2(0f, 0.5f));
 
         if (online)
         {
-            Image badge = CreateImage("联机状态", buttonObject.transform, new Color(0.12f, 0.31f, 0.31f, 1f));
+            Image badge = CreateImage("联机状态", buttonObject.transform, ButtonBorder);
             SetRect(badge.rectTransform, new Vector2(-80f, 0f), new Vector2(72f, 28f), new Vector2(1f, 0.5f));
-            TMP_Text badgeText = CreateText("联机状态文字", badge.transform, "ONLINE", font, 13f, Teal, FontStyles.Bold, TextAlignmentOptions.Center);
+            TMP_Text badgeText = CreateText("联机状态文字", badge.transform, "ONLINE", font, 13f, Label, FontStyles.Bold, TextAlignmentOptions.Center);
             Stretch(badgeText.rectTransform);
         }
         else
         {
-            TMP_Text arrow = CreateText(objectName + "_箭头", buttonObject.transform, ">", font, 22f, primary ? Cream : Muted, FontStyles.Bold, TextAlignmentOptions.Center);
+            TMP_Text arrow = CreateText(objectName + "_箭头", buttonObject.transform, ">", font, 22f, Muted, FontStyles.Bold, TextAlignmentOptions.Center);
             SetRect(arrow.rectTransform, new Vector2(-32f, 0f), new Vector2(32f, 40f), new Vector2(1f, 0.5f));
         }
     }

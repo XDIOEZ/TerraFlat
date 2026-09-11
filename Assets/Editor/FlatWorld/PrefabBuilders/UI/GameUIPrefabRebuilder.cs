@@ -49,6 +49,13 @@ public static class GameUIPrefabRebuilder
     private static readonly Color Teal = new Color(0.26f, 0.61f, 0.57f, 1f);
     private static readonly Color Border = new Color(0.55f, 0.68f, 0.70f, 0.22f);
 
+    // Modular Inventory 素材的 Steel 配色：只用于玩家行囊，不覆盖游戏内通用主题。
+    private static readonly Color ModularBagOuter = new Color32(25, 35, 47, 255);
+    private static readonly Color ModularBagSurface = new Color32(45, 62, 72, 255);
+    private static readonly Color ModularBagField = new Color32(33, 45, 55, 255);
+    private static readonly Color ModularBagLine = new Color32(126, 150, 149, 255);
+    private static readonly Color ModularBagText = new Color32(235, 240, 239, 255);
+
     private static TMP_FontAsset font;
 
     private static readonly Dictionary<string, string[]> BindingContracts = new Dictionary<string, string[]>
@@ -103,9 +110,12 @@ public static class GameUIPrefabRebuilder
             return;
         }
 
+        // 行囊构建会引用用户指定的 Modular Inventory 图集；切图必须在批量 AssetEditing 之前完成。
+        ModularInventorySpriteImporter.EnsureConfigured();
+
         List<BuildTarget> targets = new List<BuildTarget>
         {
-            new BuildTarget(BagPrefabPath, BuildPixelBlueGoldBagPreview),
+            new BuildTarget(BagPrefabPath, BuildModularInventoryBagPreview),
             new BuildTarget(InventoryPanelsRoot + "UI_Equipment.prefab", root => BuildScrollWindow(root, 526f, 566f, "装备", "EQUIPMENT / LOADOUT", "将装备拖入槽位以更新生存配置", 2, new Vector2(112f, 112f))),
             new BuildTarget(CraftingRoot + "UI_CompostBin.prefab", root => BuildScrollWindow(root, 646f, 468f, "堆肥箱", "COMPOST / RESOURCE CYCLE", "投入可腐物 · 等待自然转化", 5, new Vector2(88f, 88f))),
             new BuildTarget(CraftingRoot + "UI_MeatRack.prefab", root => BuildScrollWindow(root, 646f, 468f, "晾肉架", "MEAT RACK / PRESERVATION", "保持通风 · 留意加工进度", 5, new Vector2(88f, 88f))),
@@ -155,6 +165,8 @@ public static class GameUIPrefabRebuilder
                     NormalizeTypography(root.transform);
                     NormalizeControls(root.transform);
                     FlatWorldUITheme.Apply(root.transform);
+                    if (string.Equals(target.Path, BagPrefabPath, StringComparison.Ordinal))
+                        FinalizeModularInventoryBag(root);
                     if (string.Equals(target.Path, PlayerStatusRoot + "UI_Food.prefab", StringComparison.Ordinal))
                         FinalizeNutritionHud(root);
                     EditorUtility.SetDirty(root);
@@ -182,24 +194,27 @@ public static class GameUIPrefabRebuilder
         ValidateRebuiltUI();
     }
 
-    /// <summary>只重构行囊面板，便于独立预览 PixelBlueGold 背包版式而不影响其他游戏内 UI。</summary>
-    [MenuItem("FlatWorld/UI/重构 PixelBlueGold 行囊")]
-    public static void RebuildPixelBlueGoldBag()
+    /// <summary>只重构玩家行囊为 Modular Inventory 风格，不影响通用槽位和其他游戏内 UI。</summary>
+    [MenuItem("FlatWorld/UI/重构 Modular Inventory 行囊")]
+    public static void RebuildModularInventoryBag()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
         if (font == null)
             throw new InvalidOperationException($"缺少统一字体：{FontPath}");
 
+        ModularInventorySpriteImporter.EnsureConfigured();
+
         GameObject root = PrefabUtility.LoadPrefabContents(BagPrefabPath);
         try
         {
             RemoveGeneratedArt(root.transform);
-            BuildPixelBlueGoldBagPreview(root);
+            BuildModularInventoryBagPreview(root);
             SetUILayerRecursively(root);
             NormalizeCanvasLayers(root.transform);
             NormalizeTypography(root.transform);
             NormalizeControls(root.transform);
             FlatWorldUITheme.Apply(root.transform);
+            FinalizeModularInventoryBag(root);
             EditorUtility.SetDirty(root);
             PrefabUtility.SaveAsPrefabAsset(root, BagPrefabPath);
         }
@@ -210,7 +225,7 @@ public static class GameUIPrefabRebuilder
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[Game UI] 已按 PixelBlueGold 版式重构行囊面板。");
+        Debug.Log("[Game UI] 已使用 Modular Inventory Sprite 重构玩家行囊；通用 UI_Slot 保持原样。");
     }
 
     /// <summary>仅重构通用物品槽位，便于独立调整背包/装备等库存界面的槽位视觉。</summary>
@@ -629,58 +644,52 @@ public static class GameUIPrefabRebuilder
         }
     }
 
-    /// <summary>构建 PixelBlueGold 风格的行囊样板；使用横向七列布局和素材化框架，避免只给旧界面换色。</summary>
-    private static void BuildPixelBlueGoldBagPreview(GameObject root)
+    /// <summary>
+    /// 构建 Modular Inventory 风格的行囊版式。
+    /// 保留现有 800×640 窗口和七列滚动布局，只移除旧 PixelBlueGold 装饰并为最终素材换肤准备结构。
+    /// </summary>
+    private static void BuildModularInventoryBagPreview(GameObject root)
     {
         const float width = 800f;
         const float height = 640f;
 
         RectTransform chrome = PrepareWindow(root, width, height, "行囊", string.Empty, string.Empty);
-        ApplyPixelBlueGoldWindowSkin(root, "关闭", "整理");
 
-        Sprite panelCream = LoadPixelBlueGoldSprite("Panel_Cream_1");
-        Sprite creamBevel = LoadPixelBlueGoldSprite("Panel_CreamBevel");
-        Sprite inventoryIcon = LoadPixelBlueGoldSprite("InventoryIcon_R01_C01");
-        if (panelCream == null || creamBevel == null || inventoryIcon == null)
-            throw new MissingReferenceException($"{root.name} 无法加载 PixelBlueGold 行囊专用素材");
-
-        // 行囊只保留标题与必要操作；旧眉题、页脚说明和纯色装饰线会削弱素材本身的像素层次。
+        // 用户给出的图集本身承担边框和格子层次，因此清理旧图标、眉题和额外装饰。
         DestroyGeneratedElement(chrome, "FWUI_眉题");
         DestroyGeneratedElement(chrome, "FWUI_FooterHint");
         DestroyGeneratedElement(chrome, "FWUI_TickTop");
         DestroyGeneratedElement(chrome, "FWUI_TickBottom");
+        DestroyGeneratedElement(chrome, "FWUI_BagIconPlate");
+        DestroyGeneratedElement(chrome, "FWUI_BagIcon");
 
         RectTransform title = FindRect(chrome, "FWUI_标题");
         if (title != null)
         {
-            SetTopLeft(title, 82f, 17f, width - 170f, 42f);
+            SetTopLeft(title, 26f, 18f, width - 116f, 42f);
             TMP_Text titleText = title.GetComponent<TMP_Text>();
             if (titleText != null)
             {
                 titleText.fontSize = 30f;
-                titleText.color = Cream;
+                titleText.color = ModularBagText;
             }
         }
 
-        // 大面积浅色内容板直接承担槽位承托，减少旧版“深底 + 浅卡片 + 深槽”的多层嵌套感。
+        // 内容区使用低对比深底，真正的格线由每个 Modular Inventory Cell 自己提供。
         RectTransform innerField = FindRect(chrome, "FWUI_InnerField");
         if (innerField != null)
         {
             SetTopLeft(innerField, 24f, 92f, width - 48f, 484f);
-            ApplySlicedSprite(innerField.GetComponent<Image>(), panelCream);
+            Image fieldImage = innerField.GetComponent<Image>();
+            if (fieldImage != null)
+            {
+                fieldImage.sprite = null;
+                fieldImage.type = Image.Type.Simple;
+                fieldImage.color = ModularBagField;
+                fieldImage.raycastTarget = false;
+            }
             innerField.SetSiblingIndex(Mathf.Min(3, innerField.parent.childCount - 1));
         }
-
-        Image iconPlate = CreateImage("FWUI_BagIconPlate", chrome, Color.white);
-        ApplySlicedSprite(iconPlate, creamBevel);
-        SetTopLeft(iconPlate.rectTransform, 17f, 13f, 52f, 52f);
-
-        Image icon = CreateImage("FWUI_BagIcon", chrome, Color.white);
-        icon.sprite = inventoryIcon;
-        icon.type = Image.Type.Simple;
-        icon.preserveAspect = true;
-        icon.raycastTarget = false;
-        SetTopLeft(icon.rectTransform, 27f, 23f, 32f, 32f);
 
         RectTransform scroll = FindRect(root.transform, "Scroll View");
         if (scroll != null)
@@ -701,7 +710,7 @@ public static class GameUIPrefabRebuilder
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = 7;
             grid.cellSize = new Vector2(80f, 80f);
-            grid.spacing = new Vector2(8f, 8f);
+            grid.spacing = new Vector2(4f, 4f);
             grid.padding = new RectOffset(8, 8, 8, 8);
             grid.childAlignment = TextAnchor.UpperCenter;
         }
@@ -748,6 +757,110 @@ public static class GameUIPrefabRebuilder
                 label.color = Surface;
             }
         }
+    }
+
+    /// <summary>
+    /// 在通用 Normalize/Theme 完成后落地 Modular Inventory 素材，避免全局主题重新覆盖行囊专属外观。
+    /// 动态槽位继续由 InventorySlotVisualProfile 在运行时应用同一套 Sprite。
+    /// </summary>
+    private static void FinalizeModularInventoryBag(GameObject root)
+    {
+        Sprite normal = ModularInventorySpriteImporter.LoadSprite("ModInv_Steel_Cell");
+        Sprite highlighted = ModularInventorySpriteImporter.LoadSprite("ModInv_Blue_Cell");
+        Sprite pressed = ModularInventorySpriteImporter.LoadSprite("ModInv_Charcoal_Cell");
+        Sprite selected = ModularInventorySpriteImporter.LoadSprite("ModInv_Blue_Cell");
+        Sprite disabled = ModularInventorySpriteImporter.LoadSprite("ModInv_Silver_Cell");
+
+        ApplyModularBagSurface(root.GetComponent<Image>(), ModularBagOuter);
+        ApplyNamedModularBagSurface(root.transform, "FWUI_Body", ModularBagOuter);
+        ApplyNamedModularBagSurface(root.transform, "FWUI_Header", ModularBagSurface);
+        ApplyNamedModularBagSurface(root.transform, "FWUI_Footer", ModularBagSurface);
+        ApplyNamedModularBagSurface(root.transform, "FWUI_InnerField", ModularBagField);
+
+        Image headerRule = FindNamedImage(root.transform, "FWUI_HeaderRule");
+        if (headerRule != null)
+            headerRule.color = ModularBagLine;
+
+        Image accentRail = FindNamedImage(root.transform, "FWUI_AccentRail");
+        if (accentRail != null)
+            accentRail.color = ModularBagLine;
+
+        TMP_Text title = FindRect(root.transform, "FWUI_标题")?.GetComponent<TMP_Text>();
+        if (title != null)
+            title.color = ModularBagText;
+
+        ConfigureModularBagButton(root.transform, "关闭", normal, ModularBagText, true);
+        // “Horizontal4”本身包含四个独立格子的分隔线，只适合成组槽位展示，不能作为单个文字按钮背景。
+        // 整理按钮改用单格 Cell 的九宫格拉伸，保留同套材质语言且不会让分隔线穿过文字。
+        ConfigureModularBagButton(root.transform, "整理", normal, ModularBagText, true);
+
+        InventorySlotVisualProfile profile = root.GetComponent<InventorySlotVisualProfile>();
+        if (profile == null)
+            profile = root.AddComponent<InventorySlotVisualProfile>();
+        profile.Configure(
+            normal,
+            highlighted,
+            pressed,
+            selected,
+            disabled,
+            new Vector2(80f, 80f),
+            new Vector2(58f, 58f));
+
+        Scrollbar scrollbar = root.GetComponentInChildren<Scrollbar>(true);
+        if (scrollbar != null && scrollbar.targetGraphic is Image handle)
+        {
+            handle.sprite = normal;
+            handle.type = Image.Type.Sliced;
+            handle.preserveAspect = false;
+            handle.color = Color.white;
+        }
+    }
+
+    /// <summary>将旧主题面板恢复为纯深色表面，槽位边框由 Modular Inventory Sprite 自己呈现。</summary>
+    private static void ApplyNamedModularBagSurface(Transform root, string objectName, Color color)
+    {
+        RectTransform rect = FindRect(root, objectName);
+        if (rect != null)
+            ApplyModularBagSurface(rect.GetComponent<Image>(), color);
+    }
+
+    /// <summary>移除旧九宫格 Sprite 并应用行囊专属底色。</summary>
+    private static void ApplyModularBagSurface(Image image, Color color)
+    {
+        if (image == null)
+            return;
+
+        image.sprite = null;
+        image.type = Image.Type.Simple;
+        image.preserveAspect = false;
+        image.color = color;
+    }
+
+    /// <summary>让行囊操作按钮复用图集模块，不改变按钮节点、点击事件或导航。</summary>
+    private static void ConfigureModularBagButton(
+        Transform root,
+        string buttonName,
+        Sprite sprite,
+        Color textColor,
+        bool sliced)
+    {
+        RectTransform rect = FindDirectRect(root, buttonName);
+        if (rect == null)
+            return;
+
+        Image image = rect.GetComponent<Image>();
+        if (image != null)
+        {
+            image.sprite = sprite;
+            image.type = sliced ? Image.Type.Sliced : Image.Type.Simple;
+            image.preserveAspect = false;
+            image.color = Color.white;
+            image.pixelsPerUnitMultiplier = 1f;
+        }
+
+        TMP_Text label = rect.GetComponentInChildren<TMP_Text>(true);
+        if (label != null)
+            label.color = textColor;
     }
 
     /// <summary>删除当前生成框架中的指定节点，供专用面板裁掉不需要的装饰文案。</summary>

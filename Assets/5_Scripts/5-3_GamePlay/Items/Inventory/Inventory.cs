@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using Sirenix.OdinInspector;
 using System;
 using System.Collections;
@@ -558,6 +558,14 @@ public class Inventory
             GameObject item = GameObject.Instantiate(ItemSlot_Prefab, ItemSlot_Parent, false);
             item.SetActive(true);
             itemSlot_UI.Add(item.GetComponent<ItemSlot_UI>());
+        }
+
+        // 面板可声明自己的槽位视觉主题；仅覆盖表现，不改变通用 UI_Slot 或库存交互逻辑。
+        InventorySlotVisualProfile visualProfile = basePanel.GetComponentInChildren<InventorySlotVisualProfile>(true);
+        if (visualProfile != null)
+        {
+            foreach (ItemSlot_UI slot in itemSlot_UI)
+                visualProfile.Apply(slot);
         }
 
         // 同步 UI 数据

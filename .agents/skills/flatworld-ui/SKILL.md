@@ -116,6 +116,8 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 日志页的 GM 入口广播 `RuntimeDebugOverlay.GmPanelOpenRequested`，由 `GMReflectionConsole` 订阅；日志属于 GamePlay，而 GM 属于依赖 GamePlay 的 `FlatWorld.Gameplay.Debug`，禁止反向直接引用。日志 Canvas 排序高于 GM，打开 GM 前先收起日志页。GM 点选传送层仅在主动选点时启用，持有独立触点和玩法输入锁；关闭、失焦和换场景必须释放。
 - GM 分页枚举数值由 `ActivePageIndex` 保存；新页追加枚举项，显示顺序由 `BuildTabBar` 决定。页签横向内容宽度由布局计算，禁止恢复手写总宽而截断末尾分页。世界观察层独立于 GM 窗口显隐，关闭窗口只收起操作界面，不能顺带关闭观察层。
 - 主菜单控件名集中在 `GameManager.UI.cs`；定向构建 Prefab，避免无关重写。
+- 主菜单使用独立的中性灰按钮、近白文字、淡金点缀与蓝绿柔焦背景，不回写 `FlatWorldUITheme` 或游戏内图集。只换主菜单风格时使用 `MainMenuPrefabBuilder.ApplyReferenceStyle` 原位更新正式 Prefab，不调用清空子节点的完整重建入口，以保留后续增加的控件、布局和事件。背景由 `MainMenuBackdropBaker` 在编辑器中从原图生成独立 PNG，不覆盖原图，不增加运行时模糊开销。
+- 玩家行囊 `UI_Bag` 是用户明确指定的 Modular Inventory 视觉例外：图集 `UI_Sample-InventorySlotsSet.png` 由 `ModularInventorySpriteImporter` 按命名切片导入，行囊通过 `InventorySlotVisualProfile` 给动态生成的槽位覆写 Sprite；禁止为了这套行囊皮肤直接改通用 `UI_Slot.prefab`，否则装备、制作台、容器等库存界面会被一起换肤。
 - `SafeAreaRoot` 只约束交互内容；挂在其下的全屏背景使用 `FullScreenRectController` 反向扩展到根 Canvas，背景图用 `AspectRatioFitter.EnvelopeParent` 等比裁切。`CanvasScaler` 不再乘安全区比例，避免与 `SafeAreaRectController` 双重缩小 UI。
 
 ## 设置 Provider 契约
