@@ -28,6 +28,9 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     [Range(0f, 1f), Tooltip("投射结束后保留为可拾取物品的概率；箭矢默认 50%。")]
     public float RecoveryChance = 0.5f;
 
+    [Range(0f, 1f), Tooltip("投射物损坏后，从其普通合成配方中掉落一份原材料的概率；箭矢默认 30%。")]
+    public float BrokenSalvageChance = 0.3f;
+
     [Tooltip("素材自身的朝向角度；当前箭矢素材从左下指向右上，因此为 45 度。")]
     public float SpriteForwardAngleDegrees = 45f;
 
@@ -108,8 +111,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
     #region 发射与停止
 
-    /// <summary>按给定射手、方向和蓄力比例开始一次飞行。</summary>
-    public void Launch(Item shooter, Vector2 direction, float charge01)
+    /// <summary>按给定射手、方向、蓄力比例和来源武器倍率开始一次飞行。</summary>
+    public void Launch(Item shooter, Vector2 direction, float charge01, float sourceDamageMultiplier = 1f)
     {
         if (item == null || _damage == null || direction.sqrMagnitude < 0.0001f)
             throw new System.InvalidOperationException($"{name} 无法发射：投射物尚未正确初始化或方向无效。");
@@ -120,6 +123,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             Mathf.Max(0f, MinDamageMultiplier),
             Mathf.Max(0f, MaxDamageMultiplier),
             normalizedCharge);
+        damageMultiplier *= Mathf.Max(0f, sourceDamageMultiplier);
         Vector2 normalizedDirection = direction.normalized;
 
         item.Owner = shooter;
@@ -175,6 +179,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         bool recover = Random.value < Mathf.Clamp01(RecoveryChance);
         if (!recover)
         {
+            TryDropBrokenSalvage();
             ItemMgr.Instance?.DespawnItem(item, saveData: false);
             return;
         }
@@ -183,6 +188,105 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         item.itemData.Stack.Amount = 1f;
         item.itemData.Stack.CanBePickedUp = true;
         _endingFlight = false;
+    }
+
+    /// <summary>投射物损坏时按配置概率掉落一份真实合成配方中的原材料。</summary>
+    private void TryDropBrokenSalvage()
+    {
+        if (Random.value >= Mathf.Clamp01(BrokenSalvageChance) ||
+            !TryResolveSalvageIngredient(out string ingredientItemId))
+        {
+            return;
+        }
+
+        GameRes gameRes = GameRes.ExistingInstance;
+        ItemMgr itemManager = ItemMgr.Instance;
+        if (gameRes == null || itemManager == null)
+            return;
+
+        ItemData salvageData = gameRes.CreateItemData(ingredientItemId);
+        salvageData.Stack.Amount = 1f;
+        salvageData.Stack.CanBePickedUp = true;
+        itemManager.InstantiateItem(salvageData, item.transform.position);
+    }
+
+    /// <summary>从产出当前投射物的普通合成配方中，按材料用量随机选择一种可确定身份的原材料。</summary>
+    private bool TryResolveSalvageIngredient(out string ingredientItemId)
+    {
+        ingredientItemId = null;
+        GameRes gameRes = GameRes.ExistingInstance;
+        string projectileItemId = item?.itemData?.IDName;
+        if (gameRes == null || string.IsNullOrWhiteSpace(projectileItemId))
+            return false;
+
+        var recipes = gameRes.GetRecipes(RecipeType.Crafting);
+        for (int recipeIndex = 0; recipeIndex < recipes.Count; recipeIndex++)
+        {
+            RuntimeRecipe recipe = recipes[recipeIndex];
+            if (!RecipeProducesItem(recipe, projectileItemId))
+                continue;
+
+            var ingredients = recipe.inputs?.RowItems_List;
+            if (ingredients == null)
+                return false;
+
+            int totalWeight = 0;
+            for (int ingredientIndex = 0; ingredientIndex < ingredients.Count; ingredientIndex++)
+            {
+                RuntimeRecipeIngredient ingredient = ingredients[ingredientIndex];
+                if (ingredient != null && ingredient.matchMode == MatchMode.ExactItem &&
+                    ingredient.amount > 0 && !string.IsNullOrWhiteSpace(ingredient.ItemName))
+                {
+                    totalWeight += ingredient.amount;
+                }
+            }
+
+            if (totalWeight <= 0)
+                return false;
+
+            int roll = Random.Range(0, totalWeight);
+            for (int ingredientIndex = 0; ingredientIndex < ingredients.Count; ingredientIndex++)
+            {
+                RuntimeRecipeIngredient ingredient = ingredients[ingredientIndex];
+                if (ingredient == null || ingredient.matchMode != MatchMode.ExactItem ||
+                    ingredient.amount <= 0 || string.IsNullOrWhiteSpace(ingredient.ItemName))
+                {
+                    continue;
+                }
+
+                if (roll < ingredient.amount)
+                {
+                    ingredientItemId = ingredient.ItemName;
+                    return true;
+                }
+
+                roll -= ingredient.amount;
+            }
+
+            return false;
+        }
+
+        return false;
+    }
+
+    /// <summary>判断配方是否会产出指定物品。</summary>
+    private static bool RecipeProducesItem(RuntimeRecipe recipe, string itemId)
+    {
+        var results = recipe?.outputs?.results;
+        if (results == null)
+            return false;
+
+        for (int resultIndex = 0; resultIndex < results.Count; resultIndex++)
+        {
+            RuntimeRecipeResult result = results[resultIndex];
+            if (result != null && result.amount > 0 &&
+                string.Equals(result.ItemName, itemId, System.StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>为投射物根节点创建或复用刚体。</summary>

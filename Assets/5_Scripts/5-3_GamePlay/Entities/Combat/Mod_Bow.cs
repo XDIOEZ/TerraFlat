@@ -16,6 +16,9 @@ public sealed class Mod_Bow : Module
     [Min(0.05f), Tooltip("达到满蓄力所需秒数；超过后保持满蓄力。")]
     public float FullChargeSeconds = 1f;
 
+    [Min(0f), Tooltip("弓身对箭矢最终伤害的倍率；1 表示保持箭矢原始伤害。")]
+    public float ProjectileDamageMultiplier = 1f;
+
     [Min(0.1f), Tooltip("瞄准点允许的最大世界距离。")]
     public float MaxAimDistance = 24f;
 
@@ -214,7 +217,7 @@ public sealed class Mod_Bow : Module
             return;
         }
 
-        projectile.Launch(item.Owner, direction, charge01);
+        projectile.Launch(item.Owner, direction, charge01, ProjectileDamageMultiplier);
         _sourceInventory = null;
     }
 
