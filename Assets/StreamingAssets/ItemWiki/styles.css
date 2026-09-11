@@ -395,11 +395,81 @@ kbd {
     box-shadow: 0 3px 0 rgba(128, 80, 56, .25);
 }
 
+.index-tools-panel {
+    margin-bottom: 12px;
+    background: rgba(111, 72, 48, .08);
+    border: 1px solid #a36e49;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.08);
+}
+
+.index-tools-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 34px;
+    padding: 5px 8px 5px 10px;
+    background: rgba(126, 78, 48, .12);
+    border-bottom: 1px solid rgba(139, 91, 58, .42);
+}
+
+.index-tools-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    color: #6f4938;
+}
+
+.index-tools-heading strong {
+    font-size: 11px;
+    letter-spacing: .08em;
+}
+
+.index-tools-heading span {
+    color: #916b55;
+    font-size: 9px;
+}
+
+.index-tools-collapse-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 24px;
+    padding: 2px 7px;
+    color: #533729;
+    font-size: 9px;
+    font-weight: 700;
+    background: #e7ba7e;
+    border: 1px solid #80563d;
+    box-shadow: inset 0 0 0 1px rgba(255,235,195,.35);
+}
+
+.index-tools-collapse-button:hover {
+    background: #f0c78c;
+}
+
+.index-tools-collapse-icon {
+    font-size: 8px;
+}
+
+.index-tools-content {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+}
+
+.index-tools-panel.is-collapsed .index-tools-header {
+    border-bottom: 0;
+}
+
+.index-tools-panel.is-collapsed .index-tools-content {
+    display: none;
+}
+
 .summary-strip {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 7px;
-    margin-bottom: 12px;
+    margin-bottom: 0;
 }
 
 .summary-strip > div {
@@ -428,9 +498,9 @@ kbd {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    padding: 10px;
-    background: rgba(111, 72, 48, .08);
-    border: 1px dashed #a77756;
+    padding: 0;
+    background: transparent;
+    border: 0;
 }
 
 .filter-grid label {
@@ -529,6 +599,15 @@ kbd {
     background: #efd09a;
     border-color: #704a37;
     box-shadow: inset 4px 0 0 #714c38, inset 0 0 0 2px rgba(255,255,255,.21);
+}
+
+.item-row.index-located {
+    animation: index-locate-flash .9s ease-out;
+}
+
+@keyframes index-locate-flash {
+    0%, 100% { outline: 0 solid rgba(112, 74, 55, 0); }
+    35% { outline: 3px solid rgba(112, 74, 55, .78); outline-offset: -3px; }
 }
 
 .item-icon,
@@ -774,6 +853,34 @@ kbd {
     color: #473027;
     font-family: Consolas, "Microsoft YaHei UI", monospace;
     font-size: 13px;
+}
+
+.stat-card-value-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+}
+
+.stat-card-value-row strong {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.atlas-quick-button {
+    flex: 0 0 auto;
+    margin-top: 4px;
+    padding: 3px 6px;
+    color: #543827;
+    font: 700 9px "Microsoft YaHei UI", sans-serif;
+    white-space: nowrap;
+    background: #e8b977;
+    border: 1px solid #835a3f;
+    box-shadow: 1px 1px 0 rgba(74, 45, 29, .28);
+    cursor: pointer;
+}
+
+.atlas-quick-button:hover {
+    background: #f1cb90;
 }
 
 .tag-list {
@@ -1122,6 +1229,51 @@ kbd {
 
 .compact-ornament {
     margin-bottom: 9px;
+}
+
+.detail-navigation {
+    display: grid;
+    grid-template-columns: 34px minmax(64px, auto) 34px 34px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: -1px 0 7px;
+}
+
+.detail-navigation-button {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 28px;
+    padding: 0;
+    color: #4b3026;
+    font-size: 18px;
+    line-height: 1;
+    background: #e5b474;
+    border: 2px solid #6c4834;
+    box-shadow: inset 0 0 0 1px rgba(255, 226, 176, .55), 1px 1px 0 rgba(70, 42, 28, .38);
+}
+
+.detail-navigation-button:hover:not(:disabled) {
+    background: #f0c487;
+    transform: translateY(-1px);
+}
+
+.detail-navigation-button:disabled {
+    opacity: .34;
+    cursor: not-allowed;
+}
+
+.detail-navigation-position {
+    min-width: 64px;
+    color: #76523f;
+    font: 10px Consolas, monospace;
+    text-align: center;
+}
+
+.detail-locate-button {
+    margin-left: 2px;
+    font-size: 16px;
 }
 
 .detail-content {
@@ -1502,6 +1654,111 @@ kbd {
 .module-field-label strong { color: #654434; font-size: 9px; font-weight: 700; }
 .module-field-label small { margin-top: 1px; color: #a2765d; font: 7px Consolas, monospace; overflow-wrap: anywhere; }
 .module-field-value { margin-top: 5px; color: #34251f; font: 10px/1.45 Consolas, "Microsoft YaHei UI", monospace; overflow-wrap: anywhere; }
+
+/* 模块参数悬浮说明：使用 fixed 浮层，避免被详情页 ScrollRect 等价的 overflow 容器裁切。 */
+.field-tooltip {
+    position: fixed;
+    z-index: 5000;
+    width: min(360px, calc(100vw - 20px));
+    padding: 10px 12px;
+    color: #3b2a22;
+    background: linear-gradient(180deg, #ffefc9 0%, #f6d79d 100%);
+    border: 2px solid #5a3a2b;
+    box-shadow: 4px 5px 0 rgba(33, 24, 27, .24), inset 0 0 0 1px rgba(255, 248, 226, .72);
+    pointer-events: none;
+}
+
+.field-tooltip::before {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border: 1px solid rgba(171, 103, 59, .52);
+    pointer-events: none;
+}
+
+.field-tooltip-kicker {
+    color: #a45e34;
+    font: 700 7px/1.2 Consolas, monospace;
+    letter-spacing: .16em;
+}
+
+.field-tooltip-title {
+    margin-top: 3px;
+    padding-right: 8px;
+    color: #4a3026;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.field-tooltip-path {
+    margin-top: 2px;
+    color: #8a604a;
+    font: 7px/1.35 Consolas, monospace;
+    overflow-wrap: anywhere;
+}
+
+.field-tooltip-description,
+.field-tooltip-effect {
+    margin-top: 7px;
+    color: #563a2d;
+    font-size: 9px;
+    line-height: 1.55;
+}
+
+.field-tooltip-effect {
+    padding-top: 6px;
+    border-top: 1px dashed rgba(132, 82, 52, .38);
+}
+
+.field-tooltip-effect b,
+.field-tooltip-current b {
+    margin-right: 6px;
+    color: #9b552f;
+}
+
+.field-tooltip-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 7px;
+}
+
+.field-tooltip-meta span {
+    padding: 2px 5px;
+    color: #5c4031;
+    font-size: 8px;
+    background: rgba(255, 248, 225, .58);
+    border: 1px solid rgba(130, 82, 51, .28);
+}
+
+.field-tooltip-meta b { margin-right: 4px; color: #875237; }
+
+.field-tooltip-current {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-top: 7px;
+    font-size: 8px;
+}
+
+.field-tooltip-current code {
+    min-width: 0;
+    color: #22354d;
+    font: 8px/1.35 Consolas, monospace;
+    overflow-wrap: anywhere;
+}
+
+.field-tooltip-edit-hint {
+    margin-top: 7px;
+    color: #7c5a45;
+    font-size: 7px;
+    letter-spacing: .02em;
+}
+
+.module-field-card.has-field-help:hover .module-field-label strong,
+.module-field-card.has-field-help:focus .module-field-label strong {
+    color: #253f5c;
+}
 
 /* 词条原地编辑：双击任何可写数值，直接在当前位置编辑并自动保存。 */
 .inline-editable {

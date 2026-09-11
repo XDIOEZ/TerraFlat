@@ -133,6 +133,48 @@
       "actions": []
     },
     {
+      "id": "core:反曲弓",
+      "displayName": "反曲弓",
+      "recipeType": "crafting",
+      "requiredStation": "workbench",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Bow_Wood",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Leather",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Rope",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Bow_Recurve",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
       "id": "core:木箭",
       "displayName": "木箭",
       "recipeType": "crafting",

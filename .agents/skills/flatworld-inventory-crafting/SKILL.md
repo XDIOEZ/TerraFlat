@@ -31,6 +31,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 制作输入变化、事务扣料和面板初始化都会被动刷新预览；此时 `RecipeNotFound` 是合法的“当前无配方”状态，应清空预览且不输出 Warning。只有用户主动提交前检查失败，或库存、产物等结构性异常，才输出制作诊断。
 - 制作模块的 `Save()` 只负责持久化，不能解绑输入、输出、按钮或交互监听；这些运行时事件统一在 `Unload()` 中成对清理，由 Item 退出、移除模块与回池生命周期调用，否则自动保存会让预览与制作按钮永久失效。
 - 模态库存才获取输入锁；快捷栏和 `Inventory_Hand` 不锁玩家输入。
+- 单个库存面板需要专属槽位皮肤时，在面板 Prefab 上配置 `InventorySlotVisualProfile`，由 `Inventory.InitUI` 在动态槽位创建完成后统一应用；不要改通用 `UI_Slot.prefab` 做面板特判。该 Profile 只允许改 Sprite、图标/文字尺寸等表现，不得接管库存事务、拖拽或选择状态。
 - 槽位鼠标与触屏拖放必须复用 `ItemSlot_UI.OnMouseDragBegin` / `OnMouseDragDrop` 的来源事务：命中 `ItemSlot_UI` 时直接在起始槽与目标槽之间移动、合并或双向交换，异类交换必须同时校验双方库存接收规则与整堆容量，禁止把目标物品经 `Inventory_Hand` 中转；只有未命中槽位时才把整组转入 `Inventory_Hand`，后续手机点击按轻触方向处理：连续拿取方向下同类已有物品从槽位取一件，放置方向下空槽/同类槽向目标放一件，异类槽交换，长按空槽或同类槽则一次性放下手上整组；同类目标容量不足时余量留在起始槽，空槽起手才转交父级 `ScrollRect`。
 - 手机快捷栏轻触必须走独立 `OnTouchTap` 语义，只切换当前选中格或按单件规则取放；普通触屏拖放与桌面键鼠共用直接槽位事务，长按更久后的半组拖拽才以 `Inventory_Hand` 为来源。
 - 跟随指针的 `UI_Hand` 是纯视觉层：Canvas 排序固定占用全局顶层（32767），必须高于快捷栏、设置页和其它游戏 UI；CanvasGroup/子图形不得拦截目标槽位射线。直接槽位拖拽生成的 `InventoryDragGhost` 也必须使用独立顶层 Canvas，不能只靠 `SetAsLastSibling`，否则会被独立 Canvas 的快捷栏/模态页压住。世界手持物挂在快捷栏节点及其子节点末端。
@@ -50,7 +51,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 新版农业统一通过 `FarmlandSystem` 查询 `ChunkTerrainData`，禁止返回旧 `Chunk.Map`；锄地进度属于地格而非锄头实例。水肥计算使用临时 `TileData_Farmland` 快照，成长或施肥后必须 `CommitSoil`，否则数据修改不会进入权威环境层。
 - 玩家播种作物由 `ChunkAgricultureRenderer` 管理，保存到独立的 `ChunkSaveRecord.AgricultureCells`；不得登记为 `ChunkNaturalItemRenderer` 的临时掉落物，否则区块解绑会回收且不保存。`ChunkView` 的同步/分帧保存入口均须抓取农业状态，退出世界不能当成收获删除快照。
 - 普通农作物使用 `CropShell + Mod_Crop + Mod_CropYield + Mod_CropVisual`：`Mod_Crop` 只保存两阶段权威状态并调度 `ICropHarvestAction`，产物表和其他收获副作用必须拆成独立动作模块。
-- 可反复采果的种植灌木复用 `Bush` 的采集库存与生产模块，通过 `Mod_Grow` 接入播种并限制成熟后生产；必须关闭 `allowCultivatedHarvest`，否则会走一次性收获并销毁植株。人工幼苗的采集库存从零初始化；一次性草本作物继承 `SmallCrop_Base`，不能借用可持续采果的 `BerryCrop` 模板。
+- `BerryCrop` 统一走普通 `CropShell + Mod_Crop + Mod_CropYield + Mod_CropVisual` 链，野外生态与耕地播种复用同一 Item 定义；药草、狗尾草等小型作物可继承 `BerryCrop` 后只覆盖成长参数与产物，禁止重新维护 `SmallCrop_Base` 或 `Bush` 双轨模板。
 - 作物需要多张成长图时，在物品 `visual.spriteStates` 同时声明 `seedling/growing/mature`，由 `Mod_CropVisual` 根据 `normalizedGrowth` 派生表现阶段；不得为了中间画面给 `CropStage` 增加持久化阶段。只要声明任一阶段图就必须三张齐全，对象池卸载时恢复外壳原 Sprite。
 - 世界植株与收获物必须保留独立 Item ID；种下时把植株重置为幼苗，一次性作物成熟交互后由动作生成食物/种子并销毁植株，持续采果植株只扣果实库存；不能把世界植株直接改成食物实例。
 - `Mod_Grow` 继续承担树木与自然植物成长，并实现 `IPlantableCrop` 接入同一播种入口；水肥、天气与 `CropGrowthMultiplier` 在权威成长模块中各结算一次。

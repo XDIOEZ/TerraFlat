@@ -950,14 +950,9 @@
       }
     },
     {
-      "id": "Torch",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab",
+      "id": "Torch_Base",
+      "abstract": true,
       "shellPrefab": "Stick",
-      "gameName": "火把",
-      "description": "可照亮周围环境的简易火把，由木棍和燃料制成。",
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/item_tool_torches.png[item_tool_torches_0]"
-      },
       "modules": {
         "damage": {
           "prefab": "Mod_Damage",
@@ -1120,6 +1115,7 @@
           "parameters": {
             "AmmoTag": "Arrow",
             "FullChargeSeconds": 1.0,
+            "ProjectileDamageMultiplier": 1.0,
             "MaxAimDistance": 24.0,
             "SpawnForwardOffset": 0.45,
             "StaminaConsumePerSecond": 5.0,
@@ -1139,6 +1135,22 @@
               "y": 0.82,
               "z": 1.0
             }
+          }
+        }
+      }
+    },
+    {
+      "id": "Bow_Recurve",
+      "parent": "Bow_Wood",
+      "gameName": "反曲弓",
+      "description": "采用反曲弓臂设计的强化弓。操作方式与木弓相同，但同等蓄力下可让箭矢造成更高伤害。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Archery/WoodBow_Icon.png"
+      },
+      "modules": {
+        "bow": {
+          "parameters": {
+            "ProjectileDamageMultiplier": 1.5
           }
         }
       }
@@ -1169,6 +1181,7 @@
             "MaxDamageMultiplier": 1.0,
             "MaxFlightSeconds": 2.5,
             "RecoveryChance": 0.5,
+            "BrokenSalvageChance": 0.3,
             "SpriteForwardAngleDegrees": 45.0
           }
         }
@@ -1178,7 +1191,7 @@
       "id": "Arrow_Wood",
       "parent": "Arrow_Base",
       "gameName": "木箭",
-      "description": "削尖木材制成的基础箭矢。射出后有 50% 概率保留下来并可再次拾取。",
+      "description": "削尖木材制成的基础箭矢。射出后有 50% 概率保留下来并可再次拾取；损坏时有 30% 概率掉落一份合成原材料。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1220,7 +1233,7 @@
       "id": "Arrow_Stone",
       "parent": "Arrow_Base",
       "gameName": "石箭",
-      "description": "装有石制箭头的箭矢。射出后有 50% 概率保留下来并可再次拾取。",
+      "description": "装有石制箭头的箭矢。射出后有 50% 概率保留下来并可再次拾取；损坏时有 30% 概率掉落一份合成原材料。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1257,7 +1270,7 @@
       "id": "Arrow_Copper",
       "parent": "Arrow_Base",
       "gameName": "铜箭",
-      "description": "装有铜制箭头的箭矢。射出后有 50% 概率保留下来并可再次拾取。",
+      "description": "装有铜制箭头的箭矢。射出后有 50% 概率保留下来并可再次拾取；损坏时有 30% 概率掉落一份合成原材料。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -1294,7 +1307,7 @@
       "id": "Arrow_Iron",
       "parent": "Arrow_Base",
       "gameName": "铁箭",
-      "description": "装有铁制箭头的箭矢。射出后有 50% 概率保留下来并可再次拾取。",
+      "description": "装有铁制箭头的箭矢。射出后有 50% 概率保留下来并可再次拾取；损坏时有 30% 概率掉落一份合成原材料。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,

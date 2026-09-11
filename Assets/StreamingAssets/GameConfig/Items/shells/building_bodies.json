@@ -17,7 +17,7 @@
       "id": "BlastFurnace",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/BlastFurnace.prefab",
-      "gameName": "高炉建筑",
+      "gameName": "高炉-建筑",
       "description": "高炉：一种炉子，其中燃烧是通过压力下的空气流动来强制进行的，尤其是用于还原铁矿石的炉子。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -162,7 +162,7 @@
       "id": "Bonfire",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Bonfire.prefab",
-      "gameName": "篝火建筑",
+      "gameName": "篝火-建筑",
       "description": "用于照明、取暖与烹饪的火堆。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -330,7 +330,7 @@
       "id": "Chest_Wood",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Chest_Wood.prefab",
-      "gameName": "木箱建筑",
+      "gameName": "木箱-建筑",
       "description": "用于存放物品的木制箱子。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -454,7 +454,7 @@
       "id": "Door_Stone",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Door_Stone.prefab",
-      "gameName": "石门建筑",
+      "gameName": "石门-建筑",
       "description": "可以开关的厚重石门。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -571,7 +571,7 @@
       "id": "Door_Wood",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Door_Wood.prefab",
-      "gameName": "木门建筑",
+      "gameName": "木门-建筑",
       "description": "可安装在建筑中的木门。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -688,7 +688,7 @@
       "id": "Meatrack",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Meatrack.prefab",
-      "gameName": "晾肉架建筑",
+      "gameName": "晾肉架-建筑",
       "description": "用于晾晒和加工肉类的架子。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -805,7 +805,7 @@
       "id": "MineEntrance",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/MineEntrance.prefab",
-      "gameName": "矿坑入口建筑",
+      "gameName": "矿坑入口-建筑",
       "description": "安装后可通往地下矿洞，并在矿洞中生成对应出口。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -928,7 +928,7 @@
       "id": "Scarecrow",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Scarecrow.prefab",
-      "gameName": "稻草人建筑",
+      "gameName": "稻草人-建筑",
       "description": "用于保护农田的稻草人。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -1055,7 +1055,7 @@
       "id": "Smelter",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Smelter.prefab",
-      "gameName": "熔炉建筑",
+      "gameName": "熔炉-建筑",
       "description": "用于冶炼矿石的熔炉。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -1200,7 +1200,7 @@
       "id": "Tent",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/Tent.prefab",
-      "gameName": "帐篷建筑",
+      "gameName": "帐篷-建筑",
       "description": "可供休息与遮蔽的帐篷。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -1323,7 +1323,7 @@
       "id": "WorkBench",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/WorkBench.prefab",
-      "gameName": "工作台建筑",
+      "gameName": "工作台-建筑",
       "description": "用于制作物品的工作台。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -1446,7 +1446,7 @@
       "id": "SparkMaker",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/SparkMaker.prefab",
-      "gameName": "钻木取火工具建筑",
+      "gameName": "钻木取火工具-建筑",
       "description": "通过摩擦产生火种的生火工具。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -1563,7 +1563,7 @@
       "id": "Torch_Building",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab",
-      "gameName": "火把建筑",
+      "gameName": "火把-建筑",
       "description": "可放置在地面并提供照明的火把。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -1690,7 +1690,7 @@
       "id": "CompostBin",
       "parent": "BuildingBody_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/CompostBin.prefab",
-      "gameName": "堆肥箱建筑",
+      "gameName": "堆肥箱-建筑",
       "description": "将可腐物转化为肥料的堆肥箱。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -1777,123 +1777,6 @@
         "Module_CompostBin": {
           "prefab": "BuildingFeature_CompostBin_Mod_CompostBin",
           "id": "Module_CompostBin",
-          "enabled": true,
-          "data": {
-            "BitData": "",
-            "Type": 0
-          }
-        }
-      },
-      "itemData": {
-        "code": "",
-        "transform": {
-          "position": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0
-          },
-          "rotation": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0,
-            "w": 0.0
-          },
-          "scale": {
-            "x": 1.0,
-            "y": 1.0,
-            "z": 1.0
-          }
-        },
-        "ItemSpecialData": "",
-        "inHand": false,
-        "FactionId": ""
-      }
-    },
-    {
-      "id": "Rocket",
-      "parent": "BuildingBody_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Space/Rocket.prefab",
-      "gameName": "火箭建筑",
-      "description": "用于往返星球与太空的火箭。",
-      "durability": 1.0,
-      "maxDurability": 1.0,
-      "amount": 1.0,
-      "volume": 1.0,
-      "canBePickedUp": false,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Rocket.png[Rocket]",
-        "rendererLocalPosition": {
-          "x": 0.0,
-          "y": 1.5,
-          "z": 0.0
-        },
-        "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "rendererLocalScale": {
-          "x": 1.0,
-          "y": 1.0,
-          "z": 1.0
-        },
-        "color": {
-          "r": 1.0,
-          "g": 1.0,
-          "b": 1.0,
-          "a": 1.0
-        },
-        "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
-        "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
-        },
-        "moduleLocalPosition": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0.0,
-            "y": 0.0
-          },
-          "size": {
-            "x": 1.0,
-            "y": 1.0
-          },
-          "edgeRadius": 0.0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": false,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Rocket\",\"SummonerPrefabId\":\"Rocket_Summoner\"}",
-            "Type": 0
-          }
-        },
-        "飞行模块": {
-          "prefab": "BuildingFeature_Rocket_Module_Fly",
-          "id": "飞行模块",
           "enabled": true,
           "data": {
             "BitData": "",

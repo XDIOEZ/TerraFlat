@@ -81,7 +81,7 @@
     {
       "id": "RadishCrop",
       "parent": "Crop_Base",
-      "gameName": "萝卜植株",
+      "gameName": "萝卜-农作物",
       "description": "埋在耕地中的萝卜；成熟后交互即可拔起。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -170,7 +170,7 @@
     {
       "id": "MushroomCrop",
       "parent": "RadishCrop",
-      "gameName": "蘑菇植株",
+      "gameName": "蘑菇-农作物",
       "description": "生长在阴暗地下的蘑菇；成熟后交互即可采集。",
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mushroom/Plant_Mushroom.png",
@@ -236,7 +236,7 @@
     {
       "id": "TwineCrop",
       "parent": "Crop_Base",
-      "gameName": "藤蔓植株",
+      "gameName": "藤蔓-农作物",
       "description": "自然生长的藤蔓；成熟后交互可采集柔韧的藤蔓。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -322,11 +322,10 @@
       }
     },
     {
-      "id": "SmallCrop_Base",
-      "abstract": true,
+      "id": "BerryCrop",
       "parent": "RadishCrop",
-      "gameName": "小型作物模板",
-      "description": "小型地上作物的生长表现模板；采收后移除植株。",
+      "gameName": "浆果丛-农作物",
+      "description": "可自然生长或种在耕地中的浆果丛；成熟后交互采收。",
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/TX Plant.png[GrassLand_6]",
         "collider": {
@@ -355,54 +354,20 @@
         },
         "cropYield": {
           "parameters": {
-            "outputs": []
-          }
-        }
-      }
-    },
-    {
-      "id": "BerryCrop",
-      "parent": "Bush",
-      "gameName": "浆果植株",
-      "description": "种在耕地中的浆果灌木；长成后周期结果，采摘浆果保留植株。",
-      "modules": {
-        "生长模块": {
-          "prefab": "Module_Growth",
-          "id": "生长模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "allowCultivatedHarvest": false,
-            "matureMaxHealth": 50,
-            "Data": {
-              "growState": 0,
-              "growState_Value": [0, 20, 50, 100],
-              "growState_Scale": [0.25, 0.4, 0.6, 0.75],
-              "GrowProgress": 0,
-              "MaxGrowProgress": 100,
-              "GrowSpeed": 0.23809524
-            }
-          }
-        },
-        "采集模块": {
-          "data": {
-            "CurrentStock": 0,
-            "IsInitialized": true
-          }
-        },
-        "plantClimate": {
-          "prefab": "Module_PlantClimate",
-          "id": "Mod_PlantClimate",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "autonomous": true
+            "outputs": [
+              {
+                "itemId": "Berry",
+                "minAmount": 2,
+                "maxAmount": 4,
+                "probability": 1
+              },
+              {
+                "itemId": "Seed_Berry",
+                "minAmount": 1,
+                "maxAmount": 2,
+                "probability": 1
+              }
+            ]
           }
         }
       }
@@ -410,7 +375,7 @@
     {
       "id": "RiceCrop",
       "parent": "Crop_Base",
-      "gameName": "水稻",
+      "gameName": "水稻-农作物",
       "description": "种在耕地中的水稻；成长过程中依次经历幼苗、生长期和成熟期，收获的稻谷也能继续播种。",
       "durability": 1.0,
       "maxDurability": 1.0,

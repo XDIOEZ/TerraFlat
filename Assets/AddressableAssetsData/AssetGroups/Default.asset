@@ -1154,12 +1154,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 7f9a023388082d74ca8fc3997c0d91e6
-    m_Address: Assets/6_Art/Building/Rocket.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7fa1725ad46407f47a171f54026e684b
     m_Address: Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab
     m_ReadOnly: 0
@@ -1330,12 +1324,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 96b781ca01a5169469e6113a54a33ae6
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/ItemTransformController.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 96d4b9747c4fa0049b2147c195719ffd
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Rocket_Module_Fly.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab

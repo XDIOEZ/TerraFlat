@@ -187,7 +187,7 @@ namespace FlatWorld.WorldModel
         #region 洞穴入口周边灌木
 
         /// <summary>
-        /// 在天然洞穴入口安全区外增加灌木概率。只复用草原/森林的 Bush 规则，
+        /// 在天然洞穴入口安全区外增加灌木概率。只复用草原/森林中配置的同一生态植物规则，
         /// 因此沙漠、沙滩、石地和雪地不会因为靠近入口而长出灌木。
         /// </summary>
         private static void AddSurfacePortalShrubs(ChunkGenerationRequest request,
@@ -197,6 +197,7 @@ namespace FlatWorld.WorldModel
             List<NaturalItemPlacement> placements, HashSet<int> claimedGuids)
         {
             if (!settings.CavePortalShrubEnabled ||
+                string.IsNullOrWhiteSpace(settings.CavePortalShrubItemId) ||
                 settings.CavePortalShrubChanceMultiplier <= 0d ||
                 settings.CavePortalShrubRadius <= settings.CavePortalSafeRadius ||
                 portalPlacements == null || portalPlacements.Count == 0 ||
@@ -274,7 +275,8 @@ namespace FlatWorld.WorldModel
                         double riverFloodplain = ReadEnvironment(terrain, "riverFloodplain",
                             localX, localY);
                         EcologySpawnRuleSnapshot rule = FindSurfacePortalShrubRule(
-                            rules, cell.BiomeId, temperature, precipitation, height,
+                            rules, settings.CavePortalShrubItemId, cell.BiomeId,
+                            temperature, precipitation, height,
                             riverFloodplain);
                         if (rule == null)
                         {
@@ -318,9 +320,9 @@ namespace FlatWorld.WorldModel
                    ReadEnvironment(terrain, "structure", localX, localY) < 0.5f;
         }
 
-        /// <summary>从当前冻结 Profile 中找到符合环境条件的草原/森林 Bush 规则。</summary>
+        /// <summary>从当前冻结 Profile 中找到符合环境条件和目标物品 ID 的草原/森林生态规则。</summary>
         private static EcologySpawnRuleSnapshot FindSurfacePortalShrubRule(
-            IReadOnlyList<EcologySpawnRuleSnapshot> rules, int biomeId,
+            IReadOnlyList<EcologySpawnRuleSnapshot> rules, string shrubItemId, int biomeId,
             double temperature, double precipitation, double height,
             double riverFloodplain)
         {
@@ -334,7 +336,7 @@ namespace FlatWorld.WorldModel
             {
                 EcologySpawnRuleSnapshot rule = rules[i];
                 if (rule == null || rule.CompanionOnly ||
-                    !string.Equals(rule.ItemId, "Bush", StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(rule.ItemId, shrubItemId, StringComparison.OrdinalIgnoreCase) ||
                     !rule.Matches(biomeId, temperature, precipitation, height,
                         riverFloodplain))
                 {

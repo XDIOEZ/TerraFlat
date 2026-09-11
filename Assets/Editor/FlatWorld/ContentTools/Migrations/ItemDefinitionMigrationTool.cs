@@ -38,8 +38,7 @@ public static class ItemDefinitionMigrationTool
             string.Equals(shellPrefab, "Pickaxe", StringComparison.OrdinalIgnoreCase)),
         new("weapons", shellPrefab =>
             string.Equals(shellPrefab, "Dagger_Copper", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(shellPrefab, "Spear", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(shellPrefab, "Torch", StringComparison.OrdinalIgnoreCase)),
+            string.Equals(shellPrefab, "Spear", StringComparison.OrdinalIgnoreCase)),
         new("equipment", shellPrefab =>
             string.Equals(shellPrefab, "Chestplate_Iron", StringComparison.OrdinalIgnoreCase)),
         new("seeds", shellPrefab => string.Equals(shellPrefab, "Seed", StringComparison.OrdinalIgnoreCase)),
@@ -52,7 +51,7 @@ public static class ItemDefinitionMigrationTool
     /// <summary>已经以 JSON 为权威、无需再从具体 Prefab 导出的定义。</summary>
     private static readonly HashSet<string> PreservedIds = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Knife_Base", "Dagger_Stone", "Dagger_Copper", "Dagger_Bone", "Knife_Flint", "Torch",
+        "Knife_Base", "Dagger_Stone", "Dagger_Copper", "Dagger_Bone", "Knife_Flint", "Torch_Base",
         "WorldResource_Base", "MineResource_Base", "AppleTree", "Tree_Coconut", "Mine_Coal", "Mine_Copper",
         "Mine_Iron", "Mine_Stone", "Mine_Tin", "Iceberg", "Bush", "Weed",
         "Tree_Pine", "Resin", "Charcoal", "Glue", "DrilledLog", "WoodHammer"
@@ -61,7 +60,7 @@ public static class ItemDefinitionMigrationTool
     /// <summary>预览统计时不计入运行时物品数量的抽象定义。</summary>
     private static readonly HashSet<string> PreservedAbstractIds = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Knife_Base", "WorldResource_Base", "MineResource_Base"
+        "Knife_Base", "Torch_Base", "WorldResource_Base", "MineResource_Base"
     };
 
     private static readonly HashSet<string> EquipmentInstanceTypeNames = new(StringComparer.Ordinal)
@@ -77,8 +76,7 @@ public static class ItemDefinitionMigrationTool
         ["Dagger_Stone"] = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger.prefab",
         ["Dagger_Copper"] = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger_Copper.prefab",
         ["Dagger_Bone"] = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Dagger_Bone.prefab",
-        ["Knife_Flint"] = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Knife_Flint.prefab",
-        ["Torch"] = "Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab"
+        ["Knife_Flint"] = "Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Knife_Flint.prefab"
     };
 
     private static readonly MigrationGroup[] Groups =
@@ -107,7 +105,6 @@ public static class ItemDefinitionMigrationTool
                 "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Copper.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Flint.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Iron.prefab",
-                "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_MagicalStone.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Tin.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/Apple.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/Berry.prefab",

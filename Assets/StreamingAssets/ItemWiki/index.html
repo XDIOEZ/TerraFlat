@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FlatWorld · Item Wiki</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260911-1">
 </head>
 <body>
 <div class="site-shell">
@@ -59,35 +59,51 @@
                     <span></span><strong>INDEX</strong><span></span>
                 </div>
 
-                <div class="summary-strip">
-                    <div><strong id="countConcrete">—</strong><span>可用物品</span></div>
-                    <div><strong id="countAbstract">—</strong><span>抽象模板</span></div>
-                    <div><strong id="countPackages">—</strong><span>JSON 分包</span></div>
-                </div>
+                <section id="indexToolsPanel" class="index-tools-panel">
+                    <header class="index-tools-header">
+                        <div class="index-tools-heading">
+                            <strong>索引工具</strong>
+                            <span>统计与筛选</span>
+                        </div>
+                        <button id="indexToolsCollapseButton" class="index-tools-collapse-button" type="button"
+                                aria-controls="indexToolsContent" aria-expanded="true" title="收起索引工具">
+                            <span class="index-tools-collapse-icon">▲</span>
+                            <span class="index-tools-collapse-text">收起</span>
+                        </button>
+                    </header>
 
-                <div class="filter-grid">
-                    <label>
-                        <span>分类</span>
-                        <select id="categorySelect"></select>
-                    </label>
-                    <label>
-                        <span>分包</span>
-                        <select id="packageSelect"></select>
-                    </label>
-                    <label>
-                        <span>排序</span>
-                        <select id="sortSelect">
-                            <option value="name">名称</option>
-                            <option value="id">稳定 ID</option>
-                            <option value="package">分包</option>
-                        </select>
-                    </label>
-                    <label class="toggle-field">
-                        <input id="showAbstract" type="checkbox">
-                        <span class="toggle-box"></span>
-                        <span>显示抽象模板</span>
-                    </label>
-                </div>
+                    <div id="indexToolsContent" class="index-tools-content">
+                        <div class="summary-strip">
+                            <div><strong id="countConcrete">—</strong><span>可用物品</span></div>
+                            <div><strong id="countAbstract">—</strong><span>抽象模板</span></div>
+                            <div><strong id="countPackages">—</strong><span>JSON 分包</span></div>
+                        </div>
+
+                        <div class="filter-grid">
+                            <label>
+                                <span>分类</span>
+                                <select id="categorySelect"></select>
+                            </label>
+                            <label>
+                                <span>分包</span>
+                                <select id="packageSelect"></select>
+                            </label>
+                            <label>
+                                <span>排序</span>
+                                <select id="sortSelect">
+                                    <option value="name">名称</option>
+                                    <option value="id">稳定 ID</option>
+                                    <option value="package">分包</option>
+                                </select>
+                            </label>
+                            <label class="toggle-field">
+                                <input id="showAbstract" type="checkbox">
+                                <span class="toggle-box"></span>
+                                <span>显示抽象模板</span>
+                            </label>
+                        </div>
+                    </div>
+                </section>
 
                 <div class="list-caption">
                     <span id="resultCount">0 条结果</span>
@@ -105,6 +121,15 @@
                 <div class="page-ornament compact-ornament">
                     <span></span><strong>ENTRY</strong><span></span>
                 </div>
+                <nav class="detail-navigation" aria-label="前后浏览物品">
+                    <button id="previousItemButton" class="detail-navigation-button" type="button"
+                            aria-label="查看上一个物品" title="查看上一个物品">←</button>
+                    <span id="detailPosition" class="detail-navigation-position">— / —</span>
+                    <button id="nextItemButton" class="detail-navigation-button" type="button"
+                            aria-label="查看下一个物品" title="查看下一个物品">→</button>
+                    <button id="locateItemButton" class="detail-navigation-button detail-locate-button" type="button"
+                            aria-label="在索引中定位当前物品" title="在 INDEX 中定位当前物品">⌖</button>
+                </nav>
                 <div id="detailContent" class="detail-content">
                     <div class="detail-empty-line">正在准备物品档案…</div>
                 </div>
@@ -243,6 +268,6 @@
     </details>
 </template>
 
-<script src="app.js" defer></script>
+<script src="app.js?v=20260911-1" defer></script>
 </body>
 </html>
