@@ -16,20 +16,6 @@
       }
     },
     {
-      "id": "FoxtailEar",
-      "parent": "Twine",
-      "gameName": "狗尾草穗",
-      "description": "用筛具筛选三份草穗，得到一份谷子种子。",
-      "visual": {
-        "color": {
-          "r": 1,
-          "g": 0.9,
-          "b": 0.45,
-          "a": 1
-        }
-      }
-    },
-    {
       "id": "Straw",
       "parent": "Twine",
       "gameName": "干草",
@@ -64,16 +50,10 @@
       }
     },
     {
-      "id": "Sieve",
-      "parent": "Rope",
-      "gameName": "筛具",
-      "description": "筛选草穗的工具，参与制作时不会消耗。"
-    },
-    {
       "id": "Clay",
       "parent": "Ore_Stone",
       "gameName": "黏土",
-      "description": "用石铲开采河岸黏土点，四份可制陶罐坯。",
+      "description": "基础陶土材料，四份可制陶罐坯。",
       "visual": {
         "color": {
           "r": 0.7,
@@ -100,7 +80,7 @@
     {
       "id": "HerbCrop",
       "parent": "BerryCrop",
-      "gameName": "药草植株",
+      "gameName": "药草-农作物",
       "description": "成熟后采收；可留种种植。持续受寒或受热会枯萎。",
       "visual": {
         "color": {
@@ -144,8 +124,8 @@
     {
       "id": "FoxtailCrop",
       "parent": "BerryCrop",
-      "gameName": "狗尾草",
-      "description": "成熟后采收；可留种种植。持续受寒或受热会枯萎。",
+      "gameName": "狗尾草-农作物",
+      "description": "成熟后可采收干草；持续受寒或受热会枯萎。",
       "visual": {
         "color": {
           "r": 1,
@@ -169,65 +149,9 @@
           "parameters": {
             "outputs": [
               {
-                "itemId": "FoxtailEar",
-                "minAmount": 2,
-                "maxAmount": 4,
-                "probability": 1
-              },
-              {
                 "itemId": "Straw",
                 "minAmount": 1,
                 "maxAmount": 2,
-                "probability": 1
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": "MilletCrop",
-      "parent": "BerryCrop",
-      "gameName": "谷子植株",
-      "description": "成熟后采收；可留种种植。持续受寒或受热会枯萎。",
-      "visual": {
-        "color": {
-          "r": 1,
-          "g": 0.75,
-          "b": 0.2,
-          "a": 1
-        }
-      },
-      "modules": {
-        "crop": {
-          "parameters": {
-            "growthDurationSeconds": 900
-          }
-        },
-        "cropVisual": {
-          "parameters": {
-            "buriedClip": 0
-          }
-        },
-        "cropYield": {
-          "parameters": {
-            "outputs": [
-              {
-                "itemId": "Millet",
-                "minAmount": 3,
-                "maxAmount": 5,
-                "probability": 1
-              },
-              {
-                "itemId": "Seed_Millet",
-                "minAmount": 2,
-                "maxAmount": 2,
-                "probability": 1
-              },
-              {
-                "itemId": "Straw",
-                "minAmount": 2,
-                "maxAmount": 3,
                 "probability": 1
               }
             ]
@@ -249,19 +173,6 @@
       }
     },
     {
-      "id": "Seed_Millet",
-      "parent": "Seed_Radish",
-      "gameName": "谷子种子",
-      "description": "播种后长出对应植株。",
-      "modules": {
-        "plantable": {
-          "parameters": {
-            "cropItemId": "MilletCrop"
-          }
-        }
-      }
-    },
-    {
       "id": "Seed_Willow",
       "parent": "Seed_Radish",
       "gameName": "柳树种子",
@@ -270,110 +181,6 @@
         "plantable": {
           "parameters": {
             "cropItemId": "Tree_Willow"
-          }
-        }
-      }
-    },
-    {
-      "id": "Millet",
-      "parent": "Berry",
-      "gameName": "谷粒",
-      "description": "可以使用。",
-      "visual": {
-        "color": {
-          "r": 1,
-          "g": 0.85,
-          "b": 0.45,
-          "a": 1
-        }
-      },
-      "modules": {
-        "food": {
-          "data": {
-            "FoodData": {
-              "nutrition": {
-                "Carbohydrates": 35,
-                "Max_Carbohydrates": 35,
-                "Fat": 1,
-                "Max_Fat": 1,
-                "Protein": 4,
-                "Max_Protein": 4,
-                "Water": 2,
-                "Max_Water": 2,
-                "Vitamins": 2,
-                "Max_Vitamins": 2
-              },
-              "Max_EatingProgress": 1.5
-            },
-            "MechanicStates": [
-              {
-                "StateKey": "food.spoilage",
-                "Data": {
-                  "EnableSpoilage": true,
-                  "SpoilageElapsedSeconds": 0,
-                  "SpoilageIntervalSeconds": 12960,
-                  "SpoilageTargetItemID": "Humus"
-                }
-              },
-              {
-                "StateKey": "food.consumption",
-                "Data": {
-                  "EatingProgress": 0
-                }
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": "Millet_Cooked",
-      "parent": "Berry",
-      "gameName": "熟谷饭",
-      "description": "可以使用。",
-      "visual": {
-        "color": {
-          "r": 1,
-          "g": 0.85,
-          "b": 0.45,
-          "a": 1
-        }
-      },
-      "modules": {
-        "food": {
-          "data": {
-            "FoodData": {
-              "nutrition": {
-                "Carbohydrates": 55,
-                "Max_Carbohydrates": 55,
-                "Fat": 1,
-                "Max_Fat": 1,
-                "Protein": 6,
-                "Max_Protein": 6,
-                "Water": 8,
-                "Max_Water": 8,
-                "Vitamins": 3,
-                "Max_Vitamins": 3
-              },
-              "Max_EatingProgress": 1.5
-            },
-            "MechanicStates": [
-              {
-                "StateKey": "food.spoilage",
-                "Data": {
-                  "EnableSpoilage": true,
-                  "SpoilageElapsedSeconds": 0,
-                  "SpoilageIntervalSeconds": 5400,
-                  "SpoilageTargetItemID": "Humus"
-                }
-              },
-              {
-                "StateKey": "food.consumption",
-                "Data": {
-                  "EatingProgress": 0
-                }
-              }
-            ]
           }
         }
       }
@@ -477,43 +284,6 @@
           "parameters": {
             "requiredTool": 1,
             "minimumTier": 4
-          }
-        }
-      }
-    },
-    {
-      "id": "ClayDeposit",
-      "parent": "Mine_Stone",
-      "gameName": "河岸黏土",
-      "description": "使用对应工具开采。",
-      "visual": {
-        "color": {
-          "r": 0.7,
-          "g": 0.4,
-          "b": 0.25,
-          "a": 1
-        }
-      },
-      "lootTableId": "Ancient_Clay",
-      "modules": {
-        "生命值系统模块": {
-          "parameters": {
-            "Data": {
-              "Hp": 100,
-              "MaxHp": 100,
-              "DefenseValues": {
-                "Cutting": 0,
-                "Piercing": 0,
-                "Chopping": 0,
-                "Blunt": 0
-              }
-            }
-          }
-        },
-        "harvestRequirement": {
-          "parameters": {
-            "requiredTool": 2,
-            "minimumTier": 1
           }
         }
       }

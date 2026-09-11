@@ -84,7 +84,7 @@ public static partial class AncientStageAssetBuilder
     }
 
     #region 自然来源
-    /// <summary>把药草、狗尾草、柳树和黏土接到地表生态，把硝石接到洞穴矿脉。</summary>
+    /// <summary>把药草、狗尾草和柳树接到地表生态，把硝石接到洞穴矿脉。</summary>
     private static void BuildEcology()
     {
         var surface = new SerializedObject(AssetDatabase.LoadAssetAtPath<ChunkGenerationProfileSO>(
@@ -92,7 +92,6 @@ public static partial class AncientStageAssetBuilder
         AddEcologyRule(surface, "surface.ancient.herb", "HerbCrop", 48, 0.00045f, 0f);
         AddEcologyRule(surface, "surface.ancient.foxtail", "FoxtailCrop", 48, 0.001f, 0f);
         AddEcologyRule(surface, "surface.ancient.willow", "Tree_Willow", 48, 0.002f, 0.1f);
-        AddEcologyRule(surface, "surface.ancient.clay", "ClayDeposit", 52, 0.008f, 0.1f);
         surface.ApplyModifiedPropertiesWithoutUndo();
         var cave = new SerializedObject(AssetDatabase.LoadAssetAtPath<ChunkGenerationProfileSO>(
             "Assets/Resources/Config/WorldModel/ChunkGenerationProfile_Cave.asset"));

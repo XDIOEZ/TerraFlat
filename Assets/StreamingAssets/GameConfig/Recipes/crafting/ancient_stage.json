@@ -2,74 +2,6 @@
   "schemaVersion": 1,
   "recipes": [
     {
-      "id": "core:筛具",
-      "displayName": "筛具",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "gridWidth": 2,
-      "gridHeight": 1,
-      "allowMirror": false,
-      "temperature": 0,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "slot": 0,
-          "match": "exact_item",
-          "itemId": "Stick_Wood",
-          "tag": "",
-          "amount": 2
-        },
-        {
-          "slot": 1,
-          "match": "exact_item",
-          "itemId": "Rope",
-          "tag": "",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "Sieve",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
-      "id": "core:筛选谷子种子",
-      "displayName": "筛选谷子种子",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "gridWidth": 2,
-      "gridHeight": 1,
-      "allowMirror": false,
-      "temperature": 0,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "slot": 0,
-          "match": "exact_item",
-          "itemId": "Sieve",
-          "tag": "",
-          "amount": 0
-        },
-        {
-          "slot": 1,
-          "match": "exact_item",
-          "itemId": "FoxtailEar",
-          "tag": "",
-          "amount": 3
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "Seed_Millet",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
       "id": "core:草药包",
       "displayName": "草药包",
       "recipeType": "crafting",
@@ -91,33 +23,6 @@
       "outputs": [
         {
           "itemId": "HerbPoultice",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
-      "id": "core:熟谷饭",
-      "displayName": "熟谷饭",
-      "recipeType": "smelting",
-      "inputRule": "unordered",
-      "gridWidth": 1,
-      "gridHeight": 1,
-      "allowMirror": true,
-      "temperature": 100,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "slot": 0,
-          "match": "exact_item",
-          "itemId": "Millet",
-          "tag": "",
-          "amount": 2
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "Millet_Cooked",
           "amount": 1
         }
       ],

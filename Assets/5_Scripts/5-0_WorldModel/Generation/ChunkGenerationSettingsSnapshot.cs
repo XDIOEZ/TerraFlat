@@ -417,6 +417,7 @@ namespace FlatWorld.WorldModel
             CavePortalBaseSeed = GetInt(numbers, "cave.portal.baseSeed", 0);
             CavePortalSeedSalt = GetInt(numbers, "cave.portal.seedSalt", 7919);
             CavePortalShrubEnabled = GetBool(numbers, "cave.portal.shrub.enabled", true);
+            CavePortalShrubItemId = GetText(texts, "cave.portal.shrub.itemId", string.Empty);
             CavePortalShrubRadius = Clamp(
                 GetInt(numbers, "cave.portal.shrub.radius", 7), 1, 32);
             CavePortalShrubChanceMultiplier = Math.Max(0d, Finite(
@@ -622,9 +623,11 @@ namespace FlatWorld.WorldModel
         public int CavePortalSeedSalt { get; }
         /// <summary>是否在地表天然洞穴入口周围额外生成灌木。</summary>
         public bool CavePortalShrubEnabled { get; }
+        /// <summary>洞穴入口周围复用的生态植物物品 ID；为空时不执行额外生成。</summary>
+        public string CavePortalShrubItemId { get; }
         /// <summary>洞穴入口灌木外圈半径；入口安全半径以内不放置灌木。</summary>
         public int CavePortalShrubRadius { get; }
-        /// <summary>入口周边灌木的额外生成概率倍率；只作用于草原和森林的 Bush 规则。</summary>
+        /// <summary>入口周边灌木的额外生成概率倍率；只作用于配置物品对应的草原和森林规则。</summary>
         public double CavePortalShrubChanceMultiplier { get; }
         public string CavePortalItemId { get; }
         public string CavePortalTargetDimensionId { get; }

@@ -287,14 +287,6 @@ MonoBehaviour:
     m_Key: item.Ore_Iron.description
     m_Metadata:
       m_Items: []
-  - m_Id: 4878938150
-    m_Key: item.Ore_MagicalStone.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 4878938151
-    m_Key: item.Ore_MagicalStone.description
-    m_Metadata:
-      m_Items: []
   - m_Id: 4878938152
     m_Key: item.Ore_Tin.name
     m_Metadata:
@@ -1019,28 +1011,12 @@ MonoBehaviour:
     m_Key: item.CompostBin.description
     m_Metadata:
       m_Items: []
-  - m_Id: 7973075480915998
-    m_Key: item.Rocket.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7973075480915999
-    m_Key: item.Rocket.description
-    m_Metadata:
-      m_Items: []
   - m_Id: 7973075522859008
     m_Key: item.CompostBin_Summoner.name
     m_Metadata:
       m_Items: []
   - m_Id: 7973075522859009
     m_Key: item.CompostBin_Summoner.description
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7973075522859010
-    m_Key: item.Rocket_Summoner.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7973075522859011
-    m_Key: item.Rocket_Summoner.description
     m_Metadata:
       m_Items: []
   - m_Id: 7973075527053312
@@ -1231,10 +1207,6 @@ MonoBehaviour:
     m_Key: item.Mine_Niter.name
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662565720074
-    m_Key: item.ClayDeposit.name
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662565720075
     m_Key: item.Tree_Willow.name
     m_Metadata:
@@ -1415,10 +1387,6 @@ MonoBehaviour:
     m_Key: item.Mine_Niter.description
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662611857416
-    m_Key: item.ClayDeposit.description
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662611857417
     m_Key: item.Tree_Willow.description
     m_Metadata:
@@ -1481,6 +1449,94 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 11141662616051723
     m_Key: item.MinersNote.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258435927105536
+    m_Key: item.Bow_Wood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375168
+    m_Key: item.Bow_Recurve.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375169
+    m_Key: item.Arrow_Wood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375170
+    m_Key: item.Arrow_Stone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375171
+    m_Key: item.Arrow_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375172
+    m_Key: item.Arrow_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375173
+    m_Key: item.Peach.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375174
+    m_Key: item.Orange.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375175
+    m_Key: item.RiceGrain.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375176
+    m_Key: item.Rice.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375177
+    m_Key: item.CookedRice.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375178
+    m_Key: item.Resin.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375179
+    m_Key: item.Charcoal.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375180
+    m_Key: item.Glue.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569472
+    m_Key: item.DrilledLog.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569473
+    m_Key: item.PeachTree.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569474
+    m_Key: item.OrangeTree.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569475
+    m_Key: item.Tree_Pine.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569476
+    m_Key: item.WoodHammer.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569477
+    m_Key: item.RiceCrop.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569478
+    m_Key: item.Chili.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569479
+    m_Key: item.ChiliTree.name
     m_Metadata:
       m_Items: []
   m_Metadata:

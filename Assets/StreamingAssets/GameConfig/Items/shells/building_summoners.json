@@ -1733,7 +1733,7 @@
     },
     {
       "id": "Torch_Summoner",
-      "parent": "Torch",
+      "parent": "Torch_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab",
       "gameName": "火把",
       "description": "可手持照明并用于近战，也可放置为照明设施的火把。",
@@ -1948,129 +1948,6 @@
           "enabled": false,
           "data": {
             "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"CompostBin\",\"SummonerPrefabId\":\"CompostBin_Summoner\"}",
-            "Type": 0
-          }
-        }
-      },
-      "itemData": {
-        "code": "",
-        "transform": {
-          "position": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0
-          },
-          "rotation": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0,
-            "w": 0.0
-          },
-          "scale": {
-            "x": 1.0,
-            "y": 1.0,
-            "z": 1.0
-          }
-        },
-        "ItemSpecialData": "",
-        "inHand": false,
-        "FactionId": ""
-      }
-    },
-    {
-      "id": "Rocket_Summoner",
-      "parent": "BuildingSummoner_Base",
-      "sourcePrefab": "Assets/2_Prefabs/World/Space/Summoners/Rocket_Summoner.prefab",
-      "gameName": "火箭",
-      "description": "用于往返星球与太空的火箭。",
-      "durability": 1.0,
-      "maxDurability": 1.0,
-      "amount": 1.0,
-      "volume": 1.0,
-      "canBePickedUp": true,
-      "tags": [
-        "35"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Building/Rocket.png[Rocket]",
-        "rendererLocalPosition": {
-          "x": 0.0,
-          "y": 1.5,
-          "z": 0.0
-        },
-        "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "rendererLocalScale": {
-          "x": 1.0,
-          "y": 1.0,
-          "z": 1.0
-        },
-        "color": {
-          "r": 1.0,
-          "g": 1.0,
-          "b": 1.0,
-          "a": 1.0
-        },
-        "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": false,
-          "offset": {
-            "x": 0.0,
-            "y": 0.0
-          },
-          "path": "",
-          "size": {
-            "x": 1.0,
-            "y": 1.0
-          },
-          "edgeRadius": 0.0
-        }
-      },
-      "health": {
-        "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
-        "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
-        },
-        "moduleLocalPosition": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0.0,
-            "y": 0.0
-          },
-          "size": {
-            "x": 1.0,
-            "y": 1.0
-          },
-          "edgeRadius": 0.0
-        }
-      },
-      "modules": {
-        "建筑模块": {
-          "prefab": "Module_Building",
-          "id": "建筑模块",
-          "enabled": false,
-          "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Rocket\",\"SummonerPrefabId\":\"Rocket_Summoner\"}",
             "Type": 0
           }
         }

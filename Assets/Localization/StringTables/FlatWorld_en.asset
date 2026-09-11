@@ -290,14 +290,6 @@ MonoBehaviour:
     m_Localized: Raw material that can be processed into useful resources.
     m_Metadata:
       m_Items: []
-  - m_Id: 4878938150
-    m_Localized: Magic Stone Ore
-    m_Metadata:
-      m_Items: []
-  - m_Id: 4878938151
-    m_Localized: Raw material that can be processed into useful resources.
-    m_Metadata:
-      m_Items: []
   - m_Id: 4878938152
     m_Localized: Tin Ore
     m_Metadata:
@@ -858,7 +850,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 6403757262331905
-    m_Localized: Radish Plant
+    m_Localized: Radish-Crop
     m_Metadata:
       m_Items: []
   - m_Id: 6403757262331906
@@ -906,7 +898,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915968
-    m_Localized: Blast Furnace Building
+    m_Localized: Blast Furnace-Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915969
@@ -914,7 +906,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915970
-    m_Localized: Bonfire Building
+    m_Localized: Bonfire-Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915971
@@ -922,7 +914,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915972
-    m_Localized: Wooden Chest Building
+    m_Localized: Wooden Chest-Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915973
@@ -930,7 +922,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915974
-    m_Localized: Stone Door Building
+    m_Localized: Stone Door-Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915975
@@ -938,7 +930,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915976
-    m_Localized: Wooden Door Building
+    m_Localized: Wooden Door-Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915977
@@ -946,7 +938,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915978
-    m_Localized: Meat Drying Rack Building
+    m_Localized: Meat Drying Rack-Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915979
@@ -954,7 +946,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915980
-    m_Localized: Mine Entrance Building
+    m_Localized: Mine Entrance-Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915981
@@ -962,7 +954,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915982
-    m_Localized: Scarecrow Building
+    m_Localized: Scarecrow-Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915983
@@ -970,7 +962,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915984
-    m_Localized: Smelter Building
+    m_Localized: Smelter-Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915985
@@ -978,7 +970,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915986
-    m_Localized: Tent Building
+    m_Localized: Tent-Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915987
@@ -994,7 +986,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915990
-    m_Localized: Workbench Building
+    m_Localized: Workbench-Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915991
@@ -1002,7 +994,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915992
-    m_Localized: Fire Drill Building
+    m_Localized: Fire Drill-Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915993
@@ -1010,7 +1002,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915994
-    m_Localized: Torch Building
+    m_Localized: Torch-Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915995
@@ -1018,19 +1010,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915996
-    m_Localized: Compost Bin Building
+    m_Localized: Compost Bin-Building
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915997
     m_Localized: CompostBin.
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7973075480915998
-    m_Localized: Rocket Building
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7973075480915999
-    m_Localized: Rocket.
     m_Metadata:
       m_Items: []
   - m_Id: 7973075522859008
@@ -1041,16 +1025,8 @@ MonoBehaviour:
     m_Localized: CompostBin Summoner.
     m_Metadata:
       m_Items: []
-  - m_Id: 7973075522859010
-    m_Localized: Rocket
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7973075522859011
-    m_Localized: Rocket Summoner.
-    m_Metadata:
-      m_Items: []
   - m_Id: 7973075527053312
-    m_Localized: Vine Plant
+    m_Localized: Vine-Crop
     m_Metadata:
       m_Items: []
   - m_Id: 7973075527053313
@@ -1134,7 +1110,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 10123767377211394
-    m_Localized: Mushroom Plant
+    m_Localized: Mushroom-Crop
     m_Metadata:
       m_Items: []
   - m_Id: 11141662175649792
@@ -1142,7 +1118,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 11141662557331456
-    m_Localized: Berry Plant
+    m_Localized: Berry Bush-Crop
     m_Metadata:
       m_Items: []
   - m_Id: 11141662557331457
@@ -1198,15 +1174,15 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 11141662565720064
-    m_Localized: Herb Plant
+    m_Localized: Herb-Crop
     m_Metadata:
       m_Items: []
   - m_Id: 11141662565720065
-    m_Localized: Foxtail Grass
+    m_Localized: Foxtail Grass-Crop
     m_Metadata:
       m_Items: []
   - m_Id: 11141662565720066
-    m_Localized: Millet Plant
+    m_Localized: Millet-Crop
     m_Metadata:
       m_Items: []
   - m_Id: 11141662565720067
@@ -1235,10 +1211,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 11141662565720073
     m_Localized: Niter Deposit
-    m_Metadata:
-      m_Items: []
-  - m_Id: 11141662565720074
-    m_Localized: Riverbank Clay
     m_Metadata:
       m_Items: []
   - m_Id: 11141662565720075
@@ -1422,10 +1394,6 @@ MonoBehaviour:
     m_Localized: Niter Deposit.
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662611857416
-    m_Localized: Riverbank Clay.
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662611857417
     m_Localized: Willow Tree.
     m_Metadata:
@@ -1492,6 +1460,94 @@ MonoBehaviour:
   - m_Id: 11141662616051723
     m_Localized: Copper tools can mine iron. Make simple iron tools with raw iron,
       wooden handles and rope; alloy copper and tin at nine to one for bronze.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258435927105536
+    m_Localized: Wooden Bow
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375168
+    m_Localized: Recurve Bow
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375169
+    m_Localized: Wooden Arrow
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375170
+    m_Localized: Stone Arrow
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375171
+    m_Localized: Copper Arrow
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375172
+    m_Localized: Iron Arrow
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375173
+    m_Localized: Peach
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375174
+    m_Localized: Orange
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375175
+    m_Localized: Rice Grain
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375176
+    m_Localized: Rice
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375177
+    m_Localized: Cooked Rice
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375178
+    m_Localized: Resin
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375179
+    m_Localized: Charcoal
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436170375180
+    m_Localized: Resin Glue
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569472
+    m_Localized: Drilled Log
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569473
+    m_Localized: Peach Tree
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569474
+    m_Localized: Orange Tree
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569475
+    m_Localized: Pine Tree
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569476
+    m_Localized: Wooden Hammer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569477
+    m_Localized: Rice-Crop
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569478
+    m_Localized: Chili Pepper
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12258436174569479
+    m_Localized: Chili Tree
     m_Metadata:
       m_Items: []
   references:

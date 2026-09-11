@@ -50,9 +50,8 @@ public static class BuildingShellMigrationTool
         new("Wall_Wood", "木墙", "Assets/2_Prefabs/World/Buildings/Wall_Wood.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/Wall_Wood_Summoner.prefab", true),
         new("WorkBench", "工作台", "Assets/2_Prefabs/World/Buildings/WorkBench.prefab", "Assets/2_Prefabs/World/Buildings/Summoners/WorkBench_Summoner.prefab"),
         new("SparkMaker", "钻木取火工具", "Assets/2_Prefabs/Gameplay/Items/Tools/SparkMaker.prefab", "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/SparkMaker_Summoner.prefab"),
-        new("Torch_Building", "火把", "Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab", "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab", sourceBodyId: "Torch", preserveBodyPrefabRuntime: true),
-        new("CompostBin", "堆肥箱", "Assets/2_Prefabs/Gameplay/Items/Food/CompostBin.prefab", "Assets/2_Prefabs/Gameplay/Items/Food/Summoners/CompostBin_Summoner.prefab"),
-        new("Rocket", "火箭", "Assets/2_Prefabs/World/Space/Rocket.prefab", "Assets/2_Prefabs/World/Space/Summoners/Rocket_Summoner.prefab")
+        new("Torch_Building", "火把", "Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab", "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab", sourceBodyId: "Torch", preserveBodyPrefabRuntime: true, summonerParentId: "Torch_Base"),
+        new("CompostBin", "堆肥箱", "Assets/2_Prefabs/Gameplay/Items/Food/CompostBin.prefab", "Assets/2_Prefabs/Gameplay/Items/Food/Summoners/CompostBin_Summoner.prefab")
     };
 
     #endregion
@@ -82,7 +81,7 @@ public static class BuildingShellMigrationTool
                 entry.SummonerPath,
                 entry.SummonerId,
                 entry.SummonerId,
-                "BuildingSummoner_Base",
+                entry.SummonerParentId,
                 BuildingRole.Summoner,
                 false,
                 existingDefinitions,
@@ -837,7 +836,8 @@ public static class BuildingShellMigrationTool
             string summonerPath,
             bool usesTilemap = false,
             string sourceBodyId = null,
-            bool preserveBodyPrefabRuntime = false)
+            bool preserveBodyPrefabRuntime = false,
+            string summonerParentId = "BuildingSummoner_Base")
         {
             BodyId = bodyId;
             DisplayName = displayName;
@@ -846,6 +846,7 @@ public static class BuildingShellMigrationTool
             SummonerPath = summonerPath;
             UsesTilemap = usesTilemap;
             PreserveBodyPrefabRuntime = preserveBodyPrefabRuntime;
+            SummonerParentId = summonerParentId;
         }
 
         public string BodyId { get; }
@@ -855,6 +856,8 @@ public static class BuildingShellMigrationTool
         public string BodyPath { get; }
         public string SummonerPath { get; }
         public string SummonerId => SourceBodyId + "_Summoner";
+        /// <summary>召唤器继承的定义；可手持建筑可复用对应的抽象玩法模板。</summary>
+        public string SummonerParentId { get; }
         public bool UsesTilemap { get; }
         public bool PreserveBodyPrefabRuntime { get; }
     }

@@ -256,6 +256,8 @@ MonoBehaviour:
     Value: CaveExit
   - Id: cave.portal.targetDimensionId
     Value: cave
+  - Id: cave.portal.shrub.itemId
+    Value: BerryCrop
   - Id: tile.block.13
     Value: Tile_WaterPlatform
   - Id: tile.block.14
@@ -404,8 +406,8 @@ MonoBehaviour:
     CompanionOffsetY: 0
     CompanionMinRadius: 0
     CompanionMaxRadius: 0
-  - RuleId: surface.forest.bush
-    ItemId: Bush
+  - RuleId: surface.forest.berry
+    ItemId: BerryCrop
     ItemCount: 1
     SpawnChance: 0.00045
     SpawnChanceMultiplier: 1
@@ -504,8 +506,8 @@ MonoBehaviour:
     CompanionOffsetY: 0
     CompanionMinRadius: 0
     CompanionMaxRadius: 0
-  - RuleId: surface.grassland.bush
-    ItemId: Bush
+  - RuleId: surface.grassland.berry
+    ItemId: BerryCrop
     ItemCount: 1
     SpawnChance: 0.0002
     SpawnChanceMultiplier: 1
@@ -522,7 +524,7 @@ MonoBehaviour:
     MaxHeight: 1
     MinRiverFloodplainStrength: 0
     ProvidedTags:
-    - Bush
+    - BerryCrop
     CompanionOnly: 0
     CompanionHostTag: 
     CompanionSpawnChance: 0
@@ -574,7 +576,7 @@ MonoBehaviour:
     MinRiverFloodplainStrength: 0
     ProvidedTags: []
     CompanionOnly: 1
-    CompanionHostTag: Bush
+    CompanionHostTag: BerryCrop
     CompanionSpawnChance: 0.75
     CompanionOffsetX: 0
     CompanionOffsetY: 0
@@ -916,31 +918,6 @@ MonoBehaviour:
     PatchRadius: 2.5
     PatchChance: 1
     BiomeMask: 48
-    MinTemperature: 0
-    MaxTemperature: 1
-    MinPrecipitation: 0
-    MaxPrecipitation: 1
-    MinHeight: 0
-    MaxHeight: 1
-    MinRiverFloodplainStrength: 0.1
-    ProvidedTags: []
-    CompanionOnly: 0
-    CompanionHostTag: 
-    CompanionSpawnChance: 0
-    CompanionOffsetX: 0
-    CompanionOffsetY: 0
-    CompanionMinRadius: 0
-    CompanionMaxRadius: 0
-  - RuleId: surface.ancient.clay
-    ItemId: ClayDeposit
-    ItemCount: 1
-    SpawnChance: 0.008
-    SpawnChanceMultiplier: 1
-    DistributionMode: 0
-    PatchSpacing: 24
-    PatchRadius: 2.5
-    PatchChance: 1
-    BiomeMask: 52
     MinTemperature: 0
     MaxTemperature: 1
     MinPrecipitation: 0

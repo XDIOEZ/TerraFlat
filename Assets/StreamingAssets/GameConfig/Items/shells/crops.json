@@ -81,7 +81,7 @@
     {
       "id": "RadishCrop",
       "parent": "Crop_Base",
-      "gameName": "萝卜植株",
+      "gameName": "萝卜-农作物",
       "description": "埋在耕地中的萝卜；成熟后交互即可拔起。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -170,7 +170,7 @@
     {
       "id": "MushroomCrop",
       "parent": "RadishCrop",
-      "gameName": "蘑菇植株",
+      "gameName": "蘑菇-农作物",
       "description": "生长在阴暗地下的蘑菇；成熟后交互即可采集。",
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mushroom/Plant_Mushroom.png",
@@ -236,7 +236,7 @@
     {
       "id": "TwineCrop",
       "parent": "Crop_Base",
-      "gameName": "藤蔓植株",
+      "gameName": "藤蔓-农作物",
       "description": "自然生长的藤蔓；成熟后交互可采集柔韧的藤蔓。",
       "durability": 1.0,
       "maxDurability": 1.0,
@@ -324,8 +324,8 @@
     {
       "id": "BerryCrop",
       "parent": "RadishCrop",
-      "gameName": "浆果植株",
-      "description": "种在耕地中的浆果植株；成熟后交互采收。",
+      "gameName": "浆果丛-农作物",
+      "description": "可自然生长或种在耕地中的浆果丛；成熟后交互采收。",
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/TX Plant.png[GrassLand_6]",
         "collider": {
@@ -375,7 +375,7 @@
     {
       "id": "RiceCrop",
       "parent": "Crop_Base",
-      "gameName": "水稻",
+      "gameName": "水稻-农作物",
       "description": "种在耕地中的水稻；成长过程中依次经历幼苗、生长期和成熟期，收获的稻谷也能继续播种。",
       "durability": 1.0,
       "maxDurability": 1.0,

@@ -541,22 +541,6 @@ MonoBehaviour:
     HasHp: 1
     HasDefense: 1
     HasDamage: 0
-  - Prefab: {fileID: 4240221386964068424, guid: 41d17800f3397ad4085f635c2fd9b1f6, type: 3}
-    PrefabPath: Assets/2_Prefabs/World/Space/Rocket.prefab
-    PrefabName: Rocket
-    MaxHp: 200
-    Hp: 200
-    CuttingDefense: 10
-    PiercingDefense: 10
-    ChoppingDefense: 10
-    BluntDefense: 10
-    CuttingDamage: 0
-    PiercingDamage: 0
-    ChoppingDamage: 0
-    BluntDamage: 0
-    HasHp: 1
-    HasDefense: 1
-    HasDamage: 0
   - Prefab: {fileID: 8823128489376387190, guid: 296e945b0a9dda44b9a5d58075d795da, type: 3}
     PrefabPath: Assets/2_Prefabs/Gameplay/AI/Scarecrow.prefab
     PrefabName: Scarecrow
