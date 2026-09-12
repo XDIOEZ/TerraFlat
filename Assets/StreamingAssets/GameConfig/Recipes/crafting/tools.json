@@ -389,7 +389,7 @@
     },
     {
       "id": "core:粗铁镐",
-      "displayName": "简易铁镐",
+      "displayName": "粗铁铁镐",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "gridWidth": 3,

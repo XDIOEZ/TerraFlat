@@ -51,9 +51,9 @@ MonoBehaviour:
   - {fileID: 1729398625125957200, guid: 3b8b0ac52f922cc499112bd9e5b27298, type: 3}
   DamageValues:
     Cutting: 0
-    Piercing: 21
+    Piercing: 16
     Chopping: 0
-    Blunt: 7
+    Blunt: 6.5
   DamageInterval: 0.2
   EnableOnTriggerEnterDamage: 1
   OnlyDealDamageWhenInHand: 0
@@ -441,7 +441,7 @@ MonoBehaviour:
   comboWindowGrace: 0.05
   loopComboOnHold: 1
   attackSpeedMultiplier: 1
-  staminaCostPerAttack: 11
+  staminaCostPerAttack: 9.5
   ModSaveData:
     Name: 
     ID: 
