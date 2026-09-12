@@ -515,12 +515,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 3088dd90c9bbe9546b70b08e791bb1bb
-    m_Address: Module_DismantleSupport
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 30ac1884b639b284aae63618e0f548ee
     m_Address: Assets/6_Art/Generated/WoodHammer/WoodHammer_Icon.png
     m_ReadOnly: 0
@@ -2194,6 +2188,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f13690be3a27421baae9c13245c6e68d
+    m_Address: Assets/6_Art/Food/Item_Jam.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f13b81f3d392ba844bd4703a6aa081cc
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Crafting/Module_Detector.prefab

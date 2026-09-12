@@ -123,7 +123,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 4807634944
-    m_Localized: Simple Iron Pickaxe
+    m_Localized: Pig Iron Pickaxe
     m_Metadata:
       m_Items: []
   - m_Id: 4807634945
@@ -1245,10 +1245,6 @@ MonoBehaviour:
     m_Localized: Bronze Wall
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662565720084
-    m_Localized: Crowbar
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662565720085
     m_Localized: Unfired Clay Jar
     m_Metadata:
@@ -1422,10 +1418,6 @@ MonoBehaviour:
     m_Localized: Bronze Wall.
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662616051717
-    m_Localized: Crowbar.
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662616051718
     m_Localized: Fire in a furnace at 600 degrees Celsius to make a clay jar.
     m_Metadata:
@@ -1571,6 +1563,110 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 12625631161344000
     m_Localized: Stone Mortar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324746227712
+    m_Localized: Foxtail Seed Head
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324821725184
+    m_Localized: Jam
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919488
+    m_Localized: Wooden Bow.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919489
+    m_Localized: Recurve Bow.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919490
+    m_Localized: Wooden Arrow.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919491
+    m_Localized: Stone Arrow.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919492
+    m_Localized: Copper Arrow.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919493
+    m_Localized: Iron Arrow.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919494
+    m_Localized: Peach.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919495
+    m_Localized: Orange.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919496
+    m_Localized: Rice Grain.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919497
+    m_Localized: Rice.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919498
+    m_Localized: Cooked Rice.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919499
+    m_Localized: Resin.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919500
+    m_Localized: Charcoal.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919501
+    m_Localized: Resin Glue.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919502
+    m_Localized: Drilled Log.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919503
+    m_Localized: Peach Tree.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919504
+    m_Localized: Orange Tree.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919505
+    m_Localized: Pine Tree.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919506
+    m_Localized: Wooden Hammer.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919507
+    m_Localized: Rice-Crop.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919508
+    m_Localized: Chili Pepper.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919509
+    m_Localized: Chili Tree.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919510
+    m_Localized: Foxtail Seed Head.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919511
+    m_Localized: Jam.
     m_Metadata:
       m_Items: []
   references:

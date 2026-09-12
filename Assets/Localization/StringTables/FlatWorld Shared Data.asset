@@ -1239,10 +1239,6 @@ MonoBehaviour:
     m_Key: item.Wall_Bronze_Summoner.name
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662565720084
-    m_Key: item.Crowbar.name
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662565720085
     m_Key: item.ClayJarBlank.name
     m_Metadata:
@@ -1415,10 +1411,6 @@ MonoBehaviour:
     m_Key: item.Wall_Bronze_Summoner.description
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662616051717
-    m_Key: item.Crowbar.description
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662616051718
     m_Key: item.ClayJarBlank.description
     m_Metadata:
@@ -1553,6 +1545,110 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 12625631161344000
     m_Key: item.StoneMortar_Building.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324746227712
+    m_Key: item.FoxtailSpike.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324821725184
+    m_Key: item.Jam.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919488
+    m_Key: item.Bow_Wood.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919489
+    m_Key: item.Bow_Recurve.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919490
+    m_Key: item.Arrow_Wood.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919491
+    m_Key: item.Arrow_Stone.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919492
+    m_Key: item.Arrow_Copper.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919493
+    m_Key: item.Arrow_Iron.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919494
+    m_Key: item.Peach.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919495
+    m_Key: item.Orange.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919496
+    m_Key: item.RiceGrain.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919497
+    m_Key: item.Rice.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919498
+    m_Key: item.CookedRice.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919499
+    m_Key: item.Resin.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919500
+    m_Key: item.Charcoal.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919501
+    m_Key: item.Glue.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919502
+    m_Key: item.DrilledLog.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919503
+    m_Key: item.PeachTree.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919504
+    m_Key: item.OrangeTree.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919505
+    m_Key: item.Tree_Pine.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919506
+    m_Key: item.WoodHammer.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919507
+    m_Key: item.RiceCrop.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919508
+    m_Key: item.Chili.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919509
+    m_Key: item.ChiliTree.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919510
+    m_Key: item.FoxtailSpike.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12651324825919511
+    m_Key: item.Jam.description
     m_Metadata:
       m_Items: []
   m_Metadata:

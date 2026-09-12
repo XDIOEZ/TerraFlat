@@ -10,6 +10,17 @@
       "inputs": [{ "slot": 0, "match": "exact_item", "itemId": "Ore_Stone", "amount": 4 }],
       "outputs": [{ "itemId": "StoneMortar", "amount": 1 }],
       "actions": []
+    },
+    {
+      "id": "core:berry_jam",
+      "displayName": "捣碎浆果制果酱",
+      "requiredStation": "mortar",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "allowMirror": false,
+      "inputs": [{ "slot": 0, "match": "exact_item", "itemId": "Berry", "amount": 2 }],
+      "outputs": [{ "itemId": "Jam", "amount": 1 }],
+      "actions": []
     }
   ]
 }

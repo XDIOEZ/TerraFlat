@@ -34,6 +34,12 @@ namespace FlatWorld.GameTest.ItemModule
                     $"物品 {definition.Id} 没有 JSON 显示名");
                 Assert.That(definition.Visual?.SpriteAddress, Is.Not.Null.And.Not.Empty,
                     $"物品 {definition.Id} 没有 JSON 显示贴图地址");
+                Assert.That(definition.Weight.HasValue && definition.Weight.Value > 0f, Is.True,
+                    $"物品 {definition.Id} 没有有效重量 weight");
+                Assert.That(definition.Volume.HasValue && definition.Volume.Value > 0f, Is.True,
+                    $"物品 {definition.Id} 没有有效体积 volume");
+                Assert.That(definition.Stackable.HasValue, Is.True,
+                    $"物品 {definition.Id} 没有明确堆叠属性 stackable");
             }
         }
 
