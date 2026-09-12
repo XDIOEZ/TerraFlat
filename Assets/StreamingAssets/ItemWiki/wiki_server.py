@@ -462,7 +462,12 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
             return True
         if lower.startswith(wiki_prefix):
             relative = normalized[len(wiki_prefix):]
-            return "/" not in relative and relative.lower() in PUBLIC_WIKI_FILES
+            relative_lower = relative.lower()
+            if "/" not in relative:
+                return relative_lower in PUBLIC_WIKI_FILES
+            if relative_lower.startswith("docs/") and relative_lower.endswith(".md"):
+                return True
+            return False
 
         item_prefix = "assets/streamingassets/gameconfig/items/"
         if lower.startswith(item_prefix) and lower.endswith(".json"):

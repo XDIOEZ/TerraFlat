@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $wikiPort = 8766
 $tunnelName = 'FlatWorld_Wiki'
