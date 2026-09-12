@@ -264,6 +264,12 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         UpdateActiveVisuals(Time.deltaTime);
     }
 
+    /// <summary>池化粒子不挂在角色层级下，在角色移动完成后同步世界变换。</summary>
+    private void LateUpdate()
+    {
+        UpdateActiveParticleVisuals();
+    }
+
     private void OnDisable()
     {
         UnbindBuffManager();
@@ -747,7 +753,6 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
             UpdateVisualTransform(visual);
         }
 
-        UpdateActiveParticleVisuals();
         UpdateActiveGlowVisuals(deltaTime);
     }
 
@@ -992,11 +997,13 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         if (visual.EffectObject != null)
             visualEffectManager.ReturnEffectToPool(visual.Effect.EffectName, visual.EffectObject);
 
+        Transform effectRoot = visualEffectManager.transform;
+        Vector3 worldPosition = transform.TransformPoint(GetParticleLocalPosition(visual.Effect));
         GameObject effectObject = visualEffectManager.PlayEffect(
             transform,
             visual.Effect.EffectName,
-            transform,
-            GetParticleLocalPosition(visual.Effect),
+            effectRoot,
+            effectRoot.InverseTransformPoint(worldPosition),
             -1f,
             EffectStackMode.NonStackable);
         if (effectObject == null)
@@ -1028,13 +1035,17 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
             0f);
     }
 
-    /// <summary>同步粒子局部位置和排序层，使血滴稳定显示在角色前方。</summary>
+    /// <summary>同步独立池化粒子的世界位置、旋转、缩放和排序层，使其视觉上附着角色但不进入角色层级。</summary>
     private void UpdateParticleTransform(RuntimeStatusParticleVisual visual)
     {
         if (visual?.EffectObject == null || visual.Effect == null)
             return;
 
-        visual.EffectObject.transform.localPosition = GetParticleLocalPosition(visual.Effect);
+        Transform effectTransform = visual.EffectObject.transform;
+        effectTransform.SetPositionAndRotation(
+            transform.TransformPoint(GetParticleLocalPosition(visual.Effect)),
+            transform.rotation);
+        effectTransform.localScale = transform.lossyScale;
         if (visual.Renderers == null)
             visual.Renderers = visual.EffectObject.GetComponentsInChildren<ParticleSystemRenderer>(true);
 

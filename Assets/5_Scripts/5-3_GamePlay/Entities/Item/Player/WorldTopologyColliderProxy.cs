@@ -54,7 +54,8 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
     private readonly List<ProxyRecord> proxies = new();
     private readonly List<Vector2> requiredOffsets = new(3);
     private Item item;
-    private Collider2D[] sources;
+    // 只缓存真正需要镜像的碰撞体；过滤过程包含多次 GetComponent，绝不能放在 FixedUpdate 热路径里。
+    private Collider2D[] sources = Array.Empty<Collider2D>();
 
     public int ActiveProxyCount { get; private set; }
 
@@ -62,21 +63,26 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
     {
         if (target == null)
             return;
-        Collider2D[] colliders = target.GetComponentsInChildren<Collider2D>(true);
-        if (colliders.Length == 0)
-            return;
 
+        Collider2D[] colliders = CollectProxySources(target);
         WorldTopologyProxySource source = target.GetComponent<WorldTopologyProxySource>();
+        if (colliders.Length == 0)
+        {
+            // 对象池复用时，旧实例可能已经带有该组件；此时必须关闭旧代理。
+            source?.Bind(target, colliders);
+            return;
+        }
+
         if (source == null)
             source = target.gameObject.AddComponent<WorldTopologyProxySource>();
-        source.item = target;
-        source.sources = colliders;
+        source.Bind(target, colliders);
     }
 
     private void Awake()
     {
         item = GetComponent<Item>();
-        sources = GetComponentsInChildren<Collider2D>(true);
+        sources = item != null ? CollectProxySources(item) : Array.Empty<Collider2D>();
+        enabled = sources.Length > 0;
     }
 
     private void FixedUpdate()
@@ -109,13 +115,16 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
         }
 
         if (sources == null || sources.Length == 0)
-            sources = GetComponentsInChildren<Collider2D>(true);
+        {
+            SetAllActive(false);
+            return;
+        }
 
         int activeCount = 0;
         for (int sourceIndex = 0; sourceIndex < sources.Length; sourceIndex++)
         {
             Collider2D source = sources[sourceIndex];
-            if (!ShouldProxy(source))
+            if (source == null)
                 continue;
 
             BuildRequiredOffsets(source.bounds, bounds);
@@ -139,6 +148,68 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
                 record.Proxy.enabled = required && record.Proxy.enabled;
         }
         ActiveProxyCount = activeCount;
+    }
+
+    /// <summary>注册/对象池复用时刷新一次碰撞源，运行时热路径只读取缓存。</summary>
+    private void Bind(Item target, Collider2D[] proxySources)
+    {
+        item = target;
+        sources = proxySources ?? Array.Empty<Collider2D>();
+        RemoveStaleProxies();
+
+        bool hasSources = sources.Length > 0;
+        if (!hasSources)
+            SetAllActive(false);
+        enabled = hasSources;
+    }
+
+    /// <summary>筛掉交互、伤害等不应复制的查询碰撞体；仅在实体注册时执行。</summary>
+    private static Collider2D[] CollectProxySources(Item target)
+    {
+        Collider2D[] colliders = target.GetComponentsInChildren<Collider2D>(true);
+        int validCount = 0;
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            Collider2D collider = colliders[i];
+            if (!ShouldProxy(collider))
+                continue;
+
+            colliders[validCount++] = collider;
+        }
+
+        if (validCount == colliders.Length)
+            return colliders;
+        if (validCount == 0)
+            return Array.Empty<Collider2D>();
+
+        Array.Resize(ref colliders, validCount);
+        return colliders;
+    }
+
+    /// <summary>对象池重绑后释放已经不属于当前碰撞源集合的旧镜像。</summary>
+    private void RemoveStaleProxies()
+    {
+        for (int i = proxies.Count - 1; i >= 0; i--)
+        {
+            ProxyRecord record = proxies[i];
+            if (record.Source != null && ContainsSource(record.Source))
+                continue;
+
+            if (record.Proxy != null)
+                Destroy(record.Proxy.gameObject);
+            proxies.RemoveAt(i);
+        }
+    }
+
+    private bool ContainsSource(Collider2D source)
+    {
+        for (int i = 0; i < sources.Length; i++)
+        {
+            if (sources[i] == source)
+                return true;
+        }
+
+        return false;
     }
 
     private bool IsRegisteredRuntimeItem()

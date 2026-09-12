@@ -295,17 +295,9 @@ public partial class Mover : Module
         SetRunState(!IsRunning);
     }
 
+    /// <summary>设置可持久化的奔跑模式；输入锁只限制玩家输入，不阻止读档或跨维度恢复该状态。</summary>
     public void SetRunState(bool isRun)
     {
-        if (item != null)
-        {
-            GameController controller = item.itemMods.GetMod_ByID<GameController>(ModText.Controller);
-            if (controller != null && controller.IsGameplayInputLocked && isRun)
-            {
-                return;
-            }
-        }
-
         // 体力不足时禁止跑步
         if (isRun && stamina != null && stamina.CurrentValue < RunStaminaThreshold)
         {
