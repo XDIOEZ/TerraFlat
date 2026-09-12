@@ -117,22 +117,32 @@ namespace FlatWorld.Localization.Editor
         private static readonly Dictionary<string, string> EnglishUiOverrides =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                { "重量", "Weight" },
+                { "体积", "Volume" },
+                { "我的背包满了", "My inventory is full." },
+                { "我的背包太重了", "My inventory is too heavy." },
+                { "我的背包没有剩余空间了", "My inventory has no space left." },
+                { "我的背包重量和体积都到上限了", "My inventory has reached both its weight and volume limits." },
                 { "陶罐", "Clay Jar" },
                 { "水容器", "Water Vessel" },
                 { "放到地上", "Place on Ground" },
                 { "拆回物品", "Pack Up" },
                 { "水量状态", "Water Status" },
                 { "空容器", "Empty" },
+                { "脏水", "Dirty Water" },
                 { "淡水（需烧开）", "Fresh water (boil first)" },
                 { "脏水（可直接喝）", "Dirty water (drinkable)" },
                 { "饮用水", "Drinking water" },
+                { "海水", "Seawater" },
                 { "海水（可制盐）", "Seawater (evaporate for salt)" },
                 { "饮水", "Drink" },
                 { "倒空", "Empty Jar" },
                 { "从手持容器倒入", "Pour from Held Vessel" },
                 { "手持水容器对准水域使用即可装水；脏淡水可直接喝，也可烧开，海水可加热制盐。", "Use a held water vessel on water to fill it. Dirty fresh water is drinkable or can be boiled; heat seawater to make salt." },
+                { "液体容器一次只保存一种液体；不同液体不能直接混装。对准水域使用可以装水。", "A liquid container holds one liquid at a time. Different liquids cannot be mixed directly. Use it on water to fill it." },
                 { "{0}　{1} / {2} 份\n加热进度：{3:0} 秒", "{0}  {1} / {2} servings\nHeating: {3:0} s" },
                 { "不同水质不能混装，请先倒空容器。", "Empty the vessel before filling it with a different type of water." },
+                { "不同液体不能直接混装，请先倒空容器。", "Empty the container before filling it with a different liquid." },
                 { "装好了脏水，可以直接喝，也可以烧开。", "Filled with dirty fresh water. It can be drunk now or boiled first." },
                 { "需要使用铲子挖掘。", "Use a shovel to dig this resource." },
                 { "需要使用镐开采。", "Use a pickaxe to mine this resource." },
@@ -346,7 +356,7 @@ namespace FlatWorld.Localization.Editor
                 { "将装备拖入槽位以更新生存配置", "Drag equipment into slots to update your survival setup" },
                 { "钻木取火", "Fire Drill" },
                 { "石臼", "Stone Mortar" },
-                { "将材料拖入碗内，提起石棒再向下捣击", "Drag ingredients into the bowl. Lift the pestle, then pound down." },
+                { "拖入材料后，向下捣击或贴着碗底左右研磨", "Add ingredients, then pound or grind left and right." },
                 { "按住操作键推进过程 · 松开即可暂停", "Hold the action key to continue · release to pause" },
                 { "预期产物", "Expected Output" },
                 { "执行", "Execute" },
@@ -726,7 +736,7 @@ namespace FlatWorld.Localization.Editor
 
             StringTable chineseTable = EnsureTable(collection, chinese);
             StringTable englishTable = EnsureTable(collection, english);
-            int itemCount = SyncItemEntries(chineseTable, englishTable);
+            int itemCount = SyncItemEntries(collection, chineseTable, englishTable);
             int questTextCount = SyncQuestEntries(chineseTable, englishTable);
 
             StringTableCollection uiCollection = LocalizationEditorSettings.GetStringTableCollection(
@@ -761,6 +771,54 @@ namespace FlatWorld.Localization.Editor
             AssetDatabase.Refresh();
 
             Debug.Log($"[FlatWorld Localization] 已完成设置：Locale=zh-CN/en，物品条目={itemCount}，任务文本={questTextCount}，UI 文本={uiCount}，Tables={FlatWorldLocalizationService.DefaultTable}/{FlatWorldLocalizationService.UiTable}");
+        }
+
+        /// <summary>
+        /// 只同步指定运行时 UI 文本到现有 FlatWorldUI 表。
+        /// 用于小型功能增量，避免为了几个动态文案触发全量物品/任务/UI 重扫。
+        /// </summary>
+        public static void SyncRuntimeUiTexts(params string[] sourceTexts)
+        {
+            if (sourceTexts == null || sourceTexts.Length == 0)
+                return;
+
+            Locale chinese = AssetDatabase.LoadAssetAtPath<Locale>(ChineseLocalePath);
+            Locale english = AssetDatabase.LoadAssetAtPath<Locale>(EnglishLocalePath);
+            if (chinese == null || english == null)
+                throw new InvalidOperationException("FlatWorldUI Locale 尚未初始化，请先运行 Setup Default Tables。");
+
+            StringTableCollection uiCollection = LocalizationEditorSettings.GetStringTableCollection(
+                FlatWorldLocalizationService.UiTable);
+            if (uiCollection == null)
+                throw new InvalidOperationException("FlatWorldUI StringTableCollection 不存在，请先运行 Setup Default Tables。");
+
+            StringTable chineseTable = EnsureTable(uiCollection, chinese);
+            StringTable englishTable = EnsureTable(uiCollection, english);
+            var syncedKeys = new HashSet<string>(StringComparer.Ordinal);
+
+            for (int i = 0; i < sourceTexts.Length; i++)
+            {
+                string sourceText = sourceTexts[i]?.Trim();
+                if (string.IsNullOrWhiteSpace(sourceText) || !ContainsChinese(sourceText))
+                    continue;
+                if (!EnglishUiOverrides.TryGetValue(sourceText, out string englishText) ||
+                    string.IsNullOrWhiteSpace(englishText))
+                {
+                    throw new InvalidOperationException($"缺少 UI 英文覆盖：{sourceText}");
+                }
+
+                string key = FlatWorldLocalizationService.GetUiTextKey(sourceText);
+                SetChineseValue(chineseTable, key, sourceText);
+                SetEnglishValue(englishTable, key, englishText, sourceText, key);
+                syncedKeys.Add(key);
+            }
+
+            EditorUtility.SetDirty(uiCollection);
+            EditorUtility.SetDirty(uiCollection.SharedData);
+            EditorUtility.SetDirty(chineseTable);
+            EditorUtility.SetDirty(englishTable);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[FlatWorld Localization] 已增量同步 {syncedKeys.Count} 条运行时 UI 文本。");
         }
 
         #endregion

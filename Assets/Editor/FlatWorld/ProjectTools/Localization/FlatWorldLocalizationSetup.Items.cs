@@ -36,7 +36,7 @@ namespace FlatWorld.Localization.Editor
             if (chinese == null || english == null)
                 throw new InvalidOperationException("物品名称同步需要 zh-CN 和 en 两张内容表。");
 
-            int count = SyncItemEntries(chinese, english, includeDescriptions: false);
+            int count = SyncItemEntries(collection, chinese, english, includeDescriptions: false);
             EditorUtility.SetDirty(chinese);
             EditorUtility.SetDirty(english);
             EditorUtility.SetDirty(collection.SharedData);
@@ -48,11 +48,18 @@ namespace FlatWorld.Localization.Editor
 
         /// <summary>按正式 Manifest 解析后的物品定义同步名称，说明仍沿用独立同步规则。</summary>
         private static int SyncItemEntries(
-            StringTable chineseTable, StringTable englishTable, bool includeDescriptions = true)
+            StringTableCollection collection,
+            StringTable chineseTable,
+            StringTable englishTable,
+            bool includeDescriptions = true)
         {
+            if (collection == null)
+                throw new ArgumentNullException(nameof(collection));
+
             List<ItemDefinitionDto> definitions = ItemDefinitionCatalogLoader.LoadBuiltInDefinitions();
             Dictionary<string, string> englishNames = LoadEnglishItemNames();
             var namesByKey = new Dictionary<string, (string Chinese, string English)>(StringComparer.Ordinal);
+            var expectedItemKeys = new HashSet<string>(StringComparer.Ordinal);
 
             // 完成全目录校验后再写表，避免漏译时生成一半成功、一半仍是 ID 的资源。
             foreach (ItemDefinitionDto definition in definitions)
@@ -73,7 +80,15 @@ namespace FlatWorld.Localization.Editor
                 if (namesByKey.TryGetValue(key, out var existing) && existing != names)
                     throw new InvalidDataException($"物品名称键 {key} 被不同译名共用，请为 {definition.Id} 使用独立 labelKey。");
                 namesByKey[key] = names;
+
+                string descriptionKey = string.IsNullOrWhiteSpace(definition.DescriptionKey)
+                    ? FlatWorldLocalizationService.GetItemDescriptionKey(definition.Id)
+                    : definition.DescriptionKey.Trim();
+                expectedItemKeys.Add(key);
+                expectedItemKeys.Add(descriptionKey);
             }
+
+            RemoveStaleGeneratedItemEntries(collection, expectedItemKeys);
 
             foreach (var pair in namesByKey)
             {
@@ -101,6 +116,29 @@ namespace FlatWorld.Localization.Editor
             }
 
             return count;
+        }
+
+        /// <summary>移除 Manifest 已不存在物品遗留的默认名称/说明键，避免生成表持续积累死条目。</summary>
+        private static void RemoveStaleGeneratedItemEntries(
+            StringTableCollection collection,
+            ISet<string> expectedItemKeys)
+        {
+            var staleKeys = new List<string>();
+            foreach (SharedTableData.SharedTableEntry entry in collection.SharedData.Entries)
+            {
+                string key = entry.Key;
+                if (string.IsNullOrWhiteSpace(key) ||
+                    !key.StartsWith("item.", StringComparison.Ordinal) ||
+                    (!key.EndsWith(".name", StringComparison.Ordinal) &&
+                     !key.EndsWith(".description", StringComparison.Ordinal)) ||
+                    expectedItemKeys.Contains(key))
+                    continue;
+
+                staleKeys.Add(key);
+            }
+
+            foreach (string staleKey in staleKeys)
+                collection.RemoveEntry(staleKey);
         }
 
         /// <summary>读取作者维护的英文名称，不将下划线拆分或 ID 原文当作翻译。</summary>

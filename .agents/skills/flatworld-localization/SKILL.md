@@ -22,6 +22,7 @@ description: "Use when: 定位或修改 FlatWorld 的多语言系统、Unity Loc
 - 物品名称同步使用正式 Manifest 和继承解析结果，在写表前校验完整的中文名、英文译名和名称键冲突；继承只复用玩法和外观，子物品不得隐式继承父级 `gameName/labelKey/descriptionKey`。
 - 静态 Prefab 文本由 Setup 扫描并自动绑定；动态文本用 `GetUiText/GetUiFormat`，在语言事件后刷新，模板同时登记英文覆盖。
 - 动态物品名称可用 `LocalizedTextBinder` 显式绑定物品定义的 `LabelKey`；运行时静态文本扫描必须尊重已有绑定，不能根据当前显示的中文覆盖其内容表与 key。
+- 运行时若从已本地化控件克隆新的按钮/文本，克隆体会继承原 `LocalizedTextBinder` 的 key；改业务文案时必须同时 `Configure` 新 key，不能只改 `TMP_Text.text`，否则后续刷新语言或 UI 时会被旧 key 覆盖回来。
 - `GetEnglishUiText` 必须先匹配完整文本的精确覆盖，再执行关键词/子串回退；否则包含控件名的长提示会被错误翻译成单个短标签。
 - 保留中文 fallback；玩家自由输入与开发调试输出通常不进正式表。
 - 新增语言需同时配置 Locale、String Table、选择 UI、同步工具和 Addressables。

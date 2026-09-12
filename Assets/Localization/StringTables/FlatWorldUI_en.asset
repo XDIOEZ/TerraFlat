@@ -2267,7 +2267,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 12545160679251968
-    m_Localized: Drag ingredients into the bowl. Lift the pestle, then pound down.
+    m_Localized: Add ingredients, then pound or grind left and right.
     m_Metadata:
       m_Items: []
   - m_Id: 12578933991006208
@@ -2280,6 +2280,46 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 12579643092623360
     m_Localized: Dirty Water (Drinkable)
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12633309220691968
+    m_Localized: Weight
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12633309287800832
+    m_Localized: Volume
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12633309287800833
+    m_Localized: My inventory is full.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12633309287800834
+    m_Localized: My inventory is too heavy.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12633309287800835
+    m_Localized: My inventory has no space left.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12633309287800836
+    m_Localized: My inventory has reached both its weight and volume limits.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12633309287800837
+    m_Localized: Dirty Water
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12633309287800838
+    m_Localized: Seawater
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12633309287800839
+    m_Localized: A liquid container holds one liquid at a time. Different liquids cannot be mixed directly. Use it on water to fill it.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12633309287800840
+    m_Localized: Empty the container before filling it with a different liquid.
     m_Metadata:
       m_Items: []
   references:
