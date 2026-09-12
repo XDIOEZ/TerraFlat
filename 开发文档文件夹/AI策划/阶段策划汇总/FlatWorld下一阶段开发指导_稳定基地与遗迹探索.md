@@ -97,7 +97,7 @@
 完成以下流程：
 
 ```text
-铁矿 → 粗铁锭 → 简易铁镐 → 稳定过渡采矿
+铁矿 → 粗铁锭 → 粗铁铁镐 → 稳定过渡采矿
 铜矿＋锡矿 → 青铜锭 → 青铜镐 → 高级矿物
 两条路线与陶器、农业并行 → 完善补给 → 探索遗迹
 ```
@@ -215,7 +215,7 @@
 
 数据来源：[矿物熔炼](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/StreamingAssets/GameConfig/Recipes/smelting/ores.json>)、[合金熔炼](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/StreamingAssets/GameConfig/Recipes/smelting/alloys.json>)、[工具制作](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/StreamingAssets/GameConfig/Recipes/crafting/tools.json>)、[农业制作](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/StreamingAssets/GameConfig/Recipes/crafting/agriculture.json>)。
 
-首版使用铜镐作为采铁／锡的入口，简易铁镐作为过渡升级，青铜镐作为硝石开采入口；首件金属武器与基地升级件不因这一条而临时发明新物品，候选放在远古策划评审表中。遗迹可以给少量矿石和燃料，不能直接保证赠送全套顶级工具。
+首版使用铜镐作为采铁／锡的入口，粗铁铁镐作为过渡升级，青铜镐作为硝石开采入口；首件金属武器与基地升级件不因这一条而临时发明新物品，候选放在远古策划评审表中。遗迹可以给少量矿石和燃料，不能直接保证赠送全套顶级工具。
 
 验收：
 
@@ -242,7 +242,7 @@
 
 已存在[金属阶段台词配置](<C:/Users/CatStudio/Desktop/TerraFlat-master/Assets/Resources/Dialogue/Soliloquy/progression_metallurgy.json>)，因此本项从“从零增加”改为“核对完整链并补齐新目标”。第一块铁的实际判断要区分制作、拾取、容器转移与提前获得；一次性完成事实和台词播放标记分开，不能用一句话播完作为生产成功的证据。
 
-建议反馈顺序：获得粗铁锭时提示绳子与木柄；完成简易铁镐后，提示改善补给或寻找铜锡。未见到锡矿或遗迹线索之前，不报出具体遗迹坐标，也不把“马上精炼熟铁”写成唯一目标。
+建议反馈顺序：获得粗铁锭时提示绳子与木柄；完成粗铁铁镐后，提示改善补给或寻找铜锡。未见到锡矿或遗迹线索之前，不报出具体遗迹坐标，也不把“马上精炼熟铁”写成唯一目标。
 
 ### FW-NEXT-03：梳理基地设施功能
 
