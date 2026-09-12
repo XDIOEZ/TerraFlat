@@ -16,7 +16,6 @@ public static partial class AncientStageAssetBuilder
         SaveModule<Mod_ResourceHarvest>("World", "Module_ResourceHarvest");
         SaveModule<Mod_PlantClimate>("World", "Module_PlantClimate");
         SaveModule<Mod_ConsumableBuff>("World", "Module_ConsumableBuff");
-        SaveModule<Mod_DismantleSupport>("World", "Module_DismantleSupport");
         SaveModule<Mod_WaterVessel>("World", "Module_WaterVessel");
         SaveModule<Mod_VesselHeating>("World", "Module_VesselHeating");
         SaveModule<Mod_FarmlandSupply>("World", "Module_FarmlandSupply");

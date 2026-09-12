@@ -374,40 +374,6 @@
       "actions": []
     },
     {
-      "id": "core:撬棍",
-      "displayName": "撬棍",
-      "recipeType": "crafting",
-      "inputRule": "unordered",
-      "gridWidth": 2,
-      "gridHeight": 1,
-      "allowMirror": false,
-      "temperature": 0,
-      "maxTemperature": 2000,
-      "inputs": [
-        {
-          "slot": 0,
-          "match": "exact_item",
-          "itemId": "Stick_Wood",
-          "tag": "",
-          "amount": 2
-        },
-        {
-          "slot": 1,
-          "match": "exact_item",
-          "itemId": "Rope",
-          "tag": "",
-          "amount": 1
-        }
-      ],
-      "outputs": [
-        {
-          "itemId": "Crowbar",
-          "amount": 1
-        }
-      ],
-      "actions": []
-    },
-    {
       "id": "core:陶罐坯",
       "displayName": "陶罐坯",
       "recipeType": "crafting",
