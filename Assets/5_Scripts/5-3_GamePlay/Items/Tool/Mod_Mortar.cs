@@ -38,6 +38,7 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         bowl.item = item;
         bowl.StationId = StationId;
         bowl.Data = state.Bowl;
+        bowl.NormalizeStoredStacks();
         bowl.Data.SetUnlimitedSlots(true);
         bowl.InitData();
         capabilities = new CraftingCapabilities { StationId = StationId, AllowOutputIntoInput = true };
@@ -171,7 +172,9 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
         processing = true;
         try
         {
-            CraftingService.CraftRecipe(bowl, bowl, capabilities, batch, actor);
+            CraftingResult result = CraftingService.CraftRecipe(bowl, bowl, capabilities, batch, actor);
+            if (result.Success)
+                view?.PlayProcessingDust();
         }
         finally { processing = false; }
         OnBowlChanged(null);
@@ -183,6 +186,70 @@ public sealed class Mod_Mortar : Module, IInteractable, IInventory
     private sealed class MortarInventory : Inventory
     {
         public string StationId;
+
+        /// <summary>加载时修正旧运行过程中被空白投放区拆散的同类堆叠，不改变不同物品的相对顺序。</summary>
+        public void NormalizeStoredStacks()
+        {
+            if (Data?.itemSlots == null)
+                return;
+
+            for (int i = 0; i < Data.itemSlots.Count; i++)
+            {
+                ItemSlot targetSlot = Data.itemSlots[i];
+                ItemData targetItem = targetSlot?.itemData;
+                if (targetItem?.Stack == null || !targetItem.Stack.Stackable)
+                    continue;
+
+                for (int j = i + 1; j < Data.itemSlots.Count && !targetSlot.IsFull; j++)
+                {
+                    ItemSlot sourceSlot = Data.itemSlots[j];
+                    ItemData sourceItem = sourceSlot?.itemData;
+                    if (sourceItem?.Stack == null || !targetItem.CanStackWith(sourceItem))
+                        continue;
+
+                    float available = Mathf.Max(0f, targetSlot.SlotMaxVolume - targetItem.Stack.Amount);
+                    float moved = Mathf.Min(available, sourceItem.Stack.Amount);
+                    if (moved <= 0f)
+                        continue;
+
+                    targetItem.Stack.Amount += moved;
+                    sourceItem.Stack.Amount -= moved;
+                    if (sourceItem.Stack.Amount <= 0.0001f)
+                        sourceSlot.itemData = null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 石臼的空槽 UI 覆盖整块碗内区域；连续投放同类物品时必须先并入已有未满堆叠，
+        /// 否则每次轻触都会命中新生成的尾部空槽，造成“一件一个槽位”的异常扩容。
+        /// </summary>
+        protected override int ResolveIncomingSlotIndex(ItemSlot sourceSlot, int requestedIndex)
+        {
+            if (Data?.itemSlots == null || sourceSlot?.itemData?.Stack == null ||
+                requestedIndex < 0 || requestedIndex >= Data.itemSlots.Count ||
+                Data.itemSlots.Contains(sourceSlot))
+                return requestedIndex;
+
+            ItemSlot requestedSlot = Data.itemSlots[requestedIndex];
+            if (requestedSlot == null || requestedSlot.itemData != null || !sourceSlot.itemData.Stack.Stackable)
+                return requestedIndex;
+
+            for (int i = 0; i < Data.itemSlots.Count; i++)
+            {
+                if (i == requestedIndex)
+                    continue;
+
+                ItemSlot targetSlot = Data.itemSlots[i];
+                if (targetSlot?.itemData == null || targetSlot.IsFull)
+                    continue;
+                if (targetSlot.itemData.CanStackWith(sourceSlot.itemData))
+                    return i;
+            }
+
+            return requestedIndex;
+        }
+
         public override bool CanAcceptQuickTransfer(ItemSlot sourceSlot, ItemSlot targetSlot)
         {
             ItemData candidate = sourceSlot?.itemData;

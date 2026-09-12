@@ -19,12 +19,14 @@ public static class PortableBuildingPanelBuilder
 {
     private const string VesselPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Containers/UI_WaterVessel.prefab";
     private const string MortarPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_StoneMortar.prefab";
+    private const string FireDrillPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_FireDrill.prefab";
 
     [MenuItem("FlatWorld/UI/Configure Portable Building Actions")]
     public static void ConfigureAssets()
     {
         ConfigureAsset(VesselPath, ConfigureVessel);
         ConfigureAsset(MortarPath, ConfigureMortar);
+        ConfigureAsset(FireDrillPath, ConfigureFireDrill);
         SyncBuildingNames();
         SyncText("放到地上", "Place on Ground");
         SyncText("拆回物品", "Pack Up");
@@ -34,7 +36,16 @@ public static class PortableBuildingPanelBuilder
         SyncDescription("portable_buildings.json", "ClayJar_Building", "A placed clay jar. Interact to drink dirty or boiled water, empty it, pour from a held jar or pack it up. Water amount, quality and heating progress stay with the container.");
         SyncDescription("portable_buildings.json", "StoneMortar_Building", "A placed stone mortar. Interact to process one recipe per strike. All ingredients and products are retained when packing up or placing it again.");
         AssetDatabase.SaveAssets();
-        Debug.Log("[PortableBuilding] 陶罐、石臼正式面板的放置/拆回按钮与引用已保存。");
+        Debug.Log("[PortableBuilding] 陶罐、石臼、钻木取火正式面板的放置/拆回按钮与引用已保存。");
+    }
+
+    /// <summary>只装配钻木取火面板，供定向更新时避免触碰其它便携设施。</summary>
+    [MenuItem("FlatWorld/UI/Configure Fire Drill Building Actions")]
+    public static void ConfigureFireDrillAsset()
+    {
+        ConfigureAsset(FireDrillPath, ConfigureFireDrill);
+        AssetDatabase.SaveAssets();
+        Debug.Log("[PortableBuilding] 钻木取火正式面板的放置/拆回按钮与引用已保存。");
     }
 
     /// <summary>沿用陶罐底部按钮行，每次只显示与当前物品角色对应的一个操作。</summary>
@@ -46,10 +57,15 @@ public static class PortableBuildingPanelBuilder
         footer.minHeight = footer.preferredHeight = 64f;
     }
 
-    /// <summary>使用石臼左下角空位，不覆盖碗内投料区或分页控件。</summary>
+    /// <summary>放在操作提示下方、石碗上方，避免被底部快捷栏遮住。</summary>
     public static void ConfigureMortar(GameObject root)
         => Configure(root, FindButton(root, "关闭"), root.transform,
-            new Vector2(160f, 60f), new Vector2(-225f, -305f));
+            new Vector2(160f, 60f), new Vector2(-225f, 185f));
+
+    /// <summary>钻木取火面板左下角与“摩擦”按钮并排，只显示当前角色对应的一项建筑操作。</summary>
+    public static void ConfigureFireDrill(GameObject root)
+        => Configure(root, FindButton(root, "关闭"), root.transform,
+            new Vector2(160f, 46f), new Vector2(-220f, -184f));
 
     private static void ConfigureAsset(string path, Action<GameObject> configure)
     {

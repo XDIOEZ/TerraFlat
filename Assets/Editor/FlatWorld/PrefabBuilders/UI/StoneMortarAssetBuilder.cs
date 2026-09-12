@@ -44,7 +44,7 @@ public static class StoneMortarAssetBuilder
         Register(ModulePath, "Module_Mortar", "Prefab");
         Register(AssetDatabase.GetAssetPath(icon), AssetDatabase.GetAssetPath(icon), "ItemSprite");
         SyncText("FlatWorldUI", FlatWorldLocalizationService.GetUiTextKey("石臼"), "石臼", "Stone Mortar");
-        SyncText("FlatWorldUI", FlatWorldLocalizationService.GetUiTextKey("将材料拖入碗内，提起石棒再向下捣击"), "将材料拖入碗内，提起石棒再向下捣击", "Drag ingredients into the bowl. Lift the pestle, then pound down.");
+        SyncText("FlatWorldUI", FlatWorldLocalizationService.GetUiTextKey("拖入材料后，向下捣击或贴着碗底左右研磨"), "拖入材料后，向下捣击或贴着碗底左右研磨", "Add ingredients, then pound or grind left and right.");
         SyncText("FlatWorld", FlatWorldLocalizationService.GetItemLabelKey("StoneMortar"), "石臼", "Stone Mortar");
         SyncText("FlatWorld", FlatWorldLocalizationService.GetItemDescriptionKey("StoneMortar"), "将稻谷放进石碗，每捣击一次消耗一份稻谷并立即产出一份大米。手持面板中可选择放到地上，落地后交互使用或拆回；碗内原料与产物全程保留。", "Each strike turns one rice grain into one rice. Choose Place on Ground in the held mortar's panel, then interact with the placed mortar or pack it up. All ingredients and products are retained.");
         AssetDatabase.SaveAssets();
@@ -137,8 +137,9 @@ public static class StoneMortarAssetBuilder
         RectTransform root = Rect("UI_StoneMortar", null, new Vector2(680, 710), Vector2.zero);
         // 构建期间不运行 Awake，所有正式引用接线完成后再激活。
         root.gameObject.SetActive(false);
+        // 根 Image 仅保留为面板的透明射线阻挡面，不再绘制整块灰色背景板。
         Image background = root.gameObject.AddComponent<Image>();
-        background.color = new Color32(52, 52, 52, 251);
+        background.color = Color.clear;
         BasePanel panel = root.gameObject.AddComponent<BasePanel>();
         panel.PanelName = "石臼";
         panel.rectTransform = root;
@@ -149,7 +150,7 @@ public static class StoneMortarAssetBuilder
         closeImage.color = new Color32(85, 85, 85, 255);
         close.gameObject.AddComponent<Button>().targetGraphic = closeImage;
         Text("关闭文字", close, "×", new Vector2(64, 60), Vector2.zero, 30);
-        Text("操作提示", root, "将材料拖入碗内，提起石棒再向下捣击", new Vector2(630, 26), new Vector2(0, 262), 22);
+        Text("操作提示", root, "拖入材料后，向下捣击或贴着碗底左右研磨", new Vector2(630, 26), new Vector2(0, 262), 22);
         RectTransform area = Rect("捣料区域", root, new Vector2(610, 460), new Vector2(0, -38));
         RectTransform bowl = Rect("石碗切面", area, new Vector2(480, 360), new Vector2(0, -86));
         Image bowlImage = bowl.gameObject.AddComponent<Image>();
@@ -192,6 +193,9 @@ public static class StoneMortarAssetBuilder
         view.BowlSlot = slot;
         view.DragArea = area;
         view.BowlShape = bowl;
+        view.PestleBottomVisualPadding = 6.5f;
+        view.GrindTravelDistance = 64f;
+        view.GrindContactTolerance = 24f;
         MortarBowlDropRegion region = slotObject.AddComponent<MortarBowlDropRegion>();
         region.View = view;
         region.Slot = slot;

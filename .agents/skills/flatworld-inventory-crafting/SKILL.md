@@ -21,11 +21,11 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 配方 JSON 是唯一真源；旧 Recipe/CookRecipe SO 只作 MOD 兼容，不恢复双重维护。
 - 内容工坊的普通合成使用不限长度的滚动材料清单，保存为连续的一维输入；载入旧网格配方时按材料身份归并数量，并保留 `amount=0` 的不消耗工具。只有热加工继续使用 3×3 位置画布。保存前必须使用运行时配方工厂校验整份启用目录，并保留已有配方的未知顶层字段。
 - 所有制作入口调用 `CraftingService`；匹配由 `CraftingRecipeMatcher`，扣料/产出由 `CraftingTransaction` 原子提交。
-- `Mod_Mortar` 每次有效捣击执行一份单原料、多产物配方，输入与输出共享动态 `Inventory`，统一由 `CraftingService` 原子扣料和写入，禁止整堆改 ID。提交前按全部产物预留空槽；事务优先合并可堆叠产物，剩余原料独立保留。事务通知期间合并刷新，避免槽位变化取消正在拖动的石棒；动态容量策略在 Load 恢复，槽位和内容独立持久化。
-- 石臼面板使用正式透明槽位模板动态克隆，数量增加不等于创建新槽；同类满堆或不同产物才占新格。空槽使用碗内轮廓投料，已有物品的整个槽位随重力移动，确保命中区与图标一致。可见物品分页，关闭面板只复位视觉，不清空库存。`ItemSlot_UI.ItemAddedAtPointer` 只在点击/拖放事务实际增加物品后发布位置反馈；石臼数量、种类或槽位扩容不能重排已有物品，合并投料只用无射线的图标表现下落，停稳保留落点。透明槽位通过 `ItemSlot_UI.selectionGraphic` 把选择/拖入描边指定到图标，不能对透明背景使用忽略 Alpha 的 Outline，否则会出现整块黄色方形。
+- `Mod_Mortar` 每次有效加工手势执行一份单原料、多产物配方；加工手势包括“提起后下压到接触线”的捣击，以及石棒贴近碗底累计横移达到配置阈值的研磨步进，两者统一发布同一加工意图。输入与输出共享动态 `Inventory`，统一由 `CraftingService` 原子扣料和写入，禁止整堆改 ID。提交前按全部产物预留空槽；事务优先合并可堆叠产物，剩余原料独立保留。事务通知期间合并刷新，避免槽位变化取消正在拖动的石棒；动态容量策略在 Load 恢复，槽位和内容独立持久化。
+- 石臼面板使用正式透明槽位模板动态克隆，数量增加不等于创建新槽；同类满堆或不同产物才占新格。空槽使用碗内轮廓投料，已有物品的整个槽位随重力移动，确保命中区与图标一致。可见物品分页，关闭面板只复位视觉，不清空库存；父节点失活期间 `OnDisable` 只能清理手势、协程和临时投料表现，禁止调用 `SetSiblingIndex/SetAsLastSibling` 等层级排序，完整槽位布局复位应由层级稳定时的显式开关流程执行。`ItemSlot_UI.ItemAddedAtPointer` 只在点击/拖放事务实际增加物品后发布位置反馈；石臼数量、种类或槽位扩容不能重排已有物品，合并投料只用无射线的图标表现下落，停稳保留落点。透明槽位通过 `ItemSlot_UI.selectionGraphic` 把选择/拖入描边指定到图标，不能对透明背景使用忽略 Alpha 的 Outline，否则会出现整块黄色方形。
 
 - 玩家手工台 `Mod_HandCraftTable` 与世界工作台 `Mod_MakeTable` 均使用 `RecipeType.Crafting`；配方通过可选 `requiredStation` 区分制作入口：留空表示任意普通制作入口，`handcraft` 表示随身手工，`workbench` 表示世界工作台。匹配器用 `CraftingCapabilities.StationId` 做能力过滤，MOD 可复用字符串 ID 扩展新工作站，禁止按具体配方 ID 硬编码。当前手工台固定 4 输入/2 输出，当前工作台固定 5 输入/2 输出，运行时与 Prefab 序列化槽位必须严格一致；槽位数属于具体工作站能力，未来工作站可声明更多输入槽，配方、内容工坊和普通合成匹配器不得设置全局材料数量上限。
-- 多产物必须全部放下才提交；失败不扣料、不部分产出。体积大于 1 的非堆叠产物每个单位必须独占一个容量足够的空槽，不能把 `amount > 1` 整组塞进单槽。`amount=0` 参与签名但不消耗。
+- 多产物必须全部放下才提交；失败不扣料、不部分产出。是否允许堆叠只读取物品 `Stackable`，不得再用重量或体积阈值推导；`Stackable=false` 的产物每个单位必须独占一个空槽，不能把 `amount > 1` 整组塞进单槽。`amount=0` 参与签名但不消耗。
 - `RecipeType.Crafting` 必须配置 `inputRule: "unordered"` 且 `allowMirror: false`；普通合成只比较材料身份与总量，同类材料可以集中堆叠或分散在任意输入槽。配方需求按当前输入的可满足子集匹配，额外放入的无关材料不得屏蔽候选，也不得在制作所选配方时被扣除；因此候选扫描配方目录即可覆盖输入材料的全部可制作组合。加热加工才允许有序、镜像和网格规则，并继续保持严格输入语义。
 - 普通合成输入必须通过 `CraftingRecipeMatcher.TryMatchAll` 保留全部材料候选，`CraftingStationController` 统一维护候选、选择、进度与双输出预览，最终使用所选 `RuntimeRecipe` 精确预检和原子提交，禁止重新回退到目录首个匹配项。Exact/Tag 候选重叠时扣料计划必须按全部需求做全局容量分配，禁止逐项贪心消耗。
 - 配方产物合法性与 `ItemData` 创建必须读取 `GameRes.ItemDefinitions`；`AllPrefabs` 只保存表现壳和别名，禁止用它决定候选按钮或“开始制作”是否可用，否则 JSON 物品会出现候选已选中但提交按钮被错误禁用。
@@ -35,13 +35,15 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 制作模块的 `Save()` 只负责持久化，不能解绑输入、输出、按钮或交互监听；这些运行时事件统一在 `Unload()` 中成对清理，由 Item 退出、移除模块与回池生命周期调用，否则自动保存会让预览与制作按钮永久失效。
 - 模态库存才获取输入锁；快捷栏和 `Inventory_Hand` 不锁玩家输入。
 - 单个库存面板需要专属槽位皮肤时，在面板 Prefab 上配置 `InventorySlotVisualProfile`，由 `Inventory.InitUI` 在动态槽位创建完成后统一应用；不要改通用 `UI_Slot.prefab` 做面板特判。该 Profile 只允许改 Sprite、图标/文字尺寸等表现，不得接管库存事务、拖拽或选择状态。
-- 槽位鼠标与触屏拖放必须复用 `ItemSlot_UI.OnMouseDragBegin` / `OnMouseDragDrop` 的来源事务：命中 `ItemSlot_UI` 时直接在起始槽与目标槽之间移动、合并或双向交换，异类交换必须同时校验双方库存接收规则与整堆容量，禁止把目标物品经 `Inventory_Hand` 中转；只有未命中槽位时才把整组转入 `Inventory_Hand`，后续手机点击按轻触方向处理：连续拿取方向下同类已有物品从槽位取一件，放置方向下空槽/同类槽向目标放一件，异类槽交换，长按空槽或同类槽则按统一长按时间显示正式槽位进度并在进度走满时立即一次性放下手上整组，不等待松手；提交成功后该手势必须被消费，不能继续进入半组拖拽；同类目标容量不足时余量留在起始槽，空槽起手才转交父级 `ScrollRect`。
+- 槽位鼠标与触屏拖放必须复用 `ItemSlot_UI.OnMouseDragBegin` / `OnMouseDragDrop` 的来源事务：命中 `ItemSlot_UI` 时直接在起始槽与目标槽之间移动、合并或双向交换，异类交换必须同时校验双方库存接收规则与整堆容量，禁止把目标物品经 `Inventory_Hand` 中转；只有未命中槽位时才把整组转入 `Inventory_Hand`，后续手机点击按轻触方向处理：连续拿取方向下同类已有物品从槽位取一件，放置方向下空槽/同类槽向目标放一件，异类槽交换，长按空槽或同类槽则按统一长按时间把进度转发到唯一的 `Inventory_Hand` 手部插槽显示，并在进度走满时立即一次性放下手上整组，不等待松手；通用 `UI_Slot.prefab` 不承载这层进度视觉。长按进度视觉必须先经过短按/拖拽判定缓冲（当前 0.2 秒）再显示，缓冲期内转为拖拽则始终不出现进度条，且该视觉缓冲不得延长原有长按提交总时长。提交成功后该手势必须被消费，不能继续进入半组拖拽；同类目标容量不足时余量留在起始槽，空槽起手才转交父级 `ScrollRect`。
 - 手机快捷栏轻触必须走独立 `OnTouchTap` 语义，只切换当前选中格或按单件规则取放；普通触屏拖放与桌面键鼠共用直接槽位事务，长按更久后的半组拖拽才以 `Inventory_Hand` 为来源。
 - 跟随指针的 `UI_Hand` 是纯视觉层：Canvas 排序固定占用全局顶层（32767），必须高于快捷栏、设置页和其它游戏 UI；CanvasGroup/子图形不得拦截目标槽位射线。直接槽位拖拽生成的 `InventoryDragGhost` 也必须使用独立顶层 Canvas，不能只靠 `SetAsLastSibling`，否则会被独立 Canvas 的快捷栏/模态页压住。世界手持物挂在快捷栏节点及其子节点末端。
-- `UI_Hand` 的跟随坐标必须优先读取 Input System 的 `Pointer.current`，保持鼠标、真实触屏与 Device Simulator 使用同一当前指针语义；不能在触点抬起后直接切到 `Mouse.current`，否则模拟触屏会把手持槽 UI 跳到另一套坐标系而看似消失。读取后仍需过滤 NaN/Infinity。
+- `UI_Hand` 的桌面跟随可以读取 Input System `Pointer.current`；触屏库存与世界丢弃必须以该次手势自己的 `PointerEventData.position` 为权威，并在触点抬起后保留最后位置，直到桌面库存指针明确接管。禁止用全局 `Pointer.current` 持续覆盖触屏位置：Device Simulator、多指或触点结束时它可能切到模拟鼠标/另一触点，把手持槽钉到错误坐标。所有进入表现层的坐标仍需过滤 NaN/Infinity。
 - 快捷栏选中框属于当前槽位背景层，切换时必须重新挂到目标槽位并置为首个兄弟；数量文本和物品图标保持在其上方，不能依赖独立 Canvas 的任意 `sortingOrder`。
 - 玩家行囊的键鼠点击和滚轮无条件使用 `Inventory_Hand`，不能因携带槽为空或上次手柄操作留下的目标而回退快捷栏；桌面指针抬起实际进入 `OnDesktopTap`，只修改 `OnLeftClick` 不会恢复鼠标点击。PC 左键整组取放：空手按携带槽容量拿取，有物品时整组放置、同类合并或异类交换；不得转入 `OnTouchTap` 的单件语义，滚轮才逐件取放。点击与拖放共用整组跨库存事务，校验双向接收规则及容量、通知双方并同步快捷栏手持物；创造背包允许超量堆叠，但取出仍按目标容量与非堆叠规则拆分，余量保留原槽。快捷栏选中槽只参与手柄确认与角色当前装备，不参与 PC 背包交换。
-- 创造背包的无限格数由 `CreativeInventoryState` 存在玩家 `flatworld.creativeInventory` 命名空间，`Mod_Inventory.Load` 在初始化槽位前恢复到 `Inventory_Data` 的运行时策略，不改 MemoryPack 布局。库存事务通过 `NotifyItemDataChanged` 维护尾部空槽；容量预检必须纯只读并计入可动态扩容的空间。新增槽的 UI 只同步表现，不重新初始化库存业务事件；快捷栏部分拾取后的余量必须继续尝试主背包，最后统一发布拾取数量。
+- 物品的 `weight`（kg）、`volume`（L）和 `stackable` 是三个独立维度；重量/体积只参与玩家携带容量，不能决定堆叠资格。普通玩家主背包默认就是动态容量：基础保持 27 格；总空余槽位 <= 2 时一次补足到 3 个空槽；总槽位 > 27 且存在多余空槽时按 `max(27, 已占用槽位 + 3)` 收缩，避免 27/28 格之间反复扩缩。格子数量不构成携带容量限制；`stackable=true` 物品单格无限堆叠，同时受玩家模板配置的重量/体积双上限。世界拾取按“主背包 + 快捷栏”统一统计当前占用，避免先塞快捷栏绕过上限。行囊 Footer 也使用同一统计口径显示当前值/上限。
+- 行囊“整理”按钮使用渐进语义：每轮第一次点击只合并可堆叠物并压紧空槽，不改变物品原有相对顺序；库存保持整齐后继续点击，按物品定义、数量、当前总重量、当前总体积依次循环排序。若中途再次出现空洞或可继续合并的堆叠，下一次点击先回到整理阶段并从首个排序规则重新开始。
+- `CreativeInventoryState` 只保存创造模式的重量/体积容量豁免，不再控制主背包格子数量；普通背包与创造背包都使用同一套玩家主背包动态槽位策略。创造模式额外绕过重量/体积上限，但 `Stackable=false` 仍严格一件一格。库存事务通过 `NotifyItemDataChanged` 只负责及时补足预留空槽，周期容量自检再负责安全收缩多余空槽，避免在数据变更事件分发前移除刚变化的槽位引用；容量预检必须纯只读并计入可动态扩容的空间。动态增减槽位的 UI 只同步表现，不重新初始化库存业务事件；快捷栏部分拾取后的余量必须继续尝试主背包，最后统一发布拾取数量。
 - 快捷栏收到 Mobile `RightClick` 时必须允许当前手持物执行 `Act`，不能因触点位于手机“使用”按钮上而被 `IsPointerOverUI()` 拦截；键鼠右键仍保留 UI 遮挡检查。
 - 快捷栏生成的手持物只注册到玩家 `Mod_FocusPoint`；左右翻身角由该模块读取 `Mod_TurnBack.CurrentTurnAngleY` 后与 Z 轴瞄准一次性合成，不能再把手持物根节点注册进 `controlledTransforms_Direction`。
 - 需要“只从物品所在库存取料”的玩法统一使用 `InventoryContextResolver` 按 `ItemData` 引用/Guid 解析真实所属 `Inventory`；快捷栏手持物会命中 `Inventory_HotBar.RuntimeInventory`，普通背包命中对应 `Mod_Inventory.InventoryInstances`。实际扣除使用 `Inventory_Data.TryConsumeFirstByTag/TryConsumeFromSlot` 事务入口，不能直接改 `Stack.Amount`，否则快捷栏 UI、数据事件和后续持久化会失步。
@@ -50,6 +52,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 快捷栏物品拖入 `Inventory_Hand` 后，移动端摇杆必须让出当前触摸所有权，避免长按世界丢弃时浮动摇杆抢占操作。
 - 与背包并行打开的专用制作面板创建后必须调用 `InventoryPanelLayout.ApplyDefaultCraftingPosition`；只让背包靠左会在窄屏、安全区或 UI 缩放后由置顶背包覆盖左侧输入槽射线。
 - 手机端已经拿起物品后的轻点/长按丢弃由 `MobileHeldItemDropSurface` 统一转发到 `Module_DiscardItem.TryDropHeldItemAtScreenPosition`，仅操作手部携带槽，空手不得取快捷栏选中物；中间空白触控面只在 `Inventory_Hand` 有物品时参与射线，`ItemSlot_UI` 的拖拽射线必须继续把该组件视为世界落点。
+- `Inventory` 持有的 `item` 是 `UnityEngine.Object`；生命周期边界禁止用 `item?.GetComponent...` 判断存活，因为 C# 空条件运算符不会触发 Unity 的“已销毁对象视为 null”语义。玩家/容器卸载时必须先解除库存输入监听并清空所属 `item`，`Mod_Hand.Unload` 同时清理 `Inventory_Hand.PlayerHand`，避免槽位 `OnDisable` 或延迟 UI 回调访问上一轮玩家。
 - `Mod_Plantable` 只通过 `IPlantableCrop` 初始化幼苗并判断地块占用；作物定义只配置 `cropItemId`，统一 `PlantingSummoner` 负责预览，禁止写死依赖某个成长模块或复用 `Mod_Building` 链路。
 - 同一物品同时挂 `Mod_Plantable` 与 `Mod_Food` 时，右键动作按目标上下文仲裁：有效耕地由种植优先，无效种植目标则静默让给食用，不能一次动作同时播种和进食，也不能在正常进食时刷种植警告。
 - 新版农业统一通过 `FarmlandSystem` 查询 `ChunkTerrainData`，禁止返回旧 `Chunk.Map`；锄地进度属于地格而非锄头实例。水肥计算使用临时 `TileData_Farmland` 快照，成长或施肥后必须 `CommitSoil`，否则数据修改不会进入权威环境层。
@@ -69,8 +72,10 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - `Mod_Food` 仅在基础营养持续消耗或 `IFoodTickObserver` 规则要求时进入 `FixedInterval`；无角色模块的静态世界食物应休眠，库存腐败仍由 `IModuleDataTickObserver` 独立推进，可选角色模块必须静默查询。
 - `Module_HeldFood` 的咬痕只读取 `EatingProgress` 与 `Max_EatingProgress`，按物品 GUID 确定性重建当前轮廓遮罩，不重复持久化随机点；实际口数取最大进度的向上整数，最后一口直接清空残余区域。
 
-- `IInventoryHeatTreatment` 处理输入槽里的状态型容器，普通熔炼复用 `CraftingRecipeMatcher` 和 `CraftingTransaction`。制盐必须先确保输出事务成功再减海水，处理进度属于容器而非炉体；满输出时不清水、不重复发盐。
-- 水罐靠物品体积大于 1 的既有规则禁止堆叠，水量／水质在模块状态中；不得只按同一物品 ID 合并不同状态的罐。部分转移保持水量守恒，归属、活体和距离在每次动作时检查。
+- `IInventoryHeatTreatment` 处理输入槽里的状态型液体容器，普通熔炼复用 `CraftingRecipeMatcher` 和 `CraftingTransaction`。具体液体的转化温度、时间、结果液体或副产物由 `LiquidDefinition.HeatProcess` 声明；需要产出物品时必须先确保输出事务成功再消耗液体，处理进度属于容器而非炉体。
+- 通用液体容器由 `Mod_WaterVessel` 承载，但状态只保存稳定 `LiquidId + Amount + ProcessingSeconds`，液体语义统一来自 `GameRes.LiquidDefinitions`；容器通过显式 `Stackable=false` 禁止堆叠，不同液体不能自动混装，部分转移保持数量守恒。新增本体或 MOD 液体不得复制容器 Item 变体，应该注册新的 `LiquidDefinition` 并复用同一容器模块。
+- 世界液体来源通过地块的 `IWorldLiquidSourceData.LiquidId` 接入 `WorldLiquidSourceResolver`，再解析到同一 `LiquidDefinition` 目录；容器不得按水 Tile 名称或盐度自行猜液体 ID。准心高亮与实际装液必须复用同一个 WorldCell 解析入口，并通过容器 `AddLiquid` 等统一 API 提交状态。
+- 液体容器在背包/快捷栏中的图标同样由容器模块状态驱动：优先使用液体 `visualState` 对应的 `visual.spriteStates`，缺少专用状态时统一回退容器的 `filled` 状态，空容器使用 `empty`；禁止按水种类或容器 Item ID 写死 UI 分支。容器模块原地修改 `ModuleData` 后必须通知真实所属库存槽刷新，否则 Item ID 未变时快捷栏不会主动换图。
 - 食物机制除了目录注册，也组合消费物本身实现 `IFoodMechanic` 的模块；药品使用守卫与消费完成观察者应接入这条链，不在按钮响应时直接回血。
 - `CraftingOutputRules` 在预检和真实提交共用；防腐加工的新鲜度必须来自匹配计划实际消耗的原料，保留最差剩余比例，不能读取整份输入库存或重建全新寿命。
 - 植物环境通过 `IPlantEnvironmentCondition` 与 `PlantClimateTimeline` 结算；自主耐候树木只向成长器提供 `IPlantGrowthConstraint`，不能被两个模块重复推进。补算游标未追上当前时钟时禁止抢先收获。

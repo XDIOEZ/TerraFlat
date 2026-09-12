@@ -107,6 +107,13 @@ public class Mod_FireDrill : Module, IInteractable
 
         EnsureUIBindingsOnOpen();
 
+        BuildingPanelActions buildingActions = basePanel.GetComponent<BuildingPanelActions>();
+        if (buildingActions == null)
+        {
+            throw new InvalidOperationException("[Mod_FireDrill] 钻木取火面板缺少 BuildingPanelActions，正式 Prefab 未完成建筑操作绑定。");
+        }
+        buildingActions.Bind(item);
+
         var handInventory = playerItem.GetComponentInChildren<Mod_Hand>()?.HandInventory;
         if (handInventory == null)
         {
@@ -518,6 +525,9 @@ public class Mod_FireDrill : Module, IInteractable
 
     private void OnItemAct()
     {
+        if (item.itemMods.GetMod_ByID<Mod_Building>(ModText.Building)?.TryHandlePlacementAction() == true)
+            return;
+
         if (item.Owner == null)
         {
             Debug.LogWarning("[Mod_FireDrill] 右键触发失败：item.Owner 为空，无法定位玩家手部背包。");

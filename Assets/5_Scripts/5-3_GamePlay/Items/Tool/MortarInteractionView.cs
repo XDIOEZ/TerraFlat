@@ -7,8 +7,8 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 石棒手势视图：鼠标与单根手指共用事件，提起至少 90 像素后下压到接触线才算一次。
-/// 只发布捣击意图并模拟材料的重力滚动，不直接修改库存、配方或存档。
+/// 石棒手势视图：鼠标与单根手指共用事件，支持提起后下压捣击，以及贴住碗底的左右研磨。
+/// 只发布加工意图并模拟材料的重力滚动，不直接修改库存、配方或存档。
 /// </summary>
 public sealed class MortarInteractionView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
@@ -20,7 +20,10 @@ public sealed class MortarInteractionView : MonoBehaviour, IBeginDragHandler, ID
     public TMP_Text PageText; // 库存页码，物品少时隐藏。
     public RectTransform BowlShape; // 碗内碰撞轮廓按石碗尺寸换算。
     public float LiftDistance = 90f; // 两次有效捣击之间必须提起的距离。
-    public event Action Struck;
+    public float PestleBottomVisualPadding = 6.5f; // 石棒 Sprite 底部透明留白，接触时把 RectTransform 再下沉到可见像素贴住碗底。
+    public float GrindTravelDistance = 64f; // 石棒贴底累计横移达到该距离时触发一次研磨。
+    public float GrindContactTolerance = 24f; // 允许手机触控在碗底上方少量浮动，超出后不累计研磨距离。
+    public event Action Struck; // 有效捣击或研磨步进都会发布一次加工意图。
     private RectTransform pestle;
     private Vector2 restPosition;
     private Vector2 pointerOffset;
@@ -29,9 +32,20 @@ public sealed class MortarInteractionView : MonoBehaviour, IBeginDragHandler, ID
     private int page;
     private const int PageSize = 4; // 每页两列两行，保证每种材料和产物都可独立拿取。
     private Coroutine impact;
+    private Coroutine dustAnimation;
+    private RectTransform dustRoot;
+    private DustParticle[] dustParticles;
+    private const int DustParticleCount = 12; // UI 内固定复用的像素粉尘数量，避免每次捣击产生临时对象。
+    private static readonly Color32[] DustPalette =
+    {
+        new Color32(205, 198, 181, 225),
+        new Color32(184, 178, 165, 215),
+        new Color32(222, 216, 198, 205)
+    };
 
     private int? pointerId;
     private bool armed;
+    private float grindTravel;
     #endregion
 
     #region 手势与反馈
@@ -41,6 +55,7 @@ public sealed class MortarInteractionView : MonoBehaviour, IBeginDragHandler, ID
         restPosition = pestle.anchoredPosition;
         PreviousPage.onClick.AddListener(() => ChangePage(-1));
         NextPage.onClick.AddListener(() => ChangePage(1));
+        InitializeDustParticles();
     }
 
     /// <summary>每次库存变化只补齐新增槽位；物品数量变化不重置正在进行的捣击手势。</summary>
@@ -125,33 +140,51 @@ public sealed class MortarInteractionView : MonoBehaviour, IBeginDragHandler, ID
         public bool HasPose;
     }
 
+    /// <summary>单个 UI 粉尘粒子的瞬时运动状态。</summary>
+    private sealed class DustParticle
+    {
+        public RectTransform Rect;
+        public Image Image;
+        public Vector2 Velocity;
+        public float Lifetime;
+        public float Age;
+        public float Spin;
+        public Color32 BaseColor;
+    }
+
     public void OnBeginDrag(PointerEventData data)
     {
         if (pointerId.HasValue || data.button != PointerEventData.InputButton.Left) return;
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(DragArea, data.position, data.pressEventCamera, out Vector2 local)) return;
         pointerId = data.pointerId;
         pointerOffset = pestle.anchoredPosition - local;
-        armed = pestle.anchoredPosition.y >= FloorAt(pestle.anchoredPosition.x) + LiftDistance;
+        armed = pestle.anchoredPosition.y >= PestleContactY(pestle.anchoredPosition.x) + LiftDistance;
+        grindTravel = 0f;
     }
 
     public void OnDrag(PointerEventData data)
     {
         if (pointerId != data.pointerId) return;
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(DragArea, data.position, data.pressEventCamera, out Vector2 local)) return;
+        Vector2 previous = pestle.anchoredPosition;
         Vector2 target = local + pointerOffset;
         float horizontalLimit = InteriorHalfWidth - pestle.rect.width * .3f;
         target.x = Mathf.Clamp(target.x, BowlShape.anchoredPosition.x - horizontalLimit, BowlShape.anchoredPosition.x + horizontalLimit);
-        float contactY = FloorAt(target.x) + 42f;
-        // 棒槌以底端为轴心，上拉时底端可到达碗口，限位跟随石碗尺寸。
+        float contactY = PestleContactY(target.x);
+        // 棒槌以底端为轴心；最低点按可见像素而不是 RectTransform 边界贴住碗底。
         target.y = Mathf.Clamp(target.y, contactY, InteriorTop);
         pestle.anchoredPosition = target;
-        if (target.y >= FloorAt(target.x) + LiftDistance) armed = true;
+        if (target.y >= contactY + LiftDistance) armed = true;
         if (armed && target.y <= contactY + 1f)
         {
             armed = false;
+            grindTravel = 0f;
             Struck?.Invoke();
             PlayImpact(); // 捣击反馈独立于配方，空碗或只有产物时也能自由操作。
+            return;
         }
+
+        TrackGrinding(previous, target);
     }
 
     public void OnEndDrag(PointerEventData data)
@@ -163,7 +196,32 @@ public sealed class MortarInteractionView : MonoBehaviour, IBeginDragHandler, ID
     {
         pointerId = null;
         armed = false;
+        grindTravel = 0f;
         if (pestle != null) pestle.anchoredPosition = restPosition;
+    }
+
+    /// <summary>石棒前后两帧都贴近碗底时累计横向行程，每达到一段行程触发一次研磨。</summary>
+    private void TrackGrinding(Vector2 previous, Vector2 current)
+    {
+        float tolerance = Mathf.Max(0f, GrindContactTolerance);
+        bool previousContact = previous.y <= PestleContactY(previous.x) + tolerance;
+        bool currentContact = current.y <= PestleContactY(current.x) + tolerance;
+        if (!previousContact || !currentContact)
+        {
+            grindTravel = 0f;
+            return;
+        }
+
+        float horizontalDelta = current.x - previous.x;
+        if (Mathf.Abs(horizontalDelta) <= .01f) return;
+
+        grindTravel += Mathf.Abs(horizontalDelta);
+        if (grindTravel < Mathf.Max(1f, GrindTravelDistance)) return;
+
+        // 每段有效行程只结算一次；快速滑动不会因为单帧跨度过大而一次消耗多份原料。
+        grindTravel = 0f;
+        Struck?.Invoke();
+        PlayGrindingMotion(Mathf.Sign(horizontalDelta));
     }
 
     /// <summary>每次捣击给图标追加向上、横向和旋转冲量；仅在运动期间推进局部重力模拟。</summary>
@@ -177,6 +235,134 @@ public sealed class MortarInteractionView : MonoBehaviour, IBeginDragHandler, ID
             slot.Spin = UnityEngine.Random.Range(-260f, 260f);
         }
         StartMotion();
+    }
+
+    /// <summary>研磨时只给材料较小的横向推力与抬升，区别于垂直捣击的明显弹跳。</summary>
+    private void PlayGrindingMotion(float direction)
+    {
+        float pushDirection = Mathf.Approximately(direction, 0f) ? 1f : Mathf.Sign(direction);
+        foreach (SlotBody slot in slots)
+        {
+            if (!slot.Occupied || !slot.Rect.gameObject.activeSelf) continue;
+            slot.Velocity += new Vector2(
+                pushDirection * UnityEngine.Random.Range(65f, 105f),
+                UnityEngine.Random.Range(35f, 70f));
+            slot.Velocity = Vector2.ClampMagnitude(slot.Velocity, 220f);
+            slot.Spin = -pushDirection * UnityEngine.Random.Range(110f, 220f);
+        }
+        StartMotion();
+    }
+
+    /// <summary>配方真实提交成功后，在棒槌落点播放一小簇向上飘散的像素粉尘。</summary>
+    public void PlayProcessingDust()
+    {
+        if (!isActiveAndEnabled || dustRoot == null || dustParticles == null) return;
+        if (dustAnimation != null) StopCoroutine(dustAnimation);
+
+        // 粉尘覆盖碗内材料，但始终位于石棒下方，避免遮住玩家正在拖动的工具。
+        dustRoot.SetAsLastSibling();
+        pestle.SetAsLastSibling();
+
+        float x = pestle.anchoredPosition.x;
+        Vector2 origin = new Vector2(x, FloorAt(x) + 44f);
+        foreach (DustParticle particle in dustParticles)
+        {
+            float width = Mathf.Round(UnityEngine.Random.Range(4f, 9f));
+            float height = Mathf.Round(UnityEngine.Random.Range(4f, 8f));
+            particle.Rect.sizeDelta = new Vector2(width, height);
+            particle.Rect.anchoredPosition = origin + new Vector2(
+                Mathf.Round(UnityEngine.Random.Range(-24f, 24f)),
+                Mathf.Round(UnityEngine.Random.Range(0f, 14f)));
+            particle.Rect.localScale = Vector3.one;
+            particle.Rect.localRotation = Quaternion.Euler(0f, 0f, UnityEngine.Random.Range(-35f, 35f));
+            particle.Velocity = new Vector2(
+                UnityEngine.Random.Range(-105f, 105f),
+                UnityEngine.Random.Range(105f, 190f));
+            particle.Lifetime = UnityEngine.Random.Range(.38f, .68f);
+            particle.Age = UnityEngine.Random.Range(-.05f, .04f);
+            particle.Spin = UnityEngine.Random.Range(-150f, 150f);
+            particle.BaseColor = DustPalette[UnityEngine.Random.Range(0, DustPalette.Length)];
+            particle.Image.color = particle.BaseColor;
+            particle.Image.enabled = true;
+        }
+
+        dustAnimation = StartCoroutine(AnimateProcessingDust());
+    }
+
+    /// <summary>建立固定 UI 粒子池；使用纯色 Image，确保 Screen Space Overlay 下也能稳定显示。</summary>
+    private void InitializeDustParticles()
+    {
+        GameObject rootObject = new GameObject("捣碎粉尘", typeof(RectTransform));
+        dustRoot = rootObject.GetComponent<RectTransform>();
+        dustRoot.SetParent(DragArea, false);
+        dustRoot.anchorMin = Vector2.zero;
+        dustRoot.anchorMax = Vector2.one;
+        dustRoot.offsetMin = Vector2.zero;
+        dustRoot.offsetMax = Vector2.zero;
+        dustRoot.pivot = new Vector2(.5f, .5f);
+
+        dustParticles = new DustParticle[DustParticleCount];
+        for (int i = 0; i < dustParticles.Length; i++)
+        {
+            GameObject particleObject = new GameObject($"粉尘_{i + 1:00}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            RectTransform rect = particleObject.GetComponent<RectTransform>();
+            rect.SetParent(dustRoot, false);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(.5f, .5f);
+            Image image = particleObject.GetComponent<Image>();
+            image.raycastTarget = false;
+            image.enabled = false;
+            dustParticles[i] = new DustParticle { Rect = rect, Image = image };
+        }
+    }
+
+    /// <summary>用未缩放时间推进短促粉尘，先上扬再缓慢下落并淡出。</summary>
+    private IEnumerator AnimateProcessingDust()
+    {
+        bool alive = true;
+        while (alive)
+        {
+            alive = false;
+            float dt = Mathf.Min(Time.unscaledDeltaTime, .04f);
+            foreach (DustParticle particle in dustParticles)
+            {
+                if (!particle.Image.enabled) continue;
+                particle.Age += dt;
+                if (particle.Age < 0f)
+                {
+                    alive = true;
+                    continue;
+                }
+                if (particle.Age >= particle.Lifetime)
+                {
+                    particle.Image.enabled = false;
+                    continue;
+                }
+
+                alive = true;
+                particle.Velocity.y -= 165f * dt;
+                particle.Velocity.x *= Mathf.Exp(-2.1f * dt);
+                particle.Rect.anchoredPosition += particle.Velocity * dt;
+                particle.Rect.Rotate(0f, 0f, particle.Spin * dt);
+                float progress = particle.Age / particle.Lifetime;
+                particle.Rect.localScale = Vector3.one * Mathf.Lerp(1f, .55f, progress);
+                Color color = particle.BaseColor;
+                color.a = (particle.BaseColor.a / 255f) * Mathf.Pow(1f - progress, 1.35f);
+                particle.Image.color = color;
+            }
+            yield return null;
+        }
+
+        dustAnimation = null;
+    }
+
+    /// <summary>关闭面板时回收全部粉尘表现，不改动 UI 兄弟顺序。</summary>
+    private void ResetDustParticles()
+    {
+        if (dustAnimation != null) StopCoroutine(dustAnimation);
+        dustAnimation = null;
+        if (dustParticles != null)
+            foreach (DustParticle particle in dustParticles)
+                if (particle?.Image != null) particle.Image.enabled = false;
     }
 
     /// <summary>库存事务结束后用实际点击或松手位置投料；已存在的堆叠不搬动。</summary>
@@ -237,6 +423,9 @@ public sealed class MortarInteractionView : MonoBehaviour, IBeginDragHandler, ID
     public float InteriorHalfWidth => BowlShape.rect.width * InnerEdge[InnerEdge.Length - 1].x;
     public float InteriorTop => BowlShape.anchoredPosition.y + BowlShape.rect.height * InnerEdge[0].y;
     public float InteriorBottom => FloorAt(BowlShape.anchoredPosition.x);
+
+    /// <summary>石棒最低锚点：补偿 Sprite 底部透明边距，让实际可见像素与碗底轮廓贴合。</summary>
+    private float PestleContactY(float x) => FloorAt(x) - Mathf.Max(0f, PestleBottomVisualPadding);
 
     public float FloorAt(float x)
     {
@@ -342,13 +531,20 @@ public sealed class MortarInteractionView : MonoBehaviour, IBeginDragHandler, ID
     /// <summary>关闭面板清除槽位的速度、旋转和位置，原料与即时产物独立保留。</summary>
     public void ResetPresentation()
     {
+        StopTransientPresentation();
+        LayoutSlots(true);
+    }
+
+    /// <summary>失活期间只清理瞬时状态，不修改父节点下的兄弟顺序。</summary>
+    private void StopTransientPresentation()
+    {
         CancelGesture();
         if (impact != null) StopCoroutine(impact);
         impact = null;
         ClearDeposits();
-        LayoutSlots(true);
+        ResetDustParticles();
     }
-    private void OnDisable() => ResetPresentation();
+    private void OnDisable() => StopTransientPresentation();
     private void OnApplicationFocus(bool focus) { if (!focus) CancelGesture(); }
     private void OnApplicationPause(bool paused) { if (paused) CancelGesture(); }
     #endregion
