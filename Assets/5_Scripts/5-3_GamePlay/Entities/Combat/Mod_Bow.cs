@@ -53,6 +53,7 @@ public sealed class Mod_Bow : Module
     private Inventory _sourceInventory;
     private GameObject _nockedArrowObject;
     private SpriteRenderer _nockedArrowRenderer;
+    private ActorRenderEffectController _nockedArrowRenderEffects;
     private float _chargeSeconds;
     private bool _charging;
     private bool _inventoryResolveWarningLogged;
@@ -326,6 +327,11 @@ public sealed class Mod_Bow : Module
             _nockedArrowRenderer.sortingLayerID = bowRenderer.sortingLayerID;
             _nockedArrowRenderer.sortingOrder = bowRenderer.sortingOrder + 1;
         }
+
+        // 搭箭表现是在装备完成后动态创建的，必须显式加入角色渲染效果控制器，
+        // 否则它不会继承水体浸没、受击染色等手持物统一 MPB 效果。
+        _nockedArrowRenderEffects = item?.Owner?.GetComponentInChildren<ActorRenderEffectController>(true);
+        _nockedArrowRenderEffects?.RegisterExternalRenderers(visualTransform);
     }
 
     /// <summary>用蓄力比例把搭箭表现向后拉，形成简单但明确的拉弓反馈。</summary>
@@ -344,9 +350,13 @@ public sealed class Mod_Bow : Module
     private void DestroyNockedArrowVisual()
     {
         if (_nockedArrowObject != null)
+        {
+            _nockedArrowRenderEffects?.UnregisterExternalRenderers(_nockedArrowObject.transform);
             Destroy(_nockedArrowObject);
+        }
         _nockedArrowObject = null;
         _nockedArrowRenderer = null;
+        _nockedArrowRenderEffects = null;
     }
 
     #endregion
