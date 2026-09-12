@@ -46,6 +46,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 玩家弓类远程武器使用 `Mod_Bow` 监听 `GameController.AttackStarted/AttackEnded` 完成按住蓄力与松开发射；持续拉弓时通过持有者的 `Mod_Stamina` 按秒消耗体力，松开、取消或卸载后必须立即停止消耗，消耗统一走 `Mod_Stamina.AddStamina` 以保留难度倍率。弹药只通过通用 `Arrow` 标签和同库存事务选择，不按木/石/铜/铁写特殊分支。箭矢自身组合 `Mod_Projectile + Mod_Damage`：前者只负责飞行、蓄力倍率与落地回收，后者继续作为唯一伤害发送器；两者用 `IItemModuleDependencyBinder` 显式绑定，使新增 MOD 箭种只需遵守相同模块契约即可接入。不同弓身的伤害差异统一通过 `Mod_Bow.ProjectileDamageMultiplier` 传给 `Mod_Projectile.Launch`，禁止为某把弓复制箭矢定义或直接改箭矢基础伤害。
 - 高速箭矢不能只依赖 Trigger 回调和 Rigidbody2D Continuous；`Mod_Projectile` 应使用 `Mod_Damage` 的实际伤害盒对上一帧到当前帧做 NonAlloc 形状扫掠，再把命中交回 `Mod_Damage` 的统一结算入口，避免高速穿过窄目标时漏伤害。
 - 箭矢损坏回收材料由 `Mod_Projectile` 读取当前物品对应的普通合成配方并从 `ExactItem` 输入中按用量权重选一份，禁止在战斗代码里硬编码木棍、石料或金属；Tag 输入无法还原本次实际消耗的具体物品，因此没有可确定的精确材料时应跳过回收，不允许猜测生成物。
+- 可回收箭矢命中 `DamageReceiver` 后的“插在目标身上”状态由 `Mod_Projectile` 保存相对目标 Item 根节点的局部姿态并逐帧同步；箭矢仍保持独立 Runtime Item，不改挂到 Actor 层级。跟随移动时必须调用 `ItemMgr.NotifyRuntimeItemMoved` 刷新空间索引，目标失效后解除附着并保留箭矢最后世界位置，确保拾取、对象池和世界索引不被父子层级关系破坏。
 - 出血资格使用稳定 `Blood` 标签表达“该实体有血”，不要用 `Player`/`Animal` 类型或物种标签代替。玩家和有血动物可以同时保留自己的分类标签；幽灵、机械体等无血实体只要不声明 `Blood` 就不会触发刃伤出血规则，MOD 生物也通过同一标签接入。
 
 ## 验证

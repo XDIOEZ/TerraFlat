@@ -1187,6 +1187,7 @@
             "MaxDamageMultiplier": 1.0,
             "MaxFlightSeconds": 2.5,
             "RecoveryChance": 0.5,
+            "EmbedOnDamageReceiverWhenRecovered": true,
             "BrokenSalvageChance": 0.3,
             "SpriteForwardAngleDegrees": 45.0
           }

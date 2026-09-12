@@ -34,6 +34,9 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     [Range(0f, 1f), Tooltip("投射结束后保留为可拾取物品的概率；箭矢默认 50%。")]
     public float RecoveryChance = 0.5f;
 
+    [Tooltip("命中 DamageReceiver 且本次判定为可回收时，是否嵌入目标并随目标移动。")]
+    public bool EmbedOnDamageReceiverWhenRecovered;
+
     [Range(0f, 1f), Tooltip("投射物损坏后，从其普通合成配方中掉落一份原材料的概率；箭矢默认 30%。")]
     public float BrokenSalvageChance = 0.3f;
 
@@ -59,6 +62,9 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     private readonly RaycastHit2D[] _sweepHits = new RaycastHit2D[16];
     private bool _isFlying;
     private bool _endingFlight;
+    private Transform _embeddedTarget;
+    private Vector3 _embeddedLocalPosition;
+    private Quaternion _embeddedLocalRotation = Quaternion.identity;
 
     #endregion
 
@@ -95,6 +101,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _flightElapsed = 0f;
         _virtualLaunchVerticalSpeed = 0f;
         _virtualHeight = 0f;
+        ClearEmbeddedState();
         _lastFlightPosition = item != null ? (Vector2)item.transform.position : Vector2.zero;
     }
 
@@ -106,6 +113,12 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     /// <summary>飞行期间补做帧间碰撞体扫掠，并按虚拟抛物线高度决定落地。</summary>
     public override void ModUpdate(float deltaTime)
     {
+        if (!_isFlying && _embeddedTarget != null)
+        {
+            UpdateEmbeddedPose();
+            return;
+        }
+
         if (!_isFlying)
             return;
 
@@ -137,6 +150,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _flightRemain = 0f;
         _flightElapsed = 0f;
         _virtualHeight = 0f;
+        ClearEmbeddedState();
     }
 
     #region 发射与停止
@@ -160,6 +174,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         item.SetInHand(false);
         item.itemData.Stack.Amount = 1f;
         item.itemData.Stack.CanBePickedUp = false;
+        ClearEmbeddedState();
 
         EnsureBody();
         _body.bodyType = RigidbodyType2D.Dynamic;
@@ -278,11 +293,11 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     private void HandleReceiverDamageResolved(DamageReceiver receiver, float resolvedDamage)
     {
         if (_isFlying && resolvedDamage >= 0f)
-            FinishFlight();
+            FinishFlight(receiver);
     }
 
     /// <summary>停止飞行，并按 RecoveryChance 决定留下可拾取物还是销毁。</summary>
-    private void FinishFlight()
+    private void FinishFlight(DamageReceiver hitReceiver = null)
     {
         if (!_isFlying || _endingFlight)
             return;
@@ -315,7 +330,47 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         item.Owner = null;
         item.itemData.Stack.Amount = 1f;
         item.itemData.Stack.CanBePickedUp = true;
+
+        if (EmbedOnDamageReceiverWhenRecovered && hitReceiver != null)
+            EmbedInReceiver(hitReceiver);
+
         _endingFlight = false;
+    }
+
+    /// <summary>记录命中瞬间相对受击实体的局部姿态，使可回收投射物继续附着在移动目标上。</summary>
+    private void EmbedInReceiver(DamageReceiver receiver)
+    {
+        Transform target = receiver.item != null ? receiver.item.transform : receiver.transform;
+        if (target == null || !target.gameObject.activeInHierarchy || item == null)
+            return;
+
+        _embeddedTarget = target;
+        _embeddedLocalPosition = target.InverseTransformPoint(item.transform.position);
+        _embeddedLocalRotation = Quaternion.Inverse(target.rotation) * item.transform.rotation;
+        UpdateEmbeddedPose();
+    }
+
+    /// <summary>让嵌入的投射物跟随受击实体，并同步 ItemMgr 空间索引以保持近距离拾取有效。</summary>
+    private void UpdateEmbeddedPose()
+    {
+        if (_embeddedTarget == null || !_embeddedTarget.gameObject.activeInHierarchy || item == null)
+        {
+            ClearEmbeddedState();
+            return;
+        }
+
+        item.transform.SetPositionAndRotation(
+            _embeddedTarget.TransformPoint(_embeddedLocalPosition),
+            _embeddedTarget.rotation * _embeddedLocalRotation);
+        ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
+    }
+
+    /// <summary>清除附着关系；箭矢保持当前世界姿态，目标销毁后会自然留在最后位置。</summary>
+    private void ClearEmbeddedState()
+    {
+        _embeddedTarget = null;
+        _embeddedLocalPosition = Vector3.zero;
+        _embeddedLocalRotation = Quaternion.identity;
     }
 
     /// <summary>投射物损坏时按配置概率掉落一份真实合成配方中的原材料。</summary>
