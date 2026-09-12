@@ -56,6 +56,7 @@ public partial class Mod_PlayerDeathState : Module
 
     private Player _player; // 玩家引用
     private DamageReceiver _damageReceiver; // 血量模块
+    private BuffManager _buffManager; // Buff 状态模块
     private Mod_Food _food; // 食物模块
     private GameController _gameController; // 输入控制器
     private Mover _mover; // 移动模块
@@ -112,6 +113,7 @@ public partial class Mod_PlayerDeathState : Module
         }
 
         _food = item.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
+        _buffManager = item.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
         _mover = item.itemMods.GetMod_ByID<Mover>(ModText.Mover);
         _chunkLoader = item.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
         _rb = item.GetComponent<Rigidbody2D>();
@@ -351,6 +353,9 @@ public partial class Mod_PlayerDeathState : Module
     /// <summary>恢复死亡状态数据；跨维度时输入继续由维度事务保持锁定。</summary>
     private void CompleteRespawnState(bool restartChunkStreaming, bool unlockInput)
     {
+        // 重生代表新的生命周期，所有可清除角色状态必须在统一重生收口处结束。
+        _buffManager?.ClearAllBuffs();
+
         float respawnHp = _damageReceiver.MaxHp * Mathf.Clamp01(respawnHpRate);
         _damageReceiver.Hp = respawnHp > 0f ? respawnHp : _damageReceiver.MaxHp;
         _damageReceiver.Data.AttackersUIDs.Clear();
