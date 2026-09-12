@@ -89,15 +89,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 66936691572dbd04a801f40fe0923069, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   item: {fileID: 0}
   modData:
-    Name: 
+    Name:
     ID: "\u751F\u547D\u503C\u7CFB\u7EDF\u6A21\u5757"
     isRunning: 1
     Type: 0
-    BitData: 
+    BitData:
   Data:
     Hp: 100
     MaxHp: 100
@@ -464,6 +464,7 @@ GameObject:
   - component: {fileID: 5448549703196689227}
   - component: {fileID: 6173150566168055718}
   - component: {fileID: 3000418337859302239}
+  - component: {fileID: 6829314751203845612}
   m_Layer: 10
   m_Name: Player
   m_TagString: Untagged
@@ -471,6 +472,34 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &6829314751203845612
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d72b8e3eaf549239a0e1f67c2db84a1, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  item: {fileID: 0}
+  modData:
+    Name:
+    ID: "\u6C27\u6C14\u6A21\u5757"
+    isRunning: 1
+    Type: 0
+    BitData:
+  Data:
+    CurrentOxygen: 100
+    MaxOxygen: 100
+  staminaConsumePerSecond: 5
+  oxygenConsumePerSecond: 10
+  oxygenRecoverPerSecond: 25
+  drowningDamagePerSecond: 10
+  OnOxygenChanged:
+    _PersistentCalls: []
 --- !u!4 &7343432311901774332
 Transform:
   m_ObjectHideFlags: 0

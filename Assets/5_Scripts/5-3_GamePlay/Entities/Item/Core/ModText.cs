@@ -78,6 +78,10 @@ public static class ModText
 
     #endregion
 
+    #region O
+    public static string Oxygen = "氧气模块";
+    #endregion
+
     #region R
     public static string Run = "奔跑模块";
     #endregion

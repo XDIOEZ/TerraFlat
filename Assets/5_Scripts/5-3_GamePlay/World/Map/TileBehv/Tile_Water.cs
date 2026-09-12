@@ -51,6 +51,7 @@ public class Tile_Water : TileBlockBehaviour
         float depthValue = water != null ? Mathf.Clamp01(water.deepValue) : 0f;
         bool edgeInteractionOnly = receiver != null && receiver.IsActiveTileEdgeInteractionOnly;
         SetWaterTemperatureState(item, !edgeInteractionOnly);
+        SetWaterSurvivalState(item, !edgeInteractionOnly);
         if (edgeInteractionOnly)
         {
             // 对象池复用时也要清掉上一轮真实入水留下的目标状态。
@@ -82,6 +83,7 @@ public class Tile_Water : TileBlockBehaviour
         if (item == null)
             return;
         SetWaterTemperatureState(item, false);
+        SetWaterSurvivalState(item, false);
         SetWaterVisualState(item, 0f, false);
 
         // 移除 Buff
@@ -131,6 +133,17 @@ public class Tile_Water : TileBlockBehaviour
             entryTemperatureDrop,
             entryTemperatureFloor,
             entryTemperatureTransitionSeconds);
+    }
+
+    #endregion
+
+    #region Water Survival State
+
+    /// <summary>真实入水状态交给玩家氧气模块；动物或无氧气模块实体会自然忽略。</summary>
+    private static void SetWaterSurvivalState(Item item, bool inWater)
+    {
+        Mod_Oxygen oxygen = item?.itemMods?.GetMod_ByID<Mod_Oxygen>(ModText.Oxygen);
+        oxygen?.SetWaterExposure(inWater);
     }
 
     #endregion
