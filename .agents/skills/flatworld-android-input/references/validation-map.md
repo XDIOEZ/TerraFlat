@@ -6,7 +6,7 @@
 2. 等待 Unity 完成本次脚本导入，检查 Console 为零新增编译错误和相关异常。
 3. 执行菜单 `FlatWorld/Validation/Compile Android Player Scripts`，确认 Android Player 脚本编译成功；入口为 `Assets/Editor/FlatWorld/Automation/AndroidScriptCompileValidator.cs`。
 4. 涉及 HUD、Prefab、安全区或射线时执行菜单 `FlatWorld/Validation/Validate Mobile Controls Layout`；入口为 `Assets/Editor/FlatWorld/Automation/MobileControlsLayoutValidator.cs`。
-5. 未经用户明确要求，不调用 Unity Test Runner、`run_tests`、测试脚本或 Golden Path。
+5. 未经用户明确要求，不调用 Unity Test Runner、`run_tests` 或测试脚本。
 
 ## 已有自动化入口
 
@@ -14,11 +14,9 @@
 |---|---|
 | 虚拟设备、方向、攻击按住/松开、输入锁和设备切换 | `Assets/GameTest/PlayerInteraction/MobileControlsInputTests.cs` |
 | 真实单人移动端主路径 | `player.mobile-controls` |
-| Golden Path 场景实现 | `Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathScenarios.MobileControls.cs` |
-| 操作注册 | `Assets/Editor/FlatWorld/Automation/FlatWorldGoldenPathOperations.cs` |
 | 测试统一入口 | `.agents/skills/flatworld-test-automation/scripts/run_unity_tests.py` |
 
-只有用户明确要求运行时，才按 `flatworld-test-automation` 与 `flatworld-golden-path` 的流程执行；不要绕过其清理、结果和 Console 检查。
+只有用户明确要求运行时，才按 `flatworld-test-automation` 的流程执行；不要绕过其清理、结果和 Console 检查。
 
 ## 定向人工验收
 

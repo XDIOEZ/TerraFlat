@@ -35,7 +35,7 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
     private bool rebuildRequested;
     private bool warningLogged;
 
-    /// <summary>当前区块实际启用的阴影体数量，供调试和 Golden Path 断言使用。</summary>
+    /// <summary>当前区块实际启用的阴影体数量，供调试和自动化断言使用。</summary>
     public int ActiveOccluderCount => activeOccluderCount;
 
     /// <summary>当前实际保留的阴影槽数量，包含少量待复用缓冲槽。</summary>

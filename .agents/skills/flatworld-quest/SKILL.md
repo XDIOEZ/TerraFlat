@@ -30,7 +30,7 @@ description: "Use when: 定位或修改 FlatWorld 的任务定义、任务目录
 
 ## 联动与验证
 
-- 存档→Data；物品奖励→Inventory；入世/加载顺序→Core；MOD 内容→Modding；UI 文本→UI+Localization；真实玩法→对应 Skill+Golden Path。
+- 存档→Data；物品奖励→Inventory；入世/加载顺序→Core；MOD 内容→Modding；UI 文本→UI+Localization；真实玩法→对应领域 Skill。
 - 默认静态诊断、编译和 Console；需要时运行 `Quest.Smoke`/`Quest.Save`。真实流程聚焦时同时启用 `quest.progression` 与 `inventory.crafting`。
 
 ## Skill 维护原则

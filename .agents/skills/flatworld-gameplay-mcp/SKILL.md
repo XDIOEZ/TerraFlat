@@ -160,10 +160,7 @@ UI 使用独立的 `gameplay_ui`：
 ## 与其它测试体系的关系
 
 - GamePlayMCP：负责开放式、自主、探索式游玩和发现未知问题。
-- Runtime.GoldenPath：负责已经明确、可确定执行的生产行为回归。
 - 领域 Smoke：负责局部边界与确定性断言。
-
-GamePlayMCP 自主游玩发现一个稳定可复现的重要行为后，如果该行为适合确定性回归，应按 `flatworld-golden-path` 规则考虑补进 Golden Path，而不是永久只依赖开放式 Agent 游玩。
 
 ## 结束与交接
 

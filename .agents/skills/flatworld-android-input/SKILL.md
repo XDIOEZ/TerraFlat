@@ -11,7 +11,7 @@ description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系�
 2. 修改前检查 `git status --short` 与目标文件 diff，保留用户已有改动；定位到明确入口后停止泛化搜索。
 3. 按职责修改最小层级：触控所有权留在控件层，设备状态留在 `MobileInputRuntime`，输入语义留在 `GameController`，具体效果留在对应玩法模块。
 4. 涉及 HUD、Prefab、安全区或 EventSystem 时同时使用 `flatworld-ui`；涉及武器攻击时使用 `flatworld-combat`；涉及快捷栏、槽位长按、丢弃、种植或工具时使用 `flatworld-inventory-crafting`；涉及建筑放置时使用 `flatworld-building`。
-5. 完成后读取 [验证导航图](references/validation-map.md)，默认只做静态诊断、Android 脚本编译与 Unity Console 检查；仅在用户明确要求时运行 Unity Test Runner 或 Golden Path。
+5. 完成后读取 [验证导航图](references/validation-map.md)，默认只做静态诊断、Android 脚本编译与 Unity Console 检查；仅在用户明确要求时运行 Unity Test Runner。
 
 ## 必须保持的不变量
 
@@ -61,7 +61,7 @@ description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系�
 - 修改输入设备、Action、设备切换、径向指向或清理生命周期：同时读取 `flatworld-player-interaction`。
 - 修改可见文案：同时读取 `flatworld-localization`，将文本写入 `FlatWorldUI` 中英文表，不在脚本里新增硬编码玩家文案。
 - 修改 Android 启动、平台配置或全局生命周期：同时读取 `flatworld-core`。
-- 修改确定性的真实单人运行时行为并需要自动化覆盖：同时读取 `flatworld-golden-path` 与 `flatworld-test-automation`，但仍遵守“未经用户明确要求不运行测试”的项目规则。
+- 修改确定性的真实单人运行时行为并需要自动化覆盖：读取 `flatworld-test-automation`，但仍遵守“未经用户明确要求不运行测试”的项目规则。
 
 ## Skill 维护
 

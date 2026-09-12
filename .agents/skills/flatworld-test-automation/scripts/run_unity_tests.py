@@ -20,100 +20,6 @@ from typing import Any
 BRIDGE_SOURCE = Path("Assets/Editor/FlatWorld/Automation/FlatWorldSkillTestBridge.cs")
 RESULT_DIR = Path("Library/FlatWorldSkillTests")
 TEST_ASSEMBLY = "FlatWorld.GameTest"
-GOLDEN_PATH_CATEGORY = "Runtime.GoldenPath"
-GOLDEN_REQUEST_PREFIX = "golden-request-"
-GOLDEN_RUNNING_PREFIX = "golden-running-"
-GOLDEN_RESULT_PREFIX = "golden-result-"
-GOLDEN_OPERATION_IDS = {
-    "audio.cue-playback",
-    "buff.burning",
-    "building.placement",
-    "combat.player-respawn",
-    "combat.target-damage",
-    "dialogue.player-speech",
-    "environment.ecology",
-    "environment.tile-effects",
-    "environment.time-weather",
-    "inventory.crafting",
-    "inventory.metallurgy-progression",
-    "item.drop-lifecycle",
-    "map.chunk-load-speed",
-    "map.hydrology",
-    "navigation.loaded-grid",
-    "player.admin-invincibility",
-    "player.admin-move-speed",
-    "player.interaction-retry",
-    "player.mobile-controls",
-    "player.run-transition",
-    "player.spawn-land",
-    "quest.progression",
-    "save.auto",
-    "ui.inventory-panel",
-    "world.model-streaming",
-    "world.wrap",
-}
-
-DEFAULT_GOLDEN_CONFIGURATION: dict[str, Any] = {
-    "schemaVersion": 1,
-    "presetName": "default",
-    "world": {
-        "seed": 424242,
-        "radius": 1000,
-        "chunkSizeX": 16,
-        "chunkSizeY": 16,
-        "noiseScale": 0.01,
-        "topologyMode": "Wrapped",
-        "difficulty": "Simple",
-        "autoGenerateMap": True,
-    },
-    "player": {
-        "cameraOrthographicSize": 10.0,
-        "screenshotOrthographicSize": 20.0,
-        "wrapMoveSpeed": 12.0,
-        "maximumMoveSpeed": 24.0,
-        "waypointCount": 12,
-        "waypointStepChunks": 1.5,
-        "middleScreenshotWaypointIndex": 5,
-    },
-    "scenarios": {
-        "enableAllOperations": True,
-        "enabledOperationIds": [],
-        "disabledOperationIds": [],
-        "worldWrap": True,
-        "hydrology": True,
-        "burningBuff": True,
-    },
-    "hydrology": {
-        "overrideGeneration": False,
-        "hydrologyRegionSize": 64,
-        "runoffCellSize": 16,
-        "runoffSampleStride": 4,
-        "maxTraceSteps": 128,
-        "minimumVisibleCourseLength": 8,
-        "seaLevel": 0.5,
-        "infiltrationFloor": 0.0,
-        "riverStartFlow": 0.02,
-        "tributaryStartFlow": 0.01,
-        "fullWidthFlow": 0.2,
-        "maxRiverWidth": 5,
-        "floodplainStartFlow": 0.02,
-        "lakeMinFlow": 0.05,
-        "windwardRainGain": 0.8,
-        "leewardRainLoss": 0.6,
-    },
-    "execution": {
-        "startupTimeoutSeconds": 90.0,
-        "worldEntryTimeoutSeconds": 180.0,
-        "moveTimeoutSeconds": 20.0,
-        "screenshotTimeoutSeconds": 15.0,
-        "errorCollectionSeconds": 10.0,
-        "minimumVisitedChunks": 10,
-        "minimumObservedChunks": 50,
-        "screenshotSettleFrames": 2,
-        "screenshotSettleSeconds": 0.35,
-        "positionTolerance": 0.5,
-    },
-}
 
 
 class RunnerError(RuntimeError):
@@ -132,23 +38,6 @@ def parse_args() -> argparse.Namespace:
         help="Run the curated, one-critical-check-per-subsystem Smoke category.",
     )
     parser.add_argument("--all", action="store_true", help="Run the entire FlatWorld.GameTest assembly.")
-    parser.add_argument(
-        "--golden-path",
-        action="store_true",
-        help="Run the deterministic create-world, move-player, and chunk-streaming path.",
-    )
-    parser.add_argument(
-        "--golden-config",
-        type=Path,
-        help="JSON file containing partial GoldenPath executor configuration.",
-    )
-    parser.add_argument(
-        "--golden-set",
-        action="append",
-        default=[],
-        metavar="PATH=JSON_VALUE",
-        help="Override one GoldenPath configuration field; repeat as needed.",
-    )
     parser.add_argument("--list-categories", action="store_true", help="List categories declared under Assets/GameTest.")
     parser.add_argument(
         "--check-encoding",
@@ -162,13 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timeout", type=float, default=600.0, help="Maximum wait in seconds (default: 600).")
     args = parser.parse_args()
 
-    if args.golden_path:
-        if args.smoke or args.all or args.category or args.test:
-            parser.error("--golden-path cannot be combined with --smoke/--all/--category/--test")
-        args.category = [GOLDEN_PATH_CATEGORY]
-    elif args.golden_config is not None or args.golden_set:
-        parser.error("--golden-config/--golden-set require --golden-path")
-    elif args.smoke:
+    if args.smoke:
         if args.all or args.category or args.test:
             parser.error("--smoke cannot be combined with --all/--category/--test")
         args.category = ["Smoke"]
@@ -192,137 +75,6 @@ def parse_args() -> argparse.Namespace:
 
 def unique_nonempty(values: list[str]) -> list[str]:
     return list(dict.fromkeys(value.strip() for value in values if value.strip()))
-
-
-def build_golden_configuration(args: argparse.Namespace) -> dict[str, Any]:
-    configuration = json.loads(json.dumps(DEFAULT_GOLDEN_CONFIGURATION))
-    if args.golden_config is not None:
-        path = args.golden_config.expanduser().resolve()
-        try:
-            supplied = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            raise RunnerError(f"Could not read GoldenPath configuration {path}: {error}") from error
-        if not isinstance(supplied, dict):
-            raise RunnerError("GoldenPath configuration root must be a JSON object.")
-        merge_known_configuration(configuration, supplied, "")
-
-    for assignment in args.golden_set:
-        if "=" not in assignment:
-            raise RunnerError(f"Invalid --golden-set {assignment!r}; expected PATH=JSON_VALUE.")
-        dotted_path, raw_value = assignment.split("=", 1)
-        try:
-            value = json.loads(raw_value)
-        except json.JSONDecodeError:
-            value = raw_value
-        set_known_configuration_value(configuration, dotted_path.strip(), value)
-    validate_golden_operation_selection(configuration)
-    return configuration
-
-
-def validate_golden_operation_selection(configuration: dict[str, Any]) -> None:
-    """在提交给 Unity 前拒绝拼写错误、重复或互相冲突的操作选择。"""
-    scenarios = configuration["scenarios"]
-    enabled = scenarios["enabledOperationIds"]
-    disabled = scenarios["disabledOperationIds"]
-    for field_name, operation_ids in (
-        ("enabledOperationIds", enabled),
-        ("disabledOperationIds", disabled),
-    ):
-        if not all(isinstance(operation_id, str) for operation_id in operation_ids):
-            raise RunnerError(
-                f"GoldenPath scenarios.{field_name} must contain only strings."
-            )
-        normalized = [operation_id.casefold() for operation_id in operation_ids]
-        if len(normalized) != len(set(normalized)):
-            raise RunnerError(
-                f"GoldenPath scenarios.{field_name} contains duplicate operation IDs."
-            )
-        known_by_normalized_id = {
-            operation_id.casefold(): operation_id for operation_id in GOLDEN_OPERATION_IDS
-        }
-        unknown = sorted(
-            (
-                operation_id
-                for operation_id in operation_ids
-                if operation_id.casefold() not in known_by_normalized_id
-            ),
-            key=str.casefold,
-        )
-        if unknown:
-            raise RunnerError(
-                f"GoldenPath scenarios.{field_name} contains unknown operations: "
-                + ", ".join(unknown)
-            )
-
-    disabled_normalized = {operation_id.casefold() for operation_id in disabled}
-    conflicts = sorted(
-        (
-            operation_id
-            for operation_id in enabled
-            if operation_id.casefold() in disabled_normalized
-        ),
-        key=str.casefold,
-    )
-    if conflicts:
-        raise RunnerError(
-            "GoldenPath operations cannot be both enabled and disabled: "
-            + ", ".join(conflicts)
-        )
-    if not scenarios["enableAllOperations"] and not enabled:
-        raise RunnerError(
-            "GoldenPath scenarios.enabledOperationIds cannot be empty when "
-            "enableAllOperations is false."
-        )
-
-
-def merge_known_configuration(
-    target: dict[str, Any], supplied: dict[str, Any], prefix: str
-) -> None:
-    for key, value in supplied.items():
-        path = f"{prefix}.{key}" if prefix else key
-        if key not in target:
-            raise RunnerError(f"Unknown GoldenPath configuration field: {path}")
-        if isinstance(target[key], dict):
-            if not isinstance(value, dict):
-                raise RunnerError(f"GoldenPath configuration section {path} must be an object.")
-            merge_known_configuration(target[key], value, path)
-        else:
-            require_matching_configuration_type(path, target[key], value)
-            target[key] = value
-
-
-def set_known_configuration_value(
-    configuration: dict[str, Any], dotted_path: str, value: Any
-) -> None:
-    parts = [part for part in dotted_path.split(".") if part]
-    if not parts:
-        raise RunnerError("GoldenPath override path cannot be empty.")
-    current: dict[str, Any] = configuration
-    for part in parts[:-1]:
-        if part not in current or not isinstance(current[part], dict):
-            raise RunnerError(f"Unknown GoldenPath configuration section: {dotted_path}")
-        current = current[part]
-    leaf = parts[-1]
-    if leaf not in current or isinstance(current[leaf], dict):
-        raise RunnerError(f"Unknown GoldenPath configuration field: {dotted_path}")
-    require_matching_configuration_type(dotted_path, current[leaf], value)
-    current[leaf] = value
-
-
-def require_matching_configuration_type(path: str, expected: Any, value: Any) -> None:
-    if isinstance(expected, bool):
-        valid = isinstance(value, bool)
-    elif isinstance(expected, int):
-        valid = isinstance(value, int) and not isinstance(value, bool)
-    elif isinstance(expected, float):
-        valid = isinstance(value, (int, float)) and not isinstance(value, bool)
-    else:
-        valid = isinstance(value, type(expected))
-    if not valid:
-        raise RunnerError(
-            f"GoldenPath configuration field {path} expects "
-            f"{type(expected).__name__}, got {type(value).__name__}."
-        )
 
 
 def is_unity_project(path: Path) -> bool:
@@ -462,46 +214,6 @@ def run_in_open_editor(project: Path, args: argparse.Namespace, editor_pid: int)
     raise RunnerError(f"Timed out after {args.timeout:g}s while the Editor request was {state}.")
 
 
-def run_golden_path_in_open_editor(
-    project: Path, args: argparse.Namespace, editor_pid: int
-) -> dict[str, Any]:
-    request_id = uuid.uuid4().hex
-    result_dir = project / RESULT_DIR
-    request_path = result_dir / f"{GOLDEN_REQUEST_PREFIX}{request_id}.json"
-    running_path = result_dir / f"{GOLDEN_RUNNING_PREFIX}{request_id}.json"
-    result_path = result_dir / f"{GOLDEN_RESULT_PREFIX}{request_id}.json"
-    atomic_write_json(
-        request_path,
-        {
-            "id": request_id,
-            "createdUtc": utc_now(),
-            "configuration": build_golden_configuration(args),
-        },
-    )
-
-    deadline = time.monotonic() + args.timeout
-    try:
-        while time.monotonic() < deadline:
-            if result_path.is_file():
-                try:
-                    result = json.loads(result_path.read_text(encoding="utf-8"))
-                    result.setdefault("resultFile", str(result_path))
-                    return result
-                except (OSError, json.JSONDecodeError):
-                    time.sleep(0.1)
-                    continue
-            if not pid_exists(editor_pid):
-                raise RunnerError("Unity Editor exited before returning the golden-path result.")
-            time.sleep(0.2)
-    finally:
-        request_path.unlink(missing_ok=True)
-
-    state = "running" if running_path.exists() else "pending"
-    raise RunnerError(
-        f"Timed out after {args.timeout:g}s while the default-scene golden path was {state}."
-    )
-
-
 def utc_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
@@ -544,26 +256,6 @@ def find_unity(project: Path, explicit: Path | None) -> Path:
     raise RunnerError(
         f"Could not locate Unity {version or ''}. Pass --unity or set UNITY_PATH."
     )
-
-
-def start_editor(project: Path, args: argparse.Namespace) -> int:
-    unity = find_unity(project, args.unity)
-    process = subprocess.Popen(
-        [str(unity), "-projectPath", str(project)],
-        cwd=project,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    deadline = time.monotonic() + min(args.timeout, 240.0)
-    while time.monotonic() < deadline:
-        editor_pid = active_editor_pid(project)
-        if editor_pid is not None:
-            return editor_pid
-        return_code = process.poll()
-        if return_code is not None:
-            raise RunnerError(f"Unity Editor exited during startup with code {return_code}.")
-        time.sleep(0.5)
-    raise RunnerError("Timed out while starting the Unity Editor.")
 
 
 def run_in_batchmode(project: Path, args: argparse.Namespace) -> dict[str, Any]:
@@ -689,13 +381,6 @@ def report_result(result: dict[str, Any]) -> int:
         f"{status}: {total} tests; {passed} passed, {failed} failed, "
         f"{skipped} skipped, {inconclusive} inconclusive ({duration:.2f}s)"
     )
-    enabled_operations = result.get("enabledOperationIds", []) or []
-    if enabled_operations:
-        print(
-            f"GoldenPath operations: {len(enabled_operations)} enabled ("
-            + ", ".join(enabled_operations)
-            + ")"
-        )
     for failure in result.get("failures", []) or []:
         print(f"\n- {failure.get('fullName', '<unknown>')}")
         message = str(failure.get("message", "")).strip()
@@ -739,19 +424,11 @@ def main() -> int:
             return 0
 
         editor_pid = active_editor_pid(project)
-        if args.golden_path and args.force_batch:
-            raise RunnerError(
-                "--golden-path runs the real GameStartScene and does not support --force-batch."
-            )
-        if args.golden_path and editor_pid is None:
-            editor_pid = start_editor(project, args)
         if editor_pid is not None and args.force_batch:
             raise RunnerError(
                 "The project is already open in Unity; --force-batch cannot safely open the same project."
             )
-        if args.golden_path:
-            result = run_golden_path_in_open_editor(project, args, editor_pid)
-        elif editor_pid is not None:
+        if editor_pid is not None:
             result = run_in_open_editor(project, args, editor_pid)
         else:
             result = run_in_batchmode(project, args)
