@@ -50,6 +50,12 @@ public sealed class ModApi
         return manager.GetDefinitionInfoJson(contentId);
     }
 
+    /// <summary>判断本体或任意已加载 MOD 是否注册了指定液体；裸 ID 自动归属当前 MOD。</summary>
+    public bool HasLiquidDefinition(string liquidId)
+    {
+        return GameRes.ExistingInstance?.GetLiquidDefinition(ResolveLiquidId(liquidId)) != null;
+    }
+
     /// <summary>判断本体或任意已加载 MOD 是否注册了指定污染指标。</summary>
     public bool HasContaminationDefinition(string contaminationId)
     {
@@ -175,6 +181,15 @@ public sealed class ModApi
         string trimmed = contaminationId.Trim();
         return trimmed.Contains(":", StringComparison.Ordinal) ? trimmed : $"{ModId}:{trimmed}";
     }
+
+    /// <summary>MOD API 中裸液体 ID 默认使用当前 MOD 命名空间，同时允许显式引用 core 或依赖 MOD。</summary>
+    private string ResolveLiquidId(string liquidId)
+    {
+        if (string.IsNullOrWhiteSpace(liquidId))
+            throw new ArgumentException("液体 ID 不能为空", nameof(liquidId));
+        string trimmed = liquidId.Trim();
+        return trimmed.Contains(":", StringComparison.Ordinal) ? trimmed : $"{ModId}:{trimmed}";
+    }
 }
 
 /// <summary>
@@ -200,6 +215,10 @@ public sealed class ModItemApi
     public float Health => item?.GetComponentInChildren<DamageReceiver>(true)?.Hp ?? 0f;
     public float MaxHealth => item?.GetComponentInChildren<DamageReceiver>(true)?.MaxHp ?? 0f;
     public string FactionId => FactionRelationService.GetFactionId(item);
+    public bool IsLiquidContainer => GetLiquidContainer() != null;
+    public string LiquidId => GetLiquidContainer()?.Data?.LiquidId ?? string.Empty;
+    public int LiquidAmount => GetLiquidContainer()?.Data?.Amount ?? 0;
+    public int LiquidCapacity => GetLiquidContainer()?.Capacity ?? 0;
 
     /// <summary>在服务端权限允许时修改当前物品的阵营并触发联机状态同步。</summary>
     public bool SetFactionId(string factionId)
@@ -218,6 +237,29 @@ public sealed class ModItemApi
     {
         ModRuntimeManager.Instance?.EnsureWorldMutationAllowed("Act");
         item?.OnAct?.Invoke();
+    }
+
+    /// <summary>向当前物品的通用液体容器加入已注册液体，返回实际加入份数。</summary>
+    public int AddLiquid(string liquidId, int amount)
+    {
+        ModRuntimeManager.Instance?.EnsureWorldMutationAllowed("AddLiquid");
+        if (string.IsNullOrWhiteSpace(liquidId))
+            throw new ArgumentException("液体 ID 不能为空", nameof(liquidId));
+        return GetLiquidContainer()?.AddLiquid(liquidId.Trim(), amount) ?? 0;
+    }
+
+    /// <summary>从当前物品的通用液体容器移除指定份数。</summary>
+    public int RemoveLiquid(int amount)
+    {
+        ModRuntimeManager.Instance?.EnsureWorldMutationAllowed("RemoveLiquid");
+        return GetLiquidContainer()?.RemoveLiquid(amount) ?? 0;
+    }
+
+    /// <summary>清空当前物品的通用液体容器。</summary>
+    public bool ClearLiquid()
+    {
+        ModRuntimeManager.Instance?.EnsureWorldMutationAllowed("ClearLiquid");
+        return GetLiquidContainer()?.ClearContents() == true;
     }
 
     /// <summary>让带 Mover_AI 的 Actor 前往世界坐标；基础状态机仍可在后续 Tick 覆盖目标。</summary>
@@ -240,6 +282,9 @@ public sealed class ModItemApi
         mover.StopMovement();
         return true;
     }
+
+    private Mod_WaterVessel GetLiquidContainer() =>
+        item?.itemMods?.GetMod_ByID<Mod_WaterVessel>(Mod_WaterVessel.ModuleId);
 }
 
 #endregion

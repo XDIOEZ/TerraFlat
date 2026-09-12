@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "liquids": [
+    {
+      "id": "core:dirty_water",
+      "displayName": "脏水",
+      "description": "未经处理的淡水，可以直接饮用，也可以烧开处理。",
+      "category": "water",
+      "visualState": "dirty",
+      "drinkable": true,
+      "hydrationPerServing": 25.0,
+      "heatProcess": {
+        "mode": "Transform",
+        "minimumTemperature": 100.0,
+        "seconds": 20.0,
+        "resultLiquidId": "core:drinkable_water"
+      }
+    },
+    {
+      "id": "core:drinkable_water",
+      "displayName": "饮用水",
+      "description": "已经处理过的干净淡水。",
+      "category": "water",
+      "visualState": "drinkable",
+      "drinkable": true,
+      "hydrationPerServing": 25.0
+    },
+    {
+      "id": "core:sea_water",
+      "displayName": "海水",
+      "description": "含盐量很高的海水，可通过加热蒸发获得盐。",
+      "category": "water",
+      "visualState": "sea",
+      "drinkable": false,
+      "hydrationPerServing": 0.0,
+      "heatProcess": {
+        "mode": "ConsumeServing",
+        "minimumTemperature": 100.0,
+        "seconds": 12.0,
+        "outputItemId": "Salt",
+        "consumeAmount": 1,
+        "outputAmount": 1
+      }
+    }
+  ]
+}

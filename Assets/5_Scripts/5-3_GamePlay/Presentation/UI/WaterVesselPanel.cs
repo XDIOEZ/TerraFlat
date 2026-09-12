@@ -1,15 +1,16 @@
-using System;
+﻿using System;
 using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>通用水容器面板：显示容器容量及水质，提供饮水、倒空与手持容器转水，离开交互距离自动关闭。</summary>
+/// <summary>通用液体容器面板：显示液体身份和容量，提供饮用、倒空与手持容器转移，离开交互距离自动关闭。</summary>
 public sealed class WaterVesselPanel : MonoBehaviour
 {
+    public WaterVesselLiquidGraphic Liquid; // 正式 Prefab 中的罐内水层。
     public const string PrefabKey = "UI_WaterVessel";
     private BasePanel panel; // 通用面板生命周期。
-    private Mod_WaterVessel vessel; // 当前目标水容器。
+    private Mod_WaterVessel vessel; // 当前目标液体容器。
     private Item actor; // 操作者。
     private TextMeshProUGUI title, hint; // 当前容器名称与通用操作提示。
     private TextMeshProUGUI status; // 水质、份数与提示。
@@ -30,7 +31,9 @@ public sealed class WaterVesselPanel : MonoBehaviour
     {
         if (current == null)
             current = UIManager.Instance.CreatePanelFromGameObject(GameRes.Instance.GetPrefab(PrefabKey)).GetComponent<WaterVesselPanel>();
+        current.ClearTarget();
         current.vessel = target;
+        target.Changed += current.Refresh;
         current.actor = owner;
         BuildingPanelActions buildingActions = current.GetComponent<BuildingPanelActions>();
         if (buildingActions == null)
@@ -38,6 +41,7 @@ public sealed class WaterVesselPanel : MonoBehaviour
         buildingActions.Bind(target.item);
         current.panel.Open();
         current.Refresh();
+        current.Liquid.SetWater(target.Data.Amount, target.Capacity, target.CurrentLiquid?.VisualState, true);
     }
     /// <summary>绑定现有节点；界面层级只由 Prefab 决定。</summary>
     private void Awake()
@@ -67,25 +71,29 @@ public sealed class WaterVesselPanel : MonoBehaviour
     /// <summary>取得当前手持水容器，转移方向固定为手持容器到面板中的容器。</summary>
     private Mod_WaterVessel GetHeldVessel() => actor?.GetComponentInChildren<Inventory_HotBar>()?.CurentSelectItem?
         .itemMods.GetMod_ByID<Mod_WaterVessel>(Mod_WaterVessel.ModuleId);
-    /// <summary>显示可区分的水质；脏淡水允许直接饮用，烧开后变为干净饮用水，海水不能饮用。</summary>
+    /// <summary>显示当前液体定义；饮用能力和恢复量都由液体定义决定。</summary>
     private void Refresh()
     {
         title.text = GameRes.Instance != null &&
                      GameRes.Instance.TryGetItemDefinition(vessel.item.itemData.IDName, out RuntimeItemDefinition definition)
             ? definition.DisplayName
             : FlatWorldLocalizationService.GetUiText("水容器");
-        hint.text = FlatWorldLocalizationService.GetUiText("手持水容器对准水域使用即可装水；脏淡水可直接喝，也可烧开，海水可加热制盐。");
+        hint.text = FlatWorldLocalizationService.GetUiText("液体容器一次只保存一种液体；不同液体不能直接混装。对准水域使用可以装水。");
         transferLabel.text = FlatWorldLocalizationService.GetUiText("从手持容器倒入");
 
-        string[] qualities = { "空容器", "脏水（可直接喝）", "饮用水", "海水（可制盐）" };
+        Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, vessel.CurrentLiquid?.VisualState);
+        LiquidDefinition liquid = vessel.CurrentLiquid;
+        string liquidName = vessel.Data.Amount <= 0
+            ? FlatWorldLocalizationService.GetUiText("空容器")
+            : FlatWorldLocalizationService.GetUiText(liquid?.DisplayName ?? vessel.Data.LiquidId);
         status.text = FlatWorldLocalizationService.GetUiFormat("{0}　{1} / {2} 份\n加热进度：{3:0} 秒",
-            FlatWorldLocalizationService.GetUiText(qualities[(int)vessel.Data.Quality]), vessel.Data.Amount,
+            liquidName, vessel.Data.Amount,
             vessel.Capacity, vessel.Data.ProcessingSeconds);
-        drink.interactable = (vessel.Data.Quality is VesselWaterQuality.Dirty or VesselWaterQuality.Drinkable) &&
-                             vessel.Data.Amount > 0;
+        drink.interactable = liquid?.Drinkable == true && liquid.HydrationPerServing > 0f && vessel.Data.Amount > 0;
         Mod_WaterVessel source = GetHeldVessel();
         transfer.interactable = source != null && source != vessel && source.Data.Amount > 0 &&
-            vessel.Data.Amount < vessel.Capacity && (vessel.Data.Amount == 0 || source.Data.Quality == vessel.Data.Quality);
+            vessel.Data.Amount < vessel.Capacity &&
+            (vessel.Data.Amount == 0 || string.Equals(source.Data.LiquidId, vessel.Data.LiquidId, StringComparison.OrdinalIgnoreCase));
     }
     /// <summary>完成一次饮水并即时更新余量。</summary>
     private void Drink() { vessel.Drink(actor); Refresh(); }
@@ -95,6 +103,10 @@ public sealed class WaterVesselPanel : MonoBehaviour
     private void Empty() { vessel.Empty(actor); Refresh(); }
     /// <summary>关闭后清理玩法引用。</summary>
     private void Close() => panel.Close();
-    private void ClearTarget() { vessel = null; actor = null; }
-    private void OnDestroy() { if (panel != null) panel.Closed -= ClearTarget; }
+    private void ClearTarget()
+    {
+        if (vessel != null) vessel.Changed -= Refresh;
+        vessel = null; actor = null;
+    }
+    private void OnDestroy() { ClearTarget(); if (panel != null) panel.Closed -= ClearTarget; }
 }

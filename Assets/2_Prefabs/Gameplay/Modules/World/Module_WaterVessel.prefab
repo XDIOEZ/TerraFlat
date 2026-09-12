@@ -57,4 +57,3 @@ MonoBehaviour:
     ProcessingSeconds: 0
   capacity: 8
   reach: 2
-  waterPerServing: 25

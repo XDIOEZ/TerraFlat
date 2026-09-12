@@ -143,6 +143,7 @@ public partial class GameRes
         TileBlockDict.Clear();
         BuffDefinitions.Clear();
         ContaminationDefinitions.Clear();
+        LiquidDefinitions.Clear();
         AnimalSkillCatalogService.Reset();
         QuestCatalog.Reset();
         textLibraryService = TextLibraryService.Empty;

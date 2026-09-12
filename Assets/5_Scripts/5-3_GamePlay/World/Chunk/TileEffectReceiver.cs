@@ -8,7 +8,6 @@ using UnityEngine;
 /// </summary>
 public class TileEffectReceiver : Module
 {
-    private const float WaterEdgeTolerance = 0.2f;
     private static readonly Vector2Int[] WaterEdgeDirections =
     {
         Vector2Int.left,
@@ -214,7 +213,6 @@ public class TileEffectReceiver : Module
         if (TryResolveTileEffectAtPosition(transform.position, gridPos, out TileEffectResolution exactResolution))
         {
             if (exactResolution.TileData is TileData_Water ||
-                !IsNearCellEdge(transform.position, gridPos) ||
                 !TryResolveNearbyWater(gridPos, out resolution))
             {
                 resolution = exactResolution;
@@ -259,13 +257,13 @@ public class TileEffectReceiver : Module
         return false;
     }
 
-    /// <summary>在角色贴近边界时查找相邻水格，仅给水边交互保留小范围容错。</summary>
+    /// <summary>
+    /// 查找角色当前陆地格四邻域内的水格。
+    /// 直接与水相邻的整格都视为岸边，角色无需把中心点挤到格子边缘才能俯身饮水。
+    /// </summary>
     private bool TryResolveNearbyWater(Vector2Int gridPos, out TileEffectResolution resolution)
     {
         resolution = default;
-        if (!IsNearCellEdge(transform.position, gridPos))
-            return false;
-
         for (int i = 0; i < WaterEdgeDirections.Length; i++)
         {
             Vector2Int neighborGridPos = gridPos + WaterEdgeDirections[i];
@@ -288,21 +286,6 @@ public class TileEffectReceiver : Module
         }
 
         return false;
-    }
-
-    /// <summary>判断角色与当前格子边界的最近距离是否进入水边容错范围。</summary>
-    private static bool IsNearCellEdge(Vector2 position, Vector2Int gridPos)
-    {
-        float distanceToLeft = position.x - gridPos.x;
-        float distanceToRight = gridPos.x + 1f - position.x;
-        float distanceToBottom = position.y - gridPos.y;
-        float distanceToTop = gridPos.y + 1f - position.y;
-        float nearestDistance = Mathf.Min(
-            distanceToLeft,
-            distanceToRight,
-            distanceToBottom,
-            distanceToTop);
-        return nearestDistance >= 0f && nearestDistance <= WaterEdgeTolerance;
     }
 
     private bool IsActiveSourceCurrent(Vector2Int gridPos)

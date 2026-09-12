@@ -62,6 +62,8 @@ public sealed class ModRuntimeManager : MonoBehaviour
     private readonly List<string> registeredActorIds = new();
     private readonly List<PendingRecipeDefinition> pendingRecipeDefinitions = new();
     private readonly List<PendingBuffDefinition> pendingBuffDefinitions = new();
+    private readonly List<PendingLiquidDefinition> pendingLiquidDefinitions = new();
+    private readonly List<string> registeredLiquidIds = new();
     private readonly List<PendingContaminationDefinition> pendingContaminationDefinitions = new();
     private readonly List<string> registeredContaminationIds = new();
     private readonly List<PendingQuestDefinition> pendingQuestDefinitions = new();
@@ -202,6 +204,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
         ProcessActorDefinitions(gameRes);
         ProcessRecipeDefinitions(gameRes);
         ProcessBuffDefinitions(gameRes);
+        ProcessLiquidDefinitions(gameRes);
         ProcessContaminationDefinitions(gameRes);
         ProcessQuestDefinitions();
         ProcessPlayerCreationTemplates();
@@ -438,6 +441,29 @@ public sealed class ModRuntimeManager : MonoBehaviour
                 }
                 ValidateContentId(package.Manifest.Id, buff.Id);
                 pendingBuffDefinitions.Add(new PendingBuffDefinition(package, definitionFile, buffIndex++, buff));
+            }
+
+            int liquidIndex = 0;
+            foreach (JToken token in document["liquids"] as JArray ?? new JArray())
+            {
+                LiquidDefinitionDto liquid;
+                try
+                {
+                    liquid = LiquidDefinitionFactory.DeserializeDefinition(token);
+                }
+                catch (Exception exception)
+                {
+                    throw new InvalidDataException(
+                        $"MOD {package.Manifest.Id} 液体 Def 无效：{definitionFile}#{liquidIndex}",
+                        exception);
+                }
+
+                ValidateContentId(package.Manifest.Id, liquid.Id);
+                pendingLiquidDefinitions.Add(new PendingLiquidDefinition(
+                    package,
+                    definitionFile,
+                    liquidIndex++,
+                    liquid));
             }
 
             int contaminationIndex = 0;
@@ -956,6 +982,47 @@ public sealed class ModRuntimeManager : MonoBehaviour
                 Materialized = true
             };
             Debug.Log($"[MOD:{pending.Package.Manifest.Id}] 已注册 JSON Buff：{definition.Id}");
+        }
+    }
+
+    /// <summary>批量构建并注册 MOD 液体；所有跨液体与物品引用先校验，失败时不会留下半注册目录。</summary>
+    private void ProcessLiquidDefinitions(GameRes gameRes)
+    {
+        var built = new List<(PendingLiquidDefinition Pending, LiquidDefinition Definition)>();
+        var availableLiquidIds = new HashSet<string>(gameRes.LiquidDefinitions.Keys, IdComparer);
+
+        foreach (PendingLiquidDefinition pending in pendingLiquidDefinitions)
+        {
+            LiquidDefinitionDto dto = pending.Definition;
+            if (!string.IsNullOrWhiteSpace(dto.LabelKey))
+                dto.DisplayName = ModLocalizationRegistry.Translate(dto.LabelKey, dto.DisplayName);
+            if (!string.IsNullOrWhiteSpace(dto.DescriptionKey))
+                dto.Description = ModLocalizationRegistry.Translate(dto.DescriptionKey, dto.Description);
+
+            LiquidDefinition definition = LiquidDefinitionFactory.Build(dto);
+            if (!availableLiquidIds.Add(definition.Id))
+                throw new InvalidDataException($"液体定义 ID 冲突：{definition.Id}");
+            built.Add((pending, definition));
+        }
+
+        LiquidDefinitionFactory.ValidateReferences(
+            built.Select(entry => entry.Definition),
+            id => availableLiquidIds.Contains(id),
+            itemId => gameRes.TryGetItemDefinition(itemId, out _));
+
+        foreach ((PendingLiquidDefinition pending, LiquidDefinition definition) in built)
+        {
+            gameRes.RegisterLiquidDefinition(definition);
+            registeredLiquidIds.Add(definition.Id);
+            definitionInfos[definition.Id] = new ModDefinitionInfo
+            {
+                Id = definition.Id,
+                DeclaringModId = pending.Package.Manifest.Id,
+                SourceFile = pending.File,
+                SourceIndex = pending.Index,
+                Materialized = true
+            };
+            Debug.Log($"[MOD:{pending.Package.Manifest.Id}] 已注册液体定义：{definition.Id}");
         }
     }
 
@@ -2042,6 +2109,9 @@ public sealed class ModRuntimeManager : MonoBehaviour
         for (int index = registeredContaminationIds.Count - 1; index >= 0; index--)
             gameRes?.UnregisterExternalContaminationDefinition(registeredContaminationIds[index]);
         registeredContaminationIds.Clear();
+        for (int index = registeredLiquidIds.Count - 1; index >= 0; index--)
+            gameRes?.UnregisterExternalLiquidDefinition(registeredLiquidIds[index]);
+        registeredLiquidIds.Clear();
 
         foreach (ModLuaRuntime runtime in luaRuntimes.Values)
             runtime.Dispose();
@@ -2068,6 +2138,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
         pendingActorDefinitions.Clear();
         pendingRecipeDefinitions.Clear();
         pendingBuffDefinitions.Clear();
+        pendingLiquidDefinitions.Clear();
         pendingContaminationDefinitions.Clear();
         pendingQuestDefinitions.Clear();
         pendingPlayerCreationTemplates.Clear();
@@ -2180,6 +2251,22 @@ public sealed class ModRuntimeManager : MonoBehaviour
         public string File { get; }
         public int Index { get; }
         public BuffDefinitionDto Definition { get; }
+    }
+
+    private sealed class PendingLiquidDefinition
+    {
+        public PendingLiquidDefinition(ModPackage package, string file, int index, LiquidDefinitionDto definition)
+        {
+            Package = package;
+            File = file;
+            Index = index;
+            Definition = definition;
+        }
+
+        public ModPackage Package { get; }
+        public string File { get; }
+        public int Index { get; }
+        public LiquidDefinitionDto Definition { get; }
     }
 
     private sealed class PendingContaminationDefinition

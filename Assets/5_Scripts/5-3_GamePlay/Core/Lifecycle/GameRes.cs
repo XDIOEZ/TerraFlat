@@ -64,6 +64,11 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     public Dictionary<string, ContaminationDefinition> ContaminationDefinitions =
         new Dictionary<string, ContaminationDefinition>(System.StringComparer.OrdinalIgnoreCase);
 
+    [Header("液体定义字典")]
+    [ShowInInspector]
+    public Dictionary<string, LiquidDefinition> LiquidDefinitions =
+        new Dictionary<string, LiquidDefinition>(System.StringComparer.OrdinalIgnoreCase);
+
     [System.NonSerialized]
     private TextLibraryService textLibraryService = TextLibraryService.Empty;
 
@@ -290,6 +295,26 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         return definition;
     }
 
+    /// <summary>按稳定 ID 查询液体定义。</summary>
+    public LiquidDefinition GetLiquidDefinition(string liquidId)
+    {
+        if (string.IsNullOrWhiteSpace(liquidId))
+            return null;
+        LiquidDefinitions.TryGetValue(liquidId.Trim(), out LiquidDefinition definition);
+        return definition;
+    }
+
+    /// <summary>无日志查询液体定义，供容器、加工与 MOD API 复用。</summary>
+    public bool TryGetLiquidDefinition(string liquidId, out LiquidDefinition definition)
+    {
+        if (string.IsNullOrWhiteSpace(liquidId))
+        {
+            definition = null;
+            return false;
+        }
+        return LiquidDefinitions.TryGetValue(liquidId.Trim(), out definition);
+    }
+
     public void RegisterItemDefinition(RuntimeItemDefinition definition)
     {
         if (definition == null || string.IsNullOrWhiteSpace(definition.Id) || definition.ShellPrefab == null)
@@ -492,11 +517,36 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         LoadedCount++;
     }
 
+    /// <summary>注册一个本体或 MOD 液体定义；稳定 ID 冲突直接拒绝。</summary>
+    public void RegisterLiquidDefinition(LiquidDefinition definition)
+    {
+        if (definition == null || string.IsNullOrWhiteSpace(definition.Id))
+            throw new InvalidDataException("注册的液体定义或 ID 为空");
+
+        string id = definition.Id.Trim();
+        if (LiquidDefinitions.ContainsKey(id))
+            throw new InvalidDataException($"液体定义 ID 冲突：{id}");
+        LiquidDefinitions.Add(id, definition);
+        LoadedCount++;
+    }
+
     /// <summary>仅供 MOD 加载失败或资源重载时回滚外部污染定义。</summary>
     public bool UnregisterExternalContaminationDefinition(string contaminationId)
     {
         if (string.IsNullOrWhiteSpace(contaminationId) ||
             !ContaminationDefinitions.Remove(contaminationId.Trim()))
+        {
+            return false;
+        }
+        LoadedCount = Mathf.Max(0, LoadedCount - 1);
+        return true;
+    }
+
+    /// <summary>仅供 MOD 加载失败或资源重载时回滚外部液体定义。</summary>
+    public bool UnregisterExternalLiquidDefinition(string liquidId)
+    {
+        if (string.IsNullOrWhiteSpace(liquidId) ||
+            !LiquidDefinitions.Remove(liquidId.Trim()))
         {
             return false;
         }

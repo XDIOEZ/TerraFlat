@@ -35,6 +35,7 @@ MonoBehaviour:
         IsWalkable: 1
         deepValue: 0.5
         salt: 80
+        liquidId: core:sea_water
     - rid: 6445419709040689155
       type: {class: Tile_Water, ns: , asm: GamePlay}
       data:

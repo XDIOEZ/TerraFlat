@@ -3,17 +3,28 @@ using MemoryPack;
 using UnityEngine;
 
 /// <summary>
+/// 世界地块可提取液体的最小数据契约。玩法层只读取稳定 LiquidId，具体液体语义统一交给液体目录解析。
+/// </summary>
+public interface IWorldLiquidSourceData
+{
+    string LiquidId { get; }
+}
+
+/// <summary>
 /// 水体地块数据；海洋水深由高度层统一换算，河流仍使用水文系统提供的独立深度。
 /// 海平面内的归一化高度采用平方曲线，使近岸到深海的高低差更明显。
 /// </summary>
 [System.Serializable]
 [MemoryPackable]
-public partial class TileData_Water : TileData
+public partial class TileData_Water : TileData, IWorldLiquidSourceData
 {
     private const float SeaLevel = 0.5f;
 
     public float deepValue = 0f;
     public float salt = 0;
+    public string liquidId = string.Empty; // 当前地块实际可提取的稳定液体 ID。
+    [MemoryPackIgnore]
+    public string LiquidId => liquidId;
     public override void Initialize_Env(EnvironmentLayers layers, int x, int y)
     {
         if (layers == null || !layers.Contains(x, y))
@@ -60,7 +71,8 @@ public partial class TileData_Water : TileData
             Penalty = this.Penalty,
             IsWalkable = this.IsWalkable,
             deepValue = this.deepValue,
-            salt = this.salt
+            salt = this.salt,
+            liquidId = this.liquidId
         };
         return copy;
     }
