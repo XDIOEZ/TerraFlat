@@ -1,9 +1,9 @@
 using System;
 
-/// <summary>陶罐批量加热能力：脏淡水达到 100℃持续 20 秒后变为干净饮用水；海水每 12 秒蒸发一份并产出一份盐。</summary>
+/// <summary>水容器批量加热能力：脏淡水达到 100℃持续 20 秒后变为干净饮用水；海水每 12 秒蒸发一份并产出一份盐。</summary>
 public sealed class Mod_VesselHeating : Module, IInventoryHeatTreatment
 {
-    public Ex_ModData ModData = new(); // 炉体配置，不重复保存容器状态。
+    public Ex_ModData ModData = new(); // 加热配置，不重复保存容器状态。
     public float boilingTemperature = 100f; // 加工温度。
     public float boilingSeconds = 20f; // 一罐淡水处理时间。
     public float saltSecondsPerServing = 12f; // 每份海水制盐时间。
@@ -17,7 +17,7 @@ public sealed class Mod_VesselHeating : Module, IInventoryHeatTreatment
         if (boilingSeconds <= 0f || saltSecondsPerServing <= 0f)
             throw new InvalidOperationException("水处理时长必须大于零。");
     }
-    /// <summary>处理状态存放在陶罐自身。</summary>
+    /// <summary>处理状态存放在水容器自身。</summary>
     public override void Save() { }
     /// <summary>在原槽中处理水；盐的原子发放成功后才减少海水，输出满时保持待结算状态。</summary>
     public bool ProcessHeat(Inventory input, Inventory output, float temperature, float seconds)
