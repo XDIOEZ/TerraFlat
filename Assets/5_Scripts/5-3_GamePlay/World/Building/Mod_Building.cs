@@ -53,6 +53,9 @@ public class Mod_Building : Module
         public string SnapshotBase64;
         public string BuildingPrefabId;
         public string SummonerPrefabId;
+        // 手持物与建筑共同持有的状态模块；放置/拆回时按稳定 ID 转移当前数据。
+        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string[] SharedModuleIds;
         [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string TileBlockId;
     }
@@ -60,6 +63,8 @@ public class Mod_Building : Module
     public Building_Data Data = new();
     public Ex_ModData BuildingData;
     public BuildingShadow GhostShadow;
+    public bool RequiresPlacementRequest; // 可手持使用的设施先从面板进入放置模式，避免与使用动作冲突。
+    private bool _placementRequested;
     private GameObject _definitionPreviewSource;
     private string _definitionPreviewItemId;
     public BoxCollider2D boxCollider2D;
@@ -89,12 +94,31 @@ public class Mod_Building : Module
     public bool IsItemInInventory => IsSummoner && item != null && item.itemData != null && item.InHand && item.Owner != null;
     public bool IsPlacementPending => _placementPending;
     public bool IsDismantlePending => _dismantlePending;
+    public bool IsPlacementModeActive => IsSummoner && (!RequiresPlacementRequest || _placementRequested);
+
+    /// <summary>仅为快捷栏真实手持实例开启放置预览；切换物品后由卸载/加载生命周期取消。</summary>
+    public bool BeginPlacement()
+    {
+        if (!IsItemInInventory || _placementPending || item.DestructionHandled)
+            return false;
+        _placementRequested = true;
+        return true;
+    }
+
+    /// <summary>便携设施在放置模式下独占本次使用动作，失败时也不能同时打开面板或装水。</summary>
+    public bool TryHandlePlacementAction()
+    {
+        if (!RequiresPlacementRequest || !IsPlacementModeActive)
+            return false;
+        Install();
+        return true;
+    }
     /// <summary>当前建筑预览有效时，右键应由建筑动作优先处理。</summary>
     public bool IsPlacementActionAvailable
     {
         get
         {
-            if (!IsItemInInventory || _placementPending || !IsSummoner || GhostShadow == null)
+            if (!IsItemInInventory || _placementPending || !IsPlacementModeActive || GhostShadow == null)
                 return false;
 
             Vector3 placement = NormalizePlacement(GhostShadow.transform.position);
@@ -135,6 +159,8 @@ public class Mod_Building : Module
 
     public override void Load()
     {
+        _placementRequested = false;
+        _ownerController = null;
         EnsureRuntimeReferences();
         Data = new Building_Data();
         BuildingData?.ReadData(ref Data);
@@ -185,8 +211,10 @@ public class Mod_Building : Module
         if (!_isLoaded || item == null)
             return;
 
-        if (!IsItemInInventory || _placementPending || !IsSummoner)
+        if (!IsItemInInventory || _placementPending || !IsPlacementModeActive)
         {
+            if (!IsItemInInventory)
+                _placementRequested = false;
             CleanupGhost();
             return;
         }
@@ -225,7 +253,7 @@ public class Mod_Building : Module
     [Button]
     public virtual void Install()
     {
-        if (item == null || item.DestructionHandled || _placementPending || !IsItemInInventory)
+        if (item == null || item.DestructionHandled || _placementPending || !IsItemInInventory || !IsPlacementModeActive)
             return;
 
         if (!TryGetGhostPlacementPosition(out Vector3 placement))
@@ -420,10 +448,13 @@ public class Mod_Building : Module
             {
                 placedData = GameRes.Instance.CreateItemData(buildingPrefabId);
             }
+
+            // 即使带有拆除快照，也以当前手持容器的数据覆盖共享模块，不能恢复旧水量/旧库存。
+            BuildingModuleStateTransfer.Copy(summonerData, placedData, carrierState.SharedModuleIds);
         }
         catch (Exception exception)
         {
-            reason = $"读取建筑快照失败：{exception.Message}";
+            reason = $"构建建筑数据失败：{exception.Message}";
             return false;
         }
 
@@ -477,9 +508,10 @@ public class Mod_Building : Module
             return false;
         }
 
-        if (!string.IsNullOrWhiteSpace(data.SnapshotBase64) && itemData.Stack?.Amount != 1f)
+        if ((!string.IsNullOrWhiteSpace(data.SnapshotBase64) || data.SharedModuleIds?.Length > 0) &&
+            itemData.Stack?.Amount != 1f)
         {
-            reason = "带快照的建筑召唤器必须为单件";
+            reason = "带状态的建筑召唤器必须为单件";
             return false;
         }
 
@@ -566,6 +598,9 @@ public class Mod_Building : Module
             summonerData.transform.position = dropPosition;
             summonerData.transform.rotation = Quaternion.identity;
             summonerData.transform.scale = Vector3.one;
+
+            // 在 Load 之前还原模块数据，使拆回后的手持面板立即读到建筑中的最新状态。
+            BuildingModuleStateTransfer.Copy(item.itemData, summonerData, Data.SharedModuleIds);
 
             summoner = ItemMgr.Instance.InstantiateItem(summonerData, dropPosition);
             summoner.Load();
@@ -1038,7 +1073,8 @@ public class Mod_Building : Module
 
         damageReceiver.OnAction += OnHit;
         damageReceiver.OnDead += OnDeath;
-        item.OnAct += Install;
+        if (!RequiresPlacementRequest)
+            item.OnAct += Install;
         _eventsBound = true;
     }
 

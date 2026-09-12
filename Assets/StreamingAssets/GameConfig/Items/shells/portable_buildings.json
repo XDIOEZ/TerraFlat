@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "ClayJar_Building",
+      "parent": "BuildingBody_Base",
+      "gameName": "陶罐",
+      "description": "放置在地上的陶罐。交互打开水容器面板，脏水和烧开的饮用水都可直接喝，也可倒空、从手持陶罐转水或拆回；水量、水质与加热进度随容器保存。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "volume": 8,
+      "canBePickedUp": false,
+      "tags": ["35"],
+      "health": {
+        "hasHp": true,
+        "hp": 40,
+        "maxHp": 40,
+        "collider": { "type": "BoxCollider2D", "isTrigger": true, "size": { "x": 0.65, "y": 0.65 } }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png",
+        "collider": { "size": { "x": 0.65, "y": 0.65 } }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"ClayJar_Building\",\"SummonerPrefabId\":\"ClayJar\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
+            "Type": 0
+          }
+        },
+        "vessel": {
+          "prefab": "Module_WaterVessel",
+          "id": "Mod_WaterVessel",
+          "enabled": true,
+          "data": {},
+          "parameters": {}
+        }
+      }
+    },
+    {
+      "id": "StoneMortar_Building",
+      "parent": "BuildingBody_Base",
+      "gameName": "石臼",
+      "description": "放置在地上的石臼。交互打开原有捣料面板，每次捣击按配方加工一份材料；拆回或再次放置时保留碗内全部原料与产物。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "volume": 5,
+      "canBePickedUp": false,
+      "tags": ["35"],
+      "health": {
+        "hasHp": true,
+        "hp": 120,
+        "maxHp": 120,
+        "collider": { "type": "BoxCollider2D", "isTrigger": true, "size": { "x": 0.85, "y": 0.85 } }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/StoneMortar/StoneMortar_Icon.png",
+        "collider": { "size": { "x": 0.85, "y": 0.85 } }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"StoneMortar_Building\",\"SummonerPrefabId\":\"StoneMortar\",\"SharedModuleIds\":[\"Mod_Mortar\"]}",
+            "Type": 0
+          }
+        },
+        "mortar": {
+          "prefab": "Module_Mortar",
+          "id": "Mod_Mortar",
+          "enabled": true,
+          "data": { "BitData": [], "Type": 0 },
+          "parameters": { "StationId": "mortar" }
+        }
+      }
+    }
+  ]
+}

@@ -22,11 +22,47 @@
       "gameName": "干草",
       "description": "三份干草可搓成一根绳子。",
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Straw/Straw_Icon.png",
         "color": {
           "r": 1,
-          "g": 0.8,
-          "b": 0.4,
+          "g": 1,
+          "b": 1,
           "a": 1
+        }
+      }
+    },
+    {
+      "id": "FoxtailSpike",
+      "parent": "Berry",
+      "gameName": "狗尾草穗",
+      "description": "成熟狗尾草采收得到的穗，可直接食用，提供少量营养。",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/FoxtailEar/FoxtailEar_SeedHead_Icon.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 10,
+                "Max_Carbohydrates": 10,
+                "Fat": 2,
+                "Max_Fat": 2,
+                "Protein": 3,
+                "Max_Protein": 3,
+                "Water": 0,
+                "Max_Water": 0,
+                "Vitamins": 3,
+                "Max_Vitamins": 3
+              }
+            }
+          }
         }
       }
     },
@@ -81,7 +117,7 @@
     },
     {
       "id": "HerbCrop",
-      "parent": "BerryCrop",
+      "parent": "WildCrop_Base",
       "gameName": "药草-农作物",
       "description": "成熟后采收；可留种种植。持续受寒或受热会枯萎。",
       "visual": {
@@ -126,14 +162,20 @@
     },
     {
       "id": "FoxtailCrop",
-      "parent": "BerryCrop",
+      "parent": "WildCrop_Base",
       "gameName": "狗尾草-农作物",
-      "description": "成熟后可采收干草；持续受寒或受热会枯萎。",
+      "description": "成熟后可采收狗尾草穗；持续受寒或受热会枯萎。",
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/FoxtailGrass/FoxtailGrass_Seedling.png",
+        "spriteStates": {
+          "seedling": "Assets/6_Art/Generated/FoxtailGrass/FoxtailGrass_Seedling.png",
+          "growing": "Assets/6_Art/Generated/FoxtailGrass/FoxtailGrass_Growing.png",
+          "mature": "Assets/6_Art/Generated/FoxtailGrass/FoxtailGrass_Mature.png"
+        },
         "color": {
           "r": 1,
-          "g": 0.85,
-          "b": 0.35,
+          "g": 1,
+          "b": 1,
           "a": 1
         }
       },
@@ -152,7 +194,7 @@
           "parameters": {
             "outputs": [
               {
-                "itemId": "Straw",
+                "itemId": "FoxtailSpike",
                 "minAmount": 1,
                 "maxAmount": 2,
                 "probability": 1
@@ -539,10 +581,22 @@
     {
       "id": "ClayJar",
       "parent": "Clay",
+      "shellPrefab": "BuildingSummonerShell",
       "gameName": "陶罐",
-      "description": "可装 8 份水。手持对准水域使用装水；放入炉子输入槽烧开淡水或蒸发海水制盐。",
+      "description": "可装 8 份水。淡水装入后为脏水，可直接喝，也可烧开成为饮用水；面板中可选择放到地上，落地后交互使用或拆回，水量、水质和加热进度保留。海水可加热制盐。",
       "volume": 8,
+      "health": { "hasHp": true, "hp": 40, "maxHp": 40 },
       "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ClayJar_Building\",\"SummonerPrefabId\":\"ClayJar\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
+            "Type": 0
+          },
+          "parameters": { "RequiresPlacementRequest": true }
+        },
         "vessel": {
           "prefab": "Module_WaterVessel",
           "id": "Mod_WaterVessel",
@@ -623,7 +677,7 @@
         }
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_404.png",
+        "spriteAddress": "Assets/6_Art/Items/Materials/Ores/Item_Salt.png",
         "color": {
           "r": 1,
           "g": 1,

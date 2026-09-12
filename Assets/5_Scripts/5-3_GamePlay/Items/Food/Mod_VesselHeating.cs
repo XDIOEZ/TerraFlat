@@ -1,6 +1,6 @@
 using System;
 
-/// <summary>陶罐批量加热能力：淡水达到 100℃持续 20 秒后变为饮用水；海水每 12 秒蒸发一份并产出一份盐。</summary>
+/// <summary>陶罐批量加热能力：脏淡水达到 100℃持续 20 秒后变为干净饮用水；海水每 12 秒蒸发一份并产出一份盐。</summary>
 public sealed class Mod_VesselHeating : Module, IInventoryHeatTreatment
 {
     public Ex_ModData ModData = new(); // 炉体配置，不重复保存容器状态。
@@ -31,7 +31,7 @@ public sealed class Mod_VesselHeating : Module, IInventoryHeatTreatment
             if (temperature < boilingTemperature || state.Quality is VesselWaterQuality.Empty or VesselWaterQuality.Drinkable)
                 continue;
             state.ProcessingSeconds += seconds;
-            if (state.Quality == VesselWaterQuality.Fresh && state.ProcessingSeconds >= boilingSeconds)
+            if (state.Quality == VesselWaterQuality.Dirty && state.ProcessingSeconds >= boilingSeconds)
             {
                 state.Quality = VesselWaterQuality.Drinkable;
                 state.ProcessingSeconds = 0f;

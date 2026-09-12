@@ -30,11 +30,13 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     public float maxInteractDistance = DefaultMaxInteractDistance;
     // 交互是纯查询通道，不再创建或启用任何 Trigger；该缓冲区只服务 Physics2D Overlap 查询。
     private readonly Collider2D[] interactionOverlapBuffer = new Collider2D[32];
+    private Inventory_HotBar hotBar;
 
     public override void Load()
     {
         ModSaveData.ReadData(ref RawData);
         gameController = item != null ? item.GetComponentInChildren<GameController>() : null;
+        hotBar = item != null ? item.GetComponentInChildren<Inventory_HotBar>(true) : null;
         BindInput();
     }
 
@@ -52,6 +54,14 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         }
 
         if (IsGameplayInputLocked())
+        {
+            EndEnvironmentActionHold();
+            CancelCurrentInteraction();
+            return;
+        }
+
+        // 建筑放置模式独占世界操作，避免准线附近的设施/物品在同一输入阶段被打开。
+        if (HasHeldBuildingPlacementPriority())
         {
             EndEnvironmentActionHold();
             CancelCurrentInteraction();
@@ -97,6 +107,14 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (gameController != null && !gameController.IsGameplayInputAllowed(ctx))
             return;
 
+        // 放置由手持物“使用”动作提交；交互键在放置模式下只让位，不再打开旁边目标。
+        if (HasHeldBuildingPlacementPriority())
+        {
+            EndEnvironmentActionHold();
+            CancelCurrentInteraction();
+            return;
+        }
+
         bool interacted = TryInteractAtCurrentPosition();
         if (!interacted)
             BeginEnvironmentActionHold();
@@ -108,7 +126,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// </summary>
     public bool TryInteractAtCurrentPosition()
     {
-        if (!IsLocalInteractionOwner() || IsGameplayInputLocked())
+        if (!IsLocalInteractionOwner() || IsGameplayInputLocked() || HasHeldBuildingPlacementPriority())
             return false;
 
         // 每次按下交互键都做一次纯查询，交互链不再启用任何 Physics2D Trigger。
@@ -119,7 +137,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// <summary>通过正式交互距离与目标规则尝试和指定对象交互，供非物理输入控制源复用。</summary>
     public bool TryInteractTarget(IInteractable receiver)
     {
-        if (!IsLocalInteractionOwner() || IsGameplayInputLocked())
+        if (!IsLocalInteractionOwner() || IsGameplayInputLocked() || HasHeldBuildingPlacementPriority())
             return false;
 
         Component receiverComponent = receiver as Component;
@@ -147,7 +165,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private void OnPointerClick()
     {
         if (!IsLocalInteractionOwner() || IsGameplayInputLocked() ||
-            gameController == null || item == null)
+            HasHeldBuildingPlacementPriority() || gameController == null || item == null)
             return;
 
         Vector3 pointerWorld;
@@ -202,7 +220,8 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private void RefreshInteractionPreview()
     {
         if (!IsLocalInteractionOwner() ||
-            item == null || !item.gameObject.activeInHierarchy)
+            item == null || !item.gameObject.activeInHierarchy ||
+            HasHeldBuildingPlacementPriority())
         {
             ClearInteractionPreview();
             return;
@@ -469,6 +488,18 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private bool IsGameplayInputLocked()
     {
         return gameController != null && gameController.IsGameplayInputLocked;
+    }
+
+    /// <summary>手持建筑进入放置模式后，放置优先于半径内所有普通世界交互。</summary>
+    private bool HasHeldBuildingPlacementPriority()
+    {
+        if (item == null)
+            return false;
+
+        hotBar ??= item.GetComponentInChildren<Inventory_HotBar>(true);
+        Item heldItem = hotBar?.CurentSelectItem;
+        Mod_Building building = heldItem?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+        return building != null && building.IsItemInInventory && building.IsPlacementModeActive;
     }
 
     #endregion

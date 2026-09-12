@@ -3,8 +3,8 @@ using FlatWorld.Networking;
 using MemoryPack;
 using UnityEngine;
 
-/// <summary>水质独立于容器身份，海水不能通过烧开变成饮用水。</summary>
-public enum VesselWaterQuality { Empty, Fresh, Drinkable, Sea }
+/// <summary>水质独立于容器身份；脏淡水可以直接饮用，也可以烧开成为干净饮用水，海水不能通过烧开变成饮用水。</summary>
+public enum VesselWaterQuality { Empty = 0, Dirty = 1, Drinkable = 2, Sea = 3 }
 
 /// <summary>一只陶罐的独立存档，默认 8 份水、每份对应 25 点饮水；处理中断保留进度。</summary>
 [Serializable, MemoryPackable]
@@ -66,6 +66,8 @@ public sealed class Mod_WaterVessel : Module, IInteractable
     {
         if (!GameNetwork.HasStateAuthority || !item.InHand || item.Owner == null)
             return;
+        if (item.itemMods.GetMod_ByID<Mod_Building>(ModText.Building)?.TryHandlePlacementAction() == true)
+            return;
         Item actor = item.Owner;
         if (!CanOperate(actor)) return;
         GameController controller = actor.itemMods.GetMod_ByID<GameController>(ModText.Controller);
@@ -73,7 +75,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
             out RuntimeTerrainTileSample sample, out TileData tile, out _) && tile is TileData_Water water &&
             FarmlandSystem.IsWithinReach(actor.transform.position, sample.WorldCell, reach))
         {
-            VesselWaterQuality quality = water.salt > 0.01f ? VesselWaterQuality.Sea : VesselWaterQuality.Fresh;
+            VesselWaterQuality quality = water.salt > 0.01f ? VesselWaterQuality.Sea : VesselWaterQuality.Dirty;
             if (Data.Amount > 0 && Data.Quality != quality)
                 ItemActionFeedback.Show(actor, "不同水质不能混装，请先倒空陶罐。");
             else
@@ -82,7 +84,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
                 Data.Amount = Data.Capacity;
                 Data.ProcessingSeconds = 0f;
                 Commit();
-                ItemActionFeedback.Show(actor, quality == VesselWaterQuality.Sea ? "装好了海水，可以加热制盐。" : "装好了淡水，烧开后再喝。");
+                ItemActionFeedback.Show(actor, quality == VesselWaterQuality.Sea ? "装好了海水，可以加热制盐。" : "装好了脏水，可以直接喝，也可以烧开。");
             }
             return;
         }
@@ -101,10 +103,12 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         return item.InHand ? item.Owner == actor :
             item.Owner == null && WorldTopologyRuntime.ShortestDelta(actor.transform.position, item.transform.position).sqrMagnitude <= reach * reach;
     }
-    /// <summary>只饮用处理好的水；水分已满时不消耗一份水。</summary>
+    /// <summary>脏淡水和烧开的饮用水都可饮用；水分已满时不消耗一份水。</summary>
     public bool Drink(Item actor)
     {
-        if (!CanOperate(actor) || Data.Quality != VesselWaterQuality.Drinkable || Data.Amount < 1)
+        if (!CanOperate(actor) ||
+            Data.Quality is not (VesselWaterQuality.Dirty or VesselWaterQuality.Drinkable) ||
+            Data.Amount < 1)
             return false;
         Mod_Food food = actor.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
         if (food == null || food.DrinkWater(waterPerServing, item) <= 0f)

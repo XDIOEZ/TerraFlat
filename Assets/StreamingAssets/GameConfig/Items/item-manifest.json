@@ -2,6 +2,16 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "portable_buildings",
+      "path": "shells/portable_buildings.json",
+      "enabled": true
+    },
+    {
+      "id": "mortar",
+      "path": "shells/mortar.json",
+      "enabled": true
+    },
+    {
       "id": "weapons",
       "path": "shells/weapons.json",
       "enabled": true

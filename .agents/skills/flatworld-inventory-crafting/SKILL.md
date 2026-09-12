@@ -21,6 +21,9 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 配方 JSON 是唯一真源；旧 Recipe/CookRecipe SO 只作 MOD 兼容，不恢复双重维护。
 - 内容工坊的普通合成使用不限长度的滚动材料清单，保存为连续的一维输入；载入旧网格配方时按材料身份归并数量，并保留 `amount=0` 的不消耗工具。只有热加工继续使用 3×3 位置画布。保存前必须使用运行时配方工厂校验整份启用目录，并保留已有配方的未知顶层字段。
 - 所有制作入口调用 `CraftingService`；匹配由 `CraftingRecipeMatcher`，扣料/产出由 `CraftingTransaction` 原子提交。
+- `Mod_Mortar` 每次有效捣击执行一份单原料、多产物配方，输入与输出共享动态 `Inventory`，统一由 `CraftingService` 原子扣料和写入，禁止整堆改 ID。提交前按全部产物预留空槽；事务优先合并可堆叠产物，剩余原料独立保留。事务通知期间合并刷新，避免槽位变化取消正在拖动的石棒；动态容量策略在 Load 恢复，槽位和内容独立持久化。
+- 石臼面板使用正式透明槽位模板动态克隆，数量增加不等于创建新槽；同类满堆或不同产物才占新格。空槽使用碗内轮廓投料，已有物品的整个槽位随重力移动，确保命中区与图标一致。可见物品分页，关闭面板只复位视觉，不清空库存。`ItemSlot_UI.ItemAddedAtPointer` 只在点击/拖放事务实际增加物品后发布位置反馈；石臼数量、种类或槽位扩容不能重排已有物品，合并投料只用无射线的图标表现下落，停稳保留落点。透明槽位通过 `ItemSlot_UI.selectionGraphic` 把选择/拖入描边指定到图标，不能对透明背景使用忽略 Alpha 的 Outline，否则会出现整块黄色方形。
+
 - 玩家手工台 `Mod_HandCraftTable` 与世界工作台 `Mod_MakeTable` 均使用 `RecipeType.Crafting`；配方通过可选 `requiredStation` 区分制作入口：留空表示任意普通制作入口，`handcraft` 表示随身手工，`workbench` 表示世界工作台。匹配器用 `CraftingCapabilities.StationId` 做能力过滤，MOD 可复用字符串 ID 扩展新工作站，禁止按具体配方 ID 硬编码。当前手工台固定 4 输入/2 输出，当前工作台固定 5 输入/2 输出，运行时与 Prefab 序列化槽位必须严格一致；槽位数属于具体工作站能力，未来工作站可声明更多输入槽，配方、内容工坊和普通合成匹配器不得设置全局材料数量上限。
 - 多产物必须全部放下才提交；失败不扣料、不部分产出。体积大于 1 的非堆叠产物每个单位必须独占一个容量足够的空槽，不能把 `amount > 1` 整组塞进单槽。`amount=0` 参与签名但不消耗。
 - `RecipeType.Crafting` 必须配置 `inputRule: "unordered"` 且 `allowMirror: false`；普通合成只比较材料身份与总量，同类材料可以集中堆叠或分散在任意输入槽。配方需求按当前输入的可满足子集匹配，额外放入的无关材料不得屏蔽候选，也不得在制作所选配方时被扣除；因此候选扫描配方目录即可覆盖输入材料的全部可制作组合。加热加工才允许有序、镜像和网格规则，并继续保持严格输入语义。
@@ -35,6 +38,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 槽位鼠标与触屏拖放必须复用 `ItemSlot_UI.OnMouseDragBegin` / `OnMouseDragDrop` 的来源事务：命中 `ItemSlot_UI` 时直接在起始槽与目标槽之间移动、合并或双向交换，异类交换必须同时校验双方库存接收规则与整堆容量，禁止把目标物品经 `Inventory_Hand` 中转；只有未命中槽位时才把整组转入 `Inventory_Hand`，后续手机点击按轻触方向处理：连续拿取方向下同类已有物品从槽位取一件，放置方向下空槽/同类槽向目标放一件，异类槽交换，长按空槽或同类槽则一次性放下手上整组；同类目标容量不足时余量留在起始槽，空槽起手才转交父级 `ScrollRect`。
 - 手机快捷栏轻触必须走独立 `OnTouchTap` 语义，只切换当前选中格或按单件规则取放；普通触屏拖放与桌面键鼠共用直接槽位事务，长按更久后的半组拖拽才以 `Inventory_Hand` 为来源。
 - 跟随指针的 `UI_Hand` 是纯视觉层：Canvas 排序固定占用全局顶层（32767），必须高于快捷栏、设置页和其它游戏 UI；CanvasGroup/子图形不得拦截目标槽位射线。直接槽位拖拽生成的 `InventoryDragGhost` 也必须使用独立顶层 Canvas，不能只靠 `SetAsLastSibling`，否则会被独立 Canvas 的快捷栏/模态页压住。世界手持物挂在快捷栏节点及其子节点末端。
+- `UI_Hand` 的跟随坐标必须优先读取 Input System 的 `Pointer.current`，保持鼠标、真实触屏与 Device Simulator 使用同一当前指针语义；不能在触点抬起后直接切到 `Mouse.current`，否则模拟触屏会把手持槽 UI 跳到另一套坐标系而看似消失。读取后仍需过滤 NaN/Infinity。
 - 快捷栏选中框属于当前槽位背景层，切换时必须重新挂到目标槽位并置为首个兄弟；数量文本和物品图标保持在其上方，不能依赖独立 Canvas 的任意 `sortingOrder`。
 - 玩家行囊的键鼠点击和滚轮无条件使用 `Inventory_Hand`，不能因携带槽为空或上次手柄操作留下的目标而回退快捷栏；桌面指针抬起实际进入 `OnDesktopTap`，只修改 `OnLeftClick` 不会恢复鼠标点击。PC 左键整组取放：空手按携带槽容量拿取，有物品时整组放置、同类合并或异类交换；不得转入 `OnTouchTap` 的单件语义，滚轮才逐件取放。点击与拖放共用整组跨库存事务，校验双向接收规则及容量、通知双方并同步快捷栏手持物；创造背包允许超量堆叠，但取出仍按目标容量与非堆叠规则拆分，余量保留原槽。快捷栏选中槽只参与手柄确认与角色当前装备，不参与 PC 背包交换。
 - 创造背包的无限格数由 `CreativeInventoryState` 存在玩家 `flatworld.creativeInventory` 命名空间，`Mod_Inventory.Load` 在初始化槽位前恢复到 `Inventory_Data` 的运行时策略，不改 MemoryPack 布局。库存事务通过 `NotifyItemDataChanged` 维护尾部空槽；容量预检必须纯只读并计入可动态扩容的空间。新增槽的 UI 只同步表现，不重新初始化库存业务事件；快捷栏部分拾取后的余量必须继续尝试主背包，最后统一发布拾取数量。
@@ -51,7 +55,8 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 新版农业统一通过 `FarmlandSystem` 查询 `ChunkTerrainData`，禁止返回旧 `Chunk.Map`；锄地进度属于地格而非锄头实例。水肥计算使用临时 `TileData_Farmland` 快照，成长或施肥后必须 `CommitSoil`，否则数据修改不会进入权威环境层。
 - 玩家播种作物由 `ChunkAgricultureRenderer` 管理，保存到独立的 `ChunkSaveRecord.AgricultureCells`；不得登记为 `ChunkNaturalItemRenderer` 的临时掉落物，否则区块解绑会回收且不保存。`ChunkView` 的同步/分帧保存入口均须抓取农业状态，退出世界不能当成收获删除快照。
 - 普通农作物使用 `CropShell + Mod_Crop + Mod_CropYield + Mod_CropVisual`：`Mod_Crop` 只保存两阶段权威状态并调度 `ICropHarvestAction`，产物表和其他收获副作用必须拆成独立动作模块。
-- `BerryCrop` 统一走普通 `CropShell + Mod_Crop + Mod_CropYield + Mod_CropVisual` 链，野外生态与耕地播种复用同一 Item 定义；药草、狗尾草等小型作物可继承 `BerryCrop` 后只覆盖成长参数与产物，禁止重新维护 `SmallCrop_Base` 或 `Bush` 双轨模板。
+- `BerryCrop` 继续让野外生态与耕地播种复用同一 `CropShell` Item 定义，但持续采果不能走一次性 `Mod_CropYield`：由 `Mod_Collectable` 同时实现 `ICropHarvestAction/ICropHarvestPolicy` 保存果实库存并保留成熟植株，单次交互严格消费 1 份库存并掉落 1 个果实，不使用全局掉落数量倍率放大单次采摘；`Mod_Production` 只在成熟且库存未满时周期补果，果实提示跟随库存显隐；继承得到的 `Mod_CropYield` 必须禁用，避免一次采摘销毁植株或额外掉落种子。普通一次性作物仍保持 `Mod_Crop + Mod_CropYield + Mod_CropVisual`。药草、狗尾草等一次性小型作物不要直接继承这套持续采果行为。
+- 野外自然生成、允许玩家用武器清除的小型作物统一继承 `WildCrop_Base`；该抽象定义负责成熟自然初态、通用 `DamageReceiver`、植被受击材质和独立 DamageReceiver Trigger，具体作物只按外形/耐久覆盖 HP 与伤害碰撞尺寸。仅种植链使用的萝卜、水稻不因该规则自动获得生命模块；具体死亡掉落仍由各物品顶层 `lootTableId` 定义，禁止把通用掉落塞进 `WildCrop_Base`。
 - 作物需要多张成长图时，在物品 `visual.spriteStates` 同时声明 `seedling/growing/mature`，由 `Mod_CropVisual` 根据 `normalizedGrowth` 派生表现阶段；不得为了中间画面给 `CropStage` 增加持久化阶段。只要声明任一阶段图就必须三张齐全，对象池卸载时恢复外壳原 Sprite。
 - 世界植株与收获物必须保留独立 Item ID；种下时把植株重置为幼苗，一次性作物成熟交互后由动作生成食物/种子并销毁植株，持续采果植株只扣果实库存；不能把世界植株直接改成食物实例。
 - `Mod_Grow` 继续承担树木与自然植物成长，并实现 `IPlantableCrop` 接入同一播种入口；水肥、天气与 `CropGrowthMultiplier` 在权威成长模块中各结算一次。

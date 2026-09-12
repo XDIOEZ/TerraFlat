@@ -1,3 +1,4 @@
+using System;
 using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
@@ -29,6 +30,10 @@ public sealed class WaterVesselPanel : MonoBehaviour
             current = UIManager.Instance.CreatePanelFromGameObject(GameRes.Instance.GetPrefab(PrefabKey)).GetComponent<WaterVesselPanel>();
         current.vessel = target;
         current.actor = owner;
+        BuildingPanelActions buildingActions = current.GetComponent<BuildingPanelActions>();
+        if (buildingActions == null)
+            throw new InvalidOperationException("陶罐面板缺少 BuildingPanelActions，正式 Prefab 未完成建筑操作绑定。");
+        buildingActions.Bind(target.item);
         current.panel.Open();
         current.Refresh();
     }
@@ -43,6 +48,7 @@ public sealed class WaterVesselPanel : MonoBehaviour
         transfer.onClick.AddListener(Transfer);
         panel.GetButton("倒空按钮").onClick.AddListener(Empty);
         panel.GetButton("关闭按钮").onClick.AddListener(Close);
+        panel.Closed += ClearTarget;
     }
     /// <summary>只在面板可见时刷新，离开目标或目标销毁时收起。</summary>
     private void Update()
@@ -56,14 +62,15 @@ public sealed class WaterVesselPanel : MonoBehaviour
     /// <summary>取得当前手持陶罐，转移方向固定为手持罐到面板中的罐。</summary>
     private Mod_WaterVessel GetHeldVessel() => actor?.GetComponentInChildren<Inventory_HotBar>()?.CurentSelectItem?
         .itemMods.GetMod_ByID<Mod_WaterVessel>(Mod_WaterVessel.ModuleId);
-    /// <summary>显示可区分的水质，未经处理的淡水与海水均不开放饮水。</summary>
+    /// <summary>显示可区分的水质；脏淡水允许直接饮用，烧开后变为干净饮用水，海水不能饮用。</summary>
     private void Refresh()
     {
-        string[] qualities = { "空罐", "淡水（需烧开）", "饮用水", "海水（可制盐）" };
+        string[] qualities = { "空罐", "脏水（可直接喝）", "饮用水", "海水（可制盐）" };
         status.text = FlatWorldLocalizationService.GetUiFormat("{0}　{1} / {2} 份\n加热进度：{3:0} 秒",
             FlatWorldLocalizationService.GetUiText(qualities[(int)vessel.Data.Quality]), vessel.Data.Amount,
             vessel.Data.Capacity, vessel.Data.ProcessingSeconds);
-        drink.interactable = vessel.Data.Quality == VesselWaterQuality.Drinkable && vessel.Data.Amount > 0;
+        drink.interactable = (vessel.Data.Quality is VesselWaterQuality.Dirty or VesselWaterQuality.Drinkable) &&
+                             vessel.Data.Amount > 0;
         Mod_WaterVessel source = GetHeldVessel();
         transfer.interactable = source != null && source != vessel && source.Data.Amount > 0 &&
             vessel.Data.Amount < vessel.Data.Capacity && (vessel.Data.Amount == 0 || source.Data.Quality == vessel.Data.Quality);
@@ -75,5 +82,7 @@ public sealed class WaterVesselPanel : MonoBehaviour
     /// <summary>按用户明确点击清空当前陶罐。</summary>
     private void Empty() { vessel.Empty(actor); Refresh(); }
     /// <summary>关闭后清理玩法引用。</summary>
-    private void Close() { panel.Close(); vessel = null; actor = null; }
+    private void Close() => panel.Close();
+    private void ClearTarget() { vessel = null; actor = null; }
+    private void OnDestroy() { if (panel != null) panel.Closed -= ClearTarget; }
 }

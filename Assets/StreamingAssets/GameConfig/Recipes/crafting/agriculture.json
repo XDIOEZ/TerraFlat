@@ -148,13 +148,13 @@
           "slot": 0,
           "match": "exact_item",
           "itemId": "Berry",
-          "amount": 1
+          "amount": 2
         }
       ],
       "outputs": [
         {
           "itemId": "Seed_Berry",
-          "amount": 2
+          "amount": 1
         }
       ],
       "actions": []
@@ -184,6 +184,7 @@
     {
       "id": "core:rice_dehusk",
       "displayName": "稻谷脱壳",
+      "requiredStation": "mortar",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "allowMirror": false,

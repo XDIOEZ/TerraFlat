@@ -8,7 +8,8 @@ using UnityEngine.Rendering;
 /// 资源种类、容量、自然初始库存和成熟提示均由物品 JSON 配置，不包含浆果丛等具体物品规则。
 /// </summary>
 public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
-    INaturalResourceInitializer, IProductionStockReceiver
+    INaturalResourceInitializer, IProductionStockReceiver, ICropHarvestAction,
+    ICropHarvestPolicy, IItemModuleDependencyBinder
 {
     #region 模块数据
 
@@ -68,8 +69,18 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
     private readonly Dictionary<string, RuntimeItemDefinition> itemDefinitionCache =
         new Dictionary<string, RuntimeItemDefinition>(StringComparer.OrdinalIgnoreCase);
     private SpriteRenderer ownerRenderer;
+    private Mod_Crop cropModule;
 
     public int CurrentStock => Data?.CurrentStock ?? 0;
+    public bool CanHarvest
+    {
+        get
+        {
+            EnsureMatureStockInitialized();
+            return Data != null && Data.CurrentStock > 0 && IsCropMatureOrStandalone();
+        }
+    }
+    public bool PreserveCropAfterHarvest => true;
 
     #endregion
 
@@ -88,6 +99,14 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
         EnsureDataContainer();
         Data.CurrentStock = Mathf.Clamp(Data.CurrentStock, 0, Mathf.Max(1, MaxStock));
 
+        if (cropModule != null)
+        {
+            cropModule.Matured -= HandleCropMatured;
+            cropModule.Matured += HandleCropMatured;
+            if (cropModule.Stage == CropStage.Mature && !Data.IsInitialized)
+                InitializeNaturalResource(unchecked((uint)item.itemData.Guid));
+        }
+
         RefreshIndicatorPresentation();
     }
 
@@ -95,6 +114,27 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
     {
         EnsureDataContainer();
         Data.CurrentStock = Mathf.Clamp(Data.CurrentStock, 0, Mathf.Max(1, MaxStock));
+    }
+
+    public override void Unload()
+    {
+        if (cropModule != null)
+            cropModule.Matured -= HandleCropMatured;
+        cropModule = null;
+    }
+
+    /// <summary>显式解析可选的作物成熟状态；同一实体最多只能有一个作物状态模块。</summary>
+    public void BindModuleDependencies(ItemMods modules)
+    {
+        cropModule = null;
+        foreach (Module module in modules.Mods.Values)
+        {
+            if (module is not Mod_Crop crop)
+                continue;
+            if (cropModule != null)
+                throw new InvalidOperationException("[Mod_Collectable] 同一物品存在多个 Mod_Crop，无法确定采集成熟状态。");
+            cropModule = crop;
+        }
     }
 
     #endregion
@@ -110,7 +150,9 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
     /// <summary>仅在库存未满时允许生产模块继续推进。</summary>
     public bool CanAcceptProduction(string itemId)
     {
+        EnsureMatureStockInitialized();
         return AcceptsProduction(itemId) && Data != null &&
+               IsCropMatureOrStandalone() &&
                Data.CurrentStock < Mathf.Max(1, MaxStock);
     }
 
@@ -153,14 +195,15 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
 
     public bool CanInteract(Item playerItem)
     {
-        return playerItem != null && Data != null && Data.CurrentStock > 0;
+        // 挂在作物上时由 Mod_Crop 统一仲裁交互，避免同一次输入重复采摘。
+        return cropModule == null && playerItem != null && CanHarvest;
     }
 
     public void OnInteractStart(Item playerItem)
     {
         if (playerItem == null)
             throw new ArgumentNullException(nameof(playerItem));
-        if (Data.CurrentStock <= 0)
+        if (cropModule != null || !CanHarvest)
             return;
 
         SpawnCollectedItem();
@@ -168,6 +211,17 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
 
     public void OnInteractCancel(Item playerItem)
     {
+    }
+
+    /// <summary>作为持续采果作物的收获动作，每次只扣一份库存且不销毁植株。</summary>
+    public void Execute(CropHarvestContext context)
+    {
+        if (context.CropItem != item)
+            throw new InvalidOperationException("[Mod_Collectable] 收获上下文与模块所属 Item 不一致。");
+        if (!CanHarvest)
+            throw new InvalidOperationException($"[Mod_Collectable] 作物 {item.itemData?.IDName} 当前没有可采集库存。");
+
+        SpawnCollectedItem();
     }
 
     /// <summary>生成一次采集掉落，并扣除一份库存。</summary>
@@ -188,22 +242,14 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
         collectedItem.Load();
         collectedItem.SetInHand(false);
 
-        int outputAmount = GameDifficultyService.ScaleRandomizedAmount(
-            1,
-            GameDifficultyService.Current.World.LootAmountMultiplier);
+        // 一次交互严格对应一份库存和一个采集物；难度掉落倍率不放大单次采摘数量。
+        const int outputAmount = 1;
         collectedItem.itemData.Stack.Amount = outputAmount;
         Data.CurrentStock--;
         Data.IsInitialized = true;
 
-        if (outputAmount <= 0)
-        {
-            collectedItem.DestroySelf();
-        }
-        else
-        {
-            ApplyParabolaThrow(collectedItem, startPosition);
-            GetComponentInParent<ChunkNaturalItemRenderer>(true)?.RegisterTransientItem(collectedItem);
-        }
+        ApplyParabolaThrow(collectedItem, startPosition);
+        GetComponentInParent<ChunkNaturalItemRenderer>(true)?.RegisterTransientItem(collectedItem);
 
         RefreshIndicatorVisual();
     }
@@ -368,7 +414,9 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
 
     private void RefreshIndicatorVisual()
     {
-        int visibleCount = Mathf.Min(CurrentStock, IndicatorRenderers?.Count ?? 0);
+        int visibleCount = IsCropMatureOrStandalone()
+            ? Mathf.Min(CurrentStock, IndicatorRenderers?.Count ?? 0)
+            : 0;
         if (IndicatorRenderers == null)
             return;
 
@@ -432,7 +480,32 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
     private void ResetPoolState()
     {
         Data = new CollectableModuleData { ID = ModuleId };
+        cropModule = null;
         RefreshIndicatorVisual();
+    }
+
+    /// <summary>植株第一次成熟时建立首批果实，之后由生产模块周期补充库存。</summary>
+    private void HandleCropMatured(Mod_Crop source)
+    {
+        if (source != cropModule)
+            return;
+
+        EnsureMatureStockInitialized();
+        RefreshIndicatorPresentation();
+    }
+
+    private void EnsureMatureStockInitialized()
+    {
+        if (cropModule == null || cropModule.Stage != CropStage.Mature ||
+            Data == null || Data.IsInitialized || item?.itemData == null)
+            return;
+
+        InitializeNaturalResource(unchecked((uint)item.itemData.Guid));
+    }
+
+    private bool IsCropMatureOrStandalone()
+    {
+        return cropModule == null || cropModule.Stage == CropStage.Mature;
     }
 
     private void EnsureDataContainer()

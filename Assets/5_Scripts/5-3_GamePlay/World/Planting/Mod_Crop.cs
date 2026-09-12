@@ -132,6 +132,7 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IItemModul
     #region 运行时缓存
 
     private ICropHarvestAction[] harvestActions = Array.Empty<ICropHarvestAction>();
+    private ICropHarvestPolicy harvestPolicy;
     private bool harvestInProgress;
 
     #endregion
@@ -156,7 +157,24 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IItemModul
         ModData.ReadData(ref Data);
         NormalizeRuntimeState();
 
-        harvestActions = item.GetComponentsInChildren<ICropHarvestAction>(true);
+        ICropHarvestAction[] discoveredActions = item.GetComponentsInChildren<ICropHarvestAction>(true);
+        var activeActions = new List<ICropHarvestAction>(discoveredActions.Length);
+        ICropHarvestPolicy resolvedPolicy = null;
+        foreach (ICropHarvestAction harvestAction in discoveredActions)
+        {
+            if (harvestAction is Module module && module._Data != null && !module._Data.isRunning)
+                continue;
+
+            activeActions.Add(harvestAction);
+            if (harvestAction is not ICropHarvestPolicy policy)
+                continue;
+            if (resolvedPolicy != null)
+                throw new InvalidOperationException($"[Mod_Crop] 作物 {item.itemData?.IDName} 配置了多个 ICropHarvestPolicy，收获生命周期不明确。");
+            resolvedPolicy = policy;
+        }
+
+        harvestActions = activeActions.ToArray();
+        harvestPolicy = resolvedPolicy;
         if (harvestActions.Length == 0)
             throw new MissingComponentException($"[Mod_Crop] 作物 {item.itemData?.IDName} 缺少 ICropHarvestAction。");
 
@@ -175,6 +193,7 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IItemModul
         environmentConditions.Clear();
         ClimateStress = 0f;
         harvestActions = Array.Empty<ICropHarvestAction>();
+        harvestPolicy = null;
         harvestInProgress = false;
         GrowthChanged = null;
         StageChanged = null;
@@ -390,7 +409,8 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IItemModul
                Data.stage == CropStage.Mature &&
                !Data.isHarvested &&
                !harvestInProgress &&
-               harvestActions.Length > 0;
+               harvestActions.Length > 0 &&
+               (harvestPolicy?.CanHarvest ?? true);
     }
 
     /// <summary>历史状态尚未结算时暂缓收获，避免重载首帧绕过气候死亡。</summary>
@@ -402,9 +422,13 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IItemModul
         if (!CanInteract(playerItem))
             return;
 
+        bool preserveCrop = harvestPolicy?.PreserveCropAfterHarvest ?? false;
         harvestInProgress = true;
-        Data.isHarvested = true;
-        SetGrowthStatus(CropGrowthStatus.Harvested);
+        if (!preserveCrop)
+        {
+            Data.isHarvested = true;
+            SetGrowthStatus(CropGrowthStatus.Harvested);
+        }
         CropHarvestContext context = new(item, playerItem, item.transform.position);
 
         try
@@ -413,7 +437,15 @@ public sealed class Mod_Crop : Module, IInteractable, IPlantableCrop, IItemModul
                 harvestAction.Execute(context);
 
             Harvested?.Invoke(context);
-            item.DestroySelf();
+            if (preserveCrop)
+            {
+                Data.isHarvested = false;
+                SetGrowthStatus(CropGrowthStatus.Mature, false);
+            }
+            else
+            {
+                item.DestroySelf();
+            }
         }
         finally
         {

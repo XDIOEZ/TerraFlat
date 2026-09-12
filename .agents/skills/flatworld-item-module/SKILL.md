@@ -36,6 +36,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 本体 Item/Actor 的 Sprite、材质、动画和独立外壳请求由 `GameRes.ResourceAssets` 持有；新增加载分支不能丢失句柄所有权。`shellPrefab` 引用通用目录，独立加载只接受 `shellAddress`，禁止从编辑器 `sourcePrefab` 推导运行时外壳。
 - 每个具体定义必须独立填写默认显示名 `gameName`；`id` 与名称翻译键分别承担业务引用和界面查询职责。继承不能把父物品的名称或翻译键带入子物品，编辑器也不能把 GameObject 名和 `ItemData.ToString()` 写成显示名与说明。
 - JSON 通用 Item Shell 的 SpriteRenderer 必须使用 `SpriteSortPoint.Pivot`；运行时换图也要重新写入该值，透明排序锚点以 Sprite 导入 Pivot 为唯一权威。
+- 通用 `Module_Production` Prefab 不能内置 Apple 等具体产物；具体产物由物品 JSON 或专用 Prefab override 明确配置。`ProductionList` 的产物、数量、周期等属于当前定义；读取模块存档时只恢复 `ProductionTime`、`CurrentProductionCount`、`IsInitialized` 等运行时进度，禁止让 BitData 整体覆盖当前配置，否则内容改动后会继续生产历史产物。
 - 世界物品若由主体 SpriteRenderer + 子提示/装饰 SpriteRenderer 组成，子层级需要 `sortingOrder` 偏移时必须用根 `SortingGroup` 把整件物品作为一个 Y 深度单元；禁止让子 Renderer 的正偏移直接跨过角色等外部实体的世界排序。
 - 世界物品可用 `visual.materialAddress` 声明共享 Addressable 材质；运行时定义必须在对象池复用时显式恢复“配置材质或外壳默认材质”，避免共用 Shell 把上一个物品的材质带给下一个实例。
 - `GameRes.CreateItemData`、群系生成与生产模块只接受 Manifest 中存在的 JSON 物品 ID；缺失定义必须直接报错，禁止回退到同名 Prefab。`sourcePrefab` 用于编辑器迁移定位与通用 Prefab 目录的冗余排除，不得作为运行时加载依赖。
@@ -49,6 +50,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - JSON 的 `modules.*.prefab` 是模块变体的唯一实例化地址；多个专用 Prefab 可以共用同一玩法 `ModuleData.ID`，`GameRes` 只能为唯一候选登记该 ID 的兼容别名，禁止按加载顺序静默覆盖。
 - `ItemPicker` 不能只依赖 `OnTriggerEnter2D`：掉落/飞行或联机预约可能让物品先以不可拾取状态进入范围，状态恢复后应补偿检查，并限制为一次性请求以避免部分入包或网络请求重复执行。
 - 掉落拾取时序由 `Mod_Droping` 的轨迹状态决定：必须先移除掉落模块，再把 `CanBePickedUp` 设为 true；拾取器不能只信任这个数据标志。
+- `WorldTopologyProxySource` 会覆盖大量运行时 Item，碰撞体角色筛选必须在注册/对象池重绑时完成并缓存；禁止在 `FixedUpdate` 中对每个 Collider 重复 `GetComponent` 或重新扫描子层级，否则实体数量一高会直接放大为主线程尖峰。
 
 ## 验证
 

@@ -47,7 +47,7 @@ MonoBehaviour:
   item: {fileID: 0}
   ProductionList:
   - itemPrefab: {fileID: 3926578369279844245, guid: 4ed054f92372bc644ae2a3773e84e923, type: 3}
-    itemName: Apple
+    itemName:
     itemCountMin: 1
     itemCountMax: 1
     MaxProductionTime: 100

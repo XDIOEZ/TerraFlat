@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:stone_mortar",
+      "displayName": "石臼",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "allowMirror": false,
+      "inputs": [{ "slot": 0, "match": "exact_item", "itemId": "Ore_Stone", "amount": 4 }],
+      "outputs": [{ "itemId": "StoneMortar", "amount": 1 }],
+      "actions": []
+    }
+  ]
+}

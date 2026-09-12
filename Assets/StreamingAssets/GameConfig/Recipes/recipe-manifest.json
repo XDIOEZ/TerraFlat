@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "crafting/mortar",
+      "path": "crafting/mortar.json",
+      "enabled": true
+    },
+    {
       "id": "crafting/survival",
       "path": "crafting/survival.json",
       "enabled": true

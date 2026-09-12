@@ -34,6 +34,9 @@ public class ItemSlot_UI : MonoBehaviour,
     [Tooltip("显示当前物体的图标")]
     public Image image;
 
+    [Tooltip("可选的选中描边图形；透明槽位指定物品图标，避免描边绘出整块透明背景")]
+    public Graphic selectionGraphic;
+
     [Tooltip("显示当前物体的数量")]
     public TMP_Text text;
 
@@ -68,6 +71,30 @@ public class ItemSlot_UI : MonoBehaviour,
 
     /// <summary>桌面左键入口；背包执行整组取放，快捷栏空手时选中槽位。</summary>
     public System.Action<int> OnDesktopTap { get; set; }
+
+    /// <summary>指针事务成功增加物品后发布表现事件，不参与库存扣料或合并。</summary>
+    public event System.Action<ItemSlot_UI, Vector2, Camera, bool, float> ItemAddedAtPointer;
+    private Vector2 interactionPoint;
+    private Camera interactionCamera;
+
+    private void RememberPointer(PointerEventData data)
+    {
+        interactionPoint = data.position;
+        interactionCamera = data.pressEventCamera ?? data.enterEventCamera;
+    }
+
+    private void PerformPointerAction(System.Action action)
+    {
+        if (ItemAddedAtPointer == null) { action(); return; }
+        ItemData before = GetSlotData()?.itemData;
+        string previousId = before?.IDName;
+        float previousAmount = before?.Stack?.Amount ?? 0f;
+        action();
+        ItemData after = GetSlotData()?.itemData;
+        float added = (after?.Stack?.Amount ?? 0f) - (after?.IDName == previousId ? previousAmount : 0f);
+        if (after != null && added > 0)
+            ItemAddedAtPointer?.Invoke(this, interactionPoint, interactionCamera, before != null, added);
+    }
 
     private GameObject currentMenuInstance;
 
@@ -145,6 +172,7 @@ public class ItemSlot_UI : MonoBehaviour,
         OnShiftQuickTransfer.Clear();
         OnMouseDragBegin = null;
         OnMouseDragDrop = null;
+        ItemAddedAtPointer = null;
         OnTouchTap = null;
         OnTouchLongPress = null;
         OnTouchWorldLongPress = null;
@@ -205,6 +233,7 @@ public class ItemSlot_UI : MonoBehaviour,
 
     public void Click(PointerEventData eventData)
     {
+        RememberPointer(eventData);
         if (eventData.button == PointerEventData.InputButton.Left)
         {
             if (IsTouchPointer(eventData))
@@ -224,23 +253,26 @@ public class ItemSlot_UI : MonoBehaviour,
     private void HandleTouchTap()
     {
         // 手机轻触必须使用独立的单件事务入口，未绑定时也不能回退到整堆交换。
-        OnTouchTap?.Invoke(slotIndex);
+        PerformPointerAction(() => OnTouchTap?.Invoke(slotIndex));
     }
 
     private void HandleTouchLongPress()
     {
-        OnTouchLongPress?.Invoke(slotIndex);
+        PerformPointerAction(() => OnTouchLongPress?.Invoke(slotIndex));
     }
 
     private void HandleDesktopTap()
     {
-        OnDesktopTap?.Invoke(slotIndex);
+        PerformPointerAction(() => OnDesktopTap?.Invoke(slotIndex));
     }
 
     /// <summary>让当前目标槽尝试提交指定拖拽事务。</summary>
-    private bool HandleMouseDragDrop(InventoryDragTransaction transaction)
+    private bool HandleMouseDragDrop(InventoryDragTransaction transaction, PointerEventData data)
     {
-        return OnMouseDragDrop?.Invoke(slotIndex, transaction) == true;
+        RememberPointer(data);
+        bool accepted = false;
+        PerformPointerAction(() => accepted = OnMouseDragDrop?.Invoke(slotIndex, transaction) == true);
+        return accepted;
     }
 
     #endregion
@@ -275,6 +307,7 @@ public class ItemSlot_UI : MonoBehaviour,
     #region 接口实现
     public void OnPointerDown(PointerEventData eventData)
     {
+        RememberPointer(eventData);
         bool isTouch = IsTouchPointer(eventData);
         if (eventData.button == PointerEventData.InputButton.Left && !isTouch)
         {
@@ -346,6 +379,7 @@ public class ItemSlot_UI : MonoBehaviour,
 
     public void OnPointerUp(PointerEventData eventData)
     {
+        RememberPointer(eventData);
         if (eventData.button == PointerEventData.InputButton.Left && eventData.pointerId == touchPointerId)
         {
             bool shouldTap = !touchMovedTooFar && !touchLongPressTriggered;
@@ -489,7 +523,7 @@ public class ItemSlot_UI : MonoBehaviour,
                 ItemSlot_UI touchTargetSlot = FindSlotUnderPointer(eventData);
                 bool hasTouchTarget = touchTargetSlot != null && touchTargetSlot.isActiveAndEnabled;
                 if (hasTouchTarget)
-                    touchTargetSlot.HandleMouseDragDrop(activeDragTransaction);
+                    touchTargetSlot.HandleMouseDragDrop(activeDragTransaction, eventData);
                 CompleteActiveDrag(!hasTouchTarget);
                 touchItemDragActive = false;
                 touchPressStartedWithItem = false;
@@ -512,7 +546,7 @@ public class ItemSlot_UI : MonoBehaviour,
         ItemSlot_UI targetSlot = FindSlotUnderPointer(eventData);
         bool hasTarget = targetSlot != null && targetSlot.isActiveAndEnabled;
         if (hasTarget)
-            targetSlot.HandleMouseDragDrop(activeDragTransaction);
+            targetSlot.HandleMouseDragDrop(activeDragTransaction, eventData);
         CompleteActiveDrag(!hasTarget);
         mousePressStartedWithItem = false;
         mouseDragActive = false;
@@ -702,10 +736,10 @@ public class ItemSlot_UI : MonoBehaviour,
         if (selectionOutline != null && selectionOutlineBaselineCaptured)
             return;
 
-        selectionOutline = GetComponent<Outline>();
+        selectionOutline = selectionGraphic != null ? selectionGraphic.GetComponent<Outline>() : GetComponent<Outline>();
         if (selectionOutline == null)
         {
-            Image targetImage = GetComponent<Image>() ?? image;
+            Graphic targetImage = selectionGraphic != null ? selectionGraphic : (GetComponent<Image>() ?? image);
             if (targetImage != null)
             {
                 selectionOutline = targetImage.GetComponent<Outline>();
@@ -776,6 +810,20 @@ public class ItemSlot_UI : MonoBehaviour,
         ghostImage.preserveAspect = true;
         ghostImage.raycastTarget = false;
         ghostImage.color = new Color(1f, 1f, 1f, 0.82f);
+        // 复用来源槽的数量样式，数量与图标共用顶层 Canvas 和拖拽生命周期。
+        TMP_Text ghostAmount = Instantiate(text, mouseDragGhost);
+        ghostAmount.name = "拖拽数量";
+        ghostAmount.gameObject.SetActive(true);
+        ghostAmount.enabled = true;
+        ghostAmount.raycastTarget = false;
+        ghostAmount.text = activeDragTransaction.DraggedAmount.ToString("0.##");
+        RectTransform amountRect = ghostAmount.rectTransform;
+        amountRect.anchorMin = amountRect.anchorMax = amountRect.pivot = new Vector2(1f, 0f);
+        amountRect.anchoredPosition = new Vector2(2f, -2f);
+        amountRect.sizeDelta = new Vector2(Mathf.Max(64f, mouseDragGhost.sizeDelta.x), 28f);
+        amountRect.localScale = Vector3.one;
+        amountRect.localRotation = Quaternion.identity;
+        ghostAmount.alignment = TextAlignmentOptions.BottomRight;
         PositionMouseDragGhost(screenPosition);
     }
 

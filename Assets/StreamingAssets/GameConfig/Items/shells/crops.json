@@ -168,8 +168,136 @@
       }
     },
     {
+      "id": "WildCrop_Base",
+      "abstract": true,
+      "parent": "Crop_Base",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "volume": 1.0,
+      "canBePickedUp": false,
+      "tags": [],
+      "visual": {
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.7,
+            "y": 0.65
+          }
+        }
+      },
+      "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 30.0,
+              "MaxHp": 30.0,
+              "UseBodyPartHealth": false,
+              "DefenseValues": {
+                "Cutting": 0.0,
+                "Piercing": 0.0,
+                "Chopping": 0.0,
+                "Blunt": 0.0
+              },
+              "AttackersUIDs": [],
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0
+            },
+            "impactAudioMaterial": 2,
+            "healthBarTopPadding": 0.08,
+            "healthBarWorldScale": 0.4,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 0.7,
+                "y": 0.65
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
+        "crop": {
+          "parameters": {
+            "Data": {
+              "stage": 1,
+              "normalizedGrowth": 1.0,
+              "isPlanted": false,
+              "plantedTilePosition": {
+                "x": 0,
+                "y": 0
+              },
+              "isHarvested": false,
+              "growthStatus": 4
+            }
+          }
+        }
+      }
+    },
+    {
       "id": "MushroomCrop",
-      "parent": "RadishCrop",
+      "parent": "WildCrop_Base",
       "gameName": "蘑菇-农作物",
       "description": "生长在阴暗地下的蘑菇；成熟后交互即可采集。",
       "visual": {
@@ -190,6 +318,20 @@
         }
       },
       "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "$collider2D": {
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 0.8,
+                "y": 0.75
+              }
+            }
+          }
+        },
         "crop": {
           "parameters": {
             "growthDurationSeconds": 420.0,
@@ -235,7 +377,7 @@
     },
     {
       "id": "TwineCrop",
-      "parent": "Crop_Base",
+      "parent": "WildCrop_Base",
       "gameName": "藤蔓-农作物",
       "description": "自然生长的藤蔓；成熟后交互可采集柔韧的藤蔓。",
       "durability": 1.0,
@@ -287,6 +429,20 @@
         }
       },
       "modules": {
+        "生命值系统模块": {
+          "parameters": {
+            "$collider2D": {
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 0.75,
+                "y": 0.75
+              }
+            }
+          }
+        },
         "crop": {
           "parameters": {
             "Data": {
@@ -323,9 +479,10 @@
     },
     {
       "id": "BerryCrop",
-      "parent": "RadishCrop",
+      "parent": "WildCrop_Base",
       "gameName": "浆果丛-农作物",
-      "description": "可自然生长或种在耕地中的浆果丛；成熟后交互采收。",
+      "description": "可自然生长或种在耕地中的浆果丛；成熟后可反复采摘，果实会周期再生。",
+      "lootTableId": "BerryCrop_Default",
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/TX Plant.png[GrassLand_6]",
         "collider": {
@@ -340,6 +497,65 @@
         }
       },
       "modules": {
+        "生命值系统模块": {
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Hp": 60.0,
+              "MaxHp": 60.0,
+              "UseBodyPartHealth": false,
+              "DefenseValues": {
+                "Cutting": 0.0,
+                "Piercing": 0.0,
+                "Chopping": 0.0,
+                "Blunt": 0.0
+              },
+              "AttackersUIDs": [],
+              "DamageInterval": 0.12,
+              "DestroyDelay": 0.0
+            },
+            "impactAudioMaterial": 2,
+            "healthBarTopPadding": 0.08,
+            "healthBarWorldScale": 0.45,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            },
+            "$collider2D": {
+              "type": "BoxCollider2D",
+              "enabled": true,
+              "isTrigger": true,
+              "offset": {
+                "x": 0.0,
+                "y": 0.4
+              },
+              "size": {
+                "x": 0.8,
+                "y": 0.8
+              },
+              "edgeRadius": 0.0
+            }
+          }
+        },
         "crop": {
           "parameters": {
             "growthDurationSeconds": 420
@@ -353,6 +569,7 @@
           }
         },
         "cropYield": {
+          "enabled": false,
           "parameters": {
             "outputs": [
               {
@@ -360,14 +577,80 @@
                 "minAmount": 2,
                 "maxAmount": 4,
                 "probability": 1
-              },
-              {
-                "itemId": "Seed_Berry",
-                "minAmount": 1,
-                "maxAmount": 2,
-                "probability": 1
               }
             ]
+          }
+        },
+        "collectable": {
+          "prefab": "Module_Collectable",
+          "id": "采集模块",
+          "enabled": true,
+          "data": {
+            "CurrentStock": 0,
+            "IsInitialized": false
+          },
+          "parameters": {
+            "CollectItemId": "Berry",
+            "MaxStock": 12,
+            "NaturalInitialStockMin": 1,
+            "NaturalInitialStockMax": 2,
+            "SpawnRadius": 1.2,
+            "ThrowDuration": 0.5,
+            "ThrowBezierOffset": 0.8,
+            "ThrowArcHeight": 0.6,
+            "IndicatorLocalPositions": [
+              {
+                "x": 0.25600004,
+                "y": 0.549,
+                "z": 0.0
+              },
+              {
+                "x": -0.11899996,
+                "y": 0.7,
+                "z": 0.0
+              },
+              {
+                "x": -0.28900003,
+                "y": 0.389,
+                "z": 0.0
+              }
+            ],
+            "IndicatorScale": 0.2859,
+            "FollowOwnerRendererSorting": true,
+            "IndicatorSortingOrderOffset": 1
+          }
+        },
+        "production": {
+          "prefab": "Module_Production",
+          "id": "生产模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "ProductionList": [
+              {
+                "itemName": "Berry",
+                "itemCountMin": 6,
+                "itemCountMax": 6,
+                "MaxProductionTime": 405.0,
+                "ProductionTime": 0.0,
+                "MaxProductionCount": -1,
+                "CurrentProductionCount": 0,
+                "ThrowItem": false,
+                "StoreInModule": true,
+                "DestroySelf": false,
+                "SpawnProbability": 1.0,
+                "Random_ProductionTime": {
+                  "x": 0.0,
+                  "y": 405.0
+                },
+                "IsInitialized": false
+              }
+            ],
+            "ProductionSpeed": 1.0,
+            "UseCropGrowthMultiplier": true
           }
         }
       }

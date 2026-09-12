@@ -84,11 +84,24 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
 
     public override void Load()
     {
-        _ModDataMemoryPackable.ReadData(ref ProductionList);
+        // ProductionList 的产物、数量、周期等属于当前 Prefab/JSON 配置；存档只能恢复运行时进度。
+        // 直接把旧 BitData 整体反序列化回 ProductionList 会让历史配置（例如旧 Apple）覆盖当前定义。
+        List<ItemProductionData> configuredProductionList = ProductionList ?? new List<ItemProductionData>();
+        List<ItemProductionData> savedProductionList = null;
+        _ModDataMemoryPackable.ReadData(ref savedProductionList);
+        RestoreRuntimeProgress(configuredProductionList, savedProductionList);
+        ProductionList = configuredProductionList;
 
         stockReceivers = item.GetComponentsInChildren<IProductionStockReceiver>(true);
         foreach (ItemProductionData data in ProductionList)
         {
+            if (string.IsNullOrWhiteSpace(data.itemName))
+            {
+                throw new System.InvalidOperationException(
+                    $"[Mod_Production] 物品 {item.itemData.IDName} 的生产条目缺少 itemName，" +
+                    "通用生产模块必须由具体 Prefab 或 JSON 显式配置产物。");
+            }
+
             if (data.StoreInModule && !HasStockReceiver(data.itemName))
             {
                 throw new MissingComponentException(
@@ -103,6 +116,59 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
     public override void Save()
     {
         _ModDataMemoryPackable.WriteData(ProductionList);
+    }
+
+    /// <summary>只从存档恢复生产进度；当前定义中的产物与生产规则始终保持权威。</summary>
+    private static void RestoreRuntimeProgress(
+        List<ItemProductionData> configured,
+        List<ItemProductionData> saved)
+    {
+        if (configured == null || configured.Count == 0 || saved == null || saved.Count == 0)
+            return;
+
+        bool[] consumed = new bool[saved.Count];
+        for (int configuredIndex = 0; configuredIndex < configured.Count; configuredIndex++)
+        {
+            ItemProductionData current = configured[configuredIndex];
+            if (current == null || string.IsNullOrWhiteSpace(current.itemName))
+                continue;
+
+            int savedIndex = FindSavedEntry(saved, consumed, current.itemName, configuredIndex);
+            if (savedIndex < 0)
+                continue;
+
+            ItemProductionData runtime = saved[savedIndex];
+            consumed[savedIndex] = true;
+            current.ProductionTime = Mathf.Max(0f, runtime.ProductionTime);
+            current.CurrentProductionCount = Mathf.Max(0, runtime.CurrentProductionCount);
+            current.IsInitialized = runtime.IsInitialized;
+        }
+    }
+
+    /// <summary>优先按同位置同产物匹配，再按产物 ID 匹配，避免旧配置串到新产物。</summary>
+    private static int FindSavedEntry(
+        List<ItemProductionData> saved,
+        bool[] consumed,
+        string itemName,
+        int preferredIndex)
+    {
+        if (preferredIndex >= 0 && preferredIndex < saved.Count &&
+            !consumed[preferredIndex] &&
+            saved[preferredIndex] != null &&
+            string.Equals(saved[preferredIndex].itemName, itemName, System.StringComparison.OrdinalIgnoreCase))
+        {
+            return preferredIndex;
+        }
+
+        for (int index = 0; index < saved.Count; index++)
+        {
+            if (consumed[index] || saved[index] == null)
+                continue;
+            if (string.Equals(saved[index].itemName, itemName, System.StringComparison.OrdinalIgnoreCase))
+                return index;
+        }
+
+        return -1;
     }
 
     public override void ModUpdate(float deltaTime)
@@ -302,7 +368,7 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
         foreach (var data in ProductionList)
         {
             data.SpawnProbability = Mathf.Clamp01(data.SpawnProbability);
-            if (string.IsNullOrWhiteSpace(data.itemName))
+            if (string.IsNullOrWhiteSpace(data.itemName) && gameObject.scene.IsValid())
                 Debug.LogError("生产条目必须填写 JSON 物品 ID", this);
 
             // 确保最小值不大于最大值

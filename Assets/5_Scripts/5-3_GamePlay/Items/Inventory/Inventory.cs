@@ -21,14 +21,19 @@ public sealed class InventoryDragTransaction
     /// <summary>拖拽时是否需要隐藏来源槽内容，避免原物品与拖拽图标重复显示。</summary>
     public bool HideSourceVisual { get; private set; }
 
+    /// <summary>本次实际拖动数量，半组拖拽使用拆分后的数量。</summary>
+    public float DraggedAmount { get; }
+
     /// <summary>创建一次可提交、可按需转入手部槽的拖拽事务。</summary>
     public InventoryDragTransaction(
+        float draggedAmount,
         Func<Inventory, int, bool> dropHandler,
         Func<bool> prepareFallbackHandler,
         Func<Inventory, int, bool> fallbackDropHandler,
         bool hideSourceVisual,
         bool fallbackPrepared = false)
     {
+        DraggedAmount = draggedAmount;
         _dropHandler = dropHandler;
         _prepareFallbackHandler = prepareFallbackHandler;
         _fallbackDropHandler = fallbackDropHandler;
@@ -977,6 +982,7 @@ public class Inventory
 
         ItemData draggedItem = handSlot.itemData;
         return new InventoryDragTransaction(
+            draggedItem.Stack.Amount,
             (targetInventory, targetIndex) =>
                 handInventory.TryDropSlotTo(handSlot, draggedItem, targetInventory, targetIndex),
             null,
@@ -1039,6 +1045,7 @@ public class Inventory
         ItemData fallbackItem = null;
 
         return new InventoryDragTransaction(
+            draggedItem.Stack.Amount,
             (targetInventory, targetIndex) =>
                 TryDropSlotTo(sourceSlot, draggedItem, targetInventory, targetIndex),
             () => TryMoveDraggedSlotToHand(
