@@ -184,7 +184,7 @@ public static partial class RuntimeUIPrefabBuilder
 
         UpdateExistingPrefab(MainMenuCoreRoot + "UI_ActionList.prefab", ConfigureSettingsActionListPages);
         UpdateExistingPrefab(InventoryPanelsRoot + "UI_Bag.prefab", AddInventorySortButton);
-        UpdateExistingPrefab(InventoryComponentsRoot + "UI_Slot.prefab", ConfigureItemSlotVisualLayers);
+        UpdateExistingPrefab(InventoryComponentsRoot + "UI_Slot.prefab", AddCraftingPreviewLayers);
         UpdateExistingWorldPrefab(NetworkPlayerPrefab, AddNetworkPlayerNameLabel);
         UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerBuffStatusHUD);
         UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerQuestTrackerHUD);
@@ -759,15 +759,15 @@ public static partial class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>构建不拦截输入的右上角保存状态卡片，默认隐藏并由 GameSaveStatusHUD 控制显隐。</summary>
+    /// <summary>构建不拦截输入的顶部居中保存状态文本，默认隐藏并由 GameSaveStatusHUD 控制显隐。</summary>
     private static GameObject BuildSaveStatusHUD()
     {
         GameObject root = CreateUIObject(RuntimeUIPrefabKeys.SaveStatus, null, typeof(CanvasGroup));
         RectTransform rootRect = root.GetComponent<RectTransform>();
-        rootRect.anchorMin = new Vector2(1f, 1f);
-        rootRect.anchorMax = new Vector2(1f, 1f);
-        rootRect.pivot = new Vector2(1f, 1f);
-        rootRect.anchoredPosition = new Vector2(-32f, -118f);
+        rootRect.anchorMin = new Vector2(0.5f, 1f);
+        rootRect.anchorMax = new Vector2(0.5f, 1f);
+        rootRect.pivot = new Vector2(0.5f, 1f);
+        rootRect.anchoredPosition = new Vector2(0f, -118f);
         rootRect.sizeDelta = new Vector2(260f, 52f);
 
         CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
@@ -775,26 +775,12 @@ public static partial class RuntimeUIPrefabBuilder
         canvasGroup.interactable = false;
         canvasGroup.blocksRaycasts = false;
 
-        Image background = CreateImage("背景", root.transform, new Color(0.025f, 0.043f, 0.058f, 0.94f));
-        background.raycastTarget = false;
-        Stretch(background.rectTransform);
-        AddOutline(background, new Color(0.83f, 0.49f, 0.23f, 0.48f));
-
-        Image accent = CreateImage("强调线", root.transform, Amber);
-        accent.raycastTarget = false;
-        RectTransform accentRect = accent.rectTransform;
-        accentRect.anchorMin = new Vector2(0f, 0f);
-        accentRect.anchorMax = new Vector2(0f, 1f);
-        accentRect.pivot = new Vector2(0f, 0.5f);
-        accentRect.anchoredPosition = Vector2.zero;
-        accentRect.sizeDelta = new Vector2(4f, -14f);
-
         TextMeshProUGUI status = CreateText("保存状态文本", root.transform, "正在保存…", 16f, Cream);
         status.fontStyle = FontStyles.Bold;
-        status.alignment = TextAlignmentOptions.MidlineLeft;
+        status.alignment = TextAlignmentOptions.Center;
         status.enableWordWrapping = false;
         status.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopStretch(status.rectTransform, new Vector2(18f, 0f), new Vector2(-14f, 0f));
+        Stretch(status.rectTransform);
         return root;
     }
 
@@ -2755,12 +2741,6 @@ public static partial class RuntimeUIPrefabBuilder
         ConfigureButtonVisual(button, false, "整理");
     }
 
-    internal static void ConfigureItemSlotVisualLayers(GameObject root)
-    {
-        AddCraftingPreviewLayers(root);
-        EnsureTouchLongPressProgress(root.transform, root.GetComponent<ItemSlot_UI>());
-    }
-
     /// <summary>仅维护制作输出预览图层；嵌入式制作槽位仍可复用这一入口。</summary>
     internal static void AddCraftingPreviewLayers(GameObject root)
     {
@@ -2802,7 +2782,7 @@ public static partial class RuntimeUIPrefabBuilder
     }
 
     /// <summary>为库存槽固化手机整组放置的长按进度视觉，尺寸略大于手部槽以露出手指边缘。</summary>
-    private static void EnsureTouchLongPressProgress(Transform root, ItemSlot_UI slot)
+    internal static void EnsureTouchLongPressProgress(Transform root, ItemSlot_UI slot)
     {
         if (slot == null)
             throw new MissingComponentException($"{root.name} 缺少 ItemSlot_UI。");

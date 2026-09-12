@@ -127,7 +127,7 @@ public static class GameUIPrefabRebuilder
             new BuildTarget(PlayerStatusRoot + "UI_ModuleList.prefab", BuildGameModuleSelector),
             new BuildTarget(MainMenuCoreRoot + "UI_ActionList.prefab", BuildActionList),
             new BuildTarget(MainMenuSaveRoot + "UI_SaveContextMenu.prefab", BuildSaveContextMenu),
-            new BuildTarget(InventoryComponentsRoot + "UI_HandSlot.prefab", BuildSlot),
+            new BuildTarget(InventoryComponentsRoot + "UI_HandSlot.prefab", BuildHandSlotComponent),
             new BuildTarget(PlayerStatusRoot + "UI_ModuleOpenButton.prefab", BuildBaseButton),
             new BuildTarget(PlayerStatusRoot + "UI_ModuleButton.prefab", BuildBaseButton),
             new BuildTarget(PlayerStatusRoot + "UI_ModuleSettings.prefab", BuildSettingsPanel),
@@ -220,6 +220,30 @@ public static class GameUIPrefabRebuilder
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[Game UI] 已按灰阶简约主题重构玩家行囊；动态槽位回归通用 UI_Slot。");
+    }
+
+    /// <summary>只向现有 UI_Bag Footer 增补重量/体积显示，不重排其它行囊结构。</summary>
+    [MenuItem("FlatWorld/UI/同步行囊携带容量显示")]
+    public static void SyncBagCarryCapacityFooter()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+            throw new InvalidOperationException($"缺少统一字体：{FontPath}");
+
+        GameObject root = PrefabUtility.LoadPrefabContents(BagPrefabPath);
+        try
+        {
+            EnsureBagCarryCapacityFooter(root.transform);
+            EditorUtility.SetDirty(root);
+            PrefabUtility.SaveAsPrefabAsset(root, BagPrefabPath);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+
+        AssetDatabase.SaveAssets();
+        Debug.Log("[Game UI] 已同步 UI_Bag 的重量/体积携带容量显示。");
     }
 
     /// <summary>仅重构通用物品槽位，便于独立调整背包/装备等库存界面的槽位视觉。</summary>
@@ -505,6 +529,26 @@ public static class GameUIPrefabRebuilder
         Debug.Log($"[Game UI] 矩形进度条重建完成：{rebuilt}/{targets.Length} 个 Prefab；状态条手柄已隐藏。");
     }
 
+    /// <summary>只重建熔炉面板，便于校正其专用布局而不触碰其它游戏内 UI。</summary>
+    [MenuItem("FlatWorld/UI/Apply Furnace Layout")]
+    public static void RebuildFurnaceUI()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+        {
+            Debug.LogError($"[Game UI] 缺少统一字体：{FontPath}");
+            return;
+        }
+
+        BuildTarget target = new BuildTarget(CraftingRoot + "UI_Furnace.prefab", root => BuildFurnace(root, false));
+        bool rebuilt = RebuildSinglePrefab(target);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log(rebuilt
+            ? "[Game UI] 熔炉面板重建完成。"
+            : "[Game UI] 熔炉面板重建失败，请检查控制台。");
+    }
+
     [MenuItem("FlatWorld/UI/重建角色参数面板")]
     public static void RebuildCharacterStatusPanel()
     {
@@ -718,6 +762,8 @@ public static class GameUIPrefabRebuilder
             scrollRect.movementType = ScrollRect.MovementType.Clamped;
         }
 
+        EnsureBagCarryCapacityFooter(root.transform);
+
         RectTransform sortButton = FindDirectRect(root.transform, "整理");
         if (sortButton != null)
         {
@@ -776,6 +822,19 @@ public static class GameUIPrefabRebuilder
         TMP_Text title = FindRect(root.transform, "FWUI_标题")?.GetComponent<TMP_Text>();
         if (title != null)
             title.color = ModularBagText;
+
+        TMP_Text carryWeightLabel = FindRect(root.transform, "FWUI_CarryWeightLabel")?.GetComponent<TMP_Text>();
+        if (carryWeightLabel != null)
+            carryWeightLabel.color = Muted;
+        TMP_Text carryWeightValue = FindRect(root.transform, "FWUI_CarryWeightValue")?.GetComponent<TMP_Text>();
+        if (carryWeightValue != null)
+            carryWeightValue.color = ModularBagText;
+        TMP_Text carryVolumeLabel = FindRect(root.transform, "FWUI_CarryVolumeLabel")?.GetComponent<TMP_Text>();
+        if (carryVolumeLabel != null)
+            carryVolumeLabel.color = Muted;
+        TMP_Text carryVolumeValue = FindRect(root.transform, "FWUI_CarryVolumeValue")?.GetComponent<TMP_Text>();
+        if (carryVolumeValue != null)
+            carryVolumeValue.color = ModularBagText;
 
         ConfigureModularBagButton(root.transform, "关闭", null, ModularBagText, false);
         ConfigureModularBagButton(root.transform, "整理", null, ModularBagText, false);
@@ -839,6 +898,72 @@ public static class GameUIPrefabRebuilder
         TMP_Text label = rect.GetComponentInChildren<TMP_Text>(true);
         if (label != null)
             label.color = textColor;
+    }
+
+    /// <summary>固定行囊 Footer 容量文字的位置，保留右侧整理按钮的触控空间。</summary>
+    private static void SetFooterCapacityText(RectTransform rect, float x, float width)
+    {
+        if (rect == null)
+            return;
+
+        rect.anchorMin = new Vector2(0f, 0.5f);
+        rect.anchorMax = new Vector2(0f, 0.5f);
+        rect.pivot = new Vector2(0f, 0.5f);
+        rect.anchoredPosition = new Vector2(x, 0f);
+        rect.sizeDelta = new Vector2(width, 30f);
+    }
+
+    /// <summary>在不改变 Footer 自身与其它兄弟节点的前提下重建四个容量文本节点。</summary>
+    private static void EnsureBagCarryCapacityFooter(Transform root)
+    {
+        RectTransform footer = FindRect(root, "FWUI_Footer");
+        if (footer == null)
+            throw new InvalidOperationException("UI_Bag.prefab 缺少 FWUI_Footer，无法安装携带容量显示。");
+
+        DestroyGeneratedElement(footer, "FWUI_CarryWeightLabel");
+        DestroyGeneratedElement(footer, "FWUI_CarryWeightValue");
+        DestroyGeneratedElement(footer, "FWUI_CarryVolumeLabel");
+        DestroyGeneratedElement(footer, "FWUI_CarryVolumeValue");
+
+        TextMeshProUGUI weightLabel = CreateText(
+            "FWUI_CarryWeightLabel",
+            footer,
+            "重量",
+            16f,
+            Muted,
+            FontStyles.Normal,
+            TextAlignmentOptions.Left);
+        SetFooterCapacityText(weightLabel.rectTransform, 22f, 52f);
+
+        TextMeshProUGUI weightValue = CreateText(
+            "FWUI_CarryWeightValue",
+            footer,
+            "-- / -- kg",
+            16f,
+            ModularBagText,
+            FontStyles.Normal,
+            TextAlignmentOptions.Left);
+        SetFooterCapacityText(weightValue.rectTransform, 76f, 150f);
+
+        TextMeshProUGUI volumeLabel = CreateText(
+            "FWUI_CarryVolumeLabel",
+            footer,
+            "体积",
+            16f,
+            Muted,
+            FontStyles.Normal,
+            TextAlignmentOptions.Left);
+        SetFooterCapacityText(volumeLabel.rectTransform, 246f, 52f);
+
+        TextMeshProUGUI volumeValue = CreateText(
+            "FWUI_CarryVolumeValue",
+            footer,
+            "-- / -- L",
+            16f,
+            ModularBagText,
+            FontStyles.Normal,
+            TextAlignmentOptions.Left);
+        SetFooterCapacityText(volumeValue.rectTransform, 300f, 150f);
     }
 
     /// <summary>删除当前生成框架中的指定节点，供专用面板裁掉不需要的装饰文案。</summary>
@@ -949,6 +1074,10 @@ public static class GameUIPrefabRebuilder
         const float height = 592f;
         string title = bonfire ? "篝火" : "熔炉";
         string eyebrow = bonfire ? "BONFIRE / FIRE MANAGEMENT" : "FURNACE / SMELTING OPERATION";
+
+        if (!bonfire)
+            RemoveLegacyFurnaceVisuals(root.transform);
+
         RectTransform frame = PrepareWindow(root, width, height, title, eyebrow, bonfire ? "维持燃料 · 处理食物与基础材料" : "控制燃料与温度 · 等待冶炼完成");
 
         AddSection(frame, "INPUT", "投入", 24f, 104f, bonfire ? 188f : 232f, 366f);
@@ -969,17 +1098,18 @@ public static class GameUIPrefabRebuilder
             if (input != null)
             {
                 SetTopLeft(input, 56f, 156f, 168f, 252f);
-                ArrangeSlots(input, 3, 1, 82f, 12f);
+                ArrangeSlotsCentered(input, 3, 1, 82f, 12f);
             }
             if (fuel != null)
             {
-                SetTopLeft(fuel, 328f, 318f, 176f, 96f);
-                ArrangeSlots(fuel, 3, 3, 72f, 8f);
+                // 三格燃料横排完整收进作业区，不再靠容器外溢维持旧布局。
+                SetTopLeft(fuel, 308f, 390f, 232f, 72f);
+                ArrangeSlotsCentered(fuel, 3, 3, 72f, 8f);
             }
             if (output != null)
             {
                 SetTopLeft(output, width - 218f, 164f, 168f, 236f);
-                ArrangeSlots(output, 3, 1, 82f, 12f);
+                ArrangeSlotsCentered(output, 3, 1, 82f, 12f);
             }
         }
 
@@ -1010,7 +1140,28 @@ public static class GameUIPrefabRebuilder
             }
             else
             {
-                SetTopLeft(sliders, 316f, 184f, 220f, 170f);
+                // 熔炉状态条统一回到 1 倍缩放并显式占位，清掉旧 Stretch 偏移造成的错位。
+                SetTopLeft(sliders, 316f, 306f, 220f, 70f);
+                sliders.localScale = Vector3.one;
+
+                RectTransform processBar = FindRect(sliders, "熔炼进度条");
+                if (processBar != null)
+                {
+                    processBar.localScale = Vector3.one;
+                    processBar.localRotation = Quaternion.identity;
+                    SetTopLeft(processBar, 0f, 0f, 220f, 18f);
+                }
+
+                RectTransform fuelBar = FindRect(sliders, "燃料显示条");
+                if (fuelBar != null)
+                {
+                    fuelBar.localScale = Vector3.one;
+                    fuelBar.localRotation = Quaternion.identity;
+                    SetTopLeft(fuelBar, 0f, 52f, 220f, 18f);
+                }
+
+                AddFurnaceProcessLabel(frame, "FWUI_FurnaceProgressLabel", "熔炼进度", 316f, 284f, 220f);
+                AddFurnaceProcessLabel(frame, "FWUI_FurnaceFuelLabel", "燃料余量", 316f, 336f, 220f);
             }
         }
 
@@ -1028,11 +1179,44 @@ public static class GameUIPrefabRebuilder
             }
             else
             {
-                SetTopLeft(illustration, 350f, 152f, 132f, 132f);
+                SetTopLeft(illustration, 358f, 168f, 132f, 104f);
+                if (illustration.TryGetComponent(out Image illustrationImage))
+                {
+                    illustrationImage.preserveAspect = true;
+                    illustrationImage.raycastTarget = false;
+                }
             }
         }
 
         PlaceActionButton(root.transform, "合成按钮", width, height, bonfire ? "开始处理" : "启动熔炼");
+
+        // 交互控件必须压在装饰层与业务槽位之上，关闭按钮最后置顶。
+        FindDirectRect(root.transform, "合成按钮")?.SetAsLastSibling();
+        FindDirectRect(root.transform, "关闭")?.SetAsLastSibling();
+    }
+
+    /// <summary>移除熔炉旧版整块遮挡图和重复标签；这些节点不属于运行时绑定契约。</summary>
+    private static void RemoveLegacyFurnaceVisuals(Transform root)
+    {
+        RectTransform legacyOverlay = FindDirectRect(root, "Image");
+        if (legacyOverlay != null)
+            UnityEngine.Object.DestroyImmediate(legacyOverlay.gameObject);
+
+        string[] legacyLabels = { "Text (TMP)", "Text (TMP)_1", "Text (TMP)_2" };
+        foreach (string labelName in legacyLabels)
+        {
+            RectTransform label = FindDirectRect(root, labelName);
+            if (label != null)
+                UnityEngine.Object.DestroyImmediate(label.gameObject);
+        }
+    }
+
+    /// <summary>给熔炉作业区状态条补充轻量说明，不参与射线。</summary>
+    private static void AddFurnaceProcessLabel(RectTransform frame, string name, string text, float x, float y, float width)
+    {
+        TextMeshProUGUI label = CreateText(name, frame, text, 13f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
+        SetTopLeft(label.rectTransform, x, y, width, 18f);
+        label.raycastTarget = false;
     }
 
     private static void BuildDeathScreen(GameObject root)
@@ -1182,8 +1366,22 @@ public static class GameUIPrefabRebuilder
     {
         Button slot = root.GetComponentInChildren<Button>(true);
         if (slot != null)
+        {
             BuildSlot(slot.gameObject);
+            RuntimeUIPrefabBuilder.EnsureTouchLongPressProgress(
+                slot.transform,
+                slot.GetComponent<ItemSlot_UI>());
+        }
         NormalizeTypography(root.transform);
+    }
+
+    /// <summary>手部专用槽位在通用槽位视觉之上额外承载长按整组放置进度。</summary>
+    private static void BuildHandSlotComponent(GameObject root)
+    {
+        BuildSlot(root);
+        RuntimeUIPrefabBuilder.EnsureTouchLongPressProgress(
+            root.transform,
+            root.GetComponent<ItemSlot_UI>());
     }
 
     private static void BuildGameModuleSelector(GameObject root)
@@ -1626,7 +1824,7 @@ public static class GameUIPrefabRebuilder
             button.colors = colors;
         }
 
-        RuntimeUIPrefabBuilder.ConfigureItemSlotVisualLayers(root);
+        RuntimeUIPrefabBuilder.AddCraftingPreviewLayers(root);
 
         ItemSlot_UI slot = root.GetComponent<ItemSlot_UI>();
         if (slot != null)
@@ -2311,6 +2509,32 @@ public static class GameUIPrefabRebuilder
             int column = i % Mathf.Max(1, columns);
             int row = i / Mathf.Max(1, columns);
             SetTopLeft(slots[i], column * (size + spacing), row * (size + spacing), size, size);
+        }
+    }
+
+    /// <summary>与 ArrangeSlots 相同，但按每一行的真实槽位数水平居中；用于熔炉这种分栏面板。</summary>
+    private static void ArrangeSlotsCentered(RectTransform container, int expectedCount, int columns, float size, float spacing)
+    {
+        List<RectTransform> slots = new List<RectTransform>();
+        for (int i = 0; i < container.childCount; i++)
+        {
+            RectTransform child = container.GetChild(i) as RectTransform;
+            if (child != null && child.GetComponent<Button>() != null)
+                slots.Add(child);
+        }
+
+        int count = Mathf.Min(expectedCount, slots.Count);
+        int safeColumns = Mathf.Max(1, columns);
+        float containerWidth = container.rect.width;
+        for (int i = 0; i < count; i++)
+        {
+            int row = i / safeColumns;
+            int column = i % safeColumns;
+            int firstIndexInRow = row * safeColumns;
+            int itemsInRow = Mathf.Min(safeColumns, count - firstIndexInRow);
+            float rowWidth = itemsInRow * size + Mathf.Max(0, itemsInRow - 1) * spacing;
+            float rowLeft = Mathf.Max(0f, (containerWidth - rowWidth) * 0.5f);
+            SetTopLeft(slots[i], rowLeft + column * (size + spacing), row * (size + spacing), size, size);
         }
     }
 

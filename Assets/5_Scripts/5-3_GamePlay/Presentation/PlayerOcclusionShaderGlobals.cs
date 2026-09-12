@@ -9,7 +9,7 @@ public static class PlayerOcclusionShaderGlobals
 {
     #region Configuration
 
-    private const float MaskRadius = 0.55f;
+    private const float MaskRadius = 1.10f;
     private const float MaskFeather = 0.14f;
     private const float OccluderAlpha = 0.18f;
     private const float PlayerCenterOffsetY = 0.18f;

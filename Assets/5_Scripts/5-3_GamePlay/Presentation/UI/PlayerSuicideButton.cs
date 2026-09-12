@@ -126,7 +126,19 @@ public sealed class PlayerSuicideButton : MonoBehaviour
         TMP_Text[] labels = suicideButton.GetComponentsInChildren<TMP_Text>(true);
         if (labels.Length > 0 && labels[0] != null)
         {
-            labels[0].text = FlatWorldLocalizationService.GetUiText("自杀");
+            TMP_Text label = labels[0];
+            LocalizedTextBinder binder = label.GetComponent<LocalizedTextBinder>();
+            if (binder == null)
+            {
+                binder = label.gameObject.AddComponent<LocalizedTextBinder>();
+            }
+
+            // 自杀按钮由“返回桌面”按钮克隆而来，必须同步改写继承的本地化绑定，
+            // 否则刷新语言或 UI 组件时会再次被旧 key 覆盖成“返回桌面”。
+            binder.Configure(
+                FlatWorldLocalizationService.UiTable,
+                FlatWorldLocalizationService.GetUiTextKey("自杀"),
+                "自杀");
         }
     }
 

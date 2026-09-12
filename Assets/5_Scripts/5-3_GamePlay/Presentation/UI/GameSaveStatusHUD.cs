@@ -4,7 +4,7 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// 负责显示游戏保存状态和短暂玩法提示的右上角非交互 HUD。
+/// 负责显示游戏保存状态和短暂玩法提示的顶部居中非交互 HUD。
 /// 视觉节点只来自 UI_SaveStatus Prefab；保存期间使用未缩放时间保持提示和淡出不受暂停影响。
 /// </summary>
 [DisallowMultipleComponent]
@@ -133,7 +133,7 @@ public sealed class GameSaveStatusHUD : MonoBehaviour
             statusText.text = FlatWorldLocalizationService.GetUiText("保存失败");
     }
 
-    /// <summary>显示一条复用现有状态卡片的短暂玩法提示，避免新增单句提示预制体。</summary>
+    /// <summary>显示一条复用现有状态文本的短暂玩法提示，避免新增单句提示预制体。</summary>
     public void ShowTransientMessage(string message, float visibleSeconds = 2f)
     {
         if (string.IsNullOrWhiteSpace(message) || saveInProgress)
