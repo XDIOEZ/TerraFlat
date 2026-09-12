@@ -359,9 +359,14 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             return;
         }
 
-        item.transform.SetPositionAndRotation(
-            _embeddedTarget.TransformPoint(_embeddedLocalPosition),
-            _embeddedTarget.rotation * _embeddedLocalRotation);
+        Vector3 worldPosition = _embeddedTarget.TransformPoint(_embeddedLocalPosition);
+        Quaternion worldRotation = _embeddedTarget.rotation * _embeddedLocalRotation;
+        bool poseChanged = (item.transform.position - worldPosition).sqrMagnitude > 0.00000001f ||
+                           Quaternion.Angle(item.transform.rotation, worldRotation) > 0.001f;
+        if (!poseChanged)
+            return;
+
+        item.transform.SetPositionAndRotation(worldPosition, worldRotation);
         ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
     }
 
