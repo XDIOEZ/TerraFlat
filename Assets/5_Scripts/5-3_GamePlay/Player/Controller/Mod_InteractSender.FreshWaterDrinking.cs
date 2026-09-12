@@ -432,6 +432,7 @@ public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
     private readonly Mod_Food food;
     private float holdElapsed;
     private float tickElapsed;
+    private bool saltWaterWarningShown; // 单次持续饮水动作只提示一次海水脱水风险。
 
     public DrinkWaterActionInstance(Item actor, DrinkWaterActionDefinition definition)
     {
@@ -457,6 +458,7 @@ public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
         IsExecuting = false;
         holdElapsed = 0f;
         tickElapsed = 0f;
+        saltWaterWarningShown = false;
         return true;
     }
 
@@ -514,6 +516,11 @@ public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
 
             case WaterEnvironmentKind.Salt:
                 buffManager?.AddBuff(DehydrationBuffIds.Dehydration);
+                if (!saltWaterWarningShown)
+                {
+                    saltWaterWarningShown = true;
+                    ItemActionFeedback.Show(actor, "这海水里含有大量盐分，喝下去反而会让我脱水。");
+                }
                 break;
         }
 

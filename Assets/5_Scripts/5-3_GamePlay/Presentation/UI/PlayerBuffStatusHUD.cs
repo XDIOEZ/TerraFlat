@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using FlatWorld.Localization;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 为本地玩家维护屏幕左侧中部的 Buff 提示栏。
+/// 为本地玩家维护屏幕左侧中部的 Buff 条目列表。
 /// 只实例化 UI_BuffStatus 与 UI_BuffStatusItem Prefab；通过 BuffManager 生命周期与整秒倒计时事件刷新，
-/// 仅在条目结构变化时标记 Content 布局。面板默认不拦截输入，没有 Buff 时整体隐藏。
+/// HUD 容器本身不绘制背景或静态标题，只显示动态 Buff 条目；没有 Buff 时整体隐藏。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Player))]
@@ -18,12 +17,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
 
     public const string ViewName = "PlayerBuffStatusHUD";
 
-    private const string TitleNodeName = "标题";
-    private const string CountNodeName = "数量文本";
-    private const string EmptyNodeName = "空状态文本";
     private const string ContentNodeName = "Content";
-    private const float PanelHeaderHeight = 36f;
-    private const float PanelVerticalPadding = 8f;
     private const float RowHeight = 31f;
     private const float RowSpacing = 7f;
 
@@ -34,9 +28,6 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
     private RectTransform viewRect;
     private RectTransform contentRect;
     private CanvasGroup viewCanvasGroup;
-    private TextMeshProUGUI titleText;
-    private TextMeshProUGUI countText;
-    private TextMeshProUGUI emptyText;
     private bool missingPrefabLogged;
 
     private readonly List<BuffStatusRowView> rowViews = new(8);
@@ -163,7 +154,6 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
 
     private void HandleLanguageChanged(string _)
     {
-        RefreshStaticTexts();
         RefreshVisibleRows();
     }
 
@@ -176,7 +166,6 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
             return;
         }
 
-        RefreshStaticTexts();
         buffSnapshot.Clear();
         foreach (KeyValuePair<string, BuffInstance> pair in buffManager.ActiveBuffs)
         {
@@ -202,16 +191,11 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
             }
         }
 
-        if (countText != null)
-            countText.SetText("{0}", buffSnapshot.Count);
-        if (emptyText != null)
-            emptyText.gameObject.SetActive(buffSnapshot.Count == 0);
-
         SetViewActive(buffSnapshot.Count > 0);
         RebuildDynamicLayout(buffSnapshot.Count);
     }
 
-    /// <summary>按实际 Buff 数量收缩或增长背景板，不保留空白列表高度。</summary>
+    /// <summary>按实际 Buff 数量收缩或增长透明列表容器，不保留额外标题或背景高度。</summary>
     private void RebuildDynamicLayout(int visibleRowCount)
     {
         if (viewRect == null || contentRect == null || visibleRowCount <= 0)
@@ -220,11 +204,10 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
         float rowsHeight = visibleRowCount * RowHeight + Mathf.Max(0, visibleRowCount - 1) * RowSpacing;
         viewRect.SetSizeWithCurrentAnchors(
             RectTransform.Axis.Vertical,
-            PanelHeaderHeight + rowsHeight + PanelVerticalPadding);
+            rowsHeight);
 
-        Canvas.ForceUpdateCanvases();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
-        LayoutRebuilder.ForceRebuildLayoutImmediate(viewRect);
+        LayoutRebuilder.MarkLayoutForRebuild(contentRect);
+        LayoutRebuilder.MarkLayoutForRebuild(viewRect);
     }
 
     /// <summary>语言切换时只刷新已显示行的内容，条目结构保持不变。</summary>
@@ -305,14 +288,10 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
         viewObject.name = ViewName;
         viewRect = viewObject.GetComponent<RectTransform>();
         viewCanvasGroup = viewObject.GetComponent<CanvasGroup>();
-        titleText = FindChildText(viewObject.transform, TitleNodeName);
-        countText = FindChildText(viewObject.transform, CountNodeName);
-        emptyText = FindChildText(viewObject.transform, EmptyNodeName);
         Transform content = FindChild(viewObject.transform, ContentNodeName);
         contentRect = content as RectTransform ?? content?.GetComponent<RectTransform>();
 
-        if (viewRect == null || viewCanvasGroup == null || contentRect == null ||
-            titleText == null || countText == null || emptyText == null)
+        if (viewRect == null || viewCanvasGroup == null || contentRect == null)
         {
             Debug.LogError("[PlayerBuffStatusHUD] UI_BuffStatus Prefab 控件命名契约不完整。", viewObject);
             Destroy(viewObject);
@@ -320,26 +299,14 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
             viewRect = null;
             contentRect = null;
             viewCanvasGroup = null;
-            titleText = null;
-            countText = null;
-            emptyText = null;
             return false;
         }
 
         viewCanvasGroup.interactable = false;
         viewCanvasGroup.blocksRaycasts = false;
-        RefreshStaticTexts();
         PlaceBelowInteractivePanels();
         SetViewActive(false);
         return true;
-    }
-
-    private void RefreshStaticTexts()
-    {
-        if (titleText != null)
-            titleText.text = FlatWorldLocalizationService.GetUiText("状态效果 / BUFFS");
-        if (emptyText != null)
-            emptyText.text = FlatWorldLocalizationService.GetUiText("暂无状态");
     }
 
     private void SetViewActive(bool active)
@@ -393,12 +360,6 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
         }
 
         return null;
-    }
-
-    private static TextMeshProUGUI FindChildText(Transform root, string childName)
-    {
-        Transform child = FindChild(root, childName);
-        return child != null ? child.GetComponent<TextMeshProUGUI>() : null;
     }
 
     #endregion

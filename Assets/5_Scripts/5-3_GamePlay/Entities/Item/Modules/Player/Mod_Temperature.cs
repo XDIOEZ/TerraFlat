@@ -56,6 +56,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 #region 字段
 
     public const string ModuleId = "体温模块";
+    private const string ColdDamageSpeechText = "这里的环境温度太低了，我得赶紧去温暖的地方。"; // 每次低温扣血时给本地玩家的自言自语提示。
 
     public Ex_ModData_MemoryPackable modData; // 模块存档容器
     [LabelText("体温数据"), InlineProperty]
@@ -120,8 +121,15 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
         Data.AmbientTemperature = ambient;
         ProcessWaterEntryCooling(deltaTime);
-        TemperatureMgr.Instance.ProcessTemperature(Data, _damageReceiver, deltaTime,
-            SetNaturalTemperature, ref _damageTickTimer, NaturalTemperature);
+        bool coldDamageApplied = TemperatureMgr.Instance.ProcessTemperature(
+            Data,
+            _damageReceiver,
+            deltaTime,
+            SetNaturalTemperature,
+            ref _damageTickTimer,
+            NaturalTemperature);
+        if (coldDamageApplied)
+            ItemActionFeedback.Show(item, ColdDamageSpeechText);
     }
 
     public override void Unload()

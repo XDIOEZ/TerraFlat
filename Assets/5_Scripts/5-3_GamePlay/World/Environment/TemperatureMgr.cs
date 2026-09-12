@@ -42,7 +42,8 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
             data.RuntimeCoolingSpeedMultiplier = 1f;
     }
 
-    public void ProcessTemperature(
+    /// <summary>推进体温并结算温度伤害；返回本次是否实际造成了低温伤害。</summary>
+    public bool ProcessTemperature(
         Mod_Temperature.TemperatureData data,
         DamageReceiver damageReceiver,
         float deltaTime,
@@ -65,13 +66,13 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 
         if (damageReceiver == null)
         {
-            return;
+            return false;
         }
 
         damageTickTimer += deltaTime;
         if (damageTickTimer < DamageTickIntervalSeconds)
         {
-            return;
+            return false;
         }
 
         int tickCount = Mathf.FloorToInt(damageTickTimer / DamageTickIntervalSeconds);
@@ -85,15 +86,18 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 
         if (damage <= 0f)
         {
-            return;
+            return false;
         }
 
+        bool coldDamageApplied = data.CurrentTemperature < data.ColdDamageStart;
         damageReceiver.ForceHurt(damage);
 
         if (EnableDebugLog)
         {
             Debug.Log($"[TemperatureMgr] 触发温度伤害，当前体温={data.CurrentTemperature:F2}℃，结算次数={tickCount}，伤害={damage:F3}");
         }
+
+        return coldDamageApplied;
     }
 
     public float EvaluateNextTemperature(Mod_Temperature.TemperatureData data, float deltaTime,
