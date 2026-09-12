@@ -160,7 +160,7 @@ public class Item_Tile_Grass : Item
             if (placementShadow == null || sourceRenderer == null)
                 throw new MissingComponentException("BuildingShadow 或旧石墙 SpriteRenderer 配置不完整");
 
-            placementShadow.InitShadow(sourceRenderer, transform, ResolvePreviewFootprint());
+            placementShadow.InitShadow(sourceRenderer, transform);
         }
         catch (Exception exception)
         {
@@ -198,34 +198,6 @@ public class Item_Tile_Grass : Item
             Mathf.FloorToInt(worldPosition.x) + 0.5f,
             Mathf.FloorToInt(worldPosition.y) + 0.5f,
             0f);
-    }
-
-    private Bounds ResolvePreviewFootprint()
-    {
-        BoxCollider2D sourceCollider = GetComponentInChildren<BoxCollider2D>(true);
-        if (sourceCollider == null)
-            return new Bounds(Vector3.zero, Vector3.one);
-
-        Vector2 half = sourceCollider.size * 0.5f;
-        Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
-        Vector2 max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
-        for (int x = -1; x <= 1; x += 2)
-        {
-            for (int y = -1; y <= 1; y += 2)
-            {
-                Vector3 localPoint = sourceCollider.offset +
-                    Vector2.Scale(half, new Vector2(x, y));
-                Vector3 rootPoint = transform.InverseTransformPoint(
-                    sourceCollider.transform.TransformPoint(localPoint));
-                min = Vector2.Min(min, rootPoint);
-                max = Vector2.Max(max, rootPoint);
-            }
-        }
-
-        Vector2 size = max - min;
-        return new Bounds(
-            (min + max) * 0.5f,
-            new Vector3(Mathf.Max(0.05f, size.x), Mathf.Max(0.05f, size.y), 0.1f));
     }
 
     private void ConsumeOneStoneWallItem()

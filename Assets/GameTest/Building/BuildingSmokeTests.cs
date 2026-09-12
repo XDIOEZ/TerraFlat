@@ -109,8 +109,7 @@ namespace FlatWorld.GameTest.Building
                 Assert.That(shadow, Is.Not.Null);
                 Assert.That(source, Is.Not.Null);
 
-                shadow.InitShadow(source, buildingObject.transform,
-                    new Bounds(Vector3.zero, Vector3.one));
+                shadow.InitShadow(source, buildingObject.transform);
 
                 Assert.That(shadow.ShadowRenderer.enabled, Is.True);
                 Assert.That(shadow.ShadowRenderer.sprite, Is.EqualTo(source.sprite));

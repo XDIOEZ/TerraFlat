@@ -1,4 +1,5 @@
-// 建筑动态占地覆盖层：不修改地形 TileData，只提交导航脏格。
+// 动态建筑放置占用层：以离散世界格记录建筑位置，不依赖任何 Physics2D Collider。
+// 该层同时服务放置冲突判断与导航脏格更新；建筑实体的 Collider 只负责交互/受击等运行时物理。
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -29,6 +30,20 @@ public static class BuildingOccupancyRegistry
 
         if (occupants.Count == 0)
             OccupantsByCell.Remove(cell);
+        return false;
+    }
+
+    /// <summary>检查指定放置格是否空闲；这是动态建筑放置冲突的权威入口。</summary>
+    public static bool CanPlace(Vector2Int cell, Mod_Building except, out string reason)
+    {
+        cell = WorldTopologyRuntime.NormalizeCell(cell);
+        if (!IsOccupied(cell, except))
+        {
+            reason = null;
+            return true;
+        }
+
+        reason = $"地块 ({cell.x},{cell.y}) 已被建筑占用";
         return false;
     }
 
@@ -67,6 +82,33 @@ public static class BuildingOccupancyRegistry
             occupants.Add(building);
             RefreshCell(cell);
         }
+    }
+
+    /// <summary>注册单格动态建筑；当前可交互建筑与墙体一样以格位置作为放置槽。</summary>
+    public static void Register(Mod_Building building, Vector2Int cell)
+    {
+        if (building == null)
+            return;
+
+        cell = WorldTopologyRuntime.NormalizeCell(cell);
+        if (CellsByBuilding.TryGetValue(building, out HashSet<Vector2Int> currentCells) &&
+            currentCells.Count == 1 && currentCells.Contains(cell))
+        {
+            RefreshCell(cell);
+            return;
+        }
+
+        Unregister(building);
+        var cells = new HashSet<Vector2Int> { cell };
+        CellsByBuilding[building] = cells;
+        if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants))
+        {
+            occupants = new HashSet<Mod_Building>();
+            OccupantsByCell[cell] = occupants;
+        }
+
+        occupants.Add(building);
+        RefreshCell(cell);
     }
 
     public static void Unregister(Mod_Building building)

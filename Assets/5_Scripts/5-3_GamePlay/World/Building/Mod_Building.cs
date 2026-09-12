@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using FlatWorld.Gameplay.Building;
 using FlatWorld.Gameplay.Progress;
 using Sirenix.OdinInspector;
@@ -834,7 +833,23 @@ public class Mod_Building : Module
         if (item?.itemData?.Stack == null || item.itemData.Stack.Amount < 1f)
             return false;
 
-        ApplySourceAmount(item.itemData.Stack.Amount - 1f);
+        if (!TryGetSourceHotBarSlot(out Inventory_HotBar hotBar, out ItemSlot sourceSlot) ||
+            !hotBar.Data.TryConsumeFromSlot(sourceSlot, 1, out ItemData consumedData))
+        {
+            return false;
+        }
+
+        bool depleted = consumedData?.Stack == null || consumedData.Stack.Amount <= 0f;
+        if (depleted)
+        {
+            CleanupGhost();
+            hotBar.RuntimeInventory.SyncHeldItemImmediately();
+        }
+        else
+        {
+            hotBar.NotifyOwnerNetworkStateChanged();
+        }
+
         return true;
     }
 
@@ -849,30 +864,41 @@ public class Mod_Building : Module
         if (item?.itemData?.Stack == null)
             return;
 
-        Item owner = item.Owner;
-        Inventory_HotBar hotBar = owner?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
-        ItemSlot selectedSlot = hotBar?.CurrentSelectItemSlot;
-
-        item.itemData.Stack.Amount = Mathf.Max(0f, amount);
-        bool depleted = item.itemData.Stack.Amount <= 0f;
-        if (depleted && selectedSlot != null && ReferenceEquals(selectedSlot.itemData, item.itemData))
+        if (!TryGetSourceHotBarSlot(out Inventory_HotBar hotBar, out ItemSlot sourceSlot))
         {
-            selectedSlot.ClearData();
-            selectedSlot.RefreshUI();
+            Debug.LogError("[建筑安装] 无法解析召唤器所属快捷栏槽位，不能应用权威数量", item);
+            return;
         }
 
-        item.OnUIRefresh?.Invoke();
-        if (owner != null)
-            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(owner);
-
-        if (!depleted)
+        float normalizedAmount = Mathf.Max(0f, amount);
+        if (!hotBar.Data.TrySetSlotItemAmount(sourceSlot, item.itemData, normalizedAmount))
+        {
+            Debug.LogError("[建筑安装] 应用召唤器权威数量失败", item);
             return;
+        }
+
+        if (normalizedAmount > 0f)
+        {
+            hotBar.NotifyOwnerNetworkStateChanged();
+            return;
+        }
 
         CleanupGhost();
-        if (ItemMgr.Instance != null)
-            ItemMgr.Instance.DespawnItem(item, false);
-        else
-            item.DestroySelf();
+        hotBar.RuntimeInventory.SyncHeldItemImmediately();
+    }
+
+    /// <summary>建筑召唤器只允许从玩家当前快捷栏真实槽位扣除。</summary>
+    private bool TryGetSourceHotBarSlot(out Inventory_HotBar hotBar, out ItemSlot sourceSlot)
+    {
+        hotBar = item?.Owner?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        sourceSlot = hotBar?.CurrentSelectItemSlot;
+        if (hotBar?.Data?.itemSlots == null || sourceSlot == null || !hotBar.Data.itemSlots.Contains(sourceSlot))
+            return false;
+
+        ItemData slotData = sourceSlot.itemData;
+        ItemData heldData = item?.itemData;
+        return slotData != null && heldData != null &&
+               (ReferenceEquals(slotData, heldData) || (heldData.Guid != 0 && slotData.Guid == heldData.Guid));
     }
 
     private bool ValidatePlacement(
@@ -909,7 +935,7 @@ public class Mod_Building : Module
             return false;
         }
 
-        Bounds bounds = GetPlacementBounds(position);
+        Vector2Int placementCell = GetPlacementCell(position);
         if (!string.IsNullOrWhiteSpace(Data?.TileBlockId))
         {
             // 格子建筑的合法性以建筑阻挡层数据为准，不能再用 TilemapCollider2D 的边界判断相邻格。
@@ -919,40 +945,17 @@ public class Mod_Building : Module
             if (TileBuildingSystem.IsGroundPlacement(Data.TileBlockId))
                 return true;
         }
-        else if (!CheckWorldObstacles(bounds, out reason))
+
+        // 动态可交互建筑与墙体统一按离散格层判断占用；物理 Collider 不再参与放置合法性。
+        if (!BuildingOccupancyRegistry.CanPlace(placementCell, this, out reason))
         {
             return false;
         }
 
-        return CheckTilePenalties(bounds, out reason);
+        return CheckTilePenalties(placementCell, out reason);
     }
 
-    private bool CheckWorldObstacles(Bounds bounds, out string reason)
-    {
-        reason = null;
-        // 相邻格建筑只共享边界，不应被 Physics2D 当作重叠；轻微收缩查询框允许墙体连续铺设。
-        Vector2 overlapSize = new(
-            Mathf.Max(BoundsEpsilon, bounds.size.x - BoundsEpsilon * 2f),
-            Mathf.Max(BoundsEpsilon, bounds.size.y - BoundsEpsilon * 2f));
-        Collider2D[] overlaps = Physics2D.OverlapBoxAll(bounds.center, overlapSize, 0f);
-        for (int i = 0; i < overlaps.Length; i++)
-        {
-            Collider2D overlap = WorldTopologyColliderProxy.Resolve(overlaps[i]);
-            if (overlap == null || overlap.isTrigger ||
-                (item != null && overlap.transform.IsChildOf(item.transform)) ||
-                overlap.CompareTag("Player") || overlap.gameObject.tag == "IgnoreShadow")
-            {
-                continue;
-            }
-
-            reason = $"目标被 {overlap.gameObject.name} 阻挡";
-            return false;
-        }
-
-        return true;
-    }
-
-    private bool CheckTilePenalties(Bounds bounds, out string reason)
+    private bool CheckTilePenalties(Vector2Int worldCell, out string reason)
     {
         reason = null;
         ChunkMgr chunkManager = ChunkMgr.Instance;
@@ -962,93 +965,50 @@ public class Mod_Building : Module
             return false;
         }
 
-        int minX = Mathf.FloorToInt(bounds.min.x + BoundsEpsilon);
-        int maxX = Mathf.FloorToInt(bounds.max.x - BoundsEpsilon);
-        int minY = Mathf.FloorToInt(bounds.min.y + BoundsEpsilon);
-        int maxY = Mathf.FloorToInt(bounds.max.y - BoundsEpsilon);
-
-        for (int x = minX; x <= maxX; x++)
+        worldCell = WorldTopologyRuntime.NormalizeCell(worldCell);
+        Vector2 tileCenter = new(worldCell.x + 0.5f, worldCell.y + 0.5f);
+        if (chunkManager.TryGetRuntimeTerrainTile(
+                tileCenter, out RuntimeTerrainTileSample runtimeTile))
         {
-            for (int y = minY; y <= maxY; y++)
+            if (runtimeTile.TopTileId == 0)
             {
-                Vector2Int worldCell = WorldTopologyRuntime.NormalizeCell(new Vector2Int(x, y));
-                Vector2 tileCenter = new(worldCell.x + 0.5f, worldCell.y + 0.5f);
-                if (chunkManager.TryGetRuntimeTerrainTile(
-                        tileCenter, out RuntimeTerrainTileSample runtimeTile))
-                {
-                    if (runtimeTile.TopTileId == 0)
-                    {
-                        reason = $"地块 ({x},{y}) 不可建造";
-                        return false;
-                    }
+                reason = $"地块 ({worldCell.x},{worldCell.y}) 不可建造";
+                return false;
+            }
 
-                    if (!runtimeTile.Terrain.IsWalkable(
-                            runtimeTile.LocalCell.x, runtimeTile.LocalCell.y) ||
-                        runtimeTile.Cell.NavigationCost > BlockedTilePenalty)
-                    {
-                        reason = $"地块 ({x},{y}) 不可通行";
-                        return false;
-                    }
-                }
-                else
-                {
-                    // 旧 Map 世界仍保留兼容回退；新区块权威不依赖表现对象。
-                    chunkManager.GetChunkBy_ItemPosition(tileCenter, out Chunk chunk);
-                    if (chunk?.Map?.Data == null)
-                    {
-                        reason = $"地块 ({x},{y}) 尚未加载";
-                        return false;
-                    }
+            if (!runtimeTile.Terrain.IsWalkable(
+                    runtimeTile.LocalCell.x, runtimeTile.LocalCell.y) ||
+                runtimeTile.Cell.NavigationCost > BlockedTilePenalty)
+            {
+                reason = $"地块 ({worldCell.x},{worldCell.y}) 不可通行";
+                return false;
+            }
+        }
+        else
+        {
+            // 旧 Map 世界仍保留兼容回退；新区块权威不依赖表现对象。
+            chunkManager.GetChunkBy_ItemPosition(tileCenter, out Chunk chunk);
+            if (chunk?.Map?.Data == null)
+            {
+                reason = $"地块 ({worldCell.x},{worldCell.y}) 尚未加载";
+                return false;
+            }
 
-                    TileData topTile = chunk.Map.Data.GetTopTile(worldCell);
-                    if (topTile == null)
-                    {
-                        reason = $"地块 ({x},{y}) 不可建造";
-                        return false;
-                    }
+            TileData topTile = chunk.Map.Data.GetTopTile(worldCell);
+            if (topTile == null)
+            {
+                reason = $"地块 ({worldCell.x},{worldCell.y}) 不可建造";
+                return false;
+            }
 
-                    if (!topTile.IsWalkable || topTile.Penalty > BlockedTilePenalty)
-                    {
-                        reason = $"地块 ({x},{y}) 不可通行";
-                        return false;
-                    }
-                }
-
-                if (BuildingOccupancyRegistry.IsOccupied(worldCell, this))
-                {
-                    reason = $"地块 ({x},{y}) 已被建筑占用";
-                    return false;
-                }
+            if (!topTile.IsWalkable || topTile.Penalty > BlockedTilePenalty)
+            {
+                reason = $"地块 ({worldCell.x},{worldCell.y}) 不可通行";
+                return false;
             }
         }
 
         return true;
-    }
-
-    private Bounds GetPlacementBounds(Vector3 position)
-    {
-        if (!string.IsNullOrWhiteSpace(Data?.TileBlockId))
-            return new Bounds(position, Vector3.one);
-
-        if (Data?.Role == BuildingRole.Summoner &&
-            TryGetDefinitionPreviewSource(out GameObject definitionPreview))
-        {
-            BoxCollider2D definitionCollider = definitionPreview.GetComponent<BoxCollider2D>();
-            if (definitionCollider != null)
-            {
-                Bounds definitionBounds = GetColliderLocalBounds(definitionPreview.transform, definitionCollider);
-                definitionBounds.center += position;
-                return definitionBounds;
-            }
-        }
-
-        if (boxCollider2D == null)
-            return new Bounds(position, Vector3.one * 0.9f);
-
-        Transform itemTransform = item != null ? item.transform : transform;
-        Bounds localBounds = GetColliderLocalBounds(itemTransform, boxCollider2D);
-        localBounds.center += position;
-        return localBounds;
     }
 
     private void EnsureRuntimeReferences()
@@ -1238,13 +1198,12 @@ public class Mod_Building : Module
 
             if (GhostShadow == null ||
                 !TryGetBuildingPreviewVisual(out SpriteRenderer source,
-                    out Transform sourceRoot, out Bounds footprint))
+                    out Transform sourceRoot))
                 throw new MissingComponentException("BuildingShadow 预制体或建筑 SpriteRenderer 配置不完整");
 
             GhostShadow.InitShadow(
                 source,
-                sourceRoot,
-                footprint);
+                sourceRoot);
         }
         catch (Exception exception)
         {
@@ -1390,51 +1349,18 @@ public class Mod_Building : Module
         return false;
     }
 
-    /// <summary>返回真实放置预览使用的图片、局部坐标根节点与占地范围。</summary>
+    /// <summary>返回真实放置预览使用的图片和局部坐标根节点；占地由独立格层维护。</summary>
     public bool TryGetBuildingPreviewVisual(
         out SpriteRenderer sourceRenderer,
-        out Transform sourceRoot,
-        out Bounds footprint)
+        out Transform sourceRoot)
     {
         TryGetBuildingPreviewRenderer(out sourceRenderer, out sourceRoot);
-        footprint = GetBuildingPreviewBounds();
         return sourceRenderer != null && sourceRoot != null;
-    }
-
-    private Bounds GetBuildingPreviewBounds()
-    {
-        if (!string.IsNullOrWhiteSpace(Data?.TileBlockId))
-            return new Bounds(Vector3.zero, Vector3.one);
-
-        if (UsesCurrentItemAsBuildingPrefab())
-        {
-            BoxCollider2D currentItemCollider = item?.GetComponent<BoxCollider2D>();
-            currentItemCollider ??= item?.GetComponentInChildren<BoxCollider2D>(true);
-            if (currentItemCollider != null)
-                return GetColliderLocalBounds(item.transform, currentItemCollider);
-        }
-
-        if (TryGetDefinitionPreviewSource(out GameObject definitionPreview))
-        {
-            BoxCollider2D definitionCollider = definitionPreview.GetComponent<BoxCollider2D>();
-            if (definitionCollider != null)
-                return GetColliderLocalBounds(definitionPreview.transform, definitionCollider);
-        }
-
-        if (TryGetBuildingBodyPrefab(out GameObject buildingPrefab))
-        {
-            BoxCollider2D bodyCollider = buildingPrefab.GetComponent<BoxCollider2D>();
-            bodyCollider ??= buildingPrefab.GetComponentInChildren<BoxCollider2D>(true);
-            if (bodyCollider != null)
-                return GetColliderLocalBounds(buildingPrefab.transform, bodyCollider);
-        }
-
-        return GetPlacementBounds(Vector3.zero);
     }
 
     #region 格子建筑预览
 
-    /// <summary>以格心为根节点复刻静态 Tile 的视觉变换，占地仍由独立的一格 Bounds 描述。</summary>
+    /// <summary>以格心为根节点复刻静态 Tile 的视觉变换，占地由独立格层记录。</summary>
     private GameObject GetTilePreviewSource()
     {
         string previewId = "tile:" + Data.TileBlockId;
@@ -1498,7 +1424,7 @@ public class Mod_Building : Module
         return previewSource != null;
     }
 
-    /// <summary>把运行时定义中的图片、渲染参数与 BoxCollider 配置还原到预览专用对象。</summary>
+    /// <summary>把运行时定义中的图片与渲染参数还原到纯视觉预览对象。</summary>
     private static GameObject CreateDefinitionPreviewSource(RuntimeItemDefinition definition)
     {
         GameObject root = new GameObject($"{definition.Id}_BuildingPreview")
@@ -1534,18 +1460,6 @@ public class Mod_Building : Module
         if (visual?.SortingOrder.HasValue == true)
             renderer.sortingOrder = visual.SortingOrder.Value;
 
-        // 建筑占地默认 1×1、零偏移；JSON 只声明非默认差异，预览与最终 Shell 使用同一语义。
-        ItemColliderDefinitionDto colliderDefinition = visual?.Collider;
-        BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
-        collider.size = colliderDefinition?.Size ?? Vector2.one;
-        collider.offset = colliderDefinition?.Offset ?? Vector2.zero;
-        if (colliderDefinition?.Enabled.HasValue == true)
-            collider.enabled = colliderDefinition.Enabled.Value;
-        if (colliderDefinition?.IsTrigger.HasValue == true)
-            collider.isTrigger = colliderDefinition.IsTrigger.Value;
-        if (colliderDefinition?.EdgeRadius.HasValue == true)
-            collider.edgeRadius = colliderDefinition.EdgeRadius.Value;
-
         root.SetActive(false);
         return root;
     }
@@ -1569,30 +1483,6 @@ public class Mod_Building : Module
                buildingPrefab != null;
     }
 
-    private static Bounds GetColliderLocalBounds(Transform root, BoxCollider2D collider)
-    {
-        Vector2 half = collider.size * 0.5f;
-        Vector2 min = new(float.PositiveInfinity, float.PositiveInfinity);
-        Vector2 max = new(float.NegativeInfinity, float.NegativeInfinity);
-
-        for (int x = -1; x <= 1; x += 2)
-        {
-            for (int y = -1; y <= 1; y += 2)
-            {
-                Vector3 colliderLocal = collider.offset + Vector2.Scale(half, new Vector2(x, y));
-                Vector3 rootLocal = root.InverseTransformPoint(collider.transform.TransformPoint(colliderLocal));
-                min = Vector2.Min(min, rootLocal);
-                max = Vector2.Max(max, rootLocal);
-            }
-        }
-
-        Vector2 center = (min + max) * 0.5f;
-        Vector2 size = max - min;
-        return new Bounds(
-            center,
-            new Vector3(Mathf.Max(0.05f, size.x), Mathf.Max(0.05f, size.y), 0.1f));
-    }
-
     private Vector3 GetAuthorityPosition()
         => item?.Owner != null ? item.Owner.transform.position : item != null ? item.transform.position : transform.position;
 
@@ -1613,23 +1503,14 @@ public class Mod_Building : Module
             return;
         }
 
-        BuildingOccupancyRegistry.Register(this, GetPlacementCells(item.transform.position));
+        BuildingOccupancyRegistry.Register(this, GetPlacementCell(item.transform.position));
     }
 
-    private IEnumerable<Vector2Int> GetPlacementCells(Vector3 position)
-    {
-        Bounds bounds = GetPlacementBounds(position);
-        int minX = Mathf.FloorToInt(bounds.min.x + BoundsEpsilon);
-        int maxX = Mathf.FloorToInt(bounds.max.x - BoundsEpsilon);
-        int minY = Mathf.FloorToInt(bounds.min.y + BoundsEpsilon);
-        int maxY = Mathf.FloorToInt(bounds.max.y - BoundsEpsilon);
-
-        for (int x = minX; x <= maxX; x++)
-        {
-            for (int y = minY; y <= maxY; y++)
-                yield return new Vector2Int(x, y);
-        }
-    }
+    /// <summary>动态可交互建筑与格子墙统一以吸附后的单个世界格作为放置槽。</summary>
+    private static Vector2Int GetPlacementCell(Vector3 position)
+        => WorldTopologyRuntime.NormalizeCell(new Vector2Int(
+            Mathf.FloorToInt(position.x),
+            Mathf.FloorToInt(position.y)));
 
     /// <summary>Editor tooling uses this to stamp a prefab as the world body or its matching summoner.</summary>
     public void ConfigurePrefabRole(BuildingRole role, string buildingPrefabId, string summonerPrefabId)
