@@ -1531,6 +1531,30 @@ MonoBehaviour:
     m_Key: item.ChiliTree.name
     m_Metadata:
       m_Items: []
+  - m_Id: 12591148785721344
+    m_Key: item.StoneMortar.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12591148827664384
+    m_Key: item.StoneMortar.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12624922206527488
+    m_Key: item.ClayJar_Building.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12624922244276224
+    m_Key: item.StoneMortar_Building.description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12625631102623744
+    m_Key: item.ClayJar_Building.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12625631161344000
+    m_Key: item.StoneMortar_Building.name
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

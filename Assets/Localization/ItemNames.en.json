@@ -2,6 +2,9 @@
   "schemaVersion": 1,
   "locale": "en",
   "names": {
+    "ClayJar_Building": "Clay Jar",
+    "StoneMortar_Building": "Stone Mortar",
+    "StoneMortar": "Stone Mortar",
     "Dagger_Stone": "Stone Dagger",
     "Dagger_Copper": "Copper Dagger",
     "Dagger_Bone": "Bone Dagger",

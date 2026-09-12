@@ -2258,6 +2258,30 @@ MonoBehaviour:
     m_Localized: This deposit requires a higher-tier pickaxe.
     m_Metadata:
       m_Items: []
+  - m_Id: 11099998031699970
+    m_Localized: Touch Controls Opacity
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12545160599560192
+    m_Localized: Stone Mortar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12545160679251968
+    m_Localized: Drag ingredients into the bowl. Lift the pestle, then pound down.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12578933991006208
+    m_Localized: Place on Ground
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12578934062309376
+    m_Localized: Pack Up
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12579643092623360
+    m_Localized: Dirty Water (Drinkable)
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

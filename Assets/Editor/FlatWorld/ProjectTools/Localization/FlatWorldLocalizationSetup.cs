@@ -121,6 +121,8 @@ namespace FlatWorld.Localization.Editor
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 { "陶罐", "Clay Jar" },
+                { "放到地上", "Place on Ground" },
+                { "拆回物品", "Pack Up" },
                 { "水量状态", "Water Status" },
                 { "空罐", "Empty" },
                 { "淡水（需烧开）", "Fresh water (boil first)" },
@@ -244,6 +246,7 @@ namespace FlatWorld.Localization.Editor
                 { "界面设置", "Interface Settings" },
                 { "保存与退出", "Save & Exit" },
                 { "界面缩放", "UI Scale" },
+                { "触屏控件透明度", "Touch Controls Opacity" },
                 { "左侧触控区", "Left Touch Zone" },
                 { "右侧触控区", "Right Touch Zone" },
                 { "左侧触控区比例", "Left Touch Zone Ratio" },
@@ -342,6 +345,8 @@ namespace FlatWorld.Localization.Editor
                 { "装备", "Equipment" },
                 { "将装备拖入槽位以更新生存配置", "Drag equipment into slots to update your survival setup" },
                 { "钻木取火", "Fire Drill" },
+                { "石臼", "Stone Mortar" },
+                { "将材料拖入碗内，提起石棒再向下捣击", "Drag ingredients into the bowl. Lift the pestle, then pound down." },
                 { "按住操作键推进过程 · 松开即可暂停", "Hold the action key to continue · release to pause" },
                 { "预期产物", "Expected Output" },
                 { "执行", "Execute" },

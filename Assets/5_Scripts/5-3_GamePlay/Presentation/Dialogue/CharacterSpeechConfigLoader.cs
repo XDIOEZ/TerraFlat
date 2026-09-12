@@ -33,6 +33,8 @@ namespace FlatWorld.Dialogue
             CharacterSpeechFacts.WeatherPhase,
             CharacterSpeechFacts.WeatherIntensity,
             CharacterSpeechFacts.WeatherIsRaining,
+            CharacterSpeechFacts.WeatherIsSnowing,
+            CharacterSpeechFacts.SeasonPreparation,
             CharacterSpeechFacts.WeatherIsExposed,
             CharacterSpeechFacts.WeatherHasHeatSource,
             CharacterSpeechFacts.WeatherRemainingSeconds

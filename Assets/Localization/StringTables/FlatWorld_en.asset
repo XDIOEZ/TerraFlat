@@ -1431,8 +1431,10 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 11141662616051719
-    m_Localized: Holds 8 servings. Fill it at a water source; boil fresh water or
-      evaporate seawater in a furnace.
+    m_Localized: Holds 8 servings of water. Fresh water is stored as dirty water
+      and can be drunk immediately or boiled into clean drinking water. Choose Place
+      on Ground in its panel, then interact or pack up without losing water quality,
+      amount or heating progress. Sea water can be heated to make salt.
     m_Metadata:
       m_Items: []
   - m_Id: 11141662616051720
@@ -1540,6 +1542,35 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 12258436174569479
     m_Localized: Chili Tree
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12591148785721344
+    m_Localized: Stone Mortar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12591148827664384
+    m_Localized: Each strike turns one rice grain into one rice. Choose Place on
+      Ground in the held mortar's panel, then interact with it or pack it up. All
+      ingredients and products are retained.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12624922206527488
+    m_Localized: A placed clay jar. Interact to drink dirty or boiled water, empty
+      it, pour from a held jar or pack it up. Water amount, quality and heating progress
+      stay with the container.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12624922244276224
+    m_Localized: A placed stone mortar. Interact to process one recipe per strike.
+      All ingredients and products are retained when packing up or placing it again.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12625631102623744
+    m_Localized: Clay Jar
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12625631161344000
+    m_Localized: Stone Mortar
     m_Metadata:
       m_Items: []
   references:
