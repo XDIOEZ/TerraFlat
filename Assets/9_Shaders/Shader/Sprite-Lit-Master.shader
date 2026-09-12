@@ -38,6 +38,8 @@ Shader "Game/2D/Sprite-Lit-Master"
         _Dissolve ("Dissolve", Range(0,1)) = 0
         _DissolveTex ("Dissolve Noise", 2D) = "white" {}
 
+        [HideInInspector] _PlayerOccluder ("Player Occluder", Range(0,1)) = 0
+
         // Legacy properties，保持与官方 Sprite-Lit-Default 一致，方便管线处理
         _SnowCoverage("Seasonal Snow", Range(0,1)) = 0
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
@@ -61,6 +63,33 @@ Shader "Game/2D/Sprite-Lit-Master"
         Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
         Cull Off
         ZWrite Off
+
+        HLSLINCLUDE
+        float _PlayerOccluder;
+        float _PlayerOcclusionEnabled;
+        float4 _PlayerOcclusionCenter;
+        float _PlayerOcclusionRadius;
+        float _PlayerOcclusionFeather;
+        float _PlayerOcclusionAlpha;
+        float _PlayerOcclusionVerticalPadding;
+
+        float ComputePlayerOcclusionMask(float2 fragmentWorldPosition, float objectRootY)
+        {
+            float radius = max(0.0001, _PlayerOcclusionRadius);
+            float feather = clamp(_PlayerOcclusionFeather, 0.0001, radius);
+            float circleMask = 1.0 - smoothstep(
+                radius - feather,
+                radius,
+                distance(fragmentWorldPosition, _PlayerOcclusionCenter.xy));
+            float playerBehind = step(
+                objectRootY + _PlayerOcclusionVerticalPadding,
+                _PlayerOcclusionCenter.z);
+            return saturate(_PlayerOccluder) *
+                   saturate(_PlayerOcclusionEnabled) *
+                   circleMask *
+                   playerBehind;
+        }
+        ENDHLSL
 
         // ===== 2D 光照 Pass（在官方 Sprite-Lit-Default 的基础上加上 BodyClip / HitFlash / Dissolve） =====
         Pass
@@ -100,6 +129,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 float4  uv          : TEXCOORD0; // xy is uv, z is localY, w is localX
                 half2   lightingUV  : TEXCOORD1;
                 float3  positionWS  : TEXCOORD2;
+                float   objectRootY : TEXCOORD3;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -171,6 +201,7 @@ Shader "Game/2D/Sprite-Lit-Master"
 #endif
                 o.positionCS = TransformObjectToHClip(v.positionOS);
                 o.positionWS = TransformObjectToWorld(v.positionOS);
+                o.objectRootY = TransformObjectToWorld(float3(0, 0, 0)).y;
                 o.uv.xy = TRANSFORM_TEX(v.uv, _MainTex);
                 o.uv.z = v.positionOS.y;
                 o.uv.w = v.positionOS.x;
@@ -251,6 +282,10 @@ Shader "Game/2D/Sprite-Lit-Master"
                 main.rgb = lerp(main.rgb, _ActorTint.rgb, statusBlend);
                 main.rgb = lerp(main.rgb, _HitFlashColor.rgb, saturate(_HitFlash));
 
+                // 玩家位于树后方时，在玩家周围形成柔边圆形透明窗口。
+                float playerOcclusion = ComputePlayerOcclusionMask(i.positionWS.xy, i.objectRootY);
+                main.a *= lerp(1.0, saturate(_PlayerOcclusionAlpha), playerOcclusion);
+
                 // === 溶解效果（可选） ===
                 #ifdef DISSOLVE_ON
                 half noise = SAMPLE_TEXTURE2D(_DissolveTex, sampler_DissolveTex, i.uv.xy).r;
@@ -304,6 +339,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 float   localY          : TEXCOORD4;
                 float   localX          : TEXCOORD5;
                 float2  positionWS      : TEXCOORD6;
+                float   objectRootY     : TEXCOORD7;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -351,6 +387,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 o.localY = attributes.positionOS.y;
                 o.localX = attributes.positionOS.x;
                 o.positionWS = TransformObjectToWorld(attributes.positionOS).xy;
+                o.objectRootY = TransformObjectToWorld(float3(0, 0, 0)).y;
 #ifdef UNITY_INSTANCING_ENABLED
                 o.color *= unity_SpriteColor;
 #endif
@@ -386,6 +423,9 @@ Shader "Game/2D/Sprite-Lit-Master"
                     waterPosition);
                 submergedMask *= saturate(_WaterEnabled);
                 mainTex.a *= lerp(1.0, saturate(_WaterAlpha), submergedMask);
+
+                float playerOcclusion = ComputePlayerOcclusionMask(i.positionWS, i.objectRootY);
+                mainTex.a *= lerp(1.0, saturate(_PlayerOcclusionAlpha), playerOcclusion);
 
                 return NormalsRenderingShared(mainTex, normalTS, i.tangentWS.xyz, i.bitangentWS.xyz, i.normalWS.xyz);
             }
@@ -423,6 +463,7 @@ Shader "Game/2D/Sprite-Lit-Master"
                 float   localY          : TEXCOORD1;
                 float   localX          : TEXCOORD3;
                 float3  positionWS  : TEXCOORD2;
+                float   objectRootY : TEXCOORD4;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -468,6 +509,7 @@ Shader "Game/2D/Sprite-Lit-Master"
 #endif
                 o.positionCS = TransformObjectToHClip(attributes.positionOS);
                 o.positionWS = TransformObjectToWorld(attributes.positionOS);
+                o.objectRootY = TransformObjectToWorld(float3(0, 0, 0)).y;
                 o.uv = TRANSFORM_TEX(attributes.uv, _MainTex);
                 o.localY = attributes.positionOS.y;
                 o.localX = attributes.positionOS.x;
@@ -533,6 +575,9 @@ Shader "Game/2D/Sprite-Lit-Master"
                 float statusBlend = saturate(saturate(_ActorTintStrength) * statusPulse);
                 mainTex.rgb = lerp(mainTex.rgb, _ActorTint.rgb, statusBlend);
                 mainTex.rgb = lerp(mainTex.rgb, _HitFlashColor.rgb, saturate(_HitFlash));
+
+                float playerOcclusion = ComputePlayerOcclusionMask(i.positionWS.xy, i.objectRootY);
+                mainTex.a *= lerp(1.0, saturate(_PlayerOcclusionAlpha), playerOcclusion);
 
                 #if defined(DEBUG_DISPLAY)
                 SurfaceData2D surfaceData;

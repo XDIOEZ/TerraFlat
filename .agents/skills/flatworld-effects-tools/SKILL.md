@@ -37,6 +37,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 屏幕后处理脚本按最低支持质量只实现一个档位标记接口：Low 可在所有档位运行，Medium 需中/高档，High 仅高档；未标记效果保持旧行为。
 - 运行时 Sprite 描边若复制 `SortingGroup` 内的渲染器，描边 Renderer 必须放到组外并排在主体之后；URP 2D 自定义 Sprite Shader 必须包含 `Core2D.hlsl`，同时保留 SpriteRenderer 的逐渲染器属性。
 - 描边等代理 `SpriteRenderer` 必须同步源 Renderer 的 MPB 局部裁剪参数；代理写入自有 MPB 时必须同时写回 Sprite 的 `_MainTex`，避免逐渲染器贴图被默认白图替换。`Universal2D`、`NormalsRendering`、`UniversalForward` 等实际参与的 Shader Pass 必须使用同一坐标与阈值，避免代理或回退 Pass 重新显示已剔除像素。
+- 玩家被树冠遮挡时的圆形穿透窗由 `PlayerOcclusionShaderGlobals` 写入本地主角世界坐标，`Sprite-Lit-Master` 只对逐 Renderer `_PlayerOccluder=1` 的对象降低 Alpha；世界树必须带 `Tag.Tree`，`ItemDefinitionRuntime` 在共享外壳/对象池复用时必须显式写入 1 或 0 并保留其它 MPB 参数，禁止给所有 Sprite 开全局遮挡或为每棵树增加逐帧脚本。
 - 角色水体效果覆盖会旋转的手持物等附属 Sprite 时，水面高度与波浪横轴必须使用角色统一的世界空间坐标；保留本地坐标模式只用于不旋转的旧材质兼容，避免水线随物品旋转成竖线。
 - 浅滩最低淹没高度属于 `WaterImmersionRenderEffect` 的纯视觉映射，应在 `depthToSurface` 曲线结果后叠加身体归一化偏移；禁止改写 `TileData_Water.deepValue`，该值还会参与水中移速等玩法结算。
 - `TileEffectReceiver` 的邻接水格容错只服务于水边交互；`Tile_Water` 必须根据 `IsActiveTileEdgeInteractionOnly` 阻断浸没视觉、脚底阴影、Buff 和移动速度效果，避免站在沙格边缘的角色被误判为入水。

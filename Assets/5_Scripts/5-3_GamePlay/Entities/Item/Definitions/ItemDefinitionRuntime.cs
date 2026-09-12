@@ -7,6 +7,9 @@ using UnityEngine;
 /// <summary>把运行时定义应用到共享外壳实例。</summary>
 public static class ItemDefinitionRuntime
 {
+    private static readonly int PlayerOccluderId = Shader.PropertyToID("_PlayerOccluder");
+    private static readonly MaterialPropertyBlock VisualPropertyBlock = new();
+
     public static void ConfigureInstance(GameRes gameRes, RuntimeItemDefinition definition, Item item, ItemData itemData)
     {
         if (gameRes == null || definition == null || item == null || itemData == null)
@@ -71,11 +74,23 @@ public static class ItemDefinitionRuntime
             if (visual.SortingOrder.HasValue)
                 renderer.sortingOrder = visual.SortingOrder.Value;
 
+            ApplyPlayerOccluderFlag(item, renderer);
             item.Sprite = renderer;
         }
 
         ApplyAnimator(item, visual.AnimatorPath, definition.AnimatorController, visual.AnimationState);
         ApplyCollider(item, visual.Collider);
+    }
+
+    /// <summary>按 Tree 标签写入局部遮挡开关；对象池复用时也会明确复位，避免共享外壳串状态。</summary>
+    private static void ApplyPlayerOccluderFlag(Item item, SpriteRenderer renderer)
+    {
+        bool occludesPlayer = item.itemData?.Tags != null && item.itemData.Tags.ContainsTag(Tag.Tree);
+
+        VisualPropertyBlock.Clear();
+        renderer.GetPropertyBlock(VisualPropertyBlock);
+        VisualPropertyBlock.SetFloat(PlayerOccluderId, occludesPlayer ? 1f : 0f);
+        renderer.SetPropertyBlock(VisualPropertyBlock);
     }
 
     /// <summary>绑定 AnimatorController，并按 JSON 指定状态初始化动画机。</summary>

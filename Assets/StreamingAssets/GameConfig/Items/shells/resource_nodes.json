@@ -27,7 +27,8 @@
       "volume": 2.0,
       "canBePickedUp": false,
       "tags": [
-        "35"
+        "35",
+        "Tree"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Tree/tree-set1/64x64/trees-set1-64_6.png[trees-set1-64_6]",
