@@ -11,12 +11,12 @@ public static class NetworkModePrefabBuilder
     private const string PrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/WorldSetup/UI_NetworkMode.prefab";
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
 
-    private static readonly Color Ink = new Color(0.025f, 0.043f, 0.058f, 0.98f);
-    private static readonly Color InkSoft = new Color(0.045f, 0.075f, 0.095f, 0.98f);
-    private static readonly Color Cream = new Color(0.95f, 0.91f, 0.81f, 1f);
-    private static readonly Color Muted = new Color(0.64f, 0.70f, 0.71f, 1f);
-    private static readonly Color Amber = new Color(0.83f, 0.49f, 0.23f, 1f);
-    private static readonly Color Teal = new Color(0.26f, 0.61f, 0.57f, 1f);
+    private static readonly Color Ink = new Color32(52, 52, 52, 250);
+    private static readonly Color InkSoft = new Color32(61, 61, 61, 250);
+    private static readonly Color Cream = new Color32(238, 238, 238, 255);
+    private static readonly Color Muted = new Color32(200, 200, 200, 255);
+    private static readonly Color Amber = new Color32(215, 197, 106, 255);
+    private static readonly Color Teal = new Color32(164, 164, 164, 255);
 
     #region Prefab 重建入口
 
@@ -34,6 +34,7 @@ public static class NetworkModePrefabBuilder
         try
         {
             BuildVisualTree(root.transform, font);
+            FlatWorldUITheme.Apply(root.transform);
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
         }
         finally
@@ -99,7 +100,7 @@ public static class NetworkModePrefabBuilder
 
         Outline cardOutline = card.gameObject.AddComponent<Outline>();
         cardOutline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.32f);
-        cardOutline.effectDistance = new Vector2(1f, -1f);
+        cardOutline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
         cardOutline.useGraphicAlpha = true;
 
         Image accent = CreateImage("卡片强调线", card.transform, Amber);
@@ -166,7 +167,7 @@ public static class NetworkModePrefabBuilder
 
         Outline outline = summary.gameObject.AddComponent<Outline>();
         outline.effectColor = new Color(0.55f, 0.64f, 0.65f, 0.18f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
 
         TMP_Text heading = CreateText("会话状态标题", summary.transform, "会话状态", font, 27f, Cream, FontStyles.Bold, TextAlignmentOptions.Left);
         SetRect(heading.rectTransform, new Vector2(24f, -24f), new Vector2(260f, 38f), new Vector2(0f, 1f));
@@ -240,7 +241,7 @@ public static class NetworkModePrefabBuilder
 
         Outline outline = inputObject.AddComponent<Outline>();
         outline.effectColor = new Color(0.55f, 0.64f, 0.65f, 0.22f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
 
         GameObject viewportObject = new GameObject("Text Area", typeof(RectTransform), typeof(RectMask2D));
         viewportObject.layer = LayerMask.NameToLayer("UI");
@@ -307,7 +308,7 @@ public static class NetworkModePrefabBuilder
 
         Outline outline = buttonObject.AddComponent<Outline>();
         outline.effectColor = outlineColor;
-        outline.effectDistance = new Vector2(1f, -1f);
+        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
 
         Button button = buttonObject.GetComponent<Button>();
         button.targetGraphic = image;

@@ -1,4 +1,4 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 // AI-Context: 双脚本 UI 的面板视图基类；按节点名收集控件并管理开关状态，视觉结构完全由 Prefab 决定。
 
 using System;
@@ -93,6 +93,8 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     private bool closeOnEscapeShortcut;
     [SerializeField]
     private bool blocksGameplayInput = true;
+    private float openVisualAlpha = 1f;
+    private bool runtimeStateInitialized;
     private string preferredSelectableName;
     private GameObject previousSelectedObject;
 
@@ -136,6 +138,9 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         if (canvasGroup != null)
         {
             isOpen = canvasGroup.alpha > 0 && canvasGroup.interactable && canvasGroup.blocksRaycasts;
+            runtimeStateInitialized = true;
+            if (isOpen)
+                canvasGroup.alpha = openVisualAlpha;
         }
 
     }
@@ -377,13 +382,34 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         NotifyInteractionSurfaceChanged();
     }
 
+    /// <summary>
+    /// 设置面板打开状态下的视觉透明度，不改变交互和射线；Open/Close 会继续保留该值。
+    /// 常驻 HUD 可借此支持玩家透明度偏好，而不破坏 BasePanel 的开关语义。
+    /// </summary>
+    public void SetOpenVisualAlpha(float alpha)
+    {
+        openVisualAlpha = Mathf.Clamp01(alpha);
+        EnsureRuntimeReferences();
+        if (canvasGroup == null)
+            return;
+
+        // Init 之前只缓存偏好，不提前把一个本来打开的 Prefab 改成 alpha=0，
+        // 否则 Init 会把视觉透明误判成关闭状态。
+        if (!runtimeStateInitialized && !isOpen)
+            return;
+
+        bool currentlyOpen = isOpen || (canvasGroup.interactable && canvasGroup.blocksRaycasts);
+        if (currentlyOpen)
+            canvasGroup.alpha = openVisualAlpha;
+    }
+
     [Button]
     public void Open()
     {
         bool wasOpen = isOpen;
         if (canvasGroup != null)
         {
-            canvasGroup.alpha = 1;
+            canvasGroup.alpha = openVisualAlpha;
             canvasGroup.interactable = true;
             canvasGroup.blocksRaycasts = true;
             isOpen = true;

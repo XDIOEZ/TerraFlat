@@ -261,7 +261,7 @@ public static class MainMenuPrefabBuilder
 
         Outline cardOutline = card.gameObject.AddComponent<Outline>();
         cardOutline.effectColor = Color.clear;
-        cardOutline.effectDistance = new Vector2(1f, -1f);
+        cardOutline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
         cardOutline.useGraphicAlpha = true;
 
         Image accent = CreateImage("菜单强调线", card.transform, Color.clear);
@@ -300,7 +300,7 @@ public static class MainMenuPrefabBuilder
         image.color = ButtonFace;
         Outline outline = buttonObject.AddComponent<Outline>();
         outline.effectColor = ButtonBorder;
-        outline.effectDistance = new Vector2(1f, -1f);
+        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
         outline.useGraphicAlpha = true;
 
         Button button = buttonObject.GetComponent<Button>();
@@ -370,7 +370,7 @@ public static class MainMenuPrefabBuilder
 
         Outline outline = buttonObject.AddComponent<Outline>();
         outline.effectColor = ButtonBorder;
-        outline.effectDistance = new Vector2(1f, -1f);
+        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
         outline.useGraphicAlpha = true;
 
         Button button = buttonObject.GetComponent<Button>();

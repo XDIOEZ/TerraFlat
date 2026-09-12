@@ -12,14 +12,14 @@ public sealed class GameSaveItemView : MonoBehaviour, ISelectHandler, IDeselectH
 {
     #region 视觉参数
 
-    private static readonly Color NormalColor = new Color(0.045f, 0.075f, 0.095f, 1f);
-    private static readonly Color SelectedColor = new Color(0.075f, 0.235f, 0.225f, 1f);
-    private static readonly Color FocusedColor = new Color(0.105f, 0.335f, 0.305f, 1f);
-    private static readonly Color NormalTextColor = new Color(0.95f, 0.91f, 0.81f, 1f);
-    private static readonly Color SelectedTextColor = new Color(0.62f, 0.92f, 0.83f, 1f);
-    private static readonly Color FocusedTextColor = new Color(1f, 0.96f, 0.84f, 1f);
-    private static readonly Color SelectedAccentColor = new Color(0.26f, 0.61f, 0.57f, 1f);
-    private static readonly Color FocusedAccentColor = new Color(0.95f, 0.64f, 0.32f, 1f);
+    private static readonly Color NormalColor = new Color32(73, 73, 73, 255);
+    private static readonly Color SelectedColor = new Color32(96, 96, 96, 255);
+    private static readonly Color FocusedColor = new Color32(108, 108, 108, 255);
+    private static readonly Color NormalTextColor = new Color32(238, 238, 238, 255);
+    private static readonly Color SelectedTextColor = new Color32(245, 245, 245, 255);
+    private static readonly Color FocusedTextColor = new Color32(255, 255, 255, 255);
+    private static readonly Color SelectedAccentColor = new Color32(215, 197, 106, 210);
+    private static readonly Color FocusedAccentColor = new Color32(228, 217, 134, 255);
 
     #endregion
 

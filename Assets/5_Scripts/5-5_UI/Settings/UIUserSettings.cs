@@ -18,6 +18,7 @@ public static class UIUserSettings
     private const string ScaleKey = "FlatWorld.UI.Scale";
     private const string RespectSafeAreaKey = "FlatWorld.UI.RespectSafeArea";
     private const string FloatingMoveJoystickKey = "FlatWorld.Mobile.FloatingMoveJoystick";
+    private const string TouchControlsOpacityKey = "FlatWorld.Mobile.TouchControlsOpacity";
     private const string PinchZoomSensitivityKey = "FlatWorld.Mobile.PinchZoomSensitivity";
     private const string LeftControlZoneRatioKey = "FlatWorld.Mobile.LeftControlZoneRatio";
     private const string RightControlZoneRatioKey = "FlatWorld.Mobile.RightControlZoneRatio";
@@ -42,11 +43,16 @@ public static class UIUserSettings
     public const float MinimumPinchZoomSensitivity = 0f;
     public const float MaximumPinchZoomSensitivity = 300f;
     public const float PinchZoomSensitivityStep = 1f;
+    public const float DefaultTouchControlsOpacityPercent = 100f;
+    public const float MinimumTouchControlsOpacityPercent = 0f;
+    public const float MaximumTouchControlsOpacityPercent = 100f;
+    public const float TouchControlsOpacityPercentStep = 1f;
 
     public const string SettingsProviderId = "ui";
     public const string ScaleSettingKey = "ui.scale";
     public const string RespectSafeAreaSettingKey = "ui.respectSafeArea";
     public const string FloatingMoveJoystickSettingKey = "ui.floatingMoveJoystick";
+    public const string TouchControlsOpacitySettingKey = "ui.touchControlsOpacity";
     public const string PinchZoomSensitivitySettingKey = "ui.pinchZoomSensitivity";
     public const string LeftControlZoneRatioSettingKey = "ui.leftControlZoneRatio";
     public const string RightControlZoneRatioSettingKey = "ui.rightControlZoneRatio";
@@ -59,15 +65,19 @@ public static class UIUserSettings
     private static float cachedScale = DefaultScale;
     private static bool cachedRespectSafeArea = true;
     private static bool cachedFloatingMoveJoystick = true;
+    private static float cachedTouchControlsOpacityPercent = DefaultTouchControlsOpacityPercent;
     private static float cachedPinchZoomSensitivity = DefaultPinchZoomSensitivity;
     private static float cachedLeftControlZoneRatio = DefaultLeftControlZoneRatio;
     private static float cachedRightControlZoneRatio = DefaultRightControlZoneRatio;
 
-    /// <summary>任一 UI 偏好实际改变后广播一次。</summary>
+    /// <summary>界面缩放或安全区偏好实际改变后广播一次。</summary>
     public static event Action Changed;
 
     /// <summary>手机摇杆模式或左右触控分区改变时广播，避免无关 UI 设置触发摇杆重配。</summary>
     public static event Action MobileControlsChanged;
+
+    /// <summary>触屏玩法控件透明度改变时广播，不影响控件射线与交互状态。</summary>
+    public static event Action TouchControlsOpacityChanged;
 
     private static readonly ISettingsProvider settingsProvider =
         CreateSettingsProvider();
@@ -101,6 +111,19 @@ public static class UIUserSettings
             return cachedFloatingMoveJoystick;
         }
     }
+
+    /// <summary>触屏玩法控件透明度百分比；0 为完全透明，100 为完全不透明。</summary>
+    public static float TouchControlsOpacityPercent
+    {
+        get
+        {
+            EnsureInitialized();
+            return cachedTouchControlsOpacityPercent;
+        }
+    }
+
+    /// <summary>供 CanvasGroup 使用的归一化触屏控件透明度。</summary>
+    public static float TouchControlsOpacity => TouchControlsOpacityPercent / 100f;
 
     /// <summary>双指缩放灵敏度；0 表示关闭，数值越大响应越快。</summary>
     public static float PinchZoomSensitivity
@@ -185,6 +208,21 @@ public static class UIUserSettings
         MobileControlsChanged?.Invoke();
     }
 
+    /// <summary>保存触屏玩法控件透明度，并即时刷新手机 HUD 与快捷栏视觉。</summary>
+    public static float SetTouchControlsOpacityPercent(float value)
+    {
+        EnsureInitialized();
+        float sanitized = SanitizeTouchControlsOpacityPercent(value);
+        if (Mathf.Approximately(cachedTouchControlsOpacityPercent, sanitized))
+            return cachedTouchControlsOpacityPercent;
+
+        cachedTouchControlsOpacityPercent = sanitized;
+        PlayerPrefs.SetFloat(TouchControlsOpacityKey, sanitized);
+        PlayerPrefs.Save();
+        TouchControlsOpacityChanged?.Invoke();
+        return sanitized;
+    }
+
     /// <summary>保存双指缩放灵敏度；0 表示关闭。</summary>
     public static float SetPinchZoomSensitivity(float value)
     {
@@ -235,6 +273,9 @@ public static class UIUserSettings
         EnsureInitialized();
         bool visualChanged = !Mathf.Approximately(cachedScale, DefaultScale) ||
                              !cachedRespectSafeArea;
+        bool touchOpacityChanged = !Mathf.Approximately(
+            cachedTouchControlsOpacityPercent,
+            DefaultTouchControlsOpacityPercent);
         bool mobileChanged = !cachedFloatingMoveJoystick ||
                              !Mathf.Approximately(
                                  cachedLeftControlZoneRatio,
@@ -242,17 +283,19 @@ public static class UIUserSettings
                              !Mathf.Approximately(
                                  cachedRightControlZoneRatio,
                                  DefaultRightControlZoneRatio);
-        if (!visualChanged && !mobileChanged)
+        if (!visualChanged && !mobileChanged && !touchOpacityChanged)
             return;
 
         cachedScale = DefaultScale;
         cachedRespectSafeArea = true;
         cachedFloatingMoveJoystick = true;
+        cachedTouchControlsOpacityPercent = DefaultTouchControlsOpacityPercent;
         cachedLeftControlZoneRatio = DefaultLeftControlZoneRatio;
         cachedRightControlZoneRatio = DefaultRightControlZoneRatio;
         PlayerPrefs.SetFloat(ScaleKey, DefaultScale);
         PlayerPrefs.SetInt(RespectSafeAreaKey, 1);
         PlayerPrefs.SetInt(FloatingMoveJoystickKey, 1);
+        PlayerPrefs.SetFloat(TouchControlsOpacityKey, DefaultTouchControlsOpacityPercent);
         PlayerPrefs.SetFloat(LeftControlZoneRatioKey, DefaultLeftControlZoneRatio);
         PlayerPrefs.SetFloat(RightControlZoneRatioKey, DefaultRightControlZoneRatio);
         PlayerPrefs.Save();
@@ -260,6 +303,8 @@ public static class UIUserSettings
             Changed?.Invoke();
         if (mobileChanged)
             MobileControlsChanged?.Invoke();
+        if (touchOpacityChanged)
+            TouchControlsOpacityChanged?.Invoke();
     }
 
     /// <summary>只恢复镜头控制页的双指缩放灵敏度。</summary>
@@ -274,6 +319,9 @@ public static class UIUserSettings
         bool changed = !Mathf.Approximately(cachedScale, DefaultScale) ||
                        !cachedRespectSafeArea ||
                        !cachedFloatingMoveJoystick ||
+                       !Mathf.Approximately(
+                           cachedTouchControlsOpacityPercent,
+                           DefaultTouchControlsOpacityPercent) ||
                        !Mathf.Approximately(
                            cachedLeftControlZoneRatio,
                            DefaultLeftControlZoneRatio) ||
@@ -295,13 +343,18 @@ public static class UIUserSettings
                                      !Mathf.Approximately(
                                          cachedRightControlZoneRatio,
                                          DefaultRightControlZoneRatio);
+        bool touchOpacityChanged = !Mathf.Approximately(
+            cachedTouchControlsOpacityPercent,
+            DefaultTouchControlsOpacityPercent);
         cachedFloatingMoveJoystick = true;
+        cachedTouchControlsOpacityPercent = DefaultTouchControlsOpacityPercent;
         cachedPinchZoomSensitivity = DefaultPinchZoomSensitivity;
         cachedLeftControlZoneRatio = DefaultLeftControlZoneRatio;
         cachedRightControlZoneRatio = DefaultRightControlZoneRatio;
         PlayerPrefs.SetFloat(ScaleKey, DefaultScale);
         PlayerPrefs.SetInt(RespectSafeAreaKey, 1);
         PlayerPrefs.SetInt(FloatingMoveJoystickKey, 1);
+        PlayerPrefs.SetFloat(TouchControlsOpacityKey, DefaultTouchControlsOpacityPercent);
         PlayerPrefs.SetFloat(PinchZoomSensitivityKey, DefaultPinchZoomSensitivity);
         PlayerPrefs.SetFloat(LeftControlZoneRatioKey, DefaultLeftControlZoneRatio);
         PlayerPrefs.SetFloat(RightControlZoneRatioKey, DefaultRightControlZoneRatio);
@@ -309,6 +362,8 @@ public static class UIUserSettings
         Changed?.Invoke();
         if (mobileControlsChanged)
             MobileControlsChanged?.Invoke();
+        if (touchOpacityChanged)
+            TouchControlsOpacityChanged?.Invoke();
     }
 
     #endregion
@@ -323,11 +378,13 @@ public static class UIUserSettings
         cachedScale = DefaultScale;
         cachedRespectSafeArea = true;
         cachedFloatingMoveJoystick = true;
+        cachedTouchControlsOpacityPercent = DefaultTouchControlsOpacityPercent;
         cachedPinchZoomSensitivity = DefaultPinchZoomSensitivity;
         cachedLeftControlZoneRatio = DefaultLeftControlZoneRatio;
         cachedRightControlZoneRatio = DefaultRightControlZoneRatio;
         Changed = null;
         MobileControlsChanged = null;
+        TouchControlsOpacityChanged = null;
     }
 
     #region 设置提供者
@@ -372,11 +429,23 @@ public static class UIUserSettings
                     value => SetScale(value)),
                 new SettingsSlider(
                     new SettingDescriptor(
+                        TouchControlsOpacitySettingKey,
+                        "触屏控件透明度",
+                        SettingControlType.Slider,
+                        "mobile",
+                        order: 1),
+                    MinimumTouchControlsOpacityPercent,
+                    MaximumTouchControlsOpacityPercent,
+                    TouchControlsOpacityPercentStep,
+                    () => TouchControlsOpacityPercent,
+                    value => SetTouchControlsOpacityPercent(value)),
+                new SettingsSlider(
+                    new SettingDescriptor(
                         LeftControlZoneRatioSettingKey,
                         "左侧触控区比例",
                         SettingControlType.Slider,
                         "mobile",
-                        order: 1),
+                        order: 2),
                     MinimumControlZoneRatio,
                     MaximumControlZoneRatio,
                     ControlZoneRatioStep,
@@ -388,7 +457,7 @@ public static class UIUserSettings
                         "右侧触控区比例",
                         SettingControlType.Slider,
                         "mobile",
-                        order: 2),
+                        order: 3),
                     MinimumControlZoneRatio,
                     MaximumControlZoneRatio,
                     ControlZoneRatioStep,
@@ -400,7 +469,7 @@ public static class UIUserSettings
                         "双指缩放灵敏度",
                         SettingControlType.Slider,
                         "mobile",
-                        order: 3),
+                        order: 4),
                     MinimumPinchZoomSensitivity,
                     MaximumPinchZoomSensitivity,
                     PinchZoomSensitivityStep,
@@ -453,6 +522,8 @@ public static class UIUserSettings
         cachedScale = SanitizeScale(PlayerPrefs.GetFloat(ScaleKey, DefaultScale));
         cachedRespectSafeArea = PlayerPrefs.GetInt(RespectSafeAreaKey, 1) != 0;
         cachedFloatingMoveJoystick = PlayerPrefs.GetInt(FloatingMoveJoystickKey, 1) != 0;
+        cachedTouchControlsOpacityPercent = SanitizeTouchControlsOpacityPercent(
+            PlayerPrefs.GetFloat(TouchControlsOpacityKey, DefaultTouchControlsOpacityPercent));
         cachedPinchZoomSensitivity = SanitizePinchZoomSensitivity(
             PlayerPrefs.GetFloat(PinchZoomSensitivityKey, DefaultPinchZoomSensitivity));
         cachedLeftControlZoneRatio = SanitizeControlZoneRatio(
@@ -479,6 +550,20 @@ public static class UIUserSettings
             MinimumPinchZoomSensitivity,
             MaximumPinchZoomSensitivity);
         return Mathf.Round(clamped / PinchZoomSensitivityStep) * PinchZoomSensitivityStep;
+    }
+
+    /// <summary>把触屏控件透明度限制为设置页显示的 0–100 整数百分比。</summary>
+    private static float SanitizeTouchControlsOpacityPercent(float value)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value))
+            value = DefaultTouchControlsOpacityPercent;
+
+        float clamped = Mathf.Clamp(
+            value,
+            MinimumTouchControlsOpacityPercent,
+            MaximumTouchControlsOpacityPercent);
+        return Mathf.Round(clamped / TouchControlsOpacityPercentStep) *
+               TouchControlsOpacityPercentStep;
     }
 
     /// <summary>把左右触控区限制为稳定百分比，确保中间始终至少保留 20% 宽度。</summary>

@@ -15,8 +15,7 @@ using UnityEngine.UI;
 public static class GameUIPrefabRebuilder
 {
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
-    private const string SelectBoxSpritePath = "Assets/6_Art/UI/Inventory_UI/Inventory_select.png";
-    private const string PixelBlueGoldAtlasPath = "Assets/6_Art/UI/PixelBlueGold/PixelBlueGold_UI.png";
+    private const string SelectBoxSpritePath = "Assets/6_Art/UI/Inventory_UI/UI_HotBar_SelectionFrame.png";
     private const string PrefabRoot = "Assets/2_Prefabs/2-1_UI/";
     private const string CommonControlsRoot = PrefabRoot + "Common/Controls/";
     private const string MainMenuCoreRoot = PrefabRoot + "MainMenu/Core/";
@@ -39,22 +38,22 @@ public static class GameUIPrefabRebuilder
         CraftingRoot + "UI_FlintStrike.prefab"
     };
 
-    private static readonly Color Ink = new Color(0.025f, 0.043f, 0.058f, 0.985f);
-    private static readonly Color InkSoft = new Color(0.045f, 0.075f, 0.095f, 0.985f);
-    private static readonly Color Surface = new Color(0.063f, 0.153f, 0.188f, 0.985f);
-    private static readonly Color SurfaceRaised = new Color(0.094f, 0.212f, 0.247f, 0.985f);
-    private static readonly Color Cream = new Color(0.95f, 0.91f, 0.81f, 1f);
-    private static readonly Color Muted = new Color(0.66f, 0.72f, 0.73f, 1f);
-    private static readonly Color Amber = new Color(0.83f, 0.49f, 0.23f, 1f);
-    private static readonly Color Teal = new Color(0.26f, 0.61f, 0.57f, 1f);
-    private static readonly Color Border = new Color(0.55f, 0.68f, 0.70f, 0.22f);
+    private static readonly Color Ink = new Color32(52, 52, 52, 251);
+    private static readonly Color InkSoft = new Color32(61, 61, 61, 251);
+    private static readonly Color Surface = new Color32(73, 73, 73, 251);
+    private static readonly Color SurfaceRaised = new Color32(89, 89, 89, 252);
+    private static readonly Color Cream = new Color32(238, 238, 238, 255);
+    private static readonly Color Muted = new Color32(200, 200, 200, 255);
+    private static readonly Color Amber = new Color32(215, 197, 106, 255);
+    private static readonly Color Teal = new Color32(164, 164, 164, 255);
+    private static readonly Color Border = new Color32(255, 255, 255, 33);
 
-    // Modular Inventory 素材的 Steel 配色：只用于玩家行囊，不覆盖游戏内通用主题。
-    private static readonly Color ModularBagOuter = new Color32(25, 35, 47, 255);
-    private static readonly Color ModularBagSurface = new Color32(45, 62, 72, 255);
-    private static readonly Color ModularBagField = new Color32(33, 45, 55, 255);
-    private static readonly Color ModularBagLine = new Color32(126, 150, 149, 255);
-    private static readonly Color ModularBagText = new Color32(235, 240, 239, 255);
+    // 行囊保留原布局，但视觉跟随全局灰阶主题，不再使用独立彩色槽位皮肤。
+    private static readonly Color ModularBagOuter = new Color32(52, 52, 52, 255);
+    private static readonly Color ModularBagSurface = new Color32(73, 73, 73, 255);
+    private static readonly Color ModularBagField = new Color32(61, 61, 61, 255);
+    private static readonly Color ModularBagLine = new Color32(255, 255, 255, 34);
+    private static readonly Color ModularBagText = new Color32(238, 238, 238, 255);
 
     private static TMP_FontAsset font;
 
@@ -109,9 +108,6 @@ public static class GameUIPrefabRebuilder
             Debug.LogError($"[Game UI] 缺少统一字体：{FontPath}");
             return;
         }
-
-        // 行囊构建会引用用户指定的 Modular Inventory 图集；切图必须在批量 AssetEditing 之前完成。
-        ModularInventorySpriteImporter.EnsureConfigured();
 
         List<BuildTarget> targets = new List<BuildTarget>
         {
@@ -194,15 +190,13 @@ public static class GameUIPrefabRebuilder
         ValidateRebuiltUI();
     }
 
-    /// <summary>只重构玩家行囊为 Modular Inventory 风格，不影响通用槽位和其他游戏内 UI。</summary>
-    [MenuItem("FlatWorld/UI/重构 Modular Inventory 行囊")]
+    /// <summary>只重构玩家行囊的灰阶简约外观，不影响通用槽位和其他游戏内 UI。</summary>
+    [MenuItem("FlatWorld/UI/重构灰阶简约行囊")]
     public static void RebuildModularInventoryBag()
     {
         font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
         if (font == null)
             throw new InvalidOperationException($"缺少统一字体：{FontPath}");
-
-        ModularInventorySpriteImporter.EnsureConfigured();
 
         GameObject root = PrefabUtility.LoadPrefabContents(BagPrefabPath);
         try
@@ -225,7 +219,7 @@ public static class GameUIPrefabRebuilder
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[Game UI] 已使用 Modular Inventory Sprite 重构玩家行囊；通用 UI_Slot 保持原样。");
+        Debug.Log("[Game UI] 已按灰阶简约主题重构玩家行囊；动态槽位回归通用 UI_Slot。");
     }
 
     /// <summary>仅重构通用物品槽位，便于独立调整背包/装备等库存界面的槽位视觉。</summary>
@@ -254,7 +248,7 @@ public static class GameUIPrefabRebuilder
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[Game UI] 已按 PixelBlueGold 风格重构基础物品槽位。");
+        Debug.Log("[Game UI] 已按灰阶简约风格重构基础物品槽位。");
     }
 
     /// <summary>仅更新快捷栏名称提示，保留九格槽位和现有快捷栏样式。</summary>
@@ -645,8 +639,8 @@ public static class GameUIPrefabRebuilder
     }
 
     /// <summary>
-    /// 构建 Modular Inventory 风格的行囊版式。
-    /// 保留现有 800×640 窗口和七列滚动布局，只移除旧 PixelBlueGold 装饰并为最终素材换肤准备结构。
+    /// 构建灰阶简约行囊版式。
+    /// 保留现有 800×640 窗口和七列滚动布局，只清理旧彩色装饰并统一内容区层级。
     /// </summary>
     private static void BuildModularInventoryBagPreview(GameObject root)
     {
@@ -655,7 +649,7 @@ public static class GameUIPrefabRebuilder
 
         RectTransform chrome = PrepareWindow(root, width, height, "行囊", string.Empty, string.Empty);
 
-        // 用户给出的图集本身承担边框和格子层次，因此清理旧图标、眉题和额外装饰。
+        // 简约主题不保留额外图标、眉题和装饰性英文。
         DestroyGeneratedElement(chrome, "FWUI_眉题");
         DestroyGeneratedElement(chrome, "FWUI_FooterHint");
         DestroyGeneratedElement(chrome, "FWUI_TickTop");
@@ -675,7 +669,7 @@ public static class GameUIPrefabRebuilder
             }
         }
 
-        // 内容区使用低对比深底，真正的格线由每个 Modular Inventory Cell 自己提供。
+        // 内容区使用低对比灰底，槽位只保留轻微边界。
         RectTransform innerField = FindRect(chrome, "FWUI_InnerField");
         if (innerField != null)
         {
@@ -712,7 +706,7 @@ public static class GameUIPrefabRebuilder
             grid.cellSize = new Vector2(80f, 80f);
             grid.spacing = new Vector2(4f, 4f);
             grid.padding = new RectOffset(8, 8, 8, 8);
-            grid.childAlignment = TextAnchor.UpperCenter;
+            grid.childAlignment = TextAnchor.UpperLeft;
         }
 
         ScrollRect scrollRect = root.GetComponentInChildren<ScrollRect>(true);
@@ -760,17 +754,11 @@ public static class GameUIPrefabRebuilder
     }
 
     /// <summary>
-    /// 在通用 Normalize/Theme 完成后落地 Modular Inventory 素材，避免全局主题重新覆盖行囊专属外观。
-    /// 动态槽位继续由 InventorySlotVisualProfile 在运行时应用同一套 Sprite。
+    /// 在通用 Normalize/Theme 完成后固化行囊灰阶表面，并移除旧的独立槽位皮肤覆盖。
+    /// 动态槽位直接沿用通用 UI_Slot，保证所有库存界面保持同一视觉语言。
     /// </summary>
     private static void FinalizeModularInventoryBag(GameObject root)
     {
-        Sprite normal = ModularInventorySpriteImporter.LoadSprite("ModInv_Steel_Cell");
-        Sprite highlighted = ModularInventorySpriteImporter.LoadSprite("ModInv_Blue_Cell");
-        Sprite pressed = ModularInventorySpriteImporter.LoadSprite("ModInv_Charcoal_Cell");
-        Sprite selected = ModularInventorySpriteImporter.LoadSprite("ModInv_Blue_Cell");
-        Sprite disabled = ModularInventorySpriteImporter.LoadSprite("ModInv_Silver_Cell");
-
         ApplyModularBagSurface(root.GetComponent<Image>(), ModularBagOuter);
         ApplyNamedModularBagSurface(root.transform, "FWUI_Body", ModularBagOuter);
         ApplyNamedModularBagSurface(root.transform, "FWUI_Header", ModularBagSurface);
@@ -789,34 +777,24 @@ public static class GameUIPrefabRebuilder
         if (title != null)
             title.color = ModularBagText;
 
-        ConfigureModularBagButton(root.transform, "关闭", normal, ModularBagText, true);
-        // “Horizontal4”本身包含四个独立格子的分隔线，只适合成组槽位展示，不能作为单个文字按钮背景。
-        // 整理按钮改用单格 Cell 的九宫格拉伸，保留同套材质语言且不会让分隔线穿过文字。
-        ConfigureModularBagButton(root.transform, "整理", normal, ModularBagText, true);
+        ConfigureModularBagButton(root.transform, "关闭", null, ModularBagText, false);
+        ConfigureModularBagButton(root.transform, "整理", null, ModularBagText, false);
 
         InventorySlotVisualProfile profile = root.GetComponent<InventorySlotVisualProfile>();
-        if (profile == null)
-            profile = root.AddComponent<InventorySlotVisualProfile>();
-        profile.Configure(
-            normal,
-            highlighted,
-            pressed,
-            selected,
-            disabled,
-            new Vector2(80f, 80f),
-            new Vector2(58f, 58f));
+        if (profile != null)
+            UnityEngine.Object.DestroyImmediate(profile, true);
 
         Scrollbar scrollbar = root.GetComponentInChildren<Scrollbar>(true);
         if (scrollbar != null && scrollbar.targetGraphic is Image handle)
         {
-            handle.sprite = normal;
-            handle.type = Image.Type.Sliced;
+            handle.sprite = null;
+            handle.type = Image.Type.Simple;
             handle.preserveAspect = false;
-            handle.color = Color.white;
+            handle.color = new Color32(138, 138, 138, 240);
         }
     }
 
-    /// <summary>将旧主题面板恢复为纯深色表面，槽位边框由 Modular Inventory Sprite 自己呈现。</summary>
+    /// <summary>将行囊框架统一为纯灰阶表面。</summary>
     private static void ApplyNamedModularBagSurface(Transform root, string objectName, Color color)
     {
         RectTransform rect = FindRect(root, objectName);
@@ -824,7 +802,7 @@ public static class GameUIPrefabRebuilder
             ApplyModularBagSurface(rect.GetComponent<Image>(), color);
     }
 
-    /// <summary>移除旧九宫格 Sprite 并应用行囊专属底色。</summary>
+    /// <summary>移除旧九宫格 Sprite 并应用统一灰阶底色。</summary>
     private static void ApplyModularBagSurface(Image image, Color color)
     {
         if (image == null)
@@ -854,7 +832,7 @@ public static class GameUIPrefabRebuilder
             image.sprite = sprite;
             image.type = sliced ? Image.Type.Sliced : Image.Type.Simple;
             image.preserveAspect = false;
-            image.color = Color.white;
+            image.color = sprite != null ? Color.white : SurfaceRaised;
             image.pixelsPerUnitMultiplier = 1f;
         }
 
@@ -869,109 +847,6 @@ public static class GameUIPrefabRebuilder
         Transform target = FindTransform(root, objectName);
         if (target != null)
             UnityEngine.Object.DestroyImmediate(target.gameObject);
-    }
-
-    /// <summary>将正式窗口的框架、内容区和指定按钮替换为 PixelBlueGold 图集中的可拉伸九宫格素材。</summary>
-    private static void ApplyPixelBlueGoldWindowSkin(GameObject root, params string[] creamButtonNames)
-    {
-        Sprite panelBlue = LoadPixelBlueGoldSprite("Panel_Blue_1");
-        Sprite panelCream = LoadPixelBlueGoldSprite("Panel_Cream_1");
-        Sprite creamBevel = LoadPixelBlueGoldSprite("Panel_CreamBevel");
-
-        if (panelBlue == null || panelCream == null || creamBevel == null)
-            throw new MissingReferenceException($"{root.name} 无法加载 PixelBlueGold 核心九宫格素材");
-
-        ApplySlicedSprite(root.GetComponent<Image>(), panelBlue);
-        ApplyNamedSlicedSprite(root.transform, "FWUI_Body", panelBlue);
-        ApplyNamedSlicedSprite(root.transform, "FWUI_InnerField", panelBlue);
-        ApplyNamedSlicedSprite(root.transform, "FWUI_Header", panelBlue);
-        ApplyNamedSlicedSprite(root.transform, "FWUI_Footer", panelBlue);
-
-        Image[] images = root.GetComponentsInChildren<Image>(true);
-        foreach (Image image in images)
-        {
-            if (image != null && image.name.StartsWith("FWUI_Section_", StringComparison.Ordinal))
-                ApplySlicedSprite(image, panelCream);
-        }
-
-        TextMeshProUGUI[] texts = root.GetComponentsInChildren<TextMeshProUGUI>(true);
-        foreach (TextMeshProUGUI text in texts)
-        {
-            if (text == null)
-                continue;
-
-            if (text.name.StartsWith("FWUI_SectionTitle_", StringComparison.Ordinal))
-                text.color = Surface;
-            else if (text.name.StartsWith("FWUI_SectionEyebrow_", StringComparison.Ordinal))
-                text.color = new Color(0.58f, 0.33f, 0.12f, 1f);
-        }
-
-        if (creamButtonNames == null)
-            return;
-
-        foreach (string buttonName in creamButtonNames)
-        {
-            RectTransform buttonRect = FindRect(root.transform, buttonName);
-            if (buttonRect == null)
-                continue;
-
-            Image buttonImage = buttonRect.GetComponent<Image>();
-            ApplySlicedSprite(buttonImage, creamBevel);
-
-            TMP_Text label = buttonRect.GetComponentInChildren<TMP_Text>(true);
-            if (label != null)
-                label.color = Surface;
-        }
-    }
-
-    /// <summary>按切片名称从 PixelBlueGold Multiple Sprite 图集中读取正式 Sprite。</summary>
-    private static Sprite LoadPixelBlueGoldSprite(string spriteName)
-    {
-        UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath(PixelBlueGoldAtlasPath);
-        foreach (UnityEngine.Object asset in assets)
-        {
-            if (asset is Sprite sprite && string.Equals(sprite.name, spriteName, StringComparison.Ordinal))
-                return sprite;
-        }
-
-        Debug.LogError($"[Game UI] PixelBlueGold 缺少切片：{spriteName}");
-        return null;
-    }
-
-    /// <summary>给指定节点应用九宫格 Sprite；节点不存在时保持原结构不变。</summary>
-    private static void ApplyNamedSlicedSprite(Transform root, string objectName, Sprite sprite)
-    {
-        RectTransform rect = FindRect(root, objectName);
-        if (rect != null)
-            ApplySlicedSprite(rect.GetComponent<Image>(), sprite);
-    }
-
-    /// <summary>应用不染色的 Sliced Sprite，保留像素边框并关闭无意义的比例拉伸。</summary>
-    private static void ApplySlicedSprite(Image image, Sprite sprite)
-    {
-        if (image == null || sprite == null)
-            return;
-
-        image.sprite = sprite;
-        image.type = Image.Type.Sliced;
-        image.preserveAspect = false;
-        image.color = Color.white;
-        image.pixelsPerUnitMultiplier = 1f;
-
-        // PixelBlueGold 的 Panel 素材已经自带边框与阴影，再叠 Outline 会让像素边缘发黑变厚。
-        if (IsPixelBlueGoldSprite(sprite))
-        {
-            Outline outline = image.GetComponent<Outline>();
-            if (outline != null)
-                UnityEngine.Object.DestroyImmediate(outline);
-        }
-    }
-
-    /// <summary>判断 Sprite 是否来自当前统一 PixelBlueGold 图集。</summary>
-    private static bool IsPixelBlueGoldSprite(Sprite sprite)
-    {
-        return sprite != null &&
-               string.Equals(AssetDatabase.GetAssetPath(sprite), PixelBlueGoldAtlasPath, StringComparison.Ordinal);
     }
 
     private static void BuildCraftWindow(GameObject root, string title, string eyebrow, int inputCount, bool compact)
@@ -1712,46 +1587,43 @@ public static class GameUIPrefabRebuilder
         copy.characterSpacing = 3f;
     }
 
-    /// <summary>使用 PixelBlueGold 的槽位状态素材构建统一物品槽位，并保留物品图标、数量和制作预览层契约。</summary>
+    /// <summary>使用灰阶简约表面构建统一物品槽位，并保留物品图标、数量和制作预览层契约。</summary>
     private static void BuildSlot(GameObject root)
     {
-        Sprite normalSprite = LoadPixelBlueGoldSprite("SlotSmall_R01_C01");
-        Sprite hoverSprite = LoadPixelBlueGoldSprite("SlotSmall_R01_C02");
-        Sprite pressedSprite = LoadPixelBlueGoldSprite("SlotSmall_R02_C01");
-        Sprite disabledSprite = LoadPixelBlueGoldSprite("SlotSmall_R02_C02");
-        Sprite selectedSprite = LoadPixelBlueGoldSprite("SlotGold_R02_C01");
-        if (normalSprite == null || hoverSprite == null || pressedSprite == null ||
-            disabledSprite == null || selectedSprite == null)
-        {
-            throw new MissingReferenceException($"{root.name} 无法加载 PixelBlueGold 槽位状态素材");
-        }
-
         RectTransform rect = root.GetComponent<RectTransform>();
         if (rect != null)
             rect.sizeDelta = new Vector2(96f, 96f);
 
         Image image = EnsureImage(root);
-        image.color = Color.white;
-        image.sprite = normalSprite;
+        image.color = Surface;
+        image.sprite = null;
         image.type = Image.Type.Simple;
-        image.preserveAspect = true;
+        image.preserveAspect = false;
 
-        // PixelBlueGold 槽位自身已有像素边框；常驻 Outline 会把边缘再次外扩，改由 ItemSlot_UI 只在焦点/拖拽时显示交互描边。
+        // 槽位只保留一层轻边界；焦点/拖拽的强反馈仍由 ItemSlot_UI 负责。
         Outline rootOutline = image.GetComponent<Outline>();
-        if (rootOutline != null)
-            UnityEngine.Object.DestroyImmediate(rootOutline);
+        if (rootOutline == null)
+            rootOutline = image.gameObject.AddComponent<Outline>();
+        rootOutline.effectColor = Border;
+            rootOutline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
+        rootOutline.useGraphicAlpha = true;
 
         Button button = root.GetComponent<Button>();
         if (button != null)
         {
             button.targetGraphic = image;
-            button.transition = Selectable.Transition.SpriteSwap;
-            SpriteState spriteState = button.spriteState;
-            spriteState.highlightedSprite = hoverSprite;
-            spriteState.pressedSprite = pressedSprite;
-            spriteState.selectedSprite = selectedSprite;
-            spriteState.disabledSprite = disabledSprite;
-            button.spriteState = spriteState;
+            button.transition = Selectable.Transition.ColorTint;
+            button.spriteState = default;
+
+            ColorBlock colors = button.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(0.94f, 0.94f, 0.94f, 1f);
+            colors.pressedColor = new Color(0.74f, 0.74f, 0.74f, 1f);
+            colors.selectedColor = new Color(0.89f, 0.84f, 0.55f, 1f);
+            colors.disabledColor = new Color(0.46f, 0.46f, 0.46f, 0.52f);
+            colors.colorMultiplier = 1f;
+            colors.fadeDuration = 0.1f;
+            button.colors = colors;
         }
 
         RuntimeUIPrefabBuilder.AddCraftingPreviewLayers(root);
@@ -1783,8 +1655,8 @@ public static class GameUIPrefabRebuilder
                 slot.text.alignment = TextAlignmentOptions.BottomRight;
                 slot.text.enableWordWrapping = false;
                 slot.text.raycastTarget = false;
-                slot.text.color = new Color(0.992f, 0.820f, 0.475f, 1f);
-                AddOutline(slot.text, new Color(0.078f, 0.137f, 0.227f, 0.96f));
+                slot.text.color = Cream;
+                AddOutline(slot.text, new Color(0.12f, 0.12f, 0.12f, 0.96f));
             }
         }
 
@@ -2496,10 +2368,11 @@ public static class GameUIPrefabRebuilder
                 continue;
 
             Image image = button.targetGraphic as Image ?? button.GetComponent<Image>();
-            if (image != null && !IsPixelBlueGoldSprite(image.sprite))
+            if (image != null)
             {
                 image.sprite = null;
                 image.type = Image.Type.Simple;
+                image.preserveAspect = false;
             }
 
             if (button.GetComponent<FlatWorldUIFeedback>() == null)
@@ -2556,7 +2429,7 @@ public static class GameUIPrefabRebuilder
         if (outline == null)
             outline = graphic.gameObject.AddComponent<Outline>();
         outline.effectColor = color;
-        outline.effectDistance = new Vector2(1f, -1f);
+        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
         outline.useGraphicAlpha = true;
     }
 

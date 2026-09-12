@@ -34,15 +34,15 @@ public static partial class RuntimeUIPrefabBuilder
     private const string NetworkPlayerPrefab = "Assets/Resources/Networking/FlatWorldNetworkPlayer.prefab";
     private const string PlayerPrefab = "Assets/2_Prefabs/Gameplay/Player/Player.prefab";
 
-    private static readonly Color Canvas = new Color(0.025f, 0.043f, 0.058f, 0.99f);
-    private static readonly Color Surface = new Color(0.045f, 0.075f, 0.095f, 0.99f);
-    private static readonly Color SurfaceRaised = new Color(0.094f, 0.212f, 0.247f, 0.99f);
-    private static readonly Color Cream = new Color(0.95f, 0.91f, 0.81f, 1f);
-    private static readonly Color Muted = new Color(0.66f, 0.72f, 0.73f, 1f);
-    private static readonly Color Amber = new Color(0.83f, 0.49f, 0.23f, 1f);
-    private static readonly Color Teal = new Color(0.26f, 0.61f, 0.57f, 1f);
-    private static readonly Color Danger = new Color(0.66f, 0.31f, 0.27f, 1f);
-    private static readonly Color Border = new Color(0.55f, 0.68f, 0.70f, 0.28f);
+    private static readonly Color Canvas = new Color32(52, 52, 52, 252);
+    private static readonly Color Surface = new Color32(61, 61, 61, 252);
+    private static readonly Color SurfaceRaised = new Color32(89, 89, 89, 252);
+    private static readonly Color Cream = new Color32(238, 238, 238, 255);
+    private static readonly Color Muted = new Color32(200, 200, 200, 255);
+    private static readonly Color Amber = new Color32(215, 197, 106, 255);
+    private static readonly Color Teal = new Color32(164, 164, 164, 255);
+    private static readonly Color Danger = new Color32(138, 102, 98, 255);
+    private static readonly Color Border = new Color32(255, 255, 255, 33);
     // 手机右侧操作组统一使用同一套安全边距与间距，避免摇杆和按钮各自漂移。
     private const float MobileActionRightMargin = 76f;
     private const float MobileActionBottomMargin = 54f;
@@ -51,16 +51,16 @@ public static partial class RuntimeUIPrefabBuilder
     private const float MobileActionGap = 16f;
     private const float MobileActionGroupWidth = MobileActionButtonSize * 2f + MobileActionGap;
     private const float MobileActionGroupHeight = MobileAttackZoneSize + MobileActionGap + MobileActionButtonSize;
-    private const float MobileHotbarBackpackButtonSize = 82f;
-    private const float MobileHotbarBackpackGap = 12f;
+    private const float MobileHotbarSideButtonSize = 82f;
+    private const float MobileHotbarSideButtonGap = 12f;
     // 右侧抽屉为单列滚动列表；三角开关保留至少 60 逻辑像素的触控宽度。
     private const float MobileDrawerWidth = 280f;
     private const float MobileDrawerButtonHeight = 76f;
     private const float MobileDrawerToggleWidth = 60f;
-    // 主菜单设置使用更暖、更低亮度的独立背景，避免通用设置页的蓝绿色底板抢占视觉焦点。
-    private static readonly Color MainMenuSettingsCanvas = new Color(0.052f, 0.031f, 0.026f, 1f);
-    private static readonly Color MainMenuSettingsSurface = new Color(0.036f, 0.061f, 0.068f, 1f);
-    private static readonly Color MainMenuSettingsSection = new Color(0.14f, 0.067f, 0.038f, 0.96f);
+    // 主菜单设置与游戏内设置共用灰阶材质语言，只保留层级明度差。
+    private static readonly Color MainMenuSettingsCanvas = new Color32(46, 46, 46, 255);
+    private static readonly Color MainMenuSettingsSurface = new Color32(58, 58, 58, 255);
+    private static readonly Color MainMenuSettingsSection = new Color32(74, 74, 74, 245);
 
     private static TMP_FontAsset font;
 
@@ -515,6 +515,7 @@ public static partial class RuntimeUIPrefabBuilder
         try
         {
             SetUILayerRecursively(root);
+            FlatWorldUITheme.Apply(root.transform);
             PrefabUtility.SaveAsPrefabAsset(root, path);
         }
         finally
@@ -693,6 +694,7 @@ public static partial class RuntimeUIPrefabBuilder
         {
             update(root);
             SetUILayerRecursively(root);
+            FlatWorldUITheme.Apply(root.transform);
             EditorUtility.SetDirty(root);
             PrefabUtility.SaveAsPrefabAsset(root, path);
         }
@@ -1578,7 +1580,7 @@ public static partial class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>构建界面缩放、安全区、移动摇杆模式与触控分区设置页。</summary>
+    /// <summary>构建界面缩放、触屏控件透明度、安全区、移动摇杆模式与触控分区设置页。</summary>
     private static GameObject BuildInterfaceSettings()
     {
         GameObject root = CreateSettingsPageRoot(
@@ -1604,6 +1606,22 @@ public static partial class RuntimeUIPrefabBuilder
             Amber);
         valueText.alignment = TextAlignmentOptions.MidlineRight;
         valueText.gameObject.AddComponent<LayoutElement>().preferredWidth = 58f;
+
+        GameObject opacityRow = CreateRow("触屏控件透明度行", content, 52f);
+        CreateRowLabel(opacityRow.transform, "触屏控件透明度", 128f);
+        Slider opacitySlider = CreateSlider("触屏控件透明度", opacityRow.transform);
+        opacitySlider.minValue = UIUserSettings.MinimumTouchControlsOpacityPercent;
+        opacitySlider.maxValue = UIUserSettings.MaximumTouchControlsOpacityPercent;
+        opacitySlider.wholeNumbers = true;
+        opacitySlider.value = UIUserSettings.DefaultTouchControlsOpacityPercent;
+        TextMeshProUGUI opacityValue = CreateText(
+            "触屏控件透明度数值",
+            opacityRow.transform,
+            $"{Mathf.RoundToInt(UIUserSettings.DefaultTouchControlsOpacityPercent)}%",
+            16f,
+            Amber);
+        opacityValue.alignment = TextAlignmentOptions.MidlineRight;
+        opacityValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 58f;
 
         GameObject safeAreaRow = CreateRow("安全区域适配行", content, 48f);
         TextMeshProUGUI safeLabel = CreateText("安全区域说明", safeAreaRow.transform, "适配屏幕安全区域", 17f, Cream);
@@ -2917,7 +2935,7 @@ public static partial class RuntimeUIPrefabBuilder
             typeof(GamepadCursorGraphic));
         SetCentered(aimCursor.GetComponent<RectTransform>(), Vector2.zero, new Vector2(28f, 28f));
         GamepadCursorGraphic aimCursorGraphic = aimCursor.GetComponent<GamepadCursorGraphic>();
-        aimCursorGraphic.color = FlatWorldUITheme.SelectionOutline;
+        aimCursorGraphic.color = FlatWorldUITheme.AimCursor;
         aimCursorGraphic.raycastTarget = false;
         aimCursor.SetActive(false);
 
@@ -3029,7 +3047,7 @@ public static partial class RuntimeUIPrefabBuilder
         hotbarRect.pivot = new Vector2(0.5f, 0f);
         hotbarRect.anchoredPosition = new Vector2(0f, 16f);
         hotbarRect.sizeDelta = new Vector2(760f, 126f);
-        CreateMobileHotbarBackpackButton(hotbarAnchor.transform);
+        CreateMobileHotbarSideButtons(hotbarAnchor.transform);
 
         BuildMobileDrawer(root.transform);
         return root;
@@ -3131,7 +3149,7 @@ public static partial class RuntimeUIPrefabBuilder
         scroll.movementType = ScrollRect.MovementType.Clamped;
         scroll.scrollSensitivity = 32f;
 
-        foreach (string buttonName in new[] { "装备", "制作" })
+        foreach (string buttonName in new[] { "装备" })
         {
             Button button = CreateButton(buttonName, content.transform, buttonName, MobileDrawerWidth - 32f, MobileDrawerButtonHeight, false);
             SetButtonLabelSize(button, 22f);
@@ -3163,24 +3181,38 @@ public static partial class RuntimeUIPrefabBuilder
         drawer.SetActive(false);
     }
 
-    /// <summary>创建手机端快捷栏右侧的常驻背包入口；运行时会将它挂入真实快捷栏 Canvas 以继承模态排序。</summary>
-    private static void CreateMobileHotbarBackpackButton(Transform hotbarAnchor)
+    /// <summary>创建快捷栏左右两侧的常驻入口：左侧制作、右侧背包；运行时挂入真实快捷栏 Canvas。</summary>
+    private static void CreateMobileHotbarSideButtons(Transform hotbarAnchor)
+    {
+        CreateMobileHotbarSideButton(hotbarAnchor, "制作", false, false);
+        CreateMobileHotbarSideButton(hotbarAnchor, "背包", true, true);
+    }
+
+    /// <summary>创建单个快捷栏侧边入口，并排除九格布局控制。</summary>
+    private static void CreateMobileHotbarSideButton(
+        Transform hotbarAnchor,
+        string name,
+        bool rightSide,
+        bool accent)
     {
         Button button = CreateButton(
-            "背包",
+            name,
             hotbarAnchor,
-            "背包",
-            MobileHotbarBackpackButtonSize,
-            MobileHotbarBackpackButtonSize,
-            true);
+            name,
+            MobileHotbarSideButtonSize,
+            MobileHotbarSideButtonSize,
+            accent);
         LayoutElement layout = button.GetComponent<LayoutElement>();
         layout.ignoreLayout = true;
 
         RectTransform rect = button.GetComponent<RectTransform>();
-        rect.anchorMin = rect.anchorMax = new Vector2(1f, 0.5f);
-        rect.pivot = new Vector2(0f, 0.5f);
-        rect.anchoredPosition = new Vector2(MobileHotbarBackpackGap, 0f);
-        rect.sizeDelta = Vector2.one * MobileHotbarBackpackButtonSize;
+        float edge = rightSide ? 1f : 0f;
+        rect.anchorMin = rect.anchorMax = new Vector2(edge, 0.5f);
+        rect.pivot = new Vector2(rightSide ? 0f : 1f, 0.5f);
+        rect.anchoredPosition = new Vector2(
+            rightSide ? MobileHotbarSideButtonGap : -MobileHotbarSideButtonGap,
+            0f);
+        rect.sizeDelta = Vector2.one * MobileHotbarSideButtonSize;
         SetButtonLabelSize(button, 14f);
     }
 
@@ -3538,9 +3570,11 @@ public static partial class RuntimeUIPrefabBuilder
     private static Slider CreateSlider(string name, Transform parent)
     {
         GameObject root = CreateUIObject(name, parent, typeof(Image), typeof(Slider));
-        root.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        LayoutElement layout = root.AddComponent<LayoutElement>();
+        layout.flexibleWidth = 1f;
+        layout.preferredHeight = 26f;
         Image background = root.GetComponent<Image>();
-        background.color = new Color(0.14f, 0.23f, 0.25f, 1f);
+        background.color = FlatWorldUITheme.SurfaceLow;
         AddOutline(background, Border);
 
         GameObject fillArea = CreateUIObject("Fill Area", root.transform);
@@ -3942,7 +3976,7 @@ public static partial class RuntimeUIPrefabBuilder
     {
         Outline outline = graphic.GetComponent<Outline>() ?? graphic.gameObject.AddComponent<Outline>();
         outline.effectColor = color;
-        outline.effectDistance = new Vector2(1f, -1f);
+        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
         outline.useGraphicAlpha = true;
     }
 

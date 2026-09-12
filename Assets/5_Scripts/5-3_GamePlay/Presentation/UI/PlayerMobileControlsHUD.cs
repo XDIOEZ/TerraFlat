@@ -24,9 +24,10 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private const string GameplayLayerName = "玩法控制层";
     private const string PersistentLayerName = "常驻控制层";
     private const string HotbarAnchorName = "快捷栏锚点";
+    private const string CraftingButtonName = "制作";
     private const string BackpackButtonName = "背包";
-    private const float HotbarBackpackButtonSize = 82f;
-    private const float HotbarBackpackGap = 12f;
+    private const float HotbarSideButtonSize = 82f;
+    private const float HotbarSideButtonGap = 12f;
     private const float MoveZoneMarginX = 76f;
     private const float MoveZoneMarginY = 54f;
     private const float FixedMoveZoneSize = 230f;
@@ -34,10 +35,13 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private const float TwoFingerZoomSensitivityPerUnit = 0.00015f;
     private const float TwoFingerZoomNoiseThreshold = 1f;
 
-    private static readonly Color RunOffColor = new(0.094f, 0.212f, 0.247f, 0.99f);
-    private static readonly Color RunOnColor = new(0.26f, 0.61f, 0.57f, 1f);
-    private static readonly Color RunOffBorderColor = new(0.55f, 0.68f, 0.70f, 0.28f);
-    private static readonly Color RunOnBorderColor = new(0.83f, 0.49f, 0.23f, 1f);
+    // 奔跑是状态按钮，运行时两态必须继续使用统一灰阶主题；仅开启态用暖黄细节表达状态。
+    private static readonly Color RunOffColor = FlatWorldUITheme.SurfaceRaised;
+    private static readonly Color RunOnColor = FlatWorldUITheme.Selection;
+    private static readonly Color RunOffBorderColor = FlatWorldUITheme.Border;
+    private static readonly Color RunOnBorderColor = FlatWorldUITheme.SelectionOutline;
+    private static readonly Color RunOffIndicatorColor = FlatWorldUITheme.Border;
+    private static readonly Color RunOnIndicatorColor = FlatWorldUITheme.Accent;
 
     private static PlayerMobileControlsHUD activeLocalHud;
 
@@ -45,6 +49,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private GameController controller;
     private GameObject viewObject;
     private GameObject gameplayLayer;
+    private CanvasGroup gameplayOpacityGroup;
     private GameObject persistentLayer;
     private GameObject drawer;
     private RectTransform drawerArrow; // 菜单展开时向右，收起时向左。
@@ -56,6 +61,9 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private int heldItemDropSurfaceHomeSiblingIndex = -1;
     private MobileInputButton[] inputButtons;
     private Canvas hotbarCanvas;
+    private BasePanel hotbarOpacityPanel;
+    private RectTransform hotbarCraftingButton;
+    private Transform hotbarCraftingHome;
     private RectTransform hotbarBackpackButton;
     private Transform hotbarBackpackHome;
     private Mover mover;
@@ -116,6 +124,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             controller.ActiveInputDeviceChanged += HandleInputDeviceChanged;
         UIUserSettings.MobileControlsChanged -= HandleMobileControlsSettingsChanged;
         UIUserSettings.MobileControlsChanged += HandleMobileControlsSettingsChanged;
+        UIUserSettings.TouchControlsOpacityChanged -= HandleTouchControlsOpacityChanged;
+        UIUserSettings.TouchControlsOpacityChanged += HandleTouchControlsOpacityChanged;
         AndroidSystemGestureInsets.Changed -= HandleSystemGestureInsetsChanged;
         AndroidSystemGestureInsets.Changed += HandleSystemGestureInsetsChanged;
         Canvas.willRenderCanvases -= RefreshAimCursorBeforeCanvasRender;
@@ -131,6 +141,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (controller != null)
             controller.ActiveInputDeviceChanged -= HandleInputDeviceChanged;
         UIUserSettings.MobileControlsChanged -= HandleMobileControlsSettingsChanged;
+        UIUserSettings.TouchControlsOpacityChanged -= HandleTouchControlsOpacityChanged;
         AndroidSystemGestureInsets.Changed -= HandleSystemGestureInsetsChanged;
         Canvas.willRenderCanvases -= RefreshAimCursorBeforeCanvasRender;
         UnbindRunStateVisual();
@@ -238,9 +249,12 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         viewObject.name = RuntimeUIPrefabKeys.MobileControls;
         FlatWorldUIAutoLocalizer.BindStaticTexts(viewObject.transform);
         gameplayLayer = FindRequired(GameplayLayerName)?.gameObject;
+        gameplayOpacityGroup = EnsureOpacityGroup(gameplayLayer);
         persistentLayer = FindRequired(PersistentLayerName)?.gameObject;
         drawer = FindRequired(DrawerName)?.gameObject;
         drawerArrow = FindRequired("菜单箭头") as RectTransform;
+        hotbarCraftingButton = FindRequired(CraftingButtonName) as RectTransform;
+        hotbarCraftingHome = hotbarCraftingButton != null ? hotbarCraftingButton.parent : null;
         hotbarBackpackButton = FindRequired(BackpackButtonName) as RectTransform;
         hotbarBackpackHome = hotbarBackpackButton != null ? hotbarBackpackButton.parent : null;
         EnsureAimCursorVisual();
@@ -253,6 +267,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         CacheRunButtonVisual();
         ConfigureCameraZoomSlider();
         ConfigureCommands();
+        ApplyTouchControlsOpacity();
         hotbarSetupCoroutine = StartCoroutine(ConfigureHotbarWhenReady());
     }
 
@@ -295,7 +310,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         GamepadCursorGraphic cursorGraphic = mobileAimCursor.GetComponent<GamepadCursorGraphic>();
         if (cursorGraphic == null)
             cursorGraphic = mobileAimCursor.gameObject.AddComponent<GamepadCursorGraphic>();
-        cursorGraphic.color = FlatWorldUITheme.SelectionOutline;
+        cursorGraphic.color = FlatWorldUITheme.AimCursor;
         cursorGraphic.raycastTarget = false;
         mobileAimCursor.gameObject.SetActive(false);
     }
@@ -681,6 +696,36 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         joysticks = viewObject.GetComponentsInChildren<MobileVirtualJoystick>(true);
     }
 
+    /// <summary>透明度偏好改变时只更新玩法视觉，不重配触控区域或射线。</summary>
+    private void HandleTouchControlsOpacityChanged()
+    {
+        ApplyTouchControlsOpacity();
+    }
+
+    /// <summary>
+    /// 将 0–100 透明度统一作用于玩法控制层与手机快捷栏；常驻菜单层保持完全可见，
+    /// CanvasGroup 只修改 alpha，因此 0% 时控件仍然保留原有触控命中能力。
+    /// </summary>
+    private void ApplyTouchControlsOpacity()
+    {
+        float alpha = UIUserSettings.TouchControlsOpacity;
+        if (gameplayOpacityGroup != null)
+            gameplayOpacityGroup.alpha = alpha;
+        hotbarOpacityPanel?.SetOpenVisualAlpha(alpha);
+    }
+
+    /// <summary>为玩法层补齐仅负责视觉透明度的 CanvasGroup，不改变交互字段。</summary>
+    private static CanvasGroup EnsureOpacityGroup(GameObject target)
+    {
+        if (target == null)
+            return null;
+
+        CanvasGroup group = target.GetComponent<CanvasGroup>();
+        if (group == null)
+            group = target.AddComponent<CanvasGroup>();
+        return group;
+    }
+
     private void ConfigureVirtualButtons()
     {
         ConfigureVirtualButton("交互", MobileVirtualButton.Interact);
@@ -735,7 +780,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         runStateBound = false;
     }
 
-    /// <summary>开启时使用青绿底与琥珀指示点，关闭时恢复深色弱提示。</summary>
+    /// <summary>关闭时保持深灰弱提示；开启时只提高灰阶明度并用暖黄细节表示状态。</summary>
     private void RefreshRunButtonVisual(bool isRunning)
     {
         if (runButtonImage != null)
@@ -743,7 +788,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         if (runButtonOutline != null)
             runButtonOutline.effectColor = isRunning ? RunOnBorderColor : RunOffBorderColor;
         if (runStateIndicator != null)
-            runStateIndicator.color = isRunning ? RunOnBorderColor : RunOffBorderColor;
+            runStateIndicator.color = isRunning ? RunOnIndicatorColor : RunOffIndicatorColor;
     }
 
     private void ConfigureCommands()
@@ -751,7 +796,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         BindClick("菜单", ToggleDrawer);
         // 滚动条目只在完整点击后脉冲输入，避免按下准备拖动时就打开玩法面板。
         BindClick("装备", () => StartCoroutine(PulseVirtualButton(MobileVirtualButton.Equipment)));
-        BindClick("制作", () => StartCoroutine(PulseVirtualButton(MobileVirtualButton.Crafting)));
+        BindClick(CraftingButtonName, () => StartCoroutine(PulseVirtualButton(MobileVirtualButton.Crafting)));
         BindClick("设置", OpenSettingsFromButton);
     }
 
@@ -839,11 +884,12 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         }
 
         CacheHotbarOriginalLayout(hotbarRect, hotbarAnchor);
+        BindHotbarOpacity(hotbar?.RuntimeInventory?.basePanel);
 
         if (hotbarRect.parent != hotbarAnchor)
             hotbarRect.SetParent(hotbarAnchor, false);
         hotbarRect.SetAsLastSibling();
-        AttachBackpackButtonToHotbar(hotbarRect);
+        AttachHotbarSideButtons(hotbarRect);
         CacheHotbarCanvas(hotbarRect);
         RectTransform safeRoot = UIManager.Instance.SafeAreaRoot;
         float safeWidth = safeRoot != null
@@ -863,7 +909,20 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             occupiedScreenArea);
         hotbarRect.anchoredPosition = new Vector2(0f, gestureBottomPadding);
         ApplyHotbarInteractionPriority(UIManager.Instance.HasOpenGameplayInputBlockingPanel());
+        ApplyTouchControlsOpacity();
         return true;
+    }
+
+    /// <summary>绑定真实快捷栏面板，使其后续 Open 也继续使用玩家透明度。</summary>
+    private void BindHotbarOpacity(BasePanel panel)
+    {
+        if (hotbarOpacityPanel == panel)
+            return;
+
+        if (hotbarOpacityPanel != null)
+            hotbarOpacityPanel.SetOpenVisualAlpha(1f);
+        hotbarOpacityPanel = panel;
+        hotbarOpacityPanel?.SetOpenVisualAlpha(UIUserSettings.TouchControlsOpacity);
     }
 
     /// <summary>系统手势边距变化后立即重新放置手机快捷栏。</summary>
@@ -898,46 +957,74 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         hotbarOriginalLayoutCached = hotbarOriginalParent != null;
     }
 
-    /// <summary>将背包入口挂入真实快捷栏 Canvas，并排在九格快捷栏最右侧。</summary>
-    private void AttachBackpackButtonToHotbar(RectTransform hotbarRect)
+    /// <summary>将制作、背包入口挂入真实快捷栏 Canvas，分别固定在九格快捷栏左右两侧。</summary>
+    private void AttachHotbarSideButtons(RectTransform hotbarRect)
     {
-        if (hotbarBackpackButton == null || hotbarRect == null)
+        if (hotbarRect == null)
             return;
 
-        LayoutElement layout = hotbarBackpackButton.GetComponent<LayoutElement>();
-        if (layout != null)
-            layout.ignoreLayout = true;
-        if (hotbarBackpackButton.parent != hotbarRect)
-            hotbarBackpackButton.SetParent(hotbarRect, false);
-
-        hotbarBackpackButton.anchorMin = hotbarBackpackButton.anchorMax = new Vector2(1f, 0.5f);
-        hotbarBackpackButton.pivot = new Vector2(0f, 0.5f);
-        hotbarBackpackButton.anchoredPosition = new Vector2(HotbarBackpackGap, 0f);
-        hotbarBackpackButton.sizeDelta = Vector2.one * HotbarBackpackButtonSize;
-        hotbarBackpackButton.localScale = Vector3.one;
-        hotbarBackpackButton.SetAsLastSibling();
+        AttachHotbarSideButton(hotbarCraftingButton, hotbarRect, false);
+        AttachHotbarSideButton(hotbarBackpackButton, hotbarRect, true);
     }
 
-    /// <summary>把背包入口移回手机 HUD，避免切回桌面控制后继续跟随共用快捷栏显示。</summary>
-    private void RestoreBackpackButtonToMobileHud()
+    /// <summary>把单个快捷入口排除九格布局后固定到快捷栏指定侧。</summary>
+    private static void AttachHotbarSideButton(RectTransform button, RectTransform hotbarRect, bool rightSide)
     {
-        if (hotbarBackpackButton == null || hotbarBackpackHome == null)
+        if (button == null || hotbarRect == null)
             return;
 
-        if (hotbarBackpackButton.parent != hotbarBackpackHome)
-            hotbarBackpackButton.SetParent(hotbarBackpackHome, false);
-        hotbarBackpackButton.anchorMin = hotbarBackpackButton.anchorMax = new Vector2(1f, 0.5f);
-        hotbarBackpackButton.pivot = new Vector2(0f, 0.5f);
-        hotbarBackpackButton.anchoredPosition = new Vector2(HotbarBackpackGap, 0f);
-        hotbarBackpackButton.sizeDelta = Vector2.one * HotbarBackpackButtonSize;
-        hotbarBackpackButton.localScale = Vector3.one;
-        hotbarBackpackButton.SetAsLastSibling();
+        LayoutElement layout = button.GetComponent<LayoutElement>();
+        if (layout != null)
+            layout.ignoreLayout = true;
+        if (button.parent != hotbarRect)
+            button.SetParent(hotbarRect, false);
+
+        float edge = rightSide ? 1f : 0f;
+        button.anchorMin = button.anchorMax = new Vector2(edge, 0.5f);
+        button.pivot = new Vector2(rightSide ? 0f : 1f, 0.5f);
+        button.anchoredPosition = new Vector2(
+            rightSide ? HotbarSideButtonGap : -HotbarSideButtonGap,
+            0f);
+        button.sizeDelta = Vector2.one * HotbarSideButtonSize;
+        button.localScale = Vector3.one;
+        button.SetAsLastSibling();
+    }
+
+    /// <summary>把制作、背包入口移回手机 HUD，避免切回桌面控制后继续跟随共用快捷栏显示。</summary>
+    private void RestoreHotbarSideButtonsToMobileHud()
+    {
+        RestoreHotbarSideButton(hotbarCraftingButton, hotbarCraftingHome, false);
+        RestoreHotbarSideButton(hotbarBackpackButton, hotbarBackpackHome, true);
+    }
+
+    /// <summary>恢复快捷入口在正式手机 Prefab 中的父级与左右停靠布局。</summary>
+    private static void RestoreHotbarSideButton(RectTransform button, Transform home, bool rightSide)
+    {
+        if (button == null || home == null)
+            return;
+
+        if (button.parent != home)
+            button.SetParent(home, false);
+        float edge = rightSide ? 1f : 0f;
+        button.anchorMin = button.anchorMax = new Vector2(edge, 0.5f);
+        button.pivot = new Vector2(rightSide ? 0f : 1f, 0.5f);
+        button.anchoredPosition = new Vector2(
+            rightSide ? HotbarSideButtonGap : -HotbarSideButtonGap,
+            0f);
+        button.sizeDelta = Vector2.one * HotbarSideButtonSize;
+        button.localScale = Vector3.one;
+        button.SetAsLastSibling();
     }
 
     /// <summary>切换到 PC 或销毁手机 HUD 前，将共用快捷栏还原到 SafeAreaRoot。</summary>
     private void RestoreHotbarToOriginalParent()
     {
-        RestoreBackpackButtonToMobileHud();
+        RestoreHotbarSideButtonsToMobileHud();
+        if (hotbarOpacityPanel != null)
+        {
+            hotbarOpacityPanel.SetOpenVisualAlpha(1f);
+            hotbarOpacityPanel = null;
+        }
         if (!hotbarOriginalLayoutCached || hotbarOriginalRect == null ||
             hotbarOriginalParent == null || !hotbarOriginalParent.gameObject.activeInHierarchy)
         {

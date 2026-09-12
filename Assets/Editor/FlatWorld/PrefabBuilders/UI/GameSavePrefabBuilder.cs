@@ -11,13 +11,13 @@ public static class GameSavePrefabBuilder
     private const string ItemPrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionButton.prefab";
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
 
-    private static readonly Color Ink = new Color(0.025f, 0.043f, 0.058f, 0.985f);
-    private static readonly Color InkSoft = new Color(0.045f, 0.075f, 0.095f, 0.98f);
-    private static readonly Color Surface = new Color(0.06f, 0.095f, 0.115f, 0.98f);
-    private static readonly Color Cream = new Color(0.95f, 0.91f, 0.81f, 1f);
-    private static readonly Color Muted = new Color(0.64f, 0.70f, 0.71f, 1f);
-    private static readonly Color Amber = new Color(0.83f, 0.49f, 0.23f, 1f);
-    private static readonly Color Teal = new Color(0.26f, 0.61f, 0.57f, 1f);
+    private static readonly Color Ink = new Color32(52, 52, 52, 251);
+    private static readonly Color InkSoft = new Color32(61, 61, 61, 250);
+    private static readonly Color Surface = new Color32(73, 73, 73, 250);
+    private static readonly Color Cream = new Color32(238, 238, 238, 255);
+    private static readonly Color Muted = new Color32(200, 200, 200, 255);
+    private static readonly Color Amber = new Color32(215, 197, 106, 255);
+    private static readonly Color Teal = new Color32(164, 164, 164, 255);
 
     [MenuItem("FlatWorld/UI/Rebuild Save UI")]
     public static void RebuildSaveInterface()
@@ -62,6 +62,7 @@ public static class GameSavePrefabBuilder
             controller.BatchDeleteConfirmationDialog = confirmationDialog;
 
             EditorUtility.SetDirty(controller);
+            FlatWorldUITheme.Apply(root.transform);
             EditorUtility.SetDirty(root);
             PrefabUtility.SaveAsPrefabAsset(root, PanelPrefabPath);
         }
@@ -118,7 +119,7 @@ public static class GameSavePrefabBuilder
 
         Outline outline = card.gameObject.AddComponent<Outline>();
         outline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.34f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
 
         Image accent = CreateImage("存档主卡强调线", card.transform, Amber);
         accent.rectTransform.anchorMin = new Vector2(0f, 0f);
@@ -388,6 +389,7 @@ public static class GameSavePrefabBuilder
             itemView.SelectionAccent = accent;
             itemView.Label = (TextMeshProUGUI)label;
 
+            FlatWorldUITheme.Apply(root.transform);
             EditorUtility.SetDirty(root);
             PrefabUtility.SaveAsPrefabAsset(root, ItemPrefabPath);
         }
@@ -457,7 +459,7 @@ public static class GameSavePrefabBuilder
         background.color = InkSoft;
         Outline outline = inputObject.AddComponent<Outline>();
         outline.effectColor = new Color(0.55f, 0.64f, 0.65f, 0.24f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
 
         GameObject areaObject = new GameObject("Text Area", typeof(RectTransform), typeof(RectMask2D));
         areaObject.layer = LayerMask.NameToLayer("UI");
@@ -486,7 +488,7 @@ public static class GameSavePrefabBuilder
         Image panel = CreateImage(name, parent, Surface);
         Outline outline = panel.gameObject.AddComponent<Outline>();
         outline.effectColor = new Color(0.55f, 0.64f, 0.65f, 0.18f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
         return panel;
     }
 
@@ -510,7 +512,7 @@ public static class GameSavePrefabBuilder
         image.color = color;
         Outline outline = buttonObject.AddComponent<Outline>();
         outline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.28f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
 
         Button button = buttonObject.GetComponent<Button>();
         button.targetGraphic = image;

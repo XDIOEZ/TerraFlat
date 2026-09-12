@@ -1,4 +1,4 @@
-// AI-Context: 设置主面板内嵌界面页；负责界面缩放、安全区、移动摇杆与左右触控区。
+// AI-Context: 设置主面板内嵌界面页；负责界面缩放、触屏控件透明度、安全区、移动摇杆与左右触控区。
 using FlatWorld.Localization;
 using FlatWorld.Settings;
 using TMPro;
@@ -10,17 +10,20 @@ using UnityEngine.UI;
 public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecycle
 {
     private Slider scaleSlider;
+    private Slider touchControlsOpacitySlider;
     private Slider leftControlZoneSlider;
     private Slider rightControlZoneSlider;
     private Toggle safeAreaToggle;
     private Toggle floatingMoveJoystickToggle;
     private TextMeshProUGUI scaleValueText;
+    private TextMeshProUGUI touchControlsOpacityValueText;
     private TextMeshProUGUI leftControlZoneValueText;
     private TextMeshProUGUI rightControlZoneValueText;
     private TextMeshProUGUI controlZoneStatusText;
     private TextMeshProUGUI statusText;
     private Button resetButton;
     private ISettingsSlider scaleSetting;
+    private ISettingsSlider touchControlsOpacitySetting;
     private ISettingsSlider leftControlZoneSetting;
     private ISettingsSlider rightControlZoneSetting;
     private ISettingsToggle safeAreaSetting;
@@ -48,6 +51,8 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
 
         ISettingsProvider provider = UIUserSettings.SettingsProvider;
         scaleSetting = provider.GetSlider(UIUserSettings.ScaleSettingKey);
+        touchControlsOpacitySetting =
+            provider.GetSlider(UIUserSettings.TouchControlsOpacitySettingKey);
         leftControlZoneSetting =
             provider.GetSlider(UIUserSettings.LeftControlZoneRatioSettingKey);
         rightControlZoneSetting =
@@ -57,11 +62,14 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
             provider.GetToggle(UIUserSettings.FloatingMoveJoystickSettingKey);
 
         scaleSlider = FindComponent<Slider>(transform, "界面缩放");
+        touchControlsOpacitySlider = FindComponent<Slider>(transform, "触屏控件透明度");
         leftControlZoneSlider = FindComponent<Slider>(transform, "左侧触控区比例");
         rightControlZoneSlider = FindComponent<Slider>(transform, "右侧触控区比例");
         safeAreaToggle = FindComponent<Toggle>(transform, "安全区域适配");
         floatingMoveJoystickToggle = FindComponent<Toggle>(transform, "浮动移动摇杆");
         scaleValueText = FindComponent<TextMeshProUGUI>(transform, "界面缩放数值");
+        touchControlsOpacityValueText =
+            FindComponent<TextMeshProUGUI>(transform, "触屏控件透明度数值");
         leftControlZoneValueText = FindComponent<TextMeshProUGUI>(transform, "左侧触控区数值");
         rightControlZoneValueText = FindComponent<TextMeshProUGUI>(transform, "右侧触控区数值");
         controlZoneStatusText = FindComponent<TextMeshProUGUI>(transform, "触控区域比例文本");
@@ -69,9 +77,13 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
         resetButton = FindComponent<Button>(transform, "恢复默认按钮");
 
         ConfigureSlider(scaleSlider, scaleSetting);
+        ConfigureSlider(touchControlsOpacitySlider, touchControlsOpacitySetting);
+        if (touchControlsOpacitySlider != null)
+            touchControlsOpacitySlider.wholeNumbers = true;
         ConfigureSlider(leftControlZoneSlider, leftControlZoneSetting);
         ConfigureSlider(rightControlZoneSlider, rightControlZoneSetting);
         scaleSlider?.onValueChanged.AddListener(OnScaleChanged);
+        touchControlsOpacitySlider?.onValueChanged.AddListener(OnTouchControlsOpacityChanged);
         leftControlZoneSlider?.onValueChanged.AddListener(OnLeftControlZoneChanged);
         rightControlZoneSlider?.onValueChanged.AddListener(OnRightControlZoneChanged);
         safeAreaToggle?.onValueChanged.AddListener(OnSafeAreaChanged);
@@ -79,9 +91,11 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
         resetButton?.onClick.AddListener(ResetToDefault);
         initialized = true;
 
-        if (scaleSlider == null || leftControlZoneSlider == null ||
+        if (scaleSlider == null || touchControlsOpacitySlider == null ||
+            leftControlZoneSlider == null ||
             rightControlZoneSlider == null || safeAreaToggle == null ||
             floatingMoveJoystickToggle == null || scaleValueText == null ||
+            touchControlsOpacityValueText == null ||
             leftControlZoneValueText == null || rightControlZoneValueText == null ||
             controlZoneStatusText == null || statusText == null || resetButton == null)
         {
@@ -107,6 +121,15 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
     {
         scaleSetting?.SetValue(value);
         scaleSlider?.SetValueWithoutNotify(scaleSetting?.Value ?? value);
+        RefreshStatus();
+    }
+
+    /// <summary>写入触屏玩法控件透明度百分比。</summary>
+    private void OnTouchControlsOpacityChanged(float value)
+    {
+        touchControlsOpacitySetting?.SetValue(value);
+        touchControlsOpacitySlider?.SetValueWithoutNotify(
+            touchControlsOpacitySetting?.Value ?? value);
         RefreshStatus();
     }
 
@@ -151,6 +174,8 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
     {
         if (scaleSlider != null && scaleSetting != null)
             scaleSlider.SetValueWithoutNotify(scaleSetting.Value);
+        if (touchControlsOpacitySlider != null && touchControlsOpacitySetting != null)
+            touchControlsOpacitySlider.SetValueWithoutNotify(touchControlsOpacitySetting.Value);
         if (leftControlZoneSlider != null && leftControlZoneSetting != null)
             leftControlZoneSlider.SetValueWithoutNotify(leftControlZoneSetting.Value);
         if (rightControlZoneSlider != null && rightControlZoneSetting != null)
@@ -167,6 +192,8 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
     {
         if (scaleValueText != null && scaleSetting != null)
             scaleValueText.text = ToPercent(scaleSetting.Value);
+        if (touchControlsOpacityValueText != null && touchControlsOpacitySetting != null)
+            touchControlsOpacityValueText.text = ToWholePercent(touchControlsOpacitySetting.Value);
         if (leftControlZoneValueText != null && leftControlZoneSetting != null)
             leftControlZoneValueText.text = ToPercent(leftControlZoneSetting.Value);
         if (rightControlZoneValueText != null && rightControlZoneSetting != null)
@@ -203,6 +230,7 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
     private void OnDestroy()
     {
         scaleSlider?.onValueChanged.RemoveListener(OnScaleChanged);
+        touchControlsOpacitySlider?.onValueChanged.RemoveListener(OnTouchControlsOpacityChanged);
         leftControlZoneSlider?.onValueChanged.RemoveListener(OnLeftControlZoneChanged);
         rightControlZoneSlider?.onValueChanged.RemoveListener(OnRightControlZoneChanged);
         safeAreaToggle?.onValueChanged.RemoveListener(OnSafeAreaChanged);
@@ -214,6 +242,12 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
     private static string ToPercent(float value)
     {
         return Mathf.RoundToInt(value * 100f) + "%";
+    }
+
+    /// <summary>把已经以 0–100 存储的设置值显示为整数百分比。</summary>
+    private static string ToWholePercent(float value)
+    {
+        return Mathf.RoundToInt(value) + "%";
     }
 
     /// <summary>在页面局部按名称查找指定组件。</summary>

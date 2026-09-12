@@ -7,13 +7,12 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 ## 统一视觉风格（新建 UI 必须遵守）
 
-- 后续新建及重新设计的游戏 UI，统一使用 `Assets/6_Art/UI/PixelBlueGold/PixelBlueGold_UI.png` 的蓝灰、米白、暖金像素风素材；不能自行换用其他 UI 素材包或另起一套视觉风格，除非用户明确指定。
-- 该图集已按控件切为 Multiple Sprite；切片名称、原图左上角坐标和九宫格边框见同目录 `SpriteCatalog.csv`。优先直接引用现有 Sprite，不重复导出图片或通过颜色块替代已有面板、槽位、按钮和图标。
-- 默认蓝灰主面板使用 `Panel_Blue_1`，浅色内容区使用 `Panel_Cream_1`，强调控件可用 `Panel_CreamBevel`；其他 `Panel_Style*`、装饰木框及羊皮纸是同包备选，不在同一界面随意混搭全部变体。暖金用于选中、焦点和重要操作，状态色仍表达原有玩法语义。
-- `Panel_*`、`Input_Cream` 已设置 Sprite Border，可拉伸控件使用 `Image.Type.Sliced`，保留边角；小图标保持比例、使用 `Simple`，组合型 `Slider*`、`Meter*` 不能直接当作独立滑块或填充条拉伸，需要按真实交互职责选择/复用其子元素。
-- 图集保持 Point、无压缩、关闭 Mipmap、原始尺寸、透明通道、100 PPU；优先整数视觉缩放，不使用双线性过滤模糊像素边缘。文字继续使用现有 TMP/本地化字体与移动端字号、触控尺寸约束，不照搬图集中示例像素字作为玩家文案。
-- 缺少的控件沿用本图集的配色、边框厚度、阴影方向和像素密度扩展；正式视觉仍落在可复用控件/Prefab 中，通用 UI 不引用具体玩法类。仅修改业务行为时，不顺带整体翻修既有界面。
-- 移动图集需保留 `.meta`；已经被引用的切片名称、spriteID 和 internalID 必须稳定，禁止无差别重新自动切图而破坏引用。原图是多种尺寸布局，不能对整图统一按 16×16 切分。
+- 后续新建及重新设计的游戏 UI，以主菜单参考图为统一视觉基准：中性灰表面、近白文字、低对比细边界，只用少量暖黄表示焦点/关键操作。不要再为普通面板、按钮、输入框、槽位引入蓝绿或高饱和装饰主题。
+- 通用 UI Chrome 默认使用 uGUI `Image` 的纯色灰阶表面，不依赖额外生成图片或烘焙色彩的 UI Sprite；游戏物品图标、世界美术和必要的功能图标保持原资源与原色，不被主题层染色。
+- 面板层级主要通过明度区分：根面板最暗、内容区略亮、按钮/标题栏再抬一级；普通 UI 边框统一使用约 2 个参考像素的低透明白/灰线，文字描边仍保持约 1 像素，避免像素字体发糊；不叠加厚重双描边、木框或高对比阴影。
+- 暖黄只用于细强调线、焦点描边、选择状态和少量关键操作；危险/生命等玩法语义色允许保留低饱和状态色，但不能让整套界面重新变成彩色主题。
+- 文字继续使用现有 TMP/本地化字体与移动端字号、触控尺寸约束；标题、正文、说明只靠字号/明度/字重分级，禁止为填充视觉新增装饰性英文眉题、重复说明或无意义标签。
+- 正式视觉必须落在可复用控件/Prefab 与 `FlatWorldUITheme` 中；Prefab 构建器保存前应重新应用统一主题，避免未来重建时恢复旧蓝绿/图集皮肤。仅修改业务行为时，不顺带整体翻修既有界面。
 
 ## 入口
 
@@ -93,8 +92,9 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 ## 架构与运行时约束
 
 - 领域控制器创建/持有正式 Prefab，`UIManager` 管生命周期；控件节点名是绑定契约。正式 UI 不用 `new GameObject/AddComponent` 拼视觉。
-- Prefab 是视觉真相；`BasePanel` 不在初始化时重写结构。运行时只用稳定键加载正式 Prefab。
+- Prefab 是视觉真相；`BasePanel` 不在初始化时重写结构。运行时只用稳定键加载正式 Prefab。 编辑器构建器组装带 Awake 的视图时，应先停用根节点，完成所有序列化引用后再激活；新增必需视图引用必须同步生成正式 Prefab 并核对引用，不能只提交脚本。
 - `GameRes` 的启动资源加载面板属于引导 UI：可以登记 Addressables，但运行时必须由 `WorldManager.prefab` 直接引用，不能依赖尚未初始化的资源字典。
+- `UI_WorldLoading` 的根 `Image` 是进入世界阶段的硬遮挡层，最终 Alpha 必须保持 `1`；统一主题、迁移器和 Prefab 重建流程都不能把它降成普通面板的半透明 Canvas，否则玩法 HUD 会在加载期间透出。
 - 同一 `PanelRoot` 下的面板置顶/置底必须使用 `SetAsLastSibling`/`SetAsFirstSibling`；全局层级序号只能用于独立 Canvas 的 `sortingOrder`，不能直接当作兄弟索引。
 - 不经过 `UIManager`/`BasePanel` 打开流程的独立 Canvas，Prefab 根节点必须显式固化 `localScale = Vector3.one`；不能依赖面板动画在运行时恢复可见缩放。
 - 槽位内的选中框、背景和装饰必须按槽内兄弟顺序分层；选中框切换时必须跟随当前槽位，不得留在旧槽位后再用世界坐标跨槽移动。
@@ -102,6 +102,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 设置类模态页（主设置及其子页）需要独立高层 Canvas 与 `GraphicRaycaster`；非交互对话气泡在玩法模态打开时隐藏，避免首帧或跨 Canvas 绘制顺序造成遮挡。
 - 常驻 HUD 不拦截输入，Graphic 关闭 raycastTarget；若 HUD 提供展开/收起功能，只允许开关按钮接收 raycast，内容和装饰元素仍必须输入透明；模态面板才获取输入锁和顶层手柄焦点，关闭/失败路径释放。
 - 手机 HUD 的菜单/返回入口必须独立于可隐藏的玩法控制层；模态玩法面板打开时保留该入口并允许背包/制作等面板并行打开，Android 返回键或 Escape 优先关闭最上层可取消面板，避免移动端失去退出路径。
+- 手机左侧“奔跑”是 `UI_MobileControls.prefab` 的状态按钮，但两态颜色会由 `PlayerMobileControlsHUD.RefreshRunButtonVisual` 在运行时重写；统一主题时不能只改 Prefab。关闭态保持灰黑表面与低对比边界，开启态仍用灰阶底，只允许暖黄描边/状态标记作为少量状态强调。
 - 主菜单属于不可直接关闭的根面板；Android 返回键、Escape 或手柄取消应通过 `BasePanel.CancelShortcutOverride` 打开正式退出确认 Prefab，只有确认按钮退出应用，取消或再次返回只关闭确认层。
 - 坐标、角色状态等信息型 HUD 使用屏幕角落锚点和透明容器，只显示会随运行时变化的字段/状态条；禁止为这类 HUD 添加整块背景、卡片标题或装饰性介绍文字。
 - 左上角 `PlayerWorldCoordinateHUD` 的环境温度必须从玩家当前位置调用统一逐格温度查询，不读取角色体温或星球全局温度；环境采样不能绑定到“坐标改变”条件，玩家静止时天气和冷热源仍会改变读数，只按最终显示精度去重文本刷新。
@@ -116,8 +117,8 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 日志页的 GM 入口广播 `RuntimeDebugOverlay.GmPanelOpenRequested`，由 `GMReflectionConsole` 订阅；日志属于 GamePlay，而 GM 属于依赖 GamePlay 的 `FlatWorld.Gameplay.Debug`，禁止反向直接引用。日志 Canvas 排序高于 GM，打开 GM 前先收起日志页。GM 点选传送层仅在主动选点时启用，持有独立触点和玩法输入锁；关闭、失焦和换场景必须释放。
 - GM 分页枚举数值由 `ActivePageIndex` 保存；新页追加枚举项，显示顺序由 `BuildTabBar` 决定。页签横向内容宽度由布局计算，禁止恢复手写总宽而截断末尾分页。世界观察层独立于 GM 窗口显隐，关闭窗口只收起操作界面，不能顺带关闭观察层。
 - 主菜单控件名集中在 `GameManager.UI.cs`；定向构建 Prefab，避免无关重写。
-- 主菜单使用独立的中性灰按钮、近白文字、淡金点缀与蓝绿柔焦背景，不回写 `FlatWorldUITheme` 或游戏内图集。只换主菜单风格时使用 `MainMenuPrefabBuilder.ApplyReferenceStyle` 原位更新正式 Prefab，不调用清空子节点的完整重建入口，以保留后续增加的控件、布局和事件。背景由 `MainMenuBackdropBaker` 在编辑器中从原图生成独立 PNG，不覆盖原图，不增加运行时模糊开销。
-- 玩家行囊 `UI_Bag` 是用户明确指定的 Modular Inventory 视觉例外：图集 `UI_Sample-InventorySlotsSet.png` 由 `ModularInventorySpriteImporter` 按命名切片导入，行囊通过 `InventorySlotVisualProfile` 给动态生成的槽位覆写 Sprite；禁止为了这套行囊皮肤直接改通用 `UI_Slot.prefab`，否则装备、制作台、容器等库存界面会被一起换肤。
+- 主菜单仍保留柔焦世界背景和专属排版，但它是全局灰阶主题的视觉源：灰按钮、近白文字、淡金点缀必须与 `FlatWorldUITheme` 保持一致。只换主菜单布局/背景时使用 `MainMenuPrefabBuilder.ApplyReferenceStyle` 原位更新正式 Prefab，不调用清空子节点的完整重建入口。
+- 玩家行囊 `UI_Bag` 不再使用独立的 Modular Inventory 彩色槽位皮肤；动态槽位直接沿用通用 `UI_Slot.prefab` 的灰阶简约样式，避免同类库存界面出现两套视觉语言。`InventorySlotVisualProfile` 仅保留为未来明确需要局部皮肤时的可选机制，不默认挂载。
 - `SafeAreaRoot` 只约束交互内容；挂在其下的全屏背景使用 `FullScreenRectController` 反向扩展到根 Canvas，背景图用 `AspectRatioFitter.EnvelopeParent` 等比裁切。`CanvasScaler` 不再乘安全区比例，避免与 `SafeAreaRectController` 双重缩小 UI。
 
 ## 设置 Provider 契约
@@ -133,7 +134,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 ## Prefab 与目录约束
 
 - 创建 UI Prefab 时必须按用途放入 `Assets/2_Prefabs/2-1_UI/` 下合适的分类目录；优先复用 `Common`、`Gameplay`、`MainMenu`、`Settings`，不要把 Prefab 直接堆在 UI 根目录。现有分类都不匹配时，才新增职责明确的子目录。
-- 普通合成正式 Prefab 为 `Gameplay/Crafting/UI_HandCraftTable.prefab` 与 `UI_MakerTable.prefab`：参考画布下固定 1344×756（约占 1920×1080 的 70%），边框 1 像素，主要按钮高度不低于 60；手工台契约为 `输入_1...输入_4`，世界制作台为 `输入_1...输入_5`，两者共用 `输出_1/2`、`配方候选内容`、隐藏的 `配方候选模板`、`合成按钮`、`关闭`。运行时只复用模板生成候选项，不拼装视觉层级；`UI_MakerTable` 根节点不得保留旧 `Image` 流程箭头。
+- 普通合成正式 Prefab 为 `Gameplay/Crafting/UI_HandCraftTable.prefab` 与 `UI_MakerTable.prefab`：参考画布下固定 1344×756（约占 1920×1080 的 70%），普通边框 2 个参考像素，主要按钮高度不低于 60；手工台契约为 `输入_1...输入_4`，世界制作台为 `输入_1...输入_5`，两者共用 `输出_1/2`、`配方候选内容`、隐藏的 `配方候选模板`、`合成按钮`、`关闭`。运行时只复用模板生成候选项，不拼装视觉层级；`UI_MakerTable` 根节点不得保留旧 `Image` 流程箭头。
 - 新增正式 Prefab 必须位于 Addressables `Prefab` 标签范围，并登记稳定加载键；移动或重命名资源时保留 `.meta`，同步检查加载键与引用。
 - `5-5_UI` 的子目录统一继承根 `UI.asmdef`；整理脚本时使用 `AssetDatabase.MoveAsset` 连同 `.meta` 移动，不新建子程序集或重生成 GUID，避免 Prefab 上的 MonoScript 引用失效。
 

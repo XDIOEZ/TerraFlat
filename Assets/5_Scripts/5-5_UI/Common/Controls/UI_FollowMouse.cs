@@ -57,13 +57,50 @@ public class UI_FollowMouse : MonoBehaviour
 
     private void FollowMousePosition()
     {
-        Pointer pointer = Pointer.current;
-        if (pointer == null)
+        if (!TryGetPointerScreenPosition(out Vector2 pointerPosition))
             return;
 
-        // 手持物视觉跟随 Input System 当前指针，同时支持鼠标与触屏。
-        Vector2 pointerPosition = pointer.position.ReadValue();
         rectTransform.position = new Vector3(pointerPosition.x, pointerPosition.y, 0f) + offset;
+    }
+
+    /// <summary>只读取当前实际参与 UI 操作的鼠标或按下触点，并拒绝 Input System 的非法坐标。</summary>
+    private static bool TryGetPointerScreenPosition(out Vector2 screenPosition)
+    {
+        // 跟随 Input System 当前指针，保证 Device Simulator/触屏/鼠标使用同一套坐标语义。
+        // 不能在触点抬起后强制回退 Mouse.current，否则模拟触屏时会把手持 UI 瞬间移到另一套坐标系外。
+        Pointer pointer = Pointer.current;
+        if (pointer != null)
+        {
+            screenPosition = pointer.position.ReadValue();
+            if (IsFinite(screenPosition))
+                return true;
+        }
+
+        // Pointer.current 极少数生命周期阶段可能暂时为空，再按具体设备兜底。
+        if (Touchscreen.current != null)
+        {
+            screenPosition = Touchscreen.current.primaryTouch.position.ReadValue();
+            if (IsFinite(screenPosition))
+                return true;
+        }
+
+        if (Mouse.current != null)
+        {
+            screenPosition = Mouse.current.position.ReadValue();
+            return IsFinite(screenPosition);
+        }
+
+        screenPosition = default;
+        return false;
+    }
+
+    /// <summary>Transform 不接受 NaN/Infinity，输入坐标在进入 UI 表现层前必须有效。</summary>
+    private static bool IsFinite(Vector2 value)
+    {
+        return !float.IsNaN(value.x) &&
+               !float.IsInfinity(value.x) &&
+               !float.IsNaN(value.y) &&
+               !float.IsInfinity(value.y);
     }
 
     public void EnableFollowMouse(bool enable)

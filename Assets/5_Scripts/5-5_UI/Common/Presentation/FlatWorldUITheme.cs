@@ -9,34 +9,37 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 从主界面提炼出的全局视觉系统。
-/// 设计目标是低对比深色底、温暖的关键操作色，以及保留游戏物品像素美术本身。
+/// 从主界面参考图提炼出的全局视觉系统。
+/// 设计目标是中性灰低对比界面、近白文字、少量暖黄焦点色，并保留游戏物品像素美术本身。
 /// </summary>
 public static class FlatWorldUITheme
 {
-    public static readonly Color Canvas = Hex("08151D", 0.96f);
-    public static readonly Color SurfaceLow = Hex("0B1B24", 0.96f);
-    public static readonly Color Surface = Hex("102730", 0.97f);
-    public static readonly Color SurfaceRaised = Hex("183640", 0.98f);
-    public static readonly Color Border = Hex("829395", 0.24f);
-    public static readonly Color TextPrimary = Hex("F2E9D6");
-    public static readonly Color TextSecondary = Hex("A8B5B5");
-    public static readonly Color Accent = Hex("D47E3A");
-    public static readonly Color AccentHover = Hex("E59B59");
-    // 手柄/键盘导航选中态使用独立强调色，避免与鼠标悬停态混淆。
-    public static readonly Color Selection = Hex("F0A35A");
-    public static readonly Color SelectionOutline = Hex("FFE0A3", 0.98f);
+    public static readonly Color Canvas = Hex("343434", 0.97f);
+    public static readonly Color SurfaceLow = Hex("3D3D3D", 0.98f);
+    public static readonly Color Surface = Hex("494949", 0.98f);
+    public static readonly Color SurfaceRaised = Hex("595959", 0.99f);
+    public static readonly Color Border = Hex("FFFFFF", 0.13f);
+    public static readonly Color TextPrimary = Hex("EEEEEE");
+    public static readonly Color TextSecondary = Hex("C8C8C8");
+    public static readonly Color Accent = Hex("D7C56A");
+    public static readonly Color AccentHover = Hex("E4D986");
+    // 手柄/键盘导航选中态保持灰阶，只用细暖黄描边区分焦点，避免整块控件变成彩色。
+    public static readonly Color Selection = Hex("707070");
+    public static readonly Color SelectionOutline = Hex("E1D57C", 0.96f);
     public static readonly Vector2 SelectionOutlineDistance = new Vector2(3f, -3f);
-    public static readonly Color Teal = Hex("4D9E95");
-    public static readonly Color Danger = Hex("A94F45");
+    // 普通 UI 边框统一使用 2 个参考像素，提高手机与高分辨率屏幕下的可辨识度。
+    public static readonly Vector2 BorderOutlineDistance = new Vector2(2f, -2f);
+    // 文字描边保持 1 个参考像素，避免像素字体被加粗成糊边。
+    public static readonly Vector2 TextOutlineDistance = new Vector2(1f, -1f);
+    // 手机玩法准线固定为纯白，不与暖黄的导航焦点视觉混用。
+    public static readonly Color AimCursor = Color.white;
+    public static readonly Color Teal = Hex("A4A4A4");
+    public static readonly Color Danger = Hex("8A6662");
 
     private static readonly string[] BespokePanelNames =
     {
-        "UI_MainMenu",
-        "UI_SaveSelectionPanel",
-        "UI_NewGame",
-        "NewGame",
-        "UI_NetworkMode"
+        // 主菜单本身就是本次灰阶参考图的源界面，保留其柔焦背景和专属排版。
+        "UI_MainMenu"
     };
 
     private static readonly string[] PrimaryActionWords =
@@ -51,7 +54,11 @@ public static class FlatWorldUITheme
 
     private static readonly string[] PanelWords =
     {
-        "背景", "底板", "面板", "窗口", "卡片", "Background", "Panel", "Window"
+        "背景", "底板", "面板", "窗口", "卡片", "遮罩", "内容区", "字段", "区域",
+        "对话框", "抽屉", "分组", "页面", "顶部栏", "底座", "加载内容",
+        "主卡", "存档区", "操作区", "身份区", "状态区", "设置区", "选项页", "详情区",
+        "Background", "Panel", "Window", "Card", "Surface", "Field", "Viewport", "Plate", "Chrome", "Container", "Group",
+        "FWUI_Body", "FWUI_Header", "FWUI_Footer", "FWUI_InnerField", "FWUI_Section_"
     };
 
     // 只有明确属于设置/难度面板的滑块才允许参与手柄导航。
@@ -68,19 +75,19 @@ public static class FlatWorldUITheme
 
     private static readonly (string Key, string Title, string Eyebrow)[] WindowTitles =
     {
-        ("UI_Bag", "行囊", "INVENTORY  /  随身物资"),
-        ("UI_Equipment", "装备", "EQUIPMENT  /  生存配置"),
-        ("UI_HandCraftTable", "手工制作", "CRAFTING  /  基础工艺"),
-        ("UI_MakerTable", "制作台", "WORKBENCH  /  精细工艺"),
-        ("UI_Furnace", "熔炉", "FURNACE  /  冶炼作业"),
-        ("UI_Bonfire", "篝火", "BONFIRE  /  火源管理"),
-        ("UI_CompostBin", "堆肥箱", "COMPOST  /  资源循环"),
-        ("UI_MeatRack", "晾肉架", "MEAT RACK  /  食物处理"),
-        ("UI_FireDrill", "钻木取火", "FIRECRAFT  /  生火作业"),
-        ("UI_FlintStrike", "燧石取火", "FIRECRAFT  /  生火作业"),
-        ("UI_ModuleList", "生存状态", "SURVIVAL  /  模块状态"),
-        ("UI_ActionList", "功能列表", "ACTIONS  /  快捷入口"),
-        ("UI_Debug", "调试面板", "DEVELOPMENT  /  运行信息")
+        ("UI_Bag", "行囊", string.Empty),
+        ("UI_Equipment", "装备", string.Empty),
+        ("UI_HandCraftTable", "手工制作", string.Empty),
+        ("UI_MakerTable", "制作台", string.Empty),
+        ("UI_Furnace", "熔炉", string.Empty),
+        ("UI_Bonfire", "篝火", string.Empty),
+        ("UI_CompostBin", "堆肥箱", string.Empty),
+        ("UI_MeatRack", "晾肉架", string.Empty),
+        ("UI_FireDrill", "钻木取火", string.Empty),
+        ("UI_FlintStrike", "燧石取火", string.Empty),
+        ("UI_ModuleList", "生存状态", string.Empty),
+        ("UI_ActionList", "功能列表", string.Empty),
+        ("UI_Debug", "调试面板", string.Empty)
     };
 
     /// <summary>
@@ -102,11 +109,33 @@ public static class FlatWorldUITheme
         StyleImages(root, isHud);
         StyleButtons(root);
         StyleInputFields(root);
+        StyleDropdowns(root);
+        StyleLegacyDropdowns(root);
         StyleSliders(root);
         StyleToggles(root);
         StyleScrollbars(root);
         StyleTexts(root);
+        StyleExistingEffects(root);
         DecoratePanel(root, isHud);
+    }
+
+    /// <summary>只同步现有 UI Outline 的厚度；供保留专属视觉的主菜单等 Prefab 使用。</summary>
+    public static void ApplyBorderThickness(Transform root)
+    {
+        if (root == null)
+            return;
+
+        Outline[] outlines = root.GetComponentsInChildren<Outline>(true);
+        foreach (Outline outline in outlines)
+        {
+            if (outline == null)
+                continue;
+
+            Graphic graphic = outline.GetComponent<Graphic>();
+            outline.effectDistance = graphic is TextMeshProUGUI
+                ? TextOutlineDistance
+                : BorderOutlineDistance;
+        }
     }
 
     /// <summary>
@@ -303,12 +332,8 @@ public static class FlatWorldUITheme
             if (image == null || IsProtectedArtwork(image.transform))
                 continue;
 
-            // PixelBlueGold 图集已经把色彩、边框和阴影烘焙进 Sprite；主题层只保留原色，不能再次把素材染成旧深色主题。
-            if (IsPixelBlueGoldSprite(image.sprite))
-            {
-                image.color = Color.white;
+            if (IsMobileControlInputSurface(root, image))
                 continue;
-            }
 
             if (image.GetComponent<Selectable>() != null)
                 continue;
@@ -322,32 +347,178 @@ public static class FlatWorldUITheme
                 continue;
             }
 
+            if (ContainsAny(objectName, "遮罩", "Scrim", "Blocker", "Overlay"))
+            {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                image.color = Hex("242424", 0.72f);
+                continue;
+            }
+
+            if (image.GetComponent<ScrollRect>() != null)
+            {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                image.color = SurfaceLow;
+                AddOutline(image, Border);
+                continue;
+            }
+
             if (IsSlotTransform(image.transform))
             {
-                image.color = Hex("26383A", 0.98f);
-                AddOutline(image, Hex("D7A163", 0.30f));
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                image.color = Surface;
+                AddOutline(image, Border);
                 continue;
             }
 
             if (isRoot && !isHud)
             {
-                image.color = Canvas;
-                AddOutline(image, Hex("D7A163", 0.26f));
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                // 世界加载页是玩法画面的硬遮挡层，根图必须保持完全不透明，
+                // 否则统一主题的半透明 Canvas 会让快捷栏、摇杆等在加载阶段透出来。
+                image.color = IsOpaqueLoadingRoot(root)
+                    ? new Color(Canvas.r, Canvas.g, Canvas.b, 1f)
+                    : Canvas;
+                AddOutline(image, Border);
                 continue;
             }
 
-            if (ContainsAny(objectName, "窗口信息", "标题栏", "Header", "TitleBar"))
+            if (isRoot && isHud && string.Equals(objectName, "UI_HotBar", StringComparison.OrdinalIgnoreCase))
             {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                image.color = Hex("343434", 0.82f);
+                AddOutline(image, Border);
+                continue;
+            }
+
+            if (isRoot && isHud && string.Equals(objectName, "UI_SelectBox", StringComparison.OrdinalIgnoreCase))
+            {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                image.color = Accent;
+                AddOutline(image, Hex("D7C56A", 0.24f));
+                continue;
+            }
+
+            if (ContainsAny(objectName, "窗口信息", "标题栏", "标题背景", "标题", "Header", "TitleBar"))
+            {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
                 image.color = SurfaceRaised;
+                continue;
+            }
+
+            // 结构化窗口旧版的角落刻度属于装饰噪音；灰阶简约主题直接隐藏。
+            if (ContainsAny(objectName, "FWUI_TickTop", "FWUI_TickBottom"))
+            {
+                image.color = Border;
+                image.gameObject.SetActive(false);
+                continue;
+            }
+
+            if (ContainsAny(objectName, "FWUI_SectionMarker_"))
+            {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                image.color = Hex("D7C56A", 0.62f);
+                continue;
+            }
+
+            if (ContainsAny(objectName, "摇杆", "Joystick"))
+            {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                image.color = SurfaceRaised;
+                AddOutline(image, Border);
+                continue;
+            }
+
+            if (ContainsAny(
+                    objectName,
+                    "强调线", "状态线", "DeathAccent", "ModuleAccent",
+                    "分隔线", "Divider", "HeaderRule", "SectionRule", "AccentRail"))
+            {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                image.color = objectName.IndexOf("强调", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                              objectName.IndexOf("状态线", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                              objectName.IndexOf("Accent", StringComparison.OrdinalIgnoreCase) >= 0
+                    ? Accent
+                    : Border;
+                continue;
+            }
+
+            if (ContainsAny(objectName, "DeathHorizon", "Horizon"))
+            {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                image.color = Border;
+                continue;
+            }
+
+            if (ContainsAny(objectName, "状态指示点", "StatusDot", "StatusIndicator"))
+            {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                image.color = Teal;
+                continue;
+            }
+
+            if (ContainsAny(objectName, "占位图标", "菜单箭头"))
+            {
+                image.color = TextSecondary;
                 continue;
             }
 
             if (ContainsAny(objectName, PanelWords))
             {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
                 image.color = IsNestedSurface(image.transform, root) ? Surface : SurfaceLow;
                 AddOutline(image, Border);
             }
         }
+    }
+
+    /// <summary>进入世界的加载页负责完整遮挡玩法画面，不能继承普通面板的半透明根色。</summary>
+    private static bool IsOpaqueLoadingRoot(Transform root)
+    {
+        return root != null &&
+               string.Equals(root.name, "UI_WorldLoading", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>手机大面积透明输入层只负责接收射线，统一主题不得把它们改成可见面板。</summary>
+    private static bool IsMobileControlInputSurface(Transform root, Image image)
+    {
+        if (root == null || image == null ||
+            !ContainsAny(root.name, "MobileControls") ||
+            !image.raycastTarget || image.color.a > 0.01f)
+        {
+            return false;
+        }
+
+        string objectName = image.name;
+        return string.Equals(objectName, "手持物丢弃区", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(objectName, "普通指向区", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(objectName, "移动摇杆", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(objectName, "攻击摇杆", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void StyleButtons(Transform root)
@@ -360,53 +531,61 @@ public static class FlatWorldUITheme
 
             Graphic target = button.targetGraphic != null ? button.targetGraphic : button.GetComponent<Graphic>();
             bool slotButton = IsSlotTransform(button.transform);
-            bool pixelBlueGoldSlot = slotButton && target is Image slotImage && IsPixelBlueGoldSlotSprite(slotImage.sprite);
-            bool pixelBlueGoldButton = target is Image buttonImage && IsPixelBlueGoldSprite(buttonImage.sprite);
+            bool hasDedicatedVisualState = button.GetComponent("GameSaveItemView") != null;
             bool primary = ContainsAny(button.name, PrimaryActionWords);
             bool destructive = ContainsAny(button.name, DestructiveActionWords);
             bool close = ContainsAny(button.name, "关闭", "返回", "Close", "Back");
 
             if (target != null)
             {
-                // PixelBlueGold 控件已经把视觉层次画在 Sprite 内，不能再用主题色二次染色。
-                if (pixelBlueGoldButton)
-                    target.color = Color.white;
-                else if (slotButton)
-                    target.color = Hex("273A3C", 0.98f);
+                if (target is Image targetImage)
+                {
+                    targetImage.sprite = null;
+                    targetImage.type = Image.Type.Simple;
+                    targetImage.preserveAspect = false;
+                }
+
+                if (slotButton)
+                    target.color = Surface;
                 else if (destructive)
-                    target.color = Hex("51282A", 0.96f);
+                    target.color = Hex("505050", 0.98f);
                 else if (primary)
-                    target.color = Hex("A95829", 0.98f);
+                    target.color = Hex("626262", 0.99f);
                 else if (close)
-                    target.color = Hex("172B32", 0.96f);
+                    target.color = Hex("444444", 0.98f);
                 else
                     target.color = SurfaceRaised;
 
-                if (!slotButton && !pixelBlueGoldButton)
-                    AddOutline(target, destructive ? Hex("D87968", 0.30f) : primary ? Hex("F1B06C", 0.36f) : Border);
+                AddOutline(target, primary ? Hex("D7C56A", 0.24f) : Border);
             }
 
+            // 某些旧按钮把交互 targetGraphic 指向子节点，根节点自身还残留一层旧色 Image。
+            // 两层都归一，避免例如模块列表下拉按钮仍露出蓝绿色底。
+            Image buttonRootImage = button.GetComponent<Image>();
+            if (buttonRootImage != null && buttonRootImage != target)
+            {
+                buttonRootImage.sprite = null;
+                buttonRootImage.type = Image.Type.Simple;
+                buttonRootImage.preserveAspect = false;
+                buttonRootImage.color = slotButton
+                    ? Surface
+                    : destructive ? Hex("505050", 0.98f)
+                    : primary ? Hex("626262", 0.99f)
+                    : close ? Hex("444444", 0.98f)
+                    : SurfaceRaised;
+                AddOutline(buttonRootImage, primary ? Hex("D7C56A", 0.24f) : Border);
+            }
+
+            // 存档条目的焦点/业务选中由 GameSaveItemView 自己维护；不能让 Button 再叠一层 Tint 状态。
+            button.transition = hasDedicatedVisualState ? Selectable.Transition.None : Selectable.Transition.ColorTint;
+            if (!hasDedicatedVisualState)
+                button.spriteState = default;
             ColorBlock colors = button.colors;
-            if (pixelBlueGoldButton)
-            {
-                colors.normalColor = Color.white;
-                colors.highlightedColor = Color.white;
-                colors.pressedColor = Hex("D7D7D7");
-                colors.selectedColor = Color.white;
-                colors.disabledColor = Hex("808080", 0.58f);
-            }
-            else
-            {
-                colors.normalColor = Color.white;
-                colors.highlightedColor = slotButton
-                    ? Hex("F4D6A2")
-                    : primary ? Hex("FFD7A8") : Hex("D5E3DF");
-                colors.pressedColor = Hex("B9C3C0", 0.82f);
-                colors.selectedColor = slotButton
-                    ? Hex("E2B878")
-                    : primary ? AccentHover : destructive ? Hex("E06F5E") : Selection;
-                colors.disabledColor = Hex("777D7C", 0.48f);
-            }
+            colors.normalColor = Color.white;
+            colors.highlightedColor = Hex("F0F0F0");
+            colors.pressedColor = Hex("BEBEBE");
+            colors.selectedColor = slotButton ? Hex("E4D986") : Hex("E8E8E8");
+            colors.disabledColor = Hex("777777", 0.50f);
             colors.colorMultiplier = 1f;
             colors.fadeDuration = 0.11f;
             button.colors = colors;
@@ -415,32 +594,13 @@ public static class FlatWorldUITheme
             foreach (TextMeshProUGUI label in labels)
             {
                 // 物品槽内部 TMP 是数量角标而不是按钮标题，其颜色由槽位 Prefab 自己负责。
-                if (pixelBlueGoldSlot || pixelBlueGoldButton)
+                if (slotButton)
                     continue;
 
                 label.color = TextPrimary;
-                if (!slotButton)
-                    label.fontStyle |= FontStyles.Bold;
+                label.fontStyle |= FontStyles.Bold;
             }
         }
-    }
-
-    /// <summary>判断槽位是否正在使用统一 PixelBlueGold 状态 Sprite。</summary>
-    private static bool IsPixelBlueGoldSlotSprite(Sprite sprite)
-    {
-        if (!IsPixelBlueGoldSprite(sprite) || string.IsNullOrEmpty(sprite.name))
-            return false;
-
-        return sprite.name.StartsWith("SlotSmall_", StringComparison.Ordinal) ||
-               sprite.name.StartsWith("SlotGold_", StringComparison.Ordinal);
-    }
-
-    /// <summary>判断 Sprite 是否来自项目统一的 PixelBlueGold UI 图集。</summary>
-    private static bool IsPixelBlueGoldSprite(Sprite sprite)
-    {
-        return sprite != null &&
-               sprite.texture != null &&
-               string.Equals(sprite.texture.name, "PixelBlueGold_UI", StringComparison.Ordinal);
     }
 
     private static void StyleInputFields(Transform root)
@@ -454,6 +614,12 @@ public static class FlatWorldUITheme
             Graphic background = field.targetGraphic != null ? field.targetGraphic : field.GetComponent<Graphic>();
             if (background != null)
             {
+                if (background is Image backgroundImage)
+                {
+                    backgroundImage.sprite = null;
+                    backgroundImage.type = Image.Type.Simple;
+                    backgroundImage.preserveAspect = false;
+                }
                 background.color = SurfaceLow;
                 AddOutline(background, Border);
             }
@@ -462,19 +628,121 @@ public static class FlatWorldUITheme
                 field.textComponent.color = TextPrimary;
 
             if (field.placeholder is TextMeshProUGUI placeholder)
-                placeholder.color = Hex("849294", 0.82f);
+                placeholder.color = Hex("A8A8A8", 0.82f);
 
             field.caretColor = TextPrimary;
-            field.selectionColor = Hex("D47E3A", 0.42f);
+            field.selectionColor = Hex("D7C56A", 0.32f);
             field.customCaretColor = true;
 
             ColorBlock colors = field.colors;
             colors.normalColor = Color.white;
-            colors.highlightedColor = Hex("E6D5BB");
+            colors.highlightedColor = Hex("E5E5E5");
             colors.selectedColor = Selection;
-            colors.disabledColor = Hex("707879", 0.52f);
+            colors.disabledColor = Hex("777777", 0.52f);
             colors.fadeDuration = 0.11f;
             field.colors = colors;
+        }
+    }
+
+    private static void StyleDropdowns(Transform root)
+    {
+        TMP_Dropdown[] dropdowns = root.GetComponentsInChildren<TMP_Dropdown>(true);
+        foreach (TMP_Dropdown dropdown in dropdowns)
+        {
+            if (dropdown == null)
+                continue;
+
+            Graphic background = dropdown.targetGraphic != null ? dropdown.targetGraphic : dropdown.GetComponent<Graphic>();
+            if (background != null)
+            {
+                if (background is Image backgroundImage)
+                {
+                    backgroundImage.sprite = null;
+                    backgroundImage.type = Image.Type.Simple;
+                    backgroundImage.preserveAspect = false;
+                }
+
+                background.color = SurfaceRaised;
+                AddOutline(background, Border);
+            }
+
+            if (dropdown.captionText != null)
+                dropdown.captionText.color = TextPrimary;
+            if (dropdown.itemText != null)
+                dropdown.itemText.color = TextPrimary;
+
+            ColorBlock colors = dropdown.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = Hex("F0F0F0");
+            colors.pressedColor = Hex("BEBEBE");
+            colors.selectedColor = Hex("E8E8E8");
+            colors.disabledColor = Hex("777777", 0.50f);
+            colors.colorMultiplier = 1f;
+            colors.fadeDuration = 0.11f;
+            dropdown.colors = colors;
+
+            Image[] images = dropdown.GetComponentsInChildren<Image>(true);
+            foreach (Image image in images)
+            {
+                if (image == null || image == background)
+                    continue;
+
+                if (ContainsAny(image.name, "Arrow", "箭头"))
+                    image.color = TextSecondary;
+                else if (ContainsAny(image.name, "Checkmark", "勾选", "选中"))
+                    image.color = Accent;
+            }
+        }
+    }
+
+    private static void StyleLegacyDropdowns(Transform root)
+    {
+        Dropdown[] dropdowns = root.GetComponentsInChildren<Dropdown>(true);
+        foreach (Dropdown dropdown in dropdowns)
+        {
+            if (dropdown == null)
+                continue;
+
+            Graphic background = dropdown.targetGraphic != null ? dropdown.targetGraphic : dropdown.GetComponent<Graphic>();
+            if (background != null)
+            {
+                if (background is Image backgroundImage)
+                {
+                    backgroundImage.sprite = null;
+                    backgroundImage.type = Image.Type.Simple;
+                    backgroundImage.preserveAspect = false;
+                }
+
+                background.color = SurfaceRaised;
+                AddOutline(background, Border);
+            }
+
+            if (dropdown.captionText != null)
+                dropdown.captionText.color = TextPrimary;
+            if (dropdown.itemText != null)
+                dropdown.itemText.color = TextPrimary;
+
+            ColorBlock colors = dropdown.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = Hex("F0F0F0");
+            colors.pressedColor = Hex("BEBEBE");
+            colors.selectedColor = Hex("E8E8E8");
+            colors.disabledColor = Hex("777777", 0.50f);
+            colors.colorMultiplier = 1f;
+            colors.fadeDuration = 0.11f;
+            dropdown.colors = colors;
+
+            Image[] images = dropdown.GetComponentsInChildren<Image>(true);
+            foreach (Image image in images)
+            {
+                if (image == null || image == background)
+                    continue;
+
+                if (ContainsAny(image.name, "Arrow", "箭头"))
+                    image.color = TextSecondary;
+                else if (ContainsAny(image.name, "Checkmark", "勾选", "选中"))
+                    image.color = Accent;
+            }
         }
     }
 
@@ -488,6 +756,8 @@ public static class FlatWorldUITheme
                 continue;
 
             Image background = FindNamedImage(slider.transform, "Background", "背景", "底板");
+            if (background == null)
+                background = slider.GetComponent<Image>();
             if (background != null)
             {
                 background.color = SurfaceLow;
@@ -532,6 +802,13 @@ public static class FlatWorldUITheme
                 Image handle = slider.handleRect.GetComponent<Image>();
                 if (!keepInputHandle)
                 {
+                    if (handle != null)
+                    {
+                        handle.color = TextPrimary;
+                        handle.sprite = null;
+                        handle.type = Image.Type.Simple;
+                        handle.preserveAspect = false;
+                    }
                     slider.handleRect.gameObject.SetActive(false);
                 }
                 else if (handle != null)
@@ -543,7 +820,7 @@ public static class FlatWorldUITheme
                     handle.type = Image.Type.Simple;
                     handle.preserveAspect = false;
                     handle.raycastTarget = false;
-                    AddOutline(handle, Hex("08151D", 0.54f));
+                    AddOutline(handle, Hex("2A2A2A", 0.54f));
                 }
             }
         }
@@ -560,6 +837,12 @@ public static class FlatWorldUITheme
             Graphic background = toggle.targetGraphic != null ? toggle.targetGraphic : toggle.GetComponent<Graphic>();
             if (background != null)
             {
+                if (background is Image backgroundImage)
+                {
+                    backgroundImage.sprite = null;
+                    backgroundImage.type = Image.Type.Simple;
+                    backgroundImage.preserveAspect = false;
+                }
                 background.color = SurfaceLow;
                 AddOutline(background, Border);
             }
@@ -579,10 +862,23 @@ public static class FlatWorldUITheme
 
             Image background = scrollbar.GetComponent<Image>();
             if (background != null)
+            {
+                background.sprite = null;
+                background.type = Image.Type.Simple;
+                background.preserveAspect = false;
                 background.color = SurfaceLow;
+            }
 
             if (scrollbar.targetGraphic != null)
-                scrollbar.targetGraphic.color = Hex("637679", 0.94f);
+            {
+                if (scrollbar.targetGraphic is Image handle)
+                {
+                    handle.sprite = null;
+                    handle.type = Image.Type.Simple;
+                    handle.preserveAspect = false;
+                }
+                scrollbar.targetGraphic.color = Hex("8A8A8A", 0.94f);
+            }
         }
     }
 
@@ -594,10 +890,14 @@ public static class FlatWorldUITheme
             if (text == null || IsProtectedArtwork(text.transform))
                 continue;
 
-            if (text.GetComponentInParent<Button>() != null)
+            if (ContainsAny(text.name, "FWUI_眉题", "FWUI_SectionEyebrow_", "UITheme_Eyebrow"))
+            {
+                text.color = TextSecondary;
+                text.gameObject.SetActive(false);
                 continue;
+            }
 
-            if (HasSemanticColor(text.color))
+            if (text.GetComponentInParent<Button>() != null)
                 continue;
 
             bool heading = text.fontSize >= 24f || ContainsAny(text.name, "标题", "信息", "Title", "Header");
@@ -605,6 +905,36 @@ public static class FlatWorldUITheme
             if (heading)
                 text.fontStyle |= FontStyles.Bold;
             text.raycastTarget = false;
+        }
+    }
+
+    private static void StyleExistingEffects(Transform root)
+    {
+        Outline[] outlines = root.GetComponentsInChildren<Outline>(true);
+        foreach (Outline outline in outlines)
+        {
+            if (outline == null)
+                continue;
+
+            Graphic graphic = outline.GetComponent<Graphic>();
+            if (graphic is TextMeshProUGUI)
+            {
+                outline.effectColor = Hex("242424", 0.72f);
+            }
+            else if (ContainsAny(outline.name, PrimaryActionWords) ||
+                     ContainsAny(outline.name, "Accent", "强调", "UI_SelectBox"))
+            {
+                outline.effectColor = Hex("D7C56A", 0.24f);
+            }
+            else
+            {
+                outline.effectColor = Border;
+            }
+
+            outline.effectDistance = graphic is TextMeshProUGUI
+                ? TextOutlineDistance
+                : BorderOutlineDistance;
+            outline.useGraphicAlpha = true;
         }
     }
 
@@ -663,31 +993,34 @@ public static class FlatWorldUITheme
         Stretch(chrome);
         chrome.SetAsLastSibling();
 
-        Image header = CreateImage("UITheme_Header", chrome, Hex("17313A", 0.90f));
+        Image header = CreateImage("UITheme_Header", chrome, SurfaceRaised);
         header.raycastTarget = false;
         header.rectTransform.anchorMin = new Vector2(0f, 1f);
         header.rectTransform.anchorMax = new Vector2(1f, 1f);
         header.rectTransform.pivot = new Vector2(0.5f, 1f);
         header.rectTransform.anchoredPosition = Vector2.zero;
-        header.rectTransform.sizeDelta = new Vector2(0f, 44f);
+        header.rectTransform.sizeDelta = new Vector2(0f, 40f);
 
         Image accent = CreateImage("UITheme_Accent", chrome, Accent);
         accent.raycastTarget = false;
-        SetRect(accent.rectTransform, new Vector2(0f, 0f), new Vector2(4f, 44f), new Vector2(0f, 1f));
+        SetRect(accent.rectTransform, Vector2.zero, new Vector2(3f, 40f), new Vector2(0f, 1f));
 
-        TextMeshProUGUI titleText = CreateText("UITheme_Title", chrome, title, font, 18f, TextPrimary, FontStyles.Bold);
-        SetRect(titleText.rectTransform, new Vector2(18f, -3f), new Vector2(Mathf.Max(240f, width * 0.55f), 24f), new Vector2(0f, 1f));
+        TextMeshProUGUI titleText = CreateText("UITheme_Title", chrome, title, font, 17f, TextPrimary, FontStyles.Bold);
+        SetRect(titleText.rectTransform, new Vector2(16f, -8f), new Vector2(Mathf.Max(240f, width * 0.55f), 24f), new Vector2(0f, 1f));
 
-        TextMeshProUGUI eyebrowText = CreateText("UITheme_Eyebrow", chrome, eyebrow, font, 9.5f, AccentHover, FontStyles.Bold);
-        eyebrowText.characterSpacing = 2f;
-        SetRect(eyebrowText.rectTransform, new Vector2(18f, -25f), new Vector2(Mathf.Max(280f, width * 0.62f), 16f), new Vector2(0f, 1f));
+        if (!string.IsNullOrEmpty(eyebrow))
+        {
+            TextMeshProUGUI eyebrowText = CreateText("UITheme_Eyebrow", chrome, eyebrow, font, 9.5f, AccentHover, FontStyles.Bold);
+            eyebrowText.characterSpacing = 2f;
+            SetRect(eyebrowText.rectTransform, new Vector2(16f, -24f), new Vector2(Mathf.Max(280f, width * 0.62f), 14f), new Vector2(0f, 1f));
+        }
 
-        Image divider = CreateImage("UITheme_Divider", chrome, Hex("D4A263", 0.28f));
+        Image divider = CreateImage("UITheme_Divider", chrome, Border);
         divider.raycastTarget = false;
         divider.rectTransform.anchorMin = new Vector2(0f, 1f);
         divider.rectTransform.anchorMax = new Vector2(1f, 1f);
         divider.rectTransform.pivot = new Vector2(0.5f, 1f);
-        divider.rectTransform.anchoredPosition = new Vector2(0f, -44f);
+        divider.rectTransform.anchoredPosition = new Vector2(0f, -40f);
         divider.rectTransform.sizeDelta = new Vector2(0f, 1f);
     }
 
@@ -706,27 +1039,41 @@ public static class FlatWorldUITheme
         TextMeshProUGUI eyebrowText = chrome.Find("UITheme_Eyebrow")?.GetComponent<TextMeshProUGUI>();
 
         if (header != null)
-            header.rectTransform.sizeDelta = new Vector2(0f, 44f);
+        {
+            header.color = SurfaceRaised;
+            header.rectTransform.sizeDelta = new Vector2(0f, 40f);
+        }
 
         if (accent != null)
-            SetRect(accent.rectTransform, Vector2.zero, new Vector2(4f, 44f), new Vector2(0f, 1f));
+        {
+            accent.color = Accent;
+            SetRect(accent.rectTransform, Vector2.zero, new Vector2(3f, 40f), new Vector2(0f, 1f));
+        }
 
         if (titleText != null)
         {
             titleText.text = FlatWorldLocalizationService.GetUiText(title);
-            titleText.fontSize = 18f;
-            SetRect(titleText.rectTransform, new Vector2(18f, -3f), new Vector2(titleText.rectTransform.sizeDelta.x, 24f), new Vector2(0f, 1f));
+            titleText.color = TextPrimary;
+            titleText.fontSize = 17f;
+            SetRect(titleText.rectTransform, new Vector2(16f, -8f), new Vector2(titleText.rectTransform.sizeDelta.x, 24f), new Vector2(0f, 1f));
         }
 
         if (eyebrowText != null)
         {
-            eyebrowText.text = FlatWorldLocalizationService.GetUiText(eyebrow);
-            eyebrowText.fontSize = 9.5f;
-            SetRect(eyebrowText.rectTransform, new Vector2(18f, -25f), new Vector2(eyebrowText.rectTransform.sizeDelta.x, 16f), new Vector2(0f, 1f));
+            eyebrowText.gameObject.SetActive(!string.IsNullOrEmpty(eyebrow));
+            if (!string.IsNullOrEmpty(eyebrow))
+            {
+                eyebrowText.text = FlatWorldLocalizationService.GetUiText(eyebrow);
+                eyebrowText.fontSize = 9.5f;
+                SetRect(eyebrowText.rectTransform, new Vector2(16f, -24f), new Vector2(eyebrowText.rectTransform.sizeDelta.x, 14f), new Vector2(0f, 1f));
+            }
         }
 
         if (divider != null)
-            divider.rectTransform.anchoredPosition = new Vector2(0f, -44f);
+        {
+            divider.color = Border;
+            divider.rectTransform.anchoredPosition = new Vector2(0f, -40f);
+        }
     }
 
     private static void AddDeathPresentation(Transform root, TMP_FontAsset font)
@@ -885,7 +1232,7 @@ public static class FlatWorldUITheme
         string rootName = root.name;
         foreach (string panelName in BespokePanelNames)
         {
-            if (rootName.IndexOf(panelName, StringComparison.OrdinalIgnoreCase) >= 0)
+            if (string.Equals(rootName, panelName, StringComparison.OrdinalIgnoreCase))
                 return true;
         }
 
@@ -894,9 +1241,26 @@ public static class FlatWorldUITheme
 
     private static bool IsHud(string rootName)
     {
+        if (string.IsNullOrEmpty(rootName))
+            return false;
+
+        // 必须避免用 "UI_Hand" 的子串判断，否则 UI_HandCraftTable 会被误判成 HUD。
+        if (string.Equals(rootName, "UI_Hand", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(rootName, "UI_HotBar", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(rootName, "UI_SelectBox", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(rootName, "UI_Health", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(rootName, "UI_Food", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(rootName, "UI_Sleep", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(rootName, "UI_ModuleSettings", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
         return ContainsAny(
             rootName,
-            "HotBar", "SelectBox", "UI_Hand", "UI_Health", "UI_Food", "UI_Sleep", "UI_ModuleSettings", "世界面板", "WorldUI");
+            "HUD", "PlayerWorldCoordinate", "SaveStatus", "BuffStatus", "QuestTracker",
+            "SpeechBubble", "PlayerChatInput", "MobileControls", "RuntimeDebugOverlay",
+            "世界面板", "WorldUI");
     }
 
     private static bool IsProtectedArtwork(Transform transform)
@@ -969,12 +1333,6 @@ public static class FlatWorldUITheme
         return ContainsAny(value, "血量", "生命", "Health", "HP");
     }
 
-    private static bool HasSemanticColor(Color color)
-    {
-        Color.RGBToHSV(color, out _, out float saturation, out _);
-        return saturation > 0.40f;
-    }
-
     private static Image FindNamedImage(Transform root, params string[] names)
     {
         Image[] images = root.GetComponentsInChildren<Image>(true);
@@ -997,7 +1355,7 @@ public static class FlatWorldUITheme
             outline = graphic.gameObject.AddComponent<Outline>();
 
         outline.effectColor = color;
-        outline.effectDistance = new Vector2(1f, -1f);
+        outline.effectDistance = BorderOutlineDistance;
         outline.useGraphicAlpha = true;
     }
 

@@ -93,6 +93,54 @@ MonoBehaviour:
               - None
             SlotMaxVolume: 0
             Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
+          - CanAcceptItemType:
+              Item_TypeTag:
+              - None
+              - None
+              Item_Material:
+              - None
+            SlotMaxVolume: 0
+            Index: 0
           Index: 0
           IsInjected: 0
           PanelPosition: {x: 0, y: 0, z: 0}

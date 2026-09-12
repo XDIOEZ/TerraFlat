@@ -197,7 +197,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.15294118, g: 0.22745098, b: 0.23529412, a: 0.98}
+  m_Color: {r: 0.28627452, g: 0.28627452, b: 0.28627452, a: 0.98}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -206,7 +206,7 @@ MonoBehaviour:
       m_Calls: []
   m_Sprite: {fileID: 0}
   m_Type: 0
-  m_PreserveAspect: 1
+  m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -231,10 +231,15 @@ MonoBehaviour:
   text: {fileID: 4561207611163647605}
   OnLeftClick:
     _PersistentCalls: []
+  OnGamepadSubmit:
+    _PersistentCalls: []
   _OnScroll:
     _PersistentCalls: []
   OnShiftQuickTransfer:
     _PersistentCalls: []
+  touchLongPressSeconds: 0.45
+  touchHalfDragReadySeconds: 0.85
+  touchMoveTolerance: 16
 --- !u!114 &3021126795118695323
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -257,10 +262,10 @@ MonoBehaviour:
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
-    m_PressedColor: {r: 0.7254902, g: 0.7647059, b: 0.7529412, a: 0.82}
-    m_SelectedColor: {r: 0.95686275, g: 0.8392157, b: 0.63529414, a: 1}
-    m_DisabledColor: {r: 0.46666667, g: 0.49019608, b: 0.4862745, a: 0.48}
+    m_HighlightedColor: {r: 0.9411765, g: 0.9411765, b: 0.9411765, a: 1}
+    m_PressedColor: {r: 0.74509805, g: 0.74509805, b: 0.74509805, a: 1}
+    m_SelectedColor: {r: 0.89411765, g: 0.8509804, b: 0.5254902, a: 1}
+    m_DisabledColor: {r: 0.46666667, g: 0.46666667, b: 0.46666667, a: 0.5}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.11
   m_SpriteState:
@@ -320,8 +325,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_EffectColor: {r: 0.83, g: 0.49, b: 0.23, a: 0.3}
-  m_EffectDistance: {x: 1, y: -1}
+  m_EffectColor: {r: 1, g: 1, b: 1, a: 0.13}
+  m_EffectDistance: {x: 2, y: -2}
   m_UseGraphicAlpha: 1
 --- !u!1 &4568938631136335623
 GameObject:
@@ -470,6 +475,7 @@ MonoBehaviour:
   rectTransform: {fileID: 5690605725274206243}
   PanelName: 
   isOpen: 0
+  blocksGameplayInput: 1
 --- !u!114 &2699488455053025932
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -494,6 +500,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 31e78824344f07040a841ef439d3793c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  sortingOrder: 32767
   followMouse: 1
   offset: {x: 0, y: 0, z: 0}
   rectTransform: {fileID: 5690605725274206243}

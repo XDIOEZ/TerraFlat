@@ -100,10 +100,10 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         "季节天数_0"
     };
 
-    private static readonly Color ActiveTabColor = new Color(0.16f, 0.40f, 0.42f, 1f);
-    private static readonly Color InactiveTabColor = new Color(0.094f, 0.212f, 0.247f, 0.99f);
-    private static readonly Color ActiveLabelColor = new Color(0.95f, 0.91f, 0.81f, 1f);
-    private static readonly Color InactiveLabelColor = new Color(0.66f, 0.72f, 0.73f, 1f);
+    private static readonly Color ActiveTabColor = new Color32(103, 103, 103, 255);
+    private static readonly Color InactiveTabColor = new Color32(76, 76, 76, 252);
+    private static readonly Color ActiveLabelColor = new Color32(238, 238, 238, 255);
+    private static readonly Color InactiveLabelColor = new Color32(198, 198, 198, 255);
 
     #endregion
 

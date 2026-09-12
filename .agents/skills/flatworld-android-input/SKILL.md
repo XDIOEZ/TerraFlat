@@ -37,6 +37,7 @@ description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系�
 - 手机 HUD 的菜单/返回入口必须放在独立的常驻控制层，不能和移动、指向、攻击、交互、使用、奔跑一起放入玩法控制层；模态玩法面板打开时菜单仍可展开作为背包/制作等并行入口，Android 返回键或 Escape 才优先关闭最上层可取消面板。
 - 抽屉滚动列表中的面板入口必须用 `Button.onClick` 完整点击后脉冲虚拟按钮；不得绑定按下即生效的 `MobileInputButton`，否则手指开始滚动时会误打开装备、制作等面板。抽屉显隐与方向图标统一由 `SetDrawerOpen` 更新。
 - 左右摇杆捕获区统一读取 `UIUserSettings.LeftControlZoneRatio` 与 `RightControlZoneRatio`，中间剩余区域不得被透明摇杆层接管；比例改变时必须先释放已有触点再重算边界。移动摇杆的固定/浮动偏好继续由 `FloatingMoveJoystick` 持久化，移动与普通指向摇杆仅在各自区域取得触点后显示，固定攻击摇杆不受该可见性规则影响。
+- 触屏玩法控件透明度统一读取 `UIUserSettings.TouchControlsOpacityPercent`（设置页 0～100）；`PlayerMobileControlsHUD` 只把归一化 alpha 作用于玩法控制层和手机模式下挂入的快捷栏，常驻菜单/设置入口保持完全可见。透明度只能影响视觉，0% 也不得关闭射线或交互；浮动移动/普通指向摇杆自身的动态显隐继续由 `MobileVirtualJoystick` 管理并与父级 alpha 相乘。
 - 正式手机视觉以 `UI_MobileControls.prefab` 为真相并挂到 `UIManager.SafeAreaRoot`；运行时只绑定行为和现有 HUD，不拼装另一套视觉。
 - 手机快捷栏锚点必须与玩法控制层同级，不能成为玩法层子节点；模态背包只隐藏摇杆和玩法按钮，快捷栏需保持可见并提升到面板之上参与拖放。
 - Android 底部回到桌面/多任务手势属于强制系统手势区，不能靠 `setSystemGestureExclusionRects` 屏蔽；快捷栏等带上滑操作的控件必须读取 `WindowInsets` 的 `mandatorySystemGestures` 并只补齐尚未被 `Screen.safeArea` 覆盖的边距。
