@@ -137,6 +137,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 3.0,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -311,6 +312,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 12.0,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -529,6 +531,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 2.0,
             "$transform": {
               "localPosition": {
                 "x": -18.3141975,
@@ -754,6 +757,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 8.0,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -933,6 +937,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 7.0,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -1112,6 +1117,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 8.0,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -1292,6 +1298,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 9.0,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -1471,6 +1478,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 10.0,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -1650,6 +1658,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 9.0,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -1836,6 +1845,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 9.0,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -1958,6 +1968,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 9.0,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -2194,6 +2205,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 10.0,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -2374,6 +2386,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 11.0,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -2554,6 +2567,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 10.0,
             "RawData": [],
             "$transform": {
               "localPosition": {

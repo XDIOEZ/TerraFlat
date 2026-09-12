@@ -83,10 +83,36 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         modData.WriteData(Data);
     }
 
+    /// <summary>增加或消耗基础体力值，并统一应用当前难度倍率。</summary>
     public void AddStamina(float value)
     {
+        CurrentValue += ResolveStaminaDelta(value); // 会自动触发事件和更新Slider
+    }
+
+    /// <summary>尝试一次性消耗基础体力；不足时不扣除，供攻击等离散动作使用。</summary>
+    public bool TryConsumeStamina(float amount)
+    {
+        if (amount <= 0f)
+        {
+            return true;
+        }
+
+        float delta = ResolveStaminaDelta(-amount);
+        float effectiveCost = -delta;
+        if (CurrentValue + 0.0001f < effectiveCost)
+        {
+            return false;
+        }
+
+        CurrentValue += delta;
+        return true;
+    }
+
+    /// <summary>把基础体力变化换算为难度规则下的实际变化。</summary>
+    private float ResolveStaminaDelta(float value)
+    {
         float multiplier = GameDifficultyService.ResolveStaminaDeltaMultiplier(item, value);
-        CurrentValue += value * multiplier; // 会自动触发事件和更新Slider
+        return value * multiplier;
     }
 
 

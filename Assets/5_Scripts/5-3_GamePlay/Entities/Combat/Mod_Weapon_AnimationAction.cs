@@ -26,6 +26,8 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
     [SerializeField] private bool loopComboOnHold = true;
     [Tooltip("攻击速度倍率，1.0 为原速")]
     [SerializeField, ReadOnly] private float attackSpeedMultiplier = 1f;
+    [Tooltip("每次实际开始一段挥动攻击时消耗的基础体力；最终消耗受难度倍率影响")]
+    [SerializeField, Min(0f)] private float staminaCostPerAttack = 5f;
     #endregion
 
     #region Runtime
@@ -50,6 +52,8 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
     private GameController cachedController;
     // 缓存命中模块，确保待机状态不保留伤害碰撞体。
     private Mod_Damage cachedDamageModule;
+    // 持有者体力模块；没有体力模块的非玩家持有者不受该限制。
+    private Mod_Stamina ownerStamina;
     private bool isHoldingInput;
     #endregion
     #region 基础参数
@@ -91,6 +95,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
 
         if (item.Owner != null)
         {
+            ownerStamina = item.Owner.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
             cachedController = item.Owner.GetComponentInChildren<GameController>();
             if (cachedController != null)
             {
@@ -132,6 +137,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
     /// <summary>统一解除中央攻击语义，避免武器被直接销毁时残留订阅。</summary>
     private void UnbindAttackInput()
     {
+        ownerStamina = null;
         if (cachedController == null)
             return;
 
@@ -226,6 +232,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
     }
 
     public float AttackSpeedMultiplier => attackSpeedMultiplier; /// 当前攻击速度倍率（只读）
+    public float StaminaCostPerAttack => staminaCostPerAttack; /// 每段攻击的基础体力消耗（只读）
 
     public void SetAttackSpeedMultiplier(float multiplier) /// 设置攻击速度倍率（同时影响动画速度和攻击时序）
     {
@@ -251,8 +258,18 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
     }
 
     [InfoBox("开始播放指定索引的攻击动画")]
-    private void StartAttack(int index)
+    private bool StartAttack(int index)
     {
+        if (!TryConsumeAttackStamina())
+        {
+            if (isAttacking)
+            {
+                ResetToIdle();
+            }
+
+            return false;
+        }
+
         currentIndex = index;
         isAttacking = true;
         queuedNext = false;
@@ -285,6 +302,13 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
 
         comboDeadline = Time.time + scaledWindow;
         nextReadyTime = Time.time + scaledLength;
+        return true;
+    }
+
+    /// <summary>每一段实际挥动只结算一次体力；不足时拒绝启动该段攻击。</summary>
+    private bool TryConsumeAttackStamina()
+    {
+        return ownerStamina == null || ownerStamina.TryConsumeStamina(staminaCostPerAttack);
     }
 
     [InfoBox("检查并尝试衔接下一段连击")]

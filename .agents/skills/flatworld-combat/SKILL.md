@@ -36,6 +36,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 濒死控制与界面属于血量的派生运行态，须在本地玩家 `Event_PlayerEnterWorld`（全部模块加载后）按权威血量恢复；不能依赖模块 Load 顺序，也不能重放 `OnDead`，否则读档会重复死亡掉落。
 - 启用身体部位生命时，普通总量回血只能分配给仍存活的部位，不能复活已耗尽的手脚；直接重生或满血赋值才允许恢复全部部位。
 - 武器的 `Mod_Damage` 必须是武器实例内的直接子物体，禁止再嵌套 `Mod_Damage.prefab` 实例；Prefab 组合可显式序列化跨模块引用，JSON 组合则必须在所有模块注册后通过 `IItemModuleDependencyBinder` 按唯一稳定 ID 绑定，禁止层级搜索或静默补建。攻击动画曲线只负责开关已存在的碰撞体。
+- 玩家手持的动画近战/工具统一由 `Mod_Weapon_AnimationAction` 在每一段实际 `StartAttack` 时通过持有者 `Mod_Stamina.TryConsumeStamina` 结算 `staminaCostPerAttack`；按住连击必须每段单独扣除，体力不足则不启动该段。基础消耗由 Item JSON 的模块参数配置并继续受全局体力消耗难度倍率影响，禁止按物品 ID 在战斗代码里硬编码；仍保留 `sourcePrefab` 的现行内容同步对应序列化值，避免后续迁移覆盖经济配置。
 - 动画武器的伤害盒必须跟随 `Render` 下实际武器 `SpriteRenderer` 的局部位置、旋转、缩放与 Sprite 边界；同时处理 `flipX/flipY` 对 Pivot 偏移的反转。禁止把 `Mod_Damage` 固定在 `Render` 原点并沿用模板的默认 1×1 BoxCollider，否则武器旋转后会出现大面积错位。
 - `Mod_Damage` 开启伤害窗口时必须主动扫描当前重叠目标，不能只依赖 `OnTriggerEnter2D`；玩家、AI 与技能统一走公共伤害窗口，避免碰撞体后开时漏掉已经重叠的接收器。
 - 标准物品武器的 `Mod_Damage.MaxAttackTargets` 默认统一为 `3`；特殊单体攻击可显式调低。Prefab 与 Item JSON 都可能覆盖 C# 默认值，调整默认目标数时必须同步检查这两类序列化配置。
