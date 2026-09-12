@@ -17,6 +17,15 @@ public partial class Inventory_Data
     /// <summary>玩家普通主背包的基础体积上限，单位 L。</summary>
     public const float DefaultPlayerBagMaxVolume = 90f;
 
+    /// <summary>玩家主背包的基础槽位数；自动收缩时不会低于该数量。</summary>
+    public const int DefaultPlayerBagSlotCount = 27;
+
+    /// <summary>空余槽位小于等于该数量时触发扩容。</summary>
+    public const int PlayerBagExpandFreeSlotThreshold = 2;
+
+    /// <summary>触发扩容后一次性补足到该空余槽位数，避免逐帧连续扩容。</summary>
+    public const int PlayerBagTargetFreeSlotCount = PlayerBagExpandFreeSlotThreshold + 1;
+
     /// <summary>运行时容量策略；由所属玩家的独立状态恢复，不加入 MemoryPack 库存布局。</summary>
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     public bool HasUnlimitedSlots { get; private set; }
@@ -39,6 +48,10 @@ public partial class Inventory_Data
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     public float MaxCarryVolume { get; private set; } = float.PositiveInfinity;
 
+    /// <summary>只有玩家主背包启用“27 格基线 + 3 个预留空格”的动态收缩策略。</summary>
+    [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
+    private bool UsesPlayerBagDynamicSlotPolicy { get; set; }
+
     /// <summary>当前库存内所有物品的总重量。</summary>
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     public float CurrentCarryWeight => CalculateCarryWeight();
@@ -47,9 +60,11 @@ public partial class Inventory_Data
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     public float CurrentCarryVolume => CalculateCarryVolume();
 
-    /// <summary>配置普通玩家主背包：可堆叠物单格无限，但总携带量受重量与体积双上限约束。</summary>
+    /// <summary>配置普通玩家主背包：格子自动扩容、可堆叠物单格无限，但总携带量受重量与体积双上限约束。</summary>
     public void ConfigurePlayerBagCapacity(float maxWeight, float maxVolume)
     {
+        UsesPlayerBagDynamicSlotPolicy = true;
+        SetUnlimitedSlots(true);
         SetUnlimitedStackSize(true);
         SetCarryCapacity(maxWeight, maxVolume);
     }
@@ -104,17 +119,100 @@ public partial class Inventory_Data
         EnsureSpareSlot();
     }
 
-    /// <summary>无限库存末尾始终预留一个空槽，已有空槽不重复扩容。</summary>
+    /// <summary>
+    /// 保证动态库存具备可用空槽。普通无限库存维持旧规则：末尾占用后补 1 格；
+    /// 玩家主背包则在总空余槽位 <= 2 时一次补足到 3 格。
+    /// </summary>
     public void EnsureSpareSlot()
     {
-        if (!HasUnlimitedSlots ||
-            (itemSlots.Count > 0 && itemSlots[itemSlots.Count - 1].itemData == null))
+        if (!HasUnlimitedSlots || itemSlots == null)
             return;
 
-        itemSlots.Add(new ItemSlot(itemSlots.Count)
+        if (!UsesPlayerBagDynamicSlotPolicy)
         {
-            SlotMaxVolume = HasUnlimitedStackSize ? float.MaxValue : DefaultSlotVolume
-        });
+            if (itemSlots.Count > 0 && itemSlots[itemSlots.Count - 1].itemData == null)
+                return;
+
+            AddDynamicSlots(1);
+            return;
+        }
+
+        int emptySlotCount = CountEmptySlots();
+        int missingBaseSlots = Mathf.Max(0, DefaultPlayerBagSlotCount - itemSlots.Count);
+        int missingSpareSlots = emptySlotCount <= PlayerBagExpandFreeSlotThreshold
+            ? PlayerBagTargetFreeSlotCount - emptySlotCount
+            : 0;
+        int addCount = Mathf.Max(missingBaseSlots, missingSpareSlots);
+        if (addCount > 0)
+            AddDynamicSlots(addCount);
+    }
+
+    /// <summary>
+    /// 玩家主背包自检：先按空余槽位阈值扩容，再在总槽位超过 27 时删除多余空槽。
+    /// 收缩目标同时保留 3 个空槽，因此不会在 27/28 格之间反复扩缩。
+    /// </summary>
+    public void MaintainDynamicSlotCount()
+    {
+        EnsureSpareSlot();
+        if (!HasUnlimitedSlots || !UsesPlayerBagDynamicSlotPolicy || itemSlots == null)
+            return;
+
+        int occupiedSlotCount = itemSlots.Count - CountEmptySlots();
+        int targetSlotCount = Mathf.Max(
+            DefaultPlayerBagSlotCount,
+            occupiedSlotCount + PlayerBagTargetFreeSlotCount);
+        int removeCount = itemSlots.Count - targetSlotCount;
+        if (removeCount <= 0)
+            return;
+
+        for (int i = itemSlots.Count - 1; i >= 0 && removeCount > 0; i--)
+        {
+            ItemSlot slot = itemSlots[i];
+            if (slot != null && slot.itemData != null)
+                continue;
+
+            itemSlots.RemoveAt(i);
+            removeCount--;
+        }
+
+        ReindexDynamicSlots();
+    }
+
+    /// <summary>统计当前所有空余槽位；玩家背包扩容依据总空余量，而不是最后一格是否被占用。</summary>
+    private int CountEmptySlots()
+    {
+        int emptySlotCount = 0;
+        for (int i = 0; i < itemSlots.Count; i++)
+        {
+            if (itemSlots[i] == null || itemSlots[i].itemData == null)
+                emptySlotCount++;
+        }
+
+        return emptySlotCount;
+    }
+
+    /// <summary>按当前库存策略追加空槽。</summary>
+    private void AddDynamicSlots(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            itemSlots.Add(new ItemSlot(itemSlots.Count)
+            {
+                SlotMaxVolume = HasUnlimitedStackSize ? float.MaxValue : DefaultSlotVolume
+            });
+        }
+    }
+
+    /// <summary>动态收缩后统一重建槽位索引并修正当前索引。</summary>
+    private void ReindexDynamicSlots()
+    {
+        for (int i = 0; i < itemSlots.Count; i++)
+        {
+            if (itemSlots[i] != null)
+                itemSlots[i].Index = i;
+        }
+
+        Index = itemSlots.Count > 0 ? Mathf.Clamp(Index, 0, itemSlots.Count - 1) : 0;
     }
 
     /// <summary>按当前整包容量计算这次最多还能加入多少件指定物品。</summary>

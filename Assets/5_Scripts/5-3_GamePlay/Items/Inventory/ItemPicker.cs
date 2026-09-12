@@ -270,12 +270,12 @@ public class ItemPicker : Module
             return;
         }
 
-        ShowInventoryFullPrompt();
+        ShowInventoryFullPrompt(pickAble.itemData);
         Debug.Log($"[{nameof(ItemPicker)}] All target inventories are full, cannot pick up item: {pickAble.itemData.IDName}");
     }
 
     /// <summary>拾取失败时按触发事件限频提示，不在空闲期间轮询或重复弹窗。</summary>
-    private void ShowInventoryFullPrompt()
+    private void ShowInventoryFullPrompt(ItemData attemptedItem)
     {
         float now = Time.unscaledTime;
         if (now < nextInventoryFullPromptTime)
@@ -289,7 +289,27 @@ public class ItemPicker : Module
             return;
 
         nextInventoryFullPromptTime = now + InventoryFullPromptCooldownSeconds;
-        statusHUD.ShowTransientMessage("我的背包满了");
+        statusHUD.ShowTransientMessage(ResolveInventoryFullMessage(attemptedItem));
+    }
+
+    /// <summary>优先告诉玩家具体卡在重量还是体积；纯槽位不足继续使用通用“背包满了”。</summary>
+    private string ResolveInventoryFullMessage(ItemData attemptedItem)
+    {
+        if (item is Player player &&
+            PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot snapshot) &&
+            !snapshot.IsUnlimited)
+        {
+            bool weightBlocked = snapshot.BlocksByWeight(attemptedItem);
+            bool volumeBlocked = snapshot.BlocksByVolume(attemptedItem);
+            if (weightBlocked && volumeBlocked)
+                return "我的背包重量和体积都到上限了";
+            if (weightBlocked)
+                return "我的背包太重了";
+            if (volumeBlocked)
+                return "我的背包没有剩余空间了";
+        }
+
+        return "我的背包满了";
     }
 
     /// <summary>
@@ -364,6 +384,12 @@ public class ItemPicker : Module
     {
         if (itemData?.Stack == null || requestedAmount <= 0f)
             return 0f;
+
+        if (item is Player player &&
+            PlayerCarryCapacityUtility.TryGetSnapshot(player, out PlayerCarryCapacitySnapshot playerSnapshot))
+        {
+            return playerSnapshot.GetCapacityLimitedAmount(itemData, requestedAmount);
+        }
 
         Inventory_Data bagData = null;
         float totalWeight = 0f;

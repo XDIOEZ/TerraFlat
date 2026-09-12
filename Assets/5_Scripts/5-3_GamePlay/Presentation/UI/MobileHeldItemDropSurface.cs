@@ -12,6 +12,7 @@ using UnityEngine.UI;
 [RequireComponent(typeof(Graphic))]
 public sealed class MobileHeldItemDropSurface : MonoBehaviour,
     IPointerDownHandler,
+    IPointerMoveHandler,
     IDragHandler,
     IPointerUpHandler,
     IPointerExitHandler,
@@ -29,6 +30,7 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
     private Coroutine longPressCoroutine;
     private float pressStartedAt; // 非缩放时间，短按和长按共用同一判定时刻。
     private ItemData pressedItem; // 锁定按下时的物品，其他手指换物后取消本次丢弃。
+    private bool dropGestureCanceled;
 
     public bool RaycastOnlyWhileHoldingItem => raycastOnlyWhileHoldingItem;
 
@@ -66,13 +68,23 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
             return;
         }
 
+        UI_FollowMouse.ReportTouchPointerPosition(eventData.position);
         pointerId = eventData.pointerId;
         pressPosition = eventData.position;
         currentScreenPosition = eventData.position;
         pressStartedAt = Time.unscaledTime;
         pressedItem = GetPlayerHeldSlot().itemData;
+        dropGestureCanceled = false;
         longPressCoroutine = StartCoroutine(WaitForLongPress(eventData.pointerId));
         eventData.Use();
+    }
+
+    public void OnPointerMove(PointerEventData eventData)
+    {
+        if (eventData == null || eventData.pointerId != pointerId)
+            return;
+
+        UpdatePointerMotion(eventData.position);
     }
 
     public void OnDrag(PointerEventData eventData)
@@ -80,9 +92,7 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
         if (eventData == null || eventData.pointerId != pointerId)
             return;
 
-        currentScreenPosition = eventData.position;
-        if (HasMovedTooFar(currentScreenPosition))
-            ResetGesture();
+        UpdatePointerMotion(eventData.position);
         eventData.Use();
     }
 
@@ -91,8 +101,9 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
         if (eventData == null || eventData.pointerId != pointerId)
             return;
 
+        UI_FollowMouse.ReportTouchPointerPosition(eventData.position);
         GameObject hit = eventData.pointerCurrentRaycast.gameObject;
-        if (HasMovedTooFar(eventData.position) || hit == null ||
+        if (dropGestureCanceled || HasMovedTooFar(eventData.position) || hit == null ||
             hit.GetComponentInParent<MobileHeldItemDropSurface>() != this)
         {
             ResetGesture();
@@ -108,7 +119,25 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
     public void OnPointerExit(PointerEventData eventData)
     {
         if (eventData != null && eventData.pointerId == pointerId)
-            ResetGesture();
+            CancelDropGestureIntent();
+    }
+
+    /// <summary>手部图标持续跟随当前触点；移动只取消丢弃意图，不释放触点所有权。</summary>
+    private void UpdatePointerMotion(Vector2 screenPosition)
+    {
+        UI_FollowMouse.ReportTouchPointerPosition(screenPosition);
+        currentScreenPosition = screenPosition;
+        if (!dropGestureCanceled && HasMovedTooFar(screenPosition))
+            CancelDropGestureIntent();
+    }
+
+    /// <summary>滑动/离开只终止轻点与长按丢弃判定，保留触点直到抬起以继续驱动手部图标。</summary>
+    private void CancelDropGestureIntent()
+    {
+        dropGestureCanceled = true;
+        if (longPressCoroutine != null)
+            StopCoroutine(longPressCoroutine);
+        longPressCoroutine = null;
     }
 
     /// <summary>按 Canvas 缩放换算移动容差，与库存轻触手势保持一致。</summary>
@@ -128,7 +157,7 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
     {
         yield return new WaitForSecondsRealtime(longPressSeconds);
         longPressCoroutine = null;
-        if (pointerId != pointerIdToCheck)
+        if (pointerId != pointerIdToCheck || dropGestureCanceled)
             yield break;
 
         CompleteGesture(currentScreenPosition, entireStack: true);
@@ -159,6 +188,7 @@ public sealed class MobileHeldItemDropSurface : MonoBehaviour,
         pointerId = int.MinValue;
         pressedItem = null;
         pressStartedAt = 0f;
+        dropGestureCanceled = false;
     }
 
     /// <summary>玩家手部槽是否存在可丢弃的有效物品。</summary>

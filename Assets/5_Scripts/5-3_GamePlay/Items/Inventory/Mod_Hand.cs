@@ -31,6 +31,16 @@ public class Mod_Hand : Module
     {
         ModSaveData.WriteData(RawData);
     }
+
+    /// <summary>玩家卸载时清理全局手部入口，禁止后续 UI 回调命中上一轮玩家。</summary>
+    public override void Unload()
+    {
+        if (ReferenceEquals(Inventory_Hand.PlayerHand, HandInventory))
+            Inventory_Hand.PlayerHand = null;
+
+        if (HandInventory != null)
+            HandInventory.item = null;
+    }
     #endregion
 
     public Inventory_Hand HandInventory;

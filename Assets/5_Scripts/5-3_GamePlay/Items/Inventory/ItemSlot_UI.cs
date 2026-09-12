@@ -66,6 +66,9 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>判断当前槽位是否可执行“手部整组长按放下”，仅用于长按进度提示与即时提交。</summary>
     public System.Func<int, bool> CanTouchLongPressPutDown { get; set; }
 
+    /// <summary>把目标槽位的长按进度转发给唯一的手部插槽视觉。</summary>
+    public System.Action<float, bool> OnTouchLongPressProgress { get; set; }
+
     /// <summary>触屏拖拽物品后在世界非 UI 区域长按的入口。</summary>
     public System.Func<Vector2, bool> OnTouchWorldLongPress { get; set; }
 
@@ -82,8 +85,21 @@ public class ItemSlot_UI : MonoBehaviour,
 
     private void RememberPointer(PointerEventData data)
     {
+        ReportPointerToHandVisual(data);
         interactionPoint = data.position;
         interactionCamera = data.pressEventCamera ?? data.enterEventCamera;
+    }
+
+    /// <summary>手部槽的触屏位置只接受本次槽位手势自身的 PointerEventData，避免被其它触点或模拟鼠标覆盖。</summary>
+    private static void ReportPointerToHandVisual(PointerEventData data)
+    {
+        if (data == null)
+            return;
+
+        if (IsTouchPointer(data))
+            UI_FollowMouse.ReportTouchPointerPosition(data.position);
+        else
+            UI_FollowMouse.ReportDesktopPointerActivity();
     }
 
     private void PerformPointerAction(System.Action action)
@@ -131,6 +147,7 @@ public class ItemSlot_UI : MonoBehaviour,
 
     [Header("手机长按")]
     [SerializeField, Min(0.1f)] private float touchLongPressSeconds = 0.45f;
+    [SerializeField, Min(0f)] private float touchLongPressProgressDelaySeconds = 0.2f;
     [SerializeField, Min(0.1f)] private float touchHalfDragReadySeconds = 0.85f;
     [SerializeField, Min(1f)] private float touchMoveTolerance = 16f;
     [SerializeField] private GameObject touchLongPressProgressRoot;
@@ -183,6 +200,7 @@ public class ItemSlot_UI : MonoBehaviour,
         OnTouchTap = null;
         OnTouchLongPress = null;
         CanTouchLongPressPutDown = null;
+        OnTouchLongPressProgress = null;
         OnTouchWorldLongPress = null;
         OnTouchHalfDragBegin = null;
         OnDesktopTap = null;
@@ -359,8 +377,6 @@ public class ItemSlot_UI : MonoBehaviour,
             touchPressStartedWithItem = !IsItemSlotEmpty(GetSlotData());
             touchItemDragActive = false;
             touchScrollDragActive = false;
-            if (touchLongPressPutDownIntent)
-                ShowTouchLongPressProgress();
             touchLongPressCoroutine = StartCoroutine(WaitForTouchLongPress());
             if (touchPressStartedWithItem)
                 touchHalfDragReadyCoroutine = StartCoroutine(WaitForTouchHalfDragReady());
@@ -432,6 +448,7 @@ public class ItemSlot_UI : MonoBehaviour,
 
     public void OnPointerMove(PointerEventData eventData)
     {
+        ReportPointerToHandVisual(eventData);
         if (eventData == null || eventData.pointerId != touchPointerId || touchMovedTooFar)
             return;
 
@@ -510,6 +527,7 @@ public class ItemSlot_UI : MonoBehaviour,
 
     public void OnDrag(PointerEventData eventData)
     {
+        ReportPointerToHandVisual(eventData);
         if (IsTouchPointer(eventData))
         {
             if (touchItemDragActive)
@@ -576,29 +594,36 @@ public class ItemSlot_UI : MonoBehaviour,
     private IEnumerator WaitForTouchLongPress()
     {
         float duration = Mathf.Max(0.1f, touchLongPressSeconds);
+        float progressDelay = Mathf.Clamp(touchLongPressProgressDelaySeconds, 0f, duration);
+        float visibleDuration = Mathf.Max(0.0001f, duration - progressDelay);
         float elapsed = 0f;
         while (elapsed < duration)
         {
             if (touchPointerId == int.MinValue || touchMovedTooFar)
             {
                 touchLongPressCoroutine = null;
-                ResetTouchLongPressProgressVisual();
+                PublishTouchLongPressProgress(0f, false);
                 yield break;
             }
 
             elapsed += Time.unscaledDeltaTime;
-            UpdateTouchLongPressProgress(Mathf.Clamp01(elapsed / duration));
+            if (touchLongPressPutDownIntent && elapsed >= progressDelay)
+            {
+                float visibleProgress = Mathf.Clamp01((elapsed - progressDelay) / visibleDuration);
+                PublishTouchLongPressProgress(visibleProgress, true);
+            }
             yield return null;
         }
 
         touchLongPressCoroutine = null;
         if (touchPointerId == int.MinValue || touchMovedTooFar)
         {
-            ResetTouchLongPressProgressVisual();
+            PublishTouchLongPressProgress(0f, false);
             yield break;
         }
 
-        UpdateTouchLongPressProgress(1f);
+        if (touchLongPressPutDownIntent)
+            PublishTouchLongPressProgress(1f, true);
         touchLongPressTriggered = true;
         if (touchLongPressPutDownIntent)
         {
@@ -613,7 +638,7 @@ public class ItemSlot_UI : MonoBehaviour,
         else if (!touchPressStartedWithItem)
             HandleTouchLongPress();
 
-        ResetTouchLongPressProgressVisual();
+        PublishTouchLongPressProgress(0f, false);
     }
 
     private IEnumerator WaitForTouchHalfDragReady()
@@ -686,27 +711,25 @@ public class ItemSlot_UI : MonoBehaviour,
         if (touchLongPressCoroutine != null)
             StopCoroutine(touchLongPressCoroutine);
         touchLongPressCoroutine = null;
-        ResetTouchLongPressProgressVisual();
+        PublishTouchLongPressProgress(0f, false);
     }
 
-    /// <summary>显示正式 Prefab 内的长按整组放置进度。</summary>
-    private void ShowTouchLongPressProgress()
+    /// <summary>由目标槽转发长按进度；目标槽自身不承载进度视觉。</summary>
+    private void PublishTouchLongPressProgress(float normalizedProgress, bool visible)
+    {
+        OnTouchLongPressProgress?.Invoke(Mathf.Clamp01(normalizedProgress), visible);
+    }
+
+    /// <summary>供手部库存把转发来的长按进度显示在唯一的手部插槽上。</summary>
+    public void SetTouchLongPressProgressVisual(float normalizedProgress, bool visible)
     {
         if (touchLongPressProgressRoot == null || touchLongPressProgressFill == null)
             return;
 
-        SetTouchLongPressProgressFillScale(0f);
-        touchLongPressProgressRoot.SetActive(true);
-        touchLongPressProgressRoot.transform.SetAsLastSibling();
-    }
-
-    /// <summary>更新长按整组放置的可视进度。</summary>
-    private void UpdateTouchLongPressProgress(float normalizedProgress)
-    {
-        if (!touchLongPressPutDownIntent || touchLongPressProgressFill == null)
-            return;
-
-        SetTouchLongPressProgressFillScale(normalizedProgress);
+        SetTouchLongPressProgressFillScale(visible ? normalizedProgress : 0f);
+        touchLongPressProgressRoot.SetActive(visible);
+        if (visible)
+            touchLongPressProgressRoot.transform.SetAsLastSibling();
     }
 
     /// <summary>取消、完成或离开槽位时立即收起进度视觉。</summary>
@@ -1201,6 +1224,10 @@ public class ItemSlot_UI : MonoBehaviour,
             image.gameObject.SetActive(false);
             return;
         }
+
+        // 状态型液体容器的 Item ID 不变；图标必须从当前 ItemData 模块状态解析，而不是按 ID 写死水罐变体。
+        if (Mod_WaterVessel.TryResolvePresentationSprite(slotData.itemData, out Sprite stateSprite))
+            sprite = stateSprite;
 
         image.sprite = sprite;
         image.gameObject.SetActive(true);

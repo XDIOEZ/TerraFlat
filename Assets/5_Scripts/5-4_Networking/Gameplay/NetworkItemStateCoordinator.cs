@@ -1383,15 +1383,13 @@ namespace FlatWorld.Networking.Gameplay
             if (slot?.itemData?.Stack == null || slot.itemData.Stack.Amount < 1f)
                 throw new InvalidOperationException("服务端材料已失效");
 
-            slot.itemData.Stack.Amount = Mathf.Max(0f, slot.itemData.Stack.Amount - 1f);
-            float remaining = slot.itemData.Stack.Amount;
-            if (remaining <= 0f)
-                slot.ClearData();
-            slot.RefreshUI();
+            Inventory_HotBar hotBar = player?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+            if (hotBar?.Data == null || !hotBar.Data.TryConsumeFromSlot(slot, 1, out ItemData consumedData))
+                throw new InvalidOperationException("服务端材料库存事务提交失败");
 
             if (player != null)
                 player.Save();
-            return remaining;
+            return consumedData?.Stack == null ? 0f : Mathf.Max(0f, consumedData.Stack.Amount);
         }
 
         private static void RestoreAuthoritativeBuildingMaterial(
@@ -1403,9 +1401,14 @@ namespace FlatWorld.Networking.Gameplay
             if (slot == null || sourceData?.Stack == null)
                 return;
 
-            sourceData.Stack.Amount = sourceAmount;
-            slot.itemData = sourceData;
-            slot.RefreshUI();
+            Inventory_HotBar hotBar = player?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+            if (hotBar?.Data == null ||
+                !hotBar.Data.TrySetSlotItemAmount(slot, sourceData, Mathf.Max(0f, sourceAmount)))
+            {
+                Debug.LogError("[联机建造] 服务端材料回滚失败：无法恢复快捷栏库存事务");
+                return;
+            }
+
             player?.Save();
         }
 

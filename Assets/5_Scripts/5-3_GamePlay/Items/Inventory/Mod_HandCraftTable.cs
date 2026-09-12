@@ -105,7 +105,8 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
 
             if (_inputController.IsGameplayInputLocked &&
                 (basePanel == null || !basePanel.IsOpen()) &&
-                !CanToggleFromMobileMenu())
+                !CanToggleFromMobileMenu() &&
+                !CanOpenAlongsidePlayerBag())
             {
                 return;
             }
@@ -121,6 +122,18 @@ public class Mod_HandCraftTable : Module, IInventory, IInstanceUI
         return _inputController != null &&
                _inputController.IsUsingMobile &&
                PlayerMobileControlsHUD.IsActiveDrawerOpen;
+    }
+
+    /// <summary>仅当玩法输入锁全部来自当前玩家的主背包时，允许继续打开手工制作面板。</summary>
+    private bool CanOpenAlongsidePlayerBag()
+    {
+        if (_inputController == null)
+            return false;
+
+        return !_inputController.HasBlockingGameplayInputLock(owner =>
+            owner is Inventory inventory &&
+            ReferenceEquals(inventory.item, item) &&
+            string.Equals(inventory.Data?.Name, ModText.Bag, StringComparison.Ordinal));
     }
 
 #endregion

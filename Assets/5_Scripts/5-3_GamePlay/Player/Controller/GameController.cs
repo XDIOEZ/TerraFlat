@@ -150,6 +150,24 @@ public partial class GameController : Module
         _gameplayInputLockOwners.Count > 0 ||
         IsWorldLoadingGameplayLocked(); // 当前是否锁定玩家输入
 
+    /// <summary>
+    /// 判断当前输入锁中是否存在不属于指定兼容面板的锁。
+    /// 用于允许少数组合面板并行打开，同时继续阻止死亡、设置、加载等其它模态状态穿透。
+    /// </summary>
+    public bool HasBlockingGameplayInputLock(Func<object, bool> isCompatibleLockOwner)
+    {
+        if (_isGameplayInputLocked || IsWorldLoadingGameplayLocked())
+            return true;
+
+        foreach (object owner in _gameplayInputLockOwners)
+        {
+            if (isCompatibleLockOwner == null || !isCompatibleLockOwner(owner))
+                return true;
+        }
+
+        return false;
+    }
+
     /// <summary>世界尚未进入可玩态时阻止输入回调绕过 Item Tick 闸门。</summary>
     private static bool IsWorldLoadingGameplayLocked()
     {

@@ -3,18 +3,28 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 为使用 UI_Bag 的库存面板提供一键整理入口。
-/// 仅负责按钮创建和事件转发，排序规则由 Inventory_Data 持有。
+/// 为使用 UI_Bag 的库存面板提供渐进式整理入口。
+/// 第一次点击只整理；保持整齐后继续点击，会按定义、数量、重量、体积循环切换排序规则。
 /// </summary>
 public sealed class InventorySortButton : MonoBehaviour
 {
     private const string BagPanelName = "UI_Bag";
     private const string SortButtonName = "整理";
 
+    private static readonly InventorySortMode[] SortModes =
+    {
+        InventorySortMode.Definition,
+        InventorySortMode.AmountDescending,
+        InventorySortMode.WeightDescending,
+        InventorySortMode.VolumeDescending
+    };
+
     private Inventory inventory;
     private Button button;
+    private bool hasOrganizedStep;
+    private int nextSortModeIndex;
 
-public static void EnsureFor(Inventory targetInventory)
+    public static void EnsureFor(Inventory targetInventory)
     {
         if (targetInventory?.basePanel == null ||
             targetInventory.InventoryPanel_Prefab == null ||
@@ -41,6 +51,12 @@ public static void EnsureFor(Inventory targetInventory)
 
     private void Bind(Inventory targetInventory, Button targetButton)
     {
+        if (!ReferenceEquals(inventory, targetInventory))
+        {
+            hasOrganizedStep = false;
+            nextSortModeIndex = 0;
+        }
+
         inventory = targetInventory;
         button = targetButton;
         button.onClick.RemoveListener(HandleSort);
@@ -49,8 +65,28 @@ public static void EnsureFor(Inventory targetInventory)
 
     private void HandleSort()
     {
-        if (inventory?.Data == null || !inventory.Data.SortDefault())
+        if (inventory?.Data == null)
             return;
+
+        bool applied;
+        if (!hasOrganizedStep || !inventory.Data.IsOrganized())
+        {
+            applied = inventory.Data.Organize();
+            if (!applied)
+                return;
+
+            hasOrganizedStep = true;
+            nextSortModeIndex = 0;
+        }
+        else
+        {
+            InventorySortMode mode = SortModes[nextSortModeIndex];
+            applied = inventory.Data.Sort(mode);
+            if (!applied)
+                return;
+
+            nextSortModeIndex = (nextSortModeIndex + 1) % SortModes.Length;
+        }
 
         inventory.RefreshUI();
         if (inventory.item != null)
@@ -68,10 +104,4 @@ public static void EnsureFor(Inventory targetInventory)
 
         return null;
     }
-
-
-
-
-
-
 }
