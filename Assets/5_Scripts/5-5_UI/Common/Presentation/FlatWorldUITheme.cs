@@ -943,6 +943,8 @@ public static class FlatWorldUITheme
         string fullName = BuildPath(image.transform);
         if (IsHealthName(fullName))
             image.color = Danger;
+        else if (ContainsAny(fullName, "LongPress Hold", "长按放置"))
+            image.color = Hex("D7C56A", 0.46f);
         else if (ContainsAny(fullName, "食物", "饱食", "饥饿", "Food"))
             image.color = Accent;
         else if (ContainsAny(fullName, "体力", "耐力", "Stamina", "睡眠"))

@@ -63,6 +63,9 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>触屏长按入口；返回 true 表示已完成整组放置。</summary>
     public System.Func<int, bool> OnTouchLongPress { get; set; }
 
+    /// <summary>判断当前槽位是否可执行“手部整组长按放下”，仅用于长按进度提示与即时提交。</summary>
+    public System.Func<int, bool> CanTouchLongPressPutDown { get; set; }
+
     /// <summary>触屏拖拽物品后在世界非 UI 区域长按的入口。</summary>
     public System.Func<Vector2, bool> OnTouchWorldLongPress { get; set; }
 
@@ -130,10 +133,14 @@ public class ItemSlot_UI : MonoBehaviour,
     [SerializeField, Min(0.1f)] private float touchLongPressSeconds = 0.45f;
     [SerializeField, Min(0.1f)] private float touchHalfDragReadySeconds = 0.85f;
     [SerializeField, Min(1f)] private float touchMoveTolerance = 16f;
+    [SerializeField] private GameObject touchLongPressProgressRoot;
+    [SerializeField] private Image touchLongPressProgressFill;
     private int touchPointerId = int.MinValue;
     private Vector2 touchPressPosition;
     private bool touchMovedTooFar;
     private bool touchLongPressTriggered;
+    private bool touchLongPressPutDownIntent;
+    private bool touchLongPressPutDownCommitted;
     private bool touchHalfDragReady;
     private bool touchPressStartedWithItem;
     private bool touchItemDragActive;
@@ -175,6 +182,7 @@ public class ItemSlot_UI : MonoBehaviour,
         ItemAddedAtPointer = null;
         OnTouchTap = null;
         OnTouchLongPress = null;
+        CanTouchLongPressPutDown = null;
         OnTouchWorldLongPress = null;
         OnTouchHalfDragBegin = null;
         OnDesktopTap = null;
@@ -204,6 +212,16 @@ public class ItemSlot_UI : MonoBehaviour,
         GetSlotDataFunc = getSlotFunc;
         ClearSlotDataAction = clearAction;
     }
+
+#if UNITY_EDITOR
+    /// <summary>编辑器构建器绑定正式 Prefab 内的长按进度视觉。</summary>
+    public void ConfigureTouchLongPressProgressVisuals(GameObject progressRoot, Image progressFill)
+    {
+        touchLongPressProgressRoot = progressRoot;
+        touchLongPressProgressFill = progressFill;
+        ResetTouchLongPressProgressVisual();
+    }
+#endif
 
     /// <summary>
     /// 获取当前槽位数据
@@ -256,9 +274,11 @@ public class ItemSlot_UI : MonoBehaviour,
         PerformPointerAction(() => OnTouchTap?.Invoke(slotIndex));
     }
 
-    private void HandleTouchLongPress()
+    private bool HandleTouchLongPress()
     {
-        PerformPointerAction(() => OnTouchLongPress?.Invoke(slotIndex));
+        bool handled = false;
+        PerformPointerAction(() => handled = OnTouchLongPress?.Invoke(slotIndex) == true);
+        return handled;
     }
 
     private void HandleDesktopTap()
@@ -334,9 +354,13 @@ public class ItemSlot_UI : MonoBehaviour,
             touchPressPosition = eventData.position;
             touchMovedTooFar = false;
             touchLongPressTriggered = false;
+            touchLongPressPutDownIntent = CanTouchLongPressPutDown?.Invoke(slotIndex) == true;
+            touchLongPressPutDownCommitted = false;
             touchPressStartedWithItem = !IsItemSlotEmpty(GetSlotData());
             touchItemDragActive = false;
             touchScrollDragActive = false;
+            if (touchLongPressPutDownIntent)
+                ShowTouchLongPressProgress();
             touchLongPressCoroutine = StartCoroutine(WaitForTouchLongPress());
             if (touchPressStartedWithItem)
                 touchHalfDragReadyCoroutine = StartCoroutine(WaitForTouchHalfDragReady());
@@ -369,11 +393,7 @@ public class ItemSlot_UI : MonoBehaviour,
 
         // 指针离开槽位等同超过移动阈值，禁止滑动背包时误触长按操作。
         touchMovedTooFar = true;
-        if (touchLongPressCoroutine != null)
-        {
-            StopCoroutine(touchLongPressCoroutine);
-            touchLongPressCoroutine = null;
-        }
+        CancelTouchLongPress();
         CancelTouchHalfDragReady();
     }
 
@@ -383,7 +403,8 @@ public class ItemSlot_UI : MonoBehaviour,
         if (eventData.button == PointerEventData.InputButton.Left && eventData.pointerId == touchPointerId)
         {
             bool shouldTap = !touchMovedTooFar && !touchLongPressTriggered;
-            bool shouldHandleLongPress = !touchMovedTooFar && touchPressStartedWithItem && touchLongPressTriggered;
+            bool shouldHandleLongPress = !touchMovedTooFar && touchPressStartedWithItem && touchLongPressTriggered &&
+                                         !touchLongPressPutDownCommitted;
             CancelTouchPress();
             if (shouldHandleLongPress)
                 HandleTouchLongPress();
@@ -417,11 +438,8 @@ public class ItemSlot_UI : MonoBehaviour,
         Canvas canvas = GetComponentInParent<Canvas>();
         float scaleFactor = canvas != null ? Mathf.Max(0.01f, canvas.scaleFactor) : 1f;
         touchMovedTooFar = (eventData.position - touchPressPosition).magnitude / scaleFactor > touchMoveTolerance;
-        if (touchMovedTooFar && touchLongPressCoroutine != null)
-        {
-            StopCoroutine(touchLongPressCoroutine);
-            touchLongPressCoroutine = null;
-        }
+        if (touchMovedTooFar)
+            CancelTouchLongPress();
         if (touchMovedTooFar)
             CancelTouchHalfDragReady();
     }
@@ -557,14 +575,45 @@ public class ItemSlot_UI : MonoBehaviour,
 
     private IEnumerator WaitForTouchLongPress()
     {
-        yield return new WaitForSecondsRealtime(touchLongPressSeconds);
+        float duration = Mathf.Max(0.1f, touchLongPressSeconds);
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            if (touchPointerId == int.MinValue || touchMovedTooFar)
+            {
+                touchLongPressCoroutine = null;
+                ResetTouchLongPressProgressVisual();
+                yield break;
+            }
+
+            elapsed += Time.unscaledDeltaTime;
+            UpdateTouchLongPressProgress(Mathf.Clamp01(elapsed / duration));
+            yield return null;
+        }
+
         touchLongPressCoroutine = null;
         if (touchPointerId == int.MinValue || touchMovedTooFar)
+        {
+            ResetTouchLongPressProgressVisual();
             yield break;
+        }
 
+        UpdateTouchLongPressProgress(1f);
         touchLongPressTriggered = true;
-        if (!touchPressStartedWithItem)
+        if (touchLongPressPutDownIntent)
+        {
+            // 进度走满即提交，不再要求玩家松手后才完成整组放置。
+            touchLongPressPutDownCommitted = HandleTouchLongPress();
+            if (touchLongPressPutDownCommitted)
+            {
+                touchPressStartedWithItem = false;
+                CancelTouchHalfDragReady();
+            }
+        }
+        else if (!touchPressStartedWithItem)
             HandleTouchLongPress();
+
+        ResetTouchLongPressProgressVisual();
     }
 
     private IEnumerator WaitForTouchHalfDragReady()
@@ -627,6 +676,8 @@ public class ItemSlot_UI : MonoBehaviour,
         touchPointerId = int.MinValue;
         touchMovedTooFar = false;
         touchPressStartedWithItem = false;
+        touchLongPressPutDownIntent = false;
+        touchLongPressPutDownCommitted = false;
         CancelTouchHalfDragReady();
     }
 
@@ -635,6 +686,46 @@ public class ItemSlot_UI : MonoBehaviour,
         if (touchLongPressCoroutine != null)
             StopCoroutine(touchLongPressCoroutine);
         touchLongPressCoroutine = null;
+        ResetTouchLongPressProgressVisual();
+    }
+
+    /// <summary>显示正式 Prefab 内的长按整组放置进度。</summary>
+    private void ShowTouchLongPressProgress()
+    {
+        if (touchLongPressProgressRoot == null || touchLongPressProgressFill == null)
+            return;
+
+        SetTouchLongPressProgressFillScale(0f);
+        touchLongPressProgressRoot.SetActive(true);
+        touchLongPressProgressRoot.transform.SetAsLastSibling();
+    }
+
+    /// <summary>更新长按整组放置的可视进度。</summary>
+    private void UpdateTouchLongPressProgress(float normalizedProgress)
+    {
+        if (!touchLongPressPutDownIntent || touchLongPressProgressFill == null)
+            return;
+
+        SetTouchLongPressProgressFillScale(normalizedProgress);
+    }
+
+    /// <summary>取消、完成或离开槽位时立即收起进度视觉。</summary>
+    private void ResetTouchLongPressProgressVisual()
+    {
+        if (touchLongPressProgressFill != null)
+            SetTouchLongPressProgressFillScale(0f);
+        if (touchLongPressProgressRoot != null)
+            touchLongPressProgressRoot.SetActive(false);
+    }
+
+    /// <summary>纯色 Image 没有 Sprite 时 Filled 模式不会裁切，改用底部 Pivot 的 Y 缩放表达进度。</summary>
+    private void SetTouchLongPressProgressFillScale(float normalizedProgress)
+    {
+        if (touchLongPressProgressFill == null)
+            return;
+
+        RectTransform fillRect = touchLongPressProgressFill.rectTransform;
+        fillRect.localScale = new Vector3(1f, Mathf.Clamp01(normalizedProgress), 1f);
     }
 
     private void CancelTouchHalfDragReady()

@@ -1,4 +1,4 @@
-﻿
+
 using MemoryPack;
 using NaughtyAttributes;
 using Sirenix.OdinInspector;
@@ -43,6 +43,12 @@ public partial class Data_Player : ItemData
     [ShowInInspector]
     [Tooltip("库存数据")]
     public Dictionary<string, Inventory_Data> _inventoryData = new Dictionary<string, Inventory_Data>();
+
+    [Tooltip("玩家总携带重量上限（kg）")]
+    public float MaxCarryWeight = 60f;
+
+    [Tooltip("玩家总携带体积上限（L）")]
+    public float MaxCarryVolume = 90f;
     #endregion
 
    [ShowNonSerializedField]

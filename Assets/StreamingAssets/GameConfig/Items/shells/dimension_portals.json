@@ -3,6 +3,9 @@
   "items": [
     {
       "id": "DimensionPortal_Base",
+      "weight": 200.0,
+      "volume": 300.0,
+      "stackable": true,
       "abstract": true,
       "shellPrefab": "BuildingBodyShell",
       "visual": {
@@ -18,7 +21,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 200.0,
+      "volume": 300.0,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [],
       "visual": {

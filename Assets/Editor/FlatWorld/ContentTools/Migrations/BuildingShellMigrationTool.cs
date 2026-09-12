@@ -391,7 +391,9 @@ public static class BuildingShellMigrationTool
                 ["durability"] = data.Durability,
                 ["maxDurability"] = data.MaxDurability,
                 ["amount"] = data.Stack?.Amount ?? 1f,
+                ["weight"] = data.Stack?.Weight ?? 1f,
                 ["volume"] = data.Stack?.Volume ?? 0f,
+                ["stackable"] = data.Stack?.Stackable ?? true,
                 ["canBePickedUp"] = data.Stack?.CanBePickedUp ?? true,
                 ["tags"] = new JArray((data.Tags ?? new List<string>())
                     .Where(tag => !string.IsNullOrWhiteSpace(tag))

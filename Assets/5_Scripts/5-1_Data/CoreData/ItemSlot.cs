@@ -16,6 +16,7 @@ public partial class ItemSlot
 
     public List<string> CanAcceptTags = new List<string>();
 
+    // 历史字段名保留用于现有 Prefab/存档；现在表示普通库存单格的堆叠数量上限。
     public float SlotMaxVolume = 100;
 
     public int Index = -1;
@@ -58,7 +59,9 @@ public partial class ItemSlot
             {
                 return false;
             }
-            return itemData.Stack.CurrentVolume >= SlotMaxVolume;
+            if (itemData.Stack == null || !itemData.Stack.Stackable)
+                return true;
+            return itemData.Stack.Amount >= SlotMaxVolume;
         }
     }
     [MemoryPackIgnore]

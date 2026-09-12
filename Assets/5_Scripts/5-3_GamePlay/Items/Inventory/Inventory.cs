@@ -496,6 +496,18 @@ public class Inventory
         if (DefaultTarget_Inventory == null)
             DefaultTarget_Inventory = Inventory_Hand.PlayerHand;
 
+        Player player = item as Player;
+        bool isPlayerBag = player != null && string.Equals(Data.Name, ModText.Bag, StringComparison.Ordinal);
+        if (isPlayerBag)
+            Data.ConfigurePlayerBagCapacity(
+                player.Data?.MaxCarryWeight ?? Inventory_Data.DefaultPlayerBagMaxWeight,
+                player.Data?.MaxCarryVolume ?? Inventory_Data.DefaultPlayerBagMaxVolume);
+        else
+        {
+            Data.SetUnlimitedStackSize(false);
+            Data.ClearCarryCapacity();
+        }
+
         Data.EnsureSpareSlot();
 
         // 初始化物品槽位数据
@@ -508,7 +520,9 @@ public class Inventory
             // Inventory 可能复用存档中的 ItemSlot，先清理上一轮玩家/UI 的旧监听。
             slot.onSlotDataChanged.Clear();
             slot.Index = i;
-            slot.SlotMaxVolume = Inventory_Data.DefaultSlotVolume;
+            slot.SlotMaxVolume = Data.HasUnlimitedStackSize
+                ? float.MaxValue
+                : Inventory_Data.DefaultSlotVolume;
         }
 
         // 初始化事件系统
@@ -652,6 +666,7 @@ public class Inventory
             itemSlotUI.OnMouseDragDrop = null;
             itemSlotUI.OnTouchTap = null;
             itemSlotUI.OnTouchLongPress = null;
+            itemSlotUI.CanTouchLongPressPutDown = null;
             itemSlotUI.OnTouchWorldLongPress = null;
             itemSlotUI.OnTouchHalfDragBegin = null;
             itemSlotUI.OnDesktopTap = null;
@@ -664,6 +679,7 @@ public class Inventory
             itemSlotUI.OnMouseDragDrop = OnMouseDragDrop;
             itemSlotUI.OnTouchTap = OnTouchTap;
             itemSlotUI.OnTouchLongPress = OnTouchLongPress;
+            itemSlotUI.CanTouchLongPressPutDown = CanTouchLongPressPutDown;
             itemSlotUI.OnTouchWorldLongPress = OnTouchWorldLongPress;
             itemSlotUI.OnTouchHalfDragBegin = OnTouchHalfDragBegin;
             itemSlotUI.OnDesktopTap = OnDesktopTap;
@@ -726,6 +742,7 @@ public class Inventory
         slotUI.OnMouseDragDrop = null;
         slotUI.OnTouchTap = null;
         slotUI.OnTouchLongPress = null;
+        slotUI.CanTouchLongPressPutDown = null;
         slotUI.OnTouchWorldLongPress = null;
         slotUI.OnTouchHalfDragBegin = null;
         slotUI.OnDesktopTap = null;
@@ -738,6 +755,7 @@ public class Inventory
         slotUI.OnMouseDragDrop = OnMouseDragDrop;
         slotUI.OnTouchTap = OnTouchTap;
         slotUI.OnTouchLongPress = OnTouchLongPress;
+        slotUI.CanTouchLongPressPutDown = CanTouchLongPressPutDown;
         slotUI.OnTouchWorldLongPress = OnTouchWorldLongPress;
         slotUI.OnTouchHalfDragBegin = OnTouchHalfDragBegin;
         slotUI.OnDesktopTap = OnDesktopTap;
@@ -930,15 +948,21 @@ public class Inventory
         }
     }
 
-    /// <summary>触屏长按空槽或同类槽时，把玩家手上整组物品一次性放入目标槽。</summary>
-    public virtual bool OnTouchLongPress(int index)
+    /// <summary>判断当前槽是否允许玩家把手部整组物品长按放入。</summary>
+    public virtual bool CanTouchLongPressPutDown(int index)
     {
         if (!TryGetPlayerHandSlots(index, out Inventory handInventory, out ItemSlot localSlot, out ItemSlot handSlot) ||
             handSlot.itemData == null || !CanAcceptQuickTransfer(handSlot, localSlot))
             return false;
 
-        // 长按只允许整组放入空槽或同类槽，异类槽不执行操作。
-        if (localSlot.itemData != null && !localSlot.itemData.CanStackWith(handSlot.itemData))
+        return localSlot.itemData == null || localSlot.itemData.CanStackWith(handSlot.itemData);
+    }
+
+    /// <summary>触屏长按空槽或同类槽时，把玩家手上整组物品一次性放入目标槽。</summary>
+    public virtual bool OnTouchLongPress(int index)
+    {
+        if (!CanTouchLongPressPutDown(index) ||
+            !TryGetPlayerHandSlots(index, out Inventory handInventory, out ItemSlot localSlot, out ItemSlot handSlot))
             return false;
 
         if (!Data.DropDraggedItem(localSlot, handInventory.Data, handSlot))
@@ -1092,7 +1116,7 @@ public class Inventory
         bool swapsDifferentItems = targetItem != null && !targetItem.CanStackWith(draggedItem);
         if (swapsDifferentItems &&
             (!CanAcceptQuickTransfer(targetSlot, sourceSlot) ||
-             !CanHoldWholeStack(targetSlot, draggedItem) ||
+             !targetInventory.CanHoldWholeStack(targetSlot, draggedItem) ||
              !CanHoldWholeStack(sourceSlot, targetItem)))
             return false;
 
@@ -1150,10 +1174,14 @@ public class Inventory
     }
 
     /// <summary>判断一个槽位能否完整容纳指定物品堆，供异类交换使用。</summary>
-    private static bool CanHoldWholeStack(ItemSlot slot, ItemData itemData)
+    private bool CanHoldWholeStack(ItemSlot slot, ItemData itemData)
     {
-        return slot != null && itemData?.Stack != null &&
-               itemData.Stack.CurrentVolume <= slot.SlotMaxVolume + 0.0001f;
+        if (slot == null || itemData?.Stack == null)
+            return false;
+        if (!itemData.Stack.Stackable)
+            return itemData.Stack.Amount <= 1.0001f;
+        return Data != null &&
+               (Data.HasUnlimitedStackSize || itemData.Stack.Amount <= slot.SlotMaxVolume + 0.0001f);
     }
 
     /// <summary>拖拽改变快捷栏槽位后立即刷新玩家手持实例。</summary>
@@ -1202,8 +1230,16 @@ public class Inventory
         }
 
         int targetIndex = GetLeftClickTargetSlotIndex(index);
-        Data.ChangeItemData_Default(index, DefaultTarget_Inventory.Data.itemSlots[targetIndex]);
-        DefaultTarget_Inventory.RefreshUI(targetIndex);
+        ItemSlot localSlot = Data.itemSlots[index];
+        ItemSlot targetSlot = DefaultTarget_Inventory.Data.itemSlots[targetIndex];
+        bool changed = false;
+        if (localSlot?.itemData != null)
+            changed = TryDropSlotTo(localSlot, localSlot.itemData, DefaultTarget_Inventory, targetIndex);
+        else if (targetSlot?.itemData != null)
+            changed = DefaultTarget_Inventory.TryDropSlotTo(targetSlot, targetSlot.itemData, this, index);
+
+        if (!changed)
+            return;
 
         // 玩家背包转入快捷栏后，立即刷新当前手持实例，避免等待下一次模块 Tick 才显示。
         if (DefaultTarget_Inventory is Inventory_HotBar.HotBarRuntimeInventory hotBarInventory)

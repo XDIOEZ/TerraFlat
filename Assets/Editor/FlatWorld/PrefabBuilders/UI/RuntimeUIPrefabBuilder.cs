@@ -184,7 +184,7 @@ public static partial class RuntimeUIPrefabBuilder
 
         UpdateExistingPrefab(MainMenuCoreRoot + "UI_ActionList.prefab", ConfigureSettingsActionListPages);
         UpdateExistingPrefab(InventoryPanelsRoot + "UI_Bag.prefab", AddInventorySortButton);
-        UpdateExistingPrefab(InventoryComponentsRoot + "UI_Slot.prefab", AddCraftingPreviewLayers);
+        UpdateExistingPrefab(InventoryComponentsRoot + "UI_Slot.prefab", ConfigureItemSlotVisualLayers);
         UpdateExistingWorldPrefab(NetworkPlayerPrefab, AddNetworkPlayerNameLabel);
         UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerBuffStatusHUD);
         UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerQuestTrackerHUD);
@@ -798,7 +798,7 @@ public static partial class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>构建屏幕左侧中部上方的非交互 Buff 状态栏，避开手机奔跑按钮，超出高度时由 ScrollRect 裁剪。</summary>
+    /// <summary>构建屏幕左侧中部上方的透明 Buff 条目容器，避开手机奔跑按钮，超出高度时由 ScrollRect 裁剪。</summary>
     private static GameObject BuildBuffStatusHUD()
     {
         GameObject root = CreateUIObject(RuntimeUIPrefabKeys.BuffStatus, null, typeof(CanvasGroup));
@@ -807,50 +807,16 @@ public static partial class RuntimeUIPrefabBuilder
         rootRect.anchorMax = new Vector2(0f, 0.5f);
         rootRect.pivot = new Vector2(0f, 0f);
         rootRect.anchoredPosition = new Vector2(32f, 60f);
-        rootRect.sizeDelta = new Vector2(160f, 106f);
+        rootRect.sizeDelta = new Vector2(160f, 31f);
 
         CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>();
         canvasGroup.alpha = 1f;
         canvasGroup.interactable = false;
         canvasGroup.blocksRaycasts = false;
 
-        Image background = CreateImage("背景", root.transform, new Color(0.025f, 0.043f, 0.058f, 0.92f));
-        background.raycastTarget = false;
-        Stretch(background.rectTransform);
-        AddOutline(background, new Color(0.83f, 0.49f, 0.23f, 0.46f));
-
-        Image accent = CreateImage("强调线", root.transform, Amber);
-        accent.raycastTarget = false;
-        RectTransform accentRect = accent.rectTransform;
-        accentRect.anchorMin = new Vector2(0f, 0f);
-        accentRect.anchorMax = new Vector2(0f, 1f);
-        accentRect.pivot = new Vector2(0f, 0.5f);
-        accentRect.anchoredPosition = Vector2.zero;
-        accentRect.sizeDelta = new Vector2(4f, -18f);
-
-        TextMeshProUGUI title = CreateText("标题", root.transform, "状态效果 / BUFFS", 13f, Amber);
-        title.fontStyle = FontStyles.Bold;
-        title.characterSpacing = 1f;
-        title.enableWordWrapping = false;
-        title.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(title.rectTransform, 12f, 9f, 112f, 18f);
-
-        TextMeshProUGUI count = CreateText("数量文本", root.transform, "0", 13f, Muted);
-        count.alignment = TextAlignmentOptions.MidlineRight;
-        count.enableWordWrapping = false;
-        count.overflowMode = TextOverflowModes.Ellipsis;
-        count.rectTransform.anchorMin = new Vector2(1f, 1f);
-        count.rectTransform.anchorMax = new Vector2(1f, 1f);
-        count.rectTransform.pivot = new Vector2(1f, 1f);
-        count.rectTransform.anchoredPosition = new Vector2(-10f, -9f);
-        count.rectTransform.sizeDelta = new Vector2(28f, 18f);
-
         GameObject scrollRoot = CreateUIObject("内容列表", root.transform, typeof(ScrollRect));
         RectTransform scrollRect = scrollRoot.GetComponent<RectTransform>();
-        scrollRect.anchorMin = new Vector2(0f, 0f);
-        scrollRect.anchorMax = new Vector2(1f, 1f);
-        scrollRect.offsetMin = new Vector2(8f, 8f);
-        scrollRect.offsetMax = new Vector2(-8f, -36f);
+        Stretch(scrollRect);
 
         GameObject viewport = CreateUIObject("Viewport", scrollRoot.transform, typeof(RectMask2D));
         Stretch(viewport.GetComponent<RectTransform>());
@@ -878,12 +844,6 @@ public static partial class RuntimeUIPrefabBuilder
         scroll.scrollSensitivity = 26f;
         scroll.viewport = viewport.GetComponent<RectTransform>();
         scroll.content = contentRect;
-
-        TextMeshProUGUI empty = CreateText("空状态文本", root.transform, "暂无状态", 11f, Muted);
-        empty.alignment = TextAlignmentOptions.Center;
-        empty.enableWordWrapping = false;
-        empty.overflowMode = TextOverflowModes.Ellipsis;
-        SetTopLeft(empty.rectTransform, 8f, 42f, 144f, 24f);
 
         return root;
     }
@@ -2795,6 +2755,13 @@ public static partial class RuntimeUIPrefabBuilder
         ConfigureButtonVisual(button, false, "整理");
     }
 
+    internal static void ConfigureItemSlotVisualLayers(GameObject root)
+    {
+        AddCraftingPreviewLayers(root);
+        EnsureTouchLongPressProgress(root.transform, root.GetComponent<ItemSlot_UI>());
+    }
+
+    /// <summary>仅维护制作输出预览图层；嵌入式制作槽位仍可复用这一入口。</summary>
     internal static void AddCraftingPreviewLayers(GameObject root)
     {
         ItemSlot_UI slot = root.GetComponent<ItemSlot_UI>();
@@ -2832,6 +2799,62 @@ public static partial class RuntimeUIPrefabBuilder
         image.raycastTarget = false;
         image.preserveAspect = true;
         return image;
+    }
+
+    /// <summary>为库存槽固化手机整组放置的长按进度视觉，尺寸略大于手部槽以露出手指边缘。</summary>
+    private static void EnsureTouchLongPressProgress(Transform root, ItemSlot_UI slot)
+    {
+        if (slot == null)
+            throw new MissingComponentException($"{root.name} 缺少 ItemSlot_UI。");
+
+        Transform existingFrame = FindTransform(root, "LongPress Hold Frame");
+        Image frame = existingFrame != null ? existingFrame.GetComponent<Image>() : null;
+        if (frame == null)
+            frame = CreateImage("LongPress Hold Frame", root, FlatWorldUITheme.Surface);
+
+        RectTransform frameRect = frame.rectTransform;
+        frameRect.anchorMin = new Vector2(0.5f, 0.5f);
+        frameRect.anchorMax = new Vector2(0.5f, 0.5f);
+        frameRect.pivot = new Vector2(0.5f, 0.5f);
+        frameRect.anchoredPosition = Vector2.zero;
+        frameRect.sizeDelta = new Vector2(112f, 112f);
+        Color frameColor = FlatWorldUITheme.Surface;
+        frameColor.a = 0.42f;
+        frame.color = frameColor;
+        frame.raycastTarget = false;
+        frame.sprite = null;
+        frame.type = Image.Type.Simple;
+        frame.preserveAspect = false;
+
+        Outline frameOutline = frame.GetComponent<Outline>() ?? frame.gameObject.AddComponent<Outline>();
+        frameOutline.effectColor = FlatWorldUITheme.Border;
+        frameOutline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
+        frameOutline.useGraphicAlpha = true;
+
+        Transform existingFill = FindTransform(frame.transform, "LongPress Hold Fill");
+        Image fill = existingFill != null ? existingFill.GetComponent<Image>() : null;
+        if (fill == null)
+            fill = CreateImage("LongPress Hold Fill", frame.transform, FlatWorldUITheme.Accent);
+
+        RectTransform fillRect = fill.rectTransform;
+        fillRect.anchorMin = new Vector2(0.5f, 0.5f);
+        fillRect.anchorMax = new Vector2(0.5f, 0.5f);
+        fillRect.pivot = new Vector2(0.5f, 0f);
+        fillRect.anchoredPosition = new Vector2(0f, -52f);
+        fillRect.sizeDelta = new Vector2(104f, 104f);
+        fillRect.localScale = new Vector3(1f, 0f, 1f);
+        Color fillColor = FlatWorldUITheme.Accent;
+        fillColor.a = 0.34f;
+        fill.color = fillColor;
+        fill.raycastTarget = false;
+        fill.sprite = null;
+        fill.type = Image.Type.Simple;
+        fill.fillAmount = 1f;
+        fill.preserveAspect = false;
+
+        frame.gameObject.SetActive(false);
+        frame.transform.SetAsLastSibling();
+        slot.ConfigureTouchLongPressProgressVisuals(frame.gameObject, fill);
     }
 
     private static void AddNetworkPlayerNameLabel(GameObject root)

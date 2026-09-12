@@ -1324,8 +1324,8 @@ public sealed class StructureEditorWindow : EditorWindow
         GameObject itemPrefab)
     {
         Item item = itemPrefab?.GetComponent<Item>() ?? itemPrefab?.GetComponentInChildren<Item>(true);
-        float unitVolume = item?.itemData?.Stack?.Volume ?? 1f;
-        if (unitVolume > 1f)
+        ItemStack stack = item?.itemData?.Stack;
+        if (stack == null || !stack.Stackable)
             return 1;
 
         ItemSlot slot = inventory?.Data?.itemSlots != null &&
@@ -1333,7 +1333,7 @@ public sealed class StructureEditorWindow : EditorWindow
             ? inventory.Data.itemSlots[slotIndex]
             : null;
         float capacity = slot != null && slot.SlotMaxVolume > 0f ? slot.SlotMaxVolume : 100f;
-        return Mathf.Max(1, Mathf.FloorToInt(capacity / Mathf.Max(0.0001f, unitVolume)));
+        return Mathf.Max(1, Mathf.FloorToInt(capacity));
     }
 
     private static List<int> GetValidInventoryIndices(Mod_Inventory inventoryModule)

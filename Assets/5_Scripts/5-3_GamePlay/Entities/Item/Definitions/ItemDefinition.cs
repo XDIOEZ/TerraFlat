@@ -96,6 +96,12 @@ public sealed class ItemDefinitionDto
     [JsonProperty("volume")]
     public float? Volume;
 
+    [JsonProperty("weight")]
+    public float? Weight;
+
+    [JsonProperty("stackable")]
+    public bool? Stackable;
+
     [JsonProperty("canBePickedUp")]
     public bool? CanBePickedUp;
 

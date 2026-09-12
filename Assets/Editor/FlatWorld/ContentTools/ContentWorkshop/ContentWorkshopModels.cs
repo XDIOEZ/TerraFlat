@@ -644,7 +644,9 @@ namespace FlatWorld.Editor.ContentWorkshop
         public Sprite Icon;
         public float Durability = 1f;
         public float Amount = 1f;
+        public float Weight = 0.5f;
         public float Volume = 1f;
+        public bool Stackable = true;
         public bool CanBePickedUp = true;
         public Color Tint = Color.white;
         /// <summary>SpriteRenderer 绕 Z 轴的本地旋转角度，单位为度。</summary>
@@ -712,14 +714,28 @@ namespace FlatWorld.Editor.ContentWorkshop
                 ? 100f
                 : 1f;
             Amount = 1f;
+            Weight = template.Kind switch
+            {
+                WorkshopItemTemplateKind.Food => 0.3f,
+                WorkshopItemTemplateKind.Seed => 0.02f,
+                WorkshopItemTemplateKind.Tool => 2f,
+                WorkshopItemTemplateKind.Weapon => 1.5f,
+                WorkshopItemTemplateKind.Equipment => 5f,
+                WorkshopItemTemplateKind.BuildingSummoner => 8f,
+                _ => 0.5f
+            };
             Volume = template.Kind switch
             {
-                WorkshopItemTemplateKind.Tool => 2f,
-                WorkshopItemTemplateKind.Weapon => 2f,
-                WorkshopItemTemplateKind.Equipment => 10f,
-                WorkshopItemTemplateKind.BuildingSummoner => 10f,
-                _ => 1f
+                WorkshopItemTemplateKind.Food => 0.5f,
+                WorkshopItemTemplateKind.Seed => 0.05f,
+                WorkshopItemTemplateKind.Tool => 3f,
+                WorkshopItemTemplateKind.Weapon => 3f,
+                WorkshopItemTemplateKind.Equipment => 12f,
+                WorkshopItemTemplateKind.BuildingSummoner => 20f,
+                _ => 0.75f
             };
+            Stackable = template.Kind is WorkshopItemTemplateKind.Material or
+                WorkshopItemTemplateKind.Food or WorkshopItemTemplateKind.Seed;
             CanBePickedUp = true;
             Tint = Color.white;
             RotationDegrees = 0f;

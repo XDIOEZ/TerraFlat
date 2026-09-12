@@ -10,7 +10,9 @@
         "perceptionRadiusMultiplier": 1.0,
         "initialStamina": 100.0,
         "maxStamina": 100.0,
-        "staminaRecoverySpeed": 10.0
+        "staminaRecoverySpeed": 10.0,
+        "maxCarryWeight": 60.0,
+        "maxCarryVolume": 90.0
       },
       "movement": {
         "speed": 5.0,

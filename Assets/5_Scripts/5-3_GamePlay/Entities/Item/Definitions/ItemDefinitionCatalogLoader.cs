@@ -832,8 +832,19 @@ public static class ItemDefinitionCatalogLoader
         if (dto.Tags != null) template.Tags = new List<string>(dto.Tags);
 
         template.Stack ??= new ItemStack();
+        if (!isActor)
+        {
+            if (!dto.Weight.HasValue || dto.Weight.Value <= 0f)
+                throw new InvalidDataException($"物品 {id} 缺少有效重量 weight");
+            if (!dto.Volume.HasValue || dto.Volume.Value <= 0f)
+                throw new InvalidDataException($"物品 {id} 缺少有效体积 volume");
+            if (!dto.Stackable.HasValue)
+                throw new InvalidDataException($"物品 {id} 缺少明确的堆叠属性 stackable");
+        }
         if (dto.Amount.HasValue) template.Stack.Amount = dto.Amount.Value;
         if (dto.Volume.HasValue) template.Stack.Volume = dto.Volume.Value;
+        if (dto.Weight.HasValue) template.Stack.Weight = dto.Weight.Value;
+        if (dto.Stackable.HasValue) template.Stack.Stackable = dto.Stackable.Value;
         if (dto.CanBePickedUp.HasValue) template.Stack.CanBePickedUp = dto.CanBePickedUp.Value;
 
         // JSON 是模块初始状态的唯一来源，不继承外壳 Prefab 上的 ModuleData。

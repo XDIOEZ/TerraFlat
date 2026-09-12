@@ -365,8 +365,8 @@ namespace FlatWorld.Editor.ContentWorkshop
                 throw new InvalidOperationException("请填写玩家看到的物品名称。");
             if (draft.Icon == null)
                 throw new InvalidOperationException("请为物品选择一个 Sprite 图标。");
-            if (draft.Durability < 0f || draft.Amount <= 0f || draft.Volume < 0f)
-                throw new InvalidOperationException("耐久不得为负数，初始数量必须大于 0，体积不得为负数。");
+            if (draft.Durability < 0f || draft.Amount <= 0f || draft.Weight <= 0f || draft.Volume <= 0f)
+                throw new InvalidOperationException("耐久不得为负数，初始数量、重量与体积都必须大于 0。");
             if (draft.AddFoodAbility)
             {
                 if (draft.FoodMaxEatingProgress < 1f)
@@ -396,7 +396,9 @@ namespace FlatWorld.Editor.ContentWorkshop
                 ["durability"] = draft.Durability,
                 ["maxDurability"] = draft.Durability,
                 ["amount"] = draft.Amount,
+                ["weight"] = draft.Weight,
                 ["volume"] = draft.Volume,
+                ["stackable"] = draft.Stackable,
                 ["canBePickedUp"] = draft.CanBePickedUp,
                 ["tags"] = new JArray(BuildTemplateTags(draft, template)),
                 ["visual"] = new JObject

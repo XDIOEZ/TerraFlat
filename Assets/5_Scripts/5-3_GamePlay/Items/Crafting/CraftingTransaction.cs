@@ -307,13 +307,21 @@ public sealed class CraftingTransaction
 
         private bool TryAddCore(ItemData source)
         {
-            float unitVolume = source.Stack.Volume;
-            if (unitVolume <= CraftingIngredientMatcher.AmountEpsilon)
+            if (source.Stack.Weight < 0f || source.Stack.Volume < 0f)
                 return false;
 
             float remaining = source.Stack.Amount;
-            if (unitVolume > 1f)
-                return TryAddNonStackable(source, unitVolume, remaining);
+            GetWorkingCarryUsage(out float currentWeight, out float currentVolume);
+            float capacityAllowed = Inventory.Data.GetCapacityLimitedAmount(
+                source,
+                remaining,
+                currentWeight,
+                currentVolume);
+            if (capacityAllowed + CraftingIngredientMatcher.AmountEpsilon < remaining)
+                return false;
+
+            if (!source.Stack.Stackable)
+                return TryAddNonStackable(source, remaining);
 
             for (int i = 0; i < workingItems.Count && remaining > CraftingIngredientMatcher.AmountEpsilon; i++)
             {
@@ -321,8 +329,9 @@ public sealed class CraftingTransaction
                 if (!CanStack(target, source))
                     continue;
 
-                float availableVolume = Mathf.Max(0f, Inventory.Data.itemSlots[i].SlotMaxVolume - target.Stack.CurrentVolume);
-                float amountCapacity = availableVolume / unitVolume;
+                float amountCapacity = Inventory.Data.HasUnlimitedStackSize
+                    ? remaining
+                    : Mathf.Max(0f, Inventory.Data.itemSlots[i].SlotMaxVolume - target.Stack.Amount);
                 float amountToAdd = Mathf.Min(remaining, amountCapacity);
                 if (amountToAdd <= 0f)
                     continue;
@@ -335,7 +344,9 @@ public sealed class CraftingTransaction
                 if (workingItems[i] != null)
                     continue;
 
-                float amountCapacity = Inventory.Data.itemSlots[i].SlotMaxVolume / unitVolume;
+                float amountCapacity = Inventory.Data.HasUnlimitedStackSize
+                    ? remaining
+                    : Mathf.Max(0f, Inventory.Data.itemSlots[i].SlotMaxVolume);
                 float amountToAdd = Mathf.Min(remaining, amountCapacity);
                 if (amountToAdd <= 0f)
                     continue;
@@ -350,8 +361,8 @@ public sealed class CraftingTransaction
             return remaining <= CraftingIngredientMatcher.AmountEpsilon;
         }
 
-        /// <summary>体积大于 1 的物品不可堆叠，每个整数单位必须独占一个可容纳它的空槽。</summary>
-        private bool TryAddNonStackable(ItemData source, float unitVolume, float amount)
+        /// <summary>不可堆叠物品每个整数单位必须独占一个空槽。</summary>
+        private bool TryAddNonStackable(ItemData source, float amount)
         {
             int unitCount = Mathf.RoundToInt(amount);
             if (unitCount <= 0 || Mathf.Abs(amount - unitCount) > CraftingIngredientMatcher.AmountEpsilon)
@@ -359,11 +370,8 @@ public sealed class CraftingTransaction
 
             for (int i = 0; i < workingItems.Count && unitCount > 0; i++)
             {
-                if (workingItems[i] != null ||
-                    Inventory.Data.itemSlots[i].SlotMaxVolume + CraftingIngredientMatcher.AmountEpsilon < unitVolume)
-                {
+                if (workingItems[i] != null)
                     continue;
-                }
 
                 ItemData created = Clone(source);
                 created.Stack.Amount = 1f;
@@ -373,6 +381,22 @@ public sealed class CraftingTransaction
             }
 
             return unitCount == 0;
+        }
+
+        /// <summary>按事务工作快照计算整包占用，确保扣料后释放的容量能立即用于本次产物。</summary>
+        private void GetWorkingCarryUsage(out float totalWeight, out float totalVolume)
+        {
+            totalWeight = 0f;
+            totalVolume = 0f;
+            for (int i = 0; i < workingItems.Count; i++)
+            {
+                ItemStack stack = workingItems[i]?.Stack;
+                if (stack == null)
+                    continue;
+
+                totalWeight += Mathf.Max(0f, stack.CurrentWeight);
+                totalVolume += Mathf.Max(0f, stack.CurrentVolume);
+            }
         }
 
         public void ApplyWorkingState()

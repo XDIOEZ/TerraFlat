@@ -3,6 +3,9 @@
   "items": [
     {
       "id": "Equipment_Base",
+      "weight": 4.0,
+      "volume": 10.0,
+      "stackable": true,
       "abstract": true,
       "shellPrefab": "Chestplate_Iron",
       "visual": {
@@ -18,7 +21,9 @@
       "durability": 200.0,
       "maxDurability": 1.0,
       "amount": 1.0,
+      "weight": 9.0,
       "volume": 10.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "36"
@@ -140,7 +145,9 @@
       "durability": 200.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 5.0,
+      "weight": 2.0,
+      "volume": 8.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "36"
@@ -257,7 +264,9 @@
       "durability": 200.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 5.0,
+      "weight": 5.0,
+      "volume": 12.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "36"

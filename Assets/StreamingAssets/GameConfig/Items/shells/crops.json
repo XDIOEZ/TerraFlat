@@ -5,6 +5,9 @@
       "id": "Crop_Base",
       "abstract": true,
       "parent": "BasicItem_Base",
+      "weight": 0.7,
+      "volume": 2.5,
+      "stackable": true,
       "shellPrefab": "CropShell",
       "canBePickedUp": false,
       "visual": {
@@ -86,7 +89,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.6,
+      "volume": 2.0,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [],
       "visual": {
@@ -174,7 +179,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.7,
+      "volume": 2.5,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [],
       "visual": {
@@ -300,6 +307,9 @@
       "parent": "WildCrop_Base",
       "gameName": "蘑菇-农作物",
       "description": "生长在阴暗地下的蘑菇；成熟后交互即可采集。",
+      "weight": 0.3,
+      "volume": 1.0,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mushroom/Plant_Mushroom.png",
         "collider": {
@@ -383,7 +393,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.7,
+      "volume": 2.5,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [],
       "visual": {
@@ -482,6 +494,9 @@
       "parent": "WildCrop_Base",
       "gameName": "浆果丛-农作物",
       "description": "可自然生长或种在耕地中的浆果丛；成熟后可反复采摘，果实会周期再生。",
+      "weight": 1.5,
+      "volume": 5.0,
+      "stackable": true,
       "lootTableId": "BerryCrop_Default",
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/TX Plant.png[GrassLand_6]",
@@ -663,7 +678,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.8,
+      "volume": 3.0,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [],
       "visual": {

@@ -19,6 +19,7 @@ public static class CreativeInventoryState
         state[UnlimitedSlotsKey] = true;
         ItemSpecialDataJsonStore.WriteNamespace(player.Data, NamespaceKey, state);
         inventory.Data.SetUnlimitedSlots(true);
+        inventory.Data.SetUnlimitedCarryCapacity(true);
     }
 
     /// <summary>库存加载后按所属玩家恢复容量策略，避免对象复用残留上一位玩家的状态。</summary>
@@ -28,6 +29,7 @@ public static class CreativeInventoryState
                        ItemSpecialDataJsonStore.ReadNamespace(player.Data, NamespaceKey)
                            .Value<bool?>(UnlimitedSlotsKey) == true;
         inventory.Data.SetUnlimitedSlots(enabled);
+        inventory.Data.SetUnlimitedCarryCapacity(enabled);
     }
 
     #endregion

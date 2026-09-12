@@ -3,6 +3,9 @@
   "items": [
     {
       "id": "WorldResource_Base",
+      "weight": 500.0,
+      "volume": 1000.0,
+      "stackable": true,
       "abstract": true,
       "shellPrefab": "Prop",
       "visual": {
@@ -14,6 +17,9 @@
       "id": "MineResource_Base",
       "abstract": true,
       "parent": "WorldResource_Base",
+      "weight": 2000.0,
+      "volume": 800.0,
+      "stackable": true,
       "shellPrefab": "MineResource"
     },
     {
@@ -24,7 +30,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 320.0,
+      "volume": 1200.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "35",
@@ -286,6 +294,9 @@
       "parent": "AppleTree",
       "gameName": "桃树",
       "description": "结果的桃树，成熟时可以采桃；砍倒后也会掉落桃子。",
+      "weight": 320.0,
+      "volume": 1200.0,
+      "stackable": false,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/PeachTree/PeachTree_Idle.png"
       },
@@ -304,6 +315,9 @@
       "parent": "AppleTree",
       "gameName": "橘子树",
       "description": "喜温暖湿润环境的果树，成熟后可以采摘橘子。",
+      "weight": 320.0,
+      "volume": 1200.0,
+      "stackable": false,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/OrangeTree/OrangeTree_Idle.png"
       },
@@ -335,7 +349,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 420.0,
+      "volume": 1500.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "Tree"
@@ -650,7 +666,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 2000.0,
+      "volume": 800.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -825,7 +843,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 100.0,
+      "weight": 2000.0,
+      "volume": 800.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -1000,7 +1020,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 100.0,
+      "weight": 2000.0,
+      "volume": 800.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -1175,7 +1197,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 100.0,
+      "weight": 2000.0,
+      "volume": 800.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -1350,7 +1374,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 100.0,
+      "weight": 2000.0,
+      "volume": 800.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -1525,7 +1551,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 100.0,
+      "weight": 3000.0,
+      "volume": 3500.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -1686,7 +1714,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 320.0,
+      "volume": 1200.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "Tree"

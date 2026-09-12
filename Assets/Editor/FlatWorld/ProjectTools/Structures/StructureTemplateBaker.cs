@@ -189,8 +189,8 @@ public static class StructureTemplateValidator
                 continue;
             }
 
-            float unitVolume = Mathf.Max(0f, item.itemData.Stack.Volume);
-            if (unitVolume > 1f && entry.Amount > 1)
+            bool stackable = item.itemData.Stack.Stackable;
+            if (!stackable && entry.Amount > 1)
             {
                 Add(issues, StructureValidationSeverity.Error, $"不可堆叠物品数量必须为1：{entry.ItemPrefabId}", metadata);
             }
@@ -199,7 +199,7 @@ public static class StructureTemplateValidator
             float slotCapacity = slot != null && slot.SlotMaxVolume > 0f
                 ? slot.SlotMaxVolume
                 : 100f;
-            if (unitVolume * entry.Amount > slotCapacity)
+            if (stackable && entry.Amount > slotCapacity)
             {
                 Add(issues, StructureValidationSeverity.Error,
                     $"容器物品超过槽位容量：{entry.ItemPrefabId} x{entry.Amount} / 容量{slotCapacity}", metadata);

@@ -6,6 +6,9 @@
       "parent": "Twine",
       "gameName": "药草",
       "description": "用于制作草药包，成熟药草植株同时提供种子。",
+      "weight": 0.05,
+      "volume": 0.1,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Herb/Herb_Icon.png",
         "color": {
@@ -21,6 +24,9 @@
       "parent": "Twine",
       "gameName": "干草",
       "description": "三份干草可搓成一根绳子。",
+      "weight": 0.15,
+      "volume": 0.8,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Straw/Straw_Icon.png",
         "color": {
@@ -36,6 +42,9 @@
       "parent": "Berry",
       "gameName": "狗尾草穗",
       "description": "成熟狗尾草采收得到的穗，可直接食用，提供少量营养。",
+      "weight": 0.05,
+      "volume": 0.15,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/FoxtailEar/FoxtailEar_SeedHead_Icon.png",
         "color": {
@@ -70,13 +79,19 @@
       "id": "WillowBranch",
       "parent": "Stick_Wood",
       "gameName": "柳枝",
-      "description": "柔韧柳枝可以编成绳子。"
+      "description": "柔韧柳枝可以编成绳子。",
+      "weight": 0.3,
+      "volume": 0.8,
+      "stackable": true
     },
     {
       "id": "WillowBark",
       "parent": "Twine",
       "gameName": "柳树皮",
       "description": "可加工成绳子；后续医药原料。",
+      "weight": 0.15,
+      "volume": 0.4,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/WillowBark/WillowBark_Idle.png",
         "color": {
@@ -92,6 +107,9 @@
       "parent": "Ore_Stone",
       "gameName": "黏土",
       "description": "基础陶土材料，四份可制陶罐坯。",
+      "weight": 1.0,
+      "volume": 0.7,
+      "stackable": true,
       "visual": {
         "color": {
           "r": 0.7,
@@ -106,6 +124,9 @@
       "parent": "Ore_Stone",
       "gameName": "硝石",
       "description": "需要四级镐开采，可用于制作肥料。",
+      "weight": 1.0,
+      "volume": 0.55,
+      "stackable": true,
       "visual": {
         "color": {
           "r": 0.7,
@@ -120,6 +141,9 @@
       "parent": "WildCrop_Base",
       "gameName": "药草-农作物",
       "description": "成熟后采收；可留种种植。持续受寒或受热会枯萎。",
+      "weight": 0.4,
+      "volume": 1.5,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Herb/HerbCrop_Mature.png",
         "color": {
@@ -165,6 +189,9 @@
       "parent": "WildCrop_Base",
       "gameName": "狗尾草-农作物",
       "description": "成熟后可采收狗尾草穗；持续受寒或受热会枯萎。",
+      "weight": 0.5,
+      "volume": 2.0,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/FoxtailGrass/FoxtailGrass_Seedling.png",
         "spriteStates": {
@@ -209,6 +236,9 @@
       "parent": "Seed_Radish",
       "gameName": "药草种子",
       "description": "播种后长出对应植株。",
+      "weight": 0.01,
+      "volume": 0.03,
+      "stackable": true,
       "modules": {
         "plantable": {
           "parameters": {
@@ -222,6 +252,9 @@
       "parent": "Seed_Radish",
       "gameName": "柳树种子",
       "description": "播种后长出对应植株。",
+      "weight": 0.02,
+      "volume": 0.05,
+      "stackable": true,
       "modules": {
         "plantable": {
           "parameters": {
@@ -235,6 +268,9 @@
       "parent": "Berry",
       "gameName": "草药包",
       "description": "30 秒内缓慢恢复最多 10% 生命上限；同类药效刷新，不叠加速度。治疗仍需要体内蛋白质，不能复活。",
+      "weight": 0.2,
+      "volume": 0.25,
+      "stackable": true,
       "visual": {
         "color": {
           "r": 0.55,
@@ -301,6 +337,9 @@
       "parent": "Mine_Stone",
       "gameName": "硝石矿",
       "description": "使用对应工具开采。",
+      "weight": 1800.0,
+      "volume": 800.0,
+      "stackable": false,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mine_Niter/Mine_Niter_Idle.png",
         "color": {
@@ -339,6 +378,9 @@
       "parent": "AppleTree",
       "gameName": "柳树",
       "description": "河岸树木。砍伐获得柳枝、柳树皮与木材；可留种栽培。",
+      "weight": 320.0,
+      "volume": 1200.0,
+      "stackable": false,
       "visual": {
         "color": {
           "r": 0.65,
@@ -362,6 +404,9 @@
       "parent": "Pickaxe_Stone",
       "gameName": "石铲",
       "description": "挖掘河岸可见的黏土点；不用于开采矿石。",
+      "weight": 2.5,
+      "volume": 3.5,
+      "stackable": false,
       "modules": {
         "damage": {
           "parameters": {
@@ -377,7 +422,10 @@
       "id": "Platform_Stone_Summoner",
       "parent": "WaterPlatform_Summoner",
       "gameName": "石平台",
-      "description": "铺设在水面形成支撑；用撬棍拆除，拆前须清空平台。",
+      "description": "铺设在水面形成支撑，可在其上正常行走和继续放置建筑。",
+      "weight": 15.0,
+      "volume": 30.0,
+      "stackable": true,
       "visual": {
         "color": {
           "r": 0.65,
@@ -402,7 +450,10 @@
       "id": "Platform_Copper_Summoner",
       "parent": "WaterPlatform_Summoner",
       "gameName": "铜平台",
-      "description": "铺设在水面形成支撑；用撬棍拆除，拆前须清空平台。",
+      "description": "铺设在水面形成支撑，可在其上正常行走和继续放置建筑。",
+      "weight": 18.0,
+      "volume": 30.0,
+      "stackable": true,
       "visual": {
         "color": {
           "r": 0.95,
@@ -428,6 +479,9 @@
       "parent": "Wall_Stone_Summoner",
       "gameName": "铜墙",
       "description": "可放置的金属墙，阻挡通行并承受攻击。",
+      "weight": 22.0,
+      "volume": 32.0,
+      "stackable": true,
       "visual": {
         "color": {
           "r": 0.95,
@@ -452,7 +506,10 @@
       "id": "Platform_Iron_Summoner",
       "parent": "WaterPlatform_Summoner",
       "gameName": "铁平台",
-      "description": "铺设在水面形成支撑；用撬棍拆除，拆前须清空平台。",
+      "description": "铺设在水面形成支撑，可在其上正常行走和继续放置建筑。",
+      "weight": 22.0,
+      "volume": 30.0,
+      "stackable": true,
       "visual": {
         "color": {
           "r": 0.72,
@@ -478,6 +535,9 @@
       "parent": "Wall_Stone_Summoner",
       "gameName": "铁墙",
       "description": "可放置的金属墙，阻挡通行并承受攻击。",
+      "weight": 28.0,
+      "volume": 32.0,
+      "stackable": true,
       "visual": {
         "color": {
           "r": 0.72,
@@ -502,7 +562,10 @@
       "id": "Platform_Bronze_Summoner",
       "parent": "WaterPlatform_Summoner",
       "gameName": "青铜平台",
-      "description": "铺设在水面形成支撑；用撬棍拆除，拆前须清空平台。",
+      "description": "铺设在水面形成支撑，可在其上正常行走和继续放置建筑。",
+      "weight": 20.0,
+      "volume": 30.0,
+      "stackable": true,
       "visual": {
         "color": {
           "r": 0.85,
@@ -528,6 +591,9 @@
       "parent": "Wall_Stone_Summoner",
       "gameName": "青铜墙",
       "description": "可放置的金属墙，阻挡通行并承受攻击。",
+      "weight": 25.0,
+      "volume": 32.0,
+      "stackable": true,
       "visual": {
         "color": {
           "r": 0.85,
@@ -549,33 +615,21 @@
       }
     },
     {
-      "id": "Crowbar",
-      "parent": "Stick_Wood",
-      "gameName": "撬棍",
-      "description": "手持后对准附近平台使用。平台上有建筑、角色或物品时禁止拆除。",
-      "modules": {
-        "dismantle": {
-          "prefab": "Module_DismantleSupport",
-          "id": "Mod_DismantleSupport",
-          "enabled": true,
-          "data": {
-            "BitData": "",
-            "Type": 0
-          },
-          "parameters": {
-            "reach": 2
-          }
-        }
-      }
-    },
-    {
       "id": "ClayJarBlank",
       "parent": "Clay",
       "gameName": "陶罐坯",
       "description": "在熔炉中达到 600℃ 后烧成陶罐。",
+      "weight": 2.5,
+      "volume": 6.0,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/ClayJarBlank/ClayJarBlank_Icon.png",
-        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       }
     },
     {
@@ -584,8 +638,14 @@
       "shellPrefab": "BuildingSummonerShell",
       "gameName": "陶罐",
       "description": "可装 8 份水。淡水装入后为脏水，可直接喝，也可烧开成为饮用水；面板中可选择放到地上，落地后交互使用或拆回，水量、水质和加热进度保留。海水可加热制盐。",
-      "volume": 8,
-      "health": { "hasHp": true, "hp": 40, "maxHp": 40 },
+      "weight": 3.0,
+      "volume": 8.0,
+      "stackable": false,
+      "health": {
+        "hasHp": true,
+        "hp": 40,
+        "maxHp": 40
+      },
       "modules": {
         "建筑模块": {
           "prefab": "Module_Building",
@@ -595,7 +655,9 @@
             "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"ClayJar_Building\",\"SummonerPrefabId\":\"ClayJar\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
             "Type": 0
           },
-          "parameters": { "RequiresPlacementRequest": true }
+          "parameters": {
+            "RequiresPlacementRequest": true
+          }
         },
         "vessel": {
           "prefab": "Module_WaterVessel",
@@ -623,6 +685,9 @@
         "SaltFood"
       ],
       "description": "蒸发海水获得。吃下后缓慢缓解缺盐，也能腌制肉类；不能代替饮水。",
+      "weight": 0.1,
+      "volume": 0.08,
+      "stackable": true,
       "modules": {
         "food": {
           "data": {
@@ -687,6 +752,62 @@
       }
     },
     {
+      "id": "Jam",
+      "parent": "Berry",
+      "gameName": "果酱",
+      "description": "用石臼将浆果捣碎制成的果酱，食用后提供比浆果更充足的营养。",
+      "weight": 0.5,
+      "volume": 0.5,
+      "stackable": true,
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 6.0,
+                "Max_Carbohydrates": 6.0,
+                "Fat": 0.4,
+                "Max_Fat": 0.4,
+                "Protein": 0.4,
+                "Max_Protein": 0.4,
+                "Water": 2.0,
+                "Max_Water": 2.0,
+                "Vitamins": 4.8,
+                "Max_Vitamins": 4.8
+              },
+              "Max_EatingProgress": 1.5
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 3600.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Item_Jam.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      }
+    },
+    {
       "id": "Meat_Cured",
       "parent": "Meat",
       "gameName": "腌肉",
@@ -695,6 +816,9 @@
         "PreserveFreshness"
       ],
       "description": "腌制延长保质期，继承原料新鲜度。食用补盐；新鲜原料制成后默认可存放 9 个游戏日。",
+      "weight": 0.45,
+      "volume": 0.55,
+      "stackable": true,
       "modules": {
         "food": {
           "data": {
@@ -764,6 +888,9 @@
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Fertilizer.prefab",
       "gameName": "肥料",
       "description": "对准耕地使用，补充水分和肥力。",
+      "weight": 1.0,
+      "volume": 0.8,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/肥料.png"
       },
@@ -781,7 +908,10 @@
       "id": "MinersNote",
       "parent": "Rope",
       "gameName": "矿工笔记",
-      "description": "铁矿先用石镐采铜、再用铜镐开采。粗铁加木柄与绳子可制简易铁镐；铜锡按九比一冶炼青铜。备足陶罐饮水和食物，再去洞穴寻找更深的矿脉。"
+      "description": "铁矿先用石镐采铜、再用铜镐开采。粗铁加木柄与绳子可制粗铁铁镐；铜锡按九比一冶炼青铜。备足陶罐饮水和食物，再去洞穴寻找更深的矿脉。",
+      "weight": 0.1,
+      "volume": 0.2,
+      "stackable": true
     }
   ]
 }

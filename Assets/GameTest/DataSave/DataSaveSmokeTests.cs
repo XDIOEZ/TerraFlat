@@ -67,7 +67,16 @@ namespace FlatWorld.GameTest.DataSave
         {
             var playerData = new Data_Player
             {
-                ItemSpecialData = "{\"flatworld.tutorial\":{\"stage\":2}}"
+                ItemSpecialData = "{\"flatworld.tutorial\":{\"stage\":2}}",
+                MaxCarryWeight = 73f,
+                MaxCarryVolume = 111f,
+                Stack = new ItemStack
+                {
+                    Amount = 1f,
+                    Weight = 1.75f,
+                    Volume = 2.5f,
+                    Stackable = false
+                }
             };
             Vector3 expectedPosition = new Vector3(12.5f, -4.5f, 0f);
 
@@ -109,6 +118,11 @@ namespace FlatWorld.GameTest.DataSave
             saveContainer.WriteData<ItemData>(playerData);
             Data_Player restoredPlayerData = saveContainer.GetData<ItemData>() as Data_Player;
             Assert.That(restoredPlayerData, Is.Not.Null);
+            Assert.That(restoredPlayerData.MaxCarryWeight, Is.EqualTo(73f).Within(0.0001f));
+            Assert.That(restoredPlayerData.MaxCarryVolume, Is.EqualTo(111f).Within(0.0001f));
+            Assert.That(restoredPlayerData.Stack.Weight, Is.EqualTo(1.75f).Within(0.0001f));
+            Assert.That(restoredPlayerData.Stack.Volume, Is.EqualTo(2.5f).Within(0.0001f));
+            Assert.That(restoredPlayerData.Stack.Stackable, Is.False);
             Assert.That(
                 PlayerMainWorldSpawnStore.TryGetMainWorldSpawn(
                     restoredPlayerData,

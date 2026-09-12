@@ -204,7 +204,7 @@ public class Inventory : MonoBehaviour
     [Tooltip("序列化保存的容器数据")]
     [ShowInInspector]
     public Inventory_Data Data;
-    [Tooltip("最小堆叠容量数量")]
+    [Tooltip("旧版兼容字段；堆叠资格现由 ItemStack.Stackable 决定")]
     public int MinStackVolume = 2;
     [Tooltip("当物品槽发生变化时触发的事件")]
     public UltEvent<int, ItemSlot> onSlotChanged = new UltEvent<int, ItemSlot>();
@@ -281,15 +281,15 @@ public class Inventory : MonoBehaviour
         int stackIndex = -1; // 可堆叠的槽位索引
         int emptyIndex = -1; // 空槽位索引
 
-        // 检查是否可以进行堆叠（仅当物品体积小于最小可堆叠体积时允许）
-        if (inputItemData.Stack.Volume < MinStackVolume)
+        // 显式堆叠属性决定是否允许同槽合并，物理体积只参与整包容量。
+        if (inputItemData.Stack.Stackable)
         {
             for (int i = 0; i < Data.itemSlots.Count; i++)
             {
                 var slot = Data.itemSlots[i];
                 if (!slot.IsFull && slot._ItemData != null &&
                     slot._ItemData.CanStackWith(inputItemData) &&
-                    slot._ItemData.Stack.CurrentVolume + inputItemData.Stack.CurrentVolume <= slot.SlotMaxVolume)
+                    slot._ItemData.Stack.Amount + inputItemData.Stack.Amount <= slot.SlotMaxVolume)
                 {
                     stackIndex = i;
                     break;
@@ -342,8 +342,8 @@ public class Inventory : MonoBehaviour
             return false;
         }
 
-        // 如果物品体积大于等于最小可堆叠体积，则只能放入空槽位
-        if (inputItemData.Stack.Volume >= MinStackVolume)
+        // 不可堆叠物品只能放入空槽位。
+        if (!inputItemData.Stack.Stackable)
         {
             foreach (var slot in Data.itemSlots)
             {
@@ -361,7 +361,7 @@ public class Inventory : MonoBehaviour
         {
             if (!slot.IsFull && slot._ItemData != null &&
                 slot._ItemData.CanStackWith(inputItemData) &&
-                slot._ItemData.Stack.CurrentVolume + inputItemData.Stack.CurrentVolume <= slot.SlotMaxVolume)
+                slot._ItemData.Stack.Amount + inputItemData.Stack.Amount <= slot.SlotMaxVolume)
             {
                 //  Debug.Log("找到可堆叠的槽位");
                 return true;
@@ -450,7 +450,9 @@ public class Inventory : MonoBehaviour
         }
 
         // 特殊交换
-        if (localSlot._ItemData.Stack.Volume > MinStackVolume || !localSlot._ItemData.HasSameStackIdentity(inputSlotHand._ItemData))
+        if (!localSlot._ItemData.Stack.Stackable ||
+            !inputSlotHand._ItemData.Stack.Stackable ||
+            !localSlot._ItemData.HasSameStackIdentity(inputSlotHand._ItemData))
         {
             Debug.Log("特殊交换");
             localSlot.Change(inputSlotHand);

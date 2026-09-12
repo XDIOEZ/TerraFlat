@@ -3,6 +3,9 @@
   "items": [
     {
       "id": "BuildingBody_Base",
+      "weight": 50.0,
+      "volume": 120.0,
+      "stackable": true,
       "abstract": true,
       "shellPrefab": "BuildingBodyShell",
       "visual": {
@@ -22,7 +25,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 140.0,
+      "volume": 200.0,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -167,7 +172,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 20.0,
+      "volume": 60.0,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -335,7 +342,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 40.0,
+      "volume": 120.0,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -459,7 +468,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 100.0,
+      "volume": 140.0,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -576,7 +587,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 48.0,
+      "volume": 120.0,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -693,7 +706,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 32.0,
+      "volume": 80.0,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -810,7 +825,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 100.0,
+      "volume": 160.0,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -933,7 +950,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 10.0,
+      "weight": 24.0,
+      "volume": 88.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -1060,7 +1079,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 200.0,
+      "weight": 120.0,
+      "volume": 180.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -1205,7 +1226,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 40.0,
+      "volume": 120.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -1328,7 +1351,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 100.0,
+      "weight": 100.0,
+      "volume": 180.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -1451,7 +1476,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 5.0,
+      "weight": 24.0,
+      "volume": 64.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "35"
@@ -1568,7 +1595,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 2.0,
+      "volume": 4.0,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [
         "Modern"
@@ -1695,7 +1724,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 100.0,
+      "weight": 60.0,
+      "volume": 140.0,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "35"

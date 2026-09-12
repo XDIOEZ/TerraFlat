@@ -3,6 +3,9 @@
   "items": [
     {
       "id": "WoodTool_Base",
+      "weight": 1.5,
+      "volume": 2.5,
+      "stackable": true,
       "abstract": true,
       "shellPrefab": "Stick",
       "visual": {
@@ -18,7 +21,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.4,
+      "volume": 0.8,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -192,7 +197,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 8.0,
+      "volume": 10.0,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -405,7 +412,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.1,
+      "volume": 0.2,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -617,6 +626,9 @@
     },
     {
       "id": "Axe_Base",
+      "weight": 1.65,
+      "volume": 3.0,
+      "stackable": true,
       "abstract": true,
       "shellPrefab": "Axe",
       "visual": {
@@ -632,7 +644,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 1.65,
+      "volume": 3.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Axe"
@@ -812,7 +826,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 1.075,
+      "volume": 3.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Axe"
@@ -992,7 +1008,9 @@
       "durability": 100.0,
       "maxDurability": 100.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 1.9,
+      "volume": 3.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Axe"
@@ -1172,7 +1190,9 @@
       "durability": 1000.0,
       "maxDurability": 1000.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 2.0,
+      "volume": 3.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Axe"
@@ -1353,7 +1373,9 @@
       "durability": 100.0,
       "maxDurability": 100.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 2.1,
+      "volume": 3.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Axe"
@@ -1533,7 +1555,9 @@
       "durability": 1000.0,
       "maxDurability": 1000.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 2.15,
+      "volume": 3.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Axe"
@@ -1706,6 +1730,9 @@
     },
     {
       "id": "Pickaxe_Base",
+      "weight": 2.775,
+      "volume": 4.0,
+      "stackable": true,
       "abstract": true,
       "shellPrefab": "Pickaxe",
       "visual": {
@@ -1721,7 +1748,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 2.775,
+      "volume": 4.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Modern"
@@ -1900,7 +1929,9 @@
       "durability": 200.0,
       "maxDurability": 200.0,
       "amount": 1.0,
-      "volume": 100.0,
+      "weight": 3.1,
+      "volume": 4.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Pickaxe",
@@ -2081,7 +2112,9 @@
       "durability": 200.0,
       "maxDurability": 200.0,
       "amount": 1.0,
-      "volume": 100.0,
+      "weight": 3.23,
+      "volume": 4.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "36"
@@ -2255,12 +2288,14 @@
       "id": "Pickaxe_RawIron",
       "parent": "Pickaxe_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Weapons/Pickaxes/Pickaxe_RawIron.prefab",
-      "gameName": "简易铁镐",
-      "description": "开采等级 3；使用镐头开采对应等级以下的矿物。",
+      "gameName": "粗铁铁镐",
+      "description": "开采等级 3；由未经锻打除杂的粗铁制成，性能略高于铜镐、低于青铜镐，适合作为过渡工具。",
       "durability": 200.0,
       "maxDurability": 200.0,
       "amount": 1.0,
-      "volume": 100.0,
+      "weight": 3.36,
+      "volume": 4.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Pickaxe",
@@ -2321,9 +2356,9 @@
           "parameters": {
             "DamageValues": {
               "Cutting": 0.0,
-              "Piercing": 21.0,
+              "Piercing": 16.0,
               "Chopping": 0.0,
-              "Blunt": 7.0
+              "Blunt": 6.5
             },
             "DamageInterval": 0.2,
             "EnableOnTriggerEnterDamage": true,
@@ -2386,7 +2421,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 11.0,
+            "staminaCostPerAttack": 9.5,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -2441,7 +2476,9 @@
       "durability": 200.0,
       "maxDurability": 200.0,
       "amount": 1.0,
-      "volume": 100.0,
+      "weight": 3.425,
+      "volume": 4.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Pickaxe",
@@ -2619,6 +2656,9 @@
       "shellPrefab": "FlintStrike",
       "gameName": "打火石",
       "description": "用于生火的打火石。",
+      "weight": 0.25,
+      "volume": 0.2,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Flint.png"
       }
@@ -2631,7 +2671,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 1.5,
+      "volume": 2.5,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [],
       "visual": {

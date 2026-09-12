@@ -6,11 +6,16 @@
       "parent": "Apple",
       "gameName": "辣椒",
       "description": "火红的辣椒，既是果实也是种子，可直接种在耕地里。吃完后获得持续 60 秒的“辣”：每 10 秒损失 0.1 点生命，期间最多增温 5℃，这部分增温不会超过 30℃。",
-      "volume": 0.2,
+      "weight": 0.04,
+      "volume": 0.06,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Chili/Chili_Icon.png",
         "collider": {
-          "size": { "x": 0.6, "y": 0.6 }
+          "size": {
+            "x": 0.6,
+            "y": 0.6
+          }
         }
       },
       "modules": {
@@ -43,7 +48,9 @@
               },
               {
                 "StateKey": "food.consumption",
-                "Data": { "EatingProgress": 0.0 }
+                "Data": {
+                  "EatingProgress": 0.0
+                }
               }
             ]
           }
@@ -52,7 +59,10 @@
           "prefab": "Module_Plantable",
           "id": "Mod_Plantable",
           "enabled": true,
-          "data": { "BitData": [], "Type": 0 },
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
           "parameters": {
             "cropItemId": "ChiliTree",
             "maxPlantingDistance": 2.0,
@@ -69,7 +79,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 1.0,
+      "volume": 4.0,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [],
       "visual": {
@@ -79,10 +91,27 @@
           "growing": "Assets/6_Art/Generated/Chili/ChiliTree_Growing.png",
           "mature": "Assets/6_Art/Generated/Chili/ChiliTree_Mature.png"
         },
-        "rendererLocalPosition": { "x": 0.0, "y": 0.0, "z": 0.0 },
-        "rendererLocalEulerAngles": { "x": 0.0, "y": 0.0, "z": 0.0 },
-        "rendererLocalScale": { "x": 1.0, "y": 1.0, "z": 1.0 },
-        "color": { "r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0 },
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 1.0,
+          "y": 1.0,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
         "flipX": false,
         "flipY": false,
         "sortingLayerName": "Default",
@@ -91,19 +120,32 @@
           "type": "BoxCollider2D",
           "enabled": true,
           "isTrigger": true,
-          "offset": { "x": 0.0, "y": 0.5 },
+          "offset": {
+            "x": 0.0,
+            "y": 0.5
+          },
           "path": "",
-          "size": { "x": 0.85, "y": 1.05 }
+          "size": {
+            "x": 0.85,
+            "y": 1.05
+          }
         }
       },
       "modules": {
         "crop": {
-          "parameters": { "growthDurationSeconds": 500.0 }
+          "parameters": {
+            "growthDurationSeconds": 500.0
+          }
         },
         "cropYield": {
           "parameters": {
             "outputs": [
-              { "itemId": "Chili", "minAmount": 2, "maxAmount": 4, "probability": 1.0 }
+              {
+                "itemId": "Chili",
+                "minAmount": 2,
+                "maxAmount": 4,
+                "probability": 1.0
+              }
             ]
           }
         },

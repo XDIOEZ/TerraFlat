@@ -35,7 +35,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 制作模块的 `Save()` 只负责持久化，不能解绑输入、输出、按钮或交互监听；这些运行时事件统一在 `Unload()` 中成对清理，由 Item 退出、移除模块与回池生命周期调用，否则自动保存会让预览与制作按钮永久失效。
 - 模态库存才获取输入锁；快捷栏和 `Inventory_Hand` 不锁玩家输入。
 - 单个库存面板需要专属槽位皮肤时，在面板 Prefab 上配置 `InventorySlotVisualProfile`，由 `Inventory.InitUI` 在动态槽位创建完成后统一应用；不要改通用 `UI_Slot.prefab` 做面板特判。该 Profile 只允许改 Sprite、图标/文字尺寸等表现，不得接管库存事务、拖拽或选择状态。
-- 槽位鼠标与触屏拖放必须复用 `ItemSlot_UI.OnMouseDragBegin` / `OnMouseDragDrop` 的来源事务：命中 `ItemSlot_UI` 时直接在起始槽与目标槽之间移动、合并或双向交换，异类交换必须同时校验双方库存接收规则与整堆容量，禁止把目标物品经 `Inventory_Hand` 中转；只有未命中槽位时才把整组转入 `Inventory_Hand`，后续手机点击按轻触方向处理：连续拿取方向下同类已有物品从槽位取一件，放置方向下空槽/同类槽向目标放一件，异类槽交换，长按空槽或同类槽则一次性放下手上整组；同类目标容量不足时余量留在起始槽，空槽起手才转交父级 `ScrollRect`。
+- 槽位鼠标与触屏拖放必须复用 `ItemSlot_UI.OnMouseDragBegin` / `OnMouseDragDrop` 的来源事务：命中 `ItemSlot_UI` 时直接在起始槽与目标槽之间移动、合并或双向交换，异类交换必须同时校验双方库存接收规则与整堆容量，禁止把目标物品经 `Inventory_Hand` 中转；只有未命中槽位时才把整组转入 `Inventory_Hand`，后续手机点击按轻触方向处理：连续拿取方向下同类已有物品从槽位取一件，放置方向下空槽/同类槽向目标放一件，异类槽交换，长按空槽或同类槽则按统一长按时间显示正式槽位进度并在进度走满时立即一次性放下手上整组，不等待松手；提交成功后该手势必须被消费，不能继续进入半组拖拽；同类目标容量不足时余量留在起始槽，空槽起手才转交父级 `ScrollRect`。
 - 手机快捷栏轻触必须走独立 `OnTouchTap` 语义，只切换当前选中格或按单件规则取放；普通触屏拖放与桌面键鼠共用直接槽位事务，长按更久后的半组拖拽才以 `Inventory_Hand` 为来源。
 - 跟随指针的 `UI_Hand` 是纯视觉层：Canvas 排序固定占用全局顶层（32767），必须高于快捷栏、设置页和其它游戏 UI；CanvasGroup/子图形不得拦截目标槽位射线。直接槽位拖拽生成的 `InventoryDragGhost` 也必须使用独立顶层 Canvas，不能只靠 `SetAsLastSibling`，否则会被独立 Canvas 的快捷栏/模态页压住。世界手持物挂在快捷栏节点及其子节点末端。
 - `UI_Hand` 的跟随坐标必须优先读取 Input System 的 `Pointer.current`，保持鼠标、真实触屏与 Device Simulator 使用同一当前指针语义；不能在触点抬起后直接切到 `Mouse.current`，否则模拟触屏会把手持槽 UI 跳到另一套坐标系而看似消失。读取后仍需过滤 NaN/Infinity。

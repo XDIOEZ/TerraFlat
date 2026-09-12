@@ -170,8 +170,8 @@ public partial class Inventory_Data
             return;
         }
 
-        // 情况4：特殊交换（体积较大）
-        if (inputData.Stack.Volume >= 2 || localData.Stack.Volume >= 2)
+        // 情况4：特殊交换（任一物品不可堆叠）
+        if (!inputData.Stack.Stackable || !localData.Stack.Stackable)
         {
             Event_OnBeforeDataChanged.Invoke(localSlot);
             localSlot.Change(inputSlotHand);
@@ -266,6 +266,10 @@ public partial class Inventory_Data
 
         ItemData localData = localSlot.itemData;
         ItemData targetData = targetSlot.itemData;
+
+        if (!ReferenceEquals(this, targetInventory) &&
+            (!CanReplaceItem(localData, targetData) || !targetInventory.CanReplaceItem(targetData, localData)))
+            return false;
 
         Event_OnBeforeDataChanged.Invoke(localSlot);
         targetInventory.Event_OnBeforeDataChanged.Invoke(targetSlot);
@@ -436,28 +440,35 @@ public partial class Inventory_Data
         addedAmount = 0f;
         if (inputItemData?.Stack == null || inputItemData.Stack.Amount <= 0f) return false;
 
-        float unitVolume = inputItemData.Stack.Volume;
-        if (unitVolume <= 0f) return false;
-        float remainingAmount = inputItemData.Stack.Amount;
-        float originalAmount = Mathf.Max(0f, remainingAmount);
+        if (inputItemData.Stack.Weight < 0f || inputItemData.Stack.Volume < 0f)
+            return false;
+
+        float originalAmount = Mathf.Max(0f, inputItemData.Stack.Amount);
+        float capacityAllowedAmount = GetCapacityLimitedAmount(inputItemData, originalAmount);
+        if (!inputItemData.Stack.Stackable)
+            capacityAllowedAmount = Mathf.Floor(capacityAllowedAmount + 0.0001f);
+        if (capacityAllowedAmount <= 0.0001f)
+            return false;
+
+        float remainingAmount = Mathf.Min(originalAmount, capacityAllowedAmount);
         bool addedAny = false;
 
         // 无限库存的只读预检承诺可动态增加普通槽，不提前分配空格或改动物品。
-        if (HasUnlimitedSlots && !doAdd && unitVolume <= DefaultSlotVolume)
+        if (HasUnlimitedSlots && !doAdd)
         {
-            addedAmount = originalAmount;
+            addedAmount = remainingAmount;
             return true;
         }
         if (doAdd)
             EnsureSpareSlot();
 
-        // 非堆叠物品（体积大于1）
-        if (unitVolume > 1)
+        // 非堆叠物品严格一格一件；重量/体积只参与整包容量，不再决定堆叠属性。
+        if (!inputItemData.Stack.Stackable)
         {
             for (int i = 0; i < itemSlots.Count && remainingAmount > 0f; i++)
             {
                 ItemSlot slot = itemSlots[i];
-                if (slot.itemData != null || slot.SlotMaxVolume < unitVolume)
+                if (slot.itemData != null)
                     continue;
 
                 // 创造模式可丢出多件工具，重新拾取时仍按每格一件拆分。
@@ -469,17 +480,19 @@ public partial class Inventory_Data
                     newItem.Stack.CanBePickedUp = false;
                     SetOne_ItemData(i, newItem);
                     Event_RefreshUI.Invoke(i);
+                    if (HasUnlimitedSlots)
+                        EnsureSpareSlot();
                 }
                 remainingAmount -= toAdd;
             }
 
-            addedAmount = originalAmount - remainingAmount;
-            if (doAdd && remainingAmount <= 0.0001f)
+            addedAmount = Mathf.Min(capacityAllowedAmount, originalAmount) - remainingAmount;
+            if (doAdd && addedAmount + 0.0001f >= originalAmount)
                 inputItemData.Stack.CanBePickedUp = false;
             return addedAmount > 0f;
         }
 
-        // 堆叠物品（体积为1）
+        // 可堆叠物品优先合并同类；玩家主背包运行时把 SlotMaxVolume 设为 float.MaxValue。
         // 优先填充已有的同类堆叠槽位，其次才占用新的空槽位
 
         // 第一轮：只尝试向已有的同类物品堆叠
@@ -493,9 +506,8 @@ public partial class Inventory_Data
             if (!hasItem || !sameItem || slot.IsFull)
                 continue;
 
-            float currentVol = slot.itemData.Stack.CurrentVolume;
-            float canAdd = slot.SlotMaxVolume - currentVol;
-            float toAdd = Mathf.Min(remainingAmount, canAdd / unitVolume);
+            float canAdd = Mathf.Max(0f, slot.SlotMaxVolume - slot.itemData.Stack.Amount);
+            float toAdd = Mathf.Min(remainingAmount, canAdd);
             if (toAdd <= 0f) continue;
 
             if (doAdd)
@@ -518,9 +530,8 @@ public partial class Inventory_Data
             if (hasItem || slot.IsFull)
                 continue;
 
-            float currentVol = 0f;
-            float canAdd = slot.SlotMaxVolume - currentVol;
-            float toAdd = Mathf.Min(remainingAmount, canAdd / unitVolume);
+            float canAdd = Mathf.Max(0f, slot.SlotMaxVolume);
+            float toAdd = Mathf.Min(remainingAmount, canAdd);
             if (toAdd <= 0f) continue;
 
             if (doAdd)
@@ -536,8 +547,8 @@ public partial class Inventory_Data
             addedAny = true;
         }
 
-        addedAmount = Mathf.Max(0f, originalAmount - remainingAmount);
-        if (doAdd && remainingAmount <= 0.0001f)
+        addedAmount = Mathf.Max(0f, Mathf.Min(capacityAllowedAmount, originalAmount) - remainingAmount);
+        if (doAdd && addedAmount + 0.0001f >= originalAmount)
             inputItemData.Stack.CanBePickedUp = false;
 
         return addedAny;
@@ -549,14 +560,14 @@ public partial class Inventory_Data
     /// - 两个槽位有效，且不相同
     /// - 来源槽位有物品，且数量充足
     /// - 如果目标槽位已有物品，则其类型与来源物品一致（包括特殊数据）
-    /// - 若物品不可堆叠（Volume > 1），则不能合并，必须空槽才允许转移
+    /// - 若物品不可堆叠，则不能合并，必须空槽才允许转移
     /// - 转移后自动更新 UI 和数据
     /// </summary>
     public bool TransferItemQuantity(ItemSlot slotFrom, ItemSlot slotTo, int upToCount)
     {
         EnsureRuntimeEvents();
 
-        if (!TryTransferItemQuantityCore(slotFrom, slotTo, upToCount))
+        if (!TryTransferItemQuantityCore(slotFrom, this, slotTo, upToCount))
             return false;
 
         // 兼容旧调用：调用方仍被视为两个槽位的共同事件所有者。
@@ -591,7 +602,7 @@ public partial class Inventory_Data
             return false;
         }
 
-        if (!TryTransferItemQuantityCore(slotFrom, slotTo, upToCount))
+        if (!TryTransferItemQuantityCore(slotFrom, targetInventory, slotTo, upToCount))
             return false;
 
         Event_RefreshUI.Invoke(slotFrom.Index);
@@ -604,9 +615,13 @@ public partial class Inventory_Data
         return true;
     }
 
-    private static bool TryTransferItemQuantityCore(ItemSlot slotFrom, ItemSlot slotTo, int upToCount)
+    private bool TryTransferItemQuantityCore(
+        ItemSlot slotFrom,
+        Inventory_Data targetInventory,
+        ItemSlot slotTo,
+        int upToCount)
     {
-        if (slotFrom == null || slotTo == null || slotFrom == slotTo || upToCount <= 0)
+        if (slotFrom == null || targetInventory == null || slotTo == null || slotFrom == slotTo || upToCount <= 0)
             return false;
 
         var dataFrom = slotFrom.itemData;
@@ -621,11 +636,15 @@ public partial class Inventory_Data
         if (dataTo != null && !dataTo.HasSameStackIdentity(dataFrom))
             return false;
 
-        // 若物品不可堆叠（Volume > 1），则不能进行堆叠式转移，只能直接移动单件到空槽
-        if (dataFrom.Stack.Volume > 1)
+        // 不可堆叠物品只能直接移动单件到空槽。
+        if (!dataFrom.Stack.Stackable)
         {
             // 非空槽位不能接收不可堆叠物品
-            if (dataTo != null || slotTo.SlotMaxVolume < dataFrom.Stack.Volume)
+            if (dataTo != null)
+                return false;
+
+            if (!ReferenceEquals(this, targetInventory) &&
+                targetInventory.GetCapacityLimitedAmount(dataFrom, 1f) + 0.0001f < 1f)
                 return false;
 
             // 只允许转移一个
@@ -656,11 +675,16 @@ public partial class Inventory_Data
         if (transferCount <= 0)
             return false;
 
-        float unitVolume = dataFrom.Stack.Volume > 0f ? dataFrom.Stack.Volume : 1f;
-        float targetCurrentVolume = dataTo?.Stack?.CurrentVolume ?? 0f;
-        float availableTargetVolume = Mathf.Max(0f, slotTo.SlotMaxVolume - targetCurrentVolume);
-        int targetCapacity = Mathf.FloorToInt((availableTargetVolume / unitVolume) + 0.0001f);
+        float currentTargetAmount = dataTo?.Stack?.Amount ?? 0f;
+        int targetCapacity = targetInventory.HasUnlimitedStackSize
+            ? transferCount
+            : Mathf.FloorToInt(Mathf.Max(0f, slotTo.SlotMaxVolume - currentTargetAmount) + 0.0001f);
         transferCount = Mathf.Min(transferCount, targetCapacity);
+        if (!ReferenceEquals(this, targetInventory))
+        {
+            float capacityAmount = targetInventory.GetCapacityLimitedAmount(dataFrom, transferCount);
+            transferCount = Mathf.Min(transferCount, Mathf.FloorToInt(capacityAmount + 0.0001f));
+        }
         if (transferCount <= 0)
             return false;
 
@@ -890,7 +914,7 @@ public partial class Inventory_Data
 
     private static bool CanUseDefaultStacking(ItemData itemData)
     {
-        return itemData?.Stack != null && itemData.Stack.Volume <= 1f;
+        return itemData?.Stack != null && itemData.Stack.Stackable;
     }
 
     private static bool CanMergeForDefaultSort(ItemData source, ItemData target)
@@ -900,14 +924,14 @@ public partial class Inventory_Data
                source.HasSameStackIdentity(target);
     }
 
-    private static float GetAvailableStackAmount(ItemSlot slot, ItemData itemData)
+    private float GetAvailableStackAmount(ItemSlot slot, ItemData itemData)
     {
         if (slot == null || itemData?.Stack == null)
             return 0f;
 
-        float unitVolume = itemData.Stack.Volume > 0f ? itemData.Stack.Volume : 1f;
-        float availableVolume = Mathf.Max(0f, slot.SlotMaxVolume - itemData.Stack.CurrentVolume);
-        return Mathf.Floor(availableVolume / unitVolume);
+        if (HasUnlimitedStackSize)
+            return float.MaxValue;
+        return Mathf.Max(0f, slot.SlotMaxVolume - itemData.Stack.Amount);
     }
 
 

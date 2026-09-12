@@ -301,7 +301,15 @@ public class ItemPicker : Module
             return false;
 
         float requestedAmount = Mathf.Max(0f, itemData.Stack.Amount);
-        float remainingAmount = requestedAmount;
+        float pickupCapacityAmount = GetPickupCapacityLimitedAmount(itemData, requestedAmount);
+        if (!itemData.Stack.Stackable)
+            pickupCapacityAmount = Mathf.Floor(pickupCapacityAmount + 0.0001f);
+        if (pickupCapacityAmount <= 0.0001f ||
+            !allowPartial && pickupCapacityAmount + 0.0001f < requestedAmount)
+            return false;
+
+        float targetAmount = Mathf.Min(requestedAmount, pickupCapacityAmount);
+        float remainingAmount = targetAmount;
         foreach (IInventory inventory in AddTargetInventories)
         {
             Inventory targetInventory = inventory?.GetDefaultTargetInventory();
@@ -327,12 +335,13 @@ public class ItemPicker : Module
                 break;
         }
 
-        float totalAddedAmount = requestedAmount - remainingAmount;
+        float totalAddedAmount = targetAmount - remainingAmount;
         if (totalAddedAmount <= 0f)
             return false;
 
-        bool fullyAdded = remainingAmount <= 0.0001f;
-        itemData.Stack.Amount = fullyAdded ? requestedAmount : remainingAmount;
+        float worldRemainingAmount = Mathf.Max(0f, requestedAmount - totalAddedAmount);
+        bool fullyAdded = worldRemainingAmount <= 0.0001f;
+        itemData.Stack.Amount = fullyAdded ? requestedAmount : worldRemainingAmount;
         itemData.Stack.CanBePickedUp = !fullyAdded;
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
         DimensionManager dimensionManager = DimensionManager.ExistingInstance;
@@ -345,6 +354,42 @@ public class ItemPicker : Module
             totalAddedAmount,
             dimensionId);
         return true;
+    }
+
+    /// <summary>
+    /// 拾取会优先经过快捷栏，因此这里按玩家所有拾取目标的实际占用统一计算主背包携带上限，
+    /// 防止先塞快捷栏再塞背包绕过重量/体积限制。创造背包直接放行。
+    /// </summary>
+    private float GetPickupCapacityLimitedAmount(ItemData itemData, float requestedAmount)
+    {
+        if (itemData?.Stack == null || requestedAmount <= 0f)
+            return 0f;
+
+        Inventory_Data bagData = null;
+        float totalWeight = 0f;
+        float totalVolume = 0f;
+        var countedInventories = new HashSet<Inventory_Data>();
+        for (int i = 0; i < AddTargetInventories.Count; i++)
+        {
+            Inventory targetInventory = AddTargetInventories[i]?.GetDefaultTargetInventory();
+            Inventory_Data targetData = targetInventory?.Data;
+            if (targetData == null || !countedInventories.Add(targetData))
+                continue;
+
+            totalWeight += targetData.CurrentCarryWeight;
+            totalVolume += targetData.CurrentCarryVolume;
+            if (string.Equals(targetData.Name, ModText.Bag, System.StringComparison.Ordinal))
+                bagData = targetData;
+        }
+
+        if (bagData == null || !bagData.HasCarryCapacity || bagData.HasUnlimitedCarryCapacity)
+            return requestedAmount;
+
+        return bagData.GetCapacityLimitedAmount(
+            itemData,
+            requestedAmount,
+            totalWeight,
+            totalVolume);
     }
 
     /// <summary>

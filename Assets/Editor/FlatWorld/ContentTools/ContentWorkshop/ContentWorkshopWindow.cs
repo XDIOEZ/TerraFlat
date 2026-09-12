@@ -1094,7 +1094,9 @@ namespace FlatWorld.Editor.ContentWorkshop
             GUILayout.Space(8f);
             GUILayout.Label("基础手感", EditorStyles.boldLabel);
             itemDraft.Amount = Mathf.Max(0.01f, EditorGUILayout.FloatField("初始数量", itemDraft.Amount));
-            itemDraft.Volume = Mathf.Max(0f, EditorGUILayout.FloatField("单个体积", itemDraft.Volume));
+            itemDraft.Weight = Mathf.Max(0.001f, EditorGUILayout.FloatField("单个重量 (kg)", itemDraft.Weight));
+            itemDraft.Volume = Mathf.Max(0.001f, EditorGUILayout.FloatField("单个体积 (L)", itemDraft.Volume));
+            itemDraft.Stackable = EditorGUILayout.Toggle("允许堆叠", itemDraft.Stackable);
             itemDraft.Durability = Mathf.Max(0f, EditorGUILayout.FloatField("耐久度", itemDraft.Durability));
             itemDraft.CanBePickedUp = EditorGUILayout.Toggle("可以拾取", itemDraft.CanBePickedUp);
             itemDraft.Tags = EditorGUILayout.TextField(new GUIContent("标签", "逗号分隔；配方可按标签接受替代物品"), itemDraft.Tags);
@@ -1227,7 +1229,9 @@ namespace FlatWorld.Editor.ContentWorkshop
             itemDraft.Icon = source.Icon;
             itemDraft.Durability = definition.MaxDurability ?? definition.Durability ?? itemDraft.Durability;
             itemDraft.Amount = definition.Amount ?? 1f;
+            itemDraft.Weight = definition.Weight ?? itemDraft.Weight;
             itemDraft.Volume = definition.Volume ?? 1f;
+            itemDraft.Stackable = definition.Stackable ?? itemDraft.Stackable;
             itemDraft.CanBePickedUp = definition.CanBePickedUp ?? true;
             itemDraft.Tags = string.Join(", ", definition.Tags ?? new List<string>());
             if (definition.Visual != null)

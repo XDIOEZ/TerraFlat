@@ -75,7 +75,9 @@ public abstract partial class ItemData
             $"物品定义 ID：{IDName}\n" +
             $"物品默认名称：{GameName}\n" +
             $"物品描述：{Description}\n" +
-            $"物品体积：{Stack.Volume}\n" +
+            $"物品重量：{Stack.Weight}kg\n" +
+            $"物品体积：{Stack.Volume}L\n" +
+            $"允许堆叠：{Stack.Stackable}\n" +
             $"物品耐久度：{Durability}\n" +
             $"是否可拾取：{Stack.CanBePickedUp}\n" +
             $"物品标签：{string.Join(", ", Tags)}\n" +
@@ -134,7 +136,7 @@ public abstract partial class ItemData
     public bool CanStackWith(ItemData other)
     {
         return Stack != null && other?.Stack != null &&
-               Stack.Volume <= 1f && other.Stack.Volume <= 1f &&
+               Stack.Stackable && other.Stack.Stackable &&
                HasSameStackIdentity(other);
     }
 

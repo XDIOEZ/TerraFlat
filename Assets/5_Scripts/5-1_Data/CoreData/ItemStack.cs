@@ -8,12 +8,17 @@ public partial class ItemStack
     [Tooltip("物品数量")]
     public float Amount = 1;//物体的数量
 
-    [Tooltip("物品体积")]
-    // 公共浮点型变量Volume，用于存储物品的体积或其他相关数值
+    [Tooltip("单个物品占用体积（升）")]
     public float Volume = 1;
 
     [Tooltip("是否可拾取")]
     public bool CanBePickedUp = true;
+
+    [Tooltip("单个物品重量（千克）")]
+    public float Weight = 1;
+
+    [Tooltip("是否允许同类物品堆叠")]
+    public bool Stackable = true;
 
     [MemoryPackIgnore]
     [Tooltip("当前总体积")]
@@ -24,6 +29,10 @@ public partial class ItemStack
             return Amount * Volume;
         }
     }
+
+    [MemoryPackIgnore]
+    [Tooltip("当前总重量（千克）")]
+    public float CurrentWeight => Amount * Weight;
 
 
     public override string ToString()

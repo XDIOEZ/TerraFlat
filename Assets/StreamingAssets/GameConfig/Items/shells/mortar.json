@@ -10,14 +10,29 @@
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
-      "volume": 5,
+      "weight": 8.0,
+      "volume": 6.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [],
-      "health": { "hasHp": true, "hp": 120, "maxHp": 120 },
+      "health": {
+        "hasHp": true,
+        "hp": 120,
+        "maxHp": 120
+      },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/StoneMortar/StoneMortar_Icon.png",
-        "rendererLocalScale": { "x": 1, "y": 1, "z": 1 },
-        "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+        "rendererLocalScale": {
+          "x": 1,
+          "y": 1,
+          "z": 1
+        },
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
       },
       "modules": {
         "建筑模块": {
@@ -28,14 +43,21 @@
             "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"StoneMortar_Building\",\"SummonerPrefabId\":\"StoneMortar\",\"SharedModuleIds\":[\"Mod_Mortar\"]}",
             "Type": 0
           },
-          "parameters": { "RequiresPlacementRequest": true }
+          "parameters": {
+            "RequiresPlacementRequest": true
+          }
         },
         "mortar": {
           "prefab": "Module_Mortar",
           "id": "Mod_Mortar",
           "enabled": true,
-          "data": { "BitData": [], "Type": 0 },
-          "parameters": { "StationId": "mortar" }
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "StationId": "mortar"
+          }
         }
       }
     }

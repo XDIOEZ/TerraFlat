@@ -8,6 +8,9 @@
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
+      "weight": 0.6,
+      "volume": 0.8,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "Knife",
@@ -78,7 +81,9 @@
       "labelKey": "item.Dagger_Stone.name",
       "descriptionKey": "item.Dagger_Stone.description",
       "description": "用石料制作的小刀。",
-      "volume": 3,
+      "weight": 0.6,
+      "volume": 0.8,
+      "stackable": false,
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[石制小刀]",
         "rendererLocalEulerAngles": {
@@ -116,7 +121,9 @@
       "labelKey": "item.Dagger_Copper.name",
       "descriptionKey": "item.Dagger_Copper.description",
       "description": "用铜制作的小刀。",
-      "volume": 3,
+      "weight": 0.7,
+      "volume": 0.8,
+      "stackable": false,
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tool_Weapon.png[Tool_Weapon_19]",
         "rendererLocalEulerAngles": {
@@ -154,7 +161,9 @@
       "labelKey": "item.Dagger_Bone.name",
       "descriptionKey": "item.Dagger_Bone.description",
       "description": "用骨料制作的小刀。",
-      "volume": 2,
+      "weight": 0.39,
+      "volume": 0.8,
+      "stackable": false,
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Weapons/Item_Weapon_006.png",
         "rendererLocalEulerAngles": {
@@ -185,7 +194,9 @@
       "labelKey": "item.Knife_Flint.name",
       "descriptionKey": "item.Knife_Flint.description",
       "description": "用燧石制作的小刀。",
-      "volume": 2,
+      "weight": 0.37,
+      "volume": 0.8,
+      "stackable": false,
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Weapons/Guns/iron-weapons.png[iron-weapons_248]",
         "rendererLocalEulerAngles": {
@@ -199,6 +210,9 @@
     },
     {
       "id": "Spear_Base",
+      "weight": 1.925,
+      "volume": 5.0,
+      "stackable": true,
       "abstract": true,
       "shellPrefab": "Spear",
       "visual": {
@@ -214,7 +228,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 1.925,
+      "volume": 5.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Spear",
@@ -395,7 +411,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 2.1,
+      "volume": 5.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Spear",
@@ -576,7 +594,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 2.275,
+      "volume": 5.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Spear",
@@ -757,7 +777,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 1.925,
+      "volume": 5.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Spear",
@@ -935,6 +957,9 @@
       "shellPrefab": "ChippedTool",
       "gameName": "打制石器",
       "description": "由石料打制而成的简易工具。",
+      "weight": 0.2,
+      "volume": 0.25,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/icons_sheet.png[icons_sheet_98]",
         "flipX": true
@@ -956,6 +981,9 @@
     },
     {
       "id": "Torch_Base",
+      "weight": 1.0,
+      "volume": 2.0,
+      "stackable": true,
       "abstract": true,
       "shellPrefab": "Stick",
       "modules": {
@@ -1083,6 +1111,9 @@
     },
     {
       "id": "Bow_Base",
+      "weight": 0.9,
+      "volume": 4.0,
+      "stackable": true,
       "abstract": true,
       "shellPrefab": "Prop",
       "visual": {
@@ -1098,7 +1129,9 @@
       "durability": 100.0,
       "maxDurability": 100.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 0.9,
+      "volume": 4.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "Bow",
@@ -1150,6 +1183,9 @@
       "parent": "Bow_Wood",
       "gameName": "反曲弓",
       "description": "采用反曲弓臂设计的强化弓。操作方式与木弓相同，但同等蓄力下可让箭矢造成更高伤害。",
+      "weight": 1.2,
+      "volume": 4.0,
+      "stackable": false,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Archery/WoodBow_Icon.png"
       },
@@ -1163,6 +1199,9 @@
     },
     {
       "id": "Arrow_Base",
+      "weight": 0.08,
+      "volume": 0.12,
+      "stackable": true,
       "abstract": true,
       "shellPrefab": "Prop",
       "visual": {
@@ -1202,9 +1241,14 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.08,
+      "volume": 0.12,
+      "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Arrow", "Wood"],
+      "tags": [
+        "Arrow",
+        "Wood"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Archery/Arrow_Wood_Icon.png"
       },
@@ -1229,8 +1273,14 @@
               "type": "BoxCollider2D",
               "enabled": false,
               "isTrigger": true,
-              "offset": {"x": 0.0, "y": 0.0},
-              "size": {"x": 0.7, "y": 0.18}
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 0.7,
+                "y": 0.18
+              }
             }
           }
         }
@@ -1244,9 +1294,14 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.1,
+      "volume": 0.12,
+      "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Arrow", "Stone"],
+      "tags": [
+        "Arrow",
+        "Stone"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Archery/Arrow_Stone_Icon.png"
       },
@@ -1256,7 +1311,12 @@
           "id": "Mod_Damage",
           "enabled": true,
           "parameters": {
-            "DamageValues": {"Cutting": 0.0, "Piercing": 5.0, "Chopping": 0.0, "Blunt": 0.0},
+            "DamageValues": {
+              "Cutting": 0.0,
+              "Piercing": 5.0,
+              "Chopping": 0.0,
+              "Blunt": 0.0
+            },
             "DamageInterval": -1.0,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
@@ -1266,8 +1326,14 @@
               "type": "BoxCollider2D",
               "enabled": false,
               "isTrigger": true,
-              "offset": {"x": 0.0, "y": 0.0},
-              "size": {"x": 0.7, "y": 0.18}
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 0.7,
+                "y": 0.18
+              }
             }
           }
         }
@@ -1281,9 +1347,14 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.11,
+      "volume": 0.12,
+      "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Arrow", "Copper"],
+      "tags": [
+        "Arrow",
+        "Copper"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Archery/Arrow_Copper_Icon.png"
       },
@@ -1293,7 +1364,12 @@
           "id": "Mod_Damage",
           "enabled": true,
           "parameters": {
-            "DamageValues": {"Cutting": 0.0, "Piercing": 7.0, "Chopping": 0.0, "Blunt": 0.0},
+            "DamageValues": {
+              "Cutting": 0.0,
+              "Piercing": 7.0,
+              "Chopping": 0.0,
+              "Blunt": 0.0
+            },
             "DamageInterval": -1.0,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
@@ -1303,8 +1379,14 @@
               "type": "BoxCollider2D",
               "enabled": false,
               "isTrigger": true,
-              "offset": {"x": 0.0, "y": 0.0},
-              "size": {"x": 0.7, "y": 0.18}
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 0.7,
+                "y": 0.18
+              }
             }
           }
         }
@@ -1318,9 +1400,14 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.12,
+      "volume": 0.12,
+      "stackable": true,
       "canBePickedUp": true,
-      "tags": ["Arrow", "Iron"],
+      "tags": [
+        "Arrow",
+        "Iron"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Archery/Arrow_Iron_Icon.png"
       },
@@ -1330,7 +1417,12 @@
           "id": "Mod_Damage",
           "enabled": true,
           "parameters": {
-            "DamageValues": {"Cutting": 0.0, "Piercing": 9.0, "Chopping": 0.0, "Blunt": 0.0},
+            "DamageValues": {
+              "Cutting": 0.0,
+              "Piercing": 9.0,
+              "Chopping": 0.0,
+              "Blunt": 0.0
+            },
             "DamageInterval": -1.0,
             "EnableOnTriggerEnterDamage": true,
             "OnlyDealDamageWhenInHand": false,
@@ -1340,8 +1432,14 @@
               "type": "BoxCollider2D",
               "enabled": false,
               "isTrigger": true,
-              "offset": {"x": 0.0, "y": 0.0},
-              "size": {"x": 0.7, "y": 0.18}
+              "offset": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "size": {
+                "x": 0.7,
+                "y": 0.18
+              }
             }
           }
         }

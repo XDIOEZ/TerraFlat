@@ -108,13 +108,10 @@ public static class ItemDefinitionMigrationTool
                 "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Tin.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/Apple.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/Berry.prefab",
-                "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Addle.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Green.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Half.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Nude.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Shell.prefab",
-                "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Water.prefab",
-                "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_WaterSalt.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/CoconutMeat.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/Egg.prefab",
                 "Assets/2_Prefabs/Gameplay/Items/Food/Egg_Cooked.prefab",
@@ -668,7 +665,9 @@ public static class ItemDefinitionMigrationTool
             ["durability"] = data.Durability,
             ["maxDurability"] = data.MaxDurability,
             ["amount"] = data.Stack?.Amount ?? 1f,
+            ["weight"] = data.Stack?.Weight ?? 1f,
             ["volume"] = data.Stack?.Volume ?? 0f,
+            ["stackable"] = data.Stack?.Stackable ?? true,
             ["canBePickedUp"] = data.Stack?.CanBePickedUp ?? true,
             ["tags"] = new JArray((data.Tags ?? new List<string>())
                 .Where(tag => !string.IsNullOrWhiteSpace(tag))

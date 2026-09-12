@@ -9,18 +9,34 @@
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
-      "volume": 8,
+      "weight": 3.0,
+      "volume": 8.0,
+      "stackable": false,
       "canBePickedUp": false,
-      "tags": ["35"],
+      "tags": [
+        "35"
+      ],
       "health": {
         "hasHp": true,
         "hp": 40,
         "maxHp": 40,
-        "collider": { "type": "BoxCollider2D", "isTrigger": true, "size": { "x": 0.65, "y": 0.65 } }
+        "collider": {
+          "type": "BoxCollider2D",
+          "isTrigger": true,
+          "size": {
+            "x": 0.65,
+            "y": 0.65
+          }
+        }
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png",
-        "collider": { "size": { "x": 0.65, "y": 0.65 } }
+        "collider": {
+          "size": {
+            "x": 0.65,
+            "y": 0.65
+          }
+        }
       },
       "modules": {
         "建筑模块": {
@@ -49,18 +65,34 @@
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
-      "volume": 5,
+      "weight": 8.0,
+      "volume": 6.0,
+      "stackable": false,
       "canBePickedUp": false,
-      "tags": ["35"],
+      "tags": [
+        "35"
+      ],
       "health": {
         "hasHp": true,
         "hp": 120,
         "maxHp": 120,
-        "collider": { "type": "BoxCollider2D", "isTrigger": true, "size": { "x": 0.85, "y": 0.85 } }
+        "collider": {
+          "type": "BoxCollider2D",
+          "isTrigger": true,
+          "size": {
+            "x": 0.85,
+            "y": 0.85
+          }
+        }
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/StoneMortar/StoneMortar_Icon.png",
-        "collider": { "size": { "x": 0.85, "y": 0.85 } }
+        "collider": {
+          "size": {
+            "x": 0.85,
+            "y": 0.85
+          }
+        }
       },
       "modules": {
         "建筑模块": {
@@ -76,8 +108,13 @@
           "prefab": "Module_Mortar",
           "id": "Mod_Mortar",
           "enabled": true,
-          "data": { "BitData": [], "Type": 0 },
-          "parameters": { "StationId": "mortar" }
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "StationId": "mortar"
+          }
         }
       }
     }

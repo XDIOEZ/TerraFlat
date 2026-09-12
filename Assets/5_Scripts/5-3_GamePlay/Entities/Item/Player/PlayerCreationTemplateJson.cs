@@ -54,6 +54,8 @@ public sealed class PlayerCreationTemplateConfig
         [JsonProperty("initialStamina")] public float InitialStamina = 100f;
         [JsonProperty("maxStamina")] public float MaxStamina = 100f;
         [JsonProperty("staminaRecoverySpeed")] public float StaminaRecoverySpeed = 10f;
+        [JsonProperty("maxCarryWeight")] public float MaxCarryWeight = 60f;
+        [JsonProperty("maxCarryVolume")] public float MaxCarryVolume = 90f;
     }
 
     [Serializable]
@@ -144,6 +146,8 @@ public sealed class PlayerCreationTemplateConfig
         data.stamina = Mathf.Clamp(Core.InitialStamina, 0f, maxStamina);
         data.staminaMax = maxStamina;
         data.staminaRecoverySpeed = Mathf.Max(0f, Core.StaminaRecoverySpeed);
+        data.MaxCarryWeight = Mathf.Max(0f, Core.MaxCarryWeight);
+        data.MaxCarryVolume = Mathf.Max(0f, Core.MaxCarryVolume);
     }
 
     private void ApplyMovement(Mover mover)
@@ -343,6 +347,8 @@ public static class PlayerCreationTemplateJsonLoader
         ValidateFiniteNonNegative(profile.Core.InitialStamina, $"{profile.Id}.core.initialStamina");
         ValidateFiniteNonNegative(profile.Core.MaxStamina, $"{profile.Id}.core.maxStamina");
         ValidateFiniteNonNegative(profile.Core.StaminaRecoverySpeed, $"{profile.Id}.core.staminaRecoverySpeed");
+        ValidatePositive(profile.Core.MaxCarryWeight, $"{profile.Id}.core.maxCarryWeight");
+        ValidatePositive(profile.Core.MaxCarryVolume, $"{profile.Id}.core.maxCarryVolume");
 
         ValidateFiniteNonNegative(profile.Movement.Speed, $"{profile.Id}.movement.speed");
         ValidateFiniteNonNegative(profile.Movement.SlowDownSpeed, $"{profile.Id}.movement.slowDownSpeed");

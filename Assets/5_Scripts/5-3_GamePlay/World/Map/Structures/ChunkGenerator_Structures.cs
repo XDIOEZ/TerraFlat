@@ -560,8 +560,8 @@ public sealed class ChunkGenerator_Structures : ChunkGeneratorBase
             float slotCapacity = targetSlot != null && targetSlot.SlotMaxVolume > 0f
                 ? targetSlot.SlotMaxVolume
                 : 100f;
-            if (itemData.Stack.Volume > 1f && entry.Amount > 1 ||
-                itemData.Stack.Volume * entry.Amount > slotCapacity)
+            if (!itemData.Stack.Stackable && entry.Amount > 1 ||
+                itemData.Stack.Stackable && entry.Amount > slotCapacity)
             {
                 LogContainerError(candidate, stamp,
                     $"槽位 {entry.SlotIndex + 1} 无法容纳 {entry.ItemPrefabId} x{entry.Amount}");

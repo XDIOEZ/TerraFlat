@@ -16,6 +16,8 @@ public sealed class PlayerCreationTemplateSO : ScriptableObject
         [Min(0f)] public float initialStamina = 100f;
         [Min(0f)] public float maxStamina = 100f;
         [Min(0f)] public float staminaRecoverySpeed = 10f;
+        [Min(0.01f)] public float maxCarryWeight = 60f;
+        [Min(0.01f)] public float maxCarryVolume = 90f;
     }
 
     [Serializable]
@@ -123,6 +125,8 @@ public sealed class PlayerCreationTemplateSO : ScriptableObject
         data.stamina = core.initialStamina;
         data.staminaMax = core.maxStamina;
         data.staminaRecoverySpeed = core.staminaRecoverySpeed;
+        data.MaxCarryWeight = core.maxCarryWeight;
+        data.MaxCarryVolume = core.maxCarryVolume;
     }
 
     private void ApplyMovement(Mover mover)

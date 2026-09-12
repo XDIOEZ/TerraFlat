@@ -6,7 +6,9 @@
       "abstract": true,
       "shellPrefab": "HoeShell",
       "amount": 1,
-      "volume": 2,
+      "weight": 2.125,
+      "volume": 3.5,
+      "stackable": false,
       "durability": 1,
       "maxDurability": 1,
       "canBePickedUp": true,
@@ -43,6 +45,9 @@
       "parent": "Hoe_Base",
       "gameName": "木锄头",
       "description": "对准附近草地，右键或点击使用；从完整土地开始需要6次锄成耕地。",
+      "weight": 1.74,
+      "volume": 3.5,
+      "stackable": false,
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_362.png"
       },
@@ -60,6 +65,9 @@
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Hoes/Hoe_Stone.prefab",
       "gameName": "石锄头",
       "description": "对准附近草地，右键或点击使用；从完整土地开始需要4次锄成耕地。",
+      "weight": 2.125,
+      "volume": 3.5,
+      "stackable": false,
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_367.png"
       },
@@ -76,6 +84,9 @@
       "parent": "Hoe_Base",
       "gameName": "铜锄头",
       "description": "对准附近草地，右键或点击使用；从完整土地开始需要3次锄成耕地。",
+      "weight": 2.4,
+      "volume": 3.5,
+      "stackable": false,
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_377.png"
       },
@@ -92,6 +103,9 @@
       "parent": "Hoe_Base",
       "gameName": "铁锄头",
       "description": "对准附近草地，右键或点击使用；从完整土地开始需要2次锄成耕地。",
+      "weight": 2.675,
+      "volume": 3.5,
+      "stackable": false,
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_372.png"
       },

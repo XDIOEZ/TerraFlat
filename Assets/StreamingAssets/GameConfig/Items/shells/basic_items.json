@@ -3,6 +3,9 @@
   "items": [
     {
       "id": "BasicItem_Base",
+      "weight": 0.5,
+      "volume": 0.75,
+      "stackable": true,
       "abstract": true,
       "shellPrefab": "Prop",
       "visual": {
@@ -19,7 +22,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.45,
+      "volume": 0.6,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -98,7 +103,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.25,
+      "volume": 0.5,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -177,7 +184,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 1.0,
+      "volume": 0.75,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -256,7 +265,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.03,
+      "volume": 0.15,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "47"
@@ -440,7 +451,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.8,
+      "volume": 2.0,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -558,7 +571,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 2.0,
+      "volume": 2.5,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -637,7 +652,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 1.2,
+      "volume": 3.0,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -755,7 +772,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 1.0,
+      "volume": 1.2,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "Rope"
@@ -836,7 +855,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.1,
+      "volume": 0.15,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -915,7 +936,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 2.2,
+      "volume": 0.3,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -994,7 +1017,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 2.0,
+      "volume": 0.3,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -1073,7 +1098,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 2.4,
+      "volume": 0.3,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "Ingot",
@@ -1156,7 +1183,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 2.6,
+      "volume": 0.3,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "Ingot",
@@ -1238,7 +1267,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 1.7,
+      "volume": 0.3,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -1317,7 +1348,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 2.5,
+      "volume": 0.3,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "Ingot",
@@ -1400,7 +1433,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 1.0,
+      "volume": 1.1,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -1518,7 +1553,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 2.2,
+      "volume": 0.75,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -1597,7 +1634,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.35,
+      "volume": 0.18,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -1676,7 +1715,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 2.5,
+      "volume": 0.75,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "Ore",
@@ -1758,7 +1799,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 1.8,
+      "volume": 0.7,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -1837,7 +1880,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.2,
+      "volume": 0.25,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "47"
@@ -2017,6 +2062,9 @@
       "parent": "Apple",
       "gameName": "桃子",
       "description": "香甜多汁的桃子，以碳水和维生素为主；完整吃完后可立即恢复 5 点生命。",
+      "weight": 0.18,
+      "volume": 0.25,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Peach/Peach_Idle.png"
       },
@@ -2064,6 +2112,9 @@
       "parent": "Apple",
       "gameName": "橘子",
       "description": "酸甜多汁的柑橘类水果，富含水分和维生素。",
+      "weight": 0.22,
+      "volume": 0.3,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Orange/Orange_Idle.png"
       },
@@ -2114,7 +2165,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 0.2,
+      "weight": 0.03,
+      "volume": 0.04,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -2160,7 +2213,9 @@
       "parent": "Apple",
       "gameName": "大米",
       "description": "去壳后的生大米，可以直接食用，主要补充碳水和少量蛋白质。",
-      "volume": 0.2,
+      "weight": 0.1,
+      "volume": 0.15,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Rice/Rice_Icon.png",
         "rendererLocalScale": {
@@ -2226,7 +2281,9 @@
       "parent": "Apple",
       "gameName": "米饭",
       "description": "煮熟后聚成一团的米饭，以碳水和蛋白质为主要营养，并补充少量维生素。",
-      "volume": 0.6,
+      "weight": 0.25,
+      "volume": 0.35,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/CookedRice/CookedRice_Icon.png",
         "rendererLocalScale": {
@@ -2296,7 +2353,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.04,
+      "volume": 0.06,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "47"
@@ -2477,6 +2536,9 @@
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
       "gameName": "萝卜",
       "description": "根部鲜脆、叶片翠绿的萝卜，可以直接食用，也可以由种植收获。",
+      "weight": 0.2,
+      "volume": 0.25,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/Item_Radish.png",
         "rendererLocalScale": {
@@ -2544,6 +2606,9 @@
       "parent": "Radish",
       "gameName": "蘑菇",
       "description": "生长在地下洞穴中的食用蘑菇，可以直接食用，也可以用孢子种植。",
+      "weight": 0.08,
+      "volume": 0.12,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Mushroom/Item_Mushroom.png",
         "collider": {
@@ -2584,190 +2649,6 @@
       }
     },
     {
-      "id": "Coconut_Addle",
-      "parent": "BasicItem_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Addle.prefab",
-      "gameName": "变质椰子",
-      "description": "已经变质的椰子，不适合直接食用。",
-      "durability": 1.0,
-      "maxDurability": 1.0,
-      "amount": 1.0,
-      "volume": 1.0,
-      "canBePickedUp": true,
-      "tags": [
-        "47"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Food/椰子壳-脏水.png",
-        "rendererLocalPosition": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "rendererLocalScale": {
-          "x": 1.0,
-          "y": 1.0,
-          "z": 1.0
-        },
-        "color": {
-          "r": 1.0,
-          "g": 1.0,
-          "b": 1.0,
-          "a": 1.0
-        },
-        "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0.0,
-            "y": 0.0
-          },
-          "path": "",
-          "size": {
-            "x": 1.0,
-            "y": 1.0
-          }
-        }
-      },
-      "modules": {
-        "heldFood": {
-          "prefab": "Module_HeldFood",
-          "id": "手上食物模块",
-          "enabled": true,
-          "data": {
-            "Type": 0
-          },
-          "parameters": {}
-        },
-        "food": {
-          "prefab": "Module_Food",
-          "id": "食物模块",
-          "enabled": true,
-          "data": {
-            "FoodData": {
-              "nutrition": {
-                "Carbohydrates": 0.0,
-                "Max_Carbohydrates": 0.0,
-                "Fat": 0.0,
-                "Max_Fat": 0.0,
-                "Protein": 0.0,
-                "Max_Protein": 0.0,
-                "Water": 60.0,
-                "Max_Water": 60.0,
-                "Vitamins": 0.0,
-                "Max_Vitamins": 0.0
-              },
-              "Max_EatingProgress": 3.0,
-              "nutritionConsumeSpeed": {
-                "BaseValue": 0.0,
-                "BaseAdditive": 0.0,
-                "AdditiveModifier": 0.0,
-                "MultiplicativeModifier": 1.0,
-                "FinalAdditive": 0.0
-              },
-              "FeelGood": false,
-              "PanelPosition": {
-                "x": 0.0,
-                "y": 0.0
-              },
-              "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0
-            },
-            "MechanicStates": [
-              {
-                "StateKey": "food.spoilage",
-                "Data": {
-                  "EnableSpoilage": true,
-                  "SpoilageElapsedSeconds": 0.0,
-                  "SpoilageIntervalSeconds": 1800.0,
-                  "SpoilageTargetItemID": "Humus"
-                }
-              },
-              {
-                "StateKey": "food.consumption",
-                "Data": {
-                  "EatingProgress": 0.0
-                }
-              }
-            ],
-            "Type": 0
-          },
-          "parameters": {
-            "StaminaState": {
-              "StaminaRecoverSpeed": 1.0,
-              "StaminaConsumeSpeed": 0.5
-            },
-            "HealthState": {
-              "Enabled": false,
-              "HealSpeed": 1.0,
-              "WaterSelfHurt": 1.0,
-              "ProteinSelfHurt": 1.0,
-              "VitaminSelfHurt": 1.0,
-              "HealNeedRatio": 0.6
-            },
-            "ConsumeAudio": {
-              "Enabled": true,
-              "CueId": "food.drink",
-              "VolumeScale": 0.78,
-              "PitchMin": 0.96,
-              "PitchMax": 1.04
-            },
-            "ConsumeKind": 1,
-            "$transform": {
-              "localPosition": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
-              }
-            }
-          }
-        }
-      },
-      "itemData": {
-        "code": "",
-        "transform": {
-          "position": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0
-          },
-          "rotation": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0,
-            "w": 0.0
-          },
-          "scale": {
-            "x": 1.0,
-            "y": 1.0,
-            "z": 1.0
-          }
-        },
-        "ItemSpecialData": "",
-        "inHand": false
-      }
-    },
-    {
       "id": "Coconut_Green",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Green.prefab",
@@ -2776,7 +2657,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 1.5,
+      "volume": 2.0,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -2855,7 +2738,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
+      "weight": 0.75,
       "volume": 1.0,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -2934,7 +2819,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
+      "weight": 0.8,
       "volume": 1.0,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -3009,96 +2896,23 @@
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Shell.prefab",
       "gameName": "椰壳",
-      "description": "坚硬的椰壳，可当作简易容器或制作材料。",
+      "description": "坚硬的椰壳，可像陶罐一样装水、饮水、倒空与转水，也可作为制作材料。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.25,
+      "volume": 0.7,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/椰子壳-空.png",
-        "rendererLocalPosition": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
+        "spriteStates": {
+          "empty": "Assets/6_Art/Food/椰子壳-空.png",
+          "dirty": "Assets/6_Art/Food/椰子壳-脏水.png",
+          "drinkable": "Assets/6_Art/Food/椰子壳-有水.png",
+          "sea": "Assets/6_Art/Food/椰子壳-有水.png"
         },
-        "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "rendererLocalScale": {
-          "x": 1.0,
-          "y": 1.0,
-          "z": 1.0
-        },
-        "color": {
-          "r": 1.0,
-          "g": 1.0,
-          "b": 1.0,
-          "a": 1.0
-        },
-        "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0.0,
-            "y": 0.0
-          },
-          "path": "",
-          "size": {
-            "x": 1.0,
-            "y": 1.0
-          }
-        }
-      },
-      "modules": {},
-      "itemData": {
-        "code": "",
-        "transform": {
-          "position": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0
-          },
-          "rotation": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0,
-            "w": 0.0
-          },
-          "scale": {
-            "x": 1.0,
-            "y": 1.0,
-            "z": 1.0
-          }
-        },
-        "ItemSpecialData": "",
-        "inHand": false
-      }
-    },
-    {
-      "id": "Coconut_Water",
-      "parent": "BasicItem_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_Water.prefab",
-      "gameName": "椰子水",
-      "description": "清甜的椰子水，可以补充水分。",
-      "durability": 1.0,
-      "maxDurability": 1.0,
-      "amount": 1.0,
-      "volume": 1.0,
-      "canBePickedUp": true,
-      "tags": [
-        "47"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Food/椰子壳-有水.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -3140,290 +2954,13 @@
         }
       },
       "modules": {
-        "heldFood": {
-          "prefab": "Module_HeldFood",
-          "id": "手上食物模块",
+        "vessel": {
+          "prefab": "Module_WaterVessel",
+          "id": "Mod_WaterVessel",
           "enabled": true,
-          "data": {
-            "Type": 0
-          },
-          "parameters": {}
-        },
-        "food": {
-          "prefab": "Module_Food",
-          "id": "食物模块",
-          "enabled": true,
-          "data": {
-            "FoodData": {
-              "nutrition": {
-                "Carbohydrates": 10.0,
-                "Max_Carbohydrates": 10.0,
-                "Fat": 0.0,
-                "Max_Fat": 0.0,
-                "Protein": 0.0,
-                "Max_Protein": 0.0,
-                "Water": 150.0,
-                "Max_Water": 150.0,
-                "Vitamins": 4.0,
-                "Max_Vitamins": 4.0
-              },
-              "Max_EatingProgress": 3.0,
-              "nutritionConsumeSpeed": {
-                "BaseValue": 0.0,
-                "BaseAdditive": 0.0,
-                "AdditiveModifier": 0.0,
-                "MultiplicativeModifier": 1.0,
-                "FinalAdditive": 0.0
-              },
-              "FeelGood": false,
-              "PanelPosition": {
-                "x": 0.0,
-                "y": 0.0
-              },
-              "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0
-            },
-            "MechanicStates": [
-              {
-                "StateKey": "food.spoilage",
-                "Data": {
-                  "EnableSpoilage": true,
-                  "SpoilageElapsedSeconds": 0.0,
-                  "SpoilageIntervalSeconds": 1800.0,
-                  "SpoilageTargetItemID": "Humus"
-                }
-              },
-              {
-                "StateKey": "food.consumption",
-                "Data": {
-                  "EatingProgress": 0.0
-                }
-              }
-            ],
-            "Type": 0
-          },
+          "data": {},
           "parameters": {
-            "StaminaState": {
-              "StaminaRecoverSpeed": 1.0,
-              "StaminaConsumeSpeed": 0.5
-            },
-            "HealthState": {
-              "Enabled": false,
-              "HealSpeed": 1.0,
-              "WaterSelfHurt": 1.0,
-              "ProteinSelfHurt": 1.0,
-              "VitaminSelfHurt": 1.0,
-              "HealNeedRatio": 0.6
-            },
-            "ConsumeAudio": {
-              "Enabled": true,
-              "CueId": "food.drink",
-              "VolumeScale": 0.78,
-              "PitchMin": 0.96,
-              "PitchMax": 1.04
-            },
-            "ConsumeKind": 1,
-            "$transform": {
-              "localPosition": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
-              }
-            }
-          }
-        }
-      },
-      "itemData": {
-        "code": "",
-        "transform": {
-          "position": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0
-          },
-          "rotation": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0,
-            "w": 0.0
-          },
-          "scale": {
-            "x": 1.0,
-            "y": 1.0,
-            "z": 1.0
-          }
-        },
-        "ItemSpecialData": "",
-        "inHand": false
-      }
-    },
-    {
-      "id": "Coconut_WaterSalt",
-      "parent": "BasicItem_Base",
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Food/Coconut_WaterSalt.prefab",
-      "gameName": "加盐椰子水",
-      "description": "混入盐分的椰子水，饮用前应谨慎处理。",
-      "durability": 1.0,
-      "maxDurability": 1.0,
-      "amount": 1.0,
-      "volume": 1.0,
-      "canBePickedUp": true,
-      "tags": [
-        "47"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Food/椰子壳-有水.png",
-        "rendererLocalPosition": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "rendererLocalScale": {
-          "x": 1.0,
-          "y": 1.0,
-          "z": 1.0
-        },
-        "color": {
-          "r": 1.0,
-          "g": 1.0,
-          "b": 1.0,
-          "a": 1.0
-        },
-        "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0.0,
-            "y": 0.0
-          },
-          "path": "",
-          "size": {
-            "x": 1.0,
-            "y": 1.0
-          }
-        }
-      },
-      "modules": {
-        "heldFood": {
-          "prefab": "Module_HeldFood",
-          "id": "手上食物模块",
-          "enabled": true,
-          "data": {
-            "Type": 0
-          },
-          "parameters": {}
-        },
-        "food": {
-          "prefab": "Module_Food",
-          "id": "食物模块",
-          "enabled": true,
-          "data": {
-            "FoodData": {
-              "nutrition": {
-                "Carbohydrates": 0.0,
-                "Max_Carbohydrates": 0.0,
-                "Fat": 0.0,
-                "Max_Fat": 0.0,
-                "Protein": 0.0,
-                "Max_Protein": 0.0,
-                "Water": 0.0,
-                "Max_Water": 0.0,
-                "Vitamins": 0.0,
-                "Max_Vitamins": 0.0
-              },
-              "Max_EatingProgress": 3.0,
-              "nutritionConsumeSpeed": {
-                "BaseValue": 0.0,
-                "BaseAdditive": 0.0,
-                "AdditiveModifier": 0.0,
-                "MultiplicativeModifier": 1.0,
-                "FinalAdditive": 0.0
-              },
-              "FeelGood": false,
-              "PanelPosition": {
-                "x": 0.0,
-                "y": 0.0
-              },
-              "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0
-            },
-            "MechanicStates": [
-              {
-                "StateKey": "food.spoilage",
-                "Data": {
-                  "EnableSpoilage": true,
-                  "SpoilageElapsedSeconds": 0.0,
-                  "SpoilageIntervalSeconds": 1800.0,
-                  "SpoilageTargetItemID": "Humus"
-                }
-              },
-              {
-                "StateKey": "food.consumption",
-                "Data": {
-                  "EatingProgress": 0.0
-                }
-              }
-            ],
-            "Type": 0
-          },
-          "parameters": {
-            "StaminaState": {
-              "StaminaRecoverSpeed": 1.0,
-              "StaminaConsumeSpeed": 0.5
-            },
-            "HealthState": {
-              "Enabled": false,
-              "HealSpeed": 1.0,
-              "WaterSelfHurt": 1.0,
-              "ProteinSelfHurt": 1.0,
-              "VitaminSelfHurt": 1.0,
-              "HealNeedRatio": 0.6
-            },
-            "ConsumeAudio": {
-              "Enabled": true,
-              "CueId": "food.drink",
-              "VolumeScale": 0.78,
-              "PitchMin": 0.96,
-              "PitchMax": 1.04
-            },
-            "ConsumeKind": 1,
-            "$transform": {
-              "localPosition": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
-              }
-            }
+            "capacity": 6
           }
         }
       },
@@ -3460,7 +2997,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.3,
+      "volume": 0.4,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "47"
@@ -3644,7 +3183,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.06,
+      "volume": 0.08,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "47"
@@ -3875,7 +3416,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.055,
+      "volume": 0.08,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "47"
@@ -4059,7 +3602,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.25,
+      "volume": 0.3,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "47"
@@ -4243,7 +3788,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.65,
+      "volume": 0.75,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "47"
@@ -4427,7 +3974,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.55,
+      "volume": 0.65,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "47"
@@ -4611,7 +4160,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.3,
+      "volume": 0.4,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "47"
@@ -4795,7 +4346,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.6,
+      "volume": 0.75,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "47"
@@ -4979,7 +4532,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.08,
+      "volume": 0.2,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "47"
@@ -5163,7 +4718,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 1.0,
+      "volume": 0.8,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -5242,7 +4799,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 1.0,
+      "volume": 1.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [
         "47"
@@ -5428,7 +4987,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 2.0,
+      "weight": 1.0,
+      "volume": 1.0,
+      "stackable": false,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -5612,7 +5173,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 2.0,
+      "volume": 2.0,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [
         "47"
@@ -5756,6 +5319,9 @@
       "shellPrefab": "Ore_Stone",
       "gameName": "石头",
       "description": "可用于制作和建造的石质材料。",
+      "weight": 1.5,
+      "volume": 0.7,
+      "stackable": true,
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_404.png"
       }
@@ -5768,7 +5334,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.05,
+      "volume": 0.2,
+      "stackable": true,
       "canBePickedUp": false,
       "tags": [
         "Plant"
@@ -5966,7 +5534,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.2,
+      "volume": 0.18,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -5996,7 +5566,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.2,
+      "volume": 0.45,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -6048,7 +5620,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.3,
+      "volume": 0.25,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -6078,7 +5652,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 7.5,
+      "volume": 10.0,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {

@@ -1626,7 +1626,7 @@ public static class GameUIPrefabRebuilder
             button.colors = colors;
         }
 
-        RuntimeUIPrefabBuilder.AddCraftingPreviewLayers(root);
+        RuntimeUIPrefabBuilder.ConfigureItemSlotVisualLayers(root);
 
         ItemSlot_UI slot = root.GetComponent<ItemSlot_UI>();
         if (slot != null)

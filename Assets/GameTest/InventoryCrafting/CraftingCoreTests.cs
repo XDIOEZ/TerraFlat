@@ -265,6 +265,7 @@ namespace FlatWorld.GameTest.InventoryCrafting
             Inventory output = CreateInventory("输出", 5f, (ItemData)null);
             ItemData heavyOutput = CreateItem("anvil", 2f);
             heavyOutput.Stack.Volume = 5f;
+            heavyOutput.Stack.Stackable = false;
 
             bool prepared = CraftingTransaction.TryCreate(
                 input,
@@ -279,6 +280,82 @@ namespace FlatWorld.GameTest.InventoryCrafting
             Assert.That(failure.FailureReason, Is.EqualTo(CraftingFailureReason.OutputSpaceInsufficient));
             Assert.That(input.Data.itemSlots[0].itemData.Stack.Amount, Is.EqualTo(1f));
             Assert.That(output.Data.itemSlots[0].itemData, Is.Null);
+        }
+
+        [Test]
+        [Category("InventoryCrafting.Core")]
+        public void Transaction_PhysicalVolume_DoesNotDecideStackability()
+        {
+            Inventory input = CreateInventory("输入", 10f, CreateItem("wood", 1f));
+            Inventory output = CreateInventory("输出", 5f, (ItemData)null);
+            ItemData bulkyStackableOutput = CreateItem("bundle", 2f);
+            bulkyStackableOutput.Stack.Volume = 8f;
+            bulkyStackableOutput.Stack.Stackable = true;
+
+            bool prepared = CraftingTransaction.TryCreate(
+                input,
+                output,
+                CreateMatch(new CraftingConsumption(0, 1f)),
+                new[] { bulkyStackableOutput },
+                false,
+                out CraftingTransaction transaction,
+                out CraftingResult failure);
+
+            Assert.That(prepared, Is.True, failure?.Message);
+            Assert.That(transaction.Commit(out failure), Is.True, failure?.Message);
+            transaction.Complete();
+            Assert.That(output.Data.itemSlots[0].itemData.Stack.Amount, Is.EqualTo(2f));
+        }
+
+        [Test]
+        [Category("InventoryCrafting.Core")]
+        public void InventoryData_CarryCapacity_StopsBeforeWeightOrVolumeLimitWithoutSplittingWholeItems()
+        {
+            Inventory weightLimited = CreateInventory("重量背包", 100f, (ItemData)null);
+            weightLimited.Data.ConfigurePlayerBagCapacity(5f, 100f);
+            ItemData ore = CreateItem("ore", 3f);
+            ore.Stack.Weight = 2f;
+            ore.Stack.Volume = 1f;
+
+            Assert.That(weightLimited.Data.TryAddItem(ore, true, out float weightAdded), Is.True);
+            Assert.That(weightAdded, Is.EqualTo(2f));
+            Assert.That(weightLimited.Data.itemSlots[0].itemData.Stack.Amount, Is.EqualTo(2f));
+            Assert.That(weightLimited.Data.CurrentCarryWeight, Is.EqualTo(4f).Within(0.0001f));
+            Assert.That(ore.Stack.CanBePickedUp, Is.True, "部分入包时来源物品必须保留可拾取状态。");
+
+            Inventory volumeLimited = CreateInventory("体积背包", 100f, (ItemData)null);
+            volumeLimited.Data.ConfigurePlayerBagCapacity(100f, 5f);
+            ItemData bundle = CreateItem("bundle", 3f);
+            bundle.Stack.Weight = 1f;
+            bundle.Stack.Volume = 2f;
+
+            Assert.That(volumeLimited.Data.TryAddItem(bundle, true, out float volumeAdded), Is.True);
+            Assert.That(volumeAdded, Is.EqualTo(2f));
+            Assert.That(volumeLimited.Data.itemSlots[0].itemData.Stack.Amount, Is.EqualTo(2f));
+            Assert.That(volumeLimited.Data.CurrentCarryVolume, Is.EqualTo(4f).Within(0.0001f));
+        }
+
+        [Test]
+        [Category("InventoryCrafting.Core")]
+        public void InventoryData_CreativeCapacity_IsUnlimitedButNonStackableItemsStillUseSeparateSlots()
+        {
+            Inventory inventory = CreateInventory("创造背包", 100f, (ItemData)null);
+            inventory.Data.ConfigurePlayerBagCapacity(1f, 1f);
+            inventory.Data.SetUnlimitedSlots(true);
+            inventory.Data.SetUnlimitedCarryCapacity(true);
+
+            ItemData tools = CreateItem("tool", 3f);
+            tools.Stack.Weight = 100f;
+            tools.Stack.Volume = 100f;
+            tools.Stack.Stackable = false;
+
+            Assert.That(inventory.Data.TryAddItem(tools, true, out float added), Is.True);
+            Assert.That(added, Is.EqualTo(3f));
+            Assert.That(inventory.Data.itemSlots.FindAll(slot => slot.itemData != null), Has.Count.EqualTo(3));
+            Assert.That(inventory.Data.itemSlots, Has.Count.EqualTo(4), "创造背包应在三个独占槽后继续保留一个空余槽。");
+            Assert.That(inventory.Data.itemSlots[0].itemData.Stack.Amount, Is.EqualTo(1f));
+            Assert.That(inventory.Data.itemSlots[1].itemData.Stack.Amount, Is.EqualTo(1f));
+            Assert.That(inventory.Data.itemSlots[2].itemData.Stack.Amount, Is.EqualTo(1f));
         }
 
         private static CraftingRecipeMatch CreateMatch(params CraftingConsumption[] consumptions)

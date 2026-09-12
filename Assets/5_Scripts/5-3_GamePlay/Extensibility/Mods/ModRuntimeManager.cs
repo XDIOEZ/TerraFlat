@@ -1340,6 +1340,10 @@ public sealed class ModRuntimeManager : MonoBehaviour
             item.itemData.Stack.Amount = definition.Amount.Value;
         if (definition.Volume.HasValue)
             item.itemData.Stack.Volume = definition.Volume.Value;
+        if (definition.Weight.HasValue)
+            item.itemData.Stack.Weight = definition.Weight.Value;
+        if (definition.Stackable.HasValue)
+            item.itemData.Stack.Stackable = definition.Stackable.Value;
         if (definition.CanBePickedUp.HasValue)
             item.itemData.Stack.CanBePickedUp = definition.CanBePickedUp.Value;
 

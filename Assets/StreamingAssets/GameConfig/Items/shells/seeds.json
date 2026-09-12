@@ -3,6 +3,9 @@
   "items": [
     {
       "id": "Seed_Base",
+      "weight": 0.02,
+      "volume": 0.05,
+      "stackable": true,
       "abstract": true,
       "shellPrefab": "Seed",
       "visual": {
@@ -18,7 +21,9 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "volume": 1.0,
+      "weight": 0.02,
+      "volume": 0.05,
+      "stackable": true,
       "canBePickedUp": true,
       "tags": [],
       "visual": {
@@ -125,6 +130,9 @@
       "parent": "Seed_Apple",
       "gameName": "萝卜种子",
       "description": "种下后会长出萝卜；萝卜成熟时可以收获新的萝卜和种子。",
+      "weight": 0.02,
+      "volume": 0.05,
+      "stackable": true,
       "modules": {
         "plantable": {
           "parameters": {
@@ -138,6 +146,9 @@
       "parent": "Seed_Radish",
       "gameName": "蘑菇孢子",
       "description": "种下后会长出蘑菇；成熟时可以收获蘑菇，并有机会得到新的孢子。",
+      "weight": 0.02,
+      "volume": 0.05,
+      "stackable": true,
       "modules": {
         "plantable": {
           "parameters": {
@@ -151,6 +162,9 @@
       "parent": "Seed_Radish",
       "gameName": "浆果种子",
       "description": "种在耕地上长成浆果灌木；成熟后周期结果，采摘后植株保留。",
+      "weight": 0.02,
+      "volume": 0.05,
+      "stackable": true,
       "modules": {
         "plantable": {
           "parameters": {
