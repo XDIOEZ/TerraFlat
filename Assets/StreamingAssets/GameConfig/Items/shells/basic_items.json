@@ -2909,6 +2909,7 @@
         "spriteAddress": "Assets/6_Art/Food/椰子壳-空.png",
         "spriteStates": {
           "empty": "Assets/6_Art/Food/椰子壳-空.png",
+          "filled": "Assets/6_Art/Food/椰子壳-有水.png",
           "dirty": "Assets/6_Art/Food/椰子壳-脏水.png",
           "drinkable": "Assets/6_Art/Food/椰子壳-有水.png",
           "sea": "Assets/6_Art/Food/椰子壳-有水.png"

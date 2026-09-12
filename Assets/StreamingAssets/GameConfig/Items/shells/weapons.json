@@ -1187,7 +1187,7 @@
       "volume": 4.0,
       "stackable": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Archery/WoodBow_Icon.png"
+        "spriteAddress": "Assets/6_Art/Generated/Archery/RecurveBow_Icon.png"
       },
       "modules": {
         "bow": {

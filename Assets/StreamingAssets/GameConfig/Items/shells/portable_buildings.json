@@ -4,13 +4,13 @@
     {
       "id": "ClayJar_Building",
       "parent": "BuildingBody_Base",
-      "gameName": "陶罐",
+      "gameName": "陶罐-建筑",
       "description": "放置在地上的陶罐。交互打开水容器面板，脏水和烧开的饮用水都可直接喝，也可倒空、从手持陶罐转水或拆回；水量、水质与加热进度随容器保存。",
       "durability": 1,
       "maxDurability": 1,
       "amount": 1,
-      "weight": 3.0,
-      "volume": 8.0,
+      "weight": 3,
+      "volume": 8,
       "stackable": false,
       "canBePickedUp": false,
       "tags": [

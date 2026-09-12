@@ -555,7 +555,7 @@
     },
     {
       "id": "core:熟铁镐",
-      "displayName": "熟铁镐",
+      "displayName": "熟铁铁镐",
       "recipeType": "crafting",
       "inputRule": "unordered",
       "gridWidth": 3,

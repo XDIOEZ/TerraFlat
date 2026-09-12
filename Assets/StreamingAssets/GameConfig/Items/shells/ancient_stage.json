@@ -111,10 +111,11 @@
       "volume": 0.7,
       "stackable": true,
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Clay/Clay_Icon.png",
         "color": {
-          "r": 0.7,
-          "g": 0.4,
-          "b": 0.25,
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1
         }
       }
@@ -272,10 +273,11 @@
       "volume": 0.25,
       "stackable": true,
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/HerbPoultice/Item_HerbPoultice.png",
         "color": {
-          "r": 0.55,
-          "g": 1,
-          "b": 0.6,
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1
         }
       },
@@ -427,10 +429,11 @@
       "volume": 30.0,
       "stackable": true,
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Stone_Tile.png",
         "color": {
-          "r": 0.65,
-          "g": 0.68,
-          "b": 0.72,
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1
         }
       },
@@ -455,10 +458,11 @@
       "volume": 30.0,
       "stackable": true,
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Copper_Tile.png",
         "color": {
-          "r": 0.95,
-          "g": 0.53,
-          "b": 0.3,
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1
         }
       },
@@ -511,10 +515,11 @@
       "volume": 30.0,
       "stackable": true,
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Iron_Tile.png",
         "color": {
-          "r": 0.72,
-          "g": 0.79,
-          "b": 0.86,
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1
         }
       },
@@ -567,10 +572,11 @@
       "volume": 30.0,
       "stackable": true,
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Bronze_Tile.png",
         "color": {
-          "r": 0.85,
-          "g": 0.71,
-          "b": 0.32,
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1
         }
       },
@@ -669,6 +675,10 @@
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png",
+        "spriteStates": {
+          "empty": "Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png",
+          "filled": "Assets/6_Art/Generated/ClayJar/ClayJar_Filled.png"
+        },
         "color": {
           "r": 1,
           "g": 1,
@@ -783,7 +793,52 @@
                 "Data": {
                   "EnableSpoilage": true,
                   "SpoilageElapsedSeconds": 0.0,
-                  "SpoilageIntervalSeconds": 3600.0,
+                  "SpoilageIntervalSeconds": 900.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Food/Item_Jam.png",
+        "color": {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      }
+    },
+    {
+      "id": "BottledJam",
+      "parent": "Jam",
+      "gameName": "瓶装果酱",
+      "tags": [
+        "47",
+        "PreserveFreshness"
+      ],
+      "description": "用陶罐密封保存的果酱，保质期为一个游戏年；装瓶时继承原果酱的剩余新鲜度。",
+      "weight": 3.5,
+      "volume": 8.5,
+      "stackable": false,
+      "modules": {
+        "food": {
+          "data": {
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 34560.0,
                   "SpoilageTargetItemID": "Humus"
                 }
               },

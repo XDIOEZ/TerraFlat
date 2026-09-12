@@ -460,6 +460,40 @@
         }
       ],
       "actions": []
+    },
+    {
+      "id": "core:bottled_jam",
+      "displayName": "瓶装果酱",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Jam",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "ClayJar",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "BottledJam",
+          "amount": 1
+        }
+      ],
+      "actions": []
     }
   ]
 }

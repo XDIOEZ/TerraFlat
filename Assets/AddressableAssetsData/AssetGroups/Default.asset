@@ -305,6 +305,30 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b1237bc62a1542e2ad3b3afdb1ff88c0
+    m_Address: Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Copper_Tile.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f06ac029ccc14b4fa263ef65564120b6
+    m_Address: Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Bronze_Tile.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b92fbd666bec40daac149abfba48b3e7
+    m_Address: Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Iron_Tile.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: de315b489b0d40f2abd764e9910c2d18
+    m_Address: Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Stone_Tile.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1b00a80c1db4e5e4393e1f3fb30a4ba8
     m_Address: Assets/6_Art/Generated/Straw/Straw_Icon.png
     m_ReadOnly: 0
@@ -2147,6 +2171,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5f229fd895224d588ef8cd61724e2ee6
+    m_Address: Assets/6_Art/Generated/Archery/RecurveBow_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: eae5f08c6c704a24a8bbbcb19d3dcf13
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Equipment/Module_Equipment_Store.prefab
     m_ReadOnly: 0
@@ -2327,6 +2357,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f09c0ca5b54b49e3a886b29e57c01514
+    m_Address: Assets/6_Art/Generated/ClayJar/ClayJar_Filled.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fd8723ea4457a3a48aa43f299cc9b24f
     m_Address: "Assets/2_Prefabs/World/Space/\u901A\u7528\u661F\u4F53.prefab"
     m_ReadOnly: 0
@@ -2341,6 +2377,24 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ff8bd4b9d465da04fa604a649df27157
     m_Address: Assets/6_Art/Generated/Chili/ChiliTree_Seedling.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e2cb4edbc3684c10af988c8359ca0b90
+    m_Address: Assets/6_Art/Generated/Clay/Clay_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6703c64685ba4281b85788c794107a5d
+    m_Address: Assets/6_Art/Generated/HerbPoultice/Item_HerbPoultice.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dac097067e7d437eab8bd687be90502c
+    m_Address: Assets/6_Art/Generated/Scarecrow/Scarecrow_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
