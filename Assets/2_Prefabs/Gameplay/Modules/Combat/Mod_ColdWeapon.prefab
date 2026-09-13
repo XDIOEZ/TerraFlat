@@ -74,5 +74,5 @@ MonoBehaviour:
       type: {class: ColdWeaponStaminaObserver, ns: , asm: GamePlay}
       data:
         state:
-          StaminaConsumeSpeed: 1
+          StaminaConsumeSpeed: 0.3
           StaminaConsumeSpeedRate: 1

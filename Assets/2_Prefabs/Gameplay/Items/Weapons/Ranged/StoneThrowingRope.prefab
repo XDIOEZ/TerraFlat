@@ -440,7 +440,7 @@ MonoBehaviour:
   comboWindowGrace: 0.05
   loopComboOnHold: 1
   attackSpeedMultiplier: 1
-  staminaCostPerAttack: 5
+  staminaCostPerAttack: 1.5
   ModSaveData:
     Name: 
     ID: 

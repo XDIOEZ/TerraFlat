@@ -34,7 +34,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 4.0
+            "staminaCostPerAttack": 1.2
           }
         },
         "damage": {
@@ -356,7 +356,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 6.0,
+            "staminaCostPerAttack": 1.8,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -539,7 +539,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 6.0,
+            "staminaCostPerAttack": 1.8,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -722,7 +722,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 7.0,
+            "staminaCostPerAttack": 2.1,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -905,7 +905,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 6.0,
+            "staminaCostPerAttack": 1.8,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -1060,7 +1060,7 @@
             "comboWindowGrace": 0.05,
             "loopComboOnHold": true,
             "attackSpeedMultiplier": 1.0,
-            "staminaCostPerAttack": 4.0,
+            "staminaCostPerAttack": 1.2,
             "RawData": [],
             "$transform": {
               "localPosition": {
@@ -1157,7 +1157,7 @@
             "ProjectileDamageMultiplier": 1.0,
             "MaxAimDistance": 24.0,
             "SpawnForwardOffset": 0.45,
-            "StaminaConsumePerSecond": 5.0,
+            "StaminaConsumePerSecond": 1.5,
             "NockedArrowStartLocalPosition": {
               "x": 0.14,
               "y": 0.0,
