@@ -64,3 +64,11 @@ MonoBehaviour:
     BitData: 
   LastChunk: {fileID: 0}
   arcHeight: 1
+  sinkDensityThreshold: 1
+  slowSinkDuration: 6
+  fastSinkDuration: 1.5
+  fastSinkDensityMultiplier: 3
+  floatingMinDepth: 0.08
+  floatingMaxDepth: 0.42
+  floatingEntryDepth: 0.48
+  floatingRiseDuration: 0.8

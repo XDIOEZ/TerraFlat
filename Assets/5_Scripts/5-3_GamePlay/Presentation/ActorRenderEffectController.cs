@@ -36,6 +36,7 @@ public sealed class ActorRenderEffectController : MonoBehaviour
     private readonly Dictionary<Renderer, MaterialPropertyBlock> externalOriginalPropertyBlocks =
         new Dictionary<Renderer, MaterialPropertyBlock>();
     private MaterialPropertyBlock propertyBlock;
+    private Material effectSpriteMaterialOverride;
     private bool bindingsDirty = true;
 
     public IReadOnlyList<Renderer> Renderers => renderers;
@@ -166,6 +167,12 @@ public sealed class ActorRenderEffectController : MonoBehaviour
         bindingsDirty = false;
     }
 
+    /// <summary>为仅驱动外部 Renderer 的临时效果控制器指定共享 Sprite 效果材质。</summary>
+    public void SetEffectSpriteMaterial(Material material)
+    {
+        effectSpriteMaterialOverride = material;
+    }
+
     /// <summary>注册手持物等不在角色表现节点下的附属 Renderer，并临时继承角色效果材质。</summary>
     public void RegisterExternalRenderers(Transform root)
     {
@@ -235,6 +242,9 @@ public sealed class ActorRenderEffectController : MonoBehaviour
     /// <summary>查找支持角色效果参数的主体 Sprite 材质。</summary>
     private Material FindEffectSpriteMaterial()
     {
+        if (effectSpriteMaterialOverride != null && effectSpriteMaterialOverride.HasProperty(BodyMinVId))
+            return effectSpriteMaterialOverride;
+
         for (int i = 0; i < renderers.Count; i++)
         {
             Renderer renderer = renderers[i];

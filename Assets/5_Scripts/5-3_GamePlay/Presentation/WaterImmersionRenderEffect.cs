@@ -107,6 +107,9 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
     private float currentReferenceHeight = 1f;
     private bool hasWorldWaterReference;
 
+    public float CurrentDepth => currentDepth;
+    public float CurrentBlend => currentBlend;
+
     #endregion
 
     #region Lifecycle
@@ -141,6 +144,12 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
     {
         targetDepth = Mathf.Clamp01(depth);
         targetBlend = inWater ? 1f : 0f;
+    }
+
+    /// <summary>指定计算世界水平水线的主体 Sprite；供手持物、掉落物等外部表现复用。</summary>
+    public void SetReferenceRenderer(SpriteRenderer renderer)
+    {
+        referenceSpriteRenderer = renderer;
     }
 
     #endregion
