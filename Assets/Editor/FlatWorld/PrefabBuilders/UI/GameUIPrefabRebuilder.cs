@@ -63,7 +63,7 @@ public static class GameUIPrefabRebuilder
         { InventoryPanelsRoot + "UI_Equipment.prefab", new[] { "UI_Content", "关闭" } },
         { CraftingRoot + "UI_HandCraftTable.prefab", new[] { "输入_1", "输入_4", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, "合成按钮", "关闭" } },
         { CraftingRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_5", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, "合成按钮", "关闭" } },
-        { CraftingRoot + "UI_Furnace.prefab", new[] { "输入_1", "输入_2", "输入_3", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "合成按钮", "关闭" } },
+        { CraftingRoot + "UI_Furnace.prefab", new[] { "输入_1", "输入_2", "输入_3", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "FWUI_FurnaceTemperatureValue", "合成按钮", "关闭" } },
         { CraftingRoot + "UI_Bonfire.prefab", new[] { "输入_1", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "合成按钮", "关闭" } },
         { CraftingRoot + "UI_FireDrill.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
         { CraftingRoot + "UI_FlintStrike.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
@@ -1150,6 +1150,8 @@ public static class GameUIPrefabRebuilder
                     processBar.localScale = Vector3.one;
                     processBar.localRotation = Quaternion.identity;
                     SetTopLeft(processBar, 0f, 0f, 220f, 18f);
+                    if (processBar.TryGetComponent(out Slider processSlider))
+                        processSlider.interactable = false;
                 }
 
                 RectTransform fuelBar = FindRect(sliders, "燃料显示条");
@@ -1158,33 +1160,24 @@ public static class GameUIPrefabRebuilder
                     fuelBar.localScale = Vector3.one;
                     fuelBar.localRotation = Quaternion.identity;
                     SetTopLeft(fuelBar, 0f, 52f, 220f, 18f);
+                    if (fuelBar.TryGetComponent(out Slider fuelSlider))
+                        fuelSlider.interactable = false;
                 }
 
                 AddFurnaceProcessLabel(frame, "FWUI_FurnaceProgressLabel", "熔炼进度", 316f, 284f, 220f);
                 AddFurnaceProcessLabel(frame, "FWUI_FurnaceFuelLabel", "燃料余量", 316f, 336f, 220f);
+                AddFurnaceTemperatureLabel(frame);
             }
         }
 
-        RectTransform illustration = FindDirectRect(root.transform, bonfire ? "Image_1" : "Image_2");
+        RectTransform illustration = bonfire ? FindDirectRect(root.transform, "Image_1") : null;
         if (illustration != null)
         {
-            if (bonfire)
+            SetTopLeft(illustration, 314f, 184f, 112f, 64f);
+            if (illustration.TryGetComponent(out Image illustrationImage))
             {
-                SetTopLeft(illustration, 314f, 184f, 112f, 64f);
-                if (illustration.TryGetComponent(out Image illustrationImage))
-                {
-                    illustrationImage.preserveAspect = true;
-                    illustrationImage.raycastTarget = false;
-                }
-            }
-            else
-            {
-                SetTopLeft(illustration, 358f, 168f, 132f, 104f);
-                if (illustration.TryGetComponent(out Image illustrationImage))
-                {
-                    illustrationImage.preserveAspect = true;
-                    illustrationImage.raycastTarget = false;
-                }
+                illustrationImage.preserveAspect = true;
+                illustrationImage.raycastTarget = false;
             }
         }
 
@@ -1202,6 +1195,10 @@ public static class GameUIPrefabRebuilder
         if (legacyOverlay != null)
             UnityEngine.Object.DestroyImmediate(legacyOverlay.gameObject);
 
+        RectTransform processArrow = FindDirectRect(root, "Image_2");
+        if (processArrow != null)
+            UnityEngine.Object.DestroyImmediate(processArrow.gameObject);
+
         string[] legacyLabels = { "Text (TMP)", "Text (TMP)_1", "Text (TMP)_2" };
         foreach (string labelName in legacyLabels)
         {
@@ -1216,6 +1213,21 @@ public static class GameUIPrefabRebuilder
     {
         TextMeshProUGUI label = CreateText(name, frame, text, 13f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
         SetTopLeft(label.rectTransform, x, y, width, 18f);
+        label.raycastTarget = false;
+    }
+
+    /// <summary>炉温反馈只保留百位精度，因此只预留粗略数值文本，不创建精确刻度。</summary>
+    private static void AddFurnaceTemperatureLabel(RectTransform frame)
+    {
+        TextMeshProUGUI label = CreateText(
+            "FWUI_FurnaceTemperatureValue",
+            frame,
+            "当前炉温 0°C",
+            13f,
+            Muted,
+            FontStyles.Normal,
+            TextAlignmentOptions.Left);
+        SetTopLeft(label.rectTransform, 316f, 262f, 220f, 18f);
         label.raycastTarget = false;
     }
 
@@ -1270,7 +1282,7 @@ public static class GameUIPrefabRebuilder
         rect.anchorMin = new Vector2(0.5f, 0f);
         rect.anchorMax = new Vector2(0.5f, 0f);
         rect.pivot = new Vector2(0.5f, 0f);
-        rect.anchoredPosition = new Vector2(0f, 28f);
+        rect.anchoredPosition = new Vector2(0f, UIUserSettings.DefaultHotbarBottomSpacing);
         rect.sizeDelta = new Vector2(890f, 104f);
 
         Image image = EnsureImage(root);

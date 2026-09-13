@@ -10,12 +10,14 @@ using UnityEngine.UI;
 public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecycle
 {
     private Slider scaleSlider;
+    private Slider hotbarBottomSpacingSlider;
     private Slider touchControlsOpacitySlider;
     private Slider leftControlZoneSlider;
     private Slider rightControlZoneSlider;
     private Toggle safeAreaToggle;
     private Toggle floatingMoveJoystickToggle;
     private TextMeshProUGUI scaleValueText;
+    private TextMeshProUGUI hotbarBottomSpacingValueText;
     private TextMeshProUGUI touchControlsOpacityValueText;
     private TextMeshProUGUI leftControlZoneValueText;
     private TextMeshProUGUI rightControlZoneValueText;
@@ -23,6 +25,7 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
     private TextMeshProUGUI statusText;
     private Button resetButton;
     private ISettingsSlider scaleSetting;
+    private ISettingsSlider hotbarBottomSpacingSetting;
     private ISettingsSlider touchControlsOpacitySetting;
     private ISettingsSlider leftControlZoneSetting;
     private ISettingsSlider rightControlZoneSetting;
@@ -51,6 +54,8 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
 
         ISettingsProvider provider = UIUserSettings.SettingsProvider;
         scaleSetting = provider.GetSlider(UIUserSettings.ScaleSettingKey);
+        hotbarBottomSpacingSetting =
+            provider.GetSlider(UIUserSettings.HotbarBottomSpacingSettingKey);
         touchControlsOpacitySetting =
             provider.GetSlider(UIUserSettings.TouchControlsOpacitySettingKey);
         leftControlZoneSetting =
@@ -62,12 +67,15 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
             provider.GetToggle(UIUserSettings.FloatingMoveJoystickSettingKey);
 
         scaleSlider = FindComponent<Slider>(transform, "界面缩放");
+        hotbarBottomSpacingSlider = FindComponent<Slider>(transform, "快捷栏底部间距");
         touchControlsOpacitySlider = FindComponent<Slider>(transform, "触屏控件透明度");
         leftControlZoneSlider = FindComponent<Slider>(transform, "左侧触控区比例");
         rightControlZoneSlider = FindComponent<Slider>(transform, "右侧触控区比例");
         safeAreaToggle = FindComponent<Toggle>(transform, "安全区域适配");
         floatingMoveJoystickToggle = FindComponent<Toggle>(transform, "浮动移动摇杆");
         scaleValueText = FindComponent<TextMeshProUGUI>(transform, "界面缩放数值");
+        hotbarBottomSpacingValueText =
+            FindComponent<TextMeshProUGUI>(transform, "快捷栏底部间距数值");
         touchControlsOpacityValueText =
             FindComponent<TextMeshProUGUI>(transform, "触屏控件透明度数值");
         leftControlZoneValueText = FindComponent<TextMeshProUGUI>(transform, "左侧触控区数值");
@@ -77,12 +85,16 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
         resetButton = FindComponent<Button>(transform, "恢复默认按钮");
 
         ConfigureSlider(scaleSlider, scaleSetting);
+        ConfigureSlider(hotbarBottomSpacingSlider, hotbarBottomSpacingSetting);
+        if (hotbarBottomSpacingSlider != null)
+            hotbarBottomSpacingSlider.wholeNumbers = true;
         ConfigureSlider(touchControlsOpacitySlider, touchControlsOpacitySetting);
         if (touchControlsOpacitySlider != null)
             touchControlsOpacitySlider.wholeNumbers = true;
         ConfigureSlider(leftControlZoneSlider, leftControlZoneSetting);
         ConfigureSlider(rightControlZoneSlider, rightControlZoneSetting);
         scaleSlider?.onValueChanged.AddListener(OnScaleChanged);
+        hotbarBottomSpacingSlider?.onValueChanged.AddListener(OnHotbarBottomSpacingChanged);
         touchControlsOpacitySlider?.onValueChanged.AddListener(OnTouchControlsOpacityChanged);
         leftControlZoneSlider?.onValueChanged.AddListener(OnLeftControlZoneChanged);
         rightControlZoneSlider?.onValueChanged.AddListener(OnRightControlZoneChanged);
@@ -91,10 +103,12 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
         resetButton?.onClick.AddListener(ResetToDefault);
         initialized = true;
 
-        if (scaleSlider == null || touchControlsOpacitySlider == null ||
+        if (scaleSlider == null || hotbarBottomSpacingSlider == null ||
+            touchControlsOpacitySlider == null ||
             leftControlZoneSlider == null ||
             rightControlZoneSlider == null || safeAreaToggle == null ||
             floatingMoveJoystickToggle == null || scaleValueText == null ||
+            hotbarBottomSpacingValueText == null ||
             touchControlsOpacityValueText == null ||
             leftControlZoneValueText == null || rightControlZoneValueText == null ||
             controlZoneStatusText == null || statusText == null || resetButton == null)
@@ -121,6 +135,15 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
     {
         scaleSetting?.SetValue(value);
         scaleSlider?.SetValueWithoutNotify(scaleSetting?.Value ?? value);
+        RefreshStatus();
+    }
+
+    /// <summary>写入快捷栏相对屏幕底边的额外间距。</summary>
+    private void OnHotbarBottomSpacingChanged(float value)
+    {
+        hotbarBottomSpacingSetting?.SetValue(value);
+        hotbarBottomSpacingSlider?.SetValueWithoutNotify(
+            hotbarBottomSpacingSetting?.Value ?? value);
         RefreshStatus();
     }
 
@@ -174,6 +197,8 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
     {
         if (scaleSlider != null && scaleSetting != null)
             scaleSlider.SetValueWithoutNotify(scaleSetting.Value);
+        if (hotbarBottomSpacingSlider != null && hotbarBottomSpacingSetting != null)
+            hotbarBottomSpacingSlider.SetValueWithoutNotify(hotbarBottomSpacingSetting.Value);
         if (touchControlsOpacitySlider != null && touchControlsOpacitySetting != null)
             touchControlsOpacitySlider.SetValueWithoutNotify(touchControlsOpacitySetting.Value);
         if (leftControlZoneSlider != null && leftControlZoneSetting != null)
@@ -192,6 +217,8 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
     {
         if (scaleValueText != null && scaleSetting != null)
             scaleValueText.text = ToPercent(scaleSetting.Value);
+        if (hotbarBottomSpacingValueText != null && hotbarBottomSpacingSetting != null)
+            hotbarBottomSpacingValueText.text = $"{Mathf.RoundToInt(hotbarBottomSpacingSetting.Value)} px";
         if (touchControlsOpacityValueText != null && touchControlsOpacitySetting != null)
             touchControlsOpacityValueText.text = ToWholePercent(touchControlsOpacitySetting.Value);
         if (leftControlZoneValueText != null && leftControlZoneSetting != null)
@@ -230,6 +257,7 @@ public sealed class UISettingsPanelLauncher : MonoBehaviour, ISettingsPageLifecy
     private void OnDestroy()
     {
         scaleSlider?.onValueChanged.RemoveListener(OnScaleChanged);
+        hotbarBottomSpacingSlider?.onValueChanged.RemoveListener(OnHotbarBottomSpacingChanged);
         touchControlsOpacitySlider?.onValueChanged.RemoveListener(OnTouchControlsOpacityChanged);
         leftControlZoneSlider?.onValueChanged.RemoveListener(OnLeftControlZoneChanged);
         rightControlZoneSlider?.onValueChanged.RemoveListener(OnRightControlZoneChanged);

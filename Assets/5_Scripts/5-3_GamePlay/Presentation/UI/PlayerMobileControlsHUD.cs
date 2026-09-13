@@ -126,6 +126,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         UIUserSettings.MobileControlsChanged += HandleMobileControlsSettingsChanged;
         UIUserSettings.TouchControlsOpacityChanged -= HandleTouchControlsOpacityChanged;
         UIUserSettings.TouchControlsOpacityChanged += HandleTouchControlsOpacityChanged;
+        UIUserSettings.HotbarLayoutChanged -= HandleHotbarLayoutChanged;
+        UIUserSettings.HotbarLayoutChanged += HandleHotbarLayoutChanged;
         AndroidSystemGestureInsets.Changed -= HandleSystemGestureInsetsChanged;
         AndroidSystemGestureInsets.Changed += HandleSystemGestureInsetsChanged;
         Canvas.willRenderCanvases -= RefreshAimCursorBeforeCanvasRender;
@@ -142,6 +144,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             controller.ActiveInputDeviceChanged -= HandleInputDeviceChanged;
         UIUserSettings.MobileControlsChanged -= HandleMobileControlsSettingsChanged;
         UIUserSettings.TouchControlsOpacityChanged -= HandleTouchControlsOpacityChanged;
+        UIUserSettings.HotbarLayoutChanged -= HandleHotbarLayoutChanged;
         AndroidSystemGestureInsets.Changed -= HandleSystemGestureInsetsChanged;
         Canvas.willRenderCanvases -= RefreshAimCursorBeforeCanvasRender;
         UnbindRunStateVisual();
@@ -907,7 +910,9 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         float gestureBottomPadding = AndroidSystemGestureInsets.GetAdditionalBottomPadding(
             safeRoot,
             occupiedScreenArea);
-        hotbarRect.anchoredPosition = new Vector2(0f, gestureBottomPadding);
+        hotbarRect.anchoredPosition = new Vector2(
+            0f,
+            gestureBottomPadding + UIUserSettings.HotbarBottomSpacing);
         ApplyHotbarInteractionPriority(UIManager.Instance.HasOpenGameplayInputBlockingPanel());
         ApplyTouchControlsOpacity();
         return true;
@@ -934,6 +939,12 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         hotbarConfigured = TryConfigureHotbarWidth();
         if (!hotbarConfigured && hotbarSetupCoroutine == null)
             hotbarSetupCoroutine = StartCoroutine(ConfigureHotbarWhenReady());
+    }
+
+    /// <summary>快捷栏间距设置改变时，按当前安全区和系统手势边距重新放置手机快捷栏。</summary>
+    private void HandleHotbarLayoutChanged()
+    {
+        HandleSystemGestureInsetsChanged();
     }
 
     /// <summary>记录快捷栏在首次切入手机 HUD 前的桌面父节点和布局。</summary>
@@ -1040,7 +1051,9 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         hotbarOriginalRect.anchorMax = hotbarOriginalAnchorMax;
         hotbarOriginalRect.pivot = hotbarOriginalPivot;
         hotbarOriginalRect.sizeDelta = hotbarOriginalSizeDelta;
-        hotbarOriginalRect.anchoredPosition = hotbarOriginalAnchoredPosition;
+        Vector2 restoredPosition = hotbarOriginalAnchoredPosition;
+        restoredPosition.y = UIUserSettings.HotbarBottomSpacing;
+        hotbarOriginalRect.anchoredPosition = restoredPosition;
         hotbarOriginalRect.localScale = hotbarOriginalLocalScale;
         ApplyHotbarInteractionPriority(false);
     }

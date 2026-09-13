@@ -1526,7 +1526,7 @@ public static partial class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>构建界面缩放、触屏控件透明度、安全区、移动摇杆模式与触控分区设置页。</summary>
+    /// <summary>构建界面缩放、快捷栏间距、触屏控件透明度、安全区、移动摇杆模式与触控分区设置页。</summary>
     private static GameObject BuildInterfaceSettings()
     {
         GameObject root = CreateSettingsPageRoot(
@@ -1552,6 +1552,22 @@ public static partial class RuntimeUIPrefabBuilder
             Amber);
         valueText.alignment = TextAlignmentOptions.MidlineRight;
         valueText.gameObject.AddComponent<LayoutElement>().preferredWidth = 58f;
+
+        GameObject hotbarSpacingRow = CreateRow("快捷栏底部间距行", content, 52f);
+        CreateRowLabel(hotbarSpacingRow.transform, "快捷栏底部间距", 136f);
+        Slider hotbarSpacingSlider = CreateSlider("快捷栏底部间距", hotbarSpacingRow.transform);
+        hotbarSpacingSlider.minValue = UIUserSettings.MinimumHotbarBottomSpacing;
+        hotbarSpacingSlider.maxValue = UIUserSettings.MaximumHotbarBottomSpacing;
+        hotbarSpacingSlider.wholeNumbers = true;
+        hotbarSpacingSlider.value = UIUserSettings.DefaultHotbarBottomSpacing;
+        TextMeshProUGUI hotbarSpacingValue = CreateText(
+            "快捷栏底部间距数值",
+            hotbarSpacingRow.transform,
+            $"{Mathf.RoundToInt(UIUserSettings.DefaultHotbarBottomSpacing)} px",
+            16f,
+            Amber);
+        hotbarSpacingValue.alignment = TextAlignmentOptions.MidlineRight;
+        hotbarSpacingValue.gameObject.AddComponent<LayoutElement>().preferredWidth = 58f;
 
         GameObject opacityRow = CreateRow("触屏控件透明度行", content, 52f);
         CreateRowLabel(opacityRow.transform, "触屏控件透明度", 128f);

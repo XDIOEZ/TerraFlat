@@ -216,6 +216,9 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         RuntimeInventory.item = item;
         RuntimeInventory.InitData();
         EnsureHotBarUIOnLoad();
+        UIUserSettings.HotbarLayoutChanged -= HandleHotbarLayoutChanged;
+        UIUserSettings.HotbarLayoutChanged += HandleHotbarLayoutChanged;
+        ApplyDesktopHotbarBottomSpacing();
         BindInventoryController();
     }
 
@@ -290,6 +293,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
     private void OnDestroy()
     {
+        UIUserSettings.HotbarLayoutChanged -= HandleHotbarLayoutChanged;
         UnbindHotbarInput();
         RuntimeInventory?.UnbindController();
         HeldItemChanged?.Invoke(null);
@@ -466,6 +470,25 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         {
             RuntimeInventory.basePanel.Open();
         }
+    }
+
+    /// <summary>桌面快捷栏只在 SafeAreaRoot 下由这里应用底部间距，手机端由手机 HUD 叠加系统手势边距。</summary>
+    private void HandleHotbarLayoutChanged()
+    {
+        ApplyDesktopHotbarBottomSpacing();
+    }
+
+    /// <summary>将当前用户偏好写入桌面快捷栏的 Y 偏移，不抢占手机端临时布局所有权。</summary>
+    private void ApplyDesktopHotbarBottomSpacing()
+    {
+        RectTransform hotbarRect = RuntimeInventory?.basePanel?.transform as RectTransform;
+        UIManager manager = UIManager.ExistingInstance;
+        if (hotbarRect == null || manager == null || hotbarRect.parent != manager.SafeAreaRoot)
+            return;
+
+        Vector2 position = hotbarRect.anchoredPosition;
+        position.y = UIUserSettings.HotbarBottomSpacing;
+        hotbarRect.anchoredPosition = position;
     }
 
 #endregion

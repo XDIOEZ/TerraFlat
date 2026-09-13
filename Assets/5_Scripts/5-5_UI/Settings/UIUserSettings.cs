@@ -16,6 +16,7 @@ public static class UIUserSettings
     #region 键与默认值
 
     private const string ScaleKey = "FlatWorld.UI.Scale";
+    private const string HotbarBottomSpacingKey = "FlatWorld.UI.HotbarBottomSpacing";
     private const string RespectSafeAreaKey = "FlatWorld.UI.RespectSafeArea";
     private const string FloatingMoveJoystickKey = "FlatWorld.Mobile.FloatingMoveJoystick";
     private const string TouchControlsOpacityKey = "FlatWorld.Mobile.TouchControlsOpacity";
@@ -34,6 +35,10 @@ public static class UIUserSettings
 
     /// <summary>界面缩放每次调整的倍率步长。</summary>
     public const float ScaleStep = 0.05f;
+    public const float DefaultHotbarBottomSpacing = 28f;
+    public const float MinimumHotbarBottomSpacing = -128f;
+    public const float MaximumHotbarBottomSpacing = 128f;
+    public const float HotbarBottomSpacingStep = 1f;
     public const float DefaultLeftControlZoneRatio = 0.33f;
     public const float DefaultRightControlZoneRatio = 0.33f;
     public const float MinimumControlZoneRatio = 0.2f;
@@ -50,6 +55,7 @@ public static class UIUserSettings
 
     public const string SettingsProviderId = "ui";
     public const string ScaleSettingKey = "ui.scale";
+    public const string HotbarBottomSpacingSettingKey = "ui.hotbarBottomSpacing";
     public const string RespectSafeAreaSettingKey = "ui.respectSafeArea";
     public const string FloatingMoveJoystickSettingKey = "ui.floatingMoveJoystick";
     public const string TouchControlsOpacitySettingKey = "ui.touchControlsOpacity";
@@ -63,6 +69,7 @@ public static class UIUserSettings
 
     private static bool initialized;
     private static float cachedScale = DefaultScale;
+    private static float cachedHotbarBottomSpacing = DefaultHotbarBottomSpacing;
     private static bool cachedRespectSafeArea = true;
     private static bool cachedFloatingMoveJoystick = true;
     private static float cachedTouchControlsOpacityPercent = DefaultTouchControlsOpacityPercent;
@@ -79,6 +86,9 @@ public static class UIUserSettings
     /// <summary>触屏玩法控件透明度改变时广播，不影响控件射线与交互状态。</summary>
     public static event Action TouchControlsOpacityChanged;
 
+    /// <summary>快捷栏底部间距改变时广播，桌面与手机布局各自重新应用安全边距。</summary>
+    public static event Action HotbarLayoutChanged;
+
     private static readonly ISettingsProvider settingsProvider =
         CreateSettingsProvider();
 
@@ -91,6 +101,16 @@ public static class UIUserSettings
         {
             EnsureInitialized();
             return cachedScale;
+        }
+    }
+
+    /// <summary>快捷栏相对可用屏幕底边的额外间距，单位为 UI 参考像素。</summary>
+    public static float HotbarBottomSpacing
+    {
+        get
+        {
+            EnsureInitialized();
+            return cachedHotbarBottomSpacing;
         }
     }
 
@@ -180,6 +200,21 @@ public static class UIUserSettings
         PlayerPrefs.SetFloat(ScaleKey, sanitized);
         PlayerPrefs.Save();
         Changed?.Invoke();
+        return sanitized;
+    }
+
+    /// <summary>保存快捷栏底部额外间距，并立即刷新桌面与手机快捷栏布局。</summary>
+    public static float SetHotbarBottomSpacing(float value)
+    {
+        EnsureInitialized();
+        float sanitized = SanitizeHotbarBottomSpacing(value);
+        if (Mathf.Approximately(cachedHotbarBottomSpacing, sanitized))
+            return cachedHotbarBottomSpacing;
+
+        cachedHotbarBottomSpacing = sanitized;
+        PlayerPrefs.SetFloat(HotbarBottomSpacingKey, sanitized);
+        PlayerPrefs.Save();
+        HotbarLayoutChanged?.Invoke();
         return sanitized;
     }
 
@@ -273,6 +308,9 @@ public static class UIUserSettings
         EnsureInitialized();
         bool visualChanged = !Mathf.Approximately(cachedScale, DefaultScale) ||
                              !cachedRespectSafeArea;
+        bool hotbarLayoutChanged = !Mathf.Approximately(
+            cachedHotbarBottomSpacing,
+            DefaultHotbarBottomSpacing);
         bool touchOpacityChanged = !Mathf.Approximately(
             cachedTouchControlsOpacityPercent,
             DefaultTouchControlsOpacityPercent);
@@ -283,16 +321,18 @@ public static class UIUserSettings
                              !Mathf.Approximately(
                                  cachedRightControlZoneRatio,
                                  DefaultRightControlZoneRatio);
-        if (!visualChanged && !mobileChanged && !touchOpacityChanged)
+        if (!visualChanged && !hotbarLayoutChanged && !mobileChanged && !touchOpacityChanged)
             return;
 
         cachedScale = DefaultScale;
+        cachedHotbarBottomSpacing = DefaultHotbarBottomSpacing;
         cachedRespectSafeArea = true;
         cachedFloatingMoveJoystick = true;
         cachedTouchControlsOpacityPercent = DefaultTouchControlsOpacityPercent;
         cachedLeftControlZoneRatio = DefaultLeftControlZoneRatio;
         cachedRightControlZoneRatio = DefaultRightControlZoneRatio;
         PlayerPrefs.SetFloat(ScaleKey, DefaultScale);
+        PlayerPrefs.SetFloat(HotbarBottomSpacingKey, DefaultHotbarBottomSpacing);
         PlayerPrefs.SetInt(RespectSafeAreaKey, 1);
         PlayerPrefs.SetInt(FloatingMoveJoystickKey, 1);
         PlayerPrefs.SetFloat(TouchControlsOpacityKey, DefaultTouchControlsOpacityPercent);
@@ -301,6 +341,8 @@ public static class UIUserSettings
         PlayerPrefs.Save();
         if (visualChanged)
             Changed?.Invoke();
+        if (hotbarLayoutChanged)
+            HotbarLayoutChanged?.Invoke();
         if (mobileChanged)
             MobileControlsChanged?.Invoke();
         if (touchOpacityChanged)
@@ -317,6 +359,7 @@ public static class UIUserSettings
     {
         EnsureInitialized();
         bool changed = !Mathf.Approximately(cachedScale, DefaultScale) ||
+                       !Mathf.Approximately(cachedHotbarBottomSpacing, DefaultHotbarBottomSpacing) ||
                        !cachedRespectSafeArea ||
                        !cachedFloatingMoveJoystick ||
                        !Mathf.Approximately(
@@ -335,6 +378,10 @@ public static class UIUserSettings
             return;
 
         cachedScale = DefaultScale;
+        bool hotbarLayoutChanged = !Mathf.Approximately(
+            cachedHotbarBottomSpacing,
+            DefaultHotbarBottomSpacing);
+        cachedHotbarBottomSpacing = DefaultHotbarBottomSpacing;
         cachedRespectSafeArea = true;
         bool mobileControlsChanged = !cachedFloatingMoveJoystick ||
                                      !Mathf.Approximately(
@@ -352,6 +399,7 @@ public static class UIUserSettings
         cachedLeftControlZoneRatio = DefaultLeftControlZoneRatio;
         cachedRightControlZoneRatio = DefaultRightControlZoneRatio;
         PlayerPrefs.SetFloat(ScaleKey, DefaultScale);
+        PlayerPrefs.SetFloat(HotbarBottomSpacingKey, DefaultHotbarBottomSpacing);
         PlayerPrefs.SetInt(RespectSafeAreaKey, 1);
         PlayerPrefs.SetInt(FloatingMoveJoystickKey, 1);
         PlayerPrefs.SetFloat(TouchControlsOpacityKey, DefaultTouchControlsOpacityPercent);
@@ -360,6 +408,8 @@ public static class UIUserSettings
         PlayerPrefs.SetFloat(RightControlZoneRatioKey, DefaultRightControlZoneRatio);
         PlayerPrefs.Save();
         Changed?.Invoke();
+        if (hotbarLayoutChanged)
+            HotbarLayoutChanged?.Invoke();
         if (mobileControlsChanged)
             MobileControlsChanged?.Invoke();
         if (touchOpacityChanged)
@@ -376,6 +426,7 @@ public static class UIUserSettings
         SettingsProviderRegistry.Unregister(settingsProvider);
         initialized = false;
         cachedScale = DefaultScale;
+        cachedHotbarBottomSpacing = DefaultHotbarBottomSpacing;
         cachedRespectSafeArea = true;
         cachedFloatingMoveJoystick = true;
         cachedTouchControlsOpacityPercent = DefaultTouchControlsOpacityPercent;
@@ -385,6 +436,7 @@ public static class UIUserSettings
         Changed = null;
         MobileControlsChanged = null;
         TouchControlsOpacityChanged = null;
+        HotbarLayoutChanged = null;
     }
 
     #region 设置提供者
@@ -429,11 +481,23 @@ public static class UIUserSettings
                     value => SetScale(value)),
                 new SettingsSlider(
                     new SettingDescriptor(
+                        HotbarBottomSpacingSettingKey,
+                        "快捷栏底部间距",
+                        SettingControlType.Slider,
+                        "ui",
+                        order: 1),
+                    MinimumHotbarBottomSpacing,
+                    MaximumHotbarBottomSpacing,
+                    HotbarBottomSpacingStep,
+                    () => HotbarBottomSpacing,
+                    value => SetHotbarBottomSpacing(value)),
+                new SettingsSlider(
+                    new SettingDescriptor(
                         TouchControlsOpacitySettingKey,
                         "触屏控件透明度",
                         SettingControlType.Slider,
                         "mobile",
-                        order: 1),
+                        order: 2),
                     MinimumTouchControlsOpacityPercent,
                     MaximumTouchControlsOpacityPercent,
                     TouchControlsOpacityPercentStep,
@@ -445,7 +509,7 @@ public static class UIUserSettings
                         "左侧触控区比例",
                         SettingControlType.Slider,
                         "mobile",
-                        order: 2),
+                        order: 3),
                     MinimumControlZoneRatio,
                     MaximumControlZoneRatio,
                     ControlZoneRatioStep,
@@ -457,7 +521,7 @@ public static class UIUserSettings
                         "右侧触控区比例",
                         SettingControlType.Slider,
                         "mobile",
-                        order: 3),
+                        order: 4),
                     MinimumControlZoneRatio,
                     MaximumControlZoneRatio,
                     ControlZoneRatioStep,
@@ -469,7 +533,7 @@ public static class UIUserSettings
                         "双指缩放灵敏度",
                         SettingControlType.Slider,
                         "mobile",
-                        order: 4),
+                        order: 5),
                     MinimumPinchZoomSensitivity,
                     MaximumPinchZoomSensitivity,
                     PinchZoomSensitivityStep,
@@ -520,6 +584,8 @@ public static class UIUserSettings
             return;
 
         cachedScale = SanitizeScale(PlayerPrefs.GetFloat(ScaleKey, DefaultScale));
+        cachedHotbarBottomSpacing = SanitizeHotbarBottomSpacing(
+            PlayerPrefs.GetFloat(HotbarBottomSpacingKey, DefaultHotbarBottomSpacing));
         cachedRespectSafeArea = PlayerPrefs.GetInt(RespectSafeAreaKey, 1) != 0;
         cachedFloatingMoveJoystick = PlayerPrefs.GetInt(FloatingMoveJoystickKey, 1) != 0;
         cachedTouchControlsOpacityPercent = SanitizeTouchControlsOpacityPercent(
@@ -537,6 +603,19 @@ public static class UIUserSettings
     {
         float clamped = Mathf.Clamp(value, MinimumScale, MaximumScale);
         return Mathf.Round(clamped / ScaleStep) * ScaleStep;
+    }
+
+    /// <summary>把快捷栏底部间距限制到界面设置页允许的整数参考像素范围。</summary>
+    private static float SanitizeHotbarBottomSpacing(float value)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value))
+            value = DefaultHotbarBottomSpacing;
+
+        float clamped = Mathf.Clamp(
+            value,
+            MinimumHotbarBottomSpacing,
+            MaximumHotbarBottomSpacing);
+        return Mathf.Round(clamped / HotbarBottomSpacingStep) * HotbarBottomSpacingStep;
     }
 
     /// <summary>把双指缩放灵敏度限制为设置页显示的整数范围。</summary>
