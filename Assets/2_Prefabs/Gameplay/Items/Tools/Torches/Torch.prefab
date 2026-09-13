@@ -55,7 +55,7 @@ MonoBehaviour:
   comboWindowGrace: 0.05
   loopComboOnHold: 1
   attackSpeedMultiplier: 1
-  staminaCostPerAttack: 4
+  staminaCostPerAttack: 1.2
   ModSaveData:
     Name: 
     ID: 
@@ -548,6 +548,8 @@ MonoBehaviour:
     Intensity: 1
     Range: 8
     InnerRadius: 0.1
+  keepUpperSpriteEmissive: 1
+  emissiveStartLocalY: 0.38
 --- !u!114 &7643096827154029811
 MonoBehaviour:
   m_ObjectHideFlags: 0
