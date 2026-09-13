@@ -1558,11 +1558,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 12625631102623744
-    m_Localized: Clay Jar
+    m_Localized: Clay Jar - Building
     m_Metadata:
       m_Items: []
   - m_Id: 12625631161344000
-    m_Localized: Stone Mortar
+    m_Localized: Stone Mortar - Building
     m_Metadata:
       m_Items: []
   - m_Id: 12651324746227712
@@ -1667,6 +1667,37 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 12651324825919511
     m_Localized: Jam.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12735264685285376
+    m_Localized: 'Iron Ore
+
+
+      Mine copper first with a stone pickaxe. Once you
+      have a copper pickaxe, use it to mine iron ore.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12735264865640448
+    m_Localized: 'Crude Iron Pickaxe
+
+
+      Combine crude iron with a wooden handle
+      and rope to make a crude iron pickaxe.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12735264865640449
+    m_Localized: 'Bronze
+
+
+      Smelt copper and tin at a 9:1 ratio to make bronze.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12735264865640450
+    m_Localized: 'Before Going Deeper
+
+
+      Bring enough drinking water in a clay
+      vessel and enough food before searching deeper cave veins.'
     m_Metadata:
       m_Items: []
   references:

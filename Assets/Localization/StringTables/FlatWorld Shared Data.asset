@@ -1651,6 +1651,22 @@ MonoBehaviour:
     m_Key: item.Jam.description
     m_Metadata:
       m_Items: []
+  - m_Id: 12735264685285376
+    m_Key: item.MinersNote.page.1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12735264865640448
+    m_Key: item.MinersNote.page.2
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12735264865640449
+    m_Key: item.MinersNote.page.3
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12735264865640450
+    m_Key: item.MinersNote.page.4
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

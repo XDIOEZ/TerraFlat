@@ -2322,6 +2322,10 @@ MonoBehaviour:
     m_Localized: Empty the container before filling it with a different liquid.
     m_Metadata:
       m_Items: []
+  - m_Id: 12633309287800841
+    m_Localized: Hotbar Bottom Spacing
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
