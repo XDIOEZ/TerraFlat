@@ -38,6 +38,9 @@ public class PlayerAdminController : Module
     [Tooltip("食物模块（管理员模式维持不饿）")]
     public Mod_Food foodMod;
 
+    [Tooltip("体力模块（管理员身份拥有无限体力）")]
+    public Mod_Stamina staminaMod;
+
     public Mod_Cam adminCamera;
     public Mod_ChunkLoader chunkLoader;
 
@@ -126,6 +129,9 @@ public class PlayerAdminController : Module
             if (foodMod == null)
                 foodMod = player.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
 
+            if (staminaMod == null)
+                staminaMod = player.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
+
             if (adminCamera == null)
                 adminCamera = player.itemMods.GetMod_ByID<Mod_Cam>(ModText.Camera);
 
@@ -163,7 +169,7 @@ public class PlayerAdminController : Module
         if (keyboard?.f1Key.wasPressedThisFrame == true)
         {
             Debug.Log("F1键被按下，切换管理员身份");
-            player.Data.Name_User = AdminName;
+            TryEnableAdministrator();
         }
 
         // F2：一键启用创造背包并自动打开玩家行囊；该开发入口不要求先切换管理员显示名。
@@ -175,6 +181,7 @@ public class PlayerAdminController : Module
         // 非管理员不执行后续逻辑
         if (!IsAdmin()) return;
 
+        KeepAdminStaminaFull();
         ApplyAdminRuntimeSettings();
         KeepAdminAlive();
         HandleAdminInput(keyboard);
@@ -216,6 +223,7 @@ public class PlayerAdminController : Module
         }
 
         player.Data.Name_User = AdminName;
+        KeepAdminStaminaFull();
         return true;
     }
 
@@ -444,6 +452,19 @@ public class PlayerAdminController : Module
 
         ResolveAdminSurvivalReferences();
         RestoreAdminVitalStats();
+    }
+
+    /// <summary>管理员身份始终保持满体力；实际消耗拦截仍由 Mod_Stamina 统一负责。</summary>
+    private void KeepAdminStaminaFull()
+    {
+        if (staminaMod == null)
+            staminaMod = player?.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
+
+        if (staminaMod == null || staminaMod.MaxValue <= 0f ||
+            Mathf.Approximately(staminaMod.CurrentValue, staminaMod.MaxValue))
+            return;
+
+        staminaMod.CurrentValue = staminaMod.MaxValue;
     }
 
     /// <summary>无敌开启时把生命、理智与饥饿恢复到满值。</summary>

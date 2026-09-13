@@ -8,12 +8,18 @@ using UnityEngine.UI;
 public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
 {
     private readonly List<IStaminaCapacityModifier> capacityModifiers = new(); // 独立容量来源。
+    private PlayerAdminController adminController; // 管理员拥有无限体力，统一在体力权威模块拦截消耗。
+
     /// <summary>缓存影响体力容量的模块，体力模块不依赖缺盐等具体玩法。</summary>
     public void BindModuleDependencies(ItemMods modules)
     {
         capacityModifiers.Clear();
+        adminController = null;
         foreach (Module module in modules.Mods.Values)
+        {
             if (module is IStaminaCapacityModifier modifier) capacityModifiers.Add(modifier);
+            if (module is PlayerAdminController controller) adminController = controller;
+        }
     }
     /// <summary>容量变化后限制当前值，并通知现有 HUD。</summary>
     public void RefreshCapacity() => CurrentValue = Data.CurrentStamina;
@@ -86,6 +92,12 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
     /// <summary>增加或消耗基础体力值，并统一应用当前难度倍率。</summary>
     public void AddStamina(float value)
     {
+        if (value < 0f && HasAdministratorUnlimitedStamina())
+        {
+            EnsureAdministratorStaminaFull();
+            return;
+        }
+
         CurrentValue += ResolveStaminaDelta(value); // 会自动触发事件和更新Slider
     }
 
@@ -94,6 +106,12 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
     {
         if (amount <= 0f)
         {
+            return true;
+        }
+
+        if (HasAdministratorUnlimitedStamina())
+        {
+            EnsureAdministratorStaminaFull();
             return true;
         }
 
@@ -113,6 +131,21 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
     {
         float multiplier = GameDifficultyService.ResolveStaminaDeltaMultiplier(item, value);
         return value * multiplier;
+    }
+
+    /// <summary>管理员身份本身即拥有无限体力，不依赖额外的无敌开关。</summary>
+    private bool HasAdministratorUnlimitedStamina()
+    {
+        return adminController != null && adminController.IsAdministrator;
+    }
+
+    /// <summary>管理员首次进入无限体力状态时立即补满，避免低体力阈值继续阻止奔跑或攻击。</summary>
+    private void EnsureAdministratorStaminaFull()
+    {
+        if (Data == null || MaxValue <= 0f || Mathf.Approximately(Data.CurrentStamina, MaxValue))
+            return;
+
+        CurrentValue = MaxValue;
     }
 
 
