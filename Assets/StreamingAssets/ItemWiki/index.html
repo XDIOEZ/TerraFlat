@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FlatWorld · Item Wiki</title>
-    <link rel="stylesheet" href="styles.css?v=20260911-1">
+    <link rel="stylesheet" href="styles.css?v=20260913-3">
 </head>
 <body>
 <div class="site-shell">
@@ -25,6 +25,11 @@
                 <span>02</span>
                 <strong>全物品总览</strong>
                 <small>ITEM ATLAS</small>
+            </button>
+            <button id="designViewButton" class="header-page-button" type="button">
+                <span>03</span>
+                <strong>游戏设计</strong>
+                <small>GAME DESIGN</small>
             </button>
         </nav>
 
@@ -189,6 +194,48 @@
             <div id="overviewGrid" class="overview-grid"></div>
         </section>
 
+        <section id="designBook" class="design-book pixel-frame" hidden>
+            <div class="book-corner corner-tl"></div>
+            <div class="book-corner corner-tr"></div>
+            <div class="book-corner corner-bl"></div>
+            <div class="book-corner corner-br"></div>
+
+            <div class="page-ornament overview-ornament">
+                <span></span><strong>GAME DESIGN</strong><span></span>
+            </div>
+
+            <div class="design-heading">
+                <div>
+                    <div class="overview-kicker">FLATWORLD SYSTEM DESIGN ARCHIVE</div>
+                    <h2>游戏设计</h2>
+                    <p>直接读取 <code>docs/README.md</code> 与系统 Markdown。这里展示当前真实机制，不维护第二份网页副本。</p>
+                </div>
+            </div>
+
+            <div class="design-layout">
+                <aside class="design-sidebar">
+                    <div class="design-sidebar-heading">
+                        <strong>系统目录</strong>
+                        <span>按 README 顺序维护</span>
+                    </div>
+                    <label class="design-search-box" for="designSearch">
+                        <span>筛选文档</span>
+                        <input id="designSearch" type="search" autocomplete="off" placeholder="系统名称或说明…">
+                    </label>
+                    <nav id="designDocList" class="design-doc-list" aria-label="游戏设计文档目录">
+                        <div class="no-data">正在读取文档目录…</div>
+                    </nav>
+                </aside>
+
+                <article class="design-document">
+                    <div id="designDocMeta" class="design-doc-meta">docs/README.md</div>
+                    <div id="designDocContent" class="markdown-body">
+                        <div class="no-data">选择左侧系统文档查看当前机制。</div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
         <section id="settingsBook" class="settings-book pixel-frame" hidden>
             <div class="book-corner corner-tl"></div>
             <div class="book-corner corner-tr"></div>
@@ -268,6 +315,6 @@
     </details>
 </template>
 
-<script src="app.js?v=20260911-1" defer></script>
+<script src="app.js?v=20260913-3" defer></script>
 </body>
 </html>

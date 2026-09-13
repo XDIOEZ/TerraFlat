@@ -1,3 +1,7 @@
+param(
+    [switch]$NoBrowser
+)
+
 $ErrorActionPreference = 'Stop'
 
 $port = 8765
@@ -19,13 +23,17 @@ Start-Sleep -Milliseconds 250
 
 $python = Get-Command py -ErrorAction SilentlyContinue
 if ($python) {
-    & $python.Source -3 $serverScript --port $port
+    $serverArgs = @('-3', $serverScript, '--port', [string]$port)
+    if ($NoBrowser) { $serverArgs += '--no-browser' }
+    & $python.Source @serverArgs
     exit $LASTEXITCODE
 }
 
 $python = Get-Command python -ErrorAction SilentlyContinue
 if ($python) {
-    & $python.Source $serverScript --port $port
+    $serverArgs = @($serverScript, '--port', [string]$port)
+    if ($NoBrowser) { $serverArgs += '--no-browser' }
+    & $python.Source @serverArgs
     exit $LASTEXITCODE
 }
 

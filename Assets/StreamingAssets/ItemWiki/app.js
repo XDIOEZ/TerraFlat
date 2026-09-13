@@ -7,6 +7,7 @@
     const LOOT_TABLE_PATH = "../GameConfig/LootTables/loot-tables.json";
     const MODULE_GLOSSARY_PATH = "module-glossary.json";
     const ITEM_METADATA_PATH = "item-metadata.json";
+    const DESIGN_DOC_INDEX_PATH = "docs/README.md";
     const WIKI_STATUS_API = "/api/wiki/status";
     const ITEM_SAVE_API = "/api/items/save";
 
@@ -84,6 +85,10 @@
         entries: [],
         selectedId: null,
         spriteCache: new Map(),
+        designDocs: [],
+        designLoaded: false,
+        selectedDesignPath: DESIGN_DOC_INDEX_PATH,
+        designDocCache: new Map(),
         writable: false,
         activeView: "catalog",
         indexSide: "left"
@@ -96,10 +101,16 @@
         reloadButton: document.getElementById("reloadButton"),
         catalogViewButton: document.getElementById("catalogViewButton"),
         overviewViewButton: document.getElementById("overviewViewButton"),
+        designViewButton: document.getElementById("designViewButton"),
         settingsButton: document.getElementById("settingsButton"),
         catalogBook: document.getElementById("catalogBook"),
         overviewBook: document.getElementById("overviewBook"),
+        designBook: document.getElementById("designBook"),
         settingsBook: document.getElementById("settingsBook"),
+        designSearch: document.getElementById("designSearch"),
+        designDocList: document.getElementById("designDocList"),
+        designDocMeta: document.getElementById("designDocMeta"),
+        designDocContent: document.getElementById("designDocContent"),
         categorySelect: document.getElementById("categorySelect"),
         packageSelect: document.getElementById("packageSelect"),
         sortSelect: document.getElementById("sortSelect"),
@@ -168,12 +179,21 @@
         els.previousItemButton.addEventListener("click", () => navigateRelativeItem(-1));
         els.nextItemButton.addEventListener("click", () => navigateRelativeItem(1));
         els.locateItemButton.addEventListener("click", locateSelectedItemInIndex);
-        els.reloadButton.addEventListener("click", loadCatalog);
+        els.reloadButton.addEventListener("click", () => {
+            loadCatalog();
+            if (state.designLoaded) {
+                state.designLoaded = false;
+                state.designDocCache.clear();
+                if (state.activeView === "design") loadDesignDocs();
+            }
+        });
         els.indexCollapseButton.addEventListener("click", toggleIndexPanel);
         els.indexToolsCollapseButton.addEventListener("click", toggleIndexToolsPanel);
         els.catalogViewButton.addEventListener("click", () => setView("catalog"));
         els.overviewViewButton.addEventListener("click", () => setView("overview"));
+        els.designViewButton.addEventListener("click", () => setView("design"));
         els.settingsButton.addEventListener("click", () => setView("settings"));
+        els.designSearch.addEventListener("input", renderDesignDocList);
         els.indexSideToggle.addEventListener("change", () => {
             setIndexSide(els.indexSideToggle.checked ? "right" : "left", true);
         });
@@ -554,19 +574,279 @@
         });
     }
 
-    // 切换档案浏览、全物品总览与设置页；书本只作为视觉容器，不限制信息架构。
+    // 切换档案浏览、全物品总览、游戏设计与设置页；书本只作为视觉容器，不限制信息架构。
     function setView(view) {
-        state.activeView = view === "overview" || view === "settings" ? view : "catalog";
+        state.activeView = view === "overview" || view === "design" || view === "settings" ? view : "catalog";
         const overview = state.activeView === "overview";
+        const design = state.activeView === "design";
         const settings = state.activeView === "settings";
         document.body.classList.toggle("overview-mode", overview);
-        els.catalogBook.hidden = overview || settings;
+        els.catalogBook.hidden = overview || design || settings;
         els.overviewBook.hidden = !overview;
+        els.designBook.hidden = !design;
         els.settingsBook.hidden = !settings;
         els.catalogViewButton.classList.toggle("active", state.activeView === "catalog");
         els.overviewViewButton.classList.toggle("active", overview);
+        els.designViewButton.classList.toggle("active", design);
         els.settingsButton.classList.toggle("active", settings);
         if (overview) renderOverview();
+        if (design) loadDesignDocs();
+    }
+
+    // README 的“系统目录”表即 03 页导航真源，新增/排序文档时无需同步第二份网页配置。
+    async function loadDesignDocs() {
+        if (state.designLoaded) {
+            renderDesignDocList();
+            if (!state.designDocCache.has(state.selectedDesignPath)) {
+                openDesignDoc(state.selectedDesignPath);
+            }
+            return;
+        }
+
+        els.designDocList.innerHTML = `<div class="no-data">正在读取文档目录…</div>`;
+        els.designDocContent.innerHTML = `<div class="no-data">正在读取游戏设计 Markdown…</div>`;
+        try {
+            const markdown = await fetchText(DESIGN_DOC_INDEX_PATH);
+            state.designDocCache.set(DESIGN_DOC_INDEX_PATH, markdown);
+            state.designDocs = parseDesignDocCatalog(markdown);
+            state.designLoaded = true;
+            renderDesignDocList();
+            await openDesignDoc(state.selectedDesignPath || DESIGN_DOC_INDEX_PATH);
+        } catch (error) {
+            els.designDocList.innerHTML = `<div class="no-data">文档目录读取失败。</div>`;
+            els.designDocContent.innerHTML = `<div class="no-data">${escapeHtml(error.message)}</div>`;
+        }
+    }
+
+    // 从 README 的系统表提取标题、相对路径与一句话说明，保持 Markdown 的层级排序为唯一权威。
+    function parseDesignDocCatalog(markdown) {
+        const docs = [{
+            title: "总览与开发导航",
+            path: DESIGN_DOC_INDEX_PATH,
+            summary: "当前系统形势、开发导航与文档维护规则。"
+        }];
+        const lines = String(markdown || "").split(/\r?\n/);
+        let inSystemTable = false;
+        for (const line of lines) {
+            if (/^##\s+系统目录\s*$/.test(line.trim())) {
+                inSystemTable = true;
+                continue;
+            }
+            if (inSystemTable && /^##\s+/.test(line.trim())) break;
+            if (!inSystemTable || !line.trim().startsWith("|")) continue;
+            const columns = line.split("|").slice(1, -1).map(value => value.trim());
+            if (columns.length < 3 || columns[0] === "系统" || /^:?-{3,}/.test(columns[0])) continue;
+            const link = columns[1].match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+            if (!link) continue;
+            docs.push({
+                title: columns[0],
+                path: resolveDesignDocPath(DESIGN_DOC_INDEX_PATH, link[2]),
+                summary: columns[2]
+            });
+        }
+        return docs;
+    }
+
+    // 根据筛选条件绘制文档导航；README 条目始终排在第一项。
+    function renderDesignDocList() {
+        if (!els.designDocList) return;
+        const query = String(els.designSearch?.value || "").trim().toLowerCase();
+        const docs = state.designDocs.filter(doc =>
+            !query || `${doc.title} ${doc.summary} ${doc.path}`.toLowerCase().includes(query));
+        if (!docs.length) {
+            els.designDocList.innerHTML = `<div class="no-data">没有符合筛选条件的系统文档。</div>`;
+            return;
+        }
+        els.designDocList.innerHTML = "";
+        docs.forEach((doc, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `design-doc-button${doc.path === state.selectedDesignPath ? " active" : ""}`;
+            button.dataset.docPath = doc.path;
+            button.innerHTML = `<span>${String(index + 1).padStart(2, "0")}</span>` +
+                `<strong>${escapeHtml(doc.title)}</strong>` +
+                `<small>${escapeHtml(doc.summary)}</small>`;
+            button.addEventListener("click", () => openDesignDoc(doc.path));
+            els.designDocList.appendChild(button);
+        });
+    }
+
+    // 读取并渲染单份 Markdown；所有文档链接继续在 03 页内部跳转。
+    async function openDesignDoc(path) {
+        const normalized = normalizeDesignDocPath(path);
+        state.selectedDesignPath = normalized;
+        renderDesignDocList();
+        els.designDocMeta.textContent = normalized;
+        els.designDocContent.innerHTML = `<div class="no-data">正在读取 ${escapeHtml(normalized)}…</div>`;
+        try {
+            let markdown = state.designDocCache.get(normalized);
+            if (markdown === undefined) {
+                markdown = await fetchText(normalized);
+                state.designDocCache.set(normalized, markdown);
+            }
+            els.designDocContent.innerHTML = renderDesignMarkdown(markdown, normalized);
+            els.designDocContent.querySelectorAll("[data-doc-path]").forEach(link => {
+                link.addEventListener("click", () => openDesignDoc(link.dataset.docPath));
+            });
+            els.designDocContent.scrollTop = 0;
+        } catch (error) {
+            els.designDocContent.innerHTML = `<div class="no-data">${escapeHtml(error.message)}</div>`;
+        }
+    }
+
+    // Wiki 只允许设计文档在 docs/ 内部导航，避免 Markdown 相对路径逃出公开白名单。
+    function normalizeDesignDocPath(path) {
+        const raw = String(path || DESIGN_DOC_INDEX_PATH).replace(/\\/g, "/");
+        const stack = [];
+        for (const part of raw.split("/")) {
+            if (!part || part === ".") continue;
+            if (part === "..") stack.pop();
+            else stack.push(part);
+        }
+        const normalized = stack.join("/");
+        return normalized.startsWith("docs/") && normalized.toLowerCase().endsWith(".md")
+            ? normalized
+            : DESIGN_DOC_INDEX_PATH;
+    }
+
+    // 以当前 Markdown 所在目录解析相对文档链接。
+    function resolveDesignDocPath(currentPath, relativePath) {
+        const href = String(relativePath || "").split("#")[0];
+        if (!href) return normalizeDesignDocPath(currentPath);
+        if (href.startsWith("docs/")) return normalizeDesignDocPath(href);
+        const baseParts = String(currentPath || DESIGN_DOC_INDEX_PATH).split("/");
+        baseParts.pop();
+        return normalizeDesignDocPath(`${baseParts.join("/")}/${href}`);
+    }
+
+    // 轻量 Markdown 渲染器覆盖当前设计文档所使用的标题、列表、引用、表格、链接和代码。
+    function renderDesignMarkdown(markdown, currentPath) {
+        const lines = String(markdown || "").replace(/\r/g, "").split("\n");
+        const output = [];
+        let index = 0;
+        while (index < lines.length) {
+            const line = lines[index];
+            if (!line.trim()) {
+                index++;
+                continue;
+            }
+
+            const heading = line.match(/^(#{1,4})\s+(.+)$/);
+            if (heading) {
+                const level = heading[1].length;
+                output.push(`<h${level}>${renderDesignInline(heading[2], currentPath)}</h${level}>`);
+                index++;
+                continue;
+            }
+
+            if (/^```/.test(line.trim())) {
+                const language = line.trim().slice(3).trim();
+                const code = [];
+                index++;
+                while (index < lines.length && !/^```/.test(lines[index].trim())) code.push(lines[index++]);
+                if (index < lines.length) index++;
+                output.push(`<pre><code data-language="${escapeAttr(language)}">${escapeHtml(code.join("\n"))}</code></pre>`);
+                continue;
+            }
+
+            if (line.trim().startsWith(">")) {
+                const quote = [];
+                while (index < lines.length && lines[index].trim().startsWith(">")) {
+                    quote.push(lines[index].trim().replace(/^>\s?/, ""));
+                    index++;
+                }
+                output.push(`<blockquote>${quote.map(value => renderDesignInline(value, currentPath)).join("<br>")}</blockquote>`);
+                continue;
+            }
+
+            if (isDesignMarkdownTable(lines, index)) {
+                const headers = splitDesignTableRow(lines[index]);
+                index += 2;
+                const rows = [];
+                while (index < lines.length && lines[index].trim().startsWith("|")) {
+                    rows.push(splitDesignTableRow(lines[index++]));
+                }
+                output.push(`<div class="markdown-table-wrap"><table><thead><tr>${headers.map(cell =>
+                    `<th>${renderDesignInline(cell, currentPath)}</th>`).join("")}</tr></thead><tbody>${rows.map(row =>
+                    `<tr>${row.map(cell => `<td>${renderDesignInline(cell, currentPath)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+                continue;
+            }
+
+            const unordered = line.match(/^\s*[-*]\s+(.+)$/);
+            const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+            if (unordered || ordered) {
+                const orderedList = Boolean(ordered);
+                const items = [];
+                const pattern = orderedList ? /^\s*\d+[.)]\s+(.+)$/ : /^\s*[-*]\s+(.+)$/;
+                while (index < lines.length) {
+                    const match = lines[index].match(pattern);
+                    if (!match) break;
+                    items.push(match[1]);
+                    index++;
+                }
+                const tag = orderedList ? "ol" : "ul";
+                output.push(`<${tag}>${items.map(item => `<li>${renderDesignInline(item, currentPath)}</li>`).join("")}</${tag}>`);
+                continue;
+            }
+
+            const paragraph = [line.trim()];
+            index++;
+            while (index < lines.length && lines[index].trim() &&
+                   !/^(#{1,4})\s+/.test(lines[index]) &&
+                   !/^```/.test(lines[index].trim()) &&
+                   !/^>/.test(lines[index].trim()) &&
+                   !/^\s*[-*]\s+/.test(lines[index]) &&
+                   !/^\s*\d+[.)]\s+/.test(lines[index]) &&
+                   !isDesignMarkdownTable(lines, index)) {
+                paragraph.push(lines[index].trim());
+                index++;
+            }
+            output.push(`<p>${renderDesignInline(paragraph.join(" "), currentPath)}</p>`);
+        }
+        return output.join("\n");
+    }
+
+    function isDesignMarkdownTable(lines, index) {
+        if (index + 1 >= lines.length || !lines[index].trim().startsWith("|")) return false;
+        const delimiter = lines[index + 1].trim();
+        return delimiter.startsWith("|") && /^\|?\s*:?-{3,}/.test(delimiter);
+    }
+
+    function splitDesignTableRow(line) {
+        return String(line).trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(value => value.trim());
+    }
+
+    function renderDesignInline(value, currentPath) {
+        const tokens = [];
+        let text = String(value || "");
+        text = text.replace(/`([^`]+)`/g, (_, code) => {
+            const token = `@@FWDOC${tokens.length}@@`;
+            tokens.push(`<code>${escapeHtml(code)}</code>`);
+            return token;
+        });
+        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, href) => {
+            const token = `@@FWDOC${tokens.length}@@`;
+            if (/\.md(?:#.*)?$/i.test(href)) {
+                const path = resolveDesignDocPath(currentPath, href);
+                tokens.push(`<button type="button" class="markdown-doc-link" data-doc-path="${escapeAttr(path)}">${escapeHtml(label)}</button>`);
+            } else {
+                tokens.push(`<span class="markdown-link-label">${escapeHtml(label)}</span>`);
+            }
+            return token;
+        });
+        text = escapeHtml(text)
+            .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+            .replace(/~~([^~]+)~~/g, "<del>$1</del>");
+        tokens.forEach((html, tokenIndex) => {
+            text = text.replace(`@@FWDOC${tokenIndex}@@`, html);
+        });
+        return text;
+    }
+
+    async function fetchText(path) {
+        const response = await fetch(path, { cache: "no-store" });
+        if (!response.ok) throw new Error(`读取失败：${path}（HTTP ${response.status}）`);
+        return response.text();
     }
 
     // 获取总览页当前筛选后的条目，和左侧档案索引共享全局搜索条件。
@@ -2084,29 +2364,88 @@
                 }
                 return null;
             }
-            return { kind: "cropped", image, url, assetPath, subObjectName, ...rect };
+            const previewUrl = await createCroppedSpritePngUrl(image, rect);
+            return {
+                kind: "image",
+                url: previewUrl,
+                sourceUrl: url,
+                assetPath,
+                subObjectName,
+                width: rect.width,
+                height: rect.height
+            };
         })();
         state.spriteCache.set(spriteAddress, promise);
         return promise;
     }
 
+    // Unity 的双引号 YAML 标量可能把中文写成 \uXXXX；先还原为真实 Sprite 名再比较。
+    function parseUnityYamlScalar(rawValue) {
+        const value = String(rawValue || "").trim();
+        if (!value) return "";
+        if (value.startsWith('"') && value.endsWith('"')) {
+            try {
+                return JSON.parse(value);
+            } catch {
+                return value.slice(1, -1);
+            }
+        }
+        if (value.startsWith("'") && value.endsWith("'")) {
+            return value.slice(1, -1).replace(/''/g, "'");
+        }
+        return value;
+    }
+
     // 从 Unity TextureImporter YAML 中读取指定 Sprite 的 rect。
     function findUnitySpriteRect(meta, spriteName) {
-        const escaped = escapeRegExp(spriteName);
-        const pattern = new RegExp(
-            `name:\\s*${escaped}\\r?\\n\\s*rect:\\r?\\n\\s*serializedVersion:\\s*\\d+` +
-            `\\r?\\n\\s*x:\\s*([\\d.-]+)\\r?\\n\\s*y:\\s*([\\d.-]+)` +
-            `\\r?\\n\\s*width:\\s*([\\d.-]+)\\r?\\n\\s*height:\\s*([\\d.-]+)`,
-            "m"
+        const lines = String(meta || "").split(/\r?\n/);
+        for (let index = 0; index < lines.length; index++) {
+            const nameMatch = lines[index].match(/^\s*name:\s*(.*?)\s*$/);
+            if (!nameMatch || parseUnityYamlScalar(nameMatch[1]) !== spriteName) continue;
+
+            const section = lines.slice(index + 1, Math.min(lines.length, index + 12)).join("\n");
+            const match = section.match(
+                /^\s*rect:\s*$\n\s*serializedVersion:\s*\d+\s*$\n\s*x:\s*([\d.-]+)\s*$\n\s*y:\s*([\d.-]+)\s*$\n\s*width:\s*([\d.-]+)\s*$\n\s*height:\s*([\d.-]+)\s*$/m
+            );
+            if (!match) return null;
+            return {
+                x: Number(match[1]),
+                y: Number(match[2]),
+                width: Number(match[3]),
+                height: Number(match[4])
+            };
+        }
+        return null;
+    }
+
+    // 按 Unity Sprite.rect 以 1:1 像素裁剪，并编码为保留 Alpha 的 PNG Blob URL。
+    function createCroppedSpritePngUrl(image, rect) {
+        const canvas = document.createElement("canvas");
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        const ctx = canvas.getContext("2d");
+        ctx.imageSmoothingEnabled = false;
+        const sourceHeight = image.naturalHeight || image.height;
+        ctx.drawImage(
+            image,
+            rect.x,
+            sourceHeight - rect.y - rect.height,
+            rect.width,
+            rect.height,
+            0,
+            0,
+            rect.width,
+            rect.height
         );
-        const match = meta.match(pattern);
-        if (!match) return null;
-        return {
-            x: Number(match[1]),
-            y: Number(match[2]),
-            width: Number(match[3]),
-            height: Number(match[4])
-        };
+        return new Promise((resolve, reject) => {
+            canvas.toBlob(blob => {
+                if (!blob) {
+                    reject(new Error("Sprite PNG 编码失败"));
+                    return;
+                }
+                resolve(URL.createObjectURL(blob));
+            }, "image/png");
+        });
     }
 
     // 浏览器加载项目图片资源。
@@ -2199,9 +2538,5 @@
     }
 
     // 正则表达式文本转义。
-    function escapeRegExp(value) {
-        return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    }
-
     init();
 })();

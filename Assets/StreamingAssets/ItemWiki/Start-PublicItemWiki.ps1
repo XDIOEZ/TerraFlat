@@ -1,4 +1,8 @@
-﻿$ErrorActionPreference = 'Stop'
+﻿param(
+    [switch]$NoBrowser
+)
+
+$ErrorActionPreference = 'Stop'
 
 $wikiPort = 8766
 $tunnelName = 'FlatWorld_Wiki'
@@ -282,7 +286,9 @@ try {
     Write-Host "[SakuraFrp] 正在启动隧道 #$($tunnel.id)。"
     Write-Host '[SakuraFrp] 朋友访问时，请使用下方日志给出的 HTTPS 公开地址。'
     Write-Host '[SakuraFrp] 关闭本窗口即可同时停止公开 Wiki 与本次隧道。'
-    Start-Process $localWikiUrl
+    if (-not $NoBrowser) {
+        Start-Process $localWikiUrl
+    }
 
     $logPath = Get-SakuraLogPath
     $initialLogLength = if (Test-Path $logPath) { (Get-Item $logPath).Length } else { 0 }
