@@ -1,9 +1,23 @@
 using System.Collections;
 using System.Collections.Generic;
 using FlatWorld.Gameplay.Progress;
+using FlatWorld.Localization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+
+/// <summary>
+/// 统一炉温的玩家体感反馈。真实温度继续用于模拟与配方判定，UI 只保留百位精度。
+/// </summary>
+internal static class FurnaceTemperatureFeedback
+{
+    public static string GetDisplayedTemperature(float temperature)
+    {
+        int coarseTemperature = Mathf.FloorToInt(Mathf.Max(0f, temperature) / 100f) * 100;
+        return FlatWorldLocalizationService.GetUiFormat("当前炉温 {0}°C", coarseTemperature);
+    }
+}
+
 public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
 {
     private readonly List<IInventoryHeatTreatment> heatTreatments = new(); // 独立加热能力。
@@ -200,7 +214,7 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
     public Slider fuelSlider;
     [Tooltip("温度显示条")]
     public Slider temperatureSlider;
-    [Tooltip("温度数值文本")]
+    [Tooltip("按百位截断后的粗略炉温文本，不显示十位和个位")]
     public TextMeshProUGUI TemperatureText;
 
     #region Unity生命周期
@@ -299,8 +313,8 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
 
         // 初始化UI引用
         progressSlider = basePanel.GetSlider("熔炼进度条");
-        temperatureSlider = basePanel.GetSlider("温度显示条");
-        TemperatureText = basePanel.GetText("温度数值文本");
+        temperatureSlider = null; // 炉温只显示百位粗略值，不提供连续精确刻度。
+        TemperatureText = basePanel.GetText("FWUI_FurnaceTemperatureValue");
         fuelSlider = basePanel.GetSlider("燃料显示条");
         WorkButton = basePanel.GetButton("合成按钮");
 
@@ -490,21 +504,9 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
         if (fuelSlider != null && mod_Fuel != null && mod_Fuel.Data != null)
             fuelSlider.value = mod_Fuel.Data.Fuel.y > 0 ? mod_Fuel.Data.Fuel.x / mod_Fuel.Data.Fuel.y : 0;
 
-        // 温度条（使用熔炉限制温度作为最大值）
-        if (temperatureSlider != null)
-        {
-            // 始终使用MaxTemperatureLimit作为最大值显示给玩家参考
-            float maxTempForDisplay = Data.MaxTemperatureLimit;
-            temperatureSlider.value = maxTempForDisplay > 0 ? Data.Temperature / maxTempForDisplay : 0;
-        }
-
-        // 温度数值文本
+        // 炉温只保留百位精度，不暴露十位、个位与炉体上限。
         if (TemperatureText != null)
-        {
-            // 显示实际的温度限制（燃料限制和炉子物理限制中的较小值）
-            float actualMaxTemp = Data.MaxTemperature > 0 ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
-            TemperatureText.text = $"{Mathf.RoundToInt(Data.Temperature)}°C / {Mathf.RoundToInt(actualMaxTemp)}°C (炉子上限: {Mathf.RoundToInt(Data.MaxTemperatureLimit)}°C)";
-        }
+            TemperatureText.text = FurnaceTemperatureFeedback.GetDisplayedTemperature(Data.Temperature);
     }
 
     private void OnButtonClick()

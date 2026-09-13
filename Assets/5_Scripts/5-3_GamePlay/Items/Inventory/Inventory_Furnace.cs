@@ -35,7 +35,7 @@ public class Inventory_Furnace : Inventory
     public Slider fuelSlider;
     [Tooltip("温度显示条")]
     public Slider temperatureSlider;
-    [Tooltip("温度数值文本")]
+    [Tooltip("按百位截断后的粗略炉温文本，不显示十位和个位")]
     public TextMeshProUGUI TemperatureText;
     #endregion      
     #region Unity生命周期
@@ -161,8 +161,8 @@ public class Inventory_Furnace : Inventory
 
         // 初始化UI引用
         progressSlider = base.basePanel.GetSlider("熔炼进度条");
-        temperatureSlider = base.basePanel.GetSlider("温度显示条");
-        TemperatureText = base.basePanel.GetText("温度数值文本");
+        temperatureSlider = null; // 炉温只显示百位粗略值，不提供连续精确刻度。
+        TemperatureText = base.basePanel.GetText("FWUI_FurnaceTemperatureValue");
         fuelSlider = base.basePanel.GetSlider("燃料显示条");
         WorkButton = base.basePanel.GetButton("合成按钮");
 
@@ -1093,21 +1093,9 @@ public class Inventory_Furnace : Inventory
         if (fuelSlider != null && mod_Fuel != null && mod_Fuel.Data != null)
             fuelSlider.value = mod_Fuel.Data.Fuel.y > 0 ? mod_Fuel.Data.Fuel.x / mod_Fuel.Data.Fuel.y : 0;
 
-        // 温度条（使用熔炉限制温度作为最大值）
-        if (temperatureSlider != null)
-        {
-            // 始终使用MaxTemperatureLimit作为最大值显示给玩家参考
-            float maxTempForDisplay = _Data.MaxTemperatureLimit;
-            temperatureSlider.value = maxTempForDisplay > 0 ? _Data.Temperature / maxTempForDisplay : 0;
-        }
-
-        // 温度数值文本
+        // 炉温只保留百位精度，不暴露十位、个位与炉体上限。
         if (TemperatureText != null)
-        {
-            // 显示实际的温度限制（燃料限制和炉子物理限制中的较小值）
-            float actualMaxTemp = _Data.MaxTemperature > 0 ? Mathf.Min(_Data.MaxTemperature, _Data.MaxTemperatureLimit) : _Data.MaxTemperatureLimit;
-            TemperatureText.text = $"{Mathf.RoundToInt(_Data.Temperature)}°C / {Mathf.RoundToInt(actualMaxTemp)}°C (炉子上限: {Mathf.RoundToInt(_Data.MaxTemperatureLimit)}°C)";
-        }
+            TemperatureText.text = FurnaceTemperatureFeedback.GetDisplayedTemperature(_Data.Temperature);
     }
 
     private void OnButtonClick()
@@ -1197,7 +1185,7 @@ public partial class ModSmeltingData
     public Dictionary<string, Inventory_Data> InvData = new Dictionary<string, Inventory_Data>();
 
     [Tooltip("当前的熔炼进度")]
-    public float SmeltingProgress = 10f;
+    public float SmeltingProgress = 0f;
 
     [Tooltip("熔炉的最大熔炼速度")]
     public float MaxSmeltingSpeed = 10f;

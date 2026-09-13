@@ -348,7 +348,7 @@ MonoBehaviour:
     Type: 0
     BitData: 
   Data:
-    SmeltingProgress: 10
+    SmeltingProgress: 0
     MaxSmeltingSpeed: 10
     SmeltingSpeed: 10
     Temperature: 20

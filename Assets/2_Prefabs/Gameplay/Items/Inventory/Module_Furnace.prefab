@@ -141,7 +141,7 @@ MonoBehaviour:
         itemSlot_UI: []
         basePanel: {fileID: 0}
         _Data:
-          SmeltingProgress: 10
+          SmeltingProgress: 0
           MaxSmeltingSpeed: 10
           SmeltingSpeed: 10
           Temperature: 20
