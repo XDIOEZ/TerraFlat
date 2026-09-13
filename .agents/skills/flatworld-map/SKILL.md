@@ -25,6 +25,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - Tile 栈只通过 API 修改；静态 Blocking Tile 与动态建筑占地不要混用。
 - 真正填水改地形时，地表身份、Water 标记与通行成本应同步变化；水上平台不属于填水，使用独立 `TerrainSupportLayer` 和有效地表查询，原始水格、水深等保持不变。不能只盖图片或把平台存成永久陆地。
 - 可被容器提取的世界液体由 TileData 实现 `IWorldLiquidSourceData` 并保存稳定 `LiquidId`；`TileData_Water.Clone()` 必须保留该 ID，玩法通过 `ChunkMgr.TryGetRuntimeTileEffect` 的权威 WorldCell 解析来源，不依赖水体 Collider。当前 Tile 水源没有有限份数层时保持无限源，不因取液删除或改写水格。
+- 河流生成把真实下游单位方向保存到 `riverFlowX/riverFlowY` 环境层；运行时水流玩法统一通过 `ChunkMgr.TryGetRuntimeWaterCurrent` 读取，禁止在物品、角色等消费方重复按邻格高度猜河道方向。海洋暂无独立洋流层时由该接口使用现有风场近似表层漂移，湖泊保持静止。
 - 生成保持固定种子、稳定 BiomeId/顺序和统一噪声、气候、水文规则。
 - 修改算法时考虑生成签名、旧存档、联机指纹和 Wrapped 坐标。
 - 雪山地表固定使用纯白 `Tile_Snow`，禁止按随机噪声混入雪地变体；若未来恢复变体，只能按温度区间确定。

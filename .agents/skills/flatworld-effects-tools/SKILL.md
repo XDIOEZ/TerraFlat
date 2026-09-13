@@ -19,6 +19,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 先确认触发系统及 Prefab/材质/Shader 的真实引用来源，再改表现。
 - 陶罐 UI 的水面摇晃和罐口液流属于表现层：水面扰动只读取罐体角速度并自行衰减，罐口液流只在 `Mod_WaterVessel.RemoveLiquidAmount` 实际移除液体后触发；不得让粒子/Graphic 帧率参与液体数量结算。罐口液流应作为正式 `UI_WaterVessel.prefab` 中位于罐体外 Mask 的独立 Graphic，避免被内腔裁剪。
 - 池化特效每次取出时重置 Transform、Animator、颜色和生命周期；回收/禁用时清理订阅与状态。
+- 源实体会在触发特效的同帧被回收时，一次性粒子根节点必须先脱离源实体并放到同一场景独立播放；否则 `PrepareForDespawn/OnDisable` 会把粒子提前清空。
 - 需要在角色 `OnDisable` 中立即回收的池化特效不能挂到该角色层级下，否则归池 `SetParent` 会与父级激活/停用过程冲突；Owner 登记与 Transform 父级分开，睡眠 ZZZ 由单位缩放的独立特效根节点持有并在 `LateUpdate` 跟随。区块休眠不等于退出 AI 睡眠状态，停用时只释放可见实例，重新激活时恢复仍有效的表现请求。
 - 粒子 `VelocityModule` 的线性 X/Y/Z 必须使用同一种 `minMaxState`；2D 特效即使 Z 速度恒为零，也应使用与 X/Y 相同的模式并把上下限都设为零，避免 `Particle Velocity curves must all be in the same mode`。
 - `ParticleSystem.EmitParams.rotation` 使用欧拉角度数；2D `Billboard` 粒子按世界移动方向旋转时，屏幕旋转正负方向与 `Vector2.SignedAngle(Vector2.up, direction)` 相反，应使用其反号，否则水平/垂直方向看似正常但 45° 斜向会转成垂直朝向。
@@ -27,7 +28,8 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - Unity 2D 使用 URP/Light2D；修改 Shader 前核对材质实际 Shader 与 Pass。
 - 局部 `Light2D` 如果开启 `volumeIntensityEnabled`，同时要开启 `volumetricShadowsEnabled` 并设置有效 `shadowVolumeIntensity`；否则 `ShadowCaster2D` 只会阻挡普通光照，体积光晕仍会穿过石墙、矿洞岩壁等 Blocking Tile，看起来像“光穿墙”。新版区块的静态墙体遮挡统一复用 `ChunkLightOccluderRenderer`，不要再给每块玩家墙单独创建常驻 ShadowCaster。
 - `ChunkLightOccluderRenderer` 的 Blocking Tile 阴影体必须开启 `selfShadows`，否则墙体虽然会向背光侧投影，墙面自身仍会被 Point Light 整块照亮；通用世界 `Mod_LightSource` 的 Point Light 使用满强度普通阴影，保证实体墙移除该局部光，同时保留昼夜全局光和墙体朝光侧的窄外沿。
-- 动态可交互建筑不属于 Tilemap，不能依赖 `ChunkLightOccluderRenderer`；落地 `PlacedBuilding` 应按自身主碰撞体启用 `ShadowCaster2D`，手持/召唤器状态必须关闭，低矮设施默认 `selfShadows=false` 以保持主体正常接收局部光。
+- `selfShadows=true` 的 Blocking Tile 阴影体会通过 URP 2D 阴影模板影响任何与墙体占地区域重叠的 Lit Sprite，而不只影响墙体自身；火把火焰等自发光可视部分应使用仅覆盖发光区域的 Unlit/Emissive 表现层，禁止为了让发光体不变黑而关闭墙体 `selfShadows`，否则会重新出现整块墙面被局部光照亮的问题。
+- 动态可交互建筑不属于 Tilemap，不能依赖 `ChunkLightOccluderRenderer`；落地 `PlacedBuilding` 应在主体 `SpriteRenderer` 节点启用 `ShadowCaster2D`，旧的碰撞体节点矩形 ShadowCaster 必须关闭。URP 14 的 `useRendererSilhouette` 只负责自阴影模板，投影网格仍来自 `m_ShapePath`，因此动态建筑必须把 Sprite 的 fallback physics shape 同步到 ShadowCaster 路径，并启用 `selfShadows`，保证建筑内部不被局部光照亮且外投影跟随贴图轮廓；手持/召唤器状态必须关闭。
 - 共用海水 `UsePass` 的包装 Shader 必须声明公共 Pass 新增的同名材质属性；月光等夜间自发光倒影应在 `CombinedShapeLightShared` 之后合成，避免全局夜间光照被重复相乘。月亮出现动画读取 `DayTimeSystem` 发布的 `_GlobalMoonAppearance`，尺寸/渐亮与 `_GlobalMoonlightIntensity` 的月相亮度分离，避免新月把月面永久缩小。
 - Water Tilemap 的 Tile Color RGBA 只编码左、右、下、上岸线方向；水深必须由每个 Chunk 独立的带一格邻区边框纹理提供，并在格子中心之间使用双线性采样，禁止再把连续水深与岸线位打包进同一颜色通道。包装 Shader 必须继续声明公共 Pass 使用的全部属性。
 - Tilemap 合批后 `POSITION` 不保证是 Chunk 局部坐标；水深与岸线使用世界坐标，MPB 的 `_WaterDepthUvScaleOffset` 必须扣除水层原点再加入一格纹理边框。当前世界网格每格为 1 单位且原点对齐整数，不要用 `unity_WorldToObject` 恢复已被合批丢失的局部坐标。
@@ -45,7 +47,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 玩家被树冠遮挡时的圆形穿透窗由 `PlayerOcclusionShaderGlobals` 写入本地主角世界坐标，`Sprite-Lit-Master` 只对逐 Renderer `_PlayerOccluder=1` 的对象降低 Alpha；世界树必须带 `Tag.Tree`，`ItemDefinitionRuntime` 在共享外壳/对象池复用时必须显式写入 1 或 0 并保留其它 MPB 参数，禁止给所有 Sprite 开全局遮挡或为每棵树增加逐帧脚本。
 - 角色水体效果覆盖会旋转的手持物等附属 Sprite 时，水面高度与波浪横轴必须使用角色统一的世界空间坐标；保留本地坐标模式只用于不旋转的旧材质兼容，避免水线随物品旋转成竖线。
 - 手持物通过 `RegisterExternalRenderers` 接入角色渲染效果后，运行时再动态创建的子 `Renderer` 不会自动进入该次注册快照；这类临时表现必须在创建后再次注册自身节点，并在销毁前 `UnregisterExternalRenderers`，避免水体浸没、受击染色等 MPB 效果漏掉或控制器残留引用。
-- 浅滩最低淹没高度属于 `WaterImmersionRenderEffect` 的纯视觉映射，应在 `depthToSurface` 曲线结果后叠加身体归一化偏移；禁止改写 `TileData_Water.deepValue`，该值还会参与水中移速等玩法结算。
+- 角色/动物的水中生存由 `TileEffectReceiver` 统一结算，并直接以 `TileData_Water.deepValue` 作为自然淹没高度：水深不超过 0.3 时不进入漂浮维持且不消耗游泳体力；超过 0.3 且有体力时把玩法有效淹没维持在 0.3，体力耗尽后再向真实水深下沉，超过 0.7 才开始消耗氧气。角色水体遮罩必须始终直接使用原始 `deepValue`，不能跟随漂浮后的有效淹没值；移动减速仍使用玩法有效淹没。掉落物保留其独立 `SetWaterState` 深度映射，禁止改写权威 `TileData_Water.deepValue`。
 - `TileEffectReceiver` 的邻接水格容错只服务于水边交互；`Tile_Water` 必须根据 `IsActiveTileEdgeInteractionOnly` 阻断浸没视觉、脚底阴影、Buff 和移动速度效果，避免站在沙格边缘的角色被误判为入水。
 - `TileEffectReceiver` 在地块来源变化时会于同一帧依次调用旧地块 `OnExit` 和新地块 `OnEnter`；一次性入水效果必须由角色侧保存真实浸水状态，并合并连续水格之间的同帧切换，不能把每个水格都当成重新入水。
 - 雪地脚印等带历史轨迹的地表表现不能在 Tile `OnExit` 时清空历史；跨相邻同类地块同样会先 Exit 再 Enter，应只停止新轨迹采样，让已有轨迹继续按自身寿命逐步淘汰。`SnowFootprintTrail` 当前由 `Tile_Snow` 运行时 `AddComponent`，默认表现资源不能只依赖 Prefab/Inspector 预先赋值，必须保证动态创建后也能解析到专用 Shader/材质配置。

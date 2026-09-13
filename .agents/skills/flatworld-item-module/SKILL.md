@@ -51,6 +51,10 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - JSON 的 `modules.*.prefab` 是模块变体的唯一实例化地址；多个专用 Prefab 可以共用同一玩法 `ModuleData.ID`，`GameRes` 只能为唯一候选登记该 ID 的兼容别名，禁止按加载顺序静默覆盖。
 - `ItemPicker` 不能只依赖 `OnTriggerEnter2D`：掉落/飞行或联机预约可能让物品先以不可拾取状态进入范围，状态恢复后应补偿检查，并限制为一次性请求以避免部分入包或网络请求重复执行。
 - 掉落拾取时序由 `Mod_Droping` 的轨迹状态决定：必须先移除掉落模块，再把 `CanBePickedUp` 设为 true；拾取器不能只信任这个数据标志。
+- 世界掉落物的水体浮沉只能把 `ItemStack.Weight / Volume` 当作玩法比值，不能直接按真实水密度把阈值写成 1.0；当前内容数据里木墙约 0.32、石墙约 0.67、铜/青铜/铁墙约 0.69/0.78/0.88，因此阈值应按这些已定义物品重新标定，而不是套物理单位常数。
+- 水体浮沉/漂流属于掉落物的世界临时表现态：抛掷轨迹结束后必须恢复原本的可拾取语义，不能用 `CanBePickedUp=false` 表示“在水中”，否则建筑召唤器等物品会被交互系统误判成不可拾取世界实体；拾取时应剔除临时水体掉落模块，不能把浮沉状态带入库存数据。
+- 世界掉落物随水移动时统一读取 `ChunkMgr.TryGetRuntimeWaterCurrent`；长期漂移跨越新版 ChunkView 时必须通过 `ItemWorldPlacement.TryAttachWorldModelDrop` 重绑临时物品归属，不能只改 Transform 后继续挂在旧 `ChunkNaturalItemRenderer` 下。
+- 入水真实转换的源物品若需要一次性表现，实现 `IWaterEntryTransformEffect`；`Mod_Droping` 会在 `DespawnItem` 前调用，表现对象必须自行脱离源物品，避免源物品同帧回收时把粒子一起清掉。
 - `WorldTopologyProxySource` 会覆盖大量运行时 Item，碰撞体角色筛选必须在注册/对象池重绑时完成并缓存；禁止在 `FixedUpdate` 中对每个 Collider 重复 `GetComponent` 或重新扫描子层级，否则实体数量一高会直接放大为主线程尖峰。
 
 ## 验证

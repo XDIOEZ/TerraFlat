@@ -16,6 +16,8 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 ## 不变量
 
 - 感知链为 Detector 请求 → ItemMgr 空间格粗筛 → Collider2D 精确确认 → 应用进入/离开结果。
+- 生物感知默认经过整数格 LOS：动态建筑以 `BuildingOccupancyRegistry` 的离散占地为权威遮挡，格子墙/岩壁以运行时 `TerrainCell.BlockingTileId + TerrainCellFlags.Blocking` 为权威遮挡；`Mod_ItemDetector.wallsBlockPerception` 允许特殊生物显式关闭。AI 的持续锁定/状态距离判断必须复用 `IsWithinEffectivePerceptionRange`，避免目标进入遮挡后仍只按距离保持感知。
+- LOS 属于感知热路径；沿格检测禁止 Physics2D 射线、Collider 扫描或逐格调用 `ChunkMgr.TryGetRuntimeTerrainTile`。应从观察者格到目标格逐格查询 `BuildingOccupancyRegistry`，同时缓存当前 `ChunkRuntime/ChunkTerrainData`，仅跨 Chunk 时重新解析地址并直接读取 `BlockingTileId + Blocking`；任一格命中遮挡立即终止。
 - 目标感知范围由 Detector 的 `DetectionRadius` 与 Item 的 `PerceptionRadiusMultiplier` 共同决定；修改感知逻辑时必须同步空间粗筛、目标快照精筛和 AI 状态阈值，避免大体型目标被漏筛或状态机仍使用旧距离。
 - 现代 AI 位于 `Entities/AI/`；修改 Prefab 前确认其使用状态机还是旧 Kiwi 行为树。
 - `Chicken_Tree`、`WildBoar_Tree` 是历史 Kiwi 兼容 Prefab，不实现 `IAIActor`，不加入正式 Actor JSON/MOD 继承目录。

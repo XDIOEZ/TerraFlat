@@ -36,6 +36,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 玩家交互发送器必须是纯 Physics2D 查询通道，不得拥有或临时启用 Trigger；`Module_Hand` 禁止挂载 Collider2D。交互查询必须跳过 `DamageSender`/`DamageReciver` 专用 Collider，避免交互与伤害系统产生接触回调或互相解析。
 - 手机准线的有效距离不能固定写在输入层；空手和普通物品应跟随交互发送器距离，手持建筑应跟随建筑模块的放置距离。
 - 玩家跑步模式与视觉状态分离：`Run` 只表示逻辑奔跑模式，`Move=false` 时 `Player.controller` 必须切换到 `Idle`；进入 `Run` 必须直接播放，不添加播放倍率渐起或 Animator 混合延迟，禁止修改全局 `Animator.speed`，否则会连带暂停攻击等其他动画。
+- 管理员身份拥有无限体力：权限统一读取 `PlayerAdminController.IsAdministrator`，所有体力消耗继续汇入 `Mod_Stamina.AddStamina` / `TryConsumeStamina` 由体力权威模块统一拦截；禁止在移动、武器、游泳、高温等消费方分别添加管理员特判。
 - `Mover_SaveData.isRunning` 是玩家奔跑开关的持久字段；输入锁定只停止位移，不清空该字段，跨维度重建后须在解锁输入后恢复。
 - 玩家创建参数来自 `StreamingAssets/GameConfig/Players/player-creation-manifest.json`，由 `PlayerCreationTemplateCatalogService` 在新档案 `Player.Load()` 前解析并注入；MOD 可在 definition JSON 中增加 `playerCreationTemplates`，或用 `playerTemplate:ID` Patch 修改模板；已有存档不得再次套用模板。
 - `Player.prefab` 根的环绕控制只处理本地玩家且仅在 Wrapped 拓扑启用。

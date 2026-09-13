@@ -26,8 +26,8 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 建筑 Summoner 一旦进入有效放置模式，玩家普通世界交互必须让位于放置：附近 `IInteractable` 不得因交互键、鼠标点选或同帧多输入被打开，交互描边也应隐藏；退出放置模式后再恢复普通目标选择。
 - 通用建筑本体只提供 `Item + SpriteRenderer + BoxCollider2D`；伤害由 JSON `health` 注入，门、容器、工作台等反馈由独立 `IInteractable` Module 提供，不再依赖通用 `Mod_InteractReciver` 转发。
 - 火把的手持职责与落地建筑本体保持分离：落地后统一使用 `Torch_Building`，`Torch_Summoner` 只能指向后者；手持攻击、命中 Buff 与光源均由 JSON 组合通用模块，禁止为火把保留专用运行时 Shell。独立手持物 `Torch` 不得内嵌 `Mod_Building`。
-- 动态建筑保持 GameObject + Collider，但 Collider 只服务交互、受击等运行时物理；放置冲突与导航占地统一由 `BuildingOccupancyRegistry` 的离散世界格层维护，不得写入地形 `TileData`，也不得用 Physics2D Overlap/Collider Bounds 推导能否放置。
-- `Module_Building` 不得再携带独立物理 Collider；其 `boxCollider2D` 运行时统一绑定所属 Item 根节点由 `visual.collider` 定义的碰撞体，避免模块默认框与建筑实体框叠加后产生额外阻挡或错误光照遮挡。
+- 动态建筑保持 GameObject + Collider，但 Collider 只服务交互、受击等运行时物理；放置冲突、导航占地以及 AI 视线遮挡统一读取 `BuildingOccupancyRegistry` 的离散世界格层，不得写入地形 `TileData`，也不得用 Physics2D Overlap/Collider Bounds 推导这些逻辑结果。
+- `Module_Building` 不得再携带独立物理 Collider；其 `boxCollider2D` 运行时统一绑定所属 Item 根节点由 `visual.collider` 定义的碰撞体，避免模块默认框与建筑实体框叠加后产生额外阻挡或错误光照遮挡。`BuildingBodyShell` 的根碰撞体必须保持启用、非 Trigger，并位于 `Collider` Layer；召唤器查询碰撞体仍按召唤器规则处理。
 - 平台铺设由 `Tile_Block.groundPlacement` 与 `TileBuildingSystem.GroundPlacement` 负责，写入 `TerrainSupportLayer`，不替换底层水格、不占用 Blocking 层；预览、角色水域效果、建造和导航必须读取有效支撑面。扣料失败回滚支撑值，主动拆除撤销支撑而不重建水格。
 - 静态岩壁/结构墙才使用 Blocking Tile；例如 `Wall_Stone`、`Wall_Wood` 只有 Summoner JSON，不创建动态本体定义。Tile 栈只通过 `Data_TileMap` API 读写。
 - 新版 WorldModel 的玩家格子建筑虽使用 `ChunkTerrainData.BlockingTileId`，仍必须接入存档的运行时区块差量；不能只依赖 `MapSave.items`。
