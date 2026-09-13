@@ -908,7 +908,10 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		float effectiveDistance = Mod_ItemDetector.CalculateEffectiveDetectionRadius(
 			baseDistance,
 			target);
-		return DistanceTo(target.transform) <= effectiveDistance;
+		if (DistanceTo(target.transform) > effectiveDistance)
+			return false;
+
+		return _detector != null && _detector.HasLineOfSight(target);
 	}
 #endregion
 

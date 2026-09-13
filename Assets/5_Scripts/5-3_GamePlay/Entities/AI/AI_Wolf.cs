@@ -1148,7 +1148,7 @@ public partial class AI_Wolf : AI_Base<WolfState>, IAIAdvanceCommandReceiver
 		ally = null;
 		if (target == null || target == item) return false;
 
-		ally = target.GetComponentInChildren<AI_Wolf>();
+		ally = target.itemMods?.GetMod_ByID<AI_Wolf>(ModText.AI);
 		if (ally == null || ally == this) return false;
 
 		if (FactionRelationService.GetRelation(item, target) != FactionRelation.Friendly)

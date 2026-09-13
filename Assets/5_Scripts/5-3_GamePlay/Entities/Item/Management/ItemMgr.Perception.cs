@@ -450,7 +450,9 @@ public partial class ItemMgr
                     continue;
 
                 if (!_perceptionResultItemSet.Add(candidate) ||
-                    !PassesColliderPerceptionFilter(candidate, query, snapshot))
+                    !PassesColliderPerceptionFilter(candidate, query, snapshot) ||
+                    detector == null ||
+                    !detector.HasLineOfSight(candidate))
                     continue;
 
                 _detectorApplyBuffer.Add(candidate);

@@ -2022,7 +2022,7 @@
             "Type": 0
           },
           "parameters": {
-            "debugLog": true,
+            "debugLog": false,
             "wolfTags": [
               "Wolf"
             ],

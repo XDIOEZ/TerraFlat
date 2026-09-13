@@ -1,5 +1,7 @@
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
+using FlatWorld.WorldModel;
+using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -13,6 +15,9 @@ public class Mod_ItemDetector : Module
 
     [SerializeField, BoxGroup("检测参数")]
     public LayerMask itemLayer; // 物品所在的层级
+
+    [SerializeField, BoxGroup("检测参数"), Tooltip("开启后，动态建筑占地、墙体和岩石等阻挡格会遮挡感知视线。")]
+    public bool wallsBlockPerception = true; // 建筑与固定墙体是否遮挡感知
     #endregion
 
     #region 当前状态
@@ -49,6 +54,17 @@ public class Mod_ItemDetector : Module
     {
         get => detectionRadius;
         set => detectionRadius = value;
+    }
+
+    /// <summary>检查目标与检测器之间是否存在可阻挡感知的建筑或固定墙体。</summary>
+    public bool HasLineOfSight(Item target)
+    {
+        if (target == null)
+            return false;
+        if (!wallsBlockPerception)
+            return true;
+
+        return HasClearGridLineOfSight(transform.position, target.transform.position);
     }
 
     /// <summary>
@@ -368,6 +384,158 @@ public class Mod_ItemDetector : Module
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 沿狼到目标的整数世界格逐格检查遮挡；动态建筑读取 BuildingOccupancyRegistry，格子墙读取 TerrainCell.BlockingTileId。
+    /// </summary>
+    private static bool HasClearGridLineOfSight(Vector2 fromWorld, Vector2 toWorld)
+    {
+        ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
+        if (chunkManager == null)
+            return false;
+
+        var sampler = new GridLineSampler(chunkManager);
+
+        Vector2Int from = WorldTopologyRuntime.NormalizeCell(new Vector2Int(
+            Mathf.FloorToInt(fromWorld.x),
+            Mathf.FloorToInt(fromWorld.y)));
+        Vector2Int to = WorldTopologyRuntime.NormalizeCell(new Vector2Int(
+            Mathf.FloorToInt(toWorld.x),
+            Mathf.FloorToInt(toWorld.y)));
+
+        if (!sampler.TryGetBlockingState(from, out _) ||
+            !sampler.TryGetBlockingState(to, out _))
+        {
+            return false;
+        }
+
+        if (from == to)
+            return true;
+
+        Vector2Int shortest = WorldTopologyRuntime.ShortestDelta(from, to);
+        Vector2Int unwrappedTo = from + shortest;
+        int x = from.x;
+        int y = from.y;
+        int dx = Mathf.Abs(shortest.x);
+        int dy = Mathf.Abs(shortest.y);
+        int stepX = shortest.x >= 0 ? 1 : -1;
+        int stepY = shortest.y >= 0 ? 1 : -1;
+        int error = dx - dy;
+
+        while (x != unwrappedTo.x || y != unwrappedTo.y)
+        {
+            int previousX = x;
+            int previousY = y;
+            int doubledError = error * 2;
+
+            if (doubledError > -dy)
+            {
+                error -= dy;
+                x += stepX;
+            }
+
+            if (doubledError < dx)
+            {
+                error += dx;
+                y += stepY;
+            }
+
+            bool movedDiagonally = x != previousX && y != previousY;
+            if (movedDiagonally &&
+                (sampler.IsSightBlockingCell(new Vector2Int(x, previousY)) ||
+                 sampler.IsSightBlockingCell(new Vector2Int(previousX, y))))
+            {
+                return false;
+            }
+
+            Vector2Int current = new Vector2Int(x, y);
+            if (current != unwrappedTo && sampler.IsSightBlockingCell(current))
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>单条视线统一查询动态建筑占地与地形阻挡，并缓存当前区块避免重复解析地址。</summary>
+    private struct GridLineSampler
+    {
+        private readonly ChunkMgr chunkManager;
+        private RuntimeWorldAddress cachedAddress;
+        private ChunkTerrainData cachedTerrain;
+        private bool hasCachedChunk;
+
+        public GridLineSampler(ChunkMgr chunkManager)
+        {
+            this.chunkManager = chunkManager;
+            cachedAddress = default;
+            cachedTerrain = null;
+            hasCachedChunk = false;
+        }
+
+        /// <summary>先查动态建筑占地，再查固定地形；未知/未加载格按遮挡处理。</summary>
+        public bool IsSightBlockingCell(Vector2Int worldCell)
+        {
+            worldCell = WorldTopologyRuntime.NormalizeCell(worldCell);
+            if (BuildingOccupancyRegistry.IsOccupied(worldCell))
+                return true;
+
+            return !TryGetBlockingState(worldCell, out bool isBlocking) || isBlocking;
+        }
+
+        /// <summary>读取固定阻挡层；与世界光照遮挡使用同一 BlockingTileId + Blocking 语义。</summary>
+        public bool TryGetBlockingState(Vector2Int worldCell, out bool isBlocking)
+        {
+            worldCell = WorldTopologyRuntime.NormalizeCell(worldCell);
+            if (!TryResolveTerrain(worldCell, out ChunkTerrainData terrain, out int localX, out int localY))
+            {
+                isBlocking = true;
+                return false;
+            }
+
+            TerrainCell cell = terrain.GetCell(localX, localY);
+            isBlocking = cell.BlockingTileId != 0 &&
+                         (cell.Flags & TerrainCellFlags.Blocking) != 0;
+            return true;
+        }
+
+        private bool TryResolveTerrain(
+            Vector2Int worldCell,
+            out ChunkTerrainData terrain,
+            out int localX,
+            out int localY)
+        {
+            if (hasCachedChunk && cachedTerrain != null && !cachedTerrain.IsDisposed)
+            {
+                localX = worldCell.x - cachedAddress.ChunkOrigin.X;
+                localY = worldCell.y - cachedAddress.ChunkOrigin.Y;
+                if ((uint)localX < (uint)cachedTerrain.Width && (uint)localY < (uint)cachedTerrain.Height)
+                {
+                    terrain = cachedTerrain;
+                    return true;
+                }
+            }
+
+            Vector2 samplePosition = new Vector2(worldCell.x + 0.5f, worldCell.y + 0.5f);
+            RuntimeWorldAddress address = chunkManager.ResolveWorldAddress(samplePosition);
+            if (!chunkManager.TryGetChunkRuntime(address, out ChunkRuntime chunk) ||
+                chunk.DataStatus != ChunkDataStatus.Ready || chunk.Terrain == null ||
+                chunk.Terrain.IsDisposed)
+            {
+                terrain = null;
+                localX = 0;
+                localY = 0;
+                return false;
+            }
+
+            cachedAddress = address;
+            cachedTerrain = chunk.Terrain;
+            hasCachedChunk = true;
+            localX = worldCell.x - cachedAddress.ChunkOrigin.X;
+            localY = worldCell.y - cachedAddress.ChunkOrigin.Y;
+            terrain = cachedTerrain;
+            return (uint)localX < (uint)terrain.Width && (uint)localY < (uint)terrain.Height;
+        }
     }
     #endregion
 
