@@ -22,7 +22,7 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 
 - `GameManager` 是新建、继续、运行、退出世界的权威；`GameWorldSceneManager` 不是。
 - 动态维度 Scene 不进 Build Settings，以 `WorldKey` 命名并复用 `RunWorld()`。
-- 资源启动只有 `TryReloadResources` 一个入口，加载中不创建第二条会话；世界进入中、世界运行中或仍有存活 Item 时禁止更换目录。`isLoadFinish` 只由 `LoadState.Ready` 派生，不得由各目录单独发布成功。
+- F5/调试资源刷新统一走 `RequestResourceReload`：主菜单可直接开始底层会话；单机世界运行中必须先完整保存并通过正式退出链清掉 Item/Chunk，再调用 `TryReloadResources`，成功后从磁盘重载同一存档并重新进入。`TryReloadResources` 仍是无世界运行态时的底层入口，加载中不创建第二条会话，存在活跃 Item 时禁止释放旧目录；联机世界禁止单边资源热重载。`isLoadFinish` 只由 `LoadState.Ready` 派生，不得由各目录单独发布成功。
 - 新目录在 `GameRes.LoadPlan.cs` 注册阶段及依赖；阶段内返回嵌套 `IEnumerator`，禁止 `StartCoroutine` 脱离 `ResourceLoadPipeline` 的异常、超时与取消管理。
 - 本体资源句柄发出时即交给 `ResourceAssetScope` 持有，成功保留到目录卸载，失败/取消统一释放；卸载必须先处理 MOD 与物品池，再清空派生目录、释放资源，禁止用自动创建单例的查询入口做销毁清理。
 - 本体先校验再加载 MOD，合并后再次通过 `ResourceCatalogValidation` 才发布 Ready。新系统通过 `IResourceCatalogValidator` 接入引用校验，不把玩法资源约束塞进通用加载器；静态目录检查入口为 `FlatWorld/诊断/检查 Addressables 目录`。

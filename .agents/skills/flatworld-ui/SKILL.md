@@ -91,7 +91,8 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 ## 架构与运行时约束
 
-- 水容器剖面通过 `WaterVesselLiquidGraphic` 和独立内腔 Mask 呈现；视觉配置按 `LiquidDefinition.VisualState` 匹配，不在 UI 重建水质枚举。新增表现状态需同步正式 Prefab 的 Styles；自定义 Graphic 必须显式声明 CanvasRenderer 依赖，避免预制体有脚本却不渲染。
+- 水容器剖面通过 `WaterVesselLiquidGraphic` 和独立内腔 Mask 呈现；视觉配置按 `LiquidDefinition.VisualState` 匹配，不在 UI 重建水质枚举。`LiquidStyle` 的 `Murkiness/Sediment/SurfaceDebris/SuspendedParticles` 负责通用浑浊、沉淀、污膜和悬浮颗粒表现，罐口液流读取同一套颜色与浑浊度参数，禁止按具体液体 ID 单独硬编码。罐口倾倒液流使用正式 Prefab 中位于 `陶罐剖面`、但处于内腔 Mask 之外的 `倾倒液流/WaterVesselPourGraphic`，保证水能从罐口延伸到罐外；该节点应排在罐体图片之前，由罐体遮住液流起点。出水位置必须来自挂在 `陶罐切面` 下的左右罐口出口锚点，并按倾角选择下侧嘴沿，禁止再用“罐体中心 + 固定半径”猜测；液流根部可向罐内回退，由后绘制的罐体自然遮挡后再越过嘴沿。新增表现状态需同步正式 Prefab 的 Styles；自定义 Graphic 必须显式声明 CanvasRenderer 依赖，避免预制体有脚本却不渲染。
+- `UI_WaterVessel` 采用与石臼一致的无底板玩法面板：根 `Image` 与 `设置对话框/Image` 只保留透明射线阻挡，不绘制灰色背景或描边；统一主题不得把这两层重新着色，按钮仍按通用主题单独显示。
 
 - 领域控制器创建/持有正式 Prefab，`UIManager` 管生命周期；控件节点名是绑定契约。正式 UI 不用 `new GameObject/AddComponent` 拼视觉。
 - Prefab 是视觉真相；`BasePanel` 不在初始化时重写结构。运行时只用稳定键加载正式 Prefab。 编辑器构建器组装带 Awake 的视图时，应先停用根节点，完成所有序列化引用后再激活；新增必需视图引用必须同步生成正式 Prefab 并核对引用，不能只提交脚本。

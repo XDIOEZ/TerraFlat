@@ -15,7 +15,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 
 ## 核心不变量
 
-- 开发期存档只接受当前 Envelope 与 MemoryPack 布局；模型或差量结构变化时同步提升存档版本，旧存档直接抛出 `SaveVersionIncompatibleException`，不做迁移、字段回退、默认值修补或全量快照兼容。
+- 存档 Envelope 版本是单向能力边界：只拒绝高于当前客户端的未来格式；旧版本允许读取并在下一次保存时自然升级到当前版本。能够反序列化的旧数据不得因为游戏升级被版本号直接拒绝。
 - `SerializableTimeData` 的时间 Profile、限时边界和月相字段属于当前格式；`TimeData.EnsureTimeSystemDefaults()` 只负责当前运行时对象的合法化，不承担旧存档恢复。
 - 正式存档只写 `Application.persistentDataPath/Saves/LocalSaveData/`，并使用临时文件/原子替换；失败不得伪装为成功恢复。
 - `ItemSpecialDataJsonStore` 按命名空间更新并保留未知根属性；教程、任务、维度、出生点不得互相覆盖或改 `Data_Player` 布局。
@@ -37,6 +37,8 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - `ChunkSaveRecord.HasChanges` 必须计入独立的农业和平台状态；恢复支撑必须在导航及表现绑定之前，不能只有当前帧可行走、重载后丢失平台。
 - 地块污染使用 `ChunkSaveRecord.ContaminationCells` 保存偏离定义默认值的稀疏差量；污染定义 ID 与数值一起持久化，恢复时必须要求当前本体/MOD 已注册该定义，禁止静默丢弃未知污染状态。
 - 时间保存同时复制季节配置和历史区间；积雪、植物冷热暴露、自然补位年份、陶罐水质／加工进度、盐分负担各有独立状态，不能在渲染绑定或 UI 打开时重置。
+- 通用液体容器的 `LiquidContainerState.Amount` 以 `0.1` 份为最小持久化单位；运行时读入高精度浮点余量时先归一到一位小数，后续装液、倾倒、转移与加工不得重新写入更高精度的数量。
+- JSON ItemDefinition 是物品静态配置真源：恢复世界实体、建筑、AI 和库存物品时先用当前定义重建重量、体积、标签、耐久上限和模块组合，再叠加 GUID、数量、位置、耐久比例及模块运行态；删除的旧模块不得被存档重新实例化。
 
 ## 工作流与验证
 

@@ -11,6 +11,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 输入：`Player/Controller/{GameController,InputBindingService}.cs`
 - 交互：同目录 `{Mod_InteractSender,Mod_InteractReciver}.cs`
 - 管理员：`PlayerAdminController.cs`；移动/相机/焦点：`Entities/Move/`
+- `PlayerAdminController` 的 F2 是本地开发用创造背包一键入口：不依赖 F1 管理员显示名，按下后复用 `Mod_PlayerTraits.InitializeCreativeInventoryForAdmin` 初始化/补充物品，并确保玩家主背包面板打开；管理员专属的其它快捷键仍保持原有权限门槛。
 - GM 传送由唯一的 `Development/Debug/GMReflectionConsole.Teleport.cs` 消费 Ctrl+T 和点选入口；不能放回 `PlayerAdminController.Update`，因为玩家外壳与 Module_Player 均可能挂载管理员模块，且 GM 传送不依赖角色显示名。落点统一交给 `Mod_PlayerTraits.TryTeleportToScreenPosition` 同步刚体、玩家位置和区块加载。
 - 游戏镜头由 `Mod_Cam` 实例化 `Assets/2_Prefabs/Gameplay/Modules/Camera/Main Camera.prefab`；2D 跟随使用 Cinemachine 2.x `Framing Transposer`，跟随手感优先在该 Prefab 的 Lookahead 与 XY Damping 调整。
 

@@ -48,6 +48,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 箭矢损坏回收材料由 `Mod_Projectile` 读取当前物品对应的普通合成配方并从 `ExactItem` 输入中按用量权重选一份，禁止在战斗代码里硬编码木棍、石料或金属；Tag 输入无法还原本次实际消耗的具体物品，因此没有可确定的精确材料时应跳过回收，不允许猜测生成物。
 - 可回收箭矢命中 `DamageReceiver` 后的“插在目标身上”状态由 `Mod_Projectile` 保存相对目标 Item 根节点的局部姿态并逐帧同步；箭矢仍保持独立 Runtime Item，不改挂到 Actor 层级。跟随移动时必须调用 `ItemMgr.NotifyRuntimeItemMoved` 刷新空间索引，目标失效后解除附着并保留箭矢最后世界位置，确保拾取、对象池和世界索引不被父子层级关系破坏。
 - 出血资格使用稳定 `Blood` 标签表达“该实体有血”，不要用 `Player`/`Animal` 类型或物种标签代替。玩家和有血动物可以同时保留自己的分类标签；幽灵、机械体等无血实体只要不声明 `Blood` 就不会触发刃伤出血规则，MOD 生物也通过同一标签接入。
+- 锤类对建筑的克制通过 `IBuildingDamageSource.BuildingDamageMultiplier` 与 `TileDamageToolKind.Hammer` 表达；动态建筑在防御后应用倍率，格子建筑必须先完成自身 `MinimumWeaponDamage` 最低有效伤害规则，再对这个最终有效伤害应用锤类倍率，因此石墙保底 1 点会被锤子放大为 10 点。未被建筑规则判定为有效的 0 伤害仍不得被倍率放大。
 
 ## 验证
 

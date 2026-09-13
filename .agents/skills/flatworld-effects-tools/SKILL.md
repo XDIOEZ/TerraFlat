@@ -17,6 +17,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 ## 不变量
 
 - 先确认触发系统及 Prefab/材质/Shader 的真实引用来源，再改表现。
+- 陶罐 UI 的水面摇晃和罐口液流属于表现层：水面扰动只读取罐体角速度并自行衰减，罐口液流只在 `Mod_WaterVessel.RemoveLiquidAmount` 实际移除液体后触发；不得让粒子/Graphic 帧率参与液体数量结算。罐口液流应作为正式 `UI_WaterVessel.prefab` 中位于罐体外 Mask 的独立 Graphic，避免被内腔裁剪。
 - 池化特效每次取出时重置 Transform、Animator、颜色和生命周期；回收/禁用时清理订阅与状态。
 - 需要在角色 `OnDisable` 中立即回收的池化特效不能挂到该角色层级下，否则归池 `SetParent` 会与父级激活/停用过程冲突；Owner 登记与 Transform 父级分开，睡眠 ZZZ 由单位缩放的独立特效根节点持有并在 `LateUpdate` 跟随。区块休眠不等于退出 AI 睡眠状态，停用时只释放可见实例，重新激活时恢复仍有效的表现请求。
 - 粒子 `VelocityModule` 的线性 X/Y/Z 必须使用同一种 `minMaxState`；2D 特效即使 Z 速度恒为零，也应使用与 X/Y 相同的模式并把上下限都设为零，避免 `Particle Velocity curves must all be in the same mode`。
@@ -24,6 +25,9 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 伤害数字的最终颜色由 `DamageTextEffect` 样式或调用数据覆盖，不能只改 TMP 的 Prefab 字色；数值到显示倍率的映射也由该表现组件负责，战斗结算只传递实际伤害值与样式。
 - 角色颜色等共享 Shader 参数通过现有 MPB 控制器提交，避免多个组件互相覆盖。
 - Unity 2D 使用 URP/Light2D；修改 Shader 前核对材质实际 Shader 与 Pass。
+- 局部 `Light2D` 如果开启 `volumeIntensityEnabled`，同时要开启 `volumetricShadowsEnabled` 并设置有效 `shadowVolumeIntensity`；否则 `ShadowCaster2D` 只会阻挡普通光照，体积光晕仍会穿过石墙、矿洞岩壁等 Blocking Tile，看起来像“光穿墙”。新版区块的静态墙体遮挡统一复用 `ChunkLightOccluderRenderer`，不要再给每块玩家墙单独创建常驻 ShadowCaster。
+- `ChunkLightOccluderRenderer` 的 Blocking Tile 阴影体必须开启 `selfShadows`，否则墙体虽然会向背光侧投影，墙面自身仍会被 Point Light 整块照亮；通用世界 `Mod_LightSource` 的 Point Light 使用满强度普通阴影，保证实体墙移除该局部光，同时保留昼夜全局光和墙体朝光侧的窄外沿。
+- 动态可交互建筑不属于 Tilemap，不能依赖 `ChunkLightOccluderRenderer`；落地 `PlacedBuilding` 应按自身主碰撞体启用 `ShadowCaster2D`，手持/召唤器状态必须关闭，低矮设施默认 `selfShadows=false` 以保持主体正常接收局部光。
 - 共用海水 `UsePass` 的包装 Shader 必须声明公共 Pass 新增的同名材质属性；月光等夜间自发光倒影应在 `CombinedShapeLightShared` 之后合成，避免全局夜间光照被重复相乘。月亮出现动画读取 `DayTimeSystem` 发布的 `_GlobalMoonAppearance`，尺寸/渐亮与 `_GlobalMoonlightIntensity` 的月相亮度分离，避免新月把月面永久缩小。
 - Water Tilemap 的 Tile Color RGBA 只编码左、右、下、上岸线方向；水深必须由每个 Chunk 独立的带一格邻区边框纹理提供，并在格子中心之间使用双线性采样，禁止再把连续水深与岸线位打包进同一颜色通道。包装 Shader 必须继续声明公共 Pass 使用的全部属性。
 - Tilemap 合批后 `POSITION` 不保证是 Chunk 局部坐标；水深与岸线使用世界坐标，MPB 的 `_WaterDepthUvScaleOffset` 必须扣除水层原点再加入一格纹理边框。当前世界网格每格为 1 单位且原点对齐整数，不要用 `unity_WorldToObject` 恢复已被合批丢失的局部坐标。
@@ -35,7 +39,8 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 屏幕后处理依赖当前 `QualitySettings` 的 `customRenderPipeline`；不能只检查编辑器当前质量档位，所有可选档位都必须引用项目内实际存在的 URP 资源，否则 Scene 视图可能可见而 Game/Android 画面不可见。
 - 世界常态后处理由 `WorldManager/Global Volume` 引用 `Assets/9_Shaders/Volume/Global Volume Profile.asset`；`WorldManager` 跨场景常驻，因此 `WorldPostProcessQuality` 必须绑定同一 Prefab 内 `GameManager` 的进出世界事件，只在世界内启用 Volume，退出时释放克隆的 Profile 和所有 VolumeComponent。调色保持在该资产内，画质只调整泛光采样；状态警示继续由优先级 100 的 `ScreenPostProcessManager` 独立合成。URP 14 的 `Volume.profile` 自动克隆所有子组件，但 `Volume` 本身不负责销毁克隆，必须由持有者清理。
 - 屏幕后处理脚本按最低支持质量只实现一个档位标记接口：Low 可在所有档位运行，Medium 需中/高档，High 仅高档；未标记效果保持旧行为。
-- 运行时 Sprite 描边若复制 `SortingGroup` 内的渲染器，描边 Renderer 必须放到组外并排在主体之后；URP 2D 自定义 Sprite Shader 必须包含 `Core2D.hlsl`，同时保留 SpriteRenderer 的逐渲染器属性。
+- 低血量屏幕红边由 `ScreenPostProcessManager` 计算玩法强度，最终交给 `LowHealthRedEdgeRendererFeature` 的 GPU 全屏 Pass；URP 内置 Vignette 使用 `input * color` 的乘法公式，只能把边缘压暗，不能生成鲜明红色警示，因此不要再用它实现低血量红边。GPU Pass 只在强度大于零且相机栈 `resolveFinalTarget` 时入队，使用硬件 Alpha Blend，不复制源颜色、不创建额外 Camera，也不走 CPU UI 网格。
+- 运行时 Sprite 描边若复制 `SortingGroup` 内的渲染器，描边 Renderer 必须放到组外并排在主体之后；URP 2D 自定义 Sprite Shader 必须包含 `Core2D.hlsl`，同时保留 SpriteRenderer 的逐渲染器属性。需要随场景 `Light2D` 明暗变化的 `Universal2D` Pass 还必须实际采样 Shape Light（如 `CombinedShapeLightShared`）；只有 `LightMode=Universal2D` 标签不会自动获得 2D 光照。
 - 描边等代理 `SpriteRenderer` 必须同步源 Renderer 的 MPB 局部裁剪参数；代理写入自有 MPB 时必须同时写回 Sprite 的 `_MainTex`，避免逐渲染器贴图被默认白图替换。`Universal2D`、`NormalsRendering`、`UniversalForward` 等实际参与的 Shader Pass 必须使用同一坐标与阈值，避免代理或回退 Pass 重新显示已剔除像素。
 - 玩家被树冠遮挡时的圆形穿透窗由 `PlayerOcclusionShaderGlobals` 写入本地主角世界坐标，`Sprite-Lit-Master` 只对逐 Renderer `_PlayerOccluder=1` 的对象降低 Alpha；世界树必须带 `Tag.Tree`，`ItemDefinitionRuntime` 在共享外壳/对象池复用时必须显式写入 1 或 0 并保留其它 MPB 参数，禁止给所有 Sprite 开全局遮挡或为每棵树增加逐帧脚本。
 - 角色水体效果覆盖会旋转的手持物等附属 Sprite 时，水面高度与波浪横轴必须使用角色统一的世界空间坐标；保留本地坐标模式只用于不旋转的旧材质兼容，避免水线随物品旋转成竖线。

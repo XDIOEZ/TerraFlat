@@ -44,6 +44,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 具体 Prefab 删除后，JSON 必须同步移除 `sourcePrefab`，迁移器则把这类无源定义登记为手工保留项；否则再次执行全量迁移会误删权威 JSON。
 - 内容工坊创建物品时只写继承差异：父定义和参考模块必须来自启用分包，Sprite 先生成稳定 Addressables 地址，JSON 写入前校验继承、重复 ID、文件指纹与分包外壳边界。
 - `RuntimeItemDefinition.IsActor` 只表示复用通用管线；Actor 还必须登记到 `GameRes.ActorDefinitions` 且外壳包含 `IAIActor`。
+- 存档恢复不能把历史 `ItemData/ModuleDataDic` 当配置真源；必须先按当前 `RuntimeItemDefinition` 重建静态数据和模块集合，再恢复匹配稳定模块名的运行态。这样 F5 资源重载或版本更新后的 JSON 配置会覆盖旧档配置，已删除模块也不会被旧档复活。
 - 堆叠身份统一由 `ItemData` 判定，空与 null 特殊数据按现有规范处理。
 - 模块 Prefab 的 `ModuleData.Name/ID` 可能未序列化；进入 `ItemMods`、`ModuleInit` 或网络更新前必须统一建立非空身份，禁止直接把空值写入字典。
 - JSON 动态组合存在跨模块引用时实现 `IItemModuleDependencyBinder`；`Item` 会在全部模块进入 `ItemMods` 后、`ModuleInit/Load` 前统一绑定，依赖必须按唯一稳定 ID 解析并对缺失或重复直接报错。

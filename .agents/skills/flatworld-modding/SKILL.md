@@ -18,10 +18,11 @@ description: "Use when: 定位或修改 FlatWorld 的 MOD 扫描、manifest、�
 
 - 保留路径、防重解析点、文件数/体积/JSON 长度限制；不要为方便绕过安全校验。
 - manifest ID、版本范围、依赖顺序与内容哈希参与兼容；格式变化需版本迁移。
+- MOD 存档元数据不锁死历史版本号和内容哈希：恢复时只要求存档实际引用的 MOD ID 仍存在；同 ID MOD 更新后直接使用当前定义与资源，旧全局运行态按 modId 恢复。联机握手仍继续严格校验当前 MOD 集合与内容哈希。
 - MOD 内容 ID 使用 `modId:` 命名空间，冲突必须可诊断；失败/卸载不得留下半注册内容。
 - JSON 定义复用本体 DTO 与校验器；旧 Recipe AssetBundle 仅作兼容桥。
 - `definitionFiles` 可通过根数组 `contaminations` 注册自定义地块污染指标，ID 必须使用 `modId:` 命名空间；Lua 使用 `HasContaminationDefinition` 与 `Get/Set/AddContaminationValue` 访问，裸 ID 自动归属当前 MOD。污染运行时值由本体 `ContaminationSystem` 持久化，MOD 不应直接操作 Chunk 环境层。
-- `definitionFiles` 可通过根数组 `liquids` 注册自定义液体，定义与本体共用 `LiquidDefinitionFactory` 严格 schema，ID 必须使用 `modId:` 命名空间；通用容器只保存液体 ID 和数量，Lua 物品 API 可查询/加入/移除液体。液体加热行为应声明在 `heatProcess`，不要为每种 MOD 液体复制容器或炉体代码。
+- `definitionFiles` 可通过根数组 `liquids` 注册自定义液体，定义与本体共用 `LiquidDefinitionFactory` 严格 schema，ID 必须使用 `modId:` 命名空间；通用容器只保存液体 ID 和数量，Lua 物品 API 可查询/加入/移除液体。液体加热行为声明在 `heatProcess`，饮用后 Buff 后果声明在 `drinkEffects`（`buffId/chance/feedback`），两者都由本体通用处理链消费，不要为每种 MOD 液体复制容器、炉体或饮用特判。
 - 玩家创建模板可在任意 `definitionFiles` JSON 的 `playerCreationTemplates` 数组中声明；裸 ID 自动归属当前 MOD 命名空间，继承使用 `parent`，修改本体或其他已注册模板使用 `patchFiles` 的 `target: playerTemplate:<id>`，切换默认模板使用 `target: playerTemplateCatalog` 的 `defaultProfileId` Patch；玩家创建配置不写入存档。
 - `actors` 可继承本体/同批 MOD Actor，深度覆盖 modules；Bundle 外观用 sprite/animator 成对字段。
 - Actor Lua 必须使用 `Mod_LuaBehaviour`，运行时强制所属 modId 并校验 scriptPath 不越界；AssetBundle 不承载新 C# 代码。
