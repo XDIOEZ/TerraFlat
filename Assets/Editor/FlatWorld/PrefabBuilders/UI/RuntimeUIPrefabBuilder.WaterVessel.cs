@@ -75,6 +75,8 @@ public static partial class RuntimeUIPrefabBuilder
                 Detail = new Color32(221,247,234,255), Deep = new Color32(35,120,140,245), Foam = true
             }
         };
+        // 液流必须排在罐体子树之后：短液桥负责跨过厚嘴沿接上罐内水，外部水柱继续从嘴沿向外延伸。
+        pour.transform.SetAsLastSibling();
         CreateSettingsHint(content, "手持水容器对准水域使用即可装水；拖动陶罐可倾倒，脏淡水可直接喝，也可烧开，海水可加热制盐。", 64f);
 
         GameObject actions = CreateUIObject("操作列表", content);

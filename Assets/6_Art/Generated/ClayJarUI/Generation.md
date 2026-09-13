@@ -8,3 +8,5 @@
 - 重建入口：FlatWorld/UI/Rebuild Water Vessel UI。预览入口：FlatWorld/UI/Preview Water Vessel UI。
 - 水层按 LiquidDefinition.VisualState 匹配 Prefab 中的视觉配置；份数 / 当前容器容量决定水面高度。dirty 为浑浊颗粒，drinkable 为蓝色反光，sea 为蓝绿水体和浅色浮沫，filled 为目录默认表现状态。
 - 新增液体表现状态时同步配置正式面板 Styles；无需更改液体存档数据。
+- 剖面罐口仅保留后侧弧形沿与两侧切边，前侧横沿已移除，使颈部与腹部内腔连续；概念源图与正式精灵同步保存。
+- 编辑模式：内置 imagegen 局部编辑；提示词要点：只移除前侧罐沿，以相邻深棕内壁衔接，保留后沿、两侧厚壁、底部、像素风与原构图。仅将罐口区域合回原图，正式精灵继续采用原有 128×128 画布和调色板。

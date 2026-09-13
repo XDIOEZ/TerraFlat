@@ -11,6 +11,11 @@ public sealed class WaterVesselPourGraphic : MaskableGraphic
     private const float VisibleThreshold = 0.01f;
     private const int StreamSegments = 18; // 原 9 段翻倍，减小折线感并保持曲线连续。
     private const float JointOverlapRatio = 0.08f; // 相邻水片在接头处轻微重叠，消除像素栅格造成的黑缝。
+    private const float MouthBridgeLengthRatio = 0.1f; // 从嘴沿向罐内延伸一小段前景液桥，跨过厚陶土边缘连接罐内水体。
+    private const float MouthBridgeWidthRatio = 0.52f; // 液桥比外部水柱略窄，避免覆盖过多罐口像素。
+    private const float FlowHoldMinSeconds = 0.3f; // 最后一次真实扣液后继续保留的最短视觉反馈时间。
+    private const float FlowHoldMaxSeconds = 0.65f; // 大流量时延长水柱停留，数值结算仍保持即时完成。
+    private const float FlowFadeOutPerSecond = 2f; // 尾段缓慢收束，避免数值归零后水柱瞬间消失。
 
     private Vector2 outletPosition; // 由正式 Prefab 的罐口锚点提供，不再从罐体中心猜测出水位置。
     private Vector2 outletDirection = Vector2.up; // 罐口朝外方向，随罐体旋转同步更新。
@@ -35,7 +40,9 @@ public sealed class WaterVesselPourGraphic : MaskableGraphic
         float strength = Mathf.Clamp01(normalizedFlow);
         targetFlow = Mathf.Max(targetFlow, strength);
         flow = Mathf.Max(flow, Mathf.Lerp(0.22f, 0.92f, strength));
-        pulseUntil = Mathf.Max(pulseUntil, Time.unscaledTime + Mathf.Lerp(0.2f, 0.5f, strength));
+        pulseUntil = Mathf.Max(
+            pulseUntil,
+            Time.unscaledTime + Mathf.Lerp(FlowHoldMinSeconds, FlowHoldMaxSeconds, strength));
         SetVerticesDirty();
     }
 
@@ -74,7 +81,7 @@ public sealed class WaterVesselPourGraphic : MaskableGraphic
         if (Time.unscaledTime >= pulseUntil)
             targetFlow = 0f;
 
-        float speed = targetFlow > flow ? 5.5f : 2.8f;
+        float speed = targetFlow > flow ? 5.5f : FlowFadeOutPerSecond;
         float previous = flow;
         flow = Mathf.MoveTowards(flow, targetFlow, speed * Time.unscaledDeltaTime);
 
@@ -94,7 +101,7 @@ public sealed class WaterVesselPourGraphic : MaskableGraphic
         SetVerticesDirty();
     }
 
-    /// <summary>从旋转后的罐口沿初始喷出方向延伸，再受重力向下弯曲，形成分段液片。</summary>
+    /// <summary>先用短液桥跨过罐口厚边，再从真实嘴沿向外延伸并受重力下弯。</summary>
     protected override void OnPopulateMesh(VertexHelper mesh)
     {
         mesh.Clear();
@@ -109,8 +116,14 @@ public sealed class WaterVesselPourGraphic : MaskableGraphic
         float fallDistance = Mathf.Lerp(size * 0.32f, size * 0.68f, flow);
         float baseWidth = Mathf.Lerp(size * 0.025f, size * 0.085f, flow) * Mathf.Lerp(1f, 1.28f, murkiness);
 
-        // 根部退进罐口，让后绘制的陶罐本体自然遮住内部水段，只显示真正越过嘴沿的部分。
-        Vector2 previous = mouth - outward * (size * 0.035f);
+        // 概念稿的罐腹与嘴沿之间有一段厚陶土边缘；液流位于前景层时，用窄液桥覆盖这段视觉断点。
+        float bridgeWidth = Mathf.Max(size * 0.012f, baseWidth * MouthBridgeWidthRatio);
+        Vector2 bridgeStart = mouth - outward * (size * MouthBridgeLengthRatio);
+        Vector2 bridgeEnd = mouth + outward * (bridgeWidth * 0.35f);
+        AddRibbon(mesh, bridgeStart, bridgeEnd, bridgeWidth, bodyColor);
+
+        // 主水柱从嘴沿本身开始，并与液桥轻微重叠，根部与第一段之间不再留空。
+        Vector2 previous = mouth - outward * (bridgeWidth * JointOverlapRatio);
         for (int i = 1; i <= StreamSegments; i++)
         {
             float t = i / (float)StreamSegments;
