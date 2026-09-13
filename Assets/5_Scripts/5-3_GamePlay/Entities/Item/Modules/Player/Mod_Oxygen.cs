@@ -1,20 +1,18 @@
-using FlatWorld.Networking;
 using MemoryPack;
 using UltEvents;
 using UnityEngine;
 
 /// <summary>
-/// 玩家水中生存模块：在真实水体中持续消耗体力维持漂浮，体力耗尽后消耗氧气，
-/// 氧气归零后通过 DamageReceiver 按每秒 10 点基础伤害持续结算溺水伤害。
-/// 氧气是玩家独立持久化状态，不使用 Buff，水体只负责同步当前是否真实入水。
+/// 玩家氧气状态模块。
+/// 水深、漂浮、下沉、减速与何时开始缺氧由 TileEffectReceiver 的通用水中生存状态统一判定；
+/// 本模块只保存玩家氧气、提供水中消耗参数并向 HUD 广播变化。
 /// </summary>
-public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder
+public partial class Mod_Oxygen : Module
 {
     public const string ModuleId = "氧气模块";
 
     public override string CanonicalModuleId => ModuleId;
-    public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
-    public override float FixedTickInterval => 0.1f;
+    public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
 
     #region 数据
 
@@ -47,23 +45,14 @@ public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder
     public float MaxValue => Data?.MaxOxygen ?? 0f;
     public float OxygenRatio => MaxValue > 0f ? Mathf.Clamp01(CurrentValue / MaxValue) : 0f;
     public bool IsInWater => isInWater;
-    public bool IsDrowning => isInWater && stamina != null && stamina.CurrentValue <= 0f && CurrentValue <= 0f;
+    public bool IsDrowning => isInWater && isBreathBlocked && CurrentValue <= 0f;
 
     #endregion
 
-    #region 运行时依赖
+    #region 运行时状态
 
-    private Mod_Stamina stamina; // 玩家体力权威模块。
-    private DamageReceiver damageReceiver; // 玩家生命权威模块。
-    private bool isInWater; // 当前是否处于真实水格。
-    private int lastWaterExitFrame = -1; // 连续水格切换时避免把同帧退出当成真正上岸。
-    private bool lastWaterExitWasActive; // 最近退出前是否确实处于水中。
-
-    public void BindModuleDependencies(ItemMods modules)
-    {
-        stamina = modules.RequireSingleModById<Mod_Stamina>(ModText.Stamina);
-        damageReceiver = modules.RequireSingleModById<DamageReceiver>(ModText.Hp);
-    }
+    private bool isInWater; // 当前是否真实处于水体。
+    private bool isBreathBlocked; // 当前有效淹没高度是否超过安全呼吸线。
 
     #endregion
 
@@ -88,24 +77,6 @@ public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder
         modData.WriteData(Data);
     }
 
-    public override void ModUpdate(float deltaTime)
-    {
-        if (!GameNetwork.HasStateAuthority || Data == null || damageReceiver == null || damageReceiver.Hp <= 0f)
-            return;
-
-        float safeDeltaTime = Mathf.Max(0f, deltaTime);
-        if (safeDeltaTime <= 0f)
-            return;
-
-        if (!isInWater)
-        {
-            RecoverOxygen(safeDeltaTime);
-            return;
-        }
-
-        ProcessWaterSurvival(safeDeltaTime);
-    }
-
     public override void Unload()
     {
         ResetWaterExposureState();
@@ -119,69 +90,29 @@ public partial class Mod_Oxygen : Module, IItemModuleDependencyBinder
     /// <summary>同步真实入水状态；邻接水格只提供边缘交互时不会进入本状态。</summary>
     public void SetWaterExposure(bool inWater)
     {
+        isInWater = inWater;
         if (!inWater)
-        {
-            lastWaterExitWasActive = isInWater;
-            lastWaterExitFrame = Time.frameCount;
-            isInWater = false;
-            return;
-        }
+            isBreathBlocked = false;
+    }
 
-        if (isInWater)
-            return;
-
-        bool continuedAcrossWaterTiles =
-            lastWaterExitWasActive && lastWaterExitFrame == Time.frameCount;
-        isInWater = true;
-        lastWaterExitWasActive = false;
-
-        // 同帧跨水格仍属于同一片连续水域，不需要额外重置任何氧气状态。
-        if (continuedAcrossWaterTiles)
-            return;
+    /// <summary>同步当前是否已经被水淹过安全呼吸线。</summary>
+    public void SetBreathBlocked(bool blocked)
+    {
+        isBreathBlocked = isInWater && blocked;
     }
 
     private void ResetWaterExposureState()
     {
         isInWater = false;
-        lastWaterExitFrame = -1;
-        lastWaterExitWasActive = false;
+        isBreathBlocked = false;
     }
 
     #endregion
 
     #region 生存结算
 
-    /// <summary>先消耗体力维持漂浮；体力为零后才开始消耗氧气。</summary>
-    private void ProcessWaterSurvival(float deltaTime)
-    {
-        if (stamina != null && stamina.CurrentValue > 0f)
-        {
-            stamina.AddStamina(-Mathf.Max(0f, staminaConsumePerSecond) * deltaTime);
-            if (stamina.CurrentValue > 0f)
-            {
-                RecoverOxygen(deltaTime);
-                return;
-            }
-        }
-
-        ConsumeOxygen(deltaTime);
-        if (CurrentValue > 0f)
-            return;
-
-        float damage = Mathf.Max(0f, drowningDamagePerSecond) * deltaTime;
-        if (damage > 0f)
-            damageReceiver.ForceHurt(damage);
-    }
-
-    private void ConsumeOxygen(float deltaTime)
-    {
-        SetCurrentOxygen(CurrentValue - Mathf.Max(0f, oxygenConsumePerSecond) * deltaTime);
-    }
-
-    private void RecoverOxygen(float deltaTime)
-    {
-        SetCurrentOxygen(CurrentValue + Mathf.Max(0f, oxygenRecoverPerSecond) * deltaTime);
-    }
+    /// <summary>统一修改氧气值；正数恢复、负数消耗，并广播 HUD。</summary>
+    public void AddOxygen(float value) => SetCurrentOxygen(CurrentValue + value);
 
     private void SetCurrentOxygen(float value)
     {

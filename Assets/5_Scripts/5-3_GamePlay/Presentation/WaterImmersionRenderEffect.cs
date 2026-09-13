@@ -95,10 +95,13 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
 
     private float targetDepth;
     private float targetBlend;
+    private float targetDirectImmersion;
     private float currentDepth;
     private float currentBlend;
     private float depthVelocity;
     private float blendVelocity;
+    private float directImmersionVelocity;
+    private bool useDirectImmersion;
     private SpriteRenderer referenceSpriteRenderer;
     private float currentSurfaceV;
     private float currentTintStrength;
@@ -142,7 +145,16 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
     /// <summary>设置水体目标状态；进入水格时传入 deepValue，离开水格时传入 false。</summary>
     public void SetWaterState(float depth, bool inWater)
     {
+        useDirectImmersion = false;
         targetDepth = Mathf.Clamp01(depth);
+        targetBlend = inWater ? 1f : 0f;
+    }
+
+    /// <summary>角色水体直接使用地块真实水深作为遮罩高度，不再经过额外深度曲线或漂浮高度修正。</summary>
+    public void SetActorImmersionState(float immersionLevel, bool inWater)
+    {
+        useDirectImmersion = true;
+        targetDirectImmersion = Mathf.Clamp01(immersionLevel);
         targetBlend = inWater ? 1f : 0f;
     }
 
@@ -181,9 +193,27 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
             Mathf.Infinity,
             deltaTime);
 
-        currentSurfaceV = ResolveSurfaceHeight(currentDepth);
-        currentTintStrength = Mathf.Clamp01(depthToTintStrength.Evaluate(Mathf.Clamp01(currentDepth)));
-        currentLineStrength = Mathf.Clamp01(depthToLineStrength.Evaluate(Mathf.Clamp01(currentDepth)));
+        if (useDirectImmersion)
+        {
+            currentSurfaceV = Mathf.SmoothDamp(
+                currentSurfaceV,
+                targetDirectImmersion,
+                ref directImmersionVelocity,
+                smoothTime,
+                Mathf.Infinity,
+                deltaTime);
+        }
+        else
+        {
+            currentSurfaceV = ResolveSurfaceHeight(currentDepth);
+            directImmersionVelocity = 0f;
+        }
+
+        float visualDepth = useDirectImmersion
+            ? Mathf.Clamp01(currentSurfaceV)
+            : Mathf.Clamp01(currentDepth);
+        currentTintStrength = Mathf.Clamp01(depthToTintStrength.Evaluate(visualDepth));
+        currentLineStrength = Mathf.Clamp01(depthToLineStrength.Evaluate(visualDepth));
         UpdateWorldWaterSurface();
     }
 

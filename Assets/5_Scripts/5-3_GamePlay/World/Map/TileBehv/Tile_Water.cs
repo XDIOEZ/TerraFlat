@@ -26,9 +26,9 @@ public class Tile_Water : TileBlockBehaviour
     [Min(0f)] public float saltWaterGainPerTick = 10f;
 
     [Header("水体环境效果")]
-    [Tooltip("水深为 0 时的移动速度倍率；进入水体即至少降低 50% 移速。")]
+    [Tooltip("有效淹没为 0 时的移动速度倍率；角色实际减速按当前有效淹没高度插值。")]
     [Range(0.01f, 1f)] public float shallowMoveSpeedMultiplier = 0.5f;
-    [Tooltip("水深为 1 时的移动速度倍率；最深水体最多降低 80% 移速，由环境实例维护，不进入 Buff 系统。")]
+    [Tooltip("有效淹没为 1 时的移动速度倍率；最深水体最多降低 80% 移速，由环境实例维护，不进入 Buff 系统。")]
     [Min(0.01f)] public float moveSpeedMultiplier = 0.2f;
     [Tooltip("首次进入一片连续水域时固定降低的体温。")]
     [Min(0f)] public float entryTemperatureDrop = 10f;
@@ -49,14 +49,19 @@ public class Tile_Water : TileBlockBehaviour
         float depthValue = water != null ? Mathf.Clamp01(water.deepValue) : 0f;
         bool edgeInteractionOnly = receiver != null && receiver.IsActiveTileEdgeInteractionOnly;
         SetWaterTemperatureState(item, !edgeInteractionOnly);
-        SetWaterSurvivalState(item, !edgeInteractionOnly);
         if (edgeInteractionOnly)
         {
             // 对象池复用时也要清掉上一轮真实入水留下的目标状态。
             SetWaterVisualState(item, 0f, false);
         }
         else
+        {
+            float effectiveImmersion = receiver != null
+                ? receiver.EnterWaterSurvival(item, depthValue)
+                : depthValue;
             SetWaterVisualState(item, depthValue, true);
+            ProvideWaterEffects(receiver, effectiveImmersion);
+        }
 
         // 配置型 Buff 与环境动作相互独立；没有 BuffManager 的角色仍可获得动作定义。
         if (!edgeInteractionOnly && validItem && buffManager != null && BuffInfo != null)
@@ -71,8 +76,6 @@ public class Tile_Water : TileBlockBehaviour
         }
 
         ProvideWaterActions(item, water, receiver);
-        if (!edgeInteractionOnly)
-            ProvideWaterEffects(receiver, depthValue);
     }
 
     /// <summary>离开水格时撤销水体状态、环境 Buff、动作与被动效果。</summary>
@@ -81,7 +84,7 @@ public class Tile_Water : TileBlockBehaviour
         if (item == null)
             return;
         SetWaterTemperatureState(item, false);
-        SetWaterSurvivalState(item, false);
+        receiver?.ExitWaterSurvival(item);
         SetWaterVisualState(item, 0f, false);
 
         // 移除 Buff
@@ -113,10 +116,13 @@ public class Tile_Water : TileBlockBehaviour
         if (receiver != null && receiver.IsActiveTileEdgeInteractionOnly)
             return;
 
-        // 持续刷新目标深度，允许区块运行时更新水深时同步跟随视觉和移速。
+        // 漂浮结算直接以地块真实水深为准；水深不超过 0.3 时保持浅水状态，不进入漂浮维持。
         float depthValue = Mathf.Clamp01(water.deepValue);
+        float effectiveImmersion = receiver != null
+            ? receiver.UpdateWaterSurvival(item, depthValue, deltaTime)
+            : depthValue;
         SetWaterVisualState(item, depthValue, true);
-        ProvideWaterEffects(receiver, depthValue);
+        ProvideWaterEffects(receiver, effectiveImmersion);
     }
 
     #region Temperature State
@@ -135,25 +141,14 @@ public class Tile_Water : TileBlockBehaviour
 
     #endregion
 
-    #region Water Survival State
-
-    /// <summary>真实入水状态交给玩家氧气模块；动物或无氧气模块实体会自然忽略。</summary>
-    private static void SetWaterSurvivalState(Item item, bool inWater)
-    {
-        Mod_Oxygen oxygen = item?.itemMods?.GetMod_ByID<Mod_Oxygen>(ModText.Oxygen);
-        oxygen?.SetWaterExposure(inWater);
-    }
-
-    #endregion
-
     #region Visual State
 
-    /// <summary>只向通用渲染效果模块发送水体状态，不在地块逻辑中直接写材质参数。</summary>
-    private static void SetWaterVisualState(Item item, float depth, bool inWater)
+    /// <summary>水体遮罩始终直接使用地块真实水深，不受角色漂浮高度和体力状态影响。</summary>
+    private static void SetWaterVisualState(Item item, float waterDepth, bool inWater)
     {
         WaterImmersionRenderEffect effect = item.GetComponentInChildren<WaterImmersionRenderEffect>(true);
         if (effect != null)
-            effect.SetWaterState(depth, inWater);
+            effect.SetActorImmersionState(waterDepth, inWater);
 
         // 水下看不到脚底阴影，阴影状态与水体视觉状态保持同一入口更新。
         ActorShadowManager.GetInstance()?.SetActorInWater(item, inWater);
@@ -199,8 +194,8 @@ public class Tile_Water : TileBlockBehaviour
             resolvedWaterGain));
     }
 
-    /// <summary>根据水深计算并应用角色独享的减速实例；清 Buff 不会影响该环境效果。</summary>
-    private void ProvideWaterEffects(TileEffectReceiver receiver, float depthValue)
+    /// <summary>根据当前有效淹没高度计算减速；漂浮时固定按 0.3，体力耗尽后随下沉程度继续增加。</summary>
+    private void ProvideWaterEffects(TileEffectReceiver receiver, float immersionLevel)
     {
         EnvironmentInteractionRunner runner = receiver?.EnvironmentInteractions;
         if (runner == null)
@@ -211,7 +206,7 @@ public class Tile_Water : TileBlockBehaviour
         float resolvedMultiplier = Mathf.Lerp(
             shallowMultiplier,
             deepMultiplier,
-            Mathf.Clamp01(depthValue));
+            Mathf.Clamp01(immersionLevel));
 
         // 水深动态变化时只更新已有实例，避免每帧清空并重建其他环境效果。
         if (runner.TryUpdateMoveSpeedMultiplier(resolvedMultiplier))

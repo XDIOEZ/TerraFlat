@@ -1,3 +1,4 @@
+using FlatWorld.Networking;
 using FlatWorld.WorldModel;
 using UltEvents;
 using UnityEngine;
@@ -31,6 +32,23 @@ public class TileEffectReceiver : Module
     [Tooltip("当前踩着的 TileData 缓存，供其他模块引用")]
     public TileData currentTileData;
 
+    [Header("水中生存")]
+    [Tooltip("地块水深超过该值时，有体力的角色主动漂浮并维持该身体淹没高度。")]
+    [Range(0f, 1f)] [SerializeField] private float floatingImmersionLevel = 0.3f;
+    [Tooltip("有效淹没超过该高度后开始消耗氧气。")]
+    [Range(0f, 1f)] [SerializeField] private float oxygenSafetyImmersionLevel = 0.7f;
+    [Tooltip("体力耗尽后，每秒向地块自然淹没高度下沉的身体比例。")]
+    [Min(0.01f)] [SerializeField] private float sinkingImmersionSpeed = 0.35f;
+
+    [Header("无独立体力/氧气模块生物的水中储备")]
+    [Min(0f)] [SerializeField] private float fallbackSwimStaminaMax = 100f;
+    [Min(0f)] [SerializeField] private float fallbackSwimStaminaConsumePerSecond = 5f;
+    [Min(0f)] [SerializeField] private float fallbackSwimStaminaRecoverPerSecond = 10f;
+    [Min(0f)] [SerializeField] private float fallbackOxygenMax = 100f;
+    [Min(0f)] [SerializeField] private float fallbackOxygenConsumePerSecond = 10f;
+    [Min(0f)] [SerializeField] private float fallbackOxygenRecoverPerSecond = 25f;
+    [Min(0f)] [SerializeField] private float fallbackDrowningDamagePerSecond = 10f;
+
     #endregion
 
     #region 运行时状态
@@ -46,9 +64,22 @@ public class TileEffectReceiver : Module
     private bool isPreparedForWorldTransition;
     private EnvironmentInteractionRunner environmentInteractions;
 
+    private Item waterVitalsItem;
+    private Mod_Stamina waterStamina;
+    private Mod_Oxygen waterOxygen;
+    private DamageReceiver waterDamageReceiver;
+    private bool fallbackWaterVitalsInitialized;
+    private float fallbackSwimStamina;
+    private float fallbackOxygen;
+    private bool waterSurvivalActive;
+    private float currentWaterImmersion;
+    private int lastWaterExitFrame = -1;
+    private bool lastWaterExitWasActive;
+
     public bool HasActiveTileEffects => hasActiveTileEffects;
     public bool IsActiveTileEdgeInteractionOnly => activeTileIsEdgeInteractionOnly;
     public EnvironmentInteractionRunner EnvironmentInteractions => EnsureEnvironmentInteractions();
+    public float CurrentWaterImmersion => currentWaterImmersion;
     public override string CanonicalModuleId => ModText.TileEffectReceiver;
 
     #endregion
@@ -78,6 +109,20 @@ public class TileEffectReceiver : Module
     {
         if (_Data != null)
             _Data.ID = ModText.TileEffectReceiver;
+
+        floatingImmersionLevel = Mathf.Clamp01(floatingImmersionLevel);
+        oxygenSafetyImmersionLevel = Mathf.Clamp(
+            oxygenSafetyImmersionLevel,
+            floatingImmersionLevel,
+            1f);
+        sinkingImmersionSpeed = Mathf.Max(0.01f, sinkingImmersionSpeed);
+        fallbackSwimStaminaMax = Mathf.Max(0f, fallbackSwimStaminaMax);
+        fallbackSwimStaminaConsumePerSecond = Mathf.Max(0f, fallbackSwimStaminaConsumePerSecond);
+        fallbackSwimStaminaRecoverPerSecond = Mathf.Max(0f, fallbackSwimStaminaRecoverPerSecond);
+        fallbackOxygenMax = Mathf.Max(0f, fallbackOxygenMax);
+        fallbackOxygenConsumePerSecond = Mathf.Max(0f, fallbackOxygenConsumePerSecond);
+        fallbackOxygenRecoverPerSecond = Mathf.Max(0f, fallbackOxygenRecoverPerSecond);
+        fallbackDrowningDamagePerSecond = Mathf.Max(0f, fallbackDrowningDamagePerSecond);
     }
 
     public override void ModUpdate(float deltaTime)
@@ -90,6 +135,12 @@ public class TileEffectReceiver : Module
             lastGridPos = currentGridPos;
             EnterTile(currentGridPos);
         }
+
+        bool hasRealWater = hasActiveTileEffects &&
+                            !activeTileIsEdgeInteractionOnly &&
+                            activeTileData is TileData_Water;
+        if (!hasRealWater)
+            TickDryWaterSurvival(deltaTime);
 
         UpdateCurrentTile(deltaTime);
     }
@@ -202,6 +253,211 @@ public class TileEffectReceiver : Module
         ExitCurrentTileEffects();
         lastGridPos = gridPos;
         return EnterTile(gridPos);
+    }
+
+    #endregion
+
+    #region 水中生存
+
+    /// <summary>进入真实水体；地块水深超过 0.3 且有体力时从 0.3 漂浮线开始。</summary>
+    public float EnterWaterSurvival(Item actor, float naturalImmersion)
+    {
+        ResolveWaterVitals(actor);
+        EnsureFallbackWaterVitals();
+
+        bool continuedAcrossWaterTiles = lastWaterExitWasActive &&
+                                         lastWaterExitFrame == Time.frameCount;
+        waterSurvivalActive = true;
+        lastWaterExitWasActive = false;
+        waterOxygen?.SetWaterExposure(true);
+
+        naturalImmersion = Mathf.Clamp01(naturalImmersion);
+        if (!continuedAcrossWaterTiles)
+        {
+            currentWaterImmersion = naturalImmersion > floatingImmersionLevel
+                ? floatingImmersionLevel
+                : naturalImmersion;
+        }
+
+        UpdateWaterBreathing(currentWaterImmersion, 0f);
+        return currentWaterImmersion;
+    }
+
+    /// <summary>
+    /// 推进通用水中生存：水深不超过 0.3 时不漂浮、不耗体力；深水有体力维持 0.3；体力耗尽后下沉到自然水深；
+    /// 有效淹没超过 0.7 后才消耗氧气。
+    /// </summary>
+    public float UpdateWaterSurvival(Item actor, float naturalImmersion, float deltaTime)
+    {
+        if (!waterSurvivalActive || waterVitalsItem != actor)
+            EnterWaterSurvival(actor, naturalImmersion);
+
+        naturalImmersion = Mathf.Clamp01(naturalImmersion);
+        float safeDeltaTime = Mathf.Max(0f, deltaTime);
+        float targetImmersion = naturalImmersion;
+
+        if (naturalImmersion > floatingImmersionLevel && HasSwimStamina())
+        {
+            if (GameNetwork.HasStateAuthority && safeDeltaTime > 0f)
+                ConsumeSwimStamina(safeDeltaTime);
+
+            if (HasSwimStamina())
+                targetImmersion = floatingImmersionLevel;
+        }
+
+        currentWaterImmersion = Mathf.MoveTowards(
+            currentWaterImmersion,
+            targetImmersion,
+            Mathf.Max(0.01f, sinkingImmersionSpeed) * safeDeltaTime);
+
+        UpdateWaterBreathing(currentWaterImmersion, safeDeltaTime);
+        return currentWaterImmersion;
+    }
+
+    /// <summary>离开真实水体；连续水格同帧 Exit/Enter 会保留当前下沉进度。</summary>
+    public void ExitWaterSurvival(Item actor)
+    {
+        if (waterVitalsItem != actor && actor != null)
+            ResolveWaterVitals(actor);
+
+        lastWaterExitWasActive = waterSurvivalActive;
+        lastWaterExitFrame = Time.frameCount;
+        waterSurvivalActive = false;
+        waterOxygen?.SetWaterExposure(false);
+    }
+
+    /// <summary>不在真实水格时恢复通用生物的游泳储备与氧气；玩家普通体力仍由既有体力系统恢复。</summary>
+    private void TickDryWaterSurvival(float deltaTime)
+    {
+        ResolveWaterVitals(item);
+        EnsureFallbackWaterVitals();
+        waterOxygen?.SetWaterExposure(false);
+
+        if (!GameNetwork.HasStateAuthority)
+            return;
+
+        float safeDeltaTime = Mathf.Max(0f, deltaTime);
+        if (safeDeltaTime <= 0f)
+            return;
+
+        if (waterStamina == null)
+        {
+            fallbackSwimStamina = Mathf.Min(
+                Mathf.Max(0f, fallbackSwimStaminaMax),
+                fallbackSwimStamina + Mathf.Max(0f, fallbackSwimStaminaRecoverPerSecond) * safeDeltaTime);
+        }
+
+        if (waterOxygen != null)
+        {
+            waterOxygen.AddOxygen(Mathf.Max(0f, waterOxygen.oxygenRecoverPerSecond) * safeDeltaTime);
+        }
+        else
+        {
+            fallbackOxygen = Mathf.Min(
+                Mathf.Max(0f, fallbackOxygenMax),
+                fallbackOxygen + Mathf.Max(0f, fallbackOxygenRecoverPerSecond) * safeDeltaTime);
+        }
+    }
+
+    private void ResolveWaterVitals(Item actor)
+    {
+        if (waterVitalsItem == actor)
+            return;
+
+        waterVitalsItem = actor;
+        waterStamina = actor?.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
+        waterOxygen = actor?.itemMods?.GetMod_ByID<Mod_Oxygen>(ModText.Oxygen);
+        waterDamageReceiver = actor?.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
+        if (waterDamageReceiver == null && actor != null)
+            waterDamageReceiver = actor.GetComponentInChildren<DamageReceiver>(true);
+    }
+
+    private void EnsureFallbackWaterVitals()
+    {
+        if (fallbackWaterVitalsInitialized)
+            return;
+
+        fallbackSwimStamina = Mathf.Max(0f, fallbackSwimStaminaMax);
+        fallbackOxygen = Mathf.Max(0f, fallbackOxygenMax);
+        fallbackWaterVitalsInitialized = true;
+    }
+
+    private bool HasSwimStamina()
+    {
+        return waterStamina != null
+            ? waterStamina.CurrentValue > 0f
+            : fallbackSwimStamina > 0f;
+    }
+
+    private void ConsumeSwimStamina(float deltaTime)
+    {
+        float consumePerSecond = waterOxygen != null
+            ? Mathf.Max(0f, waterOxygen.staminaConsumePerSecond)
+            : Mathf.Max(0f, fallbackSwimStaminaConsumePerSecond);
+
+        if (waterStamina != null)
+        {
+            waterStamina.AddStamina(-consumePerSecond * deltaTime);
+            return;
+        }
+
+        fallbackSwimStamina = Mathf.Max(0f, fallbackSwimStamina - consumePerSecond * deltaTime);
+    }
+
+    private void UpdateWaterBreathing(float immersionLevel, float deltaTime)
+    {
+        bool breathBlocked = immersionLevel > oxygenSafetyImmersionLevel;
+        waterOxygen?.SetBreathBlocked(breathBlocked);
+
+        if (!GameNetwork.HasStateAuthority || deltaTime <= 0f)
+            return;
+
+        float oxygenConsume = waterOxygen != null
+            ? Mathf.Max(0f, waterOxygen.oxygenConsumePerSecond)
+            : Mathf.Max(0f, fallbackOxygenConsumePerSecond);
+        float oxygenRecover = waterOxygen != null
+            ? Mathf.Max(0f, waterOxygen.oxygenRecoverPerSecond)
+            : Mathf.Max(0f, fallbackOxygenRecoverPerSecond);
+        float oxygenBefore = waterOxygen != null ? waterOxygen.CurrentValue : fallbackOxygen;
+        float drowningDeltaTime = 0f;
+
+        if (waterOxygen != null)
+        {
+            waterOxygen.AddOxygen((breathBlocked ? -oxygenConsume : oxygenRecover) * deltaTime);
+        }
+        else if (breathBlocked)
+        {
+            fallbackOxygen = Mathf.Max(0f, fallbackOxygen - oxygenConsume * deltaTime);
+        }
+        else
+        {
+            fallbackOxygen = Mathf.Min(
+                Mathf.Max(0f, fallbackOxygenMax),
+                fallbackOxygen + oxygenRecover * deltaTime);
+        }
+
+        float currentOxygen = waterOxygen != null ? waterOxygen.CurrentValue : fallbackOxygen;
+        if (breathBlocked && currentOxygen <= 0f)
+        {
+            if (oxygenBefore <= 0f)
+            {
+                drowningDeltaTime = deltaTime;
+            }
+            else if (oxygenConsume > 0f)
+            {
+                float secondsUntilEmpty = oxygenBefore / oxygenConsume;
+                drowningDeltaTime = Mathf.Max(0f, deltaTime - secondsUntilEmpty);
+            }
+        }
+
+        if (!breathBlocked || currentOxygen > 0f || waterDamageReceiver == null || waterDamageReceiver.Hp <= 0f)
+            return;
+
+        float damagePerSecond = waterOxygen != null
+            ? Mathf.Max(0f, waterOxygen.drowningDamagePerSecond)
+            : Mathf.Max(0f, fallbackDrowningDamagePerSecond);
+        if (damagePerSecond > 0f && drowningDeltaTime > 0f)
+            waterDamageReceiver.ForceHurt(damagePerSecond * drowningDeltaTime);
     }
 
     #endregion
