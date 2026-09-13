@@ -92,14 +92,15 @@ public partial class Mod_Food : Module, IItemPoolLifecycle
     /// <summary>由容器等饮水来源恢复水分，并发布与普通饮品相同的完整饮用结果。</summary>
     public float DrinkWater(float amount, Item source)
     {
-        if (amount <= 0f || Data?.nutrition == null)
+        if (amount < 0f || Data?.nutrition == null)
             return 0f;
         Nutrition nutrition = Data.nutrition;
         float gain = Mathf.Min(amount, Mathf.Max(0f, nutrition.Max_Water - nutrition.Water));
-        if (gain <= 0f) return 0f;
-        nutrition.Water += gain;
+        if (gain > 0f)
+            nutrition.Water += gain;
         ConsumeCompleted?.Invoke(new FoodConsumeResult(item, source, FoodConsumeKind.Drink, amount, gain));
-        NotifyStateChanged();
+        if (gain > 0f)
+            NotifyStateChanged();
         return gain;
     }
 

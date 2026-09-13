@@ -128,9 +128,39 @@ namespace FlatWorld.GameTest.PlayerInteraction
             }
 
             /// <summary>向运行器提供指定水质与单次补水量的饮水动作。</summary>
-            public void Provide(WaterEnvironmentKind kind, float waterGain = 125f) =>
+            public void Provide(WaterEnvironmentKind kind, float waterGain = 125f)
+            {
+                LiquidDrinkEffect[] effects = kind switch
+                {
+                    WaterEnvironmentKind.DirtyFresh => new[]
+                    {
+                        new LiquidDrinkEffect(InfectionBuffIds.Infection, 0.2f, null)
+                    },
+                    WaterEnvironmentKind.Salt => new[]
+                    {
+                        new LiquidDrinkEffect(DehydrationBuffIds.Dehydration, 1f, null)
+                    },
+                    _ => Array.Empty<LiquidDrinkEffect>()
+                };
+                string liquidId = kind switch
+                {
+                    WaterEnvironmentKind.DirtyFresh => LiquidIds.DirtyWater,
+                    WaterEnvironmentKind.Salt => LiquidIds.SeaWater,
+                    _ => LiquidIds.DrinkableWater
+                };
+                var liquid = new LiquidDefinition(
+                    liquidId,
+                    liquidId,
+                    string.Empty,
+                    "water",
+                    "filled",
+                    true,
+                    waterGain,
+                    effects,
+                    null);
                 Runner.SetAvailableActions(
-                    new DrinkWaterActionDefinition(kind, 1f, 1f, waterGain, 0.2f));
+                    new DrinkWaterActionDefinition(liquid, kind, 1f, 1f, waterGain));
+            }
 
             public void Dispose()
             {

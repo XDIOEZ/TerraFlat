@@ -98,7 +98,7 @@ public partial class Inventory_Data
         return itemSlots[index];
     }
 
-    /// <summary>物品数量/位置不变、但模块内部状态变化时，显式刷新所属槽位及数据观察者。</summary>
+    /// <summary>物品数量/位置不变、但模块内部状态变化时，显式刷新所属槽位、库存 UI 与数据观察者。</summary>
     public bool NotifyItemStateChanged(ItemData itemData)
     {
         EnsureRuntimeEvents();
@@ -117,6 +117,9 @@ public partial class Inventory_Data
                 continue;
 
             slot.RefreshUI();
+            // 快捷栏等专用库存不应只依赖 ItemSlot 的局部监听；
+            // 统一触发库存级刷新，确保状态型物品（液体容器等）立即重新解析图标。
+            Event_RefreshUI.Invoke(i);
             Event_OnDataChanged.Invoke(slot);
             return true;
         }

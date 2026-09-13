@@ -11,7 +11,7 @@ using UnityEngine;
 public partial class LiquidContainerState
 {
     public string LiquidId; // 当前液体稳定 ID；空容器必须为空。
-    public int Amount; // 当前份数。
+    public float Amount; // 当前液体份数；允许小数以支持按倾角连续倾倒。
     public float ProcessingSeconds; // 当前液体加热处理的累计秒数。
 }
 
@@ -25,6 +25,8 @@ public sealed class Mod_WaterVessel : Module, IInteractable
 
     public const string ModuleId = "Mod_WaterVessel";
     public const int DefaultCapacity = 8;
+    public const float AmountStep = 0.1f; // 液体份数的最小存储单位，只保留小数点后一位。
+    public const float AmountEpsilon = 0.0001f;
     public Ex_ModData_MemoryPackable ModData = new(); // 容器独立持久化载体。
     public LiquidContainerState Data = new(); // 液体 ID、数量与加工进度。
     public int capacity = DefaultCapacity; // 当前容器最大份数，由物品定义配置。
@@ -49,12 +51,21 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         ModData.ReadData(ref Data);
         Data ??= new LiquidContainerState();
         Validate(Data, capacity);
+        bool normalized = NormalizeStoredAmount(Data);
+        Validate(Data, capacity);
+        if (normalized)
+            ModData.WriteData(Data);
         RefreshVisual();
         item.OnAct += Act;
     }
 
     /// <summary>写入液体身份、数量与加工进度。</summary>
-    public override void Save() => ModData.WriteData(Data);
+    public override void Save()
+    {
+        NormalizeStoredAmount(Data);
+        Validate(Data, capacity);
+        ModData.WriteData(Data);
+    }
 
     /// <summary>解除池化前的动作和视图订阅。</summary>
     public override void Unload()
@@ -92,14 +103,15 @@ public sealed class Mod_WaterVessel : Module, IInteractable
     {
         if (state == null)
             throw new InvalidOperationException("液体容器状态为空。");
-        if (containerCapacity < 1 || state.Amount < 0 || state.Amount > containerCapacity ||
-            (state.Amount == 0) != string.IsNullOrWhiteSpace(state.LiquidId) ||
+        if (containerCapacity < 1 || float.IsNaN(state.Amount) || float.IsInfinity(state.Amount) ||
+            state.Amount < -AmountEpsilon || state.Amount > containerCapacity + AmountEpsilon ||
+            IsEmptyAmount(state.Amount) != string.IsNullOrWhiteSpace(state.LiquidId) ||
             float.IsNaN(state.ProcessingSeconds) || float.IsInfinity(state.ProcessingSeconds) || state.ProcessingSeconds < 0f)
         {
             throw new InvalidOperationException("液体容器容量、液体 ID、数量或加工状态无效。");
         }
 
-        if (state.Amount > 0 && ResolveLiquidDefinition(state.LiquidId, false) == null)
+        if (!IsEmptyAmount(state.Amount) && ResolveLiquidDefinition(state.LiquidId, false) == null)
             throw new InvalidOperationException($"液体容器引用了未注册液体：{state.LiquidId}");
     }
 
@@ -119,18 +131,18 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         if (!CanOperate(actor)) return;
         if (TryResolveCurrentWorldLiquidTarget(actor, out WorldLiquidSourceTarget target))
         {
-            if (Data.Amount >= Capacity)
+            if (Data.Amount >= Capacity - AmountEpsilon)
             {
                 ItemActionFeedback.Show(actor, "容器已经装满了。");
             }
-            else if (Data.Amount > 0 && !SameLiquid(Data.LiquidId, target.Liquid.Id))
+            else if (!IsEmptyAmount(Data.Amount) && !SameLiquid(Data.LiquidId, target.Liquid.Id))
             {
                 ItemActionFeedback.Show(actor, "不同液体不能直接混装，请先倒空容器。");
             }
             else
             {
-                int moved = AddLiquid(target.Liquid.Id, Capacity - Data.Amount);
-                if (moved > 0)
+                float moved = AddLiquidAmount(target.Liquid.Id, Capacity - Data.Amount);
+                if (moved > AmountEpsilon)
                     ItemActionFeedback.Show(actor, $"已装入{target.Liquid.DisplayName}。");
             }
             return;
@@ -155,18 +167,22 @@ public sealed class Mod_WaterVessel : Module, IInteractable
             item.Owner == null && WorldTopologyRuntime.ShortestDelta(actor.transform.position, item.transform.position).sqrMagnitude <= reach * reach;
     }
 
-    /// <summary>只有液体定义声明为可饮用时才消耗一份；恢复量由液体而不是容器决定。</summary>
+    /// <summary>液体定义声明可饮用即可消耗；恢复量与饮用后的状态后果都由同一液体定义决定。</summary>
     public bool Drink(Item actor)
     {
         LiquidDefinition liquid = CurrentLiquid;
-        if (!CanOperate(actor) || liquid == null || !liquid.Drinkable || liquid.HydrationPerServing <= 0f || Data.Amount < 1)
+        if (!CanOperate(actor) || liquid == null || !liquid.Drinkable || IsEmptyAmount(Data.Amount))
             return false;
 
+        float consumedAmount = Math.Min(1f, Data.Amount);
         Mod_Food food = actor.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
-        if (food == null || food.DrinkWater(liquid.HydrationPerServing, item) <= 0f)
+        if (food == null)
             return false;
 
-        RemoveLiquidInternal(1);
+        food.DrinkWater(liquid.HydrationPerServing * consumedAmount, item);
+        LiquidDrinkEffectProcessor.Apply(actor, liquid);
+
+        RemoveLiquidInternal(consumedAmount);
         Commit();
         return true;
     }
@@ -182,16 +198,61 @@ public sealed class Mod_WaterVessel : Module, IInteractable
     /// <summary>向另一只通用液体容器部分转移；不同液体禁止自动混合。</summary>
     public bool TransferTo(Mod_WaterVessel target, Item actor)
     {
-        if (target == this || target == null || !CanOperate(actor) || !target.CanOperate(actor) || Data.Amount == 0 ||
-            (target.Data.Amount > 0 && !SameLiquid(target.Data.LiquidId, Data.LiquidId)))
+        if (target == this || target == null || !CanOperate(actor) || !target.CanOperate(actor) || IsEmptyAmount(Data.Amount) ||
+            (!IsEmptyAmount(target.Data.Amount) && !SameLiquid(target.Data.LiquidId, Data.LiquidId)))
             return false;
 
-        int moved = Math.Min(Data.Amount, target.Capacity - target.Data.Amount);
-        if (moved <= 0) return false;
+        float moved = Math.Min(Data.Amount, target.Capacity - target.Data.Amount);
+        if (moved <= AmountEpsilon) return false;
         target.AddLiquidInternal(Data.LiquidId, moved);
         RemoveLiquidInternal(moved);
         Commit();
         target.Commit();
+        return true;
+    }
+
+    /// <summary>
+    /// 把玩家库存中另一只液体容器的内容转入当前已打开容器。来源物品本身保持原槽位，只修改其液体状态；
+    /// 当前手持来源存在运行时实例时优先走实例 API，避免运行时 Data 与 ItemData 快照失步。
+    /// </summary>
+    public bool TransferFromInventoryItem(ItemData sourceItemData, Item actor)
+    {
+        if (!CanOperate(actor) || sourceItemData == null || item?.itemData == null ||
+            IsSameItemData(sourceItemData, item.itemData))
+        {
+            return false;
+        }
+
+        Mod_WaterVessel runtimeSource = ResolveHeldRuntimeSource(actor, sourceItemData);
+        if (runtimeSource != null)
+            return runtimeSource.TransferTo(this, actor);
+
+        if (!TryRead(sourceItemData, out Ex_ModData_MemoryPackable sourceStorage, out LiquidContainerState sourceState) ||
+            IsEmptyAmount(sourceState.Amount) || string.IsNullOrWhiteSpace(sourceState.LiquidId) ||
+            (!IsEmptyAmount(Data.Amount) && !SameLiquid(Data.LiquidId, sourceState.LiquidId)))
+        {
+            return false;
+        }
+
+        float moved = QuantizeMovementAmount(Math.Min(sourceState.Amount, Capacity - Data.Amount));
+        if (moved <= AmountEpsilon)
+            return false;
+
+        string liquidId = sourceState.LiquidId;
+        sourceState.Amount -= moved;
+        NormalizeStoredAmount(sourceState);
+        sourceState.ProcessingSeconds = 0f;
+        if (IsEmptyAmount(sourceState.Amount))
+        {
+            sourceState.Amount = 0f;
+            sourceState.LiquidId = null;
+        }
+        sourceStorage.WriteData(sourceState);
+
+        AddLiquidInternal(liquidId, moved);
+        Commit();
+        RefreshInventoryItemPresentation(actor, sourceItemData);
+        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(actor);
         return true;
     }
 
@@ -205,10 +266,11 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         if (!GameNetwork.HasStateAuthority || amount <= 0)
             return 0;
         ResolveLiquidDefinition(liquidId, true);
-        if (Data.Amount > 0 && !SameLiquid(Data.LiquidId, liquidId))
+        if (!IsEmptyAmount(Data.Amount) && !SameLiquid(Data.LiquidId, liquidId))
             return 0;
 
-        int moved = Math.Min(amount, Capacity - Data.Amount);
+        int wholeSpace = Mathf.FloorToInt(Mathf.Max(0f, Capacity - Data.Amount) + AmountEpsilon);
+        int moved = Math.Min(amount, wholeSpace);
         if (moved <= 0)
             return 0;
         AddLiquidInternal(liquidId, moved);
@@ -219,18 +281,54 @@ public sealed class Mod_WaterVessel : Module, IInteractable
     /// <summary>玩法和 MOD 从容器移除液体；返回实际移除份数。</summary>
     public int RemoveLiquid(int amount)
     {
-        if (!GameNetwork.HasStateAuthority || amount <= 0 || Data.Amount <= 0)
+        if (!GameNetwork.HasStateAuthority || amount <= 0 || IsEmptyAmount(Data.Amount))
             return 0;
-        int removed = Math.Min(amount, Data.Amount);
+        int wholeAvailable = Mathf.FloorToInt(Data.Amount + AmountEpsilon);
+        int removed = Math.Min(amount, wholeAvailable);
+        if (removed <= 0)
+            return 0;
         RemoveLiquidInternal(removed);
         Commit();
         return removed;
     }
 
+    /// <summary>向容器加入可为小数的液体份数；用于世界装液和连续液体玩法。</summary>
+    public float AddLiquidAmount(string liquidId, float amount)
+    {
+        if (!GameNetwork.HasStateAuthority || !IsFinitePositive(amount))
+            return 0f;
+        ResolveLiquidDefinition(liquidId, true);
+        if (!IsEmptyAmount(Data.Amount) && !SameLiquid(Data.LiquidId, liquidId))
+            return 0f;
+
+        float moved = QuantizeMovementAmount(Math.Min(amount, Capacity - Data.Amount));
+        if (moved <= AmountEpsilon)
+            return 0f;
+        float previousAmount = Data.Amount;
+        AddLiquidInternal(liquidId, moved);
+        Commit();
+        return Mathf.Max(0f, Data.Amount - previousAmount);
+    }
+
+    /// <summary>从容器移除可为小数的液体份数；返回实际移除量。</summary>
+    public float RemoveLiquidAmount(float amount)
+    {
+        if (!GameNetwork.HasStateAuthority || !IsFinitePositive(amount) || IsEmptyAmount(Data.Amount))
+            return 0f;
+
+        float removed = QuantizeMovementAmount(Math.Min(amount, Data.Amount));
+        if (removed <= AmountEpsilon)
+            return 0f;
+        float previousAmount = Data.Amount;
+        RemoveLiquidInternal(removed);
+        Commit();
+        return Mathf.Max(0f, previousAmount - Data.Amount);
+    }
+
     /// <summary>玩法和 MOD 清空容器，不生成额外物品。</summary>
     public bool ClearContents()
     {
-        if (!GameNetwork.HasStateAuthority || Data.Amount <= 0)
+        if (!GameNetwork.HasStateAuthority || IsEmptyAmount(Data.Amount))
             return false;
         ClearContentsInternal();
         Commit();
@@ -252,7 +350,11 @@ public sealed class Mod_WaterVessel : Module, IInteractable
             state = new LiquidContainerState();
             data.ReadData(ref state);
             state ??= new LiquidContainerState();
-            Validate(state, ResolveConfiguredCapacity(itemData, pair.Key));
+            int configuredCapacity = ResolveConfiguredCapacity(itemData, pair.Key);
+            Validate(state, configuredCapacity);
+            if (NormalizeStoredAmount(state))
+                data.WriteData(state);
+            Validate(state, configuredCapacity);
             return true;
         }
         return false;
@@ -272,7 +374,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
             return false;
         }
 
-        string stateName = state.Amount == 0
+        string stateName = IsEmptyAmount(state.Amount)
             ? "empty"
             : ResolveLiquidDefinition(state.LiquidId, false)?.VisualState;
 
@@ -282,7 +384,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
             return true;
         }
 
-        if (state.Amount > 0 && definition.TryGetVisualStateSprite("filled", out sprite))
+        if (!IsEmptyAmount(state.Amount) && definition.TryGetVisualStateSprite("filled", out sprite))
             return true;
 
         sprite = definition.Sprite;
@@ -313,21 +415,82 @@ public sealed class Mod_WaterVessel : Module, IInteractable
     private static bool SameLiquid(string left, string right) =>
         string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
 
-    private void AddLiquidInternal(string liquidId, int amount)
+    /// <summary>库存 ItemData 以引用为首选身份，Guid 仅处理运行时重绑后的等价实例。</summary>
+    private static bool IsSameItemData(ItemData left, ItemData right) =>
+        ReferenceEquals(left, right) ||
+        (left != null && right != null && left.Guid != 0 && left.Guid == right.Guid);
+
+    /// <summary>当前快捷栏手持物若正是拖拽来源，则返回它的运行时容器模块。</summary>
+    private static Mod_WaterVessel ResolveHeldRuntimeSource(Item actor, ItemData sourceItemData)
     {
-        if (Data.Amount == 0)
+        Inventory_HotBar hotbar = actor?.itemMods?.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        Item heldItem = hotbar?.CurentSelectItem;
+        if (heldItem?.itemData == null || !IsSameItemData(heldItem.itemData, sourceItemData))
+            return null;
+
+        return heldItem.itemMods?.GetMod_ByID<Mod_WaterVessel>(ModuleId);
+    }
+
+    /// <summary>库存内来源容器原地改变状态后通知真实所属库存刷新图标与观察者。</summary>
+    private static void RefreshInventoryItemPresentation(Item actor, ItemData sourceItemData)
+    {
+        if (actor == null || sourceItemData == null ||
+            !InventoryContextResolver.TryResolveContainingInventory(actor, sourceItemData, out Inventory inventory))
+        {
+            return;
+        }
+
+        inventory.Data?.NotifyItemStateChanged(sourceItemData);
+    }
+
+    public static bool IsEmptyAmount(float amount) => amount <= AmountEpsilon;
+
+    private static bool IsFinitePositive(float value) =>
+        !float.IsNaN(value) && !float.IsInfinity(value) && value > AmountEpsilon;
+
+    /// <summary>把液体状态归一到 0.1 份网格；读取旧的高精度浮点余量时也会立即压到一位小数。</summary>
+    public static bool NormalizeStoredAmount(LiquidContainerState state)
+    {
+        if (state == null || float.IsNaN(state.Amount) || float.IsInfinity(state.Amount))
+            return false;
+
+        float previousAmount = state.Amount;
+        string previousLiquidId = state.LiquidId;
+        state.Amount = Mathf.Round(state.Amount / AmountStep) * AmountStep;
+        if (IsEmptyAmount(state.Amount))
+        {
+            state.Amount = 0f;
+            state.LiquidId = null;
+        }
+
+        return previousAmount != state.Amount || previousLiquidId != state.LiquidId;
+    }
+
+    /// <summary>液体转移量向下落到 0.1 份，保证一次操作不会凭空多移动液体。</summary>
+    private static float QuantizeMovementAmount(float amount)
+    {
+        if (!IsFinitePositive(amount))
+            return 0f;
+        return Mathf.Floor((amount + AmountEpsilon) / AmountStep) * AmountStep;
+    }
+
+    private void AddLiquidInternal(string liquidId, float amount)
+    {
+        if (IsEmptyAmount(Data.Amount))
             Data.LiquidId = liquidId.Trim();
-        Data.Amount += amount;
+        Data.Amount = Mathf.Min(Capacity, Data.Amount + amount);
+        NormalizeStoredAmount(Data);
         Data.ProcessingSeconds = 0f;
     }
 
-    private void RemoveLiquidInternal(int amount)
+    private void RemoveLiquidInternal(float amount)
     {
         Data.Amount -= amount;
+        NormalizeStoredAmount(Data);
         Data.ProcessingSeconds = 0f;
-        if (Data.Amount <= 0)
+        if (IsEmptyAmount(Data.Amount))
         {
-            Data.Amount = 0;
+            Data.Amount = 0f;
             Data.LiquidId = null;
         }
     }
@@ -335,7 +498,7 @@ public sealed class Mod_WaterVessel : Module, IInteractable
     private void ClearContentsInternal()
     {
         Data.LiquidId = null;
-        Data.Amount = 0;
+        Data.Amount = 0f;
         Data.ProcessingSeconds = 0f;
     }
 
@@ -346,6 +509,9 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         Save();
         RefreshVisual();
         RefreshContainingInventoryPresentation();
+        // 快捷栏当前手持实例会把 OnUIRefresh 绑定到 Inventory_HotBar.RefreshUI；
+        // 模块内部状态变化不会替换 ItemData 引用，因此必须显式发布这一运行时表现事件。
+        item.OnUIRefresh?.Invoke();
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
         Changed?.Invoke();
     }

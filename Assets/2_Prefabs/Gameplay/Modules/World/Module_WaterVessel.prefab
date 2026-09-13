@@ -52,8 +52,8 @@ MonoBehaviour:
     Type: 0
     BitData: 
   Data:
+    LiquidId:
     Amount: 0
-    Quality: 0
     ProcessingSeconds: 0
   capacity: 8
   reach: 2

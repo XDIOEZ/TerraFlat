@@ -400,24 +400,24 @@ public sealed class DrinkWaterActionDefinition : IEnvironmentActionDefinition
 {
     public const string StableActionId = "environment.drink_water";
 
-    public DrinkWaterActionDefinition(WaterEnvironmentKind waterKind, float holdSeconds,
-        float tickSeconds, float waterGainPerTick, float dirtyInfectionChance)
+    public DrinkWaterActionDefinition(LiquidDefinition liquid, WaterEnvironmentKind waterKind, float holdSeconds,
+        float tickSeconds, float waterGainPerTick)
     {
+        Liquid = liquid ?? throw new System.ArgumentNullException(nameof(liquid));
         WaterKind = waterKind;
         HoldSeconds = Mathf.Max(0f, holdSeconds);
         TickSeconds = Mathf.Max(0.05f, tickSeconds);
         WaterGainPerTick = Mathf.Max(0f, waterGainPerTick);
-        DirtyInfectionChance = Mathf.Clamp01(dirtyInfectionChance);
     }
 
     public string ActionId => StableActionId;
     public string DisplayNameKey => "喝水";
     public int Priority => 100;
+    public LiquidDefinition Liquid { get; }
     public WaterEnvironmentKind WaterKind { get; }
     public float HoldSeconds { get; }
     public float TickSeconds { get; }
     public float WaterGainPerTick { get; }
-    public float DirtyInfectionChance { get; }
     public IEnvironmentActionInstance CreateInstance(Item actor) =>
         new DrinkWaterActionInstance(actor, this);
 }
@@ -428,17 +428,15 @@ public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
     private const string DrinkEffectName = "Particle_BeEat";
     private readonly Item actor;
     private readonly DrinkWaterActionDefinition definition;
-    private readonly BuffManager buffManager;
     private readonly Mod_Food food;
     private float holdElapsed;
     private float tickElapsed;
-    private bool saltWaterWarningShown; // 单次持续饮水动作只提示一次海水脱水风险。
+    private bool liquidEffectFeedbackShown; // 单次持续饮水动作中，液体风险提示只显示一次。
 
     public DrinkWaterActionInstance(Item actor, DrinkWaterActionDefinition definition)
     {
         this.actor = actor;
         this.definition = definition;
-        buffManager = actor?.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
         food = actor?.itemMods?.GetMod_ByID(ModText.Food) as Mod_Food;
     }
 
@@ -458,7 +456,7 @@ public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
         IsExecuting = false;
         holdElapsed = 0f;
         tickElapsed = 0f;
-        saltWaterWarningShown = false;
+        liquidEffectFeedbackShown = false;
         return true;
     }
 
@@ -507,22 +505,13 @@ public sealed class DrinkWaterActionInstance : IEnvironmentActionInstance
             nutrition.Water + definition.WaterGainPerTick, 0f, nutrition.Max_Water);
         food.NotifyStateChanged();
 
-        switch (definition.WaterKind)
-        {
-            case WaterEnvironmentKind.DirtyFresh
-                when Mathf.Clamp01(infectionRoll) < definition.DirtyInfectionChance:
-                buffManager?.AddBuff(InfectionBuffIds.Infection);
-                break;
-
-            case WaterEnvironmentKind.Salt:
-                buffManager?.AddBuff(DehydrationBuffIds.Dehydration);
-                if (!saltWaterWarningShown)
-                {
-                    saltWaterWarningShown = true;
-                    ItemActionFeedback.Show(actor, "这海水里含有大量盐分，喝下去反而会让我脱水。");
-                }
-                break;
-        }
+        LiquidDrinkEffectProcessor.Result effectResult = LiquidDrinkEffectProcessor.Apply(
+            actor,
+            definition.Liquid,
+            () => infectionRoll,
+            playFeedback && !liquidEffectFeedbackShown);
+        if (effectResult.FeedbackShown)
+            liquidEffectFeedbackShown = true;
 
         if (playFeedback)
             PlayFeedback();

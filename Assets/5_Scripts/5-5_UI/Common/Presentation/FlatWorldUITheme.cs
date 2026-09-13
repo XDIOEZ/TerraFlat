@@ -42,6 +42,12 @@ public static class FlatWorldUITheme
         "UI_MainMenu"
     };
 
+    // 这类玩法交互面板只保留透明射线阻挡面，视觉上直接叠在游戏画面上。
+    private static readonly string[] BackgroundlessPanelNames =
+    {
+        "UI_WaterVessel"
+    };
+
     private static readonly string[] PrimaryActionWords =
     {
         "开始", "创建", "确认", "确定", "加载", "合成", "制作", "重生", "应用", "保存"
@@ -340,6 +346,15 @@ public static class FlatWorldUITheme
 
             bool isRoot = image.transform == root;
             string objectName = image.name;
+
+            if (IsBackgroundlessPanelSurface(root, image.transform))
+            {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                image.color = Color.clear;
+                continue;
+            }
 
             if (IsFillGraphic(image))
             {
@@ -917,6 +932,12 @@ public static class FlatWorldUITheme
                 continue;
 
             Graphic graphic = outline.GetComponent<Graphic>();
+            if (IsBackgroundlessPanelSurface(root, outline.transform))
+            {
+                outline.enabled = false;
+                continue;
+            }
+
             if (graphic is TextMeshProUGUI)
             {
                 outline.effectColor = Hex("242424", 0.72f);
@@ -1239,6 +1260,29 @@ public static class FlatWorldUITheme
         }
 
         return false;
+    }
+
+    /// <summary>瓦罐采用与石臼同类的无底板表现，只把根节点和内容容器保留为透明输入层。</summary>
+    private static bool IsBackgroundlessPanelSurface(Transform root, Transform candidate)
+    {
+        if (root == null || candidate == null)
+            return false;
+
+        bool backgroundlessRoot = false;
+        for (int i = 0; i < BackgroundlessPanelNames.Length; i++)
+        {
+            if (!string.Equals(root.name, BackgroundlessPanelNames[i], StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            backgroundlessRoot = true;
+            break;
+        }
+
+        if (!backgroundlessRoot)
+            return false;
+
+        return candidate == root ||
+               string.Equals(candidate.name, "设置对话框", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsHud(string rootName)

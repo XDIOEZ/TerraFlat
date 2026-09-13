@@ -45,7 +45,6 @@ MonoBehaviour:
         drinkTickSeconds: 1
         waterGainPerTick: 12.5
         saltWaterGainPerTick: 10
-        dirtyWaterInfectionChance: 0.2
         shallowMoveSpeedMultiplier: 0.5
         moveSpeedMultiplier: 0.2
         entryTemperatureDrop: 10

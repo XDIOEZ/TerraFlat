@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 /// <summary>
 /// 通用液体加热能力：炉体只提供温度和经过时间，具体液体如何转化、消耗以及产出什么物品全部读取 LiquidDefinition。
@@ -24,7 +25,7 @@ public sealed class Mod_VesselHeating : Module, IInventoryHeatTreatment
                 continue;
 
             handled = true;
-            if (state.Amount <= 0 || string.IsNullOrWhiteSpace(state.LiquidId))
+            if (Mod_WaterVessel.IsEmptyAmount(state.Amount) || string.IsNullOrWhiteSpace(state.LiquidId))
                 continue;
 
             LiquidDefinition liquid = GameRes.ExistingInstance?.GetLiquidDefinition(state.LiquidId)
@@ -49,18 +50,19 @@ public sealed class Mod_VesselHeating : Module, IInventoryHeatTreatment
 
                 case LiquidHeatProcessMode.ConsumeServing:
                     state.ProcessingSeconds = heat.Seconds;
-                    if (state.Amount < heat.ConsumeAmount ||
+                    if (state.Amount + Mod_WaterVessel.AmountEpsilon < heat.ConsumeAmount ||
                         !TryGrantOutput(output, heat.OutputItemId, heat.OutputAmount))
                     {
                         storage.WriteData(state);
                         continue;
                     }
 
-                    state.Amount -= heat.ConsumeAmount;
+                    state.Amount = Mathf.Max(0f, state.Amount - heat.ConsumeAmount);
+                    Mod_WaterVessel.NormalizeStoredAmount(state);
                     state.ProcessingSeconds = 0f;
-                    if (state.Amount <= 0)
+                    if (Mod_WaterVessel.IsEmptyAmount(state.Amount))
                     {
-                        state.Amount = 0;
+                        state.Amount = 0f;
                         state.LiquidId = null;
                     }
                     break;

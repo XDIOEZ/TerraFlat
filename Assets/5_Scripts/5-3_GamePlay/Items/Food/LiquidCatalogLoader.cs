@@ -44,7 +44,8 @@ public static class LiquidCatalogLoader
             LiquidDefinitionFactory.ValidateReferences(
                 definitions,
                 id => availableLiquidIds.Contains(id),
-                itemId => gameRes.TryGetItemDefinition(itemId, out _));
+                itemId => gameRes.TryGetItemDefinition(itemId, out _),
+                buffId => gameRes.BuffDefinitions.ContainsKey(buffId));
 
             foreach (LiquidDefinition definition in definitions)
                 gameRes.RegisterLiquidDefinition(definition);

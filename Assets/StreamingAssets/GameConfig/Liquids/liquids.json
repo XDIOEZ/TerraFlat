@@ -9,6 +9,12 @@
       "visualState": "dirty",
       "drinkable": true,
       "hydrationPerServing": 25.0,
+      "drinkEffects": [
+        {
+          "buffId": "感染",
+          "chance": 0.2
+        }
+      ],
       "heatProcess": {
         "mode": "Transform",
         "minimumTemperature": 100.0,
@@ -31,8 +37,15 @@
       "description": "含盐量很高的海水，可通过加热蒸发获得盐。",
       "category": "water",
       "visualState": "sea",
-      "drinkable": false,
-      "hydrationPerServing": 0.0,
+      "drinkable": true,
+      "hydrationPerServing": 10.0,
+      "drinkEffects": [
+        {
+          "buffId": "脱水",
+          "chance": 1.0,
+          "feedback": "这海水里含有大量盐分，喝下去反而会让我脱水。"
+        }
+      ],
       "heatProcess": {
         "mode": "ConsumeServing",
         "minimumTemperature": 100.0,

@@ -31,6 +31,13 @@
       },
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png",
+        "spriteStates": {
+          "empty": "Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png",
+          "filled": "Assets/6_Art/Generated/ClayJar/ClayJar_Filled.png",
+          "dirty": "Assets/6_Art/Generated/ClayJar/ClayJar_Dirty.png",
+          "drinkable": "Assets/6_Art/Generated/ClayJar/ClayJar_Drinkable.png",
+          "sea": "Assets/6_Art/Generated/ClayJar/ClayJar_Sea.png"
+        },
         "collider": {
           "size": {
             "x": 0.65,
@@ -60,7 +67,7 @@
     {
       "id": "StoneMortar_Building",
       "parent": "BuildingBody_Base",
-      "gameName": "石臼",
+      "gameName": "石臼-建筑",
       "description": "放置在地上的石臼。交互打开原有捣料面板，每次捣击按配方加工一份材料；拆回或再次放置时保留碗内全部原料与产物。",
       "durability": 1,
       "maxDurability": 1,

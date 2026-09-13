@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 /// <summary>液体加热处理模式；定义只描述数据，具体库存事务由加热模块执行。</summary>
 public enum LiquidHeatProcessMode
@@ -55,6 +56,7 @@ public sealed class LiquidDefinition
         string visualState,
         bool drinkable,
         float hydrationPerServing,
+        IReadOnlyList<LiquidDrinkEffect> drinkEffects,
         LiquidHeatProcess heatProcess)
     {
         Id = id;
@@ -64,6 +66,7 @@ public sealed class LiquidDefinition
         VisualState = visualState;
         Drinkable = drinkable;
         HydrationPerServing = hydrationPerServing;
+        DrinkEffects = drinkEffects ?? Array.Empty<LiquidDrinkEffect>();
         HeatProcess = heatProcess;
     }
 
@@ -74,7 +77,23 @@ public sealed class LiquidDefinition
     public string VisualState { get; }
     public bool Drinkable { get; }
     public float HydrationPerServing { get; }
+    public IReadOnlyList<LiquidDrinkEffect> DrinkEffects { get; }
     public LiquidHeatProcess HeatProcess { get; }
+}
+
+/// <summary>一次饮用液体时可能附加的 Buff；概率和反馈属于液体定义，而不是容器或水地块。</summary>
+public sealed class LiquidDrinkEffect
+{
+    public LiquidDrinkEffect(string buffId, float chance, string feedback)
+    {
+        BuffId = buffId;
+        Chance = chance;
+        Feedback = feedback;
+    }
+
+    public string BuffId { get; }
+    public float Chance { get; }
+    public string Feedback { get; }
 }
 
 /// <summary>液体 JSON DTO；MOD definitionFiles 的 liquids 数组与本体目录共用此 schema。</summary>
@@ -102,6 +121,9 @@ public sealed class LiquidDefinitionDto
     [JsonProperty("hydrationPerServing")]
     public float HydrationPerServing;
 
+    [JsonProperty("drinkEffects")]
+    public List<LiquidDrinkEffectDto> DrinkEffects = new();
+
     [JsonProperty("heatProcess")]
     public LiquidHeatProcessDto HeatProcess;
 
@@ -110,6 +132,20 @@ public sealed class LiquidDefinitionDto
 
     [JsonProperty("descriptionKey")]
     public string DescriptionKey;
+}
+
+/// <summary>液体饮用后果 DTO；当前通用后果为按概率向饮用者添加 Buff。</summary>
+[Serializable]
+public sealed class LiquidDrinkEffectDto
+{
+    [JsonProperty("buffId", Required = Required.Always)]
+    public string BuffId;
+
+    [JsonProperty("chance")]
+    public float Chance = 1f;
+
+    [JsonProperty("feedback")]
+    public string Feedback;
 }
 
 /// <summary>单条液体加热规则 DTO。</summary>
@@ -196,6 +232,8 @@ public static class LiquidDefinitionFactory
         if (!dto.Drinkable && dto.HydrationPerServing > 0f)
             throw new InvalidDataException($"液体 {id} 不可饮用时不能配置 hydrationPerServing");
 
+        List<LiquidDrinkEffect> drinkEffects = BuildDrinkEffects(id, dto.Drinkable, dto.DrinkEffects);
+
         LiquidHeatProcess heatProcess = dto.HeatProcess == null
             ? null
             : BuildHeatProcess(id, dto.HeatProcess);
@@ -208,6 +246,7 @@ public static class LiquidDefinitionFactory
             visualState,
             dto.Drinkable,
             dto.HydrationPerServing,
+            drinkEffects,
             heatProcess);
     }
 
@@ -235,10 +274,17 @@ public static class LiquidDefinitionFactory
     public static void ValidateReferences(
         IEnumerable<LiquidDefinition> definitions,
         Func<string, bool> liquidExists,
-        Func<string, bool> itemExists)
+        Func<string, bool> itemExists,
+        Func<string, bool> buffExists)
     {
         foreach (LiquidDefinition definition in definitions)
         {
+            foreach (LiquidDrinkEffect effect in definition.DrinkEffects)
+            {
+                if (buffExists != null && !buffExists(effect.BuffId))
+                    throw new InvalidDataException($"液体 {definition.Id} 的饮用 Buff 不存在：{effect.BuffId}");
+            }
+
             LiquidHeatProcess heat = definition.HeatProcess;
             if (heat == null)
                 continue;
@@ -248,6 +294,32 @@ public static class LiquidDefinitionFactory
             if (!string.IsNullOrWhiteSpace(heat.OutputItemId) && !itemExists(heat.OutputItemId))
                 throw new InvalidDataException($"液体 {definition.Id} 的加热产物物品不存在：{heat.OutputItemId}");
         }
+    }
+
+    private static List<LiquidDrinkEffect> BuildDrinkEffects(
+        string liquidId,
+        bool drinkable,
+        IEnumerable<LiquidDrinkEffectDto> dtos)
+    {
+        var effects = new List<LiquidDrinkEffect>();
+        foreach (LiquidDrinkEffectDto dto in dtos ?? Array.Empty<LiquidDrinkEffectDto>())
+        {
+            if (!drinkable)
+                throw new InvalidDataException($"液体 {liquidId} 不可饮用时不能配置 drinkEffects");
+            if (dto == null)
+                throw new InvalidDataException($"液体 {liquidId} 的 drinkEffects 包含空项");
+
+            string buffId = NormalizeRequired(dto.BuffId, $"液体 {liquidId} drinkEffects.buffId");
+            ValidateFinite(dto.Chance, liquidId, "drinkEffects.chance");
+            if (dto.Chance < 0f || dto.Chance > 1f)
+                throw new InvalidDataException($"液体 {liquidId} 的 drinkEffects.chance 必须位于 0 到 1 之间");
+
+            effects.Add(new LiquidDrinkEffect(
+                buffId,
+                dto.Chance,
+                string.IsNullOrWhiteSpace(dto.Feedback) ? null : dto.Feedback.Trim()));
+        }
+        return effects;
     }
 
     private static LiquidHeatProcess BuildHeatProcess(string liquidId, LiquidHeatProcessDto dto)
@@ -324,4 +396,56 @@ public static class LiquidIds
     public const string DirtyWater = "core:dirty_water";
     public const string DrinkableWater = "core:drinkable_water";
     public const string SeaWater = "core:sea_water";
+}
+
+/// <summary>
+/// 统一结算液体饮用后的状态后果。世界水源与液体容器必须走这里，避免同一种液体出现两套规则。
+/// </summary>
+public static class LiquidDrinkEffectProcessor
+{
+    public readonly struct Result
+    {
+        public Result(bool anyEffectTriggered, bool feedbackShown)
+        {
+            AnyEffectTriggered = anyEffectTriggered;
+            FeedbackShown = feedbackShown;
+        }
+
+        public bool AnyEffectTriggered { get; }
+        public bool FeedbackShown { get; }
+    }
+
+    /// <summary>按定义逐条判定饮用后果；传入固定随机值可用于确定性验证。</summary>
+    public static Result Apply(Item actor, LiquidDefinition liquid, Func<float> random01 = null, bool showFeedback = true)
+    {
+        if (actor == null || liquid == null || liquid.DrinkEffects == null || liquid.DrinkEffects.Count == 0)
+            return default;
+
+        BuffManager buffManager = actor.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        bool anyEffectTriggered = false;
+        bool feedbackShown = false;
+
+        foreach (LiquidDrinkEffect effect in liquid.DrinkEffects)
+        {
+            bool triggered = effect.Chance >= 1f;
+            if (!triggered && effect.Chance > 0f)
+            {
+                float roll = Mathf.Clamp01(random01 != null ? random01() : UnityEngine.Random.value);
+                triggered = roll < effect.Chance;
+            }
+
+            if (!triggered)
+                continue;
+
+            anyEffectTriggered = true;
+            buffManager?.AddBuff(effect.BuffId);
+            if (showFeedback && !string.IsNullOrWhiteSpace(effect.Feedback))
+            {
+                ItemActionFeedback.Show(actor, effect.Feedback);
+                feedbackShown = true;
+            }
+        }
+
+        return new Result(anyEffectTriggered, feedbackShown);
+    }
 }

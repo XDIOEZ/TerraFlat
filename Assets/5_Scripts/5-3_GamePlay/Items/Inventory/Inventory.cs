@@ -16,6 +16,7 @@ public sealed class InventoryDragTransaction
     private Func<Inventory, int, bool> _dropHandler;
     private readonly Func<bool> _prepareFallbackHandler;
     private readonly Func<Inventory, int, bool> _fallbackDropHandler;
+    private readonly Func<ItemData> _sourceItemProvider;
     private bool _fallbackPrepared;
     private bool _completed;
 
@@ -32,12 +33,14 @@ public sealed class InventoryDragTransaction
         Func<bool> prepareFallbackHandler,
         Func<Inventory, int, bool> fallbackDropHandler,
         bool hideSourceVisual,
-        bool fallbackPrepared = false)
+        bool fallbackPrepared = false,
+        Func<ItemData> sourceItemProvider = null)
     {
         DraggedAmount = draggedAmount;
         _dropHandler = dropHandler;
         _prepareFallbackHandler = prepareFallbackHandler;
         _fallbackDropHandler = fallbackDropHandler;
+        _sourceItemProvider = sourceItemProvider;
         HideSourceVisual = hideSourceVisual;
         _fallbackPrepared = fallbackPrepared;
     }
@@ -49,6 +52,22 @@ public sealed class InventoryDragTransaction
             return false;
 
         if (!_dropHandler(targetInventory, targetIndex))
+            return false;
+
+        _completed = true;
+        return true;
+    }
+
+    /// <summary>
+    /// 让非库存槽玩法目标直接消费当前拖拽物品的状态；成功后结束事务，但不移动来源物品。
+    /// </summary>
+    public bool TryConsumeSourceItem(Func<ItemData, bool> consumer)
+    {
+        if (_completed || consumer == null || _sourceItemProvider == null)
+            return false;
+
+        ItemData sourceItem = _sourceItemProvider();
+        if (sourceItem == null || !consumer(sourceItem))
             return false;
 
         _completed = true;
@@ -1177,7 +1196,8 @@ public class Inventory
             null,
             null,
             false,
-            true);
+            true,
+            () => ReferenceEquals(handSlot.itemData, draggedItem) ? draggedItem : null);
     }
 
     public virtual bool OnTouchWorldLongPress(Vector2 screenPosition)
@@ -1246,7 +1266,8 @@ public class Inventory
             (targetInventory, targetIndex) =>
                 fallbackInventory != null &&
                 fallbackInventory.TryDropSlotTo(fallbackSlot, fallbackItem, targetInventory, targetIndex),
-            true);
+            true,
+            sourceItemProvider: () => IsCurrentDragSource(sourceSlot, draggedItem) ? draggedItem : null);
     }
 
     /// <summary>让目标槽提交来源拖拽事务。</summary>

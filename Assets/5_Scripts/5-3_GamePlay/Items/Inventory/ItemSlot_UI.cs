@@ -9,6 +9,15 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
+/// <summary>
+/// 允许库存拖拽物在不进入另一个库存槽的情况下触发玩法交互，例如把液体容器拖到已打开的容器上进行转移。
+/// </summary>
+public interface IInventoryDragDropTarget
+{
+    bool ContainsInventoryDropPoint(Vector2 screenPosition, Camera eventCamera);
+    bool TryAcceptInventoryDrag(InventoryDragTransaction transaction, Vector2 screenPosition, Camera eventCamera);
+}
+
 public class ItemSlot_UI : MonoBehaviour,
     IPointerDownHandler,
     IPointerEnterHandler,
@@ -560,7 +569,15 @@ public class ItemSlot_UI : MonoBehaviour,
                 bool hasTouchTarget = touchTargetSlot != null && touchTargetSlot.isActiveAndEnabled;
                 if (hasTouchTarget)
                     touchTargetSlot.HandleMouseDragDrop(activeDragTransaction, eventData);
-                CompleteActiveDrag(!hasTouchTarget);
+                IInventoryDragDropTarget touchGameplayTarget = hasTouchTarget
+                    ? null
+                    : FindInventoryDragDropTargetUnderPointer(eventData);
+                if (touchGameplayTarget != null)
+                    touchGameplayTarget.TryAcceptInventoryDrag(
+                        activeDragTransaction,
+                        eventData.position,
+                        eventData.pressEventCamera ?? eventData.enterEventCamera);
+                CompleteActiveDrag(!hasTouchTarget && touchGameplayTarget == null);
                 touchItemDragActive = false;
                 touchPressStartedWithItem = false;
                 EndMouseDragVisual();
@@ -583,7 +600,15 @@ public class ItemSlot_UI : MonoBehaviour,
         bool hasTarget = targetSlot != null && targetSlot.isActiveAndEnabled;
         if (hasTarget)
             targetSlot.HandleMouseDragDrop(activeDragTransaction, eventData);
-        CompleteActiveDrag(!hasTarget);
+        IInventoryDragDropTarget gameplayTarget = hasTarget
+            ? null
+            : FindInventoryDragDropTargetUnderPointer(eventData);
+        if (gameplayTarget != null)
+            gameplayTarget.TryAcceptInventoryDrag(
+                activeDragTransaction,
+                eventData.position,
+                eventData.pressEventCamera ?? eventData.enterEventCamera);
+        CompleteActiveDrag(!hasTarget && gameplayTarget == null);
         mousePressStartedWithItem = false;
         mouseDragActive = false;
         suppressDesktopTapAfterDrag = true;
@@ -1116,6 +1141,40 @@ public class ItemSlot_UI : MonoBehaviour,
             ItemSlot_UI slot = hitObject != null ? hitObject.GetComponentInParent<ItemSlot_UI>() : null;
             if (slot != null)
                 return slot;
+        }
+
+        return null;
+    }
+
+    /// <summary>从射线结果中寻找覆盖当前松手位置的玩法拖放目标；目标自己决定实际可接收区域。</summary>
+    private static IInventoryDragDropTarget FindInventoryDragDropTargetUnderPointer(PointerEventData eventData)
+    {
+        EventSystem eventSystem = EventSystem.current;
+        if (eventSystem == null)
+            return null;
+
+        Camera eventCamera = eventData.pressEventCamera ?? eventData.enterEventCamera;
+        var raycastResults = new List<RaycastResult>();
+        eventSystem.RaycastAll(eventData, raycastResults);
+        for (int i = 0; i < raycastResults.Count; i++)
+        {
+            GameObject hitObject = raycastResults[i].gameObject;
+            if (hitObject == null)
+                continue;
+
+            MonoBehaviour[] behaviours = hitObject.GetComponentsInParent<MonoBehaviour>(true);
+            for (int j = 0; j < behaviours.Length; j++)
+            {
+                MonoBehaviour behaviour = behaviours[j];
+                if (behaviour == null || !behaviour.isActiveAndEnabled ||
+                    behaviour is not IInventoryDragDropTarget target ||
+                    !target.ContainsInventoryDropPoint(eventData.position, eventCamera))
+                {
+                    continue;
+                }
+
+                return target;
+            }
         }
 
         return null;

@@ -24,8 +24,6 @@ public class Tile_Water : TileBlockBehaviour
     [Min(0f)] public float waterGainPerTick = 12.5f;
     [Tooltip("每次饮用海水恢复的水分；海水还会同时附加脱水 Buff。")]
     [Min(0f)] public float saltWaterGainPerTick = 10f;
-    [Tooltip("脏淡水每次饮水触发感染的概率。")]
-    [Range(0f, 1f)] public float dirtyWaterInfectionChance = 0.2f;
 
     [Header("水体环境效果")]
     [Tooltip("水深为 0 时的移动速度倍率；进入水体即至少降低 50% 移速。")]
@@ -177,7 +175,16 @@ public class Tile_Water : TileBlockBehaviour
         if (item == null || water == null)
             return;
 
-        // 当前所有非盐水地表水都视为污水，包含河流；饮用后沿用现有感染概率。
+        GameRes gameRes = GameRes.ExistingInstance;
+        if (gameRes == null ||
+            string.IsNullOrWhiteSpace(water.LiquidId) ||
+            !gameRes.TryGetLiquidDefinition(water.LiquidId, out LiquidDefinition liquid) ||
+            !liquid.Drinkable)
+        {
+            return;
+        }
+
+        // 水体只决定当前环境种类与饮用节奏；感染、脱水等饮用后果统一读取 LiquidDefinition。
         WaterEnvironmentKind waterKind = water.salt > SaltWaterThreshold
             ? WaterEnvironmentKind.Salt
             : WaterEnvironmentKind.DirtyFresh;
@@ -185,11 +192,11 @@ public class Tile_Water : TileBlockBehaviour
             ? saltWaterGainPerTick
             : waterGainPerTick;
         runner.SetAvailableActions(new DrinkWaterActionDefinition(
+            liquid,
             waterKind,
             drinkHoldSeconds,
             drinkTickSeconds,
-            resolvedWaterGain,
-            dirtyWaterInfectionChance));
+            resolvedWaterGain));
     }
 
     /// <summary>根据水深计算并应用角色独享的减速实例；清 Buff 不会影响该环境效果。</summary>

@@ -48,13 +48,17 @@ public static class PortableBuildingPanelBuilder
         Debug.Log("[PortableBuilding] 钻木取火正式面板的放置/拆回按钮与引用已保存。");
     }
 
-    /// <summary>沿用陶罐底部按钮行，每次只显示与当前物品角色对应的一个操作。</summary>
+    /// <summary>陶罐所有操作统一放在右侧纵向列表，每次只显示与当前物品角色对应的一个建筑操作。</summary>
     public static void ConfigureVessel(GameObject root)
     {
         Button template = FindButton(root, "关闭按钮");
-        Configure(root, template, template.transform.parent, new Vector2(158f, 64f), null);
-        LayoutElement footer = template.transform.parent.GetComponent<LayoutElement>();
-        footer.minHeight = footer.preferredHeight = 64f;
+        Configure(root, template, template.transform.parent, new Vector2(220f, 64f), null);
+        Button place = FindButton(root, "放置建筑按钮");
+        Button dismantle = FindButton(root, "拆回建筑按钮");
+        int closeIndex = template.transform.GetSiblingIndex();
+        place.transform.SetSiblingIndex(closeIndex);
+        dismantle.transform.SetSiblingIndex(closeIndex + 1);
+        template.transform.SetAsLastSibling();
     }
 
     /// <summary>放在操作提示下方、石碗上方，避免被底部快捷栏遮住。</summary>
