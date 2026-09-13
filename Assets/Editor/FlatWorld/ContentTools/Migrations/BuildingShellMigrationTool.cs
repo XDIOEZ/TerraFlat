@@ -131,6 +131,15 @@ public static class BuildingShellMigrationTool
         try
         {
             root.name = shellName;
+            bool isBodyShell = string.Equals(shellName, "BuildingBodyShell", StringComparison.Ordinal);
+            if (isBodyShell)
+            {
+                int colliderLayer = LayerMask.NameToLayer("Collider");
+                if (colliderLayer < 0)
+                    throw new InvalidDataException("项目缺少 Collider Layer，无法配置建筑本体物理碰撞。");
+                root.layer = colliderLayer;
+            }
+
             foreach (Module module in root.GetComponentsInChildren<Module>(true))
             {
                 if (module.gameObject == root)
@@ -144,6 +153,15 @@ public static class BuildingShellMigrationTool
                 throw new MissingComponentException($"共享建筑 Shell 缺少 SpriteRenderer：{targetPath}");
             renderer.sprite = null;
             renderer.gameObject.name = "Render";
+
+            if (isBodyShell)
+            {
+                BoxCollider2D bodyCollider = root.GetComponent<BoxCollider2D>();
+                if (bodyCollider == null)
+                    throw new MissingComponentException($"共享建筑本体 Shell 缺少根 BoxCollider2D：{targetPath}");
+                bodyCollider.enabled = true;
+                bodyCollider.isTrigger = false;
+            }
 
             Item item = root.GetComponent<Item>();
             if (item?.itemData == null)

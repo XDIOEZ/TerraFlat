@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using FlatWorld.Gameplay.Building;
 using FlatWorld.Gameplay.Progress;
 using Sirenix.OdinInspector;
@@ -40,6 +43,7 @@ public class Mod_Building : Module, IIncomingDamageRule
     private const float PlacementCellHalfExtent = 0.5f;
     private const int MaxEmbeddedSnapshotBytes = 320 * 1024;
     private const string StatefulSummonerPrefix = "building-snapshot:";
+    private const string BuildingCollisionLayerName = "Collider";
 
     [Serializable]
     public class Building_Data
@@ -73,6 +77,8 @@ public class Mod_Building : Module, IIncomingDamageRule
     private DamageReceiver damageReceiver;
     [NonSerialized]
     private ShadowCaster2D _lightOccluder;
+    private static readonly FieldInfo ShadowCasterShapePathField = ResolveShadowCasterField("m_ShapePath");
+    private static readonly FieldInfo ShadowCasterShapePathHashField = ResolveShadowCasterField("m_ShapePathHash");
     public UltEvent StartInstall = new();
     public UltEvent StartUnInstall = new();
     public UltEvent<BuildingState, BuildingState> OnStateChanged = new();
@@ -1088,6 +1094,7 @@ public class Mod_Building : Module, IIncomingDamageRule
         if (item == null)
             throw new MissingComponentException("[Mod_Building] 未找到所属 Item");
 
+        // 通用建筑本体的实体碰撞体只允许来自 Item 根节点；Module_Building 自身不再携带第二套碰撞体。
         boxCollider2D ??= item.GetComponent<BoxCollider2D>();
         boxCollider2D ??= GetComponent<BoxCollider2D>();
         boxCollider2D ??= item.GetComponentInChildren<BoxCollider2D>(true);
@@ -1101,15 +1108,14 @@ public class Mod_Building : Module, IIncomingDamageRule
 
     /// <summary>
     /// 动态可交互建筑不是 Tilemap 的一部分，不能复用 ChunkLightOccluderRenderer；
-    /// 落地后按自身主碰撞体创建一个 ShadowCaster2D，使火把等 Point Light2D 能被建筑实际遮挡。
+    /// 落地后按主体 Sprite 的真实轮廓创建 ShadowCaster2D，使火把等 Point Light2D 能得到可见建筑阴影。
     /// </summary>
     private void SyncLightOccluder()
     {
         bool shouldOcclude = item != null &&
-                             boxCollider2D != null &&
                              Data?.Role == BuildingRole.PlacedBuilding &&
                              !item.InHand &&
-                             CurrentState is BuildingState.Installed or BuildingState.Damaged;
+                             item.gameObject.activeInHierarchy;
 
         if (!shouldOcclude)
         {
@@ -1118,21 +1124,120 @@ public class Mod_Building : Module, IIncomingDamageRule
             return;
         }
 
-        if (_lightOccluder == null)
+        SpriteRenderer sourceRenderer = item.Sprite;
+        if (sourceRenderer == null || sourceRenderer.sprite == null)
+            sourceRenderer = item.GetComponentsInChildren<SpriteRenderer>(true)
+                .FirstOrDefault(renderer => renderer != null && renderer.sprite != null);
+        if (sourceRenderer == null)
         {
-            GameObject host = boxCollider2D.gameObject;
-            _lightOccluder = host.GetComponent<ShadowCaster2D>();
-            if (_lightOccluder == null)
-                _lightOccluder = host.AddComponent<ShadowCaster2D>();
+            if (_lightOccluder != null)
+                _lightOccluder.enabled = false;
+            return;
         }
 
-        // 低矮的交互设施只负责向背光侧投影；自身仍由 Sprite-Lit 材质正常接收局部光。
+        GameObject host = sourceRenderer.gameObject;
+        if (_lightOccluder != null && _lightOccluder.gameObject != host)
+        {
+            _lightOccluder.enabled = false;
+            _lightOccluder = null;
+        }
+
+        // 兼容上一版在物理碰撞体节点创建的运行时遮挡器；改用视觉轮廓后必须关闭旧矩形投影。
+        ShadowCaster2D legacyColliderCaster = boxCollider2D != null
+            ? boxCollider2D.GetComponent<ShadowCaster2D>()
+            : null;
+        if (legacyColliderCaster != null && legacyColliderCaster.gameObject != host)
+            legacyColliderCaster.enabled = false;
+
+        _lightOccluder ??= host.GetComponent<ShadowCaster2D>();
+        _lightOccluder ??= host.AddComponent<ShadowCaster2D>();
+
         _lightOccluder.castsShadows = true;
-        _lightOccluder.selfShadows = false;
-        _lightOccluder.useRendererSilhouette = false;
+        _lightOccluder.selfShadows = true;
+        _lightOccluder.useRendererSilhouette = true;
+        SyncShadowCasterShape(_lightOccluder, sourceRenderer);
         _lightOccluder.enabled = true;
         _lightOccluder.Update();
     }
+
+    private static void SyncShadowCasterShape(ShadowCaster2D shadowCaster, SpriteRenderer sourceRenderer)
+    {
+        Sprite sprite = sourceRenderer.sprite;
+        int shapeCount = sprite.GetPhysicsShapeCount();
+        if (shapeCount <= 0)
+            throw new InvalidOperationException($"[Mod_Building] Sprite {sprite.name} 没有可用的物理轮廓，无法生成光照遮挡形状");
+
+        var points = new List<Vector2>();
+        Vector2[] bestPath = null;
+        float bestArea = -1f;
+
+        for (int shapeIndex = 0; shapeIndex < shapeCount; shapeIndex++)
+        {
+            points.Clear();
+            sprite.GetPhysicsShape(shapeIndex, points);
+            if (points.Count < 3)
+                continue;
+
+            float area = CalculatePolygonArea(points);
+            if (area <= bestArea)
+                continue;
+
+            bestArea = area;
+            bestPath = points.ToArray();
+        }
+
+        if (bestPath == null)
+            throw new InvalidOperationException($"[Mod_Building] Sprite {sprite.name} 的物理轮廓无有效多边形");
+
+        var shapePath = new Vector3[bestPath.Length];
+        for (int i = 0; i < bestPath.Length; i++)
+        {
+            Vector2 point = bestPath[i];
+            if (sourceRenderer.flipX)
+                point.x = -point.x;
+            if (sourceRenderer.flipY)
+                point.y = -point.y;
+            shapePath[i] = point;
+        }
+
+        if (sourceRenderer.flipX ^ sourceRenderer.flipY)
+            Array.Reverse(shapePath);
+
+        ShadowCasterShapePathField.SetValue(shadowCaster, shapePath);
+        ShadowCasterShapePathHashField.SetValue(shadowCaster, CalculateShadowPathHash(shapePath));
+    }
+
+    private static float CalculatePolygonArea(IReadOnlyList<Vector2> points)
+    {
+        float area = 0f;
+        for (int i = 0; i < points.Count; i++)
+        {
+            Vector2 current = points[i];
+            Vector2 next = points[(i + 1) % points.Count];
+            area += current.x * next.y - next.x * current.y;
+        }
+
+        return Mathf.Abs(area * 0.5f);
+    }
+
+    private static int CalculateShadowPathHash(IReadOnlyList<Vector3> shapePath)
+    {
+        unchecked
+        {
+            int hash = 17;
+            for (int i = 0; i < shapePath.Count; i++)
+            {
+                hash = hash * 31 + shapePath[i].x.GetHashCode();
+                hash = hash * 31 + shapePath[i].y.GetHashCode();
+            }
+
+            return hash;
+        }
+    }
+
+    private static FieldInfo ResolveShadowCasterField(string fieldName)
+        => typeof(ShadowCaster2D).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)
+           ?? throw new MissingFieldException(typeof(ShadowCaster2D).FullName, fieldName);
 
     #endregion
 
@@ -1216,7 +1321,8 @@ public class Mod_Building : Module, IIncomingDamageRule
         if (!installed)
         {
             BuildingOccupancyRegistry.Unregister(this);
-            SetColliderMode(enabled: true, trigger: true);
+            // PlacedBuilding 已经是世界实体；即使处于短暂过渡态也必须保留实体碰撞，不能退化成 Trigger。
+            SetColliderMode(enabled: true, trigger: false);
             SyncLightOccluder();
             return;
         }
@@ -1235,6 +1341,13 @@ public class Mod_Building : Module, IIncomingDamageRule
     {
         if (item == null)
             return;
+
+        if (boxCollider2D != null && Data?.Role == BuildingRole.PlacedBuilding)
+        {
+            int colliderLayer = LayerMask.NameToLayer(BuildingCollisionLayerName);
+            if (colliderLayer >= 0)
+                boxCollider2D.gameObject.layer = colliderLayer;
+        }
 
         Collider2D[] colliders = item.GetComponentsInChildren<Collider2D>(true);
         for (int i = 0; i < colliders.Length; i++)
