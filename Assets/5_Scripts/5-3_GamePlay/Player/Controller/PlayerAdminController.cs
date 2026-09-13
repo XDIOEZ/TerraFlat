@@ -166,6 +166,12 @@ public class PlayerAdminController : Module
             player.Data.Name_User = AdminName;
         }
 
+        // F2：一键启用创造背包并自动打开玩家行囊；该开发入口不要求先切换管理员显示名。
+        if (keyboard?.f2Key.wasPressedThisFrame == true)
+        {
+            OpenCreativeInventoryShortcut();
+        }
+
         // 非管理员不执行后续逻辑
         if (!IsAdmin()) return;
 
@@ -251,22 +257,39 @@ public class PlayerAdminController : Module
         if (keyboard == null)
             return;
 
-        // F2：初始化创造模式背包
-        if (keyboard.f2Key.wasPressedThisFrame)
-        {
-            playerTraits?.InitializeCreativeInventoryForAdmin();
-        }
-
-        // F5：给予背包全部物品 (999)
-        if (keyboard.f5Key.wasPressedThisFrame)
-        {
-            AddAmountToAllBagItems(999f);
-        }
-
         if (keyboard.f8Key.wasPressedThisFrame)
         {
             IncreaseAdminChunkLoadDistance();
         }
+    }
+
+    /// <summary>F2 一次完成创造背包初始化，并确保玩家主背包面板处于打开状态。</summary>
+    private void OpenCreativeInventoryShortcut()
+    {
+        if (player == null || !player.IsLocalProfile)
+            return;
+
+        if (playerTraits == null && player.itemMods != null)
+            playerTraits = player.itemMods.GetMod_ByID<Mod_PlayerTraits>(Mod_PlayerTraits.ModuleId);
+        if (playerTraits == null)
+        {
+            Debug.LogWarning("[PlayerAdminController] F2 创造背包失败：未找到玩家特质模块。");
+            return;
+        }
+
+        playerTraits.InitializeCreativeInventoryForAdmin();
+
+        Mod_Inventory bagMod = player.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag);
+        Inventory bag = bagMod?.inventory;
+        if (bag == null)
+        {
+            Debug.LogWarning("[PlayerAdminController] F2 创造背包已初始化，但未找到玩家主背包面板。");
+            return;
+        }
+
+        // SwitchUI 会负责首次创建、发布背包打开事件并在下一帧置顶；已打开时不重复 Toggle，避免按 F2 把面板关掉。
+        if (bag.basePanel == null || !bag.basePanel.IsOpen())
+            bag.SwitchUI();
     }
 
     public static bool ToggleTeleportToMouseShortcut()
@@ -522,36 +545,6 @@ public class PlayerAdminController : Module
         hotbar.RefreshUI(hotbar.CurrentIndex);
 
         Debug.Log($"[Admin] 手持物品 {slot.itemData.IDName} 增加 {amount}，当前: {slot.itemData.Stack.Amount}");
-    }
-
-    /// <summary>
-    /// 为玩家背包中的所有物品增加指定数量
-    /// </summary>
-    private void AddAmountToAllBagItems(float amount)
-    {
-        // 链式获取，减少嵌套
-        var bagMod = player?.itemMods?.GetMod_ByID<Mod_Inventory>(ModText.Bag);
-        
-        // 检查关键路径
-        if (bagMod?.inventory?.Data?.itemSlots == null)
-        {
-            // 如果 player 存在但没找到背包，这通常是配置错误
-            if (player != null) Debug.LogError("[Admin] 操作失败：找不到背包数据 (Inventory/Data/Slots)");
-            return;
-        }
-
-        int changedCount = 0;
-        foreach (var slot in bagMod.inventory.Data.itemSlots)
-        {
-            if (slot?.itemData != null)
-            {
-                slot.itemData.AddAmount(amount);
-                changedCount++;
-            }
-        }
-
-        bagMod.inventory.RefreshUI();
-        Debug.Log($"[Admin] 背包中 {changedCount} 个物品各增加数量 {amount}");
     }
 
     #endregion

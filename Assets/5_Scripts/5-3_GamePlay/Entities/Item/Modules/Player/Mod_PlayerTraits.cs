@@ -78,7 +78,8 @@ public class Mod_PlayerTraits : Module
     #region 创造背包
 
     /// <summary>
-    /// 管理员每次为每种非 Actor 物品增加 100 个，已有物品原位累加，缺少物品新增槽位，不受普通堆叠容量限制。
+    /// 管理员每次为每种可持有的非 Actor 物品增加 100 个；落地建筑本体不进入背包。
+    /// 已有物品原位累加，缺少物品新增槽位，不受普通堆叠容量限制。
     /// </summary>
     public string InitializeCreativeInventoryForAdmin()
     {
@@ -107,11 +108,21 @@ public class Mod_PlayerTraits : Module
         }
 
         // 同类物品只选一个已有槽位补充，避免拆分堆叠后一次点击重复加量。
+        // PlacedBuilding 是建筑落地后的运行态载体，不是玩家应持有的物品；
+        // 旧创造背包里若已经存在则直接清掉，避免继续占用背包槽位。
         var existingSlotIndices = new Dictionary<string, int>();
         var bagData = bagMod.inventory.Data;
+        int removedPlacedBuildingCount = 0;
         for (int i = 0; i < bagData.itemSlots.Count; i++)
         {
             ItemData existingItem = bagData.itemSlots[i].itemData;
+            if (IsPlacedBuildingState(existingItem))
+            {
+                bagData.RemoveItemAll(bagData.itemSlots[i], i);
+                removedPlacedBuildingCount++;
+                continue;
+            }
+
             if (existingItem != null && !existingSlotIndices.ContainsKey(existingItem.IDName))
                 existingSlotIndices.Add(existingItem.IDName, i);
         }
@@ -120,6 +131,7 @@ public class Mod_PlayerTraits : Module
         var creativeItems = new List<ItemData>(itemIds.Count);
         var uncreatableItemIds = new List<string>();
         int actorCount = 0;
+        int placedBuildingCount = 0;
         int replenishedCount = 0;
 
         foreach (string itemId in itemIds)
@@ -137,14 +149,6 @@ public class Mod_PlayerTraits : Module
                 continue;
             }
 
-            if (existingSlotIndices.TryGetValue(itemId, out int existingSlotIndex))
-            {
-                // 走库存数量变更事件，保留原物品状态并允许创造模式超量堆叠。
-                bagData.ChangeItemDataAmount(existingSlotIndex, amountPerItem);
-                replenishedCount++;
-                continue;
-            }
-
             ItemData data;
             try
             {
@@ -154,6 +158,21 @@ public class Mod_PlayerTraits : Module
             {
                 uncreatableItemIds.Add(itemId);
                 Debug.LogError($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 物品 {itemId} 无法创建：{exception.Message}");
+                continue;
+            }
+
+            // 创造背包只保留可持有的建筑召唤器；落地建筑本体由召唤器放置时创建。
+            if (IsPlacedBuildingState(data))
+            {
+                placedBuildingCount++;
+                continue;
+            }
+
+            if (existingSlotIndices.TryGetValue(itemId, out int existingSlotIndex))
+            {
+                // 走库存数量变更事件，保留原物品状态并允许创造模式超量堆叠。
+                bagData.ChangeItemDataAmount(existingSlotIndex, amountPerItem);
+                replenishedCount++;
                 continue;
             }
 
@@ -187,14 +206,73 @@ public class Mod_PlayerTraits : Module
             bagData.SetOne_ItemData(firstCreativeSlotIndex + i, data);
         }
         CreativeInventoryState.Enable(target, bagMod.inventory);
+        bagData.MaintainDynamicSlotCount();
         bagMod.inventory.RefreshUI();
 
         string summary = $"创造背包完成：新增 {creativeItems.Count} 种，补充 {replenishedCount} 种，每种增加 {amountPerItem} 个，" +
-                         $"不可创建 {uncreatableItemIds.Count} 种，排除 Actor {actorCount} 种，共扫描 {itemIds.Count} 条定义；已解除重量与体积上限，背包格子保持默认自动扩容。";
+                         $"不可创建 {uncreatableItemIds.Count} 种，排除 Actor {actorCount} 种、落地建筑状态 {placedBuildingCount} 种，" +
+                         $"清理旧建筑状态 {removedPlacedBuildingCount} 格，共扫描 {itemIds.Count} 条定义；已解除重量与体积上限，背包格子保持默认自动扩容。";
         if (uncreatableItemIds.Count > 0)
             Debug.LogError($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 不可创建物品：{string.Join(", ", uncreatableItemIds)}");
         Debug.Log($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] {summary}");
         return summary;
+    }
+
+    /// <summary>落地建筑本体属于世界运行态，不应作为可持有物品进入创造背包。</summary>
+    private static bool IsPlacedBuildingState(ItemData itemData)
+    {
+        if (itemData == null)
+            return false;
+
+        // 便携设施的角色以载体 ID 为最终依据：历史背包数据里的 Role 可能滞后，
+        // 但 BuildingPrefabId / SummonerPrefabId 与当前 Item ID 的对应关系不会改变。
+        if (TryResolvePlacedBuildingByCarrierIdentity(itemData, out bool isPlacedBuilding))
+            return isPlacedBuilding;
+
+        // 旧创造背包可能保存了过期甚至缺失的建筑模块数据；静态配置始终以当前物品定义为准。
+        if (GameRes.Instance != null &&
+            !string.IsNullOrWhiteSpace(itemData.IDName) &&
+            GameRes.Instance.TryGetItemDefinition(itemData.IDName, out RuntimeItemDefinition currentDefinition))
+        {
+            ItemData currentData = currentDefinition.CreateItemData();
+            if (TryResolvePlacedBuildingByCarrierIdentity(currentData, out isPlacedBuilding))
+                return isPlacedBuilding;
+
+            if (Mod_Building.TryReadBuildingData(currentData, out _, out Mod_Building.Building_Data currentBuildingData) &&
+                currentBuildingData != null)
+                return currentBuildingData.Role == BuildingRole.PlacedBuilding;
+        }
+
+        return Mod_Building.TryReadBuildingData(itemData, out _, out Mod_Building.Building_Data buildingData) &&
+               buildingData?.Role == BuildingRole.PlacedBuilding;
+    }
+
+    /// <summary>用稳定载体 ID 判定建筑本体/召唤器；只有身份明确时返回 true。</summary>
+    private static bool TryResolvePlacedBuildingByCarrierIdentity(ItemData itemData, out bool isPlacedBuilding)
+    {
+        isPlacedBuilding = false;
+        if (itemData == null ||
+            string.IsNullOrWhiteSpace(itemData.IDName) ||
+            !Mod_Building.TryReadBuildingData(itemData, out _, out Mod_Building.Building_Data buildingData) ||
+            buildingData == null)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(buildingData.BuildingPrefabId) &&
+            string.Equals(itemData.IDName, buildingData.BuildingPrefabId, System.StringComparison.Ordinal))
+        {
+            isPlacedBuilding = true;
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(buildingData.SummonerPrefabId) &&
+            string.Equals(itemData.IDName, buildingData.SummonerPrefabId, System.StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     #endregion
