@@ -238,7 +238,10 @@ public class BuffManager : Module
         if (ActiveBuffs.TryGetValue(definitionId, out BuffInstance existing) &&
             existing != null)
         {
-            return HandleBuffStack(definition, existing);
+            bool handled = HandleBuffStack(definition, existing);
+            if (handled)
+                ResolveAppliedBuffInteractions(definitionId);
+            return handled;
         }
 
         var runtime = new BuffInstance();
@@ -248,7 +251,14 @@ public class BuffManager : Module
         ActiveBuffs[definitionId] = runtime;
         runtime.Start();
         BuffAdded?.Invoke(runtime);
+        ResolveAppliedBuffInteractions(definitionId);
         return true;
+    }
+
+    private void ResolveAppliedBuffInteractions(string buffId)
+    {
+        if (string.Equals(buffId, WetBuffIds.Wet, StringComparison.OrdinalIgnoreCase))
+            RemoveBuff(BurningBuffIds.Burning);
     }
 
     private bool HandleBuffStack(BuffDefinition incoming, BuffInstance existing)
@@ -615,6 +625,11 @@ public static class BloodLossBuffIds
 public static class BurningBuffIds
 {
     public const string Burning = "燃烧";
+}
+
+public static class WetBuffIds
+{
+    public const string Wet = "潮湿";
 }
 
 /// <summary>感染类 Buff 的稳定 ID，供玩法、表现和测试统一引用。</summary>
