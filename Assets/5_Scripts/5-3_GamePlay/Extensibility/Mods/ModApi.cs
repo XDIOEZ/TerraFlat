@@ -217,7 +217,9 @@ public sealed class ModItemApi
     public string FactionId => FactionRelationService.GetFactionId(item);
     public bool IsLiquidContainer => GetLiquidContainer() != null;
     public string LiquidId => GetLiquidContainer()?.Data?.LiquidId ?? string.Empty;
-    public int LiquidAmount => GetLiquidContainer()?.Data?.Amount ?? 0;
+    /// <summary>兼容旧 MOD 的完整份数视图；小数余量请读取 LiquidAmountExact。</summary>
+    public int LiquidAmount => Mathf.FloorToInt((GetLiquidContainer()?.Data?.Amount ?? 0f) + Mod_WaterVessel.AmountEpsilon);
+    public float LiquidAmountExact => GetLiquidContainer()?.Data?.Amount ?? 0f;
     public int LiquidCapacity => GetLiquidContainer()?.Capacity ?? 0;
 
     /// <summary>在服务端权限允许时修改当前物品的阵营并触发联机状态同步。</summary>

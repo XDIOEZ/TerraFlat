@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FlatWorld.Gameplay.Quests;
+using FlatWorld.Networking;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -20,17 +21,77 @@ public partial class GameRes
     /// <summary>当前或最后执行的阶段 ID。</summary>
     [Sirenix.OdinInspector.ShowInInspector] public string CurrentLoadStage => loadPipeline?.CurrentStage;
     private Coroutine loadCoroutine;
+    private Coroutine inGameReloadCoroutine;
     private ResourceLoadPipeline loadPipeline;
     private ResourceAssetScope resourceAssets = new();
     internal ResourceAssetScope ResourceAssets => resourceAssets;
 
-    /// <summary>所有入口共用一次请求；加载中忽略重复请求，有世界或存活实体时拒绝更换资源。</summary>
+    /// <summary>
+    /// F5/调试入口统一使用这里：主菜单直接重载；单机世界内先保存并退出运行态，
+    /// 再重载资源并自动回到同一存档，避免释放仍被活跃 Item 引用的 Addressables。
+    /// </summary>
+    public bool RequestResourceReload()
+    {
+        if (LoadState == ResourceLoadState.Loading ||
+            LoadState == ResourceLoadState.Disposed ||
+            inGameReloadCoroutine != null)
+        {
+            return false;
+        }
+
+        if (!Application.isPlaying)
+        {
+            Debug.LogWarning("[GameRes] 资源重载只在运行时执行；编辑器内容检查请使用目录校验菜单。");
+            return false;
+        }
+
+        GameManager manager = FindFirstObjectByType<GameManager>();
+        if (manager == null || !manager.IsInGameWorld)
+            return TryReloadResources();
+
+        if (manager.IsWorldEntryInProgress)
+        {
+            Debug.LogWarning("[GameRes] 正在进入世界，暂不能执行 F5 资源重载。");
+            return false;
+        }
+
+        // 联机状态需要由服务器统一协调资源版本；本地单边热重载会直接造成内容目录不一致。
+        if (GameNetwork.IsOnline)
+        {
+            Debug.LogWarning("[GameRes] 联机世界不允许本地 F5 热重载资源，请先结束联机会话。");
+            return false;
+        }
+
+        SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
+        ItemMgr itemMgr = ItemMgr.GetInstance();
+        string saveName = saveDataMgr?.SaveData?.saveName;
+        string playerName = saveDataMgr?.CurrentContrrolPlayerName;
+        Player player = itemMgr?.User_Player;
+        if (saveDataMgr == null ||
+            string.IsNullOrWhiteSpace(saveName) ||
+            string.IsNullOrWhiteSpace(playerName) ||
+            player == null)
+        {
+            Debug.LogWarning("[GameRes] 当前世界缺少可恢复的存档或本地玩家，已取消 F5 资源重载。");
+            return false;
+        }
+
+        string savePath = saveDataMgr.GetFullSavePath(saveName);
+        showLoadingGUI = true;
+        loadingProgress = 0f;
+        loadingText = "正在保存当前世界并准备更新资源...";
+        inGameReloadCoroutine = StartCoroutine(
+            ReloadResourcesAndResumeWorld(manager, player, playerName, saveName, savePath));
+        return true;
+    }
+
+    /// <summary>底层资源会话入口；调用前必须保证世界运行态与活跃 Item 已经清空。</summary>
     public bool TryReloadResources()
     {
         if (LoadState == ResourceLoadState.Loading || LoadState == ResourceLoadState.Disposed) return false;
         if (!Application.isPlaying)
         {
-            Debug.LogWarning("[GameRes] 资源重载只在运行中的主菜单执行；编辑器内容检查请使用目录校验菜单。");
+            Debug.LogWarning("[GameRes] 资源重载只在运行时执行；编辑器内容检查请使用目录校验菜单。");
             return false;
         }
         GameManager manager = FindFirstObjectByType<GameManager>();
@@ -38,7 +99,7 @@ public partial class GameRes
         if ((manager != null && (manager.IsInGameWorld || manager.IsWorldEntryInProgress)) ||
             (items != null && items.WorldRunTimeItems.Values.Any(item => item != null)))
         {
-            Debug.LogWarning("[GameRes] 请退出世界并返回主菜单后再重载资源。");
+            Debug.LogWarning("[GameRes] 底层资源会话仍有世界运行态引用；游戏内请通过 F5/RequestResourceReload 执行安全重载。");
             return false;
         }
 
@@ -53,8 +114,80 @@ public partial class GameRes
         return true;
     }
 
-    [Sirenix.OdinInspector.Button("重载所有资源（主菜单）")]
-    public void HotReloadAllResources() => TryReloadResources();
+    [Sirenix.OdinInspector.Button("重载所有资源")]
+    public void HotReloadAllResources() => RequestResourceReload();
+
+    /// <summary>单机世界内的安全热重载：完整保存/清场后重建内容目录，再加载同一存档。</summary>
+    private IEnumerator ReloadResourcesAndResumeWorld(
+        GameManager manager,
+        Player player,
+        string playerName,
+        string saveName,
+        string savePath)
+    {
+        Debug.Log($"[GameRes] F5 游戏内资源重载开始：存档={saveName}，玩家={playerName}");
+
+        yield return manager.BackToHelloScene_Coroutine(player, saveCurrentGame: true);
+
+        // 退出流程会将当前 SaveData 重置为空对象；确认运行态已经清空后才释放旧资源句柄。
+        ItemMgr.GetInstance()?.CleanupNullItems();
+        if (manager.IsInGameWorld ||
+            (ItemMgr.GetInstance() != null && ItemMgr.GetInstance().WorldRunTimeItems.Values.Any(item => item != null)))
+        {
+            Debug.LogError("[GameRes] F5 资源重载中止：退出世界后仍存在运行态 Item，旧资源会话未释放。");
+            showLoadingGUI = false;
+            inGameReloadCoroutine = null;
+            yield break;
+        }
+
+        loadingText = "正在更新游戏资源...";
+        loadingProgress = 0f;
+        showLoadingGUI = true;
+        if (!TryReloadResources())
+        {
+            Debug.LogError("[GameRes] F5 资源重载中止：无法启动新的资源会话。");
+            showLoadingGUI = false;
+            inGameReloadCoroutine = null;
+            yield break;
+        }
+
+        while (LoadState == ResourceLoadState.Loading)
+            yield return null;
+
+        if (LoadState != ResourceLoadState.Ready)
+        {
+            Debug.LogError($"[GameRes] F5 资源重载失败，已停留在主菜单：{LastLoadError}");
+            inGameReloadCoroutine = null;
+            yield break;
+        }
+
+        SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
+        if (saveDataMgr == null)
+        {
+            Debug.LogError("[GameRes] F5 资源重载完成，但 SaveDataMgr 不存在，无法恢复原存档。");
+            inGameReloadCoroutine = null;
+            yield break;
+        }
+
+        loadingText = "资源更新完成，正在恢复当前存档...";
+        showLoadingGUI = true;
+        saveDataMgr.LoadSaveByDisk(savePath);
+        if (saveDataMgr.SaveData == null ||
+            !string.Equals(saveDataMgr.SaveData.saveName, saveName, StringComparison.Ordinal) ||
+            saveDataMgr.SaveData.PlayerData_Dict == null ||
+            !saveDataMgr.SaveData.PlayerData_Dict.ContainsKey(playerName))
+        {
+            Debug.LogError($"[GameRes] F5 资源重载完成，但无法恢复存档 {saveName} 的玩家 {playerName}。");
+            showLoadingGUI = false;
+            inGameReloadCoroutine = null;
+            yield break;
+        }
+
+        showLoadingGUI = false;
+        inGameReloadCoroutine = null;
+        Debug.Log($"[GameRes] F5 资源更新完成，正在重新进入存档：{saveName}");
+        manager.ContinueGame(playerName);
+    }
 
     /// <summary>先释放旧会话，再执行声明式计划；任何失败都清空目录并保持不可进入世界。</summary>
     private IEnumerator RunResourceSession()
@@ -97,7 +230,7 @@ public partial class GameRes
         resourceLoadFailed = true;
         loadCoroutine = null;
         LastLoadError = $"阶段 {stage} 失败：{exception.Message}";
-        loadingText = $"资源加载失败（{stage}），修正配置后可在主菜单按 F5 重试";
+        loadingText = $"资源加载失败（{stage}），修正配置后可按 F5 重试";
         showLoadingGUI = true;
         Debug.LogError($"[GameRes] {LastLoadError}\n{exception}", this);
     }

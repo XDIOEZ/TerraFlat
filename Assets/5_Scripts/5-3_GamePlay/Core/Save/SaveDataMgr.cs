@@ -17,7 +17,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 14; // ItemStack 新增重量与显式堆叠字段，玩家数据新增携带容量。
+    private const int CompactSaveVersion = 15; // 液体容器 Amount 改为浮点份数，支持按倾角连续倾倒。
     private const int ModdedSaveVersion = 10;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
@@ -1860,7 +1860,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
             try
             {
-                ItemData runtimeData = CloneItemData(savedData);
+                ItemData runtimeData = CloneAndRebaseItemData(savedData);
                 ItemTransform transformData = runtimeData.transform ?? new ItemTransform();
                 Item restored = ItemMgr.Instance.InstantiateItem(
                     runtimeData,
@@ -2087,7 +2087,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
             try
             {
-                ItemData runtimeData = CloneItemData(savedData);
+                ItemData runtimeData = CloneAndRebaseItemData(savedData);
                 ItemTransform transformData = runtimeData.transform ?? new ItemTransform();
                 Item restored = ItemMgr.Instance.InstantiateItem(
                     runtimeData,
@@ -2320,7 +2320,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
             try
             {
-                ItemData runtimeData = CloneItemData(savedData);
+                ItemData runtimeData = CloneAndRebaseItemData(savedData);
                 Item item = chunk.InstantiateItemInChunk(
                     runtimeData,
                     runtimeData.transform.position,
@@ -2444,11 +2444,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             ModdedSaveEnvelope envelope = MemoryPackSerializer.Deserialize<ModdedSaveEnvelope>(body);
             if (envelope == null || envelope.CoreSavePayload == null)
                 throw new InvalidDataException("MOD 存档封装已损坏");
-            if (envelope.Version != ModdedSaveVersion)
-            {
-                throw new SaveVersionIncompatibleException(
-                    $"MOD 存档版本不兼容：存档={envelope.Version}，当前={ModdedSaveVersion}。不会迁移、覆盖或删除该存档。");
-            }
+            EnsureSaveVersionCanAdvance("MOD 存档", envelope.Version, ModdedSaveVersion);
 
             corePayload = envelope.CoreSavePayload;
             if (envelope.ModMetadata != null && envelope.ModMetadata.Length > 0)
@@ -2474,11 +2470,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         CompactSaveEnvelope envelope = MemoryPackSerializer.Deserialize<CompactSaveEnvelope>(body);
         if (envelope == null || envelope.CoreSaveData == null)
             throw new InvalidDataException("差异存档封装已损坏");
-        if (envelope.Version != CompactSaveVersion)
-        {
-            throw new SaveVersionIncompatibleException(
-                $"差异存档版本不兼容：存档={envelope.Version}，当前={CompactSaveVersion}。不会迁移、覆盖或删除该存档。");
-        }
+        EnsureSaveVersionCanAdvance("差异存档", envelope.Version, CompactSaveVersion);
 
         GameSaveData saveData = MemoryPackSerializer.Deserialize<GameSaveData>(envelope.CoreSaveData);
         if (saveData == null)
@@ -2525,6 +2517,28 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         return true;
     }
 
+    /// <summary>
+    /// 存档版本只防止“未来版本倒灌到旧客户端”；旧版本允许继续读取并在运行时使用当前配置。
+    /// 下一次保存会自然写成当前版本，不再因游戏升级强制废弃已有存档。
+    /// </summary>
+    private static void EnsureSaveVersionCanAdvance(string label, int savedVersion, int currentVersion)
+    {
+        if (savedVersion <= 0)
+            throw new InvalidDataException($"{label}版本无效：{savedVersion}");
+
+        if (savedVersion > currentVersion)
+        {
+            throw new SaveVersionIncompatibleException(
+                $"{label}来自更高版本：存档={savedVersion}，当前={currentVersion}，当前客户端无法安全读取未来格式。");
+        }
+
+        if (savedVersion < currentVersion)
+        {
+            Debug.Log($"[SaveDataMgr] {label}将从版本 {savedVersion} 按当前版本 {currentVersion} 读取；" +
+                      "静态内容配置以当前游戏资源为准。下一次保存会写入当前版本。");
+        }
+    }
+
     private static string BuildChunkKey(string planetName, string chunkName)
     {
         return $"{planetName}\u001f{chunkName}";
@@ -2560,6 +2574,16 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         byte[] bytes = MemoryPackSerializer.Serialize<ItemData>(itemData);
         return MemoryPackSerializer.Deserialize<ItemData>(bytes);
+    }
+
+    /// <summary>恢复运行时实体前先复制存档状态，再用当前物品定义刷新静态配置和模块组合。</summary>
+    private static ItemData CloneAndRebaseItemData(ItemData itemData)
+    {
+        ItemData cloned = CloneItemData(itemData);
+        GameRes gameRes = GameRes.Instance;
+        return gameRes == null
+            ? cloned
+            : ItemDefinitionRuntime.RebasePersistedData(gameRes, cloned);
     }
 
     private static List<TileData> CloneTileList(List<TileData> tiles)

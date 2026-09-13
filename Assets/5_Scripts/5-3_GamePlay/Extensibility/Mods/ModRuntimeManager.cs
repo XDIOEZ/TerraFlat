@@ -1008,7 +1008,8 @@ public sealed class ModRuntimeManager : MonoBehaviour
         LiquidDefinitionFactory.ValidateReferences(
             built.Select(entry => entry.Definition),
             id => availableLiquidIds.Contains(id),
-            itemId => gameRes.TryGetItemDefinition(itemId, out _));
+            itemId => gameRes.TryGetItemDefinition(itemId, out _),
+            buffId => gameRes.BuffDefinitions.ContainsKey(buffId));
 
         foreach ((PendingLiquidDefinition pending, LiquidDefinition definition) in built)
         {
@@ -1542,31 +1543,20 @@ public sealed class ModRuntimeManager : MonoBehaviour
         if (metadata?.Mods == null || metadata.Mods.Count == 0)
             return true;
 
-        List<ModSaveRecord> expected = metadata.Mods.OrderBy(record => record.LoadIndex).ToList();
-        if (expected.Count != loadedPackages.Count)
+        // 存档只要求它实际引用的 MOD 仍然存在；版本号、内容哈希和当前加载顺序属于
+        // 本次游戏内容配置，不得把旧配置锁死在存档里。同 ID MOD 更新后直接使用当前定义。
+        foreach (ModSaveRecord saved in metadata.Mods)
         {
-            error = $"存档需要 {expected.Count} 个 MOD，当前加载了 {loadedPackages.Count} 个";
-            return false;
-        }
+            if (saved == null || string.IsNullOrWhiteSpace(saved.Id))
+                continue;
 
-        for (int i = 0; i < expected.Count; i++)
-        {
-            ModManifest current = loadedPackages[i].Manifest;
-            ModSaveRecord saved = expected[i];
-            if (!string.Equals(saved.Id, current.Id, StringComparison.OrdinalIgnoreCase) ||
-                !string.Equals(saved.Version, current.Version, StringComparison.OrdinalIgnoreCase) ||
-                !string.Equals(saved.ContentHash, current.ContentHash, StringComparison.OrdinalIgnoreCase))
+            ModPackage currentPackage = loadedPackages.FirstOrDefault(package =>
+                string.Equals(package.Manifest.Id, saved.Id, StringComparison.OrdinalIgnoreCase));
+            if (currentPackage == null)
             {
-                error = $"存档 MOD 不匹配：位置 {i + 1} 需要 {saved.Id} {saved.Version}，当前为 {current.Id} {current.Version}";
+                error = $"存档引用的 MOD 当前未加载：{saved.Id}";
                 return false;
             }
-        }
-
-        if (!string.IsNullOrWhiteSpace(metadata.ModSetHash) &&
-            !string.Equals(metadata.ModSetHash, ModSetHash, StringComparison.OrdinalIgnoreCase))
-        {
-            error = "存档 MOD 集合哈希与当前环境不一致";
-            return false;
         }
 
         return true;

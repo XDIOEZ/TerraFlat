@@ -113,15 +113,15 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         TryReloadResources();
     }
 
-    /// <summary>刷新资源加载界面，并保留 F5 热重载入口。</summary>
+    /// <summary>刷新资源加载界面，并保留 F5 全局资源重载入口。</summary>
     public void Update()
     {
         RefreshResourceLoadingPresentation();
 
-        // 资源热重载是主菜单阶段也需生效的全局开发快捷键。
+        // F5 在主菜单直接重载；世界运行中自动保存、清场、重载并返回原存档。
         if (Keyboard.current?.f5Key.wasPressedThisFrame == true)
         {
-            TryReloadResources();
+            RequestResourceReload();
         }
     }
 

@@ -498,6 +498,8 @@ namespace FlatWorld.Networking.Gameplay
                 return;
             }
 
+            // 漂浮是世界临时状态；拾取载荷必须剔除掉落模块，否则会把水面状态带进库存物品。
+            Mod_Droping.PrepareFloatingPickupSnapshot(item);
             byte[] payload = CaptureSafely(item);
             if (!ItemNetworkStateSerialization.IsValidPayload(payload))
             {
@@ -1015,8 +1017,8 @@ namespace FlatWorld.Networking.Gameplay
                 buildingItem = ItemMgr.Instance.InstantiateItem(
                     placedData,
                     position,
-                    Quaternion.identity,
-                    Vector3.one);
+                    placedData.transform.rotation,
+                    placedData.transform.scale);
                 buildingItem.Load();
 
                 Mod_Building building = buildingItem.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);

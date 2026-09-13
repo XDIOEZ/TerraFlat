@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using FlatWorld.Networking;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -78,7 +79,7 @@ public sealed class ModManagerOverlay : MonoBehaviour
 
     private void DrawWindow(int windowId)
     {
-        GUILayout.Label("启停和顺序修改会在下次资源重载时生效；进入世界后禁止热重载。");
+        GUILayout.Label("启停和顺序修改会在下次资源重载时生效；单机世界内会自动保存、重载并返回当前存档。");
         GUILayout.Label($"状态：{manager.State} | 已加载：{manager.LoadedManifests.Count} | 指纹：{ShortHash(manager.ModSetHash)}");
         if (manager.IsSafeModeActive)
             GUILayout.Label("当前处于安全模式，所有外部 MOD 均被跳过。");
@@ -100,7 +101,7 @@ public sealed class ModManagerOverlay : MonoBehaviour
             ModProfileStore.RequestSafeModeNextLaunch();
             notice = "已请求下次使用安全模式。";
         }
-        bool canReload = GameManager.Instance == null || !GameManager.Instance.IsInGameWorld;
+        bool canReload = !GameNetwork.IsOnline;
         GUI.enabled = canReload;
         if (GUILayout.Button("立即重载内容", GUILayout.Width(130f)))
         {

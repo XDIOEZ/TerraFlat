@@ -256,6 +256,9 @@ public partial class ItemMgr
             playerData = loadedPlayerData;
             wasCreated = false;
 
+            // 玩家根数据仍保留自身进度，但背包/快捷栏中的物品必须使用当前 ItemDefinition 配置。
+            ItemDefinitionRuntime.RebaseNestedPersistedItems(GameRes.Instance, playerData);
+
             // 档案字典键是玩家身份真源；修复旧存档中空名、默认名或临时身份写回造成的错位。
             if (!string.Equals(playerData.Name_User, playerName, StringComparison.Ordinal))
             {
