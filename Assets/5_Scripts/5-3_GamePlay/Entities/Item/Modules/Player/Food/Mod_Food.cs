@@ -21,6 +21,7 @@ public partial class Mod_Food : Module, IItemPoolLifecycle
     public partial class FoodStaminaState
     {
         public float StaminaRecoverSpeed = 1f;
+        public float StationaryRecoveryMultiplier = 1.3f;
         public float StaminaConsumeSpeed = 0.5f;
     }
 

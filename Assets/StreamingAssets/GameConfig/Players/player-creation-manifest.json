@@ -46,6 +46,7 @@
         "waterConsumeSpeedRate": 0.1,
         "nutritionConsumeRate": 1.0,
         "staminaRecoverSpeed": 1.0,
+        "stationaryStaminaRecoveryMultiplier": 1.3,
         "staminaConsumeSpeed": 0.5,
         "healthEnabled": true,
         "healSpeed": 0.01,

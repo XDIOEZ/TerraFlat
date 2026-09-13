@@ -374,6 +374,7 @@ public sealed class FoodSurvivalRule : IFoodMechanic, IFoodTickObserver, IFoodTi
     private readonly FoodNutritionService nutritionService;
     private readonly Mod_Stamina stamina;
     private readonly Mod_Food.FoodStaminaState staminaState;
+    private readonly Mover mover;
 
     public string MechanicId => "core.survival";
     public int Priority => 90;
@@ -384,11 +385,13 @@ public sealed class FoodSurvivalRule : IFoodMechanic, IFoodTickObserver, IFoodTi
     public FoodSurvivalRule(
         FoodNutritionService nutritionService,
         Mod_Stamina stamina,
-        Mod_Food.FoodStaminaState staminaState)
+        Mod_Food.FoodStaminaState staminaState,
+        Mover mover)
     {
         this.nutritionService = nutritionService;
         this.stamina = stamina;
         this.staminaState = staminaState ?? new Mod_Food.FoodStaminaState();
+        this.mover = mover;
     }
 
     public void OnFoodTick(FoodTickContext tickContext)
@@ -404,7 +407,10 @@ public sealed class FoodSurvivalRule : IFoodMechanic, IFoodTickObserver, IFoodTi
         if (stamina.Data.CurrentStamina < stamina.Data.MaxStamina)
         {
             nutritionService.ConsumeNutrition(timeDelta * staminaState.StaminaConsumeSpeed);
-            stamina.AddStamina(staminaState.StaminaRecoverSpeed * timeDelta);
+            float recoveryMultiplier = mover != null && !mover.IsMoving
+                ? Mathf.Max(0f, staminaState.StationaryRecoveryMultiplier)
+                : 1f;
+            stamina.AddStamina(staminaState.StaminaRecoverSpeed * recoveryMultiplier * timeDelta);
         }
     }
 
@@ -481,7 +487,8 @@ public sealed class FoodRuntimeExecutor : IDisposable
         rulePipeline.Add(new FoodSurvivalRule(
             nutritionService,
             stamina,
-            staminaState));
+            staminaState,
+            context.Item?.itemMods?.GetMod_ByID<Mover>(ModText.Mover)));
         rulePipeline.Add(new FoodHealthModule(context, damageReceiver, deathState));
         rulePipeline.Add(new FoodFeedbackRule());
         rulePipeline.Add(new FoodAudioModule(context));

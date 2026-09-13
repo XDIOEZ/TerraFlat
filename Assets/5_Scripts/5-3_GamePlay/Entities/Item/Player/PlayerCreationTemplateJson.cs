@@ -84,6 +84,7 @@ public sealed class PlayerCreationTemplateConfig
         [JsonProperty("waterConsumeSpeedRate")] public float WaterConsumeSpeedRate = 0.1f;
         [JsonProperty("nutritionConsumeRate")] public float NutritionConsumeRate = 1f;
         [JsonProperty("staminaRecoverSpeed")] public float StaminaRecoverSpeed = 1f;
+        [JsonProperty("stationaryStaminaRecoveryMultiplier")] public float StationaryStaminaRecoveryMultiplier = 1.3f;
         [JsonProperty("staminaConsumeSpeed")] public float StaminaConsumeSpeed = 0.5f;
         [JsonProperty("healthEnabled")] public bool HealthEnabled = true;
         [JsonProperty("healSpeed")] public float HealSpeed = 0.01f;
@@ -205,6 +206,7 @@ public sealed class PlayerCreationTemplateConfig
         foodModule.StaminaState = new Mod_Food.FoodStaminaState
         {
             StaminaRecoverSpeed = Mathf.Max(0f, Food.StaminaRecoverSpeed),
+            StationaryRecoveryMultiplier = Mathf.Max(0f, Food.StationaryStaminaRecoveryMultiplier),
             StaminaConsumeSpeed = Mathf.Max(0f, Food.StaminaConsumeSpeed)
         };
         foodModule.HealthState = new Mod_Food.FoodHealthState
@@ -367,6 +369,7 @@ public static class PlayerCreationTemplateJsonLoader
         ValidateFiniteNonNegative(profile.Food.WaterConsumeSpeedRate, $"{profile.Id}.food.waterConsumeSpeedRate");
         ValidateFiniteNonNegative(profile.Food.NutritionConsumeRate, $"{profile.Id}.food.nutritionConsumeRate");
         ValidateFiniteNonNegative(profile.Food.StaminaRecoverSpeed, $"{profile.Id}.food.staminaRecoverSpeed");
+        ValidateFiniteNonNegative(profile.Food.StationaryStaminaRecoveryMultiplier, $"{profile.Id}.food.stationaryStaminaRecoveryMultiplier");
         ValidateFiniteNonNegative(profile.Food.StaminaConsumeSpeed, $"{profile.Id}.food.staminaConsumeSpeed");
         ValidateFiniteNonNegative(profile.Food.HealSpeed, $"{profile.Id}.food.healSpeed");
         ValidateFiniteNonNegative(profile.Food.WaterSelfHurt, $"{profile.Id}.food.waterSelfHurt");

@@ -58,6 +58,7 @@ public sealed class PlayerCreationTemplateSO : ScriptableObject
         [Min(0f)] public float waterConsumeSpeedRate = 0.1f;
         [Min(0f)] public float nutritionConsumeRate = 1f;
         [Min(0f)] public float staminaRecoverSpeed = 1f;
+        [Min(0f)] public float stationaryStaminaRecoveryMultiplier = 1.3f;
         [Min(0f)] public float staminaConsumeSpeed = 0.5f;
         public bool healthEnabled = true;
         [Min(0f)] public float healSpeed = 0.01f;
@@ -172,6 +173,7 @@ public sealed class PlayerCreationTemplateSO : ScriptableObject
         foodModule.StaminaState = new Mod_Food.FoodStaminaState
         {
             StaminaRecoverSpeed = food.staminaRecoverSpeed,
+            StationaryRecoveryMultiplier = food.stationaryStaminaRecoveryMultiplier,
             StaminaConsumeSpeed = food.staminaConsumeSpeed
         };
         foodModule.HealthState = new Mod_Food.FoodHealthState
