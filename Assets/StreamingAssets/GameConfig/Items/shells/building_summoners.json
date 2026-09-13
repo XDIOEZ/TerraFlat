@@ -1765,6 +1765,7 @@
     {
       "id": "Torch_Summoner",
       "parent": "Torch_Base",
+      "waterEntryTransformItemId": "Stick_Wood",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Summoners/Torch_Summoner.prefab",
       "gameName": "火把",
       "description": "可手持照明并用于近战，也可放置为照明设施的火把。",

@@ -466,6 +466,10 @@ namespace FlatWorld.WorldModel
             terrain.SetEnvironmentValue("mountain", x, y, mountain ? 1f : 0f);
             terrain.SetEnvironmentValue("riverDepth", x, y, river ? (float)riverCell.Depth : 0f);
             terrain.SetEnvironmentValue("riverFlow", x, y, river ? (float)riverCell.Flow : 0f);
+            terrain.SetEnvironmentValue("riverFlowX", x, y,
+                river ? (float)riverCell.FlowDirectionX : 0f);
+            terrain.SetEnvironmentValue("riverFlowY", x, y,
+                river ? (float)riverCell.FlowDirectionY : 0f);
             terrain.SetEnvironmentValue("riverFloodplain", x, y, (float)floodplain);
             terrain.SetEnvironmentValue("riverSurfaceLevel", x, y,
                 river ? (float)riverCell.SurfaceLevel : 0f);
@@ -714,6 +718,8 @@ namespace FlatWorld.WorldModel
                     settings.RiverDepthMin,
                     settings.RiverDepthMax,
                     Math.Sqrt(widthT));
+                ResolveFlowDirection(sampling, pair.Key, out double flowDirectionX,
+                    out double flowDirectionY);
 
                 for (int offsetY = -radius; offsetY <= radius; offsetY++)
                 {
@@ -737,7 +743,8 @@ namespace FlatWorld.WorldModel
                             : 1d - Clamp01(distance / (radius + 0.5d));
                         double depth = Lerp(settings.RiverDepthMin, centerDepth, edgeStrength);
                         SetRiverCell(riverCells, waterPosition, new GeneratedHydrologyCell(
-                            GeneratedHydrologyKind.River, pair.Value, depth));
+                            GeneratedHydrologyKind.River, pair.Value, depth, 0d,
+                            flowDirectionX, flowDirectionY));
                     }
                 }
 
@@ -1305,6 +1312,25 @@ namespace FlatWorld.WorldModel
             AddFlow(flowByCell, bridge, contribution);
         }
 
+        /// <summary>复用河道追踪缓存，输出当前河格真实的下游单位方向。</summary>
+        private static void ResolveFlowDirection(HydrologySamplingContext sampling,
+            Int2 current, out double directionX, out double directionY)
+        {
+            directionX = 0d;
+            directionY = 0d;
+            if (!TryChooseDownhill(sampling, current, sampling.Height(current), out Int2 next))
+                return;
+
+            int deltaX = ShortestDelta(current.X, next.X, sampling.Request.Topology, true);
+            int deltaY = ShortestDelta(current.Y, next.Y, sampling.Request.Topology, false);
+            double length = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+            if (length <= 0.000001d)
+                return;
+
+            directionX = deltaX / length;
+            directionY = deltaY / length;
+        }
+
         /// <summary>计算两个坐标之间的最短位移；环绕世界会优先选择跨边界的短路。</summary>
         private static int ShortestDelta(
             int from,
@@ -1350,11 +1376,27 @@ namespace FlatWorld.WorldModel
                                            candidate.Kind == GeneratedHydrologyKind.Lake
                 ? GeneratedHydrologyKind.Lake
                 : GeneratedHydrologyKind.River;
+            double flowDirectionX = current.FlowDirectionX;
+            double flowDirectionY = current.FlowDirectionY;
+            bool currentHasDirection = Math.Abs(flowDirectionX) > 0.000001d ||
+                                       Math.Abs(flowDirectionY) > 0.000001d;
+            if (kind == GeneratedHydrologyKind.Lake)
+            {
+                flowDirectionX = 0d;
+                flowDirectionY = 0d;
+            }
+            else if (!currentHasDirection || candidate.Flow > current.Flow)
+            {
+                flowDirectionX = candidate.FlowDirectionX;
+                flowDirectionY = candidate.FlowDirectionY;
+            }
             cells[position] = new GeneratedHydrologyCell(
                 kind,
                 Math.Max(current.Flow, candidate.Flow),
                 Math.Max(current.Depth, candidate.Depth),
-                Math.Max(current.SurfaceLevel, candidate.SurfaceLevel));
+                Math.Max(current.SurfaceLevel, candidate.SurfaceLevel),
+                flowDirectionX,
+                flowDirectionY);
         }
 
         /// <summary>记录格子的最大冲积带强度，重复计算时只保留更明显的一次。</summary>
@@ -1633,6 +1675,8 @@ namespace FlatWorld.WorldModel
             terrain.SetEnvironmentValue("moisture", x, y, groundwater ? 1f : 0.3f);
             terrain.SetEnvironmentValue("riverDepth", x, y, (float)groundwaterDepth);
             terrain.SetEnvironmentValue("riverFlow", x, y, 0f);
+            terrain.SetEnvironmentValue("riverFlowX", x, y, 0f);
+            terrain.SetEnvironmentValue("riverFlowY", x, y, 0f);
             terrain.SetEnvironmentValue("riverKind", x, y, groundwater ? 2f : 0f);
             terrain.SetEnvironmentValue("groundwater", x, y, groundwater ? 1f : 0f);
             terrain.SetEnvironmentValue("grass", x, y, 0f);

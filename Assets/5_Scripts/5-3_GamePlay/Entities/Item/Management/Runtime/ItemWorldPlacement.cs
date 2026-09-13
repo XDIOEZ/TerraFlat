@@ -61,20 +61,21 @@ internal static class ItemWorldPlacement
 
         ChunkNaturalItemRenderer existingOwner =
             item.GetComponentInParent<ChunkNaturalItemRenderer>(true);
-        if (existingOwner != null)
-        {
-            existingOwner.RegisterTransientItem(item);
-            return true;
-        }
-
         ChunkMgr chunkMgr = ChunkMgr.ExistingInstance;
-        if (chunkMgr == null || !chunkMgr.IsWorldModelRuntimeActive ||
-            !chunkMgr.TryGetRuntimeDropParent(position, out ChunkNaturalItemRenderer owner))
+        if (chunkMgr == null || !chunkMgr.IsWorldModelRuntimeActive)
+            return existingOwner != null;
+
+        if (!chunkMgr.TryGetRuntimeDropParent(position, out ChunkNaturalItemRenderer owner))
         {
-            return false;
+            existingOwner?.RegisterTransientItem(item);
+            return existingOwner != null;
         }
 
-        item.transform.SetParent(owner.transform, true);
+        if (existingOwner != owner)
+        {
+            existingOwner?.UnregisterTransientItem(item);
+            item.transform.SetParent(owner.transform, true);
+        }
         owner.RegisterTransientItem(item);
         return true;
     }

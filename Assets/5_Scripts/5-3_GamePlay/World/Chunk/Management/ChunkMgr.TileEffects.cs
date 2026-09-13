@@ -26,6 +26,29 @@ public readonly struct RuntimeTerrainTileSample
     public int TopTileId { get; }
 }
 
+/// <summary>运行时水面流动类型；河流使用水文下游方向，海洋使用风场近似表层漂移。</summary>
+public enum RuntimeWaterCurrentKind : byte
+{
+    None = 0,
+    River = 1,
+    Ocean = 2
+}
+
+/// <summary>世界水格的单位流向和原始流量，供漂浮物等玩法统一读取。</summary>
+public readonly struct RuntimeWaterCurrentSample
+{
+    public RuntimeWaterCurrentSample(RuntimeWaterCurrentKind kind, Vector2 direction, float flow)
+    {
+        Kind = kind;
+        Direction = direction.sqrMagnitude > 0.000001f ? direction.normalized : Vector2.zero;
+        Flow = Mathf.Max(0f, flow);
+    }
+
+    public RuntimeWaterCurrentKind Kind { get; }
+    public Vector2 Direction { get; }
+    public float Flow { get; }
+}
+
 /// <summary>
 /// 把纯数据地形的数字 TileId 转换成现有 Tile_Block 行为与临时 TileData。
 /// 映射由生成配置的 tile.block.&lt;TileId&gt; 文本参数提供，避免后台地形数据引用 Unity 资源。
@@ -138,6 +161,51 @@ public partial class ChunkMgr
         return TryGetRuntimeTerrainTile(worldPosition, out sample) &&
                ChunkRuntimeTileEffectResolver.TryCreateTileEffectData(ActiveGenerationProfile,
                    sample.Terrain, sample.LocalCell, sample.WorldCell, out tileData, out tileBlock);
+    }
+
+    /// <summary>
+    /// 读取当前水格的表层流向。河流使用生成阶段保存的真实下游方向；
+    /// 海洋没有独立洋流数据时使用现有风场近似较弱的表层漂移，湖泊保持静止。
+    /// </summary>
+    public bool TryGetRuntimeWaterCurrent(Vector2 worldPosition,
+        out RuntimeWaterCurrentSample current)
+    {
+        current = default;
+        if (!TryGetRuntimeTerrainTile(worldPosition, out RuntimeTerrainTileSample sample) ||
+            (sample.Cell.Flags & TerrainCellFlags.Water) == 0)
+        {
+            return false;
+        }
+
+        ChunkTerrainData terrain = sample.Terrain;
+        Vector2Int local = sample.LocalCell;
+        terrain.TryGetEnvironmentValue("riverKind", local.x, local.y, out float riverKind);
+        if (Mathf.RoundToInt(riverKind) == 1)
+        {
+            terrain.TryGetEnvironmentValue("riverFlowX", local.x, local.y, out float flowX);
+            terrain.TryGetEnvironmentValue("riverFlowY", local.x, local.y, out float flowY);
+            terrain.TryGetEnvironmentValue("riverFlow", local.x, local.y, out float flow);
+            Vector2 direction = new(flowX, flowY);
+            if (direction.sqrMagnitude <= 0.000001f)
+                return false;
+
+            current = new RuntimeWaterCurrentSample(
+                RuntimeWaterCurrentKind.River, direction, flow);
+            return true;
+        }
+
+        if ((SurfaceBiomeKind)sample.Cell.BiomeId != SurfaceBiomeKind.Ocean)
+            return false;
+
+        terrain.TryGetEnvironmentValue("windX", local.x, local.y, out float windX);
+        terrain.TryGetEnvironmentValue("windY", local.x, local.y, out float windY);
+        Vector2 windDirection = new(windX, windY);
+        if (windDirection.sqrMagnitude <= 0.000001f)
+            return false;
+
+        current = new RuntimeWaterCurrentSample(
+            RuntimeWaterCurrentKind.Ocean, windDirection, 1f);
+        return true;
     }
 
     /// <summary>读取权威区块的稳定群系名称，替代旧 Land 生成器的 BiomeData 缓存查询。</summary>

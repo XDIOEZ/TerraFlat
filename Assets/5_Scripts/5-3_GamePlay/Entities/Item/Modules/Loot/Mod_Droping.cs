@@ -35,25 +35,29 @@ public class Mod_Droping : Module
     public static bool IsDropInProgress(Item targetItem)
     {
         Mod_Droping dropping = targetItem?.itemMods?.GetMod_ByID<Mod_Droping>(ModText.Drop);
-        return dropping?.drop != null && !dropping.drop.waterFloating;
+        return dropping?.drop != null &&
+               !dropping.drop.waterFloating &&
+               !dropping.drop.waterSinking;
     }
 
-    /// <summary>拾取前只从本次快照移除漂浮用的临时掉落模块，避免动态世界状态进入库存 ItemData。</summary>
+    /// <summary>拾取前只从本次快照移除水中浮沉用的临时掉落模块，避免动态世界状态进入库存 ItemData。</summary>
     public static void PrepareFloatingPickupSnapshot(Item targetItem)
     {
         Mod_Droping dropping = targetItem?.itemMods?.GetMod_ByID<Mod_Droping>(ModText.Drop);
-        if (dropping?.drop?.waterFloating != true)
+        if (dropping?.drop == null ||
+            !dropping.drop.waterFloating && !dropping.drop.waterSinking)
             return;
 
         dropping.suppressFloatingPersistenceOnce = true;
         dropping.RemoveOwnPersistedModuleData();
     }
 
-    /// <summary>世界漂浮物已被完整拾取时先摘除临时模块，恢复原材质并保持物品对象池层级完整。</summary>
+    /// <summary>水中物品已被完整拾取时先摘除临时模块，恢复原材质并保持物品对象池层级完整。</summary>
     public static void PrepareFloatingItemForDespawn(Item targetItem)
     {
         Mod_Droping dropping = targetItem?.itemMods?.GetMod_ByID<Mod_Droping>(ModText.Drop);
-        if (dropping?.drop?.waterFloating != true)
+        if (dropping?.drop == null ||
+            !dropping.drop.waterFloating && !dropping.drop.waterSinking)
             return;
 
         dropping.transform.SetParent(null, true);
@@ -67,17 +71,17 @@ public class Mod_Droping : Module
     public float arcHeight = 1f;
 
     [Header("水体浮沉")]
-    [Tooltip("重量(kg) / 体积(L) 超过该值时下沉；1 kg/L 对应淡水密度。")]
-    [SerializeField, Min(0.01f)] private float sinkDensityThreshold = 1f;
+    [Tooltip("游戏内重量/体积比达到该值时下沉。该参数按现有物品数据标定，不按真实水密度解释。")]
+    [SerializeField, Min(0.01f)] private float sinkRatioThreshold = 0.64f;
 
     [Tooltip("刚超过下沉阈值时，从水面到完全没入的最长时间。")]
-    [SerializeField, Min(0.1f)] private float slowSinkDuration = 6f;
+    [SerializeField, Min(0.1f)] private float slowSinkDuration = 4.5f;
 
     [Tooltip("高密度物品从水面到完全没入的最短时间。")]
-    [SerializeField, Min(0.1f)] private float fastSinkDuration = 1.5f;
+    [SerializeField, Min(0.1f)] private float fastSinkDuration = 1f;
 
-    [Tooltip("密度达到“下沉阈值 × 此倍率”时使用最快下沉时间。")]
-    [SerializeField, Min(1.01f)] private float fastSinkDensityMultiplier = 3f;
+    [Tooltip("重量/体积比达到“下沉阈值 × 此倍率”时使用最快下沉时间。")]
+    [SerializeField, Min(1.01f)] private float fastSinkRatioMultiplier = 1.3f;
 
     [Tooltip("极轻漂浮物最终水线深度；数值越小，露出水面的部分越多。")]
     [SerializeField, Range(0f, 1f)] private float floatingMinDepth = 0.08f;
@@ -90,6 +94,12 @@ public class Mod_Droping : Module
 
     [Tooltip("漂浮物从入水深度上浮到稳定水线所需时间。")]
     [SerializeField, Min(0.05f)] private float floatingRiseDuration = 0.8f;
+
+    [Tooltip("漂浮物沿河流真实下游方向移动的世界单位速度。")]
+    [SerializeField, Min(0f)] private float riverDriftSpeed = 0.45f;
+
+    [Tooltip("海面没有独立洋流数据时，沿现有风场方向移动的较弱世界单位速度。")]
+    [SerializeField, Min(0f)] private float oceanDriftSpeed = 0.15f;
 
     public override ModuleTickMode TickMode =>
         isWaterFloating && waterFloatSettled
@@ -129,7 +139,7 @@ public class Mod_Droping : Module
         {
             float floatDepth = drop.waterFloatDepth > 0f
                 ? drop.waterFloatDepth
-                : ResolveFloatingDepth(ResolveDensity(item));
+                : ResolveFloatingDepth(ResolveWeightVolumeRatio(item));
             BeginWaterFloat(item, floatDepth, drop.waterFloatElapsed);
         }
     }
@@ -213,8 +223,11 @@ public class Mod_Droping : Module
 
             if (TryResolveWaterAt(landedItem.transform.position, out bool isWater) && isWater)
             {
-                float density = ResolveDensity(landedItem);
-                if (density > sinkDensityThreshold)
+                if (TryTransformOnWaterEntry(landedItem))
+                    return;
+
+                float ratio = ResolveWeightVolumeRatio(landedItem);
+                if (ratio >= sinkRatioThreshold)
                 {
                     drop.waterSinking = true;
                     drop.waterFloating = false;
@@ -223,7 +236,7 @@ public class Mod_Droping : Module
                 }
                 else
                 {
-                    float floatDepth = ResolveFloatingDepth(density);
+                    float floatDepth = ResolveFloatingDepth(ratio);
                     drop.waterSinking = false;
                     drop.waterFloating = true;
                     drop.waterFloatDepth = floatDepth;
@@ -248,17 +261,72 @@ public class Mod_Droping : Module
         isWater = false;
         ChunkMgr chunkMgr = ChunkMgr.ExistingInstance;
         if (chunkMgr == null ||
-            !chunkMgr.TryGetRuntimeTileEffect(worldPosition, out _, out TileData tileData, out _))
+            !chunkMgr.TryGetRuntimeTerrainTile(worldPosition, out RuntimeTerrainTileSample sample))
         {
             return false;
         }
 
-        isWater = tileData is TileData_Water;
+        isWater = (sample.Cell.Flags & FlatWorld.WorldModel.TerrainCellFlags.Water) != 0;
         return true;
     }
 
-    /// <summary>重量/体积即 kg/L 密度；堆叠数量同时放大重量和体积，不改变浮沉判断。</summary>
-    private static float ResolveDensity(Item targetItem)
+    /// <summary>按物品 JSON 契约执行入水转换；替换物重新进入同一套掉落水体逻辑。</summary>
+    private static bool TryTransformOnWaterEntry(Item landedItem)
+    {
+        if (landedItem?.itemData == null)
+            return false;
+
+        GameRes gameRes = GameRes.Instance;
+        if (!gameRes.TryGetItemDefinition(landedItem.itemData.IDName, out RuntimeItemDefinition definition) ||
+            string.IsNullOrWhiteSpace(definition.WaterEntryTransformItemId))
+        {
+            return false;
+        }
+
+        Vector3 position = landedItem.transform.position;
+        float amount = landedItem.itemData.Stack.Amount;
+        ItemData replacementData = gameRes.CreateItemData(definition.WaterEntryTransformItemId);
+        replacementData.Stack.Amount = amount;
+
+        PlayWaterEntryTransformEffects(landedItem);
+
+        ItemMgr itemMgr = ItemMgr.Instance;
+        itemMgr.DespawnItem(landedItem, saveData: false);
+
+        Item replacement = itemMgr.InstantiateItem(
+            replacementData,
+            position,
+            Quaternion.identity,
+            Vector3.one);
+        StaticDropItem_Pos(
+            replacement,
+            position,
+            position,
+            0f,
+            isLinear: true,
+            bezierOffset: 0f,
+            arcHeight: 0f,
+            minRotationSpeed: 0f,
+            maxRotationSpeed: 0f);
+        return true;
+    }
+
+    /// <summary>让源物品自身决定入水转换表现；掉落系统不感知火把等具体玩法类型。</summary>
+    private static void PlayWaterEntryTransformEffects(Item landedItem)
+    {
+        MonoBehaviour[] behaviours = landedItem.GetComponentsInChildren<MonoBehaviour>(true);
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            if (behaviours[i] is IWaterEntryTransformEffect effect)
+                effect.PlayWaterEntryTransformEffect();
+        }
+    }
+
+    /// <summary>
+    /// 使用物品定义里的“单位重量 / 单位体积”作为玩法浮沉比。
+    /// 这些字段本来服务于携带容量，不能把 1.0 机械视作真实水密度；阈值必须按项目内容标定。
+    /// </summary>
+    private static float ResolveWeightVolumeRatio(Item targetItem)
     {
         ItemStack stack = targetItem?.itemData?.Stack;
         if (stack == null)
@@ -268,25 +336,25 @@ public class Mod_Droping : Module
         return Mathf.Max(0f, stack.Weight) / volume;
     }
 
-    /// <summary>密度越高，下沉越快；从阈值附近的慢沉平滑过渡到高密度最快下沉。</summary>
-    private float ResolveSinkDuration(float density)
+    /// <summary>重量/体积比越高，下沉越快；从阈值附近的慢沉平滑过渡到最快下沉。</summary>
+    private float ResolveSinkDuration(float ratio)
     {
-        float threshold = Mathf.Max(0.01f, sinkDensityThreshold);
-        float fastDensity = threshold * Mathf.Max(1.01f, fastSinkDensityMultiplier);
-        float densityT = Mathf.InverseLerp(threshold, fastDensity, Mathf.Max(threshold, density));
+        float threshold = Mathf.Max(0.01f, sinkRatioThreshold);
+        float fastRatio = threshold * Mathf.Max(1.01f, fastSinkRatioMultiplier);
+        float ratioT = Mathf.InverseLerp(threshold, fastRatio, Mathf.Max(threshold, ratio));
         float slowDuration = Mathf.Max(0.1f, slowSinkDuration);
         float fastDuration = Mathf.Clamp(fastSinkDuration, 0.1f, slowDuration);
-        return Mathf.Lerp(slowDuration, fastDuration, densityT);
+        return Mathf.Lerp(slowDuration, fastDuration, ratioT);
     }
 
-    /// <summary>漂浮密度越接近阈值，稳定后浸入水中的比例越高，但始终保留可见部分。</summary>
-    private float ResolveFloatingDepth(float density)
+    /// <summary>漂浮物的重量/体积比越接近阈值，稳定后浸入水中的比例越高，但始终保留可见部分。</summary>
+    private float ResolveFloatingDepth(float ratio)
     {
-        float threshold = Mathf.Max(0.01f, sinkDensityThreshold);
-        float densityT = Mathf.Clamp01(density / threshold);
+        float threshold = Mathf.Max(0.01f, sinkRatioThreshold);
+        float ratioT = Mathf.Clamp01(ratio / threshold);
         float minDepth = Mathf.Clamp01(Mathf.Min(floatingMinDepth, floatingMaxDepth));
         float maxDepth = Mathf.Clamp01(Mathf.Max(floatingMinDepth, floatingMaxDepth));
-        return Mathf.Lerp(minDepth, maxDepth, densityT);
+        return Mathf.Lerp(minDepth, maxDepth, ratioT);
     }
 
     /// <summary>建立掉落物专用的水下渲染绑定，复用角色使用的 WaterImmersionRenderEffect。</summary>
@@ -330,12 +398,14 @@ public class Mod_Droping : Module
             return;
 
         EnsureWaterVisual(landedItem);
-        resolvedWaterSinkDuration = ResolveSinkDuration(ResolveDensity(landedItem));
+        resolvedWaterSinkDuration = ResolveSinkDuration(ResolveWeightVolumeRatio(landedItem));
         float restoredElapsed = Mathf.Clamp(elapsedSeconds, 0f, resolvedWaterSinkDuration);
         float restoredProgress = Mathf.Clamp01(restoredElapsed / resolvedWaterSinkDuration);
         waterImmersionEffect.SetWaterState(restoredProgress, true);
 
-        landedItem.itemData.Stack.CanBePickedUp = false;
+        // 入水只改变世界表现与漂移/下沉过程，不改变物品的掉落物性质。
+        // 落地后立即恢复可拾取，避免建筑召唤器等物品被当成不可拾取世界实体交互。
+        landedItem.itemData.Stack.CanBePickedUp = true;
         waterSinkElapsed = restoredElapsed;
         isWaterSinking = true;
         isWaterFloating = false;
@@ -359,10 +429,12 @@ public class Mod_Droping : Module
             initialT * initialT * (3f - 2f * initialT));
         waterImmersionEffect.SetWaterState(initialDepth, true);
 
-        landedItem.itemData.Stack.CanBePickedUp = false;
+        // 漂浮属于视觉/世界运行态；物品仍然保持普通掉落物的拾取语义。
+        landedItem.itemData.Stack.CanBePickedUp = true;
         isWaterFloating = true;
         isWaterSinking = false;
         waterFloatSettled = false;
+        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(landedItem);
         InvalidateTickSchedule();
     }
 
@@ -388,6 +460,8 @@ public class Mod_Droping : Module
             return;
         }
 
+        UpdateWaterDrift(deltaTime);
+
         waterSinkElapsed += Mathf.Max(0f, deltaTime);
         if (drop != null)
             drop.waterSinkElapsed = waterSinkElapsed;
@@ -407,7 +481,7 @@ public class Mod_Droping : Module
             ItemMgr.Instance.DespawnItem(completedItem, saveData: false);
     }
 
-    /// <summary>推进漂浮物的入水和上浮过程；稳定后降频，只保留低频地表状态确认。</summary>
+    /// <summary>推进漂浮物的入水、上浮与随水流漂移；稳定后降频继续移动。</summary>
     private void UpdateWaterFloat(float deltaTime)
     {
         if (waterItem == null || waterImmersionEffect == null || waterRenderEffects == null)
@@ -421,6 +495,8 @@ public class Mod_Droping : Module
             EndWaterFloat();
             return;
         }
+
+        UpdateWaterDrift(deltaTime);
 
         if (waterFloatSettled)
             return;
@@ -456,6 +532,49 @@ public class Mod_Droping : Module
         waterItem.itemData.Stack.CanBePickedUp = true;
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(waterItem);
         InvalidateTickSchedule();
+    }
+
+    /// <summary>按权威水文流向推进漂浮物；目标位置不是水时停在岸边，不把水流强行推上陆地。</summary>
+    private void UpdateWaterDrift(float deltaTime)
+    {
+        float safeDeltaTime = Mathf.Max(0f, deltaTime);
+        if (waterItem == null || safeDeltaTime <= 0f)
+            return;
+
+        ChunkMgr chunkMgr = ChunkMgr.ExistingInstance;
+        if (chunkMgr == null ||
+            !chunkMgr.TryGetRuntimeWaterCurrent(waterItem.transform.position,
+                out RuntimeWaterCurrentSample current))
+        {
+            return;
+        }
+
+        float speed = current.Kind switch
+        {
+            RuntimeWaterCurrentKind.River => Mathf.Max(0f, riverDriftSpeed),
+            RuntimeWaterCurrentKind.Ocean => Mathf.Max(0f, oceanDriftSpeed),
+            _ => 0f
+        };
+        if (speed <= 0f || current.Direction.sqrMagnitude <= 0.000001f)
+            return;
+
+        Vector2 currentPosition = waterItem.transform.position;
+        Vector2 targetPosition = WorldTopologyRuntime.NormalizePosition(
+            currentPosition + current.Direction * (speed * safeDeltaTime));
+        if (!TryResolveWaterAt(targetPosition, out bool targetIsWater) || !targetIsWater)
+            return;
+
+        Vector3 worldPosition = waterItem.transform.position;
+        worldPosition.x = targetPosition.x;
+        worldPosition.y = targetPosition.y;
+        waterItem.transform.position = worldPosition;
+
+        if (usesLegacyChunkOwnership)
+            UpdateChunkOwner(waterItem, targetPosition);
+        else
+            ItemWorldPlacement.TryAttachWorldModelDrop(waterItem, targetPosition);
+
+        ItemMgr.Instance?.NotifyRuntimeItemMoved(waterItem);
     }
 
     /// <summary>地表已不再是水体时恢复原材质并结束漂浮模块。</summary>
@@ -562,7 +681,9 @@ public class Mod_Droping : Module
 
     public override void Save()
     {
-        if (suppressFloatingPersistenceOnce && drop?.waterFloating == true)
+        if (suppressFloatingPersistenceOnce &&
+            drop != null &&
+            (drop.waterFloating || drop.waterSinking))
         {
             suppressFloatingPersistenceOnce = false;
             RemoveOwnPersistedModuleData();

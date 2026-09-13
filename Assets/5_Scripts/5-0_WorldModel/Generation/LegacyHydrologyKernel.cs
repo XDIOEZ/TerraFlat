@@ -20,18 +20,34 @@ namespace FlatWorld.WorldModel
             GeneratedHydrologyKind kind,
             double flow,
             double depth,
-            double surfaceLevel = 0d)
+            double surfaceLevel = 0d,
+            double flowDirectionX = 0d,
+            double flowDirectionY = 0d)
         {
             Kind = kind;
             Flow = Math.Max(0d, flow);
             Depth = Clamp01(depth);
             SurfaceLevel = Clamp01(surfaceLevel);
+            double directionLength = Math.Sqrt(
+                flowDirectionX * flowDirectionX + flowDirectionY * flowDirectionY);
+            if (kind == GeneratedHydrologyKind.River && directionLength > 0.000001d)
+            {
+                FlowDirectionX = flowDirectionX / directionLength;
+                FlowDirectionY = flowDirectionY / directionLength;
+            }
+            else
+            {
+                FlowDirectionX = 0d;
+                FlowDirectionY = 0d;
+            }
         }
 
         internal GeneratedHydrologyKind Kind { get; }
         internal double Flow { get; }
         internal double Depth { get; }
         internal double SurfaceLevel { get; }
+        internal double FlowDirectionX { get; }
+        internal double FlowDirectionY { get; }
 
         private static double Clamp01(double value) =>
             value < 0d ? 0d : value > 1d ? 1d : value;
@@ -142,7 +158,9 @@ namespace FlatWorld.WorldModel
                             sample.Kind,
                             sample.Flow,
                             sample.Depth,
-                            sample.SurfaceLevel));
+                            sample.SurfaceLevel,
+                            sample.FlowDirectionX,
+                            sample.FlowDirectionY));
                     }
 
                     double floodplain = region.GetFloodplain(position, request.Topology);
@@ -547,6 +565,27 @@ namespace FlatWorld.WorldModel
                 flow[position] = existing + contribution;
             }
 
+            /// <summary>复用河道追踪的下坡规则，输出当前河格真实的下游单位方向。</summary>
+            private void ResolveFlowDirection(Int2 current, out double directionX,
+                out double directionY)
+            {
+                directionX = 0d;
+                directionY = 0d;
+                if (!TryChooseDownhill(current, Height(current), out Int2 next))
+                    return;
+
+                int deltaX = ShortestDelta(
+                    current.X, next.X, request.Topology, horizontal: true);
+                int deltaY = ShortestDelta(
+                    current.Y, next.Y, request.Topology, horizontal: false);
+                double length = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+                if (length <= 0.000001d)
+                    return;
+
+                directionX = deltaX / length;
+                directionY = deltaY / length;
+            }
+
             private RegionResult BuildResult()
             {
                 int size = settings.RiverHydrologyRegionSize;
@@ -578,6 +617,8 @@ namespace FlatWorld.WorldModel
                         settings.RiverDepthMin,
                         settings.RiverDepthMax,
                         Math.Sqrt(widthT));
+                    ResolveFlowDirection(pair.Key, out double flowDirectionX,
+                        out double flowDirectionY);
 
                     for (int offsetY = -radius; offsetY <= radius; offsetY++)
                     {
@@ -601,7 +642,8 @@ namespace FlatWorld.WorldModel
                             double depth = Lerp(
                                 settings.RiverDepthMin, centerDepth, edgeStrength);
                             SetCell(cells, waterPosition, new LegacyCellSample(
-                                GeneratedHydrologyKind.River, pair.Value, depth, 0d));
+                                GeneratedHydrologyKind.River, pair.Value, depth, 0d,
+                                flowDirectionX, flowDirectionY));
                         }
                     }
 
@@ -865,18 +907,24 @@ namespace FlatWorld.WorldModel
                 GeneratedHydrologyKind kind,
                 double flow,
                 double depth,
-                double surfaceLevel)
+                double surfaceLevel,
+                double flowDirectionX = 0d,
+                double flowDirectionY = 0d)
             {
                 Kind = kind;
                 Flow = (float)Math.Max(0d, flow);
                 Depth = (float)Clamp01(depth);
                 SurfaceLevel = (float)Clamp01(surfaceLevel);
+                FlowDirectionX = (float)flowDirectionX;
+                FlowDirectionY = (float)flowDirectionY;
             }
 
             internal GeneratedHydrologyKind Kind { get; }
             internal float Flow { get; }
             internal float Depth { get; }
             internal float SurfaceLevel { get; }
+            internal float FlowDirectionX { get; }
+            internal float FlowDirectionY { get; }
         }
 
         private readonly struct BasinResult

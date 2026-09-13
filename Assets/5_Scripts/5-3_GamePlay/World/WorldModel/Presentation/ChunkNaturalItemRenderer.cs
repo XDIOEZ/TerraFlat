@@ -52,14 +52,20 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
         item.OnItemDestroy += HandleTransientItemDestroy;
     }
 
-    /// <summary>临时掉落物被拾取或销毁后解除登记。</summary>
-    private void HandleTransientItemDestroy(Item item)
+    /// <summary>临时物品跨区块移动前解除当前 ChunkView 的归属与销毁监听。</summary>
+    public void UnregisterTransientItem(Item item)
     {
         if (item == null)
             return;
 
         item.OnItemDestroy -= HandleTransientItemDestroy;
         transientItems.Remove(item);
+    }
+
+    /// <summary>临时掉落物被拾取或销毁后解除登记。</summary>
+    private void HandleTransientItemDestroy(Item item)
+    {
+        UnregisterTransientItem(item);
     }
 
     #endregion

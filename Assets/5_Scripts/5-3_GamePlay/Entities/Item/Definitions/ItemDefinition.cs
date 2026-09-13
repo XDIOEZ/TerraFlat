@@ -105,6 +105,10 @@ public sealed class ItemDefinitionDto
     [JsonProperty("canBePickedUp")]
     public bool? CanBePickedUp;
 
+    /// <summary>掉落物最终落入水体时，可选转换成另一物品 ID；数量保持不变。</summary>
+    [JsonProperty("waterEntryTransformItemId", NullValueHandling = NullValueHandling.Ignore)]
+    public string WaterEntryTransformItemId;
+
     [JsonProperty("tags")]
     public List<string> Tags;
 
@@ -303,6 +307,7 @@ public sealed class RuntimeItemDefinition
     public ItemVisualDefinitionDto Visual { get; }
     public ItemHealthDefinitionDto Health { get; }
     public string LootTableId { get; }
+    public string WaterEntryTransformItemId { get; }
     public string RendererPath => Visual?.RendererPath;
     public Sprite Sprite { get; }
     public Material Material { get; }
@@ -332,6 +337,7 @@ public sealed class RuntimeItemDefinition
         ItemVisualDefinitionDto visual,
         ItemHealthDefinitionDto health,
         string lootTableId,
+        string waterEntryTransformItemId,
         Sprite sprite,
         Dictionary<string, string> parameters,
         Dictionary<string, string> prefabIds,
@@ -349,6 +355,9 @@ public sealed class RuntimeItemDefinition
         Visual = visual;
         Health = health;
         LootTableId = lootTableId;
+        WaterEntryTransformItemId = string.IsNullOrWhiteSpace(waterEntryTransformItemId)
+            ? null
+            : waterEntryTransformItemId.Trim();
         Sprite = sprite;
         Material = material;
         AnimatorController = animatorController;

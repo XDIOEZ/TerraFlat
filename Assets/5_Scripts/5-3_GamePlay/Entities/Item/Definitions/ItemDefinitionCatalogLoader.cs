@@ -929,6 +929,7 @@ public static class ItemDefinitionCatalogLoader
             dto.Visual,
             dto.Health,
             lootTable?.Id,
+            dto.WaterEntryTransformItemId,
             sprite,
             moduleParameters,
             modulePrefabIds,
