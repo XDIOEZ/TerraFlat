@@ -84,6 +84,8 @@ MonoBehaviour:
       Amount: 1
       Volume: 1
       CanBePickedUp: 1
+      Weight: 1
+      Stackable: 1
     transform:
       position: {x: 0, y: 0, z: 0}
       rotation: {x: 0, y: 0, z: 0, w: 0}

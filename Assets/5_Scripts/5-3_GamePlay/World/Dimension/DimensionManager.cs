@@ -5,6 +5,9 @@ using FastCloner;
 using FlatWorld.Networking;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using RuntimeChunk = FlatWorld.WorldModel.ChunkRuntime;
+using TerrainCell = FlatWorld.WorldModel.TerrainCell;
+using TerrainCellFlags = FlatWorld.WorldModel.TerrainCellFlags;
 
 public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 {
@@ -750,29 +753,27 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         PortalTransitionContext portalContext)
     {
         Vector3 desiredPosition = portalContext.TargetPortalPosition;
-        Vector2Int chunkPosition = Chunk.GetChunkPosition(desiredPosition);
-        Chunk targetChunk = null;
-        bool requestCompleted = false;
-        ChunkMgr.Instance.RequestLoadChunk_By_Position(chunkPosition, loadedChunk =>
+        EnsureCaveExitArea(desiredPosition);
+
+        ItemMgr itemManager = ItemMgr.Instance;
+        Item caveExit = itemManager.GetItemByGuid(portalContext.Anchor.CaveExitGuid);
+        if (caveExit != null && caveExit.itemData?.IDName != CaveExitPrefabId)
         {
-            targetChunk = loadedChunk;
-            requestCompleted = true;
-        });
+            throw new InvalidOperationException(
+                $"矿洞出口 GUID 冲突：{portalContext.Anchor.CaveExitGuid} 已被 {caveExit.itemData?.IDName} 占用。");
+        }
 
-        while (!requestCompleted || targetChunk == null || !targetChunk.IsReady)
-            yield return null;
-
-        Item caveExit = FindCaveExit(targetChunk, portalContext.Anchor, desiredPosition);
         if (caveExit == null)
         {
-            caveExit = targetChunk.InstantiateItemInChunkDeterministic(
+            caveExit = itemManager.InstantiateItemDeterministic(
                 CaveExitPrefabId,
                 portalContext.Anchor.CaveExitGuid,
                 desiredPosition,
                 Quaternion.identity,
-                Vector3.one);
+                Vector3.one,
+                parent: null);
             if (caveExit == null)
-                throw new InvalidOperationException("无法在目标 Chunk 创建 CaveExit。");
+                throw new InvalidOperationException("无法在目标维度创建 CaveExit。");
 
             caveExit.Load();
         }
@@ -781,13 +782,18 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
             caveExit.Load();
         }
 
+        // 手工矿洞入口对应的出口属于本次洞穴场景运行态，不再挂到旧 Chunk/MapCore。
+        caveExit.transform.SetParent(null, true);
+        Scene activeScene = SceneManager.GetActiveScene();
+        if (caveExit.gameObject.scene != activeScene)
+            SceneManager.MoveGameObjectToScene(caveExit.gameObject, activeScene);
         caveExit.transform.SetPositionAndRotation(desiredPosition, Quaternion.identity);
         caveExit.transform.localScale = Vector3.one;
         caveExit.itemData.transform.position = desiredPosition;
         caveExit.itemData.transform.rotation = Quaternion.identity;
         caveExit.itemData.transform.scale = Vector3.one;
         caveExit.itemData.Stack.CanBePickedUp = false;
-        targetChunk.AddItem(caveExit);
+        itemManager.NotifyRuntimeItemMoved(caveExit);
 
         portalContext.TargetPortalPosition = caveExit.transform.position;
         DimensionTravelProgressStore.UpdateCaveExit(playerData, portalContext.Anchor, caveExit);
@@ -796,26 +802,70 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
         targetPlayer.Data.transform.position = safePosition;
         playerData.transform.position = safePosition;
         SaveDataMgr.Instance.SaveData.PlayerData_Dict[targetPlayer.ProfileName] = playerData;
+        yield break;
     }
 
-    private static Item FindCaveExit(Chunk chunk, DimensionPortalAnchor anchor, Vector3 desiredPosition)
+    /// <summary>
+    /// 为手工矿洞入口对应的出口保证 3x3 干燥可行走区域。
+    /// 只移除程序化洞壁/地下水，不覆盖玩家建筑占用或其它运行时阻挡。
+    /// </summary>
+    private static void EnsureCaveExitArea(Vector3 desiredPosition)
     {
-        if (chunk.RunTimeItems.TryGetValue(anchor.CaveExitGuid, out Item anchoredExit) &&
-            anchoredExit?.itemData?.IDName == CaveExitPrefabId)
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        if (chunkManager == null || chunkManager.ActiveGenerationProfile?.Settings == null)
+            throw new InvalidOperationException("矿洞出口落地区域缺少 WorldModel 生成配置。");
+
+        FlatWorld.WorldModel.ChunkGenerationSettingsSnapshot settings =
+            chunkManager.ActiveGenerationProfile.Settings;
+        if (settings.Mode != FlatWorld.WorldModel.ChunkGenerationMode.Cave)
+            throw new InvalidOperationException("只能在洞穴 WorldModel 中整理矿洞出口区域。");
+
+        Vector2Int centerCell = new(
+            Mathf.FloorToInt(desiredPosition.x),
+            Mathf.FloorToInt(desiredPosition.y));
+
+        for (int offsetY = -1; offsetY <= 1; offsetY++)
         {
-            return anchoredExit;
+            for (int offsetX = -1; offsetX <= 1; offsetX++)
+            {
+                Vector2Int worldCell = new(centerCell.x + offsetX, centerCell.y + offsetY);
+                Vector2 samplePosition = new(worldCell.x + 0.5f, worldCell.y + 0.5f);
+                if (!chunkManager.TryGetRuntimeTerrainTile(samplePosition,
+                        out RuntimeTerrainTileSample sample))
+                {
+                    throw new InvalidOperationException(
+                        $"矿洞出口 3x3 区域尚未加载：{worldCell}。");
+                }
+
+                TerrainCell current = sample.Terrain.GetCell(sample.LocalCell.x, sample.LocalCell.y);
+                bool isNaturalCaveWall = current.BlockingTileId == settings.CaveWallTileId;
+                bool isGroundwater = (current.Flags & TerrainCellFlags.Water) != 0;
+                bool isPlayerOccupied = (current.Flags & TerrainCellFlags.Occupied) != 0;
+                if (isPlayerOccupied || (!isNaturalCaveWall && !isGroundwater))
+                    continue;
+
+                TerrainCell carved = new(
+                    settings.CaveFloorTileId,
+                    0,
+                    0,
+                    current.BiomeId,
+                    settings.DefaultNavigationCost,
+                    TerrainCellFlags.Walkable);
+                sample.Terrain.SetCell(sample.LocalCell.x, sample.LocalCell.y, carved);
+
+                if (!chunkManager.TryGetChunkRuntime(sample.Address, out RuntimeChunk runtimeChunk))
+                    throw new InvalidOperationException($"矿洞出口区域所在 Chunk 已失效：{worldCell}。");
+
+                SaveDataMgr.Instance?.RecordRuntimeTerrainChange(new TileBuildingCell(
+                    runtimeChunk,
+                    sample.WorldCell,
+                    sample.LocalCell,
+                    0,
+                    null));
+            }
         }
 
-        if (!chunk.RuntimeItemsGroup.TryGetValue(CaveExitPrefabId, out HashSet<Item> exits))
-            return null;
-
-        foreach (Item candidate in exits)
-        {
-            if (candidate != null && WorldTopologyRuntime.SqrDistance(candidate.transform.position, desiredPosition) <= 0.01f)
-                return candidate;
-        }
-
-        return null;
+        Physics2D.SyncTransforms();
     }
 
     #endregion
