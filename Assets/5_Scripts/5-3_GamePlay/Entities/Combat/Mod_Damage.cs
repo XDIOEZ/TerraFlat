@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(BoxCollider2D))]
-public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHarvestTool
+public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHarvestTool, IBuildingDamageSource
 {
+    private const float HammerBuildingDamageMultiplier = 10f;
+
     #region 资源工具能力
     [SerializeField] private ResourceToolKind harvestKind; // 采集工具类别。
     [SerializeField, Min(0)] private int harvestTier; // 开采等级，与战斗伤害分离。
@@ -103,6 +105,9 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
     public CombatWeaponAudioClass WeaponAudioClass => weaponAudioClass;
     public string AttackAudioCueId => attackAudioCueId;
     public TileDamageToolKind TileDamageToolKind => tileDamageToolKind;
+    /// <summary>锤类放大目标完成防御/最低有效伤害规则后的建筑伤害，不直接改写目标防御值。</summary>
+    public float BuildingDamageMultiplier =>
+        tileDamageToolKind == TileDamageToolKind.Hammer ? HammerBuildingDamageMultiplier : 1f;
     public Collider2D DamageCollider => damageCollider;
     #endregion
 

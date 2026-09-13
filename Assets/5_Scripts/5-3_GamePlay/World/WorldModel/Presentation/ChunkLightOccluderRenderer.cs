@@ -359,7 +359,9 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         shapeSource.offset = Vector2.zero;
         ShadowCaster2D shadowCaster = shadowObject.AddComponent<ShadowCaster2D>();
         shadowCaster.castsShadows = true;
-        shadowCaster.selfShadows = false;
+        // Blocking Tile 本身就是实体墙体，必须把占地形状也纳入阴影。
+        // 这样局部光只会照到墙体朝向光源的可见外沿，不会把整块墙面一起照亮。
+        shadowCaster.selfShadows = true;
         shapeSource.enabled = false;
         shadowObject.SetActive(false);
 
@@ -378,7 +380,7 @@ public sealed class ChunkLightOccluderRenderer : MonoBehaviour, IChunkViewRender
         target.localScale = new Vector3(rectangle.width, rectangle.height, 1f);
         slot.GameObject.SetActive(true);
         slot.ShadowCaster.castsShadows = true;
-        slot.ShadowCaster.selfShadows = false;
+        slot.ShadowCaster.selfShadows = true;
         // URP 14 的 ShadowCaster2D.Update 是公开方法；绑定后主动调用，
         // 避免刚重绑的区块要等到下一帧才更新阴影缓存。
         slot.ShadowCaster.Update();

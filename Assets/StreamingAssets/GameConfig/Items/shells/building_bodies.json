@@ -111,7 +111,7 @@
           "parameters": {
             "Data": {
               "Fuel": {
-                "x": 100.23,
+                "x": 0.0,
                 "y": 100.23
               },
               "MaxTemperature": 100.0
@@ -836,7 +836,7 @@
         "spriteAddress": "Assets/6_Art/Building/Wall_Stone_Medium.png[Wall_Stone_Medium]",
         "rendererLocalPosition": {
           "x": 0.0,
-          "y": -0.5,
+          "y": 0.0,
           "z": 0.0
         },
         "rendererLocalEulerAngles": {
@@ -1174,7 +1174,7 @@
           "parameters": {
             "Data": {
               "Fuel": {
-                "x": 100.23,
+                "x": 0.0,
                 "y": 100.23
               },
               "MaxTemperature": 100.0
@@ -1592,11 +1592,11 @@
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Tools/Torches/Torch.prefab",
       "gameName": "火把-建筑",
       "description": "可放置在地面并提供照明的火把。",
-      "durability": 1.0,
-      "maxDurability": 1.0,
-      "amount": 1.0,
-      "weight": 2.0,
-      "volume": 4.0,
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 2,
+      "volume": 4,
       "stackable": true,
       "canBePickedUp": false,
       "tags": [
@@ -1605,25 +1605,25 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/item_tool_torches.png[item_tool_torches_0]",
         "rendererLocalPosition": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
+          "x": 0,
+          "y": 0,
+          "z": 0
         },
         "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
+          "x": 0,
+          "y": 0,
+          "z": 0
         },
         "rendererLocalScale": {
-          "x": 1.0,
-          "y": 1.0,
-          "z": 1.0
+          "x": 1,
+          "y": 1,
+          "z": 1
         },
         "color": {
-          "r": 1.0,
-          "g": 1.0,
-          "b": 1.0,
-          "a": 1.0
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
         },
         "flipX": false,
         "flipY": false,
@@ -1642,32 +1642,32 @@
       },
       "health": {
         "hasHp": true,
-        "hp": 180.0,
-        "maxHp": 180.0,
+        "hp": 20,
+        "maxHp": 20,
         "defense": {
-          "cutting": 8.0,
-          "piercing": 8.0,
-          "chopping": 8.0,
-          "blunt": 8.0
+          "cutting": 0,
+          "piercing": 0,
+          "chopping": 0,
+          "blunt": 0
         },
         "moduleLocalPosition": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
+          "x": 0,
+          "y": 0,
+          "z": 0
         },
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
           "isTrigger": true,
           "offset": {
-            "x": 0.0,
-            "y": 0.0
+            "x": 0.01317735,
+            "y": 0.207635462
           },
           "size": {
-            "x": 1.0,
-            "y": 1.0
+            "x": 0.193552583,
+            "y": 0.4928639
           },
-          "edgeRadius": 0.0
+          "edgeRadius": 0
         }
       },
       "modules": {
@@ -1694,20 +1694,20 @@
         "code": "",
         "transform": {
           "position": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0
+            "x": 0,
+            "y": 0,
+            "z": 0
           },
           "rotation": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0,
-            "w": 0.0
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "w": 0
           },
           "scale": {
-            "x": 1.0,
-            "y": 1.0,
-            "z": 1.0
+            "x": 1,
+            "y": 1,
+            "z": 1
           }
         },
         "ItemSpecialData": "",

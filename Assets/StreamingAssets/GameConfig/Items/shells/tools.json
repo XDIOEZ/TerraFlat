@@ -2679,7 +2679,21 @@
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/WoodHammer/WoodHammer_Icon.png"
       },
-      "modules": {}
+      "modules": {
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "parameters": {
+            "DamageValues": {
+              "Cutting": 0.0,
+              "Piercing": 0.0,
+              "Chopping": 0.0,
+              "Blunt": 6.0
+            },
+            "tileDamageToolKind": 3
+          }
+        }
+      }
     }
   ]
 }

@@ -49,11 +49,30 @@ Shader "Game/2D/Interaction-Outline"
                 half4 color : COLOR;
                 float2 uv : TEXCOORD0;
                 float localY : TEXCOORD1;
+                half2 lightingUV : TEXCOORD2;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/LightingUtility.hlsl"
+
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
+
+            #if USE_SHAPE_LIGHT_TYPE_0
+            SHAPE_LIGHT(0)
+            #endif
+
+            #if USE_SHAPE_LIGHT_TYPE_1
+            SHAPE_LIGHT(1)
+            #endif
+
+            #if USE_SHAPE_LIGHT_TYPE_2
+            SHAPE_LIGHT(2)
+            #endif
+
+            #if USE_SHAPE_LIGHT_TYPE_3
+            SHAPE_LIGHT(3)
+            #endif
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _MainTex_ST;
@@ -78,12 +97,15 @@ Shader "Game/2D/Interaction-Outline"
                 output.positionCS = TransformObjectToHClip(input.positionOS);
                 output.uv = TRANSFORM_TEX(input.uv, _MainTex);
                 output.localY = input.positionOS.y;
+                output.lightingUV = half2(ComputeScreenPos(output.positionCS / output.positionCS.w).xy);
                 output.color = input.color * _Color * _RendererColor * _OutlineColor;
                 #ifdef UNITY_INSTANCING_ENABLED
                     output.color *= unity_SpriteColor;
                 #endif
                 return output;
             }
+
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/CombinedShapeLightShared.hlsl"
 
             half4 OutlineFragment(OutlineVaryings input) : SV_Target
             {
@@ -92,7 +114,14 @@ Shader "Game/2D/Interaction-Outline"
                 float bodyRange = max(1e-5, _BodyMaxV - _BodyMinV);
                 float bodyV = saturate((input.localY - _BodyMinV) / bodyRange);
                 clip(bodyV - _BodyClip);
-                return half4(input.color.rgb, input.color.a * texel.a);
+
+                // 交互描边也是世界 Sprite；仅声明 Universal2D Pass 不会自动接入 Light2D。
+                // 用与 Sprite-Lit-Default 相同的 Shape Light 合成，使描边随火把/昼夜光一起明暗变化。
+                SurfaceData2D surfaceData;
+                InputData2D inputData;
+                InitializeSurfaceData(input.color.rgb, input.color.a * texel.a, half4(1, 1, 1, 1), surfaceData);
+                InitializeInputData(input.uv, input.lightingUV, inputData);
+                return CombinedShapeLightShared(surfaceData, inputData);
             }
         ENDHLSL
 
@@ -104,6 +133,10 @@ Shader "Game/2D/Interaction-Outline"
             #pragma vertex OutlineVertex
             #pragma fragment OutlineFragment
             #pragma multi_compile_instancing
+            #pragma multi_compile USE_SHAPE_LIGHT_TYPE_0 __
+            #pragma multi_compile USE_SHAPE_LIGHT_TYPE_1 __
+            #pragma multi_compile USE_SHAPE_LIGHT_TYPE_2 __
+            #pragma multi_compile USE_SHAPE_LIGHT_TYPE_3 __
             #pragma multi_compile _ DEBUG_DISPLAY
             ENDHLSL
         }

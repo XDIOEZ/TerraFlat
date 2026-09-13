@@ -4,6 +4,7 @@ using FlatWorld.Gameplay.Progress;
 using Sirenix.OdinInspector;
 using UltEvents;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 public enum BuildingState
 {
@@ -26,7 +27,7 @@ public enum BuildingRole
 /// 建筑召唤器是持久化载体，PlacedBuilding 是快照还原后的世界实例。
 /// 拆除时先生成带快照的召唤器，成功后才删除原建筑。
 /// </summary>
-public class Mod_Building : Module
+public class Mod_Building : Module, IIncomingDamageRule
 {
     private const int CurrentDataVersion = 3;
     private const string StoneWallBuildingId = "Wall_Stone";
@@ -70,6 +71,8 @@ public class Mod_Building : Module
     // 伤害模块由 ItemMods 注册表提供，禁止序列化嵌套 Prefab 的组件引用。
     [NonSerialized]
     private DamageReceiver damageReceiver;
+    [NonSerialized]
+    private ShadowCaster2D _lightOccluder;
     public UltEvent StartInstall = new();
     public UltEvent StartUnInstall = new();
     public UltEvent<BuildingState, BuildingState> OnStateChanged = new();
@@ -95,9 +98,45 @@ public class Mod_Building : Module
     public bool IsDismantlePending => _dismantlePending;
     public bool IsPlacementModeActive => IsSummoner && (!RequiresPlacementRequest || _placementRequested);
 
+    /// <summary>落地建筑在完成自身防御结算后应用攻击方的建筑伤害倍率。</summary>
+    public float GetDamageMultiplier(IDamageSender sender)
+    {
+        if (Data?.Role != BuildingRole.PlacedBuilding)
+            return 1f;
+
+        return sender is IBuildingDamageSource buildingDamageSource
+            ? Mathf.Max(0f, buildingDamageSource.BuildingDamageMultiplier)
+            : 1f;
+    }
+
+    /// <summary>
+    /// 便携设施的召唤器和落地本体使用不同稳定 Item ID；当前实例角色必须与自己的载体 ID 一致，
+    /// 不能沿用其它同类实例曾经写入的角色状态。
+    /// </summary>
+    public void ReconcileCarrierRoleWithItemIdentity()
+    {
+        if (Data == null || item?.itemData == null)
+            return;
+
+        string carrierId = item.itemData.IDName;
+        if (string.IsNullOrWhiteSpace(carrierId) ||
+            string.IsNullOrWhiteSpace(Data.BuildingPrefabId) ||
+            string.IsNullOrWhiteSpace(Data.SummonerPrefabId) ||
+            string.Equals(Data.BuildingPrefabId, Data.SummonerPrefabId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (string.Equals(carrierId, Data.SummonerPrefabId, StringComparison.Ordinal))
+            Data.Role = BuildingRole.Summoner;
+        else if (string.Equals(carrierId, Data.BuildingPrefabId, StringComparison.Ordinal))
+            Data.Role = BuildingRole.PlacedBuilding;
+    }
+
     /// <summary>仅为快捷栏真实手持实例开启放置预览；切换物品后由卸载/加载生命周期取消。</summary>
     public bool BeginPlacement()
     {
+        ReconcileCarrierRoleWithItemIdentity();
         if (!IsItemInInventory || _placementPending || item.DestructionHandled)
             return false;
         _placementRequested = true;
@@ -165,6 +204,7 @@ public class Mod_Building : Module
         BuildingData?.ReadData(ref Data);
         Data ??= new Building_Data();
         MigrateLegacyData(Data, item?.itemData?.IDName);
+        ReconcileCarrierRoleWithItemIdentity();
         _currentState = Data.State;
 
         UnbindRuntimeEvents();
@@ -196,6 +236,7 @@ public class Mod_Building : Module
         BuildingData.ReadData(ref Data);
         Data ??= new Building_Data();
         MigrateLegacyData(Data, item?.itemData?.IDName);
+        ReconcileCarrierRoleWithItemIdentity();
         _currentState = Data.State;
 
         if (item != null)
@@ -233,12 +274,15 @@ public class Mod_Building : Module
         EnsureRuntimeReferences();
         BindRuntimeEvents();
         SyncNavigationOccupancy();
+        SyncLightOccluder();
     }
 
     public void OnDisable()
     {
         CleanupGhost();
         BuildingOccupancyRegistry.Unregister(this);
+        if (_lightOccluder != null)
+            _lightOccluder.enabled = false;
         UnbindRuntimeEvents();
     }
 
@@ -378,7 +422,11 @@ public class Mod_Building : Module
 
         try
         {
-            building = ItemMgr.Instance.InstantiateItem(placedData, placedData.transform.position);
+            building = ItemMgr.Instance.InstantiateItem(
+                placedData,
+                placedData.transform.position,
+                placedData.transform.rotation,
+                placedData.transform.scale);
             building.Load();
 
             Mod_Building module = building.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
@@ -486,6 +534,7 @@ public class Mod_Building : Module
         placedData.Stack.CanBePickedUp = false;
         placedData.transform ??= new ItemTransform();
         placedData.transform.position = NormalizePlacement(position);
+        // 手持物会因交互表现产生旋转；落地建筑必须使用固定世界朝向，不能继承手持姿态或快照根旋转。
         placedData.transform.rotation = Quaternion.identity;
         placedData.transform.scale = Vector3.one;
         return true;
@@ -595,13 +644,17 @@ public class Mod_Building : Module
             summonerData.Stack.CanBePickedUp = true;
             summonerData.transform ??= new ItemTransform();
             summonerData.transform.position = dropPosition;
-            summonerData.transform.rotation = Quaternion.identity;
+            summonerData.transform.rotation = NormalizeBuildingRotation(item.transform.rotation);
             summonerData.transform.scale = Vector3.one;
 
             // 在 Load 之前还原模块数据，使拆回后的手持面板立即读到建筑中的最新状态。
             BuildingModuleStateTransfer.Copy(item.itemData, summonerData, Data.SharedModuleIds);
 
-            summoner = ItemMgr.Instance.InstantiateItem(summonerData, dropPosition);
+            summoner = ItemMgr.Instance.InstantiateItem(
+                summonerData,
+                dropPosition,
+                summonerData.transform.rotation,
+                summonerData.transform.scale);
             summoner.Load();
 
             Mod_Building summonerModule = summoner.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
@@ -654,6 +707,7 @@ public class Mod_Building : Module
         Data.SummonerPrefabId = ResolveSummonerPrefabId(Data.BuildingPrefabId, Data);
 
         item.transform.position = NormalizePlacement(item.transform.position);
+        item.transform.rotation = Quaternion.identity;
         item.transform.localScale = Vector3.one;
         item.SetInHand(false);
 
@@ -672,6 +726,7 @@ public class Mod_Building : Module
             ? BuildingState.Damaged
             : BuildingState.Installed;
         SyncNavigationOccupancy();
+        SyncLightOccluder();
         damageReceiver.Save();
         Save();
     }
@@ -747,6 +802,7 @@ public class Mod_Building : Module
         item.itemData.ItemSpecialData = StatefulSummonerPrefix + item.itemData.Guid;
         SetColliderMode(enabled: true, trigger: true, damageReceiverEnabled: false);
         BuildingOccupancyRegistry.Unregister(this);
+        SyncLightOccluder();
         Save();
     }
 
@@ -839,6 +895,8 @@ public class Mod_Building : Module
             return false;
         }
 
+        RefreshSourceHotBarSlot(hotBar, sourceSlot);
+
         bool depleted = consumedData?.Stack == null || consumedData.Stack.Amount <= 0f;
         if (depleted)
         {
@@ -877,6 +935,8 @@ public class Mod_Building : Module
             return;
         }
 
+        RefreshSourceHotBarSlot(hotBar, sourceSlot);
+
         if (normalizedAmount > 0f)
         {
             hotBar.NotifyOwnerNetworkStateChanged();
@@ -885,6 +945,17 @@ public class Mod_Building : Module
 
         CleanupGhost();
         hotBar.RuntimeInventory.SyncHeldItemImmediately();
+    }
+
+    /// <summary>建筑扣料后直接刷新快捷栏表现，不能只依赖通用库存事件等待后续 UI 同步。</summary>
+    private static void RefreshSourceHotBarSlot(Inventory_HotBar hotBar, ItemSlot sourceSlot)
+    {
+        if (hotBar?.Data?.itemSlots == null || sourceSlot == null)
+            return;
+
+        int slotIndex = hotBar.Data.itemSlots.IndexOf(sourceSlot);
+        if (slotIndex >= 0)
+            hotBar.RefreshUI(slotIndex);
     }
 
     /// <summary>建筑召唤器只允许从玩家当前快捷栏真实槽位扣除。</summary>
@@ -1026,6 +1097,45 @@ public class Mod_Building : Module
             throw new MissingComponentException($"[Mod_Building] {item.name} 缺少 DamageReceiver 模块");
     }
 
+    #region 2D 光照遮挡
+
+    /// <summary>
+    /// 动态可交互建筑不是 Tilemap 的一部分，不能复用 ChunkLightOccluderRenderer；
+    /// 落地后按自身主碰撞体创建一个 ShadowCaster2D，使火把等 Point Light2D 能被建筑实际遮挡。
+    /// </summary>
+    private void SyncLightOccluder()
+    {
+        bool shouldOcclude = item != null &&
+                             boxCollider2D != null &&
+                             Data?.Role == BuildingRole.PlacedBuilding &&
+                             !item.InHand &&
+                             CurrentState is BuildingState.Installed or BuildingState.Damaged;
+
+        if (!shouldOcclude)
+        {
+            if (_lightOccluder != null)
+                _lightOccluder.enabled = false;
+            return;
+        }
+
+        if (_lightOccluder == null)
+        {
+            GameObject host = boxCollider2D.gameObject;
+            _lightOccluder = host.GetComponent<ShadowCaster2D>();
+            if (_lightOccluder == null)
+                _lightOccluder = host.AddComponent<ShadowCaster2D>();
+        }
+
+        // 低矮的交互设施只负责向背光侧投影；自身仍由 Sprite-Lit 材质正常接收局部光。
+        _lightOccluder.castsShadows = true;
+        _lightOccluder.selfShadows = false;
+        _lightOccluder.useRendererSilhouette = false;
+        _lightOccluder.enabled = true;
+        _lightOccluder.Update();
+    }
+
+    #endregion
+
     private void BindRuntimeEvents()
     {
         if (_eventsBound || damageReceiver == null || item == null)
@@ -1090,6 +1200,7 @@ public class Mod_Building : Module
                 trigger: true,
                 damageReceiverEnabled: false);
             CurrentState = item.InHand ? BuildingState.NotInstalled : BuildingState.Uninstalled;
+            SyncLightOccluder();
             return;
         }
 
@@ -1097,6 +1208,7 @@ public class Mod_Building : Module
         {
             BuildingOccupancyRegistry.Unregister(this);
             SetColliderMode(enabled: false, trigger: true);
+            SyncLightOccluder();
             return;
         }
 
@@ -1105,6 +1217,7 @@ public class Mod_Building : Module
         {
             BuildingOccupancyRegistry.Unregister(this);
             SetColliderMode(enabled: true, trigger: true);
+            SyncLightOccluder();
             return;
         }
 
@@ -1115,6 +1228,7 @@ public class Mod_Building : Module
             ? BuildingState.Damaged
             : BuildingState.Installed;
         SyncNavigationOccupancy();
+        SyncLightOccluder();
     }
 
     private void SetColliderMode(bool enabled, bool trigger, bool damageReceiverEnabled = true)
@@ -1650,10 +1764,30 @@ public class Mod_Building : Module
         => WorldTopologyRuntime.NormalizePosition(
             new Vector3(Mathf.Floor(position.x) + 0.5f, Mathf.Floor(position.y) + 0.5f, 0f));
 
+    /// <summary>建筑只保留 XY 平面旋转，避免无效四元数或三维倾斜污染 2D 世界。</summary>
+    private static Quaternion NormalizeBuildingRotation(Quaternion rotation)
+    {
+        if (!IsFinite(rotation) ||
+            rotation.x * rotation.x + rotation.y * rotation.y +
+            rotation.z * rotation.z + rotation.w * rotation.w < 0.0001f)
+            return Quaternion.identity;
+
+        Vector3 euler = rotation.eulerAngles;
+        return IsFinite(euler)
+            ? Quaternion.Euler(0f, 0f, euler.z)
+            : Quaternion.identity;
+    }
+
     private static bool IsFinite(Vector3 value)
         => !float.IsNaN(value.x) && !float.IsInfinity(value.x) &&
            !float.IsNaN(value.y) && !float.IsInfinity(value.y) &&
            !float.IsNaN(value.z) && !float.IsInfinity(value.z);
+
+    private static bool IsFinite(Quaternion value)
+        => !float.IsNaN(value.x) && !float.IsInfinity(value.x) &&
+           !float.IsNaN(value.y) && !float.IsInfinity(value.y) &&
+           !float.IsNaN(value.z) && !float.IsInfinity(value.z) &&
+           !float.IsNaN(value.w) && !float.IsInfinity(value.w);
 
     private static int GenerateUniqueRuntimeGuid()
     {

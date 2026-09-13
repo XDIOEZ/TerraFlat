@@ -24,6 +24,7 @@ public sealed class BuildingPanelActions : MonoBehaviour
     public void Bind(Item target)
     {
         building = target?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+        building?.ReconcileCarrierRoleWithItemIdentity();
         PlaceButton.gameObject.SetActive(building != null && building.IsSummoner);
         PlaceButton.interactable = building != null && building.IsItemInInventory;
         DismantleButton.gameObject.SetActive(building != null && building.CanCommitDismantle);

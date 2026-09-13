@@ -7,6 +7,14 @@ public interface IDamageSender
     public Item attacker { get; set; }
 }
 
+/// <summary>
+/// 建筑伤害来源能力：倍率只应用在目标防御结算完成之后，不能用于提高破甲等级。
+/// </summary>
+public interface IBuildingDamageSource
+{
+    float BuildingDamageMultiplier { get; }
+}
+
 /// <summary>可选的攻击者受击减速参数，供武器或技能按自身特性提供效果。</summary>
 public interface IHitSlowdownSource
 {

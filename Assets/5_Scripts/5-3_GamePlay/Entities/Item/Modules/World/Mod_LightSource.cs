@@ -165,10 +165,27 @@ public class Mod_LightSource : Module
         {
             TargetLight.pointLightOuterRadius = Data.Range;
             TargetLight.pointLightInnerRadius = Data.InnerRadius;
+            ConfigureSolidWorldOcclusion(TargetLight);
         }
 
         TargetLight.enabled = Data.IsEnabled && Data.Intensity > 0f && Data.Range > 0f;
         KeepPointLightOn2DPlane();
+    }
+
+    /// <summary>
+    /// 世界实体 Point Light 必须把 Blocking Tile 视为不透光实体。
+    /// 阴影强度 1 只移除当前局部光，昼夜全局光仍会正常作用于阴影区域。
+    /// </summary>
+    private static void ConfigureSolidWorldOcclusion(Light2D targetLight)
+    {
+        targetLight.shadowsEnabled = true;
+        targetLight.shadowIntensity = 1f;
+
+        if (!targetLight.volumeIntensityEnabled)
+            return;
+
+        targetLight.volumetricShadowsEnabled = true;
+        targetLight.shadowVolumeIntensity = 1f;
     }
 }
 
