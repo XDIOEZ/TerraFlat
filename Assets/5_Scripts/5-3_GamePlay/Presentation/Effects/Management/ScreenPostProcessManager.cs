@@ -1,11 +1,9 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 
 /// <summary>
-/// 一个可叠加的屏幕后处理效果提交接口。效果只描述目标表现，实际 Volume 参数由
-/// <see cref="ScreenPostProcessManager"/> 统一合成，后续可继续接入受伤闪屏、醉酒、寒冷等效果。
+/// 一个可叠加的屏幕后处理效果提交接口。效果只描述目标表现，最终屏幕合成由
+/// <see cref="ScreenPostProcessManager"/> 与 URP Renderer Feature 统一完成。
 /// </summary>
 public interface IScreenPostProcessEffect
 {
@@ -35,7 +33,8 @@ public interface IScreenPostProcessHighQualityEffect
 #endregion
 
 /// <summary>
-/// 单帧后处理效果快照。当前提供 Vignette 通道，保留独立接口以便后续扩展其他 URP Volume 通道。
+/// 单帧屏幕警示快照。保留 Vignette 命名作为效果语义，但最终不再使用 URP 内置的
+/// 乘法 Vignette，而是交给 GPU 全屏红边 Pass 做真正的红色 Alpha 混合。
 /// </summary>
 public sealed class ScreenPostProcessFrame
 {
@@ -56,10 +55,10 @@ public sealed class ScreenPostProcessFrame
         VignetteIntensity = 0f;
         VignetteSmoothness = 0.82f;
         VignettePulseAmount = 0f;
-        VignetteColor = new Color(0.58f, 0.01f, 0.015f, 1f);
+        VignetteColor = new Color(0.9f, 0.015f, 0.02f, 1f);
     }
 
-    /// <summary>按强度叠加一个 Vignette 请求，避免多个效果互相覆盖。</summary>
+    /// <summary>按强度叠加一个屏幕边缘警示请求，避免多个效果互相覆盖。</summary>
     public void AddVignette(
         float intensity,
         Color color,
@@ -86,9 +85,9 @@ public sealed class ScreenPostProcessFrame
 }
 
 /// <summary>
-/// FlatWorld 全局后处理单例。运行时创建常驻 URP Volume，统一合成所有屏幕后处理效果，
-/// 不修改全局 Volume Profile 资产；Vignette 强度为 0 时自动停用该组件，避免常态增加渲染开销。
-/// 只提交 Volume 参数，相机栈的执行顺序和后处理开关由 WrappedWorldCameraRenderer 管理。
+/// FlatWorld 全局屏幕警示合成器。CPU 只负责收集玩法状态并平滑出少量参数；
+/// 最终红边由 <see cref="LowHealthRedEdgeRendererFeature"/> 在 GPU 上用一个全屏三角形绘制。
+/// 该路径不创建额外 Camera、不创建 UI 网格，也不使用 URP 内置会把画面乘暗的 Vignette。
 /// </summary>
 [DefaultExecutionOrder(-1000)]
 public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProcessManager>
@@ -97,8 +96,6 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
 
     private const float TransitionSeconds = 0.12f;
     private const float MinimumActiveIntensity = 0.0005f;
-    private const int RuntimeVolumeLayer = 0;
-    private const float DefaultPriority = 100f;
 
     #endregion
 
@@ -108,13 +105,8 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
         new List<IScreenPostProcessEffect>(4);
     private readonly ScreenPostProcessFrame frame = new ScreenPostProcessFrame();
 
-    private GameObject volumeObject;
-    private Volume runtimeVolume;
-    private VolumeProfile runtimeProfile;
-    private Vignette vignette;
     private float currentVignetteIntensity;
     private float vignetteIntensityVelocity;
-    private bool hasInitialized;
 
     /// <summary>当前已注册的屏幕后处理效果，供调试和后续扩展查询。</summary>
     public IReadOnlyList<IScreenPostProcessEffect> Effects => effects;
@@ -133,9 +125,7 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
             return;
 
         DontDestroyOnLoad(gameObject);
-        ScreenPostProcessSettings.Changed -= HandleQualityChanged;
-        ScreenPostProcessSettings.Changed += HandleQualityChanged;
-        EnsureRuntimeVolume();
+        LowHealthRedEdgeRendererFeature.SetState(Color.red, 0f, 0.82f);
     }
 
     private void LateUpdate()
@@ -143,7 +133,6 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
         if (instance != this)
             return;
 
-        EnsureRuntimeVolume();
         frame.Reset();
 
         float deltaTime = Mathf.Max(0f, Time.unscaledDeltaTime);
@@ -167,15 +156,8 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
 
     protected override void OnDestroy()
     {
-        ScreenPostProcessSettings.Changed -= HandleQualityChanged;
         effects.Clear();
-
-        if (runtimeProfile != null)
-        {
-            Destroy(runtimeProfile);
-            runtimeProfile = null;
-        }
-
+        LowHealthRedEdgeRendererFeature.SetState(Color.red, 0f, 0.82f);
         base.OnDestroy();
     }
 
@@ -202,7 +184,7 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
 
     #endregion
 
-    #region Volume 合成
+    #region GPU 合成参数
 
     /// <summary>按特效脚本实现的档位接口筛选当前质量允许提交的效果。</summary>
     private static bool IsEffectEnabledForQuality(IScreenPostProcessEffect effect)
@@ -213,61 +195,12 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
         if (effect is IScreenPostProcessMediumQualityEffect)
             return quality != ScreenPostProcessQuality.Low;
 
-        // 低档接口和未标记接口都保持兼容，确保基础警示效果在移动端仍可见。
         return true;
     }
 
-    /// <summary>创建仅属于本单例的运行时 Volume，不污染项目内置全局 Volume Profile。</summary>
-    private void EnsureRuntimeVolume()
-    {
-        if (hasInitialized && runtimeVolume != null && runtimeProfile != null && vignette != null)
-            return;
-
-        if (volumeObject == null)
-        {
-            volumeObject = new GameObject("ScreenPostProcessVolume");
-            volumeObject.layer = RuntimeVolumeLayer;
-            volumeObject.transform.SetParent(transform, false);
-        }
-
-        if (runtimeVolume == null)
-        {
-            runtimeVolume = volumeObject.GetComponent<Volume>();
-            if (runtimeVolume == null)
-                runtimeVolume = volumeObject.AddComponent<Volume>();
-        }
-
-        runtimeVolume.isGlobal = true;
-        runtimeVolume.priority = DefaultPriority;
-        runtimeVolume.weight = 1f;
-
-        if (runtimeProfile == null)
-        {
-            runtimeProfile = ScriptableObject.CreateInstance<VolumeProfile>();
-            runtimeProfile.name = "ScreenPostProcessRuntimeProfile";
-            runtimeVolume.sharedProfile = runtimeProfile;
-        }
-
-        if (vignette == null)
-            vignette = runtimeProfile.Add<Vignette>(true);
-
-        vignette.active = true;
-        vignette.color.overrideState = true;
-        vignette.center.overrideState = true;
-        vignette.intensity.overrideState = true;
-        vignette.smoothness.overrideState = true;
-        vignette.rounded.overrideState = true;
-        vignette.center.value = new Vector2(0.5f, 0.5f);
-        vignette.rounded.value = true;
-        hasInitialized = true;
-    }
-
-    /// <summary>把本帧效果平滑写入 URP Vignette，并按画质档位降低移动端成本。</summary>
+    /// <summary>把本帧强度平滑后提交给 GPU Renderer Feature。</summary>
     private void ApplyFrame(ScreenPostProcessFrame nextFrame, float deltaTime)
     {
-        if (vignette == null)
-            return;
-
         float targetIntensity = Mathf.Clamp01(nextFrame.VignetteIntensity) * GetQualityIntensityScale();
         currentVignetteIntensity = Mathf.SmoothDamp(
             currentVignetteIntensity,
@@ -284,19 +217,13 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
             currentVignetteIntensity = Mathf.Clamp01(currentVignetteIntensity * pulse);
         }
 
-        vignette.active = currentVignetteIntensity > MinimumActiveIntensity;
-        vignette.color.value = nextFrame.VignetteColor;
-        vignette.intensity.value = Mathf.Clamp01(currentVignetteIntensity);
-        vignette.smoothness.value = Mathf.Lerp(
-            0.72f,
-            0.9f,
-            Mathf.Clamp01(nextFrame.VignetteSmoothness * GetQualitySmoothnessScale()));
-    }
+        float smoothness = Mathf.Clamp01(
+            nextFrame.VignetteSmoothness * GetQualitySmoothnessScale());
 
-    /// <summary>质量切换时立即刷新配置，强度本身继续由 LateUpdate 平滑过渡。</summary>
-    private void HandleQualityChanged()
-    {
-        EnsureRuntimeVolume();
+        LowHealthRedEdgeRendererFeature.SetState(
+            nextFrame.VignetteColor,
+            currentVignetteIntensity,
+            smoothness);
     }
 
     private static int CompareEffects(IScreenPostProcessEffect left, IScreenPostProcessEffect right)
@@ -315,11 +242,11 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
         switch (ScreenPostProcessSettings.Quality)
         {
             case ScreenPostProcessQuality.Medium:
-                return 0.78f;
+                return 0.88f;
             case ScreenPostProcessQuality.Low:
-                return 0.62f;
+                return 0.78f;
             default:
-                return 0.92f;
+                return 1f;
         }
     }
 
@@ -328,9 +255,9 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
         switch (ScreenPostProcessSettings.Quality)
         {
             case ScreenPostProcessQuality.Medium:
-                return 0.9f;
+                return 0.94f;
             case ScreenPostProcessQuality.Low:
-                return 0.78f;
+                return 0.88f;
             default:
                 return 1f;
         }
@@ -350,5 +277,4 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
     }
 
     #endregion
-
 }

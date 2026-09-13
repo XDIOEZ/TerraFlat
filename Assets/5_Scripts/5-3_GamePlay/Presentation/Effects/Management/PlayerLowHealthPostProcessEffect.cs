@@ -119,8 +119,10 @@ public sealed class PlayerLowHealthPostProcessEffect : MonoBehaviour,
         if (severity <= 0f)
             return;
 
-        float redStrength = Mathf.Lerp(0.46f, 0.78f, severity);
-        Color vignetteColor = new Color(redStrength, 0.008f, 0.012f, 1f);
+        // GPU Pass 使用 Alpha 混合而不是 URP 内置 Vignette 的乘法变暗，
+        // 因此这里直接提交鲜明红色，最终透明度仍由 severity 控制。
+        float redStrength = Mathf.Lerp(0.88f, 1f, severity);
+        Color vignetteColor = new Color(redStrength, 0.015f, 0.02f, 1f);
         frame.AddVignette(
             severity,
             vignetteColor,
