@@ -25,6 +25,51 @@
       ]
     },
     {
+      "id": "Coconut_Green_Default",
+      "entries": [
+        {
+          "itemId": "Fiber",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 1
+        },
+        {
+          "itemId": "Coconut_Nude",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 1
+        }
+      ]
+    },
+    {
+      "id": "Coconut_Nude_Default",
+      "entries": [
+        {
+          "itemId": "Coconut_Half",
+          "probability": 1.0,
+          "minAmount": 2,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
+      "id": "Coconut_Half_Default",
+      "entries": [
+        {
+          "itemId": "CoconutMeat",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 1
+        },
+        {
+          "itemId": "Coconut_Shell",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 1
+        }
+      ]
+    },
+    {
       "id": "Chicken_Default",
       "entries": [
         {

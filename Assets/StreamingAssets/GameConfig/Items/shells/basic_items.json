@@ -928,6 +928,86 @@
       }
     },
     {
+      "id": "Fiber",
+      "parent": "BasicItem_Base",
+      "gameName": "纤维",
+      "description": "从植物外皮中剥离出的粗纤维，可作为绳索和其他生存物品的基础材料。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.1,
+      "volume": 0.15,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Fiber/Fiber_Icon.png",
+        "rendererLocalPosition": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalEulerAngles": {
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        "rendererLocalScale": {
+          "x": 0.75,
+          "y": 0.75,
+          "z": 1.0
+        },
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        },
+        "flipX": false,
+        "flipY": false,
+        "sortingLayerName": "Default",
+        "sortingOrder": 0,
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "path": "",
+          "size": {
+            "x": 0.75,
+            "y": 0.75
+          }
+        }
+      },
+      "modules": {},
+      "itemData": {
+        "code": "",
+        "transform": {
+          "position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rotation": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 0.0
+          },
+          "scale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          }
+        },
+        "ItemSpecialData": "",
+        "inHand": false
+      }
+    },
+    {
       "id": "Ingot_Bronze",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Minerals/Ingot/Ingot_Bronze.prefab",
@@ -2661,6 +2741,31 @@
       "volume": 2.0,
       "stackable": true,
       "canBePickedUp": true,
+      "health": {
+        "hasHp": true,
+        "hp": 20.0,
+        "maxHp": 20.0,
+        "defense": {
+          "cutting": 0.0,
+          "piercing": 0.0,
+          "chopping": 0.0,
+          "blunt": 0.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "lootTableId": "Coconut_Green_Default",
       "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_165.png",
@@ -2742,7 +2847,34 @@
       "volume": 1.0,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "health": {
+        "hasHp": true,
+        "hp": 20.0,
+        "maxHp": 20.0,
+        "defense": {
+          "cutting": 0.0,
+          "piercing": 0.0,
+          "chopping": 0.0,
+          "blunt": 0.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "lootTableId": "Coconut_Half_Default",
+      "tags": [
+        "47"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/Item_Food_009.png",
         "rendererLocalPosition": {
@@ -2785,7 +2917,110 @@
           }
         }
       },
-      "modules": {},
+      "modules": {
+        "heldFood": {
+          "prefab": "Module_HeldFood",
+          "id": "手上食物模块",
+          "enabled": true,
+          "data": {
+            "Type": 0
+          },
+          "parameters": {}
+        },
+        "food": {
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 30.0,
+                "Max_Carbohydrates": 30.0,
+                "Fat": 60.0,
+                "Max_Fat": 60.0,
+                "Protein": 8.0,
+                "Max_Protein": 8.0,
+                "Water": 25.0,
+                "Max_Water": 25.0,
+                "Vitamins": 8.0,
+                "Max_Vitamins": 8.0
+              },
+              "Max_EatingProgress": 3.0,
+              "nutritionConsumeSpeed": {
+                "BaseValue": 0.0,
+                "BaseAdditive": 0.0,
+                "AdditiveModifier": 0.0,
+                "MultiplicativeModifier": 1.0,
+                "FinalAdditive": 0.0
+              },
+              "FeelGood": false,
+              "PanelPosition": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "WaterConsumeSpeedRate": 0.0,
+              "nutritionConsumeRate": 0.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": true,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 1800.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ],
+            "Type": 0
+          },
+          "parameters": {
+            "StaminaState": {
+              "StaminaRecoverSpeed": 1.0,
+              "StaminaConsumeSpeed": 0.5
+            },
+            "HealthState": {
+              "Enabled": true,
+              "HealSpeed": 1.0,
+              "WaterSelfHurt": 1.0,
+              "ProteinSelfHurt": 1.0,
+              "VitaminSelfHurt": 1.0,
+              "HealNeedRatio": 0.6
+            },
+            "ConsumeAudio": {
+              "Enabled": true,
+              "CueId": "food.eat",
+              "VolumeScale": 0.78,
+              "PitchMin": 0.96,
+              "PitchMax": 1.04
+            },
+            "ConsumeKind": 0,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localEulerAngles": {
+                "x": 0.0,
+                "y": 0.0,
+                "z": 0.0
+              },
+              "localScale": {
+                "x": 1.0,
+                "y": 1.0,
+                "z": 1.0
+              }
+            }
+          }
+        }
+      },
       "itemData": {
         "code": "",
         "transform": {
@@ -2823,6 +3058,31 @@
       "volume": 1.0,
       "stackable": true,
       "canBePickedUp": true,
+      "health": {
+        "hasHp": true,
+        "hp": 20.0,
+        "maxHp": 20.0,
+        "defense": {
+          "cutting": 0.0,
+          "piercing": 0.0,
+          "chopping": 0.0,
+          "blunt": 0.0
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "size": {
+            "x": 1.0,
+            "y": 1.0
+          }
+        }
+      },
+      "lootTableId": "Coconut_Nude_Default",
       "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/Item_Food_Fruit.png[Item_Food_Fruit_98]",

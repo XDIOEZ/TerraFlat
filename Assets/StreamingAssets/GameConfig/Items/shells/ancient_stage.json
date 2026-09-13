@@ -129,9 +129,10 @@
       "volume": 0.55,
       "stackable": true,
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Ore_Niter/Ore_Niter_Idle.png",
         "color": {
-          "r": 0.7,
-          "g": 0.9,
+          "r": 1,
+          "g": 1,
           "b": 1,
           "a": 1
         }
@@ -487,10 +488,11 @@
       "volume": 32.0,
       "stackable": true,
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WallMetal/Wall_Copper_Medium.png[Wall_Copper_Medium]",
         "color": {
-          "r": 0.95,
-          "g": 0.53,
-          "b": 0.3,
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1
         }
       },
@@ -544,10 +546,11 @@
       "volume": 32.0,
       "stackable": true,
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WallMetal/Wall_Iron_Medium.png[Wall_Iron_Medium]",
         "color": {
-          "r": 0.72,
-          "g": 0.79,
-          "b": 0.86,
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1
         }
       },
@@ -601,10 +604,11 @@
       "volume": 32.0,
       "stackable": true,
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WallMetal/Wall_Bronze_Medium.png[Wall_Bronze_Medium]",
         "color": {
-          "r": 0.85,
-          "g": 0.71,
-          "b": 0.32,
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1
         }
       },
@@ -677,7 +681,10 @@
         "spriteAddress": "Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png",
         "spriteStates": {
           "empty": "Assets/6_Art/Generated/ClayJar/ClayJar_Icon.png",
-          "filled": "Assets/6_Art/Generated/ClayJar/ClayJar_Filled.png"
+          "filled": "Assets/6_Art/Generated/ClayJar/ClayJar_Filled.png",
+          "dirty": "Assets/6_Art/Generated/ClayJar/ClayJar_Dirty.png",
+          "drinkable": "Assets/6_Art/Generated/ClayJar/ClayJar_Drinkable.png",
+          "sea": "Assets/6_Art/Generated/ClayJar/ClayJar_Sea.png"
         },
         "color": {
           "r": 1,
@@ -966,7 +973,34 @@
       "description": "铁矿先用石镐采铜、再用铜镐开采。粗铁加木柄与绳子可制粗铁铁镐；铜锡按九比一冶炼青铜。备足陶罐饮水和食物，再去洞穴寻找更深的矿脉。",
       "weight": 0.1,
       "volume": 0.2,
-      "stackable": true
+      "stackable": true,
+      "modules": {
+        "readableBook": {
+          "prefab": "Module_ReadableBook",
+          "id": "Mod_ReadableBook",
+          "enabled": true,
+          "parameters": {
+            "pages": [
+              {
+                "key": "item.MinersNote.page.1",
+                "fallback": "铁矿\n\n先用石镐采铜。\n有了铜镐以后，再去开采铁矿。"
+              },
+              {
+                "key": "item.MinersNote.page.2",
+                "fallback": "粗铁铁镐\n\n粗铁加木柄与绳子，可制作粗铁铁镐。"
+              },
+              {
+                "key": "item.MinersNote.page.3",
+                "fallback": "青铜\n\n铜和锡按 9 : 1 冶炼，可以得到青铜。"
+              },
+              {
+                "key": "item.MinersNote.page.4",
+                "fallback": "下洞前\n\n备足陶罐饮水和食物，再去洞穴寻找更深的矿脉。"
+              }
+            ]
+          }
+        }
+      }
     }
   ]
 }
