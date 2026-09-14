@@ -234,6 +234,13 @@ public class BuffManager : Module
             return false;
         }
 
+        // 潮湿状态下无法进入燃烧状态；由当前 BuffManager 统一检查施加对象已有状态。
+        if (string.Equals(definition.Id, BurningBuffIds.Burning, StringComparison.OrdinalIgnoreCase) &&
+            HasBuff(WetBuffIds.Wet))
+        {
+            return false;
+        }
+
         string definitionId = definition.Id;
         if (ActiveBuffs.TryGetValue(definitionId, out BuffInstance existing) &&
             existing != null)
