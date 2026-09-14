@@ -1679,6 +1679,19 @@
               "edgeRadius": 0.0
             }
           }
+        },
+        "harvestRequirement": {
+          "prefab": "Module_ResourceHarvest",
+          "id": "Mod_ResourceHarvest",
+          "enabled": true,
+          "data": {
+            "BitData": "",
+            "Type": 0
+          },
+          "parameters": {
+            "requiredTool": 1,
+            "minimumTier": 1
+          }
         }
       },
       "itemData": {
