@@ -1,4 +1,4 @@
-﻿using Force.DeepCloner;
+using Force.DeepCloner;
 using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UnityEngine;
@@ -78,7 +78,7 @@ public class Mod_PlayerTraits : Module
     #region 创造背包
 
     /// <summary>
-    /// 管理员每次为每种可持有的非 Actor 物品增加 100 个；落地建筑本体不进入背包。
+    /// 管理员每次为每种可持有的非 Actor 物品增加 100 个；世界专用实体和落地建筑本体不进入背包。
     /// 已有物品原位累加，缺少物品新增槽位，不受普通堆叠容量限制。
     /// </summary>
     public string InitializeCreativeInventoryForAdmin()
@@ -113,6 +113,7 @@ public class Mod_PlayerTraits : Module
         var existingSlotIndices = new Dictionary<string, int>();
         var bagData = bagMod.inventory.Data;
         int removedPlacedBuildingCount = 0;
+        int removedWorldOnlyCount = 0;
         for (int i = 0; i < bagData.itemSlots.Count; i++)
         {
             ItemData existingItem = bagData.itemSlots[i].itemData;
@@ -120,6 +121,15 @@ public class Mod_PlayerTraits : Module
             {
                 bagData.RemoveItemAll(bagData.itemSlots[i], i);
                 removedPlacedBuildingCount++;
+                continue;
+            }
+
+            // 创造背包中的物品都会被写成不可拾取，不能用槽位运行态判断是否“可持有”。
+            // 必须回到当前静态定义，清理树、矿点、作物、传送口等世界专用实体。
+            if (IsWorldOnlyDefinition(existingItem?.IDName))
+            {
+                bagData.RemoveItemAll(bagData.itemSlots[i], i);
+                removedWorldOnlyCount++;
                 continue;
             }
 
@@ -132,6 +142,7 @@ public class Mod_PlayerTraits : Module
         var uncreatableItemIds = new List<string>();
         int actorCount = 0;
         int placedBuildingCount = 0;
+        int worldOnlyCount = 0;
         int replenishedCount = 0;
 
         foreach (string itemId in itemIds)
@@ -168,18 +179,25 @@ public class Mod_PlayerTraits : Module
                 continue;
             }
 
+            if (data?.Stack == null)
+            {
+                uncreatableItemIds.Add(itemId);
+                Debug.LogError($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 物品 {itemId} 没有有效的堆叠数据。");
+                continue;
+            }
+
+            // canBePickedUp=false 的定义是世界专用实体，不属于玩家可持有物品目录。
+            if (!data.Stack.CanBePickedUp)
+            {
+                worldOnlyCount++;
+                continue;
+            }
+
             if (existingSlotIndices.TryGetValue(itemId, out int existingSlotIndex))
             {
                 // 走库存数量变更事件，保留原物品状态并允许创造模式超量堆叠。
                 bagData.ChangeItemDataAmount(existingSlotIndex, amountPerItem);
                 replenishedCount++;
-                continue;
-            }
-
-            if (data?.Stack == null)
-            {
-                uncreatableItemIds.Add(itemId);
-                Debug.LogError($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 物品 {itemId} 没有有效的堆叠数据。");
                 continue;
             }
 
@@ -210,12 +228,24 @@ public class Mod_PlayerTraits : Module
         bagMod.inventory.RefreshUI();
 
         string summary = $"创造背包完成：新增 {creativeItems.Count} 种，补充 {replenishedCount} 种，每种增加 {amountPerItem} 个，" +
-                         $"不可创建 {uncreatableItemIds.Count} 种，排除 Actor {actorCount} 种、落地建筑状态 {placedBuildingCount} 种，" +
-                         $"清理旧建筑状态 {removedPlacedBuildingCount} 格，共扫描 {itemIds.Count} 条定义；已解除重量与体积上限，背包格子保持默认自动扩容。";
+                         $"不可创建 {uncreatableItemIds.Count} 种，排除 Actor {actorCount} 种、落地建筑状态 {placedBuildingCount} 种、世界专用实体 {worldOnlyCount} 种，" +
+                         $"清理旧建筑状态 {removedPlacedBuildingCount} 格、旧世界实体 {removedWorldOnlyCount} 格，共扫描 {itemIds.Count} 条定义；已解除重量与体积上限，背包格子保持默认自动扩容。";
         if (uncreatableItemIds.Count > 0)
             Debug.LogError($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] 不可创建物品：{string.Join(", ", uncreatableItemIds)}");
         Debug.Log($"[Mod_PlayerTraits.InitializeCreativeInventoryForAdmin] {summary}");
         return summary;
+    }
+
+    /// <summary>按当前静态定义判断物品是否只能存在于世界中，避免读取创造背包被改写后的运行态标志。</summary>
+    private static bool IsWorldOnlyDefinition(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId) ||
+            GameRes.Instance == null ||
+            !GameRes.Instance.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition))
+            return false;
+
+        ItemData configuredData = definition.CreateItemData();
+        return configuredData?.Stack != null && !configuredData.Stack.CanBePickedUp;
     }
 
     /// <summary>落地建筑本体属于世界运行态，不应作为可持有物品进入创造背包。</summary>
