@@ -50,6 +50,8 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
     public GameObject Prefab_UI;//TODO 这个是UI的预制体
 
     public Slider slider;
+    private RectTransform staminaBackground; // 原体力条灰黑底纹，只调整可用宽度。
+    private RectTransform staminaFillArea; // 保持原填充样式，仅让填充范围与可用上限一致。
     public override void Awake()
     {
         if (_Data.ID == "")
@@ -79,6 +81,8 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         {
             slider = GetComponentInChildren<Slider>();
         }
+
+        CacheStaminaBarRects();
 
         // 用当前体力值刷新一次 UI
         UpdateSlider();
@@ -160,6 +164,39 @@ public partial class Mod_Stamina : Module, IItemModuleDependencyBinder
         {
             slider.value = CurrentValue / MaxValue;
         }
+
+        UpdateStaminaCapacityWidth();
+    }
+
+    /// <summary>缓存原体力条的底纹与填充区域，不改颜色、层级或外框。</summary>
+    private void CacheStaminaBarRects()
+    {
+        if (slider == null)
+            return;
+
+        staminaBackground = slider.transform.Find("Background") as RectTransform;
+        staminaFillArea = slider.fillRect != null ? slider.fillRect.parent as RectTransform : null;
+    }
+
+    /// <summary>上限减少时只从右侧缩短原底纹和可填充范围，根节点尺寸保持不变。</summary>
+    private void UpdateStaminaCapacityWidth()
+    {
+        float baseMaxValue = Mathf.Max(0f, Data?.MaxStamina ?? 0f);
+        float ratio = baseMaxValue > 0f ? Mathf.Clamp01(MaxValue / baseMaxValue) : 0f;
+
+        SetRightEdgeRatio(staminaBackground, ratio);
+        SetRightEdgeRatio(staminaFillArea, ratio);
+    }
+
+    /// <summary>仅调整右侧锚点，保留原有视觉参数。</summary>
+    private static void SetRightEdgeRatio(RectTransform target, float ratio)
+    {
+        if (target == null)
+            return;
+
+        Vector2 anchorMax = target.anchorMax;
+        anchorMax.x = ratio;
+        target.anchorMax = anchorMax;
     }
 
 
