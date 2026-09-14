@@ -77,10 +77,9 @@ WaterSurfaceData CalculateWaterSurface(
     slope += fineSlope * 0.2 * detailVisibility;
     float3 normalWS = normalize(float3(-slope * _NormalStrength, 1.0));
 
-    // 水体吸收随深度平滑增长；深水不再显露原贴图里的装饰性亮块。
+    // 水面水深已离散为十档；使用等距颜色权重，避免深水段被指数吸收压缩后相邻档位难以分辨。
     surface.waterDepth = saturate(waterDepth);
-    float transmittance = exp2(-surface.waterDepth * 3.0);
-    surface.depthBlend = saturate((transmittance - 0.125) / 0.875);
+    surface.depthBlend = 1.0h - surface.waterDepth;
 
     float3 sunDirection = normalize(_SunDirection.xyz);
     float3 viewDirection = float3(0.0, 0.0, 1.0);

@@ -120,12 +120,24 @@ half4 DecodeWaterShoreMask(half4 encodedData)
     return step(0.5h, encodedData);
 }
 
-/// <summary>通过显式世界坐标映射采样 Chunk 水深，避免 Tilemap 合批改变局部坐标。</summary>
+/// <summary>把连续水深离散为 0.1~1.0 共十个视觉档位；真实水深数据本身保持不变。</summary>
+half QuantizeWaterVisualDepth(half waterDepth)
+{
+    half depth = saturate(waterDepth);
+    if (depth <= 0.0001h)
+        return 0.0h;
+
+    // 视觉档位采用 (0,0.1]、(0.1,0.2] ... (0.9,1.0]，避免浮点误差把整十分位误推到下一档。
+    return min(1.0h, ceil(depth * 10.0h - 0.001h) * 0.1h);
+}
+
+/// <summary>通过显式世界坐标映射采样 Chunk 水深，再按十分位生成十档水面表现。</summary>
 half SampleWaterDepth(float2 positionWS)
 {
     float2 depthUV = positionWS * _WaterDepthUvScaleOffset.xy
         + _WaterDepthUvScaleOffset.zw;
-    return SAMPLE_TEXTURE2D(_WaterDepthTexture, sampler_WaterDepthTexture, depthUV).r;
+    half sampledDepth = SAMPLE_TEXTURE2D(_WaterDepthTexture, sampler_WaterDepthTexture, depthUV).r;
+    return QuantizeWaterVisualDepth(sampledDepth);
 }
 
 /// <summary>利用屏幕位置和既有波形生成圆形月面及向下延伸的碎光带。</summary>

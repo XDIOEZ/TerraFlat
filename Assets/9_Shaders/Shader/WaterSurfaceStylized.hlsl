@@ -67,14 +67,9 @@ WaterSurfaceData CalculateWaterSurface(
         -gradient.y * _NormalStrength,
         1.0));
 
-    // 权威水深决定整体明暗，噪声只在中间深度保留轻微的自然过渡。
-    surface.waterDepth = smoothstep(0.0h, 1.0h, saturate(waterDepth));
-    half depthVariation = (
-        (macroA - 0.5) * 0.12
-        + (macroB - 0.5) * 0.05
-        + height * 0.025)
-        * (surface.waterDepth * (1.0h - surface.waterDepth) * 4.0h);
-    surface.depthBlend = saturate(1.0h - surface.waterDepth + depthVariation);
+    // 水面水深已离散为十档；基础水色不再混入噪声，让 0.1 的每一级变化都保持清晰可辨。
+    surface.waterDepth = saturate(waterDepth);
+    surface.depthBlend = 1.0h - surface.waterDepth;
 
     // 中尺度浪脊与大涌浪共用扭曲坐标，再用低频噪声切成自然短段。
     float rippleWarp = WaterNoise(
