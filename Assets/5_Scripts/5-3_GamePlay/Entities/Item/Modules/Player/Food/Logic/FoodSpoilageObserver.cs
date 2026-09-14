@@ -118,3 +118,107 @@ public sealed class FoodSpoilageModuleDataObserver : IModuleDataTickObserver
         Debug.Log($"[FoodSpoilage] 状态替换完成，原物品={context.ItemData.IDName}，目标物品={targetItemID}");
     }
 }
+
+/// <summary>可融化食物的库存计时状态；复用食物观察者存储，不额外挂载运行时模块。</summary>
+[Serializable]
+public sealed class FoodMeltingObserverData
+{
+    public bool EnableMelting;
+    public float MeltingElapsedSeconds;
+    public float MeltingIntervalSeconds = 300f;
+
+    /// <summary>从通用观察者负载读取融化数据。</summary>
+    public static FoodMeltingObserverData Load(ModData_FoodData persistentData)
+    {
+        FoodMechanicStateData state = FoodObserverStateStore.Find(
+            persistentData,
+            FoodObserverStateStore.MeltingStateKey);
+        return new FoodMeltingObserverData
+        {
+            EnableMelting = FoodObserverStateStore.ReadBool(state, "EnableMelting", false),
+            MeltingElapsedSeconds = FoodObserverStateStore.ReadFloat(state, "MeltingElapsedSeconds", 0f),
+            MeltingIntervalSeconds = FoodObserverStateStore.ReadFloat(state, "MeltingIntervalSeconds", 300f)
+        };
+    }
+
+    /// <summary>把融化计时写回观察者自己的通用负载。</summary>
+    public void Save(ModData_FoodData persistentData)
+    {
+        FoodMechanicStateData state = FoodObserverStateStore.GetOrCreate(
+            persistentData,
+            FoodObserverStateStore.MeltingStateKey);
+        FoodObserverStateStore.WriteBool(state, "EnableMelting", EnableMelting);
+        FoodObserverStateStore.WriteFloat(state, "MeltingElapsedSeconds", MeltingElapsedSeconds);
+        FoodObserverStateStore.WriteFloat(state, "MeltingIntervalSeconds", MeltingIntervalSeconds);
+    }
+}
+
+/// <summary>
+/// 监听库存中的可融化食物，每经过一个配置周期就从当前堆叠中融化掉 1 个。
+/// 与腐败共用库存 ModuleData Tick 和持久化框架，但不把冰块转换成虚构的“水物品”。
+/// </summary>
+public sealed class FoodMeltingModuleDataObserver : IModuleDataTickObserver
+{
+    /// <summary>只观察显式声明了融化状态的食物数据。</summary>
+    public bool CanObserve(ModuleData moduleData)
+    {
+        return moduleData is ModData_FoodData foodData &&
+               FoodObserverStateStore.Find(foodData, FoodObserverStateStore.MeltingStateKey) != null;
+    }
+
+    /// <summary>推进融化计时；允许一次较大的 Tick 跨过多个周期并一次性扣除对应数量。</summary>
+    public void OnModuleDataTick(ModuleDataTickContext context)
+    {
+        if (!(context.ModuleData is ModData_FoodData foodData))
+            return;
+
+        FoodMeltingObserverData observerData = FoodMeltingObserverData.Load(foodData);
+        if (!observerData.EnableMelting)
+            return;
+
+        if (context.InventoryData == null || context.ItemData?.Stack == null || context.Slot == null ||
+            !ReferenceEquals(context.Slot.itemData, context.ItemData))
+            return;
+
+        float intervalSeconds = observerData.MeltingIntervalSeconds;
+        if (intervalSeconds <= 0f || float.IsNaN(intervalSeconds) || float.IsInfinity(intervalSeconds))
+        {
+            Debug.LogWarning($"[FoodMelting] 融化间隔无效，物品={context.ItemData.IDName}");
+            return;
+        }
+
+        float deltaTime = context.DeltaTime;
+        if (deltaTime <= 0f || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime))
+            return;
+
+        float elapsedSeconds = observerData.MeltingElapsedSeconds + deltaTime;
+        int elapsedIntervals = Mathf.FloorToInt(elapsedSeconds / intervalSeconds);
+        if (elapsedIntervals <= 0)
+        {
+            observerData.MeltingElapsedSeconds = elapsedSeconds;
+            observerData.Save(foodData);
+            return;
+        }
+
+        int availableAmount = Mathf.Max(0, Mathf.FloorToInt(context.ItemData.Stack.Amount + 0.0001f));
+        int meltAmount = Mathf.Min(elapsedIntervals, availableAmount);
+        if (meltAmount <= 0)
+        {
+            observerData.MeltingElapsedSeconds = elapsedSeconds % intervalSeconds;
+            observerData.Save(foodData);
+            return;
+        }
+
+        float remainderSeconds = elapsedSeconds - elapsedIntervals * intervalSeconds;
+        observerData.MeltingElapsedSeconds = Mathf.Max(0f, remainderSeconds);
+        observerData.Save(foodData);
+
+        if (!context.InventoryData.TryConsumeFromSlot(context.Slot, meltAmount, out _))
+        {
+            // 库存事务失败时保留已经累计的完整时间，下一次 Tick 继续尝试，避免凭空少融化。
+            observerData.MeltingElapsedSeconds = elapsedSeconds;
+            observerData.Save(foodData);
+            Debug.LogWarning($"[FoodMelting] 融化扣减失败，物品={context.ItemData.IDName}，数量={meltAmount}");
+        }
+    }
+}

@@ -233,6 +233,7 @@ public static class ModuleDataTickObserverRegistry
     static ModuleDataTickObserverRegistry()
     {
         Register(new FoodSpoilageModuleDataObserver());
+        Register(new FoodMeltingModuleDataObserver());
     }
 
     public static void Register(IModuleDataTickObserver observer)

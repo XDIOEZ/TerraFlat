@@ -2060,7 +2060,7 @@
                   "EnableSpoilage": true,
                   "SpoilageElapsedSeconds": 0.0,
                   "SpoilageIntervalSeconds": 1800.0,
-                  "SpoilageTargetItemID": "Meat_Rotten"
+                  "SpoilageTargetItemID": "Humus"
                 }
               },
               {
@@ -4893,7 +4893,7 @@
                   "EnableSpoilage": true,
                   "SpoilageElapsedSeconds": 0.0,
                   "SpoilageIntervalSeconds": 1800.0,
-                  "SpoilageTargetItemID": "Meat_Rotten"
+                  "SpoilageTargetItemID": "Humus"
                 }
               },
               {
@@ -5496,6 +5496,14 @@
                   "SpoilageElapsedSeconds": 0.0,
                   "SpoilageIntervalSeconds": 0.0,
                   "SpoilageTargetItemID": ""
+                }
+              },
+              {
+                "StateKey": "food.melting",
+                "Data": {
+                  "EnableMelting": true,
+                  "MeltingElapsedSeconds": 0.0,
+                  "MeltingIntervalSeconds": 300.0
                 }
               },
               {

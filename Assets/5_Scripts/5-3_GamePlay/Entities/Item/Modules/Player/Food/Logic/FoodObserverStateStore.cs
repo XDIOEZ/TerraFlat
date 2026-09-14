@@ -6,6 +6,7 @@ using System.Globalization;
 public static class FoodObserverStateStore
 {
     public const string SpoilageStateKey = "food.spoilage";
+    public const string MeltingStateKey = "food.melting";
     public const string ConsumptionStateKey = "food.consumption";
 
     public static FoodMechanicStateData Find(ModData_FoodData data, string key)
