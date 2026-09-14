@@ -252,19 +252,19 @@ public class Mod_BaseDroper : Module
         [Tooltip("每秒旋转角度（单位：度）")]
         public float rotationSpeed = 360f;
 
-        [Tooltip("落点进入水体后是否已切换到下沉阶段。")]
+        [Tooltip("旧存档兼容字段：历史版本曾把水体下沉态写入 Drop；新运行时不再写入。")]
         public bool waterSinking;
 
-        [Tooltip("水体下沉阶段已经推进的时间。")]
+        [Tooltip("旧存档兼容字段：历史水体下沉进度；新运行时不再写入。")]
         public float waterSinkElapsed;
 
-        [Tooltip("落点进入水体后是否判定为漂浮。")]
+        [Tooltip("旧存档兼容字段：历史版本曾把水体漂浮态写入 Drop；新运行时不再写入。")]
         public bool waterFloating;
 
-        [Tooltip("漂浮状态最终使用的水线深度。")]
+        [Tooltip("旧存档兼容字段：历史漂浮水线深度；新运行时不再写入。")]
         public float waterFloatDepth;
 
-        [Tooltip("漂浮入水/上浮过渡已经推进的时间。")]
+        [Tooltip("旧存档兼容字段：历史漂浮过渡进度；新运行时不再写入。")]
         public float waterFloatElapsed;
         
         [JsonIgnore]

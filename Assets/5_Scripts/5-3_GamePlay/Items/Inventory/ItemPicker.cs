@@ -257,8 +257,6 @@ public class ItemPicker : Module
             return;
         }
 
-        // 漂浮状态属于世界运行态，不应被克隆进库存物品；本次 ModuleSave 只跳过该临时掉落模块。
-        Mod_Droping.PrepareFloatingPickupSnapshot(pickAble);
         pickAble.ModuleSave();
         if (TryAcceptNetworkPickup(pickAble.itemData))
         {
@@ -267,7 +265,6 @@ public class ItemPicker : Module
             if (!pickAble.itemData.Stack.CanBePickedUp)
             {
                 pickupAttemptedItems.Remove(pickAble);
-                Mod_Droping.PrepareFloatingItemForDespawn(pickAble);
                 ItemMgr.Instance.DespawnItem(pickAble);
             }
             return;

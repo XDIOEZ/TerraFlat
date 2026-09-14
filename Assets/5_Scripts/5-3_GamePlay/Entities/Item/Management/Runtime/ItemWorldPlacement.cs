@@ -19,8 +19,8 @@ internal static class ItemWorldPlacement
             return;
         }
 
-        // 新版区块窗口尚未绑定目标画面时，物品先留在运行时根节点，
-        // 由 Mod_Droping.Load 再绑定到 ChunkView；这里绝不能触发旧 Chunk 查找。
+        // 新版区块窗口下，散落物的临时 ChunkView 归属由具体世界状态在最终落点确认后建立；
+        // 这里绝不能为了找父级触发旧 Chunk 同步加载。
         if (ChunkMgr.ExistingInstance != null &&
             ChunkMgr.ExistingInstance.IsWorldModelRuntimeActive)
         {
@@ -51,10 +51,10 @@ internal static class ItemWorldPlacement
     }
 
     /// <summary>
-    /// 将一个正在执行掉落动画的物品绑定到新版 ChunkView 临时物品节点。
+    /// 将一个运行时散落物绑定到新版 ChunkView 临时物品节点。
     /// 不访问旧 Chunk 字典，也不请求旧区块加载。
     /// </summary>
-    internal static bool TryAttachWorldModelDrop(Item item, Vector2 position)
+    internal static bool TryAttachWorldModelTransientItem(Item item, Vector2 position)
     {
         if (item == null || item.gameObject == null)
             return false;

@@ -69,6 +69,7 @@ public partial class ItemMgr
         RegisterRuntimeItem(item, itemData.IDName);
         ItemWorldPlacement.Attach(item, itemObj, position, parent);
         RuntimeItemInstantiated?.Invoke(item);
+        WorldItemWaterSystem.ScheduleSpawnCheck(item);
 
         return item;
     }
@@ -83,7 +84,9 @@ public partial class ItemMgr
         if (item.DestructionHandled)
             return;
 
+        WorldItemWaterSystem.CancelSpawnCheck(item);
         RuntimeItemDespawning?.Invoke(item);
+        WorldItemWaterSystem.ClearRuntimeState(item);
 
         if (detachFromChunk)
             item.GetComponentInParent<Chunk>()?.RemoveItem(item);

@@ -37,6 +37,7 @@
       "description": "含盐量很高的海水，可通过加热蒸发获得盐。",
       "category": "water",
       "visualState": "sea",
+      "buoyancyThresholdMultiplier": 1.5,
       "drinkable": true,
       "hydrationPerServing": 10.0,
       "drinkEffects": [

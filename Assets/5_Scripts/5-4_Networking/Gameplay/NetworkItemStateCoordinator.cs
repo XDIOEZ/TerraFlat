@@ -498,8 +498,7 @@ namespace FlatWorld.Networking.Gameplay
                 return;
             }
 
-            // 漂浮是世界临时状态；拾取载荷必须剔除掉落模块，否则会把水面状态带进库存物品。
-            Mod_Droping.PrepareFloatingPickupSnapshot(item);
+            // 水体浮沉现在是非持久化的世界运行态，不会写入 ItemData/ModuleData。
             byte[] payload = CaptureSafely(item);
             if (!ItemNetworkStateSerialization.IsValidPayload(payload))
             {

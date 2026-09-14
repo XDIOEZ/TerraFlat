@@ -57,7 +57,8 @@ public sealed class LiquidDefinition
         bool drinkable,
         float hydrationPerServing,
         IReadOnlyList<LiquidDrinkEffect> drinkEffects,
-        LiquidHeatProcess heatProcess)
+        LiquidHeatProcess heatProcess,
+        float buoyancyThresholdMultiplier = 1f)
     {
         Id = id;
         DisplayName = displayName;
@@ -68,6 +69,7 @@ public sealed class LiquidDefinition
         HydrationPerServing = hydrationPerServing;
         DrinkEffects = drinkEffects ?? Array.Empty<LiquidDrinkEffect>();
         HeatProcess = heatProcess;
+        BuoyancyThresholdMultiplier = buoyancyThresholdMultiplier;
     }
 
     public string Id { get; }
@@ -79,6 +81,8 @@ public sealed class LiquidDefinition
     public float HydrationPerServing { get; }
     public IReadOnlyList<LiquidDrinkEffect> DrinkEffects { get; }
     public LiquidHeatProcess HeatProcess { get; }
+    /// <summary>世界掉落物浮沉阈值倍率；1 保持基础阈值不变。</summary>
+    public float BuoyancyThresholdMultiplier { get; }
 }
 
 /// <summary>一次饮用液体时可能附加的 Buff；概率和反馈属于液体定义，而不是容器或水地块。</summary>
@@ -126,6 +130,9 @@ public sealed class LiquidDefinitionDto
 
     [JsonProperty("heatProcess")]
     public LiquidHeatProcessDto HeatProcess;
+
+    [JsonProperty("buoyancyThresholdMultiplier")]
+    public float BuoyancyThresholdMultiplier = 1f;
 
     [JsonProperty("labelKey")]
     public string LabelKey;
@@ -231,6 +238,9 @@ public static class LiquidDefinitionFactory
             throw new InvalidDataException($"液体 {id} hydrationPerServing 不能小于 0");
         if (!dto.Drinkable && dto.HydrationPerServing > 0f)
             throw new InvalidDataException($"液体 {id} 不可饮用时不能配置 hydrationPerServing");
+        ValidateFinite(dto.BuoyancyThresholdMultiplier, id, nameof(dto.BuoyancyThresholdMultiplier));
+        if (dto.BuoyancyThresholdMultiplier <= 0f)
+            throw new InvalidDataException($"液体 {id} buoyancyThresholdMultiplier 必须大于 0");
 
         List<LiquidDrinkEffect> drinkEffects = BuildDrinkEffects(id, dto.Drinkable, dto.DrinkEffects);
 
@@ -247,7 +257,8 @@ public static class LiquidDefinitionFactory
             dto.Drinkable,
             dto.HydrationPerServing,
             drinkEffects,
-            heatProcess);
+            heatProcess,
+            dto.BuoyancyThresholdMultiplier);
     }
 
     /// <summary>构建整个本体分包并拒绝重复 ID。</summary>

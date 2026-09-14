@@ -213,6 +213,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         }
 
         _tickScheduler.Update(RuntimeItems, Time.deltaTime, RefreshRuntimeItemIndexes);
+        WorldItemWaterSystem.ProcessPendingSpawnChecks();
     }
 
     private void LateUpdate()

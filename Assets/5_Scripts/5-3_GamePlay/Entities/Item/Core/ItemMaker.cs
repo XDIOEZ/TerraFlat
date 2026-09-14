@@ -91,7 +91,7 @@ public class ItemMaker
     public void DropItem_cric(Item item, Vector3 startPos, float radius)
     {
         item.transform.position = WorldTopologyRuntime.NormalizePosition(startPos);
-        ItemWorldPlacement.TryAttachWorldModelDrop(item, item.transform.position);
+        ItemWorldPlacement.TryAttachWorldModelTransientItem(item, item.transform.position);
 
         // 设置物品暂时不可被拾取
         item.itemData.Stack.CanBePickedUp = false;
@@ -120,7 +120,7 @@ public class ItemMaker
     public void DropItemWithAnimation(Transform itemTransform, Vector3 startPos, Vector3 endPos, Item item)
     {
         item.transform.position = WorldTopologyRuntime.NormalizePosition(startPos);
-        ItemWorldPlacement.TryAttachWorldModelDrop(item, item.transform.position);
+        ItemWorldPlacement.TryAttachWorldModelTransientItem(item, item.transform.position);
         item.itemData.Stack.CanBePickedUp = false;
 
         item.StartCoroutine(

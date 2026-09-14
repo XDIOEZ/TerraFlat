@@ -28,7 +28,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     [Min(0f), Tooltip("满蓄力时的伤害倍率。")]
     public float MaxDamageMultiplier = 1f;
 
-    [Min(0.05f), Tooltip("没有命中目标时一次完整虚拟抛物线的飞行时长，同时作为安全上限。")]
+    [Min(0.05f), Tooltip("满蓄力且没有命中目标时的完整虚拟抛物线飞行时长，同时作为安全上限；未满蓄力会按蓄力比例缩短。")]
     public float MaxFlightSeconds = 2.5f;
 
     [Range(0f, 1f), Tooltip("投射结束后保留为可拾取物品的概率；箭矢默认 50%。")]
@@ -191,7 +191,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _damage.SetDamageValues(_baseDamage.Scaled(damageMultiplier));
         _damage.MaxAttackTargets = 1;
 
-        float flightSeconds = Mathf.Max(0.05f, MaxFlightSeconds);
+        // 飞行时长与蓄力保持同一比例：轻点只飞很短一段，满蓄力才使用完整持续时间。
+        float flightSeconds = Mathf.Max(0.05f, MaxFlightSeconds * normalizedCharge);
         float virtualGravity = Mathf.Max(0.01f, VirtualGravity);
         _flightRemain = flightSeconds;
         _flightElapsed = 0f;
@@ -333,6 +334,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
         if (EmbedOnDamageReceiverWhenRecovered && hitReceiver != null)
             EmbedInReceiver(hitReceiver);
+        else
+            WorldItemWaterSystem.ScheduleSpawnCheck(item);
 
         _endingFlight = false;
     }
