@@ -111,6 +111,8 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	[SerializeField, ReadOnly] private float _damageThreatRemain;
 	private Vector3 _lastDamageThreatPosition;
 	private DamageReceiver _damageEventSource;
+	// 睡眠中受到有效伤害后锁存一次唤醒请求，直到真正离开睡眠状态。
+	private bool _sleepInterruptedByDamage;
 	// 路径代价拒绝后暂时屏蔽同一追击目标，避免状态机立即重复追击。
 	private Item _pathCostRejectedChaseTarget;
 	private float _pathCostRejectedChaseRetryTimer;
@@ -169,6 +171,9 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 
 	/// <summary>判断是否为睡眠状态，供统一睡眠表现同步。</summary>
 	protected virtual bool IsSleepState(TState state) => false;
+
+	/// <summary>当前睡眠是否已被有效伤害打断，睡眠状态条件应优先消费此标记。</summary>
+	protected bool SleepInterruptedByDamage => _sleepInterruptedByDamage;
 
 	/// <summary>
 	/// How long this animal remembers the source that hurt it.
@@ -233,6 +238,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		_wanderWaitTimer = 0f;
 		_hasWanderTarget = false;
 		_lastPlayedAnimation = null;
+		_sleepInterruptedByDamage = false;
 		ClearRecentDamageThreat();
 		ClearPathCostRejectedChaseTarget();
 
@@ -442,6 +448,10 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 
 			// 子类自定义切换逻辑
 			OnBeforeSwitchState(previous, next);
+
+			// 唤醒请求只负责打断当前这一次睡眠；后续是否再次入睡由子类冷却与条件决定。
+			if (IsSleepState(previous) && !IsSleepState(next))
+				_sleepInterruptedByDamage = false;
 		});
 
 		if (DebugLogEnabled)
@@ -997,7 +1007,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	private void BindDamageThreatEvents()
 	{
 		UnbindDamageThreatEvents();
-		if (_hp == null || DamageThreatMemoryDuration <= 0f)
+		if (_hp == null)
 			return;
 
 		_damageEventSource = _hp;
@@ -1021,8 +1031,14 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 			return;
 		}
 
+		if (IsSleepState(_currentState))
+		{
+			_sleepInterruptedByDamage = true;
+			_stateDecisionTimer = 0f;
+		}
+
 		OnDamageReceived(damageInfo);
-		if (damageInfo.Attacker == null)
+		if (damageInfo.Attacker == null || DamageThreatMemoryDuration <= 0f)
 			return;
 
 		_recentDamageThreat = damageInfo.Attacker;

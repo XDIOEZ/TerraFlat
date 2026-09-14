@@ -252,7 +252,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	protected override float DetectorRefreshInterval => detectorRefreshInterval;
 	protected override bool DebugLogEnabled => debugLog;
-	/// <summary>启用基类受伤事件监听，野猪受伤后刷新减伤 Buff。</summary>
+	/// <summary>短时记录伤害来源；受伤事件本身由 AI 基类统一监听。</summary>
 	protected override float DamageThreatMemoryDuration => 0.1f;
 	protected override bool IsMoveState(WildBoarState state) => state == WildBoarState.Move;
 	protected override bool IsIdleState(WildBoarState state) => state == WildBoarState.Idle;
@@ -681,6 +681,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 		if (_currentState == WildBoarState.Sleep)
 		{
+			if (SleepInterruptedByDamage) return false;
 			if (_stateElapsed < sleepDuration) return true;
 			return IsNightTime() || hpRate < sleepExitHpRate;
 		}

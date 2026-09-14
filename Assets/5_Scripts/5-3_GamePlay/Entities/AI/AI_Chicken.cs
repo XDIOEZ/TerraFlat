@@ -536,6 +536,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 		if (_currentState == ChickenState.Sleep)
 		{
+			if (SleepInterruptedByDamage) return false;
 			if (_stateElapsed < sleepDuration) return true;
 			return IsNightTime() || hpRate < sleepExitHpRate;
 		}
