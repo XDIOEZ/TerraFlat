@@ -30,7 +30,7 @@ public partial class Inventory_Data
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     public bool HasUnlimitedSlots { get; private set; }
 
-    /// <summary>玩家主背包允许可堆叠物品在单格内无限叠加。</summary>
+    /// <summary>玩家主背包、手部槽和快捷栏允许可堆叠物品在单格内无限叠加。</summary>
     [MemoryPackIgnore, FastClonerIgnore, JsonIgnore]
     public bool HasUnlimitedStackSize { get; private set; }
 

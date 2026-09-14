@@ -152,7 +152,9 @@ public partial class Inventory_Data
 
         itemSlots[index] = new ItemSlot(index)
         {
-            SlotMaxVolume = 100
+            SlotMaxVolume = HasUnlimitedStackSize
+                ? float.MaxValue
+                : Inventory_Data.DefaultSlotVolume
         };
         Debug.LogError($"[Inventory_Data] 检测到空槽位引用，已在索引 {index} 处自动补齐 ItemSlot 实例");
         return itemSlots[index];

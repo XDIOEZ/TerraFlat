@@ -542,7 +542,9 @@ public class Inventory
                 player.Data?.MaxCarryVolume ?? Inventory_Data.DefaultPlayerBagMaxVolume);
         else
         {
-            Data.SetUnlimitedStackSize(false);
+            // 玩家手部槽与快捷栏只是主背包物品的临时/快捷承载入口，
+            // 单格堆叠规则应与主背包一致；重量与体积仍由玩家统一携带容量统计负责。
+            Data.SetUnlimitedStackSize(IsHandInventory() || IsHotBarInventory());
             Data.ClearCarryCapacity();
         }
 
