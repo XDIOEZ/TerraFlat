@@ -59,6 +59,7 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
     private Coroutine panelDestroyCoroutine;
     private Player currentInteractingPlayer;
     private Player smeltingActor;
+    private LocalTemperatureSource localTemperatureSource; // 工作中的炉体才向环境温度层注册热源。
     #endregion
 
     #region 生命周期
@@ -66,10 +67,12 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
     public override void Load()
     {
         mod_Fuel = item.GetComponentInChildren<Mod_Fuel>();
+        localTemperatureSource = GetComponent<LocalTemperatureSource>();
         RestoreSavedState();
         InputInventory.InitData();
         OutputInventory.InitData();
         FuelInventory.InitData();
+        RefreshLocalTemperatureSource();
     }
 
     public void OnInteractStart(Item playerItem)
@@ -291,8 +294,21 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
             }
         }
 
+        RefreshLocalTemperatureSource();
+
         // 同步所有UI
         UpdateUI();
+    }
+
+    /// <summary>燃烧时启用局部热源，熄火后立即从环境温度层撤销。</summary>
+    private void RefreshLocalTemperatureSource()
+    {
+        if (localTemperatureSource == null)
+            return;
+
+        bool shouldEnable = GetBurningState();
+        if (localTemperatureSource.enabled != shouldEnable)
+            localTemperatureSource.enabled = shouldEnable;
     }
 
     /// <summary>
@@ -569,6 +585,7 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
 
         // 点燃燃料模块
         mod_Fuel?.SetIgnited(true);
+        RefreshLocalTemperatureSource();
         if (mod_Fuel != null && mod_Fuel.GetIgnitedState())
         {
             GameplayProgressEvents.PublishFurnaceIgnited(
@@ -614,6 +631,7 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
     {
         Data.IsSmelting = isBurning;
         mod_Fuel?.SetIgnited(isBurning);
+        RefreshLocalTemperatureSource();
 
         if (isBurning)
         {

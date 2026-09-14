@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7726956549993551631}
   - component: {fileID: 215992678395791045}
+  - component: {fileID: 6483512096734207511}
   m_Layer: 0
   m_Name: BuildingFeature_Bonfire_Mod_Furnace
   m_TagString: Untagged
@@ -163,3 +164,17 @@ MonoBehaviour:
   fuelSlider: {fileID: 0}
   temperatureSlider: {fileID: 0}
   TemperatureText: {fileID: 0}
+--- !u!114 &6483512096734207511
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4677258519102867415}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33d0f57f8ff70f64ab5ac8c9c49cd3d6, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  radius: 6
+  celsiusOffset: 15

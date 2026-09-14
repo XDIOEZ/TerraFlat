@@ -22,7 +22,9 @@ Shader "Game/2D/Torch-Emissive-Overlay"
             "DisableBatching" = "True"
         }
 
-        Blend SrcAlpha OneMinusSrcAlpha
+        // 只给被 2D 阴影压暗的像素提供自发光下限；原 Lit Sprite 如果被其他光照得更亮，继续保留更亮结果。
+        Blend One One
+        BlendOp Max
         Cull Off
         ZWrite Off
 
@@ -82,7 +84,10 @@ Shader "Game/2D/Torch-Emissive-Overlay"
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 clip(input.localY - _ClipLocalY);
-                return SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.color;
+                half4 sprite = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.color;
+                // Max 混合不应让透明像素携带的 RGB 污染背景，因此先预乘 Alpha。
+                sprite.rgb *= sprite.a;
+                return sprite;
             }
         ENDHLSL
 

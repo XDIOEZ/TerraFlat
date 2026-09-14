@@ -549,7 +549,8 @@ MonoBehaviour:
     Intensity: 1
     Range: 8
     InnerRadius: 0.1
-  keepUpperSpriteEmissive: 1
+  keepUpperSpriteEmissive: 0
+  ignore2DShadowsOnSourceSprite: 1
   emissiveStartLocalY: 0.38
 --- !u!114 &7643096827154029811
 MonoBehaviour:

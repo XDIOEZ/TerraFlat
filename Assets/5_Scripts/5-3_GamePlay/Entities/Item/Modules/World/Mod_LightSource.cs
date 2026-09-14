@@ -35,6 +35,9 @@ public class Mod_LightSource : Module
     [Tooltip("仅用于火把等自身发光的 Sprite。开启后，指定高度以上额外绘制一层不受 2D 阴影影响的自发光区域。")]
     [SerializeField] private bool keepUpperSpriteEmissive;
 
+    [Tooltip("开启后让整个源 Sprite 使用不受 2D 阴影压暗的覆盖层；仍保留比自身基准更亮的光照结果，也不改变它对世界投射的阴影。")]
+    [SerializeField] private bool ignore2DShadowsOnSourceSprite;
+
     [Tooltip("自发光覆盖层开始绘制的 Sprite 本地 Y 坐标。")]
     [SerializeField] private float emissiveStartLocalY = 0.38f;
 
@@ -210,11 +213,12 @@ public class Mod_LightSource : Module
 
     /// <summary>
     /// Blocking Tile 的 ShadowCaster2D 开启 selfShadows 后，会通过 2D 阴影模板影响所有与墙体占地重叠的 Lit Sprite。
-    /// 火把本身属于发光体，因此只把 Sprite 上半部额外绘制为 Unlit；墙体自己的实体遮光规则保持不变。
+    /// 发光体可按配置只覆盖上半部，或覆盖整个源 Sprite；覆盖层只抬高被阴影压暗的结果，仍保留更亮的 Lit 结果。
+    /// 墙体自己的实体遮光规则保持不变。
     /// </summary>
     private void RefreshEmissiveOverlay()
     {
-        if (!keepUpperSpriteEmissive)
+        if (!keepUpperSpriteEmissive && !ignore2DShadowsOnSourceSprite)
         {
             if (emissiveOverlayRenderer != null)
                 emissiveOverlayRenderer.enabled = false;
@@ -255,7 +259,10 @@ public class Mod_LightSource : Module
         emissiveOverlayRenderer.GetPropertyBlock(emissivePropertyBlock);
         // 自定义 Sprite Shader 使用 MPB 时必须同步 _MainTex，否则运行时代理可能采到白纹理。
         emissivePropertyBlock.SetTexture(MainTexId, emissiveSourceRenderer.sprite.texture);
-        emissivePropertyBlock.SetFloat(ClipLocalYId, emissiveStartLocalY);
+        float clipLocalY = ignore2DShadowsOnSourceSprite
+            ? emissiveSourceRenderer.sprite.bounds.min.y - Mathf.Epsilon
+            : emissiveStartLocalY;
+        emissivePropertyBlock.SetFloat(ClipLocalYId, clipLocalY);
         emissiveOverlayRenderer.SetPropertyBlock(emissivePropertyBlock);
     }
 

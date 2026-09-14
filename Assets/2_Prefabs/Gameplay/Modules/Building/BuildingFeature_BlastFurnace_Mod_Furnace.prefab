@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6695189488738019421}
   - component: {fileID: 6027565125344713720}
+  - component: {fileID: 5704126591763048237}
   m_Layer: 0
   m_Name: BuildingFeature_BlastFurnace_Mod_Furnace
   m_TagString: Untagged
@@ -163,3 +164,17 @@ MonoBehaviour:
   fuelSlider: {fileID: 0}
   temperatureSlider: {fileID: 0}
   TemperatureText: {fileID: 0}
+--- !u!114 &5704126591763048237
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8531267528828031613}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33d0f57f8ff70f64ab5ac8c9c49cd3d6, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  radius: 6
+  celsiusOffset: 15
