@@ -388,6 +388,40 @@
       "actions": []
     },
     {
+      "id": "core:石锤",
+      "displayName": "石锤",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ore_Stone",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "StoneHammer",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
       "id": "core:粗铁镐",
       "displayName": "粗铁铁镐",
       "recipeType": "crafting",

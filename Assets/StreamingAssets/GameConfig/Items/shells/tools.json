@@ -2690,7 +2690,44 @@
               "Chopping": 0.0,
               "Blunt": 6.0
             },
-            "tileDamageToolKind": 3
+            "tileDamageToolKind": 3,
+            "buildingDamageMultiplier": 10.0
+          }
+        }
+      }
+    },
+    {
+      "id": "StoneHammer",
+      "parent": "WoodHammer",
+      "gameName": "石锤",
+      "description": "以石头制成锤头、木棍作为握柄的重型锤子。比木锤威力更高，但每次挥击会消耗更多体力。",
+      "weight": 2.8,
+      "volume": 2.8,
+      "visual": {
+        "color": {
+          "r": 0.82,
+          "g": 0.82,
+          "b": 0.82,
+          "a": 1.0
+        }
+      },
+      "modules": {
+        "damage": {
+          "parameters": {
+            "DamageValues": {
+              "Cutting": 0.0,
+              "Piercing": 0.0,
+              "Chopping": 0.0,
+              "Blunt": 12.0
+            }
+          }
+        },
+        "animation": {
+          "prefab": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
+          "enabled": true,
+          "parameters": {
+            "staminaCostPerAttack": 2.7
           }
         }
       }

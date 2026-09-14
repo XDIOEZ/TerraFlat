@@ -5,8 +5,6 @@ using UnityEngine;
 [RequireComponent(typeof(BoxCollider2D))]
 public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHarvestTool, IBuildingDamageSource
 {
-    private const float HammerBuildingDamageMultiplier = 10f;
-
     #region 资源工具能力
     [SerializeField] private ResourceToolKind harvestKind; // 采集工具类别。
     [SerializeField, Min(0)] private int harvestTier; // 开采等级，与战斗伤害分离。
@@ -53,6 +51,8 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
     [Header("格子建筑伤害")]
     [SerializeField, Tooltip("明确标记该攻击模块可使用的拆墙工具类型。None 不会绕过目标自身的工具限制。")]
     private TileDamageToolKind tileDamageToolKind = TileDamageToolKind.None;
+    [SerializeField, Min(0f), Tooltip("建筑克制倍率；在目标完成防御与最低有效伤害规则后应用。1 表示无额外克制。")]
+    private float buildingDamageMultiplier = 1f;
 
     [Header("武器攻击音效")]
     [SerializeField]
@@ -105,9 +105,8 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
     public CombatWeaponAudioClass WeaponAudioClass => weaponAudioClass;
     public string AttackAudioCueId => attackAudioCueId;
     public TileDamageToolKind TileDamageToolKind => tileDamageToolKind;
-    /// <summary>锤类放大目标完成防御/最低有效伤害规则后的建筑伤害，不直接改写目标防御值。</summary>
-    public float BuildingDamageMultiplier =>
-        tileDamageToolKind == TileDamageToolKind.Hammer ? HammerBuildingDamageMultiplier : 1f;
+    /// <summary>独立返回建筑克制倍率，避免把工具门槛与建筑伤害倍率隐式绑定。</summary>
+    public float BuildingDamageMultiplier => Mathf.Max(0f, buildingDamageMultiplier);
     public Collider2D DamageCollider => damageCollider;
     #endregion
 
