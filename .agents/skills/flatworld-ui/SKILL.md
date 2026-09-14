@@ -13,6 +13,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 暖黄只用于细强调线、焦点描边、选择状态和少量关键操作；危险/生命等玩法语义色允许保留低饱和状态色，但不能让整套界面重新变成彩色主题。
 - 文字继续使用现有 TMP/本地化字体与移动端字号、触控尺寸约束；标题、正文、说明只靠字号/明度/字重分级，禁止为填充视觉新增装饰性英文眉题、重复说明或无意义标签。
 - 正式视觉必须落在可复用控件/Prefab 与 `FlatWorldUITheme` 中；Prefab 构建器保存前应重新应用统一主题，避免未来重建时恢复旧蓝绿/图集皮肤。仅修改业务行为时，不顺带整体翻修既有界面。
+- `FlatWorldUIThemeMigrator` 只能通过 `FlatWorld/UI/主题迁移/` 菜单显式执行；禁止使用 `[InitializeOnLoad]`、`delayCall`、`EditorApplication.update` 等启动/重载钩子自动遍历并保存全部 UI Prefab，避免仅打开 Unity 就污染 Git 工作区。迁移版本升级后由开发者主动执行“执行当前版本迁移”，需要覆盖重烘焙时再使用“强制重新应用统一主题”。
 
 ## 入口
 

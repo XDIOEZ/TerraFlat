@@ -1,4 +1,7 @@
 root = true
 
+[*]
+end_of_line = lf
+
 [*.{cs,json,asmdef,asmref,shader,cginc,compute,hlsl,uxml,uss,xml,md,txt,lua,py,ps1,yaml,yml}]
 charset = utf-8
