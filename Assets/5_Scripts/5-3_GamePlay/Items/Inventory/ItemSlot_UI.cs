@@ -160,7 +160,11 @@ public class ItemSlot_UI : MonoBehaviour,
     [SerializeField, Min(0.1f)] private float touchHalfDragReadySeconds = 0.85f;
     [SerializeField, Min(1f)] private float touchMoveTolerance = 16f;
     [SerializeField] private GameObject touchLongPressProgressRoot;
+    [Tooltip("方形长按进度的上边；保留旧字段名以兼容已有 Prefab。")]
     [SerializeField] private Image touchLongPressProgressFill;
+    [SerializeField] private Image touchLongPressProgressRight;
+    [SerializeField] private Image touchLongPressProgressBottom;
+    [SerializeField] private Image touchLongPressProgressLeft;
     private int touchPointerId = int.MinValue;
     private Vector2 touchPressPosition;
     private bool touchMovedTooFar;
@@ -242,10 +246,18 @@ public class ItemSlot_UI : MonoBehaviour,
 
 #if UNITY_EDITOR
     /// <summary>编辑器构建器绑定正式 Prefab 内的长按进度视觉。</summary>
-    public void ConfigureTouchLongPressProgressVisuals(GameObject progressRoot, Image progressFill)
+    public void ConfigureTouchLongPressProgressVisuals(
+        GameObject progressRoot,
+        Image progressTop,
+        Image progressRight,
+        Image progressBottom,
+        Image progressLeft)
     {
         touchLongPressProgressRoot = progressRoot;
-        touchLongPressProgressFill = progressFill;
+        touchLongPressProgressFill = progressTop;
+        touchLongPressProgressRight = progressRight;
+        touchLongPressProgressBottom = progressBottom;
+        touchLongPressProgressLeft = progressLeft;
         ResetTouchLongPressProgressVisual();
     }
 #endif
@@ -748,10 +760,14 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>供手部库存把转发来的长按进度显示在唯一的手部插槽上。</summary>
     public void SetTouchLongPressProgressVisual(float normalizedProgress, bool visible)
     {
-        if (touchLongPressProgressRoot == null || touchLongPressProgressFill == null)
+        if (touchLongPressProgressRoot == null ||
+            touchLongPressProgressFill == null ||
+            touchLongPressProgressRight == null ||
+            touchLongPressProgressBottom == null ||
+            touchLongPressProgressLeft == null)
             return;
 
-        SetTouchLongPressProgressFillScale(visible ? normalizedProgress : 0f);
+        SetTouchLongPressProgressSquare(visible ? normalizedProgress : 0f);
         touchLongPressProgressRoot.SetActive(visible);
         if (visible)
             touchLongPressProgressRoot.transform.SetAsLastSibling();
@@ -760,20 +776,31 @@ public class ItemSlot_UI : MonoBehaviour,
     /// <summary>取消、完成或离开槽位时立即收起进度视觉。</summary>
     private void ResetTouchLongPressProgressVisual()
     {
-        if (touchLongPressProgressFill != null)
-            SetTouchLongPressProgressFillScale(0f);
+        SetTouchLongPressProgressSquare(0f);
         if (touchLongPressProgressRoot != null)
             touchLongPressProgressRoot.SetActive(false);
     }
 
-    /// <summary>纯色 Image 没有 Sprite 时 Filled 模式不会裁切，改用底部 Pivot 的 Y 缩放表达进度。</summary>
-    private void SetTouchLongPressProgressFillScale(float normalizedProgress)
+    /// <summary>把 0~1 进度依次分配给上、右、下、左四条边，形成顺时针方形环。</summary>
+    private void SetTouchLongPressProgressSquare(float normalizedProgress)
     {
-        if (touchLongPressProgressFill == null)
+        float squareProgress = Mathf.Clamp01(normalizedProgress) * 4f;
+        SetTouchLongPressProgressEdge(touchLongPressProgressFill, Mathf.Clamp01(squareProgress), true);
+        SetTouchLongPressProgressEdge(touchLongPressProgressRight, Mathf.Clamp01(squareProgress - 1f), false);
+        SetTouchLongPressProgressEdge(touchLongPressProgressBottom, Mathf.Clamp01(squareProgress - 2f), true);
+        SetTouchLongPressProgressEdge(touchLongPressProgressLeft, Mathf.Clamp01(squareProgress - 3f), false);
+    }
+
+    /// <summary>从每条边预设的起点 Pivot 朝前缩放，避免无 Sprite 的 Image 依赖 Filled 裁切。</summary>
+    private static void SetTouchLongPressProgressEdge(Image edge, float normalizedProgress, bool horizontal)
+    {
+        if (edge == null)
             return;
 
-        RectTransform fillRect = touchLongPressProgressFill.rectTransform;
-        fillRect.localScale = new Vector3(1f, Mathf.Clamp01(normalizedProgress), 1f);
+        float progress = Mathf.Clamp01(normalizedProgress);
+        edge.rectTransform.localScale = horizontal
+            ? new Vector3(progress, 1f, 1f)
+            : new Vector3(1f, progress, 1f);
     }
 
     private void CancelTouchHalfDragReady()

@@ -2797,7 +2797,7 @@ public static partial class RuntimeUIPrefabBuilder
         return image;
     }
 
-    /// <summary>为库存槽固化手机整组放置的长按进度视觉，尺寸略大于手部槽以露出手指边缘。</summary>
+    /// <summary>为库存槽固化手机整组放置的方形环长按进度，尺寸略大于手部槽以露出手指边缘。</summary>
     internal static void EnsureTouchLongPressProgress(Transform root, ItemSlot_UI slot)
     {
         if (slot == null)
@@ -2815,7 +2815,7 @@ public static partial class RuntimeUIPrefabBuilder
         frameRect.anchoredPosition = Vector2.zero;
         frameRect.sizeDelta = new Vector2(112f, 112f);
         Color frameColor = FlatWorldUITheme.Surface;
-        frameColor.a = 0.42f;
+        frameColor.a = 0.18f;
         frame.color = frameColor;
         frame.raycastTarget = false;
         frame.sprite = null;
@@ -2827,30 +2827,53 @@ public static partial class RuntimeUIPrefabBuilder
         frameOutline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
         frameOutline.useGraphicAlpha = true;
 
-        Transform existingFill = FindTransform(frame.transform, "LongPress Hold Fill");
-        Image fill = existingFill != null ? existingFill.GetComponent<Image>() : null;
-        if (fill == null)
-            fill = CreateImage("LongPress Hold Fill", frame.transform, FlatWorldUITheme.Accent);
+        Transform legacyFill = FindTransform(frame.transform, "LongPress Hold Fill");
+        if (legacyFill != null && FindTransform(frame.transform, "LongPress Hold Top") == null)
+            legacyFill.name = "LongPress Hold Top";
 
-        RectTransform fillRect = fill.rectTransform;
-        fillRect.anchorMin = new Vector2(0.5f, 0.5f);
-        fillRect.anchorMax = new Vector2(0.5f, 0.5f);
-        fillRect.pivot = new Vector2(0.5f, 0f);
-        fillRect.anchoredPosition = new Vector2(0f, -52f);
-        fillRect.sizeDelta = new Vector2(104f, 104f);
-        fillRect.localScale = new Vector3(1f, 0f, 1f);
-        Color fillColor = FlatWorldUITheme.Accent;
-        fillColor.a = 0.34f;
-        fill.color = fillColor;
-        fill.raycastTarget = false;
-        fill.sprite = null;
-        fill.type = Image.Type.Simple;
-        fill.fillAmount = 1f;
-        fill.preserveAspect = false;
+        Color edgeColor = FlatWorldUITheme.Accent;
+        edgeColor.a = 0.9f;
+        Image top = EnsureTouchLongPressProgressEdge(frame.transform, "LongPress Hold Top", edgeColor);
+        Image right = EnsureTouchLongPressProgressEdge(frame.transform, "LongPress Hold Right", edgeColor);
+        Image bottom = EnsureTouchLongPressProgressEdge(frame.transform, "LongPress Hold Bottom", edgeColor);
+        Image left = EnsureTouchLongPressProgressEdge(frame.transform, "LongPress Hold Left", edgeColor);
+
+        ConfigureTouchLongPressProgressEdge(top.rectTransform, new Vector2(0f, 0.5f), new Vector2(-52f, 52f), new Vector2(104f, 6f));
+        ConfigureTouchLongPressProgressEdge(right.rectTransform, new Vector2(0.5f, 1f), new Vector2(52f, 52f), new Vector2(6f, 104f));
+        ConfigureTouchLongPressProgressEdge(bottom.rectTransform, new Vector2(1f, 0.5f), new Vector2(52f, -52f), new Vector2(104f, 6f));
+        ConfigureTouchLongPressProgressEdge(left.rectTransform, new Vector2(0.5f, 0f), new Vector2(-52f, -52f), new Vector2(6f, 104f));
 
         frame.gameObject.SetActive(false);
         frame.transform.SetAsLastSibling();
-        slot.ConfigureTouchLongPressProgressVisuals(frame.gameObject, fill);
+        slot.ConfigureTouchLongPressProgressVisuals(frame.gameObject, top, right, bottom, left);
+    }
+
+    /// <summary>创建或复用一条无射线的纯色方形进度边。</summary>
+    private static Image EnsureTouchLongPressProgressEdge(Transform parent, string name, Color color)
+    {
+        Transform existing = FindTransform(parent, name);
+        Image edge = existing != null ? existing.GetComponent<Image>() : null;
+        if (edge == null)
+            edge = CreateImage(name, parent, color);
+
+        edge.color = color;
+        edge.raycastTarget = false;
+        edge.sprite = null;
+        edge.type = Image.Type.Simple;
+        edge.fillAmount = 1f;
+        edge.preserveAspect = false;
+        return edge;
+    }
+
+    /// <summary>每条边用起点 Pivot 缩放，四条边依次组成顺时针方形环。</summary>
+    private static void ConfigureTouchLongPressProgressEdge(RectTransform rect, Vector2 pivot, Vector2 position, Vector2 size)
+    {
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = pivot;
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+        rect.localScale = Vector3.one;
     }
 
     private static void AddNetworkPlayerNameLabel(GameObject root)
