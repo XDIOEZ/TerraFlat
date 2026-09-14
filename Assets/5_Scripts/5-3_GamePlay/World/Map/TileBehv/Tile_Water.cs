@@ -59,7 +59,7 @@ public class Tile_Water : TileBlockBehaviour
             float effectiveImmersion = receiver != null
                 ? receiver.EnterWaterSurvival(item, depthValue)
                 : depthValue;
-            SetWaterVisualState(item, depthValue, true);
+            SetWaterVisualState(item, effectiveImmersion, true);
             ProvideWaterEffects(receiver, effectiveImmersion);
         }
 
@@ -121,7 +121,7 @@ public class Tile_Water : TileBlockBehaviour
         float effectiveImmersion = receiver != null
             ? receiver.UpdateWaterSurvival(item, depthValue, deltaTime)
             : depthValue;
-        SetWaterVisualState(item, depthValue, true);
+        SetWaterVisualState(item, effectiveImmersion, true);
         ProvideWaterEffects(receiver, effectiveImmersion);
     }
 
@@ -143,12 +143,12 @@ public class Tile_Water : TileBlockBehaviour
 
     #region Visual State
 
-    /// <summary>水体遮罩始终直接使用地块真实水深，不受角色漂浮高度和体力状态影响。</summary>
-    private static void SetWaterVisualState(Item item, float waterDepth, bool inWater)
+    /// <summary>角色水体遮罩使用玩法有效淹没高度；深水有体力漂浮时保持 0.3，体力耗尽后随下沉进度升高。</summary>
+    private static void SetWaterVisualState(Item item, float immersionLevel, bool inWater)
     {
         WaterImmersionRenderEffect effect = item.GetComponentInChildren<WaterImmersionRenderEffect>(true);
         if (effect != null)
-            effect.SetActorImmersionState(waterDepth, inWater);
+            effect.SetActorImmersionState(immersionLevel, inWater);
 
         // 水下看不到脚底阴影，阴影状态与水体视觉状态保持同一入口更新。
         ActorShadowManager.GetInstance()?.SetActorInWater(item, inWater);

@@ -8,7 +8,7 @@ public partial class TemperatureMgr : SingletonAutoMono<TemperatureMgr>
 #region 字段
 
     public const float DefaultAmbientTemperature = 20f; // 默认环境温度
-    public const float DamageTickIntervalSeconds = 5f; // 温度伤害结算间隔
+    public const float DamageTickIntervalSeconds = 20f; // 温度伤害结算间隔
 
     public bool EnableDebugLog = false; // 是否输出温度处理调试日志
 

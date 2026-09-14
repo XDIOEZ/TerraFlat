@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// 水体浸没渲染效果模块。
-/// deepValue 仍然控制角色被水面覆盖的高度：浅水保持主体可见，深水逐步把水线推到头部下方。
+/// 角色由水中生存系统传入玩法有效淹没高度：浅水跟随真实水深，深水漂浮时维持水面线，体力耗尽后随下沉推进。
 /// 基础淹没偏移只修正视觉水线，不改写水格深度、移动速度或其他玩法结算。
 /// 水下区域通过染色和透明度表现，不再使用硬裁剪；效果由 ActorRenderEffectController 统一提交。
 /// </summary>
@@ -150,7 +150,7 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
         targetBlend = inWater ? 1f : 0f;
     }
 
-    /// <summary>角色水体直接使用地块真实水深作为遮罩高度，不再经过额外深度曲线或漂浮高度修正。</summary>
+    /// <summary>角色水体直接使用玩法有效淹没高度作为遮罩高度，不再经过额外深度曲线。</summary>
     public void SetActorImmersionState(float immersionLevel, bool inWater)
     {
         useDirectImmersion = true;

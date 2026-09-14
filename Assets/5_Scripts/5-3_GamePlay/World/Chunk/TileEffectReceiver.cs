@@ -35,8 +35,8 @@ public class TileEffectReceiver : Module
     [Header("水中生存")]
     [Tooltip("地块水深超过该值时，有体力的角色主动漂浮并维持该身体淹没高度。")]
     [Range(0f, 1f)] [SerializeField] private float floatingImmersionLevel = 0.3f;
-    [Tooltip("有效淹没超过该高度后开始消耗氧气。")]
-    [Range(0f, 1f)] [SerializeField] private float oxygenSafetyImmersionLevel = 0.7f;
+    [Tooltip("有效淹没达到或超过该高度后开始消耗氧气。")]
+    [Range(0f, 1f)] [SerializeField] private float oxygenSafetyImmersionLevel = 0.6f;
     [Tooltip("体力耗尽后，每秒向地块自然淹没高度下沉的身体比例。")]
     [Min(0.01f)] [SerializeField] private float sinkingImmersionSpeed = 0.35f;
 
@@ -285,7 +285,7 @@ public class TileEffectReceiver : Module
 
     /// <summary>
     /// 推进通用水中生存：水深不超过 0.3 时不漂浮、不耗体力；深水有体力维持 0.3；体力耗尽后下沉到自然水深；
-    /// 有效淹没超过 0.7 后才消耗氧气。
+    /// 有效淹没达到 0.6 后开始消耗氧气。
     /// </summary>
     public float UpdateWaterSurvival(Item actor, float naturalImmersion, float deltaTime)
     {
@@ -406,7 +406,7 @@ public class TileEffectReceiver : Module
 
     private void UpdateWaterBreathing(float immersionLevel, float deltaTime)
     {
-        bool breathBlocked = immersionLevel > oxygenSafetyImmersionLevel;
+        bool breathBlocked = immersionLevel >= oxygenSafetyImmersionLevel;
         waterOxygen?.SetBreathBlocked(breathBlocked);
 
         if (!GameNetwork.HasStateAuthority || deltaTime <= 0f)

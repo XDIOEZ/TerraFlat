@@ -25,7 +25,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         public float Insulation = 0f; // 保温系数(℃，正数偏保暖，负数偏散热)
 
         [LabelText("冷伤起点"), SuffixLabel("℃", true), PropertyTooltip("体温低于该值后开始受到冷伤害。")]
-        public float ColdDamageStart = 34f; // 低于该体温开始受冷伤(℃)
+        public float ColdDamageStart = 5f; // 低于该体温开始受冷伤(℃)
         [LabelText("热伤起点"), SuffixLabel("℃", true), PropertyTooltip("体温高于该值后开始受到热伤害。")]
         public float HotDamageStart = 40f; // 高于该体温开始受热伤(℃)
         [LabelText("冷伤每秒"), PropertyTooltip("低温状态下每秒造成的伤害值。")]
@@ -96,7 +96,9 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     public override void Load()
     {
         ResetTemporaryWarming();
+        float configuredColdDamageStart = Data.ColdDamageStart;
         modData.ReadData(ref Data);
+        Data.ColdDamageStart = configuredColdDamageStart; // 冷伤阈值属于当前玩法配置，不由旧存档覆盖。
         TemperatureMgr.Instance.NormalizeData(Data);
         _damageTickTimer = 0f;
         ResetWaterExposureState();

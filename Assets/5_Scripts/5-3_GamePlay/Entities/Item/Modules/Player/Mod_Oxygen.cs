@@ -1,3 +1,4 @@
+using System;
 using MemoryPack;
 using UltEvents;
 using UnityEngine;
@@ -34,6 +35,8 @@ public partial class Mod_Oxygen : Module
     [Min(0f)] public float drowningDamagePerSecond = 10f; // 氧气归零后每秒基础溺水伤害。
 
     public UltEvent<float> OnOxygenChanged = new(); // 氧气变化通知，供 HUD 等表现层订阅。
+    public event Action<float> OxygenValueChanged; // 运行时氧气变化事件，避免 HUD 轮询。
+    public event Action<bool> BreathBlockedChanged; // 呼吸阻塞变化事件，驱动头顶氧气条显隐。
 
     public override ModuleData _Data
     {
@@ -45,6 +48,8 @@ public partial class Mod_Oxygen : Module
     public float MaxValue => Data?.MaxOxygen ?? 0f;
     public float OxygenRatio => MaxValue > 0f ? Mathf.Clamp01(CurrentValue / MaxValue) : 0f;
     public bool IsInWater => isInWater;
+    public bool IsBreathBlocked => isBreathBlocked;
+    public bool IsOxygenDepleting => isInWater && isBreathBlocked;
     public bool IsDrowning => isInWater && isBreathBlocked && CurrentValue <= 0f;
 
     #endregion
@@ -92,19 +97,27 @@ public partial class Mod_Oxygen : Module
     {
         isInWater = inWater;
         if (!inWater)
-            isBreathBlocked = false;
+            SetBreathBlocked(false);
     }
 
     /// <summary>同步当前是否已经被水淹过安全呼吸线。</summary>
     public void SetBreathBlocked(bool blocked)
     {
-        isBreathBlocked = isInWater && blocked;
+        bool nextBlocked = isInWater && blocked;
+        if (isBreathBlocked == nextBlocked)
+            return;
+
+        isBreathBlocked = nextBlocked;
+        BreathBlockedChanged?.Invoke(isBreathBlocked);
     }
 
     private void ResetWaterExposureState()
     {
+        bool wasBreathBlocked = isBreathBlocked;
         isInWater = false;
         isBreathBlocked = false;
+        if (wasBreathBlocked)
+            BreathBlockedChanged?.Invoke(false);
     }
 
     #endregion
@@ -124,6 +137,7 @@ public partial class Mod_Oxygen : Module
         Data.CurrentOxygen = nextValue;
         OnAction.Invoke(nextValue);
         OnOxygenChanged.Invoke(nextValue);
+        OxygenValueChanged?.Invoke(nextValue);
     }
 
     private void NormalizeData()
