@@ -25,6 +25,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 新模块同时检查脚本、ModuleData、模块/Item Prefab、Addressables 与 JSON 定义。
 - 遇到“物品找不到模块 Prefab”时先核对 `[GameRes] Prefab 加载计划` 和失败阶段；通用 Prefab 数量为 0 时先查标签、目录与初始化，不能直接断言某个物品定义错误。
 - JSON 本体按职责组合通用模块；单个资源节点的名称和玩法配置不能成为专用模块 Prefab。周期资源应由生产模块写入库存接收契约，再由采集模块处理交互和掉落。
+- `MineResource_Base` 只提供矿点外壳与基础数据，不会自动附加采矿门槛；每个具体矿物资源节点都必须显式组合 `Mod_ResourceHarvest`，并配置有效 `requiredTool/minimumTier`，否则会退化为普通可受伤世界物。
 - 通用世界实体外壳只能提供 `Item`、表现节点与查询 Collider；作物等玩法必须由 JSON 组合模块。成熟交互的可扩展副作用通过 `ICropHarvestAction` 注册，权威状态模块只负责按顺序调度动作与结束实体生命周期。
 - Prefab 必须由 Unity 序列化生成，禁止手写根对象 `fileID: 100100000`；该值是 Prefab 资产保留 ID，把它分配给 GameObject 会触发 `GameObject to Prefab` 的 PPtr 转换错误。
 - 批量调整 Prefab override 后不得在 `m_Modification.m_Modifications` 序列中留下空项；Unity 会把对应 `PrefabInstance` 判为损坏并在导入时删除整个嵌套模块，修改后必须重新导入并核对实际层级。
@@ -52,9 +53,9 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - `ItemPicker` 不能只依赖 `OnTriggerEnter2D`：掉落/飞行或联机预约可能让物品先以不可拾取状态进入范围，状态恢复后应补偿检查，并限制为一次性请求以避免部分入包或网络请求重复执行。
 - 掉落拾取时序由 `Mod_Droping` 的轨迹状态决定：必须先移除掉落模块，再把 `CanBePickedUp` 设为 true；拾取器不能只信任这个数据标志。
 - 世界掉落物的水体浮沉只能把 `ItemStack.Weight / Volume` 当作玩法比值，不能直接按真实水密度把阈值写成 1.0；当前内容数据里木墙约 0.32、石墙约 0.67、铜/青铜/铁墙约 0.69/0.78/0.88，因此阈值应按这些已定义物品重新标定，而不是套物理单位常数。
-- 水体浮沉/漂流属于掉落物的世界临时表现态：抛掷轨迹结束后必须恢复原本的可拾取语义，不能用 `CanBePickedUp=false` 表示“在水中”，否则建筑召唤器等物品会被交互系统误判成不可拾取世界实体；拾取时应剔除临时水体掉落模块，不能把浮沉状态带入库存数据。
-- 世界掉落物随水移动时统一读取 `ChunkMgr.TryGetRuntimeWaterCurrent`；长期漂移跨越新版 ChunkView 时必须通过 `ItemWorldPlacement.TryAttachWorldModelDrop` 重绑临时物品归属，不能只改 Transform 后继续挂在旧 `ChunkNaturalItemRenderer` 下。
-- 入水真实转换的源物品若需要一次性表现，实现 `IWaterEntryTransformEffect`；`Mod_Droping` 会在 `DespawnItem` 前调用，表现对象必须自行脱离源物品，避免源物品同帧回收时把粒子一起清掉。
+- 世界散落物的水体浮沉/漂流统一由 `WorldItemWaterSystem` + `WorldItemWaterRuntime` 根据最终世界位置派生；`ItemMgr.InstantiateItem` 只登记延迟检查，抛掷/投射等入口在轨迹结束后交回该系统，禁止把水体逻辑重新塞回 `Mod_Droping` 或只覆盖丢弃路径。
+- 水体运行态不写入库存 `ItemData/ModuleData`，也不能用 `CanBePickedUp=false` 表示“在水中”；拾取时无需再剔除临时水体模块，对象池复用由 `IItemPoolLifecycle` 清理运行态。世界散落物随水移动统一读取 `ChunkMgr.TryGetRuntimeWaterCurrent`，跨新版 ChunkView 时通过 `ItemWorldPlacement.TryAttachWorldModelTransientItem` 重绑临时归属。
+- 入水真实转换的源物品若需要一次性表现，实现 `IWaterEntryTransformEffect`；`WorldItemWaterSystem` 会在 `DespawnItem` 前调用，表现对象必须自行脱离源物品，避免源物品同帧回收时把粒子一起清掉。
 - `WorldTopologyProxySource` 会覆盖大量运行时 Item，碰撞体角色筛选必须在注册/对象池重绑时完成并缓存；禁止在 `FixedUpdate` 中对每个 Collider 重复 `GetComponent` 或重新扫描子层级，否则实体数量一高会直接放大为主线程尖峰。
 
 ## 验证

@@ -38,6 +38,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - `MonsterManager` 注册表会保留区块休眠实体供后续唤醒与远距离回收，但生成上限、物种/分组存活数和溢出裁剪只统计 `activeInHierarchy` 且未进入销毁流程的实例；新增数量限制必须复用 `IsActiveForPopulationLimits`，不能直接按注册总数计算。
 - 动物头顶调试 HUD 由全局 `AI_DebugOverlay.Visible` 控制，GM 面板通过 `GMConsolePreferences` 持久化开关；动物自身的 `debugLog` 只负责日志，不要重新用它控制 HUD 显示。
 - 动物头顶调试 HUD 在 `AI_Base` 统一显示当前 `BuffManager.ActiveBuffs` 的名称与剩余时间；只读读取 Buff，不在 HUD 层修改 Buff 生命周期。
+- 现代动物的睡眠可被有效伤害打断：`AI_Base` 在睡眠中收到正伤害时锁存一次 `SleepInterruptedByDamage`，具体动物的睡眠条件必须优先退出当前睡眠；真正离开睡眠后再清除锁存，并继续使用动物自己的睡醒冷却控制重新入睡。
 - 生物生成规则统一来自 `Assets/StreamingAssets/GameConfig/Spawners/spawner-manifest.json`；`MonsterSpawnerManager` 在生态生成的 `Load` 后应用条目出生初始化，AI 组件只负责运行时行为，普通 `ItemMgr.InstantiateItem`、事件生成和存档恢复不得自动套用生态出生随机。
 - 需要短时保留正式生态生物用于跨区块、存档或可见性验证时，使用 `MonsterManager.AcquireEcologyRecycleProtection` 的作用域租约；它只绕过数量与距离回收，不能阻止区块休眠显隐或调用方的正式 `DespawnItem`，并且必须在清理路径释放。
 - 移动/可走性改动联动 `flatworld-navigation`；伤害联动 `flatworld-combat`；注册/存档联动 Item/Data Skill。
