@@ -51,7 +51,7 @@ public readonly struct WorldNavigationPathResult
 /// absolute coordinates. Path searches are time-sliced and agents sharing a goal share one
 /// reverse flow-field search.
 /// </summary>
-public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationManager>
+public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavigationManager>
 {
     private const int MaxPooledMapCellSets = 32;
 
@@ -141,8 +141,10 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         }
     }
 
+    /// <summary>停止导航后端并释放事件订阅、共享快照及地图注册。</summary>
     protected override void OnDestroy()
     {
+        DisposeSharedNavigation();
         if (ExistingInstance == this)
             ExistingInstance = null;
 
@@ -192,8 +194,10 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
         RegisterActiveMaps();
     }
 
+    /// <summary>离开游戏世界时清空两个导航后端和当前窗口。</summary>
     private void OnGameWorldExit()
     {
+        DisposeSharedNavigation();
         Init = false;
         FailAllRequests();
         fieldsByGoal.Clear();
@@ -472,12 +476,14 @@ public sealed class WorldNavigationManager : SingletonAutoMono<WorldNavigationMa
             ApplyActiveWorldKey(nextScene.name);
     }
 
+    /// <summary>世界身份变化时先释放旧导航，避免目标句柄和地图状态跨世界复用。</summary>
     private void ApplyActiveWorldKey(string nextWorldKey)
     {
         if (!string.IsNullOrEmpty(activeWorldKey) &&
             !string.IsNullOrEmpty(nextWorldKey) &&
             !string.Equals(activeWorldKey, nextWorldKey, StringComparison.Ordinal))
         {
+            DisposeSharedNavigation();
             FailAllRequests();
             fieldsByGoal.Clear();
             fieldSchedule.Clear();

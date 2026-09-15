@@ -8,6 +8,8 @@
         "FlatWorld.Networking.Core",
         "Effect",
         "GamePlay",
+        "FlatWorld.Combat.Core",
+        "FlatWorld.Geometry",
         "Data",
         "UI",
         "PlayerInput",

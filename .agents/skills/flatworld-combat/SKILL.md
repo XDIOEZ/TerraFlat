@@ -14,7 +14,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 
 ## 不变量
 
-- `DamageReceiver` 是生命、受伤、死亡与通用战利品的唯一权威；不要恢复第二套 Health 模块。
+- `DamageReceiver` 是 GameObject 实体生命、受伤、死亡与通用战利品的唯一权威；原生 ECS 生命由 AiecsDamageSettlementSystem 提交。每个目标只选一个权威，外部代理的 Hp 仅是输入快照，禁止桥接时直接扣玩家血或为 ECS 伪造 Item/Health 模块。
 - 普通攻击、环境伤害和部位伤害共用 `ResolveDamage`：先提交限定在 `0..MaxHp` 的血量与实际损失快照，再发布回调；部位数值计算不能夹带事件。权威同步、死亡收尾和结算锁释放属于必经生命周期，不能排在可能抛异常的表现/掉落之后而失去执行保证。
 - 死亡入口必须在通知观察者前登记一次性状态；重入、延迟销毁和权威结果重复到达不得重放死亡/掉落。普通回血不复活，显式复活或新实例加载才重置死亡标记，Unload 必须取消旧实例的延迟销毁任务。
 - `LootEntry.LootPrefabName` 实际保存稳定物品 ID；编辑器选择 Prefab 时取 `Item.itemData.IDName`，禁止取 `GameObject.name`，例如骨头 `Bone` 的通用外壳名是 `Prop`。Item/Actor 目录加载阶段必须校验表引用和模块内嵌掉落，不能等到死亡时才验证生成物身份。
@@ -50,6 +50,15 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - 可回收箭矢命中 `DamageReceiver` 后的“插在目标身上”状态由 `Mod_Projectile` 保存相对目标 Item 根节点的局部姿态并逐帧同步；箭矢仍保持独立 Runtime Item，不改挂到 Actor 层级。跟随移动时必须调用 `ItemMgr.NotifyRuntimeItemMoved` 刷新空间索引，目标失效后解除附着并保留箭矢最后世界位置，确保拾取、对象池和世界索引不被父子层级关系破坏。
 - 出血资格使用稳定 `Blood` 标签表达“该实体有血”，不要用 `Player`/`Animal` 类型或物种标签代替。玩家和有血动物可以同时保留自己的分类标签；幽灵、机械体等无血实体只要不声明 `Blood` 就不会触发刃伤出血规则，MOD 生物也通过同一标签接入。
 - 拆墙工具类别与建筑克制倍率是两个独立配置：`TileDamageToolKind.Hammer` 只表达工具类别/门槛，`IBuildingDamageSource.BuildingDamageMultiplier` 表达目标完成防御后的伤害倍率；木锤等锤类需在 Item JSON 显式配置建筑倍率。动态建筑在防御后应用倍率，格子建筑必须先完成自身 `MinimumWeaponDamage` 最低有效伤害规则，再对这个最终有效伤害应用倍率，因此石墙保底 1 点在木锤的 10 倍建筑克制下最终为 10 点。未被建筑规则判定为有效的 0 伤害仍不得被倍率放大。
+
+## ECS 与旧战斗的共同契约
+
+- `Shared/Combat/CombatContext.cs` 位于无 GamePlay 依赖的公共程序集，固定值身份与四类伤害可进入 Burst。两个后端共用难度/防御、实际损失裁剪与刃伤出血阈值；managed CombatDamage 只在旧入口与反馈边界转换。
+- `Hurt(IDamageSender)` 保留原来发送端 Item 与旧规则，然后适配同一生命提交核心；`Hurt(in CombatDamageContext)` 使用明确 Source/Credit 和模拟 Tick/Time。ECS 来源不提供旧 Item 引用，消费方应读取 `DamageReceiverDamageInfo.Context`，不可把其旧 Attacker 字段为空解释成环境攻击或丢弃击杀归因。
+- 武器自身 Source 与 Owner 的 Credit 分开；generation/world/dimension 必须随事件传递。模拟时间使用 double，不能把同一渲染帧的多个 ECS Tick 都改成 Time.time，否则受伤间隔与 Buff 结算会漂移。旧对象的专属 incoming rule 未提供纯上下文实现时必须显式拒绝，不能绕过资源/建筑门槛。
+- `Mod_Damage` 仅在实际窗口或周期 Pulse 导出 Box OBB，通过少量 GameplayCombatBridge 查询原生空间桶；GO 与 ECS 共用 MaxAttackTargets 和窗口预约集合。Sequence/Window/Pulse 在生产处保持唯一，原生普通攻击每次 Active 只生产一次；新增技能也必须在真实 Pulse 生成事件，不能靠每帧扫描后交给生命层去重。
+- 命中附加状态由 `ICombatDamageContextModifier` 组合导出，装配时从 ItemMods 已注册表缓存；上下文的 FixedList 容量在装配时校验，不能热路径静默截断。旧命中回调与纯数据结算各自应用一次；0 伤害有效命中仍可触发附加 Buff，负数拒绝结果不可触发，出血必须有实际刃伤。
+- 原生同目标命中按时间/攻击键分组串行提交、不同目标并行；死亡与掉落先锁存一次性状态再发布。死亡事件携带 Entity，尸体按时间排队批量回收，掉落按预算消费，不得每次死亡扫描全体实体或一次创建全部掉落。旧投射物扫掠/附着、完整技能、生态掉落修饰尚未迁移，不能因近战 Bridge 已接通而宣称全战斗兼容。
 
 ## 验证
 

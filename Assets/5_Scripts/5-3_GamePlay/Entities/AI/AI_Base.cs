@@ -918,7 +918,12 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		float effectiveDistance = Mod_ItemDetector.CalculateEffectiveDetectionRadius(
 			baseDistance,
 			target);
-		if (DistanceTo(target.transform) > effectiveDistance)
+		ItemMgr manager = ItemMgr.GetInstance();
+		if (manager != null && manager.TryIsWithinDataPerceptionRange(transform.position, target, effectiveDistance, out bool within))
+		{
+			if (!within) return false;
+		}
+		else if (DistanceTo(target.transform) > effectiveDistance)
 			return false;
 
 		return _detector != null && _detector.HasLineOfSight(target);

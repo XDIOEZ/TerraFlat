@@ -47,6 +47,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 描边等代理 `SpriteRenderer` 必须同步源 Renderer 的 MPB 局部裁剪参数；代理写入自有 MPB 时必须同时写回 Sprite 的 `_MainTex`，避免逐渲染器贴图被默认白图替换。`Universal2D`、`NormalsRendering`、`UniversalForward` 等实际参与的 Shader Pass 必须使用同一坐标与阈值，避免代理或回退 Pass 重新显示已剔除像素。
 - 玩家被树冠遮挡时的圆形穿透窗由 `PlayerOcclusionShaderGlobals` 写入本地主角世界坐标，`Sprite-Lit-Master` 只对逐 Renderer `_PlayerOccluder=1` 的对象降低 Alpha；世界树必须带 `Tag.Tree`，`ItemDefinitionRuntime` 在共享外壳/对象池复用时必须显式写入 1 或 0 并保留其它 MPB 参数，禁止给所有 Sprite 开全局遮挡或为每棵树增加逐帧脚本。
 - 角色水体效果覆盖会旋转的手持物等附属 Sprite 时，水面高度与波浪横轴必须使用角色统一的世界空间坐标；保留本地坐标模式只用于不旋转的旧材质兼容，避免水线随物品旋转成竖线。
+- `ActorWaterCommon.hlsl` 是旧 `Sprite-Lit-Master` 与 AIECS Lit 原型共用的角色水下公式；调整染色、透明或水线时保持两个调用方一致。AIECS 原型的顶点水参数只是视觉输入，不能代替 `TileEffectReceiver` 的真实地形、体力和氧气状态。
 - 手持物通过 `RegisterExternalRenderers` 接入角色渲染效果后，运行时再动态创建的子 `Renderer` 不会自动进入该次注册快照；这类临时表现必须在创建后再次注册自身节点，并在销毁前 `UnregisterExternalRenderers`，避免水体浸没、受击染色等 MPB 效果漏掉或控制器残留引用。
 - 角色/动物的水中生存由 `TileEffectReceiver` 统一结算，并直接以 `TileData_Water.deepValue` 作为自然淹没高度：水深不超过 0.3 时不进入漂浮维持且不消耗游泳体力；超过 0.3 且有体力时把玩法有效淹没维持在 0.3，体力耗尽后再向真实水深下沉，超过 0.7 才开始消耗氧气。角色水体遮罩与移动减速都使用玩法有效淹没高度：漂浮时保持 0.3，体力耗尽后随下沉进度升高；世界散落物由 `WorldItemWaterRuntime` 独立调用 `SetWaterState` 做浮沉深度映射，禁止改写权威 `TileData_Water.deepValue`。
 - `TileEffectReceiver` 的邻接水格容错只服务于水边交互；`Tile_Water` 必须根据 `IsActiveTileEdgeInteractionOnly` 阻断浸没视觉、脚底阴影、Buff 和移动速度效果，避免站在沙格边缘的角色被误判为入水。
@@ -63,6 +64,14 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 - 季节覆雪通过统一 MPB 效果模块的 `_SnowCoverage` 通道叠加；实际物品基础材质必须支持该属性，仅给默认 Sprite 材质设置 MPB 不会显示雪。保持风、水、受击和溶解等既有通道。
 - `ChunkSnowCoverRenderer`、`ChunkSupportSurfaceRenderer` 只读权威状态并绘制专用 Tilemap，卸载仅清理自身图层；禁止为了融雪或解绑改写原始地形。`ChunkSupportSurfaceRenderer` 使用 Tile Color RGBA 编码左、右、下、上四个外露平台边缘，并读取相邻 Chunk 的 `TerrainSupportLayer`；相连支撑面之间对应通道必须为 0，只允许整体外围产生接触阴影。角色和动物不装配静止物件雪效。
+
+## AIECS 渲染原型
+
+- 表现代码在独立 `AIECS/Presentation` 程序集，正式 `AiecsWorldRenderer` 只读模拟提交后的 Display，不复用 AiecsPrototypeMotion 作为行为。共享动画目录、图集及移动脚本的 GUID 必须保留；开发显示的有限 Y 行批次和血条便于手测，不等于旧世界精确透明混排、实际水深或 GPU 性能门槛通过。
+
+- `Entities/AIECS/` 通过原生 `Universal2D/NormalsRendering` 绘制排序后连续的精灵批次，禁止按物种/材质全局重排或在管线末尾补画并假设 Light2D 自动正确。当前 CPU 合并网格只用于兼容性原型；颜色批次统计不等于 GPU 实测 draw 数或两万同屏证据。
+- `AiecsLegacySortScope` 仅用于单相机独立场景的完整 Sprite 显示范围，临时覆盖外部 Order 并在停用时恢复，内部 SortingGroup 保持原绘制职责；Tilemap、粒子、嵌套组和动态正式世界尚未适配，不得直接套到半个正式场景。
+- 动画从启用的 Actor Manifest 与实际覆盖控制器导出，Sprite 按真实三角形/UV 解包后保存原尺寸、Pivot、PPU。非循环时间轴必须包含终点姿态，不能复用循环动画的去尾规则；攻击曲线/事件只是待映射标记。重导使用所选生成目录的显式菜单以保留 GUID，禁止在导入或打开场景时自动覆盖资源；特殊法线、Mask、附属物和正式运行时加载仍需各自适配。
 
 ## 验证
 

@@ -148,6 +148,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     protected override void Awake()
     {
         base.Awake();
+        Item.RuntimeStructureChanged += OnPerceptionStructureChanged;
         // 不在 Awake 中自动加载场景物品，避免破坏游戏生命周期。手动或在合适的时机调用 LoadAllRuntimeItems()
     }
 
@@ -182,6 +183,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     protected override void OnDestroy()
     {
+        Item.RuntimeStructureChanged -= OnPerceptionStructureChanged;
         CompletePerceptionBatch(false);
         DisposePerceptionJobData();
 

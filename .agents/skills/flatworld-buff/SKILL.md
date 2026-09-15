@@ -26,6 +26,12 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 - Buff 的只读调试表现可从 `BuffManager.ActiveBuffs` 读取 `BuffInstance.Definition.DisplayName` 与剩余时间；表现层不得通过显示逻辑修改、续期或移除 Buff。
 - 出血状态固定使用互斥等级 `出血1/出血2/出血3`；统一通过 `BuffManager.ApplyBleedingTier` 应用，更低等级只续期当前更高等级，更高等级替换低等级。历史 `失血/流血/出血` 只作为存档迁移别名存在，不能重新作为内容或玩法 ID 使用。
 
+## 原生 AIECS 状态边界
+
+- Native Buff 由当前 GameRes 定义冷编译，实例以定义索引、到期时间、下次 Tick 和 Credit 保存在 DynamicBuffer；不得把托管 Handler 放进 Burst。只支持完整效果集合的定义，未知效果/阶段/标签条件必须显式报告，不能只迁移同一 Buff 中的伤害而漏掉其它效果。
+- 每个 Buff 的周期命中独立保留来源 Credit，禁止把同实体的多个 Buff 合并后使用最后一个来源作击杀者；按模拟时间推进，过期前已到期的 Tick 仍结算。输出容量按实际周期命中数量扩张，不能用固定最大 Buff 数静默丢事件。
+- 当前原生能力是周期真实伤害、水量变化、出血互斥等级与 refresh/extend/ignore；温度、营养完整玩法、自定义 Handler 仍需通过能力阶段迁移。玩家继续由旧 BuffManager 管理，外部代理不重复 Tick 玩家 Buff。
+
 ## 工作流与验证
 
 1. 数值/组合只改 JSON；schema、叠加、生命周期才改 C#。

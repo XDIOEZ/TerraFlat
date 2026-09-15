@@ -215,6 +215,7 @@ Shader "Game/2D/Sprite-Lit-Master"
             }
 
             #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/CombinedShapeLightShared.hlsl"
+            #include "ActorWaterCommon.hlsl"
 
             half4 CombinedShapeLightFragment(Varyings i) : SV_Target
             {
@@ -233,47 +234,11 @@ Shader "Game/2D/Sprite-Lit-Master"
                 main.rgb = lerp(main.rgb, half3(0.88, 0.94, 1.0), snowMask * saturate(_SnowCoverage));
 
                 // === 水下表现：保留身体轮廓，用染色和透明度表达浸没程度 ===
-                float waterBlend = saturate(_WaterEnabled);
-                if (waterBlend > 0.0001)
-                {
-                    float surfaceV = saturate(_WaterSurfaceV);
-                    float feather = max(1e-5, _WaterFeather);
-                    float worldMode = saturate(_WaterWorldSpace);
-                    float referenceHeight = max(1e-5, _WaterReferenceHeight);
-                    float horizontalPosition = lerp(i.uv.w, i.positionWS.x, worldMode);
-                    float wavePhase = horizontalPosition * _WaterWaveFrequency + _Time.y * _WaterWaveSpeed;
-                    float waveOffset = sin(wavePhase) * _WaterWaveAmplitude;
-                    waveOffset += sin(wavePhase * 1.7 - _Time.y * _WaterWaveSpeed * 0.75) * _WaterWaveAmplitude * 0.35;
-                    float waterPosition = lerp(bodyV, i.positionWS.y, worldMode);
-                    float waveSurface = lerp(
-                        saturate(surfaceV + waveOffset),
-                        _WaterY + waveOffset * referenceHeight,
-                        worldMode);
-                    float effectiveFeather = lerp(feather, feather * referenceHeight, worldMode);
-                    float submergedMask = 1.0 - smoothstep(
-                        waveSurface - effectiveFeather,
-                        waveSurface + effectiveFeather,
-                        waterPosition);
-                    submergedMask *= waterBlend;
-
-                    main.rgb = lerp(
-                        main.rgb,
-                        _WaterTint.rgb,
-                        saturate(_WaterTintStrength) * submergedMask);
-                    main.a *= lerp(1.0, saturate(_WaterAlpha), submergedMask);
-
-                    // 水线使用柔和带状渐变，避免硬裁剪造成的平直断面。
-                    float lineRadius = max(1e-5, _WaterLineWidth) * lerp(1.0, referenceHeight, worldMode);
-                    float lineMask = 1.0 - smoothstep(
-                        lineRadius,
-                        lineRadius + effectiveFeather,
-                        abs(waterPosition - waveSurface));
-                    lineMask *= waterBlend * saturate(_WaterLineStrength);
-                    main.rgb = lerp(
-                        main.rgb,
-                        _WaterLineColor.rgb,
-                        lineMask * saturate(_WaterLineColor.a));
-                }
+                main = FlatWorldApplyActorWater(main, bodyV, i.uv.w, i.positionWS.xy,
+                    float4(_WaterEnabled, _WaterWorldSpace, _WaterY, _WaterReferenceHeight),
+                    float4(_WaterSurfaceV, _WaterFeather, _WaterLineWidth, _WaterWaveAmplitude),
+                    float4(_WaterWaveFrequency, _WaterWaveSpeed, _WaterTintStrength, _WaterLineStrength),
+                    _WaterTint, _WaterLineColor, _WaterAlpha, _Time.y);
 
                 // === 角色状态染色与受击闪红 ===
                 float statusPulse = 1.0 + sin(_Time.y * max(0.0, _ActorTintPulseSpeed)) *

@@ -5,6 +5,8 @@ using UnityEngine;
 
 public static class BuildingOccupancyRegistry
 {
+    public static uint Revision { get; private set; } // LOS 快照可独立于导航值变化失效。
+    public static event System.Action<Vector2Int> CellChanged; // 少量地图快照订阅者，禁止逐 AI 订阅。
     private static readonly Dictionary<Vector2Int, HashSet<Mod_Building>> OccupantsByCell = new();
     private static readonly Dictionary<Mod_Building, HashSet<Vector2Int>> CellsByBuilding = new();
 
@@ -13,6 +15,8 @@ public static class BuildingOccupancyRegistry
     {
         OccupantsByCell.Clear();
         CellsByBuilding.Clear();
+        Revision++;
+        CellChanged = null;
     }
 
     public static bool IsOccupied(Vector2Int cell, Mod_Building except = null)
@@ -130,9 +134,12 @@ public static class BuildingOccupancyRegistry
         }
     }
 
+    /// <summary>占地发生变化时通知导航并推进只读快照版本。</summary>
     private static void RefreshCell(Vector2Int cell)
     {
+        Revision++;
         cell = WorldTopologyRuntime.NormalizeCell(cell);
+        CellChanged?.Invoke(cell);
         if (ChunkMgr.Instance == null)
             return;
 
