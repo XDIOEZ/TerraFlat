@@ -17,6 +17,7 @@ public enum FactionRelation : byte
 /// <summary>阵营关系服务：提供运行时查询、网络状态修改和 MOD 关系注册入口。</summary>
 public static class FactionRelationService
 {
+    public static uint Revision { get; private set; } // Native 关系快照只在实际关系或身份变化时刷新。
     #region 内置阵营
 
     public const string WolfFactionId = "wolves";
@@ -163,6 +164,7 @@ public static class FactionRelationService
             return true;
 
         item.itemData.FactionId = normalizedFactionId;
+        Revision++;
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
         return true;
     }
@@ -193,6 +195,7 @@ public static class FactionRelationService
             OwnerId = owner,
             Relation = relation
         };
+        Revision++;
     }
 
     /// <summary>卸载指定 MOD 的关系，避免重载 MOD 后残留旧规则。</summary>
@@ -211,12 +214,14 @@ public static class FactionRelationService
 
         for (int i = 0; i < keysToRemove.Count; i++)
             ExternalRelations.Remove(keysToRemove[i]);
+        if (keysToRemove.Count > 0) Revision++;
     }
 
     /// <summary>清理全部外部关系，供 MOD 运行时整体卸载使用。</summary>
     public static void ClearExternalRelations()
     {
         ExternalRelations.Clear();
+        Revision++;
     }
 
     #endregion

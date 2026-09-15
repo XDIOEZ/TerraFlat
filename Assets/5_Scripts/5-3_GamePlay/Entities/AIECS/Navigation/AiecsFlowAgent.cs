@@ -9,6 +9,9 @@ using Unity.Mathematics;
 
 namespace FlatWorld.AIECS
 {
+    /// <summary>默认共享目标保持旧入口兼容；局部目标仅用于短距离行为差异，不创建导向图。</summary>
+    public enum AiecsMoveMode : byte { SharedGoal, Local, Hold }
+
     #region 实体状态与空间快照
     /// <summary>纯 ECS 导航状态；多个实体共享 Goal，实体自身不持有路径、请求或 GameObject 代理。</summary>
     public struct AiecsFlowAgent : IComponentData
@@ -23,6 +26,8 @@ namespace FlatWorld.AIECS
         public float Radius;
         public float Speed;
         public float StopDistance;
+        public AiecsMoveMode Mode; // 导向图、局部 steering 或停车。
+        public float2 LocalDestination; // 只有局部模式消费。
     }
 
     /// <summary>避让快照中的一个实体，按空间桶和 Entity 代际稳定排序。</summary>
@@ -106,7 +111,13 @@ namespace FlatWorld.AIECS
         /// <summary>从共享图采样方向，再在一致邻居快照上避让并按小步约束地形。</summary>
         private void Execute(Entity entity, ref AiecsFlowAgent actor)
         {
-            FlowSample sample = Navigation.Sample(actor.Position, actor.Goal, actor.StopDistance);
+            FlowSample sample = actor.Mode == AiecsMoveMode.Hold
+                ? new FlowSample { Status = FlowSampleStatus.Arrived }
+                : actor.Mode == AiecsMoveMode.Local
+                    ? new FlowSample { Delta = Navigation.Domain.ShortestDelta(actor.Position, actor.LocalDestination),
+                        Status = math.lengthsq(Navigation.Domain.ShortestDelta(actor.Position, actor.LocalDestination)) <= actor.StopDistance * actor.StopDistance
+                            ? FlowSampleStatus.Arrived : FlowSampleStatus.Moving }
+                    : Navigation.Sample(actor.Position, actor.Goal, actor.StopDistance);
             actor.Status = sample.Status; actor.Velocity = float2.zero;
             if (sample.Status != FlowSampleStatus.Moving || DeltaTime <= 0f) return;
             float distance = math.length(sample.Delta);

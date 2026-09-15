@@ -1,0 +1,5 @@
+{
+    "name": "FlatWorld.Combat.Core",
+    "references": ["Unity.Collections", "Unity.Mathematics", "FlatWorld.Geometry"],
+    "autoReferenced": true
+}

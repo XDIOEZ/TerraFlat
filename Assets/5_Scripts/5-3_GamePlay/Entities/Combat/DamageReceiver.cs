@@ -10,7 +10,7 @@ using ReadOnlyAttribute = Unity.Collections.ReadOnlyAttribute;
 using Random = UnityEngine.Random;
 
 /// <summary>
-/// 生命值与死亡的唯一权威：血量限制在 0 到 MaxHp，所有伤害共用结算与死亡收尾。
+/// GameObject 实体生命值与死亡的唯一权威：血量限制在 0 到 MaxHp，旧攻击和纯数据攻击共用结算与死亡收尾。
 /// 受伤反馈在数值提交后执行；死亡每次生命只结算一次，掉落异常不能中断实体生命周期。
 /// </summary>
 [RequireComponent(typeof(BoxCollider2D))]
@@ -175,7 +175,9 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
     /// <summary>
     /// 上一次受到伤害的时间（秒）
     /// </summary>
-    private float lastDamageTime = -999f;
+    private double lastDamageTime = double.NegativeInfinity; // 新旧入口共用同一游戏时间域。
+    public FlatWorld.Combat.CombatIdentity LastDamageSource { get; private set; } // 运行时来源，不能用伪 Item UID 代表 ECS。
+    public FlatWorld.Combat.CombatIdentity LastDamageCredit { get; private set; } // 击杀归因身份。
 
     #region 受击减速参数
 
@@ -298,7 +300,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         _resolvingDamage = false;
         ResetDeathResolution();
         _deathConsumedByExternalHandler = false;
-        lastDamageTime = float.NegativeInfinity;
+        lastDamageTime = double.NegativeInfinity;
+        LastDamageSource = default; LastDamageCredit = default;
         Equipment_Inventory = item.itemMods.GetMod_ByID<Mod_Inventory>(ModText.Equipment);
 
         HidePanel();
@@ -566,11 +569,10 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
     public virtual float Hurt(IDamageSender damageSender)
     {
         if (_resolvingDamage || _deathHandled || Hp <= 0 || item == null || damageSender == null) return -1;
-
-        // 阵营关系是实体伤害的最终防线，避免碰撞、武器或其他攻击模块绕过 AI 选敌误伤队友。
-        if (!FactionRelationService.CanAttack(damageSender.attacker, item))
-            return -1;
-
+        if (!FactionRelationService.CanAttack(damageSender.attacker, item)) return -1;
+        var context = GameplayCombatBridge.Context(damageSender, new FlatWorld.Combat.CombatClock {
+            Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime });
+        context.HitPoint = (Vector2)transform.position;
         float ruleMultiplier = 1f;
         foreach (IIncomingDamageRule rule in incomingDamageRules)
         {
@@ -582,48 +584,58 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
             ruleMultiplier *= multiplier;
         }
 
-        // ⏱️ 受伤间隔判断
-        if (Time.time - lastDamageTime < Data.DamageInterval)
+        return HurtContext(context, ruleMultiplier, damageSender);
+    }
+
+    /// <summary>数据后端的正式入口；使用真实来源身份与模拟时钟，不伪造 Item 或 IDamageSender。</summary>
+    public virtual float Hurt(in FlatWorld.Combat.CombatDamageContext context)
+    {
+        if (_resolvingDamage || _deathHandled || Hp <= 0f || item == null || !context.Attack.Source.IsValid) return -1f;
+        var target = GameplayCombatBridge.Identity(item);
+        if (context.Attack.Source == target || context.Attack.Source.World != target.World || context.Attack.Source.Dimension != target.Dimension ||
+            FactionRelationService.GetRelation(context.Faction.ToString(), FactionRelationService.GetFactionId(item)) != FactionRelation.Hostile) return -1f;
+        float rules = 1f;
+        foreach (IIncomingDamageRule rule in incomingDamageRules)
         {
-            return -1;
+            if (!(rule is IIncomingDamageContextRule pureRule)) return -1f;
+            float multiplier = pureRule.GetDamageMultiplier(context);
+            if (float.IsNaN(multiplier) || float.IsInfinity(multiplier)) throw new InvalidOperationException("受击规则必须返回有限倍率。");
+            if (multiplier <= 0f) return -1f;
+            rules *= multiplier;
         }
-        lastDamageTime = Time.time;
-
-        float difficultyDamageMultiplier = GameDifficultyService.ResolveDirectDamageMultiplier(
-            damageSender.attacker,
-            item);
-        CombatDamage senderDamage = damageSender.DamageValues ?? new CombatDamage();
-        CombatDamage scaledDamage = senderDamage.Scaled(difficultyDamageMultiplier);
-
-        // 四种伤害分别减去对应防御，并保留穿透后的类型分量供受击状态规则读取。
-        float finalDamageMultiplier = Mathf.Max(0f, damageTakenMultiplier) * ruleMultiplier;
-        CombatDamage resolvedDamageValues = scaledDamage
-            .ResolveAgainst(Defense)
-            .Scaled(finalDamageMultiplier);
-        float actualDamage = resolvedDamageValues.TotalCombatPower;
-
-        // 记录攻击者（根据是否造成实际伤害决定概率）
-        if (damageSender.attacker != null)
+        float result = HurtContext(context, rules);
+        if (result >= 0f && Hp > 0f && context.OnHitBuffs.Length > 0)
         {
-            bool shouldRecord = actualDamage > 0 || Random.value <= 0.1f; // 造成实际伤害100%记录，否则10%概率记录
-            if (shouldRecord)
-            {
-                Data.AttackersUIDs.Add(damageSender.attacker.itemData.Guid);
+            BuffManager buffManager = item.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
+            if (buffManager != null)
+                foreach (var effect in context.OnHitBuffs)
+                    if (effect.Chance >= 1f || Random.value < effect.Chance) buffManager.AddBuff(effect.Id.ToString());
+        }
+        return result;
+    }
 
-                if (Data.AttackersUIDs.Count > 3)
-                    Data.AttackersUIDs.RemoveAt(0);
+    /// <summary>新旧攻击共享间隔、四类数值、难度、归因和原有生命提交/反馈链。</summary>
+    private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null)
+    {
+        if (!Unity.Mathematics.math.all(Unity.Mathematics.math.isfinite(context.Damage)) ||
+            !Unity.Mathematics.math.isfinite(context.Clock.Time)) throw new ArgumentException("伤害上下文必须包含有限数值和模拟时间。");
+        if (context.Clock.Time - lastDamageTime < Data.DamageInterval) return -1f;
+        lastDamageTime = context.Clock.Time;
+        float difficulty = GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, GameDifficultyService.IsPlayer(item));
+        var values = FlatWorld.Combat.CombatRules.Resolve(context.Damage, GameplayCombatBridge.Values(Defense), difficulty,
+            Mathf.Max(0f, damageTakenMultiplier) * rules);
+        float damage = Unity.Mathematics.math.csum(values);
+        if (damage > 0f || Random.value <= 0.1f)
+        {
+            LastDamageSource = context.Attack.Source; LastDamageCredit = context.Credit;
+            if (legacySender?.attacker != null)
+            {
+                Data.AttackersUIDs.Add(legacySender.attacker.itemData.Guid);
+                if (Data.AttackersUIDs.Count > 3) Data.AttackersUIDs.RemoveAt(0);
             }
         }
-
-        float durabilityDamage = difficultyDamageMultiplier > 0f
-            ? (actualDamage > 0f ? 1f : 0.5f)
-            : 0f;
-        return ResolveDamage(
-            actualDamage,
-            damageSender,
-            randomBodyParts: true,
-            durabilityDamage: durabilityDamage,
-            resolvedDamageValues: resolvedDamageValues);
+        return ResolveDamage(damage, legacySender, true, difficulty > 0f ? (damage > 0f ? 1f : 0.5f) : 0f,
+            GameplayCombatBridge.LegacyValues(values), context);
     }
 
     #region 统一伤害结算
@@ -634,7 +646,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         IDamageSender sender,
         bool randomBodyParts,
         float durabilityDamage,
-        CombatDamage resolvedDamageValues = null)
+        CombatDamage resolvedDamageValues = null,
+        FlatWorld.Combat.CombatDamageContext? context = null)
     {
         if (float.IsNaN(damage) || float.IsInfinity(damage) || damage < 0f)
             throw new ArgumentOutOfRangeException(nameof(damage), "伤害必须是有限非负数。");
@@ -645,7 +658,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
             0f,
             hpBefore,
             hpBefore,
-            resolvedDamageValues: resolvedDamageValues);
+            resolvedDamageValues: resolvedDamageValues,
+            context: context);
         _resolvingDamage = true;
         try
         {
@@ -673,8 +687,12 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
                 foreach (BodyPartDamageInfo hit in damageInfo.BodyPartHits)
                     DispatchBodyPartDamaged(hit);
 
-                if (sender != null && Hp > 0f)
-                    ApplyHitSlowdown(sender);
+                if (Hp > 0f)
+                {
+                    if (context.HasValue && sender == null)
+                        ApplyHitSlowdown(context.Value.SlowEnabled != 0, context.Value.SlowMultiplier, context.Value.SlowDuration);
+                    else if (sender != null) ApplyHitSlowdown(sender);
+                }
                 DispatchDamageReceived(damageInfo);
                 OnDamaged_ShowUiAndScheduleHide();
                 if (IsPanelVisible())
@@ -1027,7 +1045,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
                item.itemMods.ContainsKey_ID(ModText.Mover_AI);
     }
 
-    private static List<BodyPartHealth> CreateDefaultBodyParts(float totalHp, float totalMaxHp)
+    /// <summary>静态内容编译与旧实例升级共用默认身体模板；返回独立部位列表。</summary>
+    public static List<BodyPartHealth> CreateDefaultBodyParts(float totalHp, float totalMaxHp)
     {
         totalMaxHp = Mathf.Max(0f, totalMaxHp);
         float healthRatio = totalMaxHp <= 0f ? 0f : Mathf.Clamp01(totalHp / totalMaxHp);
@@ -1604,13 +1623,15 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         }
     }
 
+    /// <summary>保留旧反馈字段，并把后端无关来源与权威模拟时间交给所有新消费者。</summary>
     private DamageReceiverDamageInfo CreateDamageInfo(
         IDamageSender damageSender,
         float damageValue,
         float hpBefore,
         float hpAfter,
         List<BodyPartDamageInfo> bodyPartHits = null,
-        CombatDamage resolvedDamageValues = null)
+        CombatDamage resolvedDamageValues = null,
+        FlatWorld.Combat.CombatDamageContext? context = null)
     {
         return new DamageReceiverDamageInfo
         {
@@ -1618,15 +1639,16 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
             ReceiverItem = item,
             DamageSender = damageSender,
             Attacker = damageSender?.attacker,
+            Context = context ?? default,
             DamageValue = damageValue,
-            SenderDamageValue = damageSender?.DamageValues?.TotalCombatPower ?? damageValue,
-            SenderDamageValues = damageSender?.DamageValues,
+            SenderDamageValue = context.HasValue ? Unity.Mathematics.math.csum(context.Value.Damage) : damageSender?.DamageValues?.TotalCombatPower ?? damageValue,
+            SenderDamageValues = context.HasValue ? GameplayCombatBridge.LegacyValues(context.Value.Damage) : damageSender?.DamageValues,
             ResolvedDamageValues = resolvedDamageValues,
             HpBefore = hpBefore,
             HpAfter = hpAfter,
             IsFatal = hpAfter <= 0f,
             HitPosition = transform.position,
-            Time = Time.time,
+            Time = context.HasValue ? (float)context.Value.Clock.Time : Time.time,
             BodyPartHits = bodyPartHits ?? new List<BodyPartDamageInfo>()
         };
     }

@@ -1,0 +1,6 @@
+{
+    "name": "FlatWorld.Geometry",
+    "references": ["Unity.Mathematics"],
+    "noEngineReferences": true,
+    "autoReferenced": true
+}

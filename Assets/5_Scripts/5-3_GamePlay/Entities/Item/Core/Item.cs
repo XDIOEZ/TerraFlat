@@ -169,12 +169,17 @@ public abstract class Item : MonoBehaviour
 
     #region 生命周期方法
 
+    private static uint runtimeGenerationSequence; // 本进程实例代际，覆盖对象池与相同存档 UID 再加载。
+    public uint RuntimeGeneration { get; private set; } // 不写存档，仅用于拒绝过期运行时引用。
+
     /// <summary>
     /// 加载物品数据和模块
     /// </summary>
     [Button("加载模块")]
     public virtual void Load()
     {
+        RuntimeGeneration = ++runtimeGenerationSequence;
+        if (RuntimeGeneration == 0) RuntimeGeneration = ++runtimeGenerationSequence;
         isInitialized = true;
         itemMods.BindOwner(this);
         ModuleLoad();
