@@ -31,6 +31,8 @@ python .agents/skills/flatworld-test-automation/scripts/run_unity_tests.py --che
 ## 失败与视觉
 
 - 先修编译，再按堆栈定位生产代码；禁止删除测试、弱化断言或改输入制造通过。
+- 新增脚本源码存在却报 CS0103/CS0246 时，先检查 `.meta` 是否为空或缺少有效 GUID，并在资源刷新后确认脚本已纳入 Unity 编译；不要手改自动生成的 `.csproj` 或添加重复类型来掩盖导入问题。
+- 多个 Unity Editor 同时运行时，按项目路径选择 MCP 实例；共享 `Editor.log` 可能混入另一项目记录，最终以目标实例的 Console 为准。
 - 向用户按根因汇总主要失败、阶段和影响，不只给 JSON。
 - 随机/时间/地图测试注入确定输入；结束后清理临时存档、对象、端口和进程。
 - 只有布局、颜色、动画、粒子、Shader 或相机最终观感变化才做定向视觉检查；优先使用现有截图或定向运行结果，不改变用户 Editor 布局或 Play Mode。
