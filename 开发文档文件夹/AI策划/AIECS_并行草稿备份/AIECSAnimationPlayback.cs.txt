@@ -1,0 +1,255 @@
+using System;
+using Unity.Burst;
+using Unity.Entities;
+using Unity.Mathematics;
+
+namespace FlatWorld.AIECS
+{
+    /// <summary>每实体独立位置/朝向，仅供 P1 数据切片，不承担正式移动或持久身份。</summary>
+    public struct AIECSAnimationPose : IComponentData
+    {
+        public float3 Position;
+        public float2 Scale;
+    }
+
+    /// <summary>每实体独立动作游标；时间使用 double，暂停/速率改变保持已累计相位。</summary>
+    public struct AIECSPlayback : IComponentData
+    {
+        public int ClipIndex;
+        public double Time;
+        public float Speed;
+        public byte Paused;
+        public byte Finished;
+    }
+
+    /// <summary>一个实体的每条 Sprite 轨道采样结果；-1 保留显式空帧语义。</summary>
+    [InternalBufferCapacity(1)]
+    public struct AIECSCurrentFrame : IBufferElementData
+    {
+        public int SpriteIndex;
+        public int KeyIndex;
+    }
+
+    /// <summary>纯数据采样：按真实关键帧时间二分定位，非循环末帧不取模。</summary>
+    internal static class AIECSAnimationSampling
+    {
+        /// <summary>推进显式片段时间并采样每条轨道；零步长也能完成初次帧定位。</summary>
+        internal static void Sample(ref AIECSPlayback playback, ref AIECSClipBlob clip,
+            DynamicBuffer<AIECSCurrentFrame> frames, double delta)
+        {
+            if (playback.Paused == 0)
+                playback.Time += delta * playback.Speed * clip.StateSpeed;
+            double time = playback.Time;
+            if (clip.Duration > 0 && clip.Loop != 0)
+            {
+                time -= math.floor(time / clip.Duration) * clip.Duration;
+                playback.Time = time;
+                playback.Finished = 0;
+            }
+            else
+            {
+                time = math.clamp(time, 0, clip.Duration);
+                playback.Time = time;
+                double rate = playback.Speed * clip.StateSpeed;
+                playback.Finished = (byte)((clip.Duration == 0 ||
+                    (rate > 0 && time >= clip.Duration) || (rate < 0 && time <= 0)) ? 1 : 0);
+            }
+            for (int t = 0; t < clip.Tracks.Length; t++)
+            {
+                ref var keys = ref clip.Tracks[t].Keys;
+                int low = 0;
+                int high = keys.Length;
+                while (low < high)
+                {
+                    int mid = low + (high - low) / 2;
+                    if (keys[mid].Time <= time) low = mid + 1;
+                    else high = mid;
+                }
+                int key = low - 1;
+                frames[t] = new AIECSCurrentFrame
+                {
+                    KeyIndex = key, SpriteIndex = key < 0 ? -1 : keys[key].SpriteIndex
+                };
+            }
+        }
+    }
+
+    /// <summary>每实体一个采样任务项，全部数据来自共享 Blob，无 Animator 或 Unity 对象访问。</summary>
+    [BurstCompile]
+    internal partial struct AIECSAdvanceAnimationJob : IJobEntity
+    {
+        public BlobAssetReference<AIECSAnimationBlob> Library;
+        public double Delta;
+
+        /// <summary>采样已在创建边界校验过的动作和预分配轨道 Buffer。</summary>
+        private void Execute(ref AIECSPlayback playback, DynamicBuffer<AIECSCurrentFrame> frames)
+        {
+            ref var clip = ref Library.Value.Clips[playback.ClipIndex];
+            AIECSAnimationSampling.Sample(ref playback, ref clip, frames, Delta);
+        }
+    }
+
+    /// <summary>仅由隔离开发 World 显式创建，绝不注入默认 World 或生产生物生成链。</summary>
+    [DisableAutoCreation]
+    public partial class AIECSAnimationSystem : SystemBase
+    {
+        internal BlobAssetReference<AIECSAnimationBlob> Library;
+        internal double Delta;
+
+        /// <summary>批量调度当前 World 的动画实体。</summary>
+        protected override void OnUpdate()
+        {
+            Dependency = new AIECSAdvanceAnimationJob { Library = Library, Delta = Delta }.ScheduleParallel(Dependency);
+        }
+
+        /// <summary>在开发控制、读取快照和释放所有者前完成最后一批任务。</summary>
+        internal void CompletePending()
+        {
+            Dependency.Complete();
+        }
+    }
+
+    /// <summary>
+    /// 可直接使用的 P1 开发会话：拥有独立 World、共享 Blob 和真实 Entity，不创建 GameObject。
+    /// 调用方显式 Step；不会安装 PlayerLoop，不执行游戏模拟、Animator 转场、事件或生产生成。
+    /// </summary>
+    public sealed class AIECSAnimationSession : IDisposable
+    {
+        private readonly AIECSAnimationLibrary library;
+        private readonly World world;
+        private readonly AIECSAnimationSystem system;
+        private bool disposed;
+        public int EntityCount { get; private set; }
+        public AIECSAnimationCatalog Catalog => library.Catalog;
+
+        /// <summary>构建独立会话；World 初始化失败时释放已经创建的 Blob。</summary>
+        public AIECSAnimationSession(AIECSAnimationCatalog catalog)
+        {
+            library = new AIECSAnimationLibrary(catalog);
+            try
+            {
+                world = new World("AIECS P1 Animation Data", WorldFlags.Game);
+                system = world.GetOrCreateSystemManaged<AIECSAnimationSystem>();
+                system.Library = library.Blob;
+            }
+            catch
+            {
+                if (world != null && world.IsCreated) world.Dispose();
+                library.Dispose();
+                throw;
+            }
+        }
+
+        /// <summary>生成一个有独立动作/相位/位置的真实实体，拒绝不完整的动作。</summary>
+        public Entity Create(int clipIndex, float3 position, float2 scale, float speed = 1, double phaseSeconds = 0)
+        {
+            RequireAlive();
+            ValidateClip(clipIndex);
+            ValidateTiming(speed, phaseSeconds);
+            if (!math.all(math.isfinite(position)) || !math.all(math.isfinite(scale)))
+                throw new ArgumentException("位置和缩放必须是有限数值。");
+            system.CompletePending();
+            var entity = world.EntityManager.CreateEntity(typeof(AIECSPlayback), typeof(AIECSAnimationPose));
+            world.EntityManager.SetComponentData(entity, new AIECSAnimationPose { Position = position, Scale = scale });
+            world.EntityManager.AddBuffer<AIECSCurrentFrame>(entity);
+            SetClip(entity, clipIndex, speed, phaseSeconds);
+            EntityCount++;
+            return entity;
+        }
+
+        /// <summary>显式切换动作并重建轨道长度；状态偏移以片段长度归一化，外部相位使用秒。</summary>
+        public void SetClip(Entity entity, int clipIndex, float speed = 1, double phaseSeconds = 0)
+        {
+            RequireEntity(entity);
+            ValidateClip(clipIndex);
+            ValidateTiming(speed, phaseSeconds);
+            ref var clip = ref library.Blob.Value.Clips[clipIndex];
+            var state = new AIECSPlayback { ClipIndex = clipIndex, Speed = speed,
+                Time = phaseSeconds + clip.CycleOffset * clip.Duration };
+            var frames = world.EntityManager.GetBuffer<AIECSCurrentFrame>(entity);
+            frames.ResizeUninitialized(clip.Tracks.Length);
+            AIECSAnimationSampling.Sample(ref state, ref clip, frames, 0);
+            world.EntityManager.SetComponentData(entity, state);
+        }
+
+        /// <summary>暂停或改速时保留当前相位；负速率允许反向播放。</summary>
+        public void SetPlayback(Entity entity, bool paused, float speed)
+        {
+            RequireEntity(entity);
+            ValidateTiming(speed, 0);
+            var state = world.EntityManager.GetComponentData<AIECSPlayback>(entity);
+            state.Paused = (byte)(paused ? 1 : 0);
+            state.Speed = speed;
+            world.EntityManager.SetComponentData(entity, state);
+        }
+
+        /// <summary>显式推进动画时钟；不自动读取编辑器时间或世界游戏时间。</summary>
+        public void Step(double seconds)
+        {
+            RequireAlive();
+            if (!math.isfinite(seconds) || seconds < 0) throw new ArgumentOutOfRangeException(nameof(seconds));
+            system.Delta = seconds;
+            system.Update();
+        }
+
+        /// <summary>读取一个实体的真实状态，复制帧到调用方提供的数组，不泄漏 Native 容器。</summary>
+        public AIECSPlayback Read(Entity entity, AIECSCurrentFrame[] destination)
+        {
+            RequireEntity(entity);
+            var frames = world.EntityManager.GetBuffer<AIECSCurrentFrame>(entity, true);
+            if (destination == null || destination.Length < frames.Length)
+                throw new ArgumentException("输出数组小于片段轨道数。", nameof(destination));
+            for (int i = 0; i < frames.Length; i++) destination[i] = frames[i];
+            return world.EntityManager.GetComponentData<AIECSPlayback>(entity);
+        }
+
+        /// <summary>移除会话实体，先完成使用该实体的任务。</summary>
+        public void Destroy(Entity entity)
+        {
+            RequireEntity(entity);
+            world.EntityManager.DestroyEntity(entity);
+            EntityCount--;
+        }
+
+        /// <summary>将不支持的曲线/事件作为明确错误，不能只播放 Sprite 后宣称动作完整。</summary>
+        private void ValidateClip(int index)
+        {
+            if (index < 0 || index >= Catalog.Clips.Length) throw new ArgumentOutOfRangeException(nameof(index));
+            var clip = Catalog.Clips[index];
+            if (clip.Unsupported.Length > 0 || clip.Tracks.Length == 0)
+                throw new InvalidOperationException($"动作 {clip.ActorId}/{clip.StatePath} 不可播放：{string.Join("; ", clip.Unsupported)}");
+        }
+
+        /// <summary>在操作边界验证时间输入，避免非有限数污染全部后续帧。</summary>
+        private static void ValidateTiming(float speed, double phase)
+        {
+            if (!math.isfinite(speed) || !math.isfinite(phase)) throw new ArgumentException("速率和相位必须是有限数值。");
+        }
+
+        /// <summary>验证会话未释放。</summary>
+        private void RequireAlive()
+        {
+            if (disposed) throw new ObjectDisposedException(nameof(AIECSAnimationSession));
+        }
+
+        /// <summary>完成任务后验证 Entity 仍属于此会话。</summary>
+        private void RequireEntity(Entity entity)
+        {
+            RequireAlive();
+            system.CompletePending();
+            if (!world.EntityManager.Exists(entity) || !world.EntityManager.HasComponent<AIECSPlayback>(entity))
+                throw new ArgumentException("实体已销毁或不属于该会话。", nameof(entity));
+        }
+
+        /// <summary>先完成 Job，再销毁实体/World，最后释放共享 Blob；可重复调用。</summary>
+        public void Dispose()
+        {
+            if (disposed) return;
+            system.CompletePending();
+            world.Dispose();
+            library.Dispose();
+            EntityCount = 0;
+            disposed = true;
+        }
+    }
+}

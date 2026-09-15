@@ -1,0 +1,142 @@
+using System;
+using Unity.Collections;
+using Unity.Entities;
+using Unity.Mathematics;
+using UnityEngine;
+
+namespace FlatWorld.AIECS
+{
+    /// <summary>共享只读动画数据，全部为非托管值；同一开发 World 的实体共享一份。</summary>
+    public struct AIECSAnimationBlob
+    {
+        public BlobArray<AIECSClipBlob> Clips;
+        public BlobArray<AIECSGeometryBlob> Sprites;
+    }
+
+    /// <summary>状态速率、循环规则与离散轨道；阻断标志也进入 Blob。</summary>
+    public struct AIECSClipBlob
+    {
+        public float Duration;
+        public float StateSpeed;
+        public float CycleOffset;
+        public byte Loop;
+        public byte Unsupported;
+        public BlobArray<AIECSTrackBlob> Tracks;
+    }
+
+    /// <summary>一条 Sprite 曲线的原始时间表。</summary>
+    public struct AIECSTrackBlob
+    {
+        public BlobArray<AIECSSpriteKey> Keys;
+    }
+
+    /// <summary>图集实际几何；纹理由共享目录侧持有，不把 Unity 对象放入 Job。</summary>
+    public struct AIECSGeometryBlob
+    {
+        public float2 Pivot;
+        public float PixelsPerUnit;
+        public float4 Rect;
+        public BlobArray<float2> Vertices;
+        public BlobArray<float2> UV;
+        public BlobArray<ushort> Triangles;
+    }
+
+    /// <summary>
+    /// Blob 唯一所有者。调用方必须在所有引用它的 Job 完成且实体销毁后释放。
+    /// 目录资产由调用方持有；不取得或释放调用方的 Addressables 句柄。
+    /// </summary>
+    public sealed class AIECSAnimationLibrary : IDisposable
+    {
+        public AIECSAnimationCatalog Catalog { get; }
+        public BlobAssetReference<AIECSAnimationBlob> Blob { get; private set; }
+        // 当前打包纹理的强引用，每种 Sprite 一份，不按实体复制。
+        public Texture2D[] Textures { get; }
+
+        /// <summary>校验导出数据后构建持久 Blob；失败时释放临时构建器。</summary>
+        public AIECSAnimationLibrary(AIECSAnimationCatalog catalog)
+        {
+            Catalog = catalog != null ? catalog : throw new ArgumentNullException(nameof(catalog));
+            Validate(catalog);
+            Textures = new Texture2D[catalog.Sprites.Length];
+            using var builder = new BlobBuilder(Allocator.Temp);
+            ref AIECSAnimationBlob root = ref builder.ConstructRoot<AIECSAnimationBlob>();
+            var clips = builder.Allocate(ref root.Clips, catalog.Clips.Length);
+            for (int c = 0; c < clips.Length; c++)
+            {
+                AIECSAnimationClip source = catalog.Clips[c];
+                clips[c].Duration = source.Duration;
+                clips[c].StateSpeed = source.StateSpeed;
+                clips[c].CycleOffset = source.CycleOffset;
+                clips[c].Loop = (byte)(source.Loop ? 1 : 0);
+                clips[c].Unsupported = (byte)(source.Unsupported.Length > 0 ? 1 : 0);
+                var tracks = builder.Allocate(ref clips[c].Tracks, source.Tracks.Length);
+                for (int t = 0; t < tracks.Length; t++)
+                {
+                    var keys = builder.Allocate(ref tracks[t].Keys, source.Tracks[t].Keys.Length);
+                    for (int k = 0; k < keys.Length; k++) keys[k] = source.Tracks[t].Keys[k];
+                }
+            }
+            var sprites = builder.Allocate(ref root.Sprites, catalog.Sprites.Length);
+            for (int s = 0; s < sprites.Length; s++)
+            {
+                Sprite sprite = catalog.Sprites[s].Sprite;
+                Vector2[] vertices = sprite.vertices;
+                Vector2[] uv = sprite.uv;
+                ushort[] indices = sprite.triangles;
+                if (vertices.Length != uv.Length || vertices.Length == 0)
+                    throw new InvalidOperationException($"Sprite {sprite.name} 的当前几何无效。");
+                Textures[s] = sprite.texture;
+                sprites[s].Pivot = sprite.pivot;
+                sprites[s].PixelsPerUnit = sprite.pixelsPerUnit;
+                Rect rect = sprite.rect;
+                sprites[s].Rect = new float4(rect.x, rect.y, rect.width, rect.height);
+                var destinationVertices = builder.Allocate(ref sprites[s].Vertices, vertices.Length);
+                var destinationUV = builder.Allocate(ref sprites[s].UV, uv.Length);
+                var destinationIndices = builder.Allocate(ref sprites[s].Triangles, indices.Length);
+                for (int v = 0; v < vertices.Length; v++)
+                {
+                    destinationVertices[v] = vertices[v];
+                    destinationUV[v] = uv[v];
+                }
+                for (int i = 0; i < indices.Length; i++) destinationIndices[i] = indices[i];
+            }
+            Blob = builder.CreateBlobAssetReference<AIECSAnimationBlob>(Allocator.Persistent);
+        }
+
+        /// <summary>拒绝损坏目录，不在采样热路径增加猜测式回退。</summary>
+        private static void Validate(AIECSAnimationCatalog catalog)
+        {
+            if (catalog.FormatVersion != 1 || catalog.Clips == null || catalog.Sprites == null)
+                throw new ArgumentException("动画目录格式无效，请重新导出。");
+            foreach (var sprite in catalog.Sprites)
+                if (sprite?.Sprite == null) throw new ArgumentException("动画目录存在丢失的 Sprite 引用。");
+            foreach (var clip in catalog.Clips)
+            {
+                if (clip == null || !math.isfinite(clip.Duration) || clip.Duration < 0 ||
+                    !math.isfinite(clip.StateSpeed) || !math.isfinite(clip.CycleOffset) ||
+                    clip.Tracks == null || clip.Unsupported == null)
+                    throw new ArgumentException("动画片段时间或轨道无效。");
+                foreach (var track in clip.Tracks)
+                {
+                    if (track?.Keys == null || track.Keys.Length == 0)
+                        throw new ArgumentException("Sprite 轨道没有关键帧。");
+                    float previous = -1;
+                    foreach (var key in track.Keys)
+                    {
+                        if (!math.isfinite(key.Time) || key.Time < 0 || key.Time < previous ||
+                            key.Time > clip.Duration || key.SpriteIndex < -1 || key.SpriteIndex >= catalog.Sprites.Length)
+                            throw new ArgumentException("Sprite 关键帧时间或索引无效。");
+                        previous = key.Time;
+                    }
+                }
+            }
+        }
+
+        /// <summary>幂等释放共享 Blob，所有借用者须先退出。</summary>
+        public void Dispose()
+        {
+            if (Blob.IsCreated) Blob.Dispose();
+            Blob = default;
+        }
+    }
+}
