@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
+using Unity.Mathematics;
 
 namespace FlatWorld.WorldModel
 {
@@ -11,6 +12,8 @@ namespace FlatWorld.WorldModel
     /// </summary>
     public readonly struct ChunkGenerationTopologySnapshot
     {
+        private readonly WorldTopologyDomain domain;
+
         public ChunkGenerationTopologySnapshot(Int2 min, Int2 span)
         {
             if (span.X <= 0)
@@ -20,6 +23,7 @@ namespace FlatWorld.WorldModel
             Min = min;
             Span = span;
             IsWrapped = true;
+            domain = new WorldTopologyDomain(new int2(min.X, min.Y), new int2(span.X, span.Y), true);
         }
 
         /// <summary>世界是否会在边界绕回另一边；false 表示世界无限延伸。</summary>
@@ -30,19 +34,12 @@ namespace FlatWorld.WorldModel
         public Int2 Span { get; }
 
         /// <summary>把越过左右边界的 X 坐标绕回世界内；无限世界不做修改。</summary>
-        public int NormalizeX(int value) => IsWrapped ? Wrap(value, Min.X, Span.X) : value;
+        public int NormalizeX(int value) => domain.NormalizeX(value);
         /// <summary>把越过上下边界的 Y 坐标绕回世界内；无限世界不做修改。</summary>
-        public int NormalizeY(int value) => IsWrapped ? Wrap(value, Min.Y, Span.Y) : value;
+        public int NormalizeY(int value) => domain.NormalizeY(value);
 
-        private static int Wrap(int value, int min, int span)
-        {
-            // 先用更大的整数类型计算，避免极端坐标溢出；负数余数再补回正确范围。
-            long offset = (long)value - min;
-            long wrapped = offset % span;
-            if (wrapped < 0L)
-                wrapped += span;
-            return (int)(min + wrapped);
-        }
+        /// <summary>将冻结的坐标域按值交给后台消费者，不访问活动世界。</summary>
+        public WorldTopologyDomain ToDomain() => domain;
     }
 
     /// <summary>

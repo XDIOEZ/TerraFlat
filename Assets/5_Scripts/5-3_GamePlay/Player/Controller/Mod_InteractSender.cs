@@ -187,7 +187,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             if (IsCombatOnlyCollider(colliders[i]))
                 continue;
 
-            IInteractable receiver = WorldTopologyColliderProxy.ResolveComponent<IInteractable>(colliders[i]);
+            IInteractable receiver = GameplayPhysics2D.ResolveComponent<IInteractable>(colliders[i]);
             Component receiverComponent = receiver as Component;
             if (!IsInteractionCandidate(receiver, receiverComponent))
                 continue;
@@ -280,7 +280,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             if (IsCombatOnlyCollider(overlap))
                 continue;
 
-            IInteractable receiver = WorldTopologyColliderProxy.ResolveComponent<IInteractable>(overlap);
+            IInteractable receiver = GameplayPhysics2D.ResolveComponent<IInteractable>(overlap);
             Component receiverComponent = receiver as Component;
             if (!IsInteractionCandidate(receiver, receiverComponent))
                 continue;

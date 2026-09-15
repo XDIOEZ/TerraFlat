@@ -165,7 +165,7 @@ namespace FlatWorld.GameTest.Combat
                 DamageReceiver receiver = receiverBranch.AddComponent<DamageReceiver>();
 
                 DamageReceiver resolved =
-                    WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(collider);
+                    GameplayPhysics2D.ResolveComponent<DamageReceiver>(collider);
 
                 Assert.That(resolved, Is.SameAs(receiver));
             }

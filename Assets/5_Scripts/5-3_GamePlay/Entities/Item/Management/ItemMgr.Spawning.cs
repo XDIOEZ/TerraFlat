@@ -171,8 +171,6 @@ public partial class ItemMgr
         RefreshItemSpatialIndex(item);
         RefreshPerceptionColliderCache(item);
         _tickScheduler.Register(item);
-        WorldTopologyBody.Ensure(item);
-        WorldTopologyProxySource.Ensure(item);
 
         if (TryRegisterRuntimeAiEntity(item))
             ItemWorldPlacement.AttachRuntimeAi(item, item.gameObject);
@@ -184,6 +182,7 @@ public partial class ItemMgr
         {
             _cachedMap = mapItem;
         }
+        RuntimeItemRegistered?.Invoke(item);
     }
 
     public void InjectRuntimeItem(Item item, string context = null)
@@ -231,6 +230,7 @@ public partial class ItemMgr
         RemoveItemFromSpatialIndex(item);
         _perceptionColliderCache.Remove(item);
         _tickScheduler.Remove(item);
+        RuntimeItemUnregistered?.Invoke(item);
     }
 
     private GameObject SpawnItemObject(string itemId)

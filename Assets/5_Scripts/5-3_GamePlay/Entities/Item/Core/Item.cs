@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UltEvents;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
@@ -105,6 +105,15 @@ public abstract class Item : MonoBehaviour
     /// <summary>手持状态改变时触发，供需要切换世界表现的模块监听。</summary>
     public event Action<bool> OnInHandChanged;
 
+    /// <summary>模块或运行时组件集合变化的通用通知；表现适配器自行判断是否需要刷新。</summary>
+    internal static event Action<Item> RuntimeStructureChanged;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStructureEvents() => RuntimeStructureChanged = null;
+
+    /// <summary>直接增删运行时组件后调用；仅修改现有组件属性不需要重新扫描层级。</summary>
+    public void NotifyRuntimeStructureChanged() => RuntimeStructureChanged?.Invoke(this);
+
     [HideInInspector]
     /// <summary>
     /// 物品UI更新事件
@@ -171,6 +180,7 @@ public abstract class Item : MonoBehaviour
         ModuleLoad();
         MarkModuleScheduleDirty();
         ItemMgr.GetInstance()?.NotifyItemSpatialIndexChanged(this);
+        NotifyRuntimeStructureChanged();
     }
 
 

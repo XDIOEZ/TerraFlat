@@ -173,7 +173,7 @@ public class ItemPicker : Module
     /// <param name="other">进入触发器的碰撞体</param>
     private void OnTriggerEnter2D(Collider2D other)
     {
-        Item pickAble = WorldTopologyColliderProxy.ResolveComponent<Item>(other);
+        Item pickAble = GameplayPhysics2D.ResolveComponent<Item>(other);
         if (pickAble != null)
         {
             deferredPickupItems.Remove(pickAble);
@@ -188,7 +188,7 @@ public class ItemPicker : Module
     /// </summary>
     private void OnTriggerStay2D(Collider2D other)
     {
-        Item pickAble = WorldTopologyColliderProxy.ResolveComponent<Item>(other);
+        Item pickAble = GameplayPhysics2D.ResolveComponent<Item>(other);
         if (pickAble?.itemData?.Stack == null)
             return;
 
@@ -210,7 +210,7 @@ public class ItemPicker : Module
     /// </summary>
     private void OnTriggerExit2D(Collider2D other)
     {
-        Item pickAble = WorldTopologyColliderProxy.ResolveComponent<Item>(other);
+        Item pickAble = GameplayPhysics2D.ResolveComponent<Item>(other);
         if (pickAble != null)
         {
             deferredPickupItems.Remove(pickAble);
@@ -238,7 +238,7 @@ public class ItemPicker : Module
         }
 
         // 获取物品组件
-        Item pickAble = WorldTopologyColliderProxy.ResolveComponent<Item>(other);
+        Item pickAble = GameplayPhysics2D.ResolveComponent<Item>(other);
         if (pickAble?.itemData?.Stack == null)
             return;
 

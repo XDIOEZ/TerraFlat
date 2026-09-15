@@ -300,7 +300,7 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
 
         for (int i = 0; i < _overlapColliders.Count; i++)
         {
-            DamageReceiver receiver = WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(
+            DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<DamageReceiver>(
                 _overlapColliders[i]);
             ApplyDamage(receiver);
         }
@@ -314,7 +314,7 @@ public sealed class Mod_ChargeAttack : Module, IAnimalCombatSkill, ITrunDirectio
             return;
         }
 
-        ApplyDamage(WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(other));
+        ApplyDamage(GameplayPhysics2D.ResolveComponent<DamageReceiver>(other));
     }
 
     private void ApplyDamage(DamageReceiver receiver)

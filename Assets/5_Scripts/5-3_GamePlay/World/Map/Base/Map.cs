@@ -1,4 +1,4 @@
-﻿using Force.DeepCloner;
+using Force.DeepCloner;
 using Sirenix.OdinInspector;
 using System.Collections;
 using System.Collections.Generic;
@@ -108,6 +108,12 @@ public class Map : Item
     public int LastInitialRenderTileCount => lastInitialRenderTileCount;
     public event Action<Map, string> OnGenerationFailed;
 
+    /// <summary>Tilemap 就绪、失效、增量刷新及启停的通用表现通知；不依赖 Item 实例化路径。</summary>
+    internal static event Action<Map> TilemapPresentationChanged;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetPresentationEvents() => TilemapPresentationChanged = null;
+
     protected virtual bool ShouldBakePenaltyAfterTilemapLoad => true;
     protected virtual int TilemapLoadBatchSize => Mathf.Max(16, loadTileBatchSize);
 
@@ -119,6 +125,7 @@ public class Map : Item
         tilemapVisualReady = false;
         lastGenerationFailure = null;
         chunk?.ResetLifecycleState();
+        TilemapPresentationChanged?.Invoke(this);
     }
 
     protected void BeginMapLoad()
@@ -126,6 +133,7 @@ public class Map : Item
         tilemapVisualReady = false;
         lastGenerationFailure = null;
         chunk?.BeginMapLoad();
+        TilemapPresentationChanged?.Invoke(this);
     }
 
     protected void NotifyChunkReady()
@@ -170,8 +178,8 @@ public class Map : Item
             activeGenerationContext?.MarkSucceeded();
             if (WorldNavigationManager.Instance?.EnableDebugLogs == true)
                 Debug.Log($"[WorldNav][Map] FinalizeTilemapLoad | chunk={chunk?.name ?? "null"} | Map={name} | Data.TileLoaded={Data?.TileLoaded}");
-            WrappedTilemapCollisionProxy.Ensure(this);
             OnTilemapLoaded();
+            TilemapPresentationChanged?.Invoke(this);
             NotifyChunkReady();
             activeGenerationContext = null;
         }
@@ -192,12 +200,14 @@ public class Map : Item
     {
         if (Data?.TileLoaded == true)
             WorldNavigationManager.Instance?.RegisterMap(this);
+        TilemapPresentationChanged?.Invoke(this);
     }
 
     private void OnDisable()
     {
         WorldNavigationManager.ExistingInstance?.UnregisterMap(this);
         StopMapCoroutines();
+        TilemapPresentationChanged?.Invoke(this);
     }
 
     private new void OnDestroy()
@@ -547,6 +557,7 @@ public class Map : Item
             Data.TileLoaded = false;
         tilemapVisualReady = false;
         tileMap?.ClearAllTiles();
+        TilemapPresentationChanged?.Invoke(this);
         BlockingTilemapLayer.ClearMap(this);
         SaveDataMgr.Instance?.DiscardProceduralChunkBaseline(chunk);
         lastGenerationFailure = exception == null ? message : $"{message}: {exception.Message}";
@@ -704,6 +715,7 @@ public class Map : Item
     public void LoadTileData_To_TileMap_Sync()
     {
         tilemapVisualReady = false;
+        TilemapPresentationChanged?.Invoke(this);
         lastInitialRenderBatchCount = 0;
         lastInitialRenderTileCount = 0;
         tileMap.ClearAllTiles();
@@ -734,6 +746,7 @@ public class Map : Item
     public void LoadTileData_To_TileMap_Ansync()
     {
         tilemapVisualReady = false;
+        TilemapPresentationChanged?.Invoke(this);
         // 如果已有协程在运行，先停止它
         if (loadTileMapCoroutine != null)
         {
@@ -1390,7 +1403,7 @@ public class Map : Item
 
     public void UpdateTileBaseAtPosition(Vector2Int position)
     {
-        WrappedTilemapCollisionProxy.MarkDirty(this);
+        TilemapPresentationChanged?.Invoke(this);
         Vector3Int position3D = new Vector3Int(position.x, position.y, 0);
 
         if (!Data.TryGetStackView(position, out TileStackView stack) || stack.Count == 0)

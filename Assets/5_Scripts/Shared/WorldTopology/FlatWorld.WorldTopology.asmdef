@@ -1,0 +1,6 @@
+{
+    "name": "FlatWorld.WorldTopology",
+    "references": ["Unity.Mathematics"],
+    "autoReferenced": true,
+    "noEngineReferences": true
+}

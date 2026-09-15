@@ -1,7 +1,7 @@
 {
     "name": "FlatWorld.WorldModel",
     "rootNamespace": "FlatWorld.WorldModel",
-    "references": [],
+    "references": ["FlatWorld.WorldTopology", "Unity.Mathematics"],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

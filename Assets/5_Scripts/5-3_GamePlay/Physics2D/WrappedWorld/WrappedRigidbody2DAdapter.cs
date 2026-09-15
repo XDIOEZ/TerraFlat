@@ -1,9 +1,9 @@
 using FlatWorld.Networking;
 using UnityEngine;
 
-/// <summary>Wraps authoritative non-player Rigidbody2D items into canonical space.</summary>
+/// <summary>GameObject 物理适配：把权威非玩家刚体应用到标准坐标，保留速度、角速度、索引和归属通知。</summary>
 [DisallowMultipleComponent]
-public sealed class WorldTopologyBody : MonoBehaviour
+public sealed class WrappedRigidbody2DAdapter : MonoBehaviour
 {
     private Item item;
     private Rigidbody2D body;
@@ -12,13 +12,16 @@ public sealed class WorldTopologyBody : MonoBehaviour
     {
         if (target == null || target is Player || target is Map)
             return;
+        WrappedRigidbody2DAdapter topologyBody = target.GetComponent<WrappedRigidbody2DAdapter>();
         Rigidbody2D rigidbody = target.GetComponent<Rigidbody2D>();
         if (rigidbody == null || rigidbody.bodyType == RigidbodyType2D.Static)
+        {
+            topologyBody?.Suspend();
             return;
+        }
 
-        WorldTopologyBody topologyBody = target.GetComponent<WorldTopologyBody>();
         if (topologyBody == null)
-            topologyBody = target.gameObject.AddComponent<WorldTopologyBody>();
+            topologyBody = target.gameObject.AddComponent<WrappedRigidbody2DAdapter>();
         topologyBody.Bind(target, rigidbody);
     }
 
@@ -32,7 +35,10 @@ public sealed class WorldTopologyBody : MonoBehaviour
     {
         item = target;
         body = rigidbody;
+        enabled = true;
     }
+
+    internal void Suspend() => enabled = false;
 
     private void FixedUpdate()
     {
@@ -44,7 +50,8 @@ public sealed class WorldTopologyBody : MonoBehaviour
         if (!WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds))
             return false;
 
-        if (item == null || body == null || item.itemData == null ||
+        if (!isActiveAndEnabled || item == null || body == null ||
+            body.bodyType == RigidbodyType2D.Static || item.itemData == null ||
             item.itemData.inHand || !GameNetwork.HasStateAuthority ||
             ItemMgr.Instance == null || ItemMgr.Instance.GetItemByGuid(item.itemData.Guid) != item)
         {

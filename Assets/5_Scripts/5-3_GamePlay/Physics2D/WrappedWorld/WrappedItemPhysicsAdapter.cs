@@ -1,59 +1,23 @@
 using System;
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public sealed class WorldTopologyColliderProxy : MonoBehaviour
-{
-    public Collider2D SourceCollider { get; private set; }
-    public Vector2 ImageOffset { get; private set; }
-
-    internal void Bind(Collider2D source, Vector2 imageOffset)
-    {
-        SourceCollider = source;
-        ImageOffset = imageOffset;
-    }
-
-    public static Collider2D Resolve(Collider2D collider)
-    {
-        WorldTopologyColliderProxy proxy = collider != null
-            ? collider.GetComponent<WorldTopologyColliderProxy>()
-            : null;
-        return proxy?.SourceCollider != null ? proxy.SourceCollider : collider;
-    }
-
-    public static T ResolveComponent<T>(Collider2D collider) where T : class
-    {
-        Collider2D source = Resolve(collider);
-        if (source == null)
-            return null;
-
-        T component = source.GetComponent<T>();
-        component ??= source.GetComponentInParent<T>();
-        if (component != null)
-            return component;
-
-        // 玩家碰撞体常在根节点，而 DamageReceiver 等模块在子节点，需要继续向下解析。
-        component = source.GetComponentInChildren<T>(true);
-        if (component != null)
-            return component;
-
-        // Item 的碰撞体与功能模块不保证处于同一分支：例如碰撞体可能属于表现/成长模块，
-        // DamageReceiver 位于兄弟模块。最后回到最近的 Item 根，再搜索完整 Item 子树。
-        Item ownerItem = source.GetComponentInParent<Item>();
-        return ownerItem != null ? ownerItem.GetComponentInChildren<T>(true) : null;
-    }
-}
-
-/// <summary>Maintains collision-only images of one authoritative Item near torus seams.</summary>
+/// <summary>
+/// 当前 Item 的碰撞镜像适配器；32 单位严格接缝带保持既有查询覆盖范围。
+/// 只在注册、重绑或组件结构变化时筛选碰撞源，FixedUpdate 不扫描子层级。
+/// </summary>
 [DisallowMultipleComponent]
-public sealed class WorldTopologyProxySource : MonoBehaviour
+public sealed class WrappedItemPhysicsAdapter : MonoBehaviour
 {
     private const float SeamBand = 32f;
 
     private readonly List<ProxyRecord> proxies = new();
-    private readonly List<Vector2> requiredOffsets = new(3);
     private Item item;
+    private bool sourcesDirty;
+    private int refreshGeneration;
+    private WorldTopologyDomain lastDomain;
     // 只缓存真正需要镜像的碰撞体；过滤过程包含多次 GetComponent，绝不能放在 FixedUpdate 热路径里。
     private Collider2D[] sources = Array.Empty<Collider2D>();
 
@@ -65,7 +29,7 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
             return;
 
         Collider2D[] colliders = CollectProxySources(target);
-        WorldTopologyProxySource source = target.GetComponent<WorldTopologyProxySource>();
+        WrappedItemPhysicsAdapter source = target.GetComponent<WrappedItemPhysicsAdapter>();
         if (colliders.Length == 0)
         {
             // 对象池复用时，旧实例可能已经带有该组件；此时必须关闭旧代理。
@@ -74,15 +38,27 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
         }
 
         if (source == null)
-            source = target.gameObject.AddComponent<WorldTopologyProxySource>();
+            source = target.gameObject.AddComponent<WrappedItemPhysicsAdapter>();
         source.Bind(target, colliders);
     }
 
     private void Awake()
     {
         item = GetComponent<Item>();
-        sources = item != null ? CollectProxySources(item) : Array.Empty<Collider2D>();
-        enabled = sources.Length > 0;
+    }
+
+    private void OnEnable() => sourcesDirty = true;
+
+    internal void InvalidateSources()
+    {
+        sourcesDirty = true;
+        enabled = true;
+    }
+
+    internal void Suspend()
+    {
+        SetAllActive(false);
+        enabled = false;
     }
 
     private void FixedUpdate()
@@ -97,6 +73,12 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
 
     private void OnDestroy()
     {
+        ClearProxies();
+    }
+
+    private void ClearProxies()
+    {
+        SetAllActive(false);
         for (int i = 0; i < proxies.Count; i++)
         {
             if (proxies[i].Proxy != null)
@@ -107,16 +89,31 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
 
     public void RefreshProxies()
     {
-        if (!IsRegisteredRuntimeItem() ||
+        refreshGeneration++;
+        if (sourcesDirty && item != null)
+        {
+            sourcesDirty = false;
+            sources = CollectProxySources(item);
+            RemoveStaleProxies();
+        }
+
+        if (!isActiveAndEnabled || !IsRegisteredRuntimeItem() ||
             !WorldTopologyRuntime.TryGetActiveBounds(out WorldTopologyBounds bounds))
         {
-            SetAllActive(false);
+            ClearProxies();
+            lastDomain = default;
             return;
         }
+
+        WorldTopologyDomain domain = bounds.ToDomain();
+        if (!lastDomain.IsWrapped || math.any(domain.Min != lastDomain.Min) || math.any(domain.Span != lastDomain.Span))
+            ClearProxies();
+        lastDomain = domain;
 
         if (sources == null || sources.Length == 0)
         {
             SetAllActive(false);
+            enabled = false;
             return;
         }
 
@@ -124,26 +121,42 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
         for (int sourceIndex = 0; sourceIndex < sources.Length; sourceIndex++)
         {
             Collider2D source = sources[sourceIndex];
-            if (source == null)
+            if (source == null || !source.enabled || !source.gameObject.activeInHierarchy ||
+                (source.attachedRigidbody != null && !source.attachedRigidbody.simulated))
                 continue;
 
-            BuildRequiredOffsets(source.bounds, bounds);
+            Bounds area = source.bounds;
+            WorldTopologyImageOffsets requiredOffsets = domain.GetRequiredImageOffsets(
+                new float2(area.min.x, area.min.y), new float2(area.max.x, area.max.y),
+                SeamBand, includeBoundary: false);
+            uint shapeHash = requiredOffsets.Count > 0 ? source.GetShapeHash() : 0u;
             for (int offsetIndex = 0; offsetIndex < requiredOffsets.Count; offsetIndex++)
             {
-                Vector2 offset = requiredOffsets[offsetIndex];
-                ProxyRecord record = GetOrCreate(source, offset);
+                float2 imageOffset = requiredOffsets[offsetIndex];
+                Vector2 offset = new Vector2(imageOffset.x, imageOffset.y);
+                ProxyRecord record = GetOrCreate(source, offset, shapeHash);
                 if (record == null)
                     continue;
-                UpdateProxy(record, source, offset);
+                UpdateProxy(record, source, offset, shapeHash);
                 record.Proxy.enabled = source.enabled && source.gameObject.activeInHierarchy;
                 activeCount++;
             }
         }
 
-        for (int i = 0; i < proxies.Count; i++)
+        for (int i = proxies.Count - 1; i >= 0; i--)
         {
             ProxyRecord record = proxies[i];
-            bool required = record.LastRefreshFrame == Time.frameCount;
+            if (record.Source == null || record.Proxy == null)
+            {
+                if (record.Proxy != null)
+                {
+                    record.Proxy.enabled = false;
+                    Destroy(record.Proxy.gameObject);
+                }
+                proxies.RemoveAt(i);
+                continue;
+            }
+            bool required = record.Generation == refreshGeneration;
             if (record.Proxy != null)
                 record.Proxy.enabled = required && record.Proxy.enabled;
         }
@@ -155,6 +168,8 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
     {
         item = target;
         sources = proxySources ?? Array.Empty<Collider2D>();
+        sourcesDirty = false;
+        SetAllActive(false);
         RemoveStaleProxies();
 
         bool hasSources = sources.Length > 0;
@@ -171,7 +186,8 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
         for (int i = 0; i < colliders.Length; i++)
         {
             Collider2D collider = colliders[i];
-            if (!ShouldProxy(collider))
+            // 不镜像嵌套 Item（尤其手持物/远程表现）的碰撞体，归属与其自己的注册链一致。
+            if (!ShouldProxy(collider) || collider.GetComponentInParent<Item>(true) != target)
                 continue;
 
             colliders[validCount++] = collider;
@@ -196,7 +212,10 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
                 continue;
 
             if (record.Proxy != null)
+            {
+                record.Proxy.enabled = false;
                 Destroy(record.Proxy.gameObject);
+            }
             proxies.RemoveAt(i);
         }
     }
@@ -223,9 +242,13 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
     {
         if (source == null || source is TilemapCollider2D || source is CompositeCollider2D)
             return false;
+        if (source is not BoxCollider2D && source is not CircleCollider2D &&
+            source is not CapsuleCollider2D && source is not PolygonCollider2D && source is not EdgeCollider2D)
+            return false;
         if (source.GetComponent<ItemPicker>() != null ||
             source.GetComponent<Mod_InteractSender>() != null ||
             source.GetComponent<Mod_Damage>() != null ||
+            source.GetComponent<Mod_ChargeAttack>() != null ||
             source.GetComponent<BuildingShadow>() != null)
         {
             return false;
@@ -233,32 +256,14 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
         return true;
     }
 
-    private void BuildRequiredOffsets(Bounds colliderBounds, WorldTopologyBounds bounds)
-    {
-        requiredOffsets.Clear();
-        int xDirection = colliderBounds.min.x < bounds.Min.x + SeamBand
-            ? 1
-            : colliderBounds.max.x > bounds.MaxExclusive.x - SeamBand ? -1 : 0;
-        int yDirection = colliderBounds.min.y < bounds.Min.y + SeamBand
-            ? 1
-            : colliderBounds.max.y > bounds.MaxExclusive.y - SeamBand ? -1 : 0;
-
-        if (xDirection != 0)
-            requiredOffsets.Add(new Vector2(xDirection * bounds.Span.x, 0f));
-        if (yDirection != 0)
-            requiredOffsets.Add(new Vector2(0f, yDirection * bounds.Span.y));
-        if (xDirection != 0 && yDirection != 0)
-            requiredOffsets.Add(new Vector2(xDirection * bounds.Span.x, yDirection * bounds.Span.y));
-    }
-
-    private ProxyRecord GetOrCreate(Collider2D source, Vector2 offset)
+    private ProxyRecord GetOrCreate(Collider2D source, Vector2 offset, uint shapeHash)
     {
         for (int i = 0; i < proxies.Count; i++)
         {
             ProxyRecord existing = proxies[i];
             if (existing.Source == source && existing.Offset == offset)
             {
-                existing.LastRefreshFrame = Time.frameCount;
+                existing.Generation = refreshGeneration;
                 return existing;
             }
         }
@@ -272,7 +277,8 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
             Proxy = clone,
             Body = clone.GetComponent<Rigidbody2D>(),
             Offset = offset,
-            LastRefreshFrame = Time.frameCount
+            Generation = refreshGeneration,
+            ShapeHash = shapeHash
         };
         proxies.Add(record);
         return record;
@@ -290,11 +296,11 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
 
         Collider2D clone = source switch
         {
-            BoxCollider2D box => CopyBox(proxyObject, box),
-            CircleCollider2D circle => CopyCircle(proxyObject, circle),
-            CapsuleCollider2D capsule => CopyCapsule(proxyObject, capsule),
-            PolygonCollider2D polygon => CopyPolygon(proxyObject, polygon),
-            EdgeCollider2D edge => CopyEdge(proxyObject, edge),
+            BoxCollider2D _ => proxyObject.AddComponent<BoxCollider2D>(),
+            CircleCollider2D _ => proxyObject.AddComponent<CircleCollider2D>(),
+            CapsuleCollider2D _ => proxyObject.AddComponent<CapsuleCollider2D>(),
+            PolygonCollider2D _ => proxyObject.AddComponent<PolygonCollider2D>(),
+            EdgeCollider2D _ => proxyObject.AddComponent<EdgeCollider2D>(),
             _ => null
         };
         if (clone == null)
@@ -303,13 +309,19 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
             return null;
         }
 
+        CopyGeometry(source, clone);
         CopyCommon(source, clone);
-        proxyObject.AddComponent<WorldTopologyColliderProxy>().Bind(source, offset);
+        proxyObject.AddComponent<ColliderSource2D>().Bind(source, offset);
         return clone;
     }
 
-    private static void UpdateProxy(ProxyRecord record, Collider2D source, Vector2 offset)
+    private void UpdateProxy(ProxyRecord record, Collider2D source, Vector2 offset, uint shapeHash)
     {
+        if (record.ShapeHash != shapeHash)
+        {
+            CopyGeometry(source, record.Proxy);
+            record.ShapeHash = shapeHash;
+        }
         Transform sourceTransform = source.transform;
         Vector3 position = sourceTransform.position + (Vector3)offset;
         record.Body.position = position;
@@ -318,7 +330,42 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
         record.Proxy.gameObject.layer = source.gameObject.layer;
         record.Proxy.isTrigger = source.isTrigger;
         record.Proxy.sharedMaterial = source.sharedMaterial;
-        record.LastRefreshFrame = Time.frameCount;
+        record.Proxy.offset = source.offset;
+        record.Proxy.usedByEffector = source.usedByEffector;
+        record.Generation = refreshGeneration;
+    }
+
+    /// <summary>只在形状变化时复制几何，Polygon/Edge 不在每个物理帧分配路径数组。</summary>
+    private static void CopyGeometry(Collider2D source, Collider2D target)
+    {
+        switch (source)
+        {
+            case BoxCollider2D box:
+                var boxTarget = (BoxCollider2D)target;
+                boxTarget.size = box.size;
+                boxTarget.edgeRadius = box.edgeRadius;
+                boxTarget.autoTiling = box.autoTiling;
+                break;
+            case CircleCollider2D circle:
+                ((CircleCollider2D)target).radius = circle.radius;
+                break;
+            case CapsuleCollider2D capsule:
+                var capsuleTarget = (CapsuleCollider2D)target;
+                capsuleTarget.size = capsule.size;
+                capsuleTarget.direction = capsule.direction;
+                break;
+            case PolygonCollider2D polygon:
+                var polygonTarget = (PolygonCollider2D)target;
+                polygonTarget.pathCount = polygon.pathCount;
+                for (int i = 0; i < polygon.pathCount; i++)
+                    polygonTarget.SetPath(i, polygon.GetPath(i));
+                break;
+            case EdgeCollider2D edge:
+                var edgeTarget = (EdgeCollider2D)target;
+                edgeTarget.points = edge.points;
+                edgeTarget.edgeRadius = edge.edgeRadius;
+                break;
+        }
     }
 
     private void SetAllActive(bool active)
@@ -340,53 +387,13 @@ public sealed class WorldTopologyProxySource : MonoBehaviour
         target.usedByEffector = source.usedByEffector;
     }
 
-    private static Collider2D CopyBox(GameObject target, BoxCollider2D source)
-    {
-        BoxCollider2D clone = target.AddComponent<BoxCollider2D>();
-        clone.size = source.size;
-        clone.edgeRadius = source.edgeRadius;
-        clone.autoTiling = source.autoTiling;
-        return clone;
-    }
-
-    private static Collider2D CopyCircle(GameObject target, CircleCollider2D source)
-    {
-        CircleCollider2D clone = target.AddComponent<CircleCollider2D>();
-        clone.radius = source.radius;
-        return clone;
-    }
-
-    private static Collider2D CopyCapsule(GameObject target, CapsuleCollider2D source)
-    {
-        CapsuleCollider2D clone = target.AddComponent<CapsuleCollider2D>();
-        clone.size = source.size;
-        clone.direction = source.direction;
-        return clone;
-    }
-
-    private static Collider2D CopyPolygon(GameObject target, PolygonCollider2D source)
-    {
-        PolygonCollider2D clone = target.AddComponent<PolygonCollider2D>();
-        clone.pathCount = source.pathCount;
-        for (int i = 0; i < source.pathCount; i++)
-            clone.SetPath(i, source.GetPath(i));
-        return clone;
-    }
-
-    private static Collider2D CopyEdge(GameObject target, EdgeCollider2D source)
-    {
-        EdgeCollider2D clone = target.AddComponent<EdgeCollider2D>();
-        clone.points = source.points;
-        clone.edgeRadius = source.edgeRadius;
-        return clone;
-    }
-
     private sealed class ProxyRecord
     {
         public Collider2D Source;
         public Collider2D Proxy;
         public Rigidbody2D Body;
         public Vector2 Offset;
-        public int LastRefreshFrame;
+        public int Generation;
+        public uint ShapeHash;
     }
 }

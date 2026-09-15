@@ -15,6 +15,17 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
     public static event Action<Item> RuntimeItemInstantiated;
     public static event Action<Item> RuntimeItemDespawning;
 
+    /// <summary>完整注册链的表现扩展点；包含生成、注入、加载与重绑，不改变网络生成事件语义。</summary>
+    internal static event Action<Item> RuntimeItemRegistered;
+    internal static event Action<Item> RuntimeItemUnregistered;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetAdapterEvents()
+    {
+        RuntimeItemRegistered = null;
+        RuntimeItemUnregistered = null;
+    }
+
     private const string GROUP_MAP_CORE = "MapCore";
 
     [Header("玩家创建配置")]

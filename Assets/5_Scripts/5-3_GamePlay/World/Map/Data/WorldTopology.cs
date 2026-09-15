@@ -3,75 +3,6 @@ using System.Collections.Generic;
 using Unity.Mathematics;
 using UnityEngine;
 
-/// <summary>
-/// Burst-safe description of the active generation domain. A default value is
-/// intentionally unbounded so legacy/infinite callers keep their old behaviour.
-/// </summary>
-public readonly struct WorldTopologyDomain
-{
-    public readonly int2 Min;
-    public readonly int2 Span;
-    public readonly int IsWrappedValue;
-
-    public bool IsWrapped => IsWrappedValue != 0;
-
-    public WorldTopologyDomain(int2 min, int2 span, bool isWrapped)
-    {
-        Min = min;
-        Span = span;
-        IsWrappedValue = isWrapped ? 1 : 0;
-    }
-
-    public float2 Normalize(float2 position)
-    {
-        if (!IsWrapped)
-            return position;
-
-        return new float2(
-            Wrap(position.x, Min.x, Span.x),
-            Wrap(position.y, Min.y, Span.y));
-    }
-
-    public int2 Normalize(int2 position)
-    {
-        if (!IsWrapped)
-            return position;
-
-        return new int2(
-            Wrap(position.x, Min.x, Span.x),
-            Wrap(position.y, Min.y, Span.y));
-    }
-
-    public float2 ShortestDelta(float2 from, float2 to)
-    {
-        float2 delta = to - from;
-        if (!IsWrapped)
-            return delta;
-
-        return new float2(WrapDelta(delta.x, Span.x), WrapDelta(delta.y, Span.y));
-    }
-
-    private static float Wrap(float value, int min, int span)
-    {
-        float offset = value - min;
-        return min + offset - math.floor(offset / span) * span;
-    }
-
-    private static int Wrap(int value, int min, int span)
-    {
-        long offset = (long)value - min;
-        long wrapped = offset % span;
-        if (wrapped < 0L)
-            wrapped += span;
-        return (int)(min + wrapped);
-    }
-
-    private static float WrapDelta(float delta, int span)
-    {
-        return delta - math.floor((delta + span * 0.5f) / span) * span;
-    }
-}
-
 public readonly struct WorldWrapEvent
 {
     public Vector2 PreviousPosition { get; }
@@ -136,21 +67,18 @@ public readonly struct WorldTopologyBounds
 
     public bool Contains(Vector2 position)
     {
-        return position.x >= Min.x && position.x < MaxExclusive.x &&
-               position.y >= Min.y && position.y < MaxExclusive.y;
+        return ToDomain().Contains(new float2(position.x, position.y));
     }
 
     public bool Contains(Vector2Int cell)
     {
-        return cell.x >= Min.x && cell.x < MaxExclusive.x &&
-               cell.y >= Min.y && cell.y < MaxExclusive.y;
+        return ToDomain().Contains(new int2(cell.x, cell.y));
     }
 
     public Vector2 NormalizePosition(Vector2 position)
     {
-        return new Vector2(
-            Wrap(position.x, Min.x, Span.x),
-            Wrap(position.y, Min.y, Span.y));
+        float2 normalized = ToDomain().Normalize(new float2(position.x, position.y));
+        return new Vector2(normalized.x, normalized.y);
     }
 
     public Vector3 NormalizePosition(Vector3 position)
@@ -161,16 +89,13 @@ public readonly struct WorldTopologyBounds
 
     public Vector2Int NormalizeCell(Vector2Int cell)
     {
-        return new Vector2Int(
-            Wrap(cell.x, Min.x, Span.x),
-            Wrap(cell.y, Min.y, Span.y));
+        int2 normalized = ToDomain().Normalize(new int2(cell.x, cell.y));
+        return new Vector2Int(normalized.x, normalized.y);
     }
 
     public Vector2Int NormalizeChunkOrigin(Vector2Int chunkOrigin)
     {
-        return new Vector2Int(
-            Wrap(chunkOrigin.x, Min.x, Span.x),
-            Wrap(chunkOrigin.y, Min.y, Span.y));
+        return NormalizeCell(chunkOrigin);
     }
 
     public HashSet<Vector2Int> BuildChunkWindow(Vector2Int centerChunkOrigin, int radiusInChunks)
@@ -194,23 +119,26 @@ public readonly struct WorldTopologyBounds
     /// <summary>Returns the shortest wrapped displacement from from to to.</summary>
     public Vector2 ShortestDelta(Vector2 from, Vector2 to)
     {
-        Vector2 delta = to - from;
-        return new Vector2(WrapDelta(delta.x, Span.x), WrapDelta(delta.y, Span.y));
+        float2 delta = ToDomain().ShortestDelta(new float2(from.x, from.y), new float2(to.x, to.y));
+        return new Vector2(delta.x, delta.y);
     }
 
     public Vector2Int ShortestDelta(Vector2Int from, Vector2Int to)
     {
-        Vector2Int delta = to - from;
-        return new Vector2Int(WrapDelta(delta.x, Span.x), WrapDelta(delta.y, Span.y));
+        int2 delta = ToDomain().ShortestDelta(new int2(from.x, from.y), new int2(to.x, to.y));
+        return new Vector2Int(delta.x, delta.y);
     }
 
-    public float Distance(Vector2 from, Vector2 to) => ShortestDelta(from, to).magnitude;
+    public float Distance(Vector2 from, Vector2 to) =>
+        ToDomain().Distance(new float2(from.x, from.y), new float2(to.x, to.y));
 
-    public float SqrDistance(Vector2 from, Vector2 to) => ShortestDelta(from, to).sqrMagnitude;
+    public float SqrDistance(Vector2 from, Vector2 to) =>
+        ToDomain().SqrDistance(new float2(from.x, from.y), new float2(to.x, to.y));
 
     public Vector2 NearestImagePosition(Vector2 origin, Vector2 target)
     {
-        return origin + ShortestDelta(origin, target);
+        float2 position = ToDomain().NearestImagePosition(new float2(origin.x, origin.y), new float2(target.x, target.y));
+        return new Vector2(position.x, position.y);
     }
 
     public WorldTopologyDomain ToDomain()
@@ -218,7 +146,7 @@ public readonly struct WorldTopologyBounds
         return new WorldTopologyDomain(
             new int2(Min.x, Min.y),
             new int2(Span.x, Span.y),
-            true);
+            IsWrapped);
     }
 
     private static bool TryAlignHalfExtent(int radius, int chunkSize, out int aligned)
@@ -234,45 +162,12 @@ public readonly struct WorldTopologyBounds
         return true;
     }
 
-    private static float Wrap(float value, int min, int span)
-    {
-        double offset = value - min;
-        double wrapped = offset - Math.Floor(offset / span) * span;
-        return (float)(min + wrapped);
-    }
-
-    private static int Wrap(int value, int min, int span)
-    {
-        long offset = (long)value - min;
-        long wrapped = offset % span;
-        if (wrapped < 0L)
-        {
-            wrapped += span;
-        }
-
-        return (int)(min + wrapped);
-    }
-
-    private static float WrapDelta(float delta, int span)
-    {
-        double wrapped = delta - Math.Floor((delta + span * 0.5d) / span) * span;
-        return (float)wrapped;
-    }
-
-    private static int WrapDelta(int delta, int span)
-    {
-        long half = span / 2L;
-        long wrapped = ((long)delta + half) % span;
-        if (wrapped < 0L)
-        {
-            wrapped += span;
-        }
-
-        return (int)(wrapped - half);
-    }
 }
 
-/// <summary>Central access point for the topology of the active planet.</summary>
+/// <summary>
+/// 主线程的活动世界配置与通知入口，仍读取 SaveDataMgr，不能在 Jobs 中调用。
+/// 后台任务只接收主线程预先取出的 WorldTopologyDomain 值副本。
+/// </summary>
 public static class WorldTopologyRuntime
 {
     public static event Action LocalPlayerWrapped;
@@ -341,17 +236,18 @@ public static class WorldTopologyRuntime
 
     public static float Distance(Vector2 from, Vector2 to)
     {
-        return ShortestDelta(from, to).magnitude;
+        return GetActiveDomain().Distance(new float2(from.x, from.y), new float2(to.x, to.y));
     }
 
     public static float SqrDistance(Vector2 from, Vector2 to)
     {
-        return ShortestDelta(from, to).sqrMagnitude;
+        return GetActiveDomain().SqrDistance(new float2(from.x, from.y), new float2(to.x, to.y));
     }
 
     public static Vector2 NearestImagePosition(Vector2 origin, Vector2 target)
     {
-        return origin + ShortestDelta(origin, target);
+        float2 position = GetActiveDomain().NearestImagePosition(new float2(origin.x, origin.y), new float2(target.x, target.y));
+        return new Vector2(position.x, position.y);
     }
 
     public static WorldTopologyDomain GetActiveDomain()

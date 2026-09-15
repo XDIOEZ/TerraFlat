@@ -23,6 +23,7 @@ public class ItemMods
         {
             _mods = value ?? new Dictionary<string, Module>();
             _owner?.MarkModuleScheduleDirty();
+            _owner?.NotifyRuntimeStructureChanged();
         }
     }
 
@@ -154,6 +155,7 @@ public class ItemMods
         // 添加到 Mods_List
         Mods_List[mod._Data.ID].Add(mod);
         _owner?.MarkModuleScheduleDirty();
+        _owner?.NotifyRuntimeStructureChanged();
     }
 
     public void RemoveMod(Module mod)
@@ -171,6 +173,7 @@ public class ItemMods
         }
 
         _owner?.MarkModuleScheduleDirty();
+        _owner?.NotifyRuntimeStructureChanged();
     }
 
     public bool HasMod(Module mod)

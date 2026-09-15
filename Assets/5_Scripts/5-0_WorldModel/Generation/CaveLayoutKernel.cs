@@ -1,4 +1,5 @@
 using System;
+using Unity.Mathematics;
 
 namespace FlatWorld.WorldModel
 {
@@ -729,10 +730,8 @@ namespace FlatWorld.WorldModel
 
         private static Point Normalize(ChunkGenerationTopologySnapshot topology, Point point)
         {
-            return !topology.IsWrapped
-                ? point
-                : new Point(Wrap(point.X, topology.Min.X, topology.Span.X),
-                    Wrap(point.Y, topology.Min.Y, topology.Span.Y));
+            double2 normalized = topology.ToDomain().Normalize(new double2(point.X, point.Y));
+            return new Point(normalized.x, normalized.y);
         }
 
         private static Int2 Normalize(ChunkGenerationTopologySnapshot topology, Int2 point)
@@ -743,14 +742,9 @@ namespace FlatWorld.WorldModel
         private static Point ShortestDelta(ChunkGenerationTopologySnapshot topology,
             Point from, Point to)
         {
-            double deltaX = to.X - from.X;
-            double deltaY = to.Y - from.Y;
-            if (!topology.IsWrapped)
-                return new Point(deltaX, deltaY);
-
-            deltaX = ShortestWrappedDelta(deltaX, topology.Span.X);
-            deltaY = ShortestWrappedDelta(deltaY, topology.Span.Y);
-            return new Point(deltaX, deltaY);
+            double2 delta = topology.ToDomain().ShortestDelta(
+                new double2(from.X, from.Y), new double2(to.X, to.Y), preserveHalfPeriodSign: true);
+            return new Point(delta.x, delta.y);
         }
 
         private static double DistanceSquared(ChunkGenerationTopologySnapshot topology,
@@ -829,23 +823,6 @@ namespace FlatWorld.WorldModel
         {
             int result = value % modulus;
             return result < 0 ? result + modulus : result;
-        }
-
-        private static double Wrap(double value, int min, int span)
-        {
-            double offset = value - min;
-            double wrapped = offset - Math.Floor(offset / span) * span;
-            return min + wrapped;
-        }
-
-        private static double ShortestWrappedDelta(double value, int span)
-        {
-            double half = span * 0.5d;
-            while (value > half)
-                value -= span;
-            while (value < -half)
-                value += span;
-            return value;
         }
 
         private static double Length(Point point) =>

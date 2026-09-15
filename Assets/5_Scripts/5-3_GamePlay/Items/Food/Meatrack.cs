@@ -438,7 +438,7 @@ public class Meatrack : Module, IInteractable, IInteract
                 continue;
             }
 
-            Item nearbyItem = WorldTopologyColliderProxy.ResolveComponent<Item>(hit);
+            Item nearbyItem = GameplayPhysics2D.ResolveComponent<Item>(hit);
             if (nearbyItem == null || nearbyItem == item || nearbyItem.itemData == null)
             {
                 continue;

@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Applies wrapped-world coordinate normalization to the locally authoritative
-/// player. Other dynamic entities intentionally remain unchanged in phase one.
+/// 本地玩家的 GameObject 物理适配：消费 Bounds 归一化结果，并刷新 Chunk Loader 与既有 Wrap 通知。
+/// 保留 Prefab 脚本身份；不是数学核心，不能复制到 Jobs。
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Player), typeof(Rigidbody2D))]

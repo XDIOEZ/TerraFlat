@@ -225,7 +225,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
             return;
         }
 
-        DamageReceiver receiver = WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(other);
+        DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<DamageReceiver>(other);
         if (receiver == null)
         {
             TryPlayNonDamageableImpact(other);
@@ -276,7 +276,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
             return;
 
         // 从内部接收器列表中移除
-        DamageReceiver receiver = WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(other);
+        DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<DamageReceiver>(other);
         if (receiver != null)
         {
             insideReceivers.Remove(receiver);
@@ -618,7 +618,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
         for (int i = 0; i < overlapColliders.Count; i++)
         {
             Collider2D overlap = overlapColliders[i];
-            DamageReceiver receiver = WorldTopologyColliderProxy.ResolveComponent<DamageReceiver>(overlap);
+            DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<DamageReceiver>(overlap);
             if (receiver == null || IsDamageSourceReceiver(receiver) || !windowScanHitReceivers.Add(receiver))
                 continue;
 

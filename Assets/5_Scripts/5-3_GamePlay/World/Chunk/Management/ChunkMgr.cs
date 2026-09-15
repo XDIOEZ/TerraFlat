@@ -1,4 +1,4 @@
-﻿using Sirenix.OdinInspector;
+using Sirenix.OdinInspector;
 using System.Collections.Generic;
 using UltEvents;
 using UnityEngine;
@@ -678,7 +678,7 @@ public partial class ChunkMgr : SingletonAutoMono<ChunkMgr>
             !bounds.Contains(worldPosition))
         {
             // A dynamic Rigidbody2D can be observed by Update between the physics
-            // integration that crossed the seam and WorldTopologyBody.FixedUpdate.
+            // integration that crossed the seam and WrappedRigidbody2DAdapter.FixedUpdate.
             // Do not index that transient, non-canonical image into either edge Chunk.
             return;
         }
