@@ -921,6 +921,8 @@ public static class ItemDefinitionCatalogLoader
             gameRes, dto.Visual?.AnimatorControllerAddress,
             id,
             preloadedControllers);
+        if (dto.GroundCover && (isActor || sprite == null || template.Stack?.CanBePickedUp != true))
+            throw new InvalidDataException($"地表植被 {id} 必须提供 Sprite，并定义为可拾取的普通物品。");
         return new RuntimeItemDefinition(
             id,
             shellId,
@@ -938,7 +940,8 @@ public static class ItemDefinitionCatalogLoader
             animatorController,
             isActor,
             material,
-            stateSprites);
+            stateSprites,
+            dto.GroundCover);
     }
 
     /// <summary>解析并固化额外视觉状态 Sprite，运行时模块只按状态名读取，不再重复发资源请求。</summary>

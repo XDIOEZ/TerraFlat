@@ -105,6 +105,10 @@ public sealed class ItemDefinitionDto
     [JsonProperty("canBePickedUp")]
     public bool? CanBePickedUp;
 
+    /// <summary>自然生成时由地表植被图层绘制，采集后才实例化为普通物品。</summary>
+    [JsonProperty("groundCover")]
+    public bool GroundCover;
+
     /// <summary>掉落物最终落入水体时，可选转换成另一物品 ID；数量保持不变。</summary>
     [JsonProperty("waterEntryTransformItemId", NullValueHandling = NullValueHandling.Ignore)]
     public string WaterEntryTransformItemId;
@@ -314,6 +318,9 @@ public sealed class RuntimeItemDefinition
     public RuntimeAnimatorController AnimatorController { get; }
     public bool IsActor { get; }
 
+    /// <summary>该定义的自然生成点是否使用无 Item、无碰撞体的植被图层。</summary>
+    public bool IsGroundCover { get; }
+
     /// <summary>名称在 String Table 中的稳定 key。</summary>
     public string LabelKey { get; }
 
@@ -346,7 +353,8 @@ public sealed class RuntimeItemDefinition
         RuntimeAnimatorController animatorController = null,
         bool isActor = false,
         Material material = null,
-        Dictionary<string, Sprite> stateSprites = null)
+        Dictionary<string, Sprite> stateSprites = null,
+        bool isGroundCover = false)
     {
         Id = id;
         ShellPrefabId = shellPrefabId;
@@ -362,6 +370,7 @@ public sealed class RuntimeItemDefinition
         Material = material;
         AnimatorController = animatorController;
         IsActor = isActor;
+        IsGroundCover = isGroundCover;
         LabelKey = string.IsNullOrWhiteSpace(labelKey)
             ? FlatWorldLocalizationService.GetItemLabelKey(id)
             : labelKey.Trim();

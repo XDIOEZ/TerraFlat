@@ -17,7 +17,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 15; // 液体容器 Amount 改为浮点份数，支持按倾角连续倾倒。
+    private const int CompactSaveVersion = 16; // 新增存档级世界生成配置冻结模式。
     private const int ModdedSaveVersion = 10;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";

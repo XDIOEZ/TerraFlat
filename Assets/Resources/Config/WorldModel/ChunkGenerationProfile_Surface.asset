@@ -358,6 +358,31 @@ MonoBehaviour:
     CompanionOffsetY: 0
     CompanionMinRadius: 0
     CompanionMaxRadius: 0
+  - RuleId: surface.forest.beehive
+    ItemId: Beehive
+    ItemCount: 1
+    SpawnChance: 0
+    SpawnChanceMultiplier: 1
+    DistributionMode: 0
+    PatchSpacing: 24
+    PatchRadius: 2.5
+    PatchChance: 1
+    BiomeMask: 32
+    MinTemperature: 0.3
+    MaxTemperature: 0.9
+    MinPrecipitation: 0.25
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    MinRiverFloodplainStrength: 0
+    ProvidedTags: []
+    CompanionOnly: 1
+    CompanionHostTag: Tree
+    CompanionSpawnChance: 0.05
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0.5
+    CompanionMaxRadius: 0.8
   - RuleId: surface.forest.radish
     ItemId: RadishCrop
     ItemCount: 1
@@ -654,6 +679,31 @@ MonoBehaviour:
     ProvidedTags: []
     CompanionOnly: 0
     CompanionHostTag: 
+    CompanionSpawnChance: 0
+    CompanionOffsetX: 0
+    CompanionOffsetY: 0
+    CompanionMinRadius: 0
+    CompanionMaxRadius: 0
+  - RuleId: surface.grassland.flower
+    ItemId: Flower
+    ItemCount: 1
+    SpawnChance: 0.45
+    SpawnChanceMultiplier: 1
+    DistributionMode: 1
+    PatchSpacing: 24
+    PatchRadius: 3
+    PatchChance: 0.5
+    BiomeMask: 16
+    MinTemperature: 0.3
+    MaxTemperature: 0.9
+    MinPrecipitation: 0.25
+    MaxPrecipitation: 1
+    MinHeight: 0
+    MaxHeight: 1
+    MinRiverFloodplainStrength: 0
+    ProvidedTags: []
+    CompanionOnly: 0
+    CompanionHostTag:
     CompanionSpawnChance: 0
     CompanionOffsetX: 0
     CompanionOffsetY: 0

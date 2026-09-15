@@ -23,6 +23,57 @@
       "shellPrefab": "MineResource"
     },
     {
+      "id": "Beehive",
+      "parent": "WorldResource_Base",
+      "gameName": "蜂巢",
+      "description": "林间树旁的蜂巢。当前使用占位美术，尚未开放采蜜。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 2.0,
+      "volume": 4.0,
+      "stackable": false,
+      "canBePickedUp": false,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_404.png",
+        "color": { "r": 1.0, "g": 0.72, "b": 0.3, "a": 1.0 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "path": "",
+          "offset": { "x": 0.0, "y": 0.15 },
+          "size": { "x": 0.4, "y": 0.3 }
+        }
+      }
+    },
+    {
+      "id": "Flower",
+      "parent": "WorldResource_Base",
+      "gameName": "花朵",
+      "description": "用剪刀从草地花层采集的野花，可拾取并堆叠保存。当前使用简易占位美术。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.02,
+      "volume": 0.1,
+      "stackable": true,
+      "canBePickedUp": true,
+      "groundCover": true,
+      "tags": [ "Plant" ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Items/Plants/Flower.png",
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "path": "",
+          "offset": { "x": 0.0, "y": 0.2 },
+          "size": { "x": 0.3, "y": 0.4 }
+        }
+      }
+    },
+    {
       "id": "AppleTree",
       "parent": "WorldResource_Base",
       "gameName": "苹果树",

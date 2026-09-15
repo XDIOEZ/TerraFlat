@@ -10,6 +10,9 @@ public static class GameSavePrefabBuilder
     private const string PanelPrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionPanel.prefab";
     private const string ItemPrefabPath = "Assets/2_Prefabs/2-1_UI/MainMenu/Save/UI_SaveSelectionButton.prefab";
     private const string FontPath = "Assets/Plugins/TextMesh Pro/Fonts/fusion-pixel-12px-monospaced-zh_hans.asset";
+    private const string GenerationFreezeTitle = "冻结世界生成规则";
+    private const string GenerationFreezeDescription =
+        "开启：保持存档原有生成规则。关闭：跟随当前版本并升级生成基线；已探索与未探索区域的基础地形和自然生成都可能变化，玩家差量仍保留。重新开启后会在下次进入世界重新冻结。";
 
     private static readonly Color Ink = new Color32(52, 52, 52, 251);
     private static readonly Color InkSoft = new Color32(61, 61, 61, 250);
@@ -71,6 +74,9 @@ public static class GameSavePrefabBuilder
             PrefabUtility.UnloadPrefabContents(root);
         }
 
+        FlatWorld.Localization.Editor.FlatWorldLocalizationSetup.SyncRuntimeUiTexts(
+            GenerationFreezeTitle,
+            GenerationFreezeDescription);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("[GameSaveUI] 存档选择界面与动态条目已重建。");
@@ -225,6 +231,18 @@ public static class GameSavePrefabBuilder
         divider.rectTransform.anchoredPosition = new Vector2(0f, 104f);
         divider.rectTransform.sizeDelta = new Vector2(-84f, 1f);
         divider.raycastTarget = false;
+
+        Toggle generationFreezeToggle = CreateToggle(
+            card,
+            font,
+            GameManager.GameSaveGenerationFreezeToggleKey,
+            GenerationFreezeTitle,
+            GenerationFreezeDescription,
+            new Vector2(42f, 20f),
+            new Vector2(1030f, 80f),
+            new Vector2(0f, 0f));
+        generationFreezeToggle.SetIsOnWithoutNotify(true);
+        generationFreezeToggle.interactable = false;
 
         CreateButton(card, font, GameManager.GameSaveStartButtonKey, "进入世界", new Vector2(-42f, 20f), new Vector2(280f, 80f), new Color(0.70f, 0.36f, 0.16f, 1f), Cream, 25f, new Vector2(1f, 0f));
     }
@@ -446,6 +464,72 @@ public static class GameSavePrefabBuilder
         scroll.elasticity = 0.12f;
         scroll.scrollSensitivity = 28f;
         return content;
+    }
+
+    /// <summary>创建存档设置开关；整行可点击，标题和说明保持输入透明。</summary>
+    private static Toggle CreateToggle(
+        Transform parent,
+        TMP_FontAsset font,
+        string name,
+        string title,
+        string description,
+        Vector2 position,
+        Vector2 size,
+        Vector2 pivot)
+    {
+        GameObject toggleObject = new GameObject(
+            name,
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image),
+            typeof(Toggle));
+        toggleObject.layer = LayerMask.NameToLayer("UI");
+        toggleObject.transform.SetParent(parent, false);
+        SetRect(toggleObject.GetComponent<RectTransform>(), position, size, pivot);
+
+        Image row = toggleObject.GetComponent<Image>();
+        row.color = InkSoft;
+        Outline outline = toggleObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0.55f, 0.64f, 0.65f, 0.24f);
+        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
+
+        Image box = CreateImage("选择框", toggleObject.transform, new Color(0.02f, 0.04f, 0.05f, 1f));
+        SetRect(box.rectTransform, new Vector2(18f, -18f), new Vector2(32f, 32f), new Vector2(0f, 1f));
+        Outline boxOutline = box.gameObject.AddComponent<Outline>();
+        boxOutline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.55f);
+        boxOutline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
+
+        Image mark = CreateImage("勾选标记", box.transform, Amber);
+        Stretch(mark.rectTransform, 6f, 6f, 6f, 6f);
+
+        TMP_Text titleText = CreateText(
+            name + "_标题",
+            toggleObject.transform,
+            title,
+            font,
+            19f,
+            Cream,
+            FontStyles.Bold,
+            TextAlignmentOptions.Left);
+        SetRect(titleText.rectTransform, new Vector2(66f, -8f), new Vector2(size.x - 82f, 28f), new Vector2(0f, 1f));
+
+        TMP_Text descriptionText = CreateText(
+            name + "_说明",
+            toggleObject.transform,
+            description,
+            font,
+            15f,
+            Muted,
+            FontStyles.Normal,
+            TextAlignmentOptions.Left,
+            true);
+        SetRect(descriptionText.rectTransform, new Vector2(66f, -36f), new Vector2(size.x - 82f, 40f), new Vector2(0f, 1f));
+
+        Toggle toggle = toggleObject.GetComponent<Toggle>();
+        toggle.targetGraphic = row;
+        toggle.graphic = mark;
+        toggle.navigation = new Navigation { mode = Navigation.Mode.Automatic };
+        return toggle;
     }
 
     private static TMP_InputField CreateInput(Transform parent, TMP_FontAsset font, string name, string placeholderValue, Vector2 position, Vector2 size)

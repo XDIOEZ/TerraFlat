@@ -95,6 +95,7 @@ public partial class GameManager
     public const string GameSavePlayerInputKey = "选择或新增玩家名称输入框";
     public const string GameSaveSelectedTextKey = "选中的存档名称";
     public const string GameSaveTimeTextKey = "存档保存时间";
+    public const string GameSaveGenerationFreezeToggleKey = "冻结世界生成规则开关";
     public const string GameSaveNoSelectionText = "尚未选择存档";
     public const string GameSaveNoTimeText = "保存时间：--";
 
@@ -1083,6 +1084,14 @@ public partial class GameManager
             panel.Close();
         });
         panel.GetInputField(GameSavePlayerInputKey)?.onValueChanged.AddListener(OnUpdatePlayerNameChanged);
+        Toggle generationFreezeToggle = panel.GetToggle(GameSaveGenerationFreezeToggleKey);
+        if (generationFreezeToggle != null)
+        {
+            generationFreezeToggle.SetIsOnWithoutNotify(true);
+            generationFreezeToggle.interactable = false;
+            generationFreezeToggle.onValueChanged.AddListener(
+                frozen => saveList?.OnWorldGenerationFreezeToggleChanged(frozen));
+        }
         // 动态存档条目在 RefreshForGamepadOpen 后创建；这里仅提供无存档时的安全回退。
         panel.PrepareForGamepadNavigation(GameSaveBackButtonKey);
         panel.Open();
@@ -1519,6 +1528,7 @@ public partial class GameManager
         if (saveList != null)
         {
             saveList.GeneratePlayerButtons();
+            saveList.RefreshWorldGenerationFreezeToggle(selectedSaveName);
             if (!saveList.TrySelectFirstPlayer())
                 saveList.FocusFirstPlayerOrNameInputForGamepad();
         }

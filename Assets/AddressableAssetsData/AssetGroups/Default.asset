@@ -17,6 +17,12 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
+  - m_GUID: 647e6092ebb3cc8458d1a7cb22f7df84
+    m_Address: Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 68090fdf4cb11374298a1c6b95f972aa
     m_Address: Assets/6_Art/Generated/Fiber/Fiber_Icon.png
     m_ReadOnly: 0
@@ -79,6 +85,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0389d777920d856458f6db3a2e122e34
     m_Address: Assets/6_Art/Items/Plants/GrassAndFlower.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 511ea52a8f3e02d48b1346d8ade0bdb2
+    m_Address: Assets/6_Art/Items/Plants/Flower.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite

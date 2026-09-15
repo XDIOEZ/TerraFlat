@@ -239,6 +239,10 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
         }
 
         RuntimeWorldAddress address = boundChunk.Address;
+        // 地表植被保留纯生成点和删除差量，但由专用 Tilemap 绘制，不创建常驻 Item。
+        if (GameRes.ExistingInstance.TryGetItemDefinition(placement.ItemId, out RuntimeItemDefinition definition) &&
+            definition.IsGroundCover)
+            return;
         bool renewing = chunkManager.IsNaturalItemRemoved(address, placement.Guid);
         if (renewing && (!chunkManager.IsNaturalRenewalDue(address, placement.Guid) || !CanRenewAt(placement))) return;
 

@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
@@ -184,6 +184,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
             saveStructureChanged,
             playerStructureChanged,
             createdRow);
+        ResetWorldGenerationFreezeToggle();
     }
 
     /// <summary>
@@ -349,6 +350,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         ClearSelectedRow(ref selectedSaveRow);
         ClearSaveSelectionVisuals();
         ClearSelectedRow(ref selectedPlayerRow);
+        ResetWorldGenerationFreezeToggle();
         bool playerStructureChanged = ReleaseRows(playerRows);
         UpdateBatchDeleteUi();
         CommitDynamicListChanges(false, playerStructureChanged, false);
@@ -559,6 +561,7 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         panel.SetText(GameManager.GameSaveSelectedTextKey, GameManager.GameSaveNoSelectionText);
         ClearSelectedSaveTime(panel);
         panel.SetInputFieldText(GameManager.GameSavePlayerInputKey, string.Empty);
+        ResetWorldGenerationFreezeToggle(panel);
 
         Button deleteButton = panel.GetButton(GameManager.GameSaveDeleteButtonKey);
         if (deleteButton != null)
@@ -567,6 +570,73 @@ public class SaveDataManager_UI : SingletonMono<SaveDataManager_UI>
         CommitDynamicListChanges(false, playerStructureChanged, false, panel);
         FocusFirstSaveOrBackForGamepad();
     }
+    #endregion
+
+    #region 世界生成配置
+
+    /// <summary>按当前成功载入的存档刷新“冻结世界生成规则”开关。</summary>
+    public void RefreshWorldGenerationFreezeToggle(string saveName)
+    {
+        if (!TryGetSavePanel(out BasePanel panel))
+            return;
+
+        Toggle toggle = panel.GetToggle(GameManager.GameSaveGenerationFreezeToggleKey);
+        if (toggle == null)
+            return;
+
+        saveAndLoad ??= SaveDataMgr.Instance;
+        GameSaveData saveData = saveAndLoad?.SaveData;
+        bool validSelection = selectedSaveRow != null && saveData != null &&
+                              string.Equals(selectedSaveRow.Value, saveName,
+                                  System.StringComparison.OrdinalIgnoreCase) &&
+                              string.Equals(saveData.saveName, saveName,
+                                  System.StringComparison.OrdinalIgnoreCase);
+        toggle.interactable = validSelection;
+        toggle.SetIsOnWithoutNotify(
+            !validSelection || saveData.UsesFrozenWorldGenerationConfiguration);
+        RefreshGamepadNavigation(panel, false);
+    }
+
+    /// <summary>玩家切换冻结模式时立即更新当前存档；写盘失败则恢复 UI 原值。</summary>
+    public void OnWorldGenerationFreezeToggleChanged(bool frozen)
+    {
+        if (!TryGetSavePanel(out BasePanel panel))
+            return;
+
+        Toggle toggle = panel.GetToggle(GameManager.GameSaveGenerationFreezeToggleKey);
+        saveAndLoad ??= SaveDataMgr.Instance;
+        GameSaveData saveData = saveAndLoad?.SaveData;
+        bool validSelection = selectedSaveRow != null && saveData != null &&
+                              string.Equals(saveData.saveName, selectedSaveRow.Value,
+                                  System.StringComparison.OrdinalIgnoreCase);
+        if (toggle == null || !validSelection)
+        {
+            ResetWorldGenerationFreezeToggle(panel);
+            return;
+        }
+
+        bool previousValue = saveData.UsesFrozenWorldGenerationConfiguration;
+        if (saveAndLoad.TrySetWorldGenerationConfigurationFrozen(frozen))
+            return;
+
+        toggle.SetIsOnWithoutNotify(previousValue);
+        Debug.LogWarning("[SaveDataManager_UI] 世界生成配置模式写入失败，已恢复开关状态。");
+    }
+
+    /// <summary>没有有效存档选择时禁用生成配置开关，并显示安全的默认冻结状态。</summary>
+    private void ResetWorldGenerationFreezeToggle(BasePanel panel = null)
+    {
+        if (panel == null && !TryGetSavePanel(out panel))
+            return;
+
+        Toggle toggle = panel?.GetToggle(GameManager.GameSaveGenerationFreezeToggleKey);
+        if (toggle == null)
+            return;
+
+        toggle.SetIsOnWithoutNotify(true);
+        toggle.interactable = false;
+    }
+
     #endregion
 
     #region 存档时间

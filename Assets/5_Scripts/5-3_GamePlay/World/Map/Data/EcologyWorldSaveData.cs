@@ -69,6 +69,17 @@ public partial class EcologyWorldSaveData
         Generation.Capture(profile);
     }
 
+    /// <summary>丢弃冻结生成配置，但保留自然物删除、状态覆盖与恢复年份等区块差量。</summary>
+    public void ClearFrozenConfiguration()
+    {
+        DataVersion = 0;
+        ProfileId = string.Empty;
+        ConfigurationFingerprint = 0UL;
+        GlobalMultiplier = 1d;
+        Rules = new List<EcologyRuleSaveData>();
+        Generation = new WorldGenerationProfileSaveData();
+    }
+
     /// <summary>仅在 Profile 标识匹配时恢复冻结参数，避免地表克隆数据误覆盖矿洞 Profile。</summary>
     public bool TryApplyGenerationConfiguration(ChunkGenerationProfileSnapshot profile,
         out ChunkGenerationProfileSnapshot restored)

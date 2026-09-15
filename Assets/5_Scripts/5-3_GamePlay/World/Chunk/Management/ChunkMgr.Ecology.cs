@@ -11,6 +11,9 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class ChunkMgr
 {
+    /// <summary>自然生成点被实际移除后的通知；图层观察者按地址和 GUID 增量刷新。</summary>
+    public event Action<RuntimeWorldAddress, int> NaturalItemRemoved;
+
     #region 配置冻结
 
     /// <summary>把当前 Profile 的生态配置冻结到 PlanetData，并恢复已保存配置。</summary>
@@ -32,6 +35,10 @@ public partial class ChunkMgr
         ChunkGenerationProfileSnapshot profile, PlanetData planet)
     {
         if (profile == null || planet == null)
+            return profile;
+
+        GameSaveData saveData = SaveDataMgr.Instance?.SaveData;
+        if (saveData != null && !saveData.UsesFrozenWorldGenerationConfiguration)
             return profile;
 
         planet.Ecology ??= new EcologyWorldSaveData();
@@ -162,8 +169,9 @@ public partial class ChunkMgr
     /// <summary>读取当前世界已经冻结的生态配置指纹，供联机生成设置校验使用。</summary>
     public ulong GetActiveEcologyFingerprint()
     {
-        if (SaveDataMgr.Instance != null &&
-            SaveDataMgr.Instance.TryGetActivePlanetData(out PlanetData planet) &&
+        SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
+        if (saveDataMgr?.SaveData?.UsesFrozenWorldGenerationConfiguration != false &&
+            saveDataMgr.TryGetActivePlanetData(out PlanetData planet) &&
             planet.Ecology != null && planet.Ecology.HasConfiguration)
         {
             return planet.Ecology.ConfigurationFingerprint;
@@ -274,14 +282,24 @@ public partial class ChunkMgr
     /// <summary>记录自然物删除；客户端只等待现有 Item 网络同步，不写本地生态删除列表。</summary>
     public void MarkNaturalItemRemoved(RuntimeWorldAddress address, int guid)
     {
+        TryRemoveNaturalItem(address, guid);
+    }
+
+    /// <summary>一次性写入自然物删除差量；已经移除或世界不可写时不重复提交。</summary>
+    public bool TryRemoveNaturalItem(RuntimeWorldAddress address, int guid)
+    {
         if (!GameNetwork.HasStateAuthority || guid == 0 || SaveDataMgr.Instance == null)
-            return;
+            return false;
 
         if (!SaveDataMgr.Instance.TryGetActivePlanetData(out PlanetData planet))
-            return;
+            return false;
 
         planet.Ecology ??= new EcologyWorldSaveData();
+        if (planet.Ecology.IsRemoved(address.ChunkOrigin.X, address.ChunkOrigin.Y, guid))
+            return false;
         planet.Ecology.MarkRemoved(address.ChunkOrigin.X, address.ChunkOrigin.Y, guid);
+        NaturalItemRemoved?.Invoke(address, guid);
+        return true;
     }
 
     /// <summary>保存一个自然物的 ItemData 状态覆盖。</summary>
