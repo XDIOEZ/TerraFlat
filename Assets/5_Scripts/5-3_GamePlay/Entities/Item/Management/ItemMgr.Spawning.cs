@@ -169,7 +169,7 @@ public partial class ItemMgr
 
         _runtimeRegistry.Register(item, GenerateGuid);
         RefreshItemSpatialIndex(item);
-        RefreshPerceptionColliderCache(item);
+        RefreshPerceptionTarget(item);
         _tickScheduler.Register(item);
 
         if (TryRegisterRuntimeAiEntity(item))
@@ -203,7 +203,6 @@ public partial class ItemMgr
         }
 
         RefreshRuntimeItemIndexes(item);
-        RefreshPerceptionColliderCache(item);
     }
 
     /// <summary>
@@ -228,7 +227,7 @@ public partial class ItemMgr
         }
 
         RemoveItemFromSpatialIndex(item);
-        _perceptionColliderCache.Remove(item);
+        _perceptionTargets.Remove(item);
         _tickScheduler.Remove(item);
         RuntimeItemUnregistered?.Invoke(item);
     }

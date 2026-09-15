@@ -1,0 +1,6317 @@
+{
+  "unity": "2022.3.62f3c1",
+  "observedWorkstationOnly": {
+    "cpu": "Intel(R) Core(TM) i7-14700HX",
+    "gpu": "NVIDIA GeForce RTX 5060 Laptop GPU",
+    "ramMiB": 32394
+  },
+  "targetHardware": "未获用户确认；工作站不是目标硬件",
+  "playModeRun": false,
+  "productionBackendChanged": false,
+  "manifest": "GameConfig/Actors/actor-manifest.json",
+  "actors": [
+    {
+      "id": "Chicken",
+      "resolvedDefinition": {
+        "id": "Chicken",
+        "lootTableId": "Chicken_Default",
+        "shellPrefab": "CoreActor.Chicken.Shell",
+        "shellAddress": "flatworld.actor.shell.chicken",
+        "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Chicken.prefab",
+        "gameName": "Chicken_State",
+        "description": "生鸡肉：从野生鸡类身上剥取的未处理肉类",
+        "durability": 1.0,
+        "maxDurability": 1.0,
+        "amount": 1.0,
+        "volume": 1.0,
+        "canBePickedUp": false,
+        "tags": [
+          "35",
+          "Animal",
+          "Blood"
+        ],
+        "visual": {
+          "rendererPath": "Module_Animator_AI",
+          "animationState": "Stand",
+          "rendererLocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rendererLocalEulerAngles": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rendererLocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          },
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          },
+          "flipX": true,
+          "flipY": false,
+          "sortingLayerName": "Default",
+          "sortingOrder": 0,
+          "animatorPath": "Module_Animator_AI",
+          "animatorControllerAddress": "flatworld.actor.animator.chicken",
+          "collider": {
+            "type": "BoxCollider2D",
+            "enabled": true,
+            "isTrigger": true,
+            "offset": {
+              "x": 0.007042438,
+              "y": 0.04902029
+            },
+            "path": "",
+            "size": {
+              "x": 0.2,
+              "y": 0.1
+            },
+            "edgeRadius": 0.0
+          }
+        },
+        "modules": {
+          "animator": {
+            "prefab": "Module_Animator_AI",
+            "id": "Module_Animator_AI",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "visualMode": 0,
+              "moveDetectSpeed": 0.05,
+              "walkSwingAngle": 8.0,
+              "walkSwingSpeed": 12.0,
+              "walkBobAmount": 0.04,
+              "walkReturnSpeed": 12.0,
+              "attackDashDistance": 0.22,
+              "attackDashForwardTime": 0.06,
+              "attackDashBackTime": 0.12,
+              "autoAttackDirection": true,
+              "attackDirection": {
+                "x": 1.0,
+                "y": 0.0
+              },
+              "SkillId": 0,
+              "CanUseSkill": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "ChunkAssigner": {
+            "prefab": "Module_AutoChunkOwner",
+            "id": "ChunkAssigner",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "ai": {
+            "prefab": "AI_Chicken",
+            "id": "Module_AI_Chicken",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "debugLog": false,
+              "eatEnterHungerRate": 0.35,
+              "eatExitHungerRate": 0.85,
+              "sleepEnterHpRate": 0.5,
+              "sleepExitHpRate": 0.55,
+              "sleepDuration": 6.0,
+              "sleepCooldown": 3.0,
+              "dayStartRatio": 0.25,
+              "dayEndRatio": 0.75,
+              "detectorRefreshInterval": 0.8,
+              "eatDistance": 1.2,
+              "enableGrassForaging": true,
+              "grassSearchRadius": 8.0,
+              "grassEatDuration": 1.0,
+              "grassSustenanceDays": 2.0,
+              "enableIdleWander": true,
+              "idleMinDuration": 0.6,
+              "idleMaxDuration": 1.8,
+              "wanderRadius": 4.0,
+              "wanderStopDistance": 0.35,
+              "wanderPauseMin": 0.8,
+              "wanderPauseMax": 2.2,
+              "edibleTags": [
+                "Meat",
+                "Worm",
+                "Corn",
+                "Wheat",
+                "Seed",
+                "Food",
+                "Weed",
+                "Plant"
+              ],
+              "wanderAvoidHighPenalty": true,
+              "wanderDangerPenalty": 1200,
+              "wanderSampleCount": 8,
+              "wanderPenaltyWeight": 1.0,
+              "isAdult": true,
+              "enableEggLaying": true,
+              "eggItemId": "Egg",
+              "layEggIntervalDays": 2.0,
+              "layEggDuration": 2.0,
+              "fleeTriggerDistance": 6.0,
+              "fleeSafeDistance": 10.0,
+              "fleeRunDistance": 8.0,
+              "damageFleeDuration": 5.0,
+              "threatTags": [
+                "Predator",
+                "Wolf"
+              ],
+              "fleeFromPlayer": true,
+              "defaultMateDuration": 8.0,
+              "animIdle": "Stand",
+              "animMove": "Move",
+              "animForage": "Move",
+              "animEat": "Stand",
+              "animSleep": "Stand",
+              "animMate": "Stand",
+              "animLayEgg": "Stand",
+              "animFlee": "Move",
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "BuffManager": {
+            "prefab": "Module_BuffManager",
+            "id": "BuffManager",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "detector": {
+            "prefab": "Module_Detector",
+            "id": "物品检测模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "detectionRadius": 5.0,
+              "itemLayer": 1025,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "health": {
+            "prefab": "Module_DamageReciver",
+            "id": "生命值系统模块",
+            "enabled": true,
+            "data": {
+              "BitData": "",
+              "Type": 0
+            },
+            "parameters": {
+              "Data": {
+                "Hp": 75.0,
+                "MaxHp": 75.0,
+                "UseBodyPartHealth": false,
+                "TwoPartHitChance": 0.25,
+                "BodyPartDataVersion": 0,
+                "BodyParts": [],
+                "DefenseValues": {
+                  "Cutting": 0.5,
+                  "Piercing": 0.5,
+                  "Chopping": 0.5,
+                  "Blunt": 0.5
+                },
+                "DamageInterval": 0.12,
+                "DestroyDelay": 0.0
+              },
+              "impactAudioMaterial": 0,
+              "hurtAudioCueId": "",
+              "enableHitSlowdown": true,
+              "hitSlowMultiplier": 0.5,
+              "hitSlowDuration": 0.35,
+              "flashCount": 1,
+              "flashDuration": 0.2,
+              "flashColor": {
+                "r": 1.0,
+                "g": 0.08,
+                "b": 0.08,
+                "a": 1.0
+              },
+              "shakeDuration": 0.15,
+              "shakeMagnitude": 0.1,
+              "HideUiDelayAfterLastDamage": 4.0,
+              "healthBarTopPadding": 0.16,
+              "healthBarWorldScale": 0.55,
+              "enableDebugTools": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              },
+              "$collider2D": {
+                "type": "BoxCollider2D",
+                "enabled": true,
+                "isTrigger": true,
+                "offset": {
+                  "x": 0.0531100631,
+                  "y": 0.294484079
+                },
+                "size": {
+                  "x": 0.659446239,
+                  "y": 0.7663305
+                },
+                "edgeRadius": 0.0
+              }
+            }
+          },
+          "FaceMouse模块": {
+            "prefab": "Module_FocusPoint_AI",
+            "id": "FaceMouse模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "Data": {
+                "RotationSpeed": 180.0,
+                "FocusPoints": {
+                  "See": {
+                    "x": 0.0,
+                    "y": 0.0
+                  },
+                  "Move": {
+                    "x": 0.0,
+                    "y": 0.0
+                  },
+                  "Skill_0": {
+                    "x": 0.0,
+                    "y": 0.0
+                  }
+                },
+                "ActivateRotation": true,
+                "StopRotationDistance": 0.1
+              },
+              "targetRotationTransforms": [],
+              "$transform": {
+                "localPosition": {
+                  "x": 4.5,
+                  "y": -10.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "food": {
+            "prefab": "Module_Food",
+            "id": "食物模块",
+            "enabled": true,
+            "data": {
+              "FoodData": {
+                "nutrition": {
+                  "Carbohydrates": 500.0,
+                  "Max_Carbohydrates": 500.0,
+                  "Fat": 500.0,
+                  "Max_Fat": 500.0,
+                  "Protein": 500.0,
+                  "Max_Protein": 500.0,
+                  "Water": 500.0,
+                  "Max_Water": 500.0,
+                  "Vitamins": 500.0,
+                  "Max_Vitamins": 500.0
+                },
+                "Max_EatingProgress": 3.0,
+                "nutritionConsumeSpeed": {
+                  "BaseValue": 1.0,
+                  "BaseAdditive": 0.0,
+                  "AdditiveModifier": 0.0,
+                  "MultiplicativeModifier": 1.0,
+                  "FinalAdditive": 0.0
+                },
+                "FeelGood": false,
+                "PanelPosition": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "WaterConsumeSpeedRate": 1.0,
+                "nutritionConsumeRate": 1.0
+              },
+              "MechanicStates": [
+                {
+                  "StateKey": "food.spoilage",
+                  "Data": {
+                    "EnableSpoilage": true,
+                    "SpoilageElapsedSeconds": 0.0,
+                    "SpoilageIntervalSeconds": 1800.0,
+                    "SpoilageTargetItemID": "Meat_Rotten"
+                  }
+                },
+                {
+                  "StateKey": "food.consumption",
+                  "Data": {
+                    "EatingProgress": 0.0
+                  }
+                }
+              ],
+              "Type": 0
+            },
+            "parameters": {
+              "ConsumeAudio": {
+                "Enabled": true,
+                "CueId": "food.eat",
+                "VolumeScale": 0.78,
+                "PitchMin": 0.96,
+                "PitchMax": 1.04
+              },
+              "ConsumeKind": 0,
+              "HealthState": {
+                "Enabled": true,
+                "HealSpeed": 0.0,
+                "HealInterval": 60.0,
+                "HealAmount": 10.0,
+                "WaterSelfHurt": 1.0,
+                "ProteinSelfHurt": 1.0,
+                "VitaminSelfHurt": 1.0,
+                "HealNeedRatio": 0.0
+              },
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "mover": {
+            "prefab": "Module_Mover_AI",
+            "id": "移动模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "stopDistance": 0.1,
+              "destinationChangeThreshold": 0.5,
+              "stalledRepathDelay": 0.8,
+              "progressDistanceThreshold": 0.02,
+              "animationMoveSpeedThreshold": 0.03,
+              "Data": {
+                "Speed": {
+                  "BaseValue": 5.0,
+                  "BaseAdditive": 0.0,
+                  "AdditiveModifier": 0.0,
+                  "MultiplicativeModifier": 1.0,
+                  "FinalAdditive": 0.0
+                },
+                "slowDownSpeed": 5.0,
+                "endSpeed": 0.1,
+                "moveStaminaConsume": 1.0,
+                "runStaminaConsume": 2.0,
+                "runSpeedRate": 2.0,
+                "RunStaminaThreshold": 2.0
+              },
+              "speedTransitionDuration": 0.24,
+              "stopTransitionDuration": 0.07,
+              "IsLock": false,
+              "hightReaction": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "生产模块": {
+            "prefab": "Module_Production",
+            "id": "生产模块",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "ProductionList": [
+                {
+                  "itemName": "Egg",
+                  "itemCountMin": 1,
+                  "itemCountMax": 3,
+                  "MaxProductionTime": 2880.0,
+                  "ProductionTime": 0.0,
+                  "MaxProductionCount": -1,
+                  "CurrentProductionCount": 0,
+                  "ThrowItem": true,
+                  "DestroySelf": false,
+                  "SpawnProbability": 1.0,
+                  "Random_ProductionTime": {
+                    "x": 0.0,
+                    "y": 2880.0
+                  }
+                }
+              ],
+              "ProductionSpeed": 1.0,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "Module_TurnBody": {
+            "prefab": "Module_TurnBody",
+            "id": "Module_TurnBody",
+            "enabled": true,
+            "data": {
+              "BitData": "",
+              "Type": 0
+            },
+            "parameters": {
+              "Duration": 0.3,
+              "controlledTransforms_Direction": [],
+              "controlledTransforms_Position": [],
+              "DefaultPosition": {
+                "x": 0.5,
+                "y": 0.0
+              },
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "TileReciver": {
+            "prefab": "TileReciver",
+            "id": "TileReciver",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "lastGridPos": {
+                "x": 0,
+                "y": 0
+              },
+              "currentTileData": null,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          }
+        },
+        "itemData": {
+          "code": "",
+          "transform": {
+            "position": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "rotation": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+              "w": 0.0
+            },
+            "scale": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            }
+          },
+          "ItemSpecialData": "",
+          "inHand": false
+        },
+        "abstract": false
+      },
+      "shell": {
+        "path": "Assets/2_Prefabs/Gameplay/AI/Chicken.prefab",
+        "guid": "4449fdf41529cdf488d41484f92e53e9",
+        "localId": 5065571277225119290,
+        "dependencyHash": "efe88b609c2a9268bd96a327b7985c56"
+      },
+      "controller": {
+        "path": "Assets/8_Animations/Character/Chicken/Chicken.controller",
+        "guid": "7c4d3c190401db54db1675f7e9f60bae",
+        "localId": 9100000,
+        "dependencyHash": "1ff72b7ed3984c983dedffa46a888c5c"
+      },
+      "hasIAIActor": true,
+      "perceptionGeometry": [
+        {
+          "kind": "AABB",
+          "center": [
+            0.007042438,
+            0.04902029
+          ],
+          "extents": [
+            0.1,
+            0.05
+          ],
+          "radius": 0.0,
+          "runtimePhysicsQuery": false
+        }
+      ],
+      "modules": [
+        {
+          "key": "BuffManager",
+          "prefab": "Module_BuffManager",
+          "id": "BuffManager",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "BuffManager",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Managers/Module_BuffManager.prefab",
+            "guid": "992baff2372d5b447946a74b230d5ca4",
+            "localId": 781865264438095516,
+            "dependencyHash": "c25553cb59bcb721d8c36486ab8363ad"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "ChunkAssigner",
+          "prefab": "Module_AutoChunkOwner",
+          "id": "ChunkAssigner",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_ItemChunkAssigner",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/World/Module_AutoChunkOwner.prefab",
+            "guid": "98884601a3d373a40ab86aff00f45a08",
+            "localId": 4898042926724609223,
+            "dependencyHash": "cb7be0d2e0e053936e4f2a71cb632173"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "FaceMouse模块",
+          "prefab": "Module_FocusPoint_AI",
+          "id": "FaceMouse模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_FocusPoint_AI",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/AI/Module_FocusPoint_AI.prefab",
+            "guid": "f4dcbe1f822581441bf51c160e1e75a6",
+            "localId": 3725222426643860894,
+            "dependencyHash": "456651df3e376d593cb3ec5f5a9283e5"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "Module_TurnBody",
+          "prefab": "Module_TurnBody",
+          "id": "Module_TurnBody",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_TurnBack",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Animation/Module_TurnBody.prefab",
+            "guid": "17b385e876a029e4095ccb77881ffd0a",
+            "localId": 4263365519867482383,
+            "dependencyHash": "355f6e623c9e9b8a1b11598d3923c06c"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "TileReciver",
+          "prefab": "TileReciver",
+          "id": "TileReciver",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "TileEffectReceiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Managers/TileReciver.prefab",
+            "guid": "6b76adaa9ade3a944bd13a582e3b9ee9",
+            "localId": 6542595850011715307,
+            "dependencyHash": "8a17ce7516e3964563f966224d69b35f"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "ai",
+          "prefab": "AI_Chicken",
+          "id": "Module_AI_Chicken",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "AI_Chicken",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/Chicken.prefab",
+            "guid": "4449fdf41529cdf488d41484f92e53e9",
+            "localId": 1775883118074638832,
+            "dependencyHash": "efe88b609c2a9268bd96a327b7985c56"
+          },
+          "interfaces": [
+            "IAIActor",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "animator",
+          "prefab": "Module_Animator_AI",
+          "id": "Module_Animator_AI",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_AnimatorController_Receiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Animation/Module_Animator_AI.prefab",
+            "guid": "a84f90f79ba86a34aa88b8e752960665",
+            "localId": 1835563831416809626,
+            "dependencyHash": "b63ef78d9f4f0ba3492d3f05f98ca38d"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle",
+            "ITrunDirection"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "detector",
+          "prefab": "Module_Detector",
+          "id": "物品检测模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_ItemDetector",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Crafting/Module_Detector.prefab",
+            "guid": "f13b81f3d392ba844bd4703a6aa081cc",
+            "localId": 4504417401669657616,
+            "dependencyHash": "d8ac9c93045521713d63558e9e95ff2b"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "food",
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_Food",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Items/Module_Food.prefab",
+            "guid": "c9071f519ad95e14b8f643d82db1e458",
+            "localId": 3386547747097903612,
+            "dependencyHash": "591b4b12190151cd1979a0d7c68fe874"
+          },
+          "interfaces": [
+            "IItemPoolLifecycle",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "health",
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "DamageReceiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Combat/Module_DamageReciver.prefab",
+            "guid": "c107cb4a775f75a4ab50708e43ad3078",
+            "localId": 1794842364952349929,
+            "dependencyHash": "c2ad992b87ea9bf3253fc546f164648c"
+          },
+          "interfaces": [
+            "IItemModuleDependencyBinder",
+            "IRemoteNetworkModule",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "mover",
+          "prefab": "Module_Mover_AI",
+          "id": "移动模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mover_AI",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/AI/Module_Mover_AI.prefab",
+            "guid": "a8aa3c91b5ca83a4d9ae1a44c729bce7",
+            "localId": 5373608423806965717,
+            "dependencyHash": "2750f9d266ee4505259c9c3b4203b2a3"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "生产模块",
+          "prefab": "Module_Production",
+          "id": "生产模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_Production",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Crafting/Module_Production.prefab",
+            "guid": "f4e4284d9b97d0746a88b6db98a7e8e4",
+            "localId": 2365670626427715040,
+            "dependencyHash": "24b62481bbeef50bbf18955e621b4320"
+          },
+          "interfaces": [
+            "IEnvironmentAdjustable",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        }
+      ],
+      "shellComponents": [
+        {
+          "path": "",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "WorldNavigationAgent",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "GameItem",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "UnityEngine.Rigidbody2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "UnityEngine.SpriteRenderer",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "UnityEngine.Animator",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "Mod_AnimatorController_Receiver",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorRenderEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "WaterImmersionRenderEffect",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorRenderColorEffect",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorStatusVisualEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorBuffLightController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorSleepVisualEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AutoChunkOwner",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AutoChunkOwner",
+          "type": "Mod_ItemChunkAssigner",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AI_Chicken",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AI_Chicken",
+          "type": "AI_Chicken",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "Module_BuffManager",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_BuffManager",
+          "type": "BuffManager",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Detector",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Detector",
+          "type": "Mod_ItemDetector",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_DamageReciver",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_DamageReciver",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_DamageReciver",
+          "type": "DamageReceiver",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_FocusPoint_AI",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_FocusPoint_AI",
+          "type": "Mod_FocusPoint_AI",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Food",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Food",
+          "type": "Mod_Food",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Mover_AI",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Mover_AI",
+          "type": "Mover_AI",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Production",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Production",
+          "type": "Mod_Production",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_TurnBody",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_TurnBody",
+          "type": "Mod_TurnBack",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_TileReciver",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_TileReciver",
+          "type": "TileEffectReceiver",
+          "inJsonModuleSet": false
+        }
+      ],
+      "sortingGroups": [],
+      "renderers": [
+        {
+          "path": "Module_Animator_AI",
+          "type": "SpriteRenderer",
+          "materials": [
+            "Assets/9_Shaders/Material/Sprite-Lit-Master.mat"
+          ],
+          "shaders": [
+            "Game/2D/Sprite-Lit-Master"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Ghost",
+      "resolvedDefinition": {
+        "id": "Ghost",
+        "shellPrefab": "CoreActor.Ghost.Shell",
+        "shellAddress": "flatworld.actor.shell.ghost",
+        "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Ghost.prefab",
+        "gameName": "幽灵",
+        "description": "只在完全黑暗中活动的敌对生物。",
+        "durability": 1.0,
+        "maxDurability": 1.0,
+        "amount": 1.0,
+        "volume": 1.0,
+        "canBePickedUp": false,
+        "tags": [
+          "Ghost"
+        ],
+        "visual": {
+          "rendererPath": "Visual",
+          "animationState": "Idle",
+          "rendererLocalPosition": {
+            "x": 0.0,
+            "y": 0.15,
+            "z": 0.0
+          },
+          "rendererLocalEulerAngles": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rendererLocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          },
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 0.86
+          },
+          "flipX": false,
+          "flipY": false,
+          "sortingLayerName": "Default",
+          "sortingOrder": 2,
+          "animatorPath": "Visual",
+          "animatorControllerAddress": "flatworld.actor.animator.ghost"
+        },
+        "modules": {
+          "damage": {
+            "prefab": "Mod_Damage",
+            "id": "Ghost",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "DamageValues": {
+                "Cutting": 0.0,
+                "Piercing": 0.0,
+                "Chopping": 0.0,
+                "Blunt": 20.0
+              },
+              "DamageInterval": 1.0,
+              "EnableOnTriggerEnterDamage": true,
+              "OnlyDealDamageWhenInHand": false,
+              "tileDamageToolKind": 0,
+              "weaponAudioClass": 0,
+              "attackAudioCueId": "",
+              "impactAudioOverrides": [],
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              },
+              "$collider2D": {
+                "type": "BoxCollider2D",
+                "enabled": true,
+                "isTrigger": true,
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.15
+                },
+                "size": {
+                  "x": 0.6,
+                  "y": 0.9
+                },
+                "edgeRadius": 0.0
+              }
+            }
+          },
+          "ai": {
+            "prefab": "AI_Ghost",
+            "id": "AI_Ghost",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "perceptionRadius": 60.0,
+              "wanderRadius": 6.0,
+              "wanderSpeed": 1.25,
+              "chaseSpeed": 2.5,
+              "retreatSpeed": 2.0,
+              "decisionInterval": 0.2,
+              "stuckRepathDelay": 0.75,
+              "darkPositionSamples": 16,
+              "retreatSearchRadius": 6.0,
+              "bobHeight": 0.12,
+              "bobFrequency": 1.4,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "health": {
+            "prefab": "Module_DamageReciver",
+            "id": "生命值系统模块",
+            "enabled": true,
+            "data": {
+              "BitData": "",
+              "Type": 0
+            },
+            "parameters": {
+              "Data": {
+                "Hp": 100.0,
+                "MaxHp": 100.0,
+                "UseBodyPartHealth": false,
+                "TwoPartHitChance": 0.25,
+                "BodyPartDataVersion": 0,
+                "BodyParts": [],
+                "DamageInterval": 0.12,
+                "DestroyDelay": 0.0,
+                "LootTable": [],
+                "DefenseValues": {
+                  "Cutting": 0.0,
+                  "Piercing": 0.0,
+                  "Chopping": 0.0,
+                  "Blunt": 0.0
+                }
+              },
+              "impactAudioMaterial": 0,
+              "hurtAudioCueId": "",
+              "enableHitSlowdown": true,
+              "hitSlowMultiplier": 0.5,
+              "hitSlowDuration": 0.35,
+              "flashCount": 1,
+              "flashDuration": 0.2,
+              "flashColor": {
+                "r": 1.0,
+                "g": 0.08,
+                "b": 0.08,
+                "a": 1.0
+              },
+              "shakeDuration": 0.15,
+              "shakeMagnitude": 0.1,
+              "HideUiDelayAfterLastDamage": 4.0,
+              "healthBarTopPadding": 0.16,
+              "healthBarWorldScale": 0.55,
+              "enableDebugTools": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              },
+              "$collider2D": {
+                "type": "BoxCollider2D",
+                "enabled": true,
+                "isTrigger": true,
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "size": {
+                  "x": 0.9,
+                  "y": 1.4
+                },
+                "edgeRadius": 0.0
+              }
+            }
+          },
+          "BuffManager": {
+            "prefab": "Module_BuffManager",
+            "id": "BuffManager",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          }
+        },
+        "itemData": {
+          "code": "",
+          "transform": {
+            "position": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "rotation": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+              "w": 1.0
+            },
+            "scale": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            }
+          },
+          "ItemSpecialData": "",
+          "inHand": false
+        },
+        "abstract": false
+      },
+      "shell": {
+        "path": "Assets/2_Prefabs/Gameplay/AI/Ghost.prefab",
+        "guid": "9f2c7b4d6a8e0f1b3c5d7e9a2b4f6c8d",
+        "localId": 1000,
+        "dependencyHash": "4db02a87aec4a68b06af64d32b9a60ca"
+      },
+      "controller": {
+        "path": "Assets/8_Animations/Character/Ghost/Ghost.controller",
+        "guid": "0586e2315f9647388017b2d93fbd0756",
+        "localId": 9100000,
+        "dependencyHash": "6e6a38238df348e604a6691fd015c2f7"
+      },
+      "hasIAIActor": true,
+      "perceptionGeometry": [
+        {
+          "kind": "AABB",
+          "center": [
+            0.0,
+            0.15
+          ],
+          "extents": [
+            0.3,
+            0.45
+          ],
+          "radius": 0.0,
+          "runtimePhysicsQuery": false
+        }
+      ],
+      "modules": [
+        {
+          "key": "BuffManager",
+          "prefab": "Module_BuffManager",
+          "id": "BuffManager",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "BuffManager",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Managers/Module_BuffManager.prefab",
+            "guid": "992baff2372d5b447946a74b230d5ca4",
+            "localId": 781865264438095516,
+            "dependencyHash": "c25553cb59bcb721d8c36486ab8363ad"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "ai",
+          "prefab": "AI_Ghost",
+          "id": "AI_Ghost",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "AI_Ghost",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/Ghost.prefab",
+            "guid": "9f2c7b4d6a8e0f1b3c5d7e9a2b4f6c8d",
+            "localId": 3002,
+            "dependencyHash": "4db02a87aec4a68b06af64d32b9a60ca"
+          },
+          "interfaces": [
+            "IAIActor",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "damage",
+          "prefab": "Mod_Damage",
+          "id": "Ghost",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_Damage",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Combat/Mod_Damage.prefab",
+            "guid": "605d848763ec2b14b894091dbe0dc2ee",
+            "localId": 1601643870802310424,
+            "dependencyHash": "77eee95189a28a0c1c17de237ea6b2e7"
+          },
+          "interfaces": [
+            "IBuildingDamageSource",
+            "IDamageSender",
+            "IHitSlowdownSource",
+            "IResourceHarvestTool",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "health",
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "DamageReceiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Combat/Module_DamageReciver.prefab",
+            "guid": "c107cb4a775f75a4ab50708e43ad3078",
+            "localId": 1794842364952349929,
+            "dependencyHash": "c2ad992b87ea9bf3253fc546f164648c"
+          },
+          "interfaces": [
+            "IItemModuleDependencyBinder",
+            "IRemoteNetworkModule",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        }
+      ],
+      "shellComponents": [
+        {
+          "path": "",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "UnityEngine.Rigidbody2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "GameItem",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "WorldNavigationAgent",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "ActorRenderEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "ActorRenderColorEffect",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "Mod_Damage",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Visual",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Visual",
+          "type": "UnityEngine.SpriteRenderer",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Visual",
+          "type": "UnityEngine.Animator",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AI_Ghost",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AI_Ghost",
+          "type": "AI_Ghost",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "Ghost_DamageReceiver",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Ghost_DamageReceiver",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Ghost_DamageReceiver",
+          "type": "DamageReceiver",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Ghost_BuffManager",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Ghost_BuffManager",
+          "type": "BuffManager",
+          "inJsonModuleSet": false
+        }
+      ],
+      "sortingGroups": [],
+      "renderers": [
+        {
+          "path": "Visual",
+          "type": "SpriteRenderer",
+          "materials": [
+            "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat"
+          ],
+          "shaders": [
+            "Universal Render Pipeline/2D/Sprite-Lit-Default"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Rabbit",
+      "resolvedDefinition": {
+        "id": "Rabbit",
+        "lootTableId": "Chicken_Default",
+        "shellPrefab": "CoreActor.Rabbit.Shell",
+        "shellAddress": "flatworld.actor.shell.rabbit",
+        "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Rabbit.prefab",
+        "description": "生活在雪地中的白色兔子。",
+        "durability": 1.0,
+        "maxDurability": 1.0,
+        "amount": 1.0,
+        "volume": 1.0,
+        "canBePickedUp": false,
+        "tags": [
+          "Rabbit",
+          "Animal",
+          "Blood",
+          "Prey"
+        ],
+        "visual": {
+          "rendererPath": "Module_Animator_AI",
+          "animationState": "Stand",
+          "rendererLocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rendererLocalEulerAngles": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rendererLocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          },
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          },
+          "flipX": false,
+          "flipY": false,
+          "sortingLayerName": "Default",
+          "sortingOrder": 0,
+          "animatorPath": "Module_Animator_AI",
+          "animatorControllerAddress": "flatworld.actor.animator.rabbit",
+          "collider": {
+            "type": "BoxCollider2D",
+            "enabled": true,
+            "isTrigger": true,
+            "offset": {
+              "x": 0.007042438,
+              "y": 0.04902029
+            },
+            "path": "",
+            "size": {
+              "x": 0.2,
+              "y": 0.1
+            },
+            "edgeRadius": 0.0
+          }
+        },
+        "modules": {
+          "animator": {
+            "prefab": "Module_Animator_AI",
+            "id": "Module_Animator_AI",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "visualMode": 0,
+              "moveDetectSpeed": 0.05,
+              "walkSwingAngle": 8.0,
+              "walkSwingSpeed": 12.0,
+              "walkBobAmount": 0.04,
+              "walkReturnSpeed": 12.0,
+              "attackDashDistance": 0.22,
+              "attackDashForwardTime": 0.06,
+              "attackDashBackTime": 0.12,
+              "autoAttackDirection": true,
+              "attackDirection": {
+                "x": 1.0,
+                "y": 0.0
+              },
+              "SkillId": 0,
+              "CanUseSkill": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "ChunkAssigner": {
+            "prefab": "Module_AutoChunkOwner",
+            "id": "ChunkAssigner",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "ai": {
+            "prefab": "AI_Chicken",
+            "id": "Module_AI_Chicken",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "debugLog": false,
+              "eatEnterHungerRate": 0.35,
+              "eatExitHungerRate": 0.85,
+              "sleepEnterHpRate": 0.5,
+              "sleepExitHpRate": 0.55,
+              "sleepDuration": 6.0,
+              "sleepCooldown": 3.0,
+              "dayStartRatio": 0.25,
+              "dayEndRatio": 0.75,
+              "detectorRefreshInterval": 0.8,
+              "eatDistance": 1.2,
+              "enableGrassForaging": true,
+              "grassSearchRadius": 8.0,
+              "grassEatDuration": 1.0,
+              "grassSustenanceDays": 6.0,
+              "enableIdleWander": true,
+              "idleMinDuration": 0.6,
+              "idleMaxDuration": 1.8,
+              "wanderRadius": 4.0,
+              "wanderStopDistance": 0.35,
+              "wanderPauseMin": 0.8,
+              "wanderPauseMax": 2.2,
+              "edibleTags": [
+                "Food",
+                "Weed",
+                "Plant",
+                "Grass"
+              ],
+              "wanderAvoidHighPenalty": true,
+              "wanderDangerPenalty": 1200,
+              "wanderSampleCount": 8,
+              "wanderPenaltyWeight": 1.0,
+              "isAdult": true,
+              "enableEggLaying": false,
+              "eggItemId": "",
+              "layEggIntervalDays": 2.0,
+              "layEggDuration": 2.0,
+              "fleeTriggerDistance": 6.0,
+              "fleeSafeDistance": 10.0,
+              "fleeRunDistance": 8.0,
+              "damageFleeDuration": 5.0,
+              "threatTags": [
+                "Predator",
+                "Wolf"
+              ],
+              "fleeFromPlayer": true,
+              "defaultMateDuration": 8.0,
+              "animIdle": "Stand",
+              "animMove": "Move",
+              "animForage": "Move",
+              "animEat": "Stand",
+              "animSleep": "Stand",
+              "animMate": "Stand",
+              "animLayEgg": "Stand",
+              "animFlee": "Move",
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "BuffManager": {
+            "prefab": "Module_BuffManager",
+            "id": "BuffManager",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "detector": {
+            "prefab": "Module_Detector",
+            "id": "物品检测模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "detectionRadius": 5.0,
+              "itemLayer": 1025,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "health": {
+            "prefab": "Module_DamageReciver",
+            "id": "生命值系统模块",
+            "enabled": true,
+            "data": {
+              "BitData": "",
+              "Type": 0
+            },
+            "parameters": {
+              "Data": {
+                "Hp": 75.0,
+                "MaxHp": 75.0,
+                "UseBodyPartHealth": false,
+                "TwoPartHitChance": 0.25,
+                "BodyPartDataVersion": 0,
+                "BodyParts": [],
+                "DefenseValues": {
+                  "Cutting": 0.5,
+                  "Piercing": 0.5,
+                  "Chopping": 0.5,
+                  "Blunt": 0.5
+                },
+                "DamageInterval": 0.12,
+                "DestroyDelay": 0.0
+              },
+              "impactAudioMaterial": 0,
+              "hurtAudioCueId": "",
+              "enableHitSlowdown": true,
+              "hitSlowMultiplier": 0.5,
+              "hitSlowDuration": 0.35,
+              "flashCount": 1,
+              "flashDuration": 0.2,
+              "flashColor": {
+                "r": 1.0,
+                "g": 0.08,
+                "b": 0.08,
+                "a": 1.0
+              },
+              "shakeDuration": 0.15,
+              "shakeMagnitude": 0.1,
+              "HideUiDelayAfterLastDamage": 4.0,
+              "healthBarTopPadding": 0.16,
+              "healthBarWorldScale": 0.55,
+              "enableDebugTools": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              },
+              "$collider2D": {
+                "type": "BoxCollider2D",
+                "enabled": true,
+                "isTrigger": true,
+                "offset": {
+                  "x": 0.0531100631,
+                  "y": 0.294484079
+                },
+                "size": {
+                  "x": 0.659446239,
+                  "y": 0.7663305
+                },
+                "edgeRadius": 0.0
+              }
+            }
+          },
+          "FaceMouse模块": {
+            "prefab": "Module_FocusPoint_AI",
+            "id": "FaceMouse模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "Data": {
+                "RotationSpeed": 180.0,
+                "FocusPoints": {
+                  "See": {
+                    "x": 0.0,
+                    "y": 0.0
+                  },
+                  "Move": {
+                    "x": 0.0,
+                    "y": 0.0
+                  },
+                  "Skill_0": {
+                    "x": 0.0,
+                    "y": 0.0
+                  }
+                },
+                "ActivateRotation": true,
+                "StopRotationDistance": 0.1
+              },
+              "targetRotationTransforms": [],
+              "$transform": {
+                "localPosition": {
+                  "x": 4.5,
+                  "y": -10.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "food": {
+            "prefab": "Module_Food",
+            "id": "食物模块",
+            "enabled": true,
+            "data": {
+              "FoodData": {
+                "nutrition": {
+                  "Carbohydrates": 500.0,
+                  "Max_Carbohydrates": 500.0,
+                  "Fat": 500.0,
+                  "Max_Fat": 500.0,
+                  "Protein": 500.0,
+                  "Max_Protein": 500.0,
+                  "Water": 500.0,
+                  "Max_Water": 500.0,
+                  "Vitamins": 500.0,
+                  "Max_Vitamins": 500.0
+                },
+                "Max_EatingProgress": 3.0,
+                "nutritionConsumeSpeed": {
+                  "BaseValue": 1.0,
+                  "BaseAdditive": 0.0,
+                  "AdditiveModifier": 0.0,
+                  "MultiplicativeModifier": 1.0,
+                  "FinalAdditive": 0.0
+                },
+                "FeelGood": false,
+                "PanelPosition": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "WaterConsumeSpeedRate": 1.0,
+                "nutritionConsumeRate": 1.0
+              },
+              "MechanicStates": [
+                {
+                  "StateKey": "food.spoilage",
+                  "Data": {
+                    "EnableSpoilage": true,
+                    "SpoilageElapsedSeconds": 0.0,
+                    "SpoilageIntervalSeconds": 1800.0,
+                    "SpoilageTargetItemID": "Meat_Rotten"
+                  }
+                },
+                {
+                  "StateKey": "food.consumption",
+                  "Data": {
+                    "EatingProgress": 0.0
+                  }
+                }
+              ],
+              "Type": 0
+            },
+            "parameters": {
+              "ConsumeAudio": {
+                "Enabled": true,
+                "CueId": "food.eat",
+                "VolumeScale": 0.78,
+                "PitchMin": 0.96,
+                "PitchMax": 1.04
+              },
+              "ConsumeKind": 0,
+              "HealthState": {
+                "Enabled": true,
+                "HealSpeed": 0.0,
+                "HealInterval": 60.0,
+                "HealAmount": 10.0,
+                "WaterSelfHurt": 1.0,
+                "ProteinSelfHurt": 1.0,
+                "VitaminSelfHurt": 1.0,
+                "HealNeedRatio": 0.0
+              },
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "mover": {
+            "prefab": "Module_Mover_AI",
+            "id": "移动模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "stopDistance": 0.1,
+              "destinationChangeThreshold": 0.5,
+              "stalledRepathDelay": 0.8,
+              "progressDistanceThreshold": 0.02,
+              "animationMoveSpeedThreshold": 0.03,
+              "Data": {
+                "Speed": {
+                  "BaseValue": 7.5,
+                  "BaseAdditive": 0.0,
+                  "AdditiveModifier": 0.0,
+                  "MultiplicativeModifier": 1.0,
+                  "FinalAdditive": 0.0
+                },
+                "slowDownSpeed": 5.0,
+                "endSpeed": 0.1,
+                "moveStaminaConsume": 1.0,
+                "runStaminaConsume": 2.0,
+                "runSpeedRate": 2.0,
+                "RunStaminaThreshold": 2.0
+              },
+              "speedTransitionDuration": 0.24,
+              "stopTransitionDuration": 0.07,
+              "IsLock": false,
+              "hightReaction": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "生产模块": {
+            "prefab": "Module_Production",
+            "id": "生产模块",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "ProductionList": [
+                {
+                  "itemName": "Egg",
+                  "itemCountMin": 1,
+                  "itemCountMax": 3,
+                  "MaxProductionTime": 2880.0,
+                  "ProductionTime": 0.0,
+                  "MaxProductionCount": -1,
+                  "CurrentProductionCount": 0,
+                  "ThrowItem": true,
+                  "DestroySelf": false,
+                  "SpawnProbability": 1.0,
+                  "Random_ProductionTime": {
+                    "x": 0.0,
+                    "y": 2880.0
+                  }
+                }
+              ],
+              "ProductionSpeed": 1.0,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "Module_TurnBody": {
+            "prefab": "Module_TurnBody",
+            "id": "Module_TurnBody",
+            "enabled": true,
+            "data": {
+              "BitData": "",
+              "Type": 0
+            },
+            "parameters": {
+              "Duration": 0.3,
+              "controlledTransforms_Direction": [],
+              "controlledTransforms_Position": [],
+              "DefaultPosition": {
+                "x": 0.5,
+                "y": 0.0
+              },
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "TileReciver": {
+            "prefab": "TileReciver",
+            "id": "TileReciver",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "lastGridPos": {
+                "x": 0,
+                "y": 0
+              },
+              "currentTileData": null,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          }
+        },
+        "itemData": {
+          "code": "",
+          "transform": {
+            "position": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "rotation": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+              "w": 0.0
+            },
+            "scale": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            }
+          },
+          "ItemSpecialData": "",
+          "inHand": false,
+          "factionId": "rabbits"
+        },
+        "abstract": false,
+        "gameName": "白兔"
+      },
+      "shell": {
+        "path": "Assets/2_Prefabs/Gameplay/AI/Rabbit.prefab",
+        "guid": "45e4471df755aaa4984bb39358fad09a",
+        "localId": 5065571277225119290,
+        "dependencyHash": "54f9513b18e21d19df0457e8c4411cb9"
+      },
+      "controller": {
+        "path": "Assets/8_Animations/Character/Rabbit/Rabbit.overrideController",
+        "guid": "c63e308dac924d56bb7591761c68856c",
+        "localId": 22100000,
+        "dependencyHash": "2920227eab776573cfb7a033909eee3a"
+      },
+      "hasIAIActor": true,
+      "perceptionGeometry": [
+        {
+          "kind": "AABB",
+          "center": [
+            0.007042438,
+            0.04902029
+          ],
+          "extents": [
+            0.1,
+            0.05
+          ],
+          "radius": 0.0,
+          "runtimePhysicsQuery": false
+        }
+      ],
+      "modules": [
+        {
+          "key": "BuffManager",
+          "prefab": "Module_BuffManager",
+          "id": "BuffManager",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "BuffManager",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Managers/Module_BuffManager.prefab",
+            "guid": "992baff2372d5b447946a74b230d5ca4",
+            "localId": 781865264438095516,
+            "dependencyHash": "c25553cb59bcb721d8c36486ab8363ad"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "ChunkAssigner",
+          "prefab": "Module_AutoChunkOwner",
+          "id": "ChunkAssigner",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_ItemChunkAssigner",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/World/Module_AutoChunkOwner.prefab",
+            "guid": "98884601a3d373a40ab86aff00f45a08",
+            "localId": 4898042926724609223,
+            "dependencyHash": "cb7be0d2e0e053936e4f2a71cb632173"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "FaceMouse模块",
+          "prefab": "Module_FocusPoint_AI",
+          "id": "FaceMouse模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_FocusPoint_AI",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/AI/Module_FocusPoint_AI.prefab",
+            "guid": "f4dcbe1f822581441bf51c160e1e75a6",
+            "localId": 3725222426643860894,
+            "dependencyHash": "456651df3e376d593cb3ec5f5a9283e5"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "Module_TurnBody",
+          "prefab": "Module_TurnBody",
+          "id": "Module_TurnBody",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_TurnBack",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Animation/Module_TurnBody.prefab",
+            "guid": "17b385e876a029e4095ccb77881ffd0a",
+            "localId": 4263365519867482383,
+            "dependencyHash": "355f6e623c9e9b8a1b11598d3923c06c"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "TileReciver",
+          "prefab": "TileReciver",
+          "id": "TileReciver",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "TileEffectReceiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Managers/TileReciver.prefab",
+            "guid": "6b76adaa9ade3a944bd13a582e3b9ee9",
+            "localId": 6542595850011715307,
+            "dependencyHash": "8a17ce7516e3964563f966224d69b35f"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "ai",
+          "prefab": "AI_Chicken",
+          "id": "Module_AI_Chicken",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "AI_Chicken",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/Rabbit.prefab",
+            "guid": "45e4471df755aaa4984bb39358fad09a",
+            "localId": 1775883118074638832,
+            "dependencyHash": "54f9513b18e21d19df0457e8c4411cb9"
+          },
+          "interfaces": [
+            "IAIActor",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "animator",
+          "prefab": "Module_Animator_AI",
+          "id": "Module_Animator_AI",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_AnimatorController_Receiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Animation/Module_Animator_AI.prefab",
+            "guid": "a84f90f79ba86a34aa88b8e752960665",
+            "localId": 1835563831416809626,
+            "dependencyHash": "b63ef78d9f4f0ba3492d3f05f98ca38d"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle",
+            "ITrunDirection"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "detector",
+          "prefab": "Module_Detector",
+          "id": "物品检测模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_ItemDetector",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Crafting/Module_Detector.prefab",
+            "guid": "f13b81f3d392ba844bd4703a6aa081cc",
+            "localId": 4504417401669657616,
+            "dependencyHash": "d8ac9c93045521713d63558e9e95ff2b"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "food",
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_Food",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Items/Module_Food.prefab",
+            "guid": "c9071f519ad95e14b8f643d82db1e458",
+            "localId": 3386547747097903612,
+            "dependencyHash": "591b4b12190151cd1979a0d7c68fe874"
+          },
+          "interfaces": [
+            "IItemPoolLifecycle",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "health",
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "DamageReceiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Combat/Module_DamageReciver.prefab",
+            "guid": "c107cb4a775f75a4ab50708e43ad3078",
+            "localId": 1794842364952349929,
+            "dependencyHash": "c2ad992b87ea9bf3253fc546f164648c"
+          },
+          "interfaces": [
+            "IItemModuleDependencyBinder",
+            "IRemoteNetworkModule",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "mover",
+          "prefab": "Module_Mover_AI",
+          "id": "移动模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mover_AI",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/AI/Module_Mover_AI.prefab",
+            "guid": "a8aa3c91b5ca83a4d9ae1a44c729bce7",
+            "localId": 5373608423806965717,
+            "dependencyHash": "2750f9d266ee4505259c9c3b4203b2a3"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "生产模块",
+          "prefab": "Module_Production",
+          "id": "生产模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_Production",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Crafting/Module_Production.prefab",
+            "guid": "f4e4284d9b97d0746a88b6db98a7e8e4",
+            "localId": 2365670626427715040,
+            "dependencyHash": "24b62481bbeef50bbf18955e621b4320"
+          },
+          "interfaces": [
+            "IEnvironmentAdjustable",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        }
+      ],
+      "shellComponents": [
+        {
+          "path": "",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "WorldNavigationAgent",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "GameItem",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "UnityEngine.Rigidbody2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "UnityEngine.SpriteRenderer",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "UnityEngine.Animator",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "Mod_AnimatorController_Receiver",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorRenderEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "WaterImmersionRenderEffect",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorRenderColorEffect",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorStatusVisualEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorBuffLightController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorSleepVisualEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AutoChunkOwner",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AutoChunkOwner",
+          "type": "Mod_ItemChunkAssigner",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AI_Chicken",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AI_Chicken",
+          "type": "AI_Chicken",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "Module_BuffManager",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_BuffManager",
+          "type": "BuffManager",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Detector",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Detector",
+          "type": "Mod_ItemDetector",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_DamageReciver",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_DamageReciver",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_DamageReciver",
+          "type": "DamageReceiver",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_FocusPoint_AI",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_FocusPoint_AI",
+          "type": "Mod_FocusPoint_AI",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Food",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Food",
+          "type": "Mod_Food",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Mover_AI",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Mover_AI",
+          "type": "Mover_AI",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Production",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Production",
+          "type": "Mod_Production",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_TurnBody",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_TurnBody",
+          "type": "Mod_TurnBack",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_TileReciver",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_TileReciver",
+          "type": "TileEffectReceiver",
+          "inJsonModuleSet": false
+        }
+      ],
+      "sortingGroups": [],
+      "renderers": [
+        {
+          "path": "Module_Animator_AI",
+          "type": "SpriteRenderer",
+          "materials": [
+            "Assets/9_Shaders/Material/Sprite-Lit-Master.mat"
+          ],
+          "shaders": [
+            "Game/2D/Sprite-Lit-Master"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "SnowLeopard",
+      "resolvedDefinition": {
+        "id": "SnowLeopard",
+        "lootTableId": "SnowLeopard_Default",
+        "shellPrefab": "CoreActor.SnowLeopard.Shell",
+        "shellAddress": "flatworld.actor.shell.snowleopard",
+        "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/SnowLeopard.prefab",
+        "description": "在雪地中捕食兔子并主动攻击玩家的猛兽。",
+        "durability": 1.0,
+        "maxDurability": 1.0,
+        "amount": 1.0,
+        "volume": 1.0,
+        "canBePickedUp": false,
+        "tags": [
+          "SnowLeopard",
+          "Predator",
+          "Animal",
+          "Blood"
+        ],
+        "visual": {
+          "rendererPath": "AI动画模块",
+          "animationState": "Idle",
+          "rendererLocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rendererLocalEulerAngles": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rendererLocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          },
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          },
+          "flipX": false,
+          "flipY": false,
+          "sortingLayerName": "Default",
+          "sortingOrder": 0,
+          "animatorPath": "AI动画模块",
+          "animatorControllerAddress": "flatworld.actor.animator.snowleopard",
+          "collider": {
+            "type": "BoxCollider2D",
+            "enabled": true,
+            "isTrigger": true,
+            "offset": {
+              "x": 0.007042438,
+              "y": 0.04902029
+            },
+            "path": "",
+            "size": {
+              "x": 0.2,
+              "y": 0.1
+            },
+            "edgeRadius": 0.0
+          }
+        },
+        "modules": {
+          "food": {
+            "prefab": "Module_Food",
+            "id": "食物模块",
+            "enabled": true,
+            "data": {
+              "FoodData": {
+                "nutrition": {
+                  "Carbohydrates": 500.0,
+                  "Max_Carbohydrates": 500.0,
+                  "Fat": 500.0,
+                  "Max_Fat": 500.0,
+                  "Protein": 500.0,
+                  "Max_Protein": 500.0,
+                  "Water": 500.0,
+                  "Max_Water": 500.0,
+                  "Vitamins": 500.0,
+                  "Max_Vitamins": 500.0
+                },
+                "Max_EatingProgress": 3.0,
+                "nutritionConsumeSpeed": {
+                  "BaseValue": 1.0,
+                  "BaseAdditive": 0.0,
+                  "AdditiveModifier": 0.0,
+                  "MultiplicativeModifier": 1.0,
+                  "FinalAdditive": 0.0
+                },
+                "FeelGood": false,
+                "PanelPosition": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "WaterConsumeSpeedRate": 1.0,
+                "nutritionConsumeRate": 1.0
+              },
+              "MechanicStates": [
+                {
+                  "StateKey": "food.spoilage",
+                  "Data": {
+                    "EnableSpoilage": true,
+                    "SpoilageElapsedSeconds": 0.0,
+                    "SpoilageIntervalSeconds": 1800.0,
+                    "SpoilageTargetItemID": "Meat_Rotten"
+                  }
+                },
+                {
+                  "StateKey": "food.consumption",
+                  "Data": {
+                    "EatingProgress": 0.0
+                  }
+                }
+              ],
+              "Type": 0
+            },
+            "parameters": {
+              "ConsumeAudio": {
+                "Enabled": true,
+                "CueId": "food.eat",
+                "VolumeScale": 0.78,
+                "PitchMin": 0.96,
+                "PitchMax": 1.04
+              },
+              "ConsumeKind": 0,
+              "HealthState": {
+                "Enabled": true,
+                "HealSpeed": 0.0,
+                "HealInterval": 60.0,
+                "HealAmount": 10.0,
+                "WaterSelfHurt": 1.0,
+                "ProteinSelfHurt": 1.0,
+                "VitaminSelfHurt": 1.0,
+                "HealNeedRatio": 0.0
+              },
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "detector": {
+            "prefab": "Mod_ItemDetector",
+            "id": "物品检测模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "detectionRadius": 120.0,
+              "itemLayer": 1527,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "FaceMouse模块": {
+            "prefab": "Mod_FocusPoint_AI",
+            "id": "FaceMouse模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "Data": {
+                "RotationSpeed": 180.0,
+                "FocusPoints": {
+                  "See": {
+                    "x": 0.0,
+                    "y": 0.0
+                  },
+                  "Move": {
+                    "x": 0.0,
+                    "y": 0.0
+                  },
+                  "Skill_0": {
+                    "x": 0.0,
+                    "y": 0.0
+                  }
+                },
+                "ActivateRotation": true,
+                "StopRotationDistance": 0.1
+              },
+              "targetRotationTransforms": [],
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "mover": {
+            "prefab": "Mover_AI",
+            "id": "移动模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "stopDistance": 0.1,
+              "destinationChangeThreshold": 0.05,
+              "stalledRepathDelay": 0.8,
+              "progressDistanceThreshold": 0.02,
+              "animationMoveSpeedThreshold": 0.03,
+              "Data": {
+                "Speed": {
+                  "BaseValue": 9.0,
+                  "BaseAdditive": 0.0,
+                  "AdditiveModifier": 0.0,
+                  "MultiplicativeModifier": 1.0,
+                  "FinalAdditive": 0.0
+                },
+                "slowDownSpeed": 5.0,
+                "endSpeed": 0.1,
+                "moveStaminaConsume": 1.0,
+                "runStaminaConsume": 2.0,
+                "runSpeedRate": 2.0,
+                "RunStaminaThreshold": 2.0
+              },
+              "speedTransitionDuration": 0.24,
+              "stopTransitionDuration": 0.07,
+              "IsLock": false,
+              "hightReaction": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "health": {
+            "prefab": "Module_DamageReciver",
+            "id": "生命值系统模块",
+            "enabled": true,
+            "data": {
+              "BitData": "",
+              "Type": 0
+            },
+            "parameters": {
+              "Data": {
+                "Hp": 100.0,
+                "MaxHp": 100.0,
+                "UseBodyPartHealth": false,
+                "TwoPartHitChance": 0.25,
+                "BodyPartDataVersion": 0,
+                "BodyParts": [],
+                "DamageInterval": 0.12,
+                "DestroyDelay": 0.0,
+                "DefenseValues": {
+                  "Cutting": 0.5,
+                  "Piercing": 0.5,
+                  "Chopping": 0.5,
+                  "Blunt": 0.5
+                }
+              },
+              "impactAudioMaterial": 0,
+              "hurtAudioCueId": "",
+              "enableHitSlowdown": true,
+              "hitSlowMultiplier": 0.5,
+              "hitSlowDuration": 0.35,
+              "flashCount": 1,
+              "flashDuration": 0.2,
+              "flashColor": {
+                "r": 1.0,
+                "g": 0.08,
+                "b": 0.08,
+                "a": 1.0
+              },
+              "shakeDuration": 0.15,
+              "shakeMagnitude": 0.1,
+              "HideUiDelayAfterLastDamage": 4.0,
+              "healthBarTopPadding": 0.16,
+              "healthBarWorldScale": 0.55,
+              "enableDebugTools": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              },
+              "$collider2D": {
+                "type": "BoxCollider2D",
+                "enabled": true,
+                "isTrigger": true,
+                "offset": {
+                  "x": 0.0166221261,
+                  "y": 0.278846383
+                },
+                "size": {
+                  "x": 1.0,
+                  "y": 0.589103341
+                },
+                "edgeRadius": 0.0
+              }
+            }
+          },
+          "damage": {
+            "prefab": "Mod_Damage_AI",
+            "id": "AttackTrigger_AI",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "xOffset": 0.65,
+              "DamageValues": {
+                "Cutting": 10.0,
+                "Piercing": 10.0,
+                "Chopping": 1.0,
+                "Blunt": 1.0
+              },
+              "DamageInterval": -1.0,
+              "EnableOnTriggerEnterDamage": true,
+              "OnlyDealDamageWhenInHand": false,
+              "tileDamageToolKind": 0,
+              "weaponAudioClass": 0,
+              "attackAudioCueId": "",
+              "impactAudioOverrides": [],
+              "$transform": {
+                "localPosition": {
+                  "x": 0.65,
+                  "y": 0.291,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              },
+              "$collider2D": {
+                "type": "BoxCollider2D",
+                "enabled": false,
+                "isTrigger": true,
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "size": {
+                  "x": 1.2,
+                  "y": 1.2
+                },
+                "edgeRadius": 0.0
+              }
+            }
+          },
+          "ChunkAssigner": {
+            "prefab": "Module_AutoChunkOwner",
+            "id": "ChunkAssigner",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "TileReciver": {
+            "prefab": "TileReciver",
+            "id": "TileReciver",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "lastGridPos": {
+                "x": 0,
+                "y": 0
+              },
+              "currentTileData": null,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "BuffManager": {
+            "prefab": "Module_BuffManager",
+            "id": "BuffManager",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "转身模块": {
+            "prefab": "Module_TurnBody",
+            "id": "转身模块",
+            "enabled": true,
+            "data": {
+              "BitData": "",
+              "Type": 0
+            },
+            "parameters": {
+              "Duration": 0.3,
+              "controlledTransforms_Direction": [],
+              "controlledTransforms_Position": [],
+              "DefaultPosition": {
+                "x": 0.5,
+                "y": 0.0
+              },
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "animator": {
+            "prefab": "Module_Animator_AI",
+            "id": "AI动画模块",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "visualMode": 0,
+              "moveDetectSpeed": 0.05,
+              "walkSwingAngle": 8.0,
+              "walkSwingSpeed": 12.0,
+              "walkBobAmount": 0.04,
+              "walkReturnSpeed": 12.0,
+              "attackDashDistance": 0.22,
+              "attackDashForwardTime": 0.06,
+              "attackDashBackTime": 0.12,
+              "autoAttackDirection": true,
+              "attackDirection": {
+                "x": 1.0,
+                "y": 0.0
+              },
+              "SkillId": 0,
+              "CanUseSkill": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "ai": {
+            "prefab": "AI_SnowLeopard",
+            "id": "Module_AI_SnowLeopard",
+            "parameters": {
+              "debugLog": false,
+              "detectorRefreshInterval": 0.6,
+              "perceptionRangeSatiated": 8.0,
+              "perceptionRangeHungry": 24.0,
+              "chaseLossDistance": 30.0,
+              "chasePathCostLimit": 300,
+              "chasePathRetryDelay": 3.0,
+              "preyReacquireDelay": 10.0,
+              "rabbitChaseDuration": 30.0,
+              "attackTriggerDistance": 1.2,
+              "attackCooldown": 1.2,
+              "attackDamageWindow": 0.25,
+              "attackDamageStartDelay": 0.35,
+              "attackRecoveryDuration": 0.25,
+              "enableWander": true,
+              "idleMinDuration": 0.8,
+              "idleMaxDuration": 2.2,
+              "wanderRadius": 5.0,
+              "wanderStopDistance": 0.4,
+              "wanderPauseMin": 0.8,
+              "wanderPauseMax": 2.5,
+              "wanderAvoidHighPenalty": true,
+              "wanderDangerPenalty": 1200,
+              "wanderSampleCount": 8,
+              "wanderPenaltyWeight": 1.0,
+              "animIdle": "Idle",
+              "animMove": "Move",
+              "animAlert": "Idle",
+              "animChase": "Move",
+              "animAttack": "Attack"
+            }
+          }
+        },
+        "itemData": {
+          "code": "",
+          "factionId": "snow_leopards",
+          "transform": {
+            "position": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "rotation": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+              "w": 0.0
+            },
+            "scale": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            }
+          },
+          "ItemSpecialData": "",
+          "inHand": false
+        },
+        "abstract": false,
+        "gameName": "雪豹"
+      },
+      "shell": {
+        "path": "Assets/2_Prefabs/Gameplay/AI/SnowLeopard.prefab",
+        "guid": "aefab58f6f177ba499d703618cb85d47",
+        "localId": 4766519559426352308,
+        "dependencyHash": "f8ba54c3122d6ae57c9f35a648c785fd"
+      },
+      "controller": {
+        "path": "Assets/8_Animations/Character/SnowLeopard/SnowLeopard.overrideController",
+        "guid": "5777ba571e604288a5b52bf21ab99ecf",
+        "localId": 22100000,
+        "dependencyHash": "3c37073bab7346690a960f14d08df8d3"
+      },
+      "hasIAIActor": true,
+      "perceptionGeometry": [
+        {
+          "kind": "AABB",
+          "center": [
+            0.007042438,
+            0.04902029
+          ],
+          "extents": [
+            0.1,
+            0.05
+          ],
+          "radius": 0.0,
+          "runtimePhysicsQuery": false
+        }
+      ],
+      "modules": [
+        {
+          "key": "BuffManager",
+          "prefab": "Module_BuffManager",
+          "id": "BuffManager",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "BuffManager",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Managers/Module_BuffManager.prefab",
+            "guid": "992baff2372d5b447946a74b230d5ca4",
+            "localId": 781865264438095516,
+            "dependencyHash": "c25553cb59bcb721d8c36486ab8363ad"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "ChunkAssigner",
+          "prefab": "Module_AutoChunkOwner",
+          "id": "ChunkAssigner",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_ItemChunkAssigner",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/World/Module_AutoChunkOwner.prefab",
+            "guid": "98884601a3d373a40ab86aff00f45a08",
+            "localId": 4898042926724609223,
+            "dependencyHash": "cb7be0d2e0e053936e4f2a71cb632173"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "FaceMouse模块",
+          "prefab": "Mod_FocusPoint_AI",
+          "id": "FaceMouse模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_FocusPoint_AI",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/SnowLeopard.prefab",
+            "guid": "aefab58f6f177ba499d703618cb85d47",
+            "localId": 8785560632006772089,
+            "dependencyHash": "f8ba54c3122d6ae57c9f35a648c785fd"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "TileReciver",
+          "prefab": "TileReciver",
+          "id": "TileReciver",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "TileEffectReceiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Managers/TileReciver.prefab",
+            "guid": "6b76adaa9ade3a944bd13a582e3b9ee9",
+            "localId": 6542595850011715307,
+            "dependencyHash": "8a17ce7516e3964563f966224d69b35f"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "ai",
+          "prefab": "AI_SnowLeopard",
+          "id": "Module_AI_SnowLeopard",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "AI_SnowLeopard",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/SnowLeopard.prefab",
+            "guid": "aefab58f6f177ba499d703618cb85d47",
+            "localId": 1918825113318403166,
+            "dependencyHash": "f8ba54c3122d6ae57c9f35a648c785fd"
+          },
+          "interfaces": [
+            "IAIActor",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "animator",
+          "prefab": "Module_Animator_AI",
+          "id": "AI动画模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_AnimatorController_Receiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Animation/Module_Animator_AI.prefab",
+            "guid": "a84f90f79ba86a34aa88b8e752960665",
+            "localId": 1835563831416809626,
+            "dependencyHash": "b63ef78d9f4f0ba3492d3f05f98ca38d"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle",
+            "ITrunDirection"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "damage",
+          "prefab": "Mod_Damage_AI",
+          "id": "AttackTrigger_AI",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_Damage_AI",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/SnowLeopard.prefab",
+            "guid": "aefab58f6f177ba499d703618cb85d47",
+            "localId": 5613875903493430186,
+            "dependencyHash": "f8ba54c3122d6ae57c9f35a648c785fd"
+          },
+          "interfaces": [
+            "IBuildingDamageSource",
+            "IDamageSender",
+            "IHitSlowdownSource",
+            "IResourceHarvestTool",
+            "IRuntimeDataLifecycle",
+            "ITrunDirection"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "detector",
+          "prefab": "Mod_ItemDetector",
+          "id": "物品检测模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_ItemDetector",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/SnowLeopard.prefab",
+            "guid": "aefab58f6f177ba499d703618cb85d47",
+            "localId": 4921184508604779718,
+            "dependencyHash": "f8ba54c3122d6ae57c9f35a648c785fd"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "food",
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_Food",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Items/Module_Food.prefab",
+            "guid": "c9071f519ad95e14b8f643d82db1e458",
+            "localId": 3386547747097903612,
+            "dependencyHash": "591b4b12190151cd1979a0d7c68fe874"
+          },
+          "interfaces": [
+            "IItemPoolLifecycle",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "health",
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "DamageReceiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Combat/Module_DamageReciver.prefab",
+            "guid": "c107cb4a775f75a4ab50708e43ad3078",
+            "localId": 1794842364952349929,
+            "dependencyHash": "c2ad992b87ea9bf3253fc546f164648c"
+          },
+          "interfaces": [
+            "IItemModuleDependencyBinder",
+            "IRemoteNetworkModule",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "mover",
+          "prefab": "Mover_AI",
+          "id": "移动模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mover_AI",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/SnowLeopard.prefab",
+            "guid": "aefab58f6f177ba499d703618cb85d47",
+            "localId": 8429019506545184586,
+            "dependencyHash": "f8ba54c3122d6ae57c9f35a648c785fd"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "转身模块",
+          "prefab": "Module_TurnBody",
+          "id": "转身模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_TurnBack",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Animation/Module_TurnBody.prefab",
+            "guid": "17b385e876a029e4095ccb77881ffd0a",
+            "localId": 4263365519867482383,
+            "dependencyHash": "355f6e623c9e9b8a1b11598d3923c06c"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        }
+      ],
+      "shellComponents": [
+        {
+          "path": "",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "WorldNavigationAgent",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "GameItem",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Food",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Food",
+          "type": "Mod_Food",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI_Searcher",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI_Searcher",
+          "type": "Mod_ItemDetector",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "FaceMouse",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "FaceMouse",
+          "type": "Mod_FocusPoint_AI",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "FaceMouse/FaceItem",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI_Move",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI_Move",
+          "type": "Mover_AI",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "伤害接受模块",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "伤害接受模块",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "伤害接受模块",
+          "type": "DamageReceiver",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AttackTrigger_AI",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AttackTrigger_AI",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AttackTrigger_AI",
+          "type": "Mod_Damage_AI",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "区块自动更新",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "区块自动更新",
+          "type": "Mod_ItemChunkAssigner",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "TileReciver",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "TileReciver",
+          "type": "TileEffectReceiver",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "BuffManager",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "BuffManager",
+          "type": "BuffManager",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "转身模块",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "转身模块",
+          "type": "Mod_TurnBack",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "UnityEngine.SpriteRenderer",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "UnityEngine.Animator",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "Mod_AnimatorController_Receiver",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "ActorRenderEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "WaterImmersionRenderEffect",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "ActorRenderColorEffect",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "ActorStatusVisualEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "ActorBuffLightController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "ActorSleepVisualEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AI_SnowLeopard",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AI_SnowLeopard",
+          "type": "AI_SnowLeopard",
+          "inJsonModuleSet": true
+        }
+      ],
+      "sortingGroups": [],
+      "renderers": [
+        {
+          "path": "AI动画模块",
+          "type": "SpriteRenderer",
+          "materials": [
+            "Assets/9_Shaders/Material/Sprite-Lit-Master.mat"
+          ],
+          "shaders": [
+            "Game/2D/Sprite-Lit-Master"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WildBoar",
+      "resolvedDefinition": {
+        "id": "WildBoar",
+        "lootTableId": "WildBoar_Default",
+        "shellPrefab": "CoreActor.WildBoar.Shell",
+        "shellAddress": "flatworld.actor.shell.wildboar",
+        "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab",
+        "gameName": "WildBoar",
+        "description": "物品名称：WildBoar\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：False\n物品标签：TagDictionary:\r\n  Type:\r\n  Material:\r\n  MakeTag:\r\n\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+        "durability": 1.0,
+        "maxDurability": 1.0,
+        "amount": 1.0,
+        "volume": 1.0,
+        "canBePickedUp": false,
+        "tags": [
+          "WildBoar",
+          "Animal",
+          "Blood"
+        ],
+        "visual": {
+          "rendererPath": "Module_Animator_AI",
+          "animationState": "Stand",
+          "rendererLocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rendererLocalEulerAngles": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rendererLocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          },
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          },
+          "flipX": false,
+          "flipY": false,
+          "sortingLayerName": "Default",
+          "sortingOrder": 0,
+          "animatorPath": "Module_Animator_AI",
+          "animatorControllerAddress": "flatworld.actor.animator.wildboar",
+          "collider": {
+            "type": "BoxCollider2D",
+            "enabled": true,
+            "isTrigger": true,
+            "offset": {
+              "x": 0.007042438,
+              "y": 0.04902029
+            },
+            "path": "",
+            "size": {
+              "x": 0.2,
+              "y": 0.1
+            },
+            "edgeRadius": 0.0
+          }
+        },
+        "modules": {
+          "food": {
+            "prefab": "Module_Food",
+            "id": "食物模块",
+            "enabled": true,
+            "data": {
+              "FoodData": {
+                "nutrition": {
+                  "Carbohydrates": 500.0,
+                  "Max_Carbohydrates": 500.0,
+                  "Fat": 500.0,
+                  "Max_Fat": 500.0,
+                  "Protein": 500.0,
+                  "Max_Protein": 500.0,
+                  "Water": 500.0,
+                  "Max_Water": 500.0,
+                  "Vitamins": 500.0,
+                  "Max_Vitamins": 500.0
+                },
+                "Max_EatingProgress": 3.0,
+                "nutritionConsumeSpeed": {
+                  "BaseValue": 1.0,
+                  "BaseAdditive": 0.0,
+                  "AdditiveModifier": 0.0,
+                  "MultiplicativeModifier": 1.0,
+                  "FinalAdditive": 0.0
+                },
+                "FeelGood": false,
+                "PanelPosition": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "WaterConsumeSpeedRate": 1.0,
+                "nutritionConsumeRate": 1.0
+              },
+              "MechanicStates": [
+                {
+                  "StateKey": "food.spoilage",
+                  "Data": {
+                    "EnableSpoilage": true,
+                    "SpoilageElapsedSeconds": 0.0,
+                    "SpoilageIntervalSeconds": 1800.0,
+                    "SpoilageTargetItemID": "Meat_Rotten"
+                  }
+                },
+                {
+                  "StateKey": "food.consumption",
+                  "Data": {
+                    "EatingProgress": 0.0
+                  }
+                }
+              ],
+              "Type": 0
+            },
+            "parameters": {
+              "ConsumeAudio": {
+                "Enabled": true,
+                "CueId": "food.eat",
+                "VolumeScale": 0.78,
+                "PitchMin": 0.96,
+                "PitchMax": 1.04
+              },
+              "ConsumeKind": 0,
+              "HealthState": {
+                "Enabled": true,
+                "HealSpeed": 0.0,
+                "HealInterval": 60.0,
+                "HealAmount": 10.0,
+                "WaterSelfHurt": 1.0,
+                "ProteinSelfHurt": 1.0,
+                "VitaminSelfHurt": 1.0,
+                "HealNeedRatio": 0.0
+              },
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "detector": {
+            "prefab": "Mod_ItemDetector",
+            "id": "物品检测模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "detectionRadius": 12.0,
+              "itemLayer": 1527,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "FaceMouse模块": {
+            "prefab": "Mod_FocusPoint_AI",
+            "id": "FaceMouse模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "Data": {
+                "RotationSpeed": 180.0,
+                "FocusPoints": {
+                  "See": {
+                    "x": 0.0,
+                    "y": 0.0
+                  },
+                  "Move": {
+                    "x": 0.0,
+                    "y": 0.0
+                  },
+                  "Skill_0": {
+                    "x": 0.0,
+                    "y": 0.0
+                  }
+                },
+                "ActivateRotation": true,
+                "StopRotationDistance": 0.1
+              },
+              "targetRotationTransforms": [],
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "mover": {
+            "prefab": "Mover_AI",
+            "id": "移动模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "stopDistance": 0.1,
+              "destinationChangeThreshold": 0.05,
+              "stalledRepathDelay": 0.8,
+              "progressDistanceThreshold": 0.02,
+              "animationMoveSpeedThreshold": 0.03,
+              "Data": {
+                "Speed": {
+                  "BaseValue": 3.75,
+                  "BaseAdditive": 0.0,
+                  "AdditiveModifier": 0.0,
+                  "MultiplicativeModifier": 1.0,
+                  "FinalAdditive": 0.0
+                },
+                "slowDownSpeed": 5.0,
+                "endSpeed": 0.1,
+                "moveStaminaConsume": 1.0,
+                "runStaminaConsume": 2.0,
+                "runSpeedRate": 2.0,
+                "RunStaminaThreshold": 2.0
+              },
+              "speedTransitionDuration": 0.24,
+              "stopTransitionDuration": 0.07,
+              "IsLock": false,
+              "hightReaction": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "health": {
+            "prefab": "Module_DamageReciver",
+            "id": "生命值系统模块",
+            "enabled": true,
+            "data": {
+              "BitData": "",
+              "Type": 0
+            },
+            "parameters": {
+              "Data": {
+                "Hp": 150.0,
+                "MaxHp": 150.0,
+                "UseBodyPartHealth": false,
+                "TwoPartHitChance": 0.25,
+                "BodyPartDataVersion": 0,
+                "BodyParts": [],
+                "DamageInterval": 0.12,
+                "DestroyDelay": 0.0,
+                "DefenseValues": {
+                  "Cutting": 2.5,
+                  "Piercing": 2.5,
+                  "Chopping": 2.5,
+                  "Blunt": 2.5
+                }
+              },
+              "impactAudioMaterial": 0,
+              "hurtAudioCueId": "",
+              "enableHitSlowdown": true,
+              "hitSlowMultiplier": 0.5,
+              "hitSlowDuration": 0.35,
+              "flashCount": 1,
+              "flashDuration": 0.2,
+              "flashColor": {
+                "r": 1.0,
+                "g": 0.08,
+                "b": 0.08,
+                "a": 1.0
+              },
+              "shakeDuration": 0.15,
+              "shakeMagnitude": 0.1,
+              "HideUiDelayAfterLastDamage": 4.0,
+              "healthBarTopPadding": 0.16,
+              "healthBarWorldScale": 0.55,
+              "enableDebugTools": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              },
+              "$collider2D": {
+                "type": "BoxCollider2D",
+                "enabled": true,
+                "isTrigger": true,
+                "offset": {
+                  "x": 0.0166221261,
+                  "y": 0.278846383
+                },
+                "size": {
+                  "x": 1.0,
+                  "y": 0.589103341
+                },
+                "edgeRadius": 0.0
+              }
+            }
+          },
+          "damage": {
+            "prefab": "Module_AttackTrigger_AI",
+            "id": "AttackTrigger_AI",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "xOffset": 0.5,
+              "DamageValues": {
+                "Cutting": 0.0,
+                "Piercing": 2.0,
+                "Chopping": 0.0,
+                "Blunt": 8.0
+              },
+              "DamageInterval": -1.0,
+              "EnableOnTriggerEnterDamage": true,
+              "OnlyDealDamageWhenInHand": false,
+              "tileDamageToolKind": 0,
+              "weaponAudioClass": 0,
+              "attackAudioCueId": "",
+              "impactAudioOverrides": [],
+              "$transform": {
+                "localPosition": {
+                  "x": -0.824,
+                  "y": 0.291,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              },
+              "$collider2D": {
+                "type": "BoxCollider2D",
+                "enabled": true,
+                "isTrigger": true,
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "size": {
+                  "x": 2.2,
+                  "y": 0.9
+                },
+                "edgeRadius": 0.45
+              }
+            }
+          },
+          "chargeAttackSkill": {
+            "prefab": "Module_ChargeAttack",
+            "id": "AnimalSkill_ChargeAttack",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "SkillId": "animal.charge_attack",
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "ai": {
+            "prefab": "AI_WildBoar",
+            "id": "Module_AI_WildBoar",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "debugLog": true,
+              "eatEnterHungerRate": 0.4,
+              "eatExitHungerRate": 0.8,
+              "sleepEnterHpRate": 0.45,
+              "sleepExitHpRate": 0.5,
+              "sleepDuration": 8.0,
+              "sleepCooldown": 4.0,
+              "dayStartRatio": 0.25,
+              "dayEndRatio": 0.75,
+              "duskStartRatio": 0.65,
+              "aggressiveDuringDusk": true,
+              "detectorRefreshInterval": 1.0,
+              "eatDistance": 1.5,
+              "enableGrassForaging": true,
+              "grassSearchRadius": 8.0,
+              "grassEatDuration": 1.0,
+              "grassSustenanceDays": 2.0,
+              "enableWander": true,
+              "idleMinDuration": 1.0,
+              "idleMaxDuration": 3.0,
+              "wanderRadius": 6.0,
+              "wanderStopDistance": 0.5,
+              "wanderPauseMin": 1.0,
+              "wanderPauseMax": 3.0,
+              "edibleTags": [
+                "Food",
+                "Corpse",
+                "Meat"
+              ],
+              "wanderAvoidHighPenalty": true,
+              "wanderDangerPenalty": 1200,
+              "wanderSampleCount": 8,
+              "wanderPenaltyWeight": 1.0,
+              "alertDetectDistance": 8.0,
+              "alertDuration": 3.0,
+              "alertToChaseDuration": 1.0,
+              "chaseTriggerDistance": 12.0,
+              "chaseLossDistance": 20.0,
+              "chasePathCostLimit": 200,
+              "chasePathRetryDelay": 3.0,
+              "chaseThreatTags": [
+                "Player"
+              ],
+              "chasePlayer": true,
+              "attackTriggerDistance": 1.6,
+              "attackVerticalTriggerDistance": 0.45,
+              "attackDuration": 1.5,
+              "attackPositionDistance": 1.2,
+              "attackPositionTolerance": 0.18,
+              "rageBuildupRate": 0.5,
+              "rageDecayRate": 0.2,
+              "attackCooldown": 2.0,
+              "attackDamageWindow": 0.12,
+              "attackDamageStartDelay": 0.45,
+              "fleeTriggerHpRate": 0.2,
+              "fleeSafeHpRate": 0.4,
+              "fleeRunDistance": 10.0,
+              "animIdle": "Stand",
+              "animMove": "Move",
+              "animSleep": "Stand",
+              "animForage": "Move",
+              "animEat": "Stand",
+              "animAlert": "Stand",
+              "animChase": "Move",
+              "animAttack": "Attack",
+              "animFlee": "Move",
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "ChunkAssigner": {
+            "prefab": "Module_AutoChunkOwner",
+            "id": "ChunkAssigner",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "TileReciver": {
+            "prefab": "TileReciver",
+            "id": "TileReciver",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "lastGridPos": {
+                "x": 0,
+                "y": 0
+              },
+              "currentTileData": null,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "BuffManager": {
+            "prefab": "Module_BuffManager",
+            "id": "BuffManager",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "animator": {
+            "prefab": "Module_Animator_AI",
+            "id": "Module_Animator_AI",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "visualMode": 0,
+              "moveDetectSpeed": 0.05,
+              "walkSwingAngle": 8.0,
+              "walkSwingSpeed": 12.0,
+              "walkBobAmount": 0.04,
+              "walkReturnSpeed": 12.0,
+              "attackDashDistance": 0.22,
+              "attackDashForwardTime": 0.06,
+              "attackDashBackTime": 0.12,
+              "autoAttackDirection": true,
+              "attackDirection": {
+                "x": 1.0,
+                "y": 0.0
+              },
+              "SkillId": 0,
+              "CanUseSkill": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "Module_TurnBody": {
+            "prefab": "Module_TurnBody",
+            "id": "Module_TurnBody",
+            "enabled": true,
+            "data": {
+              "BitData": "",
+              "Type": 0
+            },
+            "parameters": {
+              "Duration": 0.3,
+              "controlledTransforms_Direction": [],
+              "controlledTransforms_Position": [],
+              "DefaultPosition": {
+                "x": 0.5,
+                "y": 0.0
+              },
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          }
+        },
+        "itemData": {
+          "code": "",
+          "transform": {
+            "position": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "rotation": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+              "w": 0.0
+            },
+            "scale": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            }
+          },
+          "ItemSpecialData": "",
+          "inHand": false
+        },
+        "abstract": false
+      },
+      "shell": {
+        "path": "Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab",
+        "guid": "63385f96683848648b48555cb0876c19",
+        "localId": 4766519559426352308,
+        "dependencyHash": "198eba847c987e45a5ac390531564060"
+      },
+      "controller": {
+        "path": "Assets/8_Animations/Character/WildBoar/WildBoar.controller",
+        "guid": "d5796b80b58f98a4a9bf270003d954c8",
+        "localId": 9100000,
+        "dependencyHash": "aa3cb3b078ebe16308402d1915631e69"
+      },
+      "hasIAIActor": true,
+      "perceptionGeometry": [
+        {
+          "kind": "AABB",
+          "center": [
+            0.007042438,
+            0.04902029
+          ],
+          "extents": [
+            0.1,
+            0.05
+          ],
+          "radius": 0.0,
+          "runtimePhysicsQuery": false
+        }
+      ],
+      "modules": [
+        {
+          "key": "BuffManager",
+          "prefab": "Module_BuffManager",
+          "id": "BuffManager",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "BuffManager",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Managers/Module_BuffManager.prefab",
+            "guid": "992baff2372d5b447946a74b230d5ca4",
+            "localId": 781865264438095516,
+            "dependencyHash": "c25553cb59bcb721d8c36486ab8363ad"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "ChunkAssigner",
+          "prefab": "Module_AutoChunkOwner",
+          "id": "ChunkAssigner",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_ItemChunkAssigner",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/World/Module_AutoChunkOwner.prefab",
+            "guid": "98884601a3d373a40ab86aff00f45a08",
+            "localId": 4898042926724609223,
+            "dependencyHash": "cb7be0d2e0e053936e4f2a71cb632173"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "FaceMouse模块",
+          "prefab": "Mod_FocusPoint_AI",
+          "id": "FaceMouse模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_FocusPoint_AI",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab",
+            "guid": "63385f96683848648b48555cb0876c19",
+            "localId": 8785560632006772089,
+            "dependencyHash": "198eba847c987e45a5ac390531564060"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "Module_TurnBody",
+          "prefab": "Module_TurnBody",
+          "id": "Module_TurnBody",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_TurnBack",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Animation/Module_TurnBody.prefab",
+            "guid": "17b385e876a029e4095ccb77881ffd0a",
+            "localId": 4263365519867482383,
+            "dependencyHash": "355f6e623c9e9b8a1b11598d3923c06c"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "TileReciver",
+          "prefab": "TileReciver",
+          "id": "TileReciver",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "TileEffectReceiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Managers/TileReciver.prefab",
+            "guid": "6b76adaa9ade3a944bd13a582e3b9ee9",
+            "localId": 6542595850011715307,
+            "dependencyHash": "8a17ce7516e3964563f966224d69b35f"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "ai",
+          "prefab": "AI_WildBoar",
+          "id": "Module_AI_WildBoar",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "AI_WildBoar",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab",
+            "guid": "63385f96683848648b48555cb0876c19",
+            "localId": 8358856076963370307,
+            "dependencyHash": "198eba847c987e45a5ac390531564060"
+          },
+          "interfaces": [
+            "IAIActor",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "animator",
+          "prefab": "Module_Animator_AI",
+          "id": "Module_Animator_AI",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_AnimatorController_Receiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Animation/Module_Animator_AI.prefab",
+            "guid": "a84f90f79ba86a34aa88b8e752960665",
+            "localId": 1835563831416809626,
+            "dependencyHash": "b63ef78d9f4f0ba3492d3f05f98ca38d"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle",
+            "ITrunDirection"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "chargeAttackSkill",
+          "prefab": "Module_ChargeAttack",
+          "id": "AnimalSkill_ChargeAttack",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_ChargeAttack",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Skills/Module_ChargeAttack.prefab",
+            "guid": "59468430928f459086d2706d1f909c07",
+            "localId": 6181776900112345681,
+            "dependencyHash": "58394c0dba09a23536a9f29651a35d9f"
+          },
+          "interfaces": [
+            "IAnimalCombatSkill",
+            "IRuntimeDataLifecycle",
+            "ITrunDirection"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "damage",
+          "prefab": "Module_AttackTrigger_AI",
+          "id": "AttackTrigger_AI",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_Damage_AI",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/AI/Module_AttackTrigger_AI.prefab",
+            "guid": "88450745eac117c4295962551e0db2d7",
+            "localId": 8181546002205526525,
+            "dependencyHash": "fc5817007daacde5146150e0683a7779"
+          },
+          "interfaces": [
+            "IBuildingDamageSource",
+            "IDamageSender",
+            "IHitSlowdownSource",
+            "IResourceHarvestTool",
+            "IRuntimeDataLifecycle",
+            "ITrunDirection"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "detector",
+          "prefab": "Mod_ItemDetector",
+          "id": "物品检测模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_ItemDetector",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab",
+            "guid": "63385f96683848648b48555cb0876c19",
+            "localId": 4921184508604779718,
+            "dependencyHash": "198eba847c987e45a5ac390531564060"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "food",
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_Food",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Items/Module_Food.prefab",
+            "guid": "c9071f519ad95e14b8f643d82db1e458",
+            "localId": 3386547747097903612,
+            "dependencyHash": "591b4b12190151cd1979a0d7c68fe874"
+          },
+          "interfaces": [
+            "IItemPoolLifecycle",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "health",
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "DamageReceiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Combat/Module_DamageReciver.prefab",
+            "guid": "c107cb4a775f75a4ab50708e43ad3078",
+            "localId": 1794842364952349929,
+            "dependencyHash": "c2ad992b87ea9bf3253fc546f164648c"
+          },
+          "interfaces": [
+            "IItemModuleDependencyBinder",
+            "IRemoteNetworkModule",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "mover",
+          "prefab": "Mover_AI",
+          "id": "移动模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mover_AI",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/WildBoar.prefab",
+            "guid": "63385f96683848648b48555cb0876c19",
+            "localId": 8429019506545184586,
+            "dependencyHash": "198eba847c987e45a5ac390531564060"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        }
+      ],
+      "shellComponents": [
+        {
+          "path": "",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "WorldNavigationAgent",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "GameItem",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "食物模块",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "食物模块",
+          "type": "Mod_Food",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI_Searcher",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI_Searcher",
+          "type": "Mod_ItemDetector",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "FaceMouse",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "FaceMouse",
+          "type": "Mod_FocusPoint_AI",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "FaceMouse/FaceItem",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI_Move",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI_Move",
+          "type": "Mover_AI",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "伤害接受模块",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "伤害接受模块",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "伤害接受模块",
+          "type": "DamageReceiver",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AttackTrigger_AI",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AttackTrigger_AI",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AttackTrigger_AI",
+          "type": "Mod_Damage_AI",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AI_WildBoar",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AI_WildBoar",
+          "type": "AI_WildBoar",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "Module_AutoChunkOwner",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AutoChunkOwner",
+          "type": "Mod_ItemChunkAssigner",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "TileReciver",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "TileReciver",
+          "type": "TileEffectReceiver",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_BuffManager",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_BuffManager",
+          "type": "BuffManager",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "UnityEngine.SpriteRenderer",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "UnityEngine.Animator",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "Mod_AnimatorController_Receiver",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorRenderEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "WaterImmersionRenderEffect",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorRenderColorEffect",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorStatusVisualEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorBuffLightController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Animator_AI",
+          "type": "ActorSleepVisualEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_TurnBody",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_TurnBody",
+          "type": "Mod_TurnBack",
+          "inJsonModuleSet": false
+        }
+      ],
+      "sortingGroups": [],
+      "renderers": [
+        {
+          "path": "Module_Animator_AI",
+          "type": "SpriteRenderer",
+          "materials": [
+            "Assets/9_Shaders/Material/Sprite-Lit-Master.mat"
+          ],
+          "shaders": [
+            "Game/2D/Sprite-Lit-Master"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Wolf",
+      "resolvedDefinition": {
+        "id": "Wolf",
+        "lootTableId": "Wolf_Default",
+        "shellPrefab": "CoreActor.Wolf.Shell",
+        "shellAddress": "flatworld.actor.shell.wolf",
+        "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Wolf.prefab",
+        "gameName": "Wolf",
+        "description": "物品名称：Wolf\n物品描述：\n物品体积：1\n物品耐久度：1\n是否可拾取：True\n物品标签：物品类型：None(None),物品材质：None\n物品堆叠信息：物体数量:1\n物品特殊数据：\n全局唯一标识：0",
+        "durability": 1.0,
+        "maxDurability": 1.0,
+        "amount": 1.0,
+        "volume": 1.0,
+        "canBePickedUp": false,
+        "tags": [
+          "Wolf",
+          "Animal",
+          "Blood"
+        ],
+        "visual": {
+          "rendererPath": "AI动画模块",
+          "animationState": "Idle",
+          "rendererLocalPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rendererLocalEulerAngles": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+          },
+          "rendererLocalScale": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+          },
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0,
+            "a": 1.0
+          },
+          "flipX": false,
+          "flipY": false,
+          "sortingLayerName": "Default",
+          "sortingOrder": 0,
+          "animatorPath": "AI动画模块",
+          "animatorControllerAddress": "flatworld.actor.animator.wolf",
+          "collider": {
+            "type": "BoxCollider2D",
+            "enabled": true,
+            "isTrigger": true,
+            "offset": {
+              "x": 0.007042438,
+              "y": 0.04902029
+            },
+            "path": "",
+            "size": {
+              "x": 0.2,
+              "y": 0.1
+            },
+            "edgeRadius": 0.0
+          }
+        },
+        "modules": {
+          "food": {
+            "prefab": "Module_Food",
+            "id": "食物模块",
+            "enabled": true,
+            "data": {
+              "FoodData": {
+                "nutrition": {
+                  "Carbohydrates": 500.0,
+                  "Max_Carbohydrates": 500.0,
+                  "Fat": 500.0,
+                  "Max_Fat": 500.0,
+                  "Protein": 500.0,
+                  "Max_Protein": 500.0,
+                  "Water": 500.0,
+                  "Max_Water": 500.0,
+                  "Vitamins": 500.0,
+                  "Max_Vitamins": 500.0
+                },
+                "Max_EatingProgress": 3.0,
+                "nutritionConsumeSpeed": {
+                  "BaseValue": 1.0,
+                  "BaseAdditive": 0.0,
+                  "AdditiveModifier": 0.0,
+                  "MultiplicativeModifier": 1.0,
+                  "FinalAdditive": 0.0
+                },
+                "FeelGood": false,
+                "PanelPosition": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "WaterConsumeSpeedRate": 1.0,
+                "nutritionConsumeRate": 1.0
+              },
+              "MechanicStates": [
+                {
+                  "StateKey": "food.spoilage",
+                  "Data": {
+                    "EnableSpoilage": true,
+                    "SpoilageElapsedSeconds": 0.0,
+                    "SpoilageIntervalSeconds": 1800.0,
+                    "SpoilageTargetItemID": "Meat_Rotten"
+                  }
+                },
+                {
+                  "StateKey": "food.consumption",
+                  "Data": {
+                    "EatingProgress": 0.0
+                  }
+                }
+              ],
+              "Type": 0
+            },
+            "parameters": {
+              "ConsumeAudio": {
+                "Enabled": true,
+                "CueId": "food.eat",
+                "VolumeScale": 0.78,
+                "PitchMin": 0.96,
+                "PitchMax": 1.04
+              },
+              "ConsumeKind": 0,
+              "HealthState": {
+                "Enabled": true,
+                "HealSpeed": 0.0,
+                "HealInterval": 60.0,
+                "HealAmount": 10.0,
+                "WaterSelfHurt": 1.0,
+                "ProteinSelfHurt": 1.0,
+                "VitaminSelfHurt": 1.0,
+                "HealNeedRatio": 0.0
+              },
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "detector": {
+            "prefab": "Mod_ItemDetector",
+            "id": "物品检测模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "detectionRadius": 120.0,
+              "itemLayer": 1527,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "FaceMouse模块": {
+            "prefab": "Mod_FocusPoint_AI",
+            "id": "FaceMouse模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "Data": {
+                "RotationSpeed": 180.0,
+                "FocusPoints": {
+                  "See": {
+                    "x": 0.0,
+                    "y": 0.0
+                  },
+                  "Move": {
+                    "x": 0.0,
+                    "y": 0.0
+                  },
+                  "Skill_0": {
+                    "x": 0.0,
+                    "y": 0.0
+                  }
+                },
+                "ActivateRotation": true,
+                "StopRotationDistance": 0.1
+              },
+              "targetRotationTransforms": [],
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "mover": {
+            "prefab": "Mover_AI",
+            "id": "移动模块",
+            "enabled": false,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "stopDistance": 0.1,
+              "destinationChangeThreshold": 0.05,
+              "stalledRepathDelay": 0.8,
+              "progressDistanceThreshold": 0.02,
+              "animationMoveSpeedThreshold": 0.03,
+              "Data": {
+                "Speed": {
+                  "BaseValue": 3.75,
+                  "BaseAdditive": 0.0,
+                  "AdditiveModifier": 0.0,
+                  "MultiplicativeModifier": 1.0,
+                  "FinalAdditive": 0.0
+                },
+                "slowDownSpeed": 5.0,
+                "endSpeed": 0.1,
+                "moveStaminaConsume": 1.0,
+                "runStaminaConsume": 2.0,
+                "runSpeedRate": 2.0,
+                "RunStaminaThreshold": 2.0
+              },
+              "speedTransitionDuration": 0.24,
+              "stopTransitionDuration": 0.07,
+              "IsLock": false,
+              "hightReaction": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "health": {
+            "prefab": "Module_DamageReciver",
+            "id": "生命值系统模块",
+            "enabled": true,
+            "data": {
+              "BitData": "",
+              "Type": 0
+            },
+            "parameters": {
+              "Data": {
+                "Hp": 100.0,
+                "MaxHp": 100.0,
+                "UseBodyPartHealth": false,
+                "TwoPartHitChance": 0.25,
+                "BodyPartDataVersion": 0,
+                "BodyParts": [],
+                "DamageInterval": 0.12,
+                "DestroyDelay": 0.0,
+                "DefenseValues": {
+                  "Cutting": 1.5,
+                  "Piercing": 1.5,
+                  "Chopping": 1.5,
+                  "Blunt": 1.5
+                }
+              },
+              "impactAudioMaterial": 0,
+              "hurtAudioCueId": "",
+              "enableHitSlowdown": true,
+              "hitSlowMultiplier": 0.5,
+              "hitSlowDuration": 0.35,
+              "flashCount": 1,
+              "flashDuration": 0.2,
+              "flashColor": {
+                "r": 1.0,
+                "g": 0.08,
+                "b": 0.08,
+                "a": 1.0
+              },
+              "shakeDuration": 0.15,
+              "shakeMagnitude": 0.1,
+              "HideUiDelayAfterLastDamage": 4.0,
+              "healthBarTopPadding": 0.16,
+              "healthBarWorldScale": 0.55,
+              "enableDebugTools": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              },
+              "$collider2D": {
+                "type": "BoxCollider2D",
+                "enabled": true,
+                "isTrigger": true,
+                "offset": {
+                  "x": 0.0166221261,
+                  "y": 0.278846383
+                },
+                "size": {
+                  "x": 1.0,
+                  "y": 0.589103341
+                },
+                "edgeRadius": 0.0
+              }
+            }
+          },
+          "damage": {
+            "prefab": "Mod_Damage_AI",
+            "id": "AttackTrigger_AI",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "xOffset": 0.65,
+              "DamageValues": {
+                "Cutting": 3.0,
+                "Piercing": 2.0,
+                "Chopping": 0.0,
+                "Blunt": 7.0
+              },
+              "DamageInterval": -1.0,
+              "EnableOnTriggerEnterDamage": true,
+              "OnlyDealDamageWhenInHand": false,
+              "tileDamageToolKind": 0,
+              "weaponAudioClass": 0,
+              "attackAudioCueId": "",
+              "impactAudioOverrides": [],
+              "$transform": {
+                "localPosition": {
+                  "x": 0.65,
+                  "y": 0.291,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              },
+              "$collider2D": {
+                "type": "BoxCollider2D",
+                "enabled": false,
+                "isTrigger": true,
+                "offset": {
+                  "x": 0.0,
+                  "y": 0.0
+                },
+                "size": {
+                  "x": 1.2,
+                  "y": 1.2
+                },
+                "edgeRadius": 0.0
+              }
+            }
+          },
+          "ChunkAssigner": {
+            "prefab": "Module_AutoChunkOwner",
+            "id": "ChunkAssigner",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "TileReciver": {
+            "prefab": "TileReciver",
+            "id": "TileReciver",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "lastGridPos": {
+                "x": 0,
+                "y": 0
+              },
+              "currentTileData": null,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "BuffManager": {
+            "prefab": "Module_BuffManager",
+            "id": "BuffManager",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "转身模块": {
+            "prefab": "Module_TurnBody",
+            "id": "转身模块",
+            "enabled": true,
+            "data": {
+              "BitData": "",
+              "Type": 0
+            },
+            "parameters": {
+              "Duration": 0.3,
+              "controlledTransforms_Direction": [],
+              "controlledTransforms_Position": [],
+              "DefaultPosition": {
+                "x": 0.5,
+                "y": 0.0
+              },
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "animator": {
+            "prefab": "Module_Animator_AI",
+            "id": "AI动画模块",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "visualMode": 0,
+              "moveDetectSpeed": 0.05,
+              "walkSwingAngle": 8.0,
+              "walkSwingSpeed": 12.0,
+              "walkBobAmount": 0.04,
+              "walkReturnSpeed": 12.0,
+              "attackDashDistance": 0.22,
+              "attackDashForwardTime": 0.06,
+              "attackDashBackTime": 0.12,
+              "autoAttackDirection": true,
+              "attackDirection": {
+                "x": 1.0,
+                "y": 0.0
+              },
+              "SkillId": 0,
+              "CanUseSkill": false,
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          },
+          "ai": {
+            "prefab": "AI_Wolf",
+            "id": "Module_AI_Wolf",
+            "enabled": true,
+            "data": {
+              "BitData": [],
+              "Type": 0
+            },
+            "parameters": {
+              "debugLog": false,
+              "wolfTags": [
+                "Wolf"
+              ],
+              "playerTags": [
+                "Player"
+              ],
+              "detectorRefreshInterval": 0.6,
+              "allyCallDistance": 120.0,
+              "packAssistDuration": 5.0,
+              "packCallCooldown": 0.8,
+              "enableChaseFormation": true,
+              "chaseFormationMinMembers": 2,
+              "chaseFormationRadius": 1.05,
+              "chaseFormationVerticalSpacing": 0.42,
+              "chaseFormationMaxVerticalRatio": 0.55,
+              "chaseFormationAttackMargin": 0.18,
+              "chaseFormationAttackSlotTolerance": 0.14,
+              "chaseSeparationDistance": 0.85,
+              "chaseSeparationStrength": 0.7,
+              "chaseSeparationMaxOffset": 0.2,
+              "alertDetectDistance": 20.0,
+              "chaseTriggerDistance": 28.0,
+              "attackTriggerDistance": 1.4,
+              "chaseLossDistance": 44.0,
+              "chasePathCostLimit": 440,
+              "chasePathRetryDelay": 3.0,
+              "attackCooldown": 2.0,
+              "attackDamageWindow": 0.333333343,
+              "attackDamageStartDelay": 0.5,
+              "attackRecoveryDuration": 0.35,
+              "alertKeepDuration": 2.0,
+              "fleeTriggerHpRate": 0.22,
+              "fleeSafeHpRate": 0.45,
+              "avoidRunDistance": 9.0,
+              "fleeRunDistance": 12.0,
+              "enableWander": true,
+              "idleMinDuration": 0.8,
+              "idleMaxDuration": 2.2,
+              "wanderRadius": 5.0,
+              "wanderStopDistance": 0.4,
+              "wanderCohesionWeight": 1.0,
+              "wanderPauseMin": 0.8,
+              "wanderPauseMax": 2.5,
+              "wanderAvoidHighPenalty": true,
+              "wanderDangerPenalty": 1200,
+              "wanderSampleCount": 8,
+              "wanderPenaltyWeight": 1.0,
+              "animIdle": "Idle",
+              "animMove": "Move",
+              "animAlert": "Idle",
+              "animChase": "Move",
+              "animAttack": "Attack",
+              "animAvoid": "Move",
+              "animFlee": "Move",
+              "$transform": {
+                "localPosition": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localEulerAngles": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "z": 0.0
+                },
+                "localScale": {
+                  "x": 1.0,
+                  "y": 1.0,
+                  "z": 1.0
+                }
+              }
+            }
+          }
+        },
+        "itemData": {
+          "code": "",
+          "factionId": "wolves",
+          "transform": {
+            "position": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            "rotation": {
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0,
+              "w": 0.0
+            },
+            "scale": {
+              "x": 1.0,
+              "y": 1.0,
+              "z": 1.0
+            }
+          },
+          "ItemSpecialData": "",
+          "inHand": false
+        },
+        "abstract": false
+      },
+      "shell": {
+        "path": "Assets/2_Prefabs/Gameplay/AI/Wolf.prefab",
+        "guid": "dd531bf9262d2dd4bad34506f71b2385",
+        "localId": 4766519559426352308,
+        "dependencyHash": "d484cb9b994f1976d31d298515bee84e"
+      },
+      "controller": {
+        "path": "Assets/8_Animations/Character/Wolf/Wolf.controller",
+        "guid": "6c0d68a959e78d545b0b889726a21dcc",
+        "localId": 9100000,
+        "dependencyHash": "f905ba5f2fddde6a0264d0073d4593d1"
+      },
+      "hasIAIActor": true,
+      "perceptionGeometry": [
+        {
+          "kind": "AABB",
+          "center": [
+            0.007042438,
+            0.04902029
+          ],
+          "extents": [
+            0.1,
+            0.05
+          ],
+          "radius": 0.0,
+          "runtimePhysicsQuery": false
+        }
+      ],
+      "modules": [
+        {
+          "key": "BuffManager",
+          "prefab": "Module_BuffManager",
+          "id": "BuffManager",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "BuffManager",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Managers/Module_BuffManager.prefab",
+            "guid": "992baff2372d5b447946a74b230d5ca4",
+            "localId": 781865264438095516,
+            "dependencyHash": "c25553cb59bcb721d8c36486ab8363ad"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "ChunkAssigner",
+          "prefab": "Module_AutoChunkOwner",
+          "id": "ChunkAssigner",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_ItemChunkAssigner",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/World/Module_AutoChunkOwner.prefab",
+            "guid": "98884601a3d373a40ab86aff00f45a08",
+            "localId": 4898042926724609223,
+            "dependencyHash": "cb7be0d2e0e053936e4f2a71cb632173"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "FaceMouse模块",
+          "prefab": "Mod_FocusPoint_AI",
+          "id": "FaceMouse模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_FocusPoint_AI",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/Wolf.prefab",
+            "guid": "dd531bf9262d2dd4bad34506f71b2385",
+            "localId": 8785560632006772089,
+            "dependencyHash": "d484cb9b994f1976d31d298515bee84e"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "TileReciver",
+          "prefab": "TileReciver",
+          "id": "TileReciver",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "TileEffectReceiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Managers/TileReciver.prefab",
+            "guid": "6b76adaa9ade3a944bd13a582e3b9ee9",
+            "localId": 6542595850011715307,
+            "dependencyHash": "8a17ce7516e3964563f966224d69b35f"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "ai",
+          "prefab": "AI_Wolf",
+          "id": "Module_AI_Wolf",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "AI_Wolf",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/Wolf.prefab",
+            "guid": "dd531bf9262d2dd4bad34506f71b2385",
+            "localId": 1918825113318403166,
+            "dependencyHash": "d484cb9b994f1976d31d298515bee84e"
+          },
+          "interfaces": [
+            "IAIActor",
+            "IAIAdvanceCommandReceiver",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "animator",
+          "prefab": "Module_Animator_AI",
+          "id": "AI动画模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_AnimatorController_Receiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Animation/Module_Animator_AI.prefab",
+            "guid": "a84f90f79ba86a34aa88b8e752960665",
+            "localId": 1835563831416809626,
+            "dependencyHash": "b63ef78d9f4f0ba3492d3f05f98ca38d"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle",
+            "ITrunDirection"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "damage",
+          "prefab": "Mod_Damage_AI",
+          "id": "AttackTrigger_AI",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_Damage_AI",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/Wolf.prefab",
+            "guid": "dd531bf9262d2dd4bad34506f71b2385",
+            "localId": 5613875903493430186,
+            "dependencyHash": "d484cb9b994f1976d31d298515bee84e"
+          },
+          "interfaces": [
+            "IBuildingDamageSource",
+            "IDamageSender",
+            "IHitSlowdownSource",
+            "IResourceHarvestTool",
+            "IRuntimeDataLifecycle",
+            "ITrunDirection"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "detector",
+          "prefab": "Mod_ItemDetector",
+          "id": "物品检测模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_ItemDetector",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/Wolf.prefab",
+            "guid": "dd531bf9262d2dd4bad34506f71b2385",
+            "localId": 4921184508604779718,
+            "dependencyHash": "d484cb9b994f1976d31d298515bee84e"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "food",
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_Food",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Items/Module_Food.prefab",
+            "guid": "c9071f519ad95e14b8f643d82db1e458",
+            "localId": 3386547747097903612,
+            "dependencyHash": "591b4b12190151cd1979a0d7c68fe874"
+          },
+          "interfaces": [
+            "IItemPoolLifecycle",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "health",
+          "prefab": "Module_DamageReciver",
+          "id": "生命值系统模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "DamageReceiver",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Combat/Module_DamageReciver.prefab",
+            "guid": "c107cb4a775f75a4ab50708e43ad3078",
+            "localId": 1794842364952349929,
+            "dependencyHash": "c2ad992b87ea9bf3253fc546f164648c"
+          },
+          "interfaces": [
+            "IItemModuleDependencyBinder",
+            "IRemoteNetworkModule",
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "mover",
+          "prefab": "Mover_AI",
+          "id": "移动模块",
+          "enabled": false,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mover_AI",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/AI/Wolf.prefab",
+            "guid": "dd531bf9262d2dd4bad34506f71b2385",
+            "localId": 8429019506545184586,
+            "dependencyHash": "d484cb9b994f1976d31d298515bee84e"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        },
+        {
+          "key": "转身模块",
+          "prefab": "Module_TurnBody",
+          "id": "转身模块",
+          "enabled": true,
+          "ecsCapability": "未迁移；P0 只盘点，不授权生产后端切换",
+          "type": "Mod_TurnBack",
+          "asset": {
+            "path": "Assets/2_Prefabs/Gameplay/Modules/Animation/Module_TurnBody.prefab",
+            "guid": "17b385e876a029e4095ccb77881ffd0a",
+            "localId": 4263365519867482383,
+            "dependencyHash": "355f6e623c9e9b8a1b11598d3923c06c"
+          },
+          "interfaces": [
+            "IRuntimeDataLifecycle"
+          ],
+          "parameterContract": "通过只读校验"
+        }
+      ],
+      "shellComponents": [
+        {
+          "path": "",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "WorldNavigationAgent",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "",
+          "type": "GameItem",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Food",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_Food",
+          "type": "Mod_Food",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI_Searcher",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI_Searcher",
+          "type": "Mod_ItemDetector",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "FaceMouse",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "FaceMouse",
+          "type": "Mod_FocusPoint_AI",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "FaceMouse/FaceItem",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI_Move",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI_Move",
+          "type": "Mover_AI",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "伤害接受模块",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "伤害接受模块",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "伤害接受模块",
+          "type": "DamageReceiver",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AttackTrigger_AI",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AttackTrigger_AI",
+          "type": "UnityEngine.BoxCollider2D",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AttackTrigger_AI",
+          "type": "Mod_Damage_AI",
+          "inJsonModuleSet": true
+        },
+        {
+          "path": "区块自动更新",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "区块自动更新",
+          "type": "Mod_ItemChunkAssigner",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "TileReciver",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "TileReciver",
+          "type": "TileEffectReceiver",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "BuffManager",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "BuffManager",
+          "type": "BuffManager",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "转身模块",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "转身模块",
+          "type": "Mod_TurnBack",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "UnityEngine.SpriteRenderer",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "UnityEngine.Animator",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "Mod_AnimatorController_Receiver",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "ActorRenderEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "WaterImmersionRenderEffect",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "ActorRenderColorEffect",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "ActorStatusVisualEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "ActorBuffLightController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "AI动画模块",
+          "type": "ActorSleepVisualEffectController",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AI_Wolf",
+          "type": "UnityEngine.Transform",
+          "inJsonModuleSet": false
+        },
+        {
+          "path": "Module_AI_Wolf",
+          "type": "AI_Wolf",
+          "inJsonModuleSet": true
+        }
+      ],
+      "sortingGroups": [],
+      "renderers": [
+        {
+          "path": "AI动画模块",
+          "type": "SpriteRenderer",
+          "materials": [
+            "Assets/9_Shaders/Material/Sprite-Lit-Master.mat"
+          ],
+          "shaders": [
+            "Game/2D/Sprite-Lit-Master"
+          ]
+        }
+      ]
+    }
+  ],
+  "issues": []
+}
