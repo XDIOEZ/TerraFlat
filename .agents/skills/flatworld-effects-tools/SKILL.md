@@ -67,6 +67,8 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 ## AIECS 渲染原型
 
+- 表现代码在独立 `AIECS/Presentation` 程序集，正式 `AiecsWorldRenderer` 只读模拟提交后的 Display，不复用 AiecsPrototypeMotion 作为行为。共享动画目录、图集及移动脚本的 GUID 必须保留；开发显示的有限 Y 行批次和血条便于手测，不等于旧世界精确透明混排、实际水深或 GPU 性能门槛通过。
+
 - `Entities/AIECS/` 通过原生 `Universal2D/NormalsRendering` 绘制排序后连续的精灵批次，禁止按物种/材质全局重排或在管线末尾补画并假设 Light2D 自动正确。当前 CPU 合并网格只用于兼容性原型；颜色批次统计不等于 GPU 实测 draw 数或两万同屏证据。
 - `AiecsLegacySortScope` 仅用于单相机独立场景的完整 Sprite 显示范围，临时覆盖外部 Order 并在停用时恢复，内部 SortingGroup 保持原绘制职责；Tilemap、粒子、嵌套组和动态正式世界尚未适配，不得直接套到半个正式场景。
 - 动画从启用的 Actor Manifest 与实际覆盖控制器导出，Sprite 按真实三角形/UV 解包后保存原尺寸、Pivot、PPU。非循环时间轴必须包含终点姿态，不能复用循环动画的去尾规则；攻击曲线/事件只是待映射标记。重导使用所选生成目录的显式菜单以保留 GUID，禁止在导入或打开场景时自动覆盖资源；特殊法线、Mask、附属物和正式运行时加载仍需各自适配。

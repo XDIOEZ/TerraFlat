@@ -1,11 +1,11 @@
 # AIECS 开发文档：2 万生物同屏与 1 万 VS 1 万战斗
 
-版本：1.3 分阶段实施、纯数据感知与分层流场导航记录
+版本：1.4 正式 AI 分层框架、双向战斗与实战开发入口
 
 编写与静态核实日期：2026-09-15  
 适用项目：FlatWorld / TerraFlat  
 交付对象：后续实施 AI 与项目开发者  
-当前状态：**P0 静态基线已完成；P1 渲染原型与资源已生成，兼容性门槛尚未通过；AI↔AI 纯数据感知已接入旧后端。按用户追加要求，P2/P3 的真实网格分层流场、ECS 导航移动已实现并通过编译，其余模拟/战斗能力仍待实现；P4～P7 待实现，两万同屏性能未验收。**
+当前状态：**P0 静态基线已完成；P1～P5 进行中。正式身份、原生感知、Brain/Intent、游荡/追击/逃跑、共享导航、攻击/伤害/死亡和玩家双向近战已形成源码闭环，并提供真实世界开发入口；静态、编译与资源检查见第 20 节。未运行 Play Mode，行为闭环、视觉兼容性及两万同屏性能均待实测；完整生态/技能/生存及 P6/P7 尚未完成。**
 
 > 核心目标：保留两万只生物各自的身份、生命、行为与战斗结果，用 ECS 批量模拟和批量渲染替代两万套完整 GameObject 生物运行链。玩家及其他现有系统通过适配层接入，不把整个游戏同时重写。
 
@@ -461,15 +461,16 @@ ECS 生物显示项 + 旧玩家／树木／建筑的显示适配项
 | 阶段 | 当前状态（2026-09-15 本次实施复核） |
 | --- | --- |
 | P0 | **已完成（静态）**：真实包/调用链/程序集/内容来源与初始改动已盘点；6 种 Actor、0 条内容问题，能力清单已保存；目标硬件未确认，作为未决项登记 |
-| P1 | **进行中，未通过门槛**：独立 ECS 渲染原型、真实动画导出、连续排序批次和 Lit/入水 Shader 已生成；仍缺正式世界显示适配，且未运行视觉验收，当前 CPU 合并网格无性能证据 |
-| P2 | **进行中，未通过门槛**：真实导航 Entity 的位置/速度、共享目标、ECS 空间索引和 Burst 移动已实现；正式身份/生命周期与批量决策未接入，不能把导航群体或旧后端感知计为 P2 完成 |
-| P3 | **进行中，未通过门槛**：真实网格的 16×16 分层流场、边缘出口、脏块更新及纯几何移动已实现；地图租约、完整拥挤策略和一万 VS 一万战斗尚未实现 |
-| P4 | **待实现**：玩家和 ECS 的双向攻击桥接尚未实现 |
-| P5 | **待实现**：生物模块、环境/生存、掉落与交互尚未迁移 |
+| P1 | **进行中，未通过门槛**：已有原型资源和消费真实 ECS 位置/行为/生命的开发显示；精确旧世界混排、真实入水/附属物和视觉验收未完成，CPU 合并网格无性能证据 |
+| P2 | **进行中，未通过门槛**：正式运行定义、代际/世界身份、原生稀疏感知、分频 Brain/Intent、五种基础行为与批量移动已实现；两万实体运动及重复进出世界释放仍待 Play 验证 |
+| P3 | **进行中，未通过门槛**：复用既有 16×16 分层流场；原生阵营、四段攻击、类型伤害/防御、部位生命和一次死亡已实现；战斗区租约、完整拥挤策略、总代价拒绝与一万 VS 一万实测未完成 |
+| P4 | **进行中，未通过门槛**：玩家外部代理、AI→玩家纯上下文、玩家 Box 武器→ECS 及共享目标额度已实现；双向手测、旧战斗回归、其他旧建筑/物体规则与属性查看未完成 |
+| P5 | **进行中，未通过门槛**：最低限度的 Blood/出血、周期真实伤害/水量 Buff、受击减速、命中附加 Buff、击杀归因和预算掉落已实现；完整技能、环境/生存、生态、交互与资源修饰未迁移 |
 | P6 | **待实现**：保存、联机与版本转移尚未实现 |
 | P7 | **待实现/待验证**：未进行压力测试、实际 GPU draw 测量或正式后端切换 |
 | 补充：AI↔AI 感知 | **已实现（静态/编译），运行待验证**：旧后端的最终相交判断改为 Burst 圆/AABB，保留空间格和 LOS；必要旧对象单独走 Collider Bridge |
-| 补充：分层流场导航 | **已实现（静态/编译），运行待验证**：当前加载窗口与少量共享目标的真实 ECS 导航入口已接入；旧导航兼容保留，无逐 ECS AI 搜索或物理对象；正式生物接入、运行与规模验收未完成 |
+| 补充：分层流场导航 | **已实现（静态/编译），运行待验证**：当前加载窗口和少量共享目标已接入正式行为；旧导航兼容保留，无逐 ECS AI 搜索或物理对象；运行与规模验收未完成 |
+| 补充：正式框架与垂直切片 | **源码已实现，Play 待用户验证**：真实世界入口可切换玩家对战、两军交战、游荡和逃跑；不是轨迹原型或逐 AI GameObject，不能将可进入入口表述为行为已跑通 |
 
 | 阶段 | 实施任务 | 必须交付／通过的门槛 |
 | --- | --- | --- |
@@ -783,3 +784,74 @@ P06 是文档创建时的旧链路证据；本次实现已删除 `PassesCollider
 - 当前只支持既有单通行配置和半径小于半格的圆体。不同体型/能力、实体被新建筑覆盖后的恢复、完整窄路让行、接敌名额、击退/战斗移动以及 ECS 追击代价拒绝尚未实现，不能宣称 P2/P3 完成。
 - 仍借用玩家的已加载导航窗口，没有战斗区域数据租约。首次缓存构建和大批脏块会在发布边界等待 Job，块变化还可能重排 Native 表和重新组合共享出口选择；尚未测量尖峰，必要时根据用户采集的数据增加预算和分批发布。
 - 当前完成了“搜索按少量共享目标和变化地图发生”的导航结构；**1 万 VS 1 万真实战斗及两万同屏性能目标没有验收证据**。先按本记录人工验证导航，再继续未完成的正式显示/模拟/战斗接入，不重复 P0 或本轮已完成的 N1～N3。
+
+### 2026-09-15：正式分层 AI 与真实世界最小战斗切片
+
+**接续范围与完成状态**
+
+- 接续已有导航提交 `e68433bb`，复用 P0 内容编译来源、P1 动画资源以及 N1～N3 分层缓存，没有重做导航或重复勾选前面的验收门槛。本轮按照用户追加的框架与垂直切片要求推进 P2～P5；此前提交 `8f081ebd` 和 `e68433bb` 均只在本地，本轮框架按用户后续要求另作独立本地提交，未推送。
+- **已实现**：以下各层、双向近战通路、实际开发场景与配置资源；每项均有真实运行逻辑，没有用空 System 或模拟轨迹替代行为。
+- **已确认**：源码依赖/调用链、程序集加载、开发资源引用、最终 C# 编译与 MCP Console 结果；具体见下方检查记录。
+- **待用户确认**：14 项 Play 行为与旧后端回归，本任务没有进入 Play 或运行自动化测试，因此不能宣称“最小垂直切片已经真实跑通”。
+- **待实现/待性能验证**：完整迁移与压力门槛见本记录末尾；第 14 节没有把 P1～P5 标记为整体完成。
+
+**正式架构与实际入口**
+
+| 层 | 已实现的职责与入口 |
+| --- | --- |
+| Identity / Definition | [AiecsComponents.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Core/AiecsComponents.cs)、[AiecsDefinitionCompiler.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Gameplay/AiecsDefinitionCompiler.cs)：从当前 Actor/MOD 合并参数冷编译共享定义；每实体保存世界/维度/代际、阵营、体型、生命、部位和状态，未创建旧 AI 模板实例 |
+| Perception | [AiecsSpatialIndex.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Perception/AiecsSpatialIndex.cs)、[AiecsPerceptionSystem.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Perception/AiecsPerceptionSystem.cs)：ECS 原生快照、4×4 稀疏桶、阵营分桶、候选预算、错峰感知、稳定锁定、威胁排序；最终圆/AABB 与格级 LOS 在 Burst Job 中 |
+| Brain / Intent | [AiecsDecisionSystem.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Decision/AiecsDecisionSystem.cs)：共享优先级规则、记忆/计时、Idle/Wander/Chase/Flee/Attack，决策只提交行为意图 |
+| Behavior / Navigation | [AiecsBehaviorSystem.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Decision/AiecsBehaviorSystem.cs)、[AiecsFlowAgent.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Navigation/AiecsFlowAgent.cs)：沿用 FlowNavigationCache 的 SharedGoal；短距离合法游荡/逃跑/接敌使用 Local，所有模式经过同一批次避让与地形扫掠 |
+| Attack | [AiecsAttackSystem.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Combat/AiecsAttackSystem.cs)：Windup→Active→Recovery→Cooldown，锁定本次目标/朝向，仅 Active Tick 再检验身份、形状、朝向、LOS 并发射一次命中 |
+| Hit / Damage / Death | [CombatContext.cs](../../Assets/5_Scripts/Shared/Combat/CombatContext.cs)、[AiecsDamageSystem.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Combat/AiecsDamageSystem.cs)：纯值事件按目标分组，同一目标顺序结算、不同目标并行；四类伤害/防御/难度、模拟时间间隔、部位损失、归因与死亡锁存 |
+| Buff / Status | [AiecsBuffSystem.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Combat/AiecsBuffSystem.cs)：按当前定义编译的周期真实伤害、水量变化、Buff 刷新/续期/忽略、Blood 与出血等级、受击减速；每个 Buff 的周期事件独立保存 Credit |
+| 生命周期 / 扩展 | [AiecsSimulation.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Core/AiecsSimulation.cs)：一个 World 持有 Native 容器、依赖、输入与事件输出；少量能力调度器通过阶段契约组合，不创建逐 AI 的状态机、Job 或 C# Event |
+| Gameplay Bridge | [AiecsGameplayBridge.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Gameplay/AiecsGameplayBridge.cs)、[AiecsLosBridge.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Gameplay/AiecsLosBridge.cs)：仅玩家及必要旧对象边界读取 GameObject；LOS 按 TerrainCell 版本和建筑脏块复制，掉落走旧物品创建接口 |
+| 实际显示 / 统计 | [AiecsWorldRenderer.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Presentation/AiecsWorldRenderer.cs)、[AiecsStatistics.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/AIECS/Core/AiecsStatistics.cs)：读取提交后的位置、朝向、行为、攻击阶段与生命；显示真实目标/行为/空间/命中计数及有限血条 |
+
+核心程序集不再包含原型 MonoBehaviour；原有动画目录、合批与轨迹演示脚本移动到独立 Presentation 程序集并保留 GUID。GamePlay 与 AIECS 共同引用无业务依赖的 Geometry 和 Combat.Core，Gameplay Bridge 同时引用两边，避免循环依赖。
+
+**原生感知、共享导航和扩展约束**
+
+- AI↔AI 不读取 ItemMgr、Collider2D、Rigidbody2D 或 Physics2D。位置/生命/阵营直接来自 ECS，目标同时验证 Entity 版本和 CombatIdentity；玩家每 Tick 通过一个外部代理同步，玩家 Hp 权威仍在旧接收器。玩家重新 Load 后 RuntimeGeneration 改变，旧攻击和旧目标不能命中新代对象。
+- 有效锁定不重新搜索桶；低频复核追击范围/阵营/LOS，不可达按当前 `chasePathRetryDelay` 暂时拒绝后重试。候选预算限制密集桶遍历，Faction 分桶防止友军占满预算；视线使用独立 Blocking/占地快照，不能用导航代价代替遮挡。移动后重新建立快照，攻击 Tick 不读取移动前坐标。
+- 默认示例始终只有 **3 个共享 Goal（两组战略位置＋玩家）**，增加每军人数不增加 Goal。群体战略位置选择均值附近的实际可走成员；近距离 steering 检查扫掠/切角/地形权重，未新增逐单位路径或完整场。
+- 新行为可增加配置规则，或在 BeforeDecision 阶段写入优先级提议；自定义移动意图由 BeforeMovement 能力消费。技能在 BeforeAttack/BeforeSettlement 的真实 Pulse 查询空间索引并向公共 Native 队列提交命中；每个阶段必须返回完整依赖，AfterDamage 只消费已提交状态。静态内容和能力注册属于冷路径，禁止逐实体托管调度。
+- Native 容器与输出按实际规模复用/扩张，死亡事件携带原 Entity，尸体到期批量销毁，掉落按每 Tick 64 个旧物品的预算排队处理。没有为省时间丢弃命中或死亡；开发 OnGUI 字符串、旧玩家反馈与旧掉落创建属于托管边界，不能把它们混入“原生热路径 GC 为零”的结论，目前未采集 GC 实测。
+
+**玩家双向战斗**
+
+- AI→玩家：原生 HitEvent 携带 Source/Credit、Faction、四类数值和 SimulationTick/Time，经 Bridge 进入 [DamageReceiver.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/Combat/DamageReceiver.cs) 的纯上下文重载；沿用原生命/部位/事件/死亡提交核心，不伪造 Item，不直接写 Hp。
+- 旧 `Hurt(IDamageSender)` 保留旧发送端、资源/建筑规则和回调，适配公共数值核心。新来源以 DamageInfo.Context 表达，旧 Attacker 引用不承担 ECS 身份；来源和归因必须分开读取。旧对象的特殊 incoming rule 若未实现上下文契约，明确拒绝，不静默绕过。
+- 玩家→AI：[Mod_Damage.cs](../../Assets/5_Scripts/5-3_GamePlay/Entities/Combat/Mod_Damage.cs) 在真实窗口或周期 Pulse 导出 Box 的 Center/HalfExtents/Rotation，经 AABB 粗筛、OBB 精筛、目标形状与 LOS 生成命中；禁止遍历所有 ECS AI。GO 与 ECS 共用窗口目标集合和 MaxAttackTargets，旧 Trigger/主动重叠路径继续保留。
+- Sequence/Window/Pulse/Target 在窗口生产与结算分组处防重；普通原生攻击 Active 只提交一次，新增技能也须在实际 Pulse 生产。命中附加 Buff 通过发送端能力组合导出，FixedList 容量在装配时校验；0 点有效命中可触发附加状态，负数无效结果不触发，出血必须来自实际刃伤。
+
+**静态与编译检查记录**
+
+- 项目仍使用 Unity 2022.3.62f3c1、Entities 1.3.8、Collections 2.5.1、Burst 1.8.21、Mathematics 1.3.2；没有升级包。批次依赖、并行容器与 Burst 支持边界已对照 [Entities Job 调度](https://docs.unity3d.com/Packages/com.unity.entities@1.3/manual/systems-scheduling-jobs.html)、[Collections ParallelWriter](https://docs.unity3d.com/Packages/com.unity.collections@2.5/api/Unity.Collections.NativeParallelMultiHashMap-2.ParallelWriter.html)、[Burst 类型支持](https://docs.unity3d.com/Packages/com.unity.burst@1.8/manual/csharp-type-support.html) 核实；这些资料说明 API 使用边界，不是本项目运行或性能证据。
+- 中途出现 Burst BC1055 无法解析新增导航方法；当时 C# 程序集已有该方法。保存控制台记录后通过 Unity CompilationPipeline 的 CleanBuildCache 重编译消除；未关闭 Burst、修改包缓存源码或跳过错误。清理前记录在本机忽略目录 `Library/AIECS/framework-compile-before.json`。
+- 最终 C# 编译加载完成；MCP 确认 `compiling=false / playing=false`，Console **0 错误、0 警告**。`git diff --check` 通过，27 个新增/移动 C#/程序集文件的空白与 meta 检查无问题，5 个移动表现脚本的 GUID 全部保留；核心没有 GamePlay 或物理 API 调用。完整本机收口结果见 [framework-compile-final.json](../../Library/AIECS/framework-compile-final.json)，该文件不是运行时或持久化格式，也不是 Job 行为运行证据。
+- 新开发 Prefab 的 Catalog 已绑定，未发现缺失脚本；开发场景和资源均由 Unity 编辑器 API 创建，保留当前打开场景。没有触发 Play、自动化测试、压力测试、真实存档加载或联网。
+
+**无需改代码的手动入口与 14 项验收**
+
+1. 编辑器菜单 **FlatWorld → AIECS → 打开实战开发入口**，或双击 [AIECS实战入口.unity](../../Assets/3_Scenes/Development/AIECS实战入口.unity)。按 Play 后会进入项目原来的启动界面；选择新建一个离线临时世界，待玩家和导航窗口就绪，默认自动生成 3 个真实 ECS 单位。不要同时启动早期导航群体或轨迹原型。
+2. 屏幕下方 **无目标游荡**：在玩家感知距离外生成 6 个单位，观察 Idle/Wander 切换与位置变化，确认第 1 项；保持玩家参与开启，走近后观察 Target/Chase 和持续移动，确认第 3、4、5 项。
+3. **玩家对战**：靠近后观察起手/攻击和玩家真实生命；前摇期间向后退或绕到背后，比较玩家受击累计，确认第 6、7、8 项。使用正常流程获得并装备现有 Box 近战武器攻击蓝色单位，观察血条及“武器→ECS 命中”计数，确认第 9 项；开局若未装备武器，先按原游戏流程取得近战武器。
+4. **两军交战**：默认每军 12 个，两军共用同一套空间索引和模拟；默认关闭玩家参与，观察两组互相感知/追击/攻击/掉血，确认第 2、10 项。击杀目标后检查重选敌人与一次死亡/掉落，确认第 12 项；可再次切回玩家对战继续双向验证。
+5. **低血量逃跑**：生成真实部位生命为 15% 的单位，保持玩家参与并靠近，检查 Flee 计数和实际远离移动，确认第 11 项。
+6. 放置/拆除现有 Blocking 墙或建筑，使双方隔墙，检查 LOS 丢失、停止追击锁定与开口后的恢复，确认第 13 项；在同一 Chunk 内部与边缘分别修改，检查出口图/目标图/区块路线计数只按变化增长。
+7. 移动到 Wrapped World 边界后用上述按钮在当前位置重新创建小群体，跨边界找敌、追击和攻击，确认第 14 项；同 Chunk 内移动玩家只应增长目标局部图计算，跨 Chunk 才更新高层路线。
+8. 再检查死亡后旧命中不影响新玩家代际、切换模式/退出世界/停止 Play 无 Native 残留和新增 Console 错误；在同一窗口同时打到旧对象与 ECS 时，累计目标额度应共同受 MaxAttackTargets 限制。
+
+入口配置在 [AIECS实战开发入口.prefab](../../Assets/2_Prefabs/Development/AIECS实战开发入口.prefab)：可在 Inspector 选择当前 Actor ID 和每军数量，默认只做少量单位。数组容量、数量上限或共享 Goal 数为 3 均不能证明一万 VS 一万已达标。
+
+**下一阶段与已知限制**
+
+- 当前完成的是已有 Wolf/WildBoar 内容可配置的通用基础能力；没有物种专属 System，但不表示 Chicken 的睡眠/觅食、Wolf 群体策略、SnowLeopard 特性、Ghost 飞行等已完整迁移。后续通过规则/能力阶段接入，不能通过关闭旧能力后宣称完整替换。
+- Buff 只接受当前已完整编译的效果组合；完整温度、营养/水生态玩法、自定义 Handler、全技能、投射物扫掠/附着、生态掉落修饰、角色资源交互仍待实现。
+- 开发显示复用 CPU 网格，只支持有限 Y 行近似混排；旧透明排序、真实水深/附属物/阴影和全视觉验收仍为 P1 未完成项。缺失动画沿用当前目录可用帧，不能据此宣称动画迁移齐全。
+- 当前借用已加载地面导航窗口，未持有大战区域租约；只支持既有单通行配置、AI 半径小于半格。短程逃跑不提供复杂迷宫策略；总代价拒绝、实体被新墙覆盖后的恢复、接敌名额、拥堵/窄路让行、大体型配置仍待完善。
+- 默认正式生态仍使用旧后端；本入口不保存 ECS 单位、不同步网络、不替换正式启动配置。P6 需要独立持久化/权威协议设计与验证，不能保存开发会话身份冒充稳定存档 ID。
+- 下一步先由用户完成上述小规模 Play 闭环；根据实际缺陷继续修正，再推进视觉/完整生物能力与规模测量。**1 万 VS 1 万、两万可见独立生物、帧时间、GC、GPU draw 与反复进出世界均无运行验收证据。**

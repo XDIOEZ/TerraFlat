@@ -52,7 +52,7 @@ namespace FlatWorld.AIECS
 
         /// <summary>追加一只生物的四边形，保持帧尺寸、Pivot、镜像与原始局部姿态。</summary>
         internal void Append(AiecsPrototypeActor actor, AiecsActorVisual definition,
-            AiecsAnimationFrame frame, AiecsSpriteGeometry sprite, float surface, float tint)
+            AiecsAnimationFrame frame, AiecsSpriteGeometry sprite, float surface, float tint, bool mirror = false, Color? color = null)
         {
             int offset = positions.Count;
             Rect rect = sprite.LocalRect;
@@ -65,9 +65,9 @@ namespace FlatWorld.AIECS
                 bool right = corner == 1 || corner == 2;
                 bool top = corner >= 2;
                 Vector3 local = new Vector3(right ? rect.xMax : rect.xMin, top ? rect.yMax : rect.yMin, 0f);
-                positions.Add(TransformPoint(local, actor, definition, frame));
+                positions.Add(TransformPoint(local, actor, definition, frame, mirror));
                 uvs.Add(new Vector2(right ? uv.xMax : uv.xMin, top ? uv.yMax : uv.yMin));
-                colors.Add(definition.Color);
+                colors.Add(color ?? definition.Color);
                 water.Add(parameters);
             }
             indices.Add(offset); indices.Add(offset + 1); indices.Add(offset + 2);
@@ -76,12 +76,14 @@ namespace FlatWorld.AIECS
 
         /// <summary>将 Sprite 局部顶点变换到世界，镜像只作用于图片自身。</summary>
         internal static Vector3 TransformPoint(Vector3 point, AiecsPrototypeActor actor,
-            AiecsActorVisual definition, AiecsAnimationFrame frame)
+            AiecsActorVisual definition, AiecsAnimationFrame frame, bool mirror = false)
         {
             point.x *= definition.FlipX ? -1f : 1f;
             point.y *= definition.FlipY ? -1f : 1f;
             point = Quaternion.Euler(0f, 0f, frame.Rotation) * Vector3.Scale(point, frame.Scale);
-            return point + frame.Position + new Vector3(actor.Position.x, actor.Position.y, 0f);
+            point += frame.Position;
+            if (mirror) point.x = -point.x;
+            return point + new Vector3(actor.Position.x, actor.Position.y, 0f);
         }
 
         /// <summary>提交同一图层内的精确序号，保留原生 Renderer2D 的颜色及法线绘制上下文。</summary>
@@ -108,7 +110,8 @@ namespace FlatWorld.AIECS
         /// <summary>释放本原型创建的网格与节点，不修改共享材质。</summary>
         public void Dispose()
         {
-            renderer.enabled = false;
+            // 世界场景可能先卸载批次节点，网格仍由本所有者释放。
+            if (renderer != null) renderer.enabled = false;
             if (Application.isPlaying)
             {
                 UnityEngine.Object.Destroy(mesh);

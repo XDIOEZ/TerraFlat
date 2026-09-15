@@ -182,6 +182,33 @@ namespace FlatWorld.Navigation
         private FlowSample Towards(float2 position, float2 destination) =>
             new FlowSample { Delta = Domain.ShortestDelta(position, destination), Status = FlowSampleStatus.Moving };
 
+        /// <summary>局部 steering 只走短直段，并保留地形代价上限；不是逐单位寻路。</summary>
+        public bool CanSteer(float2 from, float2 to, float radius, float maximumDistance = 8f)
+        {
+            float2 delta = Domain.ShortestDelta(from, to);
+            if (math.lengthsq(delta) > maximumDistance * maximumDistance) return false;
+            int limit = math.max(CostAt(from), CostAt(to));
+            if (limit < 0) return false;
+            int steps = math.max(1, (int)math.ceil(math.length(delta) / 0.4f));
+            float2 last = from;
+            for (int i = 1; i <= steps; i++)
+            {
+                float2 next = from + delta * ((float)i / steps);
+                int cost = CostAt(next);
+                if (cost < 0 || cost > limit || !CanStep(last, next, radius)) return false;
+                last = next;
+            }
+            return true;
+        }
+
+        /// <summary>读取局部位置的最终地形代价，未知或阻挡返回负值。</summary>
+        public int CostAt(float2 position)
+        {
+            int2 cell = Domain.Normalize((int2)math.floor(position));
+            return ChunkLookup.TryGetValue(FlowNavigationMath.ChunkOf(cell, Domain), out int chunk)
+                ? Cells[chunk * 256 + FlowNavigationMath.LocalIndex(cell, Domain)] : -1;
+        }
+
         /// <summary>查询冻结网格的可走性；未知 Chunk 始终视为阻挡。</summary>
         public bool IsWalkable(int2 cell)
         {

@@ -51,14 +51,15 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - 可组合动物技能统一实现 `IAnimalCombatSkill` 并作为 Item Module 挂载；`AI_Base` 会自动收集到 `_animalSkills`，技能自行控制移动时状态节点必须使用 `CreateStateNode`，不能套用每帧停车的 `CreateStoppedActionStateNode`。
 - 动物技能数值来自 `Assets/StreamingAssets/GameConfig/Skills/animal-skills.json`，Actor JSON 只声明模块和技能模板 ID；独立技能碰撞模块不要继承 `Mod_Damage`，否则会被 `AI_AttackController` 当作普通攻击窗口一起启停。
 
-## AIECS 分阶段接入边界
+## AIECS 正式框架与阶段边界
 
-- `Entities/AIECS/FlatWorld.AIECS.asmdef` 包含隔离渲染原型与纯数据导航/移动，不依赖 GamePlay；Editor 适配器通过正式 Manifest/Addressables 导出动画。原型的位置轨迹、临时 Slot 和视觉入水参数不具备正式 AI、持久身份、生命、世界水体或战斗语义，不得接入正式生成器冒充完成迁移；阶段门槛以 `开发文档文件夹/AI策划/AIECS开发文档_2万同屏.md` 为准。
-- `Entities/AIECS/Gameplay/` 使用独立程序集桥接 GamePlay 和 AIECS。`AiecsNavigationCrowd` 只由显式按钮创建真实导航 Entity，少量 Transform 对应少量共享目标；每单位的位置、速度和目标句柄在 `AiecsFlowAgent`，不得为其添加 Item、Collider、Rigidbody 或 `WorldNavigationAgent`。
-- 多个对向群体应进入同一 ECS 空间索引批次；导航调度先冻结位置、排序并建立桶范围，再批量查表、避让和移动。密集桶按固定邻居预算轮转采样，不能退化为每 AI 扫描整个密集桶；这是允许短暂重叠的软分离，尚无接敌名额、完整窄路让行或战斗含义。
-- 共享导航归世界管理器所有，群体只归还自己的目标与释放自己的 World/空间容器；目标槽位代际、世界 Epoch 和 Native 读取依赖必须一起处理。目标失效或世界更换时应停止旧批次，不能在新世界继续使用旧句柄。
-- 导航开发入口与 P1 渲染原型仍是独立入口；Gizmos 观测点不是正式生物显示，真实导航 Entity 数也不代表拥有身份、生命、战斗或存档能力。具体分层缓存、体型与已加载窗口限制见 Navigation Skill。
-- 当前感知优化接在正式 Item/AI 旧后端；它消除了 AI 目标的物理几何查询，但快照采集与 LOS/结果应用仍在主线程。后续 ECS 化应复用纯几何契约，不能为每个 ECS 实体补 Item 或 Collider Bridge。
+- `Entities/AIECS/FlatWorld.AIECS.asmdef` 只承载 Core、Perception、Decision、Navigation、Combat；不引用 GamePlay、Item、Collider 或 MonoBehaviour。表现和早期轨迹原型在独立 `Presentation` 程序集，旧内容编译、玩家和死亡产物适配在独立 `Gameplay` 程序集。不能把旧原型的 Slot、运动轨迹、视觉水参数当正式身份、行为或环境状态。
+- `AiecsSimulation` 持有独立 World 与批次资源，`AiecsDefinitionCompiler` 在冷路径读取当前合并 Actor/MOD 定义。生命、记忆、攻击阶段属于每实体运行态，定义、阵营矩阵与战略 Goal 共享；不得通过实例化旧 AI 获得模板，也不得用 P0 能力报告充当运行时配置。
+- 原生感知直接从 ECS 位置、身份、体型、生命构建稀疏桶，桶键包含阵营以避免同阵营占满候选预算。锁定目标只做有效性与低频追击规则复核，失效才错峰搜桶；不可达目标按配置延迟重试。形状偏移和外部玩家缩放必须纳入粗筛扩张上限，循环桶去重与最近镜像必须一起使用。
+- LOS 独立复制 TerrainCell 的 Blocking 和建筑占地，不能把导航不可走当作遮挡。移动前快照用于感知，移动后重建快照用于命中；所有 Native 借用必须进入依赖链，重建和释放前完成旧读取者。武器 Pulse 在模拟批次之外发生时须重新借用当前导航索引，不能跨 Update 缓存可能已被导航发布替换的 LOS 视图。
+- Brain 只选择 Intent，Behavior 只准备局部移动或共享 Goal，Attack 在真实 Active Tick 再确认目标、几何、朝向和 LOS。扩展行为通过共享优先级规则或 `AiecsBehaviorProposal` 接入；特殊能力注册少量 `IAiecsSimulationStage`，在实际 Pulse 向 `AiecsFrame.HitEvents` 写入，返回完整 JobHandle，禁止逐 AI 托管状态机/事件/Job。当前 Tick 的技能命中最迟在 BeforeSettlement 生产，AfterDamage 用于消费已提交状态。
+- 每个开发模拟只采集少量外部玩家代理，身份同时验证 UID、generation、world、dimension 和 Entity 版本；AI↔AI 不走 ItemMgr 快照。旧 Item/AI 的纯几何感知仍是独立兼容后端，不要将它与原生 ECS 感知混为一条运行链。
+- 正式小规模手测入口是 `FlatWorld/AIECS/打开实战开发入口`；`AiecsPlayground`、`AiecsNavigationCrowd`、P1 轨迹原型各自持有不同 World，不能同时创建后统计为同一批正式单位。当前正式生态、完整生存/技能、保存和联网尚未接入；阶段门槛以开发文档为准，编译与开发入口不等于 Play 或两万性能通过。
 
 ## 工作流与验证
 

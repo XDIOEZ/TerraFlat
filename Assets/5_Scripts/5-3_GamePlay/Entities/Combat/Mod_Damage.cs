@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(BoxCollider2D))]
-public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHarvestTool, IBuildingDamageSource
+public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHarvestTool, IBuildingDamageSource, ICombatDamageContextModifier
 {
     #region 资源工具能力
     [SerializeField] private ResourceToolKind harvestKind; // 采集工具类别。
@@ -80,6 +80,10 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
     private readonly List<Collider2D> overlapColliders = new List<Collider2D>();
     private readonly HashSet<DamageReceiver> windowScanHitReceivers = new HashSet<DamageReceiver>();
     private readonly HashSet<DamageReceiver> attackWindowHitReceivers = new HashSet<DamageReceiver>();
+    private readonly HashSet<FlatWorld.Combat.CombatIdentity> externalWindowTargets = new HashSet<FlatWorld.Combat.CombatIdentity>(); // 与旧目标共享窗口预算。
+    private uint attackSequence, attackPulse; // 每个真实窗口的新序列与实际 Pulse。
+    private double nextDataPulseTime; // 周期查询时钟，不依赖是否命中旧 Collider。
+    private readonly List<ICombatDamageContextModifier> contextModifiers = new List<ICombatDamageContextModifier>(); // 装配时缓存的能力。
     private bool windowOverlapScanEnabled;
     private bool lastColliderEnabled = false;
     private bool tileDamageAppliedThisWindow;
@@ -108,6 +112,47 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
     /// <summary>独立返回建筑克制倍率，避免把工具门槛与建筑伤害倍率隐式绑定。</summary>
     public float BuildingDamageMultiplier => Mathf.Max(0f, buildingDamageMultiplier);
     public Collider2D DamageCollider => damageCollider;
+
+    /// <summary>两个后端共用的剩余名额；先预约再结算，与旧对象窗口语义一致。</summary>
+    public int RemainingAttackTargets => Mathf.Max(0, Mathf.Max(1, MaxAttackTargets) - attackWindowHitReceivers.Count - externalWindowTargets.Count);
+
+    /// <summary>同一窗口内同一外部身份只预约一次，不能绕过旧对象已经消耗的名额。</summary>
+    public bool TryReserveExternalTarget(FlatWorld.Combat.CombatIdentity target)
+    {
+        if (!target.IsValid || RemainingAttackTargets == 0 || externalWindowTargets.Contains(target)) return false;
+        externalWindowTargets.Add(target); return true;
+    }
+
+    /// <summary>发送端组合器只遍历本武器的少量能力，禁止每帧扫描场景或每个 ECS 实体。</summary>
+    public void ModifyDamageContext(ref FlatWorld.Combat.CombatDamageContext context)
+    {
+        for (int i = 0; i < contextModifiers.Count; i++) contextModifiers[i].ModifyDamageContext(ref context);
+    }
+
+    /// <summary>仅对一次实际 Pulse 导出真实 BoxCollider 姿态，并使用当前模拟输入时间。</summary>
+    private void EmitDataPulse()
+    {
+        nextDataPulseTime = Time.timeAsDouble + Mathf.Max(0f, DamageInterval);
+        if (!(damageCollider is BoxCollider2D box) || !box.enabled || !CanDealDamageNow() || RemainingAttackTargets == 0) return;
+        SyncBoundWeaponHitbox();
+        Vector3 axisX = box.transform.TransformVector(Vector3.right);
+        Vector3 axisY = box.transform.TransformVector(Vector3.up);
+        var shape = new FlatWorld.Geometry.AttackShape2D { Center = (Unity.Mathematics.float2)(Vector2)box.transform.TransformPoint(box.offset),
+            HalfExtents = new Unity.Mathematics.float2(box.size.x * axisX.magnitude, box.size.y * axisY.magnitude) * 0.5f,
+            Rotation = Mathf.Atan2(axisX.y, axisX.x) };
+        var context = GameplayCombatBridge.Context(this, new FlatWorld.Combat.CombatClock {
+            Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime });
+        context.Attack.Sequence = attackSequence; context.Attack.Window = 1; context.Attack.Pulse = ++attackPulse;
+        GameplayCombatBridge.QueryWeaponPulse(this, shape, context);
+    }
+
+    /// <summary>纯数据后端确认生命提交后复用武器反馈，原 DamageReceiver 专用事件仍只传真实旧接收器。</summary>
+    public void PublishExternalDamage(in FlatWorld.Combat.CombatDamageContext context, float damage)
+    {
+        if (GameplayCombatBridge.Identity(item) != context.Attack.Source) return;
+        if (damage >= 0f) SpawnEffect(context.HitPoint, damage);
+        OnDamageApplied?.Invoke(damage);
+    }
     #endregion
 
     #region IDamageSender 实现
@@ -120,8 +165,16 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
     #endregion
 
     #region Unity 生命周期
+    /// <summary>从已完成注册的模块表缓存发送端能力，并在装配时确认纯数据契约容量。</summary>
     public override void Load()
     {
+        contextModifiers.Clear();
+        if (item != null)
+            foreach (Module module in item.itemMods.Mods.Values)
+                if (module != this && module is ICombatDamageContextModifier modifier)
+                    contextModifiers.Add(modifier);
+        var contract = default(FlatWorld.Combat.CombatDamageContext);
+        ModifyDamageContext(ref contract);
         NormalizeDamageValues();
 
         if (damageCollider == null)
@@ -139,6 +192,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
         overlapColliders.Clear();
         windowScanHitReceivers.Clear();
         attackWindowHitReceivers.Clear();
+        externalWindowTargets.Clear(); attackSequence = 0; attackPulse = 0; nextDataPulseTime = 0;
         windowOverlapScanEnabled = false;
         lastColliderEnabled = damageCollider != null && damageCollider.enabled;
         tileDamageAppliedThisWindow = false;
@@ -199,6 +253,8 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
                 // 实际更新时间由 ApplyDamageToReceiver 在真正造成伤害时负责
                 ApplyDamageToInsideReceivers();
             }
+            if (Time.timeAsDouble >= nextDataPulseTime)
+                EmitDataPulse();
         }
     }
     #endregion
@@ -312,7 +368,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
         }
 
         if (attackWindowHitReceivers.Contains(receiver) ||
-            attackWindowHitReceivers.Count >= Mathf.Max(1, MaxAttackTargets))
+            attackWindowHitReceivers.Count + externalWindowTargets.Count >= Mathf.Max(1, MaxAttackTargets))
         {
             return;
         }
@@ -411,7 +467,12 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
         nonDamageableImpactAppliedThisWindow = false;
         windowScanHitReceivers.Clear();
         attackWindowHitReceivers.Clear();
+        externalWindowTargets.Clear();
+        attackSequence++; if (attackSequence == 0) attackSequence = 1;
+        attackPulse = 0;
+        bool shouldQueryData = EnableOnTriggerEnterDamage && IsDamageIntervalReady();
         ScanCurrentOverlapsAndApplyDamageForWindow();
+        if (shouldQueryData) EmitDataPulse();
         // 动画可能在同一帧内开关伤害 Collider，窗口开启时立即补一次格子建筑查询。
         TryApplyDamageToTilemap();
     }
@@ -421,6 +482,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
         insideReceivers.Clear();
         windowScanHitReceivers.Clear();
         attackWindowHitReceivers.Clear();
+        externalWindowTargets.Clear();
         windowOverlapScanEnabled = false;
         tileDamageAppliedThisWindow = false;
         nonDamageableImpactAppliedThisWindow = false;
