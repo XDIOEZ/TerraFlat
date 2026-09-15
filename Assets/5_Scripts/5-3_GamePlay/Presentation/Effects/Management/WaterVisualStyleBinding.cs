@@ -15,6 +15,7 @@ public sealed class WaterVisualStyleBinding : MonoBehaviour
     private Material stylizedMaterial;
     [SerializeField, Tooltip("写实水面材质")]
     private Material realisticMaterial;
+    private ChunkTilemapRenderer chunkTileRenderer;
 
     #endregion
 
@@ -25,6 +26,7 @@ public sealed class WaterVisualStyleBinding : MonoBehaviour
     {
         if (waterRenderer == null || stylizedMaterial == null || realisticMaterial == null)
             throw new MissingReferenceException($"[{nameof(WaterVisualStyleBinding)}] 水体风格资源未配置：{name}");
+        chunkTileRenderer = GetComponentInParent<ChunkTilemapRenderer>();
     }
 
     /// <summary>显示或从区块池激活时使用当前玩家偏好。</summary>
@@ -46,6 +48,7 @@ public sealed class WaterVisualStyleBinding : MonoBehaviour
         waterRenderer.sharedMaterial = WaterVisualSettings.Style == WaterVisualStyle.Stylized
             ? stylizedMaterial
             : realisticMaterial;
+        chunkTileRenderer?.NotifyWaterVisualStyleChanged(waterRenderer);
     }
 
     #endregion

@@ -140,6 +140,15 @@ half SampleWaterDepth(float2 positionWS)
     return QuantizeWaterVisualDepth(sampledDepth);
 }
 
+/// <summary>BRG 水格使用四个格角深度直接双线性插值，避免每个 Chunk 保留独立深度纹理。</summary>
+half SampleWaterDepthCorners(float2 positionWS, half4 cornerDepths)
+{
+    float2 cellUV = frac(positionWS + 0.0001);
+    half bottom = lerp(cornerDepths.r, cornerDepths.g, cellUV.x);
+    half top = lerp(cornerDepths.b, cornerDepths.a, cellUV.x);
+    return QuantizeWaterVisualDepth(lerp(bottom, top, cellUV.y));
+}
+
 /// <summary>利用屏幕位置和既有波形生成圆形月面及向下延伸的碎光带。</summary>
 half ComputeMoonReflection(
     float2 screenUV,

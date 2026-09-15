@@ -24,6 +24,21 @@ public sealed class ChunkTilePaletteSO : ScriptableObject
         return lookup.TryGetValue(tileId, out tile) && tile != null;
     }
 
+    /// <summary>读取 BRG 所需的正式 Sprite、颜色和 Tile 局部变换。</summary>
+    public bool TryGetVisual(int tileId, out Sprite sprite, out Color color, out Matrix4x4 transform)
+    {
+        sprite = null;
+        color = Color.white;
+        transform = Matrix4x4.identity;
+        if (!TryGetTile(tileId, out TileBase tileBase) || tileBase is not Tile tile || tile.sprite == null)
+            return false;
+
+        sprite = tile.sprite;
+        color = tile.color;
+        transform = tile.transform;
+        return true;
+    }
+
     private void OnEnable() => lookup = null;
     private void OnValidate() => lookup = null;
 

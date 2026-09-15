@@ -5,11 +5,11 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// 新版区块的基础 Tilemap 表现层。
+/// 新版区块的基础 BRG 地图表现适配器。
 ///
-/// 地表陆地、地表水岸、矿洞墙脚和水体分别使用对应的 Tilemap 表现层。
-/// 左、右、下、上四个接触方向编码到 Tile Color RGBA，连续水深由每个 Chunk 的独立纹理提供，
-/// 不再让岸线位与水深共用颜色通道，也不为接触阴影创建 SpriteRenderer 游戏对象。
+/// Ground / Water / Back / Blocking 的视觉由共享 BatchRendererGroup 绘制，格子变化只上传脏格实例。
+/// TilemapRenderer 保留为 Prefab 兼容和材质配置来源，其中 Blocking Tilemap 继续专供 TilemapCollider2D。
+/// 岸线方向与连续水深改为每实例数据，不再为每个 Chunk 创建水深纹理或整块 SetTilesBlock。
 /// </summary>
 public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IWorldAwareChunkViewRenderer
 {
@@ -28,15 +28,9 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     [SerializeField] private Tilemap blockingTilemap;
 
     private readonly List<NeighbourTerrainSubscription> neighbourTerrainSubscriptions = new(8);
-    private static readonly int WaterDepthTextureId = Shader.PropertyToID("_WaterDepthTexture");
-    private static readonly int WaterDepthUvScaleOffsetId =
-        Shader.PropertyToID("_WaterDepthUvScaleOffset");
     private WorldRuntime boundWorld;
     private ChunkRuntime boundChunk;
     private IDisposable chunkCommittedSubscription;
-    private MaterialPropertyBlock waterPropertyBlock;
-    private Texture2D waterDepthTexture;
-    private Color32[] waterDepthPixels;
     private bool renderCaveWater;
 
     /// <summary>阻挡层渲染器，为裂缝等格子表现提供一致的材质与排序基准。</summary>
@@ -80,7 +74,11 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             caveWaterTilemap.gameObject.SetActive(renderCaveWater);
         boundChunk.Terrain.Changed += HandleTerrainChanged;
         RefreshNeighbourTerrainSubscriptions();
-        Render(chunk.Terrain);
+        DisableVisualTilemapRenderers();
+        ClearVisualTilemaps();
+        ChunkBatchRendererGroupService.RegisterOwner(this);
+        SyncBlockingCollisionAll(chunk.Terrain);
+        RefreshAllBatchVisuals(chunk.Terrain);
     }
 
     public void Unbind()
@@ -88,6 +86,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         if (boundChunk?.Terrain != null)
             boundChunk.Terrain.Changed -= HandleTerrainChanged;
         ClearNeighbourTerrainSubscriptions();
+        ChunkBatchRendererGroupService.UnregisterOwner(this);
         if (groundTilemap != null)
             groundTilemap.ClearAllTiles();
         if (waterTilemap != null)
@@ -115,8 +114,6 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         chunkCommittedSubscription?.Dispose();
         chunkCommittedSubscription = null;
         ClearNeighbourTerrainSubscriptions();
-        if (waterDepthTexture != null)
-            Destroy(waterDepthTexture);
     }
 
     private void HandleTerrainChanged(ChunkTerrainChanged changed)
@@ -124,11 +121,30 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         if (boundChunk?.Terrain == null)
             return;
         if (changed.Kind != TerrainChangeKind.Cell &&
-            changed.Kind != TerrainChangeKind.TileStack)
+            changed.Kind != TerrainChangeKind.TileStack &&
+            changed.Kind != TerrainChangeKind.Environment)
             return;
 
-        // 接触方向与连续水深边界会影响邻格，地形变化时刷新本 Chunk 的轻量 Tilemap 数据。
-        Render(boundChunk.Terrain);
+        if (changed.Kind == TerrainChangeKind.Cell || changed.Kind == TerrainChangeKind.TileStack)
+            SyncBlockingCollisionCell(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
+        // 岸线、墙脚和四角水深最多依赖一圈邻格，因此只刷新 3x3 脏区。
+        RefreshBatchArea(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y, 1);
+    }
+
+    /// <summary>水体风格切换后，把现有水格迁移到新材质批次。</summary>
+    public void NotifyWaterVisualStyleChanged(Renderer changedRenderer)
+    {
+        if (boundChunk?.Terrain == null || changedRenderer == null)
+            return;
+        Tilemap activeWater = renderCaveWater ? caveWaterTilemap : waterTilemap;
+        if (activeWater == null || !ReferenceEquals(activeWater.GetComponent<TilemapRenderer>(), changedRenderer))
+            return;
+
+        ChunkTerrainData terrain = boundChunk.Terrain;
+        for (int y = 0; y < terrain.Height; y++)
+        for (int x = 0; x < terrain.Width; x++)
+            if (IsWater(terrain.GetCell(x, y)))
+                RefreshBatchCell(terrain, x, y);
     }
 
     /// <summary>相邻区块生成后刷新边界格的岸向与水深纹理边框。</summary>
@@ -154,7 +170,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         if (isNeighbour)
         {
             RefreshNeighbourTerrainSubscriptions();
-            Render(boundChunk.Terrain);
+            RefreshCommittedBatchEdge(boundChunk.Terrain, deltaX, deltaY);
         }
     }
 
@@ -199,7 +215,8 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     {
         if (boundChunk?.Terrain == null ||
             (changed.Kind != TerrainChangeKind.Cell &&
-             changed.Kind != TerrainChangeKind.TileStack))
+             changed.Kind != TerrainChangeKind.TileStack &&
+             changed.Kind != TerrainChangeKind.Environment))
         {
             return;
         }
@@ -211,7 +228,8 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             ? changed.LocalCell.Y == neighbourTerrain.Height - 1
             : changed.LocalCell.Y == 0);
         if (touchesSharedX && touchesSharedY)
-            Render(boundChunk.Terrain);
+            RefreshBatchEdge(boundChunk.Terrain, offsetX, offsetY,
+                changed.LocalCell.X, changed.LocalCell.Y);
     }
 
     private void ClearNeighbourTerrainSubscriptions()
@@ -225,150 +243,253 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         neighbourTerrainSubscriptions.Clear();
     }
 
-    #endregion
+    #region BRG 表现与碰撞兼容
 
-    #region Tilemap 绘制
-
-    private void Render(ChunkTerrainData terrain)
+    /// <summary>视觉 TilemapRenderer 全部停用；Blocking Tilemap 仅继续喂给 TilemapCollider2D。</summary>
+    private void DisableVisualTilemapRenderers()
     {
-        if (terrain == null)
-            throw new System.InvalidOperationException("Cannot bind a ChunkView before data is ready.");
-        if (palette == null)
-            throw new System.InvalidOperationException("ChunkTilePaletteSO is not assigned.");
-
-        int count = terrain.CellCount;
-        var ground = groundTilemap != null ? new TileBase[count] : null;
-        var surfaceWater = !renderCaveWater && waterTilemap != null
-            ? new TileBase[count]
-            : null;
-        var caveWater = renderCaveWater && caveWaterTilemap != null
-            ? new TileBase[count]
-            : null;
-        var back = backTilemap != null ? new TileBase[count] : null;
-        var blocking = blockingTilemap != null ? new TileBase[count] : null;
-        for (int y = 0; y < terrain.Height; y++)
-        {
-            for (int x = 0; x < terrain.Width; x++)
-            {
-                int index = y * terrain.Width + x;
-                TerrainCell cell = terrain.GetCell(x, y);
-                bool isWaterCell = IsWater(cell);
-                if (isWaterCell && cell.GroundTileId != 0)
-                {
-                    if (caveWater != null)
-                        palette.TryGetTile(cell.GroundTileId, out caveWater[index]);
-                    else if (surfaceWater != null)
-                        palette.TryGetTile(cell.GroundTileId, out surfaceWater[index]);
-                    else if (ground != null)
-                        palette.TryGetTile(cell.GroundTileId, out ground[index]);
-                }
-                else if (ground != null && cell.GroundTileId != 0)
-                    palette.TryGetTile(cell.GroundTileId, out ground[index]);
-                if (back != null && cell.BackTileId != 0)
-                    palette.TryGetTile(cell.BackTileId, out back[index]);
-                if (blocking != null && cell.BlockingTileId != 0)
-                    palette.TryGetTile(cell.BlockingTileId, out blocking[index]);
-            }
-        }
-
-        var bounds = new BoundsInt(0, 0, 0, terrain.Width, terrain.Height, 1);
-        if (ground != null)
-        {
-            groundTilemap.SetTilesBlock(bounds, ground);
-            ApplyGroundContactMasks(terrain);
-        }
-        if (surfaceWater != null)
-        {
-            waterTilemap.SetTilesBlock(bounds, surfaceWater);
-            ApplyWaterShaderData(waterTilemap, terrain);
-        }
-        if (caveWater != null)
-        {
-            caveWaterTilemap.SetTilesBlock(bounds, caveWater);
-            ApplyWaterShaderData(caveWaterTilemap, terrain);
-        }
-        if (back != null)
-            backTilemap.SetTilesBlock(bounds, back);
-        if (blocking != null)
-            blockingTilemap.SetTilesBlock(bounds, blocking);
+        SetRendererEnabled(groundTilemap, false);
+        SetRendererEnabled(waterTilemap, false);
+        SetRendererEnabled(caveWaterTilemap, false);
+        SetRendererEnabled(backTilemap, false);
+        SetRendererEnabled(blockingTilemap, false);
     }
 
-    #endregion
+    private static void SetRendererEnabled(Tilemap tilemap, bool enabled)
+    {
+        TilemapRenderer renderer = tilemap != null ? tilemap.GetComponent<TilemapRenderer>() : null;
+        if (renderer != null)
+            renderer.enabled = enabled;
+    }
 
-    #region Tilemap Shader 数据
+    /// <summary>清空旧视觉 Tilemap，避免热重载或池化后残留重复图像。</summary>
+    private void ClearVisualTilemaps()
+    {
+        if (groundTilemap != null)
+            groundTilemap.ClearAllTiles();
+        if (waterTilemap != null)
+            waterTilemap.ClearAllTiles();
+        if (caveWaterTilemap != null)
+            caveWaterTilemap.ClearAllTiles();
+        if (backTilemap != null)
+            backTilemap.ClearAllTiles();
+        if (blockingTilemap != null)
+            blockingTilemap.ClearAllTiles();
+    }
 
-    /// <summary>矿洞地面编码墙脚方向；地表水格和陆地格分别编码水岸、石地边缘方向。</summary>
-    private void ApplyGroundContactMasks(ChunkTerrainData terrain)
+    /// <summary>首次绑定时一次性建立 Blocking 碰撞格；视觉仍由 BRG 绘制。</summary>
+    private void SyncBlockingCollisionAll(ChunkTerrainData terrain)
+    {
+        if (blockingTilemap == null)
+            return;
+        var tiles = new TileBase[terrain.CellCount];
+        for (int y = 0; y < terrain.Height; y++)
+        for (int x = 0; x < terrain.Width; x++)
+        {
+            TerrainCell cell = terrain.GetCell(x, y);
+            if (cell.BlockingTileId != 0)
+                palette.TryGetTile(cell.BlockingTileId, out tiles[y * terrain.Width + x]);
+        }
+        blockingTilemap.SetTilesBlock(new BoundsInt(0, 0, 0, terrain.Width, terrain.Height, 1), tiles);
+    }
+
+    private void SyncBlockingCollisionCell(ChunkTerrainData terrain, int x, int y)
+    {
+        if (blockingTilemap == null || x < 0 || x >= terrain.Width || y < 0 || y >= terrain.Height)
+            return;
+        TerrainCell cell = terrain.GetCell(x, y);
+        TileBase tile = null;
+        if (cell.BlockingTileId != 0)
+            palette.TryGetTile(cell.BlockingTileId, out tile);
+        blockingTilemap.SetTile(new Vector3Int(x, y, 0), tile);
+    }
+
+    private void RefreshAllBatchVisuals(ChunkTerrainData terrain)
+    {
+        for (int y = 0; y < terrain.Height; y++)
+        for (int x = 0; x < terrain.Width; x++)
+            RefreshBatchCell(terrain, x, y);
+    }
+
+    private void RefreshBatchArea(ChunkTerrainData terrain, int centerX, int centerY, int radius)
+    {
+        int minX = Mathf.Max(0, centerX - radius);
+        int maxX = Mathf.Min(terrain.Width - 1, centerX + radius);
+        int minY = Mathf.Max(0, centerY - radius);
+        int maxY = Mathf.Min(terrain.Height - 1, centerY + radius);
+        for (int y = minY; y <= maxY; y++)
+        for (int x = minX; x <= maxX; x++)
+            RefreshBatchCell(terrain, x, y);
+    }
+
+    /// <summary>邻区变化映射到本区块最近边界格，再刷新一圈依赖格。</summary>
+    private void RefreshBatchEdge(ChunkTerrainData terrain, int offsetX, int offsetY,
+        int neighbourX, int neighbourY)
+    {
+        int x = offsetX < 0 ? 0 : offsetX > 0 ? terrain.Width - 1 : Mathf.Clamp(neighbourX, 0, terrain.Width - 1);
+        int y = offsetY < 0 ? 0 : offsetY > 0 ? terrain.Height - 1 : Mathf.Clamp(neighbourY, 0, terrain.Height - 1);
+        RefreshBatchArea(terrain, x, y, 1);
+    }
+
+    /// <summary>邻区首次提交会改变整条共享边界，而不是单一格。</summary>
+    private void RefreshCommittedBatchEdge(ChunkTerrainData terrain, int offsetX, int offsetY)
+    {
+        if (offsetX != 0 && offsetY != 0)
+        {
+            int cornerX = offsetX < 0 ? 0 : terrain.Width - 1;
+            int cornerY = offsetY < 0 ? 0 : terrain.Height - 1;
+            RefreshBatchArea(terrain, cornerX, cornerY, 1);
+            return;
+        }
+
+        if (offsetX != 0)
+        {
+            int x = offsetX < 0 ? 0 : terrain.Width - 1;
+            for (int y = 0; y < terrain.Height; y++)
+                RefreshBatchArea(terrain, x, y, 1);
+            return;
+        }
+
+        int edgeY = offsetY < 0 ? 0 : terrain.Height - 1;
+        for (int x = 0; x < terrain.Width; x++)
+            RefreshBatchArea(terrain, x, edgeY, 1);
+    }
+
+    private void RefreshBatchCell(ChunkTerrainData terrain, int x, int y)
+    {
+        TerrainCell cell = terrain.GetCell(x, y);
+        bool water = IsWater(cell);
+        Material waterMaterial = GetActiveWaterMaterial();
+        bool dedicatedWater = water && waterMaterial != null;
+
+        if (cell.GroundTileId != 0 && !dedicatedWater)
+        {
+            SetBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Ground,
+                cell.GroundTileId, groundTilemap, GetMaterial(groundTilemap),
+                BuildBatchGroundContactMask(terrain, x, y, cell), Vector4.zero);
+        }
+        else
+        {
+            ClearBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Ground);
+        }
+
+        if (cell.GroundTileId != 0 && dedicatedWater)
+        {
+            SetBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Water,
+                cell.GroundTileId, renderCaveWater ? caveWaterTilemap : waterTilemap, waterMaterial,
+                BuildWaterShoreMask(terrain, x, y), BuildWaterDepthCorners(terrain, x, y));
+        }
+        else
+        {
+            ClearBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Water);
+        }
+
+        if (backTilemap != null && cell.BackTileId != 0)
+        {
+            SetBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Back,
+                cell.BackTileId, backTilemap, GetMaterial(backTilemap), Vector4.zero, Vector4.zero);
+        }
+        else
+        {
+            ClearBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Back);
+        }
+
+        if (cell.BlockingTileId != 0)
+        {
+            SetBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Blocking,
+                cell.BlockingTileId, blockingTilemap, GetMaterial(blockingTilemap), Vector4.zero, Vector4.zero);
+        }
+        else
+        {
+            ClearBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Blocking);
+        }
+    }
+
+    private void SetBatchVisual(ChunkTerrainData terrain, int x, int y,
+        ChunkBatchRendererGroupService.VisualLayer layer, int tileId, Tilemap sourceTilemap,
+        Material sourceMaterial, Vector4 data0, Vector4 data1)
+    {
+        if (sourceMaterial == null ||
+            !palette.TryGetVisual(tileId, out Sprite sprite, out Color tileColor, out Matrix4x4 tileTransform))
+        {
+            ClearBatchVisual(terrain, x, y, layer);
+            return;
+        }
+
+        Int2 origin = boundChunk.Address.ChunkOrigin;
+        Matrix4x4 localToWorld = Matrix4x4.Translate(new Vector3(
+            origin.X + x + 0.5f,
+            origin.Y + y + 0.5f,
+            0f)) * tileTransform;
+        Color tint = sourceTilemap != null ? tileColor * sourceTilemap.color : tileColor;
+        var instanceData = ChunkBatchRendererGroupService.InstanceData.Create(localToWorld, data0, data1, tint);
+        ChunkBatchRendererGroupService.SetVisual(this, GetBatchSlotKey(terrain, x, y, layer),
+            new ChunkBatchRendererGroupService.Visual(layer, sprite, sourceMaterial, instanceData));
+    }
+
+    private void ClearBatchVisual(ChunkTerrainData terrain, int x, int y,
+        ChunkBatchRendererGroupService.VisualLayer layer)
+    {
+        ChunkBatchRendererGroupService.ClearVisual(this, GetBatchSlotKey(terrain, x, y, layer));
+    }
+
+    private static int GetBatchSlotKey(ChunkTerrainData terrain, int x, int y,
+        ChunkBatchRendererGroupService.VisualLayer layer)
+    {
+        return (int)layer * terrain.CellCount + y * terrain.Width + x;
+    }
+
+    private Material GetActiveWaterMaterial()
+    {
+        return GetMaterial(renderCaveWater ? caveWaterTilemap : waterTilemap);
+    }
+
+    private static Material GetMaterial(Tilemap tilemap)
+    {
+        TilemapRenderer renderer = tilemap != null ? tilemap.GetComponent<TilemapRenderer>() : null;
+        return renderer != null ? renderer.sharedMaterial : null;
+    }
+
+    private Vector4 BuildBatchGroundContactMask(ChunkTerrainData terrain, int x, int y, TerrainCell cell)
     {
         bool cave = IsCaveDimension(boundChunk?.Address.DimensionId);
-        for (int y = 0; y < terrain.Height; y++)
+        if (cave)
         {
-            for (int x = 0; x < terrain.Width; x++)
-            {
-                TerrainCell cell = terrain.GetCell(x, y);
-                if (cell.GroundTileId == 0)
-                    continue;
-
-                // 有独立水面层时，水格由对应 Water Tilemap 负责，Ground 不再写入其颜色遮罩。
-                bool dedicatedWater = IsWater(cell) &&
-                    ((cave && caveWaterTilemap != null) ||
-                     (!cave && waterTilemap != null));
-                if (dedicatedWater)
-                {
-                    continue;
-                }
-
-                bool receivesShadow;
-                ContactKind contactKind;
-                if (cave)
-                {
-                    receivesShadow = !IsBlocking(cell) && !IsWater(cell);
-                    contactKind = ContactKind.Wall;
-                }
-                else if (IsWater(cell))
-                {
-                    // 水岸阴影继续画在水格内侧，保持现有水面边缘效果。
-                    receivesShadow = true;
-                    contactKind = ContactKind.Land;
-                }
-                else
-                {
-                    // 石地与草地共用 Ground Tilemap；把阴影写到石地外侧的陆地格上。
-                    receivesShadow = !IsStone(cell);
-                    contactKind = ContactKind.Stone;
-                }
-
-                Vector3Int position = new(x, y, 0);
-                groundTilemap.SetTileFlags(position, TileFlags.None);
-                groundTilemap.SetColor(position, receivesShadow
-                    ? BuildContactMask(terrain, x, y, contactKind)
-                    : Color.clear);
-            }
+            bool receivesShadow = !IsBlocking(cell) && !IsWater(cell);
+            return receivesShadow ? (Vector4)BuildContactMask(terrain, x, y, ContactKind.Wall) : Vector4.zero;
         }
+
+        if (IsWater(cell))
+            return (Vector4)BuildContactMask(terrain, x, y, ContactKind.Land);
+        return !IsStone(cell)
+            ? (Vector4)BuildContactMask(terrain, x, y, ContactKind.Stone)
+            : Vector4.zero;
     }
 
-    /// <summary>Tile Color 只写岸线方向，连续水深通过独立纹理提交给当前 Chunk 渲染器。</summary>
-    private void ApplyWaterShaderData(Tilemap targetTilemap, ChunkTerrainData terrain)
+    /// <summary>RGBA 依次保存左下、右下、左上、右上格角的连续水深。</summary>
+    private Vector4 BuildWaterDepthCorners(ChunkTerrainData terrain, int x, int y)
     {
-        if (targetTilemap == null)
-            return;
-
-        for (int y = 0; y < terrain.Height; y++)
-        {
-            for (int x = 0; x < terrain.Width; x++)
-            {
-                TerrainCell cell = terrain.GetCell(x, y);
-                if (!IsWater(cell))
-                    continue;
-
-                Vector3Int position = new(x, y, 0);
-                targetTilemap.SetTileFlags(position, TileFlags.None);
-                targetTilemap.SetColor(position, BuildWaterShoreMask(terrain, x, y));
-            }
-        }
-
-        ApplyWaterDepthTexture(targetTilemap, terrain);
+        return new Vector4(
+            ResolveCornerDepth(terrain, x - 1, y - 1),
+            ResolveCornerDepth(terrain, x, y - 1),
+            ResolveCornerDepth(terrain, x - 1, y),
+            ResolveCornerDepth(terrain, x, y));
     }
+
+    private float ResolveCornerDepth(ChunkTerrainData terrain, int leftCellX, int bottomCellY)
+    {
+        return (
+            ResolveExtendedWaterDepth(terrain, leftCellX, bottomCellY) +
+            ResolveExtendedWaterDepth(terrain, leftCellX + 1, bottomCellY) +
+            ResolveExtendedWaterDepth(terrain, leftCellX, bottomCellY + 1) +
+            ResolveExtendedWaterDepth(terrain, leftCellX + 1, bottomCellY + 1)) * 0.25f;
+    }
+
+    #endregion
+
+    #endregion
+
+    #region BRG Shader 数据
 
     /// <summary>RGBA 分别记录左、右、下、上岸线方向。</summary>
     private Color BuildWaterShoreMask(ChunkTerrainData terrain, int x, int y)
@@ -378,68 +499,6 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             IsContactNeighbour(terrain, x + 1, y, ContactKind.Land) ? 1f : 0f,
             IsContactNeighbour(terrain, x, y - 1, ContactKind.Land) ? 1f : 0f,
             IsContactNeighbour(terrain, x, y + 1, ContactKind.Land) ? 1f : 0f);
-    }
-
-    /// <summary>建立包含一格邻区边框的水深纹理，让 GPU 在水格中心之间连续插值。</summary>
-    private void ApplyWaterDepthTexture(Tilemap targetTilemap, ChunkTerrainData terrain)
-    {
-        int textureWidth = terrain.Width + 2;
-        int textureHeight = terrain.Height + 2;
-        EnsureWaterDepthTexture(textureWidth, textureHeight);
-        for (int textureY = 0; textureY < textureHeight; textureY++)
-        {
-            for (int textureX = 0; textureX < textureWidth; textureX++)
-            {
-                float depth = ResolveExtendedWaterDepth(
-                    terrain,
-                    textureX - 1,
-                    textureY - 1);
-                byte encodedDepth = (byte)Mathf.RoundToInt(Mathf.Clamp01(depth) * 255f);
-                waterDepthPixels[textureY * textureWidth + textureX] =
-                    new Color32(encodedDepth, 0, 0, byte.MaxValue);
-            }
-        }
-
-        waterDepthTexture.SetPixels32(waterDepthPixels);
-        waterDepthTexture.Apply(false, false);
-
-        TilemapRenderer targetRenderer = targetTilemap.GetComponent<TilemapRenderer>();
-        if (targetRenderer == null)
-            throw new InvalidOperationException("Water Tilemap requires a TilemapRenderer.");
-
-        waterPropertyBlock ??= new MaterialPropertyBlock();
-        targetRenderer.GetPropertyBlock(waterPropertyBlock);
-        waterPropertyBlock.SetTexture(WaterDepthTextureId, waterDepthTexture);
-        // Tilemap 合批后顶点不保证处于 Chunk 局部空间，显式从世界坐标映射到水深纹理。
-        Vector3 waterOrigin = targetTilemap.CellToWorld(Vector3Int.zero);
-        waterPropertyBlock.SetVector(WaterDepthUvScaleOffsetId, new Vector4(
-            1f / textureWidth,
-            1f / textureHeight,
-            (1f - waterOrigin.x) / textureWidth,
-            (1f - waterOrigin.y) / textureHeight));
-        targetRenderer.SetPropertyBlock(waterPropertyBlock);
-    }
-
-    /// <summary>按 Chunk 尺寸复用深度纹理与像素缓存。</summary>
-    private void EnsureWaterDepthTexture(int width, int height)
-    {
-        if (waterDepthTexture != null &&
-            waterDepthTexture.width == width &&
-            waterDepthTexture.height == height)
-        {
-            return;
-        }
-
-        if (waterDepthTexture != null)
-            Destroy(waterDepthTexture);
-        waterDepthTexture = new Texture2D(width, height, TextureFormat.RGBA32, false, true)
-        {
-            name = $"WaterDepth_{GetInstanceID()}",
-            filterMode = FilterMode.Bilinear,
-            wrapMode = TextureWrapMode.Clamp,
-            hideFlags = HideFlags.HideAndDontSave
-        };
-        waterDepthPixels = new Color32[width * height];
     }
 
     /// <summary>非水格沿用周围水格平均深度，避免岸线参与颜色渐变。</summary>
