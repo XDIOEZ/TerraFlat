@@ -95,7 +95,7 @@ public sealed partial class GMReflectionConsole
             parametersRow.transform,
             "永久 Buff 固定为永久；次数遵循 Buff 自身叠加规则。",
             11f,
-            new Color(0.62f, 0.69f, 0.70f));
+            GmTextSecondary);
         parameterHint.enableWordWrapping = false;
         parameterHint.overflowMode = TextOverflowModes.Ellipsis;
         parameterHint.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
@@ -153,14 +153,14 @@ public sealed partial class GMReflectionConsole
             header.transform,
             "可接受 Buff 的运行对象（点击索引）",
             13f,
-            new Color(0.82f, 0.82f, 0.78f));
+            GmTextPrimary);
         title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
         buffTargetListSummaryText = CreateText(
             header.transform,
             "正在读取目标…",
             11f,
-            new Color(0.62f, 0.69f, 0.70f));
+            GmTextSecondary);
         buffTargetListSummaryText.alignment = TextAlignmentOptions.Right;
         buffTargetListSummaryText.enableWordWrapping = false;
         buffTargetListSummaryText.overflowMode = TextOverflowModes.Ellipsis;
@@ -169,10 +169,9 @@ public sealed partial class GMReflectionConsole
         CreateButton(header.transform, "刷新目标", () => RefreshBuffTargetList(), 84f, 28f);
 
         GameObject listRoot = CreateUiObject("Buff Target List", parent);
-        listRoot.AddComponent<Image>().color = new Color(0.028f, 0.071f, 0.094f, 1f);
+        listRoot.AddComponent<Image>().color = GmSurfaceLow;
         Outline outline = listRoot.AddComponent<Outline>();
-        outline.effectColor = new Color(0.51f, 0.58f, 0.58f, 0.28f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(outline);
         listRoot.AddComponent<LayoutElement>().preferredHeight = 206f;
         buffTargetListContent = ConfigureBuffTargetScroll(listRoot, 7f, out buffTargetListScroll);
     }
@@ -226,7 +225,7 @@ public sealed partial class GMReflectionConsole
         scrollbarRect.offsetMin = new Vector2(-14f, inset);
         scrollbarRect.offsetMax = new Vector2(-4f, -inset);
         Image scrollbarBackground = scrollbarObject.AddComponent<Image>();
-        scrollbarBackground.color = new Color(0.08f, 0.13f, 0.15f, 1f);
+        scrollbarBackground.color = GmSurfaceLow;
 
         GameObject slidingArea = CreateUiObject("Sliding Area", scrollbarObject.transform);
         RectTransform slidingRect = slidingArea.GetComponent<RectTransform>();
@@ -242,7 +241,7 @@ public sealed partial class GMReflectionConsole
         handleRect.offsetMin = Vector2.zero;
         handleRect.offsetMax = Vector2.zero;
         Image handleImage = handle.AddComponent<Image>();
-        handleImage.color = new Color(0.42f, 0.54f, 0.56f, 1f);
+        handleImage.color = GmSelection;
 
         Scrollbar scrollbar = scrollbarObject.AddComponent<Scrollbar>();
         scrollbar.handleRect = handleRect;
@@ -255,7 +254,7 @@ public sealed partial class GMReflectionConsole
 
     private static TextMeshProUGUI CreateBuffFieldLabel(Transform parent, string label, float width)
     {
-        TextMeshProUGUI text = CreateText(parent, label, 13f, new Color(0.82f, 0.82f, 0.78f));
+        TextMeshProUGUI text = CreateText(parent, label, 13f, GmTextPrimary);
         text.alignment = TextAlignmentOptions.MidlineRight;
         text.enableWordWrapping = false;
         text.overflowMode = TextOverflowModes.Ellipsis;
@@ -351,7 +350,7 @@ public sealed partial class GMReflectionConsole
             buffDefinitionHintText.text = availableBuffDefinitions.Count == 0
                 ? "尚未加载 Buff 目录。请进入游戏世界后点击“刷新目录”。"
                 : "未找到该 Buff ID。可直接输入已注册的 MOD Buff ID，或用左右按钮浏览目录。";
-            buffDefinitionHintText.color = Color.yellow;
+            buffDefinitionHintText.color = GmAccent;
             return;
         }
 
@@ -369,7 +368,7 @@ public sealed partial class GMReflectionConsole
             : definition.Description;
         buffDefinitionHintText.text =
             $"<b>{definition.DisplayName}</b>  ({definition.Id}) · 持续 {duration} · {stackMode} · 效果 {definition.Effects.Count} 个\n{description}";
-        buffDefinitionHintText.color = new Color(0.66f, 0.71f, 0.71f);
+        buffDefinitionHintText.color = GmTextSecondary;
     }
 
     /// <summary>窗口打开期间定时同步当前加载场景中的 Buff 接收对象。</summary>
@@ -778,15 +777,18 @@ public sealed partial class GMReflectionConsole
         SetBuffButtonPresentation(
             buffApplyButton,
             applying ? "批量分发中" : "批量分发",
-            applying ? new Color(0.18f, 0.48f, 0.33f, 1f) : new Color(0.66f, 0.32f, 0.15f, 1f));
+            applying ? GmSelection : GmSurfaceRaised,
+            true);
         SetBuffButtonPresentation(
             buffCancelButton,
             buffTargetingMode == BuffTargetingMode.None ? "取消" : "取消分发操作",
-            new Color(0.094f, 0.212f, 0.251f, 1f));
+            GmSurfaceRaised,
+            false);
         SetBuffButtonPresentation(
             buffClearButton,
             clearing ? "停止清除 Buff" : "清除 Buff",
-            clearing ? new Color(0.55f, 0.22f, 0.12f, 1f) : new Color(0.42f, 0.16f, 0.14f, 1f));
+            GmDanger,
+            clearing);
 
         if (buffTargetingHintText == null)
             return;
@@ -795,23 +797,23 @@ public sealed partial class GMReflectionConsole
         {
             buffTargetingHintText.text =
                 $"分发模式已开启：{pendingBuffId} ×{pendingBuffApplicationCount}。点击下方目标索引可连续施加。";
-            buffTargetingHintText.color = new Color(0.35f, 0.95f, 0.85f);
+            buffTargetingHintText.color = GmAccentHover;
         }
         else if (clearing)
         {
             buffTargetingHintText.text =
                 "清除模式已开启：点击下方目标索引会清除其全部 Buff；再次点击“清除 Buff”即可退出。";
-            buffTargetingHintText.color = new Color(1f, 0.71f, 0.30f);
+            buffTargetingHintText.color = GmAccent;
         }
         else
         {
             buffTargetingHintText.text =
                 "选择 Buff 后可直接点击下方目标索引；需要连续施加时点击“批量分发”。";
-            buffTargetingHintText.color = new Color(0.66f, 0.71f, 0.71f);
+            buffTargetingHintText.color = GmTextSecondary;
         }
     }
 
-    private static void SetBuffButtonPresentation(Button button, string label, Color color)
+    private static void SetBuffButtonPresentation(Button button, string label, Color color, bool emphasized)
     {
         if (button == null)
             return;
@@ -820,8 +822,6 @@ public sealed partial class GMReflectionConsole
         if (text != null)
             text.text = label;
 
-        Image image = button.GetComponent<Image>();
-        if (image != null)
-            image.color = color;
+        SetGmButtonVisual(button, color, emphasized);
     }
 }

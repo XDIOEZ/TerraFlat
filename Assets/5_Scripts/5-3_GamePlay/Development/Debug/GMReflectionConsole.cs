@@ -91,6 +91,54 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private int selectedStructureIndex;
     private static TMP_FontAsset uiFont;
 
+    #region GM 主题
+
+    // GM 面板跟随全局 UI 主题，不再维护独立的蓝绿/橙色皮肤。
+    private static Color GmCanvas => FlatWorldUITheme.Canvas;
+    private static Color GmSurfaceLow => FlatWorldUITheme.SurfaceLow;
+    private static Color GmSurface => FlatWorldUITheme.Surface;
+    private static Color GmSurfaceRaised => FlatWorldUITheme.SurfaceRaised;
+    private static Color GmBorder => FlatWorldUITheme.Border;
+    private static Color GmTextPrimary => FlatWorldUITheme.TextPrimary;
+    private static Color GmTextSecondary => FlatWorldUITheme.TextSecondary;
+    private static Color GmAccent => FlatWorldUITheme.Accent;
+    private static Color GmAccentHover => FlatWorldUITheme.AccentHover;
+    private static Color GmSelection => FlatWorldUITheme.Selection;
+    private static Color GmSelectionOutline => FlatWorldUITheme.SelectionOutline;
+    private static Color GmDanger => FlatWorldUITheme.Danger;
+
+    /// <summary>统一 GM 按钮底色和描边，选中/关键操作只用暖黄细描边强调。</summary>
+    private static void SetGmButtonVisual(Button button, Color surface, bool emphasized = false)
+    {
+        if (button == null)
+            return;
+
+        Image image = button.GetComponent<Image>();
+        if (image != null)
+            image.color = surface;
+
+        Outline outline = button.GetComponent<Outline>();
+        if (outline != null)
+        {
+            outline.effectColor = emphasized ? GmSelectionOutline : GmBorder;
+            outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
+            outline.useGraphicAlpha = true;
+        }
+    }
+
+    /// <summary>统一 GM 非文字 Graphic 的低对比描边。</summary>
+    private static void StyleGmOutline(Outline outline, bool emphasized = false)
+    {
+        if (outline == null)
+            return;
+
+        outline.effectColor = emphasized ? GmSelectionOutline : GmBorder;
+        outline.effectDistance = FlatWorldUITheme.BorderOutlineDistance;
+        outline.useGraphicAlpha = true;
+    }
+
+    #endregion
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
     {
@@ -571,10 +619,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         panelRect.sizeDelta = new Vector2(1120f, 760f);
 
         Image panelImage = airdropBrowserRoot.AddComponent<Image>();
-        panelImage.color = new Color(0.031f, 0.082f, 0.114f, 0.99f);
+        panelImage.color = GmCanvas;
         Outline panelOutline = airdropBrowserRoot.AddComponent<Outline>();
-        panelOutline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.55f);
-        panelOutline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(panelOutline, true);
 
         VerticalLayoutGroup panelLayout = airdropBrowserRoot.AddComponent<VerticalLayoutGroup>();
         panelLayout.padding = new RectOffset(20, 20, 18, 18);
@@ -587,7 +634,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         GameObject header = CreateUiObject("Header", airdropBrowserRoot.transform);
         header.AddComponent<LayoutElement>().preferredHeight = 54f;
         Image headerImage = header.AddComponent<Image>();
-        headerImage.color = new Color(0.063f, 0.153f, 0.188f, 1f);
+        headerImage.color = GmSurfaceRaised;
         HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
         headerLayout.padding = new RectOffset(16, 12, 7, 7);
         headerLayout.spacing = 12f;
@@ -596,7 +643,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         headerLayout.childControlHeight = true;
         headerLayout.childForceExpandWidth = false;
 
-        TextMeshProUGUI title = CreateText(header.transform, "物品空投", 20f, new Color(0.95f, 0.91f, 0.84f));
+        TextMeshProUGUI title = CreateText(header.transform, "物品空投", 20f, GmTextPrimary);
         title.fontStyle = FontStyles.Bold;
         title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
@@ -604,7 +651,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             header.transform,
             "选择物品后直接空投到玩家附近",
             12f,
-            new Color(0.66f, 0.71f, 0.71f));
+            GmTextSecondary);
         instruction.alignment = TextAlignmentOptions.Right;
         instruction.gameObject.AddComponent<LayoutElement>().preferredWidth = 220f;
         CreateButton(header.transform, "返回", CloseAirdropBrowser, 64f, 34f);
@@ -625,7 +672,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             toolbar.transform,
             "数量",
             13f,
-            new Color(0.82f, 0.82f, 0.78f));
+            GmTextPrimary);
         amountLabel.alignment = TextAlignmentOptions.MidlineRight;
         amountLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 40f;
 
@@ -637,7 +684,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             toolbar.transform,
             "正在读取物品…",
             12f,
-            new Color(0.66f, 0.71f, 0.71f));
+            GmTextSecondary);
         airdropBrowserCountText.alignment = TextAlignmentOptions.MidlineRight;
         airdropBrowserCountText.enableWordWrapping = false;
         airdropBrowserCountText.overflowMode = TextOverflowModes.Ellipsis;
@@ -653,7 +700,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             airdropBrowserRoot.transform,
             "点击任意物品即可空投。",
             12f,
-            new Color(0.66f, 0.71f, 0.71f));
+            GmTextSecondary);
         airdropBrowserStatusText.enableWordWrapping = false;
         airdropBrowserStatusText.overflowMode = TextOverflowModes.Ellipsis;
         airdropBrowserStatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
@@ -671,10 +718,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         panelRect.sizeDelta = new Vector2(1120f, 760f);
 
         Image panelImage = aiCreatureBrowserRoot.AddComponent<Image>();
-        panelImage.color = new Color(0.031f, 0.082f, 0.114f, 0.99f);
+        panelImage.color = GmCanvas;
         Outline panelOutline = aiCreatureBrowserRoot.AddComponent<Outline>();
-        panelOutline.effectColor = new Color(0.21f, 0.72f, 0.68f, 0.55f);
-        panelOutline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(panelOutline, true);
 
         VerticalLayoutGroup panelLayout = aiCreatureBrowserRoot.AddComponent<VerticalLayoutGroup>();
         panelLayout.padding = new RectOffset(20, 20, 18, 18);
@@ -687,7 +733,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         GameObject header = CreateUiObject("Header", aiCreatureBrowserRoot.transform);
         header.AddComponent<LayoutElement>().preferredHeight = 54f;
         Image headerImage = header.AddComponent<Image>();
-        headerImage.color = new Color(0.063f, 0.153f, 0.188f, 1f);
+        headerImage.color = GmSurfaceRaised;
         HorizontalLayoutGroup headerLayout = header.AddComponent<HorizontalLayoutGroup>();
         headerLayout.padding = new RectOffset(16, 12, 7, 7);
         headerLayout.spacing = 12f;
@@ -696,7 +742,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         headerLayout.childControlHeight = true;
         headerLayout.childForceExpandWidth = false;
 
-        TextMeshProUGUI title = CreateText(header.transform, "AI 生物召唤", 20f, new Color(0.95f, 0.91f, 0.84f));
+        TextMeshProUGUI title = CreateText(header.transform, "AI 生物召唤", 20f, GmTextPrimary);
         title.fontStyle = FontStyles.Bold;
         title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
@@ -704,7 +750,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             header.transform,
             "点击生物后生成到玩家附近",
             12f,
-            new Color(0.66f, 0.71f, 0.71f));
+            GmTextSecondary);
         instruction.alignment = TextAlignmentOptions.Right;
         instruction.gameObject.AddComponent<LayoutElement>().preferredWidth = 240f;
         CreateButton(header.transform, "返回", CloseAiCreatureBrowser, 64f, 34f);
@@ -725,7 +771,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             toolbar.transform,
             "数量",
             13f,
-            new Color(0.82f, 0.82f, 0.78f));
+            GmTextPrimary);
         amountLabel.alignment = TextAlignmentOptions.MidlineRight;
         amountLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 40f;
 
@@ -737,7 +783,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             toolbar.transform,
             "正在读取生物…",
             12f,
-            new Color(0.66f, 0.71f, 0.71f));
+            GmTextSecondary);
         aiCreatureBrowserCountText.alignment = TextAlignmentOptions.MidlineRight;
         aiCreatureBrowserCountText.enableWordWrapping = false;
         aiCreatureBrowserCountText.overflowMode = TextOverflowModes.Ellipsis;
@@ -752,7 +798,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             aiCreatureBrowserRoot.transform,
             "点击任意生物即可召唤；批量召唤会自动散布，避免重叠。",
             12f,
-            new Color(0.66f, 0.71f, 0.71f));
+            GmTextSecondary);
         aiCreatureBrowserStatusText.enableWordWrapping = false;
         aiCreatureBrowserStatusText.overflowMode = TextOverflowModes.Ellipsis;
         aiCreatureBrowserStatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
@@ -766,10 +812,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         GameObject scrollObject = CreateUiObject(objectName, parent);
         Image scrollImage = scrollObject.AddComponent<Image>();
-        scrollImage.color = new Color(0.018f, 0.052f, 0.068f, 1f);
+        scrollImage.color = GmSurfaceLow;
         Outline outline = scrollObject.AddComponent<Outline>();
-        outline.effectColor = new Color(0.51f, 0.58f, 0.58f, 0.32f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(outline);
         LayoutElement scrollLayout = scrollObject.AddComponent<LayoutElement>();
         scrollLayout.flexibleHeight = 1f;
         scrollLayout.minHeight = 220f;
@@ -813,7 +858,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         scrollbarRect.offsetMin = new Vector2(-16f, 10f);
         scrollbarRect.offsetMax = new Vector2(-6f, -10f);
         Image scrollbarBackground = scrollbarObject.AddComponent<Image>();
-        scrollbarBackground.color = new Color(0.08f, 0.13f, 0.15f, 1f);
+        scrollbarBackground.color = GmSurfaceLow;
 
         GameObject slidingArea = CreateUiObject("Sliding Area", scrollbarObject.transform);
         RectTransform slidingRect = slidingArea.GetComponent<RectTransform>();
@@ -829,7 +874,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         handleRect.offsetMin = Vector2.zero;
         handleRect.offsetMax = Vector2.zero;
         Image handleImage = handle.AddComponent<Image>();
-        handleImage.color = new Color(0.42f, 0.54f, 0.56f, 1f);
+        handleImage.color = GmSelection;
 
         Scrollbar scrollbar = scrollbarObject.AddComponent<Scrollbar>();
         scrollbar.handleRect = handleRect;
@@ -972,19 +1017,20 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         GameObject buttonObject = CreateUiObject(label, parent);
         Image image = buttonObject.AddComponent<Image>();
-        image.color = new Color(0.094f, 0.212f, 0.251f, 1f);
+        image.color = GmSurfaceRaised;
         Outline outline = buttonObject.AddComponent<Outline>();
-        outline.effectColor = new Color(0.51f, 0.58f, 0.58f, 0.28f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(outline);
         Button button = buttonObject.AddComponent<Button>();
         button.targetGraphic = image;
         button.onClick.AddListener(action);
         ColorBlock colors = button.colors;
         colors.normalColor = Color.white;
-        colors.highlightedColor = new Color(1f, 0.88f, 0.72f, 1f);
-        colors.pressedColor = new Color(0.78f, 0.72f, 0.64f, 1f);
-        colors.selectedColor = colors.highlightedColor;
-        colors.fadeDuration = 0.1f;
+        colors.highlightedColor = new Color(1.08f, 1.08f, 1.08f, 1f);
+        colors.pressedColor = new Color(0.82f, 0.82f, 0.82f, 1f);
+        colors.selectedColor = new Color(1.04f, 1.04f, 1.04f, 1f);
+        colors.disabledColor = new Color(0.62f, 0.62f, 0.62f, 0.5f);
+        colors.colorMultiplier = 1f;
+        colors.fadeDuration = 0.11f;
         button.colors = colors;
 
         LayoutElement layout = buttonObject.AddComponent<LayoutElement>();
@@ -992,7 +1038,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (width > 0f)
             layout.preferredWidth = width;
 
-        TextMeshProUGUI text = CreateText(buttonObject.transform, label, 13f, new Color(0.95f, 0.91f, 0.84f));
+        TextMeshProUGUI text = CreateText(buttonObject.transform, label, 13f, GmTextPrimary);
+        text.fontStyle |= FontStyles.Bold;
         text.alignment = TextAlignmentOptions.Center;
         text.enableWordWrapping = false;
         text.overflowMode = TextOverflowModes.Ellipsis;
@@ -1008,10 +1055,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         GameObject fieldObject = CreateUiObject("Input " + placeholder, parent);
         Image image = fieldObject.AddComponent<Image>();
-        image.color = new Color(0.028f, 0.071f, 0.094f, 1f);
+        image.color = GmSurfaceLow;
         Outline outline = fieldObject.AddComponent<Outline>();
-        outline.effectColor = new Color(0.51f, 0.58f, 0.58f, 0.28f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(outline);
         TMP_InputField field = fieldObject.AddComponent<TMP_InputField>();
         field.targetGraphic = image;
         field.lineType = TMP_InputField.LineType.SingleLine;
@@ -1027,7 +1073,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RectMask2D mask = textArea.AddComponent<RectMask2D>();
         field.textViewport = areaRect;
 
-        TextMeshProUGUI text = CreateText(textArea.transform, string.Empty, 13f, new Color(0.95f, 0.91f, 0.84f));
+        TextMeshProUGUI text = CreateText(textArea.transform, string.Empty, 13f, GmTextPrimary);
         text.alignment = TextAlignmentOptions.MidlineLeft;
         RectTransform textRect = text.rectTransform;
         textRect.anchorMin = Vector2.zero;
@@ -1035,12 +1081,15 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         textRect.offsetMin = textRect.offsetMax = Vector2.zero;
         field.textComponent = text;
 
-        TextMeshProUGUI hint = CreateText(textArea.transform, placeholder, 13f, new Color(0.51f, 0.57f, 0.58f));
+        TextMeshProUGUI hint = CreateText(textArea.transform, placeholder, 13f, GmTextSecondary);
         RectTransform hintRect = hint.rectTransform;
         hintRect.anchorMin = Vector2.zero;
         hintRect.anchorMax = Vector2.one;
         hintRect.offsetMin = hintRect.offsetMax = Vector2.zero;
         field.placeholder = hint;
+        field.caretColor = GmTextPrimary;
+        field.selectionColor = new Color(GmAccent.r, GmAccent.g, GmAccent.b, 0.32f);
+        field.customCaretColor = true;
         return field;
     }
 
@@ -1052,10 +1101,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         GameObject fieldObject = CreateUiObject("Value Display", parent);
         Image image = fieldObject.AddComponent<Image>();
-        image.color = new Color(0.028f, 0.071f, 0.094f, 1f);
+        image.color = GmSurfaceLow;
         Outline outline = fieldObject.AddComponent<Outline>();
-        outline.effectColor = new Color(0.51f, 0.58f, 0.58f, 0.28f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(outline);
 
         LayoutElement layout = fieldObject.AddComponent<LayoutElement>();
         layout.preferredWidth = width;
@@ -1065,7 +1113,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             fieldObject.transform,
             value,
             13f,
-            new Color(0.95f, 0.91f, 0.84f));
+            GmTextPrimary);
         text.alignment = TextAlignmentOptions.MidlineLeft;
         text.enableWordWrapping = false;
         text.overflowMode = TextOverflowModes.Ellipsis;
@@ -1079,7 +1127,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private static void CreateSectionTitle(Transform parent, string title)
     {
-        TextMeshProUGUI section = CreateText(parent, title, 14f, new Color(0.90f, 0.60f, 0.35f));
+        TextMeshProUGUI section = CreateText(parent, title, 14f, GmAccent);
         section.fontStyle = FontStyles.Bold;
         section.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
     }
@@ -1088,10 +1136,9 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         GameObject scrollObject = CreateUiObject("Reflected Command Scroll", parent);
         Image scrollImage = scrollObject.AddComponent<Image>();
-        scrollImage.color = new Color(0.028f, 0.071f, 0.094f, 1f);
+        scrollImage.color = GmSurfaceLow;
         Outline outline = scrollObject.AddComponent<Outline>();
-        outline.effectColor = new Color(0.51f, 0.58f, 0.58f, 0.28f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(outline);
         LayoutElement scrollLayout = scrollObject.AddComponent<LayoutElement>();
         scrollLayout.flexibleHeight = 1f;
         scrollLayout.minHeight = 180f;
@@ -1349,7 +1396,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshPlayerMoveSpeedButton();
         SetStatus(
             $"玩家移动速度已调整为 {multiplier:0.#} 倍。",
-            multiplier > 1f ? new Color(0.35f, 0.95f, 0.85f) : new Color(0.66f, 0.71f, 0.71f));
+            multiplier > 1f ? GmAccentHover : GmTextSecondary);
     }
 
     private void ApplyPlayerMoveSpeedInput()
@@ -1397,8 +1444,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         SetStatus(
             $"玩家移动速度已调整为 {appliedMultiplier:0.##} 倍。",
             appliedMultiplier > 1f
-                ? new Color(0.35f, 0.95f, 0.85f)
-                : new Color(0.66f, 0.71f, 0.71f));
+                ? GmAccentHover
+                : GmTextSecondary);
     }
 
     private void RefreshPlayerMoveSpeedButton()
@@ -1416,13 +1463,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         }
 
         Button statusButton = playerMoveSpeedApplyButton ?? playerMoveSpeedButton;
-        Image image = statusButton != null ? statusButton.GetComponent<Image>() : null;
-        if (image != null)
-        {
-            image.color = multiplier > 1f
-                ? new Color(0.10f, 0.45f, 0.31f, 1f)
-                : new Color(0.094f, 0.212f, 0.251f, 1f);
-        }
+        SetGmButtonVisual(
+            statusButton,
+            multiplier > 1f ? GmSelection : GmSurfaceRaised,
+            multiplier > 1f);
     }
 
     private void ApplyChunkLoadSpeedInput()
@@ -1506,15 +1550,11 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 unlimited ? "无限" : multiplier.ToString("0.##", CultureInfo.InvariantCulture));
         }
 
-        Image image = chunkLoadSpeedApplyButton != null
-            ? chunkLoadSpeedApplyButton.GetComponent<Image>()
-            : null;
-        if (image != null)
-        {
-            image.color = unlimited || multiplier > 1f
-                ? new Color(0.10f, 0.45f, 0.31f, 1f)
-                : new Color(0.094f, 0.212f, 0.251f, 1f);
-        }
+        bool accelerated = unlimited || multiplier > 1f;
+        SetGmButtonVisual(
+            chunkLoadSpeedApplyButton,
+            accelerated ? GmSelection : GmSurfaceRaised,
+            accelerated);
 
         if (chunkLoadSpeedUnlimitedButton == null)
             return;
@@ -1524,13 +1564,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (label != null)
             label.text = unlimited ? "恢复" : "无限";
 
-        Image unlimitedImage = chunkLoadSpeedUnlimitedButton.GetComponent<Image>();
-        if (unlimitedImage != null)
-        {
-            unlimitedImage.color = unlimited
-                ? new Color(0.66f, 0.32f, 0.15f, 1f)
-                : new Color(0.094f, 0.212f, 0.251f, 1f);
-        }
+        SetGmButtonVisual(
+            chunkLoadSpeedUnlimitedButton,
+            unlimited ? GmSelection : GmSurfaceRaised,
+            unlimited);
     }
 
     private static bool IsUnlimitedChunkLoadValue(string value)
@@ -1548,15 +1585,15 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         {
             SetStatus(
                 $"区块加载已设为自动最大；后台并发 {chunkManager.EffectiveBackgroundGenerationConcurrency}，仍保留主线程安全预算。",
-                new Color(0.35f, 0.95f, 0.85f));
+                GmAccentHover);
             return;
         }
 
         SetStatus(
             $"区块加载速度已调整为 {appliedMultiplier:0.##} 倍。",
             appliedMultiplier > 1f
-                ? new Color(0.35f, 0.95f, 0.85f)
-                : new Color(0.66f, 0.71f, 0.71f));
+                ? GmAccentHover
+                : GmTextSecondary);
     }
 
     private void ToggleTeleportShortcut()
@@ -1566,7 +1603,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshTeleportShortcutButton();
         SetStatus(
             enabled ? "Ctrl+T 鼠标传送已开启。" : "Ctrl+T 鼠标传送已关闭。",
-            enabled ? new Color(0.35f, 0.95f, 0.85f) : new Color(0.66f, 0.71f, 0.71f));
+            enabled ? GmAccentHover : GmTextSecondary);
     }
 
     private void ToggleAdminInvincibility()
@@ -1583,7 +1620,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshAdminInvincibilityButton();
         SetStatus(
             enabled ? "管理员无敌已开启。" : "管理员无敌已关闭，生命与生存状态将正常结算。",
-            enabled ? new Color(0.35f, 0.95f, 0.85f) : new Color(0.90f, 0.62f, 0.30f));
+            enabled ? GmAccentHover : GmAccent);
     }
 
     private void RefreshAdminInvincibilityButton()
@@ -1605,15 +1642,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         }
 
         adminInvincibilityButton.interactable = canToggle;
-        Image image = adminInvincibilityButton.GetComponent<Image>();
-        if (image != null)
-        {
-            image.color = !canToggle
-                ? new Color(0.12f, 0.16f, 0.18f, 1f)
-                : enabled
-                    ? new Color(0.10f, 0.45f, 0.31f, 1f)
-                    : new Color(0.44f, 0.23f, 0.16f, 1f);
-        }
+        SetGmButtonVisual(
+            adminInvincibilityButton,
+            !canToggle ? GmSurfaceLow : enabled ? GmSelection : GmSurfaceRaised,
+            enabled);
     }
 
     private void RefreshTeleportShortcutButton()
@@ -1626,13 +1658,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (label != null)
             label.text = enabled ? "Ctrl+T 传送：开" : "Ctrl+T 传送：关";
 
-        Image image = teleportShortcutButton.GetComponent<Image>();
-        if (image != null)
-        {
-            image.color = enabled
-                ? new Color(0.10f, 0.45f, 0.31f, 1f)
-                : new Color(0.094f, 0.212f, 0.251f, 1f);
-        }
+        SetGmButtonVisual(
+            teleportShortcutButton,
+            enabled ? GmSelection : GmSurfaceRaised,
+            enabled);
     }
 
     private void ToggleNavigationPathHints()
@@ -1642,7 +1671,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshNavigationPathButton();
         SetStatus(
             visible ? "AI 导航路线提示已开启。" : "AI 导航路线提示已关闭。",
-            visible ? new Color(0.35f, 0.95f, 0.85f) : new Color(0.66f, 0.71f, 0.71f));
+            visible ? GmAccentHover : GmTextSecondary);
     }
 
     private void ToggleAnimalDebugOverlay()
@@ -1652,7 +1681,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshAnimalDebugOverlayButton();
         SetStatus(
             visible ? "动物头顶参数已开启。" : "动物头顶参数已关闭。",
-            visible ? new Color(0.35f, 0.95f, 0.85f) : new Color(0.66f, 0.71f, 0.71f));
+            visible ? GmAccentHover : GmTextSecondary);
     }
 
     private void RefreshAnimalDebugOverlayButton()
@@ -1665,13 +1694,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (label != null)
             label.text = visible ? "动物参数：开" : "动物参数：关";
 
-        Image image = animalDebugOverlayButton.GetComponent<Image>();
-        if (image != null)
-        {
-            image.color = visible
-                ? new Color(0.10f, 0.45f, 0.31f, 1f)
-                : new Color(0.094f, 0.212f, 0.251f, 1f);
-        }
+        SetGmButtonVisual(
+            animalDebugOverlayButton,
+            visible ? GmSelection : GmSurfaceRaised,
+            visible);
     }
 
     private void RefreshNavigationPathButton()
@@ -1684,13 +1710,10 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (label != null)
             label.text = visible ? "AI 路线提示：开" : "AI 路线提示：关";
 
-        Image image = navigationPathButton.GetComponent<Image>();
-        if (image != null)
-        {
-            image.color = visible
-                ? new Color(0.10f, 0.45f, 0.31f, 1f)
-                : new Color(0.094f, 0.212f, 0.251f, 1f);
-        }
+        SetGmButtonVisual(
+            navigationPathButton,
+            visible ? GmSelection : GmSurfaceRaised,
+            visible);
     }
 
     private void RebuildReflectedCommands()
@@ -2112,7 +2135,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 aiCreatureGrid,
                 availableAiCreatures.Count == 0 ? "暂无可召唤 AI 生物" : "没有匹配的生物",
                 13f,
-                new Color(0.66f, 0.71f, 0.71f));
+                GmTextSecondary);
             emptyText.alignment = TextAlignmentOptions.Center;
         }
 
@@ -2134,20 +2157,21 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         GameObject tile = CreateUiObject(objectName, parent);
         Image tileImage = tile.AddComponent<Image>();
-        tileImage.color = new Color(0.075f, 0.145f, 0.17f, 1f);
+        tileImage.color = GmSurface;
         Outline outline = tile.AddComponent<Outline>();
-        outline.effectColor = new Color(0.51f, 0.58f, 0.58f, 0.34f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(outline);
 
         Button button = tile.AddComponent<Button>();
         button.targetGraphic = tileImage;
         button.onClick.AddListener(onClick);
         ColorBlock colors = button.colors;
         colors.normalColor = Color.white;
-        colors.highlightedColor = new Color(1f, 0.84f, 0.63f, 1f);
-        colors.pressedColor = new Color(0.76f, 0.68f, 0.58f, 1f);
-        colors.selectedColor = colors.highlightedColor;
-        colors.fadeDuration = 0.08f;
+        colors.highlightedColor = new Color(1.08f, 1.08f, 1.08f, 1f);
+        colors.pressedColor = new Color(0.82f, 0.82f, 0.82f, 1f);
+        colors.selectedColor = new Color(1.04f, 1.04f, 1.04f, 1f);
+        colors.disabledColor = new Color(0.62f, 0.62f, 0.62f, 0.5f);
+        colors.colorMultiplier = 1f;
+        colors.fadeDuration = 0.11f;
         button.colors = colors;
 
         GameObject iconObject = CreateUiObject("Icon", tile.transform);
@@ -2168,7 +2192,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
                 iconObject.transform,
                 "?",
                 30f,
-                new Color(0.51f, 0.58f, 0.58f));
+                GmTextSecondary);
             placeholder.alignment = TextAlignmentOptions.Center;
             RectTransform placeholderRect = placeholder.rectTransform;
             placeholderRect.anchorMin = Vector2.zero;
@@ -2180,7 +2204,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             tile.transform,
             displayName,
             12f,
-            new Color(0.95f, 0.91f, 0.84f));
+            GmTextPrimary);
         nameText.alignment = TextAlignmentOptions.Center;
         nameText.enableWordWrapping = false;
         nameText.overflowMode = TextOverflowModes.Ellipsis;
@@ -2194,7 +2218,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             tile.transform,
             itemId,
             9f,
-            new Color(0.49f, 0.60f, 0.62f));
+            GmTextSecondary);
         idText.alignment = TextAlignmentOptions.Center;
         idText.enableWordWrapping = false;
         idText.overflowMode = TextOverflowModes.Ellipsis;
