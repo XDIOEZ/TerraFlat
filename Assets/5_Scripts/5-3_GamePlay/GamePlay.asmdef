@@ -30,6 +30,9 @@
         "FlatWorld.Networking.Core",
         "FlatWorld.WorldModel",
         "FlatWorld.WorldTopology",
+        "FlatWorld.Navigation",
+        "FlatWorld.Geometry",
+        "FlatWorld.Combat.Core",
         "FlatWorld.Localization",
         "GUID:df380645f10b7bc4b97d4f5eb6303d95"
     ],

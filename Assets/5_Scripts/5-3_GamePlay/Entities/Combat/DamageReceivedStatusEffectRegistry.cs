@@ -84,10 +84,6 @@ public static class DamageReceivedStatusEffectRegistry
 public sealed class BleedingDamageStatusRule : IDamageReceivedStatusRule
 {
     private const string BloodTag = "Blood";
-    private const float ChancePerDamage = 0.04f;
-    private const float MaxApplicationChance = 0.9f;
-    private const float Bleeding2DamageThreshold = 6f;
-    private const float Bleeding3DamageThreshold = 12f;
 
     /// <summary>处理一次刃伤；0 点、致死、纯钝击以及没有 Blood 标签的目标都不会产生出血。</summary>
     public void Apply(DamageReceiverDamageInfo damageInfo)
@@ -99,8 +95,8 @@ public sealed class BleedingDamageStatusRule : IDamageReceivedStatusRule
         if (bleedingDamage <= 0f)
             return;
 
-        float chance = Mathf.Min(MaxApplicationChance, bleedingDamage * ChancePerDamage);
-        if (chance <= 0f || UnityEngine.Random.value >= chance)
+        int tier = FlatWorld.Combat.CombatRules.BleedingTier(bleedingDamage, true, true, UnityEngine.Random.value);
+        if (tier == 0)
             return;
 
         BuffManager buffManager = damageInfo.ReceiverItem?.itemMods?
@@ -108,11 +104,6 @@ public sealed class BleedingDamageStatusRule : IDamageReceivedStatusRule
         if (buffManager == null)
             return;
 
-        int tier = bleedingDamage >= Bleeding3DamageThreshold
-            ? 3
-            : bleedingDamage >= Bleeding2DamageThreshold
-                ? 2
-                : 1;
         buffManager.ApplyBleedingTier(tier);
     }
 

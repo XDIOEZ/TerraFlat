@@ -1,0 +1,5 @@
+{
+    "name": "FlatWorld.AIECS.Presentation",
+    "references": ["FlatWorld.AIECS", "FlatWorld.WorldTopology", "Unity.Entities", "Unity.Collections", "Unity.Mathematics", "Unity.Burst"],
+    "autoReferenced": true
+}

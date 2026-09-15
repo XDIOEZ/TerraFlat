@@ -318,6 +318,10 @@ public sealed class RuntimeItemDefinition
     public RuntimeAnimatorController AnimatorController { get; }
     public bool IsActor { get; }
 
+    /// <summary>由当前内容编译的共享根级感知几何；非 Actor 通过旧对象 Bridge 感知。</summary>
+    internal FlatWorld.Geometry.PerceptionShape2D[] ActorPerceptionShapes { get; }
+    public IReadOnlyList<FlatWorld.Geometry.PerceptionShape2D> PerceptionShapes => ActorPerceptionShapes; // 数据后端只读共享几何。
+
     /// <summary>该定义的自然生成点是否使用无 Item、无碰撞体的植被图层。</summary>
     public bool IsGroundCover { get; }
 
@@ -370,6 +374,7 @@ public sealed class RuntimeItemDefinition
         Material = material;
         AnimatorController = animatorController;
         IsActor = isActor;
+        ActorPerceptionShapes = isActor ? ActorPerceptionShapeCompiler.Compile(shellPrefab, visual?.Collider) : null;
         IsGroundCover = isGroundCover;
         LabelKey = string.IsNullOrWhiteSpace(labelKey)
             ? FlatWorldLocalizationService.GetItemLabelKey(id)

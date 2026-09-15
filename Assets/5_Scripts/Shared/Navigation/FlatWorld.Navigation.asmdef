@@ -1,0 +1,7 @@
+{
+    "name": "FlatWorld.Navigation",
+    "rootNamespace": "FlatWorld.Navigation",
+    "references": ["Unity.Collections", "Unity.Mathematics", "Unity.Burst", "FlatWorld.WorldTopology"],
+    "allowUnsafeCode": false,
+    "autoReferenced": true
+}

@@ -8,6 +8,7 @@ public class DamageReceiverDamageInfo
     public Item ReceiverItem;
     public IDamageSender DamageSender;
     public Item Attacker;
+    public FlatWorld.Combat.CombatDamageContext Context; // 正式来源与模拟时钟；Attacker 仅为旧 Item 调用者保留。
     public float DamageValue;
     public float SenderDamageValue;
     public CombatDamage SenderDamageValues;

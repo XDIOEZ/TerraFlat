@@ -4,7 +4,7 @@ using UnityEngine;
 /// 命中附加 Buff 模块：监听指定伤害模块的实体命中结果，并按概率给有效命中的目标添加 Buff。
 /// 该模块不参与伤害计算，也不会作用于格子建筑，因此可被燃烧、中毒、冰冻等武器效果复用。
 /// </summary>
-public sealed class DamageOnHitBuffApplier : Module, IItemModuleDependencyBinder
+public sealed class DamageOnHitBuffApplier : Module, IItemModuleDependencyBinder, ICombatDamageContextModifier
 {
     [SerializeField, Tooltip("负责发布实体命中结果的伤害模块；Prefab 可显式绑定，JSON 组合由 ItemMods 绑定。")]
     private Mod_Damage damageModule;
@@ -25,6 +25,13 @@ public sealed class DamageOnHitBuffApplier : Module, IItemModuleDependencyBinder
 
     public override string CanonicalModuleId => "Module_DamageOnHitBuff";
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
+
+    /// <summary>新后端在统一结算中应用同一 Buff 配置；旧后端仍保留原命中回调且不会重复执行。</summary>
+    public void ModifyDamageContext(ref FlatWorld.Combat.CombatDamageContext context)
+    {
+        if (string.IsNullOrWhiteSpace(buffId) || applicationChance <= 0f) return;
+        context.OnHitBuffs.Add(new FlatWorld.Combat.CombatOnHitBuff { Id = buffId.Trim(), Chance = Mathf.Clamp01(applicationChance) });
+    }
 
     /// <summary>从 ItemMods 唯一稳定 ID 绑定伤害模块，并校验 Prefab 显式引用没有漂移。</summary>
     public void BindModuleDependencies(ItemMods modules)
