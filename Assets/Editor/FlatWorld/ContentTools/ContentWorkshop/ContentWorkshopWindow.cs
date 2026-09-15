@@ -1025,6 +1025,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             EditorGUILayout.EndVertical();
         }
 
+        /// <summary>预览实际保存的物品外观，并允许选择正式图标替代共享占位素材。</summary>
         private void DrawItemPreviewAndSource()
         {
             EditorGUILayout.BeginVertical(GUILayout.ExpandWidth(true));
@@ -1037,9 +1038,10 @@ namespace FlatWorld.Editor.ContentWorkshop
             GUILayout.FlexibleSpace();
             Rect previewRect = GUILayoutUtility.GetRect(240f, 240f, GUILayout.Width(240f), GUILayout.Height(240f));
             GUI.Box(previewRect, GUIContent.none, slotStyle);
-            if (itemDraft.Icon != null)
+            Sprite previewIcon = ContentWorkshopRepository.ResolveItemIcon(itemDraft.Icon);
+            if (previewIcon != null)
             {
-                Texture preview = AssetPreview.GetAssetPreview(itemDraft.Icon) ?? itemDraft.Icon.texture;
+                Texture preview = AssetPreview.GetAssetPreview(previewIcon) ?? AssetPreview.GetMiniThumbnail(previewIcon);
                 Color oldColor = GUI.color;
                 Matrix4x4 oldMatrix = GUI.matrix;
                 GUI.color = itemDraft.Tint;
@@ -1070,6 +1072,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             EditorGUILayout.EndHorizontal();
 
             GUILayout.Space(12f);
+            GUILayout.Label("图标留空时使用「素材占位符」；选择正式素材后优先使用所选图标。", EditorStyles.wordWrappedMiniLabel);
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             GUILayout.Label(selectedTemplate.DisplayName, EditorStyles.boldLabel);
             GUILayout.Label(selectedTemplate.Description, EditorStyles.wordWrappedLabel);

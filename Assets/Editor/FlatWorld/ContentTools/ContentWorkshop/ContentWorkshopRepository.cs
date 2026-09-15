@@ -30,6 +30,8 @@ namespace FlatWorld.Editor.ContentWorkshop
         private const string RecipeManifestAssetPath = RecipeRootAssetPath + "/recipe-manifest.json";
         private const string BackupRoot = "Library/FlatWorldContentWorkshop/Backups";
         private const string ItemSpriteLabel = "ItemSprite";
+        /// <summary>新物品尚无正式美术时使用的共享占位资源。</summary>
+        private const string ItemPlaceholderAssetPath = "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png";
 
         private static readonly string[] KnownRecipeProperties =
         {
@@ -324,6 +326,14 @@ namespace FlatWorld.Editor.ContentWorkshop
 
         #region 物品写入
 
+        /// <summary>优先保留指定图标，未选择时使用项目统一占位 Sprite。</summary>
+        public static Sprite ResolveItemIcon(Sprite selectedIcon)
+        {
+            return selectedIcon != null
+                ? selectedIcon
+                : AssetDatabase.LoadAssetAtPath<Sprite>(ItemPlaceholderAssetPath);
+        }
+
         /// <summary>使用已验证模板创建物品差异定义，并将所选 Sprite 注册为稳定 Addressables 地址。</summary>
         public void CreateItem(WorkshopItemDraft draft, WorkshopItemTemplate template)
         {
@@ -338,7 +348,8 @@ namespace FlatWorld.Editor.ContentWorkshop
             if (!itemPackagePaths.ContainsKey(packageId))
                 throw new InvalidOperationException($"找不到物品模板目标分包：{packageId}");
 
-            string spriteAddress = BuildSpriteAddress(draft.Icon);
+            Sprite icon = ResolveItemIcon(draft.Icon);
+            string spriteAddress = BuildSpriteAddress(icon);
             JObject definition = BuildItemSource(draft, template, spriteAddress);
             var proposedRoots = ReadCurrentItemRoots();
             ((JArray)proposedRoots[packageId]["items"]).Add(definition);
@@ -346,7 +357,7 @@ namespace FlatWorld.Editor.ContentWorkshop
 
             // Addressables 是独立资产；修改它之前再次锁定目标 JSON，尽早阻止外部编辑冲突。
             EnsureFileUnchanged(itemPackagePaths[packageId]);
-            EnsureSpriteAddressable(draft.Icon, spriteAddress);
+            EnsureSpriteAddressable(icon, spriteAddress);
             string path = itemPackagePaths[packageId];
             WriteTrackedFiles(new Dictionary<string, string>
             {
@@ -355,6 +366,7 @@ namespace FlatWorld.Editor.ContentWorkshop
             Reload();
         }
 
+        /// <summary>保存前检查身份、可用图标、数值和模板引用。</summary>
         private void ValidateItemDraft(WorkshopItemDraft draft, WorkshopItemTemplate template)
         {
             if (string.IsNullOrWhiteSpace(draft.Id))
@@ -363,8 +375,8 @@ namespace FlatWorld.Editor.ContentWorkshop
                 throw new InvalidOperationException($"物品稳定 ID 已存在：{draft.Id}");
             if (string.IsNullOrWhiteSpace(draft.DisplayName))
                 throw new InvalidOperationException("请填写玩家看到的物品名称。");
-            if (draft.Icon == null)
-                throw new InvalidOperationException("请为物品选择一个 Sprite 图标。");
+            if (ResolveItemIcon(draft.Icon) == null)
+                throw new InvalidOperationException("共享素材占位符缺失，请恢复资源或为物品选择正式图标。");
             if (draft.Durability < 0f || draft.Amount <= 0f || draft.Weight <= 0f || draft.Volume <= 0f)
                 throw new InvalidOperationException("耐久不得为负数，初始数量、重量与体积都必须大于 0。");
             if (draft.AddFoodAbility)
