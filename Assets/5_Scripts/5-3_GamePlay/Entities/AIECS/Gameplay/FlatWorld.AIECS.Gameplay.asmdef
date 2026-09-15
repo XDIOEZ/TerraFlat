@@ -1,0 +1,6 @@
+{
+    "name": "FlatWorld.AIECS.Gameplay",
+    "rootNamespace": "FlatWorld.AIECS.Gameplay",
+    "references": ["GamePlay", "FlatWorld.Utilities", "FlatWorld.AIECS", "FlatWorld.Navigation", "FlatWorld.WorldTopology", "Unity.Entities", "Unity.Collections", "Unity.Mathematics"],
+    "autoReferenced": true
+}
