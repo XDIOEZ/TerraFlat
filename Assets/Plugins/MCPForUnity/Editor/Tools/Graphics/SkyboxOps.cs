@@ -5,11 +5,28 @@ using MCPForUnity.Editor.Helpers;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
+using MCPForUnity.Runtime.Helpers;
 
 namespace MCPForUnity.Editor.Tools.Graphics
 {
     internal static class SkyboxOps
     {
+        static Texture CustomReflectionTexture
+        {
+            get =>
+#if UNITY_2022_1_OR_NEWER
+                RenderSettings.customReflectionTexture;
+#else
+                RenderSettings.customReflection;
+#endif
+            set {
+#if UNITY_2022_1_OR_NEWER
+                RenderSettings.customReflectionTexture = value;
+#else
+                RenderSettings.customReflection = value;
+#endif
+            }
+        }
         // ---------------------------------------------------------------
         // skybox_get — read all environment settings
         // ---------------------------------------------------------------
@@ -70,12 +87,12 @@ namespace MCPForUnity.Editor.Tools.Graphics
                         bounces = RenderSettings.reflectionBounces,
                         mode = RenderSettings.defaultReflectionMode.ToString(),
                         resolution = RenderSettings.defaultReflectionResolution,
-                        customCubemap = RenderSettings.customReflectionTexture != null
-                            ? AssetDatabase.GetAssetPath(RenderSettings.customReflectionTexture)
+                        customCubemap = CustomReflectionTexture != null
+                            ? AssetDatabase.GetAssetPath(CustomReflectionTexture)
                             : null
                     },
                     sun = sun != null
-                        ? (object)new { name = sun.gameObject.name, instanceID = sun.gameObject.GetInstanceID() }
+                        ? (object)new { name = sun.gameObject.name, instanceID = sun.gameObject.GetInstanceIDCompat() }
                         : null,
                     subtractiveShadowColor = ColorToArray(RenderSettings.subtractiveShadowColor)
                 }
@@ -301,7 +318,7 @@ namespace MCPForUnity.Editor.Tools.Graphics
             {
                 var cubemap = AssetDatabase.LoadAssetAtPath<Texture>(cubemapPath);
                 if (cubemap != null)
-                    RenderSettings.customReflectionTexture = cubemap;
+                    CustomReflectionTexture = cubemap;
                 else
                     return new ErrorResponse($"Cubemap not found at '{cubemapPath}'.");
             }
@@ -318,8 +335,8 @@ namespace MCPForUnity.Editor.Tools.Graphics
                     bounces = RenderSettings.reflectionBounces,
                     mode = RenderSettings.defaultReflectionMode.ToString(),
                     resolution = RenderSettings.defaultReflectionResolution,
-                    customCubemap = RenderSettings.customReflectionTexture != null
-                        ? AssetDatabase.GetAssetPath(RenderSettings.customReflectionTexture)
+                    customCubemap = CustomReflectionTexture != null
+                        ? AssetDatabase.GetAssetPath(CustomReflectionTexture)
                         : null
                 }
             };
@@ -357,7 +374,7 @@ namespace MCPForUnity.Editor.Tools.Graphics
                 data = new
                 {
                     name = go.name,
-                    instanceID = go.GetInstanceID(),
+                    instanceID = go.GetInstanceIDCompat(),
                     lightType = light.type.ToString()
                 }
             };

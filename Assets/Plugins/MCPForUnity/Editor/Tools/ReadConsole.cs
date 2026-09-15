@@ -248,10 +248,13 @@ namespace MCPForUnity.Editor.Tools
 
             try
             {
-                // LogEntries requires calling Start/Stop around GetEntries/GetEntryInternal
-                _startGettingEntriesMethod.Invoke(null, null);
-
-                int totalEntries = (int)_getCountMethod.Invoke(null, null);
+                // LogEntries requires calling Start/Stop around GetEntries/GetEntryInternal.
+                // StartGettingEntries() returns the entry count — use it instead of GetCount()
+                // which may return stale values within an active iteration session.
+                object startResult = _startGettingEntriesMethod.Invoke(null, null);
+                int totalEntries = startResult is int startCount
+                    ? startCount
+                    : (int)_getCountMethod.Invoke(null, null);
                 // Create instance to pass to GetEntryInternal - Ensure the type is correct
                 Type logEntryType = typeof(EditorApplication).Assembly.GetType(
                     "UnityEditor.LogEntry"
@@ -316,16 +319,7 @@ namespace MCPForUnity.Editor.Tools
                         continue;
                     }
 
-                    // --- Formatting ---
-                    string stackTrace = includeStacktrace ? ExtractStackTrace(message) : null;
-                    // Always get first line for the message, use full message only if no stack trace exists
-                    string[] messageLines = message.Split(
-                        new[] { '\n', '\r' },
-                        StringSplitOptions.RemoveEmptyEntries
-                    );
-                    string messageOnly = messageLines.Length > 0 ? messageLines[0] : message;
-
-                    // If not including stacktrace, ensure we only show the first line
+                    var (messageOnly, stackTrace) = SplitMessageAndStackTrace(message);
                     if (!includeStacktrace)
                     {
                         stackTrace = null;
@@ -429,25 +423,44 @@ namespace MCPForUnity.Editor.Tools
 
         // --- Internal Helpers ---
 
-        // Mapping bits from LogEntry.mode. These may vary by Unity version.
+        // Mapping bits from LogEntry.mode, mirroring UnityEditor.ConsoleWindow.Mode.
+        // These values are stable from 2021.3 through 6000.x.
         private const int ModeBitError = 1 << 0;
         private const int ModeBitAssert = 1 << 1;
-        private const int ModeBitWarning = 1 << 2;
-        private const int ModeBitLog = 1 << 3;
-        private const int ModeBitException = 1 << 4; // often combined with Error bits
-        private const int ModeBitScriptingError = 1 << 9;
-        private const int ModeBitScriptingWarning = 1 << 10;
-        private const int ModeBitScriptingLog = 1 << 11;
-        private const int ModeBitScriptingException = 1 << 18;
-        private const int ModeBitScriptingAssertion = 1 << 22;
+        private const int ModeBitLog = 1 << 2;
+        private const int ModeBitFatal = 1 << 4;
+        private const int ModeBitAssetImportError = 1 << 6;
+        private const int ModeBitAssetImportWarning = 1 << 7;
+        private const int ModeBitScriptingError = 1 << 8;
+        private const int ModeBitScriptingWarning = 1 << 9;
+        private const int ModeBitScriptingLog = 1 << 10;
+        private const int ModeBitScriptCompileError = 1 << 11;
+        private const int ModeBitScriptCompileWarning = 1 << 12;
+        private const int ModeBitStickyError = 1 << 13;
+        private const int ModeBitScriptingException = 1 << 17;
+        private const int ModeBitScriptingAssertion = 1 << 21;
+        private const int ModeBitVisualScriptingError = 1 << 22;
 
-        private static LogType GetLogTypeFromMode(int mode)
+        private const int ModeMaskError = ModeBitError
+            | ModeBitFatal
+            | ModeBitAssetImportError
+            | ModeBitScriptingError
+            | ModeBitScriptCompileError
+            | ModeBitStickyError
+            | ModeBitVisualScriptingError;
+
+        private const int ModeMaskWarning = ModeBitAssetImportWarning
+            | ModeBitScriptingWarning
+            | ModeBitScriptCompileWarning;
+
+        internal static LogType GetLogTypeFromMode(int mode)
         {
-            // Preserve Unity's real type (no remapping); bits may vary by version
-            if ((mode & (ModeBitException | ModeBitScriptingException)) != 0) return LogType.Exception;
-            if ((mode & (ModeBitError | ModeBitScriptingError)) != 0) return LogType.Error;
+            // Preserve Unity's real type (no remapping). Order matters: an exception
+            // also carries the Error bit, and an assertion also carries Assert.
+            if ((mode & ModeBitScriptingException) != 0) return LogType.Exception;
             if ((mode & (ModeBitAssert | ModeBitScriptingAssertion)) != 0) return LogType.Assert;
-            if ((mode & (ModeBitWarning | ModeBitScriptingWarning)) != 0) return LogType.Warning;
+            if ((mode & ModeMaskError) != 0) return LogType.Error;
+            if ((mode & ModeMaskWarning) != 0) return LogType.Warning;
             return LogType.Log;
         }
 
@@ -495,30 +508,35 @@ namespace MCPForUnity.Editor.Tools
         }
 
         /// <summary>
-        /// Attempts to extract the stack trace part from a log message.
-        /// Unity log messages often have the stack trace appended after the main message,
-        /// starting on a new line and typically indented or beginning with "at ".
+        /// Splits a Unity log message into its body and appended stack trace.
+        /// Unity concatenates both, separated by newlines, so the body may span
+        /// several lines before the stack trace begins.
         /// </summary>
-        /// <param name="fullMessage">The complete log message including potential stack trace.</param>
-        /// <returns>The extracted stack trace string, or null if none is found.</returns>
-        private static string ExtractStackTrace(string fullMessage)
+        /// <param name="fullMessage">The complete log message including any appended stack trace.</param>
+        /// <returns>The message body (line endings normalized to "\n", internal blank lines preserved) and the stack trace, or null when none is found.</returns>
+        private static (string body, string stackTrace) SplitMessageAndStackTrace(string fullMessage)
         {
             if (string.IsNullOrEmpty(fullMessage))
-                return null;
+                return (fullMessage, null);
 
-            // Split into lines, removing empty ones to handle different line endings gracefully.
-            // Using StringSplitOptions.None might be better if empty lines matter within stack trace, but RemoveEmptyEntries is usually safer here.
-            string[] lines = fullMessage.Split(
-                new[] { '\r', '\n' },
-                StringSplitOptions.RemoveEmptyEntries
-            );
+            string[] lines = fullMessage.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
 
             // If there's only one line or less, there's no separate stack trace.
             if (lines.Length <= 1)
-                return null;
+                return (fullMessage, null);
 
-            int stackStartIndex = -1;
+            int stackStartIndex = FindStackStartIndex(lines);
+            if (stackStartIndex <= 0)
+                return (string.Join("\n", lines), null);
 
+            return (
+                string.Join("\n", lines.Take(stackStartIndex)),
+                string.Join("\n", lines.Skip(stackStartIndex))
+            );
+        }
+
+        private static int FindStackStartIndex(string[] lines)
+        {
             // Start checking from the second line onwards.
             for (int i = 1; i < lines.Length; ++i)
             {
@@ -540,21 +558,11 @@ namespace MCPForUnity.Editor.Tools
                     )
                 )
                 {
-                    stackStartIndex = i;
-                    break; // Found the likely start of the stack trace
+                    return i; // Found the likely start of the stack trace
                 }
             }
 
-            // If a potential start index was found...
-            if (stackStartIndex > 0)
-            {
-                // Join the lines from the stack start index onwards using standard newline characters.
-                // This reconstructs the stack trace part of the message.
-                return string.Join("\n", lines.Skip(stackStartIndex));
-            }
-
-            // No clear stack trace found based on the patterns.
-            return null;
+            return -1;
         }
 
         /* LogEntry.mode bits exploration (based on Unity decompilation/observation):

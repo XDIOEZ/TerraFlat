@@ -4,6 +4,7 @@ using MCPForUnity.Editor.Services;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEditorInternal; // Required for tag management
+using UnityEngine;
 
 namespace MCPForUnity.Editor.Tools
 {
@@ -45,8 +46,6 @@ namespace MCPForUnity.Editor.Tools
             // Parameters for specific actions
             string tagName = p.Get("tagName");
             string layerName = p.Get("layerName");
-            bool waitForCompletion = p.GetBool("waitForCompletion", false);
-
             // Route action
             switch (action)
             {
@@ -141,9 +140,38 @@ namespace MCPForUnity.Editor.Tools
                 case "restore_package":
                     return RestorePackage();
 
+                // Undo/Redo
+                case "undo":
+                {
+                    string groupName = Undo.GetCurrentGroupName();
+                    Undo.PerformUndo();
+                    string message = string.IsNullOrEmpty(groupName)
+                        ? "Undo performed (stack may be empty)."
+                        : $"Undid: {groupName}";
+                    if (EditorApplication.isPlaying)
+                        message += " Warning: undo during play mode may have unexpected effects.";
+                    return new SuccessResponse(message, new
+                    {
+                        undone_group = string.IsNullOrEmpty(groupName) ? (string)null : groupName,
+                        next_group = Undo.GetCurrentGroupName()
+                    });
+                }
+                case "redo":
+                {
+                    Undo.PerformRedo();
+                    string nextGroup = Undo.GetCurrentGroupName();
+                    string message = "Redo performed.";
+                    if (EditorApplication.isPlaying)
+                        message += " Warning: redo during play mode may have unexpected effects.";
+                    return new SuccessResponse(message, new
+                    {
+                        current_group = string.IsNullOrEmpty(nextGroup) ? (string)null : nextGroup
+                    });
+                }
+
                 default:
                     return new ErrorResponse(
-                        $"Unknown action: '{action}'. Supported actions: play, pause, stop, set_active_tool, add_tag, remove_tag, add_layer, remove_layer, deploy_package, restore_package. Use MCP resources for reading editor state, project info, tags, layers, selection, windows, prefab stage, and active tool."
+                        $"Unknown action: '{action}'. Supported actions: play, pause, stop, set_active_tool, add_tag, remove_tag, add_layer, remove_layer, deploy_package, restore_package, undo, redo. For prefab editing (open/save/close prefab stage), use manage_prefabs. Use MCP resources for reading editor state, project info, tags, layers, selection, windows, prefab stage, and active tool."
                     );
             }
         }

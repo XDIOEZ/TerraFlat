@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Xml;
 using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Runtime.Helpers;
 using Newtonsoft.Json.Linq;
@@ -19,6 +20,9 @@ namespace MCPForUnity.Editor.Tools
         {
             ".uxml", ".uss"
         };
+
+        // UTF-8 without BOM — UI Builder in Unity 6 can fail to open UXML files with a BOM.
+        private static readonly Encoding Utf8NoBom = new UTF8Encoding(false);
 
         static ManageUI()
         {
@@ -167,10 +171,36 @@ namespace MCPForUnity.Editor.Tools
                 Directory.CreateDirectory(dir);
             }
 
-            File.WriteAllText(fullPath, contents, Encoding.UTF8);
+            bool isUxml = path.EndsWith(".uxml", StringComparison.OrdinalIgnoreCase);
+            var validationWarnings = new List<string>();
+
+            if (isUxml)
+            {
+                string xmlError = ValidateUxmlContent(contents, validationWarnings);
+                if (xmlError != null)
+                {
+                    return new ErrorResponse($"UXML validation failed — file was NOT written. {xmlError}");
+                }
+                contents = EnsureEditorExtensionMode(contents);
+            }
+
+            File.WriteAllText(fullPath, contents, Utf8NoBom);
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
 
-            return new SuccessResponse($"Created {Path.GetExtension(path).TrimStart('.')} file at {path}",
+            if (isUxml)
+            {
+                ValidateUxmlPostImport(path, validationWarnings);
+            }
+
+            string ext = Path.GetExtension(path).TrimStart('.');
+            if (validationWarnings.Count > 0)
+            {
+                return new SuccessResponse(
+                    $"Created {ext} file at {path} with {validationWarnings.Count} warning(s)",
+                    new { path, validationWarnings });
+            }
+
+            return new SuccessResponse($"Created {ext} file at {path}",
                 new { path });
         }
 
@@ -233,10 +263,36 @@ namespace MCPForUnity.Editor.Tools
                 return new ErrorResponse($"File not found: {path}. Use 'create' action for new files.");
             }
 
-            File.WriteAllText(fullPath, contents, Encoding.UTF8);
+            bool isUxml = path.EndsWith(".uxml", StringComparison.OrdinalIgnoreCase);
+            var validationWarnings = new List<string>();
+
+            if (isUxml)
+            {
+                string xmlError = ValidateUxmlContent(contents, validationWarnings);
+                if (xmlError != null)
+                {
+                    return new ErrorResponse($"UXML validation failed — file was NOT updated. {xmlError}");
+                }
+                contents = EnsureEditorExtensionMode(contents);
+            }
+
+            File.WriteAllText(fullPath, contents, Utf8NoBom);
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
 
-            return new SuccessResponse($"Updated {Path.GetExtension(path).TrimStart('.')} file at {path}",
+            if (isUxml)
+            {
+                ValidateUxmlPostImport(path, validationWarnings);
+            }
+
+            string ext = Path.GetExtension(path).TrimStart('.');
+            if (validationWarnings.Count > 0)
+            {
+                return new SuccessResponse(
+                    $"Updated {ext} file at {path} with {validationWarnings.Count} warning(s)",
+                    new { path, validationWarnings });
+            }
+
+            return new SuccessResponse($"Updated {ext} file at {path}",
                 new { path });
         }
 
@@ -760,39 +816,6 @@ namespace MCPForUnity.Editor.Tools
         private static bool s_pendingCaptureDone;
         private static bool s_pendingCaptureStarted;
 
-        // MonoBehaviour that captures a screenshot at end-of-frame in play mode.
-        private sealed class MCP_ScreenCapturer : MonoBehaviour
-        {
-            private System.Collections.IEnumerator Start()
-            {
-                yield return new WaitForEndOfFrame();
-
-                if (!ScreenshotUtility.IsScreenCaptureModuleAvailable)
-                {
-                    Debug.LogError("[MCP] " + ScreenshotUtility.ScreenCaptureModuleNotAvailableError);
-                    ManageUI.s_pendingCaptureTex = null;
-                    ManageUI.s_pendingCaptureDone = false;
-                    ManageUI.s_pendingCaptureStarted = false;
-                    Destroy(gameObject);
-                    yield break;
-                }
-
-                try
-                {
-                    ManageUI.s_pendingCaptureTex = ScreenCapture.CaptureScreenshotAsTexture();
-                    ManageUI.s_pendingCaptureDone = true;
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError($"[MCP] ScreenCapture failed: {ex.Message}");
-                    ManageUI.s_pendingCaptureTex = null;
-                    ManageUI.s_pendingCaptureDone = false;
-                }
-                ManageUI.s_pendingCaptureStarted = false;
-                Destroy(gameObject);
-            }
-        }
-
         private static object RenderUI(JObject @params)
         {
             var p = new ToolParams(@params);
@@ -804,10 +827,22 @@ namespace MCPForUnity.Editor.Tools
             bool includeImage = p.GetBool("include_image") || p.GetBool("includeImage");
             int maxResolution = p.GetInt("max_resolution") ?? p.GetInt("maxResolution") ?? 640;
             string fileName = p.Get("file_name") ?? p.Get("fileName");
+            string outputFolderOverride = p.Get("output_folder") ?? p.Get("outputFolder");
 
             if (string.IsNullOrEmpty(target) && string.IsNullOrEmpty(uxmlPath))
             {
                 return new ErrorResponse("Either 'target' (GameObject with UIDocument) or 'path' (UXML asset path) is required.");
+            }
+
+            string resolvedFolderSpec = ScreenshotPreferences.Resolve(outputFolderOverride);
+            string resolvedFolderAbs;
+            try
+            {
+                resolvedFolderAbs = ScreenshotUtility.ResolveFolderAbsolute(resolvedFolderSpec);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return new ErrorResponse(ex.Message);
             }
 
             // ── Play-mode capture via ScreenCapture coroutine ──────────────────────
@@ -826,11 +861,10 @@ namespace MCPForUnity.Editor.Tools
                 if (!resolvedPlayName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
                     resolvedPlayName += ".png";
 
-                string playFolder = Path.Combine(Application.dataPath, "Screenshots");
-                Directory.CreateDirectory(playFolder);
-                string playFullPath = Path.Combine(playFolder, resolvedPlayName).Replace('\\', '/');
+                Directory.CreateDirectory(resolvedFolderAbs);
+                string playFullPath = Path.Combine(resolvedFolderAbs, resolvedPlayName).Replace('\\', '/');
                 playFullPath = EnsureUniqueFilePath(playFullPath);
-                string playAssetsRelPath = "Assets/Screenshots/" + Path.GetFileName(playFullPath);
+                string playProjectRelPath = ScreenshotUtility.ToProjectRelativePath(playFullPath);
 
                 // ── Case 1: capture is ready ──────────────────────────────────────
                 if (s_pendingCaptureDone && s_pendingCaptureTex != null)
@@ -845,11 +879,12 @@ namespace MCPForUnity.Editor.Tools
                     UnityEngine.Object.DestroyImmediate(captureTex);
 
                     File.WriteAllBytes(playFullPath, capturePng);
-                    AssetDatabase.ImportAsset(playAssetsRelPath, ImportAssetOptions.ForceSynchronousImport);
+                    if (ScreenshotUtility.IsUnderAssets(playProjectRelPath))
+                        AssetDatabase.ImportAsset(playProjectRelPath, ImportAssetOptions.ForceSynchronousImport);
 
                     var playData = new Dictionary<string, object>
                     {
-                        { "path", playAssetsRelPath },
+                        { "path", playProjectRelPath },
                         { "fullPath", playFullPath },
                         { "width", captureW },
                         { "height", captureH },
@@ -888,33 +923,28 @@ namespace MCPForUnity.Editor.Tools
                         }
                     }
 
-                    return new SuccessResponse($"UI render saved to '{playAssetsRelPath}'.", playData);
+                    return new SuccessResponse($"UI render saved to '{playProjectRelPath}'.", playData);
                 }
 
                 // ── Case 2: start a new capture ───────────────────────────────────
-                // Verify the ScreenCapture module is enabled before attempting capture.
-                if (!ScreenshotUtility.IsScreenCaptureModuleAvailable)
-                {
-                    return new ErrorResponse(ScreenshotUtility.ScreenCaptureModuleNotAvailableError);
-                }
-
                 // Only one capture in flight at a time.  If one is already pending,
                 // reject rather than silently overwriting the state.
                 if (s_pendingCaptureStarted)
                 {
                     return new ErrorResponse(
-                        "A play-mode screen capture is already in progress. "
-                        + "Call render_ui again after the current capture completes.");
+                        "Cannot capture: another capture is already in progress.",
+                        new { retry_after_ms = 100, reason = "capture_in_progress" });
                 }
 
                 s_pendingCaptureDone = false;
                 s_pendingCaptureTex = null;
                 s_pendingCaptureStarted = true;
-                var captureGo = new GameObject("__MCP_ScreenCapturer__")
+                ScreenshotCapturer.Begin(1, tex =>
                 {
-                    hideFlags = HideFlags.HideAndDontSave
-                };
-                captureGo.AddComponent<MCP_ScreenCapturer>();
+                    s_pendingCaptureTex = tex;
+                    s_pendingCaptureDone = true;
+                    s_pendingCaptureStarted = false;
+                });
 
                 return new SuccessResponse(
                     "Play-mode screenshot capture queued (WaitForEndOfFrame). Call render_ui again to retrieve the rendered image.",
@@ -977,7 +1007,7 @@ namespace MCPForUnity.Editor.Tools
                     return new ErrorResponse("UIDocument has no PanelSettings assigned.");
 
                 var panelSettings = uiDoc.panelSettings;
-                int psId = panelSettings.GetInstanceID();
+                int psId = panelSettings.GetInstanceIDCompat();
 
                 // Check if we already have a persistent RT assigned to this PanelSettings.
                 // If the RT exists and its size matches, the panel has been rendering into it.
@@ -1078,20 +1108,20 @@ namespace MCPForUnity.Editor.Tools
                 if (!resolvedName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
                     resolvedName += ".png";
 
-                string folder = Path.Combine(Application.dataPath, "Screenshots");
-                Directory.CreateDirectory(folder);
-                string fullPath = Path.Combine(folder, resolvedName).Replace('\\', '/');
+                Directory.CreateDirectory(resolvedFolderAbs);
+                string fullPath = Path.Combine(resolvedFolderAbs, resolvedName).Replace('\\', '/');
                 fullPath = EnsureUniqueFilePath(fullPath);
 
                 byte[] png = tex.EncodeToPNG();
                 File.WriteAllBytes(fullPath, png);
 
-                string assetsRelPath = "Assets/Screenshots/" + Path.GetFileName(fullPath);
-                AssetDatabase.ImportAsset(assetsRelPath, ImportAssetOptions.ForceSynchronousImport);
+                string projectRelPath = ScreenshotUtility.ToProjectRelativePath(fullPath);
+                if (ScreenshotUtility.IsUnderAssets(projectRelPath))
+                    AssetDatabase.ImportAsset(projectRelPath, ImportAssetOptions.ForceSynchronousImport);
 
                 var data = new Dictionary<string, object>
                 {
-                    { "path", assetsRelPath },
+                    { "path", projectRelPath },
                     { "fullPath", fullPath },
                     { "width", width },
                     { "height", height },
@@ -1135,10 +1165,10 @@ namespace MCPForUnity.Editor.Tools
                 UnityEngine.Object.DestroyImmediate(tex);
 
                 string msg = hasContent
-                    ? $"UI rendered to '{assetsRelPath}'."
+                    ? $"UI rendered to '{projectRelPath}'."
                     : rtJustAssigned
                         ? $"RenderTexture assigned to PanelSettings. Call render_ui again to capture the rendered content."
-                        : $"UI render saved to '{assetsRelPath}' (no visible content detected).";
+                        : $"UI render saved to '{projectRelPath}' (no visible content detected).";
 
                 return new SuccessResponse(msg, data);
             }
@@ -1203,10 +1233,10 @@ namespace MCPForUnity.Editor.Tools
             if (insertIdx < 0)
                 return new ErrorResponse("Could not find insertion point. Ensure UXML has a root <ui:UXML> or <UXML> element.");
 
-            string styleTag = $"\n    <Style src=\"project://database/{stylesheetPath}\" />";
+            string styleTag = $"\n    <ui:Style src=\"project://database/{stylesheetPath}\" />";
             content = content.Insert(insertIdx, styleTag);
 
-            File.WriteAllText(fullPath, content, Encoding.UTF8);
+            File.WriteAllText(fullPath, content, Utf8NoBom);
             AssetDatabase.ImportAsset(uxmlPath, ImportAssetOptions.ForceUpdate);
 
             return new SuccessResponse($"Linked stylesheet '{stylesheetPath}' to '{uxmlPath}'.",
@@ -1783,6 +1813,100 @@ namespace MCPForUnity.Editor.Tools
             }
 
             return p.Get("contents");
+        }
+
+        /// <summary>
+        /// Validates UXML content before writing to disk.
+        /// Returns null if valid, or an error message if malformed.
+        /// Populates warnings list with non-fatal issues.
+        /// Uses XmlParserContext to pre-declare common UXML namespace prefixes
+        /// (ui, uie, engine, editor) since Unity's parser is more lenient than System.Xml.
+        /// </summary>
+
+        /// <summary>
+        /// Ensures the root UXML element has editor-extension-mode attribute.
+        /// UI Builder requires this to open the file. Injects "False" if missing.
+        /// </summary>
+        private static string EnsureEditorExtensionMode(string contents)
+        {
+            if (contents.Contains("editor-extension-mode"))
+                return contents;
+
+            int idx = contents.IndexOf("<ui:UXML", StringComparison.Ordinal);
+            if (idx < 0)
+                idx = contents.IndexOf("<UXML", StringComparison.Ordinal);
+            if (idx < 0)
+                return contents;
+
+            int closeTag = contents.IndexOf('>', idx);
+            if (closeTag < 0)
+                return contents;
+
+            bool selfClosing = contents[closeTag - 1] == '/';
+            int insertPos = selfClosing ? closeTag - 1 : closeTag;
+
+            return contents.Substring(0, insertPos)
+                 + " editor-extension-mode=\"False\""
+                 + contents.Substring(insertPos);
+        }
+
+        private static string ValidateUxmlContent(string contents, List<string> warnings)
+        {
+            if (string.IsNullOrWhiteSpace(contents))
+                return "UXML content is empty.";
+
+            var nt = new NameTable();
+            var nsMgr = new XmlNamespaceManager(nt);
+            nsMgr.AddNamespace("ui", "UnityEngine.UIElements");
+            nsMgr.AddNamespace("uie", "UnityEditor.UIElements");
+            nsMgr.AddNamespace("engine", "UnityEngine.UIElements");
+            nsMgr.AddNamespace("editor", "UnityEditor.UIElements");
+            var ctx = new XmlParserContext(nt, nsMgr, null, XmlSpace.Default);
+
+            string rootLocalName = null;
+            try
+            {
+                using (var reader = XmlReader.Create(new StringReader(contents), null, ctx))
+                {
+                    while (reader.Read())
+                    {
+                        if (reader.NodeType == XmlNodeType.Element && rootLocalName == null)
+                            rootLocalName = reader.LocalName;
+                    }
+                }
+            }
+            catch (XmlException ex)
+            {
+                return $"Malformed XML at line {ex.LineNumber}, position {ex.LinePosition}: {ex.Message}";
+            }
+
+            if (rootLocalName == null)
+                return "UXML content has no root element.";
+
+            if (rootLocalName != "UXML")
+                warnings.Add($"Root element is <{rootLocalName}>, expected <UXML> or <ui:UXML>.");
+
+            if (!contents.Contains("UnityEngine.UIElements"))
+            {
+                warnings.Add("Missing namespace declaration xmlns:ui=\"UnityEngine.UIElements\". " +
+                              "UI Builder may fail to open this file.");
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Validates a UXML asset after import by attempting to load it as a VisualTreeAsset.
+        /// </summary>
+        private static void ValidateUxmlPostImport(string assetPath, List<string> warnings)
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(assetPath);
+            if (asset == null)
+            {
+                warnings.Add("Unity failed to parse the UXML file. " +
+                              "The file was written but UI Builder will not be able to open it. " +
+                              "Check the console for details.");
+            }
         }
     }
 }

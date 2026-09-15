@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using MCPForUnity.Editor.Helpers;
+using MCPForUnity.Runtime.Helpers;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -109,11 +110,7 @@ namespace MCPForUnity.Editor.Tools.Graphics
             string target = p.Get("target");
             if (string.IsNullOrEmpty(target))
             {
-#if UNITY_2022_2_OR_NEWER
-                var allVolumes = UnityEngine.Object.FindObjectsByType(VolumeType, FindObjectsSortMode.None);
-#else
-                var allVolumes = UnityEngine.Object.FindObjectsOfType(VolumeType);
-#endif
+                var allVolumes = UnityFindObjectsCompat.FindAll(VolumeType);
                 return allVolumes.Length > 0 ? allVolumes[0] as Component : null;
             }
 
@@ -146,7 +143,7 @@ namespace MCPForUnity.Editor.Tools.Graphics
             return prop.propertyType switch
             {
                 SerializedPropertyType.Boolean => prop.boolValue,
-                SerializedPropertyType.Integer => prop.intValue,
+                SerializedPropertyType.Integer => prop.type == "long" ? prop.longValue : (object)prop.intValue,
                 SerializedPropertyType.Float => prop.floatValue,
                 SerializedPropertyType.String => prop.stringValue,
                 SerializedPropertyType.Enum => prop.enumValueIndex < prop.enumNames.Length
@@ -177,7 +174,10 @@ namespace MCPForUnity.Editor.Tools.Graphics
                         prop.boolValue = ParamCoercion.CoerceBool(value, false);
                         return true;
                     case SerializedPropertyType.Integer:
-                        prop.intValue = ParamCoercion.CoerceInt(value, 0);
+                        if (prop.type == "long")
+                            prop.longValue = ParamCoercion.CoerceLong(value, 0);
+                        else
+                            prop.intValue = ParamCoercion.CoerceInt(value, 0);
                         return true;
                     case SerializedPropertyType.Float:
                         prop.floatValue = ParamCoercion.CoerceFloat(value, 0f);

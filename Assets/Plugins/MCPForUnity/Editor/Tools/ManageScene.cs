@@ -29,10 +29,12 @@ namespace MCPForUnity.Editor.Tools
 
             // screenshot: camera selection, inline image, batch, view positioning
             public string camera { get; set; }
+            public string captureSource { get; set; }   // "game_view" (default) or "scene_view"
             public bool? includeImage { get; set; }
             public int? maxResolution { get; set; }
+            public string outputFolder { get; set; }    // optional override; null falls back to user pref / Assets/Screenshots
             public string batch { get; set; }           // "surround" or "orbit" for multi-angle batch capture
-            public JToken lookAt { get; set; }          // GO reference or [x,y,z] to aim at before capture
+            public JToken viewTarget { get; set; }       // GO reference or [x,y,z] to focus on before capture
             public Vector3? viewPosition { get; set; }  // camera position for view-based capture
             public Vector3? viewRotation { get; set; }  // euler rotation for view-based capture
 
@@ -53,6 +55,15 @@ namespace MCPForUnity.Editor.Tools
             public int? maxDepth { get; set; }
             public int? maxChildrenPerNode { get; set; }
             public bool? includeTransform { get; set; }
+
+            // Multi-scene editing
+            public string sceneName { get; set; }
+            public string scenePath { get; set; }
+            public string target { get; set; }           // GO reference for move_to_scene
+            public bool? removeScene { get; set; }       // for close_scene
+            public bool? additive { get; set; }          // for load additive mode
+            public string template { get; set; }         // for create with template
+            public bool? autoRepair { get; set; }        // for validate with auto-repair
         }
 
         private static float[] ParseFloatArray(JToken token)
@@ -84,6 +95,7 @@ namespace MCPForUnity.Editor.Tools
         private static SceneCommand ToSceneCommand(JObject p)
         {
             if (p == null) return new SceneCommand();
+            var toolParams = new ToolParams(p);
             return new SceneCommand
             {
                 action = (p["action"]?.ToString() ?? string.Empty).Trim().ToLowerInvariant(),
@@ -95,10 +107,12 @@ namespace MCPForUnity.Editor.Tools
 
                 // screenshot: camera selection, inline image, batch, view positioning
                 camera = (p["camera"])?.ToString(),
+                captureSource = toolParams.Get("capture_source"),
                 includeImage = ParamCoercion.CoerceBoolNullable(p["includeImage"] ?? p["include_image"]),
                 maxResolution = ParamCoercion.CoerceIntNullable(p["maxResolution"] ?? p["max_resolution"]),
+                outputFolder = (p["outputFolder"] ?? p["output_folder"])?.ToString(),
                 batch = (p["batch"])?.ToString(),
-                lookAt = p["lookAt"] ?? p["look_at"],
+                viewTarget = p["viewTarget"] ?? p["view_target"],
                 viewPosition = VectorParsing.ParseVector3(p["viewPosition"] ?? p["view_position"]),
                 viewRotation = VectorParsing.ParseVector3(p["viewRotation"] ?? p["view_rotation"]),
 
@@ -109,7 +123,7 @@ namespace MCPForUnity.Editor.Tools
                 orbitFov = ParamCoercion.CoerceFloatNullable(p["orbitFov"] ?? p["orbit_fov"]),
 
                 // scene_view_frame
-                sceneViewTarget = p["sceneViewTarget"] ?? p["scene_view_target"],
+                sceneViewTarget = toolParams.GetRaw("scene_view_target"),
 
                 // get_hierarchy paging + safety
                 parent = p["parent"],
@@ -119,7 +133,29 @@ namespace MCPForUnity.Editor.Tools
                 maxDepth = ParamCoercion.CoerceIntNullable(p["maxDepth"] ?? p["max_depth"]),
                 maxChildrenPerNode = ParamCoercion.CoerceIntNullable(p["maxChildrenPerNode"] ?? p["max_children_per_node"]),
                 includeTransform = ParamCoercion.CoerceBoolNullable(p["includeTransform"] ?? p["include_transform"]),
+
+                // Multi-scene editing
+                sceneName = (p["sceneName"] ?? p["scene_name"])?.ToString(),
+                scenePath = (p["scenePath"] ?? p["scene_path"])?.ToString(),
+                target = (p["target"])?.ToString(),
+                removeScene = ParamCoercion.CoerceBoolNullable(p["removeScene"] ?? p["remove_scene"]),
+                additive = ParamCoercion.CoerceBoolNullable(p["additive"]),
+                template = (p["template"])?.ToString()?.ToLowerInvariant(),
+                autoRepair = ParamCoercion.CoerceBoolNullable(p["autoRepair"] ?? p["auto_repair"]),
             };
+        }
+
+        private static Scene? FindLoadedScene(string sceneName, string scenePath)
+        {
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                var scene = SceneManager.GetSceneAt(i);
+                if (!string.IsNullOrEmpty(scenePath) && scene.path == scenePath)
+                    return scene;
+                if (!string.IsNullOrEmpty(sceneName) && scene.name == sceneName)
+                    return scene;
+            }
+            return null;
         }
 
         /// <summary>
@@ -135,7 +171,9 @@ namespace MCPForUnity.Editor.Tools
             int? buildIndex = cmd.buildIndex;
             // bool loadAdditive = @params["loadAdditive"]?.ToObject<bool>() ?? false; // Example for future extension
 
-            // Ensure path is relative to Assets/, removing any leading "Assets/"
+            // Paths are relative to a project root folder — "Assets" by default, or "Packages"
+            // when the caller addresses a scene shipped inside a package (see issue #1197).
+            string rootFolder = "Assets";
             string relativeDir = path ?? string.Empty;
             if (!string.IsNullOrEmpty(relativeDir))
             {
@@ -143,6 +181,19 @@ namespace MCPForUnity.Editor.Tools
                 if (relativeDir.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
                 {
                     relativeDir = relativeDir.Substring("Assets/".Length).TrimStart('/');
+                }
+                else if (relativeDir.StartsWith("Packages/", StringComparison.OrdinalIgnoreCase))
+                {
+                    rootFolder = "Packages";
+                    relativeDir = relativeDir.Substring("Packages/".Length).TrimStart('/');
+                }
+                // If path ends with .unity, it's a full scene path — extract just the directory
+                if (relativeDir.EndsWith(".unity", StringComparison.OrdinalIgnoreCase))
+                {
+                    string dirPart = Path.GetDirectoryName(relativeDir);
+                    relativeDir = string.IsNullOrEmpty(dirPart)
+                        ? string.Empty
+                        : AssetPathUtility.NormalizeSeparators(dirPart);
                 }
             }
 
@@ -158,15 +209,17 @@ namespace MCPForUnity.Editor.Tools
             }
 
             string sceneFileName = string.IsNullOrEmpty(name) ? null : $"{name}.unity";
-            // Construct full system path correctly: ProjectRoot/Assets/relativeDir/sceneFileName
-            string fullPathDir = Path.Combine(Application.dataPath, relativeDir); // Combine with Assets path (Application.dataPath ends in Assets)
+            // Construct full system path correctly: ProjectRoot/<rootFolder>/relativeDir/sceneFileName
+            string fullPathDir = rootFolder == "Assets"
+                ? Path.Combine(Application.dataPath, relativeDir) // Application.dataPath ends in Assets
+                : Path.Combine(GetProjectRoot(), rootFolder, relativeDir);
             string fullPath = string.IsNullOrEmpty(sceneFileName)
                 ? null
                 : Path.Combine(fullPathDir, sceneFileName);
-            // Ensure relativePath always starts with "Assets/" and uses forward slashes
+            // Ensure relativePath is project-rooted ("Assets/..." or "Packages/...") with forward slashes
             string relativePath = string.IsNullOrEmpty(sceneFileName)
                 ? null
-                : AssetPathUtility.NormalizeSeparators(Path.Combine("Assets", relativeDir, sceneFileName));
+                : AssetPathUtility.NormalizeSeparators(Path.Combine(rootFolder, relativeDir, sceneFileName));
 
             // Ensure directory exists for 'create'
             if (action == "create" && !string.IsNullOrEmpty(fullPathDir))
@@ -188,15 +241,26 @@ namespace MCPForUnity.Editor.Tools
             switch (action)
             {
                 case "create":
-                    if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(relativePath))
+                    if (string.IsNullOrEmpty(name))
                         return new ErrorResponse(
-                            "'name' and 'path' parameters are required for 'create' action."
+                            "'name' parameter is required for 'create' action. 'path' is optional (defaults to 'Assets/Scenes/')."
                         );
+                    if (!string.IsNullOrEmpty(cmd.template))
+                        return CreateSceneFromTemplate(fullPath, relativePath, cmd.template);
                     return CreateScene(fullPath, relativePath);
                 case "load":
                     // Loading can be done by path/name or build index
-                    if (!string.IsNullOrEmpty(relativePath))
-                        return LoadScene(relativePath);
+                    // When path ends with .unity and no name is given, use path directly as the scene path
+                    string loadPath = relativePath;
+                    if (string.IsNullOrEmpty(loadPath) && !string.IsNullOrEmpty(path))
+                        loadPath = AssetPathUtility.NormalizeSeparators(
+                            IsProjectRooted(path) ? path : "Assets/" + path);
+                    if (!string.IsNullOrEmpty(loadPath))
+                    {
+                        if (cmd.additive == true)
+                            return LoadSceneAdditive(loadPath);
+                        return LoadScene(loadPath);
+                    }
                     else if (buildIndex.HasValue)
                         return LoadScene(buildIndex.Value);
                     else
@@ -222,9 +286,28 @@ namespace MCPForUnity.Editor.Tools
                     return CaptureScreenshot(cmd);
                 case "scene_view_frame":
                     return FrameSceneView(cmd);
+
+                // Multi-scene editing
+                case "close_scene":
+                    return CloseScene(cmd);
+                case "set_active_scene":
+                    return SetActiveScene(cmd);
+                case "get_loaded_scenes":
+                    return GetLoadedScenes();
+                case "move_to_scene":
+                    return MoveToScene(cmd);
+                case "modify_build_settings":
+                    return new ErrorResponse(
+                        "Build settings management has moved to manage_build (action='scenes'). "
+                        + "Use manage_build to add, remove, or configure scenes in build settings.");
+
+                // Scene validation
+                case "validate":
+                    return ValidateScene(cmd.autoRepair == true);
+
                 default:
                     return new ErrorResponse(
-                        $"Unknown action: '{action}'. Valid actions: create, load, save, get_hierarchy, get_active, get_build_settings, screenshot, scene_view_frame."
+                        $"Unknown action: '{action}'. Valid actions: create, load, save, get_hierarchy, get_active, get_build_settings, screenshot, scene_view_frame, close_scene, set_active_scene, get_loaded_scenes, move_to_scene, validate. For build settings, use manage_build."
                     );
             }
         }
@@ -244,6 +327,16 @@ namespace MCPForUnity.Editor.Tools
         /// Captures a 6-angle contact-sheet around the scene bounds centre.
         /// Public so the tools UI can reuse the same logic.
         /// </summary>
+        /// <summary>
+        /// Captures the active Scene View viewport to a PNG asset.
+        /// Public so the tools UI can reuse the same logic.
+        /// </summary>
+        public static object ExecuteSceneViewScreenshot(string fileName = null)
+        {
+            var cmd = new SceneCommand { fileName = fileName ?? string.Empty };
+            return CaptureSceneViewScreenshot(cmd, cmd.fileName, 1, false, 0);
+        }
+
         public static object ExecuteMultiviewScreenshot(int maxResolution = 480)
         {
             var cmd = new SceneCommand { maxResolution = maxResolution };
@@ -290,17 +383,7 @@ namespace MCPForUnity.Editor.Tools
 
         private static object LoadScene(string relativePath)
         {
-            if (
-                !File.Exists(
-                    Path.Combine(
-                        Application.dataPath.Substring(
-                            0,
-                            Application.dataPath.Length - "Assets".Length
-                        ),
-                        relativePath
-                    )
-                )
-            )
+            if (!SceneAssetExists(relativePath))
             {
                 return new ErrorResponse($"Scene file not found at '{relativePath}'.");
             }
@@ -433,6 +516,46 @@ namespace MCPForUnity.Editor.Tools
         {
             try
             {
+                string fileName = cmd.fileName;
+                int resolvedSuperSize = (cmd.superSize.HasValue && cmd.superSize.Value > 0) ? cmd.superSize.Value : 1;
+                bool includeImage = cmd.includeImage ?? false;
+                int maxResolution = cmd.maxResolution ?? 0; // 0 = let ScreenshotUtility default to 640
+                string cameraRef = cmd.camera;
+                string captureSource = string.IsNullOrWhiteSpace(cmd.captureSource)
+                    ? "game_view"
+                    : cmd.captureSource.Trim().ToLowerInvariant();
+
+                if (captureSource != "game_view" && captureSource != "scene_view")
+                {
+                    return new ErrorResponse(
+                        $"Invalid capture_source '{cmd.captureSource}'. Valid values: 'game_view', 'scene_view'.");
+                }
+
+                if (captureSource == "scene_view")
+                {
+                    if (resolvedSuperSize > 1)
+                    {
+                        return new ErrorResponse(
+                            "capture_source='scene_view' does not support super_size above 1. Remove 'super_size' or use capture_source='game_view'.");
+                    }
+                    if (!string.IsNullOrEmpty(cmd.batch))
+                    {
+                        return new ErrorResponse(
+                            "capture_source='scene_view' does not support batch modes. Use capture_source='game_view' for batch capture.");
+                    }
+                    if (cmd.viewPosition.HasValue || cmd.viewRotation.HasValue)
+                    {
+                        return new ErrorResponse(
+                            "capture_source='scene_view' does not support view_position/view_rotation. Use view_target to frame a Scene View object.");
+                    }
+                    if (!string.IsNullOrEmpty(cameraRef))
+                    {
+                        return new ErrorResponse(
+                            "capture_source='scene_view' does not support camera selection. Remove 'camera' or use capture_source='game_view'.");
+                    }
+                    return CaptureSceneViewScreenshot(cmd, fileName, resolvedSuperSize, includeImage, maxResolution);
+                }
+
                 // Batch capture (e.g., "surround" for 6 angles around the scene)
                 if (!string.IsNullOrEmpty(cmd.batch))
                 {
@@ -443,17 +566,11 @@ namespace MCPForUnity.Editor.Tools
                     return new ErrorResponse($"Unknown batch mode: '{cmd.batch}'. Valid modes: 'surround', 'orbit'.");
                 }
 
-                // Positioned view-based capture (creates temp camera at view_position, aimed at look_at)
-                if ((cmd.lookAt != null && cmd.lookAt.Type != JTokenType.Null) || cmd.viewPosition.HasValue)
+                // Positioned view-based capture (creates temp camera at view_position, aimed at view_target)
+                if ((cmd.viewTarget != null && cmd.viewTarget.Type != JTokenType.Null) || cmd.viewPosition.HasValue)
                 {
                     return CapturePositionedScreenshot(cmd);
                 }
-
-                string fileName = cmd.fileName;
-                int resolvedSuperSize = (cmd.superSize.HasValue && cmd.superSize.Value > 0) ? cmd.superSize.Value : 1;
-                bool includeImage = cmd.includeImage ?? false;
-                int maxResolution = cmd.maxResolution ?? 0; // 0 = let ScreenshotUtility default to 640
-                string cameraRef = cmd.camera;
 
                 // Batch mode warning
                 if (Application.isBatchMode)
@@ -472,44 +589,83 @@ namespace MCPForUnity.Editor.Tools
                     }
                 }
 
-                // When a specific camera is requested or include_image is true, always use camera-based capture
-                // (synchronous, gives us bytes in memory for base64).
-                if (targetCamera != null || includeImage)
+                // When include_image is requested but no specific camera, use composited capture
+                // (ScreenCapture.CaptureScreenshotAsTexture) which captures UI Toolkit overlays.
+                // When a specific camera IS requested, use camera-based capture.
+                if (targetCamera != null)
                 {
+                    if (!Application.isBatchMode) EnsureGameView();
+
+                    string folderOverride = ScreenshotPreferences.Resolve(cmd.outputFolder);
+                    ScreenshotCaptureResult result = ScreenshotUtility.CaptureFromCameraToProjectFolder(
+                        targetCamera, fileName, resolvedSuperSize, ensureUniqueFileName: true,
+                        includeImage: includeImage, maxResolution: maxResolution,
+                        folderOverride: folderOverride);
+
+                    if (ScreenshotUtility.IsUnderAssets(result.ProjectRelativePath))
+                        AssetDatabase.ImportAsset(result.ProjectRelativePath, ImportAssetOptions.ForceSynchronousImport);
+                    string message = $"Screenshot captured to '{result.ProjectRelativePath}' (camera: {targetCamera.name}).";
+                    return new SuccessResponse(message, BuildScreenshotResponseData(result, targetCamera.name, includeImage));
+                }
+
+                if (includeImage && Application.isPlaying)
+                {
+                    if (!Application.isBatchMode) EnsureGameView();
+
+                    string folderOverride = ScreenshotPreferences.Resolve(cmd.outputFolder);
+                    ScreenshotCaptureResult result = ScreenshotUtility.CaptureComposited(
+                        fileName, resolvedSuperSize, ensureUniqueFileName: true,
+                        includeImage: true, maxResolution: maxResolution,
+                        folderOverride: folderOverride);
+
+                    if (ScreenshotUtility.IsUnderAssets(result.ProjectRelativePath))
+                        AssetDatabase.ImportAsset(result.ProjectRelativePath, ImportAssetOptions.ForceSynchronousImport);
+                    string cameraName = Camera.main != null ? Camera.main.name : "composited";
+                    string message = $"Screenshot captured to '{result.ProjectRelativePath}' (camera: {cameraName}).";
+                    return new SuccessResponse(message, BuildScreenshotResponseData(result, cameraName, includeImage: true));
+                }
+
+                if (includeImage)
+                {
+                    // Not in play mode — fall back to camera-based capture
+                    targetCamera = Camera.main;
                     if (targetCamera == null)
                     {
-                        targetCamera = Camera.main;
-                        if (targetCamera == null)
-                        {
-#if UNITY_2022_2_OR_NEWER
-                            var allCams = UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsSortMode.None);
-#else
-                            var allCams = UnityEngine.Object.FindObjectsOfType<Camera>();
-#endif
-                            targetCamera = allCams.Length > 0 ? allCams[0] : null;
-                        }
+                        var allCams = UnityFindObjectsCompat.FindAll<Camera>();
+                        targetCamera = allCams.Length > 0 ? allCams[0] : null;
                     }
                     if (targetCamera == null)
                     {
-                        return new ErrorResponse("No camera found in the scene. Add a Camera to use screenshot with camera or include_image.");
+                        return new ErrorResponse("No camera found in the scene. Add a Camera to use screenshot with include_image outside of Play mode.");
                     }
 
                     if (!Application.isBatchMode) EnsureGameView();
 
-                    ScreenshotCaptureResult result = ScreenshotUtility.CaptureFromCameraToAssetsFolder(
-                        targetCamera, fileName, resolvedSuperSize, ensureUniqueFileName: true,
-                        includeImage: includeImage, maxResolution: maxResolution);
-
-                    AssetDatabase.ImportAsset(result.AssetsRelativePath, ImportAssetOptions.ForceSynchronousImport);
-                    string message = $"Screenshot captured to '{result.AssetsRelativePath}' (camera: {targetCamera.name}).";
+                    string folderOverride = ScreenshotPreferences.Resolve(cmd.outputFolder);
+                    ScreenshotCaptureResult result;
+                    try
+                    {
+                        result = ScreenshotUtility.CaptureFromCameraToProjectFolder(
+                            targetCamera, fileName, resolvedSuperSize, ensureUniqueFileName: true,
+                            includeImage: includeImage, maxResolution: maxResolution,
+                            folderOverride: folderOverride);
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        return new ErrorResponse(ex.Message);
+                    }
+                    if (ScreenshotUtility.IsUnderAssets(result.ProjectRelativePath))
+                        AssetDatabase.ImportAsset(result.ProjectRelativePath, ImportAssetOptions.ForceSynchronousImport);
+                    string message = $"Screenshot captured to '{result.ProjectRelativePath}' (camera: {targetCamera.name}).";
 
                     var data = new Dictionary<string, object>
                     {
-                        { "path", result.AssetsRelativePath },
+                        { "path", result.ProjectRelativePath },
                         { "fullPath", result.FullPath },
                         { "superSize", result.SuperSize },
                         { "isAsync", false },
                         { "camera", targetCamera.name },
+                        { "captureSource", "game_view" },
                     };
                     if (includeImage && result.ImageBase64 != null)
                     {
@@ -517,31 +673,12 @@ namespace MCPForUnity.Editor.Tools
                         data["imageWidth"] = result.ImageWidth;
                         data["imageHeight"] = result.ImageHeight;
                     }
-                    return new SuccessResponse(message, data);
+                    return new SuccessResponse(message, BuildScreenshotResponseData(result, targetCamera.name, includeImage));
                 }
 
-                // Default path: use ScreenCapture API if available, camera fallback otherwise
-                bool screenCaptureAvailable = ScreenshotUtility.IsScreenCaptureModuleAvailable;
-#if UNITY_2022_2_OR_NEWER
-                bool hasCameraFallback = Camera.main != null || UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsSortMode.None).Length > 0;
-#else
-                bool hasCameraFallback = Camera.main != null || UnityEngine.Object.FindObjectsOfType<Camera>().Length > 0;
-#endif
-
-#if UNITY_2022_1_OR_NEWER
-                if (!screenCaptureAvailable && !hasCameraFallback)
-                {
-                    return new ErrorResponse(
-                        "Cannot capture screenshot. The Screen Capture module is not enabled and no Camera was found in the scene. " +
-                        "Please either: (1) Enable the Screen Capture module: Window > Package Manager > Built-in > Screen Capture > Enable, " +
-                        "or (2) Add a Camera to your scene for camera-based fallback capture."
-                    );
-                }
-                if (!screenCaptureAvailable)
-                {
-                    McpLog.Warn("[ManageScene] Screen Capture module not enabled. Using camera-based fallback.");
-                }
-#else
+                // Default path: ScreenCapture API for 2022.1+, camera fallback required on older versions.
+#if !UNITY_2022_1_OR_NEWER
+                bool hasCameraFallback = Camera.main != null || UnityFindObjectsCompat.FindAll<Camera>().Length > 0;
                 if (!hasCameraFallback)
                 {
                     return new ErrorResponse(
@@ -552,22 +689,37 @@ namespace MCPForUnity.Editor.Tools
 
                 if (!Application.isBatchMode) EnsureGameView();
 
-                ScreenshotCaptureResult defaultResult = ScreenshotUtility.CaptureToAssetsFolder(fileName, resolvedSuperSize, ensureUniqueFileName: true);
+                string defaultFolderOverride = ScreenshotPreferences.Resolve(cmd.outputFolder);
+                ScreenshotCaptureResult defaultResult;
+                try
+                {
+                    defaultResult = ScreenshotUtility.CaptureToProjectFolder(
+                        fileName, resolvedSuperSize, ensureUniqueFileName: true,
+                        folderOverride: defaultFolderOverride);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return new ErrorResponse(ex.Message);
+                }
 
-                if (defaultResult.IsAsync)
-                    ScheduleAssetImportWhenFileExists(defaultResult.AssetsRelativePath, defaultResult.FullPath, timeoutSeconds: 30.0);
-                else
-                    AssetDatabase.ImportAsset(defaultResult.AssetsRelativePath, ImportAssetOptions.ForceSynchronousImport);
+                if (ScreenshotUtility.IsUnderAssets(defaultResult.ProjectRelativePath))
+                {
+                    if (defaultResult.IsAsync)
+                        ScheduleAssetImportWhenFileExists(defaultResult.ProjectRelativePath, defaultResult.FullPath, timeoutSeconds: 30.0);
+                    else
+                        AssetDatabase.ImportAsset(defaultResult.ProjectRelativePath, ImportAssetOptions.ForceSynchronousImport);
+                }
 
                 string verb = defaultResult.IsAsync ? "Screenshot requested" : "Screenshot captured";
                 return new SuccessResponse(
-                    $"{verb} to '{defaultResult.AssetsRelativePath}'.",
+                    $"{verb} to '{defaultResult.ProjectRelativePath}'.",
                     new
                     {
-                        path = defaultResult.AssetsRelativePath,
+                        path = defaultResult.ProjectRelativePath,
                         fullPath = defaultResult.FullPath,
                         superSize = defaultResult.SuperSize,
                         isAsync = defaultResult.IsAsync,
+                        captureSource = "game_view",
                     }
                 );
             }
@@ -577,8 +729,125 @@ namespace MCPForUnity.Editor.Tools
             }
         }
 
+        private static Dictionary<string, object> BuildScreenshotResponseData(
+            ScreenshotCaptureResult result,
+            string cameraName,
+            bool includeImage)
+        {
+            var data = new Dictionary<string, object>
+            {
+                { "path", result.ProjectRelativePath },
+                { "fullPath", result.FullPath },
+                { "superSize", result.SuperSize },
+                { "isAsync", false },
+                { "camera", cameraName },
+                { "captureSource", "game_view" },
+            };
+
+            if (includeImage && result.ImageBase64 != null)
+            {
+                data["imageBase64"] = result.ImageBase64;
+                data["imageWidth"] = result.ImageWidth;
+                data["imageHeight"] = result.ImageHeight;
+            }
+
+            return data;
+        }
+
+        private static object CaptureSceneViewScreenshot(
+            SceneCommand cmd,
+            string fileName,
+            int resolvedSuperSize,
+            bool includeImage,
+            int maxResolution)
+        {
+            if (Application.isBatchMode)
+            {
+                return new ErrorResponse("capture_source='scene_view' is not supported in batch mode.");
+            }
+
+            var sceneView = SceneView.lastActiveSceneView;
+            if (sceneView == null)
+            {
+                return new ErrorResponse(
+                    "No active Scene View found. Open a Scene View window first, then retry screenshot with capture_source='scene_view'.");
+            }
+
+            if (cmd.viewTarget != null && cmd.viewTarget.Type != JTokenType.Null)
+            {
+                var frameResult = FrameSceneView(new SceneCommand { sceneViewTarget = cmd.viewTarget });
+                if (frameResult is ErrorResponse)
+                {
+                    return frameResult;
+                }
+            }
+
+            try
+            {
+                string sceneViewFolderOverride = ScreenshotPreferences.Resolve(cmd.outputFolder);
+                ScreenshotCaptureResult result;
+                int viewportWidth;
+                int viewportHeight;
+                try
+                {
+                    result = EditorWindowScreenshotUtility.CaptureSceneViewViewportToProject(
+                        sceneView,
+                        fileName,
+                        resolvedSuperSize,
+                        ensureUniqueFileName: true,
+                        includeImage: includeImage,
+                        maxResolution: maxResolution,
+                        out viewportWidth,
+                        out viewportHeight,
+                        folderOverride: sceneViewFolderOverride);
+                }
+                catch (InvalidOperationException ex) when (ex.Message.StartsWith("Screenshot folder", StringComparison.Ordinal))
+                {
+                    return new ErrorResponse(ex.Message);
+                }
+
+                if (ScreenshotUtility.IsUnderAssets(result.ProjectRelativePath))
+                    AssetDatabase.ImportAsset(result.ProjectRelativePath, ImportAssetOptions.ForceSynchronousImport);
+                string sceneViewName = sceneView.titleContent?.text ?? "Scene";
+
+                var data = new Dictionary<string, object>
+                {
+                    { "path", result.ProjectRelativePath },
+                    { "fullPath", result.FullPath },
+                    { "superSize", result.SuperSize },
+                    { "isAsync", false },
+                    { "camera", sceneView.camera != null ? sceneView.camera.name : "SceneCamera" },
+                    { "captureSource", "scene_view" },
+                    { "captureMode", "scene_view_viewport" },
+                    { "sceneViewName", sceneViewName },
+                    { "viewportWidth", viewportWidth },
+                    { "viewportHeight", viewportHeight },
+                };
+
+                if (cmd.viewTarget != null && cmd.viewTarget.Type != JTokenType.Null)
+                {
+                    data["viewTarget"] = cmd.viewTarget;
+                }
+
+                if (includeImage && result.ImageBase64 != null)
+                {
+                    data["imageBase64"] = result.ImageBase64;
+                    data["imageWidth"] = result.ImageWidth;
+                    data["imageHeight"] = result.ImageHeight;
+                }
+
+                return new SuccessResponse(
+                    $"Scene View screenshot captured to '{result.ProjectRelativePath}' (scene view: {sceneViewName}).",
+                    data);
+            }
+            catch (Exception e)
+            {
+                return new ErrorResponse($"Error capturing Scene View screenshot: {e.Message}");
+            }
+        }
+
         /// <summary>
-        /// Captures screenshots from 6 angles around scene bounds (or a look_at target) for AI scene understanding.
+        /// Captures screenshots from 6 angles around scene bounds (or a view_target) for AI scene understanding.
         /// Does NOT save to disk — returns all images as inline base64 PNGs. Always uses camera-based capture.
         /// </summary>
         private static object CaptureSurroundBatch(SceneCommand cmd)
@@ -590,24 +859,24 @@ namespace MCPForUnity.Editor.Tools
                 Vector3 center;
                 float radius;
 
-                // If look_at is provided, center on that target instead of scene bounds
-                if (cmd.lookAt != null && cmd.lookAt.Type != JTokenType.Null)
+                // If view_target is provided, center on that target instead of scene bounds
+                if (cmd.viewTarget != null && cmd.viewTarget.Type != JTokenType.Null)
                 {
-                    var lookAtPos = VectorParsing.ParseVector3(cmd.lookAt);
-                    if (lookAtPos.HasValue)
+                    var targetPos3 = VectorParsing.ParseVector3(cmd.viewTarget);
+                    if (targetPos3.HasValue)
                     {
-                        center = lookAtPos.Value;
+                        center = targetPos3.Value;
                         radius = 5f;
                     }
                     else
                     {
-                        Scene lookAtScene = EditorSceneManager.GetActiveScene();
-                        var lookAtGo = ResolveGameObject(cmd.lookAt, lookAtScene);
-                        if (lookAtGo == null)
-                            return new ErrorResponse($"look_at target '{cmd.lookAt}' not found for batch capture.");
+                        Scene targetScene = EditorSceneManager.GetActiveScene();
+                        var targetGo = ResolveGameObject(cmd.viewTarget, targetScene);
+                        if (targetGo == null)
+                            return new ErrorResponse($"view_target '{cmd.viewTarget}' not found for batch capture.");
 
-                        Bounds targetBounds = new Bounds(lookAtGo.transform.position, Vector3.zero);
-                        foreach (var r in lookAtGo.GetComponentsInChildren<Renderer>())
+                        Bounds targetBounds = new Bounds(targetGo.transform.position, Vector3.zero);
+                        foreach (var r in targetGo.GetComponentsInChildren<Renderer>())
                         {
                             if (r != null && r.gameObject.activeInHierarchy) targetBounds.Encapsulate(r.bounds);
                         }
@@ -621,11 +890,7 @@ namespace MCPForUnity.Editor.Tools
                     // Default: calculate combined bounds of all renderers in the scene
                     Bounds bounds = new Bounds(Vector3.zero, Vector3.zero);
                     bool hasBounds = false;
-#if UNITY_2022_2_OR_NEWER
-                    var renderers = UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
-#else
-                    var renderers = UnityEngine.Object.FindObjectsOfType<Renderer>();
-#endif
+                    var renderers = UnityFindObjectsCompat.FindAll<Renderer>();
                     foreach (var r in renderers)
                     {
                         if (r == null || !r.gameObject.activeInHierarchy) continue;
@@ -693,14 +958,14 @@ namespace MCPForUnity.Editor.Tools
 
                     var (compositeB64, compW, compH) = ScreenshotUtility.ComposeContactSheet(tiles, tileLabels);
 
-                    string screenshotsFolder = Path.Combine(Application.dataPath, "Screenshots");
+                    string outputFolder = ResolveAbsoluteOutputFolder(cmd.outputFolder);
                     return new SuccessResponse(
                         $"Captured {shotMeta.Count} multi-angle screenshots as contact sheet ({compW}x{compH}). Scene bounds center: ({center.x:F1}, {center.y:F1}, {center.z:F1}), radius: {radius:F1}.",
                         new
                         {
                             sceneCenter = new[] { center.x, center.y, center.z },
                             sceneRadius = radius,
-                            screenshotsFolder = screenshotsFolder,
+                            outputFolder = outputFolder,
                             imageBase64 = compositeB64,
                             imageWidth = compW,
                             imageHeight = compH,
@@ -736,24 +1001,24 @@ namespace MCPForUnity.Editor.Tools
                 Vector3 center;
                 float radius;
 
-                // Resolve center and radius from look_at target or scene bounds
-                if (cmd.lookAt != null && cmd.lookAt.Type != JTokenType.Null)
+                // Resolve center and radius from view_target or scene bounds
+                if (cmd.viewTarget != null && cmd.viewTarget.Type != JTokenType.Null)
                 {
-                    var lookAtPos = VectorParsing.ParseVector3(cmd.lookAt);
-                    if (lookAtPos.HasValue)
+                    var targetPos3 = VectorParsing.ParseVector3(cmd.viewTarget);
+                    if (targetPos3.HasValue)
                     {
-                        center = lookAtPos.Value;
+                        center = targetPos3.Value;
                         radius = cmd.orbitDistance ?? 5f;
                     }
                     else
                     {
-                        Scene lookAtScene = EditorSceneManager.GetActiveScene();
-                        var lookAtGo = ResolveGameObject(cmd.lookAt, lookAtScene);
-                        if (lookAtGo == null)
-                            return new ErrorResponse($"look_at target '{cmd.lookAt}' not found for orbit capture.");
+                        Scene targetScene = EditorSceneManager.GetActiveScene();
+                        var targetGo = ResolveGameObject(cmd.viewTarget, targetScene);
+                        if (targetGo == null)
+                            return new ErrorResponse($"view_target '{cmd.viewTarget}' not found for orbit capture.");
 
-                        Bounds targetBounds = new Bounds(lookAtGo.transform.position, Vector3.zero);
-                        foreach (var r in lookAtGo.GetComponentsInChildren<Renderer>())
+                        Bounds targetBounds = new Bounds(targetGo.transform.position, Vector3.zero);
+                        foreach (var r in targetGo.GetComponentsInChildren<Renderer>())
                         {
                             if (r != null && r.gameObject.activeInHierarchy) targetBounds.Encapsulate(r.bounds);
                         }
@@ -766,11 +1031,7 @@ namespace MCPForUnity.Editor.Tools
                     // Default: calculate combined bounds of all renderers in the scene
                     Bounds bounds = new Bounds(Vector3.zero, Vector3.zero);
                     bool hasBounds = false;
-#if UNITY_2022_2_OR_NEWER
-                    var renderers = UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
-#else
-                    var renderers = UnityEngine.Object.FindObjectsOfType<Renderer>();
-#endif
+                    var renderers = UnityFindObjectsCompat.FindAll<Renderer>();
                     foreach (var r in renderers)
                     {
                         if (r == null || !r.gameObject.activeInHierarchy) continue;
@@ -844,7 +1105,7 @@ namespace MCPForUnity.Editor.Tools
                     // Compose all tiles into a single contact-sheet grid image
                     var (compositeB64, compW, compH) = ScreenshotUtility.ComposeContactSheet(tiles, tileLabels);
 
-                    string screenshotsFolder = Path.Combine(Application.dataPath, "Screenshots");
+                    string outputFolder = ResolveAbsoluteOutputFolder(cmd.outputFolder);
                     return new SuccessResponse(
                         $"Captured {shotMeta.Count} orbit screenshots as contact sheet ({compW}x{compH}, {azimuthCount} azimuths x {elevations.Length} elevations). Center: ({center.x:F1}, {center.y:F1}, {center.z:F1}), radius: {radius:F1}.",
                         new
@@ -854,7 +1115,7 @@ namespace MCPForUnity.Editor.Tools
                             orbitAngles = azimuthCount,
                             orbitElevations = elevations,
                             orbitFov = fov,
-                            screenshotsFolder = screenshotsFolder,
+                            outputFolder = outputFolder,
                             imageBase64 = compositeB64,
                             imageWidth = compW,
                             imageHeight = compH,
@@ -874,8 +1135,9 @@ namespace MCPForUnity.Editor.Tools
         }
 
         /// <summary>
-        /// Captures a single screenshot from a temporary camera placed at view_position and aimed at look_at.
-        /// Returns inline base64 PNG and also saves the image to Assets/Screenshots/.
+        /// Captures a single screenshot from a temporary camera placed at view_position and aimed at view_target.
+        /// Returns inline base64 PNG and also saves the image to the resolved screenshot folder
+        /// (caller's <c>output_folder</c> override -> <c>ScreenshotPreferences.DefaultFolder</c> -> built-in <c>Assets/Screenshots</c>).
         /// </summary>
         private static object CapturePositionedScreenshot(SceneCommand cmd)
         {
@@ -885,9 +1147,9 @@ namespace MCPForUnity.Editor.Tools
 
                 // Resolve where to aim
                 Vector3? targetPos = null;
-                if (cmd.lookAt != null && cmd.lookAt.Type != JTokenType.Null)
+                if (cmd.viewTarget != null && cmd.viewTarget.Type != JTokenType.Null)
                 {
-                    var parsedPos = VectorParsing.ParseVector3(cmd.lookAt);
+                    var parsedPos = VectorParsing.ParseVector3(cmd.viewTarget);
                     if (parsedPos.HasValue)
                     {
                         targetPos = parsedPos.Value;
@@ -895,10 +1157,10 @@ namespace MCPForUnity.Editor.Tools
                     else
                     {
                         Scene activeScene = EditorSceneManager.GetActiveScene();
-                        var lookAtGo = ResolveGameObject(cmd.lookAt, activeScene);
-                        if (lookAtGo == null)
-                            return new ErrorResponse($"look_at target '{cmd.lookAt}' not found.");
-                        targetPos = lookAtGo.transform.position;
+                        var resolvedGo = ResolveGameObject(cmd.viewTarget, activeScene);
+                        if (resolvedGo == null)
+                            return new ErrorResponse($"view_target '{cmd.viewTarget}' not found.");
+                        targetPos = resolvedGo.transform.position;
                     }
                 }
 
@@ -910,12 +1172,12 @@ namespace MCPForUnity.Editor.Tools
                 }
                 else if (targetPos.HasValue)
                 {
-                    // Default: offset from look_at target
+                    // Default: offset from view_target
                     camPos = targetPos.Value + new Vector3(0, 2, -5);
                 }
                 else
                 {
-                    return new ErrorResponse("Provide 'look_at' or 'view_position' for a positioned screenshot.");
+                    return new ErrorResponse("Provide 'view_target' or 'view_position' for a positioned screenshot.");
                 }
 
                 // Create temporary camera
@@ -936,13 +1198,23 @@ namespace MCPForUnity.Editor.Tools
 
                     var (b64, w, h) = ScreenshotUtility.RenderCameraToBase64(tempCam, maxRes);
 
-                    // Save to disk
-                    string screenshotsFolder = Path.Combine(Application.dataPath, "Screenshots");
-                    Directory.CreateDirectory(screenshotsFolder);
+                    // Resolve output folder (per-call override → user pref → built-in default).
+                    string resolvedFolderSpec = ScreenshotPreferences.Resolve(cmd.outputFolder);
+                    string folderAbsolute;
+                    try
+                    {
+                        folderAbsolute = ScreenshotUtility.ResolveFolderAbsolute(resolvedFolderSpec);
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        return new ErrorResponse(ex.Message);
+                    }
+                    Directory.CreateDirectory(folderAbsolute);
+
                     string fileName = !string.IsNullOrEmpty(cmd.fileName)
                         ? (cmd.fileName.EndsWith(".png", System.StringComparison.OrdinalIgnoreCase) ? cmd.fileName : cmd.fileName + ".png")
                         : $"screenshot-{DateTime.Now:yyyyMMdd-HHmmss}.png";
-                    string fullPath = Path.Combine(screenshotsFolder, fileName);
+                    string fullPath = Path.Combine(folderAbsolute, fileName);
                     // Ensure unique filename
                     if (File.Exists(fullPath))
                     {
@@ -951,15 +1223,22 @@ namespace MCPForUnity.Editor.Tools
                         int counter = 1;
                         while (File.Exists(fullPath))
                         {
-                            fullPath = Path.Combine(screenshotsFolder, $"{baseName}_{counter}{ext}");
+                            fullPath = Path.Combine(folderAbsolute, $"{baseName}_{counter}{ext}");
                             counter++;
                         }
                     }
                     byte[] pngBytes = System.Convert.FromBase64String(b64);
                     File.WriteAllBytes(fullPath, pngBytes);
 
-                    string assetsRelativePath = "Assets/Screenshots/" + Path.GetFileName(fullPath);
-                    AssetDatabase.ImportAsset(assetsRelativePath, ImportAssetOptions.ForceSynchronousImport);
+                    string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..")).Replace('\\', '/');
+                    string normalizedFull = fullPath.Replace('\\', '/');
+                    string normalizedRoot = projectRoot.EndsWith("/") ? projectRoot : projectRoot + "/";
+                    string projectRelativePath = normalizedFull.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase)
+                        ? normalizedFull.Substring(normalizedRoot.Length)
+                        : normalizedFull;
+
+                    if (ScreenshotUtility.IsUnderAssets(projectRelativePath))
+                        AssetDatabase.ImportAsset(projectRelativePath, ImportAssetOptions.ForceSynchronousImport);
 
                     var data = new Dictionary<string, object>
                     {
@@ -967,14 +1246,15 @@ namespace MCPForUnity.Editor.Tools
                         { "imageWidth", w },
                         { "imageHeight", h },
                         { "viewPosition", new[] { camPos.x, camPos.y, camPos.z } },
-                        { "screenshotsFolder", screenshotsFolder },
-                        { "path", assetsRelativePath },
+                        { "outputFolder", folderAbsolute.Replace('\\', '/') },
+                        { "path", projectRelativePath },
+                        { "fullPath", normalizedFull },
                     };
                     if (targetPos.HasValue)
-                        data["lookAt"] = new[] { targetPos.Value.x, targetPos.Value.y, targetPos.Value.z };
+                        data["viewTarget"] = new[] { targetPos.Value.x, targetPos.Value.y, targetPos.Value.z };
 
                     return new SuccessResponse(
-                        $"Positioned screenshot captured (max {maxRes}px) and saved to '{assetsRelativePath}'.",
+                        $"Positioned screenshot captured (max {maxRes}px) and saved to '{projectRelativePath}'.",
                         data
                     );
                 }
@@ -987,6 +1267,17 @@ namespace MCPForUnity.Editor.Tools
             {
                 return new ErrorResponse($"Error capturing positioned screenshot: {e.Message}");
             }
+        }
+
+        /// <summary>
+        /// Resolves the per-call/per-pref/built-in screenshot folder spec to an absolute path.
+        /// Propagates validation errors from <see cref="ScreenshotUtility.ResolveFolderAbsolute"/>
+        /// so callers can surface them rather than silently writing somewhere else.
+        /// </summary>
+        private static string ResolveAbsoluteOutputFolder(string callerOverride)
+        {
+            string spec = ScreenshotPreferences.Resolve(callerOverride);
+            return ScreenshotUtility.ResolveFolderAbsolute(spec).Replace('\\', '/');
         }
 
         private static string GetDirectionLabel(float azimuthDeg)
@@ -1018,11 +1309,7 @@ namespace MCPForUnity.Editor.Tools
             }
 
             // Search all cameras by name or path
-#if UNITY_2022_2_OR_NEWER
-            var allCams = UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsSortMode.None);
-#else
-            var allCams = UnityEngine.Object.FindObjectsOfType<Camera>();
-#endif
+            var allCams = UnityFindObjectsCompat.FindAll<Camera>();
             foreach (var cam in allCams)
             {
                 if (cam.name == cameraRef) return cam;
@@ -1065,30 +1352,7 @@ namespace MCPForUnity.Editor.Tools
                         return new ErrorResponse($"Target GameObject '{cmd.sceneViewTarget}' not found for scene_view_frame.");
                     }
 
-                    // Calculate bounds from renderers, colliders, or transform
-                    Bounds bounds = new Bounds(target.transform.position, Vector3.zero);
-                    var renderers = target.GetComponentsInChildren<Renderer>();
-                    if (renderers.Length > 0)
-                    {
-                        bounds = renderers[0].bounds;
-                        for (int i = 1; i < renderers.Length; i++)
-                            bounds.Encapsulate(renderers[i].bounds);
-                    }
-                    else
-                    {
-                        var colliders = target.GetComponentsInChildren<Collider>();
-                        if (colliders.Length > 0)
-                        {
-                            bounds = colliders[0].bounds;
-                            for (int i = 1; i < colliders.Length; i++)
-                                bounds.Encapsulate(colliders[i].bounds);
-                        }
-                        else
-                        {
-                            bounds = new Bounds(target.transform.position, Vector3.one);
-                        }
-                    }
-
+                    Bounds bounds = CalculateFrameBounds(target);
                     sceneView.Frame(bounds, false);
                     return new SuccessResponse($"Scene View framed on '{target.name}'.", new { target = target.name });
                 }
@@ -1097,11 +1361,7 @@ namespace MCPForUnity.Editor.Tools
                     // Frame entire scene by computing combined bounds of all renderers
                     Bounds allBounds = new Bounds(Vector3.zero, Vector3.zero);
                     bool hasAny = false;
-#if UNITY_2022_2_OR_NEWER
-                    foreach (var r in UnityEngine.Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
-#else
-                    foreach (var r in UnityEngine.Object.FindObjectsOfType<Renderer>())
-#endif
+                    foreach (var r in UnityFindObjectsCompat.FindAll<Renderer>())
                     {
                         if (r == null || !r.gameObject.activeInHierarchy) continue;
                         if (!hasAny) { allBounds = r.bounds; hasAny = true; }
@@ -1116,6 +1376,124 @@ namespace MCPForUnity.Editor.Tools
             {
                 return new ErrorResponse($"Error framing Scene View: {e.Message}");
             }
+        }
+
+        private static Bounds CalculateFrameBounds(GameObject target)
+        {
+            if (target == null)
+                return new Bounds(Vector3.zero, Vector3.one);
+
+            if (TryGetRectTransformBounds(target, out Bounds rectBounds))
+                return rectBounds;
+
+            if (TryGetRendererBounds(target, out Bounds rendererBounds))
+                return rendererBounds;
+
+            if (TryGetColliderBounds(target, out Bounds colliderBounds))
+                return colliderBounds;
+
+            return new Bounds(target.transform.position, Vector3.one);
+        }
+
+        private static bool TryGetRectTransformBounds(GameObject target, out Bounds bounds)
+        {
+            bounds = default(Bounds);
+            var rectTransforms = target.GetComponentsInChildren<RectTransform>(true);
+            bool hasBounds = false;
+            var corners = new Vector3[4];
+
+            foreach (var rectTransform in rectTransforms)
+            {
+                if (rectTransform == null || !rectTransform.gameObject.activeInHierarchy)
+                    continue;
+
+                rectTransform.GetWorldCorners(corners);
+                for (int i = 0; i < corners.Length; i++)
+                {
+                    if (!hasBounds)
+                    {
+                        bounds = new Bounds(corners[i], Vector3.zero);
+                        hasBounds = true;
+                    }
+                    else
+                    {
+                        bounds.Encapsulate(corners[i]);
+                    }
+                }
+            }
+
+            if (!hasBounds)
+                return false;
+
+            if (bounds.size.sqrMagnitude < 0.0001f)
+                bounds.Expand(1f);
+
+            return true;
+        }
+
+        private static bool TryGetRendererBounds(GameObject target, out Bounds bounds)
+        {
+            bounds = default(Bounds);
+            var renderers = target.GetComponentsInChildren<Renderer>(true);
+            bool hasBounds = false;
+            foreach (var renderer in renderers)
+            {
+                if (renderer == null || !renderer.gameObject.activeInHierarchy)
+                    continue;
+
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            return hasBounds;
+        }
+
+        private static bool TryGetColliderBounds(GameObject target, out Bounds bounds)
+        {
+            bounds = default(Bounds);
+            var colliders = target.GetComponentsInChildren<Collider>(true);
+            bool hasBounds = false;
+            foreach (var collider in colliders)
+            {
+                if (collider == null || !collider.gameObject.activeInHierarchy)
+                    continue;
+
+                if (!hasBounds)
+                {
+                    bounds = collider.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(collider.bounds);
+                }
+            }
+
+            var colliders2D = target.GetComponentsInChildren<Collider2D>(true);
+            foreach (var collider in colliders2D)
+            {
+                if (collider == null || !collider.gameObject.activeInHierarchy)
+                    continue;
+
+                if (!hasBounds)
+                {
+                    bounds = collider.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(collider.bounds);
+                }
+            }
+
+            return hasBounds;
         }
 
         private static void EnsureGameView()
@@ -1188,7 +1566,6 @@ namespace MCPForUnity.Editor.Tools
                     if (File.Exists(fullPath))
                     {
                         hasSeenFile = true;
-
                         AssetDatabase.ImportAsset(assetsRelativePath, ImportAssetOptions.ForceSynchronousImport);
                         McpLog.Debug($"[ManageScene] Imported asset at '{assetsRelativePath}'.");
                         EditorApplication.update -= tick;
@@ -1198,7 +1575,6 @@ namespace MCPForUnity.Editor.Tools
                 catch (Exception e)
                 {
                     failureCount++;
-
                     if (failureCount <= maxLoggedFailures)
                     {
                         McpLog.Warn($"[ManageScene] Exception while importing asset '{assetsRelativePath}' from '{fullPath}' (attempt {failureCount}): {e}");
@@ -1208,19 +1584,304 @@ namespace MCPForUnity.Editor.Tools
                 if (EditorApplication.timeSinceStartup - start > timeoutSeconds)
                 {
                     if (!hasSeenFile)
-                    {
                         McpLog.Warn($"[ManageScene] Timed out waiting for file '{fullPath}' (asset: '{assetsRelativePath}') after {timeoutSeconds:F1} seconds. The asset was not imported.");
-                    }
                     else
-                    {
                         McpLog.Warn($"[ManageScene] Timed out importing asset '{assetsRelativePath}' from '{fullPath}' after {timeoutSeconds:F1} seconds. The file existed but the asset was not imported.");
-                    }
-
                     EditorApplication.update -= tick;
                 }
             };
 
             EditorApplication.update += tick;
+        }
+
+
+        // ── Path helpers ───────────────────────────────────────────────────
+
+        private static string GetProjectRoot()
+        {
+            return Application.dataPath.Substring(0, Application.dataPath.Length - "Assets".Length);
+        }
+
+        /// <summary>
+        /// True when the path already carries a project root folder that Unity's asset APIs
+        /// understand, so it must not be re-rooted under Assets/.
+        /// </summary>
+        internal static bool IsProjectRooted(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return false;
+            string normalized = AssetPathUtility.NormalizeSeparators(path).TrimStart('/');
+            return normalized.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase)
+                || normalized.StartsWith("Packages/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Existence check that works for both roots, accepting either answer.
+        /// The AssetDatabase is the only one that resolves "Packages/..." — embedded packages
+        /// live in Library/PackageCache, not under the project root, so File.Exists misses them
+        /// (ManageAsset.cs carries the same note). File.Exists still covers an Assets/ scene
+        /// written to disk but not yet imported, which the AssetDatabase does not know about
+        /// until a refresh. This guard only exists to produce a clearer error than
+        /// EditorSceneManager.OpenScene would, so erring toward accepting is the safe direction.
+        /// </summary>
+        internal static bool SceneAssetExists(string projectRelativePath)
+        {
+            if (string.IsNullOrEmpty(projectRelativePath)) return false;
+
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(projectRelativePath) != null) return true;
+
+            try
+            {
+                return File.Exists(Path.Combine(GetProjectRoot(), projectRelativePath));
+            }
+            catch (ArgumentException)
+            {
+                // Invalid path characters — treat as not found rather than throwing.
+                return false;
+            }
+        }
+
+        // ── Multi-scene editing ────────────────────────────────────────────
+
+        private static object LoadSceneAdditive(string scenePath)
+        {
+            if (!SceneAssetExists(scenePath))
+                return new ErrorResponse($"Scene not found: '{scenePath}'");
+
+            var existing = SceneManager.GetSceneByPath(scenePath);
+            if (existing.IsValid() && existing.isLoaded)
+                return new ErrorResponse($"Scene '{existing.name}' is already loaded.");
+
+            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+            return new SuccessResponse($"Opened '{scene.name}' additively.", new
+            {
+                sceneName = scene.name,
+                scenePath = scene.path,
+                loadedSceneCount = SceneManager.sceneCount
+            });
+        }
+
+        private static object CloseScene(SceneCommand cmd)
+        {
+            var scene = FindLoadedScene(cmd.sceneName ?? cmd.name, cmd.scenePath);
+            if (!scene.HasValue)
+                return new ErrorResponse("Scene not found among loaded scenes. Provide 'sceneName' or 'scenePath'.");
+
+            if (SceneManager.sceneCount <= 1)
+                return new ErrorResponse("Cannot close the last loaded scene.");
+
+            if (scene.Value.isDirty)
+                return new ErrorResponse($"Scene '{scene.Value.name}' has unsaved changes. Save first or data will be lost.");
+
+            string capturedName = scene.Value.name;
+            bool remove = cmd.removeScene ?? false;
+            bool closed = EditorSceneManager.CloseScene(scene.Value, remove);
+            string verb = remove ? "Removed" : "Unloaded";
+            if (!closed)
+                return new ErrorResponse($"Failed to {verb.ToLowerInvariant()} scene '{capturedName}'.");
+            return new SuccessResponse($"{verb} scene '{capturedName}'.", new
+            {
+                sceneName = capturedName,
+                removed = remove,
+                loadedSceneCount = SceneManager.sceneCount
+            });
+        }
+
+        private static object SetActiveScene(SceneCommand cmd)
+        {
+            var scene = FindLoadedScene(cmd.sceneName ?? cmd.name, cmd.scenePath);
+            if (!scene.HasValue)
+                return new ErrorResponse("Scene not found among loaded scenes. Provide 'sceneName' or 'scenePath'.");
+            if (!scene.Value.isLoaded)
+                return new ErrorResponse($"Scene '{scene.Value.name}' is not loaded. Open it first.");
+
+            string capturedName = scene.Value.name;
+            bool success = SceneManager.SetActiveScene(scene.Value);
+            if (!success)
+                return new ErrorResponse($"Failed to set '{capturedName}' as the active scene.");
+            return new SuccessResponse($"Set '{capturedName}' as the active scene.");
+        }
+
+        private static object GetLoadedScenes()
+        {
+            var activeScene = SceneManager.GetActiveScene();
+            var scenes = new List<object>();
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                var s = SceneManager.GetSceneAt(i);
+                scenes.Add(new
+                {
+                    name = s.name,
+                    path = s.path,
+                    buildIndex = s.buildIndex,
+                    isLoaded = s.isLoaded,
+                    isDirty = s.isDirty,
+                    isActive = s == activeScene,
+                    rootCount = s.isLoaded ? s.rootCount : 0
+                });
+            }
+            return new SuccessResponse($"{scenes.Count} scene(s) loaded.", new { scenes });
+        }
+
+        private static object MoveToScene(SceneCommand cmd)
+        {
+            if (string.IsNullOrEmpty(cmd.target))
+                return new ErrorResponse("'target' (GameObject name/path/instanceID) is required for move_to_scene.");
+
+            var go = ResolveGameObject(new JValue(cmd.target), SceneManager.GetActiveScene());
+            if (go == null)
+                return new ErrorResponse($"GameObject not found: '{cmd.target}'");
+            if (go.transform.parent != null)
+                return new ErrorResponse($"'{go.name}' is not a root GameObject. Only root objects can be moved between scenes.");
+
+            var targetScene = FindLoadedScene(cmd.sceneName ?? cmd.name, cmd.scenePath);
+            if (!targetScene.HasValue)
+                return new ErrorResponse("Target scene not found. Provide 'sceneName' or 'scenePath'.");
+            if (!targetScene.Value.isLoaded)
+                return new ErrorResponse($"Target scene '{targetScene.Value.name}' is not loaded.");
+
+            SceneManager.MoveGameObjectToScene(go, targetScene.Value);
+            return new SuccessResponse($"Moved '{go.name}' to scene '{targetScene.Value.name}'.");
+        }
+
+        // ModifyBuildSettings removed — use manage_build(action="scenes") instead.
+
+        // ── Scene templates ────────────────────────────────────────────────
+
+        private static object CreateSceneFromTemplate(string fullPath, string relativePath, string template)
+        {
+            NewSceneSetup setup;
+            switch (template)
+            {
+                case "empty":
+                    setup = NewSceneSetup.EmptyScene;
+                    break;
+                case "default":
+                case "3d_basic":
+                case "2d_basic":
+                    setup = NewSceneSetup.DefaultGameObjects;
+                    break;
+                default:
+                    return new ErrorResponse(
+                        $"Unknown template: '{template}'. Valid: empty, default, 3d_basic, 2d_basic.");
+            }
+
+            if (!string.IsNullOrEmpty(fullPath) && File.Exists(fullPath))
+                return new ErrorResponse($"Scene already exists at '{relativePath}'. Delete it first or use a different name.");
+
+            var scene = EditorSceneManager.NewScene(setup, NewSceneMode.Single);
+
+            if (template == "3d_basic")
+            {
+                var plane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                plane.name = "Ground";
+                plane.transform.position = Vector3.zero;
+            }
+            else if (template == "2d_basic")
+            {
+                var cam = Camera.main;
+                if (cam != null)
+                    cam.orthographic = true;
+            }
+
+            if (!string.IsNullOrEmpty(fullPath) && !string.IsNullOrEmpty(relativePath))
+            {
+                string dir = Path.GetDirectoryName(fullPath);
+                if (!string.IsNullOrEmpty(dir))
+                    Directory.CreateDirectory(dir);
+                if (!EditorSceneManager.SaveScene(scene, relativePath))
+                    return new ErrorResponse($"Scene created in memory but failed to save to '{relativePath}'.");
+            }
+
+            return new SuccessResponse($"Created scene from template '{template}'.", new
+            {
+                sceneName = scene.name,
+                scenePath = scene.path,
+                template,
+                rootObjectCount = scene.rootCount
+            });
+        }
+
+        // ── Scene validation ───────────────────────────────────────────────
+
+        private static object ValidateScene(bool autoRepair)
+        {
+            var activeScene = SceneManager.GetActiveScene();
+            var rootObjects = activeScene.GetRootGameObjects();
+
+            int missingScripts = 0;
+            int brokenPrefabs = 0;
+            int repaired = 0;
+            var issues = new List<object>();
+            const int maxIssues = 200;
+
+            foreach (var root in rootObjects)
+            {
+                var allTransforms = root.GetComponentsInChildren<Transform>(true);
+                foreach (var t in allTransforms)
+                {
+                    var go = t.gameObject;
+
+                    int missing = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(go);
+                    if (missing > 0)
+                    {
+                        missingScripts += missing;
+                        if (issues.Count < maxIssues)
+                        {
+                            issues.Add(new
+                            {
+                                type = "missing_script",
+                                gameObject = go.name,
+                                path = GetGameObjectPath(go),
+                                count = missing
+                            });
+                        }
+
+                        if (autoRepair)
+                        {
+                            Undo.RegisterCompleteObjectUndo(go, "Remove Missing Scripts");
+                            repaired += GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
+                        }
+                    }
+
+                    var prefabStatus = PrefabUtility.GetPrefabInstanceStatus(go);
+                    if (prefabStatus == PrefabInstanceStatus.MissingAsset)
+                    {
+                        brokenPrefabs++;
+                        if (issues.Count < maxIssues)
+                        {
+                            issues.Add(new
+                            {
+                                type = "broken_prefab",
+                                gameObject = go.name,
+                                path = GetGameObjectPath(go),
+                                status = prefabStatus.ToString()
+                            });
+                        }
+                    }
+                }
+            }
+
+            if (repaired > 0)
+                EditorSceneManager.MarkSceneDirty(activeScene);
+
+            int totalIssues = missingScripts + brokenPrefabs;
+            string message = totalIssues == 0
+                ? $"Scene '{activeScene.name}' is clean — no issues found."
+                : $"Scene '{activeScene.name}' has {totalIssues} issue(s).";
+            if (repaired > 0)
+                message += $" Auto-repaired {repaired} missing script(s). Use undo to revert.";
+
+            return new SuccessResponse(message, new
+            {
+                sceneName = activeScene.name,
+                totalIssues,
+                missingScripts,
+                brokenPrefabs,
+                repaired,
+                issues,
+                truncated = issues.Count > maxIssues || (totalIssues > issues.Count),
+                note = brokenPrefabs > 0 ? "Broken prefab references are not auto-repaired (too risky). Fix manually." : null
+            });
         }
 
         private static object GetActiveSceneInfo()
@@ -1470,7 +2131,7 @@ namespace MCPForUnity.Editor.Tools
             var d = new Dictionary<string, object>
             {
                 { "name", go.name },
-                { "instanceID", go.GetInstanceID() },
+                { "instanceID", go.GetInstanceIDCompat() },
                 { "activeSelf", go.activeSelf },
                 { "activeInHierarchy", go.activeInHierarchy },
                 { "tag", go.tag },

@@ -22,6 +22,8 @@ namespace MCPForUnity.Editor.Services
         private readonly IServerCommandBuilder _commandBuilder;
         private readonly ITerminalLauncher _terminalLauncher;
 
+        private System.Diagnostics.Process _lastLaunchedProcess;
+
         /// <summary>
         /// Creates a new ServerManagementService with default dependencies.
         /// </summary>
@@ -230,20 +232,24 @@ namespace MCPForUnity.Editor.Services
         }
 
         /// <summary>
-        /// Start the local HTTP server in a separate terminal window.
-        /// Stops any existing server on the port and clears the uvx cache first.
+        /// Start the local HTTP server headless (no terminal window), redirecting its
+        /// stdout/stderr to Library/MCPForUnity/Logs/server-launch-{port}.log.
+        /// Stops any existing server on the port and clears stale build artifacts first.
         /// </summary>
-        public bool StartLocalHttpServer()
+        public bool StartLocalHttpServer(bool quiet = false)
         {
             /// Clean stale Python build artifacts when using a local dev server path
             AssetPathUtility.CleanLocalServerBuildArtifacts();
 
             if (!TryGetLocalHttpServerCommandParts(out _, out _, out var displayCommand, out var error))
             {
-                EditorUtility.DisplayDialog(
-                    "Cannot Start HTTP Server",
-                    error ?? "The server command could not be constructed with the current settings.",
-                    "OK");
+                if (!quiet)
+                {
+                    EditorUtility.DisplayDialog(
+                        "Cannot Start HTTP Server",
+                        error ?? "The server command could not be constructed with the current settings.",
+                        "OK");
+                }
                 return false;
             }
 
@@ -259,12 +265,15 @@ namespace MCPForUnity.Editor.Services
                     var remaining = GetListeningProcessIdsForPort(uri.Port);
                     if (remaining.Count > 0)
                     {
-                        EditorUtility.DisplayDialog(
-                            "Port In Use",
-                            $"Cannot start the local HTTP server because port {uri.Port} is already in use by PID(s): " +
-                            $"{string.Join(", ", remaining)}\n\n" +
-                            "MCP For Unity will not terminate unrelated processes. Stop the owning process manually or change the HTTP URL.",
-                            "OK");
+                        if (!quiet)
+                        {
+                            EditorUtility.DisplayDialog(
+                                "Port In Use",
+                                $"Cannot start the local HTTP server because port {uri.Port} is already in use by PID(s): " +
+                                $"{string.Join(", ", remaining)}\n\n" +
+                                $"{ProductInfo.ProductName} will not terminate unrelated processes. Stop the owning process manually or change the HTTP URL.",
+                                "OK");
+                        }
                         return false;
                     }
                 }
@@ -286,50 +295,89 @@ namespace MCPForUnity.Editor.Services
                 launchCommand = $"{displayCommand} --pidfile {QuoteIfNeeded(pidFilePath)} --unity-instance-token {instanceToken}";
             }
 
-            if (EditorUtility.DisplayDialog(
-                "Start Local HTTP Server",
-                $"This will start the MCP server in HTTP mode in a new terminal window:\n\n{launchCommand}\n\n" +
-                "Continue?",
-                "Start Server",
-                "Cancel"))
+            // First-time-only confirmation. Subsequent launches (and the quiet auto-start path) skip the dialog.
+            if (!quiet && !EditorPrefs.GetBool(EditorPrefKeys.HttpServerLaunchConfirmed, false))
             {
+                if (!EditorUtility.DisplayDialog(
+                    "Start Local HTTP Server",
+                    "Start the local MCP server in the background?\n\n" +
+                    "It launches headless (no terminal window) and logs progress to the Unity Console. " +
+                    "This confirmation is shown only once.",
+                    "Start",
+                    "Cancel"))
+                {
+                    return false;
+                }
+                try { EditorPrefs.SetBool(EditorPrefKeys.HttpServerLaunchConfirmed, true); } catch { }
+            }
+
+            string launchLog = portForPid > 0 ? GetLocalHttpServerLaunchLogPath(portForPid) : null;
+
+            try
+            {
+                // Clear any stale handshake state from prior launches.
+                ClearLocalServerPidTracking();
+                _lastLaunchedProcess = null;
+
+                // Best-effort: delete stale pidfile if it exists.
                 try
                 {
-                    // Clear any stale handshake state from prior launches.
-                    ClearLocalServerPidTracking();
+                    if (!string.IsNullOrEmpty(pidFilePath) && File.Exists(pidFilePath))
+                    {
+                        DeletePidFile(pidFilePath);
+                    }
+                }
+                catch { }
 
-                    // Best-effort: delete stale pidfile if it exists.
+                // Truncate the launch log so the tail always reflects the current launch.
+                if (!string.IsNullOrEmpty(launchLog))
+                {
                     try
                     {
-                        if (!string.IsNullOrEmpty(pidFilePath) && File.Exists(pidFilePath))
-                        {
-                            DeletePidFile(pidFilePath);
-                        }
+                        Directory.CreateDirectory(Path.GetDirectoryName(launchLog));
+                        File.WriteAllText(launchLog, string.Empty);
                     }
                     catch { }
-
-                    // Launch the server in a new terminal window (keeps user-visible logs).
-                    var startInfo = CreateTerminalProcessStartInfo(launchCommand);
-                    System.Diagnostics.Process.Start(startInfo);
-                    if (!string.IsNullOrEmpty(pidFilePath))
-                    {
-                        StoreLocalHttpServerHandshake(pidFilePath, instanceToken);
-                    }
-                    McpLog.Info($"Started local HTTP server in terminal: {launchCommand}");
-                    return true;
                 }
-                catch (Exception ex)
+
+                McpLog.Info("Starting local HTTP server… (first run may take a minute while dependencies install)");
+
+                // Launch the server headless (no terminal window); stdout+stderr go to the launch log.
+                string effectiveLog = launchLog ?? Path.Combine(Path.GetTempPath(), "mcp-for-unity-server-launch.log");
+                var startInfo = CreateHeadlessProcessStartInfo(launchCommand, effectiveLog);
+
+                // The headless shell is not a login shell, so it does not inherit the user's
+                // profile PATH (on macOS, GUI-launched Unity has a minimal PATH). Prepend the
+                // platform uv/uvx locations so a bare `uvx`/`uv` resolves the same way the old
+                // terminal (login shell) launch did.
+                string extraPathPrepend = GetPlatformSpecificPathPrepend();
+                if (!string.IsNullOrEmpty(extraPathPrepend))
                 {
-                    McpLog.Error($"Failed to start server: {ex.Message}");
+                    string currentPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+                    startInfo.EnvironmentVariables["PATH"] = string.IsNullOrEmpty(currentPath)
+                        ? extraPathPrepend
+                        : (extraPathPrepend + Path.PathSeparator + currentPath);
+                }
+
+                _lastLaunchedProcess = System.Diagnostics.Process.Start(startInfo);
+                if (!string.IsNullOrEmpty(pidFilePath))
+                {
+                    StoreLocalHttpServerHandshake(pidFilePath, instanceToken);
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                McpLog.Error($"Failed to start server: {ex.Message}");
+                if (!quiet)
+                {
                     EditorUtility.DisplayDialog(
                         "Error",
                         $"Failed to start server: {ex.Message}",
                         "OK");
-                    return false;
                 }
+                return false;
             }
-
-            return false;
         }
 
         /// <summary>
@@ -444,7 +492,10 @@ namespace MCPForUnity.Editor.Services
                     return false;
                 }
 
-                return TryConnectToLocalPort(uri.Host, uri.Port, timeoutMs: 50);
+                // 250ms, not 50ms: on a machine busy with test runs or domain reloads a 50ms
+                // connect wait produces false "server gone" readings that tore down healthy
+                // sessions via the orphaned-session detector (#1207).
+                return TryConnectToLocalPort(uri.Host, uri.Port, timeoutMs: 250);
             }
             catch
             {
@@ -456,14 +507,24 @@ namespace MCPForUnity.Editor.Services
         {
             try
             {
+                // timeoutMs is an overall budget shared across candidate hosts, so a
+                // filtered/dropped first candidate cannot multiply the worst-case wait
+                // (this can run on the editor UI tick).
+                var elapsed = System.Diagnostics.Stopwatch.StartNew();
                 foreach (string target in BuildLocalProbeHosts(host))
                 {
+                    int remainingMs = timeoutMs - (int)elapsed.ElapsedMilliseconds;
+                    if (remainingMs <= 0)
+                    {
+                        break;
+                    }
+
                     try
                     {
                         using (var client = new TcpClient())
                         {
                             var connectTask = client.ConnectAsync(target, port);
-                            if (connectTask.Wait(timeoutMs) && client.Connected)
+                            if (connectTask.Wait(remainingMs) && client.Connected)
                             {
                                 return true;
                             }
@@ -931,6 +992,90 @@ namespace MCPForUnity.Editor.Services
         private System.Diagnostics.ProcessStartInfo CreateTerminalProcessStartInfo(string command)
         {
             return _terminalLauncher.CreateTerminalProcessStartInfo(command);
+        }
+
+        private System.Diagnostics.ProcessStartInfo CreateHeadlessProcessStartInfo(string command, string logFilePath)
+        {
+            return _terminalLauncher.CreateHeadlessProcessStartInfo(command, logFilePath);
+        }
+
+        public string GetLocalHttpServerLaunchLogPath()
+        {
+            string baseUrl = HttpEndpointUtility.GetLocalBaseUrl();
+            if (Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) && uri.Port > 0)
+            {
+                return GetLocalHttpServerLaunchLogPath(uri.Port);
+            }
+            return null;
+        }
+
+        private string GetLocalHttpServerLaunchLogPath(int port)
+        {
+            string dir = Path.Combine(_terminalLauncher.GetProjectRootPath(), "Library", "MCPForUnity", "Logs");
+            return Path.Combine(dir, $"server-launch-{port}.log");
+        }
+
+        public bool HasManagedServerLaunchHandle => _lastLaunchedProcess != null;
+
+        public bool IsManagedServerLaunchProcessAlive()
+        {
+            try
+            {
+                var proc = _lastLaunchedProcess;
+                return proc != null && !proc.HasExited;
+            }
+            catch
+            {
+                // If we cannot query the process (e.g. it was disposed), assume it is no longer alive
+                // so callers stop waiting on a dead handle.
+                return false;
+            }
+        }
+
+        public void LogLocalHttpServerLaunchFailure()
+        {
+            string logPath = GetLocalHttpServerLaunchLogPath();
+            string tail = TailFile(logPath, 40);
+
+            string copyHint;
+            if (TryGetLocalHttpServerCommand(out var command, out _) && !string.IsNullOrEmpty(command))
+            {
+                copyHint = $"To run it yourself, copy this command into a terminal:\n{command}";
+            }
+            else
+            {
+                copyHint = "Use the \"Manual Server Launch\" foldout to copy the command and run it yourself.";
+            }
+
+            string logRef = string.IsNullOrEmpty(logPath) ? "(launch log unavailable)" : logPath;
+            string body = string.IsNullOrEmpty(tail) ? "(no output captured)" : tail;
+
+            McpLog.Error(
+                "Local HTTP server did not become reachable. " +
+                $"Launch log: {logRef}\n{body}\n{copyHint}");
+        }
+
+        private static string TailFile(string path, int maxLines)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                {
+                    return string.Empty;
+                }
+
+                var lines = File.ReadAllLines(path);
+                if (lines.Length <= maxLines)
+                {
+                    return string.Join(Environment.NewLine, lines).Trim();
+                }
+
+                return string.Join(Environment.NewLine, lines.Skip(lines.Length - maxLines)).Trim();
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
     }
 }

@@ -16,7 +16,7 @@ using UnityEngine.UIElements;
 namespace MCPForUnity.Editor.Windows.Components.Tools
 {
     /// <summary>
-    /// Controller for the Tools section inside the MCP For Unity editor window.
+    /// Controller for the Tools section inside the MCP for Unity editor window.
     /// Provides discovery, filtering, and per-tool enablement toggles.
     /// Tools are grouped by their Group property (core first, then alphabetical).
     /// </summary>
@@ -45,6 +45,8 @@ namespace MCPForUnity.Editor.Windows.Components.Tools
             { "scripting_ext", "Scripting Extensions" },
             { "testing", "Testing" },
             { "probuilder", "ProBuilder — Experimental" },
+            { "profiling", "Profiling & Frame Debugger" },
+            { "asset_gen", "Asset Gen" },
         };
 
         public VisualElement Root { get; }
@@ -76,7 +78,7 @@ namespace MCPForUnity.Editor.Windows.Components.Tools
                     EditorPrefKeys.ProjectScopedToolsLocalHttp,
                     false
                 );
-                projectScopedToolsToggle.tooltip = "When enabled, register project-scoped tools with HTTP Local transport. Allows per-project tool customization.";
+                projectScopedToolsToggle.tooltip = "When enabled, register project-scoped tools with HTTP Local and stdio transports. Allows per-project tool customization.";
                 projectScopedToolsToggle.RegisterValueChangedCallback(evt =>
                 {
                     EditorPrefs.SetBool(EditorPrefKeys.ProjectScopedToolsLocalHttp, evt.newValue);
@@ -590,28 +592,44 @@ namespace MCPForUnity.Editor.Windows.Components.Tools
             var actions = new VisualElement();
             actions.AddToClassList("tool-item-actions");
 
-            var screenshotButton = new Button(OnManageSceneScreenshotClicked)
+            var gameViewButton = new Button(OnManageSceneScreenshotClicked)
             {
-                text = "Capture Screenshot"
+                text = "Game View"
             };
-            screenshotButton.AddToClassList("tool-action-button");
-            screenshotButton.style.marginTop = 4;
-            screenshotButton.tooltip = "Capture a screenshot to Assets/Screenshots via manage_camera.";
+            gameViewButton.AddToClassList("tool-action-button");
+            gameViewButton.style.marginTop = 4;
+            gameViewButton.tooltip = "Capture a game camera screenshot. Default: Assets/Screenshots (configurable in Advanced).";
+
+            var sceneViewButton = new Button(OnSceneViewScreenshotClicked)
+            {
+                text = "Scene View"
+            };
+            sceneViewButton.AddToClassList("tool-action-button");
+            sceneViewButton.style.marginTop = 4;
+            sceneViewButton.style.marginLeft = 4;
+            sceneViewButton.tooltip = "Capture the active Scene View viewport. Default: Assets/Screenshots (configurable in Advanced).";
 
             var multiviewButton = new Button(OnManageSceneMultiviewClicked)
             {
-                text = "Capture Multiview"
+                text = "Multiview"
             };
             multiviewButton.AddToClassList("tool-action-button");
             multiviewButton.style.marginTop = 4;
             multiviewButton.style.marginLeft = 4;
-            multiviewButton.tooltip = "Capture a 6-angle contact sheet around the scene centre and save to Assets/Screenshots.";
+            multiviewButton.tooltip = "Capture a 6-angle contact sheet around the scene centre. Default: Assets/Screenshots (configurable in Advanced).";
+
+            var captureLabel = new Label("Capture:");
+            captureLabel.style.marginTop = 6;
+            captureLabel.style.unityFontStyleAndWeight = UnityEngine.FontStyle.Normal;
 
             var row = new VisualElement();
             row.style.flexDirection = FlexDirection.Row;
-            row.Add(screenshotButton);
+            row.style.flexWrap = Wrap.Wrap;
+            row.Add(gameViewButton);
+            row.Add(sceneViewButton);
             row.Add(multiviewButton);
 
+            actions.Add(captureLabel);
             actions.Add(row);
             return actions;
         }
@@ -686,6 +704,30 @@ namespace MCPForUnity.Editor.Windows.Components.Tools
             }
         }
 
+        private void OnSceneViewScreenshotClicked()
+        {
+            try
+            {
+                var response = ManageScene.ExecuteSceneViewScreenshot();
+                if (response is SuccessResponse success && !string.IsNullOrWhiteSpace(success.Message))
+                {
+                    McpLog.Info(success.Message);
+                }
+                else if (response is ErrorResponse error && !string.IsNullOrWhiteSpace(error.Error))
+                {
+                    McpLog.Error(error.Error);
+                }
+                else
+                {
+                    McpLog.Info("Scene View screenshot capture requested.");
+                }
+            }
+            catch (Exception ex)
+            {
+                McpLog.Error($"Failed to capture Scene View screenshot: {ex.Message}");
+            }
+        }
+
         private void OnManageSceneMultiviewClicked()
         {
             try
@@ -698,16 +740,35 @@ namespace MCPForUnity.Editor.Windows.Components.Tools
                     string base64 = json["imageBase64"]?.ToString();
                     if (!string.IsNullOrEmpty(base64))
                     {
-                        string folder = System.IO.Path.Combine(UnityEngine.Application.dataPath, "Screenshots");
+                        string folderSpec = MCPForUnity.Editor.Helpers.ScreenshotPreferences.Resolve(null);
+                        string folder;
+                        try
+                        {
+                            folder = MCPForUnity.Runtime.Helpers.ScreenshotUtility.ResolveFolderAbsolute(folderSpec);
+                        }
+                        catch (System.InvalidOperationException ex)
+                        {
+                            McpLog.Error(ex.Message);
+                            return;
+                        }
                         if (!System.IO.Directory.Exists(folder))
                             System.IO.Directory.CreateDirectory(folder);
 
                         string fileName = $"Multiview_{System.DateTime.Now:yyyyMMdd_HHmmss}.png";
                         string filePath = System.IO.Path.Combine(folder, fileName);
                         System.IO.File.WriteAllBytes(filePath, Convert.FromBase64String(base64));
-                        AssetDatabase.Refresh();
 
-                        McpLog.Info($"Multiview contact sheet saved to Assets/Screenshots/{fileName}");
+                        // Import only when the file landed under Assets/.
+                        string projectRoot = System.IO.Path.GetFullPath(System.IO.Path.Combine(UnityEngine.Application.dataPath, "..")).Replace('\\', '/');
+                        string normalizedFile = filePath.Replace('\\', '/');
+                        string normalizedRoot = projectRoot.EndsWith("/") ? projectRoot : projectRoot + "/";
+                        string projectRelative = normalizedFile.StartsWith(normalizedRoot, System.StringComparison.OrdinalIgnoreCase)
+                            ? normalizedFile.Substring(normalizedRoot.Length)
+                            : normalizedFile;
+                        if (MCPForUnity.Runtime.Helpers.ScreenshotUtility.IsUnderAssets(projectRelative))
+                            AssetDatabase.ImportAsset(projectRelative, ImportAssetOptions.ForceSynchronousImport);
+
+                        McpLog.Info($"Multiview contact sheet saved to {projectRelative}");
                     }
                     else
                     {

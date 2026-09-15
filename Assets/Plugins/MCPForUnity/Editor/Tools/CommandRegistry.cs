@@ -5,8 +5,10 @@ using System.Reflection;
 using System.Threading.Tasks;
 using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Editor.Resources;
+using MCPForUnity.Runtime.Helpers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using UnityEditor;
 
 namespace MCPForUnity.Editor.Tools
 {
@@ -57,30 +59,43 @@ namespace MCPForUnity.Editor.Tools
         /// </summary>
         private static void AutoDiscoverCommands()
         {
+            // AssetImportWorker is a separate Editor subprocess. It doesn't host the MCP
+            // transport so the registry is unused there, and Mono can hard-crash inside
+            // GetCustomAttribute<T>() when scanning types whose owning assembly hasn't
+            // finished domain-reload bookkeeping in the worker. Skip the scan there
+            // entirely. See issue #1134.
+            if (IsRunningInAssetImportWorker())
+            {
+                return;
+            }
+
             try
             {
-                var allTypes = AppDomain.CurrentDomain.GetAssemblies()
-                    .Where(a => !a.IsDynamic)
-                    .SelectMany(a =>
-                    {
-                        try { return a.GetTypes(); }
-                        catch { return new Type[0]; }
-                    })
-                    .ToList();
-
-                // Discover tools
-                var toolTypes = allTypes.Where(t => t.GetCustomAttribute<McpForUnityToolAttribute>() != null);
+                // TypeCache is Unity's precomputed attribute index, rebuilt once per domain
+                // reload. The previous scan materialised every type in every loaded assembly
+                // and then called GetCustomAttribute on each one twice, which measured at
+                // ~9s per reload on large projects (issue #1336) — work Unity had already
+                // done. McpClientRegistry.BuildRegistry() sets the in-tree precedent.
+                //
+                // It also removes the GetCustomAttribute calls that made the AssetImportWorker
+                // crash in issue #1134; the worker guard above stays regardless, since the
+                // registry is unused there either way.
+                // Ordered by FullName because RegisterCommandType lets a duplicate command
+                // name overwrite the previous handler, so registration order decides which
+                // one wins. TypeCache does not document an order, and the assembly scan this
+                // replaces was stable within a build, so without sorting a name collision
+                // could resolve differently between domain reloads.
                 int toolCount = 0;
-                foreach (var type in toolTypes)
+                foreach (var type in TypeCache.GetTypesWithAttribute<McpForUnityToolAttribute>()
+                             .OrderBy(t => t.FullName, StringComparer.Ordinal))
                 {
                     if (RegisterCommandType(type, isResource: false))
                         toolCount++;
                 }
 
-                // Discover resources
-                var resourceTypes = allTypes.Where(t => t.GetCustomAttribute<McpForUnityResourceAttribute>() != null);
                 int resourceCount = 0;
-                foreach (var type in resourceTypes)
+                foreach (var type in TypeCache.GetTypesWithAttribute<McpForUnityResourceAttribute>()
+                             .OrderBy(t => t.FullName, StringComparer.Ordinal))
                 {
                     if (RegisterCommandType(type, isResource: true))
                         resourceCount++;
@@ -92,6 +107,50 @@ namespace MCPForUnity.Editor.Tools
             {
                 McpLog.Error($"Failed to auto-discover MCP commands: {ex.Message}");
             }
+        }
+
+        private static bool? _cachedIsAssetImportWorker;
+
+        private static bool IsRunningInAssetImportWorker()
+        {
+            if (_cachedIsAssetImportWorker.HasValue)
+                return _cachedIsAssetImportWorker.Value;
+
+            bool result = false;
+            try
+            {
+                // AssetDatabase.IsAssetImportWorkerProcess() exists on Unity 2020.2+ but the
+                // visibility has shifted between versions. Look it up reflectively so we
+                // tolerate either signature without conditional compilation.
+                var method = typeof(UnityEditor.AssetDatabase).GetMethod(
+                    "IsAssetImportWorkerProcess",
+                    BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                if (method != null && method.GetParameters().Length == 0)
+                {
+                    result = method.Invoke(null, null) is bool b && b;
+                }
+            }
+            catch
+            {
+                // Reflection problems shouldn't break startup; fall through to the cmdline check.
+            }
+
+            if (!result)
+            {
+                try
+                {
+                    string cmd = Environment.CommandLine ?? string.Empty;
+                    if (cmd.IndexOf("-importWorker", StringComparison.OrdinalIgnoreCase) >= 0
+                        || cmd.IndexOf("AssetImportWorker", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        result = true;
+                    }
+                }
+                catch { }
+            }
+
+            _cachedIsAssetImportWorker = result;
+            return result;
         }
 
         /// <summary>

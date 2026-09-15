@@ -26,6 +26,58 @@ namespace MCPForUnity.Editor.Services.Server
         }
 
         /// <inheritdoc/>
+        public System.Diagnostics.ProcessStartInfo CreateHeadlessProcessStartInfo(string command, string logFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(command))
+                throw new ArgumentException("Command cannot be empty", nameof(command));
+            if (string.IsNullOrWhiteSpace(logFilePath))
+                throw new ArgumentException("Log file path cannot be empty", nameof(logFilePath));
+
+            command = command.Replace("\r", "").Replace("\n", "");
+
+            string logDir = Path.GetDirectoryName(logFilePath);
+            if (!string.IsNullOrEmpty(logDir))
+            {
+                Directory.CreateDirectory(logDir);
+            }
+
+#if UNITY_EDITOR_WIN
+            // cmd.exe /c "<command> < NUL >> "<log>" 2>&1"
+            // The whole payload after /c is wrapped in one outer pair of quotes; cmd strips the
+            // outermost quotes, so inner quotes around the log path survive for paths with spaces.
+            // stdin is redirected from NUL because the Editor is a console-less GUI process: with
+            // CreateNoWindow and no console handle, uvx.exe would inherit an invalid stdin and die
+            // with "The handle is invalid. (os error 6)" before launching the server.
+            string winRedirect = $"{command} < NUL >> \"{logFilePath}\" 2>&1";
+            return new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c \"{winRedirect}\"",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+            };
+#else
+            // macOS/Linux: /bin/bash -c "<command> >> '<log>' 2>&1"
+            // Single-quote the log path so spaces are preserved; the bash payload is wrapped in
+            // double quotes for the .NET argument tokenizer (escape backslashes and double quotes).
+            string singleQuotedLog = "'" + logFilePath.Replace("'", "'\\''") + "'";
+            string bashPayload = $"{command} >> {singleQuotedLog} 2>&1";
+            string escapedPayload = bashPayload
+                .Replace("\\", "\\\\")
+                .Replace("\"", "\\\"");
+            return new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "/bin/bash",
+                Arguments = $"-c \"{escapedPayload}\"",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+            };
+#endif
+        }
+
+        /// <inheritdoc/>
         public System.Diagnostics.ProcessStartInfo CreateTerminalProcessStartInfo(string command)
         {
             if (string.IsNullOrWhiteSpace(command))
@@ -70,14 +122,13 @@ namespace MCPForUnity.Editor.Services.Server
                 CreateNoWindow = true
             };
 #else
-            // Linux: Try common terminal emulators
-            // We use bash -c to execute the command, so we must properly quote/escape for bash
-            // Escape single quotes for the inner bash string
-            string escapedCommandLinux = command.Replace("'", "'\\''");
-            // Wrap the command in single quotes for bash -c
-            string script = $"'{escapedCommandLinux}; exec bash'";
-            // Escape double quotes for the outer Process argument string
-            string escapedScriptForArg = script.Replace("\"", "\\\"");
+            // Linux: Try common terminal emulators.
+            // ProcessStartInfo passes the argument string directly to the terminal, so we only
+            // need to escape for the double-quoted bash -c payload — no inner single quotes.
+            string script = $"{command}; exec bash";
+            string escapedScriptForArg = script
+                .Replace("\\", "\\\\")
+                .Replace("\"", "\\\"");
             string bashCmdArgs = $"bash -c \"{escapedScriptForArg}\"";
 
             string[] terminals = { "gnome-terminal", "xterm", "konsole", "xfce4-terminal" };

@@ -17,7 +17,8 @@ namespace MCPForUnity.Editor.Helpers
         {
             var root = new JObject();
             bool isVSCode = client?.IsVsCodeLayout == true;
-            JObject container = isVSCode ? EnsureObject(root, "servers") : EnsureObject(root, "mcpServers");
+            if (!string.IsNullOrEmpty(client?.SchemaUrl)) root["$schema"] = client.SchemaUrl;
+            JObject container = EnsureObject(root, GetContainerKey(client, isVSCode));
 
             var unity = new JObject();
             PopulateUnityNode(unity, uvPath, client, isVSCode);
@@ -31,7 +32,8 @@ namespace MCPForUnity.Editor.Helpers
         {
             if (root == null) root = new JObject();
             bool isVSCode = client?.IsVsCodeLayout == true;
-            JObject container = isVSCode ? EnsureObject(root, "servers") : EnsureObject(root, "mcpServers");
+            if (!string.IsNullOrEmpty(client?.SchemaUrl) && root["$schema"] == null) root["$schema"] = client.SchemaUrl;
+            JObject container = EnsureObject(root, GetContainerKey(client, isVSCode));
             JObject unity = container["unityMCP"] as JObject ?? new JObject();
             PopulateUnityNode(unity, uvPath, client, isVSCode);
 
@@ -52,7 +54,6 @@ namespace MCPForUnity.Editor.Helpers
             bool prefValue = EditorConfigurationCache.Instance.UseHttpTransport;
             bool clientSupportsHttp = client?.SupportsHttpTransport != false;
             bool useHttpTransport = clientSupportsHttp && prefValue;
-            bool isCline = client?.name == "Cline";
             string httpProperty = string.IsNullOrEmpty(client?.HttpUrlProperty) ? "url" : client.HttpUrlProperty;
             var urlPropsToRemove = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "url", "serverUrl" };
             urlPropsToRemove.Remove(httpProperty);
@@ -92,20 +93,11 @@ namespace MCPForUnity.Editor.Helpers
                     if (unity["headers"] != null) unity.Remove("headers");
                 }
 
-                if (isVSCode)
-                {
-                    unity["type"] = "http";
-                }
-                // Also add type for Claude Code (uses mcpServers layout but needs type field)
-                else if (client?.name == "Claude Code")
-                {
-                    unity["type"] = "http";
-                }
-                // Cline expects streamableHttp for HTTP endpoints.
-                else if (isCline)
-                {
-                    unity["type"] = "streamableHttp";
-                }
+                // Per-client override of the HTTP "type" value: Cline/Roo expect "streamableHttp"
+                // and Kilo expects "remote"; both fall back to stdio when they see the generic
+                // "http". Defaults to "http" (standard MCP protocol field) when unset, so clients
+                // don't default to SSE on seeing a URL without a type.
+                unity["type"] = string.IsNullOrEmpty(client?.HttpTypeValue) ? "http" : client.HttpTypeValue;
             }
             else
             {
@@ -121,20 +113,9 @@ namespace MCPForUnity.Editor.Helpers
                 if (unity["url"] != null) unity.Remove("url");
                 if (unity["serverUrl"] != null) unity.Remove("serverUrl");
 
-                if (isVSCode)
-                {
-                    unity["type"] = "stdio";
-                }
-                else if (isCline)
-                {
-                    unity["type"] = "stdio";
-                }
-            }
-
-            // Remove type for non-VSCode clients (except clients that explicitly require it)
-            if (!isVSCode && client?.name != "Claude Code" && !isCline && unity["type"] != null)
-            {
-                unity.Remove("type");
+                // Include type for all clients — standard MCP protocol field. A few clients use a
+                // different token for local transport (e.g. Kilo uses "local").
+                unity["type"] = string.IsNullOrEmpty(client?.StdioTypeValue) ? "stdio" : client.StdioTypeValue;
             }
 
             bool requiresEnv = client?.EnsureEnvObject == true;
@@ -162,6 +143,12 @@ namespace MCPForUnity.Editor.Helpers
                     }
                 }
             }
+        }
+
+        private static string GetContainerKey(McpClient client, bool isVSCode)
+        {
+            if (isVSCode) return "servers";
+            return string.IsNullOrEmpty(client?.ServerContainerKey) ? "mcpServers" : client.ServerContainerKey;
         }
 
         private static JObject EnsureObject(JObject parent, string name)
