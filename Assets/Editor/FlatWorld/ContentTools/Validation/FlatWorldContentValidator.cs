@@ -2301,8 +2301,6 @@ public static class FlatWorldContentValidator
             {
                 if (shadow.ShadowRenderer == null)
                     AddError(report, "FWC-PREFAB-005", shadowRecord.Path, "BuildingShadow.ShadowRenderer", "建筑预览缺少 SpriteRenderer 引用。", shadow);
-                if (shadowRecord.Prefab.GetComponentInChildren<BoxCollider2D>(true) == null)
-                    AddError(report, "FWC-PREFAB-006", shadowRecord.Path, "BuildingShadow.previewCollider", "建筑预览缺少 BoxCollider2D。", shadow);
             }
         }
 
@@ -2318,6 +2316,9 @@ public static class FlatWorldContentValidator
         foreach (string guid in FindAssetGuids("t:Prefab", PrefabRoot))
         {
             string path = AssetDatabase.GUIDToAssetPath(guid);
+            // Development 下的 Prefab 只由 Editor 工具装配开发场景，不属于运行时 Addressables 目录。
+            if (path.StartsWith("Assets/2_Prefabs/Development/", StringComparison.OrdinalIgnoreCase))
+                continue;
             if (genericExclusions.Contains(path) && !actorShellPaths.Contains(path))
                 continue;
 

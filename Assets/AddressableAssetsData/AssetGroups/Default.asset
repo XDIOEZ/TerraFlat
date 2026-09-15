@@ -17,24 +17,6 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 47b73bec22f621a498a1748af8eb38da
   m_SerializeEntries:
-  - m_GUID: 647e6092ebb3cc8458d1a7cb22f7df84
-    m_Address: Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 68090fdf4cb11374298a1c6b95f972aa
-    m_Address: Assets/6_Art/Generated/Fiber/Fiber_Icon.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: b8f520dfd3aec2440bdb9e1a036477a6
-    m_Address: Assets/6_Art/Generated/Ore_Niter/Ore_Niter_Idle.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 00321e829cd3f504ebf5c22b9aeff708
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Components/UI_Slot.prefab
     m_ReadOnly: 0
@@ -85,12 +67,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0389d777920d856458f6db3a2e122e34
     m_Address: Assets/6_Art/Items/Plants/GrassAndFlower.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 511ea52a8f3e02d48b1346d8ade0bdb2
-    m_Address: Assets/6_Art/Items/Plants/Flower.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -317,6 +293,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 18422aed66a8419797a70a3a9e2ccfcf
+    m_Address: Assets/2_Prefabs/Effects/ChoppingImpact.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1914fd03091c23347a1d4a82962a56ca
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Status/Player/UI_Sleep.prefab
     m_ReadOnly: 0
@@ -325,6 +307,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 1acc6061aad140b48a8411caa3774196
     m_Address: Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Tile.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1afd533283c14058bb4fd26ccd41c1ac
+    m_Address: Assets/6_Art/Generated/ClayJar/ClayJar_Dirty.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -587,6 +575,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 37a325589d77415ab167bb900f9ef767
+    m_Address: Assets/2_Prefabs/Effects/BluntImpact.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 382257fc2209ca64ab7c0de33d6a8a4f
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Inventory/Panels/UI_Hand.prefab
     m_ReadOnly: 0
@@ -768,6 +762,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 511ea52a8f3e02d48b1346d8ade0bdb2
+    m_Address: Assets/6_Art/Items/Plants/Flower.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5132a6b17bc20a34ba0177cce336d330
     m_Address: Assets/2_Prefabs/World/Tiles/TileItem_Snow.prefab
@@ -992,6 +992,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 647e6092ebb3cc8458d1a7cb22f7df84
+    m_Address: "Assets/6_Art/Generated/ItemPlaceholder/\u7D20\u6750\u5360\u4F4D\u7B26.png"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 64842fb553039f44a99a4fe673c1babf
     m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_DifficultySettings.prefab
     m_ReadOnly: 0
@@ -1033,6 +1039,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 68090fdf4cb11374298a1c6b95f972aa
+    m_Address: Assets/6_Art/Generated/Fiber/Fiber_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 683191f95f278944b82a4ad08bcac6df
     m_Address: Assets/6_Art/Items/Tools/Item_Tool_376.png
@@ -1147,6 +1159,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6f329e83ff294aa1aa75ca1afc4179b3
+    m_Address: Assets/6_Art/Generated/WallMetal/Wall_Copper_Medium.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6f494990827b10848bc420bb9a8fa6bb
     m_Address: "Assets/6_Art/Food/\u8015\u5730.png"
@@ -1345,6 +1363,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 89bef44cdb92408c936c2006f3f0df42
+    m_Address: Assets/6_Art/Generated/WallMetal/Wall_Iron_Medium.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8b4619eba9808f64f92359a091d87a46
     m_Address: "Assets/2_Prefabs/World/Space/\u592A\u9633.prefab"
@@ -1696,6 +1720,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b0520cc26c48462994ae9000428d2c3c
+    m_Address: Assets/2_Prefabs/Effects/PiercingImpact.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b1237bc62a1542e2ad3b3afdb1ff88c0
     m_Address: Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Copper_Tile.png
     m_ReadOnly: 0
@@ -1776,6 +1806,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b8b3886b2f4c7434b8a2a1599659ef70
     m_Address: Assets/6_Art/Generated/Rice/RiceCrop_Mature.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b8f520dfd3aec2440bdb9e1a036477a6
+    m_Address: Assets/6_Art/Generated/Ore_Niter/Ore_Niter_Idle.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -1924,6 +1960,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c9cc158b386e4044b39926f51c643261
+    m_Address: Assets/6_Art/Generated/ClayJar/ClayJar_Sea.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ca4e9b1fb55d2354882fd54109ad9dfa
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_Bonfire.prefab
     m_ReadOnly: 0
@@ -2068,6 +2110,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dc0760949df14a04bb8561372137ad3a
+    m_Address: Module_GroundCoverHarvest
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: dcf6df01e9f77f84f8fc8d241b5dee78
     m_Address: Assets/2_Prefabs/Gameplay/Items/Common/BuildingBodyShell.prefab
     m_ReadOnly: 0
@@ -2119,6 +2167,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: df7296a1187573644b2e04c97ef1e809
     m_Address: Assets/6_Art/Items/Materials/Ingots/Item_ingot_004.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e037bfae795a4a2b9d0c44d8ad834e6c
+    m_Address: Assets/6_Art/Generated/WallMetal/Wall_Bronze_Medium.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2351,6 +2405,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f6c015b268204e9593391045af665d42
+    m_Address: Assets/6_Art/Generated/ClayJar/ClayJar_Drinkable.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f6c78a2c3efe0264c8c88828280695cf
     m_Address: "Assets/2_Prefabs/World/Space/\u706B\u661F.prefab"
     m_ReadOnly: 0
@@ -2431,42 +2491,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ff8bd4b9d465da04fa604a649df27157
     m_Address: Assets/6_Art/Generated/Chili/ChiliTree_Seedling.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: e037bfae795a4a2b9d0c44d8ad834e6c
-    m_Address: Assets/6_Art/Generated/WallMetal/Wall_Bronze_Medium.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 89bef44cdb92408c936c2006f3f0df42
-    m_Address: Assets/6_Art/Generated/WallMetal/Wall_Iron_Medium.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 6f329e83ff294aa1aa75ca1afc4179b3
-    m_Address: Assets/6_Art/Generated/WallMetal/Wall_Copper_Medium.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 1afd533283c14058bb4fd26ccd41c1ac
-    m_Address: Assets/6_Art/Generated/ClayJar/ClayJar_Dirty.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: f6c015b268204e9593391045af665d42
-    m_Address: Assets/6_Art/Generated/ClayJar/ClayJar_Drinkable.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: c9cc158b386e4044b39926f51c643261
-    m_Address: Assets/6_Art/Generated/ClayJar/ClayJar_Sea.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
