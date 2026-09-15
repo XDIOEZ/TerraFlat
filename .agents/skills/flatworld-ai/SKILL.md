@@ -51,9 +51,13 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - 可组合动物技能统一实现 `IAnimalCombatSkill` 并作为 Item Module 挂载；`AI_Base` 会自动收集到 `_animalSkills`，技能自行控制移动时状态节点必须使用 `CreateStateNode`，不能套用每帧停车的 `CreateStoppedActionStateNode`。
 - 动物技能数值来自 `Assets/StreamingAssets/GameConfig/Skills/animal-skills.json`，Actor JSON 只声明模块和技能模板 ID；独立技能碰撞模块不要继承 `Mod_Damage`，否则会被 `AI_AttackController` 当作普通攻击窗口一起启停。
 
-## AIECS 原型边界
+## AIECS 分阶段接入边界
 
-- `Entities/AIECS/FlatWorld.AIECS.asmdef` 是隔离的渲染原型，不依赖 GamePlay；Editor 适配器通过正式 Manifest/Addressables 导出动画。其位置轨迹、临时 Slot 和视觉入水参数不具备正式 AI、持久身份、生命、世界水体或战斗语义，不得接入正式生成器冒充完成迁移；阶段门槛以 `开发文档文件夹/AI策划/AIECS开发文档_2万同屏.md` 为准。
+- `Entities/AIECS/FlatWorld.AIECS.asmdef` 包含隔离渲染原型与纯数据导航/移动，不依赖 GamePlay；Editor 适配器通过正式 Manifest/Addressables 导出动画。原型的位置轨迹、临时 Slot 和视觉入水参数不具备正式 AI、持久身份、生命、世界水体或战斗语义，不得接入正式生成器冒充完成迁移；阶段门槛以 `开发文档文件夹/AI策划/AIECS开发文档_2万同屏.md` 为准。
+- `Entities/AIECS/Gameplay/` 使用独立程序集桥接 GamePlay 和 AIECS。`AiecsNavigationCrowd` 只由显式按钮创建真实导航 Entity，少量 Transform 对应少量共享目标；每单位的位置、速度和目标句柄在 `AiecsFlowAgent`，不得为其添加 Item、Collider、Rigidbody 或 `WorldNavigationAgent`。
+- 多个对向群体应进入同一 ECS 空间索引批次；导航调度先冻结位置、排序并建立桶范围，再批量查表、避让和移动。密集桶按固定邻居预算轮转采样，不能退化为每 AI 扫描整个密集桶；这是允许短暂重叠的软分离，尚无接敌名额、完整窄路让行或战斗含义。
+- 共享导航归世界管理器所有，群体只归还自己的目标与释放自己的 World/空间容器；目标槽位代际、世界 Epoch 和 Native 读取依赖必须一起处理。目标失效或世界更换时应停止旧批次，不能在新世界继续使用旧句柄。
+- 导航开发入口与 P1 渲染原型仍是独立入口；Gizmos 观测点不是正式生物显示，真实导航 Entity 数也不代表拥有身份、生命、战斗或存档能力。具体分层缓存、体型与已加载窗口限制见 Navigation Skill。
 - 当前感知优化接在正式 Item/AI 旧后端；它消除了 AI 目标的物理几何查询，但快照采集与 LOS/结果应用仍在主线程。后续 ECS 化应复用纯几何契约，不能为每个 ECS 实体补 Item 或 Collider Bridge。
 
 ## 工作流与验证

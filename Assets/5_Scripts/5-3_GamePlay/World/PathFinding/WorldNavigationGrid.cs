@@ -43,6 +43,17 @@ public sealed class WorldNavigationGrid
     public int PathCostRevision { get; private set; }
     public int CellCount => cells.Count;
 
+    // 独立失效通知供共享流场订阅，不竞争旧路径管理器的 ConsumeChanges 队列。
+    public event Action<Vector2Int> CellChanged;
+    public event Action Cleared;
+
+    /// <summary>复制已注册坐标供新导航后端首次建立块索引，不暴露可写字典。</summary>
+    public void CopyCellPositions(List<Vector2Int> result)
+    {
+        result.Clear();
+        result.AddRange(cells.Keys);
+    }
+
     public static Vector2Int WorldToCell(Vector2 worldPosition)
         => NormalizeCell(new Vector2Int(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y)));
 
@@ -85,8 +96,10 @@ public sealed class WorldNavigationGrid
         }
     }
 
+    /// <summary>清空世界网格，并通知所有导航后端失效。</summary>
     public void Clear()
     {
+        Cleared?.Invoke();
         if (cells.Count == 0 && blockerCounts.Count == 0 && blockerCells.Count == 0)
             return;
 
@@ -283,6 +296,7 @@ public sealed class WorldNavigationGrid
         return false;
     }
 
+    /// <summary>按有效权重与禁止切角规则检查相邻格，并返回与共享流场一致的代价。</summary>
     public bool CanTraverse(Vector2Int from, Vector2Int to, out int traversalCost)
     {
         traversalCost = 0;
@@ -309,9 +323,7 @@ public sealed class WorldNavigationGrid
             return false;
         }
 
-        int terrainCost = destination.Penalty >= 100000u
-            ? 1000
-            : (int)(destination.Penalty / 100u);
+        int terrainCost = FlatWorld.Navigation.FlowNavigationMath.TerrainCost(destination.Penalty);
         traversalCost = (diagonal ? 14 : 10) + terrainCost;
         return true;
     }
@@ -383,8 +395,10 @@ public sealed class WorldNavigationGrid
         fullResetPending = false;
     }
 
+    /// <summary>先通知独立订阅者，再为旧路径记录有数量上限的变更队列。</summary>
     private void RecordChangedCell(Vector2Int position)
     {
+        CellChanged?.Invoke(position);
         if (fullResetPending)
             return;
 
