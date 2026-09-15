@@ -22,6 +22,44 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
     public RectTransform LeftPourOutlet; // 正倾角时使用的左侧罐口嘴沿锚点。
     public RectTransform RightPourOutlet; // 负倾角时使用的右侧罐口嘴沿锚点。
     public const string PrefabKey = "UI_WaterVessel";
+
+    #region 容器外观配置
+
+    /// <summary>单种容器的 UI 外观：剖面、内腔、水位区间和出口一起切换；位置按剖面 Rect 的 0..1 坐标配置。</summary>
+    [Serializable]
+    public struct VesselAppearance
+    {
+        public string ItemId; // 匹配当前容器物品定义。
+        public Sprite Cutaway, Interior; // 剖面和同画布内腔遮罩。
+        public Vector2 FillRange; // 水位下限、上限，按底部为零归一化。
+        public Vector2 LeftOutlet, RightOutlet; // 左右嘴沿的归一化位置。
+    }
+
+    public VesselAppearance[] Appearances = Array.Empty<VesselAppearance>(); // 特定容器的外观覆盖，未匹配时恢复 Prefab 默认外观。
+    private VesselAppearance defaultAppearance; // 首次绑定时保存的默认外观。
+    private Image vesselImage, interiorImage; // 已绑定的剖面和内腔图像。
+
+    /// <summary>切换容器时一次性应用完整外观，避免复用面板残留上一个容器的遮罩或出水位置。</summary>
+    private void ApplyAppearance(string itemId)
+    {
+        VesselAppearance appearance = defaultAppearance;
+        foreach (VesselAppearance candidate in Appearances)
+        {
+            if (!string.Equals(candidate.ItemId, itemId, StringComparison.Ordinal)) continue;
+            appearance = candidate;
+            break;
+        }
+        vesselImage.sprite = appearance.Cutaway;
+        interiorImage.sprite = appearance.Interior;
+        Liquid.FillRange = appearance.FillRange;
+        Rect rect = vesselArt.rect;
+        LeftPourOutlet.localPosition = rect.min + Vector2.Scale(rect.size, appearance.LeftOutlet);
+        RightPourOutlet.localPosition = rect.min + Vector2.Scale(rect.size, appearance.RightOutlet);
+        Liquid.SetVerticesDirty();
+    }
+
+    #endregion
+
     private BasePanel panel; // 通用面板生命周期。
     private Mod_WaterVessel vessel; // 当前目标液体容器。
     private Item actor; // 操作者。
@@ -63,6 +101,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         current.vessel = target;
         target.Changed += current.Refresh;
         current.actor = owner;
+        current.ApplyAppearance(target.item.itemData.IDName);
         BuildingPanelActions buildingActions = current.GetComponent<BuildingPanelActions>();
         if (buildingActions == null)
             throw new InvalidOperationException("水容器面板缺少 BuildingPanelActions，正式 Prefab 未完成建筑操作绑定。");
@@ -94,6 +133,17 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
         pourGraphic = vesselGestureFrame.Find("倾倒液流")?.GetComponent<WaterVesselPourGraphic>();
         if (pourGraphic == null)
             throw new InvalidOperationException("水容器面板缺少陶罐剖面/倾倒液流，正式 Prefab 未完成倾倒表现绑定。");
+        vesselImage = vesselArt.GetComponent<Image>();
+        interiorImage = Liquid.transform.parent.GetComponent<Image>();
+        Rect artRect = vesselArt.rect;
+        defaultAppearance = new VesselAppearance
+        {
+            Cutaway = vesselImage.sprite,
+            Interior = interiorImage.sprite,
+            FillRange = Liquid.FillRange,
+            LeftOutlet = Rect.PointToNormalized(artRect, LeftPourOutlet.localPosition),
+            RightOutlet = Rect.PointToNormalized(artRect, RightPourOutlet.localPosition)
+        };
         drink.onClick.AddListener(Drink);
         panel.GetButton("关闭按钮").onClick.AddListener(Close);
         panel.Closed += ClearTarget;
@@ -115,7 +165,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
                      GameRes.Instance.TryGetItemDefinition(vessel.item.itemData.IDName, out RuntimeItemDefinition definition)
             ? definition.DisplayName
             : FlatWorldLocalizationService.GetUiText("水容器");
-        hint.text = FlatWorldLocalizationService.GetUiText("液体容器一次只保存一种液体；不同液体不能直接混装。对准水域使用可以装水。");
+        hint.text = FlatWorldLocalizationService.GetUiText("一次只装一种液体；拖入液体原料或其他容器可装液，拖动容器可倾倒。");
 
         Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, vessel.CurrentLiquid?.VisualState);
         LiquidDefinition liquid = vessel.CurrentLiquid;
@@ -140,7 +190,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
                RectTransformUtility.RectangleContainsScreenPoint(vesselArt, screenPosition, eventCamera);
     }
 
-    /// <summary>拖入另一只液体容器时只转移液体状态，不移动来源物品所在槽位。</summary>
+    /// <summary>拖入容器时原地转液，拖入液体原料时按本次拖拽数量和剩余容量扣料。</summary>
     public bool TryAcceptInventoryDrag(InventoryDragTransaction transaction, Vector2 screenPosition, Camera eventCamera)
     {
         if (transaction == null || vessel == null || !vessel.CanOperate(actor) ||
@@ -149,7 +199,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             return false;
         }
 
-        return transaction.TryConsumeSourceItem(sourceItem => vessel.TransferFromInventoryItem(sourceItem, actor));
+        return transaction.TryConsumeSourceItem(sourceItem => vessel.TransferFromInventoryItem(sourceItem, actor, transaction.DraggedAmount));
     }
 
     #endregion
@@ -314,9 +364,10 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             Liquid.CurrentBodyColor,
             Liquid.CurrentSurfaceColor,
             Liquid.CurrentDetailColor,
-            Liquid.CurrentMurkiness);
+            Liquid.CurrentMurkiness,
+            Liquid.CurrentViscosity);
         Liquid.AddAgitation(Mathf.Clamp01(0.3f + normalizedFlow * 0.7f));
-        Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, vessel.CurrentLiquid?.VisualState, true);
+        Liquid.SetWater(vessel.Data.Amount, vessel.Capacity, vessel.CurrentLiquid?.VisualState, Liquid.CurrentViscosity <= 0.01f);
     }
 
     /// <summary>来回快速改变倾角会显著放大水面波纹，慢速单向倾倒只产生轻微扰动。</summary>

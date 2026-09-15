@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>容器剖面的像素水层：按真实容量比例显示高度，以 12 帧每秒绘制轻微波纹；外部 Mask 限制罐内轮廓。</summary>
+/// <summary>容器剖面的像素液体层：以 12 帧每秒追随真实容量并绘制波纹；黏稠度独立控制缓动和光泽，外部 Mask 限制容器轮廓。</summary>
 [RequireComponent(typeof(CanvasRenderer))]
 public sealed class WaterVesselLiquidGraphic : MaskableGraphic
 {
@@ -16,6 +16,7 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
         [Range(0f, 0.25f)] public float Sediment; // 底部沉淀占当前水深的比例。
         [Range(0f, 1f)] public float SurfaceDebris; // 水面断续污膜/漂浮物强度。
         [Range(0f, 1f)] public float SuspendedParticles; // 水体内悬浮颗粒密度。
+        [Range(0f, 1f)] public float Viscosity; // 视觉黏稠度：降低波速与扰动，增加缓慢回落和光泽；零保持水的原有表现。
         public bool Foam; // 海水泡沫。
     }
     public LiquidStyle[] Styles; // Prefab 配置视觉，不修改液体玩法定义。
@@ -30,6 +31,7 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
     public Color CurrentSurfaceColor => style.Surface;
     public Color CurrentDetailColor => style.Detail;
     public float CurrentMurkiness => style.Murkiness;
+    public float CurrentViscosity => style.Viscosity;
 
     /// <summary>接收容器真实数据，打开时直接定位，使用过程中平滑升降。</summary>
     public void SetWater(float amount, int capacity, string id, bool immediate = false)
@@ -42,6 +44,7 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
             if (index < 0) throw new InvalidOperationException($"液体 {id} 未配置容器视觉。");
             style = Styles[index];
             visualState = id;
+            agitation = 0f;
         }
         if (!immediate && !changedStyle && targetLevel == value) return;
         targetLevel = value;
@@ -55,16 +58,16 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
         if (level <= 0f && targetLevel <= 0f)
             return;
 
-        agitation = Mathf.Clamp01(Mathf.Max(agitation, normalizedImpulse));
+        agitation = Mathf.Clamp01(Mathf.Max(agitation, normalizedImpulse * Mathf.Lerp(1f, 0.3f, style.Viscosity)));
     }
 
     /// <summary>只在可见且有水时更新像素波纹。</summary>
     private void Update()
     {
-        agitation = Mathf.MoveTowards(agitation, 0f, Time.unscaledDeltaTime * 1.6f);
+        agitation = Mathf.MoveTowards(agitation, 0f, Time.unscaledDeltaTime * Mathf.Lerp(1.6f, 3.2f, style.Viscosity));
         if (Time.unscaledTime < nextFrame || (level <= 0 && targetLevel <= 0)) return;
         nextFrame = Time.unscaledTime + 1f / 12f;
-        level = Mathf.MoveTowards(level, targetLevel, .08f);
+        level = Mathf.MoveTowards(level, targetLevel, .08f * Mathf.Lerp(1f, 0.45f, style.Viscosity));
         frame++;
         SetVerticesDirty();
     }
@@ -79,7 +82,7 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
         float bottom = r.yMin + r.height * FillRange.x;
         float surface = Mathf.Lerp(bottom, r.yMin + r.height * FillRange.y, level);
         float wavePixels = Mathf.Lerp(1f, 5f, agitation) * Mathf.Min(1f, level * 12f) *
-                           Mathf.Lerp(1f, 0.72f, style.Murkiness);
+                           Mathf.Lerp(1f, 0.72f, style.Murkiness) * Mathf.Lerp(1f, 0.45f, style.Viscosity);
         for (int i = 0; i < 32; i++)
         {
             float x = r.xMin + i * r.width / 32f;
@@ -92,7 +95,7 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
             {
                 Quad(mesh, x, Mathf.Max(bottom, top - pixel), pixel * 3f, Mathf.Min(pixel, top - bottom), style.Detail);
             }
-            else if (style.Murkiness <= 0.01f && i % 5 == 0)
+            else if (style.Murkiness <= 0.01f && style.Viscosity <= 0.01f && i % 5 == 0)
             {
                 float y = Mathf.Lerp(bottom, top, .3f + .4f * Mathf.Abs(Mathf.Sin(i + frame * .04f)));
                 Quad(mesh, x, Mathf.Max(bottom, y), pixel, Mathf.Min(pixel, top - bottom), style.Detail);
@@ -102,16 +105,17 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
         DrawSediment(mesh, r, bottom, surface, pixel);
         DrawSuspendedParticles(mesh, r, bottom, surface, pixel);
         DrawSurfaceDebris(mesh, r, bottom, surface, wavePixels, pixel);
+        DrawViscousHighlights(mesh, r, bottom, surface, pixel);
     }
 
-    /// <summary>浑浊液体使用分层色带而不是整块纯色，让底部明显更沉、更脏。</summary>
+    /// <summary>浑浊或黏稠液体使用分层色带表现深度；是否出现泥沙仍由独立的沉淀参数决定。</summary>
     private void DrawBodyColumn(VertexHelper mesh, float x, float bottom, float top, float width)
     {
         float height = top - bottom;
         if (height <= 0f)
             return;
 
-        if (style.Murkiness <= 0.01f)
+        if (style.Murkiness <= 0.01f && style.Viscosity <= 0.01f)
         {
             Quad(mesh, x, bottom, width, height, style.Body);
             return;
@@ -198,9 +202,37 @@ public sealed class WaterVesselLiquidGraphic : MaskableGraphic
         }
     }
 
-    private float GetWave(int column) =>
-        Mathf.Sin(column * .6f + frame * .3f) +
-        Mathf.Sin(column * 1.37f - frame * .48f) * agitation * 0.65f;
+    #region 黏稠液体表现
+
+    /// <summary>缓慢移动的宽高光表现糖浆的厚度和光泽，不复用泥沙或海水泡沫。</summary>
+    private void DrawViscousHighlights(VertexHelper mesh, Rect r, float bottom, float surface, float pixel)
+    {
+        if (style.Viscosity <= 0.01f || surface - bottom < pixel * 5f)
+            return;
+
+        Color highlight = style.Surface;
+        highlight.a *= style.Viscosity * 0.55f;
+        for (int i = 0; i < 3; i++)
+        {
+            float x = Mathf.Lerp(r.xMin, r.xMax, 0.25f + i * 0.23f) +
+                      Mathf.Sin(frame * 0.025f + i * 2f) * pixel * 2f;
+            float y = Mathf.Lerp(bottom, surface, 0.7f + i * 0.08f);
+            float width = pixel * (7f - i);
+            Quad(mesh, x, y, width, pixel, highlight);
+            Quad(mesh, x + pixel, y - pixel, width - pixel * 2f, pixel, Color.Lerp(style.Body, highlight, 0.35f));
+        }
+    }
+
+    /// <summary>黏稠液体使用更宽、更慢的波峰，并抑制高频晃动。</summary>
+    private float GetWave(int column)
+    {
+        float speed = Mathf.Lerp(1f, 0.16f, style.Viscosity);
+        return Mathf.Sin(column * Mathf.Lerp(0.6f, 0.23f, style.Viscosity) + frame * 0.3f * speed) +
+               Mathf.Sin(column * 1.37f - frame * 0.48f * speed) * agitation *
+               Mathf.Lerp(0.65f, 0.1f, style.Viscosity);
+    }
+
+    #endregion
 
     /// <summary>无需分配的确定性散列，用于固定颗粒和污膜位置。</summary>
     private static float Hash01(int value)

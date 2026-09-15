@@ -526,6 +526,14 @@ public partial class GameRes : SingletonAutoMono<GameRes>
         string id = definition.Id.Trim();
         if (LiquidDefinitions.ContainsKey(id))
             throw new InvalidDataException($"液体定义 ID 冲突：{id}");
+        if (!string.IsNullOrEmpty(definition.SourceItemId))
+        {
+            foreach (LiquidDefinition existing in LiquidDefinitions.Values)
+            {
+                if (string.Equals(existing.SourceItemId, definition.SourceItemId, System.StringComparison.Ordinal))
+                    throw new InvalidDataException($"库存原料对应了多个液体：{definition.SourceItemId}");
+            }
+        }
         LiquidDefinitions.Add(id, definition);
         LoadedCount++;
     }

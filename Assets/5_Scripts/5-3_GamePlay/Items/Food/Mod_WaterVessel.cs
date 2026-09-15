@@ -212,10 +212,10 @@ public sealed class Mod_WaterVessel : Module, IInteractable
     }
 
     /// <summary>
-    /// 把玩家库存中另一只液体容器的内容转入当前已打开容器。来源物品本身保持原槽位，只修改其液体状态；
-    /// 当前手持来源存在运行时实例时优先走实例 API，避免运行时 Data 与 ItemData 快照失步。
+    /// 把库存容器中的液体或目录声明的原料装入当前容器。来源容器保持原槽位，原料按整份扣除；
+    /// 当前手持来源优先走实例 API，原料数量不超过本次拖拽量，避免半组拖拽误消费整组。
     /// </summary>
-    public bool TransferFromInventoryItem(ItemData sourceItemData, Item actor)
+    public bool TransferFromInventoryItem(ItemData sourceItemData, Item actor, float maximumItemAmount = float.PositiveInfinity)
     {
         if (!CanOperate(actor) || sourceItemData == null || item?.itemData == null ||
             IsSameItemData(sourceItemData, item.itemData))
@@ -227,8 +227,10 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         if (runtimeSource != null)
             return runtimeSource.TransferTo(this, actor);
 
-        if (!TryRead(sourceItemData, out Ex_ModData_MemoryPackable sourceStorage, out LiquidContainerState sourceState) ||
-            IsEmptyAmount(sourceState.Amount) || string.IsNullOrWhiteSpace(sourceState.LiquidId) ||
+        if (!TryRead(sourceItemData, out Ex_ModData_MemoryPackable sourceStorage, out LiquidContainerState sourceState))
+            return FillFromInventoryIngredient(sourceItemData, actor, maximumItemAmount);
+
+        if (IsEmptyAmount(sourceState.Amount) || string.IsNullOrWhiteSpace(sourceState.LiquidId) ||
             (!IsEmptyAmount(Data.Amount) && !SameLiquid(Data.LiquidId, sourceState.LiquidId)))
         {
             return false;
@@ -252,6 +254,42 @@ public sealed class Mod_WaterVessel : Module, IInteractable
         AddLiquidInternal(liquidId, moved);
         Commit();
         RefreshInventoryItemPresentation(actor, sourceItemData);
+        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(actor);
+        return true;
+    }
+
+    /// <summary>按液体目录的原料映射装液；先校验整份容量，再从真实来源槽扣料，绝不直接改堆叠数量。</summary>
+    private bool FillFromInventoryIngredient(ItemData source, Item actor, float maximumItemAmount)
+    {
+        LiquidDefinition liquid = null;
+        foreach (LiquidDefinition candidate in GameRes.Instance.LiquidDefinitions.Values)
+        {
+            if (!string.Equals(candidate.SourceItemId, source.IDName, StringComparison.Ordinal)) continue;
+            liquid = candidate;
+            break;
+        }
+        if (liquid == null || float.IsNaN(maximumItemAmount) || maximumItemAmount <= 0f ||
+            (!IsEmptyAmount(Data.Amount) && !SameLiquid(Data.LiquidId, liquid.Id)) ||
+            !InventoryContextResolver.TryResolveContainingInventory(actor, source, out Inventory inventory))
+            return false;
+
+        // 已经吃过的原料不能再按完整一份兑换，避免复制已消耗的内容。
+        foreach (ModuleData module in source.ModuleDataDic.Values)
+        {
+            if (module is ModData_FoodData food && FoodObserverStateStore.ReadFloat(
+                    FoodObserverStateStore.Find(food, FoodObserverStateStore.ConsumptionStateKey), "EatingProgress", 0f) > 0f)
+                return false;
+        }
+
+        ItemSlot sourceSlot = inventory.Data.itemSlots.Find(slot => IsSameItemData(slot?.itemData, source));
+        int amount = Mathf.FloorToInt(Mathf.Min(
+            Mathf.Min(sourceSlot?.itemData?.Stack?.Amount ?? 0f, maximumItemAmount),
+            Mathf.Max(0f, Capacity - Data.Amount) + AmountEpsilon));
+        if (amount <= 0 || !inventory.Data.TryConsumeFromSlot(sourceSlot, amount, out _))
+            return false;
+
+        AddLiquidInternal(liquid.Id, amount);
+        Commit();
         ItemNetworkStateSerialization.NotifyRuntimeStateChanged(actor);
         return true;
     }

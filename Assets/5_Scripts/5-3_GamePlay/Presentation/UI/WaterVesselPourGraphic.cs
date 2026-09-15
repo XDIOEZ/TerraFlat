@@ -28,21 +28,23 @@ public sealed class WaterVesselPourGraphic : MaskableGraphic
     private Color surfaceColor = Color.white;
     private Color detailColor = Color.white;
     private float murkiness;
+    private float viscosity; // 与罐内液面共用的视觉黏稠度，零保持普通水流。
 
     /// <summary>有真实液体流失时触发一次液流脉冲；多次连续触发会自然叠加为持续倾倒。</summary>
-    public void Emit(float normalizedFlow, Color body, Color surface, Color detail, float liquidMurkiness)
+    public void Emit(float normalizedFlow, Color body, Color surface, Color detail, float liquidMurkiness, float liquidViscosity = 0f)
     {
         bodyColor = body;
         surfaceColor = surface;
         detailColor = detail;
         murkiness = Mathf.Clamp01(liquidMurkiness);
+        viscosity = Mathf.Clamp01(liquidViscosity);
 
         float strength = Mathf.Clamp01(normalizedFlow);
         targetFlow = Mathf.Max(targetFlow, strength);
         flow = Mathf.Max(flow, Mathf.Lerp(0.22f, 0.92f, strength));
         pulseUntil = Mathf.Max(
             pulseUntil,
-            Time.unscaledTime + Mathf.Lerp(FlowHoldMinSeconds, FlowHoldMaxSeconds, strength));
+            Time.unscaledTime + Mathf.Lerp(FlowHoldMinSeconds, FlowHoldMaxSeconds, strength) * Mathf.Lerp(1f, 2f, viscosity));
         SetVerticesDirty();
     }
 
@@ -81,7 +83,7 @@ public sealed class WaterVesselPourGraphic : MaskableGraphic
         if (Time.unscaledTime >= pulseUntil)
             targetFlow = 0f;
 
-        float speed = targetFlow > flow ? 5.5f : FlowFadeOutPerSecond;
+        float speed = (targetFlow > flow ? 5.5f : FlowFadeOutPerSecond) * Mathf.Lerp(1f, 0.38f, viscosity);
         float previous = flow;
         flow = Mathf.MoveTowards(flow, targetFlow, speed * Time.unscaledDeltaTime);
 
@@ -112,9 +114,10 @@ public sealed class WaterVesselPourGraphic : MaskableGraphic
         float size = Mathf.Min(rect.width, rect.height);
         Vector2 mouth = outletPosition;
         Vector2 outward = outletDirection;
-        float launchDistance = Mathf.Lerp(size * 0.1f, size * 0.26f, flow);
+        float launchDistance = Mathf.Lerp(size * 0.1f, size * 0.26f, flow) * Mathf.Lerp(1f, 0.32f, viscosity);
         float fallDistance = Mathf.Lerp(size * 0.32f, size * 0.68f, flow);
-        float baseWidth = Mathf.Lerp(size * 0.025f, size * 0.085f, flow) * Mathf.Lerp(1f, 1.28f, murkiness);
+        float baseWidth = Mathf.Lerp(size * 0.025f, size * 0.085f, flow) * Mathf.Lerp(1f, 1.28f, murkiness) *
+                          Mathf.Lerp(1f, 0.62f, viscosity);
 
         // 概念稿的罐腹与嘴沿之间有一段厚陶土边缘；液流位于前景层时，用窄液桥覆盖这段视觉断点。
         float bridgeWidth = Mathf.Max(size * 0.012f, baseWidth * MouthBridgeWidthRatio);
@@ -128,19 +131,29 @@ public sealed class WaterVesselPourGraphic : MaskableGraphic
         {
             float t = i / (float)StreamSegments;
             // 段数翻倍后仍按整条液流的归一化位置计算波相位，避免因为细分增加而把波纹频率也翻倍。
-            float wave = Mathf.Sin(frame * 0.55f + t * 13.05f) * size * 0.012f * flow * Mathf.Lerp(1f, 0.72f, murkiness);
+            float wave = Mathf.Sin(frame * 0.55f * Mathf.Lerp(1f, 0.15f, viscosity) + t * 13.05f) *
+                         size * 0.012f * flow * Mathf.Lerp(1f, 0.72f, murkiness) * Mathf.Lerp(1f, 0.15f, viscosity);
             Vector2 current = mouth +
                               outward * (launchDistance * t) +
                               Vector2.down * (fallDistance * t * t) +
                               Vector2.right * wave;
 
-            float width = baseWidth * Mathf.Lerp(1f, 0.58f, t);
+            float width = baseWidth * Mathf.Lerp(1f, Mathf.Lerp(0.58f, 0.27f, viscosity), t);
             Vector2 segmentDirection = (current - previous).normalized;
             Vector2 start = previous - segmentDirection * width * JointOverlapRatio;
-            Color ribbonColor = i % (murkiness > 0.35f ? 10 : 6) == 0
+            Color ribbonColor = viscosity <= 0.01f && i % (murkiness > 0.35f ? 10 : 6) == 0
                 ? Color.Lerp(bodyColor, surfaceColor, Mathf.Lerp(1f, 0.38f, murkiness))
                 : bodyColor;
             AddRibbon(mesh, start, current, width, ribbonColor);
+
+            // 黏稠液流保持连续，仅用细长高光表现拉丝，不把蜜流画成断续水片。
+            if (viscosity > 0.01f)
+            {
+                Color gloss = surfaceColor;
+                gloss.a *= viscosity * 0.65f;
+                Vector2 offset = new Vector2(-segmentDirection.y, segmentDirection.x) * width * 0.18f;
+                AddRibbon(mesh, start + offset, current + offset, width * 0.18f, gloss);
+            }
 
             if (murkiness > 0.05f && i % 4 == 0)
             {
@@ -153,6 +166,15 @@ public sealed class WaterVesselPourGraphic : MaskableGraphic
                 AddSquare(mesh, fleckCenter, fleckSize, fleckColor);
             }
             previous = current;
+        }
+
+        // 拉丝末端保留一颗下坠的厚滴，随整股液流一起收细消失。
+        if (viscosity > 0.01f)
+        {
+            float dropWidth = baseWidth * viscosity * 0.65f;
+            Vector2 tip = previous + Vector2.down * dropWidth * 1.6f;
+            AddRibbon(mesh, previous, tip, dropWidth, bodyColor);
+            AddRibbon(mesh, previous, Vector2.Lerp(previous, tip, 0.6f), dropWidth * 0.2f, surfaceColor);
         }
     }
 

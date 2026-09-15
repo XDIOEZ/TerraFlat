@@ -2,6 +2,16 @@
   "schemaVersion": 1,
   "liquids": [
     {
+      "id": "core:honey",
+      "displayName": "蜂蜜",
+      "description": "金黄色的黏稠蜂蜜，可从蜂蜜物品装入液体容器。",
+      "category": "syrup",
+      "visualState": "honey",
+      "sourceItemId": "Honey",
+      "drinkable": false,
+      "hydrationPerServing": 0.0
+    },
+    {
       "id": "core:dirty_water",
       "displayName": "脏水",
       "description": "未经处理的淡水，可以直接饮用，也可以烧开处理。",

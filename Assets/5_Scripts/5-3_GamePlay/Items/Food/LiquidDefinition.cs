@@ -58,7 +58,8 @@ public sealed class LiquidDefinition
         float hydrationPerServing,
         IReadOnlyList<LiquidDrinkEffect> drinkEffects,
         LiquidHeatProcess heatProcess,
-        float buoyancyThresholdMultiplier = 1f)
+        float buoyancyThresholdMultiplier = 1f,
+        string sourceItemId = null)
     {
         Id = id;
         DisplayName = displayName;
@@ -70,6 +71,7 @@ public sealed class LiquidDefinition
         DrinkEffects = drinkEffects ?? Array.Empty<LiquidDrinkEffect>();
         HeatProcess = heatProcess;
         BuoyancyThresholdMultiplier = buoyancyThresholdMultiplier;
+        SourceItemId = sourceItemId;
     }
 
     public string Id { get; }
@@ -83,6 +85,7 @@ public sealed class LiquidDefinition
     public LiquidHeatProcess HeatProcess { get; }
     /// <summary>世界掉落物浮沉阈值倍率；1 保持基础阈值不变。</summary>
     public float BuoyancyThresholdMultiplier { get; }
+    public string SourceItemId { get; } // 可装入容器的库存原料 ID；一个完整物品对应一份液体，未配置则仅支持液体来源。
 }
 
 /// <summary>一次饮用液体时可能附加的 Buff；概率和反馈属于液体定义，而不是容器或水地块。</summary>
@@ -118,6 +121,9 @@ public sealed class LiquidDefinitionDto
 
     [JsonProperty("visualState")]
     public string VisualState = "filled";
+
+    [JsonProperty("sourceItemId")]
+    public string SourceItemId;
 
     [JsonProperty("drinkable")]
     public bool Drinkable;
@@ -258,7 +264,8 @@ public static class LiquidDefinitionFactory
             dto.HydrationPerServing,
             drinkEffects,
             heatProcess,
-            dto.BuoyancyThresholdMultiplier);
+            dto.BuoyancyThresholdMultiplier,
+            string.IsNullOrWhiteSpace(dto.SourceItemId) ? null : dto.SourceItemId.Trim());
     }
 
     /// <summary>构建整个本体分包并拒绝重复 ID。</summary>
@@ -288,8 +295,16 @@ public static class LiquidDefinitionFactory
         Func<string, bool> itemExists,
         Func<string, bool> buffExists)
     {
+        var sourceItems = new HashSet<string>(StringComparer.Ordinal);
         foreach (LiquidDefinition definition in definitions)
         {
+            if (!string.IsNullOrEmpty(definition.SourceItemId))
+            {
+                if (!sourceItems.Add(definition.SourceItemId))
+                    throw new InvalidDataException($"库存原料对应了多个液体：{definition.SourceItemId}");
+                if (!itemExists(definition.SourceItemId))
+                    throw new InvalidDataException($"液体 {definition.Id} 的库存原料不存在：{definition.SourceItemId}");
+            }
             foreach (LiquidDrinkEffect effect in definition.DrinkEffects)
             {
                 if (buffExists != null && !buffExists(effect.BuffId))
