@@ -1,0 +1,7 @@
+{
+    "name": "FlatWorld.AIECS",
+    "rootNamespace": "FlatWorld.AIECS",
+    "references": ["Unity.Entities", "Unity.Collections", "Unity.Mathematics", "Unity.Burst"],
+    "allowUnsafeCode": false,
+    "autoReferenced": true
+}
