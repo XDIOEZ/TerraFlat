@@ -2259,6 +2259,26 @@ MonoBehaviour:
     m_Key: ui.text.C7075172
     m_Metadata:
       m_Items: []
+  - m_Id: 13245584273039360
+    m_Key: ui.text.2D966C1B
+    m_Metadata:
+      m_Items: []
+  - m_Id: 13245584352731136
+    m_Key: ui.text.96A09F29
+    m_Metadata:
+      m_Items: []
+  - m_Id: 13269179082727424
+    m_Key: ui.text.8AFF7885
+    m_Metadata:
+      m_Items: []
+  - m_Id: 13269179137253376
+    m_Key: ui.text.93485D70
+    m_Metadata:
+      m_Items: []
+  - m_Id: 13270765100064768
+    m_Key: ui.text.D011A577
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

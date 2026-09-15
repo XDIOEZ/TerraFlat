@@ -2315,7 +2315,8 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 12633309287800839
-    m_Localized: A liquid container holds one liquid at a time. Different liquids cannot be mixed directly. Use it on water to fill it.
+    m_Localized: A liquid container holds one liquid at a time. Different liquids
+      cannot be mixed directly. Use it on water to fill it.
     m_Metadata:
       m_Items: []
   - m_Id: 12633309287800840
@@ -2324,6 +2325,34 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 12633309287800841
     m_Localized: Hotbar Bottom Spacing
+    m_Metadata:
+      m_Items: []
+  - m_Id: 13245584273039360
+    m_Localized: Honey
+    m_Metadata:
+      m_Items: []
+  - m_Id: 13245584352731136
+    m_Localized: Holds one liquid at a time. Drag in a liquid ingredient or another
+      vessel to fill it; drag the vessel to pour.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 13269179082727424
+    m_Localized: Freeze World Generation Rules
+    m_Metadata:
+      m_Items: []
+  - m_Id: 13269179137253376
+    m_Localized: 'On: keep this save''s existing generation rules. Off: follow the
+      current game version and upgrade the generation baseline; unexplored areas
+      may change. Re-enable it to freeze the current rules the next time you enter
+      the world.'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 13270765100064768
+    m_Localized: 'On: keep this save''s existing generation rules. Off: follow the
+      current game version and upgrade the generation baseline; base terrain and
+      natural generation may change in both explored and unexplored areas, while
+      player deltas are retained. Re-enable it to freeze the current rules the next
+      time you enter the world.'
     m_Metadata:
       m_Items: []
   references:

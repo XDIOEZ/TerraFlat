@@ -311,14 +311,6 @@ MonoBehaviour:
     m_Key: item.Berry.description
     m_Metadata:
       m_Items: []
-  - m_Id: 4878938158
-    m_Key: item.Coconut_Addle.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 4878938159
-    m_Key: item.Coconut_Addle.description
-    m_Metadata:
-      m_Items: []
   - m_Id: 4878938160
     m_Key: item.Coconut_Green.name
     m_Metadata:
@@ -349,22 +341,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 4887326724
     m_Key: item.Coconut_Shell.description
-    m_Metadata:
-      m_Items: []
-  - m_Id: 4887326725
-    m_Key: item.Coconut_Water.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 4887326726
-    m_Key: item.Coconut_Water.description
-    m_Metadata:
-      m_Items: []
-  - m_Id: 4887326727
-    m_Key: item.Coconut_WaterSalt.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 4887326728
-    m_Key: item.Coconut_WaterSalt.description
     m_Metadata:
       m_Items: []
   - m_Id: 4887326729
@@ -727,14 +703,6 @@ MonoBehaviour:
     m_Key: item.ChippedTool.description
     m_Metadata:
       m_Items: []
-  - m_Id: 1679033483485186
-    m_Key: item.Torch.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 1679033483485187
-    m_Key: item.Torch.description
-    m_Metadata:
-      m_Items: []
   - m_Id: 2189623678644224
     m_Key: item.Torch_Summoner.name
     m_Metadata:
@@ -757,14 +725,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 3818405100085250
     m_Key: item.WildDogMilk_Gray.description
-    m_Metadata:
-      m_Items: []
-  - m_Id: 3818405150416896
-    m_Key: item.Basket_Grass.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 3818405150416897
-    m_Key: item.Basket_Grass.description
     m_Metadata:
       m_Items: []
   - m_Id: 3818405305606144
@@ -867,14 +827,6 @@ MonoBehaviour:
     m_Key: item.Iceberg.description
     m_Metadata:
       m_Items: []
-  - m_Id: 6403757262331911
-    m_Key: item.Bush.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 6403757262331912
-    m_Key: item.Bush.description
-    m_Metadata:
-      m_Items: []
   - m_Id: 6403757287497728
     m_Key: item.Seed_Radish.name
     m_Metadata:
@@ -969,14 +921,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 7973075480915987
     m_Key: item.Tent.description
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7973075480915988
-    m_Key: item.Wall_Wood.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7973075480915989
-    m_Key: item.Wall_Wood.description
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915990
@@ -1139,10 +1083,6 @@ MonoBehaviour:
     m_Key: item.Herb.name
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662557331463
-    m_Key: item.FoxtailEar.name
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662557331464
     m_Key: item.Straw.name
     m_Metadata:
@@ -1153,10 +1093,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 11141662557331466
     m_Key: item.WillowBark.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 11141662557331467
-    m_Key: item.Sieve.name
     m_Metadata:
       m_Items: []
   - m_Id: 11141662557331468
@@ -1175,24 +1111,12 @@ MonoBehaviour:
     m_Key: item.FoxtailCrop.name
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662565720066
-    m_Key: item.MilletCrop.name
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662565720067
     m_Key: item.Seed_Herb.name
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662565720068
-    m_Key: item.Seed_Millet.name
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662565720069
     m_Key: item.Seed_Willow.name
-    m_Metadata:
-      m_Items: []
-  - m_Id: 11141662565720070
-    m_Key: item.Millet.name
     m_Metadata:
       m_Items: []
   - m_Id: 11141662565720072
@@ -1311,10 +1235,6 @@ MonoBehaviour:
     m_Key: item.Herb.description
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662603468804
-    m_Key: item.FoxtailEar.description
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662607663104
     m_Key: item.Straw.description
     m_Metadata:
@@ -1325,10 +1245,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 11141662607663106
     m_Key: item.WillowBark.description
-    m_Metadata:
-      m_Items: []
-  - m_Id: 11141662607663107
-    m_Key: item.Sieve.description
     m_Metadata:
       m_Items: []
   - m_Id: 11141662607663108
@@ -1347,24 +1263,12 @@ MonoBehaviour:
     m_Key: item.FoxtailCrop.description
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662611857408
-    m_Key: item.MilletCrop.description
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662611857409
     m_Key: item.Seed_Herb.description
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662611857410
-    m_Key: item.Seed_Millet.description
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662611857411
     m_Key: item.Seed_Willow.description
-    m_Metadata:
-      m_Items: []
-  - m_Id: 11141662611857412
-    m_Key: item.Millet.description
     m_Metadata:
       m_Items: []
   - m_Id: 11141662611857414
@@ -1665,6 +1569,26 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 12735264865640450
     m_Key: item.MinersNote.page.4
+    m_Metadata:
+      m_Items: []
+  - m_Id: 13292200384258048
+    m_Key: item.Fiber.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 13292200447172608
+    m_Key: item.Beehive.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 13292200447172609
+    m_Key: item.Flower.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 13292200447172610
+    m_Key: item.Honey.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 13292200447172611
+    m_Key: item.BottledJam.name
     m_Metadata:
       m_Items: []
   m_Metadata:

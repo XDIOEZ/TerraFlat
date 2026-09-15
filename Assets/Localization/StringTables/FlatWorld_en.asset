@@ -314,14 +314,6 @@ MonoBehaviour:
     m_Localized: A small wild berry that restores a little hunger when eaten.
     m_Metadata:
       m_Items: []
-  - m_Id: 4878938158
-    m_Localized: Spoiled Coconut
-    m_Metadata:
-      m_Items: []
-  - m_Id: 4878938159
-    m_Localized: A cooked coconut dish.
-    m_Metadata:
-      m_Items: []
   - m_Id: 4878938160
     m_Localized: Green Coconut
     m_Metadata:
@@ -352,22 +344,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 4887326724
     m_Localized: An empty coconut shell.
-    m_Metadata:
-      m_Items: []
-  - m_Id: 4887326725
-    m_Localized: Coconut Water
-    m_Metadata:
-      m_Items: []
-  - m_Id: 4887326726
-    m_Localized: Refreshing water from a coconut.
-    m_Metadata:
-      m_Items: []
-  - m_Id: 4887326727
-    m_Localized: Salted Coconut Water
-    m_Metadata:
-      m_Items: []
-  - m_Id: 4887326728
-    m_Localized: Salted coconut water.
     m_Metadata:
       m_Items: []
   - m_Id: 4887326729
@@ -733,14 +709,6 @@ MonoBehaviour:
     m_Localized: ChippedTool.
     m_Metadata:
       m_Items: []
-  - m_Id: 1679033483485186
-    m_Localized: Torch
-    m_Metadata:
-      m_Items: []
-  - m_Id: 1679033483485187
-    m_Localized: Torch.
-    m_Metadata:
-      m_Items: []
   - m_Id: 2189623678644224
     m_Localized: Torch
     m_Metadata:
@@ -763,14 +731,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 3818405100085250
     m_Localized: WildDogMilk Gray.
-    m_Metadata:
-      m_Items: []
-  - m_Id: 3818405150416896
-    m_Localized: Woven Grass Basket
-    m_Metadata:
-      m_Items: []
-  - m_Id: 3818405150416897
-    m_Localized: Basket Grass.
     m_Metadata:
       m_Items: []
   - m_Id: 3818405305606144
@@ -873,14 +833,6 @@ MonoBehaviour:
     m_Localized: Iceberg.
     m_Metadata:
       m_Items: []
-  - m_Id: 6403757262331911
-    m_Localized: Bush
-    m_Metadata:
-      m_Items: []
-  - m_Id: 6403757262331912
-    m_Localized: Bush.
-    m_Metadata:
-      m_Items: []
   - m_Id: 6403757287497728
     m_Localized: Radish Seed
     m_Metadata:
@@ -975,14 +927,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 7973075480915987
     m_Localized: Tent.
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7973075480915988
-    m_Localized: Wooden Wall
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7973075480915989
-    m_Localized: Wall Wood.
     m_Metadata:
       m_Items: []
   - m_Id: 7973075480915990
@@ -1145,10 +1089,6 @@ MonoBehaviour:
     m_Localized: Herb
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662557331463
-    m_Localized: Foxtail Seed Head
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662557331464
     m_Localized: Straw
     m_Metadata:
@@ -1159,10 +1099,6 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 11141662557331466
     m_Localized: Willow Bark
-    m_Metadata:
-      m_Items: []
-  - m_Id: 11141662557331467
-    m_Localized: Sieve
     m_Metadata:
       m_Items: []
   - m_Id: 11141662557331468
@@ -1181,24 +1117,12 @@ MonoBehaviour:
     m_Localized: Foxtail Grass-Crop
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662565720066
-    m_Localized: Millet-Crop
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662565720067
     m_Localized: Herb Seeds
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662565720068
-    m_Localized: Millet Seeds
-    m_Metadata:
-      m_Items: []
   - m_Id: 11141662565720069
     m_Localized: Willow Seeds
-    m_Metadata:
-      m_Items: []
-  - m_Id: 11141662565720070
-    m_Localized: Millet Grain
     m_Metadata:
       m_Items: []
   - m_Id: 11141662565720072
@@ -1317,8 +1241,8 @@ MonoBehaviour:
     m_Localized: Herb.
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662603468804
-    m_Localized: Foxtail Seed Head.
+  - m_Id: 13292200447172611
+    m_Localized: Bottled Jam
     m_Metadata:
       m_Items: []
   - m_Id: 11141662607663104
@@ -1333,8 +1257,8 @@ MonoBehaviour:
     m_Localized: Willow Bark.
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662607663107
-    m_Localized: Sieve.
+  - m_Id: 13292200447172610
+    m_Localized: Honey
     m_Metadata:
       m_Items: []
   - m_Id: 11141662607663108
@@ -1353,24 +1277,24 @@ MonoBehaviour:
     m_Localized: Foxtail Grass.
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662611857408
-    m_Localized: Millet Plant.
+  - m_Id: 13292200447172609
+    m_Localized: Flower
     m_Metadata:
       m_Items: []
   - m_Id: 11141662611857409
     m_Localized: Herb Seeds.
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662611857410
-    m_Localized: Millet Seeds.
+  - m_Id: 13292200447172608
+    m_Localized: Beehive
     m_Metadata:
       m_Items: []
   - m_Id: 11141662611857411
     m_Localized: Willow Seeds.
     m_Metadata:
       m_Items: []
-  - m_Id: 11141662611857412
-    m_Localized: Millet Grain.
+  - m_Id: 13292200384258048
+    m_Localized: Fiber
     m_Metadata:
       m_Items: []
   - m_Id: 11141662611857414
@@ -1558,11 +1482,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 12625631102623744
-    m_Localized: Clay Jar - Building
+    m_Localized: Clay Jar
     m_Metadata:
       m_Items: []
   - m_Id: 12625631161344000
-    m_Localized: Stone Mortar - Building
+    m_Localized: Stone Mortar
     m_Metadata:
       m_Items: []
   - m_Id: 12651324746227712
