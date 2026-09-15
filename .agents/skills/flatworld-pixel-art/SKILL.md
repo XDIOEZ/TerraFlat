@@ -32,6 +32,8 @@ python .agents/skills/flatworld-pixel-art/scripts/validate_pixel_asset.py <sprit
 
 ## 边界与交付
 
+- 通用物品占位图统一复用 `Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png`；未制作正式美术时优先使用它，不必重复生成。其子 Sprite 名为 `素材占位符`，Addressables 引用为 `Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]`，标签 `ItemSprite`。PNG 已紧裁为 384×384，主体接近填满画布，运行时切片覆盖整张 PNG（中心 Pivot、384 PPU、Point、无压缩、无 Mipmap）；裁剪 PNG 后必须同步切片坐标和尺寸，并保留子 Sprite 身份及资源地址，不能只改切片而保留大幅画布留白。正式素材完成后替换具体物品的引用，通常使用白色乘色，并核对继承缩放。
+
 - 禁止抗锯齿、渐变、照片纹理、高频噪点、无关背景、地面、投影、光晕、文字、Logo、水印或无法在最终尺寸辨认的装饰；半透明特效等明确例外按消费方单独制定规则。
 - 仅生成美术时不创建 Prefab、Animator、SO 或玩法代码；需要接入时再读取对应 FlatWorld 领域 Skill，通过 Unity MCP 操作时读取 `unity-mcp-orchestrator`。
 - 不复制其他资源的 GUID；仅在目标 `.meta` 已存在时精确修改导入字段。高清设计源默认不进 Addressables，也不挂到 Prefab。

@@ -38,6 +38,9 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 
 ## 验证
 
+- 循环坐标统一使用独立 `FlatWorld.WorldTopology` 程序集中的 `WorldTopologyDomain` 值副本；该程序集仅引用 Unity.Mathematics、noEngineReferences=true。`ChunkGenerationTopologySnapshot` 的整数归一化和连续洞穴坐标均委托 Domain，不再自行定义 Wrap；连续曲线保留 double 精度及显式的半周期符号策略，不影响普通坐标 API 默认半周期取负方向的契约。
+- Jobs/Burst 只能接收主线程冻结的 Domain，不能调用仍读取 SaveDataMgr 的 `WorldTopologyRuntime`。创建、保存或运算 Domain 不得注册 GameObject 生命周期或创建物理镜像；ChunkView 的可选物理表现只经 Bind/Unbind 与 Terrain.Changed 通知协调。
+
 - 默认检查静态诊断、Unity 编译和 Console。
 - 仅用户明确要求时运行 `WorldModel.Smoke` 或对应生成/持久化分类；测试位于 `Assets/GameTest/WorldModel/`。
 

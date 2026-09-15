@@ -92,6 +92,10 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 ## 架构与运行时约束
 
+- 液体视觉黏稠度使用 `LiquidStyle.Viscosity`，与浑浊度独立；液面和罐口液流必须共用该参数，不能按蜂蜜等具体液体 ID 分支。默认值 0 保持水的表现。新增样式通过 `FlatWorld/UI/Sync Water Vessel Liquid Styles` 定向写入现有 Prefab，避免为了新增液体重建容器外形或覆盖已有外观配置；完整重建和定向同步共用样式工厂。
+
+- 水容器外形通过正式面板的 `WaterVesselPanel.Appearances` 按物品 ID 配置，运行时不按具体容器写分支；一套外观必须同时提供剖面、同画布内腔遮罩、归一化水位区间及左右出口。未匹配的容器恢复 Awake 捕获的默认外观，避免共用面板从椰子壳切回陶罐后残留遮罩或出口；正式 Prefab 与构建器必须同步维护。PNG 的 Y 从顶部向下，水位及出口归一化 Y 从底部向上。
+
 - 水容器剖面通过 `WaterVesselLiquidGraphic` 和独立内腔 Mask 呈现；视觉配置按 `LiquidDefinition.VisualState` 匹配，不在 UI 重建水质枚举。`LiquidStyle` 的 `Murkiness/Sediment/SurfaceDebris/SuspendedParticles` 负责通用浑浊、沉淀、污膜和悬浮颗粒表现，罐口液流读取同一套颜色与浑浊度参数，禁止按具体液体 ID 单独硬编码。罐口倾倒液流使用正式 Prefab 中位于 `陶罐剖面`、但处于内腔 Mask 之外的 `倾倒液流/WaterVesselPourGraphic`；出水位置必须来自挂在 `陶罐切面` 下的左右罐口出口锚点，并按倾角选择下侧嘴沿，禁止再用“罐体中心 + 固定半径”猜测。当前陶罐嘴沿较厚，液流节点必须排在 `陶罐切面` 子树之后绘制，并用一段窄的前景液桥从嘴沿向罐内延伸连接罐腹水体；外部主水柱从嘴沿开始并与液桥重叠，禁止再把整条液流放到罐体后方，否则厚嘴沿会把根部完全遮断。新增表现状态需同步正式 Prefab 的 Styles；自定义 Graphic 必须显式声明 CanvasRenderer 依赖，避免预制体有脚本却不渲染。
 - `UI_WaterVessel` 采用与石臼一致的无底板玩法面板：根 `Image` 与 `设置对话框/Image` 只保留透明射线阻挡，不绘制灰色背景或描边；统一主题不得把这两层重新着色，按钮仍按通用主题单独显示。
 

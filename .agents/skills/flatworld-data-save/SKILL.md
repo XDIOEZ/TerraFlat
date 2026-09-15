@@ -39,6 +39,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - 时间保存同时复制季节配置和历史区间；积雪、植物冷热暴露、自然补位年份、陶罐水质／加工进度、盐分负担各有独立状态，不能在渲染绑定或 UI 打开时重置。
 - 通用液体容器的 `LiquidContainerState.Amount` 以 `0.1` 份为最小持久化单位；运行时读入高精度浮点余量时先归一到一位小数，后续装液、倾倒、转移与加工不得重新写入更高精度的数量。
 - JSON ItemDefinition 是物品静态配置真源：恢复世界实体、建筑、AI 和库存物品时先用当前定义重建重量、体积、标签、耐久上限和模块组合，再叠加 GUID、数量、位置、耐久比例及模块运行态；删除的旧模块不得被存档重新实例化。
+- `GameSaveData.WorldGenerationConfigMode` 是每个存档自己的生成规则策略：`Frozen` 保持 `PlanetData.Ecology` 冻结 Profile；`FollowCurrent` 跳过冻结 Profile 并允许存档跟随当前游戏版本。玩家从冻结切到跟随当前时清除所有维度的冻结 Profile，但必须保留 `EcologyWorldSaveData.Chunks` 内的删除 GUID、状态覆盖和恢复年份；重新冻结由下一次正式世界生成捕获当前 Profile。
 
 ## 工作流与验证
 

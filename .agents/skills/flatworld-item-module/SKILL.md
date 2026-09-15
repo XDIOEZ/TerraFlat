@@ -17,6 +17,8 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 
 ## 主链与不变量
 
+- 新建物品尚无正式美术、明确需要占位贴图时，优先复用 `Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png`，禁止借用其他具体物品的贴图充当通用占位。JSON `visual.spriteAddress` 使用 `Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]`，资源标签为 `ItemSprite`。内容工坊图标留空时由 `ContentWorkshopRepository.ResolveItemIcon` 统一提供预览与保存图标；手选正式素材优先，不能将现有物品的加载错误静默改成占位图。
+
 `ItemMaker/ItemMgr → ItemData → ItemMods → ModuleInit/Load → ItemMgr 分级 Tick → Save/Despawn/Pool`
 
 - Module 明确选择 EveryFrame、FixedInterval 或 Disabled；增删模块、配置变化和池复用必须使调度缓存失效。
@@ -56,7 +58,9 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 世界散落物的水体浮沉/漂流统一由 `WorldItemWaterSystem` + `WorldItemWaterRuntime` 根据最终世界位置派生；`ItemMgr.InstantiateItem` 只登记延迟检查，抛掷/投射等入口在轨迹结束后交回该系统，禁止把水体逻辑重新塞回 `Mod_Droping` 或只覆盖丢弃路径。
 - 水体运行态不写入库存 `ItemData/ModuleData`，也不能用 `CanBePickedUp=false` 表示“在水中”；拾取时无需再剔除临时水体模块，对象池复用由 `IItemPoolLifecycle` 清理运行态。世界散落物随水移动统一读取 `ChunkMgr.TryGetRuntimeWaterCurrent`，跨新版 ChunkView 时通过 `ItemWorldPlacement.TryAttachWorldModelTransientItem` 重绑临时归属。
 - 入水真实转换的源物品若需要一次性表现，实现 `IWaterEntryTransformEffect`；`WorldItemWaterSystem` 会在 `DespawnItem` 前调用，表现对象必须自行脱离源物品，避免源物品同帧回收时把粒子一起清掉。
-- `WorldTopologyProxySource` 会覆盖大量运行时 Item，碰撞体角色筛选必须在注册/对象池重绑时完成并缓存；禁止在 `FixedUpdate` 中对每个 Collider 重复 `GetComponent` 或重新扫描子层级，否则实体数量一高会直接放大为主线程尖峰。
+- Wrapped World 物理属于 `Physics2D/WrappedWorld/`，由 `WrappedWorldPhysicsAdapter` 订阅完整的 `RuntimeItemRegistered/RuntimeItemUnregistered` 注册链；不要改订阅仅覆盖 Instantiate 的网络生成事件。注入、加载、回池重绑和远程纯表现注销都必须经过该链，`ItemMgr` 不直接创建具体物理代理。
+- `WrappedItemPhysicsAdapter` 的碰撞体角色筛选在注册、重绑或结构失效时完成并缓存，不在每次 `FixedUpdate` 扫描层级。模块装卸与 Item.Load 发布 `NotifyRuntimeStructureChanged`；业务直接增删 Collider 等组件后也须发布此通知，已有形状的尺寸变化由适配器的 shape hash 同步。嵌套 Item 的碰撞体只由最近 Item 根负责，发送器、手持物和纯表现对象不得借父 Item 被镜像。
+- Physics2D 命中统一通过 `GameplayPhysics2D.ResolveComponent<T>` 解析源对象；通用 `ColliderSource2D` 标记不依赖 Item，Item 根下兄弟模块的查找仅留在 Gameplay 解析入口，不能把镜像识别成独立物品或库存对象。
 
 ## 验证
 
