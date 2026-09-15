@@ -104,10 +104,9 @@ public sealed partial class GMReflectionConsole
         gmWindowRect.sizeDelta = new Vector2(1160f, 780f);
 
         Image panelImage = windowRoot.AddComponent<Image>();
-        panelImage.color = new Color(0.031f, 0.082f, 0.114f, 0.99f);
+        panelImage.color = GmCanvas;
         Outline panelOutline = windowRoot.AddComponent<Outline>();
-        panelOutline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.55f);
-        panelOutline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(panelOutline, true);
 
         VerticalLayoutGroup panelLayout = windowRoot.AddComponent<VerticalLayoutGroup>();
         panelLayout.padding = new RectOffset(20, 20, 18, 18);
@@ -142,7 +141,7 @@ public sealed partial class GMReflectionConsole
             windowRoot.transform,
             "按 F4 打开或关闭此窗口。",
             12f,
-            new Color(0.66f, 0.71f, 0.71f));
+            GmTextSecondary);
         statusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
 
         BindGameEventManager();
@@ -167,7 +166,7 @@ public sealed partial class GMReflectionConsole
     {
         GameObject header = CreateUiObject("Header", windowRoot.transform);
         header.AddComponent<LayoutElement>().preferredHeight = 74f;
-        header.AddComponent<Image>().color = new Color(0.063f, 0.153f, 0.188f, 1f);
+        header.AddComponent<Image>().color = GmSurfaceRaised;
 
         HorizontalLayoutGroup layout = header.AddComponent<HorizontalLayoutGroup>();
         layout.padding = new RectOffset(16, 12, 7, 7);
@@ -181,7 +180,7 @@ public sealed partial class GMReflectionConsole
             header.transform,
             "FlatWorld GM 管理工具",
             20f,
-            new Color(0.95f, 0.91f, 0.84f));
+            GmTextPrimary);
         title.fontStyle = FontStyles.Bold;
         title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
@@ -189,19 +188,19 @@ public sealed partial class GMReflectionConsole
             header.transform,
             "F4  开启 / 关闭",
             12f,
-            new Color(0.66f, 0.71f, 0.71f));
+            GmTextSecondary);
         shortcut.alignment = TextAlignmentOptions.Right;
         shortcut.gameObject.AddComponent<LayoutElement>().preferredWidth = 130f;
 
         Button closeButton = CreateButton(header.transform, "关闭", () => SetWindowVisible(false), 96f, 60f);
-        closeButton.GetComponent<Image>().color = new Color(0.09f, 0.17f, 0.20f, 1f);
+        SetGmButtonVisual(closeButton, GmSurface);
     }
 
     private void BuildGlobalSearchBar()
     {
         GameObject toolbar = CreateUiObject("Global Search", windowRoot.transform);
         toolbar.AddComponent<LayoutElement>().preferredHeight = 42f;
-        toolbar.AddComponent<Image>().color = new Color(0.043f, 0.112f, 0.139f, 1f);
+        toolbar.AddComponent<Image>().color = GmSurfaceLow;
 
         HorizontalLayoutGroup layout = toolbar.AddComponent<HorizontalLayoutGroup>();
         layout.padding = new RectOffset(8, 8, 3, 3);
@@ -220,7 +219,7 @@ public sealed partial class GMReflectionConsole
             toolbar.transform,
             "输入名称后跳转",
             12f,
-            new Color(0.66f, 0.71f, 0.71f));
+            GmTextSecondary);
         gmSearchSummaryText.alignment = TextAlignmentOptions.Right;
         gmSearchSummaryText.enableWordWrapping = false;
         gmSearchSummaryText.overflowMode = TextOverflowModes.Ellipsis;
@@ -236,10 +235,9 @@ public sealed partial class GMReflectionConsole
         resultsLayout.ignoreLayout = true;
         gmSearchResultsRect = gmSearchResultsRoot.GetComponent<RectTransform>();
         ConfigureSearchResultsOverlay(gmSearchResultsRect, 150f);
-        gmSearchResultsRoot.AddComponent<Image>().color = new Color(0.025f, 0.065f, 0.086f, 1f);
+        gmSearchResultsRoot.AddComponent<Image>().color = GmSurfaceLow;
         Outline outline = gmSearchResultsRoot.AddComponent<Outline>();
-        outline.effectColor = new Color(0.83f, 0.49f, 0.23f, 0.35f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(outline, true);
 
         gmSearchResultsContent = ConfigureVerticalScroll(gmSearchResultsRoot, 7f, out _);
         gmSearchResultsRoot.SetActive(false);
@@ -263,7 +261,7 @@ public sealed partial class GMReflectionConsole
     {
         GameObject tabBar = CreateUiObject("Top Tabs", windowRoot.transform);
         tabBar.AddComponent<LayoutElement>().preferredHeight = 42f;
-        tabBar.AddComponent<Image>().color = new Color(0.043f, 0.112f, 0.139f, 1f);
+        tabBar.AddComponent<Image>().color = GmSurfaceLow;
 
         ScrollRect scroll = tabBar.AddComponent<ScrollRect>();
         scroll.horizontal = true;
@@ -329,7 +327,7 @@ public sealed partial class GMReflectionConsole
         rootRect.anchorMax = Vector2.one;
         rootRect.offsetMin = Vector2.zero;
         rootRect.offsetMax = Vector2.zero;
-        pageRoot.AddComponent<Image>().color = new Color(0.026f, 0.069f, 0.091f, 1f);
+        pageRoot.AddComponent<Image>().color = GmSurfaceLow;
 
         Transform content = ConfigureVerticalScroll(pageRoot, 10f, out ScrollRect scroll);
         GmPageView page = gmPages[pageId];
@@ -444,7 +442,7 @@ public sealed partial class GMReflectionConsole
             "物品 item 空投 生成 召唤",
             OpenAirdropBrowser,
             52f);
-        itemButton.GetComponent<Image>().color = new Color(0.66f, 0.32f, 0.15f, 1f);
+        SetGmButtonVisual(itemButton, GmSurfaceRaised, true);
 
         Button creatureButton = CreateSearchableButton(
             grid,
@@ -453,7 +451,7 @@ public sealed partial class GMReflectionConsole
             "AI 生物 动物 怪物 creature spawn 召唤",
             OpenAiCreatureBrowser,
             52f);
-        creatureButton.GetComponent<Image>().color = new Color(0.10f, 0.35f, 0.37f, 1f);
+        SetGmButtonVisual(creatureButton, GmSurfaceRaised, true);
 
         itemHintText = AddPageHint(page.Content, "进入游戏世界后会自动刷新物品与生物目录。", 24f);
     }
@@ -513,7 +511,7 @@ public sealed partial class GMReflectionConsole
         selectionLayout.flexibleWidth = 1f;
         CreateButton(row.transform, "›", () => CycleStructure(1), 40f, 40f);
         Button teleportButton = CreateButton(row.transform, "传送到最近遗迹", TeleportToSelectedStructure, 190f, 40f);
-        teleportButton.GetComponent<Image>().color = new Color(0.66f, 0.32f, 0.15f, 1f);
+        SetGmButtonVisual(teleportButton, GmSurfaceRaised, true);
         CreateButton(row.transform, "刷新", RefreshStructureOptions, 82f, 40f);
 
         structureHintText = AddPageHint(page.Content, "进入游戏世界后选择遗迹类型，再执行传送。", 26f);
@@ -564,11 +562,11 @@ public sealed partial class GMReflectionConsole
 
     private static void AddPageIntro(Transform parent, string title, string description)
     {
-        TextMeshProUGUI heading = CreateText(parent, title, 18f, new Color(0.95f, 0.91f, 0.84f));
+        TextMeshProUGUI heading = CreateText(parent, title, 18f, GmTextPrimary);
         heading.fontStyle = FontStyles.Bold;
         heading.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
 
-        TextMeshProUGUI paragraph = CreateText(parent, description.Trim(), 12f, new Color(0.66f, 0.71f, 0.71f));
+        TextMeshProUGUI paragraph = CreateText(parent, description.Trim(), 12f, GmTextSecondary);
         paragraph.enableWordWrapping = true;
         paragraph.overflowMode = TextOverflowModes.Ellipsis;
         paragraph.gameObject.AddComponent<LayoutElement>().preferredHeight = 32f;
@@ -576,7 +574,7 @@ public sealed partial class GMReflectionConsole
 
     private static TextMeshProUGUI AddPageHint(Transform parent, string value, float height)
     {
-        TextMeshProUGUI hint = CreateText(parent, value, 12f, new Color(0.66f, 0.71f, 0.71f));
+        TextMeshProUGUI hint = CreateText(parent, value, 12f, GmTextSecondary);
         hint.enableWordWrapping = true;
         hint.overflowMode = TextOverflowModes.Ellipsis;
         hint.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
@@ -600,10 +598,9 @@ public sealed partial class GMReflectionConsole
     {
         GameObject row = CreateUiObject("Player Move Speed Multiplier", parent);
         Image background = row.AddComponent<Image>();
-        background.color = new Color(0.043f, 0.112f, 0.139f, 1f);
+        background.color = GmSurface;
         Outline outline = row.AddComponent<Outline>();
-        outline.effectColor = new Color(0.51f, 0.58f, 0.58f, 0.28f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(outline);
 
         HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
         layout.padding = new RectOffset(6, 6, 3, 3);
@@ -618,7 +615,7 @@ public sealed partial class GMReflectionConsole
             row.transform,
             "移速倍率",
             12f,
-            new Color(0.95f, 0.91f, 0.84f));
+            GmTextPrimary);
         label.alignment = TextAlignmentOptions.Center;
         label.enableWordWrapping = false;
         label.overflowMode = TextOverflowModes.Ellipsis;
@@ -649,10 +646,9 @@ public sealed partial class GMReflectionConsole
     {
         GameObject row = CreateUiObject("Chunk Load Speed Multiplier", parent);
         Image background = row.AddComponent<Image>();
-        background.color = new Color(0.043f, 0.112f, 0.139f, 1f);
+        background.color = GmSurface;
         Outline outline = row.AddComponent<Outline>();
-        outline.effectColor = new Color(0.51f, 0.58f, 0.58f, 0.28f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(outline);
 
         HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
         layout.padding = new RectOffset(6, 6, 3, 3);
@@ -667,7 +663,7 @@ public sealed partial class GMReflectionConsole
             row.transform,
             "加载倍率",
             12f,
-            new Color(0.95f, 0.91f, 0.84f));
+            GmTextPrimary);
         label.alignment = TextAlignmentOptions.Center;
         label.enableWordWrapping = false;
         label.overflowMode = TextOverflowModes.Ellipsis;
@@ -719,9 +715,10 @@ public sealed partial class GMReflectionConsole
                 : null;
             if (tabImage != null)
             {
-                tabImage.color = active
-                    ? new Color(0.66f, 0.32f, 0.15f, 1f)
-                    : new Color(0.094f, 0.212f, 0.251f, 1f);
+                SetGmButtonVisual(
+                    pair.Value.TabButton,
+                    active ? GmSelection : GmSurfaceRaised,
+                    active);
             }
         }
 
@@ -851,7 +848,7 @@ public sealed partial class GMReflectionConsole
         if (highlight != null)
         {
             Color original = highlight.color;
-            highlight.color = new Color(0.86f, 0.48f, 0.18f, 1f);
+            highlight.color = GmSelection;
             yield return new WaitForSecondsRealtime(0.9f);
             if (highlight != null)
                 highlight.color = original;
@@ -891,7 +888,7 @@ public sealed partial class GMReflectionConsole
             header.transform,
             $"反射调试命令（{commands.Count}）",
             14f,
-            new Color(0.95f, 0.91f, 0.84f));
+            GmTextPrimary);
         commandCountText.fontStyle = FontStyles.Bold;
         commandCountText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         CreateButton(header.transform, "重新扫描", RebuildReflectedCommands, 96f, 30f);
@@ -985,7 +982,7 @@ public sealed partial class GMReflectionConsole
             toolbar.transform,
             $"已加载 {definitionCount} 个事件 · 正在进行 {activeCount} 个",
             13f,
-            new Color(0.82f, 0.82f, 0.78f));
+            GmTextPrimary);
         countText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         CreateButton(toolbar.transform, "重载 JSON", ReloadGameEventConfiguration, 112f, 32f);
 
@@ -1008,13 +1005,10 @@ public sealed partial class GMReflectionConsole
         GameObject card = CreateUiObject("Event " + definition.Id, gameEventPageContent);
         card.AddComponent<LayoutElement>().preferredHeight = 94f;
         card.AddComponent<Image>().color = active
-            ? new Color(0.055f, 0.20f, 0.17f, 1f)
-            : new Color(0.043f, 0.112f, 0.139f, 1f);
+            ? GmSelection
+            : GmSurface;
         Outline outline = card.AddComponent<Outline>();
-        outline.effectColor = active
-            ? new Color(0.25f, 0.85f, 0.62f, 0.55f)
-            : new Color(0.51f, 0.58f, 0.58f, 0.25f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(outline, active);
 
         HorizontalLayoutGroup cardLayout = card.AddComponent<HorizontalLayoutGroup>();
         cardLayout.padding = new RectOffset(12, 10, 8, 8);
@@ -1039,7 +1033,7 @@ public sealed partial class GMReflectionConsole
             info.transform,
             $"{definition.DisplayName}  <color=#80969B>({definition.Id})</color>",
             14f,
-            active ? new Color(0.58f, 1f, 0.78f) : new Color(0.95f, 0.91f, 0.84f));
+            active ? GmAccentHover : GmTextPrimary);
         title.fontStyle = FontStyles.Bold;
         title.enableWordWrapping = false;
         title.overflowMode = TextOverflowModes.Ellipsis;
@@ -1049,7 +1043,7 @@ public sealed partial class GMReflectionConsole
             info.transform,
             string.IsNullOrWhiteSpace(definition.Description) ? "无事件说明。" : definition.Description,
             12f,
-            new Color(0.72f, 0.75f, 0.73f));
+            GmTextSecondary);
         description.enableWordWrapping = false;
         description.overflowMode = TextOverflowModes.Ellipsis;
         description.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
@@ -1060,7 +1054,7 @@ public sealed partial class GMReflectionConsole
             info.transform,
             $"触发器 {triggerType} · 持续 {duration} · 动作 {definition.Actions.Count} 个 · {(active ? "进行中" : "未运行")}",
             11f,
-            new Color(0.53f, 0.62f, 0.63f));
+            GmTextSecondary);
         metadata.enableWordWrapping = false;
         metadata.overflowMode = TextOverflowModes.Ellipsis;
         metadata.gameObject.AddComponent<LayoutElement>().preferredHeight = 19f;
@@ -1072,9 +1066,7 @@ public sealed partial class GMReflectionConsole
             () => TriggerOrCancelGameEvent(eventId),
             112f,
             38f);
-        actionButton.GetComponent<Image>().color = active
-            ? new Color(0.42f, 0.16f, 0.14f, 1f)
-            : new Color(0.66f, 0.32f, 0.15f, 1f);
+        SetGmButtonVisual(actionButton, active ? GmDanger : GmSurfaceRaised, !active);
 
         RegisterSearchEntry(
             GmPageId.GameEvents,

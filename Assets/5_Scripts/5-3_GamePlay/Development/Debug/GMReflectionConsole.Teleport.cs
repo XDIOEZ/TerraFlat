@@ -139,13 +139,15 @@ public sealed partial class GMReflectionConsole
         toolbarRect.pivot = new Vector2(0.5f, 1f);
         toolbarRect.anchoredPosition = new Vector2(0f, -20f);
         toolbarRect.sizeDelta = new Vector2(-48f, 76f);
-        toolbar.AddComponent<Image>().color = new Color(0.03f, 0.08f, 0.11f, 0.96f);
+        Image toolbarImage = toolbar.AddComponent<Image>();
+        toolbarImage.color = GmCanvas;
+        StyleGmOutline(toolbar.AddComponent<Outline>(), true);
         HorizontalLayoutGroup layout = toolbar.AddComponent<HorizontalLayoutGroup>();
         layout.padding = new RectOffset(16, 8, 8, 8);
         layout.spacing = 12f;
         layout.childControlWidth = layout.childControlHeight = true;
         layout.childForceExpandWidth = false;
-        TextMeshProUGUI hint = CreateText(toolbar.transform, "点击场景选择传送位置", 20f, Color.white);
+        TextMeshProUGUI hint = CreateText(toolbar.transform, "点击场景选择传送位置", 20f, GmTextPrimary);
         hint.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         // 提示栏拦截点击，只有其下的场景点选层能够提交落点。
         CreateButton(toolbar.transform, "取消", () => SetWindowVisible(true), 120f, 60f);

@@ -77,7 +77,7 @@ public sealed partial class GMReflectionConsole
     {
         GameObject control = CreateUiObject("World Layer Transparency", parent);
         Image background = control.AddComponent<Image>();
-        background.color = new Color(0.043f, 0.112f, 0.139f, 1f);
+        background.color = GmSurface;
         background.raycastTarget = false;
         LayoutElement element = control.AddComponent<LayoutElement>();
         element.minWidth = 0f;
@@ -91,7 +91,7 @@ public sealed partial class GMReflectionConsole
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = true;
 
-        worldLayerTransparencyText = CreateText(control.transform, string.Empty, 18f, new Color(0.95f, 0.91f, 0.84f));
+        worldLayerTransparencyText = CreateText(control.transform, string.Empty, 18f, GmTextPrimary);
         worldLayerTransparencyText.enableWordWrapping = false;
         LayoutElement labelLayout = worldLayerTransparencyText.gameObject.AddComponent<LayoutElement>();
         labelLayout.minWidth = 120f;
@@ -113,19 +113,19 @@ public sealed partial class GMReflectionConsole
         range.offsetMin = new Vector2(10f, 0f);
         range.offsetMax = new Vector2(-10f, 0f);
         Image track = CreateUiObject("Track", range).AddComponent<Image>();
-        track.color = new Color(0.18f, 0.28f, 0.30f, 1f);
+        track.color = GmSurfaceLow;
         track.raycastTarget = false;
         track.rectTransform.anchorMin = new Vector2(0f, 0.5f);
         track.rectTransform.anchorMax = new Vector2(1f, 0.5f);
         track.rectTransform.sizeDelta = new Vector2(0f, 8f);
         Image fill = CreateUiObject("Fill", track.transform).AddComponent<Image>();
-        fill.color = new Color(0.16f, 0.70f, 0.64f, 1f);
+        fill.color = GmAccent;
         fill.raycastTarget = false;
         fill.rectTransform.anchorMin = Vector2.zero;
         fill.rectTransform.anchorMax = Vector2.one;
         fill.rectTransform.sizeDelta = Vector2.zero;
         Image handle = CreateUiObject("Handle", range).AddComponent<Image>();
-        handle.color = new Color(0.95f, 0.91f, 0.84f, 1f);
+        handle.color = GmTextPrimary;
         handle.raycastTarget = false;
         handle.rectTransform.anchorMin = new Vector2(0f, 0.5f);
         handle.rectTransform.anchorMax = new Vector2(0f, 0.5f);
@@ -164,7 +164,7 @@ public sealed partial class GMReflectionConsole
             : GmWorldLayerMode.Temperature;
         SetWorldLayerMode(mode);
         SetStatus(mode == GmWorldLayerMode.Temperature ? "温度层已开启，关闭 GM 窗口后仍会显示。" : "温度层已关闭。",
-            new Color(0.35f, 0.95f, 0.85f));
+            GmAccentHover);
     }
 
     /// <summary>污染按钮显示所有已注册污染定义中的最高归一化负荷，MOD 定义无需额外接 UI。</summary>
@@ -175,7 +175,7 @@ public sealed partial class GMReflectionConsole
             : GmWorldLayerMode.Contamination;
         SetWorldLayerMode(mode);
         SetStatus(mode == GmWorldLayerMode.Contamination ? "污染层已开启，关闭 GM 窗口后仍会显示。" : "污染层已关闭。",
-            new Color(0.35f, 0.95f, 0.85f));
+            GmAccentHover);
     }
 
     /// <summary>统一切换世界观察层并保存本地 GM 偏好。</summary>
@@ -200,9 +200,7 @@ public sealed partial class GMReflectionConsole
         if (button == null)
             return;
         button.GetComponentInChildren<TextMeshProUGUI>(true).text = active ? $"{label}：开" : $"{label}：关";
-        button.GetComponent<Image>().color = active
-            ? new Color(0.10f, 0.45f, 0.31f, 1f)
-            : new Color(0.094f, 0.212f, 0.251f, 1f);
+        SetGmButtonVisual(button, active ? GmSelection : GmSurfaceRaised, active);
     }
 
     #endregion

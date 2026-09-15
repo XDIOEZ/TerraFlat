@@ -54,7 +54,7 @@ public sealed partial class GMReflectionConsole
             toolbar.transform,
             "正在读取测试任务目录…",
             12f,
-            new Color(0.66f, 0.71f, 0.71f));
+            GmTextSecondary);
         gmQuestSummaryText.enableWordWrapping = false;
         gmQuestSummaryText.overflowMode = TextOverflowModes.Ellipsis;
         gmQuestSummaryText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
@@ -65,7 +65,7 @@ public sealed partial class GMReflectionConsole
             AcceptAllDebugQuests,
             92f,
             34f);
-        acceptAllButton.GetComponent<Image>().color = new Color(0.66f, 0.32f, 0.15f, 1f);
+        SetGmButtonVisual(acceptAllButton, GmSurfaceRaised, true);
         CreateButton(toolbar.transform, "刷新目标", RefreshDebugQuestObjectives, 92f, 34f);
 
         GameObject listObject = CreateUiObject("Debug Quest List", page.Content);
@@ -134,10 +134,9 @@ public sealed partial class GMReflectionConsole
     {
         GameObject row = CreateUiObject($"Quest {definition.Id}", gmQuestListContent);
         row.AddComponent<LayoutElement>().preferredHeight = 112f;
-        row.AddComponent<Image>().color = new Color(0.043f, 0.112f, 0.139f, 1f);
+        row.AddComponent<Image>().color = GmSurface;
         Outline outline = row.AddComponent<Outline>();
-        outline.effectColor = new Color(0.51f, 0.58f, 0.58f, 0.28f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        StyleGmOutline(outline);
 
         HorizontalLayoutGroup rowLayout = row.AddComponent<HorizontalLayoutGroup>();
         rowLayout.padding = new RectOffset(10, 10, 8, 8);
@@ -161,7 +160,7 @@ public sealed partial class GMReflectionConsole
             textColumn.transform,
             string.IsNullOrWhiteSpace(definition.Title) ? definition.Id : definition.Title,
             14f,
-            new Color(0.95f, 0.91f, 0.84f));
+            GmTextPrimary);
         title.fontStyle = FontStyles.Bold;
         title.enableWordWrapping = false;
         title.overflowMode = TextOverflowModes.Ellipsis;
@@ -171,7 +170,7 @@ public sealed partial class GMReflectionConsole
             textColumn.transform,
             definition.Description ?? string.Empty,
             11f,
-            new Color(0.66f, 0.71f, 0.71f));
+            GmTextSecondary);
         description.enableWordWrapping = true;
         description.overflowMode = TextOverflowModes.Ellipsis;
         description.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
@@ -180,7 +179,7 @@ public sealed partial class GMReflectionConsole
             textColumn.transform,
             definition.Id,
             10f,
-            new Color(0.45f, 0.58f, 0.62f));
+            GmTextSecondary);
         idText.enableWordWrapping = false;
         idText.overflowMode = TextOverflowModes.Ellipsis;
         idText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
@@ -189,7 +188,7 @@ public sealed partial class GMReflectionConsole
             row.transform,
             "未开启",
             11f,
-            new Color(0.66f, 0.71f, 0.71f));
+            GmTextSecondary);
         status.enableWordWrapping = true;
         status.overflowMode = TextOverflowModes.Ellipsis;
         status.alignment = TextAlignmentOptions.MidlineLeft;
@@ -324,10 +323,10 @@ public sealed partial class GMReflectionConsole
     {
         return snapshot?.Status switch
         {
-            QuestStatus.Active => new Color(0.42f, 0.83f, 0.90f),
-            QuestStatus.ReadyToClaim => new Color(0.95f, 0.69f, 0.29f),
-            QuestStatus.Completed => new Color(0.43f, 0.82f, 0.55f),
-            _ => new Color(0.66f, 0.71f, 0.71f)
+            QuestStatus.Active => GmTextPrimary,
+            QuestStatus.ReadyToClaim => GmAccentHover,
+            QuestStatus.Completed => GmTextSecondary,
+            _ => GmTextSecondary
         };
     }
 
