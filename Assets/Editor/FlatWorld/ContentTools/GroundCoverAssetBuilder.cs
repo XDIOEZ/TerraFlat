@@ -64,11 +64,30 @@ public static class GroundCoverAssetBuilder
                 throw new InvalidOperationException("现有草层 Tilemap 或材质未配置。");
 
             Transform flowers = root.transform.Find("Flowers");
-            GameObject layer = flowers != null ? flowers.gameObject : new GameObject("Flowers");
-            layer.transform.SetParent(root.transform, false);
-            Tilemap tilemap = layer.GetComponent<Tilemap>() ?? layer.AddComponent<Tilemap>();
-            TilemapRenderer renderer = layer.GetComponent<TilemapRenderer>() ?? layer.AddComponent<TilemapRenderer>();
+            GameObject layer;
+            Tilemap tilemap;
+            TilemapRenderer renderer;
+            if (flowers == null)
+            {
+                // Tilemap/Renderer 一次性随对象创建，避免 Prefab Stage 中逐个 AddComponent 后拿到失效引用。
+                layer = new GameObject("Flowers", typeof(Tilemap), typeof(TilemapRenderer));
+                layer.transform.SetParent(root.transform, false);
+                tilemap = layer.GetComponent<Tilemap>();
+                renderer = layer.GetComponent<TilemapRenderer>();
+            }
+            else
+            {
+                layer = flowers.gameObject;
+                tilemap = layer.GetComponent<Tilemap>();
+                if (tilemap == null) tilemap = layer.AddComponent<Tilemap>();
+                renderer = layer.GetComponent<TilemapRenderer>();
+                if (renderer == null) renderer = layer.AddComponent<TilemapRenderer>();
+            }
+            if (tilemap == null || renderer == null)
+                throw new InvalidOperationException("Flowers 图层无法创建 Tilemap 或 TilemapRenderer。");
             TilemapRenderer sourceRenderer = grassTilemap.GetComponent<TilemapRenderer>();
+            if (sourceRenderer == null)
+                throw new InvalidOperationException("现有草层缺少 TilemapRenderer。");
             tilemap.tileAnchor = grassTilemap.tileAnchor;
             renderer.sharedMaterial = material;
             renderer.sortingLayerID = sourceRenderer.sortingLayerID;
