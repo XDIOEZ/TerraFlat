@@ -17,7 +17,7 @@ namespace FlatWorld.GameplayMCP
     /// </summary>
     internal static class GameplayMcpRuntime
     {
-        public const string ProtocolVersion = "0.5.0";
+        public const string ProtocolVersion = "0.7.0";
         public const string ExtensionPath = "Assets/Editor/FlatWorld/GameplayMCP/";
 
         private static readonly object ControlOwner = new GameplayMcpControlOwner();
