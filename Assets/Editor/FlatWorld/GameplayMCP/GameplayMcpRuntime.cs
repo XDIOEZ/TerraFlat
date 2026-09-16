@@ -17,7 +17,7 @@ namespace FlatWorld.GameplayMCP
     /// </summary>
     internal static class GameplayMcpRuntime
     {
-        public const string ProtocolVersion = "0.5.0";
+        public const string ProtocolVersion = "0.6.0";
         public const string ExtensionPath = "Assets/Editor/FlatWorld/GameplayMCP/";
 
         private static readonly object ControlOwner = new GameplayMcpControlOwner();
@@ -171,6 +171,17 @@ namespace FlatWorld.GameplayMCP
                 };
             }
 
+            // 继续存档与新建世界必须遵守同一资源就绪门槛。
+            // SaveDataMgr 会校验当前 MOD 目录；在 GameRes 的 mods 阶段完成前抢先读档，
+            // 会把正常的启动时序误判为“MOD 框架尚未完成加载”。
+            timeoutSeconds = Mathf.Clamp(timeoutSeconds, 2f, 20f);
+            double deadline = EditorApplication.timeSinceStartup + timeoutSeconds;
+            bool resourcesReady = await WaitUntilAsync(
+                () => GameRes.ExistingInstance != null && GameRes.ExistingInstance.isLoadFinish,
+                timeoutSeconds);
+            if (!resourcesReady)
+                return BuildActionError("resources_not_ready", "游戏资源未在限定时间内完成加载。", false);
+
             string sourcePath = ResolveSavePath(saveName);
             if (string.IsNullOrEmpty(sourcePath))
                 return BuildActionError("save_not_found", "没有找到可用于 GamePlayMCP 的存档。", false);
@@ -209,14 +220,16 @@ namespace FlatWorld.GameplayMCP
                 return BuildActionError("player_not_found", "存档中没有可控制玩家。", false);
 
             gameManager.ContinueGame(resolvedPlayerName);
-            // MCPForUnity stdio bridge 单次命令约 30 秒超时；会话动作必须提前结束并把控制权还给 Agent。
-            timeoutSeconds = Mathf.Clamp(timeoutSeconds, 2f, 20f);
+            // 资源等待和世界进入共用同一总预算，避免 stdio 单次命令被两段等待叠加拖长。
+            float remainingSeconds = Mathf.Max(
+                0.1f,
+                (float)(deadline - EditorApplication.timeSinceStartup));
             bool ready = await WaitUntilAsync(
                 () => gameManager != null &&
                       gameManager.IsInGameWorld &&
                       gameManager.IsGameplayReady &&
                       ItemMgr.Instance?.User_Player != null,
-                timeoutSeconds);
+                remainingSeconds);
 
             return new JObject
             {
@@ -533,16 +546,15 @@ namespace FlatWorld.GameplayMCP
 
             var result = new JArray();
             for (int i = 0; i < ordered.Length; i++)
-                result.Add(BuildEntityObservation(ordered[i].Item, ordered[i].Distance));
+                result.Add(BuildEntityObservation(player, ordered[i].Item, ordered[i].Distance));
             return result;
         }
 
         /// <summary>构造一个附近实体的紧凑摘要。</summary>
-        private static JObject BuildEntityObservation(Item item, float distance)
+        private static JObject BuildEntityObservation(Player player, Item item, float distance)
         {
             DamageReceiver health = item.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
-            bool interactable = item.GetComponentsInChildren<MonoBehaviour>(true)
-                .Any(component => component is IInteractable);
+            bool interactable = CanPlayerInteractWithItem(player, item);
             ItemData data = item.itemData;
             var tags = new JArray();
             if (data.Tags != null)
@@ -564,6 +576,26 @@ namespace FlatWorld.GameplayMCP
                 ["faction"] = data.FactionId ?? string.Empty,
                 ["tags"] = tags
             };
+        }
+
+        /// <summary>判断目标当前是否存在真正接受本地主角交互的有效接收器。</summary>
+        internal static bool CanPlayerInteractWithItem(Player player, Item target)
+        {
+            if (player == null || target == null || target == player)
+                return false;
+
+            MonoBehaviour[] behaviours = target.GetComponentsInChildren<MonoBehaviour>(true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                MonoBehaviour behaviour = behaviours[i];
+                if (behaviour == null || !behaviour.gameObject.activeInHierarchy)
+                    continue;
+
+                if (behaviour is IInteractable interactable && interactable.CanInteract(player))
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>聚合玩家普通库存与快捷栏，减少 Agent 为查询资源重复翻槽位。</summary>

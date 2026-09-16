@@ -58,6 +58,7 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 循环应保持短、可观察、可复现：
 
 1. `gameplay_observe`：读取玩家位置、速度、生命、体力、营养、输入锁、快捷栏、背包摘要与附近实体。
+   - 附近实体与 `gameplay_query` 的 `interactable` 必须表示“当前玩家此刻通过正式交互规则可交互”，判断时调用目标 `IInteractable.CanInteract(player)`；禁止仅因对象挂有 `IInteractable` 组件就标记为可交互，否则自然树木等条件式接收器会被误报。
    - 需要从大量自然物中快速寻找目标时，使用只读 `gameplay_query`。`source=runtime` 查询已实例化 Item，`query` 可填写稳定 ID 或任意已配置 Locale 下的完整物品名（例如 `Ore_Stone` / `石头` / `Stone`）；传入 `radius` 时只查询玩家周围该半径内的 Item，并复用 `ItemMgr` 空间索引，`radius` 最大 64 世界单位。运行时结果按玩家距离排序并强制分页，默认只返回最近 3 条、单页最多 32 条，通过 `total_count/truncated/next_offset` 继续读取；不填写 ID/名称时可直接取得附近不同物品，每条结果都包含稳定 `id` 与明确的 `position.x/position.y`，可直接交给 `gameplay_act(move_to)`。`source=ecology` 查询已加载 ChunkRuntime 的确定性自然物放置结果；`source=terrain` 按环境层阈值查询已加载地形格。它不能生成、传送或直接拾取实体。
 2. 选择一个小目标，例如：
    - 沿一个方向探索一段距离。
@@ -68,7 +69,8 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 3. 通过 `gameplay_act` 执行一到数个有界动作。
 4. 再次 `gameplay_observe`，比较动作前后的真实状态。
 5. 定期及出现异常时调用 MCPForUnity `read_console` 检查 Error / Warning。
-6. 若结果正常，继续探索新玩法；若异常，进入 Bug 闭环。
+6. 在视觉检查点调用 `gameplay_screenshot` 补充观察：首次进入世界建立视觉基线；连续完成约 2～4 个有意义目标、进入明显不同区域/界面、或结构化数据正常但体验可能异常时再截图。禁止每个动作都截图。
+7. 若结果正常，继续探索新玩法；若异常，进入 Bug 闭环。
 
 不要长时间无目的地 `wait`。每轮都应有一个可验证的玩法意图。
 
@@ -145,14 +147,18 @@ UI 使用独立的 `gameplay_ui`：
 
 ## 视觉使用规则
 
-结构化观察是主通道。截图是低频兜底。
+结构化观察是主通道。`gameplay_screenshot` 是 GamePlayMCP 的低频视觉观察通道，默认抓取包含 UI 的完整 Game View，并把证据写入 `Library/FlatWorldGameplayMCP/Screenshots/`，不得把测试截图写进 Assets 污染项目。
 
-只在以下情况使用 `manage_camera(... screenshot ...)`：
+自主测试中优先使用 `gameplay_screenshot`，并在以下情况主动截图：
 
+- 首次进入世界并完成第一份 `gameplay_observe` 后，建立一张视觉基线。
+- 连续完成约 2～4 个有意义玩法目标后做一次抽样视觉检查，尤其是移动到新区块、打开新 UI、切换装备/状态后。
 - 需要验证 Shader、动画、粒子、排序、UI 等纯视觉问题。
 - 结构化状态正常，但玩家体验仍明显异常。
-- GamePlayMCP 尚未提供某个必要的可观察信号，且短期截图能帮助确定是否值得扩展协议。
+- 发现疑似 Bug 时，在修复前保存一张证据图；修复后重放同一场景并再次截图对比。
 - 修复视觉 Bug 后做最终定向验收。
+
+只有需要指定相机、Scene View、多角度或其它高级摄影能力时，才退回 MCPForUnity 的 `manage_camera(... screenshot ...)`。
 
 禁止把“截图 -> 视觉模型判断 -> 模拟点击”作为普通游玩主循环。
 普通 UI 操作应使用“`gameplay_ui(tree)` -> 读取文本/路径/控件状态 -> `gameplay_ui(click)`”这一结构化链路；截图只用于确认布局、遮挡、样式等纯视觉问题。

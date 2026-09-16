@@ -18,6 +18,9 @@ namespace MCPForUnity.Editor.Resources.Editor
             try
             {
                 var discovery = MCPServiceLocator.ToolDiscovery;
+                // stdio 的 manage_tools(sync) 以本资源作为工具清单真源；项目程序集可能晚于
+                // MCP 内置程序集加载，因此同步前必须重新扫描，避免沿用只含内置工具的早期缓存。
+                discovery.InvalidateCache();
                 var allTools = discovery.DiscoverAllTools();
 
                 var toolsArray = new JArray();

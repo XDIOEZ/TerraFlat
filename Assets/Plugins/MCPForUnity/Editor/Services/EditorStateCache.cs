@@ -345,8 +345,17 @@ namespace MCPForUnity.Editor.Services
 
             if (!hasChanges)
             {
-                // No state change - skip the expensive BuildSnapshot entirely.
-                // This is the key optimization that prevents the 28ms GC spikes.
+                // 没有状态变化时仍刷新观测时间，但不重建完整快照。
+                // stdio 服务会依据 observed_at_unix_ms 判断编辑器是否失联；若时间戳冻结，
+                // 稳定运行的 Play Mode 会被误判为 stale_status。
+                lock (LockObj)
+                {
+                    if (_cached != null)
+                    {
+                        _cached["observed_at_unix_ms"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                    }
+                }
+                _lastUpdateTimeSinceStartup = now;
                 return;
             }
 
