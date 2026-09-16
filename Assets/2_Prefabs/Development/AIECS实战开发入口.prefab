@@ -48,6 +48,6 @@ MonoBehaviour:
   LoadGameStartOnPlay: 1
   TeamAActor: Wolf
   TeamBActor: WildBoar
-  UnitsPerArmy: 12
+  UnitsPerArmy: 100
   InitialMode: 0
   ShowHealth: 1

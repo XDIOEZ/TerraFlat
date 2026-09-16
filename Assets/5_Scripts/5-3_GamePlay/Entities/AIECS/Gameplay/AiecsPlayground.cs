@@ -10,7 +10,7 @@ namespace FlatWorld.AIECS.Gameplay
 
     /// <summary>
     /// AIECS 实战开发入口：从正式启动场景进入临时世界后自动创建少量真实单位，可用按钮切换场景。
-    /// 默认单挑 3 只、两军各 12 只；只有本入口和有限渲染批次是 GameObject，AI 本身完全是 Entity。
+    /// 默认单挑 3 只、两军各 100 只（总计 200）；只有本入口和有限渲染批次是 GameObject，AI 本身完全是 Entity。
     /// </summary>
     [AddComponentMenu("FlatWorld/AIECS/实战开发入口")]
     public sealed class AiecsPlayground : MonoBehaviour
@@ -19,7 +19,7 @@ namespace FlatWorld.AIECS.Gameplay
         public AiecsAnimationCatalog Catalog; // 当前导出的共享动画目录。
         public bool LoadGameStartOnPlay = true; // 专用入口场景加载正式启动流程。
         public string TeamAActor = "Wolf", TeamBActor = "WildBoar"; // 当前 Actor 目录 ID，可在 Inspector 改配置。
-        [Range(1, 10000)] public int UnitsPerArmy = 12; // 两军模式每军数量，默认不启动压力测试。
+        [Range(1, 10000)] public int UnitsPerArmy = 100; // 两军模式每次增援每军数量；默认总量 200，每次点击再增加 200。
         public AiecsPlaygroundMode InitialMode = AiecsPlaygroundMode.PlayerDuel;
         public bool ShowHealth = true; // 开发血条有显示上限。
         public string Status { get; private set; } = "等待正式游戏世界；请新建临时世界。";
@@ -34,6 +34,8 @@ namespace FlatWorld.AIECS.Gameplay
         private GameManager manager;
         private GUIStyle textStyle;
         private int spawned;
+        private int armyReinforcementWave;
+        private float2 armyBattleCenter;
         #endregion
 
         #region 生命周期
@@ -110,7 +112,7 @@ namespace FlatWorld.AIECS.Gameplay
         public void StartScenario(AiecsPlaygroundMode requested)
         {
             if (player == null || WorldNavigationManager.ExistingInstance == null) return;
-            StopScenario(); mode = requested; spawned = 0;
+            StopScenario(); mode = requested; spawned = 0; armyReinforcementWave = 0;
             try
             {
                 string[] ids = { TeamAActor, TeamBActor };
@@ -123,8 +125,8 @@ namespace FlatWorld.AIECS.Gameplay
                 float2 center = (Vector2)player.transform.position;
                 if (requested == AiecsPlaygroundMode.Armies)
                 {
-                    SpawnGroup(0, math.clamp(UnitsPerArmy, 1, 10000), center + new float2(-5, 2), 1f);
-                    SpawnGroup(1, math.clamp(UnitsPerArmy, 1, 10000), center + new float2(5, 2), 1f);
+                    armyBattleCenter = center;
+                    SpawnArmyReinforcement();
                 }
                 else if (requested == AiecsPlaygroundMode.Wander) SpawnGroup(0, 6, center + new float2(9, 0), 1f);
                 else if (requested == AiecsPlaygroundMode.Flee) SpawnGroup(0, 3, center + new float2(4, 0), 0.15f);
@@ -135,6 +137,32 @@ namespace FlatWorld.AIECS.Gameplay
             }
             catch (Exception exception)
             { Status = "创建失败：" + exception.Message; Debug.LogException(exception, this); StopScenario(); }
+        }
+
+        /// <summary>两军按钮：首次切入时创建 200 只，已在两军模式时每次继续追加 200 只。</summary>
+        public void StartOrReinforceArmies()
+        {
+            if (bridge == null || mode != AiecsPlaygroundMode.Armies)
+            {
+                StartScenario(AiecsPlaygroundMode.Armies);
+                return;
+            }
+
+            int before = spawned;
+            SpawnArmyReinforcement();
+            bridge.Step(0f, simulationTime);
+            int added = spawned - before;
+            Status = $"两军交战：真实 ECS 单位 {spawned}；本次增援 {added} / 目标 {math.clamp(UnitsPerArmy, 1, 10000) * 2}。继续点击可再增援。";
+        }
+
+        /// <summary>按波次在玩家附近两侧追加单位，避免每次点击都重置已有战斗。</summary>
+        private void SpawnArmyReinforcement()
+        {
+            int perArmy = math.clamp(UnitsPerArmy, 1, 10000);
+            float waveOffset = armyReinforcementWave * 3.5f;
+            SpawnGroup(0, perArmy, armyBattleCenter + new float2(-5f - waveOffset, 2f), 1f);
+            SpawnGroup(1, perArmy, armyBattleCenter + new float2(5f + waveOffset, 2f), 1f);
+            armyReinforcementWave++;
         }
 
         /// <summary>只选择可站立的已加载格；阻挡候选被跳过，不能为了演示强行改地形。</summary>
@@ -178,7 +206,8 @@ namespace FlatWorld.AIECS.Gameplay
             GUILayout.BeginArea(new Rect(panel.x + 10, panel.y + 24, panel.width - 20, panel.height - 30));
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("玩家对战")) StartScenario(AiecsPlaygroundMode.PlayerDuel);
-            if (GUILayout.Button("两军交战")) StartScenario(AiecsPlaygroundMode.Armies);
+            int armyIncrement = math.clamp(UnitsPerArmy, 1, 10000) * 2;
+            if (GUILayout.Button($"两军交战（每次 +{armyIncrement}）")) StartOrReinforceArmies();
             if (GUILayout.Button("无目标游荡")) StartScenario(AiecsPlaygroundMode.Wander);
             if (GUILayout.Button("低血量逃跑")) StartScenario(AiecsPlaygroundMode.Flee);
             if (GUILayout.Button("清理")) { StopScenario(); startRequested = false; }
