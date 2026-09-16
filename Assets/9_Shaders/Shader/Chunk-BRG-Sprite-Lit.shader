@@ -47,12 +47,23 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 float2 uv : TEXCOORD0;
                 half2 lightingUV : TEXCOORD1;
                 half4 tint : COLOR;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
             TEXTURE2D(_MaskTex); SAMPLER(sampler_MaskTex);
-            half4 _Color;
-            half4 _RendererColor;
+            CBUFFER_START(UnityPerMaterial)
+                float4 _Color;
+                float4 _RendererColor;
+            CBUFFER_END
+            #if defined(UNITY_DOTS_INSTANCING_ENABLED)
+            UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
+                UNITY_DOTS_INSTANCED_PROP(float4, _Color)
+                UNITY_DOTS_INSTANCED_PROP(float4, _RendererColor)
+            UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
+            #define _Color UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _Color)
+            #define _RendererColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _RendererColor)
+            #endif
 
             #if USE_SHAPE_LIGHT_TYPE_0
             SHAPE_LIGHT(0)
@@ -77,6 +88,7 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 output.uv = input.uv;
                 output.tint = input.color * instanceData.tint;
                 output.lightingUV = half2(ComputeScreenPos(output.positionCS / output.positionCS.w).xy);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
                 return output;
             }
 
@@ -84,6 +96,7 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
 
             half4 Frag(Varyings input) : SV_Target
             {
+                UNITY_SETUP_INSTANCE_ID(input);
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= input.tint * _Color * _RendererColor;
                 half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, input.uv);
@@ -107,9 +120,20 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
             #pragma multi_compile _ DOTS_INSTANCING_ON
             #include "ChunkBRGInstance.hlsl"
             struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half4 tint:COLOR; };
+            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
             TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
-            half4 _Color; half4 _RendererColor;
+            CBUFFER_START(UnityPerMaterial)
+                float4 _Color;
+                float4 _RendererColor;
+            CBUFFER_END
+            #if defined(UNITY_DOTS_INSTANCING_ENABLED)
+            UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
+                UNITY_DOTS_INSTANCED_PROP(float4, _Color)
+                UNITY_DOTS_INSTANCED_PROP(float4, _RendererColor)
+            UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
+            #define _Color UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _Color)
+            #define _RendererColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _RendererColor)
+            #endif
             Varyings Vert(Attributes input)
             {
                 UNITY_SETUP_INSTANCE_ID(input);
@@ -118,10 +142,12 @@ Shader "FlatWorld/2D/Chunk BRG Sprite Lit"
                 o.positionCS = TransformWorldToHClip(TransformChunkBRGVertex(input.positionOS, d));
                 o.uv = input.uv;
                 o.tint = input.color * d.tint;
+                UNITY_TRANSFER_INSTANCE_ID(input, o);
                 return o;
             }
             half4 Frag(Varyings input):SV_Target
             {
+                UNITY_SETUP_INSTANCE_ID(input);
                 return SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
             }
             ENDHLSL

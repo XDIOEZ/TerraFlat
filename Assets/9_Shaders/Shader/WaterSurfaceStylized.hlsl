@@ -2,7 +2,9 @@
 #ifndef FLATWORLD_WATERSURFACESTYLIZED_HLSL
 #define FLATWORLD_WATERSURFACESTYLIZED_HLSL
 
+#if !defined(FLATWORLD_WATER_MATERIAL_CBUFFER_DEFINED)
 float _PixelDensity;
+#endif
 
 /// <summary>将世界坐标锁定到细像素格，保持像素画风并避免波纹随镜头抖动。</summary>
 float2 QuantizeWaterPosition(float2 positionWS)

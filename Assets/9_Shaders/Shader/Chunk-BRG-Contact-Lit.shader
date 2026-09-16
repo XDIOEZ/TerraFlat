@@ -37,10 +37,33 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/LightingUtility.hlsl"
 
             struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half2 lightingUV:TEXCOORD1; float2 positionWS:TEXCOORD2; half4 contact:TEXCOORD3; half4 tint:COLOR; };
+            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half2 lightingUV:TEXCOORD1; float2 positionWS:TEXCOORD2; half4 contact:TEXCOORD3; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
             TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
             TEXTURE2D(_MaskTex); SAMPLER(sampler_MaskTex);
-            half4 _Color; half4 _RendererColor; half4 _EdgeColor; half _EdgeWidth; half _EdgeStrength; half _CornerStrength;
+            CBUFFER_START(UnityPerMaterial)
+                float4 _Color;
+                float4 _RendererColor;
+                float4 _EdgeColor;
+                float _EdgeWidth;
+                float _EdgeStrength;
+                float _CornerStrength;
+            CBUFFER_END
+            #if defined(UNITY_DOTS_INSTANCING_ENABLED)
+            UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
+                UNITY_DOTS_INSTANCED_PROP(float4, _Color)
+                UNITY_DOTS_INSTANCED_PROP(float4, _RendererColor)
+                UNITY_DOTS_INSTANCED_PROP(float4, _EdgeColor)
+                UNITY_DOTS_INSTANCED_PROP(float, _EdgeWidth)
+                UNITY_DOTS_INSTANCED_PROP(float, _EdgeStrength)
+                UNITY_DOTS_INSTANCED_PROP(float, _CornerStrength)
+            UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
+            #define _Color UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _Color)
+            #define _RendererColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _RendererColor)
+            #define _EdgeColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _EdgeColor)
+            #define _EdgeWidth UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _EdgeWidth)
+            #define _EdgeStrength UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _EdgeStrength)
+            #define _CornerStrength UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _CornerStrength)
+            #endif
             #if USE_SHAPE_LIGHT_TYPE_0
             SHAPE_LIGHT(0)
             #endif
@@ -79,6 +102,7 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
                 o.contact = d.data0;
                 o.tint = input.color * d.tint;
                 o.lightingUV = half2(ComputeScreenPos(o.positionCS / o.positionCS.w).xy);
+                UNITY_TRANSFER_INSTANCE_ID(input, o);
                 return o;
             }
 
@@ -86,6 +110,7 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
 
             half4 Frag(Varyings input):SV_Target
             {
+                UNITY_SETUP_INSTANCE_ID(input);
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
                 half contact = ComputeContact(input.positionWS, input.contact);
                 main.rgb = lerp(main.rgb, _EdgeColor.rgb, saturate(contact * _EdgeStrength * _EdgeColor.a));
@@ -98,6 +123,63 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
             ENDHLSL
         }
 
-        UsePass "FlatWorld/2D/Chunk BRG Sprite Lit/UniversalForward"
+        Pass
+        {
+            Name "UniversalForward"
+            Tags { "LightMode"="UniversalForward" }
+            HLSLPROGRAM
+            #pragma target 4.5
+            #pragma vertex Vert
+            #pragma fragment Frag
+            #pragma multi_compile _ DOTS_INSTANCING_ON
+            #include "ChunkBRGInstance.hlsl"
+
+            struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
+            CBUFFER_START(UnityPerMaterial)
+                float4 _Color;
+                float4 _RendererColor;
+                float4 _EdgeColor;
+                float _EdgeWidth;
+                float _EdgeStrength;
+                float _CornerStrength;
+            CBUFFER_END
+            #if defined(UNITY_DOTS_INSTANCING_ENABLED)
+            UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
+                UNITY_DOTS_INSTANCED_PROP(float4, _Color)
+                UNITY_DOTS_INSTANCED_PROP(float4, _RendererColor)
+                UNITY_DOTS_INSTANCED_PROP(float4, _EdgeColor)
+                UNITY_DOTS_INSTANCED_PROP(float, _EdgeWidth)
+                UNITY_DOTS_INSTANCED_PROP(float, _EdgeStrength)
+                UNITY_DOTS_INSTANCED_PROP(float, _CornerStrength)
+            UNITY_DOTS_INSTANCING_END(MaterialPropertyMetadata)
+            #define _Color UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _Color)
+            #define _RendererColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _RendererColor)
+            #define _EdgeColor UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float4, _EdgeColor)
+            #define _EdgeWidth UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _EdgeWidth)
+            #define _EdgeStrength UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _EdgeStrength)
+            #define _CornerStrength UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _CornerStrength)
+            #endif
+
+            Varyings Vert(Attributes input)
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                ChunkBRGInstanceData d = LoadChunkBRGInstanceData();
+                Varyings o = (Varyings)0;
+                o.positionCS = TransformWorldToHClip(TransformChunkBRGVertex(input.positionOS, d));
+                o.uv = input.uv;
+                o.tint = input.color * d.tint;
+                UNITY_TRANSFER_INSTANCE_ID(input, o);
+                return o;
+            }
+
+            half4 Frag(Varyings input):SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                return SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
+            }
+            ENDHLSL
+        }
     }
 }

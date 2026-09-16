@@ -194,7 +194,7 @@ namespace FlatWorld.AIECS
         public int SampleCount => samples.IsCreated ? samples.Length : 0;
 
         /// <summary>对查询中的全部 ECS 导航实体调度同一流水线；调用方传入并接回本系统的实体访问依赖。</summary>
-        public JobHandle Schedule(EntityQuery query, FlowNavigationCache cache, float deltaTime, uint tick,
+        public JobHandle Schedule(AiecsJobSchedulerSystem scheduler, EntityQuery query, FlowNavigationCache cache, float deltaTime, uint tick,
             int neighboursPerBucket = 8, float separationWeight = 0.8f, JobHandle dependency = default)
         {
             pending.Complete();
@@ -208,12 +208,12 @@ namespace FlatWorld.AIECS
             }
             if (count == 0) return dependency;
             FlowNavigationSnapshot view = cache.Read();
-            pending = new AiecsGatherCrowdJob { Domain = view.Domain, Samples = samples }.ScheduleParallel(query, dependency);
+            pending = scheduler.ScheduleParallel(new AiecsGatherCrowdJob { Domain = view.Domain, Samples = samples }, query, dependency);
             pending = samples.SortJob().Schedule(pending);
             pending = new AiecsCrowdRangesJob { Samples = samples, Ranges = ranges }.Schedule(pending);
-            pending = new AiecsFlowMoveJob { Navigation = view, Samples = samples, Ranges = ranges,
+            pending = scheduler.ScheduleParallel(new AiecsFlowMoveJob { Navigation = view, Samples = samples, Ranges = ranges,
                 DeltaTime = deltaTime, Tick = tick, NeighboursPerBucket = math.max(1, neighboursPerBucket),
-                SeparationWeight = math.max(0f, separationWeight) }.ScheduleParallel(query, pending);
+                SeparationWeight = math.max(0f, separationWeight) }, query, pending);
             cache.RegisterReader(pending);
             return pending;
         }

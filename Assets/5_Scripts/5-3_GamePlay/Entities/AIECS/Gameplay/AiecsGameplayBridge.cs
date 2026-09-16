@@ -62,8 +62,14 @@ namespace FlatWorld.AIECS.Gameplay
 
         #region 世界接入
         /// <summary>每个配置组一个战略目标，另加一个玩家目标；实际单位多少不会增加 Goal 数量。</summary>
-        public AiecsGameplayBridge(Player player, FlowNavigationCache navigation, string[] actorIds, string[] actorFactions, float senseOverride)
+        public AiecsGameplayBridge(Player player, FlowNavigationCache navigation, string[] actorIds, string[] actorFactions, float senseOverride,
+            bool[] fleeFromHostiles = null)
         {
+            if (actorIds == null || actorFactions == null || actorIds.Length == 0 || actorIds.Length != actorFactions.Length)
+                throw new ArgumentException("AIECS Actor 与阵营目录必须非空且长度一致。");
+            if (fleeFromHostiles != null && fleeFromHostiles.Length != actorIds.Length)
+                throw new ArgumentException("AIECS 行为策略目录必须与 Actor 目录长度一致。", nameof(fleeFromHostiles));
+
             Navigation = navigation; worldStamp = ++worldSequence;
             dimensionName = ChunkMgr.Instance.ResolveWorldAddress(player.transform.position).DimensionId;
             if (!DimensionIds.TryGetValue(dimensionName, out dimensionStamp))
@@ -75,7 +81,8 @@ namespace FlatWorld.AIECS.Gameplay
             float extent = 0f;
             for (int i = 0; i < actorIds.Length; i++)
             {
-                Templates[i] = AiecsDefinitionCompiler.Compile(actorIds[i], actorFactions[i], i, Faction(actorFactions[i]), senseOverride, out definitions[i]);
+                Templates[i] = AiecsDefinitionCompiler.Compile(actorIds[i], actorFactions[i], i, Faction(actorFactions[i]), senseOverride,
+                    fleeFromHostiles != null && fleeFromHostiles[i], out definitions[i]);
                 extent = math.max(extent, math.cmax(math.abs(Templates[i].Body.Perception.Center) + Templates[i].Body.Perception.Extents));
                 extent = math.max(extent, math.cmax(math.abs(Templates[i].Body.Hit.Center) + Templates[i].Body.Hit.Extents));
                 GameRes.Instance.TryGetLootTable(definitions[i].LootTable.ToString(), out lootTables[i]);
@@ -131,14 +138,25 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>只在合法已加载位置创建 Entity；低血量演示同样使用真实部位生命比例。</summary>
         public bool Spawn(int templateIndex, float2 position, float healthRatio = 1f)
         {
+            return Spawn(templateIndex, position, healthRatio, out _, out _);
+        }
+
+        /// <summary>正式生态生成时返回稳定身份与 Entity 句柄，供批量计数和远距离回收使用。</summary>
+        public bool Spawn(int templateIndex, float2 position, float healthRatio, out Entity entity, out CombatIdentity identity)
+        {
+            entity = Entity.Null;
+            identity = default;
+            if ((uint)templateIndex >= (uint)Templates.Length)
+                return false;
+
             AiecsActorTemplate template = Templates[templateIndex]; var view = Navigation.Read();
             position = view.Domain.Normalize(position);
             if (!view.CanOccupy(position, template.Body.Radius)) return false;
             template.Vital.Hp *= healthRatio;
             for (int i = 0; i < template.Anatomy.Parts.Length; i++)
             { var part = template.Anatomy.Parts[i]; part.Hp *= healthRatio; template.Anatomy.Parts[i] = part; }
-            var key = new CombatIdentity { Backend = CombatBackend.Entity, Value = ++actorSequence, Generation = 1, World = worldStamp, Dimension = dimensionStamp };
-            Simulation.Spawn(template, key, position, templateIndex);
+            identity = new CombatIdentity { Backend = CombatBackend.Entity, Value = ++actorSequence, Generation = 1, World = worldStamp, Dimension = dimensionStamp };
+            entity = Simulation.Spawn(template, identity, position, templateIndex);
             return true;
         }
 

@@ -54,6 +54,8 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 ## AIECS 正式框架与阶段边界
 
 - `Entities/AIECS/FlatWorld.AIECS.asmdef` 只承载 Core、Perception、Decision、Navigation、Combat；不引用 GamePlay、Item、Collider 或 MonoBehaviour。表现和早期轨迹原型在独立 `Presentation` 程序集，旧内容编译、玩家和死亡产物适配在独立 `Gameplay` 程序集。不能把旧原型的 Slot、运动轨迹、视觉水参数当正式身份、行为或环境状态。
+- 正式世界的 AI 后端由 `AiRuntimeBackendService` 单向路由：`MonsterSpawnerManager` 继续持有生成时间、群系、光照、预算和种群规则，`AiecsEcologyRuntimeHost` 只接管 Entity 创建、模拟、批量表现、计数和远距离回收。GamePlay 不得反向引用 `FlatWorld.AIECS.Gameplay`；新增 ECS 接入能力必须继续通过 GamePlay 侧契约实现，禁止制造程序集循环依赖。
+- Entities 后端启用时 `AI_Base.TickMode` 必须保持 `Disabled`，独立旧实现（当前包括 `AI_Ghost`）也必须关闭 Tick/Load 副作用；进入世界时清理已有旧 Actor GameObject，生态和普通事件生成不得再 `InstantiateItem` 创建 Legacy AI。当前 AIECS 基础切片无法编译的 Actor 必须明确跳过并停止该配置的生成积压，禁止静默回退 Legacy AI；开发 `AiecsPlayground` 与正式生态宿主也不得同时驱动两个正式模拟。带专属命令语义的事件（如旧 `creature.advance`）需要单独迁移对应 ECS 行为阶段，不能靠恢复旧 Actor 实现。
 - `AiecsSimulation` 持有独立 World 与批次资源，`AiecsDefinitionCompiler` 在冷路径读取当前合并 Actor/MOD 定义。生命、记忆、攻击阶段属于每实体运行态，定义、阵营矩阵与战略 Goal 共享；不得通过实例化旧 AI 获得模板，也不得用 P0 能力报告充当运行时配置。
 - 原生感知直接从 ECS 位置、身份、体型、生命构建稀疏桶，桶键包含阵营以避免同阵营占满候选预算。锁定目标只做有效性与低频追击规则复核，失效才错峰搜桶；不可达目标按配置延迟重试。形状偏移和外部玩家缩放必须纳入粗筛扩张上限，循环桶去重与最近镜像必须一起使用。
 - LOS 独立复制 TerrainCell 的 Blocking 和建筑占地，不能把导航不可走当作遮挡。移动前快照用于感知，移动后重建快照用于命中；所有 Native 借用必须进入依赖链，重建和释放前完成旧读取者。武器 Pulse 在模拟批次之外发生时须重新借用当前导航索引，不能跨 Update 缓存可能已被导航发布替换的 LOS 视图。

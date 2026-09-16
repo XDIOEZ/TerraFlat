@@ -53,6 +53,7 @@ namespace FlatWorld.AIECS
     {
         #region 资源
         private readonly World world;
+        private readonly AiecsJobSchedulerSystem scheduler;
         private readonly EntityArchetype archetype;
         private readonly EntityQuery query;
         private readonly AiecsSpatialIndex spatial = new AiecsSpatialIndex();
@@ -78,6 +79,7 @@ namespace FlatWorld.AIECS
         private NativeParallelHashMap<Entity, int2> hitRanges;
         private NativeQueue<AiecsHitEvent> abilityHits;
         private JobHandle pending;
+        private bool disposed;
         private float maximumBodyExtent; // 单次世界生命周期内只扩张，覆盖动态玩家体型与偏心形状。
         public EntityManager Entities => world.EntityManager;
         public CombatClock Clock { get; private set; }
@@ -99,6 +101,7 @@ namespace FlatWorld.AIECS
             if (groupCount < 1 || groupCount > 32) throw new ArgumentOutOfRangeException(nameof(groupCount));
             if (factionRelations.Length != factionIds.Length * factionIds.Length) throw new ArgumentException("阵营矩阵尺寸不匹配");
             world = new World("AIECS 正式模拟");
+            scheduler = world.GetOrCreateSystemManaged<AiecsJobSchedulerSystem>();
             var types = new ComponentType[] { typeof(AiecsIdentity), typeof(AiecsBody), typeof(AiecsVital), typeof(AiecsDefense),
                 typeof(AiecsAnatomy), typeof(AiecsBrain), typeof(AiecsBehaviorProposal), typeof(AiecsBehaviorIntent),
                 typeof(AiecsLocalMotion), typeof(AiecsAttackState), typeof(AiecsStatus), typeof(AiecsWorkCounters),
@@ -232,24 +235,27 @@ namespace FlatWorld.AIECS
             if (hitRanges.Capacity < capacity) hitRanges.Capacity = capacity;
             results.Clear(); externalHits.Clear(); deaths.Clear();
             FlowNavigationSnapshot view = navigation.Read();
-            pending = spatial.Build(query, view.Domain, relations, factions.Length, maximumBodyExtent);
+            pending = spatial.Build(scheduler, query, view.Domain, relations, factions.Length, maximumBodyExtent);
             var frame = new AiecsFrame { Clock = Clock, Spatial = spatial.View, Los = los, Navigation = view, Definitions = definitions,
                 Factions = factions, HitEvents = abilityHits.AsParallelWriter() };
-            pending = new AiecsPerceptionSystem { Definitions = definitions, Spatial = frame.Spatial, Los = los, Time = time, Tick = (uint)Clock.Tick }.ScheduleParallel(query, pending);
+            pending = scheduler.ScheduleParallel(new AiecsPerceptionSystem { Definitions = definitions, Spatial = frame.Spatial,
+                Los = los, Time = time, Tick = (uint)Clock.Tick }, query, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeDecision, frame, pending);
-            pending = new AiecsDecisionSystem { Definitions = definitions, Spatial = frame.Spatial, Time = time }.ScheduleParallel(query, pending);
-            pending = new AiecsBehaviorSystem { Definitions = definitions, Spatial = frame.Spatial, Navigation = view,
-                GroupGoals = goals, Time = time }.ScheduleParallel(query, pending);
+            pending = scheduler.ScheduleParallel(new AiecsDecisionSystem { Definitions = definitions, Spatial = frame.Spatial,
+                Time = time }, query, pending);
+            pending = scheduler.ScheduleParallel(new AiecsBehaviorSystem { Definitions = definitions, Spatial = frame.Spatial,
+                Navigation = view, GroupGoals = goals, Time = time }, query, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeMovement, frame, pending);
             spatial.RegisterReader(pending); navigation.RegisterReader(pending);
-            pending = movement.Schedule(query, navigation, deltaTime, (uint)Clock.Tick, dependency: pending);
+            pending = movement.Schedule(scheduler, query, navigation, deltaTime, (uint)Clock.Tick, dependency: pending);
             // 命中必须读取本 Tick 移动后的坐标，不能使用感知开始前的旧目标位置。
-            pending = spatial.Build(query, view.Domain, relations, factions.Length, maximumBodyExtent, pending);
+            pending = spatial.Build(scheduler, query, view.Domain, relations, factions.Length, maximumBodyExtent, pending);
             frame.Spatial = spatial.View;
             pending = ScheduleStages(AiecsStagePhase.BeforeAttack, frame, pending);
-            pending = new AiecsAttackSystem { Definitions = definitions, Factions = factions, Spatial = frame.Spatial, Los = los,
-                Clock = Clock, Hits = attacks }.ScheduleParallel(query, pending);
-            pending = new AiecsBuffSystem { Definitions = buffs, Clock = Clock, HitCounts = periodicCounts }.ScheduleParallel(query, pending);
+            pending = scheduler.ScheduleParallel(new AiecsAttackSystem { Definitions = definitions, Factions = factions,
+                Spatial = frame.Spatial, Los = los, Clock = Clock, Hits = attacks }, query, pending);
+            pending = scheduler.ScheduleParallel(new AiecsBuffSystem { Definitions = buffs, Clock = Clock,
+                HitCounts = periodicCounts }, query, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeSettlement, frame, pending);
             pending = new AiecsRouteHitsJob { Attacks = attacks, PeriodicCounts = periodicCounts, TotalCount = totalHitCount,
                 External = inputs.AsArray(), Abilities = abilityHits, Hits = hits, Ranges = hitRanges }.Schedule(pending);
@@ -257,12 +263,12 @@ namespace FlatWorld.AIECS
             pending.Complete();
             if (results.Capacity < totalHitCount[0]) results.Capacity = totalHitCount[0];
             if (externalHits.Capacity < hits.Length) externalHits.Capacity = hits.Length;
-            pending = new AiecsDamageSettlementSystem { Hits = hits.AsArray(), Ranges = hitRanges,
+            pending = scheduler.ScheduleParallel(new AiecsDamageSettlementSystem { Hits = hits.AsArray(), Ranges = hitRanges,
                 Factions = factions, Definitions = definitions, BuffDefinitions = buffs, Spatial = frame.Spatial, Difficulty = Difficulty,
-                Results = results.AsParallelWriter(), ExternalHits = externalHits.AsParallelWriter() }.ScheduleParallel(query, pending);
+                Results = results.AsParallelWriter(), ExternalHits = externalHits.AsParallelWriter() }, query, pending);
             pending = ScheduleStages(AiecsStagePhase.AfterDamage, frame, pending);
-            pending = new AiecsDeathSystem { Clock = Clock, Events = deaths.AsParallelWriter() }.ScheduleParallel(query, pending);
-            pending = new AiecsCaptureStateJob { Clock = Clock, Display = display, Work = work }.ScheduleParallel(query, pending);
+            pending = scheduler.ScheduleParallel(new AiecsDeathSystem { Clock = Clock, Events = deaths.AsParallelWriter() }, query, pending);
+            pending = scheduler.ScheduleParallel(new AiecsCaptureStateJob { Clock = Clock, Display = display, Work = work }, query, pending);
             pending = new AiecsStatisticsJob { Display = display, Work = work, Statistics = statistics, Groups = groups,
                 Anchors = groupAnchors, Nearest = groupNearest, Navigation = view, Density = density, Domain = view.Domain }.Schedule(pending);
             spatial.RegisterReader(pending); navigation.RegisterReader(pending);
@@ -298,13 +304,22 @@ namespace FlatWorld.AIECS
         /// <summary>先完成读取者再释放所有容器与 World，外部共享导航由其原所有者负责。</summary>
         public void Dispose()
         {
-            Complete(); movement.Dispose(); spatial.Dispose(); query.Dispose();
+            if (disposed) return;
+            disposed = true;
+            Complete(); movement.Dispose(); spatial.Dispose();
+            // PlayMode/domain teardown can dispose custom Worlds before MonoBehaviour owners receive OnDestroy.
+            // In that path the EntityQuery's manager is already gone, so disposing the stale query would dereference
+            // Unity.Entities' destroyed query registry. Native resources below are owned by this simulation and still
+            // need deterministic cleanup regardless of the World state.
+            bool disposeWorld = world != null && world.IsCreated;
+            if (disposeWorld) query.Dispose();
             definitions.Dispose(); buffs.Dispose(); factions.Dispose(); relations.Dispose(); goals.Dispose();
             groups.Dispose(); groupAnchors.Dispose(); groupNearest.Dispose(); statistics.Dispose(); totalHitCount.Dispose();
             if (attacks.IsCreated) attacks.Dispose(); if (periodicCounts.IsCreated) periodicCounts.Dispose();
             if (display.IsCreated) display.Dispose(); if (work.IsCreated) work.Dispose();
             pendingInputs.Dispose(); inputs.Dispose(); hits.Dispose(); externalHits.Dispose(); results.Dispose(); deaths.Dispose();
-            hitRanges.Dispose(); abilityHits.Dispose(); density.Dispose(); world.Dispose();
+            hitRanges.Dispose(); abilityHits.Dispose(); density.Dispose();
+            if (disposeWorld) world.Dispose();
         }
         #endregion
     }

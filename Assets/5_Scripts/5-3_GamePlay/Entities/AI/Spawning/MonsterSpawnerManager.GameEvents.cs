@@ -180,6 +180,18 @@ public partial class MonsterSpawnerManager
         out Item spawnedItem)
     {
         spawnedItem = null;
+        if (AiRuntimeBackendService.UseEntities)
+        {
+            IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
+            if (backend == null || !backend.SupportsSpecies(prefabId))
+            {
+                Debug.LogWarning($"[GameEvent] AIECS 不支持事件生物 '{prefabId}'，不会回退 BaseAI。");
+                return false;
+            }
+
+            return backend.TrySpawnEvent(prefabId, position);
+        }
+
         try
         {
             spawnedItem = _itemManager.InstantiateItem(

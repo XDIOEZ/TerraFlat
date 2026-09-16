@@ -150,7 +150,7 @@ namespace FlatWorld.AIECS
         }
 
         /// <summary>批量建立同一时刻的索引，返回显式依赖。</summary>
-        public JobHandle Build(EntityQuery query, WorldTopologyDomain domain, NativeArray<byte> relations,
+        public JobHandle Build(AiecsJobSchedulerSystem scheduler, EntityQuery query, WorldTopologyDomain domain, NativeArray<byte> relations,
             int factionCount, float maximumBodyExtent, JobHandle dependency = default)
         {
             JobHandle.CombineDependencies(readers, dependency).Complete();
@@ -166,8 +166,8 @@ namespace FlatWorld.AIECS
             View = new AiecsSpatialView { Domain = domain, Samples = samples, Lookup = lookup, Buckets = buckets,
                 Hostile = relations, FactionCount = factionCount, MaximumBodyExtent = maximumBodyExtent };
             // Build Job 只携带数学字段，不能同时把同一容器作为只读 View 和 Writer 传入。
-            readers = new AiecsBuildSpatialJob { Domain = domain, Output = samples,
-                Lookup = lookup.AsParallelWriter(), Buckets = buckets.AsParallelWriter() }.ScheduleParallel(query, default(JobHandle));
+            readers = scheduler.ScheduleParallel(new AiecsBuildSpatialJob { Domain = domain, Output = samples,
+                Lookup = lookup.AsParallelWriter(), Buckets = buckets.AsParallelWriter() }, query, dependency);
             return readers;
         }
 
