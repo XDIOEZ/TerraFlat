@@ -3,21 +3,22 @@ using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-/// <summary>GM 世界观察层模式；关闭时停止采样，温度与污染共用同一张热力图。</summary>
+/// <summary>GM 世界观察层模式；数值用于本机偏好，新增模式只追加，关闭时停止采样。</summary>
 internal enum GmWorldLayerMode
 {
     Off = 0,
     Temperature = 1,
-    Contamination = 2
+    Contamination = 2,
+    Navigation = 3
 }
 
 /// <summary>
-/// GM 世界观察层：一张 128×128 点采样纹理覆盖当前相机视口。
+/// GM 世界观察层：温度与污染使用 128×128 点采样纹理，导航按视口扩容以保持每格一个箭头。
 /// 温度模式读取最终环境温度；污染模式读取当前地格所有已注册污染指标中的最高归一化负荷。
 /// 只访问已加载的权威 ChunkTerrainData，不为调试显示触发区块加载，也不回写世界状态。
 /// </summary>
 [DisallowMultipleComponent]
-internal sealed class GMWorldLayerOverlay : MonoBehaviour
+internal sealed partial class GMWorldLayerOverlay : MonoBehaviour
 {
     #region 显示预算与资源
 
@@ -26,6 +27,7 @@ internal sealed class GMWorldLayerOverlay : MonoBehaviour
     private const float RefreshInterval = 0.25f;
     private static readonly ProfilerMarker SampleMarker = new("FlatWorld.GM.WorldLayerOverlay");
     private static readonly int OpacityId = Shader.PropertyToID("_Opacity"); // 材质整体不透明度。
+    private static readonly int NavigationModeId = Shader.PropertyToID("_NavigationMode"); // 逐格箭头绘制开关。
     private readonly Color32[] pixels = new Color32[TextureSize * TextureSize];
     private readonly Vector3[] vertices = new Vector3[4];
     private readonly Vector2[] uvs = new Vector2[4];
@@ -34,6 +36,7 @@ internal sealed class GMWorldLayerOverlay : MonoBehaviour
     private Mesh mesh;
     private Material material;
     private Texture2D texture;
+    private bool isNavigationTexture; // 导航方向是线性数据，不能进行 sRGB 颜色转换。
     private int columns;
     private int rows;
     private int stride;
@@ -78,8 +81,16 @@ internal sealed class GMWorldLayerOverlay : MonoBehaviour
         if (modeChanged)
             HidePendingFrame();
         nextRefreshTime = 0f;
-        if (Visible && texture == null)
+        if (Visible && material == null)
             CreateRenderResources();
+        if (material != null)
+        {
+            material.SetFloat(NavigationModeId, Mode == GmWorldLayerMode.Navigation ? 1f : 0f);
+            if (Visible && Mode != GmWorldLayerMode.Navigation)
+                EnsureOverlayTexture(TextureSize, TextureSize, false);
+        }
+        if (Mode != GmWorldLayerMode.Navigation)
+            ReleaseNavigationSamples();
     }
 
     private void LateUpdate()
@@ -91,6 +102,11 @@ internal sealed class GMWorldLayerOverlay : MonoBehaviour
         }
 
         long version = ResolveContextVersion();
+        if (Mode == GmWorldLayerMode.Navigation)
+        {
+            UpdateNavigationOverlay(Camera.main, version);
+            return;
+        }
         if (renderedContextVersion != version && overlayRenderer != null)
             overlayRenderer.enabled = false;
         if (sampling && contextVersion != version)
@@ -137,6 +153,7 @@ internal sealed class GMWorldLayerOverlay : MonoBehaviour
     /// <summary>停止当前批次并立即隐藏旧帧。</summary>
     private void HidePendingFrame()
     {
+        ResetNavigationSampling();
         sampling = false;
         contextVersion = long.MinValue;
         renderedContextVersion = long.MinValue;
@@ -148,6 +165,7 @@ internal sealed class GMWorldLayerOverlay : MonoBehaviour
 
     private void OnDestroy()
     {
+        ReleaseNavigationSamples();
         if (renderRoot != null) Destroy(renderRoot);
         if (mesh != null) Destroy(mesh);
         if (material != null) Destroy(material);
@@ -237,21 +255,8 @@ internal sealed class GMWorldLayerOverlay : MonoBehaviour
     /// <summary>把当前相机视口对齐到整数世界格，超大视距自动增大采样步长。</summary>
     private bool BeginSampling(Camera camera, long version)
     {
-        if (camera == null || texture == null)
+        if (texture == null || !TryGetViewportBounds(camera, out Vector2 minimum, out Vector2 maximum))
             return false;
-
-        Plane plane = new(Vector3.forward, Vector3.zero);
-        Vector2 minimum = new(float.PositiveInfinity, float.PositiveInfinity);
-        Vector2 maximum = new(float.NegativeInfinity, float.NegativeInfinity);
-        for (int i = 0; i < 4; i++)
-        {
-            Ray ray = camera.ViewportPointToRay(new Vector3(i & 1, i >> 1, 0f));
-            if (!plane.Raycast(ray, out float distance))
-                return false;
-            Vector2 point = ray.GetPoint(distance);
-            minimum = Vector2.Min(minimum, point);
-            maximum = Vector2.Max(maximum, point);
-        }
 
         Vector2 span = maximum - minimum;
         stride = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(span.x, span.y) / (TextureSize - 4)));
@@ -266,19 +271,48 @@ internal sealed class GMWorldLayerOverlay : MonoBehaviour
         return true;
     }
 
+    /// <summary>四角投影到世界地面；各观察模式共用同一相机可视范围。</summary>
+    private static bool TryGetViewportBounds(Camera camera, out Vector2 minimum, out Vector2 maximum)
+    {
+        minimum = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+        maximum = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+        if (camera == null)
+            return false;
+
+        Plane plane = new(Vector3.forward, Vector3.zero);
+        for (int i = 0; i < 4; i++)
+        {
+            Ray ray = camera.ViewportPointToRay(new Vector3(i & 1, i >> 1, 0f));
+            if (!plane.Raycast(ray, out float distance))
+                return false;
+            Vector2 point = ray.GetPoint(distance);
+            minimum = Vector2.Min(minimum, point);
+            maximum = Vector2.Max(maximum, point);
+        }
+
+        return true;
+    }
+
     /// <summary>一批完整采样结束后整体上传，避免逐行刷新和跨世界混色。</summary>
     private void PublishTexture()
     {
         texture.SetPixels32(pixels);
         texture.Apply(false, false);
+        PublishOverlayMesh();
+        sampling = false;
+    }
+
+    /// <summary>纹理已完成上传后才更新整数格边界与可见范围，热力图和箭头共用一个四边形。</summary>
+    private void PublishOverlayMesh()
+    {
         float width = columns * stride;
         float height = rows * stride;
         vertices[0] = new Vector3(origin.x, origin.y, 0f);
         vertices[1] = new Vector3(origin.x + width, origin.y, 0f);
         vertices[2] = new Vector3(origin.x + width, origin.y + height, 0f);
         vertices[3] = new Vector3(origin.x, origin.y + height, 0f);
-        float u = (float)columns / TextureSize;
-        float v = (float)rows / TextureSize;
+        float u = (float)columns / texture.width;
+        float v = (float)rows / texture.height;
         uvs[0] = Vector2.zero;
         uvs[1] = new Vector2(u, 0f);
         uvs[2] = new Vector2(u, v);
@@ -288,7 +322,6 @@ internal sealed class GMWorldLayerOverlay : MonoBehaviour
         mesh.RecalculateBounds();
         overlayRenderer.enabled = true;
         renderedContextVersion = contextVersion;
-        sampling = false;
     }
 
     #endregion
@@ -306,15 +339,8 @@ internal sealed class GMWorldLayerOverlay : MonoBehaviour
             return;
         }
 
-        texture = new Texture2D(TextureSize, TextureSize, TextureFormat.RGBA32, false)
-        {
-            name = "GM World Layer Cells",
-            filterMode = FilterMode.Point,
-            wrapMode = TextureWrapMode.Clamp,
-            hideFlags = HideFlags.DontSave
-        };
         material = new Material(shader) { name = "GM World Layer Overlay", hideFlags = HideFlags.DontSave };
-        material.mainTexture = texture;
+        EnsureOverlayTexture(TextureSize, TextureSize, false);
         material.SetFloat(OpacityId, 1f - Transparency);
         mesh = new Mesh { name = "GM World Layer Quad", hideFlags = HideFlags.DontSave };
         mesh.MarkDynamic();
@@ -330,6 +356,27 @@ internal sealed class GMWorldLayerOverlay : MonoBehaviour
         overlayRenderer.shadowCastingMode = ShadowCastingMode.Off;
         overlayRenderer.receiveShadows = false;
         overlayRenderer.enabled = false;
+    }
+
+    /// <summary>仅尺寸或数据色彩空间变化时重建纹理；热力图保留原 sRGB 行为，方向数据使用线性采样。</summary>
+    private void EnsureOverlayTexture(int width, int height, bool navigation)
+    {
+        if (texture != null && texture.width == width && texture.height == height && isNavigationTexture == navigation)
+            return;
+
+        if (overlayRenderer != null)
+            overlayRenderer.enabled = false;
+        if (texture != null)
+            Destroy(texture);
+        texture = new Texture2D(width, height, TextureFormat.RGBA32, false, navigation)
+        {
+            name = "GM World Layer Cells",
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp,
+            hideFlags = HideFlags.DontSave
+        };
+        isNavigationTexture = navigation;
+        material.mainTexture = texture;
     }
 
     #endregion

@@ -51,6 +51,22 @@ namespace FlatWorld.Navigation
         public bool IsValid(FlowGoalHandle handle) => !disposed && !resetPending && handle.Epoch == Epoch &&
             (uint)handle.Slot < (uint)goals.Count && goals[handle.Slot].Active && goals[handle.Slot].Generation == handle.Generation;
 
+        /// <summary>观察者只借用已发布的流场，不创建目标或触发搜索；异步读取仍须登记 RegisterReader。</summary>
+        public bool TryReadPublished(FlowGoalHandle handle, out FlowNavigationSnapshot snapshot)
+        {
+            snapshot = default;
+            if (!IsValid(handle) || dirty.Count != 0 || goalsChanged || !nativeGoals.IsCreated ||
+                (uint)handle.Slot >= (uint)nativeGoals.Length)
+                return false;
+
+            FlowGoalData goal = nativeGoals[handle.Slot];
+            if (goal.Generation != handle.Generation || goal.Epoch != handle.Epoch || goal.Chunk < 0)
+                return false;
+
+            snapshot = Snapshot();
+            return true;
+        }
+
         /// <summary>创建供整组 AI 共享的目标，禁止为每只 AI 调用此入口。</summary>
         public FlowGoalHandle CreateGoal(float2 position)
         {

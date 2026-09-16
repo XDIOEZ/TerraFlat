@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using FlatWorld.AIECS.Gameplay;
 using FlatWorld.Gameplay.Events;
 using TMPro;
 using UnityEngine;
@@ -22,7 +23,8 @@ public sealed partial class GMReflectionConsole
         GameEvents,
         Commands,
         Quests,
-        Layers
+        Layers,
+        Aiecs
     }
 
     private sealed class GmPageView
@@ -67,6 +69,18 @@ public sealed partial class GMReflectionConsole
     private GameEventManager boundGameEventManager;
     private Coroutine searchNavigationCoroutine;
     private Coroutine gameEventRefreshCoroutine;
+    private Button aiecsPlayerDuelButton;
+    private Button aiecsArmiesButton;
+    private Button aiecsWanderButton;
+    private Button aiecsFleeButton;
+    private Button aiecsClearButton;
+    private Button aiecsPlayerParticipatesButton;
+    private TextMeshProUGUI aiecsStatusText;
+    private TextMeshProUGUI aiecsStatisticsText;
+    private TextMeshProUGUI aiecsTickText;
+    private TextMeshProUGUI aiecsCumulativeText;
+    private TextMeshProUGUI aiecsNavigationText;
+    private float nextAiecsPageRefreshTime;
 
     private void BuildTabbedWindow()
     {
@@ -133,6 +147,7 @@ public sealed partial class GMReflectionConsole
         BuildSpawnPage();
         BuildWorldPage();
         BuildLayersPage();
+        BuildAiecsPage();
         BuildStructurePage();
         gameEventPageContent = CreatePage(GmPageId.GameEvents).Content;
         commandPageContent = CreatePage(GmPageId.Commands).Content;
@@ -301,6 +316,7 @@ public sealed partial class GMReflectionConsole
         CreateTab(content.transform, GmPageId.Spawn, "生成", 128f);
         CreateTab(content.transform, GmPageId.World, "世界", 100f);
         CreateTab(content.transform, GmPageId.Layers, "层级显示", 128f);
+        CreateTab(content.transform, GmPageId.Aiecs, "AIECS", 110f);
         CreateTab(content.transform, GmPageId.Structures, "遗迹", 100f);
         CreateTab(content.transform, GmPageId.GameEvents, "事件", 110f);
         CreateTab(content.transform, GmPageId.Commands, "命令", 110f);
@@ -489,6 +505,221 @@ public sealed partial class GMReflectionConsole
         RefreshAnimalDebugOverlayButton();
         RefreshChunkLoadSpeedControl();
     }
+
+    #region AIECS 实战分页
+
+    /// <summary>AIECS 实战入口只保留模拟宿主，所有开发操作统一嵌入 GM 分页。</summary>
+    private void BuildAiecsPage()
+    {
+        GmPageView page = CreatePage(GmPageId.Aiecs);
+        AddPageIntro(
+            page.Content,
+            "AIECS 实战开发",
+            "控制开发入口中的真实 ECS 单位；测试场景、玩家参与开关与运行统计均集中在这里。");
+
+        Transform grid = CreateActionGrid(page.Content, 4, 256f, 60f, 6);
+        aiecsPlayerDuelButton = CreateSearchableButton(
+            grid,
+            GmPageId.Aiecs,
+            "玩家对战",
+            "AIECS ECS 玩家 对战 duel",
+            () => StartAiecsScenario(AiecsPlaygroundMode.PlayerDuel),
+            60f);
+        aiecsArmiesButton = CreateSearchableButton(
+            grid,
+            GmPageId.Aiecs,
+            "两军交战",
+            "AIECS ECS 两军 战斗 增援 armies",
+            ReinforceAiecsArmies,
+            60f);
+        aiecsWanderButton = CreateSearchableButton(
+            grid,
+            GmPageId.Aiecs,
+            "无目标游荡",
+            "AIECS ECS 游荡 wander",
+            () => StartAiecsScenario(AiecsPlaygroundMode.Wander),
+            60f);
+        aiecsFleeButton = CreateSearchableButton(
+            grid,
+            GmPageId.Aiecs,
+            "低血量逃跑",
+            "AIECS ECS 低血量 逃跑 flee",
+            () => StartAiecsScenario(AiecsPlaygroundMode.Flee),
+            60f);
+        aiecsClearButton = CreateSearchableButton(
+            grid,
+            GmPageId.Aiecs,
+            "清理",
+            "AIECS ECS 清理 clear",
+            ClearAiecsScenario,
+            60f);
+        aiecsPlayerParticipatesButton = CreateSearchableButton(
+            grid,
+            GmPageId.Aiecs,
+            "玩家参与感知与战斗：关",
+            "AIECS ECS 玩家 参与 感知 战斗 toggle",
+            ToggleAiecsPlayerParticipation,
+            60f);
+
+        aiecsStatusText = CreateAiecsReadout(page.Content, "正在连接 AIECS 实战开发入口…", 42f, true);
+        aiecsStatisticsText = CreateAiecsReadout(page.Content, "存活 0 / 目标 0 / 游荡 0 / 追击 0 / 逃跑 0 / 攻击 0", 30f);
+        aiecsTickText = CreateAiecsReadout(page.Content, "本 Tick：感知请求 0，候选 0，LOS 0，热点格 0", 30f);
+        aiecsCumulativeText = CreateAiecsReadout(page.Content, "累计：玩家受击 0（-0.0 HP），武器→ECS 命中 0，死亡 0，掉落 0", 30f);
+        aiecsNavigationText = CreateAiecsReadout(page.Content, "共享目标 0 / Chunk 0 / 出口图 0 / 目标图 0 / 区块路线 0", 30f);
+        RefreshAiecsPage();
+    }
+
+    private static TextMeshProUGUI CreateAiecsReadout(
+        Transform parent,
+        string initialText,
+        float height,
+        bool emphasized = false)
+    {
+        TextMeshProUGUI text = CreateText(
+            parent,
+            initialText,
+            emphasized ? 14f : 13f,
+            emphasized ? GmTextPrimary : GmTextSecondary);
+        text.enableWordWrapping = true;
+        text.overflowMode = TextOverflowModes.Ellipsis;
+        text.raycastTarget = false;
+        text.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
+        return text;
+    }
+
+    private void StartAiecsScenario(AiecsPlaygroundMode mode)
+    {
+        AiecsPlayground playground = AiecsPlayground.Active;
+        if (playground == null)
+        {
+            SetStatus("未找到 AIECS 实战开发入口 Prefab。", Color.yellow);
+            RefreshAiecsPage();
+            return;
+        }
+
+        playground.StartScenario(mode);
+        SetStatus(playground.Status, GmTextSecondary);
+        RefreshAiecsPage();
+    }
+
+    private void ReinforceAiecsArmies()
+    {
+        AiecsPlayground playground = AiecsPlayground.Active;
+        if (playground == null)
+        {
+            SetStatus("未找到 AIECS 实战开发入口 Prefab。", Color.yellow);
+            RefreshAiecsPage();
+            return;
+        }
+
+        playground.StartOrReinforceArmies();
+        SetStatus(playground.Status, GmTextSecondary);
+        RefreshAiecsPage();
+    }
+
+    private void ClearAiecsScenario()
+    {
+        AiecsPlayground playground = AiecsPlayground.Active;
+        if (playground == null)
+        {
+            SetStatus("未找到 AIECS 实战开发入口 Prefab。", Color.yellow);
+            RefreshAiecsPage();
+            return;
+        }
+
+        playground.ClearScenario();
+        SetStatus(playground.Status, GmTextSecondary);
+        RefreshAiecsPage();
+    }
+
+    private void ToggleAiecsPlayerParticipation()
+    {
+        AiecsPlayground playground = AiecsPlayground.Active;
+        if (playground == null || !playground.HasActiveScenario)
+        {
+            SetStatus("AIECS 当前没有可切换玩家参与状态的开发场景。", Color.yellow);
+            RefreshAiecsPage();
+            return;
+        }
+
+        playground.SetPlayerParticipates(!playground.PlayerParticipates);
+        RefreshAiecsPage();
+    }
+
+    /// <summary>仅在 GM 的 AIECS 分页可见时以 10Hz 更新文本，避免无窗口时制造字符串垃圾。</summary>
+    private void RefreshAiecsPageIfNeeded()
+    {
+        if (windowRoot == null || !windowRoot.activeSelf ||
+            !gmPages.TryGetValue(GmPageId.Aiecs, out GmPageView page) ||
+            page.Root == null || !page.Root.activeSelf ||
+            Time.unscaledTime < nextAiecsPageRefreshTime)
+            return;
+
+        nextAiecsPageRefreshTime = Time.unscaledTime + 0.1f;
+        RefreshAiecsPage();
+    }
+
+    private void RefreshAiecsPage()
+    {
+        if (aiecsStatusText == null)
+            return;
+
+        AiecsPlayground playground = AiecsPlayground.Active;
+        bool exists = playground != null;
+        bool ready = exists && playground.IsReady;
+        bool activeScenario = exists && playground.HasActiveScenario;
+        bool playerParticipates = activeScenario && playground.PlayerParticipates;
+
+        if (aiecsPlayerDuelButton != null) aiecsPlayerDuelButton.interactable = ready;
+        if (aiecsArmiesButton != null) aiecsArmiesButton.interactable = ready;
+        if (aiecsWanderButton != null) aiecsWanderButton.interactable = ready;
+        if (aiecsFleeButton != null) aiecsFleeButton.interactable = ready;
+        if (aiecsClearButton != null) aiecsClearButton.interactable = activeScenario;
+        if (aiecsPlayerParticipatesButton != null)
+        {
+            aiecsPlayerParticipatesButton.interactable = activeScenario;
+            SetButtonLabel(
+                aiecsPlayerParticipatesButton,
+                $"玩家参与感知与战斗：{(playerParticipates ? "开" : "关")}");
+            SetGmButtonVisual(
+                aiecsPlayerParticipatesButton,
+                playerParticipates ? GmSelection : GmSurfaceRaised,
+                playerParticipates);
+        }
+
+        if (aiecsArmiesButton != null)
+            SetButtonLabel(
+                aiecsArmiesButton,
+                exists ? $"两军交战（每次 +{playground.ReinforcementUnitCount}）" : "两军交战");
+
+        if (!exists)
+        {
+            aiecsStatusText.text = "未运行 AIECS 实战开发入口 Prefab；此分页不会创建第二套模拟。";
+            aiecsStatisticsText.text = "存活 0 / 目标 0 / 游荡 0 / 追击 0 / 逃跑 0 / 攻击 0";
+            aiecsTickText.text = "本 Tick：感知请求 0，候选 0，LOS 0，热点格 0";
+            aiecsCumulativeText.text = "累计：玩家受击 0（-0.0 HP），武器→ECS 命中 0，死亡 0，掉落 0";
+            aiecsNavigationText.text = "共享目标 0 / Chunk 0 / 出口图 0 / 目标图 0 / 区块路线 0";
+            return;
+        }
+
+        aiecsStatusText.text = playground.Status;
+        aiecsStatisticsText.text = playground.StatisticsSummary;
+        aiecsTickText.text = playground.TickSummary;
+        aiecsCumulativeText.text = playground.CumulativeSummary;
+        aiecsNavigationText.text = playground.NavigationSummary;
+    }
+
+    private static void SetButtonLabel(Button button, string value)
+    {
+        if (button == null)
+            return;
+
+        TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (label != null)
+            label.text = value;
+    }
+
+    #endregion
 
     private void BuildStructurePage()
     {
@@ -724,6 +955,8 @@ public sealed partial class GMReflectionConsole
 
         Canvas.ForceUpdateCanvases();
         ResizeResponsiveGrids();
+        if (pageId == GmPageId.Aiecs)
+            RefreshAiecsPage();
         if (selected.Content != null)
             LayoutRebuilder.ForceRebuildLayoutImmediate(selected.Content);
     }
@@ -1267,6 +1500,7 @@ public sealed partial class GMReflectionConsole
             GmPageId.Commands => "调试命令",
             GmPageId.Quests => "任务",
             GmPageId.Layers => "层级显示",
+            GmPageId.Aiecs => "AIECS",
             _ => pageId.ToString()
         };
     }

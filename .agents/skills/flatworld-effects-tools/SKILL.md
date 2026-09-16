@@ -61,6 +61,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 业务日志用 `GameLogManager` 的 `[WORK]` 接口；不要制造每帧重复警告。
 - `GMReflectionConsole` 独占 F4 作为 GM 调试面板开关；管理员手持物品加量由面板按钮调用，`GameDebugManager` 的晴天快捷键必须在脚本默认值与 `WorldManager.prefab` 序列化值中都使用 F6，禁止运行时反射改键。
 - GM 世界观察层属于 `Development/Debug/GMWorldLayerOverlay`，温度与污染共用一张低分辨率点采样纹理并互斥切换；纹理必须与整数世界格对齐，采样按相机视口和每帧预算分批完成后统一上传，换世界时丢弃旧批次，未加载格透明。污染总览读取全部已注册污染定义（含 MOD）的最高归一化负荷；禁止每格创建 Renderer、为可视化租住区块或向地形回写颜色。Shader 用 Resources 引用保证构建保留，关闭观察层停止采样。
+- GM 导航模式与热力图互斥，共用四边形但方向纹理必须使用线性色彩空间、Point 过滤和“一真实格一 texel”，不能沿用热力图的远景降采样。箭头读取后端真实玩家流场；采样 Job 向导航缓存登记读取依赖，上传、换模式、释放前完成任务。自有输出可跨帧，借用的 Native 表不可在后端重新发布后继续访问；目标格、不可达格与未知/阻挡格分别显示蓝点、红叉和透明，不得用直指玩家的箭头伪装寻路结果。
 
 - 季节覆雪通过统一 MPB 效果模块的 `_SnowCoverage` 通道叠加；实际物品基础材质必须支持该属性，仅给默认 Sprite 材质设置 MPB 不会显示雪。保持风、水、受击和溶解等既有通道。
 - `ChunkSnowCoverRenderer`、`ChunkSupportSurfaceRenderer` 只读权威状态并绘制专用 Tilemap，卸载仅清理自身图层；禁止为了融雪或解绑改写原始地形。`ChunkSupportSurfaceRenderer` 使用 Tile Color RGBA 编码左、右、下、上四个外露平台边缘，并读取相邻 Chunk 的 `TerrainSupportLayer`；相连支撑面之间对应通道必须为 0，只允许整体外围产生接触阴影。角色和动物不装配静止物件雪效。

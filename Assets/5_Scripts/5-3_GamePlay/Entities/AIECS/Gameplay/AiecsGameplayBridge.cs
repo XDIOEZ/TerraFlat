@@ -14,7 +14,7 @@ namespace FlatWorld.AIECS.Gameplay
     /// 正式模拟与旧玩法的生命周期适配器：只采集少量外部玩家，负责武器 Pulse、旧接收器结算与死亡掉落。
     /// AI↔AI 不经过本桥；世界更换先销毁旧模拟，禁止让旧身份、命中或借用的 Native 数据进入新世界。
     /// </summary>
-    public sealed class AiecsGameplayBridge : IDisposable, IGameplayCombatBridge
+    public sealed class AiecsGameplayBridge : IDisposable, IGameplayCombatBridge, IWorldNavigationFlowSource
     {
         #region 所有权与外部代理
         private sealed class ExternalProxy
@@ -102,6 +102,7 @@ namespace FlatWorld.AIECS.Gameplay
                 { goals[i] = navigation.CreateGoal(position); Simulation.SetGroupGoal(i, goals[i]); }
                 GameplayCombatBridge.Register(this);
                 AddPlayer(player, actorIds.Length);
+                WorldNavigationFlowRegistry.Register(this);
             }
             catch { Dispose(); throw; }
         }
@@ -162,8 +163,27 @@ namespace FlatWorld.AIECS.Gameplay
 
         /// <summary>玩家维度或导航缓存更换时必须结束整个旧模拟。</summary>
         public bool IsCurrentWorld(Player player) => player != null && Navigation != null && WorldNavigationManager.ExistingInstance != null &&
-            ReferenceEquals(WorldNavigationManager.ExistingInstance.GetSharedNavigation(), Navigation) &&
-            ChunkMgr.Instance != null && ChunkMgr.Instance.ResolveWorldAddress(player.transform.position).DimensionId == dimensionName;
+            WorldNavigationManager.ExistingInstance.OwnsSharedNavigation(Navigation) &&
+            ChunkMgr.ExistingInstance != null && ChunkMgr.ExistingInstance.ResolveWorldAddress(player.transform.position).DimensionId == dimensionName;
+
+        /// <summary>只暴露真实外部玩家代理的共享目标，复活代际、死亡和世界切换后旧目标不可观察。</summary>
+        public bool TryGetPlayerFlow(Player player, out FlowNavigationCache cache, out FlowGoalHandle goal)
+        {
+            cache = null;
+            goal = default;
+            if (Simulation == null || player == null || player.itemData == null ||
+                !player.gameObject.activeInHierarchy || !IsCurrentWorld(player) ||
+                !proxyLookup.TryGetValue(IdentityOf(player), out ExternalProxy proxy) || proxy.Item != player ||
+                proxy.Receiver == null || proxy.Receiver.Hp <= 0f)
+                return false;
+
+            goal = goals[proxy.Group];
+            if (!Navigation.IsValid(goal))
+                return false;
+
+            cache = Navigation;
+            return true;
+        }
 
         /// <summary>每个模拟 Tick 同步外部代理、少量战略中心、地图版本和事件，不逐个读取 AI GameObject。</summary>
         public void Step(float deltaTime, double time)
@@ -352,6 +372,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>注销输入后完成 Job，归还共享目标，并清空所有外部引用。</summary>
         public void Dispose()
         {
+            WorldNavigationFlowRegistry.Unregister(this);
             GameplayCombatBridge.Unregister(this); Simulation?.Dispose(); Simulation = null; los?.Dispose();
             if (Navigation != null && goals != null) foreach (var goal in goals) Navigation.RemoveGoal(goal);
             if (expiredCorpses.IsCreated) expiredCorpses.Dispose();

@@ -4,10 +4,16 @@
     "references": [
         "GamePlay",
         "Data",
+        "FlatWorld.AIECS.Gameplay",
+        "FlatWorld.Navigation",
+        "FlatWorld.WorldTopology",
         "FlatWorld.WorldModel",
         "FlatWorld.Utilities",
         "UI",
         "Kybernetik.UltEvents",
+        "Unity.Burst",
+        "Unity.Collections",
+        "Unity.Mathematics",
         "Unity.InputSystem",
         "Unity.TextMeshPro",
         "UnityEngine.UI"

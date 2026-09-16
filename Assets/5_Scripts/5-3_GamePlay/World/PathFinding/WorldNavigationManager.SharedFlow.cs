@@ -10,6 +10,10 @@ public sealed partial class WorldNavigationManager
     // 只有实际使用 ECS 导航时才创建；旧 GameObject Agent 保持现有请求路径。
     private FlowNavigationCache sharedNavigation;
 
+    /// <summary>只验证共享缓存所有权；观察者和旧模拟检查世界时不能隐式创建新缓存。</summary>
+    public bool OwnsSharedNavigation(FlowNavigationCache cache) =>
+        cache != null && ReferenceEquals(sharedNavigation, cache);
+
     /// <summary>取得当前世界唯一共享流场；调用方只借用视图，释放由本管理器负责。</summary>
     public FlowNavigationCache GetSharedNavigation()
     {

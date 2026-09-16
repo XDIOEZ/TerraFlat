@@ -177,6 +177,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     {
         UpdateBuffTargetListIfNeeded();
         RefreshResponsiveLayoutIfCanvasChanged();
+        RefreshAiecsPageIfNeeded();
         HandleTeleportInput();
 
         if (Keyboard.current?.f4Key.wasPressedThisFrame != true)
@@ -1370,6 +1371,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         RefreshAnimalDebugOverlayButton();
         RefreshItemIds();
         RefreshWorldLayerOverlayButtons();
+        RefreshAiecsPage();
         RefreshAiCreatureIds();
         RefreshStructureOptions();
         RebuildReflectedCommands();

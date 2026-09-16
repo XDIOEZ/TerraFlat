@@ -10,12 +10,13 @@ public sealed partial class GMReflectionConsole
     private GMWorldLayerOverlay worldLayerOverlay; // 独立于 GM 窗口显隐的世界观察层
     private Button temperatureOverlayButton; // 温度层开关
     private Button contaminationOverlayButton; // 污染层开关
+    private Button navigationOverlayButton; // 怪物到本地玩家的逐格流场开关
     private TextMeshProUGUI worldLayerTransparencyText; // 透明度百分比
 
     private void BuildLayersPage()
     {
         GmPageView page = CreatePage(GmPageId.Layers);
-        AddPageIntro(page.Content, "层级显示", "切换温度或污染观察层；关闭 GM 窗口后，当前半透明热力图仍会保留在世界中。");
+        AddPageIntro(page.Content, "层级显示", "切换温度、污染或怪物导航观察层；关闭 GM 窗口后，当前观察层仍会保留在世界中。");
         GameObject controls = CreateUiObject("World Layer Controls", page.Content);
         controls.AddComponent<LayoutElement>().preferredHeight = 48f;
         HorizontalLayoutGroup controlsLayout = controls.AddComponent<HorizontalLayoutGroup>();
@@ -35,6 +36,12 @@ public sealed partial class GMReflectionConsole
         contaminationButtonLayout.preferredWidth = 0f;
         contaminationButtonLayout.flexibleWidth = 1f;
         CreateWorldLayerTransparencyControl(controls.transform);
+
+        // 导航独占一行，不挤占原有温度、污染按钮与透明度滑轨。
+        navigationOverlayButton = CreateSearchableButton(
+            page.Content, GmPageId.Layers, "显示怪物导航：关",
+            "怪物 玩家 导航 寻路 流场 箭头 路径 monster player navigation path flow field arrow",
+            ToggleNavigationOverlay, 60f);
 
         GameObject legend = CreateUiObject("Temperature Legend", page.Content);
         legend.AddComponent<LayoutElement>().preferredHeight = 40f;
@@ -67,8 +74,8 @@ public sealed partial class GMReflectionConsole
             label.alignment = TextAlignmentOptions.Center;
         }
         AddPageHint(page.Content,
-            "温度：蓝色冷、红色热，固定 -20～60℃。污染：绿色清洁、红色高负荷；每格取所有已注册污染类型（包含 MOD）的最高归一化负荷。未加载区域透明。\n透明度越高，地表越清晰：0% 完全覆盖，100% 完全透明。",
-            62f);
+            "温度：蓝色冷、红色热，固定 -20～60℃。污染：绿色清洁、红色高负荷；每格取所有已注册污染类型（包含 MOD）的最高归一化负荷。未加载区域透明。\n怪物导航：每个可达格显示朝本地玩家寻路的下一步箭头；蓝点为玩家目标格，红叉为不可达格，障碍和未加载格不画。读取实际共享流场，不代表所有怪物都在追击；目标尚未就绪时不显示。\n透明度越高，地表越清晰：0% 完全覆盖，100% 完全透明。",
+            132f);
         RefreshWorldLayerOverlayButtons();
     }
 
@@ -145,7 +152,7 @@ public sealed partial class GMReflectionConsole
             entry.callback.AddListener(_ => GMConsolePreferences.SavePendingChanges());
             trigger.triggers.Add(entry);
         }
-        RegisterSearchEntry(GmPageId.Layers, "图层透明度", "温度 污染 透明度 热力图 transparency opacity", (RectTransform)control.transform);
+        RegisterSearchEntry(GmPageId.Layers, "图层透明度", "温度 污染 导航 箭头 透明度 热力图 transparency opacity", (RectTransform)control.transform);
     }
 
     /// <summary>即时修改覆盖层材质，不触发地块重采样或纹理上传。</summary>
@@ -178,6 +185,18 @@ public sealed partial class GMReflectionConsole
             GmAccentHover);
     }
 
+    /// <summary>显示怪物实际使用的玩家共享流场；再次点击关闭，不改变 AI 的目标或行为。</summary>
+    private void ToggleNavigationOverlay()
+    {
+        GmWorldLayerMode mode = worldLayerOverlay.Mode == GmWorldLayerMode.Navigation
+            ? GmWorldLayerMode.Off
+            : GmWorldLayerMode.Navigation;
+        SetWorldLayerMode(mode);
+        SetStatus(mode == GmWorldLayerMode.Navigation
+            ? "怪物导航层已开启；共享目标就绪后逐格显示，关闭 GM 窗口后仍会显示。"
+            : "怪物导航层已关闭。", GmAccentHover);
+    }
+
     /// <summary>统一切换世界观察层并保存本地 GM 偏好。</summary>
     private void SetWorldLayerMode(GmWorldLayerMode mode)
     {
@@ -186,12 +205,13 @@ public sealed partial class GMReflectionConsole
         RefreshWorldLayerOverlayButtons();
     }
 
-    /// <summary>同步温度和污染按钮的互斥状态。</summary>
+    /// <summary>同步温度、污染和导航按钮的互斥状态。</summary>
     private void RefreshWorldLayerOverlayButtons()
     {
         GmWorldLayerMode mode = worldLayerOverlay != null ? worldLayerOverlay.Mode : GmWorldLayerMode.Off;
         RefreshWorldLayerOverlayButton(temperatureOverlayButton, "显示温度", mode == GmWorldLayerMode.Temperature);
         RefreshWorldLayerOverlayButton(contaminationOverlayButton, "显示污染", mode == GmWorldLayerMode.Contamination);
+        RefreshWorldLayerOverlayButton(navigationOverlayButton, "显示怪物导航", mode == GmWorldLayerMode.Navigation);
     }
 
     /// <summary>刷新一个观察层按钮的文字与颜色。</summary>
