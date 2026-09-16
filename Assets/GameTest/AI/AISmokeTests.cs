@@ -305,13 +305,13 @@ namespace FlatWorld.GameTest.AI
             attackController.StartWindow(null, string.Empty, Vector2.right);
             Assert.That(attackController.IsDamageWindowActive, Is.False);
 
-            attackController.Update(0.059f);
+            attackController.Tick(0.059f);
             Assert.That(attackController.IsDamageWindowActive, Is.False);
 
-            attackController.Update(0.002f);
+            attackController.Tick(0.002f);
             Assert.That(attackController.IsDamageWindowActive, Is.True);
 
-            attackController.Update(0.12f);
+            attackController.Tick(0.12f);
             Assert.That(attackController.IsDamageWindowActive, Is.False);
         }
 
