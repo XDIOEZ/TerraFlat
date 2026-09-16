@@ -1,7 +1,7 @@
 {
     "name": "FlatWorld.AIECS.Editor",
     "rootNamespace": "FlatWorld.AIECS.Editor",
-    "references": ["FlatWorld.AIECS", "FlatWorld.AIECS.Presentation", "FlatWorld.AIECS.Gameplay", "GamePlay", "FlatWorld.Utilities", "FlatWorld.Combat.Core", "FlatWorld.Geometry", "Unity.Entities", "Unity.Collections", "Unity.Mathematics", "Unity.Addressables.Editor", "Unity.Addressables", "Unity.ResourceManager", "Unity.RenderPipelines.Universal.Runtime", "Unity.Newtonsoft.Json"],
+    "references": ["FlatWorld.AIECS", "FlatWorld.AIECS.Presentation", "FlatWorld.AIECS.Gameplay", "GamePlay", "UI", "FlatWorld.Utilities", "FlatWorld.Combat.Core", "FlatWorld.Geometry", "Unity.Entities", "Unity.Collections", "Unity.Mathematics", "Unity.Addressables.Editor", "Unity.Addressables", "Unity.ResourceManager", "Unity.RenderPipelines.Universal.Runtime", "Unity.Newtonsoft.Json", "Unity.TextMeshPro", "Unity.ugui"],
     "includePlatforms": ["Editor"],
     "autoReferenced": true
 }
