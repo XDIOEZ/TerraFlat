@@ -97,6 +97,13 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     private bool runtimeStateInitialized;
     private string preferredSelectableName;
     private GameObject previousSelectedObject;
+    private const float ResponsiveReferenceMarginRatio = 0.05f;
+    private const float ResponsivePositionPadding = 8f;
+    private const float MaximumResponsiveViewportScale = 1.25f;
+    private readonly Vector3[] responsiveWorldCorners = new Vector3[4];
+    private Vector3 authoredLocalScale = Vector3.one;
+    private bool authoredLocalScaleCaptured;
+    private bool isApplyingResponsiveViewportLayout;
 
     public event Action Opened;
     public event Action Closed;
@@ -123,6 +130,8 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     private void Awake()
     {
         EnsureRuntimeReferences();
+        CaptureAuthoredLocalScale();
+        ApplyResponsiveViewportLayout();
         EnsureHierarchySnapshot();
         FlatWorldUITheme.ApplyGamepadNavigationPolicy(cachedSelectables);
     }
@@ -132,6 +141,8 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     {
         EnsureHierarchySnapshot();
         EnsureRuntimeReferences();
+        CaptureAuthoredLocalScale();
+        ApplyResponsiveViewportLayout();
         ApplyCachedRuntimeBindings();
 
         // 初始化面板状态
@@ -189,6 +200,133 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
         CanDrag = Dragger != null;
     }
+
+    #region 运行时窗口分辨率适配
+
+    /// <summary>记录 Prefab authored scale，分辨率变化时只在该基准上做运行时缩放。</summary>
+    private void CaptureAuthoredLocalScale()
+    {
+        if (authoredLocalScaleCaptured || rectTransform == null)
+            return;
+
+        authoredLocalScale = rectTransform.localScale;
+        authoredLocalScaleCaptured = true;
+    }
+
+    /// <summary>
+    /// 固定尺寸窗口按当前安全区相对参考分辨率做温和等比缩放，并保证窗口不会因运行时改分辨率留在屏幕外。
+    /// 设置页等拉伸锚点面板继续完全服从 Prefab，不在这里二次改写布局。
+    /// </summary>
+    private void ApplyResponsiveViewportLayout()
+    {
+        if (!Application.isPlaying || isApplyingResponsiveViewportLayout)
+            return;
+
+        EnsureRuntimeReferences();
+        CaptureAuthoredLocalScale();
+        if (rectTransform == null || !(rectTransform.parent is RectTransform parentRect))
+            return;
+
+        // 只有 UIManager 的 SafeAreaRoot 直属窗口参与；嵌套控件也会复用 BasePanel，不能误判成独立窗口。
+        if (parentRect.GetComponent<SafeAreaRectController>() == null)
+            return;
+
+        isApplyingResponsiveViewportLayout = true;
+        try
+        {
+            // 常驻 HUD 由自身角落锚点/安全区规则负责，不套用窗口缩放。
+            if (!blocksGameplayInput)
+            {
+                rectTransform.localScale = authoredLocalScale;
+                return;
+            }
+
+            Vector2 anchorSpan = rectTransform.anchorMax - rectTransform.anchorMin;
+            if (Mathf.Abs(anchorSpan.x) > 0.001f || Mathf.Abs(anchorSpan.y) > 0.001f)
+            {
+                rectTransform.localScale = authoredLocalScale;
+                return;
+            }
+
+
+            // 固定模态窗口统一以屏幕中心为设计基准；角落锚点属于 HUD/工具条，不参与窗口缩放。
+            Vector2 anchorCenter = (rectTransform.anchorMin + rectTransform.anchorMax) * 0.5f;
+            if (Vector2.SqrMagnitude(anchorCenter - new Vector2(0.5f, 0.5f)) > 0.0001f)
+            {
+                rectTransform.localScale = authoredLocalScale;
+                return;
+            }
+
+            Vector2 panelSize = rectTransform.rect.size;
+            Vector2 viewportSize = parentRect.rect.size;
+            if (panelSize.x <= 0f || panelSize.y <= 0f || viewportSize.x <= 0f || viewportSize.y <= 0f)
+                return;
+
+            Canvas rootCanvas = GetComponentInParent<Canvas>()?.rootCanvas;
+            CanvasScaler scaler = rootCanvas != null ? rootCanvas.GetComponent<CanvasScaler>() : null;
+            Vector2 referenceSize = scaler != null && scaler.referenceResolution.x > 0f && scaler.referenceResolution.y > 0f
+                ? scaler.referenceResolution
+                : new Vector2(1920f, 1080f);
+
+            // Expand 模式下宽高比变化会增加逻辑画布面积；用几何平均让固定窗口适度利用新增空间，避免横向或纵向单轴拉伸。
+            float viewportAreaRatio = (viewportSize.x * viewportSize.y) / Mathf.Max(1f, referenceSize.x * referenceSize.y);
+            float viewportScale = Mathf.Clamp(Mathf.Sqrt(viewportAreaRatio), 1f, MaximumResponsiveViewportScale);
+
+            // 参考设置功能列表的 5% 边距语义：任何固定窗口都必须能完整落进安全区九成范围。
+            float availableWidth = viewportSize.x * (1f - ResponsiveReferenceMarginRatio * 2f);
+            float availableHeight = viewportSize.y * (1f - ResponsiveReferenceMarginRatio * 2f);
+            float authoredWidth = panelSize.x * Mathf.Max(0.0001f, Mathf.Abs(authoredLocalScale.x));
+            float authoredHeight = panelSize.y * Mathf.Max(0.0001f, Mathf.Abs(authoredLocalScale.y));
+            float fitScale = Mathf.Min(availableWidth / authoredWidth, availableHeight / authoredHeight);
+            float finalScale = Mathf.Min(viewportScale, fitScale);
+
+            rectTransform.localScale = new Vector3(
+                authoredLocalScale.x * finalScale,
+                authoredLocalScale.y * finalScale,
+                authoredLocalScale.z);
+
+            ClampInsideParent(parentRect);
+        }
+        finally
+        {
+            isApplyingResponsiveViewportLayout = false;
+        }
+    }
+
+    /// <summary>仅在窗口越出安全区时回推位置，保留玩家已经拖拽出的有效摆放位置。</summary>
+    private void ClampInsideParent(RectTransform parentRect)
+    {
+        Rect parentBounds = parentRect.rect;
+        parentBounds.xMin += ResponsivePositionPadding;
+        parentBounds.xMax -= ResponsivePositionPadding;
+        parentBounds.yMin += ResponsivePositionPadding;
+        parentBounds.yMax -= ResponsivePositionPadding;
+
+        rectTransform.GetWorldCorners(responsiveWorldCorners);
+        Vector3 bottomLeft = parentRect.InverseTransformPoint(responsiveWorldCorners[0]);
+        Vector3 topRight = parentRect.InverseTransformPoint(responsiveWorldCorners[2]);
+
+        Vector2 correction = Vector2.zero;
+        if (bottomLeft.x < parentBounds.xMin)
+            correction.x += parentBounds.xMin - bottomLeft.x;
+        if (topRight.x + correction.x > parentBounds.xMax)
+            correction.x += parentBounds.xMax - (topRight.x + correction.x);
+        if (bottomLeft.y < parentBounds.yMin)
+            correction.y += parentBounds.yMin - bottomLeft.y;
+        if (topRight.y + correction.y > parentBounds.yMax)
+            correction.y += parentBounds.yMax - (topRight.y + correction.y);
+
+        if (correction.sqrMagnitude > 0.0001f)
+            rectTransform.anchoredPosition += correction;
+    }
+
+    /// <summary>父 Canvas、SafeAreaRoot 或自身尺寸变化时同步刷新固定窗口布局；Unity 会把父 RectTransform 尺寸变化传递给子节点。</summary>
+    private void OnRectTransformDimensionsChange()
+    {
+        ApplyResponsiveViewportLayout();
+    }
+
+    #endregion
     #endregion
 
     #region 层级快照
@@ -379,6 +517,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
             return;
 
         blocksGameplayInput = shouldBlock;
+        ApplyResponsiveViewportLayout();
         NotifyInteractionSurfaceChanged();
     }
 
@@ -666,6 +805,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     /// <summary>对象启停会改变活动面板集合，必须让顶层查询缓存失效。</summary>
     private void OnEnable()
     {
+        ApplyResponsiveViewportLayout();
         NotifyInteractionSurfaceChanged();
     }
 

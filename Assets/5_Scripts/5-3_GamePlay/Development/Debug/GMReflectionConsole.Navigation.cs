@@ -210,14 +210,15 @@ public sealed partial class GMReflectionConsole
         layout.childControlHeight = true;
         layout.childForceExpandWidth = false;
 
-        gmSearchInput = CreateInputField(toolbar.transform, "搜索功能、事件名称或命令", 680f, false);
+        gmSearchInput = CreateInputField(toolbar.transform, "搜索功能；输入 /help 使用命令", 680f, false);
         LayoutElement searchLayout = gmSearchInput.GetComponent<LayoutElement>();
         searchLayout.flexibleWidth = 1f;
         gmSearchInput.onValueChanged.AddListener(_ => RebuildGlobalSearchResults());
+        gmSearchInput.onSubmit.AddListener(HandleGlobalSearchSubmit);
 
         gmSearchSummaryText = CreateText(
             toolbar.transform,
-            "输入名称后跳转",
+            "输入名称，或 /help",
             12f,
             GmTextSecondary);
         gmSearchSummaryText.alignment = TextAlignmentOptions.Right;
@@ -761,9 +762,12 @@ public sealed partial class GMReflectionConsole
         if (query.Length == 0)
         {
             gmSearchResultsRoot.SetActive(false);
-            gmSearchSummaryText.text = "输入名称后跳转";
+            gmSearchSummaryText.text = "输入名称，或 /help";
             return;
         }
+
+        if (TryRebuildSlashCommandSuggestions(query))
+            return;
 
         string[] tokens = query
             .ToLowerInvariant()
@@ -813,7 +817,7 @@ public sealed partial class GMReflectionConsole
 
         gmSearchInput.SetTextWithoutNotify(string.Empty);
         gmSearchResultsRoot.SetActive(false);
-        gmSearchSummaryText.text = "输入名称后跳转";
+        gmSearchSummaryText.text = "输入名称，或 /help";
         SetActivePage(entry.PageId);
 
         if (searchNavigationCoroutine != null)
@@ -873,7 +877,11 @@ public sealed partial class GMReflectionConsole
 
         RemoveSearchEntriesForPage(GmPageId.Commands);
         ClearChildren(commandPageContent);
-        AddPageIntro(commandPageContent, "调试命令", "自动发现当前场景中经过白名单筛选的无参数调试方法。 ");
+        AddPageIntro(
+            commandPageContent,
+            "调试命令",
+            "顶部输入框支持 /命令 参数 并按 Enter 执行；下方仍保留经过白名单筛选的反射调试按钮。 ");
+        BuildSlashCommandReference(commandPageContent);
 
         GameObject header = CreateUiObject("Command Header", commandPageContent);
         header.AddComponent<LayoutElement>().preferredHeight = 34f;
