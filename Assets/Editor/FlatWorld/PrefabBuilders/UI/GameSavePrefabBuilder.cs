@@ -134,6 +134,14 @@ public static class GameSavePrefabBuilder
         accent.rectTransform.anchoredPosition = Vector2.zero;
         accent.rectTransform.sizeDelta = new Vector2(6f, 0f);
         accent.raycastTarget = false;
+
+        SafeAreaScaleGroup scaleGroup = root.GetComponent<SafeAreaScaleGroup>();
+        if (scaleGroup == null)
+            scaleGroup = root.gameObject.AddComponent<SafeAreaScaleGroup>();
+        scaleGroup.Configure(
+            card.rectTransform,
+            new[] { shadow.rectTransform, card.rectTransform },
+            new Vector2(24f, 24f));
         return card;
     }
 
