@@ -137,6 +137,15 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     /// <summary>通过正式交互距离与目标规则尝试和指定对象交互，供非物理输入控制源复用。</summary>
     public bool TryInteractTarget(IInteractable receiver)
     {
+        if (!CanInteractTarget(receiver))
+            return false;
+
+        return StartInteraction(receiver);
+    }
+
+    /// <summary>复用正式交互发送器的全部准入规则，供结构化观察和非物理输入源判断目标当前是否可交互。</summary>
+    public bool CanInteractTarget(IInteractable receiver)
+    {
         if (!IsLocalInteractionOwner() || IsGameplayInputLocked() || HasHeldBuildingPlacementPriority())
             return false;
 
@@ -147,10 +156,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         float distance = WorldTopologyRuntime.Distance(
             item.transform.position,
             receiverComponent.transform.position);
-        if (distance > maxInteractDistance)
-            return false;
-
-        return StartInteraction(receiver);
+        return distance <= maxInteractDistance;
     }
 
     private void OnInteractReleased(InputAction.CallbackContext ctx)

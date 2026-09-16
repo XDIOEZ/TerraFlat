@@ -573,16 +573,15 @@ namespace FlatWorld.GameplayMCP
 
             var result = new JArray();
             for (int i = 0; i < ordered.Length; i++)
-                result.Add(BuildEntityObservation(ordered[i].Item, ordered[i].Distance));
+                result.Add(BuildEntityObservation(player, ordered[i].Item, ordered[i].Distance));
             return result;
         }
 
         /// <summary>构造一个附近实体的紧凑摘要。</summary>
-        private static JObject BuildEntityObservation(Item item, float distance)
+        private static JObject BuildEntityObservation(Player player, Item item, float distance)
         {
             DamageReceiver health = item.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
-            bool interactable = item.GetComponentsInChildren<MonoBehaviour>(true)
-                .Any(component => component is IInteractable);
+            bool interactable = CanPlayerInteract(item, player);
             ItemData data = item.itemData;
             var tags = new JArray();
             if (data.Tags != null)
@@ -604,6 +603,30 @@ namespace FlatWorld.GameplayMCP
                 ["faction"] = data.FactionId ?? string.Empty,
                 ["tags"] = tags
             };
+        }
+
+        /// <summary>按生产交互契约判断目标当前是否接受玩家交互，避免仅凭接口存在误报。</summary>
+        internal static bool CanPlayerInteract(Item targetItem, Player player)
+        {
+            if (targetItem == null || player == null || targetItem == player || !targetItem.gameObject.activeInHierarchy)
+                return false;
+
+            Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true);
+            if (sender == null)
+                return false;
+
+            MonoBehaviour[] behaviours = targetItem.GetComponentsInChildren<MonoBehaviour>(true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                if (behaviours[i] is IInteractable interactable &&
+                    behaviours[i].gameObject.activeInHierarchy &&
+                    sender.CanInteractTarget(interactable))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>聚合玩家普通库存与快捷栏，减少 Agent 为查询资源重复翻槽位。</summary>
