@@ -905,7 +905,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         hotbarRect.anchorMin = hotbarRect.anchorMax = new Vector2(0.5f, 0f);
         hotbarRect.pivot = new Vector2(0.5f, 0f);
         Rect occupiedScreenArea = UIUserSettings.RespectSafeArea
-            ? Screen.safeArea
+            ? SafeAreaRectController.ResolveSafeArea(Screen.safeArea, Screen.width, Screen.height)
             : new Rect(0f, 0f, Screen.width, Screen.height);
         float gestureBottomPadding = AndroidSystemGestureInsets.GetAdditionalBottomPadding(
             safeRoot,
@@ -913,6 +913,15 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         hotbarRect.anchoredPosition = new Vector2(
             0f,
             gestureBottomPadding + UIUserSettings.HotbarBottomSpacing);
+        if (safeRoot != null)
+        {
+            // 屏幕、Canvas 缩放和锚点共同决定实际下边界；负间距可以向下调，但不能切掉可点击槽位。
+            float correction = SafeAreaRectController.ResolveBottomCorrection(hotbarRect.rect,
+                safeRoot.worldToLocalMatrix * hotbarRect.localToWorldMatrix,
+                safeRoot.rect.yMin + gestureBottomPadding);
+            hotbarRect.anchoredPosition += (Vector2)hotbarRect.parent.InverseTransformVector(
+                safeRoot.TransformVector(Vector3.up * correction));
+        }
         ApplyHotbarInteractionPriority(UIManager.Instance.HasOpenGameplayInputBlockingPanel());
         ApplyTouchControlsOpacity();
         return true;

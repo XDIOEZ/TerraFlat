@@ -48,12 +48,15 @@ public sealed class SafeAreaRectController : MonoBehaviour
     {
         UIUserSettings.Changed -= HandleUISettingsChanged;
         UIUserSettings.Changed += HandleUISettingsChanged;
+        Canvas.preWillRenderCanvases -= HandleCanvasRendering;
+        Canvas.preWillRenderCanvases += HandleCanvasRendering;
         ApplySafeArea(force: true);
     }
 
     private void OnDisable()
     {
         UIUserSettings.Changed -= HandleUISettingsChanged;
+        Canvas.preWillRenderCanvases -= HandleCanvasRendering;
     }
 
     private void OnRectTransformDimensionsChange()
@@ -80,6 +83,13 @@ public sealed class SafeAreaRectController : MonoBehaviour
         ApplySafeArea(force: true);
     }
 
+    /// <summary>Canvas 尺寸回调可能早于 Screen 更新；在正式绘制前补齐同一帧的屏幕快照，不重建未变化的布局。</summary>
+    private void HandleCanvasRendering()
+    {
+        if (!isApplying && isActiveAndEnabled)
+            ApplySafeArea(force: false);
+    }
+
     #endregion
 
     #region 安全区换算
@@ -91,9 +101,10 @@ public sealed class SafeAreaRectController : MonoBehaviour
 
         int width = Mathf.Max(1, Screen.width);
         int height = Mathf.Max(1, Screen.height);
-        Rect safeArea = UIUserSettings.RespectSafeArea
+        Rect reportedSafeArea = UIUserSettings.RespectSafeArea
             ? Screen.safeArea
             : new Rect(0f, 0f, width, height);
+        Rect safeArea = ResolveSafeArea(reportedSafeArea, width, height);
         if (!force && safeArea == lastSafeArea && width == lastScreenWidth && height == lastScreenHeight)
             return;
 
@@ -113,6 +124,40 @@ public sealed class SafeAreaRectController : MonoBehaviour
         // 安全区或横屏方向变化后立即通知 HUD 重排，并让它释放旧坐标系中的触摸所有权。
         if (Application.isPlaying)
             UIManager.ExistingInstance?.NotifyInteractionSurfaceChanged();
+    }
+
+    /// <summary>
+    /// 安全区必须属于当前屏幕；模拟器切换/旋转过渡帧的旧分辨率矩形不能变成大于 1 的锚点。
+    /// 无效快照暂用完整屏幕，下一次有效快照会自动恢复刘海边距；容忍半像素取整误差。
+    /// </summary>
+    public static Rect ResolveSafeArea(Rect reported, int width, int height)
+    {
+        Rect screen = new Rect(0f, 0f, Mathf.Max(1, width), Mathf.Max(1, height));
+        if (!IsFinite(reported.x) || !IsFinite(reported.y) ||
+            !IsFinite(reported.width) || !IsFinite(reported.height) ||
+            reported.width <= 0f || reported.height <= 0f ||
+            reported.xMin < -0.5f || reported.yMin < -0.5f ||
+            reported.xMax > screen.width + 0.5f || reported.yMax > screen.height + 0.5f)
+            return screen;
+
+        return Rect.MinMaxRect(Mathf.Clamp(reported.xMin, 0f, screen.width),
+            Mathf.Clamp(reported.yMin, 0f, screen.height),
+            Mathf.Clamp(reported.xMax, 0f, screen.width),
+            Mathf.Clamp(reported.yMax, 0f, screen.height));
+    }
+
+    private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
+
+    /// <summary>计算已缩放/旋转矩形越过下边界的修正量；只修正最终显示，不改写用户的负间距偏好。</summary>
+    public static float ResolveBottomCorrection(Rect rect, Matrix4x4 localToArea, float minimumY)
+    {
+        float bottom = Mathf.Min(
+            localToArea.MultiplyPoint3x4(new Vector3(rect.xMin, rect.yMin)).y,
+            localToArea.MultiplyPoint3x4(new Vector3(rect.xMax, rect.yMin)).y);
+        bottom = Mathf.Min(bottom, Mathf.Min(
+            localToArea.MultiplyPoint3x4(new Vector3(rect.xMin, rect.yMax)).y,
+            localToArea.MultiplyPoint3x4(new Vector3(rect.xMax, rect.yMax)).y));
+        return Mathf.Max(0f, minimumY - bottom);
     }
 
     #endregion
