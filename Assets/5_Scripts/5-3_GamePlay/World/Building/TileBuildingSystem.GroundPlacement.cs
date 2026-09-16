@@ -160,19 +160,8 @@ public static partial class TileBuildingSystem
         string refundId = GameRes.Instance.GetTileBlock(blockId).groundPlacement.RefundItemId;
         if (string.IsNullOrEmpty(refundId))
             throw new InvalidOperationException($"平台缺少拆除返还物品：{blockId}");
-        Item refund = ItemMgr.Instance.InstantiateItem(refundId,
-            new Vector3(sample.WorldCell.x + 0.5f, sample.WorldCell.y + 0.5f), Quaternion.identity, Vector3.one);
-        if (refund == null)
-            return false;
-        try
-        {
-            refund.Load();
-        }
-        catch
-        {
-            ItemMgr.Instance.DespawnItem(refund, saveData: false);
-            throw;
-        }
+        DroppedItemService.Spawn(GameRes.ExistingInstance.CreateItemData(refundId),
+            new Vector2(sample.WorldCell.x + 0.5f, sample.WorldCell.y + 0.5f));
         TerrainSupportLayer.Set(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y, 0, 0);
         SaveDataMgr.Instance.RecordSupportCell(sample);
         RefreshSupportNavigation(sample.WorldCell);

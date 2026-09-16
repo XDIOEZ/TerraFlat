@@ -812,9 +812,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 
 	private void SpawnEgg()
 	{
-		Item egg = ItemMgr.Instance.InstantiateItem(eggItemId, transform.position);
-		egg.Load();
-		egg.DropInRange();
+		DroppedItemService.SpawnLoot(eggItemId, transform.position);
 
 		if (debugLog)
 		{

@@ -19,7 +19,7 @@ namespace FlatWorld.GameplayMCP
                 protocol = GameplayMcpRuntime.ProtocolVersion,
                 sessionActions = new[] { "status", "list_saves", "continue_save", "create_world", "save_exit" },
                 controlActions = new[] { "status", "acquire", "release" },
-                observationTools = new[] { "gameplay_observe", "gameplay_query" },
+                observationTools = new[] { "gameplay_observe", "gameplay_query", "gameplay_aiecs_debug" },
                 uiTool = "gameplay_ui",
                 uiActions = new[] { "tree", "click" },
                 gmTool = "gameplay_gm",

@@ -48,6 +48,7 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 - 导航观察通过 `WorldNavigationFlowRegistry/IWorldNavigationFlowSource` 取得后端真实玩家 Goal，后端销毁前注销；GM 等只读观察者调用 `TryReadPublished`，不得调用 `Read/CreateGoal/UpdateGoal` 为显示触发搜索或生成替代目标。缓存归属检查使用 `OwnsSharedNavigation`，不能借 `GetSharedNavigation` 隐式创建新缓存；未就绪、脏数据、死亡或身份失效时不显示旧场。异步观察同样登记 `RegisterReader`，跨帧只保留自有采样输出。
 - 当前共用一个既有网格通行配置，圆形移动只支持半径小于半格；大体型、飞行/游泳能力差异须先按通行配置拆缓存，不得静默共用。循环世界跨度须是 16 的正整数倍，不能通过修改存档尺寸掩盖不支持的域。
 - 地形移动用圆心线段与阻挡格 AABB 的距离做扫掠，再保留格级禁止切角；转弯净空不足时先向当前格心对齐。ECS 空间桶只做有界软分离，不提供严格生物碰撞或完整窄路让行策略。
+- ECS 群体跨格使用独立的 Tick 占格/预约表，不把生物位置写回 `WorldNavigationGrid/FlowNavigationCache`。每格容量可配置且最小为 1；前进格容量不足时依次尝试仍朝目标推进、地形代价不更高的前侧/侧格，全部满员才等待。预约冲突按 Tick 轮转起点串行裁决，移动 Job 仍并行执行；本 Tick 只能留在原格或进入自己获准的一个相邻格。正式 Bridge 批量出生同样按该容量拒绝同格超额生成。
 - 开发入口借用当前真实已加载窗口，不取得战斗区域租约；未知格视为阻挡，卸载块释放缓存。有限 Gizmos、输入上限 20000 和少量共享搜索次数都不是完整生物同屏、真实战斗或性能验收证据。
 
 ## 验证

@@ -1730,14 +1730,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
             // 使用自带的实例化方法创建战利品
             for (int i = 0; i < dropAmount; i++)
             {
-                // 使用ItemMgr的实例化方法确保一致性
-                Item lootItem = ItemMgr.Instance.InstantiateItem(
-                    lootEntry.LootPrefabName, this.transform.position);
-                if (lootItem == null)
-                    continue;
-
-                lootItem.Load();
-                lootItem.DropInRange();
+                DroppedItemService.SpawnLoot(lootEntry.LootPrefabName, transform.position);
             }
         }
     }

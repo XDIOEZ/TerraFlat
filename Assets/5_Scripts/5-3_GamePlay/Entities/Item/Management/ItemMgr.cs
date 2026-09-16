@@ -183,6 +183,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     protected override void OnDestroy()
     {
+        DroppedItemService.ReleaseWorld(capture: false);
         Item.RuntimeStructureChanged -= OnPerceptionStructureChanged;
         CompletePerceptionBatch(false);
         DisposePerceptionJobData();
@@ -222,11 +223,13 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
         if (RuntimeItems.Count == 0)
         {
+            DroppedItemService.Tick(Time.deltaTime);
             return;
         }
 
         _tickScheduler.Update(RuntimeItems, Time.deltaTime, RefreshRuntimeItemIndexes);
         WorldItemWaterSystem.ProcessPendingSpawnChecks();
+        DroppedItemService.Tick(Time.deltaTime);
     }
 
     private void LateUpdate()
@@ -235,6 +238,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
             return;
 
         SchedulePerceptionBatch();
+        DroppedItemService.Present();
     }
 
     /// <summary>仅在真实游戏世界中调度 Item，菜单与退出回收阶段不允许旧实体继续运行。</summary>

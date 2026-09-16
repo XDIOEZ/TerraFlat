@@ -1,4 +1,4 @@
-﻿using MemoryPack;
+using MemoryPack;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -242,6 +242,17 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
             if (accepted <= 0)
                 return false;
 
+            data.CurrentProductionCount++;
+            DestroyOwnerWhenFinished(data);
+            return true;
+        }
+
+        // 产出的散落物直接进入 ECS；生物和不可拾取世界节点仍保留原实体生成语义。
+        if (DroppedItemService.UsesEntities && GameRes.ExistingInstance.TryGetItemDefinition(data.itemName, out RuntimeItemDefinition definition) &&
+            !definition.IsActor && (data.ThrowItem || definition.CreateItemData().Stack?.CanBePickedUp == true))
+        {
+            DroppedItemService.SpawnLoot(data.itemName, transform.position, randomCount,
+                radius: data.ThrowItem ? 1.2f : 0f, duration: data.ThrowItem ? 0.5f : 0f);
             data.CurrentProductionCount++;
             DestroyOwnerWhenFinished(data);
             return true;

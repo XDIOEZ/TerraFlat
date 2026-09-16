@@ -183,6 +183,9 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         // 阶段 3：清理阶段
         ////////////////////////////////////////////////////////////////////////////////////
 
+        // 掉落物必须在退出快照写入以后释放，不能在更早的世界退出通知里清空。
+        DroppedItemService.ReleaseWorld();
+
         // 通过 ItemMgr 正式注销玩家，确保运行时索引、感知空间哈希和 Player_DIC 同步清理。
         if (playerItem is Player player)
         {

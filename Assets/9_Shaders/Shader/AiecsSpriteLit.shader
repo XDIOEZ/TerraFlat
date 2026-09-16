@@ -12,6 +12,7 @@ Shader "Game/2D/AIECS Sprite Lit"
         _WaterWaveAmplitude("波幅", Float) = 0.018
         _WaterWaveFrequency("波频率", Float) = 8
         _WaterWaveSpeed("波速度", Float) = 2.4
+        _WaterLineOffset("批次水线世界偏移", Float) = 0
     }
     SubShader
     {
@@ -30,6 +31,7 @@ Shader "Game/2D/AIECS Sprite Lit"
             float4 _WaterTint, _WaterLineColor;
             float _WaterAlpha, _WaterLineStrength, _WaterFeather, _WaterLineWidth;
             float _WaterWaveAmplitude, _WaterWaveFrequency, _WaterWaveSpeed;
+            float _WaterLineOffset;
         CBUFFER_END
 
         struct Attributes
@@ -71,7 +73,7 @@ Shader "Game/2D/AIECS Sprite Lit"
         {
             half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.color;
             return FlatWorldApplyActorWater(main, 0, 0, input.world,
-                float4(input.water.x, 1, input.water.y, input.water.z),
+                float4(input.water.x, 1, input.water.y + _WaterLineOffset, input.water.z),
                 float4(0, _WaterFeather, _WaterLineWidth, _WaterWaveAmplitude),
                 float4(_WaterWaveFrequency, _WaterWaveSpeed, input.water.w, _WaterLineStrength),
                 _WaterTint, _WaterLineColor, _WaterAlpha, _Time.y);

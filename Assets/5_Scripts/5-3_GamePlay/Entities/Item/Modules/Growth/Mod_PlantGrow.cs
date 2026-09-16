@@ -79,24 +79,7 @@ public class Mod_PlantGrow : Module
                 return;
             }
 
-            // 调用物品管理器实例化物品
-            Item product = ItemMgr.Instance.InstantiateItem(loot.lootName, transform.position, transform.rotation);
-            if (product == null)
-            {
-                Debug.LogWarning($"无法实例化物品: {loot.lootName}");
-                _data.nodeIndex++;
-                OnAction.Invoke(_data.nodeIndex);
-                return;
-            }
-
-            product.Load();
-            product.itemData.Stack.Amount = outputAmount;
-            // new ItemMaker().DropItem_cric(product, transform.position, 2);
-            var dropComp = GetComponent<Mod_BaseDroper>();
-            if (dropComp != null)
-            {
-                dropComp.DropItem_Range(product, transform.position, 2, 1);
-            }
+            DroppedItemService.SpawnLoot(loot.lootName, transform.position, outputAmount, 2f, 1f);
         }
 
         _data.nodeIndex++;

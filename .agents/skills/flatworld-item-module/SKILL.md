@@ -67,6 +67,11 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 
 ## 验证
 
+- 单机世界掉落态统一经 `DroppedItemService.Spawn/SpawnLoot` 进入独立 `FlatWorld.DroppedItems.Core` ECS World。位置、数量、短期运动属于组件；`ItemData` 只保留库存冷载荷，不调用 Item.Load、业务模块 Tick 或创建逐物品 Collider。自然树木、矿物节点、已安装建筑、手持物和飞行/附着中的投射物仍保持原实体语义。
+- 旧 Item 返回型扩展通过 `ScheduleLegacyDrop` 在本轮模块更新完成后移交，禁止在 Item.Load 的模块栈内销毁宿主。联机仍使用已有 Item 权威链，不能把单机 ECS 路径当成已完成网络迁移。
+- ECS 与 Item 兼容路径的浮沉数值统一读取 `WorldItemWaterRules`；达到有效阈值即下沉，液体倍率只改变浮力阈值，水线、时长和水花曲线保持同一来源。禁止在 ECS 分支复制另一套常量或使用不同的临界比较；纯数值校验入口为 `FlatWorld/诊断/验证掉落物水体规则`。
+- `FlatWorld/诊断/验证掉落物 ECS` 仅使用隔离 ECS World、内存快照和预览场景，适用于不触碰真实存档的回归。
+
 - 检查加载→Tick→保存→Despawn→复用后无旧状态、订阅、空间索引或调度残留。
 - 生命周期/ModuleData 联动 Data Skill；网络状态联动 Networking；具体玩法只加载其领域 Skill。
 

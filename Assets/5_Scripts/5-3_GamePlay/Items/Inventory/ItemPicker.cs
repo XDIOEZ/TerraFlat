@@ -37,6 +37,9 @@ public class ItemPicker : Module
         // 无论列表是否已有配置，都补齐这两个核心容器（内部会去重）
         TryAddInventoryById(ModText.Hotbar);
         TryAddInventoryById(ModText.Bag);
+        droppedPickupCollider = GetComponent<Collider2D>();
+        if (droppedPickupCollider == null) droppedPickupCollider = GetComponentInChildren<Collider2D>(true);
+        DroppedItemService.RegisterPicker(this);
     }
 
     /// <summary>
@@ -53,6 +56,7 @@ public class ItemPicker : Module
     /// <summary>清理碰撞补偿状态，避免物品复用或模块重载后残留旧拾取请求。</summary>
     public override void Unload()
     {
+        DroppedItemService.UnregisterPicker(this);
         deferredPickupItems.Clear();
         pickupAttemptedItems.Clear();
     }
@@ -109,6 +113,7 @@ public class ItemPicker : Module
     private readonly HashSet<Item> deferredPickupItems = new HashSet<Item>();
     // 当前接触期间已经发起过的拾取请求。
     private readonly HashSet<Item> pickupAttemptedItems = new HashSet<Item>();
+    private Collider2D droppedPickupCollider;
 
     /// <summary>
     /// 综合判断是否可以拾取物品
@@ -350,29 +355,37 @@ public class ItemPicker : Module
 
             // 快捷栏只能容纳一部分时，余量继续进入主背包，不能提前结束此次拾取。
             remainingAmount = Mathf.Max(0f, remainingAmount - addedAmount);
-            targetInventory.RefreshUI();
+            try { targetInventory.RefreshUI(); }
+            catch (System.Exception exception) { Debug.LogWarning($"[ItemPicker] 入包已提交，界面刷新失败：{exception.Message}"); }
             if (remainingAmount <= 0.0001f)
                 break;
         }
 
         float totalAddedAmount = targetAmount - remainingAmount;
         if (totalAddedAmount <= 0f)
+        {
+            itemData.Stack.Amount = requestedAmount;
             return false;
+        }
 
         float worldRemainingAmount = Mathf.Max(0f, requestedAmount - totalAddedAmount);
         bool fullyAdded = worldRemainingAmount <= 0.0001f;
         itemData.Stack.Amount = fullyAdded ? requestedAmount : worldRemainingAmount;
         itemData.Stack.CanBePickedUp = !fullyAdded;
-        ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
-        DimensionManager dimensionManager = DimensionManager.ExistingInstance;
-        string dimensionId = dimensionManager != null && dimensionManager.ActiveAddress.IsValid
-            ? dimensionManager.ActiveAddress.DimensionId
-            : null;
-        GameplayProgressEvents.PublishPickupSucceeded(
-            item as Player,
-            itemData.IDName,
-            totalAddedAmount,
-            dimensionId);
+        try
+        {
+            ItemNetworkStateSerialization.NotifyRuntimeStateChanged(item);
+            DimensionManager dimensionManager = DimensionManager.ExistingInstance;
+            string dimensionId = dimensionManager != null && dimensionManager.ActiveAddress.IsValid
+                ? dimensionManager.ActiveAddress.DimensionId
+                : null;
+            GameplayProgressEvents.PublishPickupSucceeded(
+                item as Player,
+                itemData.IDName,
+                totalAddedAmount,
+                dimensionId);
+        }
+        catch (System.Exception exception) { Debug.LogError($"[ItemPicker] 入包已提交，后续通知失败：{exception}"); }
         return true;
     }
 
@@ -458,6 +471,56 @@ public class ItemPicker : Module
             targetLocalPoint,
             worldItem.itemData?.Guid ?? worldItem.GetInstanceID()));
     }
+
+    #region ECS 掉落物桥接
+
+    /// <summary>ECS 与旧物品共用失败提示限频，静止在满包玩家身边不会不断刷提示。</summary>
+    internal bool TryAcceptDroppedPickup(ItemData data)
+    {
+        if (TryAcceptNetworkPickup(data)) return true;
+        ShowInventoryFullPrompt(data);
+        return false;
+    }
+
+    /// <summary>复用拾取器本身的范围，额外容差用于替代小型掉落物的接触面积。</summary>
+    internal bool TryGetDroppedPickupBounds(out Bounds bounds)
+    {
+        bounds = default;
+        if (!isActiveAndEnabled || !gameObject.activeInHierarchy || droppedPickupCollider == null ||
+            !droppedPickupCollider.enabled || item == null || item.DestructionHandled) return false;
+        bounds = droppedPickupCollider.bounds;
+        bounds.Expand(0.5f);
+        return true;
+    }
+
+    internal bool CanReachDroppedPoint(Vector2 point)
+    {
+        return droppedPickupCollider != null &&
+            (droppedPickupCollider.ClosestPoint(point) - point).sqrMagnitude <= 0.0625f;
+    }
+
+    /// <summary>只为已经成功入包的物品创建短期吸入视觉，实体本身从来不需要 SpriteRenderer。</summary>
+    internal void PlayDroppedPickupFeedback(DroppedItemVisual visual, FlatWorld.DroppedItems.DroppedBody body)
+    {
+        Vector3 position = new(body.Position.x, body.Position.y + body.VisualHeight, 0f);
+        AudioService.Instance.PlayAt(AudioEventIds.ItemPickup, position);
+        GameObject root = new GameObject("ECS掉落物_拾取反馈");
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, gameObject.scene);
+        Quaternion rotation = Quaternion.Euler(0f, 0f, body.Rotation);
+        Vector3 scale = new(body.Scale.x, body.Scale.y, 1f);
+        root.transform.SetPositionAndRotation(position + rotation * Vector3.Scale(visual.LocalPosition, scale),
+            rotation * visual.LocalRotation);
+        root.transform.localScale = Vector3.Scale(scale, visual.LocalScale);
+        SpriteRenderer sprite = root.AddComponent<SpriteRenderer>();
+        sprite.sprite = visual.Sprite; sprite.color = visual.Color;
+        sprite.sortingLayerID = visual.Layer; sprite.sortingOrder = visual.Order + 1;
+        sprite.sharedMaterial = visual.SpriteMaterial;
+        Transform target = item.transform;
+        Vector3 targetPoint = item.Sprite != null ? target.InverseTransformPoint(item.Sprite.bounds.center) : Vector3.zero;
+        StartCoroutine(AnimatePickupSuction(root, target, targetPoint, body.Id));
+    }
+
+    #endregion
 
     private static GameObject CreatePickupVisualSnapshot(
         Item worldItem,

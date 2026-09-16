@@ -228,47 +228,24 @@ public sealed class Mod_Collectable : Module, IInteractable, IItemPoolLifecycle,
     private void SpawnCollectedItem()
     {
         Vector2 startPosition = ResolveHarvestStartPosition();
-        GameObject parent = item.transform.parent != null ? item.transform.parent.gameObject : null;
-        Item collectedItem = ItemMgr.Instance.InstantiateItem(
-            CollectItemId,
-            startPosition,
-            Quaternion.identity,
-            Vector3.one,
-            parent);
-        if (collectedItem == null)
-            throw new MissingReferenceException(
-                $"[Mod_Collectable] 采集物实例化失败，物品ID={CollectItemId}");
-
-        collectedItem.Load();
-        collectedItem.SetInHand(false);
-
         // 一次交互严格对应一份库存和一个采集物；难度掉落倍率不放大单次采摘数量。
-        const int outputAmount = 1;
-        collectedItem.itemData.Stack.Amount = outputAmount;
+        SpawnParabolaDrop(startPosition);
         Data.CurrentStock--;
         Data.IsInitialized = true;
-
-        ApplyParabolaThrow(collectedItem, startPosition);
-        GetComponentInParent<ChunkNaturalItemRenderer>(true)?.RegisterTransientItem(collectedItem);
 
         RefreshIndicatorVisual();
     }
 
     /// <summary>通过统一掉落模块播放采集抛物线。</summary>
-    private void ApplyParabolaThrow(Item collectedItem, Vector2 startPosition)
+    private void SpawnParabolaDrop(Vector2 startPosition)
     {
         Vector2 direction = UnityEngine.Random.insideUnitCircle.normalized;
         float distance = UnityEngine.Random.Range(0.5f * SpawnRadius, SpawnRadius);
         Vector2 endPosition = startPosition + direction * distance;
 
-        Mod_BaseDroper.StaticDropItem_Pos(
-            collectedItem,
-            startPosition,
-            endPosition,
-            Mathf.Max(0.05f, ThrowDuration),
-            Mod_BaseDroper.MoveMode.BezierCurve,
-            ThrowBezierOffset,
-            ThrowArcHeight);
+        DroppedItemService.SpawnLoot(CollectItemId, startPosition,
+            duration: Mathf.Max(0.05f, ThrowDuration), destination: endPosition,
+            bezierOffset: ThrowBezierOffset, arcHeight: ThrowArcHeight);
     }
 
     #endregion

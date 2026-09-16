@@ -1,5 +1,6 @@
 using FlatWorld.Networking;
 using UnityEngine;
+using static WorldItemWaterRules;
 
 /// <summary>
 /// 单个散落物的水中临时运行态。状态由当前位置、物品重量/体积与液体浮力推导，
@@ -8,21 +9,6 @@ using UnityEngine;
 public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
 {
     private const string WaterEffectMaterialAddress = "Assets/9_Shaders/Material/Sprite-Lit-Master.mat";
-
-    // 世界散落物水体全局调参集中在此处，避免再散落到丢弃/投射等入口模块。
-    private const float SinkRatioThreshold = 0.64f;
-    private const float SlowSinkDuration = 4.5f;
-    private const float FastSinkDuration = 1f;
-    private const float FastSinkRatioMultiplier = 1.3f;
-    private const float FloatingMinDepth = 0.08f;
-    private const float FloatingMaxDepth = 0.42f;
-    private const float FloatingEntryDepth = 0.48f;
-    private const float FloatingRiseDuration = 0.8f;
-    private const float RiverDriftSpeed = 0.45f;
-    private const float OceanDriftSpeed = 0.15f;
-    private const float SettledTickInterval = 0.5f;
-    private const float FloatingEntrySplashMinIntensity = 0.18f;
-    private const float FloatingEntrySplashMaxIntensity = 0.6f;
 
     private Item waterItem;
     private ActorRenderEffectController waterRenderEffects;
@@ -50,9 +36,9 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         waterItem = targetItem;
         enabled = true;
 
-        float ratio = ResolveWeightVolumeRatio(targetItem);
+        float ratio = ResolveWeightVolumeRatio(targetItem.itemData.Stack);
         float effectiveThreshold = ResolveSinkRatioThreshold(targetItem.transform.position);
-        if (ratio >= effectiveThreshold)
+        if (ShouldSink(ratio, effectiveThreshold))
             BeginSink(targetItem, ratio);
         else
             BeginFloat(targetItem, ResolveFloatingDepth(ratio));
@@ -111,11 +97,7 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
     {
         EnsureWaterVisual(targetItem);
         floatTargetDepth = Mathf.Clamp01(targetDepth);
-        float splashDepthT = Mathf.InverseLerp(FloatingMinDepth, FloatingMaxDepth, floatTargetDepth);
-        float splashIntensity = Mathf.Lerp(
-            FloatingEntrySplashMinIntensity,
-            FloatingEntrySplashMaxIntensity,
-            splashDepthT);
+        float splashIntensity = ResolveSplashIntensity(floatTargetDepth);
         WorldItemWaterEntrySplashEffect.Play(targetItem.transform.position, splashIntensity);
         floatElapsed = 0f;
         settledTickElapsed = 0f;
@@ -307,40 +289,6 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         return null;
     }
 
-    private static float ResolveWeightVolumeRatio(Item targetItem)
-    {
-        ItemStack stack = targetItem?.itemData?.Stack;
-        if (stack == null)
-            return 0f;
-
-        float volume = Mathf.Max(0.0001f, stack.Volume);
-        return Mathf.Max(0f, stack.Weight) / volume;
-    }
-
-    private static float ResolveSinkRatioThreshold(Vector2 worldPosition)
-    {
-        if (!WorldLiquidSourceResolver.TryResolve(worldPosition, out WorldLiquidSourceTarget waterSource))
-            return SinkRatioThreshold;
-
-        return SinkRatioThreshold * waterSource.Liquid.BuoyancyThresholdMultiplier;
-    }
-
-    private static float ResolveSinkDuration(float ratio)
-    {
-        float fastRatio = SinkRatioThreshold * FastSinkRatioMultiplier;
-        float ratioT = Mathf.InverseLerp(
-            SinkRatioThreshold,
-            fastRatio,
-            Mathf.Max(SinkRatioThreshold, ratio));
-        return Mathf.Lerp(SlowSinkDuration, FastSinkDuration, ratioT);
-    }
-
-    private static float ResolveFloatingDepth(float ratio)
-    {
-        float ratioT = Mathf.Clamp01(ratio / SinkRatioThreshold);
-        return Mathf.Lerp(FloatingMinDepth, FloatingMaxDepth, ratioT);
-    }
-
     public void OnItemTakenFromPool()
     {
         ResetRuntimeState(resetVisual: true);
@@ -393,8 +341,11 @@ internal static class WorldItemWaterEntrySplashEffect
     /// <summary>在当前世界根节点下创建一个共享世界空间粒子系统。</summary>
     private static void EnsureEmitter()
     {
-        if (splashParticles != null)
+        var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        if (splashParticles != null && splashParticles.gameObject.scene == scene)
             return;
+        if (splashParticles != null) UnityEngine.Object.Destroy(splashParticles.gameObject);
+        splashParticles = null;
 
         ChunkMgr chunkMgr = ChunkMgr.ExistingInstance;
         if (chunkMgr == null)
@@ -414,12 +365,8 @@ internal static class WorldItemWaterEntrySplashEffect
         if (splashMaterial == null)
             return;
 
-        Transform existing = chunkMgr.transform.Find(EmitterName);
-        GameObject emitterObject = existing != null
-            ? existing.gameObject
-            : new GameObject(EmitterName);
-        if (existing == null)
-            emitterObject.transform.SetParent(chunkMgr.transform, false);
+        GameObject emitterObject = new GameObject(EmitterName);
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(emitterObject, scene);
 
         splashParticles = emitterObject.GetComponent<ParticleSystem>();
         if (splashParticles == null)

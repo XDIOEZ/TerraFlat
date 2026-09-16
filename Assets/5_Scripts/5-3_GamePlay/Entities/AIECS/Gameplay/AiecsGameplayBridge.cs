@@ -30,17 +30,20 @@ namespace FlatWorld.AIECS.Gameplay
         private readonly List<ExternalProxy> proxies = new List<ExternalProxy>();
         private readonly Dictionary<CombatIdentity, ExternalProxy> proxyLookup = new Dictionary<CombatIdentity, ExternalProxy>();
         private readonly Dictionary<CombatIdentity, Mod_Damage> weapons = new Dictionary<CombatIdentity, Mod_Damage>();
+        private readonly Dictionary<int2, int> spawnCellOccupancy = new Dictionary<int2, int>();
         private readonly List<string> factionNames = new List<string>();
         private readonly Dictionary<string, int> factionIndices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         private readonly Queue<CorpseRecord> corpses = new Queue<CorpseRecord>();
         private NativeList<Entity> expiredCorpses;
         private readonly Queue<DropRecord> dropQueue = new Queue<DropRecord>();
         private DropRecord activeDrop;
+        private readonly Func<string, float2, bool> actorLootSpawner;
         private readonly FlowGoalHandle[] goals;
         private readonly AiecsLosBridge los;
         private AiecsLosView losView;
         private uint factionRevision;
         private ulong actorSequence;
+        private ulong spawnCellTick = ulong.MaxValue;
         private readonly uint worldStamp, dimensionStamp;
         private readonly string dimensionName;
         private readonly RuntimeLootTable[] lootTables;
@@ -56,6 +59,8 @@ namespace FlatWorld.AIECS.Gameplay
         public float PlayerDamage { get; private set; }
         public int Deaths { get; private set; }
         public int Drops { get; private set; }
+        public int ActorLootSpawns { get; private set; }
+        public int PendingDropRecords => dropQueue.Count + (activeDrop.Remaining > 0 ? 1 : 0);
         public long LosChunkCopies => los.ChunkCopies;
         public int SharedGoalCount => goals.Length;
         #endregion
@@ -63,8 +68,9 @@ namespace FlatWorld.AIECS.Gameplay
         #region 世界接入
         /// <summary>每个配置组一个战略目标，另加一个玩家目标；实际单位多少不会增加 Goal 数量。</summary>
         public AiecsGameplayBridge(Player player, FlowNavigationCache navigation, string[] actorIds, string[] actorFactions, float senseOverride,
-            bool[] fleeFromHostiles = null)
+            bool[] fleeFromHostiles = null, Func<string, float2, bool> actorLootSpawner = null)
         {
+            this.actorLootSpawner = actorLootSpawner;
             if (actorIds == null || actorFactions == null || actorIds.Length == 0 || actorIds.Length != actorFactions.Length)
                 throw new ArgumentException("AIECS Actor 与阵营目录必须非空且长度一致。");
             if (fleeFromHostiles != null && fleeFromHostiles.Length != actorIds.Length)
@@ -153,12 +159,56 @@ namespace FlatWorld.AIECS.Gameplay
             AiecsActorTemplate template = Templates[templateIndex]; var view = Navigation.Read();
             position = view.Domain.Normalize(position);
             if (!view.CanOccupy(position, template.Body.Radius)) return false;
+            int2 spawnCell = view.Domain.Normalize((int2)math.floor(position));
+            EnsureSpawnCellSnapshot(view.Domain);
+            if (!TryAddSpawnCell(spawnCell)) return false;
             template.Vital.Hp *= healthRatio;
             for (int i = 0; i < template.Anatomy.Parts.Length; i++)
             { var part = template.Anatomy.Parts[i]; part.Hp *= healthRatio; template.Anatomy.Parts[i] = part; }
             identity = new CombatIdentity { Backend = CombatBackend.Entity, Value = ++actorSequence, Generation = 1, World = worldStamp, Dimension = dimensionStamp };
-            entity = Simulation.Spawn(template, identity, position, templateIndex);
+            try { entity = Simulation.Spawn(template, identity, position, templateIndex); }
+            catch { RemoveSpawnCell(spawnCell); throw; }
             return true;
+        }
+
+        /// <summary>同一模拟 Tick 首次生成前按真实 ECS 位置重建容量表，后续批量生成只做 O(1) 计数。</summary>
+        private void EnsureSpawnCellSnapshot(WorldTopologyDomain domain)
+        {
+            if (spawnCellTick == Simulation.Clock.Tick) return;
+            spawnCellOccupancy.Clear();
+            AiecsSpatialView spatial = Simulation.Spatial;
+            if (spatial.Samples.IsCreated)
+            {
+                for (int i = 0; i < spatial.Samples.Length; i++)
+                {
+                    AiecsTargetSample sample = spatial.Samples[i];
+                    if (sample.Dead != 0 || sample.Identity.External != 0) continue;
+                    AddSpawnCell(domain.Normalize((int2)math.floor(sample.Position)));
+                }
+            }
+            spawnCellTick = Simulation.Clock.Tick;
+        }
+
+        /// <summary>达到当前每格容量后拒绝继续出生；调用方可像现有开发入口一样尝试附近格。</summary>
+        private bool TryAddSpawnCell(int2 cell)
+        {
+            spawnCellOccupancy.TryGetValue(cell, out int count);
+            if (count >= Simulation.CellCapacity) return false;
+            spawnCellOccupancy[cell] = count + 1;
+            return true;
+        }
+
+        private void AddSpawnCell(int2 cell)
+        {
+            spawnCellOccupancy.TryGetValue(cell, out int count);
+            spawnCellOccupancy[cell] = count + 1;
+        }
+
+        private void RemoveSpawnCell(int2 cell)
+        {
+            if (!spawnCellOccupancy.TryGetValue(cell, out int count)) return;
+            if (count <= 1) spawnCellOccupancy.Remove(cell);
+            else spawnCellOccupancy[cell] = count - 1;
         }
 
         /// <summary>玩家维度或导航缓存更换时必须结束整个旧模拟。</summary>
@@ -323,21 +373,47 @@ namespace FlatWorld.AIECS.Gameplay
                 {
                     if (UnityEngine.Random.value > entry.Probability) continue;
                     int count = GameDifficultyService.ScaleRandomizedAmount(UnityEngine.Random.Range(entry.MinAmount, entry.MaxAmount + 1), GameDifficultyService.Current.World.LootAmountMultiplier);
-                    if (count > 0) dropQueue.Enqueue(new DropRecord { ItemId = entry.ItemId, Position = death.Position, Remaining = count });
+                    if (count > 0) QueueLoot(entry.ItemId, death.Position, count);
                 }
             }
         }
 
-        /// <summary>死亡先结算一次，旧物品创建按固定预算排队；大量同时死亡不会同 Tick 实例化所有掉落。</summary>
+        /// <summary>游戏事件与死亡表共用的预算交付入口；只登记权威数量，不绕过生成、占格和后端规则。</summary>
+        public void QueueLoot(string itemId, float2 position, int amount)
+        {
+            if (amount <= 0 || !math.all(math.isfinite(position)))
+                throw new ArgumentException("战利品请求必须具有正整数数量与有效位置。");
+            if (!GameRes.Instance.TryGetItemDefinition(itemId, out _))
+                throw new InvalidOperationException("战利品引用了缺失定义：" + itemId);
+            dropQueue.Enqueue(new DropRecord { ItemId = itemId, Position = position, Remaining = amount });
+        }
+
+        /// <summary>死亡先结算一次，掉落实体按预算发布；不为每份战利品创建 Item 外壳。</summary>
         private void PublishDrops(int budget)
         {
             while (budget-- > 0 && (activeDrop.Remaining > 0 || dropQueue.Count > 0))
             {
                 if (activeDrop.Remaining == 0) activeDrop = dropQueue.Dequeue();
+                if (!GameRes.Instance.TryGetItemDefinition(activeDrop.ItemId, out RuntimeItemDefinition definition))
+                    throw new InvalidOperationException("战利品引用了缺失定义：" + activeDrop.ItemId);
+                if (definition.IsActor)
+                {
+                    bool spawnedActor = actorLootSpawner != null
+                        ? actorLootSpawner(activeDrop.ItemId, activeDrop.Position)
+                        : DroppedItemService.TrySpawnLootActor(activeDrop.ItemId, (Vector2)activeDrop.Position);
+                    if (!spawnedActor)
+                    {
+                        // 拥挤/窗口暂未就绪是可重试结果。转到队尾，不扣数量、不阻断整个模拟。
+                        dropQueue.Enqueue(activeDrop);
+                        activeDrop = default;
+                        break;
+                    }
+                    ActorLootSpawns++;
+                }
+                else DroppedItemService.SpawnLoot(activeDrop.ItemId, (Vector2)activeDrop.Position);
+                // 只有真实生成成功才消费队列；任何反馈异常都不能先减掉尚未交付的战利品。
                 activeDrop.Remaining--;
-                Item drop = ItemMgr.Instance.InstantiateItem(activeDrop.ItemId, (Vector2)activeDrop.Position);
-                if (drop == null) continue;
-                drop.Load(); drop.DropInRange(); Drops++;
+                Drops++;
             }
         }
 

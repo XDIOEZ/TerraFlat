@@ -16,6 +16,7 @@ namespace FlatWorld.AIECS
     [BurstCompile]
     internal partial struct AiecsCaptureStateJob : IJobEntity
     {
+        [ReadOnly] public NativeArray<AiecsDefinition> Definitions;
         [NativeDisableParallelForRestriction] public NativeArray<AiecsDisplayRecord> Display;
         [NativeDisableParallelForRestriction] public NativeArray<AiecsWorkCounters> Work;
         public CombatClock Clock;
@@ -24,10 +25,28 @@ namespace FlatWorld.AIECS
         private void Execute([EntityIndexInQuery] int index, in AiecsIdentity identity, in AiecsFlowAgent actor,
             in AiecsBody body, in AiecsVital vital, in AiecsBrain brain, in AiecsAttackState attack, in AiecsWorkCounters counters)
         {
+            double actionStarted = vital.Dead != 0 ? vital.DeathTime : brain.EnteredAt;
+            if (vital.Dead == 0 && identity.External == 0 && (uint)identity.Definition < (uint)Definitions.Length)
+            {
+                AiecsDefinition definition = Definitions[identity.Definition];
+                switch (attack.Phase)
+                {
+                    case AiecsAttackPhase.Windup:
+                        actionStarted = attack.PhaseEnds - definition.Windup;
+                        break;
+                    case AiecsAttackPhase.Active:
+                        actionStarted = attack.PhaseEnds - definition.Active;
+                        break;
+                    case AiecsAttackPhase.Recovery:
+                        actionStarted = attack.PhaseEnds - definition.Recovery;
+                        break;
+                }
+            }
+
             Display[index] = new AiecsDisplayRecord { Key = identity.Key, Position = actor.Position, Facing = body.Facing,
                 Hp = vital.Hp, MaxHp = vital.MaxHp, Definition = identity.Definition, Group = identity.Group, Behavior = brain.Behavior,
                 AttackPhase = attack.Phase, Dead = vital.Dead, External = identity.External,
-                ActionElapsed = (float)(Clock.Time - (vital.Dead != 0 ? vital.DeathTime : brain.EnteredAt)),
+                ActionElapsed = math.max(0f, (float)(Clock.Time - actionStarted)),
                 HasTarget = (byte)(brain.Target != Entity.Null ? 1 : 0) };
             Work[index] = counters;
         }

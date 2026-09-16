@@ -4,6 +4,8 @@
     "references": [
         "MCPForUnity.Editor",
         "GamePlay",
+        "FlatWorld.AIECS.Gameplay",
+        "Unity.Burst",
         "Data",
         "FlatWorld.Utilities",
         "FlatWorld.WorldModel",

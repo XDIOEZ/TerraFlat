@@ -76,14 +76,6 @@ public class DamageReciver_Action_SpawnItem : DamageReciver_Action
 
         for (int i = 0; i < dropAmount; i++)
         {
-            Item spawnedItem = InstantiateDropItem(Loot.LootPrefabName, startPos);
-            if (spawnedItem == null)
-                continue;
-
-            spawnedItem.Load();
-            spawnedItem.SetInHand(false);
-            spawnedItem.itemData.Stack.Amount = 1;
-
             Vector2 randomDir = Random.insideUnitCircle.normalized;
             if (randomDir == Vector2.zero)
                 randomDir = Vector2.right;
@@ -92,14 +84,9 @@ public class DamageReciver_Action_SpawnItem : DamageReciver_Action
             // 生成点可以位于树冠等高处，但落点始终回到物品根节点周围。
             Vector2 endPos = groundOrigin + randomDir * randomDist;
 
-            Mod_BaseDroper.StaticDropItem_Pos(
-                spawnedItem,
-                startPos,
-                endPos,
-                Mathf.Max(0.05f, ThrowDuration),
-                Mod_BaseDroper.MoveMode.BezierCurve,
-                ThrowBezierOffset,
-                ThrowArcHeight);
+            DroppedItemService.SpawnLoot(Loot.LootPrefabName, startPos,
+                duration: Mathf.Max(0.05f, ThrowDuration), destination: endPos,
+                bezierOffset: ThrowBezierOffset, arcHeight: ThrowArcHeight);
         }
     }
 
@@ -108,18 +95,4 @@ public class DamageReciver_Action_SpawnItem : DamageReciver_Action
         Loot?.OnValidate();
     }
 
-    private static Item InstantiateDropItem(string itemName, Vector2 spawnPos)
-    {
-        // 归属由 Mod_Droping.Load 统一绑定到新版 ChunkView，
-        // 这里不再同步查询旧 Chunk，也不在击杀瞬间触发旧区块加载。
-        Item spawnedItem = ItemMgr.Instance.InstantiateItem(
-            itemName, spawnPos, Quaternion.identity, Vector3.one);
-
-        if (spawnedItem == null)
-        {
-            Debug.LogWarning($"[DamageReceiver] Spawn item action failed. ItemName={itemName}");
-        }
-
-        return spawnedItem;
-    }
 }

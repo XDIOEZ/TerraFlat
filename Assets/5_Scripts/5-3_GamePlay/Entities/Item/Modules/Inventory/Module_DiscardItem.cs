@@ -403,32 +403,18 @@ public class Module_DiscardItem : Mod_BaseDroper
             newItemData.Stack.CanBePickedUp = false;
             newItemData.inHand = false;
 
-            Item newObject = null;
+            DroppedItemHandle newDrop = default;
             try
             {
-                // 不再先查旧 Chunk；ItemWorldPlacement 和 Mod_Droping 会接入新版 ChunkView。
+                // 掉落态直接进入 ECS；只在生成成功后扣减库存。
                 Vector2 startPos = transform.position;
                 Vector2 endPos = screenPosition.HasValue
                     ? GameController.GetMouseWorldPosition(screenPosition.Value)
                     : DropPos;
-                newObject = ItemMgr.Instance.InstantiateItem(
-                    newItemData,
-                    startPos,
-                    Quaternion.identity,
-                    Vector3.one * 0.5f);
-                if (newObject == null)
-                    throw new InvalidOperationException("ItemMgr 未返回掉落物实例。");
-
-                Item newItem = newObject.GetComponent<Item>();
-                if (newItem == null)
-                    throw new InvalidOperationException("新物体中缺少 Item 组件。");
-
                 float distance = WorldTopologyRuntime.Distance(startPos, endPos);
                 float animTime = baseDropDuration + distance * distanceSensitivity;
-
-                newItem.Load();
-                newItem.SetInHand(false);
-                DropItem_Pos(newItem, startPos, endPos, animTime);
+                newDrop = DroppedItemService.Spawn(newItemData, startPos, endPos, animTime, Vector3.one * 0.5f,
+                    bezierOffset: defaultMoveMode == MoveMode.BezierCurve ? bezierOffset : 0f, arcHeight: arcHeight);
 
                 // 生成和掉落动画都成功后才提交背包扣减，失败时不会丢失玩家物品。
                 slot.Amount -= count;
@@ -438,12 +424,7 @@ public class Module_DiscardItem : Mod_BaseDroper
             }
             catch (Exception exception)
             {
-                if (newObject != null && !newObject.DestructionHandled &&
-                    ItemMgr.Instance != null)
-                {
-                    ItemMgr.Instance.DespawnItem(newObject,
-                        saveData: false, detachFromChunk: false);
-                }
+                if (!dropCommitted) DroppedItemService.Remove(newDrop);
 
                 Debug.LogError($"掉落物生成失败：{newItemData.IDName}，{exception.Message}", this);
             }

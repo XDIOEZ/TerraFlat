@@ -954,14 +954,7 @@ public static partial class TileBuildingSystem
         {
             try
             {
-                Item drop = ItemMgr.Instance.InstantiateItem(profile.DropItemId, position);
-                if (drop == null)
-                    continue;
-
-                drop.Load();
-                if (drop.itemData?.Stack != null)
-                    drop.itemData.Stack.CanBePickedUp = true;
-                drop.DropInRange();
+                DroppedItemService.SpawnLoot(profile.DropItemId, position);
             }
             catch (Exception exception)
             {

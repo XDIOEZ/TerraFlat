@@ -91,6 +91,9 @@ namespace FlatWorld.AIECS
         public NativeArray<AiecsHitEvent> ExternalHits => externalHits.AsArray();
         public AiecsSpatialView Spatial { get { Complete(); return spatial.View; } }
         public CombatDifficulty Difficulty { get; set; }
+        private int cellCapacity = 1;
+        /// <summary>每个 1×1 世界格允许同时容纳的 ECS Actor 数；运行时最小为 1。</summary>
+        public int CellCapacity { get => cellCapacity; set => cellCapacity = math.max(1, value); }
         #endregion
 
         #region 创建与外部输入
@@ -247,7 +250,8 @@ namespace FlatWorld.AIECS
                 Navigation = view, GroupGoals = goals, Time = time }, query, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeMovement, frame, pending);
             spatial.RegisterReader(pending); navigation.RegisterReader(pending);
-            pending = movement.Schedule(scheduler, query, navigation, deltaTime, (uint)Clock.Tick, dependency: pending);
+            pending = movement.Schedule(scheduler, query, navigation, deltaTime, (uint)Clock.Tick,
+                cellCapacity: CellCapacity, dependency: pending);
             // 命中必须读取本 Tick 移动后的坐标，不能使用感知开始前的旧目标位置。
             pending = spatial.Build(scheduler, query, view.Domain, relations, factions.Length, maximumBodyExtent, pending);
             frame.Spatial = spatial.View;
@@ -268,7 +272,8 @@ namespace FlatWorld.AIECS
                 Results = results.AsParallelWriter(), ExternalHits = externalHits.AsParallelWriter() }, query, pending);
             pending = ScheduleStages(AiecsStagePhase.AfterDamage, frame, pending);
             pending = scheduler.ScheduleParallel(new AiecsDeathSystem { Clock = Clock, Events = deaths.AsParallelWriter() }, query, pending);
-            pending = scheduler.ScheduleParallel(new AiecsCaptureStateJob { Clock = Clock, Display = display, Work = work }, query, pending);
+            pending = scheduler.ScheduleParallel(new AiecsCaptureStateJob { Definitions = definitions, Clock = Clock,
+                Display = display, Work = work }, query, pending);
             pending = new AiecsStatisticsJob { Display = display, Work = work, Statistics = statistics, Groups = groups,
                 Anchors = groupAnchors, Nearest = groupNearest, Navigation = view, Density = density, Domain = view.Domain }.Schedule(pending);
             spatial.RegisterReader(pending); navigation.RegisterReader(pending);

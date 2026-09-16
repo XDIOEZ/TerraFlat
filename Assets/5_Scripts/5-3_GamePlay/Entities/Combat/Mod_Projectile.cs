@@ -63,8 +63,11 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     private bool _isFlying;
     private bool _endingFlight;
     private Transform _embeddedTarget;
+    private bool _wasEmbedded;
     private Vector3 _embeddedLocalPosition;
     private Quaternion _embeddedLocalRotation = Quaternion.identity;
+    /// <summary>飞行或仍附着目标时属于战斗实体，不能自动转换成静态掉落物。</summary>
+    public bool HasActiveWorldAttachment => _isFlying || _wasEmbedded;
 
     #endregion
 
@@ -113,7 +116,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     /// <summary>飞行期间补做帧间碰撞体扫掠，并按虚拟抛物线高度决定落地。</summary>
     public override void ModUpdate(float deltaTime)
     {
-        if (!_isFlying && _embeddedTarget != null)
+        if (!_isFlying && _wasEmbedded)
         {
             UpdateEmbeddedPose();
             return;
@@ -348,6 +351,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             return;
 
         _embeddedTarget = target;
+        _wasEmbedded = true;
         _embeddedLocalPosition = target.InverseTransformPoint(item.transform.position);
         _embeddedLocalRotation = Quaternion.Inverse(target.rotation) * item.transform.rotation;
         UpdateEmbeddedPose();
@@ -359,6 +363,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         if (_embeddedTarget == null || !_embeddedTarget.gameObject.activeInHierarchy || item == null)
         {
             ClearEmbeddedState();
+            if (item != null && !_isFlying) WorldItemWaterSystem.ScheduleSpawnCheck(item);
             return;
         }
 
@@ -377,6 +382,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     private void ClearEmbeddedState()
     {
         _embeddedTarget = null;
+        _wasEmbedded = false;
         _embeddedLocalPosition = Vector3.zero;
         _embeddedLocalRotation = Quaternion.identity;
     }
@@ -398,7 +404,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         ItemData salvageData = gameRes.CreateItemData(ingredientItemId);
         salvageData.Stack.Amount = 1f;
         salvageData.Stack.CanBePickedUp = true;
-        itemManager.InstantiateItem(salvageData, item.transform.position);
+        DroppedItemService.Spawn(salvageData, item.transform.position);
     }
 
     /// <summary>从产出当前投射物的普通合成配方中，按材料用量随机选择一种可确定身份的原材料。</summary>

@@ -43,6 +43,9 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 
 ## 工作流与验证
 
+- `CompactSaveEnvelope.DroppedItems` 承载独立版本的 ECS 掉落快照；`GameSaveData.DroppedItems` 必须保持 MemoryPackIgnore，不能改变旧核心对象布局。按实际世界场景名（维度 WorldKey）隔离载荷，存稳定 ID、库存状态和未完成轨迹，不存 Entity 地址、GameObject 或显示批次。
+- 旧生产者移交必须先于区块快照；退出保存完成后才释放掉落 World，不能在更早的 GameWorldExit 通知中清空。缺失定义的记录保留原快照，避免下次保存静默丢物；恢复库存载荷仍按当前 ItemDefinition rebase。
+
 1. 先确定权威数据、持久化位置和当前版本，再修改模型；不要新增旧版本迁移分支。
 2. 只做静态诊断、必要的编译检查和 Unity Console 检查；不要创建或触碰真实玩家存档。
 3. 联动：生命周期→Core，Item/Module→Item，Chunk 差量→Map，协议快照→Networking，内容 Def→对应领域 Skill。

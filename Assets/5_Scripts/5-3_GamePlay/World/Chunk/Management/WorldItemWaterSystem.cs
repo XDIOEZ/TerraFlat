@@ -53,6 +53,10 @@ public static class WorldItemWaterSystem
             if (!IsLooseWorldItemCandidate(item))
                 continue;
 
+            // 兼容未声明掉落 API 的 MOD/旧存档；普通陆地掉落也移交 ECS，不再只处理水格。
+            if (DroppedItemService.UsesEntities && DroppedItemService.TryConvertLooseItem(item))
+                continue;
+
             if (!TryResolveWaterAt(item.transform.position, out bool isWater))
             {
                 // 区块表现可能仍在分帧绑定；查询失败与“明确不是水”分开处理。
@@ -78,6 +82,9 @@ public static class WorldItemWaterSystem
 
         if (!TryResolveWaterAt(item.transform.position, out bool isWater) || !isWater)
             return EntryResult.None;
+
+        if (DroppedItemService.UsesEntities && DroppedItemService.TryConvertLooseItem(item))
+            return EntryResult.Transformed;
 
         WorldItemWaterRuntime existingRuntime = item.GetComponent<WorldItemWaterRuntime>();
         if (existingRuntime != null && existingRuntime.IsActive)
@@ -125,6 +132,9 @@ public static class WorldItemWaterSystem
         if (item.itemData.inHand || RuntimeAiEntityUtility.IsAiEntity(item))
             return false;
         if (item.GetComponentInChildren<TileEffectReceiver>(true) != null)
+            return false;
+        Mod_Projectile projectile = item.GetComponentInChildren<Mod_Projectile>(true);
+        if (projectile != null && projectile.HasActiveWorldAttachment)
             return false;
         if (requirePickable && !item.itemData.Stack.CanBePickedUp)
             return false;

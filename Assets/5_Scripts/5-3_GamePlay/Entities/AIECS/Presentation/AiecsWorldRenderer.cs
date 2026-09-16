@@ -97,8 +97,10 @@ namespace FlatWorld.AIECS
                 for (int i = start; i < end; i++)
                 {
                     var item = visible[i]; var record = records[item.Index]; var definition = catalog.Actors[item.Visual];
-                    int action = record.Dead != 0 ? 3 : record.AttackPhase == AiecsAttackPhase.Windup || record.AttackPhase == AiecsAttackPhase.Active ||
-                        record.AttackPhase == AiecsAttackPhase.Recovery ? 2 : record.Behavior == (int)AiecsBehavior.Idle ? 0 : 1;
+                    // 攻击前摇/后摇是明确的战斗阶段；专用素材完成前复用待机，只有 Active 播放真正攻击动作。
+                    int action = record.Dead != 0 ? 3 : record.Behavior == (int)AiecsBehavior.Attack
+                        ? record.AttackPhase == AiecsAttackPhase.Active ? 2 : 0
+                        : record.Behavior == (int)AiecsBehavior.Idle ? 0 : 1;
                     var frame = definition.Clips[clips[record.Definition, action]].Sample(record.ActionElapsed);
                     var actor = new AiecsPrototypeActor { Position = center + domain.ShortestDelta(center, record.Position) };
                     Color color = definition.Color * (record.Group % 2 == 0 ? new Color(0.7f, 0.85f, 1f) : new Color(1f, 0.7f, 0.65f));
@@ -113,6 +115,8 @@ namespace FlatWorld.AIECS
         /// <summary>开发 HUD 最多绘制 64 个可见实体血条，不创建逐实体 UI 节点。</summary>
         public void DrawHealth(AiecsSimulation simulation, Camera camera, WorldTopologyDomain domain)
         {
+            // 无 GUILayout 控件；布局/输入事件不重复进行坐标换算与批量血条遍历。
+            if (Event.current == null || Event.current.type != EventType.Repaint) return;
             if (camera == null || !simulation.Display.IsCreated) return;
             Color previous = GUI.color; float2 center = (Vector2)camera.transform.position;
             for (int i = 0; i < math.min(64, visible.Count); i++)

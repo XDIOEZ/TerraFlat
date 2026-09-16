@@ -50,6 +50,17 @@ public class Mod_Droping : Module
         modData.ReadData(ref drop);
         BindDropItemReference();
 
+        // 旧存档只在完成 Item.Load 后转换；不能在加载模块栈内回收宿主。
+        if (DroppedItemService.UsesEntities && item != null && !RuntimeAiEntityUtility.IsAiEntity(item))
+        {
+            bool moving = drop != null && !drop.waterFloating && !drop.waterSinking;
+            Vector2 start = item.transform.position;
+            DroppedItemService.ScheduleLegacyDrop(item, start, moving ? drop.endPos : start,
+                moving ? Mathf.Max(0f, drop.time - drop.progressTime) : 0f,
+                arcHeight: arcHeight, rotationSpeed: drop?.rotationSpeed ?? 0f);
+            return;
+        }
+
         // 掉落物先尝试绑定新版 ChunkView。新区块窗口已启用时，即使当前画面尚未
         // 完成绑定也不能回退到旧 Chunk 查询，否则灌木死亡掉落会触发同步加载卡顿。
         bool attachedToWorldModel = item != null &&
@@ -75,6 +86,8 @@ public class Mod_Droping : Module
 
     public override void ModUpdate(float deltaTime)
     {
+        if (DroppedItemService.UsesEntities && item != null && !RuntimeAiEntityUtility.IsAiEntity(item))
+            return;
         if (drop == null)
         {
             Module.REMOVEModFROMItem(item, _Data);
@@ -263,6 +276,8 @@ public class Mod_Droping : Module
         float minRotationSpeed = 360f,
         float maxRotationSpeed = 1080f)
     {
+        if (DroppedItemService.ScheduleLegacyDrop(item, startPos, endPos, time,
+            isLinear ? 0f : bezierOffset, arcHeight, Random.Range(minRotationSpeed, maxRotationSpeed))) return;
         startPos = WorldTopologyRuntime.NormalizePosition(startPos);
         endPos = WorldTopologyRuntime.NearestImagePosition(startPos, endPos);
         item.transform.position = startPos;

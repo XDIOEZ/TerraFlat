@@ -76,6 +76,9 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 ## 验证
 
+- `DroppedItemPresentation` 按有限空间行、贴图和排序层增量合并掉落物真实 Sprite 三角形/UV；静止批次不重复上传，视野外释放显示节点。该兼容渲染桥不等于已验证与所有旧 Item 的精确透明混排或设备性能指标。
+- 掉落共享材质放在 `Assets/9_Shaders/Resources/DroppedItems`，复用原生 Universal2D/NormalsRendering Shader。批次水线使用规范世界坐标，循环镜像通过 `_WaterLineOffset` MPB 补偿；默认值必须为 0，不能改变原 AIECS 材质语义。
+
 - 自动断言对象、材质、池化生命周期和关键参数；最终粒子/Shader 观感才做定向视觉检查。
 - 触发属于战斗、天气、UI 或音频时加载对应领域 Skill。
 

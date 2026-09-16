@@ -75,6 +75,7 @@ public sealed partial class GMReflectionConsole
     private Button aiecsFleeButton;
     private Button aiecsClearButton;
     private Button aiecsPlayerParticipatesButton;
+    private Button aiecsPopulationButton;
     private TextMeshProUGUI aiecsStatusText;
     private TextMeshProUGUI aiecsStatisticsText;
     private TextMeshProUGUI aiecsTickText;
@@ -190,6 +191,7 @@ public sealed partial class GMReflectionConsole
         layout.childControlWidth = true;
         layout.childControlHeight = true;
         layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
 
         TextMeshProUGUI title = CreateText(
             header.transform,
@@ -224,6 +226,7 @@ public sealed partial class GMReflectionConsole
         layout.childControlWidth = true;
         layout.childControlHeight = true;
         layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
 
         gmSearchInput = CreateInputField(toolbar.transform, "搜索功能、事件名称或命令", 680f, false);
         LayoutElement searchLayout = gmSearchInput.GetComponent<LayoutElement>();
@@ -517,7 +520,7 @@ public sealed partial class GMReflectionConsole
             "AIECS 实战开发",
             "控制开发入口中的真实 ECS 单位；测试场景、玩家参与开关与运行统计均集中在这里。");
 
-        Transform grid = CreateActionGrid(page.Content, 4, 256f, 60f, 6);
+        Transform grid = CreateActionGrid(page.Content, 4, 256f, 60f, 8);
         aiecsPlayerDuelButton = CreateSearchableButton(
             grid,
             GmPageId.Aiecs,
@@ -560,6 +563,11 @@ public sealed partial class GMReflectionConsole
             "AIECS ECS 玩家 参与 感知 战斗 toggle",
             ToggleAiecsPlayerParticipation,
             60f);
+        aiecsPopulationButton = CreateSearchableButton(
+            grid, GmPageId.Aiecs, "每军数量", "AIECS ECS 压力 数量 population",
+            CycleAiecsPopulation, 60f);
+        CreateSearchableButton(grid, GmPageId.Aiecs, "生物产出验收", "AIECS ECS 生物 战利品 loot 验收",
+            () => { AiecsPlayground.Active?.QueueActorLootTest(); RefreshAiecsPage(); }, 60f);
 
         aiecsStatusText = CreateAiecsReadout(page.Content, "正在连接 AIECS 实战开发入口…", 42f, true);
         aiecsStatisticsText = CreateAiecsReadout(page.Content, "存活 0 / 目标 0 / 游荡 0 / 追击 0 / 逃跑 0 / 攻击 0", 30f);
@@ -646,6 +654,19 @@ public sealed partial class GMReflectionConsole
         RefreshAiecsPage();
     }
 
+    /// <summary>只调整下一波测试请求；不偷偷放宽每格容量、不修改正在交战单位或正式生态配置。</summary>
+    private void CycleAiecsPopulation()
+    {
+        AiecsPlayground playground = AiecsPlayground.Active;
+        if (playground == null) return;
+        int[] levels = { 100, 500, 1000, 2500, 5000, 10000 };
+        int next = levels[0];
+        foreach (int level in levels)
+            if (level > playground.UnitsPerArmy) { next = level; break; }
+        playground.UnitsPerArmy = next;
+        RefreshAiecsPage();
+    }
+
     /// <summary>仅在 GM 的 AIECS 分页可见时以 10Hz 更新文本，避免无窗口时制造字符串垃圾。</summary>
     private void RefreshAiecsPageIfNeeded()
     {
@@ -675,6 +696,12 @@ public sealed partial class GMReflectionConsole
         if (aiecsWanderButton != null) aiecsWanderButton.interactable = ready;
         if (aiecsFleeButton != null) aiecsFleeButton.interactable = ready;
         if (aiecsClearButton != null) aiecsClearButton.interactable = activeScenario;
+        if (aiecsPopulationButton != null)
+        {
+            aiecsPopulationButton.interactable = exists;
+            SetButtonLabel(aiecsPopulationButton,
+                exists ? $"每军 {playground.UnitsPerArmy}（点击切换）" : "每军数量");
+        }
         if (aiecsPlayerParticipatesButton != null)
         {
             aiecsPlayerParticipatesButton.interactable = activeScenario;

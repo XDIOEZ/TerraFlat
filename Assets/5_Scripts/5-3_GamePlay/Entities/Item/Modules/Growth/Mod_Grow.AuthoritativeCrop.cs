@@ -489,16 +489,7 @@ public partial class Mod_Grow
 
     private void SpawnHarvestItem(string itemId, int amount)
     {
-        // 掉落物归属交给 ItemWorldPlacement/Mod_Droping；新区块窗口下不再同步查询旧 Chunk。
-        Item product = ItemMgr.Instance.InstantiateItem(
-            itemId,
-            item.transform.position,
-            Quaternion.identity,
-            Vector3.one);
-        product.Load();
-        product.SetInHand(false);
-        product.itemData.Stack.Amount = amount;
-        product.DropInRange();
+        DroppedItemService.SpawnLoot(itemId, item.transform.position, amount);
     }
 
 #endregion

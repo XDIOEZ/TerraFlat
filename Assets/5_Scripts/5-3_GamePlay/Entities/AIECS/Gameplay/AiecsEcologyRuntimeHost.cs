@@ -19,6 +19,7 @@ namespace FlatWorld.AIECS.Gameplay
 
         [SerializeField] private AiecsAnimationCatalog _catalog;
         [SerializeField, Range(10, 60)] private int _simulationHz = 30;
+        [SerializeField, Min(1)] private int _cellCapacity = 1;
 
         private sealed class EcologyActor
         {
@@ -203,7 +204,8 @@ namespace FlatWorld.AIECS.Gameplay
 
         private void TryStartSimulation()
         {
-            if (_startFailed || !_worldPrepared || FindObjectOfType<AiecsPlayground>() != null)
+            // 开发入口有生命周期维护的唯一引用；暂停生态时不能每帧全场景扫描一次对象。
+            if (_startFailed || !_worldPrepared || AiecsPlayground.Active != null)
                 return;
 
             _player = ItemMgr.Instance?.User_Player;
@@ -221,6 +223,7 @@ namespace FlatWorld.AIECS.Gameplay
                     _actorFactions.ToArray(),
                     0f,
                     _fleeFromHostiles.ToArray());
+                _bridge.Simulation.CellCapacity = _cellCapacity;
                 _renderer = new AiecsWorldRenderer(_catalog, ids, _player.gameObject.scene);
                 _simulationTime = Time.timeAsDouble;
                 Debug.Log($"[AIECS] 正式生态已启动：{ids.Length} 个 Actor 定义，BaseAI 后端关闭。", this);

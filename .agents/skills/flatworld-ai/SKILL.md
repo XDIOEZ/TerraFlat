@@ -60,16 +60,24 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - 原生感知直接从 ECS 位置、身份、体型、生命构建稀疏桶，桶键包含阵营以避免同阵营占满候选预算。锁定目标只做有效性与低频追击规则复核，失效才错峰搜桶；不可达目标按配置延迟重试。形状偏移和外部玩家缩放必须纳入粗筛扩张上限，循环桶去重与最近镜像必须一起使用。
 - LOS 独立复制 TerrainCell 的 Blocking 和建筑占地，不能把导航不可走当作遮挡。移动前快照用于感知，移动后重建快照用于命中；所有 Native 借用必须进入依赖链，重建和释放前完成旧读取者。武器 Pulse 在模拟批次之外发生时须重新借用当前导航索引，不能跨 Update 缓存可能已被导航发布替换的 LOS 视图。
 - Brain 只选择 Intent，Behavior 只准备局部移动或共享 Goal，Attack 在真实 Active Tick 再确认目标、几何、朝向和 LOS。扩展行为通过共享优先级规则或 `AiecsBehaviorProposal` 接入；特殊能力注册少量 `IAiecsSimulationStage`，在实际 Pulse 向 `AiecsFrame.HitEvents` 写入，返回完整 JobHandle，禁止逐 AI 托管状态机/事件/Job。当前 Tick 的技能命中最迟在 BeforeSettlement 生产，AfterDamage 用于消费已提交状态。
+- AIECS 攻击表现必须按 `AiecsAttackPhase` 的独立阶段时钟采样：`Windup` 与 `Recovery` 在专用动画完成前复用 Idle，只有 `Active` 播放 Attack；不能继续从进入 Attack 行为的总时长采样，否则真正进入 Active 时会从攻击动画中间帧开始。
 - 每个开发模拟只采集少量外部玩家代理，身份同时验证 UID、generation、world、dimension 和 Entity 版本；AI↔AI 不走 ItemMgr 快照。旧 Item/AI 的纯几何感知仍是独立兼容后端，不要将它与原生 ECS 感知混为一条运行链。
 - 正式小规模手测入口是 `FlatWorld/AIECS/打开实战开发入口`；`AiecsPlayground`、`AiecsNavigationCrowd`、P1 轨迹原型各自持有不同 World，不能同时创建后统计为同一批正式单位。当前正式生态、完整生存/技能、保存和联网尚未接入；阶段门槛以开发文档为准，编译与开发入口不等于 Play 或两万性能通过。
 
 ## 工作流与验证
+
+- Job 布局变更后同时出现“not a known Burst entry point”和多个 JobChunk 包装器空引用时，先保存日志、做托管/Burst 对照，并通过 Unity `CompilationPipeline.RequestScriptCompilation(CleanBuildCache)` 重新生成与注册当前编译产物；禁止手动替换 `Library/ScriptAssemblies`，也不能把关闭 Burst 当成修复。复测必须确认 Burst 开启、真实 Tick 前进及行为/输出正常。
+- `AiecsPlayground` 的自动启动与 GM 按钮共用正式 `IsGameplayReady` 门禁，导航缓存就绪不代表出生区域已经完成绑定。测试阵型按整格中心和当前体型间距生成，两军初始格不重叠；拒绝出生不能靠放宽容量或同步加载地图来掩盖。压力结果区分目标数量、累计生成、当前存活，并同时检查模拟 Tick、积压时间和实际绘制，不能用静止画面或累计产出宣称同屏容量。
 
 1. 从目标 Prefab 的实际模块进入，不按类名猜运行链。
 2. 随机行为使用固定种子或可注入输入；Bug 修复保留确定性回归。
 3. 默认做静态诊断、编译和 Console 检查。
 
 ## Skill 维护原则
+
+- 开发入口暂停正式生态宿主时，死亡产出的 Actor 也必须在当前开发模拟交付：开始场景前按战利品表展开 Actor 引用闭包，渲染目录与模拟定义使用相同索引。不可把生物战利品发给被暂停的生态后端，更不能转换成库存掉落图标。
+- 掉落队列只在生成成功后扣减剩余数量。可重试的占格/窗口拒绝保留数量并轮转队列，不能把正常拥挤当异常停止整场 AI；缺失内容或不支持的静态定义仍明确报错。
+- 压力验收同时记录请求、累计生成、存活、可见批次、Tick 与积压；地图拒绝的生成不能算作已生成实体。`gameplay_aiecs_debug` 提供有界只读采样和占格检查；截图请求后的首帧可能包含 PNG 开销，性能采样应与截图编码分开。
 
 - 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
 - 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

@@ -163,6 +163,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (FlatWorld.AIECS.Gameplay.AiecsPlayground.Active != null)
+            FlatWorld.AIECS.Gameplay.AiecsPlayground.Active.HealthOverlaySuppressed = false;
         CancelTeleportTargeting();
         RuntimeDebugOverlay.GmPanelOpenRequested -= OpenWindow;
         SceneManager.activeSceneChanged -= OnActiveSceneChanged;
@@ -175,6 +177,12 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
 
     private void Update()
     {
+        // IMGUI 在 Canvas 之后绘制；GM 打开时只隐藏开发血条，不修改玩家配置的 ShowHealth 开关。
+        var playground = FlatWorld.AIECS.Gameplay.AiecsPlayground.Active;
+        if (playground != null)
+            playground.HealthOverlaySuppressed = (windowRoot != null && windowRoot.activeSelf) ||
+                (airdropBrowserRoot != null && airdropBrowserRoot.activeSelf) ||
+                (aiCreatureBrowserRoot != null && aiCreatureBrowserRoot.activeSelf);
         UpdateBuffTargetListIfNeeded();
         RefreshResponsiveLayoutIfCanvasChanged();
         RefreshAiecsPageIfNeeded();

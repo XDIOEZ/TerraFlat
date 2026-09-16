@@ -259,6 +259,31 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
         Item item = null;
         try
         {
+            // 可直接拾取的散落生成点只创建 ECS 掉落物；树、矿石、传送门等自然实体仍走 Item。
+            ItemData looseData = changedData;
+            if (DroppedItemService.UsesEntities && !placement.IsDimensionPortal && definition != null &&
+                !definition.IsActor && definition.ShellPrefab != null &&
+                definition.ShellPrefab.GetComponentInChildren<TileEffectReceiver>(true) == null)
+            {
+                looseData ??= definition.CreateItemData();
+                bool installed = Mod_Building.TryReadBuildingData(looseData, out _, out Mod_Building.Building_Data building) &&
+                    building.Role == BuildingRole.PlacedBuilding;
+                if (looseData.Stack?.CanBePickedUp == true && !installed)
+                {
+                    if (changedData?.transform != null)
+                    {
+                        position = changedData.transform.position;
+                        rotation = changedData.transform.rotation;
+                        scale = changedData.transform.scale;
+                    }
+                    DroppedItemHandle handle = DroppedItemService.Spawn(looseData, position,
+                        scale: scale, rotation: rotation.eulerAngles.z);
+                    try { chunkManager.MarkNaturalItemRemoved(address, placement.Guid); }
+                    catch { DroppedItemService.Remove(handle); throw; }
+                    return;
+                }
+            }
+
             if (changedData != null && !string.IsNullOrWhiteSpace(changedData.IDName))
             {
                 if (changedData.transform != null)

@@ -44,33 +44,10 @@ public class Mod_BaseDroper : Module
     [Tooltip("丢弃物品（自动随机终点）")]
     public void DropItem_Range(Item item, Vector2 startPos, float radius, float time)
     {
-        item.transform.position = startPos;
-
-        // 随机终点
         Vector2 randomDir = Random.insideUnitCircle.normalized;
         float randomDist = Random.Range(0.5f * radius, radius);
         Vector2 endPos = startPos + randomDir * randomDist;
-
-        // 根据移动模式计算控制点
-        Vector2 controlPos = CalculateControlPoint(startPos, endPos, defaultMoveMode);
-
-        Drop drop = new Drop
-        {
-            itemGuid = item.itemData.Guid,
-            startPos = startPos,
-            endPos = endPos,
-            controlPos = controlPos,
-            time = time,
-            progressTime = 0f,
-            item = item
-        };
-
-        item.itemData.Stack.CanBePickedUp = false;
-        Mod_Droping itemDrop = Module.ADDModTOItem(item, ModText.Drop) as Mod_Droping;
-        itemDrop.Load();
-        itemDrop.drop = drop;
-        itemDrop.arcHeight = arcHeight; // 传递弧高参数
-        drops.Add(drop);
+        StaticDropItem_Pos(item, startPos, endPos, time, defaultMoveMode, bezierOffset, arcHeight);
     }
 
     /// <summary>
@@ -100,6 +77,9 @@ public class Mod_BaseDroper : Module
     [Tooltip("静态丢弃物品方法，供外部模块调用")]
     public static void StaticDropItem_Pos(Item item, Vector2 startPos, Vector2 endPos, float time, MoveMode mode = MoveMode.BezierCurve, float bezierOffset = 1f, float arcHeight = 1f, float minRotationSpeed = 360f, float maxRotationSpeed = 1080f)
     {
+        if (DroppedItemService.ScheduleLegacyDrop(item, startPos, endPos, time,
+            mode == MoveMode.BezierCurve ? bezierOffset : 0f, arcHeight,
+            Random.Range(minRotationSpeed, maxRotationSpeed))) return;
         startPos = WorldTopologyRuntime.NormalizePosition(startPos);
         endPos = WorldTopologyRuntime.NearestImagePosition(startPos, endPos);
         item.transform.position = startPos;

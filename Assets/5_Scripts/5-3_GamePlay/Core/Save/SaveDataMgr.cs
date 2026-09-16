@@ -17,7 +17,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 16; // 新增存档级世界生成配置冻结模式。
+    private const int CompactSaveVersion = 17; // 外层追加独立 ECS 掉落物快照，旧核心对象布局不变。
     private const int ModdedSaveVersion = 10;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
@@ -1498,6 +1498,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
     private void PrepareLoadedChunksForSave()
     {
+        DroppedItemService.PrepareForSave();
         CaptureRuntimeTerrainStates();
         // 新 WorldModel 的自然物挂在 ChunkView，不属于旧 Chunk.RunTimeItems；先捕获其状态。
         ChunkMgr.Instance?.CaptureRuntimeNaturalItemStates();
@@ -1520,6 +1521,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <summary>自动保存将自然物、旧 Chunk、差异扫描和 AI 快照按单帧预算分散执行。</summary>
     private IEnumerator PrepareLoadedChunksForAutoSaveCoroutine(Action<Exception> onFailure)
     {
+        DroppedItemService.PrepareForSave();
         CaptureRuntimeTerrainStates();
         if (ChunkMgr.Instance != null)
         {
@@ -2381,7 +2383,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         CompactSaveEnvelope envelope = new CompactSaveEnvelope
         {
             Version = CompactSaveVersion,
-            CoreSaveData = SerializeCoreDataWithoutChunks(saveData)
+            CoreSaveData = SerializeCoreDataWithoutChunks(saveData),
+            DroppedItems = DroppedItemService.CaptureArchive(saveData)
         };
 
         foreach (KeyValuePair<string, ChunkSaveRecord> pair in chunkDeltas)
@@ -2475,6 +2478,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         GameSaveData saveData = MemoryPackSerializer.Deserialize<GameSaveData>(envelope.CoreSaveData);
         if (saveData == null)
             throw new InvalidDataException("差异存档的核心数据为空");
+
+        DroppedItemService.RestoreArchive(saveData, envelope.DroppedItems);
 
         if (envelope.ChunkRecords == null)
             return saveData;
@@ -2679,6 +2684,7 @@ public partial class CompactSaveEnvelope
     public int Version;
     public byte[] CoreSaveData;
     public List<ChunkSaveRecord> ChunkRecords = new();
+    public byte[] DroppedItems;
 }
 
 [MemoryPackable]

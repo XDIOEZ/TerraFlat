@@ -30,7 +30,7 @@ public enum BuildingRole
 /// 建筑召唤器是持久化载体，PlacedBuilding 是快照还原后的世界实例。
 /// 拆除时先生成带快照的召唤器，成功后才删除原建筑。
 /// </summary>
-public class Mod_Building : Module, IIncomingDamageRule
+public partial class Mod_Building : Module, IIncomingDamageRule
 {
     private const int CurrentDataVersion = 3;
     private const string StoneWallBuildingId = "Wall_Stone";
@@ -607,7 +607,11 @@ public class Mod_Building : Module, IIncomingDamageRule
             return;
 
         _dismantlePending = false;
-        if (!TryCreateDismantledSummoner(out _, out string reason))
+        string reason;
+        bool created = DroppedItemService.UsesEntities
+            ? TryCreateDismantledEcsDrop(out reason)
+            : TryCreateDismantledSummoner(out _, out reason);
+        if (!created)
         {
             CurrentState = previousState;
             Save();

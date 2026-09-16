@@ -13,13 +13,14 @@ namespace FlatWorld.AIECS.Gameplay
     /// 默认单挑 3 只、两军各 100 只（总计 200）；只有本入口和有限渲染批次是 GameObject，AI 本身完全是 Entity。
     /// </summary>
     [AddComponentMenu("FlatWorld/AIECS/实战开发入口")]
-    public sealed class AiecsPlayground : MonoBehaviour
+    public sealed partial class AiecsPlayground : MonoBehaviour
     {
         #region 配置与状态
         public AiecsAnimationCatalog Catalog; // 当前导出的共享动画目录。
         public bool LoadGameStartOnPlay = true; // 专用入口场景加载正式启动流程。
         public string TeamAActor = "Wolf", TeamBActor = "WildBoar"; // 当前 Actor 目录 ID，可在 Inspector 改配置。
         [Range(1, 10000)] public int UnitsPerArmy = 100; // 两军模式每次增援每军数量；默认总量 200，每次点击再增加 200。
+        [Min(1)] public int CellCapacity = 1; // 每个世界格允许同时容纳的 ECS Actor 数。
         public AiecsPlaygroundMode InitialMode = AiecsPlaygroundMode.PlayerDuel;
         public bool ShowHealth = true; // 开发血条有显示上限。
         public string Status { get; private set; } = "等待正式游戏世界；请新建临时世界。";
@@ -70,8 +71,8 @@ namespace FlatWorld.AIECS.Gameplay
         {
             if (active != this) return;
             if (player == null) return;
-            var navigation = WorldNavigationManager.ExistingInstance;
-            if (startRequested && navigation != null && navigation.IsNavigationReady)
+            // 导航窗口可早于玩家周边 Chunk 完整绑定；统一等待正式可玩门禁，避免首批生成空场。
+            if (startRequested && IsReady)
             { startRequested = false; StartScenario(mode); }
             if (bridge == null) return;
             if (!bridge.IsCurrentWorld(player)) { StopScenario(); startRequested = true; return; }
@@ -115,14 +116,15 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>按显式模式重新创建开发单位，保留玩家的真实生命和当前武器。</summary>
         public void StartScenario(AiecsPlaygroundMode requested)
         {
-            if (player == null || WorldNavigationManager.ExistingInstance == null) return;
+            if (!IsReady) return;
             StopScenario(); mode = requested; spawned = 0; armyReinforcementWave = 0;
             try
             {
-                string[] ids = { TeamAActor, TeamBActor };
+                BuildScenarioCatalog(out string[] ids, out string[] factions, out bool[] fleePolicies);
                 var cache = WorldNavigationManager.ExistingInstance.GetSharedNavigation();
                 float sense = requested == AiecsPlaygroundMode.Wander ? 4f : 18f;
-                bridge = new AiecsGameplayBridge(player, cache, ids, new[] { "aiecs.demo.a", "aiecs.demo.b" }, sense);
+                bridge = new AiecsGameplayBridge(player, cache, ids, factions, sense, fleePolicies, TrySpawnScenarioLootActor);
+                bridge.Simulation.CellCapacity = CellCapacity;
                 bridge.PlayerParticipates = requested != AiecsPlaygroundMode.Armies;
                 display = new AiecsWorldRenderer(Catalog, ids, player.gameObject.scene);
                 simulationTime = Time.timeAsDouble;
@@ -137,13 +139,13 @@ namespace FlatWorld.AIECS.Gameplay
                 else SpawnGroup(0, 3, center + new float2(5, 0), 1f);
                 // 零时长首批只建立实际状态/索引，普通攻击仍需完整前摇。
                 bridge.Step(0f, simulationTime);
-                SetStatus("真实 ECS 单位 " + spawned + "；使用当前武器攻击，蓝/红血条显示实际生命。");
+                SetStatus("本场累计生成 " + spawned + " 个 ECS 单位；当前存活与行为见下方实时统计。");
             }
             catch (Exception exception)
             { SetStatus("创建失败：" + exception.Message); Debug.LogException(exception, this); StopScenario(); }
         }
 
-        /// <summary>两军按钮：首次切入时创建 200 只，已在两军模式时每次继续追加 200 只。</summary>
+        /// <summary>两军按钮按 UnitsPerArmy 生成双方单位；继续点击增援，不重置已有战斗。</summary>
         public void StartOrReinforceArmies()
         {
             if (bridge == null || mode != AiecsPlaygroundMode.Armies)
@@ -156,16 +158,20 @@ namespace FlatWorld.AIECS.Gameplay
             SpawnArmyReinforcement();
             bridge.Step(0f, simulationTime);
             int added = spawned - before;
-            SetStatus($"两军交战：真实 ECS 单位 {spawned}；本次增援 {added} / 目标 {math.clamp(UnitsPerArmy, 1, 10000) * 2}。继续点击可再增援。");
+            SetStatus($"两军交战：累计生成 {spawned}；本次增援 {added} / 目标 {ReinforcementUnitCount}。当前存活见下方统计。");
         }
 
         /// <summary>按波次在玩家附近两侧追加单位，避免每次点击都重置已有战斗。</summary>
         private void SpawnArmyReinforcement()
         {
             int perArmy = math.clamp(UnitsPerArmy, 1, 10000);
+            int columns = math.max(1, (int)math.ceil(math.sqrt(perArmy)));
+            float spacing = math.max(ResolveSpawnSpacing(0), ResolveSpawnSpacing(1));
+            // 阵型随规模扩展，双方初始格不重叠；只使用已加载区域，不放宽每格容量。
+            float sideOffset = math.max(5f, columns * spacing * 0.5f + 1f);
             float waveOffset = armyReinforcementWave * 3.5f;
-            SpawnGroup(0, perArmy, armyBattleCenter + new float2(-5f - waveOffset, 2f), 1f);
-            SpawnGroup(1, perArmy, armyBattleCenter + new float2(5f + waveOffset, 2f), 1f);
+            SpawnGroup(0, perArmy, armyBattleCenter + new float2(-sideOffset - waveOffset, 2f), 1f);
+            SpawnGroup(1, perArmy, armyBattleCenter + new float2(sideOffset + waveOffset, 2f), 1f);
             armyReinforcementWave++;
         }
 
@@ -173,9 +179,12 @@ namespace FlatWorld.AIECS.Gameplay
         private void SpawnGroup(int group, int count, float2 origin, float hpRatio)
         {
             int columns = math.max(1, (int)math.ceil(math.sqrt(count)));
+            float spacing = ResolveSpawnSpacing(group);
+            origin = math.floor(origin) + 0.5f;
             for (int i = 0; i < count; i++)
             {
-                float2 position = origin + new float2(i % columns - (columns - 1) * 0.5f, i / columns - (columns - 1) * 0.5f) * 0.75f;
+                // 按整格中心排布；旧 0.75 间距在每格限一只时会系统性地少生成。
+                float2 position = origin + new float2(i % columns - columns / 2, i / columns - columns / 2) * spacing;
                 if (bridge.Spawn(group, position, hpRatio)) { spawned++; continue; }
                 for (int ring = 1; ring <= 3; ring++)
                 {
@@ -183,13 +192,18 @@ namespace FlatWorld.AIECS.Gameplay
                     for (int side = 0; side < 8; side++)
                     {
                         float angle = side * math.PI * 0.25f;
-                        if (!bridge.Spawn(group, position + new float2(math.cos(angle), math.sin(angle)) * ring, hpRatio)) continue;
+                        float2 offset = math.round(new float2(math.cos(angle), math.sin(angle))) * ring;
+                        if (!bridge.Spawn(group, position + offset, hpRatio)) continue;
                         spawned++; placed = true; break;
                     }
                     if (placed) break;
                 }
             }
         }
+
+        /// <summary>普通单位至少一格间距；MOD 大体型按当前定义半径扩展，不硬编码具体生物。</summary>
+        private float ResolveSpawnSpacing(int group) =>
+            math.max(1f, math.ceil(bridge.Templates[group].Body.Radius * 2f));
 
         /// <summary>主动结束当前开发群体并归还所有共享资源。</summary>
         private void StopScenario()
@@ -202,14 +216,28 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>当前唯一的 AIECS 实战开发入口，供 GM 分页读取，不再由 Prefab 自建独立 UI。</summary>
         public static AiecsPlayground Active => active;
 
-        /// <summary>玩家与共享导航均已就绪时才允许切换测试场景。</summary>
+        /// <summary>正式世界可玩、玩家和共享导航均已就绪时才允许生成，不能仅凭导航缓存提前放行。</summary>
         public bool IsReady => player != null &&
+                               manager != null && manager.IsInGameWorld && manager.IsGameplayReady &&
                                WorldNavigationManager.ExistingInstance != null &&
                                WorldNavigationManager.ExistingInstance.IsNavigationReady;
 
         public bool HasActiveScenario => bridge != null; // 当前是否存在开发模拟。
+        public bool HealthOverlaySuppressed { get; set; } // GM 等开发 UI 覆盖画面时暂不绘制穿透面板的 IMGUI 血条。
         public bool PlayerParticipates => bridge != null && bridge.PlayerParticipates; // 玩家是否参与当前感知/战斗。
         public int ReinforcementUnitCount => math.clamp(UnitsPerArmy, 1, 10000) * 2; // 两军按钮单次增援总量。
+
+        /// <summary>已完成的真实模拟 Tick，压力验收据此确认不是仅在绘制静止单位。</summary>
+        public ulong CompletedSimulationTicks => bridge == null ? 0UL : (ulong)bridge.Simulation.Clock.Tick;
+
+        /// <summary>上一轮相机裁剪后提交的精灵数量，包含尚未结束死亡表现的实体。</summary>
+        public int VisibleUnitCount => display == null ? 0 : display.VisibleCount;
+
+        /// <summary>当前实际显示批次数，不能把累计生成数量当成实际绘制数量。</summary>
+        public int VisibleBatchCount => display == null ? 0 : display.BatchCount;
+
+        /// <summary>尚未追上的游戏时间；稳定运行应小于单个 30Hz 步长，持续增长表示模拟已过载。</summary>
+        public double SimulationBacklogSeconds => bridge == null ? 0d : math.max(0d, Time.timeAsDouble - simulationTime);
 
         /// <summary>清空当前开发群体；不会自动重新创建默认模式。</summary>
         public void ClearScenario()
@@ -284,7 +312,7 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>血条仍用无节点 IMGUI 批量绘制，避免为了 64 个临时血条创建逐实体 uGUI。</summary>
         private void OnGUI()
         {
-            if (active != this || !ShowHealth || bridge == null || display == null) return;
+            if (active != this || !ShowHealth || HealthOverlaySuppressed || bridge == null || display == null) return;
             display.DrawHealth(bridge.Simulation, targetCamera, bridge.Navigation.Read().Domain);
         }
         #endregion

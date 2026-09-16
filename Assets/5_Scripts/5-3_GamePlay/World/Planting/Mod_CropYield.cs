@@ -99,25 +99,7 @@ public sealed class Mod_CropYield : Module, ICropHarvestAction
     /// <summary>生成一个数量为 1 的掉落实例，让每份产物独立弹出。</summary>
     private static void SpawnWorldItem(CropHarvestContext context, string itemId)
     {
-        GameObject parent = context.CropItem.transform.parent != null
-            ? context.CropItem.transform.parent.gameObject
-            : null;
-        Item product = ItemMgr.Instance.InstantiateItem(
-            itemId,
-            context.WorldPosition,
-            Quaternion.identity,
-            Vector3.one,
-            parent);
-        if (product == null)
-            throw new MissingReferenceException($"[Mod_CropYield] 无法实例化收获物品：{itemId}");
-
-        product.Load();
-        product.SetInHand(false);
-        if (product.itemData?.Stack == null)
-            throw new MissingComponentException($"[Mod_CropYield] 收获物品 {itemId} 缺少堆叠数据。");
-
-        product.itemData.Stack.Amount = 1;
-        product.DropInRange();
+        DroppedItemService.SpawnLoot(itemId, context.WorldPosition);
     }
 
     #endregion

@@ -161,7 +161,7 @@ public static class PlayerDeathInventoryDropper
         int slotIndex,
         Vector2 endPosition)
     {
-        Item spawnedItem = null;
+        DroppedItemHandle spawnedDrop = default;
 
         try
         {
@@ -172,19 +172,8 @@ public static class PlayerDeathInventoryDropper
             droppedData.transform.position = player.transform.position;
             droppedData.transform.scale = Vector3.one * 0.5f;
 
-            spawnedItem = ItemMgr.Instance.InstantiateItem(
-                droppedData,
-                player.transform.position,
-                Quaternion.identity,
-                Vector3.one * 0.5f);
-
-            spawnedItem.Load();
-            spawnedItem.SetInHand(false);
-            Mod_BaseDroper.StaticDropItem_Pos(
-                spawnedItem,
-                player.transform.position,
-                endPosition,
-                DropDuration);
+            spawnedDrop = DroppedItemService.Spawn(droppedData, player.transform.position,
+                endPosition, DropDuration, Vector3.one * 0.5f);
 
             inventoryData.RemoveItemAll(slot, slotIndex);
             inventoryData.Event_OnDataChanged_TwoSlots.Invoke(slot, null);
@@ -194,12 +183,7 @@ public static class PlayerDeathInventoryDropper
         catch (Exception exception)
         {
             bool inventoryRemovalCommitted = slot.itemData == null;
-            if (!inventoryRemovalCommitted &&
-                spawnedItem != null &&
-                ItemMgr.Instance != null)
-            {
-                ItemMgr.Instance.DespawnItem(spawnedItem, saveData: false);
-            }
+            if (!inventoryRemovalCommitted) DroppedItemService.Remove(spawnedDrop);
 
             string result = inventoryRemovalCommitted
                 ? "掉落已完成，但库存事件处理出现异常。"

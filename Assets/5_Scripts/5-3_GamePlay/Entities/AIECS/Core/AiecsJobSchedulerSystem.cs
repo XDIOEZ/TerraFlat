@@ -31,6 +31,9 @@ namespace FlatWorld.AIECS
         internal JobHandle ScheduleParallel(AiecsGatherCrowdJob job, EntityQuery query, JobHandle dependency) =>
             job.ScheduleParallel(query, dependency);
 
+        internal JobHandle ScheduleParallel(AiecsBuildCellMovePlansJob job, EntityQuery query, JobHandle dependency) =>
+            job.ScheduleParallel(query, dependency);
+
         internal JobHandle ScheduleParallel(AiecsFlowMoveJob job, EntityQuery query, JobHandle dependency) =>
             job.ScheduleParallel(query, dependency);
 

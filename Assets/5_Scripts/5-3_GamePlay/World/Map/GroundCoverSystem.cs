@@ -93,32 +93,20 @@ public static class GroundCoverSystem
             return false;
 
         ChunkMgr manager = ChunkMgr.ExistingInstance;
-        ItemMgr items = ItemMgr.Instance;
-        if (items == null || !manager.TryGetRuntimeDropParent(current.WorldPosition, out ChunkNaturalItemRenderer parent))
-            return false;
-
-        Item product = null;
+        DroppedItemHandle product = default;
         try
         {
-            product = items.InstantiateItem(current.Definition.Id, current.WorldPosition,
-                Quaternion.identity, Vector3.one, parent.gameObject);
-            if (product == null)
-                throw new InvalidOperationException($"无法创建地表植被采集物：{current.Definition.Id}");
-            product.Load();
-            product.SetInHand(false);
-            product.itemData.Stack.Amount = 1;
-            product.DropInRange();
+            product = DroppedItemService.SpawnLoot(current.Definition.Id, current.WorldPosition);
         }
         catch
         {
-            if (product != null && !product.DestructionHandled)
-                items.DespawnItem(product, saveData: false, detachFromChunk: false);
+            DroppedItemService.Remove(product);
             throw;
         }
 
         if (manager.TryRemoveNaturalItem(current.Chunk.Address, current.Placement.Guid))
             return true;
-        items.DespawnItem(product, saveData: false, detachFromChunk: false);
+        DroppedItemService.Remove(product);
         return false;
     }
 
