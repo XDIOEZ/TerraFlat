@@ -43,6 +43,7 @@ namespace FlatWorld.AIECS.Gameplay
         private EntityQuery query;
         private FlowNavigationCache cache;
         private FlowGoalHandle[] handles;
+        private AiecsJobSchedulerSystem jobScheduler;
         private AiecsFlowCrowdScheduler scheduler;
         private JobHandle pending;
         private uint tick;
@@ -65,6 +66,7 @@ namespace FlatWorld.AIECS.Gameplay
                     handles[group] = cache.CreateGoal(PositionOf(GoalTargets[group]));
                 FlowNavigationSnapshot navigation = cache.Read();
                 world = new World("AIECS 共享导航群体");
+                jobScheduler = world.GetOrCreateSystemManaged<AiecsJobSchedulerSystem>();
                 EntityManager entities = world.EntityManager;
                 EntityArchetype archetype = entities.CreateArchetype(typeof(AiecsFlowAgent));
                 query = entities.CreateEntityQuery(ComponentType.ReadWrite<AiecsFlowAgent>());
@@ -98,7 +100,7 @@ namespace FlatWorld.AIECS.Gameplay
             pending.Complete(); pending = default;
             scheduler?.Dispose(); scheduler = null;
             if (world != null && world.IsCreated) world.Dispose();
-            world = null;
+            world = null; jobScheduler = null;
             if (cache != null && handles != null)
                 foreach (FlowGoalHandle handle in handles) cache.RemoveGoal(handle);
             handles = null; cache = null; CreatedEntities = 0;
@@ -130,7 +132,7 @@ namespace FlatWorld.AIECS.Gameplay
                 if (GoalTargets[group] == null || !cache.IsValid(handles[group])) { StopCrowd(); return; }
                 cache.UpdateGoal(handles[group], PositionOf(GoalTargets[group]));
             }
-            pending = scheduler.Schedule(query, cache, Time.deltaTime, ++tick, NeighboursPerBucket, SeparationWeight);
+            pending = scheduler.Schedule(jobScheduler, query, cache, Time.deltaTime, ++tick, NeighboursPerBucket, SeparationWeight);
         }
 
         /// <summary>在表现边界完成一个移动批次，编辑器只读观察不会与 Job 并发访问。</summary>

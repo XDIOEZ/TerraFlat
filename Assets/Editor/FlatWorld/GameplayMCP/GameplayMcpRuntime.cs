@@ -443,9 +443,28 @@ namespace FlatWorld.GameplayMCP
         {
             DamageReceiver health = player.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
             Mod_Stamina stamina = player.itemMods.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
+            Mod_Oxygen oxygen = player.itemMods.GetMod_ByID<Mod_Oxygen>(ModText.Oxygen);
             Mod_Food food = player.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
             Inventory_HotBar hotbar = ResolveHotbar(player);
+            Mod_Hand handModule = player.GetComponentInChildren<Mod_Hand>(true);
+            Inventory_Hand handInventory = handModule?.HandInventory;
+            ItemSlot handSlot = handInventory?.Data?.itemSlots != null &&
+                                handInventory.Data.Index >= 0 &&
+                                handInventory.Data.Index < handInventory.Data.itemSlots.Count
+                ? handInventory.Data.itemSlots[handInventory.Data.Index]
+                : null;
+            ItemData handItemData = handSlot?.itemData;
+            Mod_ColdWeapon handWeapon = handItemData == null
+                ? null
+                : player.GetComponentsInChildren<Mod_ColdWeapon>(true)
+                    .FirstOrDefault(module => module != null && module.item != null &&
+                                              module.item.Owner == player &&
+                                              module.item.itemData != null &&
+                                              module.item.itemData.Guid == handItemData.Guid);
             Nutrition nutrition = food?.Data?.nutrition;
+            TileEffectReceiver tileReceiver = player.itemMods.GetMod_ByID<TileEffectReceiver>(ModText.TileEffectReceiver) ??
+                                               player.GetComponentInChildren<TileEffectReceiver>(true);
+            TileData_Water waterTile = tileReceiver?.currentTileData as TileData_Water;
 
             var result = new JObject
             {
@@ -456,6 +475,27 @@ namespace FlatWorld.GameplayMCP
                 ["running"] = mover.IsRunning,
                 ["hp"] = health == null ? JValue.CreateNull() : new JArray(Round(health.Hp), Round(health.MaxHp)),
                 ["stamina"] = stamina == null ? JValue.CreateNull() : new JArray(Round(stamina.CurrentValue), Round(stamina.MaxValue)),
+                ["water"] = new JObject
+                {
+                    ["inWater"] = oxygen?.IsInWater ?? waterTile != null,
+                    ["immersion"] = tileReceiver == null ? 0f : Round(tileReceiver.CurrentWaterImmersion),
+                    ["tile"] = tileReceiver?.currentTileData?.Name ?? string.Empty,
+                    ["depth"] = waterTile == null ? JValue.CreateNull() : Round(waterTile.deepValue),
+                    ["salt"] = waterTile == null ? JValue.CreateNull() : Round(waterTile.salt),
+                    ["oxygen"] = oxygen == null ? JValue.CreateNull() : new JArray(Round(oxygen.CurrentValue), Round(oxygen.MaxValue)),
+                    ["breathBlocked"] = oxygen?.IsBreathBlocked ?? false,
+                    ["drowning"] = oxygen?.IsDrowning ?? false
+                },
+                ["hand"] = new JObject
+                {
+                    ["index"] = handInventory?.Data?.Index ?? -1,
+                    ["held"] = handItemData?.IDName ?? string.Empty,
+                    ["guid"] = handItemData == null ? JValue.CreateNull() : new JValue(handItemData.Guid),
+                    ["amount"] = handItemData?.Stack == null ? 0f : Round(handItemData.Stack.Amount),
+                    ["runtimeWeapon"] = handWeapon != null,
+                    ["canAttack"] = handWeapon?.CanAttack ?? false,
+                    ["attackState"] = handWeapon?.CurrentState.ToString() ?? string.Empty
+                },
                 ["nutrition"] = nutrition == null ? JValue.CreateNull() : new JObject
                 {
                     ["carb"] = RatioPair(nutrition.Carbohydrates, nutrition.Max_Carbohydrates),

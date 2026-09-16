@@ -620,6 +620,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 5720747661594404640}
     - target: {fileID: 4923310608060424154, guid: 7ef3d949fb4a7374fb43fc85b09d4cc2, type: 3}
+      propertyPath: Data.Fuel.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4923310608060424154, guid: 7ef3d949fb4a7374fb43fc85b09d4cc2, type: 3}
       propertyPath: ExData.Name
       value: "\u71C3\u6599\u6A21\u5757_7978"
       objectReference: {fileID: 0}

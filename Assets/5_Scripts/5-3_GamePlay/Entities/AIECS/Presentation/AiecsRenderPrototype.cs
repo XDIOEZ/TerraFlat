@@ -46,6 +46,7 @@ namespace FlatWorld.AIECS
         #region 所有权与缓存
         // 本原型独占资源，不使用默认 ECS World 或正式 Item 生命周期。
         private World world;
+        private AiecsPrototypeJobSchedulerSystem scheduler;
         private EntityQuery query;
         private JobHandle pending;
         private NativeArray<AiecsPrototypeActor> snapshot;
@@ -66,6 +67,7 @@ namespace FlatWorld.AIECS
                 ValidateInputs();
                 legacy = new AiecsLegacySortScope(LegacyRoot);
                 world = new World("AIECS P1 渲染原型");
+                scheduler = world.GetOrCreateSystemManaged<AiecsPrototypeJobSchedulerSystem>();
                 EntityManager manager = world.EntityManager;
                 query = manager.CreateEntityQuery(ComponentType.ReadWrite<AiecsPrototypeActor>());
                 snapshot = new NativeArray<AiecsPrototypeActor>(EntityCount, Allocator.Persistent);
@@ -103,12 +105,12 @@ namespace FlatWorld.AIECS
             if (world == null || !world.IsCreated) return;
             try
             {
-                pending = new AiecsPrototypeMotion
+                pending = scheduler.ScheduleParallel(new AiecsPrototypeMotion
                 {
                     DeltaTime = Time.deltaTime, Travel = Travel,
                     WaterBoundaryY = WaterBoundaryY, TransitionSeconds = WaterTransitionSeconds,
                     Snapshot = snapshot
-                }.ScheduleParallel(query, default);
+                }, query, default);
                 pending.Complete();
                 UpdatedPositions = snapshot.Length;
                 CollectDisplayItems();
@@ -131,7 +133,7 @@ namespace FlatWorld.AIECS
             legacy = null;
             if (snapshot.IsCreated) snapshot.Dispose();
             if (world != null && world.IsCreated) world.Dispose();
-            world = null;
+            world = null; scheduler = null;
             display.Clear();
             CreatedEntities = UpdatedPositions = VisibleEntities = SubmittedSprites = 0;
             ColorBatches = UploadedBytes = LegacyDisplayItems = 0;

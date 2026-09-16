@@ -18,6 +18,10 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     private List<SpawnerConfig> _spawnerConfigs = new();
 
     [Header("全局生态限制")]
+    [SerializeField]
+    [Tooltip("启用后正式生态只生成 AIECS Entity，并关闭旧 BaseAI Tick；不允许静默回退旧后端。")]
+    private bool _useAiecsBackend = true;
+
     [SerializeField, Min(1)]
     private int _globalAliveLimit = 40;
 
@@ -68,6 +72,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
         _serializedSpawnerConfigs = _spawnerConfigs;
         _monsterManager = GetComponent<MonsterManager>();
+        AiRuntimeBackendService.UseEntities = _useAiecsBackend;
     }
 
     private void Start()
@@ -124,7 +129,24 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
         BindSaveData(SaveDataMgr.Instance?.SaveData);
         _itemManager.CleanupNullItems();
-        _monsterManager.Configure(_spawnerConfigs, _itemManager.WorldRunTimeItems.Values);
+        if (AiRuntimeBackendService.UseEntities)
+        {
+            IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
+            if (backend == null || !backend.PrepareWorld(_spawnerConfigs))
+            {
+                Debug.LogError("[MonsterSpawnerManager] 已要求 AIECS，但正式生态后端未就绪；不会回退 BaseAI。", this);
+                ClearTrackedPopulation();
+                enabled = false;
+                return;
+            }
+
+            _monsterManager.ResetWorld();
+            RemoveLegacyActorInstances();
+        }
+        else
+        {
+            _monsterManager.Configure(_spawnerConfigs, _itemManager.WorldRunTimeItems.Values);
+        }
         _nextPopulationMaintenanceTime = Time.unscaledTime;
         _nextRecycleCheckTime = Time.unscaledTime + _recycleCheckInterval;
         enabled = true;
@@ -553,6 +575,13 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         if (state.PendingSpawnCount <= 0 && state.PendingReplacementCount <= 0)
             return;
 
+        if (AiRuntimeBackendService.UseEntities && !HasSupportedAiecsEntry(config))
+        {
+            state.PendingSpawnCount = 0;
+            state.PendingReplacementCount = 0;
+            return;
+        }
+
         if (config.RequireGlobalDarkness && !IsGlobalDark(sceneName))
             return;
 
@@ -653,6 +682,12 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             string.IsNullOrWhiteSpace(entry.PrefabName) ||
             entry.Probability <= 0f ||
             (!config.UnboundedDailyGrowth && state.AvailableBudget < Mathf.Max(1, entry.EcologyCost)))
+        {
+            return false;
+        }
+
+        if (AiRuntimeBackendService.UseEntities &&
+            (AiRuntimeBackendService.Ecology == null || !AiRuntimeBackendService.Ecology.SupportsSpecies(entry.PrefabName)))
         {
             return false;
         }
@@ -773,6 +808,13 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         SpawnerConfig.SpawnEntry entry,
         Vector3 spawnPosition)
     {
+        if (AiRuntimeBackendService.UseEntities)
+        {
+            SpawnerConfig owner = FindConfigForEntry(entry);
+            return owner != null && AiRuntimeBackendService.Ecology != null &&
+                   AiRuntimeBackendService.Ecology.TrySpawn(owner, entry, spawnPosition);
+        }
+
         Item spawnedItem = null;
         try
         {
@@ -915,7 +957,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             if (WorldTopologyRuntime.SqrDistance(candidate, playerPosition) > radiusSqr)
                 continue;
 
-            int nearbyCount = _monsterManager.CountGroupWithinRadius(config, playerPosition, radiusSqr);
+            int nearbyCount = AiRuntimeBackendService.UseEntities
+                ? AiRuntimeBackendService.Ecology?.CountGroupWithinRadius(config, playerPosition, radiusSqr) ?? 0
+                : _monsterManager.CountGroupWithinRadius(config, playerPosition, radiusSqr);
             if (nearbyCount >= limit)
                 return false;
         }
@@ -936,17 +980,23 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private int CountGroupAlive(SpawnerConfig config)
     {
+        if (AiRuntimeBackendService.UseEntities)
+            return AiRuntimeBackendService.Ecology?.GetGroupCount(config) ?? 0;
         return _monsterManager?.GetGroupCount(config) ?? 0;
     }
 
     private int CountSpeciesAlive(string speciesId)
     {
+        if (AiRuntimeBackendService.UseEntities)
+            return AiRuntimeBackendService.Ecology?.GetSpeciesCount(speciesId) ?? 0;
         return _monsterManager?.GetSpeciesCount(speciesId) ?? 0;
     }
 
     /// <summary>只统计仍受全局数量预算约束的生态实体。</summary>
     private int CountPopulationLimitedAlive()
     {
+        if (AiRuntimeBackendService.UseEntities)
+            return AiRuntimeBackendService.Ecology?.PopulationLimitedCount ?? 0;
         return _monsterManager?.PopulationLimitedCount ?? 0;
     }
 
@@ -956,6 +1006,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void ClearTrackedPopulation(bool restoreChunkDormantItems = true)
     {
+        if (AiRuntimeBackendService.UseEntities)
+            AiRuntimeBackendService.Ecology?.ResetWorld();
+
         if (restoreChunkDormantItems)
             RestoreChunkDormantItems();
 
@@ -1002,6 +1055,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     /// <summary>让自然生物随新版区块画面休眠，并在画面重新绑定后恢复。</summary>
     private void RefreshChunkDormancy()
     {
+        if (AiRuntimeBackendService.UseEntities)
+            return;
+
         if (_monsterManager == null || _monsterManager.Count == 0 || _chunkManager == null)
             return;
 
@@ -1048,6 +1104,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             return;
 
         _nextPopulationMaintenanceTime = Time.unscaledTime + Mathf.Max(0.5f, _populationMaintenanceInterval);
+        if (AiRuntimeBackendService.UseEntities)
+            return;
+
         _monsterManager.PruneInvalidRegistrations();
         _monsterManager.CopyRegistrations(_monsterSnapshot);
         CollectPopulationOverflow(_itemSnapshot);
@@ -1160,6 +1219,12 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             return;
 
         _nextRecycleCheckTime = Time.unscaledTime + Mathf.Max(0.5f, _recycleCheckInterval);
+        if (AiRuntimeBackendService.UseEntities)
+        {
+            AiRuntimeBackendService.Ecology?.RecycleDistantPopulation(_playerPositions, Time.unscaledTime);
+            return;
+        }
+
         _itemSnapshot.Clear();
         _monsterManager.CopyRegistrations(_monsterSnapshot);
         float now = Time.unscaledTime;
@@ -1200,6 +1265,70 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             if (item != null && _itemManager != null)
                 _itemManager.DespawnItem(item, saveData: false);
         }
+    }
+
+    #endregion
+
+    #region AI 后端切换
+
+    /// <summary>查找生成条目的所属配置；条目对象来自已冻结的当前生态目录。</summary>
+    private SpawnerConfig FindConfigForEntry(SpawnerConfig.SpawnEntry entry)
+    {
+        if (entry == null || _spawnerConfigs == null)
+            return null;
+
+        for (int configIndex = 0; configIndex < _spawnerConfigs.Count; configIndex++)
+        {
+            SpawnerConfig config = _spawnerConfigs[configIndex];
+            if (config?.SpawnEntries == null)
+                continue;
+            for (int entryIndex = 0; entryIndex < config.SpawnEntries.Count; entryIndex++)
+            {
+                if (ReferenceEquals(config.SpawnEntries[entryIndex], entry))
+                    return config;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>正式 ECS 模式下没有受支持物种的配置直接停止积压，禁止回退旧 Actor。</summary>
+    private static bool HasSupportedAiecsEntry(SpawnerConfig config)
+    {
+        if (config?.SpawnEntries == null || AiRuntimeBackendService.Ecology == null)
+            return false;
+
+        for (int i = 0; i < config.SpawnEntries.Count; i++)
+        {
+            string speciesId = config.SpawnEntries[i]?.PrefabName;
+            if (AiRuntimeBackendService.Ecology.SupportsSpecies(speciesId))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>切换到 AIECS 时清理存档/旧运行时残留的 Actor GameObject，避免两套 AI 同时存在。</summary>
+    private void RemoveLegacyActorInstances()
+    {
+        if (_itemManager == null || GameRes.Instance == null)
+            return;
+
+        _itemSnapshot.Clear();
+        foreach (Item item in _itemManager.WorldRunTimeItems.Values)
+        {
+            if (item == null || item is Player || item.itemData == null)
+                continue;
+            if (!GameRes.Instance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition) || !definition.IsActor)
+                continue;
+            _itemSnapshot.Add(item);
+        }
+
+        for (int i = 0; i < _itemSnapshot.Count; i++)
+        {
+            Item item = _itemSnapshot[i];
+            if (item != null && !item.DestructionHandled)
+                _itemManager.DespawnItem(item, saveData: false);
+        }
+        _itemSnapshot.Clear();
     }
 
     #endregion

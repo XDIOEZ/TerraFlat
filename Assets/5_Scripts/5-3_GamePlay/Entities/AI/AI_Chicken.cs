@@ -217,7 +217,8 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		_currentState = Data.State;
 		_idleRemainTimer = GetIdleDuration();
 		InitializeAI();
-		BindEggWorldTime();
+		if (!AiRuntimeBackendService.UseEntities)
+			BindEggWorldTime();
 	}
 
 	public override void Unload()

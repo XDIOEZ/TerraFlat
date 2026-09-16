@@ -14,9 +14,16 @@ namespace FlatWorld.AIECS.Gameplay
     public static class AiecsDefinitionCompiler
     {
         #region Actor 编译
-        /// <summary>从当前已合并目录读取共同 AI 语义；演示阵营与感知半径覆盖明确来自场景配置。</summary>
+        /// <summary>从当前已合并目录读取共同 AI 语义；默认使用主动战斗规则。</summary>
         public static AiecsActorTemplate Compile(string actorId, string faction, int definitionIndex, int factionIndex,
             float senseOverride, out AiecsDefinition definition)
+        {
+            return Compile(actorId, faction, definitionIndex, factionIndex, senseOverride, false, out definition);
+        }
+
+        /// <summary>从当前已合并目录读取共同 AI 语义；被动生态单位发现敌对目标后只逃离，不反向启用旧 AI。</summary>
+        public static AiecsActorTemplate Compile(string actorId, string faction, int definitionIndex, int factionIndex,
+            float senseOverride, bool fleeFromHostiles, out AiecsDefinition definition)
         {
             if (!GameRes.Instance.TryGetItemDefinition(actorId, out RuntimeItemDefinition source) || !source.IsActor)
                 throw new InvalidOperationException("AIECS 找不到当前 Actor 定义：" + actorId);
@@ -47,7 +54,7 @@ namespace FlatWorld.AIECS.Gameplay
                 SlowMultiplier = Number(attack, "HitSlowMultiplier", 0.5f),
                 SlowDuration = (bool?)attack["EnableHitSlowdown"] == false ? 0f : Number(attack, "HitSlowDuration", 0.35f),
                 CandidateBudget = 64, RequireLos = (byte)((bool?)detector["wallsBlockPerception"] == false ? 0 : 1) };
-            AddRules(ref definition);
+            AddRules(ref definition, fleeFromHostiles);
             JObject onHit = Module<DamageOnHitBuffApplier>(source, item, out _);
             if (onHit != null && !string.IsNullOrWhiteSpace((string)onHit["buffId"]))
                 definition.OnHitBuffs.Add(new CombatOnHitBuff { Id = (string)onHit["buffId"], Chance = Number(onHit, "applicationChance", 0.25f) });
@@ -72,9 +79,34 @@ namespace FlatWorld.AIECS.Gameplay
                 HasBlood = (byte)(item.Tags != null && item.Tags.Contains("Blood") ? 1 : 0) };
         }
 
-        /// <summary>无物种分支的共同优先级：锁定攻击、保命、攻击起手、追击、游荡和休息。</summary>
-        private static void AddRules(ref AiecsDefinition definition)
+        /// <summary>验证 Actor 是否满足当前正式 AIECS 基础切片，不创建旧 AI 实例。</summary>
+        public static bool TryValidate(string actorId, out string reason)
         {
+            try
+            {
+                Compile(actorId, "aiecs.validation", 0, 0, 0f, false, out _);
+                reason = null;
+                return true;
+            }
+            catch (Exception exception)
+            {
+                reason = exception.Message;
+                return false;
+            }
+        }
+
+        /// <summary>无物种分支的共同优先级；生态配置只选择“主动战斗”或“受威胁逃离”策略。</summary>
+        private static void AddRules(ref AiecsDefinition definition, bool fleeFromHostiles)
+        {
+            if (fleeFromHostiles)
+            {
+                definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.LowHealth | AiecsDecisionFacts.HasThreat, Behavior = (int)AiecsBehavior.Flee, Priority = 90 });
+                definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.HasTarget, Behavior = (int)AiecsBehavior.Flee, Priority = 80 });
+                definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.RestFinished, Exclude = AiecsDecisionFacts.HasTarget, Behavior = (int)AiecsBehavior.Wander, Priority = 10 });
+                definition.Rules.Add(new AiecsDecisionRule { Behavior = (int)AiecsBehavior.Idle, Priority = 0 });
+                return;
+            }
+
             definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.AttackLocked, Behavior = (int)AiecsBehavior.Attack, Priority = 100 });
             definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.LowHealth | AiecsDecisionFacts.HasThreat, Behavior = (int)AiecsBehavior.Flee, Priority = 90 });
             definition.Rules.Add(new AiecsDecisionRule { Require = AiecsDecisionFacts.HasTarget | AiecsDecisionFacts.InAttackRange, Behavior = (int)AiecsBehavior.Attack, Priority = 70 });

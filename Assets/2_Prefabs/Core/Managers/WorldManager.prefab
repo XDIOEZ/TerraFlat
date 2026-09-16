@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 3255829291475104428}
   - component: {fileID: 4274200050966710789}
   - component: {fileID: 621153831357500893}
+  - component: {fileID: 672145831357500894}
   m_Layer: 0
   m_Name: MonsterMgr
   m_TagString: Untagged
@@ -43,12 +44,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 818a288dde5ed484ebb221ca065c59f9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   _spawnerConfigs:
   - {fileID: 11400000, guid: 3728acca7d2bf834aa32d083b7c9a9c1, type: 2}
   - {fileID: 11400001, guid: d761520c2ce00864abbe419e138f92c7, type: 2}
   - {fileID: 11400000, guid: b14e9d6f8c0a2b3d5e7f9a1c4d6b8e0f, type: 2}
+  _useAiecsBackend: 1
   _globalAliveLimit: 40
   _spawnRetryInterval: 0.5
   _populationMaintenanceInterval: 2
@@ -65,6 +67,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e21f224973762e438c68faf6f068e13, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &672145831357500894
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1015381115892987453}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0be56da7e8f144db8eb8ea236f4a9db3, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  _catalog: {fileID: 11400000, guid: 540ea69333b635d43a589273ec4c1fe0, type: 2}
+  _simulationHz: 30
 --- !u!1 &2048257428238950690
 GameObject:
   m_ObjectHideFlags: 0
