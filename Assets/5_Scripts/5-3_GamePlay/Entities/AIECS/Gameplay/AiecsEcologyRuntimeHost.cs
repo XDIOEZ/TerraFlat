@@ -160,7 +160,8 @@ namespace FlatWorld.AIECS.Gameplay
                         continue;
                     }
 
-                    if (!AiecsDefinitionCompiler.TryValidate(speciesId, out string reason))
+                    bool fleeFromHostiles = config.EcologyGroup == SpawnerEcologyGroup.Animals;
+                    if (!AiecsDefinitionCompiler.TryValidate(speciesId, fleeFromHostiles, out string reason))
                     {
                         ReportUnsupported(speciesId, reason);
                         continue;
@@ -171,7 +172,7 @@ namespace FlatWorld.AIECS.Gameplay
                     _configBySpecies.Add(speciesId, config);
                     _actorIds.Add(speciesId);
                     _actorFactions.Add(ResolveFaction(config, speciesId));
-                    _fleeFromHostiles.Add(config.EcologyGroup == SpawnerEcologyGroup.Animals);
+                    _fleeFromHostiles.Add(fleeFromHostiles);
                 }
             }
 

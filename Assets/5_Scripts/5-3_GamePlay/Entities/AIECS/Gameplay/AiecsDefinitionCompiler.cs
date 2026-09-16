@@ -33,7 +33,8 @@ namespace FlatWorld.AIECS.Gameplay
             JObject mover = Module<Mover_AI>(source, item, out _);
             JObject health = Module<DamageReceiver>(source, item, out var healthModule);
             JObject attack = Module<Mod_Damage>(source, item, out _);
-            if (ai == null || health == null || attack == null || mover == null || detector == null)
+            if (ai == null || health == null || mover == null || detector == null ||
+                (!fleeFromHostiles && attack == null))
                 throw new InvalidOperationException(actorId + " 缺少本轮基础战斗切片所需模块；不得通过旧 AI 静默回退。");
             var life = health["Data"].ToObject<DamageReceiver.DamageReceiver_SaveData>();
             var body = Body(source, health, healthModule);
@@ -50,9 +51,12 @@ namespace FlatWorld.AIECS.Gameplay
                 HitRange = start * AI_AttackController.DefaultDamageRangeMultiplier, AttackArcCos = 0f,
                 Windup = Number(ai, "attackDamageStartDelay", 0.5f), Active = Number(ai, "attackDamageWindow", 0.2f),
                 Recovery = Number(ai, "attackRecoveryDuration", 0.35f), Cooldown = Number(ai, "attackCooldown", 2f),
-                Damage = GameplayCombatBridge.Values(attack["DamageValues"].ToObject<CombatDamage>()),
+                // 被动生态单位不会进入 Attack 规则，因此无需为了纯逃跑行为伪造旧攻击模块。
+                Damage = GameplayCombatBridge.Values(attack?["DamageValues"]?.ToObject<CombatDamage>()),
                 SlowMultiplier = Number(attack, "HitSlowMultiplier", 0.5f),
-                SlowDuration = (bool?)attack["EnableHitSlowdown"] == false ? 0f : Number(attack, "HitSlowDuration", 0.35f),
+                SlowDuration = attack == null || (bool?)attack["EnableHitSlowdown"] == false
+                    ? 0f
+                    : Number(attack, "HitSlowDuration", 0.35f),
                 CandidateBudget = 64, RequireLos = (byte)((bool?)detector["wallsBlockPerception"] == false ? 0 : 1) };
             AddRules(ref definition, fleeFromHostiles);
             JObject onHit = Module<DamageOnHitBuffApplier>(source, item, out _);
@@ -82,9 +86,15 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>验证 Actor 是否满足当前正式 AIECS 基础切片，不创建旧 AI 实例。</summary>
         public static bool TryValidate(string actorId, out string reason)
         {
+            return TryValidate(actorId, false, out reason);
+        }
+
+        /// <summary>按生态实际策略验证 Actor；纯逃跑单位不强制要求永远不会使用的攻击模块。</summary>
+        public static bool TryValidate(string actorId, bool fleeFromHostiles, out string reason)
+        {
             try
             {
-                Compile(actorId, "aiecs.validation", 0, 0, 0f, false, out _);
+                Compile(actorId, "aiecs.validation", 0, 0, 0f, fleeFromHostiles, out _);
                 reason = null;
                 return true;
             }

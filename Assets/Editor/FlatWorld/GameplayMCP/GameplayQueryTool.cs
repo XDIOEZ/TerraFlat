@@ -59,6 +59,9 @@ namespace FlatWorld.GameplayMCP
             [ToolParameter("Minimum terrain environment value when source=terrain.", Required = false, DefaultValue = "0")]
             public float minValue { get; set; }
 
+            [ToolParameter("Optional maximum terrain environment value when source=terrain. Omit to leave the upper bound open.", Required = false)]
+            public float? maxValue { get; set; }
+
             [ToolParameter("Only return walkable terrain cells when source=terrain.", Required = false, DefaultValue = "true")]
             public bool walkableOnly { get; set; }
         }
@@ -111,9 +114,16 @@ namespace FlatWorld.GameplayMCP
                     out float parsedMinValue)
                     ? parsedMinValue
                     : 0f;
+                float? maxValue = float.TryParse(
+                    parameters?["maxValue"]?.ToString(),
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out float parsedMaxValue)
+                    ? parsedMaxValue
+                    : null;
                 bool walkableOnly = !bool.TryParse(parameters?["walkableOnly"]?.ToString(), out bool parsedWalkable) ||
                                     parsedWalkable;
-                return QueryTerrain(player, layerId, minValue, walkableOnly, limit);
+                return QueryTerrain(player, layerId, minValue, maxValue, walkableOnly, limit);
             }
 
             if (!string.Equals(source, "runtime", StringComparison.OrdinalIgnoreCase))
@@ -149,8 +159,7 @@ namespace FlatWorld.GameplayMCP
                 Item item = matches[i].Item;
                 ItemData data = item.itemData;
                 DamageReceiver health = item.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
-                bool interactable = item.GetComponentsInChildren<MonoBehaviour>(true)
-                    .Any(component => component is IInteractable);
+                bool interactable = GameplayMcpRuntime.CanPlayerInteract(item, player);
 
                 result.Add(new JObject
                 {
@@ -292,6 +301,7 @@ namespace FlatWorld.GameplayMCP
             Player player,
             string layerId,
             float minValue,
+            float? maxValue,
             bool walkableOnly,
             int limit)
         {
@@ -304,7 +314,7 @@ namespace FlatWorld.GameplayMCP
 
             var matches = chunkMgr.Chunks.Values
                 .Where(chunk => chunk?.Terrain != null && chunk.DataStatus == ChunkDataStatus.Ready)
-                .SelectMany(chunk => EnumerateTerrainMatches(chunk, layerId, minValue, walkableOnly))
+                .SelectMany(chunk => EnumerateTerrainMatches(chunk, layerId, minValue, maxValue, walkableOnly))
                 .Select(entry => new
                 {
                     entry.Position,
@@ -336,6 +346,7 @@ namespace FlatWorld.GameplayMCP
                 source = "terrain",
                 layer_id = layerId,
                 min_value = minValue,
+                max_value = maxValue,
                 walkable_only = walkableOnly,
                 count = matches.Length,
                 matches = result
@@ -347,6 +358,7 @@ namespace FlatWorld.GameplayMCP
             ChunkRuntime chunk,
             string layerId,
             float minValue,
+            float? maxValue,
             bool walkableOnly)
         {
             ChunkTerrainData terrain = chunk.Terrain;
@@ -356,7 +368,9 @@ namespace FlatWorld.GameplayMCP
                 {
                     if (walkableOnly && !terrain.IsWalkable(x, y))
                         continue;
-                    if (!terrain.TryGetEnvironmentValue(layerId, x, y, out float value) || value < minValue)
+                    if (!terrain.TryGetEnvironmentValue(layerId, x, y, out float value) ||
+                        value < minValue ||
+                        (maxValue.HasValue && value > maxValue.Value))
                         continue;
 
                     TerrainCell cell = terrain.GetCell(x, y);
