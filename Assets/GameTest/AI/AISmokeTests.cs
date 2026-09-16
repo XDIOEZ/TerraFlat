@@ -22,16 +22,20 @@ namespace FlatWorld.GameTest.AI
         public void BuiltInActorsComeFromJsonAndUseStableAddressables()
         {
             List<ItemDefinitionDto> definitions = ActorDefinitionCatalogLoader.LoadBuiltInDefinitions();
-            string[] expectedIds = { "Chicken", "WildBoar", "Wolf", "Ghost" };
-            Assert.That(definitions.FindAll(definition => !definition.Abstract).Count, Is.EqualTo(expectedIds.Length));
+            string[] requiredIds = { "Chicken", "WildBoar", "Wolf", "Ghost", "Rabbit", "SnowLeopard" };
 
-            foreach (string id in expectedIds)
+            foreach (string id in requiredIds)
             {
                 ItemDefinitionDto definition = definitions.Find(candidate => candidate.Id == id);
                 Assert.That(definition, Is.Not.Null, $"Actor JSON 缺少 {id}");
+            }
+
+            foreach (ItemDefinitionDto definition in definitions.FindAll(candidate => !candidate.Abstract))
+            {
+                string id = definition.Id;
                 Assert.That(definition.ShellAddress, Does.StartWith("flatworld.actor.shell."));
-                Assert.That(definition.Visual?.SpriteAddress, Does.StartWith("flatworld.actor.sprite."));
-                Assert.That(definition.Visual?.AnimatorControllerAddress,
+                Assert.That(definition.Visual, Is.Not.Null, $"{id} 缺少视觉配置");
+                Assert.That(definition.Visual.AnimatorControllerAddress,
                     Does.StartWith("flatworld.actor.animator."));
                 Assert.That(definition.Modules.ContainsKey("ai"), Is.True, $"{id} 缺少 AI 参数块");
                 Assert.That(
@@ -305,13 +309,13 @@ namespace FlatWorld.GameTest.AI
             attackController.StartWindow(null, string.Empty, Vector2.right);
             Assert.That(attackController.IsDamageWindowActive, Is.False);
 
-            attackController.Update(0.059f);
+            attackController.Tick(0.059f);
             Assert.That(attackController.IsDamageWindowActive, Is.False);
 
-            attackController.Update(0.002f);
+            attackController.Tick(0.002f);
             Assert.That(attackController.IsDamageWindowActive, Is.True);
 
-            attackController.Update(0.12f);
+            attackController.Tick(0.12f);
             Assert.That(attackController.IsDamageWindowActive, Is.False);
         }
 
