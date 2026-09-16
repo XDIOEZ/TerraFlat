@@ -27,7 +27,6 @@ description: "Use when: 定位或修改 FlatWorld 的新手引导、教程资格
 ## 验证
 
 - 默认检查静态诊断、Unity 编译和 Console。
-- 仅用户明确要求时运行 `Guide.Smoke`；测试位于 `Assets/GameTest/Guide/`。
 
 ## Skill 维护原则
 

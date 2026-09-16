@@ -43,7 +43,6 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 ## 验证
 
 - 使用确定时间、种子与天气输入，验证跨阶段、保存恢复、Host/Client 权威和资源启停；不要靠真实等待。
-- 默认不主动跑测试；需要时运行 `Environment.Smoke`。测试入口：`Assets/GameTest/Environment/EnvironmentSmokeTests.cs`。
 
 ## Skill 维护原则
 

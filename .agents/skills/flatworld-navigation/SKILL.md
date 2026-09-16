@@ -53,7 +53,6 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 
 - 使用确定地图和起终点，覆盖可达、不可达、动态阻挡、跨 Chunk 边缘与请求取消。
 - 坐标/窗口变化联动 `flatworld-map`，owned 玩家联动 Networking，占地联动 Building，AI 决策联动 AI Skill。
-- 默认不主动跑测试；需要时运行 `Navigation.Smoke`。测试入口：`Assets/GameTest/Navigation/NavigationSmokeTests.cs`。
 
 ## Skill 维护原则
 

@@ -29,7 +29,6 @@ description: "Use when: 定位或修改 FlatWorld 的 Mirror/KCP 联机启动、
 
 - 隔离端口、进程和临时存档；覆盖 Host/Client、拒绝路径、断线清理、消息往返和无重复结算。
 - 按改动联动 Core/Player、Data/Item、Map/Navigation、Building 或 Modding。
-- 默认不主动跑测试；需要时运行 `Networking.Smoke`。测试入口：`Assets/GameTest/Networking/NetworkingSmokeTests.cs`；不得恢复独立测试 Harness/Prefab/Build 场景。
 
 ## Skill 维护原则
 

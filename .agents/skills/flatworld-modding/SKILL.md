@@ -32,7 +32,6 @@ description: "Use when: 定位或修改 FlatWorld 的 MOD 扫描、manifest、�
 ## 验证
 
 - 在隔离 MOD 目录覆盖合法、缺依赖、循环依赖、损坏配置、卸载清理与 Lua 生命周期。
-- 默认不主动跑测试；需要时运行 `Modding.Smoke`。入口：`Assets/GameTest/Modding/ModdingSmokeTests.cs`。
 
 ## Skill 维护原则
 

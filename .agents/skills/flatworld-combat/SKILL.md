@@ -63,8 +63,6 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 ## 验证
 
 - 覆盖攻击→受伤→死亡→掉落，确认事件只触发一次、随机输入固定、池化特效每次重置。
-- 默认不主动跑测试；需要时运行 `Combat.Smoke`，AI 攻击专项同时看 `AI.Smoke`。
-- 测试入口：`Assets/GameTest/Combat/CombatSmokeTests.cs`。
 
 ## Skill 维护原则
 

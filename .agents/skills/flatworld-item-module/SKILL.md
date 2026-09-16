@@ -69,7 +69,6 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 
 - 检查加载→Tick→保存→Despawn→复用后无旧状态、订阅、空间索引或调度残留。
 - 生命周期/ModuleData 联动 Data Skill；网络状态联动 Networking；具体玩法只加载其领域 Skill。
-- 默认不主动跑测试；需要时运行 `ItemModule.Smoke`。入口：`Assets/GameTest/ItemModule/ItemModuleSmokeTests.cs`。
 
 ## Skill 维护原则
 

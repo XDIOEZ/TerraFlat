@@ -61,7 +61,6 @@ description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系�
 - 修改输入设备、Action、设备切换、径向指向或清理生命周期：同时读取 `flatworld-player-interaction`。
 - 修改可见文案：同时读取 `flatworld-localization`，将文本写入 `FlatWorldUI` 中英文表，不在脚本里新增硬编码玩家文案。
 - 修改 Android 启动、平台配置或全局生命周期：同时读取 `flatworld-core`。
-- 修改确定性的真实单人运行时行为并需要自动化覆盖：读取 `flatworld-test-automation`，但仍遵守“未经用户明确要求不运行测试”的项目规则。
 
 ## Skill 维护
 

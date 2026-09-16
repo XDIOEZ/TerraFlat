@@ -53,8 +53,6 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 ## 验证
 
 - 检查预览与最终占地一致、注册/注销成对、失败路径无残留、快照可还原。
-- 默认做静态诊断、编译和 Console；需要时运行 `Building.Smoke`。
-- 测试入口：`Assets/GameTest/Building/BuildingSmokeTests.cs`。
 
 ## Skill 维护原则
 

@@ -12,8 +12,6 @@ namespace FlatWorld.GameTest.WorldModel
     public sealed class CaveGenerationTests
     {
         [Test]
-        [Category("WorldModel.Smoke")]
-        [Category("Smoke")]
         public void SameCaveInputProducesStableTerrainResourcesAndPortals()
         {
             ChunkGenerationProfileSnapshot profile = CreateCaveProfile(portalChance: 1d,

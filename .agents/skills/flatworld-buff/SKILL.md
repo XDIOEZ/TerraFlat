@@ -36,8 +36,6 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 
 1. 数值/组合只改 JSON；schema、叠加、生命周期才改 C#。
 2. 存档字段或 ID 变化联动 `flatworld-data-save`；MOD 定义联动 `flatworld-modding`；伤害语义联动 `flatworld-combat`。
-3. 默认不主动跑测试；需要时运行 `Buff.Smoke`，GM/水体按需追加 `Buff.GM`、`Dimension.TileEffects`。
-4. 测试入口：`Assets/GameTest/Buff/`。
 
 ## Skill 维护原则
 

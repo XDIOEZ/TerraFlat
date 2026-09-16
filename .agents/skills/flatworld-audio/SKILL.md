@@ -23,8 +23,6 @@ description: "Use when: 定位或修改 FlatWorld 的音频服务、AudioCue、�
 ## 验证
 
 - 静态检查 Cue 是否可解析、总线/循环配置是否正确、停止后声源是否回池；听感仅作最终人工确认。
-- 默认不主动跑测试；需要时按 `flatworld-test-automation` 运行 `Audio.Smoke`。
-- 测试入口：`Assets/GameTest/Audio/AudioSmokeTests.cs`。
 
 ## Skill 维护原则
 
