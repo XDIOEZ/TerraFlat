@@ -267,7 +267,7 @@ public sealed partial class GMReflectionConsole
         string requestedId = buffIdInput != null ? buffIdInput.text?.Trim() : string.Empty;
         availableBuffDefinitions.Clear();
 
-        GameRes gameRes = GameRes.Instance;
+        GameRes gameRes = GameRes.ExistingInstance;
         if (gameRes != null)
         {
             foreach (BuffDefinition definition in gameRes.BuffDefinitions.Values)
@@ -344,7 +344,7 @@ public sealed partial class GMReflectionConsole
             return;
 
         string buffId = buffIdInput?.text?.Trim();
-        BuffDefinition definition = GameRes.Instance?.GetBuffDefinition(buffId);
+        BuffDefinition definition = GameRes.ExistingInstance?.GetBuffDefinition(buffId);
         if (definition == null)
         {
             buffDefinitionHintText.text = availableBuffDefinitions.Count == 0
@@ -548,7 +548,7 @@ public sealed partial class GMReflectionConsole
     private bool TryPreparePendingBuffApplication()
     {
         string buffId = buffIdInput?.text?.Trim();
-        BuffDefinition definition = GameRes.Instance?.GetBuffDefinition(buffId);
+        BuffDefinition definition = GameRes.ExistingInstance?.GetBuffDefinition(buffId);
         if (definition == null)
         {
             SetStatus("请先选择一个已加载的 Buff。", Color.yellow);
