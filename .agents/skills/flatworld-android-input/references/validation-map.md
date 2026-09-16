@@ -14,9 +14,7 @@
 |---|---|
 | 虚拟设备、方向、攻击按住/松开、输入锁和设备切换 | `Assets/GameTest/PlayerInteraction/MobileControlsInputTests.cs` |
 | 真实单人移动端主路径 | `player.mobile-controls` |
-| 测试统一入口 | `.agents/skills/flatworld-test-automation/scripts/run_unity_tests.py` |
 
-只有用户明确要求运行时，才按 `flatworld-test-automation` 的流程执行；不要绕过其清理、结果和 Console 检查。
 
 ## 定向人工验收
 

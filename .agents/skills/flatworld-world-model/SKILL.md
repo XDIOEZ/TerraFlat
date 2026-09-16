@@ -42,7 +42,6 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - Jobs/Burst 只能接收主线程冻结的 Domain，不能调用仍读取 SaveDataMgr 的 `WorldTopologyRuntime`。创建、保存或运算 Domain 不得注册 GameObject 生命周期或创建物理镜像；ChunkView 的可选物理表现只经 Bind/Unbind 与 Terrain.Changed 通知协调。
 
 - 默认检查静态诊断、Unity 编译和 Console。
-- 仅用户明确要求时运行 `WorldModel.Smoke` 或对应生成/持久化分类；测试位于 `Assets/GameTest/WorldModel/`。
 
 ## Skill 维护原则
 

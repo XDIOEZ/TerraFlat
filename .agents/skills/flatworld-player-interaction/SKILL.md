@@ -47,7 +47,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 ## 验证
 
 - 输入测试必须注入输入，不依赖真实鼠标、键盘或手柄；验证锁定/释放、短按/长按、切设备和重复绑定。
-- 默认做静态诊断与编译；需要时运行 `PlayerInteraction.Smoke` 或专项 `PlayerInteraction.Input`。
+- 默认做静态诊断与编译；需要时运行专项 `PlayerInteraction.Input`。
 - 测试目录：`Assets/GameTest/PlayerInteraction/`。
 
 ## Skill 维护原则

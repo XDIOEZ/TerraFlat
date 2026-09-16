@@ -32,7 +32,6 @@ namespace FlatWorld.GameTest.WorldModel
 
         [Test]
         [Category("WorldModel.Grass")]
-        [Category("Smoke")]
         public void ConsumingGrassUpdatesLayerAndNotifiesOnce()
         {
             using var world = CreateCommittedWorld(12);

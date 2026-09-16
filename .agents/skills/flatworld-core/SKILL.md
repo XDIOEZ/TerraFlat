@@ -39,7 +39,7 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 ## 验证
 
 - 检查成功、取消、失败、无保存退出均能释放事件、输入锁、玩家、Chunk 和 Scene。
-- 默认只做静态诊断、编译和 Console；系统级生命周期变化按 `flatworld-test-automation` 选择相关 Smoke。
+- 系统级生命周期变化仅做静态诊断、编译和 Console 检查。
 
 ## Skill 维护原则
 

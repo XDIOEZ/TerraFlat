@@ -68,7 +68,6 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 - 自动断言对象、材质、池化生命周期和关键参数；最终粒子/Shader 观感才做定向视觉检查。
 - 触发属于战斗、天气、UI 或音频时加载对应领域 Skill。
-- 默认不主动跑测试；需要时运行 `EffectsTools.Smoke`。入口：`Assets/GameTest/EffectsTools/EffectsToolsSmokeTests.cs`。
 
 ## Skill 维护原则
 

@@ -53,8 +53,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 
 1. 从目标 Prefab 的实际模块进入，不按类名猜运行链。
 2. 随机行为使用固定种子或可注入输入；Bug 修复保留确定性回归。
-3. 默认做静态诊断、编译和 Console 检查；达到测试门槛或用户要求时按 `flatworld-test-automation` 运行 `AI.Smoke`。
-4. 测试入口：`Assets/GameTest/AI/AISmokeTests.cs`。
+3. 默认做静态诊断、编译和 Console 检查。
 
 ## Skill 维护原则
 

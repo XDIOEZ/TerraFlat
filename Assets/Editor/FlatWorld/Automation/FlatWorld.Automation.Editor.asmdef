@@ -2,7 +2,6 @@
     "name": "FlatWorld.Automation.Editor",
     "rootNamespace": "FlatWorld.Automation",
     "references": [
-        "UnityEditor.TestRunner",
         "Unity.Addressables.Editor",
         "GamePlay",
         "FlatWorld.WorldModel",

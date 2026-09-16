@@ -165,7 +165,6 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 ## 验证
 
 - 检查 Prefab/节点/组件/事件、重复开关、输入锁、焦点边界、输入穿透、条目复用和本地化切换；最终布局再人工看。
-- 默认静态诊断、编译和 Console；系统级变化运行 `UI.Smoke`。测试入口：`Assets/GameTest/UI/UISmokeTests.cs`。
 
 ## Skill 维护原则
 

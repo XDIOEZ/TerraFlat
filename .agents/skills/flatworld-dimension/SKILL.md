@@ -31,7 +31,7 @@ description: "Use when: 定位或修改 FlatWorld 的维度、星球表面/地�
 
 - 覆盖地表键兼容、往返、位置/锚点恢复、入口唯一性、Chunk 差量、环境覆盖与失败清理。
 - 地址/生命周期联动 Core+Data；生成联动 Map；环境联动 Environment；联机限制联动 Networking。
-- 默认不主动跑测试；需要时运行 `Dimension.Smoke`，地块效果追加 `Dimension.TileEffects`。测试目录：`Assets/GameTest/Dimension/`。
+- 默认仅做静态诊断、编译和 Console 检查。
 
 ## Skill 维护原则
 

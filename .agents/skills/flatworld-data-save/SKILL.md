@@ -46,7 +46,6 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 1. 先确定权威数据、持久化位置和当前版本，再修改模型；不要新增旧版本迁移分支。
 2. 只做静态诊断、必要的编译检查和 Unity Console 检查；不要创建或触碰真实玩家存档。
 3. 联动：生命周期→Core，Item/Module→Item，Chunk 差量→Map，协议快照→Networking，内容 Def→对应领域 Skill。
-4. 默认做静态诊断、编译和 Console；需要时运行 `DataSave.Smoke`。测试入口：`Assets/GameTest/DataSave/DataSaveSmokeTests.cs`。
 
 ## Skill 维护原则
 

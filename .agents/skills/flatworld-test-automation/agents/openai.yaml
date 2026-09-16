@@ -1,4 +1,0 @@
-interface:
-  display_name: "FlatWorld Test Automation"
-  short_description: "Run deterministic FlatWorld Unity validation safely"
-  default_prompt: "Use $flatworld-test-automation to validate the relevant FlatWorld changes and use only non-disruptive Game View captures when visual evidence is necessary."

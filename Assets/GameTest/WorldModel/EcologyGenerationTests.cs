@@ -12,8 +12,6 @@ namespace FlatWorld.GameTest.WorldModel
     {
         [Test]
         [Category("WorldModel.Ecology")]
-        [Category("WorldModel.Smoke")]
-        [Category("Smoke")]
         public void SameSeedProfileAndChunkProduceIdenticalPlacements()
         {
             EcologySpawnRuleSnapshot tree = CreateRule(
