@@ -30,7 +30,6 @@ namespace FlatWorld.AIECS.Gameplay
         private readonly List<ExternalProxy> proxies = new List<ExternalProxy>();
         private readonly Dictionary<CombatIdentity, ExternalProxy> proxyLookup = new Dictionary<CombatIdentity, ExternalProxy>();
         private readonly Dictionary<CombatIdentity, Mod_Damage> weapons = new Dictionary<CombatIdentity, Mod_Damage>();
-        private readonly Dictionary<int2, int> spawnCellOccupancy = new Dictionary<int2, int>();
         private readonly List<string> factionNames = new List<string>();
         private readonly Dictionary<string, int> factionIndices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         private readonly Queue<CorpseRecord> corpses = new Queue<CorpseRecord>();
@@ -43,7 +42,6 @@ namespace FlatWorld.AIECS.Gameplay
         private AiecsLosView losView;
         private uint factionRevision;
         private ulong actorSequence;
-        private ulong spawnCellTick = ulong.MaxValue;
         private readonly uint worldStamp, dimensionStamp;
         private readonly string dimensionName;
         private readonly RuntimeLootTable[] lootTables;
@@ -159,56 +157,12 @@ namespace FlatWorld.AIECS.Gameplay
             AiecsActorTemplate template = Templates[templateIndex]; var view = Navigation.Read();
             position = view.Domain.Normalize(position);
             if (!view.CanOccupy(position, template.Body.Radius)) return false;
-            int2 spawnCell = view.Domain.Normalize((int2)math.floor(position));
-            EnsureSpawnCellSnapshot(view.Domain);
-            if (!TryAddSpawnCell(spawnCell)) return false;
             template.Vital.Hp *= healthRatio;
             for (int i = 0; i < template.Anatomy.Parts.Length; i++)
             { var part = template.Anatomy.Parts[i]; part.Hp *= healthRatio; template.Anatomy.Parts[i] = part; }
             identity = new CombatIdentity { Backend = CombatBackend.Entity, Value = ++actorSequence, Generation = 1, World = worldStamp, Dimension = dimensionStamp };
-            try { entity = Simulation.Spawn(template, identity, position, templateIndex); }
-            catch { RemoveSpawnCell(spawnCell); throw; }
+            entity = Simulation.Spawn(template, identity, position, templateIndex);
             return true;
-        }
-
-        /// <summary>同一模拟 Tick 首次生成前按真实 ECS 位置重建容量表，后续批量生成只做 O(1) 计数。</summary>
-        private void EnsureSpawnCellSnapshot(WorldTopologyDomain domain)
-        {
-            if (spawnCellTick == Simulation.Clock.Tick) return;
-            spawnCellOccupancy.Clear();
-            AiecsSpatialView spatial = Simulation.Spatial;
-            if (spatial.Samples.IsCreated)
-            {
-                for (int i = 0; i < spatial.Samples.Length; i++)
-                {
-                    AiecsTargetSample sample = spatial.Samples[i];
-                    if (sample.Dead != 0 || sample.Identity.External != 0) continue;
-                    AddSpawnCell(domain.Normalize((int2)math.floor(sample.Position)));
-                }
-            }
-            spawnCellTick = Simulation.Clock.Tick;
-        }
-
-        /// <summary>达到当前每格容量后拒绝继续出生；调用方可像现有开发入口一样尝试附近格。</summary>
-        private bool TryAddSpawnCell(int2 cell)
-        {
-            spawnCellOccupancy.TryGetValue(cell, out int count);
-            if (count >= Simulation.CellCapacity) return false;
-            spawnCellOccupancy[cell] = count + 1;
-            return true;
-        }
-
-        private void AddSpawnCell(int2 cell)
-        {
-            spawnCellOccupancy.TryGetValue(cell, out int count);
-            spawnCellOccupancy[cell] = count + 1;
-        }
-
-        private void RemoveSpawnCell(int2 cell)
-        {
-            if (!spawnCellOccupancy.TryGetValue(cell, out int count)) return;
-            if (count <= 1) spawnCellOccupancy.Remove(cell);
-            else spawnCellOccupancy[cell] = count - 1;
         }
 
         /// <summary>玩家维度或导航缓存更换时必须结束整个旧模拟。</summary>

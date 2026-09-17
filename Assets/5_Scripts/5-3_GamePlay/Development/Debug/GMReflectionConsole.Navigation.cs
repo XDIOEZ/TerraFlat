@@ -75,6 +75,7 @@ public sealed partial class GMReflectionConsole
     private Button aiecsFleeButton;
     private Button aiecsClearButton;
     private Button aiecsPlayerParticipatesButton;
+    private Button aiecsLocalAvoidanceButton;
     private Button aiecsPopulationButton;
     private TextMeshProUGUI aiecsStatusText;
     private TextMeshProUGUI aiecsStatisticsText;
@@ -563,11 +564,18 @@ public sealed partial class GMReflectionConsole
             "AIECS ECS 玩家 参与 感知 战斗 toggle",
             ToggleAiecsPlayerParticipation,
             60f);
+        aiecsLocalAvoidanceButton = CreateSearchableButton(
+            grid,
+            GmPageId.Aiecs,
+            "局部避让：关",
+            "AIECS ECS 局部 避让 separation avoidance toggle",
+            ToggleAiecsLocalAvoidance,
+            60f);
         aiecsPopulationButton = CreateSearchableButton(
             grid, GmPageId.Aiecs, "每军数量", "AIECS ECS 压力 数量 population",
             CycleAiecsPopulation, 60f);
         CreateSearchableButton(grid, GmPageId.Aiecs, "生物产出验收", "AIECS ECS 生物 战利品 loot 验收",
-            () => { AiecsPlayground.Active?.QueueActorLootTest(); RefreshAiecsPage(); }, 60f);
+            () => { ResolveAiecsPlayground()?.QueueActorLootTest(); RefreshAiecsPage(); }, 60f);
 
         aiecsStatusText = CreateAiecsReadout(page.Content, "正在连接 AIECS 实战开发入口…", 42f, true);
         aiecsStatisticsText = CreateAiecsReadout(page.Content, "存活 0 / 目标 0 / 游荡 0 / 追击 0 / 逃跑 0 / 攻击 0", 30f);
@@ -597,10 +605,10 @@ public sealed partial class GMReflectionConsole
 
     private void StartAiecsScenario(AiecsPlaygroundMode mode)
     {
-        AiecsPlayground playground = AiecsPlayground.Active;
+        AiecsPlayground playground = ResolveAiecsPlayground();
         if (playground == null)
         {
-            SetStatus("未找到 AIECS 实战开发入口 Prefab。", Color.yellow);
+            SetStatus("当前世界没有可用的 AIECS 正式宿主，无法创建 GM 调试入口。", Color.yellow);
             RefreshAiecsPage();
             return;
         }
@@ -612,10 +620,10 @@ public sealed partial class GMReflectionConsole
 
     private void ReinforceAiecsArmies()
     {
-        AiecsPlayground playground = AiecsPlayground.Active;
+        AiecsPlayground playground = ResolveAiecsPlayground();
         if (playground == null)
         {
-            SetStatus("未找到 AIECS 实战开发入口 Prefab。", Color.yellow);
+            SetStatus("当前世界没有可用的 AIECS 正式宿主，无法创建 GM 调试入口。", Color.yellow);
             RefreshAiecsPage();
             return;
         }
@@ -627,10 +635,10 @@ public sealed partial class GMReflectionConsole
 
     private void ClearAiecsScenario()
     {
-        AiecsPlayground playground = AiecsPlayground.Active;
+        AiecsPlayground playground = ResolveAiecsPlayground();
         if (playground == null)
         {
-            SetStatus("未找到 AIECS 实战开发入口 Prefab。", Color.yellow);
+            SetStatus("当前世界没有可用的 AIECS 正式宿主，无法创建 GM 调试入口。", Color.yellow);
             RefreshAiecsPage();
             return;
         }
@@ -642,7 +650,7 @@ public sealed partial class GMReflectionConsole
 
     private void ToggleAiecsPlayerParticipation()
     {
-        AiecsPlayground playground = AiecsPlayground.Active;
+        AiecsPlayground playground = ResolveAiecsPlayground();
         if (playground == null || !playground.HasActiveScenario)
         {
             SetStatus("AIECS 当前没有可切换玩家参与状态的开发场景。", Color.yellow);
@@ -654,10 +662,25 @@ public sealed partial class GMReflectionConsole
         RefreshAiecsPage();
     }
 
-    /// <summary>只调整下一波测试请求；不偷偷放宽每格容量、不修改正在交战单位或正式生态配置。</summary>
+    /// <summary>切换连续邻居 Steering 与密度分流；共享 Flow Field 和地形约束始终保留。</summary>
+    private void ToggleAiecsLocalAvoidance()
+    {
+        AiecsPlayground playground = ResolveAiecsPlayground();
+        if (playground == null)
+        {
+            SetStatus("当前世界没有可用的 AIECS 正式宿主，无法创建 GM 调试入口。", Color.yellow);
+            RefreshAiecsPage();
+            return;
+        }
+
+        playground.SetLocalAvoidanceEnabled(!playground.LocalAvoidanceEnabled);
+        RefreshAiecsPage();
+    }
+
+    /// <summary>只调整下一波测试请求；不修改正在交战单位或正式生态配置。</summary>
     private void CycleAiecsPopulation()
     {
-        AiecsPlayground playground = AiecsPlayground.Active;
+        AiecsPlayground playground = ResolveAiecsPlayground();
         if (playground == null) return;
         int[] levels = { 100, 500, 1000, 2500, 5000, 10000 };
         int next = levels[0];
@@ -685,11 +708,12 @@ public sealed partial class GMReflectionConsole
         if (aiecsStatusText == null)
             return;
 
-        AiecsPlayground playground = AiecsPlayground.Active;
+        AiecsPlayground playground = ResolveAiecsPlayground();
         bool exists = playground != null;
         bool ready = exists && playground.IsReady;
         bool activeScenario = exists && playground.HasActiveScenario;
         bool playerParticipates = activeScenario && playground.PlayerParticipates;
+        bool localAvoidanceEnabled = exists && playground.LocalAvoidanceEnabled;
 
         if (aiecsPlayerDuelButton != null) aiecsPlayerDuelButton.interactable = ready;
         if (aiecsArmiesButton != null) aiecsArmiesButton.interactable = ready;
@@ -713,6 +737,17 @@ public sealed partial class GMReflectionConsole
                 playerParticipates ? GmSelection : GmSurfaceRaised,
                 playerParticipates);
         }
+        if (aiecsLocalAvoidanceButton != null)
+        {
+            aiecsLocalAvoidanceButton.interactable = exists;
+            SetButtonLabel(
+                aiecsLocalAvoidanceButton,
+                $"局部避让：{(localAvoidanceEnabled ? "开" : "关")}");
+            SetGmButtonVisual(
+                aiecsLocalAvoidanceButton,
+                localAvoidanceEnabled ? GmSelection : GmSurfaceRaised,
+                localAvoidanceEnabled);
+        }
 
         if (aiecsArmiesButton != null)
             SetButtonLabel(
@@ -721,7 +756,7 @@ public sealed partial class GMReflectionConsole
 
         if (!exists)
         {
-            aiecsStatusText.text = "未运行 AIECS 实战开发入口 Prefab；此分页不会创建第二套模拟。";
+            aiecsStatusText.text = "当前尚未进入可用的正式 AIECS 世界；进入世界后本页会自动连接调试入口。";
             aiecsStatisticsText.text = "存活 0 / 目标 0 / 游荡 0 / 追击 0 / 逃跑 0 / 攻击 0";
             aiecsTickText.text = "本 Tick：感知请求 0，候选 0，LOS 0，热点格 0";
             aiecsCumulativeText.text = "累计：玩家受击 0（-0.0 HP），武器→ECS 命中 0，死亡 0，掉落 0";
@@ -734,6 +769,19 @@ public sealed partial class GMReflectionConsole
         aiecsTickText.text = playground.TickSummary;
         aiecsCumulativeText.text = playground.CumulativeSummary;
         aiecsNavigationText.text = playground.NavigationSummary;
+    }
+
+    /// <summary>正常 GameStart 世界按需创建空闲调试入口；只有场景按钮真正触发后才暂停正式生态并创建开发模拟。</summary>
+    private static AiecsPlayground ResolveAiecsPlayground()
+    {
+        if (AiecsPlayground.Active != null)
+            return AiecsPlayground.Active;
+
+        GameManager manager = GameManager.Instance;
+        if (manager == null || !manager.IsInGameWorld)
+            return null;
+
+        return AiecsEcologyRuntimeHost.Active?.EnsureDebugPlayground();
     }
 
     private static void SetButtonLabel(Button button, string value)

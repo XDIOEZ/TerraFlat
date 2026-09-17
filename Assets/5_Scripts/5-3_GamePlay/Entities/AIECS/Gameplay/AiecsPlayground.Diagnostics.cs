@@ -15,12 +15,13 @@ namespace FlatWorld.AIECS.Gameplay
     public sealed class AiecsDebugSnapshot
     {
         public bool Active;
+        public bool LocalAvoidanceEnabled;
         public string Mode, Status;
-        public int RequestedPerWave, Spawned, Alive, Visible, Batches, CellCapacity;
+        public int RequestedPerWave, Spawned, Alive, Visible, Batches;
         public int Targets, Chase, Wander, Flee, Attack, Deaths, Drops, PlayerHits, WeaponHits;
         public ulong Tick;
         public double BacklogSeconds;
-        public int InvalidPositions, OverCapacityCells, MaximumCellOccupancy;
+        public int InvalidPositions, DenseCells, MaximumCellDensity;
         public uint PositionHash;
         public bool PositionsChecked;
         public int ActorLootSpawns, PendingDropRecords;
@@ -34,14 +35,15 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>轻量计数供采样器消费，不执行生成、推进模拟或导航重建。</summary>
         public int AliveUnitCount => bridge == null ? 0 : bridge.Simulation.Statistics[(int)AiecsStatistic.Alive];
 
-        /// <summary>默认 O(1) 读数；需要验收格子容量时显式扫描当前已完成的只读表现快照。</summary>
+        /// <summary>默认 O(1) 读数；需要观察连续 Crowd 密度时显式扫描当前已完成的只读表现快照。</summary>
         public AiecsDebugSnapshot CaptureDebugSnapshot(bool checkPositions = false)
         {
             var snapshot = new AiecsDebugSnapshot
             {
-                Active = bridge != null, Mode = mode.ToString(), Status = Status,
+                Active = bridge != null, LocalAvoidanceEnabled = LocalAvoidanceEnabled,
+                Mode = mode.ToString(), Status = Status,
                 RequestedPerWave = ReinforcementUnitCount, Spawned = spawned, Alive = AliveUnitCount,
-                Visible = VisibleUnitCount, Batches = VisibleBatchCount, CellCapacity = CellCapacity,
+                Visible = VisibleUnitCount, Batches = VisibleBatchCount,
                 Tick = CompletedSimulationTicks, BacklogSeconds = SimulationBacklogSeconds
             };
             if (bridge == null) return snapshot;
@@ -67,7 +69,7 @@ namespace FlatWorld.AIECS.Gameplay
                 int2 cell = (int2)math.floor(record.Position);
                 cells.TryGetValue(cell, out int count);
                 cells[cell] = ++count;
-                snapshot.MaximumCellOccupancy = math.max(snapshot.MaximumCellOccupancy, count);
+                snapshot.MaximumCellDensity = math.max(snapshot.MaximumCellDensity, count);
                 snapshot.PositionHash = math.hash(new uint2(snapshot.PositionHash, math.hash(record.Position)));
                 float distance = math.lengthsq(topology.ShortestDelta(origin, record.Position));
                 if (snapshot.NearbyUnits.Count < 8 || distance < snapshot.NearbyUnits[7].DistanceSquared)
@@ -80,7 +82,7 @@ namespace FlatWorld.AIECS.Gameplay
                 }
             }
             foreach (int count in cells.Values)
-                if (count > CellCapacity) snapshot.OverCapacityCells++;
+                if (count > 1) snapshot.DenseCells++;
             return snapshot;
         }
 

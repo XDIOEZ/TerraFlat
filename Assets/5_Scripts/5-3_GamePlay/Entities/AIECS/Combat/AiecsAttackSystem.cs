@@ -15,11 +15,12 @@ namespace FlatWorld.AIECS
         [ReadOnly] public NativeArray<FixedString128Bytes> Factions;
         [ReadOnly] public AiecsSpatialView Spatial;
         [ReadOnly] public AiecsLosView Los;
+        [ReadOnly] public NativeArray<AiecsEngagementSlot> EngagementSlots;
         [NativeDisableParallelForRestriction] public NativeArray<AiecsHitEvent> Hits;
         public CombatClock Clock;
 
         /// <summary>推进有限阶段并在真正生效时提交纯值事件；动画和 Bridge 不决定命中。</summary>
-        private void Execute([EntityIndexInQuery] int index, in AiecsIdentity identity, in AiecsVital vital,
+        private void Execute([EntityIndexInQuery] int index, Entity entity, in AiecsIdentity identity, in AiecsVital vital,
             in AiecsFlowAgent actor, in AiecsBehaviorIntent intent, ref AiecsBody body, ref AiecsAttackState attack,
             ref AiecsWorkCounters counters)
         {
@@ -28,6 +29,8 @@ namespace FlatWorld.AIECS
             AiecsDefinition definition = Definitions[identity.Definition];
             if (attack.Phase == AiecsAttackPhase.Cooldown && Clock.Time >= attack.NextAttack) attack.Phase = AiecsAttackPhase.Ready;
             if (attack.Phase == AiecsAttackPhase.Ready && intent.Behavior == (int)AiecsBehavior.Attack && Clock.Time >= attack.NextAttack &&
+                (uint)index < (uint)EngagementSlots.Length &&
+                AiecsEngagementSlots.Matches(EngagementSlots[index], entity, intent.Target, intent.TargetKey) &&
                 Spatial.TryTarget(intent.Target, intent.TargetKey, out var startingTarget))
             {
                 attack.Target = intent.Target; attack.TargetKey = intent.TargetKey;

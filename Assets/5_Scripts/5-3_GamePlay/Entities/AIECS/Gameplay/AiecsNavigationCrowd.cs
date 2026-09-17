@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using FlatWorld.Navigation;
 using Unity.Entities;
 using Unity.Jobs;
@@ -25,9 +24,9 @@ namespace FlatWorld.AIECS.Gameplay
         [Range(0.01f, 0.49f)] public float BodyRadius = 0.15f;
         [Min(0.01f)] public float MoveSpeed = 3f;
         [Min(0.01f)] public float StopDistance = 0.2f;
-        [Range(1, 32)] public int NeighboursPerBucket = 8;
-        [Range(0f, 2f)] public float SeparationWeight = 0.8f;
-        [Min(1)] public int CellCapacity = 1;
+        [Range(1, 64)] public int NeighbourLimit = 12;
+        [Range(0f, 2f)] public float SeparationWeight = 1f;
+        [Range(0f, 2f)] public float DensityWeight = 0.45f;
         [Range(0, 512)] public int GizmoLimit = 128;
         public int CreatedEntities { get; private set; }
         public int RejectedSpawnPositions { get; private set; }
@@ -48,7 +47,6 @@ namespace FlatWorld.AIECS.Gameplay
         private AiecsJobSchedulerSystem jobScheduler;
         private AiecsFlowCrowdScheduler scheduler;
         private JobHandle pending;
-        private uint tick;
         #endregion
 
         #region 显式开发入口
@@ -76,7 +74,6 @@ namespace FlatWorld.AIECS.Gameplay
                 int columns = Mathf.CeilToInt(Mathf.Sqrt(perGroup * GroupLayout.x / GroupLayout.y));
                 int rows = Mathf.CeilToInt((float)perGroup / columns);
                 RejectedSpawnPositions = 0;
-                var spawnCells = new Dictionary<int2, int>();
                 for (int index = 0; index < RequestedEntities; index++)
                 {
                     int group = index % handles.Length, local = index / handles.Length;
@@ -84,18 +81,15 @@ namespace FlatWorld.AIECS.Gameplay
                     float2 position = navigation.Domain.Normalize(center + new float2(
                         ((local % columns + 0.5f) / columns - 0.5f) * GroupLayout.x,
                         ((local / columns + 0.5f) / rows - 0.5f) * GroupLayout.y));
-                    int2 cell = navigation.Domain.Normalize((int2)math.floor(position));
-                    spawnCells.TryGetValue(cell, out int occupied);
-                    if (!navigation.CanOccupy(position, BodyRadius) || occupied >= CellCapacity)
+                    if (!navigation.CanOccupy(position, BodyRadius))
                     { RejectedSpawnPositions++; continue; }
                     Entity entity = entities.CreateEntity(archetype);
                     entities.SetComponentData(entity, new AiecsFlowAgent { Position = position, Goal = handles[group],
                         Radius = BodyRadius, Speed = MoveSpeed, StopDistance = StopDistance });
-                    spawnCells[cell] = occupied + 1;
                 }
                 CreatedEntities = query.CalculateEntityCount();
                 scheduler = new AiecsFlowCrowdScheduler();
-                Debug.Log($"[AIECS Navigation] 真实 Entity={CreatedEntities}，共享目标={handles.Length}，阻挡/未加载/容量拒绝出生点={RejectedSpawnPositions}；没有执行战斗或性能验收。", this);
+                Debug.Log($"[AIECS Navigation] 真实 Entity={CreatedEntities}，共享目标={handles.Length}，阻挡/未加载拒绝出生点={RejectedSpawnPositions}；没有执行战斗或性能验收。", this);
             }
             catch { StopCrowd(); throw; }
         }
@@ -119,7 +113,7 @@ namespace FlatWorld.AIECS.Gameplay
             if (GoalTargets == null || GoalTargets.Length == 0 || GroupOrigins == null || GroupOrigins.Length != GoalTargets.Length)
                 throw new InvalidOperationException("每个共享目标必须对应一个群体出生中心。");
             if (RequestedEntities < 1 || RequestedEntities > 20000 || GroupLayout.x <= 0 || GroupLayout.y <= 0 ||
-                BodyRadius <= 0f || BodyRadius >= 0.5f || MoveSpeed <= 0f || StopDistance <= 0f || CellCapacity < 1)
+                BodyRadius <= 0f || BodyRadius >= 0.5f || MoveSpeed <= 0f || StopDistance <= 0f || NeighbourLimit < 1)
                 throw new InvalidOperationException("导航群体数量/布局/速度必须为正；当前点格通行配置只支持半径小于半格的圆体。");
             foreach (Transform target in GoalTargets) if (target == null) throw new InvalidOperationException("共享目标不能为空。");
             foreach (Transform origin in GroupOrigins) if (origin == null) throw new InvalidOperationException("出生中心不能为空。");
@@ -139,8 +133,8 @@ namespace FlatWorld.AIECS.Gameplay
                 if (GoalTargets[group] == null || !cache.IsValid(handles[group])) { StopCrowd(); return; }
                 cache.UpdateGoal(handles[group], PositionOf(GoalTargets[group]));
             }
-            pending = scheduler.Schedule(jobScheduler, query, cache, Time.deltaTime, ++tick,
-                NeighboursPerBucket, SeparationWeight, CellCapacity);
+            pending = scheduler.Schedule(jobScheduler, query, cache, Time.deltaTime,
+                NeighbourLimit, SeparationWeight, DensityWeight);
         }
 
         /// <summary>在表现边界完成一个移动批次，编辑器只读观察不会与 Job 并发访问。</summary>

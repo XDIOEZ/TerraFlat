@@ -11,25 +11,31 @@ namespace FlatWorld.AIECS
     {
         [ReadOnly] public NativeArray<AiecsDefinition> Definitions;
         [ReadOnly] public AiecsSpatialView Spatial;
+        [ReadOnly] public NativeArray<AiecsEngagementSlot> EngagementSlots;
         public double Time; // 当前权威时间。
 
         /// <summary>错峰计算事实，并原子提交这一单位的行为意图。</summary>
-        private void Execute(in AiecsIdentity identity, in AiecsVital vital, in AiecsFlowAgent actor, in AiecsAttackState attack,
-            ref AiecsBrain brain, ref AiecsBehaviorIntent intent, ref AiecsBehaviorProposal proposal)
+        private void Execute([EntityIndexInQuery] int index, Entity entity, in AiecsIdentity identity, in AiecsVital vital,
+            in AiecsFlowAgent actor, in AiecsAttackState attack, ref AiecsBrain brain,
+            ref AiecsBehaviorIntent intent, ref AiecsBehaviorProposal proposal)
         {
             if (identity.External != 0 || vital.Dead != 0) { intent = default; proposal = default; return; }
             bool targetValid = Spatial.TryTarget(brain.Target, brain.TargetKey, out var target);
             bool locked = attack.Phase == AiecsAttackPhase.Windup || attack.Phase == AiecsAttackPhase.Active || attack.Phase == AiecsAttackPhase.Recovery;
-            if (Time < brain.NextDecision && proposal.Priority <= 0 && targetValid == (intent.Target != Entity.Null) &&
-                (intent.Behavior == (int)AiecsBehavior.Attack) == locked) return;
             AiecsDefinition definition = Definitions[identity.Definition];
+            bool hasSlot = targetValid && (uint)index < (uint)EngagementSlots.Length &&
+                AiecsEngagementSlots.Matches(EngagementSlots[index], entity, brain.Target, brain.TargetKey);
+            bool inAttackRange = hasSlot && Time >= attack.NextAttack &&
+                math.lengthsq(Spatial.Domain.ShortestDelta(actor.Position, target.Position)) <=
+                definition.AttackStartRange * definition.AttackStartRange;
+            if (Time < brain.NextDecision && proposal.Priority <= 0 && targetValid == (intent.Target != Entity.Null) &&
+                (intent.Behavior == (int)AiecsBehavior.Attack) == (locked || inAttackRange)) return;
             brain.NextDecision = Time + definition.DecisionPeriod;
             AiecsDecisionFacts facts = AiecsDecisionFacts.None;
             if (targetValid)
             {
                 facts |= AiecsDecisionFacts.HasTarget;
-                if (Time >= attack.NextAttack && math.lengthsq(Spatial.Domain.ShortestDelta(actor.Position, target.Position)) <=
-                    definition.AttackStartRange * definition.AttackStartRange) facts |= AiecsDecisionFacts.InAttackRange;
+                if (inAttackRange) facts |= AiecsDecisionFacts.InAttackRange;
             }
             if (vital.Hp <= vital.MaxHp * definition.FleeHealthRatio) facts |= AiecsDecisionFacts.LowHealth;
             if (brain.Threat > 0f && Time < brain.MemoryUntil) facts |= AiecsDecisionFacts.HasThreat;

@@ -14,12 +14,13 @@ namespace FlatWorld.AIECS
         [ReadOnly] public NativeArray<FlowGoalHandle> GroupGoals;
         [ReadOnly] public AiecsSpatialView Spatial;
         [ReadOnly] public FlowNavigationSnapshot Navigation;
+        [ReadOnly] public NativeArray<AiecsEngagementSlot> EngagementSlots;
         public double Time;
 
         /// <summary>消费行为意图，设置共享 Goal 或局部目标，不建立单位级路线。</summary>
-        private void Execute(in AiecsIdentity identity, in AiecsVital vital, in AiecsBehaviorIntent intent,
-            in AiecsAttackState attack, in AiecsStatus status, ref AiecsBrain brain, ref AiecsLocalMotion local,
-            ref AiecsBody body, ref AiecsFlowAgent actor)
+        private void Execute([EntityIndexInQuery] int index, Entity entity, in AiecsIdentity identity, in AiecsVital vital,
+            in AiecsBehaviorIntent intent, in AiecsAttackState attack, in AiecsStatus status,
+            ref AiecsBrain brain, ref AiecsLocalMotion local, ref AiecsBody body, ref AiecsFlowAgent actor)
         {
             actor.Mode = AiecsMoveMode.Hold;
             if (identity.External != 0 || vital.Dead != 0) return;
@@ -30,16 +31,36 @@ namespace FlatWorld.AIECS
             if (locked || intent.Behavior == (int)AiecsBehavior.Idle || intent.Behavior == (int)AiecsBehavior.Attack) return;
             if (intent.Behavior == (int)AiecsBehavior.Chase && Spatial.TryTarget(intent.Target, intent.TargetKey, out var target))
             {
-                actor.StopDistance = definition.AttackStartRange * 0.8f;
                 body.Facing = math.normalizesafe(Spatial.Domain.ShortestDelta(actor.Position, target.Position), body.Facing);
-                if (Navigation.CanSteer(actor.Position, target.Position, actor.Radius))
+                bool hasSlot = (uint)index < (uint)EngagementSlots.Length &&
+                    AiecsEngagementSlots.Matches(EngagementSlots[index], entity, intent.Target, intent.TargetKey);
+                float contactRadius = math.max(actor.Radius + target.Body.Radius + 0.05f, definition.AttackStartRange * 0.72f);
+                float2 destination;
+                if (hasSlot)
                 {
-                    actor.Mode = AiecsMoveMode.Local; actor.LocalDestination = target.Position;
+                    AiecsEngagementSlot slot = EngagementSlots[index];
+                    float2 radial = AiecsEngagementSlots.Direction(target.Entity, slot.Index, slot.Count);
+                    destination = Spatial.Domain.Normalize(target.Position + radial * contactRadius);
+                    actor.StopDistance = 0.08f;
+                }
+                else
+                {
+                    uint hash = math.hash(new uint2((uint)entity.Index, (uint)entity.Version));
+                    float2 fallback = (hash & 1u) == 0u ? new float2(1f, 0f) : new float2(-1f, 0f);
+                    float2 radial = math.normalizesafe(Spatial.Domain.ShortestDelta(target.Position, actor.Position), fallback);
+                    float waitingRadius = math.max(definition.AttackStartRange * 1.35f,
+                        contactRadius + actor.Radius * 2.5f + 0.2f);
+                    destination = Spatial.Domain.Normalize(target.Position + radial * waitingRadius);
+                    actor.StopDistance = 0.12f;
+                }
+
+                if (Navigation.CanSteer(actor.Position, destination, actor.Radius))
+                {
+                    actor.Mode = AiecsMoveMode.Local;
+                    actor.LocalDestination = destination;
                 }
                 else if ((uint)target.Identity.Group < (uint)GroupGoals.Length)
-                {
-                    actor.Mode = AiecsMoveMode.SharedGoal; actor.Goal = GroupGoals[target.Identity.Group];
-                }
+                { actor.Mode = AiecsMoveMode.SharedGoal; actor.Goal = GroupGoals[target.Identity.Group]; }
                 return;
             }
             if (intent.HasDestination != 0)

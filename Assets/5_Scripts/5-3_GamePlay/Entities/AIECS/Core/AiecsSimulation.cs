@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using FlatWorld.Combat;
 using FlatWorld.Navigation;
+using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -45,6 +47,238 @@ namespace FlatWorld.AIECS
     }
     #endregion
 
+    #region 接敌槽位
+    /// <summary>目标周围的近战接敌资格；未获槽位的单位仍可追击，但停留在外圈并交给 Crowd Steering 分流。</summary>
+    public struct AiecsEngagementSlot
+    {
+        public Entity Actor, Target; // 当前查询实体与目标。
+        public CombatIdentity TargetKey; // 防止对象池/世界代际复用。
+        public byte Granted, Index, Count; // 是否获准、槽位序号与本目标槽位总数。
+    }
+
+    /// <summary>一个接敌申请；排序后同一目标连续，锁定攻击和已就绪攻击者优先保留近战席位。</summary>
+    internal struct AiecsEngagementClaim : IComparable<AiecsEngagementClaim>
+    {
+        public Entity Actor, Target;
+        public CombatIdentity TargetKey;
+        public float2 ApproachDirection;
+        public float DistanceSquared;
+        public int QueryIndex;
+        public sbyte PreviousSlot;
+        public byte Valid, Priority;
+
+        public int CompareTo(AiecsEngagementClaim other)
+        {
+            int order = other.Valid.CompareTo(Valid);
+            if (order == 0) order = Target.Index.CompareTo(other.Target.Index);
+            if (order == 0) order = Target.Version.CompareTo(other.Target.Version);
+            if (order == 0) order = other.Priority.CompareTo(Priority);
+            if (order == 0) order = (other.PreviousSlot >= 0 ? 1 : 0).CompareTo(PreviousSlot >= 0 ? 1 : 0);
+            if (order == 0) order = DistanceSquared.CompareTo(other.DistanceSquared);
+            if (order == 0) order = Actor.Index.CompareTo(other.Actor.Index);
+            return order != 0 ? order : Actor.Version.CompareTo(other.Actor.Version);
+        }
+    }
+
+    /// <summary>接敌槽位的纯数学工具；槽位朝向按目标身份稳定旋转，避免所有目标都沿世界轴排队。</summary>
+    public static class AiecsEngagementSlots
+    {
+        public const int DefaultCount = 8;
+
+        public static bool Matches(in AiecsEngagementSlot slot, Entity actor, Entity target, CombatIdentity key) =>
+            slot.Granted != 0 && slot.Actor == actor && slot.Target == target && slot.TargetKey == key;
+
+        public static float2 Direction(Entity target, int slot, int count)
+        {
+            count = math.max(1, count);
+            uint hash = math.hash(new uint2((uint)target.Index, (uint)target.Version));
+            float phase = (hash & 1023u) * (2f * math.PI / 1024f);
+            float angle = phase + slot * (2f * math.PI / count);
+            math.sincos(angle, out float sin, out float cos);
+            return new float2(cos, sin);
+        }
+    }
+
+    /// <summary>从 Brain 当前目标批量形成接敌申请；不创建逐 AI 托管对象。</summary>
+    [BurstCompile]
+    internal partial struct AiecsGatherEngagementClaimsJob : IJobEntity
+    {
+        [ReadOnly] public AiecsSpatialView Spatial;
+        [ReadOnly] public NativeArray<AiecsEngagementSlot> Previous;
+        [NativeDisableParallelForRestriction] public NativeArray<AiecsEngagementClaim> Claims;
+        public double Time;
+
+        private void Execute([EntityIndexInQuery] int index, Entity entity, in AiecsIdentity identity,
+            in AiecsVital vital, in AiecsBrain brain, in AiecsFlowAgent actor, in AiecsAttackState attack)
+        {
+            AiecsEngagementClaim claim = new AiecsEngagementClaim
+            {
+                Actor = entity,
+                QueryIndex = index,
+                PreviousSlot = -1
+            };
+            if (identity.External != 0 || vital.Dead != 0 ||
+                !Spatial.TryTarget(brain.Target, brain.TargetKey, out AiecsTargetSample target) ||
+                !Spatial.IsHostile(identity.Faction, target.Identity.Faction))
+            {
+                Claims[index] = claim;
+                return;
+            }
+
+            bool locked = attack.Phase == AiecsAttackPhase.Windup ||
+                          attack.Phase == AiecsAttackPhase.Active ||
+                          attack.Phase == AiecsAttackPhase.Recovery;
+            claim.Target = brain.Target;
+            claim.TargetKey = brain.TargetKey;
+            claim.DistanceSquared = math.lengthsq(Spatial.Domain.ShortestDelta(actor.Position, target.Position));
+            float2 fallback = ((math.hash(new uint2((uint)entity.Index, (uint)entity.Version)) & 1u) == 0u)
+                ? new float2(1f, 0f) : new float2(-1f, 0f);
+            claim.ApproachDirection = math.normalizesafe(Spatial.Domain.ShortestDelta(target.Position, actor.Position), fallback);
+            claim.Priority = locked ? (byte)2 : Time >= attack.NextAttack ? (byte)1 : (byte)0;
+            claim.Valid = 1;
+
+            if ((uint)index < (uint)Previous.Length)
+            {
+                AiecsEngagementSlot previous = Previous[index];
+                if (previous.Granted != 0 && previous.Actor == entity && previous.Target == brain.Target &&
+                    previous.TargetKey == brain.TargetKey)
+                    claim.PreviousSlot = (sbyte)previous.Index;
+            }
+            Claims[index] = claim;
+        }
+    }
+
+    /// <summary>
+    /// 同一目标最多保留少量近战槽位。已有且仍可攻击的单位优先保持原位，剩余槽位按接近方向分配，
+    /// 让大军接触时形成连续战线而不是所有单位挤入同一点。
+    /// </summary>
+    [BurstCompile]
+    internal struct AiecsResolveEngagementSlotsJob : IJob
+    {
+        [ReadOnly] public NativeArray<AiecsEngagementClaim> Claims;
+        public NativeArray<AiecsEngagementSlot> Slots;
+        public int MaxSlots;
+
+        public void Execute()
+        {
+            for (int i = 0; i < Slots.Length; i++) Slots[i] = default;
+            int start = 0;
+            int slotCount = math.clamp(MaxSlots, 1, 16);
+            while (start < Claims.Length && Claims[start].Valid != 0)
+            {
+                int end = start + 1;
+                Entity target = Claims[start].Target;
+                while (end < Claims.Length && Claims[end].Valid != 0 && Claims[end].Target == target) end++;
+
+                ushort used = 0;
+                for (int i = start; i < end; i++)
+                {
+                    AiecsEngagementClaim claim = Claims[i];
+                    Slots[claim.QueryIndex] = new AiecsEngagementSlot
+                    {
+                        Actor = claim.Actor,
+                        Target = claim.Target,
+                        TargetKey = claim.TargetKey,
+                        Count = (byte)slotCount
+                    };
+                }
+
+                // 正在攻击或已经就绪的旧持有者先稳定保留，冷却中的单位在有人等待时会让位。
+                for (int i = start; i < end; i++)
+                {
+                    AiecsEngagementClaim claim = Claims[i];
+                    if (claim.Priority == 0 || claim.PreviousSlot < 0 || claim.PreviousSlot >= slotCount) continue;
+                    ushort bit = (ushort)(1 << claim.PreviousSlot);
+                    if ((used & bit) != 0) continue;
+                    used |= bit;
+                    Grant(claim, claim.PreviousSlot, slotCount);
+                }
+
+                for (int i = start; i < end && used != (ushort)((1 << slotCount) - 1); i++)
+                {
+                    AiecsEngagementClaim claim = Claims[i];
+                    if (Slots[claim.QueryIndex].Granted != 0) continue;
+                    int best = -1;
+                    float bestDot = -2f;
+                    for (int slot = 0; slot < slotCount; slot++)
+                    {
+                        ushort bit = (ushort)(1 << slot);
+                        if ((used & bit) != 0) continue;
+                        float score = math.dot(claim.ApproachDirection, AiecsEngagementSlots.Direction(target, slot, slotCount));
+                        if (score <= bestDot) continue;
+                        bestDot = score;
+                        best = slot;
+                    }
+                    if (best < 0) continue;
+                    used |= (ushort)(1 << best);
+                    Grant(claim, best, slotCount);
+                }
+                start = end;
+            }
+        }
+
+        private void Grant(AiecsEngagementClaim claim, int slot, int count)
+        {
+            Slots[claim.QueryIndex] = new AiecsEngagementSlot
+            {
+                Actor = claim.Actor,
+                Target = claim.Target,
+                TargetKey = claim.TargetKey,
+                Granted = 1,
+                Index = (byte)slot,
+                Count = (byte)count
+            };
+        }
+    }
+
+    /// <summary>接敌槽位的 Native 资源所有者；申请排序与裁决都是 O(N log N) + O(N×常数槽位)。</summary>
+    internal sealed class AiecsEngagementSlotScheduler : IDisposable
+    {
+        private NativeArray<AiecsEngagementClaim> claims;
+        private NativeArray<AiecsEngagementSlot> slots;
+        private JobHandle pending;
+        public NativeArray<AiecsEngagementSlot> Slots => slots;
+
+        public JobHandle Schedule(AiecsJobSchedulerSystem scheduler, EntityQuery query, AiecsSpatialView spatial,
+            double time, JobHandle dependency)
+        {
+            pending.Complete();
+            int count = query.CalculateEntityCount();
+            if (!slots.IsCreated || slots.Length != count)
+            {
+                if (claims.IsCreated) claims.Dispose();
+                if (slots.IsCreated) slots.Dispose();
+                claims = new NativeArray<AiecsEngagementClaim>(count, Allocator.Persistent);
+                slots = new NativeArray<AiecsEngagementSlot>(count, Allocator.Persistent);
+            }
+            if (count == 0) return dependency;
+
+            pending = scheduler.ScheduleParallel(new AiecsGatherEngagementClaimsJob
+            {
+                Spatial = spatial,
+                Previous = slots,
+                Claims = claims,
+                Time = time
+            }, query, dependency);
+            pending = claims.SortJob().Schedule(pending);
+            pending = new AiecsResolveEngagementSlotsJob
+            {
+                Claims = claims,
+                Slots = slots,
+                MaxSlots = AiecsEngagementSlots.DefaultCount
+            }.Schedule(pending);
+            return pending;
+        }
+
+        public void Dispose()
+        {
+            pending.Complete();
+            if (claims.IsCreated) claims.Dispose();
+            if (slots.IsCreated) slots.Dispose();
+        }
+    }
+    #endregion
+
     /// <summary>
     /// 正式 ECS 模拟的资源与调度所有者，玩法分别由独立批量 System 执行。
     /// 一个 World、一组空间表和少量共享 Goal 服务全部单位；主线程只协调阶段和外部事件，不逐 AI 决策。
@@ -58,6 +292,7 @@ namespace FlatWorld.AIECS
         private readonly EntityQuery query;
         private readonly AiecsSpatialIndex spatial = new AiecsSpatialIndex();
         private readonly AiecsFlowCrowdScheduler movement = new AiecsFlowCrowdScheduler();
+        private readonly AiecsEngagementSlotScheduler engagement = new AiecsEngagementSlotScheduler();
         private readonly List<IAiecsSimulationStage> stages = new List<IAiecsSimulationStage>();
         private NativeArray<AiecsDefinition> definitions;
         private NativeArray<AiecsBuffDefinition> buffs;
@@ -91,9 +326,8 @@ namespace FlatWorld.AIECS
         public NativeArray<AiecsHitEvent> ExternalHits => externalHits.AsArray();
         public AiecsSpatialView Spatial { get { Complete(); return spatial.View; } }
         public CombatDifficulty Difficulty { get; set; }
-        private int cellCapacity = 1;
-        /// <summary>每个 1×1 世界格允许同时容纳的 ECS Actor 数；运行时最小为 1。</summary>
-        public int CellCapacity { get => cellCapacity; set => cellCapacity = math.max(1, value); }
+        /// <summary>开发对照开关；正式默认启用连续邻居 Steering 与密度分流，不再存在单格容量。</summary>
+        public bool LocalAvoidanceEnabled { get; set; } = true;
         #endregion
 
         #region 创建与外部输入
@@ -244,20 +478,25 @@ namespace FlatWorld.AIECS
             pending = scheduler.ScheduleParallel(new AiecsPerceptionSystem { Definitions = definitions, Spatial = frame.Spatial,
                 Los = los, Time = time, Tick = (uint)Clock.Tick }, query, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeDecision, frame, pending);
+            pending = engagement.Schedule(scheduler, query, frame.Spatial, time, pending);
+            spatial.RegisterReader(pending);
             pending = scheduler.ScheduleParallel(new AiecsDecisionSystem { Definitions = definitions, Spatial = frame.Spatial,
-                Time = time }, query, pending);
+                EngagementSlots = engagement.Slots, Time = time }, query, pending);
             pending = scheduler.ScheduleParallel(new AiecsBehaviorSystem { Definitions = definitions, Spatial = frame.Spatial,
-                Navigation = view, GroupGoals = goals, Time = time }, query, pending);
+                Navigation = view, GroupGoals = goals, EngagementSlots = engagement.Slots, Time = time }, query, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeMovement, frame, pending);
             spatial.RegisterReader(pending); navigation.RegisterReader(pending);
-            pending = movement.Schedule(scheduler, query, navigation, deltaTime, (uint)Clock.Tick,
-                cellCapacity: CellCapacity, dependency: pending);
+            pending = movement.Schedule(scheduler, query, navigation, deltaTime,
+                neighbourLimit: 12,
+                separationWeight: LocalAvoidanceEnabled ? 1f : 0f,
+                densityWeight: LocalAvoidanceEnabled ? 0.45f : 0f,
+                dependency: pending);
             // 命中必须读取本 Tick 移动后的坐标，不能使用感知开始前的旧目标位置。
             pending = spatial.Build(scheduler, query, view.Domain, relations, factions.Length, maximumBodyExtent, pending);
             frame.Spatial = spatial.View;
             pending = ScheduleStages(AiecsStagePhase.BeforeAttack, frame, pending);
             pending = scheduler.ScheduleParallel(new AiecsAttackSystem { Definitions = definitions, Factions = factions,
-                Spatial = frame.Spatial, Los = los, Clock = Clock, Hits = attacks }, query, pending);
+                Spatial = frame.Spatial, Los = los, EngagementSlots = engagement.Slots, Clock = Clock, Hits = attacks }, query, pending);
             pending = scheduler.ScheduleParallel(new AiecsBuffSystem { Definitions = buffs, Clock = Clock,
                 HitCounts = periodicCounts }, query, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeSettlement, frame, pending);
@@ -311,7 +550,7 @@ namespace FlatWorld.AIECS
         {
             if (disposed) return;
             disposed = true;
-            Complete(); movement.Dispose(); spatial.Dispose();
+            Complete(); movement.Dispose(); engagement.Dispose(); spatial.Dispose();
             // PlayMode/domain teardown can dispose custom Worlds before MonoBehaviour owners receive OnDestroy.
             // In that path the EntityQuery's manager is already gone, so disposing the stale query would dereference
             // Unity.Entities' destroyed query registry. Native resources below are owned by this simulation and still

@@ -20,7 +20,6 @@ namespace FlatWorld.AIECS.Gameplay
         public bool LoadGameStartOnPlay = true; // 专用入口场景加载正式启动流程。
         public string TeamAActor = "Wolf", TeamBActor = "WildBoar"; // 当前 Actor 目录 ID，可在 Inspector 改配置。
         [Range(1, 10000)] public int UnitsPerArmy = 100; // 两军模式每次增援每军数量；默认总量 200，每次点击再增加 200。
-        [Min(1)] public int CellCapacity = 1; // 每个世界格允许同时容纳的 ECS Actor 数。
         public AiecsPlaygroundMode InitialMode = AiecsPlaygroundMode.PlayerDuel;
         public bool ShowHealth = true; // 开发血条有显示上限。
         public string Status { get; private set; } = "等待正式游戏世界；请新建临时世界。";
@@ -36,6 +35,7 @@ namespace FlatWorld.AIECS.Gameplay
         private int spawned;
         private int armyReinforcementWave;
         private float2 armyBattleCenter;
+        private bool autoStartScenario = true; // 专用开发场景自动开始；GM 运行时入口保持空闲直到按钮明确触发。
         #endregion
 
         #region 生命周期
@@ -60,10 +60,12 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>正式玩家入场后等待真实导航窗口，不能在数据尚未准备好时创建替代网格。</summary>
         private void OnPlayerEntered(Player value)
         {
-            player = value; startRequested = true;
+            player = value; startRequested = autoStartScenario;
             if (manager != null) manager.Event_GameWorldExit -= OnWorldExit;
             manager = GameManager.Instance;
             if (manager != null) manager.Event_GameWorldExit += OnWorldExit;
+            if (!autoStartScenario)
+                SetStatus("已连接当前正式世界；请选择一个 AIECS GM 测试场景。");
         }
 
         /// <summary>固定 30Hz 模拟保留实际 Tick/Time，积压顺延而不把多 Tick 都标成渲染帧时间。</summary>
@@ -117,6 +119,7 @@ namespace FlatWorld.AIECS.Gameplay
         public void StartScenario(AiecsPlaygroundMode requested)
         {
             if (!IsReady) return;
+            AiecsEcologyRuntimeHost.Active?.SuspendForDevelopmentScenario(this);
             StopScenario(); mode = requested; spawned = 0; armyReinforcementWave = 0;
             try
             {
@@ -124,7 +127,7 @@ namespace FlatWorld.AIECS.Gameplay
                 var cache = WorldNavigationManager.ExistingInstance.GetSharedNavigation();
                 float sense = requested == AiecsPlaygroundMode.Wander ? 4f : 18f;
                 bridge = new AiecsGameplayBridge(player, cache, ids, factions, sense, fleePolicies, TrySpawnScenarioLootActor);
-                bridge.Simulation.CellCapacity = CellCapacity;
+                bridge.Simulation.LocalAvoidanceEnabled = LocalAvoidanceEnabled;
                 bridge.PlayerParticipates = requested != AiecsPlaygroundMode.Armies;
                 display = new AiecsWorldRenderer(Catalog, ids, player.gameObject.scene);
                 simulationTime = Time.timeAsDouble;
@@ -167,7 +170,7 @@ namespace FlatWorld.AIECS.Gameplay
             int perArmy = math.clamp(UnitsPerArmy, 1, 10000);
             int columns = math.max(1, (int)math.ceil(math.sqrt(perArmy)));
             float spacing = math.max(ResolveSpawnSpacing(0), ResolveSpawnSpacing(1));
-            // 阵型随规模扩展，双方初始格不重叠；只使用已加载区域，不放宽每格容量。
+            // 阵型按连续体型间距扩展；导航格只负责地形，不限制单位密度。
             float sideOffset = math.max(5f, columns * spacing * 0.5f + 1f);
             float waveOffset = armyReinforcementWave * 3.5f;
             SpawnGroup(0, perArmy, armyBattleCenter + new float2(-sideOffset - waveOffset, 2f), 1f);
@@ -175,15 +178,13 @@ namespace FlatWorld.AIECS.Gameplay
             armyReinforcementWave++;
         }
 
-        /// <summary>只选择可站立的已加载格；阻挡候选被跳过，不能为了演示强行改地形。</summary>
+        /// <summary>使用连续坐标排布初始阵型；只拒绝真实地形阻挡，不按导航格容量拒绝。</summary>
         private void SpawnGroup(int group, int count, float2 origin, float hpRatio)
         {
             int columns = math.max(1, (int)math.ceil(math.sqrt(count)));
             float spacing = ResolveSpawnSpacing(group);
-            origin = math.floor(origin) + 0.5f;
             for (int i = 0; i < count; i++)
             {
-                // 按整格中心排布；旧 0.75 间距在每格限一只时会系统性地少生成。
                 float2 position = origin + new float2(i % columns - columns / 2, i / columns - columns / 2) * spacing;
                 if (bridge.Spawn(group, position, hpRatio)) { spawned++; continue; }
                 for (int ring = 1; ring <= 3; ring++)
@@ -192,7 +193,7 @@ namespace FlatWorld.AIECS.Gameplay
                     for (int side = 0; side < 8; side++)
                     {
                         float angle = side * math.PI * 0.25f;
-                        float2 offset = math.round(new float2(math.cos(angle), math.sin(angle))) * ring;
+                        float2 offset = new float2(math.cos(angle), math.sin(angle)) * spacing * ring;
                         if (!bridge.Spawn(group, position + offset, hpRatio)) continue;
                         spawned++; placed = true; break;
                     }
@@ -201,9 +202,9 @@ namespace FlatWorld.AIECS.Gameplay
             }
         }
 
-        /// <summary>普通单位至少一格间距；MOD 大体型按当前定义半径扩展，不硬编码具体生物。</summary>
+        /// <summary>出生间距只依据连续体型；允许多个单位处于同一导航格，由 Crowd Steering 后续展开。</summary>
         private float ResolveSpawnSpacing(int group) =>
-            math.max(1f, math.ceil(bridge.Templates[group].Body.Radius * 2f));
+            math.max(0.35f, bridge.Templates[group].Body.Radius * 2f + 0.08f);
 
         /// <summary>主动结束当前开发群体并归还所有共享资源。</summary>
         private void StopScenario()
@@ -216,6 +217,24 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>当前唯一的 AIECS 实战开发入口，供 GM 分页读取，不再由 Prefab 自建独立 UI。</summary>
         public static AiecsPlayground Active => active;
 
+        /// <summary>从正常 GameStart 世界惰性创建 GM 入口；不会自动运行测试场景，也不会抢占正式生态。</summary>
+        internal static AiecsPlayground CreateRuntimeGmEntry(AiecsAnimationCatalog catalog)
+        {
+            if (active != null)
+                return active;
+            if (catalog == null)
+                return null;
+
+            GameObject root = new GameObject("AIECS GM 运行时开发入口");
+            AiecsPlayground playground = root.AddComponent<AiecsPlayground>();
+            playground.Catalog = catalog;
+            playground.LoadGameStartOnPlay = false;
+            playground.autoStartScenario = false;
+            if (ItemMgr.Instance?.User_Player != null)
+                playground.OnPlayerEntered(ItemMgr.Instance.User_Player);
+            return playground;
+        }
+
         /// <summary>正式世界可玩、玩家和共享导航均已就绪时才允许生成，不能仅凭导航缓存提前放行。</summary>
         public bool IsReady => player != null &&
                                manager != null && manager.IsInGameWorld && manager.IsGameplayReady &&
@@ -225,6 +244,7 @@ namespace FlatWorld.AIECS.Gameplay
         public bool HasActiveScenario => bridge != null; // 当前是否存在开发模拟。
         public bool HealthOverlaySuppressed { get; set; } // GM 等开发 UI 覆盖画面时暂不绘制穿透面板的 IMGUI 血条。
         public bool PlayerParticipates => bridge != null && bridge.PlayerParticipates; // 玩家是否参与当前感知/战斗。
+        public bool LocalAvoidanceEnabled { get; private set; } = true; // 连续 Steering + 密度分流默认开启，可由 GM 做对照测试。
         public int ReinforcementUnitCount => math.clamp(UnitsPerArmy, 1, 10000) * 2; // 两军按钮单次增援总量。
 
         /// <summary>已完成的真实模拟 Tick，压力验收据此确认不是仅在绘制静止单位。</summary>
@@ -252,6 +272,14 @@ namespace FlatWorld.AIECS.Gameplay
         {
             if (bridge != null)
                 bridge.PlayerParticipates = value;
+        }
+
+        /// <summary>GM 可实时切换连续邻居 Steering 与密度分流，便于对照 Flow Field 本身。</summary>
+        public void SetLocalAvoidanceEnabled(bool value)
+        {
+            LocalAvoidanceEnabled = value;
+            if (bridge != null)
+                bridge.Simulation.LocalAvoidanceEnabled = value;
         }
 
         /// <summary>供 GM 页低频读取的当前行为统计。</summary>

@@ -57,6 +57,7 @@ description: "Use when: 定位或修改 FlatWorld 的伤害、生命值、身体
 - `Hurt(IDamageSender)` 保留原来发送端 Item 与旧规则，然后适配同一生命提交核心；`Hurt(in CombatDamageContext)` 使用明确 Source/Credit 和模拟 Tick/Time。ECS 来源不提供旧 Item 引用，消费方应读取 `DamageReceiverDamageInfo.Context`，不可把其旧 Attacker 字段为空解释成环境攻击或丢弃击杀归因。
 - 武器自身 Source 与 Owner 的 Credit 分开；generation/world/dimension 必须随事件传递。模拟时间使用 double，不能把同一渲染帧的多个 ECS Tick 都改成 Time.time，否则受伤间隔与 Buff 结算会漂移。旧对象的专属 incoming rule 未提供纯上下文实现时必须显式拒绝，不能绕过资源/建筑门槛。
 - `Mod_Damage` 仅在实际窗口或周期 Pulse 导出 Box OBB，通过少量 GameplayCombatBridge 查询原生空间桶；GO 与 ECS 共用 MaxAttackTargets 和窗口预约集合。Sequence/Window/Pulse 在生产处保持唯一，原生普通攻击每次 Active 只生产一次；新增技能也必须在真实 Pulse 生成事件，不能靠每帧扫描后交给生命层去重。
+- AIECS 的近战接敌资格由目标级 `Engagement Slot` 批量裁决，而不是导航格占位；新的起手动作需要当前槽位资格，已进入既有动作阶段的实体继续使用原有锁定时序。槽位只控制同时接近目标的数量，最终有效性仍由现有距离、方向、LOS 与阵营规则确认。
 - 命中附加状态由 `ICombatDamageContextModifier` 组合导出，装配时从 ItemMods 已注册表缓存；上下文的 FixedList 容量在装配时校验，不能热路径静默截断。旧命中回调与纯数据结算各自应用一次；0 伤害有效命中仍可触发附加 Buff，负数拒绝结果不可触发，出血必须有实际刃伤。
 - 原生同目标命中按时间/攻击键分组串行提交、不同目标并行；死亡与掉落先锁存一次性状态再发布。死亡事件携带 Entity，尸体按时间排队批量回收，掉落按预算消费，不得每次死亡扫描全体实体或一次创建全部掉落。旧投射物扫掠/附着、完整技能、生态掉落修饰尚未迁移，不能因近战 Bridge 已接通而宣称全战斗兼容。
 

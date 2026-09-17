@@ -17,9 +17,9 @@ namespace FlatWorld.AIECS.Gameplay
     {
         #region 配置与记录
 
+        private static AiecsEcologyRuntimeHost active;
         [SerializeField] private AiecsAnimationCatalog _catalog;
         [SerializeField, Range(10, 60)] private int _simulationHz = 30;
-        [SerializeField, Min(1)] private int _cellCapacity = 1;
 
         private sealed class EcologyActor
         {
@@ -48,6 +48,7 @@ namespace FlatWorld.AIECS.Gameplay
         private bool _startFailed;
         private bool _ownsBackendRegistration;
 
+        public static AiecsEcologyRuntimeHost Active => active;
         public bool IsReady => _bridge != null;
 
         #endregion
@@ -60,13 +61,26 @@ namespace FlatWorld.AIECS.Gameplay
             // 副本只保持禁用，不能抢占仍存活的正式生态后端，也不能制造退出流程异常。
             _ownsBackendRegistration = AiRuntimeBackendService.TryRegisterEcology(this);
             if (!_ownsBackendRegistration)
+            {
                 enabled = false;
+                return;
+            }
+
+            active = this;
         }
 
         private void Update()
         {
             if (!AiRuntimeBackendService.UseEntities || !_worldPrepared)
                 return;
+
+            // GM 开发场景与正式生态共享同一套玩家/导航资源，但任何时刻只允许一个模拟真正运行。
+            if (AiecsPlayground.Active?.HasActiveScenario == true)
+            {
+                if (_bridge != null)
+                    DisposeSimulation();
+                return;
+            }
 
             if (_bridge == null)
                 TryStartSimulation();
@@ -117,6 +131,8 @@ namespace FlatWorld.AIECS.Gameplay
         private void OnDestroy()
         {
             ResetWorld();
+            if (ReferenceEquals(active, this))
+                active = null;
             if (_ownsBackendRegistration)
                 AiRuntimeBackendService.UnregisterEcology(this);
         }
@@ -204,8 +220,8 @@ namespace FlatWorld.AIECS.Gameplay
 
         private void TryStartSimulation()
         {
-            // 开发入口有生命周期维护的唯一引用；暂停生态时不能每帧全场景扫描一次对象。
-            if (_startFailed || !_worldPrepared || AiecsPlayground.Active != null)
+            // 空闲的 GM 调试入口不阻断正式生态；只有正在运行的开发场景才独占模拟。
+            if (_startFailed || !_worldPrepared || AiecsPlayground.Active?.HasActiveScenario == true)
                 return;
 
             _player = ItemMgr.Instance?.User_Player;
@@ -223,7 +239,6 @@ namespace FlatWorld.AIECS.Gameplay
                     _actorFactions.ToArray(),
                     0f,
                     _fleeFromHostiles.ToArray());
-                _bridge.Simulation.CellCapacity = _cellCapacity;
                 _renderer = new AiecsWorldRenderer(_catalog, ids, _player.gameObject.scene);
                 _simulationTime = Time.timeAsDouble;
                 Debug.Log($"[AIECS] 正式生态已启动：{ids.Length} 个 Actor 定义，BaseAI 后端关闭。", this);
@@ -243,6 +258,25 @@ namespace FlatWorld.AIECS.Gameplay
             _bridge?.Dispose();
             _bridge = null;
             _actors.Clear();
+        }
+
+        /// <summary>为正常 GameStart 世界提供惰性 GM 调试入口；只创建宿主，不立即创建第二套 ECS 模拟。</summary>
+        public AiecsPlayground EnsureDebugPlayground()
+        {
+            if (AiecsPlayground.Active != null)
+                return AiecsPlayground.Active;
+            if (!_ownsBackendRegistration || _catalog == null)
+                return null;
+            return AiecsPlayground.CreateRuntimeGmEntry(_catalog);
+        }
+
+        /// <summary>开发场景启动前同步释放正式生态模拟，禁止一帧内同时推进两套 AIECS World。</summary>
+        internal void SuspendForDevelopmentScenario(AiecsPlayground owner)
+        {
+            if (owner == null || AiecsPlayground.Active != owner)
+                return;
+            DisposeSimulation();
+            _startFailed = false;
         }
 
         #endregion
@@ -489,7 +523,11 @@ namespace FlatWorld.AIECS.Gameplay
         {
             if (!_reportedUnsupported.Add(speciesId))
                 return;
-            Debug.LogWarning($"[AIECS] {speciesId} 未进入正式 ECS 生态：{reason}。不会回退 BaseAI。", this);
+
+            // 单个 Actor 尚未迁移属于已知能力边界：明确跳过即可，不能让正常 GameStart 启动持续产生 Warning。
+            // 真正的后端缺失、目录完全不可用或运行时异常仍由调用链按 Error/Exception 报告。
+            string detail = (reason ?? string.Empty).Trim().TrimEnd('。', '.', '！', '!', '？', '?');
+            Debug.Log($"[AIECS] 已跳过未支持 Actor '{speciesId}'：{detail}；不会回退 BaseAI。", this);
         }
 
         #endregion
