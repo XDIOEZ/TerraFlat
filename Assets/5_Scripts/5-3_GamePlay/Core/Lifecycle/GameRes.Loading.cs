@@ -16,6 +16,12 @@ public partial class GameRes
 
     /// <summary>资源会话的权威状态。</summary>
     [Sirenix.OdinInspector.ShowInInspector] public ResourceLoadState LoadState { get; private set; }
+    /// <summary>主菜单交互所需的最小资源是否已经就绪；完整世界资源仍可能在后台加载。</summary>
+    [Sirenix.OdinInspector.ShowInInspector] public bool IsStartupReady { get; private set; }
+    /// <summary>完整资源会话的当前总进度，供世界加载页在抢跑进入时复用。</summary>
+    public float LoadProgress => loadingProgress;
+    /// <summary>完整资源会话的当前阶段文案。</summary>
+    public string LoadStatusText => loadingText ?? string.Empty;
     /// <summary>最后一次失败的阶段与原因。</summary>
     [Sirenix.OdinInspector.ShowInInspector] public string LastLoadError { get; private set; }
     /// <summary>当前或最后执行的阶段 ID。</summary>
@@ -25,6 +31,22 @@ public partial class GameRes
     private ResourceLoadPipeline loadPipeline;
     private ResourceAssetScope resourceAssets = new();
     internal ResourceAssetScope ResourceAssets => resourceAssets;
+    /// <summary>启动阶段已经持有的 Prefab 位置，完整 Prefab 阶段不再重复申请句柄。</summary>
+    private readonly HashSet<string> startupPrefabLocationIds = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// 主菜单显示后仍可能立即被访问的运行时 UI。
+    /// 主菜单、存档页和新建世界页本身由 WorldManager 直接引用，不需要经过 GameRes。
+    /// </summary>
+    private static readonly string[] StartupPrefabKeys =
+    {
+        RuntimeUIPrefabKeys.MainMenuSettings,
+        RuntimeUIPrefabKeys.MainMenuExitConfirmation,
+        RuntimeUIPrefabKeys.InputBindingRow,
+        RuntimeUIPrefabKeys.WorldLoading,
+        RuntimeUIPrefabKeys.MobileControls,
+        RuntimeUIPrefabKeys.MobileControlLayoutEditor
+    };
 
     /// <summary>
     /// F5/调试入口统一使用这里：主菜单直接重载；单机世界内先保存并退出运行态，
@@ -104,6 +126,7 @@ public partial class GameRes
         }
 
         LoadState = ResourceLoadState.Loading;
+        IsStartupReady = false;
         LastLoadError = null;
         resourceLoadFailed = false;
         showLoadingGUI = true;
@@ -214,6 +237,7 @@ public partial class GameRes
             yield break;
         }
         LoadState = ResourceLoadState.Ready;
+        IsStartupReady = true;
         loadCoroutine = null;
         loadingProgress = 1;
         showLoadingGUI = false;
@@ -227,6 +251,7 @@ public partial class GameRes
         try { ClearResourceSession(); }
         catch (Exception cleanupError) { exception = new AggregateException(exception, cleanupError); }
         LoadState = ResourceLoadState.Failed;
+        IsStartupReady = false;
         resourceLoadFailed = true;
         loadCoroutine = null;
         LastLoadError = $"阶段 {stage} 失败：{exception.Message}";
@@ -258,6 +283,8 @@ public partial class GameRes
         Clear(TimeSystemConfigService.Reset);
         Clear(() => resourceAssets.Dispose());
         LoadedCount = 0;
+        IsStartupReady = false;
+        startupPrefabLocationIds.Clear();
         if (errors.Count > 0) throw new AggregateException("资源会话清理失败。", errors);
     }
 
@@ -334,6 +361,105 @@ public partial class GameRes
         }
     }
 
+    /// <summary>
+    /// 只预载主菜单能够立刻访问的少量运行时 UI；其余玩法 Prefab 继续留给完整资源阶段。
+    /// Addressables 会同时加载这些 Prefab 的字体、Sprite 等依赖，因此显示主菜单后不会出现缺失外观。
+    /// </summary>
+    private IEnumerator LoadStartupUiPrefabs()
+    {
+        List<IResourceLocation> prefabLocations = null;
+        yield return ResolveLocations(new[] { "Prefab" }, typeof(GameObject), true, value => prefabLocations = value);
+
+        var requiredNames = new HashSet<string>(StartupPrefabKeys, StringComparer.Ordinal);
+        var byPrefabName = new Dictionary<string, IResourceLocation>(StringComparer.Ordinal);
+        foreach (IResourceLocation location in prefabLocations)
+        {
+            string prefabName = GetPrefabLocationName(location);
+            if (string.IsNullOrWhiteSpace(prefabName) || !requiredNames.Contains(prefabName))
+                continue;
+            if (byPrefabName.TryGetValue(prefabName, out IResourceLocation existing) &&
+                GetLocationIdentity(existing) != GetLocationIdentity(location))
+            {
+                throw new InvalidDataException($"启动 UI Prefab 名称冲突：{prefabName}");
+            }
+            byPrefabName[prefabName] = location;
+        }
+
+        var selected = new List<IResourceLocation>(StartupPrefabKeys.Length);
+        foreach (string prefabKey in StartupPrefabKeys)
+        {
+            if (!byPrefabName.TryGetValue(prefabKey, out IResourceLocation location))
+                throw new InvalidDataException($"启动必要 UI Prefab 未登记到 Addressables/Prefab：{prefabKey}");
+            selected.Add(location);
+        }
+
+        startupPrefabLocationIds.Clear();
+        foreach (IResourceLocation location in selected)
+            startupPrefabLocationIds.Add(GetLocationIdentity(location));
+
+        var handle = resourceAssets.Own(Addressables.LoadAssetsAsync<GameObject>(selected, null, true));
+        while (!handle.IsDone)
+        {
+            loadPipeline.Report(handle.PercentComplete * 0.9f);
+            yield return null;
+        }
+
+        IList<GameObject> loaded = ResourceAssetScope.Require(handle, "启动必要 UI Prefab");
+        var loadedNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (GameObject prefab in loaded)
+        {
+            if (prefab == null)
+                throw new InvalidDataException("启动必要 UI Prefab 加载出空资源。");
+            RegisterPrefabAlias(prefab.name, prefab);
+            loadedNames.Add(prefab.name);
+            LoadedCount++;
+        }
+
+        foreach (string prefabKey in StartupPrefabKeys)
+        {
+            if (!loadedNames.Contains(prefabKey))
+                throw new InvalidDataException($"启动必要 UI Prefab 未成功加载：{prefabKey}");
+        }
+    }
+
+    /// <summary>发布主菜单可交互状态；完整内容目录继续在同一资源会话中后台推进。</summary>
+    private void PublishStartupReady()
+    {
+        IsStartupReady = true;
+        showLoadingGUI = false;
+        Debug.Log("[GameRes] 启动必要资源已就绪，主菜单开放；剩余游戏资源继续后台加载。");
+    }
+
+    /// <summary>开放主菜单后至少让出一帧，避免紧接着的后台目录工作阻塞首次可交互画面。</summary>
+    private IEnumerator PublishStartupReadyStage()
+    {
+        PublishStartupReady();
+        yield return null;
+    }
+
+    /// <summary>生成稳定的位置身份，用于避免启动预载与完整 Prefab 阶段重复持有同一请求。</summary>
+    private static string GetLocationIdentity(IResourceLocation location)
+    {
+        if (location == null)
+            return string.Empty;
+        return $"{location.ProviderId}\n{location.InternalId}";
+    }
+
+    /// <summary>从当前以文件路径为主键的 Addressables 位置提取 Prefab 名称。</summary>
+    private static string GetPrefabLocationName(IResourceLocation location)
+    {
+        string key = location?.PrimaryKey;
+        if (string.IsNullOrWhiteSpace(key))
+            return string.Empty;
+
+        string normalized = key.Replace('\\', '/');
+        int slashIndex = normalized.LastIndexOf('/');
+        string fileName = slashIndex >= 0 ? normalized.Substring(slashIndex + 1) : normalized;
+        return fileName.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase)
+            ? fileName.Substring(0, fileName.Length - 7)
+            : fileName;
+    }
+
     /// <summary>只加载通用 Prefab；Item 冗余变体和 Actor 专用外壳在位置阶段排除。</summary>
     private IEnumerator LoadPrefabCatalog(List<ItemDefinitionDto> definitions)
     {
@@ -343,7 +469,8 @@ public partial class GameRes
         HashSet<string> excluded = ItemDefinitionCatalogLoader.GetRedundantBuiltInPrefabPaths(definitions);
         var actorIds = new HashSet<string>(actors.Select(location => location.InternalId), StringComparer.Ordinal);
         var selected = prefabs.Where(location => !excluded.Contains(location.PrimaryKey.Replace('\\', '/')) &&
-            !actorIds.Contains(location.InternalId)).ToList();
+            !actorIds.Contains(location.InternalId) &&
+            !startupPrefabLocationIds.Contains(GetLocationIdentity(location))).ToList();
         if (selected.Count == 0) throw new InvalidDataException("Prefab 计划过滤后为空，缺少运行时模块与通用外壳。");
         var handle = resourceAssets.Own(Addressables.LoadAssetsAsync<GameObject>(selected, null, true));
         while (!handle.IsDone) { loadPipeline.Report(handle.PercentComplete * 0.8f); yield return null; }
@@ -358,7 +485,7 @@ public partial class GameRes
         }
         foreach (GameObject prefab in loaded) CollectPrefabAliases(prefab, moduleAliases);
         RegisterUniqueModuleAliases(moduleAliases);
-        Debug.Log($"[GameRes] Prefab 加载计划：加载 {selected.Count}，跳过 JSON 专用 Prefab {prefabs.Count - selected.Count}");
+        Debug.Log($"[GameRes] Prefab 加载计划：后台加载 {selected.Count}，启动阶段已预载 {startupPrefabLocationIds.Count} 个 UI Prefab。");
     }
 
     #endregion

@@ -28,6 +28,7 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 - 本体先校验再加载 MOD，合并后再次通过 `ResourceCatalogValidation` 才发布 Ready。新系统通过 `IResourceCatalogValidator` 接入引用校验，不把玩法资源约束塞进通用加载器；静态目录检查入口为 `FlatWorld/诊断/检查 Addressables 目录`。
 - 编辑器普通 Play 与完整流程入口统一启用 Domain Reload 和 Scene Reload（`m_EnterPlayModeOptionsEnabled: 0`），由 Unity 一次性重建 Addressables、单例与静态事件；禁止反射替换 Addressables 私有实例来模拟局部重置。通用 Prefab 标签查询为 0 时必须在 `GameRes` 入口失败；排查时区分静态目录缺失与运行时 Locator 状态，不能仅凭空查询断言根因。
 - `GameRes` 会随 `WorldManager` Prefab 再次出现在 `GameStartScene`；跨场景存活实例已存在时，重复实例不得启动资源加载协程，否则会先清空目录、再随重复对象销毁而中断加载。时间系统 JSON 必须在 `GameRes` 允许创建新世界前完成加载，玩家覆盖文件无效时保留内建配置。
+- 启动资源采用双闸门：`GameRes.IsStartupReady` 只表示主菜单必要 UI 与基础配置已经就绪，此时启动遮罩关闭、完整内容继续在同一资源会话后台加载；`isLoadFinish/LoadState.Ready` 仍是进入世界的硬门槛。玩家在后台加载完成前点击新建或继续时，必须先显示 `UI_WorldLoading` 并等待完整 Ready，禁止先创建世界再补资源。
 - 基于 `SingletonMono<T>` 的跨场景管理器必须按 Unity null 语义恢复已销毁的静态引用，且场景副本不得覆盖有效实例，否则返回主菜单再进入时会把运行时回调发送给已销毁对象。
 - 停止播放/关闭程序的对象销毁顺序不能承担业务依赖：清理使用绑定时保存的管理器和事件源引用，禁止重新查找单例或创建场景/池根节点；整个 Chunk 窗口关闭时直接销毁 View，正常流送才入池。表现清理必须可重复调用，终止时取消后台生成并保证纯运行时最终释放；应用退出不能记成自然物被采集。
 - 创建/网络提升/远程副本都显式设置 Player ProfileContext，玩家事件只触发一次。

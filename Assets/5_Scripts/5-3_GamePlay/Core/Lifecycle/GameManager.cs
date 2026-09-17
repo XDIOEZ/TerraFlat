@@ -305,7 +305,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     /// </summary>
     public bool CreateNewWorld(NewWorldCreationRequest request)
     {
-        if (!EnsureContentReady("创建新世界"))
+        if (!CanQueueWorldEntry("创建新世界"))
             return false;
 
         if (request == null)
@@ -340,6 +340,15 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     {
         // 先让加载 Prefab 完成一帧渲染，再执行存档和世界初始化。
         yield return null;
+
+        bool contentReady = false;
+        yield return WaitForContentReadyBeforeWorld(
+            "正在创建新世界",
+            0.08f,
+            0.18f,
+            ready => contentReady = ready);
+        if (!contentReady)
+            yield break;
 
         try
         {
@@ -488,7 +497,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     [Tooltip("继续游戏,加载传入的玩家名称,通过名称获取玩家数据, ")]
     public void ContinueGame(string PlayerName)
     {
-        if (!EnsureContentReady("继续游戏"))
+        if (!CanQueueWorldEntry("继续游戏"))
             return;
 
         if (!BeginWorldEntry("正在进入存档", "正在准备世界数据…", 0.12f))
@@ -501,6 +510,16 @@ public partial class GameManager : SingletonAutoMono<GameManager>
     {
         // 确保玩家至少看到一帧加载面板，避免同步准备阶段表现为卡死。
         yield return null;
+
+        bool contentReady = false;
+        yield return WaitForContentReadyBeforeWorld(
+            "正在进入存档",
+            0.12f,
+            0.34f,
+            ready => contentReady = ready);
+        if (!contentReady)
+            yield break;
+
         ContinueGameInternal(playerName);
     }
 
@@ -640,6 +659,80 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// 主菜单操作只要求启动必要资源已就绪；完整内容仍在加载时允许排队进入世界，
+    /// 后续由世界加载页等待完整 Ready，禁止先创建空世界再补贴图。
+    /// </summary>
+    private static bool CanQueueWorldEntry(string actionName)
+    {
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null)
+        {
+            Debug.LogWarning($"[GameManager] 无法{actionName}：GameRes 未就绪。");
+            return false;
+        }
+
+        if (resources.LoadState == ResourceLoadState.Ready)
+            return EnsureContentReady(actionName);
+
+        if (resources.LoadState == ResourceLoadState.Loading && resources.IsStartupReady)
+            return true;
+
+        string reason = string.IsNullOrWhiteSpace(resources.LastLoadError)
+            ? resources.LoadState.ToString()
+            : resources.LastLoadError;
+        Debug.LogWarning($"[GameManager] 无法{actionName}：启动必要资源尚未就绪。{reason}");
+        return false;
+    }
+
+    /// <summary>快速玩家在后台资源完成前进入世界时，用世界加载页承接剩余等待时间。</summary>
+    private IEnumerator WaitForContentReadyBeforeWorld(
+        string title,
+        float startProgress,
+        float endProgress,
+        Action<bool> completed)
+    {
+        GameRes resources = GameRes.ExistingInstance;
+        if (resources == null)
+        {
+            completed?.Invoke(false);
+            FailWorldEntry("游戏资源管理器不可用，无法进入世界。");
+            yield break;
+        }
+
+        while (resources.LoadState == ResourceLoadState.Loading)
+        {
+            float displayedProgress = Mathf.Lerp(
+                startProgress,
+                endProgress,
+                Mathf.Clamp01(resources.LoadProgress));
+            string stage = string.IsNullOrWhiteSpace(resources.LoadStatusText)
+                ? "正在完成游戏资源加载…"
+                : $"正在完成游戏资源加载：{resources.LoadStatusText}";
+            ReportWorldEntryProgress(title, stage, displayedProgress);
+            yield return null;
+        }
+
+        if (resources.LoadState != ResourceLoadState.Ready)
+        {
+            string reason = string.IsNullOrWhiteSpace(resources.LastLoadError)
+                ? resources.LoadState.ToString()
+                : resources.LastLoadError;
+            completed?.Invoke(false);
+            FailWorldEntry($"游戏资源加载失败，无法进入世界：{reason}");
+            yield break;
+        }
+
+        if (!EnsureContentReady("进入世界"))
+        {
+            completed?.Invoke(false);
+            FailWorldEntry("游戏内容目录尚未完全就绪，无法进入世界。");
+            yield break;
+        }
+
+        completed?.Invoke(true);
     }
     #endregion
 

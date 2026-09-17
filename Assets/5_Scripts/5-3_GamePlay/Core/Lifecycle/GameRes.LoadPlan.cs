@@ -21,14 +21,17 @@ public partial class GameRes
         });
         List<ItemDefinitionDto> itemSources = null;
         plan.Add("addressables", "初始化资源目录", 2, InitializeAddressableCatalog);
-        plan.Add("item-manifest", "解析物品清单", 3,
-            () => LoadCatalog<List<ItemDefinitionDto>>((done, fail) =>
-                ItemDefinitionCatalogLoader.LoadBuiltInDefinitionsAsync(done, fail, plan.Report), value => itemSources = value), "addressables");
+        plan.Add("startup-ui", "加载主菜单必要界面", 3, LoadStartupUiPrefabs, "addressables");
         plan.Add("players", "加载玩家创建配置", 1,
             () => LoadCatalog<PlayerCreationTemplateCatalogConfig>(PlayerCreationTemplateJsonLoader.LoadBuiltInAsync,
                 PlayerCreationTemplateCatalogService.ReplaceBuiltIn));
         plan.Add("time", "加载时间系统配置", 1,
             () => LoadCatalog<TimeSystemConfigCatalog>(TimeSystemConfigLoader.LoadBuiltInAsync, TimeSystemConfigService.ReplaceCatalog));
+        plan.Add("startup-ready", "开放主菜单", 0.5f,
+            PublishStartupReadyStage, "startup-ui", "players", "time");
+        plan.Add("item-manifest", "解析物品清单", 3,
+            () => LoadCatalog<List<ItemDefinitionDto>>((done, fail) =>
+                ItemDefinitionCatalogLoader.LoadBuiltInDefinitionsAsync(done, fail, plan.Report), value => itemSources = value), "addressables");
         plan.Add("loot", "加载战利品表", 1,
             () => LoadCatalog<IReadOnlyList<RuntimeLootTable>>(LootTableCatalogLoader.LoadBuiltInAsync,
                 tables => { foreach (RuntimeLootTable table in tables) RegisterLootTable(table); }));
