@@ -50,11 +50,16 @@ public sealed partial class WorldNavigationManager
         /// <summary>绑定当前管理器拥有的网格。</summary>
         internal SharedGridSource(WorldNavigationGrid source) { this.source = source; }
 
-        /// <summary>读取最终有效权重；未加载格不参与导航，阻挡格以 0 表达。</summary>
-        public bool TryGetPenalty(int2 cell, out uint penalty)
+        /// <summary>读取最终有效权重与水面状态；未加载格不参与导航，阻挡格以 0 表达。</summary>
+        public bool TryGetCell(int2 cell, out FlowNavigationCellData data)
         {
-            bool registered = source.TryGetCell(new Vector2Int(cell.x, cell.y), out WorldNavigationCell data);
-            penalty = registered && data.Walkable ? data.Penalty : 0u;
+            bool registered = source.TryGetCell(new Vector2Int(cell.x, cell.y), out WorldNavigationCell sourceCell);
+            data = new FlowNavigationCellData
+            {
+                Penalty = registered && sourceCell.Walkable ? sourceCell.Penalty : 0u,
+                Water = (byte)(registered && sourceCell.Water ? 1 : 0),
+                WaterDepth = registered && sourceCell.Water ? sourceCell.WaterDepth : 0f
+            };
             return registered;
         }
 

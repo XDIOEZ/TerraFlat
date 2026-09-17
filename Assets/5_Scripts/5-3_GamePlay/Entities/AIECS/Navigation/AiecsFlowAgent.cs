@@ -26,6 +26,8 @@ namespace FlatWorld.AIECS
         public float Radius; // 连续移动体半径，当前共享通行配置要求小于半格。
         public float Speed; // 当前基础速度，Buff 后由行为层写入。
         public float StopDistance; // 到局部/共享目标的停止距离。
+        public float WaterDepth; // 当前平滑后的有效水深，仅表达移动/表现环境态。
+        public float WaterBlend; // 入水/出水平滑混合，批量表现直接消费。
         public AiecsMoveMode Mode; // 导向图、局部 steering 或停车。
         public float2 LocalDestination; // 只有局部模式消费。
     }
@@ -128,6 +130,10 @@ namespace FlatWorld.AIECS
     [BurstCompile]
     internal partial struct AiecsFlowMoveJob : IJobEntity
     {
+        private const float ShallowWaterSpeedMultiplier = 0.5f; // 与当前 Tile_Water 默认浅水倍率一致。
+        private const float DeepWaterSpeedMultiplier = 0.2f; // 与当前 Tile_Water 默认深水倍率一致。
+        private const float WaterTransitionSeconds = 0.18f; // 与角色入水表现默认过渡时间一致。
+
         [ReadOnly] public FlowNavigationSnapshot Navigation;
         [ReadOnly] public NativeArray<AiecsCrowdSample> Samples;
         [ReadOnly] public NativeParallelHashMap<int2, int2> Ranges;
@@ -139,6 +145,7 @@ namespace FlatWorld.AIECS
 
         private void Execute(Entity entity, ref AiecsFlowAgent actor)
         {
+            float waterSpeedMultiplier = UpdateWaterState(ref actor);
             FlowSample sample = Sample(actor);
             actor.Status = sample.Status;
             if (sample.Status != FlowSampleStatus.Moving || DeltaTime <= 0f)
@@ -162,7 +169,7 @@ namespace FlatWorld.AIECS
                 direction += math.normalizesafe(actor.Velocity) * 0.15f;
             direction = math.normalizesafe(direction, desired);
 
-            float moveLength = math.min(actor.Speed * densitySpeed * DeltaTime, distance);
+            float moveLength = math.min(actor.Speed * waterSpeedMultiplier * densitySpeed * DeltaTime, distance);
             float2 movement = direction * moveLength;
             int steps = math.max(1, (int)math.ceil(moveLength / 0.2f));
             float2 step = movement / steps;
@@ -170,26 +177,47 @@ namespace FlatWorld.AIECS
 
             for (int i = 0; i < steps; i++)
             {
+                float stepLength = moveLength / steps;
+                float2 desiredNext = actor.Position + desired * stepLength;
+                int allowedCost = Navigation.StepMaximumCost(actor.Position, desiredNext, actor.Radius);
+                if (allowedCost < 0)
+                    break;
                 float2 next = actor.Position + step;
-                if (!Navigation.CanStep(actor.Position, next, actor.Radius))
+                if (!Navigation.CanStepWithinCost(actor.Position, next, actor.Radius, allowedCost))
                 {
-                    // 局部 Steering 被墙角挡住时回退到 Flow 主方向，避免人群逻辑穿墙。
-                    next = actor.Position + desired * (moveLength / steps);
-                    if (!Navigation.CanStep(actor.Position, next, actor.Radius))
+                    // 局部 Steering 被墙角或更昂贵地形挡住时回退到 Flow 主方向，避免人群侧推切进水格。
+                    next = desiredNext;
+                    if (!Navigation.CanStepWithinCost(actor.Position, next, actor.Radius, allowedCost))
                     {
                         // 转弯净空不足时先回当前格中心再重新采样方向；这里只处理地形，不占有格子。
                         float2 center = (float2)(int2)math.floor(actor.Position) + 0.5f;
                         float2 alignment = Navigation.Domain.ShortestDelta(actor.Position, center);
                         if (math.lengthsq(alignment) <= 0.000001f) break;
                         next = actor.Position + math.normalizesafe(alignment) *
-                            math.min(math.length(alignment), moveLength / steps);
-                        if (!Navigation.CanStep(actor.Position, next, actor.Radius)) break;
+                            math.min(math.length(alignment), stepLength);
+                        if (!Navigation.CanStepWithinCost(actor.Position, next, actor.Radius,
+                                Navigation.CostAt(actor.Position))) break;
                     }
                 }
                 actor.Position = Navigation.Domain.Normalize(next);
             }
 
             actor.Velocity = Navigation.Domain.ShortestDelta(start, actor.Position) / DeltaTime;
+        }
+
+        /// <summary>从共享导航的有效表面读取水态；水上平台不会被标记为水体。</summary>
+        private float UpdateWaterState(ref AiecsFlowAgent actor)
+        {
+            bool inWater = Navigation.TryGetWater(actor.Position, out float targetDepth);
+            float targetBlend = inWater ? 1f : 0f;
+            float smoothing = DeltaTime > 0f
+                ? 1f - math.exp(-DeltaTime / WaterTransitionSeconds)
+                : 1f;
+            actor.WaterDepth = math.lerp(actor.WaterDepth, inWater ? targetDepth : 0f, smoothing);
+            actor.WaterBlend = math.lerp(actor.WaterBlend, targetBlend, smoothing);
+            return inWater
+                ? math.lerp(ShallowWaterSpeedMultiplier, DeepWaterSpeedMultiplier, math.saturate(targetDepth))
+                : 1f;
         }
 
         /// <summary>局部目标与共享 Flow 使用同一连续移动入口。</summary>

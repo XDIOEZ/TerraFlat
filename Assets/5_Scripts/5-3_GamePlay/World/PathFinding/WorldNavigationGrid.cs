@@ -6,11 +6,15 @@ public readonly struct WorldNavigationCell
 {
     public readonly uint Penalty;
     public readonly bool Walkable;
+    public readonly bool Water;
+    public readonly float WaterDepth;
 
-    public WorldNavigationCell(uint penalty, bool walkable)
+    public WorldNavigationCell(uint penalty, bool walkable, bool water = false, float waterDepth = 0f)
     {
         Penalty = penalty;
         Walkable = walkable;
+        Water = water;
+        WaterDepth = water ? Mathf.Clamp01(waterDepth) : 0f;
     }
 }
 
@@ -111,14 +115,16 @@ public sealed class WorldNavigationGrid
         MarkRevisionChanged(invalidatesExistingPaths: true);
     }
 
-    public void SetCell(Vector2Int position, uint penalty, bool walkable)
+    public void SetCell(Vector2Int position, uint penalty, bool walkable, bool water = false, float waterDepth = 0f)
     {
         position = NormalizeCell(position);
-        WorldNavigationCell next = new(penalty, walkable && penalty > 0u);
+        WorldNavigationCell next = new(penalty, walkable && penalty > 0u, water, waterDepth);
         bool hasCurrent = cells.TryGetValue(position, out WorldNavigationCell current);
         if (hasCurrent &&
             current.Penalty == next.Penalty &&
-            current.Walkable == next.Walkable)
+            current.Walkable == next.Walkable &&
+            current.Water == next.Water &&
+            Mathf.Approximately(current.WaterDepth, next.WaterDepth))
         {
             return;
         }
@@ -188,7 +194,11 @@ public sealed class WorldNavigationGrid
         }
 
         bool blocked = blockerCounts.TryGetValue(position, out int count) && count > 0;
-        cell = new WorldNavigationCell(terrain.Penalty, terrain.Walkable && !blocked);
+        cell = new WorldNavigationCell(
+            terrain.Penalty,
+            terrain.Walkable && !blocked,
+            terrain.Water,
+            terrain.WaterDepth);
         return true;
     }
 

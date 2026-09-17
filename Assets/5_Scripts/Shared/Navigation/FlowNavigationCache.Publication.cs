@@ -11,6 +11,8 @@ namespace FlatWorld.Navigation
         private NativeParallelHashMap<int2, int> nativeChunkLookup;
         private NativeArray<FlowChunkHeader> nativeChunks;
         private NativeArray<int> nativeCells;
+        private NativeArray<byte> nativeWater;
+        private NativeArray<float> nativeWaterDepth;
         private NativeArray<FlowPortal> nativePortals;
         private NativeArray<int> nativeExitCosts;
         private NativeArray<byte> nativeExitDirections;
@@ -32,6 +34,8 @@ namespace FlatWorld.Navigation
             nativeChunkLookup = new NativeParallelHashMap<int2, int>(math.max(1, coordinates.Count), Allocator.Persistent);
             nativeChunks = new NativeArray<FlowChunkHeader>(coordinates.Count, Allocator.Persistent);
             nativeCells = new NativeArray<int>(coordinates.Count * 256, Allocator.Persistent);
+            nativeWater = new NativeArray<byte>(coordinates.Count * 256, Allocator.Persistent);
+            nativeWaterDepth = new NativeArray<float>(coordinates.Count * 256, Allocator.Persistent);
             nativePortals = new NativeArray<FlowPortal>(portalCount, Allocator.Persistent);
             nativeExitCosts = new NativeArray<int>(portalCount * 256, Allocator.Persistent);
             nativeExitDirections = new NativeArray<byte>(portalCount * 256, Allocator.Persistent);
@@ -41,7 +45,13 @@ namespace FlatWorld.Navigation
                 CachedChunk chunk = chunks[coordinates[index]];
                 nativeChunkLookup.Add(chunk.Coordinate, index);
                 nativeChunks[index] = new FlowChunkHeader { Coordinate = chunk.Coordinate, PortalStart = nextPortal, PortalCount = chunk.Portals.Count };
-                for (int cell = 0; cell < 256; cell++) nativeCells[index * 256 + cell] = chunk.Cells[cell];
+                for (int cell = 0; cell < 256; cell++)
+                {
+                    int target = index * 256 + cell;
+                    nativeCells[target] = chunk.Cells[cell];
+                    nativeWater[target] = chunk.Water[cell];
+                    nativeWaterDepth[target] = chunk.WaterDepth[cell];
+                }
                 foreach (FlowPortal item in chunk.Portals)
                 {
                     FlowPortal portal = item; portal.Chunk = index;
@@ -130,7 +140,8 @@ namespace FlatWorld.Navigation
         private FlowNavigationSnapshot Snapshot() => new FlowNavigationSnapshot
         {
             Domain = domain, Epoch = Epoch, ChunkLookup = nativeChunkLookup, Chunks = nativeChunks,
-            Cells = nativeCells, Portals = nativePortals, ExitDirections = nativeExitDirections, Goals = nativeGoals,
+            Cells = nativeCells, Water = nativeWater, WaterDepth = nativeWaterDepth,
+            Portals = nativePortals, ExitDirections = nativeExitDirections, Goals = nativeGoals,
             TargetCosts = nativeTargetCosts, TargetDirections = nativeTargetDirections, SelectedExits = nativeSelectedExits
         };
 
@@ -140,6 +151,8 @@ namespace FlatWorld.Navigation
             if (nativeChunkLookup.IsCreated) nativeChunkLookup.Dispose();
             if (nativeChunks.IsCreated) nativeChunks.Dispose();
             if (nativeCells.IsCreated) nativeCells.Dispose();
+            if (nativeWater.IsCreated) nativeWater.Dispose();
+            if (nativeWaterDepth.IsCreated) nativeWaterDepth.Dispose();
             if (nativePortals.IsCreated) nativePortals.Dispose();
             if (nativeExitCosts.IsCreated) nativeExitCosts.Dispose();
             if (nativeExitDirections.IsCreated) nativeExitDirections.Dispose();

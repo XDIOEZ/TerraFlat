@@ -102,10 +102,17 @@ namespace FlatWorld.AIECS
                         ? record.AttackPhase == AiecsAttackPhase.Active ? 2 : 0
                         : record.Behavior == (int)AiecsBehavior.Idle ? 0 : 1;
                     var frame = definition.Clips[clips[record.Definition, action]].Sample(record.ActionElapsed);
-                    var actor = new AiecsPrototypeActor { Position = center + domain.ShortestDelta(center, record.Position) };
+                    var actor = new AiecsPrototypeActor
+                    {
+                        Position = center + domain.ShortestDelta(center, record.Position),
+                        WaterBlend = Mathf.Clamp01(record.WaterBlend)
+                    };
+                    float waterDepth = Mathf.Clamp01(record.WaterDepth);
+                    float waterTint = Mathf.Lerp(0.12f, 0.8f, waterDepth);
                     Color color = definition.Color * (record.Group % 2 == 0 ? new Color(0.7f, 0.85f, 1f) : new Color(1f, 0.7f, 0.65f));
                     if (record.Dead != 0) color.a *= Mathf.Clamp01(2f - record.ActionElapsed);
-                    batch.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], 0f, 0f, record.Facing.x < 0f, color);
+                    batch.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], waterDepth, waterTint,
+                        record.Facing.x < 0f, color);
                 }
                 batch.Submit(first.Layer, first.Order); start = end;
             }

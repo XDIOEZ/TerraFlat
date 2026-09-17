@@ -194,10 +194,16 @@ namespace FlatWorld.Navigation
             {
                 for (int cell = 0; cell < 256; cell++)
                 {
-                    bool loaded = source.TryGetPenalty(origin + FlowNavigationMath.LocalCell(cell), out uint penalty);
+                    bool loaded = source.TryGetCell(origin + FlowNavigationMath.LocalCell(cell), out FlowNavigationCellData data);
                     if (loaded) registered++;
-                    int cost = loaded && penalty > 0 ? FlowNavigationMath.TerrainCost(penalty) : -1;
-                    contentChanged |= chunk.Cells[cell] != cost; chunk.Cells[cell] = cost;
+                    int cost = loaded && data.Penalty > 0 ? FlowNavigationMath.TerrainCost(data.Penalty) : -1;
+                    byte water = loaded && data.Penalty > 0 ? data.Water : (byte)0;
+                    float waterDepth = water != 0 ? math.saturate(data.WaterDepth) : 0f;
+                    contentChanged |= chunk.Cells[cell] != cost || chunk.Water[cell] != water ||
+                                      !chunk.WaterDepth[cell].Equals(waterDepth);
+                    chunk.Cells[cell] = cost;
+                    chunk.Water[cell] = water;
+                    chunk.WaterDepth[cell] = waterDepth;
                 }
                 if (registered == 0)
                 {
@@ -238,7 +244,8 @@ namespace FlatWorld.Navigation
                 {
                     int cell = offset < 16 ? FlowNavigationMath.EdgeCell(side, offset) : 0;
                     bool open = offset < 16 && chunk.Cells[cell] >= 0 &&
-                        source.TryGetPenalty(domain.Normalize(origin + FlowNavigationMath.LocalCell(cell) + FlowNavigationMath.SideOffset(side)), out uint penalty) && penalty > 0;
+                        source.TryGetCell(domain.Normalize(origin + FlowNavigationMath.LocalCell(cell) + FlowNavigationMath.SideOffset(side)), out FlowNavigationCellData neighbour) &&
+                        neighbour.Penalty > 0;
                     if (open) { if (first < 0) first = offset; continue; }
                     if (first < 0) continue;
                     int last = offset - 1;
@@ -310,6 +317,8 @@ namespace FlatWorld.Navigation
         {
             internal readonly int2 Coordinate;
             internal readonly int[] Cells = new int[256];
+            internal readonly byte[] Water = new byte[256];
+            internal readonly float[] WaterDepth = new float[256];
             internal readonly Dictionary<int, LocalField> Fields = new();
             internal List<FlowPortal> Portals = new();
             /// <summary>记录块坐标，权重将在读取源快照时填充。</summary>

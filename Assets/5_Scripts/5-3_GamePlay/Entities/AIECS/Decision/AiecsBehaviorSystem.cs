@@ -54,7 +54,11 @@ namespace FlatWorld.AIECS
                     actor.StopDistance = 0.12f;
                 }
 
-                if (Navigation.CanSteer(actor.Position, destination, actor.Radius))
+                bool actorInWater = Navigation.TryGetWater(actor.Position, out _);
+                bool targetInWater = Navigation.TryGetWater(target.Position, out _);
+                bool destinationInWater = Navigation.TryGetWater(destination, out _);
+                bool localWaterAllowed = actorInWater || targetInWater || !destinationInWater;
+                if (localWaterAllowed && Navigation.CanSteer(actor.Position, destination, actor.Radius))
                 {
                     actor.Mode = AiecsMoveMode.Local;
                     actor.LocalDestination = destination;
@@ -77,12 +81,15 @@ namespace FlatWorld.AIECS
                 local.RefreshAt = Time + (intent.Behavior == (int)AiecsBehavior.Flee ? 0.5f : definition.WanderSeconds);
                 var random = new Random(brain.RandomState == 0 ? 1u : brain.RandomState);
                 float2 away = math.normalizesafe(Spatial.Domain.ShortestDelta(brain.ThreatPosition, actor.Position), random.NextFloat2Direction());
+                bool actorInWater = Navigation.TryGetWater(actor.Position, out _);
                 for (int attempt = 0; attempt < 8; attempt++)
                 {
                     float2 direction = intent.Behavior == (int)AiecsBehavior.Flee
                         ? math.normalizesafe(away + random.NextFloat2Direction() * 0.65f, away) : random.NextFloat2Direction();
                     float distance = math.min(7f, definition.WanderRadius) * random.NextFloat(0.35f, 1f);
                     float2 point = Navigation.Domain.Normalize(actor.Position + direction * distance);
+                    // 干地上的随机行为不主动把水格选成局部目标；已经落水的单位仍可沿水面或向陆地移动。
+                    if (!actorInWater && Navigation.TryGetWater(point, out _)) continue;
                     if (!Navigation.CanOccupy(point, actor.Radius) || !Navigation.CanSteer(actor.Position, point, actor.Radius)) continue;
                     local.Destination = point; local.Valid = 1; break;
                 }

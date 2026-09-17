@@ -6,13 +6,21 @@ using Unity.Mathematics;
 namespace FlatWorld.Navigation
 {
     #region 数据来源与共享记录
+    /// <summary>共享导航格的纯数据快照；水体只描述有效表面，不改变可走性语义。</summary>
+    public struct FlowNavigationCellData
+    {
+        public uint Penalty; // 零表示阻挡。
+        public float WaterDepth; // 有效水面的 0~1 水深。
+        public byte Water; // 水上平台等支撑面为 0。
+    }
+
     /// <summary>主线程权威网格快照入口；不向 Job 暴露业务对象。</summary>
     public interface IFlowGridSource
     {
         // 当前世界的坐标数学规则。
         WorldTopologyDomain Domain { get; }
-        /// <summary>读取已注册格的最终权重；阻挡用 0，未加载返回 false。</summary>
-        bool TryGetPenalty(int2 cell, out uint penalty);
+        /// <summary>读取已注册格的最终权重与有效表面；阻挡 penalty=0，未加载返回 false。</summary>
+        bool TryGetCell(int2 cell, out FlowNavigationCellData data);
         /// <summary>首次绑定时列出已加载导航 Chunk，后续更新由脏格驱动。</summary>
         void CollectChunks(List<int2> chunks);
     }
@@ -141,6 +149,8 @@ namespace FlatWorld.Navigation
         [ReadOnly] public NativeParallelHashMap<int2, int> ChunkLookup;
         [ReadOnly] public NativeArray<FlowChunkHeader> Chunks;
         [ReadOnly] public NativeArray<int> Cells;
+        [ReadOnly] public NativeArray<byte> Water;
+        [ReadOnly] public NativeArray<float> WaterDepth;
         [ReadOnly] public NativeArray<FlowPortal> Portals;
         [ReadOnly] public NativeArray<byte> ExitDirections;
         [ReadOnly] public NativeArray<FlowGoalData> Goals;
@@ -195,7 +205,7 @@ namespace FlatWorld.Navigation
             {
                 float2 next = from + delta * ((float)i / steps);
                 int cost = CostAt(next);
-                if (cost < 0 || cost > limit || !CanStep(last, next, radius)) return false;
+                if (cost < 0 || cost > limit || !CanStepWithinCost(last, next, radius, limit)) return false;
                 last = next;
             }
             return true;
@@ -205,8 +215,29 @@ namespace FlatWorld.Navigation
         public int CostAt(float2 position)
         {
             int2 cell = Domain.Normalize((int2)math.floor(position));
+            return CostAtCell(cell);
+        }
+
+        /// <summary>读取指定格的最终地形代价，未知或阻挡返回负值。</summary>
+        public int CostAtCell(int2 cell)
+        {
+            cell = Domain.Normalize(cell);
             return ChunkLookup.TryGetValue(FlowNavigationMath.ChunkOf(cell, Domain), out int chunk)
                 ? Cells[chunk * 256 + FlowNavigationMath.LocalIndex(cell, Domain)] : -1;
+        }
+
+        /// <summary>读取当前位置的有效水面；水上平台已在权威网格中表现为非水表面。</summary>
+        public bool TryGetWater(float2 position, out float depth)
+        {
+            depth = 0f;
+            int2 cell = Domain.Normalize((int2)math.floor(position));
+            if (!ChunkLookup.TryGetValue(FlowNavigationMath.ChunkOf(cell, Domain), out int chunk))
+                return false;
+            int index = chunk * 256 + FlowNavigationMath.LocalIndex(cell, Domain);
+            if (Cells[index] < 0 || !Water.IsCreated || Water[index] == 0)
+                return false;
+            depth = WaterDepth.IsCreated ? math.saturate(WaterDepth[index]) : 0f;
+            return true;
         }
 
         /// <summary>查询冻结网格的可走性；未知 Chunk 始终视为阻挡。</summary>
@@ -255,6 +286,35 @@ namespace FlatWorld.Navigation
                 if (squared < radius * radius || (radius == 0f && squared == 0f)) return false;
             }
             return true;
+        }
+
+        /// <summary>
+        /// 在正常体型扫掠基础上限制实体中心进入的最高地形代价。墙体/建筑仍按半径检查净空，
+        /// 水等可走软地形只在中心真正跨格时生效，避免身体边缘擦到水格就被卡在锯齿岸线。
+        /// </summary>
+        public bool CanStepWithinCost(float2 from, float2 to, float radius, int maximumCost)
+        {
+            if (maximumCost < 0 || !CanStep(from, to, radius))
+                return false;
+
+            int destinationCost = CostAt(to);
+            return destinationCost >= 0 && destinationCost <= maximumCost;
+        }
+
+        /// <summary>
+        /// 取得一次合法主 Flow 小步中心轨迹的最高地形代价；用于约束 Crowd 偏移不能主动把中心推入
+        /// 更昂贵地形。体型边缘接触水格不提升该上限，返回负值表示主步骤本身不可执行。
+        /// </summary>
+        public int StepMaximumCost(float2 from, float2 to, float radius)
+        {
+            if (!CanStep(from, to, radius))
+                return -1;
+
+            int startCost = CostAt(from);
+            int destinationCost = CostAt(to);
+            return startCost < 0 || destinationCost < 0
+                ? -1
+                : math.max(startCost, destinationCost);
         }
     }
     #endregion

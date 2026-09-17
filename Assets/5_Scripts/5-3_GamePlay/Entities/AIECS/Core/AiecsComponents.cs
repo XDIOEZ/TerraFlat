@@ -219,6 +219,7 @@ namespace FlatWorld.AIECS
         public CombatIdentity Key; // 真实身份。
         public float2 Position, Facing; // 当前位置与逻辑朝向。
         public float Hp, MaxHp, ActionElapsed; // 生命与动作时钟。
+        public float WaterDepth, WaterBlend; // 有效水深与入水表现混合。
         public int Definition, Group, Behavior; // 目录索引、分组颜色与行为。
         public AiecsAttackPhase AttackPhase; // 映射表现动作。
         public byte Dead, External, HasTarget; // 可见对象分类与实际锁定状态。

@@ -254,7 +254,9 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
                                     (terrainCell.Flags & TerrainCellFlags.Blocking) == 0;
                     walkable = BuildingOccupancyRegistry.GetEffectiveWalkable(worldCell, walkable);
                     uint penalty = walkable ? (uint)Mathf.Max(1, terrainCell.NavigationCost) : 0u;
-                    grid.SetCell(worldCell, penalty, walkable);
+                    bool water = (terrainCell.Flags & TerrainCellFlags.Water) != 0;
+                    grid.SetCell(worldCell, penalty, walkable, water,
+                        ResolveRuntimeWaterDepth(terrain, x, y, water));
                     ownedCells.Add(worldCell);
                     runtimeTerrainOwnerByCell[worldCell] = chunk.Address;
                 }
@@ -302,7 +304,11 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
 
     public void SetNavigationCell(Map owner, Vector2Int worldCell, uint penalty, bool walkable)
     {
-        grid.SetCell(worldCell, penalty, walkable);
+        // 旧 Map 烘焙仍可能晚于 Runtime Chunk 注册；保留水体元数据，避免把 ECS 共用快照中的水态擦掉。
+        TileData topTile = owner != null ? owner.GetTopTile(worldCell) : null;
+        bool water = topTile is TileData_Water;
+        float waterDepth = water ? Mathf.Clamp01(((TileData_Water)topTile).deepValue) : 0f;
+        grid.SetCell(worldCell, penalty, walkable, water, waterDepth);
         AssignCellOwner(owner, worldCell);
     }
 
@@ -378,7 +384,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
 
         if (TryReadCellFromRuntime(cellPosition, out cell, out ChunkRuntime sourceChunk))
         {
-            grid.SetCell(cellPosition, cell.Penalty, cell.Walkable);
+            grid.SetCell(cellPosition, cell.Penalty, cell.Walkable, cell.Water, cell.WaterDepth);
             AssignRuntimeCellOwner(sourceChunk, cellPosition);
             penalty = cell.Penalty;
             walkable = cell.Walkable;
@@ -505,7 +511,7 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         worldCell = WorldNavigationGrid.NormalizeCell(worldCell);
         if (TryReadCellFromRuntime(worldCell, out WorldNavigationCell cell, out ChunkRuntime sourceChunk))
         {
-            grid.SetCell(worldCell, cell.Penalty, cell.Walkable);
+            grid.SetCell(worldCell, cell.Penalty, cell.Walkable, cell.Water, cell.WaterDepth);
             AssignRuntimeCellOwner(sourceChunk, worldCell);
         }
         else
@@ -601,10 +607,27 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         TerrainCell terrainCell = TerrainSupportLayer.GetSurfaceCell(sourceChunk.Terrain, localX, localY);
         bool walkable = (terrainCell.Flags & TerrainCellFlags.Walkable) != 0 &&
                         (terrainCell.Flags & TerrainCellFlags.Blocking) == 0;
+        bool water = (terrainCell.Flags & TerrainCellFlags.Water) != 0;
         cell = new WorldNavigationCell(
             walkable ? (uint)Mathf.Max(1, terrainCell.NavigationCost) : 0u,
-            BuildingOccupancyRegistry.GetEffectiveWalkable(worldCell, walkable));
+            BuildingOccupancyRegistry.GetEffectiveWalkable(worldCell, walkable),
+            water,
+            ResolveRuntimeWaterDepth(sourceChunk.Terrain, localX, localY, water));
         return true;
+    }
+
+    /// <summary>读取有效表面的真实水深；水上平台已经由 TerrainSupportLayer 清除 Water 标记。</summary>
+    private static float ResolveRuntimeWaterDepth(ChunkTerrainData terrain, int localX, int localY, bool water)
+    {
+        if (!water || terrain == null || terrain.IsDisposed)
+            return 0f;
+
+        if (terrain.TryGetEnvironmentValue("riverDepth", localX, localY, out float riverDepth) && riverDepth > 0f)
+            return Mathf.Clamp01(riverDepth);
+
+        return terrain.TryGetEnvironmentValue("height", localX, localY, out float height)
+            ? Mathf.Clamp01(TileData_Water.CalculateDepthFromHeight(height))
+            : 0f;
     }
 
     private void AssignRuntimeCellOwner(ChunkRuntime chunk, Vector2Int worldCell)
