@@ -1584,6 +1584,18 @@ MonoBehaviour:
     m_Localized: Save Failed
     m_Metadata:
       m_Items: []
+  - m_Id: 7357812617237
+    m_Localized: Reset
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617238
+    m_Localized: Failed to reset the binding.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7357812617239
+    m_Localized: "\u201C{0}\u201D was restored to its default binding."
+    m_Metadata:
+      m_Items: []
   - m_Id: 311290649030656
     m_Localized: UI Text
     m_Metadata:

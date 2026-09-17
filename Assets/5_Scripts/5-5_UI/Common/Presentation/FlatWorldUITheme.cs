@@ -101,7 +101,7 @@ public static class FlatWorldUITheme
     /// </summary>
     public static void Apply(Transform root)
     {
-        if (root == null)
+        if (root == null || ReusableUIControl.OwnsVisuals(root))
             return;
 
         FlatWorldAudioUIFeedback.EnsureFor(root);
@@ -134,7 +134,7 @@ public static class FlatWorldUITheme
         Outline[] outlines = root.GetComponentsInChildren<Outline>(true);
         foreach (Outline outline in outlines)
         {
-            if (outline == null)
+            if (outline == null || ReusableUIControl.OwnsVisuals(outline))
                 continue;
 
             Graphic graphic = outline.GetComponent<Graphic>();
@@ -165,7 +165,7 @@ public static class FlatWorldUITheme
         for (int i = 0; i < selectables.Count; i++)
         {
             Selectable selectable = selectables[i];
-            if (selectable == null)
+            if (selectable == null || ReusableUIControl.OwnsVisuals(selectable))
                 continue;
 
             ColorBlock colors = selectable.colors;
@@ -335,7 +335,7 @@ public static class FlatWorldUITheme
         Image[] images = root.GetComponentsInChildren<Image>(true);
         foreach (Image image in images)
         {
-            if (image == null || IsProtectedArtwork(image.transform))
+            if (image == null || ReusableUIControl.OwnsVisuals(image) || IsProtectedArtwork(image.transform))
                 continue;
 
             if (IsMobileControlInputSurface(root, image))
@@ -541,7 +541,7 @@ public static class FlatWorldUITheme
         Button[] buttons = root.GetComponentsInChildren<Button>(true);
         foreach (Button button in buttons)
         {
-            if (button == null)
+            if (button == null || ReusableUIControl.OwnsVisuals(button))
                 continue;
 
             Graphic target = button.targetGraphic != null ? button.targetGraphic : button.GetComponent<Graphic>();
@@ -623,7 +623,7 @@ public static class FlatWorldUITheme
         TMP_InputField[] fields = root.GetComponentsInChildren<TMP_InputField>(true);
         foreach (TMP_InputField field in fields)
         {
-            if (field == null)
+            if (field == null || ReusableUIControl.OwnsVisuals(field))
                 continue;
 
             Graphic background = field.targetGraphic != null ? field.targetGraphic : field.GetComponent<Graphic>();
@@ -664,7 +664,7 @@ public static class FlatWorldUITheme
         TMP_Dropdown[] dropdowns = root.GetComponentsInChildren<TMP_Dropdown>(true);
         foreach (TMP_Dropdown dropdown in dropdowns)
         {
-            if (dropdown == null)
+            if (dropdown == null || ReusableUIControl.OwnsVisuals(dropdown))
                 continue;
 
             Graphic background = dropdown.targetGraphic != null ? dropdown.targetGraphic : dropdown.GetComponent<Graphic>();
@@ -685,6 +685,10 @@ public static class FlatWorldUITheme
                 dropdown.captionText.color = TextPrimary;
             if (dropdown.itemText != null)
                 dropdown.itemText.color = TextPrimary;
+
+            NormalizeDropdownItemHeight(dropdown.itemText != null
+                ? dropdown.itemText.transform.parent as RectTransform
+                : null);
 
             ColorBlock colors = dropdown.colors;
             colors.normalColor = Color.white;
@@ -715,7 +719,7 @@ public static class FlatWorldUITheme
         Dropdown[] dropdowns = root.GetComponentsInChildren<Dropdown>(true);
         foreach (Dropdown dropdown in dropdowns)
         {
-            if (dropdown == null)
+            if (dropdown == null || ReusableUIControl.OwnsVisuals(dropdown))
                 continue;
 
             Graphic background = dropdown.targetGraphic != null ? dropdown.targetGraphic : dropdown.GetComponent<Graphic>();
@@ -736,6 +740,10 @@ public static class FlatWorldUITheme
                 dropdown.captionText.color = TextPrimary;
             if (dropdown.itemText != null)
                 dropdown.itemText.color = TextPrimary;
+
+            NormalizeDropdownItemHeight(dropdown.itemText != null
+                ? dropdown.itemText.transform.parent as RectTransform
+                : null);
 
             ColorBlock colors = dropdown.colors;
             colors.normalColor = Color.white;
@@ -761,13 +769,29 @@ public static class FlatWorldUITheme
         }
     }
 
+    /// <summary>
+    /// TMP/Legacy Dropdown 展开时按 Item 的 RectTransform 实际高度计算列表，而不是按 LayoutElement 的
+    /// preferredHeight 计算。统一两者可避免模板仍保留默认 100 像素高度时产生大块空白。
+    /// </summary>
+    private static void NormalizeDropdownItemHeight(RectTransform itemRect)
+    {
+        if (itemRect == null)
+            return;
+
+        LayoutElement layout = itemRect.GetComponent<LayoutElement>();
+        if (layout == null || layout.preferredHeight <= 0f)
+            return;
+
+        itemRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, layout.preferredHeight);
+    }
+
     private static void StyleSliders(Transform root)
     {
         bool keepInputHandle = ContainsAny(root.name, "UI_ModuleSettings", "Settings", "Setting", "设置");
         Slider[] sliders = root.GetComponentsInChildren<Slider>(true);
         foreach (Slider slider in sliders)
         {
-            if (slider == null)
+            if (slider == null || ReusableUIControl.OwnsVisuals(slider))
                 continue;
 
             Image background = FindNamedImage(slider.transform, "Background", "背景", "底板");
@@ -781,10 +805,14 @@ public static class FlatWorldUITheme
                 background.preserveAspect = false;
 
                 RectTransform backgroundRect = background.rectTransform;
-                backgroundRect.anchorMin = new Vector2(0f, 0.25f);
-                backgroundRect.anchorMax = new Vector2(1f, 0.75f);
-                backgroundRect.anchoredPosition = Vector2.zero;
-                backgroundRect.sizeDelta = Vector2.zero;
+                // 根 RectTransform 属于窗口布局，不能为了绘制轨道而压缩整个控件。
+                if (backgroundRect != slider.transform)
+                {
+                    backgroundRect.anchorMin = new Vector2(0f, 0.25f);
+                    backgroundRect.anchorMax = new Vector2(1f, 0.75f);
+                    backgroundRect.anchoredPosition = Vector2.zero;
+                    backgroundRect.sizeDelta = Vector2.zero;
+                }
             }
 
             if (slider.fillRect != null)
@@ -829,7 +857,7 @@ public static class FlatWorldUITheme
                 else if (handle != null)
                 {
                     slider.handleRect.gameObject.SetActive(true);
-                    slider.handleRect.sizeDelta = new Vector2(7f, 0f);
+                    slider.handleRect.sizeDelta = new Vector2(14f, 38f);
                     handle.color = TextPrimary;
                     handle.sprite = null;
                     handle.type = Image.Type.Simple;
@@ -846,7 +874,7 @@ public static class FlatWorldUITheme
         Toggle[] toggles = root.GetComponentsInChildren<Toggle>(true);
         foreach (Toggle toggle in toggles)
         {
-            if (toggle == null)
+            if (toggle == null || ReusableUIControl.OwnsVisuals(toggle))
                 continue;
 
             Graphic background = toggle.targetGraphic != null ? toggle.targetGraphic : toggle.GetComponent<Graphic>();
@@ -872,7 +900,7 @@ public static class FlatWorldUITheme
         Scrollbar[] scrollbars = root.GetComponentsInChildren<Scrollbar>(true);
         foreach (Scrollbar scrollbar in scrollbars)
         {
-            if (scrollbar == null)
+            if (scrollbar == null || ReusableUIControl.OwnsVisuals(scrollbar))
                 continue;
 
             Image background = scrollbar.GetComponent<Image>();
@@ -902,7 +930,7 @@ public static class FlatWorldUITheme
         TextMeshProUGUI[] texts = root.GetComponentsInChildren<TextMeshProUGUI>(true);
         foreach (TextMeshProUGUI text in texts)
         {
-            if (text == null || IsProtectedArtwork(text.transform))
+            if (text == null || ReusableUIControl.OwnsVisuals(text) || IsProtectedArtwork(text.transform))
                 continue;
 
             if (ContainsAny(text.name, "FWUI_眉题", "FWUI_SectionEyebrow_", "UITheme_Eyebrow"))
@@ -928,7 +956,7 @@ public static class FlatWorldUITheme
         Outline[] outlines = root.GetComponentsInChildren<Outline>(true);
         foreach (Outline outline in outlines)
         {
-            if (outline == null)
+            if (outline == null || ReusableUIControl.OwnsVisuals(outline))
                 continue;
 
             Graphic graphic = outline.GetComponent<Graphic>();

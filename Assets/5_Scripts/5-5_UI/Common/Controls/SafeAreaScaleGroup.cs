@@ -70,10 +70,14 @@ public sealed class SafeAreaScaleGroup : MonoBehaviour
 
     private void OnDisable()
     {
-        UIUserSettings.Changed -= ApplyScale;
-        if (subscribedUIManager != null)
-            subscribedUIManager.InteractionSurfaceChanged -= ApplyScale;
-        subscribedUIManager = null;
+        UnbindCallbacks();
+    }
+
+    private void OnDestroy()
+    {
+        // 同一 GameObject 上其它组件的 OnDisable 顺序不受保证；销毁阶段再次幂等清理，
+        // 避免 UIManager 的事件链保留已销毁的 Unity 对象委托。
+        UnbindCallbacks();
     }
 
     private void OnTransformParentChanged()
@@ -109,7 +113,9 @@ public sealed class SafeAreaScaleGroup : MonoBehaviour
     /// <summary>根据当前安全区可用宽高计算统一缩放，避免顶部、底部或左右越界。</summary>
     public void ApplyScale()
     {
-        if (isApplying)
+        // Unity 对象在原生侧销毁后，托管委托仍可能在同一轮销毁回调中被触发。
+        // 必须在访问 transform / RectTransform 前拦截“假 null”和已禁用状态。
+        if (this == null || !isActiveAndEnabled || isApplying)
             return;
 
         ResolveReferences();
@@ -196,15 +202,26 @@ public sealed class SafeAreaScaleGroup : MonoBehaviour
     private void BindUIManager()
     {
         UIManager nextManager = UIManager.ExistingInstance;
-        if (subscribedUIManager == nextManager)
+        if (ReferenceEquals(subscribedUIManager, nextManager))
             return;
 
-        if (subscribedUIManager != null)
+        // 这里使用托管引用判空：Unity 已销毁对象会让 operator == 返回 null，
+        // 但其 C# 事件字段仍可解除订阅，否则会留下指向已销毁组件的委托。
+        if (!ReferenceEquals(subscribedUIManager, null))
             subscribedUIManager.InteractionSurfaceChanged -= ApplyScale;
 
         subscribedUIManager = nextManager;
         if (subscribedUIManager != null)
             subscribedUIManager.InteractionSurfaceChanged += ApplyScale;
+    }
+
+    /// <summary>幂等解除所有全局回调，供禁用与销毁阶段共同使用。</summary>
+    private void UnbindCallbacks()
+    {
+        UIUserSettings.Changed -= ApplyScale;
+        if (!ReferenceEquals(subscribedUIManager, null))
+            subscribedUIManager.InteractionSurfaceChanged -= ApplyScale;
+        subscribedUIManager = null;
     }
 
     #endregion

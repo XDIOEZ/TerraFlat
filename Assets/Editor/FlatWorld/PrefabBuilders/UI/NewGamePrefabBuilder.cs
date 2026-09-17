@@ -40,7 +40,8 @@ public static class NewGamePrefabBuilder
             BuildIdentity(card.transform, font);
             BuildWorldSettings(card.transform, font);
             BuildFooter(card.transform, font);
-            BuildDifficultyPanel(root.transform, font);
+            RectTransform difficultyDialog = BuildDifficultyPanel(root.transform, font);
+            ConfigureResponsiveScale(root, card.rectTransform, difficultyDialog);
 
             FlatWorldUITheme.Apply(root.transform);
             EditorUtility.SetDirty(root);
@@ -109,6 +110,23 @@ public static class NewGamePrefabBuilder
         accent.rectTransform.sizeDelta = new Vector2(6f, 0f);
         accent.raycastTarget = false;
         return card;
+    }
+
+    /// <summary>让主卡与难度弹窗共用安全区限幅，极端宽高比下只等比缩小、不放大。</summary>
+    private static void ConfigureResponsiveScale(
+        GameObject root,
+        RectTransform card,
+        RectTransform difficultyDialog)
+    {
+        RectTransform shadow = root.transform.Find("新世界主卡投影") as RectTransform;
+        SafeAreaScaleGroup scaleGroup = root.GetComponent<SafeAreaScaleGroup>();
+        if (scaleGroup == null)
+            scaleGroup = root.AddComponent<SafeAreaScaleGroup>();
+
+        scaleGroup.Configure(
+            difficultyDialog != null ? difficultyDialog : card,
+            new[] { shadow, card, difficultyDialog },
+            new Vector2(24f, 24f));
     }
 
     private static void BuildHeader(Transform card, TMP_FontAsset font)
@@ -215,7 +233,7 @@ public static class NewGamePrefabBuilder
         CreateButton(card, font, GameManager.NewGameStartButtonKey, "生成新世界", new Vector2(-42f, 20f), new Vector2(280f, 80f), new Color(0.70f, 0.36f, 0.16f, 1f), 25f, new Vector2(1f, 0f));
     }
 
-    private static void BuildDifficultyPanel(Transform root, TMP_FontAsset font)
+    private static RectTransform BuildDifficultyPanel(Transform root, TMP_FontAsset font)
     {
         Image overlay = CreateImage(GameManager.NewGameDifficultyPanelKey, root, new Color(0.004f, 0.012f, 0.018f, 0.92f));
         Stretch(overlay.rectTransform);
@@ -253,6 +271,7 @@ public static class NewGamePrefabBuilder
 
         CreateButton(dialog.transform, font, GameManager.NewGameDifficultyConfirmButtonKey, "确认选择", new Vector2(-48f, 26f), new Vector2(260f, 78f), new Color(0.70f, 0.36f, 0.16f, 1f), 25f, new Vector2(1f, 0f));
         overlay.gameObject.SetActive(false);
+        return dialog.rectTransform;
     }
 
     private static void BuildOfficialDifficultyPage(Transform dialog, TMP_FontAsset font)

@@ -106,6 +106,8 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
     private static Color GmSelection => FlatWorldUITheme.Selection;
     private static Color GmSelectionOutline => FlatWorldUITheme.SelectionOutline;
     private static Color GmDanger => FlatWorldUITheme.Danger;
+    // Button 的 Color Tint 会与深灰底色相乘；禁用态只降一级明度，不能再用半透明中灰把底色压成近黑。
+    private static Color GmDisabledTint => new(0.82f, 0.82f, 0.82f, 1f);
 
     /// <summary>统一 GM 按钮底色和描边，选中/关键操作只用暖黄细描边强调。</summary>
     private static void SetGmButtonVisual(Button button, Color surface, bool emphasized = false)
@@ -1037,7 +1039,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         colors.highlightedColor = new Color(1.08f, 1.08f, 1.08f, 1f);
         colors.pressedColor = new Color(0.82f, 0.82f, 0.82f, 1f);
         colors.selectedColor = new Color(1.04f, 1.04f, 1.04f, 1f);
-        colors.disabledColor = new Color(0.62f, 0.62f, 0.62f, 0.5f);
+        colors.disabledColor = GmDisabledTint;
         colors.colorMultiplier = 1f;
         colors.fadeDuration = 0.11f;
         button.colors = colors;
@@ -2179,7 +2181,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         colors.highlightedColor = new Color(1.08f, 1.08f, 1.08f, 1f);
         colors.pressedColor = new Color(0.82f, 0.82f, 0.82f, 1f);
         colors.selectedColor = new Color(1.04f, 1.04f, 1.04f, 1f);
-        colors.disabledColor = new Color(0.62f, 0.62f, 0.62f, 0.5f);
+        colors.disabledColor = GmDisabledTint;
         colors.colorMultiplier = 1f;
         colors.fadeDuration = 0.11f;
         button.colors = colors;

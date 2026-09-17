@@ -60,7 +60,6 @@ public static partial class RuntimeUIPrefabBuilder
     // 主菜单设置与游戏内设置共用灰阶材质语言，只保留层级明度差。
     private static readonly Color MainMenuSettingsCanvas = new Color32(46, 46, 46, 255);
     private static readonly Color MainMenuSettingsSurface = new Color32(58, 58, 58, 255);
-    private static readonly Color MainMenuSettingsSection = new Color32(74, 74, 74, 245);
 
     private static TMP_FontAsset font;
 
@@ -83,9 +82,10 @@ public static partial class RuntimeUIPrefabBuilder
         UpdateExistingPrefab(
             MainMenuCoreRoot + "UI_ActionList.prefab",
             ConfigureSettingsActionListPages);
+        SaveMainMenuSettingsPrefab();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[Runtime UI] 已固化单面板设置主界面、顶部页签与十页容器。");
+        Debug.Log("[Runtime UI] 已固化游戏内设置主界面，并同步主菜单客户端设置子集。");
     }
 
     /// <summary>只刷新设置会话页的保存/退出入口与确认层，保留其余设置节点和本地文件 ID。</summary>
@@ -121,6 +121,7 @@ public static partial class RuntimeUIPrefabBuilder
         GameUIPrefabRebuilder.RebuildActionListUI();
         Directory.CreateDirectory(SettingsPanelsRoot);
         Directory.CreateDirectory(SettingsComponentsRoot);
+        Directory.CreateDirectory(MobileRoot);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.AudioSettings + ".prefab", BuildAudioSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.UISettings + ".prefab", BuildInterfaceSettings);
         SaveCameraControlSettingsPrefab();
@@ -131,10 +132,12 @@ public static partial class RuntimeUIPrefabBuilder
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.DifficultySettings + ".prefab", BuildDifficultySettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.InputBindingSettings + ".prefab", BuildInputBindingSettings);
         SaveNewPrefab(SettingsComponentsRoot + RuntimeUIPrefabKeys.InputBindingRow + ".prefab", BuildInputBindingRow);
+        SaveMobileControlLayoutEditorPrefab();
         UpdateExistingPrefab(MainMenuCoreRoot + "UI_ActionList.prefab", ConfigureSettingsActionListPages);
+        SaveMainMenuSettingsPrefab();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[Runtime UI] 已固化单面板设置入口与全部内嵌设置分页。");
+        Debug.Log("[Runtime UI] 已固化全部设置分页，并同步主菜单客户端设置子集。");
     }
 
     [MenuItem("FlatWorld/UI/Rebuild Runtime Prefab UI")]
@@ -162,7 +165,6 @@ public static partial class RuntimeUIPrefabBuilder
         SaveCameraControlSettingsPrefab();
         SaveCoordinateDisplaySettingsPrefab();
         SaveVisualEffectsSettingsPrefab();
-        SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.MainMenuSettings + ".prefab", BuildMainMenuSettings);
         SaveMainMenuExitConfirmationPrefab();
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.AutoSaveSettings + ".prefab", BuildAutoSaveSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab", BuildWorldStreamingSettings);
@@ -180,9 +182,11 @@ public static partial class RuntimeUIPrefabBuilder
         SaveBuffStatusPrefabs();
         SaveQuestTrackerPrefabs();
         SaveMobileControlsPrefab();
+        SaveMobileControlLayoutEditorPrefab();
         UpdateExistingPrefab(UIRootPrefab, EnsureSafeAreaRoot);
 
         UpdateExistingPrefab(MainMenuCoreRoot + "UI_ActionList.prefab", ConfigureSettingsActionListPages);
+        SaveMainMenuSettingsPrefab();
         UpdateExistingPrefab(InventoryPanelsRoot + "UI_Bag.prefab", AddInventorySortButton);
         UpdateExistingPrefab(InventoryComponentsRoot + "UI_Slot.prefab", AddCraftingPreviewLayers);
         UpdateExistingWorldPrefab(NetworkPlayerPrefab, AddNetworkPlayerNameLabel);
@@ -208,6 +212,7 @@ public static partial class RuntimeUIPrefabBuilder
 
         Directory.CreateDirectory(MobileRoot);
         SaveMobileControlsPrefab();
+        SaveMobileControlLayoutEditorPrefab();
         UpdateExistingPrefab(UIRootPrefab, EnsureSafeAreaRoot);
         UpdateExistingWorldPrefab(PlayerPrefab, EnsurePlayerMobileControlsHUD);
         AssetDatabase.SaveAssets();
@@ -334,7 +339,7 @@ public static partial class RuntimeUIPrefabBuilder
         Debug.Log("[Runtime UI] 已固化移动端可触控的自动保存设置 Prefab。");
     }
 
-    /// <summary>只重建主菜单设置窗口，便于单独调整显示、画质和语言的占位布局。</summary>
+    /// <summary>只重建主菜单设置窗口；基础结构复制游戏内设置，仅保留客户端本地设置分页。</summary>
     [MenuItem("FlatWorld/UI/Rebuild Main Menu Settings UI")]
     public static void RebuildMainMenuSettingsUI()
     {
@@ -346,12 +351,10 @@ public static partial class RuntimeUIPrefabBuilder
         }
 
         Directory.CreateDirectory(SettingsPanelsRoot);
-        SaveNewPrefab(
-            SettingsPanelsRoot + RuntimeUIPrefabKeys.MainMenuSettings + ".prefab",
-            BuildMainMenuSettings);
+        SaveMainMenuSettingsPrefab();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[Runtime UI] 已固化主菜单设置窗口 Prefab（大小、画质、语言占位项）。");
+        Debug.Log("[Runtime UI] 已固化主菜单客户端设置窗口，并移除世界与会话分页。");
     }
 
     /// <summary>只重建主菜单退出确认弹窗，并登记为运行时可寻址 Prefab。</summary>
@@ -516,12 +519,33 @@ public static partial class RuntimeUIPrefabBuilder
         {
             SetUILayerRecursively(root);
             FlatWorldUITheme.Apply(root.transform);
+            PrepareSharedControlsForSave(root);
             PrefabUtility.SaveAsPrefabAsset(root, path);
         }
         finally
         {
             Object.DestroyImmediate(root);
         }
+    }
+
+    /// <summary>
+    /// 以正式游戏内设置 Prefab 为主菜单设置的结构基线，再定向裁成纯客户端设置子集。
+    /// 只覆盖 prefab 文件本体，保留目标 .meta/GUID，避免破坏既有 Addressables 引用。
+    /// </summary>
+    private static void SaveMainMenuSettingsPrefab()
+    {
+        string sourcePath = MainMenuCoreRoot + "UI_ActionList.prefab";
+        string targetPath = SettingsPanelsRoot + RuntimeUIPrefabKeys.MainMenuSettings + ".prefab";
+        if (!File.Exists(sourcePath))
+            throw new FileNotFoundException($"找不到游戏内设置基线 Prefab：{sourcePath}", sourcePath);
+
+        Directory.CreateDirectory(SettingsPanelsRoot);
+        File.Copy(sourcePath, targetPath, true);
+        AssetDatabase.ImportAsset(
+            targetPath,
+            ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+        UpdateExistingPrefab(targetPath, ConfigureMainMenuSettingsActionList);
+        EnsureRuntimePrefabAddressable(targetPath);
     }
 
     /// <summary>保存主菜单退出确认弹窗，并登记为 GameRes 可查询的正式运行时 Prefab。</summary>
@@ -575,6 +599,14 @@ public static partial class RuntimeUIPrefabBuilder
     {
         string prefabPath = MobileRoot + RuntimeUIPrefabKeys.MobileControls + ".prefab";
         SaveNewPrefab(prefabPath, BuildMobileControlsHUD);
+        EnsureRuntimePrefabAddressable(prefabPath);
+    }
+
+    /// <summary>保存触屏玩法控件布局编辑器，并登记为 GameRes 可寻址 Prefab。</summary>
+    private static void SaveMobileControlLayoutEditorPrefab()
+    {
+        string prefabPath = MobileRoot + RuntimeUIPrefabKeys.MobileControlLayoutEditor + ".prefab";
+        SaveNewPrefab(prefabPath, BuildMobileControlLayoutEditor);
         EnsureRuntimePrefabAddressable(prefabPath);
     }
 
@@ -695,6 +727,7 @@ public static partial class RuntimeUIPrefabBuilder
             update(root);
             SetUILayerRecursively(root);
             FlatWorldUITheme.Apply(root.transform);
+            PrepareSharedControlsForSave(root);
             EditorUtility.SetDirty(root);
             PrefabUtility.SaveAsPrefabAsset(root, path);
         }
@@ -1293,7 +1326,7 @@ public static partial class RuntimeUIPrefabBuilder
         statusLayout.preferredHeight = 112f;
         statusLayout.minHeight = 88f;
 
-        Slider progress = CreateSlider(GameRes.ResourceLoadingProgressKey, card.transform);
+        Slider progress = InstantiateSharedControl<Slider>("UI_ProgressBar", GameRes.ResourceLoadingProgressKey, card.transform);
         progress.interactable = false;
         progress.value = 0f;
         LayoutElement progressLayout = progress.GetComponent<LayoutElement>();
@@ -1377,7 +1410,7 @@ public static partial class RuntimeUIPrefabBuilder
         status.alignment = TextAlignmentOptions.Center;
         status.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
 
-        Slider progress = CreateSlider("加载进度", card.transform);
+        Slider progress = InstantiateSharedControl<Slider>("UI_ProgressBar", "加载进度", card.transform);
         progress.interactable = false;
         progress.value = 0.08f;
         LayoutElement progressLayout = progress.GetComponent<LayoutElement>();
@@ -1478,7 +1511,7 @@ public static partial class RuntimeUIPrefabBuilder
         status.alignment = TextAlignmentOptions.Center;
         SetCentered(status.rectTransform, new Vector2(0f, -38f), new Vector2(620f, 34f));
 
-        Slider progress = CreateSlider(GameManager.DimensionLoadingProgressKey, card.transform);
+        Slider progress = InstantiateSharedControl<Slider>("UI_ProgressBar", GameManager.DimensionLoadingProgressKey, card.transform);
         progress.interactable = false;
         progress.value = 0.48f;
         SetCentered(progress.GetComponent<RectTransform>(), new Vector2(0f, -91f), new Vector2(580f, 30f));
@@ -1812,65 +1845,6 @@ public static partial class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>构建主菜单设置窗口；运行时由 GameManager 绑定显示、画质、特效质量和语言设置。</summary>
-    private static GameObject BuildMainMenuSettings()
-    {
-        GameObject root = CreateModalPanelRoot(
-            RuntimeUIPrefabKeys.MainMenuSettings,
-            FlatWorldUIPanelMetrics.SharedModalCardSize);
-        Transform dialog = root.transform.Find("设置对话框");
-        ConfigureMainMenuModalBackground(root, dialog, "设置");
-
-        CreateMainMenuSettingsHeader(dialog, "游戏设置", "关闭按钮");
-
-        CreateMainMenuSettingsSection(dialog, "显示");
-        CreateMainMenuSettingsDropdownRow(
-            dialog,
-            "窗口大小",
-            "窗口大小下拉列表",
-            new[] { "1920 × 1080", "1600 × 900", "1280 × 720" });
-        CreateMainMenuSettingsDropdownRow(
-            dialog,
-            "显示模式",
-            "显示模式下拉列表",
-            new[] { "全屏窗口", "全屏", "窗口" });
-
-        CreateMainMenuSettingsSection(dialog, "画质");
-        CreateMainMenuSettingsDropdownRow(
-            dialog,
-            "画质预设",
-            "画质预设下拉列表",
-            new[] { "高（推荐）", "中", "低" });
-        CreateMainMenuSettingsDropdownRow(
-            dialog,
-            "特效质量",
-            "特效质量下拉列表",
-            new[] { "高", "中", "低" });
-
-        CreateMainMenuSettingsSection(dialog, "语言");
-        CreateMainMenuSettingsDropdownRow(
-            dialog,
-            "游戏语言",
-            "游戏语言下拉列表",
-            new[] { "简体中文", "English" });
-
-        TextMeshProUGUI status = CreateText(
-            "设置状态",
-            dialog,
-            string.Empty,
-            18f,
-            Muted);
-        status.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
-
-        Transform footer = CreateFooter(dialog);
-        footer.GetComponent<LayoutElement>().preferredHeight = 76f;
-        Button resetButton = CreateButton("恢复默认按钮", footer, "恢复所有设置", 210f, 60f, false);
-        resetButton.GetComponent<Image>().color = MainMenuSettingsSurface;
-        SetButtonLabelSize(resetButton, 20f);
-        SetButtonLabelSize(CreateButton("返回按钮", footer, "返回", 130f, 60f, true), 20f);
-        return root;
-    }
-
     /// <summary>为主菜单模态窗口建立覆盖刘海区的暗幕、卡片投影和暖黑背景。</summary>
     private static void ConfigureMainMenuModalBackground(
         GameObject root,
@@ -2020,6 +1994,7 @@ public static partial class RuntimeUIPrefabBuilder
         tabLayout.childForceExpandHeight = false;
         CreateButton("键鼠分页按钮", deviceTabs.transform, "键鼠", 132f, 34f, true);
         CreateButton("手柄分页按钮", deviceTabs.transform, "手柄", 132f, 34f, false);
+        CreateButton("触屏布局按钮", deviceTabs.transform, "触屏布局", 150f, 34f, false);
 
         CreateBindingScrollView(content);
         CreateCompactInputBindingFooter(content);
@@ -2147,6 +2122,7 @@ public static partial class RuntimeUIPrefabBuilder
         binding.gameObject.AddComponent<LayoutElement>().preferredWidth = 190f;
         CreateButton("修改按钮", root.transform, "修改", 86f, 34f, true);
         CreateButton("清除按钮", root.transform, "清除", 86f, 34f, false);
+        CreateButton("重置按钮", root.transform, "重置", 86f, 34f, false);
         return root;
     }
 
@@ -2335,6 +2311,179 @@ public static partial class RuntimeUIPrefabBuilder
         EnsureActionListTabBar(root.transform);
         RemoveObsoleteActionListPagerControls(root.transform);
         EnsureSeasonSettingsPage(root);
+    }
+
+    /// <summary>
+    /// 把游戏内设置结构裁成主菜单版本：保留纯客户端偏好，并补入画质与语言页；
+    /// 世界、存档会话、自动保存、流送、难度和季节等依赖世界实例的页面从 Prefab 中物理移除。
+    /// </summary>
+    private static void ConfigureMainMenuSettingsActionList(GameObject root)
+    {
+        root.name = RuntimeUIPrefabKeys.MainMenuSettings;
+
+        ScrollRect scroll = FindTransform(root.transform, "Scroll View")?.GetComponent<ScrollRect>();
+        Transform content = scroll != null ? scroll.content : null;
+        Transform tabBar = FindTransform(root.transform, SettingsActionListPagination.TabBarName);
+        if (content == null || tabBar == null)
+            throw new MissingReferenceException("主菜单设置基线缺少 Scroll View/Content 或设置分页栏。");
+
+        string[] removedPages =
+        {
+            SettingsActionListPagination.WorldPageName,
+            SettingsActionListPagination.SessionPageName,
+            SettingsActionListPagination.AutoSavePageName,
+            SettingsActionListPagination.WorldStreamingPageName,
+            SettingsActionListPagination.DifficultyPageName,
+            SeasonSettingsPanel.PageName
+        };
+        for (int index = 0; index < removedPages.Length; index++)
+            DestroyDirectChild(content, removedPages[index]);
+
+        DestroyTransformIfPresent(root.transform, SettingsExitConfirmationController.LayerName);
+        DestroyTransformIfPresent(tabBar, SettingsActionListPagination.WorldTabButtonName);
+        DestroyTransformIfPresent(tabBar, SettingsActionListPagination.SessionTabButtonName);
+
+        Transform graphicsPage = EnsureActionListPage(
+            content,
+            SettingsActionListPagination.GraphicsPageName);
+        ClearDirectChildren(graphicsPage);
+        CreateSettingsHeader(graphicsPage, "画质设置");
+        CreateSettingsHint(graphicsPage, "这些设置不依赖当前世界，会立即应用并自动保存。", 48f);
+        CreateSettingsDropdownRow(
+            graphicsPage,
+            "画质预设",
+            GameManager.MainMenuSettingsQualityPresetKey,
+            new[] { "高（推荐）", "中", "低" });
+        CreateSettingsDropdownRow(
+            graphicsPage,
+            "特效质量",
+            GameManager.MainMenuSettingsEffectsQualityKey,
+            new[] { "高", "中", "低" });
+
+        Transform languagePage = EnsureActionListPage(
+            content,
+            SettingsActionListPagination.LanguagePageName);
+        ClearDirectChildren(languagePage);
+        CreateSettingsHeader(languagePage, "语言");
+        CreateSettingsHint(languagePage, "界面语言会立即切换并保存到本机。", 48f);
+        CreateSettingsDropdownRow(
+            languagePage,
+            "游戏语言",
+            GameManager.MainMenuSettingsLanguageDropdownKey,
+            new[] { "简体中文", "English" });
+        TextMeshProUGUI languageStatus = CreateText(
+            GameManager.MainMenuSettingsLanguageStatusTextKey,
+            languagePage,
+            string.Empty,
+            16f,
+            Muted);
+        languageStatus.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
+
+        Transform[] orderedPages =
+        {
+            FindDirectChild(content, SettingsActionListPagination.InterfacePageName),
+            FindDirectChild(content, SettingsActionListPagination.InputBindingPageName),
+            FindDirectChild(content, SettingsActionListPagination.DisplayPageName),
+            FindDirectChild(content, SettingsActionListPagination.CameraPageName),
+            FindDirectChild(content, SettingsActionListPagination.AudioPageName),
+            FindDirectChild(content, SettingsActionListPagination.VisualEffectsPageName),
+            graphicsPage,
+            languagePage
+        };
+        for (int index = 0; index < orderedPages.Length; index++)
+        {
+            if (orderedPages[index] == null)
+                throw new MissingReferenceException($"主菜单设置缺少客户端分页，索引={index}。");
+
+            orderedPages[index].SetSiblingIndex(index);
+            orderedPages[index].gameObject.SetActive(index == 0);
+        }
+
+        Button graphicsTab = EnsureActionListTabButton(
+            root.transform,
+            tabBar,
+            SettingsActionListPagination.GraphicsTabButtonName,
+            "画质设置");
+        Button languageTab = EnsureActionListTabButton(
+            root.transform,
+            tabBar,
+            SettingsActionListPagination.LanguageTabButtonName,
+            "语言");
+        Button[] orderedTabs =
+        {
+            FindTransform(root.transform, "UI设置")?.GetComponent<Button>(),
+            FindTransform(root.transform, "按键绑定")?.GetComponent<Button>(),
+            FindTransform(root.transform, "显示设置")?.GetComponent<Button>(),
+            FindTransform(root.transform, "镜头控制")?.GetComponent<Button>(),
+            FindTransform(root.transform, "音量调节")?.GetComponent<Button>(),
+            FindTransform(root.transform, "视觉特效")?.GetComponent<Button>(),
+            graphicsTab,
+            languageTab
+        };
+        for (int index = 0; index < orderedTabs.Length; index++)
+        {
+            if (orderedTabs[index] == null)
+                throw new MissingReferenceException($"主菜单设置缺少客户端页签，索引={index}。");
+
+            orderedTabs[index].transform.SetSiblingIndex(index);
+            orderedTabs[index].GetComponent<Image>().color = SurfaceRaised;
+        }
+
+        TextMeshProUGUI title = FindTransform(root.transform, "FWUI_标题")?.GetComponent<TextMeshProUGUI>();
+        TextMeshProUGUI eyebrow = FindTransform(root.transform, "FWUI_眉题")?.GetComponent<TextMeshProUGUI>();
+        TextMeshProUGUI footerHint = FindTransform(root.transform, "FWUI_FooterHint")?.GetComponent<TextMeshProUGUI>();
+        if (title != null)
+            title.text = "设置";
+        if (eyebrow != null)
+            eyebrow.text = "SETTINGS / PREFERENCES";
+        if (footerHint != null)
+            footerHint.text = "客户端设置会自动保存";
+
+        DestroyTransformIfPresent(root.transform, "恢复所有设置");
+        Button resetButton = CreateButton(
+            "恢复所有设置",
+            root.transform,
+            "恢复所有设置",
+            190f,
+            60f,
+            false);
+        RectTransform resetRect = resetButton.GetComponent<RectTransform>();
+        resetRect.anchorMin = new Vector2(1f, 0f);
+        resetRect.anchorMax = new Vector2(1f, 0f);
+        resetRect.pivot = new Vector2(1f, 0f);
+        resetRect.anchoredPosition = new Vector2(-24f, 8f);
+        resetRect.sizeDelta = new Vector2(190f, 60f);
+        LayoutElement resetLayout = resetButton.GetComponent<LayoutElement>();
+        if (resetLayout != null)
+            resetLayout.ignoreLayout = true;
+        SetButtonLabelSize(resetButton, 17f);
+        resetButton.transform.SetAsLastSibling();
+
+        Transform close = FindTransform(root.transform, GameManager.MainMenuSettingsCloseButtonKey);
+        close?.SetAsLastSibling();
+    }
+
+    /// <summary>删除指定父节点的直属子节点。</summary>
+    private static void DestroyDirectChild(Transform parent, string childName)
+    {
+        Transform child = FindDirectChild(parent, childName);
+        if (child != null)
+            Object.DestroyImmediate(child.gameObject);
+    }
+
+    /// <summary>按名称删除一个现有节点。</summary>
+    private static void DestroyTransformIfPresent(Transform root, string objectName)
+    {
+        Transform target = FindTransform(root, objectName);
+        if (target != null)
+            Object.DestroyImmediate(target.gameObject);
+    }
+
+    /// <summary>清空页面内容但保留页面自身布局组件。</summary>
+    private static void ClearDirectChildren(Transform parent)
+    {
+        for (int index = parent.childCount - 1; index >= 0; index--)
+            Object.DestroyImmediate(parent.GetChild(index).gameObject);
     }
 
     /// <summary>定位正式会话分页并仅刷新该分页及其共用确认层。</summary>
@@ -3031,6 +3180,19 @@ public static partial class RuntimeUIPrefabBuilder
         moveZone.GetComponent<MobileHeldItemDropSurface>()
             .Configure(onlyRaycastWhileHoldingItem: false);
         CreateJoystickVisual(moveZone.transform, Vector2.zero, 188f, floating: true);
+        Transform moveHandle = moveZone.transform.Find("底座");
+        if (moveHandle != null)
+        {
+            MobileControlLayoutNode moveLayout =
+                moveHandle.gameObject.AddComponent<MobileControlLayoutNode>();
+            moveLayout.Configure(UIUserSettings.MobileMoveControlId, moveRect, fixedMoveOnly: true);
+            moveLayout.ConfigureEditorGeometry(
+                Vector2.zero,
+                Vector2.zero,
+                Vector2.zero,
+                new Vector2(MobileActionRightMargin, MobileActionBottomMargin),
+                new Vector2(MobileAttackZoneSize, MobileAttackZoneSize));
+        }
 
         // 右侧操作组以安全区右下角为唯一定位基准，组内所有控件使用局部坐标对齐。
         GameObject actionGroup = CreateUIObject("右侧操作组", gameplay.transform);
@@ -3059,22 +3221,44 @@ public static partial class RuntimeUIPrefabBuilder
         attackZone.GetComponent<MobileHeldItemDropSurface>()
             .Configure(onlyRaycastWhileHoldingItem: false);
         CreateJoystickVisual(attackZone.transform, Vector2.zero, 188f, floating: false);
+        attackZone.AddComponent<MobileControlLayoutNode>()
+            .Configure(
+                UIUserSettings.MobileAttackControlId,
+                attackZone.GetComponent<RectTransform>());
 
-        CreateMobileButton(
+        Button interactButton = CreateMobileButton(
             "交互",
             actionGroup.transform,
             "交互",
             Vector2.zero,
             new Vector2(0f, MobileAttackZoneSize + MobileActionGap),
             MobileActionButtonSize);
-        CreateMobileButton(
+        interactButton.gameObject.AddComponent<MobileControlLayoutNode>()
+            .Configure(
+                UIUserSettings.MobileInteractControlId,
+                interactButton.GetComponent<RectTransform>());
+        Button useButton = CreateMobileButton(
             "使用",
             actionGroup.transform,
             "使用",
             new Vector2(1f, 0f),
             new Vector2(0f, MobileAttackZoneSize + MobileActionGap),
             MobileActionButtonSize);
-        CreateMobileButton("奔跑", gameplay.transform, "奔跑", new Vector2(0f, 0.5f), new Vector2(76f, 0f), 104f);
+        useButton.gameObject.AddComponent<MobileControlLayoutNode>()
+            .Configure(
+                UIUserSettings.MobileUseControlId,
+                useButton.GetComponent<RectTransform>());
+        Button runButton = CreateMobileButton(
+            "奔跑",
+            gameplay.transform,
+            "奔跑",
+            new Vector2(0f, 0.5f),
+            new Vector2(76f, 0f),
+            104f);
+        runButton.gameObject.AddComponent<MobileControlLayoutNode>()
+            .Configure(
+                UIUserSettings.MobileRunControlId,
+                runButton.GetComponent<RectTransform>());
 
         // 设置与右侧菜单开关独立于玩法层，打开模态面板时仍能切换菜单。
         GameObject persistent = CreateUIObject("常驻控制层", root.transform);
@@ -3092,6 +3276,104 @@ public static partial class RuntimeUIPrefabBuilder
         CreateMobileHotbarSideButtons(hotbarAnchor.transform);
 
         BuildMobileDrawer(root.transform);
+        return root;
+    }
+
+    /// <summary>构建全屏触屏布局编辑器；实际玩法控件视觉仍由 UI_MobileControls Prefab 提供。</summary>
+    private static GameObject BuildMobileControlLayoutEditor()
+    {
+        GameObject root = CreateUIObject(
+            RuntimeUIPrefabKeys.MobileControlLayoutEditor,
+            null,
+            typeof(Image),
+            typeof(CanvasGroup),
+            typeof(MobileControlLayoutEditor));
+        RectTransform rootRect = root.GetComponent<RectTransform>();
+        Stretch(rootRect);
+        Image backdrop = root.GetComponent<Image>();
+        backdrop.color = new Color(0f, 0f, 0f, 0.72f);
+        backdrop.raycastTarget = true;
+        CanvasGroup group = root.GetComponent<CanvasGroup>();
+        group.alpha = 1f;
+        group.interactable = true;
+        group.blocksRaycasts = true;
+
+        GameObject preview = CreateUIObject("预览根", root.transform);
+        Stretch(preview.GetComponent<RectTransform>());
+
+        GameObject header = CreateUIObject("布局编辑顶部栏", root.transform, typeof(Image));
+        RectTransform headerRect = header.GetComponent<RectTransform>();
+        headerRect.anchorMin = new Vector2(0f, 1f);
+        headerRect.anchorMax = Vector2.one;
+        headerRect.pivot = new Vector2(0.5f, 1f);
+        headerRect.anchoredPosition = Vector2.zero;
+        headerRect.sizeDelta = new Vector2(0f, 82f);
+        header.GetComponent<Image>().color = Canvas;
+        AddOutline(header.GetComponent<Image>(), Border);
+
+        TextMeshProUGUI title = CreateText(
+            "标题文本",
+            header.transform,
+            "触屏布局",
+            24f,
+            Cream);
+        title.fontStyle = FontStyles.Bold;
+        title.alignment = TextAlignmentOptions.MidlineLeft;
+        title.rectTransform.anchorMin = new Vector2(0f, 0f);
+        title.rectTransform.anchorMax = new Vector2(0.32f, 1f);
+        title.rectTransform.offsetMin = new Vector2(24f, 0f);
+        title.rectTransform.offsetMax = Vector2.zero;
+        title.raycastTarget = false;
+
+        TextMeshProUGUI hint = CreateText(
+            "说明文本",
+            header.transform,
+            "拖动固定摇杆和玩法按钮；位置会按安全区域自适应不同屏幕。",
+            16f,
+            Muted);
+        hint.alignment = TextAlignmentOptions.MidlineRight;
+        hint.rectTransform.anchorMin = new Vector2(0.32f, 0f);
+        hint.rectTransform.anchorMax = Vector2.one;
+        hint.rectTransform.offsetMin = Vector2.zero;
+        hint.rectTransform.offsetMax = new Vector2(-24f, 0f);
+        hint.raycastTarget = false;
+
+        GameObject footer = CreateUIObject("布局编辑底部栏", root.transform, typeof(Image));
+        RectTransform footerRect = footer.GetComponent<RectTransform>();
+        footerRect.anchorMin = Vector2.zero;
+        footerRect.anchorMax = new Vector2(1f, 0f);
+        footerRect.pivot = new Vector2(0.5f, 0f);
+        footerRect.anchoredPosition = Vector2.zero;
+        footerRect.sizeDelta = new Vector2(0f, 86f);
+        footer.GetComponent<Image>().color = Canvas;
+        AddOutline(footer.GetComponent<Image>(), Border);
+
+        HorizontalLayoutGroup footerLayout = footer.AddComponent<HorizontalLayoutGroup>();
+        footerLayout.padding = new RectOffset(24, 24, 12, 12);
+        footerLayout.spacing = 12f;
+        footerLayout.childAlignment = TextAnchor.MiddleCenter;
+        footerLayout.childControlWidth = true;
+        footerLayout.childControlHeight = true;
+        footerLayout.childForceExpandWidth = false;
+        footerLayout.childForceExpandHeight = true;
+
+        TextMeshProUGUI status = CreateText(
+            "状态文本",
+            footer.transform,
+            "拖动控件后点击保存。",
+            15f,
+            Muted);
+        status.alignment = TextAlignmentOptions.MidlineLeft;
+        status.enableWordWrapping = false;
+        status.overflowMode = TextOverflowModes.Ellipsis;
+        LayoutElement statusLayout = status.gameObject.AddComponent<LayoutElement>();
+        statusLayout.flexibleWidth = 1f;
+        statusLayout.minWidth = 220f;
+        status.raycastTarget = false;
+
+        CreateButton("恢复默认按钮", footer.transform, "恢复默认", 132f, 60f, false);
+        CreateButton("取消按钮", footer.transform, "取消", 112f, 60f, false);
+        CreateButton("保存按钮", footer.transform, "保存", 112f, 60f, true);
         return root;
     }
 
@@ -3258,7 +3540,7 @@ public static partial class RuntimeUIPrefabBuilder
         SetButtonLabelSize(button, 14f);
     }
 
-    private static void CreateMobileButton(
+    private static Button CreateMobileButton(
         string name,
         Transform parent,
         string caption,
@@ -3285,6 +3567,8 @@ public static partial class RuntimeUIPrefabBuilder
             indicatorImage.color = Border;
             indicatorImage.raycastTarget = false;
         }
+
+        return button;
     }
 
     #endregion
@@ -3518,59 +3802,6 @@ public static partial class RuntimeUIPrefabBuilder
         }
     }
 
-    /// <summary>创建主菜单设置页的移动端分组标题。</summary>
-    private static void CreateMainMenuSettingsSection(Transform parent, string title)
-    {
-        GameObject section = CreateUIObject(title + "设置分组", parent, typeof(Image));
-        section.AddComponent<LayoutElement>().preferredHeight = 50f;
-
-        Image background = section.GetComponent<Image>();
-        background.color = MainMenuSettingsSection;
-        AddOutline(background, new Color(0.83f, 0.49f, 0.23f, 0.22f));
-
-        HorizontalLayoutGroup layout = section.AddComponent<HorizontalLayoutGroup>();
-        layout.padding = new RectOffset(14, 14, 4, 4);
-        layout.childAlignment = TextAnchor.MiddleLeft;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = false;
-        layout.childForceExpandHeight = false;
-
-        TextMeshProUGUI titleText = CreateText(title + "分组标题", section.transform, title, 22f, Amber);
-        titleText.fontStyle = FontStyles.Bold;
-        titleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-    }
-
-    /// <summary>创建主菜单设置页的移动端下拉行，扩大文字、选项和触控高度。</summary>
-    private static TMP_Dropdown CreateMainMenuSettingsDropdownRow(
-        Transform parent,
-        string label,
-        string dropdownName,
-        string[] options)
-    {
-        GameObject row = CreateRow(label + "行", parent, 72f);
-        TextMeshProUGUI labelText = CreateText(label + "标签", row.transform, label, 22f, Cream);
-        labelText.gameObject.AddComponent<LayoutElement>().preferredWidth = 160f;
-
-        TMP_Dropdown dropdown = CreateDropdown(dropdownName, row.transform);
-        LayoutElement element = dropdown.gameObject.AddComponent<LayoutElement>();
-        element.preferredWidth = 1100f;
-        element.preferredHeight = 64f;
-        dropdown.captionText.fontSize = 20f;
-        dropdown.itemText.fontSize = 19f;
-        Transform item = dropdown.itemText.transform.parent;
-        item.GetComponent<LayoutElement>().preferredHeight = 56f;
-        ((Image)dropdown.targetGraphic).color = MainMenuSettingsSurface;
-        dropdown.template.GetComponent<Image>().color = MainMenuSettingsCanvas;
-        item.GetComponent<Image>().color = new Color(0.055f, 0.075f, 0.078f, 1f);
-        dropdown.template.sizeDelta = new Vector2(0f, 280f);
-        dropdown.ClearOptions();
-        dropdown.AddOptions(new List<string>(options));
-        dropdown.value = 0;
-        dropdown.RefreshShownValue();
-        return dropdown;
-    }
-
     /// <summary>创建设置页下拉项，并写入仅用于展示的默认选项。</summary>
     private static TMP_Dropdown CreateSettingsDropdownRow(
         Transform parent,
@@ -3600,7 +3831,7 @@ public static partial class RuntimeUIPrefabBuilder
 
     private static void CreateSliderRow(Transform parent, string label, string sliderName)
     {
-        GameObject row = CreateRow(label + "行", parent, 50f);
+        GameObject row = CreateRow(label + "行", parent, 72f);
         CreateRowLabel(row.transform, label, 112f);
         Slider slider = CreateSlider(sliderName, row.transform);
         slider.value = 1f;
@@ -3611,6 +3842,9 @@ public static partial class RuntimeUIPrefabBuilder
 
     private static Slider CreateSlider(string name, Transform parent)
     {
+        if (!buildingSharedControls)
+            return InstantiateSharedControl<Slider>("UI_SliderControl", name, parent);
+
         GameObject root = CreateUIObject(name, parent, typeof(Image), typeof(Slider));
         LayoutElement layout = root.AddComponent<LayoutElement>();
         layout.flexibleWidth = 1f;
@@ -3653,6 +3887,9 @@ public static partial class RuntimeUIPrefabBuilder
 
     private static Toggle CreateToggle(string name, Transform parent)
     {
+        if (!buildingSharedControls)
+            return InstantiateSharedControl<Toggle>("UI_Toggle", name, parent);
+
         GameObject root = CreateUIObject(name, parent, typeof(Image), typeof(Toggle));
         LayoutElement element = root.AddComponent<LayoutElement>();
         element.preferredWidth = 58f;
@@ -3675,6 +3912,14 @@ public static partial class RuntimeUIPrefabBuilder
 
     private static TMP_InputField CreateInputField(string name, Transform parent, string placeholderValue)
     {
+        if (!buildingSharedControls)
+        {
+            TMP_InputField shared = InstantiateSharedControl<TMP_InputField>("UI_InputField", name, parent);
+            if (shared.placeholder is TMP_Text placeholderText)
+                placeholderText.text = placeholderValue;
+            return shared;
+        }
+
         GameObject root = CreateUIObject(name, parent, typeof(Image), typeof(TMP_InputField));
         Image background = root.GetComponent<Image>();
         background.color = Surface;
@@ -3701,6 +3946,9 @@ public static partial class RuntimeUIPrefabBuilder
 
     private static TMP_Dropdown CreateDropdown(string name, Transform parent)
     {
+        if (!buildingSharedControls)
+            return InstantiateSharedControl<TMP_Dropdown>("UI_Dropdown", name, parent);
+
         GameObject root = CreateUIObject(name, parent, typeof(Image), typeof(TMP_Dropdown));
         root.GetComponent<RectTransform>().sizeDelta = new Vector2(402f, 42f);
         Image background = root.GetComponent<Image>();
@@ -3751,6 +3999,8 @@ public static partial class RuntimeUIPrefabBuilder
         content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         GameObject item = CreateUIObject("Item", content.transform, typeof(Image), typeof(Toggle));
+        RectTransform itemRect = item.GetComponent<RectTransform>();
+        itemRect.sizeDelta = new Vector2(itemRect.sizeDelta.x, 31f);
         item.AddComponent<LayoutElement>().preferredHeight = 31f;
         Image itemBackground = item.GetComponent<Image>();
         itemBackground.color = SurfaceRaised;
@@ -3795,6 +4045,9 @@ public static partial class RuntimeUIPrefabBuilder
 
         Transform item = dropdown.itemText.transform.parent;
         item.GetComponent<LayoutElement>().preferredHeight = 60f;
+        RectTransform itemRect = item as RectTransform;
+        if (itemRect != null)
+            itemRect.sizeDelta = new Vector2(itemRect.sizeDelta.x, 60f);
         dropdown.template.sizeDelta = new Vector2(0f, 360f);
     }
 
@@ -3901,6 +4154,18 @@ public static partial class RuntimeUIPrefabBuilder
 
     private static Button CreateButton(string name, Transform parent, string caption, float width, float height, bool primary)
     {
+        if (!buildingSharedControls)
+        {
+            string key = name.Contains("关闭") ? "UI_CloseButton" :
+                name.Contains("分页") || name.Contains("切换") || name.Contains("页签") ? "UI_TabButton" : "UI_Button";
+            Button shared = InstantiateSharedControl<Button>(key, name, parent);
+            LayoutElement sharedLayout = shared.GetComponent<LayoutElement>();
+            sharedLayout.preferredWidth = width;
+            sharedLayout.preferredHeight = height;
+            shared.GetComponentInChildren<TextMeshProUGUI>(true).text = caption;
+            return shared;
+        }
+
         GameObject root = CreateUIObject(name, parent, typeof(Image), typeof(Button));
         LayoutElement element = root.GetComponent<LayoutElement>() ?? root.AddComponent<LayoutElement>();
         element.preferredWidth = width;
@@ -3927,6 +4192,9 @@ public static partial class RuntimeUIPrefabBuilder
     /// <summary>调整按钮文字字号，不改变业务节点与交互组件。</summary>
     private static void SetButtonLabelSize(Button button, float fontSize)
     {
+        if (ReusableUIControl.OwnsVisuals(button))
+            return;
+
         TextMeshProUGUI label = button != null
             ? button.GetComponentInChildren<TextMeshProUGUI>(true)
             : null;
@@ -3936,6 +4204,12 @@ public static partial class RuntimeUIPrefabBuilder
 
     private static void ConfigureButtonVisual(Button button, bool primary, string caption)
     {
+        if (ReusableUIControl.OwnsVisuals(button))
+        {
+            button.GetComponentInChildren<TextMeshProUGUI>(true).text = caption;
+            return;
+        }
+
         Image image = button.GetComponent<Image>() ?? button.gameObject.AddComponent<Image>();
         image.color = primary ? Amber : SurfaceRaised;
         AddOutline(image, primary ? Amber : Border);

@@ -23,6 +23,22 @@ public static class UIUserSettings
     private const string PinchZoomSensitivityKey = "FlatWorld.Mobile.PinchZoomSensitivity";
     private const string LeftControlZoneRatioKey = "FlatWorld.Mobile.LeftControlZoneRatio";
     private const string RightControlZoneRatioKey = "FlatWorld.Mobile.RightControlZoneRatio";
+    private const string MobileControlLayoutPrefix = "FlatWorld.Mobile.ControlLayout.";
+
+    public const string MobileMoveControlId = "move";
+    public const string MobileAttackControlId = "attack";
+    public const string MobileInteractControlId = "interact";
+    public const string MobileUseControlId = "use";
+    public const string MobileRunControlId = "run";
+
+    private static readonly string[] BuiltInMobileControlIds =
+    {
+        MobileMoveControlId,
+        MobileAttackControlId,
+        MobileInteractControlId,
+        MobileUseControlId,
+        MobileRunControlId
+    };
 
     /// <summary>新配置与恢复默认时采用的界面缩放倍率。</summary>
     public const float DefaultScale = 1.5f;
@@ -88,6 +104,9 @@ public static class UIUserSettings
 
     /// <summary>快捷栏底部间距改变时广播，桌面与手机布局各自重新应用安全边距。</summary>
     public static event Action HotbarLayoutChanged;
+
+    /// <summary>触屏玩法控件的自定义位置改变时广播，HUD 立即按安全区重新投影。</summary>
+    public static event Action MobileControlLayoutChanged;
 
     private static readonly ISettingsProvider settingsProvider =
         CreateSettingsProvider();
@@ -302,10 +321,85 @@ public static class UIUserSettings
         return sanitized;
     }
 
+    /// <summary>读取一个内置触屏玩法控件保存的安全区归一化中心位置。</summary>
+    public static bool TryGetMobileControlLayoutPosition(
+        string controlId,
+        out Vector2 normalizedPosition)
+    {
+        EnsureInitialized();
+        normalizedPosition = default;
+        if (!IsBuiltInMobileControlId(controlId))
+            return false;
+
+        string xKey = GetMobileControlLayoutKey(controlId, "X");
+        string yKey = GetMobileControlLayoutKey(controlId, "Y");
+        if (!PlayerPrefs.HasKey(xKey) || !PlayerPrefs.HasKey(yKey))
+            return false;
+
+        float x = PlayerPrefs.GetFloat(xKey);
+        float y = PlayerPrefs.GetFloat(yKey);
+        if (float.IsNaN(x) || float.IsInfinity(x) ||
+            float.IsNaN(y) || float.IsInfinity(y))
+        {
+            return false;
+        }
+
+        normalizedPosition = new Vector2(Mathf.Clamp01(x), Mathf.Clamp01(y));
+        return true;
+    }
+
+    /// <summary>批量保存触屏玩法控件位置，只在实际变化后落盘并广播一次。</summary>
+    public static void SetMobileControlLayoutPositions(
+        IReadOnlyDictionary<string, Vector2> positions)
+    {
+        EnsureInitialized();
+        if (positions == null || positions.Count == 0)
+            return;
+
+        bool changed = false;
+        for (int index = 0; index < BuiltInMobileControlIds.Length; index++)
+        {
+            string controlId = BuiltInMobileControlIds[index];
+            if (!positions.TryGetValue(controlId, out Vector2 position))
+                continue;
+
+            Vector2 sanitized = new Vector2(
+                Mathf.Clamp01(position.x),
+                Mathf.Clamp01(position.y));
+            bool hasPrevious = TryGetMobileControlLayoutPosition(
+                controlId,
+                out Vector2 previous);
+            if (hasPrevious && Vector2.SqrMagnitude(previous - sanitized) <= 0.000001f)
+                continue;
+
+            PlayerPrefs.SetFloat(GetMobileControlLayoutKey(controlId, "X"), sanitized.x);
+            PlayerPrefs.SetFloat(GetMobileControlLayoutKey(controlId, "Y"), sanitized.y);
+            changed = true;
+        }
+
+        if (!changed)
+            return;
+
+        PlayerPrefs.Save();
+        MobileControlLayoutChanged?.Invoke();
+    }
+
+    /// <summary>清除所有内置触屏玩法控件的位置覆盖，恢复正式 Prefab 的默认布局。</summary>
+    public static void ResetMobileControlLayoutToDefaults()
+    {
+        EnsureInitialized();
+        if (!ClearMobileControlLayoutPreferences())
+            return;
+
+        PlayerPrefs.Save();
+        MobileControlLayoutChanged?.Invoke();
+    }
+
     /// <summary>只恢复界面页可见设置，不改动已经拆到镜头控制页的双指缩放灵敏度。</summary>
     public static void ResetInterfaceToDefaults()
     {
         EnsureInitialized();
+        bool mobileLayoutChanged = HasMobileControlLayoutPreferences();
         bool visualChanged = !Mathf.Approximately(cachedScale, DefaultScale) ||
                              !cachedRespectSafeArea;
         bool hotbarLayoutChanged = !Mathf.Approximately(
@@ -321,7 +415,8 @@ public static class UIUserSettings
                              !Mathf.Approximately(
                                  cachedRightControlZoneRatio,
                                  DefaultRightControlZoneRatio);
-        if (!visualChanged && !hotbarLayoutChanged && !mobileChanged && !touchOpacityChanged)
+        if (!visualChanged && !hotbarLayoutChanged && !mobileChanged &&
+            !touchOpacityChanged && !mobileLayoutChanged)
             return;
 
         cachedScale = DefaultScale;
@@ -338,6 +433,7 @@ public static class UIUserSettings
         PlayerPrefs.SetFloat(TouchControlsOpacityKey, DefaultTouchControlsOpacityPercent);
         PlayerPrefs.SetFloat(LeftControlZoneRatioKey, DefaultLeftControlZoneRatio);
         PlayerPrefs.SetFloat(RightControlZoneRatioKey, DefaultRightControlZoneRatio);
+        ClearMobileControlLayoutPreferences();
         PlayerPrefs.Save();
         if (visualChanged)
             Changed?.Invoke();
@@ -347,6 +443,8 @@ public static class UIUserSettings
             MobileControlsChanged?.Invoke();
         if (touchOpacityChanged)
             TouchControlsOpacityChanged?.Invoke();
+        if (mobileLayoutChanged)
+            MobileControlLayoutChanged?.Invoke();
     }
 
     /// <summary>只恢复镜头控制页的双指缩放灵敏度。</summary>
@@ -358,6 +456,7 @@ public static class UIUserSettings
     public static void ResetToDefaults()
     {
         EnsureInitialized();
+        bool mobileLayoutChanged = HasMobileControlLayoutPreferences();
         bool changed = !Mathf.Approximately(cachedScale, DefaultScale) ||
                        !Mathf.Approximately(cachedHotbarBottomSpacing, DefaultHotbarBottomSpacing) ||
                        !cachedRespectSafeArea ||
@@ -373,7 +472,8 @@ public static class UIUserSettings
                            DefaultRightControlZoneRatio) ||
                        !Mathf.Approximately(
                            cachedPinchZoomSensitivity,
-                           DefaultPinchZoomSensitivity);
+                           DefaultPinchZoomSensitivity) ||
+                       mobileLayoutChanged;
         if (!changed)
             return;
 
@@ -406,6 +506,7 @@ public static class UIUserSettings
         PlayerPrefs.SetFloat(PinchZoomSensitivityKey, DefaultPinchZoomSensitivity);
         PlayerPrefs.SetFloat(LeftControlZoneRatioKey, DefaultLeftControlZoneRatio);
         PlayerPrefs.SetFloat(RightControlZoneRatioKey, DefaultRightControlZoneRatio);
+        ClearMobileControlLayoutPreferences();
         PlayerPrefs.Save();
         Changed?.Invoke();
         if (hotbarLayoutChanged)
@@ -414,6 +515,8 @@ public static class UIUserSettings
             MobileControlsChanged?.Invoke();
         if (touchOpacityChanged)
             TouchControlsOpacityChanged?.Invoke();
+        if (mobileLayoutChanged)
+            MobileControlLayoutChanged?.Invoke();
     }
 
     #endregion
@@ -437,6 +540,7 @@ public static class UIUserSettings
         MobileControlsChanged = null;
         TouchControlsOpacityChanged = null;
         HotbarLayoutChanged = null;
+        MobileControlLayoutChanged = null;
     }
 
     #region 设置提供者
@@ -650,6 +754,67 @@ public static class UIUserSettings
     {
         float clamped = Mathf.Clamp(value, MinimumControlZoneRatio, MaximumControlZoneRatio);
         return Mathf.Round(clamped / ControlZoneRatioStep) * ControlZoneRatioStep;
+    }
+
+    /// <summary>触屏布局只接受正式 HUD 已声明的稳定控件 ID。</summary>
+    private static bool IsBuiltInMobileControlId(string controlId)
+    {
+        if (string.IsNullOrWhiteSpace(controlId))
+            return false;
+
+        for (int index = 0; index < BuiltInMobileControlIds.Length; index++)
+        {
+            if (string.Equals(BuiltInMobileControlIds[index], controlId, StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>组合触屏布局的 PlayerPrefs 稳定键。</summary>
+    private static string GetMobileControlLayoutKey(string controlId, string axis)
+    {
+        return MobileControlLayoutPrefix + controlId + "." + axis;
+    }
+
+    /// <summary>判断是否存在任一内置触屏控件位置覆盖。</summary>
+    private static bool HasMobileControlLayoutPreferences()
+    {
+        for (int index = 0; index < BuiltInMobileControlIds.Length; index++)
+        {
+            string controlId = BuiltInMobileControlIds[index];
+            if (PlayerPrefs.HasKey(GetMobileControlLayoutKey(controlId, "X")) ||
+                PlayerPrefs.HasKey(GetMobileControlLayoutKey(controlId, "Y")))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>删除全部内置触屏控件的位置覆盖；返回是否真的删除过数据。</summary>
+    private static bool ClearMobileControlLayoutPreferences()
+    {
+        bool changed = false;
+        for (int index = 0; index < BuiltInMobileControlIds.Length; index++)
+        {
+            string controlId = BuiltInMobileControlIds[index];
+            string xKey = GetMobileControlLayoutKey(controlId, "X");
+            string yKey = GetMobileControlLayoutKey(controlId, "Y");
+            if (PlayerPrefs.HasKey(xKey))
+            {
+                PlayerPrefs.DeleteKey(xKey);
+                changed = true;
+            }
+            if (PlayerPrefs.HasKey(yKey))
+            {
+                PlayerPrefs.DeleteKey(yKey);
+                changed = true;
+            }
+        }
+
+        return changed;
     }
 
     #endregion

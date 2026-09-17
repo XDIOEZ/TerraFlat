@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FlatWorld.Localization;
+using InputSystem;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -20,6 +21,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         public TextMeshProUGUI BindingText;
         public Button RebindButton;
         public Button ClearButton;
+        public Button ResetButton;
     }
 
     private readonly List<BindingRow> rows = new List<BindingRow>();
@@ -27,6 +29,8 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
     private GameController gameController;
     private InputBindingService bindingService;
+    private PlayerInputActions standaloneInputActions;
+    private InputBindingService standaloneBindingService;
     private BasePanel parentPanel;
     private RectTransform pageRect;
     private Transform content;
@@ -35,6 +39,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     private TMP_Dropdown controlModeDropdown;
     private Button keyboardMouseTabButton;
     private Button gamepadTabButton;
+    private Button touchLayoutButton;
     private Button resetButton;
     private InputBindingDeviceGroup currentDeviceGroup = InputBindingDeviceGroup.KeyboardMouse;
     private bool controlsBound;
@@ -71,7 +76,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         parentPanel = ownerPanel;
         BindPageControls();
 
-        InputBindingService nextService = controller != null ? controller.InputBindings : null;
+        InputBindingService nextService = ResolveBindingService(controller);
         if (!ReferenceEquals(bindingService, nextService))
         {
             if (bindingService != null)
@@ -94,6 +99,20 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
     }
 
+    /// <summary>世界内复用当前玩家服务；主菜单创建只承载持久化设置的独立输入资产。</summary>
+    private InputBindingService ResolveBindingService(GameController controller)
+    {
+        if (controller != null)
+            return controller.InputBindings;
+
+        if (standaloneBindingService != null)
+            return standaloneBindingService;
+
+        standaloneInputActions = new PlayerInputActions();
+        standaloneBindingService = new InputBindingService(standaloneInputActions.asset);
+        return standaloneBindingService;
+    }
+
     /// <summary>只在按键页根节点内取得控件，避免命中下拉模板的同名节点。</summary>
     private void BindPageControls()
     {
@@ -111,17 +130,19 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         controlModeDropdown = FindDropdown(transform, "控制模式下拉列表");
         keyboardMouseTabButton = FindButton(transform, "键鼠分页按钮");
         gamepadTabButton = FindButton(transform, "手柄分页按钮");
+        touchLayoutButton = FindButton(transform, "触屏布局按钮");
         resetButton = FindButton(transform, "恢复默认按钮");
         rowPrefab = GameRes.Instance?.GetPrefab(RuntimeUIPrefabKeys.InputBindingRow);
 
         controlModeDropdown?.onValueChanged.AddListener(HandleControlModeChanged);
         keyboardMouseTabButton?.onClick.AddListener(ShowKeyboardMouseBindings);
         gamepadTabButton?.onClick.AddListener(ShowGamepadBindings);
+        touchLayoutButton?.onClick.AddListener(OpenTouchLayoutEditor);
         resetButton?.onClick.AddListener(ResetToDefaults);
 
         if (bindingList == null || bindingScrollRect == null || content == null ||
             statusText == null || controlModeDropdown == null ||
-            keyboardMouseTabButton == null || gamepadTabButton == null ||
+            keyboardMouseTabButton == null || gamepadTabButton == null || touchLayoutButton == null ||
             resetButton == null)
         {
             Debug.LogError(
@@ -243,10 +264,11 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
             Label = FindText(rowObject.transform, "操作名称"),
             BindingText = FindText(rowObject.transform, "绑定值"),
             RebindButton = FindButton(rowObject.transform, "修改按钮"),
-            ClearButton = FindButton(rowObject.transform, "清除按钮")
+            ClearButton = FindButton(rowObject.transform, "清除按钮"),
+            ResetButton = FindButton(rowObject.transform, "重置按钮")
         };
         if (row.Label == null || row.BindingText == null ||
-            row.RebindButton == null || row.ClearButton == null)
+            row.RebindButton == null || row.ClearButton == null || row.ResetButton == null)
         {
             Debug.LogError(
                 "[InputBindingPanelLauncher] 按键绑定行 Prefab 控件命名契约不完整。",
@@ -257,6 +279,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
         row.RebindButton.onClick.AddListener(() => BeginRebind(row));
         row.ClearButton.onClick.AddListener(() => ClearBinding(row));
+        row.ResetButton.onClick.AddListener(() => ResetBinding(row));
         return row;
     }
 
@@ -306,7 +329,7 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
         int selectedIndex = gameController != null
             ? (int)gameController.PreferredInputDevice
-            : 0;
+            : (int)GameController.GetPreferredInputDevicePreference();
         controlModeDropdown.SetValueWithoutNotify(Mathf.Clamp(selectedIndex, 0, 2));
         controlModeDropdown.RefreshShownValue();
     }
@@ -315,9 +338,18 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     private void HandleControlModeChanged(int selectedIndex)
     {
         if (gameController == null || selectedIndex < 0 || selectedIndex > 2)
-            return;
+        {
+            if (selectedIndex < 0 || selectedIndex > 2)
+                return;
 
-        gameController.SetPreferredInputDevice((GameController.InputDeviceType)selectedIndex);
+            GameController.SavePreferredInputDevicePreference(
+                (GameController.InputDeviceType)selectedIndex);
+        }
+        else
+        {
+            gameController.SetPreferredInputDevice((GameController.InputDeviceType)selectedIndex);
+        }
+
         RefreshControlModeDropdown();
         SetStatus(
             FlatWorldLocalizationService.GetUiFormat(
@@ -342,6 +374,25 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
     private void ShowGamepadBindings()
     {
         SetDeviceGroup(InputBindingDeviceGroup.Gamepad);
+    }
+
+    /// <summary>打开触屏玩法控件位置编辑器；该入口与键鼠、手柄分页并列但不创建第三套按键绑定。</summary>
+    private void OpenTouchLayoutEditor()
+    {
+        if (bindingService != null && bindingService.IsRebinding)
+            return;
+
+        if (MobileControlLayoutEditor.TryOpen(parentPanel, out string error))
+        {
+            SetStatus(FlatWorldLocalizationService.GetUiText("正在编辑触屏按钮布局。"));
+            return;
+        }
+
+        SetStatus(
+            string.IsNullOrEmpty(error)
+                ? FlatWorldLocalizationService.GetUiText("无法打开触屏布局编辑器。")
+                : error,
+            true);
     }
 
     /// <summary>切换绑定设备分组并复用行刷新内容。</summary>
@@ -446,6 +497,25 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
                 FlatWorldLocalizationService.GetUiText(row.Entry.DisplayName)));
     }
 
+    /// <summary>将当前行恢复为输入资产中定义的默认绑定。</summary>
+    private void ResetBinding(BindingRow row)
+    {
+        if (bindingService == null || row?.Entry == null || bindingService.IsRebinding)
+            return;
+
+        if (!bindingService.ResetBindingToDefault(row.Entry))
+        {
+            SetStatus(FlatWorldLocalizationService.GetUiText("重置绑定失败。"), true);
+            return;
+        }
+
+        RefreshRows();
+        SetStatus(
+            FlatWorldLocalizationService.GetUiFormat(
+                "“{0}”已恢复默认绑定。",
+                FlatWorldLocalizationService.GetUiText(row.Entry.DisplayName)));
+    }
+
     /// <summary>恢复当前设备页的默认绑定。</summary>
     private void ResetToDefaults()
     {
@@ -457,7 +527,18 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
         SetStatus(
             FlatWorldLocalizationService.GetUiFormat(
                 "{0}绑定已恢复默认值。",
-                FlatWorldLocalizationService.GetUiText(GetDevicePageName())));
+            FlatWorldLocalizationService.GetUiText(GetDevicePageName())));
+    }
+
+    /// <summary>供设置主面板的“恢复所有设置”同时清除键鼠与手柄覆盖。</summary>
+    public void ResetAllBindingsToDefaults()
+    {
+        if (bindingService == null)
+            return;
+
+        bindingService.ResetToDefaults();
+        RefreshRows();
+        SetStatus(FlatWorldLocalizationService.GetUiText("全部按键绑定已恢复默认值。"));
     }
 
     /// <summary>刷新所有已显示行的绑定文本。</summary>
@@ -483,12 +564,16 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
                 rows[i].RebindButton.interactable = interactable;
             if (rows[i]?.ClearButton != null)
                 rows[i].ClearButton.interactable = interactable;
+            if (rows[i]?.ResetButton != null)
+                rows[i].ResetButton.interactable = interactable;
         }
 
         if (keyboardMouseTabButton != null)
             keyboardMouseTabButton.interactable = interactable;
         if (gamepadTabButton != null)
             gamepadTabButton.interactable = interactable;
+        if (touchLayoutButton != null)
+            touchLayoutButton.interactable = interactable;
         if (controlModeDropdown != null)
             controlModeDropdown.interactable = interactable;
         if (resetButton != null)
@@ -539,9 +624,15 @@ public sealed class InputBindingPanelLauncher : MonoBehaviour, ISettingsPageLife
 
         keyboardMouseTabButton?.onClick.RemoveListener(ShowKeyboardMouseBindings);
         gamepadTabButton?.onClick.RemoveListener(ShowGamepadBindings);
+        touchLayoutButton?.onClick.RemoveListener(OpenTouchLayoutEditor);
         resetButton?.onClick.RemoveListener(ResetToDefaults);
         controlModeDropdown?.onValueChanged.RemoveListener(HandleControlModeChanged);
         FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
+
+        standaloneBindingService?.Dispose();
+        standaloneBindingService = null;
+        standaloneInputActions?.Dispose();
+        standaloneInputActions = null;
     }
 
     /// <summary>在当前页面内按名称查找 Transform。</summary>

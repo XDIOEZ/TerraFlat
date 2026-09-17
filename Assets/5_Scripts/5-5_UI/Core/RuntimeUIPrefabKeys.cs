@@ -31,6 +31,7 @@ public static class RuntimeUIPrefabKeys
     public const string QuestTracker = "UI_QuestTracker";
     public const string QuestTrackerItem = "UI_QuestTrackerItem";
     public const string MobileControls = "UI_MobileControls";
+    public const string MobileControlLayoutEditor = "UI_MobileControlLayoutEditor";
     /// <summary>手持可阅读物品打开的双页书籍面板。</summary>
     public const string ReadableBook = "UI_ReadableBook";
 

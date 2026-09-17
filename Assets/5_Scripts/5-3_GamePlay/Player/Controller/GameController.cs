@@ -597,24 +597,45 @@ public partial class GameController : Module
             deviceType = InputDeviceType.KeyboardMouse;
 
         _preferredInputDevice = deviceType;
+        SavePreferredInputDevicePreference(deviceType);
+        ApplyPreferredInputDevice();
+    }
+
+    /// <summary>读取不依赖世界实例的玩法控制偏好，供主菜单设置直接回填。</summary>
+    public static InputDeviceType GetPreferredInputDevicePreference()
+    {
+        InputDeviceType platformDefault = GetPlatformDefaultInputDevice();
+        int savedValue = PlayerPrefs.GetInt(PreferredInputDeviceKey, (int)platformDefault);
+        return Enum.IsDefined(typeof(InputDeviceType), savedValue)
+            ? (InputDeviceType)savedValue
+            : platformDefault;
+    }
+
+    /// <summary>保存不依赖世界实例的玩法控制偏好；实际玩家存在时由实例入口负责立即应用。</summary>
+    public static void SavePreferredInputDevicePreference(InputDeviceType deviceType)
+    {
+        if (!Enum.IsDefined(typeof(InputDeviceType), deviceType))
+            throw new ArgumentOutOfRangeException(nameof(deviceType), deviceType, "未知的输入设备类型");
+
         PlayerPrefs.SetInt(PreferredInputDeviceKey, (int)deviceType);
         PlayerPrefs.Save();
-        ApplyPreferredInputDevice();
     }
 
     /// <summary>恢复全局控制偏好；首次运行时桌面默认键鼠，移动平台默认触屏。</summary>
     private void LoadPreferredInputDevice()
     {
-        InputDeviceType platformDefault = Application.isMobilePlatform
-            ? InputDeviceType.Mobile
-            : InputDeviceType.KeyboardMouse;
-        int savedValue = PlayerPrefs.GetInt(PreferredInputDeviceKey, (int)platformDefault);
-        _preferredInputDevice = Enum.IsDefined(typeof(InputDeviceType), savedValue)
-            ? (InputDeviceType)savedValue
-            : platformDefault;
+        _preferredInputDevice = GetPreferredInputDevicePreference();
 
         if (_preferredInputDevice == InputDeviceType.Gamepad && !EnableGamepadAdapter)
             _preferredInputDevice = InputDeviceType.KeyboardMouse;
+    }
+
+    /// <summary>取得当前平台首次运行时的默认玩法控制方案。</summary>
+    private static InputDeviceType GetPlatformDefaultInputDevice()
+    {
+        return Application.isMobilePlatform
+            ? InputDeviceType.Mobile
+            : InputDeviceType.KeyboardMouse;
     }
 
     /// <summary>切换控制偏好只影响界面呈现，不再用 bindingMask 让不同输入源互相屏蔽。</summary>

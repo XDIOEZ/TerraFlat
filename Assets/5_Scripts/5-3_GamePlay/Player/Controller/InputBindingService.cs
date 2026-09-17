@@ -401,7 +401,7 @@ public sealed class InputBindingService : IDisposable
         BindingsChanged?.Invoke();
     }
 
-    #region 单项绑定清除
+    #region 单项绑定操作
 
     /// <summary>清除单个绑定；使用空覆盖路径禁用默认绑定，并立即持久化当前设备组。</summary>
     public bool ClearBinding(InputBindingEntry entry)
@@ -418,6 +418,21 @@ public sealed class InputBindingService : IDisposable
             {
                 overridePath = string.Empty
             });
+        SaveOverrides();
+        BindingsChanged?.Invoke();
+        return true;
+    }
+
+    /// <summary>移除单个绑定的覆盖值，使其恢复输入资产中定义的默认绑定，并立即持久化。</summary>
+    public bool ResetBindingToDefault(InputBindingEntry entry)
+    {
+        ThrowIfDisposed();
+        CancelActiveRebind();
+
+        if (!IsValidEntry(entry))
+            return false;
+
+        entry.Action.RemoveBindingOverride(entry.BindingIndex);
         SaveOverrides();
         BindingsChanged?.Invoke();
         return true;

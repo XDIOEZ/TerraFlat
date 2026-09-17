@@ -383,6 +383,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 204de1cf958f977418a5ff4896ea0961
+    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControlLayoutEditor.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 20fa46eba2a77114f8e5b6ae80b2af5a
     m_Address: Assets/2_Prefabs/Gameplay/Modules/World/Module_TileReciver.prefab
     m_ReadOnly: 0
@@ -617,6 +623,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3a7025b91062d1141a357528fe73ee61
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_CloseButton.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3b8b0ac52f922cc499112bd9e5b27298
     m_Address: Assets/2_Prefabs/Effects/DamageText.prefab
     m_ReadOnly: 0
@@ -643,6 +655,18 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3dd470cc7fe3a724db6e455263253c29
     m_Address: "Assets/2_Prefabs/World/Space/\u5730\u7403.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3e32f389c0c274b4288fdff15830c523
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_TabButton.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4018784394514384f85f46e5f9690fb4
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Dropdown.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -753,6 +777,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 4d484101ae0272b46b3d851b09b6dca3
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/ItemGPS.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4e5c8017c39f04040bc676c996290508
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_SliderControl.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1382,6 +1412,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8c3e275eabc48b04c828e6162cc59129
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Button.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8c8eb8cf412e3ca4d8845cecbc358d4d
     m_Address: Assets/2_Prefabs/2-1_UI/MainMenu/Core/UI_MainMenu.prefab
     m_ReadOnly: 0
@@ -1441,6 +1477,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 92c26ca78f387f246803a706b73bbfe9
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_InputField.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 953b7b5b07a613949b9263e579a3f146
     m_Address: Assets/2_Prefabs/Gameplay/Items/Inventory/Module_Hotbar.prefab
@@ -2044,6 +2086,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d3a32a12cc4dca94cbb7f68e701ae84b
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Switch.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d468c0a9bce573849aeb6a18be930f9c
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Variants/DamageSender Pickaxe.prefab
     m_ReadOnly: 0
@@ -2273,6 +2321,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ea550192a53dad841a260370c15a6e94
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_ProgressBar.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ea723336336767e46bbd91ed35a20635
     m_Address: Assets/6_Art/Generated/Archery/WoodBow_Icon.png
     m_ReadOnly: 0
@@ -2417,6 +2471,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f75861c6e3f25eb4eb01b03f0816e913
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_Toggle.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f7eb62eb686fb2e43bde12fdd9fadb61
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_CompostBin_Mod_CompostBin.prefab
     m_ReadOnly: 0
@@ -2494,6 +2554,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: ffb11e57913cc21489a4f57a2a2272a8
+    m_Address: Assets/2_Prefabs/2-1_UI/Common/Controls/UI_SwitchOption.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}

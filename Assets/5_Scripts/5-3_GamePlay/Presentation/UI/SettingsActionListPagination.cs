@@ -14,9 +14,16 @@ internal interface ISettingsPageLifecycle
     void OnSettingsPageHidden();
 }
 
+/// <summary>设置面板所在环境；主菜单只暴露不依赖世界实例的客户端设置。</summary>
+public enum SettingsPanelContext
+{
+    InGame,
+    MainMenu
+}
+
 /// <summary>
-/// 管理游戏内设置主面板的八个顶部入口与三个世界设置子页。
-/// 所有页面均为 UI_ActionList Prefab 内的现成节点，切换时只改变显隐。
+/// 管理设置主面板的顶部入口与内嵌分页。
+/// 游戏内使用完整页面；主菜单复用同一控制器，但只要求客户端本地设置页面存在。
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class SettingsActionListPagination : MonoBehaviour
@@ -34,9 +41,13 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     public const string AutoSavePageName = "设置分页_自动保存";
     public const string WorldStreamingPageName = "设置分页_流送性能";
     public const string DifficultyPageName = "设置分页_游戏难度";
+    public const string GraphicsPageName = "设置分页_画质设置";
+    public const string LanguagePageName = "设置分页_语言";
     public const string TabBarName = "设置分页栏";
     public const string WorldTabButtonName = "设置页签_世界";
     public const string SessionTabButtonName = "设置页签_会话";
+    public const string GraphicsTabButtonName = "设置页签_画质";
+    public const string LanguageTabButtonName = "设置页签_语言";
 
     private const int WorldPageIndex = 0;
 
@@ -53,7 +64,9 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         AutoSavePageName,
         WorldStreamingPageName,
         DifficultyPageName,
-        SeasonSettingsPanel.PageName
+        SeasonSettingsPanel.PageName,
+        GraphicsPageName,
+        LanguagePageName
     };
 
     private static readonly string[] TabButtonNames =
@@ -65,7 +78,23 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         "镜头控制",
         "音量调节",
         "视觉特效",
-        SessionTabButtonName
+        SessionTabButtonName,
+        GraphicsTabButtonName,
+        LanguageTabButtonName
+    };
+
+    private static readonly int[] TabPageIndices =
+    {
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        12,
+        13
     };
 
     private static readonly int[] PageTabIndices =
@@ -81,7 +110,9 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         0,
         0,
         0,
-        0
+        0,
+        8,
+        9
     };
 
     private static readonly string[] FirstSelectableNames =
@@ -97,7 +128,9 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         "自动保存间隔下拉列表",
         "性能模式下拉列表",
         "难度_Simple",
-        "季节天数_0"
+        "季节天数_0",
+        GameManager.MainMenuSettingsQualityPresetKey,
+        GameManager.MainMenuSettingsLanguageDropdownKey
     };
 
     private static readonly Color ActiveTabColor = new Color32(103, 103, 103, 255);
@@ -122,6 +155,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     private int currentPageIndex = -1;
     private bool currentLifecycleActive;
     private bool configured;
+    private SettingsPanelContext panelContext = SettingsPanelContext.InGame;
 
     #endregion
 
@@ -129,6 +163,14 @@ public sealed class SettingsActionListPagination : MonoBehaviour
 
     /// <summary>确保设置主面板具备内嵌分页控制器，并初始化世界入口页。</summary>
     public static SettingsActionListPagination Ensure(Transform settingsRoot)
+    {
+        return Ensure(settingsRoot, SettingsPanelContext.InGame);
+    }
+
+    /// <summary>确保设置主面板具备指定环境的分页控制器。</summary>
+    public static SettingsActionListPagination Ensure(
+        Transform settingsRoot,
+        SettingsPanelContext context)
     {
         if (settingsRoot == null)
             return null;
@@ -138,6 +180,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         if (pager == null)
             pager = settingsRoot.gameObject.AddComponent<SettingsActionListPagination>();
 
+        pager.panelContext = context;
         pager.Configure();
         return pager;
     }
@@ -153,15 +196,31 @@ public sealed class SettingsActionListPagination : MonoBehaviour
 
         for (int index = 0; index < PageNames.Length; index++)
         {
+            pageLifecycles[index] ??= new List<ISettingsPageLifecycle>();
+            pageLifecycles[index].Clear();
+            if (!IsPageIncluded(index))
+            {
+                pages[index] = null;
+                firstSelectables[index] = null;
+                continue;
+            }
+
             pages[index] = FindDirectChild(contentRect, PageNames[index]);
             firstSelectables[index] = FindSelectable(pages[index], FirstSelectableNames[index]);
-            pageLifecycles[index] ??= new List<ISettingsPageLifecycle>();
             configured &= pages[index] != null && firstSelectables[index] != null;
         }
 
         Transform tabBar = FindTransform(transform, TabBarName);
         for (int index = 0; index < TabButtonNames.Length; index++)
         {
+            if (!IsTabIncluded(index))
+            {
+                tabButtons[index] = null;
+                tabBackgrounds[index] = null;
+                tabLabels[index] = null;
+                continue;
+            }
+
             tabButtons[index] = FindButton(tabBar, TabButtonNames[index]);
             tabBackgrounds[index] = tabButtons[index] != null
                 ? tabButtons[index].GetComponent<Image>()
@@ -183,10 +242,14 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         }
 
         BindTabButtons();
-        BindWorldDetailButtons();
+        if (panelContext == SettingsPanelContext.InGame)
+            BindWorldDetailButtons();
         BindPanelLifecycle();
         RefreshPageLifecycles();
-        ShowPage(WorldPageIndex, false);
+        int initialPageIndex = panelContext == SettingsPanelContext.MainMenu
+            ? FindPageIndex(InterfacePageName)
+            : WorldPageIndex;
+        ShowPage(initialPageIndex, false);
     }
 
     /// <summary>从主滚动区域自身取得 Content，避免命中下拉模板的同名节点。</summary>
@@ -204,7 +267,10 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     {
         for (int index = 0; index < tabButtons.Length; index++)
         {
-            int pageIndex = index;
+            if (!IsTabIncluded(index) || tabButtons[index] == null)
+                continue;
+
+            int pageIndex = TabPageIndices[index];
             tabButtons[index].onClick.RemoveAllListeners();
             tabButtons[index].onClick.AddListener(() => ShowPage(pageIndex, true));
         }
@@ -276,6 +342,9 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         for (int index = 0; index < pages.Length; index++)
         {
             List<ISettingsPageLifecycle> lifecycles = pageLifecycles[index];
+            if (lifecycles == null)
+                continue;
+
             lifecycles.Clear();
             if (pages[index] == null)
                 continue;
@@ -347,7 +416,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     /// <summary>按固定索引切换页面并同步顶部高亮、布局和手柄焦点。</summary>
     private void ShowPage(int pageIndex, bool focusFirstSelectable)
     {
-        if (!configured || pageIndex < 0 || pageIndex >= pages.Length)
+        if (!configured || pageIndex < 0 || pageIndex >= pages.Length ||
+            !IsPageIncluded(pageIndex) || pages[pageIndex] == null)
             return;
 
         bool panelOpen = basePanel != null && basePanel.IsOpen();
@@ -356,7 +426,10 @@ public sealed class SettingsActionListPagination : MonoBehaviour
 
         currentPageIndex = pageIndex;
         for (int index = 0; index < pages.Length; index++)
-            pages[index].gameObject.SetActive(index == currentPageIndex);
+        {
+            if (pages[index] != null)
+                pages[index].gameObject.SetActive(index == currentPageIndex);
+        }
 
         RefreshTabVisuals(PageTabIndices[currentPageIndex]);
         currentLifecycleActive = panelOpen;
@@ -375,7 +448,19 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     {
         for (int index = 0; index < tabButtons.Length; index++)
         {
+            if (!IsTabIncluded(index) || tabButtons[index] == null ||
+                tabBackgrounds[index] == null || tabLabels[index] == null)
+            {
+                continue;
+            }
+
             bool active = index == activeTabIndex;
+            ReusableUITabVisual sharedVisual = tabButtons[index].GetComponent<ReusableUITabVisual>();
+            if (sharedVisual != null)
+            {
+                sharedVisual.SetSelected(active);
+                continue;
+            }
             tabBackgrounds[index].color = active ? ActiveTabColor : InactiveTabColor;
             tabLabels[index].color = active ? ActiveLabelColor : InactiveLabelColor;
         }
@@ -420,6 +505,24 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         }
 
         return -1;
+    }
+
+    /// <summary>判断当前环境是否应解析并显示指定分页。</summary>
+    private bool IsPageIncluded(int pageIndex)
+    {
+        if (panelContext == SettingsPanelContext.InGame)
+            return pageIndex >= 0 && pageIndex <= 11;
+
+        return (pageIndex >= 1 && pageIndex <= 6) || pageIndex == 12 || pageIndex == 13;
+    }
+
+    /// <summary>判断当前环境是否应绑定指定顶部页签。</summary>
+    private bool IsTabIncluded(int tabIndex)
+    {
+        if (panelContext == SettingsPanelContext.InGame)
+            return tabIndex >= 0 && tabIndex <= 7;
+
+        return (tabIndex >= 1 && tabIndex <= 6) || tabIndex == 8 || tabIndex == 9;
     }
 
     /// <summary>只在给定父节点的直属子级中查找页面，避免串入嵌套 Prefab。</summary>

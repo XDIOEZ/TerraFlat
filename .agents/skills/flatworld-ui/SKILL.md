@@ -123,6 +123,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 手机准线是 `UI_MobileControls.prefab` 的非交互 Graphic，由 `PlayerMobileControlsHUD` 按统一屏幕指针定位；不得让准线 Graphic 参与射线或手柄焦点。
 - 旧缓存 Prefab 缺少手机准线节点时允许由 HUD 做一次性兼容补齐，不能把该兜底扩展成运行时拼装整套手机 UI。
 - GM 调试面板由 `GMReflectionConsole` 运行时动态构建，不通过正式 UI Prefab；可持久化的调试开关统一放入 `GMConsolePreferences`，按钮状态需在场景切换和面板刷新时同步。图层页的世界观察模式由 `GMWorldLayerOverlay` 统一承载，同一时刻只显示一种热力图，避免温度与污染颜色叠加失真。
+- GM 动态按钮的 `Selectable.ColorBlock` 是乘在深灰 `Image` 底色上的状态 Tint；禁用态应保持接近白色且不降低 Alpha，只通过轻微乘色降低一级明度。禁止使用半透明中灰作为 `disabledColor`，否则统一灰阶主题会把禁用按钮乘成近黑色，误导为视觉故障。
 - 层级显示中的导航模式也走统一观察模式与透明度偏好；新增 `GmWorldLayerMode` 只追加枚举数值，不能重排已保存的模式。导航按钮保持独立行，避免挤压原有温度/污染按钮及透明度滑轨；箭头表示朝本地玩家的共享寻路场，不代表每只怪物当前都在追击。
 - 日志页的 GM 入口广播 `RuntimeDebugOverlay.GmPanelOpenRequested`，由 `GMReflectionConsole` 订阅；日志属于 GamePlay，而 GM 属于依赖 GamePlay 的 `FlatWorld.Gameplay.Debug`，禁止反向直接引用。日志 Canvas 排序高于 GM，打开 GM 前先收起日志页。GM 点选传送层仅在主动选点时启用，持有独立触点和玩法输入锁；关闭、失焦和换场景必须释放。
 - GM 分页枚举数值由 `ActivePageIndex` 保存；新页追加枚举项，显示顺序由 `BuildTabBar` 决定。页签横向内容宽度由布局计算，禁止恢复手写总宽而截断末尾分页。世界观察层独立于 GM 窗口显隐，关闭窗口只收起操作界面，不能顺带关闭观察层。
@@ -143,6 +144,12 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - 调整界面缩放范围或默认值时，以 `UIUserSettings` 常量为权威，同时检查 Provider/写入校验、`UIScaleController` 的实际应用下限，并同步 `UI_InterfaceSettings.prefab` 与 `RuntimeUIPrefabBuilder`；`PlayerPrefs` 默认参数只服务无旧键的新配置，不得覆盖已有玩家值。
 
 ## Prefab 与目录约束
+
+- 公共控件位于 `Common/Controls/UI_Button、UI_CloseButton、UI_TabButton、UI_Toggle、UI_SwitchOption、UI_Switch、UI_SliderControl、UI_ProgressBar、UI_Dropdown、UI_InputField.prefab`。窗口应使用真正的嵌套实例；关闭按钮/页签继承按钮，进度条继承滑块，互斥选项继承开关。不要 Unpack 或复制层级来复用。
+- `ReusableUIControl` 标记子树的外观所有权；主题兼容层不得覆盖公共控件的颜色、字体、内部几何。使用处只保存文案、业务事件/数值、选项及外部布局差异，颜色等外观应编辑源 Prefab 或有明确用途的 Variant，否则会阻断统一风格传播。
+- 页签业务选中状态由 `ReusableUITabVisual` 的 Prefab 字段决定，分页控制器只调用 `SetSelected`，不在业务脚本中重新写死公共页签配色。原位转换使用 `ObjectMatchMode.ByHierarchy` 保留未匹配原组件；清理嵌套实例覆盖时只处理 `ReusableUIControl` 所有的目标，因为 Unity 可能返回整个外层面板的覆盖集合。
+- `FlatWorld/UI/Shared Controls/` 提供补建缺失资产、显式迁移和验证菜单；补建不覆盖已有公共 Prefab 的人工编辑。`RuntimeUIPrefabBuilder` 保存前应执行公共控件准备流程，避免重建重新生成独立控件。迁移不重建整个窗口，专用图标/复杂卡片与不匹配层级不强制替换。
+- 可交互滑块和只读进度条使用不同资产。滑块根 Image 是透明命中区，Background/Fill/Handle 管理可见部分；根布局不得被主题当作轨道改锚点，手柄必须有非零高度。音量行预留 72 像素，滑块命中区为 60 像素；进度条禁用交互和导航。
 
 - 创建 UI Prefab 时必须按用途放入 `Assets/2_Prefabs/2-1_UI/` 下合适的分类目录；优先复用 `Common`、`Gameplay`、`MainMenu`、`Settings`，不要把 Prefab 直接堆在 UI 根目录。现有分类都不匹配时，才新增职责明确的子目录。
 - 普通合成正式 Prefab 为 `Gameplay/Crafting/UI_HandCraftTable.prefab` 与 `UI_MakerTable.prefab`：参考画布下固定 1344×756（约占 1920×1080 的 70%），普通边框 2 个参考像素，主要按钮高度不低于 60；手工台契约为 `输入_1...输入_4`，世界制作台为 `输入_1...输入_5`，两者共用 `输出_1/2`、`配方候选内容`、隐藏的 `配方候选模板`、`合成按钮`、`关闭`。运行时只复用模板生成候选项，不拼装视觉层级；`UI_MakerTable` 根节点不得保留旧 `Image` 流程箭头。

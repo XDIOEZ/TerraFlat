@@ -21,9 +21,8 @@ public partial class GameManager
     public const string MainMenuMultiplayerButtonKey = "联机模式";
     public const string MainMenuSettingsButtonKey = "设置";
     public const string MainMenuSettingsPanelKey = RuntimeUIPrefabKeys.MainMenuSettings;
-    public const string MainMenuSettingsCloseButtonKey = "关闭按钮";
-    public const string MainMenuSettingsReturnButtonKey = "返回按钮";
-    public const string MainMenuSettingsPreferredControlKey = "窗口大小下拉列表";
+    public const string MainMenuSettingsCloseButtonKey = "关闭";
+    public const string MainMenuSettingsPreferredControlKey = "界面缩放";
     public const string MainMenuSettingsQualityPresetKey = "画质预设下拉列表";
     public const string MainMenuSettingsEffectsQualityKey = "特效质量下拉列表";
     public const string MainMenuSettingsLanguageDropdownKey = "游戏语言下拉列表";
@@ -701,7 +700,7 @@ public partial class GameManager
     }
 
     /// <summary>
-    /// 打开主菜单设置面板，并同步语言下拉框的当前选择。
+    /// 打开主菜单设置面板；复用游戏内设置框架，但只挂载不依赖世界实例的客户端设置。
     /// </summary>
     public void OpenMainMenuSettings()
     {
@@ -738,12 +737,30 @@ public partial class GameManager
         }
 
         panel.SetButtonOnClick(MainMenuSettingsCloseButtonKey, panel.Close);
-        panel.SetButtonOnClick(MainMenuSettingsReturnButtonKey, panel.Close);
         panel.SetButtonOnClick(
-            "恢复默认按钮",
+            "恢复所有设置",
             () => ResetMainMenuSettings(panel));
+
+        SettingsActionListPagination pagination =
+            SettingsActionListPagination.Ensure(
+                panel.transform,
+                SettingsPanelContext.MainMenu);
+        AudioSettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.AudioPageName));
+        UISettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.InterfacePageName));
+        CameraControlSettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.CameraPageName));
+        CoordinateDisplaySettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.DisplayPageName));
+        InputBindingPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.InputBindingPageName),
+            panel,
+            null);
         BindMainMenuSettingsQuality(panel);
         BindMainMenuSettingsLanguage(panel);
+        panel.RefreshUIComponents();
+        pagination?.RefreshPageLifecycles();
         panel.PrepareForGamepadNavigation(MainMenuSettingsPreferredControlKey);
         panel.Open();
     }
@@ -833,6 +850,8 @@ public partial class GameManager
     private static void ResetMainMenuSettings(BasePanel panel)
     {
         SettingsProviderRegistry.ResetAllToDefaults();
+        panel?.GetComponentInChildren<InputBindingPanelLauncher>(true)
+            ?.ResetAllBindingsToDefaults();
         RefreshMainMenuSettingsQuality(panel);
         RefreshMainMenuSettingsLanguage(panel);
         SetMainMenuSettingsStatus(panel, "所有设置已恢复默认");

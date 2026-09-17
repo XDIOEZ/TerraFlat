@@ -93,10 +93,10 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
     private Vector2 hotbarOriginalAnchoredPosition;
     private Vector2 hotbarOriginalSizeDelta;
     private Vector3 hotbarOriginalLocalScale;
-    // 当前双指缩放配对及上一帧中心点。
+    // 当前双指缩放配对及上一帧指间距。
     private int zoomPointerIdA = int.MinValue;
     private int zoomPointerIdB = int.MinValue;
-    private Vector2 previousTwoFingerCenter;
+    private float previousTwoFingerDistance;
 
     public bool IsDrawerOpen => drawer != null && drawer.activeSelf;
     /// <summary>本地手机菜单抽屉是否打开，用于允许背包和制作面板并行切换。</summary>
@@ -128,6 +128,8 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         UIUserSettings.TouchControlsOpacityChanged += HandleTouchControlsOpacityChanged;
         UIUserSettings.HotbarLayoutChanged -= HandleHotbarLayoutChanged;
         UIUserSettings.HotbarLayoutChanged += HandleHotbarLayoutChanged;
+        UIUserSettings.MobileControlLayoutChanged -= HandleMobileControlLayoutChanged;
+        UIUserSettings.MobileControlLayoutChanged += HandleMobileControlLayoutChanged;
         AndroidSystemGestureInsets.Changed -= HandleSystemGestureInsetsChanged;
         AndroidSystemGestureInsets.Changed += HandleSystemGestureInsetsChanged;
         Canvas.willRenderCanvases -= RefreshAimCursorBeforeCanvasRender;
@@ -145,6 +147,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         UIUserSettings.MobileControlsChanged -= HandleMobileControlsSettingsChanged;
         UIUserSettings.TouchControlsOpacityChanged -= HandleTouchControlsOpacityChanged;
         UIUserSettings.HotbarLayoutChanged -= HandleHotbarLayoutChanged;
+        UIUserSettings.MobileControlLayoutChanged -= HandleMobileControlLayoutChanged;
         AndroidSystemGestureInsets.Changed -= HandleSystemGestureInsetsChanged;
         Canvas.willRenderCanvases -= RefreshAimCursorBeforeCanvasRender;
         UnbindRunStateVisual();
@@ -265,6 +268,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             drawer.SetActive(false);
 
         ConfigureJoysticks();
+        ApplyMobileControlLayout();
         ConfigureHeldItemDropSurface();
         ConfigureVirtualButtons();
         CacheRunButtonVisual();
@@ -406,7 +410,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
                !controller.IsGameplayInputLocked;
     }
 
-    /// <summary>追踪中间区内的两个触点，并把双指中心的纵向位移转换为镜头缩放。</summary>
+    /// <summary>追踪中间区内的两个触点，并把双指间距变化转换为镜头缩放。</summary>
     private void UpdateTwoFingerZoom()
     {
         if (zoomPointerIdA == int.MinValue || zoomPointerIdB == int.MinValue)
@@ -422,7 +426,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
 
             zoomPointerIdA = firstId;
             zoomPointerIdB = secondId;
-            previousTwoFingerCenter = (firstPosition + secondPosition) * 0.5f;
+            previousTwoFingerDistance = Vector2.Distance(firstPosition, secondPosition);
             return;
         }
 
@@ -435,21 +439,19 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
             return;
         }
 
-        Vector2 currentCenter = (firstTouchPosition + secondTouchPosition) * 0.5f;
-        Vector2 centerDelta = currentCenter - previousTwoFingerCenter;
-        previousTwoFingerCenter = currentCenter;
-        if (Mathf.Abs(centerDelta.y) < TwoFingerZoomNoiseThreshold ||
-            Mathf.Abs(centerDelta.y) <= Mathf.Abs(centerDelta.x))
+        float currentDistance = Vector2.Distance(firstTouchPosition, secondTouchPosition);
+        float distanceDelta = currentDistance - previousTwoFingerDistance;
+        previousTwoFingerDistance = currentDistance;
+        if (Mathf.Abs(distanceDelta) < TwoFingerZoomNoiseThreshold)
             return;
 
         Mod_Cam cameraModule = GetComponentInChildren<Mod_Cam>(true);
         if (cameraModule == null || cameraModule.Vcam == null)
             return;
 
-        // 向上滑对应滚轮向上：减小正交尺寸并拉近镜头。
         float sensitivity = UIUserSettings.PinchZoomSensitivity *
                             TwoFingerZoomSensitivityPerUnit;
-        cameraModule.ChangeCameraView(-centerDelta.y * sensitivity);
+        cameraModule.ApplyPinchZoom(distanceDelta, sensitivity);
     }
 
     /// <summary>从当前触摸中取得最先出现的两个中间区触点，左右摇杆区触点不参与缩放。</summary>
@@ -547,12 +549,12 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
                normalizedX < 1f - UIUserSettings.RightControlZoneRatio;
     }
 
-    /// <summary>释放双指缩放的触点配对与位移基线。</summary>
+    /// <summary>释放双指缩放的触点配对与距离基线。</summary>
     private void ResetTwoFingerZoom()
     {
         zoomPointerIdA = int.MinValue;
         zoomPointerIdB = int.MinValue;
-        previousTwoFingerCenter = default;
+        previousTwoFingerDistance = 0f;
     }
 
     #endregion
@@ -696,7 +698,45 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         ResetAllTouchState();
         ApplyMoveJoystickMode();
         ApplyAimJoystickRegion();
+        ApplyMobileControlLayout();
         joysticks = viewObject.GetComponentsInChildren<MobileVirtualJoystick>(true);
+    }
+
+    /// <summary>玩家保存或恢复触屏按钮位置后，立即重投影当前 HUD，避免等待重新进入世界。</summary>
+    private void HandleMobileControlLayoutChanged()
+    {
+        if (viewObject == null)
+            return;
+
+        ResetAllTouchState();
+        ApplyMoveJoystickMode();
+        ApplyAimJoystickRegion();
+        ApplyMobileControlLayout();
+    }
+
+    /// <summary>
+    /// 把保存的安全区归一化位置应用到正式手机 HUD。浮动移动摇杆继续按触点出现，
+    /// 只有切换到固定移动摇杆时才消费玩家保存的移动摇杆位置。
+    /// </summary>
+    private void ApplyMobileControlLayout()
+    {
+        RectTransform root = viewObject != null ? viewObject.transform as RectTransform : null;
+        if (root == null)
+            return;
+
+        MobileControlLayoutNode[] layoutNodes =
+            viewObject.GetComponentsInChildren<MobileControlLayoutNode>(true);
+        for (int index = 0; index < layoutNodes.Length; index++)
+        {
+            MobileControlLayoutNode node = layoutNodes[index];
+            if (node == null ||
+                (node.FixedMoveJoystickOnly && UIUserSettings.FloatingMoveJoystick))
+            {
+                continue;
+            }
+
+            node.ApplySavedPosition(root);
+        }
     }
 
     /// <summary>透明度偏好改变时只更新玩法视觉，不重配触控区域或射线。</summary>
@@ -1192,7 +1232,10 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         lastScreenWidth = Screen.width;
         lastScreenHeight = Screen.height;
         if (geometryChanged)
+        {
             AndroidSystemGestureInsets.RequestRefresh();
+            ApplyMobileControlLayout();
+        }
 
         // 背包打开时仍允许在面板外的世界空白区域轻点/长按丢弃手上物品。
         // 丢弃面临时放到常驻层最底部，因此背包、槽位、按钮仍优先吃掉自己的射线。

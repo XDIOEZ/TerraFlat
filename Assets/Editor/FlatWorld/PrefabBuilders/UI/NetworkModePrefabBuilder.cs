@@ -111,6 +111,14 @@ public static class NetworkModePrefabBuilder
         accent.rectTransform.sizeDelta = new Vector2(6f, 0f);
         accent.raycastTarget = false;
 
+        SafeAreaScaleGroup scaleGroup = root.GetComponent<SafeAreaScaleGroup>();
+        if (scaleGroup == null)
+            scaleGroup = root.gameObject.AddComponent<SafeAreaScaleGroup>();
+        scaleGroup.Configure(
+            card.rectTransform,
+            new[] { shadow.rectTransform, card.rectTransform },
+            new Vector2(24f, 24f));
+
         BuildHeader(card.transform, font);
         BuildConnectionForm(card.transform, font);
         BuildSessionSummary(card.transform, font);
