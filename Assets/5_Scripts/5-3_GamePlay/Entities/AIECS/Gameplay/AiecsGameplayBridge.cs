@@ -37,6 +37,8 @@ namespace FlatWorld.AIECS.Gameplay
         private readonly Queue<DropRecord> dropQueue = new Queue<DropRecord>();
         private DropRecord activeDrop;
         private readonly Func<string, float2, bool> actorLootSpawner;
+        private readonly bool removeSpawnedStaticDropsOnDispose;
+        private readonly List<DroppedItemHandle> ownedStaticDrops = new List<DroppedItemHandle>();
         private readonly FlowGoalHandle[] goals;
         private readonly AiecsLosBridge los;
         private AiecsLosView losView;
@@ -66,9 +68,11 @@ namespace FlatWorld.AIECS.Gameplay
         #region 世界接入
         /// <summary>每个配置组一个战略目标，另加一个玩家目标；实际单位多少不会增加 Goal 数量。</summary>
         public AiecsGameplayBridge(Player player, FlowNavigationCache navigation, string[] actorIds, string[] actorFactions, float senseOverride,
-            bool[] fleeFromHostiles = null, Func<string, float2, bool> actorLootSpawner = null)
+            bool[] fleeFromHostiles = null, Func<string, float2, bool> actorLootSpawner = null,
+            bool removeSpawnedStaticDropsOnDispose = false)
         {
             this.actorLootSpawner = actorLootSpawner;
+            this.removeSpawnedStaticDropsOnDispose = removeSpawnedStaticDropsOnDispose;
             if (actorIds == null || actorFactions == null || actorIds.Length == 0 || actorIds.Length != actorFactions.Length)
                 throw new ArgumentException("AIECS Actor 与阵营目录必须非空且长度一致。");
             if (fleeFromHostiles != null && fleeFromHostiles.Length != actorIds.Length)
@@ -364,7 +368,12 @@ namespace FlatWorld.AIECS.Gameplay
                     }
                     ActorLootSpawns++;
                 }
-                else DroppedItemService.SpawnLoot(activeDrop.ItemId, (Vector2)activeDrop.Position);
+                else
+                {
+                    DroppedItemHandle handle = DroppedItemService.SpawnLoot(activeDrop.ItemId, (Vector2)activeDrop.Position);
+                    if (removeSpawnedStaticDropsOnDispose && handle.IsValid)
+                        ownedStaticDrops.Add(handle);
+                }
                 // 只有真实生成成功才消费队列；任何反馈异常都不能先减掉尚未交付的战利品。
                 activeDrop.Remaining--;
                 Drops++;
@@ -406,7 +415,11 @@ namespace FlatWorld.AIECS.Gameplay
             GameplayCombatBridge.Unregister(this); Simulation?.Dispose(); Simulation = null; los?.Dispose();
             if (Navigation != null && goals != null) foreach (var goal in goals) Navigation.RemoveGoal(goal);
             if (expiredCorpses.IsCreated) expiredCorpses.Dispose();
+            if (removeSpawnedStaticDropsOnDispose)
+                foreach (DroppedItemHandle handle in ownedStaticDrops)
+                    DroppedItemService.Remove(handle);
             Navigation = null; proxies.Clear(); proxyLookup.Clear(); weapons.Clear(); corpses.Clear(); dropQueue.Clear(); activeDrop = default;
+            ownedStaticDrops.Clear();
         }
         #endregion
     }

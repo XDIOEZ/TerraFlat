@@ -126,7 +126,8 @@ namespace FlatWorld.AIECS.Gameplay
                 BuildScenarioCatalog(out string[] ids, out string[] factions, out bool[] fleePolicies);
                 var cache = WorldNavigationManager.ExistingInstance.GetSharedNavigation();
                 float sense = requested == AiecsPlaygroundMode.Wander ? 4f : 18f;
-                bridge = new AiecsGameplayBridge(player, cache, ids, factions, sense, fleePolicies, TrySpawnScenarioLootActor);
+                bridge = new AiecsGameplayBridge(player, cache, ids, factions, sense, fleePolicies,
+                    TrySpawnScenarioLootActor, removeSpawnedStaticDropsOnDispose: true);
                 bridge.Simulation.LocalAvoidanceEnabled = LocalAvoidanceEnabled;
                 bridge.PlayerParticipates = requested != AiecsPlaygroundMode.Armies;
                 display = new AiecsWorldRenderer(Catalog, ids, player.gameObject.scene);
