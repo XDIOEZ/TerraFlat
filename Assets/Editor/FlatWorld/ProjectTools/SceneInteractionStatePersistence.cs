@@ -48,9 +48,6 @@ namespace FlatWorld.EditorTools
         }
 
         private static Database database;
-        private static bool suppressEvents;
-        private static bool transitionInProgress;
-        private static bool hierarchyRestoreQueued;
         private static int restorePasses;
 
         private static string ProjectKey =>
@@ -73,8 +70,6 @@ namespace FlatWorld.EditorTools
 
         private static void RegisterEvents()
         {
-            EditorSceneManager.sceneOpening -= OnSceneOpening;
-            EditorSceneManager.sceneOpening += OnSceneOpening;
             EditorSceneManager.sceneOpened -= OnSceneOpened;
             EditorSceneManager.sceneOpened += OnSceneOpened;
 
@@ -83,8 +78,6 @@ namespace FlatWorld.EditorTools
             SceneManager.sceneUnloaded -= OnRuntimeSceneUnloaded;
             SceneManager.sceneUnloaded += OnRuntimeSceneUnloaded;
 
-            EditorApplication.hierarchyChanged -= OnHierarchyChanged;
-            EditorApplication.hierarchyChanged += OnHierarchyChanged;
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             AssemblyReloadEvents.beforeAssemblyReload -= SaveBeforeReload;
@@ -102,11 +95,6 @@ namespace FlatWorld.EditorTools
         #endregion
 
         #region 生命周期
-
-        private static void OnSceneOpening(string path, OpenSceneMode mode)
-        {
-            BeginTransition();
-        }
 
         private static void OnSceneOpened(Scene scene, OpenSceneMode mode)
         {
@@ -128,41 +116,10 @@ namespace FlatWorld.EditorTools
             }
         }
 
-        /// <summary>PlayMode 动态对象进入 Hierarchy 后，事件驱动地安排一次恢复。</summary>
-        private static void OnHierarchyChanged()
-        {
-            if (!IsEnabled || !EditorApplication.isPlaying || suppressEvents || transitionInProgress ||
-                hierarchyRestoreQueued)
-            {
-                return;
-            }
-
-            hierarchyRestoreQueued = true;
-            EditorApplication.delayCall -= RestoreAfterHierarchyChanged;
-            EditorApplication.delayCall += RestoreAfterHierarchyChanged;
-        }
-
-        /// <summary>层级变化后的下一次编辑器回调中恢复已记录对象，不使用 Update 轮询。</summary>
-        private static void RestoreAfterHierarchyChanged()
-        {
-            hierarchyRestoreQueued = false;
-            if (!IsEnabled || !EditorApplication.isPlaying || transitionInProgress || suppressEvents)
-            {
-                return;
-            }
-
-            ApplySavedStates();
-        }
-
         private static void OnPlayModeStateChanged(PlayModeStateChange state)
         {
             switch (state)
             {
-                case PlayModeStateChange.ExitingEditMode:
-                case PlayModeStateChange.ExitingPlayMode:
-                    BeginTransition();
-                    break;
-
                 case PlayModeStateChange.EnteredPlayMode:
                 case PlayModeStateChange.EnteredEditMode:
                     QueueRestore();
@@ -170,23 +127,13 @@ namespace FlatWorld.EditorTools
             }
         }
 
-        private static void BeginTransition()
-        {
-            if (!IsEnabled)
-                return;
-
-            transitionInProgress = true;
-        }
-
         private static void QueueRestore()
         {
             if (!IsEnabled)
             {
-                transitionInProgress = false;
                 return;
             }
 
-            transitionInProgress = true;
             restorePasses = Mathf.Max(restorePasses, 3);
             EditorApplication.delayCall -= RestorePass;
             EditorApplication.delayCall += RestorePass;
@@ -197,7 +144,6 @@ namespace FlatWorld.EditorTools
             if (!IsEnabled)
             {
                 restorePasses = 0;
-                transitionInProgress = false;
                 return;
             }
 
@@ -209,7 +155,6 @@ namespace FlatWorld.EditorTools
                 EditorApplication.delayCall += RestorePass;
                 return;
             }
-            transitionInProgress = false;
         }
 
         #endregion
@@ -242,6 +187,10 @@ namespace FlatWorld.EditorTools
                     continue;
 
                 Snapshot snapshot = CreateSnapshot(go);
+                // 未保存场景没有稳定 GlobalObjectId，不能跨会话恢复，因此不写入本机数据库。
+                if (string.IsNullOrEmpty(snapshot.globalId))
+                    continue;
+
                 database.entries.Add(new Entry
                 {
                     globalId = snapshot.globalId,
@@ -259,49 +208,45 @@ namespace FlatWorld.EditorTools
         private static void ApplySavedStates()
         {
             EnsureDatabase();
+            // 支持关闭 Domain Reload / Editor Hot Reload：旧静态数据库可能继续存活，
+            // 因此恢复入口也必须主动清掉历史运行时污染，而不能只依赖 Load()。
+            if (PruneRuntimeOnlyEntries())
+                Save();
             if (database.entries.Count == 0)
                 return;
 
             SceneVisibilityManager manager = SceneVisibilityManager.instance;
             bool changed = false;
-            suppressEvents = true;
 
-            try
+            for (int i = 0; i < database.entries.Count; i++)
             {
-                for (int i = 0; i < database.entries.Count; i++)
+                Entry entry = database.entries[i];
+                GameObject go = ResolveEntry(entry);
+                if (go == null)
+                    continue;
+
+                bool hidden = manager.IsHidden(go, false);
+                bool pickingDisabled = manager.IsPickingDisabled(go, false);
+
+                if (hidden != entry.hidden)
                 {
-                    Entry entry = database.entries[i];
-                    GameObject go = ResolveEntry(entry);
-                    if (go == null)
-                        continue;
+                    if (entry.hidden)
+                        manager.Hide(go, false);
+                    else
+                        manager.Show(go, false);
 
-                    bool hidden = manager.IsHidden(go, false);
-                    bool pickingDisabled = manager.IsPickingDisabled(go, false);
-
-                    if (hidden != entry.hidden)
-                    {
-                        if (entry.hidden)
-                            manager.Hide(go, false);
-                        else
-                            manager.Show(go, false);
-
-                        changed = true;
-                    }
-
-                    if (pickingDisabled != entry.pickingDisabled)
-                    {
-                        if (entry.pickingDisabled)
-                            manager.DisablePicking(go, false);
-                        else
-                            manager.EnablePicking(go, false);
-
-                        changed = true;
-                    }
+                    changed = true;
                 }
-            }
-            finally
-            {
-                suppressEvents = false;
+
+                if (pickingDisabled != entry.pickingDisabled)
+                {
+                    if (entry.pickingDisabled)
+                        manager.DisablePicking(go, false);
+                    else
+                        manager.EnablePicking(go, false);
+
+                    changed = true;
+                }
             }
 
             if (changed)
@@ -574,6 +519,22 @@ namespace FlatWorld.EditorTools
             }
 
             EnsureDatabase();
+            if (PruneRuntimeOnlyEntries())
+                Save();
+        }
+
+        /// <summary>
+        /// 清理历史上在 Play Mode 误采集的动态对象记录。
+        /// 持久化状态必须拥有稳定 GlobalObjectId；纯运行时场景与临时 UI 路径跨会话没有有效身份。
+        /// </summary>
+        private static bool PruneRuntimeOnlyEntries()
+        {
+            EnsureDatabase();
+            int removed = database.entries.RemoveAll(entry =>
+                entry == null ||
+                string.IsNullOrEmpty(entry.globalId) ||
+                string.IsNullOrEmpty(entry.fallbackKey));
+            return removed > 0;
         }
 
         private static void Save()
@@ -584,6 +545,7 @@ namespace FlatWorld.EditorTools
 
         private static void SaveBeforeReload()
         {
+            PruneRuntimeOnlyEntries();
             Save();
         }
 
@@ -597,10 +559,7 @@ namespace FlatWorld.EditorTools
             bool enabled = !IsEnabled;
             EditorPrefs.SetBool(EnabledKey, enabled);
             Menu.SetChecked(EnabledMenu, enabled);
-            transitionInProgress = false;
-            hierarchyRestoreQueued = false;
             restorePasses = 0;
-            EditorApplication.delayCall -= RestoreAfterHierarchyChanged;
             EditorApplication.delayCall -= RestorePass;
 
             if (enabled)
@@ -619,8 +578,20 @@ namespace FlatWorld.EditorTools
         [MenuItem(QuickCaptureMenu, priority = 100)]
         private static void CaptureCurrent()
         {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogWarning("[FlatWorld][Hierarchy状态] Play Mode 中禁止记录运行时对象；请退出播放后再记录场景状态。");
+                return;
+            }
+
             int count = CaptureCurrentInteractionStates();
             Debug.Log("[FlatWorld][Hierarchy状态] 已手动记录当前小眼睛/手状态，共 " + count + " 个非默认对象。");
+        }
+
+        [MenuItem(QuickCaptureMenu, true)]
+        private static bool ValidateCaptureCurrent()
+        {
+            return !EditorApplication.isPlaying;
         }
 
         [MenuItem(RestoreMenu, priority = 2002)]
