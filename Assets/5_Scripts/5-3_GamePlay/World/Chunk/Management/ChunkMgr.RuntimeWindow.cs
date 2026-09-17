@@ -201,13 +201,36 @@ public partial class ChunkMgr
     public void RefreshRuntimeWindow(Vector2 center, int activeDistance, int destroyDistance,
         bool includeLocalPresentation, int prefetchDistance = 0)
     {
-        EnsureWorldRuntime();
-        runtimeWindowUsesLocalPresentation = includeLocalPresentation;
         activeDistance = Mathf.Max(1, activeDistance);
         prefetchDistance = prefetchDistance <= 0
             ? activeDistance
             : Mathf.Max(activeDistance, prefetchDistance);
         destroyDistance = Mathf.Max(prefetchDistance, destroyDistance);
+        RefreshRuntimeWindow(
+            center,
+            new Vector2Int(activeDistance, activeDistance),
+            new Vector2Int(destroyDistance, destroyDistance),
+            includeLocalPresentation,
+            new Vector2Int(prefetchDistance, prefetchDistance));
+    }
+
+    /// <summary>按 X/Y 独立距离刷新矩形区块窗口，避免宽屏相机按最大边构造巨大正方形。</summary>
+    public void RefreshRuntimeWindow(Vector2 center, Vector2Int activeDistance,
+        Vector2Int destroyDistance, bool includeLocalPresentation,
+        Vector2Int? prefetchDistance = null)
+    {
+        EnsureWorldRuntime();
+        runtimeWindowUsesLocalPresentation = includeLocalPresentation;
+        activeDistance = new Vector2Int(
+            Mathf.Max(1, activeDistance.x),
+            Mathf.Max(1, activeDistance.y));
+        Vector2Int resolvedPrefetch = prefetchDistance ?? activeDistance;
+        resolvedPrefetch = new Vector2Int(
+            Mathf.Max(activeDistance.x, resolvedPrefetch.x),
+            Mathf.Max(activeDistance.y, resolvedPrefetch.y));
+        destroyDistance = new Vector2Int(
+            Mathf.Max(resolvedPrefetch.x, destroyDistance.x),
+            Mathf.Max(resolvedPrefetch.y, destroyDistance.y));
         string dimensionId = ResolveCurrentDimensionId();
         ChunkGenerationProfileSO profileAsset = DimensionManager.Instance?.GetActiveGenerationProfile();
         ChunkGenerationProfileSnapshot profile = profileAsset != null
@@ -237,14 +260,17 @@ public partial class ChunkMgr
         var centerAddress = new RuntimeWorldAddress(dimensionId,
             new Int2(centerOrigin.x, centerOrigin.y));
         runtimeChunkManager.RefreshWindow(new ChunkWindowRequest(centerAddress,
-            activeDistance, destroyDistance, includeLocalPresentation, seed, profile, topology,
-            dataDistance: activeDistance));
+            new Int2(activeDistance.x, activeDistance.y),
+            new Int2(destroyDistance.x, destroyDistance.y),
+            includeLocalPresentation, seed, profile, topology,
+            dataDistance: new Int2(activeDistance.x, activeDistance.y)));
 
         runtimeWindowTargets.Clear();
-        int radius = activeDistance - 1;
-        for (int dx = -radius; dx <= radius; dx++)
+        int radiusX = activeDistance.x - 1;
+        int radiusY = activeDistance.y - 1;
+        for (int dx = -radiusX; dx <= radiusX; dx++)
         {
-            for (int dy = -radius; dy <= radius; dy++)
+            for (int dy = -radiusY; dy <= radiusY; dy++)
             {
                 Vector2Int origin = NormalizeChunkPosition(new Vector2Int(
                     centerOrigin.x + dx * stepX,
@@ -273,7 +299,7 @@ public partial class ChunkMgr
             DeactivateRuntimeBinding(runtimeWindowRemovalBuffer[i]);
 
         RebuildRuntimePrefetchQueue(centerOrigin, dimensionId, activeDistance,
-            prefetchDistance, stepX, stepY, profile, seed, topology);
+            resolvedPrefetch, stepX, stepY, profile, seed, topology);
     }
 
     #endregion
@@ -282,21 +308,23 @@ public partial class ChunkMgr
 
     /// <summary>重建均匀的外圈预取队列；不再根据玩家移动方向做预测。</summary>
     private void RebuildRuntimePrefetchQueue(Vector2Int centerOrigin, string dimensionId,
-        int activeDistance, int prefetchDistance, int stepX, int stepY,
+        Vector2Int activeDistance, Vector2Int prefetchDistance, int stepX, int stepY,
         ChunkGenerationProfileSnapshot profile, int seed,
         ChunkGenerationTopologySnapshot topology)
     {
         runtimePrefetchQueue.Clear();
         runtimePrefetchTargets.Clear();
-        int activeRadius = activeDistance - 1;
-        int prefetchRadius = prefetchDistance - 1;
+        int activeRadiusX = activeDistance.x - 1;
+        int activeRadiusY = activeDistance.y - 1;
+        int prefetchRadiusX = prefetchDistance.x - 1;
+        int prefetchRadiusY = prefetchDistance.y - 1;
         var requests = new List<RuntimePrefetchRequest>();
-        for (int dx = -prefetchRadius; dx <= prefetchRadius; dx++)
+        for (int dx = -prefetchRadiusX; dx <= prefetchRadiusX; dx++)
         {
-            for (int dy = -prefetchRadius; dy <= prefetchRadius; dy++)
+            for (int dy = -prefetchRadiusY; dy <= prefetchRadiusY; dy++)
             {
                 int ring = Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy));
-                if (ring <= activeRadius)
+                if (Mathf.Abs(dx) <= activeRadiusX && Mathf.Abs(dy) <= activeRadiusY)
                     continue;
 
                 Vector2Int origin = NormalizeChunkPosition(new Vector2Int(

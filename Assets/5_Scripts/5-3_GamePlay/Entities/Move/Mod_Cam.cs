@@ -1,4 +1,4 @@
-﻿using Cinemachine;
+using Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -52,6 +52,10 @@ public class Mod_Cam : Module
     [Header("视野限制")]
     public float MaxPovValue = 20f; // 视野最大拉伸值
     public float MinPovValue = 5f;  // 视野最小缩放值
+    private bool _unlimitedViewEnabled; // 管理员无限视野只放开运行时上限，不污染普通视野配置。
+
+    /// <summary>当前是否启用了管理员无限视野。</summary>
+    public bool IsUnlimitedViewEnabled => _unlimitedViewEnabled;
 
     /// <summary>
     /// 获取虚拟相机组件
@@ -97,7 +101,7 @@ public class Mod_Cam : Module
         // 获取跟随对象
         CameraFollowItem = GetComponentInParent<Item>();
         Player = CameraFollowItem as Player;
-        _chunkLoader = GetComponentInParent<Mod_ChunkLoader>();
+        ResolveChunkLoader();
     
         // 直接在当前位置实例化相机预制体
         if (CamPrefab != null)
@@ -209,6 +213,7 @@ public class Mod_Cam : Module
     /// <summary>按当前拉远进度应用缩放影响系数，并保证负系数不会反转前探方向。</summary>
     private float GetZoomAdjustedLookahead()
     {
+        // 镜头预判的缩放影响始终以正常玩法视野范围计算；无限视野只是管理员运行时权限。
         float maximumPov = Mathf.Max(DefaultPovValue + 0.001f, MaxPovValue);
         float zoomOutProgress = Mathf.InverseLerp(
             DefaultPovValue,
@@ -255,19 +260,13 @@ public class Mod_Cam : Module
         if (Vcam == null) return;
 
         povValue += delta;
-        povValue = Mathf.Clamp(povValue, MinPovValue, MaxPovValue); // 限制视野范围
+        povValue = ClampPovValue(povValue);
         Vcam.m_Lens.OrthographicSize = povValue;
         if (ControllerCamera != null)
             ControllerCamera.orthographicSize = povValue;
         ApplyCameraFollowSettings();
 
-        if (_chunkLoader == null)
-        {
-            _chunkLoader = GetComponentInParent<Mod_ChunkLoader>();
-        }
-
-        if (_chunkLoader != null)
-            _chunkLoader.RefreshChunksForCameraView();
+        ResolveChunkLoader()?.RefreshChunksForCameraView();
 
         // Debug.Log($"视野范围修改为：{Vcam.m_Lens.OrthographicSize}");
     }
@@ -277,13 +276,12 @@ public class Mod_Cam : Module
     {
         if (Vcam == null)
             throw new System.InvalidOperationException("Camera module has no Cinemachine virtual camera.");
-        povValue = Mathf.Clamp(value, MinPovValue, MaxPovValue);
+        povValue = ClampPovValue(value);
         Vcam.m_Lens.OrthographicSize = povValue;
         if (ControllerCamera != null)
             ControllerCamera.orthographicSize = povValue;
         ApplyCameraFollowSettings();
-        _chunkLoader ??= GetComponentInParent<Mod_ChunkLoader>();
-        _chunkLoader?.RefreshChunksForCameraView();
+        ResolveChunkLoader()?.RefreshChunksForCameraView();
     }
 
     /// <summary>按双指间距变化调整正交视野；两指分开时镜头拉近，合拢时镜头拉远。</summary>
@@ -301,7 +299,25 @@ public class Mod_Cam : Module
 
     public void EnableUnlimitedView()
     {
-        MaxPovValue = float.MaxValue;
+        _unlimitedViewEnabled = true;
+    }
+
+    /// <summary>相机与区块加载器是玩家下的兄弟模块，通过玩家根节点解析而不是只查父级。</summary>
+    private Mod_ChunkLoader ResolveChunkLoader()
+    {
+        if (_chunkLoader != null)
+            return _chunkLoader;
+
+        Item owner = CameraFollowItem != null ? CameraFollowItem : GetComponentInParent<Item>();
+        if (owner != null)
+            _chunkLoader = owner.GetComponentInChildren<Mod_ChunkLoader>(true);
+        return _chunkLoader;
+    }
+
+    /// <summary>按普通玩法上限或管理员无限权限约束镜头正交尺寸。</summary>
+    private float ClampPovValue(float value)
+    {
+        return Mathf.Max(MinPovValue, _unlimitedViewEnabled ? value : Mathf.Min(value, MaxPovValue));
     }
     #endregion
 

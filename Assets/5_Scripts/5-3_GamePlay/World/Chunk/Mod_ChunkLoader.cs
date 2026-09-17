@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -50,7 +50,7 @@ public class Mod_ChunkLoader : Module
     [SerializeField] private bool syncWithCamera = true;
     [Tooltip("在视口范围外额外加载的Chunk圈数以防止穿帮")]
     [SerializeField] private int chunkBuffer = 1;
-    [Tooltip("自动视距允许的最大Chunk圈数，防止相机缩放过大时瞬间加载过多区块")]
+    [Tooltip("普通玩法自动视距允许的最大Chunk圈数；管理员无限视野会按真实视口需求继续扩展")]
     [SerializeField, Min(1)] private int maxAutoLoadDistance = 6;
 
     [Header("性能节流")]
@@ -72,7 +72,13 @@ public class Mod_ChunkLoader : Module
     // 动态视距引用
     private Camera _boundCamera;
     private Mod_Cam _cameraFollowManager;
-    private bool _adminManualLoadDistanceOverride;
+    /// <summary>管理员手动提高的最低加载距离；只作为下限，不关闭相机自动视距同步。</summary>
+    private int _adminMinimumLoadDistance;
+    /// <summary>当前真正用于流送的横纵加载距离；相机宽高比只影响运行时，不写回存档。</summary>
+    private Vector2Int _effectiveLoadDistance;
+    private Vector2Int _effectivePrefetchDistance;
+    private Vector2Int _effectiveDestroyDistance;
+    private bool _effectiveDistancesInitialized;
     private bool _externalStreamingManaged;
     private bool _hasTrackedChunkPosition;
     #endregion
@@ -96,9 +102,22 @@ public class Mod_ChunkLoader : Module
         set => distanceConfig.LoadChunkDistance = value;
     }
 
-    public int CurrentLoadChunkDistance => LoadChunkDistance;
-    public int CurrentUnActiveChunkDistance => UnActiveDistance;
-    public int CurrentDestroyChunkDistance => DestroyChunkDistance;
+    public int CurrentLoadChunkDistance => Mathf.Max(EffectiveLoadDistance.x, EffectiveLoadDistance.y);
+    public int CurrentUnActiveChunkDistance => Mathf.Max(EffectivePrefetchDistance.x, EffectivePrefetchDistance.y);
+    public int CurrentDestroyChunkDistance => Mathf.Max(EffectiveDestroyDistance.x, EffectiveDestroyDistance.y);
+    public Vector2Int CurrentLoadChunkDistanceXY => EffectiveLoadDistance;
+    public Vector2Int CurrentUnActiveChunkDistanceXY => EffectivePrefetchDistance;
+    public Vector2Int CurrentDestroyChunkDistanceXY => EffectiveDestroyDistance;
+
+    private Vector2Int EffectiveLoadDistance => _effectiveDistancesInitialized
+        ? _effectiveLoadDistance
+        : new Vector2Int(LoadChunkDistance, LoadChunkDistance);
+    private Vector2Int EffectivePrefetchDistance => _effectiveDistancesInitialized
+        ? _effectivePrefetchDistance
+        : new Vector2Int(UnActiveDistance, UnActiveDistance);
+    private Vector2Int EffectiveDestroyDistance => _effectiveDistancesInitialized
+        ? _effectiveDestroyDistance
+        : new Vector2Int(DestroyChunkDistance, DestroyChunkDistance);
     #endregion
 
     #region 生命周期方法
@@ -126,9 +145,10 @@ public class Mod_ChunkLoader : Module
     {
         ModData.ReadData(ref distanceConfig);
         NormalizeDistanceConfig();
+        ResetEffectiveDistancesFromConfig();
         lastChunkPos = ResolveChunkOrigin(transform.position);
         _hasTrackedChunkPosition = true;
-        _cameraFollowManager = item.GetComponentInChildren<Mod_Cam>();
+        ResolveCameraReferences();
     }
 
     public override void Save() => ModData.WriteData(distanceConfig);
@@ -165,6 +185,7 @@ public class Mod_ChunkLoader : Module
     [Button("刷新周围区块")]
     public void RefreshChunksAroundPlayer()
     {
+        AutoAdjustDistance();
         Vector2 currentChunkPos = ResolveChunkOrigin(transform.position);
         TrackChunkPosition(currentChunkPos);
         needsChunkUpdate = false;
@@ -198,8 +219,10 @@ public class Mod_ChunkLoader : Module
 
     public int IncreaseLoadDistanceForAdmin(int amount = 1)
     {
-        _adminManualLoadDistanceOverride = true;
-        AdjustLoadDistance(Mathf.Max(1, amount));
+        int increase = Mathf.Max(1, amount);
+        _adminMinimumLoadDistance = Mathf.Max(_adminMinimumLoadDistance, LoadChunkDistance) + increase;
+        if (LoadChunkDistance < _adminMinimumLoadDistance)
+            AdjustLoadDistance(_adminMinimumLoadDistance - LoadChunkDistance);
         RefreshChunksAroundPlayer();
         return LoadChunkDistance;
     }
@@ -211,26 +234,61 @@ public class Mod_ChunkLoader : Module
     private void AutoAdjustDistance()
     {
         if (!syncWithCamera) return;
-        if (_adminManualLoadDistanceOverride) return;
 
-        // 获取有效相机引用（仅用于 aspect 和回退）
-        _boundCamera ??= _cameraFollowManager?.ControllerCamera ?? Camera.main;
+        ResolveCameraReferences();
         if (_boundCamera == null || !_boundCamera.orthographic) return;
 
         // 关键修复：使用 Mod_Cam 的目标 lens size，避免 Cinemachine 同步延迟导致读取到旧的 orthographicSize
         float camSize = _cameraFollowManager?.CurrentOrthographicSize ?? _boundCamera.orthographicSize;
         if (camSize <= 0f) return;
 
-        // 计算视野半径（取半宽/半高中的较大者）
-        float radius = Mathf.Max(camSize * _boundCamera.aspect, camSize);
-
         Vector2 chunkSize = ChunkMgr.GetChunkSize();
-        float minChunkDim = Mathf.Min(chunkSize.x, chunkSize.y);
-        if (minChunkDim <= 0.1f) return;
+        if (chunkSize.x <= 0.1f || chunkSize.y <= 0.1f) return;
 
-        int neededDist = Mathf.Clamp(Mathf.CeilToInt(radius / minChunkDim) + chunkBuffer, 1, maxAutoLoadDistance);
-        if (neededDist != LoadChunkDistance)
-            AdjustLoadDistance(neededDist - LoadChunkDistance);
+        int cameraRequiredDistanceX = Mathf.Max(
+            1,
+            Mathf.CeilToInt(camSize * _boundCamera.aspect / chunkSize.x) + chunkBuffer);
+        int cameraRequiredDistanceY = Mathf.Max(
+            1,
+            Mathf.CeilToInt(camSize / chunkSize.y) + chunkBuffer);
+        bool unlimitedView = _cameraFollowManager?.IsUnlimitedViewEnabled == true;
+        int automaticDistanceX = unlimitedView
+            ? cameraRequiredDistanceX
+            : Mathf.Min(cameraRequiredDistanceX, Mathf.Max(1, maxAutoLoadDistance));
+        int automaticDistanceY = unlimitedView
+            ? cameraRequiredDistanceY
+            : Mathf.Min(cameraRequiredDistanceY, Mathf.Max(1, maxAutoLoadDistance));
+        int minimumDistance = Mathf.Max(LoadChunkDistance, _adminMinimumLoadDistance);
+        var targetLoad = new Vector2Int(
+            Mathf.Max(automaticDistanceX, minimumDistance),
+            Mathf.Max(automaticDistanceY, minimumDistance));
+
+        int prefetchMargin = Mathf.Max(1, UnActiveDistance - LoadChunkDistance);
+        int destroyMargin = Mathf.Max(0, DestroyChunkDistance - UnActiveDistance);
+        var targetPrefetch = new Vector2Int(
+            targetLoad.x + prefetchMargin,
+            targetLoad.y + prefetchMargin);
+        var targetDestroy = new Vector2Int(
+            targetPrefetch.x + destroyMargin,
+            targetPrefetch.y + destroyMargin);
+        ApplyEffectiveDistances(targetLoad, targetPrefetch, targetDestroy);
+    }
+
+    /// <summary>运行时重新解析相机模块与真实 Camera，避免跨维度或模块加载顺序造成旧引用。</summary>
+    private void ResolveCameraReferences()
+    {
+        if (_cameraFollowManager == null)
+        {
+            _cameraFollowManager = item != null
+                ? item.GetComponentInChildren<Mod_Cam>(true)
+                : GetComponentInParent<Player>()?.GetComponentInChildren<Mod_Cam>(true);
+        }
+
+        Camera controllerCamera = _cameraFollowManager?.ControllerCamera;
+        if (controllerCamera != null)
+            _boundCamera = controllerCamera;
+        else if (_boundCamera == null)
+            _boundCamera = Camera.main;
     }
 
     #endregion
@@ -268,10 +326,10 @@ public class Mod_ChunkLoader : Module
 
         ChunkMgr.Instance.RefreshRuntimeWindow(
             chunkPos,
-            LoadChunkDistance,
-            DestroyChunkDistance,
+            EffectiveLoadDistance,
+            EffectiveDestroyDistance,
             includeLocalPresentation: true,
-            prefetchDistance: UnActiveDistance);
+            prefetchDistance: EffectivePrefetchDistance);
     }
 
     #endregion
@@ -285,6 +343,33 @@ public class Mod_ChunkLoader : Module
         distanceConfig.DestroyChunkDistance = Mathf.Max(1, distanceConfig.DestroyChunkDistance + adjustment);
         distanceConfig.LoadChunkDistance = Mathf.Max(1, distanceConfig.LoadChunkDistance + adjustment);
         NormalizeDistanceConfig();
+        ResetEffectiveDistancesFromConfig();
+        AutoAdjustDistance();
+        needsChunkUpdate = true;
+    }
+
+    /// <summary>用持久化配置初始化对称窗口；随后相机可在每个轴上独立扩大。</summary>
+    private void ResetEffectiveDistancesFromConfig()
+    {
+        _effectiveLoadDistance = new Vector2Int(LoadChunkDistance, LoadChunkDistance);
+        _effectivePrefetchDistance = new Vector2Int(UnActiveDistance, UnActiveDistance);
+        _effectiveDestroyDistance = new Vector2Int(DestroyChunkDistance, DestroyChunkDistance);
+        _effectiveDistancesInitialized = true;
+    }
+
+    /// <summary>应用相机推导出的矩形流送窗口，并仅在尺寸变化时请求刷新。</summary>
+    private void ApplyEffectiveDistances(Vector2Int load, Vector2Int prefetch, Vector2Int destroy)
+    {
+        if (_effectiveDistancesInitialized &&
+            _effectiveLoadDistance == load &&
+            _effectivePrefetchDistance == prefetch &&
+            _effectiveDestroyDistance == destroy)
+            return;
+
+        _effectiveLoadDistance = load;
+        _effectivePrefetchDistance = prefetch;
+        _effectiveDestroyDistance = destroy;
+        _effectiveDistancesInitialized = true;
         needsChunkUpdate = true;
     }
 

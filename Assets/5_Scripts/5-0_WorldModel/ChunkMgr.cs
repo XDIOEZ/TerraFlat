@@ -36,20 +36,44 @@ namespace FlatWorld.WorldModel
         public ChunkWindowRequest(WorldAddress center, int activeDistance, int destroyDistance,
             bool requestPresentation, int worldSeed, ChunkGenerationProfileSnapshot profile,
             ChunkGenerationTopologySnapshot topology = default, int dataDistance = 0)
+            : this(center,
+                new Int2(activeDistance, activeDistance),
+                new Int2(destroyDistance, destroyDistance),
+                requestPresentation,
+                worldSeed,
+                profile,
+                topology,
+                dataDistance > 0
+                    ? new Int2(dataDistance, dataDistance)
+                    : default)
         {
-            if (activeDistance <= 0)
+        }
+
+        /// <summary>按 X/Y 独立距离创建矩形区块窗口，适配宽屏或超宽屏相机。</summary>
+        public ChunkWindowRequest(WorldAddress center, Int2 activeDistance, Int2 destroyDistance,
+            bool requestPresentation, int worldSeed, ChunkGenerationProfileSnapshot profile,
+            ChunkGenerationTopologySnapshot topology = default, Int2 dataDistance = default)
+        {
+            if (activeDistance.X <= 0 || activeDistance.Y <= 0)
                 throw new ArgumentOutOfRangeException(nameof(activeDistance));
-            dataDistance = dataDistance <= 0 ? activeDistance : dataDistance;
-            if (dataDistance < activeDistance)
+            if (dataDistance.X <= 0 || dataDistance.Y <= 0)
+                dataDistance = activeDistance;
+            if (dataDistance.X < activeDistance.X || dataDistance.Y < activeDistance.Y)
                 throw new ArgumentOutOfRangeException(nameof(dataDistance));
-            if (destroyDistance < activeDistance)
+            if (destroyDistance.X < activeDistance.X || destroyDistance.Y < activeDistance.Y)
                 throw new ArgumentOutOfRangeException(nameof(destroyDistance));
-            if (destroyDistance < dataDistance)
+            if (destroyDistance.X < dataDistance.X || destroyDistance.Y < dataDistance.Y)
                 throw new ArgumentOutOfRangeException(nameof(destroyDistance));
             Center = center;
-            ActiveDistance = activeDistance;
-            DataDistance = dataDistance;
-            DestroyDistance = destroyDistance;
+            ActiveDistanceX = activeDistance.X;
+            ActiveDistanceY = activeDistance.Y;
+            DataDistanceX = dataDistance.X;
+            DataDistanceY = dataDistance.Y;
+            DestroyDistanceX = destroyDistance.X;
+            DestroyDistanceY = destroyDistance.Y;
+            ActiveDistance = Math.Max(ActiveDistanceX, ActiveDistanceY);
+            DataDistance = Math.Max(DataDistanceX, DataDistanceY);
+            DestroyDistance = Math.Max(DestroyDistanceX, DestroyDistanceY);
             RequestPresentation = requestPresentation;
             WorldSeed = worldSeed;
             Profile = profile ?? throw new ArgumentNullException(nameof(profile));
@@ -59,10 +83,22 @@ namespace FlatWorld.WorldModel
         public WorldAddress Center { get; }
         /// <summary>中心周围多远以内的区块需要加载并运行。</summary>
         public int ActiveDistance { get; }
+        /// <summary>横向活动区块距离，包含中心区块。</summary>
+        public int ActiveDistanceX { get; }
+        /// <summary>纵向活动区块距离，包含中心区块。</summary>
+        public int ActiveDistanceY { get; }
         /// <summary>中心周围多远以内只提前生成数据，不领取模拟和表现租约。</summary>
         public int DataDistance { get; }
+        /// <summary>横向数据生成距离。</summary>
+        public int DataDistanceX { get; }
+        /// <summary>纵向数据生成距离。</summary>
+        public int DataDistanceY { get; }
         /// <summary>中心周围多远以内的区块暂时不要删除，不能比数据预取范围更小。</summary>
         public int DestroyDistance { get; }
+        /// <summary>横向保留距离。</summary>
+        public int DestroyDistanceX { get; }
+        /// <summary>纵向保留距离。</summary>
+        public int DestroyDistanceY { get; }
         /// <summary>这些区块除了运行逻辑外，是否还要在 Unity 里显示出来。</summary>
         public bool RequestPresentation { get; }
         /// <summary>需要生成新区块时使用的世界随机种子。</summary>
@@ -252,13 +288,16 @@ namespace FlatWorld.WorldModel
             {
                 ChunkWindowRequest request = requests[requestIndex];
                 WorldAddress center = _normalizer.Normalize(request.Center);
-                int activeRadius = request.ActiveDistance - 1;
-                int dataRadius = request.DataDistance - 1;
-                int destroyRadius = request.DestroyDistance - 1;
+                int activeRadiusX = request.ActiveDistanceX - 1;
+                int activeRadiusY = request.ActiveDistanceY - 1;
+                int dataRadiusX = request.DataDistanceX - 1;
+                int dataRadiusY = request.DataDistanceY - 1;
+                int destroyRadiusX = request.DestroyDistanceX - 1;
+                int destroyRadiusY = request.DestroyDistanceY - 1;
                 // 先算较大的保留范围，避免玩家刚走开一点，区块就马上被删除。
-                for (int x = -destroyRadius; x <= destroyRadius; x++)
+                for (int x = -destroyRadiusX; x <= destroyRadiusX; x++)
                 {
-                    for (int y = -destroyRadius; y <= destroyRadius; y++)
+                    for (int y = -destroyRadiusY; y <= destroyRadiusY; y++)
                     {
                         retainedTargets.Add(_normalizer.Normalize(new WorldAddress(
                             center.DimensionId,
@@ -266,15 +305,16 @@ namespace FlatWorld.WorldModel
                                 center.ChunkOrigin.Y + y * request.Profile.Height))));
                     }
                 }
-                for (int x = -dataRadius; x <= dataRadius; x++)
+                for (int x = -dataRadiusX; x <= dataRadiusX; x++)
                 {
-                    for (int y = -dataRadius; y <= dataRadius; y++)
+                    for (int y = -dataRadiusY; y <= dataRadiusY; y++)
                     {
                         var address = _normalizer.Normalize(new WorldAddress(center.DimensionId,
                             new Int2(center.ChunkOrigin.X + x * request.Profile.Width,
                                 center.ChunkOrigin.Y + y * request.Profile.Height)));
                         int ring = Math.Max(Math.Abs(x), Math.Abs(y));
-                        bool active = ring <= activeRadius;
+                        bool active = Math.Abs(x) <= activeRadiusX &&
+                                      Math.Abs(y) <= activeRadiusY;
                         var candidate = new WindowDataTarget(request, active, ring);
                         if (!dataTargets.TryGetValue(address, out WindowDataTarget existing) ||
                             candidate.IsHigherPriorityThan(existing))
