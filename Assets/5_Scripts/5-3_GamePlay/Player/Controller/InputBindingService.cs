@@ -218,8 +218,8 @@ public sealed class InputBindingService : IDisposable
         this.store = store ?? new PlayerPrefsInputBindingStore();
         actionMap = inputAsset.FindActionMap(ActionMapName, true);
 
-        LoadSavedOverrides();
         BuildEditableEntries();
+        LoadSavedOverrides();
     }
 
     public string GetBindingDisplayString(InputBindingEntry entry)
@@ -497,6 +497,7 @@ public sealed class InputBindingService : IDisposable
                     });
             }
 
+            removedCount += RemoveConflictingLoadedOverrides();
             if (removedCount > 0)
                 SaveOverrides();
         }
@@ -637,7 +638,7 @@ public sealed class InputBindingService : IDisposable
 
                 InputBinding binding = action.bindings[bindingIndex];
                 if (!BelongsToGroup(binding, changedEntry.BindingGroup) ||
-                    !string.Equals(changedPath, binding.effectivePath, StringComparison.OrdinalIgnoreCase))
+                    !AreBindingPathsConflicting(changedPath, binding.effectivePath))
                 {
                     continue;
                 }
@@ -664,6 +665,54 @@ public sealed class InputBindingService : IDisposable
         }
 
         return null;
+    }
+
+    /// <summary>清理旧版本冲突检测漏掉的覆盖；例如 leftShift 与通用 shift 实际属于同一修饰键。</summary>
+    private int RemoveConflictingLoadedOverrides()
+    {
+        int removedCount = 0;
+        for (int i = 0; i < entries.Count; i++)
+        {
+            InputBindingEntry entry = entries[i];
+            InputBinding binding = entry.Action.bindings[entry.BindingIndex];
+            if (binding.overridePath == null || string.IsNullOrEmpty(binding.effectivePath))
+                continue;
+
+            if (FindConflict(entry) == null)
+                continue;
+
+            entry.Action.RemoveBindingOverride(entry.BindingIndex);
+            removedCount++;
+        }
+
+        return removedCount;
+    }
+
+    /// <summary>按实际物理按键语义判断冲突，统一左右修饰键与 Input System 的通用修饰键路径。</summary>
+    private static bool AreBindingPathsConflicting(string leftPath, string rightPath)
+    {
+        if (string.IsNullOrEmpty(leftPath) || string.IsNullOrEmpty(rightPath))
+            return false;
+
+        return string.Equals(
+            NormalizeModifierPath(leftPath),
+            NormalizeModifierPath(rightPath),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeModifierPath(string path)
+    {
+        if (string.Equals(path, "<Keyboard>/leftShift", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(path, "<Keyboard>/rightShift", StringComparison.OrdinalIgnoreCase))
+            return "<Keyboard>/shift";
+        if (string.Equals(path, "<Keyboard>/leftCtrl", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(path, "<Keyboard>/rightCtrl", StringComparison.OrdinalIgnoreCase))
+            return "<Keyboard>/ctrl";
+        if (string.Equals(path, "<Keyboard>/leftAlt", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(path, "<Keyboard>/rightAlt", StringComparison.OrdinalIgnoreCase))
+            return "<Keyboard>/alt";
+
+        return path;
     }
 
     private bool IsValidEntry(InputBindingEntry entry)

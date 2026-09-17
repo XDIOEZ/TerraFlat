@@ -79,7 +79,11 @@ public class SettingCanvas : Module, IInstanceUI
             return;
         }
 
-        // Android 返回键顺序：临时面板之后先关闭不锁玩法的手机抽屉，再切换设置面板。
+        // 返回顺序：最上层可取消面板 -> 手机抽屉 -> 设置面板。
+        // 不能先检查 Gameplay Input Lock，否则背包/制作等面板持有输入锁时 ESC 会被直接吞掉。
+        if (uiManager.TryCloseTopmostCancelPanel(basePanel))
+            return;
+
         if (PlayerMobileControlsHUD.TryCloseActiveDrawer())
         {
             uiManager.NotifyCancelHandled();
