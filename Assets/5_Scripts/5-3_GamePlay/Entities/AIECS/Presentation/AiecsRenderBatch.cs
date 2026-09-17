@@ -12,6 +12,7 @@ namespace FlatWorld.AIECS
     /// </summary>
     internal sealed class AiecsRenderBatch : IDisposable
     {
+        private const string RuntimeLayerName = "AIECSRuntime"; // AIECS 批次专用层，Editor SceneView 默认隐藏以避免重复渲染压测单位。
         // 每批最多 4096 张图片，控制单次上传和包围盒大小。
         internal const int MaxSprites = 4096;
         // 复用的绘制资源与暂存列表。
@@ -28,6 +29,10 @@ namespace FlatWorld.AIECS
         internal AiecsRenderBatch(Scene scene, Material material)
         {
             root = new GameObject("AIECS 连续绘制批次") { hideFlags = HideFlags.DontSave };
+            int runtimeLayer = LayerMask.NameToLayer(RuntimeLayerName);
+            if (runtimeLayer < 0)
+                throw new InvalidOperationException($"项目缺少运行时 Layer：{RuntimeLayerName}");
+            root.layer = runtimeLayer;
             SceneManager.MoveGameObjectToScene(root, scene);
             mesh = new Mesh { name = "AIECS 复用精灵网格", indexFormat = IndexFormat.UInt32 };
             mesh.MarkDynamic();
