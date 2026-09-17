@@ -15,6 +15,7 @@
         "com.unity.cinemachine.editor",
         "Unity.InputSystem",
         "Unity.RenderStreaming",
+        "Unity.RenderStreaming.Editor",
         "Unity.TextMeshPro"
     ],
     "includePlatforms": [

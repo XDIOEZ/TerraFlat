@@ -6,9 +6,12 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Threading;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Unity.RenderStreaming;
+using Unity.RenderStreaming.Editor;
 using Debug = UnityEngine.Debug;
 using UnityInputSystem = UnityEngine.InputSystem.InputSystem;
 
@@ -23,18 +26,24 @@ namespace FlatWorld.EditorTools
     {
         #region 配置
 
-        private const int WebPort = 80;
+        private const int PreferredWebPort = 8080;
+        private const int WebPortSearchCount = 20;
         private const string WebServerDownloadUrl =
             "https://github.com/Unity-Technologies/UnityRenderStreaming/releases/download/3.1.0-exp.7/webserver.exe";
         private const string CacheDirectory = "Library/FlatWorld/RenderStreaming";
         private const string WebServerFileName = "webserver.exe";
         private const string ReceiverPath = "/receiver/index.html";
         private const string InputSettingsAssetPath = "Assets/Settings/FlatWorldInputSystemSettings.inputsettings.asset";
+        private const string RenderStreamingSettingsAssetPath = "Assets/Settings/FlatWorldRenderStreamingSettings.asset";
+        private const string AutoStreamingPreferenceKey = "FlatWorld.RenderStreaming.AutoPlayEnabled";
         private const float StreamingFrameRate = 60f;
         private const int StreamingFrameRateConfigureMaxAttempts = 120;
+        private const int WebServerReadyTimeoutMilliseconds = 3000;
 
         private static Process ownedWebServerProcess;
         private static int streamingFrameRateConfigureAttempts;
+        private static int activeWebPort = PreferredWebPort;
+        private static bool AutoStreamingEnabled => EditorPrefs.GetBool(AutoStreamingPreferenceKey, false);
 
         #endregion
 
@@ -47,6 +56,7 @@ namespace FlatWorld.EditorTools
             EditorApplication.quitting -= OnEditorQuitting;
             EditorApplication.quitting += OnEditorQuitting;
             EditorApplication.delayCall += EnsurePlayModePrerequisites;
+            EditorApplication.delayCall += ApplyAutomaticStreamingPreference;
         }
 
         private static void OnPlayModeStateChanged(PlayModeStateChange state)
@@ -55,14 +65,19 @@ namespace FlatWorld.EditorTools
             {
                 case PlayModeStateChange.ExitingEditMode:
                     EnsurePlayModePrerequisites();
-                    EnsureWebServerRunning();
+                    if (AutoStreamingEnabled)
+                        EnsureWebServerRunning();
+                    else
+                        EnsureProjectRenderStreamingSettings(activeWebPort, automaticStreaming: false);
                     break;
 
                 case PlayModeStateChange.EnteredPlayMode:
-                    // 包内默认设置已开启 Automatic Streaming；这里再显式保证当前 Editor 会话处于开启状态。
-                    Unity.RenderStreaming.RenderStreaming.AutomaticStreaming = true;
-                    QueueStreamingFrameRateConfiguration();
-                    LogMobileAccessUrl();
+                    ApplyAutomaticStreamingPreference();
+                    if (AutoStreamingEnabled)
+                    {
+                        QueueStreamingFrameRateConfiguration();
+                        LogMobileAccessUrl();
+                    }
                     break;
 
                 case PlayModeStateChange.ExitingPlayMode:
@@ -89,6 +104,35 @@ namespace FlatWorld.EditorTools
             LogMobileAccessUrl();
         }
 
+        [MenuItem("Tools/Render Streaming/Play Mode 自动手机串流")]
+        private static void ToggleAutoStreaming()
+        {
+            bool enabled = !AutoStreamingEnabled;
+            EditorPrefs.SetBool(AutoStreamingPreferenceKey, enabled);
+
+            if (enabled)
+            {
+                EnsurePlayModePrerequisites();
+                EnsureWebServerRunning();
+            }
+            else
+            {
+                EditorApplication.update -= ConfigureStreamingFrameRateWhenReady;
+                streamingFrameRateConfigureAttempts = 0;
+                EnsureProjectRenderStreamingSettings(activeWebPort, automaticStreaming: false);
+            }
+
+            ApplyAutomaticStreamingPreference();
+            Debug.Log($"[RenderStreaming] Play Mode 自动手机串流：{(enabled ? "已启用" : "已关闭（默认性能模式）")}");
+        }
+
+        [MenuItem("Tools/Render Streaming/Play Mode 自动手机串流", true)]
+        private static bool ValidateToggleAutoStreaming()
+        {
+            Menu.SetChecked("Tools/Render Streaming/Play Mode 自动手机串流", AutoStreamingEnabled);
+            return true;
+        }
+
         [MenuItem("Tools/Render Streaming/复制手机测试地址")]
         private static void CopyMobileAccessUrl()
         {
@@ -106,6 +150,22 @@ namespace FlatWorld.EditorTools
         #endregion
 
         #region 串流画质
+
+        /// <summary>
+        /// 普通 Editor Play 默认关闭 Automatic Streaming，避免 Screen 源每帧执行整屏捕获与纹理转换。
+        /// 只有开发者显式打开手机串流开关时才创建 Sender。
+        /// </summary>
+        private static void ApplyAutomaticStreamingPreference()
+        {
+            bool enabled = AutoStreamingEnabled;
+            if (!enabled)
+                EnsureProjectRenderStreamingSettings(activeWebPort, automaticStreaming: false);
+
+            if (!EditorApplication.isPlaying)
+                return;
+
+            Unity.RenderStreaming.RenderStreaming.AutomaticStreaming = enabled;
+        }
 
         /// <summary>等待 Automatic Streaming 创建 Screen Sender 后，将编码目标帧率固定为 60 FPS。</summary>
         private static void QueueStreamingFrameRateConfiguration()
@@ -210,8 +270,50 @@ namespace FlatWorld.EditorTools
                 return;
 
             EditorUtility.SetDirty(settings);
-            AssetDatabase.SaveAssets();
+            AssetDatabase.SaveAssetIfDirty(settings);
             Debug.Log("[RenderStreaming] 已应用 Editor Play 后台运行与远程输入设置。");
+        }
+
+        /// <summary>
+        /// 使用项目自有设置承载 Automatic Streaming 与信令地址，禁止把 Editor 会话配置写回不可变 PackageCache。
+        /// </summary>
+        private static void EnsureProjectRenderStreamingSettings(int webPort, bool automaticStreaming)
+        {
+            EnsureAssetDirectory(RenderStreamingSettingsAssetPath);
+            RenderStreamingSettings settings =
+                AssetDatabase.LoadAssetAtPath<RenderStreamingSettings>(RenderStreamingSettingsAssetPath);
+            if (settings == null)
+            {
+                settings = ScriptableObject.CreateInstance<RenderStreamingSettings>();
+                AssetDatabase.CreateAsset(settings, RenderStreamingSettingsAssetPath);
+            }
+
+            bool changed = false;
+            if (settings.automaticStreaming != automaticStreaming)
+            {
+                settings.automaticStreaming = automaticStreaming;
+                changed = true;
+            }
+
+            string signalingUrl = $"ws://127.0.0.1:{webPort}";
+            WebSocketSignalingSettings current = settings.signalingSettings as WebSocketSignalingSettings;
+            if (current == null || !string.Equals(current.url, signalingUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                IceServer[] iceServers = current?.iceServers?.ToArray();
+                if (iceServers == null || iceServers.Length == 0)
+                    iceServers = new WebSocketSignalingSettings().iceServers.ToArray();
+                settings.signalingSettings = new WebSocketSignalingSettings(signalingUrl, iceServers);
+                changed = true;
+            }
+
+            // 官方 Editor API 会同时把项目设置登记到 EditorBuildSettings；后续 Domain Reload 将继续使用该资产。
+            RenderStreamingEditor.SetRenderStreamingSettings(settings);
+            if (!changed)
+                return;
+
+            EditorUtility.SetDirty(settings);
+            AssetDatabase.SaveAssetIfDirty(settings);
+            Debug.Log($"[RenderStreaming] 项目信令已配置为 {signalingUrl}。");
         }
 
         private static void EnsureAssetDirectory(string assetPath)
@@ -235,12 +337,22 @@ namespace FlatWorld.EditorTools
 
         private static void EnsureWebServerRunning()
         {
-            if (IsRenderStreamingWebAppAvailable())
+            int webPort = ResolveWebPort();
+            if (webPort <= 0)
                 return;
 
-            if (IsPortListening(WebPort))
+            activeWebPort = webPort;
+            // 先登记正确 URL 但保持自动串流关闭；只有官方 WebApp 真正可访问后才允许进入 Play 时连接。
+            EnsureProjectRenderStreamingSettings(webPort, automaticStreaming: false);
+            if (IsRenderStreamingWebAppAvailable(webPort))
             {
-                Debug.LogError($"[RenderStreaming] TCP {WebPort} 已被其它程序占用，无法启动手机测试服务器。");
+                EnsureProjectRenderStreamingSettings(webPort, automaticStreaming: true);
+                return;
+            }
+
+            if (IsPortListening(webPort))
+            {
+                Debug.LogError($"[RenderStreaming] TCP {webPort} 已被其它程序占用，无法启动手机测试服务器。");
                 return;
             }
 
@@ -253,7 +365,7 @@ namespace FlatWorld.EditorTools
                 ProcessStartInfo startInfo = new ProcessStartInfo
                 {
                     FileName = executablePath,
-                    Arguments = $"-p {WebPort}",
+                    Arguments = $"-p {webPort}",
                     WorkingDirectory = Path.GetDirectoryName(executablePath),
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -261,6 +373,15 @@ namespace FlatWorld.EditorTools
                 };
 
                 ownedWebServerProcess = Process.Start(startInfo);
+                if (!WaitForRenderStreamingWebApp(webPort, WebServerReadyTimeoutMilliseconds))
+                {
+                    Debug.LogError(
+                        $"[RenderStreaming] 官方 WebApp 已启动但未在 {WebServerReadyTimeoutMilliseconds} ms 内就绪，" +
+                        $"端口 {webPort}。"
+                    );
+                    return;
+                }
+                EnsureProjectRenderStreamingSettings(webPort, automaticStreaming: true);
                 Debug.Log($"[RenderStreaming] 手机测试服务器已启动：{GetMobileAccessUrl()}");
             }
             catch (Exception exception)
@@ -303,11 +424,45 @@ namespace FlatWorld.EditorTools
             }
         }
 
-        private static bool IsRenderStreamingWebAppAvailable()
+        /// <summary>优先复用项目标准端口；被其它程序占用时选择后续空闲端口，不再抢占系统 HTTP 端口。</summary>
+        private static int ResolveWebPort()
+        {
+            if (IsRenderStreamingWebAppAvailable(activeWebPort))
+                return activeWebPort;
+
+            for (int offset = 0; offset < WebPortSearchCount; offset++)
+            {
+                int port = PreferredWebPort + offset;
+                if (IsRenderStreamingWebAppAvailable(port) || !IsPortListening(port))
+                    return port;
+            }
+
+            Debug.LogError(
+                $"[RenderStreaming] TCP {PreferredWebPort}~{PreferredWebPort + WebPortSearchCount - 1} 均被占用，" +
+                "无法为手机测试服务器选择端口。"
+            );
+            return -1;
+        }
+
+        private static bool WaitForRenderStreamingWebApp(int port, int timeoutMilliseconds)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            while (stopwatch.ElapsedMilliseconds < timeoutMilliseconds)
+            {
+                if (IsRenderStreamingWebAppAvailable(port))
+                    return true;
+                if (ownedWebServerProcess == null || ownedWebServerProcess.HasExited)
+                    return false;
+                Thread.Sleep(50);
+            }
+            return IsRenderStreamingWebAppAvailable(port);
+        }
+
+        private static bool IsRenderStreamingWebAppAvailable(int port)
         {
             try
             {
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create($"http://127.0.0.1:{WebPort}{ReceiverPath}");
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create($"http://127.0.0.1:{port}{ReceiverPath}");
                 request.Method = "GET";
                 request.Timeout = 350;
                 request.ReadWriteTimeout = 350;
@@ -372,7 +527,7 @@ namespace FlatWorld.EditorTools
         {
             IPAddress address = GetPreferredLanAddress();
             string host = address?.ToString() ?? "127.0.0.1";
-            string portSuffix = WebPort == 80 ? string.Empty : $":{WebPort}";
+            string portSuffix = activeWebPort == 80 ? string.Empty : $":{activeWebPort}";
             return $"http://{host}{portSuffix}{ReceiverPath}";
         }
 
