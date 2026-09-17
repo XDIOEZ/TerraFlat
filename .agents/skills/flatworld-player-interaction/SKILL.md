@@ -14,12 +14,14 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - `PlayerAdminController` 的 F2 是本地开发用创造背包一键入口：不依赖 F1 管理员显示名，按下后复用 `Mod_PlayerTraits.InitializeCreativeInventoryForAdmin` 初始化/补充物品，并确保玩家主背包面板打开；管理员专属的其它快捷键仍保持原有权限门槛。
 - GM 传送由唯一的 `Development/Debug/GMReflectionConsole.Teleport.cs` 消费 Ctrl+T 和点选入口；不能放回 `PlayerAdminController.Update`，因为玩家外壳与 Module_Player 均可能挂载管理员模块，且 GM 传送不依赖角色显示名。落点统一交给 `Mod_PlayerTraits.TryTeleportToScreenPosition` 同步刚体、玩家位置和区块加载。
 - 游戏镜头由 `Mod_Cam` 实例化 `Assets/2_Prefabs/Gameplay/Modules/Camera/Main Camera.prefab`；2D 跟随使用 Cinemachine 2.x `Framing Transposer`，跟随手感优先在该 Prefab 的 Lookahead 与 XY Damping 调整。
+- `Mod_Cam` 与 `Mod_ChunkLoader` 是玩家下的兄弟模块；镜头缩放需要刷新区块窗口时必须经玩家根节点/ItemMods 解析区块加载器，不能只用 `GetComponentInParent<Mod_ChunkLoader>()`，否则大视野变化只能等加载模块下一次 Tick 才被动追上。
 
 ## 不变量
 
 - 输入链为 Input System → `GameController` → 玩家模块；不要让 UI、物理输入和玩法模块各自维护冲突状态。
 - Editor Agent、自动化或其它非物理输入源接管本地主角时统一使用 `GameController` 的唯一 External Gameplay Control 租约；租约期间真实设备退出玩法输入仲裁，移动/瞄准/攻击继续注入现有生产链。禁止为自动化直接改玩家 `Rigidbody2D`、Transform 或另建平行输入状态。
 - `InputBindingService` 的覆盖存档按 binding GUID 关联输入资产；输入资产删改绑定后，加载前必须过滤当前资产不存在的 GUID 并重存清理后的配置，因为 Unity 内置加载器会直接输出警告而不会抛出异常。
+- 输入重绑定冲突检测必须按物理修饰键语义统一 `<Keyboard>/shift` 与左右 Shift、`ctrl` 与左右 Ctrl、`alt` 与左右 Alt；历史冲突覆盖加载时应自动清理，避免镜头缩放等组合输入被静默改绑到已有玩法键。
 - 需要按触点落地的世界玩法统一调用 `GameController.GetMouseWorldPosition(screenPosition)`，不得在手机玩法模块内直接读取相机或共享虚拟光标坐标。
 - `Move_Player` 的二维幅度同时表达模拟移动速度比例：手机虚拟摇杆与手柄左摇杆必须保留 0～1 幅度，玩家移动路径不得提前归一化；键盘满幅输入与目标寻路接口保持原有语义。
 - 环境交互输入只转发按下/持续/松开；具体环境提供 `IEnvironmentActionDefinition` 或 `IEnvironmentEffectDefinition`，角色侧 `EnvironmentInteractionRunner` 每次创建独立实例，禁止把玩家长按或被动效果状态存进共享地块配置。
@@ -37,6 +39,8 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 手机准线的有效距离不能固定写在输入层；空手和普通物品应跟随交互发送器距离，手持建筑应跟随建筑模块的放置距离。
 - 玩家跑步模式与视觉状态分离：`Run` 只表示逻辑奔跑模式，`Move=false` 时 `Player.controller` 必须切换到 `Idle`；进入 `Run` 必须直接播放，不添加播放倍率渐起或 Animator 混合延迟，禁止修改全局 `Animator.speed`，否则会连带暂停攻击等其他动画。
 - 管理员身份拥有无限体力：权限统一读取 `PlayerAdminController.IsAdministrator`，所有体力消耗继续汇入 `Mod_Stamina.AddStamina` / `TryConsumeStamina` 由体力权威模块统一拦截；禁止在移动、武器、游泳、高温等消费方分别添加管理员特判。
+- `Mod_Cam` 的管理员“无限视野”属于运行时权限状态，不得把 `MaxPovValue` 改成 `float.MaxValue`；`MaxPovValue` 仍是普通玩法、UI 滑条和镜头预判的有限配置上限，只有最终镜头尺寸约束在无限模式下跳过该上限。
+- Escape/Android 返回遵循“最上层可取消面板 → 手机抽屉 → 设置面板”的统一顺序；不要在尝试关闭顶部面板之前用 Gameplay Input Lock 拦截，否则持锁面板会让返回键表现为完全失效。
 - `Mover_SaveData.isRunning` 是玩家奔跑开关的持久字段；输入锁定只停止位移，不清空该字段，跨维度重建后须在解锁输入后恢复。
 - 玩家创建参数来自 `StreamingAssets/GameConfig/Players/player-creation-manifest.json`，由 `PlayerCreationTemplateCatalogService` 在新档案 `Player.Load()` 前解析并注入；MOD 可在 definition JSON 中增加 `playerCreationTemplates`，或用 `playerTemplate:ID` Patch 修改模板；已有存档不得再次套用模板。
 - `Player.prefab` 根的环绕控制只处理本地玩家且仅在 Wrapped 拓扑启用。

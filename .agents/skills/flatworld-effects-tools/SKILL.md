@@ -56,8 +56,9 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - `Assets/2_Prefabs/Gameplay/Modules/Rendering/Shadow.prefab` 是 URP `ShadowCaster2D` 投影组件，不是实体脚底贴图；实体可视阴影应复用 `ActorShadowManager` 的独立注册和水体显隐入口。
 - `Presentation/Effects/Runtime/` 受独立 `Effect.asmdef` 隔离，不能反向引用主 `GamePlay` 程序集中的 `VisualEffectManager`；需要名称池管理器的角色表现控制器应放在 `Presentation/` 主程序集，或先抽取无环依赖的公共契约。
 - Editor 脚本留在 Editor 程序集/目录；生产程序集不得反向引用 `FlatWorld.Gameplay.Debug`。
+- Editor Play 的 Render Streaming 使用项目自有 `RenderStreamingSettings` 资产并先确认官方 WebApp 已在选定端口可访问；不得把会话信令地址写回不可变的 PackageCache 默认资产，也不得假定 TCP 80 可用。`VideoStreamSource.Screen` 会在每帧结束执行整屏捕获与纹理转换，因此普通 Play/Profiler 压测默认关闭 Automatic Streaming，只能通过显式开发者开关启用；端口被系统或其它程序占用时从项目约定端口段选择空闲端口，并让信令 URL、WebApp 启动参数和展示给开发者的访问 URL 始终保持一致。
 - 运行时世界由 `SceneManager.CreateScene` 动态创建，不会触发 `SceneManager.sceneLoaded`；监听运行时 Hierarchy 的 Editor 工具必须同时处理旧场景卸载与后续 `hierarchyChanged`，且不能用无界切换标记长期屏蔽用户操作。`hierarchyChanged` 热路径必须从少量已保存记录定向解析对象，禁止组合 `Resources.FindObjectsOfTypeAll` 与 `GlobalObjectId.GetGlobalObjectIdSlow` 全场景扫描，否则跨场景引用会制造警告并造成 `EditorLoop` 尖峰；调用 `GlobalObjectIdentifierToObjectSlow` 前必须确认 ID 所属场景已加载，场景切换空窗直接跳过，否则 Unity 原生层会触发 `manager != NULL` 断言。
-- `SceneInteractionStatePersistence` 持久化 Hierarchy 的 Scene Visibility（小眼睛）与 Scene Picking（禁止点击）状态；采集必须由开发者通过菜单显式触发，禁止订阅 picking/visibility 变化或使用 `EditorApplication.update` 自动扫描。PlayMode 动态对象恢复使用场景/播放状态事件与 `hierarchyChanged + delayCall` 事件驱动方式。
+- `SceneInteractionStatePersistence` 只持久化已保存场景中具有稳定 `GlobalObjectId` 的 Scene Visibility（小眼睛）与 Scene Picking（禁止点击）状态；采集必须由开发者在非 Play Mode 下通过菜单显式触发。运行时动态场景/UI/临时对象没有跨会话稳定身份，不得写入数据库，也不得通过 `hierarchyChanged` 高频恢复；Play Mode 只在场景/播放状态切换时做有限恢复。
 - 内容工坊保持在 `Assets/Editor/FlatWorld/ContentTools/ContentWorkshop/`，只把可验证的差异写回 JSON，不在运行时程序集引入编辑器依赖。
 - 业务日志用 `GameLogManager` 的 `[WORK]` 接口；不要制造每帧重复警告。
 - `GMReflectionConsole` 独占 F4 作为 GM 调试面板开关；管理员手持物品加量由面板按钮调用，`GameDebugManager` 的晴天快捷键必须在脚本默认值与 `WorldManager.prefab` 序列化值中都使用 F6，禁止运行时反射改键。
@@ -71,7 +72,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 - 表现代码在独立 `AIECS/Presentation` 程序集，正式 `AiecsWorldRenderer` 只读模拟提交后的 Display，不复用 AiecsPrototypeMotion 作为行为。共享动画目录、图集及移动脚本的 GUID 必须保留；开发显示的有限 Y 行批次和血条便于手测，不等于旧世界精确透明混排、实际水深或 GPU 性能门槛通过。
 
-- `Entities/AIECS/` 通过原生 `Universal2D/NormalsRendering` 绘制排序后连续的精灵批次，禁止按物种/材质全局重排或在管线末尾补画并假设 Light2D 自动正确。当前 CPU 合并网格只用于兼容性原型；颜色批次统计不等于 GPU 实测 draw 数或两万同屏证据。
+- `Entities/AIECS/` 通过原生 `Universal2D/NormalsRendering` 绘制排序后连续的精灵批次，禁止按物种/材质全局重排或在管线末尾补画并假设 Light2D 自动正确。当前 CPU 合并网格只用于兼容性原型；颜色批次统计不等于 GPU 实测 draw 数或两万同屏证据。运行时批次固定使用 `AIECSRuntime` Layer；GameView/构建相机保持正常渲染，Editor 的 SceneView 默认从 `Tools.visibleLayers` 排除该层，压测时避免同一批动态 Mesh 被 SceneView 重复绘制，需要观察时再通过 `Tools/AIECS/SceneView 显示运行时批次` 显式开启。
 - `AiecsLegacySortScope` 仅用于单相机独立场景的完整 Sprite 显示范围，临时覆盖外部 Order 并在停用时恢复，内部 SortingGroup 保持原绘制职责；Tilemap、粒子、嵌套组和动态正式世界尚未适配，不得直接套到半个正式场景。
 - 动画从启用的 Actor Manifest 与实际覆盖控制器导出，Sprite 按真实三角形/UV 解包后保存原尺寸、Pivot、PPU。非循环时间轴必须包含终点姿态，不能复用循环动画的去尾规则；攻击曲线/事件只是待映射标记。重导使用所选生成目录的显式菜单以保留 GUID，禁止在导入或打开场景时自动覆盖资源；特殊法线、Mask、附属物和正式运行时加载仍需各自适配。
 

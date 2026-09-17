@@ -27,6 +27,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - Chunk BRG 自定义 Shader 的全部数值/向量/颜色材质属性必须统一声明在 `UnityPerMaterial` CBUFFER，且同一 Shader 的所有活跃 Pass 保持一致布局；不要 `UsePass` 借用另一个材质布局不同的 Shader Pass，否则 BatchRendererGroup 会因 SRP Batcher 不兼容而拒绝绘制。
 - BRG 地形实例按脏格增量上传；岸线与墙脚方向放入实例数据，连续水深使用每水格四个格角深度在 Shader 内双线性插值。边界数据依赖八方向邻区，正交邻区变化刷新共享边、对角邻区变化刷新共享角，不得退回整 Chunk `SetTilesBlock` 或每 Chunk 水深纹理重建。
 - `ChunkMgr` 随 `WorldManager` 常驻 DDOL；`ChunkView` 及其自然物表现必须挂到当前世界场景的独立根节，禁止以 `ChunkMgr.transform` 作为活动或池化 View 的父级。
+- 相机驱动的本地区块窗口必须覆盖真实视口，并按相机半宽/半高分别计算 X/Y 距离；禁止为超宽屏取最大边后构造巨大正方形窗口。普通玩法可以受自动视距上限保护，但管理员无限视野不能继续被普通上限截断；管理员手动增加加载距离只作为最低加载圈数，不能关闭相机自动扩圈。
 - 提交生成结果前校验世界纪元与请求版本；取消、失败和逐出路径必须释放结果及租约。
 - 生成保持固定种子和稳定签名；修改地形内容规则时同时使用 `flatworld-map`。
 - 新增 `SurfaceBiomeKind` 或群系条件时，必须覆盖 Profile 当前可选的全部分类算法；`LegacyLand` 只复用旧气候采样，不会自动继承其他分支的群系规则。

@@ -59,8 +59,10 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - 正式生态目录中“单个 Actor 尚未迁移”属于预期能力边界：`PrepareWorld` 必须只记录一次普通诊断日志并从 AIECS 生成候选中排除，不能污染正常 `GameStartScene` 的 Warning 基线；只有后端未注册、目录完全无可运行 Actor、初始化异常等真正阻断正式 AIECS 的情况才使用 Error/Exception。
 - 正常 `GameStartScene` 世界的 GM AIECS 分页通过正式 `AiecsEcologyRuntimeHost` 惰性取得一个空闲 `AiecsPlayground` 调试入口；空闲入口不得阻断正式生态，只有真正启动开发场景时才先同步释放正式模拟，清理开发场景后正式宿主再自动恢复，任何时刻禁止两套 AIECS World 同时推进。
 - `AiecsSimulation` 持有独立 World 与批次资源，`AiecsDefinitionCompiler` 在冷路径读取当前合并 Actor/MOD 定义。生命、记忆、攻击阶段属于每实体运行态，定义、阵营矩阵与战略 Goal 共享；不得通过实例化旧 AI 获得模板，也不得用 P0 能力报告充当运行时配置。
+- 正式 AIECS 的水体环境态从共享导航快照单向进入 `AiecsFlowAgent.WaterDepth/WaterBlend`：移动层按同一水深做减速，`AiecsDisplayRecord` 再把它交给批量水体 Shader。禁止为每只 Entity 创建 `TileEffectReceiver`、查询 `ChunkMgr` 或回退旧 `Tile_Water` GameObject 链；水体是否需要绕行仍由导航高代价决定，而不是由水态表现硬阻挡。
 - 原生感知直接从 ECS 位置、身份、体型、生命构建稀疏桶，桶键包含阵营以避免同阵营占满候选预算。锁定目标只做有效性与低频追击规则复核，失效才错峰搜桶；不可达目标按配置延迟重试。形状偏移和外部玩家缩放必须纳入粗筛扩张上限，循环桶去重与最近镜像必须一起使用。
 - LOS 独立复制 TerrainCell 的 Blocking 和建筑占地，不能把导航不可走当作遮挡。移动前快照用于感知，移动后重建快照用于命中；所有 Native 借用必须进入依赖链，重建和释放前完成旧读取者。武器 Pulse 在模拟批次之外发生时须重新借用当前导航索引，不能跨 Update 缓存可能已被导航发布替换的 LOS 视图。
+- 正式 `AiecsSimulation` 使用两套空间索引：`perceptionSpatial` 冻结移动前感知/决策快照，`combatSpatial` 沿移动 Job 依赖链异步建立移动后攻击/伤害快照；`AiecsSpatialIndex.Build` 只同步该索引上一轮读取者，当前 dependency 必须继续交给 Build Job，禁止重新复用单索引并在 Tick 中途 `Complete` 整条移动链。正式生态宿主 30Hz 追帧单帧最多执行 2 个 Tick、最多保留 3 个 Tick 时间债务，避免卡顿后形成追帧尖峰。
 - Brain 只选择 Intent，Behavior 只准备局部移动或共享 Goal，Attack 在真实 Active Tick 再确认目标、几何、朝向和 LOS。扩展行为通过共享优先级规则或 `AiecsBehaviorProposal` 接入；特殊能力注册少量 `IAiecsSimulationStage`，在实际 Pulse 向 `AiecsFrame.HitEvents` 写入，返回完整 JobHandle，禁止逐 AI 托管状态机/事件/Job。当前 Tick 的技能命中最迟在 BeforeSettlement 生产，AfterDamage 用于消费已提交状态。
 - AIECS 近战接敌名额按目标批量解析为固定数量 `Engagement Slot`，不能通过导航格容量限制实现。感知后、决策前统一分配槽位：正在攻击和可立即起手的旧持有者优先稳定保留，其余按接近方向占空位；只有当前槽位持有者可进入新的 Attack 起手，未获槽位的追击者停留在外圈并由连续 Crowd Steering/密度场向两翼分流。攻击一旦进入 Windup/Active/Recovery 仍按既有锁定语义完成，不因下一 Tick 槽位重排强制中断。
 - AIECS 攻击表现必须按 `AiecsAttackPhase` 的独立阶段时钟采样：`Windup` 与 `Recovery` 在专用动画完成前复用 Idle，只有 `Active` 播放 Attack；不能继续从进入 Attack 行为的总时长采样，否则真正进入 Active 时会从攻击动画中间帧开始。
@@ -80,6 +82,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 
 - 开发入口暂停正式生态宿主时，死亡产出的 Actor 也必须在当前开发模拟交付：开始场景前按战利品表展开 Actor 引用闭包，渲染目录与模拟定义使用相同索引。不可把生物战利品发给被暂停的生态后端，更不能转换成库存掉落图标。
 - 掉落队列只在生成成功后扣减剩余数量。可重试的占格/窗口拒绝保留数量并轮转队列，不能把正常拥挤当异常停止整场 AI；缺失内容或不支持的静态定义仍明确报错。
+- GM `AiecsPlayground` 压测场景必须拥有并在 `清理`/Dispose 时回收自己生成的静态掉落实体，否则前一轮战斗战利品会污染后续压力数据；只允许按生成时取得的掉落句柄定向回收，禁止按全局数量或遍历世界清空，以免删除进入压测前已经存在的正式掉落。正式生态 `AiecsGameplayBridge` 默认不得启用该开发清理语义。
 - 压力验收同时记录请求、累计生成、存活、可见批次、Tick 与积压；地图拒绝的生成不能算作已生成实体。`gameplay_aiecs_debug` 提供有界只读采样和占格检查；截图请求后的首帧可能包含 PNG 开销，性能采样应与截图编码分开。
 
 - 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
