@@ -13,6 +13,8 @@
         "Unity.Localization",
         "Unity.Localization.Editor",
         "com.unity.cinemachine.editor",
+        "Unity.InputSystem",
+        "Unity.RenderStreaming",
         "Unity.TextMeshPro"
     ],
     "includePlatforms": [
