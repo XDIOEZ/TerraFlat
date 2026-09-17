@@ -57,6 +57,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - `Presentation/Effects/Runtime/` 受独立 `Effect.asmdef` 隔离，不能反向引用主 `GamePlay` 程序集中的 `VisualEffectManager`；需要名称池管理器的角色表现控制器应放在 `Presentation/` 主程序集，或先抽取无环依赖的公共契约。
 - Editor 脚本留在 Editor 程序集/目录；生产程序集不得反向引用 `FlatWorld.Gameplay.Debug`。
 - 运行时世界由 `SceneManager.CreateScene` 动态创建，不会触发 `SceneManager.sceneLoaded`；监听运行时 Hierarchy 的 Editor 工具必须同时处理旧场景卸载与后续 `hierarchyChanged`，且不能用无界切换标记长期屏蔽用户操作。`hierarchyChanged` 热路径必须从少量已保存记录定向解析对象，禁止组合 `Resources.FindObjectsOfTypeAll` 与 `GlobalObjectId.GetGlobalObjectIdSlow` 全场景扫描，否则跨场景引用会制造警告并造成 `EditorLoop` 尖峰；调用 `GlobalObjectIdentifierToObjectSlow` 前必须确认 ID 所属场景已加载，场景切换空窗直接跳过，否则 Unity 原生层会触发 `manager != NULL` 断言。
+- `SceneInteractionStatePersistence` 持久化 Hierarchy 的 Scene Visibility（小眼睛）与 Scene Picking（禁止点击）状态；采集必须由开发者通过菜单显式触发，禁止订阅 picking/visibility 变化或使用 `EditorApplication.update` 自动扫描。PlayMode 动态对象恢复使用场景/播放状态事件与 `hierarchyChanged + delayCall` 事件驱动方式。
 - 内容工坊保持在 `Assets/Editor/FlatWorld/ContentTools/ContentWorkshop/`，只把可验证的差异写回 JSON，不在运行时程序集引入编辑器依赖。
 - 业务日志用 `GameLogManager` 的 `[WORK]` 接口；不要制造每帧重复警告。
 - `GMReflectionConsole` 独占 F4 作为 GM 调试面板开关；管理员手持物品加量由面板按钮调用，`GameDebugManager` 的晴天快捷键必须在脚本默认值与 `WorldManager.prefab` 序列化值中都使用 F6，禁止运行时反射改键。
