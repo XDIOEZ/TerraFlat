@@ -290,7 +290,8 @@ namespace FlatWorld.AIECS
         private readonly AiecsJobSchedulerSystem scheduler;
         private readonly EntityArchetype archetype;
         private readonly EntityQuery query;
-        private readonly AiecsSpatialIndex spatial = new AiecsSpatialIndex();
+        private readonly AiecsSpatialIndex perceptionSpatial = new AiecsSpatialIndex();
+        private readonly AiecsSpatialIndex combatSpatial = new AiecsSpatialIndex();
         private readonly AiecsFlowCrowdScheduler movement = new AiecsFlowCrowdScheduler();
         private readonly AiecsEngagementSlotScheduler engagement = new AiecsEngagementSlotScheduler();
         private readonly List<IAiecsSimulationStage> stages = new List<IAiecsSimulationStage>();
@@ -324,7 +325,7 @@ namespace FlatWorld.AIECS
         public NativeArray<AiecsDamageResult> DamageResults => results.AsArray();
         public NativeArray<AiecsDeathEvent> DeathEvents => deaths.AsArray();
         public NativeArray<AiecsHitEvent> ExternalHits => externalHits.AsArray();
-        public AiecsSpatialView Spatial { get { Complete(); return spatial.View; } }
+        public AiecsSpatialView Spatial { get { Complete(); return combatSpatial.View; } }
         public CombatDifficulty Difficulty { get; set; }
         /// <summary>开发对照开关；正式默认启用连续邻居 Steering 与密度分流，不再存在单格容量。</summary>
         public bool LocalAvoidanceEnabled { get; set; } = true;
@@ -438,7 +439,8 @@ namespace FlatWorld.AIECS
             factions.Dispose(); relations.Dispose();
             factions = new NativeArray<FixedString128Bytes>(ids, Allocator.Persistent);
             relations = new NativeArray<byte>(matrix, Allocator.Persistent);
-            spatial.SetRelations(relations, ids.Length);
+            perceptionSpatial.SetRelations(relations, ids.Length);
+            combatSpatial.SetRelations(relations, ids.Length);
         }
 
         /// <summary>仅武器实际窗口/Pulse 提交输入，未来时间的输入保留到对应模拟 Tick。</summary>
@@ -472,28 +474,28 @@ namespace FlatWorld.AIECS
             if (hitRanges.Capacity < capacity) hitRanges.Capacity = capacity;
             results.Clear(); externalHits.Clear(); deaths.Clear();
             FlowNavigationSnapshot view = navigation.Read();
-            pending = spatial.Build(scheduler, query, view.Domain, relations, factions.Length, maximumBodyExtent);
-            var frame = new AiecsFrame { Clock = Clock, Spatial = spatial.View, Los = los, Navigation = view, Definitions = definitions,
+            pending = perceptionSpatial.Build(scheduler, query, view.Domain, relations, factions.Length, maximumBodyExtent);
+            var frame = new AiecsFrame { Clock = Clock, Spatial = perceptionSpatial.View, Los = los, Navigation = view, Definitions = definitions,
                 Factions = factions, HitEvents = abilityHits.AsParallelWriter() };
             pending = scheduler.ScheduleParallel(new AiecsPerceptionSystem { Definitions = definitions, Spatial = frame.Spatial,
                 Los = los, Time = time, Tick = (uint)Clock.Tick }, query, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeDecision, frame, pending);
             pending = engagement.Schedule(scheduler, query, frame.Spatial, time, pending);
-            spatial.RegisterReader(pending);
             pending = scheduler.ScheduleParallel(new AiecsDecisionSystem { Definitions = definitions, Spatial = frame.Spatial,
                 EngagementSlots = engagement.Slots, Time = time }, query, pending);
             pending = scheduler.ScheduleParallel(new AiecsBehaviorSystem { Definitions = definitions, Spatial = frame.Spatial,
                 Navigation = view, GroupGoals = goals, EngagementSlots = engagement.Slots, Time = time }, query, pending);
             pending = ScheduleStages(AiecsStagePhase.BeforeMovement, frame, pending);
-            spatial.RegisterReader(pending); navigation.RegisterReader(pending);
+            perceptionSpatial.RegisterReader(pending); navigation.RegisterReader(pending);
             pending = movement.Schedule(scheduler, query, navigation, deltaTime,
                 neighbourLimit: 12,
                 separationWeight: LocalAvoidanceEnabled ? 1f : 0f,
                 densityWeight: LocalAvoidanceEnabled ? 0.45f : 0f,
                 dependency: pending);
             // 命中必须读取本 Tick 移动后的坐标，不能使用感知开始前的旧目标位置。
-            pending = spatial.Build(scheduler, query, view.Domain, relations, factions.Length, maximumBodyExtent, pending);
-            frame.Spatial = spatial.View;
+            // 使用独立战斗索引沿依赖链异步重建，避免清空感知索引时强制等待整个移动阶段。
+            pending = combatSpatial.Build(scheduler, query, view.Domain, relations, factions.Length, maximumBodyExtent, pending);
+            frame.Spatial = combatSpatial.View;
             pending = ScheduleStages(AiecsStagePhase.BeforeAttack, frame, pending);
             pending = scheduler.ScheduleParallel(new AiecsAttackSystem { Definitions = definitions, Factions = factions,
                 Spatial = frame.Spatial, Los = los, EngagementSlots = engagement.Slots, Clock = Clock, Hits = attacks }, query, pending);
@@ -515,7 +517,7 @@ namespace FlatWorld.AIECS
                 Display = display, Work = work }, query, pending);
             pending = new AiecsStatisticsJob { Display = display, Work = work, Statistics = statistics, Groups = groups,
                 Anchors = groupAnchors, Nearest = groupNearest, Navigation = view, Density = density, Domain = view.Domain }.Schedule(pending);
-            spatial.RegisterReader(pending); navigation.RegisterReader(pending);
+            combatSpatial.RegisterReader(pending); navigation.RegisterReader(pending);
             Complete();
         }
 
@@ -543,14 +545,14 @@ namespace FlatWorld.AIECS
         }
 
         /// <summary>完成本世界全部任务，允许 Bridge 读取输出或更新外部代理。</summary>
-        public void Complete() { pending.Complete(); spatial.Complete(); }
+        public void Complete() { pending.Complete(); perceptionSpatial.Complete(); combatSpatial.Complete(); }
 
         /// <summary>先完成读取者再释放所有容器与 World，外部共享导航由其原所有者负责。</summary>
         public void Dispose()
         {
             if (disposed) return;
             disposed = true;
-            Complete(); movement.Dispose(); engagement.Dispose(); spatial.Dispose();
+            Complete(); movement.Dispose(); engagement.Dispose(); perceptionSpatial.Dispose(); combatSpatial.Dispose();
             // PlayMode/domain teardown can dispose custom Worlds before MonoBehaviour owners receive OnDestroy.
             // In that path the EntityQuery's manager is already gone, so disposing the stale query would dereference
             // Unity.Entities' destroyed query registry. Native resources below are owned by this simulation and still

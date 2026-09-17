@@ -17,6 +17,8 @@ namespace FlatWorld.AIECS.Gameplay
     {
         #region 配置与记录
 
+        private const int MaxSimulationStepsPerFrame = 2; // 15 FPS 仍可维持 30Hz；更低帧率时优先保护渲染帧不被追帧拖垮。
+        private const int MaxBacklogSteps = 3; // 只保留少量时间债务，避免一次卡顿演变成连续多帧追赶尖峰。
         private static AiecsEcologyRuntimeHost active;
         [SerializeField] private AiecsAnimationCatalog _catalog;
         [SerializeField, Range(10, 60)] private int _simulationHz = 30;
@@ -95,13 +97,18 @@ namespace FlatWorld.AIECS.Gameplay
             }
 
             float step = 1f / Mathf.Max(1, _simulationHz);
-            int budget = 4;
+            double now = Time.timeAsDouble;
+            double maxBacklog = step * MaxBacklogSteps;
+            if (now - _simulationTime > maxBacklog)
+                _simulationTime = now - maxBacklog;
+
+            int budget = MaxSimulationStepsPerFrame;
             try
             {
-                while (_simulationTime + step <= Time.timeAsDouble && budget-- > 0)
+                _bridge.EnsurePlayer(_player);
+                while (_simulationTime + step <= now && budget-- > 0)
                 {
                     _simulationTime += step;
-                    _bridge.EnsurePlayer(_player);
                     _bridge.Step(step, _simulationTime);
                 }
 

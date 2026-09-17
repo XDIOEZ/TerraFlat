@@ -153,7 +153,8 @@ namespace FlatWorld.AIECS
         public JobHandle Build(AiecsJobSchedulerSystem scheduler, EntityQuery query, WorldTopologyDomain domain, NativeArray<byte> relations,
             int factionCount, float maximumBodyExtent, JobHandle dependency = default)
         {
-            JobHandle.CombineDependencies(readers, dependency).Complete();
+            // 只等待本索引上一轮的读取者；当前批次 dependency 由 Build Job 自身承接，不能在主线程提前 Complete。
+            readers.Complete();
             int count = query.CalculateEntityCount();
             if (!samples.IsCreated || samples.Length != count)
             {
