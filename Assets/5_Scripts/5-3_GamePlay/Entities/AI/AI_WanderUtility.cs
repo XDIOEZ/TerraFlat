@@ -3,10 +3,13 @@ using UnityEngine;
 
 public static class AI_WanderUtility
 {
+    private const int MinimumWaterExitSearchRadius = 2;
+    private const int MaximumWaterExitSearchRadius = 16;
+
 #region API
     /// <summary>
-    /// 根据逃跑方向选择一个不主动进入水面的偏移。
-    /// 当正后方是河流时，候选方向会优先选择两侧陆地，因此动物会沿河岸逃跑。
+    /// 根据逃跑方向选择水体安全的偏移。
+    /// 已经落水时优先寻找最近可走陆地脱水；仍在陆地时避免主动进入河流。
     /// </summary>
     public static Vector2 PickWaterAwareEscapeOffset(
         Vector2 origin,
@@ -18,8 +21,12 @@ public static class AI_WanderUtility
             ? preferredDirection.normalized
             : Vector2.right;
 
-        if (ChunkMgr.Instance == null)
+        ChunkMgr chunkManager = ChunkMgr.Instance;
+        if (chunkManager == null)
             return preferred * safeDistance;
+
+        if (TryPickWaterExitOffset(chunkManager, origin, safeDistance, out Vector2 waterExitOffset))
+            return waterExitOffset;
 
         // 先检查正后方，再检查两侧和反方向；候选顺序保持确定，避免动物在河边左右抖动。
         float[] candidateAngles = { 0f, 45f, -45f, 90f, -90f, 135f, -135f, 180f };
@@ -88,6 +95,44 @@ public static class AI_WanderUtility
 #endregion
 
 #region Helpers
+    /// <summary>当前位于真实水面时，优先返回最近可走陆地中心方向。</summary>
+    private static bool TryPickWaterExitOffset(
+        ChunkMgr chunkManager,
+        Vector2 origin,
+        float searchDistance,
+        out Vector2 offset)
+    {
+        offset = default;
+        if (!chunkManager.TryGetRuntimeTerrainTile(origin, out RuntimeTerrainTileSample current) ||
+            (current.Cell.Flags & TerrainCellFlags.Water) == 0)
+        {
+            return false;
+        }
+
+        int searchRadius = Mathf.Clamp(
+            Mathf.CeilToInt(searchDistance),
+            MinimumWaterExitSearchRadius,
+            MaximumWaterExitSearchRadius);
+        int searchDiameter = searchRadius * 2 + 1;
+        int sampleBudget = searchDiameter * searchDiameter;
+        if (!chunkManager.TryFindRuntimeWalkableLandNear(
+                current.WorldCell,
+                searchRadius,
+                sampleBudget,
+                out Vector2Int landCell))
+        {
+            return false;
+        }
+
+        Vector2 landCenter = new(landCell.x + 0.5f, landCell.y + 0.5f);
+        Vector2 delta = WorldTopologyRuntime.ShortestDelta(origin, landCenter);
+        if (delta.sqrMagnitude <= 0.0001f)
+            return false;
+
+        offset = delta;
+        return true;
+    }
+
     private static float EvaluateEscapeCandidate(
         Vector2 origin,
         Vector2 direction,

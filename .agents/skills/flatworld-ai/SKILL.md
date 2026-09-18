@@ -45,6 +45,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - 需要短时保留正式生态生物用于跨区块、存档或可见性验证时，使用 `MonsterManager.AcquireEcologyRecycleProtection` 的作用域租约；它只绕过数量与距离回收，不能阻止区块休眠显隐或调用方的正式 `DespawnItem`，并且必须在清理路径释放。
 - 移动/可走性改动联动 `flatworld-navigation`；伤害联动 `flatworld-combat`；注册/存档联动 Item/Data Skill。
 - 追击路径代价限制统一通过 `AI_Base.MoveToChaseTarget` 提交；具体动物只配置自身上限，闲逛、逃跑和外部推进仍使用不受限的普通移动入口。
+- GameObject 动物逃跑统一通过 `AI_Base.MoveAwayFrom` 提交目标，不得在具体动物内重复计算逃跑点绕过公共水体策略；动物已经位于水格时优先选择最近可走陆地脱水，位于陆地时继续避免主动进入水面。
 - 使用路径代价限制的追击必须消费 `RejectedByPathCost`，并通过 `AI_Base.TryHandleRejectedChasePath` 暂停同一目标后再重试；禁止让状态机继续停留在无可执行路线的追击状态。
 - 使用 `AI_AttackController` 的动物，前摇、伤害窗口和后摇由控制器统一驱动；修改攻击时序时必须同步 Actor JSON、Prefab 回退值与 `Attack.anim` 的 `IsAttacking` 曲线，避免配置与可视/伤害帧错位。
 - 攻击状态条件应先保留已经开始的 `IsAttackLocked` 攻击，再判断新攻击的冷却与起手距离；冷却中不能仅凭距离进入停车攻击节点，否则目标后退会造成反复切换，且 `OnExitAttackState` 重置冷却会进一步推迟下一击。近身起手距离与远处感知追击范围、实际伤害盒是三个独立概念。

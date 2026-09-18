@@ -68,7 +68,6 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	private bool _layEggTriggered;
 	private DayTimeSystem _eggTimeSystem;
 	private string _eggTimeSceneName;
-	private Vector3 _fleeTarget;
 	#endregion
 
 	#region CachedModules - Chicken 特有
@@ -251,7 +250,6 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 			return;
 
 		_currentThreat = threat;
-		UpdateFleeDestination(sourcePosition);
 
 		if (_isReady &&
 			_stateMachine != null &&
@@ -261,7 +259,7 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 			SwitchState(ChickenState.Flee);
 		}
 
-		MoveTo(_fleeTarget);
+		MoveAwayFrom(sourcePosition, fleeRunDistance);
 	}
 
 	/// <summary>小鸡受到有效伤害后获得短时速度1，不要求伤害必须来自可识别攻击者。</summary>
@@ -466,14 +464,12 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 		if (TryGetRecentDamageThreat(out Item damageThreat, out Vector3 damageSource))
 		{
 			_currentThreat = damageThreat;
-			UpdateFleeDestination(damageSource);
-			MoveTo(_fleeTarget);
+			MoveAwayFrom(damageSource, fleeRunDistance);
 			return;
 		}
 
 		if (_currentThreat == null) { StopMove(); return; }
-		UpdateFleeDestination(_currentThreat.transform.position);
-		MoveTo(_fleeTarget);
+		MoveAwayFrom(_currentThreat.transform.position, fleeRunDistance);
 	}
 	#endregion
 
@@ -580,12 +576,6 @@ public partial class AI_Chicken : AI_Base<ChickenState>
 	#endregion
 
 	#region Helpers - Chicken 特有
-	private void UpdateFleeDestination(Vector3 threatPosition)
-	{
-		Vector2 awayDirection = GetDirectionAwayFrom(threatPosition);
-		_fleeTarget = (Vector2)transform.position + awayDirection * fleeRunDistance;
-	}
-
 	private Item FindClosestThreat()
 	{
 		Item closestThreat = _detector.FindClosestItemByTags(threatTags, transform.position);
