@@ -206,7 +206,7 @@ public static partial class RuntimeUIPrefabBuilder
         handleArea.offsetMin = new Vector2(10f, 0f);
         handleArea.offsetMax = new Vector2(-10f, 0f);
         slider.handleRect.anchorMin = slider.handleRect.anchorMax = new Vector2(0.5f, 0.5f);
-        slider.handleRect.sizeDelta = new Vector2(10f, 15.2f);
+        slider.handleRect.sizeDelta = new Vector2(10f, 3.8f);
         slider.handleRect.gameObject.SetActive(true);
         Image handle = slider.handleRect.GetComponent<Image>();
         handle.color = FlatWorldUITheme.Accent;
