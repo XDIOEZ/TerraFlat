@@ -19,7 +19,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     [Header("全局生态限制")]
     [SerializeField]
-    [Tooltip("启用后正式生态只生成 AIECS Entity，并关闭旧 BaseAI Tick；不允许静默回退旧后端。")]
+    [Tooltip("启用后，仅显式标记为 Entities 的物种交给 AIECS；GameObject 物种继续正常运行。")]
     private bool _useAiecsBackend = true;
 
     [SerializeField, Min(1)]
@@ -99,12 +99,26 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         if (DimensionManager.Instance.ActiveDefinition?.EnableMonsterSpawning == false)
         {
             ClearTrackedPopulation();
+            AiRuntimeBackendService.ClearRoutes();
             enabled = false;
             return;
         }
 
         if (!PrepareSpawnerConfigs())
         {
+            enabled = false;
+            return;
+        }
+
+        try
+        {
+            AiRuntimeBackendService.ConfigureRoutes(_spawnerConfigs);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError($"[MonsterSpawnerManager] AI 后端路由配置无效：{exception.Message}", this);
+            AiRuntimeBackendService.ClearRoutes();
+            ReleaseJsonRuntimeConfigs();
             enabled = false;
             return;
         }
@@ -123,29 +137,33 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         {
             Debug.LogError("[MonsterSpawnerManager] 怪物生态依赖的运行时管理器未就绪。", this);
             ClearTrackedPopulation();
+            AiRuntimeBackendService.ClearRoutes();
             enabled = false;
             return;
         }
 
         BindSaveData(SaveDataMgr.Instance?.SaveData);
         _itemManager.CleanupNullItems();
-        if (AiRuntimeBackendService.UseEntities)
+        _monsterManager.Configure(_spawnerConfigs, _itemManager.WorldRunTimeItems.Values);
+        if (AiRuntimeBackendService.HasEntitiesRoutes)
         {
-            IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
-            if (backend == null || !backend.PrepareWorld(_spawnerConfigs))
+            if (!AiRuntimeBackendService.UseEntities)
             {
-                Debug.LogError("[MonsterSpawnerManager] 已要求 AIECS，但正式生态后端未就绪；不会回退 BaseAI。", this);
-                ClearTrackedPopulation();
-                enabled = false;
-                return;
+                Debug.LogWarning(
+                    "[MonsterSpawnerManager] 当前关闭 AIECS；显式 Entities 物种暂停生成，不会回退 GameObject。",
+                    this);
             }
-
-            _monsterManager.ResetWorld();
-            RemoveLegacyActorInstances();
-        }
-        else
-        {
-            _monsterManager.Configure(_spawnerConfigs, _itemManager.WorldRunTimeItems.Values);
+            else
+            {
+                IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
+                if (backend == null || !backend.PrepareWorld(_spawnerConfigs))
+                {
+                    Debug.LogError(
+                        "[MonsterSpawnerManager] AIECS 物种后端未就绪；这些物种不会回退 GameObject，其他 GameObject 生物继续运行。",
+                        this);
+                }
+            }
+            RemoveLegacyEntityRoutedActorInstances();
         }
         _nextPopulationMaintenanceTime = Time.unscaledTime;
         _nextRecycleCheckTime = Time.unscaledTime + _recycleCheckInterval;
@@ -157,6 +175,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         CaptureSaveData(SaveDataMgr.Instance?.SaveData);
         // 世界退出时对象会随场景/区块一起销毁，不再唤醒本管理器主动休眠的实体。
         ClearTrackedPopulation(restoreChunkDormantItems: false);
+        AiRuntimeBackendService.ClearRoutes();
         ReleaseJsonRuntimeConfigs();
         _nextSpawnRetryTime.Clear();
         _nextRecoveryCheckTime.Clear();
@@ -170,6 +189,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     protected override void OnDestroy()
     {
+        bool ownsSingleton = ReferenceEquals(instance, this);
         if (_gameManager != null)
         {
             _gameManager.Event_GameWorldEnter -= OnGameWorldEnter;
@@ -183,9 +203,14 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             _monsterManager.MonsterDeathStarted -= OnMonsterDeathStarted;
         }
 
-        // OnDestroy 可能发生在 Unity 正在卸载场景时，禁止对即将销毁的对象调用 SetActive。
-        ClearTrackedPopulation(restoreChunkDormantItems: false);
-        ReleaseJsonRuntimeConfigs();
+        // 场景切换时可能短暂创建重复 WorldManager；副本销毁不得清空正式单例的混合后端路由。
+        if (ownsSingleton)
+        {
+            // OnDestroy 可能发生在 Unity 正在卸载场景时，禁止对即将销毁的对象调用 SetActive。
+            ClearTrackedPopulation(restoreChunkDormantItems: false);
+            AiRuntimeBackendService.ClearRoutes();
+            ReleaseJsonRuntimeConfigs();
+        }
 
         base.OnDestroy();
     }
@@ -575,7 +600,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         if (state.PendingSpawnCount <= 0 && state.PendingReplacementCount <= 0)
             return;
 
-        if (AiRuntimeBackendService.UseEntities && !HasSupportedAiecsEntry(config))
+        if (!HasAvailableBackendEntry(config))
         {
             state.PendingSpawnCount = 0;
             state.PendingReplacementCount = 0;
@@ -686,8 +711,10 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             return false;
         }
 
-        if (AiRuntimeBackendService.UseEntities &&
-            (AiRuntimeBackendService.Ecology == null || !AiRuntimeBackendService.Ecology.SupportsSpecies(entry.PrefabName)))
+        if (AiRuntimeBackendService.UsesEntities(entry) &&
+            (!AiRuntimeBackendService.UseEntities ||
+             AiRuntimeBackendService.Ecology == null ||
+             !AiRuntimeBackendService.Ecology.SupportsSpecies(entry.PrefabName)))
         {
             return false;
         }
@@ -808,10 +835,11 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         SpawnerConfig.SpawnEntry entry,
         Vector3 spawnPosition)
     {
-        if (AiRuntimeBackendService.UseEntities)
+        if (AiRuntimeBackendService.UsesEntities(entry))
         {
             SpawnerConfig owner = FindConfigForEntry(entry);
-            return owner != null && AiRuntimeBackendService.Ecology != null &&
+            return AiRuntimeBackendService.UseEntities &&
+                   owner != null && AiRuntimeBackendService.Ecology != null &&
                    AiRuntimeBackendService.Ecology.TrySpawn(owner, entry, spawnPosition);
         }
 
@@ -957,9 +985,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             if (WorldTopologyRuntime.SqrDistance(candidate, playerPosition) > radiusSqr)
                 continue;
 
-            int nearbyCount = AiRuntimeBackendService.UseEntities
-                ? AiRuntimeBackendService.Ecology?.CountGroupWithinRadius(config, playerPosition, radiusSqr) ?? 0
-                : _monsterManager.CountGroupWithinRadius(config, playerPosition, radiusSqr);
+            int nearbyCount = _monsterManager?.CountGroupWithinRadius(config, playerPosition, radiusSqr) ?? 0;
+        if (AiRuntimeBackendService.UseEntities && AiRuntimeBackendService.HasEntitiesRoutes)
+            nearbyCount += AiRuntimeBackendService.Ecology?.CountGroupWithinRadius(config, playerPosition, radiusSqr) ?? 0;
             if (nearbyCount >= limit)
                 return false;
         }
@@ -980,24 +1008,27 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private int CountGroupAlive(SpawnerConfig config)
     {
-        if (AiRuntimeBackendService.UseEntities)
-            return AiRuntimeBackendService.Ecology?.GetGroupCount(config) ?? 0;
-        return _monsterManager?.GetGroupCount(config) ?? 0;
+        int count = _monsterManager?.GetGroupCount(config) ?? 0;
+        if (AiRuntimeBackendService.UseEntities && AiRuntimeBackendService.HasEntitiesRoutes)
+            count += AiRuntimeBackendService.Ecology?.GetGroupCount(config) ?? 0;
+        return count;
     }
 
     private int CountSpeciesAlive(string speciesId)
     {
-        if (AiRuntimeBackendService.UseEntities)
-            return AiRuntimeBackendService.Ecology?.GetSpeciesCount(speciesId) ?? 0;
-        return _monsterManager?.GetSpeciesCount(speciesId) ?? 0;
+        int count = _monsterManager?.GetSpeciesCount(speciesId) ?? 0;
+        if (AiRuntimeBackendService.UseEntities && AiRuntimeBackendService.HasEntitiesRoutes)
+            count += AiRuntimeBackendService.Ecology?.GetSpeciesCount(speciesId) ?? 0;
+        return count;
     }
 
     /// <summary>只统计仍受全局数量预算约束的生态实体。</summary>
     private int CountPopulationLimitedAlive()
     {
-        if (AiRuntimeBackendService.UseEntities)
-            return AiRuntimeBackendService.Ecology?.PopulationLimitedCount ?? 0;
-        return _monsterManager?.PopulationLimitedCount ?? 0;
+        int count = _monsterManager?.PopulationLimitedCount ?? 0;
+        if (AiRuntimeBackendService.UseEntities && AiRuntimeBackendService.HasEntitiesRoutes)
+            count += AiRuntimeBackendService.Ecology?.PopulationLimitedCount ?? 0;
+        return count;
     }
 
     #endregion
@@ -1006,7 +1037,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void ClearTrackedPopulation(bool restoreChunkDormantItems = true)
     {
-        if (AiRuntimeBackendService.UseEntities)
+        if (AiRuntimeBackendService.HasEntitiesRoutes)
             AiRuntimeBackendService.Ecology?.ResetWorld();
 
         if (restoreChunkDormantItems)
@@ -1055,9 +1086,6 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     /// <summary>让自然生物随新版区块画面休眠，并在画面重新绑定后恢复。</summary>
     private void RefreshChunkDormancy()
     {
-        if (AiRuntimeBackendService.UseEntities)
-            return;
-
         if (_monsterManager == null || _monsterManager.Count == 0 || _chunkManager == null)
             return;
 
@@ -1104,9 +1132,6 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             return;
 
         _nextPopulationMaintenanceTime = Time.unscaledTime + Mathf.Max(0.5f, _populationMaintenanceInterval);
-        if (AiRuntimeBackendService.UseEntities)
-            return;
-
         _monsterManager.PruneInvalidRegistrations();
         _monsterManager.CopyRegistrations(_monsterSnapshot);
         CollectPopulationOverflow(_itemSnapshot);
@@ -1219,11 +1244,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
             return;
 
         _nextRecycleCheckTime = Time.unscaledTime + Mathf.Max(0.5f, _recycleCheckInterval);
-        if (AiRuntimeBackendService.UseEntities)
-        {
+        if (AiRuntimeBackendService.UseEntities && AiRuntimeBackendService.HasEntitiesRoutes)
             AiRuntimeBackendService.Ecology?.RecycleDistantPopulation(_playerPositions, Time.unscaledTime);
-            return;
-        }
 
         _itemSnapshot.Clear();
         _monsterManager.CopyRegistrations(_monsterSnapshot);
@@ -1291,23 +1313,28 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         return null;
     }
 
-    /// <summary>正式 ECS 模式下没有受支持物种的配置直接停止积压，禁止回退旧 Actor。</summary>
-    private static bool HasSupportedAiecsEntry(SpawnerConfig config)
+    /// <summary>至少存在一个当前后端可实际生成的条目；ECS 失败不会把该物种静默回退为 GameObject。</summary>
+    private static bool HasAvailableBackendEntry(SpawnerConfig config)
     {
-        if (config?.SpawnEntries == null || AiRuntimeBackendService.Ecology == null)
+        if (config?.SpawnEntries == null)
             return false;
 
         for (int i = 0; i < config.SpawnEntries.Count; i++)
         {
-            string speciesId = config.SpawnEntries[i]?.PrefabName;
-            if (AiRuntimeBackendService.Ecology.SupportsSpecies(speciesId))
+            SpawnerConfig.SpawnEntry entry = config.SpawnEntries[i];
+            if (entry == null || string.IsNullOrWhiteSpace(entry.PrefabName))
+                continue;
+            if (!AiRuntimeBackendService.UsesEntities(entry))
+                return true;
+            if (AiRuntimeBackendService.UseEntities &&
+                AiRuntimeBackendService.Ecology?.SupportsSpecies(entry.PrefabName) == true)
                 return true;
         }
         return false;
     }
 
-    /// <summary>切换到 AIECS 时清理存档/旧运行时残留的 Actor GameObject，避免两套 AI 同时存在。</summary>
-    private void RemoveLegacyActorInstances()
+    /// <summary>只清理已经明确改由 AIECS 接管的旧 GameObject 残留，其他动物继续保留。</summary>
+    private void RemoveLegacyEntityRoutedActorInstances()
     {
         if (_itemManager == null || GameRes.Instance == null)
             return;
@@ -1317,7 +1344,9 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         {
             if (item == null || item is Player || item.itemData == null)
                 continue;
-            if (!GameRes.Instance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition) || !definition.IsActor)
+            if (!GameRes.Instance.TryGetItemDefinition(item.itemData.IDName, out RuntimeItemDefinition definition) ||
+                !definition.IsActor ||
+                !AiRuntimeBackendService.UsesEntities(item.itemData.IDName))
                 continue;
             _itemSnapshot.Add(item);
         }

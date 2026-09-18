@@ -39,6 +39,7 @@
       "spawnEntries": [
         {
           "prefabName": "Chicken",
+          "runtimeBackend": "gameObject",
           "probability": 5.0,
           "ecologyCost": 1,
           "speciesAliveLimit": 8,
@@ -52,6 +53,7 @@
         },
         {
           "prefabName": "WildBoar",
+          "runtimeBackend": "gameObject",
           "probability": 2.0,
           "ecologyCost": 2,
           "speciesAliveLimit": 5
@@ -96,6 +98,7 @@
       "spawnEntries": [
         {
           "prefabName": "Wolf",
+          "runtimeBackend": "gameObject",
           "probability": 1.0,
           "ecologyCost": 2,
           "speciesAliveLimit": 6
@@ -139,6 +142,7 @@
       "spawnEntries": [
         {
           "prefabName": "Rabbit",
+          "runtimeBackend": "gameObject",
           "probability": 1.0,
           "ecologyCost": 1,
           "speciesAliveLimit": 1
@@ -182,6 +186,7 @@
       "spawnEntries": [
         {
           "prefabName": "SnowLeopard",
+          "runtimeBackend": "gameObject",
           "probability": 1.0,
           "ecologyCost": 2,
           "speciesAliveLimit": 1
@@ -227,6 +232,53 @@
       "spawnEntries": [
         {
           "prefabName": "Ghost",
+          "runtimeBackend": "gameObject",
+          "probability": 1.0,
+          "ecologyCost": 1,
+          "speciesAliveLimit": 0
+        }
+      ]
+    },
+    {
+      "id": "zombie_horde",
+      "scheduleMode": "timedWindows",
+      "ecologyGroup": "commonEnemies",
+      "requireGlobalDarkness": false,
+      "spawnTriggerTime": 360.0,
+      "spawnTimeTolerance": 1.0,
+      "spawnsPerDay": 4,
+      "minSpawnDistance": 24.0,
+      "maxSpawnDistance": 70.0,
+      "playerVisibilityExclusionDistance": 24.0,
+      "playerPopulationRadius": 90.0,
+      "perPlayerAliveLimit": 0,
+      "spawnSearchRetryCount": 24,
+      "spawnCount": 32,
+      "spawnChance": 1.0,
+      "daysBetweenSpawns": 1,
+      "groupAliveLimit": 1024,
+      "maxEcologyBudget": 1024,
+      "dailyBudgetRecovery": 128,
+      "recoveryTargetPopulation": 0,
+      "recoveryCheckInterval": 8.0,
+      "growthIntervalDays": 1,
+      "maxLifetimeSpawnCount": 4096,
+      "asyncSpawnInterval": 0.0,
+      "unboundedDailyGrowth": false,
+      "ignorePopulationLimits": true,
+      "requireCompletelyDarkTile": false,
+      "maxAllowedTileLight": 1.0,
+      "allowedBiomeNames": [
+        "森林",
+        "石地",
+        "沙漠"
+      ],
+      "recycleDistance": 150.0,
+      "recycleGraceSeconds": 20.0,
+      "spawnEntries": [
+        {
+          "prefabName": "Zombie",
+          "runtimeBackend": "entities",
           "probability": 1.0,
           "ecologyCost": 1,
           "speciesAliveLimit": 0

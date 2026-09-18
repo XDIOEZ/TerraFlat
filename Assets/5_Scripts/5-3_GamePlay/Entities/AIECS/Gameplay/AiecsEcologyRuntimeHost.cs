@@ -175,7 +175,9 @@ namespace FlatWorld.AIECS.Gameplay
                 {
                     SpawnerConfig.SpawnEntry entry = config.SpawnEntries[entryIndex];
                     string speciesId = entry?.PrefabName?.Trim();
-                    if (string.IsNullOrEmpty(speciesId) || _templateBySpecies.ContainsKey(speciesId))
+                    if (string.IsNullOrEmpty(speciesId) ||
+                        !AiRuntimeBackendService.UsesEntities(entry) ||
+                        _templateBySpecies.ContainsKey(speciesId))
                         continue;
 
                     if (!CatalogContains(speciesId))
@@ -248,7 +250,7 @@ namespace FlatWorld.AIECS.Gameplay
                     _fleeFromHostiles.ToArray());
                 _renderer = new AiecsWorldRenderer(_catalog, ids, _player.gameObject.scene);
                 _simulationTime = Time.timeAsDouble;
-                Debug.Log($"[AIECS] 正式生态已启动：{ids.Length} 个 Actor 定义，BaseAI 后端关闭。", this);
+                Debug.Log($"[AIECS] 正式 ECS 生态已启动：{ids.Length} 个 Actor 定义；GameObject AI 保持并行运行。", this);
             }
             catch (Exception exception)
             {
@@ -297,7 +299,7 @@ namespace FlatWorld.AIECS.Gameplay
 
         public bool TrySpawn(SpawnerConfig config, SpawnerConfig.SpawnEntry entry, Vector3 position)
         {
-            if (!AiRuntimeBackendService.UseEntities || config == null || entry == null)
+            if (!AiRuntimeBackendService.UseEntities || !AiRuntimeBackendService.UsesEntities(entry) || config == null)
                 return false;
 
             return TrySpawnSpecies(entry.PrefabName, config, position);
@@ -307,6 +309,7 @@ namespace FlatWorld.AIECS.Gameplay
         public bool TrySpawnEvent(string speciesId, Vector3 position)
         {
             if (!AiRuntimeBackendService.UseEntities ||
+                !AiRuntimeBackendService.UsesEntities(speciesId) ||
                 string.IsNullOrWhiteSpace(speciesId) ||
                 !_configBySpecies.TryGetValue(speciesId, out SpawnerConfig config))
             {

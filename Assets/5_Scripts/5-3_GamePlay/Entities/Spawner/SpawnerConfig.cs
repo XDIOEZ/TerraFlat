@@ -34,6 +34,10 @@ public class SpawnerConfig : ScriptableObject
         [Tooltip("生成时使用的预制体/物品标识，需与项目里的名称完全一致")]
         public string PrefabName = "Chicken"; // 生成的怪物预制体名称，需与物品/预制体标识一致
 
+        [LabelText("AI 运行后端")]
+        [Tooltip("普通动物使用 GameObject；尸潮、虫灾等超大规模单位显式选择 Entities。")]
+        public AiRuntimeBackendKind RuntimeBackend = AiRuntimeBackendKind.GameObject;
+
         [LabelText("生成权重")]
         [Tooltip("参与归一化抽取的相对权重，不要求总和为 1")]
         [MinValue(0f)]

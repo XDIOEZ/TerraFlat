@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8e5ad8285f24fa43b658f35c3137b11, type: 3}
   m_Name: "\u751F\u7269\u52A8\u753B\u76EE\u5F55"
   m_EditorClassIdentifier: 
-  SourceFingerprint: 933a41da8e8755a62150a9aa773ba307
+  SourceFingerprint: eabb8349b5649ea7b8f9d6f23598feef
   Material: {fileID: 2100000, guid: 922522c46cd4b2c4b8d0c318e520b4a8, type: 2}
   Sprites:
   - Source: Assets/6_Art/Characters/Hana Caraka - Livestock & Fish [Sample]/Chicken/Chicken.png[Chicken_4]
@@ -2610,6 +2610,205 @@ MonoBehaviour:
           m_PostInfinity: 2
           m_RotationOrder: 4
         Time: 0
+        Payload:
+    - State: Base Layer.Dead
+      Duration: 0.76
+      Loop: 1
+      Frames:
+      - Start: 0
+        Sprite: 74
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.2
+        Sprite: 75
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.41
+        Sprite: 76
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.6
+        Sprite: 77
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.75
+        Sprite: 74
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      Markers: []
+  - Id: Zombie
+    SortingLayerId: 0
+    SortingOrder: 0
+    Color: {r: 0.55, g: 0.82, b: 0.52, a: 1}
+    FlipX: 0
+    FlipY: 0
+    BodyYRange: {x: -0.15, y: 0.85}
+    Clips:
+    - State: Base Layer.Move
+      Duration: 0.67
+      Loop: 1
+      Frames:
+      - Start: 0
+        Sprite: 58
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.17
+        Sprite: 59
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.33
+        Sprite: 60
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.5
+        Sprite: 61
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.66
+        Sprite: 58
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      Markers: []
+    - State: Base Layer.Idle
+      Duration: 1.35
+      Loop: 1
+      Frames:
+      - Start: 0
+        Sprite: 62
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.31666666
+        Sprite: 63
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.6666667
+        Sprite: 64
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 1
+        Sprite: 65
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 1.3333334
+        Sprite: 62
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      Markers: []
+    - State: Base Layer.Walk
+      Duration: 0.84999996
+      Loop: 1
+      Frames:
+      - Start: 0
+        Sprite: 66
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.21666667
+        Sprite: 67
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.45
+        Sprite: 68
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.6666667
+        Sprite: 69
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.8333333
+        Sprite: 66
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      Markers: []
+    - State: Base Layer.Attack
+      Duration: 0.8333333
+      Loop: 0
+      Frames:
+      - Start: 0
+        Sprite: 70
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.16666667
+        Sprite: 71
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.33333334
+        Sprite: 72
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.5
+        Sprite: 73
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.6666667
+        Sprite: 70
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      - Start: 0.8333333
+        Sprite: 70
+        Position: {x: 0, y: 0, z: 0}
+        Scale: {x: 1, y: 1, z: 1}
+        Rotation: 0
+      Markers:
+      - Binding: '|Mod_AnimatorController_Receiver|IsAttacking'
+        Curve:
+          serializedVersion: 2
+          m_Curve:
+          - serializedVersion: 3
+            time: 0
+            value: 0
+            inSlope: Infinity
+            outSlope: Infinity
+            tangentMode: 103
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.5
+            value: 1
+            inSlope: Infinity
+            outSlope: Infinity
+            tangentMode: 103
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          - serializedVersion: 3
+            time: 0.8333333
+            value: 0
+            inSlope: Infinity
+            outSlope: Infinity
+            tangentMode: 103
+            weightedMode: 0
+            inWeight: 0
+            outWeight: 0
+          m_PreInfinity: 2
+          m_PostInfinity: 2
+          m_RotationOrder: 4
+        Time: 0
         Payload: 
     - State: Base Layer.Dead
       Duration: 0.76
@@ -2645,3 +2844,4 @@ MonoBehaviour:
   - "SnowLeopard/Base Layer.Attack\uFF1A\u4FDD\u7559\u66F2\u7EBF |Mod_AnimatorController_Receiver|IsAttacking\uFF0C\u5C1A\u672A\u63A5\u5165\u73A9\u6CD5\u7ED3\u7B97\u3002"
   - "WildBoar/Base Layer.Attack\uFF1A\u4FDD\u7559\u66F2\u7EBF |MonoBehaviour|IsAttacking\uFF0C\u5C1A\u672A\u63A5\u5165\u73A9\u6CD5\u7ED3\u7B97\u3002"
   - "Wolf/Base Layer.Attack\uFF1A\u4FDD\u7559\u66F2\u7EBF |Mod_AnimatorController_Receiver|IsAttacking\uFF0C\u5C1A\u672A\u63A5\u5165\u73A9\u6CD5\u7ED3\u7B97\u3002"
+  - "Zombie/Base Layer.Attack\uFF1A\u4FDD\u7559\u66F2\u7EBF |Mod_AnimatorController_Receiver|IsAttacking\uFF0C\u5C1A\u672A\u63A5\u5165\u73A9\u6CD5\u7ED3\u7B97\u3002"

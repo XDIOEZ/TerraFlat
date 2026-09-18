@@ -180,12 +180,12 @@ public partial class MonsterSpawnerManager
         out Item spawnedItem)
     {
         spawnedItem = null;
-        if (AiRuntimeBackendService.UseEntities)
+        if (AiRuntimeBackendService.UsesEntities(prefabId))
         {
             IAiEcologyBackend backend = AiRuntimeBackendService.Ecology;
             if (backend == null || !backend.SupportsSpecies(prefabId))
             {
-                Debug.LogWarning($"[GameEvent] AIECS 不支持事件生物 '{prefabId}'，不会回退 BaseAI。");
+                Debug.LogWarning($"[GameEvent] 物种 '{prefabId}' 已指定 AIECS，但当前后端不支持；不会静默回退 GameObject。");
                 return false;
             }
 

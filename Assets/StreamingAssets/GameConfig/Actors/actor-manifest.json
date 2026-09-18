@@ -10,6 +10,11 @@
       "id": "snow-actors",
       "path": "definitions/snow-actors.json",
       "enabled": true
+    },
+    {
+      "id": "ecs-actors",
+      "path": "definitions/ecs-actors.json",
+      "enabled": true
     }
   ]
 }

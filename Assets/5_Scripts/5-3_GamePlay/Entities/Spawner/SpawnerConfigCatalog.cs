@@ -132,6 +132,7 @@ public sealed class SpawnerConfigDefinition
 public sealed class SpawnerSpawnEntryDefinition
 {
     public string PrefabName;
+    public string RuntimeBackend = "gameObject";
     public float Probability = 0.5f;
     public int EcologyCost = 1;
     public int SpeciesAliveLimit;
@@ -142,6 +143,7 @@ public sealed class SpawnerSpawnEntryDefinition
         SpawnerConfig.SpawnEntry entry = new SpawnerConfig.SpawnEntry
         {
             PrefabName = PrefabName,
+            RuntimeBackend = ParseRuntimeBackend(RuntimeBackend),
             Probability = Probability,
             EcologyCost = EcologyCost,
             SpeciesAliveLimit = SpeciesAliveLimit,
@@ -156,6 +158,14 @@ public sealed class SpawnerSpawnEntryDefinition
             }
         };
         return entry;
+    }
+
+    private static AiRuntimeBackendKind ParseRuntimeBackend(string value)
+    {
+        return string.Equals(value, "entities", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, nameof(AiRuntimeBackendKind.Entities), StringComparison.OrdinalIgnoreCase)
+            ? AiRuntimeBackendKind.Entities
+            : AiRuntimeBackendKind.GameObject;
     }
 }
 

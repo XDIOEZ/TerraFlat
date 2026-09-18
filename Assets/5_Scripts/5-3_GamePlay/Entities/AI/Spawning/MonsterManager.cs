@@ -143,7 +143,7 @@ public sealed class MonsterManager : SingletonMono<MonsterManager>
             {
                 SpawnerConfig.SpawnEntry entry = config.SpawnEntries[entryIndex];
                 string speciesId = entry?.PrefabName;
-                if (string.IsNullOrWhiteSpace(speciesId))
+                if (string.IsNullOrWhiteSpace(speciesId) || AiRuntimeBackendService.UsesEntities(entry))
                     continue;
 
                 if (_configBySpecies.ContainsKey(speciesId))

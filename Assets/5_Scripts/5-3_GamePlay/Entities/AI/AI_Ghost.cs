@@ -89,9 +89,7 @@ public class AI_Ghost : Module, IAIActor
     private float _decisionTimer;
     private bool _loggedMissingRadianceBuff;
 
-    public override ModuleTickMode TickMode => AiRuntimeBackendService.UseEntities
-        ? ModuleTickMode.Disabled
-        : ModuleTickMode.EveryFrame;
+    public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
     public Item ActorItem => item;
     public bool IsAlive => item != null && !item.DestructionHandled &&
                            (_damageReceiver == null || _damageReceiver.Hp > 0f);
@@ -107,9 +105,6 @@ public class AI_Ghost : Module, IAIActor
     {
         Data ??= new GhostAISaveData();
         ModData.ReadData(ref Data);
-
-        if (AiRuntimeBackendService.UseEntities)
-            return;
 
         item.itemMods.GetMod_ByID(ModText.Hp, out _damageReceiver);
         _buffManager = item.GetComponentInChildren<BuffManager>(true);
@@ -166,9 +161,6 @@ public class AI_Ghost : Module, IAIActor
 
     public override void ModUpdate(float deltaTime)
     {
-        if (AiRuntimeBackendService.UseEntities)
-            return;
-
         if (item == null ||
             item.itemData == null ||
             GameManager.Instance == null ||

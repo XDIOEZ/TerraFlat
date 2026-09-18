@@ -121,7 +121,7 @@ public static class DroppedItemService
         GameRes resources = GameRes.ExistingInstance;
         if (resources == null || !resources.TryGetItemDefinition(itemId, out RuntimeItemDefinition definition) || !definition.IsActor)
             throw new InvalidOperationException($"不是有效的生物战利品：{itemId}");
-        if (AiRuntimeBackendService.UseEntities)
+        if (AiRuntimeBackendService.UsesEntities(itemId))
         {
             var backend = AiRuntimeBackendService.Ecology;
             if (backend == null) return false;

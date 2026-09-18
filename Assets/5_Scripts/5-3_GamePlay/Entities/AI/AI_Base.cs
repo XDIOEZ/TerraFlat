@@ -62,10 +62,8 @@ public static class AI_DebugOverlay
 /// </summary>
 public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, Enum
 {
-    /// <summary>AIECS 正式后端启用时旧 BaseAI 不进入 Module Tick；Legacy 模式才保留原逐帧驱动。</summary>
-    public override ModuleTickMode TickMode => AiRuntimeBackendService.UseEntities
-        ? ModuleTickMode.Disabled
-        : ModuleTickMode.EveryFrame;
+    /// <summary>只要 GameObject Actor 被实例化，其 AI 就正常运行；后端选择由生成路由负责。</summary>
+    public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
 
 #region ModuleData
 	public Ex_ModData_MemoryPackable ModData = new Ex_ModData_MemoryPackable();
@@ -234,12 +232,6 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	/// <summary>通用初始化流程，子类 Load() 中读取存档数据后调用</summary>
 	protected void InitializeAI()
 	{
-		if (AiRuntimeBackendService.UseEntities)
-		{
-			_isReady = false;
-			return;
-		}
-
 		_stateElapsed = 0f;
 		_detectorRefreshTimer = GetDetectorPhaseOffset();
 		_stateDecisionTimer = 0f;
@@ -266,11 +258,6 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 
 	public override void ModUpdate(float deltaTime)
 	{
-		if (AiRuntimeBackendService.UseEntities)
-		{
-			return;
-		}
-
 		if (!_isReady)
 		{
 			return;

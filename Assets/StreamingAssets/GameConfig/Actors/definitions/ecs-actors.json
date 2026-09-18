@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "actors": [
+    {
+      "id": "Zombie",
+      "parent": "Wolf",
+      "lootTableId": "",
+      "sourcePrefab": "",
+      "gameName": "丧尸",
+      "description": "用于尸潮等超大规模战斗的基础 ECS 敌对生物。",
+      "tags": [
+        "Zombie",
+        "Undead",
+        "Hostile",
+        "Blood"
+      ],
+      "visual": {
+        "color": {
+          "r": 0.55,
+          "g": 0.82,
+          "b": 0.52,
+          "a": 1.0
+        },
+        "flipX": false
+      },
+      "modules": {
+        "mover": {
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 2.6
+              }
+            }
+          }
+        },
+        "health": {
+          "parameters": {
+            "Data": {
+              "Hp": 80.0,
+              "MaxHp": 80.0,
+              "DefenseValues": {
+                "Cutting": 0.5,
+                "Piercing": 0.5,
+                "Chopping": 0.5,
+                "Blunt": 0.5
+              }
+            }
+          }
+        },
+        "damage": {
+          "parameters": {
+            "DamageValues": {
+              "Cutting": 2.0,
+              "Piercing": 0.0,
+              "Chopping": 0.0,
+              "Blunt": 8.0
+            }
+          }
+        },
+        "ai": {
+          "parameters": {
+            "debugLog": false,
+            "detectorRefreshInterval": 0.7,
+            "chaseTriggerDistance": 22.0,
+            "attackTriggerDistance": 1.2,
+            "chaseLossDistance": 32.0,
+            "chasePathCostLimit": 360,
+            "chasePathRetryDelay": 2.0,
+            "attackCooldown": 1.4,
+            "attackDamageWindow": 0.25,
+            "attackDamageStartDelay": 0.45,
+            "attackRecoveryDuration": 0.3,
+            "fleeTriggerHpRate": 0.0,
+            "enableChaseFormation": false,
+            "enableWander": true,
+            "idleMinDuration": 0.4,
+            "idleMaxDuration": 1.2,
+            "wanderRadius": 5.0
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "zombies"
+      }
+    }
+  ]
+}

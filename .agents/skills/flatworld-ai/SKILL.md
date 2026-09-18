@@ -55,7 +55,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 
 - `Entities/AIECS/FlatWorld.AIECS.asmdef` 只承载 Core、Perception、Decision、Navigation、Combat；不引用 GamePlay、Item、Collider 或 MonoBehaviour。表现和早期轨迹原型在独立 `Presentation` 程序集，旧内容编译、玩家和死亡产物适配在独立 `Gameplay` 程序集。不能把旧原型的 Slot、运动轨迹、视觉水参数当正式身份、行为或环境状态。
 - 正式世界的 AI 后端由 `AiRuntimeBackendService` 单向路由：`MonsterSpawnerManager` 继续持有生成时间、群系、光照、预算和种群规则，`AiecsEcologyRuntimeHost` 只接管 Entity 创建、模拟、批量表现、计数和远距离回收。GamePlay 不得反向引用 `FlatWorld.AIECS.Gameplay`；新增 ECS 接入能力必须继续通过 GamePlay 侧契约实现，禁止制造程序集循环依赖。
-- Entities 后端启用时 `AI_Base.TickMode` 必须保持 `Disabled`，独立旧实现（当前包括 `AI_Ghost`）也必须关闭 Tick/Load 副作用；进入世界时清理已有旧 Actor GameObject，生态和普通事件生成不得再 `InstantiateItem` 创建 Legacy AI。当前 AIECS 基础切片无法编译的 Actor 必须明确跳过并停止该配置的生成积压，禁止静默回退 Legacy AI；开发 `AiecsPlayground` 与正式生态宿主也不得同时驱动两个正式模拟。带专属命令语义的事件（如旧 `creature.advance`）需要单独迁移对应 ECS 行为阶段，不能靠恢复旧 Actor 实现。
+- 正式生态允许 GameObject AI 与 AIECS 并行：`SpawnerConfig.SpawnEntry.RuntimeBackend` 是物种后端的权威选择，默认 `GameObject`，只有显式 `Entities` 的大规模物种交给 AIECS。`AI_Base` 与独立旧实现只要被实例化就必须正常 Tick；生成、事件、Actor 掉落、数量统计和远距离回收都必须按物种路由，禁止再用一个全局开关关闭全部 GameObject AI。同一物种在同一世界只能归属一个后端，切换或加载时只清理由 ECS 路由物种遗留的 GameObject；AIECS 临时停用或不支持该物种时也不得静默回退 GameObject。开发 `AiecsPlayground` 与正式生态宿主仍不得同时驱动两个 AIECS World。
 - 正式生态目录中“单个 Actor 尚未迁移”属于预期能力边界：`PrepareWorld` 必须只记录一次普通诊断日志并从 AIECS 生成候选中排除，不能污染正常 `GameStartScene` 的 Warning 基线；只有后端未注册、目录完全无可运行 Actor、初始化异常等真正阻断正式 AIECS 的情况才使用 Error/Exception。
 - 正常 `GameStartScene` 世界的 GM AIECS 分页通过正式 `AiecsEcologyRuntimeHost` 惰性取得一个空闲 `AiecsPlayground` 调试入口；空闲入口不得阻断正式生态，只有真正启动开发场景时才先同步释放正式模拟，清理开发场景后正式宿主再自动恢复，任何时刻禁止两套 AIECS World 同时推进。
 - `AiecsSimulation` 持有独立 World 与批次资源，`AiecsDefinitionCompiler` 在冷路径读取当前合并 Actor/MOD 定义。生命、记忆、攻击阶段属于每实体运行态，定义、阵营矩阵与战略 Goal 共享；不得通过实例化旧 AI 获得模板，也不得用 P0 能力报告充当运行时配置。
@@ -66,7 +66,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - Brain 只选择 Intent，Behavior 只准备局部移动或共享 Goal，Attack 在真实 Active Tick 再确认目标、几何、朝向和 LOS。扩展行为通过共享优先级规则或 `AiecsBehaviorProposal` 接入；特殊能力注册少量 `IAiecsSimulationStage`，在实际 Pulse 向 `AiecsFrame.HitEvents` 写入，返回完整 JobHandle，禁止逐 AI 托管状态机/事件/Job。当前 Tick 的技能命中最迟在 BeforeSettlement 生产，AfterDamage 用于消费已提交状态。
 - AIECS 近战接敌名额按目标批量解析为固定数量 `Engagement Slot`，不能通过导航格容量限制实现。感知后、决策前统一分配槽位：正在攻击和可立即起手的旧持有者优先稳定保留，其余按接近方向占空位；只有当前槽位持有者可进入新的 Attack 起手，未获槽位的追击者停留在外圈并由连续 Crowd Steering/密度场向两翼分流。攻击一旦进入 Windup/Active/Recovery 仍按既有锁定语义完成，不因下一 Tick 槽位重排强制中断。
 - AIECS 攻击表现必须按 `AiecsAttackPhase` 的独立阶段时钟采样：`Windup` 与 `Recovery` 在专用动画完成前复用 Idle，只有 `Active` 播放 Attack；不能继续从进入 Attack 行为的总时长采样，否则真正进入 Active 时会从攻击动画中间帧开始。
-- 每个开发模拟只采集少量外部玩家代理，身份同时验证 UID、generation、world、dimension 和 Entity 版本；AI↔AI 不走 ItemMgr 快照。旧 Item/AI 的纯几何感知仍是独立兼容后端，不要将它与原生 ECS 感知混为一条运行链。
+- 每个开发模拟只采集少量外部玩家代理，身份同时验证 UID、generation、world、dimension 和 Entity 版本；AI↔AI 不走 ItemMgr 快照。正式混合后端目前也只有玩家进入 AIECS 外部代理，GameObject 动物与 ECS 生物尚未互相作为感知/攻击目标；若以后需要跨后端战斗，应显式桥接少量 GameObject Actor 快照，不能把 Collider/ItemMgr 查询塞进 AIECS Native 热路径。旧 Item/AI 的纯几何感知仍是独立兼容后端，不要将它与原生 ECS 感知混为一条运行链。
 - 正式小规模手测入口是 `FlatWorld/AIECS/打开实战开发入口`；`AiecsPlayground`、`AiecsNavigationCrowd`、P1 轨迹原型各自持有不同 World，不能同时创建后统计为同一批正式单位。当前正式生态、完整生存/技能、保存和联网尚未接入；阶段门槛以开发文档为准，编译与开发入口不等于 Play 或两万性能通过。
 
 ## 工作流与验证

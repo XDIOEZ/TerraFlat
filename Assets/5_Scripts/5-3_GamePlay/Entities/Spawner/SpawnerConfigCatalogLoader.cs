@@ -135,6 +135,8 @@ public static class SpawnerConfigCatalogLoader
             throw new InvalidDataException($"生物生成配置 {config.Id} 的 spawnEntry[{index}] 缺少 prefabName");
         if (!speciesIds.Add(entry.PrefabName))
             throw new InvalidDataException($"生物生成配置 {config.Id} 重复声明物种：{entry.PrefabName}");
+        if (!IsSupportedRuntimeBackend(entry.RuntimeBackend))
+            throw new InvalidDataException($"物种 {entry.PrefabName} 的 runtimeBackend 不受支持：{entry.RuntimeBackend}");
         if (!IsFinite(entry.Probability) || entry.Probability <= 0f)
             throw new InvalidDataException($"物种 {entry.PrefabName} 的 probability 无效：{entry.Probability}");
         if (entry.EcologyCost < 1 || entry.SpeciesAliveLimit < 0)
@@ -167,6 +169,15 @@ public static class SpawnerConfigCatalogLoader
                string.Equals(value, nameof(SpawnerEcologyGroup.CommonEnemies), StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, "nightEnemies", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(value, nameof(SpawnerEcologyGroup.NightEnemies), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSupportedRuntimeBackend(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ||
+               string.Equals(value, "gameObject", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, nameof(AiRuntimeBackendKind.GameObject), StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, "entities", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(value, nameof(AiRuntimeBackendKind.Entities), StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsFinite(float value)
