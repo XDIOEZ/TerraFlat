@@ -2371,6 +2371,23 @@ MonoBehaviour:
     m_Localized: UI Animation Speed
     m_Metadata:
       m_Items: []
+  - m_Id: 14694994269954048
+    m_Localized: Debug
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14694994358034432
+    m_Localized: Log Overlay
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14694994358034433
+    m_Localized: Enable Log Overlay
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14694994358034434
+    m_Localized: The log overlay only affects the local debug UI. Logging continues
+      when it is off. Changes are saved immediately.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

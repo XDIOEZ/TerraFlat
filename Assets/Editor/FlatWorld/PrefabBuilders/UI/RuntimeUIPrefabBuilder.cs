@@ -127,6 +127,7 @@ public static partial class RuntimeUIPrefabBuilder
         SaveCameraControlSettingsPrefab();
         SaveCoordinateDisplaySettingsPrefab();
         SaveVisualEffectsSettingsPrefab();
+        SaveDebugSettingsPrefab();
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.AutoSaveSettings + ".prefab", BuildAutoSaveSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab", BuildWorldStreamingSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.DifficultySettings + ".prefab", BuildDifficultySettings);
@@ -165,6 +166,7 @@ public static partial class RuntimeUIPrefabBuilder
         SaveCameraControlSettingsPrefab();
         SaveCoordinateDisplaySettingsPrefab();
         SaveVisualEffectsSettingsPrefab();
+        SaveDebugSettingsPrefab();
         SaveMainMenuExitConfirmationPrefab();
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.AutoSaveSettings + ".prefab", BuildAutoSaveSettings);
         SaveNewPrefab(SettingsPanelsRoot + RuntimeUIPrefabKeys.WorldStreamingSettings + ".prefab", BuildWorldStreamingSettings);
@@ -2297,6 +2299,10 @@ public static partial class RuntimeUIPrefabBuilder
             content,
             SettingsActionListPagination.VisualEffectsPageName,
             SettingsPanelsRoot + RuntimeUIPrefabKeys.VisualEffectsSettings + ".prefab");
+        Transform debugPage = EnsureEmbeddedActionListPage(
+            content,
+            SettingsActionListPagination.DebugPageName,
+            SettingsPanelsRoot + RuntimeUIPrefabKeys.DebugSettings + ".prefab");
         Transform autoSavePage = EnsureEmbeddedActionListPage(
             content,
             SettingsActionListPagination.AutoSavePageName,
@@ -2317,10 +2323,11 @@ public static partial class RuntimeUIPrefabBuilder
         cameraPage.SetSiblingIndex(4);
         audioPage.SetSiblingIndex(5);
         visualEffectsPage.SetSiblingIndex(6);
-        sessionPage.SetSiblingIndex(7);
-        autoSavePage.SetSiblingIndex(8);
-        streamingPage.SetSiblingIndex(9);
-        difficultyPage.SetSiblingIndex(10);
+        debugPage.SetSiblingIndex(7);
+        sessionPage.SetSiblingIndex(8);
+        autoSavePage.SetSiblingIndex(9);
+        streamingPage.SetSiblingIndex(10);
+        difficultyPage.SetSiblingIndex(11);
         worldPage.gameObject.SetActive(true);
         sessionPage.gameObject.SetActive(false);
         EnsureActionListTabBar(root.transform);
@@ -2412,6 +2419,7 @@ public static partial class RuntimeUIPrefabBuilder
             FindDirectChild(content, SettingsActionListPagination.CameraPageName),
             FindDirectChild(content, SettingsActionListPagination.AudioPageName),
             FindDirectChild(content, SettingsActionListPagination.VisualEffectsPageName),
+            FindDirectChild(content, SettingsActionListPagination.DebugPageName),
             graphicsPage,
             languagePage
         };
@@ -2434,6 +2442,11 @@ public static partial class RuntimeUIPrefabBuilder
             tabBar,
             SettingsActionListPagination.LanguageTabButtonName,
             "语言");
+        Button debugTab = EnsureActionListTabButton(
+            root.transform,
+            tabBar,
+            SettingsActionListPagination.DebugTabButtonName,
+            "调试");
         Button[] orderedTabs =
         {
             FindTransform(root.transform, "UI设置")?.GetComponent<Button>(),
@@ -2442,6 +2455,7 @@ public static partial class RuntimeUIPrefabBuilder
             FindTransform(root.transform, "镜头控制")?.GetComponent<Button>(),
             FindTransform(root.transform, "音量调节")?.GetComponent<Button>(),
             FindTransform(root.transform, "视觉特效")?.GetComponent<Button>(),
+            debugTab,
             graphicsTab,
             languageTab
         };
@@ -2834,6 +2848,11 @@ public static partial class RuntimeUIPrefabBuilder
         Button bindingTab = EnsureActionListTabButton(root, tabBar, "按键绑定", "按键绑定");
         Button cameraTab = EnsureActionListTabButton(root, tabBar, "镜头控制", "镜头控制");
         Button visualEffectsTab = EnsureActionListTabButton(root, tabBar, "视觉特效", "视觉特效");
+        Button debugTab = EnsureActionListTabButton(
+            root,
+            tabBar,
+            SettingsActionListPagination.DebugTabButtonName,
+            "调试");
         Button worldTab = EnsureActionListTabButton(
             root,
             tabBar,
@@ -2854,6 +2873,7 @@ public static partial class RuntimeUIPrefabBuilder
             cameraTab,
             audioTab,
             visualEffectsTab,
+            debugTab,
             sessionTab
         };
         for (int index = 0; index < orderedTabs.Length; index++)

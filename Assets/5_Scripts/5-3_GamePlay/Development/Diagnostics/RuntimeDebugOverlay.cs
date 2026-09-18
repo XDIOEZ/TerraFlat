@@ -30,6 +30,22 @@ public sealed class RuntimeDebugOverlay : MonoBehaviour, IBeginDragHandler, IDra
     /// <summary>当前是否已经存在有效的调试悬浮窗。</summary>
     public static bool HasInstance => instance != null;
 
+    /// <summary>按本地调试偏好启停整个悬浮窗；关闭时同时收起展开页并停止 Update。</summary>
+    public static void SetRuntimeEnabled(bool enabled)
+    {
+        if (instance == null)
+            return;
+
+        if (!enabled)
+            instance.SetPanelVisible(false);
+
+        if (instance.gameObject.activeSelf != enabled)
+            instance.gameObject.SetActive(enabled);
+
+        if (enabled)
+            instance.RefreshPresentation(force: true);
+    }
+
     /// <summary>由 GM 所在调试程序集订阅，避免 GamePlay 反向引用调试程序集。</summary>
     public static event System.Action GmPanelOpenRequested;
 

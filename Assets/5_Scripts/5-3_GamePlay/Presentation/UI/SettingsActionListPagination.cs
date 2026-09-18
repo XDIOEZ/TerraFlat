@@ -38,6 +38,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     public const string CameraPageName = "设置分页_镜头控制";
     public const string AudioPageName = "设置分页_音量调节";
     public const string VisualEffectsPageName = "设置分页_视觉特效";
+    public const string DebugPageName = "设置分页_调试";
     public const string AutoSavePageName = "设置分页_自动保存";
     public const string WorldStreamingPageName = "设置分页_流送性能";
     public const string DifficultyPageName = "设置分页_游戏难度";
@@ -46,6 +47,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     public const string TabBarName = "设置分页栏";
     public const string WorldTabButtonName = "设置页签_世界";
     public const string SessionTabButtonName = "设置页签_会话";
+    public const string DebugTabButtonName = "设置页签_调试";
     public const string GraphicsTabButtonName = "设置页签_画质";
     public const string LanguageTabButtonName = "设置页签_语言";
 
@@ -66,7 +68,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         DifficultyPageName,
         SeasonSettingsPanel.PageName,
         GraphicsPageName,
-        LanguagePageName
+        LanguagePageName,
+        DebugPageName
     };
 
     private static readonly string[] TabButtonNames =
@@ -78,6 +81,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         "镜头控制",
         "音量调节",
         "视觉特效",
+        DebugTabButtonName,
         SessionTabButtonName,
         GraphicsTabButtonName,
         LanguageTabButtonName
@@ -92,6 +96,7 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         4,
         5,
         6,
+        14,
         7,
         12,
         13
@@ -106,13 +111,14 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         4,
         5,
         6,
-        7,
-        0,
-        0,
-        0,
-        0,
         8,
-        9
+        0,
+        0,
+        0,
+        0,
+        9,
+        10,
+        7
     };
 
     private static readonly string[] FirstSelectableNames =
@@ -130,7 +136,8 @@ public sealed class SettingsActionListPagination : MonoBehaviour
         "难度_Simple",
         "季节天数_0",
         GameManager.MainMenuSettingsQualityPresetKey,
-        GameManager.MainMenuSettingsLanguageDropdownKey
+        GameManager.MainMenuSettingsLanguageDropdownKey,
+        "日志悬浮窗开关"
     };
 
     private static readonly Color ActiveTabColor = new Color32(103, 103, 103, 255);
@@ -511,18 +518,19 @@ public sealed class SettingsActionListPagination : MonoBehaviour
     private bool IsPageIncluded(int pageIndex)
     {
         if (panelContext == SettingsPanelContext.InGame)
-            return pageIndex >= 0 && pageIndex <= 11;
+            return (pageIndex >= 0 && pageIndex <= 11) || pageIndex == 14;
 
-        return (pageIndex >= 1 && pageIndex <= 6) || pageIndex == 12 || pageIndex == 13;
+        return (pageIndex >= 1 && pageIndex <= 6) ||
+               pageIndex == 12 || pageIndex == 13 || pageIndex == 14;
     }
 
     /// <summary>判断当前环境是否应绑定指定顶部页签。</summary>
     private bool IsTabIncluded(int tabIndex)
     {
         if (panelContext == SettingsPanelContext.InGame)
-            return tabIndex >= 0 && tabIndex <= 7;
+            return tabIndex >= 0 && tabIndex <= 8;
 
-        return (tabIndex >= 1 && tabIndex <= 6) || tabIndex == 8 || tabIndex == 9;
+        return (tabIndex >= 1 && tabIndex <= 7) || tabIndex == 9 || tabIndex == 10;
     }
 
     /// <summary>只在给定父节点的直属子级中查找页面，避免串入嵌套 Prefab。</summary>

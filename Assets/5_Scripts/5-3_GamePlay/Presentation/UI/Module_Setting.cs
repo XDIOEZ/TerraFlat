@@ -131,6 +131,8 @@ public class SettingCanvas : Module, IInstanceUI
             pagination?.GetPageRoot(SettingsActionListPagination.CameraPageName));
         CoordinateDisplaySettingsPanelLauncher.Ensure(
             pagination?.GetPageRoot(SettingsActionListPagination.DisplayPageName));
+        RuntimeDebugSettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.DebugPageName));
         AutoSaveSettingsPanelLauncher.Ensure(
             pagination?.GetPageRoot(SettingsActionListPagination.AutoSavePageName),
             pagination);

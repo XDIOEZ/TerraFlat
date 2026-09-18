@@ -2330,6 +2330,22 @@ MonoBehaviour:
     m_Localized: "UI \u52A8\u753B\u901F\u5EA6"
     m_Metadata:
       m_Items: []
+  - m_Id: 14694994269954048
+    m_Localized: "\u8C03\u8BD5"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14694994358034432
+    m_Localized: "\u65E5\u5FD7\u60AC\u6D6E\u7A97"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14694994358034433
+    m_Localized: "\u542F\u7528\u65E5\u5FD7\u60AC\u6D6E\u7A97"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14694994358034434
+    m_Localized: "\u65E5\u5FD7\u60AC\u6D6E\u7A97\u53EA\u5F71\u54CD\u672C\u673A\u8C03\u8BD5\u754C\u9762\uFF1B\u5173\u95ED\u540E\u65E5\u5FD7\u8BB0\u5F55\u4ECD\u4F1A\u7EE7\u7EED\u3002\u4FEE\u6539\u4F1A\u7ACB\u5373\u4FDD\u5B58\u3002"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

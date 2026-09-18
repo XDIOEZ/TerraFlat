@@ -753,6 +753,8 @@ public partial class GameManager
             pagination?.GetPageRoot(SettingsActionListPagination.CameraPageName));
         CoordinateDisplaySettingsPanelLauncher.Ensure(
             pagination?.GetPageRoot(SettingsActionListPagination.DisplayPageName));
+        RuntimeDebugSettingsPanelLauncher.Ensure(
+            pagination?.GetPageRoot(SettingsActionListPagination.DebugPageName));
         InputBindingPanelLauncher.Ensure(
             pagination?.GetPageRoot(SettingsActionListPagination.InputBindingPageName),
             panel,

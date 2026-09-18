@@ -2295,6 +2295,22 @@ MonoBehaviour:
     m_Key: ui.text.E6592D21
     m_Metadata:
       m_Items: []
+  - m_Id: 14694994269954048
+    m_Key: ui.text.90AF8525
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14694994358034432
+    m_Key: ui.text.A2D42C88
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14694994358034433
+    m_Key: ui.text.B292BAB5
+    m_Metadata:
+      m_Items: []
+  - m_Id: 14694994358034434
+    m_Key: ui.text.90511C29
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

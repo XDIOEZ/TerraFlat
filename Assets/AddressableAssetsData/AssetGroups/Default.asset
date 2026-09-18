@@ -2014,6 +2014,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: cabd264e2311b684294e284a022cdeae
+    m_Address: Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_DebugSettings.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: cc5364d105c82f74db3f9d7ee1c58e61
     m_Address: Assets/6_Art/Items/icons_sheet.png
     m_ReadOnly: 0

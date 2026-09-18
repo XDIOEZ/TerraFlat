@@ -20,7 +20,10 @@ public sealed class RuntimeDebugOverlayLauncher : MonoBehaviour
     private void Awake()
     {
         if (RuntimeDebugOverlay.HasInstance)
+        {
+            RuntimeDebugOverlay.SetRuntimeEnabled(RuntimeDebugOverlayPreferences.OverlayEnabled);
             return;
+        }
 
         if (overlayPrefab == null)
         {
@@ -29,6 +32,7 @@ public sealed class RuntimeDebugOverlayLauncher : MonoBehaviour
         }
 
         Instantiate(overlayPrefab);
+        RuntimeDebugOverlay.SetRuntimeEnabled(RuntimeDebugOverlayPreferences.OverlayEnabled);
     }
 
     #endregion
