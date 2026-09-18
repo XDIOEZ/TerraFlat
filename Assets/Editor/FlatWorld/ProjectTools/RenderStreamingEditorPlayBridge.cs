@@ -36,12 +36,14 @@ namespace FlatWorld.EditorTools
         private const string InputSettingsAssetPath = "Assets/Settings/FlatWorldInputSystemSettings.inputsettings.asset";
         private const string RenderStreamingSettingsAssetPath = "Assets/Settings/FlatWorldRenderStreamingSettings.asset";
         private const string AutoStreamingPreferenceKey = "FlatWorld.RenderStreaming.AutoPlayEnabled";
+        private const string OwnedWebServerProcessIdPreferenceKey = "FlatWorld.RenderStreaming.OwnedWebServerProcessId";
+        private const string PreferredSpeedVideoCodecMimeType = "video/H264";
         private const float StreamingFrameRate = 60f;
         private const int StreamingFrameRateConfigureMaxAttempts = 120;
         private const int WebServerReadyTimeoutMilliseconds = 3000;
 
         private static Process ownedWebServerProcess;
-        private static int streamingFrameRateConfigureAttempts;
+        private static int streamingSenderConfigureAttempts;
         private static int activeWebPort = PreferredWebPort;
         private static bool AutoStreamingEnabled => EditorPrefs.GetBool(AutoStreamingPreferenceKey, false);
 
@@ -75,14 +77,16 @@ namespace FlatWorld.EditorTools
                     ApplyAutomaticStreamingPreference();
                     if (AutoStreamingEnabled)
                     {
-                        QueueStreamingFrameRateConfiguration();
+                        QueueStreamingSenderConfiguration();
                         LogMobileAccessUrl();
                     }
                     break;
 
                 case PlayModeStateChange.ExitingPlayMode:
-                    EditorApplication.update -= ConfigureStreamingFrameRateWhenReady;
-                    streamingFrameRateConfigureAttempts = 0;
+                    EditorApplication.update -= ConfigureStreamingSenderWhenReady;
+                    streamingSenderConfigureAttempts = 0;
+                    // 自动串流是否启用由本机 EditorPrefs 决定；退出 Play 后把仓库内设置资产恢复为关闭，避免开发偏好污染 Git。
+                    EnsureProjectRenderStreamingSettings(activeWebPort, automaticStreaming: false);
                     break;
             }
         }
@@ -99,8 +103,13 @@ namespace FlatWorld.EditorTools
         [MenuItem("Tools/Render Streaming/启动手机浏览器测试服务器")]
         private static void StartWebServerFromMenu()
         {
+            // “启动测试服务器”本身就是一次显式开发者选择；同步打开自动串流，避免下一次进入 Play 时又被性能模式关掉。
+            EditorPrefs.SetBool(AutoStreamingPreferenceKey, true);
             EnsurePlayModePrerequisites();
             EnsureWebServerRunning();
+            ApplyAutomaticStreamingPreference();
+            if (EditorApplication.isPlaying)
+                QueueStreamingSenderConfiguration();
             LogMobileAccessUrl();
         }
 
@@ -117,8 +126,8 @@ namespace FlatWorld.EditorTools
             }
             else
             {
-                EditorApplication.update -= ConfigureStreamingFrameRateWhenReady;
-                streamingFrameRateConfigureAttempts = 0;
+                EditorApplication.update -= ConfigureStreamingSenderWhenReady;
+                streamingSenderConfigureAttempts = 0;
                 EnsureProjectRenderStreamingSettings(activeWebPort, automaticStreaming: false);
             }
 
@@ -167,19 +176,19 @@ namespace FlatWorld.EditorTools
             Unity.RenderStreaming.RenderStreaming.AutomaticStreaming = enabled;
         }
 
-        /// <summary>等待 Automatic Streaming 创建 Screen Sender 后，将编码目标帧率固定为 60 FPS。</summary>
-        private static void QueueStreamingFrameRateConfiguration()
+        /// <summary>等待 Automatic Streaming 创建 Screen Sender 后，应用速度优先的视频编码参数。</summary>
+        private static void QueueStreamingSenderConfiguration()
         {
-            streamingFrameRateConfigureAttempts = 0;
-            EditorApplication.update -= ConfigureStreamingFrameRateWhenReady;
-            EditorApplication.update += ConfigureStreamingFrameRateWhenReady;
+            streamingSenderConfigureAttempts = 0;
+            EditorApplication.update -= ConfigureStreamingSenderWhenReady;
+            EditorApplication.update += ConfigureStreamingSenderWhenReady;
         }
 
-        private static void ConfigureStreamingFrameRateWhenReady()
+        private static void ConfigureStreamingSenderWhenReady()
         {
             if (!EditorApplication.isPlaying)
             {
-                EditorApplication.update -= ConfigureStreamingFrameRateWhenReady;
+                EditorApplication.update -= ConfigureStreamingSenderWhenReady;
                 return;
             }
 
@@ -196,28 +205,62 @@ namespace FlatWorld.EditorTools
             {
                 try
                 {
+                    VideoCodecInfo preferredCodec = ResolveSpeedPreferredVideoCodec();
+                    bool codecApplied = false;
                     foreach (Unity.RenderStreaming.VideoStreamSender sender in screenSenders)
-                        sender.SetFrameRate(StreamingFrameRate);
+                    {
+                        // Codec 必须在连接开始前设置；已有连接或已有显式选择时只调整帧率，不强行覆盖。
+                        if (!sender.isPlaying && sender.codec == null && preferredCodec != null)
+                        {
+                            sender.SetCodec(preferredCodec);
+                            codecApplied = true;
+                        }
 
-                    EditorApplication.update -= ConfigureStreamingFrameRateWhenReady;
-                    Debug.Log($"[RenderStreaming] Editor Play 视频串流目标帧率已设置为 {StreamingFrameRate:0} FPS。");
+                        sender.SetFrameRate(StreamingFrameRate);
+                    }
+
+                    EditorApplication.update -= ConfigureStreamingSenderWhenReady;
+                    string codecDescription = preferredCodec == null
+                        ? "默认 WebRTC 协商"
+                        : $"{preferredCodec.mimeType} / {preferredCodec.codecImplementation}";
+                    Debug.Log(
+                        $"[RenderStreaming] Editor Play 视频串流已应用速度优先配置：{StreamingFrameRate:0} FPS，" +
+                        $"编码={codecDescription}{(codecApplied ? "" : "（未覆盖已有连接/显式编码）")}。"
+                    );
                     return;
                 }
                 catch (Exception exception)
                 {
-                    Debug.LogWarning($"[RenderStreaming] 设置 {StreamingFrameRate:0} FPS 失败，将继续重试：{exception.Message}");
+                    Debug.LogWarning($"[RenderStreaming] 应用速度优先串流配置失败，将继续重试：{exception.Message}");
                 }
             }
 
-            streamingFrameRateConfigureAttempts++;
-            if (streamingFrameRateConfigureAttempts < StreamingFrameRateConfigureMaxAttempts)
+            streamingSenderConfigureAttempts++;
+            if (streamingSenderConfigureAttempts < StreamingFrameRateConfigureMaxAttempts)
                 return;
 
-            EditorApplication.update -= ConfigureStreamingFrameRateWhenReady;
+            EditorApplication.update -= ConfigureStreamingSenderWhenReady;
             Debug.LogWarning(
                 $"[RenderStreaming] 在 {StreamingFrameRateConfigureMaxAttempts} 次 Editor 更新内未找到 Screen VideoStreamSender，" +
-                $"未能应用 {StreamingFrameRate:0} FPS 设置。"
+                "未能应用速度优先串流配置。"
             );
+        }
+
+        /// <summary>优先使用浏览器兼容性较好的 H.264 Constrained Baseline；不可用时保留包默认协商。</summary>
+        private static VideoCodecInfo ResolveSpeedPreferredVideoCodec()
+        {
+            VideoCodecInfo[] codecs = Unity.RenderStreaming.VideoStreamSender.GetAvailableCodecs()
+                .Where(codec => codec != null)
+                .ToArray();
+
+            H264CodecInfo constrainedBaseline = codecs
+                .OfType<H264CodecInfo>()
+                .FirstOrDefault(codec => codec.profile == H264Profile.ConstrainedBaseline);
+            if (constrainedBaseline != null)
+                return constrainedBaseline;
+
+            return codecs.FirstOrDefault(codec =>
+                string.Equals(codec.mimeType, PreferredSpeedVideoCodecMimeType, StringComparison.OrdinalIgnoreCase));
         }
 
         #endregion
@@ -346,7 +389,10 @@ namespace FlatWorld.EditorTools
             EnsureProjectRenderStreamingSettings(webPort, automaticStreaming: false);
             if (IsRenderStreamingWebAppAvailable(webPort))
             {
-                EnsureProjectRenderStreamingSettings(webPort, automaticStreaming: true);
+                EnsureProjectRenderStreamingSettings(
+                    webPort,
+                    automaticStreaming: AutoStreamingEnabled && EditorApplication.isPlayingOrWillChangePlaymode
+                );
                 return;
             }
 
@@ -373,6 +419,7 @@ namespace FlatWorld.EditorTools
                 };
 
                 ownedWebServerProcess = Process.Start(startInfo);
+                RememberOwnedWebServerProcess(ownedWebServerProcess);
                 if (!WaitForRenderStreamingWebApp(webPort, WebServerReadyTimeoutMilliseconds))
                 {
                     Debug.LogError(
@@ -381,7 +428,10 @@ namespace FlatWorld.EditorTools
                     );
                     return;
                 }
-                EnsureProjectRenderStreamingSettings(webPort, automaticStreaming: true);
+                EnsureProjectRenderStreamingSettings(
+                    webPort,
+                    automaticStreaming: AutoStreamingEnabled && EditorApplication.isPlayingOrWillChangePlaymode
+                );
                 Debug.Log($"[RenderStreaming] 手机测试服务器已启动：{GetMobileAccessUrl()}");
             }
             catch (Exception exception)
@@ -392,9 +442,8 @@ namespace FlatWorld.EditorTools
 
         private static string EnsureWebServerExecutable()
         {
-            string projectRoot = Directory.GetParent(Application.dataPath)?.FullName ?? Directory.GetCurrentDirectory();
-            string cacheDirectory = Path.Combine(projectRoot, CacheDirectory.Replace('/', Path.DirectorySeparatorChar));
-            string executablePath = Path.Combine(cacheDirectory, WebServerFileName);
+            string executablePath = GetWebServerExecutablePath();
+            string cacheDirectory = Path.GetDirectoryName(executablePath);
             if (File.Exists(executablePath) && new FileInfo(executablePath).Length > 1024 * 1024)
                 return executablePath;
 
@@ -422,6 +471,14 @@ namespace FlatWorld.EditorTools
                 Debug.LogError($"[RenderStreaming] 下载 Unity 官方 WebApp 失败：{exception.Message}");
                 return null;
             }
+        }
+
+        /// <summary>返回当前项目专属的官方 WebApp 缓存路径。</summary>
+        private static string GetWebServerExecutablePath()
+        {
+            string projectRoot = Directory.GetParent(Application.dataPath)?.FullName ?? Directory.GetCurrentDirectory();
+            string cacheDirectory = Path.Combine(projectRoot, CacheDirectory.Replace('/', Path.DirectorySeparatorChar));
+            return Path.Combine(cacheDirectory, WebServerFileName);
         }
 
         /// <summary>优先复用项目标准端口；被其它程序占用时选择后续空闲端口，不再抢占系统 HTTP 端口。</summary>
@@ -491,7 +548,7 @@ namespace FlatWorld.EditorTools
 
         private static void StopOwnedWebServer()
         {
-            Process process = ownedWebServerProcess;
+            Process process = ownedWebServerProcess ?? TryRecoverOwnedWebServerProcess();
             ownedWebServerProcess = null;
             if (process == null)
                 return;
@@ -508,6 +565,64 @@ namespace FlatWorld.EditorTools
             finally
             {
                 process.Dispose();
+                EditorPrefs.DeleteKey(OwnedWebServerProcessIdPreferenceKey);
+            }
+        }
+
+        /// <summary>记录本工具启动的 WebApp PID，使停止/退出逻辑能够跨 Domain Reload 恢复进程句柄。</summary>
+        private static void RememberOwnedWebServerProcess(Process process)
+        {
+            if (process == null)
+            {
+                EditorPrefs.DeleteKey(OwnedWebServerProcessIdPreferenceKey);
+                return;
+            }
+
+            try
+            {
+                EditorPrefs.SetInt(OwnedWebServerProcessIdPreferenceKey, process.Id);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"[RenderStreaming] 无法记录测试服务器进程：{exception.Message}");
+            }
+        }
+
+        /// <summary>仅在 PID 对应当前项目缓存的 webserver.exe 时恢复句柄，避免 PID 复用误杀其它进程。</summary>
+        private static Process TryRecoverOwnedWebServerProcess()
+        {
+            if (!EditorPrefs.HasKey(OwnedWebServerProcessIdPreferenceKey))
+                return null;
+
+            int processId = EditorPrefs.GetInt(OwnedWebServerProcessIdPreferenceKey, -1);
+            if (processId <= 0)
+            {
+                EditorPrefs.DeleteKey(OwnedWebServerProcessIdPreferenceKey);
+                return null;
+            }
+
+            try
+            {
+                Process process = Process.GetProcessById(processId);
+                string actualPath = process.MainModule?.FileName;
+                string expectedPath = GetWebServerExecutablePath();
+                if (string.IsNullOrEmpty(actualPath) ||
+                    !string.Equals(
+                        Path.GetFullPath(actualPath),
+                        Path.GetFullPath(expectedPath),
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    process.Dispose();
+                    EditorPrefs.DeleteKey(OwnedWebServerProcessIdPreferenceKey);
+                    return null;
+                }
+
+                return process;
+            }
+            catch
+            {
+                EditorPrefs.DeleteKey(OwnedWebServerProcessIdPreferenceKey);
+                return null;
             }
         }
 
