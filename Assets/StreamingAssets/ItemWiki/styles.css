@@ -2054,6 +2054,306 @@ kbd {
 .markdown-doc-link:hover { color: #8b4f2f; }
 .markdown-link-label { color: #6d513f; font-weight: 700; }
 
+/* 系统结构：Markdown 驱动的超大脚本世界图。平移和缩放仅修改单个 Surface transform。 */
+.system-map-book {
+    position: relative;
+    min-height: 790px;
+    padding: 25px 30px 28px;
+    color: var(--ink-900);
+    background:
+        repeating-linear-gradient(0deg, transparent 0 31px, rgba(116, 76, 50, .08) 31px 32px),
+        linear-gradient(90deg, rgba(121, 78, 52, .12), transparent 4%, transparent 96%, rgba(94, 55, 37, .14)),
+        var(--paper-200);
+    border-color: #5f3b2c;
+    box-shadow:
+        0 0 0 2px var(--gold),
+        0 0 0 5px #443027,
+        9px 12px 0 #060d1c,
+        0 22px 45px rgba(0,0,0,.42);
+}
+
+.system-map-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 3px 5px 13px;
+    border-bottom: 2px solid rgba(119, 75, 51, .43);
+}
+
+.system-map-heading h2 {
+    margin: 2px 0 3px;
+    color: #4a3026;
+    font-size: 28px;
+}
+
+.system-map-heading p {
+    max-width: 880px;
+    margin: 0;
+    color: #795846;
+    font-size: 10px;
+}
+
+.system-map-heading code {
+    color: #213653;
+    font: 9px Consolas, monospace;
+}
+
+.system-map-stats {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    padding: 7px 10px;
+    color: #75513d;
+    background: rgba(243, 206, 145, .58);
+    border: 1px solid #9d6a4a;
+    white-space: nowrap;
+}
+
+.system-map-stats strong { color: #4a3026; font: 700 18px Consolas, monospace; }
+.system-map-stats span { font-size: 8px; }
+
+.system-map-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 13px 0 10px;
+}
+
+.system-map-search {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 240px;
+    max-width: 620px;
+    height: 34px;
+    padding: 0 9px;
+    color: #75513d;
+    background: #f4d99f;
+    border: 1px solid #8d6044;
+}
+
+.system-map-search > span { margin-right: 7px; font: 700 13px Consolas, monospace; }
+.system-map-search input {
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    color: #38281f;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    font: 10px Consolas, monospace;
+}
+
+.system-map-actions { display: flex; align-items: center; gap: 5px; }
+.system-map-actions button {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 9px;
+    color: #d9e1ed;
+    background: #13223a;
+    border: 1px solid #49627f;
+    box-shadow: inset 0 0 0 1px #091322;
+    font: 700 9px Consolas, monospace;
+}
+.system-map-actions button:hover,
+.system-map-actions button:focus-visible { color: #3b281e; background: #e8b96f; border-color: #6b4935; outline: 0; }
+#systemMapZoomValue { min-width: 58px; }
+
+.system-map-viewport {
+    position: relative;
+    height: clamp(570px, 67vh, 760px);
+    overflow: hidden;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    background:
+        linear-gradient(rgba(194, 142, 84, .12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(194, 142, 84, .12) 1px, transparent 1px),
+        radial-gradient(circle at 48% 42%, rgba(255, 231, 177, .08), transparent 45%),
+        #0d1b2d;
+    background-size: 48px 48px, 48px 48px, auto, auto;
+    border: 2px solid #65442f;
+    box-shadow: inset 0 0 0 2px #152a43, inset 0 0 45px rgba(0,0,0,.38);
+    contain: layout paint style;
+}
+
+.system-map-viewport.dragging { cursor: grabbing; }
+.system-map-viewport:focus-visible { outline: 2px solid #e3ad61; outline-offset: 2px; }
+
+.system-map-surface {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
+.system-map-regions,
+.system-map-nodes,
+.system-map-edges {
+    position: absolute;
+    inset: 0;
+}
+
+.system-map-regions,
+.system-map-edges { pointer-events: none; }
+.system-map-edges { overflow: visible; }
+
+.system-map-region {
+    position: absolute;
+    background: rgba(38, 63, 89, .23);
+    border: 3px solid rgba(184, 142, 89, .35);
+    box-shadow: inset 0 0 0 2px rgba(13, 25, 43, .7), inset 0 0 55px rgba(6, 14, 27, .34);
+    contain: layout paint style;
+}
+
+.system-map-region-title {
+    position: absolute;
+    left: 24px;
+    top: 20px;
+    display: flex;
+    flex-direction: column;
+    max-width: calc(100% - 48px);
+    color: #efd29b;
+    text-shadow: 2px 2px 0 rgba(0,0,0,.42);
+}
+.system-map-region-title strong { font-size: 24px; letter-spacing: .03em; }
+.system-map-region-title span { margin-top: 5px; color: #9caec1; font-size: 12px; }
+
+.system-map-edge {
+    stroke: rgba(224, 170, 97, .58);
+    stroke-width: 5;
+    stroke-linecap: round;
+    stroke-dasharray: 13 10;
+}
+
+.system-map-node {
+    position: absolute;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto 1fr auto;
+    width: 300px;
+    height: 132px;
+    padding: 10px 11px 9px;
+    overflow: hidden;
+    color: #d8e2ed;
+    text-align: left;
+    background: linear-gradient(145deg, #172b45, #0d1d32 72%);
+    border: 3px solid #60758c;
+    box-shadow: inset 0 0 0 2px #091628, 5px 6px 0 rgba(0,0,0,.32);
+    contain: layout paint style;
+}
+
+.system-map-node:hover,
+.system-map-node:focus-visible {
+    color: #34231b;
+    background: linear-gradient(145deg, #f2cf8e, #dca85f 72%);
+    border-color: #6d4932;
+    outline: 0;
+    z-index: 3;
+}
+
+.system-map-node-system {
+    align-self: center;
+    color: #e4ad62;
+    font: 700 10px Consolas, monospace;
+    letter-spacing: .06em;
+}
+.system-map-node:hover .system-map-node-system,
+.system-map-node:focus-visible .system-map-node-system { color: #70462f; }
+
+.system-map-node > strong {
+    grid-column: 1 / -1;
+    margin: 3px 0 5px;
+    overflow: hidden;
+    font: 700 16px Consolas, monospace;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.system-map-node > small {
+    grid-column: 1 / -1;
+    overflow: hidden;
+    color: #aab8c8;
+    font-size: 10px;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.system-map-node:hover > small,
+.system-map-node:focus-visible > small { color: #654735; }
+
+.system-map-node > code {
+    align-self: end;
+    min-width: 0;
+    overflow: hidden;
+    color: #738ba5;
+    font: 8px Consolas, monospace;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.system-map-node:hover > code,
+.system-map-node:focus-visible > code { color: #78513b; }
+
+.system-map-node-open {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    color: #748aa4;
+    font: 700 8px Consolas, monospace;
+}
+.system-map-node:hover .system-map-node-open,
+.system-map-node:focus-visible .system-map-node-open { color: #70462f; }
+
+.system-map-loading {
+    position: absolute;
+    left: 28px;
+    top: 28px;
+    min-width: 340px;
+    padding: 14px 16px;
+    color: #c8d5e5;
+    background: #142640;
+    border: 2px solid #57718f;
+    font: 11px Consolas, monospace;
+}
+.system-map-loading.error { color: #f0c1b7; border-color: #a65d54; }
+
+.system-map-hud {
+    position: absolute;
+    right: 12px;
+    bottom: 11px;
+    left: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 9px;
+    color: #9eb0c4;
+    background: rgba(6, 14, 26, .82);
+    border: 1px solid rgba(91, 116, 145, .72);
+    pointer-events: none;
+    font: 8px Consolas, monospace;
+}
+
+.system-map-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin-top: 9px;
+    padding: 0 3px;
+    color: #765442;
+    font-size: 8px;
+}
+.system-map-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.system-map-legend-line {
+    display: inline-block;
+    width: 28px;
+    height: 0;
+    border-top: 2px dashed #b47643;
+}
+
 /* 设置页：保持书页视觉，但只承载浏览器侧开发者偏好。 */
 .settings-book {
     position: relative;
@@ -2351,6 +2651,9 @@ kbd {
     .header-page-button { flex: 1; min-width: 0; }
     .overview-toolbar { grid-template-columns: 1fr 1fr; }
     .design-layout { grid-template-columns: 220px minmax(0, 1fr); }
+    .system-map-toolbar { align-items: stretch; flex-direction: column; }
+    .system-map-search { max-width: none; }
+    .system-map-actions { flex-wrap: wrap; }
     .loot-detail-row { grid-template-columns: 44px minmax(0, 1fr); }
     .loot-detail-values { grid-column: 2; }
     .loot-jump { grid-column: 2; }
@@ -2363,12 +2666,17 @@ kbd {
     .detail-hero { grid-template-columns: 68px minmax(0, 1fr); }
     .overview-book { padding: 22px 13px 28px; }
     .design-book { padding: 22px 13px 28px; }
+    .system-map-book { padding: 22px 13px 24px; }
     .overview-heading { align-items: flex-start; flex-direction: column; }
+    .system-map-heading { align-items: flex-start; flex-direction: column; }
+    .system-map-stats { align-self: stretch; justify-content: center; }
     .overview-toolbar { grid-template-columns: 1fr; }
     .overview-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .design-layout { grid-template-columns: 1fr; }
     .design-doc-list { max-height: 260px; }
     .markdown-body { max-height: none; }
+    .system-map-viewport { height: clamp(520px, 65vh, 700px); }
+    .system-map-hud { align-items: flex-start; flex-direction: column; }
     .module-field-grid,
     .module-identity-grid { grid-template-columns: 1fr; }
     .modal-shell { padding: 8px; }

@@ -498,6 +498,7 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
                 {
                     "writable": not self.public_readonly,
                     "publicReadOnly": self.public_readonly,
+                    "projectRoot": None if self.public_readonly else str(PROJECT_ROOT),
                     "service": "FlatWorldItemWiki",
                     "version": 1,
                 },

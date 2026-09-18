@@ -8,6 +8,11 @@
     const MODULE_GLOSSARY_PATH = "module-glossary.json";
     const ITEM_METADATA_PATH = "item-metadata.json";
     const DESIGN_DOC_INDEX_PATH = "docs/README.md";
+    const SYSTEM_MAP_DOC_PATH = "docs/system-script-map.md";
+    const SYSTEM_MAP_NODE_WIDTH = 300;
+    const SYSTEM_MAP_NODE_HEIGHT = 132;
+    const SYSTEM_MAP_MIN_ZOOM = 0.16;
+    const SYSTEM_MAP_MAX_ZOOM = 1.8;
     const WIKI_STATUS_API = "/api/wiki/status";
     const ITEM_SAVE_API = "/api/items/save";
 
@@ -89,6 +94,26 @@
         designLoaded: false,
         selectedDesignPath: DESIGN_DOC_INDEX_PATH,
         designDocCache: new Map(),
+        systemMapLoaded: false,
+        projectRoot: "",
+        publicReadOnly: false,
+        systemMap: {
+            width: 5400,
+            height: 3100,
+            nodes: [],
+            nodeById: new Map(),
+            regions: [],
+            panX: 0,
+            panY: 0,
+            zoom: 1,
+            dragging: false,
+            dragPointerId: null,
+            dragStartX: 0,
+            dragStartY: 0,
+            dragOriginX: 0,
+            dragOriginY: 0,
+            frameRequest: 0
+        },
         writable: false,
         activeView: "catalog",
         indexSide: "left"
@@ -102,15 +127,31 @@
         catalogViewButton: document.getElementById("catalogViewButton"),
         overviewViewButton: document.getElementById("overviewViewButton"),
         designViewButton: document.getElementById("designViewButton"),
+        systemMapViewButton: document.getElementById("systemMapViewButton"),
         settingsButton: document.getElementById("settingsButton"),
         catalogBook: document.getElementById("catalogBook"),
         overviewBook: document.getElementById("overviewBook"),
         designBook: document.getElementById("designBook"),
+        systemMapBook: document.getElementById("systemMapBook"),
         settingsBook: document.getElementById("settingsBook"),
         designSearch: document.getElementById("designSearch"),
         designDocList: document.getElementById("designDocList"),
         designDocMeta: document.getElementById("designDocMeta"),
         designDocContent: document.getElementById("designDocContent"),
+        systemMapSearch: document.getElementById("systemMapSearch"),
+        systemMapNodeCount: document.getElementById("systemMapNodeCount"),
+        systemMapZoomOut: document.getElementById("systemMapZoomOut"),
+        systemMapZoomValue: document.getElementById("systemMapZoomValue"),
+        systemMapZoomIn: document.getElementById("systemMapZoomIn"),
+        systemMapFit: document.getElementById("systemMapFit"),
+        systemMapHome: document.getElementById("systemMapHome"),
+        systemMapViewport: document.getElementById("systemMapViewport"),
+        systemMapSurface: document.getElementById("systemMapSurface"),
+        systemMapRegions: document.getElementById("systemMapRegions"),
+        systemMapEdges: document.getElementById("systemMapEdges"),
+        systemMapNodes: document.getElementById("systemMapNodes"),
+        systemMapHint: document.getElementById("systemMapHint"),
+        systemMapVisibleCount: document.getElementById("systemMapVisibleCount"),
         categorySelect: document.getElementById("categorySelect"),
         packageSelect: document.getElementById("packageSelect"),
         sortSelect: document.getElementById("sortSelect"),
@@ -186,14 +227,20 @@
                 state.designDocCache.clear();
                 if (state.activeView === "design") loadDesignDocs();
             }
+            if (state.systemMapLoaded) {
+                state.systemMapLoaded = false;
+                if (state.activeView === "system-map") loadSystemMap();
+            }
         });
         els.indexCollapseButton.addEventListener("click", toggleIndexPanel);
         els.indexToolsCollapseButton.addEventListener("click", toggleIndexToolsPanel);
         els.catalogViewButton.addEventListener("click", () => setView("catalog"));
         els.overviewViewButton.addEventListener("click", () => setView("overview"));
         els.designViewButton.addEventListener("click", () => setView("design"));
+        els.systemMapViewButton.addEventListener("click", () => setView("system-map"));
         els.settingsButton.addEventListener("click", () => setView("settings"));
         els.designSearch.addEventListener("input", renderDesignDocList);
+        bindSystemMapEvents();
         els.indexSideToggle.addEventListener("change", () => {
             setIndexSide(els.indexSideToggle.checked ? "right" : "left", true);
         });
@@ -411,15 +458,20 @@
         return Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, "0")).join("");
     }
 
-    // 探测当前是否由带写入 API 的本地 Wiki 服务启动。
+    // 探测当前 Wiki 服务能力；本机模式额外返回项目根目录，用于构造 VS Code 深链。
     async function checkWriteCapability() {
         try {
             const response = await fetch(WIKI_STATUS_API, { cache: "no-store" });
             const payload = response.ok ? await response.json() : null;
             state.writable = payload?.writable === true;
+            state.publicReadOnly = payload?.publicReadOnly === true;
+            state.projectRoot = typeof payload?.projectRoot === "string" ? payload.projectRoot : "";
         } catch {
             state.writable = false;
+            state.publicReadOnly = false;
+            state.projectRoot = "";
         }
+        updateSystemMapEditorHint();
     }
 
     // 完整模拟 ItemDefinitionCatalogLoader 的 parent 合并策略。
@@ -574,23 +626,27 @@
         });
     }
 
-    // 切换档案浏览、全物品总览、游戏设计与设置页；书本只作为视觉容器，不限制信息架构。
+    // 切换档案浏览、全物品总览、游戏设计、脚本世界与设置页；书本只作为视觉容器，不限制信息架构。
     function setView(view) {
-        state.activeView = view === "overview" || view === "design" || view === "settings" ? view : "catalog";
+        state.activeView = view === "overview" || view === "design" || view === "system-map" || view === "settings" ? view : "catalog";
         const overview = state.activeView === "overview";
         const design = state.activeView === "design";
+        const systemMap = state.activeView === "system-map";
         const settings = state.activeView === "settings";
         document.body.classList.toggle("overview-mode", overview);
-        els.catalogBook.hidden = overview || design || settings;
+        els.catalogBook.hidden = overview || design || systemMap || settings;
         els.overviewBook.hidden = !overview;
         els.designBook.hidden = !design;
+        els.systemMapBook.hidden = !systemMap;
         els.settingsBook.hidden = !settings;
         els.catalogViewButton.classList.toggle("active", state.activeView === "catalog");
         els.overviewViewButton.classList.toggle("active", overview);
         els.designViewButton.classList.toggle("active", design);
+        els.systemMapViewButton.classList.toggle("active", systemMap);
         els.settingsButton.classList.toggle("active", settings);
         if (overview) renderOverview();
         if (design) loadDesignDocs();
+        if (systemMap) loadSystemMap();
     }
 
     // README 的“系统目录”表即 03 页导航真源，新增/排序文档时无需同步第二份网页配置。
@@ -841,6 +897,416 @@
             text = text.replace(`@@FWDOC${tokenIndex}@@`, html);
         });
         return text;
+    }
+
+    // 第四分页只负责解释 system-script-map.md；坐标、职责和主连接均由 Markdown 维护。
+    async function loadSystemMap() {
+        if (state.systemMapLoaded) {
+            updateSystemMapEditorHint();
+            requestSystemMapFrame();
+            return;
+        }
+
+        els.systemMapNodes.innerHTML = `<div class="system-map-loading">正在读取系统脚本结构 Markdown…</div>`;
+        try {
+            const markdown = await fetchText(SYSTEM_MAP_DOC_PATH);
+            const parsed = parseSystemMapMarkdown(markdown);
+            state.systemMap.width = parsed.width;
+            state.systemMap.height = parsed.height;
+            state.systemMap.nodes = parsed.nodes;
+            state.systemMap.nodeById = parsed.nodeById;
+            state.systemMap.regions = parsed.regions;
+            renderSystemMap();
+            state.systemMapLoaded = true;
+            updateSystemMapEditorHint();
+            requestAnimationFrame(() => focusSystemMapHome(true));
+        } catch (error) {
+            state.systemMapLoaded = false;
+            els.systemMapNodes.innerHTML = `<div class="system-map-loading error">${escapeHtml(error.message)}</div>`;
+        }
+    }
+
+    // 解析指定二级标题后的 Markdown 表格，避免为结构图再引入第二份 JSON 配置。
+    function parseSystemMapTable(markdown, heading) {
+        const lines = String(markdown || "").replace(/\r/g, "").split("\n");
+        const headingIndex = lines.findIndex(line => line.trim() === `## ${heading}`);
+        if (headingIndex < 0) throw new Error(`系统结构图缺少“${heading}”表。`);
+
+        let index = headingIndex + 1;
+        while (index < lines.length && !lines[index].trim().startsWith("|")) index++;
+        if (index + 1 >= lines.length || !isDesignMarkdownTable(lines, index)) {
+            throw new Error(`系统结构图“${heading}”不是有效 Markdown 表格。`);
+        }
+
+        const headers = splitDesignTableRow(lines[index]);
+        index += 2;
+        const rows = [];
+        while (index < lines.length) {
+            // 结构图 Markdown 会用空行分隔不同系统分组；空行不应提前截断同一张表的数据。
+            while (index < lines.length && !lines[index].trim()) index++;
+            if (index >= lines.length || !lines[index].trim().startsWith("|")) break;
+
+            const values = splitDesignTableRow(lines[index++]);
+            const row = {};
+            headers.forEach((header, columnIndex) => {
+                row[header] = values[columnIndex] ?? "";
+            });
+            rows.push(row);
+        }
+        return rows;
+    }
+
+    function parseSystemMapMarkdown(markdown) {
+        const sizeMatch = String(markdown || "").match(/<!--\s*map-size:\s*(\d+)x(\d+)\s*-->/i);
+        const width = sizeMatch ? Number(sizeMatch[1]) : 5400;
+        const height = sizeMatch ? Number(sizeMatch[2]) : 3100;
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1000 || height < 700) {
+            throw new Error("系统结构图地图尺寸无效。");
+        }
+
+        const numberOf = (value, label) => {
+            const number = Number(value);
+            if (!Number.isFinite(number)) throw new Error(`${label} 不是有效数字：${value}`);
+            return number;
+        };
+
+        const regions = parseSystemMapTable(markdown, "区域").map(row => ({
+            id: String(row.ID || "").trim(),
+            name: String(row["名称"] || "").trim(),
+            x: numberOf(row.X, "区域 X"),
+            y: numberOf(row.Y, "区域 Y"),
+            width: numberOf(row["宽"], "区域宽度"),
+            height: numberOf(row["高"], "区域高度"),
+            description: String(row["说明"] || "").trim()
+        }));
+        if (!regions.length || regions.some(region => !region.id || !region.name)) {
+            throw new Error("系统结构图区域定义为空或缺少 ID/名称。");
+        }
+
+        const nodeById = new Map();
+        const nodes = parseSystemMapTable(markdown, "脚本节点").map(row => {
+            const node = {
+                id: String(row.ID || "").trim(),
+                system: String(row["系统"] || "").trim(),
+                title: String(row["脚本"] || "").trim(),
+                path: String(row["路径"] || "").trim().replace(/\\/g, "/"),
+                x: numberOf(row.X, "节点 X"),
+                y: numberOf(row.Y, "节点 Y"),
+                description: String(row["说明"] || "").trim(),
+                mainId: String(row["主连接"] || "").trim(),
+                element: null,
+                edgeElement: null
+            };
+            if (!node.id || !node.system || !node.title || !node.path || !node.description) {
+                throw new Error(`脚本节点字段不完整：${node.id || node.title || "<未知>"}`);
+            }
+            if (!node.path.startsWith("Assets/") || !node.path.toLowerCase().endsWith(".cs")) {
+                throw new Error(`脚本节点路径必须是 Assets 下的 .cs：${node.path}`);
+            }
+            if (nodeById.has(node.id)) throw new Error(`系统结构图包含重复节点 ID：${node.id}`);
+            node.searchBlob = `${node.system} ${node.title} ${node.path} ${node.description}`.toLowerCase();
+            nodeById.set(node.id, node);
+            return node;
+        });
+        if (!nodes.length) throw new Error("系统结构图没有脚本节点。");
+        nodes.forEach(node => {
+            if (node.mainId && !nodeById.has(node.mainId)) {
+                throw new Error(`节点 ${node.id} 的主连接不存在：${node.mainId}`);
+            }
+            if (node.mainId === node.id) throw new Error(`节点 ${node.id} 不能连接自己。`);
+        });
+        return { width, height, regions, nodes, nodeById };
+    }
+
+    function renderSystemMap() {
+        const map = state.systemMap;
+        els.systemMapSurface.style.width = `${map.width}px`;
+        els.systemMapSurface.style.height = `${map.height}px`;
+        els.systemMapRegions.innerHTML = "";
+        els.systemMapNodes.innerHTML = "";
+        els.systemMapEdges.innerHTML = "";
+        els.systemMapEdges.setAttribute("viewBox", `0 0 ${map.width} ${map.height}`);
+        els.systemMapEdges.setAttribute("width", String(map.width));
+        els.systemMapEdges.setAttribute("height", String(map.height));
+
+        map.regions.forEach(region => {
+            const element = document.createElement("section");
+            element.className = "system-map-region";
+            element.style.left = `${region.x}px`;
+            element.style.top = `${region.y}px`;
+            element.style.width = `${region.width}px`;
+            element.style.height = `${region.height}px`;
+            element.innerHTML = `<div class="system-map-region-title"><strong>${escapeHtml(region.name)}</strong>` +
+                `<span>${escapeHtml(region.description)}</span></div>`;
+            region.element = element;
+            els.systemMapRegions.appendChild(element);
+        });
+
+        map.nodes.forEach(node => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "system-map-node";
+            button.style.left = `${node.x}px`;
+            button.style.top = `${node.y}px`;
+            button.dataset.nodeId = node.id;
+            button.title = `${node.title}\n${node.path}\n点击在 VS Code 中打开`;
+            button.innerHTML = `<span class="system-map-node-system">${escapeHtml(node.system)}</span>` +
+                `<strong>${escapeHtml(node.title)}</strong>` +
+                `<small>${escapeHtml(node.description)}</small>` +
+                `<code>${escapeHtml(node.path)}</code>` +
+                `<span class="system-map-node-open">↗ VS Code</span>`;
+            button.addEventListener("click", () => openSystemScript(node));
+            node.element = button;
+            els.systemMapNodes.appendChild(button);
+        });
+
+        const svgNamespace = "http://www.w3.org/2000/svg";
+        map.nodes.forEach(node => {
+            if (!node.mainId) return;
+            const target = map.nodeById.get(node.mainId);
+            const line = document.createElementNS(svgNamespace, "line");
+            line.setAttribute("x1", String(node.x + SYSTEM_MAP_NODE_WIDTH / 2));
+            line.setAttribute("y1", String(node.y + SYSTEM_MAP_NODE_HEIGHT / 2));
+            line.setAttribute("x2", String(target.x + SYSTEM_MAP_NODE_WIDTH / 2));
+            line.setAttribute("y2", String(target.y + SYSTEM_MAP_NODE_HEIGHT / 2));
+            line.classList.add("system-map-edge");
+            line.dataset.sourceId = node.id;
+            line.dataset.targetId = target.id;
+            node.edgeElement = line;
+            els.systemMapEdges.appendChild(line);
+        });
+
+        els.systemMapNodeCount.textContent = String(map.nodes.length);
+        requestSystemMapFrame();
+    }
+
+    function bindSystemMapEvents() {
+        if (!els.systemMapViewport) return;
+        els.systemMapSearch.addEventListener("input", () => requestSystemMapFrame());
+        els.systemMapSearch.addEventListener("keydown", event => {
+            if (event.key !== "Enter") return;
+            const query = els.systemMapSearch.value.trim().toLowerCase();
+            if (!query) return;
+            const match = state.systemMap.nodes.find(node => node.searchBlob.includes(query));
+            if (match) focusSystemMapNode(match);
+        });
+        els.systemMapZoomOut.addEventListener("click", () => zoomSystemMapAtCenter(0.82));
+        els.systemMapZoomIn.addEventListener("click", () => zoomSystemMapAtCenter(1.22));
+        els.systemMapZoomValue.addEventListener("click", () => setSystemMapZoomAtCenter(1));
+        els.systemMapFit.addEventListener("click", fitSystemMap);
+        els.systemMapHome.addEventListener("click", () => focusSystemMapHome(false));
+
+        els.systemMapViewport.addEventListener("wheel", event => {
+            if (!state.systemMapLoaded) return;
+            event.preventDefault();
+            const rect = els.systemMapViewport.getBoundingClientRect();
+            const factor = Math.exp(-event.deltaY * 0.0013);
+            zoomSystemMapAtPoint(factor, event.clientX - rect.left, event.clientY - rect.top);
+        }, { passive: false });
+
+        els.systemMapViewport.addEventListener("pointerdown", event => {
+            if (event.button !== 0 || event.target.closest(".system-map-node")) return;
+            const map = state.systemMap;
+            map.dragging = true;
+            map.dragPointerId = event.pointerId;
+            map.dragStartX = event.clientX;
+            map.dragStartY = event.clientY;
+            map.dragOriginX = map.panX;
+            map.dragOriginY = map.panY;
+            els.systemMapViewport.classList.add("dragging");
+            els.systemMapViewport.setPointerCapture(event.pointerId);
+        });
+        els.systemMapViewport.addEventListener("pointermove", event => {
+            const map = state.systemMap;
+            if (!map.dragging || map.dragPointerId !== event.pointerId) return;
+            map.panX = map.dragOriginX + event.clientX - map.dragStartX;
+            map.panY = map.dragOriginY + event.clientY - map.dragStartY;
+            requestSystemMapFrame();
+        });
+        const stopDragging = event => {
+            const map = state.systemMap;
+            if (!map.dragging || (event.pointerId !== undefined && map.dragPointerId !== event.pointerId)) return;
+            map.dragging = false;
+            map.dragPointerId = null;
+            els.systemMapViewport.classList.remove("dragging");
+            if (event.pointerId !== undefined && els.systemMapViewport.hasPointerCapture(event.pointerId)) {
+                els.systemMapViewport.releasePointerCapture(event.pointerId);
+            }
+        };
+        els.systemMapViewport.addEventListener("pointerup", stopDragging);
+        els.systemMapViewport.addEventListener("pointercancel", stopDragging);
+
+        els.systemMapViewport.addEventListener("keydown", event => {
+            if (!state.systemMapLoaded) return;
+            const panStep = 80;
+            if (event.key === "+" || event.key === "=") {
+                event.preventDefault();
+                zoomSystemMapAtCenter(1.2);
+            } else if (event.key === "-" || event.key === "_") {
+                event.preventDefault();
+                zoomSystemMapAtCenter(0.84);
+            } else if (event.key === "0") {
+                event.preventDefault();
+                fitSystemMap();
+            } else if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) {
+                event.preventDefault();
+                state.systemMap.panX += event.key === "ArrowLeft" ? panStep : event.key === "ArrowRight" ? -panStep : 0;
+                state.systemMap.panY += event.key === "ArrowUp" ? panStep : event.key === "ArrowDown" ? -panStep : 0;
+                requestSystemMapFrame();
+            }
+        });
+        window.addEventListener("resize", () => {
+            if (state.systemMapLoaded && state.activeView === "system-map") requestSystemMapFrame();
+        });
+    }
+
+    function clampSystemMapZoom(value) {
+        return Math.min(SYSTEM_MAP_MAX_ZOOM, Math.max(SYSTEM_MAP_MIN_ZOOM, value));
+    }
+
+    function zoomSystemMapAtCenter(factor) {
+        const rect = els.systemMapViewport.getBoundingClientRect();
+        zoomSystemMapAtPoint(factor, rect.width / 2, rect.height / 2);
+    }
+
+    function setSystemMapZoomAtCenter(zoom) {
+        const map = state.systemMap;
+        const rect = els.systemMapViewport.getBoundingClientRect();
+        const worldX = (rect.width / 2 - map.panX) / map.zoom;
+        const worldY = (rect.height / 2 - map.panY) / map.zoom;
+        map.zoom = clampSystemMapZoom(zoom);
+        map.panX = rect.width / 2 - worldX * map.zoom;
+        map.panY = rect.height / 2 - worldY * map.zoom;
+        requestSystemMapFrame();
+    }
+
+    function zoomSystemMapAtPoint(factor, viewportX, viewportY) {
+        const map = state.systemMap;
+        const previousZoom = map.zoom;
+        const nextZoom = clampSystemMapZoom(previousZoom * factor);
+        if (Math.abs(previousZoom - nextZoom) < 0.0001) return;
+        const worldX = (viewportX - map.panX) / previousZoom;
+        const worldY = (viewportY - map.panY) / previousZoom;
+        map.zoom = nextZoom;
+        map.panX = viewportX - worldX * nextZoom;
+        map.panY = viewportY - worldY * nextZoom;
+        requestSystemMapFrame();
+    }
+
+    function fitSystemMap() {
+        if (!state.systemMapLoaded) return;
+        const map = state.systemMap;
+        const rect = els.systemMapViewport.getBoundingClientRect();
+        const padding = Math.min(55, Math.max(24, rect.width * 0.035));
+        const availableWidth = Math.max(100, rect.width - padding * 2);
+        const availableHeight = Math.max(100, rect.height - padding * 2);
+        map.zoom = clampSystemMapZoom(Math.min(availableWidth / map.width, availableHeight / map.height));
+        map.panX = (rect.width - map.width * map.zoom) / 2;
+        map.panY = (rect.height - map.height * map.zoom) / 2;
+        requestSystemMapFrame();
+    }
+
+    function focusSystemMapHome(initial) {
+        if (!state.systemMapLoaded) return;
+        const map = state.systemMap;
+        const rect = els.systemMapViewport.getBoundingClientRect();
+        const core = map.regions.find(region => region.id === "core") || map.regions[0];
+        const desiredZoom = clampSystemMapZoom(Math.min(
+            (rect.width * 0.9) / Math.max(1, core.width),
+            (rect.height * 0.86) / Math.max(1, core.height),
+            initial ? 0.72 : 0.9
+        ));
+        map.zoom = desiredZoom;
+        map.panX = rect.width / 2 - (core.x + core.width / 2) * desiredZoom;
+        map.panY = rect.height / 2 - (core.y + core.height / 2) * desiredZoom;
+        requestSystemMapFrame();
+    }
+
+    function focusSystemMapNode(node) {
+        if (!node) return;
+        const map = state.systemMap;
+        const rect = els.systemMapViewport.getBoundingClientRect();
+        map.zoom = Math.max(map.zoom, 0.82);
+        map.panX = rect.width / 2 - (node.x + SYSTEM_MAP_NODE_WIDTH / 2) * map.zoom;
+        map.panY = rect.height / 2 - (node.y + SYSTEM_MAP_NODE_HEIGHT / 2) * map.zoom;
+        requestSystemMapFrame();
+        node.element?.focus({ preventScroll: true });
+    }
+
+    // 所有拖拽/缩放更新合并到一个 RAF，避免 pointermove/wheel 高频触发布局与样式刷新。
+    function requestSystemMapFrame() {
+        const map = state.systemMap;
+        if (map.frameRequest) return;
+        map.frameRequest = requestAnimationFrame(() => {
+            map.frameRequest = 0;
+            els.systemMapSurface.style.transform = `translate3d(${map.panX}px, ${map.panY}px, 0) scale(${map.zoom})`;
+            els.systemMapZoomValue.textContent = `${Math.round(map.zoom * 100)}%`;
+            updateSystemMapVisibility();
+        });
+    }
+
+    // 可视区域裁剪只显示附近节点；脚本数继续增长时不会让整张大图持续参与绘制。
+    function updateSystemMapVisibility() {
+        if (!state.systemMapLoaded && !state.systemMap.nodes.length) return;
+        const map = state.systemMap;
+        const rect = els.systemMapViewport.getBoundingClientRect();
+        const padding = 320;
+        const worldLeft = -map.panX / map.zoom - padding;
+        const worldTop = -map.panY / map.zoom - padding;
+        const worldRight = worldLeft + rect.width / map.zoom + padding * 2;
+        const worldBottom = worldTop + rect.height / map.zoom + padding * 2;
+        const query = String(els.systemMapSearch.value || "").trim().toLowerCase();
+        let visibleCount = 0;
+
+        map.nodes.forEach(node => {
+            const matches = !query || node.searchBlob.includes(query);
+            const inViewport = node.x + SYSTEM_MAP_NODE_WIDTH >= worldLeft && node.x <= worldRight &&
+                node.y + SYSTEM_MAP_NODE_HEIGHT >= worldTop && node.y <= worldBottom;
+            const visible = matches && inViewport;
+            node.element.hidden = !visible;
+            if (visible) visibleCount++;
+        });
+        map.nodes.forEach(node => {
+            if (!node.edgeElement) return;
+            const target = map.nodeById.get(node.mainId);
+            node.edgeElement.hidden = node.element.hidden || target?.element?.hidden !== false;
+        });
+        map.regions.forEach(region => {
+            const inViewport = region.x + region.width >= worldLeft && region.x <= worldRight &&
+                region.y + region.height >= worldTop && region.y <= worldBottom;
+            region.element.hidden = !inViewport;
+        });
+        els.systemMapVisibleCount.textContent = `${visibleCount} / ${map.nodes.length}`;
+    }
+
+    async function openSystemScript(node) {
+        if (!state.projectRoot) await checkWriteCapability();
+        if (!state.projectRoot) {
+            setStatus("warning", state.publicReadOnly
+                ? "公开只读 Wiki 不暴露本机项目路径，脚本跳转仅在本机 Wiki 中启用。"
+                : "当前 Wiki 服务没有提供本机项目路径，无法打开 VS Code。请使用本地启动脚本打开 Wiki。");
+            return;
+        }
+        const relativePath = String(node?.path || "").replace(/\\/g, "/").replace(/^\/+/, "");
+        if (!relativePath.startsWith("Assets/") || !relativePath.toLowerCase().endsWith(".cs")) {
+            setStatus("error", `拒绝打开非法脚本路径：${relativePath || "<空>"}`);
+            return;
+        }
+        const root = state.projectRoot.replace(/\\/g, "/").replace(/\/+$/, "");
+        const fullPath = `${root}/${relativePath}`;
+        const vscodeUri = `vscode://file/${encodeURI(fullPath).replace(/#/g, "%23").replace(/\?/g, "%3F")}`;
+        window.location.href = vscodeUri;
+    }
+
+    function updateSystemMapEditorHint() {
+        if (!els.systemMapHint) return;
+        if (state.projectRoot) {
+            els.systemMapHint.textContent = "拖拽移动 · 滚轮缩放 · 点击节点打开 VS Code";
+        } else if (state.publicReadOnly) {
+            els.systemMapHint.textContent = "拖拽移动 · 滚轮缩放 · 公开只读模式不启用本机源码跳转";
+        } else {
+            els.systemMapHint.textContent = "拖拽移动 · 滚轮缩放 · 本地服务就绪后可点击节点打开 VS Code";
+        }
     }
 
     async function fetchText(path) {

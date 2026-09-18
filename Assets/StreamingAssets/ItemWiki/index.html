@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FlatWorld · Item Wiki</title>
-    <link rel="stylesheet" href="styles.css?v=20260913-3">
+    <link rel="stylesheet" href="styles.css?v=20260918-1">
 </head>
 <body>
 <div class="site-shell">
@@ -30,6 +30,11 @@
                 <span>03</span>
                 <strong>游戏设计</strong>
                 <small>GAME DESIGN</small>
+            </button>
+            <button id="systemMapViewButton" class="header-page-button" type="button">
+                <span>04</span>
+                <strong>系统结构</strong>
+                <small>SCRIPT WORLD</small>
             </button>
         </nav>
 
@@ -236,6 +241,61 @@
             </div>
         </section>
 
+        <section id="systemMapBook" class="system-map-book pixel-frame" hidden>
+            <div class="book-corner corner-tl"></div>
+            <div class="book-corner corner-tr"></div>
+            <div class="book-corner corner-bl"></div>
+            <div class="book-corner corner-br"></div>
+
+            <div class="page-ornament overview-ornament">
+                <span></span><strong>SCRIPT WORLD</strong><span></span>
+            </div>
+
+            <div class="system-map-heading">
+                <div>
+                    <div class="overview-kicker">FLATWORLD SYSTEM SCRIPT WORLD</div>
+                    <h2>系统脚本结构</h2>
+                    <p>由 <code>docs/system-script-map.md</code> 驱动。拖拽探索、滚轮缩放；每个节点只显示一条最重要的脚本关系。</p>
+                </div>
+                <div class="system-map-stats">
+                    <strong id="systemMapNodeCount">0</strong>
+                    <span>脚本节点</span>
+                </div>
+            </div>
+
+            <div class="system-map-toolbar">
+                <label class="system-map-search" for="systemMapSearch">
+                    <span>⌕</span>
+                    <input id="systemMapSearch" type="search" autocomplete="off" placeholder="搜索脚本、系统、职责或路径…">
+                </label>
+                <div class="system-map-actions" aria-label="系统结构地图控制">
+                    <button id="systemMapZoomOut" type="button" title="缩小">−</button>
+                    <button id="systemMapZoomValue" type="button" title="恢复 100%">100%</button>
+                    <button id="systemMapZoomIn" type="button" title="放大">＋</button>
+                    <button id="systemMapFit" type="button">适配全图</button>
+                    <button id="systemMapHome" type="button">回到核心</button>
+                </div>
+            </div>
+
+            <div id="systemMapViewport" class="system-map-viewport" tabindex="0" aria-label="FlatWorld 系统脚本结构大图">
+                <div id="systemMapSurface" class="system-map-surface">
+                    <div id="systemMapRegions" class="system-map-regions" aria-hidden="true"></div>
+                    <svg id="systemMapEdges" class="system-map-edges" aria-hidden="true"></svg>
+                    <div id="systemMapNodes" class="system-map-nodes"></div>
+                </div>
+                <div class="system-map-hud">
+                    <span id="systemMapHint">拖拽移动 · 滚轮缩放 · 点击节点打开 VS Code</span>
+                    <span id="systemMapVisibleCount">0 / 0</span>
+                </div>
+            </div>
+
+            <div class="system-map-legend">
+                <span><i class="system-map-legend-line"></i> 主连接</span>
+                <span>节点点击：本地 Wiki → VS Code 源码</span>
+                <span>公开只读分享不会暴露本机项目路径</span>
+            </div>
+        </section>
+
         <section id="settingsBook" class="settings-book pixel-frame" hidden>
             <div class="book-corner corner-tl"></div>
             <div class="book-corner corner-tr"></div>
@@ -315,6 +375,6 @@
     </details>
 </template>
 
-<script src="app.js?v=20260913-3" defer></script>
+<script src="app.js?v=20260918-1" defer></script>
 </body>
 </html>
