@@ -35,6 +35,7 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
     private bool editing;
     private bool originalRaycastTarget;
     private float originalCanvasAlpha;
+    private bool originalCanvasBlocksRaycasts;
 
     public string ControlId => controlId;
     public bool FixedMoveJoystickOnly => fixedMoveJoystickOnly;
@@ -157,7 +158,9 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
         if (dragCanvasGroup != null)
         {
             originalCanvasAlpha = dragCanvasGroup.alpha;
+            originalCanvasBlocksRaycasts = dragCanvasGroup.blocksRaycasts;
             dragCanvasGroup.alpha = 1f;
+            dragCanvasGroup.blocksRaycasts = true;
         }
     }
 
@@ -225,7 +228,10 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
         if (dragGraphic != null)
             dragGraphic.raycastTarget = originalRaycastTarget;
         if (dragCanvasGroup != null)
+        {
             dragCanvasGroup.alpha = originalCanvasAlpha;
+            dragCanvasGroup.blocksRaycasts = originalCanvasBlocksRaycasts;
+        }
 
         dragGraphic = null;
         dragCanvasGroup = null;

@@ -95,11 +95,21 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     private bool blocksGameplayInput = true;
     private float openVisualAlpha = 1f;
     private bool runtimeStateInitialized;
+    private bool animationReferenceResolved;
     private string preferredSelectableName;
     private GameObject previousSelectedObject;
+    private BaseUIAnimation uiAnimation;
 
     public event Action Opened;
     public event Action Closed;
+    #region 可选视觉过渡契约
+    private int visualTransitionRevision;
+    private bool visualTransitionPending;
+    /// <summary>打开态的目标透明度，供表现层保留 HUD 等面板的透明度偏好。</summary>
+    public float OpenVisualAlpha => openVisualAlpha;
+    /// <summary>仅代表视觉仍在过渡，不改变 IsOpen 和业务开关事件的语义。</summary>
+    public bool IsVisualTransitioning => visualTransitionPending;
+    #endregion
     /// <summary>领域面板可优先消费取消操作，例如关闭危险确认层而不是直接关闭整个面板。</summary>
     public Func<BaseEventData, bool> CancelOverride { get; set; }
     /// <summary>全局返回快捷键可改为执行领域操作，例如主菜单先打开退出确认弹窗。</summary>
@@ -135,7 +145,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         ApplyCachedRuntimeBindings();
 
         // 初始化面板状态
-        if (canvasGroup != null)
+        if (canvasGroup != null && !runtimeStateInitialized)
         {
             isOpen = canvasGroup.alpha > 0 && canvasGroup.interactable && canvasGroup.blocksRaycasts;
             runtimeStateInitialized = true;
@@ -185,6 +195,12 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
         if (canvasGroup == null)
         {
             canvasGroup = GetComponent<CanvasGroup>();
+        }
+
+        if (!animationReferenceResolved)
+        {
+            uiAnimation = GetComponent<BaseUIAnimation>();
+            animationReferenceResolved = true;
         }
 
         CanDrag = Dragger != null;
@@ -399,23 +415,29 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
             return;
 
         bool currentlyOpen = isOpen || (canvasGroup.interactable && canvasGroup.blocksRaycasts);
-        if (currentlyOpen)
+        if (currentlyOpen && !visualTransitionPending)
             canvasGroup.alpha = openVisualAlpha;
     }
 
     [Button]
     public void Open()
     {
+        EnsureRuntimeReferences();
         bool wasOpen = isOpen;
         if (canvasGroup != null)
         {
-            canvasGroup.alpha = openVisualAlpha;
             canvasGroup.interactable = true;
             canvasGroup.blocksRaycasts = true;
             isOpen = true;
+            runtimeStateInitialized = true;
         }
         // 提升层级以显示在最上层
         BasePanel.BringToFront(rectTransform);
+
+        if (!wasOpen && isOpen)
+            RequestVisualTransition();
+        else if (!visualTransitionPending)
+            ApplyFinalVisualState();
 
         if (gamepadNavigationPrepared)
         {
@@ -431,16 +453,20 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
     [Button]
     public void Close()
     {
+        EnsureRuntimeReferences();
         bool wasOpen = isOpen;
         if (canvasGroup != null)
         {
-            canvasGroup.alpha = 0;
             canvasGroup.interactable = false;
             canvasGroup.blocksRaycasts = false;
             isOpen = false;
-            // 层级以显示在最上层
-            BasePanel.BringToBack(rectTransform);
+            runtimeStateInitialized = true;
         }
+
+        if (wasOpen && !isOpen)
+            RequestVisualTransition();
+        else if (!visualTransitionPending)
+            ApplyFinalVisualState();
 
         NotifyInteractionSurfaceChanged();
         if (wasOpen && !isOpen)
@@ -448,6 +474,55 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
             RestorePreviousSelection();
             Closed?.Invoke();
         }
+    }
+
+    /// <summary>业务状态先提交，再由同物体的可选动画组件直接执行视觉过渡。</summary>
+    private void RequestVisualTransition()
+    {
+        int revision = ++visualTransitionRevision;
+        visualTransitionPending = true;
+
+        bool handled = false;
+        if (isActiveAndEnabled && uiAnimation != null)
+        {
+            Action completed = () => CompleteVisualTransition(revision);
+            handled = isOpen
+                ? uiAnimation.PlayOpen(openVisualAlpha, completed)
+                : uiAnimation.PlayClose(openVisualAlpha, completed);
+        }
+
+        if (handled)
+            return;
+
+        visualTransitionPending = false;
+        ApplyFinalVisualState();
+    }
+
+    /// <summary>只有当前请求能提交视觉，旧动画的迟到回调无效。</summary>
+    private void CompleteVisualTransition(int revision)
+    {
+        if (revision != visualTransitionRevision)
+            return;
+        visualTransitionPending = false;
+        ApplyFinalVisualState();
+    }
+
+    /// <summary>没有表现组件或过渡结束时保持原有即时显示行为。</summary>
+    private void ApplyFinalVisualState()
+    {
+        if (canvasGroup != null)
+            canvasGroup.alpha = isOpen ? openVisualAlpha : 0f;
+        // 父级正在停用/销毁时 Unity 禁止改兄弟顺序；此时只提交透明度并清理请求。
+        if (!isOpen && isActiveAndEnabled)
+            BringToBack(rectTransform);
+    }
+
+    /// <summary>销毁时取消动画且让旧完成回调失效，不再提交视觉层级。</summary>
+    private void CancelVisualTransition()
+    {
+        visualTransitionRevision++;
+        visualTransitionPending = false;
+        uiAnimation?.CancelAnimation();
     }
 
     public bool IsOpen()
@@ -650,6 +725,7 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
     private void OnDestroy()
     {
+        CancelVisualTransition();
         // 销毁阶段不再刷新交互面，避免 HUD 在对象销毁时重新激活或创建 UI。
         if (isOpen)
         {
@@ -671,6 +747,17 @@ public sealed class BasePanel : MonoBehaviour, ICancelHandler
 
     private void OnDisable()
     {
+        if (visualTransitionPending)
+        {
+            if (uiAnimation != null)
+                uiAnimation.CompleteAnimation();
+
+            if (visualTransitionPending)
+            {
+                visualTransitionPending = false;
+                ApplyFinalVisualState();
+            }
+        }
         NotifyInteractionSurfaceChanged();
     }
 

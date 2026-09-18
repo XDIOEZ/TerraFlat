@@ -261,6 +261,7 @@ namespace FlatWorld.Localization.Editor
                 { "界面设置", "Interface Settings" },
                 { "保存与退出", "Save & Exit" },
                 { "界面缩放", "UI Scale" },
+                { "UI 动画速度", "UI Animation Speed" },
                 { "快捷栏底部间距", "Hotbar Bottom Spacing" },
                 { "触屏控件透明度", "Touch Controls Opacity" },
                 { "左侧触控区", "Left Touch Zone" },

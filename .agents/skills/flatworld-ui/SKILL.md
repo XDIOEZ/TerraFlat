@@ -92,6 +92,11 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 ## 架构与运行时约束
 
+- 面板动画位于 `Common/Animation/`，依赖固定为 `BasePanel → BaseUIAnimation → UIAnimationManager → JSON`：BasePanel 直接调用同物体 BUA，BUA 禁止反向引用或监听 BasePanel；`Opened/Closed` 继续保持同步业务事件，无动画组件时维持即时开关。
+- 每个 BasePanel 同物体最多一个 `BaseUIAnimation` 或子类，稳定 `AnimationId` 匹配 `Resources/Config/UIAnimations.json`。JSON 只保存 Duration、相对 Offset、Scale、Ease 等结果参数，不保存移动/开关速度，也不按 `Screen.width/height` 二次换算；分辨率适配交给现有 CanvasScaler。
+- `UIAnimationManager` 缓存校验后的配置并管理已注册动画的统一运行时播放倍率；倍率只作用于本系统根 Tween，不修改 DOTween/Unity 全局时间。热重载不得改正在播放行程的几何/时长快照。
+- 滑动/缩放使用独立 MotionRoot，避免与安全区、LayoutGroup、拖拽器争写同一 RectTransform；反向开关保留当前进度，结束/禁用恢复姿态。正式接入需同步 Prefab 与构建器，禁止启动时自动批量迁移加载遮挡层/HUD。
+
 - 液体视觉黏稠度使用 `LiquidStyle.Viscosity`，与浑浊度独立；液面和罐口液流必须共用该参数，不能按蜂蜜等具体液体 ID 分支。默认值 0 保持水的表现。新增样式通过 `FlatWorld/UI/Sync Water Vessel Liquid Styles` 定向写入现有 Prefab，避免为了新增液体重建容器外形或覆盖已有外观配置；完整重建和定向同步共用样式工厂。
 
 - 水容器外形通过正式面板的 `WaterVesselPanel.Appearances` 按物品 ID 配置，运行时不按具体容器写分支；一套外观必须同时提供剖面、同画布内腔遮罩、归一化水位区间及左右出口。未匹配的容器恢复 Awake 捕获的默认外观，避免共用面板从椰子壳切回陶罐后残留遮罩或出口；正式 Prefab 与构建器必须同步维护。PNG 的 Y 从顶部向下，水位及出口归一化 Y 从底部向上。

@@ -3757,6 +3757,7 @@ GameObject:
   - component: {fileID: 7979872911735153402}
   - component: {fileID: 1376142362964742607}
   - component: {fileID: 4603082157621604449}
+  - component: {fileID: 7406109940400091002}
   m_Layer: 5
   m_Name: UI_MainMenuSettings
   m_TagString: Untagged
@@ -3764,6 +3765,20 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &7406109940400091002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8494106397721402682}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77737229ac6aa6443a62abde3fb3d418, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  animationId: panel.settings
+  motionRoot: {fileID: 0}
 --- !u!224 &7513061095771514790
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3816,9 +3831,9 @@ CanvasGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8494106397721402682}
   m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
+  m_Alpha: 0
+  m_Interactable: 0
+  m_BlocksRaycasts: 0
   m_IgnoreParentGroups: 0
 --- !u!114 &5545954549678109179
 MonoBehaviour:

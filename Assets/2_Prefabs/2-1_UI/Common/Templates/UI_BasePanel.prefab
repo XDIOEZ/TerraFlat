@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 2006754181478280131}
   - component: {fileID: 2556554368556768200}
   - component: {fileID: 8802023713154152858}
+  - component: {fileID: 7406109940400091001}
   m_Layer: 0
   m_Name: UI_BasePanel
   m_TagString: Untagged
@@ -19,6 +20,20 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &7406109940400091001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5310961288401276437}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77737229ac6aa6443a62abde3fb3d418, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  animationId: panel.default
+  motionRoot: {fileID: 0}
 --- !u!224 &3595281614573085700
 RectTransform:
   m_ObjectHideFlags: 0

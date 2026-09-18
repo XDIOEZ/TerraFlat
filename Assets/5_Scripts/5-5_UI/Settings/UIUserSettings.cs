@@ -16,6 +16,7 @@ public static class UIUserSettings
     #region 键与默认值
 
     private const string ScaleKey = "FlatWorld.UI.Scale";
+    private const string AnimationSpeedKey = "FlatWorld.UI.AnimationSpeed";
     private const string HotbarBottomSpacingKey = "FlatWorld.UI.HotbarBottomSpacing";
     private const string RespectSafeAreaKey = "FlatWorld.UI.RespectSafeArea";
     private const string FloatingMoveJoystickKey = "FlatWorld.Mobile.FloatingMoveJoystick";
@@ -51,6 +52,14 @@ public static class UIUserSettings
 
     /// <summary>界面缩放每次调整的倍率步长。</summary>
     public const float ScaleStep = 0.05f;
+    /// <summary>UI 动画默认播放倍率。</summary>
+    public const float DefaultAnimationSpeed = 1f;
+    /// <summary>UI 动画允许的最慢播放倍率，避免 0 倍速让面板视觉过渡永久停住。</summary>
+    public const float MinimumAnimationSpeed = 0.25f;
+    /// <summary>UI 动画允许的最快播放倍率。</summary>
+    public const float MaximumAnimationSpeed = 3f;
+    /// <summary>UI 动画速度滑动条步长。</summary>
+    public const float AnimationSpeedStep = 0.05f;
     public const float DefaultHotbarBottomSpacing = 28f;
     public const float MinimumHotbarBottomSpacing = -128f;
     public const float MaximumHotbarBottomSpacing = 128f;
@@ -71,6 +80,7 @@ public static class UIUserSettings
 
     public const string SettingsProviderId = "ui";
     public const string ScaleSettingKey = "ui.scale";
+    public const string AnimationSpeedSettingKey = "ui.animationSpeed";
     public const string HotbarBottomSpacingSettingKey = "ui.hotbarBottomSpacing";
     public const string RespectSafeAreaSettingKey = "ui.respectSafeArea";
     public const string FloatingMoveJoystickSettingKey = "ui.floatingMoveJoystick";
@@ -85,6 +95,7 @@ public static class UIUserSettings
 
     private static bool initialized;
     private static float cachedScale = DefaultScale;
+    private static float cachedAnimationSpeed = DefaultAnimationSpeed;
     private static float cachedHotbarBottomSpacing = DefaultHotbarBottomSpacing;
     private static bool cachedRespectSafeArea = true;
     private static bool cachedFloatingMoveJoystick = true;
@@ -120,6 +131,16 @@ public static class UIUserSettings
         {
             EnsureInitialized();
             return cachedScale;
+        }
+    }
+
+    /// <summary>统一 UI 面板动画播放倍率；1 为正常速度。</summary>
+    public static float AnimationSpeed
+    {
+        get
+        {
+            EnsureInitialized();
+            return cachedAnimationSpeed;
         }
     }
 
@@ -219,6 +240,24 @@ public static class UIUserSettings
         PlayerPrefs.SetFloat(ScaleKey, sanitized);
         PlayerPrefs.Save();
         Changed?.Invoke();
+        return sanitized;
+    }
+
+    /// <summary>保存 UI 动画播放倍率，并立即应用到当前由 UIAnimationManager 管理的过渡。</summary>
+    public static float SetAnimationSpeed(float value)
+    {
+        EnsureInitialized();
+        float sanitized = SanitizeAnimationSpeed(value);
+        if (Mathf.Approximately(cachedAnimationSpeed, sanitized))
+        {
+            UIAnimationManager.Instance.SetPlaybackSpeed(cachedAnimationSpeed);
+            return cachedAnimationSpeed;
+        }
+
+        cachedAnimationSpeed = sanitized;
+        PlayerPrefs.SetFloat(AnimationSpeedKey, sanitized);
+        PlayerPrefs.Save();
+        UIAnimationManager.Instance.SetPlaybackSpeed(sanitized);
         return sanitized;
     }
 
@@ -402,6 +441,9 @@ public static class UIUserSettings
         bool mobileLayoutChanged = HasMobileControlLayoutPreferences();
         bool visualChanged = !Mathf.Approximately(cachedScale, DefaultScale) ||
                              !cachedRespectSafeArea;
+        bool animationSpeedChanged = !Mathf.Approximately(
+            cachedAnimationSpeed,
+            DefaultAnimationSpeed);
         bool hotbarLayoutChanged = !Mathf.Approximately(
             cachedHotbarBottomSpacing,
             DefaultHotbarBottomSpacing);
@@ -415,11 +457,12 @@ public static class UIUserSettings
                              !Mathf.Approximately(
                                  cachedRightControlZoneRatio,
                                  DefaultRightControlZoneRatio);
-        if (!visualChanged && !hotbarLayoutChanged && !mobileChanged &&
+        if (!visualChanged && !animationSpeedChanged && !hotbarLayoutChanged && !mobileChanged &&
             !touchOpacityChanged && !mobileLayoutChanged)
             return;
 
         cachedScale = DefaultScale;
+        cachedAnimationSpeed = DefaultAnimationSpeed;
         cachedHotbarBottomSpacing = DefaultHotbarBottomSpacing;
         cachedRespectSafeArea = true;
         cachedFloatingMoveJoystick = true;
@@ -427,6 +470,7 @@ public static class UIUserSettings
         cachedLeftControlZoneRatio = DefaultLeftControlZoneRatio;
         cachedRightControlZoneRatio = DefaultRightControlZoneRatio;
         PlayerPrefs.SetFloat(ScaleKey, DefaultScale);
+        PlayerPrefs.SetFloat(AnimationSpeedKey, DefaultAnimationSpeed);
         PlayerPrefs.SetFloat(HotbarBottomSpacingKey, DefaultHotbarBottomSpacing);
         PlayerPrefs.SetInt(RespectSafeAreaKey, 1);
         PlayerPrefs.SetInt(FloatingMoveJoystickKey, 1);
@@ -435,6 +479,8 @@ public static class UIUserSettings
         PlayerPrefs.SetFloat(RightControlZoneRatioKey, DefaultRightControlZoneRatio);
         ClearMobileControlLayoutPreferences();
         PlayerPrefs.Save();
+        if (animationSpeedChanged)
+            UIAnimationManager.Instance.SetPlaybackSpeed(DefaultAnimationSpeed);
         if (visualChanged)
             Changed?.Invoke();
         if (hotbarLayoutChanged)
@@ -458,6 +504,7 @@ public static class UIUserSettings
         EnsureInitialized();
         bool mobileLayoutChanged = HasMobileControlLayoutPreferences();
         bool changed = !Mathf.Approximately(cachedScale, DefaultScale) ||
+                       !Mathf.Approximately(cachedAnimationSpeed, DefaultAnimationSpeed) ||
                        !Mathf.Approximately(cachedHotbarBottomSpacing, DefaultHotbarBottomSpacing) ||
                        !cachedRespectSafeArea ||
                        !cachedFloatingMoveJoystick ||
@@ -478,6 +525,10 @@ public static class UIUserSettings
             return;
 
         cachedScale = DefaultScale;
+        bool animationSpeedChanged = !Mathf.Approximately(
+            cachedAnimationSpeed,
+            DefaultAnimationSpeed);
+        cachedAnimationSpeed = DefaultAnimationSpeed;
         bool hotbarLayoutChanged = !Mathf.Approximately(
             cachedHotbarBottomSpacing,
             DefaultHotbarBottomSpacing);
@@ -499,6 +550,7 @@ public static class UIUserSettings
         cachedLeftControlZoneRatio = DefaultLeftControlZoneRatio;
         cachedRightControlZoneRatio = DefaultRightControlZoneRatio;
         PlayerPrefs.SetFloat(ScaleKey, DefaultScale);
+        PlayerPrefs.SetFloat(AnimationSpeedKey, DefaultAnimationSpeed);
         PlayerPrefs.SetFloat(HotbarBottomSpacingKey, DefaultHotbarBottomSpacing);
         PlayerPrefs.SetInt(RespectSafeAreaKey, 1);
         PlayerPrefs.SetInt(FloatingMoveJoystickKey, 1);
@@ -508,6 +560,8 @@ public static class UIUserSettings
         PlayerPrefs.SetFloat(RightControlZoneRatioKey, DefaultRightControlZoneRatio);
         ClearMobileControlLayoutPreferences();
         PlayerPrefs.Save();
+        if (animationSpeedChanged)
+            UIAnimationManager.Instance.SetPlaybackSpeed(DefaultAnimationSpeed);
         Changed?.Invoke();
         if (hotbarLayoutChanged)
             HotbarLayoutChanged?.Invoke();
@@ -529,6 +583,7 @@ public static class UIUserSettings
         SettingsProviderRegistry.Unregister(settingsProvider);
         initialized = false;
         cachedScale = DefaultScale;
+        cachedAnimationSpeed = DefaultAnimationSpeed;
         cachedHotbarBottomSpacing = DefaultHotbarBottomSpacing;
         cachedRespectSafeArea = true;
         cachedFloatingMoveJoystick = true;
@@ -549,6 +604,14 @@ public static class UIUserSettings
     private static void RegisterSettingsProviderOnLoad()
     {
         RegisterSettingsProvider();
+    }
+
+    /// <summary>在场景加载前恢复持久化倍率，确保首个面板动画也使用玩家设置。</summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void ApplyAnimationSpeedOnLoad()
+    {
+        EnsureInitialized();
+        UIAnimationManager.Instance.SetPlaybackSpeed(cachedAnimationSpeed);
     }
 
     private static ISettingsProvider RegisterSettingsProvider()
@@ -585,11 +648,23 @@ public static class UIUserSettings
                     value => SetScale(value)),
                 new SettingsSlider(
                     new SettingDescriptor(
+                        AnimationSpeedSettingKey,
+                        "UI 动画速度",
+                        SettingControlType.Slider,
+                        "ui",
+                        order: 1),
+                    MinimumAnimationSpeed,
+                    MaximumAnimationSpeed,
+                    AnimationSpeedStep,
+                    () => AnimationSpeed,
+                    value => SetAnimationSpeed(value)),
+                new SettingsSlider(
+                    new SettingDescriptor(
                         HotbarBottomSpacingSettingKey,
                         "快捷栏底部间距",
                         SettingControlType.Slider,
                         "ui",
-                        order: 1),
+                        order: 2),
                     MinimumHotbarBottomSpacing,
                     MaximumHotbarBottomSpacing,
                     HotbarBottomSpacingStep,
@@ -688,6 +763,8 @@ public static class UIUserSettings
             return;
 
         cachedScale = SanitizeScale(PlayerPrefs.GetFloat(ScaleKey, DefaultScale));
+        cachedAnimationSpeed = SanitizeAnimationSpeed(
+            PlayerPrefs.GetFloat(AnimationSpeedKey, DefaultAnimationSpeed));
         cachedHotbarBottomSpacing = SanitizeHotbarBottomSpacing(
             PlayerPrefs.GetFloat(HotbarBottomSpacingKey, DefaultHotbarBottomSpacing));
         cachedRespectSafeArea = PlayerPrefs.GetInt(RespectSafeAreaKey, 1) != 0;
@@ -707,6 +784,19 @@ public static class UIUserSettings
     {
         float clamped = Mathf.Clamp(value, MinimumScale, MaximumScale);
         return Mathf.Round(clamped / ScaleStep) * ScaleStep;
+    }
+
+    /// <summary>把 UI 动画倍率限制到设置页允许的安全范围。</summary>
+    private static float SanitizeAnimationSpeed(float value)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value))
+            value = DefaultAnimationSpeed;
+
+        float clamped = Mathf.Clamp(
+            value,
+            MinimumAnimationSpeed,
+            MaximumAnimationSpeed);
+        return Mathf.Round(clamped / AnimationSpeedStep) * AnimationSpeedStep;
     }
 
     /// <summary>把快捷栏底部间距限制到界面设置页允许的整数参考像素范围。</summary>

@@ -857,8 +857,8 @@ public static class FlatWorldUITheme
                 else if (handle != null)
                 {
                     slider.handleRect.gameObject.SetActive(true);
-                    slider.handleRect.sizeDelta = new Vector2(14f, 38f);
-                    handle.color = TextPrimary;
+                    slider.handleRect.sizeDelta = new Vector2(10f, 15.2f);
+                    handle.color = Accent;
                     handle.sprite = null;
                     handle.type = Image.Type.Simple;
                     handle.preserveAspect = false;

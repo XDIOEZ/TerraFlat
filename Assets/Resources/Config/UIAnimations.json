@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "defaultId": "panel.default",
+  "profiles": [
+    {
+      "id": "panel.default",
+      "data": {
+        "openDuration": 0.2,
+        "closeDuration": 0.15,
+        "openEase": "OutCubic",
+        "closeEase": "InCubic"
+      }
+    },
+    {
+      "id": "panel.settings",
+      "data": {
+        "openDuration": 0.18,
+        "closeDuration": 0.12,
+        "openEase": "OutCubic",
+        "closeEase": "InCubic"
+      }
+    },
+    {
+      "id": "panel.slide",
+      "data": {
+        "openDuration": 0.24,
+        "closeDuration": 0.18,
+        "offsetX": 0.0,
+        "offsetY": -48.0,
+        "openEase": "OutCubic",
+        "closeEase": "InCubic"
+      }
+    },
+    {
+      "id": "panel.scale",
+      "data": {
+        "openDuration": 0.2,
+        "closeDuration": 0.15,
+        "closedScale": 0.94,
+        "openEase": "OutCubic",
+        "closeEase": "InCubic"
+      }
+    },
+    {
+      "id": "panel.test.slide",
+      "data": {
+        "openDuration": 0.35,
+        "closeDuration": 0.25,
+        "offsetX": -120.0,
+        "offsetY": 0.0,
+        "openEase": "OutCubic",
+        "closeEase": "InCubic"
+      }
+    }
+  ]
+}
