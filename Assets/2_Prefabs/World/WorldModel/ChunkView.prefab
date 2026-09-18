@@ -134,6 +134,8 @@ MonoBehaviour:
   scaleRange: {x: 0.85, y: 1.15}
   accentVariantChance: 0.2
   grassMaterial: {fileID: 2100000, guid: 14e44684465b403baf074b99152e2ff3, type: 2}
+  sortingLayerName: Default
+  sortingOrder: 0
 --- !u!114 &2009
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -585,9 +587,9 @@ TilemapRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: -1251673239
-  m_SortingLayer: -1
-  m_SortingOrder: 3
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
   m_ChunkSize: {x: 32, y: 32, z: 32}
   m_ChunkCullingBounds: {x: 0.08, y: 0.08, z: 0}
   m_MaxChunkCount: 16

@@ -24,6 +24,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - 墙体裂缝等耐久表现必须从 `ChunkTerrainData` 的 `flatworld.tileBuilding.damage` 权威层推导；`IChunkViewRenderer.Bind` 时重建、监听 `TerrainChangeKind.Environment/Cell/TileStack` 增量刷新、`Unbind` 时解除订阅，禁止在表现组件中保存第二份生命值。
 - 墙脚、岸线等依赖邻接关系的表现除监听自身 `ChunkTerrainData.Changed` 外，还必须监听正交相邻区块的共享边界变化；`ChunkCommitted` 只表示邻区就绪，不能覆盖后续拆除或放置造成的运行时更新。
 - Ground / Water / Back / Blocking 的基础视觉统一由 `ChunkBatchRendererGroupService` 跨 Chunk 批量绘制；`ChunkTilemapRenderer` 保留历史类名用于 Prefab 兼容，但职责已变为 BRG 提交器。Blocking Tilemap 只维护 `TilemapCollider2D` 所需碰撞格，禁止重新开启其 TilemapRenderer 作为第二份视觉。
+- BRG 没有 `SpriteRenderer/TilemapRenderer` 的 Sorting Layer 字段，不能指望较低的 Render Queue 跨 Sorting Layer 压到 `Tilemap` 层下面；当前地形 BRG 使用 Default 排序域和 2987~2992 队列。草等需要盖在地形之上、普通世界 Sprite 之下的表现必须与 BRG 共用 Default 排序域，并使用高于 2992、低于 3000 的透明队列。
 - Chunk BRG 自定义 Shader 的全部数值/向量/颜色材质属性必须统一声明在 `UnityPerMaterial` CBUFFER，且同一 Shader 的所有活跃 Pass 保持一致布局；不要 `UsePass` 借用另一个材质布局不同的 Shader Pass，否则 BatchRendererGroup 会因 SRP Batcher 不兼容而拒绝绘制。
 - BRG 地形实例按脏格增量上传；岸线与墙脚方向放入实例数据，连续水深使用每水格四个格角深度在 Shader 内双线性插值。边界数据依赖八方向邻区，正交邻区变化刷新共享边、对角邻区变化刷新共享角，不得退回整 Chunk `SetTilesBlock` 或每 Chunk 水深纹理重建。
 - `ChunkMgr` 随 `WorldManager` 常驻 DDOL；`ChunkView` 及其自然物表现必须挂到当前世界场景的独立根节，禁止以 `ChunkMgr.transform` 作为活动或池化 View 的父级。

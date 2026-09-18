@@ -23,6 +23,8 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
 
     [Header("草地渲染")]
     [SerializeField] private Material grassMaterial;
+    [SerializeField] private string sortingLayerName = "Default";
+    [SerializeField] private int sortingOrder;
 
     private readonly List<Sprite> runtimeSprites = new();
     private readonly List<Tile> runtimeTiles = new();
@@ -71,15 +73,24 @@ public sealed class ChunkGrassRenderer : MonoBehaviour, IChunkViewRenderer
 
     #region 草地材质
 
-    /// <summary>为区块草地 TilemapRenderer 设置共享摆动材质，避免运行时生成材质实例。</summary>
+    /// <summary>
+    /// 为区块草地 TilemapRenderer 设置共享摆动材质与 BRG 兼容排序。
+    /// BRG 没有 SpriteRenderer 的 Sorting Layer 字段，因此草必须与 BRG 共用 Default 层，
+    /// 再由材质 Render Queue 保证位于地形批次之后、普通世界 Sprite 之前。
+    /// </summary>
     private void ApplyGrassMaterial()
     {
         if (tilemap == null || grassMaterial == null)
             return;
 
         TilemapRenderer renderer = tilemap.GetComponent<TilemapRenderer>();
-        if (renderer != null && renderer.sharedMaterial != grassMaterial)
+        if (renderer == null)
+            return;
+
+        if (renderer.sharedMaterial != grassMaterial)
             renderer.sharedMaterial = grassMaterial;
+        renderer.sortingLayerName = sortingLayerName;
+        renderer.sortingOrder = sortingOrder;
     }
 
     #endregion

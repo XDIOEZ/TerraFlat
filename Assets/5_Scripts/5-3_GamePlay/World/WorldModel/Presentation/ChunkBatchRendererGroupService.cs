@@ -303,7 +303,9 @@ internal static class ChunkBatchRendererGroupService
                 name = $"ChunkBRG_{layer}_{sourceMaterial.name}_{texture?.name}",
                 hideFlags = HideFlags.HideAndDontSave,
                 enableInstancing = true,
-                // Tilemap 是最低 SortingLayer；BRG 没有 SortingLayer 字段，因此显式放在普通 Sprite 透明队列之前。
+                // BRG 没有 SpriteRenderer/TilemapRenderer 的 Sorting Layer 字段，实际会与普通世界渲染共用默认排序域。
+                // 地形批次固定占用 2987~2992；草等 BRG 上层表现需使用 Default Sorting Layer，
+                // 并把 Render Queue 放在 2992 之后、普通世界 Sprite 3000 之前。
                 renderQueue = TerrainQueueBase + priority
             };
             runtimeMaterial.CopyPropertiesFromMaterial(sourceMaterial);
