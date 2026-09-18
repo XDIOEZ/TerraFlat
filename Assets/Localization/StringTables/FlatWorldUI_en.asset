@@ -2367,6 +2367,10 @@ MonoBehaviour:
       time you enter the world.'
     m_Metadata:
       m_Items: []
+  - m_Id: 14684599744454656
+    m_Localized: UI Animation Speed
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
