@@ -234,6 +234,97 @@
       }
     },
     {
+      "id": "Seed_Foxtail",
+      "parent": "Seed_Radish",
+      "gameName": "狗尾草籽",
+      "description": "狗尾草穗经石臼捣碎得到的草籽；指向有效耕地时播种，否则可直接食用。",
+      "weight": 0.02,
+      "volume": 0.05,
+      "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+      },
+      "modules": {
+        "plantable": {
+          "parameters": {
+            "cropItemId": "FoxtailCrop"
+          }
+        },
+        "food": {
+          "prefab": "Module_Food",
+          "id": "食物模块",
+          "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 11,
+                "Max_Carbohydrates": 11,
+                "Fat": 3,
+                "Max_Fat": 3,
+                "Protein": 4,
+                "Max_Protein": 4,
+                "Water": 0,
+                "Max_Water": 0,
+                "Vitamins": 4,
+                "Max_Vitamins": 4
+              },
+              "Max_EatingProgress": 1.0
+            },
+            "MechanicStates": [
+              {
+                "StateKey": "food.spoilage",
+                "Data": {
+                  "EnableSpoilage": false,
+                  "SpoilageElapsedSeconds": 0.0,
+                  "SpoilageIntervalSeconds": 7200.0,
+                  "SpoilageTargetItemID": "Humus"
+                }
+              },
+              {
+                "StateKey": "food.consumption",
+                "Data": {
+                  "EatingProgress": 0.0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "Flour",
+      "parent": "Rice",
+      "gameName": "面粉",
+      "description": "五份狗尾草籽经石臼研磨得到的一份面粉；可直接食用，补充碳水和蛋白质，但会消耗水分。",
+      "weight": 0.1,
+      "volume": 0.15,
+      "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+      },
+      "modules": {
+        "food": {
+          "data": {
+            "FoodData": {
+              "nutrition": {
+                "Carbohydrates": 10,
+                "Max_Carbohydrates": 10,
+                "Fat": 0,
+                "Max_Fat": 0,
+                "Protein": 3,
+                "Max_Protein": 3,
+                "Water": -10,
+                "Max_Water": 0,
+                "Vitamins": 0,
+                "Max_Vitamins": 0
+              },
+              "Max_EatingProgress": 1.0
+            }
+          }
+        }
+      }
+    },
+    {
       "id": "Seed_Herb",
       "parent": "Seed_Radish",
       "gameName": "药草种子",
