@@ -8,6 +8,19 @@ using UnityEngine;
 public partial class WeatherMgr
 {
     private static readonly int GlobalWindStrengthShaderId = Shader.PropertyToID("_GlobalWindStrength");
+    private static readonly int OceanWaveFactorsShaderId = Shader.PropertyToID("_OceanWaveFactors");
+    private static readonly int OceanWaveTimeShaderId = Shader.PropertyToID("_OceanWaveTime");
+    private float oceanWaveTime; // 独立积分风浪时钟，风速变化不跳相位，也不改潮汐时钟
+
+    /// <summary>只推进视觉风浪；暂停时停止，普通客户端读取已复制风力。</summary>
+    private void AdvanceOceanWaveClock(float deltaTime)
+    {
+        if (!_weatherRuntimeAllowed)
+            return;
+        oceanWaveTime += Mathf.Max(0f, deltaTime) *
+            WaterEnvironmentRules.ResolveOceanWaveFactors(GetCurrentWindStrength()).x;
+        Shader.SetGlobalFloat(OceanWaveTimeShaderId, oceanWaveTime);
+    }
 
     [ShowInInspector, ReadOnly, LabelText("全局风力")]
     public float CurrentWindStrength => GetCurrentWindStrength();
@@ -48,11 +61,17 @@ public partial class WeatherMgr
     private void RefreshWindFeedback()
     {
         Shader.SetGlobalFloat(GlobalWindStrengthShaderId, GetCurrentWindStrength());
+        Vector3 factors = WaterEnvironmentRules.ResolveOceanWaveFactors(GetCurrentWindStrength());
+        Shader.SetGlobalVector(OceanWaveFactorsShaderId, new Vector4(factors.x, factors.y, factors.z, 0f));
     }
 
     /// <summary>离开世界或进入禁用天气的维度时清除残留风力表现。</summary>
-    private static void DeactivateWindFeedback()
+    private void DeactivateWindFeedback()
     {
+        oceanWaveTime = 0f;
         Shader.SetGlobalFloat(GlobalWindStrengthShaderId, 0f);
+        Vector3 factors = WaterEnvironmentRules.ResolveOceanWaveFactors(0f);
+        Shader.SetGlobalVector(OceanWaveFactorsShaderId, new Vector4(factors.x, factors.y, factors.z, 0f));
+        Shader.SetGlobalFloat(OceanWaveTimeShaderId, 0f);
     }
 }

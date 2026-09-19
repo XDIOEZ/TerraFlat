@@ -10,8 +10,9 @@ public static class WorldItemWaterRules
     #region 共用参数
 
     public const float SinkRatioThreshold = 0.64f;
-    public const float SlowSinkDuration = 4.5f;
-    public const float FastSinkDuration = 1f;
+    // 所有掉落后端共用三倍沉没时长，不改变密度阈值或上浮速度。
+    public const float SlowSinkDuration = 13.5f;
+    public const float FastSinkDuration = 3f;
     public const float FastSinkRatioMultiplier = 1.3f;
     public const float FloatingMinDepth = 0.08f;
     public const float FloatingMaxDepth = 0.42f;
@@ -26,6 +27,14 @@ public static class WorldItemWaterRules
     #endregion
 
     #region 无实例浮沉计算
+
+    /// <summary>旧 Item 与 ECS 必须通过同一流量规则换算漂移速度；湖泊静止。</summary>
+    public static float ResolveDriftSpeed(RuntimeWaterCurrentKind kind, float flow) => kind switch
+    {
+        RuntimeWaterCurrentKind.River => RiverDriftSpeed * WaterEnvironmentRules.ResolveRiverStrength(flow),
+        RuntimeWaterCurrentKind.Ocean => OceanDriftSpeed,
+        _ => 0f
+    };
 
     /// <summary>整组数量不影响单件重量/体积比，零体积沿用既有最小分母。</summary>
     public static float ResolveWeightVolumeRatio(ItemStack stack) => stack == null ? 0f :

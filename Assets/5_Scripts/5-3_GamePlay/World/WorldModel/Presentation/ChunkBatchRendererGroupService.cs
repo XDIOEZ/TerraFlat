@@ -11,7 +11,7 @@ using UnityEngine.Rendering;
 /// 全局区块 BatchRendererGroup 后端。
 ///
 /// 每种 Sprite + 源材质 + 地图层共享一个 BRG Batch；所有 ChunkView 只提交格子实例数据，
-/// 不再为每个区块创建地形 MeshRenderer。实例采用 80 字节 AoS，单格变化只上传一个连续块。
+/// 不再为每个区块创建地形 MeshRenderer。实例采用 112 字节 AoS，单格变化只上传一个连续块。
 /// BRG 只负责地图视觉，Blocking TilemapCollider2D 仍由兼容层维护。
 /// </summary>
 internal static class ChunkBatchRendererGroupService
@@ -34,6 +34,8 @@ internal static class ChunkBatchRendererGroupService
         public Vector4 Data0;
         public Vector4 Data1;
         public Vector4 Tint;
+        public Vector4 FlowX; // 四个共享格角的下游速度 X
+        public Vector4 FlowY; // 四个共享格角的下游速度 Y
 
         public static InstanceData Create(Matrix4x4 localToWorld, Vector4 data0, Vector4 data1, Color tint)
         {
@@ -109,7 +111,7 @@ internal static class ChunkBatchRendererGroupService
     private sealed class Backend : IDisposable
     {
         private const int InitialCapacity = 64;
-        private const int InstanceStride = 80;
+        private const int InstanceStride = 112;
         private const int ZeroPrefixBytes = InstanceStride;
         private const uint InstanceMetadataAddress = ZeroPrefixBytes;
         private const int TerrainQueueBase = 2988;
@@ -554,7 +556,7 @@ internal static class ChunkBatchRendererGroupService
                 {
                     name = $"ChunkBRG_{Key.Layer}_{Key.SpriteId}"
                 };
-                // 第一份 80 字节零实例覆盖官方建议的 64 字节零前缀。
+                // 第一份 112 字节零实例覆盖官方建议的 64 字节零前缀。
                 scratch[0] = default;
                 buffer.SetData(scratch, 0, 0, 1);
                 BatchId = backend.CreateBatch(buffer);

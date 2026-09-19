@@ -202,12 +202,7 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
             return;
         }
 
-        float speed = current.Kind switch
-        {
-            RuntimeWaterCurrentKind.River => RiverDriftSpeed,
-            RuntimeWaterCurrentKind.Ocean => OceanDriftSpeed,
-            _ => 0f
-        };
+        float speed = ResolveDriftSpeed(current.Kind, current.Flow);
         if (speed <= 0f || current.Direction.sqrMagnitude <= 0.000001f)
             return;
 

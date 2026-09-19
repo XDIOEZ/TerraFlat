@@ -57,6 +57,8 @@ SAMPLER(sampler_WaterDepthTexture);
 #endif
 
 float _GlobalGameDay;
+float4 _OceanWaveFactors; // 速度、浪高、白沫由权威风力派生
+float _OceanWaveTime; // 与潮汐独立的连续积分时钟
 float4 _WaterDepthUvScaleOffset;
 half _GlobalMoonlightIntensity;
 half _GlobalMoonAppearance;

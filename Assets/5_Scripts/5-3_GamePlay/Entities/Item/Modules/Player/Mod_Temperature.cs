@@ -56,7 +56,6 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 #region 字段
 
     public const string ModuleId = "体温模块";
-    private const string ColdDamageSpeechText = "这里的环境温度太低了，我得赶紧去温暖的地方。"; // 每次低温扣血时给本地玩家的自言自语提示。
 
     public Ex_ModData_MemoryPackable modData; // 模块存档容器
     [LabelText("体温数据"), InlineProperty]
@@ -78,6 +77,8 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     private bool _hasWaterEntryCoolingTarget; // 是否存在尚未完成的入水降温目标
     private float _waterEntryCoolingTargetTemperature; // 本次入水降温的目标体温
     private float _waterEntryCoolingSpeed; // 本次入水降温速度(℃/s)
+    private float _waterEntryReferenceTemperature; // 连续水域首次入水的基础体温，不重复扣除水格降温
+    private float _waterEntryTemperatureDrop; // 最近一次有效浸没对应的降温档位
     private float _waterCoolingProtection; // 装备等来源累计提供的入水降温保护，1 表示完全免疫
 
 #endregion
@@ -123,15 +124,13 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 
         Data.AmbientTemperature = ambient;
         ProcessWaterEntryCooling(deltaTime);
-        bool coldDamageApplied = TemperatureMgr.Instance.ProcessTemperature(
+        TemperatureMgr.Instance.ProcessTemperature(
             Data,
             _damageReceiver,
             deltaTime,
             SetNaturalTemperature,
             ref _damageTickTimer,
             NaturalTemperature);
-        if (coldDamageApplied)
-            ItemActionFeedback.Show(item, ColdDamageSpeechText);
     }
 
     public override void Unload()
@@ -182,7 +181,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         Data.AmbientTemperature = value;
     }
 
-    /// <summary>同步真实入水状态，并在首次进入连续水域时启动一次带下限的平滑降温。</summary>
+    /// <summary>以连续水域入水体温为基准，只在有效浸没档位变化时更新平滑目标。</summary>
     public void SetWaterExposure(
         bool inWater,
         float temperatureDrop,
@@ -197,16 +196,19 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
             return;
         }
 
-        if (_isInWater)
-            return;
-
         bool continuedAcrossWaterTiles =
-            _lastWaterExitWasActive && _lastWaterExitFrame == Time.frameCount;
+            _isInWater || (_lastWaterExitWasActive && _lastWaterExitFrame == Time.frameCount);
         _isInWater = true;
         _lastWaterExitWasActive = false;
-        if (continuedAcrossWaterTiles || !GameNetwork.HasStateAuthority)
+        if (!GameNetwork.HasStateAuthority)
             return;
 
+        if (!continuedAcrossWaterTiles)
+            _waterEntryReferenceTemperature = NaturalTemperature;
+        else if (Mathf.Approximately(_waterEntryTemperatureDrop, temperatureDrop))
+            return;
+
+        _waterEntryTemperatureDrop = temperatureDrop;
         BeginWaterEntryCooling(temperatureDrop, minimumTemperature, transitionSeconds);
     }
 
@@ -271,9 +273,8 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
             return;
         }
 
-        _waterEntryCoolingTargetTemperature = Mathf.Max(
-            resolvedMinimum,
-            NaturalTemperature - resolvedDrop);
+        _waterEntryCoolingTargetTemperature = WaterEnvironmentRules.ResolveCoolingTarget(
+            _waterEntryReferenceTemperature, resolvedDrop, resolvedMinimum);
         float coolingDistance = NaturalTemperature - _waterEntryCoolingTargetTemperature;
         if (coolingDistance <= 0f)
         {
@@ -333,6 +334,8 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         _isInWater = false;
         _lastWaterExitFrame = -1;
         _lastWaterExitWasActive = false;
+        _waterEntryReferenceTemperature = 0f;
+        _waterEntryTemperatureDrop = 0f;
         ClearWaterEntryCooling();
     }
 

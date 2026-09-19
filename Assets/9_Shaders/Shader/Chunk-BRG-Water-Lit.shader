@@ -193,6 +193,63 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
         #else
             #include "WaterSurfaceRealistic.hlsl"
         #endif
+
+        // 双相位平流周期交接，避免长时间运行时弯道纹理无限拉伸；共享世界坐标无 Chunk 重置。
+        float SampleRiverPattern(float2 positionWS, float2 velocity)
+        {
+            float phase = frac(_Time.y / 8.0);
+            float nextPhase = frac(phase + 0.5);
+            float blend = abs(phase * 2.0 - 1.0);
+            float first = WaterNoise((positionWS - velocity * phase * 8.0) * 2.4);
+            float second = WaterNoise((positionWS - velocity * nextPhase * 8.0) * 2.4);
+            return lerp(first, second, blend);
+        }
+
+        // 同一格角只有一份权威邻格平均；世界格内插值让弯道和共享边连续。
+        float2 ResolveRiverVelocity(float2 positionWS, ChunkBRGInstanceData data)
+        {
+            float2 cellUV = frac(positionWS);
+            return float2(
+                lerp(lerp(data.flowX.x, data.flowX.y, cellUV.x),
+                    lerp(data.flowX.z, data.flowX.w, cellUV.x), cellUV.y),
+                lerp(lerp(data.flowY.x, data.flowY.y, cellUV.x),
+                    lerp(data.flowY.z, data.flowY.w, cellUV.x), cellUV.y));
+        }
+
+        // 湖泊静止；河流只消费权威下游速度；海洋独立进入风浪和潮汐实现。
+        WaterSurfaceData CalculateChunkWaterSurface(float2 positionWS, float2 screenUV, half depth)
+        {
+            ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
+            if (data.transform0.w > 1.5)
+                return CalculateWaterSurface(positionWS, screenUV, depth);
+            float2 velocity = ResolveRiverVelocity(positionWS, data);
+            float strength = length(velocity) / 0.45;
+            float pattern = SampleRiverPattern(positionWS, velocity);
+            WaterSurfaceData surface = (WaterSurfaceData)0;
+            surface.waterDepth = saturate(depth);
+            surface.depthBlend = 1.0h - surface.waterDepth;
+            surface.ripple = smoothstep(0.45, 0.8, pattern) * _RippleStrength * strength * 0.4;
+            surface.rippleShadow = smoothstep(0.5, 0.8, 1.0 - pattern)
+                * _RippleShadowStrength * strength * 0.3;
+            surface.caustic = pattern * _CausticStrength * surface.depthBlend * 0.3;
+            surface.whitecap = smoothstep(0.7, 0.9, pattern) * _WhitecapStrength * strength * 0.25;
+            surface.moonReflection = ComputeMoonReflection(screenUV, 0.0, pattern, pattern,
+                0.0, 0.0, 0.0);
+            return surface;
+        }
+
+        half3 ApplyChunkWaterShore(half3 sourceColor, half recess, float2 positionWS)
+        {
+            ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
+            if (data.transform0.w > 1.5)
+                return ApplyShore(sourceColor, recess, positionWS);
+            half band = saturate(recess * (1.0h - recess) * 4.0h);
+            float2 velocity = ResolveRiverVelocity(positionWS, data);
+            half foam = SampleRiverPattern(positionWS, velocity) * band
+                * length(velocity) / 0.45 * _ShoreFoamStrength * _FoamColor.a;
+            sourceColor = lerp(sourceColor, _ShoreColor.rgb, band * _ShoreStrength * _ShoreColor.a);
+            return lerp(sourceColor, _FoamColor.rgb, saturate(foam));
+        }
     ENDHLSL
 
     SubShader
@@ -257,10 +314,10 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                 UNITY_SETUP_INSTANCE_ID(input);
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
                 half waterDepth = SampleWaterDepthCorners(input.positionWS, input.depth);
-                WaterSurfaceData surface = CalculateWaterSurface(input.positionWS, input.lightingUV, waterDepth);
+                WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.lightingUV, waterDepth);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
-                main.rgb = ApplyShore(main.rgb, recess, input.positionWS);
+                main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS);
                 half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, input.uv);
                 SurfaceData2D surfaceData; InputData2D inputData;
                 InitializeSurfaceData(main.rgb, main.a, mask, surfaceData);
@@ -306,10 +363,10 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                 UNITY_SETUP_INSTANCE_ID(input);
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
                 half waterDepth = SampleWaterDepthCorners(input.positionWS, input.depth);
-                WaterSurfaceData surface = CalculateWaterSurface(input.positionWS, input.screenUV, waterDepth);
+                WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.screenUV, waterDepth);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
-                main.rgb = ApplyShore(main.rgb, recess, input.positionWS);
+                main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS);
                 main.rgb = ApplyMoonReflection(main.rgb, surface.moonReflection);
                 return main;
             }

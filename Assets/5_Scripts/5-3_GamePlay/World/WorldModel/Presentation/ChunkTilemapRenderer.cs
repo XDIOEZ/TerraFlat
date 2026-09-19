@@ -423,6 +423,8 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             0f)) * tileTransform;
         Color tint = sourceTilemap != null ? tileColor * sourceTilemap.color : tileColor;
         var instanceData = ChunkBatchRendererGroupService.InstanceData.Create(localToWorld, data0, data1, tint);
+        if (layer == ChunkBatchRendererGroupService.VisualLayer.Water)
+            SetWaterCurrentData(terrain, x, y, ref instanceData);
         ChunkBatchRendererGroupService.SetVisual(this, GetBatchSlotKey(terrain, x, y, layer),
             new ChunkBatchRendererGroupService.Visual(layer, sprite, sourceMaterial, instanceData));
     }
@@ -490,6 +492,52 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     #endregion
 
     #region BRG Shader 数据
+
+    /// <summary>共享格角插值维持弯道与 Chunk 接缝连续；只上传实例数据，不创建水格对象。</summary>
+    private void SetWaterCurrentData(ChunkTerrainData terrain, int x, int y,
+        ref ChunkBatchRendererGroupService.InstanceData instanceData)
+    {
+        terrain.TryGetEnvironmentValue("riverKind", x, y, out float riverKind);
+        RuntimeWaterCurrentKind kind = WaterEnvironmentRules.ResolveCurrentKind(
+            Mathf.RoundToInt(riverKind), (SurfaceBiomeKind)terrain.GetCell(x, y).BiomeId == SurfaceBiomeKind.Ocean);
+        instanceData.Transform0.w = (float)kind;
+        if (kind != RuntimeWaterCurrentKind.River)
+            return;
+
+        Vector2 bottomLeft = ResolveCornerCurrent(terrain, x - 1, y - 1);
+        Vector2 bottomRight = ResolveCornerCurrent(terrain, x, y - 1);
+        Vector2 topLeft = ResolveCornerCurrent(terrain, x - 1, y);
+        Vector2 topRight = ResolveCornerCurrent(terrain, x, y);
+        instanceData.FlowX = new Vector4(bottomLeft.x, bottomRight.x, topLeft.x, topRight.x);
+        instanceData.FlowY = new Vector4(bottomLeft.y, bottomRight.y, topLeft.y, topRight.y);
+    }
+
+    /// <summary>每个共享角只平均相邻河流格，陆地、湖泊与海洋不能稀释或反转下游。</summary>
+    private Vector2 ResolveCornerCurrent(ChunkTerrainData terrain, int left, int bottom)
+    {
+        Vector2 velocity = Vector2.zero;
+        int count = 0;
+        for (int offsetY = 0; offsetY <= 1; offsetY++)
+        {
+            for (int offsetX = 0; offsetX <= 1; offsetX++)
+            {
+                if (!TryResolveTerrainCell(terrain, left + offsetX, bottom + offsetY,
+                        out ChunkTerrainData source, out int localX, out int localY,
+                        out TerrainCell cell) || !IsWater(cell))
+                    continue;
+                source.TryGetEnvironmentValue("riverKind", localX, localY, out float kind);
+                if (Mathf.RoundToInt(kind) != 1)
+                    continue;
+                source.TryGetEnvironmentValue("riverFlowX", localX, localY, out float flowX);
+                source.TryGetEnvironmentValue("riverFlowY", localX, localY, out float flowY);
+                source.TryGetEnvironmentValue("riverFlow", localX, localY, out float flow);
+                velocity += new Vector2(flowX, flowY).normalized *
+                    WorldItemWaterRules.ResolveDriftSpeed(RuntimeWaterCurrentKind.River, flow);
+                count++;
+            }
+        }
+        return count > 0 ? velocity / count : Vector2.zero;
+    }
 
     /// <summary>RGBA 分别记录左、右、下、上岸线方向。</summary>
     private Color BuildWaterShoreMask(ChunkTerrainData terrain, int x, int y)

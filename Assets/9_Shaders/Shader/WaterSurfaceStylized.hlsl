@@ -23,7 +23,8 @@ WaterSurfaceData CalculateWaterSurface(
     float2 direction = ResolveWaterFlowAxis();
     float2 lateral = float2(-direction.y, direction.x);
     float2 pixelPosition = QuantizeWaterPosition(positionWS);
-    float time = ResolveTideFlowPhase(_WaveSpeed);
+    float time = _OceanWaveTime * _WaveSpeed;
+    pixelPosition -= direction * ResolveTideFlowPhase(_WaveSpeed) * 0.045;
 
     float2 drift = direction * time * 0.018
         - lateral * time * 0.006;
@@ -65,9 +66,10 @@ WaterSurfaceData CalculateWaterSurface(
     gradient += detailDirectionA * cos(detailPhaseA) * _DetailScale * 0.075;
     gradient += detailDirectionB * cos(detailPhaseB) * _DetailScale * 1.83 * 0.035;
     float3 normalWS = normalize(float3(
-        -gradient.x * _NormalStrength,
-        -gradient.y * _NormalStrength,
+        -gradient.x * _NormalStrength * _OceanWaveFactors.y,
+        -gradient.y * _NormalStrength * _OceanWaveFactors.y,
         1.0));
+    height *= _OceanWaveFactors.y;
 
     // 水面水深已离散为十档；基础水色不再混入噪声，让 0.1 的每一级变化都保持清晰可辨。
     surface.waterDepth = saturate(waterDepth);
@@ -238,6 +240,7 @@ WaterSurfaceData CalculateWaterSurface(
         detailA,
         detailB,
         time);
+    surface.whitecap *= _OceanWaveFactors.z;
     return surface;
 }
 

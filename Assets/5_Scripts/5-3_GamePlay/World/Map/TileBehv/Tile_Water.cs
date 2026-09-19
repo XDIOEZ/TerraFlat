@@ -30,8 +30,6 @@ public class Tile_Water : TileBlockBehaviour
     [Range(0.01f, 1f)] public float shallowMoveSpeedMultiplier = 0.5f;
     [Tooltip("有效淹没为 1 时的移动速度倍率；最深水体最多降低 80% 移速，由环境实例维护，不进入 Buff 系统。")]
     [Min(0.01f)] public float moveSpeedMultiplier = 0.2f;
-    [Tooltip("首次进入一片连续水域时固定降低的体温。")]
-    [Min(0f)] public float entryTemperatureDrop = 10f;
     [Tooltip("入水降温不能把角色体温压到低于该值。")]
     [Min(0f)] public float entryTemperatureFloor = 10f;
     [Tooltip("首次入水降温平滑过渡到目标体温所需的时间。")]
@@ -48,9 +46,9 @@ public class Tile_Water : TileBlockBehaviour
         TileData_Water water = tileData as TileData_Water;
         float depthValue = water != null ? Mathf.Clamp01(water.deepValue) : 0f;
         bool edgeInteractionOnly = receiver != null && receiver.IsActiveTileEdgeInteractionOnly;
-        SetWaterTemperatureState(item, !edgeInteractionOnly);
         if (edgeInteractionOnly)
         {
+            SetWaterTemperatureState(item, false, 0f);
             // 对象池复用时也要清掉上一轮真实入水留下的目标状态。
             SetWaterVisualState(item, 0f, false);
         }
@@ -59,6 +57,7 @@ public class Tile_Water : TileBlockBehaviour
             float effectiveImmersion = receiver != null
                 ? receiver.EnterWaterSurvival(item, depthValue)
                 : depthValue;
+            SetWaterTemperatureState(item, true, effectiveImmersion);
             SetWaterVisualState(item, effectiveImmersion, true);
             ProvideWaterEffects(receiver, effectiveImmersion);
         }
@@ -83,7 +82,7 @@ public class Tile_Water : TileBlockBehaviour
     {
         if (item == null)
             return;
-        SetWaterTemperatureState(item, false);
+        SetWaterTemperatureState(item, false, 0f);
         receiver?.ExitWaterSurvival(item);
         SetWaterVisualState(item, 0f, false);
 
@@ -121,6 +120,7 @@ public class Tile_Water : TileBlockBehaviour
         float effectiveImmersion = receiver != null
             ? receiver.UpdateWaterSurvival(item, depthValue, deltaTime)
             : depthValue;
+        SetWaterTemperatureState(item, true, effectiveImmersion);
         SetWaterVisualState(item, effectiveImmersion, true);
         ProvideWaterEffects(receiver, effectiveImmersion);
     }
@@ -128,13 +128,13 @@ public class Tile_Water : TileBlockBehaviour
     #region Temperature State
 
     /// <summary>把真实入水状态和本水体的降温参数交给角色体温模块。</summary>
-    private void SetWaterTemperatureState(Item item, bool inWater)
+    private void SetWaterTemperatureState(Item item, bool inWater, float effectiveImmersion)
     {
         Mod_Temperature temperature = item?.itemMods?.GetMod_ByID<Mod_Temperature>(
             ModText.Temperature);
         temperature?.SetWaterExposure(
             inWater,
-            entryTemperatureDrop,
+            WaterEnvironmentRules.ResolveCoolingDrop(effectiveImmersion),
             entryTemperatureFloor,
             entryTemperatureTransitionSeconds);
     }

@@ -43,7 +43,7 @@ WaterSurfaceData CalculateWaterSurface(
     WaterSurfaceData surface = (WaterSurfaceData)0;
     float2 direction = ResolveWaterFlowAxis();
     float2 lateral = float2(-direction.y, direction.x);
-    float time = _GlobalGameDay * 240.0 * _WaveSpeed;
+    float time = _OceanWaveTime * _WaveSpeed;
     float tide = ResolveTideFlowPhase(_WaveSpeed);
     float2 waterPosition = positionWS - direction * tide * 0.045;
     float2 drift = direction * time * 0.08;
@@ -75,6 +75,8 @@ WaterSurfaceData CalculateWaterSurface(
     float2 fineSlope = WaterNoiseSlope(detailPosition + float2(8.3, 21.7));
     fineSlope += WaterNoiseSlope(detailPosition * 1.91 + drift * 0.6) * 0.45;
     slope += fineSlope * 0.2 * detailVisibility;
+    height *= _OceanWaveFactors.y;
+    slope *= _OceanWaveFactors.y;
     float3 normalWS = normalize(float3(-slope * _NormalStrength, 1.0));
 
     // 水面水深已离散为十档；使用等距颜色权重，避免深水段被指数吸收压缩后相邻档位难以分辨。
@@ -129,7 +131,7 @@ WaterSurfaceData CalculateWaterSurface(
     float steepCrest = crest * smoothstep(0.12, 0.46, dot(slope, slope));
     float foamBreakup = smoothstep(0.5, 0.78, detailA * 0.6 + detailB * 0.4);
     surface.whitecap = steepCrest * foamBreakup
-        * saturate(_WhitecapStrength) * _FoamColor.a;
+        * saturate(_WhitecapStrength) * _FoamColor.a * _OceanWaveFactors.z;
     surface.moonReflection = ComputeMoonReflection(
         screenUV, height, macroA, macroB, detailA * 2.0 - 1.0, detailB * 2.0 - 1.0, time);
     return surface;

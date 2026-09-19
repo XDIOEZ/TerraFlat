@@ -361,6 +361,7 @@ public partial class WeatherMgr : SingletonAutoMono<WeatherMgr>
         }
 
         MaintainWeatherEventSystem();
+        AdvanceOceanWaveClock(Time.deltaTime);
         MaintainSnowPresentation();
         if (_rainEffectInstance != null && _rainEffectInstance.activeSelf)
             SyncRainEffectTransform(_rainEffectInstance.transform);
