@@ -38,6 +38,12 @@ public sealed class PlantingSummoner
         previewRenderer.color = color;
     }
 
+    /// <summary>指针离开可种植地表时关闭现有表现，不反复销毁和创建对象。</summary>
+    public void SetVisible(bool visible)
+    {
+        if (previewRenderer != null) previewRenderer.enabled = visible;
+    }
+
     /// <summary>销毁临时预览，避免切换快捷栏后残留在世界中。</summary>
     public void Dispose()
     {

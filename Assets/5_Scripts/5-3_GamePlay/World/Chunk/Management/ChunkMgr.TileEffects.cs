@@ -180,7 +180,9 @@ public partial class ChunkMgr
         ChunkTerrainData terrain = sample.Terrain;
         Vector2Int local = sample.LocalCell;
         terrain.TryGetEnvironmentValue("riverKind", local.x, local.y, out float riverKind);
-        if (Mathf.RoundToInt(riverKind) == 1)
+        RuntimeWaterCurrentKind kind = WaterEnvironmentRules.ResolveCurrentKind(
+            Mathf.RoundToInt(riverKind), (SurfaceBiomeKind)sample.Cell.BiomeId == SurfaceBiomeKind.Ocean);
+        if (kind == RuntimeWaterCurrentKind.River)
         {
             terrain.TryGetEnvironmentValue("riverFlowX", local.x, local.y, out float flowX);
             terrain.TryGetEnvironmentValue("riverFlowY", local.x, local.y, out float flowY);
@@ -194,7 +196,7 @@ public partial class ChunkMgr
             return true;
         }
 
-        if ((SurfaceBiomeKind)sample.Cell.BiomeId != SurfaceBiomeKind.Ocean)
+        if (kind != RuntimeWaterCurrentKind.Ocean)
             return false;
 
         terrain.TryGetEnvironmentValue("windX", local.x, local.y, out float windX);

@@ -5,7 +5,7 @@
       "id": "Scissors",
       "parent": "BasicItem_Base",
       "gameName": "剪刀",
-      "description": "手持后对准附近的野花，出现白色方框时右键或点击使用，剪下花朵。",
+      "description": "对准附近草层，出现白色方框时右键或点击使用，剪除一格草并获得2份植物纤维；也能采集野花。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -21,7 +21,7 @@
           "prefab": "Module_GroundCoverHarvest",
           "id": "Mod_GroundCoverHarvest",
           "enabled": true,
-          "parameters": { "reach": 2.0 }
+          "parameters": { "reach": 2.0, "grassYieldItemId": "Fiber", "grassYieldAmount": 2 }
         }
       }
     },

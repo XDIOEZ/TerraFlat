@@ -26,6 +26,8 @@ public partial class Mod_Hoe : Module
     [Min(0f)] public float useInterval = 0.2f; // 最小使用间隔
     private bool actBound;
     private float nextUseTime;
+    private WorldTileTargetOutline targetOutline;
+    private GameController ownerController;
 
     #endregion
 
@@ -51,9 +53,39 @@ public partial class Mod_Hoe : Module
         if (actBound && item != null)
             item.OnAct -= Act;
         actBound = false;
+        ReleaseOutline();
+        ownerController = null;
     }
 
     private void OnDestroy() => Unload();
+
+    /// <summary>手持时复用装水的单格白框；预览和右键都读取同一锄地资格。</summary>
+    private void LateUpdate()
+    {
+        if (item == null || !item.InHand || item.Owner is not Player player || !player.IsLocalProfile)
+        {
+            targetOutline?.Hide();
+            ownerController = null;
+            return;
+        }
+        ownerController ??= player.itemMods.GetMod_ByID<GameController>(ModText.Controller);
+        if (ownerController == null || !FarmlandSystem.TryGetTillingTarget(ownerController.GetMouseWorldPosition(),
+                player.transform.position, maxTillingDistance, out var sample))
+        {
+            targetOutline?.Hide();
+            return;
+        }
+        targetOutline ??= WorldTileTargetOutline.Create("Hoe Tile Target Outline");
+        targetOutline.Show(sample.WorldCell);
+    }
+
+    private void OnDisable() => ReleaseOutline();
+
+    private void ReleaseOutline()
+    {
+        if (targetOutline != null) Destroy(targetOutline.gameObject);
+        targetOutline = null;
+    }
 
     /// <summary>真实手持且目标有效时，只累计一次工作量。</summary>
     public override void Act()

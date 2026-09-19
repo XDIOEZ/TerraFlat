@@ -7,7 +7,7 @@ using UnityEngine;
 /// 农业地形服务：进度、水分和肥力只写入权威区块的独立环境层。
 /// 完成耕作才替换地表；TileData 仅作为成长计算快照，修改后必须提交。
 /// </summary>
-public static class FarmlandSystem
+public static partial class FarmlandSystem
 {
     #region 地块契约
 
@@ -82,29 +82,23 @@ public static class FarmlandSystem
     {
         completed = false;
         ChunkMgr manager = ChunkMgr.ExistingInstance;
-        if (manager == null || !manager.TryGetRuntimeTerrainTile(pointer, out var sample) ||
-            !IsWithinReach(owner, sample.WorldCell, range) || !IsOpen(sample))
-            return false;
-        string sourceId = GetBlockId(sample.Cell.GroundTileId);
-        if (sourceId != "Tile_Grass" && sourceId != "Tile_Soil")
-            return false;
-        if (!manager.TryGetRuntimeChunkView(sample.Address, out _) || HasWorldPlant(sample.WorldCell))
+        if (float.IsNaN(work) || float.IsInfinity(work) || work <= 0f ||
+            !TryGetTillingTarget(pointer, owner, range, out var sample))
             return false;
 
         int farmlandId = ResolveFarmlandId();
-        var template = (TileData_Farmland)GameRes.Instance.GetTileBlock(TileBlockId).tileDataTemplate;
+        EnsureSoilState(sample);
         var local = sample.LocalCell;
         float progress = Read(sample.Terrain, local, SourceLayer) == sample.Cell.GroundTileId
             ? Read(sample.Terrain, local, ProgressLayer) : 0f;
         progress = Mathf.Min(1f, progress + work);
         completed = progress >= 0.9999f;
-        sample.Terrain.SetGrass(local.x, local.y, 0);
+        RuntimeGrassClearing.Clear(sample);
         sample.Terrain.SetEnvironmentValue(SourceLayer, local.x, local.y, sample.Cell.GroundTileId);
         sample.Terrain.SetEnvironmentValue(ProgressLayer, local.x, local.y, completed ? 1f : progress);
         if (completed)
         {
-            sample.Terrain.SetEnvironmentValue(WaterLayer, local.x, local.y, template.waterValue);
-            sample.Terrain.SetEnvironmentValue(FertilityLayer, local.x, local.y, template.Fertility);
+            // 水肥在第一次操作前从原地表取得；锄成耕地不能刷新成模板值或抹掉此前浇水。
             sample.Terrain.SetCell(local.x, local.y, new TerrainCell(farmlandId, 0, 0,
                 sample.Cell.BiomeId, sample.Cell.NavigationCost, sample.Cell.Flags));
             manager.TryGetChunkRuntime(sample.Address, out ChunkRuntime chunk);
@@ -133,12 +127,10 @@ public static class FarmlandSystem
     {
         soil = null;
         if (ChunkMgr.ExistingInstance == null || !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(
-                new Vector2(worldCell.x + 0.5f, worldCell.y + 0.5f), out var sample) || !IsFarmland(sample.Cell))
+                new Vector2(worldCell.x + 0.5f, worldCell.y + 0.5f), out var sample) ||
+            !IsOpen(sample) || (!IsFarmland(sample.Cell) && !HasSoilState(sample)))
             return false;
-        soil = (TileData_Farmland)GameRes.Instance.GetTileBlock(TileBlockId).tileDataTemplate.Clone();
-        soil.position = (Vector3Int)worldCell;
-        soil.waterValue = Read(sample.Terrain, sample.LocalCell, WaterLayer);
-        soil.fertilityValue = new GameValue_float(Read(sample.Terrain, sample.LocalCell, FertilityLayer));
+        soil = ReadSoilSnapshot(sample);
         return true;
     }
 
@@ -146,11 +138,13 @@ public static class FarmlandSystem
     public static void CommitSoil(TileData_Farmland soil)
     {
         if (!ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(
-                new Vector2(soil.position.x + 0.5f, soil.position.y + 0.5f), out var sample) || !IsFarmland(sample.Cell))
+                new Vector2(soil.position.x + 0.5f, soil.position.y + 0.5f), out var sample) ||
+            !IsOpen(sample) || (!IsFarmland(sample.Cell) && !HasSoilState(sample)))
             return;
         soil.NormalizeValues();
         sample.Terrain.SetEnvironmentValue(WaterLayer, sample.LocalCell.x, sample.LocalCell.y, soil.waterValue);
         sample.Terrain.SetEnvironmentValue(FertilityLayer, sample.LocalCell.x, sample.LocalCell.y, soil.Fertility);
+        SyncSoilEnvironment(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y, soil.waterValue, soil.Fertility);
         SaveDataMgr.Instance.RecordAgricultureCell(sample);
     }
 

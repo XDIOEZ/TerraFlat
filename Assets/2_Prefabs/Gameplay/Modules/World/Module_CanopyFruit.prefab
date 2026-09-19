@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &862206347448818082
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8648113822997299978}
+  - component: {fileID: 9098170029738699795}
+  m_Layer: 0
+  m_Name: Module_CanopyFruit
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8648113822997299978
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 862206347448818082}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &9098170029738699795
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 862206347448818082}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b733d4b87e9417e4cbb0140e47d151c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  item: {fileID: 0}
+  ModData:
+    Name: canopy_fruit
+    ID: Mod_CanopyFruit
+    isRunning: 1
+    Type: 0
+    BitData: 
+  Settings:
+    MinimumCount: 1
+    MaximumCount: 5
+    GrowthSeconds: 2000
+    GrowthJitterSeconds: 0
+    CycleSeconds: 2000
+    MinimumFallDelay: 1
+    MaximumFallDelay: 1440
+    FlightSeconds: 0.65
+  FruitItemId: Coconut_Green
+  SplitItemId: Coconut_Half
+  BluntDamage: 10
+  SplitChance: 0.5
+  CollisionRadius: 0.12
+  FruitWidth: 0.28
+  SmallScale: 0.2
+  CrownCenter: {x: 0, y: 6.3}
+  CrownSpread: {x: 0.6, y: 0.25}
+  UseNormalizedCrownAnchor: 1
+  CrownAnchorUV: {x: 0.5, y: 0.625}
+  CrownSpreadUV: {x: 0.048, y: 0.02}
+  DropScatterRadius: 0.85

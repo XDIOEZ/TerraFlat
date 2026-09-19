@@ -354,7 +354,7 @@ public sealed class WaterVesselPanel : MonoBehaviour, IPointerDownHandler, IDrag
             (!shouldFullyEmpty && spillAmount + Mod_WaterVessel.AmountEpsilon < MinimumPourCommitAmount))
             return;
 
-        float removed = vessel.RemoveLiquidAmount(spillAmount);
+        float removed = vessel.PourToGround(actor, spillAmount);
         if (removed <= Mod_WaterVessel.AmountEpsilon)
             return;
 

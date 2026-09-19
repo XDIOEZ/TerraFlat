@@ -31,6 +31,9 @@ public sealed class Mod_Plantable : Module
     [Tooltip("放置成功后生成的权威作物 Item ID。")]
     public string cropItemId = "Crop_Wheat";
 
+    [Tooltip("除耕地外允许种植的自然地表 ID；默认留空，孢子等可显式声明石地。")]
+    public string[] naturalGroundIds = Array.Empty<string>();
+
     [Header("放置范围")]
     [Min(0.1f)]
     [Tooltip("从玩家位置到目标耕地中心的最大距离。")]
@@ -149,6 +152,7 @@ public sealed class Mod_Plantable : Module
             return;
         }
 
+        Item actor = item.Owner;
         Item crop = TryCreateCultivatedCrop(target);
         if (crop == null)
             return;
@@ -163,13 +167,19 @@ public sealed class Mod_Plantable : Module
         target.agriculture.RegisterCrop(target.tilePosition, crop);
         target.agriculture.CaptureState();
 
-        Debug.Log($"[种植] {cropItemId} 已种下，地块={target.tilePosition}，剩余种子={item.itemData.Stack.Amount}", item);
-        if (item.itemData.Stack.Amount <= 0f)
-            item.DestroySelf();
+        Inventory_HotBar hotbar = actor.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
+        hotbar?.RuntimeInventory?.SyncHeldItemImmediately();
+        hotbar?.NotifyOwnerNetworkStateChanged();
     }
 
     private void UpdatePreview(Vector3 pointerWorldPosition)
     {
+        // 无种植基质时完全隐藏，而不是让红色作物跟着鼠标出现在普通土地或 UI 外。
+        bool hasSubstrate = ChunkMgr.ExistingInstance != null &&
+            ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(pointerWorldPosition, out var previewSample) &&
+            IsSupportedSubstrate(previewSample);
+        plantingSummoner.SetVisible(hasSubstrate);
+        if (!hasSubstrate) return;
         Vector3 previewPosition = WorldTopologyRuntime.NormalizePosition(pointerWorldPosition);
         if (TryResolvePreviewCell(previewPosition, out Vector3 cellCenter))
             previewPosition = cellCenter;
@@ -255,11 +265,12 @@ public sealed class Mod_Plantable : Module
         }
         Vector2Int tilePosition = sample.WorldCell;
         Vector3 worldCenter = new(tilePosition.x + 0.5f, tilePosition.y + 0.5f, 0f);
-        if (!FarmlandSystem.TryReadSoil(tilePosition, out TileData_Farmland farmland))
+        if (!IsSupportedSubstrate(sample))
         {
             reason = "请先把地块锄成耕地";
             return false;
         }
+        TileData_Farmland farmland = FarmlandSystem.ReadSoilSnapshot(sample);
         farmland.NormalizeValues();
         if (farmland.waterValue <= 0f)
         {
@@ -291,9 +302,20 @@ public sealed class Mod_Plantable : Module
             return false;
         }
 
-        target = new PlantingTarget(tilePosition, worldCenter, view.GetComponent<ChunkAgricultureRenderer>());
+        ChunkAgricultureRenderer agriculture = view.GetComponent<ChunkAgricultureRenderer>();
+        if (agriculture == null)
+        {
+            reason = "目标地块的农业系统尚未就绪";
+            return false;
+        }
+        target = new PlantingTarget(tilePosition, worldCenter, agriculture);
         return true;
     }
+
+    /// <summary>内容配置扩展基质，不按种子 ID 编写孢子特例。</summary>
+    private bool IsSupportedSubstrate(RuntimeTerrainTileSample sample) =>
+        FarmlandSystem.IsFarmland(sample.Cell) || (naturalGroundIds != null &&
+        Array.IndexOf(naturalGroundIds, FarmlandSystem.GetBlockId(sample.Cell.GroundTileId)) >= 0);
 
     private bool TryResolvePreviewCell(Vector3 pointerWorldPosition, out Vector3 cellCenter)
     {
@@ -318,6 +340,9 @@ public sealed class Mod_Plantable : Module
         Item crop = null;
         try
         {
+            if (!ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(target.worldCenter, out var sample))
+                return null;
+            FarmlandSystem.EnsureSoilState(sample);
             crop = ItemMgr.Instance.InstantiateItem(
                 cropItemId,
                 target.worldCenter,
@@ -353,9 +378,12 @@ public sealed class Mod_Plantable : Module
         if (item?.itemData?.Stack == null || item.itemData.Stack.Amount < 1f)
             return false;
 
-        item.itemData.Stack.Amount -= 1f;
-        item.OnUIRefresh?.Invoke();
-        return true;
+        if (!InventoryContextResolver.TryResolveContainingInventory(item.Owner, item.itemData, out Inventory inventory))
+            return false;
+        foreach (ItemSlot slot in inventory.Data.itemSlots)
+            if (ReferenceEquals(slot.itemData, item.itemData))
+                return inventory.Data.TryConsumeFromSlot(slot, 1, out _);
+        return false;
     }
 
     #endregion

@@ -42,6 +42,20 @@ public partial class SaveDataMgr
         cell.Fertility = FarmlandSystem.Read(sample.Terrain, sample.LocalCell, FarmlandSystem.FertilityLayer);
     }
 
+    /// <summary>复用已有草层稀疏差量格式，保存 WorldModel 的清除状态，不改变存档对象布局。</summary>
+    public void RecordRuntimeGrassRemoved(RuntimeTerrainTileSample sample)
+    {
+        if (!GameNetwork.HasStateAuthority || SaveData == null) return;
+        ChunkSaveRecord record = GetRuntimeChunkRecord(sample.Address, true);
+        GrassCellSaveDelta delta = record.GrassDeltas.Find(c => c.LocalPosition == sample.LocalCell);
+        if (delta == null)
+        {
+            delta = new GrassCellSaveDelta { LocalPosition = sample.LocalCell };
+            record.GrassDeltas.Add(delta);
+        }
+        delta.State = GrassCellState.Removed;
+    }
+
     /// <summary>作物生成、保存及收获后更新对应格的独立快照。</summary>
     public void RecordCultivatedCrop(RuntimeWorldAddress address, Vector2Int local, Item crop)
     {
@@ -50,7 +64,7 @@ public partial class SaveDataMgr
         var record = GetRuntimeChunkRecord(address, true);
         var cell = record.AgricultureCells.Find(c => c.LocalPosition == local);
         if (cell == null)
-            throw new InvalidOperationException("种植格缺少农业状态，必须先完成锄地。");
+            throw new InvalidOperationException("种植格缺少水肥状态，必须先准备种植基质。");
         cell.Crop = crop == null ? null : CloneItemData(crop.itemData);
     }
 
@@ -70,6 +84,10 @@ public partial class SaveDataMgr
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.ProgressLayer, x, y, cell.Progress);
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.WaterLayer, x, y, cell.Water);
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.FertilityLayer, x, y, cell.Fertility);
+            if ((chunk.Terrain.GetCell(x, y).Flags & TerrainCellFlags.Water) != 0)
+                chunk.Terrain.SetEnvironmentValue("riverDepth", x, y, cell.Water);
+            else if (cell.SourceTileId != 0)
+                FarmlandSystem.SyncSoilEnvironment(chunk.Terrain, x, y, cell.Water, cell.Fertility);
         }
     }
 

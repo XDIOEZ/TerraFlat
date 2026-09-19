@@ -83,6 +83,7 @@ public class Item_Tile_Grass : Item
         }
 
         ConsumeOneStoneWallItem();
+        RuntimeGrassClearing.ClearAt(placement);
     }
 
     /// <summary>刷新手持石墙的格心预览；返回值只表示预览对象和指针坐标是否可用。</summary>

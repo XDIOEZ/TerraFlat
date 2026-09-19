@@ -191,8 +191,20 @@ public sealed class Mod_WaterVessel : Module, IInteractable
     public void Empty(Item actor)
     {
         if (!CanOperate(actor)) return;
-        ClearContentsInternal();
-        Commit();
+        PourToGround(actor, Data.Amount);
+    }
+
+    /// <summary>主动倾倒才向操作者脚下提交液体；配方、饮用、转移等普通扣液入口不会重复浇地。</summary>
+    public float PourToGround(Item actor, float amount)
+    {
+        if (!CanOperate(actor)) return 0f;
+        LiquidDefinition liquid = CurrentLiquid;
+        Vector2 position = actor.transform.position;
+        float removed = RemoveLiquidAmount(amount);
+        if (removed > AmountEpsilon && liquid != null &&
+            string.Equals(liquid.Category, "water", StringComparison.OrdinalIgnoreCase))
+            FarmlandSystem.TryAddGroundWater(position, removed);
+        return removed;
     }
 
     /// <summary>向另一只通用液体容器部分转移；不同液体禁止自动混合。</summary>

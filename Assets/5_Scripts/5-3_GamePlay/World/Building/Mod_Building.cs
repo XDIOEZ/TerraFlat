@@ -353,6 +353,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             Save();
             if (ConsumeOneSourceItem())
             {
+                RuntimeGrassClearing.ClearAt(placement);
                 GameplayProgressEvents.PublishBuildingPlaced(actor, buildingId);
                 return;
             }
@@ -881,6 +882,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         Save();
         if (ConsumeOneSourceItem())
         {
+            RuntimeGrassClearing.ClearAt(building.transform.position);
+            BuildingPlacementLifecycle.NotifyCommitted(building);
             GameplayProgressEvents.PublishBuildingPlaced(
                 _placementActor,
                 building.itemData?.IDName);
@@ -1292,6 +1295,15 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (Data?.Role != BuildingRole.PlacedBuilding || !IsInstalled())
             return;
 
+        foreach (Module module in item.itemMods.Mods.Values)
+        {
+            if (module is IBuildingFatalDamagePolicy policy &&
+                policy.UseDamageReceiverFatalResolution(damageReceiver))
+            {
+                return;
+            }
+        }
+
         damageReceiver.ConsumeCurrentDeath();
         UnInstall();
     }
@@ -1374,10 +1386,10 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         Vector3 mouse = NormalizePlacement(GetPointerWorldPosition());
         Vector3 authorityPosition = GetAuthorityPosition();
         float maximumPlacementDistance = GetMaxPlacementDistance();
-        float distance = WorldTopologyRuntime.Distance(authorityPosition, mouse);
-        if (!IsWithinPlacementDistance(authorityPosition, mouse, maximumPlacementDistance))
+        bool withinReach = IsWithinPlacementDistance(authorityPosition, mouse, maximumPlacementDistance);
+        if (!withinReach && _ownerController != null && _ownerController.IsUsingMobile)
         {
-            // 超出建造范围时不保留边界处的假预览，避免玩家误以为仍可放置。
+            // 手机继续使用受限准线；桌面鼠标超距保留当前位置的红色不可放置预览。
             CleanupGhost();
             return;
         }
@@ -1390,12 +1402,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         }
 
         GhostShadow.transform.position = mouse;
-        float alpha = Mathf.Clamp01(Mathf.InverseLerp(
-            maximumPlacementDistance + 1.5f,
-            maximumPlacementDistance,
-            distance));
-        GhostShadow.UpdateAlpha(alpha);
-        GhostShadow.UpdateColor(!ValidatePlacement(mouse, authorityPosition, false, out _));
+        GhostShadow.UpdateAlpha(1f);
+        GhostShadow.UpdateColor(!withinReach || !ValidatePlacement(mouse, authorityPosition, false, out _));
     }
 
     /// <summary>按目标格子的最近边缘校验距离，保留每轴半格的格心吸附余量。</summary>

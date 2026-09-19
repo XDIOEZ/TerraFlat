@@ -1036,6 +1036,8 @@ namespace FlatWorld.Networking.Gameplay
                 if (!PublishServerSpawn(buildingItem, position, position, 0.05f, false))
                     throw new InvalidOperationException("服务器无法发布建筑快照");
 
+                RuntimeGrassClearing.ClearAt(position);
+                BuildingPlacementLifecycle.NotifyCommitted(buildingItem);
                 response.Accepted = true;
                 response.Reason = string.Empty;
             }

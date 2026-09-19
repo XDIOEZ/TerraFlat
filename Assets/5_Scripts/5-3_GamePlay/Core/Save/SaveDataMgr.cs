@@ -1219,6 +1219,13 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             WriteRuntimeBuildingDamage(terrain, x, y, accumulatedDamage);
         }
         RestoreAgricultureTerrain(chunk, delta);
+        foreach (GrassCellSaveDelta grass in delta.GrassDeltas)
+        {
+            int x = grass.LocalPosition.x, y = grass.LocalPosition.y;
+            if ((uint)x < (uint)terrain.Width && (uint)y < (uint)terrain.Height &&
+                (grass.State == GrassCellState.Removed || grass.State == GrassCellState.Empty))
+                terrain.SetGrass(x, y, 0);
+        }
         RestoreSupportTerrain(chunk, delta);
         RestoreContaminationTerrain(chunk, delta);
     }

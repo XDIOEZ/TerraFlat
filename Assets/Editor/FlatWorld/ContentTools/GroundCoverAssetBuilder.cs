@@ -90,8 +90,9 @@ public static class GroundCoverAssetBuilder
                 throw new InvalidOperationException("现有草层缺少 TilemapRenderer。");
             tilemap.tileAnchor = grassTilemap.tileAnchor;
             renderer.sharedMaterial = material;
-            renderer.sortingLayerID = sourceRenderer.sortingLayerID;
-            renderer.sortingOrder = sourceRenderer.sortingOrder + 1;
+            // 草层会在绑定时切换到 BRG 共用的 Default；不能复制 Prefab 内遗留的 Tilemap 层。
+            renderer.sortingLayerName = "Default";
+            renderer.sortingOrder = 1;
             renderer.mode = TilemapRenderer.Mode.Chunk;
 
             ChunkGroundCoverRenderer cover = root.GetComponent<ChunkGroundCoverRenderer>() ?? root.AddComponent<ChunkGroundCoverRenderer>();

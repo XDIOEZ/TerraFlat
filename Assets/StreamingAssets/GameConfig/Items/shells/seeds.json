@@ -8,8 +8,27 @@
       "stackable": true,
       "abstract": true,
       "shellPrefab": "Seed",
+      "tags": ["Seed", "Food"],
       "visual": {
         "rendererPath": "Render"
+      },
+      "modules": {
+        "food": {
+          "prefab": "Module_Food", "id": "食物模块", "enabled": true,
+          "data": {
+            "FoodData": {
+              "nutrition": {"Carbohydrates": 1.0, "Max_Carbohydrates": 1.0, "Fat": 0.0, "Max_Fat": 0.0,
+                "Protein": 0.0, "Max_Protein": 0.0, "Water": 0.0, "Max_Water": 0.0, "Vitamins": 0.0, "Max_Vitamins": 0.0},
+              "Max_EatingProgress": 1.0, "nutritionConsumeSpeed": {"BaseValue": 0.0}, "nutritionConsumeRate": 0.0,
+              "WaterConsumeSpeedRate": 0.0
+            },
+            "MechanicStates": [
+              {"StateKey": "food.spoilage", "Data": {"EnableSpoilage": false}},
+              {"StateKey": "food.consumption", "Data": {"EatingProgress": 0.0}}
+            ], "Type": 0
+          },
+          "parameters": {"ConsumptionEnabled": true, "HealthState": {"Enabled": false}}
+        }
       }
     },
     {
@@ -25,7 +44,7 @@
       "volume": 0.05,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": ["Seed", "Food"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/GrassAndFlower.png[GrassAndFlower_16]",
         "rendererLocalPosition": {
@@ -149,10 +168,20 @@
       "weight": 0.02,
       "volume": 0.05,
       "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Mushroom/Item_MushroomSpores.png",
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        }
+      },
       "modules": {
         "plantable": {
           "parameters": {
-            "cropItemId": "MushroomCrop"
+            "cropItemId": "MushroomCrop",
+            "naturalGroundIds": ["Tile_Stone"]
           }
         }
       }

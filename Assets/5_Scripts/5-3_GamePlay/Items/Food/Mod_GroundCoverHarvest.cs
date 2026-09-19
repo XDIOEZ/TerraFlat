@@ -14,6 +14,9 @@ public sealed class Mod_GroundCoverHarvest : Module
     public Ex_ModData ModData = new(); // 工具模块身份；本模块没有独立存档状态。
     [Min(0.1f), Tooltip("从角色位置到目标地格的最大采集距离。")]
     public float reach = 2f;
+    [Tooltip("可选草层产物 ID；留空的工具只采集花朵等独立植被。")]
+    public string grassYieldItemId = "";
+    [Min(1)] public int grassYieldAmount = 2;
     private WorldTileTargetOutline targetOutline; // 仅当前本地手持工具拥有的白色目标框。
     private bool actBound; // 防止重复 Load 订阅同一使用事件。
     public override string CanonicalModuleId => ModuleId;
@@ -59,13 +62,13 @@ public sealed class Mod_GroundCoverHarvest : Module
     /// <summary>只更新手持工具的目标表现，不启用物品 Tick。</summary>
     private void LateUpdate()
     {
-        if (!TryResolveTarget(out GroundCoverTarget target))
+        if (!TryResolveTarget(out GroundCoverTarget target, out RuntimeTerrainTileSample grass, out bool cuttingGrass))
         {
             targetOutline?.Hide();
             return;
         }
         targetOutline ??= WorldTileTargetOutline.Create("Ground Cover Target Outline");
-        targetOutline.Show(target.WorldCell);
+        targetOutline.Show(cuttingGrass ? grass.WorldCell : target.WorldCell);
     }
 
     /// <summary>禁用期间不保留独立于手持物的目标框。</summary>
@@ -81,7 +84,17 @@ public sealed class Mod_GroundCoverHarvest : Module
     /// <summary>重新解析当前白框所使用的目标并提交一次采集。</summary>
     public override void Act()
     {
-        if (TryResolveTarget(out GroundCoverTarget target) && GroundCoverSystem.TryHarvest(target))
+        if (!TryResolveTarget(out GroundCoverTarget target, out RuntimeTerrainTileSample grass, out bool cuttingGrass))
+            return;
+        if (cuttingGrass)
+        {
+            // 先准备真实掉落，再消费草层；失败不清草，连续使用也不会重复出货。
+            DroppedItemHandle product = DroppedItemService.SpawnLoot(grassYieldItemId,
+                (Vector2)grass.WorldCell + Vector2.one * 0.5f, grassYieldAmount);
+            if (!RuntimeGrassClearing.Clear(grass)) DroppedItemService.Remove(product);
+            targetOutline?.Hide();
+        }
+        else if (GroundCoverSystem.TryHarvest(target))
         {
             targetOutline?.Hide();
             ItemActionFeedback.Show(item.Owner, $"已采集{target.Definition.DisplayName}。");
@@ -89,9 +102,11 @@ public sealed class Mod_GroundCoverHarvest : Module
     }
 
     /// <summary>白框与实际采集共用手持、存活、输入锁、UI 遮挡、地格和环绕距离判定。</summary>
-    private bool TryResolveTarget(out GroundCoverTarget target)
+    private bool TryResolveTarget(out GroundCoverTarget target, out RuntimeTerrainTileSample grass, out bool cuttingGrass)
     {
         target = default;
+        grass = default;
+        cuttingGrass = false;
         if (!GameNetwork.HasStateAuthority || item == null || !item.InHand || item.DestructionHandled ||
             item.Owner is not Player actor || !actor.IsLocalProfile || actor.DestructionHandled ||
             !(actor.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp)?.Hp > 0f))
@@ -99,9 +114,19 @@ public sealed class Mod_GroundCoverHarvest : Module
 
         GameController controller = actor.itemMods.GetMod_ByID<GameController>(ModText.Controller);
         if (controller == null || controller.IsGameplayInputLocked ||
-            (!controller.IsUsingMobile && controller.IsPointerOverUI()) ||
-            !GroundCoverSystem.TryResolve(controller.GetMouseWorldPosition(), out target))
+            (!controller.IsUsingMobile && controller.IsPointerOverUI()))
             return false;
+
+        Vector2 pointer = controller.GetMouseWorldPosition();
+        if (!string.IsNullOrWhiteSpace(grassYieldItemId) && ChunkMgr.ExistingInstance != null &&
+            ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(pointer, out grass) &&
+            FarmlandSystem.IsOpen(grass) && grass.Terrain.GetGrass(grass.LocalCell.x, grass.LocalCell.y) > 0 &&
+            FarmlandSystem.IsWithinReach(actor.transform.position, grass.WorldCell, reach))
+        {
+            cuttingGrass = true;
+            return true;
+        }
+        if (!GroundCoverSystem.TryResolve(pointer, out target)) return false;
 
         return FarmlandSystem.IsWithinReach(actor.transform.position, target.WorldCell, reach) &&
             !BuildingOccupancyRegistry.IsOccupied(target.WorldCell);

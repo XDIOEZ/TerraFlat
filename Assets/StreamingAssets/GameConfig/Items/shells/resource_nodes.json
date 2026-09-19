@@ -36,14 +36,25 @@
       "canBePickedUp": false,
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_404.png",
-        "color": { "r": 1.0, "g": 0.72, "b": 0.3, "a": 1.0 },
+        "color": {
+          "r": 1.0,
+          "g": 0.72,
+          "b": 0.3,
+          "a": 1.0
+        },
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
           "isTrigger": true,
           "path": "",
-          "offset": { "x": 0.0, "y": 0.15 },
-          "size": { "x": 0.4, "y": 0.3 }
+          "offset": {
+            "x": 0.0,
+            "y": 0.15
+          },
+          "size": {
+            "x": 0.4,
+            "y": 0.3
+          }
         }
       }
     },
@@ -60,7 +71,9 @@
       "stackable": true,
       "canBePickedUp": true,
       "groundCover": true,
-      "tags": [ "Plant" ],
+      "tags": [
+        "Plant"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/Flower.png",
         "collider": {
@@ -68,8 +81,14 @@
           "enabled": true,
           "isTrigger": true,
           "path": "",
-          "offset": { "x": 0.0, "y": 0.2 },
-          "size": { "x": 0.3, "y": 0.4 }
+          "offset": {
+            "x": 0.0,
+            "y": 0.2
+          },
+          "size": {
+            "x": 0.3,
+            "y": 0.4
+          }
         }
       }
     },
@@ -396,7 +415,7 @@
       "id": "Tree_Coconut",
       "parent": "WorldResource_Base",
       "gameName": "椰子树",
-      "description": "椰子树",
+      "description": "树冠会长出椰子。成熟果可能自行坠落；砍伐只掉落已经成熟的果实。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -408,7 +427,7 @@
         "Tree"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Env/椰子树.png[椰子树]",
+        "spriteAddress": "Assets/6_Art/Generated/CoconutTree/FruitlessCoconutTree.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,
@@ -618,56 +637,6 @@
             }
           }
         },
-        "生产模块": {
-          "prefab": "Module_Production",
-          "id": "生产模块",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "ProductionList": [
-              {
-                "itemName": "Coconut_Green",
-                "itemCountMin": 1,
-                "itemCountMax": 2,
-                "MaxProductionTime": 2000.0,
-                "ProductionTime": 80.0,
-                "MaxProductionCount": -1,
-                "CurrentProductionCount": 0,
-                "ThrowItem": true,
-                "StoreInModule": false,
-                "DestroySelf": false,
-                "SpawnProbability": 0.1,
-                "Random_ProductionTime": {
-                  "x": 0.0,
-                  "y": 1000.0
-                },
-                "IsInitialized": false
-              }
-            ],
-            "ProductionSpeed": 1.0,
-            "UseCropGrowthMultiplier": false,
-            "$transform": {
-              "localPosition": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
-              }
-            }
-          }
-        },
         "plantClimate": {
           "prefab": "Module_PlantClimate",
           "id": "Mod_PlantClimate",
@@ -680,6 +649,43 @@
             "maximumGrowthTemperature": 35,
             "maximumSurvivalTemperature": 45,
             "fatalExposureHours": 12
+          }
+        },
+        "canopy_fruit": {
+          "prefab": "Module_CanopyFruit",
+          "id": "Mod_CanopyFruit",
+          "enabled": true,
+          "data": {},
+          "parameters": {
+            "Settings": {
+              "MinimumCount": 1,
+              "MaximumCount": 5,
+              "GrowthSeconds": 2000,
+              "GrowthJitterSeconds": 300,
+              "CycleSeconds": 2000,
+              "MinimumFallDelay": 1,
+              "MaximumFallDelay": 1440,
+              "FlightSeconds": 0.65
+            },
+            "FruitItemId": "Coconut_Green",
+            "SplitItemId": "Coconut_Half",
+            "BluntDamage": 10,
+            "SplitChance": 0.5,
+            "CollisionRadius": 0.12,
+            "FruitWidth": 0.28,
+            "SmallScale": 0.2,
+            "UseNormalizedCrownAnchor": true,
+            "CrownAnchorUV": { "x": 0.5, "y": 0.625 },
+            "CrownSpreadUV": { "x": 0.048, "y": 0.02 },
+            "DropScatterRadius": 0.85,
+            "CrownCenter": {
+              "x": 0,
+              "y": 6.3
+            },
+            "CrownSpread": {
+              "x": 0.6,
+              "y": 0.25
+            }
           }
         }
       },

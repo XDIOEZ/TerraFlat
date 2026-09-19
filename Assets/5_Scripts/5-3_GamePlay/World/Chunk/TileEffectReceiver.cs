@@ -63,6 +63,21 @@ public class TileEffectReceiver : Module
     private bool activeTileIsEdgeInteractionOnly;
     private bool isPreparedForWorldTransition;
     private EnvironmentInteractionRunner environmentInteractions;
+    private readonly System.Collections.Generic.HashSet<object> effectSuppressors = new();
+
+    /// <summary>实例级地块接触开关；起飞先退出旧地块，释放后按当前位置重新进入。</summary>
+    public void SetEffectsSuppressed(object owner, bool suppressed)
+    {
+        if (owner == null)
+            throw new System.ArgumentNullException(nameof(owner));
+        if (suppressed)
+        {
+            if (effectSuppressors.Add(owner))
+                ExitCurrentTileEffects();
+        }
+        else if (effectSuppressors.Remove(owner) && effectSuppressors.Count == 0)
+            RefreshCurrentTileEffects();
+    }
 
     private Item waterVitalsItem;
     private Mod_Stamina waterStamina;
@@ -127,6 +142,8 @@ public class TileEffectReceiver : Module
 
     public override void ModUpdate(float deltaTime)
     {
+        if (effectSuppressors.Count != 0)
+            return;
         UpdateLegacyMapReference();
         Vector2Int currentGridPos = GetCurrentGridPos();
         if (currentGridPos != lastGridPos || !IsActiveSourceCurrent(currentGridPos))
@@ -239,6 +256,8 @@ public class TileEffectReceiver : Module
     /// <summary>地图加载完成或切换失败恢复后，立即重新绑定脚下地块效果。</summary>
     public bool RefreshCurrentTileEffects()
     {
+        if (effectSuppressors.Count != 0)
+            return false;
         UpdateLegacyMapReference();
         if (item == null)
             return false;
@@ -274,8 +293,8 @@ public class TileEffectReceiver : Module
         naturalImmersion = Mathf.Clamp01(naturalImmersion);
         if (!continuedAcrossWaterTiles)
         {
-            currentWaterImmersion = naturalImmersion > floatingImmersionLevel
-                ? floatingImmersionLevel
+            currentWaterImmersion = HasSwimStamina()
+                ? Mathf.Min(naturalImmersion, floatingImmersionLevel)
                 : naturalImmersion;
         }
 
@@ -296,13 +315,13 @@ public class TileEffectReceiver : Module
         float safeDeltaTime = Mathf.Max(0f, deltaTime);
         float targetImmersion = naturalImmersion;
 
-        if (naturalImmersion > floatingImmersionLevel && HasSwimStamina())
+        if (naturalImmersion > WaterEnvironmentRules.SwimmingDepthThreshold && HasSwimStamina())
         {
             if (GameNetwork.HasStateAuthority && safeDeltaTime > 0f)
-                ConsumeSwimStamina(safeDeltaTime);
+                ConsumeSwimStamina(safeDeltaTime, naturalImmersion);
 
             if (HasSwimStamina())
-                targetImmersion = floatingImmersionLevel;
+                targetImmersion = Mathf.Min(naturalImmersion, floatingImmersionLevel);
         }
 
         currentWaterImmersion = Mathf.MoveTowards(
@@ -389,11 +408,13 @@ public class TileEffectReceiver : Module
             : fallbackSwimStamina > 0f;
     }
 
-    private void ConsumeSwimStamina(float deltaTime)
+    private void ConsumeSwimStamina(float deltaTime, float naturalImmersion)
     {
         float consumePerSecond = waterOxygen != null
             ? Mathf.Max(0f, waterOxygen.staminaConsumePerSecond)
             : Mathf.Max(0f, fallbackSwimStaminaConsumePerSecond);
+
+        consumePerSecond *= WaterEnvironmentRules.ResolveSwimmingMultiplier(naturalImmersion);
 
         if (waterStamina != null)
         {

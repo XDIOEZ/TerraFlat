@@ -20,8 +20,10 @@
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
-          "z": -45
-        }
+          "z": 225
+        },
+        "flipX": true,
+        "flipY": false
       },
       "modules": {
         "hoe": {
