@@ -7,7 +7,7 @@ using UnityEngine;
 public enum BirdFlightPhase { Ground, TakingOff, Flying, Landing }
 
 /// <summary>
-/// GameObject 鸟与海鸥共用模块。地面 0.5 格/秒、空中 3 格/秒，完整巡航 30 秒。
+/// GameObject 鸟与海鸥共用模块。地面 0.5 格/秒、空中 9 格/秒，飞行受独立耐力约束。
 /// Item 和刚体始终保存地面映射坐标；独立 LiftRoot 仅提升表现与受击盒 1.5 单位。
 /// 状态、阶段计时与目的地随模块存档，回收时释放地块抑制并归零表现高度。
 /// </summary>
@@ -26,6 +26,8 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         public float PauseRemaining;
         public float TransitionStartHeight;
         public bool HasTransitionStartHeight;
+        public float Stamina = 100f;
+        public bool MustRecoverStamina;
     }
 
     public Ex_ModData Data = new();
@@ -33,13 +35,16 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     public override string CanonicalModuleId => "AI_Bird";
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
     public float groundSpeed = 0.5f;
-    public float flightSpeed = 3f;
+    public float flightSpeed = 9f;
     public float flightHeight = 1.5f;
     public float groundDuration = 8f;
-    public float flightDuration = 30f;
+    public float flightDuration = 100f;
     public float transitionDuration = 0.75f;
     public float groundWanderRadius = 2f;
     public float flightWanderRadius = 18f;
+    [Min(0.01f)] public float flightStaminaMax = 100f;
+    [Min(0f)] public float flightStaminaDrainRate = 1f;
+    [Min(0f)] public float flightStaminaRecoveryRate = 10f;
     public BirdFlightNavigationProfile flightNavigation = new();
     public Transform liftRoot;
     public Animator birdAnimator;
@@ -54,10 +59,13 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     private Vector3 liftOrigin;
     private string currentAnimation;
     private bool restoreGroundDestination;
+    private BirdFlightStaminaBar staminaDisplay;
     public Item ActorItem => item;
     public bool IsAlive => health != null && health.Hp > 0f;
     public BirdFlightPhase Phase => state.Phase;
     public bool IsAirborne => state.Phase != BirdFlightPhase.Ground;
+    public float FlightStamina => state.Stamina;
+    public bool IsRecoveringFlightStamina => state.MustRecoverStamina;
     #endregion
 
     #region 装配与回收
@@ -68,6 +76,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         tileReceiver = modules.RequireSingleModById<TileEffectReceiver>(ModText.TileEffectReceiver);
         health = modules.RequireSingleModById<DamageReceiver>(ModText.Hp);
         food = modules.RequireSingleModById<Mod_Food>(ModText.Food);
+        threatDetector = modules.RequireSingleModById<Mod_ItemDetector>(ModText.Detector);
         if (liftRoot == null || birdAnimator == null)
             throw new InvalidOperationException("鸟外壳缺少 LiftRoot、Animator 或根刚体，请运行鸟资源定向构建菜单。");
         liftOrigin = liftRoot.localPosition;
@@ -78,9 +87,16 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         body = item.GetComponent<Rigidbody2D>();
         if (body == null)
             throw new InvalidOperationException("鸟外壳缺少根刚体。");
+        // 依赖装配阶段尚未执行 Module.LoadMod，item 只在 Load 阶段保证已绑定。
+        staminaDisplay = item.GetComponent<BirdFlightStaminaBar>();
+        if (staminaDisplay == null) staminaDisplay = item.gameObject.AddComponent<BirdFlightStaminaBar>();
+        staminaDisplay.Bind(this, liftRoot);
         state = Data.GetData<FlightState>() ?? new FlightState();
         if (!Enum.IsDefined(typeof(BirdFlightPhase), state.Phase))
             throw new InvalidOperationException("鸟存档包含无效飞行阶段。");
+        state.Stamina = Mathf.Clamp(state.Stamina, 0f, flightStaminaMax);
+        if (state.Stamina <= 0f) state.MustRecoverStamina = true;
+        threatDetector.DetectionRadius = Mathf.Max(fleeTriggerDistance, fleeSafeDistance);
         loaded = true;
         stoppedForDeath = false;
         currentAnimation = null;
@@ -106,6 +122,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         if (body != null)
             body.velocity = Vector2.zero;
         currentAnimation = null;
+        staminaDisplay?.SetVisible(false);
     }
     #endregion
 
@@ -130,6 +147,21 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
         {
             float step = Mathf.Max(0f, deltaTime);
             state.Elapsed += step;
+            bool exhausted = AdvanceFlightStamina(state, step, flightStaminaMax, flightStaminaDrainRate, flightStaminaRecoveryRate);
+            if (exhausted && (state.Phase == BirdFlightPhase.Flying || state.Phase == BirdFlightPhase.TakingOff))
+            {
+                escapeRemaining = 0f;
+                BeginLanding();
+            }
+            // 强制降落必须先于逃跑和觅食，避免零耐力后仍被逃跑分支继续当作飞机移动。
+            if (state.Phase == BirdFlightPhase.Landing && state.MustRecoverStamina)
+            {
+                mover.StopMovement();
+                if (state.Elapsed >= transitionDuration) CompleteLanding();
+                ApplyFlightPresentation();
+                return;
+            }
+            TickVigilance(step);
             if (TickEscape(step) || TickForaging(step))
             {
                 ApplyFlightPresentation();
@@ -159,9 +191,31 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     }
 
     /// <summary>起飞入口先撤销地块效果，再移动受击盒；同一 Tick 即拒绝近战。</summary>
-    public void BeginTakeoff() => EnterPhase(BirdFlightPhase.TakingOff);
+    public void BeginTakeoff()
+    {
+        if (state.Stamina <= 0f || state.MustRecoverStamina || state.Phase == BirdFlightPhase.TakingOff) return;
+        EnterPhase(BirdFlightPhase.TakingOff);
+    }
     public void BeginLanding() => EnterPhase(BirdFlightPhase.Landing);
     public void CompleteLanding() => EnterPhase(BirdFlightPhase.Ground);
+
+    /// <summary>纯耐力结算：飞行每秒扣 1，地面每秒回 10；耗尽后必须回满才能解除强制休息。</summary>
+    public static bool AdvanceFlightStamina(FlightState state, float deltaTime, float maximum, float drain, float recovery)
+    {
+        float step = Mathf.Max(0f, deltaTime);
+        maximum = Mathf.Max(0.01f, maximum);
+        if (state.Phase == BirdFlightPhase.Ground)
+        {
+            state.Stamina = Mathf.Min(maximum, state.Stamina + Mathf.Max(0f, recovery) * step);
+            if (state.Stamina >= maximum) state.MustRecoverStamina = false;
+        }
+        else
+        {
+            state.Stamina = Mathf.Max(0f, state.Stamina - Mathf.Max(0f, drain) * step);
+            if (state.Stamina <= 0f) state.MustRecoverStamina = true;
+        }
+        return state.MustRecoverStamina && state.Stamina <= 0f;
+    }
 
     private void EnterPhase(BirdFlightPhase phase)
     {

@@ -17,22 +17,26 @@
         "Prey"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/8_Animations/Character/Birds/Bird/Ground_0.png",
         "rendererPath": "BirdLift/Module_Animator_AI",
         "animatorPath": "BirdLift/Module_Animator_AI",
         "animationState": "Ground",
         "animatorControllerAddress": "flatworld.actor.animator.bird",
         "flipX": false,
         "color": {
-          "r": 0.65,
-          "g": 0.8,
+          "r": 1.0,
+          "g": 1.0,
           "b": 1.0,
           "a": 1.0
         }
       },
       "modules": {
+        "detector": {
+          "enabled": true,
+          "parameters": { "DetectionRadius": 20.0 }
+        },
         "food": {
-          "parameters": {"NutritionTagMultipliers": [{"Tag": "Seed", "Multiplier": 3.0}]}
+          "parameters": {"NutritionTagMultipliers": [{"Tag": "Seed", "Multiplier": 3.0}, {"Tag": "Fruit", "Multiplier": 3.0}]}
         },
         "ai": {
           "prefab": "AI_Bird",
@@ -44,10 +48,16 @@
           },
           "parameters": {
             "groundSpeed": 0.5,
-            "flightSpeed": 3.0,
+            "flightSpeed": 9.0,
+            "flightStaminaMax": 100.0,
+            "flightStaminaDrainRate": 1.0,
+            "flightStaminaRecoveryRate": 10.0,
+            "fleeTriggerDistance": 12.0,
+            "fleeSafeDistance": 20.0,
+            "additionalForageTags": ["Berry", "Fruit"],
             "flightHeight": 1.5,
             "groundDuration": 8.0,
-            "flightDuration": 30.0,
+            "flightDuration": 100.0,
             "transitionDuration": 0.75,
             "groundWanderRadius": 2.0,
             "flightWanderRadius": 18.0,
@@ -103,6 +113,7 @@
         "Prey"
       ],
       "visual": {
+        "spriteAddress": "Assets/8_Animations/Character/Birds/Seagull/Ground_0.png",
         "animatorControllerAddress": "flatworld.actor.animator.seagull",
         "color": {
           "r": 1.0,

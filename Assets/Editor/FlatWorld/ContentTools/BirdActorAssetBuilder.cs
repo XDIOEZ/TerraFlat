@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -10,8 +11,8 @@ using EditorAnimatorController = UnityEditor.Animations.AnimatorController;
 
 /// <summary>
 /// 鸟/海鸥定向资源构建器，仅手动菜单执行，不迁移其它 Actor、不修改 Item manifest。
-/// 复用正式动物组件结构，但全部动作使用通用素材占位符；LiftRoot 隔离表现高度与地图位置。
-/// 重复运行仅更新本构建器拥有的两个外壳、动画和 Addressables 条目。
+/// 复用正式动物组件结构，按物种加载五个飞行状态的正式像素帧；LiftRoot 隔离表现高度与地图位置。
+/// 重复运行仅更新本构建器拥有的两个外壳、动画和 Addressables 条目，避免正式动画被重新写成占位图。
 /// </summary>
 public static class BirdActorAssetBuilder
 {
@@ -19,9 +20,11 @@ public static class BirdActorAssetBuilder
     public const string BuildMenu = "FlatWorld/鸟与海鸥/构建外壳动画与Addressables";
     public const string ValidateMenu = "FlatWorld/鸟与海鸥/验证规则与资源";
     public const string RulesMenu = "FlatWorld/鸟与海鸥/仅验证确定性规则";
-    public const string PlaceholderPath = "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png";
     private const string SourcePath = "Assets/2_Prefabs/Gameplay/AI/Chicken.prefab";
     private const string AnimationRoot = "Assets/8_Animations/Character/Birds";
+    private const int AnimationFrameRate = 8;
+    private const int AnimationFrameCount = 2;
+    private const int AnimationPixelsPerUnit = 40;
     private static readonly string[] States = { "Ground", "Walk", "TakingOff", "Flying", "Landing" };
 
     [MenuItem(BuildMenu)]
@@ -32,22 +35,26 @@ public static class BirdActorAssetBuilder
         AddressableAssetSettings settings = AddressableAssetSettingsDefaultObject.Settings;
         if (settings == null || settings.DefaultGroup == null)
             throw new InvalidOperationException("项目 Addressables 默认组未配置。");
-        Sprite sprite = AssetDatabase.LoadAllAssetsAtPath(PlaceholderPath).OfType<Sprite>().FirstOrDefault();
-        if (sprite == null)
-            throw new InvalidDataException("通用素材占位符必须已作为 Sprite 导入，禁止替换为鸡图。");
+        AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
         EnsureFolder(AnimationRoot);
-        BuildSpecies("Bird", sprite, settings);
-        BuildSpecies("Seagull", sprite, settings);
+        BuildSpecies("Bird", settings);
+        BuildSpecies("Seagull", settings);
         AssetDatabase.SaveAssets();
         ValidateAssets();
-        Debug.Log("[BirdActor] 鸟与海鸥的外壳、Animator 和 Addressables 已构建；未修改其他物种或 Item manifest。");
+        Debug.Log("[BirdActor] 鸟与海鸥已使用各自正式动画帧构建外壳、Animator 和 Addressables；未修改其他物种或 Item manifest。");
     }
     #endregion
 
     #region 外壳与动画
-    private static void BuildSpecies(string species, Sprite sprite, AddressableAssetSettings settings)
+    private static void BuildSpecies(string species, AddressableAssetSettings settings)
     {
-        EditorAnimatorController controller = BuildController(species, sprite);
+        Dictionary<string, Sprite[]> frames = LoadFormalFrames(species);
+        EditorAnimatorController controller = BuildController(species, frames);
+        Sprite groundSprite = frames["Ground"][0];
+        foreach (Sprite[] stateFrames in frames.Values)
+            foreach (Sprite frame in stateFrames)
+                RegisterAddress(settings, AssetDatabase.GetAssetPath(frame), AssetDatabase.GetAssetPath(frame), "ActorVisual");
+
         GameObject root = PrefabUtility.LoadPrefabContents(SourcePath);
         try
         {
@@ -70,7 +77,7 @@ public static class BirdActorAssetBuilder
             animator.runtimeAnimatorController = controller;
             animator.applyRootMotion = false;
             foreach (SpriteRenderer renderer in root.GetComponentsInChildren<SpriteRenderer>(true))
-                renderer.sprite = sprite;
+                renderer.sprite = groundSprite;
             actor.Sprite = animator.GetComponent<SpriteRenderer>();
             if (actor.Sprite == null || actor.Sprite.transform.name != "Module_Animator_AI")
                 throw new InvalidDataException("鸟 JSON 约定动画与主 Sprite 同在 Module_Animator_AI 节点。");
@@ -99,7 +106,62 @@ public static class BirdActorAssetBuilder
         }
     }
 
-    private static EditorAnimatorController BuildController(string species, Sprite sprite)
+    /// <summary>读取并统一导入某一物种的五个状态帧。</summary>
+    private static Dictionary<string, Sprite[]> LoadFormalFrames(string species)
+    {
+        var frames = new Dictionary<string, Sprite[]>(StringComparer.Ordinal);
+        foreach (string state in States)
+        {
+            Sprite[] stateFrames = new Sprite[AnimationFrameCount];
+            for (int frameIndex = 0; frameIndex < stateFrames.Length; frameIndex++)
+            {
+                string path = GetFramePath(species, state, frameIndex);
+                ConfigureSpriteImporter(path);
+                stateFrames[frameIndex] = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                if (stateFrames[frameIndex] == null)
+                    throw new InvalidDataException($"{species}/{state}_{frameIndex} 正式 Sprite 无法导入：{path}");
+            }
+            frames.Add(state, stateFrames);
+        }
+        return frames;
+    }
+
+    /// <summary>配置鸟类帧的点采样、无压缩和底部中心 Pivot。</summary>
+    private static void ConfigureSpriteImporter(string path)
+    {
+        TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+        if (importer == null)
+            throw new InvalidDataException($"正式鸟类帧缺失或不是纹理：{path}");
+
+        TextureImporterSettings textureSettings = new();
+        importer.ReadTextureSettings(textureSettings);
+        bool changed = importer.textureType != TextureImporterType.Sprite ||
+                       importer.spriteImportMode != SpriteImportMode.Single ||
+                       textureSettings.spriteAlignment != (int)SpriteAlignment.BottomCenter ||
+                       textureSettings.spritePivot != new Vector2(0.5f, 0f) ||
+                       importer.spritePixelsPerUnit != AnimationPixelsPerUnit ||
+                       importer.filterMode != FilterMode.Point ||
+                       importer.mipmapEnabled ||
+                       importer.textureCompression != TextureImporterCompression.Uncompressed ||
+                       !importer.alphaIsTransparency ||
+                       importer.wrapMode != TextureWrapMode.Clamp;
+        importer.textureType = TextureImporterType.Sprite;
+        importer.spriteImportMode = SpriteImportMode.Single;
+        textureSettings.spriteAlignment = (int)SpriteAlignment.BottomCenter;
+        textureSettings.spritePivot = new Vector2(0.5f, 0f);
+        importer.SetTextureSettings(textureSettings);
+        importer.spritePixelsPerUnit = AnimationPixelsPerUnit;
+        importer.filterMode = FilterMode.Point;
+        importer.mipmapEnabled = false;
+        importer.textureCompression = TextureImporterCompression.Uncompressed;
+        importer.alphaIsTransparency = true;
+        importer.wrapMode = TextureWrapMode.Clamp;
+        if (changed)
+            importer.SaveAndReimport();
+    }
+
+    /// <summary>按稳定的状态边界创建循环动画，避免重建时退回共享占位帧。</summary>
+    private static EditorAnimatorController BuildController(string species, Dictionary<string, Sprite[]> frames)
     {
         string directory = $"{AnimationRoot}/{species}";
         EnsureFolder(directory);
@@ -118,18 +180,28 @@ public static class BirdActorAssetBuilder
             AnimationClip clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(clipPath);
             if (clip == null)
             {
-                clip = new AnimationClip { name = stateName, frameRate = 8f };
+                clip = new AnimationClip { name = stateName, frameRate = AnimationFrameRate };
                 AssetDatabase.CreateAsset(clip, clipPath);
             }
             clip.ClearCurves();
+            clip.frameRate = AnimationFrameRate;
             var binding = EditorCurveBinding.PPtrCurve("", typeof(SpriteRenderer), "m_Sprite");
-            AnimationUtility.SetObjectReferenceCurve(clip, binding, new[]
-            {
-                new ObjectReferenceKeyframe { time = 0f, value = sprite },
-                new ObjectReferenceKeyframe { time = 1f, value = sprite }
-            });
+            bool loop = stateName == "Ground" || stateName == "Walk" || stateName == "Flying";
+            ObjectReferenceKeyframe[] keyframes = loop
+                ? new[]
+                {
+                    new ObjectReferenceKeyframe { time = 0f, value = frames[stateName][0] },
+                    new ObjectReferenceKeyframe { time = 1f / AnimationFrameRate, value = frames[stateName][1] },
+                    new ObjectReferenceKeyframe { time = 2f / AnimationFrameRate, value = frames[stateName][0] }
+                }
+                : new[]
+                {
+                    new ObjectReferenceKeyframe { time = 0f, value = frames[stateName][0] },
+                    new ObjectReferenceKeyframe { time = 1f / AnimationFrameRate, value = frames[stateName][1] }
+                };
+            AnimationUtility.SetObjectReferenceCurve(clip, binding, keyframes);
             AnimationClipSettings clipSettings = AnimationUtility.GetAnimationClipSettings(clip);
-            clipSettings.loopTime = true;
+            clipSettings.loopTime = loop;
             AnimationUtility.SetAnimationClipSettings(clip, clipSettings);
             AnimatorState state = machine.AddState(stateName);
             state.motion = clip;
@@ -139,6 +211,10 @@ public static class BirdActorAssetBuilder
         EditorUtility.SetDirty(controller);
         return controller;
     }
+
+    /// <summary>返回鸟类正式状态帧的稳定项目路径。</summary>
+    private static string GetFramePath(string species, string state, int frameIndex) =>
+        $"{AnimationRoot}/{species}/{state}_{frameIndex}.png";
 
     private static void RegisterAddress(AddressableAssetSettings settings, string path, string address, string label)
     {
@@ -201,12 +277,25 @@ public static class BirdActorAssetBuilder
             }
             ValidateAddress(definition.ShellAddress, $"Assets/2_Prefabs/Gameplay/AI/{species}.prefab");
             ValidateAddress(definition.Visual.AnimatorControllerAddress, AssetDatabase.GetAssetPath(bird.birdAnimator.runtimeAnimatorController));
+            string groundPath = GetFramePath(species, "Ground", 0);
+            Require(string.Equals(definition.Visual.SpriteAddress, groundPath, StringComparison.Ordinal),
+                $"{species} JSON 未指向本物种正式 Ground Sprite");
+            ValidateAddress(definition.Visual.SpriteAddress, groundPath);
             foreach (AnimationClip clip in bird.birdAnimator.runtimeAnimatorController.animationClips)
+            {
+                bool hasFormalFrame = false;
                 foreach (EditorCurveBinding binding in AnimationUtility.GetObjectReferenceCurveBindings(clip))
                     foreach (ObjectReferenceKeyframe frame in AnimationUtility.GetObjectReferenceCurve(clip, binding))
-                        Require(AssetDatabase.GetAssetPath(frame.value) == PlaceholderPath, "鸟动画引用了非通用占位图");
+                    {
+                        string framePath = AssetDatabase.GetAssetPath(frame.value);
+                        Require(frame.value != null && framePath.StartsWith($"{AnimationRoot}/{species}/", StringComparison.Ordinal),
+                            $"{species}/{clip.name} 动画引用了非本物种正式帧：{framePath}");
+                        hasFormalFrame = true;
+                    }
+                Require(hasFormalFrame, $"{species}/{clip.name} 没有 Sprite 帧");
+            }
         }
-        Debug.Log("[BirdActor] 鸟/海鸥 JSON、外壳层级、动画占位符、Addressables 与生态后端验证通过。");
+        Debug.Log("[BirdActor] 鸟/海鸥 JSON、外壳层级、正式动画帧、Addressables 与生态后端验证通过。");
     }
 
     private static void ValidateAddress(string address, string path)
