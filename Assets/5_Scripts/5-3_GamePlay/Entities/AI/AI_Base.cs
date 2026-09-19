@@ -110,6 +110,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	[SerializeField, ReadOnly] private Item _recentDamageThreat;
 	[SerializeField, ReadOnly] private float _damageThreatRemain;
 	private Vector3 _lastDamageThreatPosition;
+	private bool _freezeDamageThreatOrigin; // 投射物来源按命中瞬间冻结，不能跟着穿过身体的弹体翻转方向。
 	private DamageReceiver _damageEventSource;
 	// 睡眠中受到有效伤害后锁存一次唤醒请求，直到真正离开睡眠状态。
 	private bool _sleepInterruptedByDamage;
@@ -614,7 +615,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 			return false;
 		}
 
-		if (threat != null)
+		if (threat != null && !_freezeDamageThreatOrigin)
 			_lastDamageThreatPosition = threat.transform.position;
 
 		sourcePosition = _lastDamageThreatPosition;
@@ -643,6 +644,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 	{
 		_recentDamageThreat = null;
 		_damageThreatRemain = 0f;
+		_freezeDamageThreatOrigin = false;
 		_lastDamageThreatPosition = transform.position;
 	}
 
@@ -681,7 +683,7 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		if (_damageThreatRemain <= 0f)
 			return;
 
-		if (_recentDamageThreat != null)
+		if (_recentDamageThreat != null && !_freezeDamageThreatOrigin)
 			_lastDamageThreatPosition = _recentDamageThreat.transform.position;
 
 		_damageThreatRemain = DecrementTimer(_damageThreatRemain, deltaTime);
@@ -1043,11 +1045,13 @@ public abstract class AI_Base<TState> : Module, IAIActor where TState : struct, 
 		}
 
 		OnDamageReceived(damageInfo);
-		if (damageInfo.Attacker == null || DamageThreatMemoryDuration <= 0f)
+		if (DamageThreatMemoryDuration <= 0f || !DamageThreatOrigin.TryResolve(damageInfo, out Vector2 origin))
 			return;
 
-		_recentDamageThreat = damageInfo.Attacker;
-		_lastDamageThreatPosition = damageInfo.Attacker.transform.position;
+		_recentDamageThreat = damageInfo.Attacker != null ? damageInfo.Attacker.Owner ?? damageInfo.Attacker : null;
+		_lastDamageThreatPosition = origin;
+		_freezeDamageThreatOrigin = damageInfo.Attacker == null ||
+			(damageInfo.Context.DeliveryCapabilities & FlatWorld.Combat.CombatDeliveryCapabilities.Projectile) != 0;
 		_damageThreatRemain = Mathf.Max(0.1f, DamageThreatMemoryDuration);
 		_stateDecisionTimer = 0f;
 		OnDamageThreatUpdated(damageInfo);

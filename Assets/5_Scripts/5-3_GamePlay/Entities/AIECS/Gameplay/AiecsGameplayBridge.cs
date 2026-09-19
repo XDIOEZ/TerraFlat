@@ -25,6 +25,8 @@ namespace FlatWorld.AIECS.Gameplay
         }
         private struct CorpseRecord { public Entity Entity; public double Expires; } // 按模拟时间先进先出。
         private struct DropRecord { public string ItemId; public float2 Position; public int Remaining; } // 队列持有静态 ID，无逐掉落任务对象。
+        private struct WeaponCandidate { public AiecsHitEvent Hit; public float Fraction, Distance; }
+        private readonly List<WeaponCandidate> weaponCandidates = new(); // 复用候选数组，跨桶按最近碰撞排序。
         private static uint worldSequence;
         private static readonly Dictionary<string, uint> DimensionIds = new Dictionary<string, uint>(StringComparer.Ordinal);
         private readonly List<ExternalProxy> proxies = new List<ExternalProxy>();
@@ -242,7 +244,8 @@ namespace FlatWorld.AIECS.Gameplay
         /// <summary>实际窗口才查询稀疏桶；OBB 精筛与旧目标共同预约武器的 MaxAttackTargets。</summary>
         public void QueryWeaponPulse(Mod_Damage weapon, AttackShape2D shape, CombatDamageContext context)
         {
-            if (Simulation == null || !GameDifficultyService.IsPlayer(weapon.item) || context.Attack.Source.World != worldStamp) return;
+            if (Simulation == null || !GameDifficultyService.IsPlayer(weapon.item) || context.Attack.Source.World != worldStamp ||
+                (context.DeliveryCapabilities & CombatDeliveryCapabilities.AirborneOnly) != 0) return;
             var view = Simulation.Spatial;
             if (!view.Samples.IsCreated) return;
             // 导航可能在模拟与武器 Update 之间发布新表；实际 Pulse 重新借用当前 LOS 索引。
@@ -253,12 +256,13 @@ namespace FlatWorld.AIECS.Gameplay
             // 新阵营注册可能替换矩阵，因此重新取得视图。
             view = Simulation.Spatial;
             WeaponPulses++; weapons[context.Attack.Source] = weapon;
-            view.BucketRange(shape.Center, shape.BoundsExtents + view.MaximumBodyExtent, out int2 first, out int2 size);
-            for (int y = 0; y < size.y && weapon.RemainingAttackTargets > 0; y++)
-            for (int x = 0; x < size.x && weapon.RemainingAttackTargets > 0; x++)
+            weaponCandidates.Clear();
+            view.BucketRange(shape.BoundsCenter, shape.BoundsExtents + view.MaximumBodyExtent, out int2 first, out int2 size);
+            for (int y = 0; y < size.y; y++)
+            for (int x = 0; x < size.x; x++)
             {
                 int2 bucket = view.NormalizeBucket(first + new int2(x, y));
-                for (int faction = 0; faction < factionNames.Count && weapon.RemainingAttackTargets > 0; faction++)
+                for (int faction = 0; faction < factionNames.Count; faction++)
                 {
                     if (!view.IsHostile(sourceFaction, faction) || !view.Buckets.TryGetFirstValue(new int3(bucket, faction), out int index, out var iterator)) continue;
                     do
@@ -266,14 +270,31 @@ namespace FlatWorld.AIECS.Gameplay
                         WeaponCandidates++;
                         var target = view.Samples[index];
                         if (target.Identity.External != 0 || target.Dead != 0 || target.Identity.Key.World != worldStamp ||
-                            !shape.Intersects(target.ShapeNear(shape.Center, view.Domain, true)) || !losView.Visible(shape.Center, target.Position)) continue;
-                        if (!Simulation.Entities.Exists(target.Entity) || Simulation.Entities.GetComponentData<AiecsVital>(target.Entity).Dead != 0 ||
-                            !weapon.TryReserveExternalTarget(target.Identity.Key)) continue;
-                        var hit = context; hit.HitPoint = target.Position;
-                        Simulation.SubmitHit(new AiecsHitEvent { Target = target.Entity, TargetKey = target.Identity.Key, Context = hit });
-                    } while (weapon.RemainingAttackTargets > 0 && view.Buckets.TryGetNextValue(out index, ref iterator));
+                            !shape.TryIntersect(target.ShapeNear(shape.BoundsCenter, view.Domain, true), out float fraction) ||
+                            !losView.Visible(context.Origin, target.Position)) continue;
+                        if (!Simulation.Entities.Exists(target.Entity) || Simulation.Entities.GetComponentData<AiecsVital>(target.Entity).Dead != 0) continue;
+                        var hit = context;
+                        hit.HitPoint = math.lengthsq(shape.SweepDelta) > 0.000001f
+                            ? shape.Center - shape.SweepDelta * (1f - fraction) : target.Position;
+                        weaponCandidates.Add(new WeaponCandidate {
+                            Hit = new AiecsHitEvent { Target = target.Entity, TargetKey = target.Identity.Key, Context = hit },
+                            Fraction = fraction, Distance = math.distancesq(context.Origin, hit.HitPoint) });
+                    } while (view.Buckets.TryGetNextValue(out index, ref iterator));
                 }
             }
+            weaponCandidates.Sort(CompareWeaponCandidates);
+            foreach (WeaponCandidate candidate in weaponCandidates)
+            {
+                if (weapon.RemainingAttackTargets == 0) break;
+                if (weapon.TryReserveExternalTarget(candidate.Hit.TargetKey)) Simulation.SubmitHit(candidate.Hit);
+            }
+        }
+
+        private static int CompareWeaponCandidates(WeaponCandidate a, WeaponCandidate b)
+        {
+            int result = a.Fraction.CompareTo(b.Fraction);
+            if (result == 0) result = a.Distance.CompareTo(b.Distance);
+            return result == 0 ? a.Hit.TargetKey.CompareTo(b.Hit.TargetKey) : result;
         }
 
         /// <summary>只有玩家 Bridge 采集 Collider 形状；Native AI 的任何阶段均没有物理对象。</summary>

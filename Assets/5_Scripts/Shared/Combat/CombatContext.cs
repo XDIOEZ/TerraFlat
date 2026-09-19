@@ -57,9 +57,23 @@ namespace FlatWorld.Combat
     #endregion
 
     #region 攻击上下文与共同规则
+    /// <summary>投送能力独立于伤害材质；穿刺近战不自动获得空中命中能力。</summary>
+    [Flags]
+    public enum CombatDeliveryCapabilities : uint
+    {
+        None = 0,
+        Projectile = 1,
+        AirborneTargets = 2,
+        AirborneOnly = 4
+    }
+
+    /// <summary>飞行身份是可组合目标能力，不按鸟类物品 ID 或伤害材质写特判。</summary>
+    public interface ICombatAirborneTarget { bool IsAirborne { get; } }
+
     /// <summary>四类伤害按切割/穿刺/劈砍/钝击的固定顺序存储；该顺序同时用于防御和结算结果。</summary>
     public struct CombatDamageContext
     {
+        public CombatDeliveryCapabilities DeliveryCapabilities;
         public CombatAttackKey Attack; // 去重与攻击者身份。
         public CombatIdentity Credit; // 击杀归因；武器可以与 Attack.Source 不同。
         public FixedString128Bytes Faction; // 来源阵营的稳定 ID。

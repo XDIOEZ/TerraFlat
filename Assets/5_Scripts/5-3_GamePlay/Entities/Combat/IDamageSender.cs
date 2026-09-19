@@ -1,4 +1,10 @@
 
+/// <summary>投送能力；MOD 显式声明远程及空中命中，不依赖物理层或伤害类型。</summary>
+public interface IDamageDeliverySource
+{
+    FlatWorld.Combat.CombatDeliveryCapabilities DeliveryCapabilities { get; }
+}
+
 public interface IDamageSender
 {
     /// <summary>本次攻击的四类基础伤害。</summary>

@@ -12,6 +12,10 @@ public sealed class Mod_Bow : Module
 
     [Tooltip("可作为弹药的物品标签。")]
     public string AmmoTag = "Arrow";
+    [Tooltip("抛石等可堆叠投掷物消耗手持物自身；弓仍按弹药 Tag 从同一库存取箭。")]
+    public bool UseHeldItemAsAmmo;
+    [Tooltip("是否显示独立搭箭图像；抛掷自身的物品不需要第二份手持图片。")]
+    public bool ShowNockedAmmo = true;
 
     [Min(0.05f), Tooltip("达到满蓄力所需秒数；超过后保持满蓄力。")]
     public float FullChargeSeconds = 1f;
@@ -155,14 +159,14 @@ public sealed class Mod_Bow : Module
             return;
         }
 
-        ItemSlot ammoSlot = _sourceInventory.Data.FindFirstByTag(AmmoTag);
+        ItemSlot ammoSlot = ResolveAmmoSlot();
         if (ammoSlot?.itemData?.Stack == null || ammoSlot.itemData.Stack.Amount < 1f)
             return;
 
         _ownerStamina = item.Owner.itemMods?.GetMod_ByID<Mod_Stamina>(ModText.Stamina);
         _charging = true;
         _chargeSeconds = 0f;
-        CreateNockedArrowVisual(ammoSlot.itemData.IDName);
+        if (ShowNockedAmmo) CreateNockedArrowVisual(ammoSlot.itemData.IDName);
         UpdateNockedArrowVisual(0f);
     }
 
@@ -190,7 +194,7 @@ public sealed class Mod_Bow : Module
             return;
         }
 
-        ItemSlot ammoSlot = _sourceInventory.Data.FindFirstByTag(AmmoTag);
+        ItemSlot ammoSlot = ResolveAmmoSlot();
         ItemData ammoData = ammoSlot?.itemData;
         if (ammoData?.Stack == null || ammoData.Stack.Amount < 1f)
         {
@@ -221,6 +225,8 @@ public sealed class Mod_Bow : Module
             return;
         }
 
+        Item shooter = item.Owner;
+        Inventory_HotBar hotbar = shooter.itemMods.GetMod_ByID<Inventory_HotBar>(ModText.Hotbar);
         if (!_sourceInventory.Data.TryConsumeFromSlot(ammoSlot, 1, out _))
         {
             ItemMgr.Instance.DespawnItem(projectileItem, saveData: false);
@@ -228,8 +234,24 @@ public sealed class Mod_Bow : Module
             return;
         }
 
-        projectile.Launch(item.Owner, direction, charge01, ProjectileDamageMultiplier);
+        projectile.Launch(shooter, direction, charge01, ProjectileDamageMultiplier);
+        if (UseHeldItemAsAmmo)
+        {
+            hotbar?.RefreshUI(ammoSlot.Index);
+            hotbar?.RuntimeInventory?.SyncHeldItemImmediately();
+            hotbar?.NotifyOwnerNetworkStateChanged();
+        }
         _sourceInventory = null;
+    }
+
+    /// <summary>消费真实槽位，不另建库存副本；最后一个投掷物也通过同一库存事务交付。</summary>
+    private ItemSlot ResolveAmmoSlot()
+    {
+        if (_sourceInventory?.Data == null) return null;
+        if (!UseHeldItemAsAmmo) return _sourceInventory.Data.FindFirstByTag(AmmoTag);
+        foreach (ItemSlot slot in _sourceInventory.Data.itemSlots)
+            if (ReferenceEquals(slot.itemData, item.itemData)) return slot;
+        return null;
     }
 
     /// <summary>取消蓄力但不消费弹药。</summary>

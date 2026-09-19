@@ -43,6 +43,13 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     [Tooltip("素材自身的朝向角度；当前箭矢素材从左下指向右上，因此为 45 度。")]
     public float SpriteForwardAngleDegrees = 45f;
 
+    [Tooltip("抛掷类在视觉和受击盒上使用真实抛物线；关闭时保持箭矢的直线飞行。")]
+    public bool UseVisibleArc;
+    [Range(0f, 1f), Tooltip("抛掷物只在最后这一比例的飞行阶段允许命中地面目标。")]
+    public float GroundImpactFraction = 0.15f;
+    [Tooltip("抛掷类飞行时每秒自转角度；零表示保持朝向。")]
+    public float SpinDegreesPerSecond;
+
     public Ex_ModData_MemoryPackable Data = new Ex_ModData_MemoryPackable();
     public override ModuleData _Data { get => Data; set => Data = (Ex_ModData_MemoryPackable)value; }
     public override string CanonicalModuleId => PersistedModuleId;
@@ -59,6 +66,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     private float _virtualLaunchVerticalSpeed;
     private float _virtualHeight;
     private Vector2 _lastFlightPosition;
+    private Vector2 _groundFlightPosition, _arcVelocity;
+    private float _flightDuration;
     private readonly RaycastHit2D[] _sweepHits = new RaycastHit2D[16];
     private bool _isFlying;
     private bool _endingFlight;
@@ -95,6 +104,8 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
         _damage.OnReceiverDamageResolved -= HandleReceiverDamageResolved;
         _damage.OnReceiverDamageResolved += HandleReceiverDamageResolved;
+        _damage.OnExternalDamageResolved -= HandleExternalDamageResolved;
+        _damage.OnExternalDamageResolved += HandleExternalDamageResolved;
         _baseDamage = _damage.ResolveDamageValues().Scaled(1f);
         _damage.StopAttack();
         ConfigureBodyForRest();
@@ -125,19 +136,26 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         if (!_isFlying)
             return;
 
-        SweepFlightPath();
-        if (!_isFlying)
-            return;
-
-        ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
-
-        float step = Mathf.Max(0f, deltaTime);
+        float step = Mathf.Min(Mathf.Max(0f, deltaTime), Mathf.Max(0f, _flightRemain));
         _flightElapsed += step;
         _flightRemain -= step;
 
         float gravity = Mathf.Max(0.01f, VirtualGravity);
         _virtualHeight = _virtualLaunchVerticalSpeed * _flightElapsed -
                          0.5f * gravity * _flightElapsed * _flightElapsed;
+
+        if (UseVisibleArc)
+        {
+            _groundFlightPosition = WorldTopologyRuntime.NormalizePosition(_groundFlightPosition + _arcVelocity * step);
+            _arcVelocity *= Mathf.Exp(-Mathf.Max(0f, FlightLinearDrag) * step);
+            _body.position = _groundFlightPosition + Vector2.up * Mathf.Max(0f, _virtualHeight);
+            item.transform.rotation *= Quaternion.Euler(0f, 0f, SpinDegreesPerSecond * step);
+            SetFlightDeliveryCapabilities();
+        }
+
+        SweepFlightPath();
+        if (!_isFlying) return;
+        ItemMgr.Instance?.NotifyRuntimeItemMoved(item);
 
         if ((_flightElapsed > 0f && _virtualHeight <= 0f) || _flightRemain <= 0f)
             FinishFlight();
@@ -146,8 +164,13 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
     /// <summary>解除伤害事件，防止对象池复用后重复订阅。</summary>
     public override void Unload()
     {
+        _damage?.SetDeliveryCapabilities(FlatWorld.Combat.CombatDeliveryCapabilities.None);
         if (_damage != null)
+        {
             _damage.OnReceiverDamageResolved -= HandleReceiverDamageResolved;
+            _damage.OnExternalDamageResolved -= HandleExternalDamageResolved;
+            _damage.SetExplicitProjectileSweep(false);
+        }
         _isFlying = false;
         _endingFlight = false;
         _flightRemain = 0f;
@@ -180,13 +203,15 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         ClearEmbeddedState();
 
         EnsureBody();
-        _body.bodyType = RigidbodyType2D.Dynamic;
+        _body.bodyType = UseVisibleArc ? RigidbodyType2D.Kinematic : RigidbodyType2D.Dynamic;
         _body.gravityScale = 0f;
         _body.drag = Mathf.Max(0f, FlightLinearDrag);
         _body.constraints = RigidbodyConstraints2D.FreezeRotation;
         _body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         _body.interpolation = RigidbodyInterpolation2D.Interpolate;
-        _body.velocity = normalizedDirection * speed;
+        _arcVelocity = normalizedDirection * speed;
+        _groundFlightPosition = _body.position;
+        _body.velocity = UseVisibleArc ? Vector2.zero : _arcVelocity;
 
         float angle = Mathf.Atan2(normalizedDirection.y, normalizedDirection.x) * Mathf.Rad2Deg;
         item.transform.rotation = Quaternion.Euler(0f, 0f, angle - SpriteForwardAngleDegrees);
@@ -196,6 +221,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
         // 飞行时长与蓄力保持同一比例：轻点只飞很短一段，满蓄力才使用完整持续时间。
         float flightSeconds = Mathf.Max(0.05f, MaxFlightSeconds * normalizedCharge);
+        _flightDuration = flightSeconds;
         float virtualGravity = Mathf.Max(0.01f, VirtualGravity);
         _flightRemain = flightSeconds;
         _flightElapsed = 0f;
@@ -205,18 +231,32 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _endingFlight = false;
         _isFlying = true;
 
+        _damage.SetExplicitProjectileSweep(true);
+        SetFlightDeliveryCapabilities();
+
         // 先进入飞行态再开伤害窗，确保出生点附近的有效命中也能立即结束箭矢。
         _damage.StartAttack();
+    }
+
+    /// <summary>高空段与落地段共享同一窗口，切换资格不能清掉已经命中的目标。</summary>
+    private void SetFlightDeliveryCapabilities()
+    {
+        var capabilities = FlatWorld.Combat.CombatDeliveryCapabilities.Projectile |
+            FlatWorld.Combat.CombatDeliveryCapabilities.AirborneTargets;
+        if (UseVisibleArc && _flightElapsed < _flightDuration * (1f - Mathf.Clamp01(GroundImpactFraction)))
+            capabilities |= FlatWorld.Combat.CombatDeliveryCapabilities.AirborneOnly;
+        _damage.SetDeliveryCapabilities(capabilities);
     }
 
     /// <summary>用伤害盒扫过上一帧到当前帧的完整路径，补足高速 Trigger 可能漏掉的目标。</summary>
     private void SweepFlightPath()
     {
         Vector2 currentPosition = _body != null ? _body.position : (Vector2)item.transform.position;
-        Vector2 displacement = currentPosition - _lastFlightPosition;
+        Vector2 displacement = WorldTopologyRuntime.ShortestDelta(_lastFlightPosition, currentPosition);
         float distance = displacement.magnitude;
         if (distance <= 0.0001f)
         {
+            _damage.QueryProjectileSweep(Vector2.zero);
             _lastFlightPosition = currentPosition;
             return;
         }
@@ -246,6 +286,16 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             CombatPhysicsChannels.DamageReceiverMask);
         SortSweepHitsByDistance(hitCount);
 
+        // 外部后端只扫到最近的有效 GO 目标为止；预约成功就占用同一个 MaxAttackTargets 名额。
+        float maximumFraction = 1f;
+        for (int i = 0; i < hitCount; i++)
+            if (_damage.CanHitColliderTarget(_sweepHits[i].collider))
+            {
+                maximumFraction = Mathf.Clamp01(_sweepHits[i].distance / distance);
+                break;
+            }
+        _damage.QueryProjectileSweep(displacement, maximumFraction);
+
         for (int i = 0; i < hitCount && _isFlying; i++)
         {
             Collider2D hitCollider = _sweepHits[i].collider;
@@ -259,7 +309,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             else
                 item.transform.position = impactPosition;
 
-            _damage.ProcessExplicitColliderHit(hitCollider);
+            _damage.ProcessExplicitColliderHit(hitCollider, castOrigin);
             if (!_isFlying)
             {
                 _lastFlightPosition = impactPosition;
@@ -300,6 +350,16 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             FinishFlight(receiver);
     }
 
+    /// <summary>ECS 结算回执同样结束投射物，不能因没有 DamageReceiver 组件而穿过狼继续飞。</summary>
+    private void HandleExternalDamageResolved(FlatWorld.Combat.CombatDamageContext context, float resolvedDamage)
+    {
+        if (!_isFlying || resolvedDamage < 0f) return;
+        Vector2 offset = _damage.DamageCollider is BoxCollider2D box
+            ? (Vector2)box.transform.TransformPoint(box.offset) - (Vector2)item.transform.position : Vector2.zero;
+        _body.position = WorldTopologyRuntime.NormalizePosition((Vector2)context.HitPoint - offset);
+        FinishFlight();
+    }
+
     /// <summary>停止飞行，并按 RecoveryChance 决定留下可拾取物还是销毁。</summary>
     private void FinishFlight(DamageReceiver hitReceiver = null)
     {
@@ -308,8 +368,11 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
         _endingFlight = true;
         _isFlying = false;
+        float remainingHeight = Mathf.Max(0f, _virtualHeight);
         _damage.StopAttack();
+        _damage.SetExplicitProjectileSweep(false);
         _damage.SetDamageValues(_baseDamage.Scaled(1f));
+        _damage.SetDeliveryCapabilities(FlatWorld.Combat.CombatDeliveryCapabilities.None);
 
         if (_body != null)
         {
@@ -334,6 +397,14 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         item.Owner = null;
         item.itemData.Stack.Amount = 1f;
         item.itemData.Stack.CanBePickedUp = true;
+
+        if (UseVisibleArc && remainingHeight > 0.05f)
+        {
+            DroppedItemService.Spawn(item.itemData, item.transform.position, _groundFlightPosition,
+                0.25f, rotation: item.transform.eulerAngles.z, bezierOffset: 0f, arcHeight: 0f, rotationSpeed: SpinDegreesPerSecond);
+            ItemMgr.Instance.DespawnItem(item, saveData: false);
+            return;
+        }
 
         if (EmbedOnDamageReceiverWhenRecovered && hitReceiver != null)
             EmbedInReceiver(hitReceiver);

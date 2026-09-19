@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(BoxCollider2D))]
-public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHarvestTool, IBuildingDamageSource, ICombatDamageContextModifier
+public class Mod_Damage : Module, IDamageSender, IDamageDeliverySource, IHitSlowdownSource, IResourceHarvestTool, IBuildingDamageSource, ICombatDamageContextModifier
 {
     #region 资源工具能力
     [SerializeField] private ResourceToolKind harvestKind; // 采集工具类别。
@@ -105,6 +105,11 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
 
     /// <summary>实体伤害完成后发布目标与结算结果；0 表示有效命中，负数表示本次结算无效。</summary>
     public event System.Action<DamageReceiver, float> OnReceiverDamageResolved;
+    public event System.Action<FlatWorld.Combat.CombatDamageContext, float> OnExternalDamageResolved;
+    private bool explicitProjectileSweep;
+    private bool hasImpactOrigin;
+    private Vector2 impactOrigin;
+    public Vector2 DamageOrigin => hasImpactOrigin ? impactOrigin : damageCollider != null ? (Vector2)damageCollider.bounds.center : (Vector2)transform.position;
 
     public CombatWeaponAudioClass WeaponAudioClass => weaponAudioClass;
     public string AttackAudioCueId => attackAudioCueId;
@@ -126,31 +131,57 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
     /// <summary>发送端组合器只遍历本武器的少量能力，禁止每帧扫描场景或每个 ECS 实体。</summary>
     public void ModifyDamageContext(ref FlatWorld.Combat.CombatDamageContext context)
     {
+        context.DeliveryCapabilities |= DeliveryCapabilities;
         for (int i = 0; i < contextModifiers.Count; i++) contextModifiers[i].ModifyDamageContext(ref context);
     }
+
+    public FlatWorld.Combat.CombatDeliveryCapabilities DeliveryCapabilities { get; private set; }
+
+    /// <summary>投射生命周期稳定入口；回收清空，旧碰撞与纯上下文共享能力。</summary>
+    public void SetDeliveryCapabilities(FlatWorld.Combat.CombatDeliveryCapabilities capabilities)
+    {
+        DeliveryCapabilities = capabilities;
+    }
+
+    /// <summary>投射物自行提供连续路径，关闭普通 LateUpdate 的离散查询，避免越过最近目标。</summary>
+    public void SetExplicitProjectileSweep(bool enabled) => explicitProjectileSweep = enabled;
 
     /// <summary>仅对一次实际 Pulse 导出真实 BoxCollider 姿态，并使用当前模拟输入时间。</summary>
     private void EmitDataPulse()
     {
         nextDataPulseTime = Time.timeAsDouble + Mathf.Max(0f, DamageInterval);
+        EmitDataShape(Vector2.zero);
+    }
+
+    /// <summary>由投射物真实运动入口提交上一姿态到当前姿态的扫掠。</summary>
+    public void QueryProjectileSweep(Vector2 displacement, float maximumFraction = 1f)
+    {
+        float fraction = Mathf.Clamp01(maximumFraction);
+        EmitDataShape(displacement * fraction, -displacement * (1f - fraction));
+    }
+
+    private void EmitDataShape(Vector2 displacement, Vector2 centerOffset = default)
+    {
         if (!(damageCollider is BoxCollider2D box) || !box.enabled || !CanDealDamageNow() || RemainingAttackTargets == 0) return;
         SyncBoundWeaponHitbox();
         Vector3 axisX = box.transform.TransformVector(Vector3.right);
         Vector3 axisY = box.transform.TransformVector(Vector3.up);
-        var shape = new FlatWorld.Geometry.AttackShape2D { Center = (Unity.Mathematics.float2)(Vector2)box.transform.TransformPoint(box.offset),
+        var shape = new FlatWorld.Geometry.AttackShape2D { Center = (Unity.Mathematics.float2)((Vector2)box.transform.TransformPoint(box.offset) + centerOffset),
             HalfExtents = new Unity.Mathematics.float2(box.size.x * axisX.magnitude, box.size.y * axisY.magnitude) * 0.5f,
-            Rotation = Mathf.Atan2(axisX.y, axisX.x) };
+            Rotation = Mathf.Atan2(axisX.y, axisX.x), SweepDelta = displacement };
         var context = GameplayCombatBridge.Context(this, new FlatWorld.Combat.CombatClock {
             Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime });
         context.Attack.Sequence = attackSequence; context.Attack.Window = 1; context.Attack.Pulse = ++attackPulse;
+        context.Origin = shape.Center - shape.SweepDelta;
         GameplayCombatBridge.QueryWeaponPulse(this, shape, context);
     }
 
     /// <summary>纯数据后端确认生命提交后复用武器反馈，原 DamageReceiver 专用事件仍只传真实旧接收器。</summary>
     public void PublishExternalDamage(in FlatWorld.Combat.CombatDamageContext context, float damage)
     {
-        if (GameplayCombatBridge.Identity(item) != context.Attack.Source) return;
+        if (GameplayCombatBridge.Identity(item) != context.Attack.Source || context.Attack.Sequence != attackSequence) return;
         if (damage >= 0f) SpawnEffect(context.HitPoint, damage);
+        OnExternalDamageResolved?.Invoke(context, damage);
         OnDamageApplied?.Invoke(damage);
     }
     #endregion
@@ -168,6 +199,8 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
     /// <summary>从已完成注册的模块表缓存发送端能力，并在装配时确认纯数据契约容量。</summary>
     public override void Load()
     {
+        DeliveryCapabilities = FlatWorld.Combat.CombatDeliveryCapabilities.None;
+        explicitProjectileSweep = false;
         contextModifiers.Clear();
         if (item != null)
             foreach (Module module in item.itemMods.Mods.Values)
@@ -208,6 +241,10 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
     private void LateUpdate()
     {
         SyncBoundWeaponHitbox();
+        // 动画开启的一次窗口会移动：每帧检测新进入 OBB 的 ECS 目标，窗口集合仍保证每目标只受击一次。
+        if (!explicitProjectileSweep && EnableOnTriggerEnterDamage && DamageInterval < 0f &&
+            damageCollider != null && damageCollider.enabled)
+            EmitDataPulse();
     }
 
     public override void ModUpdate(float deltaTime)
@@ -253,7 +290,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
                 // 实际更新时间由 ApplyDamageToReceiver 在真正造成伤害时负责
                 ApplyDamageToInsideReceivers();
             }
-            if (Time.timeAsDouble >= nextDataPulseTime)
+            if (!explicitProjectileSweep && Time.timeAsDouble >= nextDataPulseTime)
                 EmitDataPulse();
         }
     }
@@ -262,13 +299,27 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
     #region 伤害处理
     public void OnTriggerEnter2D(Collider2D other)
     {
-        ProcessDamageColliderHit(other);
+        // 连续投射物统一按扫掠距离排序，不能让物理回调先击中更远的 GO 而跳过近处 ECS。
+        if (!explicitProjectileSweep) ProcessDamageColliderHit(other);
+    }
+
+    /// <summary>只读候选资格，供连续扫掠确定最近的实体边界；不会消耗命中次数。</summary>
+    public bool CanHitColliderTarget(Collider2D collider)
+    {
+        if (!CombatPhysicsChannels.IsDamageReceiverCollider(collider)) return false;
+        DamageReceiver receiver = GameplayPhysics2D.ResolveComponent<DamageReceiver>(collider);
+        return receiver != null && !IsDamageSourceReceiver(receiver) && CanDealDamageNow() &&
+            AllowsTargetDelivery(receiver) && FactionRelationService.CanAttack(item, receiver.item) &&
+            !attackWindowHitReceivers.Contains(receiver);
     }
 
     /// <summary>供高速投射物的射线/碰撞体扫掠复用同一套命中结算，避免绕过 Mod_Damage。</summary>
-    public void ProcessExplicitColliderHit(Collider2D other)
+    public void ProcessExplicitColliderHit(Collider2D other, Vector2? sourceOrigin = null)
     {
-        ProcessDamageColliderHit(other);
+        hasImpactOrigin = sourceOrigin.HasValue;
+        impactOrigin = sourceOrigin.GetValueOrDefault();
+        try { ProcessDamageColliderHit(other); }
+        finally { hasImpactOrigin = false; }
     }
 
     /// <summary>统一处理 Trigger 与显式扫掠得到的伤害碰撞体。</summary>
@@ -362,6 +413,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
         if (receiver == null ||
             IsDamageSourceReceiver(receiver) ||
             !CanDealDamageNow() ||
+            !AllowsTargetDelivery(receiver) ||
             !FactionRelationService.CanAttack(item, receiver.item))
         {
             return;
@@ -392,6 +444,16 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
 
         lastDamageTime = Time.time;
 
+    }
+
+    /// <summary>抛掷物高空段只接受真正飞行的目标；不能在地面目标处提前消费唯一命中名额。</summary>
+    private bool AllowsTargetDelivery(DamageReceiver receiver)
+    {
+        if ((DeliveryCapabilities & FlatWorld.Combat.CombatDeliveryCapabilities.AirborneOnly) == 0) return true;
+        if (receiver.item?.itemMods == null) return false;
+        foreach (Module module in receiver.item.itemMods.Mods.Values)
+            if (module is FlatWorld.Combat.ICombatAirborneTarget airborne && airborne.IsAirborne) return true;
+        return false;
     }
 
     /// <summary>解析稳定的命中特效位置；缺少碰撞体时回退到受击对象中心。</summary>
@@ -432,7 +494,7 @@ public class Mod_Damage : Module, IDamageSender, IHitSlowdownSource, IResourceHa
 
     private void TryApplyDamageToTilemap()
     {
-        if (tileDamageAppliedThisWindow ||
+        if ((DeliveryCapabilities & FlatWorld.Combat.CombatDeliveryCapabilities.AirborneOnly) != 0 || tileDamageAppliedThisWindow ||
             damageCollider == null ||
             !damageCollider.enabled ||
             !CanDealDamageNow() ||

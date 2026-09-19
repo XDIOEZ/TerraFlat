@@ -66,7 +66,7 @@ public static class GameplayCombatBridge
         Item item = sender.attacker; var slow = sender as IHitSlowdownSource;
         var context = new CombatDamageContext { Attack = new CombatAttackKey { Source = Identity(item) }, Credit = Identity(item?.Owner ?? item),
             Faction = FactionRelationService.GetFactionId(item), Damage = Values(sender.DamageValues), Clock = clock,
-            Origin = item != null ? (float2)(Vector2)item.transform.position : float2.zero,
+            Origin = sender is Mod_Damage weapon ? (float2)weapon.DamageOrigin : item != null ? (float2)(Vector2)item.transform.position : float2.zero,
             SourceIsPlayer = (byte)(GameDifficultyService.IsPlayer(item) ? 1 : 0),
             SlowEnabled = (byte)(slow != null && slow.HitSlowdownEnabled ? 1 : 0),
             SlowMultiplier = slow?.HitSlowMultiplier ?? 1f, SlowDuration = slow?.HitSlowDuration ?? 0f,
