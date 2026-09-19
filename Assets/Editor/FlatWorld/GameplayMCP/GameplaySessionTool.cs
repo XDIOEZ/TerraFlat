@@ -23,7 +23,7 @@ namespace FlatWorld.GameplayMCP
             [ToolParameter("Player profile name. Empty means the first stable profile in the save.", Required = false)]
             public string playerName { get; set; }
 
-            [ToolParameter("Use a Library copy so autonomous testing cannot overwrite the player's real save.", Required = false, DefaultValue = "true")]
+            [ToolParameter("Use Library storage for new worlds or a Library copy for existing saves so autonomous testing cannot overwrite real saves.", Required = false, DefaultValue = "true")]
             public bool isolated { get; set; }
 
             [ToolParameter("World entry timeout in real seconds. Clamped below the MCP bridge command timeout.", Required = false, DefaultValue = "20")]
@@ -70,6 +70,7 @@ namespace FlatWorld.GameplayMCP
                 }
                 case "create_world":
                 {
+                    bool isolated = !bool.TryParse(parameters?["isolated"]?.ToString(), out bool parsedIsolated) || parsedIsolated;
                     string saveName = parameters?["saveName"]?.ToString();
                     string playerName = parameters?["playerName"]?.ToString();
                     string seed = parameters?["seed"]?.ToString();
@@ -96,6 +97,7 @@ namespace FlatWorld.GameplayMCP
                         topology,
                         radius,
                         noiseScale,
+                        isolated,
                         timeout);
                     return new SuccessResponse("FlatWorld new-world request completed.", result);
                 }

@@ -171,7 +171,17 @@ namespace FlatWorld.GameplayMCP
                 };
             }
 
-            string sourcePath = ResolveSavePath(saveName);
+            string isolatedDirectory = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "Library",
+                "FlatWorldGameplayMCP",
+                "Saves");
+            string existingIsolatedPath = isolated && !string.IsNullOrWhiteSpace(saveName)
+                ? Path.Combine(isolatedDirectory, saveName.Trim() + ".bytes")
+                : null;
+            bool resumeExistingIsolated = !string.IsNullOrEmpty(existingIsolatedPath) &&
+                                          File.Exists(existingIsolatedPath);
+            string sourcePath = resumeExistingIsolated ? existingIsolatedPath : ResolveSavePath(saveName);
             if (string.IsNullOrEmpty(sourcePath))
                 return BuildActionError("save_not_found", "没有找到可用于 GamePlayMCP 的存档。", false);
 
@@ -179,16 +189,14 @@ namespace FlatWorld.GameplayMCP
             string defaultSaveDirectory = SaveDataMgr.GetDefaultSavePath();
             if (isolated)
             {
-                string isolatedDirectory = Path.Combine(
-                    Directory.GetCurrentDirectory(),
-                    "Library",
-                    "FlatWorldGameplayMCP",
-                    "Saves");
                 Directory.CreateDirectory(isolatedDirectory);
-                string isolatedName = $"GameplayMCP_{Path.GetFileNameWithoutExtension(sourcePath)}";
-                loadPath = Path.Combine(isolatedDirectory, isolatedName + ".bytes");
-                File.Copy(sourcePath, loadPath, true);
-                CopyIfExists(sourcePath + ".bak", loadPath + ".bak");
+                if (!resumeExistingIsolated)
+                {
+                    string isolatedName = $"GameplayMCP_{Path.GetFileNameWithoutExtension(sourcePath)}";
+                    loadPath = Path.Combine(isolatedDirectory, isolatedName + ".bytes");
+                    File.Copy(sourcePath, loadPath, true);
+                    CopyIfExists(sourcePath + ".bak", loadPath + ".bak");
+                }
                 saveDataMgr.UserSavePath = isolatedDirectory + Path.DirectorySeparatorChar;
             }
             else
@@ -224,6 +232,7 @@ namespace FlatWorld.GameplayMCP
                 ["save"] = saveDataMgr.SaveData?.saveName ?? string.Empty,
                 ["player"] = resolvedPlayerName,
                 ["isolated"] = isolated,
+                ["resumedIsolated"] = resumeExistingIsolated,
                 ["ready"] = ready,
                 ["code"] = ready ? "ready" : "world_entry_timeout"
             };
@@ -238,6 +247,7 @@ namespace FlatWorld.GameplayMCP
             string topology,
             int radius,
             float noiseScale,
+            bool isolated,
             float timeoutSeconds)
         {
             if (!Application.isPlaying)
@@ -249,12 +259,25 @@ namespace FlatWorld.GameplayMCP
                 return BuildActionError("lifecycle_not_ready", "GameManager 或 SaveDataMgr 尚未就绪。", false);
             if (gameManager.IsInGameWorld)
                 return BuildActionError("already_in_world", "当前已经处于游戏世界中，请先保存退出。", false);
+            if (gameManager.IsWorldEntryInProgress)
+                return BuildActionError("world_entry_in_progress", "世界仍在加载，请查询会话状态，不要重复创建。", false);
 
             timeoutSeconds = Mathf.Clamp(timeoutSeconds, 2f, 20f);
-            bool resourcesReady = await WaitUntilAsync(
-                () => GameRes.ExistingInstance != null && GameRes.ExistingInstance.isLoadFinish,
+            double deadline = Time.realtimeSinceStartupAsDouble + timeoutSeconds;
+            // 主菜单允许延迟创建 GameRes；显式走正式单例入口启动会话，不能只等待 ExistingInstance。
+            GameRes resources = GameRes.Instance;
+            if (resources == null)
+                return BuildActionError("resources_unavailable", "游戏资源管理器不可用。", false);
+            await WaitUntilAsync(
+                () => resources == null || resources.isLoadFinish ||
+                      resources.LoadState == ResourceLoadState.Failed ||
+                      resources.LoadState == ResourceLoadState.Disposed,
                 timeoutSeconds);
-            if (!resourcesReady)
+            if (resources == null || resources.LoadState == ResourceLoadState.Disposed)
+                return BuildActionError("resources_unavailable", "资源会话已结束，请重新启动播放。", false);
+            if (resources.LoadState == ResourceLoadState.Failed)
+                return BuildActionError("resource_load_failed", resources.LastLoadError, false);
+            if (!resources.isLoadFinish)
                 return BuildActionError("resources_not_ready", "游戏资源未在限定时间内完成加载。", false);
 
             string timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
@@ -294,17 +317,25 @@ namespace FlatWorld.GameplayMCP
             if (!request.TryValidate(out string validationError))
                 return BuildActionError("invalid_world_request", validationError, false);
 
-            // 新建世界是用户明确要求的正式会话，必须回到正式存档根目录。
-            saveDataMgr.UserSavePath = SaveDataMgr.GetDefaultSavePath();
+            // 新建与续档遵守同一个隔离开关；首个存档及后续自动保存都必须写到选定目录。
+            string saveDirectory = isolated
+                ? Path.Combine(Directory.GetCurrentDirectory(), "Library", "FlatWorldGameplayMCP", "Saves")
+                : SaveDataMgr.GetDefaultSavePath();
+            Directory.CreateDirectory(saveDirectory);
+            string previousSavePath = saveDataMgr.UserSavePath;
+            saveDataMgr.UserSavePath = saveDirectory + Path.DirectorySeparatorChar;
             if (!gameManager.CreateNewWorld(request))
+            {
+                saveDataMgr.UserSavePath = previousSavePath;
                 return BuildActionError("create_world_rejected", "GameManager 拒绝了新世界请求。", false);
+            }
 
             bool ready = await WaitUntilAsync(
                 () => gameManager != null &&
                       gameManager.IsInGameWorld &&
                       gameManager.IsGameplayReady &&
                       ItemMgr.Instance?.User_Player != null,
-                timeoutSeconds);
+                Mathf.Max(0f, (float)(deadline - Time.realtimeSinceStartupAsDouble)));
 
             return new JObject
             {
@@ -314,6 +345,7 @@ namespace FlatWorld.GameplayMCP
                 ["save"] = saveDataMgr.SaveData?.saveName ?? resolvedSaveName,
                 ["player"] = saveDataMgr.CurrentContrrolPlayerName ?? resolvedPlayerName,
                 ["world"] = resolvedWorldName,
+                ["isolated"] = isolated,
                 ["topology"] = topologyMode.ToString(),
                 ["seed"] = saveDataMgr.SaveData?.SaveSeed ?? seed ?? string.Empty
             };

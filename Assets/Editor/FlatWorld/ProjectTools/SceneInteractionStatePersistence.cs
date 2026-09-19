@@ -12,7 +12,6 @@ namespace FlatWorld.EditorTools
     /// 持久化 Hierarchy 原生“小眼睛 / 手”状态（Scene Visibility / Scene Picking）。
     /// 开发者通过顶部菜单显式记录；数据仅保存在本机 EditorPrefs，恢复时按已记录对象定向定位。
     /// </summary>
-    [InitializeOnLoad]
     internal static class SceneInteractionStatePersistence
     {
         #region 数据
@@ -48,7 +47,6 @@ namespace FlatWorld.EditorTools
         }
 
         private static Database database;
-        private static int restorePasses;
 
         private static string ProjectKey =>
             Hash128.Compute(Application.dataPath.Replace('\\', '/').ToLowerInvariant()).ToString();
@@ -59,102 +57,11 @@ namespace FlatWorld.EditorTools
 
         #endregion
 
-        #region 初始化
+        #region 手动工具初始化
 
         static SceneInteractionStatePersistence()
         {
             Load();
-            RegisterEvents();
-            EditorApplication.delayCall += InitialSync;
-        }
-
-        private static void RegisterEvents()
-        {
-            EditorSceneManager.sceneOpened -= OnSceneOpened;
-            EditorSceneManager.sceneOpened += OnSceneOpened;
-
-            SceneManager.sceneLoaded -= OnRuntimeSceneLoaded;
-            SceneManager.sceneLoaded += OnRuntimeSceneLoaded;
-            SceneManager.sceneUnloaded -= OnRuntimeSceneUnloaded;
-            SceneManager.sceneUnloaded += OnRuntimeSceneUnloaded;
-
-            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
-            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-            AssemblyReloadEvents.beforeAssemblyReload -= SaveBeforeReload;
-            AssemblyReloadEvents.beforeAssemblyReload += SaveBeforeReload;
-            EditorApplication.quitting -= SaveBeforeReload;
-            EditorApplication.quitting += SaveBeforeReload;
-        }
-
-        private static void InitialSync()
-        {
-            if (IsEnabled)
-                ApplySavedStates();
-        }
-
-        #endregion
-
-        #region 生命周期
-
-        private static void OnSceneOpened(Scene scene, OpenSceneMode mode)
-        {
-            QueueRestore();
-        }
-
-        private static void OnRuntimeSceneLoaded(Scene scene, LoadSceneMode mode)
-        {
-            if (EditorApplication.isPlaying)
-                QueueRestore();
-        }
-
-        private static void OnRuntimeSceneUnloaded(Scene scene)
-        {
-            if (EditorApplication.isPlaying)
-            {
-                // CreateScene 不触发 sceneLoaded；卸载旧场景后必须主动结束有限恢复。
-                QueueRestore();
-            }
-        }
-
-        private static void OnPlayModeStateChanged(PlayModeStateChange state)
-        {
-            switch (state)
-            {
-                case PlayModeStateChange.EnteredPlayMode:
-                case PlayModeStateChange.EnteredEditMode:
-                    QueueRestore();
-                    break;
-            }
-        }
-
-        private static void QueueRestore()
-        {
-            if (!IsEnabled)
-            {
-                return;
-            }
-
-            restorePasses = Mathf.Max(restorePasses, 3);
-            EditorApplication.delayCall -= RestorePass;
-            EditorApplication.delayCall += RestorePass;
-        }
-
-        private static void RestorePass()
-        {
-            if (!IsEnabled)
-            {
-                restorePasses = 0;
-                return;
-            }
-
-            ApplySavedStates();
-
-            restorePasses--;
-            if (restorePasses > 0)
-            {
-                EditorApplication.delayCall += RestorePass;
-                return;
-            }
         }
 
         #endregion
@@ -543,12 +450,6 @@ namespace FlatWorld.EditorTools
             EditorPrefs.SetString(StateKey, JsonUtility.ToJson(database));
         }
 
-        private static void SaveBeforeReload()
-        {
-            PruneRuntimeOnlyEntries();
-            Save();
-        }
-
         #endregion
 
         #region 菜单
@@ -559,12 +460,6 @@ namespace FlatWorld.EditorTools
             bool enabled = !IsEnabled;
             EditorPrefs.SetBool(EnabledKey, enabled);
             Menu.SetChecked(EnabledMenu, enabled);
-            restorePasses = 0;
-            EditorApplication.delayCall -= RestorePass;
-
-            if (enabled)
-                ApplySavedStates();
-
             Debug.Log("[FlatWorld][Hierarchy状态] 小眼睛/手持久化：" + (enabled ? "已启用" : "已停用"));
         }
 
@@ -600,6 +495,9 @@ namespace FlatWorld.EditorTools
             ApplySavedStates();
             Debug.Log("[FlatWorld][Hierarchy状态] 已恢复当前小眼睛/手状态。");
         }
+
+        [MenuItem(RestoreMenu, true)]
+        private static bool ValidateRestoreCurrent() => IsEnabled && !EditorApplication.isCompiling;
 
         [MenuItem(ClearMenu, priority = 2003)]
         private static void ClearSaved()

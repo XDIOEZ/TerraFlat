@@ -47,9 +47,9 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 7. 调用 `gameplay_control(action="acquire")` 获取唯一主角控制租约。
 8. 调用 `gameplay_observe` 获取第一份结构化状态，然后开始游玩循环。
 
-需要操作主菜单、教程、背包、制作、设置等 UI 时，不要求先进入世界或获取玩家控制租约。直接调用 `gameplay_ui(action="tree")` 获取当前激活 Canvas 的语义 UI 树，从 `clickable=true` 且 `interactable=true` 的节点选择 `id`，再调用 `gameplay_ui(action="click", targetId=<id>)`。点击后界面可能同步变化，继续操作前必须重新读取 UI 树，不复用旧树猜测下一个节点。
+需要操作主菜单、教程、背包、制作、设置等 UI 时，不要求先进入世界或获取玩家控制租约。直接调用 `gameplay_ui(action="tree")` 获取当前激活 Canvas 的语义 UI 树；点击时从 `clickable=true` 且 `interactable=true` 的节点选择 `id`，调用 `gameplay_ui(action="click", targetId=<id>)`。需要浏览 ScrollRect 中的屏外内容时，对树中的 `type=scroll` 节点调用 `gameplay_ui(action="scroll", targetId=<id>, deltaY=<滚轮量>)`；需要移动可拖拽窗口或滑块时，对对应可拖拽节点调用 `gameplay_ui(action="drag", targetId=<id>, deltaX=<像素>, dragDeltaY=<像素>)`。滚动与拖拽都必须走真实 EventSystem 事件链，不直接改 ScrollRect/RectTransform 数据。UI 操作后界面可能同步变化，继续操作前必须重新读取 UI 树，不复用旧树猜测下一个节点。
 
-需要创建全新正式世界时使用 `gameplay_session(action="create_world")`；它直接调用生产 `GameManager.CreateNewWorld(NewWorldCreationRequest)`。需要保存并返回主菜单时使用 `gameplay_session(action="save_exit")`；它直接调用生产退出协程并保存当前世界。
+创建新世界使用 `gameplay_session(action="create_world", isolated=true)`，默认把首个存档及后续保存都写入 Library 隔离目录；只有用户明确要求正式存档时才传 `isolated=false`。它通过 `GameRes.Instance` 启动可能尚未创建的资源会话，等完整 Ready 后调用生产 `GameManager.CreateNewWorld(NewWorldCreationRequest)`；不得只轮询 `ExistingInstance` 导致永久等待。资源等待与世界等待共用单次调用时限，已经开始进入世界时只能查询状态，不能重复创建或改换存档目录。需要保存并返回主菜单时使用 `gameplay_session(action="save_exit")`；它直接调用生产退出协程并保存当前世界。
 
 脚本重编译、Domain Reload、退出世界或重新进入 Play Mode 后，旧控制租约不可假定仍有效。必须重新执行 `status -> acquire -> observe`。
 
@@ -91,6 +91,8 @@ UI 使用独立的 `gameplay_ui`：
 
 - `tree`：返回当前激活 Canvas 的分页语义树。纯布局 Transform 会被压缩，节点保留完整 `path`；默认最多 64 个语义节点，单次最多 128 个，避免把完整 UI Transform 树塞进上下文。
 - `click`：接收 `tree` 返回的运行时 `targetId`，先按目标矩形执行 EventSystem 射线，只有目标当前真实可见、可交互且未被其它 UI 挡住时，才发送左键 `PointerDown -> PointerUp -> PointerClick`。这与项目现有槽位输入链一致，不直接调用 `Button.onClick` 或业务方法。
+- `scroll`：接收 `tree` 中 `type=scroll` 节点的 `targetId` 和纵向 `deltaY`，通过 `IScrollHandler` / EventSystem 发送真实滚轮事件；用于背包、列表等屏外内容，不直接写 ScrollRect 的归一化位置。
+- `drag`：接收语义树中的可拖拽节点 `targetId` 与屏幕像素位移，依次发送标准 PointerDown / InitializePotentialDrag / BeginDrag / Drag / EndDrag / PointerUp；用于移动窗口等正常 UI 操作，不直接写 RectTransform。
 - UI 工具不依赖玩家控制租约，因此主菜单和进入世界前的界面也能使用。
 
 已有 `interact`、`select_hotbar`、`use` 等专用玩法语义时仍优先使用这些动作；`press_key` 主要服务桌面面板快捷键、返回/聊天等 InputAction，以及确实只通过键盘暴露的行为，不应退化成用按键猜测替代结构化玩法 API。
@@ -155,7 +157,7 @@ UI 使用独立的 `gameplay_ui`：
 - 修复视觉 Bug 后做最终定向验收。
 
 禁止把“截图 -> 视觉模型判断 -> 模拟点击”作为普通游玩主循环。
-普通 UI 操作应使用“`gameplay_ui(tree)` -> 读取文本/路径/控件状态 -> `gameplay_ui(click)`”这一结构化链路；截图只用于确认布局、遮挡、样式等纯视觉问题。
+普通 UI 操作应使用“`gameplay_ui(tree)` -> 读取文本/路径/控件状态 -> `gameplay_ui(click/scroll/drag)`”这一结构化链路；截图只用于确认布局、遮挡、样式等纯视觉问题。
 
 ## 与其它测试体系的关系
 

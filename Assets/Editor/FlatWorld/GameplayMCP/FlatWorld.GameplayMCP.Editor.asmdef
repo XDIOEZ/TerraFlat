@@ -13,6 +13,7 @@
         "Unity.Localization",
         "Unity.InputSystem",
         "Unity.TextMeshPro",
+        "UI",
         "Newtonsoft.Json"
     ],
     "includePlatforms": [

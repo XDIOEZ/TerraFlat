@@ -85,7 +85,7 @@ namespace FlatWorld.GameplayMCP
                 truncated,
                 next_offset = truncated ? offset + page.Length : (int?)null,
                 semantic_tree = new JArray(page),
-                hint = "Use targetId from a clickable node with gameplay_ui(action=click), then query tree again because UI may have changed."
+                hint = "Use targetId from a clickable node with action=click/drag, or from a scroll node with action=scroll; then query the tree again because UI may have changed."
             });
         }
 
@@ -134,7 +134,7 @@ namespace FlatWorld.GameplayMCP
             kind = ResolveControlKind(target);
             bool clickable = IsClickCapable(target);
             if (interactiveOnly)
-                return clickable;
+                return clickable || target.GetComponent<ScrollRect>() != null;
 
             if (!string.IsNullOrEmpty(kind))
                 return true;
@@ -331,6 +331,135 @@ namespace FlatWorld.GameplayMCP
             });
         }
 
+        /// <summary>向语义树中的 ScrollRect 发送真实 EventSystem 滚轮事件，不直接写 normalizedPosition。</summary>
+        public static object Scroll(JObject parameters)
+        {
+            if (!Application.isPlaying)
+                return new ErrorResponse("not_playing: Unity 必须处于 Play Mode 才能滚动运行时 UI。");
+
+            int targetId = ReadInt(parameters, "targetId", 0);
+            if (targetId == 0)
+                return new ErrorResponse("missing_ui_target: action=scroll 需要 targetId。");
+
+            GameObject target = EditorUtility.InstanceIDToObject(targetId) as GameObject;
+            if (!IsQueryableRuntimeObject(target))
+                return new ErrorResponse($"ui_target_not_found: 找不到当前运行时 UI 节点 id={targetId}，请重新读取 UI 树。");
+            if (!target.activeInHierarchy || !IsVisibleThroughCanvasGroups(target.transform))
+                return new ErrorResponse($"ui_target_hidden: UI 节点 id={targetId} 当前不可见，请重新读取 UI 树。");
+
+            ScrollRect scrollRect = target.GetComponent<ScrollRect>();
+            if (scrollRect == null || !scrollRect.isActiveAndEnabled)
+                return new ErrorResponse($"ui_target_not_scrollable: UI 节点 id={targetId} 不是可滚动的 ScrollRect。");
+
+            EventSystem eventSystem = EventSystem.current;
+            if (eventSystem == null)
+                return new ErrorResponse("event_system_missing: 当前没有可用 EventSystem。");
+
+            float deltaY = Mathf.Clamp(ReadFloat(parameters, "deltaY", -6f), -20f, 20f);
+            if (Mathf.Abs(deltaY) <= 0.001f)
+                return new ErrorResponse("invalid_scroll_delta: deltaY 不能为 0。");
+
+            Vector2 pointerPosition = Vector2.zero;
+            if (TryGetScreenRect(target, out Rect rect))
+                pointerPosition = rect.center;
+
+            var eventData = new PointerEventData(eventSystem)
+            {
+                pointerId = -1,
+                position = pointerPosition,
+                delta = Vector2.zero,
+                scrollDelta = new Vector2(0f, deltaY)
+            };
+
+            bool handled = ExecuteEvents.Execute(target, eventData, ExecuteEvents.scrollHandler);
+            return new SuccessResponse("FlatWorld UI scroll completed.", new
+            {
+                action = "scroll",
+                target_id = targetId,
+                target_name = target.name,
+                target_path = BuildPath(target.transform),
+                delta_y = Round(deltaY),
+                handled,
+                hint = "Query gameplay_ui(action=tree) again because scroll position and visible nodes may have changed."
+            });
+        }
+
+        /// <summary>通过 EventSystem 的标准 Pointer/Drag 事件链拖动 UI，不直接改 RectTransform。</summary>
+        public static object Drag(JObject parameters)
+        {
+            if (!Application.isPlaying)
+                return new ErrorResponse("not_playing: Unity 必须处于 Play Mode 才能拖拽运行时 UI。");
+
+            int targetId = ReadInt(parameters, "targetId", 0);
+            if (targetId == 0)
+                return new ErrorResponse("missing_ui_target: action=drag 需要 targetId。");
+
+            GameObject target = EditorUtility.InstanceIDToObject(targetId) as GameObject;
+            if (!IsQueryableRuntimeObject(target))
+                return new ErrorResponse($"ui_target_not_found: 找不到当前运行时 UI 节点 id={targetId}，请重新读取 UI 树。");
+            if (!target.activeInHierarchy || !IsVisibleThroughCanvasGroups(target.transform))
+                return new ErrorResponse($"ui_target_hidden: UI 节点 id={targetId} 当前不可见，请重新读取 UI 树。");
+
+            EventSystem eventSystem = EventSystem.current;
+            if (eventSystem == null)
+                return new ErrorResponse("event_system_missing: 当前没有可用 EventSystem。");
+
+            float deltaX = Mathf.Clamp(ReadFloat(parameters, "deltaX", 0f), -2000f, 2000f);
+            float deltaY = Mathf.Clamp(ReadFloat(parameters, "dragDeltaY", 0f), -2000f, 2000f);
+            if (Mathf.Abs(deltaX) <= 0.001f && Mathf.Abs(deltaY) <= 0.001f)
+                return new ErrorResponse("invalid_drag_delta: deltaX 与 dragDeltaY 不能同时为 0。");
+
+            if (!TryFindDragRaycast(
+                    eventSystem,
+                    target,
+                    out Vector2 startPosition,
+                    out RaycastResult raycast,
+                    out GameObject dragHandler,
+                    out string blocker))
+            {
+                string suffix = string.IsNullOrEmpty(blocker) ? string.Empty : $" 顶层命中：{blocker}。";
+                return new ErrorResponse($"ui_target_not_draggable: 目标当前没有玩家可拖拽的可见区域。{suffix}");
+            }
+
+            Vector2 endPosition = startPosition + new Vector2(deltaX, deltaY);
+            var eventData = new PointerEventData(eventSystem)
+            {
+                pointerId = -1,
+                position = startPosition,
+                pressPosition = startPosition,
+                delta = Vector2.zero,
+                button = PointerEventData.InputButton.Left,
+                pointerCurrentRaycast = raycast,
+                pointerPressRaycast = raycast,
+                pointerDrag = dragHandler,
+                dragging = true
+            };
+
+            GameObject hitObject = raycast.gameObject;
+            ExecuteEvents.ExecuteHierarchy(hitObject, eventData, ExecuteEvents.pointerDownHandler);
+            ExecuteEvents.Execute(dragHandler, eventData, ExecuteEvents.initializePotentialDrag);
+            bool began = ExecuteEvents.Execute(dragHandler, eventData, ExecuteEvents.beginDragHandler);
+
+            eventData.delta = new Vector2(deltaX, deltaY);
+            eventData.position = endPosition;
+            bool dragged = ExecuteEvents.Execute(dragHandler, eventData, ExecuteEvents.dragHandler);
+            bool ended = ExecuteEvents.Execute(dragHandler, eventData, ExecuteEvents.endDragHandler);
+            ExecuteEvents.ExecuteHierarchy(hitObject, eventData, ExecuteEvents.pointerUpHandler);
+
+            return new SuccessResponse("FlatWorld UI drag completed.", new
+            {
+                action = "drag",
+                target_id = targetId,
+                target_name = target.name,
+                target_path = BuildPath(target.transform),
+                start = new[] { Round(startPosition.x), Round(startPosition.y) },
+                end = new[] { Round(endPosition.x), Round(endPosition.y) },
+                delta = new[] { Round(deltaX), Round(deltaY) },
+                handled = began || dragged || ended,
+                hint = "Query gameplay_ui(action=tree) again because the target layout may have moved."
+            });
+        }
+
         /// <summary>在控件矩形内尝试多个点击点，只接受真实射线最上层解析回目标控件的点。</summary>
         private static bool TryFindClickableRaycast(
             EventSystem eventSystem,
@@ -374,6 +503,62 @@ namespace FlatWorld.GameplayMCP
                 {
                     clickPosition = candidate;
                     hit = top;
+                    return true;
+                }
+
+                if (string.IsNullOrEmpty(blocker) && top.gameObject != null)
+                    blocker = BuildPath(top.gameObject.transform);
+            }
+
+            return false;
+        }
+
+        /// <summary>在目标可见区域中寻找真实射线最上层可解析到目标自身的 IDragHandler。</summary>
+        private static bool TryFindDragRaycast(
+            EventSystem eventSystem,
+            GameObject target,
+            out Vector2 dragPosition,
+            out RaycastResult hit,
+            out GameObject dragHandler,
+            out string blocker)
+        {
+            dragPosition = default;
+            hit = default;
+            dragHandler = null;
+            blocker = string.Empty;
+            if (!TryGetScreenRect(target, out Rect rect) || rect.width <= 0.01f || rect.height <= 0.01f)
+                return false;
+
+            var results = new List<RaycastResult>(16);
+            for (int i = 0; i < ClickCandidates.Length; i++)
+            {
+                Vector2 normalized = ClickCandidates[i];
+                Vector2 candidate = new(
+                    Mathf.Lerp(rect.xMin, rect.xMax, normalized.x),
+                    Mathf.Lerp(rect.yMin, rect.yMax, normalized.y));
+                if (candidate.x < 0f || candidate.y < 0f ||
+                    candidate.x > Screen.width || candidate.y > Screen.height)
+                    continue;
+
+                var probe = new PointerEventData(eventSystem)
+                {
+                    pointerId = -1,
+                    position = candidate,
+                    delta = Vector2.zero,
+                    button = PointerEventData.InputButton.Left
+                };
+                results.Clear();
+                eventSystem.RaycastAll(probe, results);
+                if (results.Count == 0)
+                    continue;
+
+                RaycastResult top = results[0];
+                GameObject handler = ExecuteEvents.GetEventHandler<IDragHandler>(top.gameObject);
+                if (handler == target)
+                {
+                    dragPosition = candidate;
+                    hit = top;
+                    dragHandler = handler;
                     return true;
                 }
 
@@ -649,6 +834,12 @@ namespace FlatWorld.GameplayMCP
         private static bool ReadBool(JObject parameters, string key, bool fallback)
         {
             return bool.TryParse(parameters?[key]?.ToString(), out bool value) ? value : fallback;
+        }
+
+        /// <summary>读取浮点 MCP 参数。</summary>
+        private static float ReadFloat(JObject parameters, string key, float fallback)
+        {
+            return float.TryParse(parameters?[key]?.ToString(), out float value) ? value : fallback;
         }
 
         /// <summary>限制协议中的浮点精度，避免 UI 坐标制造无意义 Token。</summary>

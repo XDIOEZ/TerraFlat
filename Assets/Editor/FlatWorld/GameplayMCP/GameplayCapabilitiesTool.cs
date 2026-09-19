@@ -21,14 +21,14 @@ namespace FlatWorld.GameplayMCP
                 controlActions = new[] { "status", "acquire", "release" },
                 observationTools = new[] { "gameplay_observe", "gameplay_query", "gameplay_aiecs_debug" },
                 uiTool = "gameplay_ui",
-                uiActions = new[] { "tree", "click" },
+                uiActions = new[] { "tree", "click", "scroll", "drag" },
                 gmTool = "gameplay_gm",
                 gmCommands = GameplayMcpGmCommandRegistry.BuildCapabilityObject(),
                 gmUsage = "Call gameplay_gm with command=enable_invincibility to enable administrator invincibility directly; it enables administrator mode if needed and does not require opening the GM UI.",
                 gameplayActions = GameplayMcpActionRegistry.ActionNames,
                 gameplayActionDescriptions = GameplayMcpActionRegistry.BuildCapabilityObject(),
                 extensionPath = GameplayMcpRuntime.ExtensionPath,
-                rule = "Use gameplay_ui tree/click for visible UI. Use gameplay_gm only with its listed commands. When gameplay_act returns capability_gap, add an IGameplayMcpAction with GameplayMcpActionAttribute backed by production APIs. Do not use arbitrary reflection, arbitrary console commands, or direct business callback invocation."
+                rule = "Use gameplay_ui tree/click/scroll/drag for visible UI. Use gameplay_gm only with its listed commands. When gameplay_act returns capability_gap, add an IGameplayMcpAction with GameplayMcpActionAttribute backed by production APIs. Do not use arbitrary reflection, arbitrary console commands, or direct business callback invocation."
             });
         }
     }

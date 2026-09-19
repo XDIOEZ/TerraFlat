@@ -1328,6 +1328,20 @@ public class Inventory
         return true;
     }
 
+    /// <summary>
+    /// 通过与真实拖拽完全相同的校验、交换和同步流程，把一个槽位移动到另一库存的指定槽位。
+    /// 供输入适配层和自动化控制复用，避免直接改写 Inventory_Data。
+    /// </summary>
+    public bool TryMoveSlotTo(int sourceIndex, Inventory targetInventory, int targetIndex)
+    {
+        if (Data?.itemSlots == null || sourceIndex < 0 || sourceIndex >= Data.itemSlots.Count)
+            return false;
+
+        ItemSlot sourceSlot = Data.itemSlots[sourceIndex];
+        return sourceSlot?.itemData != null &&
+               TryDropSlotTo(sourceSlot, sourceSlot.itemData, targetInventory, targetIndex);
+    }
+
     /// <summary>未命中槽位时才把拖拽物转入玩家手部槽，并返回新的携带来源。</summary>
     private bool TryMoveDraggedSlotToHand(
         ItemSlot sourceSlot,

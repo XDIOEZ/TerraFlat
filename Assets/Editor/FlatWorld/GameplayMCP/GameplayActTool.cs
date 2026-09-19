@@ -38,6 +38,9 @@ namespace FlatWorld.GameplayMCP
             [ToolParameter("Zero-based hotbar slot index.", Required = false)]
             public int index { get; set; }
 
+            [ToolParameter("Exact ItemDefinition id used by inventory actions.", Required = false)]
+            public string itemId { get; set; }
+
             [ToolParameter("Input System action name for press_key, for example B, E, H, P, ESC or OpenChat. Resolves the player's current effective keyboard binding and therefore follows rebinding.", Required = false)]
             public string inputAction { get; set; }
 

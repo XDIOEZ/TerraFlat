@@ -5,21 +5,30 @@ using Newtonsoft.Json.Linq;
 namespace FlatWorld.GameplayMCP
 {
     /// <summary>
-    /// 向自主游玩 Agent 暴露当前可见 UI 的语义树，并允许按树中运行时 ID 执行真实 UI 点击。
+    /// 向自主游玩 Agent 暴露当前可见 UI 的语义树，并允许按树中运行时 ID 执行真实 UI 点击、滚动或拖拽。
     /// </summary>
     [McpForUnityTool(
         "gameplay_ui",
-        Description = "Inspect and click live FlatWorld UI without screenshots. action=tree returns a paged semantic UI tree for active canvases; action=click accepts a targetId from that tree and performs a real EventSystem left click only when the target is currently raycastable and interactable.",
+        Description = "Inspect and operate live FlatWorld UI without screenshots. action=tree returns a paged semantic UI tree for active canvases; action=click performs a real EventSystem left click; action=scroll sends a real EventSystem scroll event to a ScrollRect; action=drag sends the standard EventSystem pointer/drag chain to a draggable UI node.",
         Group = "core")]
     public static class GameplayUiTool
     {
         public sealed class Parameters
         {
-            [ToolParameter("UI action: tree or click.", Required = false, DefaultValue = "tree")]
+            [ToolParameter("UI action: tree, click, scroll, or drag.", Required = false, DefaultValue = "tree")]
             public string action { get; set; }
 
-            [ToolParameter("Runtime UI node id returned by action=tree. Required for action=click.", Required = false)]
+            [ToolParameter("Runtime UI node id returned by action=tree. Required for action=click, action=scroll, or action=drag.", Required = false)]
             public int targetId { get; set; }
+
+            [ToolParameter("Vertical EventSystem scroll delta for action=scroll. Negative scrolls down, positive scrolls up.", Required = false, DefaultValue = "-6")]
+            public float deltaY { get; set; }
+
+            [ToolParameter("Horizontal screen-space drag delta in pixels for action=drag.", Required = false, DefaultValue = "0")]
+            public float deltaX { get; set; }
+
+            [ToolParameter("Vertical screen-space drag delta in pixels for action=drag.", Required = false, DefaultValue = "0")]
+            public float dragDeltaY { get; set; }
 
             [ToolParameter("Zero-based semantic node offset for action=tree paging.", Required = false, DefaultValue = "0")]
             public int offset { get; set; }
@@ -30,7 +39,7 @@ namespace FlatWorld.GameplayMCP
             [ToolParameter("Include visible non-interactive text and UI containers so the Agent can understand panel context.", Required = false, DefaultValue = "true")]
             public bool includeText { get; set; }
 
-            [ToolParameter("Return only clickable controls plus canvas roots. Useful for a compact follow-up query.", Required = false, DefaultValue = "false")]
+            [ToolParameter("Return only operable controls, scroll containers, plus canvas roots. Useful for a compact follow-up query.", Required = false, DefaultValue = "false")]
             public bool interactiveOnly { get; set; }
         }
 
@@ -43,7 +52,9 @@ namespace FlatWorld.GameplayMCP
             {
                 "tree" => GameplayUiRuntime.BuildTree(args),
                 "click" => GameplayUiRuntime.Click(args),
-                _ => new ErrorResponse("unknown_ui_action: action 只支持 tree 或 click。")
+                "scroll" => GameplayUiRuntime.Scroll(args),
+                "drag" => GameplayUiRuntime.Drag(args),
+                _ => new ErrorResponse("unknown_ui_action: action 只支持 tree、click、scroll 或 drag。")
             };
         }
     }
