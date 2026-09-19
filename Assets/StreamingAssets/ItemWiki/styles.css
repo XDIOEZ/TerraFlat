@@ -2689,6 +2689,8 @@ kbd {
     line-height: 1.8;
     overflow-wrap: anywhere;
 }
+.mechanics-card.inline-editable { padding-right: 30px; }
+.mechanics-card.inline-editing { padding-right: 18px; }
 .mechanics-card h3 { margin: 20px 0 8px; font-size: 1rem; }
 .mechanics-card h3:first-child { margin-top: 0; }
 .mechanics-card p { margin: 6px 0; }

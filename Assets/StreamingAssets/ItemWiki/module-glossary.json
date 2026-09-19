@@ -30,7 +30,6 @@
     "钻木取火模块": { "name": "钻木取火", "description": "提供钻木取火建筑交互能力。" },
     "bow": { "name": "弓", "description": "控制蓄力、弹药标签、箭矢生成位置与瞄准距离。" },
     "dismantle": { "name": "拆除支持", "description": "定义建筑或物品可被拆除时的操作距离。" },
-    "WeedAppearance": { "name": "杂草外观", "description": "控制杂草随机翻转和缩放范围。" },
     "farmlandSupply": { "name": "农田供给", "description": "让实体向附近农田提供资源或环境支持。" },
     "飞行模块": { "name": "飞行", "description": "为火箭等实体提供飞行能力。" },
     "vessel": { "name": "储水容器", "description": "保存和管理容器内的液体状态。" },

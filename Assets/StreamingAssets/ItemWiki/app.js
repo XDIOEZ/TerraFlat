@@ -431,7 +431,7 @@
             restoreOrSelectFirst(preferredId);
             setStatus(
                 "ready",
-                `已载入 ${state.entries.filter(entry => !entry.final.abstract && entry.kind === "item").length} 个物品、${state.entries.filter(entry => !entry.final.abstract && entry.kind === "actor").length} 个生物、${state.recipes.length} 个配方；机制按继承配置生成，生物只读。`
+                `已载入 ${state.entries.filter(entry => !entry.final.abstract && entry.kind === "item").length} 个物品、${state.entries.filter(entry => !entry.final.abstract && entry.kind === "actor").length} 个生物、${state.recipes.length} 个配方；机制默认按继承配置生成，可双击覆盖编辑，生物只读。`
             );
         } catch (error) {
             console.error(error);
@@ -1594,8 +1594,20 @@
         });
         els.detailContent.appendChild(description);
 
-        appendSectionTitle("机制详解 · 基础配置");
-        els.detailContent.appendChild(ItemMechanics.render(entry, state.mechanicsContext, document));
+        appendSectionTitle("玩法机制");
+        const mechanicsCard = ItemMechanics.render(entry, state.mechanicsContext, document);
+        const mechanicsText = ItemMechanics.describe(entry, state.mechanicsContext).join("\n");
+        const mechanicsOverride = typeof entry.final.wiki?.mechanics === "string" && entry.final.wiki.mechanics.trim()
+            ? entry.final.wiki.mechanics
+            : mechanicsText;
+        attachInlineEditor(mechanicsCard, entry, {
+            sourceType: "root",
+            path: "wiki.mechanics",
+            value: mechanicsOverride,
+            label: "玩法机制",
+            multiline: true
+        });
+        els.detailContent.appendChild(mechanicsCard);
 
         appendSectionTitle("基础数值");
         els.detailContent.appendChild(renderStatGrid(buildBaseStats(entry.final), entry));
@@ -2180,7 +2192,7 @@
 
         const currentEntry = findItemEntry(entry.id) || entry;
         const valueHost = getInlineValueHost(host);
-        const originalText = valueHost.textContent;
+        const originalNodes = Array.from(valueHost.childNodes).map(node => node.cloneNode(true));
         const originalValue = deepClone(target.value);
         const editor = createInlineEditorControl(originalValue, target);
         const hint = document.createElement("small");
@@ -2196,7 +2208,7 @@
         let settled = false;
         const restore = () => {
             host.classList.remove("inline-editing", "inline-saving", "inline-error");
-            valueHost.textContent = originalText;
+            valueHost.replaceChildren(...originalNodes.map(node => node.cloneNode(true)));
         };
         const cancel = () => {
             if (settled) return;
