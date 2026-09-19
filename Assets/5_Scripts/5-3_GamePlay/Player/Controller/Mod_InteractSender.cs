@@ -30,6 +30,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     public float maxInteractDistance = DefaultMaxInteractDistance;
     // 交互是纯查询通道，不再创建或启用任何 Trigger；该缓冲区只服务 Physics2D Overlap 查询。
     private readonly Collider2D[] interactionOverlapBuffer = new Collider2D[32];
+    private readonly List<IInteractable> spatialCandidates = new(); // 纯空间目标共用选择规则。
     private Inventory_HotBar hotBar;
 
     public override void Load()
@@ -184,16 +185,24 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             return;
         }
 
+        IInteractable selectedReceiver = FindReceiverAtPointer(pointerWorld);
+        if (selectedReceiver != null)
+            StartInteraction(selectedReceiver);
+    }
+
+    /// <summary>按键、鼠标和描边共用精确落点查询，木筏优先于其下方的水面。</summary>
+    private IInteractable FindReceiverAtPointer(Vector2 pointerWorld)
+    {
         Physics2D.SyncTransforms();
-        Collider2D[] colliders = Physics2D.OverlapPointAll(pointerWorld, InteractionQueryLayerMask);
+        int count = Physics2D.OverlapPointNonAlloc(pointerWorld, interactionOverlapBuffer, InteractionQueryLayerMask);
         IInteractable selectedReceiver = null;
         float closestDistance = float.MaxValue;
-        for (int i = 0; i < colliders.Length; i++)
+        for (int i = 0; i < count; i++)
         {
-            if (IsCombatOnlyCollider(colliders[i]))
+            if (IsCombatOnlyCollider(interactionOverlapBuffer[i]))
                 continue;
 
-            IInteractable receiver = GameplayPhysics2D.ResolveComponent<IInteractable>(colliders[i]);
+            IInteractable receiver = GameplayPhysics2D.ResolveComponent<IInteractable>(interactionOverlapBuffer[i]);
             Component receiverComponent = receiver as Component;
             if (!IsInteractionCandidate(receiver, receiverComponent))
                 continue;
@@ -207,8 +216,16 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             selectedReceiver = receiver;
         }
 
-        if (selectedReceiver != null)
-            StartInteraction(selectedReceiver);
+        spatialCandidates.Clear();
+        SpatialInteractionRegistry.Query(item, maxInteractDistance, pointerWorld, spatialCandidates);
+        foreach (IInteractable candidate in spatialCandidates)
+        {
+            float distance = WorldTopologyRuntime.Distance(item.transform.position, ((Component)candidate).transform.position);
+            if (distance >= closestDistance) continue;
+            closestDistance = distance;
+            selectedReceiver = candidate;
+        }
+        return selectedReceiver;
     }
 
     /// <summary>
@@ -267,6 +284,14 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (item == null || !item.gameObject.activeInHierarchy)
             return null;
 
+        if (TryGetInteractionPointer(out Vector2 pointer))
+        {
+            IInteractable pointedReceiver = FindReceiverAtPointer(pointer);
+            if (pointedReceiver != null) return pointedReceiver;
+            // 光标落在水面时只允许环境长按，不因附近存在木筏而把喝水变成登船。
+            if (IsPointerOverWater(pointer)) return null;
+        }
+
         Physics2D.SyncTransforms();
         int count = Physics2D.OverlapCircleNonAlloc(
             item.transform.position,
@@ -280,13 +305,20 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         float directionalDistance = float.MaxValue;
         bool hasInteractionDirection = TryGetInteractionDirection(out Vector2 interactionDirection);
 
+        spatialCandidates.Clear();
+        SpatialInteractionRegistry.Query(item, maxInteractDistance, null, spatialCandidates);
         for (int i = 0; i < count; i++)
         {
             Collider2D overlap = interactionOverlapBuffer[i];
             if (IsCombatOnlyCollider(overlap))
                 continue;
-
             IInteractable receiver = GameplayPhysics2D.ResolveComponent<IInteractable>(overlap);
+            if (receiver != null && !spatialCandidates.Contains(receiver)) spatialCandidates.Add(receiver);
+        }
+        foreach (IInteractable receiver in spatialCandidates)
+        {
+            // 载具必须真正被光标命中；普通设施仍保留原有近距离按键交互。
+            if (receiver is ICarrierMotionSource) continue;
             Component receiverComponent = receiver as Component;
             if (!IsInteractionCandidate(receiver, receiverComponent))
                 continue;
@@ -326,6 +358,30 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         }
 
         return directionalReceiver ?? closestReceiver;
+    }
+
+    /// <summary>只从正式控制器读取世界光标，兼容鼠标、手柄准线与外部输入租约。</summary>
+    private bool TryGetInteractionPointer(out Vector2 pointer)
+    {
+        pointer = default;
+        if (gameController == null) return false;
+        try { pointer = gameController.GetMouseWorldPosition(); return true; }
+        catch (MissingReferenceException) { return false; }
+    }
+
+    /// <summary>只读有效水面，不会为光标触发区块生成。</summary>
+    private static bool IsPointerOverWater(Vector2 pointer)
+        => ChunkMgr.ExistingInstance != null &&
+           ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(pointer, out RuntimeTerrainTileSample tile) &&
+           (tile.Cell.Flags & FlatWorld.WorldModel.TerrainCellFlags.Water) != 0;
+
+    /// <summary>喝水必须指向可触及的水面，且该落点没有更优先的实体交互。</summary>
+    private bool CanPointAtEnvironmentWater()
+    {
+        if (!TryGetInteractionPointer(out Vector2 pointer) || item == null ||
+            WorldTopologyRuntime.Distance(item.transform.position, pointer) > maxInteractDistance ||
+            !IsPointerOverWater(pointer)) return false;
+        return FindReceiverAtPointer(pointer) == null;
     }
 
     private bool TryGetInteractionDirection(out Vector2 direction)
@@ -442,6 +498,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         }
 
         SetInteractionPreview(receiver);
+        EndEnvironmentActionHold();
 
         // 切换目标前先完整结束旧交互，避免 UI/占用状态残留。
         if (currentReceiver != null && currentReceiver != receiver)

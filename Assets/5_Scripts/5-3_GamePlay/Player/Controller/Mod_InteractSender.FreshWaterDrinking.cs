@@ -572,6 +572,9 @@ public partial class Mod_InteractSender
     public bool BeginEnvironmentActionHold()
     {
         ResolveEnvironmentInteractionRunner();
+        if (environmentInteractionRunner != null &&
+            environmentInteractionRunner.TryGetDefinition<DrinkWaterActionDefinition>(out _) &&
+            !CanPointAtEnvironmentWater()) return false;
         return environmentInteractionRunner != null &&
                environmentInteractionRunner.BeginPreferredAction();
     }
@@ -582,6 +585,11 @@ public partial class Mod_InteractSender
     public void TickEnvironmentInteraction(float deltaTime)
     {
         ResolveEnvironmentInteractionRunner();
+        if (environmentInteractionRunner?.ActiveAction is DrinkWaterActionInstance && !CanPointAtEnvironmentWater())
+        {
+            EndEnvironmentActionHold();
+            return;
+        }
         environmentInteractionRunner?.TickActiveAction(deltaTime);
     }
 

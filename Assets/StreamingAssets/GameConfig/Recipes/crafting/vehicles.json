@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:boat",
+      "displayName": "简易木筏",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "allowMirror": false,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Plank", "amount": 4 },
+        { "slot": 1, "match": "exact_item", "itemId": "Log", "amount": 2 }
+      ],
+      "outputs": [{ "itemId": "Boat", "amount": 1 }],
+      "actions": []
+    }
+  ]
+}

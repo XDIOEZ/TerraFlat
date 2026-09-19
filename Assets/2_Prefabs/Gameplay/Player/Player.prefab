@@ -409,7 +409,7 @@ MonoBehaviour:
     Insulation: 0
     ColdDamageStart: 5
     HotDamageStart: 60
-    ColdDamagePerSecond: 1
+    ColdDamagePerTick: 2
     HotDamagePerSecond: 1
     RuntimeAmbientOffset: 0
     RuntimeChangeSpeedMultiplier: 1
@@ -1102,7 +1102,7 @@ MonoBehaviour:
   staminaConsumePerSecond: 5
   oxygenConsumePerSecond: 10
   oxygenRecoverPerSecond: 25
-  drowningDamagePerSecond: 10
+  drowningDamagePerTick: 10
   OnOxygenChanged:
     _PersistentCalls: []
 --- !u!1 &7418924436426645882

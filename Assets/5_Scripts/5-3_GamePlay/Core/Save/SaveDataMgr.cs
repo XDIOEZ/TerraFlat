@@ -1631,6 +1631,14 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// </summary>
     public void RecordRuntimeBuildingChange(Item buildingItem)
     {
+        RecordRuntimeBuildingChangeAtPosition(
+            buildingItem,
+            buildingItem != null ? (Vector2)buildingItem.transform.position : default);
+    }
+
+    /// <summary>按指定世界位置标记动态建筑区块脏；物理载具跨区块时用它同时清理旧区块快照。</summary>
+    public void RecordRuntimeBuildingChangeAtPosition(Item buildingItem, Vector2 worldPosition)
+    {
         if (!GameNetwork.HasStateAuthority || SaveData == null ||
             !IsRuntimeBuildingChangeSource(buildingItem))
         {
@@ -1642,7 +1650,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             return;
 
         string planetName = ResolveRuntimePlanetName();
-        RuntimeWorldAddress address = chunkManager.ResolveWorldAddress(buildingItem.transform.position);
+        RuntimeWorldAddress address = chunkManager.ResolveWorldAddress(worldPosition);
         string key = BuildChunkKey(planetName, ToChunkName(address));
         runtimeBuildingDirtyChunks.Add(key);
         runtimeBuildingDirtyAddresses[key] = address;

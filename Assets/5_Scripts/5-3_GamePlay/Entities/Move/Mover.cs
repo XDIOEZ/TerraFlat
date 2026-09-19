@@ -64,6 +64,11 @@ public partial class Mover : Module
     [Tooltip("是否正在移动")]
     public bool IsMoving;
 
+    [Min(0.01f)] public float pushContactRadius = 0.2f; // 玩法推动占地，不依赖物理碰撞体。
+    public Vector2 DrivenVelocity { get; private set; } // 只有主动移动贡献驱动行走动画。
+    public Vector2 ExternalVelocity { get; private set; } // 水流/承载等被动速度贡献。
+    public Vector2 RequestedMoveInput { get; private set; } // 当前真实输入，推动来源失效时可立即撤销。
+
     private InputAction moveAction;
     private InputAction holdRunAction;
     private InputAction toggleRunAction;
@@ -183,6 +188,8 @@ public partial class Mover : Module
         Data.isRunning = false;
 
         rb = GetComponentInParent<Rigidbody2D>();
+        DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
+        _wasMoving = IsMoving = false;
 
         hungerAction ??= new MovementHungerActionDefinition();
         hungerActionInstance = hungerAction.CreateInstance(item);
@@ -220,6 +227,7 @@ public partial class Mover : Module
 
     public override void ModUpdate(float deltaTime)
     {
+        if (UpdateCarrierMotion(deltaTime)) return;
         if (moveAction == null)
         {
             hungerActionInstance?.SetMovementState(false, false);
@@ -326,6 +334,7 @@ public partial class Mover : Module
 
     public virtual void Move(Vector2 targetPosition, float deltaTime)
     {
+        if (CarrierSource != null) return;
         if (rb == null)
         {
             Debug.LogError($"{name}: Rigidbody2D 为空，无法执行 Move！");
@@ -336,7 +345,9 @@ public partial class Mover : Module
         Vector2 targetVelocity = delta.sqrMagnitude < ArriveThreshold * ArriveThreshold
             ? Vector2.zero
             : delta.normalized * Speed.Value;
-        rb.velocity = CalculateSmoothedVelocity(targetVelocity, deltaTime);
+        DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
+        ExternalVelocity = Vector2.zero;
+        rb.velocity = DrivenVelocity;
         UpdateMovementState();
     }
 
@@ -345,6 +356,7 @@ public partial class Mover : Module
     /// <summary>按二维输入幅度驱动玩家移动；水流是额外的表层漂移，不计作主动奔跑或体力消耗。</summary>
     public void MoveByInput(Vector2 input, float deltaTime)
     {
+        if (CarrierSource != null) return;
         if (rb == null)
         {
             Debug.LogError($"{name}: Rigidbody2D 为空，无法执行输入移动！");
@@ -352,22 +364,24 @@ public partial class Mover : Module
         }
 
         Vector2 clampedInput = Vector2.ClampMagnitude(input, 1f);
+        RequestedMoveInput = clampedInput;
         Vector2 targetVelocity = clampedInput.sqrMagnitude > InputMoveThresholdSqr
             ? clampedInput * Speed.Value
             : Vector2.zero;
-        targetVelocity += ResolveWaterCurrentVelocity();
-        rb.velocity = CalculateSmoothedVelocity(targetVelocity, deltaTime);
+        // 主动速度独立缓动，不能把上帧水流当作下帧主动移动的初速度。
+        DrivenVelocity = SmoothSurfaceVelocity(DrivenVelocity, targetVelocity, deltaTime);
+        ExternalVelocity = ResolveWaterCurrentVelocity();
+        rb.velocity = WorldMotionSystem.ResolveContactVelocity(this, rb.position,
+            DrivenVelocity, DrivenVelocity + ExternalVelocity, Mathf.Max(deltaTime, Time.fixedDeltaTime));
         UpdateMovementState();
     }
 
     /// <summary>统一读取有效地表流向：河流顺流、海洋随表层风场，平台和静水不会推动玩家。</summary>
     public Vector2 ResolveWaterCurrentVelocity()
     {
-        if (item is not Player || rb == null || waterCurrentPushSpeed <= 0f ||
-            ChunkMgr.ExistingInstance == null ||
-            !ChunkMgr.ExistingInstance.TryGetRuntimeWaterCurrent(rb.position, out RuntimeWaterCurrentSample current))
-            return Vector2.zero;
-        return current.Direction * (waterCurrentPushSpeed * Mathf.Clamp01(current.Flow));
+        return item is Player && rb != null
+            ? WorldMotionSystem.SampleWaterVelocity(rb.position, waterCurrentPushSpeed)
+            : Vector2.zero;
     }
 
     /// <summary>将实际速度按当前移动表面的响应平滑到目标速度。</summary>
@@ -398,11 +412,6 @@ public partial class Mover : Module
             : nextVelocity;
     }
 
-    private Vector2 CalculateSmoothedVelocity(Vector2 targetVelocity, float deltaTime)
-    {
-        return SmoothSurfaceVelocity(rb.velocity, targetVelocity, deltaTime);
-    }
-
     /// <summary>输入锁定时立即停止，避免模态界面打开后角色继续滑行。</summary>
     private void StopImmediately()
     {
@@ -410,15 +419,16 @@ public partial class Mover : Module
             return;
 
         rb.velocity = Vector2.zero;
+        DrivenVelocity = ExternalVelocity = RequestedMoveInput = Vector2.zero;
         UpdateMovementState();
     }
 
-    /// <summary>根据实际速度同步移动事件与动画状态。</summary>
+    /// <summary>仅主动移动播放行走动画；海水漂移和船的承载不冒充角色自身迈步。</summary>
     private void UpdateMovementState()
     {
         float stopThreshold = Mathf.Max(0.001f, endSpeed);
-        bool isActuallyMoving = rb != null &&
-                                rb.velocity.sqrMagnitude > stopThreshold * stopThreshold;
+        bool isActuallyMoving = CarrierSource == null && rb != null &&
+                                DrivenVelocity.sqrMagnitude > stopThreshold * stopThreshold;
         IsMoving = isActuallyMoving;
 
         if (!_wasMoving && isActuallyMoving)
@@ -434,6 +444,7 @@ public partial class Mover : Module
     #region 数据存取
     public override void Save()
     {
+        SaveCarrierSafePosition();
         var saveData = new Mover_SaveData
         {
             Speed = new GameValue_float(Data.Speed.BaseValue)
@@ -458,6 +469,7 @@ public partial class Mover : Module
     }
     public void OnDestroy()
     {
+        ReleaseCarrierLease();
         UnbindRunActions();
         OnMoveStart?.Clear();
         OnMoveEnd?.Clear();

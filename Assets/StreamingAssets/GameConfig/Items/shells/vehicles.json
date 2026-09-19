@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Boat",
+      "parent": "BasicItem_Base",
+      "shellPrefab": "BuildingSummonerShell",
+      "gameName": "简易木筏",
+      "description": "用四块木板和两根原木制作；放置后朝木筏移动可推动，陆地和水中都可将光标指向木筏按 E 登船，用方向键或摇杆划行，靠岸后再次交互下船。",
+      "weight": 60,
+      "volume": 180,
+      "amount": 1,
+      "durability": 1,
+      "maxDurability": 1,
+      "stackable": false,
+      "canBePickedUp": true,
+      "health": {
+        "hasHp": true,
+        "hp": 500,
+        "maxHp": 500,
+        "defense": { "cutting": 3, "piercing": 10, "chopping": 1, "blunt": 3 }
+      },
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/Boat/Boat_Carrier.png" },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"Boat_Building\",\"SummonerPrefabId\":\"Boat\",\"SharedModuleIds\":[]}",
+            "Type": 0
+          },
+          "parameters": { "RequiresPlacementRequest": false }
+        }
+      }
+    },
+    {
+      "id": "Boat_Building",
+      "parent": "BasicItem_Base",
+      "shellPrefab": "CarrierBodyShell",
+      "gameName": "简易木筏",
+      "description": "光标指向木筏显示白色描边，陆地或水中按 E 登船；指向可触及水面则长按 E 喝水。木筏会随水流漂移，仅靠岸时可主动下船。读档恢复为空船。",
+      "weight": 60,
+      "volume": 180,
+      "amount": 1,
+      "durability": 1,
+      "maxDurability": 1,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": ["35"],
+      "health": {
+        "hasHp": true,
+        "hp": 500,
+        "maxHp": 500,
+        "defense": { "cutting": 3, "piercing": 10, "chopping": 1, "blunt": 3 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 1.5, "y": 1.0 }
+        }
+      },
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/Boat/Boat_Carrier.png",
+        "rendererLocalScale": { "x": 2, "y": 2, "z": 1 },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": false,
+          "isTrigger": false,
+          "offset": { "x": 0, "y": 0 },
+          "size": { "x": 1.5, "y": 1.0 }
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"Boat_Building\",\"SummonerPrefabId\":\"Boat\",\"SharedModuleIds\":[]}",
+            "Type": 0
+          }
+        },
+        "carrier": {
+          "prefab": "Module_Carrier",
+          "id": "Mod_Carrier",
+          "enabled": true,
+          "data": { "BitData": "{\"Version\":1}", "Type": 0 },
+          "parameters": {
+            "MaxSpeed": 5,
+            "Acceleration": 3,
+            "Braking": 6,
+            "Mass": 60,
+            "Radius": 0.35,
+            "LandSpeedMultiplier": 0.1,
+            "LandPushSpeedMultiplier": 0.2,
+            "WaterCurrentSpeed": 0.18,
+            "HullSize": { "x": 1.5, "y": 1.0 },
+            "SeatOffset": { "x": 0, "y": 0.25 },
+            "AllowsWater": true
+          }
+        }
+      }
+    }
+  ]
+}
