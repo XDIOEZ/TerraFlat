@@ -104,6 +104,7 @@ MonoBehaviour:
     - ActorShell
     - ActorVisual
     - ItemMaterial
+    - Sprite
   m_SchemaTemplates: []
   m_GroupTemplateObjects:
   - {fileID: 11400000, guid: 81df820a3474c3645bf38f01f1aa6217, type: 2}

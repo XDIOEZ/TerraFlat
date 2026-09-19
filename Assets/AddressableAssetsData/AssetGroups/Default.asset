@@ -89,6 +89,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 048b0446d4d78344b8ac9d52b345ae41
+    m_Address: flatworld.actor.shell.seagull
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorShell
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 04d78b873e1da2341a6666c85506542b
     m_Address: Assets/2_Prefabs/World/Map/MapEdge.prefab
     m_ReadOnly: 0
@@ -232,6 +238,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1137127a7dcba774496b43879211e47f
+    m_Address: flatworld.actor.animator.seagull
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 120388a9c6809dd4fbf2befd3bb4577d
     m_Address: Assets/6_Art/Items/Weapons/Guns/iron-weapons.png
@@ -556,6 +568,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 32cbf4ff2199ded47b149dd073befabd
+    m_Address: Module_CanopyFruit
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 337af568711ba9442ad340dc4cf5cadc
     m_Address: Assets/2_Prefabs/Gameplay/Items/Weapons/Melee/Sword_Bronze.prefab
@@ -1442,6 +1460,18 @@ MonoBehaviour:
     m_SerializedLabels:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8fb4b4e195c5afd498693f90b0312861
+    m_Address: flatworld.actor.shell.bird
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorShell
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8fd2b191c88ca664780031b0f33aa905
+    m_Address: Module_BodyPartTreatment
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 902952c12669acc448ab8712e0c96250
     m_Address: Assets/6_Art/Items/Equipment/Jade Equipment/Jade Chestplate.png
     m_ReadOnly: 0
@@ -1483,6 +1513,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 941be0ccc90a2b441b23c14fc684b23c
+    m_Address: flatworld.actor.animator.bird
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 953b7b5b07a613949b9263e579a3f146
     m_Address: Assets/2_Prefabs/Gameplay/Items/Inventory/Module_Hotbar.prefab
@@ -1587,6 +1623,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9fa1f637df9313c44815e0b8a201aa5d
+    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Player/UI_BodyPartTreatment.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9fbe5f349e29e714697e4680674c1bb1
     m_Address: Assets/4_ScriptObjects/Gameplay/Skills
     m_ReadOnly: 0
@@ -1619,6 +1661,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a231ae82b21c66641b5a1c9e708fa683
     m_Address: Assets/6_Art/Items/Tools/Item_Tool_368.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a2577fd38089bda38e87a049715c610e
+    m_Address: Assets/6_Art/Generated/Mushroom/Item_MushroomSpores.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
@@ -2524,6 +2572,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fbcaf9031e37ce84b8ef2b53b48427ba
+    m_Address: Assets/6_Art/Generated/CoconutTree/FruitlessCoconutTree.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Sprite
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fbffc25086cf10846861a513617f0dd8
     m_Address: Assets/7_Tiles/Base
