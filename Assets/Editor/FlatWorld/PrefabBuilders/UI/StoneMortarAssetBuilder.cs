@@ -137,9 +137,12 @@ public static class StoneMortarAssetBuilder
         RectTransform root = Rect("UI_StoneMortar", null, new Vector2(680, 710), Vector2.zero);
         // 构建期间不运行 Awake，所有正式引用接线完成后再激活。
         root.gameObject.SetActive(false);
-        // 根 Image 仅保留为面板的透明射线阻挡面，不再绘制整块灰色背景板。
+        // 根 Image 只保留布局占位；透明区域不得吞掉世界与快捷栏输入。
         Image background = root.gameObject.AddComponent<Image>();
         background.color = Color.clear;
+        background.raycastTarget = false;
+        SafeAreaScaleGroup fit = root.gameObject.AddComponent<SafeAreaScaleGroup>();
+        fit.Configure(root, new[] { root }, new Vector2(24f, 24f));
         BasePanel panel = root.gameObject.AddComponent<BasePanel>();
         panel.PanelName = "石臼";
         panel.rectTransform = root;

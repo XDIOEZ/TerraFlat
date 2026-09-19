@@ -168,6 +168,11 @@ namespace FlatWorld.Localization.Editor
                 { "日志悬浮窗只影响本机调试界面；关闭后日志记录仍会继续。修改会立即保存。", "The log overlay only affects the local debug UI. Logging continues when it is off. Changes are saved immediately." },
                 { "视觉特效", "Visual Effects" },
                 { "水体风格", "Water Style" },
+                { "物品透视", "Object See-through" },
+                { "开启后，遮挡玩家的树木会局部透明。", "Make trees partially transparent where they obscure the player." },
+                { "点选按钮调整大小", "Select a control to resize" },
+                { "攻击摇杆", "Attack Joystick" },
+                { "{0} 大小：{1:0}%", "{0} size: {1:0}%" },
                 { "风格化", "Stylized" },
                 { "写实", "Realistic" },
                 { "风格化：鲜明水色、清晰浪纹与泡沫。", "Stylized: vivid water colors, distinct ripples and foam." },
@@ -843,6 +848,14 @@ namespace FlatWorld.Localization.Editor
             EditorUtility.SetDirty(englishTable);
             AssetDatabase.SaveAssets();
             Debug.Log($"[FlatWorld Localization] 已增量同步 {syncedKeys.Count} 条运行时 UI 文本。");
+        }
+
+        /// <summary>仅同步透视开关和触控尺寸界面的新增文案。</summary>
+        [MenuItem("FlatWorld/Localization/Sync UI Occlusion And Touch Size")]
+        public static void SyncUiOcclusionAndTouchSize()
+        {
+            SyncRuntimeUiTexts("物品透视", "开启后，遮挡玩家的树木会局部透明。",
+                "点选按钮调整大小", "{0} 大小：{1:0}%", "攻击摇杆");
         }
 
         #endregion

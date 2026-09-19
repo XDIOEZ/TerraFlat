@@ -29,6 +29,10 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
     private Button resetButton;
     private Button cancelButton;
     private bool initialized;
+    private MobileControlLayoutNode selectedNode;
+    private Button decreaseSizeButton;
+    private Button increaseSizeButton;
+    private TextMeshProUGUI sizeText;
 
     #endregion
 
@@ -101,8 +105,12 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
         saveButton = FindComponent<Button>(transform, "保存按钮");
         resetButton = FindComponent<Button>(transform, "恢复默认按钮");
         cancelButton = FindComponent<Button>(transform, "取消按钮");
+        decreaseSizeButton = FindComponent<Button>(transform, "缩小按钮");
+        increaseSizeButton = FindComponent<Button>(transform, "放大按钮");
+        sizeText = FindComponent<TextMeshProUGUI>(transform, "尺寸文本");
         if (previewRoot == null || statusText == null || saveButton == null ||
-            resetButton == null || cancelButton == null)
+            resetButton == null || cancelButton == null || decreaseSizeButton == null ||
+            increaseSizeButton == null || sizeText == null)
         {
             Debug.LogError("[MobileLayoutEditor] 正式编辑器 Prefab 节点契约不完整。", this);
             editorPanel.Destroy();
@@ -112,11 +120,19 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
         saveButton.onClick.AddListener(SaveAndClose);
         resetButton.onClick.AddListener(ResetPreviewToDefaults);
         cancelButton.onClick.AddListener(CancelAndClose);
+        decreaseSizeButton.onClick.AddListener(DecreaseSize);
+        increaseSizeButton.onClick.AddListener(IncreaseSize);
+        FlatWorldUIAutoLocalizer.BindStaticTexts(sizeText.transform);
+        LocalizedTextBinder sizeBinder = sizeText.GetComponent<LocalizedTextBinder>();
+        if (sizeBinder != null)
+            sizeBinder.enabled = false;
+        FlatWorldLocalizationService.LanguageChanged += HandleLanguageChanged;
 
         previewObject = Instantiate(controlsPrefab, previewRoot, false);
         previewObject.name = RuntimeUIPrefabKeys.MobileControls + "_LayoutPreview";
         FlatWorldUIAutoLocalizer.BindStaticTexts(previewObject.transform);
         PreparePreviewHierarchy();
+        RefreshSizeControls();
 
         editorPanel.SetGameplayInputBlocking(true);
         editorPanel.PrepareForGamepadNavigation("保存按钮", true, true);
@@ -157,7 +173,39 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
             defaultPositions[node.ControlId] = node.CaptureNormalizedPosition(previewRoot);
             node.ApplySavedPosition(previewRoot);
             node.SetEditing(previewRoot, true);
+            node.Selected += SelectNode;
         }
+    }
+
+    private void SelectNode(MobileControlLayoutNode node)
+    {
+        selectedNode = node;
+        RefreshSizeControls();
+    }
+
+    private void DecreaseSize() => ChangeSize(-0.1f);
+    private void IncreaseSize() => ChangeSize(0.1f);
+    private void HandleLanguageChanged(string language) => RefreshSizeControls();
+
+    private void ChangeSize(float delta)
+    {
+        if (selectedNode == null || !selectedNode.SupportsSize)
+            return;
+        selectedNode.ApplySize(previewRoot, Mathf.Round((selectedNode.SizeMultiplier + delta) * 10f) / 10f);
+        RefreshSizeControls();
+    }
+
+    private void RefreshSizeControls()
+    {
+        bool canResize = selectedNode != null && selectedNode.SupportsSize;
+        decreaseSizeButton.interactable = canResize &&
+            selectedNode.SizeMultiplier > UIUserSettings.MinimumMobileControlSize;
+        increaseSizeButton.interactable = canResize &&
+            selectedNode.SizeMultiplier < UIUserSettings.MaximumMobileControlSize;
+        sizeText.text = canResize
+            ? FlatWorldLocalizationService.GetUiFormat("{0} 大小：{1:0}%",
+                FlatWorldLocalizationService.GetUiText(selectedNode.name), selectedNode.SizeMultiplier * 100f)
+            : FlatWorldLocalizationService.GetUiText("点选按钮调整大小");
     }
 
     #endregion
@@ -168,6 +216,7 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
     private void SaveAndClose()
     {
         Dictionary<string, Vector2> positions = new Dictionary<string, Vector2>();
+        Dictionary<string, float> sizes = new Dictionary<string, float>();
         if (layoutNodes != null)
         {
             for (int index = 0; index < layoutNodes.Length; index++)
@@ -177,10 +226,12 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
                     continue;
 
                 positions[node.ControlId] = node.CaptureNormalizedPosition(previewRoot);
+                if (node.SupportsSize)
+                    sizes[node.ControlId] = node.SizeMultiplier;
             }
         }
 
-        UIUserSettings.SetMobileControlLayoutPositions(positions);
+        UIUserSettings.SetMobileControlLayout(positions, sizes);
         CloseEditor();
     }
 
@@ -196,9 +247,11 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
             if (node == null || !defaultPositions.TryGetValue(node.ControlId, out Vector2 position))
                 continue;
 
+            node.ApplySize(previewRoot, 1f);
             node.ApplyNormalizedPosition(previewRoot, position);
         }
 
+        RefreshSizeControls();
         SetStatus("已恢复默认预览；点击保存后生效。", false);
     }
 
@@ -286,6 +339,15 @@ public sealed class MobileControlLayoutEditor : MonoBehaviour
 
     private void OnDestroy()
     {
+        FlatWorldLocalizationService.LanguageChanged -= HandleLanguageChanged;
+        decreaseSizeButton?.onClick.RemoveListener(DecreaseSize);
+        increaseSizeButton?.onClick.RemoveListener(IncreaseSize);
+        if (layoutNodes != null)
+        {
+            foreach (MobileControlLayoutNode node in layoutNodes)
+                if (node != null)
+                    node.Selected -= SelectNode;
+        }
         saveButton?.onClick.RemoveListener(SaveAndClose);
         resetButton?.onClick.RemoveListener(ResetPreviewToDefaults);
         cancelButton?.onClick.RemoveListener(CancelAndClose);

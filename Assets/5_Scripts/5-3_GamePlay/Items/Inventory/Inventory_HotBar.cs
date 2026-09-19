@@ -478,7 +478,7 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         ApplyDesktopHotbarBottomSpacing();
     }
 
-    /// <summary>将当前用户偏好写入桌面快捷栏的 Y 偏移，不抢占手机端临时布局所有权。</summary>
+    /// <summary>应用桌面底部间距并限制最终可见下边界，保留负间距偏好且不抢占手机端布局。</summary>
     private void ApplyDesktopHotbarBottomSpacing()
     {
         RectTransform hotbarRect = RuntimeInventory?.basePanel?.transform as RectTransform;
@@ -489,6 +489,12 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
         Vector2 position = hotbarRect.anchoredPosition;
         position.y = UIUserSettings.HotbarBottomSpacing;
         hotbarRect.anchoredPosition = position;
+
+        // 与手机端共用变换后矩形校验；安全区就是父节点，修正量可直接用于锚点偏移。
+        RectTransform safeRoot = manager.SafeAreaRoot;
+        float correction = SafeAreaRectController.ResolveBottomCorrection(hotbarRect.rect,
+            safeRoot.worldToLocalMatrix * hotbarRect.localToWorldMatrix, safeRoot.rect.yMin);
+        hotbarRect.anchoredPosition += Vector2.up * correction;
     }
 
 #endregion

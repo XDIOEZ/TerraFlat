@@ -168,8 +168,11 @@ public sealed class SafeAreaScaleGroup : MonoBehaviour
 
     private void ResolveReferences()
     {
-        if (availableRect == null)
-            availableRect = (RectTransform)transform;
+        RectTransform self = (RectTransform)transform;
+        // 固定尺寸面板允许直接缩放自己：此时可用空间必须取父级，而不是拿自己的固定尺寸和自己比较。
+        bool scalesSelf = boundsTarget == self && scaledTargets != null &&
+                          System.Array.IndexOf(scaledTargets, self) >= 0;
+        availableRect = scalesSelf && self.parent is RectTransform parent ? parent : self;
     }
 
     private void CaptureBaseScales(bool force)

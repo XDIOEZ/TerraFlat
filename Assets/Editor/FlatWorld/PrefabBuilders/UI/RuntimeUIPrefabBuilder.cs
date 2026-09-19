@@ -222,6 +222,17 @@ public static partial class RuntimeUIPrefabBuilder
         Debug.Log("[Runtime UI] 已固化手机多点触控 HUD、安全区根节点，并挂载到 Player.prefab。");
     }
 
+    /// <summary>只更新触控布局编辑页，不重建 HUD、玩家或根 Canvas。</summary>
+    [MenuItem("FlatWorld/UI/Rebuild Touch Layout Editor Only")]
+    public static void RebuildTouchLayoutEditorOnly()
+    {
+        font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+        if (font == null)
+            throw new MissingReferenceException($"缺少设置字体：{FontPath}");
+        SaveMobileControlLayoutEditorPrefab();
+        AssetDatabase.SaveAssets();
+    }
+
     /// <summary>只重建界面与镜头控制设置页，并同步设置入口分页。</summary>
     [MenuItem("FlatWorld/UI/Rebuild Interface Settings UI")]
     public static void RebuildInterfaceSettingsUI()
@@ -3371,17 +3382,28 @@ public static partial class RuntimeUIPrefabBuilder
         title.raycastTarget = false;
 
         TextMeshProUGUI hint = CreateText(
-            "说明文本",
+            "尺寸文本",
             header.transform,
-            "拖动固定摇杆和玩法按钮；位置会按安全区域自适应不同屏幕。",
-            16f,
+            "点选按钮调整大小",
+            18f,
             Muted);
         hint.alignment = TextAlignmentOptions.MidlineRight;
         hint.rectTransform.anchorMin = new Vector2(0.32f, 0f);
         hint.rectTransform.anchorMax = Vector2.one;
         hint.rectTransform.offsetMin = Vector2.zero;
-        hint.rectTransform.offsetMax = new Vector2(-24f, 0f);
+        hint.rectTransform.offsetMax = new Vector2(-204f, 0f);
+        hint.enableWordWrapping = false;
+        hint.overflowMode = TextOverflowModes.Ellipsis;
         hint.raycastTarget = false;
+        Button decrease = CreateButton("缩小按钮", header.transform, "−", 76f, 60f, false);
+        Button increase = CreateButton("放大按钮", header.transform, "+", 76f, 60f, false);
+        RectTransform decreaseRect = decrease.GetComponent<RectTransform>();
+        RectTransform increaseRect = increase.GetComponent<RectTransform>();
+        decreaseRect.anchorMin = decreaseRect.anchorMax = new Vector2(1f, 0.5f);
+        increaseRect.anchorMin = increaseRect.anchorMax = new Vector2(1f, 0.5f);
+        decreaseRect.anchoredPosition = new Vector2(-146f, 0f);
+        increaseRect.anchoredPosition = new Vector2(-62f, 0f);
+        decreaseRect.sizeDelta = increaseRect.sizeDelta = new Vector2(76f, 60f);
 
         GameObject footer = CreateUIObject("布局编辑底部栏", root.transform, typeof(Image));
         RectTransform footerRect = footer.GetComponent<RectTransform>();
@@ -3413,7 +3435,7 @@ public static partial class RuntimeUIPrefabBuilder
         status.overflowMode = TextOverflowModes.Ellipsis;
         LayoutElement statusLayout = status.gameObject.AddComponent<LayoutElement>();
         statusLayout.flexibleWidth = 1f;
-        statusLayout.minWidth = 220f;
+        statusLayout.minWidth = 0f;
         status.raycastTarget = false;
 
         CreateButton("恢复默认按钮", footer.transform, "恢复默认", 132f, 60f, false);

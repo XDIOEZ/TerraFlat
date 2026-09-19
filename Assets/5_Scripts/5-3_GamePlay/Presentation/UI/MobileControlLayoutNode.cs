@@ -8,6 +8,7 @@ using UnityEngine.UI;
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class MobileControlLayoutNode : MonoBehaviour,
+    IPointerDownHandler,
     IBeginDragHandler,
     IDragHandler,
     IEndDragHandler
@@ -36,6 +37,14 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
     private bool originalRaycastTarget;
     private float originalCanvasAlpha;
     private bool originalCanvasBlocksRaycasts;
+    private Vector3 baseLocalScale;
+    private Vector2 baseAnchoredPosition;
+    private bool scaleCaptured;
+    private int dragPointerId = int.MinValue;
+
+    public event System.Action<MobileControlLayoutNode> Selected;
+    public bool SupportsSize => !fixedMoveJoystickOnly;
+    public float SizeMultiplier { get; private set; } = 1f;
 
     public string ControlId => controlId;
     public bool FixedMoveJoystickOnly => fixedMoveJoystickOnly;
@@ -88,11 +97,57 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
     /// <summary>读取并应用玩家保存的位置覆盖；没有覆盖时保持 Prefab 当前布局。</summary>
     public bool ApplySavedPosition(RectTransform root)
     {
+        if (SupportsSize)
+        {
+            CaptureBaseGeometry();
+            LayoutTarget.localScale = baseLocalScale;
+            LayoutTarget.anchoredPosition = baseAnchoredPosition;
+            ApplySize(root, UIUserSettings.GetMobileControlSize(controlId));
+        }
         if (!UIUserSettings.TryGetMobileControlLayoutPosition(controlId, out Vector2 position))
             return false;
 
         ApplyNormalizedPosition(root, position);
         return true;
+    }
+
+    /// <summary>每次从原始比例计算尺寸；视觉、射线矩形共同缩放，超小安全区只缩不溢出。</summary>
+    public void ApplySize(RectTransform root, float multiplier)
+    {
+        RectTransform target = LayoutTarget;
+        if (!SupportsSize || target == null || root == null)
+            return;
+        Vector2 center = CaptureNormalizedPosition(root);
+        CaptureBaseGeometry();
+        SizeMultiplier = UIUserSettings.SanitizeMobileControlSize(multiplier);
+        target.localScale = new Vector3(baseLocalScale.x * SizeMultiplier,
+            baseLocalScale.y * SizeMultiplier, baseLocalScale.z);
+        Vector3[] corners = new Vector3[4];
+        target.GetWorldCorners(corners);
+        Vector3 minimum = root.InverseTransformPoint(corners[0]);
+        Vector3 maximum = minimum;
+        for (int index = 1; index < corners.Length; index++)
+        {
+            Vector3 corner = root.InverseTransformPoint(corners[index]);
+            minimum = Vector3.Min(minimum, corner);
+            maximum = Vector3.Max(maximum, corner);
+        }
+        Vector3 extent = maximum - minimum;
+        float fit = Mathf.Min(1f, root.rect.width / Mathf.Max(0.001f, extent.x),
+            root.rect.height / Mathf.Max(0.001f, extent.y));
+        target.localScale = new Vector3(baseLocalScale.x * SizeMultiplier * fit,
+            baseLocalScale.y * SizeMultiplier * fit, baseLocalScale.z);
+        ApplyNormalizedPosition(root, center);
+    }
+
+    /// <summary>只捕获一次 Prefab 基准；删除偏好后恢复锚点位置，不保留上次用户覆盖。</summary>
+    private void CaptureBaseGeometry()
+    {
+        if (scaleCaptured)
+            return;
+        baseLocalScale = LayoutTarget.localScale;
+        baseAnchoredPosition = LayoutTarget.anchoredPosition;
+        scaleCaptured = true;
     }
 
     /// <summary>把目标中心放到根节点的归一化位置，并保证整个目标仍留在可用区域内。</summary>
@@ -143,6 +198,7 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
             RestoreHandleVisualState();
 
         editing = value;
+        dragPointerId = int.MinValue;
         editingRoot = value ? root : null;
         if (!editing)
             return;
@@ -164,22 +220,33 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
         }
     }
 
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        if (!editing || eventData == null)
+            return;
+        Selected?.Invoke(this);
+    }
+
     public void OnBeginDrag(PointerEventData eventData)
     {
-        if (!editing || editingRoot == null || LayoutTarget == null)
+        if (!editing || editingRoot == null || LayoutTarget == null ||
+            eventData == null || dragPointerId != int.MinValue)
             return;
 
         if (!TryGetPointerLocalPosition(eventData, out Vector2 pointerLocal))
             return;
 
         Vector2 centerLocal = editingRoot.InverseTransformPoint(GetWorldCenter(LayoutTarget));
+        dragPointerId = eventData.pointerId;
+        Selected?.Invoke(this);
         pointerOffset = centerLocal - pointerLocal;
         eventData.Use();
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (!editing || editingRoot == null || LayoutTarget == null)
+        if (!editing || editingRoot == null || LayoutTarget == null ||
+            eventData == null || eventData.pointerId != dragPointerId)
             return;
 
         if (!TryGetPointerLocalPosition(eventData, out Vector2 pointerLocal))
@@ -197,6 +264,9 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
 
     public void OnEndDrag(PointerEventData eventData)
     {
+        if (eventData == null || eventData.pointerId != dragPointerId)
+            return;
+        dragPointerId = int.MinValue;
         if (editing)
             eventData.Use();
     }
@@ -214,6 +284,7 @@ public sealed class MobileControlLayoutNode : MonoBehaviour,
 
     private void OnDisable()
     {
+        dragPointerId = int.MinValue;
         if (editing)
         {
             RestoreHandleVisualState();

@@ -1104,6 +1104,16 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         restoredPosition.y = UIUserSettings.HotbarBottomSpacing;
         hotbarOriginalRect.anchoredPosition = restoredPosition;
         hotbarOriginalRect.localScale = hotbarOriginalLocalScale;
+
+        // 切回桌面时重新校验恢复后的缩放，不能把原始负间距重新带到屏幕外。
+        RectTransform safeRoot = UIManager.ExistingInstance?.SafeAreaRoot;
+        if (safeRoot != null)
+        {
+            float correction = SafeAreaRectController.ResolveBottomCorrection(hotbarOriginalRect.rect,
+                safeRoot.worldToLocalMatrix * hotbarOriginalRect.localToWorldMatrix, safeRoot.rect.yMin);
+            hotbarOriginalRect.anchoredPosition += (Vector2)hotbarOriginalRect.parent.InverseTransformVector(
+                safeRoot.TransformVector(Vector3.up * correction));
+        }
         ApplyHotbarInteractionPriority(false);
     }
 
@@ -1233,6 +1243,7 @@ public sealed class PlayerMobileControlsHUD : MonoBehaviour
         lastScreenHeight = Screen.height;
         if (geometryChanged)
         {
+            ResetAllTouchState();
             AndroidSystemGestureInsets.RequestRefresh();
             ApplyMobileControlLayout();
         }

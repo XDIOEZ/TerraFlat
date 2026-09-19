@@ -25,6 +25,8 @@ public static class UIUserSettings
     private const string LeftControlZoneRatioKey = "FlatWorld.Mobile.LeftControlZoneRatio";
     private const string RightControlZoneRatioKey = "FlatWorld.Mobile.RightControlZoneRatio";
     private const string MobileControlLayoutPrefix = "FlatWorld.Mobile.ControlLayout.";
+    public const float MinimumMobileControlSize = 0.5f;
+    public const float MaximumMobileControlSize = 2f;
 
     public const string MobileMoveControlId = "move";
     public const string MobileAttackControlId = "attack";
@@ -391,6 +393,27 @@ public static class UIUserSettings
     public static void SetMobileControlLayoutPositions(
         IReadOnlyDictionary<string, Vector2> positions)
     {
+        SetMobileControlLayout(positions, null);
+    }
+
+    /// <summary>读取控件独立尺寸乘区，不使用全局 UI 缩放键。</summary>
+    public static float GetMobileControlSize(string controlId)
+    {
+        float value = PlayerPrefs.GetFloat(GetMobileControlLayoutKey(controlId, "Size"), 1f);
+        return SanitizeMobileControlSize(value);
+    }
+
+    public static float SanitizeMobileControlSize(float value)
+    {
+        return float.IsNaN(value) || float.IsInfinity(value) ? 1f :
+            Mathf.Clamp(value, MinimumMobileControlSize, MaximumMobileControlSize);
+    }
+
+    /// <summary>一次提交位置和独立倍率，并只广播一次布局变化以释放旧触点。</summary>
+    public static void SetMobileControlLayout(
+        IReadOnlyDictionary<string, Vector2> positions,
+        IReadOnlyDictionary<string, float> sizes)
+    {
         EnsureInitialized();
         if (positions == null || positions.Count == 0)
             return;
@@ -399,6 +422,15 @@ public static class UIUserSettings
         for (int index = 0; index < BuiltInMobileControlIds.Length; index++)
         {
             string controlId = BuiltInMobileControlIds[index];
+            if (sizes != null && sizes.TryGetValue(controlId, out float size))
+            {
+                float sanitizedSize = SanitizeMobileControlSize(size);
+                if (!Mathf.Approximately(GetMobileControlSize(controlId), sanitizedSize))
+                {
+                    PlayerPrefs.SetFloat(GetMobileControlLayoutKey(controlId, "Size"), sanitizedSize);
+                    changed = true;
+                }
+            }
             if (!positions.TryGetValue(controlId, out Vector2 position))
                 continue;
 
@@ -874,7 +906,8 @@ public static class UIUserSettings
         {
             string controlId = BuiltInMobileControlIds[index];
             if (PlayerPrefs.HasKey(GetMobileControlLayoutKey(controlId, "X")) ||
-                PlayerPrefs.HasKey(GetMobileControlLayoutKey(controlId, "Y")))
+                PlayerPrefs.HasKey(GetMobileControlLayoutKey(controlId, "Y")) ||
+                PlayerPrefs.HasKey(GetMobileControlLayoutKey(controlId, "Size")))
             {
                 return true;
             }
@@ -892,6 +925,12 @@ public static class UIUserSettings
             string controlId = BuiltInMobileControlIds[index];
             string xKey = GetMobileControlLayoutKey(controlId, "X");
             string yKey = GetMobileControlLayoutKey(controlId, "Y");
+            string sizeKey = GetMobileControlLayoutKey(controlId, "Size");
+            if (PlayerPrefs.HasKey(sizeKey))
+            {
+                PlayerPrefs.DeleteKey(sizeKey);
+                changed = true;
+            }
             if (PlayerPrefs.HasKey(xKey))
             {
                 PlayerPrefs.DeleteKey(xKey);

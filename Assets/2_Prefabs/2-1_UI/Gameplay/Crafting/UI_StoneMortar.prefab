@@ -1934,6 +1934,7 @@ GameObject:
   - component: {fileID: 2778211446581845300}
   - component: {fileID: 671399011624820480}
   - component: {fileID: 5703448706332420614}
+  - component: {fileID: 7118296150934312271}
   m_Layer: 0
   m_Name: UI_StoneMortar
   m_TagString: Untagged
@@ -1991,7 +1992,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 0, g: 0, b: 0, a: 0}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -2052,6 +2053,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   PlaceButton: {fileID: 1284710862003299099}
   DismantleButton: {fileID: 677919250638960049}
+--- !u!114 &7118296150934312271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8590396981883253119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a2bfc35292b494793ff1853e5a8f751, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  boundsTarget: {fileID: 7378317741759783839}
+  scaledTargets:
+  - {fileID: 7378317741759783839}
+  safeMargin: {x: 24, y: 24}
+  maxScale: 1
 --- !u!1001 &3946985644879940004
 PrefabInstance:
   m_ObjectHideFlags: 0

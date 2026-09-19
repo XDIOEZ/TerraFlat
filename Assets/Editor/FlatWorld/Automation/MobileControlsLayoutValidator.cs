@@ -27,6 +27,175 @@ namespace FlatWorld.Automation
 
         #region 菜单入口
 
+        /// <summary>只读验收待办 UI：不进入 Play、不写偏好、不保存 Prefab，覆盖多分辨率与缩放乘区。</summary>
+        [MenuItem("FlatWorld/Validation/Validate UI Occlusion Touch Size And Crafting")]
+        public static void ValidateUiOcclusionTouchSizeAndCrafting()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("请在非 Play 状态执行 UI 静态诊断。");
+            ValidateOcclusionContract();
+            GameObject host = new GameObject("UI layout diagnostic", typeof(RectTransform));
+            host.hideFlags = HideFlags.HideAndDontSave;
+            try
+            {
+                RectTransform bounds = host.GetComponent<RectTransform>();
+                GameObject mobile = UnityEngine.Object.Instantiate(RequirePrefab(MobilePrefabPath), bounds, false);
+                GameObject[] crafting = new GameObject[2];
+                string[] names = { "UI_HandCraftTable", "UI_MakerTable" };
+                for (int index = 0; index < names.Length; index++)
+                    crafting[index] = UnityEngine.Object.Instantiate(RequirePrefab(
+                        "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/" + names[index] + ".prefab"), bounds, false);
+
+                Vector4[] screens =
+                {
+                    new Vector4(2560, 1440, 0, 0), new Vector4(1920, 1080, 0, 0),
+                    new Vector4(1600, 900, 0, 0), new Vector4(1280, 720, 0, 0),
+                    new Vector4(1024, 768, 0, 0), new Vector4(2400, 1080, 132, 48),
+                    new Vector4(2400, 1080, 48, 132)
+                };
+                CanvasScaler scaler = RequirePrefab(UIRootPath).GetComponentInChildren<CanvasScaler>(true);
+                if (scaler == null)
+                    throw new InvalidOperationException("UIRoot 缺少 CanvasScaler。");
+                foreach (Vector4 screen in screens)
+                {
+                    foreach (float uiScale in new[] { UIUserSettings.MinimumScale, 1f,
+                        UIUserSettings.DefaultScale, UIUserSettings.MaximumScale })
+                    {
+                        float canvasScale = Mathf.Min(screen.x / scaler.referenceResolution.x,
+                            screen.y / scaler.referenceResolution.y) * uiScale;
+                        bounds.sizeDelta = new Vector2((screen.x - screen.z - screen.w) / canvasScale,
+                            screen.y / canvasScale);
+                        bounds.ForceUpdateRectTransforms();
+                        string context = $"{screen.x}×{screen.y}, UI={uiScale}, insets={screen.z}/{screen.w}";
+                        ValidateTouchSizeGeometry(mobile, context);
+                        foreach (GameObject panel in crafting)
+                            ValidateCraftingSizeGeometry(panel, context);
+                    }
+                }
+                ValidateTouchEditorContract();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+            Debug.Log("[UI Todo] 透视三个 Shader 通道、触控尺寸和制作面板 28 组屏幕/缩放组合通过只读 Editor 诊断。");
+        }
+
+        /// <summary>核对透视共享门控以及正式设置页的序列化引用，不改变玩家偏好。</summary>
+        private static void ValidateOcclusionContract()
+        {
+            string shader = System.IO.File.ReadAllText("Assets/9_Shaders/Shader/Sprite-Lit-Master.shader");
+            if (!shader.Contains("saturate(_PlayerOcclusionEnabled) *") ||
+                CountOccurrences(shader, "float playerOcclusion = ComputePlayerOcclusionMask(") != 3 ||
+                CountOccurrences(shader, "*= lerp(1.0, saturate(_PlayerOcclusionAlpha), playerOcclusion);") != 3)
+                throw new InvalidOperationException("透视三个 Sprite Shader 通道必须共用 Enabled 门控和 alpha 插值。");
+            string bridge = System.IO.File.ReadAllText(
+                "Assets/5_Scripts/5-3_GamePlay/Presentation/PlayerOcclusionShaderGlobals.cs");
+            if (!bridge.Contains("PlayerPrefs.GetInt(PreferenceKey, 0)") ||
+                !bridge.Contains("if (!Enabled || localPlayer == null"))
+                throw new InvalidOperationException("透视默认关闭和相机渲染门控契约不完整。");
+            GameObject page = RequirePrefab("Assets/2_Prefabs/2-1_UI/Settings/Panels/UI_VisualEffectsSettings.prefab");
+            VisualEffectsSettingsPanelLauncher launcher = page.GetComponent<VisualEffectsSettingsPanelLauncher>();
+            if (launcher == null)
+                throw new InvalidOperationException("视觉特效设置页缺少控制器。");
+            SerializedObject serialized = new SerializedObject(launcher);
+            Toggle toggle = serialized.FindProperty("occlusionToggle").objectReferenceValue as Toggle;
+            if (toggle == null || toggle.isOn || toggle.GetComponent<LayoutElement>().minHeight < 60f)
+                throw new InvalidOperationException("请先定向重建视觉特效页；透视应默认关闭且满足触控高度。");
+        }
+
+        private static int CountOccurrences(string source, string token)
+        {
+            int count = 0;
+            int offset = 0;
+            while ((offset = source.IndexOf(token, offset, StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                offset += token.Length;
+            }
+            return count;
+        }
+
+        /// <summary>实际调用节点尺寸算法，验证视觉/命中矩形同源、边缘限幅和重复应用不累乘。</summary>
+        private static void ValidateTouchSizeGeometry(GameObject mobile, string context)
+        {
+            RectTransform root = mobile.GetComponent<RectTransform>();
+            foreach (MobileControlLayoutNode node in mobile.GetComponentsInChildren<MobileControlLayoutNode>(true))
+            {
+                if (!node.SupportsSize)
+                    continue;
+                Graphic hit = node.GetComponent<Graphic>();
+                if (hit == null || !hit.raycastTarget || hit.rectTransform != node.LayoutTarget)
+                    throw new InvalidOperationException($"{node.ControlId} 的视觉与命中矩形不一致。");
+                foreach (float multiplier in new[] { 0.5f, 1f, 2f, 1f })
+                {
+                    node.ApplySize(root, multiplier);
+                    Vector3 firstScale = node.LayoutTarget.localScale;
+                    node.ApplySize(root, multiplier);
+                    if (Vector3.Distance(firstScale, node.LayoutTarget.localScale) > 0.0001f)
+                        throw new InvalidOperationException($"{context}: {node.ControlId} 尺寸累乘。");
+                    foreach (Vector2 corner in new[] { Vector2.zero, Vector2.one,
+                        new Vector2(0f, 1f), new Vector2(1f, 0f) })
+                    {
+                        node.ApplyNormalizedPosition(root, corner);
+                        RequireContained(root, node.LayoutTarget, context + " / " + node.ControlId);
+                    }
+                }
+            }
+        }
+
+        /// <summary>核对实际 Prefab 的全屏外壳、固定内容和只缩不放；同一实例连续调整模拟窗口变化。</summary>
+        private static void ValidateCraftingSizeGeometry(GameObject panel, string context)
+        {
+            RectTransform outer = panel.GetComponent<RectTransform>();
+            RectTransform content = panel.transform.Find("CraftingContent") as RectTransform;
+            SafeAreaScaleGroup fit = panel.GetComponent<SafeAreaScaleGroup>();
+            if (outer.anchorMin != Vector2.zero || outer.anchorMax != Vector2.one ||
+                outer.offsetMin != Vector2.zero || outer.offsetMax != Vector2.zero ||
+                content == null || content.sizeDelta != new Vector2(1344f, 756f) || fit == null)
+                throw new InvalidOperationException(panel.name + " 尚未执行制作面板安全区定向适配。");
+            if (panel.GetComponent<CanvasScaler>() != null || panel.GetComponent<Image>().enabled)
+                throw new InvalidOperationException(panel.name + " 外壳不能缩放 Canvas 或绘制全屏背景。");
+            fit.ApplyScale();
+            float expected = Mathf.Min(1f, (outer.rect.width - 48f) / 1344f,
+                (outer.rect.height - 48f) / 756f);
+            if (Mathf.Abs(content.localScale.x - expected) > 0.0001f ||
+                Mathf.Abs(content.localScale.y - expected) > 0.0001f)
+                throw new InvalidOperationException(context + " 制作内容缩放不符合只缩不放规则。");
+            fit.ApplyScale();
+            if (Mathf.Abs(content.localScale.x - expected) > 0.0001f)
+                throw new InvalidOperationException(context + " 制作内容重复应用发生累乘。");
+            RequireContained(outer, content, context + " / " + panel.name);
+        }
+
+        private static void RequireContained(RectTransform root, RectTransform target, string context)
+        {
+            Vector3[] corners = new Vector3[4];
+            target.GetWorldCorners(corners);
+            foreach (Vector3 corner in corners)
+            {
+                Vector3 local = root.InverseTransformPoint(corner);
+                if (local.x < root.rect.xMin - 0.01f || local.x > root.rect.xMax + 0.01f ||
+                    local.y < root.rect.yMin - 0.01f || local.y > root.rect.yMax + 0.01f)
+                    throw new InvalidOperationException(context + " 超出安全区。");
+            }
+        }
+
+        private static void ValidateTouchEditorContract()
+        {
+            GameObject editor = RequirePrefab(
+                "Assets/2_Prefabs/2-1_UI/Gameplay/Mobile/UI_MobileControlLayoutEditor.prefab");
+            foreach (string name in new[] { "缩小按钮", "放大按钮", "尺寸文本", "保存按钮", "恢复默认按钮", "取消按钮" })
+                RequireNode(editor.transform, name);
+            string hud = System.IO.File.ReadAllText(
+                "Assets/5_Scripts/5-3_GamePlay/Presentation/UI/PlayerMobileControlsHUD.cs");
+            int handler = hud.IndexOf("private void HandleMobileControlLayoutChanged()", StringComparison.Ordinal);
+            int release = hud.IndexOf("ResetAllTouchState();", handler, StringComparison.Ordinal);
+            int layout = hud.IndexOf("ApplyMobileControlLayout();", handler, StringComparison.Ordinal);
+            if (release < handler || release > layout)
+                throw new InvalidOperationException("布局提交必须先释放触点再应用新尺寸。");
+        }
+
         [MenuItem("FlatWorld/Validation/Validate Mobile Controls Layout")]
         public static void Validate()
         {

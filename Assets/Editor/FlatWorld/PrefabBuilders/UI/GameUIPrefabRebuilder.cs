@@ -61,8 +61,8 @@ public static class GameUIPrefabRebuilder
     {
         { BagPrefabPath, new[] { "Scroll View", "Content", "关闭" } },
         { InventoryPanelsRoot + "UI_Equipment.prefab", new[] { "UI_Content", "关闭" } },
-        { CraftingRoot + "UI_HandCraftTable.prefab", new[] { "输入_1", "输入_4", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, "合成按钮", "关闭" } },
-        { CraftingRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_5", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, "合成按钮", "关闭" } },
+        { CraftingRoot + "UI_HandCraftTable.prefab", new[] { "输入_1", "输入_4", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, CraftingStationController.CandidateOutputAmountName, CraftingStationController.CandidateMaterialAmountName, "合成按钮", "关闭" } },
+        { CraftingRoot + "UI_MakerTable.prefab", new[] { "输入_1", "输入_5", "输出_1", "输出_2", CraftingStationController.CandidateContentName, CraftingStationController.CandidateTemplateName, CraftingStationController.CandidateOutputAmountName, CraftingStationController.CandidateMaterialAmountName, "合成按钮", "关闭" } },
         { CraftingRoot + "UI_Furnace.prefab", new[] { "输入_1", "输入_2", "输入_3", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "FWUI_FurnaceTemperatureValue", "合成按钮", "关闭" } },
         { CraftingRoot + "UI_Bonfire.prefab", new[] { "输入_1", "输出_1", "燃料_1", "熔炼进度条", "燃料显示条", "合成按钮", "关闭" } },
         { CraftingRoot + "UI_FireDrill.prefab", new[] { "输入_1", "输出_1", "合成按钮", "关闭", "Progress" } },
@@ -1011,6 +1011,7 @@ public static class GameUIPrefabRebuilder
     /// </summary>
     private static void BuildCraftingSelectionWindow(GameObject root, string title, string eyebrow, int inputCount)
     {
+        UnwrapCraftingContent(root);
         const float width = 1344f;
         const float height = 756f;
         const float sectionTop = 98f;
@@ -1044,7 +1045,92 @@ public static class GameUIPrefabRebuilder
         PlaceCraftingActionButton(root.transform, "开始制作");
         PlaceCraftingCloseButton(root.transform);
         EnsureCraftingOutputPreviewLayers(root.transform);
+        EnsureCraftingSafeArea(root);
     }
+
+    #region 制作面板安全区
+
+    /// <summary>只给两张制作面板增加适配外壳，保留所有原有业务节点和引用。</summary>
+    [MenuItem("FlatWorld/UI/Adapt Crafting Panels Safe Area Only")]
+    public static void AdaptCraftingPanelsSafeAreaOnly()
+    {
+        foreach (string name in new[] { "UI_HandCraftTable", "UI_MakerTable" })
+        {
+            string path = CraftingRoot + name + ".prefab";
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                EnsureCraftingSafeArea(root);
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+        AssetDatabase.SaveAssets();
+    }
+
+    /// <summary>内容以 1344×756 排版；外层占满安全区，缩放组件仅向下限幅。</summary>
+    private static void EnsureCraftingSafeArea(GameObject root)
+    {
+        RectTransform outer = root.GetComponent<RectTransform>();
+        RectTransform content = root.transform.Find("CraftingContent") as RectTransform;
+        if (content == null)
+        {
+            content = CreateRect("CraftingContent", root.transform);
+            content.anchorMin = content.anchorMax = new Vector2(0.5f, 0.5f);
+            content.pivot = new Vector2(0.5f, 0.5f);
+            content.sizeDelta = new Vector2(1344f, 756f);
+            content.anchoredPosition = Vector2.zero;
+            Image source = root.GetComponent<Image>();
+            if (source != null)
+            {
+                Image background = content.gameObject.AddComponent<Image>();
+                EditorUtility.CopySerialized(source, background);
+                background.enabled = true;
+                source.enabled = false;
+            }
+            foreach (Outline outline in root.GetComponents<Outline>())
+            {
+                Outline copy = content.gameObject.AddComponent<Outline>();
+                EditorUtility.CopySerialized(outline, copy);
+                copy.enabled = true;
+                outline.enabled = false;
+            }
+            List<Transform> children = new List<Transform>();
+            foreach (Transform child in root.transform)
+                if (child != content)
+                    children.Add(child);
+            foreach (Transform child in children)
+                child.SetParent(content, false);
+        }
+        content.localScale = Vector3.one;
+        Stretch(outer);
+        outer.localScale = Vector3.one;
+        SafeAreaScaleGroup scale = root.GetComponent<SafeAreaScaleGroup>();
+        if (scale == null)
+            scale = root.AddComponent<SafeAreaScaleGroup>();
+        scale.Configure(content, new[] { content }, new Vector2(24f, 24f));
+    }
+
+    /// <summary>重建前还原旧构建坐标空间，避免重复包裹或改变内部绝对布局。</summary>
+    private static void UnwrapCraftingContent(GameObject root)
+    {
+        Transform content = root.transform.Find("CraftingContent");
+        if (content == null)
+            return;
+        while (content.childCount > 0)
+            content.GetChild(0).SetParent(root.transform, false);
+        UnityEngine.Object.DestroyImmediate(content.gameObject);
+        Image image = root.GetComponent<Image>();
+        if (image != null)
+            image.enabled = true;
+        foreach (Outline outline in root.GetComponents<Outline>())
+            outline.enabled = true;
+    }
+
+    #endregion
 
     private static void BuildMakerTable(GameObject root)
     {
@@ -1059,7 +1145,7 @@ public static class GameUIPrefabRebuilder
         foreach (Transform transform in transforms)
         {
             bool isLegacyRootArrow = transform != null &&
-                                     transform.parent == root &&
+                                     (transform.parent == root || transform.parent == root.Find("CraftingContent")) &&
                                      string.Equals(transform.name, "Image", StringComparison.Ordinal);
             bool isGeneratedFlowArrow = transform != null &&
                                         transform.name.StartsWith("FWUI_FlowArrow_", StringComparison.Ordinal);
@@ -2324,24 +2410,47 @@ public static class GameUIPrefabRebuilder
             Cream,
             FontStyles.Bold,
             TextAlignmentOptions.Left);
-        SetTopLeft(label.rectTransform, 90f, 15f, width - 208f, 54f);
+        SetTopLeft(label.rectTransform, 152f, 15f, width - 270f, 54f);
         label.enableWordWrapping = true;
         label.overflowMode = TextOverflowModes.Ellipsis;
 
-        TextMeshProUGUI amount = CreateText(
-            CraftingStationController.CandidateAmountName,
+        TextMeshProUGUI outputAmount = CreateText(
+            CraftingStationController.CandidateOutputAmountName,
             templateImage.transform,
             string.Empty,
             18f,
             Amber,
             FontStyles.Bold,
             TextAlignmentOptions.Center);
-        SetTopLeft(amount.rectTransform, width - 116f, 20f, 82f, 44f);
+        SetTopLeft(outputAmount.rectTransform, 80f, 20f, 66f, 44f);
+        ConfigureCandidateAmountText(outputAmount);
+
+        TextMeshProUGUI materialAmount = CreateText(
+            CraftingStationController.CandidateMaterialAmountName,
+            templateImage.transform,
+            string.Empty,
+            18f,
+            Teal,
+            FontStyles.Bold,
+            TextAlignmentOptions.Center);
+        SetTopLeft(materialAmount.rectTransform, width - 116f, 20f, 82f, 44f);
+        ConfigureCandidateAmountText(materialAmount);
 
         templateImage.gameObject.SetActive(false);
         scroll.viewport = viewportImage.rectTransform;
         scroll.content = content;
         scroll.verticalNormalizedPosition = 1f;
+    }
+
+    /// <summary>候选数量使用固定预算并自动缩字，保证 ×10、×100 等多位数不会挤入相邻区域。</summary>
+    private static void ConfigureCandidateAmountText(TextMeshProUGUI text)
+    {
+        text.enableWordWrapping = false;
+        text.enableAutoSizing = true;
+        text.fontSizeMin = 11f;
+        text.fontSizeMax = 18f;
+        text.overflowMode = TextOverflowModes.Truncate;
+        text.raycastTarget = false;
     }
 
     /// <summary>旧版单配方进度条已由双输出槽预览取代。</summary>

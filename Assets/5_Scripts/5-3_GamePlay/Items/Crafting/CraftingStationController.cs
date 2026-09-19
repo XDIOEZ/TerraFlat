@@ -19,7 +19,8 @@ public sealed class CraftingStationController : IDisposable
     public const string CandidateTemplateName = "配方候选模板";
     public const string CandidateIconName = "图标";
     public const string CandidateLabelName = "名称";
-    public const string CandidateAmountName = "数量";
+    public const string CandidateOutputAmountName = "成品数量";
+    public const string CandidateMaterialAmountName = "材料数量";
 
     #endregion
 
@@ -260,7 +261,8 @@ public sealed class CraftingStationController : IDisposable
             button,
             FindRect(button.transform, CandidateIconName)?.GetComponent<Image>(),
             FindRect(button.transform, CandidateLabelName)?.GetComponent<TextMeshProUGUI>(),
-            FindRect(button.transform, CandidateAmountName)?.GetComponent<TextMeshProUGUI>());
+            FindRect(button.transform, CandidateOutputAmountName)?.GetComponent<TextMeshProUGUI>(),
+            FindRect(button.transform, CandidateMaterialAmountName)?.GetComponent<TextMeshProUGUI>());
         entry.Bind(() => SelectRecipe(entry.Recipe));
         return entry;
     }
@@ -402,16 +404,23 @@ public sealed class CraftingStationController : IDisposable
         private readonly Image background;
         private readonly Image icon;
         private readonly TextMeshProUGUI label;
-        private readonly TextMeshProUGUI amount;
+        private readonly TextMeshProUGUI outputAmount;
+        private readonly TextMeshProUGUI materialAmount;
         private UnityAction selectAction;
 
-        public CandidateEntry(Button button, Image icon, TextMeshProUGUI label, TextMeshProUGUI amount)
+        public CandidateEntry(
+            Button button,
+            Image icon,
+            TextMeshProUGUI label,
+            TextMeshProUGUI outputAmount,
+            TextMeshProUGUI materialAmount)
         {
             this.button = button ?? throw new ArgumentNullException(nameof(button));
             background = button.targetGraphic as Image ?? button.GetComponent<Image>();
             this.icon = icon ?? throw new InvalidOperationException("配方候选模板缺少图标 Image");
             this.label = label ?? throw new InvalidOperationException("配方候选模板缺少名称 TMP");
-            this.amount = amount ?? throw new InvalidOperationException("配方候选模板缺少数量 TMP");
+            this.outputAmount = outputAmount ?? throw new InvalidOperationException("配方候选模板缺少成品数量 TMP");
+            this.materialAmount = materialAmount ?? throw new InvalidOperationException("配方候选模板缺少材料数量 TMP");
         }
 
         public RuntimeRecipe Recipe { get; private set; }
@@ -451,11 +460,12 @@ public sealed class CraftingStationController : IDisposable
                 label.text = FlatWorldLocalizationService.GetUiText(recipe.name);
             }
 
-            float outputAmount = primaryOutput?.Stack?.Amount ?? recipe.outputs?.results?[0]?.amount ?? 1f;
+            int primaryOutputAmount = recipe.outputs?.results?[0]?.amount ?? 1;
             int extraOutputCount = Mathf.Max(0, (recipe.outputs?.results?.Count ?? 1) - 1);
-            amount.text = extraOutputCount > 0
-                ? $"×{outputAmount:0.##}  +{extraOutputCount}"
-                : $"×{outputAmount:0.##}";
+            outputAmount.text = extraOutputCount > 0
+                ? $"×{primaryOutputAmount} +{extraOutputCount}"
+                : $"×{primaryOutputAmount}";
+            materialAmount.text = $"×{GetRequiredMaterialAmount(recipe)}";
             button.interactable = description.Success;
             button.gameObject.SetActive(true);
         }
@@ -466,7 +476,8 @@ public sealed class CraftingStationController : IDisposable
             icon.sprite = null;
             icon.enabled = false;
             label.text = string.Empty;
-            amount.text = string.Empty;
+            outputAmount.text = string.Empty;
+            materialAmount.text = string.Empty;
             button.gameObject.SetActive(false);
         }
 
@@ -491,6 +502,24 @@ public sealed class CraftingStationController : IDisposable
             }
 
             label.text = displayName;
+        }
+
+        /// <summary>统计制作一份配方会实际消耗的材料总件数；amount=0 的工具需求不计入消耗数量。</summary>
+        private static long GetRequiredMaterialAmount(RuntimeRecipe recipe)
+        {
+            IReadOnlyList<RuntimeRecipeIngredient> ingredients = recipe?.inputs?.RowItems_List;
+            if (ingredients == null)
+                return 0L;
+
+            long total = 0L;
+            for (int index = 0; index < ingredients.Count; index++)
+            {
+                RuntimeRecipeIngredient ingredient = ingredients[index];
+                if (ingredient != null && ingredient.amount > 0)
+                    total += ingredient.amount;
+            }
+
+            return total;
         }
     }
 
