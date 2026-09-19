@@ -14,7 +14,7 @@
       "stackable": false,
       "canBePickedUp": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Scissors/Scissors_Icon.png"
       },
       "modules": {
         "groundCoverHarvest": {
@@ -2728,10 +2728,11 @@
       "weight": 2.8,
       "volume": 2.8,
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/StoneHammer/StoneHammer_Icon.png",
         "color": {
-          "r": 0.82,
-          "g": 0.82,
-          "b": 0.82,
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1.0
         }
       },

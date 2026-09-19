@@ -82,7 +82,16 @@
       "description": "柔韧柳枝可以编成绳子。",
       "weight": 0.3,
       "volume": 0.8,
-      "stackable": true
+      "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WillowBranch/WillowBranch_Icon.png",
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        }
+      }
     },
     {
       "id": "WillowBark",
@@ -242,7 +251,13 @@
       "volume": 0.05,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/FoxtailSeed/FoxtailSeed_Icon.png",
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        }
       },
       "modules": {
         "plantable": {
@@ -300,7 +315,13 @@
       "volume": 0.15,
       "stackable": true,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Flour/Flour_Icon.png",
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        }
       },
       "modules": {
         "food": {
@@ -332,6 +353,15 @@
       "weight": 0.01,
       "volume": 0.03,
       "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/HerbSeed/HerbSeed_Icon.png",
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        }
+      },
       "modules": {
         "plantable": {
           "parameters": {
@@ -348,6 +378,15 @@
       "weight": 0.02,
       "volume": 0.05,
       "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WillowSeed/WillowSeed_Icon.png",
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        }
+      },
       "modules": {
         "plantable": {
           "parameters": {
@@ -476,11 +515,12 @@
       "volume": 1200.0,
       "stackable": false,
       "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WillowTree/WillowTree_Idle.png",
         "color": {
-          "r": 0.65,
-          "g": 0.95,
-          "b": 0.7,
-          "a": 1
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
         }
       },
       "lootTableId": "Ancient_Willow",
@@ -501,6 +541,15 @@
       "weight": 2.5,
       "volume": 3.5,
       "stackable": false,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/StoneShovel/StoneShovel_Icon.png",
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        }
+      },
       "modules": {
         "damage": {
           "parameters": {
@@ -963,12 +1012,12 @@
         }
       },
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "spriteAddress": "Assets/6_Art/Generated/Honey/Honey_Icon.png",
         "color": {
-          "r": 1,
-          "g": 0.82,
-          "b": 0.35,
-          "a": 1
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
         }
       }
     },
@@ -1122,6 +1171,15 @@
       "weight": 0.1,
       "volume": 0.2,
       "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/MinersNote/MinersNote_Icon.png",
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        }
+      },
       "modules": {
         "readableBook": {
           "prefab": "Module_ReadableBook",

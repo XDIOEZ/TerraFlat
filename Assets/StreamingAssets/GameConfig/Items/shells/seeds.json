@@ -152,6 +152,15 @@
       "weight": 0.02,
       "volume": 0.05,
       "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/RadishSeed/RadishSeed_Icon.png",
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        }
+      },
       "modules": {
         "plantable": {
           "parameters": {
@@ -194,6 +203,15 @@
       "weight": 0.02,
       "volume": 0.05,
       "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/BerrySeed/BerrySeed_Icon.png",
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        }
+      },
       "modules": {
         "plantable": {
           "parameters": {

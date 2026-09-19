@@ -2621,6 +2621,84 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 9103545e7e6d8108de063e503f4011f6
+    m_Address: Assets/6_Art/Generated/Scissors/Scissors_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fbe63fe746cdb6f4c1ebc536e4364de3
+    m_Address: Assets/6_Art/Generated/StoneShovel/StoneShovel_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3f13d3a89b9477ffd54e89d432742c41
+    m_Address: Assets/6_Art/Generated/StoneHammer/StoneHammer_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 60a7857771b1a481ea669d25c0c2e911
+    m_Address: Assets/6_Art/Generated/FoxtailSeed/FoxtailSeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 170f30f3a26ddb752acdd2c42a13c331
+    m_Address: Assets/6_Art/Generated/RadishSeed/RadishSeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 87f773944fc46c2e258a731494417908
+    m_Address: Assets/6_Art/Generated/BerrySeed/BerrySeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0017c78e6bdddaae8e0096d70189ceed
+    m_Address: Assets/6_Art/Generated/HerbSeed/HerbSeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7d6df6f2a3fed54da135205b898a25ee
+    m_Address: Assets/6_Art/Generated/WillowSeed/WillowSeed_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6ca396415d99195c7e6fcf80f6f75fde
+    m_Address: Assets/6_Art/Generated/Flour/Flour_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: aa04620148ec79c4ba088299feea7a71
+    m_Address: Assets/6_Art/Generated/Honey/Honey_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a5732d1324140c40b598f12d14fbbad2
+    m_Address: Assets/6_Art/Generated/MinersNote/MinersNote_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6234249e6e988e5111b44d5da2565029
+    m_Address: Assets/6_Art/Generated/WillowBranch/WillowBranch_Icon.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 04dff00073e8d61412c91281eda84d7c
+    m_Address: Assets/6_Art/Generated/WillowTree/WillowTree_Idle.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}
   m_SchemaSet:
