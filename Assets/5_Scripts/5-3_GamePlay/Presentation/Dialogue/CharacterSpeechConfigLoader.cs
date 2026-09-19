@@ -35,6 +35,7 @@ namespace FlatWorld.Dialogue
             CharacterSpeechFacts.WeatherIsRaining,
             CharacterSpeechFacts.WeatherIsSnowing,
             CharacterSpeechFacts.SeasonPreparation,
+            CharacterSpeechFacts.TemperatureTransition,
             CharacterSpeechFacts.WeatherIsExposed,
             CharacterSpeechFacts.WeatherHasHeatSource,
             CharacterSpeechFacts.WeatherRemainingSeconds
@@ -395,6 +396,16 @@ namespace FlatWorld.Dialogue
                             result,
                             logIssues);
                     }
+                }
+            }
+
+            if (entry.LocalizedLines != null)
+            {
+                foreach (KeyValuePair<string, List<string>> translation in entry.LocalizedLines)
+                {
+                    if (string.IsNullOrWhiteSpace(translation.Key) || translation.Value == null ||
+                        translation.Value.Count == 0 || translation.Value.Exists(string.IsNullOrWhiteSpace))
+                        valid &= Report(entry, string.Empty, "localizedLines 的语言与台词不能为空。", result, logIssues);
                 }
             }
 

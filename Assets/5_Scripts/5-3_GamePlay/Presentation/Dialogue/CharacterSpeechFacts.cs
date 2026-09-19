@@ -38,6 +38,8 @@ namespace FlatWorld.Dialogue
 
         #region 天气与暴露
 
+        public const string TemperatureTransition = "temperature.transition";
+
         public const string WeatherType = "weather.type";
         public const string WeatherPhase = "weather.phase";
         public const string WeatherIntensity = "weather.intensity";

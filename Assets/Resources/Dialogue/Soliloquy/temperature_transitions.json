@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "temperature.cold.enter",
+      "topic": "temperature.cold.enter",
+      "triggers": ["StateChanged"],
+      "priority": "Critical",
+      "conditions": [{"fact": "temperature.transition", "operator": "Equal", "value": "ColdEnter"}],
+      "lines": ["冷得快撑不住了，得赶紧暖和起来。"],
+      "localizedLines": {"en": ["I'm dangerously cold. I need to warm up."]},
+      "duration": 4,
+      "cooldown": 20,
+      "cooldownGroup": "temperature",
+      "retryWhileMatched": true,
+      "enabled": true
+    },
+    {
+      "id": "temperature.cold.exit",
+      "topic": "temperature.cold.exit",
+      "triggers": ["StateChanged"],
+      "priority": "Need",
+      "conditions": [{"fact": "temperature.transition", "operator": "Equal", "value": "ColdExit"}],
+      "lines": ["总算暖和些了，没那么冷了。"],
+      "localizedLines": {"en": ["I'm warming up at last. That's a relief."]},
+      "duration": 3.5,
+      "cooldown": 20,
+      "cooldownGroup": "temperature",
+      "retryWhileMatched": true,
+      "enabled": true
+    },
+    {
+      "id": "temperature.hot.enter",
+      "topic": "temperature.hot.enter",
+      "triggers": ["StateChanged"],
+      "priority": "Critical",
+      "conditions": [{"fact": "temperature.transition", "operator": "Equal", "value": "HotEnter"}],
+      "lines": ["热得受不了了，得赶紧找地方凉快一下。"],
+      "localizedLines": {"en": ["I'm overheating. I need somewhere to cool down."]},
+      "duration": 4,
+      "cooldown": 20,
+      "cooldownGroup": "temperature",
+      "retryWhileMatched": true,
+      "enabled": true
+    },
+    {
+      "id": "temperature.hot.exit",
+      "topic": "temperature.hot.exit",
+      "triggers": ["StateChanged"],
+      "priority": "Need",
+      "conditions": [{"fact": "temperature.transition", "operator": "Equal", "value": "HotExit"}],
+      "lines": ["凉快多了，总算缓过来了。"],
+      "localizedLines": {"en": ["Much cooler now. I can finally catch my breath."]},
+      "duration": 3.5,
+      "cooldown": 20,
+      "cooldownGroup": "temperature",
+      "retryWhileMatched": true,
+      "enabled": true
+    }
+  ]
+}

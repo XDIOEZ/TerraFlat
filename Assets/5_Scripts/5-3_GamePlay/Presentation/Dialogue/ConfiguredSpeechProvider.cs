@@ -22,6 +22,8 @@ namespace FlatWorld.Dialogue
         private readonly Dictionary<string, float> nextAllowedSpeechAt =
             new(StringComparer.Ordinal);
 
+        private readonly Dictionary<string, float> nextAllowedGroupAt = new(StringComparer.Ordinal);
+
         private CharacterSoliloquyController controller;
         private CharacterSpeechCompletionStore completionStore;
         private List<CharacterSpeechConfigEntry> entries = new();
@@ -120,7 +122,8 @@ namespace FlatWorld.Dialogue
                 if (updateStateCache)
                 {
                     bool wasMet = previousConditionStates.TryGetValue(entry.Id, out bool previous) && previous;
-                    previousConditionStates[entry.Id] = conditionsMet;
+                    if (!entry.RetryWhileMatched || !conditionsMet)
+                        previousConditionStates[entry.Id] = conditionsMet;
                     if (!conditionsMet || wasMet)
                         continue;
                 }
@@ -166,6 +169,10 @@ namespace FlatWorld.Dialogue
             if (entry.Once && completionStore.IsCompleted(entry.CompletionFlag))
                 return false;
 
+            if (!string.IsNullOrEmpty(entry.CooldownGroup) &&
+                nextAllowedGroupAt.TryGetValue(entry.CooldownGroup, out float groupAllowed) &&
+                context.RequestedAt < groupAllowed)
+                return false;
             return !nextAllowedSpeechAt.TryGetValue(entry.Id, out float nextAllowed) ||
                    context.RequestedAt >= nextAllowed;
         }
@@ -175,7 +182,11 @@ namespace FlatWorld.Dialogue
             if (entry == null || entry.Lines == null || entry.Lines.Count == 0)
                 return null;
 
-            string line = entry.Lines[UnityEngine.Random.Range(0, entry.Lines.Count)];
+            List<string> lines = entry.Lines;
+            string locale = FlatWorld.Localization.FlatWorldLocalizationService.CurrentLocaleCode;
+            if (entry.LocalizedLines != null && entry.LocalizedLines.TryGetValue(locale, out List<string> localized))
+                lines = localized;
+            string line = lines[UnityEngine.Random.Range(0, lines.Count)];
             return new CharacterSpeechRequest(
                 line,
                 entry.Topic,
@@ -199,7 +210,12 @@ namespace FlatWorld.Dialogue
                 return;
             }
 
-            nextAllowedSpeechAt[entry.Id] = Time.unscaledTime + Mathf.Max(0f, entry.Cooldown);
+            float nextAllowed = Time.unscaledTime + Mathf.Max(0f, entry.Cooldown);
+            nextAllowedSpeechAt[entry.Id] = nextAllowed;
+            if (!string.IsNullOrEmpty(entry.CooldownGroup))
+                nextAllowedGroupAt[entry.CooldownGroup] = nextAllowed;
+            if (entry.RetryWhileMatched)
+                previousConditionStates[entry.Id] = true;
             if (entry.Once)
                 completionStore.MarkCompleted(request.CompletionFlag);
         }
@@ -221,6 +237,7 @@ namespace FlatWorld.Dialogue
             entriesById.Clear();
             previousConditionStates.Clear();
             nextAllowedSpeechAt.Clear();
+            nextAllowedGroupAt.Clear();
             for (int i = 0; i < entries.Count; i++)
                 entriesById[entries[i].Id] = entries[i];
         }

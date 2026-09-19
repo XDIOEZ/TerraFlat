@@ -1,0 +1,7 @@
+{
+  "ColdThresholdOffset": 0,
+  "HotThresholdOffset": 0,
+  "Hysteresis": 0.5,
+  "DebounceSeconds": 3,
+  "CooldownSeconds": 20
+}

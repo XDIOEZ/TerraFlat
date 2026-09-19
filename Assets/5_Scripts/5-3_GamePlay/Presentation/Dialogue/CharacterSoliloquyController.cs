@@ -90,6 +90,7 @@ namespace FlatWorld.Dialogue
                     presenter = speechPresenter;
             }
 
+            CharacterSpeechContributorRegistry.AppendTo(contributors);
             contributors.Sort((left, right) => left.ContextOrder.CompareTo(right.ContextOrder));
             providers.Sort((left, right) => right.ProviderOrder.CompareTo(left.ProviderOrder));
         }

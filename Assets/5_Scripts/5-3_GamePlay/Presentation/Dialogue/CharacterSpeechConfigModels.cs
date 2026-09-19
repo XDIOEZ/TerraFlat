@@ -39,11 +39,23 @@ namespace FlatWorld.Dialogue
         [JsonProperty("lines")]
         public List<string> Lines = new();
 
+        // 台词专用翻译，不与 UI 共用本地化资源争写。
+        [JsonProperty("localizedLines")]
+        public Dictionary<string, List<string>> LocalizedLines = new();
+
         [JsonProperty("duration")]
         public float Duration;
 
         [JsonProperty("cooldown")]
         public float Cooldown;
+
+        // 同组进入/离开提示共享实际显示后的冷却。
+        [JsonProperty("cooldownGroup")]
+        public string CooldownGroup;
+
+        // 被高优先级气泡阻挡时，只在条件仍成立期间等待显示。
+        [JsonProperty("retryWhileMatched")]
+        public bool RetryWhileMatched;
 
         [JsonProperty("once")]
         public bool Once;
