@@ -504,18 +504,21 @@ public partial class ChunkMgr
     private bool TryDequeueRuntimePresentation(out RuntimeWorldAddress address)
     {
         address = default;
-        int bestIndex = -1;
-        int bestPriority = int.MaxValue;
+        // 先移除失效条目，再选择优先项。倒序清理过程中删除较小索引会移动已选项，
+        // 两件事混在同一遍历中会留下过期 bestIndex，导致队列越界并中断表现协程。
         for (int i = runtimePresentationQueue.Count - 1; i >= 0; i--)
         {
             RuntimeWorldAddress candidate = runtimePresentationQueue[i];
             if (!activeRuntimeBindings.TryGetValue(candidate, out RuntimeChunkBinding binding) ||
                 !binding.PresentationQueued || !binding.WantsPresentation || binding.PendingChunk == null)
-            {
                 runtimePresentationQueue.RemoveAt(i);
-                continue;
-            }
+        }
 
+        int bestIndex = -1;
+        int bestPriority = int.MaxValue;
+        for (int i = runtimePresentationQueue.Count - 1; i >= 0; i--)
+        {
+            RuntimeChunkBinding binding = activeRuntimeBindings[runtimePresentationQueue[i]];
             if (binding.PresentationPriority <= bestPriority)
             {
                 bestIndex = i;

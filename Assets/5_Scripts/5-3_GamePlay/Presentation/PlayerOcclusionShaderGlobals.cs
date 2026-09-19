@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using FlatWorld.Settings;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -14,6 +17,63 @@ public static class PlayerOcclusionShaderGlobals
     private const float OccluderAlpha = 0.18f;
     private const float PlayerCenterOffsetY = 0.18f;
     private const float BehindVerticalPadding = 0.04f;
+    private const string PreferenceKey = "FlatWorld.Visual.PlayerOcclusion";
+    public const string EnabledSettingKey = "player-occlusion";
+    private static bool initialized;
+    private static bool enabled;
+    private static readonly ISettingsProvider settingsProvider = new OcclusionSettingsProvider();
+    public static event Action Changed;
+
+    public static ISettingsProvider SettingsProvider
+    {
+        get
+        {
+            SettingsProviderRegistry.Register(settingsProvider);
+            return settingsProvider;
+        }
+    }
+
+    public static bool Enabled
+    {
+        get
+        {
+            if (!initialized)
+            {
+                enabled = PlayerPrefs.GetInt(PreferenceKey, 0) != 0;
+                initialized = true;
+            }
+            return enabled;
+        }
+    }
+
+    /// <summary>持久化透视偏好；关闭时立即清空所有渲染通道共用的开关。</summary>
+    public static void SetEnabled(bool value)
+    {
+        if (Enabled == value)
+            return;
+        enabled = value;
+        PlayerPrefs.SetInt(PreferenceKey, value ? 1 : 0);
+        PlayerPrefs.Save();
+        if (!value)
+            Shader.SetGlobalFloat(EnabledId, 0f);
+        Changed?.Invoke();
+    }
+
+    private sealed class OcclusionSettingsProvider : ISettingsProvider
+    {
+        public string ProviderId => "player-occlusion";
+        public string DisplayName => "物品透视";
+        public int Order => 71;
+        public IReadOnlyList<ISettingsToggle> ToggleSettings { get; } = new ISettingsToggle[]
+        {
+            new SettingsToggle(new SettingDescriptor(EnabledSettingKey, "物品透视",
+                SettingControlType.Toggle, "visual"), () => Enabled, SetEnabled)
+        };
+        public IReadOnlyList<ISettingsSlider> SliderSettings => Array.Empty<ISettingsSlider>();
+        public IReadOnlyList<ISettingsDropdown> DropdownSettings => Array.Empty<ISettingsDropdown>();
+        public IReadOnlyList<ISettingsSwitch> SwitchSettings => Array.Empty<ISettingsSwitch>();
+        public void ResetToDefaults() => SetEnabled(false);
+    }
 
     #endregion
 
@@ -37,12 +97,17 @@ public static class PlayerOcclusionShaderGlobals
         RenderPipelineManager.beginCameraRendering -= HandleBeginCameraRendering;
         GameManager.Event_PlayerEnterWorld -= HandlePlayerEnteredWorld;
         localPlayer = null;
+        SettingsProviderRegistry.Unregister(settingsProvider);
+        initialized = false;
+        enabled = false;
+        Changed = null;
         Shader.SetGlobalFloat(EnabledId, 0f);
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Register()
     {
+        SettingsProviderRegistry.Register(settingsProvider);
         RenderPipelineManager.beginCameraRendering -= HandleBeginCameraRendering;
         RenderPipelineManager.beginCameraRendering += HandleBeginCameraRendering;
         GameManager.Event_PlayerEnterWorld -= HandlePlayerEnteredWorld;
@@ -68,7 +133,7 @@ public static class PlayerOcclusionShaderGlobals
     /// <summary>在相机提交世界 Sprite 前同步本地主角位置。</summary>
     private static void HandleBeginCameraRendering(ScriptableRenderContext context, Camera camera)
     {
-        if (localPlayer == null || !localPlayer.gameObject.activeInHierarchy)
+        if (!Enabled || localPlayer == null || !localPlayer.gameObject.activeInHierarchy)
         {
             Shader.SetGlobalFloat(EnabledId, 0f);
             return;

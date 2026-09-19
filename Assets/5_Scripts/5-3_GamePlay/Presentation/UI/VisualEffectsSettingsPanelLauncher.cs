@@ -14,6 +14,8 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     [SerializeField] private Button stylizedButton;
     [SerializeField] private Button realisticButton;
     [SerializeField] private Button resetButton;
+    [SerializeField] private Toggle occlusionToggle;
+    private ISettingsToggle occlusionSetting;
     private ISettingsProvider provider;
     private ISettingsSwitch styleSetting;
 
@@ -24,11 +26,14 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     /// <summary>页面首次显示时解析设置契约，保留正式 Prefab 的序列化控件引用。</summary>
     private void Awake()
     {
-        if (stylizedButton == null || realisticButton == null || resetButton == null)
+        if (stylizedButton == null || realisticButton == null || resetButton == null || occlusionToggle == null)
             throw new MissingReferenceException("视觉特效设置页缺少按钮引用。");
 
         provider = WaterVisualSettings.SettingsProvider;
         styleSetting = provider.GetSwitch(WaterVisualSettings.StyleSettingKey);
+        occlusionSetting = PlayerOcclusionShaderGlobals.SettingsProvider.GetToggle(
+            PlayerOcclusionShaderGlobals.EnabledSettingKey);
+        occlusionToggle.onValueChanged.AddListener(SetOcclusion);
         stylizedButton.onClick.AddListener(SelectStylized);
         realisticButton.onClick.AddListener(SelectRealistic);
         resetButton.onClick.AddListener(ResetToDefaults);
@@ -38,11 +43,18 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     private void OnEnable()
     {
         WaterVisualSettings.Changed += RefreshView;
+        PlayerOcclusionShaderGlobals.Changed += RefreshView;
         RefreshView();
     }
 
     /// <summary>页面隐藏后解除偏好订阅。</summary>
-    private void OnDisable() => WaterVisualSettings.Changed -= RefreshView;
+    private void OnDisable()
+    {
+        WaterVisualSettings.Changed -= RefreshView;
+        PlayerOcclusionShaderGlobals.Changed -= RefreshView;
+    }
+
+    private void SetOcclusion(bool value) => occlusionSetting.SetValue(value);
 
     /// <summary>通过设置契约选用风格化水面。</summary>
     private void SelectStylized() => SelectStyle(0);
@@ -59,11 +71,16 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     }
 
     /// <summary>仅恢复本页水体风格。</summary>
-    private void ResetToDefaults() => provider.ResetToDefaults();
+    private void ResetToDefaults()
+    {
+        provider.ResetToDefaults();
+        PlayerOcclusionShaderGlobals.SettingsProvider.ResetToDefaults();
+    }
 
     /// <summary>用选中底色标识当前风格，两种按钮始终可导航和操作。</summary>
     private void RefreshView()
     {
+        occlusionToggle.SetIsOnWithoutNotify(PlayerOcclusionShaderGlobals.Enabled);
         stylizedButton.targetGraphic.color = styleSetting.SelectedIndex == 0
             ? FlatWorldUITheme.Accent : FlatWorldUITheme.Surface;
         realisticButton.targetGraphic.color = styleSetting.SelectedIndex == 1
@@ -79,6 +96,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     /// <summary>销毁时解除本控制器的按钮监听。</summary>
     private void OnDestroy()
     {
+        occlusionToggle.onValueChanged.RemoveListener(SetOcclusion);
         stylizedButton.onClick.RemoveListener(SelectStylized);
         realisticButton.onClick.RemoveListener(SelectRealistic);
         resetButton.onClick.RemoveListener(ResetToDefaults);

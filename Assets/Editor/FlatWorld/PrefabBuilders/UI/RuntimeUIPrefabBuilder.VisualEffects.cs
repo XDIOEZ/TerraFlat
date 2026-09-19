@@ -47,6 +47,17 @@ public static partial class RuntimeUIPrefabBuilder
         CreateSettingsHeader(content, "视觉特效");
         CreateSettingsHint(content, "调整会立即应用并自动保存。", 48f);
 
+        GameObject occlusionRow = CreateRow("物品透视行", content, 72f);
+        TextMeshProUGUI occlusionLabel = CreateText("物品透视标签", occlusionRow.transform, "物品透视", 22f, Cream);
+        occlusionLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        Toggle occlusion = CreateToggle("物品透视开关", occlusionRow.transform);
+        LayoutElement occlusionLayout = occlusion.GetComponent<LayoutElement>();
+        occlusionLayout.minHeight = 60f;
+        occlusionLayout.preferredHeight = 64f;
+        occlusionLayout.minWidth = 88f;
+        occlusion.isOn = false;
+        CreateSettingsHint(content, "开启后，遮挡玩家的树木会局部透明。", 52f);
+
         TextMeshProUGUI label = CreateText("水体风格标签", content, "水体风格", 22f, Cream);
         label.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
         GameObject row = CreateRow("水体风格行", content, 72f);
@@ -65,6 +76,7 @@ public static partial class RuntimeUIPrefabBuilder
         serialized.FindProperty("stylizedButton").objectReferenceValue = stylized;
         serialized.FindProperty("realisticButton").objectReferenceValue = realistic;
         serialized.FindProperty("resetButton").objectReferenceValue = reset;
+        serialized.FindProperty("occlusionToggle").objectReferenceValue = occlusion;
         serialized.ApplyModifiedPropertiesWithoutUndo();
         return root;
     }

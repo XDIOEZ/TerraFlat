@@ -33,6 +33,7 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IChunkViewRenderer
             throw new InvalidOperationException("地表植被图层缺少区块数据或 Tilemap 配置。");
         if (ReferenceEquals(boundChunk, chunk)) return;
         Unbind();
+        ApplyGroundCoverSorting();
         boundChunk = chunk;
         manager = ChunkMgr.ExistingInstance;
         if (manager == null || GameRes.ExistingInstance == null)
@@ -84,6 +85,15 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IChunkViewRenderer
     #endregion
 
     #region 增量绘制
+
+    /// <summary>草与 BRG 地表共用 Default 排序域；花层明确在草之后，异步绑定次序不能改变遮挡关系。</summary>
+    private void ApplyGroundCoverSorting()
+    {
+        TilemapRenderer renderer = tilemap.GetComponent<TilemapRenderer>();
+        if (renderer == null) throw new MissingComponentException("花层缺少 TilemapRenderer。");
+        renderer.sortingLayerName = "Default";
+        renderer.sortingOrder = 1;
+    }
 
     /// <summary>仅刷新本区块被采集生成点所在的格子。</summary>
     private void HandleRemoved(RuntimeWorldAddress address, int guid)

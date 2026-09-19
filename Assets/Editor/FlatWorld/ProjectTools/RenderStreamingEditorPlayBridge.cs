@@ -57,7 +57,7 @@ namespace FlatWorld.EditorTools
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             EditorApplication.quitting -= OnEditorQuitting;
             EditorApplication.quitting += OnEditorQuitting;
-            EditorApplication.delayCall += EnsurePlayModePrerequisites;
+            EditorApplication.delayCall += ApplyEditorInputPreference;
             EditorApplication.delayCall += ApplyAutomaticStreamingPreference;
         }
 
@@ -66,11 +66,16 @@ namespace FlatWorld.EditorTools
             switch (state)
             {
                 case PlayModeStateChange.ExitingEditMode:
-                    EnsurePlayModePrerequisites();
                     if (AutoStreamingEnabled)
+                    {
+                        EnsurePlayModePrerequisites();
                         EnsureWebServerRunning();
+                    }
                     else
+                    {
+                        EnsureLocalEditorInputSettings();
                         EnsureProjectRenderStreamingSettings(activeWebPort, automaticStreaming: false);
+                    }
                     break;
 
                 case PlayModeStateChange.EnteredPlayMode:
@@ -128,6 +133,7 @@ namespace FlatWorld.EditorTools
             {
                 EditorApplication.update -= ConfigureStreamingSenderWhenReady;
                 streamingSenderConfigureAttempts = 0;
+                EnsureLocalEditorInputSettings();
                 EnsureProjectRenderStreamingSettings(activeWebPort, automaticStreaming: false);
             }
 
@@ -267,6 +273,15 @@ namespace FlatWorld.EditorTools
 
         #region Editor Play 前置条件
 
+        /// <summary>按当前本机串流偏好切换 Editor 输入策略，避免后台串流配置污染普通 Game/Simulator 测试。</summary>
+        private static void ApplyEditorInputPreference()
+        {
+            if (AutoStreamingEnabled)
+                EnsurePlayModePrerequisites();
+            else
+                EnsureLocalEditorInputSettings();
+        }
+
         /// <summary>应用 Render Streaming 官方 Wizard 对 Editor Play 的必要设置。</summary>
         private static void EnsurePlayModePrerequisites()
         {
@@ -278,22 +293,7 @@ namespace FlatWorld.EditorTools
                 changed = true;
             }
 
-            InputSettings settings = UnityInputSystem.settings;
-            string currentPath = settings != null ? AssetDatabase.GetAssetPath(settings) : string.Empty;
-            if (settings == null || string.IsNullOrEmpty(currentPath) ||
-                !currentPath.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
-            {
-                settings = AssetDatabase.LoadAssetAtPath<InputSettings>(InputSettingsAssetPath);
-                if (settings == null)
-                {
-                    EnsureAssetDirectory(InputSettingsAssetPath);
-                    settings = ScriptableObject.CreateInstance<InputSettings>();
-                    AssetDatabase.CreateAsset(settings, InputSettingsAssetPath);
-                }
-
-                UnityInputSystem.settings = settings;
-                changed = true;
-            }
+            InputSettings settings = EnsureProjectInputSettings(ref changed);
 
             if (settings.backgroundBehavior != InputSettings.BackgroundBehavior.IgnoreFocus)
             {
@@ -315,6 +315,60 @@ namespace FlatWorld.EditorTools
             EditorUtility.SetDirty(settings);
             AssetDatabase.SaveAssetIfDirty(settings);
             Debug.Log("[RenderStreaming] 已应用 Editor Play 后台运行与远程输入设置。");
+        }
+
+        /// <summary>
+        /// 普通本地 Play 恢复 Input System 默认焦点语义，让 Game 与 Simulator 由各自焦点正确接管鼠标/触摸。
+        /// </summary>
+        private static void EnsureLocalEditorInputSettings()
+        {
+            bool changed = false;
+            InputSettings settings = EnsureProjectInputSettings(ref changed);
+
+            if (settings.backgroundBehavior != InputSettings.BackgroundBehavior.ResetAndDisableNonBackgroundDevices)
+            {
+                settings.backgroundBehavior = InputSettings.BackgroundBehavior.ResetAndDisableNonBackgroundDevices;
+                changed = true;
+            }
+
+            if (settings.editorInputBehaviorInPlayMode !=
+                InputSettings.EditorInputBehaviorInPlayMode.PointersAndKeyboardsRespectGameViewFocus)
+            {
+                settings.editorInputBehaviorInPlayMode =
+                    InputSettings.EditorInputBehaviorInPlayMode.PointersAndKeyboardsRespectGameViewFocus;
+                changed = true;
+            }
+
+            if (!changed)
+                return;
+
+            EditorUtility.SetDirty(settings);
+            AssetDatabase.SaveAssetIfDirty(settings);
+            Debug.Log("[RenderStreaming] 已恢复普通 Editor Play 的 Game/Simulator 焦点输入。");
+        }
+
+        /// <summary>确保项目使用可写入的 Input System 设置资产。</summary>
+        private static InputSettings EnsureProjectInputSettings(ref bool changed)
+        {
+            InputSettings settings = UnityInputSystem.settings;
+            string currentPath = settings != null ? AssetDatabase.GetAssetPath(settings) : string.Empty;
+            if (settings != null && !string.IsNullOrEmpty(currentPath) &&
+                currentPath.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+            {
+                return settings;
+            }
+
+            settings = AssetDatabase.LoadAssetAtPath<InputSettings>(InputSettingsAssetPath);
+            if (settings == null)
+            {
+                EnsureAssetDirectory(InputSettingsAssetPath);
+                settings = ScriptableObject.CreateInstance<InputSettings>();
+                AssetDatabase.CreateAsset(settings, InputSettingsAssetPath);
+            }
+
+            UnityInputSystem.settings = settings;
+            changed = true;
+            return settings;
         }
 
         /// <summary>
