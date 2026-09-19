@@ -229,9 +229,7 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
             return;
         }
 
-        float sunlight = GetSunlightIntensity(item.gameObject.scene);
-        float sunlightT = Mathf.InverseLerp(minSunlightToShow, 1f, sunlight);
-        float alpha = maxShadowAlpha * Mathf.Pow(sunlightT, Mathf.Max(0.01f, sunlightResponsePower));
+        float alpha = GetShadowOpacity(item.gameObject.scene);
 
         if (binding.InWater || alpha <= 0.001f)
         {
@@ -398,6 +396,14 @@ public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
         }
 
         return null;
+    }
+
+    /// <summary>向旧对象与 ECS 表现提供同一场景的阴影透明度；每场景每帧缓存光照查询。</summary>
+    public float GetShadowOpacity(Scene actorScene)
+    {
+        if (!isActiveAndEnabled) return 0f;
+        float sunlightT = Mathf.InverseLerp(minSunlightToShow, 1f, GetSunlightIntensity(actorScene));
+        return maxShadowAlpha * Mathf.Pow(sunlightT, Mathf.Max(0.01f, sunlightResponsePower));
     }
 
     /// <summary>按当前场景读取 DayTimeSystem 的有效太阳光照强度。</summary>

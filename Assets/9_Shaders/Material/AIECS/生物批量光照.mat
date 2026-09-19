@@ -31,6 +31,7 @@ Material:
     m_Floats:
     - _WaterAlpha: 0.1
     - _WaterFeather: 0.035
+    - _WaterLineOffset: 0
     - _WaterLineStrength: 0.8
     - _WaterLineWidth: 0.035
     - _WaterWaveAmplitude: 0.018

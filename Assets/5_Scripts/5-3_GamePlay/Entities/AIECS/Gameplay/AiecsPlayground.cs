@@ -22,6 +22,7 @@ namespace FlatWorld.AIECS.Gameplay
         [Range(1, 10000)] public int UnitsPerArmy = 100; // 两军模式每次增援每军数量；默认总量 200，每次点击再增加 200。
         public AiecsPlaygroundMode InitialMode = AiecsPlaygroundMode.PlayerDuel;
         public bool ShowHealth = true; // 开发血条有显示上限。
+        public bool ShowFootShadows = true; // 仅控制当前开发群体的阴影，供渲染开销对照。
         public string Status { get; private set; } = "等待正式游戏世界；请新建临时世界。";
         private static AiecsPlayground active;
         private Player player;
@@ -94,6 +95,9 @@ namespace FlatWorld.AIECS.Gameplay
         {
             if (bridge == null) return;
             if (targetCamera == null || !targetCamera.isActiveAndEnabled) targetCamera = Camera.main;
+            ActorShadowManager shadowManager = ActorShadowManager.GetInstance();
+            display.ShadowOpacity = shadowManager != null ? shadowManager.GetShadowOpacity(player.gameObject.scene) : 0.4f;
+            display.ShadowsEnabled = ShowFootShadows;
             display.Draw(bridge.Simulation, targetCamera, bridge.Navigation.Read().Domain);
         }
 
@@ -256,6 +260,10 @@ namespace FlatWorld.AIECS.Gameplay
 
         /// <summary>当前实际显示批次数，不能把累计生成数量当成实际绘制数量。</summary>
         public int VisibleBatchCount => display == null ? 0 : display.BatchCount;
+
+        /// <summary>实际脚底阴影数量与批次；与主体绘制计数分开验收。</summary>
+        public int VisibleShadowCount => display == null ? 0 : display.ShadowCount;
+        public int VisibleShadowBatchCount => display == null ? 0 : display.ShadowBatchCount;
 
         /// <summary>尚未追上的游戏时间；稳定运行应小于单个 30Hz 步长，持续增长表示模拟已过载。</summary>
         public double SimulationBacklogSeconds => bridge == null ? 0d : math.max(0d, Time.timeAsDouble - simulationTime);

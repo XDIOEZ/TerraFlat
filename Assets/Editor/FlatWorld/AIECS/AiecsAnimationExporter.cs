@@ -298,6 +298,8 @@ namespace FlatWorld.AIECS.Editor
                         throw new InvalidDataException("单张图集空间不足；需要分页实现，禁止静默缩小原图。");
                     frames[index] = new AiecsSpriteGeometry { AtlasRect = rects[index],
                         LocalRect = GetLocalRect(sprites[index]),
+                        VisibleRect = AiecsShadowDiagnostics.MeasureVisibleBounds(textures[index].GetPixels32(), textures[index].width,
+                            new RectInt(0, 0, textures[index].width, textures[index].height), GetLocalRect(sprites[index])),
                         Source = AssetDatabase.GetAssetPath(sprites[index]) + "[" + sprites[index].name + "]" };
                 }
                 File.WriteAllBytes(path, atlas.EncodeToPNG());

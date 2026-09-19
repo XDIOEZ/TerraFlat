@@ -29,6 +29,8 @@ namespace FlatWorld.AIECS
         public string Source;
         // 带 Pivot 的局部几何范围。
         public Rect LocalRect;
+        // 非透明像素的局部范围；导出时计算，脚底阴影不在运行时读回纹理。
+        public Rect VisibleRect;
         // 无旋转的专用图集区域。
         public Rect AtlasRect;
     }

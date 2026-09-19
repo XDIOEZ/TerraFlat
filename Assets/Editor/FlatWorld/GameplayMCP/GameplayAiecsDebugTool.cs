@@ -57,7 +57,9 @@ namespace FlatWorld.GameplayMCP
                 isolated = IsIsolated(), frame = Time.frameCount, timeScale = Time.timeScale,
                 screen = new[] { Screen.width, Screen.height }, safeArea = Screen.safeArea.ToString(),
                 usedMemory = Profiler.GetTotalAllocatedMemoryLong(), reservedMemory = Profiler.GetTotalReservedMemoryLong(),
-                ecs = entry == null ? null : entry.CaptureDebugSnapshot(true), drops = DroppedItemService.Count
+                ecs = entry == null ? null : entry.CaptureDebugSnapshot(true), drops = DroppedItemService.Count,
+                shadows = entry == null ? null : new { enabled = entry.ShowFootShadows, visible = entry.VisibleShadowCount,
+                    batches = entry.VisibleShadowBatchCount }
             };
         }
 
@@ -127,7 +129,9 @@ namespace FlatWorld.GameplayMCP
                     maxMs = Percentile(frames, 1), maxBacklog, minimumAlive, maximumAlive, minimumVisible, maximumVisible,
                     memoryBefore, memoryAfter = Profiler.GetTotalAllocatedMemoryLong(),
                     errors, warnings, issues, burst = BurstCompiler.Options.EnableBurstCompilation,
-                    isolated = IsIsolated(), before, after
+                    isolated = IsIsolated(), before, after,
+                    shadows = entry == null ? null : new { enabled = entry.ShowFootShadows, visible = entry.VisibleShadowCount,
+                        batches = entry.VisibleShadowBatchCount }
                 });
             }
             finally

@@ -132,6 +132,8 @@ namespace FlatWorld.AIECS.Gameplay
             if (_camera == null)
                 return;
 
+            ActorShadowManager shadowManager = ActorShadowManager.GetInstance();
+            _renderer.ShadowOpacity = shadowManager != null ? shadowManager.GetShadowOpacity(_player.gameObject.scene) : 0.4f;
             _renderer.Draw(_bridge.Simulation, _camera, _bridge.Navigation.Read().Domain);
         }
 

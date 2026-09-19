@@ -34,6 +34,12 @@ namespace FlatWorld.AIECS
         private readonly List<AiecsRenderBatch> batches = new List<AiecsRenderBatch>();
         private readonly List<DrawItem> visible = new List<DrawItem>();
         private readonly UnityEngine.SceneManagement.Scene scene;
+        private readonly AiecsShadowRenderer shadows;
+        private readonly Vector4[] shadowFootprints;
+        public bool ShadowsEnabled { get; set; } = true; // 表现开关，不影响模拟。
+        public float ShadowOpacity { get; set; } = 0.4f; // 宿主按场景提供昼夜强度。
+        public int ShadowCount => shadows.ShadowCount;
+        public int ShadowBatchCount => shadows.BatchCount;
         public int VisibleCount => visible.Count;
         public int BatchCount { get; private set; }
 
@@ -43,6 +49,7 @@ namespace FlatWorld.AIECS
             this.catalog = catalog; this.scene = scene;
             if (catalog == null || catalog.Material == null) throw new InvalidOperationException("请先导出 AIECS 动画目录。");
             visuals = new int[actorIds.Length]; clips = new int[actorIds.Length, 4];
+            shadowFootprints = new Vector4[actorIds.Length];
             for (int i = 0; i < actorIds.Length; i++)
             {
                 visuals[i] = Array.FindIndex(catalog.Actors, value => value.Id == actorIds[i]);
@@ -52,7 +59,10 @@ namespace FlatWorld.AIECS
                 clips[i, 1] = FindClip(definition, "Move", "Walk");
                 clips[i, 2] = FindClip(definition, "Attack", "Attack");
                 clips[i, 3] = FindClip(definition, "Death", "Dead");
+                var idle = definition.Clips[clips[i, 0]].Sample(0f);
+                shadowFootprints[i] = AiecsShadowRenderer.MeasureFootprint(definition, catalog.Sprites[idle.Sprite], idle);
             }
+            shadows = new AiecsShadowRenderer(scene);
         }
 
         /// <summary>按原始状态尾名匹配，不把缺少的功能动画当作已迁移动作。</summary>
@@ -70,7 +80,13 @@ namespace FlatWorld.AIECS
         /// <summary>读取真实 ECS 位置/行为/生命，循环世界只绘制相机最近镜像。</summary>
         public void Draw(AiecsSimulation simulation, Camera camera, WorldTopologyDomain domain)
         {
-            if (camera == null || !simulation.Display.IsCreated) return;
+            if (camera == null || !simulation.Display.IsCreated)
+            {
+                visible.Clear(); BatchCount = 0; shadows.Hide();
+                foreach (var batch in batches) batch.Hide();
+                return;
+            }
+            shadows.Begin();
             visible.Clear();
             float2 center = (Vector2)camera.transform.position;
             float halfHeight = camera.orthographicSize, halfWidth = halfHeight * camera.aspect;
@@ -111,12 +127,17 @@ namespace FlatWorld.AIECS
                     float waterTint = Mathf.Lerp(0.12f, 0.8f, waterDepth);
                     Color color = definition.Color * (record.Group % 2 == 0 ? new Color(0.7f, 0.85f, 1f) : new Color(1f, 0.7f, 0.65f));
                     if (record.Dead != 0) color.a *= Mathf.Clamp01(2f - record.ActionElapsed);
+                    // 复用真实水态和当前可见列表，绝不逐实体查询地形或创建阴影组件。
+                    if (ShadowsEnabled)
+                        shadows.Append(new Vector2(actor.Position.x, actor.Position.y), shadowFootprints[record.Definition],
+                            record.Facing.x < 0f, AiecsShadowRenderer.ResolveOpacity(ShadowOpacity, color.a, record.WaterDepth, record.WaterBlend));
                     batch.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], waterDepth, waterTint,
                         record.Facing.x < 0f, color);
                 }
                 batch.Submit(first.Layer, first.Order); start = end;
             }
             for (int i = BatchCount; i < batches.Count; i++) batches[i].Hide();
+            shadows.End();
         }
 
         /// <summary>开发 HUD 最多绘制 64 个可见实体血条，不创建逐实体 UI 节点。</summary>
@@ -140,6 +161,11 @@ namespace FlatWorld.AIECS
         }
 
         /// <summary>释放该表现入口创建的批次，保留共享内容资源。</summary>
-        public void Dispose() { foreach (var batch in batches) batch.Dispose(); batches.Clear(); visible.Clear(); }
+        public void Dispose()
+        {
+            shadows.Dispose();
+            foreach (var batch in batches) batch.Dispose();
+            batches.Clear(); visible.Clear(); BatchCount = 0;
+        }
     }
 }
