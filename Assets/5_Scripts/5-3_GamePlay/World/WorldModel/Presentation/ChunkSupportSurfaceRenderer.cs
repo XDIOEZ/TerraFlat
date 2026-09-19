@@ -5,16 +5,16 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 
 /// <summary>
-/// 支撑面独立 Tilemap 表现；只读取权威层，不遮改水深、岸线或存档。
-/// 平台接触阴影通过 Tile Color RGBA 编码左、右、下、上四个外露方向，
-/// 相邻支撑平台之间不再绘制内部阴影，并支持跨 Chunk 连续平台。
+/// 地表覆盖独立 Tilemap 表现；只读取权威层，不改写底层地形数据。
+/// 平台/地板接触阴影通过 Tile Color RGBA 编码左、右、下、上四个外露方向，
+/// 相邻覆盖面之间不再绘制内部阴影，并支持跨 Chunk 连续铺设。
 /// </summary>
 public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRenderer, IWorldAwareChunkViewRenderer
 {
     #region 配置与状态
 
     [SerializeField] private ChunkTilePaletteSO palette; // 材料到地块的映射。
-    [SerializeField] private Tilemap tilemap; // 水面上方的平台图层。
+    [SerializeField] private Tilemap tilemap; // 原始地形上方的平台/地板图层。
 
     private readonly List<NeighbourTerrainSubscription> neighbourTerrainSubscriptions = new(4);
     private WorldRuntime boundWorld;
@@ -25,7 +25,7 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
 
     #region 绑定与生命周期
 
-    /// <summary>注入当前世界，用于读取跨 Chunk 的相邻平台。</summary>
+    /// <summary>注入当前世界，用于读取跨 Chunk 的相邻覆盖面。</summary>
     public void SetWorld(WorldRuntime worldRuntime)
     {
         if (ReferenceEquals(boundWorld, worldRuntime))
@@ -39,7 +39,7 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         RefreshNeighbourTerrainSubscriptions();
     }
 
-    /// <summary>绑定区块并从持久化支撑面重建表现。</summary>
+    /// <summary>绑定区块并从持久化覆盖层重建表现。</summary>
     public void Bind(ChunkRuntime value)
     {
         if (value == null)
@@ -54,7 +54,7 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         RefreshAll();
     }
 
-    /// <summary>取消订阅并清除回池区块的旧平台。</summary>
+    /// <summary>取消订阅并清除回池区块的旧覆盖面。</summary>
     public void Unbind()
     {
         if (chunk?.Terrain != null)
@@ -75,7 +75,7 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
 
     #endregion
 
-    #region 平台绘制
+    #region 覆盖面绘制
 
     /// <summary>支撑层改变时同步自身和四邻格的外轮廓。</summary>
     private void HandleChanged(ChunkTerrainChanged change)
@@ -92,7 +92,7 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
         Refresh(x, y + 1);
     }
 
-    /// <summary>重建当前 Chunk 的平台和外露边缘遮罩。</summary>
+    /// <summary>重建当前 Chunk 的覆盖面和外露边缘遮罩。</summary>
     private void RefreshAll()
     {
         if (chunk?.Terrain == null)
@@ -103,7 +103,7 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
                 Refresh(x, y);
     }
 
-    /// <summary>按稳定地块 ID 选择平台外观，并只保留平台整体外围的接触阴影。</summary>
+    /// <summary>按稳定地块 ID 选择覆盖外观，并只保留整体外围的接触阴影。</summary>
     private void Refresh(int x, int y)
     {
         if (chunk?.Terrain == null || tilemap == null ||
@@ -134,13 +134,13 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
             HasSupport(terrain, x, y + 1) ? 0f : 1f);
     }
 
-    /// <summary>任意支撑地块都视为同一高度的平台连接面，不在材质交界处制造凹陷阴影。</summary>
+    /// <summary>任意覆盖地块都视为同一高度的连接面，不在材质交界处制造凹陷阴影。</summary>
     private bool HasSupport(ChunkTerrainData terrain, int x, int y)
     {
         return TryGetSupportTileId(terrain, x, y, out int tileId) && tileId != 0;
     }
 
-    /// <summary>读取本 Chunk 或正交相邻 Chunk 的支撑层。</summary>
+    /// <summary>读取本 Chunk 或正交相邻 Chunk 的覆盖层。</summary>
     private bool TryGetSupportTileId(ChunkTerrainData terrain, int x, int y, out int tileId)
     {
         tileId = 0;
@@ -225,7 +225,7 @@ public sealed class ChunkSupportSurfaceRenderer : MonoBehaviour, IChunkViewRende
             RefreshHorizontalEdge(terrain.Height - 1);
     }
 
-    /// <summary>订阅四个正交相邻区块，平台变化时同步共享边阴影。</summary>
+    /// <summary>订阅四个正交相邻区块，覆盖面变化时同步共享边阴影。</summary>
     private void RefreshNeighbourTerrainSubscriptions()
     {
         ClearNeighbourTerrainSubscriptions();

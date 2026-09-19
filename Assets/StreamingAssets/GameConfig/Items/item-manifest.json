@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "vehicles",
+      "path": "shells/vehicles.json",
+      "enabled": true
+    },
+    {
       "id": "portable_buildings",
       "path": "shells/portable_buildings.json",
       "enabled": true
@@ -74,6 +79,11 @@
     {
       "id": "ancient_stage",
       "path": "shells/ancient_stage.json",
+      "enabled": true
+    },
+    {
+      "id": "floors",
+      "path": "shells/floors.json",
       "enabled": true
     },
     {

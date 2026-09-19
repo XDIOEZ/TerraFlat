@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:Floor_Wood_Summoner",
+      "displayName": "木地板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Plank",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Floor_Wood_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:Floor_Stone_Summoner",
+      "displayName": "石地板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ore_Stone",
+          "tag": "",
+          "amount": 4
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Floor_Stone_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:Floor_Copper_Summoner",
+      "displayName": "铜地板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Floor_Copper_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:Floor_Iron_Summoner",
+      "displayName": "铁地板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ingot_RawIron",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Floor_Iron_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:Floor_Bronze_Summoner",
+      "displayName": "青铜地板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ingot_Bronze",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Floor_Bronze_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

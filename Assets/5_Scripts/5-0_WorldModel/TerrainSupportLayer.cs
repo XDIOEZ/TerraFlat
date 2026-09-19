@@ -2,17 +2,17 @@ using System;
 
 namespace FlatWorld.WorldModel
 {
-    /// <summary>独立支撑面：保留原始水体、地形与通行代价，移除覆盖后直接重新使用底层数据。</summary>
+    /// <summary>独立地表覆盖：保留原始地形与通行代价，移除平台/地板后直接重新使用底层数据。</summary>
     public static class TerrainSupportLayer
     {
         public const string TileIdLayer = "terrain.support.tileId"; // 覆盖地块身份。
-        public const string CostLayer = "terrain.support.navigationCost"; // 支撑面通行代价。
+        public const string CostLayer = "terrain.support.navigationCost"; // 覆盖面通行代价。
 
-        /// <summary>查询独立支撑地块，零表示没有支撑面。</summary>
+        /// <summary>查询独立覆盖地块，零表示没有覆盖面。</summary>
         public static int GetTileId(ChunkTerrainData terrain, int x, int y) =>
             terrain.TryGetEnvironmentValue(TileIdLayer, x, y, out float id) ? (int)id : 0;
 
-        /// <summary>生成供通行和交互使用的有效表面；不修改基础水体数据。</summary>
+        /// <summary>生成供通行和交互使用的有效表面；不修改基础地形数据。</summary>
         public static TerrainCell GetSurfaceCell(ChunkTerrainData terrain, int x, int y)
         {
             TerrainCell cell = terrain.GetCell(x, y);

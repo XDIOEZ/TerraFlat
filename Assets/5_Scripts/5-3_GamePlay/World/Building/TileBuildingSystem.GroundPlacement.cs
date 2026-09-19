@@ -4,7 +4,7 @@ using FlatWorld.WorldModel;
 using UnityEngine;
 
 /// <summary>
-/// 可移除支撑面的铺设事务；基础水体保持原值，平台单独保存，后续建筑读取有效表面。
+/// 可移除地表覆盖的铺设事务；基础地形保持原值，平台/地板单独保存，后续系统读取有效表面。
 /// </summary>
 public static partial class TileBuildingSystem
 {
@@ -17,7 +17,7 @@ public static partial class TileBuildingSystem
                GameRes.Instance?.GetTileBlock(tileBlockId)?.groundPlacement != null;
     }
 
-    /// <summary>预览与提交共用规则；只接受已加载且没有叠层或建筑占用的来源格。</summary>
+    /// <summary>预览与提交共用规则；只接受满足来源标记且没有叠层或建筑占用的来源格。</summary>
     private static bool TryResolveGroundPlacement(Vector2Int worldCell, Tile_Block definition,
         out RuntimeTerrainTileSample sample, out int tileId, out string reason)
     {
@@ -37,6 +37,12 @@ public static partial class TileBuildingSystem
         if ((cell.Flags & required) != required)
         {
             reason = required == TerrainCellFlags.Water ? "水上平台只能铺在水里" : "目标地形不满足铺设条件";
+            return false;
+        }
+        TerrainCellFlags forbidden = definition.groundPlacement.ForbiddenSourceFlags;
+        if ((cell.Flags & forbidden) != 0)
+        {
+            reason = (forbidden & TerrainCellFlags.Water) != 0 ? "地板只能铺在非水地面" : "目标地形不满足铺设条件";
             return false;
         }
         if (TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) != 0 ||
@@ -62,7 +68,7 @@ public static partial class TileBuildingSystem
         return true;
     }
 
-    /// <summary>增加独立支撑面，并同步持久化和通行查询。</summary>
+    /// <summary>增加独立地表覆盖，并同步持久化和通行查询。</summary>
     private static bool TryPlaceGround(Vector2Int worldCell, Tile_Block definition,
         out TileBuildingCell placedCell, out string reason)
     {
@@ -91,7 +97,7 @@ public static partial class TileBuildingSystem
         return true;
     }
 
-    /// <summary>仅回滚尚未覆盖其他内容的本次铺设，恢复原水格全部核心属性。</summary>
+    /// <summary>仅回滚尚未覆盖其他内容的本次铺设；移除覆盖后直接恢复原地形。</summary>
     private static bool TryRollbackGround(TileBuildingCell placedCell, out string reason)
     {
         reason = null;
@@ -117,11 +123,11 @@ public static partial class TileBuildingSystem
         return true;
     }
 
-    /// <summary>更新平台格的导航，不改变周围水域的基础代价。</summary>
+    /// <summary>更新覆盖格的导航，不改变底层地形及周围格的基础代价。</summary>
     private static void RefreshSupportNavigation(Vector2Int cell) =>
         WorldNavigationManager.Instance?.QueueNavigationRegion(new RectInt(cell.x, cell.y, 1, 1));
 
-    /// <summary>主动拆除只允许空平台；返还物先创建成功，再撤销支撑状态。</summary>
+    /// <summary>主动拆除只允许空覆盖格；返还物先创建成功，再撤销覆盖状态。</summary>
     public static bool TryDismantleSupport(Vector2Int worldCell, out string reason)
     {
         reason = null;
@@ -133,13 +139,13 @@ public static partial class TileBuildingSystem
         int tileId = TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y);
         if (tileId == 0 || !TryResolveRuntimeTileBlockId(manager, tileId, out string blockId))
         {
-            reason = "这里没有可拆的平台。";
+            reason = "这里没有可拆的地板或平台。";
             return false;
         }
         TerrainCell baseCell = sample.Terrain.GetCell(sample.LocalCell.x, sample.LocalCell.y);
         if (baseCell.BackTileId != 0 || baseCell.BlockingTileId != 0 || BuildingOccupancyRegistry.IsOccupied(sample.WorldCell))
         {
-            reason = "请先移走平台上的建筑。";
+            reason = "请先移走覆盖面上的建筑。";
             return false;
         }
         var occupants = new System.Collections.Generic.List<Item>();
@@ -153,13 +159,13 @@ public static partial class TileBuildingSystem
             Vector2 position = WorldTopologyRuntime.NormalizePosition(occupant.transform.position);
             if (Mathf.FloorToInt(position.x) == sample.WorldCell.x && Mathf.FloorToInt(position.y) == sample.WorldCell.y)
             {
-                reason = "请先移走平台上的角色和物品。";
+                reason = "请先移走覆盖面上的角色和物品。";
                 return false;
             }
         }
         string refundId = GameRes.Instance.GetTileBlock(blockId).groundPlacement.RefundItemId;
         if (string.IsNullOrEmpty(refundId))
-            throw new InvalidOperationException($"平台缺少拆除返还物品：{blockId}");
+            throw new InvalidOperationException($"地表覆盖缺少拆除返还物品：{blockId}");
         DroppedItemService.Spawn(GameRes.ExistingInstance.CreateItemData(refundId),
             new Vector2(sample.WorldCell.x + 0.5f, sample.WorldCell.y + 0.5f));
         TerrainSupportLayer.Set(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y, 0, 0);

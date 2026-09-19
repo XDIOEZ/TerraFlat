@@ -57,3 +57,13 @@ MonoBehaviour:
     Tile: {fileID: 11400000, guid: 186815832e542854c84f6b846fe08acb, type: 2}
   - TileId: 22
     Tile: {fileID: 11400000, guid: 6a48df77088b1594bbc0d911d1f5a7c4, type: 2}
+  - TileId: 23
+    Tile: {fileID: 11400000, guid: 99334949bf6f4657959354285418527b, type: 2}
+  - TileId: 24
+    Tile: {fileID: 11400000, guid: 1bcf6f3e7e692c84aaa09a0cd4218dce, type: 2}
+  - TileId: 25
+    Tile: {fileID: 11400000, guid: 5eb2ad13c9873124bba80077191ac4d1, type: 2}
+  - TileId: 26
+    Tile: {fileID: 11400000, guid: 1340e3a9170a54447ad7aabd8963469e, type: 2}
+  - TileId: 27
+    Tile: {fileID: 11400000, guid: f537b2da16ccfd84fb7c5875f3facc87, type: 2}

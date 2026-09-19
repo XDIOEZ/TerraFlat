@@ -7,7 +7,7 @@ using UnityEngine;
 
 public partial class SaveDataMgr
 {
-    /// <summary>立即记录支撑面的增删，基础水体不进入平台快照。</summary>
+    /// <summary>立即记录平台/地板覆盖面的增删，底层原始地形不进入覆盖快照。</summary>
     public void RecordSupportCell(RuntimeTerrainTileSample sample)
     {
         if (!GameNetwork.HasStateAuthority || SaveData == null)

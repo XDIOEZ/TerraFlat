@@ -63,6 +63,16 @@ public static class ChunkRuntimeTileEffectResolver
         ChunkTerrainData terrain, Vector2Int localCell, Vector2Int worldCell,
         out TileData tileData, out Tile_Block tileBlock)
     {
+        return TryCreateTileEffectData(profile, null, terrain, localCell, worldCell,
+            out tileData, out tileBlock);
+    }
+
+    /// <summary>优先读取冻结生成映射，缺失时允许当前内容目录补充后来新增的玩家建筑 Tile。</summary>
+    public static bool TryCreateTileEffectData(ChunkGenerationProfileSnapshot profile,
+        ChunkGenerationProfileSnapshot runtimeTileCatalog,
+        ChunkTerrainData terrain, Vector2Int localCell, Vector2Int worldCell,
+        out TileData tileData, out Tile_Block tileBlock)
+    {
         tileData = null;
         tileBlock = null;
         if (profile == null || terrain == null || terrain.IsDisposed || GameRes.Instance == null)
@@ -76,8 +86,8 @@ public static class ChunkRuntimeTileEffectResolver
         if (supportId != 0 && effective.BlockingTileId == 0 && effective.BackTileId == 0)
             tileId = supportId;
         string parameterId = TileBlockParameterPrefix + tileId;
-        if (tileId == 0 || !profile.TextParameters.TryGetValue(parameterId, out string tileBlockId) ||
-            string.IsNullOrWhiteSpace(tileBlockId))
+        if (tileId == 0 ||
+            !TryResolveTileBlockId(profile, runtimeTileCatalog, parameterId, out string tileBlockId))
             return false;
 
         tileBlock = GameRes.Instance.GetTileBlock(tileBlockId);
@@ -92,6 +102,26 @@ public static class ChunkRuntimeTileEffectResolver
         tileData.IsWalkable = terrain.IsWalkable(localCell.x, localCell.y);
         HydrateEnvironmentData(terrain, localCell, tileData);
         return true;
+    }
+
+    /// <summary>旧地形优先沿用冻结映射；仅在旧快照没有该 ID 时读取当前内容目录。</summary>
+    private static bool TryResolveTileBlockId(
+        ChunkGenerationProfileSnapshot profile,
+        ChunkGenerationProfileSnapshot runtimeTileCatalog,
+        string parameterId,
+        out string tileBlockId)
+    {
+        tileBlockId = null;
+        if (profile?.TextParameters != null &&
+            profile.TextParameters.TryGetValue(parameterId, out tileBlockId) &&
+            !string.IsNullOrWhiteSpace(tileBlockId))
+        {
+            return true;
+        }
+
+        return runtimeTileCatalog?.TextParameters != null &&
+               runtimeTileCatalog.TextParameters.TryGetValue(parameterId, out tileBlockId) &&
+               !string.IsNullOrWhiteSpace(tileBlockId);
     }
 
     #endregion
@@ -159,8 +189,14 @@ public partial class ChunkMgr
         tileData = null;
         tileBlock = null;
         return TryGetRuntimeTerrainTile(worldPosition, out sample) &&
-               ChunkRuntimeTileEffectResolver.TryCreateTileEffectData(ActiveGenerationProfile,
-                   sample.Terrain, sample.LocalCell, sample.WorldCell, out tileData, out tileBlock);
+               ChunkRuntimeTileEffectResolver.TryCreateTileEffectData(
+                   ActiveGenerationProfile,
+                   RuntimeTileCatalogProfile,
+                   sample.Terrain,
+                   sample.LocalCell,
+                   sample.WorldCell,
+                   out tileData,
+                   out tileBlock);
     }
 
     /// <summary>

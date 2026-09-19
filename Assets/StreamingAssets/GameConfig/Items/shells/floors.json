@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Floor_Wood_Summoner",
+      "parent": "WaterPlatform_Summoner",
+      "gameName": "木地板",
+      "description": "铺设在普通陆地上的木地板。只覆盖地表外观，拆除后恢复原始地块。",
+      "weight": 12.0,
+      "volume": 30.0,
+      "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Tile.png"
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Floor_Wood\",\"SummonerPrefabId\":\"Floor_Wood_Summoner\",\"TileBlockId\":\"Tile_Floor_Wood\"}",
+            "Type": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Floor_Stone_Summoner",
+      "parent": "WaterPlatform_Summoner",
+      "gameName": "石地板",
+      "description": "铺设在普通陆地上的石地板。只覆盖地表外观，拆除后恢复原始地块。",
+      "weight": 15.0,
+      "volume": 30.0,
+      "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Stone_Tile.png"
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Floor_Stone\",\"SummonerPrefabId\":\"Floor_Stone_Summoner\",\"TileBlockId\":\"Tile_Floor_Stone\"}",
+            "Type": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Floor_Copper_Summoner",
+      "parent": "WaterPlatform_Summoner",
+      "gameName": "铜地板",
+      "description": "铺设在普通陆地上的铜地板。只覆盖地表外观，拆除后恢复原始地块。",
+      "weight": 18.0,
+      "volume": 30.0,
+      "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Copper_Tile.png"
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Floor_Copper\",\"SummonerPrefabId\":\"Floor_Copper_Summoner\",\"TileBlockId\":\"Tile_Floor_Copper\"}",
+            "Type": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Floor_Iron_Summoner",
+      "parent": "WaterPlatform_Summoner",
+      "gameName": "铁地板",
+      "description": "铺设在普通陆地上的铁地板。只覆盖地表外观，拆除后恢复原始地块。",
+      "weight": 22.0,
+      "volume": 30.0,
+      "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Iron_Tile.png"
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Floor_Iron\",\"SummonerPrefabId\":\"Floor_Iron_Summoner\",\"TileBlockId\":\"Tile_Floor_Iron\"}",
+            "Type": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "Floor_Bronze_Summoner",
+      "parent": "WaterPlatform_Summoner",
+      "gameName": "青铜地板",
+      "description": "铺设在普通陆地上的青铜地板。只覆盖地表外观，拆除后恢复原始地块。",
+      "weight": 20.0,
+      "volume": 30.0,
+      "stackable": true,
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/WaterPlatform/WaterPlatform_Bronze_Tile.png"
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": false,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Floor_Bronze\",\"SummonerPrefabId\":\"Floor_Bronze_Summoner\",\"TileBlockId\":\"Tile_Floor_Bronze\"}",
+            "Type": 0
+          }
+        }
+      }
+    }
+  ]
+}

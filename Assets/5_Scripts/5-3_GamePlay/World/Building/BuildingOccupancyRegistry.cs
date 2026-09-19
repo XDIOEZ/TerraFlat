@@ -9,12 +9,15 @@ public static class BuildingOccupancyRegistry
     public static event System.Action<Vector2Int> CellChanged; // 少量地图快照订阅者，禁止逐 AI 订阅。
     private static readonly Dictionary<Vector2Int, HashSet<Mod_Building>> OccupantsByCell = new();
     private static readonly Dictionary<Mod_Building, HashSet<Vector2Int>> CellsByBuilding = new();
+    // 开门只撤销导航阻挡，不能撤销建筑放置占用，否则其它建筑可以重叠放进门里。
+    private static readonly HashSet<Mod_Building> PassableBuildings = new();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeState()
     {
         OccupantsByCell.Clear();
         CellsByBuilding.Clear();
+        PassableBuildings.Clear();
         Revision++;
         CellChanged = null;
     }
@@ -52,7 +55,24 @@ public static class BuildingOccupancyRegistry
     }
 
     public static bool GetEffectiveWalkable(Vector2Int cell, bool terrainWalkable)
-        => terrainWalkable && !IsOccupied(cell);
+    {
+        if (!terrainWalkable) return false;
+        cell = WorldTopologyRuntime.NormalizeCell(cell);
+        if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants)) return true;
+        foreach (Mod_Building building in occupants)
+            if (building != null && building.isActiveAndEnabled && building.IsInstalled() && !PassableBuildings.Contains(building))
+                return false;
+        return true;
+    }
+
+    /// <summary>门状态的正式导航入口；同一建筑的放置占格保持不变。</summary>
+    public static void SetPassable(Mod_Building building, bool passable)
+    {
+        if (building == null) return;
+        bool changed = passable ? PassableBuildings.Add(building) : PassableBuildings.Remove(building);
+        if (changed && CellsByBuilding.TryGetValue(building, out HashSet<Vector2Int> cells))
+            foreach (Vector2Int cell in cells) RefreshCell(cell);
+    }
 
     public static void Register(Mod_Building building, IEnumerable<Vector2Int> cells)
     {
@@ -117,6 +137,7 @@ public static class BuildingOccupancyRegistry
 
     public static void Unregister(Mod_Building building)
     {
+        if (building != null) PassableBuildings.Remove(building);
         if (building == null || !CellsByBuilding.TryGetValue(building, out HashSet<Vector2Int> cells))
             return;
 

@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "crafting/vehicles",
+      "path": "crafting/vehicles.json",
+      "enabled": true
+    },
+    {
       "id": "crafting/mortar",
       "path": "crafting/mortar.json",
       "enabled": true
@@ -54,6 +59,11 @@
     {
       "id": "crafting/ancient_stage",
       "path": "crafting/ancient_stage.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/floors",
+      "path": "crafting/floors.json",
       "enabled": true
     },
     {

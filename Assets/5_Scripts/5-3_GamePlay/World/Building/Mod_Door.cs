@@ -4,7 +4,7 @@ using System.Linq;
 using FlatWorld.Audio;
 using UnityEngine;
 
-public class Mod_Door : Module, IInteractable
+public class Mod_Door : Module, IInteractable, IBuildingPlacementCommitted
 {
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
 
@@ -41,6 +41,7 @@ public class Mod_Door : Module, IInteractable
 
     [Tooltip("专用于交互检测的 Trigger。为空时会在运行时自动创建，不参与物理阻挡。")]
     public BoxCollider2D InteractionCollider;
+    private bool loaded;
     #endregion
 
     #region 生命周期
@@ -62,7 +63,28 @@ public class Mod_Door : Module, IInteractable
         CacheReferences();
 
         DoorData.ReadData(ref Data);
+        loaded = true;
         ApplyDoorState();
+        SpatialInteractionRegistry.Register(this, 0.75f);
+    }
+
+    /// <summary>门打开后实体碰撞会关闭，交互范围仍由独立空间注册保留。</summary>
+    public override void Unload()
+    {
+        loaded = false;
+        SpatialInteractionRegistry.Unregister(this);
+        base.Unload();
+    }
+
+    private void OnDisable() => SpatialInteractionRegistry.Unregister(this);
+    private void OnEnable() { if (loaded) SpatialInteractionRegistry.Register(this, 0.75f); }
+
+    /// <summary>安装流程会统一开启建筑碰撞，提交后按门的真实状态重新同步。</summary>
+    public void OnBuildingPlacementCommitted()
+    {
+        CacheReferences();
+        ApplyDoorState();
+        SpatialInteractionRegistry.Register(this, 0.75f);
     }
 
     public override void Save()
@@ -77,6 +99,7 @@ public class Mod_Door : Module, IInteractable
         }
 
         item.itemData.ModuleDataDic[_Data.Name] = DoorData;
+        SaveDataMgr.Instance?.RecordRuntimeBuildingChange(item);
     }
 
     public override void ModUpdate(float deltaTime)
@@ -85,8 +108,15 @@ public class Mod_Door : Module, IInteractable
     #endregion
 
     #region 交互接口
+    public bool CanInteract(Item playerItem)
+    {
+        Mod_Building building = item?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+        return loaded && isActiveAndEnabled && building != null && building.IsInstalled();
+    }
+
     public void OnInteractStart(Item playerItem)
     {
+        if (!CanInteract(playerItem)) return;
         if (DoorRenderer == null || DoorCollider == null)
             CacheReferences();
 
@@ -118,14 +148,17 @@ public class Mod_Door : Module, IInteractable
 
         if (DoorRenderer == null)
         {
-            DoorRenderer = GetComponent<SpriteRenderer>();
-            DoorRenderer ??= ownerItem?.GetComponentInChildren<SpriteRenderer>(true);
+            // Unity 已销毁/缺失组件可能不是 CLR null，不能用 ??= 跳过宿主查找。
+            DoorRenderer = ownerItem != null ? ownerItem.Sprite : null;
+            if (DoorRenderer == null && ownerItem != null)
+                DoorRenderer = ownerItem.GetComponentInChildren<SpriteRenderer>(true);
         }
 
         if (DoorCollider == null)
         {
+            DoorCollider = ownerItem != null ? ownerItem.GetComponent<BoxCollider2D>() : null;
             BoxCollider2D[] colliders = GetComponents<BoxCollider2D>();
-            for (int i = 0; i < colliders.Length; i++)
+            for (int i = 0; DoorCollider == null && i < colliders.Length; i++)
             {
                 if (colliders[i] != null && !colliders[i].isTrigger)
                 {
@@ -176,6 +209,8 @@ public class Mod_Door : Module, IInteractable
 
         // 让当前物理步之前的 Cast/Overlap 立即看到新的碰撞状态。
         Physics2D.SyncTransforms();
+        Mod_Building building = item?.itemMods?.GetMod_ByID<Mod_Building>(ModText.Building);
+        BuildingOccupancyRegistry.SetPassable(building, Data.IsOpen);
     }
 
     private void EnsureInteractionCollider()

@@ -157,16 +157,12 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         Install();
         return true;
     }
-    /// <summary>当前建筑预览有效时，右键应由建筑动作优先处理。</summary>
+    /// <summary>进入放置模式即拥有右键；非法或隐藏的预览也必须进入安装校验以给出拒绝反馈。</summary>
     public bool IsPlacementActionAvailable
     {
         get
         {
-            if (!IsItemInInventory || _placementPending || !IsPlacementModeActive || GhostShadow == null)
-                return false;
-
-            Vector3 placement = NormalizePlacement(GhostShadow.transform.position);
-            return ValidatePlacement(placement, GetAuthorityPosition(), false, out _);
+            return IsItemInInventory && !_placementPending && IsPlacementModeActive;
         }
     }
     public bool CanCommitDismantle => Data?.Role == BuildingRole.PlacedBuilding &&
@@ -305,16 +301,25 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (item == null || item.DestructionHandled || _placementPending || !IsItemInInventory || !IsPlacementModeActive)
             return;
 
+        // 越界时虚影已被销毁，必须先用当前准线判定范围，不能提前返回“预览尚未就绪”。
+        Vector3 pointedPlacement = NormalizePlacement(GetPointerWorldPosition());
+        if (!IsWithinPlacementDistance(GetAuthorityPosition(), pointedPlacement, GetMaxPlacementDistance()))
+        {
+            BuildingPlacementFeedbackEvents.PublishPlacementRejected(
+                ResolvePlacementActor(), BuildingPlacementFailureReason.OutOfRange);
+            return;
+        }
+
         if (!TryGetGhostPlacementPosition(out Vector3 placement))
         {
             Debug.LogWarning("[建筑安装] 放置预览尚未就绪", item);
             return;
         }
 
-        if (!ValidatePlacement(placement, GetAuthorityPosition(), true, out string reason))
+        if (!ValidatePlacement(placement, GetAuthorityPosition(), true, out string reason, out BuildingPlacementFailureReason failureReason))
         {
             BuildingPlacementFeedbackEvents.PublishPlacementRejected(
-                ResolvePlacementActor());
+                ResolvePlacementActor(), failureReason);
             Debug.LogWarning($"[建筑安装] {reason}", item);
             return;
         }
@@ -656,7 +661,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             summonerData.transform ??= new ItemTransform();
             summonerData.transform.position = dropPosition;
             summonerData.transform.rotation = NormalizeBuildingRotation(item.transform.rotation);
-            summonerData.transform.scale = Vector3.one;
+            summonerData.transform.scale = DroppedItemService.ResolveDefaultWorldDropScale(summonerData);
 
             // 在 Load 之前还原模块数据，使拆回后的手持面板立即读到建筑中的最新状态。
             BuildingModuleStateTransfer.Copy(item.itemData, summonerData, Data.SharedModuleIds);
@@ -990,8 +995,13 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         Vector3 authorityPosition,
         bool requireGhostClear,
         out string reason)
+        => ValidatePlacement(position, authorityPosition, requireGhostClear, out reason, out _);
+
+    private bool ValidatePlacement(Vector3 position, Vector3 authorityPosition, bool requireGhostClear,
+        out string reason, out BuildingPlacementFailureReason failureReason)
     {
         reason = null;
+        failureReason = BuildingPlacementFailureReason.InvalidPosition;
         position = NormalizePlacement(position);
 
         if (!IsFinite(position) || !IsFinite(authorityPosition))
@@ -1010,6 +1020,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (!IsWithinPlacementDistance(authorityPosition, position, maximumPlacementDistance))
         {
             reason = "目标超出建造距离";
+            failureReason = BuildingPlacementFailureReason.OutOfRange;
             return false;
         }
 
@@ -1102,9 +1113,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             throw new MissingComponentException("[Mod_Building] 未找到所属 Item");
 
         // 通用建筑本体的实体碰撞体只允许来自 Item 根节点；Module_Building 自身不再携带第二套碰撞体。
-        boxCollider2D ??= item.GetComponent<BoxCollider2D>();
-        boxCollider2D ??= GetComponent<BoxCollider2D>();
-        boxCollider2D ??= item.GetComponentInChildren<BoxCollider2D>(true);
+        if (boxCollider2D == null) boxCollider2D = item.GetComponent<BoxCollider2D>();
+        if (boxCollider2D == null) boxCollider2D = GetComponent<BoxCollider2D>();
+        if (boxCollider2D == null) boxCollider2D = item.GetComponentInChildren<BoxCollider2D>(true);
 
         damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
         if (damageReceiver == null)
@@ -1254,6 +1265,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             return;
 
         damageReceiver.OnAction += OnHit;
+        BindFatalDamageTracking();
         damageReceiver.OnDead += OnDeath;
         if (!RequiresPlacementRequest)
             item.OnAct += Install;
@@ -1268,6 +1280,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (damageReceiver != null)
         {
             damageReceiver.OnAction -= OnHit;
+            UnbindFatalDamageTracking();
             damageReceiver.OnDead -= OnDeath;
         }
         if (item != null)
@@ -1304,8 +1317,14 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             }
         }
 
-        damageReceiver.ConsumeCurrentDeath();
-        UnInstall();
+        if (FatalDamageWasHammer)
+        {
+            damageReceiver.ConsumeCurrentDeath();
+            UnInstall();
+            return;
+        }
+
+        DestroyFromNonHammerFatalDamage();
     }
 
     private void SyncRuntimeState()
@@ -1387,9 +1406,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         Vector3 authorityPosition = GetAuthorityPosition();
         float maximumPlacementDistance = GetMaxPlacementDistance();
         bool withinReach = IsWithinPlacementDistance(authorityPosition, mouse, maximumPlacementDistance);
-        if (!withinReach && _ownerController != null && _ownerController.IsUsingMobile)
+        if (!withinReach)
         {
-            // 手机继续使用受限准线；桌面鼠标超距保留当前位置的红色不可放置预览。
+            // 虚影可见范围与实际可提交范围一致，桌面和手机均不保留越界红色虚影。
             CleanupGhost();
             return;
         }
@@ -1407,7 +1426,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     }
 
     /// <summary>按目标格子的最近边缘校验距离，保留每轴半格的格心吸附余量。</summary>
-    private bool IsWithinPlacementDistance(
+    public static bool IsWithinPlacementDistance(
         Vector3 authorityPosition,
         Vector3 placement,
         float maximumPlacementDistance)
@@ -1730,8 +1749,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     {
         Mod_InteractSender interactionSender = item?.Owner?.GetComponentInChildren<Mod_InteractSender>(true);
         return interactionSender != null
-            ? Mathf.Max(0.01f, interactionSender.maxInteractDistance)
-            : Mathf.Max(0.01f, Data?.maxVisibleDistance ?? Mod_InteractSender.DefaultMaxInteractDistance);
+            ? Mathf.Max(0.01f, interactionSender.maxInteractDistance * 2f)
+            : Mathf.Max(0.01f, (Data?.maxVisibleDistance ?? Mod_InteractSender.DefaultMaxInteractDistance) * 2f);
     }
 
     private void SyncNavigationOccupancy()
@@ -1743,6 +1762,8 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         }
 
         BuildingOccupancyRegistry.Register(this, GetPlacementCell(item.transform.position));
+        Mod_Door door = item.itemMods?.GetMod_ByID<Mod_Door>("Door");
+        if (door != null) BuildingOccupancyRegistry.SetPassable(this, door.Data.IsOpen);
     }
 
     /// <summary>动态可交互建筑与格子墙统一以吸附后的单个世界格作为放置槽。</summary>

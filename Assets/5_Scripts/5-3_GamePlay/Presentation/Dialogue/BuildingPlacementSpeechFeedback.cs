@@ -11,6 +11,7 @@ namespace FlatWorld.Dialogue
     {
         // 非法放置时显示给玩家的本地化原文。
         private const string InvalidPlacementSpeechText = "这个建筑不能放置在那里";
+        private const string OutOfRangeSpeechText = "物品超出放置范围限制";
         // 非法放置提示使用稳定话题，便于台词系统识别来源。
         private const string InvalidPlacementSpeechTopic = "building.invalid-placement";
 
@@ -23,7 +24,7 @@ namespace FlatWorld.Dialogue
         }
 
         /// <summary>只为触发事件的本地玩家显示非法放置气泡。</summary>
-        private static void HandlePlacementRejected(Player actor)
+        private static void HandlePlacementRejected(Player actor, BuildingPlacementFailureReason reason)
         {
             if (actor == null || !actor.IsLocalProfile)
                 return;
@@ -34,7 +35,8 @@ namespace FlatWorld.Dialogue
                 return;
 
             speechController.Say(
-                FlatWorldLocalizationService.GetUiText(InvalidPlacementSpeechText),
+                FlatWorldLocalizationService.GetUiText(reason == BuildingPlacementFailureReason.OutOfRange
+                    ? OutOfRangeSpeechText : InvalidPlacementSpeechText),
                 CharacterSpeechPriority.Player,
                 topic: InvalidPlacementSpeechTopic);
         }

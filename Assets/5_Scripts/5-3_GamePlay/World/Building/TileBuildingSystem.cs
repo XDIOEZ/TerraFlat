@@ -578,7 +578,7 @@ public static partial class TileBuildingSystem
         {
             map.RemoveTile(hit.Cell, topIndex);
             RefreshBlockingState(map, hit.Cell);
-            SpawnDrop(profile, hit.Cell);
+            SpawnDestructionDrop(profile, hit.Cell, sender);
         }
 
         result = new TileBuildingDamageResult(
@@ -656,7 +656,7 @@ public static partial class TileBuildingSystem
             if (!terrain.TryRemoveBlockingTile(localX, localY, current.BlockingTileId))
                 return false;
             ResetRuntimeDamage(terrain, target.LocalPosition);
-            SpawnDrop(profile, target.Position);
+            SpawnDestructionDrop(profile, target.Position, sender);
         }
         else
         {
@@ -805,12 +805,43 @@ public static partial class TileBuildingSystem
         if (chunkManager == null || string.IsNullOrWhiteSpace(tileBlockId))
             return false;
 
-        const string prefix = "tile.block.";
-        IReadOnlyDictionary<string, string> textParameters =
-            chunkManager.ActiveGenerationProfile?.TextParameters;
+        // 玩家建筑使用当前内容目录；冻结 Profile 只负责保持旧世界的生成结果。
+        // 若老存档同一个数字 ID 已绑定其它 Tile，则拒绝覆盖，避免污染既有地形数据。
+        IReadOnlyDictionary<string, string> currentParameters =
+            chunkManager.RuntimeTileCatalogProfile?.TextParameters;
+        if (TryFindRuntimeTileId(currentParameters, tileBlockId, out int currentTileId))
+        {
+            IReadOnlyDictionary<string, string> frozenParameters =
+                chunkManager.ActiveGenerationProfile?.TextParameters;
+            if (frozenParameters == null ||
+                !frozenParameters.TryGetValue($"tile.block.{currentTileId}", out string frozenBlockId) ||
+                string.IsNullOrWhiteSpace(frozenBlockId) ||
+                string.Equals(frozenBlockId, tileBlockId, StringComparison.Ordinal))
+            {
+                runtimeTileId = currentTileId;
+                return true;
+            }
+
+            return false;
+        }
+
+        return TryFindRuntimeTileId(
+            chunkManager.ActiveGenerationProfile?.TextParameters,
+            tileBlockId,
+            out runtimeTileId);
+    }
+
+    /// <summary>从稳定 Tile_Block ID 反查数字 TileId。</summary>
+    private static bool TryFindRuntimeTileId(
+        IReadOnlyDictionary<string, string> textParameters,
+        string tileBlockId,
+        out int runtimeTileId)
+    {
+        runtimeTileId = 0;
         if (textParameters == null)
             return false;
 
+        const string prefix = "tile.block.";
         foreach (KeyValuePair<string, string> parameter in textParameters)
         {
             if (!parameter.Key.StartsWith(prefix, StringComparison.Ordinal) ||
@@ -820,8 +851,7 @@ public static partial class TileBuildingSystem
             }
 
             string numericPart = parameter.Key.Substring(prefix.Length);
-            if (int.TryParse(numericPart, out runtimeTileId) && runtimeTileId > 0)
-                return true;
+            return int.TryParse(numericPart, out runtimeTileId) && runtimeTileId > 0;
         }
 
         return false;
@@ -837,10 +867,20 @@ public static partial class TileBuildingSystem
         if (chunkManager == null || runtimeTileId <= 0)
             return false;
 
-        IReadOnlyDictionary<string, string> textParameters =
+        IReadOnlyDictionary<string, string> frozenParameters =
             chunkManager.ActiveGenerationProfile?.TextParameters;
-        return textParameters != null &&
-               textParameters.TryGetValue($"tile.block.{runtimeTileId}", out tileBlockId) &&
+        string parameterId = $"tile.block.{runtimeTileId}";
+        if (frozenParameters != null &&
+            frozenParameters.TryGetValue(parameterId, out tileBlockId) &&
+            !string.IsNullOrWhiteSpace(tileBlockId))
+        {
+            return true;
+        }
+
+        IReadOnlyDictionary<string, string> currentParameters =
+            chunkManager.RuntimeTileCatalogProfile?.TextParameters;
+        return currentParameters != null &&
+               currentParameters.TryGetValue(parameterId, out tileBlockId) &&
                !string.IsNullOrWhiteSpace(tileBlockId);
     }
 
@@ -961,6 +1001,42 @@ public static partial class TileBuildingSystem
                 Debug.LogWarning($"[格子建筑] 掉落 {profile.DropItemId} 失败：{exception.Message}");
                 break;
             }
+        }
+    }
+
+    /// <summary>玩家建筑被锤子摧毁时完整返还；其它伤害只按制作材料逐份 50% 概率回收。</summary>
+    private static void SpawnDestructionDrop(
+        TileBuildingDamageProfile profile,
+        Vector2Int cell,
+        Mod_Damage sender)
+    {
+        if (profile == null ||
+            string.IsNullOrWhiteSpace(profile.DropItemId) ||
+            profile.DropAmount <= 0)
+        {
+            return;
+        }
+
+        if (sender?.TileDamageToolKind == TileDamageToolKind.Hammer ||
+            !BuildingMaterialSalvage.IsBuildingSummoner(profile.DropItemId))
+        {
+            SpawnDrop(profile, cell);
+            return;
+        }
+
+        Vector2 position = new Vector2(cell.x + 0.5f, cell.y + 0.5f);
+        for (int i = 0; i < profile.DropAmount; i++)
+        {
+            if (BuildingMaterialSalvage.TrySpawnRandomMaterialSalvage(
+                    profile.DropItemId,
+                    position,
+                    out string reason))
+            {
+                continue;
+            }
+
+            Debug.LogWarning($"[格子建筑] 材料回收失败：{reason}");
+            break;
         }
     }
 
