@@ -285,7 +285,7 @@ public static class NewGamePrefabBuilder
         TMP_Text caption = CreateText("官方预设说明", page.transform, "预设会持续扩充，并保持规则组合清晰。", font, 18f, Muted, FontStyles.Normal, TextAlignmentOptions.Left);
         SetRect(caption.rectTransform, new Vector2(20f, -60f), new Vector2(520f, 30f), new Vector2(0f, 1f));
 
-        GameObject scrollObject = new GameObject("官方预设列表", typeof(RectTransform), typeof(ScrollRect));
+        GameObject scrollObject = new GameObject("官方预设列表", typeof(RectTransform), typeof(ItemStepScrollRect));
         scrollObject.layer = LayerMask.NameToLayer("UI");
         scrollObject.transform.SetParent(page.transform, false);
         SetRect(scrollObject.GetComponent<RectTransform>(), new Vector2(20f, -105f), new Vector2(520f, 375f), new Vector2(0f, 1f));

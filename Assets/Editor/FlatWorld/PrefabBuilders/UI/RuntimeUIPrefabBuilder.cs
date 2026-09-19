@@ -846,7 +846,7 @@ public static partial class RuntimeUIPrefabBuilder
         canvasGroup.interactable = false;
         canvasGroup.blocksRaycasts = false;
 
-        GameObject scrollRoot = CreateUIObject("内容列表", root.transform, typeof(ScrollRect));
+        GameObject scrollRoot = CreateUIObject("内容列表", root.transform, typeof(ItemStepScrollRect));
         RectTransform scrollRect = scrollRoot.GetComponent<RectTransform>();
         Stretch(scrollRect);
 
@@ -1192,7 +1192,7 @@ public static partial class RuntimeUIPrefabBuilder
         dividerRect.anchoredPosition = new Vector2(0f, -154f);
         dividerRect.sizeDelta = new Vector2(-40f, 2f);
 
-        GameObject scrollRoot = CreateUIObject("日志滚动区", panel.transform, typeof(Image), typeof(ScrollRect));
+        GameObject scrollRoot = CreateUIObject("日志滚动区", panel.transform, typeof(Image), typeof(ItemStepScrollRect));
         RectTransform scrollRootRect = scrollRoot.GetComponent<RectTransform>();
         scrollRootRect.anchorMin = Vector2.zero;
         scrollRootRect.anchorMax = Vector2.one;
@@ -3506,7 +3506,7 @@ public static partial class RuntimeUIPrefabBuilder
         background.raycastTarget = true;
         AddOutline(background, Amber);
 
-        GameObject scrollObject = CreateUIObject("菜单滚动区", drawer.transform, typeof(ScrollRect));
+        GameObject scrollObject = CreateUIObject("菜单滚动区", drawer.transform, typeof(ItemStepScrollRect));
         RectTransform scrollRect = scrollObject.GetComponent<RectTransform>();
         Stretch(scrollRect);
         scrollRect.offsetMin = new Vector2(16f, 16f);
@@ -3650,7 +3650,7 @@ public static partial class RuntimeUIPrefabBuilder
             typeof(RectTransform),
             typeof(CanvasRenderer),
             typeof(Image),
-            typeof(ScrollRect));
+            typeof(ItemStepScrollRect));
         RectTransform rect = root.GetComponent<RectTransform>();
         Stretch(rect);
 
@@ -4036,7 +4036,7 @@ public static partial class RuntimeUIPrefabBuilder
         arrow.rectTransform.anchoredPosition = Vector2.zero;
         arrow.rectTransform.sizeDelta = new Vector2(36f, 0f);
 
-        GameObject template = CreateUIObject("Template", root.transform, typeof(Image), typeof(ScrollRect));
+        GameObject template = CreateUIObject("Template", root.transform, typeof(Image), typeof(ItemStepScrollRect));
         RectTransform templateRect = template.GetComponent<RectTransform>();
         templateRect.anchorMin = new Vector2(0f, 0f);
         templateRect.anchorMax = new Vector2(1f, 0f);
@@ -4146,7 +4146,7 @@ public static partial class RuntimeUIPrefabBuilder
 
     private static void CreateBindingScrollView(Transform parent)
     {
-        GameObject scrollRoot = CreateUIObject("绑定列表", parent, typeof(Image), typeof(ScrollRect));
+        GameObject scrollRoot = CreateUIObject("绑定列表", parent, typeof(Image), typeof(ItemStepScrollRect));
         LayoutElement scrollElement = scrollRoot.AddComponent<LayoutElement>();
         scrollElement.minHeight = 180f;
         scrollElement.flexibleHeight = 1f;

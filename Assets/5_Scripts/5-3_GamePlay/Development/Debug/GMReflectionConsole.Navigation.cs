@@ -282,7 +282,7 @@ public sealed partial class GMReflectionConsole
         tabBar.AddComponent<LayoutElement>().preferredHeight = 42f;
         tabBar.AddComponent<Image>().color = GmSurfaceLow;
 
-        ScrollRect scroll = tabBar.AddComponent<ScrollRect>();
+        ScrollRect scroll = tabBar.AddComponent<ItemStepScrollRect>();
         scroll.horizontal = true;
         scroll.vertical = false;
         scroll.movementType = ScrollRect.MovementType.Clamped;
@@ -360,7 +360,7 @@ public sealed partial class GMReflectionConsole
 
     private static Transform ConfigureVerticalScroll(GameObject root, float inset, out ScrollRect scroll)
     {
-        scroll = root.AddComponent<ScrollRect>();
+        scroll = root.AddComponent<ItemStepScrollRect>();
         scroll.horizontal = false;
         scroll.vertical = true;
         scroll.movementType = ScrollRect.MovementType.Clamped;

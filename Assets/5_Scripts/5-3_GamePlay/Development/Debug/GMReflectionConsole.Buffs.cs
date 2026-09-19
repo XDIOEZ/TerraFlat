@@ -182,7 +182,7 @@ public sealed partial class GMReflectionConsole
         float inset,
         out ScrollRect scroll)
     {
-        scroll = root.AddComponent<ScrollRect>();
+        scroll = root.AddComponent<ItemStepScrollRect>();
         scroll.horizontal = false;
         scroll.vertical = true;
         scroll.movementType = ScrollRect.MovementType.Clamped;

@@ -6,6 +6,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// 在隔离预览场景中验证两个制作面板的可用空间适配，并输出实际 Prefab 的渲染图。
@@ -85,6 +86,7 @@ public static class TodoCraftingLayoutPreview
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(asset, scene);
             instance.transform.SetParent(root.transform, false);
             instance.SetActive(true);
+            PopulateRecipePreview(instance.transform);
             var panel = instance.GetComponent<RectTransform>();
             Require(panel != null && panel.anchorMin == Vector2.zero && panel.anchorMax == Vector2.one,
                 $"{id} 根节点不是全屏 Stretch。");
@@ -96,6 +98,9 @@ public static class TodoCraftingLayoutPreview
             var serialized = new SerializedObject(groups[0]);
             var bounds = serialized.FindProperty("boundsTarget").objectReferenceValue as RectTransform;
             Vector2 margin = serialized.FindProperty("safeMargin").vector2Value;
+            float presentationScale = serialized.FindProperty("presentationScale").floatValue;
+            Require(Mathf.Abs(presentationScale - (id == "UI_HandCraftTable" ? 0.6f : 1f)) < 0.001f,
+                $"{id} 制作面板表现比例不正确：{presentationScale}。");
             Require(bounds != null, $"{id} 缺少固定内容边界引用。");
             Require(Mathf.Abs(bounds.sizeDelta.x - 1344f) < 0.01f &&
                     Mathf.Abs(bounds.sizeDelta.y - 756f) < 0.01f,
@@ -121,6 +126,7 @@ public static class TodoCraftingLayoutPreview
                 Canvas.ForceUpdateCanvases();
                 float expected = Mathf.Min(1f,
                     (size.x - margin.x * 2f) / 1344f, (size.y - margin.y * 2f) / 756f);
+                expected *= presentationScale;
                 Require(Mathf.Abs(bounds.localScale.x - expected) < 0.001f &&
                         Mathf.Abs(bounds.localScale.y - expected) < 0.001f,
                     $"{id} {size} 缩放错误：{bounds.localScale}，预期 {expected}。");
@@ -154,6 +160,51 @@ public static class TodoCraftingLayoutPreview
     #endregion
 
     #region 预览渲染与断言
+
+    /// <summary>隔离场景只克隆正式候选和材料模板，不启动库存或物品模块，便于观察真实行布局。</summary>
+    private static void PopulateRecipePreview(Transform root)
+    {
+        RectTransform content = FindPreviewRect(root, CraftingStationController.CandidateContentName);
+        RectTransform template = FindPreviewRect(root, CraftingStationController.CandidateTemplateName);
+        Require(content != null && template != null, "制作预览缺少正式候选模板。");
+        AddRecipePreview(content, template, "石臼", "Assets/6_Art/Generated/StoneMortar/StoneMortar_Icon.png",
+            new[] { "Assets/6_Art/Generated/Items/StoneSlab.png", "Assets/6_Art/Items/Tools/Item_Tool_404.png" },
+            new[] { 1, 1 });
+        AddRecipePreview(content, template, "石墙", "Assets/6_Art/Building/Wall_Stone_Medium.png",
+            new[] { "Assets/6_Art/Items/Tools/Item_Tool_404.png" }, new[] { 4 });
+    }
+
+    private static void AddRecipePreview(RectTransform content, RectTransform template, string label,
+        string productPath, string[] materials, int[] amounts)
+    {
+        RectTransform row = UnityEngine.Object.Instantiate(template, content, false);
+        row.name = "静态预览_" + label;
+        FindPreviewRect(row, CraftingStationController.CandidateLabelName).GetComponent<TMP_Text>().text = label;
+        FindPreviewRect(row, CraftingStationController.CandidateOutputAmountName).GetComponent<TMP_Text>().text = "×1";
+        Image icon = FindPreviewRect(row, CraftingStationController.CandidateIconName).GetComponent<Image>();
+        icon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(productPath);
+        icon.enabled = icon.sprite != null;
+        RectTransform materialRoot = FindPreviewRect(row, CraftingStationController.CandidateMaterialsName);
+        RectTransform materialTemplate = FindPreviewRect(row, CraftingStationController.CandidateMaterialTemplateName);
+        Require(materialRoot != null && materialTemplate != null, "制作预览缺少正式材料图标模板。");
+        for (int index = 0; index < materials.Length; index++)
+        {
+            RectTransform cell = UnityEngine.Object.Instantiate(materialTemplate, materialRoot, false);
+            Image materialIcon = FindPreviewRect(cell, CraftingStationController.CandidateMaterialIconName).GetComponent<Image>();
+            materialIcon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(materials[index]);
+            materialIcon.enabled = materialIcon.sprite != null;
+            FindPreviewRect(cell, CraftingStationController.CandidateMaterialAmountName).GetComponent<TMP_Text>().text = $"×{amounts[index]}";
+            cell.gameObject.SetActive(true);
+        }
+        row.gameObject.SetActive(true);
+    }
+
+    private static RectTransform FindPreviewRect(Transform root, string name)
+    {
+        foreach (RectTransform rect in root.GetComponentsInChildren<RectTransform>(true))
+            if (rect.name == name) return rect;
+        return null;
+    }
 
     private static void Render(Camera camera, Vector2Int size, string path)
     {

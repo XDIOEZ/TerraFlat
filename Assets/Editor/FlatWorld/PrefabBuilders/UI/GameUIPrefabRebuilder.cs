@@ -1111,7 +1111,7 @@ public static class GameUIPrefabRebuilder
         SafeAreaScaleGroup scale = root.GetComponent<SafeAreaScaleGroup>();
         if (scale == null)
             scale = root.AddComponent<SafeAreaScaleGroup>();
-        scale.Configure(content, new[] { content }, new Vector2(24f, 24f));
+        scale.Configure(content, new[] { content }, new Vector2(24f, 24f), root.name == "UI_HandCraftTable" ? 0.6f : 1f);
     }
 
     /// <summary>重建前还原旧构建坐标空间，避免重复包裹或改变内部绝对布局。</summary>
@@ -2345,7 +2345,7 @@ public static class GameUIPrefabRebuilder
         listSurface.raycastTarget = true;
         AddOutline(listSurface, new Color(0.55f, 0.68f, 0.70f, 0.14f));
 
-        ScrollRect scroll = listSurface.gameObject.AddComponent<ScrollRect>();
+        ScrollRect scroll = listSurface.gameObject.AddComponent<ItemStepScrollRect>();
         scroll.horizontal = false;
         scroll.vertical = true;
         scroll.movementType = ScrollRect.MovementType.Clamped;
@@ -2399,7 +2399,10 @@ public static class GameUIPrefabRebuilder
         templateImage.gameObject.AddComponent<FlatWorldUIFeedback>();
 
         Image icon = CreateImage(CraftingStationController.CandidateIconName, templateImage.transform, Color.white);
-        SetTopLeft(icon.rectTransform, 12f, 10f, 64f, 64f);
+        icon.rectTransform.anchorMin = icon.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+        icon.rectTransform.pivot = new Vector2(0f, 0.5f);
+        icon.rectTransform.anchoredPosition = new Vector2(10f, 0f);
+        icon.rectTransform.sizeDelta = new Vector2(52f, 52f);
         icon.preserveAspect = true;
 
         TextMeshProUGUI label = CreateText(
@@ -2410,7 +2413,10 @@ public static class GameUIPrefabRebuilder
             Cream,
             FontStyles.Bold,
             TextAlignmentOptions.Left);
-        SetTopLeft(label.rectTransform, 152f, 15f, width - 270f, 54f);
+        label.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+        label.rectTransform.anchorMax = new Vector2(0.54f, 0.5f);
+        label.rectTransform.offsetMin = new Vector2(72f, -30f);
+        label.rectTransform.offsetMax = new Vector2(-50f, 30f);
         label.enableWordWrapping = true;
         label.overflowMode = TextOverflowModes.Ellipsis;
 
@@ -2422,19 +2428,39 @@ public static class GameUIPrefabRebuilder
             Amber,
             FontStyles.Bold,
             TextAlignmentOptions.Center);
-        SetTopLeft(outputAmount.rectTransform, 80f, 20f, 66f, 44f);
+        outputAmount.rectTransform.anchorMin = outputAmount.rectTransform.anchorMax = new Vector2(0.54f, 0.5f);
+        outputAmount.rectTransform.anchoredPosition = new Vector2(-26f, 0f);
+        outputAmount.rectTransform.sizeDelta = new Vector2(48f, 44f);
         ConfigureCandidateAmountText(outputAmount);
 
+        RectTransform materials = CreateRect(CraftingStationController.CandidateMaterialsName, templateImage.transform);
+        materials.anchorMin = new Vector2(0.54f, 0f);
+        materials.anchorMax = Vector2.one;
+        materials.offsetMin = new Vector2(8f, 8f);
+        materials.offsetMax = new Vector2(-8f, -8f);
+        GridLayoutGroup materialGrid = materials.gameObject.AddComponent<GridLayoutGroup>();
+        materialGrid.cellSize = new Vector2(56f, 64f);
+        materialGrid.spacing = new Vector2(4f, 4f);
+        materialGrid.childAlignment = TextAnchor.UpperRight;
+        materialGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        materialGrid.constraintCount = 3;
+        RectTransform materialTemplate = CreateRect(CraftingStationController.CandidateMaterialTemplateName, materials);
+        materialTemplate.sizeDelta = materialGrid.cellSize;
+        Image materialIcon = CreateImage(CraftingStationController.CandidateMaterialIconName, materialTemplate, Color.white);
+        SetTopLeft(materialIcon.rectTransform, 8f, 0f, 40f, 40f);
+        materialIcon.preserveAspect = true;
+        materialIcon.raycastTarget = false;
         TextMeshProUGUI materialAmount = CreateText(
             CraftingStationController.CandidateMaterialAmountName,
-            templateImage.transform,
+            materialTemplate,
             string.Empty,
             18f,
             Teal,
             FontStyles.Bold,
             TextAlignmentOptions.Center);
-        SetTopLeft(materialAmount.rectTransform, width - 116f, 20f, 82f, 44f);
+        SetTopLeft(materialAmount.rectTransform, 0f, 40f, 56f, 24f);
         ConfigureCandidateAmountText(materialAmount);
+        materialTemplate.gameObject.SetActive(false);
 
         templateImage.gameObject.SetActive(false);
         scroll.viewport = viewportImage.rectTransform;

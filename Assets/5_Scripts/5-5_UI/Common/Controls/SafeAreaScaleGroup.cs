@@ -22,6 +22,9 @@ public sealed class SafeAreaScaleGroup : MonoBehaviour
     [SerializeField]
     private float maxScale = 1f;
 
+    [SerializeField, Range(0.1f, 1f), Tooltip("在安全区适配后再应用的表现比例，不影响其它面板。")]
+    private float presentationScale = 1f;
+
     #endregion
 
     #region 运行时状态
@@ -36,12 +39,13 @@ public sealed class SafeAreaScaleGroup : MonoBehaviour
     #region 配置入口
 
     /// <summary>由 Prefab 构建器写入需要共同缩放的固定尺寸节点。</summary>
-    public void Configure(RectTransform targetBounds, RectTransform[] targets, Vector2 margin)
+    public void Configure(RectTransform targetBounds, RectTransform[] targets, Vector2 margin, float visualScale = 1f)
     {
         boundsTarget = targetBounds;
         scaledTargets = targets ?? new RectTransform[0];
         safeMargin = new Vector2(Mathf.Max(0f, margin.x), Mathf.Max(0f, margin.y));
         maxScale = 1f;
+        presentationScale = Mathf.Clamp(visualScale, 0.1f, 1f);
 
         if (Application.isPlaying)
         {
@@ -143,6 +147,7 @@ public sealed class SafeAreaScaleGroup : MonoBehaviour
             usableSize.x / boundsSize.x,
             usableSize.y / boundsSize.y);
         fitScale = Mathf.Clamp(fitScale, 0.01f, allowedMaxScale);
+        fitScale *= presentationScale;
 
         isApplying = true;
         try

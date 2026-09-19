@@ -427,7 +427,7 @@ public static class GameSavePrefabBuilder
 
     private static Transform CreateScrollList(string name, Transform parent, Vector2 position, Vector2 size)
     {
-        GameObject scrollObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(ScrollRect));
+        GameObject scrollObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(ItemStepScrollRect));
         scrollObject.layer = LayerMask.NameToLayer("UI");
         scrollObject.transform.SetParent(parent, false);
         RectTransform scrollRectTransform = scrollObject.GetComponent<RectTransform>();

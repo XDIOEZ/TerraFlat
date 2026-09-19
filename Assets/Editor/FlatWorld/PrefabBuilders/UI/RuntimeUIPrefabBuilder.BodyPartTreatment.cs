@@ -32,7 +32,7 @@ public static partial class RuntimeUIPrefabBuilder
         Transform content = root.transform.Find("设置对话框");
         TextMeshProUGUI title = CreateText("治疗标题", content, "选择治疗部位", 28f, Amber);
         title.gameObject.AddComponent<LayoutElement>().preferredHeight = 42f;
-        GameObject scroll = CreateUIObject("部位列表", content, typeof(Image), typeof(ScrollRect));
+        GameObject scroll = CreateUIObject("部位列表", content, typeof(Image), typeof(ItemStepScrollRect));
         scroll.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
         scroll.GetComponent<Image>().raycastTarget = true;
         scroll.AddComponent<LayoutElement>().flexibleHeight = 1f;

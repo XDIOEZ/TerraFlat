@@ -831,7 +831,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         scrollLayout.minHeight = 220f;
         scrollLayout.preferredHeight = 0f;
 
-        ScrollRect scroll = scrollObject.AddComponent<ScrollRect>();
+        ScrollRect scroll = scrollObject.AddComponent<ItemStepScrollRect>();
         scroll.horizontal = false;
         scroll.vertical = true;
         scroll.scrollSensitivity = 38f;
@@ -1153,7 +1153,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         LayoutElement scrollLayout = scrollObject.AddComponent<LayoutElement>();
         scrollLayout.flexibleHeight = 1f;
         scrollLayout.minHeight = 180f;
-        ScrollRect scroll = scrollObject.AddComponent<ScrollRect>();
+        ScrollRect scroll = scrollObject.AddComponent<ItemStepScrollRect>();
         scroll.horizontal = false;
 
         GameObject viewport = CreateUiObject("Viewport", scrollObject.transform);

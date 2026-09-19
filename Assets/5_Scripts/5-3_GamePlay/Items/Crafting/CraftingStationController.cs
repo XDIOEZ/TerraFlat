@@ -21,6 +21,9 @@ public sealed class CraftingStationController : IDisposable
     public const string CandidateLabelName = "名称";
     public const string CandidateOutputAmountName = "成品数量";
     public const string CandidateMaterialAmountName = "材料数量";
+    public const string CandidateMaterialsName = "材料列表";
+    public const string CandidateMaterialTemplateName = "材料模板";
+    public const string CandidateMaterialIconName = "材料图标";
 
     #endregion
 
@@ -83,6 +86,7 @@ public sealed class CraftingStationController : IDisposable
         inputInventory.Data.Event_OnDataChanged += OnInputChanged;
         outputInventory.Data.Event_OnDataChanged -= OnOutputChanged;
         outputInventory.Data.Event_OnDataChanged += OnOutputChanged;
+        FlatWorldLocalizationService.LanguageChanged += OnLanguageChanged;
 
         RefreshCandidates();
     }
@@ -93,6 +97,7 @@ public sealed class CraftingStationController : IDisposable
             return;
 
         disposed = true;
+        FlatWorldLocalizationService.LanguageChanged -= OnLanguageChanged;
         craftButton.onClick.RemoveListener(OnCraftButtonClick);
         if (inputInventory.Data != null)
             inputInventory.Data.Event_OnDataChanged -= OnInputChanged;
@@ -118,6 +123,12 @@ public sealed class CraftingStationController : IDisposable
     private void OnOutputChanged(ItemSlot _)
     {
         RefreshSelectedRecipe();
+    }
+
+    /// <summary>动态工具标记跟随语言切换，同时保留当前配方选择及制作进度。</summary>
+    private void OnLanguageChanged(string _)
+    {
+        if (!disposed) RefreshCandidates();
     }
 
     private void SelectRecipe(RuntimeRecipe recipe)
@@ -262,7 +273,9 @@ public sealed class CraftingStationController : IDisposable
             FindRect(button.transform, CandidateIconName)?.GetComponent<Image>(),
             FindRect(button.transform, CandidateLabelName)?.GetComponent<TextMeshProUGUI>(),
             FindRect(button.transform, CandidateOutputAmountName)?.GetComponent<TextMeshProUGUI>(),
-            FindRect(button.transform, CandidateMaterialAmountName)?.GetComponent<TextMeshProUGUI>());
+            FindRect(button.transform, CandidateMaterialsName),
+            FindRect(button.transform, CandidateMaterialTemplateName),
+            inputInventory);
         entry.Bind(() => SelectRecipe(entry.Recipe));
         return entry;
     }
@@ -405,7 +418,10 @@ public sealed class CraftingStationController : IDisposable
         private readonly Image icon;
         private readonly TextMeshProUGUI label;
         private readonly TextMeshProUGUI outputAmount;
-        private readonly TextMeshProUGUI materialAmount;
+        private readonly RectTransform materials;
+        private readonly RectTransform materialTemplate;
+        private readonly Inventory inputInventory;
+        private readonly List<MaterialEntry> materialEntries = new();
         private UnityAction selectAction;
 
         public CandidateEntry(
@@ -413,14 +429,22 @@ public sealed class CraftingStationController : IDisposable
             Image icon,
             TextMeshProUGUI label,
             TextMeshProUGUI outputAmount,
-            TextMeshProUGUI materialAmount)
+            RectTransform materials,
+            RectTransform materialTemplate,
+            Inventory inputInventory)
         {
             this.button = button ?? throw new ArgumentNullException(nameof(button));
             background = button.targetGraphic as Image ?? button.GetComponent<Image>();
             this.icon = icon ?? throw new InvalidOperationException("配方候选模板缺少图标 Image");
             this.label = label ?? throw new InvalidOperationException("配方候选模板缺少名称 TMP");
             this.outputAmount = outputAmount ?? throw new InvalidOperationException("配方候选模板缺少成品数量 TMP");
-            this.materialAmount = materialAmount ?? throw new InvalidOperationException("配方候选模板缺少材料数量 TMP");
+            this.materials = materials ?? throw new InvalidOperationException("配方候选模板缺少材料列表");
+            this.materialTemplate = materialTemplate ?? throw new InvalidOperationException("配方候选模板缺少材料图标模板");
+            this.inputInventory = inputInventory;
+            materialTemplate.gameObject.SetActive(false);
+            foreach (Transform child in materials)
+                if (child != materialTemplate && child.name.StartsWith("材料项_", StringComparison.Ordinal))
+                    materialEntries.Add(new MaterialEntry((RectTransform)child));
         }
 
         public RuntimeRecipe Recipe { get; private set; }
@@ -465,7 +489,7 @@ public sealed class CraftingStationController : IDisposable
             outputAmount.text = extraOutputCount > 0
                 ? $"×{primaryOutputAmount} +{extraOutputCount}"
                 : $"×{primaryOutputAmount}";
-            materialAmount.text = $"×{GetRequiredMaterialAmount(recipe)}";
+            RefreshMaterials(recipe);
             button.interactable = description.Success;
             button.gameObject.SetActive(true);
         }
@@ -477,7 +501,7 @@ public sealed class CraftingStationController : IDisposable
             icon.enabled = false;
             label.text = string.Empty;
             outputAmount.text = string.Empty;
-            materialAmount.text = string.Empty;
+            foreach (MaterialEntry entry in materialEntries) entry.Hide();
             button.gameObject.SetActive(false);
         }
 
@@ -504,23 +528,72 @@ public sealed class CraftingStationController : IDisposable
             label.text = displayName;
         }
 
-        /// <summary>统计制作一份配方会实际消耗的材料总件数；amount=0 的工具需求不计入消耗数量。</summary>
-        private static long GetRequiredMaterialAmount(RuntimeRecipe recipe)
+        /// <summary>逐项显示真实材料；标签需求以输入库存中的实际匹配物品展示，不猜测物品身份。</summary>
+        private void RefreshMaterials(RuntimeRecipe recipe)
         {
             IReadOnlyList<RuntimeRecipeIngredient> ingredients = recipe?.inputs?.RowItems_List;
-            if (ingredients == null)
-                return 0L;
-
-            long total = 0L;
-            for (int index = 0; index < ingredients.Count; index++)
+            int visible = 0;
+            for (int index = 0; ingredients != null && index < ingredients.Count; index++)
             {
                 RuntimeRecipeIngredient ingredient = ingredients[index];
-                if (ingredient != null && ingredient.amount > 0)
-                    total += ingredient.amount;
+                if (CraftingIngredientMatcher.IsEmpty(ingredient)) continue;
+                if (visible >= materialEntries.Count)
+                {
+                    RectTransform clone = UnityEngine.Object.Instantiate(materialTemplate, materials, false);
+                    clone.name = $"材料项_{visible + 1}";
+                    materialEntries.Add(new MaterialEntry(clone));
+                }
+                string itemId = ingredient.ItemName;
+                if (ingredient.matchMode == MatchMode.ByTag)
+                {
+                    itemId = null;
+                    foreach (ItemSlot slot in inputInventory.Data.itemSlots)
+                        if (CraftingIngredientMatcher.MatchesIdentity(ingredient, slot?.itemData))
+                        {
+                            itemId = slot.itemData.IDName;
+                            break;
+                        }
+                }
+                materialEntries[visible++].Show(itemId, ingredient.amount);
             }
-
-            return total;
+            for (int i = visible; i < materialEntries.Count; i++) materialEntries[i].Hide();
+            GridLayoutGroup grid = materials.GetComponent<GridLayoutGroup>();
+            LayoutElement row = button.GetComponent<LayoutElement>();
+            if (grid != null && row != null)
+            {
+                int rows = Mathf.CeilToInt(visible / (float)Mathf.Max(1, grid.constraintCount));
+                row.preferredHeight = Mathf.Max(row.minHeight, rows * (grid.cellSize.y + grid.spacing.y) - grid.spacing.y + 16f);
+            }
         }
+    }
+
+    /// <summary>纯表现材料格，复用正式模板，不创建运行时物品或参与库存结算。</summary>
+    private sealed class MaterialEntry
+    {
+        private readonly RectTransform root;
+        private readonly Image icon;
+        private readonly TextMeshProUGUI amount;
+
+        public MaterialEntry(RectTransform root)
+        {
+            this.root = root;
+            icon = FindRect(root, CandidateMaterialIconName)?.GetComponent<Image>()
+                ?? throw new InvalidOperationException("材料模板缺少材料图标");
+            amount = FindRect(root, CandidateMaterialAmountName)?.GetComponent<TextMeshProUGUI>()
+                ?? throw new InvalidOperationException("材料模板缺少材料数量");
+        }
+
+        public void Show(string itemId, int count)
+        {
+            icon.sprite = null;
+            if (!string.IsNullOrEmpty(itemId) && GameRes.Instance.TryGetItemPresentation(itemId, out _, out Sprite sprite))
+                icon.sprite = sprite;
+            icon.enabled = icon.sprite != null;
+            amount.text = count > 0 ? $"×{count}" : FlatWorldLocalizationService.GetUiText("工具");
+            root.gameObject.SetActive(true);
+        }
+
+        public void Hide() => root.gameObject.SetActive(false);
     }
 
     #endregion
