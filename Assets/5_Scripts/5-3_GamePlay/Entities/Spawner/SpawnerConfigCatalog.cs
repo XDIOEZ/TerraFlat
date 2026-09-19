@@ -12,6 +12,7 @@ public sealed class SpawnerConfigCatalog
 [Serializable]
 public sealed class SpawnerConfigDefinition
 {
+    public SpawnerTreeHabitat TreeHabitat = new();
     public string Id;
     public string ScheduleMode = "timedWindows";
     public string EcologyGroup = "animals";
@@ -50,6 +51,12 @@ public sealed class SpawnerConfigDefinition
         SpawnerConfig config = ScriptableObject.CreateInstance<SpawnerConfig>();
         config.name = Id;
         config.PersistentId = Id;
+        config.TreeHabitat = new SpawnerTreeHabitat
+        {
+            Enabled = TreeHabitat.Enabled,
+            TreesPerActor = TreeHabitat.TreesPerActor,
+            SpawnRadius = TreeHabitat.SpawnRadius
+        };
         config.ScheduleMode = ParseScheduleMode(ScheduleMode);
         config.EcologyGroup = ParseEcologyGroup(EcologyGroup);
         config.RequireGlobalDarkness = RequireGlobalDarkness;

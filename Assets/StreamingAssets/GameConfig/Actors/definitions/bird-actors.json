@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "actors": [
+    {
+      "id": "Bird",
+      "parent": "Chicken",
+      "lootTableId": "Chicken_Default",
+      "shellPrefab": "CoreActor.Bird.Shell",
+      "shellAddress": "flatworld.actor.shell.bird",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Bird.prefab",
+      "gameName": "小鸟",
+      "description": "在树林周围短距离步行，起飞后进行长距离巡航的小鸟。",
+      "tags": [
+        "Bird",
+        "Animal",
+        "Blood",
+        "Prey"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]",
+        "rendererPath": "BirdLift/Module_Animator_AI",
+        "animatorPath": "BirdLift/Module_Animator_AI",
+        "animationState": "Ground",
+        "animatorControllerAddress": "flatworld.actor.animator.bird",
+        "flipX": false,
+        "color": {
+          "r": 0.65,
+          "g": 0.8,
+          "b": 1.0,
+          "a": 1.0
+        }
+      },
+      "modules": {
+        "food": {
+          "parameters": {"NutritionTagMultipliers": [{"Tag": "Seed", "Multiplier": 3.0}]}
+        },
+        "ai": {
+          "prefab": "AI_Bird",
+          "id": "AI_Bird",
+          "enabled": true,
+          "data": {
+            "BitData": null,
+            "Type": 0
+          },
+          "parameters": {
+            "groundSpeed": 0.5,
+            "flightSpeed": 3.0,
+            "flightHeight": 1.5,
+            "groundDuration": 8.0,
+            "flightDuration": 30.0,
+            "transitionDuration": 0.75,
+            "groundWanderRadius": 2.0,
+            "flightWanderRadius": 18.0,
+            "flightNavigation": {
+              "crossGroundObstacles": true,
+              "sampleSpacing": 0.25
+            }
+          }
+        },
+        "mover": {
+          "id": "移动模块",
+          "parameters": {
+            "Data": {
+              "Speed": {
+                "BaseValue": 0.5
+              }
+            }
+          }
+        },
+        "health": {
+          "id": "生命值系统模块",
+          "parameters": {
+            "Data": {
+              "Hp": 20.0,
+              "MaxHp": 20.0,
+              "DefenseValues": {
+                "Cutting": 1.0,
+                "Piercing": 1.0,
+                "Chopping": 1.0,
+                "Blunt": 1.0
+              }
+            }
+          }
+        }
+      },
+      "itemData": {
+        "factionId": "birds"
+      }
+    },
+    {
+      "id": "Seagull",
+      "parent": "Bird",
+      "shellPrefab": "CoreActor.Seagull.Shell",
+      "shellAddress": "flatworld.actor.shell.seagull",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Seagull.prefab",
+      "gameName": "海鸥",
+      "description": "仅在沙滩群系生态生成的鸟类变体。",
+      "tags": [
+        "Bird",
+        "Seagull",
+        "Animal",
+        "Blood",
+        "Prey"
+      ],
+      "visual": {
+        "animatorControllerAddress": "flatworld.actor.animator.seagull",
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 1.0,
+          "a": 1.0
+        }
+      },
+      "itemData": {
+        "factionId": "birds"
+      }
+    }
+  ]
+}

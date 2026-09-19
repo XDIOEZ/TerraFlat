@@ -59,6 +59,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
     private List<SpawnerConfig> _serializedSpawnerConfigs;
     private float _nextPopulationMaintenanceTime;
     private float _nextRecycleCheckTime;
+    private readonly RuntimeTreeHabitatIndex _treeHabitatIndex = new();
+    private readonly Dictionary<SpawnerConfig, (float Until, int Count)> _treeCapacityCache = new();
 
     #endregion
 
@@ -145,6 +147,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         BindSaveData(SaveDataMgr.Instance?.SaveData);
         _itemManager.CleanupNullItems();
         _monsterManager.Configure(_spawnerConfigs, _itemManager.WorldRunTimeItems.Values);
+        _treeHabitatIndex.Bind(_itemManager.WorldRunTimeItems.Values);
+        _treeCapacityCache.Clear();
         if (AiRuntimeBackendService.HasEntitiesRoutes)
         {
             if (!AiRuntimeBackendService.UseEntities)
@@ -172,6 +176,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     private void OnGameWorldExit()
     {
+        _treeHabitatIndex.Dispose();
+        _treeCapacityCache.Clear();
         CaptureSaveData(SaveDataMgr.Instance?.SaveData);
         // 世界退出时对象会随场景/区块一起销毁，不再唤醒本管理器主动休眠的实体。
         ClearTrackedPopulation(restoreChunkDormantItems: false);
@@ -189,6 +195,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
 
     protected override void OnDestroy()
     {
+        _treeHabitatIndex.Dispose();
         bool ownsSingleton = ReferenceEquals(instance, this);
         if (_gameManager != null)
         {
@@ -397,7 +404,7 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
                     continue;
                 }
 
-                if (UnityEngine.Random.value > config.SpawnChance)
+                if (config.SpawnChance <= 0f || UnityEngine.Random.value >= config.SpawnChance)
                     continue;
 
                 int queueRoom = Mathf.Max(
@@ -746,6 +753,8 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
                 Mathf.Cos(randomAngle) * randomDistance,
                 Mathf.Sin(randomAngle) * randomDistance,
                 0f);
+            if (config.TreeHabitat.Enabled && !TryGetTreeHabitatPosition(config, out candidate))
+                continue;
             candidate.x = Mathf.Floor(candidate.x) + 0.5f;
             candidate.y = Mathf.Floor(candidate.y) + 0.5f;
 
@@ -1000,10 +1009,45 @@ public partial class MonsterSpawnerManager : SingletonAutoMono<MonsterSpawnerMan
         if (config.UnboundedDailyGrowth || config.IgnorePopulationLimits)
             return int.MaxValue;
 
-        return GameDifficultyService.ScaleCount(
+        int populationLimit = GameDifficultyService.ScaleCount(
             config.GroupAliveLimit,
             GameDifficultyService.Current.World.SpawnPopulationMultiplier,
             1);
+        if (config.TreeHabitat.Enabled)
+            populationLimit = Mathf.Min(populationLimit, RuntimeTreeHabitatIndex.ResolveCapacity(
+                CountEligibleHabitatTrees(config), config.TreeHabitat.TreesPerActor));
+        return populationLimit;
+    }
+
+    /// <summary>当前玩家范围和群系共同筛选树，不把其它维度或远处森林计入容量。</summary>
+    private bool IsEligibleHabitatTree(SpawnerConfig config, Vector2 position)
+    {
+        return IsNearAnyPlayer(position, config.MaxSpawnDistance) && IsBiomeAllowed(config, position);
+    }
+
+    private int CountEligibleHabitatTrees(SpawnerConfig config)
+    {
+        if (_itemManager == null) return 0;
+        if (_treeCapacityCache.TryGetValue(config, out var cached) && Time.unscaledTime < cached.Until)
+            return cached.Count;
+        IReadOnlyList<Vector2> positions = _treeHabitatIndex.GetActivePositions(_itemManager.PlayerInSceneName);
+        int count = 0;
+        for (int index = 0; index < positions.Count; index++)
+            if (IsEligibleHabitatTree(config, positions[index])) count++;
+        _treeCapacityCache[config] = (Time.unscaledTime + 2f, count);
+        return count;
+    }
+
+    /// <summary>在树索引中均匀抽取候选，再沿用正式地形、可见性、群系和数量门槛。</summary>
+    private bool TryGetTreeHabitatPosition(SpawnerConfig config, out Vector3 candidate)
+    {
+        candidate = default;
+        IReadOnlyList<Vector2> positions = _treeHabitatIndex.GetActivePositions(_itemManager.PlayerInSceneName);
+        if (positions.Count == 0) return false;
+        Vector2 tree = positions[UnityEngine.Random.Range(0, positions.Count)];
+        if (!IsEligibleHabitatTree(config, tree)) return false;
+        candidate = WorldTopologyRuntime.NormalizePosition(tree + UnityEngine.Random.insideUnitCircle * config.TreeHabitat.SpawnRadius);
+        return true;
     }
 
     private int CountGroupAlive(SpawnerConfig config)

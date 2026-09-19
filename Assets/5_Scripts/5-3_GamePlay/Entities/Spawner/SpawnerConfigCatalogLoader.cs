@@ -115,6 +115,9 @@ public static class SpawnerConfigCatalogLoader
             throw new InvalidDataException($"生物生成配置 {config.Id} 的生态上限无效");
 
         HashSet<string> speciesIds = new(StringComparer.OrdinalIgnoreCase);
+        if (config.TreeHabitat == null || config.TreeHabitat.TreesPerActor < 1 ||
+            !IsFinite(config.TreeHabitat.SpawnRadius) || config.TreeHabitat.SpawnRadius <= 0f)
+            throw new InvalidDataException($"生成配置 {config.Id} 的树木栖息地参数无效。");
         for (int entryIndex = 0; entryIndex < config.SpawnEntries.Count; entryIndex++)
         {
             ValidateEntry(config, config.SpawnEntries[entryIndex], entryIndex, speciesIds);

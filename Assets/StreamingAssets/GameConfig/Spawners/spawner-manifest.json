@@ -254,7 +254,7 @@
       "perPlayerAliveLimit": 0,
       "spawnSearchRetryCount": 24,
       "spawnCount": 32,
-      "spawnChance": 1.0,
+      "spawnChance": 0.0,
       "daysBetweenSpawns": 1,
       "groupAliveLimit": 1024,
       "maxEcologyBudget": 1024,
@@ -282,6 +282,114 @@
           "probability": 1.0,
           "ecologyCost": 1,
           "speciesAliveLimit": 0
+        }
+      ]
+    },
+    {
+      "id": "bird_ecology",
+      "scheduleMode": "timedWindows",
+      "ecologyGroup": "animals",
+      "requireGlobalDarkness": false,
+      "spawnTriggerTime": 360.0,
+      "spawnsPerDay": 4,
+      "minSpawnDistance": 15.0,
+      "maxSpawnDistance": 50.0,
+      "playerVisibilityExclusionDistance": 18.0,
+      "playerPopulationRadius": 65.0,
+      "perPlayerAliveLimit": 12,
+      "spawnSearchRetryCount": 24,
+      "spawnCount": 4,
+      "spawnChance": 1.0,
+      "daysBetweenSpawns": 1,
+      "groupAliveLimit": 24,
+      "maxEcologyBudget": 24,
+      "dailyBudgetRecovery": 12,
+      "recoveryTargetPopulation": 24,
+      "recoveryCheckInterval": 8.0,
+      "growthIntervalDays": 1,
+      "maxLifetimeSpawnCount": 4096,
+      "asyncSpawnInterval": 0.25,
+      "unboundedDailyGrowth": false,
+      "ignorePopulationLimits": false,
+      "requireCompletelyDarkTile": false,
+      "maxAllowedTileLight": 1.0,
+      "allowedBiomeNames": [],
+      "recycleDistance": 110.0,
+      "recycleGraceSeconds": 20.0,
+      "treeHabitat": {
+        "enabled": true,
+        "treesPerActor": 4,
+        "spawnRadius": 3.0
+      },
+      "spawnEntries": [
+        {
+          "prefabName": "Bird",
+          "runtimeBackend": "gameObject",
+          "probability": 1.0,
+          "ecologyCost": 1,
+          "speciesAliveLimit": 24,
+          "initialization": {
+            "nutrition": {
+              "enabled": true,
+              "minFoodRate": 0.8,
+              "maxFoodRate": 1.0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "seagull_ecology",
+      "scheduleMode": "timedWindows",
+      "ecologyGroup": "animals",
+      "requireGlobalDarkness": false,
+      "spawnTriggerTime": 360.0,
+      "spawnsPerDay": 4,
+      "minSpawnDistance": 15.0,
+      "maxSpawnDistance": 50.0,
+      "playerVisibilityExclusionDistance": 18.0,
+      "playerPopulationRadius": 65.0,
+      "perPlayerAliveLimit": 12,
+      "spawnSearchRetryCount": 24,
+      "spawnCount": 4,
+      "spawnChance": 1.0,
+      "daysBetweenSpawns": 1,
+      "groupAliveLimit": 24,
+      "maxEcologyBudget": 24,
+      "dailyBudgetRecovery": 12,
+      "recoveryTargetPopulation": 8,
+      "recoveryCheckInterval": 8.0,
+      "growthIntervalDays": 1,
+      "maxLifetimeSpawnCount": 4096,
+      "asyncSpawnInterval": 0.25,
+      "unboundedDailyGrowth": false,
+      "ignorePopulationLimits": false,
+      "requireCompletelyDarkTile": false,
+      "maxAllowedTileLight": 1.0,
+      "allowedBiomeNames": [
+        "沙滩"
+      ],
+      "recycleDistance": 110.0,
+      "recycleGraceSeconds": 20.0,
+      "treeHabitat": {
+        "enabled": false,
+        "treesPerActor": 4,
+        "spawnRadius": 3.0
+      },
+      "spawnEntries": [
+        {
+          "prefabName": "Seagull",
+          "runtimeBackend": "gameObject",
+          "probability": 1.0,
+          "ecologyCost": 1,
+          "speciesAliveLimit": 24,
+          "initialization": {
+            "nutrition": {
+              "enabled": true,
+              "minFoodRate": 0.8,
+              "maxFoodRate": 1.0
+            }
+          }
         }
       ]
     }

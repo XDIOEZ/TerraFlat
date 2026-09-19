@@ -16,12 +16,22 @@ public enum SpawnerEcologyGroup
     NightEnemies = 2
 }
 
+/// <summary>树木生态扩展配置；默认关闭，不改变其他物种的生成和后端。</summary>
+[Serializable]
+public sealed class SpawnerTreeHabitat
+{
+    public bool Enabled;
+    public int TreesPerActor = 4;
+    public float SpawnRadius = 3f;
+}
+
 /// <summary>
 /// 怪物生成系统配置类 - 包含所有生成相关的常数和配置
 /// </summary>
 [CreateAssetMenu(fileName = "SpawnerConfig", menuName = "FlatWorld/SpawnerConfig")]
 public class SpawnerConfig : ScriptableObject
 {
+    public SpawnerTreeHabitat TreeHabitat = new();
 #region 嵌套类型
 
     /// <summary>

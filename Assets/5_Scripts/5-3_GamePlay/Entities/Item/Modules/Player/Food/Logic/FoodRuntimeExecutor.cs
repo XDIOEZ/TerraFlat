@@ -247,14 +247,15 @@ public sealed class FoodNutritionService
 
         float fatBefore = consumer.Data.nutrition.Fat;
         float fatMaximumBefore = consumer.Data.nutrition.Max_Fat;
-        float consumedFat = Mathf.Max(0f, consumedFood.Data.nutrition.Fat);
+        Nutrition absorbed = Mod_Food.ScaleConsumedNutrition(consumer.Item, consumedFood.Item?.itemData, consumedFood.Data.nutrition);
+        float consumedFat = Mathf.Max(0f, absorbed.Fat);
         bool playerFatWasFull = consumer.IsPlayer &&
             consumedFat > 0f &&
             fatBefore >= fatMaximumBefore - 0.001f;
-        float consumedWater = Mathf.Max(0f, consumedFood.Data.nutrition.Water);
+        float consumedWater = Mathf.Max(0f, absorbed.Water);
         float waterBefore = consumer.Data.nutrition.Water;
 
-        consumer.Data.nutrition = consumer.Data.nutrition + consumedFood.Data.nutrition;
+        consumer.Data.nutrition = consumer.Data.nutrition + absorbed;
 
         if (playerFatWasFull)
         {

@@ -15,6 +15,11 @@
       "id": "ecs-actors",
       "path": "definitions/ecs-actors.json",
       "enabled": true
+    },
+    {
+      "id": "bird-actors",
+      "path": "definitions/bird-actors.json",
+      "enabled": true
     }
   ]
 }

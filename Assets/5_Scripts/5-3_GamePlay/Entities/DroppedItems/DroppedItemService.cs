@@ -20,7 +20,7 @@ public readonly struct DroppedItemHandle
 /// 掉落态入口：生成、轨迹、拾取与持久化共享同一 ECS 权威世界。ItemData 只作库存冷载荷，
 /// 树木、矿石节点、安装中的建筑、手持物和战斗中的投射物仍由各自原系统管理。
 /// </summary>
-public static class DroppedItemService
+public static partial class DroppedItemService
 {
     private sealed class LegacyDropPlan
     {
@@ -46,6 +46,7 @@ public static class DroppedItemService
     {
         runtime?.Dispose(); runtime = null; ownerSave = null; ownerWorld = null;
         pickers.Clear(); legacyPlans.Clear(); legacyScratch.Clear(); Epoch++;
+        forageLegacyCandidates.Clear(); forageLegacyDedupe.Clear();
     }
 
     #region 生成与回收
