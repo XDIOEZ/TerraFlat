@@ -26,6 +26,22 @@ public sealed class ChunkView : MonoBehaviour
     /// <summary>当前 View 保留的阴影槽数量，供流送 Profiler 与回归检查使用。</summary>
     public int RetainedOccluderCount => lightOccluderRenderer?.RetainedOccluderCount ?? 0;
 
+    /// <summary>低频检查可丢失的外部渲染后端登记，并只修复对应表现层。</summary>
+    public bool RepairPresentationBackendIfNeeded()
+    {
+        if (chunk == null || !presentationComplete)
+            return false;
+        for (int i = 0; i < renderers.Count; i++)
+        {
+            if (renderers[i] is ChunkTilemapRenderer tilemapRenderer)
+                return tilemapRenderer.RepairBatchPresentationIfNeeded();
+        }
+
+        // Editor 脚本热重载可能清掉接口缓存，但场景组件仍存在；按组件重新找一次即可自愈。
+        ChunkTilemapRenderer fallback = GetComponentInChildren<ChunkTilemapRenderer>(true);
+        return fallback != null && fallback.RepairBatchPresentationIfNeeded();
+    }
+
     /// <summary>确保运行时区块表现拥有独立的自然物品父节点。</summary>
     private void Awake()
     {

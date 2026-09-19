@@ -216,23 +216,34 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                     lerp(data.flowY.z, data.flowY.w, cellUV.x), cellUV.y));
         }
 
-        // 湖泊静止；河流只消费权威下游速度；海洋独立进入风浪和潮汐实现。
+        // 静水也有表面细波；物理流速为零不代表视觉冻结。河口反射波只影响渲染。
         WaterSurfaceData CalculateChunkWaterSurface(float2 positionWS, float2 screenUV, half depth)
         {
             ChunkBRGInstanceData data = LoadChunkBRGInstanceData();
             if (data.transform0.w > 1.5)
                 return CalculateWaterSurface(positionWS, screenUV, depth);
             float2 velocity = ResolveRiverVelocity(positionWS, data);
-            float strength = length(velocity) / 0.45;
-            float pattern = SampleRiverPattern(positionWS, velocity);
+            float strength = saturate(length(velocity) / 0.45);
+            float lake = 1.0 - step(0.5, data.transform0.w);
+            // 邻河传播到湖口的波纹向河道缓慢反射；河道本身仍按真实下游平流。
+            float2 visualVelocity = lerp(velocity, -velocity * 0.35, lake);
+            float pattern = SampleRiverPattern(positionWS, visualVelocity);
+            float gentlePhase = dot(positionWS, float2(0.72, 0.31)) * 3.2 - _Time.y * 0.65;
+            float gentleWave = pow(saturate(0.5 + 0.5 * sin(gentlePhase +
+                WaterNoise(positionWS * 0.24) * 3.0)), 10.0);
+            gentleWave *= 0.45 + 0.55 * WaterNoise(positionWS * 0.7 + float2(_Time.y * 0.03, 0.0));
             WaterSurfaceData surface = (WaterSurfaceData)0;
             surface.waterDepth = saturate(depth);
             surface.depthBlend = 1.0h - surface.waterDepth;
-            surface.ripple = smoothstep(0.45, 0.8, pattern) * _RippleStrength * strength * 0.4;
+            surface.ripple = smoothstep(0.45, 0.8, pattern) * _RippleStrength * strength * 0.55;
+            surface.ripple += gentleWave * max(_RippleStrength, 0.10) * lerp(0.35, 0.85, lake);
             surface.rippleShadow = smoothstep(0.5, 0.8, 1.0 - pattern)
                 * _RippleShadowStrength * strength * 0.3;
             surface.caustic = pattern * _CausticStrength * surface.depthBlend * 0.3;
-            surface.whitecap = smoothstep(0.7, 0.9, pattern) * _WhitecapStrength * strength * 0.25;
+            // 细小天空反光不随深度归零，深湖仍服从日夜照明但不会成为一整片纯黑色。
+            surface.reflection = lake * (0.055 + gentleWave * 0.035);
+            surface.whitecap = smoothstep(0.64, 0.88, pattern) * max(_WhitecapStrength, 0.14)
+                * strength * lerp(0.25, 0.65, lake);
             surface.moonReflection = ComputeMoonReflection(screenUV, 0.0, pattern, pattern,
                 0.0, 0.0, 0.0);
             return surface;
@@ -245,8 +256,11 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                 return ApplyShore(sourceColor, recess, positionWS);
             half band = saturate(recess * (1.0h - recess) * 4.0h);
             float2 velocity = ResolveRiverVelocity(positionWS, data);
-            half foam = SampleRiverPattern(positionWS, velocity) * band
-                * length(velocity) / 0.45 * _ShoreFoamStrength * _FoamColor.a;
+            float lake = 1.0 - step(0.5, data.transform0.w);
+            float2 visualVelocity = lerp(velocity, -velocity * 0.35, lake);
+            float stillWash = lake * (0.08 + 0.04 * sin(_Time.y * 0.7 + dot(positionWS, float2(0.6, 0.4))));
+            half foam = SampleRiverPattern(positionWS, visualVelocity) * band
+                * (length(velocity) / 0.45 + stillWash) * _ShoreFoamStrength * _FoamColor.a;
             sourceColor = lerp(sourceColor, _ShoreColor.rgb, band * _ShoreStrength * _ShoreColor.a);
             return lerp(sourceColor, _FoamColor.rgb, saturate(foam));
         }

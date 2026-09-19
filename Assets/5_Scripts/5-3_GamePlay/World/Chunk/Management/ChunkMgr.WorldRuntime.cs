@@ -22,6 +22,7 @@ public partial class ChunkMgr
 
     private RuntimeChunkMgr runtimeChunkManager;
     private ChunkGenerationProfileSnapshot defaultGenerationSnapshot;
+    private ChunkGenerationProfileSnapshot runtimeTileCatalogSnapshot;
     private ChunkGenerationProfileSnapshot activeGenerationSnapshot;
     private long runtimeEpoch;
     private WorldRuntimeHost runtimeHost;
@@ -36,6 +37,9 @@ public partial class ChunkMgr
     /// <summary>当前世界实际提交给后台区块生成器的完整参数快照。</summary>
     public ChunkGenerationProfileSnapshot ActiveGenerationProfile =>
         activeGenerationSnapshot ?? defaultGenerationSnapshot;
+    /// <summary>当前版本用于运行时玩家建筑的 Tile 映射；不随旧存档的生成配置冻结。</summary>
+    public ChunkGenerationProfileSnapshot RuntimeTileCatalogProfile =>
+        runtimeTileCatalogSnapshot ?? defaultGenerationSnapshot;
     public bool IsAuthoritativeSimulation
     {
         get => authoritativeSimulation;
@@ -181,6 +185,7 @@ public partial class ChunkMgr
         defaultGenerationSnapshot = defaultGenerationProfile != null
             ? defaultGenerationProfile.CreateSnapshot()
             : CreateFallbackGenerationSnapshot();
+        runtimeTileCatalogSnapshot = defaultGenerationSnapshot;
         activeGenerationSnapshot = defaultGenerationSnapshot;
         string worldId = SceneManager.GetActiveScene().name;
         if (string.IsNullOrWhiteSpace(worldId))
@@ -223,6 +228,7 @@ public partial class ChunkMgr
             RuntimeChunkMgr manager = runtimeChunkManager;
             runtimeChunkManager = null;
             activeGenerationSnapshot = null;
+            runtimeTileCatalogSnapshot = null;
             if (manager != null)
             {
                 WorldRuntime world = manager.World;

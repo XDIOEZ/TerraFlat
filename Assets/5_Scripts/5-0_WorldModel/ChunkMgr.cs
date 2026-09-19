@@ -359,6 +359,9 @@ namespace FlatWorld.WorldModel
                 _ = RequestChunkDataAsync(address, targetRequest.WorldSeed, targetRequest.Profile,
                     topology: targetRequest.Topology);
             }
+            // 玩家移动后，仍在队列里的旧任务必须按“当前可见性 + 当前距离”重新排序。
+            // 只在首次入队时排序会让新进入视野的区块长期卡在历史队列尾部。
+            _scheduler.PrioritizeQueuedWork(orderedDataTargets);
 
             var deactivate = new List<WorldAddress>();
             foreach (WorldAddress address in _simulationLeases.Keys)

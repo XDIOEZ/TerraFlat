@@ -86,13 +86,13 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IChunkViewRenderer
 
     #region 增量绘制
 
-    /// <summary>草与 BRG 地表共用 Default 排序域；花层明确在草之后，异步绑定次序不能改变遮挡关系。</summary>
+    /// <summary>花与草共用地表排序域和材质队列；正 Order 会越过角色，因此不得把整张花层抬高。</summary>
     private void ApplyGroundCoverSorting()
     {
         TilemapRenderer renderer = tilemap.GetComponent<TilemapRenderer>();
         if (renderer == null) throw new MissingComponentException("花层缺少 TilemapRenderer。");
         renderer.sortingLayerName = "Default";
-        renderer.sortingOrder = 1;
+        renderer.sortingOrder = 0;
     }
 
     /// <summary>仅刷新本区块被采集生成点所在的格子。</summary>

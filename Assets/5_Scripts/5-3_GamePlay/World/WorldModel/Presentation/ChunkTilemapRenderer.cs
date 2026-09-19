@@ -37,6 +37,10 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     public TilemapRenderer BlockingTilemapRenderer =>
         blockingTilemap != null ? blockingTilemap.GetComponent<TilemapRenderer>() : null;
 
+    /// <summary>当前区块的基础地形是否仍登记在全局 BRG 后端。</summary>
+    public bool IsBatchPresentationRegistered =>
+        boundChunk?.Terrain != null && ChunkBatchRendererGroupService.IsOwnerRegistered(this);
+
     #endregion
 
     #region 绑定与生命周期
@@ -105,6 +109,23 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             blockingTilemap.ClearAllTiles();
         renderCaveWater = false;
         boundChunk = null;
+    }
+
+    /// <summary>
+    /// BRG 后端因脚本热重载或异常生命周期被重建时，使用现有权威地形重新登记基础表现。
+    /// 不重绑草地、自然物、导航等其它 ChunkView 子系统。
+    /// </summary>
+    public bool RepairBatchPresentationIfNeeded()
+    {
+        if (boundChunk?.Terrain == null)
+            return false;
+        if (ChunkBatchRendererGroupService.IsOwnerRegistered(this))
+            return true;
+
+        DisableVisualTilemapRenderers();
+        ChunkBatchRendererGroupService.RegisterOwner(this);
+        RefreshAllBatchVisuals(boundChunk.Terrain);
+        return ChunkBatchRendererGroupService.IsOwnerRegistered(this);
     }
 
     private void OnDestroy()
@@ -501,7 +522,10 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         RuntimeWaterCurrentKind kind = WaterEnvironmentRules.ResolveCurrentKind(
             Mathf.RoundToInt(riverKind), (SurfaceBiomeKind)terrain.GetCell(x, y).BiomeId == SurfaceBiomeKind.Ocean);
         instanceData.Transform0.w = (float)kind;
-        if (kind != RuntimeWaterCurrentKind.River)
+        instanceData.FlowX = Vector4.zero;
+        instanceData.FlowY = Vector4.zero;
+        // 湖泊仅在河口读取邻河的表面扰动，绝不写回权威水流或推动漂浮物。
+        if (kind == RuntimeWaterCurrentKind.Ocean)
             return;
 
         Vector2 bottomLeft = ResolveCornerCurrent(terrain, x - 1, y - 1);

@@ -78,11 +78,18 @@ internal static class ChunkBatchRendererGroupService
     internal static void UnregisterOwner(ChunkTilemapRenderer owner)
     {
         backend?.UnregisterOwner(owner);
-        if (backend != null && backend.OwnerCount == 0)
-        {
-            backend.Dispose();
-            backend = null;
-        }
+    }
+
+    /// <summary>
+    /// 世界窗口彻底关闭后再释放空闲后端。
+    /// 普通区块流送期间即使短暂没有 Owner，也保留 BRG，避免反复销毁/重建共享批次。
+    /// </summary>
+    internal static void ReleaseUnusedBackend()
+    {
+        if (backend == null || backend.OwnerCount != 0)
+            return;
+        backend.Dispose();
+        backend = null;
     }
 
     internal static void SetVisual(ChunkTilemapRenderer owner, int slotKey, Visual visual)
@@ -93,6 +100,12 @@ internal static class ChunkBatchRendererGroupService
     internal static void ClearVisual(ChunkTilemapRenderer owner, int slotKey)
     {
         backend?.ClearVisual(owner, slotKey);
+    }
+
+    /// <summary>检查某个区块地形表现是否仍登记在当前 BRG 后端。</summary>
+    internal static bool IsOwnerRegistered(ChunkTilemapRenderer owner)
+    {
+        return owner != null && backend?.IsOwnerRegistered(owner) == true;
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -155,6 +168,12 @@ internal static class ChunkBatchRendererGroupService
                 if (!ownerHandles.ContainsKey(owner))
                     ownerHandles.Add(owner, new Dictionary<int, InstanceHandle>());
             }
+        }
+
+        public bool IsOwnerRegistered(ChunkTilemapRenderer owner)
+        {
+            lock (syncRoot)
+                return owner != null && ownerHandles.ContainsKey(owner);
         }
 
         public void UnregisterOwner(ChunkTilemapRenderer owner)

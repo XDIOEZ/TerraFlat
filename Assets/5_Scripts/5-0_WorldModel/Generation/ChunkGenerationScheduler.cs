@@ -20,6 +20,7 @@ namespace FlatWorld.WorldModel
             public ChunkGenerationRequest Request;
             public CancellationToken CancellationToken;
             public TaskCompletionSource<ChunkGenerationResult> Completion;
+            public long QueueSequence;
         }
 
         #endregion
@@ -35,6 +36,7 @@ namespace FlatWorld.WorldModel
         private int _maxConcurrency;
         private int _activeTaskCount;
         private int _requestedMaxConcurrency;
+        private long _nextQueueSequence;
         private bool _disposed;
 
         #endregion
@@ -123,10 +125,68 @@ namespace FlatWorld.WorldModel
                 {
                     Request = request,
                     CancellationToken = cancellationToken,
-                    Completion = completion
+                    Completion = completion,
+                    QueueSequence = _nextQueueSequence++
                 });
                 StartQueuedWorkLocked();
                 return completion.Task;
+            }
+        }
+
+        /// <summary>
+        /// 按当前窗口优先级重新排列尚未开始的生成任务。
+        /// priorityAddresses 越靠前优先级越高；不在列表里的任务保持原相对顺序并排在后面。
+        /// </summary>
+        public void PrioritizeQueuedWork(IReadOnlyList<WorldAddress> priorityAddresses)
+        {
+            lock (_gate)
+            {
+                ThrowIfDisposed();
+                if (_queue.Count <= 1)
+                    return;
+
+                var ranks = new Dictionary<WorldAddress, int>();
+                if (priorityAddresses != null)
+                {
+                    for (int i = 0; i < priorityAddresses.Count; i++)
+                    {
+                        WorldAddress address = priorityAddresses[i];
+                        if (!ranks.ContainsKey(address))
+                            ranks.Add(address, i);
+                    }
+                }
+
+                var pending = new List<WorkItem>(_queue.Count);
+                while (_queue.Count > 0)
+                {
+                    WorkItem work = _queue.Dequeue();
+                    if (work.CancellationToken.IsCancellationRequested)
+                    {
+                        work.Completion.TrySetCanceled();
+                        continue;
+                    }
+                    pending.Add(work);
+                }
+
+                pending.Sort((left, right) =>
+                {
+                    bool leftRanked = ranks.TryGetValue(left.Request.Address, out int leftRank);
+                    bool rightRanked = ranks.TryGetValue(right.Request.Address, out int rightRank);
+                    if (leftRanked != rightRanked)
+                        return leftRanked ? -1 : 1;
+                    if (leftRanked)
+                    {
+                        int rank = leftRank.CompareTo(rightRank);
+                        if (rank != 0)
+                            return rank;
+                    }
+                    return left.QueueSequence.CompareTo(right.QueueSequence);
+                });
+
+                for (int i = 0; i < pending.Count; i++)
+                    _queue.Enqueue(pending[i]);
+
+                StartQueuedWorkLocked();
             }
         }
 

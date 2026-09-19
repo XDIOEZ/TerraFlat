@@ -260,6 +260,12 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             ["biome.grassland.minimumPrecipitation"] = "降水低于该值不判定温带草原",
             ["biome.grassland.maximumPrecipitation"] = "降水高于该值不判定温带草原，通常转森林",
             ["river.lakeChance"] = "内陆汇流终点形成淡水湖的确定性概率",
+            ["lake.large.enabled"] = "启用独立于河流小水潭的大型内陆淡水湖",
+            ["lake.large.regionSize"] = "大型淡水湖候选区域间距（格）；固定种子决定区域内的湖岸",
+            ["lake.large.chance"] = "每个内陆候选区域出现大型淡水湖的概率",
+            ["lake.large.minRadius"] = "大型淡水湖基础半径下限（格）",
+            ["lake.large.maxRadius"] = "大型淡水湖基础半径上限（格）；长轴约为半径的 1.25 倍",
+            ["lake.large.islandChance"] = "大型淡水湖包含一至三个小岛的概率",
             ["navigation.defaultCost"] = "普通地面的寻路代价；越大角色越不愿经过",
             ["navigation.waterCost"] = "水域的寻路代价；保持可通行，但让 A* 优先选择陆路"
         };
@@ -1956,8 +1962,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             return new Color(0.92f, 0.57f, 0.22f, 1f);
         }
 
-        if (value.IndexOf("weed", StringComparison.OrdinalIgnoreCase) >= 0 ||
-            value.IndexOf("twine", StringComparison.OrdinalIgnoreCase) >= 0 ||
+        if (value.IndexOf("twine", StringComparison.OrdinalIgnoreCase) >= 0 ||
             value.IndexOf("vine", StringComparison.OrdinalIgnoreCase) >= 0)
         {
             return new Color(0.76f, 0.89f, 0.25f, 1f);
@@ -2193,7 +2198,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             if (prefab == null)
                 continue;
 
-            // 部分自然物（例如 Weed）只有子节点带 SpriteRenderer；不读取根节点的缺失组件。
+            // 部分自然物只有子节点带 SpriteRenderer；不读取根节点的缺失组件。
             SpriteRenderer[] renderers = prefab.GetComponentsInChildren<SpriteRenderer>(true);
             for (int rendererIndex = 0; rendererIndex < renderers.Length; rendererIndex++)
             {

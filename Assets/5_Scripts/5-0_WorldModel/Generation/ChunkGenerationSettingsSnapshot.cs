@@ -343,6 +343,12 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "river.lakeChance", 0.75d));
             RiverMaxCachedRegions = Clamp(
                 GetInt(numbers, "river.maxCachedRegions", 9), 1, 32);
+            LargeLakeEnabled = GetBool(numbers, "lake.large.enabled", true);
+            LargeLakeRegionSize = Clamp(GetInt(numbers, "lake.large.regionSize", 384), 128, 4096);
+            LargeLakeChance = Clamp01(GetDouble(numbers, "lake.large.chance", 0.65d));
+            LargeLakeMinRadius = Clamp(GetDouble(numbers, "lake.large.minRadius", 48d), 16d, 256d);
+            LargeLakeMaxRadius = Clamp(GetDouble(numbers, "lake.large.maxRadius", 104d), LargeLakeMinRadius, 512d);
+            LargeLakeIslandChance = Clamp01(GetDouble(numbers, "lake.large.islandChance", 0.7d));
             GrassDensity = Clamp01(GetDouble(numbers, "grass.density", 0.24d));
             StructureEnabled = GetBool(numbers, "structure.enabled", true);
             StructureRegionSize = Math.Max(8, GetInt(numbers, "structure.regionSize", 96));
@@ -424,7 +430,6 @@ namespace FlatWorld.WorldModel
                 : string.Empty;
             CaveDirtWallVineItemId = GetText(texts, "cave.dirtWall.vineItemId",
                 CaveVineItemId);
-            CaveDirtWallWeedItemId = GetText(texts, "cave.dirtWall.weedItemId", string.Empty);
             CaveDirtWallFlowerItemId = GetText(texts, "cave.dirtWall.flowerItemId", string.Empty);
             CavePortalEnabled = GetBool(numbers, "cave.portal.enabled", true);
             CavePortalChunkChance = Clamp01(
@@ -589,6 +594,14 @@ namespace FlatWorld.WorldModel
         public double RiverLakeMinFlow { get; }
         /// <summary>高度驱动河网在内陆汇流终点形成淡水湖的确定性概率。</summary>
         public double RiverLakeChance { get; }
+
+        /// <summary>独立于汇流小水潭的大型内陆淡水盆地参数。</summary>
+        public bool LargeLakeEnabled { get; }
+        public int LargeLakeRegionSize { get; }
+        public double LargeLakeChance { get; }
+        public double LargeLakeMinRadius { get; }
+        public double LargeLakeMaxRadius { get; }
+        public double LargeLakeIslandChance { get; }
         /// <summary>每个纯生成器实例最多保留多少个已完成水文区域。</summary>
         public int RiverMaxCachedRegions { get; }
         /// <summary>合适的地面上长出草的基本概率。</summary>
@@ -640,7 +653,6 @@ namespace FlatWorld.WorldModel
         public double CaveDirtWallChance { get; }
         public double CaveDirtWallDecorationChance { get; }
         public string CaveDirtWallVineItemId { get; }
-        public string CaveDirtWallWeedItemId { get; }
         public string CaveDirtWallFlowerItemId { get; }
         /// <summary>洞壁藤蔓基础概率；临近地下水时使用湿润倍率。</summary>
         public bool CaveVineEnabled { get; }

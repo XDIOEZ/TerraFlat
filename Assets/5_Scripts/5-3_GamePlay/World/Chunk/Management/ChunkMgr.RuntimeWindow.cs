@@ -238,6 +238,9 @@ public partial class ChunkMgr
             : defaultGenerationSnapshot;
         profile = ApplyWorldCoordinateScale(profile);
         profile = WorldGenerationRuntimeHooks.ApplyBeforeWorldModelGeneration(profile);
+        // 玩家可建造 Tile 属于当前内容目录，不应被旧存档冻结的世界生成参数锁死。
+        // 先保留当前版本映射，再恢复冻结生成配置；这样老世界也能使用后来新增的地板/建筑 Tile。
+        runtimeTileCatalogSnapshot = profile;
         profile = ApplyPersistedEcologyConfiguration(profile);
         int baseSeed = SaveDataMgr.Instance?.SaveData?.Seed ?? 1;
         if (baseSeed == 0)
@@ -298,6 +301,8 @@ public partial class ChunkMgr
         for (int i = 0; i < runtimeWindowRemovalBuffer.Count; i++)
             DeactivateRuntimeBinding(runtimeWindowRemovalBuffer[i]);
 
+        // 只在流送窗口发生变化时校验一次现有表现，不做定时轮询。
+        RepairRuntimeWindowPresentationBackends();
         RebuildRuntimePrefetchQueue(centerOrigin, dimensionId, activeDistance,
             resolvedPrefetch, stepX, stepY, profile, seed, topology);
     }
@@ -667,6 +672,20 @@ public partial class ChunkMgr
         }
     }
 
+    /// <summary>
+    /// 流送窗口刷新时检查已绑定区块的共享 BRG 登记；只处理当前可见窗口，不按时间轮询。
+    /// </summary>
+    private void RepairRuntimeWindowPresentationBackends()
+    {
+        foreach (RuntimeWorldAddress address in runtimeWindowTargets)
+        {
+            if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding) ||
+                binding.View == null || !binding.View.IsBound)
+                continue;
+            binding.View.RepairPresentationBackendIfNeeded();
+        }
+    }
+
     #endregion
 
     #region 对象池与清理
@@ -808,6 +827,7 @@ public partial class ChunkMgr
         runtimePrefetchInFlight = null;
         runtimePrefetchInFlightCount = 0;
         DestroyRuntimeChunkViewPool();
+        ChunkBatchRendererGroupService.ReleaseUnusedBackend();
     }
 
     #endregion

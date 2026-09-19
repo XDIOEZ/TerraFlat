@@ -12,7 +12,7 @@ namespace FlatWorld.WorldModel
     public sealed class DeterministicChunkGenerator : IChunkPureGenerator
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 36;
+        public const int CurrentGenerationSignature = 37;
 
         private readonly LegacyHydrologyKernel legacyHydrologyKernel = new();
         private readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<GeneratedHydrologyMap>>
@@ -59,6 +59,9 @@ namespace FlatWorld.WorldModel
                             cancellationToken)
                         : BuildHeightDrivenRiverMap(request, settings, cancellationToken);
                 }
+                if (!cave && settings.LargeLakeEnabled)
+                    riverMap = LargeFreshwaterLakeKernel.Build(request, settings, riverMap,
+                        position => SampleHeight(request, settings, position.X, position.Y), cancellationToken);
                 for (int y = 0; y < profile.Height; y++)
                 {
                     for (int x = 0; x < profile.Width; x++)
