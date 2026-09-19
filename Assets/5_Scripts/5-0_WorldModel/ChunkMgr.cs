@@ -144,6 +144,9 @@ namespace FlatWorld.WorldModel
         private readonly Dictionary<WorldAddress, ChunkLease> _simulationLeases =
             new Dictionary<WorldAddress, ChunkLease>();
         private readonly HashSet<WorldAddress> _presentationDemand = new HashSet<WorldAddress>();
+        private readonly HashSet<WorldAddress> _windowDataDemand = new HashSet<WorldAddress>();
+        private readonly List<WorldAddress> _windowDataCancellationBuffer =
+            new List<WorldAddress>();
         private readonly HashSet<Task<ChunkGenerationResult>> _generationTasks =
             new HashSet<Task<ChunkGenerationResult>>();
         private readonly ReadOnlyCollection<WorldAddress> _emptyAddresses =
@@ -329,6 +332,10 @@ namespace FlatWorld.WorldModel
                 }
             }
 
+            // 先撤销已经离开当前数据窗口的旧生成请求。否则调度器 FIFO 队列会继续生成
+            // 玩家早已离开的区块，让新进入视野的区块长期排在后面形成黑块。
+            ReconcileWindowDataDemand(dataTargets);
+
             // 先把新范围里的区块都启用，再统一停掉旧区块；这样更新过程更安全、顺序也固定。
             var orderedTargets = new List<WorldAddress>(targets);
             orderedTargets.Sort();
@@ -392,6 +399,45 @@ namespace FlatWorld.WorldModel
             if (ring != 0)
                 return ring;
             return left.CompareTo(right);
+        }
+
+        /// <summary>取消已经离开当前数据窗口、但仍在后台队列中的旧区块请求。</summary>
+        private void ReconcileWindowDataDemand(
+            IReadOnlyDictionary<WorldAddress, WindowDataTarget> currentTargets)
+        {
+            _windowDataCancellationBuffer.Clear();
+            foreach (WorldAddress address in _windowDataDemand)
+            {
+                if (!currentTargets.ContainsKey(address) && _pending.ContainsKey(address))
+                    _windowDataCancellationBuffer.Add(address);
+            }
+
+            _windowDataCancellationBuffer.Sort();
+            for (int i = 0; i < _windowDataCancellationBuffer.Count; i++)
+                CancelChunkRequest(_windowDataCancellationBuffer[i]);
+
+            _windowDataDemand.Clear();
+            foreach (WorldAddress address in currentTargets.Keys)
+                _windowDataDemand.Add(address);
+            _windowDataCancellationBuffer.Clear();
+        }
+
+        /// <summary>窗口关闭时取消仍未完成的窗口生成请求，不影响独立的显式数据请求。</summary>
+        private void ClearWindowDataDemand()
+        {
+            _windowDataCancellationBuffer.Clear();
+            foreach (WorldAddress address in _windowDataDemand)
+            {
+                if (_pending.ContainsKey(address))
+                    _windowDataCancellationBuffer.Add(address);
+            }
+
+            _windowDataCancellationBuffer.Sort();
+            for (int i = 0; i < _windowDataCancellationBuffer.Count; i++)
+                CancelChunkRequest(_windowDataCancellationBuffer[i]);
+
+            _windowDataCancellationBuffer.Clear();
+            _windowDataDemand.Clear();
         }
 
         /// <summary>
@@ -500,6 +546,7 @@ namespace FlatWorld.WorldModel
         public void ClearWindow()
         {
             ThrowIfDisposed();
+            ClearWindowDataDemand();
             var addresses = new List<WorldAddress>(_simulationLeases.Keys);
             addresses.Sort();
             for (int i = 0; i < addresses.Count; i++)
@@ -518,6 +565,8 @@ namespace FlatWorld.WorldModel
             addresses.Sort();
             for (int i = 0; i < addresses.Count; i++)
                 CancelChunkRequest(addresses[i]);
+            _windowDataDemand.Clear();
+            _windowDataCancellationBuffer.Clear();
         }
 
         /// <summary>
@@ -556,6 +605,8 @@ namespace FlatWorld.WorldModel
             _pending.Clear();
             _generationTasks.Clear();
             _presentationDemand.Clear();
+            _windowDataDemand.Clear();
+            _windowDataCancellationBuffer.Clear();
             _scheduler.Dispose();
             while (_completed.TryDequeue(out GenerationCompletion completion))
             {
