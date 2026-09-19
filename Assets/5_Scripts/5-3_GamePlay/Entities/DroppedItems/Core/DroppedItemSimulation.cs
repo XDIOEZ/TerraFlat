@@ -30,7 +30,8 @@ namespace FlatWorld.DroppedItems
                 throw new ArgumentException("掉落物 ID 为空或重复。", nameof(body));
             if (!math.all(math.isfinite(body.Position)) || !math.all(math.isfinite(body.Scale)) ||
                 !math.all(math.isfinite(new float4(body.Amount, body.Rotation, body.VisualHeight, body.WaterDepth))) ||
-                body.Amount <= 0f || body.WaterKind > 2)
+                body.Amount <= 0f || body.WaterKind > 2 || !math.isfinite(body.SubmergedProgress) ||
+                body.SubmergedProgress < 0f || body.SubmergedProgress > 1f)
                 throw new ArgumentException("掉落物热数据包含无效坐标、数量或水态。", nameof(body));
             if (flight.HasValue)
             {
@@ -43,7 +44,8 @@ namespace FlatWorld.DroppedItems
             if (water.HasValue)
             {
                 DroppedWaterTransition value = water.Value;
-                if (value.Duration <= 0f || value.Elapsed < 0f ||
+                if (value.Duration <= 0f || value.Elapsed < 0f || value.RecedeDuration < 0f ||
+                    !math.isfinite(value.RecedeDuration) ||
                     !math.all(math.isfinite(new float4(value.StartDepth, value.TargetDepth, value.Duration, value.Elapsed))))
                     throw new ArgumentException("掉落物水线过渡数据无效。", nameof(water));
             }

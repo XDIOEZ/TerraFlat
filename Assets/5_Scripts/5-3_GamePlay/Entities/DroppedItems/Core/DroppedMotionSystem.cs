@@ -78,12 +78,15 @@ namespace FlatWorld.DroppedItems
 
             private void Execute([EntityIndexInQuery] int index, ref DroppedBody body, ref DroppedWaterTransition transition)
             {
-                transition.Elapsed = math.min(transition.Duration, transition.Elapsed + Delta);
+                float endTime = transition.Duration + (body.WaterKind == 2 ? math.max(0f, transition.RecedeDuration) : 0f);
+                transition.Elapsed = math.min(endTime, transition.Elapsed + Delta);
                 float t = math.saturate(transition.Elapsed / math.max(0.0001f, transition.Duration));
                 float weight = body.WaterKind == 1 ? t * t * (3f - 2f * t) : t;
                 body.WaterDepth = math.lerp(transition.StartDepth, transition.TargetDepth, weight);
+                body.SubmergedProgress = body.WaterKind == 2
+                    ? math.saturate((transition.Elapsed - transition.Duration) / math.max(0.0001f, transition.RecedeDuration)) : 0f;
                 Changes[Offset + index] = new DroppedChange { Id = body.Id,
-                    Kind = (byte)(t < 1f ? 0 : body.WaterKind == 2 ? 3 : 2) };
+                    Kind = (byte)(transition.Elapsed < endTime ? 0 : body.WaterKind == 2 ? 3 : 2) };
             }
         }
     }

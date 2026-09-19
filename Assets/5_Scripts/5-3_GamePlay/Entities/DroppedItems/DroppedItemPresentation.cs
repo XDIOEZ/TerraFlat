@@ -212,8 +212,9 @@ internal sealed class DroppedItemPresentation : IDisposable
             DroppedBody body = simulation.Get(id);
             DroppedItemVisual visual = visuals[id];
             Vector3 position = new(body.Position.x, body.Position.y + body.VisualHeight, 0f);
+            float submergedScale = WorldItemWaterRules.ResolveSubmergedScale(body.SubmergedProgress);
             Matrix4x4 matrix = Matrix4x4.TRS(position - key.Origin, Quaternion.Euler(0f, 0f, body.Rotation),
-                new Vector3(body.Scale.x, body.Scale.y, 1f)) * visual.LocalMatrix;
+                new Vector3(body.Scale.x * submergedScale, body.Scale.y * submergedScale, 1f)) * visual.LocalMatrix;
             int offset = vertices.Count;
             float minY = float.PositiveInfinity, maxY = float.NegativeInfinity;
             for (int i = 0; i < visual.Vertices.Length; i++)

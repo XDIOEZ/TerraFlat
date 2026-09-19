@@ -13,6 +13,8 @@ public static class WorldItemWaterRules
     // 所有掉落后端共用三倍沉没时长，不改变密度阈值或上浮速度。
     public const float SlowSinkDuration = 13.5f;
     public const float FastSinkDuration = 3f;
+    // 完全浸没后保留两秒远离水面的视觉阶段；库存载荷和原始尺寸不受影响。
+    public const float SubmergedRecedeDuration = 2f;
     public const float FastSinkRatioMultiplier = 1.3f;
     public const float FloatingMinDepth = 0.08f;
     public const float FloatingMaxDepth = 0.42f;
@@ -50,6 +52,9 @@ public static class WorldItemWaterRules
             : SinkRatioThreshold;
 
     public static bool ShouldSink(float ratio, float effectiveThreshold) => ratio >= effectiveThreshold;
+
+    /// <summary>完全浸没后的视觉缩放；平滑趋近零，不修改物品的真实体积。</summary>
+    public static float ResolveSubmergedScale(float progress) => 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(progress));
 
     public static float ResolveSinkDuration(float ratio) => Mathf.Lerp(SlowSinkDuration, FastSinkDuration,
         Mathf.InverseLerp(SinkRatioThreshold, SinkRatioThreshold * FastSinkRatioMultiplier,

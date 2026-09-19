@@ -146,9 +146,13 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
         if (UseVisibleArc)
         {
-            _groundFlightPosition = WorldTopologyRuntime.NormalizePosition(_groundFlightPosition + _arcVelocity * step);
-            _arcVelocity *= Mathf.Exp(-Mathf.Max(0f, FlightLinearDrag) * step);
-            _body.position = _groundFlightPosition + Vector2.up * Mathf.Max(0f, _virtualHeight);
+            // 手动抛物线按渲染帧推进；解析积分使不同帧率的射程一致，不能再叠加物理帧插值。
+            float drag = Mathf.Max(0f, FlightLinearDrag);
+            float attenuation = Mathf.Exp(-drag * step);
+            float travelTime = drag > 0.0001f ? (1f - attenuation) / drag : step;
+            _groundFlightPosition = WorldTopologyRuntime.NormalizePosition(_groundFlightPosition + _arcVelocity * travelTime);
+            _arcVelocity *= attenuation;
+            SetProjectilePosition(_groundFlightPosition + Vector2.up * Mathf.Max(0f, _virtualHeight));
             item.transform.rotation *= Quaternion.Euler(0f, 0f, SpinDegreesPerSecond * step);
             SetFlightDeliveryCapabilities();
         }
@@ -208,7 +212,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         _body.drag = Mathf.Max(0f, FlightLinearDrag);
         _body.constraints = RigidbodyConstraints2D.FreezeRotation;
         _body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-        _body.interpolation = RigidbodyInterpolation2D.Interpolate;
+        _body.interpolation = UseVisibleArc ? RigidbodyInterpolation2D.None : RigidbodyInterpolation2D.Interpolate;
         _arcVelocity = normalizedDirection * speed;
         _groundFlightPosition = _body.position;
         _body.velocity = UseVisibleArc ? Vector2.zero : _arcVelocity;
@@ -236,6 +240,14 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
 
         // 先进入飞行态再开伤害窗，确保出生点附近的有效命中也能立即结束箭矢。
         _damage.StartAttack();
+    }
+
+    /// <summary>手动轨迹同时提交刚体与可见姿态，避免只改刚体后等待下个物理帧才显示。</summary>
+    private void SetProjectilePosition(Vector2 position)
+    {
+        _body.position = position;
+        if (UseVisibleArc)
+            item.transform.position = new Vector3(position.x, position.y, item.transform.position.z);
     }
 
     /// <summary>高空段与落地段共享同一窗口，切换资格不能清掉已经命中的目标。</summary>
@@ -305,7 +317,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             Vector2 impactPosition = _lastFlightPosition +
                                      direction * Mathf.Clamp(_sweepHits[i].distance, 0f, distance);
             if (_body != null)
-                _body.position = impactPosition;
+                SetProjectilePosition(impactPosition);
             else
                 item.transform.position = impactPosition;
 
@@ -318,7 +330,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
             }
 
             if (_body != null)
-                _body.position = currentPosition;
+                SetProjectilePosition(currentPosition);
             else
                 item.transform.position = currentPosition;
         }
@@ -356,7 +368,7 @@ public sealed class Mod_Projectile : Module, IItemModuleDependencyBinder
         if (!_isFlying || resolvedDamage < 0f) return;
         Vector2 offset = _damage.DamageCollider is BoxCollider2D box
             ? (Vector2)box.transform.TransformPoint(box.offset) - (Vector2)item.transform.position : Vector2.zero;
-        _body.position = WorldTopologyRuntime.NormalizePosition((Vector2)context.HitPoint - offset);
+        SetProjectilePosition(WorldTopologyRuntime.NormalizePosition((Vector2)context.HitPoint - offset));
         FinishFlight();
     }
 

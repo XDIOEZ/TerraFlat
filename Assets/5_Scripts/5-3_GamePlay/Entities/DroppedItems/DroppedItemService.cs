@@ -65,7 +65,8 @@ public static partial class DroppedItemService
         if (resources == null || !resources.TryGetItemDefinition(source.IDName, out RuntimeItemDefinition definition))
             throw new InvalidOperationException($"找不到掉落物定义：{source.IDName}");
         if (definition.IsActor) throw new InvalidOperationException($"生物不是静态掉落物：{source.IDName}");
-        if (!UsesEntities) return SpawnNetworkCompatible(source, position, destination, duration, scale, rotation,
+        Vector3 finalScale = scale ?? ResolveDefaultWorldDropScale(source);
+        if (!UsesEntities) return SpawnNetworkCompatible(source, position, destination, duration, finalScale, rotation,
             bezierOffset, arcHeight, rotationSpeed);
         EnsureContext();
         ItemData payload = FastCloner.FastCloner.DeepClone(source);
@@ -76,7 +77,6 @@ public static partial class DroppedItemService
         payload.Guid = id;
         Vector2 start = WorldTopologyRuntime.NormalizePosition(position);
         Vector2 end = WorldTopologyRuntime.NearestImagePosition(start, destination ?? start);
-        Vector3 finalScale = scale ?? Vector3.one;
         DroppedBody body = new()
         {
             Id = id, Position = start, Scale = new Unity.Mathematics.float2(finalScale.x, finalScale.y),
@@ -89,6 +89,18 @@ public static partial class DroppedItemService
         } : null;
         runtime.Add(payload, body, flight);
         return new DroppedItemHandle(id, Epoch);
+    }
+
+    /// <summary>未显式指定缩放时，建筑召唤器按普通丢弃物尺寸显示，避免沿用落地建筑的大图尺寸。</summary>
+    public static Vector3 ResolveDefaultWorldDropScale(ItemData source)
+    {
+        if (Mod_Building.TryReadBuildingData(source, out _, out Mod_Building.Building_Data buildingData) &&
+            buildingData?.Role == BuildingRole.Summoner)
+        {
+            return Vector3.one * 0.5f;
+        }
+
+        return Vector3.one;
     }
 
     /// <summary>标准战利品产出；生物生成回到 AI 后端，不能把动物做成可入包的静态图标。</summary>

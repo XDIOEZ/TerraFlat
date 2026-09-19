@@ -145,7 +145,9 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             {
                 Id = data.Guid, Amount = data.Stack.Amount, Position = domain.Normalize(record.Position),
                 Scale = record.Scale, Rotation = record.Rotation, VisualHeight = record.VisualHeight,
-                WaterDepth = record.WaterDepth, WaterKind = record.WaterKind, Pickable = 0
+                WaterDepth = record.WaterDepth, WaterKind = record.WaterKind, Pickable = 0,
+                SubmergedProgress = record.WaterKind == 2 && record.HasWaterTransition
+                    ? Mathf.Clamp01((record.WaterElapsed - record.WaterDuration) / WorldItemWaterRules.SubmergedRecedeDuration) : 0f
             };
             DroppedFlight? flight = record.HasFlight ? new DroppedFlight
             {
@@ -156,7 +158,8 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             DroppedWaterTransition? water = record.HasWaterTransition ? new DroppedWaterTransition
             {
                 StartDepth = record.WaterStart, TargetDepth = record.WaterTarget,
-                Duration = record.WaterDuration, Elapsed = record.WaterElapsed
+                Duration = record.WaterDuration, Elapsed = record.WaterElapsed,
+                RecedeDuration = record.WaterKind == 2 ? WorldItemWaterRules.SubmergedRecedeDuration : 0f
             } : null;
             Add(data, body, flight, water);
         }

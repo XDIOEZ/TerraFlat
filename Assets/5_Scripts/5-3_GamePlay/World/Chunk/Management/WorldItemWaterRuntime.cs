@@ -21,6 +21,9 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
     private float floatElapsed;
     private float floatTargetDepth;
     private float settledTickElapsed;
+    private float submergedElapsed;
+    private Transform submergedVisual;
+    private Vector3 originalVisualScale;
 
     public bool IsActive => waterItem != null && (isSinking || isFloating);
 
@@ -85,6 +88,12 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
         WorldItemWaterEntrySplashEffect.Play(targetItem.transform.position, 1f);
         resolvedSinkDuration = ResolveSinkDuration(ratio);
         sinkElapsed = 0f;
+        submergedElapsed = 0f;
+        if (targetItem.Sprite != null)
+        {
+            submergedVisual = targetItem.Sprite.transform;
+            originalVisualScale = submergedVisual.localScale;
+        }
         waterImmersionEffect.SetWaterState(0f, true);
         targetItem.itemData.Stack.CanBePickedUp = true;
         isSinking = true;
@@ -138,7 +147,12 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
             return;
         }
 
-        if (!GameNetwork.HasStateAuthority)
+        // 水线完全覆盖之后再缩小，避免把“刚入水”误做成立即消失。
+        submergedElapsed += deltaTime;
+        float recedeProgress = Mathf.Clamp01(submergedElapsed / SubmergedRecedeDuration);
+        if (submergedVisual != null)
+            submergedVisual.localScale = originalVisualScale * ResolveSubmergedScale(recedeProgress);
+        if (recedeProgress < 1f || !GameNetwork.HasStateAuthority)
             return;
 
         Item completedItem = waterItem;
@@ -251,6 +265,11 @@ public sealed class WorldItemWaterRuntime : MonoBehaviour, IItemPoolLifecycle
 
     private void ResetRuntimeState(bool resetVisual)
     {
+        // 回池、拾取和离水都恢复表现尺寸，禁止把缩小结果带入库存或下一次实例。
+        if (submergedVisual != null)
+            submergedVisual.localScale = originalVisualScale;
+        submergedVisual = null;
+        submergedElapsed = 0f;
         if (waterRenderEffects != null && waterItem != null)
             waterRenderEffects.UnregisterExternalRenderers(waterItem.transform);
 

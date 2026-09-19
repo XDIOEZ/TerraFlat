@@ -123,7 +123,8 @@ internal sealed partial class DroppedItemRuntime
         {
             if (body.WaterKind != 0)
             {
-                body.WaterKind = 0; body.WaterDepth = 0f; wetItems.Remove(id); simulation.SetWater(id, null);
+                body.WaterKind = 0; body.WaterDepth = 0f; body.SubmergedProgress = 0f;
+                wetItems.Remove(id); simulation.SetWater(id, null);
                 changed = true;
             }
             if (changed) { body.Pickable = 1; simulation.Set(body); UpdatePlacement(id); }
@@ -146,9 +147,10 @@ internal sealed partial class DroppedItemRuntime
             changed = true;
             float start = entering ? (kind == 1 ? Mathf.Max(FloatingEntryDepth, target) : 0f) : body.WaterDepth;
             float duration = kind == 1 ? FloatingRiseDuration : ResolveSinkDuration(ratio);
-            body.WaterKind = kind; body.WaterDepth = start;
+            body.WaterKind = kind; body.WaterDepth = start; body.SubmergedProgress = 0f;
             simulation.SetWater(id, new DroppedWaterTransition
-            { StartDepth = start, TargetDepth = target, Duration = duration });
+            { StartDepth = start, TargetDepth = target, Duration = duration,
+                RecedeDuration = kind == 2 ? SubmergedRecedeDuration : 0f });
             if (entering)
                 WorldItemWaterEntrySplashEffect.Play(new Vector3(body.Position.x, body.Position.y, 0f),
                     kind == 1 ? ResolveSplashIntensity(target) : 1f);

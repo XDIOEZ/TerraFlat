@@ -13,6 +13,7 @@ namespace FlatWorld.DroppedItems
         public float VisualHeight;
         public float Amount;
         public float WaterDepth;
+        public float SubmergedProgress; // 完全入水后的视觉远离进度，原始 Scale 保持不变。
         public byte WaterKind; // 0 陆地，1 漂浮，2 下沉。
         public byte Pickable;
     }
@@ -36,6 +37,7 @@ namespace FlatWorld.DroppedItems
         public float TargetDepth;
         public float Duration;
         public float Elapsed;
+        public float RecedeDuration; // 浸没后的缩小阶段；漂浮物为零。
     }
 
     /// <summary>运动系统交付给主线程的变化；只含稳定 ID，不把 Entity 地址写入存档。</summary>
