@@ -2682,3 +2682,16 @@ kbd {
     .modal-shell { padding: 8px; }
     .modal-panel { width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
 }
+.mechanics-card {
+    padding: 18px;
+    border: 1px solid var(--line, #d8d1c2);
+    border-radius: 8px;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+}
+.mechanics-card h3 { margin: 20px 0 8px; font-size: 1rem; }
+.mechanics-card h3:first-child { margin-top: 0; }
+.mechanics-card p { margin: 6px 0; }
+.mechanics-card small { display: block; opacity: .65; }
+.mechanics-card details { margin-top: 8px; }
+.mechanics-card pre { white-space: pre-wrap; font-size: .8rem; }

@@ -18,7 +18,7 @@
 
     const CATEGORY_ORDER = [
         "全部", "材料", "食物", "武器", "工具", "装备", "种子", "作物",
-        "资源节点", "建筑", "维度入口", "其他"
+        "资源节点", "建筑", "维度入口", "生物", "其他"
     ];
 
     const CATEGORY_HINTS = {
@@ -88,6 +88,9 @@
         moduleGlossary: { modules: {}, fields: {}, fieldHelp: {} },
         itemMetadata: { schemaVersion: 1, items: {} },
         entries: [],
+        actors: null,
+        recipes: [],
+        mechanicsContext: null,
         selectedId: null,
         spriteCache: new Map(),
         designDocs: [],
@@ -368,11 +371,13 @@
         els.reloadButton.disabled = true;
         try {
             state.spriteCache.clear();
-            const [manifest, lootRoot, moduleGlossary, itemMetadata] = await Promise.all([
+            const [manifest, lootRoot, moduleGlossary, itemMetadata, actors, recipes] = await Promise.all([
                 fetchJson(ITEM_MANIFEST_PATH),
                 fetchJson(LOOT_TABLE_PATH),
                 fetchJson(MODULE_GLOSSARY_PATH),
-                fetchJson(ITEM_METADATA_PATH)
+                fetchJson(ITEM_METADATA_PATH),
+                ItemMechanics.loadManifest(fetchJson, "../GameConfig/Actors/", "actor-manifest.json", "actors"),
+                ItemMechanics.loadManifest(fetchJson, "../GameConfig/Recipes/", "recipe-manifest.json", "recipes")
             ]);
             const packages = (manifest.packages || []).filter(pkg => pkg && pkg.enabled !== false);
             const packagePayloads = await Promise.all(packages.map(async pkg => ({
@@ -404,17 +409,20 @@
             state.sourceById = sourceById;
             state.packageById = packageById;
             state.packageHashes = packageHashes;
+            state.actors = actors;
+            state.recipes = Array.from(recipes.resolved.values());
             state.itemMetadata = itemMetadata && itemMetadata.schemaVersion === 1 && isPlainObject(itemMetadata.items)
                 ? itemMetadata
                 : { schemaVersion: 1, items: {} };
             state.resolvedById = resolveDefinitions(sourceById);
-            state.entries = Array.from(state.resolvedById.values()).map(final => buildEntry(final));
             state.lootTables = new Map((lootRoot.lootTables || [])
                 .filter(table => table && table.id)
                 .map(table => [String(table.id).toLowerCase(), table]));
             state.moduleGlossary = moduleGlossary && moduleGlossary.schemaVersion === 1
                 ? moduleGlossary
                 : { modules: {}, fields: {}, fieldHelp: {} };
+
+            rebuildEntries();
 
             renderFilters();
             updateSummary();
@@ -423,7 +431,7 @@
             restoreOrSelectFirst(preferredId);
             setStatus(
                 "ready",
-                `已载入 ${state.entries.length} 条 ItemDefinition 与 ${state.lootTables.size} 张战利品表；页面展示值已按 parent 继承规则解析。`
+                `已载入 ${state.entries.filter(entry => !entry.final.abstract && entry.kind === "item").length} 个物品、${state.entries.filter(entry => !entry.final.abstract && entry.kind === "actor").length} 个生物、${state.recipes.length} 个配方；机制按继承配置生成，生物只读。`
             );
         } catch (error) {
             console.error(error);
@@ -476,81 +484,14 @@
 
     // 完整模拟 ItemDefinitionCatalogLoader 的 parent 合并策略。
     function resolveDefinitions(sourceById) {
-        const resolved = new Map();
-        const resolving = new Set();
-
-        const resolveOne = key => {
-            if (resolved.has(key)) return resolved.get(key);
-            if (resolving.has(key)) throw new Error(`物品定义继承存在循环：${sourceById.get(key)?.id || key}`);
-            const source = sourceById.get(key);
-            if (!source) throw new Error(`找不到物品定义：${key}`);
-
-            resolving.add(key);
-            let result = {};
-            const parentId = String(source.parent || "").trim();
-            if (parentId) {
-                const parentKey = parentId.toLowerCase();
-                if (!sourceById.has(parentKey)) throw new Error(`物品 ${source.id} 找不到 parent：${parentId}`);
-                result = deepClone(resolveOne(parentKey));
-                delete result.gameName;
-                delete result.labelKey;
-                delete result.descriptionKey;
-            }
-
-            removeReplacedModuleBodies(result, source);
-            result = mergeLikeJsonNet(result, source);
-            result.id = source.id;
-            result.abstract = source.abstract ?? false;
-            delete result.parent;
-
-            resolving.delete(key);
-            resolved.set(key, result);
-            return result;
-        };
-
-        for (const key of sourceById.keys()) resolveOne(key);
-        return resolved;
+        return ItemMechanics.resolveDefinitions(sourceById);
     }
 
-    // 子定义切换模块 Prefab 时，先丢弃父模块身体，匹配运行时代码行为。
-    function removeReplacedModuleBodies(inherited, source) {
-        if (!isPlainObject(inherited?.modules) || !isPlainObject(source?.modules)) return;
-        for (const [name, childBody] of Object.entries(source.modules)) {
-            const inheritedBody = inherited.modules[name];
-            if (!isPlainObject(childBody) || !isPlainObject(inheritedBody)) continue;
-            const inheritedPrefab = String(inheritedBody.prefab || "").trim();
-            const childPrefab = String(childBody.prefab || "").trim();
-            if (childPrefab && inheritedPrefab.toLowerCase() !== childPrefab.toLowerCase()) {
-                delete inherited.modules[name];
-            }
-        }
-    }
-
-    // 模拟 JObject.Merge：对象递归、数组替换、null 也覆盖父值。
-    function mergeLikeJsonNet(base, override) {
-        if (Array.isArray(override)) return deepClone(override);
-        if (!isPlainObject(override)) return deepClone(override);
-        const output = isPlainObject(base) ? deepClone(base) : {};
-        for (const [key, value] of Object.entries(override)) {
-            if (Array.isArray(value)) {
-                output[key] = deepClone(value);
-            } else if (isPlainObject(value) && isPlainObject(output[key])) {
-                output[key] = mergeLikeJsonNet(output[key], value);
-            } else if (isPlainObject(value)) {
-                output[key] = mergeLikeJsonNet({}, value);
-            } else {
-                output[key] = value;
-            }
-        }
-        return output;
-    }
-
-    // 构造用于筛选和显示的 Wiki 条目。
-    function buildEntry(final) {
+    function buildEntry(final, kind = "item") {
         const key = String(final.id || "").toLowerCase();
-        const source = state.sourceById.get(key) || {};
-        const pkg = state.packageById.get(key) || { id: "unknown", path: "" };
-        const category = inferCategory(pkg.id, final, source);
+        const source = (kind === "actor" ? state.actors.sources : state.sourceById).get(key) || {};
+        const pkg = (kind === "actor" ? state.actors.packages : state.packageById).get(key) || { id: "unknown", path: "" };
+        const category = kind === "actor" ? "生物" : inferCategory(pkg.id, final, source);
         const displayName = String(final.gameName || final.id || "<未命名>").trim();
         const searchBlob = [
             displayName,
@@ -563,15 +504,22 @@
         ].filter(Boolean).join(" ").toLowerCase();
 
         return {
-            id: final.id,
+            id: kind === "actor" ? `actor:${final.id}` : final.id,
+            kind,
             displayName,
             category,
             package: pkg,
             final,
             source,
             searchBlob,
-            modifiedAt: state.itemMetadata?.items?.[final.id] || null
+            modifiedAt: kind === "actor" ? null : state.itemMetadata?.items?.[final.id] || null
         };
+    }
+
+    function rebuildEntries() {
+        state.entries = Array.from(state.resolvedById.values()).map(final => buildEntry(final));
+        state.entries.push(...Array.from(state.actors.resolved.values()).map(final => buildEntry(final, "actor")));
+        state.mechanicsContext = ItemMechanics.createContext(state.entries, state.recipes, state.lootTables);
     }
 
     // 优先按 Manifest 分包和模块语义生成开发者友好分类。
@@ -604,7 +552,7 @@
 
         const packageOptions = [
             `<option value="全部">全部分包</option>`,
-            ...state.packages.map(pkg =>
+            ...Array.from(new Map(state.entries.map(entry => [entry.package.id, entry.package])).values()).map(pkg =>
                 `<option value="${escapeAttr(pkg.id)}">${escapeHtml(pkg.id)}</option>`
             )
         ].join("");
@@ -1646,6 +1594,9 @@
         });
         els.detailContent.appendChild(description);
 
+        appendSectionTitle("机制详解 · 基础配置");
+        els.detailContent.appendChild(ItemMechanics.render(entry, state.mechanicsContext, document));
+
         appendSectionTitle("基础数值");
         els.detailContent.appendChild(renderStatGrid(buildBaseStats(entry.final), entry));
 
@@ -1961,7 +1912,7 @@
             seen.add(id.toLowerCase());
             chain.unshift(id);
             const parentId = String(current.parent || "").trim();
-            current = parentId ? state.sourceById.get(parentId.toLowerCase()) : null;
+            current = parentId ? (entry.kind === "actor" ? state.actors.sources : state.sourceById).get(parentId.toLowerCase()) : null;
         }
 
         chain.forEach((id, index) => {
@@ -2194,6 +2145,7 @@
     // 把当前词条变成可直接双击编辑的字段；编辑完成后立即写回权威 JSON。
     function attachInlineEditor(host, entry, target) {
         if (!host || !entry || !target) return;
+        if (entry.kind === "actor" || state.publicReadOnly) return;
         host.classList.add("inline-editable");
         host.tabIndex = 0;
         host.setAttribute("role", "button");
@@ -2215,6 +2167,7 @@
 
     // 进入内联编辑态；Enter/失焦保存，Esc 取消，复杂 JSON 使用 Ctrl+Enter 保存。
     async function beginInlineEdit(host, entry, target) {
+        if (entry.kind === "actor") return;
         if (host.classList.contains("inline-editing")) return;
         hideModuleFieldTooltip();
         if (!state.writable) {
@@ -2385,6 +2338,7 @@
 
     // 发送受限 Item 写入请求；调用方决定保存后的界面行为。
     async function saveItemSourceRequest(entry, source) {
+        if (entry.kind !== "item") throw new Error("生物定义只读，不能通过 Item 接口保存。");
         const expectedHash = state.packageHashes.get(entry.package.id);
         if (!expectedHash) throw new Error("当前分包缺少文件指纹，请先重新读取 JSON。");
         const response = await fetch(ITEM_SAVE_API, {
@@ -2392,6 +2346,7 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 itemId: entry.id,
+                definitionKind: entry.kind,
                 packagePath: entry.package.path,
                 expectedHash,
                 source
@@ -2414,7 +2369,7 @@
             state.itemMetadata.items[entry.id] = modifiedAt;
         }
         state.resolvedById = resolveDefinitions(state.sourceById);
-        state.entries = Array.from(state.resolvedById.values()).map(final => buildEntry(final));
+        rebuildEntries();
         renderList();
         renderOverview();
         const refreshed = findItemEntry(entry.id);
@@ -2440,8 +2395,9 @@
     // 绘制源配置、最终配置和直接源 JSON 链接。
     function renderDeveloperPanels(entry) {
         const wrap = document.createElement("div");
-        const packagePath = `${ITEM_CONFIG_ROOT}${entry.package.path}`;
-        const projectPath = `Assets/StreamingAssets/GameConfig/Items/${entry.package.path}`;
+        const directory = entry.kind === "actor" ? "Actors" : "Items";
+        const packagePath = `../GameConfig/${directory}/${entry.package.path}`;
+        const projectPath = `Assets/StreamingAssets/GameConfig/${directory}/${entry.package.path}`;
 
         const sourcePanel = document.createElement("details");
         sourcePanel.className = "dev-panel";

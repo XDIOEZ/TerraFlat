@@ -39,6 +39,8 @@ SAVE_LOCK = threading.Lock()
 WIKI_URL_PATH = "/Assets/StreamingAssets/ItemWiki/"
 PUBLIC_WIKI_FILES = {
     "app.js",
+    "mechanics.js",
+    "mechanics-rules.js",
     "index.html",
     "item-metadata.json",
     "module-glossary.json",
@@ -328,6 +330,8 @@ def validate_all_items(roots_by_package: dict[str, dict[str, Any]], packages: li
 
 def save_item(payload: dict[str, Any]) -> dict[str, Any]:
     """校验并原子写回单个 Item 原始定义。"""
+    if payload.get("definitionKind", "item") != "item" or str(payload.get("itemId", "")).lower().startswith("actor:"):
+        raise WikiValidationError("生物定义只读，不能通过 Item 接口保存")
     item_id = str(payload.get("itemId") or "").strip()
     package_path = normalize_package_path(payload.get("packagePath") or "")
     expected_hash = str(payload.get("expectedHash") or "").strip().lower()
@@ -474,6 +478,22 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
             return True
         if lower == "assets/streamingassets/gameconfig/loottables/loot-tables.json":
             return True
+
+        for directory, manifest_name in (("Actors", "actor-manifest.json"), ("Recipes", "recipe-manifest.json")):
+            prefix = f"assets/streamingassets/gameconfig/{directory.lower()}/"
+            if lower.startswith(prefix):
+                config_root = PROJECT_ROOT / "Assets" / "StreamingAssets" / "GameConfig" / directory
+                if lower == prefix + manifest_name:
+                    return True
+                manifest = read_json(config_root / manifest_name)
+                for package in manifest.get("packages", []):
+                    if package.get("enabled", True) is False:
+                        continue
+                    relative = normalize_package_path(package.get("path", ""))
+                    target = (config_root / relative).resolve()
+                    if config_root.resolve() in target.parents and lower == prefix + relative.lower():
+                        return True
+                return False
 
         if lower.startswith("assets/"):
             if lower.endswith(PUBLIC_IMAGE_SUFFIXES):
