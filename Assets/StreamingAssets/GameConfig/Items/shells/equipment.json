@@ -89,7 +89,11 @@
               {
                 "DefenseBonusIncrease": 10.0,
                 "Name": "[Chestplate_Iron]增加10点防御",
-                "$concreteType": "EquipmentInstance_Defense"
+                "$concreteType": "EquipmentInstance_Defense",
+                "CoveredParts": [
+                  "Chest",
+                  "Abdomen"
+                ]
               }
             ],
             "$transform": {
@@ -208,7 +212,11 @@
               {
                 "DefenseBonusIncrease": 5.0,
                 "Name": "[Chestplate_Iron]增加10点防御",
-                "$concreteType": "EquipmentInstance_Defense"
+                "$concreteType": "EquipmentInstance_Defense",
+                "CoveredParts": [
+                  "Chest",
+                  "Abdomen"
+                ]
               }
             ],
             "$transform": {
@@ -327,7 +335,11 @@
               {
                 "DefenseBonusIncrease": 4.0,
                 "Name": "[Chestplate_Iron]增加10点防御",
-                "$concreteType": "EquipmentInstance_Defense"
+                "$concreteType": "EquipmentInstance_Defense",
+                "CoveredParts": [
+                  "Chest",
+                  "Abdomen"
+                ]
               }
             ],
             "$transform": {

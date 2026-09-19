@@ -231,7 +231,7 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
         }
     }
 
-    public float AttackSpeedMultiplier => attackSpeedMultiplier; /// 当前攻击速度倍率（只读）
+    public float AttackSpeedMultiplier => attackSpeedMultiplier * BodyTraumaBuffEffects.GetAttackMultiplier(item?.Owner); /// 当前攻击速度倍率（只读）
     public float StaminaCostPerAttack => staminaCostPerAttack; /// 每段攻击的基础体力消耗（只读）
 
     public void SetAttackSpeedMultiplier(float multiplier) /// 设置攻击速度倍率（同时影响动画速度和攻击时序）
@@ -282,11 +282,11 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
         animator.Update(0f);
 
         float currentLength = animator.GetCurrentAnimatorStateInfo(0).length;
-        float scaledLength = currentLength / attackSpeedMultiplier;
+        float scaledLength = currentLength / AttackSpeedMultiplier;
         float window = comboWindowOverride > 0f
             ? Mathf.Max(comboWindowOverride, currentLength)
             : currentLength;
-        float scaledWindow = window / attackSpeedMultiplier;
+        float scaledWindow = window / AttackSpeedMultiplier;
 
         if (scaledWindow <= 0f)
         {
@@ -418,6 +418,6 @@ public class Mod_Weapon_AnimationAction : Module, IItemModuleDependencyBinder
             return;
         }
 
-        animator.speed = attackSpeedMultiplier;
+        animator.speed = AttackSpeedMultiplier;
     }
 }

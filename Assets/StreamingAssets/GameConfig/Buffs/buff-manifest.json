@@ -30,6 +30,16 @@
       "id": "attribute_modifiers",
       "path": "attribute_modifiers.json",
       "enabled": true
+    },
+    {
+      "id": "body_trauma",
+      "path": "body_trauma.json",
+      "enabled": true
+    },
+    {
+      "id": "body_recovery",
+      "path": "body_recovery.json",
+      "enabled": true
     }
   ]
 }

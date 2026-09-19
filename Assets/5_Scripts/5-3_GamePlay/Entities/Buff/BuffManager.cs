@@ -6,7 +6,7 @@ using UnityEngine;
 /// <summary>
 /// Buff 生命周期、叠加、持久化和角色消费事件的统一入口。
 /// </summary>
-public class BuffManager : Module
+public partial class BuffManager : Module
 {
     private const float TickInterval = 0.1f;
     private const string LegacyModuleId = "Buff模块";
@@ -58,7 +58,8 @@ public class BuffManager : Module
 
     public override void Load()
     {
-        buffReceiver ??= item;
+        ClearAllBuffs();
+        buffReceiver = item;
         if (ModData == null)
         {
             Debug.LogError("[BuffManager] ModData 为空，无法加载 Buff。", this);
@@ -102,7 +103,9 @@ public class BuffManager : Module
             return;
         }
 
-        var runtimes = new List<BuffInstance>(ActiveBuffs.Values);
+        var runtimes = new List<BuffInstance>();
+        foreach (BuffInstance runtime in ActiveBuffs.Values)
+            if (string.IsNullOrEmpty(runtime.SourceKey)) runtimes.Add(runtime);
         runtimes.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(
             left?.DefinitionId,
             right?.DefinitionId));
@@ -111,7 +114,14 @@ public class BuffManager : Module
 
     private void OnDestroy()
     {
+        Unload();
+    }
+
+    public override void Unload()
+    {
+        ClearAllBuffs();
         UnbindFoodEvents();
+        buffReceiver = null;
     }
 
     private void InitializeBuffs()

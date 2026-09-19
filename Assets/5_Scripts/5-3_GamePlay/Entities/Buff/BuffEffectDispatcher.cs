@@ -28,6 +28,11 @@ public static class BuffEffectDispatcher
 
     static BuffEffectDispatcher()
     {
+        Register(BodyTraumaBuffEffects.Move, BodyTraumaBuffEffects.Apply);
+        Register(BodyTraumaBuffEffects.Attack, BodyTraumaBuffEffects.Apply);
+        Register(BodyTraumaBuffEffects.Confusion, BodyTraumaBuffEffects.Apply);
+        Register(BodyTraumaBuffEffects.Blur, BodyTraumaBuffEffects.Apply);
+        Register(BodyTraumaBuffEffects.RestoreDurability, BodyTraumaBuffEffects.ApplyDurabilityRecovery);
         Register(BuffEffectTypeIds.MoveSpeedMultiplier, ApplyMoveSpeedMultiplier);
         Register(BuffEffectTypeIds.FoodConsumeSpeedMultiplier, ApplyFoodConsumeSpeedMultiplier);
         Register(BuffEffectTypeIds.WaterConsumeSpeedMultiplier, ApplyWaterConsumeSpeedMultiplier);

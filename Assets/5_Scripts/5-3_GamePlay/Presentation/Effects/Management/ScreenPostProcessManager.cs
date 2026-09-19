@@ -40,6 +40,9 @@ public sealed class ScreenPostProcessFrame
 {
     #region 当前帧数据
 
+    public float BlurStrength { get; private set; }
+    public void AddBlur(float strength) => BlurStrength = Mathf.Max(BlurStrength, Mathf.Clamp(strength, 0f, 4f));
+
     public float VignetteIntensity { get; private set; }
     public float VignetteSmoothness { get; private set; }
     public float VignettePulseAmount { get; private set; }
@@ -52,6 +55,7 @@ public sealed class ScreenPostProcessFrame
     /// <summary>清空上一帧的合成结果。</summary>
     public void Reset()
     {
+        BlurStrength = 0f;
         VignetteIntensity = 0f;
         VignetteSmoothness = 0.82f;
         VignettePulseAmount = 0f;
@@ -125,6 +129,7 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
             return;
 
         DontDestroyOnLoad(gameObject);
+        TraumaBlurRendererFeature.SetStrength(0f);
         LowHealthRedEdgeRendererFeature.SetState(Color.red, 0f, 0.82f);
     }
 
@@ -157,6 +162,7 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
     protected override void OnDestroy()
     {
         effects.Clear();
+        TraumaBlurRendererFeature.SetStrength(0f);
         LowHealthRedEdgeRendererFeature.SetState(Color.red, 0f, 0.82f);
         base.OnDestroy();
     }
@@ -201,6 +207,7 @@ public sealed class ScreenPostProcessManager : SingletonAutoMono<ScreenPostProce
     /// <summary>把本帧强度平滑后提交给 GPU Renderer Feature。</summary>
     private void ApplyFrame(ScreenPostProcessFrame nextFrame, float deltaTime)
     {
+        TraumaBlurRendererFeature.SetStrength(nextFrame.BlurStrength);
         float targetIntensity = Mathf.Clamp01(nextFrame.VignetteIntensity) * GetQualityIntensityScale();
         currentVignetteIntensity = Mathf.SmoothDamp(
             currentVignetteIntensity,

@@ -159,6 +159,20 @@ public static class BuffDefinitionFactory
         string context = $"Buff {buffId} effects[{index}]";
         switch (effect.TypeId)
         {
+            case BodyTraumaBuffEffects.RestoreDurability:
+                if (effect.Phase == BuffEffectPhase.Start || effect.Value <= 0f ||
+                    !Enum.TryParse(effect.TargetId, out BodyPartType recoveryPart) ||
+                    !Enum.IsDefined(typeof(BodyPartType), recoveryPart))
+                    throw new InvalidDataException($"{context} 部位恢复必须配置 tick/stop、正恢复量和有效 targetId");
+                effect.BodyPartTarget = recoveryPart;
+                break;
+            case BodyTraumaBuffEffects.Move:
+            case BodyTraumaBuffEffects.Attack:
+            case BodyTraumaBuffEffects.Confusion:
+            case BodyTraumaBuffEffects.Blur:
+                if (effect.Phase == BuffEffectPhase.Tick || effect.Value <= 0f)
+                    throw new InvalidDataException($"{context} 创伤效果仅支持 start/stop 与正数值");
+                break;
             case BuffEffectTypeIds.TemperatureWarming:
                 if (effect.Phase == BuffEffectPhase.Tick ||
                     (effect.Phase == BuffEffectPhase.Start &&

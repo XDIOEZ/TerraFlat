@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "buffs": [
+    { "id": "core:body_recovery.head", "displayName": "头部固定恢复", "description": "夹板在144秒内恢复10点头部耐久。", "durationSeconds": 144, "tickIntervalSeconds": 6, "stackMode": "ignore", "effects": [
+      { "phase": "tick", "typeId": "core:body_durability_restore", "targetId": "Head", "value": 0.4166666667 },
+      { "phase": "stop", "typeId": "core:body_durability_restore", "targetId": "Head", "value": 0.4166666667 }
+    ] },
+    { "id": "core:body_recovery.chest", "displayName": "胸部固定恢复", "description": "夹板在144秒内恢复10点胸部耐久。", "durationSeconds": 144, "tickIntervalSeconds": 6, "stackMode": "ignore", "effects": [
+      { "phase": "tick", "typeId": "core:body_durability_restore", "targetId": "Chest", "value": 0.4166666667 },
+      { "phase": "stop", "typeId": "core:body_durability_restore", "targetId": "Chest", "value": 0.4166666667 }
+    ] },
+    { "id": "core:body_recovery.abdomen", "displayName": "腹部固定恢复", "description": "夹板在144秒内恢复10点腹部耐久。", "durationSeconds": 144, "tickIntervalSeconds": 6, "stackMode": "ignore", "effects": [
+      { "phase": "tick", "typeId": "core:body_durability_restore", "targetId": "Abdomen", "value": 0.4166666667 },
+      { "phase": "stop", "typeId": "core:body_durability_restore", "targetId": "Abdomen", "value": 0.4166666667 }
+    ] },
+    { "id": "core:body_recovery.pelvis", "displayName": "骨盆固定恢复", "description": "夹板在144秒内恢复10点骨盆耐久。", "durationSeconds": 144, "tickIntervalSeconds": 6, "stackMode": "ignore", "effects": [
+      { "phase": "tick", "typeId": "core:body_durability_restore", "targetId": "Pelvis", "value": 0.4166666667 },
+      { "phase": "stop", "typeId": "core:body_durability_restore", "targetId": "Pelvis", "value": 0.4166666667 }
+    ] },
+    { "id": "core:body_recovery.lefthand", "displayName": "左手固定恢复", "description": "夹板在144秒内恢复10点左手耐久。", "durationSeconds": 144, "tickIntervalSeconds": 6, "stackMode": "ignore", "effects": [
+      { "phase": "tick", "typeId": "core:body_durability_restore", "targetId": "LeftHand", "value": 0.4166666667 },
+      { "phase": "stop", "typeId": "core:body_durability_restore", "targetId": "LeftHand", "value": 0.4166666667 }
+    ] },
+    { "id": "core:body_recovery.righthand", "displayName": "右手固定恢复", "description": "夹板在144秒内恢复10点右手耐久。", "durationSeconds": 144, "tickIntervalSeconds": 6, "stackMode": "ignore", "effects": [
+      { "phase": "tick", "typeId": "core:body_durability_restore", "targetId": "RightHand", "value": 0.4166666667 },
+      { "phase": "stop", "typeId": "core:body_durability_restore", "targetId": "RightHand", "value": 0.4166666667 }
+    ] },
+    { "id": "core:body_recovery.leftleg", "displayName": "左腿固定恢复", "description": "夹板在144秒内恢复10点左腿耐久。", "durationSeconds": 144, "tickIntervalSeconds": 6, "stackMode": "ignore", "effects": [
+      { "phase": "tick", "typeId": "core:body_durability_restore", "targetId": "LeftLeg", "value": 0.4166666667 },
+      { "phase": "stop", "typeId": "core:body_durability_restore", "targetId": "LeftLeg", "value": 0.4166666667 }
+    ] },
+    { "id": "core:body_recovery.rightleg", "displayName": "右腿固定恢复", "description": "夹板在144秒内恢复10点右腿耐久。", "durationSeconds": 144, "tickIntervalSeconds": 6, "stackMode": "ignore", "effects": [
+      { "phase": "tick", "typeId": "core:body_durability_restore", "targetId": "RightLeg", "value": 0.4166666667 },
+      { "phase": "stop", "typeId": "core:body_durability_restore", "targetId": "RightLeg", "value": 0.4166666667 }
+    ] }
+  ]
+}

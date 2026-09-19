@@ -93,18 +93,119 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   item: {fileID: 0}
   modData:
-    Name: 
+    Name: health
     ID: "\u751F\u547D\u503C\u7CFB\u7EDF\u6A21\u5757"
     isRunning: 1
     Type: 0
-    BitData: 
+    BitData: '{"Hp":100.0,"MaxHp":100.0,"UseBodyPartHealth":true,"TwoPartHitChance":0.25,"BodyPartDataVersion":2,"BodyParts":[{"Part":0,"Hp":20.0,"MaxHp":20.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.5,"DepletionBuffIds":["core:concussion"],"AreaRatio":0.08,"InjuryProbability":1.0},{"Part":1,"Hp":50.0,"MaxHp":50.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":[],"AreaRatio":0.22,"InjuryProbability":1.0},{"Part":2,"Hp":30.0,"MaxHp":30.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":[],"AreaRatio":0.16,"InjuryProbability":1.0},{"Part":3,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:arm_fracture"],"AreaRatio":0.09,"InjuryProbability":1.0},{"Part":4,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:arm_fracture"],"AreaRatio":0.09,"InjuryProbability":1.0},{"Part":5,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":[],"AreaRatio":0.1,"InjuryProbability":1.0},{"Part":6,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:leg_fracture"],"AreaRatio":0.13,"InjuryProbability":1.0},{"Part":7,"Hp":25.0,"MaxHp":25.0,"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"DamageMultiplier":1.0,"DepletionBuffIds":["core:leg_fracture"],"AreaRatio":0.13,"InjuryProbability":1.0}],"DefenseValues":{"Cutting":0.0,"Piercing":0.0,"Chopping":0.0,"Blunt":0.0,"TotalDefense":0.0},"AttackersUIDs":[],"DamageInterval":0.1,"DestroyDelay":0.0,"LootTable":[]}'
   Data:
     Hp: 100
     MaxHp: 100
-    UseBodyPartHealth: 0
+    UseBodyPartHealth: 1
     TwoPartHitChance: 0.25
-    BodyPartDataVersion: 0
-    BodyParts: []
+    BodyPartDataVersion: 2
+    BodyParts:
+    - Part: 0
+      Hp: 20
+      MaxHp: 20
+      DefenseValues:
+        Cutting: 0
+        Piercing: 0
+        Chopping: 0
+        Blunt: 0
+      DamageMultiplier: 1.5
+      DepletionBuffIds:
+      - core:concussion
+      AreaRatio: 0.08
+      InjuryProbability: 1
+    - Part: 1
+      Hp: 50
+      MaxHp: 50
+      DefenseValues:
+        Cutting: 0
+        Piercing: 0
+        Chopping: 0
+        Blunt: 0
+      DamageMultiplier: 1
+      DepletionBuffIds: []
+      AreaRatio: 0.22
+      InjuryProbability: 1
+    - Part: 2
+      Hp: 30
+      MaxHp: 30
+      DefenseValues:
+        Cutting: 0
+        Piercing: 0
+        Chopping: 0
+        Blunt: 0
+      DamageMultiplier: 1
+      DepletionBuffIds: []
+      AreaRatio: 0.16
+      InjuryProbability: 1
+    - Part: 3
+      Hp: 25
+      MaxHp: 25
+      DefenseValues:
+        Cutting: 0
+        Piercing: 0
+        Chopping: 0
+        Blunt: 0
+      DamageMultiplier: 1
+      DepletionBuffIds:
+      - core:arm_fracture
+      AreaRatio: 0.09
+      InjuryProbability: 1
+    - Part: 4
+      Hp: 25
+      MaxHp: 25
+      DefenseValues:
+        Cutting: 0
+        Piercing: 0
+        Chopping: 0
+        Blunt: 0
+      DamageMultiplier: 1
+      DepletionBuffIds:
+      - core:arm_fracture
+      AreaRatio: 0.09
+      InjuryProbability: 1
+    - Part: 5
+      Hp: 25
+      MaxHp: 25
+      DefenseValues:
+        Cutting: 0
+        Piercing: 0
+        Chopping: 0
+        Blunt: 0
+      DamageMultiplier: 1
+      DepletionBuffIds: []
+      AreaRatio: 0.1
+      InjuryProbability: 1
+    - Part: 6
+      Hp: 25
+      MaxHp: 25
+      DefenseValues:
+        Cutting: 0
+        Piercing: 0
+        Chopping: 0
+        Blunt: 0
+      DamageMultiplier: 1
+      DepletionBuffIds:
+      - core:leg_fracture
+      AreaRatio: 0.13
+      InjuryProbability: 1
+    - Part: 7
+      Hp: 25
+      MaxHp: 25
+      DefenseValues:
+        Cutting: 0
+        Piercing: 0
+        Chopping: 0
+        Blunt: 0
+      DamageMultiplier: 1
+      DepletionBuffIds:
+      - core:leg_fracture
+      AreaRatio: 0.13
+      InjuryProbability: 1
     DefenseValues:
       Cutting: 0
       Piercing: 0

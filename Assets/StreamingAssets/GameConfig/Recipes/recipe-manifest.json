@@ -55,6 +55,11 @@
       "id": "crafting/ancient_stage",
       "path": "crafting/ancient_stage.json",
       "enabled": true
+    },
+    {
+      "id": "medical",
+      "path": "crafting/medical.json",
+      "enabled": true
     }
   ]
 }

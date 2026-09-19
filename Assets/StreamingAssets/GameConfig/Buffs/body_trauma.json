@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "buffs": [
+    {
+      "id": "core:concussion",
+      "displayName": "脑震荡",
+      "description": "头部创伤导致视野模糊、移动方向反转，144秒后自然恢复。",
+      "durationSeconds": 144,
+      "stackMode": "ignore",
+      "effects": [
+        {
+          "phase": "start",
+          "typeId": "core:trauma_confusion",
+          "value": 65
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:trauma_confusion",
+          "value": 65
+        },
+        {
+          "phase": "start",
+          "typeId": "core:trauma_blur",
+          "value": 2.5
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:trauma_blur",
+          "value": 2.5
+        }
+      ]
+    },
+    {
+      "id": "core:leg_fracture",
+      "displayName": "腿部骨折",
+      "description": "每条受伤腿的移动速度乘以 0.65。",
+      "durationSeconds": null,
+      "stackMode": "ignore",
+      "effects": [
+        {
+          "phase": "start",
+          "typeId": "core:trauma_move",
+          "value": 0.65
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:trauma_move",
+          "value": 0.65
+        }
+      ]
+    },
+    {
+      "id": "core:arm_fracture",
+      "displayName": "手部骨折/脱臼",
+      "description": "每条受伤手臂的攻击速度乘以 0.7。",
+      "durationSeconds": null,
+      "stackMode": "ignore",
+      "effects": [
+        {
+          "phase": "start",
+          "typeId": "core:trauma_attack",
+          "value": 0.7
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:trauma_attack",
+          "value": 0.7
+        }
+      ]
+    }
+  ]
+}

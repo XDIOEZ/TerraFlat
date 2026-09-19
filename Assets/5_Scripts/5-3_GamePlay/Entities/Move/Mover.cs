@@ -246,6 +246,7 @@ public partial class Mover : Module
         Vector2 input = inputController != null
             ? inputController.ReadMoveInput(moveAction)
             : moveAction.ReadValue<Vector2>();
+        input = BodyTraumaBuffEffects.TransformMoveInput(item, input, Time.time);
         bool isCurrentlyMoving = input.sqrMagnitude > InputMoveThresholdSqr;
 
         if (isCurrentlyMoving)
@@ -339,7 +340,9 @@ public partial class Mover : Module
         UpdateMovementState();
     }
 
-    /// <summary>按二维输入幅度驱动玩家移动；满幅达到当前最大速度，轻推时按比例降速。</summary>
+    [Min(0f)] public float waterCurrentPushSpeed = 0.18f;
+
+    /// <summary>按二维输入幅度驱动玩家移动；水流是额外的表层漂移，不计作主动奔跑或体力消耗。</summary>
     public void MoveByInput(Vector2 input, float deltaTime)
     {
         if (rb == null)
@@ -352,8 +355,19 @@ public partial class Mover : Module
         Vector2 targetVelocity = clampedInput.sqrMagnitude > InputMoveThresholdSqr
             ? clampedInput * Speed.Value
             : Vector2.zero;
+        targetVelocity += ResolveWaterCurrentVelocity();
         rb.velocity = CalculateSmoothedVelocity(targetVelocity, deltaTime);
         UpdateMovementState();
+    }
+
+    /// <summary>统一读取有效地表流向：河流顺流、海洋随表层风场，平台和静水不会推动玩家。</summary>
+    public Vector2 ResolveWaterCurrentVelocity()
+    {
+        if (item is not Player || rb == null || waterCurrentPushSpeed <= 0f ||
+            ChunkMgr.ExistingInstance == null ||
+            !ChunkMgr.ExistingInstance.TryGetRuntimeWaterCurrent(rb.position, out RuntimeWaterCurrentSample current))
+            return Vector2.zero;
+        return current.Direction * (waterCurrentPushSpeed * Mathf.Clamp01(current.Flow));
     }
 
     /// <summary>将实际速度按当前移动表面的响应平滑到目标速度。</summary>

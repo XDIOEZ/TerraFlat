@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Splint",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "夹板",
+      "description": "右键选择身体部位，固定3秒后立即恢复10点耐久，随后144秒再恢复10点。同一部位不能叠加，不恢复生命值。",
+      "weight": 0.3,
+      "volume": 0.45,
+      "amount": 1,
+      "durability": 1,
+      "maxDurability": 1,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+      },
+      "modules": {
+        "treatment": {
+          "prefab": "Module_BodyPartTreatment",
+          "id": "Mod_BodyPartTreatment",
+          "enabled": true,
+          "data": {},
+          "parameters": {
+            "treatableParts": ["Head", "Chest", "Abdomen", "Pelvis", "LeftLeg", "RightLeg", "LeftHand", "RightHand"],
+            "durabilityRestored": 10,
+            "channelDurationSeconds": 3,
+            "recoveryBuffPrefix": "core:body_recovery."
+          }
+        }
+      }
+    },
+    {
+      "id": "Bandage_Plant",
+      "parent": "BasicItem_Base",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "植物绷带",
+      "description": "包扎头部或躯干，恢复10点部位耐久，不恢复生命值。拿在手上使用。",
+      "weight": 0.05,
+      "volume": 0.1,
+      "amount": 1,
+      "durability": 1,
+      "maxDurability": 1,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+      },
+      "modules": {
+        "treatment": {
+          "prefab": "Module_BodyPartTreatment",
+          "id": "Mod_BodyPartTreatment",
+          "enabled": true,
+          "data": {},
+          "parameters": {
+            "treatableParts": ["Head", "Chest", "Abdomen", "Pelvis"],
+            "durabilityRestored": 10
+          }
+        }
+      }
+    }
+  ]
+}

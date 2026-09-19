@@ -14,7 +14,7 @@ using Random = UnityEngine.Random;
 /// 受伤反馈在数值提交后执行；死亡每次生命只结算一次，掉落异常不能中断实体生命周期。
 /// </summary>
 [RequireComponent(typeof(BoxCollider2D))]
-public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependencyBinder
+public partial class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependencyBinder
 {
     private readonly List<IIncomingDamageRule> incomingDamageRules = new(); // 已装配的受击规则。
 
@@ -26,7 +26,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
             if (module is IIncomingDamageRule rule)
                 incomingDamageRules.Add(rule);
     }
-    private const int CurrentBodyPartDataVersion = 1;
+    private const int CurrentBodyPartDataVersion = 2;
     // 玩家每恢复 1 点生命值消耗 1 点蛋白质。
     private const float PlayerHealingProteinCostPerHp = 1f;
 
@@ -40,20 +40,23 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
 
     public float MaxHp
     {
-        get => UsesBodyPartHealth ? GetBodyPartMaxHpTotal() : Data.MaxHp;
+        get => Data.MaxHp;
         set => SetOverallMaxHp(value);
     }
 
     public float Hp
     {
-        get => UsesBodyPartHealth ? GetBodyPartHpTotal() : Data.Hp;
+        get => Data.Hp;
         set
         {
             float previousHp = Hp;
             SetOverallHp(value);
             // 显式恢复生命开始新的生命周期；普通 Heal 不允许复活。
             if (previousHp <= 0f && Hp > 0f)
+            {
+                ResetBodyPartDurability();
                 ResetDeathResolution();
+            }
         }
     }
 
@@ -291,6 +294,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
     public override void Load()
     {
         CombatPhysicsChannels.AssignDamageReceiver(this);
+        ClearBodyPartPenalties();
         ClearHitSlowdown();
         damageTakenMultiplier = 1f;
         modData.ReadData(ref Data);
@@ -415,6 +419,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
 
     public override void ModUpdate(float deltaTime)
     {
+        ReconcileBodyPartPenalties();
         UpdateHitSlowdown(deltaTime);
 
         // 抖动只属于受击视觉，血条继续跟随稳定的物品根节点。
@@ -536,6 +541,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
     public override void Unload()
     {
         incomingDamageRules.Clear();
+        ClearBodyPartPenalties();
+        bodyArmorSources.Clear();
         ClearHitSlowdown();
         if (_deathCoroutine != null)
         {
@@ -560,7 +567,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
     [Button]
     public override void Save()
     {
-        SynchronizeOverallHealthFromBodyParts();
         modData.WriteData(Data);
         item.itemData.ModuleDataDic[_Data.Name] = modData;
     }
@@ -568,7 +574,17 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
     /// <summary>先校验阵营及可组合受击规则，再统一结算伤害、耐久与死亡。</summary>
     public virtual float Hurt(IDamageSender damageSender)
     {
-        if (_resolvingDamage || _deathHandled || Hp <= 0 || item == null || damageSender == null) return -1;
+        BodyPartType? preferred = null;
+        if (UsesBodyPartHealth && damageSender is IPreferredBodyPartDamageSource source &&
+            TryGetBodyPart(source.PreferredBodyPart, out _))
+            preferred = source.PreferredBodyPart;
+        return Hurt(damageSender, preferred);
+    }
+
+    /// <summary>定向部位入口；null 使用随机部位，仍通过阵营、受击规则及统一结算。</summary>
+    public virtual float Hurt(IDamageSender damageSender, BodyPartType? targetPart)
+    {
+        if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0 || item == null || damageSender == null) return -1;
         if (!FactionRelationService.CanAttack(damageSender.attacker, item)) return -1;
         var context = GameplayCombatBridge.Context(damageSender, new FlatWorld.Combat.CombatClock {
             Tick = (ulong)Time.frameCount, Time = Time.timeAsDouble, DeltaTime = Time.deltaTime });
@@ -584,13 +600,16 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
             ruleMultiplier *= multiplier;
         }
 
-        return HurtContext(context, ruleMultiplier, damageSender);
+        return HurtContext(context, ruleMultiplier, damageSender, targetPart);
     }
 
     /// <summary>数据后端的正式入口；使用真实来源身份与模拟时钟，不伪造 Item 或 IDamageSender。</summary>
-    public virtual float Hurt(in FlatWorld.Combat.CombatDamageContext context)
+    public virtual float Hurt(in FlatWorld.Combat.CombatDamageContext context) => Hurt(context, null);
+
+    /// <summary>共享上下文的定向部位入口。</summary>
+    public virtual float Hurt(in FlatWorld.Combat.CombatDamageContext context, BodyPartType? targetPart)
     {
-        if (_resolvingDamage || _deathHandled || Hp <= 0f || item == null || !context.Attack.Source.IsValid) return -1f;
+        if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0f || item == null || !context.Attack.Source.IsValid) return -1f;
         var target = GameplayCombatBridge.Identity(item);
         if (context.Attack.Source == target || context.Attack.Source.World != target.World || context.Attack.Source.Dimension != target.Dimension ||
             FactionRelationService.GetRelation(context.Faction.ToString(), FactionRelationService.GetFactionId(item)) != FactionRelation.Hostile) return -1f;
@@ -603,7 +622,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
             if (multiplier <= 0f) return -1f;
             rules *= multiplier;
         }
-        float result = HurtContext(context, rules);
+        float result = HurtContext(context, rules, targetPart: targetPart);
         if (result >= 0f && Hp > 0f && context.OnHitBuffs.Length > 0)
         {
             BuffManager buffManager = item.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
@@ -615,15 +634,19 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
     }
 
     /// <summary>新旧攻击共享间隔、四类数值、难度、归因和原有生命提交/反馈链。</summary>
-    private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null)
+    private float HurtContext(in FlatWorld.Combat.CombatDamageContext context, float rules, IDamageSender legacySender = null, BodyPartType? targetPart = null)
     {
         if (!Unity.Mathematics.math.all(Unity.Mathematics.math.isfinite(context.Damage)) ||
             !Unity.Mathematics.math.isfinite(context.Clock.Time)) throw new ArgumentException("伤害上下文必须包含有限数值和模拟时间。");
         if (context.Clock.Time - lastDamageTime < Data.DamageInterval) return -1f;
         lastDamageTime = context.Clock.Time;
         float difficulty = GameplayCombatBridge.Difficulty().Resolve(context.SourceIsPlayer != 0, GameDifficultyService.IsPlayer(item));
-        var values = FlatWorld.Combat.CombatRules.Resolve(context.Damage, GameplayCombatBridge.Values(Defense), difficulty,
-            Mathf.Max(0f, damageTakenMultiplier) * rules);
+        List<BodyPartDamageInfo> preparedHits = null;
+        var values = UsesBodyPartHealth && context.IsTrueDamage == 0
+            ? ResolveBodyPartAttack(context.Damage, difficulty, Mathf.Max(0f, damageTakenMultiplier) * rules, targetPart, out preparedHits)
+            : FlatWorld.Combat.CombatRules.Resolve(context.Damage,
+                context.IsTrueDamage != 0 ? Unity.Mathematics.float4.zero : GameplayCombatBridge.Values(Defense), difficulty,
+                Mathf.Max(0f, damageTakenMultiplier) * rules);
         float damage = Unity.Mathematics.math.csum(values);
         if (damage > 0f || Random.value <= 0.1f)
         {
@@ -634,8 +657,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
                 if (Data.AttackersUIDs.Count > 3) Data.AttackersUIDs.RemoveAt(0);
             }
         }
-        return ResolveDamage(damage, legacySender, true, difficulty > 0f ? (damage > 0f ? 1f : 0.5f) : 0f,
-            GameplayCombatBridge.LegacyValues(values), context);
+        return ResolveDamage(damage, legacySender, difficulty > 0f ? (damage > 0f ? 1f : 0.5f) : 0f,
+            GameplayCombatBridge.LegacyValues(values), context, preparedHits);
     }
 
     #region 统一伤害结算
@@ -644,10 +667,10 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
     private float ResolveDamage(
         float damage,
         IDamageSender sender,
-        bool randomBodyParts,
         float durabilityDamage,
         CombatDamage resolvedDamageValues = null,
-        FlatWorld.Combat.CombatDamageContext? context = null)
+        FlatWorld.Combat.CombatDamageContext? context = null,
+        List<BodyPartDamageInfo> preparedHits = null)
     {
         if (float.IsNaN(damage) || float.IsInfinity(damage) || damage < 0f)
             throw new ArgumentOutOfRangeException(nameof(damage), "伤害必须是有限非负数。");
@@ -665,18 +688,11 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         {
             if (damage > 0f)
             {
-                List<BodyPartDamageInfo> bodyPartHits = null;
-                if (UsesBodyPartHealth)
-                {
-                    if (randomBodyParts)
-                        ApplyRandomBodyPartDamage(damage, out bodyPartHits);
-                    else
-                        ApplyFullBodyDamage(damage, out bodyPartHits);
-                }
-                else
-                {
-                    SetOverallHp(hpBefore - damage);
-                }
+                SetOverallHp(hpBefore - damage);
+                List<BodyPartDamageInfo> bodyPartHits = preparedHits;
+                if (bodyPartHits != null)
+                    foreach (BodyPartDamageInfo hit in bodyPartHits)
+                        if (TryGetBodyPart(hit.Part, out BodyPartHealth part)) part.Hp = hit.HpAfter;
 
                 // 总血量与部位伤害都以实际扣除值结算，过量伤害不计入实际损失。
                 damageInfo.DamageValue = hpBefore - Hp;
@@ -816,12 +832,12 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
 
     public virtual float ForceHurt(float damage)
     {
-        if (_resolvingDamage || _deathHandled || Hp <= 0) return -1;
+        if (!CanMutateBodyState() || _resolvingDamage || _deathHandled || Hp <= 0) return -1;
         damage *= GameDifficultyService.ResolveEnvironmentalDamageMultiplier(item);
         damage *= Mathf.Max(0f, damageTakenMultiplier);
         if (damage <= 0f) return Hp;
 
-        ResolveDamage(damage, null, randomBodyParts: false, durabilityDamage: 0f);
+        ResolveDamage(damage, null, durabilityDamage: 0f);
         return Hp;
     }
 
@@ -829,6 +845,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
 
     public virtual float Heal(float healAmount, Item healer = null)
     {
+        if (!CanMutateBodyState()) return Hp;
         float oldHp = Hp;
         // 已经归零的实体不能通过普通回血重新复活；玩家复活由 Mod_PlayerDeathState 显式赋值处理。
         if (oldHp <= 0f)
@@ -859,10 +876,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
                 return Hp;
         }
 
-        if (UsesBodyPartHealth)
-            HealAllBodyParts(healAmount);
-        else
-            Hp = Mathf.Min(Hp + healAmount, MaxHp);
+        SetOverallHp(Mathf.Min(Hp + healAmount, MaxHp));
 
         float actualHeal = Mathf.Max(0f, Hp - oldHp);
         if (playerFood != null && actualHeal > 0f)
@@ -923,7 +937,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         Data.UseBodyPartHealth = true;
         Data.BodyPartDataVersion = CurrentBodyPartDataVersion;
         Data.BodyParts = CreateDefaultBodyParts(totalHp, totalMaxHp);
-        SynchronizeOverallHealthFromBodyParts();
     }
 
     public void SetBodyPartHealthEnabled(bool enabled)
@@ -934,8 +947,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         if (enabled && (Data.BodyParts == null || Data.BodyParts.Count == 0))
             Data.BodyParts = CreateDefaultBodyParts(Data.Hp, Data.MaxHp);
 
-        if (!enabled && UsesBodyPartHealth)
-            SynchronizeOverallHealthFromBodyParts();
 
         Data.UseBodyPartHealth = enabled;
         Data.BodyPartDataVersion = CurrentBodyPartDataVersion;
@@ -993,9 +1004,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         if (healAmount <= 0f || !TryGetBodyPart(part, out BodyPartHealth bodyPart))
             return 0f;
 
-        // 普通部位回血不复活已经耗尽的部位，避免死亡/残肢状态被被动系统反复抬回。
-        if (bodyPart.Hp <= 0f)
-            return 0f;
+        if (Hp <= 0f || !CanMutateBodyState()) return 0f;
+        ValidateBodyValue(healAmount, nameof(healAmount));
 
         float hpBefore = bodyPart.Hp;
         bodyPart.Hp = Mathf.Min(bodyPart.MaxHp, bodyPart.Hp + healAmount);
@@ -1003,7 +1013,6 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         if (appliedHeal <= 0f)
             return 0f;
 
-        SynchronizeOverallHealthFromBodyParts();
         DispatchBodyPartHealthChanged(bodyPart, hpBefore);
         DataUpdate?.Invoke();
         OnAction?.Invoke(Hp);
@@ -1026,6 +1035,17 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         if (Data.BodyPartDataVersion < CurrentBodyPartDataVersion)
         {
             Data.UseBodyPartHealth = Data.UseBodyPartHealth || ShouldUseBodyPartHealthByDefault();
+            // 旧档保留受损比例，部位生命转为耐久；绝不据此重新求和整体 Hp。
+            foreach (BodyPartHealth part in Data.BodyParts)
+            {
+                if (part == null) continue;
+                float ratio = part.MaxHp > 0f ? Mathf.Clamp01(part.Hp / part.MaxHp) : 1f;
+                part.MaxHp = GetDefaultDurability(part.Part);
+                part.Hp = part.MaxHp * ratio;
+                part.DamageMultiplier = part.Part == BodyPartType.Head ? 1.5f : 1f;
+                part.DepletionBuffIds = BodyPartPenaltyRegistry.GetDefaultBuffIds(part.Part);
+                part.DefenseValues ??= new CombatDefense();
+            }
             Data.BodyPartDataVersion = CurrentBodyPartDataVersion;
         }
 
@@ -1048,40 +1068,35 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
     /// <summary>静态内容编译与旧实例升级共用默认身体模板；返回独立部位列表。</summary>
     public static List<BodyPartHealth> CreateDefaultBodyParts(float totalHp, float totalMaxHp)
     {
-        totalMaxHp = Mathf.Max(0f, totalMaxHp);
-        float healthRatio = totalMaxHp <= 0f ? 0f : Mathf.Clamp01(totalHp / totalMaxHp);
         Array values = Enum.GetValues(typeof(BodyPartType));
         List<BodyPartHealth> result = new List<BodyPartHealth>(values.Length);
 
         foreach (BodyPartType part in values)
         {
-            float maxHp = totalMaxHp * GetDefaultHealthShare(part);
+            float maxHp = GetDefaultDurability(part);
             result.Add(new BodyPartHealth
             {
                 Part = part,
-                Hp = maxHp * healthRatio,
+                Hp = maxHp,
                 MaxHp = maxHp,
                 AreaRatio = GetDefaultAreaRatio(part),
-                InjuryProbability = 1f
+                InjuryProbability = 1f,
+                DamageMultiplier = part == BodyPartType.Head ? 1.5f : 1f,
+                DepletionBuffIds = BodyPartPenaltyRegistry.GetDefaultBuffIds(part)
             });
         }
 
         return result;
     }
 
-    private static float GetDefaultHealthShare(BodyPartType part)
+    private static float GetDefaultDurability(BodyPartType part)
     {
         switch (part)
         {
-            case BodyPartType.Head: return 0.10f;
-            case BodyPartType.Chest: return 0.25f;
-            case BodyPartType.Abdomen: return 0.15f;
-            case BodyPartType.LeftHand:
-            case BodyPartType.RightHand: return 0.075f;
-            case BodyPartType.Pelvis: return 0.10f;
-            case BodyPartType.LeftLeg:
-            case BodyPartType.RightLeg: return 0.125f;
-            default: return 0f;
+            case BodyPartType.Head: return 20f;
+            case BodyPartType.Chest: return 50f;
+            case BodyPartType.Abdomen: return 30f;
+            default: return 25f;
         }
     }
 
@@ -1101,185 +1116,21 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         }
     }
 
-    private float GetBodyPartHpTotal()
+    /// <summary>整体生命上限独立于部位耐久；提升上限不自动治疗。</summary>
+    public void SetOverallMaxHp(float value)
     {
-        float total = 0f;
-        if (Data?.BodyParts == null)
-            return total;
-
-        for (int i = 0; i < Data.BodyParts.Count; i++)
-        {
-            if (Data.BodyParts[i] != null)
-                total += Mathf.Max(0f, Data.BodyParts[i].Hp);
-        }
-
-        return total;
+        ValidateBodyValue(value, nameof(value));
+        if (!CanMutateBodyState()) return;
+        Data.MaxHp = value;
+        Data.Hp = Mathf.Clamp(Data.Hp, 0f, value);
+        NotifyBodyStateChanged();
     }
 
-    private float GetBodyPartMaxHpTotal()
+    private void SetOverallHp(float value)
     {
-        float total = 0f;
-        if (Data?.BodyParts == null)
-            return total;
-
-        for (int i = 0; i < Data.BodyParts.Count; i++)
-        {
-            if (Data.BodyParts[i] != null)
-                total += Mathf.Max(0f, Data.BodyParts[i].MaxHp);
-        }
-
-        return total;
-    }
-
-    private void SetOverallMaxHp(float value)
-    {
-        value = Mathf.Max(0f, value);
-        if (!UsesBodyPartHealth)
-        {
-            Data.MaxHp = value;
-            Data.Hp = Mathf.Clamp(Data.Hp, 0f, Data.MaxHp);
-            return;
-        }
-
-        float oldMaxHp = GetBodyPartMaxHpTotal();
-        if (oldMaxHp <= 0f)
-        {
-            Data.BodyParts = CreateDefaultBodyParts(0f, value);
-            SynchronizeOverallHealthFromBodyParts();
-            return;
-        }
-
-        float scale = value / oldMaxHp;
-        for (int i = 0; i < Data.BodyParts.Count; i++)
-        {
-            BodyPartHealth part = Data.BodyParts[i];
-            if (part == null)
-                continue;
-
-            part.MaxHp *= scale;
-            part.Hp = Mathf.Clamp(part.Hp, 0f, part.MaxHp);
-        }
-
-        SynchronizeOverallHealthFromBodyParts();
-    }
-
-    private void SetOverallHp(
-        float value,
-        bool preserveDepletedBodyParts = false)
-    {
-        if (!UsesBodyPartHealth)
-        {
-            Data.Hp = Mathf.Clamp(value, 0f, Data.MaxHp);
-            return;
-        }
-
-        float currentHp = GetBodyPartHpTotal();
-        float targetHp = Mathf.Clamp(value, 0f, GetBodyPartMaxHpTotal());
-        if (Mathf.Approximately(currentHp, targetHp))
-            return;
-
-        if (targetHp < currentHp && currentHp > 0f)
-        {
-            float ratio = targetHp / currentHp;
-            for (int i = 0; i < Data.BodyParts.Count; i++)
-            {
-                BodyPartHealth part = Data.BodyParts[i];
-                if (part != null)
-                    part.Hp *= ratio;
-            }
-        }
-        else
-        {
-            float missingHp = 0f;
-            for (int i = 0; i < Data.BodyParts.Count; i++)
-            {
-                BodyPartHealth part = Data.BodyParts[i];
-                if (part == null || (preserveDepletedBodyParts && part.Hp <= 0f))
-                    continue;
-
-                missingHp += Mathf.Max(0f, part.MaxHp - part.Hp);
-            }
-
-            float fillRatio = missingHp <= 0f
-                ? 0f
-                : Mathf.Clamp01((targetHp - currentHp) / missingHp);
-            for (int i = 0; i < Data.BodyParts.Count; i++)
-            {
-                BodyPartHealth part = Data.BodyParts[i];
-                if (part == null ||
-                    (preserveDepletedBodyParts && part.Hp <= 0f))
-                    continue;
-
-                part.Hp += (part.MaxHp - part.Hp) * fillRatio;
-            }
-        }
-
-        SynchronizeOverallHealthFromBodyParts();
-    }
-
-    /// <summary>仅结算随机命中的部位并记录快照，统一入口负责发布受伤事件。</summary>
-    private void ApplyRandomBodyPartDamage(float damage, out List<BodyPartDamageInfo> hits)
-    {
-        hits = new List<BodyPartDamageInfo>(2);
-        BodyPartHealth first = SelectRandomBodyPart(null);
-        if (first == null)
-            first = SelectFallbackLivingBodyPart(null);
-        if (first == null)
-            return;
-
-        bool useSecondPart = Random.value < Mathf.Clamp01(Data.TwoPartHitChance);
-        BodyPartHealth second = useSecondPart ? SelectRandomBodyPart(first) : null;
-        if (second == null && useSecondPart)
-            second = SelectFallbackLivingBodyPart(first);
-        int hitCount = second == null ? 1 : 2;
-        float damageShare = 1f / hitCount;
-        float damagePerPart = damage * damageShare;
-
-        ApplyDamageToBodyPart(first, damagePerPart, damageShare, hits);
-        if (second != null)
-            ApplyDamageToBodyPart(second, damagePerPart, damageShare, hits);
-
-        SynchronizeOverallHealthFromBodyParts();
-    }
-
-    /// <summary>按总量分摊环境伤害并记录部位快照，不在数值修改中途调用外部模块。</summary>
-    private void ApplyFullBodyDamage(float damage, out List<BodyPartDamageInfo> hits)
-    {
-        hits = new List<BodyPartDamageInfo>(Data.BodyParts.Count);
-        Dictionary<BodyPartType, BodyPartSnapshot> previous = CaptureBodyPartSnapshots();
-        float hpBefore = GetBodyPartHpTotal();
-        SetOverallHp(hpBefore - damage);
-        float appliedDamage = hpBefore - GetBodyPartHpTotal();
-
-        for (int i = 0; i < Data.BodyParts.Count; i++)
-        {
-            BodyPartHealth part = Data.BodyParts[i];
-            if (part == null || !previous.TryGetValue(part.Part, out BodyPartSnapshot oldState))
-                continue;
-
-            float partDamage = oldState.Hp - part.Hp;
-            if (partDamage <= 0.0001f)
-                continue;
-
-            BodyPartDamageInfo hit = new BodyPartDamageInfo
-            {
-                Part = part.Part,
-                DamageValue = partDamage,
-                DamageShare = appliedDamage <= 0f ? 0f : partDamage / appliedDamage,
-                HpBefore = oldState.Hp,
-                HpAfter = part.Hp,
-                MaxHp = part.MaxHp,
-                IsDepleted = part.Hp <= 0f
-            };
-            hits.Add(hit);
-        }
-    }
-
-    private void HealAllBodyParts(float healAmount)
-    {
-        Dictionary<BodyPartType, BodyPartSnapshot> previous = CaptureBodyPartSnapshots();
-        SetOverallHp(Hp + healAmount, preserveDepletedBodyParts: true);
-        DispatchNetworkBodyPartChanges(previous);
+        if (float.IsNaN(value) || float.IsInfinity(value)) throw new ArgumentOutOfRangeException(nameof(value));
+        Data.Hp = Mathf.Clamp(value, 0f, Data.MaxHp);
+        bodyPenaltiesDirty = true;
     }
 
     private BodyPartHealth SelectRandomBodyPart(BodyPartHealth excluded)
@@ -1289,7 +1140,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         for (int i = 0; i < Data.BodyParts.Count; i++)
         {
             BodyPartHealth part = Data.BodyParts[i];
-            if (part == null || part == excluded || part.Hp <= 0f || part.MaxHp <= 0f)
+            if (part == null || part == excluded || part.MaxHp <= 0f)
                 continue;
 
             float weight = Mathf.Max(0f, part.AreaRatio) * Mathf.Max(0f, part.InjuryProbability);
@@ -1315,53 +1166,9 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         return candidates[candidates.Count - 1];
     }
 
-    /// <summary>当剩余生命全部落在零权重部位时，仍选取一个存活部位，防止实体永久卡在残血。</summary>
-    private BodyPartHealth SelectFallbackLivingBodyPart(BodyPartHealth excluded)
-    {
-        BodyPartHealth fallback = null;
-        float highestHp = 0f;
-
-        for (int i = 0; i < Data.BodyParts.Count; i++)
-        {
-            BodyPartHealth candidate = Data.BodyParts[i];
-            if (candidate == null || candidate == excluded ||
-                candidate.Hp <= 0f || candidate.MaxHp <= 0f)
-            {
-                continue;
-            }
-
-            if (fallback == null || candidate.Hp > highestHp)
-            {
-                fallback = candidate;
-                highestHp = candidate.Hp;
-            }
-        }
-
-        return fallback;
-    }
-
-    private static void ApplyDamageToBodyPart(
-        BodyPartHealth part,
-        float damage,
-        float damageShare,
-        List<BodyPartDamageInfo> hits)
-    {
-        float hpBefore = part.Hp;
-        part.Hp = Mathf.Max(0f, part.Hp - damage);
-        hits.Add(new BodyPartDamageInfo
-        {
-            Part = part.Part,
-            DamageValue = hpBefore - part.Hp,
-            DamageShare = damageShare,
-            HpBefore = hpBefore,
-            HpAfter = part.Hp,
-            MaxHp = part.MaxHp,
-            IsDepleted = part.Hp <= 0f
-        });
-    }
-
     private void DispatchBodyPartDamaged(BodyPartDamageInfo hit)
     {
+        ApplyTimedBodyPartTrauma(hit);
         OnBodyPartDamaged?.Invoke(hit);
         if (TryGetBodyPart(hit.Part, out BodyPartHealth part))
             DispatchBodyPartHealthChanged(part, hit.HpBefore);
@@ -1369,6 +1176,8 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
 
     private void DispatchBodyPartHealthChanged(BodyPartHealth part, float hpBefore)
     {
+        bodyPenaltiesDirty = true;
+        ReconcileBodyPartPenalties();
         OnBodyPartHealthChanged?.Invoke(new BodyPartHealthChangeInfo
         {
             Receiver = this,
@@ -1443,18 +1252,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
         if (!requiresRepair && seen.Count == expectedCount)
             return;
 
-        float totalMaxHp = Mathf.Max(0f, Data.MaxHp);
-        float totalHp = Mathf.Clamp(Data.Hp, 0f, totalMaxHp);
-        Data.BodyParts = CreateDefaultBodyParts(totalHp, totalMaxHp);
-    }
-
-    private void SynchronizeOverallHealthFromBodyParts()
-    {
-        if (!UsesBodyPartHealth)
-            return;
-
-        Data.MaxHp = GetBodyPartMaxHpTotal();
-        Data.Hp = Mathf.Clamp(GetBodyPartHpTotal(), 0f, Data.MaxHp);
+        throw new InvalidOperationException("身体配置必须包含每种部位且不得重复；请修正静态内容配置。");
     }
 
     private readonly struct BodyPartSnapshot
@@ -1494,13 +1292,16 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
             part.Hp = Mathf.Clamp(part.Hp, 0f, part.MaxHp);
             part.AreaRatio = Mathf.Clamp01(part.AreaRatio);
             part.InjuryProbability = Mathf.Clamp01(part.InjuryProbability);
+            ValidateBodyValue(part.DamageMultiplier, nameof(part.DamageMultiplier));
+            part.DefenseValues ??= new CombatDefense();
+            part.DefenseValues.ClampNonNegative();
         }
 
-        SynchronizeOverallHealthFromBodyParts();
     }
 
     private void OnDamaged_ShowUiAndScheduleHide()
     {
+        if (!Application.isPlaying || !isActiveAndEnabled) return;
         _lastDamageUiTime = Time.time;
 
         if (!IsPanelVisible())
@@ -1756,7 +1557,7 @@ public class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleDependenc
     /// <summary>使用角色渲染模块播放闪红，并启动轻微震动；不再访问 Renderer.material。</summary>
     private void PlayHitVisualFeedback()
     {
-        if (item == null || item.Sprite == null)
+        if (!Application.isPlaying || !isActiveAndEnabled || item == null || item.Sprite == null)
             return;
 
         Hit_Flash(item.Sprite);

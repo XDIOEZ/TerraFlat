@@ -75,6 +75,11 @@
       "id": "ancient_stage",
       "path": "shells/ancient_stage.json",
       "enabled": true
+    },
+    {
+      "id": "medical",
+      "path": "shells/medical.json",
+      "enabled": true
     }
   ]
 }

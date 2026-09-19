@@ -15,6 +15,9 @@ public partial class BuffInstance
 {
     private const int MaxTicksPerUpdate = 64;
 
+    [MemoryPackIgnore]
+    public string SourceKey; // 派生状态来源，不写入 Buff 存档，由宿主状态重建。
+
     public string DefinitionId;
     public float RemainingDurationSeconds;
     public float TickElapsedSeconds;
