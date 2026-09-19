@@ -579,6 +579,7 @@ public class ItemPicker : Module
         int itemIdentity)
     {
         Vector3 initialScale = visualRoot.transform.localScale;
+        Quaternion initialRotation = visualRoot.transform.rotation;
         float duration = Mathf.Max(0.05f, pickupSuctionDuration);
         float elapsed = 0f;
 
@@ -596,6 +597,9 @@ public class ItemPicker : Module
             : Vector2.up;
         float curveSign = (itemIdentity & 1) == 0 ? 1f : -1f;
         Vector3 curveOffset = perpendicular * (pickupSuctionCurveOffset * curveSign);
+
+        // 首帧保持落地快照；后续旋转叠加在当前姿态上，不先摆正再吸入。
+        yield return null;
 
         while (elapsed < duration && visualRoot != null)
         {
@@ -616,7 +620,7 @@ public class ItemPicker : Module
             visualRoot.transform.localScale =
                 initialScale * Mathf.Max(0.02f, 1f - normalizedTime * normalizedTime);
             visualRoot.transform.rotation =
-                Quaternion.Euler(0f, 0f, pickupSuctionRotation * suctionTime * curveSign);
+                initialRotation * Quaternion.Euler(0f, 0f, pickupSuctionRotation * suctionTime * curveSign);
             yield return null;
         }
 
