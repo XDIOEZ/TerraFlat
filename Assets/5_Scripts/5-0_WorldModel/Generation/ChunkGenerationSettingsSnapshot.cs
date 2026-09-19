@@ -396,6 +396,22 @@ namespace FlatWorld.WorldModel
                 GetDouble(numbers, "cave.groundwater.minDepth", 0.25d));
             CaveGroundwaterMaxDepth = Math.Max(CaveGroundwaterMinDepth, Clamp01(
                 GetDouble(numbers, "cave.groundwater.maxDepth", 0.85d)));
+            CaveRiverEnabled = GetBool(numbers, "cave.river.enabled", false);
+            CaveRiverConnectionChance = Clamp01(
+                GetDouble(numbers, "cave.river.connectionChance", 0.3d));
+            CaveRiverHalfWidth = ScaleDistance(Positive(
+                    GetDouble(numbers, "cave.river.halfWidth", 0.72d), 0.72d),
+                WorldCoordinateDistanceScale, 0.35d, 4d);
+            CaveRiverMinDepth = Clamp01(
+                GetDouble(numbers, "cave.river.minDepth", 0.25d));
+            CaveRiverMaxDepth = Math.Max(CaveRiverMinDepth, Clamp01(
+                GetDouble(numbers, "cave.river.maxDepth", 0.65d)));
+            CaveDirtWallEnabled = GetBool(numbers, "cave.dirtWall.enabled", false);
+            CaveDirtWallTileId = GetInt(numbers, "cave.dirtWall.tileId", 0);
+            CaveDirtWallChance = Clamp01(
+                GetDouble(numbers, "cave.dirtWall.chance", 0.18d));
+            CaveDirtWallDecorationChance = Clamp01(
+                GetDouble(numbers, "cave.dirtWall.decorationChance", 0.28d));
             CaveVineEnabled = GetBool(numbers, "cave.vine.enabled", false);
             CaveVineWallChance = Clamp01(
                 GetDouble(numbers, "cave.vine.wallChance", 0.06d));
@@ -406,6 +422,10 @@ namespace FlatWorld.WorldModel
             CaveVineItemId = CaveVineEnabled
                 ? GetRequiredText(texts, "cave.vine.itemId")
                 : string.Empty;
+            CaveDirtWallVineItemId = GetText(texts, "cave.dirtWall.vineItemId",
+                CaveVineItemId);
+            CaveDirtWallWeedItemId = GetText(texts, "cave.dirtWall.weedItemId", string.Empty);
+            CaveDirtWallFlowerItemId = GetText(texts, "cave.dirtWall.flowerItemId", string.Empty);
             CavePortalEnabled = GetBool(numbers, "cave.portal.enabled", true);
             CavePortalChunkChance = Clamp01(
                 GetDouble(numbers, "cave.portal.chunkChance", 0d));
@@ -608,6 +628,20 @@ namespace FlatWorld.WorldModel
         public double CaveGroundwaterMaxRadiusRatio { get; }
         public double CaveGroundwaterMinDepth { get; }
         public double CaveGroundwaterMaxDepth { get; }
+        /// <summary>洞穴房间连接中生成地下河的概率、半宽与水深范围。</summary>
+        public bool CaveRiverEnabled { get; }
+        public double CaveRiverConnectionChance { get; }
+        public double CaveRiverHalfWidth { get; }
+        public double CaveRiverMinDepth { get; }
+        public double CaveRiverMaxDepth { get; }
+        /// <summary>地下河与地下湖岸边生成的天然泥土墙及其装饰。</summary>
+        public bool CaveDirtWallEnabled { get; }
+        public int CaveDirtWallTileId { get; }
+        public double CaveDirtWallChance { get; }
+        public double CaveDirtWallDecorationChance { get; }
+        public string CaveDirtWallVineItemId { get; }
+        public string CaveDirtWallWeedItemId { get; }
+        public string CaveDirtWallFlowerItemId { get; }
         /// <summary>洞壁藤蔓基础概率；临近地下水时使用湿润倍率。</summary>
         public bool CaveVineEnabled { get; }
         public double CaveVineWallChance { get; }

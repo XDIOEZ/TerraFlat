@@ -17,6 +17,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
     #region 字段
 
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
+    private const string LegacyNaturalPortalItemId = "CaveExit";
+    private const string NaturalSurfacePortalItemId = "NaturalMineEntrance";
 
     private readonly Dictionary<int, Item> spawnedItems = new();
     private readonly HashSet<Item> transientItems = new();
@@ -161,7 +163,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
             Item item = pair.Value;
             if (item == null || item.itemData == null || item.DestructionHandled)
                 continue;
-            // 天然传送门完全由确定性基线恢复，不能被一次临时销毁写进删除/状态差量。
+            // 天然传送门不保存运行态快照；真正被摧毁时仍由 OnItemDestroy 写入删除差量。
             if (generatedPortalGuids.Contains(pair.Key))
                 continue;
 
@@ -239,8 +241,9 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
         }
 
         RuntimeWorldAddress address = boundChunk.Address;
+        string runtimeItemId = ResolveRuntimeItemId(address, placement);
         // 地表植被保留纯生成点和删除差量，但由专用 Tilemap 绘制，不创建常驻 Item。
-        if (GameRes.ExistingInstance.TryGetItemDefinition(placement.ItemId, out RuntimeItemDefinition definition) &&
+        if (GameRes.ExistingInstance.TryGetItemDefinition(runtimeItemId, out RuntimeItemDefinition definition) &&
             definition.IsGroundCover)
             return;
         bool renewing = chunkManager.IsNaturalItemRemoved(address, placement.Guid);
@@ -298,7 +301,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
             else
             {
                 item = itemManager.InstantiateItemDeterministic(
-                    placement.ItemId,
+                    runtimeItemId,
                     placement.Guid,
                     position,
                     rotation,
@@ -315,7 +318,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
                 DimensionPortal portal = item.GetComponentInChildren<DimensionPortal>(true);
                 if (portal == null)
                     throw new InvalidOperationException(
-                        $"生成传送门物品缺少 DimensionPortal：{placement.ItemId}");
+                        $"生成传送门物品缺少 DimensionPortal：{runtimeItemId}");
                 // 显式绑定拥有者，切换维度时不再依赖父层级查找的时序。
                 portal.ConfigureGenerated(placement.TargetDimensionId, item);
                 if (item.itemData.Stack != null)
@@ -328,8 +331,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
                 initializer.InitializeNaturalResource(unchecked((uint)placement.Guid));
             item.Initialize_Env(environmentLayers,
                 new Vector2Int(placement.LocalX, placement.LocalY));
-            if (!placement.IsDimensionPortal)
-                item.OnItemDestroy += HandleNaturalItemDestroy;
+            item.OnItemDestroy += HandleNaturalItemDestroy;
             spawnedItems[placement.Guid] = item;
             if (renewing) chunkManager.CompleteNaturalRenewal(address, placement.Guid);
         }
@@ -341,6 +343,26 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
                 $"[ChunkNaturalItemRenderer] 自然物实例化失败：{placement.ItemId}，规则={placement.RuleId}，{exception.Message}",
                 this);
         }
+    }
+
+    /// <summary>
+    /// 旧世界的冻结生成快照会把地表天然入口保存成 CaveExit。
+    /// 只在“地表→洞穴”的自然传送门表现层迁移为可破坏入口，地下出口继续保留 CaveExit。
+    /// </summary>
+    private static string ResolveRuntimeItemId(RuntimeWorldAddress address, NaturalItemPlacement placement)
+    {
+        if (placement.IsDimensionPortal &&
+            string.Equals(address.DimensionId, global::WorldAddress.SurfaceDimensionId,
+                StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(placement.TargetDimensionId, global::WorldAddress.CaveDimensionId,
+                StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(placement.ItemId, LegacyNaturalPortalItemId,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return NaturalSurfacePortalItemId;
+        }
+
+        return placement.ItemId;
     }
 
     /// <summary>自然物被玩家采集或其它系统销毁时写入删除列表。</summary>

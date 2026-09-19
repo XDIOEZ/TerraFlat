@@ -40,6 +40,24 @@ namespace FlatWorld.WorldModel
             Precipitation >= minimumPrecipitation;
     }
 
+    /// <summary>单格地下河采样；方向始终保存为单位下游方向，Flow 供运行时水流强度使用。</summary>
+    internal readonly struct CaveRiverSample
+    {
+        public CaveRiverSample(double depth, double flowX, double flowY, double flow)
+        {
+            Depth = depth;
+            FlowX = flowX;
+            FlowY = flowY;
+            Flow = flow;
+        }
+
+        public double Depth { get; }
+        public double FlowX { get; }
+        public double FlowY { get; }
+        public double Flow { get; }
+        public bool IsRiver => Depth > 0d;
+    }
+
     /// <summary>
     /// 纯数据洞穴布局内核。
     /// 以冻结地表参数算出的群系交界作为主通道，并保留稀疏房间支路、入口安全区和洞壁矿脉；
@@ -294,6 +312,168 @@ namespace FlatWorld.WorldModel
             }
 
             return deepest;
+        }
+
+        /// <summary>
+        /// 在洞室连接通道中确定性抽取地下河。河道沿正式洞穴隧道中心线生成，
+        /// 因而不会切出独立于洞穴网络的水沟；下游方向优先取配对地表高度的下降方向。
+        /// </summary>
+        internal static CaveRiverSample SampleRiver(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
+        {
+            if (!settings.CaveRiverEnabled || settings.CaveRiverConnectionChance <= 0d ||
+                settings.CaveRiverHalfWidth <= 0d ||
+                IsInsideDefaultSpawnSafeArea(request, settings, worldX, worldY))
+            {
+                return default;
+            }
+
+            Int2 normalized = Normalize(request.Topology, new Int2(worldX, worldY));
+            Point point = new(normalized.X + 0.5d, normalized.Y + 0.5d);
+            if (IsInsidePortalNetwork(request, settings, point, GetPortalSeed(request, settings)))
+                return default;
+
+            Int2 region = GetRegionCoordinates(request.Topology, settings, point);
+            CaveRiverSample best = default;
+            for (int regionX = region.X - 1; regionX <= region.X + 1; regionX++)
+            for (int regionY = region.Y - 1; regionY <= region.Y + 1; regionY++)
+            {
+                TrySampleRiverConnection(request, settings, point, regionX, regionY,
+                    horizontal: true, ref best);
+                TrySampleRiverConnection(request, settings, point, regionX, regionY,
+                    horizontal: false, ref best);
+            }
+
+            return best;
+        }
+
+        /// <summary>开放的干地若紧邻地下河/湖，则按稳定概率转成天然泥土岸壁。</summary>
+        internal static bool ShouldPlaceDirtWall(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
+        {
+            if (!settings.CaveDirtWallEnabled || settings.CaveDirtWallTileId <= 0 ||
+                settings.CaveDirtWallChance <= 0d ||
+                IsInsideDefaultSpawnSafeArea(request, settings, worldX, worldY) ||
+                !IsOpenAtWorld(request, settings, worldX, worldY))
+            {
+                return false;
+            }
+
+            if (SampleRiver(request, settings, worldX, worldY).IsRiver ||
+                SampleGroundwaterDepth(request, settings, worldX, worldY) > 0d)
+            {
+                return false;
+            }
+
+            ReadOnlySpan<Int2> neighbours = stackalloc Int2[]
+            {
+                new(-1, 0), new(1, 0), new(0, -1), new(0, 1)
+            };
+            bool nearWater = false;
+            for (int index = 0; index < neighbours.Length; index++)
+            {
+                int neighbourX = worldX + neighbours[index].X;
+                int neighbourY = worldY + neighbours[index].Y;
+                if (SampleRiver(request, settings, neighbourX, neighbourY).IsRiver ||
+                    SampleGroundwaterDepth(request, settings, neighbourX, neighbourY) > 0d)
+                {
+                    nearWater = true;
+                    break;
+                }
+            }
+
+            if (!nearWater)
+                return false;
+
+            Int2 normalized = Normalize(request.Topology, new Int2(worldX, worldY));
+            uint state = Hash(request.WorldSeed, normalized.X, normalized.Y, 0x4d12c671);
+            return NextUnitDouble(ref state) < settings.CaveDirtWallChance;
+        }
+
+        private static void TrySampleRiverConnection(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, Point point, int regionX, int regionY,
+            bool horizontal, ref CaveRiverSample best)
+        {
+            if (!ShouldConnectSupplementalRooms(request, settings, regionX, regionY, horizontal))
+                return;
+
+            int riverSalt = horizontal ? 0x3973b17 : 0x6e624eb;
+            uint riverState = HashRoom(request.Topology, settings, request.WorldSeed,
+                regionX, regionY, riverSalt);
+            if (NextUnitDouble(ref riverState) >= settings.CaveRiverConnectionChance)
+                return;
+
+            Room startRoom = CreateRoom(request.Topology, settings, regionX, regionY,
+                request.WorldSeed);
+            Room endRoom = CreateRoom(request.Topology, settings,
+                regionX + (horizontal ? 1 : 0), regionY + (horizontal ? 0 : 1),
+                request.WorldSeed);
+            int tunnelSalt = horizontal ? 1101 : 1211;
+            uint tunnelState = HashRoom(request.Topology, settings, request.WorldSeed,
+                regionX, regionY, tunnelSalt);
+
+            Point start = startRoom.Center;
+            Point end = start + ShortestDelta(request.Topology, start, endRoom.Center);
+            Point localPoint = start + ShortestDelta(request.Topology, start, point);
+            Point direction = end - start;
+            double length = Length(direction);
+            if (length <= 0.001d)
+                return;
+
+            Point perpendicular = new(-direction.Y / length, direction.X / length);
+            double bendOffset = Math.Min(settings.CaveRegionSize * 0.28d,
+                5.5d * settings.WorldCoordinateDistanceScale);
+            Point bendA = start + direction * 0.34d + perpendicular *
+                Lerp(-bendOffset, bendOffset, NextUnitDouble(ref tunnelState));
+            Point bendB = start + direction * 0.67d + perpendicular *
+                Lerp(-bendOffset, bendOffset, NextUnitDouble(ref tunnelState));
+            double distance = Math.Min(DistanceToSegment(localPoint, start, bendA),
+                Math.Min(DistanceToSegment(localPoint, bendA, bendB),
+                    DistanceToSegment(localPoint, bendB, end)));
+            double shorelineNoise = SampleNoise01(request.Topology, point, request.WorldSeed,
+                0.17d / settings.WorldCoordinateDistanceScale, 0x6a09e667);
+            double halfWidth = settings.CaveRiverHalfWidth * Lerp(0.82d, 1.18d, shorelineNoise);
+            if (distance >= halfWidth)
+                return;
+
+            double centerStrength = Clamp01(1d - distance / Math.Max(0.001d, halfWidth));
+            double depth = Lerp(settings.CaveRiverMinDepth, settings.CaveRiverMaxDepth,
+                Math.Sqrt(centerStrength));
+            if (depth <= best.Depth)
+                return;
+
+            Point downstream = ResolveCaveRiverDirection(request, startRoom.Center,
+                endRoom.Center, riverState);
+            best = new CaveRiverSample(depth, downstream.X, downstream.Y,
+                Lerp(0.55d, 1.15d, centerStrength));
+        }
+
+        /// <summary>用冻结地表高度决定地下河下游；高度相同时再用稳定哈希打破平局。</summary>
+        private static Point ResolveCaveRiverDirection(ChunkGenerationRequest request,
+            Point start, Point end, uint tieState)
+        {
+            Point delta = ShortestDelta(request.Topology, start, end);
+            double length = Length(delta);
+            if (length <= 0.001d)
+                return new Point(0d, 0d);
+
+            CaveSurfaceInfluenceSample startSurface = SampleSurfaceInfluence(request,
+                (int)Math.Floor(start.X), (int)Math.Floor(start.Y));
+            CaveSurfaceInfluenceSample endSurface = SampleSurfaceInfluence(request,
+                (int)Math.Floor(end.X), (int)Math.Floor(end.Y));
+            bool reverse;
+            if (startSurface.HasHeightReference && endSurface.HasHeightReference &&
+                Math.Abs(startSurface.Height - endSurface.Height) > 0.000001d)
+            {
+                reverse = startSurface.Height < endSurface.Height;
+            }
+            else
+            {
+                reverse = (tieState & 1u) != 0u;
+            }
+
+            double sign = reverse ? -1d : 1d;
+            return new Point(delta.X / length * sign, delta.Y / length * sign);
         }
 
         /// <summary>在干燥洞壁边缘确定性生成藤蔓；地下水两格内提高概率。</summary>

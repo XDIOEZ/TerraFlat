@@ -822,6 +822,7 @@
       "sourcePrefab": "Assets/2_Prefabs/World/Buildings/MineEntrance.prefab",
       "gameName": "矿坑入口-建筑",
       "description": "安装后可通往地下矿洞，并在矿洞中生成对应出口。",
+      "lootTableId": "MineEntrance_Default",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,

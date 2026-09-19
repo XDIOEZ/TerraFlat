@@ -106,12 +106,19 @@ namespace FlatWorld.WorldModel
                     if (occupiedCells.Contains(localY * terrain.Width + localX))
                         continue;
 
+                    int worldX = request.Topology.NormalizeX(startX + localX);
+                    int worldY = request.Topology.NormalizeY(startY + localY);
                     TerrainCell cell = terrain.GetCell(localX, localY);
+                    if (settings.CaveDirtWallEnabled &&
+                        cell.BlockingTileId == settings.CaveDirtWallTileId)
+                    {
+                        TryAddDirtWallDecoration(request, settings, worldX, worldY,
+                            localX, localY, placements, claimedGuids);
+                        continue;
+                    }
                     if ((cell.Flags & TerrainCellFlags.Walkable) == 0)
                         continue;
 
-                    int worldX = request.Topology.NormalizeX(startX + localX);
-                    int worldY = request.Topology.NormalizeY(startY + localY);
                     if (CaveLayoutKernel.IsInsideDefaultSpawnSafeArea(
                             request, settings, worldX, worldY))
                     {
@@ -688,6 +695,57 @@ namespace FlatWorld.WorldModel
                 AddPlacement(placements, claimedGuids, placement);
                 occupiedCells.Add(cellKey);
             }
+        }
+
+        #endregion
+
+        #region 天然泥土墙装饰
+
+        /// <summary>泥土岸壁按稳定随机挂一份藤蔓、杂草或花朵；没有配置的候选会被跳过。</summary>
+        private static bool TryAddDirtWallDecoration(ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
+            int localX, int localY, List<NaturalItemPlacement> placements,
+            HashSet<int> claimedGuids)
+        {
+            if (settings.CaveDirtWallDecorationChance <= 0d)
+                return false;
+
+            uint state = CaveLayoutKernel.Hash(request.WorldSeed, worldX, worldY,
+                unchecked((int)0x73c4a51d));
+            if (CaveLayoutKernel.NextUnitDouble(ref state) >=
+                settings.CaveDirtWallDecorationChance)
+            {
+                return false;
+            }
+
+            string first = settings.CaveDirtWallVineItemId;
+            string second = settings.CaveDirtWallWeedItemId;
+            string third = settings.CaveDirtWallFlowerItemId;
+            int configuredCount = (string.IsNullOrWhiteSpace(first) ? 0 : 1) +
+                                  (string.IsNullOrWhiteSpace(second) ? 0 : 1) +
+                                  (string.IsNullOrWhiteSpace(third) ? 0 : 1);
+            if (configuredCount == 0)
+                return false;
+
+            int choice = Math.Min(configuredCount - 1,
+                (int)(CaveLayoutKernel.NextUnitDouble(ref state) * configuredCount));
+            string itemId = null;
+            if (!string.IsNullOrWhiteSpace(first) && choice-- == 0) itemId = first;
+            if (itemId == null && !string.IsNullOrWhiteSpace(second) && choice-- == 0)
+                itemId = second;
+            if (itemId == null && !string.IsNullOrWhiteSpace(third)) itemId = third;
+            if (string.IsNullOrWhiteSpace(itemId))
+                return false;
+
+            string ruleId = $"cave.dirtWall.decoration.{itemId}";
+            float offsetX = (float)Lerp(-0.16d, 0.16d,
+                CaveLayoutKernel.NextUnitDouble(ref state));
+            float offsetY = (float)Lerp(-0.12d, 0.12d,
+                CaveLayoutKernel.NextUnitDouble(ref state));
+            int guid = CaveLayoutKernel.CreatePlacementGuid(request, worldX, worldY, ruleId);
+            AddPlacement(placements, claimedGuids, new NaturalItemPlacement(guid, itemId,
+                localX, localY, offsetX, offsetY, ruleId));
+            return true;
         }
 
         #endregion

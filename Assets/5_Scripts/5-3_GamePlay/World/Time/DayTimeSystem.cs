@@ -42,6 +42,11 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
     private string appliedPresentationProfileId = string.Empty;
     private string appliedPresentationSceneName = string.Empty;
     private int appliedPresentationConfigVersion = -1;
+    private readonly List<Vector2> caveExitLightPositions = new();
+    private string cachedCaveExitLightWorldKey = string.Empty;
+    private float nextCaveExitLightRefreshTime;
+    private const float CaveExitAmbientFadeDistance = 100f;
+    private const float CaveExitAmbientRefreshInterval = 0.25f;
 
     #endregion
 
@@ -123,6 +128,9 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
         appliedPresentationProfileId = string.Empty;
         appliedPresentationSceneName = string.Empty;
         appliedPresentationConfigVersion = -1;
+        caveExitLightPositions.Clear();
+        cachedCaveExitLightWorldKey = string.Empty;
+        nextCaveExitLightRefreshTime = 0f;
     }
 
     private void Update()
@@ -367,9 +375,54 @@ private void TimeRun(string sceneName, float deltaTime)
             dimension.UseFixedLighting)
         {
             lighting = Mathf.Min(lighting, Mathf.Clamp01(dimension.FixedLighting));
+            if (dimension.GenerationMode == DimensionGenerationMode.Cave)
+                lighting *= ResolveCaveExitAmbientFactor(sceneName);
         }
 
         return lighting;
+    }
+
+    /// <summary>
+    /// 洞穴自然采光只来自仍然开放的出口：出口处保持现有洞穴环境光，随后按世界距离线性衰减，
+    /// 100 米及更深处环境光归零；火把等局部光仍由 LightLayerMgr 独立叠加。
+    /// </summary>
+    private float ResolveCaveExitAmbientFactor(string sceneName)
+    {
+        DimensionManager manager = DimensionManager.Instance;
+        if (manager == null || !manager.ActiveAddress.IsValid ||
+            manager.ActiveAddress.DimensionId != WorldAddress.CaveDimensionId ||
+            !string.Equals(manager.ActiveAddress.WorldKey, sceneName, StringComparison.Ordinal))
+        {
+            return 1f;
+        }
+
+        Transform player = ItemMgr.Instance?.UserPlayerTransform;
+        GameSaveData save = SaveDataMgr.Instance?.SaveData;
+        if (player == null || save == null)
+            return 1f;
+
+        if (!string.Equals(cachedCaveExitLightWorldKey, manager.ActiveAddress.WorldKey,
+                StringComparison.Ordinal) || Time.unscaledTime >= nextCaveExitLightRefreshTime)
+        {
+            caveExitLightPositions.Clear();
+            DimensionTravelProgressStore.CollectOpenCaveExitPositions(
+                save, manager.ActiveAddress, caveExitLightPositions);
+            cachedCaveExitLightWorldKey = manager.ActiveAddress.WorldKey;
+            nextCaveExitLightRefreshTime = Time.unscaledTime + CaveExitAmbientRefreshInterval;
+        }
+
+        if (caveExitLightPositions.Count == 0)
+            return 0f;
+
+        Vector2 position = player.position;
+        float nearest = float.PositiveInfinity;
+        for (int index = 0; index < caveExitLightPositions.Count; index++)
+        {
+            nearest = Mathf.Min(nearest,
+                WorldTopologyRuntime.Distance(position, caveExitLightPositions[index]));
+        }
+
+        return Mathf.Clamp01(1f - nearest / CaveExitAmbientFadeDistance);
     }
 
     private float GetMoonlightIntensity(TimeData timeData)

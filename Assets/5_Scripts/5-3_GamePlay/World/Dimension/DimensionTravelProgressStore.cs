@@ -13,7 +13,7 @@ public sealed class DimensionPortalAnchor
     public Vector3 CaveExitPosition;
 }
 
-public static class DimensionTravelProgressStore
+public static partial class DimensionTravelProgressStore
 {
     private const string NamespaceKey = "flatworld.dimensions";
     private const string LastPositionsKey = "lastPositions";
@@ -103,7 +103,23 @@ public static class DimensionTravelProgressStore
         string anchorId = BuildAnchorId(surfaceAddress.WorldKey, entranceGuid);
         JObject dimensionData = ItemSpecialDataJsonStore.ReadNamespace(playerData, NamespaceKey);
         JObject anchors = dimensionData[PortalAnchorsKey] as JObject ?? new JObject();
-        DimensionPortalAnchor anchor = ParseAnchor(anchorId, anchors[anchorId] as JObject) ?? new DimensionPortalAnchor
+        // 重建只更换地表实体 GUID，不更换这个格子已经绑定的矿洞出口。
+        DimensionPortalAnchor anchor = ParseAnchor(anchorId, anchors[anchorId] as JObject);
+        if (anchor == null)
+        {
+            foreach (JProperty property in anchors.Properties())
+            {
+                DimensionPortalAnchor candidate = ParseAnchor(property.Name, property.Value as JObject);
+                if (candidate == null || candidate.SurfaceWorldKey != surfaceAddress.WorldKey ||
+                    candidate.CaveWorldKey != caveAddress.WorldKey ||
+                    Vector2Int.FloorToInt(candidate.SurfaceEntrancePosition) != Vector2Int.FloorToInt(surfaceEntrance.transform.position))
+                    continue;
+                anchor = candidate;
+                anchorId = candidate.AnchorId;
+                break;
+            }
+        }
+        anchor ??= new DimensionPortalAnchor
         {
             AnchorId = anchorId,
             CaveExitGuid = GenerateStableGuid(caveAddress.WorldKey, entranceGuid, "CaveExit"),

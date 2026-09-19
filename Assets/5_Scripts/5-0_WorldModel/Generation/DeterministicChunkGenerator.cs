@@ -12,7 +12,7 @@ namespace FlatWorld.WorldModel
     public sealed class DeterministicChunkGenerator : IChunkPureGenerator
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 35;
+        public const int CurrentGenerationSignature = 36;
 
         private readonly LegacyHydrologyKernel legacyHydrologyKernel = new();
         private readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<GeneratedHydrologyMap>>
@@ -1647,38 +1647,50 @@ namespace FlatWorld.WorldModel
             worldY = request.Topology.NormalizeY(worldY);
             CaveSurfaceInfluenceSample surfaceInfluence =
                 CaveLayoutKernel.SampleSurfaceInfluence(request, worldX, worldY);
-            // 洞穴岩壁下保留石地；开放洞室可按世界区域形成跨 Chunk 连续的地下湖。
+            // 洞穴岩壁下保留石地；开放洞室可按世界区域形成跨 Chunk 连续的地下河与地下湖。
             bool open = CaveLayoutKernel.IsOpenAtWorld(
                 request, settings, worldX, worldY, surfaceInfluence);
+            CaveRiverSample caveRiver = open
+                ? CaveLayoutKernel.SampleRiver(request, settings, worldX, worldY)
+                : default;
             double groundwaterDepth = open
                 ? CaveLayoutKernel.SampleGroundwaterDepth(
                     request, settings, worldX, worldY, surfaceInfluence)
                 : 0d;
             bool groundwater = groundwaterDepth > 0d;
-            TerrainCellFlags flags = !open
+            bool river = caveRiver.IsRiver;
+            double waterDepth = Math.Max(groundwaterDepth, caveRiver.Depth);
+            bool water = waterDepth > 0d;
+            bool dirtWall = open && !water && CaveLayoutKernel.ShouldPlaceDirtWall(
+                request, settings, worldX, worldY);
+            TerrainCellFlags flags = !open || dirtWall
                 ? TerrainCellFlags.Blocking
-                : groundwater
+                : water
                     ? TerrainCellFlags.Water | TerrainCellFlags.Walkable
                     : TerrainCellFlags.Walkable;
-            int groundTileId = groundwater ? settings.FreshWaterTileId : settings.CaveFloorTileId;
-            short navigationCost = !open
+            int groundTileId = water ? settings.FreshWaterTileId : settings.CaveFloorTileId;
+            int blockingTileId = !open
+                ? settings.CaveWallTileId
+                : dirtWall ? settings.CaveDirtWallTileId : 0;
+            short navigationCost = !open || dirtWall
                 ? short.MaxValue
-                : groundwater ? settings.WaterNavigationCost : settings.DefaultNavigationCost;
+                : water ? settings.WaterNavigationCost : settings.DefaultNavigationCost;
             terrain.SetCell(x, y, new TerrainCell(groundTileId, 0,
-                open ? 0 : settings.CaveWallTileId, 100,
+                blockingTileId, 100,
                 navigationCost, flags));
             terrain.SetEnvironmentValue("height", x, y,
-                groundwater ? (float)(1d - groundwaterDepth) : open ? 1f : 0f);
+                water ? (float)(1d - waterDepth) : open ? 1f : 0f);
             terrain.SetEnvironmentValue("temperature", x, y, 0.38f);
             terrain.SetEnvironmentValue("temperature.celsius", x, y, 8f);
             terrain.SetEnvironmentValue("precipitation", x, y, 0f);
-            terrain.SetEnvironmentValue("moisture", x, y, groundwater ? 1f : 0.3f);
-            terrain.SetEnvironmentValue("riverDepth", x, y, (float)groundwaterDepth);
-            terrain.SetEnvironmentValue("riverFlow", x, y, 0f);
-            terrain.SetEnvironmentValue("riverFlowX", x, y, 0f);
-            terrain.SetEnvironmentValue("riverFlowY", x, y, 0f);
-            terrain.SetEnvironmentValue("riverKind", x, y, groundwater ? 2f : 0f);
+            terrain.SetEnvironmentValue("moisture", x, y, water ? 1f : dirtWall ? 0.72f : 0.3f);
+            terrain.SetEnvironmentValue("riverDepth", x, y, (float)waterDepth);
+            terrain.SetEnvironmentValue("riverFlow", x, y, river ? (float)caveRiver.Flow : 0f);
+            terrain.SetEnvironmentValue("riverFlowX", x, y, river ? (float)caveRiver.FlowX : 0f);
+            terrain.SetEnvironmentValue("riverFlowY", x, y, river ? (float)caveRiver.FlowY : 0f);
+            terrain.SetEnvironmentValue("riverKind", x, y, river ? 1f : groundwater ? 2f : 0f);
             terrain.SetEnvironmentValue("groundwater", x, y, groundwater ? 1f : 0f);
+            terrain.SetEnvironmentValue("caveDirtWall", x, y, dirtWall ? 1f : 0f);
             terrain.SetEnvironmentValue("grass", x, y, 0f);
             terrain.SetGrass(x, y, GrassEmpty);
         }

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Cave
   m_EditorClassIdentifier: 
   profileId: cave.default
-  generationSignature: 28
+  generationSignature: 30
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -59,6 +59,24 @@ MonoBehaviour:
     Value: 0.25
   - Id: cave.groundwater.maxDepth
     Value: 0.85
+  - Id: cave.river.enabled
+    Value: 1
+  - Id: cave.river.connectionChance
+    Value: 0.35
+  - Id: cave.river.halfWidth
+    Value: 0.72
+  - Id: cave.river.minDepth
+    Value: 0.25
+  - Id: cave.river.maxDepth
+    Value: 0.65
+  - Id: cave.dirtWall.enabled
+    Value: 1
+  - Id: cave.dirtWall.tileId
+    Value: 22
+  - Id: cave.dirtWall.chance
+    Value: 0.18
+  - Id: cave.dirtWall.decorationChance
+    Value: 0.28
   - Id: cave.vine.enabled
     Value: 1
   - Id: cave.vine.wallChance
@@ -94,6 +112,12 @@ MonoBehaviour:
     Value: TileBase_StoneWall
   - Id: cave.vine.itemId
     Value: TwineCrop
+  - Id: cave.dirtWall.vineItemId
+    Value: TwineCrop
+  - Id: cave.dirtWall.weedItemId
+    Value: Weed
+  - Id: cave.dirtWall.flowerItemId
+    Value: Flower
   - Id: cave.portal.itemId
     Value: CaveExit
   - Id: cave.portal.targetDimensionId
@@ -116,6 +140,8 @@ MonoBehaviour:
     Value: Tile_Wall_Iron
   - Id: tile.block.21
     Value: Tile_Wall_Bronze
+  - Id: tile.block.22
+    Value: Tile_DirtWall
   ecologyGlobalMultiplier: 1
   ecologyRules:
   - RuleId: cave.flora.mushroom
@@ -126,7 +152,7 @@ MonoBehaviour:
     DistributionMode: 1
     PatchSpacing: 12
     PatchRadius: 2.5
-    PatchChance: 0.08
+    PatchChance: 0.04
     BiomeMask: 0
     MinTemperature: 0
     MaxTemperature: 1

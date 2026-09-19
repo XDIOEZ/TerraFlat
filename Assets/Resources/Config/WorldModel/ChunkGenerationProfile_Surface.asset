@@ -255,7 +255,7 @@ MonoBehaviour:
   - Id: tile.block.12
     Value: TileBase_BuiltWoodWall
   - Id: cave.portal.itemId
-    Value: CaveExit
+    Value: NaturalMineEntrance
   - Id: cave.portal.targetDimensionId
     Value: cave
   - Id: cave.portal.shrub.itemId

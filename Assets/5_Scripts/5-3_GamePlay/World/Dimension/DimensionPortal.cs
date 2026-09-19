@@ -1,7 +1,8 @@
 using UnityEngine;
 
 /// <summary>维度入口功能模块；可由自然入口或通用建筑本体 Shell 复用。</summary>
-public sealed class DimensionPortal : Module, IInteractable, IItemPoolLifecycle
+public sealed partial class DimensionPortal : Module, IInteractable, IItemPoolLifecycle,
+    IBuildingPlacementCommitted, IBuildingFatalDamagePolicy
 {
     #region 模块数据
 
@@ -45,6 +46,7 @@ public sealed class DimensionPortal : Module, IInteractable, IItemPoolLifecycle
         EnsureModuleData();
         CachePortalContext();
         EnsureNavigationObstacle();
+        BindEntranceLifecycle();
     }
 
     /// <summary>维度入口当前没有额外持久化状态。</summary>
@@ -127,6 +129,7 @@ public sealed class DimensionPortal : Module, IInteractable, IItemPoolLifecycle
         portalItem = ownerItem;
         building = ownerItem?.GetComponentInChildren<Mod_Building>(true);
         EnsureNavigationObstacle();
+        OnBuildingPlacementCommitted();
     }
 
     public void OnInteractStart(Item playerItem)
@@ -135,13 +138,24 @@ public sealed class DimensionPortal : Module, IInteractable, IItemPoolLifecycle
             return;
 
         CachePortalContext();
+        RefreshBlockedState();
+        if (IsBlockedExit)
+        {
+            ItemActionFeedback.Show(player, "外面的矿洞被堵住了");
+            return;
+        }
         if (string.IsNullOrWhiteSpace(targetDimensionId))
         {
             Debug.LogWarning("[DimensionPortal] 未配置目标维度。", this);
             return;
         }
 
-        if (generatedWorldPortal)
+        WorldAddress sourceWorld = DimensionManager.Instance.ActiveAddress;
+        bool restoresNaturalEntrance = sourceWorld.IsSurface &&
+            targetDimensionId == WorldAddress.CaveDimensionId &&
+            DimensionTravelProgressStore.WasGeneratedSurfaceEntrance(SaveDataMgr.Instance?.SaveData,
+                sourceWorld, portalItem.transform.position);
+        if (generatedWorldPortal || restoresNaturalEntrance)
         {
             transitionRequested = DimensionManager.Instance.TryBeginGeneratedPortalTransition(
                 player, targetDimensionId, portalItem);
@@ -210,6 +224,7 @@ public sealed class DimensionPortal : Module, IInteractable, IItemPoolLifecycle
 
     private void ResetRuntimeState()
     {
+        UnbindEntranceLifecycle();
         portalItem = null;
         building = null;
         transitionRequested = false;
