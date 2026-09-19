@@ -70,6 +70,6 @@ MonoBehaviour:
   CrownCenter: {x: 0, y: 6.3}
   CrownSpread: {x: 0.6, y: 0.25}
   UseNormalizedCrownAnchor: 1
-  CrownAnchorUV: {x: 0.5, y: 0.625}
+  CrownAnchorUV: {x: 0.5, y: 0.74}
   CrownSpreadUV: {x: 0.048, y: 0.02}
   DropScatterRadius: 0.85

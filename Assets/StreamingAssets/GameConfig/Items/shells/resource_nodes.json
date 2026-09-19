@@ -26,7 +26,7 @@
       "id": "Beehive",
       "parent": "WorldResource_Base",
       "gameName": "蜂巢",
-      "description": "林间树旁的蜂巢。当前使用占位美术，尚未开放采蜜。",
+      "description": "林间树旁的野生蜂巢，呈金黄色蜡层并保留深色入口。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -35,11 +35,11 @@
       "stackable": false,
       "canBePickedUp": false,
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_404.png",
+        "spriteAddress": "Assets/6_Art/Generated/Environment/Beehive.png",
         "color": {
           "r": 1.0,
-          "g": 0.72,
-          "b": 0.3,
+          "g": 1.0,
+          "b": 1.0,
           "a": 1.0
         },
         "collider": {
@@ -62,7 +62,7 @@
       "id": "Flower",
       "parent": "WorldResource_Base",
       "gameName": "花朵",
-      "description": "用剪刀从草地花层采集的野花，可拾取并堆叠保存。当前使用简易占位美术。",
+      "description": "用剪刀从草地花层采集的几朵野花，可拾取并堆叠保存。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
@@ -675,7 +675,7 @@
             "FruitWidth": 0.28,
             "SmallScale": 0.2,
             "UseNormalizedCrownAnchor": true,
-            "CrownAnchorUV": { "x": 0.5, "y": 0.625 },
+            "CrownAnchorUV": { "x": 0.5, "y": 0.74 },
             "CrownSpreadUV": { "x": 0.048, "y": 0.02 },
             "DropScatterRadius": 0.85,
             "CrownCenter": {

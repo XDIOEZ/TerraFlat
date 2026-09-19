@@ -701,7 +701,7 @@ namespace FlatWorld.WorldModel
 
         #region 天然泥土墙装饰
 
-        /// <summary>泥土岸壁按稳定随机挂一份藤蔓、杂草或花朵；没有配置的候选会被跳过。</summary>
+        /// <summary>泥土岸壁按稳定随机挂一份藤蔓或花朵；没有配置的候选会被跳过。</summary>
         private static bool TryAddDirtWallDecoration(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
             int localX, int localY, List<NaturalItemPlacement> placements,
@@ -719,11 +719,9 @@ namespace FlatWorld.WorldModel
             }
 
             string first = settings.CaveDirtWallVineItemId;
-            string second = settings.CaveDirtWallWeedItemId;
-            string third = settings.CaveDirtWallFlowerItemId;
+            string second = settings.CaveDirtWallFlowerItemId;
             int configuredCount = (string.IsNullOrWhiteSpace(first) ? 0 : 1) +
-                                  (string.IsNullOrWhiteSpace(second) ? 0 : 1) +
-                                  (string.IsNullOrWhiteSpace(third) ? 0 : 1);
+                                  (string.IsNullOrWhiteSpace(second) ? 0 : 1);
             if (configuredCount == 0)
                 return false;
 
@@ -733,7 +731,6 @@ namespace FlatWorld.WorldModel
             if (!string.IsNullOrWhiteSpace(first) && choice-- == 0) itemId = first;
             if (itemId == null && !string.IsNullOrWhiteSpace(second) && choice-- == 0)
                 itemId = second;
-            if (itemId == null && !string.IsNullOrWhiteSpace(third)) itemId = third;
             if (string.IsNullOrWhiteSpace(itemId))
                 return false;
 

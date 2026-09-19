@@ -176,7 +176,6 @@
               "Wheat",
               "Seed",
               "Food",
-              "Weed",
               "Plant"
             ],
             "wanderAvoidHighPenalty": true,

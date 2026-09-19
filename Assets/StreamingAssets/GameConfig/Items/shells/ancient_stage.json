@@ -966,62 +966,6 @@
       }
     },
     {
-      "id": "Honey",
-      "parent": "Jam",
-      "gameName": "蜂蜜",
-      "description": "金黄色的黏稠蜂蜜，可以直接食用。把蜂蜜拖入已打开的液体容器，每个蜂蜜装入一份；不能与水混装。",
-      "weight": 0.14,
-      "volume": 0.1,
-      "stackable": true,
-      "modules": {
-        "food": {
-          "data": {
-            "FoodData": {
-              "nutrition": {
-                "Carbohydrates": 12.0,
-                "Max_Carbohydrates": 12.0,
-                "Fat": 0.0,
-                "Max_Fat": 0.0,
-                "Protein": 0.0,
-                "Max_Protein": 0.0,
-                "Water": 0.0,
-                "Max_Water": 0.0,
-                "Vitamins": 0.0,
-                "Max_Vitamins": 0.0
-              },
-              "Max_EatingProgress": 1.0
-            },
-            "MechanicStates": [
-              {
-                "StateKey": "food.spoilage",
-                "Data": {
-                  "EnableSpoilage": false,
-                  "SpoilageElapsedSeconds": 0.0,
-                  "SpoilageIntervalSeconds": 900.0,
-                  "SpoilageTargetItemID": "Humus"
-                }
-              },
-              {
-                "StateKey": "food.consumption",
-                "Data": {
-                  "EatingProgress": 0.0
-                }
-              }
-            ]
-          }
-        }
-      },
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/Honey/Honey_Icon.png",
-        "color": {
-          "r": 1.0,
-          "g": 1.0,
-          "b": 1.0,
-          "a": 1.0
-        }
-      }
-    },
-    {
       "id": "BottledJam",
       "parent": "Jam",
       "gameName": "瓶装果酱",

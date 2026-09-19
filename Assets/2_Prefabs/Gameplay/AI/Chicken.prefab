@@ -303,7 +303,6 @@ MonoBehaviour:
   - Wheat
   - Seed
   - Food
-  - Weed
   - Plant
   wanderAvoidHighPenalty: 1
   wanderDangerPenalty: 1200

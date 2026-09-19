@@ -16,7 +16,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Medical/Splint.png"
       },
       "modules": {
         "treatment": {
@@ -48,7 +48,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/Medical/Bandage_Plant.png"
       },
       "modules": {
         "treatment": {

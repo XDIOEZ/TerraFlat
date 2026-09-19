@@ -92,7 +92,7 @@ public static class GroundCoverAssetBuilder
             renderer.sharedMaterial = material;
             // 草层会在绑定时切换到 BRG 共用的 Default；不能复制 Prefab 内遗留的 Tilemap 层。
             renderer.sortingLayerName = "Default";
-            renderer.sortingOrder = 1;
+            renderer.sortingOrder = 0;
             renderer.mode = TilemapRenderer.Mode.Chunk;
 
             ChunkGroundCoverRenderer cover = root.GetComponent<ChunkGroundCoverRenderer>() ?? root.AddComponent<ChunkGroundCoverRenderer>();

@@ -34,7 +34,6 @@
             "enableGrassForaging": true,
             "edibleTags": [
               "Food",
-              "Weed",
               "Plant",
               "Grass"
             ]

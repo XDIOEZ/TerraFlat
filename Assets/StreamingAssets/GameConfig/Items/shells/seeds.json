@@ -46,7 +46,7 @@
       "canBePickedUp": true,
       "tags": ["Seed", "Food"],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Plants/GrassAndFlower.png[GrassAndFlower_16]",
+        "spriteAddress": "Assets/6_Art/Generated/AppleSeed/AppleSeed_Icon.png",
         "rendererLocalPosition": {
           "x": 0.0,
           "y": 0.0,

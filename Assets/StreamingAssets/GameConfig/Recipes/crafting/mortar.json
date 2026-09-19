@@ -7,7 +7,10 @@
       "recipeType": "crafting",
       "inputRule": "unordered",
       "allowMirror": false,
-      "inputs": [{ "slot": 0, "match": "exact_item", "itemId": "Ore_Stone", "amount": 4 }],
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "StoneSlab", "amount": 1 },
+        { "slot": 1, "match": "exact_item", "itemId": "Ore_Stone", "amount": 1 }
+      ],
       "outputs": [{ "itemId": "StoneMortar", "amount": 1 }],
       "actions": []
     },

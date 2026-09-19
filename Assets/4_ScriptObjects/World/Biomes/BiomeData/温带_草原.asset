@@ -42,10 +42,3 @@ MonoBehaviour:
         TemperatureRange: {x: 0, y: 1}
         PrecipitationRange: {x: 0, y: 1}
         HeightRange: {x: 0, y: 1}
-    - itemName: Weed
-      itemCount: 1
-      SpawnChance: 0.08
-      environmentConditionRange:
-        TemperatureRange: {x: 0, y: 1}
-        PrecipitationRange: {x: 0, y: 1}
-        HeightRange: {x: 0, y: 1}

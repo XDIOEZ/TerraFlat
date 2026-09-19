@@ -15,6 +15,8 @@ public partial class EcologyWorldSaveData
     #region 世界配置
 
     public const int CurrentDataVersion = 5;
+    private const string RetiredWeedItemId = "Weed";
+    private const string RetiredWeedRuleId = "surface.grassland.weed";
 
     [MemoryPackInclude] public int DataVersion;
     [MemoryPackInclude] public string ProfileId;
@@ -41,6 +43,26 @@ public partial class EcologyWorldSaveData
             throw new InvalidOperationException(
                 $"生态存档版本不兼容：存档={DataVersion}，当前={CurrentDataVersion}。请创建新世界。");
         }
+
+        MigrateRetiredNaturalItemRules();
+    }
+
+    /// <summary>
+    /// Weed 已从 Item 目录退休，普通草改由地表草层表现。
+    /// 旧世界冻结的生态规则仍会保存这条生成规则；读取时显式移除它，
+    /// 保留其它冻结规则与区块差量，避免旧档持续实例化已删除的 Item。
+    /// </summary>
+    private void MigrateRetiredNaturalItemRules()
+    {
+        if (DataVersion != CurrentDataVersion || Rules == null || Rules.Count == 0)
+            return;
+
+        int removed = Rules.RemoveAll(rule =>
+            rule != null &&
+            (string.Equals(rule.RuleId, RetiredWeedRuleId, StringComparison.Ordinal) ||
+             string.Equals(rule.ItemId, RetiredWeedItemId, StringComparison.Ordinal)));
+        if (removed > 0)
+            ConfigurationFingerprint = 0UL;
     }
 
     /// <summary>首次进入世界时冻结当前 Profile 的生态配置。</summary>

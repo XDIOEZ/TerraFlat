@@ -572,7 +572,7 @@
       "maxDurability": 1.0,
       "amount": 1.0,
       "weight": 2.0,
-      "volume": 2.5,
+      "volume": 4.0,
       "stackable": true,
       "canBePickedUp": true,
       "tags": [],
@@ -1965,7 +1965,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "47"
+        "47",
+        "Fruit"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/Item_Food_013.png",
@@ -2438,7 +2439,9 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "47"
+        "47",
+        "Fruit",
+        "Berry"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/Item_Food_Fruit.png[Item_Food_Fruit_54]",
@@ -3263,7 +3266,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "47"
+        "47",
+        "Fruit"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Food/椰肉.png",
@@ -5625,213 +5629,13 @@
       }
     },
     {
-      "id": "LargeStone",
+      "id": "StoneSlab",
       "parent": "BasicItem_Base",
-      "gameName": "大石头",
-      "description": "从较大的石矿或矿洞入口开采出的整块岩石。",
+      "gameName": "石板",
+      "description": "从较大的石矿或矿洞入口开采出的厚重石板。",
       "weight": 12.0, "volume": 7.0, "stackable": true,
       "tags": ["Stone", "Mineral"],
-      "visual": {"spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png"}
-    },
-    {
-      "id": "Weed",
-      "parent": "BasicItem_Base",
-      "gameName": "杂草",
-      "description": "随处可见的杂草。",
-      "durability": 1.0,
-      "maxDurability": 1.0,
-      "amount": 1.0,
-      "weight": 0.05,
-      "volume": 0.2,
-      "stackable": true,
-      "canBePickedUp": false,
-      "tags": [
-        "Plant"
-      ],
-      "visual": {
-        "spriteAddress": "Assets/6_Art/Items/Plants/GrassAndFlower.png[GrassAndFlower_0]",
-        "rendererLocalPosition": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "rendererLocalEulerAngles": {
-          "x": 0.0,
-          "y": 0.0,
-          "z": 0.0
-        },
-        "rendererLocalScale": {
-          "x": 1.0,
-          "y": 1.0,
-          "z": 1.0
-        },
-        "color": {
-          "r": 1.0,
-          "g": 1.0,
-          "b": 1.0,
-          "a": 1.0
-        },
-        "flipX": false,
-        "flipY": false,
-        "sortingLayerName": "Default",
-        "sortingOrder": 0,
-        "collider": {
-          "type": "BoxCollider2D",
-          "enabled": true,
-          "isTrigger": true,
-          "offset": {
-            "x": 0.0,
-            "y": 0.0
-          },
-          "path": "",
-          "size": {
-            "x": 0.5,
-            "y": 0.5
-          },
-          "edgeRadius": 0.0
-        }
-      },
-      "modules": {
-        "WeedAppearance": {
-          "prefab": "Mod_WeedAppearance",
-          "id": "WeedAppearance",
-          "enabled": true,
-          "data": {
-            "BitData": [],
-            "Type": 0
-          },
-          "parameters": {
-            "allowHorizontalFlip": true,
-            "scaleRange": {
-              "x": 0.9,
-              "y": 1.12
-            },
-            "$transform": {
-              "localPosition": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
-              }
-            }
-          }
-        },
-        "food": {
-          "prefab": "Module_Food",
-          "id": "食物模块",
-          "enabled": true,
-          "data": {
-            "FoodData": {
-              "nutrition": {
-                "Carbohydrates": 4.0,
-                "Max_Carbohydrates": 4.0,
-                "Fat": 0.0,
-                "Max_Fat": 0.0,
-                "Protein": 1.0,
-                "Max_Protein": 1.0,
-                "Water": 3.0,
-                "Max_Water": 3.0,
-                "Vitamins": 6.0,
-                "Max_Vitamins": 6.0
-              },
-              "Max_EatingProgress": 3.0,
-              "nutritionConsumeSpeed": {
-                "BaseValue": 0.0,
-                "BaseAdditive": 0.0,
-                "AdditiveModifier": 0.0,
-                "MultiplicativeModifier": 1.0,
-                "FinalAdditive": 0.0
-              },
-              "FeelGood": false,
-              "PanelPosition": {
-                "x": 0.0,
-                "y": 0.0
-              },
-              "WaterConsumeSpeedRate": 0.0,
-              "nutritionConsumeRate": 0.0
-            },
-            "MechanicStates": [],
-            "Type": 0
-          },
-          "parameters": {
-            "ConsumeAudio": {
-              "Enabled": true,
-              "CueId": "food.eat",
-              "VolumeScale": 0.78,
-              "PitchMin": 0.96,
-              "PitchMax": 1.04
-            },
-            "HealthState": {
-              "Enabled": true,
-              "HealSpeed": 1.0,
-              "HealInterval": 0.0,
-              "HealAmount": 0.0,
-              "WaterSelfHurt": 1.0,
-              "ProteinSelfHurt": 1.0,
-              "VitaminSelfHurt": 1.0,
-              "PlayerProteinHealThreshold": 0.0,
-              "HealNeedRatio": 0.6
-            },
-            "StaminaState": {
-              "StaminaRecoverSpeed": 1.0,
-              "StaminaConsumeSpeed": 0.5
-            },
-            "ConsumeKind": 0,
-            "ConsumptionEnabled": true,
-            "ConsumeCompleteReplacementItemID": "",
-            "$transform": {
-              "localPosition": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localEulerAngles": {
-                "x": 0.0,
-                "y": 0.0,
-                "z": 0.0
-              },
-              "localScale": {
-                "x": 1.0,
-                "y": 1.0,
-                "z": 1.0
-              }
-            }
-          }
-        }
-      },
-      "itemData": {
-        "code": "",
-        "transform": {
-          "position": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0
-          },
-          "rotation": {
-            "x": 0.0,
-            "y": 0.0,
-            "z": 0.0,
-            "w": 0.0
-          },
-          "scale": {
-            "x": 1.0,
-            "y": 1.0,
-            "z": 1.0
-          }
-        },
-        "ItemSpecialData": "",
-        "inHand": false,
-        "FactionId": ""
-      }
+      "visual": {"spriteAddress": "Assets/6_Art/Generated/Items/StoneSlab.png"}
     },
     {
       "id": "Resin",
@@ -5879,7 +5683,7 @@
       "canBePickedUp": true,
       "tags": [],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Items/resources_basic.png[resources_basic_41]",
+        "spriteAddress": "Assets/6_Art/Generated/Charcoal/Charcoal_Icon.png",
         "collider": {
           "type": "BoxCollider2D",
           "enabled": true,
@@ -5959,8 +5763,8 @@
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "weight": 7.5,
-      "volume": 10.0,
+      "weight": 2.8,
+      "volume": 12.0,
       "stackable": true,
       "canBePickedUp": true,
       "tags": [],

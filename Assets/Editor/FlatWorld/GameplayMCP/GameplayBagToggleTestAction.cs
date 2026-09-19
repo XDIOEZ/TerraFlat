@@ -114,7 +114,7 @@ namespace FlatWorld.GameplayMCP
                 {
                     ["count"] = ids.Count,
                     ["ids"] = new JArray(ids),
-                    ["largeStoneCount"] = ids.Count(id => string.Equals(id, "LargeStone", System.StringComparison.OrdinalIgnoreCase)),
+                    ["stoneSlabCount"] = ids.Count(id => string.Equals(id, "StoneSlab", System.StringComparison.OrdinalIgnoreCase)),
                     ["oreStoneCount"] = ids.Count(id => string.Equals(id, "Ore_Stone", System.StringComparison.OrdinalIgnoreCase))
                 }));
         }

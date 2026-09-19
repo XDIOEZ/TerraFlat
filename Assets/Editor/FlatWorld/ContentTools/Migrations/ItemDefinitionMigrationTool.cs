@@ -53,7 +53,7 @@ public static class ItemDefinitionMigrationTool
     {
         "Knife_Base", "Dagger_Stone", "Dagger_Copper", "Dagger_Bone", "Knife_Flint", "Torch_Base",
         "WorldResource_Base", "MineResource_Base", "AppleTree", "Tree_Coconut", "Mine_Coal", "Mine_Copper",
-        "Mine_Iron", "Mine_Stone", "Mine_Tin", "Iceberg", "Bush", "Weed",
+        "Mine_Iron", "Mine_Stone", "Mine_Tin", "Iceberg", "Bush",
         "Tree_Pine", "Resin", "Charcoal", "Glue", "DrilledLog", "WoodHammer",
         "Beehive", "Flower", "Scissors"
     };

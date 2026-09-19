@@ -841,14 +841,6 @@ MonoBehaviour:
     m_Localized: Seed Radish.
     m_Metadata:
       m_Items: []
-  - m_Id: 7973075325726720
-    m_Localized: Weed
-    m_Metadata:
-      m_Items: []
-  - m_Id: 7973075447361536
-    m_Localized: Weed.
-    m_Metadata:
-      m_Items: []
   - m_Id: 7973075480915968
     m_Localized: Blast Furnace-Building
     m_Metadata:

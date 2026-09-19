@@ -240,7 +240,7 @@
           "maxAmount": 4
         },
         {
-          "itemId": "LargeStone",
+          "itemId": "StoneSlab",
           "probability": 0.2,
           "minAmount": 1,
           "maxAmount": 1
@@ -251,7 +251,7 @@
       "id": "MineEntrance_Default",
       "entries": [
         {
-          "itemId": "LargeStone",
+          "itemId": "StoneSlab",
           "probability": 1.0,
           "minAmount": 1,
           "maxAmount": 3

@@ -4,10 +4,9 @@
     {
       "id": "core:honey",
       "displayName": "蜂蜜",
-      "description": "金黄色的黏稠蜂蜜，可从蜂蜜物品装入液体容器。",
+      "description": "金黄色的黏稠蜂蜜，只作为液体存在，可储存在液体容器中。",
       "category": "syrup",
       "visualState": "honey",
-      "sourceItemId": "Honey",
       "drinkable": false,
       "hydrationPerServing": 0.0
     },

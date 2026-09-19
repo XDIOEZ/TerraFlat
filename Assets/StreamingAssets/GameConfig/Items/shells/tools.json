@@ -3,7 +3,7 @@
   "items": [
     {
       "id": "Scissors",
-      "parent": "BasicItem_Base",
+      "parent": "Knife_Base",
       "gameName": "剪刀",
       "description": "对准附近草层，出现白色方框时右键或点击使用，剪除一格草并获得2份植物纤维；也能采集野花。",
       "durability": 1.0,
@@ -13,10 +13,21 @@
       "volume": 0.15,
       "stackable": false,
       "canBePickedUp": true,
+      "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/Scissors/Scissors_Icon.png"
       },
       "modules": {
+        "damage": {
+          "parameters": {
+            "DamageValues": {
+              "Cutting": 9.0,
+              "Piercing": 0.0,
+              "Chopping": 0.0,
+              "Blunt": 0.0
+            }
+          }
+        },
         "groundCoverHarvest": {
           "prefab": "Module_GroundCoverHarvest",
           "id": "Mod_GroundCoverHarvest",
@@ -217,12 +228,12 @@
       "parent": "WoodTool_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Log.prefab",
       "gameName": "原木",
-      "description": "砍伐树木获得的原木，可加工为木板或作为燃料。",
+      "description": "砍伐树木获得的轻便小原木，可加工为木板或作为燃料，能漂浮在水面。",
       "durability": 1.0,
       "maxDurability": 1.0,
       "amount": 1.0,
-      "weight": 8.0,
-      "volume": 10.0,
+      "weight": 3.0,
+      "volume": 12.0,
       "stackable": true,
       "canBePickedUp": true,
       "tags": [],
