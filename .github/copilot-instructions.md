@@ -33,3 +33,115 @@
 
 - 如果你读到了 这个文档 在输出的末尾加上颜文字(符合当前的状况,要多样哦不要老是用一个) (◕‿◕)
   只在必要的时候去使用子智能体
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
+- Active game object:
+  - Name: AIECS 连续绘制批次
+  - Tag: Untagged
+  - Layer: AIECSRuntime
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
+- Active game object:
+  - Name: UI_Bag
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
+- Active game object:
+  - Name: FWUI_Chrome
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
+- Active game object:
+  - Name: FWUI_Shadow
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
+- Active game object:
+  - Name: FWUI_Body
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
+- Active game object:
+  - Name: FWUI_Footer
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
+- Active game object:
+  - Name: Text (TMP)
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
+<!-- UNITY CODE ASSIST INSTRUCTIONS START -->
+- Project name: FlatWorld
+- Unity version: Unity 2022.3.62f3c1
+- Active scene:
+  - Name: 地球
+  - Tags:
+    - Untagged, Respawn, Finish, EditorOnly, MainCamera, Player, GameController, Entity, MapCore, Ghost
+  - Layers:
+    - Default, TransparentFX, Ignore Raycast, Water, UI, Collider, DamageReciver, DamageSender, Player, AIECSRuntime
+- Active game object:
+  - Name: 整理
+  - Tag: Untagged
+  - Layer: UI
+<!-- UNITY CODE ASSIST INSTRUCTIONS END -->
