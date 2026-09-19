@@ -10,7 +10,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 项目自有 Shader 资源统一放在 `Assets/9_Shaders/`：Shader 源文件放 `Shader/`，材质放 `Material/`，Volume 配置放 `Volume/`；必须依赖 `Resources.Load` 的 Shader/材质放在 `Assets/9_Shaders/Resources/` 下并保持原逻辑资源路径。不要再创建 `Assets/Shaders`、`Assets/Resources/Shaders` 或其它散落的项目自有 Shader 资源目录；第三方插件资源保持原目录不移动。
 - 运行时视觉：`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Management/VisualEffectManager.cs`、`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Runtime/`
 - 角色渲染：`Assets/5_Scripts/5-3_GamePlay/Presentation/{ActorRenderEffectController,ActorRenderColorEffect,WaterImmersionRenderEffect}.cs`
-- 实体脚底阴影：`Assets/5_Scripts/5-3_GamePlay/Presentation/ActorShadowManager.cs` 与 `Assets/2_Prefabs/Gameplay/Modules/Rendering/ActorShadow.prefab`；阴影使用场景级 `ActorShadows` 根节点和 `Shadow` Sorting Layer，不挂到实体或 `RuntimeEntities` 下。
+- 实体脚底阴影：`Assets/5_Scripts/5-3_GamePlay/Presentation/ActorShadowManager.cs` 与 `Assets/2_Prefabs/Gameplay/Modules/Rendering/ActorShadow.prefab`；旧对象阴影使用场景级 `ActorShadows` 根节点和 `Default/-1000` 排序，不挂到实体或 `RuntimeEntities` 下；ECS 使用下述独立批次，不注册逐实体对象。
 - 编辑器工具：`Assets/Editor/FlatWorld/`、`Assets/Editor/FlatWorld/ProjectTools/`；内容工坊入口为菜单 `FlatWorld/内容配置/内容工坊`
 - 调试：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/`、`Development/Diagnostics/{GameDebugManager,GameLogManager}.cs`
 
@@ -70,6 +70,9 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 ## AIECS 渲染原型
 
+- ECS 脚底阴影由 `AiecsShadowRenderer` 独立合批：每批最多 4096 只、固定 16 位索引、24 字节顶点，复用主体可见列表与 Display 水态，不创建逐实体 GameObject，也不额外查询地形。它和旧 `ActorShadowManager` 使用实际 `Default/-1000` 排序与 `GetShadowOpacity(scene)` 昼夜入口；主体批次数与阴影批次数必须分开统计。相机缺失、空帧、关闭阴影、释放世界都必须隐藏/回收旧批次。
+- 阴影脚底使用待机帧的固定非透明 `VisibleRect`，不能使用含大面积留白的完整帧矩形，也不能跟随攻击/奔跑逐帧伸缩。导出器从已解包像素记录边界；既有图集可用 `FlatWorld/AIECS/阴影 更新非透明边界` 只补目录数据，不重导图集、不改源贴图。`阴影 验证批次与生命周期` 的离线验证不等于真实世界、截图或设备性能验收。
+
 - 表现代码在独立 `AIECS/Presentation` 程序集，正式 `AiecsWorldRenderer` 只读模拟提交后的 Display，不复用 AiecsPrototypeMotion 作为行为。共享动画目录、图集及移动脚本的 GUID 必须保留；开发显示的有限 Y 行批次和血条便于手测，不等于旧世界精确透明混排、实际水深或 GPU 性能门槛通过。
 
 - `Entities/AIECS/` 通过原生 `Universal2D/NormalsRendering` 绘制排序后连续的精灵批次，禁止按物种/材质全局重排或在管线末尾补画并假设 Light2D 自动正确。当前 CPU 合并网格只用于兼容性原型；颜色批次统计不等于 GPU 实测 draw 数或两万同屏证据。运行时批次固定使用 `AIECSRuntime` Layer；GameView/构建相机保持正常渲染，Editor 的 SceneView 默认从 `Tools.visibleLayers` 排除该层，压测时避免同一批动态 Mesh 被 SceneView 重复绘制，需要观察时再通过 `Tools/AIECS/SceneView 显示运行时批次` 显式开启。
@@ -78,6 +81,10 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 ## 验证
 
+- 掉落物沉没包含入水和完全浸没后的远离两段。ECS 的 `SubmergedProgress` 只乘表现矩阵，原始 Scale/质量/体积不变；保存延续同一 WaterElapsed，拾取、离水和旧 Item 回池时都恢复原始视觉尺寸。销毁在远离阶段结束后，由权威层提交。
+- 花与草必须同属 Default/Order 0 地表排序域，靠地表材质队列与角色混排，不能把整张花 Tilemap 提到 Order 1；同时修改 `GroundCoverAssetBuilder`，避免重建恢复错误顺序。
+- 静止/深湖仍保留独立时钟的细波和微弱天空反光；湖泊物理流速为零不能再把所有光学强度乘成零。河口的反射波速度只属于 `Chunk-BRG-Water-Lit`，海洋仍单独使用风浪/潮汐时钟，保持真实日夜光照。
+
 - `DroppedItemPresentation` 按有限空间行、贴图和排序层增量合并掉落物真实 Sprite 三角形/UV；静止批次不重复上传，视野外释放显示节点。该兼容渲染桥不等于已验证与所有旧 Item 的精确透明混排或设备性能指标。
 - 掉落共享材质放在 `Assets/9_Shaders/Resources/DroppedItems`，复用原生 Universal2D/NormalsRendering Shader。批次水线使用规范世界坐标，循环镜像通过 `_WaterLineOffset` MPB 补偿；默认值必须为 0，不能改变原 AIECS 材质语义。
 
@@ -85,6 +92,8 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 触发属于战斗、天气、UI 或音频时加载对应领域 Skill。
 
 ## Skill 维护原则
+
+- 载具尾波只消费实际水面位移，使用限额世界空间粒子复用共享环形材质；每个发射点也需确认水面，不能由按键输入决定发射或把尾波挂在船体层级随船一起平移。停用、回池和换世界必须清理发射器。
 
 - 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
 - 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

@@ -16,11 +16,15 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 
 ## 核心链与不变量
 
+- 门模块必须绑定所属 Item 的主 SpriteRenderer 与根实体碰撞体；Unity 缺失组件的假 null 不能用 `??=` 判定。打开时交互注册仍须保留，导航通行通过 `BuildingOccupancyRegistry.SetPassable` 更新，但建筑放置占格不撤销；安装流程完成后再次同步开门状态。
+- 放置范围由交互半径的两倍统一派生，虚影与提交复用同一格边距离校验。越界隐藏虚影；仅在实际提交时以 `BuildingPlacementFailureReason` 向表现层区分越界和其它非法位置，不能逐帧发提示。
+- 放置模式的右键所有权不等于位置有效性；虚影因越界隐藏后，仍需根据当前准线先做范围校验并发拒绝反馈，不能被“预览为空”提前返回吞掉。
+
 `Summoner → BuildingShadow 校验 → PlacedBuilding → 注册占地 → 导航脏格`；拆除反向生成带 Snapshot 的 Summoner，成功后才删除建筑。
 
 - 以 `BuildingRole` 区分 Summoner/PlacedBuilding，禁止用血量或位置推断。
 - 无快照的新放置必须通过 `GameRes.CreateItemData(BuildingPrefabId)` 创建本体 JSON 数据；禁止再克隆 Summoner 数据后改 ID。拆除快照仍由 Summoner 携带并优先恢复。
-- 可手持操作的设施仍使用真实 Summoner 与独立 BuildingBody；以 `RequiresPlacementRequest` 从正式面板显式进入放置模式，功能模块先调用 `TryHandlePlacementAction` 仲裁使用，禁止同一次动作同时建造、装水或开面板。两端通过 `Building_Data.SharedModuleIds` 声明需双向转移的模块，由 `BuildingModuleStateTransfer` 按唯一稳定 ID 深拷贝；拆回必须在载体 `Load` 前注入，重放旧建筑快照后必须再覆盖当前载体的共享状态，避免手持期间的水量/库存修改丢失。转移仅允许单件载体，失败不得修改或消费源物品。
+- 可手持操作的设施仍使用真实 Summoner 与独立 BuildingBody；以 `RequiresPlacementRequest` 从正式面板显式进入放置模式，功能模块先调用 `TryHandlePlacementAction` 仲裁使用，禁止同一次动作同时建造、装水或开面板。`RequiresPlacementRequest=true` 只允许用于确有正式入口调用 `BeginPlacement()` 的物品；没有面板或其它显式入口的普通召唤器（例如简单载具）必须保持 false，让 `Item.OnAct -> Install` 直接进入标准放置链。两端通过 `Building_Data.SharedModuleIds` 声明需双向转移的模块，由 `BuildingModuleStateTransfer` 按唯一稳定 ID 深拷贝；拆回必须在载体 `Load` 前注入，重放旧建筑快照后必须再覆盖当前载体的共享状态，避免手持期间的水量/库存修改丢失。转移仅允许单件载体，失败不得修改或消费源物品。
 - 便携设施若由共享模块驱动状态贴图，Summoner 与 PlacedBuilding 都必须在各自当前 Item 定义中声明对应 `visual.spriteStates`；运行时视觉解析只读取当前载体 ID 的定义，不能假设落地本体会自动继承手持物的状态图。
 - 当便携设施的 Summoner 与 PlacedBuilding 使用不同稳定 Item ID 时，`Building_Data.Role` 必须与当前载体 ID 对齐；模块加载、联机数据应用和面板绑定都要按 `SummonerPrefabId/BuildingPrefabId` 校正当前实例，禁止一个已落地实例的角色状态污染另一个同类手持物的“放到地上”按钮。
 - 建筑 Summoner 一旦进入有效放置模式，玩家普通世界交互必须让位于放置：附近 `IInteractable` 不得因交互键、鼠标点选或同帧多输入被打开，交互描边也应隐藏；退出放置模式后再恢复普通目标选择。
@@ -29,8 +33,9 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 动态建筑保持 GameObject + Collider，但 Collider 只服务交互、受击等运行时物理；放置冲突、导航占地以及 AI 视线遮挡统一读取 `BuildingOccupancyRegistry` 的离散世界格层，不得写入地形 `TileData`，也不得用 Physics2D Overlap/Collider Bounds 推导这些逻辑结果。
 - 建筑占地的 Revision/CellChanged 同时服务 Native LOS 脏块桥，不能只依赖导航最终可走值的变化来刷新视线（例如原本不可走但不遮挡的格）。通知只标脏，复制前完成旧 Job；退出世界注销订阅，避免每个 AI 注册占地事件。
 - `Module_Building` 不得再携带独立物理 Collider；其 `boxCollider2D` 运行时统一绑定所属 Item 根节点由 `visual.collider` 定义的碰撞体，避免模块默认框与建筑实体框叠加后产生额外阻挡或错误光照遮挡。`BuildingBodyShell` 的根碰撞体必须保持启用、非 Trigger，并位于 `Collider` Layer；召唤器查询碰撞体仍按召唤器规则处理。
-- 平台铺设由 `Tile_Block.groundPlacement` 与 `TileBuildingSystem.GroundPlacement` 负责，写入 `TerrainSupportLayer`，不替换底层水格、不占用 Blocking 层；预览、角色水域效果、建造和导航必须读取有效支撑面。扣料失败回滚支撑值，主动拆除撤销支撑而不重建水格。
+- 平台与地板铺设都由 `Tile_Block.groundPlacement` 与 `TileBuildingSystem.GroundPlacement` 负责，统一写入 `TerrainSupportLayer`，不替换底层地形、不占用 Blocking 层；平台用 `RequiredSourceFlags=Water`，地板用 `RequiredSourceFlags=Walkable + ForbiddenSourceFlags=Water`。预览、角色水域效果、建造和导航读取有效覆盖面；扣料失败或主动拆除只撤销覆盖值，底层原始地块自然恢复。
 - 静态岩壁/结构墙才使用 Blocking Tile；例如 `Wall_Stone`、`Wall_Wood` 只有 Summoner JSON，不创建动态本体定义。Tile 栈只通过 `Data_TileMap` API 读写。
+- 建筑“主动完整拆回”与“受伤摧毁”必须分开结算：锤类致命伤害可完整返还 Summoner，非锤类摧毁只按该 Summoner 的唯一精确制作配方逐份随机回收材料；天然 Tile 的资源掉落仍服从自身 `damageProfile`。建筑 Summoner 进入世界掉落态后的缩放由 `DroppedItemService` 统一派生，拆除调用方不得按落地建筑尺寸硬编码。
 - 新版 WorldModel 的玩家格子建筑虽使用 `ChunkTerrainData.BlockingTileId`，仍必须接入存档的运行时区块差量；不能只依赖 `MapSave.items`。
 - 新版格子建筑的耐久或累计损伤必须与 `BlockingTileId` 一起保存在 `ChunkTerrainData`，并进入 `RuntimeTileDeltas`；否则区块回收或重载后会回满。
 - 新版 WorldModel 的动态建筑 Item 不挂旧 `Chunk.RunTimeItems`；必须按 `Mod_Building` 的角色筛选，在 `ChangedItems` 中保存完整 `ItemData`，并在区块就绪后恢复模块状态/耐久。
@@ -39,7 +44,7 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 - 建筑本体 JSON 的 `visual.collider` 只描述最终实体的物理碰撞范围，不再参与放置合法性或导航占地计算；当前动态可交互建筑和格子墙一样以吸附后的世界格作为放置槽。
 - 带 `Building_Data.TileBlockId` 的建筑最终由 `TileBuildingSystem` 写入 Tilemap；预览根与一格占地以格心为锚点，图片直接读取目标静态 `Tile` 的 Sprite 和 transform，禁止继承动态本体或召唤器图标的偏移。高墙图片应将 Pivot 放在底部占地格的中心，避免用 Tile transform 平移同时移动 Grid Collider；虚影同步 Tile 的缩放与旋转。
 - 新增玩家格子墙需同时配置召唤器 `TileBlockId`、`Tile_Block` 伤害与掉落、Unity Tile、生成 Profile 的 `tile.block.*` 和 `ChunkTilePaletteSO`；权威落地生命来自 `Tile_Block.damageProfile`，不能按召唤器的 `health` 推断。保留的迁移源 Prefab 也需声明 `Data.TileBlockId` 与 `BitData.TileBlockId`，并在 `BuildingShellMigrationTool` 标记为 Tilemap 建筑，否则重新导出会恢复动态本体链路。
-- 资源装配脚本只是编辑器工具，新增格子建筑交付时必须包含实际生成的 Tile、Tile_Block、图片导入设置、Profile/Palette 映射与 Addressables 注册，不能只交付脚本和可制作的召唤器。`GameRes.TileBlockDict` 在资源会话中加载；补齐资源后可返回主菜单按 F5 重载，已有生成快照不会自动增加新 Tile 映射，仍须新建世界验证新映射。建筑关系的权威配置位于模块 `data.BitData`；`BuildingResourceCatalogValidator` 与静态目录检查必须读取该字段，不能只查 `parameters.Data`。
+- 资源装配脚本只是编辑器工具，新增格子建筑交付时必须包含实际生成的 Tile、Tile_Block、图片导入设置、Profile/Palette 映射与 Addressables 注册，不能只交付脚本和可制作的召唤器。`GameRes.TileBlockDict` 在资源会话中加载；补齐资源后可返回主菜单按 F5 重载。世界生成仍使用存档冻结 Profile，但玩家可建造 Tile 的 `tile.block.*` 映射读取当前内容目录并在旧快照缺失时补充，因此新增地板/建筑不得要求玩家重开世界；数字 TileId 必须保持稳定且不能与旧快照已有映射冲突。建筑关系的权威配置位于模块 `data.BitData`；`BuildingResourceCatalogValidator` 与静态目录检查必须读取该字段，不能只查 `parameters.Data`。
 - 手机准星可以停在最大建造半径；格心吸附会产生每轴最多半格的偏差，距离校验应按目标格最近边缘判断，禁止直接用吸附后格心距离或 `Ceil` 取整决定预览与放置资格。
 - 动态建筑相邻放置只比较 `BuildingOccupancyRegistry` 中的离散格记录；相邻格永远不因实体 Collider 接触而互相否决，同一格则由占用层直接拒绝。
 - Summoner 只能由快捷栏的真实手持实例放置：`IsItemInInventory`、`BuildingShadow` 与源槽扣减都依赖 `InHand + Owner + CurrentSelectItemSlot`；库存菜单不得临时实例化 Summoner 后直接 `Act`。

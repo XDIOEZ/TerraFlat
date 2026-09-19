@@ -15,6 +15,10 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 
 ## 不变量
 
+- `AI_Bird` 的起飞入口必须统一执行飞行耐力门禁；耗尽后的强制降落先于逃跑/觅食，落地回满才能解锁，不能让受击逃跑在地面仍调用空中位移。耐力与恢复锁写入独立模块快照，`LiftRoot` 已包含飞行高度，头顶条不能重复叠加。
+- `IItemModuleDependencyBinder` 运行时尚未经过 `Module.LoadMod` 的宿主赋值，只能解析传入的模块注册表；依赖 `Module.item` 的运行时表现组件必须留到 `Load` 再创建。
+- 鸟类警惕距离需要同时覆盖 Detector 粗筛和带目标感知倍率的逃离阈值；扩大随机巡航半径不等于扩大警惕范围。种子与水果按最近掉落选择，JSON 中实际物品必须带语义 Tag，不能把物品 ID 当作已经存在的 Tag。
+
 - 感知链为 Detector 请求 → ItemMgr 空间格粗筛 → Burst 圆形/AABB 最终相交判断 → 整数格 LOS → 进入/离开结果。Actor/旧 AI 不再通过 `Collider2D.bounds/ClosestPoint` 复核；只有玩家及必须使用 GameObject 几何的旧目标进入 `PerceptionColliderBridge`，不能把 Bridge 当作不支持的 Actor 能力的静默回退。
 - Actor 感知形状由当前外壳根级作者数据与合并后的 `visual.collider` 编译，共享于 `RuntimeItemDefinition`；子级攻击盒、生命受击盒不是感知体型。运行时位置、缩放和旋转只变换纯数据形状，不能再因 Collider 开关或 Physics2D 同步时机改变 AI 感知结果；圆采用包围圆，复杂形状采用明确的 AABB 语义，不能把这一感知近似当成精确伤害形状。
 - 异步、同步圆形查询与 `IsWithinEffectivePerceptionRange` 必须使用同一 Actor 几何和循环镜像规则；空间格按中心登记时，粗筛范围须覆盖最大变换后体型。Job 结果还须核对注册代际、Guid、实例与当前层；仅检查 GetInstanceID 无法防止对象池原对象复用。

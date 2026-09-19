@@ -1,6 +1,6 @@
 ---
 name: flatworld-portrait-art
-description: "为 FlatWorld 生成、重绘或评审高清角色立绘，并处理角色身份继承、画风参考、平视全身构图、透明 PNG 验收与 Unity UI 导入。Use when: 角色立绘、全身立绘、对话人物图、角色页人物展示、任务人物图、表情立绘、高清 UI 人物图、立绘平涂或赛璐璐风格。不要用于游戏内像素小人、NPC Sprite、动物、怪物、物品、建筑、图标或 Sprite Sheet；这些任务使用 flatworld-pixel-art。"
+description: "为 FlatWorld 生成、重绘或评审高清角色立绘，并处理角色身份继承、画风参考、平视全身构图、透明 PNG 验收与 Unity UI 导入。Use when: 角色立绘、全身立绘、对话人物图、角色页人物展示、任务人物图、表情立绘、高清 UI 人物图、立绘平涂或赛璐璐风格。不要用于游戏内像素小人、NPC Sprite、AI 控制的动物或怪物、物品、建筑、图标或 Sprite Sheet；这些任务使用 flatworld-pixel-art。"
 ---
 
 # FlatWorld 高清角色立绘
@@ -12,6 +12,7 @@ description: "为 FlatWorld 生成、重绘或评审高清角色立绘，并处�
 - 生成或编辑位图时同时使用系统 `imagegen` Skill，并遵守其参考图、透明背景、输出路径与结果检查规则。
 - 用户要求把立绘接入现有 UI 时，同时读取 `flatworld-ui`；通过 Unity MCP 操作编辑器时再读取 `unity-mcp-orchestrator`。
 - 若目标是场景运行时像素素材，停止套用本 Skill，改用 `flatworld-pixel-art`。同一任务同时需要立绘和 Sprite 时可使用两个 Skill，但分别生成、命名、验收和导入。
+- AI 控制的动物或怪物贴图即使需要左右侧视和特殊动作，也属于运行时 Sprite，不属于 Portrait；必须转用 `flatworld-pixel-art`，只生成一套标准侧向动画和特殊动作帧，另一侧由 Unity 水平镜像得到。
 
 ## 工作流
 
@@ -26,7 +27,7 @@ description: "为 FlatWorld 生成、重绘或评审高清角色立绘，并处�
 
 ## 边界与交付
 
-- 运行时像素角色只能作为身份参考，不把俯视角、点眼、大头短身、16×16、硬 Alpha 或 24 色上限继承到立绘。
+- 运行时像素角色只能作为身份参考，不把俯视角、点眼、大头短身、16×16、硬 Alpha 或 24 色上限继承到立绘；AI 生物的标准侧向 Sprite 与特殊动作表也不能被本 Skill 改成高清立绘。
 - 仅生成立绘时不创建 Prefab、Animator、SO、Addressables 条目或玩法代码；接入时先检查实际 UI 消费方。
 - 不复制其他资源的 GUID；仅在目标 `.meta` 已存在时精确修改导入字段。
 - 最终报告画布尺寸、主体边界、透明度、身份不变量、各参考图职责、使用的提示词/模式、Unity 导入设置和必要人工观感检查。

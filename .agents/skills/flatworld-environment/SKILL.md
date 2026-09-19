@@ -16,6 +16,9 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 
 ## 不变量
 
+- 低温、过热与缺氧必须使用独立伤害时钟；解除对应危险、死亡或回收时清除该来源的时间债务。低温和缺氧用固定每次伤害，不以温差或累计秒数放大成一次大额伤害；高温保留独立规则。
+- `TemperatureData` 的 MemoryPack 字段顺序属于存档布局，改冷伤语义不能删掉中间 float 槽位。规则参数在加载旧存档后恢复当前内容配置，运行态体温仍由存档恢复。
+
 - 当前跨场景时间与存档主入口是 `DayTimeSystem`；季节改动前确认场景是否使用 `DayNightTimeManager`。
 - 天气权威状态保存在 `PlanetData`；阶段边界使用绝对世界时间，跳时交给 Scheduler 跨越全部边界。
 - `PlanetData.WindStrength` 是独立于降雨强度的星球级权威状态；修改必须经 `WeatherMgr.SetWindStrength` 发布天气快照，Client 只应用复制值，离开世界或 `SuppressWeather` 维度时清零 Shader 全局表现但不改存档值。

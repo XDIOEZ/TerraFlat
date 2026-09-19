@@ -25,9 +25,9 @@ Asset type: FlatWorld 2D top-down pixel-art creature sprite
 Input images: Image 1 is the closest project animal or monster reference and is the primary authority for species silhouette, world scale, viewpoint, pixel clusters, outline weight, palette structure, and material rendering; Image 2 is the merchant anchor and may only supplement broad FlatWorld color-clustering language when it does not conflict with creature references.
 Primary request: create one original <动物/怪物> readable at the target runtime size, using the closest existing project creature as the primary style, world-scale, and pixel-density reference.
 Style/medium: compact FlatWorld pixel art; strong species silhouette; limited muted palette; dark outline matching the closest project creature's visual weight at the same world scale; hard color clusters; no anti-aliasing or gradient. Higher logical pixel density is allowed without changing the established creature style.
-Composition/framing: exactly one complete creature, <朝向/动作>, no cropped ears, tail, legs, or wings; final runtime subject fits the target canvas and aligns bottom-center. Higher logical pixel density is allowed, but silhouette, outline weight, palette structure, and material rendering must still match the closest existing project creature.
+Composition/framing: exactly one complete creature using one canonical lateral direction only — default to <向左> so the head and body face screen-left — with <动作>; no cropped ears, tail, legs, or wings; final runtime subject fits the target canvas and aligns bottom-center. Put locomotion and requested special-action frames into one equal-size Sprite Sheet when possible; derive the right-facing version by Unity horizontal mirroring instead of generating duplicate right-facing frames. Never include front-facing, back-facing, upward, downward, or mixed four-direction frames. Higher logical pixel density is allowed, but silhouette, outline weight, palette structure, and material rendering must still match the closest existing project creature.
 Scene/backdrop: perfectly flat solid chroma-key background.
-Constraints: preserve simplified animal anatomy; no clothing unless requested; no floor, shadow, text, watermark, or extra creature.
+Constraints: preserve simplified animal anatomy; no clothing unless requested; no floor, shadow, text, watermark, or extra creature; keep every source frame in the same canonical lateral direction and let Unity's `flipX`/equivalent mirror produce the opposite side.
 ```
 
 ## 物品、工具、树木、植被、建筑或世界道具
@@ -48,8 +48,8 @@ Constraints: no card background; no frame; no label; no shadow unless same-categ
 ```text
 Use case: identity-preserve
 Input images: Image 1 is the approved runtime character anchor; Image 2 is the project animation-layout reference.
-Primary request: create <新朝向/动作/装备变体> for the same character.
-Constraints: preserve head shape, face, proportions, outfit construction, accessory placement, palette, outline thickness, light direction, feet baseline, and identity; change only <明确变化>; no redesign; no extra elements; no text; no watermark.
+Primary request: create <新动作/装备变体> for the same character while keeping the approved canonical lateral direction.
+Constraints: preserve head shape, face, proportions, outfit construction, accessory placement, palette, outline thickness, light direction, feet baseline, identity, and the selected canonical lateral direction; change only <明确变化>; do not generate a duplicate opposite-facing frame because Unity mirrors it at runtime; no redesign; no front/back/up/down direction; no extra elements; no text; no watermark.
 ```
 
 ## 迭代原则

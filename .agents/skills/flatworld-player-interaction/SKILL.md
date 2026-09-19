@@ -18,12 +18,17 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 
 ## 不变量
 
+- 玩家主动速度与环境速度必须分开：`Mover.DrivenVelocity` 决定步行动画，水流和承载只写 `ExternalVelocity`；不能把上一帧总刚体速度重新当作主动移动的缓动起点。
+- `WorldMotionSystem` 用作者矩形占地与扫掠统一处理推动，载具通过 `IWorldPushTarget` 注册来源；船的水流、划行与推动先合成，再由 `ICarrierMotionSource` 传递给乘员。禁止乘员反推自身载具或用物理冲量代替游戏速度规则。
+- 载具的按键、鼠标和白色描边必须共用光标落点查询；指向可触及水面才允许喝水长按，指向载具优先交互。远海登船也合法，恢复位置优先附近安全陆地，否则保留真实登船坐标，不凭空传送到陆地。
+
 - 输入链为 Input System → `GameController` → 玩家模块；不要让 UI、物理输入和玩法模块各自维护冲突状态。
 - Editor Agent、自动化或其它非物理输入源接管本地主角时统一使用 `GameController` 的唯一 External Gameplay Control 租约；租约期间真实设备退出玩法输入仲裁，移动/瞄准/攻击继续注入现有生产链。禁止为自动化直接改玩家 `Rigidbody2D`、Transform 或另建平行输入状态。
 - `InputBindingService` 的覆盖存档按 binding GUID 关联输入资产；输入资产删改绑定后，加载前必须过滤当前资产不存在的 GUID 并重存清理后的配置，因为 Unity 内置加载器会直接输出警告而不会抛出异常。
 - 输入重绑定冲突检测必须按物理修饰键语义统一 `<Keyboard>/shift` 与左右 Shift、`ctrl` 与左右 Ctrl、`alt` 与左右 Alt；历史冲突覆盖加载时应自动清理，避免镜头缩放等组合输入被静默改绑到已有玩法键。
 - 需要按触点落地的世界玩法统一调用 `GameController.GetMouseWorldPosition(screenPosition)`，不得在手机玩法模块内直接读取相机或共享虚拟光标坐标。
 - `Move_Player` 的二维幅度同时表达模拟移动速度比例：手机虚拟摇杆与手柄左摇杆必须保留 0～1 幅度，玩家移动路径不得提前归一化；键盘满幅输入与目标寻路接口保持原有语义。
+- 玩家乘坐载具统一经 `ICarrierMotionSource` 与 `Mover.TryAttachCarrier` 仲裁：载具源拥有位移积分、速度和力，乘员不改 Transform 父级，只在租约期间关闭自身 Rigidbody2D 模拟并跟随座位；乘员引用和瞬时速度不进存档，恢复位置使用登船时取得的作用域租约。无 Collider 载具交互使用 `SpatialInteractionRegistry`，不要为了点选重新添加物理碰撞体。
 - 环境交互输入只转发按下/持续/松开；具体环境提供 `IEnvironmentActionDefinition` 或 `IEnvironmentEffectDefinition`，角色侧 `EnvironmentInteractionRunner` 每次创建独立实例，禁止把玩家长按或被动效果状态存进共享地块配置。
 - 本地档案由 `Player.IsLocalProfile`/ProfileContext 判定；远程副本不得持久化、跑本地教程或玩家语音。
 - 玩家存档与 `Player_DIC` 必须使用 `Player.ProfileName` 稳定档案键；`Data_Player.Name_User` 可能被显示名、旧存档或管理员身份临时改写，禁止用它决定保存、卸载或跨维度重建的角色槽位。
