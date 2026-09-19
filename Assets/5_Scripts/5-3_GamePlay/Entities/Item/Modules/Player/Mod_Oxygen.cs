@@ -32,7 +32,7 @@ public partial class Mod_Oxygen : Module
     [Min(0f)] public float staminaConsumePerSecond = 5f; // 漂浮时每秒基础体力消耗。
     [Min(0f)] public float oxygenConsumePerSecond = 10f; // 体力耗尽后每秒氧气消耗。
     [Min(0f)] public float oxygenRecoverPerSecond = 25f; // 可呼吸时每秒氧气恢复。
-    [Min(0f)] public float drowningDamagePerSecond = 10f; // 氧气归零后每秒基础溺水伤害。
+    [Min(0f)] public float drowningDamagePerTick = 10f; // 缺氧时每次固定伤害。
 
     public UltEvent<float> OnOxygenChanged = new(); // 氧气变化通知，供 HUD 等表现层订阅。
     public event Action<float> OxygenValueChanged; // 运行时氧气变化事件，避免 HUD 轮询。

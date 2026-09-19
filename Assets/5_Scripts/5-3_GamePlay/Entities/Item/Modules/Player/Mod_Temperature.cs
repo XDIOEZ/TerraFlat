@@ -28,8 +28,9 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
         public float ColdDamageStart = 5f; // 低于该体温开始受冷伤(℃)
         [LabelText("热伤起点"), SuffixLabel("℃", true), PropertyTooltip("体温高于该值后开始受到热伤害。")]
         public float HotDamageStart = 40f; // 高于该体温开始受热伤(℃)
-        [LabelText("冷伤每秒"), PropertyTooltip("低温状态下每秒造成的伤害值。")]
-        public float ColdDamagePerSecond = 0.6f; // 低温每秒伤害
+        // 保持这个 float 在 MemoryPack 数据中的原槽位；实际伤害配置不由旧存档的每秒伤害覆盖。
+        [LabelText("每次冷伤"), Min(0f)]
+        public float ColdDamagePerTick = 2f;
         [LabelText("热伤每秒"), PropertyTooltip("高温状态下每秒造成的伤害值。")]
         public float HotDamagePerSecond = 1f; // 高温每秒伤害
 
@@ -70,7 +71,8 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     public UltEvent<float> OnTemperatureChanged = new UltEvent<float>(); // 体温变化事件
 
     private DamageReceiver _damageReceiver; // 血量模块引用
-    private float _damageTickTimer; // 温度伤害计时器
+    private float _coldDamageTickTimer; // 低温伤害计时器
+    private float _hotDamageTickTimer; // 高温伤害计时器
     private bool _isInWater; // 当前是否处于真实水体中
     private int _lastWaterExitFrame = -1; // 最近一次退出真实水体的帧
     private bool _lastWaterExitWasActive; // 最近一次退出前是否确实处于水中
@@ -98,10 +100,13 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     {
         ResetTemporaryWarming();
         float configuredColdDamageStart = Data.ColdDamageStart;
+        float configuredColdDamagePerTick = Data.ColdDamagePerTick;
         modData.ReadData(ref Data);
+        Data.ColdDamagePerTick = configuredColdDamagePerTick;
         Data.ColdDamageStart = configuredColdDamageStart; // 冷伤阈值属于当前玩法配置，不由旧存档覆盖。
         TemperatureMgr.Instance.NormalizeData(Data);
-        _damageTickTimer = 0f;
+        _coldDamageTickTimer = 0f;
+        _hotDamageTickTimer = 0f;
         ResetWaterExposureState();
 
         _damageReceiver = item.itemMods.GetMod_ByID<DamageReceiver>(ModText.Hp);
@@ -129,7 +134,8 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
             _damageReceiver,
             deltaTime,
             SetNaturalTemperature,
-            ref _damageTickTimer,
+            ref _coldDamageTickTimer,
+            ref _hotDamageTickTimer,
             NaturalTemperature);
     }
 
@@ -140,6 +146,8 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
             item.OnInit_Env -= AdjustByEnvironment;
         }
         ResetWaterExposureState();
+        _coldDamageTickTimer = 0f;
+        _hotDamageTickTimer = 0f;
         ResetTemporaryWarming();
         base.Unload();
     }

@@ -47,7 +47,7 @@ public class TileEffectReceiver : Module
     [Min(0f)] [SerializeField] private float fallbackOxygenMax = 100f;
     [Min(0f)] [SerializeField] private float fallbackOxygenConsumePerSecond = 10f;
     [Min(0f)] [SerializeField] private float fallbackOxygenRecoverPerSecond = 25f;
-    [Min(0f)] [SerializeField] private float fallbackDrowningDamagePerSecond = 10f;
+    [Min(0f)] [SerializeField] private float fallbackDrowningDamagePerTick = 10f;
 
     #endregion
 
@@ -90,6 +90,9 @@ public class TileEffectReceiver : Module
     private float currentWaterImmersion;
     private int lastWaterExitFrame = -1;
     private bool lastWaterExitWasActive;
+    private float drowningDamageTickTimer;
+
+    private const float DrowningDamageTickIntervalSeconds = 5f;
 
     public bool HasActiveTileEffects => hasActiveTileEffects;
     public bool IsActiveTileEdgeInteractionOnly => activeTileIsEdgeInteractionOnly;
@@ -137,7 +140,7 @@ public class TileEffectReceiver : Module
         fallbackOxygenMax = Mathf.Max(0f, fallbackOxygenMax);
         fallbackOxygenConsumePerSecond = Mathf.Max(0f, fallbackOxygenConsumePerSecond);
         fallbackOxygenRecoverPerSecond = Mathf.Max(0f, fallbackOxygenRecoverPerSecond);
-        fallbackDrowningDamagePerSecond = Mathf.Max(0f, fallbackDrowningDamagePerSecond);
+        fallbackDrowningDamagePerTick = Mathf.Max(0f, fallbackDrowningDamagePerTick);
     }
 
     public override void ModUpdate(float deltaTime)
@@ -342,6 +345,7 @@ public class TileEffectReceiver : Module
         lastWaterExitWasActive = waterSurvivalActive;
         lastWaterExitFrame = Time.frameCount;
         waterSurvivalActive = false;
+        drowningDamageTickTimer = 0f;
         waterOxygen?.SetWaterExposure(false);
     }
 
@@ -351,6 +355,7 @@ public class TileEffectReceiver : Module
         ResolveWaterVitals(item);
         EnsureFallbackWaterVitals();
         waterOxygen?.SetWaterExposure(false);
+        drowningDamageTickTimer = 0f;
 
         if (!GameNetwork.HasStateAuthority)
             return;
@@ -471,14 +476,28 @@ public class TileEffectReceiver : Module
             }
         }
 
-        if (!breathBlocked || currentOxygen > 0f || waterDamageReceiver == null || waterDamageReceiver.Hp <= 0f)
+        if (!breathBlocked || currentOxygen > 0f)
+        {
+            drowningDamageTickTimer = 0f;
+            return;
+        }
+
+        if (waterDamageReceiver == null || waterDamageReceiver.Hp <= 0f)
+        {
+            drowningDamageTickTimer = 0f;
+            return;
+        }
+
+        drowningDamageTickTimer += drowningDeltaTime;
+        if (drowningDamageTickTimer < DrowningDamageTickIntervalSeconds)
             return;
 
-        float damagePerSecond = waterOxygen != null
-            ? Mathf.Max(0f, waterOxygen.drowningDamagePerSecond)
-            : Mathf.Max(0f, fallbackDrowningDamagePerSecond);
-        if (damagePerSecond > 0f && drowningDeltaTime > 0f)
-            waterDamageReceiver.ForceHurt(damagePerSecond * drowningDeltaTime);
+        drowningDamageTickTimer = 0f;
+        float damagePerTick = waterOxygen != null
+            ? Mathf.Max(0f, waterOxygen.drowningDamagePerTick)
+            : Mathf.Max(0f, fallbackDrowningDamagePerTick);
+        if (damagePerTick > 0f)
+            waterDamageReceiver.ForceHurt(damagePerTick);
     }
 
     #endregion
