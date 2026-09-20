@@ -17,6 +17,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 ## 不变量
 
 - 低温、过热与缺氧必须使用独立伤害时钟；解除对应危险、死亡或回收时清除该来源的时间债务。低温和缺氧用固定每次伤害，不以温差或累计秒数放大成一次大额伤害；高温保留独立规则。
+- 玩家显式重生统一调用 `Mod_Temperature.RestoreOnRespawn` 恢复正常基础体温，并清除上一条生命的入水降温目标与冷热伤计时；死亡/重生模块不得直接改写 `TemperatureData.CurrentTemperature`。
 - `TemperatureData` 的 MemoryPack 字段顺序属于存档布局，改冷伤语义不能删掉中间 float 槽位。规则参数在加载旧存档后恢复当前内容配置，运行态体温仍由存档恢复。
 
 - 当前跨场景时间与存档主入口是 `DayTimeSystem`；季节改动前确认场景是否使用 `DayNightTimeManager`。

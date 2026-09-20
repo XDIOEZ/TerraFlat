@@ -58,6 +58,7 @@ public partial class Mod_PlayerDeathState : Module
     private DamageReceiver _damageReceiver; // 血量模块
     private BuffManager _buffManager; // Buff 状态模块
     private Mod_Food _food; // 食物模块
+    private Mod_Temperature _temperature; // 体温模块
     private GameController _gameController; // 输入控制器
     private Mover _mover; // 移动模块
     private Mod_ChunkLoader _chunkLoader; // 区块加载模块
@@ -114,6 +115,7 @@ public partial class Mod_PlayerDeathState : Module
 
         _food = item.itemMods.GetMod_ByID<Mod_Food>(ModText.Food);
         _buffManager = item.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        _temperature = item.itemMods.GetMod_ByID<Mod_Temperature>(ModText.Temperature);
         _mover = item.itemMods.GetMod_ByID<Mover>(ModText.Mover);
         _chunkLoader = item.itemMods.GetMod_ByID<Mod_ChunkLoader>(ModText.ChunkLoader);
         _rb = item.GetComponent<Rigidbody2D>();
@@ -502,6 +504,8 @@ public partial class Mod_PlayerDeathState : Module
         {
             _food.RestoreOnRespawn();
         }
+
+        _temperature?.RestoreOnRespawn();
     }
 
     private void RestartChunkStreamingForRespawn()

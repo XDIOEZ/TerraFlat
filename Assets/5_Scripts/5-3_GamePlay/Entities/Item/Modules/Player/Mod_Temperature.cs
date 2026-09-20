@@ -6,6 +6,8 @@ using FlatWorld.Networking;
 
 public partial class Mod_Temperature : Module, IEnvironmentAdjustable
 {
+    public const float NormalBodyTemperature = 36.5f; // 玩家正常体温，也是重生后的恢复目标
+
     public override ModuleTickMode TickMode => ModuleTickMode.FixedInterval;
     public override float FixedTickInterval => 0.25f;
 
@@ -16,7 +18,7 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     public partial class TemperatureData
     {
         [LabelText("当前体温"), SuffixLabel("℃", true), PropertyTooltip("角色当前体温。")]
-        public float CurrentTemperature = 36.5f; // 当前体温(℃)
+        public float CurrentTemperature = NormalBodyTemperature; // 当前体温(℃)
         [HideInInspector]
         public float AmbientTemperature = 20f; // 当前环境温度(℃)
         [LabelText("变化速度"), SuffixLabel("℃/s", true), PropertyTooltip("体温向环境温度逼近的速度。")]
@@ -187,6 +189,15 @@ public partial class Mod_Temperature : Module, IEnvironmentAdjustable
     public void SetAmbientTemperature(float value)
     {
         Data.AmbientTemperature = value;
+    }
+
+    /// <summary>重生时恢复正常基础体温，并清除上一条生命遗留的水体降温与冷热伤计时。</summary>
+    public void RestoreOnRespawn()
+    {
+        _coldDamageTickTimer = 0f;
+        _hotDamageTickTimer = 0f;
+        ResetWaterExposureState();
+        SetNaturalTemperature(NormalBodyTemperature);
     }
 
     /// <summary>以连续水域入水体温为基准，只在有效浸没档位变化时更新平滑目标。</summary>
