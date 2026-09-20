@@ -21,7 +21,7 @@ public enum ModLoadState
     Failed
 }
 
-public sealed class ModRuntimeManager : MonoBehaviour
+public sealed partial class ModRuntimeManager : MonoBehaviour
 {
     #region 常量与静态入口
 
@@ -200,6 +200,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
         }
 
         reportProgress?.Invoke("解析 Def 继承与 Patch", 0.55f);
+        ProcessTileDefinitions(gameRes);
         ProcessItemDefinitions(gameRes);
         ProcessActorDefinitions(gameRes);
         ProcessRecipeDefinitions(gameRes);
@@ -388,6 +389,8 @@ public sealed class ModRuntimeManager : MonoBehaviour
                     ?? throw new InvalidDataException($"MOD {package.Manifest.Id} 资源定义无效：{definitionFile}");
                 RegisterBundleAsset(gameRes, package, definition);
             }
+
+            QueueTileDefinitions(package, definitionFile, document);
 
             int itemIndex = 0;
             foreach (JToken token in document["items"] as JArray ?? new JArray())
@@ -1159,7 +1162,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
         if (operation == null || string.IsNullOrWhiteSpace(operation.Target))
             throw new InvalidDataException($"MOD {pending.Package.Manifest.Id} Patch 目标为空：{pending.File}#{operationIndex}");
 
-        if (PlayerCreationTemplateCatalogService.IsPatchTarget(operation.Target))
+        if (PlayerCreationTemplateCatalogService.IsPatchTarget(operation.Target) || IsTilePatchTarget(operation.Target))
             return;
 
         if (!resolved.TryGetValue(operation.Target, out JObject target))
@@ -1347,13 +1350,10 @@ public sealed class ModRuntimeManager : MonoBehaviour
                 RegisterLegacyRecipe(gameRes, definition.Id, CloneAsset((Recipe)asset));
                 break;
             case "tile":
-                RegisterUnique(gameRes.tileBaseDict, definition.Id, CloneAsset((TileBase)asset));
+                RegisterModTileAsset(gameRes, definition.Id, (TileBase)asset);
                 break;
             case "tileblock":
-                Tile_Block tileBlock = CloneAsset((Tile_Block)asset);
-                tileBlock.tileItemName = definition.Id;
-                RegisterUnique(gameRes.TileBlockDict, definition.Id, tileBlock);
-                break;
+                throw new InvalidDataException($"MOD {package.Manifest.Id} 的地块逻辑已改为 JSON：请在 definitionFiles 的 tiles 数组声明 {definition.Id}，外观资源仍使用 assets.type=tile。");
             case "inventory":
                 RegisterUnique(gameRes.InventoryInitDict, definition.Id, CloneAsset((Inventoryinit)asset));
                 break;
@@ -2093,6 +2093,7 @@ public sealed class ModRuntimeManager : MonoBehaviour
         UnbindGameEvents();
 
         GameRes gameRes = GameRes.ExistingInstance;
+        UnloadTileDefinitions(gameRes);
         for (int index = registeredActorIds.Count - 1; index >= 0; index--)
             gameRes?.UnregisterExternalActorDefinition(registeredActorIds[index]);
         registeredActorIds.Clear();

@@ -159,7 +159,7 @@ public static partial class TileBuildingSystem
             Mathf.FloorToInt(worldPosition.x),
             Mathf.FloorToInt(worldPosition.y));
 
-        Tile_Block definition = GameRes.Instance?.GetTileBlock(tileBlockId);
+        RuntimeTileDefinition definition = GameRes.Instance?.GetTileBlock(tileBlockId);
         if (definition?.tileDataTemplate == null)
         {
             reason = $"找不到格子建筑定义：{tileBlockId}";
@@ -241,7 +241,7 @@ public static partial class TileBuildingSystem
             Mathf.FloorToInt(worldPosition.x),
             Mathf.FloorToInt(worldPosition.y));
 
-        Tile_Block definition = GameRes.Instance?.GetTileBlock(tileBlockId);
+        RuntimeTileDefinition definition = GameRes.Instance?.GetTileBlock(tileBlockId);
         if (definition?.tileDataTemplate == null)
         {
             reason = $"找不到格子建筑定义：{tileBlockId}";
@@ -809,7 +809,14 @@ public static partial class TileBuildingSystem
         // 若老存档同一个数字 ID 已绑定其它 Tile，则拒绝覆盖，避免污染既有地形数据。
         IReadOnlyDictionary<string, string> currentParameters =
             chunkManager.RuntimeTileCatalogProfile?.TextParameters;
-        if (TryFindRuntimeTileId(currentParameters, tileBlockId, out int currentTileId))
+        bool foundCurrent = TryFindRuntimeTileId(currentParameters, tileBlockId, out int currentTileId);
+        if (!foundCurrent && GameRes.ExistingInstance != null &&
+            GameRes.ExistingInstance.TryGetTileDefinition(tileBlockId, out var definition) && definition.RuntimeTileId > 0)
+        {
+            currentTileId = definition.RuntimeTileId;
+            foundCurrent = true;
+        }
+        if (foundCurrent)
         {
             IReadOnlyDictionary<string, string> frozenParameters =
                 chunkManager.ActiveGenerationProfile?.TextParameters;
@@ -879,9 +886,14 @@ public static partial class TileBuildingSystem
 
         IReadOnlyDictionary<string, string> currentParameters =
             chunkManager.RuntimeTileCatalogProfile?.TextParameters;
-        return currentParameters != null &&
-               currentParameters.TryGetValue(parameterId, out tileBlockId) &&
-               !string.IsNullOrWhiteSpace(tileBlockId);
+        if (currentParameters != null && currentParameters.TryGetValue(parameterId, out tileBlockId) &&
+            !string.IsNullOrWhiteSpace(tileBlockId)) return true;
+        if (GameRes.ExistingInstance != null && GameRes.ExistingInstance.TryGetTileDefinition(runtimeTileId, out var definition))
+        {
+            tileBlockId = definition.Id;
+            return true;
+        }
+        return false;
     }
 
     private static bool TryGetTopBlockingTile(
@@ -901,7 +913,7 @@ public static partial class TileBuildingSystem
         if (tile == null || GameRes.Instance == null)
             return null;
 
-        Tile_Block definition = GameRes.Instance.GetTileBlock(tile.ID);
+        RuntimeTileDefinition definition = GameRes.Instance.GetTileBlock(tile.ID);
         if (definition == null && !string.Equals(tile.ID, tile.Name, StringComparison.Ordinal))
             definition = GameRes.Instance.GetTileBlock(tile.Name);
         return definition?.damageProfile;
@@ -923,7 +935,7 @@ public static partial class TileBuildingSystem
             return null;
         }
 
-        Tile_Block definition = GameRes.Instance.GetTileBlock(tileBlockId);
+        RuntimeTileDefinition definition = GameRes.Instance.GetTileBlock(tileBlockId);
         return definition?.damageProfile;
     }
 

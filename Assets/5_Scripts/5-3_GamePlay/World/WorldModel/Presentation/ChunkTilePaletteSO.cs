@@ -20,6 +20,12 @@ public sealed class ChunkTilePaletteSO : ScriptableObject
 
     public bool TryGetTile(int tileId, out TileBase tile)
     {
+        // JSON 定义是运行时地块资源真源；MOD 新格子无需改写本体 Palette SO。
+        if (GameRes.ExistingInstance != null && GameRes.ExistingInstance.TryGetTileDefinition(tileId, out var definition))
+        {
+            tile = definition.GetTileBaseAsset();
+            return tile != null;
+        }
         EnsureLookup();
         return lookup.TryGetValue(tileId, out tile) && tile != null;
     }
@@ -38,6 +44,19 @@ public sealed class ChunkTilePaletteSO : ScriptableObject
         transform = tile.transform;
         return true;
     }
+
+    #region 资源预热
+
+    /// <summary>收集 Palette 最终映射；JSON/MOD 覆盖规则与实际 BRG 查询保持一致。</summary>
+    public void CollectVisualSprites(ISet<Sprite> sprites)
+    {
+        if (sprites == null) throw new ArgumentNullException(nameof(sprites));
+        EnsureLookup();
+        foreach (int tileId in lookup.Keys)
+            if (TryGetVisual(tileId, out Sprite sprite, out _, out _)) sprites.Add(sprite);
+    }
+
+    #endregion
 
     private void OnEnable() => lookup = null;
     private void OnValidate() => lookup = null;

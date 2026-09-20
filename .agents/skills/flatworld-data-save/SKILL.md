@@ -20,6 +20,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - 正式存档只写 `Application.persistentDataPath/Saves/LocalSaveData/`，并使用临时文件/原子替换；失败不得伪装为成功恢复。
 - `ItemSpecialDataJsonStore` 按命名空间更新并保留未知根属性；教程、任务、维度、出生点不得互相覆盖或改 `Data_Player` 布局。
 - Item/Recipe JSON 是唯一内容真源；Manifest 不自动扫描目录。移动资源还要核对 Address、标签和运行时字典键。
+- Tile JSON 同样由显式 Manifest 加载，定义保存稳定字符串 ID、世界整数 `runtimeTileId`、资源键及行为参数；不改变 `TileData` 的 MemoryPack 布局，也不保存角色或格子的运行时状态。已发布的地块整数编号不能重排、复用或被 Patch 修改；JSON 行为工厂注册不等同于新增 MemoryPack Union 注册。
 - Actor JSON 位于 `GameConfig/Actors`，使用独立 Manifest；外壳/Sprite/Animator 的 `flatworld.actor.*` 地址由 GUID 跟随移动，`sourcePrefab` 仅供编辑器。
 - Android/Player 构建必须启用 Addressables 随 Player 自动构建（`m_BuildAddressablesWithPlayerBuild: 1`），否则 `GameRes` 在真机包内可能拿到缺失或过期的本地 Catalog。
 - 编辑器通过 `AddressableAssetSettings` 新增或修改条目后，必须显式保存条目所属的 `AddressableAssetGroup`；只保存 Settings 可能让条目停留在内存，未进入 Git 与后续构建。

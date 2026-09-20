@@ -68,6 +68,12 @@ internal static class ChunkBatchRendererGroupService
 
     private static Backend backend;
 
+    static ChunkBatchRendererGroupService()
+    {
+        // 资源会话结束必须先注销 BRG；共享缓存本身不依赖地形后端。
+        SharedSpriteMeshCache.Clearing += ResetStatics;
+    }
+
     internal static void RegisterOwner(ChunkTilemapRenderer owner)
     {
         if (owner == null)
@@ -279,27 +285,10 @@ internal static class ChunkBatchRendererGroupService
             if (meshes.TryGetValue(key, out MeshRegistration registration))
                 return registration;
 
-            Vector2[] spriteVertices = sprite.vertices;
-            Vector2[] spriteUv = sprite.uv;
-            ushort[] spriteTriangles = sprite.triangles;
-            var vertices = new Vector3[spriteVertices.Length];
-            var triangles = new int[spriteTriangles.Length];
-            for (int i = 0; i < spriteVertices.Length; i++)
-                vertices[i] = spriteVertices[i];
-            for (int i = 0; i < spriteTriangles.Length; i++)
-                triangles[i] = spriteTriangles[i];
-
-            var mesh = new Mesh
-            {
-                name = $"ChunkBRG_{sprite.name}",
-                hideFlags = HideFlags.HideAndDontSave
-            };
-            mesh.vertices = vertices;
-            mesh.uv = spriteUv;
-            mesh.triangles = triangles;
-            mesh.RecalculateBounds();
+            // Mesh 属于资源会话；注册 ID 只保存在当前 Backend，重建 BRG 后重新注册。
+            Mesh mesh = SharedSpriteMeshCache.GetOrCreate(sprite);
             BatchMeshID id = rendererGroup.RegisterMesh(mesh);
-            registration = new MeshRegistration(mesh, id);
+            registration = new MeshRegistration(id);
             meshes.Add(key, registration);
             return registration;
         }
@@ -460,7 +449,6 @@ internal static class ChunkBatchRendererGroupService
                 foreach (MeshRegistration registration in meshes.Values)
                 {
                     rendererGroup.UnregisterMesh(registration.Id);
-                    DestroyRuntimeObject(registration.Mesh);
                 }
                 meshes.Clear();
                 rendererGroup.Dispose();
@@ -670,13 +658,11 @@ internal static class ChunkBatchRendererGroupService
 
         private readonly struct MeshRegistration
         {
-            public MeshRegistration(Mesh mesh, BatchMeshID id)
+            public MeshRegistration(BatchMeshID id)
             {
-                Mesh = mesh;
                 Id = id;
             }
 
-            public Mesh Mesh { get; }
             public BatchMeshID Id { get; }
         }
 

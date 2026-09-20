@@ -49,17 +49,19 @@ public static partial class AncientStageAssetBuilder
             AssetDatabase.CreateAsset(block, blockPath);
         }
         block.tileItemName = id;
-        block.displayName = label + (platform ? "平台" : "墙");
-        block.tileDataTemplate.ID = id;
-        block.tileDataTemplate.Name = id;
-        block.TileBase = tile;
+        TileDefinitionDto definition = TileDefinitionFactory.DeserializeDefinition(source.Definition.CopySource());
+        definition.Id = id;
+        definition.RuntimeTileId = runtimeId;
+        definition.DisplayName = label + (platform ? "平台" : "墙");
+        definition.TileAsset = tile.name;
         if (platform)
-            block.groundPlacement = new GroundTilePlacementRule { RefundItemId = $"Platform_{materialId}_Summoner" };
+            definition.GroundPlacement = new GroundTilePlacementRule { RefundItemId = $"Platform_{materialId}_Summoner" };
         else
         {
-            block.damageProfile.MaxHealth = health;
-            block.damageProfile.DropItemId = $"Wall_{materialId}_Summoner";
+            definition.DamageProfile.MaxHealth = health;
+            definition.DamageProfile.DropItemId = $"Wall_{materialId}_Summoner";
         }
+        TileDefinitionEditorCatalog.SaveDefinition(definition);
         EditorUtility.SetDirty(block);
         Register(blockPath, "TileBlock");
         RegisterTileMapping(runtimeId, id, tile);

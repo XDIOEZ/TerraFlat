@@ -47,117 +47,54 @@ public sealed class TileBuildingDamageProfile
 }
 
 /// <summary>
-/// 地块逻辑 ScriptableObject
-/// 负责描述「踩在某个 Tile 上时」的进入 / 退出 / 持续效果接口。
-/// 通过组合 TileBlockBehaviour，而不是继承本类，来实现具体逻辑。
+/// 旧 Prefab、群系和结构编辑器使用的地块 ID 引用壳。
+/// 这里只序列化稳定 ID；数值、行为和 TileBase 引用统一解析 JSON 运行时定义，不能另存一份 SO 配置。
 /// </summary>
 [System.Serializable]
-[CreateAssetMenu(menuName = "TileBlock/Block", fileName = "Tile_Block")]
+[CreateAssetMenu(menuName = "TileBlock/JSON Definition Reference", fileName = "Tile_Block")]
 public class Tile_Block : ScriptableObject
 {
-    [Header("标识配置")]
-    [Tooltip("用于和 TileData.Name_ItemName 对应，例如：TileItem_Water")]
+    #region JSON 定义引用
+    [Header("地块 JSON 的稳定 ID")]
+    [Tooltip("仅作为旧编辑器和 Prefab 的引用；实际配置位于 GameConfig/Tiles。")]
     public string tileItemName;
+    public string DefinitionId => string.IsNullOrWhiteSpace(tileItemName) ? name : tileItemName;
+    public RuntimeTileDefinition Definition => ResolveDefinition();
+    public string displayName => Definition.DisplayName;
+    public TileData tileDataTemplate => Definition.TileDataTemplate;
+    public TileBase TileBase => Definition.TileBase;
+    public GroundTilePlacementRule groundPlacement => Definition.GroundPlacement;
+    public TileBuildingDamageProfile damageProfile => Definition.DamageProfile;
+    public IReadOnlyList<TileBlockBehaviour> behaviours => Definition.Behaviours;
 
-    [Tooltip("策划可读的显示名称，仅用于编辑器显示")] 
-    public string displayName;
+#if UNITY_EDITOR
+    /// <summary>由编辑器 JSON 目录注入，运行时程序集不依赖 Editor 程序集。</summary>
+    public static System.Func<string, RuntimeTileDefinition> EditorDefinitionResolver;
+#endif
 
-    [Header("TileData 初始模板（用于生成地图数据）")]
-    [Tooltip("作为该地块的默认数据模板，生成地图或放置方块时会从这里拷贝一份运行时 TileData")] 
-    [SerializeReference]
-    public TileData tileDataTemplate;
-
-    [Header("对应的 Unity TileBase 资源")]
-    public TileBase TileBase;
-
-    [Header("地表铺设（为空时沿用阻挡墙规则）")]
-    [SerializeReference]
-    public GroundTilePlacementRule groundPlacement;
-
-    [Header("格子建筑伤害")]
-    public TileBuildingDamageProfile damageProfile = new TileBuildingDamageProfile();
-
-    [Header("逻辑行为列表（组合方式")]
-    [Tooltip("按顺序执行的地块逻辑行为列表，通过 SerializeReference 支持多态，多种逻辑可以叠加生效")]
-    [SerializeReference]
-    public List<TileBlockBehaviour> behaviours = new List<TileBlockBehaviour>();
-
-    /// <summary>
-    /// 获取用于渲染到 Tilemap 上的 Unity TileBase（默认无，子类可重写）
-    /// </summary>
-    public virtual UnityEngine.Tilemaps.TileBase GetTileBaseAsset()
+    /// <summary>不自动创建 GameRes；编辑器预览与真实资源会话严格分开。</summary>
+    private RuntimeTileDefinition ResolveDefinition()
     {
-        return TileBase;
+#if UNITY_EDITOR
+        if (!Application.isPlaying && EditorDefinitionResolver != null)
+            return EditorDefinitionResolver(DefinitionId);
+#endif
+        RuntimeTileDefinition definition = GameRes.ExistingInstance?.GetTileBlock(DefinitionId);
+        return definition ?? throw new System.InvalidOperationException($"地块 JSON 定义尚未加载：{DefinitionId}");
     }
+    #endregion
 
-    /// <summary>
-    /// 进入该地块时调用
-    /// </summary>
+    #region 旧调用兼容入口
+    public virtual TileBase GetTileBaseAsset() => Definition.GetTileBaseAsset();
+
+    /// <summary>旧地图转发到 JSON 创建的共享行为。</summary>
     public void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
-    {
-        if (behaviours == null || behaviours.Count == 0)
-            return;
+        => Definition.OnEnter(item, tileData, map, receiver);
 
-        for (int i = 0; i < behaviours.Count; i++)
-        {
-            var b = behaviours[i];
-            if (b == null) continue;
-            b.OnEnter(item, tileData, map, receiver);
-        }
-    }
-
-    /// <summary>
-    /// 离开该地块时调用
-    /// </summary>
     public void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
-    {
-        if (behaviours == null || behaviours.Count == 0)
-            return;
+        => Definition.OnExit(item, tileData, map, receiver);
 
-        for (int i = 0; i < behaviours.Count; i++)
-        {
-            var b = behaviours[i];
-            if (b == null) continue;
-            b.OnExit(item, tileData, map, receiver);
-        }
-    }
-
-    /// <summary>
-    /// 每帧在该地块上时调用（可选）
-    /// </summary>
     public void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
-    {
-        if (behaviours == null || behaviours.Count == 0)
-            return;
-
-        for (int i = 0; i < behaviours.Count; i++)
-        {
-            var b = behaviours[i];
-            if (b == null) continue;
-            b.OnUpdate(item, tileData, map, receiver, deltaTime);
-        }
-    }
-
-    /// <summary>
-    /// 在编辑器中自动校正 TileData 模板的 ID 和 Name，避免手动填写
-    /// </summary>
-    private void OnValidate()
-    {
-        if (tileDataTemplate == null)
-            return;
-
-        // 优先使用 tileItemName，未填写则退回到 SO 资源名
-        string keyName = !string.IsNullOrEmpty(tileItemName) ? tileItemName : name;
-        if (string.IsNullOrEmpty(keyName))
-            return;
-
-        // 始终同步 Name，供 TileEffectReceiver 通过 GameRes.GetTileBlock 查找
-        tileDataTemplate.Name = keyName;
-
-        // 仅在 ID 为空时填充，避免覆盖那些有特殊含义（如 TileBase 名称）的配置
-        if (string.IsNullOrEmpty(tileDataTemplate.ID))
-        {
-            tileDataTemplate.ID = keyName;
-        }
-    }
+        => Definition.OnUpdate(item, tileData, map, receiver, deltaTime);
+    #endregion
 }

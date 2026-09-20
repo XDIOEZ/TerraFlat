@@ -5,7 +5,7 @@ using UnityEngine;
 
 /// <summary>
 /// 地块效果接收器。优先读取 ChunkRuntime/ChunkTerrainData 权威地形，进入、离开或地块来源变化时
-/// 调用 Tile_Block 行为；旧 Map 仅作为尚未迁移场景的兼容回退。
+/// 调用 RuntimeTileDefinition 行为；旧 Map 仅作为尚未迁移场景的兼容回退。
 /// </summary>
 public class TileEffectReceiver : Module
 {
@@ -53,7 +53,7 @@ public class TileEffectReceiver : Module
 
     #region 运行时状态
 
-    private Tile_Block activeTileBlock;
+    private RuntimeTileDefinition activeTileBlock;
     private TileData activeTileData;
     private Map activeTileMap;
     private ChunkTerrainData activeRuntimeTerrain;
@@ -213,7 +213,7 @@ public class TileEffectReceiver : Module
             return false;
         }
 
-        Tile_Block tileBlock = activeTileBlock;
+        RuntimeTileDefinition tileBlock = activeTileBlock;
         TileData tileData = activeTileData;
         Map tileMap = activeTileMap;
         ClearActiveTile();
@@ -531,7 +531,7 @@ public class TileEffectReceiver : Module
         ChunkMgr manager = ChunkMgr.Instance;
         if (manager != null && manager.TryGetRuntimeTileEffect(samplePosition,
                 out RuntimeTerrainTileSample sample, out TileData runtimeData,
-                out Tile_Block runtimeBlock))
+                out RuntimeTileDefinition runtimeBlock))
         {
             resolution = new TileEffectResolution(runtimeBlock, runtimeData, null,
                 sample.Terrain, sample.TopTileId);
@@ -541,7 +541,7 @@ public class TileEffectReceiver : Module
         TileData legacyData = Cache_map?.GetTile(gridPos);
         if (legacyData != null && GameRes.Instance != null)
         {
-            Tile_Block legacyBlock = GameRes.Instance.GetTileBlock(legacyData.Name);
+            RuntimeTileDefinition legacyBlock = GameRes.Instance.GetTileBlock(legacyData.Name);
             if (legacyBlock != null)
             {
                 resolution = new TileEffectResolution(legacyBlock, legacyData, Cache_map, null, 0);
@@ -675,7 +675,7 @@ public class TileEffectReceiver : Module
 
     private readonly struct TileEffectResolution
     {
-        public TileEffectResolution(Tile_Block tileBlock, TileData tileData, Map map,
+        public TileEffectResolution(RuntimeTileDefinition tileBlock, TileData tileData, Map map,
             ChunkTerrainData runtimeTerrain, int runtimeTileId, bool edgeInteractionOnly = false)
         {
             TileBlock = tileBlock;
@@ -686,7 +686,7 @@ public class TileEffectReceiver : Module
             EdgeInteractionOnly = edgeInteractionOnly;
         }
 
-        public Tile_Block TileBlock { get; }
+        public RuntimeTileDefinition TileBlock { get; }
         public TileData TileData { get; }
         public Map Map { get; }
         public ChunkTerrainData RuntimeTerrain { get; }

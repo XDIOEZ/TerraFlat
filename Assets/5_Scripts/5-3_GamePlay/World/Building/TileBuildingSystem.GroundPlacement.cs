@@ -18,7 +18,7 @@ public static partial class TileBuildingSystem
     }
 
     /// <summary>预览与提交共用规则；只接受满足来源标记且没有叠层或建筑占用的来源格。</summary>
-    private static bool TryResolveGroundPlacement(Vector2Int worldCell, Tile_Block definition,
+    private static bool TryResolveGroundPlacement(Vector2Int worldCell, RuntimeTileDefinition definition,
         out RuntimeTerrainTileSample sample, out int tileId, out string reason)
     {
         sample = default;
@@ -69,7 +69,7 @@ public static partial class TileBuildingSystem
     }
 
     /// <summary>增加独立地表覆盖，并同步持久化和通行查询。</summary>
-    private static bool TryPlaceGround(Vector2Int worldCell, Tile_Block definition,
+    private static bool TryPlaceGround(Vector2Int worldCell, RuntimeTileDefinition definition,
         out TileBuildingCell placedCell, out string reason)
     {
         placedCell = default;

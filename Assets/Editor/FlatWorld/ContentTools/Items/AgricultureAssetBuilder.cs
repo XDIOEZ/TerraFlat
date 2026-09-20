@@ -39,10 +39,12 @@ public static class AgricultureAssetBuilder
         EditorUtility.SetDirty(tile);
         AssetDatabase.SaveAssetIfDirty(tile);
         Tile_Block block = AssetDatabase.LoadAssetAtPath<Tile_Block>(BlockPath);
-        block.displayName = "耕地";
-        block.TileBase = tile;
-        block.tileDataTemplate.IsWalkable = true;
-        block.tileDataTemplate.Penalty = 1000;
+        TileDefinitionDto definition = TileDefinitionFactory.DeserializeDefinition(block.Definition.CopySource());
+        definition.DisplayName = "耕地";
+        definition.TileAsset = tile.name;
+        definition.Data.Parameters["isWalkable"] = true;
+        definition.Data.Parameters["penalty"] = 1000;
+        TileDefinitionEditorCatalog.SaveDefinition(definition);
         EditorUtility.SetDirty(block);
         AssetDatabase.SaveAssetIfDirty(block);
         Register(BlockPath, "TileBlock");

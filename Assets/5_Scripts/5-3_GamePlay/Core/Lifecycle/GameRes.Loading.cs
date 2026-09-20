@@ -277,6 +277,8 @@ public partial class GameRes
     {
         var errors = new List<Exception>();
         void Clear(Action action) { try { action(); } catch (Exception exception) { errors.Add(exception); } }
+        // 先让使用者释放 BRG 注册/材质，再销毁共享 Mesh，最后卸载源 Sprite/Tile/MOD。
+        Clear(SharedSpriteMeshCache.Clear);
         Clear(() => ModRuntimeManager.Instance?.UnloadForResourceReload());
         Clear(ClearAllDictionaries);
         Clear(PlayerCreationTemplateCatalogService.Reset);
@@ -300,7 +302,7 @@ public partial class GameRes
         recipeDict.Clear();
         recipeCatalog.Clear();
         tileBaseDict.Clear();
-        TileBlockDict.Clear();
+        ClearTileDefinitions();
         BuffDefinitions.Clear();
         ContaminationDefinitions.Clear();
         LiquidDefinitions.Clear();

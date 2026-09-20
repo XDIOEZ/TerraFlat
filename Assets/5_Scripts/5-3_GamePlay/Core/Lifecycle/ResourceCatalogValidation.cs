@@ -19,7 +19,8 @@ public static class ResourceCatalogValidation
     private static readonly SortedDictionary<string, IResourceCatalogValidator> validators = new(StringComparer.Ordinal)
     {
         ["items"] = new ItemResourceCatalogValidator(),
-        ["buildings"] = new BuildingResourceCatalogValidator()
+        ["buildings"] = new BuildingResourceCatalogValidator(),
+        ["tiles"] = new TileDefinitionCatalogValidator()
     };
 
     /// <summary>按稳定 ID 接入独立系统校验；替换既有校验必须显式声明。</summary>

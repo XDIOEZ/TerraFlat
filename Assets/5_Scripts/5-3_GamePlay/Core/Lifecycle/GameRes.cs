@@ -50,9 +50,9 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     [ShowInInspector]
     public Dictionary<string, TileBase> tileBaseDict = new Dictionary<string, TileBase>();
 
-    [Header("Tile地块逻辑SO字典")]
+    [Header("JSON 地块运行时定义字典")]
     [ShowInInspector]
-    public Dictionary<string, Tile_Block> TileBlockDict = new Dictionary<string, Tile_Block>();
+    public Dictionary<string, RuntimeTileDefinition> TileBlockDict = new(System.StringComparer.OrdinalIgnoreCase);
 
     [Header("Buff数据字典")]
     [ShowInInspector]
@@ -269,10 +269,11 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     }
     
     /// <summary>
-    /// 获取 Tile_Block 逻辑 ScriptableObject（通过 tileItemName 或资源名）
+    /// 获取 JSON 构建的共享地块定义；保留原查询方法名，返回值不再是 SO。
     /// </summary>
-    public Tile_Block GetTileBlock(string key)
+    public RuntimeTileDefinition GetTileBlock(string key)
     {
+        if (string.IsNullOrWhiteSpace(key)) return null;
         TileBlockDict.TryGetValue(key, out var block);
         return block;
     }

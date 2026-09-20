@@ -66,18 +66,20 @@ public static class WaterPlatformAssetBuilder
             AssetDatabase.CreateAsset(block, BlockPath);
         }
         block.tileItemName = TileBlockId;
-        block.displayName = "水上平台";
-        block.TileBase = tile;
-        block.tileDataTemplate = new TileData_Universal
+        TileDefinitionDto definition = new TileDefinitionDto
         {
-            ID = TileBlockId,
-            Name = TileBlockId,
-            IsWalkable = true,
-            Penalty = 1000
+            Id = TileBlockId,
+            RuntimeTileId = RuntimeTileId,
+            DisplayName = "水上平台",
+            TileAsset = tile.name,
+            Data = new TileComponentDefinitionDto
+            {
+                Type = "universal",
+                Parameters = new Newtonsoft.Json.Linq.JObject { ["isWalkable"] = true, ["penalty"] = 1000 }
+            },
+            GroundPlacement = new GroundTilePlacementRule { RefundItemId = "WaterPlatform_Summoner" }
         };
-        block.groundPlacement = new GroundTilePlacementRule { RefundItemId = "WaterPlatform_Summoner" };
-        block.behaviours.Clear();
-        block.damageProfile = new TileBuildingDamageProfile();
+        TileDefinitionEditorCatalog.SaveDefinition(definition);
         EditorUtility.SetDirty(block);
 
         RegisterPalette(tile);

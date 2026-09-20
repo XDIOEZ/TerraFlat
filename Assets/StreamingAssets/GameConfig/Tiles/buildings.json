@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "tiles": [
+    {
+      "id": "TileBase_StoneWall",
+      "runtimeTileId": 7,
+      "displayName": "矿洞岩壁",
+      "tileAsset": "TileBase_StoneWall",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "Blocking", "demolitionTime": 5, "penalty": 0, "isWalkable": false }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": true, "maxHealth": 60,
+        "defenseValues": { "cutting": 2, "piercing": 2, "chopping": 2, "blunt": 2 },
+        "requiredTool": 1, "impactMaterial": 4, "dropItemId": "Ore_Stone", "dropAmount": 1
+      }
+    },
+    {
+      "id": "TileBase_BuiltStoneWall",
+      "runtimeTileId": 8,
+      "displayName": "石墙",
+      "tileAsset": "TileBase_BuiltStoneWall",
+      "data": {
+        "type": "cellBuilding",
+        "parameters": { "tileTag": "Blocking", "demolitionTime": 200, "penalty": 0, "isWalkable": false, "currentHp": 200 }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": true, "maxHealth": 200,
+        "defenseValues": { "cutting": 5, "piercing": 5, "chopping": 5, "blunt": 5 },
+        "requiredTool": 0, "minimumWeaponDamage": 1, "impactMaterial": 4, "dropItemId": "Wall_Stone_Summoner", "dropAmount": 1
+      }
+    },
+    {
+      "id": "TileBase_BuiltWoodWall",
+      "runtimeTileId": 12,
+      "displayName": "木墙",
+      "tileAsset": "TileBase_BuiltWoodWall",
+      "data": {
+        "type": "cellBuilding",
+        "parameters": { "tileTag": "Blocking", "demolitionTime": 200, "penalty": 0, "isWalkable": false, "currentHp": 100 }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": true, "maxHealth": 100,
+        "defenseValues": { "cutting": 5, "piercing": 5, "chopping": 0, "blunt": 0 },
+        "requiredTool": 0, "minimumWeaponDamage": 1, "impactMaterial": 3, "dropItemId": "Wall_Wood_Summoner", "dropAmount": 1
+      }
+    },
+    {
+      "id": "Tile_WaterPlatform",
+      "runtimeTileId": 13,
+      "displayName": "水上平台",
+      "tileAsset": "Tile_WaterPlatform",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": false, "maxHealth": 100,
+        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+      },
+      "groundPlacement": { "requiredSourceFlags": 4, "refundItemId": "WaterPlatform_Summoner" }
+    },
+    {
+      "id": "Tile_Platform_Stone",
+      "runtimeTileId": 15,
+      "displayName": "石平台",
+      "tileAsset": "Tile_Platform_Stone",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": false, "maxHealth": 100,
+        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+      },
+      "groundPlacement": { "requiredSourceFlags": 4, "refundItemId": "Platform_Stone_Summoner" }
+    },
+    {
+      "id": "Tile_Platform_Copper",
+      "runtimeTileId": 16,
+      "displayName": "铜平台",
+      "tileAsset": "Tile_Platform_Copper",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": false, "maxHealth": 100,
+        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+      },
+      "groundPlacement": { "requiredSourceFlags": 4, "refundItemId": "Platform_Copper_Summoner" }
+    },
+    {
+      "id": "Tile_Platform_Iron",
+      "runtimeTileId": 17,
+      "displayName": "铁平台",
+      "tileAsset": "Tile_Platform_Iron",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": false, "maxHealth": 100,
+        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+      },
+      "groundPlacement": { "requiredSourceFlags": 4, "refundItemId": "Platform_Iron_Summoner" }
+    },
+    {
+      "id": "Tile_Platform_Bronze",
+      "runtimeTileId": 18,
+      "displayName": "青铜平台",
+      "tileAsset": "Tile_Platform_Bronze",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": false, "maxHealth": 100,
+        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+      },
+      "groundPlacement": { "requiredSourceFlags": 4, "refundItemId": "Platform_Bronze_Summoner" }
+    },
+    {
+      "id": "Tile_Wall_Copper",
+      "runtimeTileId": 19,
+      "displayName": "铜墙",
+      "tileAsset": "Tile_Wall_Copper",
+      "data": {
+        "type": "cellBuilding",
+        "parameters": { "tileTag": "Blocking", "demolitionTime": 200, "penalty": 0, "isWalkable": false, "currentHp": 200 }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": true, "maxHealth": 280,
+        "defenseValues": { "cutting": 5, "piercing": 5, "chopping": 5, "blunt": 5 },
+        "requiredTool": 0, "minimumWeaponDamage": 1, "impactMaterial": 4, "dropItemId": "Wall_Copper_Summoner", "dropAmount": 1
+      }
+    },
+    {
+      "id": "Tile_Wall_Iron",
+      "runtimeTileId": 20,
+      "displayName": "铁墙",
+      "tileAsset": "Tile_Wall_Iron",
+      "data": {
+        "type": "cellBuilding",
+        "parameters": { "tileTag": "Blocking", "demolitionTime": 200, "penalty": 0, "isWalkable": false, "currentHp": 200 }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": true, "maxHealth": 360,
+        "defenseValues": { "cutting": 5, "piercing": 5, "chopping": 5, "blunt": 5 },
+        "requiredTool": 0, "minimumWeaponDamage": 1, "impactMaterial": 4, "dropItemId": "Wall_Iron_Summoner", "dropAmount": 1
+      }
+    },
+    {
+      "id": "Tile_Wall_Bronze",
+      "runtimeTileId": 21,
+      "displayName": "青铜墙",
+      "tileAsset": "Tile_Wall_Bronze",
+      "data": {
+        "type": "cellBuilding",
+        "parameters": { "tileTag": "Blocking", "demolitionTime": 200, "penalty": 0, "isWalkable": false, "currentHp": 200 }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": true, "maxHealth": 320,
+        "defenseValues": { "cutting": 5, "piercing": 5, "chopping": 5, "blunt": 5 },
+        "requiredTool": 0, "minimumWeaponDamage": 1, "impactMaterial": 4, "dropItemId": "Wall_Bronze_Summoner", "dropAmount": 1
+      }
+    },
+    {
+      "id": "Tile_DirtWall",
+      "runtimeTileId": 22,
+      "displayName": "泥土墙",
+      "tileAsset": "TileBase_Dirt",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "Blocking", "demolitionTime": 3, "penalty": 0, "isWalkable": false }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": true, "maxHealth": 40,
+        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 1 },
+        "requiredTool": 1, "impactMaterial": 1, "dropItemId": "Earth", "dropAmount": 1
+      }
+    },
+    {
+      "id": "Tile_Floor_Wood",
+      "runtimeTileId": 23,
+      "displayName": "木地板",
+      "tileAsset": "Tile_WaterPlatform",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": false, "maxHealth": 100,
+        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+      },
+      "groundPlacement": { "requiredSourceFlags": 1, "forbiddenSourceFlags": 4, "refundItemId": "Floor_Wood_Summoner" }
+    },
+    {
+      "id": "Tile_Floor_Stone",
+      "runtimeTileId": 24,
+      "displayName": "石地板",
+      "tileAsset": "Tile_Platform_Stone",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": false, "maxHealth": 100,
+        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+      },
+      "groundPlacement": { "requiredSourceFlags": 1, "forbiddenSourceFlags": 4, "refundItemId": "Floor_Stone_Summoner" }
+    },
+    {
+      "id": "Tile_Floor_Copper",
+      "runtimeTileId": 25,
+      "displayName": "铜地板",
+      "tileAsset": "Tile_Platform_Copper",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": false, "maxHealth": 100,
+        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+      },
+      "groundPlacement": { "requiredSourceFlags": 1, "forbiddenSourceFlags": 4, "refundItemId": "Floor_Copper_Summoner" }
+    },
+    {
+      "id": "Tile_Floor_Iron",
+      "runtimeTileId": 26,
+      "displayName": "铁地板",
+      "tileAsset": "Tile_Platform_Iron",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": false, "maxHealth": 100,
+        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+      },
+      "groundPlacement": { "requiredSourceFlags": 1, "forbiddenSourceFlags": 4, "refundItemId": "Floor_Iron_Summoner" }
+    },
+    {
+      "id": "Tile_Floor_Bronze",
+      "runtimeTileId": 27,
+      "displayName": "青铜地板",
+      "tileAsset": "Tile_Platform_Bronze",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": false, "maxHealth": 100,
+        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+      },
+      "groundPlacement": { "requiredSourceFlags": 1, "forbiddenSourceFlags": 4, "refundItemId": "Floor_Bronze_Summoner" }
+    }
+  ]
+}

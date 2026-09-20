@@ -1430,8 +1430,8 @@ public class Map : Item
             return;
         }
 
-        // 通过位置拿到顶层 TileData.ID -> 通过 ID 找 Tile_Block SO -> 通过 SO 获取 TileBase
-        Tile_Block tileBlock = GameRes.Instance.GetTileBlock(topTile.ID);
+        // 旧地图同样通过稳定 ID 获取 JSON 运行时定义，不再读取 SO 中的配置。
+        RuntimeTileDefinition tileBlock = GameRes.Instance.GetTileBlock(topTile.ID);
         if (tileBlock == null)
         {
             Debug.LogError($"无法加载 Tile_Block：{topTile.ID}，更新失败。");

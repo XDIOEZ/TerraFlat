@@ -43,7 +43,7 @@ namespace FlatWorld.GameTest.Dimension
 
             bool resolved = ChunkRuntimeTileEffectResolver.TryCreateTileEffectData(
                 profile.CreateSnapshot(), terrain, Vector2Int.zero, new Vector2Int(10, 20),
-                out TileData tileData, out Tile_Block tileBlock);
+                out TileData tileData, out RuntimeTileDefinition tileBlock);
 
             Assert.That(resolved, Is.True);
             Assert.That(tileBlock.tileItemName, Is.EqualTo("Tile_Water_Fresh"));
@@ -53,7 +53,7 @@ namespace FlatWorld.GameTest.Dimension
             Tile_Water behaviour = tileBlock.behaviours.OfType<Tile_Water>().Single();
             Assert.That(behaviour.BuffInfo, Does.Not.Contain("水体减速"));
             Assert.That(behaviour.BuffInfo, Does.Contain("潮湿"));
-            Assert.That(behaviour.moveSpeedMultiplier, Is.EqualTo(0.5f));
+            Assert.That(behaviour.moveSpeedMultiplier, Is.EqualTo(0.2f));
         }
 
         [Test]
@@ -135,9 +135,10 @@ namespace FlatWorld.GameTest.Dimension
 
             private readonly GameObject itemObject;
             private readonly GameObject mapObject;
-            private readonly Tile_Block waterBlock;
+            private readonly RuntimeTileDefinition waterBlock;
+            private readonly Tile visualTile;
             private readonly GameRes gameRes;
-            private readonly Tile_Block previousBlock;
+            private readonly RuntimeTileDefinition previousBlock;
             private readonly bool hadPreviousBlock;
             private readonly BuffDefinition previousWetBuff;
             private readonly bool hadPreviousWetBuff;
@@ -161,13 +162,27 @@ namespace FlatWorld.GameTest.Dimension
                 previousWetBuff = existingWetBuff;
                 gameRes.BuffDefinitions[WetBuff.Id] = WetBuff;
 
-                waterBlock = ScriptableObject.CreateInstance<Tile_Block>();
-                waterBlock.tileItemName = TestTileId;
-                waterBlock.behaviours.Add(new Tile_Water
+                visualTile = ScriptableObject.CreateInstance<Tile>();
+                waterBlock = TileDefinitionFactory.Build(new TileDefinitionDto
                 {
-                    BuffInfo = new List<string> { WetBuff.Id },
-                    moveSpeedMultiplier = 0.5f
-                });
+                    Id = TestTileId,
+                    TileAsset = TestTileId,
+                    Data = new TileComponentDefinitionDto
+                    {
+                        Type = "water",
+                        Parameters = new Newtonsoft.Json.Linq.JObject
+                        { ["liquidId"] = salt > 0 ? "core:sea_water" : "core:dirty_water", ["salt"] = salt }
+                    },
+                    Behaviours = new List<TileComponentDefinitionDto>
+                    {
+                        new TileComponentDefinitionDto
+                        {
+                            Type = "water",
+                            Parameters = new Newtonsoft.Json.Linq.JObject
+                            { ["buffInfo"] = new Newtonsoft.Json.Linq.JArray(WetBuff.Id), ["moveSpeedMultiplier"] = 0.5f }
+                        }
+                    }
+                }, _ => visualTile);
                 hadPreviousBlock = gameRes.TileBlockDict.TryGetValue(TestTileId, out previousBlock);
                 gameRes.TileBlockDict[TestTileId] = waterBlock;
 
@@ -236,8 +251,8 @@ namespace FlatWorld.GameTest.Dimension
                     UnityEngine.Object.DestroyImmediate(itemObject);
                 if (mapObject != null)
                     UnityEngine.Object.DestroyImmediate(mapObject);
-                if (waterBlock != null)
-                    UnityEngine.Object.DestroyImmediate(waterBlock);
+                if (visualTile != null)
+                    UnityEngine.Object.DestroyImmediate(visualTile);
             }
 
             private static Ex_ModData_MemoryPackable CreateModuleData(string id, string name)

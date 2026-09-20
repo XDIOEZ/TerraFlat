@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "tiles": [
+    {
+      "id": "TileBase_Stone",
+      "runtimeTileId": 0,
+      "displayName": "矿洞石地",
+      "tileAsset": "TileBase_Stone",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "CaveFloor", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": []
+    },
+    {
+      "id": "Tile_Grass",
+      "runtimeTileId": 1,
+      "displayName": "Tile_Grass",
+      "tileAsset": "Tile_Grass",
+      "data": {
+        "type": "grass",
+        "parameters": {
+          "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true,
+          "fertileValue": { "baseValue": 1, "baseAdditive": 0, "additiveModifier": 0, "multiplicativeModifier": 1, "finalAdditive": 0 }
+        }
+      },
+      "behaviours": [ { "type": "grass", "parameters": { "buffInfo": [] } } ]
+    },
+    {
+      "id": "Tile_Water_Fresh",
+      "runtimeTileId": 2,
+      "displayName": "Tile_Water_Fresh",
+      "tileAsset": "Tile_Water_Fresh",
+      "data": {
+        "type": "water",
+        "parameters": {
+          "tileTag": "", "demolitionTime": 0, "penalty": 20000, "isWalkable": true,
+          "deepValue": 0, "salt": 0, "liquidId": "core:dirty_water"
+        }
+      },
+      "behaviours": [
+        {
+          "type": "water",
+          "parameters": {
+            "buffInfo": [ "潮湿" ],
+            "drinkHoldSeconds": 1,
+            "drinkTickSeconds": 1,
+            "waterGainPerTick": 12.5,
+            "saltWaterGainPerTick": 10,
+            "shallowMoveSpeedMultiplier": 0.5,
+            "moveSpeedMultiplier": 0.2,
+            "entryTemperatureFloor": 10,
+            "entryTemperatureTransitionSeconds": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": "Tile_Sand",
+      "runtimeTileId": 3,
+      "displayName": "Tile_Sand",
+      "tileAsset": "Tile_Sand",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": []
+    },
+    {
+      "id": "Tile_Stone",
+      "runtimeTileId": 4,
+      "displayName": "Tile_Stone",
+      "tileAsset": "Tile_Stone",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": []
+    },
+    {
+      "id": "Tile_Snow",
+      "runtimeTileId": 5,
+      "displayName": "Tile_Snow",
+      "tileAsset": "TileBase_Snow",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [ { "type": "snow", "parameters": { "moveSpeedMultiplier": 0.9, "footprintLifetime": 60 } } ]
+    },
+    {
+      "id": "Tile_Water_Salt",
+      "runtimeTileId": 6,
+      "displayName": "Tile_Water_Salt",
+      "tileAsset": "Tile_Water_Salt",
+      "data": {
+        "type": "water",
+        "parameters": {
+          "tileTag": "", "demolitionTime": 0, "penalty": 20000, "isWalkable": true,
+          "deepValue": 0.5, "salt": 80, "liquidId": "core:sea_water"
+        }
+      },
+      "behaviours": [
+        {
+          "type": "water",
+          "parameters": {
+            "buffInfo": [ "潮湿" ],
+            "drinkHoldSeconds": 1,
+            "drinkTickSeconds": 1,
+            "waterGainPerTick": 12.5,
+            "saltWaterGainPerTick": 10,
+            "shallowMoveSpeedMultiplier": 0.5,
+            "moveSpeedMultiplier": 0.2,
+            "entryTemperatureFloor": 10,
+            "entryTemperatureTransitionSeconds": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": "Tile_Ice",
+      "runtimeTileId": 9,
+      "displayName": "Tile_Ice",
+      "tileAsset": "TileBase_Ice",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [ { "type": "ice", "parameters": { "accelerationMultiplier": 0.35, "decelerationMultiplier": 0.15 } } ]
+    },
+    {
+      "id": "Tile_Snow_Variant2",
+      "runtimeTileId": 10,
+      "displayName": "Tile_Snow_Variant2",
+      "tileAsset": "Winter_1",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [ { "type": "snow", "parameters": { "moveSpeedMultiplier": 0.9, "footprintLifetime": 60 } } ]
+    },
+    {
+      "id": "Tile_Snow_Variant3",
+      "runtimeTileId": 11,
+      "displayName": "Tile_Snow_Variant3",
+      "tileAsset": "Winter_3",
+      "data": {
+        "type": "universal",
+        "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
+      },
+      "behaviours": [ { "type": "snow", "parameters": { "moveSpeedMultiplier": 0.9, "footprintLifetime": 60 } } ]
+    },
+    {
+      "id": "Tile_Farmland",
+      "runtimeTileId": 14,
+      "displayName": "耕地",
+      "tileAsset": "Tile_Farmland",
+      "data": {
+        "type": "farmland",
+        "parameters": {
+          "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true,
+          "fertilityValue": { "baseValue": 1, "baseAdditive": 0, "additiveModifier": 0, "multiplicativeModifier": 1, "finalAdditive": 0 },
+          "waterValue": 40, "maxWater": 100
+        }
+      },
+      "behaviours": [],
+      "damageProfile": {
+        "damageable": false, "maxHealth": 100,
+        "defenseValues": { "cutting": 0, "piercing": 0, "chopping": 0, "blunt": 0 },
+        "requiredTool": 0, "minimumWeaponDamage": 0, "impactMaterial": 1, "dropItemId": null, "dropAmount": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+    "name": "FlatWorld.WorldModel.EditorTests",
+    "rootNamespace": "FlatWorld.GameTest.WorldModel",
+    "references": ["GamePlay"],
+    "includePlatforms": ["Editor"],
+    "autoReferenced": false,
+    "optionalUnityReferences": ["TestAssemblies"]
+}

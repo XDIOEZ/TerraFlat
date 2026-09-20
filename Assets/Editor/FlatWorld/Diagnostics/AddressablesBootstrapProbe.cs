@@ -178,14 +178,8 @@ namespace FlatWorld.Editor.Diagnostics
                     if (!string.IsNullOrWhiteSpace(tileId)) tileRequests[definition.Id] = tileId;
                 }
             }
-            var blocks = new Dictionary<string, Tile_Block>(StringComparer.Ordinal);
-            foreach (IResourceLocation location in Locations("TileBlock", typeof(Tile_Block)))
-            {
-                Tile_Block block = AssetDatabase.LoadAssetAtPath<Tile_Block>(location.InternalId);
-                if (block == null) { errors.Add($"TileBlock 无法读取：{location.InternalId}"); continue; }
-                if (!blocks.TryAdd(block.name, block)) errors.Add($"TileBlock 名称冲突：{block.name}");
-            }
-            BuildingResourceCatalogValidator.ValidateTiles(tileRequests, blocks, errors);
+            TileDefinitionEditorCatalog.Invalidate();
+            BuildingResourceCatalogValidator.ValidateTiles(tileRequests, TileDefinitionEditorCatalog.Definitions, errors);
             if (errors.Count > 0) Debug.LogError($"{LogPrefix} 内容预检发现 {errors.Count} 个问题：\n" + string.Join("\n", errors));
             else Debug.Log($"{LogPrefix} 内容预检通过：{definitions.Count(definition => !definition.Abstract)} 个物品，{actors.Count(definition => !definition.Abstract)} 个 Actor，" +
                 $"{prefabs.Count} 个 Prefab 名称/别名，{tileRequests.Count} 个 Tile 建筑，地址与引用完整。");

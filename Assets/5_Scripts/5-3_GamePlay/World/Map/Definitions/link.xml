@@ -1,0 +1,28 @@
+<linker>
+  <!-- JSON 仅反射已注册配置字段；IL2CPP 构建仍需保留这些字段和默认构造器。 -->
+  <assembly fullname="Data">
+    <type fullname="TileData" preserve="all" />
+    <type fullname="TileData_Universal" preserve="all" />
+    <type fullname="TileData_Grass" preserve="all" />
+    <type fullname="TileData_Water" preserve="all" />
+    <type fullname="TileData_Farmland" preserve="all" />
+    <type fullname="TileData_CellBuilding" preserve="all" />
+    <type fullname="GameValue_float" preserve="all" />
+  </assembly>
+  <assembly fullname="GamePlay">
+    <type fullname="TileDefinitionManifestDto" preserve="all" />
+    <type fullname="TileDefinitionPackageDto" preserve="all" />
+    <type fullname="TileDefinitionCatalogDto" preserve="all" />
+    <type fullname="TileDefinitionDto" preserve="all" />
+    <type fullname="TileComponentDefinitionDto" preserve="all" />
+    <type fullname="TileBuildingDamageProfile" preserve="all" />
+    <type fullname="GroundTilePlacementRule" preserve="all" />
+    <type fullname="Tile_Universal" preserve="all" />
+    <type fullname="Tile_Grass" preserve="all" />
+    <type fullname="Tile_Water" preserve="all" />
+    <type fullname="Tile_Farmland" preserve="all" />
+    <type fullname="Tile_Ice" preserve="all" />
+    <type fullname="Tile_Snow" preserve="all" />
+    <type fullname="CombatDefense" preserve="all" />
+  </assembly>
+</linker>

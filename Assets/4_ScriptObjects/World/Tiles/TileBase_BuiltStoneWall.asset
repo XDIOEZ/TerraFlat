@@ -13,37 +13,3 @@ MonoBehaviour:
   m_Name: TileBase_BuiltStoneWall
   m_EditorClassIdentifier:
   tileItemName: TileBase_BuiltStoneWall
-  displayName: "\u77F3\u5899"
-  tileDataTemplate:
-    rid: 7812649051734021163
-  TileBase: {fileID: 11400000, guid: f26a8c9974724632a1b9de6bd85f4b2d, type: 2}
-  damageProfile:
-    Damageable: 1
-    MaxHealth: 200
-    DefenseValues:
-      Cutting: 5
-      Piercing: 5
-      Chopping: 5
-      Blunt: 5
-    RequiredTool: 0
-    MinimumWeaponDamage: 1
-    ImpactMaterial: 4
-    DropItemId: Wall_Stone_Summoner
-    DropAmount: 1
-  behaviours: []
-  references:
-    version: 2
-    RefIds:
-    - rid: 7812649051734021163
-      type: {class: TileData_CellBuilding, ns: , asm: Data}
-      data:
-        ID: TileBase_BuiltStoneWall
-        Name: TileBase_BuiltStoneWall
-        TileTag: Blocking
-        position: {x: 0, y: 0, z: 0}
-        DemolitionTime: 200
-        workTime: 0
-        Penalty: 0
-        IsWalkable: 0
-        Version: 1
-        CurrentHp: 200

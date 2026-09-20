@@ -107,6 +107,10 @@ public sealed class ModDefinitionDocument
     [JsonProperty("assets")]
     public List<ModAssetDefinition> Assets = new();
 
+    /// <summary>与本体共用的 JSON 地块定义，行为通过稳定 type ID 注册。</summary>
+    [JsonProperty("tiles")]
+    public List<TileDefinitionDto> Tiles = new();
+
     [JsonProperty("items")]
     public List<ModItemDefinition> Items = new();
 

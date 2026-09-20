@@ -30,7 +30,7 @@ public sealed class BuildingResourceCatalogValidator : IResourceCatalogValidator
                 errors.Add($"建筑 {definition.Id} -> 召唤器 {state.SummonerPrefabId} 未注册");
         }
         ValidateTiles(tileRequests, resources.TileBlockDict, errors);
-        foreach (Tile_Block block in resources.TileBlockDict.Values.Distinct())
+        foreach (RuntimeTileDefinition block in resources.TileBlockDict.Values.Distinct())
         {
             string drop = block.damageProfile?.DropItemId;
             if (!string.IsNullOrWhiteSpace(drop) && !resources.ItemDefinitions.ContainsKey(drop))
@@ -38,9 +38,9 @@ public sealed class BuildingResourceCatalogValidator : IResourceCatalogValidator
         }
     }
 
-    /// <summary>只检查已加载的 SO 与纯配置，不创建地图、快照存档或建筑实例。</summary>
+    /// <summary>只检查已加载的 JSON 定义与生成配置，不创建地图、快照存档或建筑实例。</summary>
     public static void ValidateTiles(IReadOnlyDictionary<string, string> requests,
-        IReadOnlyDictionary<string, Tile_Block> blocks, List<string> errors)
+        IReadOnlyDictionary<string, RuntimeTileDefinition> blocks, List<string> errors)
     {
         ChunkGenerationProfileSO[] profiles = Resources.LoadAll<ChunkGenerationProfileSO>("Config/WorldModel");
         ChunkTilePaletteSO palette = Resources.Load<ChunkTilePaletteSO>("Config/WorldModel/ChunkTilePalette_Default");
@@ -58,21 +58,24 @@ public sealed class BuildingResourceCatalogValidator : IResourceCatalogValidator
                 { errors.Add($"Profile {profile.name} -> 无效 Tile ID {entry.Key}"); continue; }
                 if (!seen.Add(entry.Value)) errors.Add($"Profile {profile.name} -> 地块 {entry.Value} 绑定了多个 Tile ID");
                 registered.Add(entry.Value);
-                if (!blocks.TryGetValue(entry.Value, out Tile_Block block) || block == null)
+                if (!blocks.TryGetValue(entry.Value, out RuntimeTileDefinition block) || block == null)
                 { errors.Add($"Profile {profile.name} -> {entry.Key} -> TileBlock {entry.Value} 未加载"); continue; }
-                if (palette != null && (!palette.TryGetTile(tileId, out TileBase tile) || tile != block.GetTileBaseAsset()))
-                    errors.Add($"Profile {profile.name} -> {entry.Key} -> {entry.Value} 与调色板 Tile 不一致或缺失");
+                if (block.RuntimeTileId != tileId)
+                    errors.Add($"Profile {profile.name} -> {entry.Key} 与 JSON 地块 {block.Id} 的稳定编号不一致");
+                if (block.GetTileBaseAsset() is not Tile tile || tile.sprite == null)
+                    errors.Add($"Profile {profile.name} -> {entry.Key} -> {entry.Value} 缺少可供 BRG 使用的静态 Tile 或 Sprite");
             }
         }
         foreach (KeyValuePair<string, string> request in requests)
         {
             string source = $"建筑 {request.Key} -> TileBlock {request.Value}";
-            if (!blocks.TryGetValue(request.Value, out Tile_Block block) || block == null)
-            { errors.Add(source + " 未加载，请检查资源及 TileBlock 标签"); continue; }
+            if (!blocks.TryGetValue(request.Value, out RuntimeTileDefinition block) || block == null)
+            { errors.Add(source + " 未加载，请检查地块 JSON 清单"); continue; }
             if (block.GetTileBaseAsset() is not Tile tile || tile.sprite == null)
                 errors.Add(source + " -> 缺少静态 Tile 或 Sprite");
             if (block.tileDataTemplate == null) errors.Add(source + " -> 缺少 TileData 模板");
-            if (!registered.Contains(request.Value)) errors.Add(source + " -> 没有任何生成 Profile 注册 tile.block.*");
+            if (!registered.Contains(request.Value) && block.RuntimeTileId <= 0)
+                errors.Add(source + " -> JSON 缺少稳定 runtimeTileId，生成 Profile 也没有注册 tile.block.*");
         }
     }
 

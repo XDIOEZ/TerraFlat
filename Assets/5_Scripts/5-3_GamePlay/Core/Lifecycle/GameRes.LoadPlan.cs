@@ -37,7 +37,8 @@ public partial class GameRes
                 tables => { foreach (RuntimeLootTable table in tables) RegisterLootTable(table); }));
         plan.Add("prefabs", "加载运行时预制体", 20, () => LoadPrefabCatalog(itemSources), "item-manifest");
         plan.Add("tiles", "加载地形图块", 3, () => LoadAssetGroup<TileBase>("TileBase", tileBaseDict, tile => tile.name, true), "addressables");
-        plan.Add("tile-blocks", "加载逻辑地块", 3, () => LoadAssetGroup<Tile_Block>("TileBlock", TileBlockDict, tile => tile.name, true), "tiles");
+        plan.Add("tile-blocks", "加载地块 JSON 定义", 3,
+            () => LoadCatalog<int>((done, fail) => TileDefinitionCatalogLoader.LoadBuiltInAsync(this, done, fail), _ => { }), "tiles");
         plan.Add("inventory", "加载初始库存", 2, () => LoadAssetGroup<Inventoryinit>("InventoryInit", InventoryInitDict, asset => asset.name, true), "addressables");
         plan.Add("skills", "加载技能资源", 2, () => LoadAssetGroup<BaseSkill>("Skill", SkillDict, asset => asset.name, true), "addressables");
         plan.Add("items", "构建物品定义", 25,
@@ -71,6 +72,8 @@ public partial class GameRes
                 ResourceCatalogValidation.Validate(this);
                 GameManager.Instance?.ApplyDefaultTimeSystemProfile();
             }), "mods");
+        plan.Add("brg-sprite-mesh-prewarm", "预构造地形共享网格", 3,
+            PrewarmTerrainSpriteMeshes, "validate-final");
         return plan;
     }
 

@@ -50,7 +50,7 @@ public readonly struct RuntimeWaterCurrentSample
 }
 
 /// <summary>
-/// 把纯数据地形的数字 TileId 转换成现有 Tile_Block 行为与临时 TileData。
+/// 把纯数据地形的数字 TileId 转换成共享 RuntimeTileDefinition 与临时 TileData。
 /// 映射由生成配置的 tile.block.&lt;TileId&gt; 文本参数提供，避免后台地形数据引用 Unity 资源。
 /// </summary>
 public static class ChunkRuntimeTileEffectResolver
@@ -61,7 +61,7 @@ public static class ChunkRuntimeTileEffectResolver
 
     public static bool TryCreateTileEffectData(ChunkGenerationProfileSnapshot profile,
         ChunkTerrainData terrain, Vector2Int localCell, Vector2Int worldCell,
-        out TileData tileData, out Tile_Block tileBlock)
+        out TileData tileData, out RuntimeTileDefinition tileBlock)
     {
         return TryCreateTileEffectData(profile, null, terrain, localCell, worldCell,
             out tileData, out tileBlock);
@@ -71,11 +71,11 @@ public static class ChunkRuntimeTileEffectResolver
     public static bool TryCreateTileEffectData(ChunkGenerationProfileSnapshot profile,
         ChunkGenerationProfileSnapshot runtimeTileCatalog,
         ChunkTerrainData terrain, Vector2Int localCell, Vector2Int worldCell,
-        out TileData tileData, out Tile_Block tileBlock)
+        out TileData tileData, out RuntimeTileDefinition tileBlock)
     {
         tileData = null;
         tileBlock = null;
-        if (profile == null || terrain == null || terrain.IsDisposed || GameRes.Instance == null)
+        if (profile == null || terrain == null || terrain.IsDisposed || GameRes.ExistingInstance == null)
             return false;
         if ((uint)localCell.x >= (uint)terrain.Width || (uint)localCell.y >= (uint)terrain.Height)
             return false;
@@ -90,14 +90,14 @@ public static class ChunkRuntimeTileEffectResolver
             !TryResolveTileBlockId(profile, runtimeTileCatalog, parameterId, out string tileBlockId))
             return false;
 
-        tileBlock = GameRes.Instance.GetTileBlock(tileBlockId);
+        tileBlock = GameRes.ExistingInstance.GetTileBlock(tileBlockId);
         if (tileBlock?.tileDataTemplate == null)
         {
             tileBlock = null;
             return false;
         }
 
-        tileData = tileBlock.tileDataTemplate.Clone();
+        tileData = tileBlock.CreateTileData();
         tileData.position = new Vector3Int(worldCell.x, worldCell.y, 0);
         tileData.IsWalkable = terrain.IsWalkable(localCell.x, localCell.y);
         HydrateEnvironmentData(terrain, localCell, tileData);
@@ -119,9 +119,18 @@ public static class ChunkRuntimeTileEffectResolver
             return true;
         }
 
-        return runtimeTileCatalog?.TextParameters != null &&
-               runtimeTileCatalog.TextParameters.TryGetValue(parameterId, out tileBlockId) &&
-               !string.IsNullOrWhiteSpace(tileBlockId);
+        if (runtimeTileCatalog?.TextParameters != null &&
+            runtimeTileCatalog.TextParameters.TryGetValue(parameterId, out tileBlockId) &&
+            !string.IsNullOrWhiteSpace(tileBlockId)) return true;
+
+        // MOD 只需在 JSON 声明稳定数字 ID，不要求修改本体或冻结的生成 Profile。
+        if (int.TryParse(parameterId.Substring(TileBlockParameterPrefix.Length), out int tileId) &&
+            GameRes.ExistingInstance != null && GameRes.ExistingInstance.TryGetTileDefinition(tileId, out var definition))
+        {
+            tileBlockId = definition.Id;
+            return true;
+        }
+        return false;
     }
 
     #endregion
@@ -184,7 +193,7 @@ public partial class ChunkMgr
 
     /// <summary>把新版权威地形采样转换成现有地块行为数据。</summary>
     public bool TryGetRuntimeTileEffect(Vector2 worldPosition, out RuntimeTerrainTileSample sample,
-        out TileData tileData, out Tile_Block tileBlock)
+        out TileData tileData, out RuntimeTileDefinition tileBlock)
     {
         tileData = null;
         tileBlock = null;
