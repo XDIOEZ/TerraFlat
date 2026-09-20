@@ -678,7 +678,7 @@ P06 是文档创建时的旧链路证据；本次实现已删除 `PassesCollider
 - 当前 Unity 为 `2022.3.62f3c1`；Entities `1.3.8`、Entities Graphics `1.4.5`、Collections `2.5.1`、Burst `1.8.21`、Mathematics `1.3.2`、URP `14.0.12`。未修改包、管线设置或 PackageCache。
 - 观测工作站为 i7-14700HX、RTX 5060 Laptop GPU、D3D11，系统内存 32394 MiB、显存 7899 MiB；这是当前编辑器环境，**不是用户已确认的目标硬件或性能证明**。
 - 本任务开始时工作区仅有未跟踪的开发文档；后续发生并行写入，已按用户授权统一。当前新增代码分为不依赖 GamePlay 的 AIECS 原型程序集、依赖旧内容加载器的 Editor 适配器及无业务依赖的公共几何；正式感知适配仍在 GamePlay 内。
-- 最新 [AIECS_P0能力清单.json](AIECS_P0能力清单.json) 是从 `Library/AIECS/p0-inventory.json` 保存的可交接快照：6 个 Actor、0 条内容问题，包含合并后的 JSON、模块类型、参数契约、组件、控制器、资源指纹及纯数据感知形状。0 条问题只说明当前盘点项通过，不代表模块已迁移。
+- 最新 [AIECS_P0能力清单.json](../AI策划/AIECS_P0能力清单.json) 是从 `Library/AIECS/p0-inventory.json` 保存的可交接快照：6 个 Actor、0 条内容问题，包含合并后的 JSON、模块类型、参数契约、组件、控制器、资源指纹及纯数据感知形状。0 条问题只说明当前盘点项通过，不代表模块已迁移。
 - Chicken/Rabbit 共用鸡行为组合，Wolf/SnowLeopard 各有行为入口，WildBoar 额外包含冲撞技能，Ghost 使用自己的 AI/伤害组合；食物、Buff、移动、生命、生产、地块效果等能力均继续由旧后端承担，清单逐模块标明“未迁移”。
 
 **P1 实际落盘与生成产物**
