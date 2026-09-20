@@ -9,6 +9,7 @@ Shader "Hidden/FlatWorld/BodyTraumaBlur"
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Frag
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
             float _Radius;
             half4 Frag(Varyings input) : SV_Target
