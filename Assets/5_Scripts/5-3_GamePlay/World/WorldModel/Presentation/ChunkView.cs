@@ -26,6 +26,33 @@ public sealed class ChunkView : MonoBehaviour
     /// <summary>当前 View 保留的阴影槽数量，供流送 Profiler 与回归检查使用。</summary>
     public int RetainedOccluderCount => lightOccluderRenderer?.RetainedOccluderCount ?? 0;
 
+    /// <summary>只读取得基础地形 BRG 状态；诊断调用不会创建、重建或修复渲染后端。</summary>
+    public bool TryGetTerrainBatchDebugState(out bool registered, out int visualCount)
+    {
+        ChunkTilemapRenderer tilemapRenderer = null;
+        for (int i = 0; i < renderers.Count; i++)
+        {
+            if (renderers[i] is ChunkTilemapRenderer candidate)
+            {
+                tilemapRenderer = candidate;
+                break;
+            }
+        }
+
+        if (tilemapRenderer == null)
+            tilemapRenderer = GetComponentInChildren<ChunkTilemapRenderer>(true);
+        if (tilemapRenderer == null)
+        {
+            registered = false;
+            visualCount = 0;
+            return false;
+        }
+
+        registered = ChunkBatchRendererGroupService.IsOwnerRegistered(tilemapRenderer);
+        visualCount = ChunkBatchRendererGroupService.GetOwnerVisualCount(tilemapRenderer);
+        return true;
+    }
+
     /// <summary>低频检查可丢失的外部渲染后端登记，并只修复对应表现层。</summary>
     public bool RepairPresentationBackendIfNeeded()
     {

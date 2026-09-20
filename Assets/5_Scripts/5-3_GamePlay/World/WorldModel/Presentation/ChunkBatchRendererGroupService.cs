@@ -18,6 +18,9 @@ internal static class ChunkBatchRendererGroupService
 {
     #region 公共契约
 
+    /// <summary>Editor 与 Development Build 只记录 BRG 异常与手动诊断，正式非开发包保持静默。</summary>
+    private static bool RenderDebugEnabled => Application.isEditor || Debug.isDebugBuild;
+
     internal enum VisualLayer : byte
     {
         Back,
@@ -100,7 +103,9 @@ internal static class ChunkBatchRendererGroupService
 
     internal static void SetVisual(ChunkTilemapRenderer owner, int slotKey, Visual visual)
     {
-        EnsureBackend().SetVisual(owner, slotKey, visual);
+        // 只有 RegisterOwner 能创建后端。增量提交不能借 SetVisual 偷偷复活后端，
+        // 否则一次脏格刷新就可能制造“只登记了局部实例”的伪完整 Owner。
+        backend?.SetVisual(owner, slotKey, visual);
     }
 
     internal static void ClearVisual(ChunkTilemapRenderer owner, int slotKey)
@@ -114,9 +119,26 @@ internal static class ChunkBatchRendererGroupService
         return owner != null && backend?.IsOwnerRegistered(owner) == true;
     }
 
+    /// <summary>读取当前 Owner 实际登记到 BRG 的实例数，用于判断“数据存在但表现提交缺失”。</summary>
+    internal static int GetOwnerVisualCount(ChunkTilemapRenderer owner)
+    {
+        return owner != null && backend != null ? backend.GetOwnerVisualCount(owner) : 0;
+    }
+
+    /// <summary>构造当前 BRG 后端快照，供运行时日志和 Inspector ContextMenu 定向排查。</summary>
+    internal static string BuildDebugSummary(ChunkTilemapRenderer owner = null)
+    {
+        return backend != null
+            ? backend.BuildDebugSummary(owner)
+            : "[ChunkRenderDebug] backend=null owners=0 batches=0 instances=0 culls=0";
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
+        if (RenderDebugEnabled && backend != null)
+            Debug.LogWarning("[ChunkRenderDebug] BRG backend 正在 Reset；现有 ChunkView 的基础地块表现需要重新登记。 " +
+                             backend.BuildDebugSummary());
         backend?.Dispose();
         backend = null;
     }
@@ -143,9 +165,14 @@ internal static class ChunkBatchRendererGroupService
         private readonly List<TileBatch> orderedBatches = new();
         private readonly Dictionary<int, MeshRegistration> meshes = new();
         private readonly Dictionary<MaterialKey, MaterialRegistration> materials = new();
+        private readonly HashSet<int> warnedMissingOwnerIds = new();
         private readonly Material spriteTemplate;
         private readonly Material contactTemplate;
         private readonly Material waterTemplate;
+        private long cullingCallbackCount;
+        private long lastZeroVisibleWarningCull;
+        private int lastCullingCommandCount;
+        private int lastCullingVisibleCount;
         private bool disposed;
 
         public Backend()
@@ -173,6 +200,7 @@ internal static class ChunkBatchRendererGroupService
             {
                 if (!ownerHandles.ContainsKey(owner))
                     ownerHandles.Add(owner, new Dictionary<int, InstanceHandle>());
+                warnedMissingOwnerIds.Remove(owner.GetInstanceID());
             }
         }
 
@@ -180,6 +208,42 @@ internal static class ChunkBatchRendererGroupService
         {
             lock (syncRoot)
                 return owner != null && ownerHandles.ContainsKey(owner);
+        }
+
+        public int GetOwnerVisualCount(ChunkTilemapRenderer owner)
+        {
+            lock (syncRoot)
+                return owner != null && ownerHandles.TryGetValue(owner, out Dictionary<int, InstanceHandle> handles)
+                    ? handles.Count
+                    : 0;
+        }
+
+        public string BuildDebugSummary(ChunkTilemapRenderer owner = null)
+        {
+            lock (syncRoot)
+            {
+                int totalInstances = 0;
+                int activeBatches = 0;
+                for (int i = 0; i < orderedBatches.Count; i++)
+                {
+                    int count = orderedBatches[i].Count;
+                    totalInstances += count;
+                    if (count > 0)
+                        activeBatches++;
+                }
+
+                int ownerInstances = owner != null && ownerHandles.TryGetValue(owner,
+                    out Dictionary<int, InstanceHandle> handles)
+                    ? handles.Count
+                    : -1;
+                string ownerPart = owner != null
+                    ? $" owner={owner.name} ownerRegistered={ownerInstances >= 0} ownerInstances={Mathf.Max(0, ownerInstances)}"
+                    : string.Empty;
+                return $"[ChunkRenderDebug] owners={ownerHandles.Count} batches={batches.Count} activeBatches={activeBatches} " +
+                       $"instances={totalInstances} meshes={meshes.Count} materials={materials.Count} " +
+                       $"culls={cullingCallbackCount} lastCullCommands={lastCullingCommandCount} " +
+                       $"lastCullVisible={lastCullingVisibleCount}{ownerPart}";
+            }
         }
 
         public void UnregisterOwner(ChunkTilemapRenderer owner)
@@ -214,8 +278,13 @@ internal static class ChunkBatchRendererGroupService
             {
                 if (!ownerHandles.TryGetValue(owner, out Dictionary<int, InstanceHandle> handles))
                 {
-                    handles = new Dictionary<int, InstanceHandle>();
-                    ownerHandles.Add(owner, handles);
+                    if (RenderDebugEnabled && warnedMissingOwnerIds.Add(owner.GetInstanceID()))
+                    {
+                        Debug.LogWarning($"[ChunkRenderDebug] SetVisualRejected owner={owner.name} slot={slotKey} " +
+                                         $"layer={visual.Layer} reason=owner-not-registered. " +
+                                         "禁止通过单格增量提交隐式创建 Owner，避免只恢复局部地块。");
+                    }
+                    return;
                 }
 
                 VisualKey key = new(visual.Layer, visual.Sprite, visual.SourceMaterial);
@@ -352,6 +421,7 @@ internal static class ChunkBatchRendererGroupService
         {
             lock (syncRoot)
             {
+                cullingCallbackCount++;
                 int commandCount = 0;
                 int visibleCount = 0;
                 for (int i = 0; i < orderedBatches.Count; i++)
@@ -360,6 +430,16 @@ internal static class ChunkBatchRendererGroupService
                         continue;
                     commandCount++;
                     visibleCount += orderedBatches[i].Count;
+                }
+                lastCullingCommandCount = commandCount;
+                lastCullingVisibleCount = visibleCount;
+
+                if (RenderDebugEnabled && ownerHandles.Count > 0 && visibleCount == 0 &&
+                    cullingCallbackCount - lastZeroVisibleWarningCull >= 180)
+                {
+                    lastZeroVisibleWarningCull = cullingCallbackCount;
+                    Debug.LogWarning($"[ChunkRenderDebug] BRG 有 {ownerHandles.Count} 个 Owner，但本次 Culling 没有任何可绘制实例。 " +
+                                     BuildDebugSummary());
                 }
 
                 BatchCullingOutputDrawCommands* commands =

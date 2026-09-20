@@ -26,7 +26,11 @@ ChunkBRGInstanceData LoadChunkBRGInstanceData()
     ChunkBRGInstanceData data = (ChunkBRGInstanceData)0;
 #if defined(UNITY_DOTS_INSTANCING_ENABLED)
     uint baseAddress = UNITY_DOTS_INSTANCED_METADATA_NAME(uint, _ChunkInstanceData);
-    uint address = baseAddress + unity_InstanceID * 112u;
+    // 调用方必须先执行 UNITY_SETUP_INSTANCE_ID，以建立当前绘制的 DOTS 可见实例映射。
+    // unity_InstanceID 只是单次 draw 的局部序号，Unity 拆分大批次后会从零重新计数；
+    // 必须使用可见列表映射后的真实实例索引，否则后续地块会重复绘制到批次开头的位置。
+    uint instanceIndex = GetDOTSInstanceIndex();
+    uint address = baseAddress + instanceIndex * 112u;
     data.transform0 = asfloat(unity_DOTSInstanceData.Load4(address));
     data.transform1 = asfloat(unity_DOTSInstanceData.Load4(address + 16u));
     data.data0 = asfloat(unity_DOTSInstanceData.Load4(address + 32u));

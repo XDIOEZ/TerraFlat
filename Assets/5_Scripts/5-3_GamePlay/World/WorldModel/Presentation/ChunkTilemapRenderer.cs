@@ -32,6 +32,15 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     private ChunkRuntime boundChunk;
     private IDisposable chunkCommittedSubscription;
     private bool renderCaveWater;
+    private bool batchPresentationComplete;
+    private bool batchBindingInProgress;
+
+    /// <summary>Editor 与 Development Build 只记录 BRG 异常与手动诊断，正式非开发包保持静默。</summary>
+    private static bool RenderDebugEnabled => Application.isEditor || Debug.isDebugBuild;
+    private static readonly HashSet<string> renderDebugMissingVisualKeys = new();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetRenderDebugState() => renderDebugMissingVisualKeys.Clear();
 
     /// <summary>阻挡层渲染器，为裂缝等格子表现提供一致的材质与排序基准。</summary>
     public TilemapRenderer BlockingTilemapRenderer =>
@@ -70,19 +79,31 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             return;
 
         Unbind();
-        boundChunk = chunk;
-        renderCaveWater = IsCaveDimension(chunk.Address.DimensionId);
-        if (waterTilemap != null)
-            waterTilemap.gameObject.SetActive(!renderCaveWater);
-        if (caveWaterTilemap != null)
-            caveWaterTilemap.gameObject.SetActive(renderCaveWater);
-        boundChunk.Terrain.Changed += HandleTerrainChanged;
-        RefreshNeighbourTerrainSubscriptions();
-        DisableVisualTilemapRenderers();
-        ClearVisualTilemaps();
-        ChunkBatchRendererGroupService.RegisterOwner(this);
-        SyncBlockingCollisionAll(chunk.Terrain);
-        RefreshAllBatchVisuals(chunk.Terrain);
+        batchBindingInProgress = true;
+        try
+        {
+            boundChunk = chunk;
+            renderCaveWater = IsCaveDimension(chunk.Address.DimensionId);
+            // SetActive 会同步触发 WaterVisualStyleBinding.OnEnable。该回调只负责先把共享材质切到最新风格；
+            // Bind 随后的全量 BRG 提交会直接读取这个材质，因此绑定期无需再走一次增量修复。
+            if (waterTilemap != null)
+                waterTilemap.gameObject.SetActive(!renderCaveWater);
+            if (caveWaterTilemap != null)
+                caveWaterTilemap.gameObject.SetActive(renderCaveWater);
+            boundChunk.Terrain.Changed += HandleTerrainChanged;
+            RefreshNeighbourTerrainSubscriptions();
+            DisableVisualTilemapRenderers();
+            ClearVisualTilemaps();
+            batchPresentationComplete = false;
+            ChunkBatchRendererGroupService.RegisterOwner(this);
+            SyncBlockingCollisionAll(chunk.Terrain);
+            RefreshAllBatchVisuals(chunk.Terrain);
+            batchPresentationComplete = true;
+        }
+        finally
+        {
+            batchBindingInProgress = false;
+        }
     }
 
     public void Unbind()
@@ -90,6 +111,8 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         if (boundChunk?.Terrain != null)
             boundChunk.Terrain.Changed -= HandleTerrainChanged;
         ClearNeighbourTerrainSubscriptions();
+        batchBindingInProgress = false;
+        batchPresentationComplete = false;
         ChunkBatchRendererGroupService.UnregisterOwner(this);
         if (groundTilemap != null)
             groundTilemap.ClearAllTiles();
@@ -117,21 +140,49 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     /// </summary>
     public bool RepairBatchPresentationIfNeeded()
     {
+        return RepairBatchPresentationIfNeeded("ExternalCheck");
+    }
+
+    /// <summary>按触发来源修复 BRG 表现；只在异常路径记录一次诊断。</summary>
+    private bool RepairBatchPresentationIfNeeded(string reason)
+    {
         if (boundChunk?.Terrain == null)
             return false;
-        if (ChunkBatchRendererGroupService.IsOwnerRegistered(this))
+
+        ChunkTerrainData terrain = boundChunk.Terrain;
+        if (ChunkBatchRendererGroupService.IsOwnerRegistered(this) &&
+            batchPresentationComplete)
+        {
             return true;
+        }
+
+        if (RenderDebugEnabled)
+        {
+            int expectedSubmittable = CountSubmittableVisuals(terrain);
+            int submitted = ChunkBatchRendererGroupService.GetOwnerVisualCount(this);
+            Debug.LogWarning($"[ChunkRenderDebug] RepairPresentation reason={reason} chunk={GetDebugChunkLabel()} " +
+                             $"registered={ChunkBatchRendererGroupService.IsOwnerRegistered(this)} " +
+                             $"complete={batchPresentationComplete} submitted={submitted} " +
+                             $"expectedSubmittable={expectedSubmittable}. " +
+                             "将从权威 Terrain 全量重建 BRG 表现。");
+        }
 
         DisableVisualTilemapRenderers();
+        batchPresentationComplete = false;
+        ChunkBatchRendererGroupService.UnregisterOwner(this);
         ChunkBatchRendererGroupService.RegisterOwner(this);
-        RefreshAllBatchVisuals(boundChunk.Terrain);
-        return ChunkBatchRendererGroupService.IsOwnerRegistered(this);
+        RefreshAllBatchVisuals(terrain);
+        batchPresentationComplete = true;
+        ValidateBatchPresentation("Repair", terrain);
+        return ChunkBatchRendererGroupService.IsOwnerRegistered(this) && batchPresentationComplete;
     }
 
     private void OnDestroy()
     {
         if (boundChunk?.Terrain != null)
             boundChunk.Terrain.Changed -= HandleTerrainChanged;
+        batchPresentationComplete = false;
+        ChunkBatchRendererGroupService.UnregisterOwner(this);
         chunkCommittedSubscription?.Dispose();
         chunkCommittedSubscription = null;
         ClearNeighbourTerrainSubscriptions();
@@ -148,6 +199,8 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
 
         if (changed.Kind == TerrainChangeKind.Cell || changed.Kind == TerrainChangeKind.TileStack)
             SyncBlockingCollisionCell(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
+        if (!EnsureBatchPresentationForIncrementalRefresh("TerrainChanged"))
+            return;
         // 岸线、墙脚和四角水深最多依赖一圈邻格，因此只刷新 3x3 脏区。
         RefreshBatchArea(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y, 1);
     }
@@ -159,6 +212,10 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             return;
         Tilemap activeWater = renderCaveWater ? caveWaterTilemap : waterTilemap;
         if (activeWater == null || !ReferenceEquals(activeWater.GetComponent<TilemapRenderer>(), changedRenderer))
+            return;
+        if (batchBindingInProgress)
+            return;
+        if (!EnsureBatchPresentationForIncrementalRefresh("WaterStyleChanged"))
             return;
 
         ChunkTerrainData terrain = boundChunk.Terrain;
@@ -191,6 +248,8 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         if (isNeighbour)
         {
             RefreshNeighbourTerrainSubscriptions();
+            if (!EnsureBatchPresentationForIncrementalRefresh("NeighbourCommitted"))
+                return;
             RefreshCommittedBatchEdge(boundChunk.Terrain, deltaX, deltaY);
         }
     }
@@ -249,8 +308,12 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             ? changed.LocalCell.Y == neighbourTerrain.Height - 1
             : changed.LocalCell.Y == 0);
         if (touchesSharedX && touchesSharedY)
+        {
+            if (!EnsureBatchPresentationForIncrementalRefresh("NeighbourTerrainChanged"))
+                return;
             RefreshBatchEdge(boundChunk.Terrain, offsetX, offsetY,
                 changed.LocalCell.X, changed.LocalCell.Y);
+        }
     }
 
     private void ClearNeighbourTerrainSubscriptions()
@@ -430,9 +493,22 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         ChunkBatchRendererGroupService.VisualLayer layer, int tileId, Tilemap sourceTilemap,
         Material sourceMaterial, Vector4 data0, Vector4 data1)
     {
-        if (sourceMaterial == null ||
-            !palette.TryGetVisual(tileId, out Sprite sprite, out Color tileColor, out Matrix4x4 tileTransform))
+        if (sourceMaterial == null)
         {
+            WarnMissingVisualOnce(layer, tileId, "sourceMaterial=null", x, y);
+            ClearBatchVisual(terrain, x, y, layer);
+            return;
+        }
+        if (palette == null)
+        {
+            WarnMissingVisualOnce(layer, tileId, "palette=null", x, y);
+            ClearBatchVisual(terrain, x, y, layer);
+            return;
+        }
+        if (!palette.TryGetVisual(tileId, out Sprite sprite, out Color tileColor, out Matrix4x4 tileTransform) ||
+            sprite == null)
+        {
+            WarnMissingVisualOnce(layer, tileId, "palette.TryGetVisual=false", x, y);
             ClearBatchVisual(terrain, x, y, layer);
             return;
         }
@@ -472,6 +548,142 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         TilemapRenderer renderer = tilemap != null ? tilemap.GetComponent<TilemapRenderer>() : null;
         return renderer != null ? renderer.sharedMaterial : null;
     }
+
+    #region BRG DEBUG
+
+    /// <summary>增量刷新前验证后端登记；登记丢失或实例不完整时先从权威 Terrain 全量自愈。</summary>
+    private bool EnsureBatchPresentationForIncrementalRefresh(string reason)
+    {
+        if (boundChunk?.Terrain == null)
+            return false;
+
+        if (batchPresentationComplete &&
+            ChunkBatchRendererGroupService.IsOwnerRegistered(this))
+        {
+            return true;
+        }
+        return RepairBatchPresentationIfNeeded(reason);
+    }
+
+    /// <summary>统计当前权威地块中理论上能够提交到 BRG 的实例数。</summary>
+    private int CountSubmittableVisuals(ChunkTerrainData terrain)
+    {
+        if (terrain == null || palette == null)
+            return 0;
+
+        int count = 0;
+        Material groundMaterial = GetMaterial(groundTilemap);
+        Material waterMaterial = GetActiveWaterMaterial();
+        Material backMaterial = GetMaterial(backTilemap);
+        Material blockingMaterial = GetMaterial(blockingTilemap);
+        for (int y = 0; y < terrain.Height; y++)
+        for (int x = 0; x < terrain.Width; x++)
+        {
+            TerrainCell cell = terrain.GetCell(x, y);
+            if (cell.GroundTileId != 0)
+            {
+                bool dedicatedWater = IsWater(cell) && waterMaterial != null;
+                Material material = dedicatedWater ? waterMaterial : groundMaterial;
+                if (material != null && HasPaletteVisual(cell.GroundTileId))
+                    count++;
+            }
+
+            if (backTilemap != null && cell.BackTileId != 0 &&
+                backMaterial != null && HasPaletteVisual(cell.BackTileId))
+            {
+                count++;
+            }
+
+            if (cell.BlockingTileId != 0 &&
+                blockingMaterial != null && HasPaletteVisual(cell.BlockingTileId))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>只做静态外观映射检查，不创建任何运行时表现。</summary>
+    private bool HasPaletteVisual(int tileId)
+    {
+        return palette != null &&
+               palette.TryGetVisual(tileId, out Sprite sprite, out _, out _) &&
+               sprite != null;
+    }
+
+    /// <summary>把权威地块数量、可提交数量与后端实际实例数放到同一条日志中。</summary>
+    private void ValidateBatchPresentation(string reason, ChunkTerrainData terrain, bool forceLog = false)
+    {
+        if (!RenderDebugEnabled || terrain == null)
+            return;
+
+        int dataVisuals = CountDataVisuals(terrain);
+        int submittable = CountSubmittableVisuals(terrain);
+        int submitted = ChunkBatchRendererGroupService.GetOwnerVisualCount(this);
+        string message = $"[ChunkRenderDebug] {reason} chunk={GetDebugChunkLabel()} " +
+                         $"dataVisuals={dataVisuals} submittable={submittable} submitted={submitted}. " +
+                         ChunkBatchRendererGroupService.BuildDebugSummary(this);
+        if (submitted != submittable || submittable != dataVisuals)
+            Debug.LogWarning(message);
+        else if (forceLog)
+            Debug.Log(message);
+    }
+
+    /// <summary>统计 Terrain 中非零的基础视觉槽，独立于材质和 Palette 是否有效。</summary>
+    private int CountDataVisuals(ChunkTerrainData terrain)
+    {
+        int count = 0;
+        for (int y = 0; y < terrain.Height; y++)
+        for (int x = 0; x < terrain.Width; x++)
+        {
+            TerrainCell cell = terrain.GetCell(x, y);
+            if (cell.GroundTileId != 0)
+                count++;
+            if (cell.BackTileId != 0)
+                count++;
+            if (cell.BlockingTileId != 0)
+                count++;
+        }
+        return count;
+    }
+
+    /// <summary>同一类缺失只报警一次，避免一个坏 Tile 把运行时日志刷爆。</summary>
+    private void WarnMissingVisualOnce(ChunkBatchRendererGroupService.VisualLayer layer,
+        int tileId, string reason, int x, int y)
+    {
+        if (!RenderDebugEnabled)
+            return;
+
+        string key = $"{layer}:{tileId}:{reason}";
+        if (!renderDebugMissingVisualKeys.Add(key))
+            return;
+        Debug.LogWarning($"[ChunkRenderDebug] VisualRejected chunk={GetDebugChunkLabel()} cell=({x},{y}) " +
+                         $"layer={layer} tileId={tileId} reason={reason}");
+    }
+
+    /// <summary>供 Inspector 右键菜单手动打印当前 Chunk 的 BRG 对账快照。</summary>
+    [ContextMenu("DEBUG/打印当前地块 BRG 状态")]
+    public void LogBatchRenderDebugState()
+    {
+        if (boundChunk?.Terrain == null)
+        {
+            Debug.LogWarning($"[ChunkRenderDebug] {name} 当前没有绑定 Chunk/Terrain。");
+            return;
+        }
+        ValidateBatchPresentation("ManualDump", boundChunk.Terrain, true);
+    }
+
+    /// <summary>生成便于搜索的稳定 Chunk 标签。</summary>
+    private string GetDebugChunkLabel()
+    {
+        if (boundChunk == null)
+            return "<unbound>";
+        Int2 origin = boundChunk.Address.ChunkOrigin;
+        return $"{boundChunk.Address.DimensionId}@({origin.X},{origin.Y})";
+    }
+
+    #endregion
 
     private Vector4 BuildBatchGroundContactMask(ChunkTerrainData terrain, int x, int y, TerrainCell cell)
     {

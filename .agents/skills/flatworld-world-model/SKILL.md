@@ -27,12 +27,16 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - BRG 没有 `SpriteRenderer/TilemapRenderer` 的 Sorting Layer 字段，不能指望较低的 Render Queue 跨 Sorting Layer 压到 `Tilemap` 层下面；当前地形 BRG 使用 Default 排序域和 2987~2992 队列。草等需要盖在地形之上、普通世界 Sprite 之下的表现必须与 BRG 共用 Default 排序域，并使用高于 2992、低于 3000 的透明队列。
 - 地形 Sprite 几何只经资源会话级 `SharedSpriteMeshCache` 构造，最终 Tile/MOD 目录和 Palette 在 Ready 前预热，动态 Sprite 保留懒加载兜底。普通流送与 `ReleaseUnusedBackend` 不清 Mesh；`BatchMeshID` 仅存当前 Backend，退出世界销毁 BRG 后再次进入必须重新注册共享 Mesh。缓存清理先通知 BRG 解绑再销毁 Mesh，禁止反向依赖 Batch 内部实现。
 - Chunk BRG 自定义 Shader 的全部数值/向量/颜色材质属性必须统一声明在 `UnityPerMaterial` CBUFFER，且同一 Shader 的所有活跃 Pass 保持一致布局；不要 `UsePass` 借用另一个材质布局不同的 Shader Pass，否则 BatchRendererGroup 会因 SRP Batcher 不兼容而拒绝绘制。
+- BRG 自定义 AoS 数据寻址必须在 `UNITY_SETUP_INSTANCE_ID` 后使用 `GetDOTSInstanceIndex()` 取得可见列表映射后的真实实例索引；`unity_InstanceID` 只是单次 draw 的局部序号，大批次被 Unity 拆分后会重复从零计数。误用会出现“数据、Owner 和实例数量均正常，但视野扩大后地面永久缺块”，不能靠增加加载距离或重建 Owner 修复。
 - BRG 地形实例按脏格增量上传；岸线与墙脚方向放入实例数据，连续水深使用每水格四个格角深度在 Shader 内双线性插值。边界数据依赖八方向邻区，正交邻区变化刷新共享边、对角邻区变化刷新共享角，不得退回整 Chunk `SetTilesBlock` 或每 Chunk 水深纹理重建。
 - `ChunkMgr` 随 `WorldManager` 常驻 DDOL；`ChunkView` 及其自然物表现必须挂到当前世界场景的独立根节，禁止以 `ChunkMgr.transform` 作为活动或池化 View 的父级。
 - 相机驱动的本地区块窗口必须覆盖真实视口，并按相机半宽/半高分别计算 X/Y 距离；禁止为超宽屏取最大边后构造巨大正方形窗口。普通玩法可以受自动视距上限保护，但管理员无限视野不能继续被普通上限截断；管理员手动增加加载距离只作为最低加载圈数，不能关闭相机自动扩圈。
 - 区块窗口变化时必须取消已经离开当前数据窗口、但仍处于 pending/后台队列中的旧生成请求；不能只逐出已完成 Chunk。否则 FIFO 生成队列会持续计算过期区块，导致新进入视野的区块长期饥饿并显示为黑块。
 - 已经排队但仍属于当前窗口的生成请求也必须随玩家当前位置重新排序；只在首次入队时按距离排序会让后来进入镜头的新区块卡在历史队列尾部。
 - ChunkView 的草地 Tilemap 与基础地形 BRG 生命周期不同；若出现“草仍可见但整块基础地面变黑”，应检查 BRG owner 登记而不是继续增加生成并发。BRG 后端不得在普通流送中因 Owner 短暂归零立即销毁；只在世界窗口彻底关闭后释放。窗口变化时可事件式校验当前绑定，并在登记丢失时从权威 Terrain 原地重建基础层，禁止使用每帧或定时轮询。
+- 高视距会一次产生大量已 Ready 的 ChunkView 表现任务；调度必须跨 Chunk 优先完成基础地形 BRG，再轮转补齐草地、碰撞、导航、自然物等后续表现。禁止让单个 Chunk 的全部表现器串行完成后才开始下一个 Chunk，否则会出现“数据已经生成但视野大片长期空白”的表现饥饿。
+- BRG 的单格 `SetVisual` 不得在 Owner 丢失时隐式重新注册 Owner；否则脚本热重载或后端重建后的第一次脏格刷新只会恢复局部实例，却让后续校验误判整块已登记。增量刷新发现 Owner 丢失时必须先从权威 Terrain 全量重建，再恢复单格增量路径。
+- `ChunkTilemapRenderer.Bind` 激活水层 GameObject 时会同步触发 `WaterVisualStyleBinding.OnEnable`；绑定期允许它先更新共享材质，但必须抑制 `NotifyWaterVisualStyleChanged` 的增量 BRG 修复，因为紧随其后的全量提交会直接读取最新材质。不要把这个正常激活时序误判成 Owner 丢失。
 - 提交生成结果前校验世界纪元与请求版本；取消、失败和逐出路径必须释放结果及租约。
 - 生成保持固定种子和稳定签名；修改地形内容规则时同时使用 `flatworld-map`。
 - 新增 `SurfaceBiomeKind` 或群系条件时，必须覆盖 Profile 当前可选的全部分类算法；`LegacyLand` 只复用旧气候采样，不会自动继承其他分支的群系规则。

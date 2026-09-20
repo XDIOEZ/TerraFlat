@@ -14,6 +14,8 @@ public partial class ChunkMgr
         public ChunkRuntime PendingChunk;
         public bool WantsPresentation;
         public bool PresentationQueued;
+        public bool PresentationInProgress;
+        public IEnumerator PresentationRoutine;
         public int PresentationPriority;
     }
 
@@ -64,8 +66,10 @@ public partial class ChunkMgr
     }
 
     [Header("区块表现分帧")]
-    [Tooltip("主线程每帧最多完成的 ChunkView 绑定数量；数值越大，新区块出现越快，但单帧卡顿风险越高。")]
+    [Tooltip("主线程每帧最多启动多少个新区块；启动时优先完成基础地形 BRG，让扩大视距后先快速消除空白区块。")]
     [SerializeField, Min(1)] private int maxChunkPresentationsPerFrame = 1;
+    [Tooltip("主线程每帧额外推进多少次已启动区块的后续表现绑定；与首层地形分离，避免草地/导航/自然物阻塞其它区块的基础地形。")]
+    [SerializeField, Min(1)] private int maxChunkPresentationContinuationStepsPerFrame = 2;
 
     private const int MaxIdlePrefetchConcurrency = 1;
     private const int ChunkViewPoolSpareCapacity = 4;
@@ -76,6 +80,7 @@ public partial class ChunkMgr
     private readonly HashSet<RuntimeWorldAddress> runtimeWindowTargets = new();
     private readonly List<RuntimeWorldAddress> runtimeWindowRemovalBuffer = new();
     private readonly List<RuntimeWorldAddress> runtimePresentationQueue = new();
+    private readonly Queue<RuntimeWorldAddress> runtimePresentationContinuationQueue = new();
     private readonly Queue<RuntimePrefetchRequest> runtimePrefetchQueue = new();
     private readonly HashSet<RuntimeWorldAddress> runtimePrefetchTargets = new();
     private readonly Queue<PooledChunkViewEntry> chunkViewPool = new();
@@ -145,6 +150,16 @@ public partial class ChunkMgr
             return false;
         view = binding.View;
         return view != null && view.IsBound;
+    }
+
+    /// <summary>读取已经开始绑定的 ChunkView；允许返回仍在补草地、导航、自然物等后续表现的 View。</summary>
+    public bool TryGetRuntimeChunkPresentationView(RuntimeWorldAddress address, out ChunkView view)
+    {
+        view = null;
+        if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
+            return false;
+        view = binding.View;
+        return view != null && (view.IsBinding || view.IsBound);
     }
 
     /// <summary>按世界坐标查找已绑定的新版区块画面。</summary>
@@ -469,6 +484,9 @@ public partial class ChunkMgr
             return;
         if (binding.View != null && binding.View.IsBound && ReferenceEquals(binding.View.Model, chunk))
             return;
+        if (binding.PresentationInProgress && binding.View != null &&
+            binding.View.IsBinding && ReferenceEquals(binding.View.Model, chunk))
+            return;
 
         binding.PendingChunk = chunk;
         if (!binding.PresentationQueued)
@@ -481,21 +499,29 @@ public partial class ChunkMgr
             runtimePresentationCoroutine = StartCoroutine(ProcessRuntimePresentationQueue());
     }
 
-    /// <summary>每帧按距离优先绘制有限数量的区块，给玩家移动和输入留出主线程时间。</summary>
+    /// <summary>
+    /// 两阶段推进区块表现：先按距离启动新区块并立即绑定基础地形，再轮转补齐其它表现器。
+    /// 这样高视距下不会因为单个区块的草地、导航、自然物等后续工作，长期阻塞其它已生成区块的地面显示。
+    /// </summary>
     private IEnumerator ProcessRuntimePresentationQueue()
     {
         // 先等一帧收集同批后台结果，才能真正按玩家距离排序，而不是按任务回调顺序抢画。
         yield return null;
-        while (runtimePresentationQueue.Count > 0)
+        while (runtimePresentationQueue.Count > 0 || runtimePresentationContinuationQueue.Count > 0)
         {
-            int remainingBudget = Mathf.Max(1, maxChunkPresentationsPerFrame);
-            while (remainingBudget-- > 0 &&
+            int startBudget = Mathf.Max(1, maxChunkPresentationsPerFrame);
+            while (startBudget-- > 0 &&
                    TryDequeueRuntimePresentation(out RuntimeWorldAddress address))
             {
-                runtimePresentationInProgressCount++;
-                yield return PresentRuntimeChunk(address);
-                runtimePresentationInProgressCount = Mathf.Max(
-                    0, runtimePresentationInProgressCount - 1);
+                StartRuntimeChunkPresentation(address);
+            }
+
+            int continuationBudget = Mathf.Max(1, maxChunkPresentationContinuationStepsPerFrame);
+            while (continuationBudget-- > 0 &&
+                   TryDequeueRuntimePresentationContinuation(out RuntimeWorldAddress continuationAddress))
+            {
+                if (AdvanceRuntimeChunkPresentation(continuationAddress))
+                    runtimePresentationContinuationQueue.Enqueue(continuationAddress);
             }
 
             // 即使本轮刚好清空也保留到下一帧，防止同帧晚到结果重新启动协程绕过预算。
@@ -541,11 +567,11 @@ public partial class ChunkMgr
         return true;
     }
 
-    /// <summary>在主线程完成一个区块的 Tilemap、草地、碰撞和导航绑定。</summary>
-    private IEnumerator PresentRuntimeChunk(RuntimeWorldAddress address)
+    /// <summary>启动一个区块的增量表现，并立即推进首个表现器（ChunkTilemapRenderer）。</summary>
+    private void StartRuntimeChunkPresentation(RuntimeWorldAddress address)
     {
         if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
-            yield break;
+            return;
 
         ChunkRuntime chunk = binding.PendingChunk;
         binding.PendingChunk = null;
@@ -554,15 +580,15 @@ public partial class ChunkMgr
             !runtimeChunkManager.TryGetChunk(address, out ChunkRuntime current) ||
             !ReferenceEquals(current, chunk) || current.DataStatus != ChunkDataStatus.Ready ||
             current.Terrain == null)
-            yield break;
+            return;
 
         if (binding.View != null && binding.View.IsBound && ReferenceEquals(binding.View.Model, current))
-            yield break;
+            return;
 
         RecycleRuntimeChunkView(binding);
         ChunkView prefab = DimensionManager.Instance?.GetActiveChunkViewPrefab();
         if (prefab == null)
-            yield break;
+            return;
 
         ChunkView view = AcquireChunkView(prefab);
         binding.View = view;
@@ -574,32 +600,88 @@ public partial class ChunkMgr
         {
             RecycleRuntimeChunkView(binding);
             Debug.LogError($"[ChunkMgr] 区块主线程表现绑定失败 {address}: {exception}", this);
-            yield break;
+            return;
         }
 
-        IEnumerator incremental = view.BindIncremental(
+        binding.PresentationRoutine = view.BindIncremental(
             WorldRuntime, current, includeNavigation: true, renderersPerFrame: 1);
-        while (true)
+        binding.PresentationInProgress = true;
+        runtimePresentationInProgressCount++;
+
+        // 第一次 MoveNext 会完成最高优先级的基础地形绑定后才 yield。
+        // 后续表现器改由轮转队列推进，避免当前区块长期独占整个表现流水线。
+        if (AdvanceRuntimeChunkPresentation(address))
+            runtimePresentationContinuationQueue.Enqueue(address);
+    }
+
+    /// <summary>轮转推进一个已启动区块的一步后续表现；返回 true 表示仍需继续。</summary>
+    private bool AdvanceRuntimeChunkPresentation(RuntimeWorldAddress address)
+    {
+        if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding) ||
+            !binding.PresentationInProgress || binding.PresentationRoutine == null)
+            return false;
+
+        if (!binding.WantsPresentation || binding.View == null)
         {
-            bool moved;
-            object yielded = null;
-            try
+            FinishRuntimeChunkPresentation(binding);
+            return false;
+        }
+
+        try
+        {
+            if (binding.PresentationRoutine.MoveNext())
+                return true;
+        }
+        catch (Exception exception)
+        {
+            FinishRuntimeChunkPresentation(binding);
+            RecycleRuntimeChunkView(binding);
+            Debug.LogError($"[ChunkMgr] 区块主线程分帧绑定失败 {address}: {exception}", this);
+            return false;
+        }
+
+        FinishRuntimeChunkPresentation(binding);
+        return false;
+    }
+
+    /// <summary>从轮转队列取一个仍有效的增量绑定；过期条目直接丢弃。</summary>
+    private bool TryDequeueRuntimePresentationContinuation(out RuntimeWorldAddress address)
+    {
+        address = default;
+        int remaining = runtimePresentationContinuationQueue.Count;
+        while (remaining-- > 0)
+        {
+            RuntimeWorldAddress candidate = runtimePresentationContinuationQueue.Dequeue();
+            if (!activeRuntimeBindings.TryGetValue(candidate, out RuntimeChunkBinding binding))
+                continue;
+            if (!binding.PresentationInProgress || binding.PresentationRoutine == null ||
+                !binding.WantsPresentation || binding.View == null)
             {
-                moved = incremental.MoveNext();
-                if (moved)
-                    yielded = incremental.Current;
-            }
-            catch (Exception exception)
-            {
-                RecycleRuntimeChunkView(binding);
-                Debug.LogError($"[ChunkMgr] 区块主线程分帧绑定失败 {address}: {exception}", this);
-                yield break;
+                FinishRuntimeChunkPresentation(binding);
+                continue;
             }
 
-            if (!moved)
-                yield break;
-            yield return yielded;
+            address = candidate;
+            return true;
         }
+
+        return false;
+    }
+
+    /// <summary>结束一个增量绑定并释放枚举器；计数只允许回收一次。</summary>
+    private void FinishRuntimeChunkPresentation(RuntimeChunkBinding binding)
+    {
+        if (binding == null)
+            return;
+
+        if (binding.PresentationRoutine is IDisposable disposable)
+            disposable.Dispose();
+        binding.PresentationRoutine = null;
+        if (!binding.PresentationInProgress)
+            return;
+
+        binding.PresentationInProgress = false;
+        runtimePresentationInProgressCount = Mathf.Max(0, runtimePresentationInProgressCount - 1);
     }
 
     /// <summary>优先从对象池取出 ChunkView，没有可用对象时才实例化新的。</summary>
@@ -780,6 +862,7 @@ public partial class ChunkMgr
     {
         if (!activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
             return;
+        FinishRuntimeChunkPresentation(binding);
         activeRuntimeBindings.Remove(address);
         binding.PresentationQueued = false;
         binding.PendingChunk = null;
@@ -819,6 +902,7 @@ public partial class ChunkMgr
         runtimeWindowTargets.Clear();
         runtimeWindowUsesLocalPresentation = false;
         runtimePresentationQueue.Clear();
+        runtimePresentationContinuationQueue.Clear();
         runtimePresentationInProgressCount = 0;
         runtimePrefetchQueue.Clear();
         runtimePrefetchTargets.Clear();
