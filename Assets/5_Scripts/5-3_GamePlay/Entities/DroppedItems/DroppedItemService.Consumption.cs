@@ -2,12 +2,65 @@ using System.Collections.Generic;
 using FlatWorld.Networking;
 using UnityEngine;
 
+/// <summary>供只读诊断与自主游玩观察使用的 ECS 掉落物快照，不暴露可修改的 ECS/ItemData 引用。</summary>
+public readonly struct DroppedItemObservation
+{
+    public DroppedItemObservation(
+        int id,
+        string itemId,
+        string gameName,
+        Vector2 position,
+        float amount,
+        bool pickable,
+        string[] tags)
+    {
+        Id = id;
+        ItemId = itemId ?? string.Empty;
+        GameName = gameName ?? string.Empty;
+        Position = position;
+        Amount = amount;
+        Pickable = pickable;
+        Tags = tags ?? System.Array.Empty<string>();
+    }
+
+    public int Id { get; }
+    public string ItemId { get; }
+    public string GameName { get; }
+    public Vector2 Position { get; }
+    public float Amount { get; }
+    public bool Pickable { get; }
+    public IReadOnlyList<string> Tags { get; }
+}
+
 public static partial class DroppedItemService
 {
     #region 世界实物查询与原子消耗
 
     private static readonly List<Item> forageLegacyCandidates = new();
     private static readonly HashSet<Item> forageLegacyDedupe = new();
+
+    /// <summary>
+    /// 读取玩家附近的离线 ECS 掉落物；包含飞行中与已落地实体的当前世界坐标。
+    /// 只复制观察字段，不返回 ECS Entity、ItemData 或其它可修改权威状态。
+    /// </summary>
+    public static int QueryNearbyEntityDrops(
+        Vector2 origin,
+        float radius,
+        List<DroppedItemObservation> results)
+    {
+        if (results == null)
+            throw new System.ArgumentNullException(nameof(results));
+
+        results.Clear();
+        if (!UsesEntities || runtime == null || radius <= 0f ||
+            float.IsNaN(radius) || float.IsInfinity(radius))
+        {
+            return 0;
+        }
+
+        runtime.QueryNearbyObservations(origin, radius, results);
+        return results.Count;
+    }
 
     /// <summary>按统一内容标签查询附近已落地实物；离线走 ECS 空间桶，联机走现有权威 Item 索引。</summary>
     public static bool TryFindNearestTagged(Vector2 origin, float radius, string tag, out DroppedItemHandle handle)

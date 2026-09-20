@@ -19,7 +19,7 @@ namespace FlatWorld.GameplayMCP
     /// </summary>
     [McpForUnityTool(
         "gameplay_query",
-        Description = "Query already-loaded FlatWorld runtime entities. For source=runtime, query accepts either a stable ItemDefinition id or an exact localized item name from any configured locale (for example Ore_Stone, 石头, or Stone). Set radius to query only Items around the player. Results are distance-sorted and paged with a hard result cap to keep context small. Read-only; it never spawns, teleports, picks up, or mutates gameplay.",
+        Description = "Query already-loaded FlatWorld runtime data. Sources: runtime Item objects, ecology placements, terrain environment layers, tile surface cells, and ECS drops. source=tile resolves an exact tile id/name and returns nearest loaded coordinates. source=drops observes ECS dropped items with live world positions. Read-only; it never spawns, teleports, picks up, or mutates gameplay.",
         Group = "core")]
     public static class GameplayQueryTool
     {
@@ -29,10 +29,10 @@ namespace FlatWorld.GameplayMCP
 
         public sealed class Parameters
         {
-            [ToolParameter("Query source: runtime for instantiated Items, ecology for deterministic natural placements, terrain for loaded terrain cells.", Required = false, DefaultValue = "runtime")]
+            [ToolParameter("Query source: runtime for instantiated Items, ecology for deterministic natural placements, terrain for environment layers, tile for surface tile identity, drops for ECS dropped items.", Required = false, DefaultValue = "runtime")]
             public string source { get; set; }
 
-            [ToolParameter("Runtime search text. Accepts an exact stable ItemDefinition id or an exact localized item name from any configured locale. Examples: Ore_Stone, 石头, Stone.", Required = false)]
+            [ToolParameter("Search text. runtime/drops accept an exact stable ItemDefinition id or exact localized item name. tile accepts an exact numeric tile id, Tile_Block id, tileItemName, or displayName.", Required = false)]
             public string query { get; set; }
 
             [ToolParameter("Backward-compatible exact stable ItemDefinition id filter. When set, it takes precedence over query. Empty means any id.", Required = false)]
@@ -78,10 +78,6 @@ namespace FlatWorld.GameplayMCP
                 return new ErrorResponse(error);
             }
 
-            ItemMgr itemMgr = ItemMgr.Instance;
-            if (itemMgr == null)
-                return new ErrorResponse("item_runtime_not_ready: ItemMgr 尚未就绪。");
-
             string itemId = parameters?["itemId"]?.ToString()?.Trim() ?? string.Empty;
             string query = parameters?["query"]?.ToString()?.Trim() ?? string.Empty;
             string tag = parameters?["tag"]?.ToString()?.Trim() ?? string.Empty;
@@ -103,6 +99,23 @@ namespace FlatWorld.GameplayMCP
 
             if (string.Equals(source, "ecology", StringComparison.OrdinalIgnoreCase))
                 return QueryEcology(player, itemId, limit);
+
+            if (string.Equals(source, "tile", StringComparison.OrdinalIgnoreCase))
+            {
+                bool tileWalkableOnly = bool.TryParse(
+                    parameters?["walkableOnly"]?.ToString(),
+                    out bool parsedTileWalkable) && parsedTileWalkable;
+                int tileLimit = parameters?["limit"] == null
+                    ? 1
+                    : Mathf.Clamp(limit, 1, 9);
+                return QueryTile(player, query, tileWalkableOnly, tileLimit);
+            }
+
+            if (string.Equals(source, "drops", StringComparison.OrdinalIgnoreCase))
+            {
+                float dropRadius = radius > 0f ? radius : 16f;
+                return QueryDrops(player, itemId, query, tag, pickup, dropRadius, limit, offset);
+            }
 
             if (string.Equals(source, "terrain", StringComparison.OrdinalIgnoreCase))
             {
@@ -127,7 +140,11 @@ namespace FlatWorld.GameplayMCP
             }
 
             if (!string.Equals(source, "runtime", StringComparison.OrdinalIgnoreCase))
-                return new ErrorResponse("unknown_query_source: source 只支持 runtime、ecology 或 terrain。");
+                return new ErrorResponse("unknown_query_source: source 只支持 runtime、ecology、terrain、tile 或 drops。");
+
+            ItemMgr itemMgr = ItemMgr.Instance;
+            if (itemMgr == null)
+                return new ErrorResponse("item_runtime_not_ready: ItemMgr 尚未就绪。");
 
             // 运行时实体查询会直接进入模型上下文，因此强制分页并限制单页上限。
             limit = Mathf.Clamp(limit, 1, MaximumRuntimePageSize);
@@ -353,6 +370,241 @@ namespace FlatWorld.GameplayMCP
             });
         }
 
+        /// <summary>按地块身份查询已加载世界中距离玩家最近的地表格。</summary>
+        private static object QueryTile(
+            Player player,
+            string query,
+            bool walkableOnly,
+            int limit)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return new ErrorResponse("tile_query_required: source=tile 时 query 不能为空。");
+
+            ChunkMgr chunkMgr = ChunkMgr.Instance;
+            if (chunkMgr == null)
+                return new ErrorResponse("chunk_runtime_not_ready: ChunkMgr 尚未就绪。");
+
+            HashSet<int> resolvedIds = GameplayMcpRuntime.ResolveTerrainTileIds(query, out JArray resolved);
+            if (resolvedIds.Count == 0)
+            {
+                return new SuccessResponse("FlatWorld tile query resolved no tile definition.", new
+                {
+                    source = "tile",
+                    query,
+                    resolved,
+                    walkable_only = walkableOnly,
+                    count = 0,
+                    matches = new JArray()
+                });
+            }
+
+            var matches = chunkMgr.Chunks.Values
+                .Where(chunk => chunk?.Terrain != null &&
+                                !chunk.Terrain.IsDisposed &&
+                                chunk.DataStatus == ChunkDataStatus.Ready)
+                .SelectMany(chunk => EnumerateTileMatches(chunk, resolvedIds, walkableOnly))
+                .Select(entry => new
+                {
+                    entry.Position,
+                    entry.TileId,
+                    entry.BlockId,
+                    entry.DisplayName,
+                    entry.Walkable,
+                    entry.BiomeId,
+                    entry.Water,
+                    Distance = WorldTopologyRuntime.Distance(player.transform.position, entry.Position)
+                })
+                .OrderBy(entry => entry.Distance)
+                .ThenBy(entry => entry.Position.x)
+                .ThenBy(entry => entry.Position.y)
+                .Take(limit)
+                .ToArray();
+
+            var result = new JArray();
+            for (int i = 0; i < matches.Length; i++)
+            {
+                result.Add(new JObject
+                {
+                    ["position"] = new JObject
+                    {
+                        ["x"] = Round(matches[i].Position.x),
+                        ["y"] = Round(matches[i].Position.y)
+                    },
+                    ["distance"] = Round(matches[i].Distance),
+                    ["tileId"] = matches[i].TileId,
+                    ["id"] = matches[i].BlockId,
+                    ["name"] = matches[i].DisplayName,
+                    ["walkable"] = matches[i].Walkable,
+                    ["water"] = matches[i].Water,
+                    ["biomeId"] = matches[i].BiomeId
+                });
+            }
+
+            return new SuccessResponse("FlatWorld nearest loaded tile query.", new
+            {
+                source = "tile",
+                query,
+                resolved,
+                walkable_only = walkableOnly,
+                count = matches.Length,
+                matches = result
+            });
+        }
+
+        /// <summary>枚举单个已加载区块内指定 Tile ID 的有效地表格。</summary>
+        private static IEnumerable<TileQueryEntry> EnumerateTileMatches(
+            ChunkRuntime chunk,
+            HashSet<int> tileIds,
+            bool walkableOnly)
+        {
+            ChunkTerrainData terrain = chunk.Terrain;
+            ChunkMgr chunkMgr = ChunkMgr.Instance;
+            for (int y = 0; y < terrain.Height; y++)
+            {
+                for (int x = 0; x < terrain.Width; x++)
+                {
+                    bool walkable = terrain.IsWalkable(x, y);
+                    if (walkableOnly && !walkable)
+                        continue;
+
+                    int tileId = GameplayMcpRuntime.ResolveEffectiveTerrainTileId(terrain, x, y);
+                    if (!tileIds.Contains(tileId))
+                        continue;
+
+                    GameplayMcpRuntime.TryResolveTerrainTileMetadata(
+                        chunkMgr,
+                        tileId,
+                        out string blockId,
+                        out string displayName);
+                    TerrainCell cell = TerrainSupportLayer.GetSurfaceCell(terrain, x, y);
+                    yield return new TileQueryEntry(
+                        new Vector2(
+                            chunk.Address.ChunkOrigin.X + x + 0.5f,
+                            chunk.Address.ChunkOrigin.Y + y + 0.5f),
+                        tileId,
+                        blockId,
+                        displayName,
+                        walkable,
+                        cell.BiomeId,
+                        (cell.Flags & TerrainCellFlags.Water) != 0);
+                }
+            }
+        }
+
+        /// <summary>查询玩家附近 ECS 掉落物，并保留飞行中掉落的实时世界位置。</summary>
+        private static object QueryDrops(
+            Player player,
+            string itemId,
+            string query,
+            string tag,
+            bool? pickup,
+            float radius,
+            int limit,
+            int offset)
+        {
+            limit = Mathf.Clamp(limit, 1, MaximumRuntimePageSize);
+            var candidates = new List<DroppedItemObservation>(64);
+            DroppedItemService.QueryNearbyEntityDrops(player.transform.position, radius, candidates);
+            HashSet<string> resolvedItemIds = ResolveCatalogItemIds(itemId, query);
+            bool hasIdentityFilter = !string.IsNullOrWhiteSpace(itemId) || !string.IsNullOrWhiteSpace(query);
+
+            var orderedMatches = candidates
+                .Where(drop => !hasIdentityFilter || resolvedItemIds.Contains(drop.ItemId ?? string.Empty))
+                .Where(drop => string.IsNullOrWhiteSpace(tag) ||
+                               drop.Tags.Any(value => string.Equals(value, tag, StringComparison.OrdinalIgnoreCase)))
+                .Where(drop => !pickup.HasValue || drop.Pickable == pickup.Value)
+                .Select(drop => new
+                {
+                    Drop = drop,
+                    Distance = WorldTopologyRuntime.Distance(player.transform.position, drop.Position)
+                })
+                .OrderBy(entry => entry.Distance)
+                .ThenBy(entry => entry.Drop.Id)
+                .ToArray();
+
+            int totalCount = orderedMatches.Length;
+            var matches = orderedMatches.Skip(offset).Take(limit).ToArray();
+            var result = new JArray();
+            for (int i = 0; i < matches.Length; i++)
+            {
+                DroppedItemObservation drop = matches[i].Drop;
+                var tags = new JArray();
+                for (int tagIndex = 0; tagIndex < drop.Tags.Count; tagIndex++)
+                    tags.Add(drop.Tags[tagIndex]);
+
+                result.Add(new JObject
+                {
+                    ["guid"] = drop.Id,
+                    ["id"] = drop.ItemId,
+                    ["name"] = GameplayMcpRuntime.ResolveItemDisplayName(drop.ItemId, drop.GameName),
+                    ["position"] = new JObject
+                    {
+                        ["x"] = Round(drop.Position.x),
+                        ["y"] = Round(drop.Position.y)
+                    },
+                    ["distance"] = Round(matches[i].Distance),
+                    ["amount"] = Round(drop.Amount),
+                    ["pickable"] = drop.Pickable,
+                    ["tags"] = tags
+                });
+            }
+
+            bool truncated = offset + matches.Length < totalCount;
+            return new SuccessResponse("FlatWorld ECS dropped item query.", new
+            {
+                source = "drops",
+                query,
+                item_id = itemId,
+                resolved_item_ids = new JArray(
+                    resolvedItemIds.OrderBy(value => value, StringComparer.OrdinalIgnoreCase)),
+                tag,
+                pickup,
+                radius = Round(radius),
+                total_count = totalCount,
+                offset,
+                returned_count = matches.Length,
+                limit,
+                truncated,
+                next_offset = truncated ? offset + matches.Length : (int?)null,
+                matches = result
+            });
+        }
+
+        /// <summary>掉落物没有 GameObject，直接从运行时物品目录解析稳定 ID 或本地化精确名称。</summary>
+        private static HashSet<string> ResolveCatalogItemIds(string explicitItemId, string query)
+        {
+            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!string.IsNullOrWhiteSpace(explicitItemId))
+            {
+                result.Add(explicitItemId.Trim());
+                return result;
+            }
+
+            if (string.IsNullOrWhiteSpace(query))
+                return result;
+
+            string normalizedQuery = query.Trim();
+            GameRes gameRes = GameRes.ExistingInstance;
+            if (gameRes?.ItemDefinitions == null)
+                return result;
+
+            string exactId = gameRes.ItemDefinitions.Keys.FirstOrDefault(id =>
+                string.Equals(id, normalizedQuery, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(exactId))
+            {
+                result.Add(exactId);
+                return result;
+            }
+
+            foreach (KeyValuePair<string, RuntimeItemDefinition> pair in gameRes.ItemDefinitions)
+            {
+                if (MatchesLocalizedItemName(normalizedQuery, null, pair.Value))
+                    result.Add(pair.Key);
+            }
+
+            return result;
+        }
+
         /// <summary>枚举单个已加载区块内符合环境阈值的地形格。</summary>
         private static System.Collections.Generic.IEnumerable<TerrainQueryEntry> EnumerateTerrainMatches(
             ChunkRuntime chunk,
@@ -400,6 +652,36 @@ namespace FlatWorld.GameplayMCP
             public float Value { get; }
             public int GroundTileId { get; }
             public int BiomeId { get; }
+        }
+
+        /// <summary>按地块身份查询使用的紧凑内部结果。</summary>
+        private readonly struct TileQueryEntry
+        {
+            public TileQueryEntry(
+                Vector2 position,
+                int tileId,
+                string blockId,
+                string displayName,
+                bool walkable,
+                int biomeId,
+                bool water)
+            {
+                Position = position;
+                TileId = tileId;
+                BlockId = blockId ?? string.Empty;
+                DisplayName = displayName ?? string.Empty;
+                Walkable = walkable;
+                BiomeId = biomeId;
+                Water = water;
+            }
+
+            public Vector2 Position { get; }
+            public int TileId { get; }
+            public string BlockId { get; }
+            public string DisplayName { get; }
+            public bool Walkable { get; }
+            public int BiomeId { get; }
+            public bool Water { get; }
         }
 
         /// <summary>过滤不可用于场景查询的玩家、已销毁对象和未激活对象。</summary>

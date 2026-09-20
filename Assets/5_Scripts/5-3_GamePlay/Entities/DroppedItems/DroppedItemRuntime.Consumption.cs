@@ -1,9 +1,75 @@
+using System;
+using System.Collections.Generic;
 using FlatWorld.DroppedItems;
 using UnityEngine;
 
 internal sealed partial class DroppedItemRuntime
 {
     #region 局部觅食空间查询
+
+    private readonly HashSet<int> observationQueryDedupe = new();
+
+    /// <summary>复用掉落物空间桶采集附近 ECS 实体的只读观察快照，飞行中的掉落也会被返回。</summary>
+    public void QueryNearbyObservations(
+        Vector2 origin,
+        float radius,
+        List<DroppedItemObservation> results)
+    {
+        if (results == null)
+            throw new ArgumentNullException(nameof(results));
+
+        results.Clear();
+        observationQueryDedupe.Clear();
+        float radiusSquared = radius * radius;
+        Vector2Int min = SpatialCell(origin - Vector2.one * radius);
+        Vector2Int max = SpatialCell(origin + Vector2.one * radius);
+
+        try
+        {
+            for (int y = min.y; y <= max.y; y++)
+            {
+                for (int x = min.x; x <= max.x; x++)
+                {
+                    Vector2 point = domain.Normalize(new Unity.Mathematics.float2(
+                        (x + 0.5f) * SpatialCellSize,
+                        (y + 0.5f) * SpatialCellSize));
+                    if (!spatial.TryGetValue(SpatialCell(point), out HashSet<int> bucket))
+                        continue;
+
+                    foreach (int id in bucket)
+                    {
+                        if (!observationQueryDedupe.Add(id) ||
+                            !simulation.Contains(id) ||
+                            !payloads.TryGetValue(id, out ItemData payload))
+                        {
+                            continue;
+                        }
+
+                        DroppedBody body = simulation.Get(id);
+                        Vector2 nearestPosition = domain.NearestImagePosition(origin, body.Position);
+                        if ((nearestPosition - origin).sqrMagnitude > radiusSquared)
+                            continue;
+
+                        string[] tags = payload.Tags == null || payload.Tags.Count == 0
+                            ? Array.Empty<string>()
+                            : payload.Tags.GetRange(0, Mathf.Min(8, payload.Tags.Count)).ToArray();
+                        results.Add(new DroppedItemObservation(
+                            id,
+                            payload.IDName,
+                            payload.GameName,
+                            body.Position,
+                            body.Amount,
+                            body.Pickable != 0 && body.Amount >= 1f,
+                            tags));
+                    }
+                }
+            }
+        }
+        finally
+        {
+            observationQueryDedupe.Clear();
+        }
+    }
 
     public bool TryFindNearestTagged(Vector2 origin, float radius, string tag, out int nearestId)
     {

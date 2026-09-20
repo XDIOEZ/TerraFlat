@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FlatWorld.WorldModel;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -17,7 +18,7 @@ namespace FlatWorld.GameplayMCP
     /// </summary>
     internal static class GameplayMcpRuntime
     {
-        public const string ProtocolVersion = "0.7.0";
+        public const string ProtocolVersion = "0.8.0";
         public const string ExtensionPath = "Assets/Editor/FlatWorld/GameplayMCP/";
 
         private static readonly object ControlOwner = new GameplayMcpControlOwner();
@@ -462,6 +463,8 @@ namespace FlatWorld.GameplayMCP
 
             root["ready"] = true;
             root["player"] = BuildPlayerObservation(player, controller, mover, includeInventory);
+            root["terrain"] = BuildTerrainGridObservation(player.transform.position);
+            root["drops"] = BuildNearbyDroppedItemObservation(player, radius, Mathf.Min(maxEntities, 16));
             root["nearby"] = BuildNearbyObservation(player, radius, maxEntities);
             return root;
         }
@@ -700,6 +703,266 @@ namespace FlatWorld.GameplayMCP
             foreach (KeyValuePair<string, float> pair in totals.OrderBy(pair => pair.Key, StringComparer.Ordinal))
                 result.Add(new JObject { ["id"] = pair.Key, ["n"] = Round(pair.Value) });
             return result;
+        }
+
+        /// <summary>固定返回玩家脚下为中心的 3×3 权威地块，避免 Agent 丢失脚下环境上下文。</summary>
+        private static JObject BuildTerrainGridObservation(Vector2 playerPosition)
+        {
+            Vector2 normalized = WorldTopologyRuntime.NormalizePosition(playerPosition);
+            Vector2Int center = Vector2Int.FloorToInt(normalized);
+            var cells = new JArray();
+
+            for (int dy = 1; dy >= -1; dy--)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    Vector2 samplePosition = new(center.x + dx + 0.5f, center.y + dy + 0.5f);
+                    if (!TryBuildTerrainCellObservation(samplePosition, dx, dy, out JObject cell))
+                    {
+                        cells.Add(new JObject
+                        {
+                            ["offset"] = new JArray(dx, dy),
+                            ["loaded"] = false
+                        });
+                        continue;
+                    }
+
+                    cells.Add(cell);
+                }
+            }
+
+            return new JObject
+            {
+                ["grid"] = "3x3",
+                ["center"] = new JArray(center.x, center.y),
+                ["cells"] = cells
+            };
+        }
+
+        /// <summary>把一个已加载权威地块压缩为身份、通行与水流信息。</summary>
+        private static bool TryBuildTerrainCellObservation(
+            Vector2 samplePosition,
+            int offsetX,
+            int offsetY,
+            out JObject result)
+        {
+            result = null;
+            ChunkMgr chunkMgr = ChunkMgr.ExistingInstance;
+            if (chunkMgr == null ||
+                !chunkMgr.TryGetRuntimeTerrainTile(samplePosition, out RuntimeTerrainTileSample sample))
+            {
+                return false;
+            }
+
+            TryResolveTerrainTileMetadata(
+                chunkMgr,
+                sample.TopTileId,
+                out string blockId,
+                out string displayName);
+
+            bool water = (sample.Cell.Flags & TerrainCellFlags.Water) != 0;
+            result = new JObject
+            {
+                ["offset"] = new JArray(offsetX, offsetY),
+                ["loaded"] = true,
+                ["cell"] = new JArray(sample.WorldCell.x, sample.WorldCell.y),
+                ["tileId"] = sample.TopTileId,
+                ["id"] = blockId,
+                ["name"] = displayName,
+                ["walkable"] = sample.Terrain.IsWalkable(sample.LocalCell.x, sample.LocalCell.y),
+                ["water"] = water,
+                ["biomeId"] = sample.Cell.BiomeId
+            };
+
+            if (water &&
+                chunkMgr.TryGetRuntimeWaterCurrent(
+                    new Vector2(sample.WorldCell.x + 0.5f, sample.WorldCell.y + 0.5f),
+                    out RuntimeWaterCurrentSample current))
+            {
+                result["current"] = new JObject
+                {
+                    ["kind"] = current.Kind.ToString(),
+                    ["direction"] = new JArray(Round(current.Direction.x), Round(current.Direction.y)),
+                    ["flow"] = Round(current.Flow)
+                };
+            }
+
+            return true;
+        }
+
+        /// <summary>读取附近 ECS 掉落物当前位置，与旧 ItemMgr nearby 分开返回。</summary>
+        private static JArray BuildNearbyDroppedItemObservation(Player player, float radius, int maxDrops)
+        {
+            var candidates = new List<DroppedItemObservation>(Mathf.Max(4, maxDrops));
+            DroppedItemService.QueryNearbyEntityDrops(player.transform.position, radius, candidates);
+            var ordered = candidates
+                .Select(drop => new
+                {
+                    Drop = drop,
+                    Distance = WorldTopologyRuntime.Distance(player.transform.position, drop.Position)
+                })
+                .OrderBy(entry => entry.Distance)
+                .ThenBy(entry => entry.Drop.Id)
+                .Take(maxDrops)
+                .ToArray();
+
+            var result = new JArray();
+            for (int i = 0; i < ordered.Length; i++)
+            {
+                DroppedItemObservation drop = ordered[i].Drop;
+                var tags = new JArray();
+                for (int tagIndex = 0; tagIndex < drop.Tags.Count; tagIndex++)
+                    tags.Add(drop.Tags[tagIndex]);
+
+                result.Add(new JObject
+                {
+                    ["guid"] = drop.Id,
+                    ["id"] = drop.ItemId,
+                    ["name"] = ResolveItemDisplayName(drop.ItemId, drop.GameName),
+                    ["position"] = new JObject
+                    {
+                        ["x"] = Round(drop.Position.x),
+                        ["y"] = Round(drop.Position.y)
+                    },
+                    ["distance"] = Round(ordered[i].Distance),
+                    ["amount"] = Round(drop.Amount),
+                    ["pickable"] = drop.Pickable,
+                    ["tags"] = tags
+                });
+            }
+
+            return result;
+        }
+
+        /// <summary>把数字地块 ID 映射到当前世界实际使用的 Tile_Block 身份。</summary>
+        internal static bool TryResolveTerrainTileMetadata(
+            ChunkMgr chunkMgr,
+            int tileId,
+            out string blockId,
+            out string displayName)
+        {
+            blockId = string.Empty;
+            displayName = string.Empty;
+            if (chunkMgr == null || tileId == 0)
+                return false;
+
+            string parameterId = "tile.block." + tileId;
+            if (!TryResolveTerrainBlockId(chunkMgr.ActiveGenerationProfile, parameterId, out blockId) &&
+                !TryResolveTerrainBlockId(chunkMgr.RuntimeTileCatalogProfile, parameterId, out blockId))
+            {
+                return false;
+            }
+
+            RuntimeTileDefinition block = GameRes.ExistingInstance?.GetTileBlock(blockId);
+            displayName = !string.IsNullOrWhiteSpace(block?.displayName)
+                ? block.displayName
+                : blockId;
+            return true;
+        }
+
+        /// <summary>按稳定 ID、Tile_Block 名称或显示名精确解析可查询地块 ID。</summary>
+        internal static HashSet<int> ResolveTerrainTileIds(string query, out JArray resolved)
+        {
+            resolved = new JArray();
+            var matches = new HashSet<int>();
+            if (string.IsNullOrWhiteSpace(query))
+                return matches;
+
+            ChunkMgr chunkMgr = ChunkMgr.ExistingInstance;
+            if (chunkMgr == null)
+                return matches;
+
+            var definitions = new Dictionary<int, string>();
+            CollectTerrainTileDefinitions(chunkMgr.ActiveGenerationProfile, definitions);
+            CollectTerrainTileDefinitions(chunkMgr.RuntimeTileCatalogProfile, definitions);
+            string normalized = query.Trim();
+
+            foreach (KeyValuePair<int, string> pair in definitions.OrderBy(pair => pair.Key))
+            {
+                RuntimeTileDefinition block = GameRes.ExistingInstance?.GetTileBlock(pair.Value);
+                if (!TerrainTileNameEquals(normalized, pair.Key, pair.Value, block))
+                    continue;
+
+                matches.Add(pair.Key);
+                resolved.Add(new JObject
+                {
+                    ["tileId"] = pair.Key,
+                    ["id"] = pair.Value,
+                    ["name"] = !string.IsNullOrWhiteSpace(block?.displayName)
+                        ? block.displayName
+                        : pair.Value
+                });
+            }
+
+            return matches;
+        }
+
+        /// <summary>按地表/支撑层规则取得与 RuntimeTerrainTileSample.TopTileId 一致的有效顶层 ID。</summary>
+        internal static int ResolveEffectiveTerrainTileId(ChunkTerrainData terrain, int x, int y)
+        {
+            TerrainCell effective = TerrainSupportLayer.GetSurfaceCell(terrain, x, y);
+            int supportId = TerrainSupportLayer.GetTileId(terrain, x, y);
+            return supportId != 0 && effective.BlockingTileId == 0 && effective.BackTileId == 0
+                ? supportId
+                : terrain.GetTopTileId(x, y);
+        }
+
+        /// <summary>当前语言物品名优先来自运行时定义，缺失时使用冷载荷名称。</summary>
+        internal static string ResolveItemDisplayName(string itemId, string fallback)
+        {
+            GameRes gameRes = GameRes.ExistingInstance;
+            return gameRes?.ItemDefinitions != null &&
+                   gameRes.ItemDefinitions.TryGetValue(itemId ?? string.Empty, out RuntimeItemDefinition definition)
+                ? definition.DisplayName
+                : fallback ?? string.Empty;
+        }
+
+        private static bool TryResolveTerrainBlockId(
+            ChunkGenerationProfileSnapshot profile,
+            string parameterId,
+            out string blockId)
+        {
+            blockId = null;
+            return profile?.TextParameters != null &&
+                   profile.TextParameters.TryGetValue(parameterId, out blockId) &&
+                   !string.IsNullOrWhiteSpace(blockId);
+        }
+
+        private static void CollectTerrainTileDefinitions(
+            ChunkGenerationProfileSnapshot profile,
+            IDictionary<int, string> definitions)
+        {
+            if (profile?.TextParameters == null)
+                return;
+
+            const string prefix = "tile.block.";
+            foreach (KeyValuePair<string, string> pair in profile.TextParameters)
+            {
+                if (!pair.Key.StartsWith(prefix, StringComparison.Ordinal) ||
+                    !int.TryParse(pair.Key.Substring(prefix.Length), out int tileId) ||
+                    tileId == 0 ||
+                    string.IsNullOrWhiteSpace(pair.Value))
+                {
+                    continue;
+                }
+
+                definitions[tileId] = pair.Value.Trim();
+            }
+        }
+
+        private static bool TerrainTileNameEquals(
+            string query,
+            int tileId,
+            string blockId,
+            RuntimeTileDefinition block)
+        {
+            return string.Equals(query, tileId.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(query, blockId, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(query, block?.name, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(query, block?.tileItemName, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(query, block?.displayName, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(query, block?.tileDataTemplate?.ID, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(query, block?.tileDataTemplate?.Name, StringComparison.OrdinalIgnoreCase);
         }
 
         #endregion
