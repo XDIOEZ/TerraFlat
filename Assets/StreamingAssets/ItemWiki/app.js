@@ -15,10 +15,12 @@
     const SYSTEM_MAP_MAX_ZOOM = 1.8;
     const WIKI_STATUS_API = "/api/wiki/status";
     const ITEM_SAVE_API = "/api/items/save";
+    const BUFF_CONFIG_ROOT = "../GameConfig/Buffs/";
+    const BUFF_SAVE_API = "/api/buffs/save";
 
     const CATEGORY_ORDER = [
         "全部", "材料", "食物", "武器", "工具", "装备", "种子", "作物",
-        "资源节点", "建筑", "维度入口", "生物", "其他"
+        "资源节点", "建筑", "维度入口", "生物", "其他", "BUFF"
     ];
 
     const CATEGORY_HINTS = {
@@ -83,6 +85,10 @@
         sourceById: new Map(),
         packageById: new Map(),
         packageHashes: new Map(),
+        buffSources: new Map(),
+        buffPackages: new Map(),
+        buffHashes: new Map(),
+        buffWritable: false,
         resolvedById: new Map(),
         lootTables: new Map(),
         moduleGlossary: { modules: {}, fields: {}, fieldHelp: {} },
@@ -128,6 +134,7 @@
         globalSearch: document.getElementById("globalSearch"),
         reloadButton: document.getElementById("reloadButton"),
         catalogViewButton: document.getElementById("catalogViewButton"),
+        buffViewButton: document.getElementById("buffViewButton"),
         overviewViewButton: document.getElementById("overviewViewButton"),
         designViewButton: document.getElementById("designViewButton"),
         systemMapViewButton: document.getElementById("systemMapViewButton"),
@@ -203,7 +210,6 @@
             setStatus("error", "浏览器禁止 file:// 页面直接读取 JSON。请双击同目录的“打开物品Wiki.cmd”。");
             return;
         }
-        checkWriteCapability();
         loadCatalog();
     }
 
@@ -238,6 +244,7 @@
         els.indexCollapseButton.addEventListener("click", toggleIndexPanel);
         els.indexToolsCollapseButton.addEventListener("click", toggleIndexToolsPanel);
         els.catalogViewButton.addEventListener("click", () => setView("catalog"));
+        els.buffViewButton.addEventListener("click", () => setView("buffs"));
         els.overviewViewButton.addEventListener("click", () => setView("overview"));
         els.designViewButton.addEventListener("click", () => setView("design"));
         els.systemMapViewButton.addEventListener("click", () => setView("system-map"));
@@ -281,7 +288,7 @@
 
     // 仅在档案浏览且未编辑文本/打开弹窗时接管左右方向键，避免干扰输入框与原生控件。
     function canUseCatalogPageKeys(event) {
-        if (state.activeView !== "catalog") return false;
+        if (state.activeView !== "catalog" && state.activeView !== "buffs") return false;
         if (!els.imageZoomModal.hidden || !els.lootModal.hidden) return false;
         if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return false;
 
@@ -370,14 +377,16 @@
         setStatus("loading", "正在读取 item-manifest.json 与全部启用分包…");
         els.reloadButton.disabled = true;
         try {
+            await checkWriteCapability();
             state.spriteCache.clear();
-            const [manifest, lootRoot, moduleGlossary, itemMetadata, actors, recipes] = await Promise.all([
+            const [manifest, lootRoot, moduleGlossary, itemMetadata, actors, recipes, buffs] = await Promise.all([
                 fetchJson(ITEM_MANIFEST_PATH),
                 fetchJson(LOOT_TABLE_PATH),
                 fetchJson(MODULE_GLOSSARY_PATH),
                 fetchJson(ITEM_METADATA_PATH),
                 ItemMechanics.loadManifest(fetchJson, "../GameConfig/Actors/", "actor-manifest.json", "actors"),
-                ItemMechanics.loadManifest(fetchJson, "../GameConfig/Recipes/", "recipe-manifest.json", "recipes")
+                ItemMechanics.loadManifest(fetchJson, "../GameConfig/Recipes/", "recipe-manifest.json", "recipes"),
+                loadBuffCatalog()
             ]);
             const packages = (manifest.packages || []).filter(pkg => pkg && pkg.enabled !== false);
             const packagePayloads = await Promise.all(packages.map(async pkg => ({
@@ -409,6 +418,9 @@
             state.sourceById = sourceById;
             state.packageById = packageById;
             state.packageHashes = packageHashes;
+            state.buffSources = buffs.sources;
+            state.buffPackages = buffs.packages;
+            state.buffHashes = buffs.hashes;
             state.actors = actors;
             state.recipes = Array.from(recipes.resolved.values());
             state.itemMetadata = itemMetadata && itemMetadata.schemaVersion === 1 && isPlainObject(itemMetadata.items)
@@ -431,7 +443,7 @@
             restoreOrSelectFirst(preferredId);
             setStatus(
                 "ready",
-                `已载入 ${state.entries.filter(entry => !entry.final.abstract && entry.kind === "item").length} 个物品、${state.entries.filter(entry => !entry.final.abstract && entry.kind === "actor").length} 个生物、${state.recipes.length} 个配方；机制默认按继承配置生成，可双击覆盖编辑，生物只读。`
+                `已载入 ${state.entries.filter(entry => !entry.final.abstract && entry.kind === "item").length} 个物品、${state.entries.filter(entry => !entry.final.abstract && entry.kind === "actor").length} 个生物、${state.recipes.length} 个配方、${state.buffSources.size} 个 BUFF；双击数值编辑，生物只读。`
             );
         } catch (error) {
             console.error(error);
@@ -448,6 +460,25 @@
         const response = await fetch(path, { cache: "no-store" });
         if (!response.ok) throw new Error(`${response.status} ${response.statusText} · ${path}`);
         return response.json();
+    }
+
+    // 独立命名空间避免 BUFF 与 Item 同名或分包同名时互相覆盖。
+    async function loadBuffCatalog() {
+        const manifest = await fetchJson(`${BUFF_CONFIG_ROOT}buff-manifest.json`);
+        if (manifest.schemaVersion !== 1 || !Array.isArray(manifest.packages)) throw new Error("BUFF 清单格式无效");
+        const sources = new Map(), packages = new Map(), hashes = new Map();
+        for (const pkg of manifest.packages.filter(value => value && value.enabled !== false)) {
+            const { data, hash } = await fetchJsonWithHash(`${BUFF_CONFIG_ROOT}${pkg.path}`);
+            if (data.schemaVersion !== 1 || !Array.isArray(data.buffs)) throw new Error(`BUFF 分包 ${pkg.id} 格式无效`);
+            hashes.set(pkg.id, hash);
+            for (const source of data.buffs) {
+                const key = String(source?.id || "").trim().toLowerCase();
+                if (!key || sources.has(key)) throw new Error(`BUFF ID 为空或重复：${source?.id}`);
+                sources.set(key, deepClone(source));
+                packages.set(key, pkg);
+            }
+        }
+        return { sources, packages, hashes };
     }
 
     // 读取分包原始字节并计算服务端同算法指纹，用于保存时检测外部修改。
@@ -472,10 +503,12 @@
             const response = await fetch(WIKI_STATUS_API, { cache: "no-store" });
             const payload = response.ok ? await response.json() : null;
             state.writable = payload?.writable === true;
+            state.buffWritable = payload?.buffWritable === true;
             state.publicReadOnly = payload?.publicReadOnly === true;
             state.projectRoot = typeof payload?.projectRoot === "string" ? payload.projectRoot : "";
         } catch {
             state.writable = false;
+            state.buffWritable = false;
             state.publicReadOnly = false;
             state.projectRoot = "";
         }
@@ -520,6 +553,7 @@
         state.entries = Array.from(state.resolvedById.values()).map(final => buildEntry(final));
         state.entries.push(...Array.from(state.actors.resolved.values()).map(final => buildEntry(final, "actor")));
         state.mechanicsContext = ItemMechanics.createContext(state.entries, state.recipes, state.lootTables);
+        state.entries.push(...Array.from(state.buffSources, ([key, source]) => BuffWiki.makeEntry(source, state.buffPackages.get(key))));
     }
 
     // 优先按 Manifest 分包和模块语义生成开发者友好分类。
@@ -542,22 +576,26 @@
 
     // 刷新分类、分包选择器和右侧书签。
     function renderFilters() {
-        const presentCategories = new Set(state.entries.map(entry => entry.category));
+        const catalogEntries = state.entries.filter(entry => (entry.kind === "buff") === (state.activeView === "buffs"));
+        const presentCategories = new Set(catalogEntries.map(entry => entry.category));
         const categories = CATEGORY_ORDER.filter(category => category === "全部" || presentCategories.has(category));
         const categoryOptions = categories.map(category =>
             `<option value="${escapeAttr(category)}">${escapeHtml(category)}</option>`
         ).join("");
         els.categorySelect.innerHTML = categoryOptions;
-        els.overviewCategorySelect.innerHTML = categoryOptions;
+        els.overviewCategorySelect.innerHTML = CATEGORY_ORDER.filter(category => category !== "BUFF").map(category =>
+            `<option value="${escapeAttr(category)}">${escapeHtml(category)}</option>`).join("");
 
         const packageOptions = [
             `<option value="全部">全部分包</option>`,
-            ...Array.from(new Map(state.entries.map(entry => [entry.package.id, entry.package])).values()).map(pkg =>
+            ...Array.from(new Map(catalogEntries.map(entry => [entry.package.id, entry.package])).values()).map(pkg =>
                 `<option value="${escapeAttr(pkg.id)}">${escapeHtml(pkg.id)}</option>`
             )
         ].join("");
         els.packageSelect.innerHTML = packageOptions;
-        els.overviewPackageSelect.innerHTML = packageOptions;
+        els.overviewPackageSelect.innerHTML = `<option value="全部">全部分包</option>` + Array.from(
+            new Map(state.entries.filter(entry => entry.kind !== "buff").map(entry => [entry.package.id, entry.package])).values()
+        ).map(pkg => `<option value="${escapeAttr(pkg.id)}">${escapeHtml(pkg.id)}</option>`).join("");
 
         els.categoryTabs.innerHTML = categories.map((category, index) =>
             `<button class="category-tab${category === "全部" ? " active" : ""}" type="button" ` +
@@ -576,7 +614,7 @@
 
     // 切换档案浏览、全物品总览、游戏设计、脚本世界与设置页；书本只作为视觉容器，不限制信息架构。
     function setView(view) {
-        state.activeView = view === "overview" || view === "design" || view === "system-map" || view === "settings" ? view : "catalog";
+        state.activeView = ["overview", "design", "system-map", "settings", "buffs"].includes(view) ? view : "catalog";
         const overview = state.activeView === "overview";
         const design = state.activeView === "design";
         const systemMap = state.activeView === "system-map";
@@ -588,6 +626,7 @@
         els.systemMapBook.hidden = !systemMap;
         els.settingsBook.hidden = !settings;
         els.catalogViewButton.classList.toggle("active", state.activeView === "catalog");
+        els.buffViewButton.classList.toggle("active", state.activeView === "buffs");
         els.overviewViewButton.classList.toggle("active", overview);
         els.designViewButton.classList.toggle("active", design);
         els.systemMapViewButton.classList.toggle("active", systemMap);
@@ -595,6 +634,15 @@
         if (overview) renderOverview();
         if (design) loadDesignDocs();
         if (systemMap) loadSystemMap();
+        if (state.activeView === "catalog" || state.activeView === "buffs") {
+            renderFilters();
+            updateSummary();
+            renderList();
+            const candidates = getCatalogEntries();
+            const selected = candidates.find(entry => entry.id === state.selectedId) || candidates[0];
+            if (selected) selectItem(selected.id);
+            else showEmpty();
+        }
     }
 
     // README 的“系统目录”表即 03 页导航真源，新增/排序文档时无需同步第二份网页配置。
@@ -1270,6 +1318,7 @@
         const packageId = els.overviewPackageSelect.value || "全部";
         const includeAbstract = els.overviewShowAbstract.checked;
         let entries = state.entries.filter(entry => {
+            if (entry.kind === "buff") return false;
             if (!includeAbstract && entry.final.abstract === true) return false;
             if (category !== "全部" && entry.category !== category) return false;
             if (packageId !== "全部" && entry.package.id !== packageId) return false;
@@ -1364,10 +1413,11 @@
 
     // 更新物品总数摘要。
     function updateSummary() {
-        const abstractCount = state.entries.filter(entry => entry.final.abstract === true).length;
-        els.countConcrete.textContent = String(state.entries.length - abstractCount);
+        const entries = state.entries.filter(entry => (entry.kind === "buff") === (state.activeView === "buffs"));
+        const abstractCount = entries.filter(entry => entry.final.abstract === true).length;
+        els.countConcrete.textContent = String(entries.length - abstractCount);
         els.countAbstract.textContent = String(abstractCount);
-        els.countPackages.textContent = String(state.packages.length);
+        els.countPackages.textContent = String(new Set(entries.map(entry => entry.package.id)).size);
     }
 
     // 获取左页索引当前筛选与排序后的条目，供列表和前后浏览共同使用。
@@ -1378,6 +1428,7 @@
         const includeAbstract = els.showAbstract.checked;
 
         let entries = state.entries.filter(entry => {
+            if ((entry.kind === "buff") !== (state.activeView === "buffs")) return false;
             if (!includeAbstract && entry.final.abstract === true) return false;
             if (category !== "全部" && entry.category !== category) return false;
             if (packageId !== "全部" && entry.package.id !== packageId) return false;
@@ -1406,7 +1457,7 @@
         els.itemList.innerHTML = "";
 
         if (!entries.length) {
-            els.itemList.innerHTML = `<div class="no-data">没有符合当前条件的物品。</div>`;
+            els.itemList.innerHTML = `<div class="no-data">没有符合当前条件的条目。</div>`;
             updateDetailNavigation();
             return;
         }
@@ -1544,7 +1595,8 @@
         const hashId = decodeURIComponent(location.hash.replace(/^#/, ""));
         const requestedId = String(preferredId || hashId || "").toLowerCase();
         const preferred = state.entries.find(entry => entry.id.toLowerCase() === requestedId);
-        const firstConcrete = state.entries.find(entry => entry.final.abstract !== true);
+        if (preferred?.kind === "buff" && state.activeView === "catalog") setView("buffs");
+        const firstConcrete = getCatalogEntries().find(entry => entry.final.abstract !== true);
         if (preferred || firstConcrete) selectItem((preferred || firstConcrete).id);
         else showEmpty();
     }
@@ -1552,6 +1604,10 @@
     // 绘制右页完整开发者详情。
     function renderDetail(entry) {
         els.detailContent.innerHTML = "";
+        if (entry.kind === "buff") {
+            renderBuffDetail(entry);
+            return;
+        }
 
         const hero = document.createElement("section");
         hero.className = "detail-hero";
@@ -1653,6 +1709,47 @@
         heading.className = "section-title";
         heading.textContent = text;
         els.detailContent.appendChild(heading);
+    }
+
+    // 复用 Item 的数值卡片、内联编辑和保存反馈；说明始终根据当前 BUFF JSON 生成。
+    function renderBuffDetail(entry) {
+        const heading = document.createElement("h2");
+        heading.textContent = entry.displayName;
+        attachInlineEditor(heading, entry, { sourceType: "root", path: "displayName",
+            value: entry.final.displayName || entry.final.id, label: "名称" });
+        const meta = document.createElement("p");
+        meta.className = "detail-id";
+        meta.textContent = `${entry.final.id} · ${entry.package.path}`;
+        els.detailContent.append(heading, meta);
+        const description = document.createElement("div");
+        description.className = "description-card";
+        description.textContent = entry.final.description || "暂无说明，双击填写。";
+        attachInlineEditor(description, entry, { sourceType: "root", path: "description",
+            value: entry.final.description || "", label: "说明", multiline: true });
+        els.detailContent.appendChild(description);
+        appendSectionTitle("当前机制");
+        const rules = document.createElement("div");
+        rules.className = "description-card";
+        for (const line of BuffWiki.describe(entry.final)) {
+            const paragraph = document.createElement("p");
+            paragraph.textContent = line;
+            rules.appendChild(paragraph);
+        }
+        els.detailContent.appendChild(rules);
+        appendSectionTitle("基础数值 · 双击编辑");
+        els.detailContent.appendChild(renderStatGrid(BuffWiki.stats(entry.final), entry));
+        (entry.final.effects || []).forEach((effect, index) => {
+            appendSectionTitle(`效果 ${index + 1} · ${BuffWiki.effectNames[effect.typeId] || effect.typeId}`);
+            els.detailContent.appendChild(renderStatGrid(BuffWiki.effectStats(effect, index), entry));
+        });
+        appendSectionTitle("效果集合 · 双击编辑 JSON");
+        const effects = jsonPre(entry.final.effects || []);
+        attachInlineEditor(effects, entry, { sourceType: "root", path: "effects", value: entry.final.effects || [], label: "效果集合" });
+        els.detailContent.appendChild(effects);
+        const note = document.createElement("p");
+        note.textContent = "保存写回游戏实际 BUFF 分包，并保留备份。运行中的游戏需重新加载资源或重启后使用新数值；null 表示永久。公开分享模式只读。";
+        els.detailContent.appendChild(note);
+        els.detailContent.scrollTop = 0;
     }
 
     // 提取物品常用基础字段。
@@ -2189,6 +2286,13 @@
                 return;
             }
         }
+        if (entry.kind === "buff" && !state.buffWritable) {
+            await checkWriteCapability();
+            if (!state.buffWritable) {
+                setStatus("error", "当前服务尚未启用 BUFF 保存，请重启“打开物品Wiki.cmd”后重试。");
+                return;
+            }
+        }
 
         const currentEntry = findItemEntry(entry.id) || entry;
         const valueHost = getInlineValueHost(host);
@@ -2219,7 +2323,9 @@
             if (settled) return;
             let nextValue;
             try {
-                nextValue = parseInlineEditorValue(editor, originalValue, target.label || target.path);
+                nextValue = target.nullableNumber
+                    ? parseNullableNumber(editor.value, target.label || target.path)
+                    : parseInlineEditorValue(editor, originalValue, target.label || target.path);
             } catch (error) {
                 host.classList.add("inline-error");
                 setStatus("error", error.message);
@@ -2279,6 +2385,13 @@
 
     // 按原始 JSON 类型创建最小编辑控件，数组/对象直接编辑 JSON。
     function createInlineEditorControl(value, target) {
+        if (target.nullableNumber) {
+            const input = document.createElement("input");
+            input.className = "inline-edit-control";
+            input.type = "text";
+            input.value = value == null ? "null" : String(value);
+            return input;
+        }
         if (typeof value === "boolean") {
             const select = document.createElement("select");
             select.className = "inline-edit-control";
@@ -2325,6 +2438,12 @@
         return editor.value;
     }
 
+    function parseNullableNumber(raw, label) {
+        if (raw.trim().toLowerCase() === "null") return null;
+        if (!raw.trim() || !Number.isFinite(Number(raw))) throw new Error(`${label} 必须是有限数字或 null。`);
+        return Number(raw);
+    }
+
     // 把一个内联字段作为当前 Item 的差异覆盖写入原始 source。
     function applyInlineValueToSource(source, target, value) {
         if (target.sourceType === "root") {
@@ -2350,14 +2469,15 @@
 
     // 发送受限 Item 写入请求；调用方决定保存后的界面行为。
     async function saveItemSourceRequest(entry, source) {
-        if (entry.kind !== "item") throw new Error("生物定义只读，不能通过 Item 接口保存。");
-        const expectedHash = state.packageHashes.get(entry.package.id);
+        if (entry.kind !== "item" && entry.kind !== "buff") throw new Error("生物定义只读，不能通过 Item 接口保存。");
+        const isBuff = entry.kind === "buff";
+        const expectedHash = (isBuff ? state.buffHashes : state.packageHashes).get(entry.package.id);
         if (!expectedHash) throw new Error("当前分包缺少文件指纹，请先重新读取 JSON。");
-        const response = await fetch(ITEM_SAVE_API, {
+        const response = await fetch(isBuff ? BUFF_SAVE_API : ITEM_SAVE_API, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                itemId: entry.id,
+                itemId: isBuff ? entry.final.id : entry.id,
                 definitionKind: entry.kind,
                 packagePath: entry.package.path,
                 expectedHash,
@@ -2373,8 +2493,13 @@
 
     // 使用服务端确认后的 source 刷新本地解析结果，同时保持开发者当前阅读位置。
     function applySavedItemSource(entry, source, packageHash, modifiedAt, scrollTop) {
-        state.sourceById.set(entry.id.toLowerCase(), deepClone(source));
-        state.packageHashes.set(entry.package.id, packageHash);
+        if (entry.kind === "buff") {
+            state.buffSources.set(entry.final.id.toLowerCase(), deepClone(source));
+            state.buffHashes.set(entry.package.id, packageHash);
+        } else {
+            state.sourceById.set(entry.id.toLowerCase(), deepClone(source));
+            state.packageHashes.set(entry.package.id, packageHash);
+        }
         if (modifiedAt) {
             if (!isPlainObject(state.itemMetadata)) state.itemMetadata = { schemaVersion: 1, items: {} };
             if (!isPlainObject(state.itemMetadata.items)) state.itemMetadata.items = {};
@@ -2395,10 +2520,13 @@
     // 按点分路径写入嵌套 JSON 对象。
     function setNestedValue(root, path, value) {
         const parts = String(path).split(".");
+        if (parts.some(key => ["__proto__", "prototype", "constructor"].includes(key)))
+            throw new Error("无效字段路径");
         let cursor = root;
         for (let index = 0; index < parts.length - 1; index++) {
             const key = parts[index];
-            if (!isPlainObject(cursor[key])) cursor[key] = {};
+            if (!isPlainObject(cursor[key]) && !Array.isArray(cursor[key]))
+                cursor[key] = /^\d+$/.test(parts[index + 1]) ? [] : {};
             cursor = cursor[key];
         }
         cursor[parts[parts.length - 1]] = value;

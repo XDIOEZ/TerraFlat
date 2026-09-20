@@ -25,12 +25,15 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import unquote, urlparse
+from buff_validation import validate_catalogs as validate_buff_catalogs
 
 
 WIKI_DIRECTORY = Path(__file__).resolve().parent
 PROJECT_ROOT = WIKI_DIRECTORY.parents[2]
 ITEM_ROOT = PROJECT_ROOT / "Assets" / "StreamingAssets" / "GameConfig" / "Items"
 ITEM_MANIFEST = ITEM_ROOT / "item-manifest.json"
+BUFF_ROOT = PROJECT_ROOT / "Assets" / "StreamingAssets" / "GameConfig" / "Buffs"
+BUFF_MANIFEST = BUFF_ROOT / "buff-manifest.json"
 LOOT_TABLE_FILE = PROJECT_ROOT / "Assets" / "StreamingAssets" / "GameConfig" / "LootTables" / "loot-tables.json"
 BACKUP_ROOT = PROJECT_ROOT / "Library" / "FlatWorldItemWiki" / "Backups"
 ITEM_METADATA_FILE = WIKI_DIRECTORY / "item-metadata.json"
@@ -39,6 +42,7 @@ SAVE_LOCK = threading.Lock()
 WIKI_URL_PATH = "/Assets/StreamingAssets/ItemWiki/"
 PUBLIC_WIKI_FILES = {
     "app.js",
+    "buffs.js",
     "mechanics.js",
     "mechanics-rules.js",
     "index.html",
@@ -123,9 +127,9 @@ def normalize_package_path(value: str) -> str:
     return path.as_posix()
 
 
-def load_manifest_packages() -> list[dict[str, Any]]:
+def load_manifest_packages(manifest_path: Path | None = None) -> list[dict[str, Any]]:
     """读取并校验 Item Manifest 的启用分包。"""
-    manifest = read_json(ITEM_MANIFEST)
+    manifest = read_json(manifest_path or ITEM_MANIFEST)
     if manifest.get("schemaVersion") != 1:
         raise WikiValidationError("item-manifest.json 的 schemaVersion 不受支持")
     packages = manifest.get("packages")
@@ -329,9 +333,22 @@ def validate_all_items(roots_by_package: dict[str, dict[str, Any]], packages: li
 
 
 def save_item(payload: dict[str, Any]) -> dict[str, Any]:
-    """校验并原子写回单个 Item 原始定义。"""
-    if payload.get("definitionKind", "item") != "item" or str(payload.get("itemId", "")).lower().startswith("actor:"):
-        raise WikiValidationError("生物定义只读，不能通过 Item 接口保存")
+    """保留原 Item 写入入口，由共同保存事务处理备份、指纹和原子替换。"""
+    return save_definition(payload, "item")
+
+
+def save_buff(payload: dict[str, Any]) -> dict[str, Any]:
+    """BUFF 只允许修改 Manifest 已启用分包中的现有定义。"""
+    return save_definition(payload, "buff")
+
+
+def save_definition(payload: dict[str, Any], definition_kind: str) -> dict[str, Any]:
+    """复用 Item 保存事务；不同目录仅替换集合、清单和领域校验器。"""
+    if payload.get("definitionKind", "item") != definition_kind:
+        raise WikiValidationError("定义类型与保存接口不匹配")
+    config_root = BUFF_ROOT if definition_kind == "buff" else ITEM_ROOT
+    manifest_path = BUFF_MANIFEST if definition_kind == "buff" else ITEM_MANIFEST
+    collection = "buffs" if definition_kind == "buff" else "items"
     item_id = str(payload.get("itemId") or "").strip()
     package_path = normalize_package_path(payload.get("packagePath") or "")
     expected_hash = str(payload.get("expectedHash") or "").strip().lower()
@@ -344,13 +361,13 @@ def save_item(payload: dict[str, Any]) -> dict[str, Any]:
     if not expected_hash:
         raise WikiValidationError("保存请求缺少文件指纹，请重新读取 JSON")
 
-    packages = load_manifest_packages()
+    packages = load_manifest_packages(manifest_path)
     package = next((entry for entry in packages if entry["path"].lower() == package_path.lower()), None)
     if package is None:
-        raise WikiValidationError(f"目标文件不是启用的 Item 分包：{package_path}")
+        raise WikiValidationError(f"目标文件不是启用的 {definition_kind} 分包：{package_path}")
 
-    target_path = (ITEM_ROOT / Path(package_path)).resolve()
-    item_root_resolved = ITEM_ROOT.resolve()
+    target_path = (config_root / Path(package["path"])).resolve()
+    item_root_resolved = config_root.resolve()
     if target_path.parent != item_root_resolved and item_root_resolved not in target_path.parents:
         raise WikiValidationError("目标文件越出 Item 配置目录")
     if not target_path.is_file():
@@ -364,12 +381,14 @@ def save_item(payload: dict[str, Any]) -> dict[str, Any]:
     target_root: dict[str, Any] | None = None
     target_index = -1
     for current_package in packages:
-        current_path = ITEM_ROOT / current_package["path"]
+        current_path = (config_root / current_package["path"]).resolve()
+        if config_root.resolve() not in current_path.parents:
+            raise WikiValidationError("分包越出配置目录")
         root = read_json(current_path)
         roots_by_package[current_package["id"]] = root
         if current_package["path"].lower() == package_path.lower():
             target_root = root
-            for index, current_source in enumerate(root.get("items") or []):
+            for index, current_source in enumerate(root.get(collection) or []):
                 if isinstance(current_source, dict) and str(current_source.get("id") or "").strip().lower() == item_id.lower():
                     if target_index >= 0:
                         raise WikiValidationError(f"分包内存在重复 Item ID：{item_id}")
@@ -378,8 +397,14 @@ def save_item(payload: dict[str, Any]) -> dict[str, Any]:
     if target_root is None or target_index < 0:
         raise WikiConflictError(f"原 Item {item_id} 已被移动或删除，请重新读取 JSON。")
 
-    target_root["items"][target_index] = copy.deepcopy(source)
-    validate_all_items(roots_by_package, packages)
+    target_root[collection][target_index] = copy.deepcopy(source)
+    if definition_kind == "buff":
+        try:
+            validate_buff_catalogs(roots_by_package, packages)
+        except ValueError as error:
+            raise WikiValidationError(str(error)) from error
+    else:
+        validate_all_items(roots_by_package, packages)
 
     original_bytes = target_path.read_bytes()
     newline = "\r\n" if b"\r\n" in original_bytes else "\n"
@@ -405,7 +430,8 @@ def save_item(payload: dict[str, Any]) -> dict[str, Any]:
 
     modified_at = None
     try:
-        modified_at = write_item_modified_time(item_id)
+        if definition_kind == "item":
+            modified_at = write_item_modified_time(item_id)
     except Exception as error:
         print(f"[Item Wiki] metadata update failed for {item_id}: {error}", file=sys.stderr)
 
@@ -479,7 +505,7 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
         if lower == "assets/streamingassets/gameconfig/loottables/loot-tables.json":
             return True
 
-        for directory, manifest_name in (("Actors", "actor-manifest.json"), ("Recipes", "recipe-manifest.json")):
+        for directory, manifest_name in (("Actors", "actor-manifest.json"), ("Recipes", "recipe-manifest.json"), ("Buffs", "buff-manifest.json")):
             prefix = f"assets/streamingassets/gameconfig/{directory.lower()}/"
             if lower.startswith(prefix):
                 config_root = PROJECT_ROOT / "Assets" / "StreamingAssets" / "GameConfig" / directory
@@ -517,10 +543,11 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
                 200,
                 {
                     "writable": not self.public_readonly,
+                    "buffWritable": not self.public_readonly,
                     "publicReadOnly": self.public_readonly,
                     "projectRoot": None if self.public_readonly else str(PROJECT_ROOT),
                     "service": "FlatWorldItemWiki",
-                    "version": 1,
+                    "version": 2,
                 },
             )
             return
@@ -550,7 +577,8 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
         if self.public_readonly:
             self.send_json(403, {"ok": False, "error": "公开 Wiki 为只读模式，禁止写入项目数据。"})
             return
-        if urlparse(self.path).path != "/api/items/save":
+        save_action = {"/api/items/save": save_item, "/api/buffs/save": save_buff}.get(urlparse(self.path).path)
+        if save_action is None:
             self.send_json(404, {"ok": False, "error": "未知 API"})
             return
         try:
@@ -561,7 +589,7 @@ class WikiRequestHandler(SimpleHTTPRequestHandler):
             if not isinstance(payload, dict):
                 raise WikiValidationError("请求根节点必须是对象")
             with SAVE_LOCK:
-                result = save_item(payload)
+                result = save_action(payload)
             self.send_json(200, result)
         except WikiConflictError as error:
             self.send_json(409, {"ok": False, "error": str(error)})
