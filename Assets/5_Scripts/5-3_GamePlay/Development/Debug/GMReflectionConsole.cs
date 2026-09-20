@@ -1481,6 +1481,36 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
             multiplier > 1f);
     }
 
+    /// <summary>按当前正交视距乘倍率，并通过正式相机 API 同步刷新区块窗口。</summary>
+    private void MultiplyCameraView(float multiplier)
+    {
+        if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier <= 0f)
+        {
+            SetStatus("视距倍率必须是大于 0 的有限数值。", Color.yellow);
+            return;
+        }
+
+        Mod_Cam cameraModule = FindFirstComponent("Mod_Cam") as Mod_Cam;
+        if (cameraModule == null)
+        {
+            SetStatus("未找到玩家相机模块，无法调整视距。", Color.yellow);
+            return;
+        }
+
+        float previousSize = cameraModule.CurrentOrthographicSize;
+        if (previousSize <= 0f)
+        {
+            SetStatus("当前相机视距无效，无法应用倍率。", Color.yellow);
+            return;
+        }
+
+        cameraModule.EnableUnlimitedView();
+        cameraModule.SetOrthographicSize(previousSize * multiplier);
+        SetStatus(
+            $"相机视距已从 {previousSize:0.##} 调整为 {cameraModule.CurrentOrthographicSize:0.##}（{multiplier:0.##}x）。",
+            GmAccentHover);
+    }
+
     private void ApplyChunkLoadSpeedInput()
     {
         if (chunkLoadSpeedInput == null)
