@@ -165,10 +165,11 @@ public class PlayerAdminController : Module
 
         Keyboard keyboard = Keyboard.current;
 
-        // F1：切换管理员权限
-        if (keyboard?.f1Key.wasPressedThisFrame == true)
+        // Ctrl+F1：切换管理员权限；裸 F1 由 UIManager 用于宣传片录制模式。
+        if (keyboard?.f1Key.wasPressedThisFrame == true &&
+            (keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed))
         {
-            Debug.Log("F1键被按下，切换管理员身份");
+            Debug.Log("Ctrl+F1 被按下，切换管理员身份");
             TryEnableAdministrator();
         }
 
@@ -213,7 +214,7 @@ public class PlayerAdminController : Module
     /// <summary>管理员权限与无敌开关同时开启时，玩家才受无敌保护。</summary>
     public bool IsAdminInvincibilityEnabled => IsAdministrator && AdminInvincibilityEnabled;
 
-    /// <summary>为当前本地玩家开启管理员权限，兼容既有 F1 行为。</summary>
+    /// <summary>为当前本地玩家开启管理员权限，供 Ctrl+F1 与 GM 面板复用。</summary>
     public bool TryEnableAdministrator()
     {
         ResolveAdminSurvivalReferences();

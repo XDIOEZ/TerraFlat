@@ -2659,7 +2659,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         if (adminController != null && adminController.TryEnableAdministrator())
         {
             RefreshAdminInvincibilityButton();
-            SetStatus("管理员已启用（兼容现有 F1 管理员逻辑）。", new Color(0.35f, 0.95f, 0.85f));
+            SetStatus("管理员已启用。", new Color(0.35f, 0.95f, 0.85f));
             return;
         }
 
@@ -2673,7 +2673,7 @@ public sealed partial class GMReflectionConsole : MonoBehaviour
         }
 
         RefreshAdminInvincibilityButton();
-        SetStatus("管理员已启用（兼容现有 F1 管理员逻辑）。", new Color(0.35f, 0.95f, 0.85f));
+        SetStatus("管理员已启用。", new Color(0.35f, 0.95f, 0.85f));
     }
 
     private Transform GetLocalPlayerTransform()

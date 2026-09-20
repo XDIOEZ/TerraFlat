@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 /// <summary>
@@ -72,6 +73,10 @@ public class UIManager : MonoBehaviour
     private int nextSettingsPanelSortingOrder = SettingsPanelSortingOrder;
     private int interactionSurfaceRevision;
     private int lastHandledCancelFrame = -1;
+    private bool presentationUiHidden;
+    private readonly Dictionary<Canvas, bool> presentationCanvasStates = new Dictionary<Canvas, bool>();
+    private readonly Dictionary<GraphicRaycaster, bool> presentationRaycasterStates =
+        new Dictionary<GraphicRaycaster, bool>();
 
     // 顶层面板查询只在交互面修订号变化时重新扫描，避免手柄路径逐帧分配数组。
     private readonly List<BasePanel> panelQueryBuffer = new List<BasePanel>(16);
@@ -109,6 +114,9 @@ public class UIManager : MonoBehaviour
 
     /// <summary>面板开关、排序或结构改变时递增，供虚拟光标判断是否需要重新射线。</summary>
     public int InteractionSurfaceRevision => interactionSurfaceRevision;
+
+    /// <summary>宣传片录制模式是否正在隐藏全部运行时 UI。</summary>
+    public bool IsPresentationUiHidden => presentationUiHidden;
     #endregion
 
     #region 面板层级
@@ -230,6 +238,19 @@ public class UIManager : MonoBehaviour
         EnsurePanelRootExists();
     }
 
+    private void Update()
+    {
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard?.f1Key.wasPressedThisFrame != true)
+            return;
+
+        // Ctrl+F1 保留给管理员快捷键，裸 F1 专用于宣传片录制模式。
+        if (keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed)
+            return;
+
+        TogglePresentationUiVisibility();
+    }
+
     /// <summary>退出播放模式前停止交互面事件，避免销毁阶段重新创建 UI。</summary>
     private void OnApplicationQuit()
     {
@@ -240,6 +261,9 @@ public class UIManager : MonoBehaviour
     /// <summary>清理单例引用和事件，避免场景卸载后继续访问已销毁的 UI。</summary>
     private void OnDestroy()
     {
+        Canvas.preWillRenderCanvases -= EnforcePresentationUiHidden;
+        RestorePresentationUi();
+
         if (_instance != this)
             return;
 
@@ -349,6 +373,100 @@ public class UIManager : MonoBehaviour
         panels.Clear();
         NotifyInteractionSurfaceChanged();
     }
+    #endregion
+
+    #region 宣传片录制 UI
+
+    /// <summary>切换宣传片录制 UI 隐藏状态；不会改变面板自身的开关状态。</summary>
+    public void TogglePresentationUiVisibility()
+    {
+        SetPresentationUiHidden(!presentationUiHidden);
+    }
+
+    /// <summary>
+    /// 设置宣传片录制 UI 隐藏状态。
+    /// 隐藏时仅停用 Canvas 与 GraphicRaycaster，恢复时还原进入录制模式前的 enabled 状态。
+    /// </summary>
+    public void SetPresentationUiHidden(bool hidden)
+    {
+        if (presentationUiHidden == hidden)
+            return;
+
+        presentationUiHidden = hidden;
+        if (hidden)
+        {
+            CaptureAndDisablePresentationUi();
+            Canvas.preWillRenderCanvases -= EnforcePresentationUiHidden;
+            Canvas.preWillRenderCanvases += EnforcePresentationUiHidden;
+        }
+        else
+        {
+            Canvas.preWillRenderCanvases -= EnforcePresentationUiHidden;
+            RestorePresentationUi();
+        }
+
+        NotifyInteractionSurfaceChanged();
+    }
+
+    /// <summary>在 Canvas 真正渲染前捕获并隐藏录制期间新创建的 UI，避免动态 HUD 短暂闪现。</summary>
+    private void EnforcePresentationUiHidden()
+    {
+        if (!presentationUiHidden)
+            return;
+
+        CaptureAndDisablePresentationUi();
+    }
+
+    /// <summary>记录当前 UI 组件状态并停用渲染与 UI 射线，不关闭业务面板。</summary>
+    private void CaptureAndDisablePresentationUi()
+    {
+        Canvas[] canvases = FindObjectsByType<Canvas>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < canvases.Length; i++)
+        {
+            Canvas canvas = canvases[i];
+            if (canvas == null)
+                continue;
+
+            if (!presentationCanvasStates.ContainsKey(canvas))
+                presentationCanvasStates.Add(canvas, canvas.enabled);
+            canvas.enabled = false;
+        }
+
+        GraphicRaycaster[] raycasters = FindObjectsByType<GraphicRaycaster>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+        for (int i = 0; i < raycasters.Length; i++)
+        {
+            GraphicRaycaster raycaster = raycasters[i];
+            if (raycaster == null)
+                continue;
+
+            if (!presentationRaycasterStates.ContainsKey(raycaster))
+                presentationRaycasterStates.Add(raycaster, raycaster.enabled);
+            raycaster.enabled = false;
+        }
+    }
+
+    /// <summary>恢复进入录制模式前保存的 Canvas 与射线器状态。</summary>
+    private void RestorePresentationUi()
+    {
+        foreach (KeyValuePair<Canvas, bool> pair in presentationCanvasStates)
+        {
+            if (pair.Key != null)
+                pair.Key.enabled = pair.Value;
+        }
+        presentationCanvasStates.Clear();
+
+        foreach (KeyValuePair<GraphicRaycaster, bool> pair in presentationRaycasterStates)
+        {
+            if (pair.Key != null)
+                pair.Key.enabled = pair.Value;
+        }
+        presentationRaycasterStates.Clear();
+    }
+
     #endregion
 
     #region 面板获取
