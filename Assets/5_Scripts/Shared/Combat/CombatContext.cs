@@ -92,6 +92,7 @@ namespace FlatWorld.Combat
     {
         public FixedString128Bytes Id; // 当前 Buff 定义 ID。
         public float Chance; // 0..1 应用概率。
+        public int Stacks; // 一次施加层数；旧生产者的零值按一层处理。
     }
 
     /// <summary>由 Gameplay 冻结的难度规则，两个后端使用同一个计算函数。</summary>

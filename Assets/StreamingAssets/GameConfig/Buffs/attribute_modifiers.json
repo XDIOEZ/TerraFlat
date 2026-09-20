@@ -59,8 +59,12 @@
     {
       "id": "潮湿",
       "displayName": "潮湿",
-      "description": "潮湿时体温下降速度翻倍，离开水体后恢复正常。",
-      "durationSeconds": null,
+      "description": "每秒浸水增加1层，最高10层；水深1/10、2/10、3/10、4/10以上分别最多3、6、9、10层。同层或更弱的燃烧被熄灭，强火会蒸发潮湿。离水后30秒干燥，潮湿期间降温速度翻倍。",
+      "durationSeconds": 30.0,
+      "stackMode": "add_stacks",
+      "maxStacks": 10,
+      "waterStackIntervalSeconds": 1.0,
+      "waterStacksPerDepthLevel": 3,
       "effects": [
         {
           "phase": "start",

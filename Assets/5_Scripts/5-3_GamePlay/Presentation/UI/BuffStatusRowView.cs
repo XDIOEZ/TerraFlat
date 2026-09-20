@@ -43,9 +43,12 @@ public sealed class BuffStatusRowView : MonoBehaviour
         if (nameText != null)
         {
             string displayName = runtime.Definition.DisplayName;
-            nameText.text = string.IsNullOrWhiteSpace(displayName)
+            string resolvedName = string.IsNullOrWhiteSpace(displayName)
                 ? runtime.DefinitionId
                 : displayName;
+            nameText.text = runtime.Definition.MaxStacks > 1
+                ? $"{resolvedName} ×{runtime.StackCount}"
+                : resolvedName;
         }
 
         RefreshRemaining(runtime);

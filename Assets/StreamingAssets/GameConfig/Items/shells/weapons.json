@@ -1104,7 +1104,8 @@
           },
           "parameters": {
             "buffId": "燃烧",
-            "applicationChance": 0.25
+            "applicationChance": 0.25,
+            "applicationStacks": 2
           }
         }
       }

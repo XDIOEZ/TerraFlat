@@ -46,6 +46,7 @@ public class Tile_Water : TileBlockBehaviour
         TileData_Water water = tileData as TileData_Water;
         float depthValue = water != null ? Mathf.Clamp01(water.deepValue) : 0f;
         bool edgeInteractionOnly = receiver != null && receiver.IsActiveTileEdgeInteractionOnly;
+        buffManager?.SetWaterStackExposure(!edgeInteractionOnly && depthValue > 0f);
         if (edgeInteractionOnly)
         {
             SetWaterTemperatureState(item, false, 0f);
@@ -67,7 +68,8 @@ public class Tile_Water : TileBlockBehaviour
         {
             foreach (string buffId in BuffInfo)
             {
-                if (string.IsNullOrWhiteSpace(buffId))
+                if (string.IsNullOrWhiteSpace(buffId) ||
+                    string.Equals(buffId, WetBuffIds.Wet, System.StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 buffManager.AddBuff(buffId);
@@ -88,11 +90,13 @@ public class Tile_Water : TileBlockBehaviour
 
         // 移除 Buff
         BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
+        buffManager?.SetWaterStackExposure(false);
         if (buffManager != null && BuffInfo != null)
         {
             foreach (string buffId in BuffInfo)
             {
-                if (string.IsNullOrWhiteSpace(buffId))
+                if (string.IsNullOrWhiteSpace(buffId) ||
+                    string.Equals(buffId, WetBuffIds.Wet, System.StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 if (buffManager.HasBuff(buffId))
@@ -117,6 +121,9 @@ public class Tile_Water : TileBlockBehaviour
 
         // 漂浮结算直接以地块真实水深为准；水深不超过 0.3 时保持浅水状态，不进入漂浮维持。
         float depthValue = Mathf.Clamp01(water.deepValue);
+        BuffManager buffManager = item.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
+        buffManager?.SetWaterStackExposure(depthValue > 0f);
+        buffManager?.AdvanceWaterWetness(depthValue, deltaTime);
         float effectiveImmersion = receiver != null
             ? receiver.UpdateWaterSurvival(item, depthValue, deltaTime)
             : depthValue;

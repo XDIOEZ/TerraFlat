@@ -74,6 +74,8 @@ public static class BuffDefinitionFactory
         if (dto.DrinkDurationExtensionSeconds < 0f)
             throw new InvalidDataException($"Buff {id} drinkDurationExtensionSeconds 不能小于 0");
 
+        ValidateStackParameters(dto, id);
+
         var definition = new BuffDefinition
         {
             Id = id,
@@ -83,6 +85,11 @@ public static class BuffDefinitionFactory
             DurationSeconds = dto.DurationSeconds,
             TickIntervalSeconds = dto.TickIntervalSeconds,
             StackMode = ParseStackMode(dto.StackMode, id),
+            MaxStacks = dto.MaxStacks,
+            VisualBaseScale = dto.VisualBaseScale,
+            VisualScalePerStack = dto.VisualScalePerStack,
+            WaterStackIntervalSeconds = dto.WaterStackIntervalSeconds,
+            WaterStacksPerDepthLevel = dto.WaterStacksPerDepthLevel,
             DrinkDurationExtensionSeconds = dto.DrinkDurationExtensionSeconds
         };
 
@@ -95,6 +102,8 @@ public static class BuffDefinitionFactory
 
         if (definition.IsPermanent && definition.DrinkDurationExtensionSeconds > 0f)
             throw new InvalidDataException($"Buff {id} 是永久 Buff，不能配置饮水延时");
+        if (definition.StackMode == BuffStackMode.AddStacks && definition.DurationSeconds == 0f)
+            throw new InvalidDataException($"Buff {id} 叠层持续时间必须为正数或 null");
 
         var all = new List<BuffEffectDefinition>();
         var start = new List<BuffEffectDefinition>();
@@ -145,6 +154,7 @@ public static class BuffDefinitionFactory
             TargetId = dto.TargetId?.Trim(),
             RequiredTag = dto.RequiredTag?.Trim(),
             Value = dto.Value,
+            ScaleWithStacks = dto.ScaleWithStacks,
             UpperLimit = dto.UpperLimit
         };
 
@@ -157,6 +167,9 @@ public static class BuffDefinitionFactory
     private static void ValidateEffectParameters(BuffEffectDefinition effect, string buffId, int index)
     {
         string context = $"Buff {buffId} effects[{index}]";
+        if (effect.ScaleWithStacks &&
+            (effect.Phase != BuffEffectPhase.Tick || effect.TypeId != BuffEffectTypeIds.TrueDamage))
+            throw new InvalidDataException($"{context} scaleWithStacks 当前只支持 tick 真实伤害");
         switch (effect.TypeId)
         {
             case BodyTraumaBuffEffects.RestoreDurability:
@@ -228,6 +241,7 @@ public static class BuffDefinitionFactory
             "ignore" => BuffStackMode.Ignore,
             "extend_duration" => BuffStackMode.ExtendDuration,
             "refresh_duration" => BuffStackMode.RefreshDuration,
+            "add_stacks" => BuffStackMode.AddStacks,
             _ => throw new InvalidDataException($"Buff {id} stackMode 无效：{value}")
         };
     }
@@ -255,4 +269,28 @@ public static class BuffDefinitionFactory
         if (float.IsNaN(value) || float.IsInfinity(value))
             throw new InvalidDataException($"{field} 必须是有限数字");
     }
+
+    #region 叠层参数校验
+
+    /// <summary>在目录加载阶段拒绝非法层数、水体周期及特效倍率，避免运行时出现除零或无界增长。</summary>
+    private static void ValidateStackParameters(BuffDefinitionDto dto, string id)
+    {
+        if (dto.MaxStacks < 1 || dto.MaxStacks > 1000)
+            throw new InvalidDataException($"Buff {id} maxStacks 必须位于 1..1000");
+        ValidateFinite(dto.VisualBaseScale, $"Buff {id} visualBaseScale");
+        ValidateFinite(dto.VisualScalePerStack, $"Buff {id} visualScalePerStack");
+        ValidateFinite(dto.WaterStackIntervalSeconds, $"Buff {id} waterStackIntervalSeconds");
+        ValidateFinite(dto.VisualBaseScale + (dto.MaxStacks - 1) * dto.VisualScalePerStack, $"Buff {id} 最高层特效倍率");
+        if (dto.VisualBaseScale <= 0f || dto.VisualScalePerStack < 0f || dto.WaterStackIntervalSeconds < 0f ||
+            dto.WaterStacksPerDepthLevel < 0 || dto.WaterStacksPerDepthLevel > 1000)
+            throw new InvalidDataException($"Buff {id} 叠层表现和水体参数超出有效范围");
+        if ((dto.WaterStackIntervalSeconds > 0f) != (dto.WaterStacksPerDepthLevel > 0))
+            throw new InvalidDataException($"Buff {id} 水体周期与每级层数必须同时启用或同时为零");
+        if (dto.WaterStackIntervalSeconds > 0f &&
+            (!string.Equals(id, WetBuffIds.Wet, StringComparison.OrdinalIgnoreCase) ||
+             ParseStackMode(dto.StackMode, id) != BuffStackMode.AddStacks))
+            throw new InvalidDataException($"Buff {id} 水体叠层参数只用于 add_stacks 潮湿定义");
+    }
+
+    #endregion
 }

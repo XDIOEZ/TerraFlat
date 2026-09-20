@@ -235,7 +235,7 @@ public static class BuffEffectDispatcher
         Item receiver = GetReceiver(runtime);
         DamageReceiver damageReceiver = receiver?.itemMods.GetMod_ByID(ModText.Hp) as DamageReceiver;
         if (effect.Value > 0f)
-            damageReceiver?.ForceHurt(effect.Value);
+            damageReceiver?.ForceHurt(effect.Value * (effect.ScaleWithStacks ? runtime.StackCount : 1));
     }
 
     private static void ApplyMaxHealthPercentTrueDamage(BuffEffectDefinition effect, BuffInstance runtime)

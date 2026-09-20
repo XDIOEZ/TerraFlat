@@ -119,6 +119,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
         buffManager.BuffAdded += HandleBuffChanged;
         buffManager.BuffRemoved += HandleBuffChanged;
         buffManager.BuffDurationChanged += HandleBuffContentChanged;
+        buffManager.BuffStacksChanged += HandleBuffContentChanged;
         buffManager.BuffCountdownChanged += HandleBuffContentChanged;
         return true;
     }
@@ -130,6 +131,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
             buffManager.BuffAdded -= HandleBuffChanged;
             buffManager.BuffRemoved -= HandleBuffChanged;
             buffManager.BuffDurationChanged -= HandleBuffContentChanged;
+            buffManager.BuffStacksChanged -= HandleBuffContentChanged;
             buffManager.BuffCountdownChanged -= HandleBuffContentChanged;
         }
 
@@ -149,7 +151,7 @@ public sealed class PlayerBuffStatusHUD : MonoBehaviour
             return;
 
         if (activeRows.TryGetValue(runtime.DefinitionId, out BuffStatusRowView rowView))
-            rowView.RefreshRemaining(runtime);
+            rowView.Bind(runtime);
     }
 
     private void HandleLanguageChanged(string _)

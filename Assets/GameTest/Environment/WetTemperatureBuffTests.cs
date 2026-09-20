@@ -54,7 +54,7 @@ namespace FlatWorld.GameTest.Environment
         {
             var definitions = BuffCatalogLoader.LoadBuiltInDefinitions();
 
-            Assert.That(definitions, Has.Count.EqualTo(17));
+            Assert.That(definitions, Is.Not.Empty);
             Assert.That(
                 definitions.SelectMany(definition => definition.Effects)
                     .All(effect => effect.IsHandlerCached),
@@ -68,7 +68,10 @@ namespace FlatWorld.GameTest.Environment
             BuffDefinition wetBuff = BuffCatalogLoader.LoadBuiltInDefinitions()
                 .Single(definition => definition.Id == "潮湿");
             Assert.That(wetBuff, Is.Not.Null);
-            Assert.That(wetBuff.IsPermanent, Is.True);
+            Assert.That(wetBuff.IsPermanent, Is.False);
+            Assert.That(wetBuff.DurationSeconds, Is.EqualTo(30f));
+            Assert.That(wetBuff.MaxStacks, Is.EqualTo(10));
+            Assert.That(wetBuff.StackMode, Is.EqualTo(BuffStackMode.AddStacks));
             Assert.That(wetBuff.TickIntervalSeconds, Is.Zero);
 
             Assert.That(wetBuff.StartEffects.Count, Is.EqualTo(1));

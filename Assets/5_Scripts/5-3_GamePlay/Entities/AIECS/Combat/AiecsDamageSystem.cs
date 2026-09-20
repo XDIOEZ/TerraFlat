@@ -134,7 +134,7 @@ namespace FlatWorld.AIECS
                                 if (effect.Chance < 1f && random.NextFloat() >= effect.Chance) continue;
                                 for (int buff = 0; buff < BuffDefinitions.Length; buff++)
                                     if (BuffDefinitions[buff].Id.Equals(effect.Id))
-                                    { AiecsBuffOperations.Add(ref buffs, BuffDefinitions, buff, context.Clock.Time, context.Credit); break; }
+                                    { AiecsBuffOperations.Add(ref buffs, BuffDefinitions, buff, context.Clock.Time, context.Credit, math.max(1, effect.Stacks)); break; }
                             }
                     }
                     if (vital.Hp <= 0f)

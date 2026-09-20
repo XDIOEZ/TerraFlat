@@ -36,6 +36,7 @@ public partial class BuffManager : Module
     public event Action<BuffInstance> BuffAdded;
     public event Action<BuffInstance> BuffRemoved;
     public event Action<BuffInstance> BuffDurationChanged;
+    public event Action<BuffInstance> BuffStacksChanged; // 层数变化的独立通知，供 HUD 与特效订阅。
 
     /// <summary>限时 Buff 的显示秒数变化时触发，供只读表现层按需刷新倒计时。</summary>
     public event Action<BuffInstance> BuffCountdownChanged;
@@ -58,6 +59,7 @@ public partial class BuffManager : Module
 
     public override void Load()
     {
+        ResetWaterStackClock();
         ClearAllBuffs();
         buffReceiver = item;
         if (ModData == null)
@@ -119,6 +121,7 @@ public partial class BuffManager : Module
 
     public override void Unload()
     {
+        ResetWaterStackClock();
         ClearAllBuffs();
         UnbindFoodEvents();
         buffReceiver = null;
@@ -224,6 +227,14 @@ public partial class BuffManager : Module
 
     public bool AddBuff(string buffId)
     {
+        return AddBuff(buffId, 1);
+    }
+
+    /// <summary>施加指定层数；非叠层定义保持原有续期/忽略语义，调用者无需循环施加。</summary>
+    public bool AddBuff(string buffId, int stacks)
+    {
+        if (stacks <= 0)
+            return false;
         buffReceiver ??= item;
         if (string.IsNullOrWhiteSpace(buffId))
         {
@@ -244,18 +255,15 @@ public partial class BuffManager : Module
             return false;
         }
 
-        // 潮湿状态下无法进入燃烧状态；由当前 BuffManager 统一检查施加对象已有状态。
-        if (string.Equals(definition.Id, BurningBuffIds.Burning, StringComparison.OrdinalIgnoreCase) &&
-            HasBuff(WetBuffIds.Wet))
-        {
+        int incomingStacks = ResolveIncomingStacks(definition, stacks);
+        if (!CanApplyStackedBuff(definition.Id, incomingStacks))
             return false;
-        }
 
         string definitionId = definition.Id;
         if (ActiveBuffs.TryGetValue(definitionId, out BuffInstance existing) &&
             existing != null)
         {
-            bool handled = HandleBuffStack(definition, existing);
+            bool handled = HandleBuffStack(definition, existing, incomingStacks);
             if (handled)
                 ResolveAppliedBuffInteractions(definitionId);
             return handled;
@@ -264,6 +272,8 @@ public partial class BuffManager : Module
         var runtime = new BuffInstance();
         if (!runtime.Initialize(definition, buffReceiver))
             return false;
+
+        runtime.SetStackCount(incomingStacks);
 
         ActiveBuffs[definitionId] = runtime;
         runtime.Start();
@@ -274,14 +284,25 @@ public partial class BuffManager : Module
 
     private void ResolveAppliedBuffInteractions(string buffId)
     {
-        if (string.Equals(buffId, WetBuffIds.Wet, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(buffId, WetBuffIds.Wet, StringComparison.OrdinalIgnoreCase) &&
+            GetBuffStacks(WetBuffIds.Wet) >= GetBuffStacks(BurningBuffIds.Burning))
             RemoveBuff(BurningBuffIds.Burning);
+        else if (string.Equals(buffId, BurningBuffIds.Burning, StringComparison.OrdinalIgnoreCase))
+            RemoveBuff(WetBuffIds.Wet);
     }
 
-    private bool HandleBuffStack(BuffDefinition incoming, BuffInstance existing)
+    private bool HandleBuffStack(BuffDefinition incoming, BuffInstance existing, int incomingStacks)
     {
         switch (incoming.StackMode)
         {
+            case BuffStackMode.AddStacks:
+                bool changed = existing.SetStackCount(incomingStacks);
+                existing.RefreshDuration();
+                if (changed)
+                    BuffStacksChanged?.Invoke(existing);
+                BuffDurationChanged?.Invoke(existing);
+                return true;
+
             case BuffStackMode.ExtendDuration:
                 existing.ExtendDuration(Mathf.Max(0f, incoming.DurationSeconds ?? 0f));
                 BuffDurationChanged?.Invoke(existing);
@@ -431,6 +452,7 @@ public partial class BuffManager : Module
 
     public void ClearAllBuffs()
     {
+        ResetWaterStackClock();
         if (ActiveBuffs.Count == 0)
             return;
 

@@ -628,7 +628,8 @@ public partial class DamageReceiver : Module, IRemoteNetworkModule, IItemModuleD
             BuffManager buffManager = item.itemMods.GetMod_ByID<BuffManager>(ModText.BuffManager);
             if (buffManager != null)
                 foreach (var effect in context.OnHitBuffs)
-                    if (effect.Chance >= 1f || Random.value < effect.Chance) buffManager.AddBuff(effect.Id.ToString());
+                    if (effect.Chance >= 1f || Random.value < effect.Chance)
+                        buffManager.AddBuff(effect.Id.ToString(), Mathf.Max(1, effect.Stacks));
         }
         return result;
     }

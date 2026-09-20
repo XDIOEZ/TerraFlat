@@ -15,6 +15,9 @@ public sealed class DamageOnHitBuffApplier : Module, IItemModuleDependencyBinder
     [SerializeField, Range(0f, 1f), Tooltip("每次有效实体命中附加 Buff 的概率。")]
     private float applicationChance = 0.25f;
 
+    [SerializeField, Min(1), Tooltip("一次成功附加的 Buff 层数；一次提交完整层数以正确比较水火强度。")]
+    private int applicationStacks = 1;
+
     [SerializeField] private Ex_ModData_MemoryPackable moduleData = new();
 
     public override ModuleData _Data
@@ -30,7 +33,8 @@ public sealed class DamageOnHitBuffApplier : Module, IItemModuleDependencyBinder
     public void ModifyDamageContext(ref FlatWorld.Combat.CombatDamageContext context)
     {
         if (string.IsNullOrWhiteSpace(buffId) || applicationChance <= 0f) return;
-        context.OnHitBuffs.Add(new FlatWorld.Combat.CombatOnHitBuff { Id = buffId.Trim(), Chance = Mathf.Clamp01(applicationChance) });
+        context.OnHitBuffs.Add(new FlatWorld.Combat.CombatOnHitBuff {
+            Id = buffId.Trim(), Chance = Mathf.Clamp01(applicationChance), Stacks = Mathf.Max(1, applicationStacks) });
     }
 
     /// <summary>从 ItemMods 唯一稳定 ID 绑定伤害模块，并校验 Prefab 显式引用没有漂移。</summary>
@@ -78,6 +82,6 @@ public sealed class DamageOnHitBuffApplier : Module, IItemModuleDependencyBinder
         Item targetItem = receiver.item;
         BuffManager buffManager = targetItem?.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
         if (buffManager != null)
-            buffManager.AddBuff(buffId.Trim());
+            buffManager.AddBuff(buffId.Trim(), Mathf.Max(1, applicationStacks));
     }
 }

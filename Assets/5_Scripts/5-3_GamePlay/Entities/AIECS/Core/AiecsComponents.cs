@@ -142,6 +142,7 @@ namespace FlatWorld.AIECS
     public struct AiecsBuff : IBufferElementData
     {
         public int Definition; // 共享 Buff 索引。
+        public int Stacks; // 同一定义的层数，旧零值按一层解释。
         public double Expires, NextTick; // 续期和周期时钟。
         public CombatIdentity Credit; // 持续伤害归因。
     }
@@ -203,6 +204,8 @@ namespace FlatWorld.AIECS
     {
         public FixedString128Bytes Id; // 稳定 Buff ID。
         public float Duration, Interval, TrueDamage, WaterDelta; // 生命周期与本轮支持的周期效果。
+        public float TrueDamagePerStack; // 只放明确声明按层数缩放的伤害，避免放大其它效果。
+        public int MaxStacks; // 当前内容目录的层数上限。
         public int BleedingTier; // 零表示普通状态，正值参与互斥等级。
         public byte StackMode; // 与当前 Buff 配置枚举一致。
     }

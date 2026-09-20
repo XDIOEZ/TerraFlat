@@ -69,6 +69,21 @@ public sealed class BuffDefinitionDto
     [JsonProperty("stackMode")]
     public string StackMode = "ignore";
 
+    [JsonProperty("maxStacks")]
+    public int MaxStacks = 1;
+
+    [JsonProperty("visualBaseScale")]
+    public float VisualBaseScale = 1f;
+
+    [JsonProperty("visualScalePerStack")]
+    public float VisualScalePerStack;
+
+    [JsonProperty("waterStackIntervalSeconds")]
+    public float WaterStackIntervalSeconds;
+
+    [JsonProperty("waterStacksPerDepthLevel")]
+    public int WaterStacksPerDepthLevel;
+
     [JsonProperty("drinkDurationExtensionSeconds")]
     public float DrinkDurationExtensionSeconds;
 
@@ -93,6 +108,9 @@ public sealed class BuffEffectDto
 
     [JsonProperty("value")]
     public float Value;
+
+    [JsonProperty("scaleWithStacks")]
+    public bool ScaleWithStacks;
 
     [JsonProperty("upperLimit")]
     public float? UpperLimit;

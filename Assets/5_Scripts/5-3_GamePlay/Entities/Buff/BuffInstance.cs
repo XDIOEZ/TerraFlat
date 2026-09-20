@@ -21,6 +21,8 @@ public partial class BuffInstance
     public string DefinitionId;
     public float RemainingDurationSeconds;
     public float TickElapsedSeconds;
+    // 只在原有三个持久化字段后追加；旧存档缺失层数时恢复为第一层。
+    public int StackCount = 1;
 
     [MemoryPackIgnore]
     public BuffDefinition Definition { get; private set; }
@@ -59,6 +61,7 @@ public partial class BuffInstance
         DefinitionId = definition.Id;
         RemainingDurationSeconds = definition.DurationSeconds ?? 0f;
         TickElapsedSeconds = 0f;
+        StackCount = 1;
         Receiver = receiver;
         started = false;
         stopped = false;
@@ -83,6 +86,7 @@ public partial class BuffInstance
             ? 0f
             : Mathf.Max(0f, RemainingDurationSeconds);
         TickElapsedSeconds = Mathf.Max(0f, TickElapsedSeconds);
+        StackCount = Mathf.Clamp(StackCount, 1, Definition.MaxStacks);
         started = false;
         stopped = false;
         startPending = true;
@@ -158,6 +162,26 @@ public partial class BuffInstance
         stopped = false;
         return true;
     }
+
+    #region 层数与表现
+
+    /// <summary>更新实例层数，不重新执行 Start/Stop；体温等登记型效果始终只应用一次。</summary>
+    public bool SetStackCount(int count)
+    {
+        if (Definition == null)
+            return false;
+        int resolved = Mathf.Clamp(count, 1, Definition.MaxStacks);
+        if (resolved == StackCount)
+            return false;
+        StackCount = resolved;
+        return true;
+    }
+
+    [MemoryPackIgnore]
+    public float VisualScale => Definition == null ? 1f :
+        Definition.VisualBaseScale + (StackCount - 1) * Definition.VisualScalePerStack;
+
+    #endregion
 
     /// <summary>
     /// 设置限时 Buff 的剩余持续时间。用于受控的运行时调试入口；

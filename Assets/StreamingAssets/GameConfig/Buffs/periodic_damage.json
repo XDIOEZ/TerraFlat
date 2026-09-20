@@ -74,15 +74,19 @@
       "id": "燃烧",
       "displayName": "燃烧",
       "category": "general",
-      "description": "持续燃烧，每秒受到1点真实伤害。",
+      "description": "最高5层，每层每秒受到1点真实伤害，火焰随层数增大。同层或更高潮湿阻止点燃，强火蒸发较低潮湿；浸水累计到同层潮湿时熄灭。",
       "durationSeconds": 5.0,
       "tickIntervalSeconds": 1.0,
-      "stackMode": "refresh_duration",
+      "stackMode": "add_stacks",
+      "maxStacks": 5,
+      "visualBaseScale": 0.6,
+      "visualScalePerStack": 0.2,
       "effects": [
         {
           "phase": "tick",
           "typeId": "core:true_damage",
-          "value": 1.0
+          "value": 1.0,
+          "scaleWithStacks": true
         }
       ]
     },

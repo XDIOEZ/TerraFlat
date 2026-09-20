@@ -61,7 +61,8 @@ namespace FlatWorld.AIECS.Gameplay
             AddRules(ref definition, fleeFromHostiles);
             JObject onHit = Module<DamageOnHitBuffApplier>(source, item, out _);
             if (onHit != null && !string.IsNullOrWhiteSpace((string)onHit["buffId"]))
-                definition.OnHitBuffs.Add(new CombatOnHitBuff { Id = (string)onHit["buffId"], Chance = Number(onHit, "applicationChance", 0.25f) });
+                definition.OnHitBuffs.Add(new CombatOnHitBuff { Id = (string)onHit["buffId"],
+                    Chance = Number(onHit, "applicationChance", 0.25f), Stacks = Mathf.Max(1, (int)Number(onHit, "applicationStacks", 1f)) });
             var anatomy = new AiecsAnatomy { TwoPartChance = life.TwoPartHitChance };
             // Actor 的版本 0 数据沿用旧后端升级为身体部位生命的规则。
             if (life.UseBodyPartHealth || life.BodyPartDataVersion == 0)
@@ -185,12 +186,16 @@ namespace FlatWorld.AIECS.Gameplay
             {
                 var source = pair.Value;
                 var definition = new AiecsBuffDefinition { Id = source.Id, Duration = source.DurationSeconds ?? float.PositiveInfinity,
-                    Interval = source.TickIntervalSeconds, StackMode = (byte)source.StackMode };
+                    Interval = source.TickIntervalSeconds, StackMode = (byte)source.StackMode, MaxStacks = source.MaxStacks };
                 bool supported = true;
                 foreach (var effect in source.Effects)
                 {
                     if (effect.Phase != BuffEffectPhase.Tick || !string.IsNullOrEmpty(effect.RequiredTag)) { supported = false; break; }
-                    if (effect.TypeId == "core:true_damage") definition.TrueDamage += effect.Value;
+                    if (effect.TypeId == "core:true_damage")
+                    {
+                        if (effect.ScaleWithStacks) definition.TrueDamagePerStack += effect.Value;
+                        else definition.TrueDamage += effect.Value;
+                    }
                     else if (effect.TypeId == "core:nutrition_change" && effect.TargetId == "water") definition.WaterDelta += effect.Value;
                     else { supported = false; break; }
                 }

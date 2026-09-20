@@ -370,6 +370,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
             buffManager.BuffAdded += OnBuffAdded;
             buffManager.BuffRemoved += OnBuffRemoved;
             buffManager.BuffDurationChanged += OnBuffDurationChanged;
+            buffManager.BuffStacksChanged += OnBuffDurationChanged;
         }
 
         statusesDirty = true;
@@ -395,6 +396,7 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         buffManager.BuffAdded -= OnBuffAdded;
         buffManager.BuffRemoved -= OnBuffRemoved;
         buffManager.BuffDurationChanged -= OnBuffDurationChanged;
+        buffManager.BuffStacksChanged -= OnBuffDurationChanged;
         buffManager = null;
     }
 
@@ -804,6 +806,8 @@ public sealed class ActorStatusVisualEffectController : MonoBehaviour
         float sourceHeight = Mathf.Max(0.01f, sourceSprite.bounds.size.y);
         float effectHeight = Mathf.Max(0.01f, effectSprite.bounds.size.y);
         float scale = sourceHeight * visual.Sequence.SizeMultiplier / effectHeight;
+        if (buffManager != null && buffManager.TryGetBuff(visual.Sequence.BuffId, out BuffInstance runtime))
+            scale *= runtime.VisualScale;
         float verticalOffset = sourceHeight * visual.Sequence.VerticalOffsetNormalized;
 
         Transform effectTransform = visual.EffectObject.transform;

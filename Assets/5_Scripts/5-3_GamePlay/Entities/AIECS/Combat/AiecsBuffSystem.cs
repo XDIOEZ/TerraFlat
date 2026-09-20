@@ -31,13 +31,14 @@ namespace FlatWorld.AIECS
                 {
                     int ticks = 1 + (int)math.floor((limit - buff.NextTick) / definition.Interval);
                     status.Water = math.max(0f, status.Water + definition.WaterDelta * ticks);
-                    if (definition.TrueDamage > 0f)
+                    float damage = definition.TrueDamage + definition.TrueDamagePerStack * math.max(1, buff.Stacks);
+                    if (damage > 0f)
                     {
                         var source = identity.Key; source.Backend = CombatBackend.Environment;
                         output.Add(new AiecsPeriodicHit { Hit = new AiecsHitEvent { Target = entity, TargetKey = identity.Key,
                             Context = new CombatDamageContext { Attack = new CombatAttackKey { Source = source,
                                 Sequence = (uint)Clock.Tick, Window = (uint)(Clock.Tick >> 32), Pulse = (uint)buff.Definition + 1 },
-                                Credit = buff.Credit, Clock = Clock, Damage = new float4(0, 0, 0, definition.TrueDamage * ticks), IsTrueDamage = 1,
+                                Credit = buff.Credit, Clock = Clock, Damage = new float4(0, 0, 0, damage * ticks), IsTrueDamage = 1,
                                 Origin = actor.Position, HitPoint = actor.Position, BuildingMultiplier = 1f } } });
                     }
                     buff.NextTick += ticks * definition.Interval;
@@ -76,16 +77,35 @@ namespace FlatWorld.AIECS
         public static void Add(ref DynamicBuffer<AiecsBuff> buffs, NativeArray<AiecsBuffDefinition> definitions,
             int index, double time, CombatIdentity credit)
         {
+            Add(ref buffs, definitions, index, time, credit, 1);
+        }
+
+        /// <summary>一次应用完整层数，刷新持续时间但不重置伤害时钟。</summary>
+        public static void Add(ref DynamicBuffer<AiecsBuff> buffs, NativeArray<AiecsBuffDefinition> definitions,
+            int index, double time, CombatIdentity credit, int stacks)
+        {
+            if (stacks <= 0) return;
             AiecsBuffDefinition definition = definitions[index];
+            int maxStacks = math.max(1, definition.MaxStacks);
             for (int i = 0; i < buffs.Length; i++)
             {
                 if (buffs[i].Definition != index) continue;
                 AiecsBuff current = buffs[i];
+                if (current.Expires <= time)
+                {
+                    buffs.RemoveAtSwapBack(i);
+                    break;
+                }
                 if (definition.StackMode == 0) return;
+                if (definition.StackMode == 3)
+                {
+                    int added = math.min(maxStacks, stacks);
+                    current.Stacks = math.min(maxStacks - added, math.max(1, current.Stacks)) + added;
+                }
                 current.Expires = definition.StackMode == 1 ? current.Expires + definition.Duration : time + definition.Duration;
                 current.Credit = credit; buffs[i] = current; return;
             }
-            buffs.Add(new AiecsBuff { Definition = index, Expires = time + definition.Duration,
+            buffs.Add(new AiecsBuff { Definition = index, Stacks = math.min(maxStacks, stacks), Expires = time + definition.Duration,
                 NextTick = time + definition.Interval, Credit = credit });
         }
     }
