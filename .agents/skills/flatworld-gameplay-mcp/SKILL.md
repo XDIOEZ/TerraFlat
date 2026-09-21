@@ -59,6 +59,7 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 
 1. `gameplay_observe`：读取玩家位置、速度、生命、体力、营养、输入锁、快捷栏、背包摘要、附近实体、附近 ECS 掉落物，以及以玩家脚下为中心的固定 3×3 权威地块；水格同时附带可用的河流/海洋表层流向与流量，避免 Agent 在河流中把环境漂移误判成移动或战斗异常。
    - 需要从大量世界数据中快速寻找目标时，使用只读 `gameplay_query`。`source=runtime` 查询已实例化 Item，`query` 可填写稳定 ID 或任意已配置 Locale 下的完整物品名（例如 `Ore_Stone` / `石头` / `Stone`）；传入 `radius` 时只查询玩家周围该半径内的 Item，并复用 `ItemMgr` 空间索引，`radius` 最大 64 世界单位。运行时结果按玩家距离排序并强制分页，默认只返回最近 3 条、单页最多 32 条，通过 `total_count/truncated/next_offset` 继续读取；不填写 ID/名称时可直接取得附近不同物品，每条结果都包含稳定 `id` 与明确的 `position.x/position.y`，可直接交给 `gameplay_act(move_to)`。`source=ecology` 查询已加载 ChunkRuntime 的确定性自然物放置结果；`source=terrain` 按环境层阈值查询已加载地形格；`source=tile` 按数字 Tile ID、`Tile_Block` 稳定 ID、`tileItemName` 或显示名精确查询最近已加载地块坐标，默认只返回最近 1 格；`source=drops` 直接查询离线 ECS 掉落物空间桶，返回飞行中和落地后的实时世界坐标、数量与可拾取状态。所有查询都只读，不能生成、传送或直接拾取实体。
+   - `source=runtime` 命中机械节点时额外返回只读 `mechanical` 快照（RPM、网络状态、供给/负载、手摇缓冲，以及加工器输入/输出/进度）；只用于观察真实运行状态，不允许由查询工具修改机械网络。
 2. 选择一个小目标，例如：
    - 沿一个方向探索一段距离。
    - 接近一个自然物并交互。
@@ -160,6 +161,8 @@ UI 使用独立的 `gameplay_ui`：
 普通 UI 操作应使用“`gameplay_ui(tree)` -> 读取文本/路径/控件状态 -> `gameplay_ui(click/scroll/drag)`”这一结构化链路；截图只用于确认布局、遮挡、样式等纯视觉问题。
 
 ## 与其它测试体系的关系
+
+- TerraFlat 功能验收统一使用真实 Play Mode / GamePlayMCP 运行链；项目不再维护 `Assets/GameTest`、Unity Test Runner、冒烟测试或一次性 `*_test` Gameplay 动作。需要补能力时只能增加可复用的真实玩法动作、GM 能力或只读观察，不新增为了“让测试通过”的测试后门。
 
 - `gameplay_aiecs_debug(status/sample)` 只读当前 GM 开发模拟；sample 在 1～20 秒内记录真实帧时、Burst、隔离会话、错误、Tick、实际实体与占格状态。单位生成/清理与数量调整仍通过 GM 的正式 UI 按钮，不通过诊断工具修改游戏数据。
 - 用户要求截图循环时，每轮应在真实操作后抓取 Game View，并实际打开返回的 PNG；把截图检查与结构化状态/整轮 Console 对照。截图只报告已保存路径不等于看过画面，也不能仅以一个无错误的短采样窗口代替整个运行周期检查。

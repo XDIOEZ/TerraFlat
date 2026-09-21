@@ -30,6 +30,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - `Move_Player` 的二维幅度同时表达模拟移动速度比例：手机虚拟摇杆与手柄左摇杆必须保留 0～1 幅度，玩家移动路径不得提前归一化；键盘满幅输入与目标寻路接口保持原有语义。
 - 玩家乘坐载具统一经 `ICarrierMotionSource` 与 `Mover.TryAttachCarrier` 仲裁：载具源拥有位移积分、速度和力，乘员不改 Transform 父级，只在租约期间关闭自身 Rigidbody2D 模拟并跟随座位；乘员引用和瞬时速度不进存档，恢复位置使用登船时取得的作用域租约。无 Collider 载具交互使用 `SpatialInteractionRegistry`，不要为了点选重新添加物理碰撞体。
 - 环境交互输入只转发按下/持续/松开；具体环境提供 `IEnvironmentActionDefinition` 或 `IEnvironmentEffectDefinition`，角色侧 `EnvironmentInteractionRunner` 每次创建独立实例，禁止把玩家长按或被动效果状态存进共享地块配置。
+- 世界实体的持续交互统一走 `IInteractable.OnInteractUpdate`：`Mod_InteractSender` 只在交互键从按下到松开的保持期间向本次按键命中的目标转发 Update；鼠标单击和外部单次 `TryInteractTarget` 不自动进入持续通道，业务模块不得自行读取 E 键状态。
 - 本地档案由 `Player.IsLocalProfile`/ProfileContext 判定；远程副本不得持久化、跑本地教程或玩家语音。
 - 玩家存档与 `Player_DIC` 必须使用 `Player.ProfileName` 稳定档案键；`Data_Player.Name_User` 可能被显示名、旧存档或管理员身份临时改写，禁止用它决定保存、卸载或跨维度重建的角色槽位。
 - 手柄焦点只能停留在顶层导航面板；虚拟光标/虚拟键盘按现有模式接管。
@@ -55,9 +56,9 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 
 ## 验证
 
-- 输入测试必须注入输入，不依赖真实鼠标、键盘或手柄；验证锁定/释放、短按/长按、切设备和重复绑定。
-- 默认做静态诊断与编译；需要时运行专项 `PlayerInteraction.Input`。
-- 测试目录：`Assets/GameTest/PlayerInteraction/`。
+- 输入验收必须在真实 Play Mode 中走正式 Input System → `GameController` → 玩法模块链；GamePlayMCP 可通过生产输入入口注入动作，不能直接改业务状态。
+- 实际覆盖锁定/释放、短按/长按、切设备和重复绑定等受影响路径；不再维护 `PlayerInteraction.Input` 或 `Assets/GameTest` 测试程序集。
+- 编译与 Console 只作为进入运行态的门禁和故障证据，最终结果以真实玩法状态变化为准。
 
 ## Skill 维护原则
 

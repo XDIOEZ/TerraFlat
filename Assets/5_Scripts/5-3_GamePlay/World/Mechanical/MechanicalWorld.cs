@@ -270,7 +270,7 @@ public static class MechanicalWorld
         {
             Vector2Int adjacent = WorldTopologyRuntime.NormalizeCell(cell + offset);
             if (manager.TryGetRuntimeTerrainTile(new Vector2(adjacent.x + .5f, adjacent.y + .5f), out var sample) &&
-                (sample.Cell.Flags & FlatWorld.WorldModel.TerrainCellFlags.Water) != 0) return true;
+                sample.LiquidDepth > 0f) return true;
         }
         return false;
     }

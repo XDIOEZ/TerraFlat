@@ -78,8 +78,8 @@ public sealed class MechanicalSettings
     public int DeactivationChunks = 2;
     public float UnloadDelaySeconds = 5f;
     public float ReferenceRpm = 60f;
-    public float ManualPulseSeconds = 5f;
-    public float ManualReserveSeconds = 15f;
+    public float ManualPulseSeconds = 0.2f; // 按住交互时维持的最小动力缓冲。
+    public float ManualReserveSeconds = 0.2f; // 松开后允许残留的最大动力缓冲。
     public float BellowsHeatBonus = 250f;
     public void Validate()
     {

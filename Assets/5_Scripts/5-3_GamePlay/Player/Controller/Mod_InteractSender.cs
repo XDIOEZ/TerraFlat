@@ -25,6 +25,12 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private IInteractable previewReceiver;
     private Component previewReceiverComponent;
     private InteractionTargetOutline previewOutline;
+    private IInteractable heldReceiver; // 仅记录当前由交互键按住产生的持续交互目标。
+    public bool HasHeldInteraction => heldReceiver != null && currentReceiver == heldReceiver; // 只读诊断：当前是否正在持续世界交互。
+    public string CurrentInteractionType => currentReceiver?.GetType().Name ?? string.Empty; // 只读诊断：当前交互目标类型。
+    public string HeldInteractionType => heldReceiver?.GetType().Name ?? string.Empty; // 只读诊断：按住交互目标类型。
+    public int CurrentInteractionTargetGuid => ResolveInteractionTargetGuid(currentReceiver); // 只读诊断：当前目标所属 Item Guid。
+    public int HeldInteractionTargetGuid => ResolveInteractionTargetGuid(heldReceiver); // 只读诊断：按住目标所属 Item Guid。
     public const float DefaultMaxInteractDistance = 2f;
     // 交互距离默认值；建筑放置距离运行时复用该值。
     public float maxInteractDistance = DefaultMaxInteractDistance;
@@ -70,6 +76,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         }
 
         ValidateCurrentInteractionDistance();
+        TickHeldInteraction();
         RefreshInteractionPreview();
         TickEnvironmentInteraction(deltaTime);
     }
@@ -117,6 +124,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         }
 
         bool interacted = TryInteractAtCurrentPosition();
+        heldReceiver = interacted ? currentReceiver : null;
         if (!interacted)
             BeginEnvironmentActionHold();
     }
@@ -162,6 +170,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private void OnInteractReleased(InputAction.CallbackContext ctx)
     {
+        heldReceiver = null;
         if (gameController != null && !gameController.IsGameplayInputAllowed(ctx))
             return;
 
@@ -373,7 +382,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
     private static bool IsPointerOverWater(Vector2 pointer)
         => ChunkMgr.ExistingInstance != null &&
            ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(pointer, out RuntimeTerrainTileSample tile) &&
-           (tile.Cell.Flags & FlatWorld.WorldModel.TerrainCellFlags.Water) != 0;
+           tile.LiquidDepth > 0f;
 
     /// <summary>喝水必须指向可触及的水面，且该落点没有更优先的实体交互。</summary>
     private bool CanPointAtEnvironmentWater()
@@ -523,9 +532,28 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         if (currentReceiver == null)
             return;
 
+        if (heldReceiver == currentReceiver)
+            heldReceiver = null;
         currentReceiver.OnInteractCancel(item);
         currentReceiver = null;
         currentReceiverComponent = null;
+    }
+
+    /// <summary>交互键保持期间才转发持续交互；鼠标单击和外部单次交互不会自动进入该通道。</summary>
+    private void TickHeldInteraction()
+    {
+        if (heldReceiver == null || currentReceiver != heldReceiver)
+            return;
+
+        currentReceiver.OnInteractUpdate(item);
+    }
+
+    /// <summary>把交互接口归属到 Item，供结构化调试读取，不改变交互选择规则。</summary>
+    private static int ResolveInteractionTargetGuid(IInteractable receiver)
+    {
+        Component component = receiver as Component;
+        Item target = component != null ? component.GetComponentInParent<Item>() : null;
+        return target?.itemData?.Guid ?? 0;
     }
 
     private void ValidateCurrentInteractionDistance()

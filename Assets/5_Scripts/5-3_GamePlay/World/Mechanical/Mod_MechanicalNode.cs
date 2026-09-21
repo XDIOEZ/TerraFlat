@@ -126,14 +126,25 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
     public void OnInteractStart(Item actor)
     {
         if (!placed || Node == null || !GameNetwork.HasStateAuthority) return;
+        // 手摇轮改为按住世界交互持续供能，不再通过机械面板按钮脉冲供能。
+        if (Definition.Source == "manual") return;
         panel ??= new MechanicalPanelSession("UI_Mechanical", item, Node.Processor, PerformOperation, GetStatus, GetActionLabel);
         panel.Toggle(actor);
+    }
+    public void OnInteractUpdate(Item actor)
+    {
+        if (!placed || Node?.State == null || !GameNetwork.HasStateAuthority || Definition.Source != "manual") return;
+
+        // 配置继续保留 Pulse/Reserve 字段兼容 MOD；默认值只覆盖约两个机械 Tick。
+        float holdBufferSeconds = Mathf.Min(
+            MechanicalCatalog.Settings.ManualReserveSeconds,
+            Mathf.Max(MechanicalCatalog.Settings.ManualPulseSeconds, MechanicalCatalog.Settings.TickSeconds * 2f));
+        LocalState.ManualSeconds = Mathf.Max(LocalState.ManualSeconds, holdBufferSeconds);
     }
     public void OnInteractCancel(Item actor) => panel?.Close();
     public void RefreshPanel() => panel?.Refresh();
     public string GetActionLabel()
     {
-        if (Definition.Source == "manual") return "摇动";
         if (Definition.Kind == "clutch") return LocalState.Engaged ? "断开" : "接合";
         if (Definition.Kind == "gearbox") return "切换传动比";
         return string.Empty;
@@ -141,10 +152,7 @@ public sealed class Mod_MechanicalNode : Module, IInteractable, IBuildingPlaceme
     private void PerformOperation(Player actor)
     {
         if (!GameNetwork.HasStateAuthority || Node?.State == null) return;
-        if (Definition.Source == "manual")
-            LocalState.ManualSeconds = Mathf.Min(MechanicalCatalog.Settings.ManualReserveSeconds,
-                LocalState.ManualSeconds + MechanicalCatalog.Settings.ManualPulseSeconds);
-        else if (Definition.Kind == "clutch") { LocalState.Engaged = !LocalState.Engaged; MechanicalWorld.TopologyChanged(Node); }
+        if (Definition.Kind == "clutch") { LocalState.Engaged = !LocalState.Engaged; MechanicalWorld.TopologyChanged(Node); }
         else if (Definition.Kind == "gearbox") { LocalState.RatioIndex = (LocalState.RatioIndex + 1) % Definition.Ratios.Length; MechanicalWorld.TopologyChanged(Node); }
         Save(); panel?.Refresh();
     }

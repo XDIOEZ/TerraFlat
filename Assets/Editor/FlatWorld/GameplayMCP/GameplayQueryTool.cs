@@ -178,7 +178,7 @@ namespace FlatWorld.GameplayMCP
                 DamageReceiver health = item.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
                 bool interactable = GameplayMcpRuntime.CanPlayerInteract(item, player);
 
-                result.Add(new JObject
+                var entry = new JObject
                 {
                     ["guid"] = data.Guid,
                     ["id"] = data.IDName ?? string.Empty,
@@ -195,7 +195,13 @@ namespace FlatWorld.GameplayMCP
                     ["hp"] = health == null
                         ? JValue.CreateNull()
                         : new JArray(Round(health.Hp), Round(health.MaxHp))
-                });
+                };
+
+                JToken mechanical = BuildMechanicalSnapshot(item);
+                if (mechanical != null)
+                    entry["mechanical"] = mechanical;
+
+                result.Add(entry);
             }
 
             bool truncated = offset + matches.Length < totalCount;
@@ -221,6 +227,43 @@ namespace FlatWorld.GameplayMCP
                 next_offset = truncated ? offset + matches.Length : (int?)null,
                 matches = result
             });
+        }
+
+        /// <summary>机械实体额外暴露只读运行状态，供自主测试核对真实网络与加工进度。</summary>
+        private static JToken BuildMechanicalSnapshot(Item item)
+        {
+            Mod_MechanicalNode view = item?.itemMods?.GetMod_ByID<Mod_MechanicalNode>(Mod_MechanicalNode.ModuleId);
+            if (view == null)
+                return null;
+
+            MechanicalNode node = view.Node;
+            MechanicalNetwork network = node?.Network;
+            MechanicalNodeState state = node?.State ?? view.LocalState;
+            MechanicalProcessor processor = node?.Processor;
+            ItemData input = processor?.Input?.Data?.GetItemSlot(0)?.itemData;
+            ItemData output = processor?.Output?.Data?.GetItemSlot(0)?.itemData;
+
+            return new JObject
+            {
+                ["definition"] = view.Definition?.Id ?? string.Empty,
+                ["attached"] = node != null,
+                ["rpm"] = Round(node?.Rpm ?? 0f),
+                ["networkStatus"] = network?.Status ?? string.Empty,
+                ["supply"] = Round(network?.Supply ?? 0f),
+                ["demand"] = Round(network?.Demand ?? 0f),
+                ["manualSeconds"] = Round(state?.ManualSeconds ?? 0f),
+                ["processor"] = processor == null
+                    ? JValue.CreateNull()
+                    : new JObject
+                    {
+                        ["station"] = processor.Station ?? string.Empty,
+                        ["progress01"] = Round(processor.Progress01),
+                        ["inputId"] = input?.IDName ?? string.Empty,
+                        ["inputAmount"] = Round(input?.Stack?.Amount ?? 0f),
+                        ["outputId"] = output?.IDName ?? string.Empty,
+                        ["outputAmount"] = Round(output?.Stack?.Amount ?? 0f)
+                    }
+            };
         }
 
         /// <summary>按可选玩家半径取得运行时物品；半径查询复用 ItemMgr 的空间索引，避免扫描全场景。</summary>

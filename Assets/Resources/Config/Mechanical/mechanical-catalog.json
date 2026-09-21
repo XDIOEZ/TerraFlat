@@ -6,8 +6,8 @@
     "DeactivationChunks": 2,
     "UnloadDelaySeconds": 5,
     "ReferenceRpm": 60,
-    "ManualPulseSeconds": 5,
-    "ManualReserveSeconds": 15,
+    "ManualPulseSeconds": 0.2,
+    "ManualReserveSeconds": 0.2,
     "BellowsHeatBonus": 250
   },
   "Nodes": [
