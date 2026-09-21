@@ -11,7 +11,7 @@ description: "定位、修改和验证 FlatWorld 的 Android/移动端输入系�
 2. 修改前检查 `git status --short` 与目标文件 diff，保留用户已有改动；定位到明确入口后停止泛化搜索。
 3. 按职责修改最小层级：触控所有权留在控件层，设备状态留在 `MobileInputRuntime`，输入语义留在 `GameController`，具体效果留在对应玩法模块。
 4. 涉及 HUD、Prefab、安全区或 EventSystem 时同时使用 `flatworld-ui`；涉及武器攻击时使用 `flatworld-combat`；涉及快捷栏、槽位长按、丢弃、种植或工具时使用 `flatworld-inventory-crafting`；涉及建筑放置时使用 `flatworld-building`。
-5. 完成后读取 [验证导航图](references/validation-map.md)，默认只做静态诊断、Android 脚本编译与 Unity Console 检查；仅在用户明确要求时运行 Unity Test Runner。
+5. 完成后读取 [验证导航图](references/validation-map.md)，按真实运行链验证触摸、HUD、输入锁和玩法结果；不再使用 Unity Test Runner、冒烟或静态布局校验作为验收。
 
 ## 必须保持的不变量
 

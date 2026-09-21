@@ -26,7 +26,7 @@ description: "Use when: 定位或修改 FlatWorld 的新手引导、教程资格
 
 ## 验证
 
-- 默认检查静态诊断、Unity 编译和 Console。
+- 验收统一进入真实 Play Mode，实际推进对应玩法里程碑并观察引导阶段、Facts 和持久化；编译与 Console 只作为辅助诊断。
 
 ## Skill 维护原则
 

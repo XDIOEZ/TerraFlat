@@ -1,22 +1,14 @@
 # Android 输入验证导航图
 
-## 默认验证门槛
+## 实机验证流程
 
-1. 检查目标 diff 和 `git diff --check`，确认没有覆盖用户已有修改、空白错误或生成文件被手改。
-2. 等待 Unity 完成本次脚本导入，检查 Console 为零新增编译错误和相关异常。
-3. 执行菜单 `FlatWorld/Validation/Compile Android Player Scripts`，确认 Android Player 脚本编译成功；入口为 `Assets/Editor/FlatWorld/Automation/AndroidScriptCompileValidator.cs`。
-4. 涉及 HUD、Prefab、安全区或射线时执行菜单 `FlatWorld/Validation/Validate Mobile Controls Layout`；入口为 `Assets/Editor/FlatWorld/Automation/MobileControlsLayoutValidator.cs`。
-5. 未经用户明确要求，不调用 Unity Test Runner、`run_tests` 或测试脚本。
+1. 等待 Unity 完成脚本导入；若有编译错误或相关 Console 异常，先修复再进入运行态。
+2. 在真实 Play Mode 或目标 Android 设备中进入可玩世界，实际操作对应触摸/HUD 路径；移动端专属触控问题以目标设备结果为准。
+3. 使用 GamePlayMCP/结构化观察辅助读取玩家、UI 和玩法状态，但操作必须继续走正式 Input System、EventSystem 和生产玩法 API。
+4. 修改涉及输入锁、面板、方向、安全区或多点触控时，必须实际触发这些场景并观察结果，不再运行 Test Runner、冒烟脚本或静态布局 Validator。
+5. Console 只作为运行过程中发现异常的证据；没有报错不能替代实际操作成功。
 
-## 已有自动化入口
-
-| 覆盖 | 文件/操作 |
-|---|---|
-| 虚拟设备、方向、攻击按住/松开、输入锁和设备切换 | `Assets/GameTest/PlayerInteraction/MobileControlsInputTests.cs` |
-| 真实单人移动端主路径 | `player.mobile-controls` |
-
-
-## 定向人工验收
+## 定向实机验收
 
 - 同时按住左摇杆和右侧指向，确认移动与朝向互不抢占。
 - 按下攻击摇杆但不拖出死区，确认立即沿普通朝向攻击；拖动后实时改向并保留为普通朝向；松开可靠停止，玩家移动时准线仍保持相对位置跟随。

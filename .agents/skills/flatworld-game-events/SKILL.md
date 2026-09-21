@@ -27,8 +27,8 @@ description: "Use when: 定位或修改 FlatWorld 的全局游戏事件、事件
 
 ## 验证
 
-- 默认检查 JSON、静态诊断、Unity 编译和 Console。
-- 仅用户明确要求时运行对应 `GameEvents.*` 分类；测试位于 `Assets/GameTest/GameEvents/`。
+- 事件验收统一进入真实 Play Mode，实际满足触发条件并观察行动、冲突和存档状态；不再维护 `GameEvents.*` Test Runner 分类。
+- JSON、编译和 Console 只作为实机运行前后的辅助诊断。
 
 ## Skill 维护原则
 

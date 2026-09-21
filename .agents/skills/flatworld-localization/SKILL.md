@@ -34,7 +34,7 @@ description: "Use when: 定位或修改 FlatWorld 的多语言系统、Unity Loc
 2. 修改 JSON/Prefab/动态赋值点和英文覆盖。
 3. 仅物品名称变更执行 `FlatWorld/Localization/Sync Item Names`；需要全量内容和 UI 同步时执行 `FlatWorld/Localization/Setup Default Tables`，核对中英文、占位符与 Addressables。
 4. UI 文字联动 `flatworld-ui`；Item/Quest/Dialogue 只加载命中的领域 Skill。
-5. 默认只做静态诊断、编译、Console 与人工切换语言，不主动运行 Test Runner。
+5. 验收统一在真实 Play Mode 中切换语言并实际打开受影响界面/内容观察刷新结果；不再使用 Test Runner 或静态校验代替运行验证。
 
 ## Skill 维护原则
 

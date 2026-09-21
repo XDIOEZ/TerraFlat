@@ -1,6 +1,7 @@
 # FlatWorld 项目编程指南
 
 - 本项目是 Unity 2D 俯视角沙盒游戏。
+- 功能验收统一使用真实 Play Mode / GamePlayMCP 运行链；不再新增或恢复 `Assets/GameTest`、Unity Test Runner、冒烟测试或独立静态验证脚本。编译与 Console 只作为进入实机运行前的门禁和故障证据，不作为独立验收结果。
 - 处理游戏系统任务时，根据任务类型直接读取对应的 `.agents/skills/flatworld-*/SKILL.md` 专项 Skill；任务跨系统时只读取直接相关的多个 Skill，不要无目的地搜索整个项目。
 - 完成代码或资源修改后，必须检查本次使用的专项 Skill 是否需要同步；只记录系统维护中可复用的易错点、隐含约束和必要注意事项,以及系统架构
 - 清理无效、未使用的代码。
