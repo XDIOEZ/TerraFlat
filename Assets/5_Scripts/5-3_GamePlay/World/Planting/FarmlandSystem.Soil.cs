@@ -75,21 +75,9 @@ public static partial class FarmlandSystem
             !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(worldPosition, out var sample))
             return false;
         int x = sample.LocalCell.x, y = sample.LocalCell.y;
-        if ((sample.Cell.Flags & TerrainCellFlags.Water) != 0)
-        {
-            float depth = 0f;
-            if (!sample.Terrain.TryGetEnvironmentValue("riverDepth", x, y, out depth) || depth <= 0f)
-            {
-                if (sample.Terrain.TryGetEnvironmentValue("height", x, y, out float height))
-                    depth = Mathf.Clamp01(TileData_Water.CalculateDepthFromHeight(height));
-            }
-            float next = depth + amount;
-            sample.Terrain.SetEnvironmentValue(SourceLayer, x, y, sample.Cell.GroundTileId);
-            sample.Terrain.SetEnvironmentValue(WaterLayer, x, y, next);
-            sample.Terrain.SetEnvironmentValue("riverDepth", x, y, next);
-            SaveDataMgr.Instance.RecordAgricultureCell(sample);
-            return true;
-        }
+        float liquidDepth = sample.Terrain.GetLiquidDepth(x, y);
+        if (liquidDepth > 0f)
+            return WorldLiquidSystem.TrySet(sample, sample.Terrain.GetLiquidId(x, y), liquidDepth + amount);
         if (!IsOpen(sample)) return false;
         EnsureSoilState(sample);
         TileData_Farmland soil = ReadSoilSnapshot(sample);

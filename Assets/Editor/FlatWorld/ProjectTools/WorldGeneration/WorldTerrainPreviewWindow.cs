@@ -170,9 +170,9 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         {
             ["world.coordinateScale"] = "越大地貌越密集、越碎；越小地貌越舒展",
             ["terrain.groundTileId"] = "普通陆地默认使用的 Tile 数字编号",
-            ["terrain.waterTileId"] = "河流和淡水使用的 Tile 数字编号",
+            ["terrain.riverbedTileId"] = "河流和淡水使用的 Tile 数字编号",
             ["terrain.waterThreshold"] = "旧配置兼容项，当前纯地表生成器不读取",
-            ["terrain.saltWaterTileId"] = "海洋使用的咸水 Tile 数字编号",
+            ["terrain.seabedTileId"] = "海洋使用的咸水 Tile 数字编号",
             ["terrain.sandTileId"] = "沙滩、沙漠和冲积带使用的 Tile 数字编号",
             ["terrain.stoneTileId"] = "山地石地使用的 Tile 数字编号",
             ["terrain.snowTileId"] = "雪地使用的 Tile 数字编号",

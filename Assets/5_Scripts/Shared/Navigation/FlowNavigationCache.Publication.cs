@@ -12,7 +12,7 @@ namespace FlatWorld.Navigation
         private NativeArray<FlowChunkHeader> nativeChunks;
         private NativeArray<int> nativeCells;
         private NativeArray<byte> nativeWater;
-        private NativeArray<float> nativeWaterDepth;
+        private NativeArray<float> nativeLiquidDepth;
         private NativeArray<FlowPortal> nativePortals;
         private NativeArray<int> nativeExitCosts;
         private NativeArray<byte> nativeExitDirections;
@@ -35,7 +35,7 @@ namespace FlatWorld.Navigation
             nativeChunks = new NativeArray<FlowChunkHeader>(coordinates.Count, Allocator.Persistent);
             nativeCells = new NativeArray<int>(coordinates.Count * 256, Allocator.Persistent);
             nativeWater = new NativeArray<byte>(coordinates.Count * 256, Allocator.Persistent);
-            nativeWaterDepth = new NativeArray<float>(coordinates.Count * 256, Allocator.Persistent);
+            nativeLiquidDepth = new NativeArray<float>(coordinates.Count * 256, Allocator.Persistent);
             nativePortals = new NativeArray<FlowPortal>(portalCount, Allocator.Persistent);
             nativeExitCosts = new NativeArray<int>(portalCount * 256, Allocator.Persistent);
             nativeExitDirections = new NativeArray<byte>(portalCount * 256, Allocator.Persistent);
@@ -50,7 +50,7 @@ namespace FlatWorld.Navigation
                     int target = index * 256 + cell;
                     nativeCells[target] = chunk.Cells[cell];
                     nativeWater[target] = chunk.Water[cell];
-                    nativeWaterDepth[target] = chunk.WaterDepth[cell];
+                    nativeLiquidDepth[target] = chunk.LiquidDepth[cell];
                 }
                 foreach (FlowPortal item in chunk.Portals)
                 {
@@ -140,7 +140,7 @@ namespace FlatWorld.Navigation
         private FlowNavigationSnapshot Snapshot() => new FlowNavigationSnapshot
         {
             Domain = domain, Epoch = Epoch, ChunkLookup = nativeChunkLookup, Chunks = nativeChunks,
-            Cells = nativeCells, Water = nativeWater, WaterDepth = nativeWaterDepth,
+            Cells = nativeCells, Water = nativeWater, LiquidDepth = nativeLiquidDepth,
             Portals = nativePortals, ExitDirections = nativeExitDirections, Goals = nativeGoals,
             TargetCosts = nativeTargetCosts, TargetDirections = nativeTargetDirections, SelectedExits = nativeSelectedExits
         };
@@ -152,7 +152,7 @@ namespace FlatWorld.Navigation
             if (nativeChunks.IsCreated) nativeChunks.Dispose();
             if (nativeCells.IsCreated) nativeCells.Dispose();
             if (nativeWater.IsCreated) nativeWater.Dispose();
-            if (nativeWaterDepth.IsCreated) nativeWaterDepth.Dispose();
+            if (nativeLiquidDepth.IsCreated) nativeLiquidDepth.Dispose();
             if (nativePortals.IsCreated) nativePortals.Dispose();
             if (nativeExitCosts.IsCreated) nativeExitCosts.Dispose();
             if (nativeExitDirections.IsCreated) nativeExitDirections.Dispose();

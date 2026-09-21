@@ -49,7 +49,7 @@ JSON 是静态配置唯一真源。旧 `Tile_Block.asset` 仅保留地块 ID 和
 
 行为类型：`universal`、`grass`、`water`、`farmland`、`ice`、`snow`。行为按数组顺序调用，具体功能仍由对应的 C# 类实现。水体行为要求 `water` 数据，耕地行为要求 `farmland` 数据；组合行为时仍应遵守各行为的进入、更新和清理契约。
 
-水体数据必须指定已注册的 `liquidId`，例如 `core:dirty_water` 或 `core:sea_water`。`buffInfo` 使用真实 Buff ID，例如 `潮湿`，不是显示英文译名。潮湿叠层和水深结算继续由现有水体/Buff 系统处理，不要额外复制一套每格计时器。
+`water` 数据/行为只保留代码与历史序列化兼容入口；新的世界水体在 `Liquids/liquids.json` 声明 `worldWater`，不再创建 Water Tile。液体身份使用已注册的 `LiquidId`，例如 `core:dirty_water` 或 `core:sea_water`。`buffInfo` 使用真实 Buff ID，例如 `潮湿`，不是显示英文译名。潮湿叠层和水深结算继续由现有水体/Buff 系统处理，不要额外复制一套每格计时器。
 
 墙体伤害使用 `damageProfile`；平台和地板使用 `groundPlacement`。可配置字段以实际分包为准。枚举支持合法名称或数字，例如 `requiredTool: "Pickaxe"`、`requiredSourceFlags: "Water"`。
 
@@ -69,11 +69,11 @@ JSON 是静态配置唯一真源。旧 `Tile_Block.asset` 仅保留地块 ID 和
 {
   "patches": [
     {
-      "target": "tile:Tile_Water_Fresh",
+      "target": "tile:Tile_Snow",
       "operation": "replace",
-      "path": "/behaviours/0/parameters/drinkHoldSeconds",
-      "expect": 1,
-      "value": 0.5
+      "path": "/behaviours/0/parameters/moveSpeedMultiplier",
+      "expect": 0.9,
+      "value": 0.8
     }
   ]
 }

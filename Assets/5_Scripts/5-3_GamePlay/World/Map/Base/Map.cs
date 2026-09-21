@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using UnityEngine.Tilemaps;
 
-public class Map : Item
+public partial class Map : Item
 {
     #region 属性和字段
     [Header("地图配置")]
@@ -153,6 +153,7 @@ public class Map : Item
 
     protected virtual void OnTilemapLoaded()
     {
+        RebuildLegacyLiquidVisuals();
         GetComponent<GrassDetailLayer>()?.Rebuild(this);
 
         if (!ShouldBakePenaltyAfterTilemapLoad)
@@ -212,6 +213,7 @@ public class Map : Item
 
     private new void OnDestroy()
     {
+        DisposeLegacyLiquids();
         WorldNavigationManager.ExistingInstance?.UnregisterMap(this);
         StopMapCoroutines();
     }

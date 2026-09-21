@@ -18,7 +18,12 @@ namespace FlatWorld.WorldModel
             TerrainCell cell = terrain.GetCell(x, y);
             int id = GetTileId(terrain, x, y);
             if (id == 0)
-                return cell;
+            {
+                TerrainCellFlags flags = terrain.GetLiquidDepth(x, y) > 0f
+                    ? cell.Flags | TerrainCellFlags.Water : cell.Flags & ~TerrainCellFlags.Water;
+                return new TerrainCell(cell.GroundTileId, cell.BackTileId, cell.BlockingTileId, cell.BiomeId,
+                    cell.NavigationCost, flags);
+            }
             terrain.TryGetEnvironmentValue(CostLayer, x, y, out float cost);
             return new TerrainCell(id, cell.BackTileId, cell.BlockingTileId, cell.BiomeId,
                 (short)Math.Clamp(cost, 1f, short.MaxValue), (cell.Flags & ~TerrainCellFlags.Water) | TerrainCellFlags.Walkable);

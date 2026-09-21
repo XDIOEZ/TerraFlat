@@ -44,7 +44,7 @@ public sealed class ChunkSnowCoverRenderer : MonoBehaviour, IChunkViewRenderer
         {
             TerrainCell surface = TerrainSupportLayer.GetSurfaceCell(chunk.Terrain, x, y);
             Vector3 world = new(chunk.Address.ChunkOrigin.X + x + 0.5f, chunk.Address.ChunkOrigin.Y + y + 0.5f);
-            float coverage = (surface.Flags & TerrainCellFlags.Water) != 0 || surface.GroundTileId == 0
+            float coverage = WorldLiquidSystem.GetSurfaceDepth(chunk.Terrain, x, y) > 0f || surface.GroundTileId == 0
                 ? 0f : weather.GetSnowCoverage(world);
             byte value = (byte)Mathf.RoundToInt(coverage * 100f);
             int index = y * chunk.Terrain.Width + x;

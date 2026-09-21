@@ -40,7 +40,7 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
 
     public override GenerationStage Stage => GenerationStage.Hydrology;
 
-    [Header("水体 Tile")]
+    [Header("河床 / 湖底 Ground")]
     public Tile_Block riverTileBlock;
 
     [Header("区域水文")]
@@ -254,8 +254,8 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
 
     public void ValidateConfiguration()
     {
-        if (riverTileBlock?.tileDataTemplate is not TileData_Water)
-            throw new InvalidOperationException("riverTileBlock 必须提供 TileData_Water 模板。");
+        if (riverTileBlock?.tileDataTemplate == null || riverTileBlock.tileDataTemplate is TileData_Water)
+            throw new InvalidOperationException("riverTileBlock 必须提供真实河床 Ground 模板，不能使用 Water Tile。");
         if (hydrologyRegionSize < 64 || runoffCellSize < 16 || runoffSampleStride < 1 ||
             maxTraceSteps < 32 || maxCachedRegions < 1)
         {
@@ -359,39 +359,11 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
 
     private void WriteFreshWaterAt(Vector2Int worldPosition, float depth)
     {
-        int layerCount = Map.Data.GetLayerCount(worldPosition);
-        TileData top = Map.Data.GetTopTile(worldPosition);
-        if (IsSeaWater(top))
-            return;
-
-        TileData riverTile = riverTileBlock.tileDataTemplate.Clone();
-        if (riverTile is not TileData_Water waterTile)
-            throw new InvalidOperationException("河流 Tile 模板克隆后不是 TileData_Water。");
-
-        riverTile.position = new Vector3Int(worldPosition.x, worldPosition.y, 0);
-        Vector2Int localPosition = worldPosition - Map.Data.position;
-        riverTile.Initialize_Env(Map.Data.EnvironmentLayers, localPosition.x, localPosition.y);
-        waterTile.salt = 0f;
-        waterTile.deepValue = math.saturate(depth);
-
-        if (layerCount == 0)
-        {
-            Map.Data.SetBaseTile(worldPosition, riverTile);
-            return;
-        }
-
-        switch (writeMode)
-        {
-            case RiverWriteMode.AddLayer when top is not TileData_Water:
-                Map.Data.PushTile(worldPosition, riverTile);
-                break;
-            case RiverWriteMode.ReplaceAll:
-                Map.Data.ReplaceStack(worldPosition, riverTile);
-                break;
-            default:
-                Map.Data.ReplaceTop(worldPosition, riverTile);
-                break;
-        }
+        if (Map.GetGeneratedLiquidId(worldPosition) == LiquidIds.SeaWater) return;
+        TileData bed = riverTileBlock.tileDataTemplate.Clone();
+        bed.position = new Vector3Int(worldPosition.x, worldPosition.y, 0);
+        Map.Data.ReplaceStack(worldPosition, bed);
+        Map.SetGeneratedLiquid(worldPosition, LiquidIds.DirtyWater, depth);
     }
 
     private static WorldAddress NormalizeAddress(WorldAddress address)

@@ -130,7 +130,7 @@ Tilemap:
   m_AnimatedTiles: {}
   m_TileAssetArray:
   - m_RefCount: 1
-    m_Data: {fileID: 11400000, guid: 57d25a3fd2bb6fb4e822c2992f71ab13, type: 2}
+    m_Data: {fileID: 11400000, guid: 25706c96a4c97da4ea78a1295d5bfc75, type: 2}
   - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: 2ccdd18f6c4787c43a001bbaa64407ab, type: 2}
   - m_RefCount: 1

@@ -84,9 +84,7 @@ public partial class SaveDataMgr
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.ProgressLayer, x, y, cell.Progress);
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.WaterLayer, x, y, cell.Water);
             chunk.Terrain.SetEnvironmentValue(FarmlandSystem.FertilityLayer, x, y, cell.Fertility);
-            if ((chunk.Terrain.GetCell(x, y).Flags & TerrainCellFlags.Water) != 0)
-                chunk.Terrain.SetEnvironmentValue("riverDepth", x, y, cell.Water);
-            else if (cell.SourceTileId != 0)
+            if (cell.SourceTileId != 0)
                 FarmlandSystem.SyncSoilEnvironment(chunk.Terrain, x, y, cell.Water, cell.Fertility);
         }
     }

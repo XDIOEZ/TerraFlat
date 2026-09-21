@@ -15,11 +15,6 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
 {
     #region 配置与状态
 
-    /// <summary>河流与地下水使用的权威水深层。</summary>
-    private const string RiverDepthLayerId = "riverDepth";
-    /// <summary>海洋深度换算使用的权威高度层。</summary>
-    private const string HeightLayerId = "height";
-
     [SerializeField] private ChunkTilePaletteSO palette;
     [SerializeField] private Tilemap groundTilemap;
     [SerializeField] private Tilemap waterTilemap;
@@ -194,7 +189,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             return;
         if (changed.Kind != TerrainChangeKind.Cell &&
             changed.Kind != TerrainChangeKind.TileStack &&
-            changed.Kind != TerrainChangeKind.Environment)
+            changed.Kind != TerrainChangeKind.Environment && changed.Kind != TerrainChangeKind.Liquid)
             return;
 
         if (changed.Kind == TerrainChangeKind.Cell || changed.Kind == TerrainChangeKind.TileStack)
@@ -221,7 +216,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         ChunkTerrainData terrain = boundChunk.Terrain;
         for (int y = 0; y < terrain.Height; y++)
         for (int x = 0; x < terrain.Width; x++)
-            if (IsWater(terrain.GetCell(x, y)))
+            if (terrain.GetLiquidDepth(x, y) > 0f)
                 RefreshBatchCell(terrain, x, y);
     }
 
@@ -296,7 +291,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         if (boundChunk?.Terrain == null ||
             (changed.Kind != TerrainChangeKind.Cell &&
              changed.Kind != TerrainChangeKind.TileStack &&
-             changed.Kind != TerrainChangeKind.Environment))
+             changed.Kind != TerrainChangeKind.Environment && changed.Kind != TerrainChangeKind.Liquid))
         {
             return;
         }
@@ -442,11 +437,8 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     private void RefreshBatchCell(ChunkTerrainData terrain, int x, int y)
     {
         TerrainCell cell = terrain.GetCell(x, y);
-        bool water = IsWater(cell);
-        Material waterMaterial = GetActiveWaterMaterial();
-        bool dedicatedWater = water && waterMaterial != null;
 
-        if (cell.GroundTileId != 0 && !dedicatedWater)
+        if (cell.GroundTileId != 0)
         {
             SetBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Ground,
                 cell.GroundTileId, groundTilemap, GetMaterial(groundTilemap),
@@ -457,16 +449,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             ClearBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Ground);
         }
 
-        if (cell.GroundTileId != 0 && dedicatedWater)
-        {
-            SetBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Water,
-                cell.GroundTileId, renderCaveWater ? caveWaterTilemap : waterTilemap, waterMaterial,
-                BuildWaterShoreMask(terrain, x, y), BuildWaterDepthCorners(terrain, x, y));
-        }
-        else
-        {
-            ClearBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Water);
-        }
+        RefreshLiquidVisual(terrain, x, y);
 
         if (backTilemap != null && cell.BackTileId != 0)
         {
@@ -487,6 +470,37 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         {
             ClearBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Blocking);
         }
+    }
+
+    /// <summary>Liquid BRG 完全从液体目录取外观，不再把 GroundTileId 当作水面贴图。</summary>
+    private void RefreshLiquidVisual(ChunkTerrainData terrain, int x, int y)
+    {
+        if (terrain.GetLiquidDepth(x, y) <= 0f)
+        {
+            ClearBatchVisual(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Water);
+            return;
+        }
+        WorldLiquidSettings settings = ResolveLiquidVisual(terrain, x, y);
+        if (settings?.Sprite == null || settings.Material == null)
+            throw new System.InvalidOperationException($"液体外观尚未就绪：{terrain.GetLiquidId(x, y)}");
+        Material material = settings.FollowWaterVisualStyle ? GetActiveWaterMaterial() : settings.Material;
+        if (material == null) material = settings.Material;
+        Int2 origin = boundChunk.Address.ChunkOrigin;
+        Matrix4x4 transform = Matrix4x4.Translate(new Vector3(origin.X + x + 0.5f, origin.Y + y + 0.5f, 0f));
+        var data = ChunkBatchRendererGroupService.InstanceData.Create(transform,
+            BuildWaterShoreMask(terrain, x, y), BuildLiquidDepthCorners(terrain, x, y), Color.white);
+        SetWaterCurrentData(terrain, x, y, ref data);
+        ChunkBatchRendererGroupService.SetVisual(this,
+            GetBatchSlotKey(terrain, x, y, ChunkBatchRendererGroupService.VisualLayer.Water),
+            new ChunkBatchRendererGroupService.Visual(ChunkBatchRendererGroupService.VisualLayer.Water,
+                settings.Sprite, material, data));
+    }
+
+    private static WorldLiquidSettings ResolveLiquidVisual(ChunkTerrainData terrain, int x, int y)
+    {
+        string id = terrain.LiquidTypes.GetId(terrain.GetLiquidTypeIndex(x, y));
+        return GameRes.ExistingInstance != null && GameRes.ExistingInstance.TryGetLiquidDefinition(id, out var definition)
+            ? definition.WorldWater : null;
     }
 
     private void SetBatchVisual(ChunkTerrainData terrain, int x, int y,
@@ -573,20 +587,14 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
 
         int count = 0;
         Material groundMaterial = GetMaterial(groundTilemap);
-        Material waterMaterial = GetActiveWaterMaterial();
         Material backMaterial = GetMaterial(backTilemap);
         Material blockingMaterial = GetMaterial(blockingTilemap);
         for (int y = 0; y < terrain.Height; y++)
         for (int x = 0; x < terrain.Width; x++)
         {
             TerrainCell cell = terrain.GetCell(x, y);
-            if (cell.GroundTileId != 0)
-            {
-                bool dedicatedWater = IsWater(cell) && waterMaterial != null;
-                Material material = dedicatedWater ? waterMaterial : groundMaterial;
-                if (material != null && HasPaletteVisual(cell.GroundTileId))
-                    count++;
-            }
+            if (cell.GroundTileId != 0 && groundMaterial != null && HasPaletteVisual(cell.GroundTileId)) count++;
+            if (terrain.GetLiquidDepth(x, y) > 0f && ResolveLiquidVisual(terrain, x, y)?.Sprite != null) count++;
 
             if (backTilemap != null && cell.BackTileId != 0 &&
                 backMaterial != null && HasPaletteVisual(cell.BackTileId))
@@ -690,11 +698,11 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         bool cave = IsCaveDimension(boundChunk?.Address.DimensionId);
         if (cave)
         {
-            bool receivesShadow = !IsBlocking(cell) && !IsWater(cell);
+            bool receivesShadow = !IsBlocking(cell) && terrain.GetLiquidDepth(x, y) <= 0f;
             return receivesShadow ? (Vector4)BuildContactMask(terrain, x, y, ContactKind.Wall) : Vector4.zero;
         }
 
-        if (IsWater(cell))
+        if (terrain.GetLiquidDepth(x, y) > 0f)
             return (Vector4)BuildContactMask(terrain, x, y, ContactKind.Land);
         return !IsStone(cell)
             ? (Vector4)BuildContactMask(terrain, x, y, ContactKind.Stone)
@@ -702,7 +710,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     }
 
     /// <summary>RGBA 依次保存左下、右下、左上、右上格角的连续水深。</summary>
-    private Vector4 BuildWaterDepthCorners(ChunkTerrainData terrain, int x, int y)
+    private Vector4 BuildLiquidDepthCorners(ChunkTerrainData terrain, int x, int y)
     {
         return new Vector4(
             ResolveCornerDepth(terrain, x - 1, y - 1),
@@ -714,10 +722,10 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     private float ResolveCornerDepth(ChunkTerrainData terrain, int leftCellX, int bottomCellY)
     {
         return (
-            ResolveExtendedWaterDepth(terrain, leftCellX, bottomCellY) +
-            ResolveExtendedWaterDepth(terrain, leftCellX + 1, bottomCellY) +
-            ResolveExtendedWaterDepth(terrain, leftCellX, bottomCellY + 1) +
-            ResolveExtendedWaterDepth(terrain, leftCellX + 1, bottomCellY + 1)) * 0.25f;
+            ResolveExtendedLiquidDepth(terrain, leftCellX, bottomCellY) +
+            ResolveExtendedLiquidDepth(terrain, leftCellX + 1, bottomCellY) +
+            ResolveExtendedLiquidDepth(terrain, leftCellX, bottomCellY + 1) +
+            ResolveExtendedLiquidDepth(terrain, leftCellX + 1, bottomCellY + 1)) * 0.25f;
     }
 
     #endregion
@@ -759,7 +767,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             {
                 if (!TryResolveTerrainCell(terrain, left + offsetX, bottom + offsetY,
                         out ChunkTerrainData source, out int localX, out int localY,
-                        out TerrainCell cell) || !IsWater(cell))
+                        out TerrainCell cell) || source.GetLiquidDepth(localX, localY) <= 0f)
                     continue;
                 source.TryGetEnvironmentValue("riverKind", localX, localY, out float kind);
                 if (Mathf.RoundToInt(kind) != 1)
@@ -786,16 +794,16 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     }
 
     /// <summary>非水格沿用周围水格平均深度，避免岸线参与颜色渐变。</summary>
-    private float ResolveExtendedWaterDepth(ChunkTerrainData terrain, int x, int y)
+    private float ResolveExtendedLiquidDepth(ChunkTerrainData terrain, int x, int y)
     {
-        if (TryResolveWaterDepth(terrain, x, y, out float depth))
+        if (TryResolveLiquidDepth(terrain, x, y, out float depth))
             return depth;
 
         // 邻区边框落在陆地时，先向当前 Chunk 边缘延展，避免取样范围越过第二圈邻格。
         int sampleX = Mathf.Clamp(x, 0, terrain.Width - 1);
         int sampleY = Mathf.Clamp(y, 0, terrain.Height - 1);
         if ((sampleX != x || sampleY != y) &&
-            TryResolveWaterDepth(terrain, sampleX, sampleY, out depth))
+            TryResolveLiquidDepth(terrain, sampleX, sampleY, out depth))
         {
             return depth;
         }
@@ -806,7 +814,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         {
             for (int offsetX = -1; offsetX <= 1; offsetX++)
             {
-                if (!TryResolveWaterDepth(terrain, sampleX + offsetX, sampleY + offsetY,
+                if (!TryResolveLiquidDepth(terrain, sampleX + offsetX, sampleY + offsetY,
                         out float neighbourDepth))
                 {
                     continue;
@@ -821,32 +829,24 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     }
 
     /// <summary>读取当前格或邻区水格的权威深度。</summary>
-    private bool TryResolveWaterDepth(ChunkTerrainData terrain, int x, int y, out float depth)
+    private bool TryResolveLiquidDepth(ChunkTerrainData terrain, int x, int y, out float depth)
     {
         depth = 0f;
         if (!TryResolveTerrainCell(terrain, x, y,
                 out ChunkTerrainData resolvedTerrain, out int localX, out int localY,
-                out TerrainCell cell) || !IsWater(cell))
+                out TerrainCell cell) || resolvedTerrain.GetLiquidDepth(localX, localY) <= 0f)
         {
             return false;
         }
 
-        depth = ResolveWaterDepth(resolvedTerrain, localX, localY);
+        depth = ResolveLiquidDepth(resolvedTerrain, localX, localY);
         return true;
     }
 
-    /// <summary>优先读取河流或地下水深度，海洋则复用玩法系统的高度换算规则。</summary>
-    private static float ResolveWaterDepth(ChunkTerrainData terrain, int x, int y)
+    /// <summary>所有水域统一读取已生成或被玩家修改的权威液深。</summary>
+    private static float ResolveLiquidDepth(ChunkTerrainData terrain, int x, int y)
     {
-        if (terrain.TryGetEnvironmentValue(RiverDepthLayerId, x, y,
-                out float hydrologyDepth) && hydrologyDepth > 0f)
-        {
-            return Mathf.Clamp01(hydrologyDepth);
-        }
-
-        return terrain.TryGetEnvironmentValue(HeightLayerId, x, y, out float height)
-            ? Mathf.Clamp01(TileData_Water.CalculateDepthFromHeight(height))
-            : 0f;
+        return terrain.GetLiquidDepth(x, y);
     }
 
     /// <summary>RGBA 分别表示左、右、下、上是否需要绘制接触阴影。</summary>
@@ -861,12 +861,13 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
 
     private bool IsContactNeighbour(ChunkTerrainData terrain, int x, int y, ContactKind kind)
     {
-        if (!TryGetCell(terrain, x, y, out TerrainCell neighbour))
+        if (!TryResolveTerrainCell(terrain, x, y, out ChunkTerrainData neighbourTerrain,
+                out int neighbourX, out int neighbourY, out TerrainCell neighbour))
             return false;
         return kind switch
         {
             ContactKind.Wall => IsBlocking(neighbour),
-            ContactKind.Land => !IsWater(neighbour),
+            ContactKind.Land => neighbourTerrain.GetLiquidDepth(neighbourX, neighbourY) <= 0f,
             ContactKind.Stone => IsStone(neighbour),
             _ => false
         };
@@ -951,8 +952,6 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         return string.Equals(dimensionId, "cave", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsWater(TerrainCell cell) =>
-        (cell.Flags & TerrainCellFlags.Water) != 0;
 
     private static bool IsBlocking(TerrainCell cell) =>
         cell.BlockingTileId != 0 && (cell.Flags & TerrainCellFlags.Blocking) != 0;

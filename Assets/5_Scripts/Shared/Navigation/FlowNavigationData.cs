@@ -10,7 +10,7 @@ namespace FlatWorld.Navigation
     public struct FlowNavigationCellData
     {
         public uint Penalty; // 零表示阻挡。
-        public float WaterDepth; // 有效水面的 0~1 水深。
+        public float LiquidDepth; // 有效水面的 0~1 水深。
         public byte Water; // 水上平台等支撑面为 0。
     }
 
@@ -150,7 +150,7 @@ namespace FlatWorld.Navigation
         [ReadOnly] public NativeArray<FlowChunkHeader> Chunks;
         [ReadOnly] public NativeArray<int> Cells;
         [ReadOnly] public NativeArray<byte> Water;
-        [ReadOnly] public NativeArray<float> WaterDepth;
+        [ReadOnly] public NativeArray<float> LiquidDepth;
         [ReadOnly] public NativeArray<FlowPortal> Portals;
         [ReadOnly] public NativeArray<byte> ExitDirections;
         [ReadOnly] public NativeArray<FlowGoalData> Goals;
@@ -236,7 +236,7 @@ namespace FlatWorld.Navigation
             int index = chunk * 256 + FlowNavigationMath.LocalIndex(cell, Domain);
             if (Cells[index] < 0 || !Water.IsCreated || Water[index] == 0)
                 return false;
-            depth = WaterDepth.IsCreated ? math.saturate(WaterDepth[index]) : 0f;
+            depth = LiquidDepth.IsCreated ? math.saturate(LiquidDepth[index]) : 0f;
             return true;
         }
 

@@ -7,7 +7,7 @@ using UnityEngine;
 /// 地块效果接收器。优先读取 ChunkRuntime/ChunkTerrainData 权威地形，进入、离开或地块来源变化时
 /// 调用 RuntimeTileDefinition 行为；旧 Map 仅作为尚未迁移场景的兼容回退。
 /// </summary>
-public class TileEffectReceiver : Module
+public partial class TileEffectReceiver : Module
 {
     private static readonly Vector2Int[] WaterEdgeDirections =
     {
@@ -73,7 +73,10 @@ public class TileEffectReceiver : Module
         if (suppressed)
         {
             if (effectSuppressors.Add(owner))
+            {
+                ExitLiquidContact();
                 ExitCurrentTileEffects();
+            }
         }
         else if (effectSuppressors.Remove(owner) && effectSuppressors.Count == 0)
             RefreshCurrentTileEffects();
@@ -95,8 +98,8 @@ public class TileEffectReceiver : Module
     private const float DrowningDamageTickIntervalSeconds = 5f;
 
     public bool HasActiveTileEffects => hasActiveTileEffects;
-    public bool IsActiveTileEdgeInteractionOnly => activeTileIsEdgeInteractionOnly;
-    public EnvironmentInteractionRunner EnvironmentInteractions => EnsureEnvironmentInteractions();
+    public bool IsActiveTileEdgeInteractionOnly => liquidCallback ? activeLiquidEdge : activeTileIsEdgeInteractionOnly;
+    public EnvironmentInteractionRunner EnvironmentInteractions => groundCallback ? EnsureGroundEnvironmentInteractions() : EnsureEnvironmentInteractions();
     public float CurrentWaterImmersion => currentWaterImmersion;
     public override string CanonicalModuleId => ModText.TileEffectReceiver;
 
@@ -145,20 +148,19 @@ public class TileEffectReceiver : Module
 
     public override void ModUpdate(float deltaTime)
     {
-        if (effectSuppressors.Count != 0)
+        if (effectSuppressors.Count != 0 || isPreparedForWorldTransition)
             return;
         UpdateLegacyMapReference();
         Vector2Int currentGridPos = GetCurrentGridPos();
-        if (currentGridPos != lastGridPos || !IsActiveSourceCurrent(currentGridPos))
+        RefreshLiquidContact(currentGridPos, deltaTime);
+        if (!LiquidFloating && (currentGridPos != lastGridPos || !IsActiveSourceCurrent(currentGridPos)))
         {
             ExitCurrentTileEffects();
             lastGridPos = currentGridPos;
             EnterTile(currentGridPos);
         }
 
-        bool hasRealWater = hasActiveTileEffects &&
-                            !activeTileIsEdgeInteractionOnly &&
-                            activeTileData is TileData_Water;
+        bool hasRealWater = activeLiquid != null && !activeLiquidEdge;
         if (!hasRealWater)
             TickDryWaterSurvival(deltaTime);
 
@@ -192,14 +194,14 @@ public class TileEffectReceiver : Module
 
     private bool EnterTile(Vector2Int gridPos)
     {
-        if (item == null || !TryResolveTileEffect(gridPos, out TileEffectResolution resolution))
+        if (LiquidFloating || item == null || !TryResolveTileEffect(gridPos, out TileEffectResolution resolution))
         {
             currentTileData = null;
             return false;
         }
 
         CacheActiveTile(gridPos, resolution);
-        resolution.TileBlock.OnEnter(item, resolution.TileData, resolution.Map, this);
+        InvokeGroundEnter(resolution.TileBlock, resolution.TileData, resolution.Map);
         OnTileEnterEvent.Invoke(resolution.TileData);
         return true;
     }
@@ -221,7 +223,7 @@ public class TileEffectReceiver : Module
         if (item == null || tileBlock == null || tileData == null)
             return false;
 
-        tileBlock.OnExit(item, tileData, tileMap, this);
+        InvokeGroundExit(tileBlock, tileData, tileMap);
         OnTileExitEvent.Invoke(tileData);
         return true;
     }
@@ -232,7 +234,7 @@ public class TileEffectReceiver : Module
             return;
 
         currentTileData = activeTileData;
-        activeTileBlock.OnUpdate(item, activeTileData, activeTileMap, this, deltaTime);
+        InvokeGroundUpdate(deltaTime);
     }
 
     /// <summary>世界切换保存前撤销脚下地块效果，防止环境 Buff 带到下一维度。</summary>
@@ -242,18 +244,9 @@ public class TileEffectReceiver : Module
             return;
 
         isPreparedForWorldTransition = true;
-        if (!hasActiveTileEffects && item != null)
-        {
-            Vector2Int gridPos = GetCurrentGridPos();
-            if (TryResolveTileEffect(gridPos, out TileEffectResolution resolution))
-            {
-                CacheActiveTile(gridPos, resolution);
-                isPreparedForWorldTransition = true;
-                lastGridPos = gridPos;
-            }
-        }
-
-        ExitCurrentTileEffects();
+        liquidContactTransition = true;
+        try { ExitLiquidContact(); ExitCurrentTileEffects(); }
+        finally { liquidContactTransition = false; }
     }
 
     /// <summary>地图加载完成或切换失败恢复后，立即重新绑定脚下地块效果。</summary>
@@ -265,7 +258,10 @@ public class TileEffectReceiver : Module
         if (item == null)
             return false;
 
+        isPreparedForWorldTransition = false;
         Vector2Int gridPos = GetCurrentGridPos();
+        RefreshLiquidContact(gridPos, 0f);
+        if (LiquidFloating) return true;
         if (IsActiveSourceCurrent(gridPos))
         {
             lastGridPos = gridPos;
@@ -294,6 +290,7 @@ public class TileEffectReceiver : Module
         waterOxygen?.SetWaterExposure(true);
 
         naturalImmersion = Mathf.Clamp01(naturalImmersion);
+        SetLiquidFloating(!groundCallback && naturalImmersion > WaterEnvironmentRules.SwimmingDepthThreshold && HasSwimStamina());
         if (!continuedAcrossWaterTiles)
         {
             currentWaterImmersion = HasSwimStamina()
@@ -327,6 +324,7 @@ public class TileEffectReceiver : Module
                 targetImmersion = Mathf.Min(naturalImmersion, floatingImmersionLevel);
         }
 
+        SetLiquidFloating(!groundCallback && naturalImmersion > WaterEnvironmentRules.SwimmingDepthThreshold && HasSwimStamina());
         currentWaterImmersion = Mathf.MoveTowards(
             currentWaterImmersion,
             targetImmersion,
@@ -345,6 +343,7 @@ public class TileEffectReceiver : Module
         lastWaterExitWasActive = waterSurvivalActive;
         lastWaterExitFrame = Time.frameCount;
         waterSurvivalActive = false;
+        SetLiquidFloating(false);
         drowningDamageTickTimer = 0f;
         waterOxygen?.SetWaterExposure(false);
     }
@@ -504,31 +503,16 @@ public class TileEffectReceiver : Module
 
     #region 查询与缓存
 
-    private bool TryResolveTileEffect(Vector2Int gridPos, out TileEffectResolution resolution)
+    protected virtual bool TryResolveTileEffect(Vector2Int gridPos, out TileEffectResolution resolution)
     {
-        if (TryResolveTileEffectAtPosition(transform.position, gridPos, out TileEffectResolution exactResolution))
-        {
-            if (exactResolution.TileData is TileData_Water ||
-                !TryResolveNearbyWater(gridPos, out resolution))
-            {
-                resolution = exactResolution;
-            }
-
-            return true;
-        }
-
-        if (TryResolveNearbyWater(gridPos, out resolution))
-            return true;
-
-        resolution = default;
-        return false;
+        return TryResolveTileEffectAtPosition(transform.position, gridPos, out resolution);
     }
 
     /// <summary>按指定世界采样点查询新版运行时地形或旧 Map 地块行为。</summary>
     private bool TryResolveTileEffectAtPosition(Vector2 samplePosition, Vector2Int gridPos,
         out TileEffectResolution resolution)
     {
-        ChunkMgr manager = ChunkMgr.Instance;
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
         if (manager != null && manager.TryGetRuntimeTileEffect(samplePosition,
                 out RuntimeTerrainTileSample sample, out TileData runtimeData,
                 out RuntimeTileDefinition runtimeBlock))
@@ -539,9 +523,9 @@ public class TileEffectReceiver : Module
         }
 
         TileData legacyData = Cache_map?.GetTile(gridPos);
-        if (legacyData != null && GameRes.Instance != null)
+        if (legacyData != null && GameRes.ExistingInstance != null)
         {
-            RuntimeTileDefinition legacyBlock = GameRes.Instance.GetTileBlock(legacyData.Name);
+            RuntimeTileDefinition legacyBlock = GameRes.ExistingInstance.GetTileBlock(legacyData.Name);
             if (legacyBlock != null)
             {
                 resolution = new TileEffectResolution(legacyBlock, legacyData, Cache_map, null, 0);
@@ -550,37 +534,6 @@ public class TileEffectReceiver : Module
         }
 
         resolution = default;
-        return false;
-    }
-
-    /// <summary>
-    /// 查找角色当前陆地格四邻域内的水格。
-    /// 直接与水相邻的整格都视为岸边，角色无需把中心点挤到格子边缘才能俯身饮水。
-    /// </summary>
-    private bool TryResolveNearbyWater(Vector2Int gridPos, out TileEffectResolution resolution)
-    {
-        resolution = default;
-        for (int i = 0; i < WaterEdgeDirections.Length; i++)
-        {
-            Vector2Int neighborGridPos = gridPos + WaterEdgeDirections[i];
-            Vector2 samplePosition = new Vector2(neighborGridPos.x + 0.5f, neighborGridPos.y + 0.5f);
-            if (!TryResolveTileEffectAtPosition(samplePosition, neighborGridPos,
-                    out TileEffectResolution candidate) ||
-                !(candidate.TileData is TileData_Water))
-            {
-                continue;
-            }
-
-            resolution = new TileEffectResolution(
-                candidate.TileBlock,
-                candidate.TileData,
-                candidate.Map,
-                candidate.RuntimeTerrain,
-                candidate.RuntimeTileId,
-                true);
-            return true;
-        }
-
         return false;
     }
 
@@ -640,7 +593,7 @@ public class TileEffectReceiver : Module
 
     private void UpdateLegacyMapReference()
     {
-        ChunkMgr manager = ChunkMgr.Instance;
+        ChunkMgr manager = ChunkMgr.ExistingInstance;
         if (manager == null ||
             manager.TryGetRuntimeTerrainTile(transform.position, out _))
             return;
@@ -673,7 +626,7 @@ public class TileEffectReceiver : Module
             : null;
     }
 
-    private readonly struct TileEffectResolution
+    protected readonly struct TileEffectResolution
     {
         public TileEffectResolution(RuntimeTileDefinition tileBlock, TileData tileData, Map map,
             ChunkTerrainData runtimeTerrain, int runtimeTileId, bool edgeInteractionOnly = false)

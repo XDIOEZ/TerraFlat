@@ -97,7 +97,7 @@ public static class TileDefinitionFactory
         template.TileTag ??= string.Empty;
         if (template is TileData_Water water)
         {
-            if (water.deepValue < 0 || water.deepValue > 1 || water.salt < 0)
+            if (water.LiquidDepth < 0 || water.LiquidDepth > 1 || water.salt < 0)
                 throw new InvalidDataException($"地块 {id} 的水深必须在 0~1，盐度不能为负数。");
             ValidateId(water.liquidId, id + ".liquidId");
         }

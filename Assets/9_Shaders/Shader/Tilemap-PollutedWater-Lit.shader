@@ -4,8 +4,8 @@ Shader "FlatWorld/2D/Tilemap Polluted Water Lit"
     {
         [PerRendererData] _MainTex("水面贴图", 2D) = "white" {}
         _MaskTex("灯光遮罩", 2D) = "white" {}
-        [PerRendererData] _WaterDepthTexture("水深场", 2D) = "black" {}
-        [HideInInspector] _WaterDepthUvScaleOffset("水深纹理坐标", Vector) = (1,1,0,0)
+        [PerRendererData] _LiquidDepthTexture("水深场", 2D) = "black" {}
+        [HideInInspector] _LiquidDepthUvScaleOffset("水深纹理坐标", Vector) = (1,1,0,0)
 
         [Header(Polluted Water Surface)]
         _DeepColor("深水颜色", Color) = (0.005, 0.025, 0.012, 1)

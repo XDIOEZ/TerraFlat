@@ -58,7 +58,7 @@ public sealed partial class WorldNavigationManager
             {
                 Penalty = registered && sourceCell.Walkable ? sourceCell.Penalty : 0u,
                 Water = (byte)(registered && sourceCell.Water ? 1 : 0),
-                WaterDepth = registered && sourceCell.Water ? sourceCell.WaterDepth : 0f
+                LiquidDepth = registered && sourceCell.Water ? sourceCell.LiquidDepth : 0f
             };
             return registered;
         }

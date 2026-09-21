@@ -145,7 +145,7 @@ internal sealed partial class DroppedItemRuntime : IDisposable
             {
                 Id = data.Guid, Amount = data.Stack.Amount, Position = domain.Normalize(record.Position),
                 Scale = record.Scale, Rotation = record.Rotation, VisualHeight = record.VisualHeight,
-                WaterDepth = record.WaterDepth, WaterKind = record.WaterKind, Pickable = 0,
+                LiquidDepth = record.LiquidDepth, WaterKind = record.WaterKind, Pickable = 0,
                 SubmergedProgress = record.WaterKind == 2 && record.HasWaterTransition
                     ? Mathf.Clamp01((record.WaterElapsed - record.WaterDuration) / WorldItemWaterRules.SubmergedRecedeDuration) : 0f
             };

@@ -13,6 +13,8 @@ namespace FlatWorld.WorldModel
         private readonly TerrainCell[] terrainCells;
         private readonly Dictionary<string, float[]> environmentLayers;
         private readonly byte[] grass;
+        private readonly float[] liquidDepth;
+        private readonly string[] liquidIds;
         private readonly IReadOnlyDictionary<int, int[]> extendedTileStacks;
         private readonly IReadOnlyDictionary<Int2, int> occupancy;
         private readonly NaturalItemPlacement[] ecologyPlacements;
@@ -21,7 +23,7 @@ namespace FlatWorld.WorldModel
             TerrainCell[] terrainCells, Dictionary<string, float[]> environmentLayers,
             byte[] grass, IReadOnlyDictionary<int, int[]> extendedTileStacks,
             IReadOnlyDictionary<Int2, int> occupancy,
-            NaturalItemPlacement[] ecologyPlacements, ulong stableHash)
+            NaturalItemPlacement[] ecologyPlacements, float[] liquidDepth, string[] liquidIds, ulong stableHash)
         {
             Address = address;
             Width = width;
@@ -32,6 +34,8 @@ namespace FlatWorld.WorldModel
             this.extendedTileStacks = extendedTileStacks ?? new Dictionary<int, int[]>();
             this.occupancy = occupancy ?? new Dictionary<Int2, int>();
             this.ecologyPlacements = ecologyPlacements ?? Array.Empty<NaturalItemPlacement>();
+            this.liquidDepth = liquidDepth;
+            this.liquidIds = liquidIds;
             StableHash = stableHash;
         }
 
@@ -43,10 +47,13 @@ namespace FlatWorld.WorldModel
         public int Height { get; }
         /// <summary>所有地形格子的副本；二维地图被按行排成了一个长列表。</summary>
         public IReadOnlyList<TerrainCell> TerrainCells => terrainCells;
-        /// <summary>温度、降水、高度等环境数据的副本。</summary>
+        /// <summary>温度、降水等环境数据的副本；不保存生成临时高度。</summary>
         public IReadOnlyDictionary<string, float[]> EnvironmentLayers => environmentLayers;
         /// <summary>每个格子的草地数据。</summary>
         public IReadOnlyList<byte> Grass => grass;
+        /// <summary>液深和稳定身份的副本；快照不能暴露临时液体编号。</summary>
+        public IReadOnlyList<float> LiquidDepth => liquidDepth;
+        public IReadOnlyList<string> LiquidIds => liquidIds;
         /// <summary>一个格子里地块层数很多时，这里保存完整的上下叠放顺序。</summary>
         public IReadOnlyDictionary<int, int[]> ExtendedTileStacks => extendedTileStacks;
         /// <summary>哪些格子被哪些物品占用的副本。</summary>
@@ -69,13 +76,15 @@ namespace FlatWorld.WorldModel
             var occupied = new Dictionary<Int2, int>();
             foreach (KeyValuePair<Int2, int> pair in chunk.Occupancy.Owners)
                 occupied.Add(pair.Key, pair.Value);
+            var ids = new string[terrain.CellCount];
+            for (int i = 0; i < ids.Length; i++) ids[i] = terrain.LiquidTypes.GetId(terrain.LiquidTypeIndex[i]);
             return new ChunkRuntimeSnapshot(chunk.Address, terrain.Width, terrain.Height,
                 terrain.CopyCells(), layers, terrain.CopyGrass(), terrain.CopyExtendedTileStacks(),
                 occupied,
                 chunk.Ecology?.Placements == null
                     ? Array.Empty<NaturalItemPlacement>()
                     : new List<NaturalItemPlacement>(chunk.Ecology.Placements).ToArray(),
-                terrain.ComputeStableHash());
+                terrain.LiquidDepth.ToArray(), ids, terrain.ComputeStableHash());
         }
     }
 

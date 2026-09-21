@@ -118,12 +118,12 @@ internal sealed partial class DroppedItemRuntime
         }
         WatchTerrain(id, sample);
         bool changed = body.Pickable == 0;
-        bool isWater = (sample.Cell.Flags & TerrainCellFlags.Water) != 0;
+        bool isWater = sample.LiquidDepth > 0f;
         if (!isWater)
         {
             if (body.WaterKind != 0)
             {
-                body.WaterKind = 0; body.WaterDepth = 0f; body.SubmergedProgress = 0f;
+                body.WaterKind = 0; body.LiquidDepth = 0f; body.SubmergedProgress = 0f;
                 wetItems.Remove(id); simulation.SetWater(id, null);
                 changed = true;
             }
@@ -145,9 +145,9 @@ internal sealed partial class DroppedItemRuntime
         if (entering || body.WaterKind != kind)
         {
             changed = true;
-            float start = entering ? (kind == 1 ? Mathf.Max(FloatingEntryDepth, target) : 0f) : body.WaterDepth;
+            float start = entering ? (kind == 1 ? Mathf.Max(FloatingEntryDepth, target) : 0f) : body.LiquidDepth;
             float duration = kind == 1 ? FloatingRiseDuration : ResolveSinkDuration(ratio);
-            body.WaterKind = kind; body.WaterDepth = start; body.SubmergedProgress = 0f;
+            body.WaterKind = kind; body.LiquidDepth = start; body.SubmergedProgress = 0f;
             simulation.SetWater(id, new DroppedWaterTransition
             { StartDepth = start, TargetDepth = target, Duration = duration,
                 RecedeDuration = kind == 2 ? SubmergedRecedeDuration : 0f });

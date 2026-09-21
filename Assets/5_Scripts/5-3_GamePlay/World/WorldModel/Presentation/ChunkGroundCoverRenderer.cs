@@ -106,7 +106,7 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IChunkViewRenderer
     private void HandleTerrainChanged(ChunkTerrainChanged changed)
     {
         if (changed.Kind == TerrainChangeKind.Cell || changed.Kind == TerrainChangeKind.TileStack ||
-            changed.Kind == TerrainChangeKind.Environment)
+            changed.Kind == TerrainChangeKind.Environment || changed.Kind == TerrainChangeKind.Liquid)
             RefreshCell(new Vector3Int(changed.LocalCell.X, changed.LocalCell.Y, 0));
     }
 

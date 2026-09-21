@@ -75,7 +75,8 @@ public static class GroundCoverSystem
         if (terrain == null || terrain.IsDisposed || (uint)x >= (uint)terrain.Width || (uint)y >= (uint)terrain.Height)
             return false;
         TerrainCell cell = terrain.GetCell(x, y);
-        return (cell.Flags & (TerrainCellFlags.Water | TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0 &&
+        return terrain.GetLiquidDepth(x, y) <= 0f &&
+            (cell.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0 &&
             cell.BlockingTileId == 0 && !FarmlandSystem.IsFarmland(cell) &&
             TerrainSupportLayer.GetTileId(terrain, x, y) == 0;
     }

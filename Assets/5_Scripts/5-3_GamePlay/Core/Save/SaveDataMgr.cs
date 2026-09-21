@@ -17,7 +17,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 18; // 独立机械整网载荷追加在外层，旧核心对象布局不变。
+    private const int CompactSaveVersion = 19; // Chunk 末尾追加独立液体稀疏差量，旧成员顺序保持不变。
     private const int ModdedSaveVersion = 10;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
@@ -1211,13 +1211,22 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             if ((uint)x >= (uint)terrain.Width || (uint)y >= (uint)terrain.Height)
                 continue;
 
-            terrain.SetCell(x, y, cell.ToTerrainCell());
+            TerrainCell restored = cell.ToTerrainCell();
+            if (restored.GroundTileId == 2 || restored.GroundTileId == 6)
+            {
+                // 旧水地块差量只恢复其它层；底部地块沿用刚生成的真实河床/海底。
+                TerrainCell generated = terrain.GetCell(x, y);
+                restored = new TerrainCell(generated.GroundTileId, restored.BackTileId, restored.BlockingTileId,
+                    restored.BiomeId, generated.NavigationCost, restored.Flags);
+            }
+            terrain.SetCell(x, y, restored);
 
             float accumulatedDamage = cell.BlockingTileId == 0
                 ? 0f
                 : Mathf.Max(0f, cell.AccumulatedDamage);
             WriteRuntimeBuildingDamage(terrain, x, y, accumulatedDamage);
         }
+        MigrateLegacyLiquidCells(chunk.Terrain, delta);
         RestoreAgricultureTerrain(chunk, delta);
         foreach (GrassCellSaveDelta grass in delta.GrassDeltas)
         {
@@ -1228,6 +1237,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         }
         RestoreSupportTerrain(chunk, delta);
         RestoreContaminationTerrain(chunk, delta);
+        RestoreLiquidTerrain(chunk, delta);
     }
 
     /// <summary>放置、受损或拆除运行时格子建筑后立即更新内存差量，避免区块回收时丢失状态。</summary>
@@ -1359,7 +1369,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         delta.RuntimeTileDeltas ??= new List<RuntimeTileCellSaveDelta>();
         delta.RuntimeTileDeltas.RemoveAll(cell => cell.LocalPosition == localPosition);
-        if (!currentCell.Equals(baselineCell) ||
+        if (!GroundCellsEqual(currentCell, baselineCell) ||
             !Mathf.Approximately(accumulatedDamage, baselineAccumulatedDamage))
         {
             delta.RuntimeTileDeltas.Add(RuntimeTileCellSaveDelta.Capture(
@@ -1392,7 +1402,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             {
                 TerrainCell currentCell = terrain.GetCell(x, y);
                 float currentAccumulatedDamage = ReadRuntimeBuildingDamage(terrain, x, y);
-                if (currentCell.Equals(baseline.GetCell(x, y)) &&
+                if (GroundCellsEqual(currentCell, baseline.GetCell(x, y)) &&
                     Mathf.Approximately(
                         currentAccumulatedDamage,
                         baseline.GetAccumulatedDamage(x, y)))
@@ -1416,6 +1426,13 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         delta.RuntimeTileDeltas = changes;
         chunkDeltas[key] = delta;
     }
+
+    /// <summary>Water 兼容位不是地块修改，液体差量不能重复进入 Ground 存档。</summary>
+    private static bool GroundCellsEqual(TerrainCell left, TerrainCell right) =>
+        left.GroundTileId == right.GroundTileId && left.BackTileId == right.BackTileId &&
+        left.BlockingTileId == right.BlockingTileId && left.BiomeId == right.BiomeId &&
+        left.NavigationCost == right.NavigationCost &&
+        (left.Flags & ~TerrainCellFlags.Water) == (right.Flags & ~TerrainCellFlags.Water);
 
     /// <summary>读取新版区块中一格建筑已累计的损伤；缺少专用环境层时视为未受损。</summary>
     private static float ReadRuntimeBuildingDamage(ChunkTerrainData terrain, int x, int y)
@@ -2724,6 +2741,7 @@ public partial class ChunkSaveRecord
     public List<SupportCellSaveData> SupportCells = new(); // 独立支撑面
     public List<AgricultureCellSaveData> AgricultureCells = new(); // 独立农业状态
     public List<ContaminationCellSaveData> ContaminationCells = new(); // 独立污染状态
+    public List<LiquidCellSaveData> LiquidCells = new(); // 只保存玩家改变的液体格，字段追加保持旧成员顺序。
 
     [MemoryPackIgnore]
     public bool HasChanges =>
@@ -2734,7 +2752,8 @@ public partial class ChunkSaveRecord
          (RuntimeTileDeltas?.Count ?? 0) > 0 ||
          (AgricultureCells?.Count ?? 0) > 0 ||
          (SupportCells?.Count ?? 0) > 0 ||
-         (ContaminationCells?.Count ?? 0) > 0);
+         (ContaminationCells?.Count ?? 0) > 0 ||
+         (LiquidCells?.Count ?? 0) > 0);
 }
 
 [MemoryPackable]

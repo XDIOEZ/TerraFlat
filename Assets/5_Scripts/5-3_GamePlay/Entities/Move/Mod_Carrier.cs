@@ -300,7 +300,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
         if (!CanReceivePush(source)) return CurrentVelocity;
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         bool inWater = manager != null && manager.TryGetRuntimeTerrainTile(source.rb.position, out RuntimeTerrainTileSample tile) &&
-                       (tile.Cell.Flags & TerrainCellFlags.Water) != 0;
+                       tile.LiquidDepth > 0f;
         PushSource = source;
         pushedVelocity = WorldMotionSystem.CalculatePushVelocity(velocity, inWater, LandPushSpeedMultiplier);
         pushValidUntil = Time.time + Mathf.Max(0.1f, deltaTime * 2f);
@@ -402,7 +402,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
     {
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         if (manager != null && manager.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample tile) &&
-            (tile.Cell.Flags & TerrainCellFlags.Water) != 0)
+            tile.LiquidDepth > 0f)
             return MaxSpeed;
         return MaxSpeed * LandSpeedMultiplier;
     }
@@ -421,7 +421,7 @@ public sealed class Mod_Carrier : Module, ICarrierMotionSource, IWorldPushTarget
     {
         ChunkMgr manager = ChunkMgr.ExistingInstance;
         if (manager == null || !manager.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample tile)) return false;
-        bool water = (tile.Cell.Flags & TerrainCellFlags.Water) != 0;
+        bool water = tile.LiquidDepth > 0f;
         return tile.Cell.BlockingTileId == 0 && tile.Cell.BackTileId == 0 && tile.TopTileId != 0 &&
             (tile.Cell.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) == 0 &&
             !BuildingOccupancyRegistry.IsOccupied(tile.WorldCell, building) &&

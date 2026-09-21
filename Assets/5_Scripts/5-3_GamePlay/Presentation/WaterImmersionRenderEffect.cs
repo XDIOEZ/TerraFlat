@@ -35,7 +35,7 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
     [Range(0f, 1f)]
     [SerializeField] private float immersionBaseOffset = 0.3f;
 
-    [Tooltip("将水格 deepValue 映射到角色身体高度；最高值保留头部区域。")]
+    [Tooltip("将水格 LiquidDepth 映射到角色身体高度；最高值保留头部区域。")]
     [SerializeField] private AnimationCurve depthToSurface = new AnimationCurve(
         new Keyframe(0f, 0f),
         new Keyframe(0.2f, 0.12f),
@@ -142,7 +142,7 @@ public sealed class WaterImmersionRenderEffect : ActorRenderEffectModule
 
     #region Public API
 
-    /// <summary>设置水体目标状态；进入水格时传入 deepValue，离开水格时传入 false。</summary>
+    /// <summary>设置水体目标状态；进入水格时传入 LiquidDepth，离开水格时传入 false。</summary>
     public void SetWaterState(float depth, bool inWater)
     {
         useDirectImmersion = false;

@@ -24,8 +24,8 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 
 - 本 Skill 负责地图内容规则；WorldModel 负责 Chunk 生命周期、并发、租约和表现绑定。
 - Tile 栈只通过 API 修改；静态 Blocking Tile 与动态建筑占地不要混用。
-- 真正填水改地形时，地表身份、Water 标记与通行成本应同步变化；水上平台不属于填水，使用独立 `TerrainSupportLayer` 和有效地表查询，原始水格、水深等保持不变。不能只盖图片或把平台存成永久陆地。
-- 可被容器提取的世界液体由 TileData 实现 `IWorldLiquidSourceData` 并保存稳定 `LiquidId`；`TileData_Water.Clone()` 必须保留该 ID，玩法通过 `ChunkMgr.TryGetRuntimeTileEffect` 的权威 WorldCell 解析来源，不依赖水体 Collider。当前 Tile 水源没有有限份数层时保持无限源，不因取液删除或改写水格。
+- Ground 永远保存真实底部地块，海洋、河流、湖泊、地下水的初始液体在生成阶段另外写入 `ChunkTerrainData`。修改地面不会自动改液体；抽水只走 `WorldLiquidSystem.TryPump/TrySet`，禁止抽水时生成底部或修改 Ground。平台通过 `TerrainSupportLayer` 遮断表面接触，底部液体仍保留。
+- 世界液体来源统一由 `WorldLiquidSourceResolver` 读取权威 Liquid 层的深度与稳定 `LiquidId`，再解析 `LiquidDefinition`；不能按 Ground Tile、盐度或 Collider 猜身份。容器份数与世界液深是不同单位，不能未经规则换算直接互相扣减。旧 `TileData_Water` 只保留 MemoryPack Union 与旧 MOD 类型入口，不是运行时水格真源。
 - 河流生成把真实下游单位方向保存到 `riverFlowX/riverFlowY` 环境层；运行时水流玩法统一通过 `ChunkMgr.TryGetRuntimeWaterCurrent` 读取，禁止在物品、角色等消费方重复按邻格高度猜河道方向。海洋暂无独立洋流层时由该接口使用现有风场近似表层漂移，湖泊保持静止。
 - 生成保持固定种子、稳定 BiomeId/顺序和统一噪声、气候、水文规则。
 - 修改算法时考虑生成签名、旧存档、联机指纹和 Wrapped 坐标。
@@ -39,14 +39,16 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 
 - 自然植物恢复资格由 `INaturalRenewalPolicy` 记录到生态存档的 `RenewalYears`；只有生成成功才清除移除标记和补位计划。玩家种植不参加自然补位，建筑、耕地及平台所在格不补野生植物。
 
+- 旧 `Tile_Water_Fresh/Tile_Water_Salt` 资源与配置已退休，原数字编号 2/6 不得重新分配。`Map.Liquids` 仅适配旧生成预览，正式世界修改和差量存档始终通过 ChunkRuntime。
+
 ## 验证
 
 - `WorldTopologyDomain` 是 `Shared/WorldTopology/FlatWorld.WorldTopology.asmdef` 中的纯数学坐标真源；Bounds 只负责配置/类型封装，Runtime 仍读取 SaveDataMgr，只允许主线程使用。禁止在 Map 或数学核心直接创建 Wrapped Physics Proxy。
 - Tilemap 镜像由独立 `WrappedTilemapPhysicsAdapter` 消费表现生命周期：旧 Map 发布 `TilemapPresentationChanged`，新版 ChunkView 经 `ChunkCollisionRenderer` 的绑定/失效通知接入。不得假定地图一定由 ItemMgr.InstantiateItem 创建；重新加载开始、失败、停用、重新启用和增量编辑都须同步失效。
 - Item 的严格接缝带与 Tilemap 的包含边界触边是两种调用语义，共用 Domain 的无分配镜像偏移查询，但不能合并阈值。旧 Map 的镜像 `TilemapDamageReceiver` 必须绑定真实 Map 与镜像 Tilemap，不能用源 Tilemap 坐标代替；新版 WorldModel 继续通过权威格子查询结算伤害。
 
-- 默认检查静态诊断、Unity 编译和 Console。
-- 仅用户明确要求时运行 `Map.*` 分类；涉及纯生成或持久化时追加对应 `WorldModel.*` 分类。
+- 功能验收以实际游戏操作和可观察结果为准；不以冒烟、自动化测试或静态检查代替实际验收。
+- 世界生成与持久化改动实际覆盖新建世界、抽干露底、区块往返和保存重进；保留用户当前试玩时，不自动停止游戏或排队运行测试。
 
 ## Skill 维护原则
 

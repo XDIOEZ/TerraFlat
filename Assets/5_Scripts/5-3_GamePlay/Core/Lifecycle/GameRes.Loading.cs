@@ -307,6 +307,7 @@ public partial class GameRes
         BuffDefinitions.Clear();
         ContaminationDefinitions.Clear();
         LiquidDefinitions.Clear();
+        LiquidTypes = null;
         AnimalSkillCatalogService.Reset();
         QuestCatalog.Reset();
         textLibraryService = TextLibraryService.Empty;

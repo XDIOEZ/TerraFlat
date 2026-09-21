@@ -1376,6 +1376,11 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 750d6e3853fe84b4bb2233569ea0618d
+    m_Address: Assets/6_Art/Tilemap/Winter.png
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 7559be8c1187b03488b747c429c8c897
     m_Address: Assets/9_Shaders/Material/Bush-Sway-Lit.mat
     m_ReadOnly: 0
@@ -1519,6 +1524,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8395331aa0b773b49bfe31f6dea8699a
+    m_Address: Assets/6_Art/Tilemap/Grass.png
+    m_ReadOnly: 0
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 847aec62604c1c746973939ad5f38c1c
     m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_Wall_Copper.asset
@@ -2247,6 +2257,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: c4a8f6d21b7e4c8095d3a1f6e2b7c4d9
+    m_Address: Assets/9_Shaders/Material/Tilemap-Water-Lit.mat
+    m_ReadOnly: 0
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: c56368145ed98b84da8f176212fb6b75
     m_Address: Assets/2_Prefabs/2-1_UI/Settings/Components/UI_InputBindingRow.prefab

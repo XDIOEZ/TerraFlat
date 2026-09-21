@@ -23,9 +23,9 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - `ChunkRuntime + ChunkTerrainData` 是权威状态；Tilemap、Collider 和 Renderer 只是表现。
 - 墙体裂缝等耐久表现必须从 `ChunkTerrainData` 的 `flatworld.tileBuilding.damage` 权威层推导；`IChunkViewRenderer.Bind` 时重建、监听 `TerrainChangeKind.Environment/Cell/TileStack` 增量刷新、`Unbind` 时解除订阅，禁止在表现组件中保存第二份生命值。
 - 墙脚、岸线等依赖邻接关系的表现除监听自身 `ChunkTerrainData.Changed` 外，还必须监听正交相邻区块的共享边界变化；`ChunkCommitted` 只表示邻区就绪，不能覆盖后续拆除或放置造成的运行时更新。
-- Ground / Water / Back / Blocking 的基础视觉统一由 `ChunkBatchRendererGroupService` 跨 Chunk 批量绘制；`ChunkTilemapRenderer` 保留历史类名用于 Prefab 兼容，但职责已变为 BRG 提交器。Blocking Tilemap 只维护 `TilemapCollider2D` 所需碰撞格，禁止重新开启其 TilemapRenderer 作为第二份视觉。
+- Ground / Liquid / Back / Blocking 的基础视觉统一由 `ChunkBatchRendererGroupService` 跨 Chunk 批量绘制；`ChunkTilemapRenderer` 保留历史类名用于 Prefab 兼容，但职责已变为 BRG 提交器。Blocking Tilemap 只维护 `TilemapCollider2D` 所需碰撞格，禁止重新开启其 TilemapRenderer 作为第二份视觉。
 - BRG 没有 `SpriteRenderer/TilemapRenderer` 的 Sorting Layer 字段，不能指望较低的 Render Queue 跨 Sorting Layer 压到 `Tilemap` 层下面；当前地形 BRG 使用 Default 排序域和 2987~2992 队列。草等需要盖在地形之上、普通世界 Sprite 之下的表现必须与 BRG 共用 Default 排序域，并使用高于 2992、低于 3000 的透明队列。
-- 地形 Sprite 几何只经资源会话级 `SharedSpriteMeshCache` 构造，最终 Tile/MOD 目录和 Palette 在 Ready 前预热，动态 Sprite 保留懒加载兜底。普通流送与 `ReleaseUnusedBackend` 不清 Mesh；`BatchMeshID` 仅存当前 Backend，退出世界销毁 BRG 后再次进入必须重新注册共享 Mesh。缓存清理先通知 BRG 解绑再销毁 Mesh，禁止反向依赖 Batch 内部实现。
+- 地形 Sprite 几何只经资源会话级 `SharedSpriteMeshCache` 构造，最终 Tile/MOD/Liquid 目录和 Palette 在 Ready 前预热，动态 Sprite 保留懒加载兜底。普通流送与 `ReleaseUnusedBackend` 不清 Mesh；`BatchMeshID` 仅存当前 Backend，退出世界销毁 BRG 后再次进入必须重新注册共享 Mesh。缓存清理先通知 BRG 解绑再销毁 Mesh，禁止反向依赖 Batch 内部实现。
 - Chunk BRG 自定义 Shader 的全部数值/向量/颜色材质属性必须统一声明在 `UnityPerMaterial` CBUFFER，且同一 Shader 的所有活跃 Pass 保持一致布局；不要 `UsePass` 借用另一个材质布局不同的 Shader Pass，否则 BatchRendererGroup 会因 SRP Batcher 不兼容而拒绝绘制。
 - BRG 自定义 AoS 数据寻址必须在 `UNITY_SETUP_INSTANCE_ID` 后使用 `GetDOTSInstanceIndex()` 取得可见列表映射后的真实实例索引；`unity_InstanceID` 只是单次 draw 的局部序号，大批次被 Unity 拆分后会重复从零计数。误用会出现“数据、Owner 和实例数量均正常，但视野扩大后地面永久缺块”，不能靠增加加载距离或重建 Owner 修复。
 - BRG 地形实例按脏格增量上传；岸线与墙脚方向放入实例数据，连续水深使用每水格四个格角深度在 Shader 内双线性插值。边界数据依赖八方向邻区，正交邻区变化刷新共享边、对角邻区变化刷新共享角，不得退回整 Chunk `SetTilesBlock` 或每 Chunk 水深纹理重建。
@@ -60,7 +60,10 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - 循环坐标统一使用独立 `FlatWorld.WorldTopology` 程序集中的 `WorldTopologyDomain` 值副本；该程序集仅引用 Unity.Mathematics、noEngineReferences=true。`ChunkGenerationTopologySnapshot` 的整数归一化和连续洞穴坐标均委托 Domain，不再自行定义 Wrap；连续曲线保留 double 精度及显式的半周期符号策略，不影响普通坐标 API 默认半周期取负方向的契约。
 - Jobs/Burst 只能接收主线程冻结的 Domain，不能调用仍读取 SaveDataMgr 的 `WorldTopologyRuntime`。创建、保存或运算 Domain 不得注册 GameObject 生命周期或创建物理镜像；ChunkView 的可选物理表现只经 Bind/Unbind 与 Terrain.Changed 通知协调。
 
-- 默认检查静态诊断、Unity 编译和 Console。
+- 验收统一进入真实 Play Mode，实际移动跨区块、触发生成/流送/逐出并观察权威状态与表现；编译与 Console 只作为运行门禁和故障定位。
+
+- Liquid 独立持有池化的 `LiquidDepth[]/LiquidTypeIndex[]`，Seal 移交唯一所有权、取消或逐出时归还；编号来自资源会话冻结的 `LiquidTypeCatalog`，稳定哈希与持久化使用 LiquidId，不能使用会话编号。`height` 仅供生成和生态筛选，在 Seal 时释放；运行时不得再反算液深。
+- `TerrainChangeKind.Liquid` 必须驱动当前格、八方向邻区的岸线/四角液深和导航刷新。`TerrainCell.Flags.Water` 仅为兼容投影，纯液体变化不得重复保存成 Ground 差量。
 
 ## Skill 维护原则
 

@@ -12,7 +12,14 @@ namespace FlatWorld.WorldModel
     public sealed class DeterministicChunkGenerator : IChunkPureGenerator
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 37;
+        public const int CurrentGenerationSignature = 38;
+
+        private readonly LiquidTypeCatalog liquidTypes;
+        /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
+        public DeterministicChunkGenerator(LiquidTypeCatalog liquidTypes = null)
+        {
+            this.liquidTypes = liquidTypes ?? LiquidTypeCatalog.BuiltIn;
+        }
 
         private readonly LegacyHydrologyKernel legacyHydrologyKernel = new();
         private readonly ConcurrentDictionary<HeightDrivenRegionKey, Lazy<GeneratedHydrologyMap>>
@@ -38,7 +45,7 @@ namespace FlatWorld.WorldModel
         {
             ChunkGenerationProfileSnapshot profile = request.Profile;
             ChunkGenerationSettingsSnapshot settings = profile.Settings;
-            var terrain = new ChunkTerrainBuffer(profile.Width, profile.Height);
+            var terrain = new ChunkTerrainBuffer(profile.Width, profile.Height, liquidTypes);
             try
             {
                 // 设置说是洞穴就生成洞穴；旧配置没有这个设置时，名字里有 cave 也当作洞穴。
@@ -185,8 +192,7 @@ namespace FlatWorld.WorldModel
                         continue;
                     }
 
-                    TerrainCell cell = terrain.GetCell(localX, localY);
-                    if ((cell.Flags & TerrainCellFlags.Water) != 0 ||
+                    if (terrain.GetLiquidDepth(localX, localY) > 0f ||
                         !terrain.IsWalkable(localX, localY))
                     {
                         continue;
@@ -377,9 +383,9 @@ namespace FlatWorld.WorldModel
             if (biome == SurfaceBiomeKind.Ocean)
             {
                 biomeId = (int)biome;
-                groundTileId = settings.SaltWaterTileId;
+                groundTileId = settings.SeabedTileId;
                 flags = TerrainCellFlags.Water | TerrainCellFlags.Walkable;
-                navigationCost = settings.WaterNavigationCost;
+                // 液体导航代价由消费层单独叠加，底部 Ground 保留陆地成本。
             }
             else if (biome == SurfaceBiomeKind.River)
             {
@@ -395,10 +401,10 @@ namespace FlatWorld.WorldModel
                 }
                 else
                 {
-                    groundTileId = settings.FreshWaterTileId;
+                    groundTileId = settings.RiverbedTileId;
                     // 水域只是高代价地形：有陆路时 A* 优先绕行，唯一通路是水面时仍可通过。
                     flags = TerrainCellFlags.Water | TerrainCellFlags.Walkable;
-                    navigationCost = settings.WaterNavigationCost;
+                    // 液体导航代价由消费层单独叠加，底部 Ground 保留陆地成本。
                 }
             }
             else if (biome == SurfaceBiomeKind.Stone)
@@ -454,10 +460,16 @@ namespace FlatWorld.WorldModel
                 flags = TerrainCellFlags.Walkable;
             }
 
-            // 核心格子保存游戏马上要用的结果；高度、温度等详细数值另外保存，供画面和其他系统读取。
+            // 地面与液体独立写入；height 只供生成期间生态筛选，在 Seal 时释放，运行时直接读取液深。
             terrain.SetCell(x, y, new TerrainCell(groundTileId, 0, 0, biomeId,
                 navigationCost, flags));
             terrain.SetEnvironmentValue("height", x, y, (float)height);
+            float initialLiquidDepth = ocean
+                ? (float)(1d - Math.Pow(Clamp01(height / Math.Max(0.0001d, settings.SeaLevel)), 2d))
+                : river && !frozenRiver ? (float)riverCell.Depth : 0f;
+            terrain.SetLiquid(x, y, initialLiquidDepth > 0f
+                ? terrain.LiquidTypes.GetIndex(ocean ? LiquidTypeCatalog.SeaWaterId : LiquidTypeCatalog.DirtyWaterId) : 0,
+                initialLiquidDepth);
             terrain.SetEnvironmentValue("temperature", x, y, (float)temperature);
             terrain.SetEnvironmentValue("temperature.celsius", x, y,
                 (float)temperatureCelsius);
@@ -467,7 +479,6 @@ namespace FlatWorld.WorldModel
             terrain.SetEnvironmentValue("windY", x, y, (float)windY);
             terrain.SetEnvironmentValue("moisture", x, y, (float)moisture);
             terrain.SetEnvironmentValue("mountain", x, y, mountain ? 1f : 0f);
-            terrain.SetEnvironmentValue("riverDepth", x, y, river ? (float)riverCell.Depth : 0f);
             terrain.SetEnvironmentValue("riverFlow", x, y, river ? (float)riverCell.Flow : 0f);
             terrain.SetEnvironmentValue("riverFlowX", x, y,
                 river ? (float)riverCell.FlowDirectionX : 0f);
@@ -1656,14 +1667,14 @@ namespace FlatWorld.WorldModel
             CaveRiverSample caveRiver = open
                 ? CaveLayoutKernel.SampleRiver(request, settings, worldX, worldY)
                 : default;
-            double groundwaterDepth = open
-                ? CaveLayoutKernel.SampleGroundwaterDepth(
+            double groundliquidDepth = open
+                ? CaveLayoutKernel.SampleGroundliquidDepth(
                     request, settings, worldX, worldY, surfaceInfluence)
                 : 0d;
-            bool groundwater = groundwaterDepth > 0d;
+            bool groundwater = groundliquidDepth > 0d;
             bool river = caveRiver.IsRiver;
-            double waterDepth = Math.Max(groundwaterDepth, caveRiver.Depth);
-            bool water = waterDepth > 0d;
+            double liquidDepth = Math.Max(groundliquidDepth, caveRiver.Depth);
+            bool water = liquidDepth > 0d;
             bool dirtWall = open && !water && CaveLayoutKernel.ShouldPlaceDirtWall(
                 request, settings, worldX, worldY);
             TerrainCellFlags flags = !open || dirtWall
@@ -1671,23 +1682,22 @@ namespace FlatWorld.WorldModel
                 : water
                     ? TerrainCellFlags.Water | TerrainCellFlags.Walkable
                     : TerrainCellFlags.Walkable;
-            int groundTileId = water ? settings.FreshWaterTileId : settings.CaveFloorTileId;
+            int groundTileId = settings.CaveFloorTileId;
             int blockingTileId = !open
                 ? settings.CaveWallTileId
                 : dirtWall ? settings.CaveDirtWallTileId : 0;
             short navigationCost = !open || dirtWall
                 ? short.MaxValue
-                : water ? settings.WaterNavigationCost : settings.DefaultNavigationCost;
+                : settings.DefaultNavigationCost;
             terrain.SetCell(x, y, new TerrainCell(groundTileId, 0,
                 blockingTileId, 100,
                 navigationCost, flags));
-            terrain.SetEnvironmentValue("height", x, y,
-                water ? (float)(1d - waterDepth) : open ? 1f : 0f);
+            terrain.SetLiquid(x, y, water ? terrain.LiquidTypes.GetIndex(LiquidTypeCatalog.DirtyWaterId) : 0,
+                (float)liquidDepth);
             terrain.SetEnvironmentValue("temperature", x, y, 0.38f);
             terrain.SetEnvironmentValue("temperature.celsius", x, y, 8f);
             terrain.SetEnvironmentValue("precipitation", x, y, 0f);
             terrain.SetEnvironmentValue("moisture", x, y, water ? 1f : dirtWall ? 0.72f : 0.3f);
-            terrain.SetEnvironmentValue("riverDepth", x, y, (float)waterDepth);
             terrain.SetEnvironmentValue("riverFlow", x, y, river ? (float)caveRiver.Flow : 0f);
             terrain.SetEnvironmentValue("riverFlowX", x, y, river ? (float)caveRiver.FlowX : 0f);
             terrain.SetEnvironmentValue("riverFlowY", x, y, river ? (float)caveRiver.FlowY : 0f);

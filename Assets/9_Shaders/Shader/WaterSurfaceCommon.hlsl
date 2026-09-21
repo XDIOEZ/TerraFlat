@@ -9,8 +9,8 @@ TEXTURE2D(_MainTex);
 SAMPLER(sampler_MainTex);
 TEXTURE2D(_MaskTex);
 SAMPLER(sampler_MaskTex);
-TEXTURE2D(_WaterDepthTexture);
-SAMPLER(sampler_WaterDepthTexture);
+TEXTURE2D(_LiquidDepthTexture);
+SAMPLER(sampler_LiquidDepthTexture);
 
 #if !defined(FLATWORLD_WATER_MATERIAL_CBUFFER_DEFINED)
     half4 _Color;
@@ -59,7 +59,7 @@ SAMPLER(sampler_WaterDepthTexture);
 float _GlobalGameDay;
 float4 _OceanWaveFactors; // 速度、浪高、白沫由权威风力派生
 float _OceanWaveTime; // 与潮汐独立的连续积分时钟
-float4 _WaterDepthUvScaleOffset;
+float4 _LiquidDepthUvScaleOffset;
 half _GlobalMoonlightIntensity;
 half _GlobalMoonAppearance;
 
@@ -108,7 +108,7 @@ float WaterNoise(float2 position)
 /// <summary>汇总海面各层光学信息，供水色、反光、焦散与白沫统一混合。</summary>
 struct WaterSurfaceData
 {
-    half waterDepth;
+    half liquidDepth;
     half depthBlend;
     half ripple;
     half rippleShadow;
@@ -126,9 +126,9 @@ half4 DecodeWaterShoreMask(half4 encodedData)
 }
 
 /// <summary>把连续水深离散为 0.1~1.0 共十个视觉档位；真实水深数据本身保持不变。</summary>
-half QuantizeWaterVisualDepth(half waterDepth)
+half QuantizeWaterVisualDepth(half liquidDepth)
 {
-    half depth = saturate(waterDepth);
+    half depth = saturate(liquidDepth);
     if (depth <= 0.0001h)
         return 0.0h;
 
@@ -137,16 +137,16 @@ half QuantizeWaterVisualDepth(half waterDepth)
 }
 
 /// <summary>通过显式世界坐标映射采样 Chunk 水深，再按十分位生成十档水面表现。</summary>
-half SampleWaterDepth(float2 positionWS)
+half SampleLiquidDepth(float2 positionWS)
 {
-    float2 depthUV = positionWS * _WaterDepthUvScaleOffset.xy
-        + _WaterDepthUvScaleOffset.zw;
-    half sampledDepth = SAMPLE_TEXTURE2D(_WaterDepthTexture, sampler_WaterDepthTexture, depthUV).r;
+    float2 depthUV = positionWS * _LiquidDepthUvScaleOffset.xy
+        + _LiquidDepthUvScaleOffset.zw;
+    half sampledDepth = SAMPLE_TEXTURE2D(_LiquidDepthTexture, sampler_LiquidDepthTexture, depthUV).r;
     return QuantizeWaterVisualDepth(sampledDepth);
 }
 
 /// <summary>BRG 水格使用四个格角深度直接双线性插值，避免每个 Chunk 保留独立深度纹理。</summary>
-half SampleWaterDepthCorners(float2 positionWS, half4 cornerDepths)
+half SampleLiquidDepthCorners(float2 positionWS, half4 cornerDepths)
 {
     float2 cellUV = frac(positionWS + 0.0001);
     half bottom = lerp(cornerDepths.r, cornerDepths.g, cellUV.x);

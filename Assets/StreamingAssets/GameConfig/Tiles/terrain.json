@@ -27,35 +27,6 @@
       "behaviours": [ { "type": "grass", "parameters": { "buffInfo": [] } } ]
     },
     {
-      "id": "Tile_Water_Fresh",
-      "runtimeTileId": 2,
-      "displayName": "Tile_Water_Fresh",
-      "tileAsset": "Tile_Water_Fresh",
-      "data": {
-        "type": "water",
-        "parameters": {
-          "tileTag": "", "demolitionTime": 0, "penalty": 20000, "isWalkable": true,
-          "deepValue": 0, "salt": 0, "liquidId": "core:dirty_water"
-        }
-      },
-      "behaviours": [
-        {
-          "type": "water",
-          "parameters": {
-            "buffInfo": [ "潮湿" ],
-            "drinkHoldSeconds": 1,
-            "drinkTickSeconds": 1,
-            "waterGainPerTick": 12.5,
-            "saltWaterGainPerTick": 10,
-            "shallowMoveSpeedMultiplier": 0.5,
-            "moveSpeedMultiplier": 0.2,
-            "entryTemperatureFloor": 10,
-            "entryTemperatureTransitionSeconds": 5
-          }
-        }
-      ]
-    },
-    {
       "id": "Tile_Sand",
       "runtimeTileId": 3,
       "displayName": "Tile_Sand",
@@ -87,35 +58,6 @@
         "parameters": { "tileTag": "", "demolitionTime": 0, "penalty": 1000, "isWalkable": true }
       },
       "behaviours": [ { "type": "snow", "parameters": { "moveSpeedMultiplier": 0.9, "footprintLifetime": 60 } } ]
-    },
-    {
-      "id": "Tile_Water_Salt",
-      "runtimeTileId": 6,
-      "displayName": "Tile_Water_Salt",
-      "tileAsset": "Tile_Water_Salt",
-      "data": {
-        "type": "water",
-        "parameters": {
-          "tileTag": "", "demolitionTime": 0, "penalty": 20000, "isWalkable": true,
-          "deepValue": 0.5, "salt": 80, "liquidId": "core:sea_water"
-        }
-      },
-      "behaviours": [
-        {
-          "type": "water",
-          "parameters": {
-            "buffInfo": [ "潮湿" ],
-            "drinkHoldSeconds": 1,
-            "drinkTickSeconds": 1,
-            "waterGainPerTick": 12.5,
-            "saltWaterGainPerTick": 10,
-            "shallowMoveSpeedMultiplier": 0.5,
-            "moveSpeedMultiplier": 0.2,
-            "entryTemperatureFloor": 10,
-            "entryTemperatureTransitionSeconds": 5
-          }
-        }
-      ]
     },
     {
       "id": "Tile_Ice",

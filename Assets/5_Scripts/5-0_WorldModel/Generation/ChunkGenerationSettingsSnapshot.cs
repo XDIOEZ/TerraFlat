@@ -170,9 +170,9 @@ namespace FlatWorld.WorldModel
             Mode = GetText(texts, "terrain.mode", "surface").Equals("cave",
                 StringComparison.OrdinalIgnoreCase) ? ChunkGenerationMode.Cave : ChunkGenerationMode.Surface;
             GroundTileId = GetInt(numbers, "terrain.groundTileId", 1);
-            FreshWaterTileId = GetInt(numbers, "terrain.waterTileId", 2);
-            SaltWaterTileId = GetInt(numbers, "terrain.saltWaterTileId", FreshWaterTileId);
             SandTileId = GetInt(numbers, "terrain.sandTileId", GroundTileId);
+            SeabedTileId = GetInt(numbers, "terrain.seabedTileId", SandTileId);
+            RiverbedTileId = GetInt(numbers, "terrain.riverbedTileId", SandTileId);
             StoneTileId = GetInt(numbers, "terrain.stoneTileId", GroundTileId);
             SnowTileId = GetInt(numbers, "terrain.snowTileId", GroundTileId);
             IceTileId = GetInt(numbers, "terrain.iceTileId", SnowTileId);
@@ -460,17 +460,15 @@ namespace FlatWorld.WorldModel
                 Mode == ChunkGenerationMode.Cave ? "surface" : "cave");
             DefaultNavigationCost = (short)Clamp(GetInt(numbers,
                 "navigation.defaultCost", 1), 1, short.MaxValue);
-            WaterNavigationCost = (short)Clamp(GetInt(numbers,
-                "navigation.waterCost", 20000), DefaultNavigationCost, short.MaxValue);
         }
 
         /// <summary>生成地表还是洞穴。</summary>
         public ChunkGenerationMode Mode { get; }
         // 下面这些都是地块的数字编号，不直接保存 Unity 里的 Tile 图片资源。
         public int GroundTileId { get; }
-        public int FreshWaterTileId { get; }
-        public int SaltWaterTileId { get; }
         public int SandTileId { get; }
+        public int SeabedTileId { get; }
+        public int RiverbedTileId { get; }
         public int StoneTileId { get; }
         public int SnowTileId { get; }
         public int IceTileId { get; }
@@ -687,7 +685,6 @@ namespace FlatWorld.WorldModel
         /// <summary>普通地面默认有多难走；数字越大，寻路越不喜欢走。</summary>
         public short DefaultNavigationCost { get; }
         /// <summary>水域的有限寻路代价；高于陆地，但所有水格仍参与带权寻路。</summary>
-        public short WaterNavigationCost { get; }
 
         /// <summary>把气候通道的基础温度换算成受海拔影响的实际温度。</summary>
         public double ApplyAltitudeTemperatureCooling(double height, double baseTemperature)

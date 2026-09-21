@@ -4,8 +4,8 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
     {
         [PerRendererData] _MainTex("水面贴图", 2D) = "white" {}
         _MaskTex("灯光遮罩", 2D) = "white" {}
-        [PerRendererData] _WaterDepthTexture("水深场", 2D) = "black" {}
-        [HideInInspector] _WaterDepthUvScaleOffset("水深纹理坐标", Vector) = (1,1,0,0)
+        [PerRendererData] _LiquidDepthTexture("水深场", 2D) = "black" {}
+        [HideInInspector] _LiquidDepthUvScaleOffset("水深纹理坐标", Vector) = (1,1,0,0)
 
         [Header(Ocean Surface)]
         _DeepColor("深海颜色", Color) = (0.035, 0.13, 0.19, 1)
@@ -155,11 +155,11 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= _Color * _RendererColor;
                 half4 shoreMask = DecodeWaterShoreMask(input.waterTileData);
-                half waterDepth = SampleWaterDepth(input.positionWS);
+                half liquidDepth = SampleLiquidDepth(input.positionWS);
                 WaterSurfaceData waterSurface = CalculateWaterSurface(
                     input.positionWS,
                     input.lightingUV,
-                    waterDepth);
+                    liquidDepth);
                 main.rgb = ApplyWaterSurface(main.rgb, waterSurface);
                 half recess = ComputeShoreRecess(input.positionWS, shoreMask);
                 main.rgb = ApplyShore(main.rgb, recess, input.positionWS);
@@ -227,11 +227,11 @@ Shader "FlatWorld/2D/Tilemap Water Lit"
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 main *= _Color * _RendererColor;
                 half4 shoreMask = DecodeWaterShoreMask(input.waterTileData);
-                half waterDepth = SampleWaterDepth(input.positionWS);
+                half liquidDepth = SampleLiquidDepth(input.positionWS);
                 WaterSurfaceData waterSurface = CalculateWaterSurface(
                     input.positionWS,
                     input.screenUV,
-                    waterDepth);
+                    liquidDepth);
                 main.rgb = ApplyWaterSurface(main.rgb, waterSurface);
                 half recess = ComputeShoreRecess(input.positionWS, shoreMask);
                 main.rgb = ApplyShore(main.rgb, recess, input.positionWS);

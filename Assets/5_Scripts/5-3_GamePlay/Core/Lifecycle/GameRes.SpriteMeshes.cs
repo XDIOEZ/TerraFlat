@@ -13,6 +13,8 @@ public partial class GameRes
     {
         const int meshesPerFrame = 32;
         var sprites = new HashSet<Sprite>();
+        foreach (LiquidDefinition definition in LiquidDefinitions.Values)
+            if (definition.WorldWater?.Sprite != null) sprites.Add(definition.WorldWater.Sprite);
         // 本体、JSON 引用与 MOD 动态登记都以合并后的运行时目录为准。
         foreach (TileBase tile in tileBaseDict.Values) CollectTerrainSprite(tile, sprites);
         foreach (RuntimeTileDefinition definition in TileBlockDict.Values)

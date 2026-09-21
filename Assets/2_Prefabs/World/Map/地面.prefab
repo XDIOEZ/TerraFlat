@@ -247,10 +247,10 @@ MonoBehaviour:
   - tile: {fileID: 11400000, guid: 2ccdd18f6c4787c43a001bbaa64407ab, type: 2}
     overrideArea: 0
     area: 0
-  - tile: {fileID: 11400000, guid: 57d25a3fd2bb6fb4e822c2992f71ab13, type: 2}
+  - tile: {fileID: 11400000, guid: 25706c96a4c97da4ea78a1295d5bfc75, type: 2}
     overrideArea: 0
     area: 0
-  - tile: {fileID: 11400000, guid: 17927379171a0244184e81b4a99c4c43, type: 2}
+  - tile: {fileID: 11400000, guid: 25706c96a4c97da4ea78a1295d5bfc75, type: 2}
     overrideArea: 0
     area: 0
 --- !u!50 &2373972238810705706

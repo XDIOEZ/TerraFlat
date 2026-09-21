@@ -11,35 +11,18 @@ public interface IWorldLiquidSourceData
 }
 
 /// <summary>
-/// 水体地块数据；海洋水深由高度层统一换算，河流仍使用水文系统提供的独立深度。
-/// 海平面内的归一化高度采用平方曲线，使近岸到深海的高低差更明显。
+/// 旧存档和 MOD 的液体接触快照，字段顺序保持原 MemoryPack 布局。
+/// 新版权威深度只来自 ChunkTerrainData，此类型不拥有世界液体状态。
 /// </summary>
 [System.Serializable]
 [MemoryPackable]
 public partial class TileData_Water : TileData, IWorldLiquidSourceData
 {
-    private const float SeaLevel = 0.5f;
-
-    public float deepValue = 0f;
+    public float LiquidDepth = 0f;
     public float salt = 0;
     public string liquidId = string.Empty; // 当前地块实际可提取的稳定液体 ID。
     [MemoryPackIgnore]
     public string LiquidId => liquidId;
-    public override void Initialize_Env(EnvironmentLayers layers, int x, int y)
-    {
-        if (layers == null || !layers.Contains(x, y))
-            return;
-
-        deepValue = CalculateDepthFromHeight(layers.Height[x, y]);
-    }
-
-    /// <summary>将海平面内的高度平方后反算水深，保持岸线位置并扩大海底深度差。</summary>
-    public static float CalculateDepthFromHeight(float height)
-    {
-        float normalizedHeight = Mathf.Clamp01(height / SeaLevel);
-        return 1f - normalizedHeight * normalizedHeight;
-    }
-
     /// <summary>
     /// 重写ToString方法，返回水地块的详细信息（中文格式）
     /// </summary>
@@ -54,7 +37,7 @@ public partial class TileData_Water : TileData, IWorldLiquidSourceData
 
         return $"TileData_Water {{\n" +
                $"  {parentInfo},\n" +  // 继承父类的中文信息
-               $"  水深基础值: {deepValue:F2}\n" +  // 水深值保留2位小数
+               $"  水深基础值: {LiquidDepth:F2}\n" +  // 水深值保留2位小数
                "}";
     }
 
@@ -70,7 +53,7 @@ public partial class TileData_Water : TileData, IWorldLiquidSourceData
             workTime = this.workTime,
             Penalty = this.Penalty,
             IsWalkable = this.IsWalkable,
-            deepValue = this.deepValue,
+            LiquidDepth = this.LiquidDepth,
             salt = this.salt,
             liquidId = this.liquidId
         };

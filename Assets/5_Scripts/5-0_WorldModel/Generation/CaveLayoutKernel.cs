@@ -244,17 +244,17 @@ namespace FlatWorld.WorldModel
         /// 在达到地表最低降水阈值的洞室内部采样确定性的地下湖水深；出生区、天然出口及其连接通道始终保持干燥。
         /// 以世界区域而非区块坐标选湖，保证湖面跨 Chunk 连续且不受加载顺序影响。
         /// </summary>
-        public static double SampleGroundwaterDepth(ChunkGenerationRequest request,
+        public static double SampleGroundliquidDepth(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY)
         {
             CaveSurfaceInfluenceSample surfaceInfluence =
                 SampleSurfaceInfluence(request, worldX, worldY);
-            return SampleGroundwaterDepth(
+            return SampleGroundliquidDepth(
                 request, settings, worldX, worldY, surfaceInfluence);
         }
 
         /// <summary>使用已采样地表高度与最终降水阈值决定地下湖是否形成，不再执行随机成湖判定。</summary>
-        internal static double SampleGroundwaterDepth(ChunkGenerationRequest request,
+        internal static double SampleGroundliquidDepth(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
             CaveSurfaceInfluenceSample surfaceInfluence)
         {
@@ -360,7 +360,7 @@ namespace FlatWorld.WorldModel
             }
 
             if (SampleRiver(request, settings, worldX, worldY).IsRiver ||
-                SampleGroundwaterDepth(request, settings, worldX, worldY) > 0d)
+                SampleGroundliquidDepth(request, settings, worldX, worldY) > 0d)
             {
                 return false;
             }
@@ -375,7 +375,7 @@ namespace FlatWorld.WorldModel
                 int neighbourX = worldX + neighbours[index].X;
                 int neighbourY = worldY + neighbours[index].Y;
                 if (SampleRiver(request, settings, neighbourX, neighbourY).IsRiver ||
-                    SampleGroundwaterDepth(request, settings, neighbourX, neighbourY) > 0d)
+                    SampleGroundliquidDepth(request, settings, neighbourX, neighbourY) > 0d)
                 {
                     nearWater = true;
                     break;
@@ -483,7 +483,7 @@ namespace FlatWorld.WorldModel
             if (!settings.CaveVineEnabled || settings.CaveVineWallChance <= 0d ||
                 !IsWallEdge(request, settings, worldX, worldY) ||
                 IsInsideDefaultSpawnSafeArea(request, settings, worldX, worldY) ||
-                SampleGroundwaterDepth(request, settings, worldX, worldY) > 0d)
+                SampleGroundliquidDepth(request, settings, worldX, worldY) > 0d)
                 return false;
 
             Point point = new(worldX + 0.5d, worldY + 0.5d);
@@ -496,7 +496,7 @@ namespace FlatWorld.WorldModel
             {
                 if (offsetX * offsetX + offsetY * offsetY > 4)
                     continue;
-                if (SampleGroundwaterDepth(request, settings, worldX + offsetX,
+                if (SampleGroundliquidDepth(request, settings, worldX + offsetX,
                         worldY + offsetY) > 0d)
                 {
                     nearWater = true;

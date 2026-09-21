@@ -1016,6 +1016,14 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
 
         foreach ((PendingLiquidDefinition pending, LiquidDefinition definition) in built)
         {
+            WorldLiquidSettings worldWater = definition.WorldWater;
+            if (worldWater != null)
+            {
+                if (!string.IsNullOrWhiteSpace(worldWater.SpriteBundle))
+                    worldWater.Sprite = LoadBundleAsset<Sprite>(pending.Package, worldWater.SpriteBundle, worldWater.SpriteAsset, definition.Id);
+                if (!string.IsNullOrWhiteSpace(worldWater.MaterialBundle))
+                    worldWater.Material = LoadBundleAsset<Material>(pending.Package, worldWater.MaterialBundle, worldWater.MaterialAsset, definition.Id);
+            }
             gameRes.RegisterLiquidDefinition(definition);
             registeredLiquidIds.Add(definition.Id);
             definitionInfos[definition.Id] = new ModDefinitionInfo

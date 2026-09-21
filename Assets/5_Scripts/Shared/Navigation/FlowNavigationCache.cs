@@ -198,12 +198,12 @@ namespace FlatWorld.Navigation
                     if (loaded) registered++;
                     int cost = loaded && data.Penalty > 0 ? FlowNavigationMath.TerrainCost(data.Penalty) : -1;
                     byte water = loaded && data.Penalty > 0 ? data.Water : (byte)0;
-                    float waterDepth = water != 0 ? math.saturate(data.WaterDepth) : 0f;
+                    float liquidDepth = water != 0 ? math.saturate(data.LiquidDepth) : 0f;
                     contentChanged |= chunk.Cells[cell] != cost || chunk.Water[cell] != water ||
-                                      !chunk.WaterDepth[cell].Equals(waterDepth);
+                                      !chunk.LiquidDepth[cell].Equals(liquidDepth);
                     chunk.Cells[cell] = cost;
                     chunk.Water[cell] = water;
-                    chunk.WaterDepth[cell] = waterDepth;
+                    chunk.LiquidDepth[cell] = liquidDepth;
                 }
                 if (registered == 0)
                 {
@@ -318,7 +318,7 @@ namespace FlatWorld.Navigation
             internal readonly int2 Coordinate;
             internal readonly int[] Cells = new int[256];
             internal readonly byte[] Water = new byte[256];
-            internal readonly float[] WaterDepth = new float[256];
+            internal readonly float[] LiquidDepth = new float[256];
             internal readonly Dictionary<int, LocalField> Fields = new();
             internal List<FlowPortal> Portals = new();
             /// <summary>记录块坐标，权重将在读取源快照时填充。</summary>

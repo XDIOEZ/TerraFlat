@@ -31,9 +31,9 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - `selfShadows=true` 的 Blocking Tile 阴影体会通过 URP 2D 阴影模板影响任何与墙体占地区域重叠的 Lit Sprite，而不只影响墙体自身；火把等自发光物体应使用独立 Unlit/Emissive 覆盖层，可按玩法需要只覆盖发光区域或整个源 Sprite。覆盖层使用 Max 混合给发光体提供不被阴影压暗的颜色下限，同时保留原 Lit Sprite 更亮的受光结果；禁止为了让发光体不变黑而关闭墙体 `selfShadows`，否则会重新出现整块墙面被局部光照亮的问题。
 - 动态可交互建筑不属于 Tilemap，不能依赖 `ChunkLightOccluderRenderer`；落地 `PlacedBuilding` 应在主体 `SpriteRenderer` 节点启用 `ShadowCaster2D`，旧的碰撞体节点矩形 ShadowCaster 必须关闭。URP 14 的 `useRendererSilhouette` 只负责自阴影模板，投影网格仍来自 `m_ShapePath`，因此动态建筑必须把 Sprite 的 fallback physics shape 同步到 ShadowCaster 路径，并启用 `selfShadows`，保证建筑内部不被局部光照亮且外投影跟随贴图轮廓；手持/召唤器状态必须关闭。
 - 共用海水 `UsePass` 的包装 Shader 必须声明公共 Pass 新增的同名材质属性；月光等夜间自发光倒影应在 `CombinedShapeLightShared` 之后合成，避免全局夜间光照被重复相乘。月亮出现动画读取 `DayTimeSystem` 发布的 `_GlobalMoonAppearance`，尺寸/渐亮与 `_GlobalMoonlightIntensity` 的月相亮度分离，避免新月把月面永久缩小。
-- Water Tilemap 的 Tile Color RGBA 只编码左、右、下、上岸线方向；水深必须由每个 Chunk 独立的带一格邻区边框纹理提供，并在格子中心之间使用双线性采样，禁止再把连续水深与岸线位打包进同一颜色通道。包装 Shader 必须继续声明公共 Pass 使用的全部属性。
-- 水面视觉把双线性采样后的连续水深离散为 `0.1~1.0` 共十档，真实 `deepValue` 与水深纹理仍保持连续；两种正式水面风格的基础深浅色权重按十档等距变化，避免深水段相邻层级难以分辨。
-- Tilemap 合批后 `POSITION` 不保证是 Chunk 局部坐标；水深与岸线使用世界坐标，MPB 的 `_WaterDepthUvScaleOffset` 必须扣除水层原点再加入一格纹理边框。当前世界网格每格为 1 单位且原点对齐整数，不要用 `unity_WorldToObject` 恢复已被合批丢失的局部坐标。
+- 正式 Ground/Liquid 由 BRG 独立提交，液体外观来自 `LiquidDefinition.WorldWater`，禁止按 GroundTileId 查水面贴图。岸线以 LiquidDepth > 0 判断，深度用每格四角插值；任一边界格液深变化须更新八方向邻区的共享边/角，不能只监听 TerrainCell 改动。旧 Tilemap 的颜色仍只编码岸线，兼容深度纹理与 BRG 共用连续液深语义。
+- 水面视觉把双线性采样后的连续水深离散为 `0.1~1.0` 共十档，真实 `LiquidDepth` 与水深纹理仍保持连续；两种正式水面风格的基础深浅色权重按十档等距变化，避免深水段相邻层级难以分辨。
+- Tilemap 合批后 `POSITION` 不保证是 Chunk 局部坐标；水深与岸线使用世界坐标，MPB 的 `_LiquidDepthUvScaleOffset` 必须扣除水层原点再加入一格纹理边框。当前世界网格每格为 1 单位且原点对齐整数，不要用 `unity_WorldToObject` 恢复已被合批丢失的局部坐标。
 - 水面潮流使用 `DayTimeSystem` 发布的 `_GlobalGameDay` 驱动，并沿材质 `_FlowDirection` 轴按 `_TideCyclesPerDay` 往返；方向性水纹不要改回基于 `_Time` 的持续旋转，否则跳时、读档与游戏时间倍率会和潮汐表现脱节。
 - 写实水面的风浪传播与潮流平移必须分开：波相位随游戏时间连续推进，潮汐只平移水面坐标，避免潮流换向时整片海面停住；波面法线与太阳高光共用解析波斜率，缩小时通过屏幕导数衰减细浪并拓宽高光，不量化写实水面的世界坐标。风格化水面按其独立算法保留像素采样与浪纹。
 - 水体风格由 `WaterVisualSettings` 保存本地偏好，`ChunkView` 的 Water/CaveWater 均通过 `WaterVisualStyleBinding` 在激活和设置变化时替换共享材质，不重建地形、不改写水深 MPB。风格化材质显式启用 `FLATWORLD_WATER_STYLIZED` 本地关键字，两种正式材质都必须被 Prefab 引用，确保构建保留 Shader 变体；两种算法共用 `WaterSurfaceCommon.hlsl` 的水深、岸线与月光契约。
@@ -49,9 +49,9 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 角色水体效果覆盖会旋转的手持物等附属 Sprite 时，水面高度与波浪横轴必须使用角色统一的世界空间坐标；保留本地坐标模式只用于不旋转的旧材质兼容，避免水线随物品旋转成竖线。
 - `ActorWaterCommon.hlsl` 是旧 `Sprite-Lit-Master` 与 AIECS Lit 原型共用的角色水下公式；调整染色、透明或水线时保持两个调用方一致。AIECS 原型的顶点水参数只是视觉输入，不能代替 `TileEffectReceiver` 的真实地形、体力和氧气状态。
 - 手持物通过 `RegisterExternalRenderers` 接入角色渲染效果后，运行时再动态创建的子 `Renderer` 不会自动进入该次注册快照；这类临时表现必须在创建后再次注册自身节点，并在销毁前 `UnregisterExternalRenderers`，避免水体浸没、受击染色等 MPB 效果漏掉或控制器残留引用。
-- 角色/动物的水中生存由 `TileEffectReceiver` 统一结算，并直接以 `TileData_Water.deepValue` 作为自然淹没高度：水深不超过 0.3 时不进入漂浮维持且不消耗游泳体力；超过 0.3 且有体力时把玩法有效淹没维持在 0.3，体力耗尽后再向真实水深下沉，超过 0.7 才开始消耗氧气。角色水体遮罩与移动减速都使用玩法有效淹没高度：漂浮时保持 0.3，体力耗尽后随下沉进度升高；世界散落物由 `WorldItemWaterRuntime` 独立调用 `SetWaterState` 做浮沉深度映射，禁止改写权威 `TileData_Water.deepValue`。
-- `TileEffectReceiver` 的邻接水格容错只服务于水边交互；`Tile_Water` 必须根据 `IsActiveTileEdgeInteractionOnly` 阻断浸没视觉、脚底阴影、Buff 和移动速度效果，避免站在沙格边缘的角色被误判为入水。
-- `TileEffectReceiver` 在地块来源变化时会于同一帧依次调用旧地块 `OnExit` 和新地块 `OnEnter`；一次性入水效果必须由角色侧保存真实浸水状态，并合并连续水格之间的同帧切换，不能把每个水格都当成重新入水。
+- 角色/动物的水中生存由 `TileEffectReceiver` 读取独立 LiquidDepth；水深不超过 0.3 时不漂浮，超过 0.3 且有体力时把有效淹没维持在 0.3，体力耗尽后下沉。氧气安全线读取接收器配置（脚本默认 0.6），不得把视觉阈值当玩法阈值。水体遮罩和减速使用有效淹没，世界液深不被漂浮效果改写。
+- `TileEffectReceiver` 的邻接水格容错只服务于水边交互；`WorldLiquidBehaviour` 必须根据 `IsActiveTileEdgeInteractionOnly` 阻断浸没视觉、脚底阴影、Buff 和移动速度效果，避免站在沙格边缘的角色被误判为入水。
+- Liquid 接触独立于 Ground：同一液体内移动或静止抽水只刷新位置与深度，液体身份/边缘接触模式变化才 Exit/Enter。液体切换保留同帧下沉状态；LiquidFloating 只触发 Ground 边界回调，不清空液体效果。
 - 雪地脚印等带历史轨迹的地表表现不能在 Tile `OnExit` 时清空历史；跨相邻同类地块同样会先 Exit 再 Enter，应只停止新轨迹采样，让已有轨迹继续按自身寿命逐步淘汰。`SnowFootprintTrail` 当前由 `Tile_Snow` 运行时 `AddComponent`，默认表现资源不能只依赖 Prefab/Inspector 预先赋值，必须保证动态创建后也能解析到专用 Shader/材质配置。
 - `Assets/2_Prefabs/Gameplay/Modules/Rendering/Shadow.prefab` 是 URP `ShadowCaster2D` 投影组件，不是实体脚底贴图；实体可视阴影应复用 `ActorShadowManager` 的独立注册和水体显隐入口。
 - `Presentation/Effects/Runtime/` 受独立 `Effect.asmdef` 隔离，不能反向引用主 `GamePlay` 程序集中的 `VisualEffectManager`；需要名称池管理器的角色表现控制器应放在 `Presentation/` 主程序集，或先抽取无环依赖的公共契约。

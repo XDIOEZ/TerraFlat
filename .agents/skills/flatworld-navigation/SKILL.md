@@ -18,7 +18,7 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 ## 不变量
 
 - 权威链：Tile 栈顶可走性/权重 + 动态建筑占地 → 脏格/脏区 → 稀疏 `WorldNavigationGrid`。
-- 新运行时世界注册导航时读取 `ChunkRuntime.Terrain` 的 `TerrainCell`，不读取旧 `TileData` SO；海洋、河流与地下水都必须同时带 `Water | Walkable`，统一使用有限的高 `NavigationCost`，由带权寻路决定绕行而不是把水注册成障碍。
+- 新运行时世界注册导航读取有效 Ground 与独立 LiquidDepth。地块基础 NavigationCost 不随抽水改变，`WorldLiquidSystem.GetNavigationCost` 按当前液体定义合成有限高成本，抽干自动回到原地面成本；水仍可走，由带权寻路决定绕行。平台同时遮断液体接触与液体导航成本。
 - 短距离直视线快捷路径只能在中间格代价不高于起终点代价时使用；包含河流等高代价格时必须进入带权寻路，不能只检查可走性。
 - `WorldNavigationAgent` 接收路径后的路点跳过也必须沿用同一代价限制；只用几何 LOS 会把已经绕开的高代价地形重新拉直穿过。
 - `WorldNavigationGrid.SetCell` 的可走格代价发生变化时必须使旧路径失效，否则运行中的 AI 会继续执行按旧权重生成的路线。
@@ -33,7 +33,7 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 - Wrapped 世界的网格邻接使用规范化格与最短位移，旧 Agent 路点移动也使用 `ShortestDelta`；不能恢复“不跨接缝”的过期规则。Job 只用冻结的 `WorldTopologyDomain`，不能访问依赖存档的 `WorldTopologyRuntime`。
 
 - 水上平台的可走性和代价来自 `TerrainSupportLayer.GetSurfaceCell`；构建导航窗口和增量更新都读取有效支撑面，原始 `TerrainCell` 保留水格身份。平台变化须发布同一格的导航脏区。
-- ECS 共享 Flow 快照除最终通行代价外还携带“有效表面”的水体标记与水深，供批量移动减速和表现读取；水上平台必须保持非水表面。禁止让每只 ECS AI 反向查询 `ChunkMgr`/`Tile_Water`。Crowd Steering 不得把实体中心推入比主 Flow 小步更昂贵的地形；墙体/建筑净空仍按身体半径扫掠，但水等可走软地形的代价不能按身体半径判定，否则动物仅擦到岸边水格就会卡住。水本身仍保持可走且由高代价决定是否绕行。
+- ECS 共享 Flow 快照除最终通行代价外还携带“有效表面”的水体标记与 `LiquidDepth`，供批量移动减速和表现读取；水上平台必须保持非水表面。禁止让每只 ECS AI 反向查询 `ChunkMgr`/`Tile_Water`。Crowd Steering 不得把实体中心推入比主 Flow 小步更昂贵的地形；墙体/建筑净空仍按身体半径扫掠，但水等可走软地形的代价不能按身体半径判定，否则动物仅擦到岸边水格就会卡住。水本身仍保持可走且由高代价决定是否绕行。
 
 ## ECS 分层流场的边界
 

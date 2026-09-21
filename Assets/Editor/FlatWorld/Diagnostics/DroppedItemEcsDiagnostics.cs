@@ -96,7 +96,7 @@ public static class DroppedItemEcsDiagnostics
         simulation.Create(floating, water: new DroppedWaterTransition
             { StartDepth = 0.48f, TargetDepth = 0.2f, Duration = 0.8f });
         simulation.Step(0.8f, default, changes);
-        Check(Mathf.Abs(simulation.Get(10002).WaterDepth - 0.2f) < 0.001f &&
+        Check(Mathf.Abs(simulation.Get(10002).LiquidDepth - 0.2f) < 0.001f &&
             !simulation.TryGetWater(10002, out _) && changes.Any(change => change.Id == 10002 && change.Kind == 2),
             "漂浮水线到达目标后移除过渡组件");
         DroppedBody sinking = Body(10003, new float2(10f)); sinking.WaterKind = 2;
@@ -112,7 +112,7 @@ public static class DroppedItemEcsDiagnostics
             { StartDepth = 0f, TargetDepth = 0.4f, Duration = 1f });
         simulation.Step(0.5f, default, changes);
         Check(changes.Count == 2 && changes.Any(change => change.Id == 10004) &&
-            changes.Any(change => change.Id == 10005) && Mathf.Abs(simulation.Get(10005).WaterDepth - 0.2f) < 0.001f,
+            changes.Any(change => change.Id == 10005) && Mathf.Abs(simulation.Get(10005).LiquidDepth - 0.2f) < 0.001f,
             "抛掷与浮沉同帧执行时，固定变更缓冲分区不相互覆盖");
     }
 

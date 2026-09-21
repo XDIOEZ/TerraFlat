@@ -32,6 +32,8 @@ description: "Use when: 定位或修改 FlatWorld 的 MOD 扫描、manifest、�
 - xLua 托管程序集名固定为 `XLua.Runtime`，原生 P/Invoke 库名保持 `xlua`；调整托管名时必须同步程序集限定反射字符串与 `Gen/link.xml`，避免在不区分大小写的平台与 `xlua.dll` 冲突。
 - ModSetHash/存档记录或加入世界握手变化联动 Networking 与 Data；具体定义联动对应领域 Skill。
 
+- 液体可选 `worldWater` 扩展世界玩法和显示；Sprite/Material 每项选择 Addressables 地址或所属包的 bundle/asset 成对字段，不能混填。Bundle 资源由 MOD 会话持有，本体地址由 GameRes 资源会话持有，最终目录验证后再建立 LiquidTypeCatalog 和预热共享 Sprite Mesh。MOD 只保存稳定 LiquidId，通过 WorldLiquidSystem 修改世界液体，不保存或复用会话数字编号。
+
 ## 验证
 
 - 在隔离 MOD 目录覆盖合法、缺依赖、循环依赖、损坏配置、卸载清理与 Lua 生命周期。

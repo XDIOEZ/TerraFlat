@@ -406,7 +406,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
         var cell = boundChunk.Terrain.GetCell(placement.LocalX, placement.LocalY);
         Vector2Int world = new(boundChunk.Address.ChunkOrigin.X + placement.LocalX,
             boundChunk.Address.ChunkOrigin.Y + placement.LocalY);
-        return cell.BlockingTileId == 0 && cell.BackTileId == 0 && !FarmlandSystem.IsFarmland(cell) &&
+        return boundChunk.Terrain.GetLiquidDepth(placement.LocalX, placement.LocalY) <= 0f &&
+            cell.BlockingTileId == 0 && cell.BackTileId == 0 && !FarmlandSystem.IsFarmland(cell) &&
             TerrainSupportLayer.GetTileId(boundChunk.Terrain, placement.LocalX, placement.LocalY) == 0 &&
             !BuildingOccupancyRegistry.IsOccupied(world);
     }
@@ -423,7 +424,6 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
         CopyLayer(terrain, "temperature", layers.Temperature);
         CopyLayer(terrain, "temperature.celsius", layers.TemperatureCelsius);
         CopyLayer(terrain, "precipitation", layers.Precipitation);
-        CopyLayer(terrain, "height", layers.Height);
         for (int y = 0; y < terrain.Height; y++)
         for (int x = 0; x < terrain.Width; x++)
         {

@@ -78,7 +78,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - `IInventoryHeatTreatment` 处理输入槽里的状态型液体容器，普通熔炼复用 `CraftingRecipeMatcher` 和 `CraftingTransaction`。具体液体的转化温度、时间、结果液体或副产物由 `LiquidDefinition.HeatProcess` 声明；需要产出物品时必须先确保输出事务成功再消耗液体，处理进度属于容器而非炉体。
 - 通用液体容器由 `Mod_WaterVessel` 承载，但状态只保存稳定 `LiquidId + Amount + ProcessingSeconds`，其中 `Amount` 是可持久化的浮点“份数”，用于表达连续液体余量；液体语义统一来自 `GameRes.LiquidDefinitions`。容器通过显式 `Stackable=false` 禁止堆叠，不同液体不能自动混装，部分转移保持数量守恒。新增本体或 MOD 液体不得复制容器 Item 变体，应该注册新的 `LiquidDefinition` 并复用同一容器模块。
 - 液体容器的“饮水”按钮只按 `LiquidDefinition.Drinkable` 与剩余量决定是否可点，不得用当前补水收益或角色水分已满来阻止玩家主动饮用；`Mod_Food.DrinkWater` 即使实际补水量为 0 也要发布一次完整饮水结果。感染、脱水等饮用后果统一声明在 `LiquidDefinition.drinkEffects`，世界水源与容器都通过 `LiquidDrinkEffectProcessor` 结算，禁止在水地块或具体容器里按液体 ID 再写一套后果逻辑。
-- 世界液体来源通过地块的 `IWorldLiquidSourceData.LiquidId` 接入 `WorldLiquidSourceResolver`，再解析到同一 `LiquidDefinition` 目录；容器不得按水 Tile 名称或盐度自行猜液体 ID。准心高亮与实际装液必须复用同一个 WorldCell 解析入口，并通过容器 `AddLiquid` 等统一 API 提交状态。
+- 世界液体来源由 `WorldLiquidSourceResolver` 直接读取 Chunk 独立 Liquid 层，使用稳定 LiquidId 解析同一 LiquidDefinition；容器不得按水 Tile 名称或盐度猜身份。准心高亮与实际装液复用同一 WorldCell 入口；世界液深与容器份数不能隐式互换，世界抽水统一走 `WorldLiquidSystem.TryPump`。
 - 液体容器在背包/快捷栏中的图标同样由容器模块状态驱动：优先使用液体 `visualState` 对应的 `visual.spriteStates`，缺少专用状态时统一回退容器的 `filled` 状态，空容器使用 `empty`；禁止按水种类或容器 Item ID 写死 UI 分支。容器模块原地修改 `ModuleData` 后必须通过 `Inventory_Data.NotifyItemStateChanged` 通知真实所属库存；该入口必须同时发布槽位刷新与库存级 `Event_RefreshUI`，否则快捷栏等专用库存可能保留旧图标。
 - 快捷栏当前手持实例会把 `Item.OnUIRefresh` 绑定到 `Inventory_HotBar.RefreshUI`；手持物模块只修改内部状态而不替换 `ItemData` 引用时，除了通知真实所属库存，还必须发布 `Item.OnUIRefresh`，使当前快捷栏槽立即重画状态型图标，不能只刷新世界中的手持 Sprite。
 - `UI_WaterVessel` 的拖拽倾倒只消费现有 `Mod_WaterVessel.RemoveLiquidAmount`，不保存独立手势状态。绝对倾角定义当前姿态的最大保液量：直立 0°=100%，水平 90°=50%，倒扣 180°=0%，按浮点份数连续结算；实际余量只允许下降，扶正不能恢复已倒出的液体。空容器仍允许完整拖动和自动回正，只提供交互反馈、不产生液体扣减。手势必须按独立 `pointerId` 持有触点，并在不随罐体旋转的父级坐标系计算：外圈拖拽优先按绕罐体中心的极角变化解释，因此左右、上下、斜向及半圆轨迹均可倾倒；中心起手才退化为二维线性位移。方向契约固定为屏幕右侧手势产生负 Z（顺时针、朝右倒），屏幕左侧手势产生正 Z（逆时针、朝左倒），圆弧与线性回退必须一致。来回改变倾角只驱动 `WaterVesselLiquidGraphic` 的短时波动，真实流失量仍由容器状态决定；罐口外液流由独立 `WaterVesselPourGraphic` 读取本次真实移除量做表现，禁止用视觉帧反向扣减玩法数据。
@@ -97,6 +97,8 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 覆盖满包、回滚、普通合成多候选精确选择、Tag 全局分配、加热镜像/紧凑网格、快捷栏/手持同步、输入锁和作物存档往返。
 - UI 契约联动 UI Skill；Item 生命周期联动 Item Skill；配方/农业存档联动 Data Skill。
 - JSON 物品迁移时可以暂不填写 `visual` 图标；库存槽位的统一显示入口必须回退到 shell Prefab 的 `SpriteRenderer`，否则已有物品会在快捷栏中变成空槽。
+
+- 向现有世界液体倾倒时，液深修改由 `WorldLiquidSystem` 提交并记录独立差量；农业状态只能持有土壤水肥和作物，不得再把液深藏入农业环境层或重新反算 height。
 
 ## Skill 维护原则
 

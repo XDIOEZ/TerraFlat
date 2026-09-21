@@ -233,8 +233,8 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
                 WaterNoise(positionWS * 0.24) * 3.0)), 10.0);
             gentleWave *= 0.45 + 0.55 * WaterNoise(positionWS * 0.7 + float2(_Time.y * 0.03, 0.0));
             WaterSurfaceData surface = (WaterSurfaceData)0;
-            surface.waterDepth = saturate(depth);
-            surface.depthBlend = 1.0h - surface.waterDepth;
+            surface.liquidDepth = saturate(depth);
+            surface.depthBlend = 1.0h - surface.liquidDepth;
             surface.ripple = smoothstep(0.45, 0.8, pattern) * _RippleStrength * strength * 0.55;
             surface.ripple += gentleWave * max(_RippleStrength, 0.10) * lerp(0.35, 0.85, lake);
             surface.rippleShadow = smoothstep(0.5, 0.8, 1.0 - pattern)
@@ -327,8 +327,8 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
-                half waterDepth = SampleWaterDepthCorners(input.positionWS, input.depth);
-                WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.lightingUV, waterDepth);
+                half liquidDepth = SampleLiquidDepthCorners(input.positionWS, input.depth);
+                WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.lightingUV, liquidDepth);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
                 main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS);
@@ -376,8 +376,8 @@ Shader "FlatWorld/2D/Chunk BRG Water Lit"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
-                half waterDepth = SampleWaterDepthCorners(input.positionWS, input.depth);
-                WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.screenUV, waterDepth);
+                half liquidDepth = SampleLiquidDepthCorners(input.positionWS, input.depth);
+                WaterSurfaceData surface = CalculateChunkWaterSurface(input.positionWS, input.screenUV, liquidDepth);
                 main.rgb = ApplyWaterSurface(main.rgb, surface);
                 half recess = ComputeShoreRecess(input.positionWS, DecodeWaterShoreMask(input.shore));
                 main.rgb = ApplyChunkWaterShore(main.rgb, recess, input.positionWS);

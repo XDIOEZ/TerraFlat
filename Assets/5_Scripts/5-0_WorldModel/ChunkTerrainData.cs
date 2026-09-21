@@ -9,7 +9,7 @@ namespace FlatWorld.WorldModel
     /// 地形先写在这里。写完调用 Seal 后，里面的数据就交给正式地形对象，本草稿不能再使用。
     /// 大数组会重复利用，避免每生成一个区块都重新申请很多内存。
     /// </summary>
-    public sealed class ChunkTerrainBuffer : IDisposable
+    public sealed partial class ChunkTerrainBuffer : IDisposable
     {
         private TerrainCell[] _cells;
         private Dictionary<string, float[]> _environmentLayers;
@@ -17,7 +17,7 @@ namespace FlatWorld.WorldModel
         private byte[] _grass;
         private bool _sealed;
 
-        public ChunkTerrainBuffer(int width, int height)
+        public ChunkTerrainBuffer(int width, int height, LiquidTypeCatalog liquidTypes = null)
         {
             if (width <= 0)
                 throw new ArgumentOutOfRangeException(nameof(width));
@@ -27,6 +27,7 @@ namespace FlatWorld.WorldModel
             Width = width;
             Height = height;
             CellCount = checked(width * height);
+            liquid = new LiquidCellStorage(CellCount, liquidTypes);
             _cells = ArrayPool<TerrainCell>.Shared.Rent(CellCount);
             Array.Clear(_cells, 0, CellCount);
             _environmentLayers = new Dictionary<string, float[]>(StringComparer.Ordinal);
@@ -127,9 +128,16 @@ namespace FlatWorld.WorldModel
         public ChunkTerrainData Seal()
         {
             ThrowIfUnavailable();
+            // height 仅服务生成期生态筛选，正式区块不保留可由种子复算的高度数组。
+            if (_environmentLayers.TryGetValue("height", out float[] generationHeights))
+            {
+                _environmentLayers.Remove("height");
+                ArrayPool<float>.Shared.Return(generationHeights, true);
+            }
             _sealed = true;
             var result = new ChunkTerrainData(Width, Height, _cells, _environmentLayers, _grass,
-                _extendedTileStacks);
+                _extendedTileStacks, liquid);
+            liquid = null;
             _cells = null;
             _environmentLayers = null;
             _grass = null;
@@ -145,6 +153,8 @@ namespace FlatWorld.WorldModel
         {
             if (_sealed)
                 return;
+            liquid?.Dispose();
+            liquid = null;
 
             if (_cells != null)
             {
@@ -205,7 +215,7 @@ namespace FlatWorld.WorldModel
     /// 它保存格子、草地和温度等数据，也允许游戏过程中改动单个格子。
     /// 数据真的变化时会把版本号加 1，并通知画面、寻路等系统及时刷新。
     /// </summary>
-    public sealed class ChunkTerrainData : IDisposable
+    public sealed partial class ChunkTerrainData : IDisposable
     {
         // 草层状态：0 表示尚未初始化，1 表示无草，2 表示有草。
         public const byte GrassEmpty = 1;
@@ -219,12 +229,13 @@ namespace FlatWorld.WorldModel
 
         internal ChunkTerrainData(int width, int height, TerrainCell[] cells,
             Dictionary<string, float[]> environmentLayers, byte[] grass = null,
-            Dictionary<int, int[]> extendedTileStacks = null)
+            Dictionary<int, int[]> extendedTileStacks = null, LiquidCellStorage liquid = null)
         {
             Width = width;
             Height = height;
             CellCount = checked(width * height);
             _cells = cells ?? throw new ArgumentNullException(nameof(cells));
+            this.liquid = liquid ?? new LiquidCellStorage(CellCount, LiquidTypeCatalog.BuiltIn);
             _environmentLayers = environmentLayers ??
                 new Dictionary<string, float[]>(StringComparer.Ordinal);
             _extendedTileStacks = extendedTileStacks ?? new Dictionary<int, int[]>();
@@ -243,7 +254,7 @@ namespace FlatWorld.WorldModel
         public bool IsDisposed => _cells == null;
         /// <summary>生成完成后又被修改了多少次；刚生成时是 0。</summary>
         public long Revision => _revision;
-        /// <summary>这里目前保存了哪些环境数据，例如 height 或 temperature。</summary>
+        /// <summary>这里目前保存了哪些环境数据，例如 temperature 或 riverFlow。</summary>
         public IEnumerable<string> EnvironmentLayerIds =>
             _environmentLayers == null
                 ? (IEnumerable<string>)Array.Empty<string>()
@@ -264,6 +275,8 @@ namespace FlatWorld.WorldModel
         {
             ThrowIfDisposed();
             int index = GetIndex(x, y);
+            value = new TerrainCell(value.GroundTileId, value.BackTileId, value.BlockingTileId, value.BiomeId,
+                value.NavigationCost, liquid.Depth[index] > 0f ? value.Flags | TerrainCellFlags.Water : value.Flags & ~TerrainCellFlags.Water);
             if (_cells[index].Equals(value))
                 return;
             _cells[index] = value;
@@ -565,6 +578,10 @@ namespace FlatWorld.WorldModel
                 Hash(ref hash, cell.NavigationCost, prime);
                 Hash(ref hash, (byte)cell.Flags, prime);
                 Hash(ref hash, _grass[i], prime);
+                Hash(ref hash, BitConverter.SingleToInt32Bits(liquid.Depth[i]), prime);
+                foreach (char character in liquid.Types.GetId(liquid.TypeIndex[i]))
+                    Hash(ref hash, character, prime);
+                Hash(ref hash, 0, prime);
                 if (_extendedTileStacks.TryGetValue(i, out int[] stack))
                 {
                     Hash(ref hash, stack.Length, prime);
@@ -597,6 +614,8 @@ namespace FlatWorld.WorldModel
         /// <summary>清空并释放这份地形占用的内存，同时取消所有变化通知。</summary>
         public void Dispose()
         {
+            liquid.Dispose();
+            liquidBaselines.Clear();
             if (_cells != null)
             {
                 Array.Clear(_cells, 0, Math.Min(CellCount, _cells.Length));
@@ -674,7 +693,9 @@ namespace FlatWorld.WorldModel
         /// <summary>温度、高度等环境数据变了。</summary>
         Environment,
         /// <summary>格子是否被物体占用发生了变化；目前这类通知由 ChunkOccupancyData 单独负责。</summary>
-        Occupancy
+        Occupancy,
+        /// <summary>液体身份或深度改变，显示、导航和玩法应重新读取同一权威格。</summary>
+        Liquid
     }
 
     /// <summary>一次“某个地形格子发生变化”的通知内容。</summary>

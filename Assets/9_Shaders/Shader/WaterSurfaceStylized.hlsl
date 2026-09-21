@@ -17,7 +17,7 @@ float2 QuantizeWaterPosition(float2 positionWS)
 WaterSurfaceData CalculateWaterSurface(
     float2 positionWS,
     float2 screenUV,
-    half waterDepth)
+    half liquidDepth)
 {
     WaterSurfaceData surface = (WaterSurfaceData)0;
     float2 direction = ResolveWaterFlowAxis();
@@ -72,8 +72,8 @@ WaterSurfaceData CalculateWaterSurface(
     height *= _OceanWaveFactors.y;
 
     // 水面水深已离散为十档；基础水色不再混入噪声，让 0.1 的每一级变化都保持清晰可辨。
-    surface.waterDepth = saturate(waterDepth);
-    surface.depthBlend = 1.0h - surface.waterDepth;
+    surface.liquidDepth = saturate(liquidDepth);
+    surface.depthBlend = 1.0h - surface.liquidDepth;
 
     // 中尺度浪脊与大涌浪共用扭曲坐标，再用低频噪声切成自然短段。
     float rippleWarp = WaterNoise(
@@ -251,7 +251,7 @@ half3 ApplyWaterSurface(half3 sourceColor, WaterSurfaceData surface)
     half tintStrength = lerp(
         saturate(_SurfaceTint),
         1.0h,
-        surface.waterDepth);
+        surface.liquidDepth);
     sourceColor = lerp(sourceColor, waterTint, tintStrength);
     sourceColor = lerp(sourceColor, _DeepColor.rgb, surface.rippleShadow);
     sourceColor += _CausticColor.rgb * surface.caustic;

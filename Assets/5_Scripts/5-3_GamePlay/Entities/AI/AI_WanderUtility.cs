@@ -104,7 +104,7 @@ public static class AI_WanderUtility
     {
         offset = default;
         if (!chunkManager.TryGetRuntimeTerrainTile(origin, out RuntimeTerrainTileSample current) ||
-            (current.Cell.Flags & TerrainCellFlags.Water) == 0)
+            current.LiquidDepth <= 0f)
         {
             return false;
         }
@@ -156,7 +156,7 @@ public static class AI_WanderUtility
             }
 
             hasTerrainSample = true;
-            if ((sample.Cell.Flags & TerrainCellFlags.Water) != 0)
+            if (sample.LiquidDepth > 0f)
                 waterSamples++;
             if (!sample.Terrain.IsWalkable(sample.LocalCell.x, sample.LocalCell.y))
                 blockedSamples++;

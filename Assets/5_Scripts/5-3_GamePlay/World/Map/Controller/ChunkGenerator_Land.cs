@@ -208,6 +208,8 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
                 TileData tile = tileBlock.tileDataTemplate.Clone();
                 tile.Initialize_Env(Map.Data.EnvironmentLayers, localX, localY);
                 tile.position = new Vector3Int(worldPosition.x, worldPosition.y, 0);
+                if (biome.BiomeId == "ocean")
+                    Map.SetGeneratedLiquid(worldPosition, LiquidIds.SeaWater, 1f - Mathf.Pow(Mathf.Clamp01(environment.w / 0.5f), 2f));
                 if (!Map.Data.SetBaseTile(worldPosition, tile))
                     throw new InvalidOperationException($"无法写入基础地形：{worldPosition}");
 
@@ -579,6 +581,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         int height = Mathf.Max(1, Mathf.RoundToInt(chunkSize.y));
         map.Data.EnsureTileStorage(width, height);
         map.Data.ClearAllTiles();
+        map.ResetLegacyLiquids();
         map.Data.EnsureEnvironmentStorage(width, height);
     }
 
@@ -906,7 +909,7 @@ public readonly struct TerrainPreviewSample
     public float RiverDepth { get; }
     public bool HasWater { get; }
     public float WaterSalt { get; }
-    public float WaterDepth { get; }
+    public float LiquidDepth { get; }
 
     public TerrainPreviewSample(
         EnvironmentSample environment,
@@ -916,7 +919,7 @@ public readonly struct TerrainPreviewSample
         float riverDepth,
         bool hasWater,
         float waterSalt,
-        float waterDepth)
+        float liquidDepth)
     {
         Environment = environment;
         Biome = biome;
@@ -925,7 +928,7 @@ public readonly struct TerrainPreviewSample
         RiverDepth = riverDepth;
         HasWater = hasWater;
         WaterSalt = waterSalt;
-        WaterDepth = waterDepth;
+        LiquidDepth = liquidDepth;
     }
 }
 
@@ -966,16 +969,15 @@ public sealed class TerrainPreviewSampler
 
         TileData baseTerrain = ChunkGenerator_Land.GetTerrainTileBlock(biome).tileDataTemplate;
         HydrologyCellSample hydrology = default;
-        bool hasHydrology = _river != null &&
+        bool baseHasWater = biome.BiomeId == "ocean";
+        bool hasHydrology = !baseHasWater && _river != null &&
                             _river.TryEvaluateAppliedHydrologyCell(
                                 worldPosition,
                                 _worldSeed,
                                 baseTerrain,
                                 out hydrology);
-        bool baseHasWater = baseTerrain is TileData_Water;
-        TileData_Water baseWater = baseTerrain as TileData_Water;
-        float baseWaterDepth = baseHasWater
-            ? TileData_Water.CalculateDepthFromHeight(baseEnvironment.Height)
+        float baseLiquidDepth = baseHasWater
+            ? (1f - Mathf.Pow(Mathf.Clamp01(baseEnvironment.Height / 0.5f), 2f))
             : 0f;
         preview = new TerrainPreviewSample(
             baseEnvironment,
@@ -984,8 +986,8 @@ public sealed class TerrainPreviewSampler
             hasHydrology ? hydrology.Flow : 0f,
             hasHydrology && hydrology.WaterKind == HydrologyWaterKind.River ? hydrology.Depth : 0f,
             hasHydrology || baseHasWater,
-            hasHydrology ? 0f : baseWater?.salt ?? 0f,
-            hasHydrology ? hydrology.Depth : baseWaterDepth);
+            hasHydrology ? 0f : baseHasWater ? 80f : 0f,
+            hasHydrology ? hydrology.Depth : baseLiquidDepth);
         return true;
     }
 }

@@ -12,7 +12,7 @@ namespace FlatWorld.DroppedItems
         public float Rotation;
         public float VisualHeight;
         public float Amount;
-        public float WaterDepth;
+        public float LiquidDepth;
         public float SubmergedProgress; // 完全入水后的视觉远离进度，原始 Scale 保持不变。
         public byte WaterKind; // 0 陆地，1 漂浮，2 下沉。
         public byte Pickable;

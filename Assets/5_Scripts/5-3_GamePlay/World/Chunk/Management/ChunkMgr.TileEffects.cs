@@ -24,6 +24,11 @@ public readonly struct RuntimeTerrainTileSample
     public Vector2Int LocalCell { get; }
     public TerrainCell Cell { get; }
     public int TopTileId { get; }
+    /// <summary>有效表面的液深；平台遮断接触，底部原始液体仍由 Terrain 查询。</summary>
+    public float LiquidDepth => Terrain == null || Terrain.IsDisposed ? 0f :
+        WorldLiquidSystem.GetSurfaceDepth(Terrain, LocalCell.x, LocalCell.y);
+    public string LiquidId => Terrain?.GetLiquidId(LocalCell.x, LocalCell.y);
+    public int LiquidTypeIndex => Terrain?.GetLiquidTypeIndex(LocalCell.x, LocalCell.y) ?? 0;
 }
 
 /// <summary>运行时水面流动类型；河流使用水文下游方向，海洋使用风场近似表层漂移。</summary>
@@ -143,15 +148,7 @@ public static class ChunkRuntimeTileEffectResolver
         if (tileData is not TileData_Water water)
             return;
 
-        if (terrain.TryGetEnvironmentValue("riverDepth", localCell.x, localCell.y,
-                out float riverDepth) && riverDepth > 0f)
-        {
-            water.deepValue = Mathf.Clamp01(riverDepth);
-            return;
-        }
-
-        if (terrain.TryGetEnvironmentValue("height", localCell.x, localCell.y, out float height))
-            water.deepValue = Mathf.Clamp01(TileData_Water.CalculateDepthFromHeight(height));
+        water.LiquidDepth = terrain.GetLiquidDepth(localCell.x, localCell.y);
     }
 
     #endregion
@@ -217,7 +214,7 @@ public partial class ChunkMgr
     {
         current = default;
         if (!TryGetRuntimeTerrainTile(worldPosition, out RuntimeTerrainTileSample sample) ||
-            (sample.Cell.Flags & TerrainCellFlags.Water) == 0)
+            sample.LiquidDepth <= 0f)
         {
             return false;
         }
@@ -270,7 +267,7 @@ public partial class ChunkMgr
     public bool IsRuntimeWalkableLand(Vector2 worldPosition)
     {
         return TryGetRuntimeTerrainTile(worldPosition, out RuntimeTerrainTileSample sample) &&
-               (sample.Cell.Flags & TerrainCellFlags.Water) == 0 &&
+               sample.LiquidDepth <= 0f &&
                sample.Terrain.IsWalkable(sample.LocalCell.x, sample.LocalCell.y);
     }
 

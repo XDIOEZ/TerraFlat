@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 一次准心命中的世界液体来源。当前地形液体没有有限份数状态，因此 Tile 来源保持无限源语义。
+/// 一次准心命中的世界液体来源。液体身份与深度来自独立 Liquid 层。
 /// </summary>
 public readonly struct WorldLiquidSourceTarget
 {
@@ -18,7 +18,7 @@ public readonly struct WorldLiquidSourceTarget
 
 /// <summary>
 /// 把权威世界地块的 LiquidId 解析成统一 LiquidDefinition。
-/// 不依赖碰撞体、不识别具体 Water ID，任何实现 IWorldLiquidSourceData 的地块都可接入同一取液链路。
+/// 不依赖碰撞体或 Ground Behaviour；MOD 液体只需在目录声明 worldWater 配置。
 /// </summary>
 public static class WorldLiquidSourceResolver
 {
@@ -27,23 +27,9 @@ public static class WorldLiquidSourceResolver
         target = default;
         ChunkMgr chunkManager = ChunkMgr.ExistingInstance;
         if (chunkManager == null ||
-            !chunkManager.TryGetRuntimeTileEffect(
-                worldPosition,
-                out RuntimeTerrainTileSample sample,
-                out TileData tileData,
-                out _) ||
-            tileData is not IWorldLiquidSourceData liquidSource ||
-            string.IsNullOrWhiteSpace(liquidSource.LiquidId))
-        {
+            !chunkManager.TryGetRuntimeTerrainTile(worldPosition, out RuntimeTerrainTileSample sample) ||
+            sample.LiquidDepth <= 0f || !WorldLiquidSystem.TryGetDefinition(sample, out LiquidDefinition liquid))
             return false;
-        }
-
-        GameRes gameRes = GameRes.ExistingInstance;
-        if (gameRes == null ||
-            !gameRes.TryGetLiquidDefinition(liquidSource.LiquidId, out LiquidDefinition liquid))
-        {
-            return false;
-        }
 
         target = new WorldLiquidSourceTarget(sample, liquid);
         return true;

@@ -49,8 +49,11 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - 旧生产者移交必须先于区块快照；退出保存完成后才释放掉落 World，不能在更早的 GameWorldExit 通知中清空。缺失定义的记录保留原快照，避免下次保存静默丢物；恢复库存载荷仍按当前 ItemDefinition rebase。
 
 1. 先确定权威数据、持久化位置和当前版本，再修改模型；不要新增旧版本迁移分支。
-2. 只做静态诊断、必要的编译检查和 Unity Console 检查；不要创建或触碰真实玩家存档。
+2. 使用隔离存档进入真实 Play Mode，实际覆盖写入、退出、重进和恢复；不得触碰正式玩家存档。编译与 Console 只作为运行门禁和故障定位。
 3. 联动：生命周期→Core，Item/Module→Item，Chunk 差量→Map，协议快照→Networking，内容 Def→对应领域 Skill。
+
+- 世界液体差量使用 `ChunkSaveRecord.LiquidCells`，每项只有局部坐标、LiquidId 和 LiquidDepth；空格用空 ID 与零深度。生成值变化后才记录，恢复生成值要移除差量；恢复前校验全部坐标、重复项和液体身份，缺失 MOD 液体必须明确拒绝，不能擦除原存档。
+- 液体先生成再覆盖差量，覆盖必须早于表现和导航绑定。原始 Ground 的比较忽略 Water 兼容位，避免抽水污染 RuntimeTileDeltas。MemoryPack 新字段在末尾追加，不能把 LiquidTypeIndex 写入存档或移动旧字段顺序。
 
 ## Skill 维护原则
 

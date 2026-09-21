@@ -226,7 +226,7 @@ internal sealed class DroppedItemPresentation : IDisposable
             float height = Mathf.Max(0.0001f, maxY - minY);
             // 水线保持规范世界坐标；循环镜像仅通过批次 MPB 补偏移，不依赖动态合批后的 ObjectToWorld。
             Vector4 parameters = new(body.WaterKind != 0 ? 1f : 0f,
-                key.Origin.y + minY + height * body.WaterDepth, height, 0f);
+                key.Origin.y + minY + height * body.LiquidDepth, height, 0f);
             for (int i = 0; i < visual.Vertices.Length; i++) water.Add(parameters);
             for (int i = 0; i < visual.Triangles.Length; i++) triangles.Add(offset + visual.Triangles[i]);
         }

@@ -1168,7 +1168,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
         if (chunkMgr != null && chunkMgr.TryGetRuntimeTerrainTile(
                 worldPosition + new Vector2(0.5f, 0.5f), out RuntimeTerrainTileSample sample))
         {
-            return (sample.Cell.Flags & FlatWorld.WorldModel.TerrainCellFlags.Water) == 0 &&
+            return sample.LiquidDepth <= 0f &&
                    sample.Terrain.IsWalkable(sample.LocalCell.x, sample.LocalCell.y);
         }
 
@@ -1180,7 +1180,8 @@ public partial class GameManager : SingletonAutoMono<GameManager>
             return false;
         }
 
-        return IsWalkableLandTile(chunk.Map.GetTopTile(worldPosition));
+        return chunk.Map.GetGeneratedLiquidDepth(new Vector2Int(Mathf.FloorToInt(worldPosition.x), Mathf.FloorToInt(worldPosition.y))) <= 0f &&
+               IsWalkableLandTile(chunk.Map.GetTopTile(worldPosition));
     }
 
     private static bool IsWalkableLandTile(TileData tile)

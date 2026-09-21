@@ -172,7 +172,7 @@ MonoBehaviour:
     - rid: 6445419845959286807
       type: {class: ChunkGenerator_River, ns: , asm: GamePlay}
       data:
-        riverTileBlock: {fileID: 11400000, guid: 7161f78828c23bc43a28d345ef6f8bc1, type: 2}
+        riverTileBlock: {fileID: 11400000, guid: bf736d65367b9254dbd69cd783e538f8, type: 2}
         seed: 12345
         hydrologyRegionSize: 256
         runoffCellSize: 64

@@ -839,7 +839,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
 
                 TerrainCell current = sample.Terrain.GetCell(sample.LocalCell.x, sample.LocalCell.y);
                 bool isNaturalCaveWall = current.BlockingTileId == settings.CaveWallTileId;
-                bool isGroundwater = (current.Flags & TerrainCellFlags.Water) != 0;
+                bool isGroundwater = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y) > 0f;
                 bool isPlayerOccupied = (current.Flags & TerrainCellFlags.Occupied) != 0;
                 if (isPlayerOccupied || (!isNaturalCaveWall && !isGroundwater))
                     continue;
@@ -852,6 +852,7 @@ public sealed class DimensionManager : SingletonAutoMono<DimensionManager>
                     settings.DefaultNavigationCost,
                     TerrainCellFlags.Walkable);
                 sample.Terrain.SetCell(sample.LocalCell.x, sample.LocalCell.y, carved);
+                if (isGroundwater) WorldLiquidSystem.TrySet(sample, string.Empty, 0f);
 
                 if (!chunkManager.TryGetChunkRuntime(sample.Address, out RuntimeChunk runtimeChunk))
                     throw new InvalidOperationException($"矿洞出口区域所在 Chunk 已失效：{worldCell}。");

@@ -93,7 +93,7 @@ public class ChunkGenerator_SpawnItems : ChunkGeneratorBase
             return 0;
         }
 
-        if (Map.GetTopTile(worldPosition) is TileData_Water)
+        if (Map.GetGeneratedLiquidDepth(worldPosition) > 0f)
             return 0;
 
         if (!Map.Data.IsEnvironmentLocalValid(localPosition.x, localPosition.y))

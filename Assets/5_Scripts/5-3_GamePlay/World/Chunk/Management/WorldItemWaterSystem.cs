@@ -108,7 +108,7 @@ public static class WorldItemWaterSystem
             return false;
         }
 
-        isWater = (sample.Cell.Flags & TerrainCellFlags.Water) != 0;
+        isWater = sample.LiquidDepth > 0f;
         return true;
     }
 

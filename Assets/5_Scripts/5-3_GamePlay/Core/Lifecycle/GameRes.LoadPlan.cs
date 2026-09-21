@@ -72,8 +72,9 @@ public partial class GameRes
                 ResourceCatalogValidation.Validate(this);
                 GameManager.Instance?.ApplyDefaultTimeSystemProfile();
             }), "mods");
+        plan.Add("world-liquids", "加载世界液体外观", 2, LoadWorldLiquidResources, "validate-final");
         plan.Add("brg-sprite-mesh-prewarm", "预构造地形共享网格", 3,
-            PrewarmTerrainSpriteMeshes, "validate-final");
+            PrewarmTerrainSpriteMeshes, "world-liquids");
         return plan;
     }
 

@@ -29,7 +29,7 @@ namespace FlatWorld.DroppedItems
             if (body.Id == 0 || entities.ContainsKey(body.Id))
                 throw new ArgumentException("掉落物 ID 为空或重复。", nameof(body));
             if (!math.all(math.isfinite(body.Position)) || !math.all(math.isfinite(body.Scale)) ||
-                !math.all(math.isfinite(new float4(body.Amount, body.Rotation, body.VisualHeight, body.WaterDepth))) ||
+                !math.all(math.isfinite(new float4(body.Amount, body.Rotation, body.VisualHeight, body.LiquidDepth))) ||
                 body.Amount <= 0f || body.WaterKind > 2 || !math.isfinite(body.SubmergedProgress) ||
                 body.SubmergedProgress < 0f || body.SubmergedProgress > 1f)
                 throw new ArgumentException("掉落物热数据包含无效坐标、数量或水态。", nameof(body));

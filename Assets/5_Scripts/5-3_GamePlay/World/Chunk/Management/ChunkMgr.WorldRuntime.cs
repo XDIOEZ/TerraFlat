@@ -191,7 +191,7 @@ public partial class ChunkMgr
         if (string.IsNullOrWhiteSpace(worldId))
             worldId = "world";
         var world = new WorldRuntime(worldId, runtimeEpoch);
-        runtimeChunkManager = new RuntimeChunkMgr(world, new DeterministicChunkGenerator(),
+        runtimeChunkManager = new RuntimeChunkMgr(world, new DeterministicChunkGenerator(GameRes.ExistingInstance?.LiquidTypes),
             EffectiveBackgroundGenerationConcurrency, new UnityWorldAddressNormalizer());
     }
 

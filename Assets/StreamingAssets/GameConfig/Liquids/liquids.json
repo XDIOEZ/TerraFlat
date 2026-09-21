@@ -29,6 +29,18 @@
         "minimumTemperature": 100.0,
         "seconds": 20.0,
         "resultLiquidId": "core:drinkable_water"
+      },
+      "worldWater": {
+        "spriteAddress": "Assets/6_Art/Tilemap/Grass.png[Water_0]",
+        "materialAddress": "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat",
+        "navigationCost": 20000,
+        "shallowMoveSpeedMultiplier": 0.5,
+        "deepMoveSpeedMultiplier": 0.2,
+        "entryTemperatureFloor": 10.0,
+        "entryTemperatureTransitionSeconds": 5.0,
+        "drinkHoldSeconds": 1.0,
+        "drinkTickSeconds": 1.0,
+        "followWaterVisualStyle": true
       }
     },
     {
@@ -63,6 +75,18 @@
         "outputItemId": "Salt",
         "consumeAmount": 1,
         "outputAmount": 1
+      },
+      "worldWater": {
+        "spriteAddress": "Assets/6_Art/Tilemap/Winter.png[Winter_0]",
+        "materialAddress": "Assets/9_Shaders/Material/Tilemap-Water-Lit.mat",
+        "navigationCost": 20000,
+        "shallowMoveSpeedMultiplier": 0.5,
+        "deepMoveSpeedMultiplier": 0.2,
+        "entryTemperatureFloor": 10.0,
+        "entryTemperatureTransitionSeconds": 5.0,
+        "drinkHoldSeconds": 1.0,
+        "drinkTickSeconds": 1.0,
+        "followWaterVisualStyle": true
       }
     }
   ]

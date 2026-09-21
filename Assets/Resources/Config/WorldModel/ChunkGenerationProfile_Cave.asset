@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Cave
   m_EditorClassIdentifier: 
   profileId: cave.default
-  generationSignature: 30
+  generationSignature: 38
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -99,15 +99,11 @@ MonoBehaviour:
     Value: 0.0012
   - Id: navigation.defaultCost
     Value: 1
-  - Id: navigation.waterCost
-    Value: 20000
   textParameters:
   - Id: terrain.mode
     Value: cave
   - Id: tile.block.4
     Value: Tile_Stone
-  - Id: tile.block.2
-    Value: Tile_Water_Fresh
   - Id: tile.block.7
     Value: TileBase_StoneWall
   - Id: cave.vine.itemId

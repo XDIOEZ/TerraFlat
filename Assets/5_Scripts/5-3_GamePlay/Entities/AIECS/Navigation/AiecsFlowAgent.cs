@@ -26,7 +26,7 @@ namespace FlatWorld.AIECS
         public float Radius; // 连续移动体半径，当前共享通行配置要求小于半格。
         public float Speed; // 当前基础速度，Buff 后由行为层写入。
         public float StopDistance; // 到局部/共享目标的停止距离。
-        public float WaterDepth; // 当前平滑后的有效水深，仅表达移动/表现环境态。
+        public float LiquidDepth; // 当前平滑后的有效水深，仅表达移动/表现环境态。
         public float WaterBlend; // 入水/出水平滑混合，批量表现直接消费。
         public AiecsMoveMode Mode; // 导向图、局部 steering 或停车。
         public float2 LocalDestination; // 只有局部模式消费。
@@ -213,7 +213,7 @@ namespace FlatWorld.AIECS
             float smoothing = DeltaTime > 0f
                 ? 1f - math.exp(-DeltaTime / WaterTransitionSeconds)
                 : 1f;
-            actor.WaterDepth = math.lerp(actor.WaterDepth, inWater ? targetDepth : 0f, smoothing);
+            actor.LiquidDepth = math.lerp(actor.LiquidDepth, inWater ? targetDepth : 0f, smoothing);
             actor.WaterBlend = math.lerp(actor.WaterBlend, targetBlend, smoothing);
             return inWater
                 ? math.lerp(ShallowWaterSpeedMultiplier, DeepWaterSpeedMultiplier, math.saturate(targetDepth))

@@ -145,7 +145,12 @@ public static class TileDefinitionEditorCatalog
     /// <summary>只在内存中检查 JSON 拒绝边界、工厂租约和克隆隔离，不创建世界或更改资源目录。</summary>
     public static int ValidateFactoryBoundaries()
     {
-        RuntimeTileDefinition water = Get("Tile_Water_Fresh");
+        var compatibility = Get("Tile_Sand").CopySource();
+        compatibility["id"] = "flatworld.diagnostics:legacy_water";
+        compatibility["data"] = new JObject { ["type"] = "water", ["parameters"] = new JObject
+            { ["liquidId"] = LiquidIds.DirtyWater, ["LiquidDepth"] = 0.5f } };
+        compatibility["behaviours"] = new JArray(new JObject { ["type"] = "water", ["parameters"] = new JObject() });
+        RuntimeTileDefinition water = BuildSource(compatibility);
         int checks = 0;
         var invalid = water.CopySource();
         invalid["behaviours"][0]["type"] = "flatworld.diagnostics:missing";
@@ -163,7 +168,7 @@ public static class TileDefinitionEditorCatalog
         position["data"]["parameters"]["position"] = new JObject();
         checks += ExpectRejected(() => BuildSource(position));
         var depth = water.CopySource();
-        depth["data"]["parameters"]["deepValue"] = 2;
+        depth["data"]["parameters"]["LiquidDepth"] = 2;
         checks += ExpectRejected(() => BuildSource(depth));
         var penalty = water.CopySource();
         penalty["data"]["parameters"]["penalty"] = 40000;

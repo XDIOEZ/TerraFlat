@@ -44,6 +44,8 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - `TemperatureMgr.TryGetClimateBaseline` 不含季节、动态天气和局部源；历史环境重建与积雪采样用它，角色体温仍用最终环境温度入口，避免重复叠加季节。
 - 积雪是 `PlanetData.SeasonalSnow` 的独立基温分段状态，不是格子地形差量；`WeatherMgr.Snow` 在天气阶段边界与日内分段推进覆盖量，雪停保留覆盖，暖时融化。禁用天气的维度不修改星球覆雪状态。
 
+- 角色液体接触由 `TileEffectReceiver.Liquid` 独立维护，WorldLiquidBehaviour 读取当前 LiquidDepth；深水有体力时 `LiquidFloating` 仅暂停 Ground。Ground 与 Liquid 各自拥有环境效果运行器，雪地/泥地退出不能清掉潮湿、体温、游泳、氧气、液体减速或饮用动作。浮沉边界只触发一次 Ground Exit/Enter，禁止用全接收器 effectSuppressors 代替上浮状态。
+
 ## 验证
 
 - 单机散落物水态由 `DroppedItemRuntime.Water` 桥接权威地形、液体目录与 ECS 短期水线组件；原 `WorldItemWaterRuntime` 仅保留旧实体/联机兼容。淡水密度阈值保持 0.64，海水倍率读取液体定义，不能把漂浮深度和浮力阈值混成同一参数。

@@ -27,11 +27,13 @@ description: "Use when: 定位或修改 FlatWorld 的维度、星球表面/地�
 - 矿洞默认抑制天气/怪物生成，`FixedLighting` 是上限。
 - 当前只支持离线切换；服务器权威迁移协议完成前不得开放联机。
 
+- 地下入口开辟安全区时，替换 Ground/Blocking 后仍须显式通过 `WorldLiquidSystem.TrySet(..., 0)` 清空目标 Liquid；删除 Water 标记不能清水。维度切换准备必须退出 Ground 与 Liquid 两套接触，准备期间不重新推进地块效果，目的地完成后显式刷新。
+
 ## 验证
 
 - 覆盖地表键兼容、往返、位置/锚点恢复、入口唯一性、Chunk 差量、环境覆盖与失败清理。
 - 地址/生命周期联动 Core+Data；生成联动 Map；环境联动 Environment；联机限制联动 Networking。
-- 默认仅做静态诊断、编译和 Console 检查。
+- 验收使用实际地表/地下往返与游戏中的状态变化；不以冒烟或静态结果代替实际验证，不打断用户明确要求保留的试玩。
 
 ## Skill 维护原则
 

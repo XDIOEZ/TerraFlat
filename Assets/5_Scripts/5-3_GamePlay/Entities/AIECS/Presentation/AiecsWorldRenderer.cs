@@ -123,15 +123,15 @@ namespace FlatWorld.AIECS
                         Position = center + domain.ShortestDelta(center, record.Position),
                         WaterBlend = Mathf.Clamp01(record.WaterBlend)
                     };
-                    float waterDepth = Mathf.Clamp01(record.WaterDepth);
-                    float waterTint = Mathf.Lerp(0.12f, 0.8f, waterDepth);
+                    float liquidDepth = Mathf.Clamp01(record.LiquidDepth);
+                    float waterTint = Mathf.Lerp(0.12f, 0.8f, liquidDepth);
                     Color color = definition.Color * (record.Group % 2 == 0 ? new Color(0.7f, 0.85f, 1f) : new Color(1f, 0.7f, 0.65f));
                     if (record.Dead != 0) color.a *= Mathf.Clamp01(2f - record.ActionElapsed);
                     // 复用真实水态和当前可见列表，绝不逐实体查询地形或创建阴影组件。
                     if (ShadowsEnabled)
                         shadows.Append(new Vector2(actor.Position.x, actor.Position.y), shadowFootprints[record.Definition],
-                            record.Facing.x < 0f, AiecsShadowRenderer.ResolveOpacity(ShadowOpacity, color.a, record.WaterDepth, record.WaterBlend));
-                    batch.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], waterDepth, waterTint,
+                            record.Facing.x < 0f, AiecsShadowRenderer.ResolveOpacity(ShadowOpacity, color.a, record.LiquidDepth, record.WaterBlend));
+                    batch.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], liquidDepth, waterTint,
                         record.Facing.x < 0f, color);
                 }
                 batch.Submit(first.Layer, first.Order); start = end;

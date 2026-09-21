@@ -72,9 +72,9 @@ namespace FlatWorld.AIECS
 
         #region 固定脚底几何
         /// <summary>统一昼夜、主体淡出与水态规则；只读 Display，不向模拟回写。</summary>
-        public static float ResolveOpacity(float sceneOpacity, float spriteOpacity, float waterDepth, float waterBlend)
+        public static float ResolveOpacity(float sceneOpacity, float spriteOpacity, float liquidDepth, float waterBlend)
         {
-            if (waterDepth > 0.001f || waterBlend > 0.001f) return 0f;
+            if (liquidDepth > 0.001f || waterBlend > 0.001f) return 0f;
             return Mathf.Clamp01(sceneOpacity) * Mathf.Clamp01(spriteOpacity);
         }
 

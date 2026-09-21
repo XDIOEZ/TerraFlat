@@ -31,7 +31,7 @@ public sealed class CarrierWaterWake : MonoBehaviour
         if (source == null || !source.IsAvailable || distance > 4f || source.CurrentVelocity.sqrMagnitude < 0.0025f ||
             ChunkMgr.ExistingInstance == null ||
             !ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample tile) ||
-            (tile.Cell.Flags & FlatWorld.WorldModel.TerrainCellFlags.Water) == 0)
+            tile.LiquidDepth <= 0f)
         {
             distanceRemainder = 0f;
             return;
@@ -99,7 +99,7 @@ public sealed class CarrierWaterWake : MonoBehaviour
     private void Emit(Vector2 position)
     {
         if (!ChunkMgr.ExistingInstance.TryGetRuntimeTerrainTile(position, out RuntimeTerrainTileSample tile) ||
-            (tile.Cell.Flags & FlatWorld.WorldModel.TerrainCellFlags.Water) == 0) return;
+            tile.LiquidDepth <= 0f) return;
         particles.Emit(new ParticleSystem.EmitParams
         {
             position = new Vector3(position.x, position.y, transform.position.z),

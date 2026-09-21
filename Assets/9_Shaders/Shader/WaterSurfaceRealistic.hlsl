@@ -38,7 +38,7 @@ float2 WaterNoiseSlope(float2 position)
 WaterSurfaceData CalculateWaterSurface(
     float2 positionWS,
     float2 screenUV,
-    half waterDepth)
+    half liquidDepth)
 {
     WaterSurfaceData surface = (WaterSurfaceData)0;
     float2 direction = ResolveWaterFlowAxis();
@@ -80,8 +80,8 @@ WaterSurfaceData CalculateWaterSurface(
     float3 normalWS = normalize(float3(-slope * _NormalStrength, 1.0));
 
     // 水面水深已离散为十档；使用等距颜色权重，避免深水段被指数吸收压缩后相邻档位难以分辨。
-    surface.waterDepth = saturate(waterDepth);
-    surface.depthBlend = 1.0h - surface.waterDepth;
+    surface.liquidDepth = saturate(liquidDepth);
+    surface.depthBlend = 1.0h - surface.liquidDepth;
 
     float3 sunDirection = normalize(_SunDirection.xyz);
     float3 viewDirection = float3(0.0, 0.0, 1.0);
@@ -144,7 +144,7 @@ half3 ApplyWaterSurface(half3 sourceColor, WaterSurfaceData surface)
     half tintStrength = lerp(
         saturate(_SurfaceTint),
         1.0h,
-        surface.waterDepth);
+        surface.liquidDepth);
     sourceColor = lerp(sourceColor, waterTint, tintStrength);
     sourceColor = lerp(sourceColor, _DeepColor.rgb, surface.rippleShadow);
     sourceColor += _CausticColor.rgb * surface.caustic;

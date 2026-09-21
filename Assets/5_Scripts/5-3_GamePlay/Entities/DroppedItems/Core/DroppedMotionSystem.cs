@@ -82,7 +82,7 @@ namespace FlatWorld.DroppedItems
                 transition.Elapsed = math.min(endTime, transition.Elapsed + Delta);
                 float t = math.saturate(transition.Elapsed / math.max(0.0001f, transition.Duration));
                 float weight = body.WaterKind == 1 ? t * t * (3f - 2f * t) : t;
-                body.WaterDepth = math.lerp(transition.StartDepth, transition.TargetDepth, weight);
+                body.LiquidDepth = math.lerp(transition.StartDepth, transition.TargetDepth, weight);
                 body.SubmergedProgress = body.WaterKind == 2
                     ? math.saturate((transition.Elapsed - transition.Duration) / math.max(0.0001f, transition.RecedeDuration)) : 0f;
                 Changes[Offset + index] = new DroppedChange { Id = body.Id,

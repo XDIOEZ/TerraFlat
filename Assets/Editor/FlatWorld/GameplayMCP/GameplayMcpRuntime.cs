@@ -500,6 +500,7 @@ namespace FlatWorld.GameplayMCP
             TileEffectReceiver tileReceiver = player.itemMods.GetMod_ByID<TileEffectReceiver>(ModText.TileEffectReceiver) ??
                                                player.GetComponentInChildren<TileEffectReceiver>(true);
             TileData_Water waterTile = tileReceiver?.currentTileData as TileData_Water;
+            Mod_InteractSender interactSender = player.GetComponentInChildren<Mod_InteractSender>(true);
 
             var result = new JObject
             {
@@ -515,7 +516,7 @@ namespace FlatWorld.GameplayMCP
                     ["inWater"] = oxygen?.IsInWater ?? waterTile != null,
                     ["immersion"] = tileReceiver == null ? 0f : Round(tileReceiver.CurrentWaterImmersion),
                     ["tile"] = tileReceiver?.currentTileData?.Name ?? string.Empty,
-                    ["depth"] = waterTile == null ? JValue.CreateNull() : Round(waterTile.deepValue),
+                    ["depth"] = waterTile == null ? JValue.CreateNull() : Round(waterTile.LiquidDepth),
                     ["salt"] = waterTile == null ? JValue.CreateNull() : Round(waterTile.salt),
                     ["oxygen"] = oxygen == null ? JValue.CreateNull() : new JArray(Round(oxygen.CurrentValue), Round(oxygen.MaxValue)),
                     ["breathBlocked"] = oxygen?.IsBreathBlocked ?? false,
@@ -546,6 +547,14 @@ namespace FlatWorld.GameplayMCP
                     ["active"] = controller.HasExternalGameplayControl,
                     ["owned"] = OwnsControl(controller),
                     ["owner"] = controller.ExternalGameplayControlOwnerName
+                },
+                ["interaction"] = interactSender == null ? JValue.CreateNull() : new JObject
+                {
+                    ["currentType"] = interactSender.CurrentInteractionType,
+                    ["currentGuid"] = interactSender.CurrentInteractionTargetGuid,
+                    ["held"] = interactSender.HasHeldInteraction,
+                    ["heldType"] = interactSender.HeldInteractionType,
+                    ["heldGuid"] = interactSender.HeldInteractionTargetGuid
                 }
             };
 
@@ -618,6 +627,8 @@ namespace FlatWorld.GameplayMCP
             DamageReceiver health = item.itemMods?.GetMod_ByID<DamageReceiver>(ModText.Hp);
             bool interactable = CanPlayerInteract(item, player);
             ItemData data = item.itemData;
+            Mod_MechanicalNode mechanical = item.itemMods?.GetMod_ByID<Mod_MechanicalNode>(Mod_MechanicalNode.ModuleId) ??
+                                            item.GetComponentInChildren<Mod_MechanicalNode>(true);
             var tags = new JArray();
             if (data.Tags != null)
             {
@@ -625,7 +636,7 @@ namespace FlatWorld.GameplayMCP
                     tags.Add(data.Tags[i]);
             }
 
-            return new JObject
+            var result = new JObject
             {
                 ["guid"] = data.Guid,
                 ["id"] = data.IDName ?? string.Empty,
@@ -638,6 +649,29 @@ namespace FlatWorld.GameplayMCP
                 ["faction"] = data.FactionId ?? string.Empty,
                 ["tags"] = tags
             };
+
+            if (mechanical != null)
+            {
+                MechanicalNode node = mechanical.Node;
+                MechanicalNetwork network = node?.Network;
+                MechanicalNodeState state = node?.State ?? mechanical.LocalState;
+                result["mechanical"] = new JObject
+                {
+                    ["attached"] = node != null,
+                    ["definition"] = (node?.Definition ?? mechanical.Definition)?.Id ?? string.Empty,
+                    ["kind"] = (node?.Definition ?? mechanical.Definition)?.Kind ?? string.Empty,
+                    ["source"] = (node?.Definition ?? mechanical.Definition)?.Source ?? string.Empty,
+                    ["rpm"] = node == null ? 0f : Round(node.Rpm),
+                    ["manualSeconds"] = state == null ? 0f : Round(state.ManualSeconds),
+                    ["networkActive"] = network?.Active ?? false,
+                    ["status"] = network?.Status ?? string.Empty,
+                    ["supply"] = network == null ? 0f : Round(network.Supply),
+                    ["demand"] = network == null ? 0f : Round(network.Demand),
+                    ["networkNodes"] = network?.Nodes?.Count ?? 0
+                };
+            }
+
+            return result;
         }
 
         /// <summary>按生产交互契约判断目标当前是否接受玩家交互，避免仅凭接口存在误报。</summary>

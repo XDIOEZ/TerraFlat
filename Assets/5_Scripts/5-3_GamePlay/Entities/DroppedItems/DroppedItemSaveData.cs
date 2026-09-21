@@ -20,7 +20,7 @@ public partial class DroppedItemSaveRecord
     public Vector2 Scale;
     public float Rotation;
     public float VisualHeight;
-    public float WaterDepth;
+    public float LiquidDepth;
     public byte WaterKind;
     public bool HasFlight;
     public Vector2 FlightStart;
@@ -51,7 +51,7 @@ public partial class DroppedItemSaveRecord
         return new DroppedItemSaveRecord
         {
             Data = data, Position = body.Position, Scale = body.Scale, Rotation = body.Rotation,
-            VisualHeight = body.VisualHeight, WaterDepth = body.WaterDepth, WaterKind = body.WaterKind,
+            VisualHeight = body.VisualHeight, LiquidDepth = body.LiquidDepth, WaterKind = body.WaterKind,
             HasFlight = hasFlight, FlightStart = flight.Start, FlightEnd = flight.End, FlightControl = flight.Control,
             FlightDuration = flight.Duration, FlightElapsed = flight.Elapsed, ArcHeight = flight.ArcHeight,
             RotationSpeed = flight.RotationSpeed, HasWaterTransition = hasWater,

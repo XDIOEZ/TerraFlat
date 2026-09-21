@@ -59,7 +59,8 @@ public sealed class LiquidDefinition
         IReadOnlyList<LiquidDrinkEffect> drinkEffects,
         LiquidHeatProcess heatProcess,
         float buoyancyThresholdMultiplier = 1f,
-        string sourceItemId = null)
+        string sourceItemId = null,
+        WorldLiquidSettings worldWater = null)
     {
         Id = id;
         DisplayName = displayName;
@@ -72,8 +73,10 @@ public sealed class LiquidDefinition
         HeatProcess = heatProcess;
         BuoyancyThresholdMultiplier = buoyancyThresholdMultiplier;
         SourceItemId = sourceItemId;
+        WorldWater = worldWater;
     }
 
+    public WorldLiquidSettings WorldWater { get; }
     public string Id { get; }
     public string DisplayName { get; }
     public string Description { get; }
@@ -121,6 +124,9 @@ public sealed class LiquidDefinitionDto
 
     [JsonProperty("visualState")]
     public string VisualState = "filled";
+
+    [JsonProperty("worldWater")]
+    public WorldLiquidSettings WorldWater;
 
     [JsonProperty("sourceItemId")]
     public string SourceItemId;
@@ -248,6 +254,7 @@ public static class LiquidDefinitionFactory
         if (dto.BuoyancyThresholdMultiplier <= 0f)
             throw new InvalidDataException($"液体 {id} buoyancyThresholdMultiplier 必须大于 0");
 
+        dto.WorldWater?.Validate(id);
         List<LiquidDrinkEffect> drinkEffects = BuildDrinkEffects(id, dto.Drinkable, dto.DrinkEffects);
 
         LiquidHeatProcess heatProcess = dto.HeatProcess == null
@@ -265,7 +272,7 @@ public static class LiquidDefinitionFactory
             drinkEffects,
             heatProcess,
             dto.BuoyancyThresholdMultiplier,
-            string.IsNullOrWhiteSpace(dto.SourceItemId) ? null : dto.SourceItemId.Trim());
+            string.IsNullOrWhiteSpace(dto.SourceItemId) ? null : dto.SourceItemId.Trim(), dto.WorldWater);
     }
 
     /// <summary>构建整个本体分包并拒绝重复 ID。</summary>

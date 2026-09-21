@@ -47,7 +47,7 @@ namespace FlatWorld.AIECS
                 Hp = vital.Hp, MaxHp = vital.MaxHp, Definition = identity.Definition, Group = identity.Group, Behavior = brain.Behavior,
                 AttackPhase = attack.Phase, Dead = vital.Dead, External = identity.External,
                 ActionElapsed = math.max(0f, (float)(Clock.Time - actionStarted)),
-                WaterDepth = actor.WaterDepth, WaterBlend = actor.WaterBlend,
+                LiquidDepth = actor.LiquidDepth, WaterBlend = actor.WaterBlend,
                 HasTarget = (byte)(brain.Target != Entity.Null ? 1 : 0) };
             Work[index] = counters;
         }
