@@ -22,7 +22,7 @@ public static class BuildingOccupancyRegistry
         CellChanged = null;
     }
 
-    public static bool IsOccupied(Vector2Int cell, Mod_Building except = null)
+    public static bool IsOccupied(Vector2Int cell, Mod_Building except = null, int layer = -1)
     {
         cell = WorldTopologyRuntime.NormalizeCell(cell);
         if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants))
@@ -31,7 +31,7 @@ public static class BuildingOccupancyRegistry
         occupants.RemoveWhere(building => building == null || !building.isActiveAndEnabled || !building.IsInstalled());
         foreach (Mod_Building building in occupants)
         {
-            if (building != except)
+            if (building != except && (layer < 0 || GetPlacementLayer(building) == layer))
                 return true;
         }
 
@@ -44,7 +44,8 @@ public static class BuildingOccupancyRegistry
     public static bool CanPlace(Vector2Int cell, Mod_Building except, out string reason)
     {
         cell = WorldTopologyRuntime.NormalizeCell(cell);
-        if (!IsOccupied(cell, except))
+        int layer = except == null ? 0 : GetPlacementLayer(except);
+        if (!IsOccupied(cell, except, layer) && !MechanicalWorld.IsOccupied(cell, layer, except?.item?.itemData?.Guid ?? 0))
         {
             reason = null;
             return true;
@@ -60,7 +61,7 @@ public static class BuildingOccupancyRegistry
         cell = WorldTopologyRuntime.NormalizeCell(cell);
         if (!OccupantsByCell.TryGetValue(cell, out HashSet<Mod_Building> occupants)) return true;
         foreach (Mod_Building building in occupants)
-            if (building != null && building.isActiveAndEnabled && building.IsInstalled() && !PassableBuildings.Contains(building))
+            if (building != null && building.isActiveAndEnabled && building.IsInstalled() && GetPlacementLayer(building) == 0 && !PassableBuildings.Contains(building))
                 return false;
         return true;
     }
@@ -73,6 +74,10 @@ public static class BuildingOccupancyRegistry
         if (changed && CellsByBuilding.TryGetValue(building, out HashSet<Vector2Int> cells))
             foreach (Vector2Int cell in cells) RefreshCell(cell);
     }
+
+    /// <summary>普通建筑仍占 Layer0，上层桥式传动只在自己的层内互斥。</summary>
+    public static int GetPlacementLayer(Mod_Building building)
+        => BuildingPlacementLifecycle.GetExtension(building?.item)?.OccupancyLayer ?? 0;
 
     public static void Register(Mod_Building building, IEnumerable<Vector2Int> cells)
     {

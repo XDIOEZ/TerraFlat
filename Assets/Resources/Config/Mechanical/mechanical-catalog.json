@@ -1,0 +1,45 @@
+{
+  "Version": 1,
+  "Settings": {
+    "TickSeconds": 0.1,
+    "ActivationChunks": 1,
+    "DeactivationChunks": 2,
+    "UnloadDelaySeconds": 5,
+    "ReferenceRpm": 60,
+    "ManualPulseSeconds": 5,
+    "ManualReserveSeconds": 15,
+    "BellowsHeatBonus": 250
+  },
+  "Nodes": [
+    { "Id": "HandCrank", "Kind": "source", "Ports": "all", "Source": "manual", "Power": 24, "Capacity": 64 },
+    { "Id": "WaterWheel", "Kind": "source", "Ports": "all", "Source": "water", "Power": 48, "Capacity": 128 },
+    { "Id": "Windmill", "Kind": "source", "Ports": "all", "Source": "wind", "Power": 64, "Capacity": 128 },
+    { "Id": "LargeWaterWheel", "Kind": "source", "Ports": "all", "Source": "water", "Power": 96, "Capacity": 256 },
+    { "Id": "LargeWindmill", "Kind": "source", "Ports": "all", "Source": "wind", "Power": 128, "Capacity": 256 },
+    { "Id": "Shaft_Wood", "Kind": "shaft", "Ports": "axis", "Capacity": 32 },
+    { "Id": "Gear_Wood", "Kind": "gear", "Ports": "all", "Capacity": 32 },
+    { "Id": "Gearbox_Wood", "Kind": "gearbox", "Ports": "axis", "Capacity": 32, "Ratios": [0.5, 1, 2] },
+    { "Id": "Clutch", "Kind": "clutch", "Ports": "axis", "Capacity": 256 },
+    { "Id": "Shaft_Copper", "Kind": "shaft", "Ports": "axis", "Capacity": 96 },
+    { "Id": "Gear_Copper", "Kind": "gear", "Ports": "all", "Capacity": 96 },
+    { "Id": "Gearbox_Copper", "Kind": "gearbox", "Ports": "axis", "Capacity": 96, "Ratios": [0.5, 1, 2] },
+    { "Id": "Shaft_Iron", "Kind": "shaft", "Ports": "axis", "Capacity": 256 },
+    { "Id": "Gear_Iron", "Kind": "gear", "Ports": "all", "Capacity": 256 },
+    { "Id": "Gearbox_Iron", "Kind": "gearbox", "Ports": "axis", "Capacity": 256, "Ratios": [0.5, 1, 2] },
+    { "Id": "CrossShaft", "Kind": "bridge", "Ports": "axis", "Capacity": 256 },
+    { "Id": "Millstone", "Kind": "consumer", "Ports": "all", "Station": "millstone", "Load": 8, "Capacity": 256 },
+    { "Id": "MechanicalBellows", "Kind": "bellows", "Ports": "all", "Load": 8, "Capacity": 256 },
+    { "Id": "Sawmill", "Kind": "consumer", "Ports": "all", "Station": "sawmill", "Load": 12, "Capacity": 256 },
+    { "Id": "MechanicalHammer", "Kind": "consumer", "Ports": "all", "Station": "mechanical_hammer", "Load": 16, "Capacity": 256 }
+  ],
+  "Processes": [
+    { "Station": "hand_drill", "Input": "Log", "Outputs": [{ "ItemName": "DrilledLog", "amount": 1 }], "WorkSeconds": 4 },
+    { "Station": "hand_drill", "Input": "Plank", "Outputs": [{ "ItemName": "DrilledPlank", "amount": 1 }], "WorkSeconds": 4 },
+    { "Station": "hand_drill", "Input": "Stick_Wood", "Outputs": [{ "ItemName": "DrilledStick", "amount": 1 }], "WorkSeconds": 4 },
+    { "Station": "hand_drill", "Input": "StoneSlab", "Outputs": [{ "ItemName": "DrilledStoneSlab", "amount": 1 }], "WorkSeconds": 6 },
+    { "Station": "hand_drill", "Input": "Ore_Stone", "Outputs": [{ "ItemName": "DrilledStone", "amount": 1 }], "WorkSeconds": 6 },
+    { "Station": "millstone", "Input": "RiceGrain", "Outputs": [{ "ItemName": "Rice", "amount": 1 }], "WorkSeconds": 3 },
+    { "Station": "sawmill", "Input": "Log", "Outputs": [{ "ItemName": "Plank", "amount": 4 }], "WorkSeconds": 6 },
+    { "Station": "mechanical_hammer", "Input": "Ingot_RawIron", "Outputs": [{ "ItemName": "Ingot_WroughtIron", "amount": 1 }], "WorkSeconds": 8 }
+  ]
+}

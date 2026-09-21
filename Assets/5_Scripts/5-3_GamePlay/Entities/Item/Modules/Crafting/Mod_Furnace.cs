@@ -396,13 +396,15 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
 
         // 计算实际的最大温度（受限于熔炉本身的最大温度限制）
         float actualMaxTemp = Data.MaxTemperature > 0 ? Mathf.Min(Data.MaxTemperature, Data.MaxTemperatureLimit) : Data.MaxTemperatureLimit;
+        float bellows = MechanicalWorld.GetBellowsBoost(item.transform.position);
+        actualMaxTemp = Mathf.Min(Data.MaxTemperatureLimit, actualMaxTemp + bellows * MechanicalCatalog.Settings.BellowsHeatBonus);
 
         // 如果没有物品 → 进度归零（表示干烧）
         if (!hasInputItem)
         {
             Data.SmeltingProgress = 0f;
             // 温度仍然会上升到燃料允许的上限，但不超过熔炉限制
-            Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * 2f * deltaTime, actualMaxTemp);
+            Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * (1f + bellows) * 2f * deltaTime, actualMaxTemp);
             // 继续消耗燃料
             mod_Fuel?.ConsumeFuel(deltaTime);
             return; // 不进入熔炼逻辑
@@ -411,7 +413,7 @@ public class Mod_Furnace : Module, IInteractable, IItemModuleDependencyBinder
         // ===== 以下是正常熔炼逻辑 =====
 
         // 温度随时间上升，但不超过熔炉限制
-        Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * deltaTime, actualMaxTemp);
+        Data.Temperature = Mathf.Min(Data.Temperature + Data.TemperatureUpSpeed * (1f + bellows) * deltaTime, actualMaxTemp);
 
         // 根据温度计算当前熔炼速度
         float tempRatio = Data.Temperature / actualMaxTemp;

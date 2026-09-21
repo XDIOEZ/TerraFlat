@@ -103,6 +103,15 @@ namespace InputSystem
                     ""initialStateCheck"": true
                 },
                 {
+                    ""name"": ""RotateBuilding"",
+                    ""type"": ""Button"",
+                    ""id"": ""18c3b730-067e-4b7e-b8b2-a16a3299d582"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""Attack_Player"",
                     ""type"": ""Button"",
                     ""id"": ""9c5afda1-8ba4-4fe2-a228-4f2c11e46b46"",
@@ -302,6 +311,17 @@ namespace InputSystem
                 }
             ],
             ""bindings"": [
+                {
+                    ""name"": """",
+                    ""id"": ""ba960d2d-fd16-49d5-9548-0bc24f9064fb"",
+                    ""path"": ""<Keyboard>/r"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""RotateBuilding"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
                 {
                     ""name"": ""2D Vector"",
                     ""id"": ""f7c0d424-cb0e-4850-8e25-e0f13654d2da"",
@@ -998,6 +1018,7 @@ namespace InputSystem
             // Win10
             m_Win10 = asset.FindActionMap("Win10", throwIfNotFound: true);
             m_Win10_Move_Player = m_Win10.FindAction("Move_Player", throwIfNotFound: true);
+            m_Win10_RotateBuilding = m_Win10.FindAction("RotateBuilding", throwIfNotFound: true);
             m_Win10_Attack_Player = m_Win10.FindAction("Attack_Player", throwIfNotFound: true);
             m_Win10_MobileAim_Player = m_Win10.FindAction("MobileAim_Player", throwIfNotFound: true);
             m_Win10_MobileAttackAim_Player = m_Win10.FindAction("MobileAttackAim_Player", throwIfNotFound: true);
@@ -1101,6 +1122,7 @@ namespace InputSystem
         private readonly InputActionMap m_Win10;
         private List<IWin10Actions> m_Win10ActionsCallbackInterfaces = new List<IWin10Actions>();
         private readonly InputAction m_Win10_Move_Player;
+        private readonly InputAction m_Win10_RotateBuilding;
         private readonly InputAction m_Win10_Attack_Player;
         private readonly InputAction m_Win10_MobileAim_Player;
         private readonly InputAction m_Win10_MobileAttackAim_Player;
@@ -1138,6 +1160,10 @@ namespace InputSystem
             /// Provides access to the underlying input action "Win10/Move_Player".
             /// </summary>
             public InputAction @Move_Player => m_Wrapper.m_Win10_Move_Player;
+            /// <summary>
+            /// Provides access to the underlying input action "Win10/RotateBuilding".
+            /// </summary>
+            public InputAction @RotateBuilding => m_Wrapper.m_Win10_RotateBuilding;
             /// <summary>
             /// Provides access to the underlying input action "Win10/Attack_Player".
             /// </summary>
@@ -1255,6 +1281,9 @@ namespace InputSystem
                 @Move_Player.started += instance.OnMove_Player;
                 @Move_Player.performed += instance.OnMove_Player;
                 @Move_Player.canceled += instance.OnMove_Player;
+                @RotateBuilding.started += instance.OnRotateBuilding;
+                @RotateBuilding.performed += instance.OnRotateBuilding;
+                @RotateBuilding.canceled += instance.OnRotateBuilding;
                 @Attack_Player.started += instance.OnAttack_Player;
                 @Attack_Player.performed += instance.OnAttack_Player;
                 @Attack_Player.canceled += instance.OnAttack_Player;
@@ -1335,6 +1364,9 @@ namespace InputSystem
                 @Move_Player.started -= instance.OnMove_Player;
                 @Move_Player.performed -= instance.OnMove_Player;
                 @Move_Player.canceled -= instance.OnMove_Player;
+                @RotateBuilding.started -= instance.OnRotateBuilding;
+                @RotateBuilding.performed -= instance.OnRotateBuilding;
+                @RotateBuilding.canceled -= instance.OnRotateBuilding;
                 @Attack_Player.started -= instance.OnAttack_Player;
                 @Attack_Player.performed -= instance.OnAttack_Player;
                 @Attack_Player.canceled -= instance.OnAttack_Player;
@@ -1487,6 +1519,13 @@ namespace InputSystem
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnMove_Player(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "RotateBuilding" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnRotateBuilding(InputAction.CallbackContext context);
             /// <summary>
             /// Method invoked when associated input action "Attack_Player" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>

@@ -85,6 +85,7 @@ public partial class ItemMgr
             return;
 
         WorldItemWaterSystem.CancelSpawnCheck(item);
+        MechanicalWorld.BeforeDespawn(item);
         RuntimeItemDespawning?.Invoke(item);
         WorldItemWaterSystem.ClearRuntimeState(item);
 

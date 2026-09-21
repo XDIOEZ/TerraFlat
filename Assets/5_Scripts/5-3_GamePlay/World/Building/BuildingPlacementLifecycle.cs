@@ -10,6 +10,16 @@ public interface IBuildingFatalDamagePolicy
     bool UseDamageReceiverFatalResolution(DamageReceiver receiver);
 }
 
+/// <summary>扩展建筑的分层占格、候选状态和预览；手持临时配置只在提交候选时写入世界数据。</summary>
+public interface IBuildingPlacementExtension
+{
+    int OccupancyLayer { get; }
+    bool ValidatePlacement(UnityEngine.Vector2Int cell, out string reason);
+    void PreparePlacedData(ItemData data);
+    void PrepareRepackedSnapshot(ItemData snapshot);
+    void ApplyPreview(BuildingShadow shadow);
+}
+
 public static class BuildingPlacementLifecycle
 {
     #region 安装事务通知
@@ -19,6 +29,15 @@ public static class BuildingPlacementLifecycle
         if (building?.itemMods == null) return;
         foreach (Module module in building.itemMods.Mods.Values)
             if (module is IBuildingPlacementCommitted listener) listener.OnBuildingPlacementCommitted();
+    }
+
+    /// <summary>同一建筑只能有一套占地扩展，模块组合完成后解析。</summary>
+    public static IBuildingPlacementExtension GetExtension(Item item)
+    {
+        if (item?.itemMods == null) return null;
+        foreach (Module module in item.itemMods.Mods.Values)
+            if (module is IBuildingPlacementExtension extension) return extension;
+        return null;
     }
 
     #endregion

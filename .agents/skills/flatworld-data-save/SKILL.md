@@ -54,5 +54,8 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 
 ## Skill 维护原则
 
+- 机械整网使用外层追加的 `CompactSaveEnvelope.MechanicalNetworks`；`GameSaveData.Mechanical` 保持 `MemoryPackIgnore`。机械本体不能同时写进普通建筑 Chunk 快照，远端无表现节点也必须进入独立存档；退出保存完成之后才能释放 `MechanicalWorld`。
+- 二进制加工库存由 `MechanicalProcessor` 恢复时重新挂接当前 ItemDefinition；不能假设通用 `Inventory_ModuleData` 递归会访问专用二进制载荷。缺失机械 MOD 定义的原快照仍保留在对应世界档案中。
+
 - 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
 - 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

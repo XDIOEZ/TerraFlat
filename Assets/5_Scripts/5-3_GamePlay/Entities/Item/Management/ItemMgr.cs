@@ -183,6 +183,7 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
 
     protected override void OnDestroy()
     {
+        MechanicalWorld.ReleaseWorld(capture: false);
         DroppedItemService.ReleaseWorld(capture: false);
         Item.RuntimeStructureChanged -= OnPerceptionStructureChanged;
         CompletePerceptionBatch(false);
@@ -218,6 +219,8 @@ public partial class ItemMgr : SingletonMono<ItemMgr>
         }
 
         _itemTickSuspended = false;
+
+        MechanicalWorld.Tick(Time.deltaTime);
 
         CompletePerceptionBatch();
 

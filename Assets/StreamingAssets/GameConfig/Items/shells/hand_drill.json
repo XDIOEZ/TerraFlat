@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "HandDrill",
+      "parent": "BuildingBody_Base",
+      "gameName": "手钻-建筑",
+      "description": "可放置并打开手钻加工面板的手动钻孔工具。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1.5,
+      "volume": 2.5,
+      "stackable": false,
+      "canBePickedUp": false,
+      "tags": [
+        "35",
+        "HandDrill"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 180,
+        "maxHp": 180,
+        "defense": {
+          "cutting": 8,
+          "piercing": 8,
+          "chopping": 8,
+          "blunt": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"HandDrill\",\"SummonerPrefabId\":\"HandDrill_Summoner\",\"SharedModuleIds\":[\"手钻模块\"]}",
+            "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": true
+          }
+        },
+        "手钻模块": {
+          "prefab": "Module_HandDrill",
+          "id": "手钻模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "WorkPerClick": 1.0
+          }
+        }
+      }
+    },
+    {
+      "id": "HandDrill_Summoner",
+      "parent": "BuildingSummoner_Base",
+      "gameName": "手钻",
+      "description": "可携带的手动钻孔工具，放置后共享手钻加工状态。",
+      "durability": 1,
+      "maxDurability": 1,
+      "amount": 1,
+      "weight": 1.5,
+      "volume": 2.5,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "35",
+        "HandDrill"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+      },
+      "health": {
+        "hasHp": true,
+        "hp": 180,
+        "maxHp": 180,
+        "defense": {
+          "cutting": 8,
+          "piercing": 8,
+          "chopping": 8,
+          "blunt": 8
+        },
+        "collider": {
+          "type": "BoxCollider2D",
+          "enabled": true,
+          "isTrigger": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "x": 1,
+            "y": 1
+          },
+          "edgeRadius": 0
+        }
+      },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10,\"minVisibleDistance\":1,\"State\":0,\"Role\":0,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"HandDrill\",\"SummonerPrefabId\":\"HandDrill_Summoner\",\"SharedModuleIds\":[\"手钻模块\"]}",
+            "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": true
+          }
+        },
+        "手钻模块": {
+          "prefab": "Module_HandDrill",
+          "id": "手钻模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "WorkPerClick": 1.0
+          }
+        }
+      }
+    }
+  ]
+}

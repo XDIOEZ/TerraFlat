@@ -61,5 +61,8 @@ description: "Use when: 定位或修改 FlatWorld 的建筑放置预览、安装
 
 ## Skill 维护原则
 
+- 机械节点通过 `IBuildingPlacementExtension` 声明占地层、候选数据与拆回快照处理；扩展校验必须同时覆盖放置预览和真实事务。只有 `IBuildingPlacementCommitted` 后才登记世界副作用，不能在未提交候选的 `Load` 中入网。
+- `CrossShaft` 只占 Layer1 中心一格，普通建筑仍占 Layer0；导航只考虑下层阻挡。手持 R 朝向属于模块临时状态，拆回快照和重新选中都必须恢复横向；禁止把方向写进 Summoner 堆叠数据。
+
 - 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
 - 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

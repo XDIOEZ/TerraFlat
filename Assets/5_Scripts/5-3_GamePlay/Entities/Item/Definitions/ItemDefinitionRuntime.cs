@@ -31,7 +31,8 @@ public static class ItemDefinitionRuntime
             return persistedData;
 
         ItemData rebasedData = persistedData;
-        if (gameRes.TryGetItemDefinition(persistedData.IDName.Trim(), out RuntimeItemDefinition definition))
+        string definitionId = Mod_HandDrill.ResolveCarrierDefinition(persistedData);
+        if (gameRes.TryGetItemDefinition(definitionId, out RuntimeItemDefinition definition))
         {
             ItemData currentData = definition.CreateItemData();
             RestoreItemInstanceState(currentData, persistedData);

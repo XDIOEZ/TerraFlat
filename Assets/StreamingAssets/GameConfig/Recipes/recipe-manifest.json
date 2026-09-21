@@ -32,6 +32,11 @@
       "enabled": true
     },
     {
+      "id": "crafting/mechanical",
+      "path": "crafting/mechanical.json",
+      "enabled": true
+    },
+    {
       "id": "cooking/basic_food",
       "path": "cooking/basic_food.json",
       "enabled": true

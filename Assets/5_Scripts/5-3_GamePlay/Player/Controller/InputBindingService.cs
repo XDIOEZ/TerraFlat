@@ -151,6 +151,7 @@ public sealed class InputBindingService : IDisposable
         new BindingSpec("B", null, "背包", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
         new BindingSpec("P", null, "装备面板", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
         new BindingSpec("H", null, "手工制作", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
+        new BindingSpec("RotateBuilding", null, "旋转建筑", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
         new BindingSpec("ToggleRun", null, "切换奔跑", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
         new BindingSpec("Shift", null, "长按奔跑", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),
         new BindingSpec("CtrlMouse", "Modifier", "镜头缩放修饰键", InputBindingDeviceGroup.KeyboardMouse, "Keyboard&Mouse", "Button"),

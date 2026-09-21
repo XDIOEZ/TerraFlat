@@ -29,6 +29,7 @@ public sealed class CraftingCapabilities
     public int MaxRecipeHeight;
     public bool AllowCompactGrid;
     public bool AllowOutputIntoInput;
+    public bool ApplyDifficultyOutputMultiplier = true; // 固定物料转换可关闭普通合成的难度增产。
 }
 
 /// <summary>

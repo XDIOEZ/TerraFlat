@@ -85,6 +85,7 @@ public partial class GameController : Module
     public event Action<InputDeviceType> ActiveInputDeviceChanged;
     public event Action AttackStarted;
     public event Action AttackEnded;
+    public event Action BuildingRotationRequested; // 当前手持建筑的临时朝向切换。
     public float AimDeadZone => Mathf.Clamp01(GamepadCursorDeadZone); // 手机和手柄共用的准星死区
 
     [Header("手柄适配")]
@@ -520,6 +521,7 @@ public partial class GameController : Module
 
     private void RegisterInputCallbacks() /// 注册输入监听
     {
+        _inputActions.asset.FindAction("Win10/RotateBuilding", true).performed += HandleBuildingRotation;
         _inputActions.Win10.LeftClick.performed += LeftClickAction;
         _inputActions.Win10.LeftClick.canceled += LeftClickUpAction;
         _inputActions.Win10.Attack_Player.started += MobileAttackStartedAction;
@@ -555,6 +557,7 @@ public partial class GameController : Module
 
     private void UnregisterInputCallbacks() /// 取消输入监听
     {
+        _inputActions.asset.FindAction("Win10/RotateBuilding", true).performed -= HandleBuildingRotation;
         _inputActions.Win10.LeftClick.performed -= LeftClickAction;
         _inputActions.Win10.LeftClick.canceled -= LeftClickUpAction;
         _inputActions.Win10.Attack_Player.started -= MobileAttackStartedAction;
@@ -585,6 +588,14 @@ public partial class GameController : Module
         _inputActions.Win10.ToggleRun.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.Ctrl.performed -= UpdateCurrentInputDevice;
         _inputActions.Win10.ESC.performed -= UpdateCurrentInputDevice;
+    }
+
+    /// <summary>只在玩法输入可用时，把旋转请求转发给当前手持建筑。</summary>
+    private void HandleBuildingRotation(InputAction.CallbackContext context)
+    {
+        if (!context.performed || !IsGameplayInputAllowed(context) || IsGameplayInputLocked ||
+            IsPointerOverUI() || EventSystemGuard.IsGamepadUISelectionActive) return;
+        BuildingRotationRequested?.Invoke();
     }
 
     /// <summary>切换并保存玩家选择的玩法控制方案；UI 指针动作不受玩法绑定遮罩影响。</summary>

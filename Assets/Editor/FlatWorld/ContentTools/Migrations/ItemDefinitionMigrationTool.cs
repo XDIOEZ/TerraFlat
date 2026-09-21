@@ -55,7 +55,7 @@ public static class ItemDefinitionMigrationTool
         "WorldResource_Base", "MineResource_Base", "AppleTree", "Tree_Coconut", "Mine_Coal", "Mine_Copper",
         "Mine_Iron", "Mine_Stone", "Mine_Tin", "Iceberg", "Bush",
         "Tree_Pine", "Resin", "Charcoal", "Glue", "DrilledLog", "DrilledPlank", "DrilledStick", "HandDrill", "WoodHammer",
-        "Beehive", "Flower", "Scissors"
+        "Beehive", "Flower", "Scissors", "DrilledStoneSlab", "DrilledStone"
     };
 
     /// <summary>预览统计时不计入运行时物品数量的抽象定义。</summary>

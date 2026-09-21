@@ -134,7 +134,8 @@ public static class CraftingService
                 requestedRecipe);
         }
 
-        if (!TryPrepareOutputs(match.Recipe, out List<ItemData> outputs, out CraftingResult outputFailure))
+        if (!TryPrepareOutputs(match.Recipe, out List<ItemData> outputs, out CraftingResult outputFailure,
+                capabilities?.ApplyDifficultyOutputMultiplier ?? true))
             return outputFailure;
 
         if (!CraftingOutputRules.Prepare(inputInventory, match, outputs, out string stateError))
@@ -217,7 +218,8 @@ public static class CraftingService
     private static bool TryPrepareOutputs(
         RuntimeRecipe recipe,
         out List<ItemData> outputs,
-        out CraftingResult failure)
+        out CraftingResult failure,
+        bool applyDifficultyMultiplier = true)
     {
         outputs = new List<ItemData>();
         failure = null;
@@ -256,10 +258,10 @@ public static class CraftingService
                 return false;
             }
 
-            itemData.Stack.Amount = GameDifficultyService.ScaleCount(
+            itemData.Stack.Amount = applyDifficultyMultiplier ? GameDifficultyService.ScaleCount(
                 output.amount,
                 GameDifficultyService.Current.Production.CraftingOutputMultiplier,
-                1);
+                1) : output.amount;
             outputs.Add(itemData);
         }
 

@@ -64,4 +64,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 
 ## Skill 维护原则
 
+- `World/Mechanical/MechanicalWorld` 的模拟权威独立于 `ChunkView`：真实端口连通网络整组唤醒、先全量恢复再 Tick、先全量快照再休眠；不可因可见 Chunk 卸载而删除节点或冻结一半动力源。
+- 机械距离只查询缓存的 Chunk `BoundsInt`，含滞回和冷却；拓扑变化时重算单区块属性和循环世界最短包围跨度。表现层只查询已存在的 ChunkView，不为传动网络申请整条地图加载。
+
 - 只补充可复用的易错点、隐含约束和必要注意事项，不记录近期改动流水账。

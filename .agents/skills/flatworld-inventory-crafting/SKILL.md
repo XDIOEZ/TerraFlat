@@ -100,5 +100,8 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 
 ## Skill 维护原则
 
+- `Mod_HandDrill` 使用独立二进制 `MechanicalProcessingState` 与 `UI_HandDrill`；手持/建筑通过 `SharedModuleIds=["手钻模块"]` 迁移同一库存和进度，不再使用 amount=0 工具配方。加工表位于 `Resources/Config/Mechanical/mechanical-catalog.json`，MOD 注册入口为 `MechanicalCatalog.RegisterProcess`。
+- `MechanicalProcessor` 的输入过滤覆盖统一库存转移入口；预览与提交均走 `CraftingService`，输出满时不扣料、不清空已有进度。固定物料转换必须设置 `ApplyDifficultyOutputMultiplier=false`，避免难度增产倍率破坏 1:1 钻孔。
+
 - 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
 - 不记录修改日期、近期变更或仅描述本次改动内容的流水账。

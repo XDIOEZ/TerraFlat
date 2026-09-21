@@ -17,7 +17,7 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 17; // 外层追加独立 ECS 掉落物快照，旧核心对象布局不变。
+    private const int CompactSaveVersion = 18; // 独立机械整网载荷追加在外层，旧核心对象布局不变。
     private const int ModdedSaveVersion = 10;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
@@ -1727,6 +1727,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     private static bool IsRuntimeBuildingItem(Item item, out Mod_Building building)
     {
         building = null;
+        if (MechanicalWorld.OwnsWorldItem(item?.itemData)) return false;
         if (item == null || item is Player || item is Map || item.itemData == null)
             return false;
 
@@ -1765,6 +1766,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
     /// <summary>判断建筑 SaveData 是否可以在世界加载时重新实例化。</summary>
     private static bool IsRestorableRuntimeBuildingData(ItemData data)
     {
+        if (MechanicalWorld.OwnsWorldItem(data)) return false;
         try
         {
             if (data == null || !Mod_Building.TryReadBuildingData(
@@ -2399,7 +2401,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         {
             Version = CompactSaveVersion,
             CoreSaveData = SerializeCoreDataWithoutChunks(saveData),
-            DroppedItems = DroppedItemService.CaptureArchive(saveData)
+            DroppedItems = DroppedItemService.CaptureArchive(saveData),
+            MechanicalNetworks = MechanicalWorld.CaptureArchive(saveData)
         };
 
         foreach (KeyValuePair<string, ChunkSaveRecord> pair in chunkDeltas)
@@ -2495,6 +2498,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             throw new InvalidDataException("差异存档的核心数据为空");
 
         DroppedItemService.RestoreArchive(saveData, envelope.DroppedItems);
+        MechanicalWorld.RestoreArchive(saveData, envelope.MechanicalNetworks);
 
         if (envelope.ChunkRecords == null)
             return saveData;
@@ -2700,6 +2704,7 @@ public partial class CompactSaveEnvelope
     public byte[] CoreSaveData;
     public List<ChunkSaveRecord> ChunkRecords = new();
     public byte[] DroppedItems;
+    public byte[] MechanicalNetworks; // 追加独立版本载荷，旧版本缺失时为空。
 }
 
 [MemoryPackable]

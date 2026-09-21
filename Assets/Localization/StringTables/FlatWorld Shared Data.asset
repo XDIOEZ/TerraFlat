@@ -1583,6 +1583,182 @@ MonoBehaviour:
     m_Key: item.BottledJam.name
     m_Metadata:
       m_Items: []
+  - m_Id: 15838801002749952
+    m_Key: item.DrilledStoneSlab.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996160
+    m_Key: item.DrilledStone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996161
+    m_Key: item.HandCrank.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996162
+    m_Key: item.HandCrank_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996163
+    m_Key: item.WaterWheel.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996164
+    m_Key: item.WaterWheel_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996165
+    m_Key: item.Windmill.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996166
+    m_Key: item.Windmill_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996167
+    m_Key: item.LargeWaterWheel.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996168
+    m_Key: item.LargeWaterWheel_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996169
+    m_Key: item.LargeWindmill.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996170
+    m_Key: item.LargeWindmill_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996171
+    m_Key: item.Shaft_Wood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996172
+    m_Key: item.Shaft_Wood_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996173
+    m_Key: item.Gear_Wood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996174
+    m_Key: item.Gear_Wood_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996175
+    m_Key: item.Gearbox_Wood.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996176
+    m_Key: item.Gearbox_Wood_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996177
+    m_Key: item.Clutch.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996178
+    m_Key: item.Clutch_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996179
+    m_Key: item.Shaft_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996180
+    m_Key: item.Shaft_Copper_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996181
+    m_Key: item.Gear_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996182
+    m_Key: item.Gear_Copper_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996183
+    m_Key: item.Gearbox_Copper.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996184
+    m_Key: item.Gearbox_Copper_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996185
+    m_Key: item.Shaft_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996186
+    m_Key: item.Shaft_Iron_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996187
+    m_Key: item.Gear_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996188
+    m_Key: item.Gear_Iron_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996189
+    m_Key: item.Gearbox_Iron.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996190
+    m_Key: item.Gearbox_Iron_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996191
+    m_Key: item.CrossShaft.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996192
+    m_Key: item.CrossShaft_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996193
+    m_Key: item.Millstone.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996194
+    m_Key: item.Millstone_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996195
+    m_Key: item.MechanicalBellows.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996196
+    m_Key: item.MechanicalBellows_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996197
+    m_Key: item.Sawmill.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996198
+    m_Key: item.Sawmill_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801120190464
+    m_Key: item.MechanicalHammer.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801120190465
+    m_Key: item.MechanicalHammer_Summoner.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801120190466
+    m_Key: item.HandDrill.name
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801120190467
+    m_Key: item.HandDrill_Summoner.name
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

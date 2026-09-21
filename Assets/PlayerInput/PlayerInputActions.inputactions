@@ -15,6 +15,15 @@
                     "initialStateCheck": true
                 },
                 {
+                    "name": "RotateBuilding",
+                    "type": "Button",
+                    "id": "18c3b730-067e-4b7e-b8b2-a16a3299d582",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Attack_Player",
                     "type": "Button",
                     "id": "9c5afda1-8ba4-4fe2-a228-4f2c11e46b46",
@@ -214,6 +223,17 @@
                 }
             ],
             "bindings": [
+                {
+                    "name": "",
+                    "id": "ba960d2d-fd16-49d5-9548-0bc24f9064fb",
+                    "path": "<Keyboard>/r",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "RotateBuilding",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
                 {
                     "name": "2D Vector",
                     "id": "f7c0d424-cb0e-4850-8e25-e0f13654d2da",

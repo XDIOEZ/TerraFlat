@@ -1616,6 +1616,182 @@ MonoBehaviour:
       vessel and enough food before searching deeper cave veins.'
     m_Metadata:
       m_Items: []
+  - m_Id: 15838801002749952
+    m_Localized: Drilled Stone Slab
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996160
+    m_Localized: Drilled Stone
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996161
+    m_Localized: Hand Crank
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996162
+    m_Localized: Hand Crank
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996163
+    m_Localized: Water Wheel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996164
+    m_Localized: Water Wheel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996165
+    m_Localized: Windmill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996166
+    m_Localized: Windmill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996167
+    m_Localized: Large Water Wheel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996168
+    m_Localized: Large Water Wheel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996169
+    m_Localized: Large Windmill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996170
+    m_Localized: Large Windmill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996171
+    m_Localized: Wooden Shaft
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996172
+    m_Localized: Wooden Shaft
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996173
+    m_Localized: Wooden Gear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996174
+    m_Localized: Wooden Gear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996175
+    m_Localized: Wooden Gearbox
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996176
+    m_Localized: Wooden Gearbox
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996177
+    m_Localized: Clutch
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996178
+    m_Localized: Clutch
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996179
+    m_Localized: Copper Shaft
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996180
+    m_Localized: Copper Shaft
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996181
+    m_Localized: Copper Gear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996182
+    m_Localized: Copper Gear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996183
+    m_Localized: Copper Gearbox
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996184
+    m_Localized: Copper Gearbox
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996185
+    m_Localized: Iron Shaft
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996186
+    m_Localized: Iron Shaft
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996187
+    m_Localized: Iron Gear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996188
+    m_Localized: Iron Gear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996189
+    m_Localized: Iron Gearbox
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996190
+    m_Localized: Iron Gearbox
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996191
+    m_Localized: Shaft Bridge
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996192
+    m_Localized: Shaft Bridge
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996193
+    m_Localized: Millstone
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996194
+    m_Localized: Millstone
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996195
+    m_Localized: Mechanical Bellows
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996196
+    m_Localized: Mechanical Bellows
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996197
+    m_Localized: Sawmill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801115996198
+    m_Localized: Sawmill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801120190464
+    m_Localized: Mechanical Hammer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801120190465
+    m_Localized: Mechanical Hammer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801120190466
+    m_Localized: Hand Drill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15838801120190467
+    m_Localized: Hand Drill
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

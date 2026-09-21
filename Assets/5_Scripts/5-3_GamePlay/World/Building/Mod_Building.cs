@@ -434,6 +434,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
         try
         {
+            BuildingPlacementLifecycle.GetExtension(item)?.PreparePlacedData(placedData);
             building = ItemMgr.Instance.InstantiateItem(
                 placedData,
                 placedData.transform.position,
@@ -855,6 +856,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
             snapshot.transform.position = item.transform.position;
             snapshot.transform.rotation = item.transform.rotation;
             snapshot.transform.scale = item.transform.localScale;
+            BuildingPlacementLifecycle.GetExtension(item)?.PrepareRepackedSnapshot(snapshot);
 
             if (!ItemNetworkStateSerialization.TrySerializeItemData(snapshot, out byte[] payload) ||
                 payload.Length > MaxEmbeddedSnapshotBytes)
@@ -1031,6 +1033,9 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         }
 
         Vector2Int placementCell = GetPlacementCell(position);
+        IBuildingPlacementExtension placementExtension = BuildingPlacementLifecycle.GetExtension(item);
+        if (placementExtension != null && !placementExtension.ValidatePlacement(placementCell, out reason))
+            return false;
         if (!string.IsNullOrWhiteSpace(Data?.TileBlockId))
         {
             // 格子建筑的合法性以建筑阻挡层数据为准，不能再用 TilemapCollider2D 的边界判断相邻格。
@@ -1422,6 +1427,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
         GhostShadow.transform.position = mouse;
         GhostShadow.UpdateAlpha(1f);
+        BuildingPlacementLifecycle.GetExtension(item)?.ApplyPreview(GhostShadow);
         GhostShadow.UpdateColor(!withinReach || !ValidatePlacement(mouse, authorityPosition, false, out _));
     }
 

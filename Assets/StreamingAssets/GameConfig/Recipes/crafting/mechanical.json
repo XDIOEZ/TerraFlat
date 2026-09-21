@@ -1,0 +1,880 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:mechanical_HandCrank",
+      "displayName": "手摇轮",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 4,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "DrilledStick",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Rope",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "HandCrank_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_WaterWheel",
+      "displayName": "水车",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "tag": "",
+          "amount": 8
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "WaterWheel_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Windmill",
+      "displayName": "风车",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 5,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "tag": "",
+          "amount": 6
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "DrilledStick",
+          "tag": "",
+          "amount": 4
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Fiber",
+          "tag": "",
+          "amount": 8
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Rope",
+          "tag": "",
+          "amount": 4
+        },
+        {
+          "slot": 4,
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Windmill_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_LargeWaterWheel",
+      "displayName": "大水车",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "WaterWheel_Summoner",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "tag": "",
+          "amount": 8
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "LargeWaterWheel_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_LargeWindmill",
+      "displayName": "大风车",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 5,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Windmill_Summoner",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "tag": "",
+          "amount": 8
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Fiber",
+          "tag": "",
+          "amount": 12
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Rope",
+          "tag": "",
+          "amount": 6
+        },
+        {
+          "slot": 4,
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "LargeWindmill_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Shaft_Wood",
+      "displayName": "木制传动轴",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "DrilledStick",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Shaft_Wood_Summoner",
+          "amount": 4
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Gear_Wood",
+      "displayName": "木制齿轮",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "DrilledStick",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Gear_Wood_Summoner",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Gearbox_Wood",
+      "displayName": "变速箱",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "tag": "",
+          "amount": 4
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Gearbox_Wood_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Clutch",
+      "displayName": "离合器",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 4,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Rope",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Clutch_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Shaft_Copper",
+      "displayName": "铜制传动轴",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Shaft_Copper_Summoner",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Gear_Copper",
+      "displayName": "铜制齿轮",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Gear_Copper_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Gearbox_Copper",
+      "displayName": "铜制变速箱",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Gearbox_Wood_Summoner",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ingot_Copper",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Gearbox_Copper_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Shaft_Iron",
+      "displayName": "铁制传动轴",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Shaft_Iron_Summoner",
+          "amount": 2
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Gear_Iron",
+      "displayName": "铁制齿轮",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Gear_Iron_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Gearbox_Iron",
+      "displayName": "铁制变速箱",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Gearbox_Wood_Summoner",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "tag": "",
+          "amount": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Gearbox_Iron_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_CrossShaft",
+      "displayName": "跨轴器",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 4,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "DrilledStick",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Rope",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "CrossShaft_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Millstone",
+      "displayName": "石磨",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 4,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ore_Stone",
+          "tag": "",
+          "amount": 6
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Millstone_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_MechanicalBellows",
+      "displayName": "机械风箱",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 5,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "tag": "",
+          "amount": 4
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "DrilledStick",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Leather",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Rope",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 4,
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "MechanicalBellows_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_Sawmill",
+      "displayName": "锯木机",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 5,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "tag": "",
+          "amount": 4
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "DrilledStick",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Ingot_WroughtIron",
+          "tag": "",
+          "amount": 3
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 4,
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "Sawmill_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:mechanical_MechanicalHammer",
+      "displayName": "机械锻锤",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 5,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "requiredStation": "workbench",
+      "temperature": 0,
+      "maxTemperature": 2000,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "DrilledPlank",
+          "tag": "",
+          "amount": 4
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "DrilledStick",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "Ingot_RawIron",
+          "tag": "",
+          "amount": 3
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Gear_Wood_Summoner",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 4,
+          "match": "exact_item",
+          "itemId": "Shaft_Wood_Summoner",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "MechanicalHammer_Summoner",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

@@ -2388,6 +2388,74 @@ MonoBehaviour:
       when it is off. Changes are saved immediately.
     m_Metadata:
       m_Items: []
+  - m_Id: 15792813051469824
+    m_Localized: Hand Drill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813118578688
+    m_Localized: Mechanical Power
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813118578689
+    m_Localized: Drill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813118578690
+    m_Localized: Crank
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813122772992
+    m_Localized: Disengage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813122772993
+    m_Localized: Engage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813122772994
+    m_Localized: Change Ratio
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813122772995
+    m_Localized: Rotate Building
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813122772996
+    m_Localized: Progress {0:0}%
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813122772997
+    m_Localized: "{0} \xB7 RPM {1:0} \xB7 Power {2:0.#}/{3:0.#}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813122772998
+    m_Localized: " \xB7 Ratio {0:0.##}"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813122772999
+    m_Localized: No Power
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813122773000
+    m_Localized: Overloaded
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813122773001
+    m_Localized: Running
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813122773002
+    m_Localized: Ratio Conflict
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813122773003
+    m_Localized: Sleeping
+    m_Metadata:
+      m_Items: []
+  - m_Id: 15792813122773004
+    m_Localized: Stopped
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

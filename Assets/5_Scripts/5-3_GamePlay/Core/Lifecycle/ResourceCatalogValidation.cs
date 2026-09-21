@@ -20,7 +20,8 @@ public static class ResourceCatalogValidation
     {
         ["items"] = new ItemResourceCatalogValidator(),
         ["buildings"] = new BuildingResourceCatalogValidator(),
-        ["tiles"] = new TileDefinitionCatalogValidator()
+        ["tiles"] = new TileDefinitionCatalogValidator(),
+        ["mechanical"] = new MechanicalResourceCatalogValidator()
     };
 
     /// <summary>按稳定 ID 接入独立系统校验；替换既有校验必须显式声明。</summary>

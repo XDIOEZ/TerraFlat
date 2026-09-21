@@ -283,6 +283,7 @@ public partial class GameRes
         Clear(ClearAllDictionaries);
         Clear(PlayerCreationTemplateCatalogService.Reset);
         Clear(TimeSystemConfigService.Reset);
+        Clear(MechanicalCatalog.Clear);
         Clear(() => resourceAssets.Dispose());
         LoadedCount = 0;
         IsStartupReady = false;
