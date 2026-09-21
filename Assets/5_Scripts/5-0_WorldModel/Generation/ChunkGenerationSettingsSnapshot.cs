@@ -289,13 +289,13 @@ namespace FlatWorld.WorldModel
                 RiverMaxTraceSteps);
             RiverInfiltrationFloor = Clamp01(
                 GetDouble(numbers, "river.infiltrationFloor", 0.25d));
-            RiverStartFlow = Positive(GetDouble(numbers, "river.startFlow", 0.405d), 0.405d);
+            RiverStartFlow = Positive(GetDouble(numbers, "river.startFlow", 0.14d), 0.14d);
             RiverTributaryStartFlow = Math.Min(
                 RiverStartFlow,
-                Positive(GetDouble(numbers, "river.tributaryStartFlow", 0.195d), 0.195d));
+                Positive(GetDouble(numbers, "river.tributaryStartFlow", 0.10d), 0.10d));
             RiverFullWidthFlow = Math.Max(
                 RiverStartFlow,
-                Positive(GetDouble(numbers, "river.fullWidthFlow", 1.2d), 1.2d));
+                Positive(GetDouble(numbers, "river.fullWidthFlow", 0.45d), 0.45d));
             double lateralDistanceScale = Math.Sqrt(WorldCoordinateDistanceScale);
             RiverMaxWidth = ScaleDistance(
                 GetInt(numbers, "river.maxWidth", 7), lateralDistanceScale, 1, 15);
@@ -317,7 +317,7 @@ namespace FlatWorld.WorldModel
                 24);
             RiverFloodplainStartFlow = Math.Max(
                 RiverStartFlow,
-                Positive(GetDouble(numbers, "river.floodplainStartFlow", 0.405d), 0.405d));
+                Positive(GetDouble(numbers, "river.floodplainStartFlow", 0.14d), 0.14d));
             RiverFloodplainMaxRadius = ScaleDistance(
                 GetInt(numbers, "river.floodplainMaxRadius", 8),
                 lateralDistanceScale,
@@ -391,6 +391,8 @@ namespace FlatWorld.WorldModel
             CaveSurfaceOceanWallChance = Clamp01(GetDouble(
                 numbers, "cave.surfaceInfluence.oceanWallChance", 0.85d));
             CaveGroundwaterEnabled = GetBool(numbers, "cave.groundwater.enabled", false);
+            CaveGroundwaterRoomChance = Clamp01(
+                GetDouble(numbers, "cave.groundwater.roomChance", 0.1d));
             CaveGroundwaterMinimumPrecipitation = Clamp01(
                 GetDouble(numbers, "cave.groundwater.minimumPrecipitation", 0.72d));
             CaveGroundwaterMinRadiusRatio = Clamp(
@@ -634,6 +636,8 @@ namespace FlatWorld.WorldModel
         public double CaveSurfaceOceanWallChance { get; }
         /// <summary>洞室地下湖的确定性分布、水面半径与水深范围；地表高度带与最低降水阈值共同决定是否成湖。</summary>
         public bool CaveGroundwaterEnabled { get; }
+        /// <summary>满足地表条件的洞室生成地下湖的确定性概率。</summary>
+        public double CaveGroundwaterRoomChance { get; }
         public double CaveGroundwaterMinimumPrecipitation { get; }
         public double CaveGroundwaterMinRadiusRatio { get; }
         public double CaveGroundwaterMaxRadiusRatio { get; }

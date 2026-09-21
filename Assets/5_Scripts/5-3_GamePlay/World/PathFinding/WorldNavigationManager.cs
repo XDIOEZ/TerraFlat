@@ -308,10 +308,10 @@ public sealed partial class WorldNavigationManager : SingletonAutoMono<WorldNavi
         // 旧 Map 烘焙仍可能晚于 Runtime Chunk 注册；保留水体元数据，避免把 ECS 共用快照中的水态擦掉。
         float liquidDepth = owner != null ? owner.GetGeneratedLiquidDepth(worldCell) : 0f;
         bool water = liquidDepth > 0f;
-        if (water && owner.LegacyLiquidTerrain != null)
+        if (water && owner.GeneratedLiquidTerrain != null)
         {
             Vector2Int local = worldCell - owner.Data.position;
-            penalty = WorldLiquidSystem.GetNavigationCost(owner.LegacyLiquidTerrain, local.x, local.y, penalty);
+            penalty = WorldLiquidSystem.GetNavigationCost(owner.GeneratedLiquidTerrain, local.x, local.y, penalty);
         }
         grid.SetCell(worldCell, penalty, walkable, water, liquidDepth);
         AssignCellOwner(owner, worldCell);

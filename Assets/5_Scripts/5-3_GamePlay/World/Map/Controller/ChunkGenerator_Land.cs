@@ -502,7 +502,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             return false;
 
         TileData template = GetTerrainTileBlock(sample.Biome)?.tileDataTemplate;
-        return template != null && template is not TileData_Water && template.IsWalkable;
+        return template != null && template.IsWalkable;
     }
 
     public byte[] CopyRuntimeBiomeIndices()
@@ -581,7 +581,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         int height = Mathf.Max(1, Mathf.RoundToInt(chunkSize.y));
         map.Data.EnsureTileStorage(width, height);
         map.Data.ClearAllTiles();
-        map.ResetLegacyLiquids();
+        map.ResetGeneratedLiquids();
         map.Data.EnsureEnvironmentStorage(width, height);
     }
 
@@ -974,7 +974,6 @@ public sealed class TerrainPreviewSampler
                             _river.TryEvaluateAppliedHydrologyCell(
                                 worldPosition,
                                 _worldSeed,
-                                baseTerrain,
                                 out hydrology);
         float baseLiquidDepth = baseHasWater
             ? (1f - Mathf.Pow(Mathf.Clamp01(baseEnvironment.Height / 0.5f), 2f))

@@ -21,7 +21,7 @@ description: "Use when: 定位或修改 FlatWorld 的 Buff 定义、JSON 目录�
 - Handler 在定义构建时缓存，运行 Tick 不做反射或字符串查找。
 - `add_stacks` 只改变单实例 `StackCount` 并续期，不重放 Start/Stop、不重置 Tick 相位；冷却/移速等登记型倍率仍只登记一次。按层伤害由效果 `scaleWithStacks` 显式声明，不能把整个效果集合一律乘层数。
 - 层数必须追加在 BuffInstance 原有持久化字段后；恢复时按当前定义把缺失/越界层数归一到 `1..MaxStacks`。表现订阅 `BuffStacksChanged`，不能靠重建 Buff 或反复触发布局表达层数变化。
-- 水体叠层时钟由每个 BuffManager 独享，不能放入共享 Tile_Water；使用真实地形深度而不是漂浮后的视觉浸没深度。同帧跨水格保留计时，进入浅水只限制后续增长，不削掉已有层数；离水保留 Buff 按自身时长自然到期。
+- 水体叠层时钟由每个 BuffManager 独享，不能放入共享 LiquidDefinition/WorldLiquidBehaviour；使用真实地形深度而不是漂浮后的视觉浸没深度。同帧跨水格保留计时，进入浅水只限制后续增长，不削掉已有层数；离水保留 Buff 按自身时长自然到期。
 - 火焰施加先比较完整候选层数：同层潮湿阻止点燃，强火成功施加后才蒸发弱潮湿。燃烧期间重新浸水允许潮湿累计到灭火阈值，不能每次把新加的单层水立即删除而导致永久无法灭火。
 - Wiki BUFF 页与 Item 共用内联编辑、文件指纹、备份及原子写回事务；BuffManifest 是可写目标白名单，校验器须与 BuffDefinitionFactory 同步。保存不代表正在运行的 GameRes 已热重载，页面必须说明生效边界；公开模式只读。
 - 新效果需同时增加稳定 typeId、Dispatcher 注册和参数校验。

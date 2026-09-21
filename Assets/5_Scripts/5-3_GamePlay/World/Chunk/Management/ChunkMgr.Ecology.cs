@@ -82,6 +82,8 @@ public partial class ChunkMgr
             return profile;
         }
 
+        planet.Ecology.Generation.MigrateHeightDrivenRiverDefaults(profile);
+
         if (!planet.Ecology.TryApplyGenerationConfiguration(profile,
                 out ChunkGenerationProfileSnapshot restoredProfile))
         {

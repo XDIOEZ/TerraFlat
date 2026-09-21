@@ -1186,7 +1186,7 @@ public partial class GameManager : SingletonAutoMono<GameManager>
 
     private static bool IsWalkableLandTile(TileData tile)
     {
-        return tile != null && !(tile is TileData_Water) && tile.IsWalkable;
+        return tile != null && tile.IsWalkable;
     }
 
     /// <summary>

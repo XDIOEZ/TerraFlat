@@ -25,8 +25,9 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 本 Skill 负责地图内容规则；WorldModel 负责 Chunk 生命周期、并发、租约和表现绑定。
 - Tile 栈只通过 API 修改；静态 Blocking Tile 与动态建筑占地不要混用。
 - Ground 永远保存真实底部地块，海洋、河流、湖泊、地下水的初始液体在生成阶段另外写入 `ChunkTerrainData`。修改地面不会自动改液体；抽水只走 `WorldLiquidSystem.TryPump/TrySet`，禁止抽水时生成底部或修改 Ground。平台通过 `TerrainSupportLayer` 遮断表面接触，底部液体仍保留。
-- 世界液体来源统一由 `WorldLiquidSourceResolver` 读取权威 Liquid 层的深度与稳定 `LiquidId`，再解析 `LiquidDefinition`；不能按 Ground Tile、盐度或 Collider 猜身份。容器份数与世界液深是不同单位，不能未经规则换算直接互相扣减。旧 `TileData_Water` 只保留 MemoryPack Union 与旧 MOD 类型入口，不是运行时水格真源。
+- 世界液体来源统一由 `WorldLiquidSourceResolver` 读取权威 Liquid 层的深度与稳定 `LiquidId`，再解析 `LiquidDefinition`；不能按 Ground Tile、TerrainCellFlags、盐度或 Collider 猜身份。容器份数与世界液深是不同单位，不能未经规则换算直接互相扣减。液体行为直接消费 `WorldLiquidContactData`，不得重新引入 Water TileData/TileBehaviour。
 - 河流生成把真实下游单位方向保存到 `riverFlowX/riverFlowY` 环境层；运行时水流玩法统一通过 `ChunkMgr.TryGetRuntimeWaterCurrent` 读取，禁止在物品、角色等消费方重复按邻格高度猜河道方向。海洋暂无独立洋流层时由该接口使用现有风场近似表层漂移，湖泊保持静止。
+- `heightDriven` 地表河网必须保持“区域级累计 + 最多双接收 D∞ + 连续中心线重建”拓扑：三角坡面负责真实下坡主方向，低坡区可用确定性平滑旋度场增加曲率；可见河槽须经地形感知曲率松弛、Chaikin 圆角和亚格采样重新栅格化，避免直接把 D8 格子链当最终水体；真实接收格仍必须严格更低，不要退回单接收 D8/D∞，也不要把流量分给全部下坡邻格形成扇形水片。
 - 生成保持固定种子、稳定 BiomeId/顺序和统一噪声、气候、水文规则。
 - 修改算法时考虑生成签名、旧存档、联机指纹和 Wrapped 坐标。
 - 雪山地表固定使用纯白 `Tile_Snow`，禁止按随机噪声混入雪地变体；若未来恢复变体，只能按温度区间确定。
@@ -39,7 +40,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 
 - 自然植物恢复资格由 `INaturalRenewalPolicy` 记录到生态存档的 `RenewalYears`；只有生成成功才清除移除标记和补位计划。玩家种植不参加自然补位，建筑、耕地及平台所在格不补野生植物。
 
-- 旧 `Tile_Water_Fresh/Tile_Water_Salt` 资源与配置已退休，原数字编号 2/6 不得重新分配。`Map.Liquids` 仅适配旧生成预览，正式世界修改和差量存档始终通过 ChunkRuntime。
+- 正式世界修改和差量存档始终通过 ChunkRuntime 的独立 Liquid 层；Ground 数字 ID 不承担任何液体身份。
 
 ## 验证
 

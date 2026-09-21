@@ -26,9 +26,11 @@ public partial class GrowData
 }
 
 
-public partial class Mod_Grow : Module, IInteractable, IPlantableCrop, INaturalRenewalPolicy, IItemModuleDependencyBinder
+public partial class Mod_Grow : Module, IInteractable, IPlantableCrop, INaturalRenewalPolicy,
+    IItemModuleDependencyBinder, INaturalCompanionHostCondition
 {
     private readonly List<IPlantGrowthConstraint> growthConstraints = new(); // 独立环境模块提供的成长和采集限制。
+    private const GrowState MinimumNaturalCompanionHostState = GrowState.发育; // 树冠进入完整尺寸后才承载自然伴生物。
 
     /// <summary>树木只读取环境限制，冷热暴露仍由独立模块推进。</summary>
     public void BindModuleDependencies(ItemMods modules)
@@ -37,6 +39,12 @@ public partial class Mod_Grow : Module, IInteractable, IPlantableCrop, INaturalR
         foreach (Module module in modules.Mods.Values)
             if (module is IPlantGrowthConstraint constraint)
                 growthConstraints.Add(constraint);
+    }
+
+    /// <summary>幼苗和小树不承载蜂巢等自然伴生物，达到配置阶段后再开放。</summary>
+    public bool CanHostNaturalCompanion(string companionItemId)
+    {
+        return Data != null && (int)Data.growState >= (int)MinimumNaturalCompanionHostState;
     }
 
     /// <summary>区块卸载与对象回池时解除环境依赖和事件。</summary>

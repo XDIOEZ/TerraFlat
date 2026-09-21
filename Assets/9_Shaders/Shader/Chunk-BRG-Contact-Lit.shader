@@ -8,6 +8,13 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
         _EdgeWidth("Shadow Width", Range(0.03, 0.45)) = 0.2
         _EdgeStrength("Shadow Strength", Range(0, 1)) = 0.72
         _CornerStrength("Corner Strength", Range(0, 1)) = 0.18
+        _ElevationStrength("Elevation Strength", Range(0, 1)) = 1
+        _ElevationLevelCount("Elevation Levels", Range(2, 40)) = 20
+        _ElevationToneStrength("Elevation Tone Strength", Range(0, 0.2)) = 0.04
+        _ElevationShadowStrength("Elevation Shadow Strength", Range(0, 1)) = 0.45
+        _ElevationHighlightStrength("Elevation Highlight Strength", Range(0, 0.5)) = 0.12
+        _ElevationEdgeWidth("Elevation Edge Width", Range(0.02, 0.35)) = 0.12
+        _ElevationDeltaForMaxStrength("Elevation Delta For Max Strength", Range(1, 8)) = 3
         [HideInInspector] _Color("Tint", Color) = (1,1,1,1)
         [HideInInspector] _RendererColor("Renderer Color", Color) = (1,1,1,1)
     }
@@ -37,7 +44,7 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/LightingUtility.hlsl"
 
             struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half2 lightingUV:TEXCOORD1; float2 positionWS:TEXCOORD2; half4 contact:TEXCOORD3; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half2 lightingUV:TEXCOORD1; float2 positionWS:TEXCOORD2; half4 contact:TEXCOORD3; half4 elevationNeighbours:TEXCOORD4; half elevationCurrent:TEXCOORD5; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
             TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
             TEXTURE2D(_MaskTex); SAMPLER(sampler_MaskTex);
             CBUFFER_START(UnityPerMaterial)
@@ -47,6 +54,13 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
                 float _EdgeWidth;
                 float _EdgeStrength;
                 float _CornerStrength;
+                float _ElevationStrength;
+                float _ElevationLevelCount;
+                float _ElevationToneStrength;
+                float _ElevationShadowStrength;
+                float _ElevationHighlightStrength;
+                float _ElevationEdgeWidth;
+                float _ElevationDeltaForMaxStrength;
             CBUFFER_END
             #if defined(UNITY_DOTS_INSTANCING_ENABLED)
             UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
@@ -90,6 +104,41 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
                 return saturate(strongest + overlap * _CornerStrength);
             }
 
+            half3 ApplyElevation(float2 positionWS, half currentElevation, half4 neighbourElevation,
+                half3 color)
+            {
+                if (_ElevationStrength <= 0.0001 || currentElevation < 0.0h)
+                    return color;
+
+                float levelCount = max(_ElevationLevelCount, 2.0);
+                float currentLevel = min(floor(saturate((float)currentElevation) * levelCount), levelCount - 1.0);
+                float4 neighbourLevel = min(floor(saturate((float4)neighbourElevation) * levelCount), levelCount - 1.0);
+                float4 delta = neighbourLevel - currentLevel;
+                float4 deltaStrength = saturate(abs(delta) / max(_ElevationDeltaForMaxStrength, 1.0));
+
+                float2 cellUV = frac(positionWS + 0.0001);
+                float width = max(_ElevationEdgeWidth, 0.001);
+                float4 edge = float4(
+                    1.0 - smoothstep(0.0, width, cellUV.x),
+                    1.0 - smoothstep(0.0, width, 1.0 - cellUV.x),
+                    1.0 - smoothstep(0.0, width, cellUV.y),
+                    1.0 - smoothstep(0.0, width, 1.0 - cellUV.y));
+
+                float4 lowerSide = edge * deltaStrength * step(0.001, delta);
+                float4 higherSide = edge * deltaStrength * step(0.001, -delta);
+                float shadow = max(max(lowerSide.x, lowerSide.y), max(lowerSide.z, lowerSide.w));
+                float highlight = max(max(higherSide.x, higherSide.y), max(higherSide.z, higherSide.w));
+                float normalizedLevel = currentLevel / max(levelCount - 1.0, 1.0);
+                float tone = lerp(1.0 - saturate(_ElevationToneStrength * _ElevationStrength),
+                    1.0, normalizedLevel);
+                color *= (half)tone;
+                color = lerp(color, (half3)_EdgeColor.rgb,
+                    (half)saturate(shadow * _ElevationShadowStrength * _ElevationStrength * _EdgeColor.a));
+                color = lerp(color, half3(1.0h, 1.0h, 1.0h),
+                    (half)saturate(highlight * _ElevationHighlightStrength * _ElevationStrength));
+                return color;
+            }
+
             Varyings Vert(Attributes input)
             {
                 UNITY_SETUP_INSTANCE_ID(input);
@@ -100,6 +149,8 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
                 o.positionWS = positionWS.xy;
                 o.uv = input.uv;
                 o.contact = d.data0;
+                o.elevationNeighbours = d.data1;
+                o.elevationCurrent = d.transform0.w;
                 o.tint = input.color * d.tint;
                 o.lightingUV = half2(ComputeScreenPos(o.positionCS / o.positionCS.w).xy);
                 UNITY_TRANSFER_INSTANCE_ID(input, o);
@@ -112,6 +163,7 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
+                main.rgb = ApplyElevation(input.positionWS, input.elevationCurrent, input.elevationNeighbours, main.rgb);
                 half contact = ComputeContact(input.positionWS, input.contact);
                 main.rgb = lerp(main.rgb, _EdgeColor.rgb, saturate(contact * _EdgeStrength * _EdgeColor.a));
                 half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, input.uv);
@@ -135,7 +187,7 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
             #include "ChunkBRGInstance.hlsl"
 
             struct Attributes { float3 positionOS:POSITION; half4 color:COLOR; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Varyings { float4 positionCS:SV_POSITION; float2 uv:TEXCOORD0; float2 positionWS:TEXCOORD1; half4 elevationNeighbours:TEXCOORD2; half elevationCurrent:TEXCOORD3; half4 tint:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
             TEXTURE2D(_MainTex); SAMPLER(sampler_MainTex);
             CBUFFER_START(UnityPerMaterial)
                 float4 _Color;
@@ -144,6 +196,13 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
                 float _EdgeWidth;
                 float _EdgeStrength;
                 float _CornerStrength;
+                float _ElevationStrength;
+                float _ElevationLevelCount;
+                float _ElevationToneStrength;
+                float _ElevationShadowStrength;
+                float _ElevationHighlightStrength;
+                float _ElevationEdgeWidth;
+                float _ElevationDeltaForMaxStrength;
             CBUFFER_END
             #if defined(UNITY_DOTS_INSTANCING_ENABLED)
             UNITY_DOTS_INSTANCING_START(MaterialPropertyMetadata)
@@ -162,13 +221,52 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
             #define _CornerStrength UNITY_ACCESS_DOTS_INSTANCED_PROP_WITH_DEFAULT(float, _CornerStrength)
             #endif
 
+            half3 ApplyElevation(float2 positionWS, half currentElevation, half4 neighbourElevation,
+                half3 color)
+            {
+                if (_ElevationStrength <= 0.0001 || currentElevation < 0.0h)
+                    return color;
+
+                float levelCount = max(_ElevationLevelCount, 2.0);
+                float currentLevel = min(floor(saturate((float)currentElevation) * levelCount), levelCount - 1.0);
+                float4 neighbourLevel = min(floor(saturate((float4)neighbourElevation) * levelCount), levelCount - 1.0);
+                float4 delta = neighbourLevel - currentLevel;
+                float4 deltaStrength = saturate(abs(delta) / max(_ElevationDeltaForMaxStrength, 1.0));
+
+                float2 cellUV = frac(positionWS + 0.0001);
+                float width = max(_ElevationEdgeWidth, 0.001);
+                float4 edge = float4(
+                    1.0 - smoothstep(0.0, width, cellUV.x),
+                    1.0 - smoothstep(0.0, width, 1.0 - cellUV.x),
+                    1.0 - smoothstep(0.0, width, cellUV.y),
+                    1.0 - smoothstep(0.0, width, 1.0 - cellUV.y));
+
+                float4 lowerSide = edge * deltaStrength * step(0.001, delta);
+                float4 higherSide = edge * deltaStrength * step(0.001, -delta);
+                float shadow = max(max(lowerSide.x, lowerSide.y), max(lowerSide.z, lowerSide.w));
+                float highlight = max(max(higherSide.x, higherSide.y), max(higherSide.z, higherSide.w));
+                float normalizedLevel = currentLevel / max(levelCount - 1.0, 1.0);
+                float tone = lerp(1.0 - saturate(_ElevationToneStrength * _ElevationStrength),
+                    1.0, normalizedLevel);
+                color *= (half)tone;
+                color = lerp(color, (half3)_EdgeColor.rgb,
+                    (half)saturate(shadow * _ElevationShadowStrength * _ElevationStrength * _EdgeColor.a));
+                color = lerp(color, half3(1.0h, 1.0h, 1.0h),
+                    (half)saturate(highlight * _ElevationHighlightStrength * _ElevationStrength));
+                return color;
+            }
+
             Varyings Vert(Attributes input)
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 ChunkBRGInstanceData d = LoadChunkBRGInstanceData();
                 Varyings o = (Varyings)0;
-                o.positionCS = TransformWorldToHClip(TransformChunkBRGVertex(input.positionOS, d));
+                float3 positionWS = TransformChunkBRGVertex(input.positionOS, d);
+                o.positionCS = TransformWorldToHClip(positionWS);
+                o.positionWS = positionWS.xy;
                 o.uv = input.uv;
+                o.elevationNeighbours = d.data1;
+                o.elevationCurrent = d.transform0.w;
                 o.tint = input.color * d.tint;
                 UNITY_TRANSFER_INSTANCE_ID(input, o);
                 return o;
@@ -177,7 +275,9 @@ Shader "FlatWorld/2D/Chunk BRG Contact Lit"
             half4 Frag(Varyings input):SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
-                return SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
+                half4 main = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * input.tint * _Color * _RendererColor;
+                main.rgb = ApplyElevation(input.positionWS, input.elevationCurrent, input.elevationNeighbours, main.rgb);
+                return main;
             }
             ENDHLSL
         }

@@ -18,6 +18,12 @@ public interface INaturalResourceInitializer
     void InitializeNaturalResource(uint deterministicRandomValue);
 }
 
+/// <summary>自然伴生物生成前查询宿主当前是否已经满足承载条件。</summary>
+public interface INaturalCompanionHostCondition
+{
+    bool CanHostNaturalCompanion(string companionItemId);
+}
+
 /// <summary>接收生产模块产出的库存模块契约。</summary>
 public interface IProductionStockReceiver
 {

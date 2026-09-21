@@ -92,6 +92,9 @@ public partial class ChunkMgr
     private RuntimeWorldAddress? runtimePrefetchInFlight;
     private int runtimePrefetchInFlightCount;
 
+    /// <summary>仅所属地址的表现状态变化时通知实体系统，不要求实体每帧查询所有区块。</summary>
+    public event Action<RuntimeWorldAddress> RuntimeEntityPresentationChanged;
+
     /// <summary>等待主线程绘制、碰撞和导航绑定的区块数量。</summary>
     public int PendingRuntimeChunkPresentationCount =>
         runtimePresentationQueue.Count + runtimePresentationInProgressCount;
@@ -697,10 +700,17 @@ public partial class ChunkMgr
 
             pooled.transform.SetParent(viewRoot, false);
             pooled.PrepareForPoolReuse();
+            pooled.PresentationChanged -= HandleRuntimeEntityPresentationChanged;
+            pooled.PresentationChanged += HandleRuntimeEntityPresentationChanged;
             return pooled;
         }
-        return Instantiate(prefab, viewRoot);
+        ChunkView created = Instantiate(prefab, viewRoot);
+        created.PresentationChanged += HandleRuntimeEntityPresentationChanged;
+        return created;
     }
+
+    private void HandleRuntimeEntityPresentationChanged(RuntimeWorldAddress address) =>
+        RuntimeEntityPresentationChanged?.Invoke(address);
 
     /// <summary>
     /// 区块表现必须属于当前世界场景；ChunkMgr 随 WorldManager 常驻，但不能把自然物带入 DDOL 场景。

@@ -7,6 +7,10 @@ using UnityEngine.SceneManagement;
 
 public partial class MonsterSpawnerManager
 {
+    /// <summary>事件候选重试共用相机缓冲；相机数量增加时完整扩容，不截断视野查询。</summary>
+    private Camera[] _eventCameras = Array.Empty<Camera>();
+    private readonly List<MonoBehaviour> _eventActorBehaviours = new(16);
+
     public int GetEventSpawnPlayerCount(string worldKey)
     {
         string targetWorld = string.IsNullOrWhiteSpace(worldKey)
@@ -116,12 +120,15 @@ public partial class MonsterSpawnerManager
         return false;
     }
 
-    private static bool IsVisibleByAnyActiveCamera(Vector3 worldPosition)
+    private bool IsVisibleByAnyActiveCamera(Vector3 worldPosition)
     {
-        Camera[] cameras = Camera.allCameras;
-        for (int i = 0; i < cameras.Length; i++)
+        int required = Camera.allCamerasCount;
+        if (_eventCameras.Length < required)
+            Array.Resize(ref _eventCameras, Mathf.NextPowerOfTwo(Mathf.Max(4, required)));
+        int count = Camera.GetAllCameras(_eventCameras);
+        for (int i = 0; i < count; i++)
         {
-            Camera camera = cameras[i];
+            Camera camera = _eventCameras[i];
             if (camera == null || !camera.isActiveAndEnabled)
                 continue;
 
@@ -224,22 +231,24 @@ public partial class MonsterSpawnerManager
         }
     }
 
-    private static bool TryGetBoundAiActor(Item spawnedItem, out IAIActor actor)
+    private bool TryGetBoundAiActor(Item spawnedItem, out IAIActor actor)
     {
         actor = null;
         if (spawnedItem == null)
             return false;
 
-        MonoBehaviour[] behaviours = spawnedItem.GetComponentsInChildren<MonoBehaviour>(true);
-        for (int i = 0; i < behaviours.Length; i++)
+        _eventActorBehaviours.Clear();
+        spawnedItem.GetComponentsInChildren(true, _eventActorBehaviours);
+        for (int i = 0; i < _eventActorBehaviours.Count; i++)
         {
-            if (behaviours[i] is not IAIActor candidate || candidate.ActorItem != spawnedItem)
+            if (_eventActorBehaviours[i] is not IAIActor candidate || candidate.ActorItem != spawnedItem)
                 continue;
 
             actor = candidate;
+            _eventActorBehaviours.Clear();
             return true;
         }
-
+        _eventActorBehaviours.Clear();
         return false;
     }
 

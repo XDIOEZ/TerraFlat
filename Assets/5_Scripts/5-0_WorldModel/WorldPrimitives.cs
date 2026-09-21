@@ -126,10 +126,8 @@ namespace FlatWorld.WorldModel
         Walkable = 1 << 0,
         /// <summary>这里有墙、岩石等固定障碍。</summary>
         Blocking = 1 << 1,
-        /// <summary>这里是水。</summary>
-        Water = 1 << 2,
         /// <summary>这里已经被建筑或其他物体占用。</summary>
-        Occupied = 1 << 3
+        Occupied = 1 << 2
     }
 
     /// <summary>
@@ -159,7 +157,7 @@ namespace FlatWorld.WorldModel
         public int BiomeId { get; }
         /// <summary>角色走进这个格子有多费劲；数值越大，寻路越不愿意走这里。</summary>
         public short NavigationCost { get; }
-        /// <summary>这个格子的“可走、水、障碍、已占用”等标记。</summary>
+        /// <summary>这个 Ground 格子的“可走、障碍、已占用”等标记；液体状态只存在于独立 Liquid 层。</summary>
         public TerrainCellFlags Flags { get; }
 
         public bool Equals(TerrainCell other) =>

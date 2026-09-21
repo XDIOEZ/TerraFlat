@@ -1,12 +1,10 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// 世界液体共享行为。负责液体表现、潮湿、体温、游泳与饮用，角色状态始终由接收器持有。
-/// 新世界由 LiquidDefinition 调用；旧 Tile_Water 只保留兼容类型入口。
+/// 直接消费 LiquidDefinition + LiquidDepth，不经过 TileData/TileBlockBehaviour。
 /// </summary>
-[System.Serializable]
-public class WorldLiquidBehaviour : TileBlockBehaviour
+public sealed class WorldLiquidBehaviour
 {
     #region 定义配置
     public WorldLiquidBehaviour() { }
@@ -22,22 +20,11 @@ public class WorldLiquidBehaviour : TileBlockBehaviour
     }
     #endregion
 
-    /// <summary>水体盐度高于此值时视为盐水；海水运行时数据使用 80 作为盐度。</summary>
-    private const float SaltWaterThreshold = 0.01f;
-
-    [Header("进入水体时附加的 Buff 列表")]
-    public List<string> BuffInfo = new List<string>();
-
     [Header("水体环境动作")]
     [Tooltip("长按交互键达到该时长后开始饮水。")]
     [Min(0f)] public float drinkHoldSeconds = 1f;
     [Tooltip("持续饮水的结算间隔。")]
     [Min(0.05f)] public float drinkTickSeconds = 1f;
-    [Tooltip("每次饮用淡水恢复的水分。")]
-    [Min(0f)] public float waterGainPerTick = 12.5f;
-    [Tooltip("每次饮用海水恢复的水分；海水还会同时附加脱水 Buff。")]
-    [Min(0f)] public float saltWaterGainPerTick = 10f;
-
     [Header("水体环境效果")]
     [Tooltip("有效淹没为 0 时的移动速度倍率；角色实际减速按当前有效淹没高度插值。")]
     [Range(0.01f, 1f)] public float shallowMoveSpeedMultiplier = 0.5f;
@@ -49,15 +36,14 @@ public class WorldLiquidBehaviour : TileBlockBehaviour
     [Min(0.1f)] public float entryTemperatureTransitionSeconds = 5f;
 
     /// <summary>进入水格时启用真实水体状态、环境 Buff、动作与被动效果。</summary>
-    public override void OnEnter(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public void OnEnter(Item item, WorldLiquidContactData contact, TileEffectReceiver receiver)
     {
-        if (item == null)
+        if (item == null || contact == null)
             return;
 
         bool validItem = item != null;
         BuffManager buffManager = validItem ? item.GetComponentInChildren<BuffManager>() : null;
-        TileData_Water water = tileData as TileData_Water;
-        float depthValue = water != null ? Mathf.Clamp01(water.LiquidDepth) : 0f;
+        float depthValue = Mathf.Clamp01(contact.LiquidDepth);
         bool edgeInteractionOnly = receiver != null && receiver.IsActiveTileEdgeInteractionOnly;
         buffManager?.SetWaterStackExposure(!edgeInteractionOnly && depthValue > 0f);
         if (edgeInteractionOnly)
@@ -76,24 +62,11 @@ public class WorldLiquidBehaviour : TileBlockBehaviour
             ProvideWaterEffects(receiver, effectiveImmersion);
         }
 
-        // 配置型 Buff 与环境动作相互独立；没有 BuffManager 的角色仍可获得动作定义。
-        if (!edgeInteractionOnly && validItem && buffManager != null && BuffInfo != null)
-        {
-            foreach (string buffId in BuffInfo)
-            {
-                if (string.IsNullOrWhiteSpace(buffId) ||
-                    string.Equals(buffId, WetBuffIds.Wet, System.StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                buffManager.AddBuff(buffId);
-            }
-        }
-
-        ProvideWaterActions(item, water, receiver);
+        ProvideWaterActions(item, contact.Liquid, receiver);
     }
 
     /// <summary>离开水格时撤销水体状态、环境 Buff、动作与被动效果。</summary>
-    public override void OnExit(Item item, TileData tileData, Map map, TileEffectReceiver receiver)
+    public void OnExit(Item item, TileEffectReceiver receiver)
     {
         if (item == null)
             return;
@@ -101,31 +74,17 @@ public class WorldLiquidBehaviour : TileBlockBehaviour
         receiver?.ExitWaterSurvival(item);
         SetWaterVisualState(item, 0f, false);
 
-        // 移除 Buff
         BuffManager buffManager = item.GetComponentInChildren<BuffManager>();
         buffManager?.SetWaterStackExposure(false);
-        if (buffManager != null && BuffInfo != null)
-        {
-            foreach (string buffId in BuffInfo)
-            {
-                if (string.IsNullOrWhiteSpace(buffId) ||
-                    string.Equals(buffId, WetBuffIds.Wet, System.StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (buffManager.HasBuff(buffId))
-                    buffManager.RemoveBuff(buffId);
-            }
-        }
-
 
         receiver?.EnvironmentInteractions.ClearAvailableActions();
         receiver?.EnvironmentInteractions.ClearAvailableEffects();
     }
 
     /// <summary>持续同步真实水格的水深与移动速度影响。</summary>
-    public override void OnUpdate(Item item, TileData tileData, Map map, TileEffectReceiver receiver, float deltaTime)
+    public void OnUpdate(Item item, WorldLiquidContactData contact, TileEffectReceiver receiver, float deltaTime)
     {
-        if (item == null || !(tileData is TileData_Water water))
+        if (item == null || contact == null)
             return;
 
         // 邻接水格只用于保留边缘交互，不得把沙地角色染成浸没状态或施加水下减速。
@@ -133,7 +92,7 @@ public class WorldLiquidBehaviour : TileBlockBehaviour
             return;
 
         // 漂浮结算直接以地块真实水深为准；水深不超过 0.3 时保持浅水状态，不进入漂浮维持。
-        float depthValue = Mathf.Clamp01(water.LiquidDepth);
+        float depthValue = Mathf.Clamp01(contact.LiquidDepth);
         BuffManager buffManager = item.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
         buffManager?.SetWaterStackExposure(depthValue > 0f);
         buffManager?.AdvanceWaterWetness(depthValue, deltaTime);
@@ -179,7 +138,7 @@ public class WorldLiquidBehaviour : TileBlockBehaviour
     #region 环境动作提供
 
     /// <summary>水体只提供无角色状态的动作定义；角色侧运行器在按键时创建独立实例。</summary>
-    private void ProvideWaterActions(Item item, TileData_Water water,
+    private void ProvideWaterActions(Item item, LiquidDefinition liquid,
         TileEffectReceiver receiver)
     {
         EnvironmentInteractionRunner runner = receiver?.EnvironmentInteractions;
@@ -187,20 +146,15 @@ public class WorldLiquidBehaviour : TileBlockBehaviour
             return;
 
         runner.ClearAvailableActions();
-        if (item == null || water == null)
+        if (item == null || liquid == null)
             return;
 
-        GameRes gameRes = GameRes.ExistingInstance;
-        if (gameRes == null ||
-            string.IsNullOrWhiteSpace(water.LiquidId) ||
-            !gameRes.TryGetLiquidDefinition(water.LiquidId, out LiquidDefinition liquid) ||
-            !liquid.Drinkable)
-        {
+        if (!liquid.Drinkable)
             return;
-        }
 
         // 水体只决定当前环境种类与饮用节奏；感染、脱水等饮用后果统一读取 LiquidDefinition。
-        WaterEnvironmentKind waterKind = water.salt > SaltWaterThreshold
+        WaterEnvironmentKind waterKind = string.Equals(
+            liquid.Id, LiquidIds.SeaWater, System.StringComparison.OrdinalIgnoreCase)
             ? WaterEnvironmentKind.Salt
             : WaterEnvironmentKind.DirtyFresh;
         float resolvedWaterGain = liquid.HydrationPerServing;
@@ -235,4 +189,19 @@ public class WorldLiquidBehaviour : TileBlockBehaviour
     }
 
     #endregion
+}
+
+/// <summary>角色与世界液体接触时的轻量运行时快照；不属于 TileData，也不参与地块存档。</summary>
+public sealed class WorldLiquidContactData
+{
+    public WorldLiquidContactData(LiquidDefinition liquid, Vector2Int worldCell, float liquidDepth)
+    {
+        Liquid = liquid ?? throw new System.ArgumentNullException(nameof(liquid));
+        WorldCell = worldCell;
+        LiquidDepth = liquidDepth;
+    }
+
+    public LiquidDefinition Liquid { get; }
+    public Vector2Int WorldCell { get; set; }
+    public float LiquidDepth { get; set; }
 }

@@ -23,6 +23,7 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
     private readonly Dictionary<int, Item> spawnedItems = new();
     private readonly HashSet<Item> transientItems = new();
     private readonly HashSet<int> generatedPortalGuids = new();
+    private readonly List<NaturalItemPlacement> deferredCompanionPlacements = new();
     private ChunkRuntime boundChunk;
     private EnvironmentLayers environmentLayers;
     // 绑定时记录依赖，销毁阶段不再通过单例搜索场景。
@@ -32,6 +33,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
     private bool unbinding;
     private float nextRenewalCheck; // 春季低频分批补位。
     private int renewalCursor; // 每次最多检查四个自然生成点。
+    private float nextCompanionReadinessCheck; // 小树长大后低频补生成伴生物。
+    private int companionReadinessCursor;
 
     public int SpawnedItemCount => spawnedItems.Count;
 
@@ -96,8 +99,29 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
         if (itemManager == null || chunkManager == null)
             throw new InvalidOperationException("绑定自然物需要有效的 ItemMgr 和 ChunkMgr。");
 
+        // 先生成全部宿主，再处理伴生物，避免依赖生态规则序列化顺序。
         for (int i = 0; i < placements.Count; i++)
-            SpawnPlacement(placements[i]);
+        {
+            NaturalItemPlacement placement = placements[i];
+            if (!placement.IsCompanion)
+                SpawnPlacement(placement);
+        }
+
+        for (int i = 0; i < placements.Count; i++)
+        {
+            NaturalItemPlacement placement = placements[i];
+            if (!placement.IsCompanion)
+                continue;
+
+            if (!CanSpawnCompanionForHost(placement))
+            {
+                if (!chunkManager.IsNaturalItemRemoved(chunk.Address, placement.Guid))
+                    deferredCompanionPlacements.Add(placement);
+                continue;
+            }
+
+            SpawnPlacement(placement);
+        }
 
         // 传送门可能和玩家在同一帧生成；立即同步一次物理变换，避免首个交互帧拿到旧碰撞位置。
         if (generatedPortalGuids.Count > 0)
@@ -137,6 +161,9 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
             spawnedItems.Clear();
             transientItems.Clear();
             generatedPortalGuids.Clear();
+            deferredCompanionPlacements.Clear();
+            companionReadinessCursor = 0;
+            nextCompanionReadinessCheck = 0f;
             environmentLayers = null;
             boundChunk = null;
             itemManager = null;
@@ -239,6 +266,8 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
         {
             return;
         }
+        if (!CanSpawnCompanionForHost(placement))
+            return;
 
         RuntimeWorldAddress address = boundChunk.Address;
         string runtimeItemId = ResolveRuntimeItemId(address, placement);
@@ -382,8 +411,72 @@ public sealed class ChunkNaturalItemRenderer : MonoBehaviour, IChunkViewRenderer
         }
     }
 
-    /// <summary>春季逐步补回已被移除的自然植物，不扫描或加载窗口以外的区块。</summary>
+    /// <summary>低频检查等待宿主长大的伴生物；达到宿主门槛后只尝试生成一次。</summary>
     private void Update()
+    {
+        ProcessDeferredCompanionSpawns();
+        ProcessNaturalRenewal();
+    }
+
+    private void ProcessDeferredCompanionSpawns()
+    {
+        if (unbinding || boundChunk == null || chunkManager == null ||
+            deferredCompanionPlacements.Count == 0 || Time.unscaledTime < nextCompanionReadinessCheck)
+        {
+            return;
+        }
+
+        nextCompanionReadinessCheck = Time.unscaledTime + 1f;
+        int checks = Mathf.Min(4, deferredCompanionPlacements.Count);
+        for (int i = 0; i < checks && deferredCompanionPlacements.Count > 0; i++)
+        {
+            if (companionReadinessCursor >= deferredCompanionPlacements.Count)
+                companionReadinessCursor = 0;
+
+            NaturalItemPlacement placement = deferredCompanionPlacements[companionReadinessCursor];
+            if (spawnedItems.ContainsKey(placement.Guid) ||
+                chunkManager.IsNaturalItemRemoved(boundChunk.Address, placement.Guid))
+            {
+                deferredCompanionPlacements.RemoveAt(companionReadinessCursor);
+                continue;
+            }
+
+            if (!CanSpawnCompanionForHost(placement))
+            {
+                companionReadinessCursor++;
+                continue;
+            }
+
+            deferredCompanionPlacements.RemoveAt(companionReadinessCursor);
+            SpawnPlacement(placement);
+        }
+    }
+
+    /// <summary>宿主存在且所有宿主模块都同意时，伴生物才允许实例化。</summary>
+    private bool CanSpawnCompanionForHost(NaturalItemPlacement placement)
+    {
+        if (!placement.IsCompanion)
+            return true;
+        if (!spawnedItems.TryGetValue(placement.HostGuid, out Item host) || host == null ||
+            host.DestructionHandled || host.itemMods == null)
+        {
+            return false;
+        }
+
+        foreach (Module module in host.itemMods.Mods.Values)
+        {
+            if (module is INaturalCompanionHostCondition condition &&
+                !condition.CanHostNaturalCompanion(placement.ItemId))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>春季逐步补回已被移除的自然植物，不扫描或加载窗口以外的区块。</summary>
+    private void ProcessNaturalRenewal()
     {
         if (unbinding || boundChunk?.Ecology?.Placements == null || Time.unscaledTime < nextRenewalCheck ||
             !GameNetwork.HasStateAuthority || !DayTimeSystem.Instance.TryGetCurrentSeason(out SeasonSnapshot season) ||

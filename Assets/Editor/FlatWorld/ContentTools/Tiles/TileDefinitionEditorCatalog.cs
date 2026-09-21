@@ -145,48 +145,47 @@ public static class TileDefinitionEditorCatalog
     /// <summary>只在内存中检查 JSON 拒绝边界、工厂租约和克隆隔离，不创建世界或更改资源目录。</summary>
     public static int ValidateFactoryBoundaries()
     {
-        var compatibility = Get("Tile_Sand").CopySource();
-        compatibility["id"] = "flatworld.diagnostics:legacy_water";
-        compatibility["data"] = new JObject { ["type"] = "water", ["parameters"] = new JObject
-            { ["liquidId"] = LiquidIds.DirtyWater, ["LiquidDepth"] = 0.5f } };
-        compatibility["behaviours"] = new JArray(new JObject { ["type"] = "water", ["parameters"] = new JObject() });
-        RuntimeTileDefinition water = BuildSource(compatibility);
+        var diagnosticSource = Get("Tile_Sand").CopySource();
+        diagnosticSource["id"] = "flatworld.diagnostics:tile";
+        diagnosticSource["behaviours"] = new JArray(new JObject
+        {
+            ["type"] = "universal",
+            ["parameters"] = new JObject { ["buffInfo"] = new JArray() }
+        });
+        RuntimeTileDefinition diagnostic = BuildSource(diagnosticSource);
         int checks = 0;
-        var invalid = water.CopySource();
+        var invalid = diagnostic.CopySource();
         invalid["behaviours"][0]["type"] = "flatworld.diagnostics:missing";
         checks += ExpectRejected(() => BuildSource(invalid));
-        var unknown = water.CopySource();
+        var unknown = diagnostic.CopySource();
         unknown["behaviours"][0]["parameters"]["typo"] = 1;
         checks += ExpectRejected(() => BuildSource(unknown));
-        var negative = water.CopySource();
-        negative["behaviours"][0]["parameters"]["drinkHoldSeconds"] = -1;
+        var negative = diagnostic.CopySource();
+        negative["data"]["parameters"]["demolitionTime"] = -1;
         checks += ExpectRejected(() => BuildSource(negative));
-        var identity = water.CopySource();
+        var identity = diagnostic.CopySource();
         identity["runtimeTileId"] = -1;
         checks += ExpectRejected(() => BuildSource(identity));
-        var position = water.CopySource();
+        var position = diagnostic.CopySource();
         position["data"]["parameters"]["position"] = new JObject();
         checks += ExpectRejected(() => BuildSource(position));
-        var depth = water.CopySource();
-        depth["data"]["parameters"]["LiquidDepth"] = 2;
-        checks += ExpectRejected(() => BuildSource(depth));
-        var penalty = water.CopySource();
+        var penalty = diagnostic.CopySource();
         penalty["data"]["parameters"]["penalty"] = 40000;
         checks += ExpectRejected(() => BuildSource(penalty));
-        var metadata = water.CopySource();
+        var metadata = diagnostic.CopySource();
         metadata["$type"] = "NotAllowed";
         checks += ExpectRejected(() => BuildSource(metadata));
         checks += ExpectRejected(() => TileDefinitionJson.Parse("{\"id\":1,\"id\":2}"));
-        var asset = water.CopySource();
+        var asset = diagnostic.CopySource();
         asset["tileAsset"] = "flatworld.diagnostics:missing";
         checks += ExpectRejected(() => BuildSource(asset));
-        checks += ExpectRejected(() => TileDefinitionFactory.ValidateIdentities(new[] { water, water }));
-        var other = water.CopySource();
+        checks += ExpectRejected(() => TileDefinitionFactory.ValidateIdentities(new[] { diagnostic, diagnostic }));
+        var other = diagnostic.CopySource();
         other["id"] = "flatworld.diagnostics:collision";
         RuntimeTileDefinition collision = BuildSource(other);
-        checks += ExpectRejected(() => TileDefinitionFactory.ValidateIdentities(new[] { water, collision }));
+        checks += ExpectRejected(() => TileDefinitionFactory.ValidateIdentities(new[] { diagnostic, collision }));
 
-        var custom = water.CopySource();
+        var custom = diagnostic.CopySource();
         custom["behaviours"][0]["type"] = "flatworld.diagnostics:empty";
         custom["behaviours"][0]["parameters"] = new JObject();
         using (TileBehaviourRegistry.RegisterBehaviour("flatworld.diagnostics:empty", _ => new Tile_Universal()))
@@ -196,11 +195,11 @@ public static class TileDefinitionEditorCatalog
             checks++;
         }
         checks += ExpectRejected(() => BuildSource(custom));
-        var first = (TileData_Water)water.CreateTileData();
-        var second = (TileData_Water)water.CreateTileData();
-        first.salt = 42;
-        if (second.salt == 42 || ReferenceEquals(first, second) ||
-            ((TileData_Water)water.TileDataTemplate).salt == 42)
+        TileData first = diagnostic.CreateTileData();
+        TileData second = diagnostic.CreateTileData();
+        first.Name = "mutated";
+        if (second.Name == "mutated" || ReferenceEquals(first, second) ||
+            diagnostic.TileDataTemplate.Name == "mutated")
             throw new InvalidDataException("地块 Clone 泄漏共享状态。");
         return checks + 1;
     }

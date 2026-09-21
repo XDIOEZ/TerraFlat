@@ -87,6 +87,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
         public int Width;
         public int Height;
         public float[] Heights;
+        public float[] LiquidDepths;
         public byte[] Biomes;
         public TerrainCellFlags[] Flags;
         public int[] GroundTileIds;
@@ -488,7 +489,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             $"高度 {previewResult.Heights[index]:0.0000}  " +
             $"群系 {SurfaceBiomeClassifier.GetLegacyName(previewResult.Biomes[index])}  " +
             $"Tile {previewResult.GroundTileIds[index]}\n" +
-            $"水 {((flags & TerrainCellFlags.Water) != 0 ? "是" : "否")}  " +
+            $"液深 {previewResult.LiquidDepths[index]:0.00}  " +
             $"可行走 {((flags & TerrainCellFlags.Walkable) != 0 ? "是" : "否")}\n" +
             $"生态物品 {previewResult.EcologyCounts[index]} 个" +
             (string.IsNullOrWhiteSpace(previewResult.EcologyPrimaryItemIds[index])
@@ -1515,6 +1516,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
 
         int cellCount = checked(input.Width * input.Height);
         var heights = new float[cellCount];
+        var liquidDepths = new float[cellCount];
         var biomes = new byte[cellCount];
         var flags = new TerrainCellFlags[cellCount];
         var groundTileIds = new int[cellCount];
@@ -1587,18 +1589,20 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
                 }
 
                 TerrainCell cell = terrain.GetCell(sampleX, sampleY);
-                float heightValue = terrain.TryGetEnvironmentValue(
-                    "height", sampleX, sampleY, out float sampledHeight)
+                float heightValue = terrain.TryGetSurfaceElevation(
+                    sampleX, sampleY, out float sampledHeight)
                     ? sampledHeight
                     : 0f;
+                float liquidDepth = terrain.GetLiquidDepth(sampleX, sampleY);
                 heights[index] = heightValue;
+                liquidDepths[index] = liquidDepth;
                 biomes[index] = (byte)Math.Max(byte.MinValue, Math.Min(byte.MaxValue, cell.BiomeId));
                 flags[index] = cell.Flags;
                 groundTileIds[index] = cell.GroundTileId;
                 minimumHeight = Math.Min(minimumHeight, heightValue);
                 maximumHeight = Math.Max(maximumHeight, heightValue);
                 totalHeight += heightValue;
-                if ((cell.Flags & TerrainCellFlags.Water) != 0)
+                if (liquidDepth > 0f)
                     waterCount++;
                 if (terrain.IsWalkable(sampleX, sampleY))
                     walkableCount++;
@@ -1626,6 +1630,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             Width = input.Width,
             Height = input.Height,
             Heights = heights,
+            LiquidDepths = liquidDepths,
             Biomes = biomes,
             Flags = flags,
             GroundTileIds = groundTileIds,
@@ -1921,8 +1926,7 @@ public sealed class WorldTerrainPreviewWindow : EditorWindow
             1f);
         if (count <= 0)
         {
-            TerrainCellFlags flags = previewResult.Flags[index];
-            if ((flags & TerrainCellFlags.Water) != 0)
+            if (previewResult.LiquidDepths[index] > 0f)
                 baseColor *= 0.7f;
             return baseColor;
         }

@@ -82,26 +82,47 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         return null;
     }
 
-    /// <summary>
-    /// Quiet topology lookup for hot paths such as movement, navigation and
-    /// distance checks. Missing active-world data is a normal infinite-world
-    /// fallback here and must not emit one warning per queried cell.
-    /// </summary>
+    // 场景句柄索引避免每次拓扑查询都从原生层分配场景名；不缓存可替换的存档对象。
+    private int _activePlanetSceneHandle = int.MinValue;
+    private string _activePlanetSceneName;
+
+    /// <summary>移动、导航和距离检查的无日志拓扑查询；无世界数据时沿用无限世界语义。</summary>
     public bool TryGetActivePlanetData(out PlanetData planetData)
     {
         planetData = null;
         if (SaveData?.PlanetData_Dict == null)
             return false;
 
-        string activeSceneName = SceneManager.GetActiveScene().name;
-        return SaveData.PlanetData_Dict.TryGetValue(activeSceneName, out planetData) &&
+        Scene scene = SceneManager.GetActiveScene();
+        if (_activePlanetSceneHandle != scene.handle)
+        {
+            _activePlanetSceneHandle = scene.handle;
+            _activePlanetSceneName = scene.name;
+        }
+        // 仅缓存原生场景名字符串；每次仍查询当前 SaveData，不能跨重进世界缓存 PlanetData。
+        return SaveData.PlanetData_Dict.TryGetValue(_activePlanetSceneName, out planetData) &&
                planetData != null;
     }
 
     protected override void Awake()
     {
         base.Awake();
+        if (ReferenceEquals(instance, this))
+            SceneManager.activeSceneChanged += InvalidateActivePlanetScene;
         InitializeUserSavePath();
+    }
+
+    /// <summary>即使新世界复用了旧场景句柄，也必须丢弃旧场景名。</summary>
+    private void InvalidateActivePlanetScene(Scene previous, Scene next)
+    {
+        _activePlanetSceneHandle = int.MinValue;
+        _activePlanetSceneName = null;
+    }
+
+    protected override void OnDestroy()
+    {
+        SceneManager.activeSceneChanged -= InvalidateActivePlanetScene;
+        base.OnDestroy();
     }
 
     /// <summary>
@@ -1212,13 +1233,6 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 continue;
 
             TerrainCell restored = cell.ToTerrainCell();
-            if (restored.GroundTileId == 2 || restored.GroundTileId == 6)
-            {
-                // 旧水地块差量只恢复其它层；底部地块沿用刚生成的真实河床/海底。
-                TerrainCell generated = terrain.GetCell(x, y);
-                restored = new TerrainCell(generated.GroundTileId, restored.BackTileId, restored.BlockingTileId,
-                    restored.BiomeId, generated.NavigationCost, restored.Flags);
-            }
             terrain.SetCell(x, y, restored);
 
             float accumulatedDamage = cell.BlockingTileId == 0
@@ -1226,7 +1240,6 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
                 : Mathf.Max(0f, cell.AccumulatedDamage);
             WriteRuntimeBuildingDamage(terrain, x, y, accumulatedDamage);
         }
-        MigrateLegacyLiquidCells(chunk.Terrain, delta);
         RestoreAgricultureTerrain(chunk, delta);
         foreach (GrassCellSaveDelta grass in delta.GrassDeltas)
         {
@@ -1427,12 +1440,12 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         chunkDeltas[key] = delta;
     }
 
-    /// <summary>Water 兼容位不是地块修改，液体差量不能重复进入 Ground 存档。</summary>
+    /// <summary>Ground 差量只比较 Ground 自身状态；Liquid 使用独立 LiquidCells。</summary>
     private static bool GroundCellsEqual(TerrainCell left, TerrainCell right) =>
         left.GroundTileId == right.GroundTileId && left.BackTileId == right.BackTileId &&
         left.BlockingTileId == right.BlockingTileId && left.BiomeId == right.BiomeId &&
         left.NavigationCost == right.NavigationCost &&
-        (left.Flags & ~TerrainCellFlags.Water) == (right.Flags & ~TerrainCellFlags.Water);
+        left.Flags == right.Flags;
 
     /// <summary>读取新版区块中一格建筑已累计的损伤；缺少专用环境层时视为未受损。</summary>
     private static float ReadRuntimeBuildingDamage(ChunkTerrainData terrain, int x, int y)

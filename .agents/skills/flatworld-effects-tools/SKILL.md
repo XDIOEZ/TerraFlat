@@ -32,6 +32,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 动态可交互建筑不属于 Tilemap，不能依赖 `ChunkLightOccluderRenderer`；落地 `PlacedBuilding` 应在主体 `SpriteRenderer` 节点启用 `ShadowCaster2D`，旧的碰撞体节点矩形 ShadowCaster 必须关闭。URP 14 的 `useRendererSilhouette` 只负责自阴影模板，投影网格仍来自 `m_ShapePath`，因此动态建筑必须把 Sprite 的 fallback physics shape 同步到 ShadowCaster 路径，并启用 `selfShadows`，保证建筑内部不被局部光照亮且外投影跟随贴图轮廓；手持/召唤器状态必须关闭。
 - 共用海水 `UsePass` 的包装 Shader 必须声明公共 Pass 新增的同名材质属性；月光等夜间自发光倒影应在 `CombinedShapeLightShared` 之后合成，避免全局夜间光照被重复相乘。月亮出现动画读取 `DayTimeSystem` 发布的 `_GlobalMoonAppearance`，尺寸/渐亮与 `_GlobalMoonlightIntensity` 的月相亮度分离，避免新月把月面永久缩小。
 - 正式 Ground/Liquid 由 BRG 独立提交，液体外观来自 `LiquidDefinition.WorldWater`，禁止按 GroundTileId 查水面贴图。岸线以 LiquidDepth > 0 判断，深度用每格四角插值；任一边界格液深变化须更新八方向邻区的共享边/角，不能只监听 TerrainCell 改动。旧 Tilemap 的颜色仍只编码岸线，兼容深度纹理与 BRG 共用连续液深语义。
+- Surface Ground 的高度分层只读 `ChunkTerrainData.TryGetSurfaceElevation`：当前格复用 BRG `Transform0.w`，左/右/下/上邻格复用 `Data1`，保持 112 字节实例布局；Cave、水格、缺失邻区不得制造高度边，邻格不可用时回退当前高度。该海拔只驱动 Shader 表现，不改坐标、碰撞、导航、存档或地形权威状态。
 - 水面视觉把双线性采样后的连续水深离散为 `0.1~1.0` 共十档，真实 `LiquidDepth` 与水深纹理仍保持连续；两种正式水面风格的基础深浅色权重按十档等距变化，避免深水段相邻层级难以分辨。
 - Tilemap 合批后 `POSITION` 不保证是 Chunk 局部坐标；水深与岸线使用世界坐标，MPB 的 `_LiquidDepthUvScaleOffset` 必须扣除水层原点再加入一格纹理边框。当前世界网格每格为 1 单位且原点对齐整数，不要用 `unity_WorldToObject` 恢复已被合批丢失的局部坐标。
 - 水面潮流使用 `DayTimeSystem` 发布的 `_GlobalGameDay` 驱动，并沿材质 `_FlowDirection` 轴按 `_TideCyclesPerDay` 往返；方向性水纹不要改回基于 `_Time` 的持续旋转，否则跳时、读档与游戏时间倍率会和潮汐表现脱节。

@@ -105,7 +105,6 @@ public static class ChunkRuntimeTileEffectResolver
         tileData = tileBlock.CreateTileData();
         tileData.position = new Vector3Int(worldCell.x, worldCell.y, 0);
         tileData.IsWalkable = terrain.IsWalkable(localCell.x, localCell.y);
-        HydrateEnvironmentData(terrain, localCell, tileData);
         return true;
     }
 
@@ -136,19 +135,6 @@ public static class ChunkRuntimeTileEffectResolver
             return true;
         }
         return false;
-    }
-
-    #endregion
-
-    #region 环境数据
-
-    private static void HydrateEnvironmentData(ChunkTerrainData terrain, Vector2Int localCell,
-        TileData tileData)
-    {
-        if (tileData is not TileData_Water water)
-            return;
-
-        water.LiquidDepth = terrain.GetLiquidDepth(localCell.x, localCell.y);
     }
 
     #endregion

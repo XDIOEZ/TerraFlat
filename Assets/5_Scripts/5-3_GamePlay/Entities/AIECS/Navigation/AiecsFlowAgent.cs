@@ -130,8 +130,8 @@ namespace FlatWorld.AIECS
     [BurstCompile]
     internal partial struct AiecsFlowMoveJob : IJobEntity
     {
-        private const float ShallowWaterSpeedMultiplier = 0.5f; // 与当前 Tile_Water 默认浅水倍率一致。
-        private const float DeepWaterSpeedMultiplier = 0.2f; // 与当前 Tile_Water 默认深水倍率一致。
+        private const float ShallowWaterSpeedMultiplier = 0.5f; // 与当前世界液体默认浅水倍率一致。
+        private const float DeepWaterSpeedMultiplier = 0.2f; // 与当前世界液体默认深水倍率一致。
         private const float WaterTransitionSeconds = 0.18f; // 与角色入水表现默认过渡时间一致。
 
         [ReadOnly] public FlowNavigationSnapshot Navigation;

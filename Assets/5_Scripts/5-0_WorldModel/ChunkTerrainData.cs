@@ -128,15 +128,17 @@ namespace FlatWorld.WorldModel
         public ChunkTerrainData Seal()
         {
             ThrowIfUnavailable();
-            // height 仅服务生成期生态筛选，正式区块不保留可由种子复算的高度数组。
+            // height 的生成期语义到此结束；数组所有权直接移交为只读地表海拔，
+            // 供 Ground BRG 做纯视觉高度分层，不复制数组，也不把它混入可变环境层。
+            float[] surfaceElevation = null;
             if (_environmentLayers.TryGetValue("height", out float[] generationHeights))
             {
                 _environmentLayers.Remove("height");
-                ArrayPool<float>.Shared.Return(generationHeights, true);
+                surfaceElevation = generationHeights;
             }
             _sealed = true;
             var result = new ChunkTerrainData(Width, Height, _cells, _environmentLayers, _grass,
-                _extendedTileStacks, liquid);
+                _extendedTileStacks, liquid, surfaceElevation);
             liquid = null;
             _cells = null;
             _environmentLayers = null;
@@ -225,11 +227,13 @@ namespace FlatWorld.WorldModel
         private Dictionary<string, float[]> _environmentLayers;
         private Dictionary<int, int[]> _extendedTileStacks;
         private byte[] _grass;
+        private float[] _surfaceElevation;
         private long _revision;
 
         internal ChunkTerrainData(int width, int height, TerrainCell[] cells,
             Dictionary<string, float[]> environmentLayers, byte[] grass = null,
-            Dictionary<int, int[]> extendedTileStacks = null, LiquidCellStorage liquid = null)
+            Dictionary<int, int[]> extendedTileStacks = null, LiquidCellStorage liquid = null,
+            float[] surfaceElevation = null)
         {
             Width = width;
             Height = height;
@@ -240,6 +244,7 @@ namespace FlatWorld.WorldModel
                 new Dictionary<string, float[]>(StringComparer.Ordinal);
             _extendedTileStacks = extendedTileStacks ?? new Dictionary<int, int[]>();
             _grass = grass ?? ArrayPool<byte>.Shared.Rent(CellCount);
+            _surfaceElevation = surfaceElevation;
             if (grass == null)
                 Array.Clear(_grass, 0, CellCount);
         }
@@ -275,8 +280,6 @@ namespace FlatWorld.WorldModel
         {
             ThrowIfDisposed();
             int index = GetIndex(x, y);
-            value = new TerrainCell(value.GroundTileId, value.BackTileId, value.BlockingTileId, value.BiomeId,
-                value.NavigationCost, liquid.Depth[index] > 0f ? value.Flags | TerrainCellFlags.Water : value.Flags & ~TerrainCellFlags.Water);
             if (_cells[index].Equals(value))
                 return;
             _cells[index] = value;
@@ -511,6 +514,23 @@ namespace FlatWorld.WorldModel
             return false;
         }
 
+        /// <summary>
+        /// 读取生成期移交的地表海拔（0～1）。它是不可变的纯表现输入，不参与环境变更、存档差量或稳定哈希。
+        /// Cave 等没有地表高度语义的区块返回 false。
+        /// </summary>
+        public bool TryGetSurfaceElevation(int x, int y, out float value)
+        {
+            ThrowIfDisposed();
+            if (_surfaceElevation != null)
+            {
+                value = _surfaceElevation[GetIndex(x, y)];
+                return true;
+            }
+
+            value = default;
+            return false;
+        }
+
         /// <summary>设置某个格子的环境数据；没有这种环境数据时会自动创建。</summary>
         public void SetEnvironmentValue(string layerId, int x, int y, float value)
         {
@@ -621,6 +641,13 @@ namespace FlatWorld.WorldModel
                 Array.Clear(_cells, 0, Math.Min(CellCount, _cells.Length));
                 ArrayPool<TerrainCell>.Shared.Return(_cells);
                 _cells = null;
+            }
+
+            if (_surfaceElevation != null)
+            {
+                Array.Clear(_surfaceElevation, 0, Math.Min(CellCount, _surfaceElevation.Length));
+                ArrayPool<float>.Shared.Return(_surfaceElevation);
+                _surfaceElevation = null;
             }
 
             if (_environmentLayers == null)

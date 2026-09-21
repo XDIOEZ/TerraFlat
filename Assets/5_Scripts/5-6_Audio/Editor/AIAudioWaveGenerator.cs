@@ -26,6 +26,7 @@ namespace FlatWorld.Audio.Editor
             UiCancel,
             ItemPickup,
             ItemDrop,
+            HoeTill,
             DoorOpen,
             DoorClose,
             CombatHit,
@@ -59,6 +60,7 @@ namespace FlatWorld.Audio.Editor
             new KeyValuePair<string, SoundKind>("ui.cancel__01.wav", SoundKind.UiCancel),
             new KeyValuePair<string, SoundKind>("item.pickup__01.wav", SoundKind.ItemPickup),
             new KeyValuePair<string, SoundKind>("item.drop__01.wav", SoundKind.ItemDrop),
+            new KeyValuePair<string, SoundKind>("item.hoe.till__01.wav", SoundKind.HoeTill),
             new KeyValuePair<string, SoundKind>("door.open__01.wav", SoundKind.DoorOpen),
             new KeyValuePair<string, SoundKind>("door.close__01.wav", SoundKind.DoorClose),
             new KeyValuePair<string, SoundKind>("combat.hit__01.wav", SoundKind.CombatHit),
@@ -153,6 +155,7 @@ namespace FlatWorld.Audio.Editor
                 case SoundKind.UiCancel: return CreateChirp(0.17f, 530f, 250f, 0.20f, 0.015f, 17);
                 case SoundKind.ItemPickup: return CreatePickup();
                 case SoundKind.ItemDrop: return CreateImpact(0.16f, 145f, 0.25f, 0.20f, 23);
+                case SoundKind.HoeTill: return CreateHoeTill();
                 case SoundKind.DoorOpen: return CreateDoorOpen();
                 case SoundKind.DoorClose: return CreateDoorClose();
                 case SoundKind.CombatHit: return CreateImpact(0.13f, 92f, 0.34f, 0.37f, 31);
@@ -433,6 +436,32 @@ namespace FlatWorld.Audio.Editor
                 float air = Mathf.Lerp(smoothNoise, highNoise, brightness) * 0.34f;
                 float edge = Mathf.Sin(phase) * 0.055f;
                 samples[i] = (air + edge) * swish * Envelope(time, duration, 0.008f, 0.018f);
+            }
+
+            return samples;
+        }
+
+        /// <summary>占位锄地声：短促低频落土 + 干燥土粒摩擦，后续可直接替换同 Cue 的 wav。</summary>
+        private static float[] CreateHoeTill()
+        {
+            const float duration = 0.28f;
+            int count = Mathf.CeilToInt(duration * SampleRate);
+            float[] samples = new float[count];
+            float lowPhase = 0f;
+            float smoothNoise = 0f;
+            uint seed = 181;
+
+            for (int i = 0; i < count; i++)
+            {
+                float time = i / (float)SampleRate;
+                float progress = time / duration;
+                lowPhase += 2f * Mathf.PI * Mathf.Lerp(118f, 72f, progress) / SampleRate;
+
+                float rawNoise = NextNoise(ref seed);
+                smoothNoise = Mathf.Lerp(smoothNoise, rawNoise, 0.1f);
+                float dryScrape = (rawNoise - smoothNoise) * 0.22f * Mathf.Exp(-time * 10f);
+                float thump = Mathf.Sin(lowPhase) * 0.30f * Mathf.Exp(-time * 19f);
+                samples[i] = (thump + dryScrape) * Envelope(time, duration, 0.002f, 0.065f);
             }
 
             return samples;

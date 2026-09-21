@@ -62,8 +62,8 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 
 - 验收统一进入真实 Play Mode，实际移动跨区块、触发生成/流送/逐出并观察权威状态与表现；编译与 Console 只作为运行门禁和故障定位。
 
-- Liquid 独立持有池化的 `LiquidDepth[]/LiquidTypeIndex[]`，Seal 移交唯一所有权、取消或逐出时归还；编号来自资源会话冻结的 `LiquidTypeCatalog`，稳定哈希与持久化使用 LiquidId，不能使用会话编号。`height` 仅供生成和生态筛选，在 Seal 时释放；运行时不得再反算液深。
-- `TerrainChangeKind.Liquid` 必须驱动当前格、八方向邻区的岸线/四角液深和导航刷新。`TerrainCell.Flags.Water` 仅为兼容投影，纯液体变化不得重复保存成 Ground 差量。
+- Liquid 独立持有池化的 `LiquidDepth[]/LiquidTypeIndex[]`，Seal 移交唯一所有权、取消或逐出时归还；编号来自资源会话冻结的 `LiquidTypeCatalog`，稳定哈希与持久化使用 LiquidId，不能使用会话编号。生成期 `height` 在生态筛选结束后由 Seal 直接移交为不可变 `SurfaceElevation` 表现输入，不进入环境层、稳定哈希或存档差量；运行时液体仍不得用海拔反算液深。
+- `TerrainChangeKind.Liquid` 必须驱动当前格、八方向邻区的岸线/四角液深和导航刷新。`TerrainCell.Flags` 不保存任何液体状态，纯液体变化只写 Liquid 层和 Liquid 差量。
 
 ## Skill 维护原则
 

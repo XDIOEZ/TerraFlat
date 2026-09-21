@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// 通用地块逻辑行为
 /// - 主要用于快速创建「没有特殊逻辑」或「只需要简单 Buff/特效」的通用地块行为类。
-/// - 参考 Tile_Water 的结构，但不绑定水深等特殊含义。
+/// - 只处理 Ground 通用行为，不承担液体语义。
 /// 作为 TileBlockBehaviour 的具体实现，通过组合到 Tile_Block 中使用。
 /// </summary>
 [System.Serializable]

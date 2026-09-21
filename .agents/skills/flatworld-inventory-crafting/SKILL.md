@@ -66,6 +66,7 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 - 作物需要多张成长图时，在物品 `visual.spriteStates` 同时声明 `seedling/growing/mature`，由 `Mod_CropVisual` 根据 `normalizedGrowth` 派生表现阶段；不得为了中间画面给 `CropStage` 增加持久化阶段。只要声明任一阶段图就必须三张齐全，对象池卸载时恢复外壳原 Sprite。
 - 世界植株与收获物必须保留独立 Item ID；种下时把植株重置为幼苗，一次性作物成熟交互后由动作生成食物/种子并销毁植株，持续采果植株只扣果实库存；不能把世界植株直接改成食物实例。
 - `Mod_Grow` 继续承担树木与自然植物成长，并实现 `IPlantableCrop` 接入同一播种入口；水肥、天气与 `CropGrowthMultiplier` 在权威成长模块中各结算一次。
+- 自然生态伴生物通过 `NaturalItemPlacement.HostGuid` 绑定宿主；宿主模块可实现 `INaturalCompanionHostCondition` 提供运行态门禁。`Mod_Grow` 默认到“发育”阶段才允许蜂巢等伴生物出现，未达门槛时由 `ChunkNaturalItemRenderer` 延迟生成，禁止让幼苗/小树直接挂载伴生物。
 - 苹果/桃/柑橘这类果树优先复用 `AppleTree` 与 `Apple` 的 JSON 继承链：果实只覆盖营养、腐败和视觉，果树只覆盖采收物、气候、战利品和视觉；若需要野生生成，再单独在地表 `ecologyRules` 注册稳定规则，禁止为每种果树复制一套成长代码。
 - 使用 `_BodyClip` 裁剪作物精灵时，必须给 `Mod_CropVisual` 绑定支持该属性的 `Sprite-Lit-Master` 材质；通用 `Prop` 外壳默认材质不提供 BodyClip。
 - `_BodyMinV/_BodyMaxV` 实际传入 `Sprite.bounds` 的本地 Y，不是 UV；主体和交互描边 Shader 都必须保留 `DisableBatching=True`，否则精灵合批预变换顶点后可能按世界位置误裁整株作物。不能通过提高 Sorting Order 修复，也不能只保护主体而遗漏描边 Pass。

@@ -45,13 +45,13 @@ JSON 是静态配置唯一真源。旧 `Tile_Block.asset` 仅保留地块 ID 和
 
 ## 内建类型
 
-数据类型：`universal`、`grass`、`water`、`farmland`、`cellBuilding`。
+数据类型：`universal`、`grass`、`farmland`、`cellBuilding`。
 
-行为类型：`universal`、`grass`、`water`、`farmland`、`ice`、`snow`。行为按数组顺序调用，具体功能仍由对应的 C# 类实现。水体行为要求 `water` 数据，耕地行为要求 `farmland` 数据；组合行为时仍应遵守各行为的进入、更新和清理契约。
+行为类型：`universal`、`grass`、`farmland`、`ice`、`snow`。行为按数组顺序调用，具体功能仍由对应的 C# 类实现。耕地行为要求 `farmland` 数据；组合行为时仍应遵守各行为的进入、更新和清理契约。
 
-`water` 数据/行为只保留代码与历史序列化兼容入口；新的世界水体在 `Liquids/liquids.json` 声明 `worldWater`，不再创建 Water Tile。液体身份使用已注册的 `LiquidId`，例如 `core:dirty_water` 或 `core:sea_water`。`buffInfo` 使用真实 Buff ID，例如 `潮湿`，不是显示英文译名。潮湿叠层和水深结算继续由现有水体/Buff 系统处理，不要额外复制一套每格计时器。
+世界液体只在 `Liquids/liquids.json` 声明 `worldWater`，并写入独立 Liquid 层；Tile JSON 不提供任何 water data/behaviour。液体身份使用已注册的 `LiquidId`，例如 `core:dirty_water` 或 `core:sea_water`。潮湿叠层和水深结算由液体/Buff 系统处理，不要在 Ground 定义里复制液体状态。
 
-墙体伤害使用 `damageProfile`；平台和地板使用 `groundPlacement`。可配置字段以实际分包为准。枚举支持合法名称或数字，例如 `requiredTool: "Pickaxe"`、`requiredSourceFlags: "Water"`。
+墙体伤害使用 `damageProfile`；平台和地板使用 `groundPlacement`。可配置字段以实际分包为准。液体约束使用 `liquidRequirement`（`Any / Dry / Liquid`），Ground 标记只表达 `Walkable / Blocking / Occupied`。
 
 ## JSON MOD
 
@@ -89,7 +89,7 @@ Patch 不能更改 `id` 或 `runtimeTileId`。地块定义与 Patch 先完整构
 
 共享 Behaviour 只能保存规则参数。角色计时、环境效果实例等留在 `TileEffectReceiver / EnvironmentInteractionRunner`；格子数据留在 `ChunkTerrainData` 及其权威扩展层。自定义 TileData 的 `Clone()` 必须深复制可变成员；需要进入旧 MemoryPack TileData 存档时还需另外处理序列化类型注册。JSON 行为注册本身不会自动增加 MemoryPack Union，也没有新增任意 Lua 方法执行入口。
 
-原 `Tile_Water` 等行为类及生命周期方法保留。`GameRes.GetTileBlock(string)` 现在返回 `RuntimeTileDefinition`，旧代码 MOD 的返回类型声明和相关 Harmony Patch 签名需要相应更新；只读取常用 `tileDataTemplate / behaviours / GetTileBaseAsset()` 的调用保留同名入口。
+液体不属于 Tile JSON：世界液体通过 `GameConfig/Liquids` 注册并写入独立 Liquid 层，Tile 定义禁止声明 water data/behaviour。`GameRes.GetTileBlock(string)` 返回 `RuntimeTileDefinition`。
 
 ## 检查
 

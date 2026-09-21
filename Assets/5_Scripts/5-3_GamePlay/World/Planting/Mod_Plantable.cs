@@ -382,7 +382,14 @@ public sealed class Mod_Plantable : Module
             return false;
         foreach (ItemSlot slot in inventory.Data.itemSlots)
             if (ReferenceEquals(slot.itemData, item.itemData))
-                return inventory.Data.TryConsumeFromSlot(slot, 1, out _);
+            {
+                if (!inventory.Data.TryConsumeFromSlot(slot, 1, out _))
+                    return false;
+
+                // 快捷栏数量文本需要在扣料事务完成后立即刷新，不能只同步世界手持实例。
+                inventory.RefreshUI(slot.Index);
+                return true;
+            }
         return false;
     }
 

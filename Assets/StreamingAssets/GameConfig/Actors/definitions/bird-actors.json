@@ -48,7 +48,7 @@
           },
           "parameters": {
             "groundSpeed": 0.5,
-            "flightSpeed": 9.0,
+            "flightSpeed": 6.3,
             "flightStaminaMax": 100.0,
             "flightStaminaDrainRate": 1.0,
             "flightStaminaRecoveryRate": 10.0,

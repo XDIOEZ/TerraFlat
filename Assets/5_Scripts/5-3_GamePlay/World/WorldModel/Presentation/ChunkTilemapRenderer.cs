@@ -29,6 +29,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     private bool renderCaveWater;
     private bool batchPresentationComplete;
     private bool batchBindingInProgress;
+    private const float DisabledSurfaceElevation = -1f;
 
     /// <summary>Editor 与 Development Build 只记录 BRG 异常与手动诊断，正式非开发包保持静默。</summary>
     private static bool RenderDebugEnabled => Application.isEditor || Debug.isDebugBuild;
@@ -534,7 +535,9 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             0f)) * tileTransform;
         Color tint = sourceTilemap != null ? tileColor * sourceTilemap.color : tileColor;
         var instanceData = ChunkBatchRendererGroupService.InstanceData.Create(localToWorld, data0, data1, tint);
-        if (layer == ChunkBatchRendererGroupService.VisualLayer.Water)
+        if (layer == ChunkBatchRendererGroupService.VisualLayer.Ground)
+            SetGroundElevationData(terrain, x, y, ref instanceData);
+        else if (layer == ChunkBatchRendererGroupService.VisualLayer.Water)
             SetWaterCurrentData(terrain, x, y, ref instanceData);
         ChunkBatchRendererGroupService.SetVisual(this, GetBatchSlotKey(terrain, x, y, layer),
             new ChunkBatchRendererGroupService.Visual(layer, sprite, sourceMaterial, instanceData));
@@ -733,6 +736,59 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     #endregion
 
     #region BRG Shader 数据
+
+    /// <summary>
+    /// Ground 用 Transform0.w 保存当前海拔，Data1 依次保存左、右、下、上邻格海拔。
+    /// 水格、Cave、缺失邻区统一禁用或回退，避免岸线双描边和 Chunk 边界假悬崖。
+    /// </summary>
+    private void SetGroundElevationData(ChunkTerrainData terrain, int x, int y,
+        ref ChunkBatchRendererGroupService.InstanceData instanceData)
+    {
+        if (renderCaveWater || terrain.GetLiquidDepth(x, y) > 0f ||
+            !TryGetSurfaceElevation(terrain, x, y, out float currentElevation))
+        {
+            instanceData.Transform0.w = DisabledSurfaceElevation;
+            instanceData.Data1 = Vector4.zero;
+            return;
+        }
+
+        currentElevation = Mathf.Clamp01(currentElevation);
+        instanceData.Transform0.w = currentElevation;
+        instanceData.Data1 = new Vector4(
+            ResolveNeighbourSurfaceElevation(terrain, x - 1, y, currentElevation),
+            ResolveNeighbourSurfaceElevation(terrain, x + 1, y, currentElevation),
+            ResolveNeighbourSurfaceElevation(terrain, x, y - 1, currentElevation),
+            ResolveNeighbourSurfaceElevation(terrain, x, y + 1, currentElevation));
+    }
+
+    /// <summary>只有已就绪的无水地表格参与高度边；其它情况视为与当前格同高。</summary>
+    private float ResolveNeighbourSurfaceElevation(ChunkTerrainData terrain, int x, int y,
+        float fallbackElevation)
+    {
+        if (!TryResolveTerrainCell(terrain, x, y, out ChunkTerrainData resolvedTerrain,
+                out int localX, out int localY, out _) ||
+            resolvedTerrain.GetLiquidDepth(localX, localY) > 0f ||
+            !TryGetSurfaceElevation(resolvedTerrain, localX, localY, out float elevation))
+        {
+            return fallbackElevation;
+        }
+
+        return Mathf.Clamp01(elevation);
+    }
+
+    /// <summary>过滤非法高度，避免 NaN/Infinity 污染整批 GPU 实例数据。</summary>
+    private static bool TryGetSurfaceElevation(ChunkTerrainData terrain, int x, int y,
+        out float elevation)
+    {
+        if (terrain.TryGetSurfaceElevation(x, y, out elevation) &&
+            !float.IsNaN(elevation) && !float.IsInfinity(elevation))
+        {
+            return true;
+        }
+
+        elevation = default;
+        return false;
+    }
 
     /// <summary>共享格角插值维持弯道与 Chunk 接缝连续；只上传实例数据，不创建水格对象。</summary>
     private void SetWaterCurrentData(ChunkTerrainData terrain, int x, int y,

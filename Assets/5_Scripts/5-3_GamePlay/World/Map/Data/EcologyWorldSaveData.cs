@@ -217,7 +217,15 @@ public partial class EcologyWorldSaveData
 [Serializable]
 public partial class WorldGenerationProfileSaveData
 {
-    public const int CurrentDataVersion = 2;
+    public const int CurrentDataVersion = 4;
+
+    private const double LegacyRiverStartFlow = 0.405d;
+    private const double LegacyRiverTributaryStartFlow = 0.195d;
+    private const double LegacyRiverFullWidthFlow = 1.2d;
+    private const double LegacyRiverFloodplainStartFlow = 0.405d;
+    private const double InterimRiverStartFlow = 0.10d;
+    private const double InterimRiverTributaryStartFlow = 0.06d;
+    private const double InterimRiverFloodplainStartFlow = 0.10d;
 
     public int DataVersion;
     public string ProfileId;
@@ -229,6 +237,82 @@ public partial class WorldGenerationProfileSaveData
     [MemoryPackIgnore]
     public bool HasConfiguration => DataVersion > 0 && NumericParameters != null &&
                                     TextParameters != null && CaveResourceRules != null;
+
+    /// <summary>
+    /// 把单接收格旧水文的默认流量阈值迁移到当前双接收 D∞ 水文。
+    /// 只替换仍等于旧默认值的冻结参数；玩家或 MOD 显式改过的数值保持原样。
+    /// </summary>
+    public void MigrateHeightDrivenRiverDefaults(ChunkGenerationProfileSnapshot currentProfile)
+    {
+        if (!HasConfiguration || DataVersion >= CurrentDataVersion || currentProfile == null ||
+            !Matches(currentProfile) || currentProfile.Settings.Mode != ChunkGenerationMode.Surface)
+        {
+            return;
+        }
+
+        if (DataVersion <= 2)
+        {
+            ReplaceLegacyNumericDefault(
+                "river.startFlow",
+                LegacyRiverStartFlow,
+                currentProfile);
+            ReplaceLegacyNumericDefault(
+                "river.tributaryStartFlow",
+                LegacyRiverTributaryStartFlow,
+                currentProfile);
+            ReplaceLegacyNumericDefault(
+                "river.fullWidthFlow",
+                LegacyRiverFullWidthFlow,
+                currentProfile);
+            ReplaceLegacyNumericDefault(
+                "river.floodplainStartFlow",
+                LegacyRiverFloodplainStartFlow,
+                currentProfile);
+        }
+
+        if (DataVersion <= 3)
+        {
+            ReplaceLegacyNumericDefault(
+                "river.startFlow",
+                InterimRiverStartFlow,
+                currentProfile);
+            ReplaceLegacyNumericDefault(
+                "river.tributaryStartFlow",
+                InterimRiverTributaryStartFlow,
+                currentProfile);
+            ReplaceLegacyNumericDefault(
+                "river.floodplainStartFlow",
+                InterimRiverFloodplainStartFlow,
+                currentProfile);
+        }
+
+        DataVersion = CurrentDataVersion;
+        // Apply() 会按迁移后的完整参数重新计算真实指纹。
+        GenerationFingerprint = 0UL;
+    }
+
+    /// <summary>旧值仍等于历史默认值时，替换为当前 Profile 的对应数值。</summary>
+    private void ReplaceLegacyNumericDefault(
+        string id,
+        double legacyDefault,
+        ChunkGenerationProfileSnapshot currentProfile)
+    {
+        if (!currentProfile.NumericParameters.TryGetValue(id, out double currentValue))
+            return;
+
+        for (int i = 0; i < NumericParameters.Count; i++)
+        {
+            WorldGenerationNumericParameterSaveData parameter = NumericParameters[i];
+            if (parameter == null || !string.Equals(parameter.Id, id, StringComparison.Ordinal) ||
+                Math.Abs(parameter.Value - legacyDefault) > 0.000001d)
+            {
+                continue;
+            }
+
+            parameter.Value = currentValue;
+            return;
+        }
+    }
 
     /// <summary>复制完整的数值、文本和矿脉规则；键按序保存便于审查与 JSON 转换。</summary>
     public void Capture(ChunkGenerationProfileSnapshot profile)
@@ -312,10 +396,6 @@ public partial class WorldGenerationProfileSaveData
                 resources.Add(rule.ToSnapshot());
             }
         }
-        // 原液体地块编号永久保留不用；液体覆盖改由独立层生成，冻结气候和水文仍原样继承。
-        foreach (string retired in new[] { "tile.block.2", "tile.block.6" })
-            if (texts.TryGetValue(retired, out string id) &&
-                (id == "Tile_Water_Fresh" || id == "Tile_Water_Salt")) texts.Remove(retired);
         return profile.WithGenerationConfiguration(numbers, texts, resources);
     }
 }

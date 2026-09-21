@@ -253,7 +253,7 @@ namespace FlatWorld.WorldModel
                 request, settings, worldX, worldY, surfaceInfluence);
         }
 
-        /// <summary>使用已采样地表高度与最终降水阈值决定地下湖是否形成，不再执行随机成湖判定。</summary>
+        /// <summary>使用已采样地表高度、最终降水阈值与洞室稳定概率决定地下湖是否形成。</summary>
         internal static double SampleGroundliquidDepth(ChunkGenerationRequest request,
             ChunkGenerationSettingsSnapshot settings, int worldX, int worldY,
             CaveSurfaceInfluenceSample surfaceInfluence)
@@ -280,6 +280,11 @@ namespace FlatWorld.WorldModel
             for (int regionX = region.X - 1; regionX <= region.X + 1; regionX++)
             for (int regionY = region.Y - 1; regionY <= region.Y + 1; regionY++)
             {
+                uint lakeSelectionState = HashRoom(request.Topology, settings, request.WorldSeed,
+                    regionX, regionY, 0x6a7d91f);
+                if (NextUnitDouble(ref lakeSelectionState) >= settings.CaveGroundwaterRoomChance)
+                    continue;
+
                 uint state = HashRoom(request.Topology, settings, request.WorldSeed,
                     regionX, regionY, 0x2f6e2b1);
                 Room room = CreateRoom(request.Topology, settings, regionX, regionY,

@@ -42,6 +42,10 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - `IgnorePopulationLimits` 只取消物种、生成组、玩家周边与全局数量上限；生成计划、概率、生态预算和远距离回收仍然生效，不能与 `UnboundedDailyGrowth` 混为一谈。
 - 怪物实例、物种/生成组计数、死亡订阅和回收保护统一由 `MonsterManager` 通过 `ItemMgr` 生命周期事件维护；`MonsterSpawnerManager` 只注入物种目录并执行生成/生态策略，其他系统必须查询注册表或复制无分配快照，禁止再用 `FindObjectsOfType` 或维护第二套怪物实例表。
 - `MonsterManager` 注册表会保留区块休眠实体供后续唤醒与远距离回收，但生成上限、物种/分组存活数和溢出裁剪只统计 `activeInHierarchy` 且未进入销毁流程的实例；新增数量限制必须复用 `IsActiveForPopulationLimits`，不能直接按注册总数计算。
+- 活动种群计数由 `RuntimeItemRegistered/Unregistered` 与无 Update 的 `MonsterPopulationObserver` 增量维护；必须覆盖祖先显隐、直接销毁和回池解绑，不得恢复每帧全表重数。`RegistrationVersion` 只表示注册表结构变化，不能用它缓存会随移动改变的周边数量。
+- 刷怪休眠复用 `ItemMgr` 的 WorldAddress 索引：注册时先建立地址，移动跨块以及 `ChunkView` 完整绑定/解绑才检查相关实体。退出世界先解除表现通知，再清理登记，禁止唤醒卸载中的对象；命名空间中存在两种 `WorldAddress`，运行时通知须明确使用 `FlatWorld.WorldModel.WorldAddress`。
+- 生成与裁剪必须使用一致的难度倍率；候选重试只共用本次搜索的周边数量，树容量和选树共用合格快照。分帧生成预算只延后完整操作，不丢弃 Pending、不提前消耗重试时间，并轮转配置避免饥饿；查询 ECS 前先检查该配置是否含 ECS 路由。
+- `gameplay_spawner_debug` 提供真实注册表审计、有限时间采样及 `profile_frames` 原始 Profiler 读取；Unity Mono 的 `GC.GetAllocatedBytesForCurrentThread` 可能恒为零，必须以自检和标记子树中的 `GC.Alloc` 元数据确认，不能把不支持的计数器当成零分配。
 - 动物头顶调试 HUD 由全局 `AI_DebugOverlay.Visible` 控制，GM 面板通过 `GMConsolePreferences` 持久化开关；动物自身的 `debugLog` 只负责日志，不要重新用它控制 HUD 显示。
 - 动物头顶调试 HUD 在 `AI_Base` 统一显示当前 `BuffManager.ActiveBuffs` 的名称与剩余时间；只读读取 Buff，不在 HUD 层修改 Buff 生命周期。
 - 现代动物的睡眠可被有效伤害打断：`AI_Base` 在睡眠中收到正伤害时锁存一次 `SleepInterruptedByDamage`，具体动物的睡眠条件必须优先退出当前睡眠；真正离开睡眠后再清除锁存，并继续使用动物自己的睡醒冷却控制重新入睡。
@@ -64,7 +68,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - 正式生态目录中“单个 Actor 尚未迁移”属于预期能力边界：`PrepareWorld` 必须只记录一次普通诊断日志并从 AIECS 生成候选中排除，不能污染正常 `GameStartScene` 的 Warning 基线；只有后端未注册、目录完全无可运行 Actor、初始化异常等真正阻断正式 AIECS 的情况才使用 Error/Exception。
 - 正常 `GameStartScene` 世界的 GM AIECS 分页通过正式 `AiecsEcologyRuntimeHost` 惰性取得一个空闲 `AiecsPlayground` 调试入口；空闲入口不得阻断正式生态，只有真正启动开发场景时才先同步释放正式模拟，清理开发场景后正式宿主再自动恢复，任何时刻禁止两套 AIECS World 同时推进。
 - `AiecsSimulation` 持有独立 World 与批次资源，`AiecsDefinitionCompiler` 在冷路径读取当前合并 Actor/MOD 定义。生命、记忆、攻击阶段属于每实体运行态，定义、阵营矩阵与战略 Goal 共享；不得通过实例化旧 AI 获得模板，也不得用 P0 能力报告充当运行时配置。
-- 正式 AIECS 的水体环境态从共享导航快照单向进入 `AiecsFlowAgent.WaterDepth/WaterBlend`：移动层按同一水深做减速，`AiecsDisplayRecord` 再把它交给批量水体 Shader。禁止为每只 Entity 创建 `TileEffectReceiver`、查询 `ChunkMgr` 或回退旧 `Tile_Water` GameObject 链；水体是否需要绕行仍由导航高代价决定，而不是由水态表现硬阻挡。
+- 正式 AIECS 的水体环境态从共享导航快照单向进入 `AiecsFlowAgent.WaterDepth/WaterBlend`：移动层按同一水深做减速，`AiecsDisplayRecord` 再把它交给批量水体 Shader。禁止为每只 Entity 创建 `TileEffectReceiver` 或反向查询 `ChunkMgr`；水体是否需要绕行仍由导航高代价决定，而不是由水态表现硬阻挡。
 - 原生感知直接从 ECS 位置、身份、体型、生命构建稀疏桶，桶键包含阵营以避免同阵营占满候选预算。锁定目标只做有效性与低频追击规则复核，失效才错峰搜桶；不可达目标按配置延迟重试。形状偏移和外部玩家缩放必须纳入粗筛扩张上限，循环桶去重与最近镜像必须一起使用。
 - LOS 独立复制 TerrainCell 的 Blocking 和建筑占地，不能把导航不可走当作遮挡。移动前快照用于感知，移动后重建快照用于命中；所有 Native 借用必须进入依赖链，重建和释放前完成旧读取者。武器 Pulse 在模拟批次之外发生时须重新借用当前导航索引，不能跨 Update 缓存可能已被导航发布替换的 LOS 视图。
 - 正式 `AiecsSimulation` 使用两套空间索引：`perceptionSpatial` 冻结移动前感知/决策快照，`combatSpatial` 沿移动 Job 依赖链异步建立移动后攻击/伤害快照；`AiecsSpatialIndex.Build` 只同步该索引上一轮读取者，当前 dependency 必须继续交给 Build Job，禁止重新复用单索引并在 Tick 中途 `Complete` 整条移动链。正式生态宿主 30Hz 追帧单帧最多执行 2 个 Tick、最多保留 3 个 Tick 时间债务，避免卡顿后形成追帧尖峰。

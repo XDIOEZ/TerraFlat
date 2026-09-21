@@ -22,27 +22,6 @@ public partial class SaveDataMgr
         record.LiquidCells.Sort(CompareLiquidCell);
     }
 
-    /// <summary>旧倾倒行为借用农业记录保存水深；迁为 Liquid 差量，绝不把已退休的水编号恢复成 Ground。</summary>
-    private static void MigrateLegacyLiquidCells(ChunkTerrainData terrain, ChunkSaveRecord record)
-    {
-        if (record.AgricultureCells == null) return;
-        record.LiquidCells ??= new List<LiquidCellSaveData>();
-        for (int i = record.AgricultureCells.Count - 1; i >= 0; i--)
-        {
-            AgricultureCellSaveData old = record.AgricultureCells[i];
-            if (old == null || (old.SourceTileId != 2 && old.SourceTileId != 6) || old.Progress > 0f || old.Crop != null) continue;
-            if (!record.LiquidCells.Exists(cell => cell.LocalPosition == old.LocalPosition))
-            {
-                float depth = Mathf.Clamp01(old.Water);
-                var migrated = new LiquidCellSaveData { LocalPosition = old.LocalPosition, LiquidDepth = depth,
-                    LiquidId = depth > 0f ? (old.SourceTileId == 6 ? LiquidTypeCatalog.SeaWaterId : LiquidTypeCatalog.DirtyWaterId) : string.Empty };
-                migrated.Validate(terrain);
-                record.LiquidCells.Add(migrated);
-            }
-            record.AgricultureCells.RemoveAt(i);
-        }
-    }
-
     private static int CompareLiquidCell(LiquidCellSaveData left, LiquidCellSaveData right)
     {
         int y = left.LocalPosition.y.CompareTo(right.LocalPosition.y);

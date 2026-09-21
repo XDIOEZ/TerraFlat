@@ -388,8 +388,8 @@ namespace FlatWorld.WorldModel
         private static bool IsValidNaturalCell(TerrainCell cell, ChunkTerrainBuffer terrain,
             int x, int y)
         {
-            if ((cell.Flags & (TerrainCellFlags.Water | TerrainCellFlags.Blocking |
-                               TerrainCellFlags.Occupied)) != 0 ||
+            if (terrain.GetLiquidDepth(x, y) > 0f ||
+                (cell.Flags & (TerrainCellFlags.Blocking | TerrainCellFlags.Occupied)) != 0 ||
                 (cell.Flags & TerrainCellFlags.Walkable) == 0)
             {
                 return false;

@@ -5,7 +5,7 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 
 /// <summary>
-/// 一次资源目录的 Addressables 所有者。请求发出时立即记录句柄，成功资源保留到目录卸载，
+/// 一次资源目录的具体 Addressables 资源所有者。请求发出时立即记录句柄，成功资源保留到目录卸载，
 /// 失败、取消和退出都按相反顺序释放；同类型同地址只持有一次请求。
 /// </summary>
 internal sealed class ResourceAssetScope : IDisposable

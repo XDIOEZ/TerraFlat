@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 /// 统一管理玩家与生物脚底的静态阴影。
 /// 阴影实例全部放在场景级 ActorShadows 根节点下，并使用 Default 层的负序号，
 /// 不依附于 Item 或 RuntimeEntities 层级；阴影透明度随 DayTimeSystem 的有效光照强度变化，
-/// 进入水体后由 Tile_Water 主动关闭，后续建筑阴影也可以复用此管理器的注册入口。
+/// 进入液体后由独立液体接触系统主动关闭，后续建筑阴影也可以复用此管理器的注册入口。
 /// </summary>
 public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
 {
