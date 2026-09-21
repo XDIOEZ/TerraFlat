@@ -501,6 +501,16 @@ public static class FlatWorldUITheme
                 continue;
             }
 
+            if (ContainsAny(objectName, "层数徽标", "StackBadge", "StackCountBadge"))
+            {
+                image.sprite = null;
+                image.type = Image.Type.Simple;
+                image.preserveAspect = false;
+                image.color = Hex("1A1A1A", 0.96f);
+                AddOutline(image, Hex("FFFFFF", 0.28f));
+                continue;
+            }
+
             if (ContainsAny(objectName, PanelWords))
             {
                 image.sprite = null;
@@ -943,8 +953,9 @@ public static class FlatWorldUITheme
             if (text.GetComponentInParent<Button>() != null)
                 continue;
 
+            bool stackLevel = ContainsAny(text.name, "层数文本", "StackCount", "StackLevel");
             bool heading = text.fontSize >= 24f || ContainsAny(text.name, "标题", "信息", "Title", "Header");
-            text.color = heading ? TextPrimary : TextSecondary;
+            text.color = stackLevel || heading ? TextPrimary : TextSecondary;
             if (heading)
                 text.fontStyle |= FontStyles.Bold;
             text.raycastTarget = false;

@@ -9,6 +9,7 @@ public static class BuffEffectTypeIds
     public const string WaterConsumeSpeedMultiplier = "core:water_consume_speed_multiplier";
     public const string TemperatureCoolingMultiplier = "core:temperature_cooling_multiplier";
     public const string TemperatureWarming = "core:temperature_warming";
+    public const string NightVision = "core:night_vision";
     public const string DamageTakenMultiplier = "core:damage_taken_multiplier";
     public const string Heal = "core:heal";
     public const string MaxHealthPercentHeal = "core:max_health_percent_heal";
@@ -38,6 +39,7 @@ public static class BuffEffectDispatcher
         Register(BuffEffectTypeIds.WaterConsumeSpeedMultiplier, ApplyWaterConsumeSpeedMultiplier);
         Register(BuffEffectTypeIds.TemperatureCoolingMultiplier, ApplyTemperatureCoolingMultiplier);
         Register(BuffEffectTypeIds.TemperatureWarming, ApplyTemperatureWarming);
+        Register(BuffEffectTypeIds.NightVision, ApplyNightVision);
         Register(BuffEffectTypeIds.DamageTakenMultiplier, ApplyDamageTakenMultiplier);
         Register(BuffEffectTypeIds.Heal, ApplyHeal);
         Register(BuffEffectTypeIds.MaxHealthPercentHeal, ApplyMaxHealthPercentHeal);
@@ -152,6 +154,24 @@ public static class BuffEffectDispatcher
             temperature.RemoveTemporaryWarming(runtime);
         else
             temperature.SetTemporaryWarming(runtime, effect.Value, effect.UpperLimit.Value);
+    }
+
+    /// <summary>只为本地玩家注册画面亮度下限，不把夜视伪装成真实世界光源。</summary>
+    private static void ApplyNightVision(BuffEffectDefinition effect, BuffInstance runtime)
+    {
+        DayTimeSystem timeSystem = DayTimeSystem.GetInstance();
+        if (effect.Phase == BuffEffectPhase.Stop)
+        {
+            timeSystem?.RemoveLocalPresentationLightingFloor(runtime);
+            return;
+        }
+
+        Item receiver = GetReceiver(runtime);
+        Transform localPlayer = ItemMgr.Instance?.UserPlayerTransform;
+        if (timeSystem == null || receiver == null || localPlayer == null || receiver.transform != localPlayer)
+            return;
+
+        timeSystem.SetLocalPresentationLightingFloor(runtime, effect.Value);
     }
 
     /// <summary>按 Buff 阶段调整接收者的最终受伤倍率，停止阶段由配置传入倒数倍率恢复。</summary>

@@ -195,6 +195,11 @@ public static class BuffDefinitionFactory
                 }
                 break;
 
+            case BuffEffectTypeIds.NightVision:
+                if (effect.Phase == BuffEffectPhase.Tick || effect.Value <= 0f || effect.Value > 1f)
+                    throw new InvalidDataException($"{context} 夜视仅支持 start/stop，value 必须位于 (0, 1]");
+                break;
+
             case BuffEffectTypeIds.MoveSpeedMultiplier:
             case BuffEffectTypeIds.FoodConsumeSpeedMultiplier:
             case BuffEffectTypeIds.WaterConsumeSpeedMultiplier:
