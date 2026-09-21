@@ -401,19 +401,24 @@ public partial class GameRes
         foreach (IResourceLocation location in selected)
             startupPrefabLocationIds.Add(GetLocationIdentity(location));
 
-        var handle = resourceAssets.Own(Addressables.LoadAssetsAsync<GameObject>(selected, null, true));
-        while (!handle.IsDone)
-        {
-            loadPipeline.Report(handle.PercentComplete * 0.9f);
-            yield return null;
-        }
-
-        IList<GameObject> loaded = ResourceAssetScope.Require(handle, "启动必要 UI Prefab");
         var loadedNames = new HashSet<string>(StringComparer.Ordinal);
-        foreach (GameObject prefab in loaded)
+        for (int i = 0; i < selected.Count; i++)
         {
+            IResourceLocation location = selected[i];
+            string prefabKey = StartupPrefabKeys[i];
+            Debug.Log($"[GameRes] 启动 UI 加载：{prefabKey} ({location.PrimaryKey})");
+
+            var handle = resourceAssets.Own(Addressables.LoadAssetAsync<GameObject>(location));
+            while (!handle.IsDone)
+            {
+                float itemProgress = (i + handle.PercentComplete) / selected.Count;
+                loadPipeline.Report(itemProgress * 0.9f);
+                yield return null;
+            }
+
+            GameObject prefab = ResourceAssetScope.Require(handle, $"启动必要 UI Prefab {prefabKey}");
             if (prefab == null)
-                throw new InvalidDataException("启动必要 UI Prefab 加载出空资源。");
+                throw new InvalidDataException($"启动必要 UI Prefab 加载出空资源：{prefabKey}");
             RegisterPrefabAlias(prefab.name, prefab);
             loadedNames.Add(prefab.name);
             LoadedCount++;
