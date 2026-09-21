@@ -123,8 +123,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
             return;
         }
 
-        bool interacted = TryInteractAtCurrentPosition();
-        heldReceiver = interacted ? currentReceiver : null;
+        bool interacted = TryBeginHeldInteraction();
         if (!interacted)
             BeginEnvironmentActionHold();
     }
@@ -152,6 +151,22 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
         return StartInteraction(receiver);
     }
 
+    /// <summary>开始一次持续交互；不指定目标时沿用玩家当前最近目标选择规则。</summary>
+    public bool TryBeginHeldInteraction(IInteractable receiver = null)
+    {
+        bool interacted = receiver != null
+            ? TryInteractTarget(receiver)
+            : TryInteractAtCurrentPosition();
+        heldReceiver = interacted ? currentReceiver : null;
+        return interacted;
+    }
+
+    /// <summary>结束持续交互状态；目标本身仍按原交互生命周期保留到切换或取消。</summary>
+    public void EndHeldInteraction()
+    {
+        heldReceiver = null;
+    }
+
     /// <summary>复用正式交互发送器的全部准入规则，供结构化观察和非物理输入源判断目标当前是否可交互。</summary>
     public bool CanInteractTarget(IInteractable receiver)
     {
@@ -170,7 +185,7 @@ public partial class Mod_InteractSender : Module,IFocusPoint,ITrunDirection
 
     private void OnInteractReleased(InputAction.CallbackContext ctx)
     {
-        heldReceiver = null;
+        EndHeldInteraction();
         if (gameController != null && !gameController.IsGameplayInputAllowed(ctx))
             return;
 

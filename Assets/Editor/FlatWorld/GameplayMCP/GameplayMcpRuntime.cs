@@ -1161,6 +1161,64 @@ namespace FlatWorld.GameplayMCP
             });
         }
 
+        /// <summary>按真实交互链持续按住一个目标，供手摇轮等持续交互玩法复用。</summary>
+        internal static async Task<JObject> InteractHoldAsync(JObject parameters, Player player)
+        {
+            Mod_InteractSender sender = player.GetComponentInChildren<Mod_InteractSender>(true);
+            if (sender == null)
+                return BuildActionError("interaction_missing", "玩家没有 Mod_InteractSender。", false);
+
+            int targetGuid = GetInt(parameters, "targetGuid", 0);
+            bool interacted = false;
+            if (targetGuid == 0)
+            {
+                interacted = sender.TryBeginHeldInteraction();
+            }
+            else
+            {
+                Item targetItem = FindRuntimeItem(targetGuid);
+                if (targetItem == null)
+                    return BuildActionError("target_not_found", $"找不到运行时实体 Guid={targetGuid}。", false);
+
+                MonoBehaviour[] behaviours = targetItem.GetComponentsInChildren<MonoBehaviour>(true);
+                for (int i = 0; i < behaviours.Length && !interacted; i++)
+                {
+                    if (behaviours[i] is IInteractable interactable)
+                        interacted = sender.TryBeginHeldInteraction(interactable);
+                }
+            }
+
+            if (!interacted)
+            {
+                return BuildActionSuccess("interact_hold", player, new JObject
+                {
+                    ["targetGuid"] = targetGuid == 0 ? JValue.CreateNull() : new JValue(targetGuid),
+                    ["interacted"] = false,
+                    ["seconds"] = 0f
+                });
+            }
+
+            float seconds = Mathf.Clamp(GetFloat(parameters, "seconds", 1f), 0.02f, 20f);
+            try
+            {
+                bool completed = await WaitEditorSecondsAsync(seconds);
+                if (!completed)
+                    return BuildActionError("play_mode_ended", "持续交互期间 Play Mode 已结束。", false);
+            }
+            finally
+            {
+                if (sender != null)
+                    sender.EndHeldInteraction();
+            }
+
+            return BuildActionSuccess("interact_hold", player, new JObject
+            {
+                ["targetGuid"] = targetGuid == 0 ? JValue.CreateNull() : new JValue(targetGuid),
+                ["interacted"] = true,
+                ["seconds"] = Round(seconds)
+            });
+        }
+
         /// <summary>向现有攻击事件链提交一次有时长的攻击按压。</summary>
         internal static async Task<JObject> AttackAsync(JObject parameters, Player player, GameController controller)
         {
@@ -1643,6 +1701,16 @@ namespace FlatWorld.GameplayMCP
     {
         public Task<JObject> ExecuteAsync(GameplayMcpActionContext context, JObject parameters) =>
             Task.FromResult(GameplayMcpRuntime.Interact(parameters, context.Player));
+    }
+
+    /// <summary>持续执行正式交互，用于手摇轮等必须按住交互键的玩法。</summary>
+    [GameplayMcpAction(
+        "interact_hold",
+        "Hold a production interaction target for bounded real seconds through Mod_InteractSender. Useful for hand cranks and other continuous interactions.")]
+    internal sealed class GameplayMcpInteractHoldAction : IGameplayMcpAction
+    {
+        public Task<JObject> ExecuteAsync(GameplayMcpActionContext context, JObject parameters) =>
+            GameplayMcpRuntime.InteractHoldAsync(parameters, context.Player);
     }
 
     /// <summary>执行一次有界攻击按压。</summary>
