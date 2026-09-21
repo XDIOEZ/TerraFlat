@@ -673,6 +673,204 @@
       "actions": []
     },
     {
+      "id": "core:钻孔原木_手钻",
+      "displayName": "钻孔原木（手钻）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "tag",
+          "itemId": "",
+          "tag": "HandDrill",
+          "amount": 0
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Log",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "DrilledLog",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:钻孔木板",
+      "displayName": "钻孔木板",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "tag",
+          "itemId": "",
+          "tag": "HandDrill",
+          "amount": 0
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Plank",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "DrilledPlank",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:钻孔木棍",
+      "displayName": "钻孔木棍",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 2,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "tag",
+          "itemId": "",
+          "tag": "HandDrill",
+          "amount": 0
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "DrilledStick",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:手钻_燧石",
+      "displayName": "手钻（燧石钻头）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 4,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Rope",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "DrilledLog",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "exact_item",
+          "itemId": "Ore_Flint",
+          "tag": "",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "HandDrill",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
+      "id": "core:手钻_金属锭",
+      "displayName": "手钻（金属钻头）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 4,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 0.0,
+      "maxTemperature": 2000.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Stick_Wood",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 1,
+          "match": "exact_item",
+          "itemId": "Rope",
+          "tag": "",
+          "amount": 2
+        },
+        {
+          "slot": 2,
+          "match": "exact_item",
+          "itemId": "DrilledLog",
+          "tag": "",
+          "amount": 1
+        },
+        {
+          "slot": 3,
+          "match": "tag",
+          "itemId": "",
+          "tag": "Ingot",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "HandDrill",
+          "amount": 1
+        }
+      ],
+      "actions": []
+    },
+    {
       "id": "core:木锤_树脂胶水",
       "displayName": "木锤（树脂胶水）",
       "recipeType": "crafting",

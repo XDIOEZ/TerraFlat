@@ -224,6 +224,42 @@
       }
     },
     {
+      "id": "DrilledStick",
+      "parent": "WoodTool_Base",
+      "gameName": "钻孔木棍",
+      "description": "在木棍上加工出贯穿孔的机械木料，主要用于机械动力装置的轴心与连接。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 0.4,
+      "volume": 0.8,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+      },
+      "modules": {}
+    },
+    {
+      "id": "HandDrill",
+      "parent": "WoodTool_Base",
+      "gameName": "手钻",
+      "description": "以钻孔原木为主体、绳索传动并安装燧石或金属钻头的手动钻孔工具，可继续加工原木、木板和木棍。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "stackable": false,
+      "canBePickedUp": true,
+      "tags": [
+        "HandDrill"
+      ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+      },
+      "modules": {}
+    },
+    {
       "id": "Log",
       "parent": "WoodTool_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Log.prefab",

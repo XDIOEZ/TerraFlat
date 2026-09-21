@@ -1020,7 +1020,9 @@
       "volume": 0.3,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Ingot"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Materials/Ingots/Item_ingot_003.png",
         "rendererLocalPosition": {
@@ -1101,7 +1103,9 @@
       "volume": 0.3,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Ingot"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_402.png",
         "rendererLocalPosition": {
@@ -1351,7 +1355,9 @@
       "volume": 0.3,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "Ingot"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_394.png",
         "rendererLocalPosition": {
@@ -5770,6 +5776,24 @@
       "tags": [],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/DrilledLog/DrilledLog_Idle.png"
+      },
+      "modules": {}
+    },
+    {
+      "id": "DrilledPlank",
+      "parent": "BasicItem_Base",
+      "gameName": "钻孔木板",
+      "description": "在木板上加工出贯穿孔的机械木料，主要用于机械动力装置的结构与连接。",
+      "durability": 1.0,
+      "maxDurability": 1.0,
+      "amount": 1.0,
+      "weight": 2.0,
+      "volume": 4.0,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": [],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
       },
       "modules": {}
     }
