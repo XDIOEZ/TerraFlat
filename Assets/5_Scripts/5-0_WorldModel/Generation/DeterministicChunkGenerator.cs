@@ -460,7 +460,7 @@ namespace FlatWorld.WorldModel
                 flags = TerrainCellFlags.Walkable;
             }
 
-            // 地面与液体独立写入；height 只供生成期间生态筛选，在 Seal 时释放，运行时直接读取液深。
+            // 地面与液体独立写入；height 供生态筛选与地表分层显示，运行时液体只读取独立液深。
             terrain.SetCell(x, y, new TerrainCell(groundTileId, 0, 0, biomeId,
                 navigationCost, flags));
             terrain.SetEnvironmentValue("height", x, y, (float)height);

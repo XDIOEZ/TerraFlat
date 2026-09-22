@@ -62,7 +62,8 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 
 - 验收统一进入真实 Play Mode，实际移动跨区块、触发生成/流送/逐出并观察权威状态与表现；编译与 Console 只作为运行门禁和故障定位。
 
-- Liquid 独立持有池化的 `LiquidDepth[]/LiquidTypeIndex[]`，Seal 移交唯一所有权、取消或逐出时归还；编号来自资源会话冻结的 `LiquidTypeCatalog`，稳定哈希与持久化使用 LiquidId，不能使用会话编号。`height` 仅供生成和生态筛选，在 Seal 时释放；运行时不得再反算液深。
+- Liquid 独立持有池化的 `LiquidDepth[]/LiquidTypeIndex[]`，Seal 移交唯一所有权、取消或逐出时归还；编号来自资源会话冻结的 `LiquidTypeCatalog`，稳定哈希与持久化使用 LiquidId，不能使用会话编号。`height` 在 Seal 时随环境数组移交给正式区块，供 Surface Ground 高度分层读取，直到区块 Dispose 才归还；它不参与玩法内容指纹，不增加存档字段，也不能用于反算液深。
+- 高度分层只读取原生成高度：Ground 的 `Transform0.w` 保存当前高度（负值禁用），`Data1` 按左、右、下、上保存邻高，BRG 步长保持 112 字节。缺失邻区、非法高度、无 Ground 或有 Liquid 的邻格回退为本格同高；本格非 Surface 或有 Liquid 时禁用。复用 Environment/Liquid 脏区及邻区 Changed，并同时响应 ChunkCommitted / ChunkEvicted，不能靠轮询或重新采样 Noise 补边界。
 - `TerrainChangeKind.Liquid` 必须驱动当前格、八方向邻区的岸线/四角液深和导航刷新。TerrainCell 不保存液体标记，SetLiquid 不能修改任何 Ground 字段；生成筛选读取 LiquidDepth，有效表面接触额外考虑 TerrainSupportLayer，纯液体变化不得产生 Ground 差量。
 
 ## Skill 维护原则

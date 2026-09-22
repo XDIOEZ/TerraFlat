@@ -26,6 +26,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 伤害数字的最终颜色由 `DamageTextEffect` 样式或调用数据覆盖，不能只改 TMP 的 Prefab 字色；数值到显示倍率的映射也由该表现组件负责，战斗结算只传递实际伤害值与样式。
 - 角色颜色等共享 Shader 参数通过现有 MPB 控制器提交，避免多个组件互相覆盖。
 - Unity 2D 使用 URP/Light2D；修改 Shader 前核对材质实际 Shader 与 Pass。
+- 地表高度分层在 `Chunk-BRG-Contact-Lit` 的共享 HLSL 中处理，两条 Pass 共用 `UnityPerMaterial` 布局和公式，且先分层着色、再接触阴影、最后进入 Light2D。按世界格坐标与四邻离散层差画边，同层无边、低侧暗边优先、拐角取最大强度；`_ElevationStrength=0` 必须完全旁路高度 Tone/暗边/亮边，不能连带关闭 Contact 或改变水面 Shader。
 - 局部 `Light2D` 如果开启 `volumeIntensityEnabled`，同时要开启 `volumetricShadowsEnabled` 并设置有效 `shadowVolumeIntensity`；否则 `ShadowCaster2D` 只会阻挡普通光照，体积光晕仍会穿过石墙、矿洞岩壁等 Blocking Tile，看起来像“光穿墙”。新版区块的静态墙体遮挡统一复用 `ChunkLightOccluderRenderer`，不要再给每块玩家墙单独创建常驻 ShadowCaster。
 - `ChunkLightOccluderRenderer` 的 Blocking Tile 阴影体必须开启 `selfShadows`，否则墙体虽然会向背光侧投影，墙面自身仍会被 Point Light 整块照亮；通用世界 `Mod_LightSource` 的 Point Light 使用满强度普通阴影，保证实体墙移除该局部光，同时保留昼夜全局光和墙体朝光侧的窄外沿。
 - `selfShadows=true` 的 Blocking Tile 阴影体会通过 URP 2D 阴影模板影响任何与墙体占地区域重叠的 Lit Sprite，而不只影响墙体自身；火把等自发光物体应使用独立 Unlit/Emissive 覆盖层，可按玩法需要只覆盖发光区域或整个源 Sprite。覆盖层使用 Max 混合给发光体提供不被阴影压暗的颜色下限，同时保留原 Lit Sprite 更亮的受光结果；禁止为了让发光体不变黑而关闭墙体 `selfShadows`，否则会重新出现整块墙面被局部光照亮的问题。

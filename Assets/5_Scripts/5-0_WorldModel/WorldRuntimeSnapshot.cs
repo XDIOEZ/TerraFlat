@@ -47,7 +47,7 @@ namespace FlatWorld.WorldModel
         public int Height { get; }
         /// <summary>所有地形格子的副本；二维地图被按行排成了一个长列表。</summary>
         public IReadOnlyList<TerrainCell> TerrainCells => terrainCells;
-        /// <summary>温度、降水等环境数据的副本；不保存生成临时高度。</summary>
+        /// <summary>温度、降水和视觉高度等环境数据的副本；高度不参与玩法内容指纹。</summary>
         public IReadOnlyDictionary<string, float[]> EnvironmentLayers => environmentLayers;
         /// <summary>每个格子的草地数据。</summary>
         public IReadOnlyList<byte> Grass => grass;

@@ -128,12 +128,7 @@ namespace FlatWorld.WorldModel
         public ChunkTerrainData Seal()
         {
             ThrowIfUnavailable();
-            // height 仅服务生成期生态筛选，正式区块不保留可由种子复算的高度数组。
-            if (_environmentLayers.TryGetValue("height", out float[] generationHeights))
-            {
-                _environmentLayers.Remove("height");
-                ArrayPool<float>.Shared.Return(generationHeights, true);
-            }
+            // 保留生成时的 height 供地表高度分层读取，随区块统一释放；液体仍只认独立 LiquidDepth。
             _sealed = true;
             var result = new ChunkTerrainData(Width, Height, _cells, _environmentLayers, _grass,
                 _extendedTileStacks, liquid);
@@ -598,6 +593,9 @@ namespace FlatWorld.WorldModel
             for (int layerIndex = 0; layerIndex < layerIds.Count; layerIndex++)
             {
                 string layerId = layerIds[layerIndex];
+                // height 是可由种子重建的视觉输入，不改变此前不含高度的玩法内容指纹。
+                if (string.Equals(layerId, "height", StringComparison.Ordinal))
+                    continue;
                 for (int charIndex = 0; charIndex < layerId.Length; charIndex++)
                     Hash(ref hash, layerId[charIndex], prime);
 
