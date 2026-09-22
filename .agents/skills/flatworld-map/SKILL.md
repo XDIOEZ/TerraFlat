@@ -25,7 +25,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 本 Skill 负责地图内容规则；WorldModel 负责 Chunk 生命周期、并发、租约和表现绑定。
 - Tile 栈只通过 API 修改；静态 Blocking Tile 与动态建筑占地不要混用。
 - Ground 永远保存真实底部地块，海洋、河流、湖泊、地下水的初始液体在生成阶段另外写入 `ChunkTerrainData`。修改地面不会自动改液体；抽水只走 `WorldLiquidSystem.TryPump/TrySet`，禁止抽水时生成底部或修改 Ground。平台通过 `TerrainSupportLayer` 遮断表面接触，底部液体仍保留。
-- 世界液体来源统一由 `WorldLiquidSourceResolver` 读取权威 Liquid 层的深度与稳定 `LiquidId`，再解析 `LiquidDefinition`；不能按 Ground Tile、盐度或 Collider 猜身份。容器份数与世界液深是不同单位，不能未经规则换算直接互相扣减。旧 `TileData_Water` 只保留 MemoryPack Union 与旧 MOD 类型入口，不是运行时水格真源。
+- 世界液体来源统一由 `WorldLiquidSourceResolver` 读取权威 Liquid 层的深度与稳定 `LiquidId`，再解析 `LiquidDefinition`；不能按 Ground Tile、盐度或 Collider 猜身份。容器份数与世界液深是不同单位，不能未经规则换算直接互相扣减。液体接触直接使用 WorldLiquidSourceTarget，不继承 TileData，不注册地块 water 数据/行为或 MemoryPack Union。
 - 河流生成把真实下游单位方向保存到 `riverFlowX/riverFlowY` 环境层；运行时水流玩法统一通过 `ChunkMgr.TryGetRuntimeWaterCurrent` 读取，禁止在物品、角色等消费方重复按邻格高度猜河道方向。海洋暂无独立洋流层时由该接口使用现有风场近似表层漂移，湖泊保持静止。
 - 生成保持固定种子、稳定 BiomeId/顺序和统一噪声、气候、水文规则。
 - 修改算法时考虑生成签名、旧存档、联机指纹和 Wrapped 坐标。
@@ -34,7 +34,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 - 洞穴入口联动 `flatworld-dimension`，可走性联动 `flatworld-navigation`，差量联动 `flatworld-data-save`。
 - 地块可提供环境动作与被动效果定义，但共享 `TileBlockBehaviour` 只保存规则；玩家长按、Tick、环境倍率等实例状态必须留在角色侧运行器。
 - 资源加载时由 JSON 构建 `RuntimeTileDefinition` 和每种定义自己的共享 Behaviour 集合；`type` 经 `TileBehaviourRegistry` 的显式工厂解析，禁止 CLR `$type` 或移动时反序列化。参数使用现有配置字段的 camelCase，私有 `[SerializeField]` 参数也须迁移；未知字段和无效数值必须失败，不得静默忽略。
-- `TileData.ID/Name` 由定义 ID 注入，位置和工作进度不进入 JSON；单格读取使用 `CreateTileData/Clone`，不得修改共享模板。原水体 YAML 中的 `entryTemperatureDrop` 已不是有效配置，水体降温继续读取当前 C# 规则。
+- `TileData.ID/Name` 由定义 ID 注入，位置和工作进度不进入 JSON；单格读取使用 `CreateTileData/Clone`，不得修改共享模板。液体配置只来自 LiquidDefinition.worldWater，水体降温读取当前 C# 规则。
 - 编辑器通过 `TileDefinitionEditorCatalog` 解析 ID 壳并显式保存 JSON，不可恢复 SO 与 JSON 双写。`GameRes.GetTileBlock` 返回 `RuntimeTileDefinition`；原 Behaviour 类和生命周期方法继续使用。
 
 - 自然植物恢复资格由 `INaturalRenewalPolicy` 记录到生态存档的 `RenewalYears`；只有生成成功才清除移除标记和补位计划。玩家种植不参加自然补位，建筑、耕地及平台所在格不补野生植物。

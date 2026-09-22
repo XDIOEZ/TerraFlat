@@ -51,7 +51,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 手持物通过 `RegisterExternalRenderers` 接入角色渲染效果后，运行时再动态创建的子 `Renderer` 不会自动进入该次注册快照；这类临时表现必须在创建后再次注册自身节点，并在销毁前 `UnregisterExternalRenderers`，避免水体浸没、受击染色等 MPB 效果漏掉或控制器残留引用。
 - 角色/动物的水中生存由 `TileEffectReceiver` 读取独立 LiquidDepth；水深不超过 0.3 时不漂浮，超过 0.3 且有体力时把有效淹没维持在 0.3，体力耗尽后下沉。氧气安全线读取接收器配置（脚本默认 0.6），不得把视觉阈值当玩法阈值。水体遮罩和减速使用有效淹没，世界液深不被漂浮效果改写。
 - `TileEffectReceiver` 的邻接水格容错只服务于水边交互；`WorldLiquidBehaviour` 必须根据 `IsActiveTileEdgeInteractionOnly` 阻断浸没视觉、脚底阴影、Buff 和移动速度效果，避免站在沙格边缘的角色被误判为入水。
-- Liquid 接触独立于 Ground：同一液体内移动或静止抽水只刷新位置与深度，液体身份/边缘接触模式变化才 Exit/Enter。液体切换保留同帧下沉状态；LiquidFloating 只触发 Ground 边界回调，不清空液体效果。
+- Liquid 接触独立于 Ground：WorldLiquidBehaviour 的 OnEnter/OnUpdate/OnExit 直接接收 WorldLiquidSourceTarget，不继承 TileBlockBehaviour，也不构造临时水地块数据。同一液体内移动或静止抽水只刷新采样，液体身份/边缘接触模式变化才 Exit/Enter。液体切换保留同帧下沉状态；LiquidFloating 只触发 Ground 边界回调，不清空液体效果。
 - 雪地脚印等带历史轨迹的地表表现不能在 Tile `OnExit` 时清空历史；跨相邻同类地块同样会先 Exit 再 Enter，应只停止新轨迹采样，让已有轨迹继续按自身寿命逐步淘汰。`SnowFootprintTrail` 当前由 `Tile_Snow` 运行时 `AddComponent`，默认表现资源不能只依赖 Prefab/Inspector 预先赋值，必须保证动态创建后也能解析到专用 Shader/材质配置。
 - `Assets/2_Prefabs/Gameplay/Modules/Rendering/Shadow.prefab` 是 URP `ShadowCaster2D` 投影组件，不是实体脚底贴图；实体可视阴影应复用 `ActorShadowManager` 的独立注册和水体显隐入口。
 - `Presentation/Effects/Runtime/` 受独立 `Effect.asmdef` 隔离，不能反向引用主 `GamePlay` 程序集中的 `VisualEffectManager`；需要名称池管理器的角色表现控制器应放在 `Presentation/` 主程序集，或先抽取无环依赖的公共契约。

@@ -502,7 +502,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
             return false;
 
         TileData template = GetTerrainTileBlock(sample.Biome)?.tileDataTemplate;
-        return template != null && template is not TileData_Water && template.IsWalkable;
+        return template != null && template.IsWalkable;
     }
 
     public byte[] CopyRuntimeBiomeIndices()
@@ -967,14 +967,12 @@ public sealed class TerrainPreviewSampler
             return false;
         }
 
-        TileData baseTerrain = ChunkGenerator_Land.GetTerrainTileBlock(biome).tileDataTemplate;
         HydrologyCellSample hydrology = default;
         bool baseHasWater = biome.BiomeId == "ocean";
         bool hasHydrology = !baseHasWater && _river != null &&
                             _river.TryEvaluateAppliedHydrologyCell(
                                 worldPosition,
                                 _worldSeed,
-                                baseTerrain,
                                 out hydrology);
         float baseLiquidDepth = baseHasWater
             ? (1f - Mathf.Pow(Mathf.Clamp01(baseEnvironment.Height / 0.5f), 2f))

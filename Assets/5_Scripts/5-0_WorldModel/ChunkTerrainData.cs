@@ -275,8 +275,6 @@ namespace FlatWorld.WorldModel
         {
             ThrowIfDisposed();
             int index = GetIndex(x, y);
-            value = new TerrainCell(value.GroundTileId, value.BackTileId, value.BlockingTileId, value.BiomeId,
-                value.NavigationCost, liquid.Depth[index] > 0f ? value.Flags | TerrainCellFlags.Water : value.Flags & ~TerrainCellFlags.Water);
             if (_cells[index].Equals(value))
                 return;
             _cells[index] = value;

@@ -66,9 +66,6 @@ namespace FlatWorld.WorldModel
             int index = GetIndex(x, y);
             LiquidCellValue value = liquid.Normalize(liquidTypeIndex, liquidDepth);
             liquid.Write(index, value);
-            TerrainCell cell = _cells[index];
-            _cells[index] = new TerrainCell(cell.GroundTileId, cell.BackTileId, cell.BlockingTileId, cell.BiomeId,
-                cell.NavigationCost, value.LiquidDepth > 0f ? cell.Flags | TerrainCellFlags.Water : cell.Flags & ~TerrainCellFlags.Water);
         }
         #endregion
     }
@@ -96,10 +93,6 @@ namespace FlatWorld.WorldModel
             if (previous.Equals(next)) return false;
             if (!liquidBaselines.ContainsKey(index)) liquidBaselines.Add(index, previous);
             liquid.Write(index, next);
-            // Water 位仅为尚未迁移的 MOD/生成筛选保留兼容投影，不承担液体权威状态。
-            TerrainCell cell = _cells[index];
-            _cells[index] = new TerrainCell(cell.GroundTileId, cell.BackTileId, cell.BlockingTileId, cell.BiomeId,
-                cell.NavigationCost, next.LiquidDepth > 0f ? cell.Flags | TerrainCellFlags.Water : cell.Flags & ~TerrainCellFlags.Water);
             MarkChanged(x, y, TerrainChangeKind.Liquid);
             return true;
         }

@@ -18,12 +18,10 @@ public static class TileBehaviourRegistry
     {
         RegisterData("universal", Create<TileData_Universal>);
         RegisterData("grass", Create<TileData_Grass>);
-        RegisterData("water", Create<TileData_Water>);
         RegisterData("farmland", Create<TileData_Farmland>);
         RegisterData("cellBuilding", Create<TileData_CellBuilding>);
         RegisterBehaviour("universal", Create<Tile_Universal>);
         RegisterBehaviour("grass", Create<Tile_Grass>);
-        RegisterBehaviour("water", Create<Tile_Water>);
         RegisterBehaviour("farmland", Create<Tile_Farmland>);
         RegisterBehaviour("ice", Create<Tile_Ice>);
         RegisterBehaviour("snow", Create<Tile_Snow>);

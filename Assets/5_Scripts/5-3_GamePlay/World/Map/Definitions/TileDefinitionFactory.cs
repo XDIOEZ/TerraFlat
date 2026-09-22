@@ -52,13 +52,6 @@ public static class TileDefinitionFactory
         foreach (TileComponentDefinitionDto entry in dto.Behaviours)
         {
             TileBlockBehaviour behaviour = TileBehaviourRegistry.BuildBehaviour(entry);
-            if (behaviour is Tile_Water water)
-            {
-                if (template is not TileData_Water)
-                    throw new InvalidDataException($"地块 {dto.Id} 的 water 行为要求 water 数据类型。");
-                if (water.moveSpeedMultiplier > water.shallowMoveSpeedMultiplier)
-                    throw new InvalidDataException($"地块 {dto.Id} 的深水移速倍率不能大于浅水倍率。");
-            }
             if (behaviour is Tile_Farmland && template is not TileData_Farmland)
                 throw new InvalidDataException($"地块 {dto.Id} 的 farmland 行为要求 farmland 数据类型。");
             behaviours.Add(behaviour);
@@ -95,12 +88,6 @@ public static class TileDefinitionFactory
         if (template.Penalty > short.MaxValue || template.DemolitionTime < 0)
             throw new InvalidDataException($"地块 {id} 的导航代价或拆除时间无效。");
         template.TileTag ??= string.Empty;
-        if (template is TileData_Water water)
-        {
-            if (water.LiquidDepth < 0 || water.LiquidDepth > 1 || water.salt < 0)
-                throw new InvalidDataException($"地块 {id} 的水深必须在 0~1，盐度不能为负数。");
-            ValidateId(water.liquidId, id + ".liquidId");
-        }
         if (template is TileData_Farmland soil &&
             (soil.fertilityValue == null || soil.Fertility < 0 || soil.maxWater <= 0 || soil.waterValue < 0 || soil.waterValue > soil.maxWater))
             throw new InvalidDataException($"地块 {id} 的耕地水分或肥力无效。");
@@ -124,7 +111,7 @@ public static class TileDefinitionFactory
         if (rule == null) return;
         TileDefinitionJson.ValidateFields(rule, id + ".groundPlacement");
         const TerrainCellFlags allowed = TerrainCellFlags.Walkable | TerrainCellFlags.Blocking |
-                                         TerrainCellFlags.Water | TerrainCellFlags.Occupied;
+                                         TerrainCellFlags.Occupied;
         if (((rule.RequiredSourceFlags | rule.ForbiddenSourceFlags) & ~allowed) != 0 ||
             (rule.RequiredSourceFlags & rule.ForbiddenSourceFlags) != 0)
             throw new InvalidDataException($"地块 {id} 的铺设来源标记无效或相互冲突。");

@@ -10,7 +10,7 @@ public partial class BuffManager
 {
     #region 层数查询与水火关系
 
-    private double waterStackElapsed; // 每个角色独立计时，不能放在共享 Tile_Water 上。
+    private double waterStackElapsed; // 每个角色独立计时，不能放在共享 WorldLiquidBehaviour 上。
     private bool waterStackExposure;
     private int waterStackExitFrame = -1;
 

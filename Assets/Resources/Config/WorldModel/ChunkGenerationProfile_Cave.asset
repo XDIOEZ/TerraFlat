@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Cave
   m_EditorClassIdentifier: 
   profileId: cave.default
-  generationSignature: 38
+  generationSignature: 39
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:

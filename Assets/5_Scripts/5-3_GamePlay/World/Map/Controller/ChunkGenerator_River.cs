@@ -35,7 +35,6 @@ public readonly struct HydrologyCellSample
 [Serializable]
 public sealed class ChunkGenerator_River : ChunkGeneratorBase
 {
-    private const float SeaSalt = 80f;
     private const float DownhillEpsilon = 0.00001f;
 
     public override GenerationStage Stage => GenerationStage.Hydrology;
@@ -212,11 +211,9 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
     internal bool TryEvaluateAppliedHydrologyCell(
         Vector2Int worldPosition,
         int worldSeed,
-        TileData baseTerrain,
         out HydrologyCellSample sample)
     {
-        if (IsSeaWater(baseTerrain) ||
-            !TrySampleHydrologyCell(
+        if (!TrySampleHydrologyCell(
                 worldPosition,
                 worldSeed,
                 _activeLand,
@@ -231,31 +228,10 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
         return sample.HasFreshWater;
     }
 
-    internal bool TryEvaluateAppliedRiverCell(
-        Vector2Int worldPosition,
-        int worldSeed,
-        TileData baseTerrain,
-        out float depth)
-    {
-        if (TryEvaluateAppliedHydrologyCell(
-                worldPosition,
-                worldSeed,
-                baseTerrain,
-                out HydrologyCellSample sample) &&
-            sample.WaterKind == HydrologyWaterKind.River)
-        {
-            depth = sample.Depth;
-            return true;
-        }
-
-        depth = 0f;
-        return false;
-    }
-
     public void ValidateConfiguration()
     {
-        if (riverTileBlock?.tileDataTemplate == null || riverTileBlock.tileDataTemplate is TileData_Water)
-            throw new InvalidOperationException("riverTileBlock 必须提供真实河床 Ground 模板，不能使用 Water Tile。");
+        if (riverTileBlock?.tileDataTemplate == null)
+            throw new InvalidOperationException("riverTileBlock 必须提供真实河床 Ground 模板。");
         if (hydrologyRegionSize < 64 || runoffCellSize < 16 || runoffSampleStride < 1 ||
             maxTraceSteps < 32 || maxCachedRegions < 1)
         {
@@ -285,11 +261,6 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
 
     public static int CachedRegionCount => HydrologyRegionCache.Count;
     public static int CompletedCachedRegionCount => HydrologyRegionCache.CompletedCount;
-
-    internal static bool IsSeaWater(TileData tile)
-    {
-        return tile is TileData_Water water && math.abs(water.salt - SeaSalt) <= 0.01f;
-    }
 
     private List<HydrologyRegionEntry> CollectRequiredRegions(
         Vector2Int origin,

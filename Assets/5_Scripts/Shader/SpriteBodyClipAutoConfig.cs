@@ -67,7 +67,7 @@ public class SpriteBodyClipAutoConfig : MonoBehaviour
         block.SetFloat("_BodyMinV", localMinY);
         block.SetFloat("_BodyMaxV", localMaxY);
         
-        // 将 Tile_Water 写入的原始 _BodyClip 乘以淹没系数
+        // 将 WorldLiquidBehaviour 写入的原始 _BodyClip 乘以淹没系数
         float rawClip = block.GetFloat("_BodyClip");
         block.SetFloat("_BodyClip", Mathf.Clamp01(rawClip * submergeScale));
         

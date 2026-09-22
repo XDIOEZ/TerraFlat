@@ -33,16 +33,28 @@ public static partial class TileBuildingSystem
         }
 
         TerrainCell cell = sample.Terrain.GetCell(sample.LocalCell.x, sample.LocalCell.y);
+        bool hasLiquid = sample.Terrain.GetLiquidDepth(sample.LocalCell.x, sample.LocalCell.y) > 0f;
+        GroundPlacementLiquidRequirement liquidRequirement = definition.groundPlacement.LiquidRequirement;
+        if (liquidRequirement == GroundPlacementLiquidRequirement.Present && !hasLiquid)
+        {
+            reason = "水上平台只能铺在水里";
+            return false;
+        }
+        if (liquidRequirement == GroundPlacementLiquidRequirement.Absent && hasLiquid)
+        {
+            reason = "地板只能铺在非水地面";
+            return false;
+        }
         TerrainCellFlags required = definition.groundPlacement.RequiredSourceFlags;
         if ((cell.Flags & required) != required)
         {
-            reason = required == TerrainCellFlags.Water ? "水上平台只能铺在水里" : "目标地形不满足铺设条件";
+            reason = "目标地形不满足铺设条件";
             return false;
         }
         TerrainCellFlags forbidden = definition.groundPlacement.ForbiddenSourceFlags;
         if ((cell.Flags & forbidden) != 0)
         {
-            reason = (forbidden & TerrainCellFlags.Water) != 0 ? "地板只能铺在非水地面" : "目标地形不满足铺设条件";
+            reason = "目标地形不满足铺设条件";
             return false;
         }
         if (TerrainSupportLayer.GetTileId(sample.Terrain, sample.LocalCell.x, sample.LocalCell.y) != 0 ||

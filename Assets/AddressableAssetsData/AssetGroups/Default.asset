@@ -2365,12 +2365,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: cfcaae5d4c4ccea4fb3554ba602b7890
-    m_Address: Assets/2_Prefabs/World/Tiles/TileItem_Water.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: cff57bd8f54557d42a62beae37596a95
     m_Address: Assets/6_Art/Items/Weapons/Item_Weapon_031.png
     m_ReadOnly: 0

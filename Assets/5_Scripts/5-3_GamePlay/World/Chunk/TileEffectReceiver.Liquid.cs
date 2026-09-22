@@ -4,7 +4,7 @@ public partial class TileEffectReceiver
 {
     #region 独立液体接触
     private LiquidDefinition activeLiquid;
-    private TileData_Water activeLiquidData;
+    private WorldLiquidSourceTarget activeLiquidContact;
     private bool activeLiquidEdge;
     private bool liquidCallback;
     private bool liquidContactTransition;
@@ -13,7 +13,9 @@ public partial class TileEffectReceiver
 
     /// <summary>正在深水中消耗游泳储备维持上浮，只暂停 Ground Behaviour。</summary>
     public bool LiquidFloating { get; private set; }
-    public float LiquidDepth => activeLiquidData != null && !activeLiquidEdge ? activeLiquidData.LiquidDepth : 0f;
+    public float LiquidDepth => activeLiquid != null && !activeLiquidEdge ? activeLiquidContact.Sample.LiquidDepth : 0f;
+    /// <summary>真实脚下液体的稳定身份；岸边交互或平台覆盖不视为入水。</summary>
+    public string LiquidId => LiquidDepth > 0f ? activeLiquid.Id : string.Empty;
     public EnvironmentInteractionRunner GroundEnvironmentInteractions => EnsureGroundEnvironmentInteractions();
 
     /// <summary>浮沉边界各触发一次 Ground Exit/Enter；液体生存与动作始终独立继续。</summary>
@@ -56,16 +58,13 @@ public partial class TileEffectReceiver
                 ExitLiquidContact();
                 activeLiquid = target.Liquid;
                 activeLiquidEdge = edge;
-                activeLiquidData = new TileData_Water { liquidId = activeLiquid.Id, position = (Vector3Int)target.WorldCell,
-                    LiquidDepth = target.Sample.LiquidDepth,
-                    salt = activeLiquid.Category == "water" && activeLiquid.Id == LiquidIds.SeaWater ? 80f : 0f };
+                activeLiquidContact = target;
                 liquidCallback = true;
-                activeLiquid.WorldWater.Behaviour.OnEnter(item, activeLiquidData, null, this);
+                activeLiquid.WorldWater.Behaviour.OnEnter(item, activeLiquidContact, this);
             }
-            activeLiquidData.position = (Vector3Int)target.WorldCell;
-            activeLiquidData.LiquidDepth = target.Sample.LiquidDepth;
+            activeLiquidContact = target;
             liquidCallback = true;
-            activeLiquid.WorldWater.Behaviour.OnUpdate(item, activeLiquidData, null, this, Mathf.Max(0f, deltaTime));
+            activeLiquid.WorldWater.Behaviour.OnUpdate(item, activeLiquidContact, this, Mathf.Max(0f, deltaTime));
         }
         finally { liquidCallback = false; liquidContactTransition = false; }
     }
@@ -74,12 +73,12 @@ public partial class TileEffectReceiver
     {
         if (activeLiquid == null) return;
         liquidCallback = true;
-        try { activeLiquid.WorldWater.Behaviour.OnExit(item, activeLiquidData, null, this); }
+        try { activeLiquid.WorldWater.Behaviour.OnExit(item, activeLiquidContact, this); }
         finally
         {
             liquidCallback = false;
             activeLiquid = null;
-            activeLiquidData = null;
+            activeLiquidContact = default;
             activeLiquidEdge = false;
         }
     }

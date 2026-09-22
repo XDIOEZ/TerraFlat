@@ -126,8 +126,6 @@ namespace FlatWorld.WorldModel
         Walkable = 1 << 0,
         /// <summary>这里有墙、岩石等固定障碍。</summary>
         Blocking = 1 << 1,
-        /// <summary>这里是水。</summary>
-        Water = 1 << 2,
         /// <summary>这里已经被建筑或其他物体占用。</summary>
         Occupied = 1 << 3
     }

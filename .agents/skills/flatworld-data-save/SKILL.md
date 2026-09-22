@@ -15,7 +15,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 
 ## 核心不变量
 
-- 存档 Envelope 版本是单向能力边界：只拒绝高于当前客户端的未来格式；旧版本允许读取并在下一次保存时自然升级到当前版本。能够反序列化的旧数据不得因为游戏升级被版本号直接拒绝。
+- 开发阶段只读取当前 Envelope 版本，不保留旧版本自动升级路径。Ground/Liquid 格式边界使用 FWD8；格式头必须在反序列化内部对象之前校验，旧格式明确拒绝但不删除或覆盖原文件。
 - `SerializableTimeData` 的时间 Profile、限时边界和月相字段属于当前格式；`TimeData.EnsureTimeSystemDefaults()` 只负责当前运行时对象的合法化，不承担旧存档恢复。
 - 正式存档只写 `Application.persistentDataPath/Saves/LocalSaveData/`，并使用临时文件/原子替换；失败不得伪装为成功恢复。
 - `ItemSpecialDataJsonStore` 按命名空间更新并保留未知根属性；教程、任务、维度、出生点不得互相覆盖或改 `Data_Player` 布局。
@@ -53,7 +53,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 3. 联动：生命周期→Core，Item/Module→Item，Chunk 差量→Map，协议快照→Networking，内容 Def→对应领域 Skill。
 
 - 世界液体差量使用 `ChunkSaveRecord.LiquidCells`，每项只有局部坐标、LiquidId 和 LiquidDepth；空格用空 ID 与零深度。生成值变化后才记录，恢复生成值要移除差量；恢复前校验全部坐标、重复项和液体身份，缺失 MOD 液体必须明确拒绝，不能擦除原存档。
-- 液体先生成再覆盖差量，覆盖必须早于表现和导航绑定。原始 Ground 的比较忽略 Water 兼容位，避免抽水污染 RuntimeTileDeltas。MemoryPack 新字段在末尾追加，不能把 LiquidTypeIndex 写入存档或移动旧字段顺序。
+- 液体先生成再覆盖差量，覆盖必须早于表现和导航绑定。Ground 使用完整 TerrainCell.Equals 比较；液体写入不修改地面字段，所以不需要忽略任何兼容位。农业水分只属于土壤，不推测旧水地块编号、盐度或农业 Water 字段来恢复液体；不能把 LiquidTypeIndex 写入存档。
 
 ## Skill 维护原则
 

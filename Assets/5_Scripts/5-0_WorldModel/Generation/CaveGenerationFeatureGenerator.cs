@@ -315,7 +315,8 @@ namespace FlatWorld.WorldModel
         private static bool IsSurfacePortalShrubCellAvailable(ChunkTerrainBuffer terrain,
             TerrainCell cell, int localX, int localY)
         {
-            if ((cell.Flags & (TerrainCellFlags.Water | TerrainCellFlags.Blocking |
+            if (terrain.GetLiquidDepth(localX, localY) > 0f ||
+                (cell.Flags & (TerrainCellFlags.Blocking |
                                TerrainCellFlags.Occupied)) != 0 ||
                 (cell.Flags & TerrainCellFlags.Walkable) == 0)
             {
@@ -421,7 +422,7 @@ namespace FlatWorld.WorldModel
                     continue;
 
                 TerrainCell cell = terrain.GetCell(localX, localY);
-                if (!IsSurfacePortalCellAvailable(cell,
+                if (!IsSurfacePortalCellAvailable(cell, terrain.GetLiquidDepth(localX, localY),
                         ReadEnvironment(terrain, "structure", localX, localY)))
                 {
                     continue;
@@ -565,7 +566,7 @@ namespace FlatWorld.WorldModel
 
                 TerrainCell cell = surfaceTerrain.GetCell(localX, localY);
                 float structure = ReadEnvironment(surfaceTerrain, "structure", localX, localY);
-                if (IsSurfacePortalCellAvailable(cell, structure))
+                if (IsSurfacePortalCellAvailable(cell, surfaceTerrain.GetLiquidDepth(localX, localY), structure))
                     return new SurfacePortalSelection(candidate, candidateIndex);
             }
 
@@ -605,9 +606,10 @@ namespace FlatWorld.WorldModel
         }
 
         /// <summary>地表入口与洞穴复核共用同一套禁止水域、障碍和结构占用的条件。</summary>
-        private static bool IsSurfacePortalCellAvailable(TerrainCell cell, float structure)
+        private static bool IsSurfacePortalCellAvailable(TerrainCell cell, float liquidDepth, float structure)
         {
-            return (cell.Flags & (TerrainCellFlags.Water | TerrainCellFlags.Blocking |
+            return liquidDepth <= 0f &&
+                   (cell.Flags & (TerrainCellFlags.Blocking |
                                   TerrainCellFlags.Occupied)) == 0 &&
                    (cell.Flags & TerrainCellFlags.Walkable) != 0 &&
                    structure < 0.5f;

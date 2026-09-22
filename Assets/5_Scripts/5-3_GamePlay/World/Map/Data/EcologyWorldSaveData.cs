@@ -312,10 +312,6 @@ public partial class WorldGenerationProfileSaveData
                 resources.Add(rule.ToSnapshot());
             }
         }
-        // 原液体地块编号永久保留不用；液体覆盖改由独立层生成，冻结气候和水文仍原样继承。
-        foreach (string retired in new[] { "tile.block.2", "tile.block.6" })
-            if (texts.TryGetValue(retired, out string id) &&
-                (id == "Tile_Water_Fresh" || id == "Tile_Water_Salt")) texts.Remove(retired);
         return profile.WithGenerationConfiguration(numbers, texts, resources);
     }
 }

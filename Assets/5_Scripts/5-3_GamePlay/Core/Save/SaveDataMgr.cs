@@ -17,14 +17,14 @@ using RuntimeWorldAddress = FlatWorld.WorldModel.WorldAddress;
 /// </summary>
 public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 {
-    private const int CompactSaveVersion = 19; // Chunk 末尾追加独立液体稀疏差量，旧成员顺序保持不变。
+    private const int CompactSaveVersion = 20; // Ground/Liquid 独立存档，不恢复旧水地块或农业水深。
     private const int ModdedSaveVersion = 10;
     private const float AutoSaveFrameBudgetSeconds = 0.0025f;
     private const string TemporarySaveSuffix = ".tmp";
     private const string BackupSaveSuffix = ".bak";
     private const string LastExitTimeSuffix = ".lastplayed";
     // 季节与世界状态采用当前布局，先检查封装头，再解析嵌套 MemoryPack 数据。
-    private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'7' };
+    private static readonly byte[] CompactSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'8' };
     private static readonly byte[] ModdedSaveMagic = { (byte)'F', (byte)'W', (byte)'D', (byte)'4' };
     private static readonly object SaveFileLock = new object();
     private static readonly object SaveRevisionLock = new object();
@@ -1211,22 +1211,13 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             if ((uint)x >= (uint)terrain.Width || (uint)y >= (uint)terrain.Height)
                 continue;
 
-            TerrainCell restored = cell.ToTerrainCell();
-            if (restored.GroundTileId == 2 || restored.GroundTileId == 6)
-            {
-                // 旧水地块差量只恢复其它层；底部地块沿用刚生成的真实河床/海底。
-                TerrainCell generated = terrain.GetCell(x, y);
-                restored = new TerrainCell(generated.GroundTileId, restored.BackTileId, restored.BlockingTileId,
-                    restored.BiomeId, generated.NavigationCost, restored.Flags);
-            }
-            terrain.SetCell(x, y, restored);
+            terrain.SetCell(x, y, cell.ToTerrainCell());
 
             float accumulatedDamage = cell.BlockingTileId == 0
                 ? 0f
                 : Mathf.Max(0f, cell.AccumulatedDamage);
             WriteRuntimeBuildingDamage(terrain, x, y, accumulatedDamage);
         }
-        MigrateLegacyLiquidCells(chunk.Terrain, delta);
         RestoreAgricultureTerrain(chunk, delta);
         foreach (GrassCellSaveDelta grass in delta.GrassDeltas)
         {
@@ -1369,7 +1360,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
 
         delta.RuntimeTileDeltas ??= new List<RuntimeTileCellSaveDelta>();
         delta.RuntimeTileDeltas.RemoveAll(cell => cell.LocalPosition == localPosition);
-        if (!GroundCellsEqual(currentCell, baselineCell) ||
+        if (!currentCell.Equals(baselineCell) ||
             !Mathf.Approximately(accumulatedDamage, baselineAccumulatedDamage))
         {
             delta.RuntimeTileDeltas.Add(RuntimeTileCellSaveDelta.Capture(
@@ -1402,7 +1393,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             {
                 TerrainCell currentCell = terrain.GetCell(x, y);
                 float currentAccumulatedDamage = ReadRuntimeBuildingDamage(terrain, x, y);
-                if (GroundCellsEqual(currentCell, baseline.GetCell(x, y)) &&
+                if (currentCell.Equals(baseline.GetCell(x, y)) &&
                     Mathf.Approximately(
                         currentAccumulatedDamage,
                         baseline.GetAccumulatedDamage(x, y)))
@@ -1426,13 +1417,6 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         delta.RuntimeTileDeltas = changes;
         chunkDeltas[key] = delta;
     }
-
-    /// <summary>Water 兼容位不是地块修改，液体差量不能重复进入 Ground 存档。</summary>
-    private static bool GroundCellsEqual(TerrainCell left, TerrainCell right) =>
-        left.GroundTileId == right.GroundTileId && left.BackTileId == right.BackTileId &&
-        left.BlockingTileId == right.BlockingTileId && left.BiomeId == right.BiomeId &&
-        left.NavigationCost == right.NavigationCost &&
-        (left.Flags & ~TerrainCellFlags.Water) == (right.Flags & ~TerrainCellFlags.Water);
 
     /// <summary>读取新版区块中一格建筑已累计的损伤；缺少专用环境层时视为未受损。</summary>
     private static float ReadRuntimeBuildingDamage(ChunkTerrainData terrain, int x, int y)
@@ -2482,7 +2466,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
             ModdedSaveEnvelope envelope = MemoryPackSerializer.Deserialize<ModdedSaveEnvelope>(body);
             if (envelope == null || envelope.CoreSavePayload == null)
                 throw new InvalidDataException("MOD 存档封装已损坏");
-            EnsureSaveVersionCanAdvance("MOD 存档", envelope.Version, ModdedSaveVersion);
+            EnsureCurrentSaveVersion("MOD 存档", envelope.Version, ModdedSaveVersion);
 
             corePayload = envelope.CoreSavePayload;
             if (envelope.ModMetadata != null && envelope.ModMetadata.Length > 0)
@@ -2500,7 +2484,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         if (!HasSaveHeader(payload, CompactSaveMagic))
         {
             throw new SaveVersionIncompatibleException(
-                "存档封装与当前完整地形差量版本不兼容。不会迁移、覆盖或删除该存档。");
+                "存档封装与当前 Ground/Liquid 独立格式不兼容，请创建新世界。不会迁移、覆盖或删除该存档。");
         }
 
         byte[] body = new byte[payload.Length - CompactSaveMagic.Length];
@@ -2508,7 +2492,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         CompactSaveEnvelope envelope = MemoryPackSerializer.Deserialize<CompactSaveEnvelope>(body);
         if (envelope == null || envelope.CoreSaveData == null)
             throw new InvalidDataException("差异存档封装已损坏");
-        EnsureSaveVersionCanAdvance("差异存档", envelope.Version, CompactSaveVersion);
+        EnsureCurrentSaveVersion("差异存档", envelope.Version, CompactSaveVersion);
 
         GameSaveData saveData = MemoryPackSerializer.Deserialize<GameSaveData>(envelope.CoreSaveData);
         if (saveData == null)
@@ -2558,26 +2542,15 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         return true;
     }
 
-    /// <summary>
-    /// 存档版本只防止“未来版本倒灌到旧客户端”；旧版本允许继续读取并在运行时使用当前配置。
-    /// 下一次保存会自然写成当前版本，不再因游戏升级强制废弃已有存档。
-    /// </summary>
-    private static void EnsureSaveVersionCanAdvance(string label, int savedVersion, int currentVersion)
+    /// <summary>只读取当前存档格式；开发阶段不保留旧版本迁移或自动升级路径。</summary>
+    private static void EnsureCurrentSaveVersion(string label, int savedVersion, int currentVersion)
     {
         if (savedVersion <= 0)
             throw new InvalidDataException($"{label}版本无效：{savedVersion}");
 
-        if (savedVersion > currentVersion)
-        {
+        if (savedVersion != currentVersion)
             throw new SaveVersionIncompatibleException(
-                $"{label}来自更高版本：存档={savedVersion}，当前={currentVersion}，当前客户端无法安全读取未来格式。");
-        }
-
-        if (savedVersion < currentVersion)
-        {
-            Debug.Log($"[SaveDataMgr] {label}将从版本 {savedVersion} 按当前版本 {currentVersion} 读取；" +
-                      "静态内容配置以当前游戏资源为准。下一次保存会写入当前版本。");
-        }
+                $"{label}版本不兼容：存档={savedVersion}，当前={currentVersion}。请创建新世界。");
     }
 
     private static string BuildChunkKey(string planetName, string chunkName)
@@ -2741,7 +2714,7 @@ public partial class ChunkSaveRecord
     public List<SupportCellSaveData> SupportCells = new(); // 独立支撑面
     public List<AgricultureCellSaveData> AgricultureCells = new(); // 独立农业状态
     public List<ContaminationCellSaveData> ContaminationCells = new(); // 独立污染状态
-    public List<LiquidCellSaveData> LiquidCells = new(); // 只保存玩家改变的液体格，字段追加保持旧成员顺序。
+    public List<LiquidCellSaveData> LiquidCells = new(); // 只保存玩家改变的液体格，与 Ground 差量独立。
 
     [MemoryPackIgnore]
     public bool HasChanges =>

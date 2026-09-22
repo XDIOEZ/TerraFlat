@@ -499,7 +499,6 @@ namespace FlatWorld.GameplayMCP
             Nutrition nutrition = food?.Data?.nutrition;
             TileEffectReceiver tileReceiver = player.itemMods.GetMod_ByID<TileEffectReceiver>(ModText.TileEffectReceiver) ??
                                                player.GetComponentInChildren<TileEffectReceiver>(true);
-            TileData_Water waterTile = tileReceiver?.currentTileData as TileData_Water;
             Mod_InteractSender interactSender = player.GetComponentInChildren<Mod_InteractSender>(true);
 
             var result = new JObject
@@ -513,11 +512,12 @@ namespace FlatWorld.GameplayMCP
                 ["stamina"] = stamina == null ? JValue.CreateNull() : new JArray(Round(stamina.CurrentValue), Round(stamina.MaxValue)),
                 ["water"] = new JObject
                 {
-                    ["inWater"] = oxygen?.IsInWater ?? waterTile != null,
+                    ["inWater"] = oxygen?.IsInWater ?? (tileReceiver != null && tileReceiver.LiquidDepth > 0f),
                     ["immersion"] = tileReceiver == null ? 0f : Round(tileReceiver.CurrentWaterImmersion),
                     ["tile"] = tileReceiver?.currentTileData?.Name ?? string.Empty,
-                    ["depth"] = waterTile == null ? JValue.CreateNull() : Round(waterTile.LiquidDepth),
-                    ["salt"] = waterTile == null ? JValue.CreateNull() : Round(waterTile.salt),
+                    ["depth"] = tileReceiver == null ? 0f : Round(tileReceiver.LiquidDepth),
+                    ["liquidId"] = tileReceiver?.LiquidId ?? string.Empty,
+                    ["floating"] = tileReceiver?.LiquidFloating ?? false,
                     ["oxygen"] = oxygen == null ? JValue.CreateNull() : new JArray(Round(oxygen.CurrentValue), Round(oxygen.MaxValue)),
                     ["breathBlocked"] = oxygen?.IsBreathBlocked ?? false,
                     ["drowning"] = oxygen?.IsDrowning ?? false
@@ -794,7 +794,7 @@ namespace FlatWorld.GameplayMCP
                 out string blockId,
                 out string displayName);
 
-            bool water = (sample.Cell.Flags & TerrainCellFlags.Water) != 0;
+            bool water = sample.LiquidDepth > 0f;
             result = new JObject
             {
                 ["offset"] = new JArray(offsetX, offsetY),
@@ -805,6 +805,8 @@ namespace FlatWorld.GameplayMCP
                 ["name"] = displayName,
                 ["walkable"] = sample.Terrain.IsWalkable(sample.LocalCell.x, sample.LocalCell.y),
                 ["water"] = water,
+                ["liquidDepth"] = Round(sample.LiquidDepth),
+                ["liquidId"] = water ? sample.LiquidId : string.Empty,
                 ["biomeId"] = sample.Cell.BiomeId
             };
 

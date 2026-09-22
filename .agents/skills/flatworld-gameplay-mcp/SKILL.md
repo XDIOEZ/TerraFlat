@@ -58,6 +58,7 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 循环应保持短、可观察、可复现：
 
 1. `gameplay_observe`：读取玩家位置、速度、生命、体力、营养、输入锁、快捷栏、背包摘要、附近实体、附近 ECS 掉落物，以及以玩家脚下为中心的固定 3×3 权威地块；水格同时附带可用的河流/海洋表层流向与流量，避免 Agent 在河流中把环境漂移误判成移动或战斗异常。
+   - 玩家液体观察读取 TileEffectReceiver 的 LiquidDepth、LiquidId、LiquidFloating；附近水格读取独立液体层并考虑支撑面。currentTileData 只代表 Ground，不能再据此推断液体或盐度。
    - 需要从大量世界数据中快速寻找目标时，使用只读 `gameplay_query`。`source=runtime` 查询已实例化 Item，`query` 可填写稳定 ID 或任意已配置 Locale 下的完整物品名（例如 `Ore_Stone` / `石头` / `Stone`）；传入 `radius` 时只查询玩家周围该半径内的 Item，并复用 `ItemMgr` 空间索引，`radius` 最大 64 世界单位。运行时结果按玩家距离排序并强制分页，默认只返回最近 3 条、单页最多 32 条，通过 `total_count/truncated/next_offset` 继续读取；不填写 ID/名称时可直接取得附近不同物品，每条结果都包含稳定 `id` 与明确的 `position.x/position.y`，可直接交给 `gameplay_act(move_to)`。`source=ecology` 查询已加载 ChunkRuntime 的确定性自然物放置结果；`source=terrain` 按环境层阈值查询已加载地形格；`source=tile` 按数字 Tile ID、`Tile_Block` 稳定 ID、`tileItemName` 或显示名精确查询最近已加载地块坐标，默认只返回最近 1 格；`source=drops` 直接查询离线 ECS 掉落物空间桶，返回飞行中和落地后的实时世界坐标、数量与可拾取状态。所有查询都只读，不能生成、传送或直接拾取实体。
    - `source=runtime` 命中机械节点时额外返回只读 `mechanical` 快照（RPM、网络状态、供给/负载、手摇缓冲，以及加工器输入/输出/进度）；只用于观察真实运行状态，不允许由查询工具修改机械网络。
 2. 选择一个小目标，例如：

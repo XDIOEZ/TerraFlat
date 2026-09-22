@@ -12,7 +12,7 @@ namespace FlatWorld.WorldModel
     public sealed class DeterministicChunkGenerator : IChunkPureGenerator
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 38;
+        public const int CurrentGenerationSignature = 39;
 
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
@@ -384,7 +384,7 @@ namespace FlatWorld.WorldModel
             {
                 biomeId = (int)biome;
                 groundTileId = settings.SeabedTileId;
-                flags = TerrainCellFlags.Water | TerrainCellFlags.Walkable;
+                flags = TerrainCellFlags.Walkable;
                 // 液体导航代价由消费层单独叠加，底部 Ground 保留陆地成本。
             }
             else if (biome == SurfaceBiomeKind.River)
@@ -393,7 +393,7 @@ namespace FlatWorld.WorldModel
                 if (frozenRiver)
                 {
                     // 河流仍保留 River 群系编号和水文数据，但雪地气候下改用真正的冰地块；
-                    // 同时移除 Water 标记，避免冰块继续走水面 Tilemap/水体玩法效果。
+                    // 生成冰面时不写入液体，避免冰块继续触发水面表现和液体玩法效果。
                     groundTileId = settings.IceTileId;
                     flags = TerrainCellFlags.Walkable;
                     navigationCost = (short)Math.Min(short.MaxValue, navigationCost + 1);
@@ -403,7 +403,7 @@ namespace FlatWorld.WorldModel
                 {
                     groundTileId = settings.RiverbedTileId;
                     // 水域只是高代价地形：有陆路时 A* 优先绕行，唯一通路是水面时仍可通过。
-                    flags = TerrainCellFlags.Water | TerrainCellFlags.Walkable;
+                    flags = TerrainCellFlags.Walkable;
                     // 液体导航代价由消费层单独叠加，底部 Ground 保留陆地成本。
                 }
             }
@@ -1679,9 +1679,7 @@ namespace FlatWorld.WorldModel
                 request, settings, worldX, worldY);
             TerrainCellFlags flags = !open || dirtWall
                 ? TerrainCellFlags.Blocking
-                : water
-                    ? TerrainCellFlags.Water | TerrainCellFlags.Walkable
-                    : TerrainCellFlags.Walkable;
+                : TerrainCellFlags.Walkable;
             int groundTileId = settings.CaveFloorTileId;
             int blockingTileId = !open
                 ? settings.CaveWallTileId
@@ -1753,7 +1751,7 @@ namespace FlatWorld.WorldModel
                             int y = worldY - minWorldY;
                             TerrainCell current = terrain.GetCell(x, y);
                             // 这个简化版遗迹只更换陆地表面，不填河海，也不改变原来的障碍和走路规则。
-                            if ((current.Flags & TerrainCellFlags.Water) != 0)
+                            if (terrain.GetLiquidDepth(x, y) > 0f)
                                 continue;
                             terrain.SetCell(x, y, new TerrainCell(settings.StructureGroundTileId,
                                 current.BackTileId, current.BlockingTileId, current.BiomeId,
