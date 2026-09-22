@@ -26,6 +26,7 @@ public static class GameUIPrefabRebuilder
     private const string InventoryPanelsRoot = PrefabRoot + "Gameplay/Inventory/Panels/";
     private const string ScreensRoot = PrefabRoot + "Gameplay/Screens/";
     private const string PlayerStatusRoot = PrefabRoot + "Gameplay/Status/Player/";
+    private const string CombatStatusRoot = PrefabRoot + "Gameplay/Status/Combat/";
     private const string BagPrefabPath = InventoryPanelsRoot + "UI_Bag.prefab";
     private const string SlotPrefabPath = InventoryComponentsRoot + "UI_Slot.prefab";
 
@@ -83,6 +84,7 @@ public static class GameUIPrefabRebuilder
         },
         { PlayerStatusRoot + "UI_ModuleSettings.prefab", new[] { "Panel", "Slider", "关闭页面" } },
         { PlayerStatusRoot + "UI_Health.prefab", new[] { "血量模块_世界面板", "背景", "血量" } },
+        { CombatStatusRoot + "UI_DamageReceiverStatus.prefab", new[] { "整体血量", "部位耐久列表", "部位耐久模板" } },
         { PlayerStatusRoot + "UI_Food.prefab", new[] { "血量", "碳水", "脂肪", "蛋白质", "水", "维生素", "体温", "DataText_血量", "DataText_体温" } },
         { PlayerStatusRoot + "UI_Sleep.prefab", new[] { "ZZZs" } }
     };
@@ -132,6 +134,7 @@ public static class GameUIPrefabRebuilder
             new BuildTarget(PlayerStatusRoot + "UI_ModuleButton.prefab", BuildBaseButton),
             new BuildTarget(PlayerStatusRoot + "UI_ModuleSettings.prefab", BuildSettingsPanel),
             new BuildTarget(PlayerStatusRoot + "UI_Health.prefab", BuildHealthWorldPanel),
+            new BuildTarget(CombatStatusRoot + "UI_DamageReceiverStatus.prefab", BuildDamageReceiverStatusPanel),
             new BuildTarget(PlayerStatusRoot + "UI_Food.prefab", BuildNutritionHud),
             new BuildTarget(PlayerStatusRoot + "UI_Sleep.prefab", BuildSleepHud),
             new BuildTarget(InventoryComponentsRoot + "UI_Slot.prefab", BuildSlot),
@@ -1594,6 +1597,38 @@ public static class GameUIPrefabRebuilder
                 text.alignment = TextAlignmentOptions.Center;
             }
         }
+    }
+
+    private static void BuildDamageReceiverStatusPanel(GameObject root)
+    {
+        RectTransform frame = PrepareWindow(
+            root,
+            360f,
+            220f,
+            "伤害接收器状态",
+            "DAMAGE RECEIVER / STATUS",
+            "显示整体生命与身体部位耐久");
+
+        RectTransform hp = FindRect(root.transform, "整体血量");
+        if (hp != null)
+        {
+            hp.anchoredPosition = new Vector2(0f, 50f);
+            hp.sizeDelta = new Vector2(300f, 36f);
+        }
+
+        RectTransform parts = FindRect(root.transform, "部位耐久列表");
+        if (parts != null)
+        {
+            parts.anchorMin = new Vector2(0.5f, 0f);
+            parts.anchorMax = new Vector2(0.5f, 0f);
+            parts.pivot = new Vector2(0.5f, 0f);
+            parts.anchoredPosition = new Vector2(0f, 24f);
+            parts.sizeDelta = new Vector2(300f, 90f);
+        }
+
+        RectTransform template = FindRect(root.transform, "部位耐久模板");
+        if (template != null)
+            template.gameObject.SetActive(false);
     }
 
     private static void BuildActionList(GameObject root)
