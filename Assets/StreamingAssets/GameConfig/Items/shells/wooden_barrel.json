@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "WoodenBarrel",
+      "parent": "BuildingSummoner_Base",
+      "shellPrefab": "BuildingSummonerShell",
+      "gameName": "木桶",
+      "description": "用木板、绳子和树脂密封的储水桶，可像陶罐一样装水、饮水、倒空、转水和放置。使用树脂胶水制作时最大耐久提高 50%。",
+      "durability": 60,
+      "maxDurability": 60,
+      "weight": 5,
+      "volume": 12,
+      "stackable": false,
+      "canBePickedUp": true,
+      "health": { "hasHp": true, "hp": 60, "maxHp": 60 },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":0,\"BuildingPrefabId\":\"WoodenBarrel_Building\",\"SummonerPrefabId\":\"WoodenBarrel\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
+            "Type": 0
+          },
+          "parameters": {
+            "RequiresPlacementRequest": true
+          }
+        },
+        "vessel": {
+          "prefab": "Module_WaterVessel",
+          "id": "Mod_WaterVessel",
+          "enabled": true,
+          "data": {},
+          "parameters": {}
+        }
+      },
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]" }
+    },
+    {
+      "id": "WoodenBarrel_Building",
+      "parent": "BuildingBody_Base",
+      "gameName": "木桶-建筑",
+      "description": "放置在地面的储水木桶，可交互使用并拆回；液体状态和制作时获得的耐久品质都会保留。",
+      "durability": 60,
+      "maxDurability": 60,
+      "weight": 5,
+      "volume": 12,
+      "stackable": false,
+      "canBePickedUp": false,
+      "health": { "hasHp": true, "hp": 60, "maxHp": 60 },
+      "modules": {
+        "建筑模块": {
+          "prefab": "Module_Building",
+          "id": "建筑模块",
+          "enabled": true,
+          "data": {
+            "BitData": "{\"Version\":3,\"State\":0,\"Role\":1,\"BuildingPrefabId\":\"WoodenBarrel_Building\",\"SummonerPrefabId\":\"WoodenBarrel\",\"SharedModuleIds\":[\"Mod_WaterVessel\"]}",
+            "Type": 0
+          }
+        },
+        "vessel": {
+          "prefab": "Module_WaterVessel",
+          "id": "Mod_WaterVessel",
+          "enabled": true,
+          "data": {},
+          "parameters": {}
+        }
+      },
+      "visual": { "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]" }
+    }
+  ]
+}
