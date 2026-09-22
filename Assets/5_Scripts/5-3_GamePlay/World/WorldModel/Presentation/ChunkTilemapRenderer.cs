@@ -10,6 +10,7 @@ using UnityEngine.Tilemaps;
 /// Ground / Water / Back / Blocking 的视觉由共享 BatchRendererGroup 绘制，格子变化只上传脏格实例。
 /// TilemapRenderer 保留为 Prefab 兼容和材质配置来源，其中 Blocking Tilemap 继续专供 TilemapCollider2D。
 /// 岸线方向与连续水深改为每实例数据，不再为每个 Chunk 创建水深纹理或整块 SetTilesBlock。
+/// Surface Ground 复用 112 字节实例中的 Transform0.w / Data1 传递当前高度与四邻高度，负值关闭分层。
 /// </summary>
 public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IWorldAwareChunkViewRenderer
 {
@@ -23,13 +24,16 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     [SerializeField] private Tilemap blockingTilemap;
 
     private readonly List<NeighbourTerrainSubscription> neighbourTerrainSubscriptions = new(8);
+    private readonly HashSet<int> liquidVisualDirty = new(); // 合并本块与相邻块的液体批次。
     private WorldRuntime boundWorld;
+    private GameRes boundResources; // 只订阅正式目录发布，不重建 ChunkRuntime。
     private ChunkRuntime boundChunk;
     private IDisposable chunkCommittedSubscription;
+    private IDisposable chunkEvictedSubscription; // 邻区卸载后恢复边界高度回退值。
     private bool renderCaveWater;
+    private bool renderGroundElevation; // 只有使用 Surface 生成语义的维度显示高度。
     private bool batchPresentationComplete;
     private bool batchBindingInProgress;
-    private const float DisabledSurfaceElevation = -1f;
 
     /// <summary>Editor 与 Development Build 只记录 BRG 异常与手动诊断，正式非开发包保持静默。</summary>
     private static bool RenderDebugEnabled => Application.isEditor || Debug.isDebugBuild;
@@ -58,10 +62,16 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
 
         chunkCommittedSubscription?.Dispose();
         chunkCommittedSubscription = null;
+        chunkEvictedSubscription?.Dispose();
+        chunkEvictedSubscription = null;
         boundWorld = worldRuntime;
         if (boundWorld != null)
+        {
             chunkCommittedSubscription =
                 boundWorld.Events.Subscribe<ChunkCommitted>(HandleChunkCommitted);
+            chunkEvictedSubscription =
+                boundWorld.Events.Subscribe<ChunkEvicted>(HandleChunkEvicted);
+        }
         RefreshNeighbourTerrainSubscriptions();
     }
 
@@ -79,7 +89,10 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         try
         {
             boundChunk = chunk;
+            boundResources = GameRes.ExistingInstance;
+            if (boundResources != null) boundResources.ResourcesReloaded += HandleResourcesReloaded;
             renderCaveWater = IsCaveDimension(chunk.Address.DimensionId);
+            renderGroundElevation = IsSurfaceDimension(chunk.Address.DimensionId);
             // SetActive 会同步触发 WaterVisualStyleBinding.OnEnable。该回调只负责先把共享材质切到最新风格；
             // Bind 随后的全量 BRG 提交会直接读取这个材质，因此绑定期无需再走一次增量修复。
             if (waterTilemap != null)
@@ -87,6 +100,8 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             if (caveWaterTilemap != null)
                 caveWaterTilemap.gameObject.SetActive(renderCaveWater);
             boundChunk.Terrain.Changed += HandleTerrainChanged;
+            boundChunk.Terrain.LiquidBatchChanged += HandleLiquidBatchChanged;
+            WorldLiquidFlowExperiment.FlowChanged += HandleLiquidFlowChanged;
             RefreshNeighbourTerrainSubscriptions();
             DisableVisualTilemapRenderers();
             ClearVisualTilemaps();
@@ -104,6 +119,12 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
 
     public void Unbind()
     {
+        if (boundResources != null) boundResources.ResourcesReloaded -= HandleResourcesReloaded;
+        boundResources = null;
+        WorldLiquidFlowExperiment.FlowChanged -= HandleLiquidFlowChanged;
+        if (boundChunk?.Terrain != null)
+            boundChunk.Terrain.LiquidBatchChanged -= HandleLiquidBatchChanged;
+        liquidVisualDirty.Clear();
         if (boundChunk?.Terrain != null)
             boundChunk.Terrain.Changed -= HandleTerrainChanged;
         ClearNeighbourTerrainSubscriptions();
@@ -127,7 +148,16 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         if (blockingTilemap != null)
             blockingTilemap.ClearAllTiles();
         renderCaveWater = false;
+        renderGroundElevation = false;
         boundChunk = null;
+    }
+
+    /// <summary>F5 只从原权威地形重建视觉与碰撞映射，保留区块、液体、自然物及世界租约。</summary>
+    private void HandleResourcesReloaded()
+    {
+        if (boundChunk?.Terrain == null || !batchPresentationComplete) return;
+        SyncBlockingCollisionAll(boundChunk.Terrain);
+        RefreshAllBatchVisuals(boundChunk.Terrain);
     }
 
     /// <summary>
@@ -175,12 +205,17 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
 
     private void OnDestroy()
     {
+        WorldLiquidFlowExperiment.FlowChanged -= HandleLiquidFlowChanged;
+        if (boundChunk?.Terrain != null)
+            boundChunk.Terrain.LiquidBatchChanged -= HandleLiquidBatchChanged;
         if (boundChunk?.Terrain != null)
             boundChunk.Terrain.Changed -= HandleTerrainChanged;
         batchPresentationComplete = false;
         ChunkBatchRendererGroupService.UnregisterOwner(this);
         chunkCommittedSubscription?.Dispose();
         chunkCommittedSubscription = null;
+        chunkEvictedSubscription?.Dispose();
+        chunkEvictedSubscription = null;
         ClearNeighbourTerrainSubscriptions();
     }
 
@@ -197,7 +232,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             SyncBlockingCollisionCell(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y);
         if (!EnsureBatchPresentationForIncrementalRefresh("TerrainChanged"))
             return;
-        // 岸线、墙脚和四角水深最多依赖一圈邻格，因此只刷新 3x3 脏区。
+        // 高度边、岸线、墙脚和四角水深最多依赖一圈邻格，因此只刷新 3x3 脏区。
         RefreshBatchArea(boundChunk.Terrain, changed.LocalCell.X, changed.LocalCell.Y, 1);
     }
 
@@ -221,11 +256,23 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
                 RefreshBatchCell(terrain, x, y);
     }
 
-    /// <summary>相邻区块生成后刷新边界格的岸向与水深纹理边框。</summary>
+    /// <summary>相邻区块就绪后补齐高度、岸线与四角水深。</summary>
     private void HandleChunkCommitted(ChunkCommitted committed)
     {
+        RefreshNeighbourChunkAvailability(committed.Address);
+    }
+
+    /// <summary>相邻区块逐出后立即回退边界数据，避免保留已卸载邻格的高度边。</summary>
+    private void HandleChunkEvicted(ChunkEvicted evicted)
+    {
+        RefreshNeighbourChunkAvailability(evicted.Address);
+    }
+
+    /// <summary>复用既有边界脏区处理邻区加载和卸载，不增加逐帧查询。</summary>
+    private void RefreshNeighbourChunkAvailability(FlatWorld.WorldModel.WorldAddress address)
+    {
         if (boundChunk?.Terrain == null ||
-            !string.Equals(committed.Address.DimensionId, boundChunk.Address.DimensionId,
+            !string.Equals(address.DimensionId, boundChunk.Address.DimensionId,
                 StringComparison.Ordinal))
         {
             return;
@@ -234,9 +281,11 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         int width = boundChunk.Terrain.Width;
         int height = boundChunk.Terrain.Height;
         Int2 origin = boundChunk.Address.ChunkOrigin;
-        Int2 changed = committed.Address.ChunkOrigin;
-        int deltaX = changed.X - origin.X;
-        int deltaY = changed.Y - origin.Y;
+        Int2 changed = address.ChunkOrigin;
+        Vector2Int neighbourDelta = WorldTopologyRuntime.ShortestDelta(
+            new Vector2Int(origin.X, origin.Y), new Vector2Int(changed.X, changed.Y));
+        int deltaX = neighbourDelta.x;
+        int deltaY = neighbourDelta.y;
         bool isNeighbour =
             (deltaX == -width || deltaX == 0 || deltaX == width) &&
             (deltaY == -height || deltaY == 0 || deltaY == height) &&
@@ -244,7 +293,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         if (isNeighbour)
         {
             RefreshNeighbourTerrainSubscriptions();
-            if (!EnsureBatchPresentationForIncrementalRefresh("NeighbourCommitted"))
+            if (!EnsureBatchPresentationForIncrementalRefresh("NeighbourAvailabilityChanged"))
                 return;
             RefreshCommittedBatchEdge(boundChunk.Terrain, deltaX, deltaY);
         }
@@ -271,16 +320,19 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     private void SubscribeNeighbourTerrain(int offsetX, int offsetY)
     {
         Int2 origin = boundChunk.Address.ChunkOrigin;
+        Vector2Int normalizedOrigin = WorldTopologyRuntime.NormalizeCell(new Vector2Int(origin.X + offsetX, origin.Y + offsetY));
         var address = new FlatWorld.WorldModel.WorldAddress(boundChunk.Address.DimensionId,
-            new Int2(origin.X + offsetX, origin.Y + offsetY));
+            new Int2(normalizedOrigin.x, normalizedOrigin.y));
         if (!boundWorld.TryGetChunkTerrain(address, out ChunkTerrainData neighbourTerrain))
             return;
 
         Action<ChunkTerrainChanged> handler = changed =>
             HandleNeighbourTerrainChanged(neighbourTerrain, offsetX, offsetY, changed);
         neighbourTerrain.Changed += handler;
+        Action<ChunkLiquidBatchChanged> liquidHandler = changed => QueueLiquidVisuals(changed, offsetX, offsetY);
+        neighbourTerrain.LiquidBatchChanged += liquidHandler;
         neighbourTerrainSubscriptions.Add(
-            new NeighbourTerrainSubscription(neighbourTerrain, handler));
+            new NeighbourTerrainSubscription(neighbourTerrain, handler, liquidHandler));
     }
 
     private void HandleNeighbourTerrainChanged(
@@ -318,12 +370,58 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         {
             NeighbourTerrainSubscription subscription = neighbourTerrainSubscriptions[i];
             subscription.Terrain.Changed -= subscription.Handler;
+            subscription.Terrain.LiquidBatchChanged -= subscription.LiquidHandler;
         }
 
         neighbourTerrainSubscriptions.Clear();
     }
 
     #region BRG 表现与碰撞兼容
+
+    /// <summary>延后到本帧所有液体 Chunk 写回之后，合并处理岸线、四角液深与高度边。</summary>
+    private void HandleLiquidBatchChanged(ChunkLiquidBatchChanged changed) => QueueLiquidVisuals(changed, 0, 0);
+
+    /// <summary>动态流向归零时也必须更新 Shader；本块和八邻区变化仍合并到帧末。</summary>
+    private void HandleLiquidFlowChanged(ChunkTerrainData terrain)
+    {
+        if (boundChunk?.Terrain == null) return;
+        bool related = ReferenceEquals(boundChunk.Terrain, terrain);
+        for (int i = 0; !related && i < neighbourTerrainSubscriptions.Count; i++)
+            related = ReferenceEquals(neighbourTerrainSubscriptions[i].Terrain, terrain);
+        if (!related) return;
+        // 流向也是四角共享数据；合并后每个水格只刷新一次，不为流向制造权威环境变化。
+        for (int i = 0; i < boundChunk.Terrain.CellCount; i++)
+            if (boundChunk.Terrain.GetLiquidDepth(i % boundChunk.Terrain.Width, i / boundChunk.Terrain.Width) > 0f)
+                liquidVisualDirty.Add(i);
+    }
+
+    /// <summary>只登记去重后的可见脏格；借用的批次索引不会保留到下一帧。</summary>
+    private void QueueLiquidVisuals(ChunkLiquidBatchChanged changed, int offsetX, int offsetY)
+    {
+        if (boundChunk?.Terrain == null) return;
+        ChunkTerrainData terrain = boundChunk.Terrain;
+        foreach (int index in changed.CellIndices.Span)
+        {
+            int centerX = index % changed.Terrain.Width + offsetX;
+            int centerY = index / changed.Terrain.Width + offsetY;
+            for (int y = Math.Max(0, centerY - 1); y <= Math.Min(terrain.Height - 1, centerY + 1); y++)
+            for (int x = Math.Max(0, centerX - 1); x <= Math.Min(terrain.Width - 1, centerX + 1); x++)
+                liquidVisualDirty.Add(y * terrain.Width + x);
+        }
+    }
+
+    /// <summary>一帧最多刷新一次合并区域；空闲时没有遍历与 BRG 上传。</summary>
+    private void LateUpdate()
+    {
+        if (liquidVisualDirty.Count == 0 || boundChunk?.Terrain == null) return;
+        if (EnsureBatchPresentationForIncrementalRefresh("LiquidBatch"))
+        {
+            ChunkTerrainData terrain = boundChunk.Terrain;
+            foreach (int index in liquidVisualDirty)
+                RefreshBatchCell(terrain, index % terrain.Width, index / terrain.Width);
+        }
+        liquidVisualDirty.Clear();
+    }
 
     /// <summary>视觉 TilemapRenderer 全部停用；Blocking Tilemap 仅继续喂给 TilemapCollider2D。</summary>
     private void DisableVisualTilemapRenderers()
@@ -535,10 +633,10 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             0f)) * tileTransform;
         Color tint = sourceTilemap != null ? tileColor * sourceTilemap.color : tileColor;
         var instanceData = ChunkBatchRendererGroupService.InstanceData.Create(localToWorld, data0, data1, tint);
+        // Liquid 有独立提交入口；Back / Blocking 即使复用 Contact 材质也不能获得高度语义。
+        instanceData.Transform0.w = -1f;
         if (layer == ChunkBatchRendererGroupService.VisualLayer.Ground)
             SetGroundElevationData(terrain, x, y, ref instanceData);
-        else if (layer == ChunkBatchRendererGroupService.VisualLayer.Water)
-            SetWaterCurrentData(terrain, x, y, ref instanceData);
         ChunkBatchRendererGroupService.SetVisual(this, GetBatchSlotKey(terrain, x, y, layer),
             new ChunkBatchRendererGroupService.Visual(layer, sprite, sourceMaterial, instanceData));
     }
@@ -737,58 +835,54 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
 
     #region BRG Shader 数据
 
-    /// <summary>
-    /// Ground 用 Transform0.w 保存当前海拔，Data1 依次保存左、右、下、上邻格海拔。
-    /// 水格、Cave、缺失邻区统一禁用或回退，避免岸线双描边和 Chunk 边界假悬崖。
-    /// </summary>
+    #region 地表高度分层
+
+    /// <summary>当前高度放 Transform0.w，左、右、下、上邻高放 Data1，保持实例布局与 Contact 数据不变。</summary>
     private void SetGroundElevationData(ChunkTerrainData terrain, int x, int y,
         ref ChunkBatchRendererGroupService.InstanceData instanceData)
     {
-        if (renderCaveWater || terrain.GetLiquidDepth(x, y) > 0f ||
-            !TryGetSurfaceElevation(terrain, x, y, out float currentElevation))
-        {
-            instanceData.Transform0.w = DisabledSurfaceElevation;
-            instanceData.Data1 = Vector4.zero;
+        instanceData.Transform0.w = -1f;
+        instanceData.Data1 = Vector4.zero;
+        if (!renderGroundElevation || !TryGetGroundHeight(terrain, x, y, out float height))
             return;
-        }
 
-        currentElevation = Mathf.Clamp01(currentElevation);
-        instanceData.Transform0.w = currentElevation;
+        instanceData.Transform0.w = height;
         instanceData.Data1 = new Vector4(
-            ResolveNeighbourSurfaceElevation(terrain, x - 1, y, currentElevation),
-            ResolveNeighbourSurfaceElevation(terrain, x + 1, y, currentElevation),
-            ResolveNeighbourSurfaceElevation(terrain, x, y - 1, currentElevation),
-            ResolveNeighbourSurfaceElevation(terrain, x, y + 1, currentElevation));
+            ResolveNeighbourGroundHeight(terrain, x - 1, y, height),
+            ResolveNeighbourGroundHeight(terrain, x + 1, y, height),
+            ResolveNeighbourGroundHeight(terrain, x, y - 1, height),
+            ResolveNeighbourGroundHeight(terrain, x, y + 1, height));
     }
 
-    /// <summary>只有已就绪的无水地表格参与高度边；其它情况视为与当前格同高。</summary>
-    private float ResolveNeighbourSurfaceElevation(ChunkTerrainData terrain, int x, int y,
-        float fallbackElevation)
+    /// <summary>缺失邻区、无地面、无合法高度或有液体时回退到当前高度，避免假悬崖与重复水岸边。</summary>
+    private float ResolveNeighbourGroundHeight(ChunkTerrainData terrain, int x, int y, float currentHeight)
     {
-        if (!TryResolveTerrainCell(terrain, x, y, out ChunkTerrainData resolvedTerrain,
-                out int localX, out int localY, out _) ||
-            resolvedTerrain.GetLiquidDepth(localX, localY) > 0f ||
-            !TryGetSurfaceElevation(resolvedTerrain, localX, localY, out float elevation))
-        {
-            return fallbackElevation;
-        }
-
-        return Mathf.Clamp01(elevation);
+        return TryResolveTerrainCell(terrain, x, y, out ChunkTerrainData neighbour,
+                   out int neighbourX, out int neighbourY, out _) &&
+               TryGetGroundHeight(neighbour, neighbourX, neighbourY, out float height)
+            ? height : currentHeight;
     }
 
-    /// <summary>过滤非法高度，避免 NaN/Infinity 污染整批 GPU 实例数据。</summary>
-    private static bool TryGetSurfaceElevation(ChunkTerrainData terrain, int x, int y,
-        out float elevation)
+    /// <summary>只读取真实干燥 Ground 的有限 0～1 高度；不按 Tile ID 或旧 Water 标记推断水格。</summary>
+    private static bool TryGetGroundHeight(ChunkTerrainData terrain, int x, int y, out float height)
     {
-        if (terrain.TryGetSurfaceElevation(x, y, out elevation) &&
-            !float.IsNaN(elevation) && !float.IsInfinity(elevation))
-        {
-            return true;
-        }
-
-        elevation = default;
-        return false;
+        height = -1f;
+        return terrain.GetCell(x, y).GroundTileId != 0 && terrain.GetLiquidDepth(x, y) <= 0f &&
+               terrain.TryGetEnvironmentValue("height", x, y, out height) &&
+               !float.IsNaN(height) && !float.IsInfinity(height) && height >= 0f && height <= 1f;
     }
+
+    /// <summary>通过维度目录支持 MOD 的 Surface 维度；未知维度只有正式 surface 标识可启用。</summary>
+    private static bool IsSurfaceDimension(string dimensionId)
+    {
+        if (DimensionManager.Instance != null &&
+            DimensionManager.Instance.TryGetDefinition(dimensionId, out DimensionDefinition definition))
+            return definition.GenerationMode == DimensionGenerationMode.Surface;
+
+        return string.Equals(dimensionId, WorldAddress.SurfaceDimensionId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    #endregion
 
     /// <summary>共享格角插值维持弯道与 Chunk 接缝连续；只上传实例数据，不创建水格对象。</summary>
     private void SetWaterCurrentData(ChunkTerrainData terrain, int x, int y,
@@ -802,7 +896,12 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         instanceData.FlowY = Vector4.zero;
         // 湖泊仅在河口读取邻河的表面扰动，绝不写回权威水流或推动漂浮物。
         if (kind == RuntimeWaterCurrentKind.Ocean)
-            return;
+        {
+            Vector2 worldCell = new(boundChunk.Address.ChunkOrigin.X + x, boundChunk.Address.ChunkOrigin.Y + y);
+            if (ChunkMgr.ExistingInstance == null || !ChunkMgr.ExistingInstance.TryGetExperimentalLiquidFlow(worldCell, out _))
+                return;
+            instanceData.Transform0.w = (float)RuntimeWaterCurrentKind.River;
+        }
 
         Vector2 bottomLeft = ResolveCornerCurrent(terrain, x - 1, y - 1);
         Vector2 bottomRight = ResolveCornerCurrent(terrain, x, y - 1);
@@ -825,6 +924,15 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
                         out ChunkTerrainData source, out int localX, out int localY,
                         out TerrainCell cell) || source.GetLiquidDepth(localX, localY) <= 0f)
                     continue;
+                Vector2 worldCell = new(boundChunk.Address.ChunkOrigin.X + left + offsetX,
+                    boundChunk.Address.ChunkOrigin.Y + bottom + offsetY);
+                if (ChunkMgr.ExistingInstance != null &&
+                    ChunkMgr.ExistingInstance.TryGetExperimentalLiquidFlow(worldCell, out Vector2 liquidFlow))
+                {
+                    velocity += Vector2.ClampMagnitude(liquidFlow, 1f);
+                    count++;
+                    continue;
+                }
                 source.TryGetEnvironmentValue("riverKind", localX, localY, out float kind);
                 if (Mathf.RoundToInt(kind) != 1)
                     continue;
@@ -970,8 +1078,9 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         else if (y >= terrain.Height)
             targetOriginY += terrain.Height;
 
+        Vector2Int normalizedOrigin = WorldTopologyRuntime.NormalizeCell(new Vector2Int(targetOriginX, targetOriginY));
         var address = new FlatWorld.WorldModel.WorldAddress(boundChunk.Address.DimensionId,
-            new Int2(targetOriginX, targetOriginY));
+            new Int2(normalizedOrigin.x, normalizedOrigin.y));
         if (!boundWorld.TryGetChunkTerrain(address, out ChunkTerrainData neighbourTerrain))
             return false;
 
@@ -1027,14 +1136,17 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     {
         public NeighbourTerrainSubscription(
             ChunkTerrainData terrain,
-            Action<ChunkTerrainChanged> handler)
+            Action<ChunkTerrainChanged> handler,
+            Action<ChunkLiquidBatchChanged> liquidHandler)
         {
             Terrain = terrain;
             Handler = handler;
+            LiquidHandler = liquidHandler;
         }
 
         public ChunkTerrainData Terrain { get; }
         public Action<ChunkTerrainChanged> Handler { get; }
+        public Action<ChunkLiquidBatchChanged> LiquidHandler { get; }
     }
 
     #endregion

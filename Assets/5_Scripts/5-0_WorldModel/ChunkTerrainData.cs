@@ -128,17 +128,10 @@ namespace FlatWorld.WorldModel
         public ChunkTerrainData Seal()
         {
             ThrowIfUnavailable();
-            // height 的生成期语义到此结束；数组所有权直接移交为只读地表海拔，
-            // 供 Ground BRG 做纯视觉高度分层，不复制数组，也不把它混入可变环境层。
-            float[] surfaceElevation = null;
-            if (_environmentLayers.TryGetValue("height", out float[] generationHeights))
-            {
-                _environmentLayers.Remove("height");
-                surfaceElevation = generationHeights;
-            }
+            // 保留生成时的 height 供地表高度分层读取，随区块统一释放；液体仍只认独立 LiquidDepth。
             _sealed = true;
             var result = new ChunkTerrainData(Width, Height, _cells, _environmentLayers, _grass,
-                _extendedTileStacks, liquid, surfaceElevation);
+                _extendedTileStacks, liquid);
             liquid = null;
             _cells = null;
             _environmentLayers = null;
@@ -227,13 +220,11 @@ namespace FlatWorld.WorldModel
         private Dictionary<string, float[]> _environmentLayers;
         private Dictionary<int, int[]> _extendedTileStacks;
         private byte[] _grass;
-        private float[] _surfaceElevation;
         private long _revision;
 
         internal ChunkTerrainData(int width, int height, TerrainCell[] cells,
             Dictionary<string, float[]> environmentLayers, byte[] grass = null,
-            Dictionary<int, int[]> extendedTileStacks = null, LiquidCellStorage liquid = null,
-            float[] surfaceElevation = null)
+            Dictionary<int, int[]> extendedTileStacks = null, LiquidCellStorage liquid = null)
         {
             Width = width;
             Height = height;
@@ -244,7 +235,6 @@ namespace FlatWorld.WorldModel
                 new Dictionary<string, float[]>(StringComparer.Ordinal);
             _extendedTileStacks = extendedTileStacks ?? new Dictionary<int, int[]>();
             _grass = grass ?? ArrayPool<byte>.Shared.Rent(CellCount);
-            _surfaceElevation = surfaceElevation;
             if (grass == null)
                 Array.Clear(_grass, 0, CellCount);
         }
@@ -514,22 +504,11 @@ namespace FlatWorld.WorldModel
             return false;
         }
 
-        /// <summary>
-        /// 读取生成期移交的地表海拔（0～1）。它是不可变的纯表现输入，不参与环境变更、存档差量或稳定哈希。
-        /// Cave 等没有地表高度语义的区块返回 false。
-        /// </summary>
-        public bool TryGetSurfaceElevation(int x, int y, out float value)
-        {
-            ThrowIfDisposed();
-            if (_surfaceElevation != null)
-            {
-                value = _surfaceElevation[GetIndex(x, y)];
-                return true;
-            }
-
-            value = default;
-            return false;
-        }
+        #region 生成高度兼容查询
+        /// <summary>保留生成高度的稳定查询入口；当前实现复用 height 层，不新增权威高度或持久化字段。</summary>
+        public bool TryGetSurfaceElevation(int x, int y, out float value) =>
+            TryGetEnvironmentValue("height", x, y, out value);
+        #endregion
 
         /// <summary>设置某个格子的环境数据；没有这种环境数据时会自动创建。</summary>
         public void SetEnvironmentValue(string layerId, int x, int y, float value)
@@ -620,6 +599,9 @@ namespace FlatWorld.WorldModel
             for (int layerIndex = 0; layerIndex < layerIds.Count; layerIndex++)
             {
                 string layerId = layerIds[layerIndex];
+                // height 是可由种子重建的视觉输入，不改变此前不含高度的玩法内容指纹。
+                if (string.Equals(layerId, "height", StringComparison.Ordinal))
+                    continue;
                 for (int charIndex = 0; charIndex < layerId.Length; charIndex++)
                     Hash(ref hash, layerId[charIndex], prime);
 
@@ -643,13 +625,6 @@ namespace FlatWorld.WorldModel
                 _cells = null;
             }
 
-            if (_surfaceElevation != null)
-            {
-                Array.Clear(_surfaceElevation, 0, Math.Min(CellCount, _surfaceElevation.Length));
-                ArrayPool<float>.Shared.Return(_surfaceElevation);
-                _surfaceElevation = null;
-            }
-
             if (_environmentLayers == null)
                 return;
 
@@ -669,6 +644,7 @@ namespace FlatWorld.WorldModel
                 _grass = null;
             }
             Changed = null;
+            LiquidBatchChanged = null;
         }
 
         private int GetIndex(int x, int y)
