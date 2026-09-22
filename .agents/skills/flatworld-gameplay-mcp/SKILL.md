@@ -97,6 +97,11 @@ UI 使用独立的 `gameplay_ui`：
 - `drag`：接收语义树中的可拖拽节点 `targetId` 与屏幕像素位移，依次发送标准 PointerDown / InitializePotentialDrag / BeginDrag / Drag / EndDrag / PointerUp；用于移动窗口等正常 UI 操作，不直接写 RectTransform。
 - UI 工具不依赖玩家控制租约，因此主菜单和进入世界前的界面也能使用。
 
+GM 使用独立的 `gameplay_gm` 白名单：
+
+- 给当前受控玩家施加已注册 Buff 时使用 `command=apply_self_buff:<buffId>`，例如 `apply_self_buff:core:night_vision`；内部先校验当前 GameRes 的 BuffDefinition，再走正式 `BuffManager.AddBuff`，不直接改运行时字典。
+- GM 命令仍要求当前世界就绪且已取得 GamePlayMCP 控制租约；具体命令始终以 `gameplay_capabilities.gmCommands` 为准。
+
 已有 `interact`、`select_hotbar`、`use` 等专用玩法语义时仍优先使用这些动作；`press_key` 主要服务桌面面板快捷键、返回/聊天等 InputAction，以及确实只通过键盘暴露的行为，不应退化成用按键猜测替代结构化玩法 API。
 
 单次持续动作保持短且有界（当前最多约 20 秒），避免跨过 MCP 桥接单次命令超时；长距离探索应拆成多轮 `observe -> act`。

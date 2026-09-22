@@ -77,6 +77,24 @@
           "value": 0.5
         }
       ]
+    },
+    {
+      "id": "core:night_vision",
+      "displayName": "夜视",
+      "description": "提高本地玩家画面的最低环境亮度，让夜间世界保持清晰可见；不改变真实世界光照、AI 或生成判定。",
+      "durationSeconds": null,
+      "effects": [
+        {
+          "phase": "start",
+          "typeId": "core:night_vision",
+          "value": 1.0
+        },
+        {
+          "phase": "stop",
+          "typeId": "core:night_vision",
+          "value": 1.0
+        }
+      ]
     }
   ]
 }

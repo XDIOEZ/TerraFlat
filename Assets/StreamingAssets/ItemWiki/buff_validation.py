@@ -7,7 +7,7 @@ FIELDS = set("id displayName category description labelKey descriptionKey durati
 EFFECT_FIELDS = set("phase typeId targetId requiredTag value upperLimit scaleWithStacks".split())
 MULTIPLIERS = {f"core:{name}" for name in ("move_speed_multiplier", "food_consume_speed_multiplier", "water_consume_speed_multiplier", "temperature_cooling_multiplier", "damage_taken_multiplier")}
 TRAUMA = {f"core:trauma_{name}" for name in ("move", "attack", "confusion", "blur")}
-TYPES = MULTIPLIERS | TRAUMA | {f"core:{name}" for name in ("temperature_warming", "heal", "max_health_percent_heal", "stamina_change", "nutrition_change", "true_damage", "max_health_percent_true_damage", "body_durability_restore")}
+TYPES = MULTIPLIERS | TRAUMA | {f"core:{name}" for name in ("temperature_warming", "night_vision", "heal", "max_health_percent_heal", "stamina_change", "nutrition_change", "true_damage", "max_health_percent_true_damage", "body_durability_restore")}
 BODY_PARTS = {"Head", "Chest", "Abdomen", "Pelvis", "LeftHand", "RightHand", "LeftLeg", "RightLeg"}
 
 
@@ -99,6 +99,8 @@ def validate_definition(source):
             raise ValueError("营养 targetId 无效")
         if kind == "core:temperature_warming" and (phase == "tick" or phase == "start" and (value <= 0 or upper is None)):
             raise ValueError("临时增温必须使用 start/stop，start 要求正 value 与 upperLimit")
+        if kind == "core:night_vision" and (phase == "tick" or not 0 < value <= 1):
+            raise ValueError("夜视必须使用 start/stop，value 必须位于 (0, 1]")
         if kind == "core:body_durability_restore" and (phase == "start" or value <= 0 or target not in BODY_PARTS):
             raise ValueError("部位恢复参数无效")
 

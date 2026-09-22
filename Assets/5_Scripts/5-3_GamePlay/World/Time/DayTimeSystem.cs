@@ -47,6 +47,9 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
     private float nextCaveExitLightRefreshTime;
     private const float CaveExitAmbientFadeDistance = 100f;
     private const float CaveExitAmbientRefreshInterval = 0.25f;
+    // 仅影响本地画面的最低环境亮度；真实世界光照仍使用昼夜系统原值。
+    private readonly Dictionary<object, float> localPresentationLightingFloors = new();
+    private float localPresentationLightingFloor;
 
     #endregion
 
@@ -74,6 +77,7 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
     {
         UnregisterSeasonSettings();
         UnsubscribeGameManagerEvents();
+        ClearLocalPresentationLightingOverrides();
         SetGlobalMoonlightIntensity(0f);
         SetGlobalMoonAppearance(0f);
         SetGlobalGameDay(0f);
@@ -123,6 +127,7 @@ public partial class DayTimeSystem : SingletonMono<DayTimeSystem>
         SetGlobalMoonlightIntensity(0f);
         SetGlobalMoonAppearance(0f);
         SetGlobalGameDay(0f);
+        ClearLocalPresentationLightingOverrides();
         WorldTimeDict?.Clear();
         SceneLightingRateDict?.Clear();
         appliedPresentationProfileId = string.Empty;
@@ -201,10 +206,14 @@ private void TimeRun(string sceneName, float deltaTime)
     /// </summary>
     private void SetGlobalLight(float intensity, Color color, float moonlightIntensity, float moonAppearance)
     {
+        float presentationIntensity = intensity;
+        Color presentationColor = color;
+        ResolveLocalPresentationLighting(ref presentationIntensity, ref presentationColor);
+
         if (GlobalLight != null)
         {
-            GlobalLight.intensity = intensity;
-            GlobalLight.color = color;
+            GlobalLight.intensity = presentationIntensity;
+            GlobalLight.color = presentationColor;
         }
 
         if (syncTileLightLayer)
@@ -219,6 +228,64 @@ private void TimeRun(string sceneName, float deltaTime)
 
         SetGlobalMoonlightIntensity(moonlightIntensity);
         SetGlobalMoonAppearance(moonAppearance);
+    }
+
+    /// <summary>
+    /// 注册本地画面的最低环境亮度来源；多个来源取最大值，不改变真实世界光照层。
+    /// </summary>
+    public void SetLocalPresentationLightingFloor(object source, float minimumIntensity)
+    {
+        if (source == null)
+            return;
+
+        float clamped = Mathf.Clamp01(minimumIntensity);
+        if (clamped <= 0f)
+        {
+            RemoveLocalPresentationLightingFloor(source);
+            return;
+        }
+
+        localPresentationLightingFloors[source] = clamped;
+        RecalculateLocalPresentationLightingFloor();
+    }
+
+    /// <summary>移除一个本地画面亮度来源。</summary>
+    public void RemoveLocalPresentationLightingFloor(object source)
+    {
+        if (source == null || !localPresentationLightingFloors.Remove(source))
+            return;
+
+        RecalculateLocalPresentationLightingFloor();
+    }
+
+    /// <summary>夜视只增强画面；越需要增亮，越把夜间色调拉回默认白光以保证可读性。</summary>
+    private void ResolveLocalPresentationLighting(ref float intensity, ref Color color)
+    {
+        float floor = localPresentationLightingFloor;
+        float worldIntensity = Mathf.Max(0f, intensity);
+        if (floor <= worldIntensity)
+            return;
+
+        float presentationIntensity = Mathf.Max(worldIntensity, floor);
+        float colorRecovery = Mathf.Clamp01(
+            (presentationIntensity - worldIntensity) / Mathf.Max(presentationIntensity, Mathf.Epsilon));
+        intensity = presentationIntensity;
+        color = Color.Lerp(color, defaultLightColor, colorRecovery);
+    }
+
+    private void RecalculateLocalPresentationLightingFloor()
+    {
+        float strongest = 0f;
+        foreach (float value in localPresentationLightingFloors.Values)
+            strongest = Mathf.Max(strongest, value);
+
+        localPresentationLightingFloor = strongest;
+    }
+
+    private void ClearLocalPresentationLightingOverrides()
+    {
+        localPresentationLightingFloors.Clear();
+        localPresentationLightingFloor = 0f;
     }
 
     /// <summary>

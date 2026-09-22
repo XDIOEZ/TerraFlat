@@ -880,7 +880,7 @@ public static partial class RuntimeUIPrefabBuilder
         return root;
     }
 
-    /// <summary>构建 Buff 行：统一占位图标、名称和剩余时间，不依赖具体 Buff 美术资源。</summary>
+    /// <summary>构建 Buff 行：图标右下角显示可叠层 Buff 的当前层级，名称与层级分离以保持紧凑易读。</summary>
     private static GameObject BuildBuffStatusItem()
     {
         GameObject root = CreateUIObject(
@@ -892,7 +892,8 @@ public static partial class RuntimeUIPrefabBuilder
         rowElement.preferredHeight = 31f;
 
         Image background = root.GetComponent<Image>();
-        background.color = new Color(0.055f, 0.105f, 0.12f, 0.92f);
+        // Buff HUD 沿用当前灰阶主题，不再恢复旧版蓝绿色底。
+        background.color = new Color(0.20392157f, 0.20392157f, 0.20392157f, 0.97f);
         background.raycastTarget = false;
         AddOutline(background, new Color(0.55f, 0.68f, 0.70f, 0.22f));
 
@@ -919,6 +920,25 @@ public static partial class RuntimeUIPrefabBuilder
         placeholder.alignment = TextAlignmentOptions.Center;
         placeholder.enableWordWrapping = false;
         Stretch(placeholder.rectTransform);
+
+        GameObject stackBadge = CreateUIObject("层数徽标", iconObject.transform, typeof(Image));
+        RectTransform stackBadgeRect = stackBadge.GetComponent<RectTransform>();
+        SetBottomRight(stackBadgeRect, -2f, -2f, 13f, 13f);
+        Image stackBadgeImage = stackBadge.GetComponent<Image>();
+        stackBadgeImage.color = new Color(0.10f, 0.10f, 0.10f, 0.96f);
+        stackBadgeImage.raycastTarget = false;
+        AddOutline(stackBadgeImage, new Color(0.92f, 0.92f, 0.92f, 0.34f));
+
+        TextMeshProUGUI stackText = CreateText("层数文本", stackBadge.transform, "1", 8f, Cream);
+        stackText.fontStyle = FontStyles.Bold;
+        stackText.alignment = TextAlignmentOptions.Center;
+        stackText.enableWordWrapping = false;
+        stackText.overflowMode = TextOverflowModes.Overflow;
+        Stretch(stackText.rectTransform);
+        AddOutline(stackText, new Color(0.05f, 0.05f, 0.05f, 0.92f));
+
+        // 运行时只对可叠层 Buff 打开，Prefab 默认隐藏避免编辑器预览误导。
+        stackBadge.SetActive(false);
 
         GameObject info = CreateUIObject("状态信息", root.transform);
         LayoutElement infoElement = info.AddComponent<LayoutElement>();
