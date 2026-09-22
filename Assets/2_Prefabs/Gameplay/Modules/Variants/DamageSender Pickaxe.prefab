@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1001 &1915593145083206945
+--- !u!1001 &1609567159099991007
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -8,33 +8,9 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 1132132357919869270, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
-      propertyPath: m_Size.x
-      value: 0.34679747
-      objectReference: {fileID: 0}
-    - target: {fileID: 1132132357919869270, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
-      propertyPath: m_Size.y
-      value: 0.90651184
-      objectReference: {fileID: 0}
-    - target: {fileID: 1132132357919869270, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
-      propertyPath: m_Enabled
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1132132357919869270, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
-      propertyPath: m_Offset.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 1132132357919869270, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
-      propertyPath: m_Offset.y
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 5547162183614461524, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
       propertyPath: m_Name
       value: DamageSender Pickaxe
-      objectReference: {fileID: 0}
-    - target: {fileID: 5547162183614461524, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
-      propertyPath: m_Layer
-      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 5854501383382979422, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
       propertyPath: m_LocalPosition.x
@@ -77,29 +53,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
-      propertyPath: damageCollider
-      value: 
-      objectReference: {fileID: 1523247678439396471}
-    - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
-      propertyPath: MoveTargetTransform
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
       propertyPath: weaponData.AttackSpeed
       value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
       propertyPath: weaponData.ReturnSpeed
       value: 4
-      objectReference: {fileID: 0}
-    - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
-      propertyPath: saveData.MaxAttackDistance
-      value: 2
-      objectReference: {fileID: 0}
-
-    - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
-      propertyPath: weaponData.SafetyDistance.x
-      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: 8741024448855339655, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
       propertyPath: weaponData.SafetyDistance.y
@@ -109,17 +68,8 @@ PrefabInstance:
       propertyPath: weaponData.MaxAttackDistance
       value: 0.7
       objectReference: {fileID: 0}
-
-
-
-
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
---- !u!61 &1523247678439396471 stripped
-BoxCollider2D:
-  m_CorrespondingSourceObject: {fileID: 1132132357919869270, guid: c62ffd66631e4b54db78add2abc249c8, type: 3}
-  m_PrefabInstance: {fileID: 1915593145083206945}
-  m_PrefabAsset: {fileID: 0}

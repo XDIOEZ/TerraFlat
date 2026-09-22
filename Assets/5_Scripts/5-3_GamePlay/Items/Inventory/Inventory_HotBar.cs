@@ -26,7 +26,6 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
 
 #region 模组参数
 
-    [SerializeReference]
     public List<string> RawData = new List<string>();
 
     [System.Serializable]
@@ -139,7 +138,6 @@ public class Inventory_HotBar : Module, IInventory, IRemoteNetworkModule
     }
 
     [Header("快捷栏运行时库存")]
-    [SerializeReference]
     public HotBarRuntimeInventory RuntimeInventory = new HotBarRuntimeInventory();
 
     [Header("快捷栏设置")]

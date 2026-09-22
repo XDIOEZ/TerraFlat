@@ -143,6 +143,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemMaterial
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 08617ac51d6146a39bd6ad480e8973f1
+    m_Address: Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Shaft_Wood.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 08640f772c27ee944929981f9566590b
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Loading/UI_DimensionLoading.prefab
     m_ReadOnly: 0
@@ -2365,12 +2371,6 @@ MonoBehaviour:
     m_SerializedLabels:
     - ActorVisual
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: cfcaae5d4c4ccea4fb3554ba602b7890
-    m_Address: Assets/2_Prefabs/World/Tiles/TileItem_Water.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: cff57bd8f54557d42a62beae37596a95
     m_Address: Assets/6_Art/Items/Weapons/Item_Weapon_031.png
     m_ReadOnly: 0
@@ -2935,12 +2935,6 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 08617ac51d6146a39bd6ad480e8973f1
-    m_Address: Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Shaft_Wood.png
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: fc59728ab6aa9b54ba0a5f7cc69fc0d8, type: 2}

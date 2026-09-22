@@ -74,4 +74,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9e707237011446d449847f53ad80f001, type: 3}
   m_Name: Low Health Red Edge
   m_EditorClassIdentifier:
+  edgeShader: {fileID: 4800000, guid: db50afe6719abbd4e91d178997802335, type: 3}
   m_Active: 1
