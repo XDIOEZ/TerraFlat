@@ -17,8 +17,8 @@ namespace FlatWorld.Gameplay.Quests
         public const int SupportedSchemaVersion = 1;
         private const string BuiltInPrefix = "flatworld:";
         private static readonly StringComparer IdComparer = StringComparer.OrdinalIgnoreCase;
-        private static readonly Dictionary<string, QuestDefinition> Definitions = new(IdComparer);
-        private static readonly HashSet<string> ExternalIds = new(IdComparer);
+        private static Dictionary<string, QuestDefinition> Definitions = new(IdComparer);
+        private static HashSet<string> ExternalIds = new(IdComparer);
 
         public static bool IsReady { get; private set; }
         public static IReadOnlyCollection<QuestDefinition> All => Definitions.Values;
@@ -26,6 +26,14 @@ namespace FlatWorld.Gameplay.Quests
         #endregion
 
         #region 注册
+
+        /// <summary>只交换任务定义及其来源索引，玩家任务进度继续由原运行时持有。</summary>
+        internal static void ConfigureResourceReload(ResourceReloadContext context)
+        {
+            context.AddDictionary(() => Definitions, value => Definitions = value);
+            context.AddSet(() => ExternalIds, value => ExternalIds = value);
+            context.Add(() => IsReady, value => IsReady = value, false);
+        }
 
         public static void ReplaceBuiltIns(IEnumerable<QuestDefinition> definitions)
         {

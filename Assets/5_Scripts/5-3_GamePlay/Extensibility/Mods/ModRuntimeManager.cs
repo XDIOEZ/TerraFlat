@@ -50,26 +50,26 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
 
     #region 运行时状态
 
-    private readonly List<ModPackage> loadedPackages = new();
-    private readonly Dictionary<string, ModPackage> packagesById = new(IdComparer);
-    private readonly Dictionary<string, ModLuaRuntime> luaRuntimes = new(IdComparer);
-    private readonly Dictionary<string, string> globalStates = new(IdComparer);
-    private readonly List<AssetBundle> loadedBundles = new();
-    private readonly List<UnityEngine.Object> clonedAssets = new();
-    private readonly HashSet<GameObject> runtimeTemplates = new();
-    private readonly List<PendingItemDefinition> pendingItemDefinitions = new();
-    private readonly List<PendingActorDefinition> pendingActorDefinitions = new();
-    private readonly List<string> registeredActorIds = new();
-    private readonly List<PendingRecipeDefinition> pendingRecipeDefinitions = new();
-    private readonly List<PendingBuffDefinition> pendingBuffDefinitions = new();
-    private readonly List<PendingLiquidDefinition> pendingLiquidDefinitions = new();
-    private readonly List<string> registeredLiquidIds = new();
-    private readonly List<PendingContaminationDefinition> pendingContaminationDefinitions = new();
-    private readonly List<string> registeredContaminationIds = new();
-    private readonly List<PendingQuestDefinition> pendingQuestDefinitions = new();
-    private readonly List<PendingPlayerCreationTemplate> pendingPlayerCreationTemplates = new();
-    private readonly List<PendingPatchDocument> pendingPatchDocuments = new();
-    private readonly Dictionary<string, ModDefinitionInfo> definitionInfos = new(IdComparer);
+    private List<ModPackage> loadedPackages = new();
+    private Dictionary<string, ModPackage> packagesById = new(IdComparer);
+    private Dictionary<string, ModLuaRuntime> luaRuntimes = new(IdComparer);
+    private Dictionary<string, string> globalStates = new(IdComparer);
+    private List<AssetBundle> loadedBundles = new();
+    private List<UnityEngine.Object> clonedAssets = new();
+    private HashSet<GameObject> runtimeTemplates = new();
+    private List<PendingItemDefinition> pendingItemDefinitions = new();
+    private List<PendingActorDefinition> pendingActorDefinitions = new();
+    private List<string> registeredActorIds = new();
+    private List<PendingRecipeDefinition> pendingRecipeDefinitions = new();
+    private List<PendingBuffDefinition> pendingBuffDefinitions = new();
+    private List<PendingLiquidDefinition> pendingLiquidDefinitions = new();
+    private List<string> registeredLiquidIds = new();
+    private List<PendingContaminationDefinition> pendingContaminationDefinitions = new();
+    private List<string> registeredContaminationIds = new();
+    private List<PendingQuestDefinition> pendingQuestDefinitions = new();
+    private List<PendingPlayerCreationTemplate> pendingPlayerCreationTemplates = new();
+    private List<PendingPatchDocument> pendingPatchDocuments = new();
+    private Dictionary<string, ModDefinitionInfo> definitionInfos = new(IdComparer);
     private ModProfile activeProfile;
     private bool safeModeActive;
     private GameManager boundGameManager;
@@ -138,7 +138,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         if (State == ModLoadState.Loading)
             yield break;
 
-        UnloadAll();
+        if (!preparingResourceReload) UnloadAll();
         State = ModLoadState.Loading;
         FailureReason = null;
         Directory.CreateDirectory(ModsRootPath);
@@ -158,10 +158,10 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
             {
                 FailureReason = ex.Message;
                 State = ModLoadState.Failed;
-                ModProfileStore.RecordLoadFailure(ex.ToString());
+                if (!preparingResourceReload) ModProfileStore.RecordLoadFailure(ex.ToString());
                 Debug.LogError($"[ModRuntime] MOD 加载失败：{FailureReason}");
                 Debug.LogException(ex);
-                UnloadAll(keepFailureState: true);
+                if (!preparingResourceReload) UnloadAll(keepFailureState: true);
                 yield break;
             }
 
@@ -176,7 +176,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         reportProgress?.Invoke("扫描 MOD 清单", 0f);
         List<ModPackage> packages = ScanPackages();
         activeProfile = ModProfileStore.LoadActiveProfile();
-        safeModeActive = ModProfileStore.ConsumeSafeModeRequest();
+        safeModeActive = !preparingResourceReload && ModProfileStore.ConsumeSafeModeRequest();
         if (safeModeActive)
         {
             packages.Clear();
@@ -222,6 +222,14 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
 
         ModSetHash = ComputeModSetHash(loadedPackages);
         State = ModLoadState.Ready;
+        if (!preparingResourceReload) PublishContentReady();
+        reportProgress?.Invoke(loadedPackages.Count == 0 ? "未启用 MOD" : $"已加载 {loadedPackages.Count} 个 MOD", 1f);
+        Debug.Log($"[ModRuntime] 加载完成，数量={loadedPackages.Count}，集合哈希={ModSetHash}");
+    }
+
+    /// <summary>仅正式发布后通知脚本，候选目录不能触发当前世界的生命周期副作用。</summary>
+    internal void PublishContentReady()
+    {
         BindGameEvents();
         DispatchEvent("content.ready", new
         {
@@ -229,8 +237,6 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
             modSetHash = ModSetHash,
             safeMode = safeModeActive
         });
-        reportProgress?.Invoke(loadedPackages.Count == 0 ? "未启用 MOD" : $"已加载 {loadedPackages.Count} 个 MOD", 1f);
-        Debug.Log($"[ModRuntime] 加载完成，数量={loadedPackages.Count}，集合哈希={ModSetHash}");
     }
 
     private List<ModPackage> ScanPackages()
@@ -370,12 +376,11 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
                 throw new InvalidDataException($"MOD {package.Manifest.Id} 存在重复 Bundle ID：{bundleDefinition.Id}");
 
             string bundlePath = ModPathUtility.ResolvePackagePath(package.RootPath, bundleDefinition.Path, true);
-            AssetBundle bundle = AssetBundle.LoadFromFile(bundlePath);
+            AssetBundle bundle = LoadResourceBundle(package, bundleDefinition.Id, bundlePath);
             if (bundle == null)
                 throw new InvalidDataException($"MOD {package.Manifest.Id} 无法加载 AssetBundle：{bundleDefinition.Path}");
 
             package.Bundles.Add(bundleDefinition.Id, bundle);
-            loadedBundles.Add(bundle);
         }
 
         foreach (string definitionFile in package.Manifest.DefinitionFiles ?? Enumerable.Empty<string>())
@@ -1329,7 +1334,8 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         }
         catch
         {
-            runtime.Dispose();
+            if (preparingResourceReload) runtime.DisposeWithoutCallbacks();
+            else runtime.Dispose();
             throw;
         }
     }
@@ -1388,7 +1394,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         if (basePrefab == null)
             throw new InvalidDataException($"MOD {package.Manifest.Id} 的物品 {definition.Id} 找不到基础预制体：{definition.BasePrefab}");
 
-        GameObject template = Instantiate(basePrefab, transform);
+        GameObject template = Instantiate(basePrefab, GetResourceTemplateParent());
         template.name = definition.Id;
         template.SetActive(false);
         clonedAssets.Add(template);
@@ -1457,6 +1463,11 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
 
     private void RegisterPrefab(GameRes gameRes, string modId, string contentId, GameObject prefab)
     {
+        // Bundle 可能被正式世界与候选目录共用；先克隆再写 ID，不能修改共享源 Prefab。
+        prefab = Instantiate(prefab, GetResourceTemplateParent());
+        prefab.SetActive(false);
+        clonedAssets.Add(prefab);
+        runtimeTemplates.Add(prefab);
         Item item = prefab.GetComponent<Item>();
         if (item != null && item.itemData != null)
             item.itemData.IDName = contentId;
@@ -1590,7 +1601,8 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
 
     internal void SetGlobalState(string modId, string json)
     {
-        EnsureWorldMutationAllowed("SetGlobalState");
+        // 候选脚本可以初始化自己的隔离全局状态，但不能修改游戏世界。
+        if (!preparingResourceReload) EnsureWorldMutationAllowed("SetGlobalState");
         if (!packagesById.ContainsKey(modId ?? string.Empty))
             throw new InvalidOperationException($"未加载 MOD：{modId}");
         globalStates[modId] = json ?? string.Empty;
@@ -1650,7 +1662,7 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
     internal void EnsureWorldMutationAllowed(string operation)
     {
         if (!worldMutationAllowed)
-            throw new InvalidOperationException($"联网客户端 MOD 不允许执行世界修改：{operation}");
+            throw new InvalidOperationException($"当前 MOD 上下文不允许执行世界修改（联网客户端或资源候选加载）：{operation}");
     }
 
     public List<InstalledModInfo> DiscoverInstalledMods()
@@ -2172,6 +2184,8 @@ public sealed partial class ModRuntimeManager : MonoBehaviour
         public string RootPath { get; }
         public ModManifest Manifest { get; }
         public Dictionary<string, AssetBundle> Bundles { get; } = new(IdComparer);
+        public Dictionary<string, string> BundleHashes { get; } = new(IdComparer);
+        public Dictionary<string, string> BundlePaths { get; } = new(IdComparer);
     }
 
     private sealed class PendingItemDefinition

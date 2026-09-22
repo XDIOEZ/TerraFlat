@@ -44,7 +44,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     public IReadOnlyDictionary<string, RuntimeRecipe> recipeById => recipeCatalog.RecipesById;
 
     /// <summary>运行时配方的权威索引；注册时构建类型候选顺序。</summary>
-    private readonly CraftingRecipeCatalog recipeCatalog = new CraftingRecipeCatalog();
+    private CraftingRecipeCatalog recipeCatalog = new CraftingRecipeCatalog();
 
     [Header("TileBase字典")]
     [ShowInInspector]
@@ -118,7 +118,7 @@ public partial class GameRes : SingletonAutoMono<GameRes>
     {
         RefreshResourceLoadingPresentation();
 
-        // F5 在主菜单直接重载；世界运行中自动保存、清场、重载并返回原存档。
+        // F5 在主菜单重建资源会话，在世界内准备候选目录并原位发布，不触发保存或退出。
         if (Keyboard.current?.f5Key.wasPressedThisFrame == true)
         {
             RequestResourceReload();

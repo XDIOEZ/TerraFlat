@@ -118,6 +118,17 @@ public partial class Mod_Production : Module, IEnvironmentAdjustable
         _ModDataMemoryPackable.WriteData(ProductionList);
     }
 
+    /// <summary>F5 更新生产规则时按产物身份保留累计时间、次数及初始化标记，不重新执行 Load。</summary>
+    public override void ApplyResourceConfiguration(string itemId, string moduleName, string json)
+    {
+        List<ItemProductionData> previous = ProductionList;
+        try { base.ApplyResourceConfiguration(itemId, moduleName, json); }
+        finally
+        {
+            if (!ReferenceEquals(previous, ProductionList)) RestoreRuntimeProgress(ProductionList, previous);
+        }
+    }
+
     /// <summary>只从存档恢复生产进度；当前定义中的产物与生产规则始终保持权威。</summary>
     private static void RestoreRuntimeProgress(
         List<ItemProductionData> configured,

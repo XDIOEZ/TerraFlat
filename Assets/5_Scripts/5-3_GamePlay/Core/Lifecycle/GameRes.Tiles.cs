@@ -7,9 +7,9 @@ using System.Linq;
 public partial class GameRes
 {
     #region 地块目录
-    private readonly Dictionary<int, RuntimeTileDefinition> tileDefinitionsByNumber = new();
+    private Dictionary<int, RuntimeTileDefinition> tileDefinitionsByNumber = new();
 
-    /// <summary>全部校验成功后发布本体目录；本方法只在无活动世界的资源加载阶段调用。</summary>
+    /// <summary>发布本体目录；游戏内热更新时由候选上下文隔离，完整校验后才对世界可见。</summary>
     public void ReplaceTileDefinitions(IReadOnlyList<RuntimeTileDefinition> definitions)
     {
         TileDefinitionFactory.ValidateIdentities(definitions);

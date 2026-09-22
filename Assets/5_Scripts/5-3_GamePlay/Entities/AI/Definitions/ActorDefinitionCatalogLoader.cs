@@ -20,11 +20,11 @@ public static class ActorDefinitionCatalogLoader
     public const string ManifestFileName = "actor-manifest.json";
     public const string RelativeManifestPath = RelativeActorRoot + "/" + ManifestFileName;
 
-    private static readonly Dictionary<string, JObject> ResolvedSources =
+    private static Dictionary<string, JObject> ResolvedSources =
         new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, Sprite> LoadedSprites =
+    private static Dictionary<string, Sprite> LoadedSprites =
         new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, RuntimeAnimatorController> LoadedControllers =
+    private static Dictionary<string, RuntimeAnimatorController> LoadedControllers =
         new(StringComparer.OrdinalIgnoreCase);
 
     public static string BuiltInActorRoot =>
@@ -34,6 +34,14 @@ public static class ActorDefinitionCatalogLoader
         StreamingAssetsTextLoader.CombinePath(BuiltInActorRoot, ManifestFileName);
 
     #region 目录读取
+
+    /// <summary>让候选 Actor 来源与资源缓存独立于仍在运行的正式目录。</summary>
+    internal static void ConfigureResourceReload(ResourceReloadContext context)
+    {
+        context.AddDictionary(() => ResolvedSources, value => ResolvedSources = value);
+        context.AddDictionary(() => LoadedSprites, value => LoadedSprites = value);
+        context.AddDictionary(() => LoadedControllers, value => LoadedControllers = value);
+    }
 
     /// <summary>同步读取 Actor 定义，供编辑器迁移、静态测试和诊断使用。</summary>
     public static List<ItemDefinitionDto> LoadBuiltInDefinitions()

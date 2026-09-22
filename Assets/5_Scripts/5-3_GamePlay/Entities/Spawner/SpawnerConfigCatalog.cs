@@ -178,6 +178,10 @@ public sealed class SpawnerSpawnEntryDefinition
 
 public static class SpawnerConfigCatalogService
 {
+    /// <summary>隔离候选刷怪目录；正在运行的刷怪进度不属于资源上下文。</summary>
+    internal static void ConfigureResourceReload(ResourceReloadContext context) =>
+        context.Add(() => Catalog, value => Catalog = value, (SpawnerConfigCatalog)null);
+
     public static SpawnerConfigCatalog Catalog { get; private set; }
     public static bool IsLoaded => Catalog != null;
 
