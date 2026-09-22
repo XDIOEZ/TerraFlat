@@ -11,6 +11,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 运行时视觉：`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Management/VisualEffectManager.cs`、`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Runtime/`
 - 角色渲染：`Assets/5_Scripts/5-3_GamePlay/Presentation/{ActorRenderEffectController,ActorRenderColorEffect,WaterImmersionRenderEffect}.cs`
 - 实体脚底阴影：`Assets/5_Scripts/5-3_GamePlay/Presentation/ActorShadowManager.cs` 与 `Assets/2_Prefabs/Gameplay/Modules/Rendering/ActorShadow.prefab`；旧对象阴影使用场景级 `ActorShadows` 根节点和 `Default/-1000` 排序，不挂到实体或 `RuntimeEntities` 下；ECS 使用下述独立批次，不注册逐实体对象。
+- 太阳长投影由 `Presentation/WorldShadowProjectionManager.cs` 独立持有，偏好由 `SunShadowSettings` 保存；代理监听完整 `RuntimeItemRegistered/Unregistered`，不复用脚底阴影的水体显隐。`SunShadowCaster` 允许 Prefab 覆盖主体、视觉高度与落地点。
 - 编辑器工具：`Assets/Editor/FlatWorld/`、`Assets/Editor/FlatWorld/ProjectTools/`；内容工坊入口为菜单 `FlatWorld/内容配置/内容工坊`
 - 调试：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/`、`Development/Diagnostics/{GameDebugManager,GameLogManager}.cs`
 
@@ -26,11 +27,14 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 伤害数字的最终颜色由 `DamageTextEffect` 样式或调用数据覆盖，不能只改 TMP 的 Prefab 字色；数值到显示倍率的映射也由该表现组件负责，战斗结算只传递实际伤害值与样式。
 - 角色颜色等共享 Shader 参数通过现有 MPB 控制器提交，避免多个组件互相覆盖。
 - Unity 2D 使用 URP/Light2D；修改 Shader 前核对材质实际 Shader 与 Pass。
+- 太阳投影使用 `Tilemap/3 + Transparent+10`，排在地面覆雪之后、`Blocking/4` 及实体之前；不能直接复用脚底阴影的 `Default/-1000`，否则长投影会覆盖 Tilemap 墙体。Shader 位移后的 CPU 包围盒必须同步扩大，屏幕外投影源仍可能把阴影投进视口；逐 Renderer MPB 必须显式恢复 `_MainTex` 及 Android 分离 Alpha。
+- `AiecsSunShadowRenderer` 通过 `_WorldSunShadow` 全局契约消费太阳状态，每 4096 只合批并复用当前动画图集，不反向引用 GamePlay。设置关闭/夜晚/相机丢失必须停止投影顶点上传并隐藏旧批次；普通实体管理器关闭时取消注册、清空绑定并停用更新，开启时只补扫 ItemMgr 权威表。
 - 地表高度分层在 `Chunk-BRG-Contact-Lit` 的共享 HLSL 中处理，两条 Pass 共用 `UnityPerMaterial` 布局和公式，且先分层着色、再接触阴影、最后进入 Light2D。按世界格坐标与四邻离散层差画边，同层无边、低侧暗边优先、拐角取最大强度；`_ElevationStrength=0` 必须完全旁路高度 Tone/暗边/亮边，不能连带关闭 Contact 或改变水面 Shader。
 - 局部 `Light2D` 如果开启 `volumeIntensityEnabled`，同时要开启 `volumetricShadowsEnabled` 并设置有效 `shadowVolumeIntensity`；否则 `ShadowCaster2D` 只会阻挡普通光照，体积光晕仍会穿过石墙、矿洞岩壁等 Blocking Tile，看起来像“光穿墙”。新版区块的静态墙体遮挡统一复用 `ChunkLightOccluderRenderer`，不要再给每块玩家墙单独创建常驻 ShadowCaster。
 - `ChunkLightOccluderRenderer` 的 Blocking Tile 阴影体必须开启 `selfShadows`，否则墙体虽然会向背光侧投影，墙面自身仍会被 Point Light 整块照亮；通用世界 `Mod_LightSource` 的 Point Light 使用满强度普通阴影，保证实体墙移除该局部光，同时保留昼夜全局光和墙体朝光侧的窄外沿。
 - `selfShadows=true` 的 Blocking Tile 阴影体会通过 URP 2D 阴影模板影响任何与墙体占地区域重叠的 Lit Sprite，而不只影响墙体自身；火把等自发光物体应使用独立 Unlit/Emissive 覆盖层，可按玩法需要只覆盖发光区域或整个源 Sprite。覆盖层使用 Max 混合给发光体提供不被阴影压暗的颜色下限，同时保留原 Lit Sprite 更亮的受光结果；禁止为了让发光体不变黑而关闭墙体 `selfShadows`，否则会重新出现整块墙面被局部光照亮的问题。
-- 动态可交互建筑不属于 Tilemap，不能依赖 `ChunkLightOccluderRenderer`；落地 `PlacedBuilding` 应在主体 `SpriteRenderer` 节点启用 `ShadowCaster2D`，旧的碰撞体节点矩形 ShadowCaster 必须关闭。URP 14 的 `useRendererSilhouette` 只负责自阴影模板，投影网格仍来自 `m_ShapePath`，因此动态建筑必须把 Sprite 的 fallback physics shape 同步到 ShadowCaster 路径，并启用 `selfShadows`，保证建筑内部不被局部光照亮且外投影跟随贴图轮廓；手持/召唤器状态必须关闭。
+- 动态可交互建筑不属于 Tilemap，不能依赖 `ChunkLightOccluderRenderer`；落地 `PlacedBuilding` 应在主体 `SpriteRenderer` 节点启用 `ShadowCaster2D`，旧的碰撞体节点矩形 ShadowCaster 必须关闭。URP 14 的 `useRendererSilhouette` 只负责自阴影模板，投影网格仍来自 `m_ShapePath`，因此完整建筑应把 Sprite 的 fallback physics shape 同步到路径并启用 `selfShadows`；手持/召唤器状态必须关闭。发光建筑自动避让自身光源时，应同时用裁剪路径生成投影并关闭 `useRendererSilhouette`，让自阴影也使用裁剪网格，否则完整 Sprite 仍会把光源盖住；不得通过关闭墙体阴影或整盏灯的阴影来修复。
+- `Light2DSortingLayerUtility` 集中适配 URP 14 的接收排序层字段。`Mod_LightSource.TargetSortingLayers` 空列表保留原光源 Prefab 配置，`SetTargetSortingLayers` 支持运行时设置与恢复；`Mod_Building.ShadowTargetSortingLayers` 空列表表示全部接收层。层名称必须校验，不能把未知名称默默转换成 Default；环绕世界的镜像 Light2D 必须同步源光的层集合。这些字段只过滤接收者，不代表物理高度或逐灯的 Owner 排除，不能靠调整 Z、Light Order 或关掉 `selfShadows` 宣称解决内嵌光源的外投影问题。
 - 共用海水 `UsePass` 的包装 Shader 必须声明公共 Pass 新增的同名材质属性；月光等夜间自发光倒影应在 `CombinedShapeLightShared` 之后合成，避免全局夜间光照被重复相乘。月亮出现动画读取 `DayTimeSystem` 发布的 `_GlobalMoonAppearance`，尺寸/渐亮与 `_GlobalMoonlightIntensity` 的月相亮度分离，避免新月把月面永久缩小。
 - 正式 Ground/Liquid 由 BRG 独立提交，液体外观来自 `LiquidDefinition.WorldWater`，禁止按 GroundTileId 查水面贴图。岸线以 LiquidDepth > 0 判断，深度用每格四角插值；任一边界格液深变化须更新八方向邻区的共享边/角，不能只监听 TerrainCell 改动。旧 Tilemap 的颜色仍只编码岸线，兼容深度纹理与 BRG 共用连续液深语义。
 - 水面视觉把双线性采样后的连续水深离散为 `0.1~1.0` 共十档，真实 `LiquidDepth` 与水深纹理仍保持连续；两种正式水面风格的基础深浅色权重按十档等距变化，避免深水段相邻层级难以分辨。

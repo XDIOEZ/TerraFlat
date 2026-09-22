@@ -31,6 +31,7 @@ description: "Use when: 定位或修改 FlatWorld 的世界时间、昼夜、天
 - 设备组件 `LocalTemperatureSource` 的强度表示中心摄氏度增量（负值制冷），不是功率或绝对目标温度；恒温器应由设备控制器根据当前地块温度计算有效强度。当前影响层不保存热惯性，撤销源会立即撤销其环境增量；需要蓄热/热传导时应引入独立状态层，不能悄悄改变来源参数语义。
 - 污染指标统一注册为 `ContaminationDefinition`，权威值保存在 `ChunkTerrainData` 的 `flatworld.contamination.<definitionId>` 环境层；运行时修改必须走 `ContaminationSystem`，禁止直接 `SetEnvironmentValue`，否则会绕过服务器权威、污染差量存档和变化通知。脏污度与具体病原负荷是同一系统内不同指标，不能合并成单一“越脏就拥有所有疾病”的数值。
 - 维度 `FixedLighting` 是光照上限；SuppressWeather 会关闭天气与雨效。
+- 太阳长投影只读取 `DayTimeSystem` 已解析的游戏时间及有效光照，轨迹由 `SunShadowParametersProvider` 统一发布；夜间太阳淡出与月相无关，不得因月光非零继续显示太阳投影。维度 `SunShadows=Automatic` 仅允许非固定光照地表，显式 Enabled/Disabled 可覆盖；退出世界与关闭偏好清零 Shader 全局参数。
 - 运行时全局光由 `TimeSystem.prefab` 中的 `DayTimeSystem + Light2D` 持有；`GameStartScene` 不得再注入独立 `DayTimeSystem`，否则会抢占单例并使带光源的运行时 Prefab 被销毁。
 - 月相应基于 `TimeData.TotalDays + CurrentTime / DayLength` 计算，不能只使用日内时间；月光先作为昼夜曲线的夜间下限，再经过采光率与维度固定光照上限。
 - 向 Shader 发布月光表现值时应保留 `GetLighting` 已应用的场景采光率与维度上限，并在系统禁用或退出世界时清零全局参数，避免关闭域重载后残留上一局状态。`_GlobalMoonlightIntensity` 只表达月相/场景后的最终亮度，黄昏到夜晚的出现进度由独立 `_GlobalMoonAppearance` 发布，避免把月相强度误当成尺寸动画进度。

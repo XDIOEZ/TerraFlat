@@ -26,6 +26,7 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - Ground / Liquid / Back / Blocking 的基础视觉统一由 `ChunkBatchRendererGroupService` 跨 Chunk 批量绘制；`ChunkTilemapRenderer` 保留历史类名用于 Prefab 兼容，但职责已变为 BRG 提交器。Blocking Tilemap 只维护 `TilemapCollider2D` 所需碰撞格，禁止重新开启其 TilemapRenderer 作为第二份视觉。
 - BRG 没有 `SpriteRenderer/TilemapRenderer` 的 Sorting Layer 字段，不能指望较低的 Render Queue 跨 Sorting Layer 压到 `Tilemap` 层下面；当前地形 BRG 使用 Default 排序域和 2987~2992 队列。草等需要盖在地形之上、普通世界 Sprite 之下的表现必须与 BRG 共用 Default 排序域，并使用高于 2992、低于 3000 的透明队列。
 - 地形 Sprite 几何只经资源会话级 `SharedSpriteMeshCache` 构造，最终 Tile/MOD/Liquid 目录和 Palette 在 Ready 前预热，动态 Sprite 保留懒加载兜底。普通流送与 `ReleaseUnusedBackend` 不清 Mesh；`BatchMeshID` 仅存当前 Backend，退出世界销毁 BRG 后再次进入必须重新注册共享 Mesh。缓存清理先通知 BRG 解绑再销毁 Mesh，禁止反向依赖 Batch 内部实现。
+- 世界内 F5 不销毁 WorldRuntime、Chunk、租约或 BRG；`ChunkTilemapRenderer` 随 Bind/Unbind 成对订阅 `GameRes.ResourcesReloaded`，发布后用原权威地形刷新碰撞映射和批量视觉。候选期间不预热或清除共享 Mesh；运行中液体身份集合及数字索引必须不变，因为原世界和后台生成器仍持有原编号表。
 - Chunk BRG 自定义 Shader 的全部数值/向量/颜色材质属性必须统一声明在 `UnityPerMaterial` CBUFFER，且同一 Shader 的所有活跃 Pass 保持一致布局；不要 `UsePass` 借用另一个材质布局不同的 Shader Pass，否则 BatchRendererGroup 会因 SRP Batcher 不兼容而拒绝绘制。
 - BRG 自定义 AoS 数据寻址必须在 `UNITY_SETUP_INSTANCE_ID` 后使用 `GetDOTSInstanceIndex()` 取得可见列表映射后的真实实例索引；`unity_InstanceID` 只是单次 draw 的局部序号，大批次被 Unity 拆分后会重复从零计数。误用会出现“数据、Owner 和实例数量均正常，但视野扩大后地面永久缺块”，不能靠增加加载距离或重建 Owner 修复。
 - BRG 地形实例按脏格增量上传；岸线与墙脚方向放入实例数据，连续水深使用每水格四个格角深度在 Shader 内双线性插值。边界数据依赖八方向邻区，正交邻区变化刷新共享边、对角邻区变化刷新共享角，不得退回整 Chunk `SetTilesBlock` 或每 Chunk 水深纹理重建。
@@ -67,6 +68,10 @@ description: "Use when: 定位或修改 FlatWorld 的纯 WorldModel、Chunk 运�
 - `TerrainChangeKind.Liquid` 必须驱动当前格、八方向邻区的岸线/四角液深和导航刷新。TerrainCell 不保存液体标记，SetLiquid 不能修改任何 Ground 字段；生成筛选读取 LiquidDepth，有效表面接触额外考虑 TerrainSupportLayer，纯液体变化不得产生 Ground 差量。
 
 ## Skill 维护原则
+
+- 液体流动是默认关闭的实验模块：纯计算在 `LiquidFlowSolver`，生命周期在 `WorldLiquidFlowExperiment` / `ChunkMgr.LiquidFlow`。使用 `TryGetSurfaceElevation` 缓存冻结生成高度；通用批量基础与实验核心分开提交，关闭实验不等于撤销已保存的液深变化。
+- `SetLiquidBatch` 要求索引唯一递增，跨 Chunk 先全部写回再 `PublishLiquidBatch`；批次仅发 `LiquidBatchChanged`，不会逐格发 `Changed`。借用的变化索引只能在同步回调内读取；新消费方必须显式订阅批事件。BRG 在帧末合并邻块脏格，Navigation 与植被也消费批事件。
+- 实验流动从外部修改或显式唤醒开始；模拟内部只能在已开放的有限区域传播，不能通过再次扩大区域绕过海洋保护。等待邻区、停用、异常和换世界都必须结束批次并归还租约；存档差量与建筑恢复完成前不能计算流量。四邻格共享松弛预算，并同时限制整格总流入/总流出，避免透支、溢出与棋盘振荡。
 
 - `World/Mechanical/MechanicalWorld` 的模拟权威独立于 `ChunkView`：真实端口连通网络整组唤醒、先全量恢复再 Tick、先全量快照再休眠；不可因可见 Chunk 卸载而删除节点或冻结一半动力源。
 - 机械距离只查询缓存的 Chunk `BoundsInt`，含滞回和冷却；拓扑变化时重算单区块属性和循环世界最短包围跨度。表现层只查询已存在的 ChunkView，不为传动网络申请整条地图加载。

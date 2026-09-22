@@ -52,4 +52,7 @@ description: "Use when: 定位或修改 FlatWorld 的地图内容、Tilemap、�
 
 ## Skill 维护原则
 
+- 实验动态流向通过 `ChunkMgr.TryGetExperimentalLiquidFlow` 查询，休眠/停用后归零；不能覆写天然 `riverFlow*` 或持久化流向。`TryGetRuntimeWaterCurrent` 优先消费实际动态流量，关闭实验后仍沿用既有天然水文行为。
+- 显式挡水建筑/MOD 通过 `WorldLiquidFlowObstacles.Register/Unregister` 登记世界格；不能从 Collider 或所有导航占地推断挡水。水上平台不自动阻断底部液体。液体批次存档使用 `SaveDataMgr.RecordLiquidBatch` 更新内存差量，不在 Liquid Tick 写磁盘。
+
 - 只补充可复用的易错点、隐含约束和必要注意事项，不记录近期改动流水账。
