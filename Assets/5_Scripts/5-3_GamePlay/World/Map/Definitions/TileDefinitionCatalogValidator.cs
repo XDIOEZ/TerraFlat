@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-/// <summary>地块配置的跨目录引用检查；在本体和 MOD 均构建完成后验证液体、Buff 与返还物品。</summary>
+/// <summary>地块配置的跨目录引用检查；在本体和 MOD 均构建完成后验证 Buff 与返还物品。</summary>
 public sealed class TileDefinitionCatalogValidator : IResourceCatalogValidator
 {
     #region 引用检查

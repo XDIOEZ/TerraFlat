@@ -229,25 +229,6 @@ public sealed class ChunkGenerator_River : ChunkGeneratorBase
         return sample.HasFreshWater;
     }
 
-    internal bool TryEvaluateAppliedRiverCell(
-        Vector2Int worldPosition,
-        int worldSeed,
-        out float depth)
-    {
-        if (TryEvaluateAppliedHydrologyCell(
-                worldPosition,
-                worldSeed,
-                out HydrologyCellSample sample) &&
-            sample.WaterKind == HydrologyWaterKind.River)
-        {
-            depth = sample.Depth;
-            return true;
-        }
-
-        depth = 0f;
-        return false;
-    }
-
     public void ValidateConfiguration()
     {
         if (riverTileBlock?.tileDataTemplate == null)

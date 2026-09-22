@@ -529,7 +529,7 @@ namespace FlatWorld.GameplayMCP
                         displayName,
                         walkable,
                         cell.BiomeId,
-                        terrain.GetLiquidDepth(x, y) > 0f);
+                        terrain.GetLiquidDepth(x, y) > 0f && TerrainSupportLayer.GetTileId(terrain, x, y) == 0);
                 }
             }
         }

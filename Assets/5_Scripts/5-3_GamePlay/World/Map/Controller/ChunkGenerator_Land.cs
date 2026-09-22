@@ -967,7 +967,6 @@ public sealed class TerrainPreviewSampler
             return false;
         }
 
-        TileData baseTerrain = ChunkGenerator_Land.GetTerrainTileBlock(biome).tileDataTemplate;
         HydrologyCellSample hydrology = default;
         bool baseHasWater = biome.BiomeId == "ocean";
         bool hasHydrology = !baseHasWater && _river != null &&
