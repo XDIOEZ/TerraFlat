@@ -11,6 +11,7 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 - UI 绑定：同目录 `GameManager.UI.cs`
 - 资源门面：同目录 `GameRes.cs`；会话：`GameRes.Loading.cs`；阶段组合：`GameRes.LoadPlan.cs`
 - 阶段执行/所有权/校验：同目录 `ResourceLoadPipeline.cs`、`ResourceAssetScope.cs`、`ResourceCatalogValidation.cs`
+- 世界内原位更新：同目录 `GameRes.HotReload.cs`、`ResourceReloadContext.cs`
 - 场景服务：同目录 `SceneMgr.cs`
 - 保存：同目录 `{AutoSaveController,SaveDataMgr}.cs`
 
@@ -22,12 +23,14 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 
 - `GameManager` 是新建、继续、运行、退出世界的权威；`GameWorldSceneManager` 不是。
 - 动态维度 Scene 不进 Build Settings，以 `WorldKey` 命名并复用 `RunWorld()`。
-- F5/调试资源刷新统一走 `RequestResourceReload`：主菜单可直接开始底层会话；单机世界运行中必须先完整保存并通过正式退出链清掉 Item/Chunk，再调用 `TryReloadResources`，成功后从磁盘重载同一存档并重新进入。`TryReloadResources` 仍是无世界运行态时的底层入口，加载中不创建第二条会话，存在活跃 Item 时禁止释放旧目录；联机世界禁止单边资源热重载。`isLoadFinish` 只由 `LoadState.Ready` 派生，不得由各目录单独发布成功。
+- F5/调试资源刷新统一走 `RequestResourceReload`：主菜单使用 `TryReloadResources` 完整替换会话；单机世界使用 `GameRes.HotReload` 准备候选目录，校验后同帧发布，不保存、不退出、不重新加载存档。候选加载期间正式 `LoadState` 保持 Ready，以 `IsResourceReloadInProgress` 防重入；失败保留原目录。联机世界仍禁止单边热更新。
+- `ResourceReloadContext` 只交换资源目录和会话标量，每次加载器 `MoveNext` 返回 Unity 前恢复正式引用；禁止登记玩家、区块、库存等持续变化的运行态。新增静态目录由所有者提供 `ConfigureResourceReload`，加载阶段不能用异步回调绕过上下文写入全局目录，也不能提前触发世界生命周期事件。
+- 原位更新成功后发布 `ResourcesReloaded`，活跃 Item 和 Chunk 不重建；旧代 Addressables、MOD 模板与 Lua 保留到正式退出完成后释放。运行中不能删除原有物品/地块/MOD 身份、改变地块数字编号或增删/重排液体身份，在用 MOD Bundle 二进制变更同样拒绝。`TryReloadResources` 只允许无世界和活跃 Item 时调用。
 - 新目录在 `GameRes.LoadPlan.cs` 注册阶段及依赖；阶段内返回嵌套 `IEnumerator`，禁止 `StartCoroutine` 脱离 `ResourceLoadPipeline` 的异常、超时与取消管理。
 - 本体资源句柄发出时即交给 `ResourceAssetScope` 持有，成功保留到目录卸载，失败/取消统一释放；卸载必须先处理 MOD 与物品池，再清空派生目录、释放资源，禁止用自动创建单例的查询入口做销毁清理。
 - Addressables 初始化句柄属于 `GameRes` 生命周期，必须跨资源会话重载保留；`ResourceAssetScope` 只持有具体资源请求，不能释放初始化句柄，否则 Fast Mode Locator 可能保留但不再重建有效目录。
 - 本体先校验再加载 MOD，合并后再次通过 `ResourceCatalogValidation` 才发布 Ready。新系统通过 `IResourceCatalogValidator` 接入引用校验，不把玩法资源约束塞进通用加载器；静态目录检查入口为 `FlatWorld/诊断/检查 Addressables 目录`。
-- `validate-final` 后执行 `brg-sprite-mesh-prewarm`，完成后才允许 Ready；预热合并最终 TileBase/JSON/MOD 目录与 Palette，不可只扫描固定 Palette。共享 Mesh 随资源会话而非世界存活，F5/失败/取消清理须在 MOD 和底层资源卸载前调用 `SharedSpriteMeshCache.Clear`；停止播放和域重载也必须显式释放隐藏 Mesh。
+- 完整资源会话在 `validate-final` 后执行 `brg-sprite-mesh-prewarm`，合并最终 TileBase/JSON/MOD 目录与 Palette，完成后才允许 Ready。原位 F5 候选跳过共享缓存预热，发布后经 `GetOrCreate` 按需构建，失败候选不得清理正式 BRG/Mesh。完整卸载及旧代回收必须先解绑 BRG、清理共享 Mesh，再释放源资源；停止播放和域重载也必须显式释放隐藏 Mesh。
 - 编辑器普通 Play 与完整流程入口统一启用 Domain Reload 和 Scene Reload（`m_EnterPlayModeOptionsEnabled: 0`），由 Unity 一次性重建 Addressables、单例与静态事件；禁止反射替换 Addressables 私有实例来模拟局部重置。通用 Prefab 标签查询为 0 时必须在 `GameRes` 入口失败；排查时区分静态目录缺失与运行时 Locator 状态，不能仅凭空查询断言根因。
 - `GameRes` 会随 `WorldManager` Prefab 再次出现在 `GameStartScene`；跨场景存活实例已存在时，重复实例不得启动资源加载协程，否则会先清空目录、再随重复对象销毁而中断加载。时间系统 JSON 必须在 `GameRes` 允许创建新世界前完成加载，玩家覆盖文件无效时保留内建配置。
 - 启动资源采用双闸门：`GameRes.IsStartupReady` 只表示主菜单必要 UI 与基础配置已经就绪，此时启动遮罩关闭、完整内容继续在同一资源会话后台加载；`isLoadFinish/LoadState.Ready` 仍是进入世界的硬门槛。玩家在后台加载完成前点击新建或继续时，必须先显示 `UI_WorldLoading` 并等待完整 Ready，禁止先创建世界再补资源。

@@ -24,6 +24,9 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 `ItemMaker/ItemMgr → ItemData → ItemMods → ModuleInit/Load → ItemMgr 分级 Tick → Save/Despawn/Pool`
 
 - Module 明确选择 EveryFrame、FixedInterval 或 Disabled；增删模块、配置变化和池复用必须使调度缓存失效。
+- 世界内 F5 经 `ItemDefinitionRuntime.RefreshLiveConfiguration` 只更新现有模块的已改变显式参数，以及仍由原定义控制的 Sprite/材质；不替换 ItemData、模块集合或调用 Load。外壳/模块结构变化与删除参数后的 Prefab 默认值由后续新实例应用，不能把旧实例伪装为已完整迁移。
+- 模块通过具名 `ApplyResourceConfiguration` 保留配置对象内部的运行态，通过 `OnResourcesReloaded` 更新派生缓存；禁止用重新 Load 代替配置刷新。生产模块更换规则列表时按产物身份保留累计时间、次数与初始化标记。
+- 原位更新发布时清空闲置物品池，并把现有活跃实例的 `PooledItemMarker.PoolingDisabled` 置为 true；只清闲置池会让旧外壳稍后回池，再污染新定义实例。
 - 注册/注销、保存/销毁各执行一次；`PrepareForDespawn` 与 `OnDestroy` 不得被外部重复调用。
 - 远程网络副本不进入本地 Tick、感知和存档索引。
 - 感知后端在注册和 `Item.RuntimeStructureChanged` 边界选择：Actor 使用当前 `RuntimeItemDefinition` 的共享根级纯几何，旧对象才缓存 Collider Bridge；移动通知仅更新位置索引，不能重新扫描组件。注销必须移除后端映射，重建索引前完成并丢弃旧 Job；每次重新注册/结构变化递增代际以拒绝对象池复用前的结果。正式 Actor 的物理 Collider 尺寸不是运行时感知配置权威，新增动态体型应提供纯数据输入。
@@ -51,9 +54,11 @@ description: "Use when: 定位或修改 FlatWorld 的 Item/Module 组合架构�
 - 内容工坊创建物品时只写继承差异：父定义和参考模块必须来自启用分包，Sprite 先生成稳定 Addressables 地址，JSON 写入前校验继承、重复 ID、文件指纹与分包外壳边界。
 - `RuntimeItemDefinition.IsActor` 只表示复用通用管线；Actor 还必须登记到 `GameRes.ActorDefinitions` 且外壳包含 `IAIActor`。
 - 存档恢复不能把历史 `ItemData/ModuleDataDic` 当配置真源；必须先按当前 `RuntimeItemDefinition` 重建静态数据和模块集合，再恢复匹配稳定模块名的运行态。这样 F5 资源重载或版本更新后的 JSON 配置会覆盖旧档配置，已删除模块也不会被旧档复活。
+- 制作材料赋予的实例耐久使用 `ItemData.CraftedDurabilityMultiplier` 持久化；定义重建后以当前定义的基础耐久重新应用倍率，不能直接沿用旧 `MaxDurability`。堆叠身份必须包含该倍率，避免不同品质实例合并后丢失品质。
 - 堆叠身份统一由 `ItemData` 判定，空与 null 特殊数据按现有规范处理。
 - 模块 Prefab 的 `ModuleData.Name/ID` 可能未序列化；进入 `ItemMods`、`ModuleInit` 或网络更新前必须统一建立非空身份，禁止直接把空值写入字典。
 - JSON 动态组合存在跨模块引用时实现 `IItemModuleDependencyBinder`；`Item` 会在全部模块进入 `ItemMods` 后、`ModuleInit/Load` 前统一绑定，依赖必须按唯一稳定 ID 解析并对缺失或重复直接报错。
+- 可燃物品采用纯组合：`Mod_Fuel` 提供燃料数据，`Mod_Combustion` 提供燃烧状态与世界时间消耗，`Mod_FuelInteraction` 提供通用投料/点火交互；光源、燃烧粒子、局部温度、命中 Buff 等通过 `ICombustionStateReceiver` 独立响应。具体物品名称、外观与组件选择只存在于 JSON，禁止新增 `Mod_具体物品名` 来重新聚合这些职责。
 - JSON 的 `modules.*.prefab` 是模块变体的唯一实例化地址；多个专用 Prefab 可以共用同一玩法 `ModuleData.ID`，`GameRes` 只能为唯一候选登记该 ID 的兼容别名，禁止按加载顺序静默覆盖。
 - `ItemPicker` 不能只依赖 `OnTriggerEnter2D`：掉落/飞行或联机预约可能让物品先以不可拾取状态进入范围，状态恢复后应补偿检查，并限制为一次性请求以避免部分入包或网络请求重复执行。
 - 掉落拾取时序由 `Mod_Droping` 的轨迹状态决定：必须先移除掉落模块，再把 `CanBePickedUp` 设为 true；拾取器不能只信任这个数据标志。

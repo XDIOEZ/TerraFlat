@@ -48,6 +48,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 `UI_FireDrill.prefab` - 钻木取火面板
 `UI_FlintStrike.prefab` - 燧石取火面板
 `UI_Food.prefab` - 玩家饱食状态面板
+`UI_FuelInteraction.prefab` - 通用燃料补充与点火交互面板
 `UI_Furnace.prefab` - 熔炉制作面板
 `UI_Hand.prefab` - 手持物面板
 `UI_HandCraftTable.prefab` - 手工制作面板
@@ -105,6 +106,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - `UI_WaterVessel` 采用与石臼一致的无底板玩法面板：根 `Image` 与 `设置对话框/Image` 只保留透明射线阻挡，不绘制灰色背景或描边；统一主题不得把这两层重新着色，按钮仍按通用主题单独显示。
 
 - 领域控制器创建/持有正式 Prefab，`UIManager` 管生命周期；控件节点名是绑定契约。正式 UI 不用 `new GameObject/AddComponent` 拼视觉。
+- `UI_FuelInteraction` 只绑定通用 `Mod_FuelInteraction`，标题从当前物品定义读取；面板、控制器和文案逻辑不得按火把、油灯、火盆等具体物品 ID 分支。
 - Prefab 是视觉真相；`BasePanel` 不在初始化时重写结构。运行时只用稳定键加载正式 Prefab。 编辑器构建器组装带 Awake 的视图时，应先停用根节点，完成所有序列化引用后再激活；新增必需视图引用必须同步生成正式 Prefab 并核对引用，不能只提交脚本。
 - `GameRes` 的启动资源加载面板属于引导 UI：可以登记 Addressables，但运行时必须由 `WorldManager.prefab` 直接引用，不能依赖尚未初始化的资源字典。
 - `UI_WorldLoading` 的根 `Image` 是进入世界阶段的硬遮挡层，最终 Alpha 必须保持 `1`；统一主题、迁移器和 Prefab 重建流程都不能把它降成普通面板的半透明 Canvas，否则玩法 HUD 会在加载期间透出。
@@ -146,6 +148,7 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 - `ProviderId` 与设置 `Key` 必须稳定且按功能命名；运行时在管理器自身生命周期中通过 `SettingsProviderRegistry.Register/Unregister` 注册，UI 通过 Provider 和 Key 查找，不直接调用管理器的业务字段或 `AudioBus` 等实现细节。
 - `ISettingsDropdown`/`ISettingsSwitch` 的选项使用稳定 `SettingOption.Id`，写入通过 `TrySetSelectedIndex` 返回错误；需要“应用/取消”或自定义输入的页面保留专用 View 状态，最终提交仍调用 Provider，不能把校验逻辑塞回 `BasePanel`。
 - 现有静态偏好类通过 `SettingsProvider` 兼容入口注册；新增实例型系统优先让管理器直接实现接口。Provider 不负责创建 Prefab，正式布局仍由专用 Launcher 和 Prefab 管理。
+- `UI_VisualEffectsSettings` 同时嵌套在游戏内与主菜单设置中；太阳长投影开关绑定 `SunShadowSettings` Provider，关闭必须停止对应渲染工作，不能只把材质 Alpha 设零。新增必需控件时同步源 Prefab、控制器和 `RuntimeUIPrefabBuilder.VisualEffects`，并核对两个嵌套使用处的真实引用。
 - 游戏内设置页签由 `SettingsActionListPagination` 的页面名、入口名、页签映射和首个焦点控件共同定义；新增分页时同步正式 `UI_ActionList` 嵌套 Prefab 与完整/定向构建入口。直接挂在子页 Prefab 的控制器会由分页器收集 `ISettingsPageLifecycle`，不必再向 `SettingCanvas` 添加专用初始化分支。
 - 调整界面缩放范围或默认值时，以 `UIUserSettings` 常量为权威，同时检查 Provider/写入校验、`UIScaleController` 的实际应用下限，并同步 `UI_InterfaceSettings.prefab` 与 `RuntimeUIPrefabBuilder`；`PlayerPrefs` 默认参数只服务无旧键的新配置，不得覆盖已有玩家值。
 
@@ -191,3 +194,4 @@ description: "Use when: 定位或修改 FlatWorld 的 UIManager、BasePanel、�
 
 - 只补充后续维护可复用的易错点、隐含约束和必要注意事项。
 - 不记录修改日期、近期变更或仅描述本次改动内容的流水账。
+- 创建正式 UI Prefab 时必须直接完成可用版本。不能只创建节点骨架或占位结构后交付；必须在 Unity Prefab Mode 中基于现有参考 Prefab（如 UI_Health、UI_ProgressBar 等）手动补齐视觉组件、布局组件、颜色、字体、嵌套 Prefab 引用和必要序列化配置。Prefab 提交时应达到可直接查看和使用的完成状态，后续代码绑定只负责数据驱动，不负责补视觉。

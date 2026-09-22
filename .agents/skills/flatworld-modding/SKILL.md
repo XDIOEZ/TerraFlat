@@ -34,6 +34,13 @@ description: "Use when: 定位或修改 FlatWorld 的 MOD 扫描、manifest、�
 
 - 液体可选 `worldWater` 扩展世界玩法和显示；Sprite/Material 每项选择 Addressables 地址或所属包的 bundle/asset 成对字段，不能混填。Bundle 资源由 MOD 会话持有，本体地址由 GameRes 资源会话持有，最终目录验证后再建立 LiquidTypeCatalog 和预热共享 Sprite Mesh。MOD 只保存稳定 LiquidId，通过 WorldLiquidSystem 修改世界液体，不保存或复用会话数字编号。
 
+## 世界内原位更新
+
+- `ModRuntimeManager.HotReload` 为候选目录隔离定义、设置、Lua 与资源所有权；管理器及正式事件订阅持续复用，不能卸载当前世界正在使用的 MOD 会话。
+- 候选 `OnLoad/OnLoadSave` 只允许初始化隔离状态，禁止修改世界或持久化客户端设置；需要发布后执行的副作用放到 `OnContentReady`。提交前从仍在运行的正式会话捕获最新全局状态，再恢复到候选 Lua，不能用加载开始时的过期快照覆盖进度。
+- 未改变的 Bundle 按路径和 SHA256 借用旧句柄；在用 Bundle 二进制变化需在主菜单更新。旧代回收时把仍被当前目录引用的 Bundle 所有权转交当前会话，失败候选只释放自己拥有的句柄。
+- 资源 Prefab 先在未激活模板根下克隆再配置，禁止在候选期激活实体或直接修改共享 Bundle Prefab。失败候选和退役 Lua 使用 `DisposeWithoutCallbacks`，避免旧 `OnUnload` 修改当前世界。
+
 ## 验证
 
 - 在隔离 MOD 目录覆盖合法、缺依赖、循环依赖、损坏配置、卸载清理与 Lua 生命周期。

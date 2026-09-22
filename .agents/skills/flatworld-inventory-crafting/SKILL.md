@@ -18,9 +18,13 @@ description: "Use when: 定位或修改 FlatWorld 的背包、槽位、快捷栏
 
 ## 不变量
 
+- F5 原位应用模块参数不能重置生产运行态；`Mod_Production.ApplyResourceConfiguration` 复用按产物身份匹配的 `RestoreRuntimeProgress`，保留累计生产时间、次数和初始化标记，不重新 Load 或改写库存。未变化的参数集合不重新构造。
+
 - 库存液体原料通过 `LiquidDefinition.sourceItemId` 唯一映射到液体；每个完整物品对应一份，容器拖入先校验同液体与整份容量，再从真实所属库存调用 `TryConsumeFromSlot`，数量不得超过 `InventoryDragTransaction.DraggedAmount`。不能把液体原料伪装成容器变体；已有进食进度的原料不能再按完整一份装液。浮点残余容量不足一份时不扣料，容器之间仍允许按原有规则部分转液。
 
 - 配方 JSON 是唯一真源；旧 Recipe/CookRecipe SO 只作 MOD 兼容，不恢复双重维护。
+- 配方输出可通过可选 `durabilityMultiplier` 为同一产物定义赋予实例耐久品质；倍率必须为大于 0 的有限数，由 `CraftedDurabilityQuality` 在预览与真实提交共用的产物创建阶段应用，并写入 `ItemData.CraftedDurabilityMultiplier`。禁止为单个配方另写按配方 ID 硬编码的输出规则，否则容易与通用倍率重复叠乘。
+- 金属手钻的钻头质量读取实际扣除矿锭的 `DrillDurability:<正数>` Tag，并通过 `CraftingOutputRules` 写入产物实例；动态耐久必须同时持久化到共享“手钻模块”，放置/拆回及 ItemDefinition 读档重建后再恢复，不能只改临时 `ItemData.MaxDurability`。MOD 矿锭可通过同一 Tag 接入。
 - 内容工坊的普通合成使用不限长度的滚动材料清单，保存为连续的一维输入；载入旧网格配方时按材料身份归并数量，并保留 `amount=0` 的不消耗工具。只有热加工继续使用 3×3 位置画布。保存前必须使用运行时配方工厂校验整份启用目录，并保留已有配方的未知顶层字段。
 - 所有制作入口调用 `CraftingService`；匹配由 `CraftingRecipeMatcher`，扣料/产出由 `CraftingTransaction` 原子提交。
 - `Mod_Mortar` 每次有效加工手势执行一份单原料、多产物配方；加工手势包括“提起后下压到接触线”的捣击，以及石棒贴近碗底累计横移达到配置阈值的研磨步进，两者统一发布同一加工意图。输入与输出共享动态 `Inventory`，统一由 `CraftingService` 原子扣料和写入，禁止整堆改 ID。提交前按全部产物预留空槽；事务优先合并可堆叠产物，剩余原料独立保留。事务通知期间合并刷新，避免槽位变化取消正在拖动的石棒；动态容量策略在 Load 恢复，槽位和内容独立持久化。

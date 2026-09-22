@@ -41,6 +41,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - 时间保存同时复制季节配置和历史区间；积雪、植物冷热暴露、自然补位年份、陶罐水质／加工进度、盐分负担各有独立状态，不能在渲染绑定或 UI 打开时重置。
 - 通用液体容器的 `LiquidContainerState.Amount` 以 `0.1` 份为最小持久化单位；运行时读入高精度浮点余量时先归一到一位小数，后续装液、倾倒、转移与加工不得重新写入更高精度的数量。
 - JSON ItemDefinition 是物品静态配置真源：恢复世界实体、建筑、AI 和库存物品时先用当前定义重建重量、体积、标签、耐久上限和模块组合，再叠加 GUID、数量、位置、耐久比例及模块运行态；删除的旧模块不得被存档重新实例化。
+- `ItemData.CraftedDurabilityMultiplier` 是制作材料赋予的实例品质，作为追加字段持久化；恢复时先用当前 ItemDefinition 的基础耐久重建，再应用倍率并保留原耐久百分比，禁止把历史 `MaxDurability` 直接当成当前基础值。
 - `GameSaveData.WorldGenerationConfigMode` 是每个存档自己的生成规则策略：`Frozen` 保持 `PlanetData.Ecology` 冻结 Profile；`FollowCurrent` 跳过冻结 Profile 并允许存档跟随当前游戏版本。玩家从冻结切到跟随当前时清除所有维度的冻结 Profile，但必须保留 `EcologyWorldSaveData.Chunks` 内的删除 GUID、状态覆盖和恢复年份；重新冻结由下一次正式世界生成捕获当前 Profile。
 
 ## 工作流与验证
@@ -56,6 +57,8 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - 液体先生成再覆盖差量，覆盖必须早于表现和导航绑定。Ground 不保存液体标记，因此抽水/加水只能改变 `LiquidCells`，不能产生 `RuntimeTileDeltas`。不能把会话 `LiquidTypeIndex` 写入存档。
 
 ## Skill 维护原则
+
+- 液体模拟按 Chunk 调用 `RecordLiquidBatch`，只更新内存中的 `LiquidCells` 并复用已有记录；全部权威写回后再发布批次通知。稳定 ID、零深度和恢复生成值时删除差量的规则不变；实验开关、活动集合、生成高度缓存及动态流向不增加存档字段。关闭实验不能撤销已经保存的模拟结果。
 
 - 机械整网使用外层追加的 `CompactSaveEnvelope.MechanicalNetworks`；`GameSaveData.Mechanical` 保持 `MemoryPackIgnore`。机械本体不能同时写进普通建筑 Chunk 快照，远端无表现节点也必须进入独立存档；退出保存完成之后才能释放 `MechanicalWorld`。
 - 二进制加工库存由 `MechanicalProcessor` 恢复时重新挂接当前 ItemDefinition；不能假设通用 `Inventory_ModuleData` 递归会访问专用二进制载荷。缺失机械 MOD 定义的原快照仍保留在对应世界档案中。
