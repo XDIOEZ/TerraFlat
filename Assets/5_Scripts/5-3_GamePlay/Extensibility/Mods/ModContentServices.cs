@@ -14,8 +14,12 @@ using UnityEngine;
 /// <summary>MOD 文本注册表；使用命名空间键并提供语言回退。</summary>
 public static class ModLocalizationRegistry
 {
-    private static readonly Dictionary<string, Dictionary<string, string>> Tables =
+    private static Dictionary<string, Dictionary<string, string>> Tables =
         new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>语言表候选目录不影响当前界面使用的正式翻译。</summary>
+    internal static void ConfigureResourceReload(ResourceReloadContext context) =>
+        context.AddDictionary(() => Tables, value => Tables = value);
 
     public static string CurrentLanguage { get; private set; } = ResolveSystemLanguage();
 
@@ -98,9 +102,17 @@ public static class ModLocalizationRegistry
 public static class ModSettingsRegistry
 {
     private static readonly StringComparer IdComparer = StringComparer.OrdinalIgnoreCase;
-    private static readonly Dictionary<string, ModSettingDefinition> Definitions = new(IdComparer);
-    private static readonly Dictionary<string, string> Owners = new(IdComparer);
-    private static readonly Dictionary<string, JToken> Values = new(IdComparer);
+    private static Dictionary<string, ModSettingDefinition> Definitions = new(IdComparer);
+    private static Dictionary<string, string> Owners = new(IdComparer);
+    private static Dictionary<string, JToken> Values = new(IdComparer);
+
+    /// <summary>候选设置从持久配置读取，发布前不污染当前 MOD 的设置索引。</summary>
+    internal static void ConfigureResourceReload(ResourceReloadContext context)
+    {
+        context.AddDictionary(() => Definitions, value => Definitions = value);
+        context.AddDictionary(() => Owners, value => Owners = value);
+        context.AddDictionary(() => Values, value => Values = value);
+    }
 
     public static string ConfigRootPath => Path.Combine(Application.persistentDataPath, "ModConfigs");
 
@@ -178,6 +190,7 @@ public static class ModSettingsRegistry
 
     public static void SetClientValue(string modId, string settingId, string jsonValue)
     {
+        ModRuntimeManager.Instance?.EnsureClientSettingsWritable();
         string id = NormalizeId(modId, settingId);
         if (!Definitions.TryGetValue(id, out ModSettingDefinition definition))
             throw new KeyNotFoundException($"找不到 MOD 设置：{id}");

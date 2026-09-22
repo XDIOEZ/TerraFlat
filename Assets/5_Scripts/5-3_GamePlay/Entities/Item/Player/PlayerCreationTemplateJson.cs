@@ -426,13 +426,25 @@ public static class PlayerCreationTemplateCatalogService
     public const string PatchTargetPrefix = "playerTemplate:";
     public const string CatalogPatchTarget = "playerTemplateCatalog";
 
-    private static readonly Dictionary<string, JObject> Sources = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, JObject> ResolvedSources = new(StringComparer.OrdinalIgnoreCase);
+    private static Dictionary<string, JObject> Sources = new(StringComparer.OrdinalIgnoreCase);
+    private static Dictionary<string, JObject> ResolvedSources = new(StringComparer.OrdinalIgnoreCase);
     private static string defaultProfileId = "default";
     private static string builtInDefaultProfileId = "default";
     private static bool dirty = true;
 
     public static string DefaultProfileId => defaultProfileId;
+
+    #region 资源热更新
+    /// <summary>玩家创建模板只更新目录，不重新覆盖当前玩家的创建参数。</summary>
+    internal static void ConfigureResourceReload(ResourceReloadContext context)
+    {
+        context.AddDictionary(() => Sources, value => Sources = value);
+        context.AddDictionary(() => ResolvedSources, value => ResolvedSources = value);
+        context.Add(() => defaultProfileId, value => defaultProfileId = value, string.Empty);
+        context.Add(() => builtInDefaultProfileId, value => builtInDefaultProfileId = value, string.Empty);
+        context.Add(() => dirty, value => dirty = value, true);
+    }
+    #endregion
 
     /// <summary>资源会话失败或卸载时，清除全部本体和扩展模板。</summary>
     internal static void Reset()

@@ -32,7 +32,7 @@ public partial class GameRes
     private ResourceAssetScope resourceAssets = new();
     internal ResourceAssetScope ResourceAssets => resourceAssets;
     /// <summary>启动阶段已经持有的 Prefab 位置，完整 Prefab 阶段不再重复申请句柄。</summary>
-    private readonly HashSet<string> startupPrefabLocationIds = new(StringComparer.Ordinal);
+    private HashSet<string> startupPrefabLocationIds = new(StringComparer.Ordinal);
 
     /// <summary>
     /// 主菜单显示后仍可能立即被访问的运行时 UI。
@@ -49,14 +49,14 @@ public partial class GameRes
     };
 
     /// <summary>
-    /// F5/调试入口统一使用这里：主菜单直接重载；单机世界内先保存并退出运行态，
-    /// 再重载资源并自动回到同一存档，避免释放仍被活跃 Item 引用的 Addressables。
+    /// F5/调试入口统一使用这里：主菜单直接重载；单机世界内准备独立候选目录并原位发布。
+    /// 活跃实例继续持有旧资源，不保存、不退出、不从磁盘恢复世界。
     /// </summary>
     public bool RequestResourceReload()
     {
         if (LoadState == ResourceLoadState.Loading ||
             LoadState == ResourceLoadState.Disposed ||
-            inGameReloadCoroutine != null)
+            resourceReloadInProgress)
         {
             return false;
         }
@@ -84,33 +84,13 @@ public partial class GameRes
             return false;
         }
 
-        SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
-        ItemMgr itemMgr = ItemMgr.GetInstance();
-        string saveName = saveDataMgr?.SaveData?.saveName;
-        string playerName = saveDataMgr?.CurrentContrrolPlayerName;
-        Player player = itemMgr?.User_Player;
-        if (saveDataMgr == null ||
-            string.IsNullOrWhiteSpace(saveName) ||
-            string.IsNullOrWhiteSpace(playerName) ||
-            player == null)
-        {
-            Debug.LogWarning("[GameRes] 当前世界缺少可恢复的存档或本地玩家，已取消 F5 资源重载。");
-            return false;
-        }
-
-        string savePath = saveDataMgr.GetFullSavePath(saveName);
-        showLoadingGUI = true;
-        loadingProgress = 0f;
-        loadingText = "正在保存当前世界并准备更新资源...";
-        inGameReloadCoroutine = StartCoroutine(
-            ReloadResourcesAndResumeWorld(manager, player, playerName, saveName, savePath));
-        return true;
+        return StartInPlaceResourceReload(manager);
     }
 
     /// <summary>底层资源会话入口；调用前必须保证世界运行态与活跃 Item 已经清空。</summary>
     public bool TryReloadResources()
     {
-        if (LoadState == ResourceLoadState.Loading || LoadState == ResourceLoadState.Disposed) return false;
+        if (LoadState == ResourceLoadState.Loading || LoadState == ResourceLoadState.Disposed || resourceReloadInProgress) return false;
         if (!Application.isPlaying)
         {
             Debug.LogWarning("[GameRes] 资源重载只在运行时执行；编辑器内容检查请使用目录校验菜单。");
@@ -139,78 +119,6 @@ public partial class GameRes
 
     [Sirenix.OdinInspector.Button("重载所有资源")]
     public void HotReloadAllResources() => RequestResourceReload();
-
-    /// <summary>单机世界内的安全热重载：完整保存/清场后重建内容目录，再加载同一存档。</summary>
-    private IEnumerator ReloadResourcesAndResumeWorld(
-        GameManager manager,
-        Player player,
-        string playerName,
-        string saveName,
-        string savePath)
-    {
-        Debug.Log($"[GameRes] F5 游戏内资源重载开始：存档={saveName}，玩家={playerName}");
-
-        yield return manager.BackToHelloScene_Coroutine(player, saveCurrentGame: true);
-
-        // 退出流程会将当前 SaveData 重置为空对象；确认运行态已经清空后才释放旧资源句柄。
-        ItemMgr.GetInstance()?.CleanupNullItems();
-        if (manager.IsInGameWorld ||
-            (ItemMgr.GetInstance() != null && ItemMgr.GetInstance().WorldRunTimeItems.Values.Any(item => item != null)))
-        {
-            Debug.LogError("[GameRes] F5 资源重载中止：退出世界后仍存在运行态 Item，旧资源会话未释放。");
-            showLoadingGUI = false;
-            inGameReloadCoroutine = null;
-            yield break;
-        }
-
-        loadingText = "正在更新游戏资源...";
-        loadingProgress = 0f;
-        showLoadingGUI = true;
-        if (!TryReloadResources())
-        {
-            Debug.LogError("[GameRes] F5 资源重载中止：无法启动新的资源会话。");
-            showLoadingGUI = false;
-            inGameReloadCoroutine = null;
-            yield break;
-        }
-
-        while (LoadState == ResourceLoadState.Loading)
-            yield return null;
-
-        if (LoadState != ResourceLoadState.Ready)
-        {
-            Debug.LogError($"[GameRes] F5 资源重载失败，已停留在主菜单：{LastLoadError}");
-            inGameReloadCoroutine = null;
-            yield break;
-        }
-
-        SaveDataMgr saveDataMgr = SaveDataMgr.Instance;
-        if (saveDataMgr == null)
-        {
-            Debug.LogError("[GameRes] F5 资源重载完成，但 SaveDataMgr 不存在，无法恢复原存档。");
-            inGameReloadCoroutine = null;
-            yield break;
-        }
-
-        loadingText = "资源更新完成，正在恢复当前存档...";
-        showLoadingGUI = true;
-        saveDataMgr.LoadSaveByDisk(savePath);
-        if (saveDataMgr.SaveData == null ||
-            !string.Equals(saveDataMgr.SaveData.saveName, saveName, StringComparison.Ordinal) ||
-            saveDataMgr.SaveData.PlayerData_Dict == null ||
-            !saveDataMgr.SaveData.PlayerData_Dict.ContainsKey(playerName))
-        {
-            Debug.LogError($"[GameRes] F5 资源重载完成，但无法恢复存档 {saveName} 的玩家 {playerName}。");
-            showLoadingGUI = false;
-            inGameReloadCoroutine = null;
-            yield break;
-        }
-
-        showLoadingGUI = false;
-        inGameReloadCoroutine = null;
-        Debug.Log($"[GameRes] F5 资源更新完成，正在重新进入存档：{saveName}");
-        manager.ContinueGame(playerName);
-    }
 
     /// <summary>先释放旧会话，再执行声明式计划；任何失败都清空目录并保持不可进入世界。</summary>
     private IEnumerator RunResourceSession()
@@ -264,6 +172,10 @@ public partial class GameRes
     private void DisposeResourceSession()
     {
         if (instance != this) return;
+        if (inGameReloadCoroutine != null) StopCoroutine(inGameReloadCoroutine);
+        cancelInPlaceReload?.Invoke();
+        if (reloadWorldOwner != null)
+            reloadWorldOwner.BackToHelloScene_Event_End -= ReleaseRetiredWorldResources;
         LoadState = ResourceLoadState.Disposed;
         if (loadCoroutine != null) StopCoroutine(loadCoroutine);
         loadCoroutine = null;
@@ -280,6 +192,7 @@ public partial class GameRes
         // 先让使用者释放 BRG 注册/材质，再销毁共享 Mesh，最后卸载源 Sprite/Tile/MOD。
         Clear(SharedSpriteMeshCache.Clear);
         Clear(() => ModRuntimeManager.Instance?.UnloadForResourceReload());
+        Clear(ReleaseRetiredResourceSessions);
         Clear(ClearAllDictionaries);
         Clear(PlayerCreationTemplateCatalogService.Reset);
         Clear(TimeSystemConfigService.Reset);
@@ -435,6 +348,7 @@ public partial class GameRes
     private void PublishStartupReady()
     {
         IsStartupReady = true;
+        if (preparingInPlaceReload) return;
         showLoadingGUI = false;
         Debug.Log("[GameRes] 启动必要资源已就绪，主菜单开放；剩余游戏资源继续后台加载。");
     }

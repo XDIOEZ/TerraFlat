@@ -7,11 +7,20 @@ using UnityEngine;
 public static class MechanicalCatalog
 {
     #region 目录与扩展
-    private static readonly Dictionary<string, MechanicalDefinition> definitions = new(StringComparer.Ordinal);
-    private static readonly Dictionary<string, MechanicalProcessDefinition> processes = new(StringComparer.Ordinal);
+    private static Dictionary<string, MechanicalDefinition> definitions = new(StringComparer.Ordinal);
+    private static Dictionary<string, MechanicalProcessDefinition> processes = new(StringComparer.Ordinal);
     private static bool loaded;
     public static MechanicalSettings Settings { get; private set; } = new(); // 整网调度参数
     public static IEnumerable<MechanicalProcessDefinition> Processes { get { EnsureLoaded(); return processes.Values; } }
+
+    /// <summary>热更新只替换机械定义，不清除当前机械网络或 MOD 动力源注册。</summary>
+    internal static void ConfigureResourceReload(ResourceReloadContext context)
+    {
+        context.AddDictionary(() => definitions, value => definitions = value);
+        context.AddDictionary(() => processes, value => processes = value);
+        context.Add(() => loaded, value => loaded = value, false);
+        context.Add(() => Settings, value => Settings = value, new MechanicalSettings());
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Reset() { loaded = false; definitions.Clear(); processes.Clear(); Settings = new(); }

@@ -70,7 +70,8 @@ public partial class GameRes
             () => RunAction(() =>
             {
                 ResourceCatalogValidation.Validate(this);
-                GameManager.Instance?.ApplyDefaultTimeSystemProfile();
+                // 候选目录校验不得修改正在运行的世界时间和主菜单准备数据。
+                if (!preparingInPlaceReload) GameManager.Instance?.ApplyDefaultTimeSystemProfile();
             }), "mods");
         plan.Add("world-liquids", "加载世界液体外观", 2, LoadWorldLiquidResources, "validate-final");
         plan.Add("brg-sprite-mesh-prewarm", "预构造地形共享网格", 3,

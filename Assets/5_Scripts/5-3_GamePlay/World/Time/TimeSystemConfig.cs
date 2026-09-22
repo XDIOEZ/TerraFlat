@@ -264,6 +264,13 @@ public static class TimeSystemConfigService
         Version++;
     }
 
+    /// <summary>候选版本只在发布后使时间配置缓存失效，不修改正在流逝的世界时间。</summary>
+    internal static void ConfigureResourceReload(ResourceReloadContext context)
+    {
+        context.Add(() => Catalog, value => Catalog = value, (TimeSystemConfigCatalog)null);
+        context.Add(() => Version, value => Version = value, Version);
+    }
+
     /// <summary>资源会话失败或卸载时，清除本次目录并使派生缓存失效。</summary>
     internal static void Reset()
     {

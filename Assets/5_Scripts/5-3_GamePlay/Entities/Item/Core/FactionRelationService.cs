@@ -34,8 +34,12 @@ public static class FactionRelationService
         public FactionRelation Relation;
     }
 
-    private static readonly Dictionary<string, RegisteredRelation> ExternalRelations =
+    private static Dictionary<string, RegisteredRelation> ExternalRelations =
         new Dictionary<string, RegisteredRelation>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>候选阵营关系加载期间，当前战斗继续查询正式关系表。</summary>
+    internal static void ConfigureResourceReload(ResourceReloadContext context) =>
+        context.AddDictionary(() => ExternalRelations, value => ExternalRelations = value);
 
     #endregion
 

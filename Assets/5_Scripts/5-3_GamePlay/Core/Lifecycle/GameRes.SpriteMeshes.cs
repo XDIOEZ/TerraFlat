@@ -11,6 +11,8 @@ public partial class GameRes
     /// <summary>收集最终目录和 Palette，按唯一 Sprite 每批最多 32 份网格让出一帧。</summary>
     private IEnumerator PrewarmTerrainSpriteMeshes()
     {
+        // 候选会话不能污染正式共享缓存；发布后的表现刷新通过 GetOrCreate 按需补齐新 Sprite。
+        if (preparingInPlaceReload) yield break;
         const int meshesPerFrame = 32;
         var sprites = new HashSet<Sprite>();
         foreach (LiquidDefinition definition in LiquidDefinitions.Values)

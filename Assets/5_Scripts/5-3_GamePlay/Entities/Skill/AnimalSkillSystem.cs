@@ -290,8 +290,12 @@ public static class AnimalSkillCatalogLoader
 /// <summary>已加载动物技能目录的运行时访问入口。</summary>
 public static class AnimalSkillCatalogService
 {
-    private static readonly Dictionary<string, AnimalSkillDefinition> Definitions =
+    private static Dictionary<string, AnimalSkillDefinition> Definitions =
         new Dictionary<string, AnimalSkillDefinition>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>技能定义候选目录独立加载，已有技能施放状态保持原样。</summary>
+    internal static void ConfigureResourceReload(ResourceReloadContext context) =>
+        context.AddDictionary(() => Definitions, value => Definitions = value);
 
     public static void Replace(AnimalSkillCatalog catalog)
     {

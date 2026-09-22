@@ -109,9 +109,17 @@ internal sealed class ModLuaRuntime : IDisposable
 
     public void Dispose()
     {
+        DisposeRuntime(notifyUnload: true);
+    }
+
+    /// <summary>候选失败或旧代释放只回收 Lua，不让 OnUnload 修改仍在运行的新世界上下文。</summary>
+    internal void DisposeWithoutCallbacks() => DisposeRuntime(notifyUnload: false);
+
+    private void DisposeRuntime(bool notifyUnload)
+    {
         try
         {
-            InvokeMain("OnUnload", api);
+            if (notifyUnload) InvokeMain("OnUnload", api);
         }
         catch (Exception ex)
         {

@@ -12,9 +12,9 @@ using UnityEngine.Tilemaps;
 public sealed partial class ModRuntimeManager
 {
     #region 来源与所有权
-    private readonly List<PendingTileDefinition> pendingTileDefinitions = new();
-    private readonly List<(string Id, RuntimeTileDefinition Previous)> tileDefinitionChanges = new();
-    private readonly List<(string Id, TileBase Asset)> registeredTileAssets = new();
+    private List<PendingTileDefinition> pendingTileDefinitions = new();
+    private List<(string Id, RuntimeTileDefinition Previous)> tileDefinitionChanges = new();
+    private List<(string Id, TileBase Asset)> registeredTileAssets = new();
 
     private sealed class PendingTileDefinition
     {
