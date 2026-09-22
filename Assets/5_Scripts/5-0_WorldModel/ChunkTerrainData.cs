@@ -504,6 +504,12 @@ namespace FlatWorld.WorldModel
             return false;
         }
 
+        #region 生成高度兼容查询
+        /// <summary>保留生成高度的稳定查询入口；当前实现复用 height 层，不新增权威高度或持久化字段。</summary>
+        public bool TryGetSurfaceElevation(int x, int y, out float value) =>
+            TryGetEnvironmentValue("height", x, y, out value);
+        #endregion
+
         /// <summary>设置某个格子的环境数据；没有这种环境数据时会自动创建。</summary>
         public void SetEnvironmentValue(string layerId, int x, int y, float value)
         {
@@ -638,6 +644,7 @@ namespace FlatWorld.WorldModel
                 _grass = null;
             }
             Changed = null;
+            LiquidBatchChanged = null;
         }
 
         private int GetIndex(int x, int y)

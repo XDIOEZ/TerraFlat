@@ -35,6 +35,7 @@ public static class WorldItemWaterRules
     {
         RuntimeWaterCurrentKind.River => RiverDriftSpeed * WaterEnvironmentRules.ResolveRiverStrength(flow),
         RuntimeWaterCurrentKind.Ocean => OceanDriftSpeed,
+        RuntimeWaterCurrentKind.ExperimentalLiquid => Mathf.Min(flow, 1f),
         _ => 0f
     };
 

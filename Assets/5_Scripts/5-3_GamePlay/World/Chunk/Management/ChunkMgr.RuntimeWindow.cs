@@ -460,6 +460,7 @@ public partial class ChunkMgr
             SaveDataMgr.Instance?.RestoreRuntimeTerrainForChunk(address, chunk);
             SaveDataMgr.Instance?.RestoreRuntimeBuildingsForChunk(address);
             SaveDataMgr.Instance?.RestoreRuntimeAiEntitiesForChunk(address);
+            NotifyLiquidFlowChunkReady(chunk);
             if (!binding.WantsPresentation)
                 return;
             QueueRuntimeChunkPresentation(address, binding, chunk);

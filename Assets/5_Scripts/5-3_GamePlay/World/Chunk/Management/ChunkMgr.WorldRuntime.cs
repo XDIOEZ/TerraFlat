@@ -167,6 +167,7 @@ public partial class ChunkMgr
                 Mathf.Max(1, maxChunkCommitsPerFrame));
         }
         ReconcileRuntimeWindowBindings();
+        AdvanceLiquidFlowExperiment(deltaSeconds);
     }
 
     /// <summary>玩家修改性能模式后，立即调整后台线程数量。</summary>
@@ -198,6 +199,8 @@ public partial class ChunkMgr
     /// <summary>切换场景时清空旧区块，并让新场景使用新的世界纪元。</summary>
     private void ResetWorldRuntimeForSceneChange()
     {
+        StopLiquidFlowExperiment();
+        WorldLiquidFlowObstacles.ClearWorld();
         ClearRuntimeWindowBindings();
         if (runtimeChunkManager == null)
             return;
@@ -215,6 +218,8 @@ public partial class ChunkMgr
             return;
 
         IsWorldRuntimeShuttingDown = true;
+        StopLiquidFlowExperiment();
+        WorldLiquidFlowObstacles.ClearWorld();
         if (runtimeHost != null)
             runtimeHost.Bind(null);
         runtimeChunkManager?.CancelAllRequests();

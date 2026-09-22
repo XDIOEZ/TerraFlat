@@ -40,6 +40,7 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IChunkViewRenderer
             throw new InvalidOperationException("地表植被图层绑定前必须完成世界和物品目录初始化。");
         manager.NaturalItemRemoved += HandleRemoved;
         boundChunk.Terrain.Changed += HandleTerrainChanged;
+        boundChunk.Terrain.LiquidBatchChanged += HandleLiquidBatchChanged;
 
         IReadOnlyList<NaturalItemPlacement> placements = chunk.Ecology?.Placements;
         if (placements == null) return;
@@ -65,6 +66,7 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IChunkViewRenderer
     {
         if (manager != null) manager.NaturalItemRemoved -= HandleRemoved;
         if (boundChunk?.Terrain != null) boundChunk.Terrain.Changed -= HandleTerrainChanged;
+        if (boundChunk?.Terrain != null) boundChunk.Terrain.LiquidBatchChanged -= HandleLiquidBatchChanged;
         if (tilemap != null) tilemap.ClearAllTiles();
         foreach (Tile tile in tiles.Values)
         {
@@ -108,6 +110,13 @@ public sealed class ChunkGroundCoverRenderer : MonoBehaviour, IChunkViewRenderer
         if (changed.Kind == TerrainChangeKind.Cell || changed.Kind == TerrainChangeKind.TileStack ||
             changed.Kind == TerrainChangeKind.Environment || changed.Kind == TerrainChangeKind.Liquid)
             RefreshCell(new Vector3Int(changed.LocalCell.X, changed.LocalCell.Y, 0));
+    }
+
+    /// <summary>批次结束后再更新被液体覆盖或露出的植被，不订阅逐格模拟过程。</summary>
+    private void HandleLiquidBatchChanged(ChunkLiquidBatchChanged changed)
+    {
+        foreach (int index in changed.CellIndices.Span)
+            RefreshCell(new Vector3Int(index % changed.Terrain.Width, index / changed.Terrain.Width, 0));
     }
 
     /// <summary>用与工具相同的查询选取此格剩余植被，全部采完后清空图像。</summary>

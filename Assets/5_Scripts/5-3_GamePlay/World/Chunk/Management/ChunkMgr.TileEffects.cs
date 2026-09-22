@@ -36,7 +36,8 @@ public enum RuntimeWaterCurrentKind : byte
 {
     None = 0,
     River = 1,
-    Ocean = 2
+    Ocean = 2,
+    ExperimentalLiquid = 3
 }
 
 /// <summary>世界水格的单位流向和原始流量，供漂浮物等玩法统一读取。</summary>
@@ -208,6 +209,11 @@ public partial class ChunkMgr
 
         ChunkTerrainData terrain = sample.Terrain;
         Vector2Int local = sample.LocalCell;
+        if (TryGetExperimentalLiquidFlow(worldPosition, out Vector2 liquidFlow))
+        {
+            current = new RuntimeWaterCurrentSample(RuntimeWaterCurrentKind.ExperimentalLiquid, liquidFlow, liquidFlow.magnitude);
+            return true;
+        }
         terrain.TryGetEnvironmentValue("riverKind", local.x, local.y, out float riverKind);
         RuntimeWaterCurrentKind kind = WaterEnvironmentRules.ResolveCurrentKind(
             Mathf.RoundToInt(riverKind), (SurfaceBiomeKind)sample.Cell.BiomeId == SurfaceBiomeKind.Ocean);
