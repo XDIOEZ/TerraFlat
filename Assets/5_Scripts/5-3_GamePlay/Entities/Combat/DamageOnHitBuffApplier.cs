@@ -4,7 +4,8 @@ using UnityEngine;
 /// 命中附加 Buff 模块：监听指定伤害模块的实体命中结果，并按概率给有效命中的目标添加 Buff。
 /// 该模块不参与伤害计算，也不会作用于格子建筑，因此可被燃烧、中毒、冰冻等武器效果复用。
 /// </summary>
-public sealed class DamageOnHitBuffApplier : Module, IItemModuleDependencyBinder, ICombatDamageContextModifier
+public sealed class DamageOnHitBuffApplier : Module, IItemModuleDependencyBinder, ICombatDamageContextModifier,
+    ICombustionStateReceiver
 {
     [SerializeField, Tooltip("负责发布实体命中结果的伤害模块；Prefab 可显式绑定，JSON 组合由 ItemMods 绑定。")]
     private Mod_Damage damageModule;
@@ -18,7 +19,11 @@ public sealed class DamageOnHitBuffApplier : Module, IItemModuleDependencyBinder
     [SerializeField, Min(1), Tooltip("一次成功附加的 Buff 层数；一次提交完整层数以正确比较水火强度。")]
     private int applicationStacks = 1;
 
+    [SerializeField, Tooltip("开启后，只有同一物品处于燃烧状态时才允许附加该 Buff。")]
+    private bool requiresCombustion;
+
     [SerializeField] private Ex_ModData_MemoryPackable moduleData = new();
+    private bool combustionActive = true;
 
     public override ModuleData _Data
     {
@@ -29,10 +34,12 @@ public sealed class DamageOnHitBuffApplier : Module, IItemModuleDependencyBinder
     public override string CanonicalModuleId => "Module_DamageOnHitBuff";
     public override ModuleTickMode TickMode => ModuleTickMode.Disabled;
 
+    private bool IsEffectActive => isActiveAndEnabled && (!requiresCombustion || combustionActive);
+
     /// <summary>新后端在统一结算中应用同一 Buff 配置；旧后端仍保留原命中回调且不会重复执行。</summary>
     public void ModifyDamageContext(ref FlatWorld.Combat.CombatDamageContext context)
     {
-        if (string.IsNullOrWhiteSpace(buffId) || applicationChance <= 0f) return;
+        if (!IsEffectActive || string.IsNullOrWhiteSpace(buffId) || applicationChance <= 0f) return;
         context.OnHitBuffs.Add(new FlatWorld.Combat.CombatOnHitBuff {
             Id = buffId.Trim(), Chance = Mathf.Clamp01(applicationChance), Stacks = Mathf.Max(1, applicationStacks) });
     }
@@ -46,6 +53,9 @@ public sealed class DamageOnHitBuffApplier : Module, IItemModuleDependencyBinder
 
         damageModule = resolved;
     }
+
+    /// <summary>燃烧状态只门控效果，不改写组件 enabled，避免破坏其它生命周期。</summary>
+    public void SetCombustionActive(bool active) => combustionActive = active;
 
     /// <summary>模块加载时订阅伤害结算。</summary>
     public override void Load()
@@ -68,7 +78,8 @@ public sealed class DamageOnHitBuffApplier : Module, IItemModuleDependencyBinder
     /// <summary>对一次有效实体命中执行概率判定，并通过目标 BuffManager 添加状态。</summary>
     private void HandleReceiverDamageResolved(DamageReceiver receiver, float damageResult)
     {
-        if (receiver == null ||
+        if (!IsEffectActive ||
+            receiver == null ||
             damageResult < 0f ||
             string.IsNullOrWhiteSpace(buffId))
         {

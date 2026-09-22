@@ -28,7 +28,7 @@ public static partial class RuntimeUIPrefabBuilder
         });
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("[Runtime UI] 已固化视觉特效分页及水体风格选项。");
+        Debug.Log("[Runtime UI] 已固化视觉特效分页及投影、透视、水体选项。");
     }
 
     /// <summary>保存设置页，并按正式运行时 Prefab 契约登记 Addressables。</summary>
@@ -58,6 +58,17 @@ public static partial class RuntimeUIPrefabBuilder
         occlusion.isOn = false;
         CreateSettingsHint(content, "开启后，遮挡玩家的树木会局部透明。", 52f);
 
+        GameObject sunRow = CreateRow("太阳长投影行", content, 72f);
+        TextMeshProUGUI sunLabel = CreateText("太阳长投影标签", sunRow.transform, "太阳长投影", 22f, Cream);
+        sunLabel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        Toggle sunShadows = CreateToggle("太阳长投影开关", sunRow.transform);
+        LayoutElement sunLayout = sunShadows.GetComponent<LayoutElement>();
+        sunLayout.minHeight = 60f;
+        sunLayout.preferredHeight = 64f;
+        sunLayout.minWidth = 88f;
+        sunShadows.isOn = SunShadowSettings.DefaultEnabled;
+        CreateSettingsHint(content, "随太阳方向投射长阴影。低配设备可关闭以减少渲染开销。", 60f);
+
         TextMeshProUGUI label = CreateText("水体风格标签", content, "水体风格", 22f, Cream);
         label.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
         GameObject row = CreateRow("水体风格行", content, 72f);
@@ -77,6 +88,7 @@ public static partial class RuntimeUIPrefabBuilder
         serialized.FindProperty("realisticButton").objectReferenceValue = realistic;
         serialized.FindProperty("resetButton").objectReferenceValue = reset;
         serialized.FindProperty("occlusionToggle").objectReferenceValue = occlusion;
+        serialized.FindProperty("sunShadowToggle").objectReferenceValue = sunShadows;
         serialized.ApplyModifiedPropertiesWithoutUndo();
         return root;
     }

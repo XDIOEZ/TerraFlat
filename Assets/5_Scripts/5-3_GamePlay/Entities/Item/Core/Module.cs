@@ -32,6 +32,12 @@ public interface IItemModuleDependencyBinder
     void BindModuleDependencies(ItemMods modules);
 }
 
+/// <summary>接收同一物品上的通用燃烧状态；光源、命中效果等可按需响应，不反向依赖具体物品类型。</summary>
+public interface ICombustionStateReceiver
+{
+    void SetCombustionActive(bool active);
+}
+
 public enum ModuleTickMode
 {
     EveryFrame,
@@ -158,6 +164,18 @@ public abstract class Module : MonoBehaviour, IRuntimeDataLifecycle
     /// <summary>解除事件、输入与临时资源；无运行时绑定的模块无需重写。</summary>
     [Button("Unload")]
     public virtual void Unload()
+    {
+    }
+
+    /// <summary>原位更新配置的稳定扩展入口；配置与运行态混存的模块可覆写并保留自身进度。</summary>
+    public virtual void ApplyResourceConfiguration(string itemId, string moduleName, string json)
+    {
+        ModuleJsonConfigurator.Apply(this, itemId, moduleName, _Data?.ID, json);
+        OnResourcesReloaded();
+    }
+
+    /// <summary>原位资源更新后重建派生配置；默认不执行 Load，避免重置生命、库存、计时或重复订阅。</summary>
+    public virtual void OnResourcesReloaded()
     {
     }
 

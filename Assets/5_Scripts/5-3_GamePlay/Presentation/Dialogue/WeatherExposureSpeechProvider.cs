@@ -129,11 +129,13 @@ namespace FlatWorld.Dialogue
                 if (nearbyItem == null || nearbyItem == actorItem || nearbyItem.itemMods == null)
                     continue;
 
-                if (!nearbyItem.itemMods.ContainsKey_ID(ModText.Fuel))
+                Mod_Fuel fuel = nearbyItem.itemMods.GetMod_ByID<Mod_Fuel>(ModText.Fuel);
+                if (fuel == null || !fuel.HasFuel())
                     continue;
 
-                Mod_Fuel fuel = nearbyItem.itemMods.GetMod_ByID<Mod_Fuel>(ModText.Fuel);
-                if (fuel != null && fuel.GetIgnitedState() && fuel.HasFuel())
+                Mod_Combustion combustion =
+                    nearbyItem.itemMods.GetMod_ByID<Mod_Combustion>(Mod_Combustion.ModuleId);
+                if (combustion != null ? combustion.IsActivelyBurning : fuel.GetIgnitedState())
                     return true;
             }
 

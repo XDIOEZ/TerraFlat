@@ -2,11 +2,62 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 /// <summary>把运行时定义应用到共享外壳实例。</summary>
 public static class ItemDefinitionRuntime
 {
+    #region 原位配置更新
+
+    /// <summary>
+    /// 更新已有模块的显式配置与未被玩法接管的 Sprite/材质，不替换 ItemData、模块集合或调用 Load。
+    /// 新增/删除模块和外壳结构由后续新实例使用；已有实例的身份、库存和模块运行态继续保留。
+    /// </summary>
+    public static void RefreshLiveConfiguration(Item item, RuntimeItemDefinition previous, RuntimeItemDefinition current)
+    {
+        if (item == null || previous == null || current == null) return;
+        var updates = new List<(Module Module, string Name, string Json)>();
+        foreach (KeyValuePair<string, Module> pair in item.Mods)
+        {
+            Module module = pair.Value;
+            if (module == null || !current.TryGetModuleParameters(pair.Key, out string json)) continue;
+            previous.TryGetModuleParameters(pair.Key, out string oldJson);
+            string moduleId = module._Data?.ID;
+            if (json == oldJson || current.GetModulePrefabId(pair.Key, moduleId) != previous.GetModulePrefabId(pair.Key, moduleId)) continue;
+            json = GetChangedModuleParameters(oldJson, json);
+            if (json == null) continue;
+            ModuleJsonConfigurator.Validate(module, current.Id, pair.Key, moduleId, json);
+            updates.Add((module, pair.Key, json));
+        }
+        foreach (var update in updates)
+        {
+            update.Module.ApplyResourceConfiguration(current.Id, update.Name, update.Json);
+        }
+        SpriteRenderer renderer = item.Sprite;
+        if (renderer != null)
+        {
+            if (current.Sprite != null && renderer.sprite == previous.Sprite) renderer.sprite = current.Sprite;
+            if (current.Material != null && renderer.sharedMaterial == previous.Material) renderer.sharedMaterial = current.Material;
+        }
+        item.MarkModuleScheduleDirty();
+        item.NotifyRuntimeStructureChanged();
+    }
+
+    /// <summary>仅写发生变化的显式字段，未修改的集合与内部运行态不能随完整 JSON 被重新构造。</summary>
+    private static string GetChangedModuleParameters(string previous, string current)
+    {
+        if (string.IsNullOrWhiteSpace(current)) return null;
+        JObject before = string.IsNullOrWhiteSpace(previous) ? new JObject() : JObject.Parse(previous);
+        JObject changes = JObject.Parse(current);
+        foreach (JProperty property in changes.Properties().ToArray())
+            if (JToken.DeepEquals(before[property.Name], property.Value)) property.Remove();
+        return changes.HasValues ? changes.ToString(Formatting.None) : null;
+    }
+
+    #endregion
+
     private static readonly int PlayerOccluderId = Shader.PropertyToID("_PlayerOccluder");
     private static readonly MaterialPropertyBlock VisualPropertyBlock = new();
 
@@ -37,6 +88,7 @@ public static class ItemDefinitionRuntime
             ItemData currentData = definition.CreateItemData();
             RestoreItemInstanceState(currentData, persistedData);
             RestoreModuleRuntimeState(currentData.ModuleDataDic, persistedData.ModuleDataDic);
+            Mod_HandDrill.RestoreRuntimeDurability(currentData);
             rebasedData = currentData;
         }
 
@@ -75,6 +127,7 @@ public static class ItemDefinitionRuntime
         currentData.inHand = persistedData.inHand;
         currentData.transform = persistedData.transform ?? currentData.transform;
         currentData.FactionId = persistedData.FactionId;
+        CraftedDurabilityQuality.RestorePersistedMultiplier(currentData, persistedData);
 
         if (currentData.Stack != null && persistedData.Stack != null)
             currentData.Stack.Amount = persistedData.Stack.Amount;

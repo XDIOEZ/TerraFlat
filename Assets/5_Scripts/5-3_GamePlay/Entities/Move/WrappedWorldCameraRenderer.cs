@@ -303,6 +303,7 @@ public sealed class WrappedWorldCameraRenderer : MonoBehaviour
         proxy.gameObject.layer = source.gameObject.layer;
 
         proxy.lightType = Light2D.LightType.Point;
+        Light2DSortingLayerUtility.CopyLightLayers(source, proxy);
         proxy.blendStyleIndex = source.blendStyleIndex;
         proxy.color = source.color;
         proxy.intensity = source.intensity;

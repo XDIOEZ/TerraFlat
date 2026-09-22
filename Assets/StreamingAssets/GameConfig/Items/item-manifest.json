@@ -17,6 +17,11 @@
       "enabled": true
     },
     {
+      "id": "crucible",
+      "path": "shells/crucible.json",
+      "enabled": true
+    },
+    {
       "id": "weapons",
       "path": "shells/weapons.json",
       "enabled": true
@@ -99,6 +104,16 @@
     {
       "id": "medical",
       "path": "shells/medical.json",
+      "enabled": true
+    },
+    {
+      "id": "livestock_items",
+      "path": "shells/livestock_items.json",
+      "enabled": true
+    },
+    {
+      "id": "wooden_barrel",
+      "path": "shells/wooden_barrel.json",
       "enabled": true
     }
   ]

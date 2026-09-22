@@ -54,6 +54,14 @@ public sealed class LocalTemperatureSource : MonoBehaviour
 
     private void Publish()
     {
+        if (Mathf.Approximately(celsiusOffset, 0f))
+        {
+            if (registeredManager != null)
+                registeredManager.RemoveLocalTemperatureSource(this);
+            registeredManager = null;
+            return;
+        }
+
         // 只发布当前世界场景的设备，预加载或尚未卸载的旧维度设备不能影响新世界。
         if (GameManager.Instance == null || !GameManager.Instance.IsInGameWorld ||
             gameObject.scene != SceneManager.GetActiveScene())

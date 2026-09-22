@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:砂子=熔融玻璃",
+      "displayName": "砂子=熔融玻璃",
+      "recipeType": "smelting",
+      "requiredStation": "crucible",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 1700.0,
+      "maxTemperature": 2000.0,
+      "processingSeconds": 20.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Sand",
+          "amount": 1
+        }
+      ],
+      "outputs": [],
+      "liquidOutput": {
+        "liquidId": "core:molten_glass",
+        "amount": 1.0
+      },
+      "actions": []
+    },
+    {
+      "id": "core:铜矿石=熔融铜",
+      "displayName": "铜矿石=熔融铜",
+      "recipeType": "smelting",
+      "requiredStation": "crucible",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 1085.0,
+      "maxTemperature": 1600.0,
+      "processingSeconds": 20.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ore_Copper",
+          "amount": 2
+        }
+      ],
+      "outputs": [],
+      "liquidOutput": {
+        "liquidId": "core:molten_copper",
+        "amount": 1.0
+      },
+      "actions": []
+    },
+    {
+      "id": "core:锡矿石=熔融锡",
+      "displayName": "锡矿石=熔融锡",
+      "recipeType": "smelting",
+      "requiredStation": "crucible",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 232.0,
+      "maxTemperature": 1200.0,
+      "processingSeconds": 20.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ore_Tin",
+          "amount": 2
+        }
+      ],
+      "outputs": [],
+      "liquidOutput": {
+        "liquidId": "core:molten_tin",
+        "amount": 1.0
+      },
+      "actions": []
+    },
+    {
+      "id": "core:铁矿石=熔融铁",
+      "displayName": "铁矿石=熔融铁",
+      "recipeType": "smelting",
+      "requiredStation": "crucible",
+      "inputRule": "unordered",
+      "gridWidth": 1,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "temperature": 1538.0,
+      "maxTemperature": 2000.0,
+      "processingSeconds": 20.0,
+      "inputs": [
+        {
+          "slot": 0,
+          "match": "exact_item",
+          "itemId": "Ore_Iron",
+          "amount": 1
+        }
+      ],
+      "outputs": [],
+      "liquidOutput": {
+        "liquidId": "core:molten_iron",
+        "amount": 1.0
+      },
+      "actions": []
+    }
+  ]
+}

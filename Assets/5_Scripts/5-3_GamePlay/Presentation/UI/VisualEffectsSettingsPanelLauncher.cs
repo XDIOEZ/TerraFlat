@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 视觉特效分页的表现控制器：正式 Prefab 提供两种水体风格按钮和恢复默认入口。
+/// 视觉特效分页的表现控制器：正式 Prefab 提供水体风格、透视和太阳长投影开关。
 /// 控件只通过 Provider 提交偏好；当前选中状态跟随设置事件刷新，不持有渲染业务。
 /// </summary>
 [DisallowMultipleComponent]
@@ -15,6 +15,8 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     [SerializeField] private Button realisticButton;
     [SerializeField] private Button resetButton;
     [SerializeField] private Toggle occlusionToggle;
+    [SerializeField] private Toggle sunShadowToggle;
+    private ISettingsToggle sunShadowSetting;
     private ISettingsToggle occlusionSetting;
     private ISettingsProvider provider;
     private ISettingsSwitch styleSetting;
@@ -26,13 +28,15 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     /// <summary>页面首次显示时解析设置契约，保留正式 Prefab 的序列化控件引用。</summary>
     private void Awake()
     {
-        if (stylizedButton == null || realisticButton == null || resetButton == null || occlusionToggle == null)
+        if (stylizedButton == null || realisticButton == null || resetButton == null || occlusionToggle == null || sunShadowToggle == null)
             throw new MissingReferenceException("视觉特效设置页缺少按钮引用。");
 
         provider = WaterVisualSettings.SettingsProvider;
         styleSetting = provider.GetSwitch(WaterVisualSettings.StyleSettingKey);
         occlusionSetting = PlayerOcclusionShaderGlobals.SettingsProvider.GetToggle(
             PlayerOcclusionShaderGlobals.EnabledSettingKey);
+        sunShadowSetting = SunShadowSettings.SettingsProvider.GetToggle(SunShadowSettings.EnabledSettingKey);
+        sunShadowToggle.onValueChanged.AddListener(SetSunShadows);
         occlusionToggle.onValueChanged.AddListener(SetOcclusion);
         stylizedButton.onClick.AddListener(SelectStylized);
         realisticButton.onClick.AddListener(SelectRealistic);
@@ -44,6 +48,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     {
         WaterVisualSettings.Changed += RefreshView;
         PlayerOcclusionShaderGlobals.Changed += RefreshView;
+        SunShadowSettings.Changed += RefreshView;
         RefreshView();
     }
 
@@ -52,9 +57,13 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     {
         WaterVisualSettings.Changed -= RefreshView;
         PlayerOcclusionShaderGlobals.Changed -= RefreshView;
+        SunShadowSettings.Changed -= RefreshView;
     }
 
     private void SetOcclusion(bool value) => occlusionSetting.SetValue(value);
+
+    /// <summary>通过 Provider 即时保存太阳投影开关。</summary>
+    private void SetSunShadows(bool value) => sunShadowSetting.SetValue(value);
 
     /// <summary>通过设置契约选用风格化水面。</summary>
     private void SelectStylized() => SelectStyle(0);
@@ -70,17 +79,19 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
         RefreshView();
     }
 
-    /// <summary>仅恢复本页水体风格。</summary>
+    /// <summary>恢复本页的全部视觉偏好。</summary>
     private void ResetToDefaults()
     {
         provider.ResetToDefaults();
         PlayerOcclusionShaderGlobals.SettingsProvider.ResetToDefaults();
+        SunShadowSettings.SettingsProvider.ResetToDefaults();
     }
 
     /// <summary>用选中底色标识当前风格，两种按钮始终可导航和操作。</summary>
     private void RefreshView()
     {
         occlusionToggle.SetIsOnWithoutNotify(PlayerOcclusionShaderGlobals.Enabled);
+        sunShadowToggle.SetIsOnWithoutNotify(SunShadowSettings.Enabled);
         stylizedButton.targetGraphic.color = styleSetting.SelectedIndex == 0
             ? FlatWorldUITheme.Accent : FlatWorldUITheme.Surface;
         realisticButton.targetGraphic.color = styleSetting.SelectedIndex == 1
@@ -97,6 +108,7 @@ public sealed class VisualEffectsSettingsPanelLauncher : MonoBehaviour, ISetting
     private void OnDestroy()
     {
         occlusionToggle.onValueChanged.RemoveListener(SetOcclusion);
+        if (sunShadowToggle != null) sunShadowToggle.onValueChanged.RemoveListener(SetSunShadows);
         stylizedButton.onClick.RemoveListener(SelectStylized);
         realisticButton.onClick.RemoveListener(SelectRealistic);
         resetButton.onClick.RemoveListener(ResetToDefaults);

@@ -1,4 +1,4 @@
-Shader "Game/2D/Torch-Emissive-Overlay"
+Shader "Game/2D/Emissive-Sprite-Overlay"
 {
     Properties
     {

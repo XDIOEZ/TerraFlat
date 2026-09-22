@@ -8,6 +8,9 @@ public enum DimensionGenerationMode
     Cave
 }
 
+/// <summary>太阳长投影的维度策略；自动按地表/地下及固定光照规则选择。</summary>
+public enum DimensionSunShadowMode { Automatic, Enabled, Disabled }
+
 [Serializable]
 public sealed class DimensionLoadingTheme
 {
@@ -56,6 +59,8 @@ public sealed class DimensionDefinition
     [Tooltip("维度允许的最高全局光照强度，不作为最低亮度或恒定亮度。")]
     [Range(0f, 1f)] public float FixedLighting = 1f;
     public bool SuppressWeather;
+    [Tooltip("太阳长投影：自动仅允许非固定光照的地表，特殊维度可显式覆盖。")]
+    public DimensionSunShadowMode SunShadows;
     public bool EnableMonsterSpawning = true;
 
     [Header("加载页主题")]

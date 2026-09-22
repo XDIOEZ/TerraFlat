@@ -764,5 +764,35 @@
         }
       }
     }
+    ,{
+      "id": "CottonCrop",
+      "parent": "Crop_Base",
+      "gameName": "棉花",
+      "description": "成熟后可以采集棉花纤维。",
+      "weight": 0.7,
+      "volume": 2.5,
+      "stackable": true,
+      "canBePickedUp": false,
+      "modules": {
+        "cropYield": {
+          "parameters": {
+            "outputs": [
+              {
+                "itemId": "Cotton",
+                "minAmount": 2,
+                "maxAmount": 4,
+                "probability": 1.0
+              },
+              {
+                "itemId": "Seed_Cotton",
+                "minAmount": 1,
+                "maxAmount": 1,
+                "probability": 0.25
+              }
+            ]
+          }
+        }
+      }
+    }
   ]
 }

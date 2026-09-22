@@ -88,6 +88,62 @@
         "drinkTickSeconds": 1.0,
         "followWaterVisualStyle": true
       }
+    },
+    {
+      "id": "core:molten_glass",
+      "displayName": "熔融玻璃",
+      "description": "砂子在坩埚中达到熔化温度后形成的高温玻璃液体。",
+      "category": "molten",
+      "visualState": "molten_glass",
+      "drinkable": false,
+      "hydrationPerServing": 0.0,
+      "solidification": {
+        "meltingPoint": 1700.0,
+        "outputItemId": "Glass",
+        "outputAmount": 1
+      }
+    },
+    {
+      "id": "core:molten_copper",
+      "displayName": "熔融铜",
+      "description": "铜矿石在坩埚中熔化后的高温铜液。",
+      "category": "molten",
+      "visualState": "molten_copper",
+      "drinkable": false,
+      "hydrationPerServing": 0.0,
+      "solidification": {
+        "meltingPoint": 1085.0,
+        "outputItemId": "Ingot_Copper",
+        "outputAmount": 1
+      }
+    },
+    {
+      "id": "core:molten_tin",
+      "displayName": "熔融锡",
+      "description": "锡矿石在坩埚中熔化后的高温锡液。",
+      "category": "molten",
+      "visualState": "molten_tin",
+      "drinkable": false,
+      "hydrationPerServing": 0.0,
+      "solidification": {
+        "meltingPoint": 232.0,
+        "outputItemId": "Ingot_Tin",
+        "outputAmount": 1
+      }
+    },
+    {
+      "id": "core:molten_iron",
+      "displayName": "熔融铁",
+      "description": "铁矿石在坩埚中熔化后的高温铁液。",
+      "category": "molten",
+      "visualState": "molten_iron",
+      "drinkable": false,
+      "hydrationPerServing": 0.0,
+      "solidification": {
+        "meltingPoint": 1538.0,
+        "outputItemId": "Ingot_RawIron",
+        "outputAmount": 1
+      }
     }
   ]
 }

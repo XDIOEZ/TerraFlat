@@ -258,6 +258,7 @@ public static class CraftingService
                 return false;
             }
 
+            CraftedDurabilityQuality.ApplyToCraftedOutput(itemData, output.durabilityMultiplier);
             itemData.Stack.Amount = applyDifficultyMultiplier ? GameDifficultyService.ScaleCount(
                 output.amount,
                 GameDifficultyService.Current.Production.CraftingOutputMultiplier,

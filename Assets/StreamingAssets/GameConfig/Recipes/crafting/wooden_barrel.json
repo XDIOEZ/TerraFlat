@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "recipes": [
+    {
+      "id": "core:木桶_树脂",
+      "displayName": "木桶（树脂）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Plank", "amount": 8 },
+        { "slot": 1, "match": "exact_item", "itemId": "Rope", "amount": 4 },
+        { "slot": 2, "match": "exact_item", "itemId": "Resin", "amount": 4 }
+      ],
+      "outputs": [{ "itemId": "WoodenBarrel", "amount": 1 }],
+      "actions": []
+    },
+    {
+      "id": "core:木桶_树脂胶水",
+      "displayName": "木桶（树脂胶水）",
+      "recipeType": "crafting",
+      "inputRule": "unordered",
+      "gridWidth": 3,
+      "gridHeight": 1,
+      "allowMirror": false,
+      "inputs": [
+        { "slot": 0, "match": "exact_item", "itemId": "Plank", "amount": 8 },
+        { "slot": 1, "match": "exact_item", "itemId": "Rope", "amount": 4 },
+        { "slot": 2, "match": "exact_item", "itemId": "Glue", "amount": 4 }
+      ],
+      "outputs": [
+        {
+          "itemId": "WoodenBarrel",
+          "amount": 1,
+          "durabilityMultiplier": 1.5
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

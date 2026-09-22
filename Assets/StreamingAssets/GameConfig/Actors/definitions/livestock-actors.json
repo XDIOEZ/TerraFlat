@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "actors": [
+    {
+      "id": "Sheep",
+      "parent": "Chicken",
+      "lootTableId": "Sheep_Default",
+      "shellPrefab": "CoreActor.Sheep.Shell",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/AI/Chicken.prefab",
+      "gameName": "绵羊",
+      "description": "温顺的草食动物，可以剪取羊毛。",
+      "tags": ["Sheep", "Animal", "Blood", "Prey"],
+      "visual": {
+        "animationState": "Stand",
+        "animatorControllerAddress": "flatworld.actor.animator.sheep",
+        "flipX": false
+      },
+      "modules": {
+        "ai": {
+          "prefab": "AI_Chicken",
+          "id": "Module_AI_Chicken",
+          "parameters": {
+            "enableEggLaying": false,
+            "eggItemId": "",
+            "enableGrassForaging": true,
+            "edibleTags": ["Food", "Plant", "Grass"],
+            "fleeFromPlayer": true
+          }
+        }
+      }
+    }
+  ]
+}

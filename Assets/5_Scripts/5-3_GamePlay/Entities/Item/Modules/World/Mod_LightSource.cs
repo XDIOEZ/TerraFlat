@@ -7,10 +7,10 @@ using UnityEngine.Rendering.Universal;
 /// 地块光照层由 LightLayerMgr 按此 Light2D 的实时强度、范围和距离进行计算。
 /// 运行时既可作为独立模块 Prefab，也可直接挂在物品外壳上供 JSON 定义复用。
 /// </summary>
-public class Mod_LightSource : Module
+public class Mod_LightSource : Module, ICombustionStateReceiver
 {
     private const string EmissiveOverlayName = "Light Emissive Overlay";
-    private const string EmissiveShaderResourcePath = "Shaders/TorchEmissiveOverlay";
+    private const string EmissiveShaderResourcePath = "Shaders/EmissiveSpriteOverlay";
     private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
     private static readonly int ClipLocalYId = Shader.PropertyToID("_ClipLocalY");
 
@@ -28,11 +28,20 @@ public class Mod_LightSource : Module
     [Tooltip("可以不手动赋值，模块会自动查找物品子对象中的 Point Light2D")]
     public Light2D TargetLight;
 
+    [SerializeField, Tooltip("光源颜色；具体设备通过 JSON 配置，不在模块里硬编码。")]
+    private Color lightColor = Color.white;
+
+    [Tooltip("接收局部光照的 Sorting Layer 名称；空列表沿用光源 Prefab 原配置。不是物理碰撞层或真实高度。")]
+    public string[] TargetSortingLayers = System.Array.Empty<string>();
+
+    [Tooltip("开启后，只有同一物品的燃烧模块处于活动状态时才输出光照。")]
+    public bool followCombustionState;
+
     [Tooltip("光照模块的运行时/存档参数")]
     public LightSourceData Data = new LightSourceData();
 
     [Header("自发光 Sprite")]
-    [Tooltip("仅用于火把等自身发光的 Sprite。开启后，指定高度以上额外绘制一层不受 2D 阴影影响的自发光区域。")]
+    [Tooltip("用于自身发光的 Sprite。开启后，指定高度以上额外绘制一层不受 2D 阴影影响的自发光区域。")]
     [SerializeField] private bool keepUpperSpriteEmissive;
 
     [Tooltip("开启后让整个源 Sprite 使用不受 2D 阴影压暗的覆盖层；仍保留比自身基准更亮的光照结果，也不改变它对世界投射的阴影。")]
@@ -44,18 +53,25 @@ public class Mod_LightSource : Module
     private SpriteRenderer emissiveSourceRenderer;
     private SpriteRenderer emissiveOverlayRenderer;
     private MaterialPropertyBlock emissivePropertyBlock;
+    private bool combustionActive = true;
+    private Light2D sortingLayerSourceLight;
+    private int[] originalSortingLayerIds;
 
     private static Material sharedEmissiveMaterial;
     private static bool emissiveShaderMissingLogged;
 
     public float LightIntensity => Data != null ? Data.Intensity : 0f;
     public float LightRange => Data != null ? Data.Range : 0f;
-    public bool IsLightEnabled => Data != null && Data.IsEnabled;
+    public bool IsLightEnabled =>
+        Data != null &&
+        Data.IsEnabled &&
+        (!followCombustionState || combustionActive);
 
     public override void Awake()
     {
         base.Awake();
         ResolveTargetLight();
+        ApplyTargetSortingLayers();
         ApplyToUnityLight();
         RefreshEmissiveOverlay();
     }
@@ -63,6 +79,7 @@ public class Mod_LightSource : Module
     private void OnEnable()
     {
         ResolveTargetLight();
+        ApplyTargetSortingLayers();
         RefreshEmissiveOverlay();
     }
 
@@ -79,6 +96,7 @@ public class Mod_LightSource : Module
         Data ??= new LightSourceData();
         ClampData();
         ResolveTargetLight();
+        ApplyTargetSortingLayers();
         ApplyToUnityLight();
     }
 
@@ -118,6 +136,7 @@ public class Mod_LightSource : Module
         Data ??= new LightSourceData();
         ClampData();
         ResolveTargetLight();
+        ApplyTargetSortingLayers();
         ApplyToUnityLight();
         RefreshEmissiveOverlay();
     }
@@ -163,6 +182,14 @@ public class Mod_LightSource : Module
         ApplyToUnityLight();
     }
 
+    /// <summary>燃烧状态只作为运行时门控，不改写光源自身的持久化启用配置。</summary>
+    public void SetCombustionActive(bool active)
+    {
+        combustionActive = active;
+        ApplyToUnityLight();
+        RefreshEmissiveOverlay();
+    }
+
     public void SetLightParameters(float intensity, float range, float innerRadius, bool isEnabled = true)
     {
         Data ??= new LightSourceData();
@@ -182,6 +209,47 @@ public class Mod_LightSource : Module
         TargetLight = searchRoot.GetComponentInChildren<Light2D>(true);
     }
 
+    #region 光照接收层与建筑遮挡契约
+
+    /// <summary>MOD 可覆盖此入口提供自身光源；读取真实 Light2D 状态，兼容燃料模块直接熄灯。</summary>
+    public virtual bool TryGetActiveOcclusionLight(out Light2D light)
+    {
+        light = TargetLight;
+        return isActiveAndEnabled && light != null && light.isActiveAndEnabled &&
+               light.lightType == Light2D.LightType.Point && light.intensity > 0f &&
+               light.pointLightOuterRadius > 0f;
+    }
+
+    /// <summary>配置局部光照的目标层并立即应用；空列表恢复 Prefab 基线，不改变 Sprite 排序与物理碰撞。</summary>
+    public void SetTargetSortingLayers(string[] layerNames)
+    {
+        // 在修改配置前检查名称，避免无效 MOD 参数留下半应用状态。
+        Light2DSortingLayerUtility.ResolveLayerIds(layerNames);
+        TargetSortingLayers = layerNames != null ? (string[])layerNames.Clone() : System.Array.Empty<string>();
+        ResolveTargetLight();
+        ApplyTargetSortingLayers();
+    }
+
+    /// <summary>加载配置时解析名称，不在光照强度更新热路径中重复分配层数组。</summary>
+    private void ApplyTargetSortingLayers()
+    {
+        if (TargetLight == null)
+            return;
+        if (sortingLayerSourceLight != TargetLight)
+        {
+            sortingLayerSourceLight = TargetLight;
+            originalSortingLayerIds = Light2DSortingLayerUtility.GetLightLayers(TargetLight)
+                ?? Light2DSortingLayerUtility.ResolveLayerIds(null);
+        }
+
+        int[] targetLayers = TargetSortingLayers == null || TargetSortingLayers.Length == 0
+            ? originalSortingLayerIds
+            : Light2DSortingLayerUtility.ResolveLayerIds(TargetSortingLayers);
+        Light2DSortingLayerUtility.SetLightLayers(TargetLight, targetLayers);
+    }
+
+    #endregion
+
     private void ClampData()
     {
         if (Data == null)
@@ -198,6 +266,7 @@ public class Mod_LightSource : Module
             return;
 
         TargetLight.intensity = Data.Intensity;
+        TargetLight.color = lightColor;
         if (TargetLight.lightType == Light2D.LightType.Point)
         {
             TargetLight.pointLightOuterRadius = Data.Range;
@@ -205,7 +274,7 @@ public class Mod_LightSource : Module
             ConfigureSolidWorldOcclusion(TargetLight);
         }
 
-        TargetLight.enabled = Data.IsEnabled && Data.Intensity > 0f && Data.Range > 0f;
+        TargetLight.enabled = IsLightEnabled && Data.Intensity > 0f && Data.Range > 0f;
         KeepPointLightOn2DPlane();
     }
 
@@ -274,7 +343,7 @@ public class Mod_LightSource : Module
         Transform searchRoot = item != null ? item.transform : transform;
         SpriteRenderer[] renderers = searchRoot.GetComponentsInChildren<SpriteRenderer>(true);
 
-        // 火把的动画 SpriteRenderer 自带 Animator，优先锁定它，避免误选交互描边等运行时代理。
+        // 动画 SpriteRenderer 自带 Animator，优先锁定它，避免误选交互描边等运行时代理。
         for (int i = 0; i < renderers.Length; i++)
         {
             SpriteRenderer candidate = renderers[i];
@@ -323,7 +392,7 @@ public class Mod_LightSource : Module
 
         if (emissiveOverlayRenderer.sharedMaterial == null ||
             emissiveOverlayRenderer.sharedMaterial.shader == null ||
-            emissiveOverlayRenderer.sharedMaterial.shader.name != "Game/2D/Torch-Emissive-Overlay")
+            emissiveOverlayRenderer.sharedMaterial.shader.name != "Game/2D/Emissive-Sprite-Overlay")
         {
             emissiveOverlayRenderer.sharedMaterial = GetSharedEmissiveMaterial();
         }

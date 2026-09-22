@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "Wool",
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Common/Prop.prefab",
+      "gameName": "羊毛",
+      "description": "从绵羊身上剪下的柔软羊毛，可用于制作布料。",
+      "amount": 1.0,
+      "weight": 0.2,
+      "volume": 0.4,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material", "AnimalProduct"]
+    }
+  ]
+}

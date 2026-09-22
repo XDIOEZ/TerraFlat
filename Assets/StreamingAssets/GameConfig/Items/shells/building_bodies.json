@@ -1598,7 +1598,7 @@
       "amount": 1,
       "weight": 2,
       "volume": 4,
-      "stackable": true,
+      "stackable": false,
       "canBePickedUp": false,
       "tags": [
         "Modern"
@@ -1677,17 +1677,128 @@
           "id": "建筑模块",
           "enabled": false,
           "data": {
-            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Torch_Building\",\"SummonerPrefabId\":\"Torch_Summoner\"}",
+            "BitData": "{\"Version\":3,\"maxVisibleDistance\":10.0,\"minVisibleDistance\":1.0,\"State\":0,\"Role\":1,\"SnapshotBase64\":null,\"BuildingPrefabId\":\"Torch_Building\",\"SummonerPrefabId\":\"Torch_Summoner\",\"SharedModuleIds\":[\"燃料模块\",\"Mod_Combustion\"]}",
             "Type": 0
           }
         },
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 1440.0,
+                "y": 1440.0
+              },
+              "MaxTemperature": 500.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        },
         "Module_LightSource": {
-          "prefab": "BuildingFeature_Torch_Building_Mod_LightSource",
+          "prefab": "Module_LightSource",
           "id": "Module_LightSource",
           "enabled": true,
           "data": {
             "BitData": [],
             "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "IsEnabled": true,
+              "Intensity": 1.0,
+              "Range": 8.0,
+              "InnerRadius": 0.1
+            },
+            "followCombustionState": true,
+            "lightColor": {
+              "r": 1.0,
+              "g": 0.29712662,
+              "b": 0.0,
+              "a": 1.0
+            },
+            "ignore2DShadowsOnSourceSprite": true,
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.5,
+                "z": 0.0
+              }
+            }
+          }
+        },
+        "combustionVisual": {
+          "prefab": "Module_CombustionVisual",
+          "id": "Mod_CombustionVisual",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "$transform": {
+              "localPosition": {
+                "x": 0.0,
+                "y": 0.5,
+                "z": 0.0
+              }
+            }
+          }
+        },
+        "localTemperature": {
+          "prefab": "Module_LocalTemperatureSource",
+          "id": "Mod_LocalTemperatureSource",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "radius": 6.0,
+            "celsiusOffset": 15.0,
+            "requiresCombustion": true
+          }
+        },
+        "combustion": {
+          "prefab": "Module_Combustion",
+          "id": "Mod_Combustion",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "startBurning": true,
+            "burnWhileHeld": true,
+            "burnWhileInWorld": true,
+            "burnWhileStored": false,
+            "fuelConsumptionMultiplier": 1.0
+          }
+        },
+        "fuelInteraction": {
+          "prefab": "Module_FuelInteraction",
+          "id": "Mod_FuelInteraction",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "reach": 2.0,
+            "ignitionItemIds": [
+              "FireSeed"
+            ],
+            "ignitionTags": [
+              "火种"
+            ],
+            "ignitionFuelValueOverride": 8.0
           }
         }
       },
