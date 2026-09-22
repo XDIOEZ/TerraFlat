@@ -20,6 +20,11 @@
       "id": "bird-actors",
       "path": "definitions/bird-actors.json",
       "enabled": true
+    },
+    {
+      "id": "livestock-actors",
+      "path": "definitions/livestock-actors.json",
+      "enabled": true
     }
   ]
 }

@@ -2,8 +2,8 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// 通用液体加热能力：炉体只提供温度和经过时间，具体液体如何转化、消耗以及产出什么物品全部读取 LiquidDefinition。
-/// 因此 MOD 新液体可以直接声明 heatProcess，不需要为每种液体新增炉体代码。
+/// 通用容器加热能力：热源只提供库存、温度和经过时间，具体液体或坩埚材料如何处理由容器自身决定。
+/// 因此高炉、熔炉、电炉等只要接入本能力，就不需要为每种容器新增热源代码。
 /// </summary>
 public sealed class Mod_VesselHeating : Module, IInventoryHeatTreatment
 {
@@ -21,6 +21,14 @@ public sealed class Mod_VesselHeating : Module, IInventoryHeatTreatment
         bool handled = false;
         foreach (ItemSlot slot in input.Data.itemSlots)
         {
+            if (Mod_Mortar.IsCrucibleItem(slot.itemData))
+            {
+                handled = true;
+                Mod_Mortar.TryProcessCrucibleHeat(slot.itemData, temperature, seconds);
+                input.Data.NotifyItemStateChanged(slot.itemData);
+                continue;
+            }
+
             if (!Mod_WaterVessel.TryRead(slot.itemData, out Ex_ModData_MemoryPackable storage, out LiquidContainerState state))
                 continue;
 

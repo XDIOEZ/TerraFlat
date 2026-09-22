@@ -20,6 +20,7 @@ public static class PortableBuildingPanelBuilder
     private const string VesselPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Containers/UI_WaterVessel.prefab";
     private const string MortarPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_StoneMortar.prefab";
     private const string FireDrillPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Crafting/UI_FireDrill.prefab";
+    private const string FuelInteractionPath = "Assets/2_Prefabs/2-1_UI/Gameplay/Containers/UI_FuelInteraction.prefab";
 
     [MenuItem("FlatWorld/UI/Configure Portable Building Actions")]
     public static void ConfigureAssets()
@@ -27,6 +28,8 @@ public static class PortableBuildingPanelBuilder
         ConfigureAsset(VesselPath, ConfigureVessel);
         ConfigureAsset(MortarPath, ConfigureMortar);
         ConfigureAsset(FireDrillPath, ConfigureFireDrill);
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(FuelInteractionPath) != null)
+            ConfigureAsset(FuelInteractionPath, ConfigureFuelInteraction);
         SyncBuildingNames();
         SyncText("放到地上", "Place on Ground");
         SyncText("拆回物品", "Pack Up");
@@ -70,6 +73,12 @@ public static class PortableBuildingPanelBuilder
     public static void ConfigureFireDrill(GameObject root)
         => Configure(root, FindButton(root, "关闭"), root.transform,
             new Vector2(160f, 46f), new Vector2(-220f, -184f));
+
+    /// <summary>燃料交互面板底部横向排列关闭与建筑操作，只显示当前载体能执行的放置或拆回。</summary>
+    public static void ConfigureFuelInteraction(GameObject root)
+        => Configure(root, FindButton(root, "关闭按钮"),
+            root.transform.Find("设置对话框/操作列表"),
+            new Vector2(180f, 64f), null);
 
     private static void ConfigureAsset(string path, Action<GameObject> configure)
     {

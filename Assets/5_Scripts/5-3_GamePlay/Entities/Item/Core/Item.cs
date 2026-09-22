@@ -183,6 +183,7 @@ public abstract class Item : MonoBehaviour
         isInitialized = true;
         itemMods.BindOwner(this);
         ModuleLoad();
+        CraftedDurabilityQuality.ApplyRuntimeHealth(this);
         MarkModuleScheduleDirty();
         ItemMgr.GetInstance()?.NotifyItemSpatialIndexChanged(this);
         NotifyRuntimeStructureChanged();

@@ -68,6 +68,7 @@ public static class RecipeRuntimeFactory
             enableMirrorCrafting = dto.AllowMirror,
             Temperature = dto.Temperature,
             Temperature_Max = dto.MaxTemperature,
+            ProcessingSeconds = dto.ProcessingSeconds,
             inputs = new RuntimeRecipeInput
             {
                 recipeType = recipeType,
@@ -122,10 +123,39 @@ public static class RecipeRuntimeFactory
             string itemId = NormalizeRequired(output.ItemId, $"配方 {id} 输出 itemId");
             if (output.Amount <= 0)
                 throw new InvalidDataException($"配方 {id} 的输出 {itemId} 数量必须大于 0");
+            float durabilityMultiplier = output.DurabilityMultiplier ?? CraftedDurabilityQuality.DefaultMultiplier;
+            if (!CraftedDurabilityQuality.IsValidMultiplier(durabilityMultiplier))
+                throw new InvalidDataException($"配方 {id} 的输出 {itemId} durabilityMultiplier 必须是大于 0 的有限数值");
             ValidateItemReference(itemId, itemExists, $"配方 {id} 输出", warnings);
-            recipe.outputs.results.Add(new RuntimeRecipeResult { ItemName = itemId, amount = output.Amount });
+            recipe.outputs.results.Add(new RuntimeRecipeResult
+            {
+                ItemName = itemId,
+                amount = output.Amount,
+                durabilityMultiplier = durabilityMultiplier
+            });
         }
-        if (recipe.outputs.results.Count == 0)
+        if (dto.LiquidOutput != null)
+        {
+            string liquidId = NormalizeLiquidId(dto.LiquidOutput.LiquidId, $"配方 {id} liquidOutput.liquidId");
+            if (float.IsNaN(dto.LiquidOutput.Amount) || float.IsInfinity(dto.LiquidOutput.Amount) ||
+                dto.LiquidOutput.Amount <= 0f)
+            {
+                throw new InvalidDataException($"配方 {id} 的液体产出数量必须是大于 0 的有限数值");
+            }
+            if (recipe.ProcessingSeconds <= 0f || float.IsNaN(recipe.ProcessingSeconds) ||
+                float.IsInfinity(recipe.ProcessingSeconds))
+            {
+                throw new InvalidDataException($"配方 {id} 的 processingSeconds 必须是大于 0 的有限数值");
+            }
+
+            recipe.LiquidOutput = new RuntimeLiquidOutput
+            {
+                LiquidId = liquidId,
+                Amount = dto.LiquidOutput.Amount
+            };
+        }
+
+        if (recipe.outputs.results.Count == 0 && recipe.LiquidOutput == null)
             throw new InvalidDataException($"配方 {id} 没有输出");
 
         foreach (RecipeActionDto action in dto.Actions ?? Enumerable.Empty<RecipeActionDto>())
@@ -173,6 +203,17 @@ public static class RecipeRuntimeFactory
         if (string.IsNullOrWhiteSpace(value))
             throw new InvalidDataException($"{field} 不能为空");
         return value.Trim();
+    }
+
+    private static string NormalizeLiquidId(string value, string field)
+    {
+        string normalized = NormalizeRequired(value, field);
+        if (!normalized.Contains(':', StringComparison.Ordinal) || normalized.StartsWith(":", StringComparison.Ordinal) ||
+            normalized.EndsWith(":", StringComparison.Ordinal) || normalized.Any(char.IsWhiteSpace))
+        {
+            throw new InvalidDataException($"{field} 必须是带稳定命名空间且不含空白的 ID：{normalized}");
+        }
+        return normalized;
     }
 
     private static RecipeType ParseRecipeType(string value, string id)

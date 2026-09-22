@@ -469,7 +469,9 @@
       "volume": 0.2,
       "stackable": true,
       "canBePickedUp": true,
-      "tags": [],
+      "tags": [
+        "火种"
+      ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Plants/火种.png[火种]",
         "rendererLocalPosition": {

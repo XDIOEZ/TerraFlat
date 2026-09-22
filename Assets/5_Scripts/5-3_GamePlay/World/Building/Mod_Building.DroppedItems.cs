@@ -72,6 +72,7 @@ public partial class Mod_Building
             carrier.Stack.CanBePickedUp = true;
             carrier.ItemSpecialData = StatefulSummonerPrefix + carrier.Guid;
             BuildingModuleStateTransfer.Copy(item.itemData, carrier, Data.SharedModuleIds);
+            CopySharedDurability(item.itemData, carrier, Data.SharedModuleIds);
             if (!WriteBuildingData(carrier, state =>
                 {
                     state.Version = CurrentDataVersion;

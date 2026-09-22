@@ -1021,7 +1021,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "Ingot"
+        "Ingot",
+        "DrillDurability:140"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Materials/Ingots/Item_ingot_003.png",
@@ -1104,7 +1105,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "Ingot"
+        "Ingot",
+        "DrillDurability:100"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_402.png",
@@ -1189,7 +1191,8 @@
       "tags": [
         "Ingot",
         "Iron",
-        "RawIron"
+        "RawIron",
+        "DrillDurability:160"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Materials/Ores/ores.png[ores_10]",
@@ -1273,7 +1276,8 @@
       "canBePickedUp": true,
       "tags": [
         "Ingot",
-        "Steel"
+        "Steel",
+        "DrillDurability:300"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Materials/Ingots/Item_ingot_001.png",
@@ -1356,7 +1360,8 @@
       "stackable": true,
       "canBePickedUp": true,
       "tags": [
-        "Ingot"
+        "Ingot",
+        "DrillDurability:80"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Tools/Item_Tool_394.png",
@@ -1441,7 +1446,8 @@
       "tags": [
         "Ingot",
         "Iron",
-        "WroughtIron"
+        "WroughtIron",
+        "DrillDurability:220"
       ],
       "visual": {
         "spriteAddress": "Assets/6_Art/Items/Materials/Ingots/Item_ingot_004.png",
@@ -3923,6 +3929,27 @@
         }
       },
       "modules": {
+        "燃料模块": {
+          "prefab": "Module_Fuel",
+          "id": "燃料模块",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "Data": {
+              "Fuel": {
+                "x": 50.0,
+                "y": 50.0
+              },
+              "MaxTemperature": 500.0
+            },
+            "lightBaseIntensity": 1.0,
+            "burnSpeedMultiplier": 1.0,
+            "igniteWhileHeld": false
+          }
+        },
         "heldFood": {
           "prefab": "Module_HeldFood",
           "id": "手上食物模块",
@@ -5834,6 +5861,47 @@
         "Stone",
         "Mineral"
       ],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+      },
+      "modules": {}
+    }
+    ,{
+      "id": "Cotton",
+      "parent": "BasicItem_Base",
+      "gameName": "棉花",
+      "description": "柔软的天然纤维，可用于制作布料。",
+      "weight": 0.1,
+      "volume": 0.2,
+      "stackable": true,
+      "tags": ["Material", "Fiber"],
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Materials/Material.prefab"
+    },
+    {
+      "id": "WoodAsh",
+      "parent": "BasicItem_Base",
+      "gameName": "草木灰",
+      "description": "草木燃烧后留下的灰烬，是一种轻质的基础加工材料。",
+      "weight": 0.08,
+      "volume": 0.2,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material"],
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+      },
+      "modules": {}
+    },
+    {
+      "id": "Nail",
+      "parent": "BasicItem_Base",
+      "gameName": "钉子",
+      "description": "用于固定木料和结构连接的金属紧固件，可作为建造与机械制作材料。",
+      "weight": 0.02,
+      "volume": 0.02,
+      "stackable": true,
+      "canBePickedUp": true,
+      "tags": ["Material"],
       "visual": {
         "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
       },

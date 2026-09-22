@@ -68,6 +68,9 @@ public abstract partial class ItemData
     [Tooltip("实体所属的阵营/队伍 ID；为空时由运行时兼容规则推导")]
     public string FactionId = string.Empty;
 
+    [Tooltip("制作材料赋予的耐久倍率；1 表示使用物品定义中的基础耐久")]
+    public float CraftedDurabilityMultiplier = 1f;
+
     //重写ToString方法，用于在控制台输出物品信息
     public override string ToString()
     {
@@ -127,9 +130,22 @@ public abstract partial class ItemData
         if (other == null || !string.Equals(IDName, other.IDName, StringComparison.Ordinal))
             return false;
 
+        float ownDurabilityMultiplier = NormalizeCraftedDurabilityMultiplier(CraftedDurabilityMultiplier);
+        float otherDurabilityMultiplier = NormalizeCraftedDurabilityMultiplier(other.CraftedDurabilityMultiplier);
+        if (!Mathf.Approximately(ownDurabilityMultiplier, otherDurabilityMultiplier))
+            return false;
+
         string ownSpecialData = string.IsNullOrEmpty(ItemSpecialData) ? string.Empty : ItemSpecialData;
         string otherSpecialData = string.IsNullOrEmpty(other.ItemSpecialData) ? string.Empty : other.ItemSpecialData;
         return string.Equals(ownSpecialData, otherSpecialData, StringComparison.Ordinal);
+    }
+
+    /// <summary>旧存档未包含品质字段时按 1 倍处理，避免把 0 误判为独立堆叠身份。</summary>
+    private static float NormalizeCraftedDurabilityMultiplier(float multiplier)
+    {
+        return !float.IsNaN(multiplier) && !float.IsInfinity(multiplier) && multiplier > 0f
+            ? multiplier
+            : 1f;
     }
 
     /// <summary>判断两个物品是否允许合并进同一库存槽位。</summary>

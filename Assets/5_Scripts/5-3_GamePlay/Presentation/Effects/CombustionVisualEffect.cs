@@ -3,18 +3,18 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 火把燃烧表现：在火把顶端持续生成小型火焰、火星与烟雾粒子。
-/// 粒子使用世界空间速度，因此手持火把旋转或挥动时，已喷出的烟与火星仍会自然向上飘。
+/// 通用燃烧表现：持续生成小型火焰、火星与烟雾粒子。
+/// 粒子使用世界空间速度，因此宿主旋转或挥动时，已喷出的烟与火星仍会自然向上飘。
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class TorchBurningEffect : MonoBehaviour, IWaterEntryTransformEffect
+public sealed class CombustionVisualEffect : MonoBehaviour, IWaterEntryTransformEffect
 {
     #region 常量与配置
 
-    private const string FlameName = "Torch Flame Particles";
-    private const string EmberName = "Torch Ember Particles";
-    private const string SmokeName = "Torch Smoke Particles";
-    private const string ExtinguishRootName = "Torch Extinguish Burst";
+    private const string FlameName = "Combustion Flame Particles";
+    private const string EmberName = "Combustion Ember Particles";
+    private const string SmokeName = "Combustion Smoke Particles";
+    private const string ExtinguishRootName = "Combustion Extinguish Burst";
     private const float ExtinguishEffectLifetime = 1.6f;
 
     [Header("引用")]
@@ -32,12 +32,13 @@ public sealed class TorchBurningEffect : MonoBehaviour, IWaterEntryTransformEffe
     private ParticleSystem emberParticles;
     private ParticleSystem smokeParticles;
     private bool particlesPlaying;
+    private bool combustionActive;
 
     #endregion
 
     #region 熄灭表现
 
-    /// <summary>火把入水转换前喷出一小团黑烟与白汽；根节点脱离火把，源物品回收后仍可播完。</summary>
+    /// <summary>燃烧物入水转换前喷出一小团黑烟与白汽；根节点脱离宿主，源物品回收后仍可播完。</summary>
     public void PlayWaterEntryTransformEffect()
     {
         ResolveReferences();
@@ -91,7 +92,7 @@ public sealed class TorchBurningEffect : MonoBehaviour, IWaterEntryTransformEffe
         Destroy(effectRoot, ExtinguishEffectLifetime);
     }
 
-    /// <summary>构建一次性 2D 粒子爆发；黑烟和白汽共用火把现有粒子材质。</summary>
+    /// <summary>构建一次性 2D 粒子爆发；黑烟和白汽共用当前燃烧表现的粒子材质。</summary>
     private ParticleSystem CreateExtinguishBurstSystem(
         Transform parent,
         string objectName,
@@ -214,7 +215,39 @@ public sealed class TorchBurningEffect : MonoBehaviour, IWaterEntryTransformEffe
 
     #region 引用与状态
 
-    /// <summary>优先使用火把 Light2D 的位置作为燃烧点。</summary>
+    /// <summary>显式绑定宿主表现，避免通用模块 Prefab 依赖自身父子层级猜测排序来源。</summary>
+    public void BindHost(Item host)
+    {
+        if (host == null)
+            return;
+
+        SpriteRenderer[] renderers = host.GetComponentsInChildren<SpriteRenderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            SpriteRenderer renderer = renderers[i];
+            if (renderer == null || renderer.transform.IsChildOf(transform))
+                continue;
+
+            if (renderer.GetComponent<Animator>() != null)
+            {
+                sourceSpriteRenderer = renderer;
+                break;
+            }
+
+            sourceSpriteRenderer ??= renderer;
+        }
+
+        RefreshSorting();
+    }
+
+    /// <summary>由通用燃烧模块显式驱动表现开关，不从具体物品类型推断。</summary>
+    public void SetCombustionActive(bool active)
+    {
+        combustionActive = active;
+        RefreshPlayingState(force: true);
+    }
+
+    /// <summary>优先使用同层级 Light2D 的位置作为燃烧点。</summary>
     private void ResolveReferences()
     {
         if (flameAnchor == null)
@@ -230,7 +263,8 @@ public sealed class TorchBurningEffect : MonoBehaviour, IWaterEntryTransformEffe
     /// <summary>光源被关闭时同步熄灭燃烧粒子。</summary>
     private void RefreshPlayingState(bool force)
     {
-        bool shouldPlay = isActiveAndEnabled &&
+        bool shouldPlay = combustionActive &&
+                          isActiveAndEnabled &&
                           (sourceLight == null ||
                            (sourceLight.enabled && sourceLight.intensity > 0f));
         if (!force && shouldPlay == particlesPlaying)

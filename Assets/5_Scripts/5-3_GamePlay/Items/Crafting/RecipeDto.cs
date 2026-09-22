@@ -82,11 +82,19 @@ public sealed class RecipeDto
     [JsonProperty("maxTemperature")]
     public float MaxTemperature = 2000f;
 
+    /// <summary>容器类加热配方的累计处理时长；普通物品配方保持默认 0。</summary>
+    [JsonProperty("processingSeconds")]
+    public float ProcessingSeconds;
+
     [JsonProperty("inputs")]
     public List<RecipeIngredientDto> Inputs = new List<RecipeIngredientDto>();
 
     [JsonProperty("outputs")]
     public List<RecipeOutputDto> Outputs = new List<RecipeOutputDto>();
+
+    /// <summary>可选的容器液体产物；与普通物品 outputs 二选一或同时存在。</summary>
+    [JsonProperty("liquidOutput", NullValueHandling = NullValueHandling.Ignore)]
+    public RecipeLiquidOutputDto LiquidOutput;
 
     [JsonProperty("actions")]
     public List<RecipeActionDto> Actions = new List<RecipeActionDto>();
@@ -119,6 +127,20 @@ public sealed class RecipeOutputDto
 
     [JsonProperty("amount")]
     public int Amount = 1;
+
+    /// <summary>可选的实例耐久倍率；用于材料品质影响同一产物的耐久。</summary>
+    [JsonProperty("durabilityMultiplier", NullValueHandling = NullValueHandling.Ignore)]
+    public float? DurabilityMultiplier;
+}
+
+[Serializable]
+public sealed class RecipeLiquidOutputDto
+{
+    [JsonProperty("liquidId")]
+    public string LiquidId;
+
+    [JsonProperty("amount")]
+    public float Amount = 1f;
 }
 
 [Serializable]

@@ -1009,6 +1009,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Prefab
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5b0080e215ad188439be42322d1d71a9
+    m_Address: Module_CombustionVisual
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5b261cb9840b4835978c5c3b8a12d6a1
     m_Address: Assets/4_ScriptObjects/World/Tiles/Tile_WaterPlatform.asset
     m_ReadOnly: 0
@@ -1050,6 +1056,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5dfad5215c0b53e46a2419f0a1556112
+    m_Address: Module_Combustion
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5eda240c8cb9ec64d8368d6aeff94749
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_BlastFurnace_Mod_Furnace.prefab
@@ -1196,6 +1208,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - TileBlock
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 66e334679f9db5846b2140fdb856d81e
+    m_Address: Module_FuelInteraction
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6703c64685ba4281b85788c794107a5d
     m_Address: Assets/6_Art/Generated/HerbPoultice/Item_HerbPoultice.png
     m_ReadOnly: 0
@@ -1228,6 +1246,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 69c58992491b92e46864d7be17f5f748
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Meatrack_Meatrack.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6a1e2830b60f32246895223f85a1aa8a
+    m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Containers/UI_FuelInteraction.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1485,12 +1509,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8042e942207940647b24ee91463aa184
     m_Address: Assets/2_Prefabs/Gameplay/Items/Weapons/Ranged/StoneThrowingRope.prefab
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Prefab
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 80f03fab627fc4d4f84df8396ba2d58b
-    m_Address: Assets/2_Prefabs/Gameplay/Modules/Building/BuildingFeature_Torch_Building_Mod_LightSource.prefab
     m_ReadOnly: 0
     m_SerializedLabels:
     - Prefab
@@ -1866,6 +1884,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - Skill
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a0d8e3f021ab1db42a851820bda77bf6
+    m_Address: Module_LightSource
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a0dc5a480ea75bf4d9d7b74bfdf2c4dc
     m_Address: Assets/6_Art/Food/Tea.png
@@ -2917,6 +2941,12 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels:
     - ActorVisual
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: febd795dc4720e649ad8abe6f02c9a13
+    m_Address: Module_LocalTemperatureSource
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Prefab
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fee68fa8026ccf1459d9d4b36eae05a3
     m_Address: Assets/6_Art/Items/Tools/Item_Tool_402.png

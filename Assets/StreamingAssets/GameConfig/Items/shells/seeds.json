@@ -220,5 +220,22 @@
         }
       }
     }
+    ,{
+      "id": "Seed_Cotton",
+      "parent": "Seed_Radish",
+      "gameName": "棉花种子",
+      "description": "种下后会长出棉花作物。",
+      "weight": 0.02,
+      "volume": 0.05,
+      "stackable": true,
+      "tags": ["Seed"],
+      "modules": {
+        "plantable": {
+          "parameters": {
+            "cropItemId": "CottonCrop"
+          }
+        }
+      }
+    }
   ]
 }

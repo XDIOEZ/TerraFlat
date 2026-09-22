@@ -57,6 +57,11 @@
       "enabled": true
     },
     {
+      "id": "smelting/crucible",
+      "path": "smelting/crucible.json",
+      "enabled": true
+    },
+    {
       "id": "crafting/agriculture",
       "path": "crafting/agriculture.json",
       "enabled": true
@@ -74,6 +79,11 @@
     {
       "id": "medical",
       "path": "crafting/medical.json",
+      "enabled": true
+    },
+    {
+      "id": "crafting/wooden_barrel",
+      "path": "crafting/wooden_barrel.json",
       "enabled": true
     }
   ]

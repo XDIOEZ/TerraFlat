@@ -43,6 +43,23 @@ public sealed class LiquidHeatProcess
 }
 
 /// <summary>
+/// 液体离开热源后的凝固规则。熔点以下会把液体按数量转换为指定固体，产物仍写回原容器的固体库存。
+/// </summary>
+public sealed class LiquidSolidification
+{
+    public LiquidSolidification(float meltingPoint, string outputItemId, int outputAmount)
+    {
+        MeltingPoint = meltingPoint;
+        OutputItemId = outputItemId;
+        OutputAmount = outputAmount;
+    }
+
+    public float MeltingPoint { get; }
+    public string OutputItemId { get; }
+    public int OutputAmount { get; }
+}
+
+/// <summary>
 /// 可注册的通用液体定义。容器只保存 LiquidId 与数量，不再把水质写死在容器类型里；
 /// 本体和 MOD 都通过同一目录声明液体的显示、饮用与加热语义。
 /// </summary>
@@ -60,7 +77,8 @@ public sealed class LiquidDefinition
         LiquidHeatProcess heatProcess,
         float buoyancyThresholdMultiplier = 1f,
         string sourceItemId = null,
-        WorldLiquidSettings worldWater = null)
+        WorldLiquidSettings worldWater = null,
+        LiquidSolidification solidification = null)
     {
         Id = id;
         DisplayName = displayName;
@@ -71,6 +89,7 @@ public sealed class LiquidDefinition
         HydrationPerServing = hydrationPerServing;
         DrinkEffects = drinkEffects ?? Array.Empty<LiquidDrinkEffect>();
         HeatProcess = heatProcess;
+        Solidification = solidification;
         BuoyancyThresholdMultiplier = buoyancyThresholdMultiplier;
         SourceItemId = sourceItemId;
         WorldWater = worldWater;
@@ -86,6 +105,8 @@ public sealed class LiquidDefinition
     public float HydrationPerServing { get; }
     public IReadOnlyList<LiquidDrinkEffect> DrinkEffects { get; }
     public LiquidHeatProcess HeatProcess { get; }
+    /// <summary>液体冷却到熔点以下时的固体产物规则。</summary>
+    public LiquidSolidification Solidification { get; }
     /// <summary>世界掉落物浮沉阈值倍率；1 保持基础阈值不变。</summary>
     public float BuoyancyThresholdMultiplier { get; }
     public string SourceItemId { get; } // 可装入容器的库存原料 ID；一个完整物品对应一份液体，未配置则仅支持液体来源。
@@ -143,6 +164,9 @@ public sealed class LiquidDefinitionDto
     [JsonProperty("heatProcess")]
     public LiquidHeatProcessDto HeatProcess;
 
+    [JsonProperty("solidification")]
+    public LiquidSolidificationDto Solidification;
+
     [JsonProperty("buoyancyThresholdMultiplier")]
     public float BuoyancyThresholdMultiplier = 1f;
 
@@ -188,6 +212,20 @@ public sealed class LiquidHeatProcessDto
 
     [JsonProperty("consumeAmount")]
     public int ConsumeAmount = 1;
+
+    [JsonProperty("outputAmount")]
+    public int OutputAmount = 1;
+}
+
+/// <summary>液体冷却凝固规则 DTO；固体产物引用正式物品 ID，跨目录引用由目录加载阶段校验。</summary>
+[Serializable]
+public sealed class LiquidSolidificationDto
+{
+    [JsonProperty("meltingPoint", Required = Required.Always)]
+    public float MeltingPoint;
+
+    [JsonProperty("outputItemId", Required = Required.Always)]
+    public string OutputItemId;
 
     [JsonProperty("outputAmount")]
     public int OutputAmount = 1;
@@ -260,6 +298,9 @@ public static class LiquidDefinitionFactory
         LiquidHeatProcess heatProcess = dto.HeatProcess == null
             ? null
             : BuildHeatProcess(id, dto.HeatProcess);
+        LiquidSolidification solidification = dto.Solidification == null
+            ? null
+            : BuildSolidification(id, dto.Solidification);
 
         return new LiquidDefinition(
             id,
@@ -272,7 +313,9 @@ public static class LiquidDefinitionFactory
             drinkEffects,
             heatProcess,
             dto.BuoyancyThresholdMultiplier,
-            string.IsNullOrWhiteSpace(dto.SourceItemId) ? null : dto.SourceItemId.Trim(), dto.WorldWater);
+            string.IsNullOrWhiteSpace(dto.SourceItemId) ? null : dto.SourceItemId.Trim(),
+            dto.WorldWater,
+            solidification);
     }
 
     /// <summary>构建整个本体分包并拒绝重复 ID。</summary>
@@ -317,6 +360,10 @@ public static class LiquidDefinitionFactory
                 if (buffExists != null && !buffExists(effect.BuffId))
                     throw new InvalidDataException($"液体 {definition.Id} 的饮用 Buff 不存在：{effect.BuffId}");
             }
+
+            LiquidSolidification solidification = definition.Solidification;
+            if (solidification != null && !itemExists(solidification.OutputItemId))
+                throw new InvalidDataException($"液体 {definition.Id} 的凝固产物物品不存在：{solidification.OutputItemId}");
 
             LiquidHeatProcess heat = definition.HeatProcess;
             if (heat == null)
@@ -381,6 +428,19 @@ public static class LiquidDefinitionFactory
             outputItemId,
             mode == LiquidHeatProcessMode.ConsumeServing ? dto.ConsumeAmount : 0,
             string.IsNullOrWhiteSpace(outputItemId) ? 0 : dto.OutputAmount);
+    }
+
+    private static LiquidSolidification BuildSolidification(string liquidId, LiquidSolidificationDto dto)
+    {
+        ValidateFinite(dto.MeltingPoint, liquidId, nameof(dto.MeltingPoint));
+        if (dto.MeltingPoint < 0f)
+            throw new InvalidDataException($"液体 {liquidId} 的 solidification.meltingPoint 不能小于 0");
+
+        string outputItemId = NormalizeRequired(dto.OutputItemId, $"液体 {liquidId} solidification.outputItemId");
+        if (dto.OutputAmount <= 0)
+            throw new InvalidDataException($"液体 {liquidId} 的 solidification.outputAmount 必须大于 0");
+
+        return new LiquidSolidification(dto.MeltingPoint, outputItemId, dto.OutputAmount);
     }
 
     private static string NormalizeContentId(string value, string field)

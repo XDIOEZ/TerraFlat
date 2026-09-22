@@ -2456,6 +2456,93 @@ MonoBehaviour:
     m_Localized: Stopped
     m_Metadata:
       m_Items: []
+  - m_Id: 16091410989047808
+    m_Localized: Torch
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16091411047768064
+    m_Localized: Burning
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16091411047768065
+    m_Localized: Extinguished
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16091411047768066
+    m_Localized: '{0}  Fuel {1:0} / {2:0} s'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16091411047768067
+    m_Localized: Fuel / Tinder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16091411047768068
+    m_Localized: Drag in fuel to refill it. When extinguished, drag in tinder to
+      relight the torch.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16091411047768069
+    m_Localized: The torch has no fuel, so tinder cannot light it.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16091411047768070
+    m_Localized: The torch has been relit.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16091411047768071
+    m_Localized: This item cannot be used as fuel.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16091411047768072
+    m_Localized: The torch is already full of fuel.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16091411047768073
+    m_Localized: Torch fuel replenished.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16102305546887168
+    m_Localized: Fuel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16102305613996032
+    m_Localized: Drag in fuel to refill it. When extinguished, drag in tinder to
+      relight it.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16102305613996033
+    m_Localized: There is no fuel, so tinder cannot light it.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16102305613996034
+    m_Localized: Relit.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16102305613996035
+    m_Localized: Fuel is already full.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16102305613996036
+    m_Localized: Fuel replenished.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16113686912425984
+    m_Localized: Sun Shadows
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16113686958563328
+    m_Localized: Cast long shadows following the sun. Disable on lower-end devices
+      to reduce rendering cost.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16113686958563329
+    m_Localized: Object See-through
+    m_Metadata:
+      m_Items: []
+  - m_Id: 16113686958563330
+    m_Localized: Make trees partially transparent where they obscure the player.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

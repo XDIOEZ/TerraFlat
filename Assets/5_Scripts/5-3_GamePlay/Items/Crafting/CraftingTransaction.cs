@@ -32,6 +32,7 @@ public sealed class CraftingTransaction
             outputs,
             allowOutputIntoInput,
             true,
+            true,
             out transaction,
             out failure);
     }
@@ -51,8 +52,28 @@ public sealed class CraftingTransaction
             match,
             outputs,
             allowOutputIntoInput,
+            true,
             false,
             out _,
+            out failure);
+    }
+
+    /// <summary>只扣除输入材料并保留可回滚事务，适用于把结果写入输入物品自身状态的加工。</summary>
+    public static bool TryCreateInputOnly(
+        Inventory inputInventory,
+        CraftingRecipeMatch match,
+        out CraftingTransaction transaction,
+        out CraftingResult failure)
+    {
+        return TryBuild(
+            inputInventory,
+            inputInventory,
+            match,
+            Array.Empty<ItemData>(),
+            true,
+            false,
+            true,
+            out transaction,
             out failure);
     }
 
@@ -63,6 +84,7 @@ public sealed class CraftingTransaction
         CraftingRecipeMatch match,
         IReadOnlyList<ItemData> outputs,
         bool allowOutputIntoInput,
+        bool requireOutput,
         bool retainTransaction,
         out CraftingTransaction transaction,
         out CraftingResult failure)
@@ -74,7 +96,7 @@ public sealed class CraftingTransaction
             failure = CraftingResult.Failed(CraftingFailureReason.InvalidInventory, "制作事务缺少有效库存或配方匹配");
             return false;
         }
-        if (outputs == null || outputs.Count == 0)
+        if (outputs == null || (requireOutput && outputs.Count == 0))
         {
             failure = CraftingResult.Failed(CraftingFailureReason.InvalidOutput, "制作事务没有有效产物", match.Recipe);
             return false;

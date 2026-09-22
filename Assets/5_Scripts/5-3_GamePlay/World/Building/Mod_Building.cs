@@ -511,6 +511,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
             // 即使带有拆除快照，也以当前手持容器的数据覆盖共享模块，不能恢复旧水量/旧库存。
             BuildingModuleStateTransfer.Copy(summonerData, placedData, carrierState.SharedModuleIds);
+            CopySharedDurability(summonerData, placedData, carrierState.SharedModuleIds);
         }
         catch (Exception exception)
         {
@@ -666,6 +667,7 @@ public partial class Mod_Building : Module, IIncomingDamageRule
 
             // 在 Load 之前还原模块数据，使拆回后的手持面板立即读到建筑中的最新状态。
             BuildingModuleStateTransfer.Copy(item.itemData, summonerData, Data.SharedModuleIds);
+            CopySharedDurability(item.itemData, summonerData, Data.SharedModuleIds);
 
             summoner = ItemMgr.Instance.InstantiateItem(
                 summonerData,
@@ -697,6 +699,16 @@ public partial class Mod_Building : Module, IIncomingDamageRule
     public void CompleteNetworkDismantle()
     {
         _dismantlePending = false;
+    }
+
+    /// <summary>迁移制作材料品质；手钻继续兼容其独立模块保存的动态耐久。</summary>
+    private static void CopySharedDurability(ItemData source, ItemData target, IReadOnlyCollection<string> sharedModuleIds)
+    {
+        CraftedDurabilityQuality.CopyInstanceQuality(source, target);
+        if (source == null || target == null || sharedModuleIds == null || !sharedModuleIds.Contains(Mod_HandDrill.ModuleId))
+            return;
+        target.MaxDurability = Mathf.Max(0f, source.MaxDurability);
+        target.Durability = Mathf.Clamp(source.Durability, 0f, target.MaxDurability);
     }
 
     public void RejectNetworkDismantle(string reason)
@@ -1172,15 +1184,17 @@ public partial class Mod_Building : Module, IIncomingDamageRule
         if (legacyColliderCaster != null && legacyColliderCaster.gameObject != host)
             legacyColliderCaster.enabled = false;
 
-        _lightOccluder ??= host.GetComponent<ShadowCaster2D>();
-        _lightOccluder ??= host.AddComponent<ShadowCaster2D>();
+        if (_lightOccluder == null)
+            _lightOccluder = host.GetComponent<ShadowCaster2D>();
+        if (_lightOccluder == null)
+            _lightOccluder = host.AddComponent<ShadowCaster2D>();
 
         _lightOccluder.castsShadows = true;
         _lightOccluder.selfShadows = true;
-        _lightOccluder.useRendererSilhouette = true;
-        SyncShadowCasterShape(_lightOccluder, sourceRenderer);
-        _lightOccluder.enabled = true;
-        _lightOccluder.Update();
+        _lightOccluderSource = sourceRenderer;
+        Light2DSortingLayerUtility.SetShadowLayers(_lightOccluder,
+            Light2DSortingLayerUtility.ResolveLayerIds(ShadowTargetSortingLayers));
+        RefreshLightOccluderGeometry(true);
     }
 
     private static void SyncShadowCasterShape(ShadowCaster2D shadowCaster, SpriteRenderer sourceRenderer)

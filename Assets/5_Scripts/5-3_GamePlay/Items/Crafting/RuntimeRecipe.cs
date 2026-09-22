@@ -16,6 +16,8 @@ public sealed class RuntimeRecipe
     public List<RuntimeRecipeAction> action = new List<RuntimeRecipeAction>();
     public float Temperature;
     public float Temperature_Max = 2000f;
+    public float ProcessingSeconds;
+    public RuntimeLiquidOutput LiquidOutput;
 
     public string name => string.IsNullOrWhiteSpace(DisplayName) ? Id : DisplayName;
 }
@@ -84,10 +86,17 @@ public sealed class RuntimeRecipeOutput
     public List<RuntimeRecipeResult> results = new List<RuntimeRecipeResult>();
 }
 
+public sealed class RuntimeLiquidOutput
+{
+    public string LiquidId = string.Empty;
+    public float Amount = 1f;
+}
+
 public sealed class RuntimeRecipeResult
 {
     public string ItemName = string.Empty;
     public int amount = 1;
+    public float durabilityMultiplier = CraftedDurabilityQuality.DefaultMultiplier;
 }
 
 public sealed class RuntimeRecipeAction

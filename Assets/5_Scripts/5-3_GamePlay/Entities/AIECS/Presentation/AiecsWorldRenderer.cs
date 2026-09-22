@@ -35,11 +35,15 @@ namespace FlatWorld.AIECS
         private readonly List<DrawItem> visible = new List<DrawItem>();
         private readonly UnityEngine.SceneManagement.Scene scene;
         private readonly AiecsShadowRenderer shadows;
+        private readonly AiecsSunShadowRenderer sunShadows;
+        private readonly float[] sunShadowHeights; // 每物种高度覆盖，0 关闭；不进入模拟或存档。
         private readonly Vector4[] shadowFootprints;
         public bool ShadowsEnabled { get; set; } = true; // 表现开关，不影响模拟。
         public float ShadowOpacity { get; set; } = 0.4f; // 宿主按场景提供昼夜强度。
         public int ShadowCount => shadows.ShadowCount;
         public int ShadowBatchCount => shadows.BatchCount;
+        public int SunShadowCount => sunShadows.ShadowCount;
+        public int SunShadowBatchCount => sunShadows.BatchCount;
         public int VisibleCount => visible.Count;
         public int BatchCount { get; private set; }
 
@@ -50,8 +54,10 @@ namespace FlatWorld.AIECS
             if (catalog == null || catalog.Material == null) throw new InvalidOperationException("请先导出 AIECS 动画目录。");
             visuals = new int[actorIds.Length]; clips = new int[actorIds.Length, 4];
             shadowFootprints = new Vector4[actorIds.Length];
+            sunShadowHeights = new float[actorIds.Length];
             for (int i = 0; i < actorIds.Length; i++)
             {
+                sunShadowHeights[i] = 1f;
                 visuals[i] = Array.FindIndex(catalog.Actors, value => value.Id == actorIds[i]);
                 if (visuals[i] < 0) throw new InvalidOperationException("AIECS 动画目录缺少 " + actorIds[i]);
                 var definition = catalog.Actors[visuals[i]];
@@ -63,6 +69,15 @@ namespace FlatWorld.AIECS
                 shadowFootprints[i] = AiecsShadowRenderer.MeasureFootprint(definition, catalog.Sprites[idle.Sprite], idle);
             }
             shadows = new AiecsShadowRenderer(scene);
+            sunShadows = new AiecsSunShadowRenderer(scene, catalog.Material.mainTexture);
+        }
+
+        /// <summary>MOD 可按当前定义索引调整太阳投影高度，0 表示关闭该物种投影。</summary>
+        public void SetSunShadowHeight(int definitionIndex, float multiplier)
+        {
+            if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier < 0f)
+                throw new ArgumentOutOfRangeException(nameof(multiplier));
+            sunShadowHeights[definitionIndex] = multiplier;
         }
 
         /// <summary>按原始状态尾名匹配，不把缺少的功能动画当作已迁移动作。</summary>
@@ -82,11 +97,12 @@ namespace FlatWorld.AIECS
         {
             if (camera == null || !simulation.Display.IsCreated)
             {
-                visible.Clear(); BatchCount = 0; shadows.Hide();
+                visible.Clear(); BatchCount = 0; shadows.Hide(); sunShadows.Hide();
                 foreach (var batch in batches) batch.Hide();
                 return;
             }
             shadows.Begin();
+            sunShadows.Begin();
             visible.Clear();
             float2 center = (Vector2)camera.transform.position;
             float halfHeight = camera.orthographicSize, halfWidth = halfHeight * camera.aspect;
@@ -95,7 +111,9 @@ namespace FlatWorld.AIECS
             {
                 var record = records[i]; if (record.External != 0) continue;
                 float2 delta = domain.ShortestDelta(center, record.Position);
-                if (math.abs(delta.x) > halfWidth + 2f || math.abs(delta.y) > halfHeight + 2f) continue;
+                // 屏外主体的长投影仍可能落入视口，开启时扩展候选范围。
+                float margin = 2f + sunShadows.CullingMargin;
+                if (math.abs(delta.x) > halfWidth + margin || math.abs(delta.y) > halfHeight + margin) continue;
                 int visual = visuals[record.Definition]; var definition = catalog.Actors[visual];
                 int row = math.clamp((int)((delta.y + halfHeight) / math.max(0.01f, halfHeight * 2f) * 24), 0, 23);
                 visible.Add(new DrawItem { Index = i, Visual = visual, Row = row, Y = delta.y,
@@ -131,6 +149,10 @@ namespace FlatWorld.AIECS
                     if (ShadowsEnabled)
                         shadows.Append(new Vector2(actor.Position.x, actor.Position.y), shadowFootprints[record.Definition],
                             record.Facing.x < 0f, AiecsShadowRenderer.ResolveOpacity(ShadowOpacity, color.a, record.LiquidDepth, record.WaterBlend));
+                    if (sunShadows.Active)
+                        sunShadows.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], record.Facing.x < 0f,
+                            color.a, actor.Position.y + shadowFootprints[record.Definition].y - 0.02f,
+                            sunShadowHeights[record.Definition]);
                     batch.Append(actor, definition, frame, catalog.Sprites[frame.Sprite], liquidDepth, waterTint,
                         record.Facing.x < 0f, color);
                 }
@@ -138,6 +160,7 @@ namespace FlatWorld.AIECS
             }
             for (int i = BatchCount; i < batches.Count; i++) batches[i].Hide();
             shadows.End();
+            sunShadows.End();
         }
 
         /// <summary>开发 HUD 最多绘制 64 个可见实体血条，不创建逐实体 UI 节点。</summary>
@@ -164,6 +187,7 @@ namespace FlatWorld.AIECS
         public void Dispose()
         {
             shadows.Dispose();
+            sunShadows.Dispose();
             foreach (var batch in batches) batch.Dispose();
             batches.Clear(); visible.Clear(); BatchCount = 0;
         }

@@ -347,6 +347,7 @@ GameObject:
   - component: {fileID: 5620251106547435517}
   - component: {fileID: 2693940703275175513}
   - component: {fileID: 4939125256281199578}
+  - component: {fileID: 6188641116391193677}
   m_Layer: 0
   m_Name: WorldManager
   m_TagString: Untagged
@@ -525,6 +526,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   overlayPrefab: {fileID: 8515459174737126461, guid: 0d1b3a0c73a0212498d83f06a0ea5372, type: 3}
+--- !u!114 &6188641116391193677
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4565539948505994440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f352f64487f7ede4b8069e0d3a2c9513, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  minimumLength: 0.35
+  maximumLength: 2.8
+  maximumDistance: 8
+  opacity: 0.34
+  shadowColor: {r: 0.12, g: 0.14, b: 0.2, a: 1}
+  maximumVisibleDistance: 80
 --- !u!1 &5482967027949208378
 GameObject:
   m_ObjectHideFlags: 0
