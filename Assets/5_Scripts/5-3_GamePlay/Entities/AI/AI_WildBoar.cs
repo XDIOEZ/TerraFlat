@@ -21,8 +21,8 @@ public enum WildBoarState
 }
 
 /// <summary>
-/// 野猪 AI：支持觅食/进食/睡眠/愤怒值/攻击伤害窗口/逃跑等行为。
-/// 状态优先级：逃跑 > 技能 > 攻击 > 警觉 > 追击 > 睡眠 > 进食 > 觅食 > 移动 > 待机
+/// 野猪 AI：包含觅食、睡眠、主动避让和受伤反击；默认累计玩家造成最大生命值 20% 的实际伤害后，锁定该玩家追击 30 秒。
+/// 状态优先级：逃跑 > 反击技能 > 反击攻击 > 反击追击 > 避让 > 睡眠 > 进食 > 觅食 > 移动 > 待机。
 /// </summary>
 public partial class AI_WildBoar : AI_Base<WildBoarState>
 {
@@ -36,6 +36,9 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		public WildBoarState State = WildBoarState.Idle;
 		public float Fatigue01 = 0f;
 		public float RageLevel = 0f;
+		public float PlayerDamageAccumulated = 0f; // 上次狂暴结束后玩家造成的累计实际伤害。
+		public float RetaliationTimeRemaining = 0f; // 狂暴反击剩余秒数。
+		public int RetaliationTargetGuid = 0; // 狂暴期间锁定玩家的运行时 GUID。
 		public bool GrassSustenanceInitialized;
 		public float GrassSustenanceRemaining;
 	}
@@ -73,9 +76,9 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	private bool _hasAttackPositionTarget;
 
 	private float _sleepCooldownTimer;
-	private float _alertCooldownTimer;
 	private float _grassSearchCooldown;
 	private Vector3 _chaseTarget;
+	private Item _retaliationTarget; // 狂暴期间锁定的玩家。
 	private AI_AttackController _attack = new AI_AttackController();
 	#endregion
 
@@ -103,12 +106,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	public float dayStartRatio = 0.25f;
 	[HorizontalGroup("配置/昼夜/时间/Hr1"), LabelText("白天结束"), Range(0f, 1f)]
 	public float dayEndRatio = 0.75f;
-
-	[TabGroup("配置", "昼夜"), BoxGroup("配置/昼夜/时间"), HorizontalGroup("配置/昼夜/时间/Hr2"), LabelText("黄昏开始"), Range(0f, 1f)]
-	public float duskStartRatio = 0.65f;
-
-	[TabGroup("配置", "昼夜"), BoxGroup("配置/昼夜/时间"), LabelText("黄昏时更具攻击性")]
-	public bool aggressiveDuringDusk = true;
 
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/移动觅食"), HorizontalGroup("配置/行为/移动觅食/Hr1"), LabelText("检测间隔"), SuffixLabel("秒", true), MinValue(0.05f)]
 	public float detectorRefreshInterval = 1.0f;
@@ -152,18 +149,14 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/移动觅食"), LabelText("权重惩罚系数"), MinValue(0f)]
 	public float wanderPenaltyWeight = 1f;
 
-	[TabGroup("配置", "行为"), BoxGroup("配置/行为/警觉"), HorizontalGroup("配置/行为/警觉/Hr1"), LabelText("视范距离"), SuffixLabel("米", true), MinValue(0.1f)]
-	public float alertDetectDistance = 8f;
-	[HorizontalGroup("配置/行为/警觉/Hr1"), LabelText("持续时间"), SuffixLabel("秒", true), MinValue(0.1f)]
-	public float alertDuration = 3f;
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/避让"), LabelText("玩家避让距离"), SuffixLabel("米", true), MinValue(0.1f)]
+	public float playerAvoidDistance = 8f; // 进入玩家感知范围后的避让半径。
 
-	[TabGroup("配置", "行为"), BoxGroup("配置/行为/警觉"), LabelText("警觉延迟"), SuffixLabel("秒", true), MinValue(0f)]
-	public float alertToChaseDuration = 1f;
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/反击"), HorizontalGroup("配置/行为/反击/Hr1"), LabelText("受伤反击阈值"), Range(0f, 1f)]
+	public float retaliationDamageThresholdRate = 0.2f; // 玩家累计实伤占野猪最大生命值的比例。
+	[TabGroup("配置", "行为"), BoxGroup("配置/行为/反击"), HorizontalGroup("配置/行为/反击/Hr1"), LabelText("狂暴追击时长"), SuffixLabel("秒", true), MinValue(0.1f)]
+	public float retaliationDuration = 30f; // 触发反击后的追击时长。
 
-	[TabGroup("配置", "行为"), BoxGroup("配置/行为/追击"), HorizontalGroup("配置/行为/追击/Hr1"), LabelText("触发距离"), SuffixLabel("米", true), MinValue(0.1f)]
-	public float chaseTriggerDistance = 12f;
-	[HorizontalGroup("配置/行为/追击/Hr1"), LabelText("放弃距离"), SuffixLabel("米", true), MinValue(0.1f)]
-	public float chaseLossDistance = 20f;
 	/// <summary>野猪接受新追击路线的总代价上限，不包含上限本身。</summary>
 	[TabGroup("配置", "行为"), BoxGroup("配置/行为/追击"), LabelText("路径代价上限"), MinValue(1)]
 	public int chasePathCostLimit = 200;
@@ -186,11 +179,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	public float attackPositionDistance = 1.2f;
 	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/攻击"), LabelText("站位容差"), SuffixLabel("米", true), MinValue(0.05f)]
 	public float attackPositionTolerance = 0.18f;
-
-	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/攻击"), HorizontalGroup("配置/战斗/攻击/Hr2"), LabelText("愤怒增长"), MinValue(0f)]
-	public float rageBuildupRate = 0.5f;
-	[HorizontalGroup("配置/战斗/攻击/Hr2"), LabelText("愤怒衰减"), MinValue(0f)]
-	public float rageDecayRate = 0.2f;
 
 	[TabGroup("配置", "战斗"), BoxGroup("配置/战斗/攻击"), LabelText("攻击冷却"), SuffixLabel("秒", true), MinValue(0f)]
 	public float attackCooldown = 2f;
@@ -271,6 +259,8 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	public override void Save()
 	{
 		Data.State = _currentState;
+		if (_retaliationTarget != null)
+			Data.RetaliationTargetGuid = _retaliationTarget.itemData?.Guid ?? 0;
 		ModData.WriteData(Data);
 	}
 	#endregion
@@ -279,10 +269,12 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	protected override void OnResetRuntimeState()
 	{
 		_sleepCooldownTimer = 0f;
-		_alertCooldownTimer = 0f;
 		_grassSearchCooldown = 0f;
 		_currentFoodTarget = null;
 		_currentThreat = null;
+		_retaliationTarget = null;
+		Data.RetaliationTimeRemaining = Mathf.Max(0f, Data.RetaliationTimeRemaining);
+		Data.RageLevel = GetRetaliationProgress();
 		ClearGrassTarget();
 		ClearAttackPosition();
 		_attack.Reset();
@@ -299,8 +291,8 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		InitializeGrassSustenance();
 		if (_detector != null)
 		{
-			// 感知半径至少覆盖追击触发距离；丢失距离由当前目标记忆维持。
-			_detector.DetectionRadius = Mathf.Max(_detector.DetectionRadius, chaseTriggerDistance);
+			// 感知半径至少覆盖玩家避让距离。
+			_detector.DetectionRadius = Mathf.Max(_detector.DetectionRadius, playerAvoidDistance);
 		}
 		_attack.Bind(item);
 	}
@@ -322,7 +314,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	protected override void UpdateExtraTimers(float deltaTime)
 	{
 		_sleepCooldownTimer = DecrementTimer(_sleepCooldownTimer, deltaTime);
-		_alertCooldownTimer = DecrementTimer(_alertCooldownTimer, deltaTime);
 		_grassSearchCooldown = DecrementTimer(_grassSearchCooldown, deltaTime);
 		if (enableGrassForaging && Data.GrassSustenanceInitialized)
 		{
@@ -331,7 +322,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 				deltaTime);
 		}
 		_attack.Tick(deltaTime);
-		UpdateRageLevel(deltaTime);
+		UpdateRetaliationTimer(deltaTime);
 	}
 
 	protected override void OnPreEvaluate()
@@ -347,6 +338,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 		BuffManager buffManager = item.itemMods?.GetMod_ByID<BuffManager>(ModText.BuffManager);
 		buffManager?.AddBuff(DamageReductionBuffId);
+		AccumulatePlayerDamage(damageInfo);
 	}
 
 	protected override void OnBeforeSwitchState(WildBoarState previous, WildBoarState next)
@@ -365,7 +357,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		// 离开所有战斗相关状态时清除威胁目标
 		if (next != WildBoarState.Alert && next != WildBoarState.Chase
 		    && next != WildBoarState.Attack && next != WildBoarState.Flee
-		    && next != WildBoarState.Skill)
+		    && next != WildBoarState.Skill && !IsRetaliating)
 		{
 			_currentThreat = null;
 		}
@@ -391,7 +383,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	protected override string GetDebugExtraInfo()
 	{
-		return $" | 愤怒: {Data.RageLevel:F2}";
+		return $" | 狂暴: {Data.RageLevel:P0} | 玩家累计伤害: {Data.PlayerDamageAccumulated:F1}";
 	}
 	#endregion
 
@@ -400,16 +392,18 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	#endregion
 
 	#region PublicAPI
-	[Button("激怒野猪")]
+	[Button("触发避让")]
 	public void TriggerAlert(Item threatSource)
 	{
+		if (!IsPlayerThreat(threatSource))
+			return;
+
 		if (_currentThreat != threatSource)
 			ClearAttackPosition();
 		_currentThreat = threatSource;
-		_alertCooldownTimer = alertDuration;
 		if (debugLog)
 		{
-			Debug.Log($"[WildBoar] {name} 被激怒，威胁来源: {threatSource?.name}", this);
+			Debug.Log($"[WildBoar] {name} 开始避让玩家: {threatSource.name}", this);
 		}
 	}
 	#endregion
@@ -420,7 +414,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 		if (ShouldFlee())    return WildBoarState.Flee;
 		if (ShouldUseSkill())return WildBoarState.Skill;
 		if (ShouldAttack())  return WildBoarState.Attack;
-		if (ShouldAlert())   return WildBoarState.Alert;
 		if (ShouldChase())   return WildBoarState.Chase;
 		if (ShouldSleep())   return WildBoarState.Sleep;
 		if (ShouldEat())     return WildBoarState.Eat;
@@ -510,7 +503,7 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	private void TickAlert(float deltaTime)
 	{
 		if (_currentThreat != null &&
-			IsWithinEffectivePerceptionRange(_currentThreat, alertDetectDistance))
+			IsWithinEffectivePerceptionRange(_currentThreat, playerAvoidDistance))
 		{
 			FaceTarget(_currentThreat.transform.position);
 		}
@@ -588,19 +581,26 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 	#endregion
 
 	#region Conditions
-	/// <summary>逃跑条件：血量低于阈值（逃跑中需恢复到安全血量才停止）</summary>
+	/// <summary>野猪平时避让视野内的玩家，低血量时持续逃跑；反击计时内不被逃跑打断。</summary>
 	private bool ShouldFlee()
 	{
+		if (IsRetaliating)
+			return false;
+
 		float hpRate = GetHpRate();
-		return _currentState == WildBoarState.Flee
-			? hpRate < fleeSafeHpRate
-			: hpRate < fleeTriggerHpRate;
+		if (_currentState == WildBoarState.Flee && hpRate < fleeSafeHpRate)
+			return true;
+		if (hpRate < fleeTriggerHpRate)
+			return true;
+
+		return IsPlayerThreat(_currentThreat) &&
+			IsWithinEffectivePerceptionRange(_currentThreat, playerAvoidDistance);
 	}
 
 	/// <summary>攻击条件：攻击锁定阶段必须完成，且只有冷却结束后才能从追击进入攻击。</summary>
 	private bool ShouldAttack()
 	{
-		if (_currentThreat == null) return false;
+		if (!IsRetaliating || _currentThreat == null) return false;
 
 		// 攻击已经启动后，必须锁定到前摇、伤害窗口和后摇结束，不能因玩家短距离后撤而提前追击。
 		if (_currentState == WildBoarState.Attack)
@@ -610,25 +610,24 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 				 HasReachedAttackPosition(_currentThreat.transform.position));
 		}
 
-		if (_alertCooldownTimer > 0f || !_attack.IsCooldownDone) return false;
+		if (!_attack.IsCooldownDone) return false;
 
 		// 攻击状态与伤害触发盒共用横向更远、竖向更窄的椭圆范围，避免上下方向空挥。
 		return IsTargetInsideAttackRange(_currentThreat.transform.position) &&
-			HasReachedAttackPosition(_currentThreat.transform.position) &&
-			Data.RageLevel > 0.3f;
+			HasReachedAttackPosition(_currentThreat.transform.position);
 	}
 
 	/// <summary>技能条件：锁定威胁且技能模板进入触发距离；技能执行中保持状态直到模块结束。</summary>
 	private bool ShouldUseSkill()
 	{
-		if (_currentThreat == null || !_animalSkills.HasSkills)
+		if (!IsRetaliating || _currentThreat == null || !_animalSkills.HasSkills)
 			return false;
 
 		if (_currentState == WildBoarState.Skill)
 			return _animalSkills.IsAnyActive;
 
 		// 普通攻击已经开始时不抢断，待其结束后再由技能冷却/距离条件重新选择。
-		if (_currentState == WildBoarState.Attack || _alertCooldownTimer > 0f)
+		if (_currentState == WildBoarState.Attack)
 			return false;
 
 		return _animalSkills.HasUsableSkill(_currentThreat);
@@ -636,42 +635,15 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	private bool ShouldChase()
 	{
-		Item threat = _currentThreat;
-		if (IsChaseTargetBlockedByPathCost(threat)) return false;
+		if (!IsRetaliating)
+			return false;
 
-		if (_currentState == WildBoarState.Chase)
-		{
-			if (threat == null) return false;
-			_currentThreat = threat;
-			return IsWithinEffectivePerceptionRange(threat, chaseLossDistance);
-		}
-
-		if (threat == null) return false;
-		if (!IsWithinEffectivePerceptionRange(threat, chaseTriggerDistance)) return false;
+		Item threat = ResolveRetaliationTarget();
+		if (threat == null)
+			return false;
 
 		_currentThreat = threat;
-		return true;
-	}
-
-	private bool ShouldAlert()
-	{
-		if (_currentThreat == null)
-			return _alertCooldownTimer > 0f;
-		if (IsChaseTargetBlockedByPathCost(_currentThreat))
-			return false;
-
-		// 警觉状态只维持到倒计时结束；结束后必须放行后续追击判断，避免永久卡在警觉。
-		if (_currentState == WildBoarState.Alert)
-			return _alertCooldownTimer > 0f;
-		if (_alertCooldownTimer > 0f)
-			return true;
-		if (_currentState == WildBoarState.Chase || _currentState == WildBoarState.Attack)
-			return false;
-
-		if (!IsWithinEffectivePerceptionRange(_currentThreat, alertDetectDistance))
-			return false;
-
-		_alertCooldownTimer = Mathf.Max(0.01f, alertToChaseDuration);
+		if (IsChaseTargetBlockedByPathCost(threat)) return false;
 		return true;
 	}
 
@@ -844,6 +816,12 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	private void RefreshThreatTarget()
 	{
+		if (IsRetaliating)
+		{
+			_currentThreat = ResolveRetaliationTarget();
+			return;
+		}
+
 		Item nearestThreat = FindClosestThreat();
 
 		if (nearestThreat != null)
@@ -854,30 +832,99 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 			return;
 		}
 
-		// 感知快照暂时没有新目标时保留当前目标，直到超过追击放弃距离。
+		// 感知快照暂时没有新目标时，仅保留仍处于避让距离内的玩家。
 		if (_currentThreat != null &&
-			!IsWithinEffectivePerceptionRange(_currentThreat, chaseLossDistance))
+			!IsWithinEffectivePerceptionRange(_currentThreat, playerAvoidDistance))
 		{
 			_currentThreat = null;
 			ClearAttackPosition();
 		}
 	}
 
-	private void UpdateRageLevel(float deltaTime)
+	private void UpdateRetaliationTimer(float deltaTime)
 	{
-		if (_currentThreat != null && (_currentState == WildBoarState.Alert || _currentState == WildBoarState.Chase || _currentState == WildBoarState.Attack || _currentState == WildBoarState.Skill))
+		if (Data.RetaliationTimeRemaining > 0f)
 		{
-			Data.RageLevel = Mathf.Min(1f, Data.RageLevel + rageBuildupRate * deltaTime);
-			if (aggressiveDuringDusk && IsDuskTime())
+			Data.RetaliationTimeRemaining = DecrementTimer(Data.RetaliationTimeRemaining, deltaTime);
+			if (Data.RetaliationTimeRemaining <= 0f)
 			{
-				Data.RageLevel = Mathf.Min(1f, Data.RageLevel + rageBuildupRate * 0.5f * deltaTime);
+				Data.RetaliationTargetGuid = 0;
+				Data.PlayerDamageAccumulated = 0f;
+				_retaliationTarget = null;
 			}
 		}
-		else
-		{
-			Data.RageLevel = Mathf.Max(0f, Data.RageLevel - rageDecayRate * deltaTime);
-		}
+
+		Data.RageLevel = GetRetaliationProgress();
 	}
+
+	/// <summary>累计玩家对野猪造成的实际生命损失，达到最大生命值阈值后锁定反击目标。</summary>
+	private void AccumulatePlayerDamage(DamageReceiverDamageInfo damageInfo)
+	{
+		if (IsRetaliating || damageInfo.HpAfter <= 0f)
+			return;
+
+		Item player = ResolvePlayerDamageSource(damageInfo.Attacker);
+		float maxHp = damageInfo.Receiver != null ? damageInfo.Receiver.MaxHp : 0f;
+		if (player == null || maxHp <= 0f)
+			return;
+
+		Data.PlayerDamageAccumulated += damageInfo.DamageValue;
+		if (Data.PlayerDamageAccumulated >= maxHp * retaliationDamageThresholdRate)
+			BeginRetaliation(player);
+	}
+
+	/// <summary>开始定时反击并记录目标 GUID，支持野猪存档恢复后继续锁定同一玩家。</summary>
+	private void BeginRetaliation(Item player)
+	{
+		_retaliationTarget = player;
+		_currentThreat = player;
+		Data.PlayerDamageAccumulated = 0f;
+		Data.RetaliationTargetGuid = player.itemData?.Guid ?? 0;
+		Data.RetaliationTimeRemaining = retaliationDuration;
+		Data.RageLevel = GetRetaliationProgress();
+		ClearAttackPosition();
+	}
+
+	/// <summary>读取当前锁定玩家，读档时按 Item 注册表中的稳定 GUID 重新绑定。</summary>
+	private Item ResolveRetaliationTarget()
+	{
+		if (_retaliationTarget != null)
+			return _retaliationTarget;
+
+		int guid = Data.RetaliationTargetGuid;
+		ItemMgr manager = ItemMgr.Instance;
+		if (guid != 0 && manager != null)
+			manager.WorldRunTimeItems.TryGetValue(guid, out _retaliationTarget);
+
+		return _retaliationTarget;
+	}
+
+	/// <summary>攻击者优先解析到持有者，并只接受玩家实体或玩家标签。</summary>
+	private static Item ResolvePlayerDamageSource(Item attacker)
+	{
+		Item player = attacker != null ? attacker.Owner ?? attacker : null;
+		return IsPlayerThreat(player) ? player : null;
+	}
+
+	/// <summary>识别本地玩家类、Unity Player 标签和运行时 Player 物品标签。</summary>
+	private static bool IsPlayerThreat(Item target)
+	{
+		if (target == null)
+			return false;
+
+		return target is Player || target.CompareTag("Player") ||
+			target.itemData?.Tags?.Contains("Player") == true;
+	}
+
+	/// <summary>狂暴进度供调试信息显示，计时结束时归零。</summary>
+	private float GetRetaliationProgress()
+	{
+		return retaliationDuration > 0f
+			? Mathf.Clamp01(Data.RetaliationTimeRemaining / retaliationDuration)
+			: 0f;
+	}
+
+	private bool IsRetaliating => Data.RetaliationTimeRemaining > 0f; // 狂暴计时仍在运行。
 
 	private Item FindClosestThreat()
 	{
@@ -1024,17 +1071,6 @@ public partial class AI_WildBoar : AI_Base<WildBoarState>
 
 	private bool IsNightTime() => !IsDayTime();
 
-	private bool IsDuskTime()
-	{
-		if (DayTimeSystem.Instance == null) return false;
-
-		string sceneName = gameObject.scene.name;
-		if (!DayTimeSystem.Instance.WorldTimeDict.TryGetValue(sceneName, out TimeData timeData)) return false;
-
-		float dayLength = Mathf.Max(1f, timeData.DayLength);
-		float normalized = Mathf.Repeat(DayTimeSystem.Instance.GetCurrentTime(sceneName), dayLength) / dayLength;
-		return normalized >= duskStartRatio && normalized <= dayEndRatio;
-	}
 	#endregion
 
 	#region Animation Mapping

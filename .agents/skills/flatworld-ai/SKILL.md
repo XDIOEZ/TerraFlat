@@ -16,6 +16,8 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 ## 不变量
 
 - `AI_Bird` 的起飞入口必须统一执行飞行耐力门禁；耗尽后的强制降落先于逃跑/觅食，落地回满才能解锁，不能让受击逃跑在地面仍调用空中位移。耐力与恢复锁写入独立模块快照，`LiftRoot` 已包含飞行高度，头顶条不能重复叠加。
+- 鸟类动画以 `AI_Bird` 飞行阶段为权威：切换时核对 Animator 当前状态，不能只缓存上次请求的动画名；觅食降落还须确认鸟当前位置可落脚，食物目标格可走不代表脚下可落地。
+- 鸟与海鸥的飞行高度以 Actor JSON 的 `modules.ai.parameters.flightHeight` 为运行时配置，`AI_Bird` 默认值和两个外壳 Prefab 须与之同步；海鸥继承鸟的 Actor 参数。`BirdLift` 同时包含贴图和受击盒，飞行表现只移动该节点，不改写 Item/刚体的地面坐标；独立阴影通过 `IVisualGroundOffset` 扣除视觉抬升。
 - `IItemModuleDependencyBinder` 运行时尚未经过 `Module.LoadMod` 的宿主赋值，只能解析传入的模块注册表；依赖 `Module.item` 的运行时表现组件必须留到 `Load` 再创建。
 - 鸟类警惕距离需要同时覆盖 Detector 粗筛和带目标感知倍率的逃离阈值；扩大随机巡航半径不等于扩大警惕范围。种子与水果按最近掉落选择，JSON 中实际物品必须带语义 Tag，不能把物品 ID 当作已经存在的 Tag。
 
@@ -41,6 +43,7 @@ description: "Use when: 定位或修改 FlatWorld 的动物/怪物 AI、状态�
 - `UnboundedDailyGrowth` 会跳过生态预算与存活上限；修改生成条件时保留其独立语义。
 - `IgnorePopulationLimits` 只取消物种、生成组、玩家周边与全局数量上限；生成计划、概率、生态预算和远距离回收仍然生效，不能与 `UnboundedDailyGrowth` 混为一谈。
 - 怪物实例、物种/生成组计数、死亡订阅和回收保护统一由 `MonsterManager` 通过 `ItemMgr` 生命周期事件维护；`MonsterSpawnerManager` 只注入物种目录并执行生成/生态策略，其他系统必须查询注册表或复制无分配快照，禁止再用 `FindObjectsOfType` 或维护第二套怪物实例表。
+- 生态实体远距离回收与溢出裁剪使用 `DespawnItem(saveData:false)`；不落盘与不回池是两回事。状态机节点绑定同一 AI 组件，首次配置后应复用，卸载时只清本轮运行态与订阅。
 - `MonsterManager` 注册表会保留区块休眠实体供后续唤醒与远距离回收，但生成上限、物种/分组存活数和溢出裁剪只统计 `activeInHierarchy` 且未进入销毁流程的实例；新增数量限制必须复用 `IsActiveForPopulationLimits`，不能直接按注册总数计算。
 - 活动种群计数由 `RuntimeItemRegistered/Unregistered` 与无 Update 的 `MonsterPopulationObserver` 增量维护；必须覆盖祖先显隐、直接销毁和回池解绑，不得恢复每帧全表重数。`RegistrationVersion` 只表示注册表结构变化，不能用它缓存会随移动改变的周边数量。
 - 刷怪休眠复用 `ItemMgr` 的 WorldAddress 索引：注册时先建立地址，移动跨块以及 `ChunkView` 完整绑定/解绑才检查相关实体。退出世界先解除表现通知，再清理登记，禁止唤醒卸载中的对象；命名空间中存在两种 `WorldAddress`，运行时通知须明确使用 `FlatWorld.WorldModel.WorldAddress`。

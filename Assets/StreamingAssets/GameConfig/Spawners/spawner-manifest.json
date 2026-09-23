@@ -54,7 +54,7 @@
         {
           "prefabName": "WildBoar",
           "runtimeBackend": "gameObject",
-          "probability": 2.0,
+          "probability": 0.5263158,
           "ecologyCost": 2,
           "speciesAliveLimit": 5
         }
