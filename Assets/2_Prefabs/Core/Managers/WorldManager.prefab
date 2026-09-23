@@ -726,6 +726,7 @@ MonoBehaviour:
   chunkLoadSpeedMultiplier: 1
   unlimitedChunkLoadSpeed: 0
   maxChunkPresentationsPerFrame: 1
+  maxChunkPresentationContinuationStepsPerFrame: 6
   defaultGenerationProfile: {fileID: 0}
   backgroundGenerationConcurrency: 2
   maxChunkCommitsPerFrame: 1

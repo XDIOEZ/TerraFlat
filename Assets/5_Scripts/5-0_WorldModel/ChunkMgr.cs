@@ -28,14 +28,15 @@ namespace FlatWorld.WorldModel
 
     /// <summary>
     /// 描述“玩家或其他观察者周围要保留多大一片区块”。
-    /// 近处的区块会加载并运行；稍远的区块暂时留在内存里；再远才会删除。
+    /// 近处的区块会运行，外圈可提前准备画面，再外圈只保留数据；最远处才删除。
     /// 这里的距离按区块计算，并且把中心区块自己也算在内。
     /// </summary>
     public readonly struct ChunkWindowRequest
     {
         public ChunkWindowRequest(WorldAddress center, int activeDistance, int destroyDistance,
             bool requestPresentation, int worldSeed, ChunkGenerationProfileSnapshot profile,
-            ChunkGenerationTopologySnapshot topology = default, int dataDistance = 0)
+            ChunkGenerationTopologySnapshot topology = default, int dataDistance = 0,
+            int presentationDistance = 0)
             : this(center,
                 new Int2(activeDistance, activeDistance),
                 new Int2(destroyDistance, destroyDistance),
@@ -45,6 +46,9 @@ namespace FlatWorld.WorldModel
                 topology,
                 dataDistance > 0
                     ? new Int2(dataDistance, dataDistance)
+                    : default,
+                presentationDistance > 0
+                    ? new Int2(presentationDistance, presentationDistance)
                     : default)
         {
         }
@@ -52,13 +56,18 @@ namespace FlatWorld.WorldModel
         /// <summary>按 X/Y 独立距离创建矩形区块窗口，适配宽屏或超宽屏相机。</summary>
         public ChunkWindowRequest(WorldAddress center, Int2 activeDistance, Int2 destroyDistance,
             bool requestPresentation, int worldSeed, ChunkGenerationProfileSnapshot profile,
-            ChunkGenerationTopologySnapshot topology = default, Int2 dataDistance = default)
+            ChunkGenerationTopologySnapshot topology = default, Int2 dataDistance = default,
+            Int2 presentationDistance = default)
         {
             if (activeDistance.X <= 0 || activeDistance.Y <= 0)
                 throw new ArgumentOutOfRangeException(nameof(activeDistance));
+            if (presentationDistance.X <= 0 || presentationDistance.Y <= 0)
+                presentationDistance = activeDistance;
             if (dataDistance.X <= 0 || dataDistance.Y <= 0)
-                dataDistance = activeDistance;
-            if (dataDistance.X < activeDistance.X || dataDistance.Y < activeDistance.Y)
+                dataDistance = presentationDistance;
+            if (presentationDistance.X < activeDistance.X || presentationDistance.Y < activeDistance.Y)
+                throw new ArgumentOutOfRangeException(nameof(presentationDistance));
+            if (dataDistance.X < presentationDistance.X || dataDistance.Y < presentationDistance.Y)
                 throw new ArgumentOutOfRangeException(nameof(dataDistance));
             if (destroyDistance.X < activeDistance.X || destroyDistance.Y < activeDistance.Y)
                 throw new ArgumentOutOfRangeException(nameof(destroyDistance));
@@ -67,11 +76,14 @@ namespace FlatWorld.WorldModel
             Center = center;
             ActiveDistanceX = activeDistance.X;
             ActiveDistanceY = activeDistance.Y;
+            PresentationDistanceX = presentationDistance.X;
+            PresentationDistanceY = presentationDistance.Y;
             DataDistanceX = dataDistance.X;
             DataDistanceY = dataDistance.Y;
             DestroyDistanceX = destroyDistance.X;
             DestroyDistanceY = destroyDistance.Y;
             ActiveDistance = Math.Max(ActiveDistanceX, ActiveDistanceY);
+            PresentationDistance = Math.Max(PresentationDistanceX, PresentationDistanceY);
             DataDistance = Math.Max(DataDistanceX, DataDistanceY);
             DestroyDistance = Math.Max(DestroyDistanceX, DestroyDistanceY);
             RequestPresentation = requestPresentation;
@@ -87,7 +99,11 @@ namespace FlatWorld.WorldModel
         public int ActiveDistanceX { get; }
         /// <summary>纵向活动区块距离，包含中心区块。</summary>
         public int ActiveDistanceY { get; }
-        /// <summary>中心周围多远以内只提前生成数据，不领取模拟和表现租约。</summary>
+        /// <summary>横纵方向完整准备画面的距离，可大于实际运行圈。</summary>
+        public int PresentationDistance { get; }
+        public int PresentationDistanceX { get; }
+        public int PresentationDistanceY { get; }
+        /// <summary>中心周围多远以内需要数据；超出表现圈的部分不领取模拟和表现租约。</summary>
         public int DataDistance { get; }
         /// <summary>横向数据生成距离。</summary>
         public int DataDistanceX { get; }
@@ -293,6 +309,8 @@ namespace FlatWorld.WorldModel
                 WorldAddress center = _normalizer.Normalize(request.Center);
                 int activeRadiusX = request.ActiveDistanceX - 1;
                 int activeRadiusY = request.ActiveDistanceY - 1;
+                int presentationRadiusX = request.PresentationDistanceX - 1;
+                int presentationRadiusY = request.PresentationDistanceY - 1;
                 int dataRadiusX = request.DataDistanceX - 1;
                 int dataRadiusY = request.DataDistanceY - 1;
                 int destroyRadiusX = request.DestroyDistanceX - 1;
@@ -323,10 +341,11 @@ namespace FlatWorld.WorldModel
                             candidate.IsHigherPriorityThan(existing))
                             dataTargets[address] = candidate;
 
-                        if (!active)
-                            continue;
-                        targets.Add(address);
-                        if (request.RequestPresentation)
+                        if (active)
+                            targets.Add(address);
+                        if (request.RequestPresentation &&
+                            Math.Abs(x) <= presentationRadiusX &&
+                            Math.Abs(y) <= presentationRadiusY)
                             presentationTargets.Add(address);
                     }
                 }
@@ -345,8 +364,20 @@ namespace FlatWorld.WorldModel
                 if (!_simulationLeases.ContainsKey(address))
                     _simulationLeases.Add(address,
                         World.AcquireChunkLease(address, ChunkLeaseKind.Simulation));
-                SetPresentationDemand(address, presentationTargets.Contains(address));
             }
+
+            // 预加载圈只持有表现需求；离开真实活动圈时不必销毁已经画好的区块。
+            var orderedPresentationTargets = new List<WorldAddress>(presentationTargets);
+            orderedPresentationTargets.Sort();
+            for (int i = 0; i < orderedPresentationTargets.Count; i++)
+                SetPresentationDemand(orderedPresentationTargets[i], true);
+            var hiddenPresentationTargets = new List<WorldAddress>();
+            foreach (WorldAddress address in _presentationDemand)
+                if (!presentationTargets.Contains(address))
+                    hiddenPresentationTargets.Add(address);
+            hiddenPresentationTargets.Sort();
+            for (int i = 0; i < hiddenPresentationTargets.Count; i++)
+                SetPresentationDemand(hiddenPresentationTargets[i], false);
 
             // 可见圈始终排在预取圈前面；同一圈按地址稳定排序，不再计算移动预测。
             var orderedDataTargets = new List<WorldAddress>(dataTargets.Keys);
@@ -375,7 +406,6 @@ namespace FlatWorld.WorldModel
                 WorldAddress address = deactivate[i];
                 _simulationLeases[address].Dispose();
                 _simulationLeases.Remove(address);
-                SetPresentationDemand(address, false);
             }
 
             // 真正删除前，世界还会再检查一次：只要还有人拿着使用票，就不会误删。
@@ -553,11 +583,13 @@ namespace FlatWorld.WorldModel
             var addresses = new List<WorldAddress>(_simulationLeases.Keys);
             addresses.Sort();
             for (int i = 0; i < addresses.Count; i++)
-            {
                 _simulationLeases[addresses[i]].Dispose();
-                SetPresentationDemand(addresses[i], false);
-            }
             _simulationLeases.Clear();
+            addresses.Clear();
+            addresses.AddRange(_presentationDemand);
+            addresses.Sort();
+            for (int i = 0; i < addresses.Count; i++)
+                SetPresentationDemand(addresses[i], false);
         }
 
         /// <summary>取消所有还没完成的区块生成任务。</summary>

@@ -77,11 +77,11 @@ internal static class ChunkBatchRendererGroupService
         SharedSpriteMeshCache.Clearing += ResetStatics;
     }
 
-    internal static void RegisterOwner(ChunkTilemapRenderer owner)
+    internal static void RegisterOwner(ChunkTilemapRenderer owner, Bounds worldBounds)
     {
         if (owner == null)
             return;
-        EnsureBackend().RegisterOwner(owner);
+        EnsureBackend().RegisterOwner(owner, worldBounds);
     }
 
     internal static void UnregisterOwner(ChunkTilemapRenderer owner)
@@ -157,10 +157,15 @@ internal static class ChunkBatchRendererGroupService
         private const uint InstanceMetadataAddress = ZeroPrefixBytes;
         private const int TerrainQueueBase = 2988;
         private static readonly int InstanceDataId = Shader.PropertyToID("_ChunkInstanceData");
+        private static readonly int ElevationStrengthId = Shader.PropertyToID("_ElevationStrength");
+        private static readonly int ElevationEdgeWidthId = Shader.PropertyToID("_ElevationEdgeWidth");
 
         private readonly object syncRoot = new();
         private readonly BatchRendererGroup rendererGroup;
         private readonly Dictionary<ChunkTilemapRenderer, Dictionary<int, InstanceHandle>> ownerHandles = new();
+        private readonly Dictionary<ChunkTilemapRenderer, Bounds> ownerBounds = new();
+        private readonly Dictionary<ChunkTilemapRenderer, bool> ownerVisibility = new();
+        private readonly List<int> batchVisibleCounts = new();
         private readonly Dictionary<VisualKey, TileBatch> batches = new();
         private readonly List<TileBatch> orderedBatches = new();
         private readonly Dictionary<int, MeshRegistration> meshes = new();
@@ -181,6 +186,7 @@ internal static class ChunkBatchRendererGroupService
             contactTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Contact-Lit");
             waterTemplate = LoadTemplate("Config/WorldModel/BRG/ChunkBRG-Water-Lit");
             rendererGroup = new BatchRendererGroup(OnPerformCulling, IntPtr.Zero);
+            GroundElevationShadowSettings.Changed += ApplyGroundElevationPreference;
             // Chunk 流送本身已经限制活动窗口；这里保留宽全局 Bounds，避免 BRG 在回调前误裁掉循环世界区块。
             rendererGroup.SetGlobalBounds(new Bounds(Vector3.zero, new Vector3(2000000f, 2000000f, 1000f)));
         }
@@ -194,12 +200,13 @@ internal static class ChunkBatchRendererGroupService
             }
         }
 
-        public void RegisterOwner(ChunkTilemapRenderer owner)
+        public void RegisterOwner(ChunkTilemapRenderer owner, Bounds worldBounds)
         {
             lock (syncRoot)
             {
                 if (!ownerHandles.ContainsKey(owner))
                     ownerHandles.Add(owner, new Dictionary<int, InstanceHandle>());
+                ownerBounds[owner] = worldBounds;
                 warnedMissingOwnerIds.Remove(owner.GetInstanceID());
             }
         }
@@ -263,6 +270,7 @@ internal static class ChunkBatchRendererGroupService
                 }
 
                 ownerHandles.Remove(owner);
+                ownerBounds.Remove(owner);
             }
         }
 
@@ -391,10 +399,32 @@ internal static class ChunkBatchRendererGroupService
             runtimeMaterial.shaderKeywords = sourceMaterial.shaderKeywords;
             runtimeMaterial.SetTexture("_MainTex", texture);
             runtimeMaterial.renderQueue = TerrainQueueBase + priority;
+            if (layer == VisualLayer.Ground)
+                ApplyGroundElevationPreference(runtimeMaterial);
             BatchMaterialID id = rendererGroup.RegisterMaterial(runtimeMaterial);
-            registration = new MaterialRegistration(runtimeMaterial, id);
+            registration = new MaterialRegistration(runtimeMaterial, id, layer);
             materials.Add(key, registration);
             return registration;
+        }
+
+        /// <summary>立即刷新已有地面批次，宽度调整不需要重新上传地块实例。</summary>
+        private void ApplyGroundElevationPreference()
+        {
+            lock (syncRoot)
+            {
+                foreach (MaterialRegistration registration in materials.Values)
+                {
+                    if (registration.Layer == VisualLayer.Ground)
+                        ApplyGroundElevationPreference(registration.Material);
+                }
+            }
+        }
+
+        /// <summary>只覆盖高度着色参数，保持源材质的墙脚接触阴影配置。</summary>
+        private static void ApplyGroundElevationPreference(Material material)
+        {
+            material.SetFloat(ElevationStrengthId, GroundElevationShadowSettings.Enabled ? 1f : 0f);
+            material.SetFloat(ElevationEdgeWidthId, GroundElevationShadowSettings.Width);
         }
 
         private BatchID CreateBatch(GraphicsBuffer buffer)
@@ -424,21 +454,33 @@ internal static class ChunkBatchRendererGroupService
                 cullingCallbackCount++;
                 int commandCount = 0;
                 int visibleCount = 0;
+                int submittedCount = 0;
+                ownerVisibility.Clear();
+                batchVisibleCounts.Clear();
                 for (int i = 0; i < orderedBatches.Count; i++)
                 {
-                    if (orderedBatches[i].Count <= 0)
+                    TileBatch batch = orderedBatches[i];
+                    submittedCount += batch.Count;
+                    int batchVisible = 0;
+                    for (int instance = 0; instance < batch.Count; instance++)
+                    {
+                        if (IsOwnerVisible(batch.GetOwner(instance), context.cullingPlanes))
+                            batchVisible++;
+                    }
+                    batchVisibleCounts.Add(batchVisible);
+                    if (batchVisible <= 0)
                         continue;
                     commandCount++;
-                    visibleCount += orderedBatches[i].Count;
+                    visibleCount += batchVisible;
                 }
                 lastCullingCommandCount = commandCount;
                 lastCullingVisibleCount = visibleCount;
 
-                if (RenderDebugEnabled && ownerHandles.Count > 0 && visibleCount == 0 &&
+                if (RenderDebugEnabled && ownerHandles.Count > 0 && submittedCount == 0 &&
                     cullingCallbackCount - lastZeroVisibleWarningCull >= 180)
                 {
                     lastZeroVisibleWarningCull = cullingCallbackCount;
-                    Debug.LogWarning($"[ChunkRenderDebug] BRG 有 {ownerHandles.Count} 个 Owner，但本次 Culling 没有任何可绘制实例。 " +
+                    Debug.LogWarning($"[ChunkRenderDebug] BRG 有 {ownerHandles.Count} 个 Owner，但没有提交可绘制实例。 " +
                                      BuildDebugSummary());
                 }
 
@@ -472,12 +514,13 @@ internal static class ChunkBatchRendererGroupService
                 for (int i = 0; i < orderedBatches.Count; i++)
                 {
                     TileBatch batch = orderedBatches[i];
-                    if (batch.Count <= 0)
+                    int batchVisible = batchVisibleCounts[i];
+                    if (batchVisible <= 0)
                         continue;
 
                     BatchDrawCommand* draw = commands->drawCommands + commandIndex;
                     draw->visibleOffset = (uint)visibleOffset;
-                    draw->visibleCount = (uint)batch.Count;
+                    draw->visibleCount = (uint)batchVisible;
                     draw->batchID = batch.BatchId;
                     draw->materialID = batch.MaterialId;
                     draw->meshID = batch.MeshId;
@@ -494,15 +537,46 @@ internal static class ChunkBatchRendererGroupService
                         renderingLayerMask = uint.MaxValue
                     };
 
+                    int visibleIndex = 0;
                     for (int instance = 0; instance < batch.Count; instance++)
-                        commands->visibleInstances[visibleOffset + instance] = instance;
+                    {
+                        if (ownerVisibility[batch.GetOwner(instance)])
+                            commands->visibleInstances[visibleOffset + visibleIndex++] = instance;
+                    }
 
-                    visibleOffset += batch.Count;
+                    visibleOffset += batchVisible;
                     commandIndex++;
                 }
             }
 
             return default;
+        }
+
+        /// <summary>按区块边界与当前相机裁剪面判断，预加载区块靠近镜头时无需重新绑定 BRG。</summary>
+        private bool IsOwnerVisible(ChunkTilemapRenderer owner, NativeArray<Plane> planes)
+        {
+            if (ownerVisibility.TryGetValue(owner, out bool visible))
+                return visible;
+
+            Bounds bounds = ownerBounds[owner];
+            Vector3 center = bounds.center;
+            Vector3 extents = bounds.extents;
+            visible = true;
+            for (int i = 0; i < planes.Length; i++)
+            {
+                Plane plane = planes[i];
+                Vector3 normal = plane.normal;
+                float radius = Mathf.Abs(normal.x) * extents.x +
+                               Mathf.Abs(normal.y) * extents.y +
+                               Mathf.Abs(normal.z) * extents.z;
+                if (Vector3.Dot(normal, center) + plane.distance + radius >= 0f)
+                    continue;
+                visible = false;
+                break;
+            }
+
+            ownerVisibility.Add(owner, visible);
+            return visible;
         }
 
         public void Dispose()
@@ -512,12 +586,16 @@ internal static class ChunkBatchRendererGroupService
                 if (disposed)
                     return;
                 disposed = true;
+                GroundElevationShadowSettings.Changed -= ApplyGroundElevationPreference;
 
                 for (int i = 0; i < orderedBatches.Count; i++)
                     orderedBatches[i].Dispose();
                 orderedBatches.Clear();
                 batches.Clear();
                 ownerHandles.Clear();
+                ownerBounds.Clear();
+                ownerVisibility.Clear();
+                batchVisibleCounts.Clear();
 
                 foreach (MaterialRegistration registration in materials.Values)
                 {
@@ -588,6 +666,7 @@ internal static class ChunkBatchRendererGroupService
             public int Priority { get; }
             public BatchID BatchId { get; private set; }
             public int Count => gpuData.Count;
+            public ChunkTilemapRenderer GetOwner(int index) => owners[index].Owner;
 
             public int Add(ChunkTilemapRenderer owner, int slotKey, InstanceData data)
             {
@@ -748,14 +827,16 @@ internal static class ChunkBatchRendererGroupService
 
         private readonly struct MaterialRegistration
         {
-            public MaterialRegistration(Material material, BatchMaterialID id)
+            public MaterialRegistration(Material material, BatchMaterialID id, VisualLayer layer)
             {
                 Material = material;
                 Id = id;
+                Layer = layer;
             }
 
             public Material Material { get; }
             public BatchMaterialID Id { get; }
+            public VisualLayer Layer { get; }
         }
     }
 

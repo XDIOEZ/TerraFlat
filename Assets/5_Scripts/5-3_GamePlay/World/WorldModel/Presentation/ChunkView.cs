@@ -18,11 +18,16 @@ public sealed class ChunkView : MonoBehaviour
     private bool navigationEnabled;
     private int bindVersion;
     private bool presentationComplete;
-    private ChunkLightOccluderRenderer lightOccluderRenderer;
+    [SerializeField] private ChunkNaturalItemRenderer naturalItemRenderer;
+    [SerializeField] private ChunkLightOccluderRenderer lightOccluderRenderer;
+    private ChunkTilemapRenderer terrainRenderer;
 
     public ChunkRuntime Model => chunk;
     public bool IsBound => chunk != null && presentationComplete;
     public bool IsBinding => chunk != null && !presentationComplete;
+    /// <summary>基础地形已提交给 BRG，后续草地、碰撞和自然物可以继续分帧绑定。</summary>
+    public bool IsBaseTerrainPresented =>
+        chunk != null && terrainRenderer != null && terrainRenderer.IsBatchPresentationComplete;
 
     /// <summary>完整绑定或解绑后的表现状态通知，覆盖同步、增量绑定以及回池/销毁。</summary>
     public event Action<FlatWorld.WorldModel.WorldAddress> PresentationChanged;
@@ -72,11 +77,11 @@ public sealed class ChunkView : MonoBehaviour
         return fallback != null && fallback.RepairBatchPresentationIfNeeded();
     }
 
-    /// <summary>确保运行时区块表现拥有独立的自然物品父节点。</summary>
+    /// <summary>区块所需表现组件由 Prefab 明确装配，避免流送时动态添加脚本组件。</summary>
     private void Awake()
     {
-        EnsureNaturalItemRenderer();
-        EnsureLightOccluderRenderer();
+        if (naturalItemRenderer == null || lightOccluderRenderer == null)
+            throw new InvalidOperationException("ChunkView Prefab 缺少自然物或光遮挡表现组件。");
     }
 
     public void Bind(WorldRuntime worldRuntime, ChunkRuntime chunkRuntime, bool includeNavigation = true)
@@ -175,6 +180,7 @@ public sealed class ChunkView : MonoBehaviour
                     renderers[i] is MonoBehaviour behaviour && behaviour != null)
                     worldAware.SetWorld(null);
             renderers.Clear();
+            terrainRenderer = null;
             navigationLease?.Dispose();
             navigationLease = null;
             presentationLease?.Dispose();
@@ -188,8 +194,7 @@ public sealed class ChunkView : MonoBehaviour
     public void CaptureNaturalItemState()
     {
         GetComponent<ChunkAgricultureRenderer>().CaptureState();
-        ChunkNaturalItemRenderer renderer = GetComponentInChildren<ChunkNaturalItemRenderer>(true);
-        renderer?.CaptureState();
+        naturalItemRenderer.CaptureState();
     }
 
     #region 池化资源
@@ -216,11 +221,7 @@ public sealed class ChunkView : MonoBehaviour
     public IEnumerator CaptureNaturalItemStateCoroutine()
     {
         GetComponent<ChunkAgricultureRenderer>().CaptureState();
-        ChunkNaturalItemRenderer renderer = GetComponentInChildren<ChunkNaturalItemRenderer>(true);
-        if (renderer == null)
-            yield break;
-
-        IEnumerator captureRoutine = renderer.CaptureStateCoroutine();
+        IEnumerator captureRoutine = naturalItemRenderer.CaptureStateCoroutine();
         while (captureRoutine.MoveNext())
             yield return captureRoutine.Current;
     }
@@ -246,38 +247,19 @@ public sealed class ChunkView : MonoBehaviour
     private void CacheRenderers()
     {
         renderers.Clear();
+        terrainRenderer = null;
         MonoBehaviour[] behaviours = GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
         for (int i = 0; i < behaviours.Length; i++)
         {
             if (behaviours[i] is IChunkViewRenderer renderer && !ReferenceEquals(renderer, this))
+            {
                 renderers.Add(renderer);
+                if (renderer is ChunkTilemapRenderer terrain)
+                    terrainRenderer = terrain;
+            }
         }
         renderers.Sort((left, right) =>
             ResolveRendererPriority(left).CompareTo(ResolveRendererPriority(right)));
-    }
-
-    /// <summary>旧 ChunkView Prefab 无需手工改层级，首次加载时自动补齐 NaturalItems 子节点。</summary>
-    private void EnsureNaturalItemRenderer()
-    {
-        ChunkNaturalItemRenderer renderer = GetComponentInChildren<ChunkNaturalItemRenderer>(true);
-        if (renderer != null)
-            return;
-
-        var naturalItems = new GameObject("NaturalItems");
-        naturalItems.transform.SetParent(transform, false);
-        naturalItems.AddComponent<ChunkNaturalItemRenderer>();
-    }
-
-    /// <summary>旧 ChunkView Prefab 无需手工改层级，首次加载时自动补齐 LightOccluders 子节点。</summary>
-    private void EnsureLightOccluderRenderer()
-    {
-        lightOccluderRenderer = GetComponentInChildren<ChunkLightOccluderRenderer>(true);
-        if (lightOccluderRenderer != null)
-            return;
-
-        var lightOccluders = new GameObject("LightOccluders");
-        lightOccluders.transform.SetParent(transform, false);
-        lightOccluderRenderer = lightOccluders.AddComponent<ChunkLightOccluderRenderer>();
     }
 
     /// <summary>建立租约和事件，再由同步或分帧入口绑定各表现组件。</summary>

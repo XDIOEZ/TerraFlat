@@ -50,6 +50,10 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
     public bool IsBatchPresentationRegistered =>
         boundChunk?.Terrain != null && ChunkBatchRendererGroupService.IsOwnerRegistered(this);
 
+    /// <summary>基础地形完成 BRG 提交且仍登记在渲染后端。</summary>
+    public bool IsBatchPresentationComplete =>
+        batchPresentationComplete && IsBatchPresentationRegistered;
+
     #endregion
 
     #region 绑定与生命周期
@@ -106,7 +110,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
             DisableVisualTilemapRenderers();
             ClearVisualTilemaps();
             batchPresentationComplete = false;
-            ChunkBatchRendererGroupService.RegisterOwner(this);
+            ChunkBatchRendererGroupService.RegisterOwner(this, GetBatchWorldBounds(chunk.Terrain));
             SyncBlockingCollisionAll(chunk.Terrain);
             RefreshAllBatchVisuals(chunk.Terrain);
             batchPresentationComplete = true;
@@ -196,7 +200,7 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         DisableVisualTilemapRenderers();
         batchPresentationComplete = false;
         ChunkBatchRendererGroupService.UnregisterOwner(this);
-        ChunkBatchRendererGroupService.RegisterOwner(this);
+        ChunkBatchRendererGroupService.RegisterOwner(this, GetBatchWorldBounds(terrain));
         RefreshAllBatchVisuals(terrain);
         batchPresentationComplete = true;
         ValidateBatchPresentation("Repair", terrain);
@@ -651,6 +655,15 @@ public sealed class ChunkTilemapRenderer : MonoBehaviour, IChunkViewRenderer, IW
         ChunkBatchRendererGroupService.VisualLayer layer)
     {
         return (int)layer * terrain.CellCount + y * terrain.Width + x;
+    }
+
+    /// <summary>给 BRG 提供整块地形的世界边界，留两格余量容纳岸线和地块 Sprite 的外扩。</summary>
+    private Bounds GetBatchWorldBounds(ChunkTerrainData terrain)
+    {
+        Int2 origin = boundChunk.Address.ChunkOrigin;
+        return new Bounds(
+            new Vector3(origin.X + terrain.Width * 0.5f, origin.Y + terrain.Height * 0.5f, 0f),
+            new Vector3(terrain.Width + 4f, terrain.Height + 4f, 4f));
     }
 
     private Material GetActiveWaterMaterial()

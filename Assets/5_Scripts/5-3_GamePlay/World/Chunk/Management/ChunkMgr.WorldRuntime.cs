@@ -16,7 +16,7 @@ public partial class ChunkMgr
     [Header("无头世界模型")]
     [SerializeField] private ChunkGenerationProfileSO defaultGenerationProfile;
     [SerializeField, Min(1)] private int backgroundGenerationConcurrency = 2;
-    [Tooltip("主线程每帧最多提交的后台生成结果。提交会计算哈希并发布事件，建议保持 1。")]
+    [Tooltip("主线程每帧最多提交的后台生成结果；提交会计算哈希并发布事件，建议保持 1。")]
     [SerializeField, Range(1, 4)] private int maxChunkCommitsPerFrame = 1;
     [SerializeField] private bool authoritativeSimulation = true;
 

@@ -15,7 +15,7 @@ public class Mod_ChunkLoader : Module
     [System.Serializable]
     public struct ChunkDistanceConfig
     {
-        [Tooltip("区块数据预取距离（可见圈外只提前生成数据，不绘制也不运行）")]
+        [Tooltip("可见圈外只预生成区块数据，不创建画面或运行模拟")]
         public int UnActiveDistance;
 
         [Tooltip("区块销毁距离（超过此距离的区块将被销毁）")]
@@ -24,7 +24,7 @@ public class Mod_ChunkLoader : Module
         [Tooltip("区块加载距离（此距离内的区块将被加载）")]
         public int LoadChunkDistance;
 
-        public ChunkDistanceConfig(int unActive = 2, int destroy = 3, int load = 1)
+        public ChunkDistanceConfig(int unActive = 3, int destroy = 4, int load = 1)
         {
             UnActiveDistance = unActive;
             DestroyChunkDistance = destroy;
@@ -43,7 +43,7 @@ public class Mod_ChunkLoader : Module
 
     [Header("区块加载距离设置")]
     [SerializeField]
-    private ChunkDistanceConfig distanceConfig = new ChunkDistanceConfig(2, 3, 1);
+    private ChunkDistanceConfig distanceConfig = new ChunkDistanceConfig(3, 4, 1);
 
     [Header("动态视距同步")]
     [Tooltip("是否跟随相机视口自动调整加载范围")]
@@ -291,8 +291,8 @@ public class Mod_ChunkLoader : Module
             Mathf.Max(automaticDistanceX, minimumDistance),
             Mathf.Max(automaticDistanceY, minimumDistance));
 
-        int prefetchMargin = Mathf.Max(1, UnActiveDistance - LoadChunkDistance);
-        int destroyMargin = Mathf.Max(0, DestroyChunkDistance - UnActiveDistance);
+        int prefetchMargin = Mathf.Max(2, UnActiveDistance - LoadChunkDistance);
+        int destroyMargin = Mathf.Max(1, DestroyChunkDistance - UnActiveDistance);
         var targetPrefetch = new Vector2Int(
             targetLoad.x + prefetchMargin,
             targetLoad.y + prefetchMargin);
@@ -357,7 +357,8 @@ public class Mod_ChunkLoader : Module
             EffectiveLoadDistance,
             EffectiveDestroyDistance,
             includeLocalPresentation: true,
-            prefetchDistance: EffectivePrefetchDistance);
+            prefetchDistance: EffectivePrefetchDistance,
+            presentationDistance: EffectiveLoadDistance);
     }
 
     #endregion
@@ -401,15 +402,15 @@ public class Mod_ChunkLoader : Module
         needsChunkUpdate = true;
     }
 
-    /// <summary>保证可见、预取、保留三圈按顺序递增，并始终保留至少一圈数据预取。</summary>
+    /// <summary>保证可见、数据预取、保留三圈按顺序递增，并至少保留两圈数据预取。</summary>
     private void NormalizeDistanceConfig()
     {
         distanceConfig.LoadChunkDistance = Mathf.Max(1, distanceConfig.LoadChunkDistance);
         distanceConfig.UnActiveDistance = Mathf.Max(
-            distanceConfig.LoadChunkDistance + 1,
+            distanceConfig.LoadChunkDistance + 2,
             distanceConfig.UnActiveDistance);
         distanceConfig.DestroyChunkDistance = Mathf.Max(
-            distanceConfig.UnActiveDistance,
+            distanceConfig.UnActiveDistance + 1,
             distanceConfig.DestroyChunkDistance);
     }
 

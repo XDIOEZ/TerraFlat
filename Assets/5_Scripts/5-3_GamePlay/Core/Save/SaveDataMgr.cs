@@ -1215,11 +1215,13 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         string planetName = ResolveRuntimePlanetName();
         string chunkName = ToChunkName(address);
         string key = BuildChunkKey(planetName, chunkName);
-        if (!TryEnsureRuntimeChunkBaseline(key, chunk, out _))
+        if (!TryEnsureRuntimeChunkBaseline(key, chunk, out RuntimeChunkBaseline baseline) ||
+            baseline.PersistenceRestored)
             return;
 
         if (!chunkDeltas.TryGetValue(key, out ChunkSaveRecord delta) || delta == null)
         {
+            baseline.PersistenceRestored = true;
             return;
         }
 
@@ -1250,6 +1252,7 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         RestoreSupportTerrain(chunk, delta);
         RestoreContaminationTerrain(chunk, delta);
         RestoreLiquidTerrain(chunk, delta);
+        baseline.PersistenceRestored = true;
     }
 
     /// <summary>放置、受损或拆除运行时格子建筑后立即更新内存差量，避免区块回收时丢失状态。</summary>
@@ -2660,6 +2663,8 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         }
 
         public WeakReference ChunkReference { get; }
+        /// <summary>同一份区块数据的存档差量只恢复一次，防止缓存区块往返视野时覆盖运行中改动。</summary>
+        public bool PersistenceRestored { get; set; }
         public int Width { get; }
         public int Height { get; }
         public TerrainCell[] Cells { get; }

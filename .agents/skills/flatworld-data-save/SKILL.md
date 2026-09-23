@@ -28,6 +28,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 - Sprite 地址只有在源图是 Multiple 切片时才追加 `[子资源名]`；单 Sprite 图必须使用主资源地址。Unity 2022.3 + Addressables 1.22.3 Fast Mode 遇到无效子资源地址可能在 `AssetDatabaseProvider.LoadAssetSubObject` 抛空引用，编辑器加载路径需先做资源存在性和子资源名称校验。
 - Tile 栈只通过 `Data_TileMap` API 读写；区块差量保留基线、ChangedItems、删除 GUID 与确定性 ID 语义。
 - 新版 WorldModel 的格子建筑写入 `ChunkTerrainData.BlockingTileId`，不会进入 `MapSave.items`；必须按“确定性生成基线 → RuntimeTileDeltas 差量 → 表现绑定”的顺序持久化和恢复。
+- `RuntimeChunkBaseline` 随同一份 `ChunkRuntime` 保留在缓存时，存档差量只能应用一次；视野往返不得再次覆盖运行中的地形改动。地址复用但生成了新的 `ChunkRuntime` 时重新建立基线并恢复。
 - `RuntimeTileDeltas` 与基线保存完整 `TerrainCell`（地表、背层、阻挡层、群系、导航代价、Flags）及建筑损伤；水上平台另外通过 `SupportCells` 保存支撑层，底层水属性本就应保留。嵌套 MemoryPack 布局变化必须在解析嵌套数据前拒绝旧格式，可更换外层格式头，不能依赖完整反序列化之后才比较版本。
 - 新版 WorldModel 的动态建筑 Item 不属于旧 `Chunk.RunTimeItems`；建筑存档要复用区块 `ChangedItems` 差量，按 `Mod_Building` 角色清理旧记录并在区块数据就绪后实例化恢复。
 - 自动/手动保存可分帧采集，但后台只处理不可变快照；旧任务不得覆盖更新的手动/退出保存。
