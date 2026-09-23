@@ -26,7 +26,7 @@ namespace FlatWorld.GameplayMCP
             [ToolParameter("Use Library storage for new worlds or a Library copy for existing saves so autonomous testing cannot overwrite real saves.", Required = false, DefaultValue = "true")]
             public bool isolated { get; set; }
 
-            [ToolParameter("World entry timeout in real seconds. Clamped below the MCP bridge command timeout.", Required = false, DefaultValue = "20")]
+            [ToolParameter("Session timeout in real seconds. Clamped below the MCP bridge command timeout.", Required = false, DefaultValue = "60")]
             public float timeoutSeconds { get; set; }
 
             [ToolParameter("New-world seed text. Empty lets the production world creator generate one.", Required = false)]
@@ -60,7 +60,7 @@ namespace FlatWorld.GameplayMCP
                     bool isolated = !bool.TryParse(parameters?["isolated"]?.ToString(), out bool parsedIsolated) || parsedIsolated;
                     float timeout = float.TryParse(parameters?["timeoutSeconds"]?.ToString(), out float parsedTimeout)
                         ? parsedTimeout
-                        : 20f;
+                        : 60f;
                     JObject result = await GameplayMcpRuntime.ContinueSaveAsync(
                         saveName,
                         playerName,
@@ -88,7 +88,7 @@ namespace FlatWorld.GameplayMCP
                         : PlanetData.DefaultNoiseScale;
                     float timeout = float.TryParse(parameters?["timeoutSeconds"]?.ToString(), out float parsedTimeout)
                         ? parsedTimeout
-                        : 20f;
+                        : 60f;
                     JObject result = await GameplayMcpRuntime.CreateWorldAsync(
                         saveName,
                         playerName,
@@ -105,7 +105,7 @@ namespace FlatWorld.GameplayMCP
                 {
                     float timeout = float.TryParse(parameters?["timeoutSeconds"]?.ToString(), out float parsedTimeout)
                         ? parsedTimeout
-                        : 20f;
+                        : 60f;
                     JObject result = await GameplayMcpRuntime.SaveAndExitAsync(timeout);
                     return new SuccessResponse("FlatWorld save-and-exit request completed.", result);
                 }

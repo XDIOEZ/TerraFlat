@@ -20,6 +20,8 @@ namespace FlatWorld.GameplayMCP
     {
         public const string ProtocolVersion = "0.8.2";
         public const string ExtensionPath = "Assets/Editor/FlatWorld/GameplayMCP/";
+        private const float MinimumSessionTimeoutSeconds = 2f;
+        private const float MaximumSessionTimeoutSeconds = 120f;
         private const float MoveToProgressDistanceEpsilon = 0.05f; // 低于此距离的微动不重置卡滞计时。
         private const float MoveToStallTimeoutSeconds = 8f; // 导航模块先执行有限重规划，MCP 保留更长的无位移保护时限。
 
@@ -220,8 +222,11 @@ namespace FlatWorld.GameplayMCP
                 return BuildActionError("player_not_found", "存档中没有可控制玩家。", false);
 
             gameManager.ContinueGame(resolvedPlayerName);
-            // MCPForUnity stdio bridge 单次命令约 30 秒超时；会话动作必须提前结束并把控制权还给 Agent。
-            timeoutSeconds = Mathf.Clamp(timeoutSeconds, 2f, 20f);
+            // 世界生成在冷启动/大存档下可能明显超过 20 秒；仍限制在桥接命令预算内，避免无限等待。
+            timeoutSeconds = Mathf.Clamp(
+                timeoutSeconds,
+                MinimumSessionTimeoutSeconds,
+                MaximumSessionTimeoutSeconds);
             bool ready = await WaitUntilAsync(
                 () => gameManager != null &&
                       gameManager.IsInGameWorld &&
@@ -265,7 +270,10 @@ namespace FlatWorld.GameplayMCP
             if (gameManager.IsWorldEntryInProgress)
                 return BuildActionError("world_entry_in_progress", "世界仍在加载，请查询会话状态，不要重复创建。", false);
 
-            timeoutSeconds = Mathf.Clamp(timeoutSeconds, 2f, 20f);
+            timeoutSeconds = Mathf.Clamp(
+                timeoutSeconds,
+                MinimumSessionTimeoutSeconds,
+                MaximumSessionTimeoutSeconds);
             double deadline = Time.realtimeSinceStartupAsDouble + timeoutSeconds;
             // 主菜单允许延迟创建 GameRes；显式走正式单例入口启动会话，不能只等待 ExistingInstance。
             GameRes resources = GameRes.Instance;
@@ -383,7 +391,10 @@ namespace FlatWorld.GameplayMCP
                 () => completed = true,
                 saveCurrentGame: true));
 
-            timeoutSeconds = Mathf.Clamp(timeoutSeconds, 2f, 20f);
+            timeoutSeconds = Mathf.Clamp(
+                timeoutSeconds,
+                MinimumSessionTimeoutSeconds,
+                MaximumSessionTimeoutSeconds);
             bool finished = await WaitUntilAsync(
                 () => completed ||
                       (!gameManager.IsInGameWorld &&

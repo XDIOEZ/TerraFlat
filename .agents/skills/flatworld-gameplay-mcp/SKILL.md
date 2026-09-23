@@ -49,7 +49,7 @@ GamePlayMCP 复用项目已有 MCPForUnity 自定义工具发现机制，不另�
 
 需要操作主菜单、教程、背包、制作、设置等 UI 时，不要求先进入世界或获取玩家控制租约。直接调用 `gameplay_ui(action="tree")` 获取当前激活 Canvas 的语义 UI 树；点击时从 `clickable=true` 且 `interactable=true` 的节点选择 `id`，调用 `gameplay_ui(action="click", targetId=<id>)`。需要浏览 ScrollRect 中的屏外内容时，对树中的 `type=scroll` 节点调用 `gameplay_ui(action="scroll", targetId=<id>, deltaY=<滚轮量>)`；需要移动可拖拽窗口或滑块时，对对应可拖拽节点调用 `gameplay_ui(action="drag", targetId=<id>, deltaX=<像素>, dragDeltaY=<像素>)`。滚动与拖拽都必须走真实 EventSystem 事件链，不直接改 ScrollRect/RectTransform 数据。UI 操作后界面可能同步变化，继续操作前必须重新读取 UI 树，不复用旧树猜测下一个节点。
 
-创建新世界使用 `gameplay_session(action="create_world", isolated=true)`，默认把首个存档及后续保存都写入 Library 隔离目录；只有用户明确要求正式存档时才传 `isolated=false`。它通过 `GameRes.Instance` 启动可能尚未创建的资源会话，等完整 Ready 后调用生产 `GameManager.CreateNewWorld(NewWorldCreationRequest)`；不得只轮询 `ExistingInstance` 导致永久等待。资源等待与世界等待共用单次调用时限，已经开始进入世界时只能查询状态，不能重复创建或改换存档目录。若返回 `world_entry_timeout`，先查 `gameplay_session(action="status")`；实测场景切换后仍可能继续初始化并最终就绪，轮询确认前不要重试创建。需要保存并返回主菜单时使用 `gameplay_session(action="save_exit")`；它直接调用生产退出协程并保存当前世界。
+创建新世界使用 `gameplay_session(action="create_world", isolated=true)`，默认把首个存档及后续保存都写入 Library 隔离目录；只有用户明确要求正式存档时才传 `isolated=false`。它通过 `GameRes.Instance` 启动可能尚未创建的资源会话，等完整 Ready 后调用生产 `GameManager.CreateNewWorld(NewWorldCreationRequest)`；不得只轮询 `ExistingInstance` 导致永久等待。资源等待与世界等待共用单次调用时限，默认 60 秒、最长 120 秒，已经开始进入世界时只能查询状态，不能重复创建或改换存档目录。若返回 `world_entry_timeout`，先查 `gameplay_session(action="status")`；实测场景切换后仍可能继续初始化并最终就绪，轮询确认前不要重试创建。需要保存并返回主菜单时使用 `gameplay_session(action="save_exit")`；它直接调用生产退出协程并保存当前世界。
 
 脚本重编译、Domain Reload、退出世界或重新进入 Play Mode 后，旧控制租约不可假定仍有效。必须重新执行 `status -> acquire -> observe`。
 
