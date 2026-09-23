@@ -1640,7 +1640,7 @@
       "id": "Ore_Copper",
       "parent": "BasicItem_Base",
       "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Minerals/Ore/Ore_Copper.prefab",
-      "gameName": "铜矿石",
+      "gameName": "孔雀石",
       "description": "含铜的矿石，可在熔炉中冶炼为铜锭。",
       "durability": 1.0,
       "maxDurability": 1.0,

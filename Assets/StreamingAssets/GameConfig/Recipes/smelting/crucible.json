@@ -30,7 +30,7 @@
     },
     {
       "id": "core:铜矿石=熔融铜",
-      "displayName": "铜矿石=熔融铜",
+      "displayName": "孔雀石=熔融铜",
       "recipeType": "smelting",
       "requiredStation": "crucible",
       "inputRule": "unordered",

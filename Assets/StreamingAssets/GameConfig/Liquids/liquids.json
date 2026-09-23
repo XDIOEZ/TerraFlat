@@ -106,7 +106,7 @@
     {
       "id": "core:molten_copper",
       "displayName": "熔融铜",
-      "description": "铜矿石在坩埚中熔化后的高温铜液。",
+      "description": "孔雀石在坩埚中熔化后的高温铜液。",
       "category": "molten",
       "visualState": "molten_copper",
       "drinkable": false,
