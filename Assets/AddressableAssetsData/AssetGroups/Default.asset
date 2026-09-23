@@ -677,6 +677,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemSprite
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 393e9b5a56d893e4fbe21e2ced7d9852
+    m_Address: Assets/6_Art/Items/crucible.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3a5b83e504544c94a8138c46c2805e2d
     m_Address: Assets/2_Prefabs/Gameplay/Modules/Items/Module_HeldFood.prefab
     m_ReadOnly: 0

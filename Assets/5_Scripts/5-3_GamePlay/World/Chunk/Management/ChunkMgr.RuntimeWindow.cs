@@ -195,6 +195,35 @@ public partial class ChunkMgr
         return TryGetRuntimeChunkView(worldPosition, out _);
     }
 
+    /// <summary>只在世界进入超时等低频诊断路径生成中心区块状态，不进入正常帧热路径。</summary>
+    public string DescribeRuntimeEntityPresentationWait(Vector2 worldPosition)
+    {
+        if (!runtimeWindowUsesLocalPresentation || runtimeWindowTargets.Count == 0)
+            return "localPresentation=off";
+        if (!TryResolveRuntimeAddress(worldPosition, out RuntimeWorldAddress address))
+            return "address=unresolved";
+
+        string chunkState = "missing";
+        if (TryGetChunkRuntime(address, out ChunkRuntime runtimeChunk) && runtimeChunk != null)
+            chunkState = $"{runtimeChunk.DataStatus}/terrain={(runtimeChunk.Terrain != null ? "ready" : "null")}";
+
+        string bindingState = "missing";
+        if (activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
+        {
+            string viewState = binding.View == null
+                ? "none"
+                : binding.View.IsBound ? "bound" : binding.View.IsBinding ? "binding" : "idle";
+            bindingState = $"queued={binding.PresentationQueued},inProgress={binding.PresentationInProgress}," +
+                           $"pendingChunk={(binding.PendingChunk != null)},priority={binding.PresentationPriority},view={viewState}";
+        }
+
+        return $"address={address},chunk={chunkState},binding=[{bindingState}]," +
+               $"presentationPending={PendingRuntimeChunkPresentationCount}," +
+               $"generationQueued={runtimeChunkManager?.QueuedGenerationCount ?? 0}," +
+               $"generationActive={runtimeChunkManager?.ActiveGenerationCount ?? 0}," +
+               $"commitPending={runtimeChunkManager?.PendingCommitCount ?? 0}";
+    }
+
     /// <summary>使用当前生成 Profile 将世界坐标换算为新版区块地址。</summary>
     private bool TryResolveRuntimeAddress(Vector2 worldPosition,
         out RuntimeWorldAddress address)

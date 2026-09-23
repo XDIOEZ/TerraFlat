@@ -10,7 +10,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 - 项目自有 Shader 资源统一放在 `Assets/9_Shaders/`：Shader 源文件放 `Shader/`，材质放 `Material/`，Volume 配置放 `Volume/`；必须依赖 `Resources.Load` 的 Shader/材质放在 `Assets/9_Shaders/Resources/` 下并保持原逻辑资源路径。不要再创建 `Assets/Shaders`、`Assets/Resources/Shaders` 或其它散落的项目自有 Shader 资源目录；第三方插件资源保持原目录不移动。
 - 运行时视觉：`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Management/VisualEffectManager.cs`、`Assets/5_Scripts/5-3_GamePlay/Presentation/Effects/Runtime/`
 - 角色渲染：`Assets/5_Scripts/5-3_GamePlay/Presentation/{ActorRenderEffectController,ActorRenderColorEffect,WaterImmersionRenderEffect}.cs`
-- 实体脚底阴影：`Assets/5_Scripts/5-3_GamePlay/Presentation/ActorShadowManager.cs` 与 `Assets/2_Prefabs/Gameplay/Modules/Rendering/ActorShadow.prefab`；旧对象阴影使用场景级 `ActorShadows` 根节点和 `Default/-1000` 排序，不挂到实体或 `RuntimeEntities` 下；ECS 使用下述独立批次，不注册逐实体对象。
+- 实体脚底阴影：`Assets/5_Scripts/5-3_GamePlay/Presentation/ActorShadowManager.cs` 与 `Assets/2_Prefabs/Gameplay/Modules/Rendering/ActorShadow.prefab`；旧对象阴影使用场景级 `ActorShadows` 根节点和 `Tilemap/1000` 排序，确保高于地面 Tilemap、低于 Default 世界精灵与角色，不挂到实体或 `RuntimeEntities` 下；ECS 使用下述独立批次，不注册逐实体对象。
 - 太阳长投影由 `Presentation/WorldShadowProjectionManager.cs` 独立持有，偏好由 `SunShadowSettings` 保存；代理监听完整 `RuntimeItemRegistered/Unregistered`，不复用脚底阴影的水体显隐。`SunShadowCaster` 允许 Prefab 覆盖主体、视觉高度与落地点。
 - 编辑器工具：`Assets/Editor/FlatWorld/`、`Assets/Editor/FlatWorld/ProjectTools/`；内容工坊入口为菜单 `FlatWorld/内容配置/内容工坊`
 - 调试：`Assets/5_Scripts/5-3_GamePlay/Development/Debug/`、`Development/Diagnostics/{GameDebugManager,GameLogManager}.cs`
@@ -75,7 +75,7 @@ description: "Use when: 定位或修改 FlatWorld 的运行时特效、粒子、
 
 ## AIECS 渲染原型
 
-- ECS 脚底阴影由 `AiecsShadowRenderer` 独立合批：每批最多 4096 只、固定 16 位索引、24 字节顶点，复用主体可见列表与 Display 水态，不创建逐实体 GameObject，也不额外查询地形。它和旧 `ActorShadowManager` 使用实际 `Default/-1000` 排序与 `GetShadowOpacity(scene)` 昼夜入口；主体批次数与阴影批次数必须分开统计。相机缺失、空帧、关闭阴影、释放世界都必须隐藏/回收旧批次。
+- ECS 脚底阴影由 `AiecsShadowRenderer` 独立合批：每批最多 4096 只、固定 16 位索引、24 字节顶点，复用主体可见列表与 Display 水态，不创建逐实体 GameObject，也不额外查询地形。它和旧 `ActorShadowManager` 使用实际 `Tilemap/1000` 排序与 `GetShadowOpacity(scene)` 昼夜入口；主体批次数与阴影批次数必须分开统计。相机缺失、空帧、关闭阴影、释放世界都必须隐藏/回收旧批次。
 - 阴影脚底使用待机帧的固定非透明 `VisibleRect`，不能使用含大面积留白的完整帧矩形，也不能跟随攻击/奔跑逐帧伸缩。导出器从已解包像素记录边界；既有图集可用 `FlatWorld/AIECS/阴影 更新非透明边界` 只补目录数据，不重导图集、不改源贴图。`阴影 验证批次与生命周期` 的离线验证不等于真实世界、截图或设备性能验收。
 
 - 表现代码在独立 `AIECS/Presentation` 程序集，正式 `AiecsWorldRenderer` 只读模拟提交后的 Display，不复用 AiecsPrototypeMotion 作为行为。共享动画目录、图集及移动脚本的 GUID 必须保留；开发显示的有限 Y 行批次和血条便于手测，不等于旧世界精确透明混排、实际水深或 GPU 性能门槛通过。

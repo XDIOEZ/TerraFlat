@@ -131,7 +131,7 @@ public class Mod_ChunkLoader : Module
             return;
         if (_externalStreamingManaged)
             return;
-        RefreshChunksAroundPlayer();
+        PrimeCenterChunkForWorldEntry();
     }
 
     private void OnValidate()
@@ -215,6 +215,34 @@ public class Mod_ChunkLoader : Module
     {
         AutoAdjustDistance();
         RefreshChunksAroundPlayer();
+    }
+
+    /// <summary>
+    /// 世界进入首阶段只请求玩家脚下区块，避免高并发地形生成让中心区块与外围区块争抢 CPU。
+    /// GameManager 会在中心区块完整可用后再调用 RefreshChunksForCameraView 扩展到真实视口。
+    /// </summary>
+    public void PrimeCenterChunkForWorldEntry()
+    {
+        if (_externalStreamingManaged)
+            return;
+
+        AutoAdjustDistance();
+        Vector2 currentChunkPos = ResolveChunkOrigin(transform.position);
+        TrackChunkPosition(currentChunkPos);
+        needsChunkUpdate = false;
+
+        if (ChunkMgr.Instance == null)
+        {
+            Debug.LogError("[区块加载器] ChunkMgr 未初始化，无法准备玩家中心区块", this);
+            return;
+        }
+
+        ChunkMgr.Instance.RefreshRuntimeWindow(
+            currentChunkPos,
+            activeDistance: 1,
+            destroyDistance: 1,
+            includeLocalPresentation: true,
+            prefetchDistance: 1);
     }
 
     public int IncreaseLoadDistanceForAdmin(int amount = 1)

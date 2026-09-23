@@ -974,7 +974,7 @@ public class Inventory
         RefreshCarryCapacityUI();
     }
 
-    /// <summary>刷新“当前 / 上限”的玩家随身重量与体积；创造背包使用无穷符号显示无上限。</summary>
+    /// <summary>刷新“当前 / 上限”的玩家随身重量与体积；创造背包使用 ASCII INF 显示无上限，避免 TMP 字体缺少无穷符号。</summary>
     private void RefreshCarryCapacityUI()
     {
         if ((_carryWeightValueText == null && _carryVolumeValueText == null) ||
@@ -985,8 +985,8 @@ public class Inventory
             return;
         }
 
-        string maxWeight = snapshot.IsUnlimited ? "∞" : snapshot.MaxWeight.ToString("0.##");
-        string maxVolume = snapshot.IsUnlimited ? "∞" : snapshot.MaxVolume.ToString("0.##");
+        string maxWeight = snapshot.IsUnlimited ? "INF" : snapshot.MaxWeight.ToString("0.##");
+        string maxVolume = snapshot.IsUnlimited ? "INF" : snapshot.MaxVolume.ToString("0.##");
 
         if (_carryWeightValueText != null)
             _carryWeightValueText.text = $"{snapshot.CurrentWeight:0.##} / {maxWeight} kg";

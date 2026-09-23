@@ -5875,7 +5875,10 @@
       "volume": 0.2,
       "stackable": true,
       "tags": ["Material", "Fiber"],
-      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Materials/Material.prefab"
+      "sourcePrefab": "Assets/2_Prefabs/Gameplay/Items/Materials/Material.prefab",
+      "visual": {
+        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+      }
     },
     {
       "id": "WoodAsh",

@@ -233,20 +233,15 @@ public partial class GameManager
         ChunkMgr chunkManager = ChunkMgr.Instance;
         Vector3 playerPosition = player.transform.position;
         Mod_ChunkLoader chunkLoader = player.GetComponentInChildren<Mod_ChunkLoader>(true);
-        if (chunkLoader != null)
+        if (chunkLoader == null)
         {
-            // 与维度切换一致，使用玩家当前相机视距建立完整可见窗口。
-            chunkLoader.RefreshChunksForCameraView();
-        }
-        else
-        {
-            Debug.LogWarning("[GameManager] 进入世界的玩家缺少 Mod_ChunkLoader，使用默认 3x3 区块窗口。", player);
+            Debug.LogWarning("[GameManager] 进入世界的玩家缺少 Mod_ChunkLoader，先准备脚下区块再使用默认 3x3 窗口。", player);
             chunkManager.RefreshRuntimeWindow(
                 playerPosition,
-                2,
-                3,
+                1,
+                1,
                 includeLocalPresentation: true,
-                prefetchDistance: 3);
+                prefetchDistance: 1);
         }
 
         bool centerWarningLogged = false;
@@ -260,10 +255,29 @@ public partial class GameManager
             if (!centerWarningLogged && Time.realtimeSinceStartup >= centerWarningAt)
             {
                 centerWarningLogged = true;
-                Debug.LogWarning("[GameManager] 玩家脚下区块表现超过 12 秒，继续保持加载页。", chunkManager);
+                Debug.LogWarning(
+                    "[GameManager] 玩家脚下区块表现超过 12 秒，继续保持加载页。 " +
+                    chunkManager.DescribeRuntimeEntityPresentationWait(playerPosition),
+                    chunkManager);
             }
 
             yield return null;
+        }
+
+        // 首屏可玩区已经准备好，再展开真实相机窗口。这样重生成任务不会在进入世界最关键的
+        // 几秒内让外围区块与玩家脚下区块竞争后台 CPU，同时不降低正常流送阶段的总吞吐。
+        if (chunkLoader != null)
+        {
+            chunkLoader.RefreshChunksForCameraView();
+        }
+        else
+        {
+            chunkManager.RefreshRuntimeWindow(
+                playerPosition,
+                2,
+                3,
+                includeLocalPresentation: true,
+                prefetchDistance: 3);
         }
 
         bool windowWarningLogged = false;

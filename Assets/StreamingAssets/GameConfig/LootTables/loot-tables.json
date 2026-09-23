@@ -93,6 +93,29 @@
       ]
     },
     {
+      "id": "Sheep_Default",
+      "entries": [
+        {
+          "itemId": "Wool",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 3
+        },
+        {
+          "itemId": "Meat",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        },
+        {
+          "itemId": "Bone",
+          "probability": 1.0,
+          "minAmount": 1,
+          "maxAmount": 2
+        }
+      ]
+    },
+    {
       "id": "WildBoar_Default",
       "entries": [
         {
