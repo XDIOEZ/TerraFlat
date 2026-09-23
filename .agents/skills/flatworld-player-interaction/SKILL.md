@@ -23,7 +23,7 @@ description: "Use when: 定位或修改 FlatWorld 的玩家实体、输入系统
 - 载具的按键、鼠标和白色描边必须共用光标落点查询；指向可触及水面才允许喝水长按，指向载具优先交互。远海登船也合法，恢复位置优先附近安全陆地，否则保留真实登船坐标，不凭空传送到陆地。
 
 - 输入链为 Input System → `GameController` → 玩家模块；不要让 UI、物理输入和玩法模块各自维护冲突状态。
-- Editor Agent、自动化或其它非物理输入源接管本地主角时统一使用 `GameController` 的唯一 External Gameplay Control 租约；租约期间真实设备退出玩法输入仲裁，移动/瞄准/攻击继续注入现有生产链。禁止为自动化直接改玩家 `Rigidbody2D`、Transform 或另建平行输入状态。
+- Editor Agent、自动化或其它非物理输入源接管本地主角时统一使用 `GameController` 的唯一 External Gameplay Control 租约；租约期间真实设备退出玩法输入仲裁，移动/瞄准/攻击继续注入现有生产链。打包游戏的 AI/LLM 适配器通过玩家运行时模块 `Mod_GameMCP_LLM` 提交和查询导航意图；该模块复用同一租约与 Mover 输入链，不依赖 Editor 或 GamePlayMCP。禁止为自动化直接改玩家 `Rigidbody2D`、Transform 或另建平行输入状态。
 - `InputBindingService` 的覆盖存档按 binding GUID 关联输入资产；输入资产删改绑定后，加载前必须过滤当前资产不存在的 GUID 并重存清理后的配置，因为 Unity 内置加载器会直接输出警告而不会抛出异常。
 - 输入重绑定冲突检测必须按物理修饰键语义统一 `<Keyboard>/shift` 与左右 Shift、`ctrl` 与左右 Ctrl、`alt` 与左右 Alt；历史冲突覆盖加载时应自动清理，避免镜头缩放等组合输入被静默改绑到已有玩法键。
 - 需要按触点落地的世界玩法统一调用 `GameController.GetMouseWorldPosition(screenPosition)`，不得在手机玩法模块内直接读取相机或共享虚拟光标坐标。

@@ -566,6 +566,7 @@ GameObject:
   - component: {fileID: 6173150566168055718}
   - component: {fileID: 3000418337859302239}
   - component: {fileID: 6829314751203845612}
+  - component: {fileID: 9162598698088840726}
   m_Layer: 10
   m_Name: Player
   m_TagString: Untagged
@@ -1105,6 +1106,25 @@ MonoBehaviour:
   drowningDamagePerTick: 10
   OnOxygenChanged:
     _PersistentCalls: []
+--- !u!114 &9162598698088840726
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4678875130974218576}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 859c99d135d910a4cbdc9bc6ead9c115, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  item: {fileID: 0}
+  ModData:
+    Name:
+    ID:
+    isRunning: 1
+    Type: 0
+    BitData:
 --- !u!1 &7418924436426645882
 GameObject:
   m_ObjectHideFlags: 0

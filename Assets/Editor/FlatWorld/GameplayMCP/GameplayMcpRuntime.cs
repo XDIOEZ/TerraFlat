@@ -18,8 +18,10 @@ namespace FlatWorld.GameplayMCP
     /// </summary>
     internal static class GameplayMcpRuntime
     {
-        public const string ProtocolVersion = "0.8.1";
+        public const string ProtocolVersion = "0.8.2";
         public const string ExtensionPath = "Assets/Editor/FlatWorld/GameplayMCP/";
+        private const float MoveToProgressDistanceEpsilon = 0.05f; // 低于此距离的微动不重置卡滞计时。
+        private const float MoveToStallTimeoutSeconds = 8f; // 导航模块先执行有限重规划，MCP 保留更长的无位移保护时限。
 
         private static readonly object ControlOwner = new GameplayMcpControlOwner();
 
@@ -1058,7 +1060,7 @@ namespace FlatWorld.GameplayMCP
             });
         }
 
-        /// <summary>持续重算方向移动到目标点，使用现有输入链并设置有界超时。</summary>
+        /// <summary>通过玩家智能体模块按导航路点移动到目标点，并返回实际路径与停止状态。</summary>
         internal static async Task<JObject> MoveToAsync(
             JObject parameters,
             Player player,
@@ -1071,44 +1073,131 @@ namespace FlatWorld.GameplayMCP
             float maxSeconds = Mathf.Clamp(GetFloat(parameters, "seconds", 5f), 0.05f, 20f);
             float tolerance = Mathf.Clamp(GetFloat(parameters, "tolerance", 0.25f), 0.05f, 2f);
             bool run = GetBool(parameters, "run", false);
+            Mod_GameMCP_LLM llmModule = player.GetMod<Mod_GameMCP_LLM>();
+            if (llmModule == null)
+            {
+                return BuildActionError(
+                    "llm_module_missing",
+                    "玩家 Prefab 缺少 Mod_GameMCP_LLM，无法提交运行时导航命令。",
+                    false);
+            }
+
+            if (!llmModule.TryBeginMoveTo(ControlOwner, target, tolerance, out string requestError))
+            {
+                return BuildActionError(
+                    "move_to_rejected",
+                    $"Mod_GameMCP_LLM 拒绝本次导航请求：{requestError}",
+                    false);
+            }
+
             bool previousRun = mover.IsRunning;
             mover.SetRunState(run);
 
-            double deadline = EditorApplication.timeSinceStartup + maxSeconds;
+            Vector2 startPosition = player.transform.position;
+            double startedAt = EditorApplication.timeSinceStartup;
+            double lastProgressAt = startedAt;
+            float startDistance = WorldTopologyRuntime.ShortestDelta(startPosition, target).magnitude;
+            Vector2 lastProgressPosition = startPosition;
+            Mod_GameMCP_LLM.MoveToStatus navigationStatus = default;
+            bool stalled = false;
+            string stopReason = string.Empty;
+            double deadline = startedAt + maxSeconds;
             try
             {
-                bool reached = await RunUntilAsync(() =>
+                bool completedWhilePlaying = await RunUntilAsync(() =>
                 {
                     if (player == null || controller == null ||
                         !controller.IsExternalGameplayControlOwner(ControlOwner))
                     {
+                        stopReason = "control_lost";
+                        llmModule.TryCancelMoveTo(ControlOwner);
                         return true;
                     }
 
-                    Vector2 delta = WorldTopologyRuntime.ShortestDelta(player.transform.position, target);
-                    if (delta.sqrMagnitude <= tolerance * tolerance)
+                    if (!llmModule.TryGetMoveToStatus(ControlOwner, out Mod_GameMCP_LLM.MoveToStatus currentStatus))
                     {
-                        controller.TrySetExternalMoveInput(ControlOwner, Vector2.zero);
+                        stopReason = "operation_lost";
                         return true;
                     }
 
-                    controller.TrySetExternalMoveInput(ControlOwner, delta.normalized);
-                    return EditorApplication.timeSinceStartup >= deadline;
+                    navigationStatus = currentStatus;
+                    double now = EditorApplication.timeSinceStartup;
+                    if (currentStatus.IsTerminal)
+                    {
+                        stopReason = currentStatus.StopReason;
+                        stalled = string.Equals(stopReason, "navigation_stalled", StringComparison.Ordinal);
+                        return true;
+                    }
+
+                    Vector2 currentPosition = player.transform.position;
+                    if (WorldTopologyRuntime.ShortestDelta(lastProgressPosition, currentPosition).magnitude >=
+                        MoveToProgressDistanceEpsilon)
+                    {
+                        lastProgressPosition = currentPosition;
+                        lastProgressAt = now;
+                    }
+
+                    if (now >= deadline)
+                    {
+                        stopReason = "timeout";
+                        llmModule.TryCancelMoveTo(ControlOwner);
+                        return true;
+                    }
+
+                    if (now - lastProgressAt >= MoveToStallTimeoutSeconds)
+                    {
+                        stalled = true;
+                        stopReason = "no_progress";
+                        llmModule.TryCancelMoveTo(ControlOwner);
+                        return true;
+                    }
+
+                    return false;
                 });
+
+                if (!completedWhilePlaying)
+                    stopReason = "play_mode_ended";
+
+                if (llmModule.TryGetMoveToStatus(ControlOwner, out Mod_GameMCP_LLM.MoveToStatus finalStatus))
+                    navigationStatus = finalStatus;
 
                 Vector2 finalDelta = player == null
                     ? Vector2.one * float.PositiveInfinity
                     : WorldTopologyRuntime.ShortestDelta(player.transform.position, target);
-                bool arrived = reached && finalDelta.sqrMagnitude <= tolerance * tolerance;
+                bool arrived = completedWhilePlaying &&
+                               navigationStatus.State == Mod_GameMCP_LLM.OperationState.Reached &&
+                               finalDelta.sqrMagnitude <= tolerance * tolerance;
+                float remainingDistance = player == null ? -1f : finalDelta.magnitude;
+                if (string.IsNullOrEmpty(stopReason))
+                    stopReason = completedWhilePlaying ? "stopped" : "play_mode_ended";
                 return BuildActionSuccess("move_to", player, new JObject
                 {
+                    ["startPosition"] = VectorToJson(startPosition),
                     ["target"] = VectorToJson(target),
                     ["reached"] = arrived,
-                    ["timedOut"] = !arrived
+                    ["timedOut"] = string.Equals(stopReason, "timeout", StringComparison.Ordinal),
+                    ["notReached"] = !arrived,
+                    ["stalled"] = stalled,
+                    ["stopReason"] = stopReason,
+                    ["elapsedSeconds"] = Round((float)Math.Max(0d, EditorApplication.timeSinceStartup - startedAt)),
+                    ["remainingDistance"] = remainingDistance >= 0f ? Round(remainingDistance) : -1f,
+                    ["progressDistance"] = remainingDistance >= 0f
+                        ? Round(Mathf.Max(0f, startDistance - remainingDistance)) : 0f,
+                    ["navigationUsed"] = true,
+                    ["pathRequestCount"] = navigationStatus.PathRequestCount,
+                    ["replanCount"] = navigationStatus.ReplanCount,
+                    ["routeWaypointCount"] = navigationStatus.WaypointCount,
+                    ["pathCost"] = navigationStatus.PathCost,
+                    ["routeReachesDestination"] = navigationStatus.ReachesDestination,
+                    ["arrivedAtResolvedDestination"] = navigationStatus.ArrivedAtResolvedDestination,
+                    ["resolvedDestination"] = navigationStatus.HasResolvedDestination
+                        ? VectorToJson(navigationStatus.ResolvedDestination)
+                        : JValue.CreateNull()
                 });
             }
             finally
             {
+                llmModule.TryCancelMoveTo(ControlOwner);
                 if (controller != null && controller.IsExternalGameplayControlOwner(ControlOwner))
                     controller.TrySetExternalMoveInput(ControlOwner, Vector2.zero);
                 if (mover != null)
@@ -1682,7 +1771,7 @@ namespace FlatWorld.GameplayMCP
     }
 
     /// <summary>持续向世界坐标移动直到到达或超时。</summary>
-    [GameplayMcpAction("move_to", "Move toward a world position through the normal Mover input chain until reached or timed out.")]
+    [GameplayMcpAction("move_to", "Submit a move intent to the player's Mod_GameMCP_LLM runtime interface. Uses WorldNavigationManager paths, follows waypoints through the normal Mover input chain, replans around invalid routes, and reports resolved destination and navigation diagnostics.")]
     internal sealed class GameplayMcpMoveToAction : IGameplayMcpAction
     {
         public Task<JObject> ExecuteAsync(GameplayMcpActionContext context, JObject parameters) =>
