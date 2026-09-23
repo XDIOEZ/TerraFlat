@@ -152,7 +152,8 @@ public class WorldLiquidBehaviour
             return;
 
         // 水体只决定当前环境种类与饮用节奏；感染、脱水等饮用后果统一读取 LiquidDefinition。
-        WaterEnvironmentKind waterKind = liquid.Id == LiquidIds.SeaWater
+        WaterEnvironmentKind waterKind = string.Equals(
+            liquid.Id, LiquidIds.SeaWater, System.StringComparison.OrdinalIgnoreCase)
             ? WaterEnvironmentKind.Salt
             : WaterEnvironmentKind.DirtyFresh;
         float resolvedWaterGain = liquid.HydrationPerServing;

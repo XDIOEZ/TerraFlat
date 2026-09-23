@@ -139,7 +139,6 @@ public static class ChunkRuntimeTileEffectResolver
     }
 
     #endregion
-
 }
 
 public partial class ChunkMgr

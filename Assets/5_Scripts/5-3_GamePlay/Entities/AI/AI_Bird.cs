@@ -7,7 +7,7 @@ using UnityEngine;
 public enum BirdFlightPhase { Ground, TakingOff, Flying, Landing }
 
 /// <summary>
-/// GameObject 鸟与海鸥共用模块。地面 0.5 格/秒、空中 9 格/秒，飞行受独立耐力约束。
+/// GameObject 鸟与海鸥共用模块。地面 0.5 格/秒、空中 6.3 格/秒，飞行受独立耐力约束。
 /// Item 和刚体始终保存地面映射坐标；独立 LiftRoot 仅提升表现与受击盒 1.5 单位。
 /// 状态、阶段计时与目的地随模块存档，回收时释放地块抑制并归零表现高度。
 /// </summary>
@@ -35,7 +35,7 @@ public sealed partial class AI_Bird : Module, IAIActor, IItemModuleDependencyBin
     public override string CanonicalModuleId => "AI_Bird";
     public override ModuleTickMode TickMode => ModuleTickMode.EveryFrame;
     public float groundSpeed = 0.5f;
-    public float flightSpeed = 9f;
+    public float flightSpeed = 6.3f;
     public float flightHeight = 1.5f;
     public float groundDuration = 8f;
     public float flightDuration = 100f;

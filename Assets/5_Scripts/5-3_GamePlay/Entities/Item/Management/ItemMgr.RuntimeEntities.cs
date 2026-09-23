@@ -86,6 +86,9 @@ public partial class ItemMgr
     private WorldRuntime _runtimeAiWorld;
     private long _runtimeAiWorldEpoch = long.MinValue;
 
+    /// <summary>正式地址索引已完成跨区块更新；只通知实际变化，不按帧发布。</summary>
+    public event Action<Item> RuntimeAiAddressChanged;
+
     #region 实体识别与根节点
 
     /// <summary>判断 Item 是否属于新运行时实体 AI。</summary>
@@ -123,6 +126,7 @@ public partial class ItemMgr
         }
 
         _runtimeAiEntities.Add(item);
+        RefreshRuntimeAiAddress(item);
         return true;
     }
 
@@ -221,6 +225,7 @@ public partial class ItemMgr
         _runtimeAiAddressByGuid[item.itemData.Guid] = next;
         if (markDirty)
             _runtimeAiDirtyAddresses.Add(next);
+        RuntimeAiAddressChanged?.Invoke(item);
     }
 
     /// <summary>从新版实体索引移除 Item，并把原地址标记为需要保存。</summary>

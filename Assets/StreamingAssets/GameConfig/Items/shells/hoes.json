@@ -16,7 +16,7 @@
         "Tool"
       ],
       "visual": {
-        "rendererPath": "Render",
+        "rendererPath": "Render/GameObject",
         "rendererLocalEulerAngles": {
           "x": 0,
           "y": 0,
@@ -38,6 +38,58 @@
             "usesPerTile": 6,
             "maxTillingDistance": 2,
             "useInterval": 0.2
+          }
+        },
+        "damage": {
+          "prefab": "Mod_Damage",
+          "id": "Mod_Damage",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "DamageValues": {
+              "Cutting": 0.0,
+              "Piercing": 0.0,
+              "Chopping": 0.0,
+              "Blunt": 5.0
+            },
+            "DamageInterval": 0.2,
+            "EnableOnTriggerEnterDamage": true,
+            "OnlyDealDamageWhenInHand": false,
+            "MaxAttackTargets": 3,
+            "EnableHitSlowdown": true,
+            "HitSlowMultiplier": 0.5,
+            "HitSlowDuration": 0.35,
+            "tileDamageToolKind": 0,
+            "weaponAudioClass": 0,
+            "attackAudioCueId": "",
+            "impactAudioOverrides": [],
+            "playImpactFeedbackOnNonDamageableHit": false,
+            "lastDamageTime": 0.0
+          }
+        },
+        "animation": {
+          "prefab": "Mod_Weapon_AnimationAction",
+          "id": "Module_Weapon_AnimationAction",
+          "enabled": true,
+          "data": {
+            "BitData": [],
+            "Type": 0
+          },
+          "parameters": {
+            "useLocalInput": false,
+            "idleAnimationName": "Idle_0",
+            "attackAnimationNames": [
+              "Attack_2"
+            ],
+            "comboWindowOverride": -1.0,
+            "comboWindowGrace": 0.05,
+            "loopComboOnHold": true,
+            "attackSpeedMultiplier": 1.0,
+            "staminaCostPerAttack": 2.1,
+            "RawData": []
           }
         }
       }

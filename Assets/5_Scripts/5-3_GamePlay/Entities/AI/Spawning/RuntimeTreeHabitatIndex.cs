@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 树木栖息地索引：仅首次绑定枚举 ItemMgr，之后通过正式注册/注销事件增量维护。
@@ -55,10 +56,11 @@ public sealed class RuntimeTreeHabitatIndex : IDisposable
         snapshotScene = sceneName;
         nextRefresh = Time.unscaledTime + 2f;
         activePositions.Clear();
+        Scene scene = SceneManager.GetSceneByName(sceneName);
         foreach (Item tree in trees)
         {
             if (tree == null || tree.DestructionHandled || !tree.gameObject.activeInHierarchy ||
-                tree.gameObject.scene.name != sceneName)
+                tree.gameObject.scene != scene)
                 continue;
             activePositions.Add(tree.transform.position);
         }

@@ -153,7 +153,7 @@ public partial class Map : Item
 
     protected virtual void OnTilemapLoaded()
     {
-        RebuildLegacyLiquidVisuals();
+        RebuildGeneratedLiquidVisuals();
         GetComponent<GrassDetailLayer>()?.Rebuild(this);
 
         if (!ShouldBakePenaltyAfterTilemapLoad)
@@ -213,7 +213,7 @@ public partial class Map : Item
 
     private new void OnDestroy()
     {
-        DisposeLegacyLiquids();
+        DisposeGeneratedLiquids();
         WorldNavigationManager.ExistingInstance?.UnregisterMap(this);
         StopMapCoroutines();
     }

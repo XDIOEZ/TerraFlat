@@ -54,7 +54,7 @@ description: "Use when: 定位或修改 FlatWorld 的数据模型、MemoryPack �
 3. 联动：生命周期→Core，Item/Module→Item，Chunk 差量→Map，协议快照→Networking，内容 Def→对应领域 Skill。
 
 - 世界液体差量使用 `ChunkSaveRecord.LiquidCells`，每项只有局部坐标、LiquidId 和 LiquidDepth；空格用空 ID 与零深度。生成值变化后才记录，恢复生成值要移除差量；恢复前校验全部坐标、重复项和液体身份，缺失 MOD 液体必须明确拒绝，不能擦除原存档。
-- 液体先生成再覆盖差量，覆盖必须早于表现和导航绑定。Ground 使用完整 TerrainCell.Equals 比较；液体写入不修改地面字段，所以不需要忽略任何兼容位。农业水分只属于土壤，不推测旧水地块编号、盐度或农业 Water 字段来恢复液体；不能把 LiquidTypeIndex 写入存档。
+- 液体先生成再覆盖差量，覆盖必须早于表现和导航绑定。Ground 使用完整 TerrainCell.Equals 比较；液体写入不修改地面字段，只更新 `LiquidCells`，不能产生 `RuntimeTileDeltas`。农业水分只属于土壤，不推测旧水地块编号、盐度或农业 Water 字段来恢复液体；不能把 LiquidTypeIndex 写入存档。
 
 ## Skill 维护原则
 

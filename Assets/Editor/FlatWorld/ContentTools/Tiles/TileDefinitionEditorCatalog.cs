@@ -145,42 +145,47 @@ public static class TileDefinitionEditorCatalog
     /// <summary>只在内存中检查 JSON 拒绝边界、工厂租约和克隆隔离，不创建世界或更改资源目录。</summary>
     public static int ValidateFactoryBoundaries()
     {
-        var source = Get("Tile_Sand").CopySource();
-        source["behaviours"] = new JArray(new JObject { ["type"] = "universal", ["parameters"] = new JObject() });
-        RuntimeTileDefinition tile = BuildSource(source);
+        var diagnosticSource = Get("Tile_Sand").CopySource();
+        diagnosticSource["id"] = "flatworld.diagnostics:tile";
+        diagnosticSource["behaviours"] = new JArray(new JObject
+        {
+            ["type"] = "universal",
+            ["parameters"] = new JObject { ["buffInfo"] = new JArray() }
+        });
+        RuntimeTileDefinition diagnostic = BuildSource(diagnosticSource);
         int checks = 0;
-        var invalid = tile.CopySource();
+        var invalid = diagnostic.CopySource();
         invalid["behaviours"][0]["type"] = "flatworld.diagnostics:missing";
         checks += ExpectRejected(() => BuildSource(invalid));
-        var unknown = tile.CopySource();
+        var unknown = diagnostic.CopySource();
         unknown["behaviours"][0]["parameters"]["typo"] = 1;
         checks += ExpectRejected(() => BuildSource(unknown));
-        var negative = tile.CopySource();
+        var negative = diagnostic.CopySource();
         negative["data"]["parameters"]["demolitionTime"] = -1;
         checks += ExpectRejected(() => BuildSource(negative));
-        var identity = tile.CopySource();
+        var identity = diagnostic.CopySource();
         identity["runtimeTileId"] = -1;
         checks += ExpectRejected(() => BuildSource(identity));
-        var position = tile.CopySource();
+        var position = diagnostic.CopySource();
         position["data"]["parameters"]["position"] = new JObject();
         checks += ExpectRejected(() => BuildSource(position));
-        var penalty = tile.CopySource();
+        var penalty = diagnostic.CopySource();
         penalty["data"]["parameters"]["penalty"] = 40000;
         checks += ExpectRejected(() => BuildSource(penalty));
-        var metadata = tile.CopySource();
+        var metadata = diagnostic.CopySource();
         metadata["$type"] = "NotAllowed";
         checks += ExpectRejected(() => BuildSource(metadata));
         checks += ExpectRejected(() => TileDefinitionJson.Parse("{\"id\":1,\"id\":2}"));
-        var asset = tile.CopySource();
+        var asset = diagnostic.CopySource();
         asset["tileAsset"] = "flatworld.diagnostics:missing";
         checks += ExpectRejected(() => BuildSource(asset));
-        checks += ExpectRejected(() => TileDefinitionFactory.ValidateIdentities(new[] { tile, tile }));
-        var other = tile.CopySource();
+        checks += ExpectRejected(() => TileDefinitionFactory.ValidateIdentities(new[] { diagnostic, diagnostic }));
+        var other = diagnostic.CopySource();
         other["id"] = "flatworld.diagnostics:collision";
         RuntimeTileDefinition collision = BuildSource(other);
-        checks += ExpectRejected(() => TileDefinitionFactory.ValidateIdentities(new[] { tile, collision }));
+        checks += ExpectRejected(() => TileDefinitionFactory.ValidateIdentities(new[] { diagnostic, collision }));
 
-        var custom = tile.CopySource();
+        var custom = diagnostic.CopySource();
         custom["behaviours"][0]["type"] = "flatworld.diagnostics:empty";
         custom["behaviours"][0]["parameters"] = new JObject();
         using (TileBehaviourRegistry.RegisterBehaviour("flatworld.diagnostics:empty", _ => new Tile_Universal()))
@@ -190,11 +195,11 @@ public static class TileDefinitionEditorCatalog
             checks++;
         }
         checks += ExpectRejected(() => BuildSource(custom));
-        var first = tile.CreateTileData();
-        var second = tile.CreateTileData();
-        first.Penalty = 42;
-        if (second.Penalty == 42 || ReferenceEquals(first, second) ||
-            (tile.TileDataTemplate).Penalty == 42)
+        TileData first = diagnostic.CreateTileData();
+        TileData second = diagnostic.CreateTileData();
+        first.Name = "mutated";
+        if (second.Name == "mutated" || ReferenceEquals(first, second) ||
+            diagnostic.TileDataTemplate.Name == "mutated")
             throw new InvalidDataException("地块 Clone 泄漏共享状态。");
         return checks + 1;
     }

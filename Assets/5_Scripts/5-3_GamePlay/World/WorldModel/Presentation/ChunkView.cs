@@ -23,6 +23,9 @@ public sealed class ChunkView : MonoBehaviour
     public ChunkRuntime Model => chunk;
     public bool IsBound => chunk != null && presentationComplete;
     public bool IsBinding => chunk != null && !presentationComplete;
+
+    /// <summary>完整绑定或解绑后的表现状态通知，覆盖同步、增量绑定以及回池/销毁。</summary>
+    public event Action<FlatWorld.WorldModel.WorldAddress> PresentationChanged;
     /// <summary>当前 View 保留的阴影槽数量，供流送 Profiler 与回归检查使用。</summary>
     public int RetainedOccluderCount => lightOccluderRenderer?.RetainedOccluderCount ?? 0;
 
@@ -96,6 +99,7 @@ public sealed class ChunkView : MonoBehaviour
         }
         presentationComplete = true;
         chunk.MarkPresentationBound();
+        PresentationChanged?.Invoke(chunk.Address);
     }
 
     /// <summary>把同一区块的表现组件拆到多帧绑定；地面优先，草地和导航最后。</summary>
@@ -135,6 +139,7 @@ public sealed class ChunkView : MonoBehaviour
         {
             presentationComplete = true;
             chunk.MarkPresentationBound();
+            PresentationChanged?.Invoke(chunk.Address);
         }
     }
 
@@ -144,6 +149,8 @@ public sealed class ChunkView : MonoBehaviour
         if (chunk == null && world == null)
             return;
 
+        bool hadChunk = chunk != null;
+        FlatWorld.WorldModel.WorldAddress previousAddress = hadChunk ? chunk.Address : default;
         bindVersion++;
         chunk = null;
         world = null;
@@ -172,6 +179,8 @@ public sealed class ChunkView : MonoBehaviour
             navigationLease = null;
             presentationLease?.Dispose();
             presentationLease = null;
+            if (hadChunk)
+                PresentationChanged?.Invoke(previousAddress);
         }
     }
 

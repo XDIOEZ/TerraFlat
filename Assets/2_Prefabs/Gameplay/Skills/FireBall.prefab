@@ -117,7 +117,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8654951274317120326}
-  - {fileID: 6239112886104973990}
+  - {fileID: 1070945788365026709}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &8250423564893825132
@@ -208,7 +208,7 @@ MonoBehaviour:
   mods: []
   StartDebugTest: "\u6280\u80FD\u5F00\u59CB\u6267\u884C"
   StopDebugTest: "\u6280\u80FD\u6267\u884C\u505C\u6B62"
---- !u!1001 &5094658560004770151
+--- !u!1001 &2232333439608495700
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -256,10 +256,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-
-
-
-
+    - target: {fileID: 1601643870802310424, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
+      propertyPath: DamageInterval
+      value: 0.5
+      objectReference: {fileID: 0}
     - target: {fileID: 2747812879517624506, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
       propertyPath: m_Name
       value: Mod_Damage
@@ -269,8 +269,8 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
---- !u!4 &6239112886104973990 stripped
+--- !u!4 &1070945788365026709 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1163640551680355265, guid: 605d848763ec2b14b894091dbe0dc2ee, type: 3}
-  m_PrefabInstance: {fileID: 5094658560004770151}
+  m_PrefabInstance: {fileID: 2232333439608495700}
   m_PrefabAsset: {fileID: 0}

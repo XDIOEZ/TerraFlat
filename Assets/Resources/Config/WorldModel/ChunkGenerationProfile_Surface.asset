@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ChunkGenerationProfile_Surface
   m_EditorClassIdentifier: 
   profileId: surface.default
-  generationSignature: 39
+  generationSignature: 44
   chunkWidth: 16
   chunkHeight: 16
   numericParameters:
@@ -134,11 +134,11 @@ MonoBehaviour:
   - Id: river.infiltrationFloor
     Value: 0.25
   - Id: river.startFlow
-    Value: 0.405
+    Value: 0.14
   - Id: river.tributaryStartFlow
-    Value: 0.195
+    Value: 0.1
   - Id: river.fullWidthFlow
-    Value: 1.2
+    Value: 0.45
   - Id: river.maxWidth
     Value: 7
   - Id: river.meanderTieTolerance
@@ -154,7 +154,7 @@ MonoBehaviour:
   - Id: river.lookAheadDistance
     Value: 6
   - Id: river.floodplainStartFlow
-    Value: 0.405
+    Value: 0.14
   - Id: river.floodplainMaxRadius
     Value: 8
   - Id: river.floodplainMaxSlope

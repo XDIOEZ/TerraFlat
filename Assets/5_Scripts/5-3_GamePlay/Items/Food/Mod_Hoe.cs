@@ -28,6 +28,7 @@ public partial class Mod_Hoe : Module
     private float nextUseTime;
     private WorldTileTargetOutline targetOutline;
     private GameController ownerController;
+    private Mod_Weapon_AnimationAction attackAction;
 
     #endregion
 
@@ -39,6 +40,7 @@ public partial class Mod_Hoe : Module
     {
         ModData.ReadData(ref Data);
         nextUseTime = 0f;
+        attackAction = item?.itemMods?.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
         if (!actBound)
         {
             item.OnAct += Act;
@@ -55,6 +57,7 @@ public partial class Mod_Hoe : Module
         actBound = false;
         ReleaseOutline();
         ownerController = null;
+        attackAction = null;
     }
 
     private void OnDestroy() => Unload();
@@ -96,10 +99,18 @@ public partial class Mod_Hoe : Module
         GameController controller = item.Owner.itemMods.GetMod_ByID<GameController>(ModText.Controller);
         if (controller == null)
             return;
+
+        if (!FarmlandSystem.TryGetTillingTarget(controller.GetMouseWorldPosition(), item.Owner.transform.position,
+                maxTillingDistance, out var target))
+            return;
+
         if (FarmlandSystem.TryTill(controller.GetMouseWorldPosition(), item.Owner.transform.position,
                 maxTillingDistance, 1f / usesPerTile, out bool completed))
         {
             nextUseTime = Time.time + useInterval;
+            attackAction ??= item.itemMods?.GetMod_ByID<Mod_Weapon_AnimationAction>("Module_Weapon_AnimationAction");
+            attackAction?.RequestAttack();
+            HoeTillingFeedback.Play(item, target.WorldCell);
             if (completed)
                 Data.tilledCount++;
         }

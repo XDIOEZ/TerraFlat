@@ -12,7 +12,7 @@ namespace FlatWorld.WorldModel
     public sealed class DeterministicChunkGenerator : IChunkPureGenerator
     {
         /// <summary>纯区块生成规则版本；气候、群系、河流或生态空间分布规则改变时递增。</summary>
-        public const int CurrentGenerationSignature = 39;
+        public const int CurrentGenerationSignature = 44;
 
         private readonly LiquidTypeCatalog liquidTypes;
         /// <summary>资源就绪后注入会话液体表；离线纯算法测试可以使用本体最小目录。</summary>
@@ -460,7 +460,8 @@ namespace FlatWorld.WorldModel
                 flags = TerrainCellFlags.Walkable;
             }
 
-            // 地面与液体独立写入；height 供生态筛选与地表分层显示，运行时液体只读取独立液深。
+            // 地面与液体独立写入；height 先供生成期生态筛选，Seal 时原数组直接移交为只读地表海拔表现数据。
+            // 液体仍只读取独立 LiquidDepth，禁止用海拔反算液深。
             terrain.SetCell(x, y, new TerrainCell(groundTileId, 0, 0, biomeId,
                 navigationCost, flags));
             terrain.SetEnvironmentValue("height", x, y, (float)height);
@@ -605,14 +606,8 @@ namespace FlatWorld.WorldModel
             new Int2(-1, 1),  new Int2(0, 1),  new Int2(1, 1)
         };
 
-        // 斜向河段已经补过正交格，因此这里用四邻域统计一整条连续河网。
-        private static readonly Int2[] RiverCardinalNeighbors =
-        {
-            new Int2(-1, 0), new Int2(1, 0), new Int2(0, -1), new Int2(0, 1)
-        };
-
-        // D∞ 连续坡向按逆时针排序；连续偏转只在严格下坡候选中改变选路。
-        private static readonly Int2[] RiverDirectionsCounterClockwise =
+        // D∞ 的八条栅格边，按数学正方向逆时针排列；相邻两条边共同组成一个三角坡面。
+        private static readonly Int2[] RiverFlowDirections =
         {
             new Int2(1, 0), new Int2(1, 1), new Int2(0, 1), new Int2(-1, 1),
             new Int2(-1, 0), new Int2(-1, -1), new Int2(0, -1), new Int2(1, -1)
@@ -670,8 +665,11 @@ namespace FlatWorld.WorldModel
             CancellationToken cancellationToken)
         {
             var sampling = new HydrologySamplingContext(request, settings);
+            var sourceFlowByCell = new Dictionary<Int2, double>();
             var flowByCell = new Dictionary<Int2, double>();
             var terminalFlowByCell = new Dictionary<Int2, double>();
+            var flowDirectionByCell = new Dictionary<Int2, FlowDirectionSample>();
+            var dominantDownstreamByCell = new Dictionary<Int2, Int2>();
             var processedSourceOrigins = new HashSet<Int2>();
             int maximumRadius = Math.Max(0, (settings.RiverMaxWidth - 1) / 2);
             int padding = settings.RiverMaxTraceSteps + maximumRadius + 1;
@@ -698,14 +696,21 @@ namespace FlatWorld.WorldModel
                     if (!processedSourceOrigins.Add(sourceOrigin))
                         continue;
 
-                    ProcessRunoffSource(
+                    CollectRunoffSource(
                         sampling,
                         sourceOrigin,
-                        flowByCell,
-                        terminalFlowByCell,
-                        cancellationToken);
+                        sourceFlowByCell);
                 }
             }
+
+            RouteRunoffNetwork(
+                sampling,
+                sourceFlowByCell,
+                flowByCell,
+                terminalFlowByCell,
+                flowDirectionByCell,
+                dominantDownstreamByCell,
+                cancellationToken);
 
             HashSet<Int2> visibleFlowCells = BuildVisibleFlowCells(
                 sampling,
@@ -715,15 +720,136 @@ namespace FlatWorld.WorldModel
                 settings.RiverMinimumVisibleCourseLength);
             var riverCells = new Dictionary<Int2, GeneratedHydrologyCell>();
             var floodplainCells = new Dictionary<Int2, double>();
-            foreach (KeyValuePair<Int2, double> pair in flowByCell)
-            {
-                if (!visibleFlowCells.Contains(pair.Key))
-                    continue;
+            RenderSmoothedRiverChannels(
+                request,
+                settings,
+                sampling,
+                flowByCell,
+                flowDirectionByCell,
+                dominantDownstreamByCell,
+                visibleFlowCells,
+                maximumRadius,
+                riverCells,
+                floodplainCells,
+                cancellationToken);
 
+            AddHeightDrivenTerminalLakes(
+                request,
+                settings,
+                sampling,
+                terminalFlowByCell,
+                riverCells,
+                cancellationToken);
+
+            return new GeneratedHydrologyMap(riverCells, floodplainCells);
+        }
+
+        /// <summary>
+        /// 把离散水文图转换成连续河道中心线后再栅格化。
+        /// 水量与汇流仍由 D∞ 区域水文决定；这里仅负责把“格子链”重建为平滑曲线，
+        /// 从表现根源消除跨屏水平、垂直或 45° 的栅格锁向直线。
+        /// </summary>
+        private static void RenderSmoothedRiverChannels(
+            ChunkGenerationRequest request,
+            ChunkGenerationSettingsSnapshot settings,
+            HydrologySamplingContext sampling,
+            IReadOnlyDictionary<Int2, double> flowByCell,
+            IReadOnlyDictionary<Int2, FlowDirectionSample> flowDirectionByCell,
+            IReadOnlyDictionary<Int2, Int2> dominantDownstreamByCell,
+            IReadOnlyCollection<Int2> visibleFlowCells,
+            int maximumRadius,
+            Dictionary<Int2, GeneratedHydrologyCell> riverCells,
+            Dictionary<Int2, double> floodplainCells,
+            CancellationToken cancellationToken)
+        {
+            var visible = new HashSet<Int2>();
+            foreach (Int2 cell in visibleFlowCells)
+            {
+                if (ContainsChunk(request, cell))
+                    visible.Add(cell);
+            }
+            if (visible.Count == 0)
+                return;
+
+            var incoming = new Dictionary<Int2, int>();
+            foreach (Int2 cell in visible)
+            {
+                if (!dominantDownstreamByCell.TryGetValue(cell, out Int2 next) ||
+                    !visible.Contains(next))
+                {
+                    continue;
+                }
+
+                incoming.TryGetValue(next, out int count);
+                incoming[next] = count + 1;
+            }
+
+            var starts = new List<Int2>();
+            foreach (Int2 cell in visible)
+            {
+                if (!incoming.ContainsKey(cell))
+                    starts.Add(cell);
+            }
+            starts.Sort(CompareInt2);
+
+            var claimed = new HashSet<Int2>();
+            var centerSamples = new Dictionary<Int2, ChannelCenterSample>();
+            for (int i = 0; i < starts.Count; i++)
+            {
+                if ((i & 31) == 0)
+                    cancellationToken.ThrowIfCancellationRequested();
+                TraceAndRasterizeChannel(
+                    starts[i],
+                    settings,
+                    sampling,
+                    flowByCell,
+                    flowDirectionByCell,
+                    dominantDownstreamByCell,
+                    visible,
+                    claimed,
+                    centerSamples);
+            }
+
+            // 理论上严格下坡图不会成环；这里仍把未被头节点覆盖的孤立段补上，
+            // 避免环绕世界边界或阈值裁剪后漏掉合法河段。
+            if (claimed.Count < visible.Count)
+            {
+                var remaining = new List<Int2>();
+                foreach (Int2 cell in visible)
+                {
+                    if (!claimed.Contains(cell))
+                        remaining.Add(cell);
+                }
+                remaining.Sort(CompareInt2);
+                for (int i = 0; i < remaining.Count; i++)
+                {
+                    if (claimed.Contains(remaining[i]))
+                        continue;
+                    TraceAndRasterizeChannel(
+                        remaining[i],
+                        settings,
+                        sampling,
+                        flowByCell,
+                        flowDirectionByCell,
+                        dominantDownstreamByCell,
+                        visible,
+                        claimed,
+                        centerSamples);
+                }
+            }
+
+            int rendered = 0;
+            foreach (KeyValuePair<Int2, ChannelCenterSample> pair in centerSamples)
+            {
+                if ((rendered++ & 63) == 0)
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                Int2 center = pair.Key;
+                ChannelCenterSample sample = pair.Value;
                 double widthT = InverseLerp(
                     settings.RiverStartFlow,
                     Math.Max(settings.RiverStartFlow + 0.001d, settings.RiverFullWidthFlow),
-                    pair.Value);
+                    sample.Flow);
                 int width = 1 + (int)Math.Round(
                     widthT * (settings.RiverMaxWidth - 1),
                     MidpointRounding.AwayFromZero);
@@ -732,8 +858,6 @@ namespace FlatWorld.WorldModel
                     settings.RiverDepthMin,
                     settings.RiverDepthMax,
                     Math.Sqrt(widthT));
-                ResolveFlowDirection(sampling, pair.Key, out double flowDirectionX,
-                    out double flowDirectionY);
 
                 for (int offsetY = -radius; offsetY <= radius; offsetY++)
                 {
@@ -743,8 +867,8 @@ namespace FlatWorld.WorldModel
                             continue;
 
                         Int2 waterPosition = sampling.Normalize(new Int2(
-                            pair.Key.X + offsetX,
-                            pair.Key.Y + offsetY));
+                            center.X + offsetX,
+                            center.Y + offsetY));
                         if (!ContainsChunk(request, waterPosition) ||
                             sampling.Height(waterPosition) <= settings.SeaLevel)
                         {
@@ -757,8 +881,12 @@ namespace FlatWorld.WorldModel
                             : 1d - Clamp01(distance / (radius + 0.5d));
                         double depth = Lerp(settings.RiverDepthMin, centerDepth, edgeStrength);
                         SetRiverCell(riverCells, waterPosition, new GeneratedHydrologyCell(
-                            GeneratedHydrologyKind.River, pair.Value, depth, 0d,
-                            flowDirectionX, flowDirectionY));
+                            GeneratedHydrologyKind.River,
+                            sample.Flow,
+                            depth,
+                            0d,
+                            sample.DirectionX,
+                            sample.DirectionY));
                     }
                 }
 
@@ -766,21 +894,312 @@ namespace FlatWorld.WorldModel
                     request,
                     settings,
                     sampling,
-                    pair.Key,
-                    pair.Value,
+                    center,
+                    sample.Flow,
                     radius,
                     floodplainCells);
             }
+        }
 
-            AddHeightDrivenTerminalLakes(
-                request,
-                settings,
+        /// <summary>沿主下游图提取一条折线，做横向连续偏移和两轮 Chaikin 圆角后栅格化。</summary>
+        private static void TraceAndRasterizeChannel(
+            Int2 start,
+            ChunkGenerationSettingsSnapshot settings,
+            HydrologySamplingContext sampling,
+            IReadOnlyDictionary<Int2, double> flowByCell,
+            IReadOnlyDictionary<Int2, FlowDirectionSample> flowDirectionByCell,
+            IReadOnlyDictionary<Int2, Int2> dominantDownstreamByCell,
+            HashSet<Int2> visible,
+            HashSet<Int2> claimed,
+            Dictionary<Int2, ChannelCenterSample> centerSamples)
+        {
+            var path = new List<ChannelPoint>();
+            var localVisited = new HashSet<Int2>();
+            Int2 current = start;
+            while (visible.Contains(current) && localVisited.Add(current))
+            {
+                bool alreadyClaimed = !claimed.Add(current);
+                flowByCell.TryGetValue(current, out double flow);
+                ResolveFlowDirection(
+                    flowDirectionByCell,
+                    current,
+                    out double directionX,
+                    out double directionY);
+                if (Math.Abs(directionX) <= 0.000001d &&
+                    Math.Abs(directionY) <= 0.000001d &&
+                    dominantDownstreamByCell.TryGetValue(current, out Int2 fallbackNext))
+                {
+                    int dx = fallbackNext.X - current.X;
+                    int dy = fallbackNext.Y - current.Y;
+                    double length = Math.Sqrt(dx * dx + dy * dy);
+                    if (length > 0.000001d)
+                    {
+                        directionX = dx / length;
+                        directionY = dy / length;
+                    }
+                }
+
+                double widthT = InverseLerp(
+                    settings.RiverStartFlow,
+                    Math.Max(settings.RiverStartFlow + 0.001d, settings.RiverFullWidthFlow),
+                    flow);
+                // 窄河允许更明显的亚格偏移；宽河保持主槽稳定，避免整条大河左右抖动。
+                double lateralAmplitude = Lerp(0.72d, 0.42d, Math.Sqrt(widthT));
+                double lateral = sampling.ChannelCenterBias(current) * lateralAmplitude;
+                double pointX = current.X + 0.5d - directionY * lateral;
+                double pointY = current.Y + 0.5d + directionX * lateral;
+                path.Add(new ChannelPoint(pointX, pointY, flow));
+
+                if (alreadyClaimed ||
+                    !dominantDownstreamByCell.TryGetValue(current, out Int2 next) ||
+                    !visible.Contains(next))
+                {
+                    break;
+                }
+                current = next;
+            }
+
+            if (path.Count == 0)
+                return;
+
+            List<ChannelPoint> curved = ApplyChannelCurvatureRelaxation(
+                path,
                 sampling,
-                terminalFlowByCell,
-                riverCells,
-                cancellationToken);
+                settings);
+            List<ChannelPoint> smoothed = SmoothChannelPath(curved);
+            List<ChannelPoint> finalCurve = ApplyChannelCurvatureRelaxation(
+                smoothed,
+                sampling,
+                settings);
+            RasterizeChannelPath(finalCurve, sampling, centerSamples);
+        }
 
-            return new GeneratedHydrologyMap(riverCells, floodplainCells);
+        /// <summary>
+        /// 对超长同方向中心线做地形感知的曲率松弛。
+        /// D∞ 负责真实汇流，但离散到方格后仍可能长时间落在同一条 8 邻域边；
+        /// 这里把这种“数学正确、视觉机械”的直段轻推向更低的一侧，再由 Chaikin 圆角成连续弧线。
+        /// </summary>
+        private static List<ChannelPoint> ApplyChannelCurvatureRelaxation(
+            List<ChannelPoint> source,
+            HydrologySamplingContext sampling,
+            ChunkGenerationSettingsSnapshot settings)
+        {
+            if (source.Count < 3)
+                return source;
+
+            double minimumStraightLength = Math.Max(
+                8d,
+                settings.RiverLookAheadDistance * 2d);
+            var output = new List<ChannelPoint>(source);
+            int runStart = 0;
+            Int2 runDirection = QuantizeChannelDirection(source[0], source[1]);
+            double runLength = ChannelSegmentLength(source[0], source[1]);
+            for (int segment = 1; segment <= source.Count - 1; segment++)
+            {
+                bool end = segment == source.Count - 1;
+                Int2 direction = end
+                    ? default
+                    : QuantizeChannelDirection(source[segment], source[segment + 1]);
+                if (!end && direction.Equals(runDirection))
+                {
+                    runLength += ChannelSegmentLength(
+                        source[segment],
+                        source[segment + 1]);
+                    continue;
+                }
+
+                int runEndPoint = segment;
+                if ((runDirection.X != 0 || runDirection.Y != 0) &&
+                    runLength >= minimumStraightLength)
+                {
+                    RelaxStraightChannelRun(
+                        output,
+                        runStart,
+                        runEndPoint,
+                        runLength,
+                        sampling,
+                        minimumStraightLength);
+                }
+
+                runStart = segment;
+                runDirection = direction;
+                runLength = end
+                    ? 0d
+                    : ChannelSegmentLength(
+                        source[segment],
+                        source[segment + 1]);
+            }
+            return output;
+        }
+
+        /// <summary>把一段过直的中心线压成一条向低地侧弯出的平滑弧。</summary>
+        private static void RelaxStraightChannelRun(
+            List<ChannelPoint> points,
+            int start,
+            int end,
+            double straightLength,
+            HydrologySamplingContext sampling,
+            double minimumStraightLength)
+        {
+            ChannelPoint first = points[start];
+            ChannelPoint last = points[end];
+            double tangentX = last.X - first.X;
+            double tangentY = last.Y - first.Y;
+            double length = Math.Sqrt(tangentX * tangentX + tangentY * tangentY);
+            if (length <= 0.000001d)
+                return;
+
+            tangentX /= length;
+            tangentY /= length;
+            double normalX = -tangentY;
+            double normalY = tangentX;
+            double middleX = (first.X + last.X) * 0.5d;
+            double middleY = (first.Y + last.Y) * 0.5d;
+            var middleCell = sampling.Normalize(new Int2(
+                (int)Math.Floor(middleX),
+                (int)Math.Floor(middleY)));
+
+            const double sideProbeDistance = 1.25d;
+            Int2 leftProbe = sampling.Normalize(new Int2(
+                (int)Math.Floor(middleX + normalX * sideProbeDistance),
+                (int)Math.Floor(middleY + normalY * sideProbeDistance)));
+            Int2 rightProbe = sampling.Normalize(new Int2(
+                (int)Math.Floor(middleX - normalX * sideProbeDistance),
+                (int)Math.Floor(middleY - normalY * sideProbeDistance)));
+            double leftHeight = sampling.RoutingHeight(leftProbe);
+            double rightHeight = sampling.RoutingHeight(rightProbe);
+            double sideSign;
+            if (Math.Abs(leftHeight - rightHeight) > 0.0005d)
+                sideSign = leftHeight < rightHeight ? 1d : -1d;
+            else
+                sideSign = sampling.ChannelCenterBias(middleCell) >= 0d ? 1d : -1d;
+
+            double excess = straightLength - minimumStraightLength;
+            double amplitude = Math.Min(2d, 0.6d + excess * 0.09d);
+            for (int i = start + 1; i < end; i++)
+            {
+                double t = (i - start) / (double)(end - start);
+                double envelope = Math.Sin(Math.PI * t);
+                ChannelPoint point = points[i];
+                double offset = sideSign * amplitude * envelope;
+                points[i] = new ChannelPoint(
+                    point.X + normalX * offset,
+                    point.Y + normalY * offset,
+                    point.Flow);
+            }
+        }
+
+        /// <summary>读取中心线相邻控制点的欧氏距离。</summary>
+        private static double ChannelSegmentLength(ChannelPoint from, ChannelPoint to)
+        {
+            double x = to.X - from.X;
+            double y = to.Y - from.Y;
+            return Math.Sqrt(x * x + y * y);
+        }
+
+        /// <summary>把连续线段方向量化为 8 邻域，仅用于识别机械直段。</summary>
+        private static Int2 QuantizeChannelDirection(ChannelPoint from, ChannelPoint to)
+        {
+            double deltaX = to.X - from.X;
+            double deltaY = to.Y - from.Y;
+            if (deltaX * deltaX + deltaY * deltaY <= 0.000001d)
+                return default;
+
+            double angle = Math.Atan2(deltaY, deltaX);
+            int sector = PositiveMod(
+                (int)Math.Round(angle / (Math.PI / 4d), MidpointRounding.AwayFromZero),
+                8);
+            return RiverFlowDirections[sector];
+        }
+
+        /// <summary>两轮 Chaikin 圆角，把格子折线变成连续河槽曲线，同时插值保留水量。</summary>
+        private static List<ChannelPoint> SmoothChannelPath(List<ChannelPoint> source)
+        {
+            if (source.Count < 3)
+                return source;
+
+            List<ChannelPoint> current = source;
+            for (int iteration = 0; iteration < 2; iteration++)
+            {
+                var next = new List<ChannelPoint>(current.Count * 2);
+                next.Add(current[0]);
+                for (int i = 0; i < current.Count - 1; i++)
+                {
+                    ChannelPoint a = current[i];
+                    ChannelPoint b = current[i + 1];
+                    next.Add(ChannelPoint.Lerp(a, b, 0.25d));
+                    next.Add(ChannelPoint.Lerp(a, b, 0.75d));
+                }
+                next.Add(current[current.Count - 1]);
+                current = next;
+            }
+            return current;
+        }
+
+        /// <summary>以亚格步长采样平滑曲线，并把连续切线写回最终河水格。</summary>
+        private static void RasterizeChannelPath(
+            IReadOnlyList<ChannelPoint> path,
+            HydrologySamplingContext sampling,
+            Dictionary<Int2, ChannelCenterSample> centerSamples)
+        {
+            if (path.Count == 1)
+            {
+                Int2 only = sampling.Normalize(new Int2(
+                    (int)Math.Floor(path[0].X),
+                    (int)Math.Floor(path[0].Y)));
+                SetChannelCenterSample(centerSamples, only,
+                    new ChannelCenterSample(path[0].Flow, 0d, 0d));
+                return;
+            }
+
+            const double sampleSpacing = 0.28d;
+            for (int i = 0; i < path.Count - 1; i++)
+            {
+                ChannelPoint a = path[i];
+                ChannelPoint b = path[i + 1];
+                double deltaX = b.X - a.X;
+                double deltaY = b.Y - a.Y;
+                double distance = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+                if (distance <= 0.000001d)
+                    continue;
+
+                double directionX = deltaX / distance;
+                double directionY = deltaY / distance;
+                int steps = Math.Max(1, (int)Math.Ceiling(distance / sampleSpacing));
+                for (int step = 0; step <= steps; step++)
+                {
+                    double t = step / (double)steps;
+                    double x = Lerp(a.X, b.X, t);
+                    double y = Lerp(a.Y, b.Y, t);
+                    Int2 cell = sampling.Normalize(new Int2(
+                        (int)Math.Floor(x),
+                        (int)Math.Floor(y)));
+                    double flow = Lerp(a.Flow, b.Flow, t);
+                    SetChannelCenterSample(centerSamples, cell,
+                        new ChannelCenterSample(flow, directionX, directionY));
+                }
+            }
+        }
+
+        /// <summary>同一栅格被多条曲线经过时保留水量更大的主槽样本。</summary>
+        private static void SetChannelCenterSample(
+            Dictionary<Int2, ChannelCenterSample> samples,
+            Int2 position,
+            ChannelCenterSample candidate)
+        {
+            if (samples.TryGetValue(position, out ChannelCenterSample existing) &&
+                existing.Flow >= candidate.Flow)
+            {
+                return;
+            }
+            samples[position] = candidate;
+        }
+
+        /// <summary>稳定排序水文格，保证中心线提取不依赖 Dictionary/HashSet 枚举顺序。</summary>
+        private static int CompareInt2(Int2 left, Int2 right)
+        {
+            int y = left.Y.CompareTo(right.Y);
+            return y != 0 ? y : left.X.CompareTo(right.X);
         }
 
         /// <summary>把足够汇流的内陆低洼扩展为淡水湖，河流入海时不生成湖。</summary>
@@ -950,10 +1369,10 @@ namespace FlatWorld.WorldModel
                 {
                     Int2 current = queue.Dequeue();
                     component.Add(current);
-                    for (int i = 0; i < RiverCardinalNeighbors.Length; i++)
+                    for (int i = 0; i < RiverNeighbors.Length; i++)
                     {
                         Int2 neighbor = sampling.Normalize(
-                            current + RiverCardinalNeighbors[i]);
+                            current + RiverNeighbors[i]);
                         if (mainCandidates.Contains(neighbor) && visited.Add(neighbor))
                             queue.Enqueue(neighbor);
                     }
@@ -990,10 +1409,10 @@ namespace FlatWorld.WorldModel
                     Int2 current = queue.Dequeue();
                     component.Add(current);
                     joinsMainRiver |= visible.Contains(current);
-                    for (int i = 0; i < RiverCardinalNeighbors.Length; i++)
+                    for (int i = 0; i < RiverNeighbors.Length; i++)
                     {
                         Int2 neighbor = sampling.Normalize(
-                            current + RiverCardinalNeighbors[i]);
+                            current + RiverNeighbors[i]);
                         if (tributaryCandidates.Contains(neighbor) && visited.Add(neighbor))
                             queue.Enqueue(neighbor);
                     }
@@ -1007,13 +1426,11 @@ namespace FlatWorld.WorldModel
             return visible;
         }
 
-        /// <summary>汇总一个径流单元的降水，并从最高有效采样点开始沿高度图下行。</summary>
-        private static void ProcessRunoffSource(
+        /// <summary>汇总一个径流单元的降水，并把贡献挂到该单元最高的有效源点。</summary>
+        private static void CollectRunoffSource(
             HydrologySamplingContext sampling,
             Int2 sourceOrigin,
-            Dictionary<Int2, double> flowByCell,
-            Dictionary<Int2, double> terminalFlowByCell,
-            CancellationToken cancellationToken)
+            Dictionary<Int2, double> sourceFlowByCell)
         {
             ChunkGenerationSettingsSnapshot settings = sampling.Settings;
             int stride = settings.RiverRunoffSampleStride;
@@ -1055,179 +1472,584 @@ namespace FlatWorld.WorldModel
             if (contribution <= 0.0001d)
                 return;
 
-            TraceRunoff(sampling, source, contribution, flowByCell, terminalFlowByCell,
-                cancellationToken);
+            AddFlow(sourceFlowByCell, source, contribution);
         }
 
-        /// <summary>沿八邻域最低点追踪径流；到海洋或真实局部洼地后结束。</summary>
-        private static void TraceRunoff(
+        /// <summary>
+        /// 在整个水文区域内用多流向累计径流。
+        /// 每个格子的水量按坡降分给多个真实下坡邻格，不再强制挑一个 D8/D∞ 接收格；
+        /// 宽缓坡面的水会自然分散并在谷底重新汇聚，从算法根上消除规则网格造成的长直斜线。
+        /// </summary>
+        private static void RouteRunoffNetwork(
             HydrologySamplingContext sampling,
-            Int2 source,
-            double contribution,
+            IReadOnlyDictionary<Int2, double> sourceFlowByCell,
             Dictionary<Int2, double> flowByCell,
             Dictionary<Int2, double> terminalFlowByCell,
+            Dictionary<Int2, FlowDirectionSample> flowDirectionByCell,
+            Dictionary<Int2, Int2> dominantDownstreamByCell,
             CancellationToken cancellationToken)
         {
-            var visited = new HashSet<Int2>();
-            Int2 current = source;
-            for (int step = 0; step < sampling.Settings.RiverMaxTraceSteps; step++)
+            if (sourceFlowByCell.Count == 0)
+                return;
+
+            const double flowEpsilon = 0.00001d;
+            var pendingFlow = new Dictionary<Int2, double>(sourceFlowByCell);
+            var minimumSteps = new Dictionary<Int2, int>();
+            var queued = new HashSet<Int2>();
+            var processed = new HashSet<Int2>();
+            var queue = new FlowRoutingMaxHeap();
+
+            foreach (KeyValuePair<Int2, double> source in sourceFlowByCell)
             {
-                if ((step & 31) == 0)
+                Int2 position = sampling.Normalize(source.Key);
+                minimumSteps[position] = 0;
+                if (queued.Add(position))
+                    queue.Push(position, sampling.Height(position));
+            }
+
+            var receivers = new FlowReceiver[RiverNeighbors.Length];
+            int processedCount = 0;
+            while (queue.TryPop(out Int2 current, out _))
+            {
+                if ((processedCount++ & 63) == 0)
                     cancellationToken.ThrowIfCancellationRequested();
+
                 current = sampling.Normalize(current);
-                if (!visited.Add(current))
-                    break;
+                if (!processed.Add(current) ||
+                    !pendingFlow.TryGetValue(current, out double flow) ||
+                    flow <= flowEpsilon)
+                {
+                    continue;
+                }
 
                 double currentHeight = sampling.Height(current);
                 if (currentHeight <= sampling.Settings.SeaLevel)
-                    break;
-                AddFlow(flowByCell, current, contribution);
+                    continue;
 
-                if (!TryChooseDownhill(sampling, current, currentHeight, out Int2 next))
+                flowByCell[current] = flow;
+                int step = minimumSteps.TryGetValue(current, out int routedSteps)
+                    ? routedSteps
+                    : 0;
+                if (step >= sampling.Settings.RiverMaxTraceSteps)
                 {
-                    AddFlow(terminalFlowByCell, current, contribution);
-                    break;
+                    AddFlow(terminalFlowByCell, current, flow);
+                    continue;
                 }
-                AddDiagonalBridge(sampling, current, next, contribution, flowByCell);
-                current = next;
+
+                int receiverCount = ResolveFlowReceivers(
+                    sampling,
+                    current,
+                    currentHeight,
+                    receivers,
+                    out double weightSum,
+                    out double directionX,
+                    out double directionY);
+                if (receiverCount == 0 || weightSum <= flowEpsilon)
+                {
+                    AddFlow(terminalFlowByCell, current, flow);
+                    continue;
+                }
+
+                flowDirectionByCell[current] = new FlowDirectionSample(directionX, directionY);
+                int dominantReceiverIndex = ResolveChannelReceiverIndex(
+                    sampling,
+                    current,
+                    receivers,
+                    receiverCount,
+                    weightSum);
+                dominantDownstreamByCell[current] = receivers[dominantReceiverIndex].Position;
+                int nextStep = step + 1;
+                for (int i = 0; i < receiverCount; i++)
+                {
+                    FlowReceiver receiver = receivers[i];
+                    double routedFlow = flow * (receiver.Weight / weightSum);
+                    if (routedFlow <= flowEpsilon)
+                        continue;
+
+                    AddFlow(pendingFlow, receiver.Position, routedFlow);
+                    if (!minimumSteps.TryGetValue(receiver.Position, out int existingStep) ||
+                        nextStep < existingStep)
+                    {
+                        minimumSteps[receiver.Position] = nextStep;
+                    }
+
+                    if (processed.Contains(receiver.Position) || !queued.Add(receiver.Position))
+                        continue;
+                    queue.Push(receiver.Position, receiver.Height);
+                }
             }
         }
 
         /// <summary>
-        /// 从严格下坡邻格中选择能继续进入低谷的方向。
-        /// 评分只读取同一高度图：细谷残差负责弯曲，前视高度负责避免短视锯齿。
+        /// 把 D∞ 的两个接收方向确定性栅格化成一条主槽路径。
+        /// 不能永远选择权重更大的那一格，否则 55/45 之类的连续坡向仍会永久锁死在同一条 45° 边；
+        /// 这里按真实分流比例做无周期坐标抖动，再交给中心线平滑层消除细碎像素感。
         /// </summary>
-        private static bool TryChooseDownhill(
+        private static int ResolveChannelReceiverIndex(
+            HydrologySamplingContext sampling,
+            Int2 current,
+            FlowReceiver[] receivers,
+            int receiverCount,
+            double weightSum)
+        {
+            if (receiverCount <= 1 || weightSum <= 0.000001d)
+                return 0;
+
+            double firstShare = Clamp01(receivers[0].Weight / weightSum);
+            double dither = Hash01(
+                sampling.Request.WorldSeed,
+                current.X,
+                current.Y,
+                0x94d049bbu);
+            return dither < firstShare ? 0 : 1;
+        }
+
+        /// <summary>
+        /// 按 D∞ 连续坡向把水量分给夹住该方向的两条相邻栅格边。
+        /// 不再让一次径流同时扩散到整个八邻域，因此既减少 D8 的方向锁定，也避免 MFD 的扇形扩散。
+        /// </summary>
+        private static int ResolveFlowReceivers(
             HydrologySamplingContext sampling,
             Int2 current,
             double currentHeight,
-            out Int2 next)
+            FlowReceiver[] receivers,
+            out double weightSum,
+            out double directionX,
+            out double directionY)
         {
-            if (sampling.TryGetCachedDownstream(current, out DownstreamChoice cached))
+            weightSum = 0d;
+            directionX = 0d;
+            directionY = 0d;
+            if (!TryResolvePreferredFlowDirection(
+                    sampling,
+                    current,
+                    out double preferredX,
+                    out double preferredY))
             {
-                next = cached.Next;
-                return cached.Found;
+                return ResolveFallbackDownhillReceivers(
+                    sampling,
+                    current,
+                    currentHeight,
+                    receivers,
+                    out weightSum,
+                    out directionX,
+                    out directionY);
             }
 
-            if (TryChooseDInfinityDownhill(sampling, current, currentHeight, out next))
+            double angle = Math.Atan2(preferredY, preferredX);
+            if (angle < 0d)
+                angle += Math.PI * 2d;
+            double sectorPosition = angle / (Math.PI / 4d);
+            int lowerIndex = PositiveMod((int)Math.Floor(sectorPosition), 8);
+            int upperIndex = (lowerIndex + 1) & 7;
+            double upperShare = sectorPosition - Math.Floor(sectorPosition);
+            double lowerShare = 1d - upperShare;
+
+            int count = 0;
+            if (lowerShare > 0.000001d && TryCreateFlowReceiver(
+                    sampling,
+                    current,
+                    currentHeight,
+                    RiverFlowDirections[lowerIndex],
+                    lowerShare,
+                    out FlowReceiver lower))
             {
-                sampling.CacheDownstream(current, new DownstreamChoice(true, next));
-                return true;
+                receivers[count++] = lower;
+            }
+            if (upperShare > 0.000001d && TryCreateFlowReceiver(
+                    sampling,
+                    current,
+                    currentHeight,
+                    RiverFlowDirections[upperIndex],
+                    upperShare,
+                    out FlowReceiver upper))
+            {
+                receivers[count++] = upper;
             }
 
-            next = default;
-            double bestScore = double.MaxValue;
-            bool found = false;
-            for (int i = 0; i < RiverNeighbors.Length; i++)
+            if (count == 0)
             {
-                Int2 candidate = sampling.Normalize(current + RiverNeighbors[i]);
+                return ResolveFallbackDownhillReceivers(
+                    sampling,
+                    current,
+                    currentHeight,
+                    receivers,
+                    out weightSum,
+                    out directionX,
+                    out directionY);
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                FlowReceiver receiver = receivers[i];
+                weightSum += receiver.Weight;
+                directionX += receiver.UnitX * receiver.Weight;
+                directionY += receiver.UnitY * receiver.Weight;
+            }
+
+            double length = Math.Sqrt(directionX * directionX + directionY * directionY);
+            if (length > 0.000001d)
+            {
+                directionX /= length;
+                directionY /= length;
+            }
+            else
+            {
+                directionX = 0d;
+                directionY = 0d;
+            }
+
+            return count;
+        }
+
+        /// <summary>把一个 D∞ 方向对应到真实下坡邻格，并结合谷底/前视坡降计算分流权重。</summary>
+        private static bool TryCreateFlowReceiver(
+            HydrologySamplingContext sampling,
+            Int2 current,
+            double currentHeight,
+            Int2 offset,
+            double angularShare,
+            out FlowReceiver receiver)
+        {
+            receiver = default;
+            Int2 candidate = sampling.Normalize(current + offset);
+            if (candidate == current)
+                return false;
+
+            double height = sampling.Height(candidate);
+            double rawDrop = currentHeight - height;
+            if (rawDrop <= DownhillEpsilon)
+                return false;
+
+            double distance = offset.X != 0 && offset.Y != 0
+                ? Math.Sqrt(2d)
+                : 1d;
+            double localSlope = rawDrop / distance;
+            double routingHeight = sampling.RoutingHeight(current);
+            double valleyDrop = Math.Max(
+                0d,
+                routingHeight - sampling.RoutingHeight(candidate));
+            double valleySlope = valleyDrop / distance;
+            Int2 lookAhead = sampling.Normalize(new Int2(
+                candidate.X + offset.X * sampling.Settings.RiverLookAheadDistance,
+                candidate.Y + offset.Y * sampling.Settings.RiverLookAheadDistance));
+            double lookAheadDistance = distance *
+                                       (sampling.Settings.RiverLookAheadDistance + 1d);
+            double lookAheadSlope = Math.Max(
+                0d,
+                routingHeight - sampling.RoutingHeight(lookAhead)) /
+                Math.Max(1d, lookAheadDistance);
+            double guidedSlope = Lerp(
+                valleySlope,
+                lookAheadSlope,
+                sampling.Settings.RiverLookAheadWeight);
+            double effectiveSlope = Math.Max(
+                localSlope * 0.45d + guidedSlope * 0.55d,
+                localSlope * 0.1d);
+            double weight = angularShare * Math.Sqrt(
+                Math.Max(effectiveSlope, DownhillEpsilon));
+            if (weight <= 0.000001d)
+                return false;
+
+            receiver = new FlowReceiver(
+                candidate,
+                height,
+                weight,
+                offset.X / distance,
+                offset.Y / distance);
+            return true;
+        }
+
+        /// <summary>
+        /// D∞ 两个夹角邻格都不可走时，按真实坡降收集候选，再收敛为最陡方向和一个相邻次方向。
+        /// </summary>
+        private static int ResolveFallbackDownhillReceivers(
+            HydrologySamplingContext sampling,
+            Int2 current,
+            double currentHeight,
+            FlowReceiver[] receivers,
+            out double weightSum,
+            out double directionX,
+            out double directionY)
+        {
+            int count = 0;
+            for (int i = 0; i < RiverFlowDirections.Length; i++)
+            {
+                Int2 offset = RiverFlowDirections[i];
+                Int2 candidate = sampling.Normalize(current + offset);
                 if (candidate == current)
                     continue;
                 double height = sampling.Height(candidate);
-                if (height >= currentHeight - DownhillEpsilon)
+                double drop = currentHeight - height;
+                if (drop <= DownhillEpsilon)
                     continue;
-
-                Int2 direction = RiverNeighbors[i];
-                Int2 lookAhead = sampling.Normalize(new Int2(
-                    candidate.X + direction.X * sampling.Settings.RiverLookAheadDistance,
-                    candidate.Y + direction.Y * sampling.Settings.RiverLookAheadDistance));
-                double score = Lerp(
-                                   sampling.RoutingHeight(candidate),
-                                   sampling.RoutingHeight(lookAhead),
-                                   sampling.Settings.RiverLookAheadWeight) +
-                               Hash01(
-                    sampling.Request.WorldSeed,
-                    candidate.X,
-                    candidate.Y,
-                    0x9e3779b9u) * sampling.Settings.RiverMeanderTieTolerance;
-                if (score >= bestScore)
-                    continue;
-                bestScore = score;
-                next = candidate;
-                found = true;
+                double distance = offset.X != 0 && offset.Y != 0
+                    ? Math.Sqrt(2d)
+                    : 1d;
+                receivers[count++] = new FlowReceiver(
+                    candidate,
+                    height,
+                    drop / distance,
+                    offset.X / distance,
+                    offset.Y / distance);
             }
 
-            sampling.CacheDownstream(current, new DownstreamChoice(found, next));
-            return found;
+            return KeepDominantFlowReceivers(
+                receivers,
+                count,
+                out weightSum,
+                out directionX,
+                out directionY);
         }
 
         /// <summary>
-        /// 用高度图的连续负梯度求 D∞ 坡向，再叠加世界坐标连续变化的轻微偏转。
-        /// 偏转只负责在下坡方向间选路，不生成水体；每个实际河格仍严格低于上游。
+        /// 把兜底候选收敛为最多两个相邻主方向，防止局部凹凸重新把水撒向整个八邻域。
         /// </summary>
-        private static bool TryChooseDInfinityDownhill(
-            HydrologySamplingContext sampling,
-            Int2 current,
-            double currentHeight,
-            out Int2 next)
+        private static int KeepDominantFlowReceivers(
+            FlowReceiver[] receivers,
+            int count,
+            out double weightSum,
+            out double directionX,
+            out double directionY)
         {
-            next = default;
-            int gradientRadius = Math.Max(1, sampling.Settings.RiverLookAheadDistance / 2);
-            double gradientX = sampling.RoutingHeight(new Int2(
-                                   current.X + gradientRadius,
-                                   current.Y)) -
-                               sampling.RoutingHeight(new Int2(
-                                   current.X - gradientRadius,
-                                   current.Y));
-            double gradientY = sampling.RoutingHeight(new Int2(
-                                   current.X,
-                                   current.Y + gradientRadius)) -
-                               sampling.RoutingHeight(new Int2(
-                                   current.X,
-                                   current.Y - gradientRadius));
-            double magnitudeSquared = gradientX * gradientX + gradientY * gradientY;
-            if (magnitudeSquared <= DownhillEpsilon * DownhillEpsilon)
-                return false;
+            weightSum = 0d;
+            directionX = 0d;
+            directionY = 0d;
+            if (count <= 0)
+                return 0;
 
-            double angle = Math.Atan2(-gradientY, -gradientX);
-            if (angle < 0d)
-                angle += Math.PI * 2d;
-            double directionPosition = angle / (Math.PI / 4d) +
-                                       sampling.MeanderBias(current) *
-                                       sampling.Settings.RiverMeanderStrength;
-            int lowerIndex = PositiveMod((int)Math.Floor(directionPosition), 8);
-            int upperIndex = (lowerIndex + 1) & 7;
-            double upperWeight = directionPosition - Math.Floor(directionPosition);
-            double dither = ResolveDirectionDither(sampling, current);
-            bool preferUpper = upperWeight >= dither;
-
-            Int2 firstDirection = RiverDirectionsCounterClockwise[
-                preferUpper ? upperIndex : lowerIndex];
-            Int2 secondDirection = RiverDirectionsCounterClockwise[
-                preferUpper ? lowerIndex : upperIndex];
-            if (TryUseDownhillDirection(
-                    sampling, current, currentHeight, firstDirection, out next))
+            int firstIndex = 0;
+            for (int i = 1; i < count; i++)
             {
-                return true;
+                if (receivers[i].Weight > receivers[firstIndex].Weight)
+                    firstIndex = i;
             }
 
-            return TryUseDownhillDirection(
-                sampling, current, currentHeight, secondDirection, out next);
+            FlowReceiver first = receivers[firstIndex];
+            int secondIndex = -1;
+            double secondScore = double.MinValue;
+            for (int i = 0; i < count; i++)
+            {
+                if (i == firstIndex)
+                    continue;
+
+                FlowReceiver candidate = receivers[i];
+                double directionDot = first.UnitX * candidate.UnitX +
+                                      first.UnitY * candidate.UnitY;
+                // D∞ 只允许把一次连续坡向分配给夹住该方向的相邻两条 D8 边。
+                // 两个离散方向若相隔超过 45°，就会把河水横向撕成扇形，重新制造栅格伪影。
+                if (directionDot < 0.7071067811865476d - 0.0001d)
+                    continue;
+
+                // 邻近主方向优先；同等坡降下避免把水拆到相隔过远的两个方向。
+                double score = candidate.Weight * (0.75d + Math.Max(0d, directionDot) * 0.25d);
+                if (score <= secondScore)
+                    continue;
+                secondScore = score;
+                secondIndex = i;
+            }
+
+            receivers[0] = first;
+            int outputCount = 1;
+            if (secondIndex >= 0)
+            {
+                FlowReceiver second = receivers[secondIndex];
+                // 极弱的第二方向只会制造一格宽的毛刺，直接并回主流。
+                if (second.Weight >= first.Weight * 0.12d)
+                {
+                    receivers[1] = second;
+                    outputCount = 2;
+                }
+            }
+
+            for (int i = 0; i < outputCount; i++)
+            {
+                FlowReceiver receiver = receivers[i];
+                weightSum += receiver.Weight;
+                directionX += receiver.UnitX * receiver.Weight;
+                directionY += receiver.UnitY * receiver.Weight;
+            }
+
+            return outputCount;
         }
 
-        /// <summary>尝试沿指定方向走到严格更低的格子，并返回新的位置。</summary>
-        private static bool TryUseDownhillDirection(
+        /// <summary>
+        /// 从 3×3 邻域的八个三角坡面求 D∞ 最陡连续下坡方向，再叠加低坡增强的平滑横向曲率。
+        /// 曲率只旋转连续方向，真正接收格仍必须满足真实高度严格下降。
+        /// </summary>
+        private static bool TryResolvePreferredFlowDirection(
             HydrologySamplingContext sampling,
             Int2 current,
-            double currentHeight,
-            Int2 direction,
-            out Int2 next)
+            out double directionX,
+            out double directionY)
         {
-            next = sampling.Normalize(current + direction);
-            return next != current && sampling.Height(next) < currentHeight - DownhillEpsilon;
+            if (!TryResolveDInfinityDirection(
+                    sampling,
+                    current,
+                    out double baseX,
+                    out double baseY,
+                    out double baseSlope))
+            {
+                directionX = 0d;
+                directionY = 0d;
+                return false;
+            }
+
+            int steeringRadius = Math.Max(1, sampling.Settings.RiverLookAheadDistance / 3);
+            double curlX = sampling.MeanderBias(new Int2(
+                               current.X,
+                               current.Y + steeringRadius)) -
+                           sampling.MeanderBias(new Int2(
+                               current.X,
+                               current.Y - steeringRadius));
+            double curlY = -(sampling.MeanderBias(new Int2(
+                                current.X + steeringRadius,
+                                current.Y)) -
+                            sampling.MeanderBias(new Int2(
+                                current.X - steeringRadius,
+                                current.Y)));
+            double curlLength = Math.Sqrt(curlX * curlX + curlY * curlY);
+            if (curlLength > 0.000001d)
+            {
+                curlX /= curlLength;
+                curlY /= curlLength;
+            }
+            else
+            {
+                curlX = 0d;
+                curlY = 0d;
+            }
+
+            double slopeReference = Math.Max(
+                0.005d,
+                sampling.Settings.RiverFloodplainMaxSlope);
+            double flatness = 1d - Clamp01(baseSlope / slopeReference);
+            double perpendicularX = -baseY;
+            double perpendicularY = baseX;
+            double curlSide = curlX * perpendicularX + curlY * perpendicularY;
+            double smoothBias = sampling.MeanderBias(current);
+            double lateral = Math.Max(-1d, Math.Min(1d,
+                curlSide * 0.72d + smoothBias * 0.28d));
+            double maximumTurn = sampling.Settings.RiverMeanderStrength *
+                                 (0.20d + flatness * 0.35d);
+            double turn = lateral * maximumTurn;
+            double angle = Math.Atan2(baseY, baseX) + turn;
+
+            // 栅格方向排斥：连续坡向落在 0/45/90° 等固定方向附近时，
+            // 用同一条平滑蜿蜒场把它轻推离精确栅格角，避免几十格连续锁成一条直线。
+            // 真正落格仍在 ResolveFlowReceivers 中接受“严格下坡”检查，因此不会逆坡造河。
+            const double gridDirectionStep = Math.PI / 4d;
+            double nearestGridAngle = Math.Round(angle / gridDirectionStep) * gridDirectionStep;
+            double gridDelta = Math.Atan2(
+                Math.Sin(angle - nearestGridAngle),
+                Math.Cos(angle - nearestGridAngle));
+            double lockStrength = 1d - Clamp01(
+                Math.Abs(gridDelta) / (Math.PI / 16d));
+            if (lockStrength > 0d)
+            {
+                double side = Math.Abs(lateral) > 0.05d
+                    ? Math.Sign(lateral)
+                    : (smoothBias >= 0d ? 1d : -1d);
+                angle += side * lockStrength * (Math.PI / 18d) *
+                         (0.55d + flatness * 0.45d);
+            }
+
+            directionX = Math.Cos(angle);
+            directionY = Math.Sin(angle);
+            return true;
         }
 
-        /// <summary>按世界种子与坐标分配相邻坡向，避免固定 4×4 图案形成周期直线。</summary>
-        private static double ResolveDirectionDither(
+        /// <summary>按 D∞ 思路，在八个三角坡面中寻找最陡的连续下降向量。</summary>
+        private static bool TryResolveDInfinityDirection(
             HydrologySamplingContext sampling,
-            Int2 position)
+            Int2 current,
+            out double directionX,
+            out double directionY,
+            out double slope)
         {
-            position = sampling.Normalize(position);
-            return Hash01(
-                sampling.Request.WorldSeed,
-                position.X,
-                position.Y,
-                0x27d4eb2fu);
+            directionX = 0d;
+            directionY = 0d;
+            slope = 0d;
+            double centerHeight = sampling.RoutingHeight(current);
+            for (int i = 0; i < RiverFlowDirections.Length; i++)
+            {
+                Int2 first = RiverFlowDirections[i];
+                Int2 second = RiverFlowDirections[(i + 1) & 7];
+                if (!TryResolveFacetDownhill(
+                        sampling,
+                        current,
+                        centerHeight,
+                        first,
+                        second,
+                        out double candidateX,
+                        out double candidateY,
+                        out double candidateSlope) ||
+                    candidateSlope <= slope)
+                {
+                    continue;
+                }
+
+                directionX = candidateX;
+                directionY = candidateY;
+                slope = candidateSlope;
+            }
+
+            return slope > DownhillEpsilon;
+        }
+
+        /// <summary>求中心格与两条相邻 D8 边构成的三角坡面上的最陡下降方向。</summary>
+        private static bool TryResolveFacetDownhill(
+            HydrologySamplingContext sampling,
+            Int2 current,
+            double centerHeight,
+            Int2 first,
+            Int2 second,
+            out double directionX,
+            out double directionY,
+            out double slope)
+        {
+            directionX = 0d;
+            directionY = 0d;
+            slope = 0d;
+            double firstDelta = sampling.RoutingHeight(current + first) - centerHeight;
+            double secondDelta = sampling.RoutingHeight(current + second) - centerHeight;
+            double determinant = first.X * second.Y - first.Y * second.X;
+            if (Math.Abs(determinant) <= 0.000001d)
+                return false;
+
+            double gradientX = (firstDelta * second.Y - first.Y * secondDelta) / determinant;
+            double gradientY = (first.X * secondDelta - firstDelta * second.X) / determinant;
+            double downhillX = -gradientX;
+            double downhillY = -gradientY;
+            double downhillLength = Math.Sqrt(downhillX * downhillX + downhillY * downhillY);
+            if (downhillLength > DownhillEpsilon)
+            {
+                double firstCoefficient =
+                    (downhillX * second.Y - downhillY * second.X) / determinant;
+                double secondCoefficient =
+                    (first.X * downhillY - first.Y * downhillX) / determinant;
+                if (firstCoefficient >= -0.000001d && secondCoefficient >= -0.000001d)
+                {
+                    directionX = downhillX / downhillLength;
+                    directionY = downhillY / downhillLength;
+                    slope = downhillLength;
+                    return true;
+                }
+            }
+
+            double firstLength = first.X != 0 && first.Y != 0 ? Math.Sqrt(2d) : 1d;
+            double secondLength = second.X != 0 && second.Y != 0 ? Math.Sqrt(2d) : 1d;
+            double firstSlope = Math.Max(0d, -firstDelta / firstLength);
+            double secondSlope = Math.Max(0d, -secondDelta / secondLength);
+            if (firstSlope <= DownhillEpsilon && secondSlope <= DownhillEpsilon)
+                return false;
+
+            Int2 edge = firstSlope >= secondSlope ? first : second;
+            double edgeLength = edge.X != 0 && edge.Y != 0 ? Math.Sqrt(2d) : 1d;
+            directionX = edge.X / edgeLength;
+            directionY = edge.Y / edgeLength;
+            slope = Math.Max(firstSlope, secondSlope);
+            return true;
         }
 
         /// <summary>只在低坡且已有明显汇流的主河两侧生成宽缓冲积带。</summary>
@@ -1305,62 +2127,19 @@ namespace FlatWorld.WorldModel
             return maximum;
         }
 
-        /// <summary>补齐斜向流动的一个正交格，避免 Tilemap 上出现仅角点接触的断河。</summary>
-        private static void AddDiagonalBridge(
-            HydrologySamplingContext sampling,
+        /// <summary>读取 MFD 累计阶段已经求出的真实下游单位方向。</summary>
+        private static void ResolveFlowDirection(
+            IReadOnlyDictionary<Int2, FlowDirectionSample> flowDirections,
             Int2 current,
-            Int2 next,
-            double contribution,
-            Dictionary<Int2, double> flowByCell)
-        {
-            int deltaX = ShortestDelta(current.X, next.X, sampling.Request.Topology, true);
-            int deltaY = ShortestDelta(current.Y, next.Y, sampling.Request.Topology, false);
-            if (deltaX == 0 || deltaY == 0)
-                return;
-
-            Int2 horizontal = sampling.Normalize(new Int2(current.X + deltaX, current.Y));
-            Int2 vertical = sampling.Normalize(new Int2(current.X, current.Y + deltaY));
-            Int2 bridge = sampling.Height(horizontal) <= sampling.Height(vertical)
-                ? horizontal
-                : vertical;
-            AddFlow(flowByCell, bridge, contribution);
-        }
-
-        /// <summary>复用河道追踪缓存，输出当前河格真实的下游单位方向。</summary>
-        private static void ResolveFlowDirection(HydrologySamplingContext sampling,
-            Int2 current, out double directionX, out double directionY)
+            out double directionX,
+            out double directionY)
         {
             directionX = 0d;
             directionY = 0d;
-            if (!TryChooseDownhill(sampling, current, sampling.Height(current), out Int2 next))
+            if (!flowDirections.TryGetValue(current, out FlowDirectionSample sample))
                 return;
-
-            int deltaX = ShortestDelta(current.X, next.X, sampling.Request.Topology, true);
-            int deltaY = ShortestDelta(current.Y, next.Y, sampling.Request.Topology, false);
-            double length = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
-            if (length <= 0.000001d)
-                return;
-
-            directionX = deltaX / length;
-            directionY = deltaY / length;
-        }
-
-        /// <summary>计算两个坐标之间的最短位移；环绕世界会优先选择跨边界的短路。</summary>
-        private static int ShortestDelta(
-            int from,
-            int to,
-            ChunkGenerationTopologySnapshot topology,
-            bool horizontal)
-        {
-            int delta = to - from;
-            if (!topology.IsWrapped)
-                return delta;
-            int span = horizontal ? topology.Span.X : topology.Span.Y;
-            if (delta > span / 2)
-                delta -= span;
-            else if (delta < -span / 2)
-                delta += span;
-            return delta;
+            directionX = sample.X;
+            directionY = sample.Y;
         }
 
         /// <summary>把一份径流量累加到指定格子。</summary>
@@ -1517,17 +2296,153 @@ namespace FlatWorld.WorldModel
             }
         }
 
-        private readonly struct DownstreamChoice
+        /// <summary>连续河道中心线上的一个控制点。</summary>
+        private readonly struct ChannelPoint
         {
-            /// <summary>记录某个格子是否找到下游，以及找到的下游坐标。</summary>
-            public DownstreamChoice(bool found, Int2 next)
+            public ChannelPoint(double x, double y, double flow)
             {
-                Found = found;
-                Next = next;
+                X = x;
+                Y = y;
+                Flow = flow;
             }
 
-            public bool Found { get; }
-            public Int2 Next { get; }
+            public double X { get; }
+            public double Y { get; }
+            public double Flow { get; }
+
+            public static ChannelPoint Lerp(ChannelPoint a, ChannelPoint b, double t) =>
+                new(
+                    DeterministicChunkGenerator.Lerp(a.X, b.X, t),
+                    DeterministicChunkGenerator.Lerp(a.Y, b.Y, t),
+                    DeterministicChunkGenerator.Lerp(a.Flow, b.Flow, t));
+        }
+
+        /// <summary>平滑中心线重新栅格化后的河槽中心样本。</summary>
+        private readonly struct ChannelCenterSample
+        {
+            public ChannelCenterSample(
+                double flow,
+                double directionX,
+                double directionY)
+            {
+                Flow = flow;
+                DirectionX = directionX;
+                DirectionY = directionY;
+            }
+
+            public double Flow { get; }
+            public double DirectionX { get; }
+            public double DirectionY { get; }
+        }
+
+        /// <summary>一个下坡接收格及其 MFD 分配权重。</summary>
+        private readonly struct FlowReceiver
+        {
+            public FlowReceiver(
+                Int2 position,
+                double height,
+                double weight,
+                double unitX,
+                double unitY)
+            {
+                Position = position;
+                Height = height;
+                Weight = weight;
+                UnitX = unitX;
+                UnitY = unitY;
+            }
+
+            public Int2 Position { get; }
+            public double Height { get; }
+            public double Weight { get; }
+            public double UnitX { get; }
+            public double UnitY { get; }
+        }
+
+        /// <summary>MFD 输出给水流玩法的连续单位方向。</summary>
+        private readonly struct FlowDirectionSample
+        {
+            public FlowDirectionSample(double x, double y)
+            {
+                X = x;
+                Y = y;
+            }
+
+            public double X { get; }
+            public double Y { get; }
+        }
+
+        /// <summary>按高度从高到低处理流量，保证格子出队时所有更高上游都已经汇入。</summary>
+        private sealed class FlowRoutingMaxHeap
+        {
+            private readonly List<FlowRoutingQueueEntry> entries = new();
+
+            public void Push(Int2 position, double height)
+            {
+                FlowRoutingQueueEntry entry = new(position, height);
+                entries.Add(entry);
+                int index = entries.Count - 1;
+                while (index > 0)
+                {
+                    int parent = (index - 1) / 2;
+                    if (entries[parent].Height >= height)
+                        break;
+                    entries[index] = entries[parent];
+                    index = parent;
+                }
+                entries[index] = entry;
+            }
+
+            public bool TryPop(out Int2 position, out double height)
+            {
+                if (entries.Count == 0)
+                {
+                    position = default;
+                    height = 0d;
+                    return false;
+                }
+
+                FlowRoutingQueueEntry root = entries[0];
+                int lastIndex = entries.Count - 1;
+                FlowRoutingQueueEntry last = entries[lastIndex];
+                entries.RemoveAt(lastIndex);
+                if (entries.Count > 0)
+                {
+                    int index = 0;
+                    while (true)
+                    {
+                        int left = index * 2 + 1;
+                        if (left >= entries.Count)
+                            break;
+                        int right = left + 1;
+                        int child = right < entries.Count &&
+                                    entries[right].Height > entries[left].Height
+                            ? right
+                            : left;
+                        if (entries[child].Height <= last.Height)
+                            break;
+                        entries[index] = entries[child];
+                        index = child;
+                    }
+                    entries[index] = last;
+                }
+
+                position = root.Position;
+                height = root.Height;
+                return true;
+            }
+        }
+
+        private readonly struct FlowRoutingQueueEntry
+        {
+            public FlowRoutingQueueEntry(Int2 position, double height)
+            {
+                Position = position;
+                Height = height;
+            }
+
+            public Int2 Position { get; }
+            public double Height { get; }
         }
 
         /// <summary>复用单次区块水文计算中的高度和降水采样，避免重复计算同一格噪声。</summary>
@@ -1537,7 +2452,7 @@ namespace FlatWorld.WorldModel
             private readonly Dictionary<Int2, double> precipitationCache = new();
             private readonly Dictionary<Int2, double> routingHeightCache = new();
             private readonly Dictionary<Int2, double> meanderBiasCache = new();
-            private readonly Dictionary<Int2, DownstreamChoice> downstreamCache = new();
+            private readonly Dictionary<Int2, double> channelCenterBiasCache = new();
 
             /// <summary>创建一次水文采样上下文，并准备各类采样缓存。</summary>
             public HydrologySamplingContext(
@@ -1637,17 +2552,42 @@ namespace FlatWorld.WorldModel
                 return value;
             }
 
-            /// <summary>查询是否已经算过该格子的下游方向。</summary>
-            public bool TryGetCachedDownstream(Int2 position, out DownstreamChoice choice)
+            /// <summary>
+            /// 河槽中心线使用的较短尺度横向偏移场。
+            /// 它只改变连续中心线在格子里的亚格位置，不参与汇流和水量计算；
+            /// 尺度比主蜿蜒场更短，用来打散长距离同方向栅格锁定，但仍保持连续平滑。
+            /// </summary>
+            public double ChannelCenterBias(Int2 position)
             {
-                return downstreamCache.TryGetValue(Normalize(position), out choice);
+                position = Normalize(position);
+                if (channelCenterBiasCache.TryGetValue(position, out double value))
+                    return value;
+
+                double scale = Math.Max(7d, Settings.RiverMeanderScale * 0.28d);
+                double broad = Fractal(
+                    CreateSeed(Request, 0xa24baed5u),
+                    position.X,
+                    position.Y,
+                    1d / scale,
+                    2,
+                    2.07d,
+                    0.52d,
+                    Request.Topology);
+                double detail = Fractal(
+                    CreateSeed(Request, 0x9fb21c65u),
+                    position.X,
+                    position.Y,
+                    1d / Math.Max(5d, scale * 0.52d),
+                    2,
+                    2.13d,
+                    0.46d,
+                    Request.Topology);
+                value = Math.Max(-1d, Math.Min(1d,
+                    (broad * 0.68d + detail * 0.32d - 0.5d) * 2.75d));
+                channelCenterBiasCache.Add(position, value);
+                return value;
             }
 
-            /// <summary>缓存该格子的下游方向，后续河流追踪可以直接复用。</summary>
-            public void CacheDownstream(Int2 position, DownstreamChoice choice)
-            {
-                downstreamCache[Normalize(position)] = choice;
-            }
         }
 
         #endregion

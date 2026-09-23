@@ -12,7 +12,7 @@ public enum GroundPlacementLiquidRequirement
 
 /// <summary>
 /// 地表覆盖的来源约束；配置在 Tile_Block 上，与阻挡墙和动态建筑分开。
-/// 平台要求水面，地板要求可行走且非水的普通地面；覆盖只写独立支撑层，不修改原始地形。
+/// 液体要求直接读取独立 Liquid 层，不能通过 TerrainCellFlags 间接表达。
 /// </summary>
 [Serializable]
 public sealed class GroundTilePlacementRule

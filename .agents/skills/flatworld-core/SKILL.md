@@ -28,6 +28,7 @@ description: "Use when: 定位或修改 FlatWorld 的游戏启动、新建世界
 - 原位更新成功后发布 `ResourcesReloaded`，活跃 Item 和 Chunk 不重建；旧代 Addressables、MOD 模板与 Lua 保留到正式退出完成后释放。运行中不能删除原有物品/地块/MOD 身份、改变地块数字编号或增删/重排液体身份，在用 MOD Bundle 二进制变更同样拒绝。`TryReloadResources` 只允许无世界和活跃 Item 时调用。
 - 新目录在 `GameRes.LoadPlan.cs` 注册阶段及依赖；阶段内返回嵌套 `IEnumerator`，禁止 `StartCoroutine` 脱离 `ResourceLoadPipeline` 的异常、超时与取消管理。
 - 本体资源句柄发出时即交给 `ResourceAssetScope` 持有，成功保留到目录卸载，失败/取消统一释放；卸载必须先处理 MOD 与物品池，再清空派生目录、释放资源，禁止用自动创建单例的查询入口做销毁清理。
+- Addressables 初始化句柄属于 `GameRes` 生命周期，必须跨资源会话重载保留；`ResourceAssetScope` 只持有具体资源请求，不能释放初始化句柄，否则 Fast Mode Locator 可能保留但不再重建有效目录。
 - 本体先校验再加载 MOD，合并后再次通过 `ResourceCatalogValidation` 才发布 Ready。新系统通过 `IResourceCatalogValidator` 接入引用校验，不把玩法资源约束塞进通用加载器；静态目录检查入口为 `FlatWorld/诊断/检查 Addressables 目录`。
 - 完整资源会话在 `validate-final` 后执行 `brg-sprite-mesh-prewarm`，合并最终 TileBase/JSON/MOD 目录与 Palette，完成后才允许 Ready。原位 F5 候选跳过共享缓存预热，发布后经 `GetOrCreate` 按需构建，失败候选不得清理正式 BRG/Mesh。完整卸载及旧代回收必须先解绑 BRG、清理共享 Mesh，再释放源资源；停止播放和域重载也必须显式释放隐藏 Mesh。
 - 编辑器普通 Play 与完整流程入口统一启用 Domain Reload 和 Scene Reload（`m_EnterPlayModeOptionsEnabled: 0`），由 Unity 一次性重建 Addressables、单例与静态事件；禁止反射替换 Addressables 私有实例来模拟局部重置。通用 Prefab 标签查询为 0 时必须在 `GameRes` 入口失败；排查时区分静态目录缺失与运行时 Locator 状态，不能仅凭空查询断言根因。

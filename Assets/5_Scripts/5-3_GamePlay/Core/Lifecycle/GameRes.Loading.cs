@@ -7,9 +7,11 @@ using FlatWorld.Gameplay.Quests;
 using FlatWorld.Networking;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.AddressableAssets.ResourceLocators;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceLocations;
 
-/// <summary>资源会话边界：单次加载、主菜单重载、失败清理与销毁，统一管理全部本体句柄。</summary>
+/// <summary>资源会话边界：具体资源按会话清理，Addressables 初始化按 GameRes 生命周期持有。</summary>
 public partial class GameRes
 {
     #region 会话状态
@@ -30,6 +32,8 @@ public partial class GameRes
     private Coroutine inGameReloadCoroutine;
     private ResourceLoadPipeline loadPipeline;
     private ResourceAssetScope resourceAssets = new();
+    /// <summary>Addressables 初始化属于 GameRes 生命周期，不能随单次资源会话释放。</summary>
+    private AsyncOperationHandle<IResourceLocator> addressablesInitializationHandle;
     internal ResourceAssetScope ResourceAssets => resourceAssets;
     /// <summary>启动阶段已经持有的 Prefab 位置，完整 Prefab 阶段不再重复申请句柄。</summary>
     private HashSet<string> startupPrefabLocationIds = new(StringComparer.Ordinal);
@@ -182,6 +186,7 @@ public partial class GameRes
         loadPipeline?.Dispose();
         try { ClearResourceSession(); }
         catch (Exception exception) { Debug.LogException(exception, this); }
+        finally { ReleaseAddressablesInitialization(); }
     }
 
     /// <summary>依赖方先卸载，目录再清空，最后释放底层资源；每项清理都独立执行。</summary>
@@ -235,9 +240,29 @@ public partial class GameRes
     /// <summary>显式等待 Addressables 初始化，不把初始化异常误归因到首个物品。</summary>
     private IEnumerator InitializeAddressableCatalog()
     {
-        var handle = resourceAssets.Own(Addressables.InitializeAsync(false));
-        yield return handle;
-        ResourceAssetScope.Require(handle, "Addressables 初始化目录");
+        if (!addressablesInitializationHandle.IsValid())
+            addressablesInitializationHandle = Addressables.InitializeAsync(false);
+
+        yield return addressablesInitializationHandle;
+        try
+        {
+            ResourceAssetScope.Require(addressablesInitializationHandle, "Addressables 初始化目录");
+        }
+        catch
+        {
+            ReleaseAddressablesInitialization();
+            throw;
+        }
+    }
+
+    /// <summary>GameRes 销毁时释放跨资源会话持有的 Addressables 初始化句柄。</summary>
+    private void ReleaseAddressablesInitialization()
+    {
+        if (!addressablesInitializationHandle.IsValid())
+            return;
+
+        try { Addressables.Release(addressablesInitializationHandle); }
+        finally { addressablesInitializationHandle = default; }
     }
 
     /// <summary>位置查询使用短期句柄；结果去重依据实际资源与类型，别名不能掩盖资源冲突。</summary>

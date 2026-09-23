@@ -28,13 +28,13 @@ Material:
     - _CornerStrength: 0.18
     - _EdgeStrength: 0.72
     - _EdgeWidth: 0.2
-    - _ElevationStrength: 1
-    - _ElevationLevelCount: 20
-    - _ElevationToneStrength: 0.04
-    - _ElevationShadowStrength: 0.45
-    - _ElevationHighlightStrength: 0.12
-    - _ElevationEdgeWidth: 0.12
     - _ElevationDeltaForMaxStrength: 3
+    - _ElevationEdgeWidth: 0.12
+    - _ElevationHighlightStrength: 0.12
+    - _ElevationLevelCount: 20
+    - _ElevationShadowStrength: 0.45
+    - _ElevationStrength: 1
+    - _ElevationToneStrength: 0.04
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EdgeColor: {r: 0.035, g: 0.022, b: 0.015, a: 1}

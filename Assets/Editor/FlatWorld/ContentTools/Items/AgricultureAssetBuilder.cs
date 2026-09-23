@@ -18,6 +18,8 @@ public static class AgricultureAssetBuilder
     private const string TilePath = "Assets/7_Tiles/Base/Tile_Farmland.asset";
     private const string ViewPath = "Assets/2_Prefabs/World/WorldModel/ChunkView.prefab";
     private const string SoilTexture = "Assets/6_Art/Food/耕地.png";
+    private const string SpriteMaterialPath = "Assets/9_Shaders/Material/Sprite-Lit-Master.mat";
+    private const string WeaponControllerPath = "Assets/8_Animations/Item/Weapon/Weapon_Uni.controller";
 
     [MenuItem("FlatWorld/内容配置/装配农业资源")]
     public static void Build()
@@ -75,10 +77,52 @@ public static class AgricultureAssetBuilder
             item.BindData(new Data_GeneralItem { IDName = "HoeShell", GameName = "锄头", Durability = 1, MaxDurability = 1 });
             var render = new GameObject("Render");
             render.transform.SetParent(root.transform, false);
-            SpriteRenderer sprite = render.AddComponent<SpriteRenderer>();
+            var visual = new GameObject("GameObject");
+            visual.transform.SetParent(render.transform, false);
+            visual.transform.localEulerAngles = new Vector3(0f, 0f, 225f);
+            SpriteRenderer sprite = visual.AddComponent<SpriteRenderer>();
             sprite.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/6_Art/Items/Tools/Item_Tool_362.png");
-            sprite.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/9_Shaders/Material/Sprite-Lit-Master.mat");
+            sprite.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(SpriteMaterialPath);
             sprite.spriteSortPoint = SpriteSortPoint.Pivot;
+
+            Animator animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(WeaponControllerPath);
+
+            var damageObject = new GameObject("Mod_Damage");
+            damageObject.transform.SetParent(render.transform, false);
+            int damageLayer = LayerMask.NameToLayer("DamageSender");
+            if (damageLayer >= 0)
+                damageObject.layer = damageLayer;
+            BoxCollider2D damageCollider = damageObject.AddComponent<BoxCollider2D>();
+            damageCollider.isTrigger = true;
+            damageCollider.enabled = false;
+            damageCollider.size = Vector2.one;
+            Mod_Damage damage = damageObject.AddComponent<Mod_Damage>();
+            damage.MemoryPackableData = new Ex_ModData_MemoryPackable
+            {
+                ID = "Mod_Damage",
+                Name = "Mod_Damage",
+                isRunning = true
+            };
+            SerializedObject damageSerialized = new(damage);
+            damageSerialized.FindProperty("damageCollider").objectReferenceValue = damageCollider;
+            damageSerialized.ApplyModifiedPropertiesWithoutUndo();
+
+            var actionObject = new GameObject("Module_Weapon_AnimationAction");
+            actionObject.transform.SetParent(root.transform, false);
+            Mod_Weapon_AnimationAction action = actionObject.AddComponent<Mod_Weapon_AnimationAction>();
+            action.animator = animator;
+            action.ModSaveData = new Ex_ModData_MemoryPackable
+            {
+                ID = "Module_Weapon_AnimationAction",
+                Name = "Module_Weapon_AnimationAction",
+                isRunning = true
+            };
+            SerializedObject actionSerialized = new(action);
+            actionSerialized.FindProperty("damageModule").objectReferenceValue = damage;
+            actionSerialized.FindProperty("useLocalInput").boolValue = false;
+            actionSerialized.ApplyModifiedPropertiesWithoutUndo();
+
             BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
             collider.isTrigger = true;
             collider.size = new Vector2(0.8f, 0.3f);
@@ -117,7 +161,8 @@ public static class AgricultureAssetBuilder
             TilemapRenderer ground = root.transform.Find("Ground").GetComponent<TilemapRenderer>();
             SerializedObject serialized = new(component);
             serialized.FindProperty("farmlandSprite").objectReferenceValue = soil;
-            serialized.FindProperty("progressMaterial").objectReferenceValue = ground.sharedMaterial;
+            serialized.FindProperty("progressMaterial").objectReferenceValue =
+                AssetDatabase.LoadAssetAtPath<Material>(SpriteMaterialPath);
             serialized.FindProperty("sortingLayerName").stringValue = ground.sortingLayerName;
             serialized.FindProperty("sortingOrder").intValue = ground.sortingOrder + 1;
             serialized.ApplyModifiedPropertiesWithoutUndo();

@@ -33,7 +33,7 @@ description: "Use when: 定位或修改 FlatWorld 的稀疏网格寻路、16×16
 - Wrapped 世界的网格邻接使用规范化格与最短位移，旧 Agent 路点移动也使用 `ShortestDelta`；不能恢复“不跨接缝”的过期规则。Job 只用冻结的 `WorldTopologyDomain`，不能访问依赖存档的 `WorldTopologyRuntime`。
 
 - 水上平台的可走性和代价来自 `TerrainSupportLayer.GetSurfaceCell`；构建导航窗口和增量更新都读取有效支撑面，原始 `TerrainCell` 保留水格身份。平台变化须发布同一格的导航脏区。
-- ECS 共享 Flow 快照除最终通行代价外还携带“有效表面”的水体标记与 `LiquidDepth`，供批量移动减速和表现读取；水上平台必须保持非水表面。禁止让每只 ECS AI 反向查询 `ChunkMgr`/`Tile_Water`。Crowd Steering 不得把实体中心推入比主 Flow 小步更昂贵的地形；墙体/建筑净空仍按身体半径扫掠，但水等可走软地形的代价不能按身体半径判定，否则动物仅擦到岸边水格就会卡住。水本身仍保持可走且由高代价决定是否绕行。
+- ECS 共享 Flow 快照除最终通行代价外还携带“有效表面”的 `LiquidDepth`，供批量移动减速和表现读取；水上平台必须把有效表面液深投影为 0。禁止让每只 ECS AI 反向查询 `ChunkMgr`。Crowd Steering 不得把实体中心推入比主 Flow 小步更昂贵的地形；墙体/建筑净空仍按身体半径扫掠，但液体等可走软地形的代价不能按身体半径判定，否则动物仅擦到岸边水格就会卡住。液体本身仍保持可走且由高代价决定是否绕行。
 
 ## ECS 分层流场的边界
 

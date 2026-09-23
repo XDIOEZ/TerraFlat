@@ -134,7 +134,8 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         ItemMgr.RuntimeItemRegistered -= RegisterCaster;
         ItemMgr.RuntimeItemUnregistered -= UnregisterCaster;
         Item.RuntimeStructureChanged -= RefreshCaster;
-        ClearWorld();
+        // OnDisable 可能发生在场景/父节点停用过程中，此时不能把子代理重挂到其它父节点。
+        ClearWorld(false);
     }
 
     /// <summary>解除常驻偏好与游戏事件，销毁归池资源。</summary>
@@ -201,9 +202,12 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     }
 
     /// <summary>退出世界立即清空绑定；只保留有上限的停用代理池。</summary>
-    private void ClearWorld()
+    private void ClearWorld() => ClearWorld(true);
+
+    /// <summary>清空当前世界；组件停用期间禁用归池重挂，避免 Unity 层级激活/停用时序冲突。</summary>
+    private void ClearWorld(bool allowPooling)
     {
-        foreach (Binding binding in bindings.Values) ReleaseProxy(binding);
+        foreach (Binding binding in bindings.Values) ReleaseProxy(binding, allowPooling);
         bindings.Clear();
         foreach (Transform root in roots.Values) if (root != null) Destroy(root.gameObject);
         roots.Clear();
@@ -215,7 +219,10 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
     }
 
     /// <summary>代理停用后脱离世界根节点归池，不对正在回池的 Item 层级做重挂操作。</summary>
-    private void ReleaseProxy(Binding binding)
+    private void ReleaseProxy(Binding binding) => ReleaseProxy(binding, true);
+
+    /// <summary>释放单个代理；停用链中由世界根节点统一销毁，禁止 SetParent。</summary>
+    private void ReleaseProxy(Binding binding, bool allowPooling)
     {
         SpriteRenderer proxy = binding.Proxy;
         binding.Proxy = null;
@@ -225,6 +232,7 @@ public sealed class WorldShadowProjectionManager : MonoBehaviour
         proxy.sprite = null;
         proxy.SetPropertyBlock(null);
         proxy.ResetBounds();
+        if (!allowPooling) return;
         if (pool.Count < MaxPooledRenderers)
         {
             proxy.transform.SetParent(transform, false);

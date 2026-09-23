@@ -193,7 +193,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   farmlandSprite: {fileID: 21300000, guid: 6f494990827b10848bc420bb9a8fa6bb, type: 3}
-  progressMaterial: {fileID: 2100000, guid: 1d7a2e9c4b6f43a8b5c0d1e2f3a49786, type: 2}
+  progressMaterial: {fileID: 2100000, guid: 06dc2608a1031034698c137f9f6cfbc8, type: 2}
   sortingLayerName: Tilemap
   sortingOrder: 1
 --- !u!114 &4930781637069307147

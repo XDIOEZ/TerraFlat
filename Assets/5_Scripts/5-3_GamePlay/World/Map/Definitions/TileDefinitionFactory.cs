@@ -115,6 +115,8 @@ public static class TileDefinitionFactory
         if (((rule.RequiredSourceFlags | rule.ForbiddenSourceFlags) & ~allowed) != 0 ||
             (rule.RequiredSourceFlags & rule.ForbiddenSourceFlags) != 0)
             throw new InvalidDataException($"地块 {id} 的铺设来源标记无效或相互冲突。");
+        if (!Enum.IsDefined(typeof(GroundPlacementLiquidRequirement), rule.LiquidRequirement))
+            throw new InvalidDataException($"地块 {id} 的液体铺设约束无效。");
         ValidateId(rule.RefundItemId, id + ".groundPlacement.refundItemId");
     }
     #endregion

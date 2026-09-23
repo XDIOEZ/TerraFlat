@@ -687,7 +687,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Shaft_Wood.png"
       },
       "health": {
         "hasHp": true,
@@ -754,7 +754,7 @@
         "35"
       ],
       "visual": {
-        "spriteAddress": "Assets/6_Art/Generated/ItemPlaceholder/素材占位符.png[素材占位符]"
+        "spriteAddress": "Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Shaft_Wood.png"
       },
       "health": {
         "hasHp": true,

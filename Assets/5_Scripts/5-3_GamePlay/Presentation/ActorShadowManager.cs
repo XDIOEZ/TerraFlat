@@ -4,17 +4,17 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 统一管理玩家与生物脚底的静态阴影。
-/// 阴影实例全部放在场景级 ActorShadows 根节点下，并使用 Default 层的负序号，
+/// 阴影实例全部放在场景级 ActorShadows 根节点下，并使用 Tilemap 层的高序号，
 /// 不依附于 Item 或 RuntimeEntities 层级；阴影透明度随 DayTimeSystem 的有效光照强度变化，
-/// 进入水体后由 WorldLiquidBehaviour 主动关闭，后续建筑阴影也可以复用此管理器的注册入口。
+/// 进入液体后由独立液体接触系统主动关闭，后续建筑阴影也可以复用此管理器的注册入口。
 /// </summary>
 public sealed class ActorShadowManager : SingletonMono<ActorShadowManager>
 {
     private const byte VisibleAlphaThreshold = 8;
     private const string ShadowRootName = "ActorShadows";
-    // 角色 Sprite 使用 Default/0；同层负序号可保证阴影在角色下方，同时仍显示在 Tilemap 上方。
-    private const string ShadowSortingLayer = "Default";
-    private const int ShadowSortingOrder = -1000;
+    // 脚底阴影属于地表覆盖：放在 Tilemap 排序域最上层，确保高于地面、低于 Default 世界精灵和角色。
+    private const string ShadowSortingLayer = "Tilemap";
+    private const int ShadowSortingOrder = 1000;
     private const float RegistrationScanInterval = 0.5f;
 
     private static readonly Dictionary<Sprite, SpritePixelBounds> visibleSpriteBoundsCache =

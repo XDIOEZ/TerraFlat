@@ -92,6 +92,9 @@ public partial class ChunkMgr
     private RuntimeWorldAddress? runtimePrefetchInFlight;
     private int runtimePrefetchInFlightCount;
 
+    /// <summary>仅所属地址的表现状态变化时通知实体系统，不要求实体每帧查询所有区块。</summary>
+    public event Action<RuntimeWorldAddress> RuntimeEntityPresentationChanged;
+
     /// <summary>等待主线程绘制、碰撞和导航绑定的区块数量。</summary>
     public int PendingRuntimeChunkPresentationCount =>
         runtimePresentationQueue.Count + runtimePresentationInProgressCount;
@@ -190,6 +193,35 @@ public partial class ChunkMgr
         if (!runtimeWindowUsesLocalPresentation || runtimeWindowTargets.Count == 0)
             return true;
         return TryGetRuntimeChunkView(worldPosition, out _);
+    }
+
+    /// <summary>只在世界进入超时等低频诊断路径生成中心区块状态，不进入正常帧热路径。</summary>
+    public string DescribeRuntimeEntityPresentationWait(Vector2 worldPosition)
+    {
+        if (!runtimeWindowUsesLocalPresentation || runtimeWindowTargets.Count == 0)
+            return "localPresentation=off";
+        if (!TryResolveRuntimeAddress(worldPosition, out RuntimeWorldAddress address))
+            return "address=unresolved";
+
+        string chunkState = "missing";
+        if (TryGetChunkRuntime(address, out ChunkRuntime runtimeChunk) && runtimeChunk != null)
+            chunkState = $"{runtimeChunk.DataStatus}/terrain={(runtimeChunk.Terrain != null ? "ready" : "null")}";
+
+        string bindingState = "missing";
+        if (activeRuntimeBindings.TryGetValue(address, out RuntimeChunkBinding binding))
+        {
+            string viewState = binding.View == null
+                ? "none"
+                : binding.View.IsBound ? "bound" : binding.View.IsBinding ? "binding" : "idle";
+            bindingState = $"queued={binding.PresentationQueued},inProgress={binding.PresentationInProgress}," +
+                           $"pendingChunk={(binding.PendingChunk != null)},priority={binding.PresentationPriority},view={viewState}";
+        }
+
+        return $"address={address},chunk={chunkState},binding=[{bindingState}]," +
+               $"presentationPending={PendingRuntimeChunkPresentationCount}," +
+               $"generationQueued={runtimeChunkManager?.QueuedGenerationCount ?? 0}," +
+               $"generationActive={runtimeChunkManager?.ActiveGenerationCount ?? 0}," +
+               $"commitPending={runtimeChunkManager?.PendingCommitCount ?? 0}";
     }
 
     /// <summary>使用当前生成 Profile 将世界坐标换算为新版区块地址。</summary>
@@ -698,10 +730,17 @@ public partial class ChunkMgr
 
             pooled.transform.SetParent(viewRoot, false);
             pooled.PrepareForPoolReuse();
+            pooled.PresentationChanged -= HandleRuntimeEntityPresentationChanged;
+            pooled.PresentationChanged += HandleRuntimeEntityPresentationChanged;
             return pooled;
         }
-        return Instantiate(prefab, viewRoot);
+        ChunkView created = Instantiate(prefab, viewRoot);
+        created.PresentationChanged += HandleRuntimeEntityPresentationChanged;
+        return created;
     }
+
+    private void HandleRuntimeEntityPresentationChanged(RuntimeWorldAddress address) =>
+        RuntimeEntityPresentationChanged?.Invoke(address);
 
     /// <summary>
     /// 区块表现必须属于当前世界场景；ChunkMgr 随 WorldManager 常驻，但不能把自然物带入 DDOL 场景。

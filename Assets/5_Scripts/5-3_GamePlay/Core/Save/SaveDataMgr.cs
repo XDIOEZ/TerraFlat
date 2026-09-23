@@ -82,26 +82,47 @@ public partial class SaveDataMgr : SingletonAutoMono<SaveDataMgr>
         return null;
     }
 
-    /// <summary>
-    /// Quiet topology lookup for hot paths such as movement, navigation and
-    /// distance checks. Missing active-world data is a normal infinite-world
-    /// fallback here and must not emit one warning per queried cell.
-    /// </summary>
+    // 场景句柄索引避免每次拓扑查询都从原生层分配场景名；不缓存可替换的存档对象。
+    private int _activePlanetSceneHandle = int.MinValue;
+    private string _activePlanetSceneName;
+
+    /// <summary>移动、导航和距离检查的无日志拓扑查询；无世界数据时沿用无限世界语义。</summary>
     public bool TryGetActivePlanetData(out PlanetData planetData)
     {
         planetData = null;
         if (SaveData?.PlanetData_Dict == null)
             return false;
 
-        string activeSceneName = SceneManager.GetActiveScene().name;
-        return SaveData.PlanetData_Dict.TryGetValue(activeSceneName, out planetData) &&
+        Scene scene = SceneManager.GetActiveScene();
+        if (_activePlanetSceneHandle != scene.handle)
+        {
+            _activePlanetSceneHandle = scene.handle;
+            _activePlanetSceneName = scene.name;
+        }
+        // 仅缓存原生场景名字符串；每次仍查询当前 SaveData，不能跨重进世界缓存 PlanetData。
+        return SaveData.PlanetData_Dict.TryGetValue(_activePlanetSceneName, out planetData) &&
                planetData != null;
     }
 
     protected override void Awake()
     {
         base.Awake();
+        if (ReferenceEquals(instance, this))
+            SceneManager.activeSceneChanged += InvalidateActivePlanetScene;
         InitializeUserSavePath();
+    }
+
+    /// <summary>即使新世界复用了旧场景句柄，也必须丢弃旧场景名。</summary>
+    private void InvalidateActivePlanetScene(Scene previous, Scene next)
+    {
+        _activePlanetSceneHandle = int.MinValue;
+        _activePlanetSceneName = null;
+    }
+
+    protected override void OnDestroy()
+    {
+        SceneManager.activeSceneChanged -= InvalidateActivePlanetScene;
+        base.OnDestroy();
     }
 
     /// <summary>

@@ -581,7 +581,7 @@ public class ChunkGenerator_Land : ChunkGeneratorBase
         int height = Mathf.Max(1, Mathf.RoundToInt(chunkSize.y));
         map.Data.EnsureTileStorage(width, height);
         map.Data.ClearAllTiles();
-        map.ResetLegacyLiquids();
+        map.ResetGeneratedLiquids();
         map.Data.EnsureEnvironmentStorage(width, height);
     }
 

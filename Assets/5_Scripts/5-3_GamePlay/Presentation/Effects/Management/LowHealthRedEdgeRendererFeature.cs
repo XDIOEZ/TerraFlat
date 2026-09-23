@@ -11,7 +11,6 @@ public sealed class LowHealthRedEdgeRendererFeature : ScriptableRendererFeature
 {
     #region 静态状态
 
-    private const string ShaderResourcePath = "Shaders/LowHealthRedEdge";
     private const float MinimumVisibleStrength = 0.0005f;
 
     private static Color edgeColor = Color.red;
@@ -38,6 +37,9 @@ public sealed class LowHealthRedEdgeRendererFeature : ScriptableRendererFeature
 
     #region Renderer Feature
 
+    [SerializeField]
+    private Shader edgeShader; // 渲染器资源显式绑定的红边 Shader。
+
     private Material material;
     private RedEdgePass pass;
 
@@ -46,15 +48,14 @@ public sealed class LowHealthRedEdgeRendererFeature : ScriptableRendererFeature
         CoreUtils.Destroy(material);
         material = null;
 
-        Shader shader = Resources.Load<Shader>(ShaderResourcePath);
-        if (shader == null)
+        if (edgeShader == null)
         {
-            Debug.LogError($"[LowHealthRedEdge] 缺少 Shader Resources/{ShaderResourcePath}。");
+            Debug.LogError("[LowHealthRedEdge] Renderer Feature 未配置 edgeShader。", this);
             pass = null;
             return;
         }
 
-        material = CoreUtils.CreateEngineMaterial(shader);
+        material = CoreUtils.CreateEngineMaterial(edgeShader);
         pass = new RedEdgePass();
     }
 

@@ -143,6 +143,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - ItemMaterial
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 08617ac51d6146a39bd6ad480e8973f1
+    m_Address: Assets/6_Art/Generated/MechanicalWorld/Transmission/World_Shaft_Wood.png
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 08640f772c27ee944929981f9566590b
     m_Address: Assets/2_Prefabs/2-1_UI/Gameplay/Loading/UI_DimensionLoading.prefab
     m_ReadOnly: 0
@@ -667,6 +673,12 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 392f49685d31b894f8ba9907a27e9e5e
     m_Address: "Assets/6_Art/Food/\u5806\u80A5\u6876.png"
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - ItemSprite
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 393e9b5a56d893e4fbe21e2ced7d9852
+    m_Address: Assets/6_Art/Items/crucible.png
     m_ReadOnly: 0
     m_SerializedLabels:
     - ItemSprite
