@@ -1,6 +1,6 @@
 ---
 name: flatworld-fix-loop
-description: "Use when: 用户明确要求“循环FIX”“循环修复”“反复修到好”，或给出一个具体 FlatWorld Bug 并要求通过 Play Mode、GamePlayMCP、截图和 Console 反复复现验证，直到原问题消失。只处理已知问题的定向闭环；开放式主动找新 Bug 使用 flatworld-gameplay-bug-hunt。关键词：循环FIX、循环修复、复现、修到好、截图验证、Console 验证。"
+description: "Use when: 用户明确要求“循环FIX”“循环修复”“循环DEBUG”“反复修到好”，或给出一个具体 FlatWorld Bug 并要求通过 Play Mode、GamePlayMCP、截图和 Console 反复复现验证，直到原问题消失。发现目标异常后先暂停 Unity Play Mode 并保留现场，再诊断修复。只处理已知问题的定向闭环；开放式主动找新 Bug 使用 flatworld-gameplay-bug-hunt。关键词：循环FIX、循环修复、循环DEBUG、复现、暂停现场、截图验证、Console 验证。"
 ---
 
 # FlatWorld 循环 FIX
@@ -44,6 +44,18 @@ description: "Use when: 用户明确要求“循环FIX”“循环修复”“�
 - 视觉问题的截图。
 
 如果当前环境暂时无法复现，不凭猜测宣布修复成功；先根据已有证据做最小修复，再在后续循环中验证。
+
+## 发现异常后的现场冻结（强制）
+
+初次复现和每轮复测期间，只要出现与目标问题相关的新 Error、Exception、Assert、Warning，或观察到预期状态/画面没有发生、发生错误变化，必须先冻结现场，再开始诊断：
+
+1. Unity 仍在 Play Mode 时，先通过 `mcpforunity://instances` 确认并选中本次任务对应的 Unity 实例，再立即调用 Unity MCP `manage_editor(action="pause")` 暂停编辑器。读取 `mcpforunity://editor/state` 确认编辑器仍处于 Play Mode 且暂停已生效。如果 MCP 暂停失败，使用该实例的 Unity 工具栏 Pause，并再次确认状态；不要向未确认的 Unity 实例发送控制命令，也不要继续推进游戏。
+2. 暂停前不要先调用 `gameplay_act(action="stop")`；暂停后也不要调用任何会推进游戏或改变现场的 `gameplay_act`、`gameplay_ui`、`wait`、继续游戏或退出 Play Mode 操作。暂停保持当前 Play Mode 的内存现场，供检查对象、层级、Inspector 和错误发生位置。
+3. 在保持暂停的情况下收集只读证据：相关 Console 条目与堆栈、可读取时的 `gameplay_observe` 状态、最后一次动作及参数；视觉问题补充截图。某项信息在暂停时不可读取，就记录为不可读取，不要为此恢复游戏。先记录证据，再分析和修改代码。不要清空 Console，也不要为了保存现场而把运行时状态写回正式场景或存档。
+4. 代码编辑可能触发脚本重编译或 Domain Reload，导致 Play Mode 退出/重启或非序列化运行时状态丢失。因此，修改代码前必须先完成现场证据记录；不得承诺暂停现场能跨重编译保留。编译后重新检查编辑器状态和 Console，再依照会话规则建立复测。
+5. 若异常是在 Edit Mode 或编译阶段发现，无法暂停 Play Mode 时保留当前编辑器/Console 状态并记录错误，不要为了制造暂停而启动游戏。若编译或其它操作使编辑器自动恢复运行，发现后立即再次暂停。
+
+本现场冻结步骤优先于 GamePlayMCP 通用 Bug 闭环中“发现异常后先停止角色输入”的顺序。只有完成现场证据记录、准备恢复受控复测时，才按当时可用的 MCP 能力清理遗留输入并继续。
 
 ## 循环步骤
 
